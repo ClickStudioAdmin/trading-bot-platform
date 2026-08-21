@@ -1,0 +1,26 @@
+---
+description: GitHub is the source of truth
+alwaysApply: true
+---
+
+# Source of truth
+
+GitHub is the source of truth for application code, migrations, configuration, documentation, tests, and CI/CD.
+
+The hosted Supabase database and Vercel deployment are not the source of truth.
+
+All database schema changes must be Supabase migration files under `supabase/migrations/`.
+
+Do not edit the production schema in the Supabase dashboard as the normal process.
+
+Production migrations are applied by GitHub Actions from `main`, not by hand.
+
+Do daily work on `develop`. Pushes to `develop` migrate the development database only.
+
+Never apply `develop` to the production Supabase project. Never use production database secrets on `develop`.
+
+Never reuse Fisheries Quota Exchange Supabase project IDs or the FQX Vercel project. Same accounts, separate projects.
+
+Do not use local Supabase or Vercel CLI as the normal process. Migrations run in GitHub Actions.
+
+Update documentation when architecture changes.

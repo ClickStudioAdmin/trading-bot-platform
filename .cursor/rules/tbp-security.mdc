@@ -1,0 +1,20 @@
+---
+description: Secrets, keys, and untrusted client state
+alwaysApply: true
+---
+
+# Security
+
+Never commit secrets. Use `.env.local` locally, Vercel env vars for the app, and GitHub Actions secrets for migrations.
+
+Never put service-role keys in frontend code or `NEXT_PUBLIC_` variables.
+
+Never trust the browser for payment status, bid validity, quota availability, exchange balances, order fills, signature completion, or admin permissions.
+
+Never edit immutable financial or position ledgers in place. Corrections use adjustment or reversal entries.
+
+Use database transactions for concurrent money and position operations.
+
+Payment and webhook handling must be idempotent.
+
+API keys stored for exchanges must be trade-only, with no withdrawal permission.

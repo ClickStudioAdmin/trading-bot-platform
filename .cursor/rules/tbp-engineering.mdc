@@ -1,0 +1,16 @@
+---
+description: Tests and documentation expectations
+alwaysApply: true
+---
+
+# Engineering
+
+Add tests for important business logic. Financial and position operations need especially strong coverage.
+
+Each phase must remain lint-clean and production-buildable.
+
+Do not add dependencies unless the current work requires them.
+
+Do not create files that are not required by the current request or phase.
+
+When a change affects architecture, migrations, or deployment, update the relevant file in `docs/`.
