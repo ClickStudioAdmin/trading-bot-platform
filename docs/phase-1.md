@@ -20,9 +20,9 @@ You will not run `supabase`, `vercel`, or `gh` commands. Migrations run in GitHu
 
 ## Current micro-step
 
-**2 of 9 — Static Next.js homepage** (complete)
+**3 of 9 — Migration + Actions workflow** (complete)
 
-Homepage source, lint, and production build succeeded. Stopped here. Next is micro-step 3 (migration + GitHub Actions) when you say so.
+`system_health` and `.github/workflows/deploy-database.yml` are in the working tree. Stopped here. Next is micro-step 4: you create two new Supabase projects in the dashboard.
 
 ## Micro-steps
 

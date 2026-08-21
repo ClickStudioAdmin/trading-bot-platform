@@ -32,7 +32,7 @@ You do not run Supabase or Vercel CLI. GitHub Actions applies migrations. Vercel
 
 ## GitHub Actions
 
-[`.github/workflows/deploy-database.yml`](../.github/workflows/deploy-database.yml) is added in Phase 1 micro-step 3. It will run on pushes to `develop` and `main`.
+[`.github/workflows/deploy-database.yml`](../.github/workflows/deploy-database.yml) runs on pushes to `develop` and `main`.
 
 - `develop` runs **Apply development migrations** against GitHub Environment `development` and the development Supabase project.
 - `main` runs **Apply production migrations** against GitHub Environment `production` and the production Supabase project.
