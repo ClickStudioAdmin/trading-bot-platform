@@ -20,9 +20,7 @@ You will not run `supabase`, `vercel`, or `gh` commands. Migrations run in GitHu
 
 ## Current micro-step
 
-**1 of 9 — Repo contract** (this step)
-
-Docs, Cursor rules, and `.gitignore`. No application code yet.
+**2 of 9 — Static Next.js homepage** (source written; `npm install` / lint / build blocked by disk full)
 
 ## Micro-steps
 
