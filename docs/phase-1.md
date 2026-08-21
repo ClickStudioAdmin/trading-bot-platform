@@ -20,7 +20,9 @@ You will not run `supabase`, `vercel`, or `gh` commands. Migrations run in GitHu
 
 ## Current micro-step
 
-**2 of 9 — Static Next.js homepage** (source written; `npm install` / lint / build blocked by disk full)
+**2 of 9 — Static Next.js homepage** (complete)
+
+Homepage source, lint, and production build succeeded. Stopped here. Next is micro-step 3 (migration + GitHub Actions) when you say so.
 
 ## Micro-steps
 
