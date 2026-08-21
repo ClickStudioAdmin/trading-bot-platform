@@ -14,6 +14,10 @@ GitHub. Hosted Supabase and Vercel are not.
 
 The web app never places exchange orders from a Vercel invocation.
 
+## Environments
+
+`develop` uses a dedicated development Supabase database and the Vercel Development environment. `main` uses a dedicated production Supabase database and the Vercel Production environment. See [environments.md](environments.md).
+
 ## Current phase
 
 Phase 1 — Foundation. See [phase-1.md](phase-1.md).

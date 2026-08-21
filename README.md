@@ -8,7 +8,7 @@ GitHub is the source of truth. The hosted database and Vercel deployment are not
 
 **Phase 1 — Foundation (pipeline proof)**
 
-See [docs/phase-1.md](docs/phase-1.md). Work happens on `develop`. Merge to `main` for production. See [docs/environments.md](docs/environments.md).
+See [docs/phase-1.md](docs/phase-1.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
 
 This phase proves Cursor → GitHub → GitHub Actions → Supabase → Vercel. No trading features yet.
 
@@ -27,10 +27,10 @@ Never commit `.env.local` or secrets.
 
 ## Deployment
 
-| Branch | Database | App |
+| Branch | Supabase database | Vercel environment |
 | --- | --- | --- |
-| `develop` | Development Supabase | Vercel Preview |
-| `main` | Production Supabase | Vercel Production |
+| `develop` | Development project (separate database) | Development |
+| `main` | Production project (separate database) | Production |
 
 GitHub Actions secrets (this repo only — not FQX project IDs):
 

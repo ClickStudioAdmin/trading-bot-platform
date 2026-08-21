@@ -15,9 +15,11 @@ Do not edit the production schema in the Supabase dashboard as the normal proces
 
 Production migrations are applied by GitHub Actions from `main`, not by hand.
 
-Do daily work on `develop`. Pushes to `develop` migrate the development database only.
+Do daily work on `develop`. Pushes to `develop` migrate the **development** Supabase database only and deploy the Vercel **Development** environment.
 
-Never apply `develop` to the production Supabase project. Never use production database secrets on `develop`.
+`main` migrates the **production** Supabase database and deploys Vercel **Production**.
+
+Never apply `develop` to the production Supabase project. Never use production database secrets on `develop`. Never put production Supabase URLs or keys on the Vercel Development environment. Two Supabase projects (two databases), not one shared database.
 
 Never reuse Fisheries Quota Exchange Supabase project IDs or the FQX Vercel project. Same accounts, separate projects.
 
