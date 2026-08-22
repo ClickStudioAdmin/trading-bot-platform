@@ -81,7 +81,7 @@ export function formatEntryTriggers(automation: PaperCarryAutomation): string[] 
   if (automation.entrySizeType === "dynamic") {
     if (automation.entryMinSizeUsdt !== null) {
       lines.push(
-        `Min Size $${Math.round(automation.entryMinSizeUsdt).toLocaleString("en-US")}`,
+        `Min Order Size $${Math.round(automation.entryMinSizeUsdt).toLocaleString("en-US")}`,
       );
     }
   } else if (automation.entryMinCapacityUsdt !== null) {

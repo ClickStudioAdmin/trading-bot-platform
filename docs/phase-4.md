@@ -38,7 +38,7 @@ Vercel Cron is not the scheduler. Hobby cron is once per day and Production-only
 
 `paper_engine_settings` holds the enable switch (one row per user). `paper_rules` holds stacked layers (many rows per user). RLS own-row. Layers can be deleted.
 
-Each layer has its own order type, entry filters, open caps, and exits. **Fixed** opens at Order size and can require Min book value. **Dynamic** opens at the pair’s current book value and skips if that is below Min Size. For a pair, the engine uses the matching layer with the **highest min APR**. Example: $10,000 at 10% APR, $25,000 at 20% APR.
+Each layer has its own order type, entry filters, open caps, and exits. **Fixed** opens at Order size and can require Min book value. **Dynamic** opens at the pair’s current book value and skips if that is below Min Order Size. For a pair, the engine uses the matching layer with the **highest min APR**. Example: $10,000 at 10% APR, $25,000 at 20% APR.
 
 **Exit (first match wins, on that layer):** DTE ≤ `close_max_dte`; mark net APR < `close_min_net_apr`; P&L % ≥ `take_profit_pct`; P&L % ≤ `stop_loss_pct`.
 

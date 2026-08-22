@@ -8,7 +8,7 @@ import {
   type PaperLayerFormValues,
   type PaperRulesFormValues,
 } from "@/lib/engine/rules";
-import { GroupedNumberInput, UsdtSizeInput } from "@/components/usdt-size-input";
+import { GroupedNumberInput } from "@/components/usdt-size-input";
 
 export function PaperRulesForm({ values }: { values: PaperRulesFormValues }) {
   const [enabled, setEnabled] = useState(values.enabled);
@@ -139,18 +139,11 @@ function RuleRow({
           ) : null}
         </FieldGroup>
         <FieldGroup title="Position and Orders">
-          <label className="block text-[11px] text-ink-muted">
-            Max Position Size
-            <div className="mt-0.5">
-              <UsdtSizeInput
-                name={`${prefix}maxOpenNotional`}
-                defaultValue={layer.maxOpenNotional}
-                ariaLabel={`Max position size for rule ${index + 1}`}
-                compact
-                showPrefix={false}
-              />
-            </div>
-          </label>
+          <Field
+            name={`${prefix}maxOpenNotional`}
+            label="Max Position Size"
+            defaultValue={layer.maxOpenNotional}
+          />
           <Field
             name={`${prefix}maxOpenCount`}
             label="Max opens"
@@ -173,22 +166,15 @@ function RuleRow({
           {sizeType === "dynamic" ? (
             <Field
               name={`${prefix}minSize`}
-              label="Min Size"
+              label="Min Order Size"
               defaultValue={layer.minSize}
             />
           ) : (
-            <label className="block text-[11px] text-ink-muted">
-              Order size (USDT)
-              <div className="mt-0.5">
-                <UsdtSizeInput
-                  name={`${prefix}notionalUsdt`}
-                  defaultValue={layer.notionalUsdt}
-                  ariaLabel={`Order size for rule ${index + 1}`}
-                  compact
-                  showPrefix={false}
-                />
-              </div>
-            </label>
+            <Field
+              name={`${prefix}notionalUsdt`}
+              label="Order size (USDT)"
+              defaultValue={String(layer.notionalUsdt)}
+            />
           )}
         </FieldGroup>
       </div>

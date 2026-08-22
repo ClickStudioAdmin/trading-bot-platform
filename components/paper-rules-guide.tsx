@@ -65,7 +65,7 @@ export function PaperRulesGuide() {
           detail="Fixed only. Paper size of each open this layer creates. P&L is (entry net − mark net − 2 × fees and slip) × this size. Fees are VIP0 taker on both legs plus 5 bp slip, charged for open and for close."
         />
         <GuideItem
-          term="Min Size"
+          term="Min Order Size"
           detail="Dynamic only. Skip the pair if book value is below this. Stops dust opens on thin books."
         />
       </dl>

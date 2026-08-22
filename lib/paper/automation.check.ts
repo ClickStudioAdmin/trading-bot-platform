@@ -60,7 +60,7 @@ assert.deepEqual(
     entryMinDte: null,
     entryMaxDte: null,
   }),
-  ["Order Type Dynamic", "Min Size $4,000"],
+  ["Order Type Dynamic", "Min Order Size $4,000"],
 );
 
 const form = new FormData();

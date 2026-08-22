@@ -192,7 +192,7 @@ function parseLayer(
   const minSizeUsdt =
     sizeType === "dynamic" ? parseBound(form.get(`${prefix}minSize`)) : null;
   if (minSizeUsdt !== null && minSizeUsdt <= 0) {
-    return { ok: false, error: `Rule ${index + 1}: min size must be positive.` };
+    return { ok: false, error: `Rule ${index + 1}: min order size must be positive.` };
   }
 
   const takeProfitPct = parsePercent(form.get(`${prefix}takeProfit`));
