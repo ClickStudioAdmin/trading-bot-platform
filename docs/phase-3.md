@@ -8,9 +8,9 @@ A paper carry is long USDT spot and short the matching dated future, sized in US
 
 ## Current micro-step
 
-**1 of 7 — Paper carry math** (complete)
+**2 of 7 — Sign-in** (complete)
 
-Pure formulas and types. No auth or trade table yet.
+Cookie session via Supabase Auth. Market pages stay public. No public sign-up.
 
 ## Micro-steps
 
@@ -25,6 +25,8 @@ Pure formulas and types. No auth or trade table yet.
 | 7 | Push `develop` | You + agent | Development Vercel shows the paper desk. Production unchanged until you merge |
 
 Stop after each step.
+
+`/sign-in` is email/password. Create users in the dashboard. `/` and the scanner stay public.
 
 ## Formulas
 

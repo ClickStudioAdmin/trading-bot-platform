@@ -90,6 +90,21 @@ Phase 1 needs no Vercel environment variables (static homepage). When the app la
 
 Never add a service-role key to `NEXT_PUBLIC_` variables. Never put production values on the Development environment.
 
+## Auth (Phase 3)
+
+Email/password only. Create desk users in the Supabase dashboard (Authentication → Users). Do not open public sign-up.
+
+On **both** TBP projects:
+
+1. Authentication → Providers → Email enabled
+2. Authentication → URL configuration:
+   - Development project Site URL = the Vercel **Development** URL
+   - Production project Site URL = the Vercel **Production** URL
+   - Redirect URLs include that origin (and `http://localhost:3000` if you run locally)
+3. Add your user with **Auto Confirm** so no inbound email is required
+
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` must be set on the matching Vercel environment. The browser uses the publishable key. The service role stays server-only.
+
 The service role is in the Supabase dashboard: **Project Settings → API → `service_role`**. Copy the **development** project’s key into Vercel **Development**, and the **production** project’s key into Vercel **Production**.
 
 ## Merge to production

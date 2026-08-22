@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import { SessionBar } from "@/components/session-bar";
 import "./globals.css";
 
 const geist = Geist({
@@ -21,7 +22,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={geist.className}>
-      <body>{children}</body>
+      <body>
+        <SessionBar />
+        {children}
+      </body>
     </html>
   );
 }

@@ -21,6 +21,12 @@ export default function Home() {
           Cash and carry
         </Link>
         <Link
+          href="/sign-in"
+          className="inline-flex rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+        >
+          Sign in
+        </Link>
+        <Link
           href="/theme"
           className="inline-flex rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
         >

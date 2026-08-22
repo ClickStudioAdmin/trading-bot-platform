@@ -1,0 +1,78 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { signIn } from "@/lib/auth/actions";
+import { getAuthUser } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+
+export const metadata: Metadata = {
+  title: "Sign in",
+  description: "Desk sign-in for Trading Bot Platform.",
+};
+
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const user = await getAuthUser();
+  if (user) {
+    redirect("/cash-and-carry");
+  }
+
+  const { error } = await searchParams;
+
+  return (
+    <div className="min-h-dvh bg-canvas text-ink">
+      <main className="mx-auto max-w-md px-6 py-16">
+        <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
+          Desk
+        </p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Sign in</h1>
+        <p className="mt-3 text-sm text-ink-muted">
+          Invite-only. Create the user in the Supabase dashboard, then sign in
+          here. Market pages stay public.
+        </p>
+        {error ? (
+          <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            {error}
+          </p>
+        ) : null}
+        <form action={signIn} className="mt-8 space-y-4">
+          <label className="block text-xs text-ink-muted" htmlFor="email">
+            Email
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
+            />
+          </label>
+          <label className="block text-xs text-ink-muted" htmlFor="password">
+            Password
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
+            />
+          </label>
+          <button
+            type="submit"
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          >
+            Sign in
+          </button>
+        </form>
+        <p className="mt-8 text-sm text-ink-faint">
+          <Link href="/" className="text-accent hover:text-accent-strong">
+            Home
+          </Link>
+        </p>
+      </main>
+    </div>
+  );
+}
