@@ -23,7 +23,7 @@ export async function signIn(formData: FormData) {
     redirect(`/sign-in?error=${encodeURIComponent(error.message)}`);
   }
 
-  redirect("/cash-and-carry");
+  redirect("/strategies/universe");
 }
 
 export async function signOut() {

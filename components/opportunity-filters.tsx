@@ -48,7 +48,7 @@ export function OpportunityFiltersForm({
           Apply filters
         </button>
         <a
-          href="/opportunities"
+          href="/strategies/universe/opportunities"
           className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
         >
           Clear

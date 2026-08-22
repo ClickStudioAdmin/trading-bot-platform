@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
-export default function CashAndCarryRedirect() {
+export default function UniverseRedirect() {
   redirect("/strategies/universe");
 }

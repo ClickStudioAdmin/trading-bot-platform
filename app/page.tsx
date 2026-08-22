@@ -8,8 +8,8 @@ export default function Home() {
         Trading Bot Platform
       </h1>
       <p className="mt-3 text-sm text-ink-muted">
-        TBP development environment is operational. Open cash and carry from
-        the menu to scan the live book and record paper trades.
+        TBP development environment is operational. Open Strategies from the
+        menu, then Universe for the live book and paper trades.
       </p>
       <p className="mt-8 text-sm text-ink-faint">Build: 002</p>
     </main>

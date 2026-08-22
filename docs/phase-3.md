@@ -21,12 +21,14 @@ Signed-in users can open a paper carry from an opportunity. Entry basis comes fr
 | 3 | Paper carries table | Agent | Migration with RLS by `user_id`. GitHub Actions applies on `develop` |
 | 4 | Open paper carry | Agent | Signed-in user can open a paper carry from an opportunity. No Bybit order |
 | 5 | Mark and close | Agent | Open carries mark from the live scan. Close writes realized P&L |
-| 6 | Overview blotter | Agent | `/cash-and-carry` current trades, past trades, and desk stats use paper rows |
+| 6 | Overview blotter | Agent | `/strategies/universe` current trades, past trades, and desk stats use paper rows |
 | 7 | Push `develop` | You + agent | Development Vercel shows the paper desk. Production unchanged until you merge |
 
 Stop after each step.
 
 `/sign-in` is email/password. Create users in the dashboard. `/` and the scanner stay public.
+
+`/strategies` lists strategies. `/strategies/universe` is this strategy’s landing page. Related screens are `/strategies/universe/opportunities` and `/strategies/universe/pairs`.
 
 ## Formulas
 

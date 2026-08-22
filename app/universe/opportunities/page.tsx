@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default async function OpportunitiesRedirect({
+export default async function UniverseOpportunitiesRedirect({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;

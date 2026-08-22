@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SiteLogo } from "@/components/site-logo";
-import { SITE_LINKS } from "@/lib/site-links";
+import { UNIVERSE_LINKS } from "@/lib/site-links";
 
 export function SiteFooter() {
   return (
@@ -15,10 +15,10 @@ export function SiteFooter() {
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-ink-faint">
-            Strategy
+            Universe
           </p>
           <ul className="mt-3 space-y-2 text-sm">
-            {SITE_LINKS.map((link) => (
+            {UNIVERSE_LINKS.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}

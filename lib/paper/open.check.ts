@@ -31,8 +31,13 @@ assert.equal(formatNotionalInput("10000"), "10,000");
 assert.equal(formatNotionalInput("10,000"), "10,000");
 assert.equal(parseNotionalUsdt("0"), null);
 assert.equal(parseNotionalUsdt("-1"), null);
-assert.equal(safePaperReturnPath("/cash-and-carry"), "/cash-and-carry");
-assert.equal(safePaperReturnPath("/evil"), "/opportunities");
+assert.equal(safePaperReturnPath("/strategies/universe"), "/strategies/universe");
+assert.equal(safePaperReturnPath("/universe"), "/strategies/universe");
+assert.equal(safePaperReturnPath("/cash-and-carry"), "/strategies/universe");
+assert.equal(
+  safePaperReturnPath("/evil"),
+  "/strategies/universe/opportunities",
+);
 
 const row = paperCarryInsertRow("user-1", opportunity, 10_000);
 assert.equal(row.user_id, "user-1");
