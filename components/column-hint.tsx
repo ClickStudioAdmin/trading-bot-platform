@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 export function ColumnHint({
   label,
   hint,
 }: {
-  label: string;
+  label: ReactNode;
   hint: string;
 }) {
   const [box, setBox] = useState<DOMRect | null>(null);

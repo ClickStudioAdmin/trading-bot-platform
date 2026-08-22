@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
+import { ColumnHint } from "@/components/column-hint";
 import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
 import { TokenIcon } from "@/components/token-icon";
 import { closedTradeLabel } from "@/lib/paper/automation";
@@ -227,18 +228,28 @@ function ClosePaperButton({
         <input type="hidden" name="carryId" value={trade.id} />
         <input type="hidden" name="next" value={next} />
         <input type="hidden" name="mode" value="market" />
-        <button type="submit" className={actionClass}>
-          Close
-        </button>
+        <ColumnHint
+          hint="Close at market"
+          label={
+            <button type="submit" className={actionClass}>
+              Close
+            </button>
+          }
+        />
       </form>
       {trade.source === "manual" && trade.status !== "closing" ? (
         <form action={closeOpenPaperCarry}>
           <input type="hidden" name="carryId" value={trade.id} />
           <input type="hidden" name="next" value={next} />
           <input type="hidden" name="mode" value="unwind" />
-          <button type="submit" className={actionClass}>
-            Unwind
-          </button>
+          <ColumnHint
+            hint="Unwind position over time & ASAP (based on the usable book setting)"
+            label={
+              <button type="submit" className={actionClass}>
+                Unwind
+              </button>
+            }
+          />
         </form>
       ) : null}
     </div>
