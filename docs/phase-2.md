@@ -10,7 +10,7 @@ The web app may call **public** Bybit market endpoints from the server. It must 
 
 **7 of 7 — Push `develop`** (complete)
 
-`develop` is on origin. Development Vercel and the development Supabase migration job pick up this branch. Production stays on `main` until you merge.
+Phase 2 is accepted. `develop` has the scanner and Current Opportunities UI. Production stays on `main` until you merge.
 
 ## Micro-steps
 

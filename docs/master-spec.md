@@ -24,7 +24,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/theme`. Wri
 
 ## Current phase
 
-Phase 2 — Scanner and Current Opportunities. See [phase-2.md](phase-2.md). Phase 1 is complete.
+Phase 3 — Paper blotter. See [phase-3.md](phase-3.md). Phase 1 and Phase 2 are complete.
 
 ## Multi-tenancy (later)
 

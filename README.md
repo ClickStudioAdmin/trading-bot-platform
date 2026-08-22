@@ -6,11 +6,11 @@ GitHub is the source of truth. The hosted database and Vercel deployment are not
 
 ## Current phase
 
-**Phase 2 — Scanner and Current Opportunities**
+**Phase 3 — Paper blotter**
 
-See [docs/phase-2.md](docs/phase-2.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
+See [docs/phase-3.md](docs/phase-3.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
 
-Phase 2 is a read-only Bybit dated-futures scanner and Current Opportunities screen. No orders.
+Phase 3 records paper cash-and-carry trades. No exchange orders.
 
 ## Technology stack
 
