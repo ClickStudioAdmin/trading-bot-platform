@@ -1,5 +1,24 @@
 @import "tailwindcss";
 
+@theme {
+  --color-canvas: #0b0e14;
+  --color-surface: #161b22;
+  --color-surface-raised: #1c222c;
+  --color-line: #2a313c;
+  --color-line-strong: #3a4352;
+  --color-ink: #f4f6f8;
+  --color-ink-muted: #9aa3b2;
+  --color-ink-faint: #6b7382;
+  --color-accent: #a78bfa;
+  --color-accent-strong: #8b6cf6;
+  --color-success: #34d399;
+  --color-danger: #f07167;
+  --color-warning: #f5b942;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --radius-card: 1rem;
+  --radius-control: 0.5rem;
+}
+
 html {
   height: 100%;
 }
@@ -8,5 +27,13 @@ body {
   min-height: 100%;
   min-height: 100dvh;
   margin: 0;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+a[href],
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
 }

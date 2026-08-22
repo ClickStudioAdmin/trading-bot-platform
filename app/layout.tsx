@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
+import { Geist } from "next/font/google";
 import "./globals.css";
 
+const geist = Geist({
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "Trading Bot Platform",
+  title: {
+    default: "Trading Bot Platform",
+    template: "%s · TBP",
+  },
   description: "Development environment.",
 };
 
@@ -12,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={geist.className}>
       <body>{children}</body>
     </html>
   );

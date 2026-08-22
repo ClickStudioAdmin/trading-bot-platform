@@ -18,9 +18,13 @@ The web app never places exchange orders from a Vercel invocation.
 
 `develop` uses a dedicated development Supabase database and the Vercel Development environment. `main` uses a dedicated production Supabase database and the Vercel Production environment. See [environments.md](environments.md).
 
+## UI
+
+Dark business portal. Tokens in `app/globals.css`. Visual guide at `/theme`. Written rules in [ui-theme.md](ui-theme.md).
+
 ## Current phase
 
-Phase 1 — Foundation. See [phase-1.md](phase-1.md).
+Phase 1 — Foundation. See [phase-1.md](phase-1.md). Theme reference is allowed before Phase 2.
 
 Do not add scanner, Bybit, auth, or engine tables in this phase.
 

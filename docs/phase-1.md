@@ -22,7 +22,7 @@ You will not run `supabase`, `vercel`, or `gh` commands. Migrations run in GitHu
 
 **9 of 9 — Merge to `main`** (done)
 
-`origin/main` includes PR #1 from `develop` (`7a2010d`). Phase 1 foundation is complete once production Actions, production Vercel (**Build: 002**), and the production `system_health` row are confirmed.
+`origin/main` includes PR #1 from `develop` (`7a2010d`). Phase 1 foundation is accepted. A theme reference page lives at `/theme` (`docs/ui-theme.md`). It is not the scanner.
 
 ## Micro-steps
 
