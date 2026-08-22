@@ -1,8 +1,9 @@
 "use server";
 
 import { writeEventLog } from "@/lib/logs/write";
-import { parseCarryExitForm } from "@/lib/paper/automation";
+import { EMPTY_AUTOMATION, parseCarryExitForm } from "@/lib/paper/automation";
 import { closePaperCarry as computeClose } from "@/lib/paper/math";
+import { paperOrderInsertRow } from "@/lib/paper/orders";
 import { pairKey, paperCarryInsertRow, parseNotionalUsdt, safePaperReturnPath } from "@/lib/paper/open";
 import { asNumber, parsePaperCarryRow } from "@/lib/paper/rows";
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
@@ -48,9 +49,11 @@ export async function openPaperCarry(formData: FormData) {
     );
   }
 
-  const { error } = await supabase.from("paper_carries").insert(
-    paperCarryInsertRow(user.id, match, notionalUsdt),
-  );
+  const { data, error } = await supabase
+    .from("paper_carries")
+    .insert(paperCarryInsertRow(user.id, match, notionalUsdt))
+    .select("id")
+    .single();
 
   if (error) {
     await writeEventLog({
@@ -65,6 +68,23 @@ export async function openPaperCarry(formData: FormData) {
     redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
   }
 
+  if (!data) {
+    redirect(`${next}?paper=opened`);
+  }
+
+  const carryId = asNumber(data.id);
+  await insertPaperOrder(supabase, {
+    userId: user.id,
+    carryId,
+    side: "open",
+    source: "manual",
+    triggerReason: null,
+    notionalUsdt,
+    filledAt: new Date(),
+    opportunity: match,
+    automation: EMPTY_AUTOMATION,
+  });
+
   await writeEventLog({
     scope: "trade",
     event: "trade.opened",
@@ -72,6 +92,7 @@ export async function openPaperCarry(formData: FormData) {
     userId: user.id,
     strategy: "cash-and-carry",
     data: {
+      carryId,
       spotSymbol,
       futureSymbol,
       notionalUsdt,
@@ -176,6 +197,18 @@ export async function closeOpenPaperCarry(formData: FormData) {
     redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
   }
 
+  await insertPaperOrder(supabase, {
+    userId: user.id,
+    carryId,
+    side: "close",
+    source: "manual",
+    triggerReason: null,
+    notionalUsdt: row.notionalUsdt,
+    filledAt: new Date(closedAtMs),
+    opportunity: match,
+    automation: row.automation,
+  });
+
   await writeEventLog({
     scope: "trade",
     event: "trade.closed",
@@ -276,4 +309,24 @@ export async function updatePaperCarryExits(formData: FormData) {
   });
 
   redirect(`${next}?paper=exits`);
+}
+
+async function insertPaperOrder(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  input: Parameters<typeof paperOrderInsertRow>[0],
+) {
+  const { error } = await supabase
+    .from("paper_orders")
+    .insert(paperOrderInsertRow(input));
+  if (error) {
+    await writeEventLog({
+      level: "warning",
+      scope: "trade",
+      event: "trade.order_failed",
+      message: error.message,
+      userId: input.userId,
+      strategy: "cash-and-carry",
+      data: { carryId: input.carryId, side: input.side },
+    });
+  }
 }

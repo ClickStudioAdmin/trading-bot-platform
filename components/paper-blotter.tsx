@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
 import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
+import { PaperCarryExpand } from "@/components/paper-carry-expand";
 import { TokenIcon } from "@/components/token-icon";
 import { closedTradeLabel } from "@/lib/paper/automation";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@/lib/opportunities/format";
 import { closeOpenPaperCarry } from "@/lib/paper/actions";
 import { carryPnlPct } from "@/lib/paper/math";
+import type { PaperOrderRow } from "@/lib/paper/orders";
 import type { PaperReturnPath } from "@/lib/paper/open";
 import {
   formatDeskDate,
@@ -20,6 +22,9 @@ import {
   type MarkedPaperCarry,
   type PaperCarryRow,
 } from "@/lib/paper/rows";
+
+type OpenCarryView = MarkedPaperCarry & { orders: PaperOrderRow[] };
+type ClosedCarryView = PaperCarryRow & { orders: PaperOrderRow[] };
 
 const EXPOSURE_BARS = ["bg-accent", "bg-success", "bg-warning"] as const;
 
@@ -30,14 +35,13 @@ export function PaperBlotter({
   next = "/strategies/cash-and-carry",
 }: {
   signedIn: boolean;
-  open: MarkedPaperCarry[];
-  closed: PaperCarryRow[];
+  open: OpenCarryView[];
+  closed: ClosedCarryView[];
   next?: PaperReturnPath;
 }) {
   return (
     <>
       <OpenPaperTrades signedIn={signedIn} open={open} next={next} />
-      <ClosedPaperTrades signedIn={signedIn} closed={closed} />
       <PaperDeskStats signedIn={signedIn} open={open} closed={closed} />
     </>
   );
@@ -50,7 +54,7 @@ export function OpenPaperTrades({
   showHeading = true,
 }: {
   signedIn: boolean;
-  open: MarkedPaperCarry[];
+  open: OpenCarryView[];
   next?: PaperReturnPath;
   showHeading?: boolean;
 }) {
@@ -150,16 +154,19 @@ export function OpenPaperTrades({
                     ? null
                     : carryPnlPct(trade.unrealizedUsdt, trade.notionalUsdt);
                 return (
-                <tr
+                <PaperCarryExpand
                   key={trade.id}
-                  className="border-b border-line last:border-b-0"
+                  orders={trade.orders}
+                  colSpan={8}
                 >
+                  {(toggle) => (
+                    <>
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-2 font-medium">
                       <TokenIcon symbol={trade.baseCoin} />
                       {trade.baseCoin}
                     </span>
-                    <span className="mt-0.5 flex items-center gap-1 pl-7 text-xs text-ink-faint">
+                    <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
                       Long spot · short {trade.futureSymbol}
                       {" · "}
                       {trade.source === "engine" ? (
@@ -174,6 +181,8 @@ export function OpenPaperTrades({
                       ) : (
                         "Manual"
                       )}
+                      {" · "}
+                      {toggle}
                     </span>
                   </td>
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
@@ -209,7 +218,9 @@ export function OpenPaperTrades({
                   <td className="px-4 py-3">
                     <ClosePaperButton trade={trade} next={next} />
                   </td>
-                </tr>
+                    </>
+                  )}
+                </PaperCarryExpand>
                 );
               })
             )}
@@ -225,7 +236,7 @@ export function ClosedPaperTrades({
   closed,
 }: {
   signedIn: boolean;
-  closed: PaperCarryRow[];
+  closed: ClosedCarryView[];
 }) {
   return (
     <section>
@@ -301,10 +312,13 @@ export function ClosedPaperTrades({
               />
             ) : (
               closed.map((trade) => (
-                <tr
+                <PaperCarryExpand
                   key={trade.id}
-                  className="border-b border-line last:border-b-0"
+                  orders={trade.orders}
+                  colSpan={7}
                 >
+                  {(toggle) => (
+                    <>
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-2 font-medium">
                       <TokenIcon symbol={trade.baseCoin} />
@@ -322,6 +336,8 @@ export function ClosedPaperTrades({
                         closeSource={trade.closeSource}
                         closeReason={trade.closeReason}
                       />
+                      {" · "}
+                      {toggle}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-ink-muted">
@@ -352,7 +368,9 @@ export function ClosedPaperTrades({
                   >
                     {formatPct(trade.realizedApr)}
                   </td>
-                </tr>
+                    </>
+                  )}
+                </PaperCarryExpand>
               ))
             )}
           </tbody>
@@ -362,7 +380,7 @@ export function ClosedPaperTrades({
   );
 }
 
-function PaperDeskStats({
+export function PaperDeskStats({
   signedIn,
   open,
   closed,

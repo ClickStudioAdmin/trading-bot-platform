@@ -12,6 +12,17 @@ export function formatUsd(value: number): string {
   return `$${Math.round(value).toLocaleString("en-US")}`;
 }
 
+export function formatPrice(value: number | null): string {
+  if (value === null || !(value > 0)) {
+    return "—";
+  }
+  const digits = value >= 1000 ? 2 : value >= 1 ? 4 : 8;
+  return value.toLocaleString("en-US", {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: 0,
+  });
+}
+
 export function formatSignedUsd(value: number): string {
   const formatted = `$${Math.abs(Math.round(value)).toLocaleString("en-US")}`;
   if (value > 0) {

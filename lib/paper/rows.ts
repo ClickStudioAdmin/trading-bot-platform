@@ -142,6 +142,13 @@ export function formatDeskDate(ms: number | null): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
+export function formatDeskDateTime(ms: number | null): string {
+  if (ms === null || !Number.isFinite(ms)) {
+    return "—";
+  }
+  return `${new Date(ms).toISOString().replace("T", " ").slice(0, 19)} UTC`;
+}
+
 export function paperDeskStats(
   open: MarkedPaperCarry[],
   closed: PaperCarryRow[],

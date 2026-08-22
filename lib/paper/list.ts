@@ -1,6 +1,12 @@
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import { type OpportunityPaperProps } from "@/lib/paper/open";
 import {
+  attachOrders,
+  parsePaperOrderRow,
+  type PaperCarryWithOrders,
+  type PaperOrderRow,
+} from "@/lib/paper/orders";
+import {
   markOpenCarries,
   parsePaperCarryRow,
   type MarkedPaperCarry,
@@ -39,21 +45,51 @@ export async function listPaperCarries(): Promise<PaperCarryRow[]> {
   return data.map((row) => parsePaperCarryRow(row as Record<string, unknown>));
 }
 
+export async function listPaperOrders(): Promise<PaperOrderRow[]> {
+  const user = await getSessionMember();
+  const supabase = createServiceClient();
+  if (!user || !supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("paper_orders")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("filled_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (error || !data) {
+    return [];
+  }
+
+  return data.map((row) => parsePaperOrderRow(row as Record<string, unknown>));
+}
+
 export async function loadPaperDesk(scan: ScannedOpportunity[]): Promise<{
   signedIn: boolean;
-  open: MarkedPaperCarry[];
-  closed: PaperCarryRow[];
+  open: (MarkedPaperCarry & { orders: PaperOrderRow[] })[];
+  closed: PaperCarryWithOrders[];
 }> {
   const user = await getSessionMember();
   if (!user) {
     return { signedIn: false, open: [], closed: [] };
   }
 
-  const rows = await listPaperCarries();
-  const open = markOpenCarries(
-    rows.filter((row) => row.status === "open"),
-    scan,
+  const [rows, orders] = await Promise.all([
+    listPaperCarries(),
+    listPaperOrders(),
+  ]);
+  const open = attachOrders(
+    markOpenCarries(
+      rows.filter((row) => row.status === "open"),
+      scan,
+    ),
+    orders,
   );
-  const closed = rows.filter((row) => row.status === "closed");
+  const closed = attachOrders(
+    rows.filter((row) => row.status === "closed"),
+    orders,
+  );
   return { signedIn: true, open, closed };
 }
