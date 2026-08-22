@@ -222,16 +222,16 @@ function ClosePaperButton({
     );
   }
 
+  const actionClass =
+    "rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium whitespace-nowrap text-ink";
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-nowrap items-center gap-2">
       <form action={closeOpenPaperCarry}>
         <input type="hidden" name="carryId" value={trade.id} />
         <input type="hidden" name="next" value={next} />
         <input type="hidden" name="mode" value="market" />
-        <button
-          type="submit"
-          className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
-        >
+        <button type="submit" className={actionClass}>
           Close
         </button>
       </form>
@@ -240,10 +240,7 @@ function ClosePaperButton({
           <input type="hidden" name="carryId" value={trade.id} />
           <input type="hidden" name="next" value={next} />
           <input type="hidden" name="mode" value="unwind" />
-          <button
-            type="submit"
-            className="rounded-control border border-line px-2.5 py-1 text-xs font-medium text-ink-muted hover:bg-surface-raised hover:text-ink"
-          >
+          <button type="submit" className={actionClass}>
             Unwind
           </button>
         </form>
