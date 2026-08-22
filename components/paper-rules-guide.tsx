@@ -4,7 +4,7 @@ export function PaperRulesGuide() {
       <h2 className="text-lg font-semibold tracking-tight">How automations work</h2>
       <p className="mt-2 text-sm text-ink-muted">
         The paper engine scans the live book, then opens or closes paper
-        carries using these layers. No Bybit order is sent. Empty fields mean
+        carries using these positions. No Bybit order is sent. Empty fields mean
         that bound is off.
       </p>
 
@@ -17,16 +17,16 @@ export function PaperRulesGuide() {
           detail="When on, the scheduled tick may open and close paper rows. When off, the tick does nothing. Manual Open and Close on the blotter still work."
         />
         <GuideItem
-          term="Add rule"
-          detail="Adds another layer. Each layer has its own entry conditions, position caps, order types, and exits. If several layers match a pair, the engine uses the one with the highest min APR. If min APRs tie, it uses the layer that appears first on this page."
+          term="Add position"
+          detail="Adds another position. Each position has its own entry conditions, caps, order types, and exits. If several positions match a pair, the engine uses the one with the highest min APR. If min APRs tie, it uses the one that appears first on this page."
         />
       </dl>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Entry · Conditions
+        Entry · Conditions (all must be true)
       </h3>
       <p className="mt-2 text-sm text-ink-muted">
-        All filled entry conditions must be true before this layer looks to
+        All filled entry conditions must be true before this position looks to
         open. Empty conditions are ignored.
       </p>
       <dl className="mt-3 space-y-3 text-sm">
@@ -46,11 +46,11 @@ export function PaperRulesGuide() {
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Max Position Size"
-          detail="Cap on the sum of open sizes this layer created. Dynamic fills up to this cap over time. A new clip is sized to the leftover room when the next book-sized clip would overshoot. Fixed skips if Order size would push the sum over the cap."
+          detail="Cap on the sum of open sizes this position created. Dynamic fills up to this cap over time. A new clip is sized to the leftover room when the next book-sized clip would overshoot. Fixed skips if Order size would push the sum over the cap."
         />
         <GuideItem
           term="Max opens"
-          detail="Maximum number of open paper rows this layer may have. Each Dynamic clip counts as one open. Manual opens and other layers do not count."
+          detail="Maximum number of open paper rows this position may have. Each Dynamic clip counts as one open. Manual opens and other positions do not count."
         />
         <GuideItem
           term="Order Type"
@@ -58,7 +58,7 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Order size (USDT)"
-          detail="Fixed only. Paper size of the single open this layer creates on a pair."
+          detail="Fixed only. Paper size of the single open this position creates on a pair."
         />
         <GuideItem
           term="Min book value"
@@ -71,11 +71,11 @@ export function PaperRulesGuide() {
       </dl>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Exit · Conditions
+        Exit · Conditions (any can be true)
       </h3>
       <p className="mt-2 text-sm text-ink-muted">
-        Exits apply only to paper rows this layer opened. If either filled
-        condition is true, the layer starts exiting. First match wins: DTE,
+        Exits apply only to paper rows this position opened. If either filled
+        condition is true, the position starts exiting. First match wins: DTE,
         then mark APR, then take profit, then stop loss.
       </p>
       <dl className="mt-3 space-y-3 text-sm">
@@ -124,7 +124,7 @@ export function PaperRulesGuide() {
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Fixed: one open per pair"
-          detail="A Fixed layer will not open a pair you already hold. Dynamic may add clips on a pair you already hold until Max Position Size or Max opens is reached. Manual Open can still stack the same pair."
+          detail="A Fixed position will not open a pair you already hold. Dynamic may add clips on a pair you already hold until Max Position Size or Max opens is reached. Manual Open can still stack the same pair."
         />
         <GuideItem
           term="No live mark"

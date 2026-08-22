@@ -29,8 +29,8 @@ export function PaperRulesForm({ values }: { values: PaperRulesFormValues }) {
           Enable automations
         </label>
         <p className="mt-1 text-xs text-ink-muted">
-          Stack rules to scale in: a higher min APR can use a different size.
-          The engine picks the highest matching layer. Off means no auto
+          Stack positions: a higher min APR can use a different size.
+          The engine picks the highest matching position. Off means no auto
           open or close.
         </p>
       </section>
@@ -58,7 +58,7 @@ export function PaperRulesForm({ values }: { values: PaperRulesFormValues }) {
           }
           className="rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface-raised"
         >
-          Add rule
+          Add position
         </button>
         <button
           type="submit"
@@ -97,7 +97,7 @@ function RuleRow({
     <section className="rounded-card border border-line bg-surface px-4 py-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold tracking-tight">
-          Rule {index + 1}
+          Position {index + 1}
         </h2>
         {canRemove ? (
           <button
@@ -114,7 +114,7 @@ function RuleRow({
         Entry
       </p>
       <div className="mt-1 grid gap-2 md:grid-cols-2">
-        <FieldGroup title="Conditions">
+        <FieldGroup title="Conditions (all must be true)">
           <Field
             name={`${prefix}minApr`}
             label="Min APR %"
@@ -184,7 +184,7 @@ function RuleRow({
         Exit
       </p>
       <div className="mt-1 grid gap-2 md:grid-cols-3">
-        <FieldGroup title="Conditions">
+        <FieldGroup title="Conditions (any can be true)">
           <Field
             name={`${prefix}closeMaxDte`}
             label="DTE ≤"

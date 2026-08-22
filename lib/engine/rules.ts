@@ -92,7 +92,7 @@ export function parsePaperRulesForm(
 ): { ok: true; config: PaperEngineConfig } | { ok: false; error: string } {
   const count = Number(String(form.get("ruleCount") ?? "0"));
   if (!Number.isInteger(count) || count < 0) {
-    return { ok: false, error: "Add at least one rule, or save with the list empty." };
+    return { ok: false, error: "Add at least one position, or save with the list empty." };
   }
 
   const layers: PaperEngineLayer[] = [];
@@ -176,23 +176,23 @@ function parseLayer(
       ? (parsedNotional ?? DEFAULT_PAPER_NOTIONAL_USDT)
       : parsedNotional;
   if (notionalUsdt === null) {
-    return { ok: false, error: `Rule ${index + 1}: enter a positive order size.` };
+    return { ok: false, error: `Position ${index + 1}: enter a positive order size.` };
   }
 
   const minDte = parseBound(form.get(`${prefix}minDte`));
   const maxDte = parseBound(form.get(`${prefix}maxDte`));
   if (minDte !== null && maxDte !== null && minDte > maxDte) {
-    return { ok: false, error: `Rule ${index + 1}: min DTE cannot be greater than max DTE.` };
+    return { ok: false, error: `Position ${index + 1}: min DTE cannot be greater than max DTE.` };
   }
 
   const maxOpenCount = parseBound(form.get(`${prefix}maxOpenCount`));
   if (maxOpenCount !== null && (!Number.isInteger(maxOpenCount) || maxOpenCount <= 0)) {
-    return { ok: false, error: `Rule ${index + 1}: max open trades must be a positive whole number.` };
+    return { ok: false, error: `Position ${index + 1}: max open trades must be a positive whole number.` };
   }
 
   const maxOpenNotionalUsdt = parseBound(form.get(`${prefix}maxOpenNotional`));
   if (maxOpenNotionalUsdt !== null && maxOpenNotionalUsdt <= 0) {
-    return { ok: false, error: `Rule ${index + 1}: max position size must be positive.` };
+    return { ok: false, error: `Position ${index + 1}: max position size must be positive.` };
   }
 
   const minSizeUsdt =
@@ -200,12 +200,12 @@ function parseLayer(
       ? parseBound(form.get(`${prefix}minSize`))
       : null;
   if (minSizeUsdt !== null && minSizeUsdt <= 0) {
-    return { ok: false, error: `Rule ${index + 1}: min order size must be positive.` };
+    return { ok: false, error: `Position ${index + 1}: min order size must be positive.` };
   }
 
   const takeProfitPct = parsePercent(form.get(`${prefix}takeProfit`));
   if (takeProfitPct !== null && takeProfitPct <= 0) {
-    return { ok: false, error: `Rule ${index + 1}: take profit % must be positive.` };
+    return { ok: false, error: `Position ${index + 1}: take profit % must be positive.` };
   }
 
   const stopLossRaw = parsePercent(form.get(`${prefix}stopLoss`));
