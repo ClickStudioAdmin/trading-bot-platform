@@ -37,6 +37,8 @@ You do not run Supabase or Vercel CLI. GitHub Actions applies migrations. Vercel
 - `develop` runs **Apply development migrations** against GitHub Environment `development` and the development Supabase project.
 - `main` runs **Apply production migrations** against GitHub Environment `production` and the production Supabase project.
 
+[`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) POSTs `/api/engine/tick` every 5 minutes, and on **Run workflow**. The development job always runs. The production job runs only from `main`. GitHub only fires `schedule` from the **default branch** — keep that as `develop` until you merge.
+
 Development secrets use separate names so a missing development secret fails the job instead of falling back to production.
 
 ### Repository secrets
@@ -110,7 +112,9 @@ A member is an admin when `members.role` is `admin`, or the email is `click.stud
 
 ## Paper engine tick (Phase 4)
 
-The tick is `POST /api/engine/tick` on the Sydney Vercel function, guarded by `CRON_SECRET`. GitHub Actions calls it every 5 minutes. Do not use Vercel Cron (Hobby is daily and Production-only).
+The tick is `POST /api/engine/tick` on the Sydney Vercel function, guarded by `CRON_SECRET`. [`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) POSTs it every 5 minutes. Do not use Vercel Cron (Hobby is daily and Production-only).
+
+Confirm a tick from **Actions → Paper Engine Tick → Run workflow**. The JSON body is `{ users, opened, closed, clipped }`. Failures show in that run and in `/admin/logs`.
 
 | Variable | Where | Value |
 | --- | --- | --- |

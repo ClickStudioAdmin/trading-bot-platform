@@ -8,9 +8,9 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
 ## Current micro-step
 
-**5 of 7 — Engine tick** (in progress)
+**7 of 7 — Secrets + push** (waiting on you)
 
-`runPaperEngineTick` and `POST /api/engine/tick` apply entries, rule exits, and Closing clips. Manual rows have Close (market) and Unwind. Waiting on **6 — Schedule**.
+`runPaperEngineTick`, `POST /api/engine/tick`, and `.github/workflows/paper-engine-tick.yml` are in the repo. The engine is on when you save at least one rule set. Add `CRON_SECRET` and `ENGINE_TICK_URL` as below, then confirm a tick on `develop`. Do not merge to `main` until that works.
 
 ## Micro-steps
 

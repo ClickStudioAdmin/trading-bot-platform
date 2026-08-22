@@ -1,6 +1,8 @@
 import { authorizeCronSecret } from "@/lib/engine/cron";
 import { runPaperEngineTick } from "@/lib/engine/tick";
 
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
