@@ -15,5 +15,5 @@ export default async function OpportunitiesRedirect({
     }
   }
   const suffix = query.size > 0 ? `?${query.toString()}` : "";
-  redirect(`/strategies/universe/opportunities${suffix}`);
+  redirect(`/strategies/cash-and-carry/opportunities${suffix}`);
 }

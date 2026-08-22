@@ -5,7 +5,7 @@ export const DEFAULT_PAPER_NOTIONAL_USDT = 10_000;
 export type OpportunityPaperProps = {
   signedIn: boolean;
   openKeys: Set<string>;
-  next: "/strategies/universe" | "/strategies/universe/opportunities";
+  next: "/strategies/cash-and-carry" | "/strategies/cash-and-carry/opportunities";
 };
 
 export function pairKey(spotSymbol: string, futureSymbol: string): string {
@@ -36,15 +36,16 @@ export function firstSearchValue(
 
 export function safePaperReturnPath(
   raw: string,
-): "/strategies/universe" | "/strategies/universe/opportunities" {
+): "/strategies/cash-and-carry" | "/strategies/cash-and-carry/opportunities" {
   if (
+    raw === "/strategies/cash-and-carry" ||
     raw === "/strategies/universe" ||
     raw === "/universe" ||
     raw === "/cash-and-carry"
   ) {
-    return "/strategies/universe";
+    return "/strategies/cash-and-carry";
   }
-  return "/strategies/universe/opportunities";
+  return "/strategies/cash-and-carry/opportunities";
 }
 
 export function paperCarryInsertRow(

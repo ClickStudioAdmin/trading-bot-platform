@@ -15,7 +15,7 @@ export default async function SignInPage({
 }) {
   const user = await getAuthUser();
   if (user) {
-    redirect("/strategies/universe");
+    redirect("/strategies/cash-and-carry");
   }
 
   const { error } = await searchParams;

@@ -17,18 +17,18 @@ export default function StrategiesPage() {
       </p>
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         <Link
-          href="/strategies/universe"
+          href="/strategies/cash-and-carry"
           className="rounded-card border border-line bg-surface p-6 hover:border-line-strong hover:bg-surface-raised"
         >
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-            Universe
+            Strategy
           </p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight">
             Cash and carry
           </h2>
           <p className="mt-2 text-sm text-ink-muted">
             Buy USDT spot, sell the dated future. Live book, paper carries,
-            pair list.
+            and the pair list.
           </p>
         </Link>
       </div>

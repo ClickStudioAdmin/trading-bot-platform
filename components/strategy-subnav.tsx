@@ -2,18 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UNIVERSE_LINKS } from "@/lib/site-links";
+import { CASH_AND_CARRY_LINKS } from "@/lib/site-links";
 
-export function UniverseSubnav() {
+export function StrategySubnav() {
   const pathname = usePathname();
 
   return (
-    <nav
-      aria-label="Universe strategy"
-      className="border-b border-line bg-surface"
-    >
+    <nav aria-label="Cash and carry" className="border-b border-line bg-surface">
       <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-6 py-2">
-        {UNIVERSE_LINKS.map((link) => {
+        {CASH_AND_CARRY_LINKS.map((link) => {
           const exact = "exact" in link && link.exact;
           const active = exact
             ? pathname === link.href
