@@ -63,6 +63,12 @@ function OpenPaperTrades({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
+                  label="DTE"
+                  hint="Days until this future expires."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
                   label="Notional"
                   hint="Paper size in USDT. P&L scales with this amount."
                 />
@@ -89,12 +95,6 @@ function OpenPaperTrades({
                 <ColumnHint
                   label="P&L %"
                   hint="Unrealized ÷ notional. All-in percentage of paper size. Not annualized — that is APR on past trades."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="DTE"
-                  hint="Days until this future expires."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -144,6 +144,11 @@ function OpenPaperTrades({
                     </span>
                   </td>
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
+                    {trade.daysToExpiry === null
+                      ? "—"
+                      : trade.daysToExpiry.toFixed(1)}
+                  </td>
+                  <td className="px-4 py-3 tabular-nums text-ink-muted">
                     {formatUsd(trade.notionalUsdt)}
                   </td>
                   <td
@@ -167,11 +172,6 @@ function OpenPaperTrades({
                     className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}
                   >
                     {formatPct(pnlPct)}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-ink-muted">
-                    {trade.daysToExpiry === null
-                      ? "—"
-                      : trade.daysToExpiry.toFixed(1)}
                   </td>
                   <td className="px-4 py-3">
                     <ClosePaperButton trade={trade} />
