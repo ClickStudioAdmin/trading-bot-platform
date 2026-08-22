@@ -58,13 +58,20 @@ export function defaultPaperConfig(): PaperEngineConfig {
   };
 }
 
+export function blockedRuleDeletes(
+  staleIds: number[],
+  inUseIds: number[],
+): number[] {
+  const used = new Set(inUseIds);
+  return staleIds.filter((id) => used.has(id));
+}
+
 export function paperConfigToFormValues(
   config: PaperEngineConfig,
 ): PaperRulesFormValues {
-  const layers = config.layers.length > 0 ? config.layers : [defaultPaperLayer(0)];
   return {
     enabled: config.enabled,
-    layers: layers.map((layer, index) => ({
+    layers: config.layers.map((layer, index) => ({
       key: layer.id !== null ? `id-${layer.id}` : `new-${index}`,
       id: layer.id === null ? "" : String(layer.id),
       sizeType: layer.sizeType,

@@ -18,7 +18,7 @@ export default async function CashAndCarryAutomationsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const { signedIn, config } = await loadPaperRules();
+  const { signedIn, config, inUseRuleIds } = await loadPaperRules();
   const saved = firstSearchValue(params.saved) === "1";
   const error = firstSearchValue(params.error);
 
@@ -39,7 +39,10 @@ export default async function CashAndCarryAutomationsPage({
       ) : null}
       {signedIn ? (
         <div className="mt-6">
-          <PaperRulesForm values={paperConfigToFormValues(config)} />
+          <PaperRulesForm
+            values={paperConfigToFormValues(config)}
+            inUseRuleIds={inUseRuleIds}
+          />
         </div>
       ) : (
         <p className="mt-6 text-sm text-ink-muted">

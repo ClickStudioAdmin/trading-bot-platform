@@ -18,7 +18,7 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Add position"
-          detail="Adds another position. Each position has its own entry conditions, caps, order types, and exits. If several positions match a pair, the engine uses the one with the highest min APR. If min APRs tie, it uses the one that appears first on this page."
+          detail="Adds another position. Each position has its own entry conditions, caps, order types, and exits. If several positions match a pair, the engine uses the one with the highest min APR. If min APRs tie, it uses the one that appears first on this page. Remove a set if no current paper row is using it. Save to apply."
         />
       </dl>
 

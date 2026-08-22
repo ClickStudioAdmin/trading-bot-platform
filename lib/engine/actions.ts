@@ -1,6 +1,10 @@
 "use server";
 
-import { paperLayerToRow, parsePaperRulesForm } from "@/lib/engine/rules";
+import {
+  blockedRuleDeletes,
+  paperLayerToRow,
+  parsePaperRulesForm,
+} from "@/lib/engine/rules";
 import { parseUsableBookShare } from "@/lib/opportunities/capacity";
 import { writeEventLog } from "@/lib/logs/write";
 import { getSessionMember } from "@/lib/auth/session";
@@ -72,6 +76,37 @@ export async function savePaperRules(formData: FormData) {
     .filter((id) => !keepIds.has(id));
 
   if (staleIds.length > 0) {
+    const { data: openRows, error: openError } = await supabase
+      .from("paper_carries")
+      .select("rule_id")
+      .eq("user_id", user.id)
+      .in("status", ["open", "closing"])
+      .in("rule_id", staleIds);
+
+    if (openError) {
+      await writeEventLog({
+        level: "error",
+        scope: "strategy",
+        event: "automations.save_failed",
+        message: openError.message,
+        userId: user.id,
+        strategy: "cash-and-carry",
+      });
+      redirect(`${RULES_PATH}?error=${encodeURIComponent(openError.message)}`);
+    }
+
+    const blocked = blockedRuleDeletes(
+      staleIds,
+      (openRows ?? [])
+        .map((row) => Number((row as { rule_id: unknown }).rule_id))
+        .filter((id) => Number.isFinite(id)),
+    );
+    if (blocked.length > 0) {
+      redirect(
+        `${RULES_PATH}?error=${encodeURIComponent("Cannot remove a rule set that has an open position.")}`,
+      );
+    }
+
     const { error } = await supabase
       .from("paper_rules")
       .delete()

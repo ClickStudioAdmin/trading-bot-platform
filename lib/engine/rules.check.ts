@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  blockedRuleDeletes,
   defaultPaperConfig,
   paperConfigToFormValues,
   paperLayerToRow,
@@ -77,6 +78,10 @@ const missingSize = new FormData();
 missingSize.set("ruleCount", "1");
 missingSize.set("r0_sizeType", "fixed");
 assert.equal(parsePaperRulesForm(missingSize).ok, false);
+
+assert.deepEqual(blockedRuleDeletes([1, 2, 3], [2, 9]), [2]);
+assert.deepEqual(blockedRuleDeletes([4], []), []);
+assert.equal(paperConfigToFormValues({ enabled: false, layers: [] }).layers.length, 0);
 
 assert.equal(defaultPaperConfig().layers.length, 1);
 

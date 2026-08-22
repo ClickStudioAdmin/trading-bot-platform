@@ -10,9 +10,16 @@ import {
 } from "@/lib/engine/rules";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 
-export function PaperRulesForm({ values }: { values: PaperRulesFormValues }) {
+export function PaperRulesForm({
+  values,
+  inUseRuleIds,
+}: {
+  values: PaperRulesFormValues;
+  inUseRuleIds: number[];
+}) {
   const [enabled, setEnabled] = useState(values.enabled);
   const [layers, setLayers] = useState(values.layers);
+  const inUse = new Set(inUseRuleIds);
 
   return (
     <form action={savePaperRules} className="space-y-4">
@@ -35,17 +42,31 @@ export function PaperRulesForm({ values }: { values: PaperRulesFormValues }) {
         </p>
       </section>
 
-      {layers.map((layer, index) => (
-        <RuleRow
-          key={layer.key}
-          index={index}
-          layer={layer}
-          canRemove={layers.length > 1}
-          onRemove={() =>
-            setLayers((current) => current.filter((item) => item.key !== layer.key))
-          }
-        />
-      ))}
+      {layers.length === 0 ? (
+        <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
+          No rule sets. Add a position to start, or leave this empty if you
+          only trade by hand.
+        </p>
+      ) : (
+        layers.map((layer, index) => {
+          const id = Number(layer.id);
+          const used = Number.isFinite(id) && inUse.has(id);
+          return (
+            <RuleRow
+              key={layer.key}
+              index={index}
+              layer={layer}
+              canRemove={!used}
+              inUse={used}
+              onRemove={() =>
+                setLayers((current) =>
+                  current.filter((item) => item.key !== layer.key),
+                )
+              }
+            />
+          );
+        })
+      )}
 
       <div className="flex flex-wrap gap-2">
         <button
@@ -83,11 +104,13 @@ function RuleRow({
   index,
   layer,
   canRemove,
+  inUse,
   onRemove,
 }: {
   index: number;
   layer: PaperLayerFormValues;
   canRemove: boolean;
+  inUse: boolean;
   onRemove: () => void;
 }) {
   const prefix = `r${index}_`;
@@ -99,7 +122,11 @@ function RuleRow({
         <h2 className="text-sm font-semibold tracking-tight">
           Position {index + 1}
         </h2>
-        {canRemove ? (
+        {inUse ? (
+          <span className="text-xs text-warning">
+            In use by an open position
+          </span>
+        ) : canRemove ? (
           <button
             type="button"
             onClick={onRemove}
