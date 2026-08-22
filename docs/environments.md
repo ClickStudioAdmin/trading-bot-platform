@@ -111,6 +111,21 @@ On **both** TBP projects:
 
 The service role is in the Supabase dashboard: **Project Settings → API → `service_role`**. Copy the **development** project’s key into Vercel **Development**, and the **production** project’s key into Vercel **Production**.
 
+## Paper engine tick (Phase 4)
+
+The tick is `POST /api/engine/tick` on the Sydney Vercel function, guarded by `CRON_SECRET`. GitHub Actions calls it every 5 minutes. Do not use Vercel Cron (Hobby is daily and Production-only).
+
+| Variable | Where | Value |
+| --- | --- | --- |
+| `CRON_SECRET` | Vercel Preview (`develop`) and GitHub Environment `development` | Same random secret. TBP-dev only |
+| `CRON_SECRET` | Vercel Production (`main`) and GitHub Environment `production` | A **different** random secret. TBP-prod only |
+| `ENGINE_TICK_URL` | GitHub Environment `development` | The stable `develop` Preview URL + `/api/engine/tick` |
+| `ENGINE_TICK_URL` | GitHub Environment `production` | The Production URL + `/api/engine/tick` |
+
+The function already uses `SUPABASE_SERVICE_ROLE_KEY` on that Vercel environment. Never put the service role or `CRON_SECRET` in `NEXT_PUBLIC_*`. Never put production secrets on Preview or the `development` GitHub Environment.
+
+Fly.io is a later runner for the same `runPaperEngineTick` function. Do not add Fly apps this phase.
+
 ## Merge to production
 
 Open a pull request from `develop` into `main`. After merge:

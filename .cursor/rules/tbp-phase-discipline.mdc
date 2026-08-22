@@ -7,16 +7,16 @@ alwaysApply: true
 
 Read [docs/master-spec.md](docs/master-spec.md) and the current phase doc before changing code.
 
-Work only on the current phase. The current phase is Phase 3. See [docs/phase-3.md](docs/phase-3.md). Phase 1 and Phase 2 are complete.
+Work only on the current phase. The current phase is Phase 4. See [docs/phase-4.md](docs/phase-4.md). Phase 1, Phase 2, and Phase 3 are complete.
 
 Feature work happens on `develop`. Merge to `main` only when the user is ready for production.
 
-Phase 3 is a paper cash-and-carry blotter. Do not place exchange orders. Do not add encrypted exchange keys, auto-trading, or a Fly.io engine. Do not call Bybit from the browser.
+Phase 4 is automated **paper** cash-and-carry. Do not place exchange orders. Do not add encrypted exchange keys or a Fly.io worker. Do not call Bybit from the browser.
 
 Do not create later-phase tables or speculative architecture.
 
 Keep dependencies minimal. Prefer the simplest solution that satisfies the current phase.
 
-Work one micro-step at a time as listed in [docs/phase-3.md](docs/phase-3.md). Stop at the end of each micro-step and wait for instruction.
+Work one micro-step at a time as listed in [docs/phase-4.md](docs/phase-4.md). Stop at the end of each micro-step and wait for instruction.
 
 Stop at the end of the phase. After acceptance criteria pass, report results and wait for instruction.

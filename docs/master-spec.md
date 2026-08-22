@@ -6,13 +6,13 @@ Trading Bot Platform is a multi-tenant desk: each trader connects their own exch
 
 GitHub. Hosted Supabase and Vercel are not.
 
-## Runtime split (later phases)
+## Runtime split
 
-- `apps/web` (or repo-root Next.js in early phases) on Vercel — UI only
-- Always-on engine (Fly.io or equivalent) — websockets, scan, orders
-- Supabase — auth, Postgres, Realtime, encrypted keys
+- Repo-root Next.js on Vercel — UI and the Phase 4 paper tick HTTP door
+- Paper engine tick lives in `lib/engine` and is host-agnostic. Phase 4 is scheduled by GitHub Actions against the Sydney Vercel function. Fly.io can call the same function later
+- Supabase — auth, Postgres
 
-The web app never places exchange orders from a Vercel invocation.
+The web app never places exchange orders from a Vercel invocation. Paper `paper_carries` writes are not exchange orders.
 
 ## Environments
 
@@ -24,7 +24,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/theme`. Wri
 
 ## Current phase
 
-Phase 3 — Paper blotter. See [phase-3.md](phase-3.md). Phase 1 and Phase 2 are complete.
+Phase 4 — Automated paper engine. See [phase-4.md](phase-4.md). Phase 1, Phase 2, and Phase 3 are complete.
 
 ## Multi-tenancy (later)
 

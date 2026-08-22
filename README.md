@@ -6,11 +6,11 @@ GitHub is the source of truth. The hosted database and Vercel deployment are not
 
 ## Current phase
 
-**Phase 3 — Paper blotter**
+**Phase 4 — Automated paper engine**
 
-See [docs/phase-3.md](docs/phase-3.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
+See [docs/phase-4.md](docs/phase-4.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** / Preview environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
 
-Phase 3 records paper cash-and-carry trades. No exchange orders.
+Phase 4 auto-opens and auto-closes paper cash-and-carry rows from saved rules. No exchange orders. No Fly.io.
 
 ## Technology stack
 

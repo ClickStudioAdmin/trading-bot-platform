@@ -6,13 +6,11 @@ Record paper cash-and-carry trades and show them on the strategy overview. No ex
 
 A paper carry is long USDT spot and short the matching dated future, sized in USDT notional. P&L is the change in basis, not the coin’s direction. A desk can hold more than one open paper carry on the same pair.
 
-## Current micro-step
+## Status
 
-**6 of 7 — Overview blotter** (complete)
+Complete. Manual paper blotter is in use. Push any remaining Phase 3 commits on `develop` if they are not on GitHub yet.
 
-Open carries mark from the live scan. Close writes realized P&L. `/strategies/cash-and-carry` current trades, past trades, and desk stats use paper rows.
-
-Waiting on **7 — Push `develop`**.
+Phase 4 (automated paper engine) is current. See [phase-4.md](phase-4.md).
 
 ## Micro-steps
 
