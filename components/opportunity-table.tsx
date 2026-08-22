@@ -92,7 +92,7 @@ export function OpportunityTable({
             </th>
             <th className="px-4 py-3 font-medium">
               <ColumnHint
-                label="Exec. basis"
+                label="Basis"
                 hint="(future bid − spot ask) / spot ask. Touching the book, not mid or last."
               />
             </th>
@@ -116,8 +116,8 @@ export function OpportunityTable({
             </th>
             <th className="px-4 py-3 font-medium">
               <ColumnHint
-                label="Book value"
-                hint="25% of the top 5 book levels that stay inside 5 bp of impact. How much size the books can take, not how much you will trade."
+                label="Usable book value"
+                hint="Your usable book share (Settings) of the top 5 book levels inside 5 bp of impact. How much size the books can take, not the full five-level book."
               />
             </th>
             {paper ? (
@@ -125,7 +125,7 @@ export function OpportunityTable({
                 <th className="px-4 py-3 font-medium">
                   <ColumnHint
                     label="Size USDT"
-                    hint="Paper notional to open. Cannot exceed book value. Each Open creates a new paper row."
+                    hint="Paper notional to open. Cannot exceed usable book value. Each Open creates a new paper row."
                   />
                 </th>
                 <th className="px-4 py-3 font-medium">

@@ -54,15 +54,15 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Order Type"
-          detail="Fixed opens one Order size on a pair you do not already hold. Dynamic (scale in): each tick may add one clip on a matching pair, sized to current book value (or leftover room under Max Position Size), until the cap is met. Book value is 25% of the top 5 book levels inside 5 bp of impact."
+          detail="Fixed opens one Order size on a pair you do not already hold. Dynamic (scale in): each tick may add one clip on a matching pair, sized to current usable book value (or leftover room under Max Position Size), until the cap is met. Usable book value is your Settings share of the top 5 book levels inside 5 bp of impact."
         />
         <GuideItem
           term="Order size (USDT)"
           detail="Fixed only. Paper size of the single open this position creates on a pair."
         />
         <GuideItem
-          term="Min book value"
-          detail="Fixed only. The pair’s book value must be at least this before that Order size is used."
+          term="Min usable book value"
+          detail="Fixed only. The pair’s usable book value must be at least this before that Order size is used."
         />
         <GuideItem
           term="Min Order Size"
@@ -95,7 +95,7 @@ export function PaperRulesGuide() {
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Order Type"
-          detail="Fixed (entire position) closes the whole paper row when an exit fires. Dynamic (scale out) clips out over ticks: each tick closes up to the current book value (and not below Min Order Size, unless this is the last leftover). Oldest rows on a pair go first. It keeps clipping until the position is flat."
+          detail="Fixed (entire position) closes the whole paper row when an exit fires. Dynamic (scale out) clips out over ticks: each tick closes up to the current usable book value (and not below Min Order Size, unless this is the last leftover). Oldest rows on a pair go first. It keeps clipping until the position is flat."
         />
       </dl>
 
@@ -128,7 +128,7 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="No live mark"
-          detail="If the pair is missing from the current scan, the engine will not auto-close it. There is no honest exit price or book value."
+          detail="If the pair is missing from the current scan, the engine will not auto-close it. There is no honest exit price or usable book value."
         />
         <GuideItem
           term="Manual trades"

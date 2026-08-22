@@ -15,28 +15,24 @@ export function OpportunityFiltersForm({
           id="minApr"
           name="minApr"
           label="Min net APR %"
-          placeholder="10"
           defaultValue={values.minApr}
         />
         <Field
           id="minDte"
           name="minDte"
           label="Min DTE"
-          placeholder="7"
           defaultValue={values.minDte}
         />
         <Field
           id="maxDte"
           name="maxDte"
           label="Max DTE"
-          placeholder="90"
           defaultValue={values.maxDte}
         />
         <Field
           id="minCapacity"
           name="minCapacity"
-          label="Min book value"
-          placeholder="5000"
+          label="Min usable book value"
           defaultValue={values.minCapacity}
         />
       </div>
@@ -62,13 +58,11 @@ function Field({
   id,
   name,
   label,
-  placeholder,
   defaultValue,
 }: {
   id: string;
   name: string;
   label: string;
-  placeholder: string;
   defaultValue: string;
 }) {
   return (
@@ -80,9 +74,8 @@ function Field({
         type="number"
         step="any"
         inputMode="decimal"
-        placeholder={placeholder}
         defaultValue={defaultValue}
-        className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
+        className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
       />
     </label>
   );

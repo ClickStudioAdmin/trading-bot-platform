@@ -3,6 +3,8 @@ import Link from "next/link";
 import { OpportunityTable } from "@/components/opportunity-table";
 import { OpenPaperTrades } from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
+import { loadUsableBookShare } from "@/lib/engine/settings";
+import { applyUsableBookShare } from "@/lib/opportunities/capacity";
 import { persistOpportunities } from "@/lib/opportunities/persist";
 import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -26,8 +28,9 @@ export default async function CashAndCarryPage({
   let error: string | null = null;
 
   try {
-    rows = await scanCarryOpportunities();
-    await persistOpportunities(rows);
+    const raw = await scanCarryOpportunities();
+    await persistOpportunities(raw);
+    rows = applyUsableBookShare(raw, await loadUsableBookShare());
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Scan failed";
   }
@@ -82,7 +85,7 @@ export default async function CashAndCarryPage({
             label="Positive / negative basis"
             value={`${positive} / ${negative}`}
           />
-          <StatCard label="Book value" value={formatUsd(capacity)} />
+          <StatCard label="Usable book value" value={formatUsd(capacity)} />
         </div>
       </section>
 

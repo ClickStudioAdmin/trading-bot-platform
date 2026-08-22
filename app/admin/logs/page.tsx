@@ -60,8 +60,7 @@ export default async function AdminLogsPage({
             <input
               name="event"
               defaultValue={filters.event}
-              placeholder="trade.opened"
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
+              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
             />
           </label>
         </div>

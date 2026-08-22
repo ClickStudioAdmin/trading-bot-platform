@@ -90,7 +90,7 @@ export function formatEntryTriggers(automation: PaperCarryAutomation): string[] 
     }
   } else if (automation.entryMinCapacityUsdt !== null) {
     lines.push(
-      `Min book value $${Math.round(automation.entryMinCapacityUsdt).toLocaleString("en-US")}`,
+      `Min usable book value $${Math.round(automation.entryMinCapacityUsdt).toLocaleString("en-US")}`,
     );
   }
   return lines;

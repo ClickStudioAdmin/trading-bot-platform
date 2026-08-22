@@ -9,6 +9,8 @@ import {
   filtersAreActive,
   parseOpportunityFilters,
 } from "@/lib/opportunities/filter";
+import { loadUsableBookShare } from "@/lib/engine/settings";
+import { applyUsableBookShare } from "@/lib/opportunities/capacity";
 import { persistOpportunities } from "@/lib/opportunities/persist";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getOpportunityPaperProps } from "@/lib/paper/list";
@@ -34,8 +36,9 @@ export default async function CashAndCarryOpportunitiesPage({
   let error: string | null = null;
 
   try {
-    rows = await scanCarryOpportunities();
-    await persistOpportunities(rows);
+    const raw = await scanCarryOpportunities();
+    await persistOpportunities(raw);
+    rows = applyUsableBookShare(raw, await loadUsableBookShare());
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Scan failed";
   }

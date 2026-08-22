@@ -1,6 +1,7 @@
 "use server";
 
 import { paperLayerToRow, parsePaperRulesForm } from "@/lib/engine/rules";
+import { parseUsableBookShare } from "@/lib/opportunities/capacity";
 import { writeEventLog } from "@/lib/logs/write";
 import { getSessionMember } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -137,4 +138,54 @@ export async function savePaperRules(formData: FormData) {
   });
 
   redirect(`${RULES_PATH}?saved=1`);
+}
+
+const SETTINGS_PATH = "/strategies/cash-and-carry/settings";
+
+export async function savePaperSettings(formData: FormData) {
+  const user = await getSessionMember();
+  if (!user) {
+    redirect("/sign-in");
+  }
+
+  const parsed = parseUsableBookShare(formData.get("usableBookShare"));
+  if (typeof parsed !== "number") {
+    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(parsed.error)}`);
+  }
+
+  const supabase = createServiceClient();
+  if (!supabase) {
+    redirect(
+      `${SETTINGS_PATH}?error=${encodeURIComponent("Auth is not configured.")}`,
+    );
+  }
+
+  const { error } = await supabase.from("paper_engine_settings").upsert({
+    user_id: user.id,
+    usable_book_share: parsed,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    await writeEventLog({
+      level: "error",
+      scope: "strategy",
+      event: "settings.save_failed",
+      message: error.message,
+      userId: user.id,
+      strategy: "cash-and-carry",
+    });
+    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await writeEventLog({
+    scope: "strategy",
+    event: "settings.saved",
+    message: "Saved strategy settings",
+    userId: user.id,
+    strategy: "cash-and-carry",
+    data: { usableBookShare: parsed },
+  });
+
+  redirect(`${SETTINGS_PATH}?saved=1`);
 }

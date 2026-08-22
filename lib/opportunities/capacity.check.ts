@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
-import { pairCapacityUsdt, walkNotional } from "./capacity";
+import {
+  applyUsableBookShare,
+  pairCapacityUsdt,
+  parseUsableBookShare,
+  usableBookShareToInput,
+  usableBookUsdt,
+  walkNotional,
+} from "./capacity";
 
 const asks = [
   { price: 100, size: 2 },
@@ -19,7 +26,20 @@ assert.equal(walkNotional(bids, "sell", 0.0005, 5), 102 * 1 + 101.96 * 2);
 
 assert.equal(
   pairCapacityUsdt(asks, bids),
-  Math.min(100 * 2 + 100.04 * 3, 102 * 1 + 101.96 * 2) * 0.25,
+  Math.min(100 * 2 + 100.04 * 3, 102 * 1 + 101.96 * 2),
+);
+assert.equal(usableBookUsdt(10_000, 0.25), 2_500);
+assert.equal(usableBookUsdt(10_000, 1), 10_000);
+assert.deepEqual(
+  applyUsableBookShare([{ capacityUsdt: 8_000 }], 0.25),
+  [{ capacityUsdt: 2_000 }],
+);
+assert.equal(parseUsableBookShare("25"), 0.25);
+assert.equal(parseUsableBookShare(""), 0.25);
+assert.equal(usableBookShareToInput(0.25), "25");
+assert.equal(
+  (parseUsableBookShare("0") as { error: string }).error.includes("1 and 100"),
+  true,
 );
 
 assert.equal(walkNotional([], "buy", 0.0005, 5), 0);

@@ -4,6 +4,8 @@ import { writeEventLog } from "@/lib/logs/write";
 import { EMPTY_AUTOMATION, parseCarryExitForm } from "@/lib/paper/automation";
 import { closePaperCarry as computeClose } from "@/lib/paper/math";
 import { paperOrderInsertRow } from "@/lib/paper/orders";
+import { loadUsableBookShare } from "@/lib/engine/settings";
+import { usableBookUsdt } from "@/lib/opportunities/capacity";
 import {
   notionalFitsBook,
   pairKey,
@@ -55,11 +57,16 @@ export async function openPaperCarry(formData: FormData) {
     );
   }
 
-  if (!notionalFitsBook(notionalUsdt, match.capacityUsdt)) {
+  const usableCapacityUsdt = usableBookUsdt(
+    match.capacityUsdt,
+    await loadUsableBookShare(),
+  );
+  if (!notionalFitsBook(notionalUsdt, usableCapacityUsdt)) {
     redirect(
-      `${next}?paperError=${encodeURIComponent("Size cannot exceed book value.")}`,
+      `${next}?paperError=${encodeURIComponent("Size cannot exceed usable book value.")}`,
     );
   }
+  match = { ...match, capacityUsdt: usableCapacityUsdt };
 
   const { data, error } = await supabase
     .from("paper_carries")

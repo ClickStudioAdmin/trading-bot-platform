@@ -10,7 +10,7 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
 **4 of 7 — Rules UI** (complete)
 
-`/strategies/cash-and-carry/automations` saves the user’s automation layers. `/strategies/cash-and-carry/positions` is the open paper table. `/strategies/cash-and-carry/performance` is past positions and desk statistics. `/strategies/cash-and-carry/settings` is a placeholder. Waiting on **5 — Engine tick**.
+`/strategies/cash-and-carry/automations` saves the user’s automation layers. `/strategies/cash-and-carry/positions` is the open paper table. `/strategies/cash-and-carry/performance` is past positions and desk statistics. `/strategies/cash-and-carry/settings` saves usable book share. Waiting on **5 — Engine tick**.
 
 ## Micro-steps
 
@@ -36,11 +36,11 @@ Vercel Cron is not the scheduler. Hobby cron is once per day and Production-only
 
 ## Rules (per user)
 
-`paper_engine_settings` holds the enable switch (one row per user). `paper_rules` holds stacked layers (many rows per user). RLS own-row. Layers can be deleted.
+`paper_engine_settings` holds the enable switch and usable book share (one row per user). `paper_rules` holds stacked layers (many rows per user). RLS own-row. Layers can be deleted.
 
-Each layer has its own entry and exit order types, entry filters, open caps, and exits. **Fixed entry** opens Order size once on a pair you do not already hold, and can require Min book value. **Dynamic entry** adds one clip per pair per tick, sized to current book value or leftover room under Max Position Size, until that cap (and Max opens) is met. Skip a clip below Min Order Size. For a pair, the engine uses the matching layer with the **highest min APR**.
+Each layer has its own entry and exit order types, entry filters, open caps, and exits. **Fixed entry** opens Order size once on a pair you do not already hold, and can require Min usable book value. **Dynamic entry** adds one clip per pair per tick, sized to current usable book value or leftover room under Max Position Size, until that cap (and Max opens) is met. Skip a clip below Min Order Size. For a pair, the engine uses the matching layer with the **highest min APR**. Usable book value is the user’s Settings share of the top 5 book levels inside 5 bp of impact. Default share is 25%. The scan stores the raw in-range book; the share is applied per user.
 
-**Exit (first match wins, on that layer):** DTE ≤ `close_max_dte`; mark net APR < `close_min_net_apr`; P&L % ≥ `take_profit_pct`; P&L % ≤ `stop_loss_pct`. P&L % is all-in P&L ÷ entry notional (10% on $10,000 is $1,000). **Fixed exit** closes the whole row. **Dynamic exit** closes up to current book value per tick until the row is flat.
+**Exit (first match wins, on that layer):** DTE ≤ `close_max_dte`; mark net APR < `close_min_net_apr`; P&L % ≥ `take_profit_pct`; P&L % ≤ `stop_loss_pct`. P&L % is all-in P&L ÷ entry notional (10% on $10,000 is $1,000). **Fixed exit** closes the whole row. **Dynamic exit** closes up to current usable book value per tick until the row is flat.
 
 **Engine safety:** Fixed entry skips a pair you already hold. Dynamic entry may add clips on a held pair. Rank by net APR. Caps are per layer. If `enabled` is false, the engine neither opens nor closes. Manual opens have no `rule_id` and are not auto-closed.
 
@@ -56,7 +56,7 @@ Expand a current or past position to see its paper orders. Each order stores the
 
 `event_logs` records system, strategy, and trade events. Writes are service-role only via `writeEventLog`. Manual paper open/close and automation saves are logged. Page scans are not.
 
-`/admin` is for `click.studio.admin@gmail.com` and members with role `admin`. Logs and members are live. Settings is a placeholder.
+`/admin` is for `click.studio.admin@gmail.com` and members with role `admin`. Logs and members are live. Admin settings is a placeholder.
 
 ## Out of scope
 

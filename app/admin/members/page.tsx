@@ -69,8 +69,7 @@ export default async function AdminMembersPage({
             <input
               name="q"
               defaultValue={query.q}
-              placeholder="Name or email"
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
+              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
             />
           </label>
           <label className="block text-xs text-ink-muted">
