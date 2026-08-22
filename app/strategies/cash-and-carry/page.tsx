@@ -5,7 +5,11 @@ import { OpenPaperTrades } from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import { applyUsableBookShare } from "@/lib/opportunities/capacity";
-import { persistOpportunities } from "@/lib/opportunities/persist";
+import { LastScan } from "@/components/last-scan";
+import {
+  loadLatestScannedAt,
+  persistOpportunities,
+} from "@/lib/opportunities/persist";
 import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getOpportunityPaperProps, loadPaperDesk } from "@/lib/paper/list";
@@ -26,13 +30,16 @@ export default async function CashAndCarryPage({
   const paper = await getOpportunityPaperProps("/strategies/cash-and-carry");
   let rows: ScannedOpportunity[] = [];
   let error: string | null = null;
+  let scannedAtMs: number | null = null;
 
   try {
     const raw = await scanCarryOpportunities();
+    scannedAtMs = Date.now();
     await persistOpportunities(raw);
     rows = applyUsableBookShare(raw, await loadUsableBookShare());
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Scan failed";
+    scannedAtMs = await loadLatestScannedAt();
   }
 
   const desk = await loadPaperDesk(rows);
@@ -48,10 +55,6 @@ export default async function CashAndCarryPage({
 
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-6 pt-6 pb-8">
-      <p className="text-sm text-ink-muted">
-        Top opportunities are a live scan. Current Positions are your paper
-        desk. Open and Close are paper only — no Bybit order.
-      </p>
       <PaperFlash
         opened={firstSearchValue(params.paper) === "opened"}
         closed={firstSearchValue(params.paper) === "closed"}
@@ -100,12 +103,15 @@ export default async function CashAndCarryPage({
               Best five by net APR. Green is a premium; red is a discount.
             </p>
           </div>
-          <Link
-            href="/strategies/cash-and-carry/opportunities"
-            className="text-sm text-accent hover:text-accent-strong"
-          >
-            All opportunities
-          </Link>
+          <div className="shrink-0 text-right">
+            <LastScan atMs={scannedAtMs} />
+            <Link
+              href="/strategies/cash-and-carry/opportunities"
+              className="mt-1 inline-block text-sm text-accent hover:text-accent-strong"
+            >
+              All opportunities
+            </Link>
+          </div>
         </div>
         <OpportunityTable rows={topFive} paper={paper} />
       </section>

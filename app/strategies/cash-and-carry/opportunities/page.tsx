@@ -11,7 +11,11 @@ import {
 } from "@/lib/opportunities/filter";
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import { applyUsableBookShare } from "@/lib/opportunities/capacity";
-import { persistOpportunities } from "@/lib/opportunities/persist";
+import { LastScan } from "@/components/last-scan";
+import {
+  loadLatestScannedAt,
+  persistOpportunities,
+} from "@/lib/opportunities/persist";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getOpportunityPaperProps } from "@/lib/paper/list";
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
@@ -34,13 +38,16 @@ export default async function CashAndCarryOpportunitiesPage({
   );
   let rows: ScannedOpportunity[] = [];
   let error: string | null = null;
+  let scannedAtMs: number | null = null;
 
   try {
     const raw = await scanCarryOpportunities();
+    scannedAtMs = Date.now();
     await persistOpportunities(raw);
     rows = applyUsableBookShare(raw, await loadUsableBookShare());
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Scan failed";
+    scannedAtMs = await loadLatestScannedAt();
   }
 
   const visible = applyOpportunityFilters(rows, filters);
@@ -48,12 +55,10 @@ export default async function CashAndCarryOpportunitiesPage({
 
   return (
     <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Opportunities" />
-      <p className="-mt-2 text-sm text-ink-muted">
-        Full book. Green basis and APR are a premium (enter if rules allow).
-        Red is a discount or loss of edge. Open is paper only — no Bybit
-        order.
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <PageHeading as="h2" title="Opportunities" />
+        <LastScan atMs={scannedAtMs} />
+      </div>
       <PaperFlash
         opened={firstSearchValue(params.paper) === "opened"}
         error={firstSearchValue(params.paperError)}

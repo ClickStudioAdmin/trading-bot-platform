@@ -43,3 +43,24 @@ export async function persistOpportunities(
 
   return { status: "saved", count: payload.length };
 }
+
+export async function loadLatestScannedAt(): Promise<number | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("opportunities")
+    .select("scanned_at")
+    .order("scanned_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data?.scanned_at) {
+    return null;
+  }
+
+  const ms = new Date(String(data.scanned_at)).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}

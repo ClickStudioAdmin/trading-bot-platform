@@ -34,11 +34,6 @@ export default async function CashAndCarryPositionsPage({
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Current Positions" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Open paper carries. Type is Manual or Auto. Close flattens at the
-        live scan. Unwind (manual) clips to usable book and stays Closing
-        until flat. Paper only — no Bybit order.
-      </p>
       {error ? (
         <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}

@@ -25,10 +25,6 @@ export default async function CashAndCarryAutomationsPage({
   return (
     <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Automations" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Stack entry layers by min APR and size. The engine uses the highest
-        matching layer. Paper only — no Bybit order.
-      </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}

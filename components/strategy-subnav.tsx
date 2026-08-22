@@ -7,22 +7,43 @@ import {
   CASH_AND_CARRY_SECONDARY_LINKS,
 } from "@/lib/site-links";
 
-export function StrategySubnav() {
+export function StrategySubnav({
+  automationsRunning = false,
+}: {
+  automationsRunning?: boolean;
+}) {
   const pathname = usePathname();
 
   return (
     <div className="mx-auto max-w-6xl px-6 pt-8">
-      <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-        <Link href="/strategies" className="hover:text-accent-strong">
-          Strategies
-        </Link>
-      </p>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-        Cash and carry
-      </h1>
-      <p className="mt-1 text-sm text-ink-muted">
-        Buy the USDT spot, sell the dated future.
-      </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
+            <Link href="/strategies" className="hover:text-accent-strong">
+              Strategies
+            </Link>
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+            Cash and carry
+          </h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            Buy the USDT spot, sell the dated future.
+          </p>
+        </div>
+        {automationsRunning ? (
+          <Link
+            href="/strategies/cash-and-carry/automations"
+            className="mt-8 flex items-center gap-2 text-sm text-success"
+            title="Automations running"
+          >
+            <span className="relative flex size-2.5" aria-hidden>
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60" />
+              <span className="relative inline-flex size-2.5 rounded-full bg-success" />
+            </span>
+            Automations
+          </Link>
+        ) : null}
+      </div>
       <nav
         aria-label="Cash and carry"
         className="mt-5 flex items-end justify-between gap-4 border-b border-line"

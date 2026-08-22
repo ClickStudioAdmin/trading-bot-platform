@@ -5,6 +5,13 @@ export function formatPct(value: number | null): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+export function formatScanAt(ms: number | null): string {
+  if (ms === null || !Number.isFinite(ms)) {
+    return "—";
+  }
+  return `${new Date(ms).toISOString().replace("T", " ").slice(0, 16)} UTC`;
+}
+
 export function formatUsd(value: number): string {
   if (value <= 0) {
     return "—";
