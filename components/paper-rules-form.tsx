@@ -196,13 +196,13 @@ function RuleRow({
         <FieldGroup title="Triggers">
           <Field
             name={`${prefix}closeMaxDte`}
-            label="Close DTE ≤"
+            label="DTE ≤"
             placeholder="3"
             defaultValue={layer.closeMaxDte}
           />
           <Field
             name={`${prefix}closeMinApr`}
-            label="Close APR % below"
+            label="APR % below"
             placeholder="5"
             defaultValue={layer.closeMinApr}
           />

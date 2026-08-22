@@ -124,13 +124,13 @@ export function PaperAutomationTrigger({
                   />
                   <ExitField
                     name="closeMaxDte"
-                    label="Close DTE ≤"
+                    label="DTE ≤"
                     defaultValue={form.closeMaxDte}
                     placeholder="3"
                   />
                   <ExitField
                     name="closeMinApr"
-                    label="Close APR % below"
+                    label="APR % below"
                     defaultValue={form.closeMinApr}
                     placeholder="5"
                   />

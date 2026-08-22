@@ -79,11 +79,11 @@ export function PaperRulesGuide() {
       </p>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
-          term="Close DTE ≤"
+          term="DTE ≤"
           detail="Close when days to expiry fall to this number or below. Use this to flatten before delivery."
         />
         <GuideItem
-          term="Close APR % below"
+          term="APR % below"
           detail="Close when the live mark net APR is below this. That is the book’s current net APR, not your P&L %. Use it when the remaining edge has gone."
         />
       </dl>

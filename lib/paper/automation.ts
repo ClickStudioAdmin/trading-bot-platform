@@ -95,11 +95,11 @@ export function formatEntryTriggers(automation: PaperCarryAutomation): string[] 
 export function formatExitTriggers(automation: PaperCarryAutomation): string[] {
   const lines: string[] = [];
   if (automation.closeMaxDte !== null) {
-    lines.push(`Close DTE ≤ ${automation.closeMaxDte}`);
+    lines.push(`DTE ≤ ${automation.closeMaxDte}`);
   }
   const closeApr = formatPctPoints(automation.closeMinNetApr);
   if (closeApr) {
-    lines.push(`Close APR below ${closeApr}`);
+    lines.push(`APR below ${closeApr}`);
   }
   const takeProfit = formatPctPoints(automation.takeProfitPct);
   if (takeProfit) {

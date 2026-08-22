@@ -36,8 +36,8 @@ assert.deepEqual(formatEntryTriggers(automation), [
   "Min book value $5,000",
 ]);
 assert.deepEqual(formatExitTriggers(automation), [
-  "Close DTE ≤ 3",
-  "Close APR below 5%",
+  "DTE ≤ 3",
+  "APR below 5%",
   "Take profit 1%",
   "Stop loss 2%",
 ]);
