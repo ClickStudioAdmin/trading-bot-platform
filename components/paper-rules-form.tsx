@@ -153,7 +153,7 @@ function RuleRow({
               }
               className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
             >
-              <option value="dynamic">Dynamic</option>
+              <option value="dynamic">Dynamic (scale in)</option>
               <option value="fixed">Fixed</option>
             </select>
           </label>
@@ -210,8 +210,8 @@ function RuleRow({
               }
               className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
             >
-              <option value="dynamic">Dynamic</option>
-              <option value="fixed">Fixed</option>
+              <option value="dynamic">Dynamic (scale out)</option>
+              <option value="fixed">Fixed (entire position)</option>
             </select>
           </label>
         </FieldGroup>

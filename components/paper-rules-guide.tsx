@@ -54,7 +54,7 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Order Type"
-          detail="Fixed opens one Order size on a pair you do not already hold. Dynamic scales in: each tick may add one clip on a matching pair, sized to current book value (or leftover room under Max Position Size), until the cap is met. Book value is 25% of the top 5 book levels inside 5 bp of impact."
+          detail="Fixed opens one Order size on a pair you do not already hold. Dynamic (scale in): each tick may add one clip on a matching pair, sized to current book value (or leftover room under Max Position Size), until the cap is met. Book value is 25% of the top 5 book levels inside 5 bp of impact."
         />
         <GuideItem
           term="Order size (USDT)"
@@ -95,7 +95,7 @@ export function PaperRulesGuide() {
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Order Type"
-          detail="Fixed closes the whole paper row when an exit fires. Dynamic scales out: each tick closes up to the current book value (and not below Min Order Size, unless this is the last leftover). Oldest rows on a pair go first. It keeps clipping until the position is flat."
+          detail="Fixed (entire position) closes the whole paper row when an exit fires. Dynamic (scale out) clips out over ticks: each tick closes up to the current book value (and not below Min Order Size, unless this is the last leftover). Oldest rows on a pair go first. It keeps clipping until the position is flat."
         />
       </dl>
 

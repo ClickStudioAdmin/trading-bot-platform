@@ -37,7 +37,7 @@ assert.deepEqual(formatEntryTriggers(automation), [
   "Min book value $5,000",
 ]);
 assert.deepEqual(formatExitTriggers(automation), [
-  "Order Type Fixed",
+  "Order Type Fixed (entire position)",
   "DTE ≤ 3",
   "APR below 5%",
   "Take profit 1%",
@@ -62,7 +62,7 @@ assert.deepEqual(
     entryMinDte: null,
     entryMaxDte: null,
   }),
-  ["Order Type Dynamic", "Min Order Size $4,000"],
+  ["Order Type Dynamic (scale in)", "Min Order Size $4,000"],
 );
 
 const form = new FormData();

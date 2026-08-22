@@ -72,7 +72,7 @@ export function automationInsertColumns(automation: PaperCarryAutomation) {
 export function formatEntryTriggers(automation: PaperCarryAutomation): string[] {
   const lines: string[] = [];
   if (automation.entrySizeType === "dynamic") {
-    lines.push("Order Type Dynamic");
+    lines.push("Order Type Dynamic (scale in)");
   }
   const minApr = formatPctPoints(automation.entryMinNetApr);
   if (minApr) {
@@ -99,9 +99,9 @@ export function formatEntryTriggers(automation: PaperCarryAutomation): string[] 
 export function formatExitTriggers(automation: PaperCarryAutomation): string[] {
   const lines: string[] = [];
   if (automation.exitSizeType === "dynamic") {
-    lines.push("Order Type Dynamic");
+    lines.push("Order Type Dynamic (scale out)");
   } else if (automation.exitSizeType === "fixed") {
-    lines.push("Order Type Fixed");
+    lines.push("Order Type Fixed (entire position)");
   }
   if (automation.closeMaxDte !== null) {
     lines.push(`DTE ≤ ${automation.closeMaxDte}`);
