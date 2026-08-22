@@ -2,6 +2,7 @@
 
 import { requireAdmin } from "@/lib/admin/access";
 import { emailIsListedAdmin } from "@/lib/admin/emails";
+import { hashPassword } from "@/lib/auth/password";
 import { writeEventLog } from "@/lib/logs/write";
 import { parseMemberForm, parseMemberId } from "@/lib/members/form";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -21,37 +22,22 @@ export async function createMember(formData: FormData) {
     );
   }
 
-  const { data: created, error: authError } = await supabase.auth.admin.createUser({
-    email: parsed.values.email,
-    password: parsed.values.password,
-    email_confirm: true,
-    user_metadata: { name: parsed.values.name },
-  });
-
-  if (authError || !created.user) {
-    redirect(
-      `/admin/members/new?error=${encodeURIComponent(authError?.message ?? "Could not create the sign-in user.")}`,
-    );
-  }
-
+  const userId = crypto.randomUUID();
   const now = new Date().toISOString();
   const { error: insertError } = await supabase.from("members").insert({
-    user_id: created.user.id,
+    user_id: userId,
     email: parsed.values.email,
     name: parsed.values.name,
     role: parsed.values.role,
     status: parsed.values.status,
+    password_hash: hashPassword(parsed.values.password),
     created_at: now,
     updated_at: now,
   });
 
   if (insertError) {
-    await supabase.auth.admin.deleteUser(created.user.id);
     redirect(`/admin/members/new?error=${encodeURIComponent(insertError.message)}`);
   }
-
-  await syncAdminRow(supabase, created.user.id, parsed.values.role);
-  await applyAuthStatus(supabase, created.user.id, parsed.values.status);
 
   await writeEventLog({
     scope: "system",
@@ -59,7 +45,7 @@ export async function createMember(formData: FormData) {
     message: `Created member ${parsed.values.email}`,
     userId: admin.id,
     data: {
-      memberUserId: created.user.id,
+      memberUserId: userId,
       email: parsed.values.email,
       role: parsed.values.role,
       status: parsed.values.status,
@@ -92,7 +78,7 @@ export async function updateMember(formData: FormData) {
 
   const { data: existing, error: loadError } = await supabase
     .from("members")
-    .select("*")
+    .select("id, user_id, email")
     .eq("id", memberId)
     .maybeSingle();
 
@@ -112,37 +98,20 @@ export async function updateMember(formData: FormData) {
     );
   }
 
-  const authPatch: {
-    email: string;
-    user_metadata: { name: string };
-    password?: string;
-  } = {
+  const update: Record<string, unknown> = {
     email: parsed.values.email,
-    user_metadata: { name: parsed.values.name },
+    name: parsed.values.name,
+    role: parsed.values.role,
+    status: parsed.values.status,
+    updated_at: new Date().toISOString(),
   };
   if (parsed.values.password) {
-    authPatch.password = parsed.values.password;
-  }
-
-  const { error: authError } = await supabase.auth.admin.updateUserById(
-    userId,
-    authPatch,
-  );
-  if (authError) {
-    redirect(
-      `/admin/members/${memberId}?error=${encodeURIComponent(authError.message)}`,
-    );
+    update.password_hash = hashPassword(parsed.values.password);
   }
 
   const { error: updateError } = await supabase
     .from("members")
-    .update({
-      email: parsed.values.email,
-      name: parsed.values.name,
-      role: parsed.values.role,
-      status: parsed.values.status,
-      updated_at: new Date().toISOString(),
-    })
+    .update(update)
     .eq("id", memberId);
 
   if (updateError) {
@@ -150,9 +119,6 @@ export async function updateMember(formData: FormData) {
       `/admin/members/${memberId}?error=${encodeURIComponent(updateError.message)}`,
     );
   }
-
-  await syncAdminRow(supabase, userId, parsed.values.role);
-  await applyAuthStatus(supabase, userId, parsed.values.status);
 
   await writeEventLog({
     scope: "system",
@@ -169,26 +135,4 @@ export async function updateMember(formData: FormData) {
   });
 
   redirect("/admin/members?updated=1");
-}
-
-async function syncAdminRow(
-  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
-  userId: string,
-  role: "member" | "admin",
-) {
-  if (role === "admin") {
-    await supabase.from("app_admins").upsert({ user_id: userId });
-    return;
-  }
-  await supabase.from("app_admins").delete().eq("user_id", userId);
-}
-
-async function applyAuthStatus(
-  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
-  userId: string,
-  status: "active" | "disabled",
-) {
-  await supabase.auth.admin.updateUserById(userId, {
-    ban_duration: status === "disabled" ? "876000h" : "none",
-  });
 }

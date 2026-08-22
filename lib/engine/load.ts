@@ -1,17 +1,18 @@
 import { defaultPaperConfig, parsePaperRulesRow } from "@/lib/engine/rules";
 import type { PaperEngineConfig } from "@/lib/engine/decide";
-import { createUserClient, getAuthUser } from "@/lib/supabase/server";
+import { getSessionMember } from "@/lib/auth/session";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 export async function loadPaperRules(): Promise<{
   signedIn: boolean;
   config: PaperEngineConfig;
 }> {
-  const user = await getAuthUser();
+  const user = await getSessionMember();
   if (!user) {
     return { signedIn: false, config: defaultPaperConfig() };
   }
 
-  const supabase = await createUserClient();
+  const supabase = createServiceClient();
   if (!supabase) {
     return { signedIn: true, config: defaultPaperConfig() };
   }

@@ -1,6 +1,5 @@
 import type { EventLogFilters } from "@/lib/logs/filters";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { createUserClient } from "@/lib/supabase/server";
 
 export type { EventLogFilters } from "@/lib/logs/filters";
 export { parseEventLogFilters } from "@/lib/logs/filters";
@@ -21,7 +20,7 @@ export async function listEventLogs(
   filters: EventLogFilters,
   limit = 100,
 ): Promise<EventLogRow[]> {
-  const supabase = createServiceClient() ?? (await createUserClient());
+  const supabase = createServiceClient();
   if (!supabase) {
     return [];
   }

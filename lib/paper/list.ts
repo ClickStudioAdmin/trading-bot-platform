@@ -6,12 +6,13 @@ import {
   type MarkedPaperCarry,
   type PaperCarryRow,
 } from "@/lib/paper/rows";
-import { createUserClient, getAuthUser } from "@/lib/supabase/server";
+import { getSessionMember } from "@/lib/auth/session";
+import { createServiceClient } from "@/lib/supabase/admin";
 
 export async function getOpportunityPaperProps(
   next: OpportunityPaperProps["next"],
 ): Promise<OpportunityPaperProps> {
-  const user = await getAuthUser();
+  const user = await getSessionMember();
   return {
     signedIn: Boolean(user),
     next,
@@ -19,14 +20,16 @@ export async function getOpportunityPaperProps(
 }
 
 export async function listPaperCarries(): Promise<PaperCarryRow[]> {
-  const supabase = await createUserClient();
-  if (!supabase) {
+  const user = await getSessionMember();
+  const supabase = createServiceClient();
+  if (!user || !supabase) {
     return [];
   }
 
   const { data, error } = await supabase
     .from("paper_carries")
     .select("*")
+    .eq("user_id", user.id)
     .order("opened_at", { ascending: false });
 
   if (error || !data) {
@@ -41,7 +44,7 @@ export async function loadPaperDesk(scan: ScannedOpportunity[]): Promise<{
   open: MarkedPaperCarry[];
   closed: PaperCarryRow[];
 }> {
-  const user = await getAuthUser();
+  const user = await getSessionMember();
   if (!user) {
     return { signedIn: false, open: [], closed: [] };
   }

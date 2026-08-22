@@ -21,7 +21,7 @@ export default async function AdminNewMemberPage({
     <main className="mx-auto max-w-6xl px-6 py-8">
       <PageHeading overline="Admin" title="New member" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Creates the auth user and the members row. No public sign-up.
+        Creates a desk login on the members table. No public sign-up.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

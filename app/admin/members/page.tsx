@@ -39,7 +39,7 @@ export default async function AdminMembersPage({
         </Link>
       </div>
       <p className="-mt-4 text-sm text-ink-muted">
-        Desk accounts. Creating a member also creates their sign-in.
+        Desk accounts. Sign-in uses this table, not Supabase Auth.
       </p>
       {error || list.error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

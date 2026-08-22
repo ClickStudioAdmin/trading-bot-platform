@@ -15,13 +15,13 @@ Current tables:
 | `paper_rules` | 4 | Stacked entry/exit layers. Many rows per user. RLS by `user_id`. Authenticated select/insert/update/delete. |
 | `app_admins` | 4 | Admin allow-list. The desk admin email is hardcoded in `lib/admin/emails.ts` and upserted on sign-in. Users can select only their own row. |
 | `event_logs` | 4 | Append-only system, strategy, and trade events. Authenticated select own or admin. Writes are service-role only. |
-| `members` | 4 | Desk accounts. Name, email, role (`member` / `admin`), status (`active` / `disabled`). Linked to `auth.users`. Authenticated select own or admin. Writes are service-role only. |
+| `members` | 4 | Desk users. Email, password hash, role (`member` / `admin`), status. This is the only login table. Writes and reads for the app are service-role only, scoped by the session. |
 
 Phase 4 rules migrations: `supabase/migrations/20260822160000_paper_rules.sql` then `supabase/migrations/20260822170000_paper_rule_layers.sql`.
 
 Event logs and admins: `supabase/migrations/20260822180000_event_logs_and_admins.sql`.
 
-Members: `supabase/migrations/20260822190000_members.sql`. Opening `/admin/members` copies any Auth users that are not yet in `members`. The listed desk admin is also written on sign-in. Admins create further members in `/admin/members`, which also creates the Auth user.
+Members: `supabase/migrations/20260822190000_members.sql`. Password and no Auth FK: `supabase/migrations/20260822220000_members_password_no_auth_fk.sql`.
 
 Per-trade automation snapshot: `supabase/migrations/20260822200000_paper_carry_automation.sql`. Close source: `supabase/migrations/20260822210000_paper_carry_close_source.sql`.
 

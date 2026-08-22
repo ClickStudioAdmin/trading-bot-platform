@@ -4,8 +4,10 @@ import {
   type MemberListQuery,
 } from "@/lib/members/query";
 import { parseMemberRow, type MemberRow } from "@/lib/members/rows";
-import { syncMembersFromAuth } from "@/lib/members/sync";
 import { createServiceClient } from "@/lib/supabase/admin";
+
+const MEMBER_COLUMNS =
+  "id, user_id, email, name, role, status, created_at, updated_at";
 
 export type MemberListResult = {
   rows: MemberRow[];
@@ -27,15 +29,17 @@ export async function listMembers(
   };
   const supabase = createServiceClient();
   if (!supabase) {
-    return { ...empty, error: "Service role is not configured." };
+    return {
+      ...empty,
+      error:
+        "Set SUPABASE_SERVICE_ROLE_KEY on this Vercel environment (TBP-dev service role, not Sensitive if the badge says Preview). Same key already used to upsert opportunities.",
+    };
   }
-
-  await syncMembersFromAuth();
 
   let countQuery = supabase
     .from("members")
     .select("id", { count: "exact", head: true });
-  let dataQuery = supabase.from("members").select("*");
+  let dataQuery = supabase.from("members").select(MEMBER_COLUMNS);
 
   if (query.q) {
     const pattern = `%${query.q}%`;
@@ -92,7 +96,7 @@ export async function getMemberById(id: number): Promise<MemberRow | null> {
   }
   const { data, error } = await supabase
     .from("members")
-    .select("*")
+    .select(MEMBER_COLUMNS)
     .eq("id", id)
     .maybeSingle();
   if (error || !data) {

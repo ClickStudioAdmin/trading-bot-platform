@@ -2,10 +2,10 @@ import { SiteLogo } from "@/components/site-logo";
 import { SiteNav } from "@/components/site-nav";
 import { UserMenu } from "@/components/user-menu";
 import { getAdminUser } from "@/lib/admin/access";
-import { getAuthUser } from "@/lib/supabase/server";
+import { getSessionMember } from "@/lib/auth/session";
 
 export async function SiteHeader() {
-  const user = await getAuthUser();
+  const user = await getSessionMember();
   const admin = user ? await getAdminUser() : null;
   const extraLinks = admin ? [{ href: "/admin", label: "Admin" }] : [];
 

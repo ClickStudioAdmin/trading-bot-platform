@@ -2,13 +2,14 @@
 
 import { paperLayerToRow, parsePaperRulesForm } from "@/lib/engine/rules";
 import { writeEventLog } from "@/lib/logs/write";
-import { createUserClient, getAuthUser } from "@/lib/supabase/server";
+import { getSessionMember } from "@/lib/auth/session";
+import { createServiceClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 
 const RULES_PATH = "/strategies/cash-and-carry/automations";
 
 export async function savePaperRules(formData: FormData) {
-  const user = await getAuthUser();
+  const user = await getSessionMember();
   if (!user) {
     redirect("/sign-in");
   }
@@ -18,7 +19,7 @@ export async function savePaperRules(formData: FormData) {
     redirect(`${RULES_PATH}?error=${encodeURIComponent(parsed.error)}`);
   }
 
-  const supabase = await createUserClient();
+  const supabase = createServiceClient();
   if (!supabase) {
     redirect(`${RULES_PATH}?error=${encodeURIComponent("Auth is not configured.")}`);
   }

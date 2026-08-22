@@ -55,7 +55,7 @@ export function AdminMemberForm({
         />
         <span className="mt-1 block text-xs text-ink-faint">
           {mode === "create"
-            ? "At least 8 characters. The member uses this to sign in."
+            ? "At least 8 characters. This is the desk password."
             : "Leave blank to keep the current password."}
         </span>
       </label>

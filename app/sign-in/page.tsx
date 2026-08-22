@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { signIn } from "@/lib/auth/actions";
-import { getAuthUser } from "@/lib/supabase/server";
+import { getSessionMember } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -13,7 +13,7 @@ export default async function SignInPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const user = await getAuthUser();
+  const user = await getSessionMember();
   if (user) {
     redirect("/strategies/cash-and-carry");
   }
@@ -27,7 +27,8 @@ export default async function SignInPage({
         </p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">Sign in</h1>
         <p className="mt-3 text-sm text-ink-muted">
-          Invite-only. An admin creates members. Market pages stay public.
+          Invite-only. Sign in with a desk member account. Market pages stay
+          public.
         </p>
         {error ? (
           <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

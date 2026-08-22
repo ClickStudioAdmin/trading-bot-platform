@@ -94,26 +94,19 @@ Vercel will not put **Sensitive** variables on the **Development** environment. 
 
 If the `develop` deployment badge says **Preview** (Vercel default when `develop` is not attached to the Development environment), put the TBP-dev values on **Preview** as well, or attach branch `develop` under **Settings → Environments → Development**. Check the deployment badge if sign-in says auth is not configured. Preview must never use the production Supabase project.
 
-## Auth (Phase 3)
+## Auth (desk members)
 
-Email/password only. Create desk users from **Admin → Members**. Do not open public sign-up. Existing Auth users are backfilled into `members` when that migration runs.
+Sign-in is email/password against `public.members`. There is no Supabase Auth session. The server sets an httpOnly cookie (`tbp_session`) signed with `SESSION_SECRET`, or `SUPABASE_SERVICE_ROLE_KEY` if that is unset.
 
-On **both** TBP projects:
+Create members from **Admin → Members**. The first sign-in as `click.studio.admin@gmail.com` creates that admin row and sets the password.
 
-1. Authentication → Providers → Email enabled
-2. Authentication → URL configuration:
-   - Development project Site URL = the Vercel **Development** URL
-   - Production project Site URL = the Vercel **Production** URL
-   - Redirect URLs include that origin (and `http://localhost:3000` if you run locally)
-3. Keep public sign-up off. The first admin can still be added in the dashboard with **Auto Confirm**; later members are created in `/admin/members`
-
-`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` must be set on the matching Vercel environment. The browser uses the publishable key. The service role stays server-only.
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` can stay on Vercel for any remaining public Supabase reads. Desk writes use `SUPABASE_SERVICE_ROLE_KEY` and the session member id.
 
 The service role is in the Supabase dashboard: **Project Settings → API → `service_role`**. Copy the **development** project’s key into Vercel **Development**, and the **production** project’s key into Vercel **Production**.
 
 ## Admin (Phase 4)
 
-The desk admin is `click.studio.admin@gmail.com`, listed in `lib/admin/emails.ts`. Members with role `admin` also get the **Admin** nav. The server upserts those users into `app_admins` so RLS can show every `event_logs` row. No Vercel secret is required. Manage accounts at `/admin/members`.
+A member is an admin when `members.role` is `admin`, or the email is `click.studio.admin@gmail.com`. Manage accounts at `/admin/members`.
 
 ## Paper engine tick (Phase 4)
 

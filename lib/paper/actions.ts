@@ -6,17 +6,18 @@ import { closePaperCarry as computeClose } from "@/lib/paper/math";
 import { pairKey, paperCarryInsertRow, parseNotionalUsdt, safePaperReturnPath } from "@/lib/paper/open";
 import { asNumber, parsePaperCarryRow } from "@/lib/paper/rows";
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
-import { createUserClient, getAuthUser } from "@/lib/supabase/server";
+import { getSessionMember } from "@/lib/auth/session";
+import { createServiceClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 
 export async function openPaperCarry(formData: FormData) {
   const next = safePaperReturnPath(String(formData.get("next") ?? ""));
-  const user = await getAuthUser();
+  const user = await getSessionMember();
   if (!user) {
     redirect("/sign-in");
   }
 
-  const supabase = await createUserClient();
+  const supabase = createServiceClient();
   if (!supabase) {
     redirect(`${next}?paperError=${encodeURIComponent("Auth is not configured.")}`);
   }
@@ -84,12 +85,12 @@ export async function openPaperCarry(formData: FormData) {
 
 export async function closeOpenPaperCarry(formData: FormData) {
   const next = safePaperReturnPath(String(formData.get("next") ?? ""));
-  const user = await getAuthUser();
+  const user = await getSessionMember();
   if (!user) {
     redirect("/sign-in");
   }
 
-  const supabase = await createUserClient();
+  const supabase = createServiceClient();
   if (!supabase) {
     redirect(`${next}?paperError=${encodeURIComponent("Auth is not configured.")}`);
   }
@@ -105,6 +106,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
     .from("paper_carries")
     .select("*")
     .eq("id", carryId)
+    .eq("user_id", user.id)
     .eq("status", "open")
     .maybeSingle();
 
@@ -158,6 +160,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
       close_reason: null,
     })
     .eq("id", carryId)
+    .eq("user_id", user.id)
     .eq("status", "open");
 
   if (error) {
@@ -194,12 +197,12 @@ export async function closeOpenPaperCarry(formData: FormData) {
 
 export async function updatePaperCarryExits(formData: FormData) {
   const next = safePaperReturnPath(String(formData.get("next") ?? ""));
-  const user = await getAuthUser();
+  const user = await getSessionMember();
   if (!user) {
     redirect("/sign-in");
   }
 
-  const supabase = await createUserClient();
+  const supabase = createServiceClient();
   if (!supabase) {
     redirect(`${next}?paperError=${encodeURIComponent("Auth is not configured.")}`);
   }
@@ -220,6 +223,7 @@ export async function updatePaperCarryExits(formData: FormData) {
     .from("paper_carries")
     .select("*")
     .eq("id", carryId)
+    .eq("user_id", user.id)
     .eq("status", "open")
     .eq("source", "engine")
     .maybeSingle();
@@ -239,6 +243,7 @@ export async function updatePaperCarryExits(formData: FormData) {
       stop_loss_pct: parsed.stopLossPct,
     })
     .eq("id", carryId)
+    .eq("user_id", user.id)
     .eq("status", "open")
     .eq("source", "engine");
 
