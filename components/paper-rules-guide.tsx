@@ -58,15 +58,15 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Order Type"
-          detail="Fixed uses Order size as the open. Dynamic clips Order size to the pair’s current book value, so thinner books get a smaller open."
+          detail="Fixed uses Order size as the open. Dynamic sizes each open to the pair’s current book value."
         />
         <GuideItem
           term="Order size (USDT)"
-          detail="For Fixed, this is the paper size of each open. For Dynamic, this is the ceiling; the open is min(Order size, book value). P&L is (entry net − mark net − 2 × fees and slip) × the size that opened. Fees are VIP0 taker on both legs plus 5 bp slip, charged for open and for close."
+          detail="Fixed only. Paper size of each open this layer creates. P&L is (entry net − mark net − 2 × fees and slip) × this size. Fees are VIP0 taker on both legs plus 5 bp slip, charged for open and for close."
         />
         <GuideItem
           term="Min Size"
-          detail="Dynamic only. Skip the pair if the clipped size would be below this. Stops dust opens on thin books."
+          detail="Dynamic only. Skip the pair if book value is below this. Stops dust opens on thin books."
         />
       </dl>
 

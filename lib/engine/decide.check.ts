@@ -192,11 +192,19 @@ assert.deepEqual(
 );
 assert.equal(
   decideEntries(
-    [opportunity("BTCUSDT-25MAY27", { netApr: 0.18, capacityUsdt: 50_000 })],
+    [opportunity("BTCUSDT-25MAY27", { netApr: 0.18, capacityUsdt: 20_000 })],
     [],
     { enabled: true, layers: [dynamicLayer] },
   )[0]?.notionalUsdt,
-  10_000,
+  20_000,
+);
+assert.equal(
+  decideEntries(
+    [opportunity("BTCUSDT-25JUN27", { netApr: 0.19, capacityUsdt: 50_000 })],
+    [],
+    { enabled: true, layers: [dynamicLayer] },
+  ).length,
+  0,
 );
 assert.deepEqual(
   decideEntries(

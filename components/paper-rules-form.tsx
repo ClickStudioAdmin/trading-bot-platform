@@ -164,23 +164,11 @@ function RuleRow({
               onChange={(event) =>
                 setSizeType(event.target.value === "dynamic" ? "dynamic" : "fixed")
               }
-              className="mt-0.5 w-full rounded-control border border-line bg-canvas px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
+              className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
             >
               <option value="fixed">Fixed</option>
               <option value="dynamic">Dynamic</option>
             </select>
-          </label>
-          <label className="block text-[11px] text-ink-muted">
-            Order size (USDT)
-            <div className="mt-0.5">
-              <UsdtSizeInput
-                name={`${prefix}notionalUsdt`}
-                defaultValue={layer.notionalUsdt}
-                ariaLabel={`Order size for rule ${index + 1}`}
-                compact
-                showPrefix={false}
-              />
-            </div>
           </label>
           {sizeType === "dynamic" ? (
             <Field
@@ -188,7 +176,20 @@ function RuleRow({
               label="Min Size"
               defaultValue={layer.minSize}
             />
-          ) : null}
+          ) : (
+            <label className="block text-[11px] text-ink-muted">
+              Order size (USDT)
+              <div className="mt-0.5">
+                <UsdtSizeInput
+                  name={`${prefix}notionalUsdt`}
+                  defaultValue={layer.notionalUsdt}
+                  ariaLabel={`Order size for rule ${index + 1}`}
+                  compact
+                  showPrefix={false}
+                />
+              </div>
+            </label>
+          )}
         </FieldGroup>
       </div>
       <p className="mt-3 text-[11px] uppercase tracking-[0.08em] text-ink-faint">

@@ -161,7 +161,14 @@ function parseLayer(
   index: number,
 ): { ok: true; layer: PaperEngineLayer } | { ok: false; error: string } {
   const prefix = `r${index}_`;
-  const notionalUsdt = parseNotionalUsdt(String(form.get(`${prefix}notionalUsdt`) ?? ""));
+  const sizeType = parseSizeType(form.get(`${prefix}sizeType`));
+  const parsedNotional = parseNotionalUsdt(
+    String(form.get(`${prefix}notionalUsdt`) ?? ""),
+  );
+  const notionalUsdt =
+    sizeType === "dynamic"
+      ? (parsedNotional ?? DEFAULT_PAPER_NOTIONAL_USDT)
+      : parsedNotional;
   if (notionalUsdt === null) {
     return { ok: false, error: `Rule ${index + 1}: enter a positive order size.` };
   }
@@ -182,14 +189,10 @@ function parseLayer(
     return { ok: false, error: `Rule ${index + 1}: max position size must be positive.` };
   }
 
-  const sizeType = parseSizeType(form.get(`${prefix}sizeType`));
   const minSizeUsdt =
     sizeType === "dynamic" ? parseBound(form.get(`${prefix}minSize`)) : null;
   if (minSizeUsdt !== null && minSizeUsdt <= 0) {
     return { ok: false, error: `Rule ${index + 1}: min size must be positive.` };
-  }
-  if (minSizeUsdt !== null && minSizeUsdt > notionalUsdt) {
-    return { ok: false, error: `Rule ${index + 1}: min size cannot be greater than order size.` };
   }
 
   const takeProfitPct = parsePercent(form.get(`${prefix}takeProfit`));

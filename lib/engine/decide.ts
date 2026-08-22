@@ -182,13 +182,10 @@ export function entryNotionalUsdt(
   layer: PaperEngineLayer,
   opportunity: ScannedOpportunity,
 ): number | null {
-  if (!(layer.notionalUsdt > 0)) {
-    return null;
-  }
   if (layer.sizeType !== "dynamic") {
-    return layer.notionalUsdt;
+    return layer.notionalUsdt > 0 ? layer.notionalUsdt : null;
   }
-  const size = Math.min(layer.notionalUsdt, opportunity.capacityUsdt);
+  const size = opportunity.capacityUsdt;
   if (!(size > 0)) {
     return null;
   }

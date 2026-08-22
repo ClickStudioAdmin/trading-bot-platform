@@ -63,7 +63,6 @@ assert.equal(parsePaperRulesForm(swapped).ok, false);
 const dynamic = new FormData();
 dynamic.set("ruleCount", "1");
 dynamic.set("r0_sizeType", "dynamic");
-dynamic.set("r0_notionalUsdt", "10000");
 dynamic.set("r0_minCapacity", "5000");
 dynamic.set("r0_minSize", "4000");
 const parsedDynamic = parsePaperRulesForm(dynamic);
@@ -74,12 +73,10 @@ if (parsedDynamic.ok) {
   assert.equal(parsedDynamic.config.layers[0]?.minCapacityUsdt, null);
 }
 
-const minTooBig = new FormData();
-minTooBig.set("ruleCount", "1");
-minTooBig.set("r0_sizeType", "dynamic");
-minTooBig.set("r0_notionalUsdt", "10000");
-minTooBig.set("r0_minSize", "20000");
-assert.equal(parsePaperRulesForm(minTooBig).ok, false);
+const missingSize = new FormData();
+missingSize.set("ruleCount", "1");
+missingSize.set("r0_sizeType", "fixed");
+assert.equal(parsePaperRulesForm(missingSize).ok, false);
 
 assert.equal(defaultPaperConfig().layers.length, 1);
 
