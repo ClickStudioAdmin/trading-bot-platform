@@ -122,6 +122,7 @@ Confirm a tick from **Actions → Paper Engine Tick → Run workflow**. The JSON
 | `CRON_SECRET` | Vercel Production (`main`) and GitHub Environment `production` | A **different** random secret. TBP-prod only |
 | `ENGINE_TICK_URL` | GitHub Environment `development` | The stable `develop` Preview URL + `/api/engine/tick` |
 | `ENGINE_TICK_URL` | GitHub Environment `production` | The Production URL + `/api/engine/tick` |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub Environment `development` | Same value as Vercel **Protection Bypass for Automation**. Preview deployments are SSO-protected; without this header the tick gets `401 Protected Deployment` |
 
 The function already uses `SUPABASE_SERVICE_ROLE_KEY` on that Vercel environment. Never put the service role or `CRON_SECRET` in `NEXT_PUBLIC_*`. Never put production secrets on Preview or the `development` GitHub Environment.
 

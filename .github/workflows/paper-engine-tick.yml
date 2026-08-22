@@ -24,6 +24,7 @@ jobs:
     env:
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
       ENGINE_TICK_URL: ${{ secrets.ENGINE_TICK_URL }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
     steps:
       - name: Check required secrets
         run: |
@@ -34,6 +35,11 @@ jobs:
           fi
           if [ -z "$ENGINE_TICK_URL" ]; then
             echo "ENGINE_TICK_URL is not set on the development environment"
+            missing=1
+          fi
+          if [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            echo "VERCEL_AUTOMATION_BYPASS_SECRET is not set on the development environment"
+            echo "Vercel Preview is deployment-protected. Enable Protection Bypass for Automation and add that secret here."
             missing=1
           fi
           if [ "$missing" -ne 0 ]; then
@@ -47,6 +53,7 @@ jobs:
             -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             -H "Content-Type: application/json" \
+            -H "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
             "$ENGINE_TICK_URL")
           echo "HTTP $http_code"
           cat /tmp/tick-body.json
