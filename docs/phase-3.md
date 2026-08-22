@@ -8,9 +8,9 @@ A paper carry is long USDT spot and short the matching dated future, sized in US
 
 ## Current micro-step
 
-**2 of 7 — Sign-in** (complete)
+**3 of 7 — Paper carries table** (complete)
 
-Cookie session via Supabase Auth. Market pages stay public. No public sign-up.
+`paper_carries` migration is in git. RLS is by `user_id`. GitHub Actions applies it on push to `develop`. No open/close UI yet.
 
 ## Micro-steps
 

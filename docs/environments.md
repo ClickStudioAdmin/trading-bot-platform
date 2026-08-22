@@ -90,6 +90,10 @@ Phase 1 needs no Vercel environment variables (static homepage). When the app la
 
 Never add a service-role key to `NEXT_PUBLIC_` variables. Never put production values on the Development environment.
 
+Vercel will not put **Sensitive** variables on the **Development** environment. Leave Sensitive **off** for `NEXT_PUBLIC_` vars (they are public).
+
+If the `develop` deployment badge says **Preview** (Vercel default when `develop` is not attached to the Development environment), put the TBP-dev values on **Preview** as well, or attach branch `develop` under **Settings → Environments → Development**. Check the deployment badge if sign-in says auth is not configured. Preview must never use the production Supabase project.
+
 ## Auth (Phase 3)
 
 Email/password only. Create desk users in the Supabase dashboard (Authentication → Users). Do not open public sign-up.
