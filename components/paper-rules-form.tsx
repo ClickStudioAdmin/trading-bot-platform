@@ -124,6 +124,18 @@ function RuleRow({
           </div>
         </label>
         <Field
+          name={`${prefix}maxOpenNotional`}
+          label="Max Size"
+          placeholder="50000"
+          defaultValue={layer.maxOpenNotional}
+        />
+        <Field
+          name={`${prefix}maxOpenCount`}
+          label="Max opens"
+          placeholder="2"
+          defaultValue={layer.maxOpenCount}
+        />
+        <Field
           name={`${prefix}minApr`}
           label="Min APR %"
           placeholder="10"
@@ -143,21 +155,9 @@ function RuleRow({
         />
         <Field
           name={`${prefix}minCapacity`}
-          label="Min cap USDT"
+          label="Min book value"
           placeholder="5000"
           defaultValue={layer.minCapacity}
-        />
-        <Field
-          name={`${prefix}maxOpenCount`}
-          label="Max opens"
-          placeholder="2"
-          defaultValue={layer.maxOpenCount}
-        />
-        <Field
-          name={`${prefix}maxOpenNotional`}
-          label="Max notional"
-          placeholder="50000"
-          defaultValue={layer.maxOpenNotional}
         />
       </div>
       <p className="mt-2 text-[11px] uppercase tracking-[0.08em] text-ink-faint">

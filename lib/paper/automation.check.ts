@@ -31,7 +31,7 @@ const automation = automationFromLayer(layer);
 assert.deepEqual(formatEntryTriggers(automation), [
   "Min APR 10%",
   "DTE 7–90",
-  "Min cap $5,000",
+  "Min book value $5,000",
 ]);
 assert.deepEqual(formatExitTriggers(automation), [
   "Close DTE ≤ 3",

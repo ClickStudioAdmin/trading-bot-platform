@@ -17,7 +17,7 @@ export async function signIn(formData: FormData) {
   const supabase = createServiceClient();
   if (!supabase) {
     redirect(
-      "/sign-in?error=Set%20SUPABASE_SERVICE_ROLE_KEY%20on%20this%20environment.",
+      "/sign-in?error=Set%20SUPABASE_SERVICE_ROLE_KEY%20on%20this%20Vercel%20environment%20(TBP-dev%20service_role.%20Leave%20Sensitive%20off%20if%20the%20badge%20says%20Preview).%20This%20is%20the%20database%20key%2C%20not%20Supabase%20Auth.",
     );
   }
 

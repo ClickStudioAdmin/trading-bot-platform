@@ -119,8 +119,8 @@ export function OpportunityTable({
             </th>
             <th className="px-4 py-3 font-medium">
               <ColumnHint
-                label="Capacity"
-                hint="25% of the top 5 book levels that stay inside 5 bp of impact."
+                label="Book value"
+                hint="25% of the top 5 book levels that stay inside 5 bp of impact. How much size the books can take, not how much you will trade."
               />
             </th>
             {paper ? (

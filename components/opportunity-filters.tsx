@@ -35,7 +35,7 @@ export function OpportunityFiltersForm({
         <Field
           id="minCapacity"
           name="minCapacity"
-          label="Min capacity USDT"
+          label="Min book value"
           placeholder="5000"
           defaultValue={values.minCapacity}
         />

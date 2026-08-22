@@ -35,6 +35,14 @@ export function PaperRulesGuide() {
           detail="Paper notional for each open this layer creates. P&L is (entry net − mark net − 2 × fees and slip) × this size. Fees are VIP0 taker on both legs plus 5 bp slip, charged for open and for close."
         />
         <GuideItem
+          term="Max Size"
+          detail="Cap on the sum of open sizes for this layer only. A new open is skipped if this size would push the layer over the cap."
+        />
+        <GuideItem
+          term="Max opens"
+          detail="How many open paper carries this layer may have at once. Only rows this layer opened count. Manual opens and other layers do not count toward this cap."
+        />
+        <GuideItem
           term="Min APR %"
           detail="The pair’s live net APR must be at least this. Net APR is the scanner’s net basis annualized by DTE, after fees and slip. Same number as the book’s Net APR column."
         />
@@ -43,16 +51,8 @@ export function PaperRulesGuide() {
           detail="Days until the dated future expires must sit in this range. Use max DTE to avoid very long tenors; use min DTE to avoid contracts that are about to expire."
         />
         <GuideItem
-          term="Min cap USDT"
-          detail="The pair’s book capacity must be at least this. Capacity is 25% of the top 5 book levels that stay inside 5 bp of impact — how much size the books can take, not how much you will trade."
-        />
-        <GuideItem
-          term="Max opens"
-          detail="How many open paper carries this layer may have at once. Only rows this layer opened count. Manual opens and other layers do not count toward this cap."
-        />
-        <GuideItem
-          term="Max notional"
-          detail="Cap on the sum of open notionals for this layer only. A new open is skipped if this size would push the layer over the cap."
+          term="Min book value"
+          detail="The pair’s book value must be at least this. Book value is 25% of the top 5 book levels that stay inside 5 bp of impact — how much size the books can take, not how much you will trade."
         />
       </dl>
 

@@ -65,7 +65,7 @@ export function formatEntryTriggers(automation: PaperCarryAutomation): string[] 
   }
   if (automation.entryMinCapacityUsdt !== null) {
     lines.push(
-      `Min cap $${Math.round(automation.entryMinCapacityUsdt).toLocaleString("en-US")}`,
+      `Min book value $${Math.round(automation.entryMinCapacityUsdt).toLocaleString("en-US")}`,
     );
   }
   return lines;
