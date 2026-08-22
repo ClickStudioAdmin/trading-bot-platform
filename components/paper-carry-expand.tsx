@@ -44,13 +44,14 @@ export function OpenPaperCarryRows({
       : carryPnlPct(trade.unrealizedUsdt, trade.notionalUsdt);
 
   return (
-    <ExpandableOrderRows colSpan={9} orders={trade.orders}>
+    <ExpandableOrderRows colSpan={8} orders={trade.orders}>
       {(toggle) => (
         <>
       <td className="px-4 py-3">
         <span className="flex items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
+          <PositionKind source={trade.source} status={trade.status} />
         </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
           Long spot · short {trade.futureSymbol}
@@ -70,9 +71,6 @@ export function OpenPaperCarryRows({
           {" · "}
           {toggle}
         </span>
-      </td>
-      <td className="px-4 py-3">
-        <PositionKind source={trade.source} status={trade.status} />
       </td>
       <td className="px-4 py-3 tabular-nums text-ink-muted">
         {trade.daysToExpiry === null ? "—" : trade.daysToExpiry.toFixed(1)}
@@ -112,13 +110,14 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
       : carryPnlPct(trade.realizedUsdt, trade.notionalUsdt);
 
   return (
-    <ExpandableOrderRows colSpan={8} orders={trade.orders}>
+    <ExpandableOrderRows colSpan={7} orders={trade.orders}>
       {(toggle) => (
         <>
       <td className="px-4 py-3">
         <span className="flex items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
+          <PositionKind source={trade.source} status={trade.status} />
         </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
           {trade.futureSymbol}
@@ -135,9 +134,6 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
           {" · "}
           {toggle}
         </span>
-      </td>
-      <td className="px-4 py-3">
-        <PositionKind source={trade.source} status={trade.status} />
       </td>
       <td className="px-4 py-3 text-ink-muted">
         {formatDeskDate(trade.closedAtMs)}
@@ -256,15 +252,24 @@ function PositionKind({
   source: MarkedPaperCarry["source"];
   status: MarkedPaperCarry["status"];
 }) {
+  const auto = source === "engine";
   return (
-    <div>
-      <p className="text-sm text-ink">
-        {source === "engine" ? "Auto" : "Manual"}
-      </p>
+    <span className="inline-flex items-center gap-1 font-normal">
+      <span
+        className={
+          auto
+            ? "rounded-full bg-accent/15 px-2 py-0.5 text-[11px] text-accent"
+            : "rounded-full bg-surface-raised px-2 py-0.5 text-[11px] text-ink-muted"
+        }
+      >
+        {auto ? "Auto" : "Manual"}
+      </span>
       {status === "closing" ? (
-        <p className="text-xs text-warning">Closing</p>
+        <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
+          Closing
+        </span>
       ) : null}
-    </div>
+    </span>
   );
 }
 

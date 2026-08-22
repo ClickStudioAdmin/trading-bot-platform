@@ -60,13 +60,7 @@ export function OpenPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Pair"
-                  hint="Long USDT spot and short this dated future."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Type"
-                  hint="Manual is a hand open. Auto is an engine open. Closing means Unwind or a dynamic exit is still clipping to usable book."
+                  hint="Long USDT spot and short this dated future. The badge is Manual or Auto. Closing means Unwind or a dynamic exit is still clipping to usable book."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -116,7 +110,7 @@ export function OpenPaperTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={9}
+                colSpan={8}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -128,7 +122,7 @@ export function OpenPaperTrades({
               />
             ) : open.length === 0 ? (
               <EmptyRow
-                colSpan={9}
+                colSpan={8}
                 message="No open paper carries. Open one from the book above."
               />
             ) : (
@@ -167,13 +161,7 @@ export function ClosedPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Pair"
-                  hint="Long USDT spot and short this dated future."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Type"
-                  hint="Manual is a hand open. Auto is an engine open."
+                  hint="Long USDT spot and short this dated future. The badge is Manual or Auto."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -217,7 +205,7 @@ export function ClosedPaperTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={8}
+                colSpan={7}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -229,7 +217,7 @@ export function ClosedPaperTrades({
               />
             ) : closed.length === 0 ? (
               <EmptyRow
-                colSpan={8}
+                colSpan={7}
                 message="No closed paper carries yet."
               />
             ) : (
