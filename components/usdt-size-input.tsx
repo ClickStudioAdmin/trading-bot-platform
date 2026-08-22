@@ -11,11 +11,13 @@ export function UsdtSizeInput({
   defaultValue,
   ariaLabel,
   form,
+  compact,
 }: {
   name: string;
   defaultValue: number;
   ariaLabel: string;
   form?: string;
+  compact?: boolean;
 }) {
   const [display, setDisplay] = useState(formatNotionalInput(String(defaultValue)));
   const parsed = parseNotionalUsdt(display);
@@ -30,7 +32,11 @@ export function UsdtSizeInput({
         aria-label={ariaLabel}
         value={display}
         onChange={(event) => setDisplay(formatNotionalInput(event.target.value))}
-        className="w-28 rounded-control border border-line bg-canvas px-2 py-1 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+        className={
+          compact
+            ? "w-20 rounded-control border border-line bg-canvas px-1.5 py-1 text-xs tabular-nums text-ink focus:border-line-strong focus:outline-none"
+            : "w-28 rounded-control border border-line bg-canvas px-2 py-1 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+        }
       />
     </span>
   );

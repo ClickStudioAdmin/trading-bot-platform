@@ -18,6 +18,7 @@ export type PaperCarryRow = {
   daysHeld: number | null;
   realizedApr: number | null;
   source: "manual" | "engine";
+  ruleId: number | null;
 };
 
 export type MarkedPaperCarry = PaperCarryRow & {
@@ -71,6 +72,7 @@ export function parsePaperCarryRow(row: Record<string, unknown>): PaperCarryRow 
     daysHeld: asNullableNumber(row.days_held),
     realizedApr: asNullableNumber(row.realized_apr),
     source: row.source === "engine" ? "engine" : "manual",
+    ruleId: asNullableNumber(row.rule_id),
   };
 }
 

@@ -58,6 +58,7 @@ const stats = paperDeskStats(marked, [
     daysHeld: 1,
     realizedApr: 3.65,
     source: "manual",
+    ruleId: null,
   },
 ]);
 assert.equal(stats.openNotionalUsdt, 10_000);

@@ -1,9 +1,10 @@
-import type { PaperEngineRules } from "@/lib/engine/decide";
+import type { PaperEngineConfig, PaperEngineLayer } from "@/lib/engine/decide";
 import { DEFAULT_PAPER_NOTIONAL_USDT, parseNotionalUsdt } from "@/lib/paper/open";
 import { asNullableNumber, asNumber } from "@/lib/paper/rows";
 
-export type PaperRulesFormValues = {
-  enabled: boolean;
+export type PaperLayerFormValues = {
+  key: string;
+  id: string;
   notionalUsdt: number;
   minApr: string;
   minDte: string;
@@ -17,9 +18,15 @@ export type PaperRulesFormValues = {
   stopLoss: string;
 };
 
-export function defaultPaperRules(): PaperEngineRules {
+export type PaperRulesFormValues = {
+  enabled: boolean;
+  layers: PaperLayerFormValues[];
+};
+
+export function defaultPaperLayer(sortOrder = 0): PaperEngineLayer {
   return {
-    enabled: false,
+    id: null,
+    sortOrder,
     notionalUsdt: DEFAULT_PAPER_NOTIONAL_USDT,
     minNetApr: null,
     minDte: null,
@@ -34,81 +41,72 @@ export function defaultPaperRules(): PaperEngineRules {
   };
 }
 
-export function paperRulesToFormValues(
-  rules: PaperEngineRules,
-): PaperRulesFormValues {
+export function defaultPaperConfig(): PaperEngineConfig {
   return {
-    enabled: rules.enabled,
-    notionalUsdt: rules.notionalUsdt,
-    minApr: decimalToPercentInput(rules.minNetApr),
-    minDte: boundToInput(rules.minDte),
-    maxDte: boundToInput(rules.maxDte),
-    minCapacity: boundToInput(rules.minCapacityUsdt),
-    maxOpenCount: boundToInput(rules.maxOpenCount),
-    maxOpenNotional: boundToInput(rules.maxOpenNotionalUsdt),
-    closeMaxDte: boundToInput(rules.closeMaxDte),
-    closeMinApr: decimalToPercentInput(rules.closeMinNetApr),
-    takeProfit: decimalToPercentInput(rules.takeProfitPct),
-    stopLoss: decimalToPercentInput(
-      rules.stopLossPct === null ? null : Math.abs(rules.stopLossPct),
-    ),
+    enabled: false,
+    layers: [defaultPaperLayer(0)],
+  };
+}
+
+export function paperConfigToFormValues(
+  config: PaperEngineConfig,
+): PaperRulesFormValues {
+  const layers = config.layers.length > 0 ? config.layers : [defaultPaperLayer(0)];
+  return {
+    enabled: config.enabled,
+    layers: layers.map((layer, index) => ({
+      key: layer.id !== null ? `id-${layer.id}` : `new-${index}`,
+      id: layer.id === null ? "" : String(layer.id),
+      notionalUsdt: layer.notionalUsdt,
+      minApr: decimalToPercentInput(layer.minNetApr),
+      minDte: boundToInput(layer.minDte),
+      maxDte: boundToInput(layer.maxDte),
+      minCapacity: boundToInput(layer.minCapacityUsdt),
+      maxOpenCount: boundToInput(layer.maxOpenCount),
+      maxOpenNotional: boundToInput(layer.maxOpenNotionalUsdt),
+      closeMaxDte: boundToInput(layer.closeMaxDte),
+      closeMinApr: decimalToPercentInput(layer.closeMinNetApr),
+      takeProfit: decimalToPercentInput(layer.takeProfitPct),
+      stopLoss: decimalToPercentInput(
+        layer.stopLossPct === null ? null : Math.abs(layer.stopLossPct),
+      ),
+    })),
   };
 }
 
 export function parsePaperRulesForm(
   form: FormData,
-): { ok: true; rules: PaperEngineRules } | { ok: false; error: string } {
-  const notionalUsdt = parseNotionalUsdt(String(form.get("notionalUsdt") ?? ""));
-  if (notionalUsdt === null) {
-    return { ok: false, error: "Enter a positive USDT notional." };
+): { ok: true; config: PaperEngineConfig } | { ok: false; error: string } {
+  const count = Number(String(form.get("ruleCount") ?? "0"));
+  if (!Number.isInteger(count) || count < 0) {
+    return { ok: false, error: "Add at least one rule, or save with the list empty." };
   }
 
-  const minDte = parseBound(form.get("minDte"));
-  const maxDte = parseBound(form.get("maxDte"));
-  if (minDte !== null && maxDte !== null && minDte > maxDte) {
-    return { ok: false, error: "Min DTE cannot be greater than max DTE." };
+  const layers: PaperEngineLayer[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const parsed = parseLayer(form, index);
+    if (!parsed.ok) {
+      return parsed;
+    }
+    layers.push(parsed.layer);
   }
-
-  const maxOpenCount = parseBound(form.get("maxOpenCount"));
-  if (maxOpenCount !== null && (!Number.isInteger(maxOpenCount) || maxOpenCount <= 0)) {
-    return { ok: false, error: "Max open count must be a positive whole number." };
-  }
-
-  const maxOpenNotionalUsdt = parseBound(form.get("maxOpenNotional"));
-  if (maxOpenNotionalUsdt !== null && maxOpenNotionalUsdt <= 0) {
-    return { ok: false, error: "Max open notional must be positive." };
-  }
-
-  const takeProfitPct = parsePercent(form.get("takeProfit"));
-  if (takeProfitPct !== null && takeProfitPct <= 0) {
-    return { ok: false, error: "Take profit % must be positive." };
-  }
-
-  const stopLossRaw = parsePercent(form.get("stopLoss"));
-  const stopLossPct = stopLossRaw === null ? null : -Math.abs(stopLossRaw);
 
   return {
     ok: true,
-    rules: {
+    config: {
       enabled: String(form.get("enabled") ?? "") === "on",
-      notionalUsdt,
-      minNetApr: parsePercent(form.get("minApr")),
-      minDte,
-      maxDte,
-      minCapacityUsdt: parseBound(form.get("minCapacity")),
-      maxOpenCount,
-      maxOpenNotionalUsdt,
-      closeMaxDte: parseBound(form.get("closeMaxDte")),
-      closeMinNetApr: parsePercent(form.get("closeMinApr")),
-      takeProfitPct,
-      stopLossPct,
+      layers,
     },
   };
 }
 
-export function parsePaperRulesRow(row: Record<string, unknown>): PaperEngineRules {
+export function parsePaperRulesRow(
+  row: Record<string, unknown>,
+  sortOrder: number,
+): PaperEngineLayer {
   return {
-    enabled: Boolean(row.enabled),
+    id: asNumber(row.id),
+    sortOrder,
     notionalUsdt: asNumber(row.notional_usdt),
     minNetApr: asNullableNumber(row.min_net_apr),
     minDte: asNullableNumber(row.min_dte),
@@ -123,22 +121,79 @@ export function parsePaperRulesRow(row: Record<string, unknown>): PaperEngineRul
   };
 }
 
-export function paperRulesToRow(userId: string, rules: PaperEngineRules) {
+export function paperLayerToRow(
+  userId: string,
+  layer: PaperEngineLayer,
+) {
   return {
     user_id: userId,
-    enabled: rules.enabled,
-    notional_usdt: rules.notionalUsdt,
-    min_net_apr: rules.minNetApr,
-    min_dte: rules.minDte,
-    max_dte: rules.maxDte,
-    min_capacity_usdt: rules.minCapacityUsdt,
-    max_open_count: rules.maxOpenCount,
-    max_open_notional_usdt: rules.maxOpenNotionalUsdt,
-    close_max_dte: rules.closeMaxDte,
-    close_min_net_apr: rules.closeMinNetApr,
-    take_profit_pct: rules.takeProfitPct,
-    stop_loss_pct: rules.stopLossPct,
-    updated_at: new Date().toISOString(),
+    sort_order: layer.sortOrder,
+    notional_usdt: layer.notionalUsdt,
+    min_net_apr: layer.minNetApr,
+    min_dte: layer.minDte,
+    max_dte: layer.maxDte,
+    min_capacity_usdt: layer.minCapacityUsdt,
+    max_open_count: layer.maxOpenCount,
+    max_open_notional_usdt: layer.maxOpenNotionalUsdt,
+    close_max_dte: layer.closeMaxDte,
+    close_min_net_apr: layer.closeMinNetApr,
+    take_profit_pct: layer.takeProfitPct,
+    stop_loss_pct: layer.stopLossPct,
+  };
+}
+
+function parseLayer(
+  form: FormData,
+  index: number,
+): { ok: true; layer: PaperEngineLayer } | { ok: false; error: string } {
+  const prefix = `r${index}_`;
+  const notionalUsdt = parseNotionalUsdt(String(form.get(`${prefix}notionalUsdt`) ?? ""));
+  if (notionalUsdt === null) {
+    return { ok: false, error: `Rule ${index + 1}: enter a positive USDT size.` };
+  }
+
+  const minDte = parseBound(form.get(`${prefix}minDte`));
+  const maxDte = parseBound(form.get(`${prefix}maxDte`));
+  if (minDte !== null && maxDte !== null && minDte > maxDte) {
+    return { ok: false, error: `Rule ${index + 1}: min DTE cannot be greater than max DTE.` };
+  }
+
+  const maxOpenCount = parseBound(form.get(`${prefix}maxOpenCount`));
+  if (maxOpenCount !== null && (!Number.isInteger(maxOpenCount) || maxOpenCount <= 0)) {
+    return { ok: false, error: `Rule ${index + 1}: max open trades must be a positive whole number.` };
+  }
+
+  const maxOpenNotionalUsdt = parseBound(form.get(`${prefix}maxOpenNotional`));
+  if (maxOpenNotionalUsdt !== null && maxOpenNotionalUsdt <= 0) {
+    return { ok: false, error: `Rule ${index + 1}: max open notional must be positive.` };
+  }
+
+  const takeProfitPct = parsePercent(form.get(`${prefix}takeProfit`));
+  if (takeProfitPct !== null && takeProfitPct <= 0) {
+    return { ok: false, error: `Rule ${index + 1}: take profit % must be positive.` };
+  }
+
+  const stopLossRaw = parsePercent(form.get(`${prefix}stopLoss`));
+  const idRaw = String(form.get(`${prefix}id`) ?? "").trim();
+
+  return {
+    ok: true,
+    layer: {
+      id:
+        idRaw === "" || !Number.isFinite(Number(idRaw)) ? null : Number(idRaw),
+      sortOrder: index,
+      notionalUsdt,
+      minNetApr: parsePercent(form.get(`${prefix}minApr`)),
+      minDte,
+      maxDte,
+      minCapacityUsdt: parseBound(form.get(`${prefix}minCapacity`)),
+      maxOpenCount,
+      maxOpenNotionalUsdt,
+      closeMaxDte: parseBound(form.get(`${prefix}closeMaxDte`)),
+      closeMinNetApr: parsePercent(form.get(`${prefix}closeMinApr`)),
+      takeProfitPct,
+      stopLossPct: stopLossRaw === null ? null : -Math.abs(stopLossRaw),
+    },
   };
 }
 

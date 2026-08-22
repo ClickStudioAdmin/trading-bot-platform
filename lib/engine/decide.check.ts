@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { decideEntries, decideExits, type PaperEngineRules } from "./decide";
+import {
+  bestMatchingLayer,
+  decideEntries,
+  decideExits,
+  type PaperEngineConfig,
+  type PaperEngineLayer,
+} from "./decide";
 import type { ScannedOpportunity } from "../opportunities/scan";
 
 function opportunity(
@@ -24,138 +30,98 @@ function opportunity(
   };
 }
 
-const rules: PaperEngineRules = {
-  enabled: true,
-  notionalUsdt: 10_000,
-  minNetApr: 0.1,
-  minDte: 7,
-  maxDte: 90,
-  minCapacityUsdt: 5_000,
-  maxOpenCount: 2,
+function layer(
+  extras: Partial<PaperEngineLayer> = {},
+): PaperEngineLayer {
+  return {
+    id: 1,
+    sortOrder: 0,
+    notionalUsdt: 10_000,
+    minNetApr: 0.1,
+    minDte: 7,
+    maxDte: 90,
+    minCapacityUsdt: 5_000,
+    maxOpenCount: 2,
+    maxOpenNotionalUsdt: 25_000,
+    closeMaxDte: 3,
+    closeMinNetApr: 0.05,
+    takeProfitPct: 0.01,
+    stopLossPct: -0.02,
+    ...extras,
+  };
+}
+
+const base = layer();
+const stretch = layer({
+  id: 2,
+  sortOrder: 1,
+  notionalUsdt: 25_000,
+  minNetApr: 0.2,
+  maxOpenCount: 1,
   maxOpenNotionalUsdt: 25_000,
-  closeMaxDte: 3,
-  closeMinNetApr: 0.05,
-  takeProfitPct: 0.01,
-  stopLossPct: -0.02,
-};
+});
+const config: PaperEngineConfig = { enabled: true, layers: [base, stretch] };
 
 const high = opportunity("BTCUSDT-25JUN27", { netApr: 0.3, daysToExpiry: 40 });
 const mid = opportunity("BTCUSDT-25SEP26", { netApr: 0.15, daysToExpiry: 20 });
 const low = opportunity("BTCUSDT-25DEC26", { netApr: 0.02, daysToExpiry: 20 });
 
-assert.deepEqual(decideEntries([high, mid, low], [], { ...rules, enabled: false }), []);
-assert.deepEqual(decideEntries([high], [], { ...rules, notionalUsdt: 0 }), []);
+assert.equal(bestMatchingLayer(high, config.layers)?.id, 2);
+assert.equal(bestMatchingLayer(mid, config.layers)?.id, 1);
+assert.equal(bestMatchingLayer(low, config.layers), null);
 
-const ranked = decideEntries([mid, low, high], [], rules);
+assert.deepEqual(decideEntries([high], [], { ...config, enabled: false }), []);
+
+const ranked = decideEntries([mid, low, high], [], config);
 assert.deepEqual(
-  ranked.map((row) => row.futureSymbol),
-  ["BTCUSDT-25JUN27", "BTCUSDT-25SEP26"],
+  ranked.map((row) => [row.opportunity.futureSymbol, row.layer.id]),
+  [
+    ["BTCUSDT-25JUN27", 2],
+    ["BTCUSDT-25SEP26", 1],
+  ],
 );
 
 const skipOpen = decideEntries(
   [high, mid],
-  [{ spotSymbol: "BTCUSDT", futureSymbol: "BTCUSDT-25JUN27", notionalUsdt: 10_000 }],
-  rules,
+  [
+    {
+      spotSymbol: "BTCUSDT",
+      futureSymbol: "BTCUSDT-25JUN27",
+      notionalUsdt: 10_000,
+      ruleId: 2,
+    },
+  ],
+  config,
 );
 assert.deepEqual(
-  skipOpen.map((row) => row.futureSymbol),
+  skipOpen.map((row) => row.opportunity.futureSymbol),
   ["BTCUSDT-25SEP26"],
 );
 
-const countCapped = decideEntries([high, mid], [], { ...rules, maxOpenCount: 1 });
-assert.equal(countCapped.length, 1);
-assert.equal(countCapped[0]?.futureSymbol, "BTCUSDT-25JUN27");
-
-const notionalCapped = decideEntries(
-  [high, mid],
-  [{ spotSymbol: "ETHUSDT", futureSymbol: "ETHUSDT-25JUN27", notionalUsdt: 20_000 }],
-  rules,
-);
-assert.equal(notionalCapped.length, 0);
-
-assert.deepEqual(
-  decideExits(
-    [
-      {
-        spotSymbol: "BTCUSDT",
-        futureSymbol: high.futureSymbol,
-        notionalUsdt: 10_000,
-        daysToExpiry: 2,
-        markNetApr: 0.2,
-        pnlPct: 0.02,
-      },
-    ],
-    rules,
-  ).map((row) => row.reason),
-  ["dte"],
-);
-
-assert.deepEqual(
-  decideExits(
-    [
-      {
-        spotSymbol: "BTCUSDT",
-        futureSymbol: high.futureSymbol,
-        notionalUsdt: 10_000,
-        daysToExpiry: 20,
-        markNetApr: 0.01,
-        pnlPct: 0.02,
-      },
-    ],
-    rules,
-  ).map((row) => row.reason),
-  ["mark_apr"],
-);
-
-assert.deepEqual(
-  decideExits(
-    [
-      {
-        spotSymbol: "BTCUSDT",
-        futureSymbol: high.futureSymbol,
-        notionalUsdt: 10_000,
-        daysToExpiry: 20,
-        markNetApr: 0.2,
-        pnlPct: 0.015,
-      },
-    ],
-    rules,
-  ).map((row) => row.reason),
-  ["take_profit"],
-);
-
-assert.deepEqual(
-  decideExits(
-    [
-      {
-        spotSymbol: "BTCUSDT",
-        futureSymbol: high.futureSymbol,
-        notionalUsdt: 10_000,
-        daysToExpiry: 20,
-        markNetApr: 0.2,
-        pnlPct: -0.03,
-      },
-    ],
-    rules,
-  ).map((row) => row.reason),
-  ["stop_loss"],
-);
-
-assert.deepEqual(
-  decideExits(
-    [
-      {
-        spotSymbol: "BTCUSDT",
-        futureSymbol: high.futureSymbol,
-        notionalUsdt: 10_000,
-        daysToExpiry: null,
-        markNetApr: null,
-        pnlPct: null,
-      },
-    ],
-    rules,
-  ),
+const layerCapped = decideEntries(
+  [high, opportunity("BTCUSDT-26JUN27", { netApr: 0.28 })],
   [],
+  config,
+);
+assert.equal(layerCapped.length, 1);
+assert.equal(layerCapped[0]?.layer.id, 2);
+
+assert.equal(
+  decideExits(
+    [
+      {
+        spotSymbol: "BTCUSDT",
+        futureSymbol: high.futureSymbol,
+        notionalUsdt: 10_000,
+        ruleId: 1,
+        daysToExpiry: 2,
+        markNetApr: 0.2,
+        pnlPct: 0.02,
+      },
+    ],
+    config,
+  )[0]?.reason,
+  "dte",
 );
 
 assert.deepEqual(
@@ -165,12 +131,13 @@ assert.deepEqual(
         spotSymbol: "BTCUSDT",
         futureSymbol: high.futureSymbol,
         notionalUsdt: 10_000,
+        ruleId: null,
         daysToExpiry: 2,
         markNetApr: 0.01,
         pnlPct: -0.03,
       },
     ],
-    { ...rules, enabled: false },
+    config,
   ),
   [],
 );

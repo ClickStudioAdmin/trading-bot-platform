@@ -36,15 +36,17 @@ Vercel Cron is not the scheduler. Hobby cron is once per day and Production-only
 
 ## Rules (per user)
 
-One `paper_rules` row per `user_id`. RLS select/insert/update own. No delete.
+`paper_engine_settings` holds the enable switch (one row per user). `paper_rules` holds stacked layers (many rows per user). RLS own-row. Layers can be deleted.
 
-**Entry (all must pass):** `enabled`, `notional_usdt`, `min_net_apr`, `min_dte`, `max_dte`, `min_capacity_usdt`, `max_open_count`, `max_open_notional_usdt`.
+Each layer has its own size, entry filters, open caps, and exits. For a pair, the engine uses the matching layer with the **highest min APR**. Example: $10,000 at 10% APR, $25,000 at 20% APR.
 
-**Exit (first match wins):** DTE ≤ `close_max_dte`; mark net APR < `close_min_net_apr`; P&L % ≥ `take_profit_pct`; P&L % ≤ `stop_loss_pct`.
+**Exit (first match wins, on that layer):** DTE ≤ `close_max_dte`; mark net APR < `close_min_net_apr`; P&L % ≥ `take_profit_pct`; P&L % ≤ `stop_loss_pct`.
 
-**Engine safety:** skip a pair if that user already has any open row on it. Rank by net APR. Fill until caps. If `enabled` is false, the engine neither opens nor closes.
+**Engine safety:** skip a pair if that user already has any open row on it. Rank by net APR. Caps are per layer. If `enabled` is false, the engine neither opens nor closes. Manual opens have no `rule_id` and are not auto-closed.
 
 Positions with no live mark are not auto-closed.
+
+`paper_carries.source` is `manual` or `engine`. `paper_carries.rule_id` points at the layer that opened an engine row.
 
 `paper_carries.source` is `manual` or `engine`.
 

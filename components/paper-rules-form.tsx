@@ -1,162 +1,220 @@
+"use client";
+
+import { useState } from "react";
 import { savePaperRules } from "@/lib/engine/actions";
-import type { PaperRulesFormValues } from "@/lib/engine/rules";
+import {
+  defaultPaperLayer,
+  paperConfigToFormValues,
+  type PaperLayerFormValues,
+  type PaperRulesFormValues,
+} from "@/lib/engine/rules";
 import { UsdtSizeInput } from "@/components/usdt-size-input";
 
 export function PaperRulesForm({ values }: { values: PaperRulesFormValues }) {
+  const [enabled, setEnabled] = useState(values.enabled);
+  const [layers, setLayers] = useState(values.layers);
+
   return (
-    <form action={savePaperRules} className="space-y-8">
-      <section className="rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Engine</h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          Off means the tick neither opens nor closes. Manual Open and Close
-          still work.
-        </p>
-        <label className="mt-4 flex items-center gap-2 text-sm text-ink">
+    <form action={savePaperRules} className="space-y-4">
+      <input type="hidden" name="ruleCount" value={layers.length} />
+      <section className="rounded-card border border-line bg-surface px-4 py-3">
+        <label className="flex items-center gap-2 text-sm text-ink">
           <input
             type="checkbox"
             name="enabled"
-            defaultChecked={values.enabled}
-            className="size-4"
+            checked={enabled}
+            onChange={(event) => setEnabled(event.target.checked)}
+            className="size-3.5"
           />
           Enable paper engine
         </label>
-        <label className="mt-4 block text-xs text-ink-muted">
-          Size USDT
-          <div className="mt-1">
-            <UsdtSizeInput
-              name="notionalUsdt"
-              defaultValue={values.notionalUsdt}
-              ariaLabel="Paper size in USDT for engine opens"
-            />
-          </div>
-        </label>
-      </section>
-
-      <section className="rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Entry</h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          Same meaning as the book filters. Empty means no bound. The engine
-          skips a pair you already have open.
+        <p className="mt-1 text-xs text-ink-muted">
+          Stack rules to scale in: a higher min APR can use a different size.
+          The engine picks the highest matching layer. Off means no auto
+          open or close.
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Field
-            id="minApr"
-            name="minApr"
-            label="Min net APR %"
-            placeholder="10"
-            defaultValue={values.minApr}
-          />
-          <Field
-            id="minDte"
-            name="minDte"
-            label="Min DTE"
-            placeholder="7"
-            defaultValue={values.minDte}
-          />
-          <Field
-            id="maxDte"
-            name="maxDte"
-            label="Max DTE"
-            placeholder="90"
-            defaultValue={values.maxDte}
-          />
-          <Field
-            id="minCapacity"
-            name="minCapacity"
-            label="Min capacity USDT"
-            placeholder="5000"
-            defaultValue={values.minCapacity}
-          />
-          <Field
-            id="maxOpenCount"
-            name="maxOpenCount"
-            label="Max open trades"
-            placeholder="4"
-            defaultValue={values.maxOpenCount}
-          />
-          <Field
-            id="maxOpenNotional"
-            name="maxOpenNotional"
-            label="Max open notional USDT"
-            placeholder="50000"
-            defaultValue={values.maxOpenNotional}
-          />
-        </div>
       </section>
 
-      <section className="rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Exit</h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          First match wins: DTE, then mark APR, then take profit, then stop
-          loss. No live mark means no auto-close.
-        </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Field
-            id="closeMaxDte"
-            name="closeMaxDte"
-            label="Close when DTE ≤"
-            placeholder="3"
-            defaultValue={values.closeMaxDte}
-          />
-          <Field
-            id="closeMinApr"
-            name="closeMinApr"
-            label="Close when mark APR % below"
-            placeholder="5"
-            defaultValue={values.closeMinApr}
-          />
-          <Field
-            id="takeProfit"
-            name="takeProfit"
-            label="Take profit %"
-            placeholder="1"
-            defaultValue={values.takeProfit}
-          />
-          <Field
-            id="stopLoss"
-            name="stopLoss"
-            label="Stop loss %"
-            placeholder="2"
-            defaultValue={values.stopLoss}
-          />
-        </div>
-      </section>
+      {layers.map((layer, index) => (
+        <RuleRow
+          key={layer.key}
+          index={index}
+          layer={layer}
+          canRemove={layers.length > 1}
+          onRemove={() =>
+            setLayers((current) => current.filter((item) => item.key !== layer.key))
+          }
+        />
+      ))}
 
-      <button
-        type="submit"
-        className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-      >
-        Save rules
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            setLayers((current) => [
+              ...current,
+              layerToForm(current.length),
+            ])
+          }
+          className="rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface-raised"
+        >
+          Add rule
+        </button>
+        <button
+          type="submit"
+          className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
+        >
+          Save rules
+        </button>
+      </div>
     </form>
   );
 }
 
+function layerToForm(index: number): PaperLayerFormValues {
+  const layer = paperConfigToFormValues({
+    enabled: false,
+    layers: [defaultPaperLayer(index)],
+  }).layers[0]!;
+  return { ...layer, key: `new-${Date.now()}-${index}` };
+}
+
+function RuleRow({
+  index,
+  layer,
+  canRemove,
+  onRemove,
+}: {
+  index: number;
+  layer: PaperLayerFormValues;
+  canRemove: boolean;
+  onRemove: () => void;
+}) {
+  const prefix = `r${index}_`;
+  return (
+    <section className="rounded-card border border-line bg-surface px-4 py-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold tracking-tight">
+          Rule {index + 1}
+        </h2>
+        {canRemove ? (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-xs text-ink-muted hover:text-danger"
+          >
+            Remove
+          </button>
+        ) : null}
+      </div>
+      <input type="hidden" name={`${prefix}id`} value={layer.id} />
+      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        Entry
+      </p>
+      <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1.5 md:grid-cols-4 xl:grid-cols-7">
+        <label className="block text-[11px] text-ink-muted">
+          Size USDT
+          <div className="mt-0.5">
+            <UsdtSizeInput
+              name={`${prefix}notionalUsdt`}
+              defaultValue={layer.notionalUsdt}
+              ariaLabel={`Paper size for rule ${index + 1}`}
+              compact
+            />
+          </div>
+        </label>
+        <Field
+          name={`${prefix}minApr`}
+          label="Min APR %"
+          placeholder="10"
+          defaultValue={layer.minApr}
+        />
+        <Field
+          name={`${prefix}minDte`}
+          label="Min DTE"
+          placeholder="7"
+          defaultValue={layer.minDte}
+        />
+        <Field
+          name={`${prefix}maxDte`}
+          label="Max DTE"
+          placeholder="90"
+          defaultValue={layer.maxDte}
+        />
+        <Field
+          name={`${prefix}minCapacity`}
+          label="Min cap USDT"
+          placeholder="5000"
+          defaultValue={layer.minCapacity}
+        />
+        <Field
+          name={`${prefix}maxOpenCount`}
+          label="Max opens"
+          placeholder="2"
+          defaultValue={layer.maxOpenCount}
+        />
+        <Field
+          name={`${prefix}maxOpenNotional`}
+          label="Max notional"
+          placeholder="50000"
+          defaultValue={layer.maxOpenNotional}
+        />
+      </div>
+      <p className="mt-2 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        Exit
+      </p>
+      <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1.5 md:grid-cols-4">
+        <Field
+          name={`${prefix}closeMaxDte`}
+          label="Close DTE ≤"
+          placeholder="3"
+          defaultValue={layer.closeMaxDte}
+        />
+        <Field
+          name={`${prefix}closeMinApr`}
+          label="Close APR % below"
+          placeholder="5"
+          defaultValue={layer.closeMinApr}
+        />
+        <Field
+          name={`${prefix}takeProfit`}
+          label="Take profit %"
+          placeholder="1"
+          defaultValue={layer.takeProfit}
+        />
+        <Field
+          name={`${prefix}stopLoss`}
+          label="Stop loss %"
+          placeholder="2"
+          defaultValue={layer.stopLoss}
+        />
+      </div>
+    </section>
+  );
+}
+
 function Field({
-  id,
   name,
   label,
   placeholder,
   defaultValue,
 }: {
-  id: string;
   name: string;
   label: string;
   placeholder: string;
   defaultValue: string;
 }) {
   return (
-    <label htmlFor={id} className="block text-xs text-ink-muted">
+    <label className="block text-[11px] text-ink-muted">
       {label}
       <input
-        id={id}
         name={name}
         type="number"
         step="any"
         inputMode="decimal"
         placeholder={placeholder}
         defaultValue={defaultValue}
-        className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
+        className="mt-0.5 w-full rounded-control border border-line bg-canvas px-1.5 py-1 text-xs tabular-nums text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
       />
     </label>
   );

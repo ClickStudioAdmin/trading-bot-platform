@@ -2,8 +2,9 @@ import { applyOpportunityFilters } from "@/lib/opportunities/filter";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import { pairKey } from "@/lib/paper/open";
 
-export type PaperEngineRules = {
-  enabled: boolean;
+export type PaperEngineLayer = {
+  id: number | null;
+  sortOrder: number;
   notionalUsdt: number;
   minNetApr: number | null;
   minDte: number | null;
@@ -17,16 +18,27 @@ export type PaperEngineRules = {
   stopLossPct: number | null;
 };
 
+export type PaperEngineConfig = {
+  enabled: boolean;
+  layers: PaperEngineLayer[];
+};
+
 export type EngineOpenPosition = {
   spotSymbol: string;
   futureSymbol: string;
   notionalUsdt: number;
+  ruleId: number | null;
 };
 
 export type EngineMarkedPosition = EngineOpenPosition & {
   daysToExpiry: number | null;
   markNetApr: number | null;
   pnlPct: number | null;
+};
+
+export type EngineEntry = {
+  opportunity: ScannedOpportunity;
+  layer: PaperEngineLayer;
 };
 
 export type ExitReason = "dte" | "mark_apr" | "take_profit" | "stop_loss";
@@ -39,57 +51,85 @@ export type EngineExit = {
 export function decideEntries(
   scan: ScannedOpportunity[],
   opens: EngineOpenPosition[],
-  rules: PaperEngineRules,
-): ScannedOpportunity[] {
-  if (!rules.enabled || !(rules.notionalUsdt > 0)) {
+  config: PaperEngineConfig,
+): EngineEntry[] {
+  if (!config.enabled) {
     return [];
   }
 
   const taken = new Set(
     opens.map((row) => pairKey(row.spotSymbol, row.futureSymbol)),
   );
-  const filtered = applyOpportunityFilters(scan, {
-    minNetApr: rules.minNetApr,
-    minDte: rules.minDte,
-    maxDte: rules.maxDte,
-    minCapacityUsdt: rules.minCapacityUsdt,
-  })
-    .filter((row) => !taken.has(pairKey(row.spotSymbol, row.futureSymbol)))
-    .sort((a, b) => (b.netApr ?? Number.NEGATIVE_INFINITY) - (a.netApr ?? Number.NEGATIVE_INFINITY));
-
-  const usedCount = opens.length;
-  const usedNotional = opens.reduce((sum, row) => sum + row.notionalUsdt, 0);
-  const chosen: ScannedOpportunity[] = [];
-
-  for (const row of filtered) {
-    const nextCount = usedCount + chosen.length + 1;
-    const nextNotional = usedNotional + (chosen.length + 1) * rules.notionalUsdt;
-    if (rules.maxOpenCount !== null && nextCount > rules.maxOpenCount) {
-      break;
+  const ranked = [...scan].sort(
+    (a, b) =>
+      (b.netApr ?? Number.NEGATIVE_INFINITY) -
+      (a.netApr ?? Number.NEGATIVE_INFINITY),
+  );
+  const usedByLayer = new Map<string, { count: number; notional: number }>();
+  for (const open of opens) {
+    if (open.ruleId === null) {
+      continue;
     }
-    if (
-      rules.maxOpenNotionalUsdt !== null &&
-      nextNotional > rules.maxOpenNotionalUsdt
-    ) {
-      break;
-    }
-    chosen.push(row);
+    const key = layerUsageKey({ id: open.ruleId, sortOrder: 0 });
+    const used = usedByLayer.get(key) ?? { count: 0, notional: 0 };
+    used.count += 1;
+    used.notional += open.notionalUsdt;
+    usedByLayer.set(key, used);
   }
 
+  const chosen: EngineEntry[] = [];
+  for (const opportunity of ranked) {
+    if (taken.has(pairKey(opportunity.spotSymbol, opportunity.futureSymbol))) {
+      continue;
+    }
+    const layer = bestMatchingLayer(opportunity, config.layers);
+    if (!layer || !(layer.notionalUsdt > 0)) {
+      continue;
+    }
+    const key = layerUsageKey(layer);
+    const used = usedByLayer.get(key) ?? { count: 0, notional: 0 };
+    if (layer.maxOpenCount !== null && used.count + 1 > layer.maxOpenCount) {
+      continue;
+    }
+    if (
+      layer.maxOpenNotionalUsdt !== null &&
+      used.notional + layer.notionalUsdt > layer.maxOpenNotionalUsdt
+    ) {
+      continue;
+    }
+    usedByLayer.set(key, {
+      count: used.count + 1,
+      notional: used.notional + layer.notionalUsdt,
+    });
+    taken.add(pairKey(opportunity.spotSymbol, opportunity.futureSymbol));
+    chosen.push({ opportunity, layer });
+  }
   return chosen;
 }
 
 export function decideExits(
   positions: EngineMarkedPosition[],
-  rules: PaperEngineRules,
+  config: PaperEngineConfig,
 ): EngineExit[] {
-  if (!rules.enabled) {
+  if (!config.enabled) {
     return [];
   }
 
+  const byId = new Map(
+    config.layers
+      .filter((layer) => layer.id !== null)
+      .map((layer) => [layer.id, layer]),
+  );
   const exits: EngineExit[] = [];
   for (const position of positions) {
-    const reason = exitReason(position, rules);
+    if (position.ruleId === null) {
+      continue;
+    }
+    const layer = byId.get(position.ruleId);
+    if (!layer) {
+      continue;
+    }
+    const reason = exitReason(position, layer);
     if (reason) {
       exits.push({ position, reason });
     }
@@ -97,35 +137,65 @@ export function decideExits(
   return exits;
 }
 
+export function bestMatchingLayer(
+  opportunity: ScannedOpportunity,
+  layers: PaperEngineLayer[],
+): PaperEngineLayer | null {
+  const matches = layers.filter((layer) =>
+    applyOpportunityFilters([opportunity], {
+      minNetApr: layer.minNetApr,
+      minDte: layer.minDte,
+      maxDte: layer.maxDte,
+      minCapacityUsdt: layer.minCapacityUsdt,
+    }).length > 0,
+  );
+  if (matches.length === 0) {
+    return null;
+  }
+  return [...matches].sort((a, b) => {
+    const aprDelta =
+      (b.minNetApr ?? Number.NEGATIVE_INFINITY) -
+      (a.minNetApr ?? Number.NEGATIVE_INFINITY);
+    if (aprDelta !== 0) {
+      return aprDelta;
+    }
+    return a.sortOrder - b.sortOrder;
+  })[0] ?? null;
+}
+
+function layerUsageKey(layer: { id: number | null; sortOrder: number }): string {
+  return layer.id !== null ? `id:${layer.id}` : `tmp:${layer.sortOrder}`;
+}
+
 function exitReason(
   position: EngineMarkedPosition,
-  rules: PaperEngineRules,
+  layer: PaperEngineLayer,
 ): ExitReason | null {
   if (
-    rules.closeMaxDte !== null &&
+    layer.closeMaxDte !== null &&
     position.daysToExpiry !== null &&
-    position.daysToExpiry <= rules.closeMaxDte
+    position.daysToExpiry <= layer.closeMaxDte
   ) {
     return "dte";
   }
   if (
-    rules.closeMinNetApr !== null &&
+    layer.closeMinNetApr !== null &&
     position.markNetApr !== null &&
-    position.markNetApr < rules.closeMinNetApr
+    position.markNetApr < layer.closeMinNetApr
   ) {
     return "mark_apr";
   }
   if (
-    rules.takeProfitPct !== null &&
+    layer.takeProfitPct !== null &&
     position.pnlPct !== null &&
-    position.pnlPct >= rules.takeProfitPct
+    position.pnlPct >= layer.takeProfitPct
   ) {
     return "take_profit";
   }
   if (
-    rules.stopLossPct !== null &&
+    layer.stopLossPct !== null &&
     position.pnlPct !== null &&
-    position.pnlPct <= rules.stopLossPct
+    position.pnlPct <= layer.stopLossPct
   ) {
     return "stop_loss";
   }
