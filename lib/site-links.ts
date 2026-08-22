@@ -7,11 +7,12 @@ export const CASH_AND_CARRY_PRIMARY_LINKS = [
   { href: "/strategies/cash-and-carry/opportunities", label: "Opportunities" },
   { href: "/strategies/cash-and-carry/positions", label: "Positions" },
   { href: "/strategies/cash-and-carry/automations", label: "Automations" },
+  { href: "/strategies/cash-and-carry/performance", label: "Performance" },
 ] as const;
 
 export const CASH_AND_CARRY_SECONDARY_LINKS = [
-  { href: "/strategies/cash-and-carry/pairs", label: "Pairs" },
   { href: "/strategies/cash-and-carry/settings", label: "Settings" },
+  { href: "/strategies/cash-and-carry/pairs", label: "Pairs" },
 ] as const;
 
 export const CASH_AND_CARRY_LINKS = [

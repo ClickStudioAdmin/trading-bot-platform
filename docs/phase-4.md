@@ -10,7 +10,7 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
 **4 of 7 — Rules UI** (complete)
 
-`/strategies/cash-and-carry/automations` saves the user’s automation layers. `/strategies/cash-and-carry/positions` is the open paper table. `/strategies/cash-and-carry/settings` is a placeholder. Waiting on **5 — Engine tick**.
+`/strategies/cash-and-carry/automations` saves the user’s automation layers. `/strategies/cash-and-carry/positions` is the open paper table. `/strategies/cash-and-carry/performance` is past positions and desk statistics. `/strategies/cash-and-carry/settings` is a placeholder. Waiting on **5 — Engine tick**.
 
 ## Micro-steps
 

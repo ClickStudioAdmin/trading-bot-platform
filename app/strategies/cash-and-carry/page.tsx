@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { OpportunityTable } from "@/components/opportunity-table";
-import { PaperBlotter } from "@/components/paper-blotter";
+import { OpenPaperTrades } from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
 import { persistOpportunities } from "@/lib/opportunities/persist";
 import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
@@ -106,11 +106,7 @@ export default async function CashAndCarryPage({
         <OpportunityTable rows={topFive} paper={paper} />
       </section>
 
-      <PaperBlotter
-        signedIn={desk.signedIn}
-        open={desk.open}
-        closed={desk.closed}
-      />
+      <OpenPaperTrades signedIn={desk.signedIn} open={desk.open} />
 
       <p className="text-sm text-ink-faint">
         <Link href="/strategies/cash-and-carry/pairs" className="text-accent">

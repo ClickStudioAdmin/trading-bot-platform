@@ -25,25 +25,6 @@ type ClosedCarryView = PaperCarryRow & { orders: PaperOrderRow[] };
 
 const EXPOSURE_BARS = ["bg-accent", "bg-success", "bg-warning"] as const;
 
-export function PaperBlotter({
-  signedIn,
-  open,
-  closed,
-  next = "/strategies/cash-and-carry",
-}: {
-  signedIn: boolean;
-  open: OpenCarryView[];
-  closed: ClosedCarryView[];
-  next?: PaperReturnPath;
-}) {
-  return (
-    <>
-      <OpenPaperTrades signedIn={signedIn} open={open} next={next} />
-      <PaperDeskStats signedIn={signedIn} open={open} closed={closed} />
-    </>
-  );
-}
-
 export function OpenPaperTrades({
   signedIn,
   open,

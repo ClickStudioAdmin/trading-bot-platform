@@ -1,24 +1,20 @@
 import type { Metadata } from "next";
 import { PageHeading } from "@/components/page-heading";
-import { OpenPaperTrades } from "@/components/paper-blotter";
-import { PaperFlash } from "@/components/paper-flash";
+import {
+  ClosedPaperTrades,
+  PaperDeskStats,
+} from "@/components/paper-blotter";
 import { persistOpportunities } from "@/lib/opportunities/persist";
-import { firstSearchValue } from "@/lib/paper/open";
 import { loadPaperDesk } from "@/lib/paper/list";
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
 export const metadata: Metadata = {
-  title: "Current Positions",
-  description: "Open paper cash-and-carry positions.",
+  title: "Performance",
+  description: "Past paper positions and cash-and-carry desk statistics.",
 };
 
-export default async function CashAndCarryPositionsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const params = await searchParams;
+export default async function CashAndCarryPerformancePage() {
   let rows: ScannedOpportunity[] = [];
   let error: string | null = null;
 
@@ -33,28 +29,21 @@ export default async function CashAndCarryPositionsPage({
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Current Positions" />
+      <PageHeading as="h2" title="Performance" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Open paper carries. Expand a row for the orders, the conditions that
-        fired, and the scan versus paper fill. Close is paper only — no Bybit
-        order.
+        Closed paper carries and desk statistics. Marks from the live scan.
+        Paper only — no Bybit order.
       </p>
       {error ? (
         <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
       ) : null}
-      <PaperFlash
-        opened={firstSearchValue(params.paper) === "opened"}
-        closed={firstSearchValue(params.paper) === "closed"}
-        exits={firstSearchValue(params.paper) === "exits"}
-        error={firstSearchValue(params.paperError)}
-      />
-      <OpenPaperTrades
+      <ClosedPaperTrades signedIn={desk.signedIn} closed={desk.closed} />
+      <PaperDeskStats
         signedIn={desk.signedIn}
         open={desk.open}
-        next="/strategies/cash-and-carry/positions"
-        showHeading={false}
+        closed={desk.closed}
       />
     </main>
   );
