@@ -3,7 +3,7 @@ export default function Home() {
     <main>
       <h1>Trading Bot Platform</h1>
       <p>TBP development environment is operational.</p>
-      <p>Build: 001</p>
+      <p>Build: 002</p>
     </main>
   );
 }
