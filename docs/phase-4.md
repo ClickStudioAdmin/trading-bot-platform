@@ -38,11 +38,11 @@ Vercel Cron is not the scheduler. Hobby cron is once per day and Production-only
 
 `paper_engine_settings` holds the enable switch (one row per user). `paper_rules` holds stacked layers (many rows per user). RLS own-row. Layers can be deleted.
 
-Each layer has its own order type, entry filters, open caps, and exits. **Fixed** opens at Order size and can require Min book value. **Dynamic** opens at the pair’s current book value and skips if that is below Min Order Size. For a pair, the engine uses the matching layer with the **highest min APR**. Example: $10,000 at 10% APR, $25,000 at 20% APR.
+Each layer has its own entry and exit order types, entry filters, open caps, and exits. **Fixed entry** opens Order size once on a pair you do not already hold, and can require Min book value. **Dynamic entry** adds one clip per pair per tick, sized to current book value or leftover room under Max Position Size, until that cap (and Max opens) is met. Skip a clip below Min Order Size. For a pair, the engine uses the matching layer with the **highest min APR**.
 
-**Exit (first match wins, on that layer):** DTE ≤ `close_max_dte`; mark net APR < `close_min_net_apr`; P&L % ≥ `take_profit_pct`; P&L % ≤ `stop_loss_pct`.
+**Exit (first match wins, on that layer):** DTE ≤ `close_max_dte`; mark net APR < `close_min_net_apr`; P&L % ≥ `take_profit_pct`; P&L % ≤ `stop_loss_pct`. P&L % is all-in P&L ÷ entry notional (10% on $10,000 is $1,000). **Fixed exit** closes the whole row. **Dynamic exit** closes up to current book value per tick until the row is flat.
 
-**Engine safety:** skip a pair if that user already has any open row on it. Rank by net APR. Caps are per layer. If `enabled` is false, the engine neither opens nor closes. Manual opens have no `rule_id` and are not auto-closed.
+**Engine safety:** Fixed entry skips a pair you already hold. Dynamic entry may add clips on a held pair. Rank by net APR. Caps are per layer. If `enabled` is false, the engine neither opens nor closes. Manual opens have no `rule_id` and are not auto-closed.
 
 Positions with no live mark are not auto-closed.
 

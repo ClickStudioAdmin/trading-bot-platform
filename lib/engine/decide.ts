@@ -8,6 +8,7 @@ export type PaperEngineLayer = {
   id: number | null;
   sortOrder: number;
   sizeType: PaperSizeType;
+  exitSizeType: PaperSizeType;
   notionalUsdt: number;
   minNetApr: number | null;
   minDte: number | null;
@@ -45,6 +46,8 @@ export type EngineMarkedPosition = EngineOpenPosition & {
   daysToExpiry: number | null;
   markNetApr: number | null;
   pnlPct: number | null;
+  capacityUsdt?: number | null;
+  openedAtMs?: number;
   exits?: PositionExits;
 };
 
@@ -59,6 +62,7 @@ export type ExitReason = "dte" | "mark_apr" | "take_profit" | "stop_loss";
 export type EngineExit = {
   position: EngineMarkedPosition;
   reason: ExitReason;
+  closeNotionalUsdt: number;
 };
 
 export function decideEntries(
@@ -70,9 +74,10 @@ export function decideEntries(
     return [];
   }
 
-  const taken = new Set(
+  const occupied = new Set(
     opens.map((row) => pairKey(row.spotSymbol, row.futureSymbol)),
   );
+  const clippedThisTick = new Set<string>();
   const ranked = [...scan].sort(
     (a, b) =>
       (b.netApr ?? Number.NEGATIVE_INFINITY) -
@@ -92,12 +97,15 @@ export function decideEntries(
 
   const chosen: EngineEntry[] = [];
   for (const opportunity of ranked) {
-    if (taken.has(pairKey(opportunity.spotSymbol, opportunity.futureSymbol))) {
+    const pair = pairKey(opportunity.spotSymbol, opportunity.futureSymbol);
+    const layer = bestMatchingLayer(opportunity, config.layers);
+    if (!layer) {
       continue;
     }
-    const layer = bestMatchingLayer(opportunity, config.layers);
-    const notionalUsdt = layer ? entryNotionalUsdt(layer, opportunity) : null;
-    if (!layer || notionalUsdt === null) {
+    if (layer.sizeType === "fixed" && occupied.has(pair)) {
+      continue;
+    }
+    if (layer.sizeType === "dynamic" && clippedThisTick.has(pair)) {
       continue;
     }
     const key = layerUsageKey(layer);
@@ -105,17 +113,23 @@ export function decideEntries(
     if (layer.maxOpenCount !== null && used.count + 1 > layer.maxOpenCount) {
       continue;
     }
-    if (
-      layer.maxOpenNotionalUsdt !== null &&
-      used.notional + notionalUsdt > layer.maxOpenNotionalUsdt
-    ) {
+    const remainingUsdt =
+      layer.maxOpenNotionalUsdt === null
+        ? null
+        : layer.maxOpenNotionalUsdt - used.notional;
+    const notionalUsdt = entryNotionalUsdt(layer, opportunity, remainingUsdt);
+    if (notionalUsdt === null) {
       continue;
     }
     usedByLayer.set(key, {
       count: used.count + 1,
       notional: used.notional + notionalUsdt,
     });
-    taken.add(pairKey(opportunity.spotSymbol, opportunity.futureSymbol));
+    if (layer.sizeType === "fixed") {
+      occupied.add(pair);
+    } else {
+      clippedThisTick.add(pair);
+    }
     chosen.push({ opportunity, layer, notionalUsdt });
   }
   return chosen;
@@ -134,7 +148,11 @@ export function decideExits(
       .filter((layer) => layer.id !== null)
       .map((layer) => [layer.id, layer]),
   );
-  const exits: EngineExit[] = [];
+  const candidates: {
+    position: EngineMarkedPosition;
+    reason: ExitReason;
+    layer: PaperEngineLayer;
+  }[] = [];
   for (const position of positions) {
     if (position.ruleId === null) {
       continue;
@@ -145,8 +163,28 @@ export function decideExits(
     }
     const reason = exitReason(position, position.exits ?? layer);
     if (reason) {
-      exits.push({ position, reason });
+      candidates.push({ position, reason, layer });
     }
+  }
+  candidates.sort((a, b) => {
+    const pairDelta = pairKey(
+      a.position.spotSymbol,
+      a.position.futureSymbol,
+    ).localeCompare(pairKey(b.position.spotSymbol, b.position.futureSymbol));
+    if (pairDelta !== 0) {
+      return pairDelta;
+    }
+    return (a.position.openedAtMs ?? 0) - (b.position.openedAtMs ?? 0);
+  });
+
+  const bookLeft = new Map<string, number>();
+  const exits: EngineExit[] = [];
+  for (const { position, reason, layer } of candidates) {
+    const closeNotionalUsdt = exitNotionalUsdt(layer, position, bookLeft);
+    if (closeNotionalUsdt === null) {
+      continue;
+    }
+    exits.push({ position, reason, closeNotionalUsdt });
   }
   return exits;
 }
@@ -181,18 +219,58 @@ export function bestMatchingLayer(
 export function entryNotionalUsdt(
   layer: PaperEngineLayer,
   opportunity: ScannedOpportunity,
+  remainingUsdt: number | null = null,
 ): number | null {
   if (layer.sizeType !== "dynamic") {
-    return layer.notionalUsdt > 0 ? layer.notionalUsdt : null;
+    if (!(layer.notionalUsdt > 0)) {
+      return null;
+    }
+    if (remainingUsdt !== null && layer.notionalUsdt > remainingUsdt) {
+      return null;
+    }
+    return layer.notionalUsdt;
   }
-  const size = opportunity.capacityUsdt;
-  if (!(size > 0)) {
+  const room =
+    remainingUsdt === null
+      ? opportunity.capacityUsdt
+      : Math.min(opportunity.capacityUsdt, remainingUsdt);
+  if (!(room > 0)) {
     return null;
   }
-  if (layer.minSizeUsdt !== null && size < layer.minSizeUsdt) {
+  if (layer.minSizeUsdt !== null && room < layer.minSizeUsdt) {
     return null;
   }
-  return size;
+  return room;
+}
+
+function exitNotionalUsdt(
+  layer: PaperEngineLayer,
+  position: EngineMarkedPosition,
+  bookLeft: Map<string, number>,
+): number | null {
+  if (!(position.notionalUsdt > 0)) {
+    return null;
+  }
+  if (layer.exitSizeType !== "dynamic") {
+    return position.notionalUsdt;
+  }
+  const minSize = layer.minSizeUsdt;
+  if (minSize !== null && position.notionalUsdt <= minSize) {
+    return position.notionalUsdt;
+  }
+  const pair = pairKey(position.spotSymbol, position.futureSymbol);
+  const book = bookLeft.has(pair)
+    ? bookLeft.get(pair)!
+    : (position.capacityUsdt ?? 0);
+  const clip = Math.min(position.notionalUsdt, book);
+  if (!(clip > 0)) {
+    return null;
+  }
+  if (minSize !== null && clip < minSize) {
+    return null;
+  }
+  bookLeft.set(pair, book - clip);
+  return clip;
 }
 
 function layerUsageKey(layer: { id: number | null; sortOrder: number }): string {

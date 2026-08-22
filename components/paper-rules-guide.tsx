@@ -18,17 +18,17 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Add rule"
-          detail="Adds another layer. Each layer has its own size, entry filters, caps, and exits. Use this to scale in: a modest size at a lower APR, and a larger (or smaller) size only if APR is higher."
-        />
-        <GuideItem
-          term="Which layer is used"
-          detail="A pair must pass every filled entry field on a layer. If several layers match, the engine uses the one with the highest min APR. If min APRs tie, it uses the layer that appears first on this page. Example: Rule 1 min APR 10% and $10,000; Rule 2 min APR 20% and $25,000. A pair at 12% net APR uses Rule 1. A pair at 25% uses Rule 2."
+          detail="Adds another layer. Each layer has its own entry conditions, position caps, order types, and exits. If several layers match a pair, the engine uses the one with the highest min APR. If min APRs tie, it uses the layer that appears first on this page."
         />
       </dl>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
         Entry · Conditions
       </h3>
+      <p className="mt-2 text-sm text-ink-muted">
+        All filled entry conditions must be true before this layer looks to
+        open. Empty conditions are ignored.
+      </p>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Min APR %"
@@ -46,27 +46,27 @@ export function PaperRulesGuide() {
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Max Position Size"
-          detail="Cap on the sum of open sizes for this layer only. A new open is skipped if this size would push the layer over the cap."
+          detail="Cap on the sum of open sizes this layer created. Dynamic fills up to this cap over time. A new clip is sized to the leftover room when the next book-sized clip would overshoot. Fixed skips if Order size would push the sum over the cap."
         />
         <GuideItem
           term="Max opens"
-          detail="How many open paper carries this layer may have at once. Only rows this layer opened count. Manual opens and other layers do not count toward this cap."
+          detail="Maximum number of open paper rows this layer may have. Each Dynamic clip counts as one open. Manual opens and other layers do not count."
         />
         <GuideItem
           term="Order Type"
-          detail="Fixed uses Order size as the open. Dynamic sizes each open to the pair’s current book value."
+          detail="Fixed opens one Order size on a pair you do not already hold. Dynamic scales in: each tick may add one clip on a matching pair, sized to current book value (or leftover room under Max Position Size), until the cap is met. Book value is 25% of the top 5 book levels inside 5 bp of impact."
         />
         <GuideItem
           term="Order size (USDT)"
-          detail="Fixed only. Paper size of each open this layer creates. P&L is (entry net − mark net − 2 × fees and slip) × this size. Fees are VIP0 taker on both legs plus 5 bp slip, charged for open and for close."
+          detail="Fixed only. Paper size of the single open this layer creates on a pair."
         />
         <GuideItem
           term="Min book value"
-          detail="Fixed only. The pair’s book value must be at least this. Book value is 25% of the top 5 book levels that stay inside 5 bp of impact — how much size the books can take, not how much you will trade."
+          detail="Fixed only. The pair’s book value must be at least this before that Order size is used."
         />
         <GuideItem
           term="Min Order Size"
-          detail="Dynamic only. Skip the pair if book value is below this. Stops dust opens on thin books."
+          detail="Dynamic entry and exit. Skip a clip if it would be below this, except the last leftover exit which always flattens so the position can finish. The last entry clip is also skipped if leftover room under Max Position Size is below this, so the cap may sit slightly under."
         />
       </dl>
 
@@ -74,31 +74,47 @@ export function PaperRulesGuide() {
         Exit · Conditions
       </h3>
       <p className="mt-2 text-sm text-ink-muted">
-        Exits apply only to paper rows this layer opened. First match wins, in
-        this order: DTE, then mark APR, then take profit, then stop loss.
+        Exits apply only to paper rows this layer opened. If either filled
+        condition is true, the layer starts exiting. First match wins: DTE,
+        then mark APR, then take profit, then stop loss.
       </p>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="DTE ≤"
-          detail="Close when days to expiry fall to this number or below. Use this to flatten before delivery."
+          detail="Start exiting when days to expiry fall to this number or below. Use this to flatten before delivery."
         />
         <GuideItem
           term="APR % below"
-          detail="Close when the live mark net APR is below this. That is the book’s current net APR, not your P&L %. Use it when the remaining edge has gone."
+          detail="Start exiting when the live mark net APR is below this. That is the book’s current net APR, not your P&L %. Use it when the remaining edge has gone."
+        />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Exit · Position and Orders
+      </h3>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="Order Type"
+          detail="Fixed closes the whole paper row when an exit fires. Dynamic scales out: each tick closes up to the current book value (and not below Min Order Size, unless this is the last leftover). Oldest rows on a pair go first. It keeps clipping until the position is flat."
         />
       </dl>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
         Exit · Stops
       </h3>
+      <p className="mt-2 text-sm text-ink-muted">
+        Percents are of the paper size at entry, not of mark APR. A $10,000
+        entry with a 10% take profit exits when all-in P&L is at least $1,000.
+        A 10% stop exits when all-in P&L is at or below −$1,000.
+      </p>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Take profit %"
-          detail="Close when all-in P&L % is at least this. P&L % is unrealized ÷ notional, after open and close fee costs. Enter 1 for +1%."
+          detail="Exit when all-in P&L reaches this percent of entry notional, after open and close fee costs. Enter 10 for +10% ($1,000 on a $10,000 entry)."
         />
         <GuideItem
           term="Stop loss %"
-          detail="Close when all-in P&L % is at or below this loss. Enter 2 to stop at −2%. You type a positive number; the engine treats it as a loss."
+          detail="Exit when all-in P&L is at or below this loss, as a percent of entry notional. Enter 10 to stop at −10% (−$1,000 on a $10,000 entry). You type a positive number; the engine treats it as a loss."
         />
       </dl>
 
@@ -107,12 +123,12 @@ export function PaperRulesGuide() {
       </h3>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
-          term="One open per pair"
-          detail="The engine will not open a pair you already hold, even if another layer would match. Manual Open can still stack the same pair."
+          term="Fixed: one open per pair"
+          detail="A Fixed layer will not open a pair you already hold. Dynamic may add clips on a pair you already hold until Max Position Size or Max opens is reached. Manual Open can still stack the same pair."
         />
         <GuideItem
           term="No live mark"
-          detail="If the pair is missing from the current scan, the engine will not auto-close it. There is no honest exit price."
+          detail="If the pair is missing from the current scan, the engine will not auto-close it. There is no honest exit price or book value."
         />
         <GuideItem
           term="Manual trades"

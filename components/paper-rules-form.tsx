@@ -92,6 +92,7 @@ function RuleRow({
 }) {
   const prefix = `r${index}_`;
   const [sizeType, setSizeType] = useState(layer.sizeType);
+  const [exitSizeType, setExitSizeType] = useState(layer.exitSizeType);
   return (
     <section className="rounded-card border border-line bg-surface px-4 py-3">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -156,13 +157,7 @@ function RuleRow({
               <option value="fixed">Fixed</option>
             </select>
           </label>
-          {sizeType === "dynamic" ? (
-            <Field
-              name={`${prefix}minSize`}
-              label="Min Order Size"
-              defaultValue={layer.minSize}
-            />
-          ) : (
+          {sizeType === "fixed" ? (
             <>
               <Field
                 name={`${prefix}notionalUsdt`}
@@ -175,13 +170,20 @@ function RuleRow({
                 defaultValue={layer.minCapacity}
               />
             </>
-          )}
+          ) : null}
+          {sizeType === "dynamic" || exitSizeType === "dynamic" ? (
+            <Field
+              name={`${prefix}minSize`}
+              label="Min Order Size"
+              defaultValue={layer.minSize}
+            />
+          ) : null}
         </FieldGroup>
       </div>
       <p className="mt-3 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
         Exit
       </p>
-      <div className="mt-1 grid gap-2 md:grid-cols-2">
+      <div className="mt-1 grid gap-2 md:grid-cols-3">
         <FieldGroup title="Conditions">
           <Field
             name={`${prefix}closeMaxDte`}
@@ -194,6 +196,24 @@ function RuleRow({
             defaultValue={layer.closeMinApr}
             allowDecimal
           />
+        </FieldGroup>
+        <FieldGroup title="Position and Orders">
+          <label className="block text-[11px] text-ink-muted">
+            Order Type
+            <select
+              name={`${prefix}exitSizeType`}
+              value={exitSizeType}
+              onChange={(event) =>
+                setExitSizeType(
+                  event.target.value === "fixed" ? "fixed" : "dynamic",
+                )
+              }
+              className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
+            >
+              <option value="dynamic">Dynamic</option>
+              <option value="fixed">Fixed</option>
+            </select>
+          </label>
         </FieldGroup>
         <FieldGroup title="Stops">
           <Field

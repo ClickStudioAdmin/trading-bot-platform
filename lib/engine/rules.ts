@@ -10,6 +10,7 @@ export type PaperLayerFormValues = {
   key: string;
   id: string;
   sizeType: PaperSizeType;
+  exitSizeType: PaperSizeType;
   notionalUsdt: number;
   minApr: string;
   minDte: string;
@@ -34,6 +35,7 @@ export function defaultPaperLayer(sortOrder = 0): PaperEngineLayer {
     id: null,
     sortOrder,
     sizeType: "dynamic",
+    exitSizeType: "dynamic",
     notionalUsdt: DEFAULT_PAPER_NOTIONAL_USDT,
     minNetApr: null,
     minDte: null,
@@ -66,6 +68,7 @@ export function paperConfigToFormValues(
       key: layer.id !== null ? `id-${layer.id}` : `new-${index}`,
       id: layer.id === null ? "" : String(layer.id),
       sizeType: layer.sizeType,
+      exitSizeType: layer.exitSizeType,
       notionalUsdt: layer.notionalUsdt,
       minApr: decimalToPercentInput(layer.minNetApr),
       minDte: boundToInput(layer.minDte),
@@ -118,6 +121,7 @@ export function parsePaperRulesRow(
     id: asNumber(row.id),
     sortOrder,
     sizeType: parseSizeType(row.size_type),
+    exitSizeType: parseSizeType(row.exit_size_type),
     notionalUsdt: asNumber(row.notional_usdt),
     minNetApr: asNullableNumber(row.min_net_apr),
     minDte: asNullableNumber(row.min_dte),
@@ -141,6 +145,7 @@ export function paperLayerToRow(
     user_id: userId,
     sort_order: layer.sortOrder,
     size_type: layer.sizeType,
+    exit_size_type: layer.exitSizeType,
     notional_usdt: layer.notionalUsdt,
     min_net_apr: layer.minNetApr,
     min_dte: layer.minDte,
@@ -162,6 +167,7 @@ function parseLayer(
 ): { ok: true; layer: PaperEngineLayer } | { ok: false; error: string } {
   const prefix = `r${index}_`;
   const sizeType = parseSizeType(form.get(`${prefix}sizeType`));
+  const exitSizeType = parseSizeType(form.get(`${prefix}exitSizeType`));
   const parsedNotional = parseNotionalUsdt(
     String(form.get(`${prefix}notionalUsdt`) ?? ""),
   );
@@ -190,7 +196,9 @@ function parseLayer(
   }
 
   const minSizeUsdt =
-    sizeType === "dynamic" ? parseBound(form.get(`${prefix}minSize`)) : null;
+    sizeType === "dynamic" || exitSizeType === "dynamic"
+      ? parseBound(form.get(`${prefix}minSize`))
+      : null;
   if (minSizeUsdt !== null && minSizeUsdt <= 0) {
     return { ok: false, error: `Rule ${index + 1}: min order size must be positive.` };
   }
@@ -210,6 +218,7 @@ function parseLayer(
         idRaw === "" || !Number.isFinite(Number(idRaw)) ? null : Number(idRaw),
       sortOrder: index,
       sizeType,
+      exitSizeType,
       notionalUsdt,
       minNetApr: parsePercent(form.get(`${prefix}minApr`)),
       minDte,

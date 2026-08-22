@@ -15,6 +15,7 @@ const layer = {
   id: 1,
   sortOrder: 0,
   sizeType: "fixed" as const,
+  exitSizeType: "fixed" as const,
   notionalUsdt: 10_000,
   minNetApr: 0.1,
   minDte: 7,
@@ -36,6 +37,7 @@ assert.deepEqual(formatEntryTriggers(automation), [
   "Min book value $5,000",
 ]);
 assert.deepEqual(formatExitTriggers(automation), [
+  "Order Type Fixed",
   "DTE ≤ 3",
   "APR below 5%",
   "Take profit 1%",

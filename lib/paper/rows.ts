@@ -89,6 +89,7 @@ export function parsePaperCarryRow(row: Record<string, unknown>): PaperCarryRow 
     ruleId: asNullableNumber(row.rule_id),
     automation: {
       entrySizeType: parseEntrySizeType(row.entry_size_type),
+      exitSizeType: parseEntrySizeType(row.exit_size_type),
       entryMinNetApr: asNullableNumber(row.entry_min_net_apr),
       entryMinDte: asNullableNumber(row.entry_min_dte),
       entryMaxDte: asNullableNumber(row.entry_max_dte),

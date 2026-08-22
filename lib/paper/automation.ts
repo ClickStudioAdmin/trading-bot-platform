@@ -9,6 +9,7 @@ export type CloseReason = ExitReason;
 
 export type PaperCarryAutomation = {
   entrySizeType: PaperSizeType | null;
+  exitSizeType: PaperSizeType | null;
   entryMinNetApr: number | null;
   entryMinDte: number | null;
   entryMaxDte: number | null;
@@ -22,6 +23,7 @@ export type PaperCarryAutomation = {
 
 export const EMPTY_AUTOMATION: PaperCarryAutomation = {
   entrySizeType: null,
+  exitSizeType: null,
   entryMinNetApr: null,
   entryMinDte: null,
   entryMaxDte: null,
@@ -38,6 +40,7 @@ export function automationFromLayer(
 ): PaperCarryAutomation {
   return {
     entrySizeType: layer.sizeType,
+    exitSizeType: layer.exitSizeType,
     entryMinNetApr: layer.minNetApr,
     entryMinDte: layer.minDte,
     entryMaxDte: layer.maxDte,
@@ -53,6 +56,7 @@ export function automationFromLayer(
 export function automationInsertColumns(automation: PaperCarryAutomation) {
   return {
     entry_size_type: automation.entrySizeType,
+    exit_size_type: automation.exitSizeType,
     entry_min_net_apr: automation.entryMinNetApr,
     entry_min_dte: automation.entryMinDte,
     entry_max_dte: automation.entryMaxDte,
@@ -94,6 +98,11 @@ export function formatEntryTriggers(automation: PaperCarryAutomation): string[] 
 
 export function formatExitTriggers(automation: PaperCarryAutomation): string[] {
   const lines: string[] = [];
+  if (automation.exitSizeType === "dynamic") {
+    lines.push("Order Type Dynamic");
+  } else if (automation.exitSizeType === "fixed") {
+    lines.push("Order Type Fixed");
+  }
   if (automation.closeMaxDte !== null) {
     lines.push(`DTE ≤ ${automation.closeMaxDte}`);
   }

@@ -23,7 +23,7 @@ Event logs and admins: `supabase/migrations/20260822180000_event_logs_and_admins
 
 Members: `supabase/migrations/20260822190000_members.sql`. Password and no Auth FK: `supabase/migrations/20260822220000_members_password_no_auth_fk.sql`.
 
-Per-trade automation snapshot: `supabase/migrations/20260822200000_paper_carry_automation.sql`. Close source: `supabase/migrations/20260822210000_paper_carry_close_source.sql`. Size type: `supabase/migrations/20260823063000_paper_rule_size_type.sql`.
+Per-trade automation snapshot: `supabase/migrations/20260822200000_paper_carry_automation.sql`. Close source: `supabase/migrations/20260822210000_paper_carry_close_source.sql`. Size type: `supabase/migrations/20260823063000_paper_rule_size_type.sql`. Exit size type: `supabase/migrations/20260823080000_paper_rule_exit_size_type.sql`.
 
 `event_logs` is append-only. Writes go through `writeEventLog` with the service role. Authenticated clients can select their own rows; `app_admins` can select every row. Secrets in `data` are redacted before insert. Logging failures must not break the action that produced the event.
 

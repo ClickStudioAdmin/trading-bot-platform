@@ -37,6 +37,7 @@ function layer(
     id: 1,
     sortOrder: 0,
     sizeType: "fixed",
+    exitSizeType: "fixed",
     notionalUsdt: 10_000,
     minNetApr: 0.1,
     minDte: 7,
@@ -203,8 +204,23 @@ assert.equal(
     [opportunity("BTCUSDT-25JUN27", { netApr: 0.19, capacityUsdt: 50_000 })],
     [],
     { enabled: true, layers: [dynamicLayer] },
-  ).length,
-  0,
+  )[0]?.notionalUsdt,
+  25_000,
+);
+assert.equal(
+  decideEntries(
+    [thin],
+    [
+      {
+        spotSymbol: "BTCUSDT",
+        futureSymbol: thin.futureSymbol,
+        notionalUsdt: 10_000,
+        ruleId: 1,
+      },
+    ],
+    { enabled: true, layers: [dynamicLayer] },
+  )[0]?.notionalUsdt,
+  8_000,
 );
 assert.deepEqual(
   decideEntries(
@@ -213,6 +229,68 @@ assert.deepEqual(
     { enabled: true, layers: [layer({ minCapacityUsdt: 20_000 })] },
   ),
   [],
+);
+
+const dynamicExit = layer({
+  exitSizeType: "dynamic",
+  minSizeUsdt: 5_000,
+});
+assert.equal(
+  decideExits(
+    [
+      {
+        spotSymbol: "BTCUSDT",
+        futureSymbol: high.futureSymbol,
+        notionalUsdt: 20_000,
+        ruleId: 1,
+        daysToExpiry: 2,
+        markNetApr: 0.2,
+        pnlPct: 0.02,
+        capacityUsdt: 8_000,
+        openedAtMs: 1,
+      },
+    ],
+    { enabled: true, layers: [dynamicExit] },
+  )[0]?.closeNotionalUsdt,
+  8_000,
+);
+assert.equal(
+  decideExits(
+    [
+      {
+        spotSymbol: "BTCUSDT",
+        futureSymbol: high.futureSymbol,
+        notionalUsdt: 20_000,
+        ruleId: 1,
+        daysToExpiry: 2,
+        markNetApr: 0.2,
+        pnlPct: 0.02,
+        capacityUsdt: 4_000,
+        openedAtMs: 1,
+      },
+    ],
+    { enabled: true, layers: [dynamicExit] },
+  ).length,
+  0,
+);
+assert.equal(
+  decideExits(
+    [
+      {
+        spotSymbol: "BTCUSDT",
+        futureSymbol: high.futureSymbol,
+        notionalUsdt: 4_000,
+        ruleId: 1,
+        daysToExpiry: 2,
+        markNetApr: 0.2,
+        pnlPct: 0.02,
+        capacityUsdt: 1_000,
+        openedAtMs: 1,
+      },
+    ],
+    { enabled: true, layers: [dynamicExit] },
+  )[0]?.closeNotionalUsdt,
+  4_000,
 );
 
 console.log("engine decide checks passed");
