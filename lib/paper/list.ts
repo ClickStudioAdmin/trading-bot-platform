@@ -46,24 +46,27 @@ export async function listPaperCarries(): Promise<PaperCarryRow[]> {
 }
 
 export async function listPaperOrders(): Promise<PaperOrderRow[]> {
-  const user = await getSessionMember();
-  const supabase = createServiceClient();
-  if (!user || !supabase) {
+  try {
+    const user = await getSessionMember();
+    const supabase = createServiceClient();
+    if (!user || !supabase) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from("paper_orders")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("filled_at", { ascending: true });
+
+    if (error || !data) {
+      return [];
+    }
+
+    return data.map((row) => parsePaperOrderRow(row as Record<string, unknown>));
+  } catch {
     return [];
   }
-
-  const { data, error } = await supabase
-    .from("paper_orders")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("filled_at", { ascending: true })
-    .order("id", { ascending: true });
-
-  if (error || !data) {
-    return [];
-  }
-
-  return data.map((row) => parsePaperOrderRow(row as Record<string, unknown>));
 }
 
 export async function loadPaperDesk(scan: ScannedOpportunity[]): Promise<{

@@ -1,22 +1,19 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
-import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
-import { PaperCarryExpand } from "@/components/paper-carry-expand";
-import { TokenIcon } from "@/components/token-icon";
-import { closedTradeLabel } from "@/lib/paper/automation";
 import {
-  formatPct,
+  ClosedPaperCarryRows,
+  OpenPaperCarryRows,
+} from "@/components/paper-carry-expand";
+import { TokenIcon } from "@/components/token-icon";
+import {
   formatSignedUsd,
   formatUsd,
   signedTone,
 } from "@/lib/opportunities/format";
-import { closeOpenPaperCarry } from "@/lib/paper/actions";
-import { carryPnlPct } from "@/lib/paper/math";
 import type { PaperOrderRow } from "@/lib/paper/orders";
 import type { PaperReturnPath } from "@/lib/paper/open";
 import {
-  formatDeskDate,
   openExposure,
   paperDeskStats,
   type MarkedPaperCarry,
@@ -148,81 +145,13 @@ export function OpenPaperTrades({
                 message="No open paper carries. Open one from the book above."
               />
             ) : (
-              open.map((trade) => {
-                const pnlPct =
-                  trade.unrealizedUsdt === null
-                    ? null
-                    : carryPnlPct(trade.unrealizedUsdt, trade.notionalUsdt);
-                return (
-                <PaperCarryExpand
+              open.map((trade) => (
+                <OpenPaperCarryRows
                   key={trade.id}
-                  orders={trade.orders}
-                  colSpan={8}
-                >
-                  {(toggle) => (
-                    <>
-                  <td className="px-4 py-3">
-                    <span className="flex items-center gap-2 font-medium">
-                      <TokenIcon symbol={trade.baseCoin} />
-                      {trade.baseCoin}
-                    </span>
-                    <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
-                      Long spot · short {trade.futureSymbol}
-                      {" · "}
-                      {trade.source === "engine" ? (
-                        <PaperAutomationTrigger
-                          carryId={trade.id}
-                          automation={trade.automation}
-                          label="Engine"
-                          canEdit
-                          entrySource="engine"
-                          next={next}
-                        />
-                      ) : (
-                        "Manual"
-                      )}
-                      {" · "}
-                      {toggle}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-ink-muted">
-                    {trade.daysToExpiry === null
-                      ? "—"
-                      : trade.daysToExpiry.toFixed(1)}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-ink-muted">
-                    {formatUsd(trade.notionalUsdt)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 tabular-nums ${signedTone(trade.entryBasis)}`}
-                  >
-                    {formatPct(trade.entryBasis)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 tabular-nums ${signedTone(trade.markBasis)}`}
-                  >
-                    {formatPct(trade.markBasis)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 tabular-nums ${signedTone(trade.unrealizedUsdt)}`}
-                  >
-                    {trade.unrealizedUsdt === null
-                      ? "—"
-                      : formatSignedUsd(trade.unrealizedUsdt)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}
-                  >
-                    {formatPct(pnlPct)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <ClosePaperButton trade={trade} next={next} />
-                  </td>
-                    </>
-                  )}
-                </PaperCarryExpand>
-                );
-              })
+                  trade={trade}
+                  next={next}
+                />
+              ))
             )}
           </tbody>
         </table>
@@ -312,65 +241,7 @@ export function ClosedPaperTrades({
               />
             ) : (
               closed.map((trade) => (
-                <PaperCarryExpand
-                  key={trade.id}
-                  orders={trade.orders}
-                  colSpan={7}
-                >
-                  {(toggle) => (
-                    <>
-                  <td className="px-4 py-3">
-                    <span className="flex items-center gap-2 font-medium">
-                      <TokenIcon symbol={trade.baseCoin} />
-                      {trade.baseCoin}
-                    </span>
-                    <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
-                      {trade.futureSymbol}
-                      {" · "}
-                      <PaperAutomationTrigger
-                        carryId={trade.id}
-                        automation={trade.automation}
-                        label={closedTradeLabel(trade.source, trade.closeSource)}
-                        canEdit={false}
-                        entrySource={trade.source}
-                        closeSource={trade.closeSource}
-                        closeReason={trade.closeReason}
-                      />
-                      {" · "}
-                      {toggle}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-ink-muted">
-                    {formatDeskDate(trade.closedAtMs)}
-                  </td>
-                  <td className="px-4 py-3 tabular-nums text-ink-muted">
-                    {trade.daysHeld === null ? "—" : trade.daysHeld.toFixed(1)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 tabular-nums ${signedTone(trade.entryBasis)}`}
-                  >
-                    {formatPct(trade.entryBasis)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 tabular-nums ${signedTone(trade.exitBasis)}`}
-                  >
-                    {formatPct(trade.exitBasis)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 tabular-nums ${signedTone(trade.realizedUsdt)}`}
-                  >
-                    {trade.realizedUsdt === null
-                      ? "—"
-                      : formatSignedUsd(trade.realizedUsdt)}
-                  </td>
-                  <td
-                    className={`px-4 py-3 tabular-nums ${signedTone(trade.realizedApr)}`}
-                  >
-                    {formatPct(trade.realizedApr)}
-                  </td>
-                    </>
-                  )}
-                </PaperCarryExpand>
+                <ClosedPaperCarryRows key={trade.id} trade={trade} />
               ))
             )}
           </tbody>
@@ -476,38 +347,6 @@ export function PaperDeskStats({
         )}
       </div>
     </section>
-  );
-}
-
-function ClosePaperButton({
-  trade,
-  next,
-}: {
-  trade: MarkedPaperCarry;
-  next: PaperReturnPath;
-}) {
-  if (trade.markBasis === null) {
-    return (
-      <span
-        className="text-xs text-ink-faint"
-        title="That pair is not in the live scan"
-      >
-        No mark
-      </span>
-    );
-  }
-
-  return (
-    <form action={closeOpenPaperCarry}>
-      <input type="hidden" name="carryId" value={trade.id} />
-      <input type="hidden" name="next" value={next} />
-      <button
-        type="submit"
-        className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
-      >
-        Close
-      </button>
-    </form>
   );
 }
 

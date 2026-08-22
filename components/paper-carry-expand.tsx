@@ -1,13 +1,18 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
+import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
+import { TokenIcon } from "@/components/token-icon";
+import { closedTradeLabel } from "@/lib/paper/automation";
 import {
   formatPct,
   formatPrice,
+  formatSignedUsd,
   formatUsd,
   signedTone,
 } from "@/lib/opportunities/format";
+import { closeOpenPaperCarry } from "@/lib/paper/actions";
+import { carryPnlPct } from "@/lib/paper/math";
 import {
   fillSlip,
   formatOrderConditions,
@@ -15,9 +20,141 @@ import {
   formatOrderWhy,
   type PaperOrderRow,
 } from "@/lib/paper/orders";
-import { formatDeskDateTime } from "@/lib/paper/rows";
+import type { PaperReturnPath } from "@/lib/paper/open";
+import {
+  formatDeskDate,
+  formatDeskDateTime,
+  type MarkedPaperCarry,
+  type PaperCarryRow,
+} from "@/lib/paper/rows";
 
-export function PaperCarryExpand({
+type OpenCarryView = MarkedPaperCarry & { orders: PaperOrderRow[] };
+type ClosedCarryView = PaperCarryRow & { orders: PaperOrderRow[] };
+
+export function OpenPaperCarryRows({
+  trade,
+  next,
+}: {
+  trade: OpenCarryView;
+  next: PaperReturnPath;
+}) {
+  const pnlPct =
+    trade.unrealizedUsdt === null
+      ? null
+      : carryPnlPct(trade.unrealizedUsdt, trade.notionalUsdt);
+
+  return (
+    <ExpandableOrderRows colSpan={8} orders={trade.orders}>
+      {(toggle) => (
+        <>
+      <td className="px-4 py-3">
+        <span className="flex items-center gap-2 font-medium">
+          <TokenIcon symbol={trade.baseCoin} />
+          {trade.baseCoin}
+        </span>
+        <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
+          Long spot · short {trade.futureSymbol}
+          {" · "}
+          {trade.source === "engine" ? (
+            <PaperAutomationTrigger
+              carryId={trade.id}
+              automation={trade.automation}
+              label="Engine"
+              canEdit
+              entrySource="engine"
+              next={next}
+            />
+          ) : (
+            "Manual"
+          )}
+          {" · "}
+          {toggle}
+        </span>
+      </td>
+      <td className="px-4 py-3 tabular-nums text-ink-muted">
+        {trade.daysToExpiry === null ? "—" : trade.daysToExpiry.toFixed(1)}
+      </td>
+      <td className="px-4 py-3 tabular-nums text-ink-muted">
+        {formatUsd(trade.notionalUsdt)}
+      </td>
+      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.entryBasis)}`}>
+        {formatPct(trade.entryBasis)}
+      </td>
+      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.markBasis)}`}>
+        {formatPct(trade.markBasis)}
+      </td>
+      <td
+        className={`px-4 py-3 tabular-nums ${signedTone(trade.unrealizedUsdt)}`}
+      >
+        {trade.unrealizedUsdt === null
+          ? "—"
+          : formatSignedUsd(trade.unrealizedUsdt)}
+      </td>
+      <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
+        {formatPct(pnlPct)}
+      </td>
+      <td className="px-4 py-3">
+        <ClosePaperButton trade={trade} next={next} />
+      </td>
+        </>
+      )}
+    </ExpandableOrderRows>
+  );
+}
+
+export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
+  return (
+    <ExpandableOrderRows colSpan={7} orders={trade.orders}>
+      {(toggle) => (
+        <>
+      <td className="px-4 py-3">
+        <span className="flex items-center gap-2 font-medium">
+          <TokenIcon symbol={trade.baseCoin} />
+          {trade.baseCoin}
+        </span>
+        <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
+          {trade.futureSymbol}
+          {" · "}
+          <PaperAutomationTrigger
+            carryId={trade.id}
+            automation={trade.automation}
+            label={closedTradeLabel(trade.source, trade.closeSource)}
+            canEdit={false}
+            entrySource={trade.source}
+            closeSource={trade.closeSource}
+            closeReason={trade.closeReason}
+          />
+          {" · "}
+          {toggle}
+        </span>
+      </td>
+      <td className="px-4 py-3 text-ink-muted">
+        {formatDeskDate(trade.closedAtMs)}
+      </td>
+      <td className="px-4 py-3 tabular-nums text-ink-muted">
+        {trade.daysHeld === null ? "—" : trade.daysHeld.toFixed(1)}
+      </td>
+      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.entryBasis)}`}>
+        {formatPct(trade.entryBasis)}
+      </td>
+      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.exitBasis)}`}>
+        {formatPct(trade.exitBasis)}
+      </td>
+      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.realizedUsdt)}`}>
+        {trade.realizedUsdt === null
+          ? "—"
+          : formatSignedUsd(trade.realizedUsdt)}
+      </td>
+      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.realizedApr)}`}>
+        {formatPct(trade.realizedApr)}
+      </td>
+        </>
+      )}
+    </ExpandableOrderRows>
+  );
+}
+
+function ExpandableOrderRows({
   orders,
   colSpan,
   children,
@@ -28,11 +165,10 @@ export function PaperCarryExpand({
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
-
   const toggle = (
     <button
       type="button"
-      className="text-xs text-ink-faint hover:text-ink"
+      className="text-ink-faint hover:text-ink"
       aria-expanded={open}
       aria-controls={open ? panelId : undefined}
       onClick={() => setOpen((current) => !current)}
@@ -54,6 +190,38 @@ export function PaperCarryExpand({
         </tr>
       ) : null}
     </>
+  );
+}
+
+function ClosePaperButton({
+  trade,
+  next,
+}: {
+  trade: MarkedPaperCarry;
+  next: PaperReturnPath;
+}) {
+  if (trade.markBasis === null) {
+    return (
+      <span
+        className="text-xs text-ink-faint"
+        title="That pair is not in the live scan"
+      >
+        No mark
+      </span>
+    );
+  }
+
+  return (
+    <form action={closeOpenPaperCarry}>
+      <input type="hidden" name="carryId" value={trade.id} />
+      <input type="hidden" name="next" value={next} />
+      <button
+        type="submit"
+        className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
+      >
+        Close
+      </button>
+    </form>
   );
 }
 
