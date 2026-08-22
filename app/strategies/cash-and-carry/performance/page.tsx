@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PageHeading } from "@/components/page-heading";
 import {
   ClosedPaperTrades,
   PaperDeskStats,
@@ -28,21 +27,18 @@ export default async function CashAndCarryPerformancePage() {
   const desk = await loadPaperDesk(rows);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Performance" />
-      <div className="space-y-6">
-        {error ? (
-          <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {error}
-          </p>
-        ) : null}
-        <PaperDeskStats
-          signedIn={desk.signedIn}
-          open={desk.open}
-          closed={desk.closed}
-        />
-        <ClosedPaperTrades signedIn={desk.signedIn} closed={desk.closed} />
-      </div>
+    <main className="mx-auto max-w-6xl space-y-6 px-6 pt-6 pb-8">
+      {error ? (
+        <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
+      <PaperDeskStats
+        signedIn={desk.signedIn}
+        open={desk.open}
+        closed={desk.closed}
+      />
+      <ClosedPaperTrades signedIn={desk.signedIn} closed={desk.closed} />
     </main>
   );
 }
