@@ -8,9 +8,9 @@ The web app may call **public** Bybit market endpoints from the server. It must 
 
 ## Current micro-step
 
-**2 of 7 — Bybit instruments** (complete)
+**3 of 7 — Books → opportunities** (complete)
 
-Public REST only, no API key. `/instruments` lists dated USDT expiry paired to USDT spot. Perps excluded. Bybit 403 from Vercel means a US function region — use Sydney (`syd1`).
+`/opportunities` ranks live bid/ask books: executable basis, VIP0 taker + 5 bp slip, net APR, depth capacity. No persistence yet.
 
 ## Micro-steps
 
