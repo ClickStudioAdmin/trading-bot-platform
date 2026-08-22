@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { savePaperRules } from "@/lib/engine/actions";
 import {
   defaultPaperLayer,
@@ -91,6 +91,7 @@ function RuleRow({
   onRemove: () => void;
 }) {
   const prefix = `r${index}_`;
+  const [sizeType, setSizeType] = useState(layer.sizeType);
   return (
     <section className="rounded-card border border-line bg-surface px-4 py-3">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -111,85 +112,134 @@ function RuleRow({
       <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
         Entry
       </p>
-      <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1.5 md:grid-cols-4 xl:grid-cols-7">
-        <label className="block text-[11px] text-ink-muted">
-          Size USDT
-          <div className="mt-0.5">
-            <UsdtSizeInput
-              name={`${prefix}notionalUsdt`}
-              defaultValue={layer.notionalUsdt}
-              ariaLabel={`Paper size for rule ${index + 1}`}
-              compact
+      <div className="mt-1 grid gap-2 md:grid-cols-2">
+        <FieldGroup title="Triggers">
+          <Field
+            name={`${prefix}minApr`}
+            label="Min APR %"
+            placeholder="10"
+            defaultValue={layer.minApr}
+          />
+          <Field
+            name={`${prefix}minDte`}
+            label="Min DTE"
+            placeholder="7"
+            defaultValue={layer.minDte}
+          />
+          <Field
+            name={`${prefix}maxDte`}
+            label="Max DTE"
+            placeholder="90"
+            defaultValue={layer.maxDte}
+          />
+          {sizeType === "fixed" ? (
+            <Field
+              name={`${prefix}minCapacity`}
+              label="Min book value"
+              placeholder="5000"
+              defaultValue={layer.minCapacity}
             />
-          </div>
-        </label>
-        <Field
-          name={`${prefix}maxOpenNotional`}
-          label="Max Size"
-          placeholder="50000"
-          defaultValue={layer.maxOpenNotional}
-        />
-        <Field
-          name={`${prefix}maxOpenCount`}
-          label="Max opens"
-          placeholder="2"
-          defaultValue={layer.maxOpenCount}
-        />
-        <Field
-          name={`${prefix}minApr`}
-          label="Min APR %"
-          placeholder="10"
-          defaultValue={layer.minApr}
-        />
-        <Field
-          name={`${prefix}minDte`}
-          label="Min DTE"
-          placeholder="7"
-          defaultValue={layer.minDte}
-        />
-        <Field
-          name={`${prefix}maxDte`}
-          label="Max DTE"
-          placeholder="90"
-          defaultValue={layer.maxDte}
-        />
-        <Field
-          name={`${prefix}minCapacity`}
-          label="Min book value"
-          placeholder="5000"
-          defaultValue={layer.minCapacity}
-        />
+          ) : null}
+        </FieldGroup>
+        <FieldGroup title="Position">
+          <label className="block text-[11px] text-ink-muted">
+            Size type
+            <select
+              name={`${prefix}sizeType`}
+              value={sizeType}
+              onChange={(event) =>
+                setSizeType(event.target.value === "dynamic" ? "dynamic" : "fixed")
+              }
+              className="mt-0.5 w-full rounded-control border border-line bg-canvas px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
+            >
+              <option value="fixed">Fixed</option>
+              <option value="dynamic">Dynamic</option>
+            </select>
+          </label>
+          <label className="block text-[11px] text-ink-muted">
+            Size USDT
+            <div className="mt-0.5">
+              <UsdtSizeInput
+                name={`${prefix}notionalUsdt`}
+                defaultValue={layer.notionalUsdt}
+                ariaLabel={`Paper size for rule ${index + 1}`}
+                compact
+              />
+            </div>
+          </label>
+          <Field
+            name={`${prefix}maxOpenNotional`}
+            label="Max Size"
+            placeholder="50000"
+            defaultValue={layer.maxOpenNotional}
+          />
+          <Field
+            name={`${prefix}maxOpenCount`}
+            label="Max opens"
+            placeholder="2"
+            defaultValue={layer.maxOpenCount}
+          />
+          {sizeType === "dynamic" ? (
+            <Field
+              name={`${prefix}minSize`}
+              label="Min Size"
+              placeholder="5000"
+              defaultValue={layer.minSize}
+            />
+          ) : null}
+        </FieldGroup>
       </div>
-      <p className="mt-2 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+      <p className="mt-3 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
         Exit
       </p>
-      <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1.5 md:grid-cols-4">
-        <Field
-          name={`${prefix}closeMaxDte`}
-          label="Close DTE ≤"
-          placeholder="3"
-          defaultValue={layer.closeMaxDte}
-        />
-        <Field
-          name={`${prefix}closeMinApr`}
-          label="Close APR % below"
-          placeholder="5"
-          defaultValue={layer.closeMinApr}
-        />
-        <Field
-          name={`${prefix}takeProfit`}
-          label="Take profit %"
-          placeholder="1"
-          defaultValue={layer.takeProfit}
-        />
-        <Field
-          name={`${prefix}stopLoss`}
-          label="Stop loss %"
-          placeholder="2"
-          defaultValue={layer.stopLoss}
-        />
+      <div className="mt-1 grid gap-2 md:grid-cols-2">
+        <FieldGroup title="Triggers">
+          <Field
+            name={`${prefix}closeMaxDte`}
+            label="Close DTE ≤"
+            placeholder="3"
+            defaultValue={layer.closeMaxDte}
+          />
+          <Field
+            name={`${prefix}closeMinApr`}
+            label="Close APR % below"
+            placeholder="5"
+            defaultValue={layer.closeMinApr}
+          />
+        </FieldGroup>
+        <FieldGroup title="Stops">
+          <Field
+            name={`${prefix}takeProfit`}
+            label="Take profit %"
+            placeholder="1"
+            defaultValue={layer.takeProfit}
+          />
+          <Field
+            name={`${prefix}stopLoss`}
+            label="Stop loss %"
+            placeholder="2"
+            defaultValue={layer.stopLoss}
+          />
+        </FieldGroup>
       </div>
     </section>
+  );
+}
+
+function FieldGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-card border border-line bg-canvas px-3 py-2">
+      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        {title}
+      </p>
+      <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1.5">{children}</div>
+    </div>
   );
 }
 

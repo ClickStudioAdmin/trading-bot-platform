@@ -1,13 +1,19 @@
-import type { ExitReason, PaperEngineLayer } from "@/lib/engine/decide";
+import type {
+  ExitReason,
+  PaperEngineLayer,
+  PaperSizeType,
+} from "@/lib/engine/decide";
 
 export type TradeSource = "manual" | "engine";
 export type CloseReason = ExitReason;
 
 export type PaperCarryAutomation = {
+  entrySizeType: PaperSizeType | null;
   entryMinNetApr: number | null;
   entryMinDte: number | null;
   entryMaxDte: number | null;
   entryMinCapacityUsdt: number | null;
+  entryMinSizeUsdt: number | null;
   closeMaxDte: number | null;
   closeMinNetApr: number | null;
   takeProfitPct: number | null;
@@ -15,10 +21,12 @@ export type PaperCarryAutomation = {
 };
 
 export const EMPTY_AUTOMATION: PaperCarryAutomation = {
+  entrySizeType: null,
   entryMinNetApr: null,
   entryMinDte: null,
   entryMaxDte: null,
   entryMinCapacityUsdt: null,
+  entryMinSizeUsdt: null,
   closeMaxDte: null,
   closeMinNetApr: null,
   takeProfitPct: null,
@@ -29,10 +37,12 @@ export function automationFromLayer(
   layer: PaperEngineLayer,
 ): PaperCarryAutomation {
   return {
+    entrySizeType: layer.sizeType,
     entryMinNetApr: layer.minNetApr,
     entryMinDte: layer.minDte,
     entryMaxDte: layer.maxDte,
     entryMinCapacityUsdt: layer.minCapacityUsdt,
+    entryMinSizeUsdt: layer.minSizeUsdt,
     closeMaxDte: layer.closeMaxDte,
     closeMinNetApr: layer.closeMinNetApr,
     takeProfitPct: layer.takeProfitPct,
@@ -42,10 +52,12 @@ export function automationFromLayer(
 
 export function automationInsertColumns(automation: PaperCarryAutomation) {
   return {
+    entry_size_type: automation.entrySizeType,
     entry_min_net_apr: automation.entryMinNetApr,
     entry_min_dte: automation.entryMinDte,
     entry_max_dte: automation.entryMaxDte,
     entry_min_capacity_usdt: automation.entryMinCapacityUsdt,
+    entry_min_size_usdt: automation.entryMinSizeUsdt,
     close_max_dte: automation.closeMaxDte,
     close_min_net_apr: automation.closeMinNetApr,
     take_profit_pct: automation.takeProfitPct,
@@ -55,6 +67,9 @@ export function automationInsertColumns(automation: PaperCarryAutomation) {
 
 export function formatEntryTriggers(automation: PaperCarryAutomation): string[] {
   const lines: string[] = [];
+  if (automation.entrySizeType === "dynamic") {
+    lines.push("Size Dynamic");
+  }
   const minApr = formatPctPoints(automation.entryMinNetApr);
   if (minApr) {
     lines.push(`Min APR ${minApr}`);
@@ -63,7 +78,13 @@ export function formatEntryTriggers(automation: PaperCarryAutomation): string[] 
   if (dte) {
     lines.push(dte);
   }
-  if (automation.entryMinCapacityUsdt !== null) {
+  if (automation.entrySizeType === "dynamic") {
+    if (automation.entryMinSizeUsdt !== null) {
+      lines.push(
+        `Min Size $${Math.round(automation.entryMinSizeUsdt).toLocaleString("en-US")}`,
+      );
+    }
+  } else if (automation.entryMinCapacityUsdt !== null) {
     lines.push(
       `Min book value $${Math.round(automation.entryMinCapacityUsdt).toLocaleString("en-US")}`,
     );
@@ -126,6 +147,13 @@ export function parseCarryExitForm(form: FormData): {
     takeProfitPct,
     stopLossPct: stopLossRaw === null ? null : -Math.abs(stopLossRaw),
   };
+}
+
+export function parseEntrySizeType(value: unknown): PaperSizeType | null {
+  if (value === "dynamic" || value === "fixed") {
+    return value;
+  }
+  return null;
 }
 
 export function parseTradeSource(value: unknown): TradeSource {

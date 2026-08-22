@@ -1,15 +1,21 @@
-import type { PaperEngineConfig, PaperEngineLayer } from "@/lib/engine/decide";
+import type {
+  PaperEngineConfig,
+  PaperEngineLayer,
+  PaperSizeType,
+} from "@/lib/engine/decide";
 import { DEFAULT_PAPER_NOTIONAL_USDT, parseNotionalUsdt } from "@/lib/paper/open";
 import { asNullableNumber, asNumber } from "@/lib/paper/rows";
 
 export type PaperLayerFormValues = {
   key: string;
   id: string;
+  sizeType: PaperSizeType;
   notionalUsdt: number;
   minApr: string;
   minDte: string;
   maxDte: string;
   minCapacity: string;
+  minSize: string;
   maxOpenCount: string;
   maxOpenNotional: string;
   closeMaxDte: string;
@@ -27,11 +33,13 @@ export function defaultPaperLayer(sortOrder = 0): PaperEngineLayer {
   return {
     id: null,
     sortOrder,
+    sizeType: "fixed",
     notionalUsdt: DEFAULT_PAPER_NOTIONAL_USDT,
     minNetApr: null,
     minDte: null,
     maxDte: null,
     minCapacityUsdt: null,
+    minSizeUsdt: null,
     maxOpenCount: null,
     maxOpenNotionalUsdt: null,
     closeMaxDte: null,
@@ -57,11 +65,13 @@ export function paperConfigToFormValues(
     layers: layers.map((layer, index) => ({
       key: layer.id !== null ? `id-${layer.id}` : `new-${index}`,
       id: layer.id === null ? "" : String(layer.id),
+      sizeType: layer.sizeType,
       notionalUsdt: layer.notionalUsdt,
       minApr: decimalToPercentInput(layer.minNetApr),
       minDte: boundToInput(layer.minDte),
       maxDte: boundToInput(layer.maxDte),
       minCapacity: boundToInput(layer.minCapacityUsdt),
+      minSize: boundToInput(layer.minSizeUsdt),
       maxOpenCount: boundToInput(layer.maxOpenCount),
       maxOpenNotional: boundToInput(layer.maxOpenNotionalUsdt),
       closeMaxDte: boundToInput(layer.closeMaxDte),
@@ -107,11 +117,13 @@ export function parsePaperRulesRow(
   return {
     id: asNumber(row.id),
     sortOrder,
+    sizeType: parseSizeType(row.size_type),
     notionalUsdt: asNumber(row.notional_usdt),
     minNetApr: asNullableNumber(row.min_net_apr),
     minDte: asNullableNumber(row.min_dte),
     maxDte: asNullableNumber(row.max_dte),
     minCapacityUsdt: asNullableNumber(row.min_capacity_usdt),
+    minSizeUsdt: asNullableNumber(row.min_size_usdt),
     maxOpenCount: asNullableNumber(row.max_open_count),
     maxOpenNotionalUsdt: asNullableNumber(row.max_open_notional_usdt),
     closeMaxDte: asNullableNumber(row.close_max_dte),
@@ -128,11 +140,13 @@ export function paperLayerToRow(
   return {
     user_id: userId,
     sort_order: layer.sortOrder,
+    size_type: layer.sizeType,
     notional_usdt: layer.notionalUsdt,
     min_net_apr: layer.minNetApr,
     min_dte: layer.minDte,
     max_dte: layer.maxDte,
     min_capacity_usdt: layer.minCapacityUsdt,
+    min_size_usdt: layer.minSizeUsdt,
     max_open_count: layer.maxOpenCount,
     max_open_notional_usdt: layer.maxOpenNotionalUsdt,
     close_max_dte: layer.closeMaxDte,
@@ -165,7 +179,17 @@ function parseLayer(
 
   const maxOpenNotionalUsdt = parseBound(form.get(`${prefix}maxOpenNotional`));
   if (maxOpenNotionalUsdt !== null && maxOpenNotionalUsdt <= 0) {
-    return { ok: false, error: `Rule ${index + 1}: max open notional must be positive.` };
+    return { ok: false, error: `Rule ${index + 1}: max size must be positive.` };
+  }
+
+  const sizeType = parseSizeType(form.get(`${prefix}sizeType`));
+  const minSizeUsdt =
+    sizeType === "dynamic" ? parseBound(form.get(`${prefix}minSize`)) : null;
+  if (minSizeUsdt !== null && minSizeUsdt <= 0) {
+    return { ok: false, error: `Rule ${index + 1}: min size must be positive.` };
+  }
+  if (minSizeUsdt !== null && minSizeUsdt > notionalUsdt) {
+    return { ok: false, error: `Rule ${index + 1}: min size cannot be greater than size.` };
   }
 
   const takeProfitPct = parsePercent(form.get(`${prefix}takeProfit`));
@@ -182,11 +206,14 @@ function parseLayer(
       id:
         idRaw === "" || !Number.isFinite(Number(idRaw)) ? null : Number(idRaw),
       sortOrder: index,
+      sizeType,
       notionalUsdt,
       minNetApr: parsePercent(form.get(`${prefix}minApr`)),
       minDte,
       maxDte,
-      minCapacityUsdt: parseBound(form.get(`${prefix}minCapacity`)),
+      minCapacityUsdt:
+        sizeType === "fixed" ? parseBound(form.get(`${prefix}minCapacity`)) : null,
+      minSizeUsdt,
       maxOpenCount,
       maxOpenNotionalUsdt,
       closeMaxDte: parseBound(form.get(`${prefix}closeMaxDte`)),
@@ -195,6 +222,10 @@ function parseLayer(
       stopLossPct: stopLossRaw === null ? null : -Math.abs(stopLossRaw),
     },
   };
+}
+
+export function parseSizeType(value: unknown): PaperSizeType {
+  return value === "dynamic" ? "dynamic" : "fixed";
 }
 
 function parseBound(raw: FormDataEntryValue | null): number | null {

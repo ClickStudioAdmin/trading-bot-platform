@@ -14,8 +14,10 @@ const parsedEmpty = parsePaperRulesForm(empty);
 assert.equal(parsedEmpty.ok, true);
 if (parsedEmpty.ok) {
   assert.equal(parsedEmpty.config.enabled, false);
+  assert.equal(parsedEmpty.config.layers[0]?.sizeType, "fixed");
   assert.equal(parsedEmpty.config.layers[0]?.notionalUsdt, 10_000);
   assert.equal(parsedEmpty.config.layers[0]?.minNetApr, null);
+  assert.equal(parsedEmpty.config.layers[0]?.minSizeUsdt, null);
 }
 
 const filled = new FormData();
@@ -40,8 +42,10 @@ if (parsed.ok) {
   assert.equal(parsed.config.layers[1]?.takeProfitPct, 0.01);
   const row = paperLayerToRow("user-1", parsed.config.layers[0]!);
   assert.equal(row.user_id, "user-1");
+  assert.equal(row.size_type, "fixed");
   const roundTrip = parsePaperRulesRow({ id: 4, ...row }, 0);
   assert.equal(roundTrip.id, 4);
+  assert.equal(roundTrip.sizeType, "fixed");
   assert.equal(paperConfigToFormValues(parsed.config).layers[0]?.stopLoss, "2");
 }
 
@@ -55,6 +59,27 @@ swapped.set("r0_notionalUsdt", "10000");
 swapped.set("r0_minDte", "90");
 swapped.set("r0_maxDte", "7");
 assert.equal(parsePaperRulesForm(swapped).ok, false);
+
+const dynamic = new FormData();
+dynamic.set("ruleCount", "1");
+dynamic.set("r0_sizeType", "dynamic");
+dynamic.set("r0_notionalUsdt", "10000");
+dynamic.set("r0_minCapacity", "5000");
+dynamic.set("r0_minSize", "4000");
+const parsedDynamic = parsePaperRulesForm(dynamic);
+assert.equal(parsedDynamic.ok, true);
+if (parsedDynamic.ok) {
+  assert.equal(parsedDynamic.config.layers[0]?.sizeType, "dynamic");
+  assert.equal(parsedDynamic.config.layers[0]?.minSizeUsdt, 4_000);
+  assert.equal(parsedDynamic.config.layers[0]?.minCapacityUsdt, null);
+}
+
+const minTooBig = new FormData();
+minTooBig.set("ruleCount", "1");
+minTooBig.set("r0_sizeType", "dynamic");
+minTooBig.set("r0_notionalUsdt", "10000");
+minTooBig.set("r0_minSize", "20000");
+assert.equal(parsePaperRulesForm(minTooBig).ok, false);
 
 assert.equal(defaultPaperConfig().layers.length, 1);
 

@@ -1,5 +1,6 @@
 import {
   parseCloseReason,
+  parseEntrySizeType,
   parseTradeSource,
   type CloseReason,
   type PaperCarryAutomation,
@@ -87,10 +88,12 @@ export function parsePaperCarryRow(row: Record<string, unknown>): PaperCarryRow 
     closeReason: parseCloseReason(row.close_reason),
     ruleId: asNullableNumber(row.rule_id),
     automation: {
+      entrySizeType: parseEntrySizeType(row.entry_size_type),
       entryMinNetApr: asNullableNumber(row.entry_min_net_apr),
       entryMinDte: asNullableNumber(row.entry_min_dte),
       entryMaxDte: asNullableNumber(row.entry_max_dte),
       entryMinCapacityUsdt: asNullableNumber(row.entry_min_capacity_usdt),
+      entryMinSizeUsdt: asNullableNumber(row.entry_min_size_usdt),
       closeMaxDte: asNullableNumber(row.close_max_dte),
       closeMinNetApr: asNullableNumber(row.close_min_net_apr),
       takeProfitPct: asNullableNumber(row.take_profit_pct),

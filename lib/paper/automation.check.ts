@@ -14,11 +14,13 @@ import {
 const layer = {
   id: 1,
   sortOrder: 0,
+  sizeType: "fixed" as const,
   notionalUsdt: 10_000,
   minNetApr: 0.1,
   minDte: 7,
   maxDte: 90,
   minCapacityUsdt: 5_000,
+  minSizeUsdt: null,
   maxOpenCount: 2,
   maxOpenNotionalUsdt: 25_000,
   closeMaxDte: 3,
@@ -46,6 +48,20 @@ assert.deepEqual(formatEntryTriggers({
   entryMaxDte: null,
   entryMinCapacityUsdt: null,
 }), []);
+assert.deepEqual(
+  formatEntryTriggers({
+    ...automationFromLayer({
+      ...layer,
+      sizeType: "dynamic",
+      minCapacityUsdt: 5_000,
+      minSizeUsdt: 4_000,
+    }),
+    entryMinNetApr: null,
+    entryMinDte: null,
+    entryMaxDte: null,
+  }),
+  ["Size Dynamic", "Min Size $4,000"],
+);
 
 const form = new FormData();
 form.set("closeMaxDte", "4");

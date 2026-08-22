@@ -2,14 +2,18 @@ import { applyOpportunityFilters } from "@/lib/opportunities/filter";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import { pairKey } from "@/lib/paper/open";
 
+export type PaperSizeType = "fixed" | "dynamic";
+
 export type PaperEngineLayer = {
   id: number | null;
   sortOrder: number;
+  sizeType: PaperSizeType;
   notionalUsdt: number;
   minNetApr: number | null;
   minDte: number | null;
   maxDte: number | null;
   minCapacityUsdt: number | null;
+  minSizeUsdt: number | null;
   maxOpenCount: number | null;
   maxOpenNotionalUsdt: number | null;
   closeMaxDte: number | null;
@@ -47,6 +51,7 @@ export type EngineMarkedPosition = EngineOpenPosition & {
 export type EngineEntry = {
   opportunity: ScannedOpportunity;
   layer: PaperEngineLayer;
+  notionalUsdt: number;
 };
 
 export type ExitReason = "dte" | "mark_apr" | "take_profit" | "stop_loss";
@@ -91,7 +96,8 @@ export function decideEntries(
       continue;
     }
     const layer = bestMatchingLayer(opportunity, config.layers);
-    if (!layer || !(layer.notionalUsdt > 0)) {
+    const notionalUsdt = layer ? entryNotionalUsdt(layer, opportunity) : null;
+    if (!layer || notionalUsdt === null) {
       continue;
     }
     const key = layerUsageKey(layer);
@@ -101,16 +107,16 @@ export function decideEntries(
     }
     if (
       layer.maxOpenNotionalUsdt !== null &&
-      used.notional + layer.notionalUsdt > layer.maxOpenNotionalUsdt
+      used.notional + notionalUsdt > layer.maxOpenNotionalUsdt
     ) {
       continue;
     }
     usedByLayer.set(key, {
       count: used.count + 1,
-      notional: used.notional + layer.notionalUsdt,
+      notional: used.notional + notionalUsdt,
     });
     taken.add(pairKey(opportunity.spotSymbol, opportunity.futureSymbol));
-    chosen.push({ opportunity, layer });
+    chosen.push({ opportunity, layer, notionalUsdt });
   }
   return chosen;
 }
@@ -154,7 +160,8 @@ export function bestMatchingLayer(
       minNetApr: layer.minNetApr,
       minDte: layer.minDte,
       maxDte: layer.maxDte,
-      minCapacityUsdt: layer.minCapacityUsdt,
+      minCapacityUsdt:
+        layer.sizeType === "dynamic" ? null : layer.minCapacityUsdt,
     }).length > 0,
   );
   if (matches.length === 0) {
@@ -169,6 +176,26 @@ export function bestMatchingLayer(
     }
     return a.sortOrder - b.sortOrder;
   })[0] ?? null;
+}
+
+export function entryNotionalUsdt(
+  layer: PaperEngineLayer,
+  opportunity: ScannedOpportunity,
+): number | null {
+  if (!(layer.notionalUsdt > 0)) {
+    return null;
+  }
+  if (layer.sizeType !== "dynamic") {
+    return layer.notionalUsdt;
+  }
+  const size = Math.min(layer.notionalUsdt, opportunity.capacityUsdt);
+  if (!(size > 0)) {
+    return null;
+  }
+  if (layer.minSizeUsdt !== null && size < layer.minSizeUsdt) {
+    return null;
+  }
+  return size;
 }
 
 function layerUsageKey(layer: { id: number | null; sortOrder: number }): string {

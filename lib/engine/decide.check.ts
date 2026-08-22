@@ -36,11 +36,13 @@ function layer(
   return {
     id: 1,
     sortOrder: 0,
+    sizeType: "fixed",
     notionalUsdt: 10_000,
     minNetApr: 0.1,
     minDte: 7,
     maxDte: 90,
     minCapacityUsdt: 5_000,
+    minSizeUsdt: null,
     maxOpenCount: 2,
     maxOpenNotionalUsdt: 25_000,
     closeMaxDte: 3,
@@ -164,6 +166,45 @@ assert.equal(
     config,
   )[0]?.reason,
   "take_profit",
+);
+
+const dynamicLayer = layer({
+  sizeType: "dynamic",
+  minCapacityUsdt: 20_000,
+  minSizeUsdt: 5_000,
+});
+const thin = opportunity("BTCUSDT-25MAR27", {
+  netApr: 0.16,
+  capacityUsdt: 8_000,
+});
+const dust = opportunity("BTCUSDT-25APR27", {
+  netApr: 0.17,
+  capacityUsdt: 4_000,
+});
+const dynamicHits = decideEntries(
+  [thin, dust],
+  [],
+  { enabled: true, layers: [dynamicLayer] },
+);
+assert.deepEqual(
+  dynamicHits.map((row) => [row.opportunity.futureSymbol, row.notionalUsdt]),
+  [["BTCUSDT-25MAR27", 8_000]],
+);
+assert.equal(
+  decideEntries(
+    [opportunity("BTCUSDT-25MAY27", { netApr: 0.18, capacityUsdt: 50_000 })],
+    [],
+    { enabled: true, layers: [dynamicLayer] },
+  )[0]?.notionalUsdt,
+  10_000,
+);
+assert.deepEqual(
+  decideEntries(
+    [thin],
+    [],
+    { enabled: true, layers: [layer({ minCapacityUsdt: 20_000 })] },
+  ),
+  [],
 );
 
 console.log("engine decide checks passed");

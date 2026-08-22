@@ -27,21 +27,9 @@ export function PaperRulesGuide() {
       </dl>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Entry
+        Entry · Triggers
       </h3>
       <dl className="mt-3 space-y-3 text-sm">
-        <GuideItem
-          term="Size USDT"
-          detail="Paper notional for each open this layer creates. P&L is (entry net − mark net − 2 × fees and slip) × this size. Fees are VIP0 taker on both legs plus 5 bp slip, charged for open and for close."
-        />
-        <GuideItem
-          term="Max Size"
-          detail="Cap on the sum of open sizes for this layer only. A new open is skipped if this size would push the layer over the cap."
-        />
-        <GuideItem
-          term="Max opens"
-          detail="How many open paper carries this layer may have at once. Only rows this layer opened count. Manual opens and other layers do not count toward this cap."
-        />
         <GuideItem
           term="Min APR %"
           detail="The pair’s live net APR must be at least this. Net APR is the scanner’s net basis annualized by DTE, after fees and slip. Same number as the book’s Net APR column."
@@ -52,12 +40,38 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Min book value"
-          detail="The pair’s book value must be at least this. Book value is 25% of the top 5 book levels that stay inside 5 bp of impact — how much size the books can take, not how much you will trade."
+          detail="Fixed only. The pair’s book value must be at least this. Book value is 25% of the top 5 book levels that stay inside 5 bp of impact — how much size the books can take, not how much you will trade."
         />
       </dl>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Exit
+        Entry · Position
+      </h3>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="Size type"
+          detail="Fixed uses Size as the open. Dynamic clips Size to the pair’s current book value, so thinner books get a smaller open."
+        />
+        <GuideItem
+          term="Size USDT"
+          detail="For Fixed, this is the paper size of each open. For Dynamic, this is the ceiling; the open is min(Size, book value). P&L is (entry net − mark net − 2 × fees and slip) × the size that opened. Fees are VIP0 taker on both legs plus 5 bp slip, charged for open and for close."
+        />
+        <GuideItem
+          term="Max Size"
+          detail="Cap on the sum of open sizes for this layer only. A new open is skipped if this size would push the layer over the cap."
+        />
+        <GuideItem
+          term="Max opens"
+          detail="How many open paper carries this layer may have at once. Only rows this layer opened count. Manual opens and other layers do not count toward this cap."
+        />
+        <GuideItem
+          term="Min Size"
+          detail="Dynamic only. Skip the pair if the clipped size would be below this. Stops dust opens on thin books."
+        />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Exit · Triggers
       </h3>
       <p className="mt-2 text-sm text-ink-muted">
         Exits apply only to paper rows this layer opened. First match wins, in
@@ -72,6 +86,12 @@ export function PaperRulesGuide() {
           term="Close APR % below"
           detail="Close when the live mark net APR is below this. That is the book’s current net APR, not your P&L %. Use it when the remaining edge has gone."
         />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Exit · Stops
+      </h3>
+      <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Take profit %"
           detail="Close when all-in P&L % is at least this. P&L % is unrealized ÷ notional, after open and close fee costs. Enter 1 for +1%."
