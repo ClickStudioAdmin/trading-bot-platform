@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { PageHeading } from "@/components/page-heading";
 import { TokenIcon } from "@/components/token-icon";
 import { listCarryPairs } from "@/lib/exchanges/bybit/list-carry-pairs";
 import type { CarryPair } from "@/lib/exchanges/bybit/universe";
@@ -21,28 +21,9 @@ export default async function InstrumentsPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-canvas text-ink">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-              Bybit public
-            </p>
-            <h1 className="text-lg font-semibold tracking-tight">
-              Carry universe
-            </h1>
-          </div>
-          <Link
-            href="/cash-and-carry"
-            className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-          >
-            Overview
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl px-6 py-8">
-        <p className="text-sm text-ink-muted">
+    <main className="mx-auto max-w-6xl px-6 py-8">
+      <PageHeading overline="Bybit public" title="Carry universe" />
+        <p className="-mt-2 text-sm text-ink-muted">
           Server fetch of Bybit instruments. No API key. USDT expiry plus
           matching USDT spot for BTC, ETH, SOL, DOGE, XRP, MNT. Perps are
           excluded.
@@ -93,7 +74,6 @@ export default async function InstrumentsPage() {
             </tbody>
           </table>
         </div>
-      </main>
-    </div>
+    </main>
   );
 }

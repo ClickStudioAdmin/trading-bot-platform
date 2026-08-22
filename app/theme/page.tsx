@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { PageHeading } from "@/components/page-heading";
 
 export const metadata: Metadata = {
   title: "Theme",
@@ -40,26 +40,7 @@ const swatchClass: Record<(typeof colours)[number]["name"], string> = {
 
 export default function ThemePage() {
   return (
-    <div className="min-h-dvh bg-canvas text-ink">
-      <header className="sticky top-0 z-10 border-b border-line bg-surface/90 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-              Reference
-            </p>
-            <h1 className="text-lg font-semibold tracking-tight">
-              Portal theme
-            </h1>
-          </div>
-          <Link
-            href="/"
-            className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-          >
-            Home
-          </Link>
-        </div>
-      </header>
-
+    <div>
       <div className="overflow-hidden border-b border-line bg-surface">
         <div className="flex gap-8 px-6 py-2.5 text-xs whitespace-nowrap text-ink-muted">
           <span>
@@ -79,6 +60,7 @@ export default function ThemePage() {
       </div>
 
       <main className="mx-auto max-w-6xl space-y-12 px-6 py-10">
+        <PageHeading overline="Reference" title="Portal theme" />
         <section>
           <h2 className="text-xl font-semibold tracking-tight">Colour</h2>
           <p className="mt-1 text-sm text-ink-muted">

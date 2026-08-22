@@ -6,6 +6,7 @@ import {
   PlaceholderTradeStats,
 } from "@/components/carry-placeholders";
 import { OpportunityTable } from "@/components/opportunity-table";
+import { PageHeading } from "@/components/page-heading";
 import { PaperFlash } from "@/components/paper-flash";
 import { persistOpportunities } from "@/lib/opportunities/persist";
 import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
@@ -46,28 +47,9 @@ export default async function CashAndCarryPage({
   const capacity = rows.reduce((sum, row) => sum + row.capacityUsdt, 0);
 
   return (
-    <div className="min-h-dvh bg-canvas text-ink">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-              Strategy
-            </p>
-            <h1 className="text-lg font-semibold tracking-tight">
-              Cash and carry
-            </h1>
-          </div>
-          <Link
-            href="/"
-            className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-          >
-            Home
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-6xl space-y-8 px-6 py-8">
-        <p className="text-sm text-ink-muted">
+    <main className="mx-auto max-w-6xl space-y-8 px-6 py-8">
+      <PageHeading overline="Strategy" title="Cash and carry" />
+        <p className="-mt-4 text-sm text-ink-muted">
           Buy the USDT spot, sell the dated future. Top opportunities are a
           live scan. Trade tables are still placeholders. Open on a pair is
           paper only — no Bybit order.
@@ -82,8 +64,6 @@ export default async function CashAndCarryPage({
             {error}
           </p>
         ) : null}
-
-        <PlaceholderTradeStats />
 
         <section>
           <div className="mb-3">
@@ -131,6 +111,7 @@ export default async function CashAndCarryPage({
 
         <PlaceholderOpenTrades />
         <PlaceholderClosedTrades />
+        <PlaceholderTradeStats />
 
         <p className="text-sm text-ink-faint">
           <Link href="/instruments" className="text-accent">
@@ -139,8 +120,7 @@ export default async function CashAndCarryPage({
           {" · "}
           Live Bybit public books. No API key.
         </p>
-      </main>
-    </div>
+    </main>
   );
 }
 

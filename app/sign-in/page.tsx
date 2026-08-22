@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { signIn } from "@/lib/auth/actions";
 import { getAuthUser } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -22,7 +21,6 @@ export default async function SignInPage({
   const { error } = await searchParams;
 
   return (
-    <div className="min-h-dvh bg-canvas text-ink">
       <main className="mx-auto max-w-md px-6 py-16">
         <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
           Desk
@@ -67,12 +65,6 @@ export default async function SignInPage({
             Sign in
           </button>
         </form>
-        <p className="mt-8 text-sm text-ink-faint">
-          <Link href="/" className="text-accent hover:text-accent-strong">
-            Home
-          </Link>
-        </p>
       </main>
-    </div>
   );
 }
