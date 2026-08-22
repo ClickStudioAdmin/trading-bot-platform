@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import {
+  clampNotionalInput,
   formatGroupedNumberInput,
   formatNotionalInput,
+  maxPaperNotionalUsdt,
+  notionalFitsBook,
   pairKey,
   paperCarryInsertRow,
   parseNotionalUsdt,
@@ -59,5 +62,13 @@ assert.equal(row.status, "open");
 assert.equal(row.notional_usdt, 10_000);
 
 assert.throws(() => paperCarryInsertRow("user-1", opportunity, 0));
+
+assert.equal(maxPaperNotionalUsdt(50_000.9), 50_000);
+assert.equal(maxPaperNotionalUsdt(0), 0);
+assert.equal(notionalFitsBook(10_000, 50_000), true);
+assert.equal(notionalFitsBook(50_001, 50_000), false);
+assert.equal(notionalFitsBook(1, 0), false);
+assert.equal(clampNotionalInput("60,000", 50_000), "50,000");
+assert.equal(clampNotionalInput("12,000", 50_000), "12,000");
 
 console.log("paper open checks passed");

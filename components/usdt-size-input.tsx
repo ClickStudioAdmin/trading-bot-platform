@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  clampNotionalInput,
   formatGroupedNumberInput,
   formatNotionalInput,
   parseNotionalUsdt,
@@ -14,15 +15,19 @@ export function UsdtSizeInput({
   form,
   compact,
   showPrefix = true,
+  maxUsdt,
 }: {
   name: string;
-  defaultValue: number | string;
+  defaultValue?: number | string;
   ariaLabel: string;
   form?: string;
   compact?: boolean;
   showPrefix?: boolean;
+  maxUsdt?: number;
 }) {
-  const [display, setDisplay] = useState(formatNotionalInput(String(defaultValue)));
+  const [display, setDisplay] = useState(
+    formatNotionalInput(String(defaultValue ?? "")),
+  );
   const parsed = parseNotionalUsdt(display);
 
   return (
@@ -34,7 +39,13 @@ export function UsdtSizeInput({
         autoComplete="off"
         aria-label={ariaLabel}
         value={display}
-        onChange={(event) => setDisplay(formatNotionalInput(event.target.value))}
+        onChange={(event) =>
+          setDisplay(
+            maxUsdt === undefined
+              ? formatNotionalInput(event.target.value)
+              : clampNotionalInput(event.target.value, maxUsdt),
+          )
+        }
         className={
           compact
             ? "w-20 rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs tabular-nums text-ink focus:border-line-strong focus:outline-none"

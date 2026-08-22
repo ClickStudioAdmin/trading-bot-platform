@@ -4,7 +4,13 @@ import { writeEventLog } from "@/lib/logs/write";
 import { EMPTY_AUTOMATION, parseCarryExitForm } from "@/lib/paper/automation";
 import { closePaperCarry as computeClose } from "@/lib/paper/math";
 import { paperOrderInsertRow } from "@/lib/paper/orders";
-import { pairKey, paperCarryInsertRow, parseNotionalUsdt, safePaperReturnPath } from "@/lib/paper/open";
+import {
+  notionalFitsBook,
+  pairKey,
+  paperCarryInsertRow,
+  parseNotionalUsdt,
+  safePaperReturnPath,
+} from "@/lib/paper/open";
 import { asNumber, parsePaperCarryRow } from "@/lib/paper/rows";
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
 import { getSessionMember } from "@/lib/auth/session";
@@ -46,6 +52,12 @@ export async function openPaperCarry(formData: FormData) {
   if (!match) {
     redirect(
       `${next}?paperError=${encodeURIComponent("That pair is not in the live scan.")}`,
+    );
+  }
+
+  if (!notionalFitsBook(notionalUsdt, match.capacityUsdt)) {
+    redirect(
+      `${next}?paperError=${encodeURIComponent("Size cannot exceed book value.")}`,
     );
   }
 

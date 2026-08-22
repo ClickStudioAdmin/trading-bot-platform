@@ -62,6 +62,37 @@ export function parseNotionalUsdt(raw: string): number | null {
   return value;
 }
 
+export function maxPaperNotionalUsdt(capacityUsdt: number): number {
+  if (!(capacityUsdt > 0) || !Number.isFinite(capacityUsdt)) {
+    return 0;
+  }
+  return Math.floor(capacityUsdt);
+}
+
+export function notionalFitsBook(
+  notionalUsdt: number,
+  capacityUsdt: number,
+): boolean {
+  const max = maxPaperNotionalUsdt(capacityUsdt);
+  return notionalUsdt > 0 && max > 0 && notionalUsdt <= max;
+}
+
+export function clampNotionalInput(raw: string, maxUsdt: number): string {
+  const formatted = formatNotionalInput(raw);
+  const parsed = parseNotionalUsdt(formatted);
+  if (parsed === null) {
+    return formatted;
+  }
+  const max = maxPaperNotionalUsdt(maxUsdt);
+  if (max <= 0) {
+    return "";
+  }
+  if (parsed > max) {
+    return formatNotionalInput(String(max));
+  }
+  return formatted;
+}
+
 export function firstSearchValue(
   value: string | string[] | undefined,
 ): string | undefined {

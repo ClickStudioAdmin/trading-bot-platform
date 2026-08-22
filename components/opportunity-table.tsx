@@ -4,10 +4,7 @@ import { TokenIcon } from "@/components/token-icon";
 import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
 import { openPaperCarry } from "@/lib/paper/actions";
 import { UsdtSizeInput } from "@/components/usdt-size-input";
-import {
-  DEFAULT_PAPER_NOTIONAL_USDT,
-  type OpportunityPaperProps,
-} from "@/lib/paper/open";
+import { type OpportunityPaperProps } from "@/lib/paper/open";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
 export function OpportunityRows({
@@ -128,7 +125,7 @@ export function OpportunityTable({
                 <th className="px-4 py-3 font-medium">
                   <ColumnHint
                     label="Size USDT"
-                    hint="Paper notional to open. Each Open creates a new paper row."
+                    hint="Paper notional to open. Cannot exceed book value. Each Open creates a new paper row."
                   />
                 </th>
                 <th className="px-4 py-3 font-medium">
@@ -165,7 +162,8 @@ function PaperSizeCell({
   return (
     <UsdtSizeInput
       name="notionalUsdt"
-      defaultValue={DEFAULT_PAPER_NOTIONAL_USDT}
+      defaultValue=""
+      maxUsdt={row.capacityUsdt}
       ariaLabel={`Paper size in USDT for ${row.futureSymbol}`}
       form={openFormId(row)}
     />
