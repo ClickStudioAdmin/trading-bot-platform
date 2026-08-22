@@ -25,23 +25,19 @@ export function StrategySubnav() {
       </p>
       <nav
         aria-label="Cash and carry"
-        className="mt-5 flex items-end justify-between gap-4 overflow-x-auto border-b border-line"
+        className="mt-5 flex gap-1 overflow-x-auto border-b border-line"
       >
-        <div className="flex gap-1">
-          {CASH_AND_CARRY_PRIMARY_LINKS.map((link) => (
-            <SubnavLink key={link.href} link={link} pathname={pathname} />
-          ))}
-        </div>
-        <div className="flex gap-1">
-          {CASH_AND_CARRY_SECONDARY_LINKS.map((link) => (
-            <SubnavLink
-              key={link.href}
-              link={link}
-              pathname={pathname}
-              secondary
-            />
-          ))}
-        </div>
+        {CASH_AND_CARRY_PRIMARY_LINKS.map((link) => (
+          <SubnavLink key={link.href} link={link} pathname={pathname} />
+        ))}
+        {CASH_AND_CARRY_SECONDARY_LINKS.map((link) => (
+          <SubnavLink
+            key={link.href}
+            link={link}
+            pathname={pathname}
+            secondary
+          />
+        ))}
       </nav>
     </div>
   );
