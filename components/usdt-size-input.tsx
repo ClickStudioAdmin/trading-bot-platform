@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  formatGroupedNumberInput,
   formatNotionalInput,
   parseNotionalUsdt,
 } from "@/lib/paper/open";
@@ -12,19 +13,21 @@ export function UsdtSizeInput({
   ariaLabel,
   form,
   compact,
+  showPrefix = true,
 }: {
   name: string;
-  defaultValue: number;
+  defaultValue: number | string;
   ariaLabel: string;
   form?: string;
   compact?: boolean;
+  showPrefix?: boolean;
 }) {
   const [display, setDisplay] = useState(formatNotionalInput(String(defaultValue)));
   const parsed = parseNotionalUsdt(display);
 
   return (
     <span className="flex items-center gap-1 text-ink-muted">
-      $
+      {showPrefix ? "$" : null}
       <input type="hidden" name={name} value={parsed ?? ""} form={form} />
       <input
         inputMode="numeric"
@@ -39,5 +42,32 @@ export function UsdtSizeInput({
         }
       />
     </span>
+  );
+}
+
+export function GroupedNumberInput({
+  name,
+  defaultValue,
+  allowDecimal = false,
+}: {
+  name: string;
+  defaultValue: string;
+  allowDecimal?: boolean;
+}) {
+  const [display, setDisplay] = useState(
+    formatGroupedNumberInput(defaultValue, allowDecimal),
+  );
+
+  return (
+    <input
+      name={name}
+      inputMode={allowDecimal ? "decimal" : "numeric"}
+      autoComplete="off"
+      value={display}
+      onChange={(event) =>
+        setDisplay(formatGroupedNumberInput(event.target.value, allowDecimal))
+      }
+      className="mt-0.5 w-full rounded-control border border-line bg-canvas px-1.5 py-1 text-xs tabular-nums text-ink focus:border-line-strong focus:outline-none"
+    />
   );
 }

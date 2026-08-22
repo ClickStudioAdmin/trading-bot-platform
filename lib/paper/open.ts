@@ -16,11 +16,37 @@ export function pairKey(spotSymbol: string, futureSymbol: string): string {
 }
 
 export function formatNotionalInput(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  if (digits === "") {
+  return formatGroupedNumberInput(raw, false);
+}
+
+export function formatGroupedNumberInput(
+  raw: string,
+  allowDecimal = false,
+): string {
+  if (!allowDecimal) {
+    const digits = raw.replace(/\D/g, "");
+    if (digits === "") {
+      return "";
+    }
+    return Number(digits).toLocaleString("en-US");
+  }
+
+  const stripped = raw.replace(/[^\d.]/g, "");
+  if (stripped === "") {
     return "";
   }
-  return Number(digits).toLocaleString("en-US");
+  if (stripped === ".") {
+    return "0.";
+  }
+  const hasDot = stripped.includes(".");
+  const [wholeRaw = "", ...rest] = stripped.split(".");
+  const fraction = rest.join("");
+  const wholeDigits = wholeRaw === "" ? "0" : wholeRaw;
+  const grouped = Number(wholeDigits).toLocaleString("en-US");
+  if (!Number.isFinite(Number(wholeDigits))) {
+    return "";
+  }
+  return hasDot ? `${grouped}.${fraction}` : grouped;
 }
 
 export function parseNotionalUsdt(raw: string): number | null {

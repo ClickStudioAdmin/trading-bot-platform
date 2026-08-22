@@ -8,7 +8,7 @@ import {
   type PaperLayerFormValues,
   type PaperRulesFormValues,
 } from "@/lib/engine/rules";
-import { UsdtSizeInput } from "@/components/usdt-size-input";
+import { GroupedNumberInput, UsdtSizeInput } from "@/components/usdt-size-input";
 
 export function PaperRulesForm({ values }: { values: PaperRulesFormValues }) {
   const [enabled, setEnabled] = useState(values.enabled);
@@ -117,41 +117,43 @@ function RuleRow({
           <Field
             name={`${prefix}minApr`}
             label="Min APR %"
-            placeholder="10"
             defaultValue={layer.minApr}
+            allowDecimal
           />
           <Field
             name={`${prefix}minDte`}
             label="Min DTE"
-            placeholder="7"
             defaultValue={layer.minDte}
           />
           <Field
             name={`${prefix}maxDte`}
             label="Max DTE"
-            placeholder="90"
             defaultValue={layer.maxDte}
           />
           {sizeType === "fixed" ? (
             <Field
               name={`${prefix}minCapacity`}
               label="Min book value"
-              placeholder="5000"
               defaultValue={layer.minCapacity}
             />
           ) : null}
         </FieldGroup>
         <FieldGroup title="Position and Orders">
-          <Field
-            name={`${prefix}maxOpenNotional`}
-            label="Max Position Size"
-            placeholder="50000"
-            defaultValue={layer.maxOpenNotional}
-          />
+          <label className="block text-[11px] text-ink-muted">
+            Max Position Size
+            <div className="mt-0.5">
+              <UsdtSizeInput
+                name={`${prefix}maxOpenNotional`}
+                defaultValue={layer.maxOpenNotional}
+                ariaLabel={`Max position size for rule ${index + 1}`}
+                compact
+                showPrefix={false}
+              />
+            </div>
+          </label>
           <Field
             name={`${prefix}maxOpenCount`}
             label="Max opens"
-            placeholder="2"
             defaultValue={layer.maxOpenCount}
           />
           <label className="block text-[11px] text-ink-muted">
@@ -169,13 +171,14 @@ function RuleRow({
             </select>
           </label>
           <label className="block text-[11px] text-ink-muted">
-            Order size
+            Order size (USDT)
             <div className="mt-0.5">
               <UsdtSizeInput
                 name={`${prefix}notionalUsdt`}
                 defaultValue={layer.notionalUsdt}
                 ariaLabel={`Order size for rule ${index + 1}`}
                 compact
+                showPrefix={false}
               />
             </div>
           </label>
@@ -183,7 +186,6 @@ function RuleRow({
             <Field
               name={`${prefix}minSize`}
               label="Min Size"
-              placeholder="5000"
               defaultValue={layer.minSize}
             />
           ) : null}
@@ -197,28 +199,27 @@ function RuleRow({
           <Field
             name={`${prefix}closeMaxDte`}
             label="DTE ≤"
-            placeholder="3"
             defaultValue={layer.closeMaxDte}
           />
           <Field
             name={`${prefix}closeMinApr`}
             label="APR % below"
-            placeholder="5"
             defaultValue={layer.closeMinApr}
+            allowDecimal
           />
         </FieldGroup>
         <FieldGroup title="Stops">
           <Field
             name={`${prefix}takeProfit`}
             label="Take profit %"
-            placeholder="1"
             defaultValue={layer.takeProfit}
+            allowDecimal
           />
           <Field
             name={`${prefix}stopLoss`}
             label="Stop loss %"
-            placeholder="2"
             defaultValue={layer.stopLoss}
+            allowDecimal
           />
         </FieldGroup>
       </div>
@@ -246,25 +247,21 @@ function FieldGroup({
 function Field({
   name,
   label,
-  placeholder,
   defaultValue,
+  allowDecimal,
 }: {
   name: string;
   label: string;
-  placeholder: string;
   defaultValue: string;
+  allowDecimal?: boolean;
 }) {
   return (
     <label className="block text-[11px] text-ink-muted">
       {label}
-      <input
+      <GroupedNumberInput
         name={name}
-        type="number"
-        step="any"
-        inputMode="decimal"
-        placeholder={placeholder}
         defaultValue={defaultValue}
-        className="mt-0.5 w-full rounded-control border border-line bg-canvas px-1.5 py-1 text-xs tabular-nums text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
+        allowDecimal={allowDecimal}
       />
     </label>
   );

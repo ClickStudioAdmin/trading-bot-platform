@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { updatePaperCarryExits } from "@/lib/paper/actions";
 import {
   exitFormValues,
@@ -126,25 +127,24 @@ export function PaperAutomationTrigger({
                     name="closeMaxDte"
                     label="DTE ≤"
                     defaultValue={form.closeMaxDte}
-                    placeholder="3"
                   />
                   <ExitField
                     name="closeMinApr"
                     label="APR % below"
                     defaultValue={form.closeMinApr}
-                    placeholder="5"
+                    allowDecimal
                   />
                   <ExitField
                     name="takeProfit"
                     label="Take profit %"
                     defaultValue={form.takeProfit}
-                    placeholder="1"
+                    allowDecimal
                   />
                   <ExitField
                     name="stopLoss"
                     label="Stop loss %"
                     defaultValue={form.stopLoss}
-                    placeholder="2"
+                    allowDecimal
                   />
                   <button
                     type="submit"
@@ -193,24 +193,20 @@ function ExitField({
   name,
   label,
   defaultValue,
-  placeholder,
+  allowDecimal,
 }: {
   name: string;
   label: string;
   defaultValue: string;
-  placeholder: string;
+  allowDecimal?: boolean;
 }) {
   return (
     <label className="block text-[11px] text-ink-muted">
       {label}
-      <input
+      <GroupedNumberInput
         name={name}
-        type="number"
-        step="any"
-        inputMode="decimal"
         defaultValue={defaultValue}
-        placeholder={placeholder}
-        className="mt-0.5 w-full rounded-control border border-line bg-canvas px-1.5 py-1 text-xs tabular-nums text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
+        allowDecimal={allowDecimal}
       />
     </label>
   );
