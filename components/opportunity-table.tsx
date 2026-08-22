@@ -2,6 +2,7 @@ import Link from "next/link";
 import { TokenIcon } from "@/components/token-icon";
 import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
 import { openPaperCarry } from "@/lib/paper/actions";
+import { UsdtSizeInput } from "@/components/usdt-size-input";
 import {
   DEFAULT_PAPER_NOTIONAL_USDT,
   pairKey,
@@ -115,18 +116,11 @@ function PaperOpenCell({
       <input type="hidden" name="spotSymbol" value={row.spotSymbol} />
       <input type="hidden" name="futureSymbol" value={row.futureSymbol} />
       <input type="hidden" name="next" value={paper.next} />
-      <span className="flex items-center gap-1 text-ink-muted">
-        $
-        <input
-          name="notionalUsdt"
-          type="number"
-          min="1"
-          step="1"
-          defaultValue={DEFAULT_PAPER_NOTIONAL_USDT}
-          aria-label={`Paper size in USDT for ${row.futureSymbol}`}
-          className="w-24 rounded-control border border-line bg-canvas px-2 py-1 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
-        />
-      </span>
+      <UsdtSizeInput
+        name="notionalUsdt"
+        defaultValue={DEFAULT_PAPER_NOTIONAL_USDT}
+        ariaLabel={`Paper size in USDT for ${row.futureSymbol}`}
+      />
       <button
         type="submit"
         className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"

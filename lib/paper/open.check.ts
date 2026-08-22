@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  formatNotionalInput,
   pairKey,
   paperCarryInsertRow,
   parseNotionalUsdt,
@@ -25,6 +26,9 @@ const opportunity: ScannedOpportunity = {
 
 assert.equal(pairKey("BTCUSDT", "BTCUSDT-26DEC25"), "BTCUSDT|BTCUSDT-26DEC25");
 assert.equal(parseNotionalUsdt("10000"), 10_000);
+assert.equal(parseNotionalUsdt("10,000"), 10_000);
+assert.equal(formatNotionalInput("10000"), "10,000");
+assert.equal(formatNotionalInput("10,000"), "10,000");
 assert.equal(parseNotionalUsdt("0"), null);
 assert.equal(parseNotionalUsdt("-1"), null);
 assert.equal(safePaperReturnPath("/cash-and-carry"), "/cash-and-carry");

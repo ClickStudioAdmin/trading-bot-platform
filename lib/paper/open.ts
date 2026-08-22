@@ -12,8 +12,16 @@ export function pairKey(spotSymbol: string, futureSymbol: string): string {
   return `${spotSymbol}|${futureSymbol}`;
 }
 
+export function formatNotionalInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits === "") {
+    return "";
+  }
+  return Number(digits).toLocaleString("en-US");
+}
+
 export function parseNotionalUsdt(raw: string): number | null {
-  const value = Number(raw);
+  const value = Number(raw.replace(/,/g, "").trim());
   if (!Number.isFinite(value) || value <= 0) {
     return null;
   }
