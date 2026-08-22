@@ -45,9 +45,7 @@ export function OpenPaperCarryRows({
       : carryPnlPct(trade.unrealizedUsdt, trade.notionalUsdt);
 
   return (
-    <ExpandableOrderRows colSpan={8} orders={trade.orders}>
-      {(toggle) => (
-        <>
+    <ExpandableOrderRows colSpan={9} orders={trade.orders}>
       <td className="px-4 py-3">
         <span className="flex items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
@@ -69,8 +67,6 @@ export function OpenPaperCarryRows({
               />
             </>
           ) : null}
-          {" · "}
-          {toggle}
         </span>
       </td>
       <td className="px-4 py-3 tabular-nums text-ink-muted">
@@ -98,8 +94,6 @@ export function OpenPaperCarryRows({
       <td className="px-4 py-3">
         <ClosePaperButton trade={trade} next={next} />
       </td>
-        </>
-      )}
     </ExpandableOrderRows>
   );
 }
@@ -111,9 +105,7 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
       : carryPnlPct(trade.realizedUsdt, trade.notionalUsdt);
 
   return (
-    <ExpandableOrderRows colSpan={7} orders={trade.orders}>
-      {(toggle) => (
-        <>
+    <ExpandableOrderRows colSpan={8} orders={trade.orders}>
       <td className="px-4 py-3">
         <span className="flex items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
@@ -132,8 +124,6 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
             closeSource={trade.closeSource}
             closeReason={trade.closeReason}
           />
-          {" · "}
-          {toggle}
         </span>
       </td>
       <td className="px-4 py-3 text-ink-muted">
@@ -156,8 +146,6 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
       <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
         {formatPct(pnlPct)}
       </td>
-        </>
-      )}
     </ExpandableOrderRows>
   );
 }
@@ -169,26 +157,27 @@ function ExpandableOrderRows({
 }: {
   orders: PaperOrderRow[];
   colSpan: number;
-  children: (toggle: ReactNode) => ReactNode;
+  children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
-  const toggle = (
-    <button
-      type="button"
-      className="text-ink-faint hover:text-ink"
-      aria-expanded={open}
-      aria-controls={open ? panelId : undefined}
-      onClick={() => setOpen((current) => !current)}
-    >
-      {open ? "Hide orders" : "Orders"}
-    </button>
-  );
 
   return (
     <>
       <tr className="border-b border-line last:border-b-0">
-        {children(toggle)}
+        <td className="px-4 py-3">
+          <button
+            type="button"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
+            aria-expanded={open}
+            aria-controls={open ? panelId : undefined}
+            aria-label={open ? "Hide order details" : "Show order details"}
+            onClick={() => setOpen((current) => !current)}
+          >
+            <ChevronIcon className={open ? "rotate-90" : undefined} />
+          </button>
+        </td>
+        {children}
       </tr>
       {open ? (
         <tr className="border-b border-line last:border-b-0">
@@ -198,6 +187,25 @@ function ExpandableOrderRows({
         </tr>
       ) : null}
     </>
+  );
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      className={`h-4 w-4 ${className ?? ""}`}
+    >
+      <path
+        d="M6 3.5 11 8l-5 4.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

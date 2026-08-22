@@ -59,6 +59,12 @@ export function OpenPaperTrades({
             <tr>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
+                  label="Details"
+                  hint="Paper orders for this carry. Expand to see fills, scan values, and why it opened or closed."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
                   label="Pair"
                   hint="Long USDT spot and short this dated future. The badge is Manual or Auto. Closing means Unwind or a dynamic exit is still clipping to usable book."
                 />
@@ -110,7 +116,7 @@ export function OpenPaperTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={8}
+                colSpan={9}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -122,7 +128,7 @@ export function OpenPaperTrades({
               />
             ) : open.length === 0 ? (
               <EmptyRow
-                colSpan={8}
+                colSpan={9}
                 message="No open paper carries. Open one from the book above."
               />
             ) : (
@@ -158,6 +164,12 @@ export function ClosedPaperTrades({
         <table className="w-full min-w-[52rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Details"
+                  hint="Paper orders for this carry. Expand to see fills, scan values, and why it opened or closed."
+                />
+              </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Pair"
@@ -205,7 +217,7 @@ export function ClosedPaperTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={7}
+                colSpan={8}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -217,7 +229,7 @@ export function ClosedPaperTrades({
               />
             ) : closed.length === 0 ? (
               <EmptyRow
-                colSpan={7}
+                colSpan={8}
                 message="No closed paper carries yet."
               />
             ) : (
