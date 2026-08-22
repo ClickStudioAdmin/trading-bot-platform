@@ -42,7 +42,7 @@ Never rank on mid or last price.
 
 ## Screen
 
-`/strategies/cash-and-carry` is the strategy home. `/strategies/cash-and-carry/opportunities` is the full book with GET filters (min net APR %, min/max DTE, min capacity USDT). `/strategies/cash-and-carry/pairs` is the instrument scan list. Theme tokens only. Top opportunities are a live scan. Current trades, past trades, and desk statistics are labeled placeholders until later phases place orders.
+`/strategies/cash-and-carry` is the strategy home. `/strategies/cash-and-carry/opportunities` is the full book with GET filters (min net APR %, min/max DTE, min capacity USDT). `/strategies/cash-and-carry/pairs` is the instrument scan list. Theme tokens only. Top opportunities are a live scan. Current trades, past trades, and desk statistics are the Phase 3 paper blotter.
 
 ## Out of scope
 

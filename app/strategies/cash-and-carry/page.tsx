@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  PlaceholderClosedTrades,
-  PlaceholderOpenTrades,
-  PlaceholderTradeStats,
-} from "@/components/carry-placeholders";
 import { OpportunityTable } from "@/components/opportunity-table";
 import { PageHeading } from "@/components/page-heading";
+import { PaperBlotter } from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
 import { persistOpportunities } from "@/lib/opportunities/persist";
 import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
 import { firstSearchValue } from "@/lib/paper/open";
-import { getOpportunityPaperProps } from "@/lib/paper/list";
+import { getOpportunityPaperProps, loadPaperDesk } from "@/lib/paper/list";
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
@@ -37,6 +33,8 @@ export default async function CashAndCarryPage({
     error = cause instanceof Error ? cause.message : "Scan failed";
   }
 
+  const desk = await loadPaperDesk(rows);
+
   const topFive = rows.slice(0, 5);
   const aprs = rows
     .map((row) => row.netApr)
@@ -51,11 +49,12 @@ export default async function CashAndCarryPage({
       <PageHeading overline="Strategies" title="Cash and carry" />
       <p className="-mt-4 text-sm text-ink-muted">
         Buy the USDT spot, sell the dated future. Top opportunities are a live
-        scan. Trade tables are still placeholders. Open on a pair is paper
-        only — no Bybit order.
+        scan. Current and past trades are your paper desk. Open and Close are
+        paper only — no Bybit order.
       </p>
       <PaperFlash
         opened={firstSearchValue(params.paper) === "opened"}
+        closed={firstSearchValue(params.paper) === "closed"}
         error={firstSearchValue(params.paperError)}
       />
 
@@ -109,9 +108,11 @@ export default async function CashAndCarryPage({
         <OpportunityTable rows={topFive} paper={paper} />
       </section>
 
-      <PlaceholderOpenTrades />
-      <PlaceholderClosedTrades />
-      <PlaceholderTradeStats />
+      <PaperBlotter
+        signedIn={desk.signedIn}
+        open={desk.open}
+        closed={desk.closed}
+      />
 
       <p className="text-sm text-ink-faint">
         <Link href="/strategies/cash-and-carry/pairs" className="text-accent">

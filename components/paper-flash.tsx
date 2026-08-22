@@ -1,8 +1,10 @@
 export function PaperFlash({
   opened,
+  closed,
   error,
 }: {
   opened: boolean;
+  closed?: boolean;
   error?: string;
 }) {
   if (error) {
@@ -16,6 +18,13 @@ export function PaperFlash({
     return (
       <p className="mt-3 text-sm text-success">
         Paper carry opened. No exchange order was sent.
+      </p>
+    );
+  }
+  if (closed) {
+    return (
+      <p className="mt-3 text-sm text-success">
+        Paper carry closed. No exchange order was sent.
       </p>
     );
   }
