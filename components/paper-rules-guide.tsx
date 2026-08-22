@@ -38,10 +38,6 @@ export function PaperRulesGuide() {
           term="Min DTE / Max DTE"
           detail="Days until the dated future expires must sit in this range. Use max DTE to avoid very long tenors; use min DTE to avoid contracts that are about to expire."
         />
-        <GuideItem
-          term="Min book value"
-          detail="Fixed only. The pair’s book value must be at least this. Book value is 25% of the top 5 book levels that stay inside 5 bp of impact — how much size the books can take, not how much you will trade."
-        />
       </dl>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
@@ -63,6 +59,10 @@ export function PaperRulesGuide() {
         <GuideItem
           term="Order size (USDT)"
           detail="Fixed only. Paper size of each open this layer creates. P&L is (entry net − mark net − 2 × fees and slip) × this size. Fees are VIP0 taker on both legs plus 5 bp slip, charged for open and for close."
+        />
+        <GuideItem
+          term="Min book value"
+          detail="Fixed only. The pair’s book value must be at least this. Book value is 25% of the top 5 book levels that stay inside 5 bp of impact — how much size the books can take, not how much you will trade."
         />
         <GuideItem
           term="Min Order Size"

@@ -130,13 +130,6 @@ function RuleRow({
             label="Max DTE"
             defaultValue={layer.maxDte}
           />
-          {sizeType === "fixed" ? (
-            <Field
-              name={`${prefix}minCapacity`}
-              label="Min book value"
-              defaultValue={layer.minCapacity}
-            />
-          ) : null}
         </FieldGroup>
         <FieldGroup title="Position and Orders">
           <Field
@@ -170,11 +163,18 @@ function RuleRow({
               defaultValue={layer.minSize}
             />
           ) : (
-            <Field
-              name={`${prefix}notionalUsdt`}
-              label="Order size (USDT)"
-              defaultValue={String(layer.notionalUsdt)}
-            />
+            <>
+              <Field
+                name={`${prefix}notionalUsdt`}
+                label="Order size (USDT)"
+                defaultValue={String(layer.notionalUsdt)}
+              />
+              <Field
+                name={`${prefix}minCapacity`}
+                label="Min book value"
+                defaultValue={layer.minCapacity}
+              />
+            </>
           )}
         </FieldGroup>
       </div>
