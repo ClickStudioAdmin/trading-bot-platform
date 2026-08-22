@@ -30,10 +30,18 @@ export type EngineOpenPosition = {
   ruleId: number | null;
 };
 
+export type PositionExits = {
+  closeMaxDte: number | null;
+  closeMinNetApr: number | null;
+  takeProfitPct: number | null;
+  stopLossPct: number | null;
+};
+
 export type EngineMarkedPosition = EngineOpenPosition & {
   daysToExpiry: number | null;
   markNetApr: number | null;
   pnlPct: number | null;
+  exits?: PositionExits;
 };
 
 export type EngineEntry = {
@@ -129,7 +137,7 @@ export function decideExits(
     if (!layer) {
       continue;
     }
-    const reason = exitReason(position, layer);
+    const reason = exitReason(position, position.exits ?? layer);
     if (reason) {
       exits.push({ position, reason });
     }
@@ -169,33 +177,33 @@ function layerUsageKey(layer: { id: number | null; sortOrder: number }): string 
 
 function exitReason(
   position: EngineMarkedPosition,
-  layer: PaperEngineLayer,
+  exits: PositionExits,
 ): ExitReason | null {
   if (
-    layer.closeMaxDte !== null &&
+    exits.closeMaxDte !== null &&
     position.daysToExpiry !== null &&
-    position.daysToExpiry <= layer.closeMaxDte
+    position.daysToExpiry <= exits.closeMaxDte
   ) {
     return "dte";
   }
   if (
-    layer.closeMinNetApr !== null &&
+    exits.closeMinNetApr !== null &&
     position.markNetApr !== null &&
-    position.markNetApr < layer.closeMinNetApr
+    position.markNetApr < exits.closeMinNetApr
   ) {
     return "mark_apr";
   }
   if (
-    layer.takeProfitPct !== null &&
+    exits.takeProfitPct !== null &&
     position.pnlPct !== null &&
-    position.pnlPct >= layer.takeProfitPct
+    position.pnlPct >= exits.takeProfitPct
   ) {
     return "take_profit";
   }
   if (
-    layer.stopLossPct !== null &&
+    exits.stopLossPct !== null &&
     position.pnlPct !== null &&
-    position.pnlPct <= layer.stopLossPct
+    position.pnlPct <= exits.stopLossPct
   ) {
     return "stop_loss";
   }

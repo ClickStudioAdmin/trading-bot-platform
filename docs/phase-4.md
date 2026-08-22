@@ -48,7 +48,13 @@ Positions with no live mark are not auto-closed.
 
 `paper_carries.source` is `manual` or `engine`. `paper_carries.rule_id` points at the layer that opened an engine row.
 
-`paper_carries.source` is `manual` or `engine`.
+Engine opens copy that layer’s entry filters and exits onto the carry. Click **Engine** on an open row to see them and edit that trade’s exits. Past trades show **In Auto/Manual · Out Auto/Manual**; click for the triggers and how it actually closed. `close_source` is `manual` or `engine`. The tick uses the carry’s exits and writes `close_reason` when it auto-closes.
+
+## Event logs and admin
+
+`event_logs` records system, strategy, and trade events. Writes are service-role only via `writeEventLog`. Manual paper open/close and automation saves are logged. Page scans are not.
+
+`/admin` is for `click.studio.admin@gmail.com` and members with role `admin`. Logs and members are live. Settings is a placeholder.
 
 ## Out of scope
 

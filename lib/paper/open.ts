@@ -1,4 +1,8 @@
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
+import {
+  automationInsertColumns,
+  type PaperCarryAutomation,
+} from "@/lib/paper/automation";
 
 export const DEFAULT_PAPER_NOTIONAL_USDT = 10_000;
 
@@ -51,6 +55,7 @@ export function paperCarryInsertRow(
   userId: string,
   opportunity: ScannedOpportunity,
   notionalUsdt: number,
+  automation?: PaperCarryAutomation,
 ) {
   if (!(notionalUsdt > 0)) {
     throw new Error("Notional must be positive");
@@ -64,5 +69,6 @@ export function paperCarryInsertRow(
     notional_usdt: notionalUsdt,
     entry_basis: opportunity.netBasis,
     status: "open" as const,
+    ...(automation ? automationInsertColumns(automation) : {}),
   };
 }

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
+import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
 import { TokenIcon } from "@/components/token-icon";
+import { closedTradeLabel } from "@/lib/paper/automation";
 import {
   formatPct,
   formatSignedUsd,
@@ -139,10 +141,20 @@ function OpenPaperTrades({
                       <TokenIcon symbol={trade.baseCoin} />
                       {trade.baseCoin}
                     </span>
-                    <span className="mt-0.5 block pl-7 text-xs text-ink-faint">
+                    <span className="mt-0.5 flex items-center gap-1 pl-7 text-xs text-ink-faint">
                       Long spot · short {trade.futureSymbol}
                       {" · "}
-                      {trade.source === "engine" ? "Engine" : "Manual"}
+                      {trade.source === "engine" ? (
+                        <PaperAutomationTrigger
+                          carryId={trade.id}
+                          automation={trade.automation}
+                          label="Engine"
+                          canEdit
+                          entrySource="engine"
+                        />
+                      ) : (
+                        "Manual"
+                      )}
                     </span>
                   </td>
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
@@ -279,10 +291,18 @@ function ClosedPaperTrades({
                       <TokenIcon symbol={trade.baseCoin} />
                       {trade.baseCoin}
                     </span>
-                    <span className="mt-0.5 block pl-7 text-xs text-ink-faint">
+                    <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
                       {trade.futureSymbol}
                       {" · "}
-                      {trade.source === "engine" ? "Engine" : "Manual"}
+                      <PaperAutomationTrigger
+                        carryId={trade.id}
+                        automation={trade.automation}
+                        label={closedTradeLabel(trade.source, trade.closeSource)}
+                        canEdit={false}
+                        entrySource={trade.source}
+                        closeSource={trade.closeSource}
+                        closeReason={trade.closeReason}
+                      />
                     </span>
                   </td>
                   <td className="px-4 py-3 text-ink-muted">

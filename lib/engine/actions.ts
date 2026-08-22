@@ -1,6 +1,7 @@
 "use server";
 
 import { paperLayerToRow, parsePaperRulesForm } from "@/lib/engine/rules";
+import { writeEventLog } from "@/lib/logs/write";
 import { createUserClient, getAuthUser } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -31,6 +32,14 @@ export async function savePaperRules(formData: FormData) {
     });
 
   if (settingsError) {
+    await writeEventLog({
+      level: "error",
+      scope: "strategy",
+      event: "automations.save_failed",
+      message: settingsError.message,
+      userId: user.id,
+      strategy: "cash-and-carry",
+    });
     redirect(`${RULES_PATH}?error=${encodeURIComponent(settingsError.message)}`);
   }
 
@@ -40,6 +49,14 @@ export async function savePaperRules(formData: FormData) {
     .eq("user_id", user.id);
 
   if (loadError) {
+    await writeEventLog({
+      level: "error",
+      scope: "strategy",
+      event: "automations.save_failed",
+      message: loadError.message,
+      userId: user.id,
+      strategy: "cash-and-carry",
+    });
     redirect(`${RULES_PATH}?error=${encodeURIComponent(loadError.message)}`);
   }
 
@@ -59,6 +76,14 @@ export async function savePaperRules(formData: FormData) {
       .eq("user_id", user.id)
       .in("id", staleIds);
     if (error) {
+      await writeEventLog({
+        level: "error",
+        scope: "strategy",
+        event: "automations.save_failed",
+        message: error.message,
+        userId: user.id,
+        strategy: "cash-and-carry",
+      });
       redirect(`${RULES_PATH}?error=${encodeURIComponent(error.message)}`);
     }
   }
@@ -72,15 +97,43 @@ export async function savePaperRules(formData: FormData) {
         .eq("id", layer.id)
         .eq("user_id", user.id);
       if (error) {
+        await writeEventLog({
+          level: "error",
+          scope: "strategy",
+          event: "automations.save_failed",
+          message: error.message,
+          userId: user.id,
+          strategy: "cash-and-carry",
+        });
         redirect(`${RULES_PATH}?error=${encodeURIComponent(error.message)}`);
       }
     } else {
       const { error } = await supabase.from("paper_rules").insert(payload);
       if (error) {
+        await writeEventLog({
+          level: "error",
+          scope: "strategy",
+          event: "automations.save_failed",
+          message: error.message,
+          userId: user.id,
+          strategy: "cash-and-carry",
+        });
         redirect(`${RULES_PATH}?error=${encodeURIComponent(error.message)}`);
       }
     }
   }
+
+  await writeEventLog({
+    scope: "strategy",
+    event: "automations.saved",
+    message: `Saved ${parsed.config.layers.length} automation layer(s)`,
+    userId: user.id,
+    strategy: "cash-and-carry",
+    data: {
+      enabled: parsed.config.enabled,
+      layerCount: parsed.config.layers.length,
+    },
+  });
 
   redirect(`${RULES_PATH}?saved=1`);
 }

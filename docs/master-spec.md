@@ -11,6 +11,7 @@ GitHub. Hosted Supabase and Vercel are not.
 - Repo-root Next.js on Vercel — UI and the Phase 4 paper tick HTTP door
 - Paper engine tick lives in `lib/engine` and is host-agnostic. Phase 4 is scheduled by GitHub Actions against the Sydney Vercel function. Fly.io can call the same function later
 - Supabase — auth, Postgres
+- `/admin` — `click.studio.admin@gmail.com` and members with role `admin`. Logs and members now; settings later
 
 The web app never places exchange orders from a Vercel invocation. Paper `paper_carries` writes are not exchange orders.
 

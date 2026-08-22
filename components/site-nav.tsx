@@ -6,14 +6,17 @@ import { SITE_LINKS } from "@/lib/site-links";
 
 export function SiteNav({
   className = "",
+  extraLinks = [],
 }: {
   className?: string;
+  extraLinks?: { href: string; label: string }[];
 }) {
   const pathname = usePathname();
+  const links = [...SITE_LINKS, ...extraLinks];
 
   return (
     <nav className={className} aria-label="Primary">
-      {SITE_LINKS.map((link) => {
+      {links.map((link) => {
         const active =
           pathname === link.href || pathname.startsWith(`${link.href}/`);
         return (

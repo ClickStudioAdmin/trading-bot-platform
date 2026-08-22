@@ -96,7 +96,7 @@ If the `develop` deployment badge says **Preview** (Vercel default when `develop
 
 ## Auth (Phase 3)
 
-Email/password only. Create desk users in the Supabase dashboard (Authentication → Users). Do not open public sign-up.
+Email/password only. Create desk users from **Admin → Members**. Do not open public sign-up. Existing Auth users are backfilled into `members` when that migration runs.
 
 On **both** TBP projects:
 
@@ -105,11 +105,15 @@ On **both** TBP projects:
    - Development project Site URL = the Vercel **Development** URL
    - Production project Site URL = the Vercel **Production** URL
    - Redirect URLs include that origin (and `http://localhost:3000` if you run locally)
-3. Add your user with **Auto Confirm** so no inbound email is required
+3. Keep public sign-up off. The first admin can still be added in the dashboard with **Auto Confirm**; later members are created in `/admin/members`
 
 `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` must be set on the matching Vercel environment. The browser uses the publishable key. The service role stays server-only.
 
 The service role is in the Supabase dashboard: **Project Settings → API → `service_role`**. Copy the **development** project’s key into Vercel **Development**, and the **production** project’s key into Vercel **Production**.
+
+## Admin (Phase 4)
+
+The desk admin is `click.studio.admin@gmail.com`, listed in `lib/admin/emails.ts`. Members with role `admin` also get the **Admin** nav. The server upserts those users into `app_admins` so RLS can show every `event_logs` row. No Vercel secret is required. Manage accounts at `/admin/members`.
 
 ## Paper engine tick (Phase 4)
 

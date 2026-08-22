@@ -27,8 +27,7 @@ export default async function SignInPage({
         </p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">Sign in</h1>
         <p className="mt-3 text-sm text-ink-muted">
-          Invite-only. Create the user in the Supabase dashboard, then sign in
-          here. Market pages stay public.
+          Invite-only. An admin creates members. Market pages stay public.
         </p>
         {error ? (
           <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

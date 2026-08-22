@@ -1,3 +1,10 @@
+import {
+  parseCloseReason,
+  parseTradeSource,
+  type CloseReason,
+  type PaperCarryAutomation,
+  type TradeSource,
+} from "@/lib/paper/automation";
 import { carryPnlUsdt } from "@/lib/paper/math";
 import { pairKey } from "@/lib/paper/open";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
@@ -17,8 +24,11 @@ export type PaperCarryRow = {
   realizedUsdt: number | null;
   daysHeld: number | null;
   realizedApr: number | null;
-  source: "manual" | "engine";
+  source: TradeSource;
+  closeSource: TradeSource | null;
+  closeReason: CloseReason | null;
   ruleId: number | null;
+  automation: PaperCarryAutomation;
 };
 
 export type MarkedPaperCarry = PaperCarryRow & {
@@ -71,8 +81,21 @@ export function parsePaperCarryRow(row: Record<string, unknown>): PaperCarryRow 
     realizedUsdt: asNullableNumber(row.realized_usdt),
     daysHeld: asNullableNumber(row.days_held),
     realizedApr: asNullableNumber(row.realized_apr),
-    source: row.source === "engine" ? "engine" : "manual",
+    source: parseTradeSource(row.source),
+    closeSource:
+      status === "closed" ? parseTradeSource(row.close_source) : null,
+    closeReason: parseCloseReason(row.close_reason),
     ruleId: asNullableNumber(row.rule_id),
+    automation: {
+      entryMinNetApr: asNullableNumber(row.entry_min_net_apr),
+      entryMinDte: asNullableNumber(row.entry_min_dte),
+      entryMaxDte: asNullableNumber(row.entry_max_dte),
+      entryMinCapacityUsdt: asNullableNumber(row.entry_min_capacity_usdt),
+      closeMaxDte: asNullableNumber(row.close_max_dte),
+      closeMinNetApr: asNullableNumber(row.close_min_net_apr),
+      takeProfitPct: asNullableNumber(row.take_profit_pct),
+      stopLossPct: asNullableNumber(row.stop_loss_pct),
+    },
   };
 }
 

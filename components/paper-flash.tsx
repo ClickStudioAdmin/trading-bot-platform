@@ -1,10 +1,12 @@
 export function PaperFlash({
   opened,
   closed,
+  exits,
   error,
 }: {
   opened: boolean;
   closed?: boolean;
+  exits?: boolean;
   error?: string;
 }) {
   if (error) {
@@ -25,6 +27,13 @@ export function PaperFlash({
     return (
       <p className="mt-3 text-sm text-success">
         Paper carry closed. No exchange order was sent.
+      </p>
+    );
+  }
+  if (exits) {
+    return (
+      <p className="mt-3 text-sm text-success">
+        Paper carry exits updated. That trade only — the automation rule is unchanged.
       </p>
     );
   }

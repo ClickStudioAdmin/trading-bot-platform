@@ -1,5 +1,7 @@
 "use server";
 
+import { writeEventLog } from "@/lib/logs/write";
+import { parseCarryExitForm } from "@/lib/paper/automation";
 import { closePaperCarry as computeClose } from "@/lib/paper/math";
 import { pairKey, paperCarryInsertRow, parseNotionalUsdt, safePaperReturnPath } from "@/lib/paper/open";
 import { asNumber, parsePaperCarryRow } from "@/lib/paper/rows";
@@ -50,8 +52,32 @@ export async function openPaperCarry(formData: FormData) {
   );
 
   if (error) {
+    await writeEventLog({
+      level: "error",
+      scope: "trade",
+      event: "trade.open_failed",
+      message: error.message,
+      userId: user.id,
+      strategy: "cash-and-carry",
+      data: { spotSymbol, futureSymbol, notionalUsdt },
+    });
     redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
   }
+
+  await writeEventLog({
+    scope: "trade",
+    event: "trade.opened",
+    message: `Opened paper ${futureSymbol}`,
+    userId: user.id,
+    strategy: "cash-and-carry",
+    data: {
+      spotSymbol,
+      futureSymbol,
+      notionalUsdt,
+      entryBasis: match.netBasis,
+      source: "manual",
+    },
+  });
 
   redirect(`${next}?paper=opened`);
 }
@@ -128,13 +154,121 @@ export async function closeOpenPaperCarry(formData: FormData) {
       realized_usdt: closed.realizedUsdt,
       days_held: closed.daysHeld,
       realized_apr: closed.realizedApr,
+      close_source: "manual",
+      close_reason: null,
     })
     .eq("id", carryId)
     .eq("status", "open");
 
   if (error) {
+    await writeEventLog({
+      level: "error",
+      scope: "trade",
+      event: "trade.close_failed",
+      message: error.message,
+      userId: user.id,
+      strategy: "cash-and-carry",
+      data: { carryId },
+    });
     redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
   }
 
+  await writeEventLog({
+    scope: "trade",
+    event: "trade.closed",
+    message: `Closed paper ${row.futureSymbol}`,
+    userId: user.id,
+    strategy: "cash-and-carry",
+    data: {
+      carryId,
+      futureSymbol: row.futureSymbol,
+      exitBasis: match.netBasis,
+      realizedUsdt: closed.realizedUsdt,
+      source: row.source,
+      closeSource: "manual",
+    },
+  });
+
   redirect(`${next}?paper=closed`);
+}
+
+export async function updatePaperCarryExits(formData: FormData) {
+  const next = safePaperReturnPath(String(formData.get("next") ?? ""));
+  const user = await getAuthUser();
+  if (!user) {
+    redirect("/sign-in");
+  }
+
+  const supabase = await createUserClient();
+  if (!supabase) {
+    redirect(`${next}?paperError=${encodeURIComponent("Auth is not configured.")}`);
+  }
+
+  let carryId: number;
+  try {
+    carryId = asNumber(formData.get("carryId"));
+  } catch {
+    redirect(`${next}?paperError=${encodeURIComponent("Missing paper carry.")}`);
+  }
+
+  const parsed = parseCarryExitForm(formData);
+  if ("error" in parsed) {
+    redirect(`${next}?paperError=${encodeURIComponent(parsed.error)}`);
+  }
+
+  const { data, error: loadError } = await supabase
+    .from("paper_carries")
+    .select("*")
+    .eq("id", carryId)
+    .eq("status", "open")
+    .eq("source", "engine")
+    .maybeSingle();
+
+  if (loadError || !data) {
+    redirect(
+      `${next}?paperError=${encodeURIComponent("That automated paper carry is not open.")}`,
+    );
+  }
+
+  const { error } = await supabase
+    .from("paper_carries")
+    .update({
+      close_max_dte: parsed.closeMaxDte,
+      close_min_net_apr: parsed.closeMinNetApr,
+      take_profit_pct: parsed.takeProfitPct,
+      stop_loss_pct: parsed.stopLossPct,
+    })
+    .eq("id", carryId)
+    .eq("status", "open")
+    .eq("source", "engine");
+
+  if (error) {
+    await writeEventLog({
+      level: "error",
+      scope: "trade",
+      event: "trade.exits_failed",
+      message: error.message,
+      userId: user.id,
+      strategy: "cash-and-carry",
+      data: { carryId },
+    });
+    redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
+  }
+
+  await writeEventLog({
+    scope: "trade",
+    event: "trade.exits_updated",
+    message: `Updated exits for paper ${String(data.future_symbol)}`,
+    userId: user.id,
+    strategy: "cash-and-carry",
+    data: {
+      carryId,
+      closeMaxDte: parsed.closeMaxDte,
+      closeMinNetApr: parsed.closeMinNetApr,
+      takeProfitPct: parsed.takeProfitPct,
+      stopLossPct: parsed.stopLossPct,
+    },
+  });
+
+  redirect(`${next}?paper=exits`);
 }

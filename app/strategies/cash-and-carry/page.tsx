@@ -55,6 +55,7 @@ export default async function CashAndCarryPage({
       <PaperFlash
         opened={firstSearchValue(params.paper) === "opened"}
         closed={firstSearchValue(params.paper) === "closed"}
+        exits={firstSearchValue(params.paper) === "exits"}
         error={firstSearchValue(params.paperError)}
       />
 

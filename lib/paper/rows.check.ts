@@ -24,6 +24,7 @@ assert.equal(row.id, 3);
 assert.equal(row.notionalUsdt, 10_000);
 assert.equal(row.entryBasis, 0.25);
 assert.equal(row.status, "open");
+assert.equal(row.closeSource, null);
 
 const scan: ScannedOpportunity[] = [
   {
@@ -58,6 +59,8 @@ const stats = paperDeskStats(marked, [
     daysHeld: 1,
     realizedApr: 3.65,
     source: "manual",
+    closeSource: "manual",
+    closeReason: null,
     ruleId: null,
   },
 ]);

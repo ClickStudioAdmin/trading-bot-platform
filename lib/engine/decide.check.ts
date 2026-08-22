@@ -142,4 +142,28 @@ assert.deepEqual(
   [],
 );
 
+assert.equal(
+  decideExits(
+    [
+      {
+        spotSymbol: "BTCUSDT",
+        futureSymbol: high.futureSymbol,
+        notionalUsdt: 10_000,
+        ruleId: 1,
+        daysToExpiry: 2,
+        markNetApr: 0.2,
+        pnlPct: 0.02,
+        exits: {
+          closeMaxDte: null,
+          closeMinNetApr: null,
+          takeProfitPct: 0.01,
+          stopLossPct: null,
+        },
+      },
+    ],
+    config,
+  )[0]?.reason,
+  "take_profit",
+);
+
 console.log("engine decide checks passed");
