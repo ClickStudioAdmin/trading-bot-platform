@@ -40,6 +40,10 @@ assert.equal(
   safePaperReturnPath("/strategies/cash-and-carry"),
   "/strategies/cash-and-carry",
 );
+assert.equal(
+  safePaperReturnPath("/strategies/cash-and-carry/positions"),
+  "/strategies/cash-and-carry/positions",
+);
 assert.equal(safePaperReturnPath("/strategies/universe"), "/strategies/cash-and-carry");
 assert.equal(safePaperReturnPath("/universe"), "/strategies/cash-and-carry");
 assert.equal(safePaperReturnPath("/cash-and-carry"), "/strategies/cash-and-carry");

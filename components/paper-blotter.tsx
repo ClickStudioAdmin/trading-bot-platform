@@ -12,6 +12,7 @@ import {
 } from "@/lib/opportunities/format";
 import { closeOpenPaperCarry } from "@/lib/paper/actions";
 import { carryPnlPct } from "@/lib/paper/math";
+import type { PaperReturnPath } from "@/lib/paper/open";
 import {
   formatDeskDate,
   openExposure,
@@ -26,33 +27,50 @@ export function PaperBlotter({
   signedIn,
   open,
   closed,
+  next = "/strategies/cash-and-carry",
 }: {
   signedIn: boolean;
   open: MarkedPaperCarry[];
   closed: PaperCarryRow[];
+  next?: PaperReturnPath;
 }) {
   return (
     <>
-      <OpenPaperTrades signedIn={signedIn} open={open} />
+      <OpenPaperTrades signedIn={signedIn} open={open} next={next} />
       <ClosedPaperTrades signedIn={signedIn} closed={closed} />
       <PaperDeskStats signedIn={signedIn} open={open} closed={closed} />
     </>
   );
 }
 
-function OpenPaperTrades({
+export function OpenPaperTrades({
   signedIn,
   open,
+  next = "/strategies/cash-and-carry",
+  showHeading = true,
 }: {
   signedIn: boolean;
   open: MarkedPaperCarry[];
+  next?: PaperReturnPath;
+  showHeading?: boolean;
 }) {
   return (
     <section>
-      <SectionHead
-        title="Current trades"
-        subtitle="Open paper carries. Unrealized includes open and close fees on both legs. Close is paper only — no Bybit order."
-      />
+      {showHeading ? (
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <SectionHead
+            title="Current Positions"
+            subtitle="Open paper carries. Unrealized includes open and close fees on both legs. Close is paper only — no Bybit order."
+            className=""
+          />
+          <Link
+            href="/strategies/cash-and-carry/positions"
+            className="shrink-0 text-sm text-accent hover:text-accent-strong"
+          >
+            All positions
+          </Link>
+        </div>
+      ) : null}
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[56rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
@@ -151,6 +169,7 @@ function OpenPaperTrades({
                           label="Engine"
                           canEdit
                           entrySource="engine"
+                          next={next}
                         />
                       ) : (
                         "Manual"
@@ -188,7 +207,7 @@ function OpenPaperTrades({
                     {formatPct(pnlPct)}
                   </td>
                   <td className="px-4 py-3">
-                    <ClosePaperButton trade={trade} />
+                    <ClosePaperButton trade={trade} next={next} />
                   </td>
                 </tr>
                 );
@@ -442,7 +461,13 @@ function PaperDeskStats({
   );
 }
 
-function ClosePaperButton({ trade }: { trade: MarkedPaperCarry }) {
+function ClosePaperButton({
+  trade,
+  next,
+}: {
+  trade: MarkedPaperCarry;
+  next: PaperReturnPath;
+}) {
   if (trade.markBasis === null) {
     return (
       <span
@@ -457,7 +482,7 @@ function ClosePaperButton({ trade }: { trade: MarkedPaperCarry }) {
   return (
     <form action={closeOpenPaperCarry}>
       <input type="hidden" name="carryId" value={trade.id} />
-      <input type="hidden" name="next" value="/strategies/cash-and-carry" />
+      <input type="hidden" name="next" value={next} />
       <button
         type="submit"
         className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
@@ -487,12 +512,14 @@ function EmptyRow({
 function SectionHead({
   title,
   subtitle,
+  className = "mb-3",
 }: {
   title: string;
   subtitle: string;
+  className?: string;
 }) {
   return (
-    <div className="mb-3">
+    <div className={className}>
       <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
       <p className="text-sm text-ink-muted">{subtitle}</p>
     </div>

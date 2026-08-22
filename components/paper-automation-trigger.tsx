@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { updatePaperCarryExits } from "@/lib/paper/actions";
+import type { PaperReturnPath } from "@/lib/paper/open";
 import {
   exitFormValues,
   formatCloseHow,
@@ -23,6 +24,7 @@ export function PaperAutomationTrigger({
   entrySource,
   closeSource = null,
   closeReason = null,
+  next = "/strategies/cash-and-carry",
 }: {
   carryId: number;
   automation: PaperCarryAutomation;
@@ -31,6 +33,7 @@ export function PaperAutomationTrigger({
   entrySource: TradeSource;
   closeSource?: TradeSource | null;
   closeReason?: CloseReason | null;
+  next?: PaperReturnPath;
 }) {
   const [open, setOpen] = useState(false);
   const [box, setBox] = useState<DOMRect | null>(null);
@@ -121,7 +124,7 @@ export function PaperAutomationTrigger({
                   <input
                     type="hidden"
                     name="next"
-                    value="/strategies/cash-and-carry"
+                    value={next}
                   />
                   <ExitField
                     name="closeMaxDte"

@@ -6,9 +6,14 @@ import {
 
 export const DEFAULT_PAPER_NOTIONAL_USDT = 10_000;
 
+export type PaperReturnPath =
+  | "/strategies/cash-and-carry"
+  | "/strategies/cash-and-carry/opportunities"
+  | "/strategies/cash-and-carry/positions";
+
 export type OpportunityPaperProps = {
   signedIn: boolean;
-  next: "/strategies/cash-and-carry" | "/strategies/cash-and-carry/opportunities";
+  next: PaperReturnPath;
 };
 
 export function pairKey(spotSymbol: string, futureSymbol: string): string {
@@ -63,9 +68,10 @@ export function firstSearchValue(
   return Array.isArray(value) ? value[0] : value;
 }
 
-export function safePaperReturnPath(
-  raw: string,
-): "/strategies/cash-and-carry" | "/strategies/cash-and-carry/opportunities" {
+export function safePaperReturnPath(raw: string): PaperReturnPath {
+  if (raw === "/strategies/cash-and-carry/positions") {
+    return raw;
+  }
   if (
     raw === "/strategies/cash-and-carry" ||
     raw === "/strategies/universe" ||

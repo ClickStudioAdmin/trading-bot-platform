@@ -132,7 +132,7 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Manual trades"
-          detail="Rows you opened by hand are not auto-closed. Close those from Current trades."
+          detail="Rows you opened by hand are not auto-closed. Close those from Positions."
         />
       </dl>
     </section>
