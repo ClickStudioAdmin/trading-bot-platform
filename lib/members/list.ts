@@ -4,6 +4,7 @@ import {
   type MemberListQuery,
 } from "@/lib/members/query";
 import { parseMemberRow, type MemberRow } from "@/lib/members/rows";
+import { syncMembersFromAuth } from "@/lib/members/sync";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 export type MemberListResult = {
@@ -11,6 +12,7 @@ export type MemberListResult = {
   total: number;
   page: number;
   pageCount: number;
+  error: string | null;
 };
 
 export async function listMembers(
@@ -21,11 +23,14 @@ export async function listMembers(
     total: 0,
     page: 1,
     pageCount: 1,
+    error: null,
   };
   const supabase = createServiceClient();
   if (!supabase) {
-    return empty;
+    return { ...empty, error: "Service role is not configured." };
   }
+
+  await syncMembersFromAuth();
 
   let countQuery = supabase
     .from("members")
@@ -49,7 +54,7 @@ export async function listMembers(
 
   const { count, error: countError } = await countQuery;
   if (countError || count === null) {
-    return empty;
+    return { ...empty, error: countError?.message ?? "Could not load members." };
   }
 
   const pageCount = Math.max(1, Math.ceil(count / MEMBER_PAGE_SIZE));
@@ -62,7 +67,13 @@ export async function listMembers(
     .range(from, to);
 
   if (error || !data) {
-    return { ...empty, total: count, page, pageCount };
+    return {
+      ...empty,
+      total: count,
+      page,
+      pageCount,
+      error: error?.message ?? "Could not load members.",
+    };
   }
 
   return {
@@ -70,6 +81,7 @@ export async function listMembers(
     total: count,
     page,
     pageCount,
+    error: null,
   };
 }
 

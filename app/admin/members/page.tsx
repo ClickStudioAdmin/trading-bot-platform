@@ -41,9 +41,9 @@ export default async function AdminMembersPage({
       <p className="-mt-4 text-sm text-ink-muted">
         Desk accounts. Creating a member also creates their sign-in.
       </p>
-      {error ? (
+      {error || list.error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
+          {error ?? list.error}
         </p>
       ) : null}
       {created ? (

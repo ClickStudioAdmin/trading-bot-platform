@@ -21,7 +21,7 @@ Phase 4 rules migrations: `supabase/migrations/20260822160000_paper_rules.sql` t
 
 Event logs and admins: `supabase/migrations/20260822180000_event_logs_and_admins.sql`.
 
-Members: `supabase/migrations/20260822190000_members.sql`. Existing `auth.users` are backfilled. Admins create further members in `/admin/members`, which also creates the Auth user.
+Members: `supabase/migrations/20260822190000_members.sql`. Opening `/admin/members` copies any Auth users that are not yet in `members`. The listed desk admin is also written on sign-in. Admins create further members in `/admin/members`, which also creates the Auth user.
 
 Per-trade automation snapshot: `supabase/migrations/20260822200000_paper_carry_automation.sql`. Close source: `supabase/migrations/20260822210000_paper_carry_close_source.sql`.
 

@@ -1,4 +1,5 @@
 import { emailIsListedAdmin } from "@/lib/admin/emails";
+import { ensureMemberRow } from "@/lib/members/sync";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { createUserClient, getAuthUser } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -18,6 +19,10 @@ export async function getAdminUser(): Promise<AdminUser | null> {
 
   if (emailIsListedAdmin(user.email)) {
     await ensureAdminRow(user.id);
+    await ensureMemberRow({
+      userId: user.id,
+      email: user.email ?? null,
+    });
     return { id: user.id, email: user.email ?? null };
   }
 
