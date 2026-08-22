@@ -10,7 +10,7 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
 **4 of 7 — Rules UI** (complete)
 
-`/strategies/cash-and-carry/rules` saves the user’s rules. Waiting on **5 — Engine tick**.
+`/strategies/cash-and-carry/automations` saves the user’s automation layers. `/strategies/cash-and-carry/settings` is a placeholder. Waiting on **5 — Engine tick**.
 
 ## Micro-steps
 
@@ -19,7 +19,7 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 | 1 | Docs | Agent | `phase-4.md` exists. Master spec, environments, database, and phase-discipline say Phase 4 |
 | 2 | Decision math | Agent | `lib/engine` decides entries and exits from scan + opens + rules. Checks pass |
 | 3 | Rules table | Agent | `paper_rules` and `paper_carries.source` migrations. GitHub Actions applies on `develop` |
-| 4 | Rules UI | Agent | `/strategies/cash-and-carry/rules` saves the user’s rules. Subnav includes Rules |
+| 4 | Rules UI | Agent | `/strategies/cash-and-carry/automations` saves layers. Subnav includes Settings and Automations |
 | 5 | Engine tick | Agent | `runPaperEngineTick` + `POST /api/engine/tick` with `CRON_SECRET`. Service-role writes |
 | 6 | Schedule | Agent | GitHub Actions every 5 minutes hits the matching Vercel URL |
 | 7 | Secrets + push | You + agent | `CRON_SECRET` on Preview and Production. Push `develop`. Production unchanged until you merge |

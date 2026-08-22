@@ -1,7 +1,7 @@
 export function PaperRulesGuide() {
   return (
     <section className="mt-10 rounded-card border border-line bg-surface px-5 py-5">
-      <h2 className="text-lg font-semibold tracking-tight">How rules work</h2>
+      <h2 className="text-lg font-semibold tracking-tight">How automations work</h2>
       <p className="mt-2 text-sm text-ink-muted">
         The paper engine scans the live book, then opens or closes paper
         carries using these layers. No Bybit order is sent. Empty fields mean
@@ -9,11 +9,11 @@ export function PaperRulesGuide() {
       </p>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Engine
+        Automations
       </h3>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
-          term="Enable paper engine"
+          term="Enable automations"
           detail="When on, the scheduled tick may open and close paper rows. When off, the tick does nothing. Manual Open and Close on the blotter still work."
         />
         <GuideItem

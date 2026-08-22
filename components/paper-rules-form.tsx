@@ -26,7 +26,7 @@ export function PaperRulesForm({ values }: { values: PaperRulesFormValues }) {
             onChange={(event) => setEnabled(event.target.checked)}
             className="size-3.5"
           />
-          Enable paper engine
+          Enable automations
         </label>
         <p className="mt-1 text-xs text-ink-muted">
           Stack rules to scale in: a higher min APR can use a different size.
@@ -64,7 +64,7 @@ export function PaperRulesForm({ values }: { values: PaperRulesFormValues }) {
           type="submit"
           className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
         >
-          Save rules
+          Save automations
         </button>
       </div>
     </form>

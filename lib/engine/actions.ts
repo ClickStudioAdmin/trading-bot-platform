@@ -4,7 +4,7 @@ import { paperLayerToRow, parsePaperRulesForm } from "@/lib/engine/rules";
 import { createUserClient, getAuthUser } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
-const RULES_PATH = "/strategies/cash-and-carry/rules";
+const RULES_PATH = "/strategies/cash-and-carry/automations";
 
 export async function savePaperRules(formData: FormData) {
   const user = await getAuthUser();
