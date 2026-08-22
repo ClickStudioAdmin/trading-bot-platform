@@ -13,12 +13,20 @@ export default function Home() {
         TBP development environment is operational.
       </p>
       <p className="mt-8 text-sm text-ink-faint">Build: 002</p>
-      <Link
-        href="/theme"
-        className="mt-8 inline-flex rounded-control border border-line bg-surface px-4 py-2 text-sm text-ink hover:bg-surface-raised"
-      >
-        Theme reference
-      </Link>
+      <div className="mt-8 flex flex-wrap gap-3">
+        <Link
+          href="/instruments"
+          className="inline-flex rounded-control border border-line bg-surface px-4 py-2 text-sm text-ink hover:bg-surface-raised"
+        >
+          Carry universe
+        </Link>
+        <Link
+          href="/theme"
+          className="inline-flex rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+        >
+          Theme reference
+        </Link>
+      </div>
     </main>
   );
 }

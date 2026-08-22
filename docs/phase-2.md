@@ -8,9 +8,9 @@ The web app may call **public** Bybit market endpoints from the server. It must 
 
 ## Current micro-step
 
-**1 of 7 — Opportunity math** (complete)
+**2 of 7 — Bybit instruments** (complete)
 
-`lib/opportunities/math.ts` computes executable basis, net basis, net APR, and DTE. `npm test` passes. No Bybit HTTP yet.
+Public REST only, no API key. `/instruments` lists dated USDT expiry paired to USDT spot. Perps excluded.
 
 ## Micro-steps
 
