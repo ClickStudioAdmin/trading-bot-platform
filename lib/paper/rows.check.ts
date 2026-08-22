@@ -57,6 +57,7 @@ const stats = paperDeskStats(marked, [
     closedAtMs: row.openedAtMs + 86_400_000,
     daysHeld: 1,
     realizedApr: 3.65,
+    source: "manual",
   },
 ]);
 assert.equal(stats.openNotionalUsdt, 10_000);

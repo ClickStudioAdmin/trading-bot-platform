@@ -8,9 +8,9 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
 ## Current micro-step
 
-**2 of 7 — Decision math** (complete)
+**4 of 7 — Rules UI** (complete)
 
-`lib/engine` decides entries and exits from scan + opens + rules. Waiting on **3 — Rules table**.
+`/strategies/cash-and-carry/rules` saves the user’s rules. Waiting on **5 — Engine tick**.
 
 ## Micro-steps
 

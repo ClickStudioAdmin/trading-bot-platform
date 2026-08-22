@@ -141,6 +141,8 @@ function OpenPaperTrades({
                     </span>
                     <span className="mt-0.5 block pl-7 text-xs text-ink-faint">
                       Long spot · short {trade.futureSymbol}
+                      {" · "}
+                      {trade.source === "engine" ? "Engine" : "Manual"}
                     </span>
                   </td>
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
@@ -279,6 +281,8 @@ function ClosedPaperTrades({
                     </span>
                     <span className="mt-0.5 block pl-7 text-xs text-ink-faint">
                       {trade.futureSymbol}
+                      {" · "}
+                      {trade.source === "engine" ? "Engine" : "Manual"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-ink-muted">
