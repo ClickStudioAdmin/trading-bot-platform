@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  carryPnlPct,
   carryPnlUsdt,
   closePaperCarry,
   daysHeld,
@@ -16,6 +17,8 @@ function almostEqual(actual: number, expected: number, digits = 6) {
 almostEqual(carryPnlUsdt(0.02, 0.01, 10_000, 0.002), 60);
 almostEqual(carryPnlUsdt(0.02, 0.02, 10_000, 0.002), -40);
 almostEqual(carryPnlUsdt(0.012, -0.001, 10_000, 0.002), 90);
+almostEqual(carryPnlPct(60, 10_000), 0.006);
+almostEqual(carryPnlPct(-40, 10_000), -0.004);
 
 assert.equal(daysHeld(0, 86_400_000), 1);
 almostEqual(daysHeld(0, 45 * 86_400_000), 45);

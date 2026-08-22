@@ -35,6 +35,16 @@ export function daysHeld(openedAtMs: number, closedAtMs: number): number {
   return (closedAtMs - openedAtMs) / 86_400_000;
 }
 
+export function carryPnlPct(pnlUsdt: number, notionalUsdt: number): number {
+  if (!(notionalUsdt > 0)) {
+    throw new Error("Notional must be positive");
+  }
+  if (!Number.isFinite(pnlUsdt)) {
+    throw new Error("P&L must be finite");
+  }
+  return pnlUsdt / notionalUsdt;
+}
+
 export function realizedApr(
   realizedUsdt: number,
   notionalUsdt: number,

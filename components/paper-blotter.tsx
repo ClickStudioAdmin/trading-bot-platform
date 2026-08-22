@@ -9,6 +9,7 @@ import {
   signedTone,
 } from "@/lib/opportunities/format";
 import { closeOpenPaperCarry } from "@/lib/paper/actions";
+import { carryPnlPct } from "@/lib/paper/math";
 import {
   formatDeskDate,
   openExposure,
@@ -86,6 +87,12 @@ function OpenPaperTrades({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
+                  label="P&L %"
+                  hint="Unrealized ÷ notional. All-in percentage of paper size. Not annualized — that is APR on past trades."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
                   label="DTE"
                   hint="Days until this future expires."
                 />
@@ -101,7 +108,7 @@ function OpenPaperTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={7}
+                colSpan={8}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -113,11 +120,16 @@ function OpenPaperTrades({
               />
             ) : open.length === 0 ? (
               <EmptyRow
-                colSpan={7}
+                colSpan={8}
                 message="No open paper carries. Open one from the book above."
               />
             ) : (
-              open.map((trade) => (
+              open.map((trade) => {
+                const pnlPct =
+                  trade.unrealizedUsdt === null
+                    ? null
+                    : carryPnlPct(trade.unrealizedUsdt, trade.notionalUsdt);
+                return (
                 <tr
                   key={trade.id}
                   className="border-b border-line last:border-b-0"
@@ -151,6 +163,11 @@ function OpenPaperTrades({
                       ? "—"
                       : formatSignedUsd(trade.unrealizedUsdt)}
                   </td>
+                  <td
+                    className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}
+                  >
+                    {formatPct(pnlPct)}
+                  </td>
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
                     {trade.daysToExpiry === null
                       ? "—"
@@ -160,7 +177,8 @@ function OpenPaperTrades({
                     <ClosePaperButton trade={trade} />
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

@@ -35,6 +35,7 @@ Stop after each step.
 ## Formulas
 
 - Unrealized / realized USDT = `(entry_net − current_net − 2 × fee_rate) × notional`
+- P&L % = `unrealized / notional` (not annualized)
 - `fee_rate` is the scan model: VIP0 taker on both legs + 5 bp slip + delivery (0 on USDT expiry)
 - Days held = `(closed_at − opened_at) / 86400000`
 - Realized APR = `(realized / notional) × 365 / days held`
