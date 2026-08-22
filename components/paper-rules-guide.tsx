@@ -27,7 +27,7 @@ export function PaperRulesGuide() {
       </dl>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Entry · Triggers
+        Entry · Conditions
       </h3>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
@@ -71,7 +71,7 @@ export function PaperRulesGuide() {
       </dl>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Exit · Triggers
+        Exit · Conditions
       </h3>
       <p className="mt-2 text-sm text-ink-muted">
         Exits apply only to paper rows this layer opened. First match wins, in

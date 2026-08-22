@@ -113,7 +113,7 @@ function RuleRow({
         Entry
       </p>
       <div className="mt-1 grid gap-2 md:grid-cols-2">
-        <FieldGroup title="Triggers">
+        <FieldGroup title="Conditions">
           <Field
             name={`${prefix}minApr`}
             label="Min APR %"
@@ -193,7 +193,7 @@ function RuleRow({
         Exit
       </p>
       <div className="mt-1 grid gap-2 md:grid-cols-2">
-        <FieldGroup title="Triggers">
+        <FieldGroup title="Conditions">
           <Field
             name={`${prefix}closeMaxDte`}
             label="DTE ≤"
