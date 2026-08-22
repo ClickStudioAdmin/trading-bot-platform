@@ -70,14 +70,9 @@ export default async function CashAndCarryPage({
       ) : null}
 
       <section>
-        <div className="mb-3">
-          <h2 className="text-xl font-semibold tracking-tight">
-            Market snapshot
-          </h2>
-          <p className="text-sm text-ink-muted">
-            Live Bybit public books. No API key.
-          </p>
-        </div>
+        <h2 className="mb-3 text-xl font-semibold tracking-tight">
+          Market snapshot
+        </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Pairs scanned" value={String(rows.length)} />
           <StatCard

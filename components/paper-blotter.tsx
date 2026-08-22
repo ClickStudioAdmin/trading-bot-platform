@@ -253,9 +253,7 @@ export function PaperDeskStats({
       <SectionHead
         title="Strategy statistics"
         subtitle={
-          signedIn
-            ? "Your paper desk. Marks from the live scan."
-            : "Sign in to see your paper desk numbers."
+          signedIn ? undefined : "Sign in to see your paper desk numbers."
         }
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -353,13 +351,13 @@ function SectionHead({
   className = "mb-3",
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   className?: string;
 }) {
   return (
     <div className={className}>
       <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
-      <p className="text-sm text-ink-muted">{subtitle}</p>
+      {subtitle ? <p className="text-sm text-ink-muted">{subtitle}</p> : null}
     </div>
   );
 }
