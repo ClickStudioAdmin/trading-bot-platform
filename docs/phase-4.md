@@ -8,9 +8,9 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
 ## Current micro-step
 
-**1 of 7 — Docs** (complete)
+**2 of 7 — Decision math** (complete)
 
-Phase 3 is complete. Phase 4 is current. Waiting on **2 — Decision math**.
+`lib/engine` decides entries and exits from scan + opens + rules. Waiting on **3 — Rules table**.
 
 ## Micro-steps
 
@@ -42,7 +42,9 @@ One `paper_rules` row per `user_id`. RLS select/insert/update own. No delete.
 
 **Exit (first match wins):** DTE ≤ `close_max_dte`; mark net APR < `close_min_net_apr`; P&L % ≥ `take_profit_pct`; P&L % ≤ `stop_loss_pct`.
 
-**Engine safety:** skip a pair if that user already has any open row on it. Rank by net APR. Fill until caps.
+**Engine safety:** skip a pair if that user already has any open row on it. Rank by net APR. Fill until caps. If `enabled` is false, the engine neither opens nor closes.
+
+Positions with no live mark are not auto-closed.
 
 `paper_carries.source` is `manual` or `engine`.
 
