@@ -49,7 +49,7 @@ export default async function CashAndCarryPage({
       <PageHeading overline="Strategies" title="Cash and carry" />
       <p className="-mt-4 text-sm text-ink-muted">
         Buy the USDT spot, sell the dated future. Top opportunities are a live
-        scan. Current Positions and past trades are your paper desk. Open and Close are
+        scan. Current Positions and Past Positions are your paper desk. Open and Close are
         paper only — no Bybit order.
       </p>
       <PaperFlash

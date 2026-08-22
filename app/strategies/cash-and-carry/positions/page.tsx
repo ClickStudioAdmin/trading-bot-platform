@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
-import { OpenPaperTrades } from "@/components/paper-blotter";
+import {
+  ClosedPaperTrades,
+  OpenPaperTrades,
+} from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
 import { persistOpportunities } from "@/lib/opportunities/persist";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -11,7 +13,7 @@ import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
 export const metadata: Metadata = {
   title: "Positions",
-  description: "Open paper cash-and-carry positions.",
+  description: "Open and past paper cash-and-carry positions.",
 };
 
 export default async function CashAndCarryPositionsPage({
@@ -56,13 +58,7 @@ export default async function CashAndCarryPositionsPage({
         next="/strategies/cash-and-carry/positions"
         showHeading={false}
       />
-      <p className="text-sm text-ink-faint">
-        <Link href="/strategies/cash-and-carry" className="text-accent">
-          Overview
-        </Link>
-        {" · "}
-        Past trades and desk stats stay on Overview.
-      </p>
+      <ClosedPaperTrades signedIn={desk.signedIn} closed={desk.closed} />
     </main>
   );
 }

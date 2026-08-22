@@ -220,7 +220,7 @@ export function OpenPaperTrades({
   );
 }
 
-function ClosedPaperTrades({
+export function ClosedPaperTrades({
   signedIn,
   closed,
 }: {
@@ -230,7 +230,7 @@ function ClosedPaperTrades({
   return (
     <section>
       <SectionHead
-        title="Past trades"
+        title="Past Positions"
         subtitle="Closed paper carries. Realized P&L uses the same all-in fee model as unrealized."
       />
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
