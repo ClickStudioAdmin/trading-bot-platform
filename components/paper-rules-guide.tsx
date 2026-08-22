@@ -13,12 +13,8 @@ export function PaperRulesGuide() {
       </h3>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
-          term="Enable automations"
-          detail="When on, the scheduled tick may open and close paper rows from these rules. When off, it will not open or auto-exit. Manual Open, Close, and Unwind still work. The tick still clips rows that are already Closing."
-        />
-        <GuideItem
           term="Add position"
-          detail="Adds another position. Each position has its own entry conditions, caps, order types, and exits. If several positions match a pair, the engine uses the one with the highest min APR. If min APRs tie, it uses the one that appears first on this page. Remove a set if no current paper row is using it. Save to apply."
+          detail="Adds a rule set. If any rule sets exist, the engine may open and close paper rows from them. With none, it only continues rows that are already Closing. Each set has its own entry conditions, caps, order types, and exits. If several match a pair, the engine uses the one with the highest min APR. If min APRs tie, it uses the one that appears first on this page. Remove a set if no current paper row is using it. Save to apply."
         />
       </dl>
 

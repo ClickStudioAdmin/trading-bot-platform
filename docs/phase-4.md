@@ -36,7 +36,7 @@ Vercel Cron is not the scheduler. Hobby cron is once per day and Production-only
 
 ## Rules (per user)
 
-`paper_engine_settings` holds the enable switch and usable book share (one row per user). `paper_rules` holds stacked layers (many rows per user). RLS own-row. Layers can be deleted.
+`paper_engine_settings` holds usable book share and whether any rule sets are saved (one row per user). `paper_rules` holds stacked layers (many rows per user). RLS own-row. Layers can be deleted. The engine is on when at least one layer exists.
 
 Each layer has its own entry and exit order types, entry filters, open caps, and exits. **Fixed entry** opens Order size once on a pair you do not already hold, and can require Min usable book. **Dynamic entry** adds one clip per pair per tick, sized to current usable book or leftover room under Max Position Size, until that cap (and Max opens) is met. Skip a clip below Min Order Size. For a pair, the engine uses the matching layer with the **highest min APR**. Usable book is the user’s Settings share of the top 5 book levels inside 5 bp of impact. Default share is 25%. The scan stores the raw in-range book; the share is applied per user.
 
@@ -44,7 +44,7 @@ Each layer has its own entry and exit order types, entry filters, open caps, and
 
 Manual rows: **Close** flattens remaining size at the live scan. **Unwind** clips to usable book and sets `closing` until later ticks finish it. Auto rows follow that layer’s exits. Positions show Manual or Auto.
 
-**Engine safety:** Fixed entry skips a pair you already hold. Dynamic entry may add clips on a held pair. Rank by net APR. Caps are per layer. If `enabled` is false, the engine does not open or fire rule exits. It still clips `closing` rows. Manual opens have no `rule_id` and are not auto-closed unless the user clicks Unwind.
+**Engine safety:** Fixed entry skips a pair you already hold. Dynamic entry may add clips on a held pair. Rank by net APR. Caps are per layer. If there are no rule sets, the engine does not open or fire rule exits. It still clips `closing` rows. Manual opens have no `rule_id` and are not auto-closed unless the user clicks Unwind.
 
 Positions with no live mark are not auto-closed.
 

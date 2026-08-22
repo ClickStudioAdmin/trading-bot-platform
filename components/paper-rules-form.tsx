@@ -17,32 +17,25 @@ export function PaperRulesForm({
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
 }) {
-  const [enabled, setEnabled] = useState(values.enabled);
   const [layers, setLayers] = useState(values.layers);
   const inUse = new Set(inUseRuleIds);
+  const empty = layers.length === 0;
+
+  function removeLayer(key: string, id: string) {
+    const next = layers.filter((item) => item.key !== key);
+    setLayers(next);
+    if (next.length === 0 && id !== "") {
+      const data = new FormData();
+      data.set("ruleCount", "0");
+      void savePaperRules(data);
+    }
+  }
 
   return (
     <form action={savePaperRules} className="space-y-4">
       <input type="hidden" name="ruleCount" value={layers.length} />
-      <section className="rounded-card border border-line bg-surface px-4 py-3">
-        <label className="flex items-center gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
-            name="enabled"
-            checked={enabled}
-            onChange={(event) => setEnabled(event.target.checked)}
-            className="size-3.5"
-          />
-          Enable automations
-        </label>
-        <p className="mt-1 text-xs text-ink-muted">
-          Stack positions: a higher min APR can use a different size.
-          The engine picks the highest matching position. Off means no auto
-          open or close.
-        </p>
-      </section>
 
-      {layers.length === 0 ? (
+      {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
           No rule sets. Add a position to start, or leave this empty if you
           only trade by hand.
@@ -58,17 +51,13 @@ export function PaperRulesForm({
               layer={layer}
               canRemove={!used}
               inUse={used}
-              onRemove={() =>
-                setLayers((current) =>
-                  current.filter((item) => item.key !== layer.key),
-                )
-              }
+              onRemove={() => removeLayer(layer.key, layer.id)}
             />
           );
         })
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() =>
@@ -77,16 +66,22 @@ export function PaperRulesForm({
               layerToForm(current.length),
             ])
           }
-          className="rounded-control border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface-raised"
+          className={
+            empty
+              ? "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+              : "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
+          }
         >
           Add position
         </button>
-        <button
-          type="submit"
-          className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
-        >
-          Save automations
-        </button>
+        {empty ? null : (
+          <button
+            type="submit"
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          >
+            Save automations
+          </button>
+        )}
       </div>
     </form>
   );

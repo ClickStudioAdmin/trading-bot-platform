@@ -14,7 +14,7 @@ empty.set("r0_notionalUsdt", "10,000");
 const parsedEmpty = parsePaperRulesForm(empty);
 assert.equal(parsedEmpty.ok, true);
 if (parsedEmpty.ok) {
-  assert.equal(parsedEmpty.config.enabled, false);
+  assert.equal(parsedEmpty.config.enabled, true);
   assert.equal(parsedEmpty.config.layers[0]?.sizeType, "dynamic");
   assert.equal(parsedEmpty.config.layers[0]?.notionalUsdt, 10_000);
   assert.equal(parsedEmpty.config.layers[0]?.minNetApr, null);

@@ -114,7 +114,7 @@ export function parsePaperRulesForm(
   return {
     ok: true,
     config: {
-      enabled: String(form.get("enabled") ?? "") === "on",
+      enabled: layers.length > 0,
       layers,
     },
   };
