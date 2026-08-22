@@ -15,7 +15,7 @@ export function ColumnHint({
   return (
     <>
       <span
-        className="cursor-help border-b border-dotted border-ink-faint"
+        className="cursor-help"
         onMouseEnter={(event) =>
           setBox(event.currentTarget.getBoundingClientRect())
         }

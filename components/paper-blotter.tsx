@@ -418,7 +418,7 @@ function ClosePaperButton({ trade }: { trade: MarkedPaperCarry }) {
       <input type="hidden" name="next" value="/strategies/cash-and-carry" />
       <button
         type="submit"
-        className="rounded-control border border-line bg-surface-raised px-2.5 py-1 text-xs font-medium text-ink"
+        className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
       >
         Close
       </button>
