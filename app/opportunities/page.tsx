@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { persistOpportunities } from "@/lib/opportunities/persist";
+import type { PersistResult } from "@/lib/opportunities/persist";
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
@@ -38,9 +40,11 @@ function aprTone(apr: number | null): string {
 export default async function OpportunitiesPage() {
   let rows: ScannedOpportunity[] = [];
   let error: string | null = null;
+  let persist: PersistResult | null = null;
 
   try {
     rows = await scanCarryOpportunities();
+    persist = await persistOpportunities(rows);
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Scan failed";
   }
@@ -88,6 +92,17 @@ export default async function OpportunitiesPage() {
         ) : (
           <p className="mt-3 text-sm text-ink-faint">{rows.length} pairs</p>
         )}
+        {persist?.status === "saved" ? (
+          <p className="mt-2 text-sm text-success">
+            Saved {persist.count} latest rows.
+          </p>
+        ) : null}
+        {persist?.status === "skipped" ? (
+          <p className="mt-2 text-sm text-warning">{persist.reason}</p>
+        ) : null}
+        {persist?.status === "error" ? (
+          <p className="mt-2 text-sm text-danger">{persist.reason}</p>
+        ) : null}
 
         <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
           <table className="w-full min-w-[52rem] text-left text-sm">

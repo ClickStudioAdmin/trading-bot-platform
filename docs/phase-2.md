@@ -8,9 +8,9 @@ The web app may call **public** Bybit market endpoints from the server. It must 
 
 ## Current micro-step
 
-**3 of 7 — Books → opportunities** (complete)
+**4 of 7 — Persist scan** (complete)
 
-`/opportunities` ranks live bid/ask books: executable basis, VIP0 taker + 5 bp slip, net APR, depth capacity. No persistence yet.
+`opportunities` migration upserts the latest row per pair. The app server writes with the service role. GitHub Actions applies the migration on push to `develop`.
 
 ## Micro-steps
 

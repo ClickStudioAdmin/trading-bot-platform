@@ -10,6 +10,7 @@
     "test": "npx --yes tsx lib/opportunities/math.check.ts && npx --yes tsx lib/exchanges/bybit/universe.check.ts && npx --yes tsx lib/opportunities/capacity.check.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "next": "^16.2.10",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

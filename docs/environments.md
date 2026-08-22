@@ -85,8 +85,12 @@ Phase 1 needs no Vercel environment variables (static homepage). When the app la
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Development project URL | Production project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Development publishable key | Production publishable key |
+| `SUPABASE_URL` | Same as development project URL | Same as production project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Development **service role** | Production **service role** |
 
 Never add a service-role key to `NEXT_PUBLIC_` variables. Never put production values on the Development environment.
+
+The service role is in the Supabase dashboard: **Project Settings → API → `service_role`**. Copy the **development** project’s key into Vercel **Development**, and the **production** project’s key into Vercel **Production**.
 
 ## Merge to production
 

@@ -18,6 +18,7 @@ export type ScannedOpportunity = {
   baseCoin: string;
   spotSymbol: string;
   futureSymbol: string;
+  deliveryTimeMs: number;
   deliveryDate: string;
   daysToExpiry: number;
   futureBid: number;
@@ -133,6 +134,7 @@ export async function scanCarryOpportunities(
       baseCoin: pair.baseCoin,
       spotSymbol: pair.spotSymbol,
       futureSymbol: pair.futureSymbol,
+      deliveryTimeMs: pair.deliveryTimeMs,
       deliveryDate: new Date(pair.deliveryTimeMs).toISOString().slice(0, 10),
       daysToExpiry: ranked.daysToExpiry,
       futureBid,
