@@ -82,7 +82,7 @@ export function OpportunityTable({
             <th className="px-4 py-3 font-medium">Net basis</th>
             <th className="px-4 py-3 font-medium">Net APR</th>
             <th className="px-4 py-3 font-medium">Capacity</th>
-            {paper ? <th className="px-4 py-3 font-medium">Paper</th> : null}
+            {paper ? <th className="px-4 py-3 font-medium">Size USDT</th> : null}
           </tr>
         </thead>
         <OpportunityRows rows={rows} paper={paper} />
@@ -115,15 +115,18 @@ function PaperOpenCell({
       <input type="hidden" name="spotSymbol" value={row.spotSymbol} />
       <input type="hidden" name="futureSymbol" value={row.futureSymbol} />
       <input type="hidden" name="next" value={paper.next} />
-      <input
-        name="notionalUsdt"
-        type="number"
-        min="1"
-        step="1"
-        defaultValue={DEFAULT_PAPER_NOTIONAL_USDT}
-        aria-label={`Paper notional for ${row.futureSymbol}`}
-        className="w-24 rounded-control border border-line bg-canvas px-2 py-1 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
-      />
+      <span className="flex items-center gap-1 text-ink-muted">
+        $
+        <input
+          name="notionalUsdt"
+          type="number"
+          min="1"
+          step="1"
+          defaultValue={DEFAULT_PAPER_NOTIONAL_USDT}
+          aria-label={`Paper size in USDT for ${row.futureSymbol}`}
+          className="w-24 rounded-control border border-line bg-canvas px-2 py-1 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+        />
+      </span>
       <button
         type="submit"
         className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
