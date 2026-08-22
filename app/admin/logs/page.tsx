@@ -121,8 +121,8 @@ export default async function AdminLogsPage({
                   <td className="px-4 py-3 align-top">
                     <div>{row.message}</div>
                     {Object.keys(row.data).length > 0 ? (
-                      <pre className="mt-1 max-w-xl overflow-x-auto text-xs text-ink-faint">
-                        {JSON.stringify(row.data)}
+                      <pre className="mt-1 whitespace-pre-wrap break-all text-xs text-ink-faint">
+                        {JSON.stringify(row.data, null, 2)}
                       </pre>
                     ) : null}
                   </td>
