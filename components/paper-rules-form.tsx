@@ -141,7 +141,19 @@ function RuleRow({
             />
           ) : null}
         </FieldGroup>
-        <FieldGroup title="Position">
+        <FieldGroup title="Position and Orders">
+          <Field
+            name={`${prefix}maxOpenNotional`}
+            label="Max Position Size"
+            placeholder="50000"
+            defaultValue={layer.maxOpenNotional}
+          />
+          <Field
+            name={`${prefix}maxOpenCount`}
+            label="Max opens"
+            placeholder="2"
+            defaultValue={layer.maxOpenCount}
+          />
           <label className="block text-[11px] text-ink-muted">
             Order Type
             <select
@@ -167,18 +179,6 @@ function RuleRow({
               />
             </div>
           </label>
-          <Field
-            name={`${prefix}maxOpenNotional`}
-            label="Max Position Size"
-            placeholder="50000"
-            defaultValue={layer.maxOpenNotional}
-          />
-          <Field
-            name={`${prefix}maxOpenCount`}
-            label="Max opens"
-            placeholder="2"
-            defaultValue={layer.maxOpenCount}
-          />
           {sizeType === "dynamic" ? (
             <Field
               name={`${prefix}minSize`}
