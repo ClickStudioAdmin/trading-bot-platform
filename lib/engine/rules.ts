@@ -33,7 +33,7 @@ export function defaultPaperLayer(sortOrder = 0): PaperEngineLayer {
   return {
     id: null,
     sortOrder,
-    sizeType: "fixed",
+    sizeType: "dynamic",
     notionalUsdt: DEFAULT_PAPER_NOTIONAL_USDT,
     minNetApr: null,
     minDte: null,
@@ -228,7 +228,7 @@ function parseLayer(
 }
 
 export function parseSizeType(value: unknown): PaperSizeType {
-  return value === "dynamic" ? "dynamic" : "fixed";
+  return value === "fixed" ? "fixed" : "dynamic";
 }
 
 function parseBound(raw: FormDataEntryValue | null): number | null {
