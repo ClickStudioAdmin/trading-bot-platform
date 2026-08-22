@@ -21,7 +21,9 @@ This phase proves Cursor → GitHub → GitHub Actions → Supabase → Vercel. 
 
 ## Local development
 
-Not required for Phase 1. The homepage is static. Copy `.env.example` to `.env.local` only when a later phase needs Supabase in the app. Never use the production project locally.
+Not required for Phase 1 verification beyond lint and production build. The homepage is static and does not use a database.
+
+`package.json` includes `dev`, `lint`, `build`, and `start`. Copy `.env.example` to `.env.local` only when a later phase needs Supabase in the app. Never use the production project locally.
 
 Never commit `.env.local` or secrets.
 

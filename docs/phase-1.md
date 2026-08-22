@@ -20,9 +20,9 @@ You will not run `supabase`, `vercel`, or `gh` commands. Migrations run in GitHu
 
 ## Current micro-step
 
-**1 of 9 — Repo contract** (this step)
+**3 of 9 — Migration + Actions workflow** (complete)
 
-Docs, Cursor rules, and `.gitignore`. No application code yet.
+`system_health` and `.github/workflows/deploy-database.yml` are in the working tree. Stopped here. Next is micro-step 4: you create two new Supabase projects in the dashboard.
 
 ## Micro-steps
 

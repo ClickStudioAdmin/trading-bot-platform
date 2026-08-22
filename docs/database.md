@@ -10,6 +10,6 @@ Current tables:
 | --- | --- | --- |
 | `system_health` | 1 | Pipeline proof. One row: `TBP`. |
 
-The `system_health` migration is added in Phase 1 micro-step 3.
+The `system_health` migration is `supabase/migrations/20260822000000_system_health.sql`. GitHub Actions applies it on push to `develop` (development project) and `main` (production project).
 
 See [phase-1.md](phase-1.md) and [environments.md](environments.md).
