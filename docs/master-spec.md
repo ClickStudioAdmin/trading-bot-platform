@@ -24,9 +24,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/theme`. Wri
 
 ## Current phase
 
-Phase 1 — Foundation. See [phase-1.md](phase-1.md). Theme reference is allowed before Phase 2.
-
-Do not add scanner, Bybit, auth, or engine tables in this phase.
+Phase 2 — Scanner and Current Opportunities. See [phase-2.md](phase-2.md). Phase 1 is complete.
 
 ## Multi-tenancy (later)
 

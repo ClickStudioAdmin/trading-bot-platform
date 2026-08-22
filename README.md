@@ -6,11 +6,11 @@ GitHub is the source of truth. The hosted database and Vercel deployment are not
 
 ## Current phase
 
-**Phase 1 — Foundation (pipeline proof)**
+**Phase 2 — Scanner and Current Opportunities**
 
-See [docs/phase-1.md](docs/phase-1.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
+See [docs/phase-2.md](docs/phase-2.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
 
-This phase proves Cursor → GitHub → GitHub Actions → Supabase → Vercel. No trading features yet.
+Phase 2 is a read-only Bybit dated-futures scanner and Current Opportunities screen. No orders.
 
 ## Technology stack
 
