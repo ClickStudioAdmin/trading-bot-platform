@@ -36,8 +36,8 @@ export default async function CashAndCarryPositionsPage({
   const desk = await loadPaperDesk(rows);
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-6 py-8">
-      <PageHeading overline="Strategies · Cash and carry" title="Current Positions" />
+    <main className="mx-auto max-w-6xl space-y-6 px-6 pt-6 pb-8">
+      <PageHeading as="h2" title="Current Positions" />
       <p className="-mt-4 text-sm text-ink-muted">
         Open and past paper carries. Expand a row for the orders, the
         conditions that fired, and the scan versus paper fill. Close is paper

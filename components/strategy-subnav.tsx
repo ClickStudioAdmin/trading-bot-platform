@@ -11,8 +11,22 @@ export function StrategySubnav() {
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Cash and carry" className="border-b border-line bg-surface">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 overflow-x-auto px-6 py-2">
+    <div className="mx-auto max-w-6xl px-6 pt-8">
+      <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
+        <Link href="/strategies" className="hover:text-accent-strong">
+          Strategies
+        </Link>
+      </p>
+      <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+        Cash and carry
+      </h1>
+      <p className="mt-1 text-sm text-ink-muted">
+        Buy the USDT spot, sell the dated future.
+      </p>
+      <nav
+        aria-label="Cash and carry"
+        className="mt-5 flex items-end justify-between gap-4 overflow-x-auto border-b border-line"
+      >
         <div className="flex gap-1">
           {CASH_AND_CARRY_PRIMARY_LINKS.map((link) => (
             <SubnavLink key={link.href} link={link} pathname={pathname} />
@@ -28,8 +42,8 @@ export function StrategySubnav() {
             />
           ))}
         </div>
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 }
 
@@ -50,12 +64,12 @@ function SubnavLink({
   return (
     <Link
       href={link.href}
-      className={`rounded-control px-3 py-1.5 text-sm whitespace-nowrap ${
+      className={`-mb-px border-b-2 px-3 py-2 text-sm whitespace-nowrap ${
         active
-          ? "bg-surface-raised text-ink"
+          ? "border-accent text-ink"
           : secondary
-            ? "text-ink-faint hover:bg-surface-raised hover:text-ink"
-            : "text-ink-muted hover:bg-surface-raised hover:text-ink"
+            ? "border-transparent text-ink-faint hover:text-ink-muted"
+            : "border-transparent text-ink-muted hover:text-ink"
       }`}
     >
       {link.label}

@@ -23,8 +23,8 @@ export default async function CashAndCarryAutomationsPage({
   const error = firstSearchValue(params.error);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
-      <PageHeading overline="Strategies · Cash and carry" title="Automations" />
+    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+      <PageHeading as="h2" title="Automations" />
       <p className="-mt-4 text-sm text-ink-muted">
         Stack entry layers by min APR and size. The engine uses the highest
         matching layer. Paper only — no Bybit order.

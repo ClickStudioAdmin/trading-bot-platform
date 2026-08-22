@@ -44,8 +44,8 @@ export default async function CashAndCarryOpportunitiesPage({
   const active = filtersAreActive(filters);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
-      <PageHeading overline="Strategies · Cash and carry" title="Opportunities" />
+    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+      <PageHeading as="h2" title="Opportunities" />
       <p className="-mt-2 text-sm text-ink-muted">
         Full book. Green basis and APR are a premium (enter if rules allow).
         Red is a discount or loss of edge. Open is paper only — no Bybit

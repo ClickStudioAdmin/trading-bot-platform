@@ -21,8 +21,8 @@ export default async function CashAndCarryPairsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
-      <PageHeading overline="Strategies · Cash and carry" title="Pairs" />
+    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+      <PageHeading as="h2" title="Pairs" />
       <p className="-mt-2 text-sm text-ink-muted">
         Every dated USDT pair in this strategy’s scan. No API key. BTC, ETH,
         SOL, DOGE, XRP, MNT only. Perps are excluded.

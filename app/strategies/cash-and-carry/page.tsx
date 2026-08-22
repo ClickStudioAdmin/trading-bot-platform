@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { OpportunityTable } from "@/components/opportunity-table";
-import { PageHeading } from "@/components/page-heading";
 import { PaperBlotter } from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
 import { persistOpportunities } from "@/lib/opportunities/persist";
@@ -45,12 +44,10 @@ export default async function CashAndCarryPage({
   const capacity = rows.reduce((sum, row) => sum + row.capacityUsdt, 0);
 
   return (
-    <main className="mx-auto max-w-6xl space-y-8 px-6 py-8">
-      <PageHeading overline="Strategies" title="Cash and carry" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Buy the USDT spot, sell the dated future. Top opportunities are a live
-        scan. Current Positions are your paper desk. Open and Close are
-        paper only — no Bybit order.
+    <main className="mx-auto max-w-6xl space-y-8 px-6 pt-6 pb-8">
+      <p className="text-sm text-ink-muted">
+        Top opportunities are a live scan. Current Positions are your paper
+        desk. Open and Close are paper only — no Bybit order.
       </p>
       <PaperFlash
         opened={firstSearchValue(params.paper) === "opened"}

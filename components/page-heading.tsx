@@ -1,16 +1,27 @@
 export function PageHeading({
   overline,
   title,
+  as = "h1",
 }: {
-  overline: string;
+  overline?: string;
   title: string;
+  as?: "h1" | "h2";
 }) {
+  const Heading = as;
   return (
     <div className="mb-6">
-      <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-        {overline}
-      </p>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">{title}</h1>
+      {overline ? (
+        <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
+          {overline}
+        </p>
+      ) : null}
+      <Heading
+        className={`font-semibold tracking-tight ${
+          overline ? "mt-2" : ""
+        } ${as === "h2" ? "text-xl" : "text-2xl"}`}
+      >
+        {title}
+      </Heading>
     </div>
   );
 }

@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function CashAndCarrySettingsPage() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
-      <PageHeading overline="Strategies · Cash and carry" title="Settings" />
+    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+      <PageHeading as="h2" title="Settings" />
       <p className="-mt-4 text-sm text-ink-muted">
         Strategy settings will land here. Automations stay on their own page.
       </p>
