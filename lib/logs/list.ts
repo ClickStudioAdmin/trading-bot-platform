@@ -18,18 +18,23 @@ export type EventLogRow = {
 
 export async function listEventLogs(
   filters: EventLogFilters,
-  limit = 100,
+  options: { limit?: number; userId?: string } = {},
 ): Promise<EventLogRow[]> {
   const supabase = createServiceClient();
   if (!supabase) {
     return [];
   }
 
+  const limit = options.limit ?? 100;
   let query = supabase
     .from("event_logs")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
+
+  if (options.userId) {
+    query = query.eq("user_id", options.userId);
+  }
 
   if (filters.scope === "system" || filters.scope === "strategy" || filters.scope === "trade") {
     query = query.eq("scope", filters.scope);

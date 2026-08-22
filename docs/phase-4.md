@@ -56,9 +56,9 @@ Expand a current or past position to see its paper orders. Each order stores the
 
 ## Event logs and admin
 
-`event_logs` records system, strategy, and trade events. Writes are service-role only via `writeEventLog`. Manual paper open/close and automation saves are logged. Page scans are not.
+`event_logs` records system, strategy, and trade events. Writes are service-role only via `writeEventLog`. Manual paper open/close, unwinds, automation saves, and engine clips are logged. Page scans are not.
 
-`/admin` is for `click.studio.admin@gmail.com` and members with role `admin`. Logs and members are live. Admin settings is a placeholder.
+`/strategies/cash-and-carry/activity` is the signed-in user’s own trade and strategy events. `/admin/logs` is the full system log for admins. Logs and members are live. Admin settings is a placeholder.
 
 ## Out of scope
 
