@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { PaperRulesForm } from "@/components/paper-rules-form";
+import { PaperRulesGuide } from "@/components/paper-rules-guide";
 import { loadPaperRules } from "@/lib/engine/load";
 import { paperConfigToFormValues } from "@/lib/engine/rules";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -48,6 +49,7 @@ export default async function PaperRulesPage({
           to save paper engine rules.
         </p>
       )}
+      <PaperRulesGuide />
     </main>
   );
 }
