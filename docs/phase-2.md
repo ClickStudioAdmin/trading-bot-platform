@@ -8,9 +8,9 @@ The web app may call **public** Bybit market endpoints from the server. It must 
 
 ## Current micro-step
 
-**6 of 7 — Filters** (complete)
+**7 of 7 — Push `develop`** (complete)
 
-`/opportunities` filters the live book by min net APR, DTE window, and min capacity. The server still persists the unfiltered scan.
+`develop` is on origin. Development Vercel and the development Supabase migration job pick up this branch. Production stays on `main` until you merge.
 
 ## Micro-steps
 
@@ -24,7 +24,7 @@ The web app may call **public** Bybit market endpoints from the server. It must 
 | 6 | Filters | Agent | Min net APR, DTE window, min capacity |
 | 7 | Push `develop` | You + agent | Development Vercel shows the live book. Production unchanged until you merge |
 
-Stop after each step.
+Stop after each step. Phase 2 micro-steps are complete. Check the Vercel Development URL, then wait before merging to `main`.
 
 ## Universe
 
