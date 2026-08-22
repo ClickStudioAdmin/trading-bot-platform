@@ -1,11 +1,11 @@
 import Link from "next/link";
+import { ColumnHint } from "@/components/column-hint";
 import { TokenIcon } from "@/components/token-icon";
 import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
 import { openPaperCarry } from "@/lib/paper/actions";
 import { UsdtSizeInput } from "@/components/usdt-size-input";
 import {
   DEFAULT_PAPER_NOTIONAL_USDT,
-  pairKey,
   type OpportunityPaperProps,
 } from "@/lib/paper/open";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
@@ -54,9 +54,14 @@ export function OpportunityRows({
             {formatUsd(row.capacityUsdt)}
           </td>
           {paper ? (
-            <td className="px-4 py-3">
-              <PaperOpenCell row={row} paper={paper} />
-            </td>
+            <>
+              <td className="px-4 py-3">
+                <PaperSizeCell row={row} paper={paper} />
+              </td>
+              <td className="px-4 py-3">
+                <PaperOpenAction row={row} paper={paper} />
+              </td>
+            </>
           ) : null}
         </tr>
       ))}
@@ -76,14 +81,64 @@ export function OpportunityTable({
       <table className="w-full min-w-[60rem] text-left text-sm">
         <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
           <tr>
-            <th className="px-4 py-3 font-medium">Pair</th>
-            <th className="px-4 py-3 font-medium">DTE</th>
-            <th className="px-4 py-3 font-medium">Exec. basis</th>
-            <th className="px-4 py-3 font-medium">Fees + slip</th>
-            <th className="px-4 py-3 font-medium">Net basis</th>
-            <th className="px-4 py-3 font-medium">Net APR</th>
-            <th className="px-4 py-3 font-medium">Capacity</th>
-            {paper ? <th className="px-4 py-3 font-medium">Size USDT</th> : null}
+            <th className="px-4 py-3 font-medium">
+              <ColumnHint
+                label="Pair"
+                hint="Long USDT spot and short this dated future."
+              />
+            </th>
+            <th className="px-4 py-3 font-medium">
+              <ColumnHint
+                label="DTE"
+                hint="Days until this future expires."
+              />
+            </th>
+            <th className="px-4 py-3 font-medium">
+              <ColumnHint
+                label="Exec. basis"
+                hint="(future bid − spot ask) / spot ask. Touching the book, not mid or last."
+              />
+            </th>
+            <th className="px-4 py-3 font-medium">
+              <ColumnHint
+                label="Fees + slip"
+                hint="VIP0 taker on both legs (0.155%) plus 5 bp slip. USDT expiry delivery is 0. This is the cost of one open, not a round trip."
+              />
+            </th>
+            <th className="px-4 py-3 font-medium">
+              <ColumnHint
+                label="Net basis"
+                hint="Executable minus fees and slip. This is the entry basis used when you open a paper carry."
+              />
+            </th>
+            <th className="px-4 py-3 font-medium">
+              <ColumnHint
+                label="Net APR"
+                hint="Net basis × 365 / DTE. Used to rank the book."
+              />
+            </th>
+            <th className="px-4 py-3 font-medium">
+              <ColumnHint
+                label="Capacity"
+                hint="25% of the top 5 book levels that stay inside 5 bp of impact."
+              />
+            </th>
+            {paper ? (
+              <>
+                <th className="px-4 py-3 font-medium">
+                  <ColumnHint
+                    label="Size USDT"
+                    hint="Paper notional to open. Each Open creates a new paper row."
+                  />
+                </th>
+                <th className="px-4 py-3 font-medium">
+                  <ColumnHint
+                    label="Actions"
+                    hint="Open a paper carry at the live scan net basis. No Bybit order."
+                  />
+                </th>
+              </>
+            ) : null}
           </tr>
         </thead>
         <OpportunityRows rows={rows} paper={paper} />
@@ -92,7 +147,32 @@ export function OpportunityTable({
   );
 }
 
-function PaperOpenCell({
+function openFormId(row: ScannedOpportunity) {
+  return `open-${row.spotSymbol}-${row.futureSymbol}`;
+}
+
+function PaperSizeCell({
+  row,
+  paper,
+}: {
+  row: ScannedOpportunity;
+  paper: OpportunityPaperProps;
+}) {
+  if (!paper.signedIn) {
+    return <span className="text-ink-faint">—</span>;
+  }
+
+  return (
+    <UsdtSizeInput
+      name="notionalUsdt"
+      defaultValue={DEFAULT_PAPER_NOTIONAL_USDT}
+      ariaLabel={`Paper size in USDT for ${row.futureSymbol}`}
+      form={openFormId(row)}
+    />
+  );
+}
+
+function PaperOpenAction({
   row,
   paper,
 }: {
@@ -107,20 +187,11 @@ function PaperOpenCell({
     );
   }
 
-  if (paper.openKeys.has(pairKey(row.spotSymbol, row.futureSymbol))) {
-    return <span className="text-xs text-success">Open</span>;
-  }
-
   return (
-    <form action={openPaperCarry} className="flex items-center gap-2">
+    <form id={openFormId(row)} action={openPaperCarry}>
       <input type="hidden" name="spotSymbol" value={row.spotSymbol} />
       <input type="hidden" name="futureSymbol" value={row.futureSymbol} />
       <input type="hidden" name="next" value={paper.next} />
-      <UsdtSizeInput
-        name="notionalUsdt"
-        defaultValue={DEFAULT_PAPER_NOTIONAL_USDT}
-        ariaLabel={`Paper size in USDT for ${row.futureSymbol}`}
-      />
       <button
         type="submit"
         className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"

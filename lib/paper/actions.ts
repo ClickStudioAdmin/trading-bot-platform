@@ -50,11 +50,7 @@ export async function openPaperCarry(formData: FormData) {
   );
 
   if (error) {
-    const message =
-      error.code === "23505"
-        ? "You already have an open paper carry on this pair."
-        : error.message;
-    redirect(`${next}?paperError=${encodeURIComponent(message)}`);
+    redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
   }
 
   redirect(`${next}?paper=opened`);
@@ -118,6 +114,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
     entryBasis: row.entryBasis,
     exitBasis: match.netBasis,
     notionalUsdt: row.notionalUsdt,
+    feeRate: match.feeRate,
     openedAtMs: row.openedAtMs,
     closedAtMs,
   });

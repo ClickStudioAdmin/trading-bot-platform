@@ -10,10 +10,12 @@ export function UsdtSizeInput({
   name,
   defaultValue,
   ariaLabel,
+  form,
 }: {
   name: string;
   defaultValue: number;
   ariaLabel: string;
+  form?: string;
 }) {
   const [display, setDisplay] = useState(formatNotionalInput(String(defaultValue)));
   const parsed = parseNotionalUsdt(display);
@@ -21,7 +23,7 @@ export function UsdtSizeInput({
   return (
     <span className="flex items-center gap-1 text-ink-muted">
       $
-      <input type="hidden" name={name} value={parsed ?? ""} />
+      <input type="hidden" name={name} value={parsed ?? ""} form={form} />
       <input
         inputMode="numeric"
         autoComplete="off"

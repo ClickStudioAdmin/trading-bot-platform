@@ -4,7 +4,6 @@ export const DEFAULT_PAPER_NOTIONAL_USDT = 10_000;
 
 export type OpportunityPaperProps = {
   signedIn: boolean;
-  openKeys: Set<string>;
   next: "/strategies/cash-and-carry" | "/strategies/cash-and-carry/opportunities";
 };
 

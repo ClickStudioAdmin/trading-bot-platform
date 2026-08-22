@@ -13,33 +13,35 @@ function almostEqual(actual: number, expected: number, digits = 6) {
   );
 }
 
-almostEqual(carryPnlUsdt(0.0182, 0.0164, 50_000), 90);
-almostEqual(carryPnlUsdt(0.0091, 0.0105, 25_000), -35);
-almostEqual(carryPnlUsdt(0.012, -0.001, 10_000), 130);
+almostEqual(carryPnlUsdt(0.02, 0.01, 10_000, 0.002), 60);
+almostEqual(carryPnlUsdt(0.02, 0.02, 10_000, 0.002), -40);
+almostEqual(carryPnlUsdt(0.012, -0.001, 10_000, 0.002), 90);
 
 assert.equal(daysHeld(0, 86_400_000), 1);
 almostEqual(daysHeld(0, 45 * 86_400_000), 45);
 
-const apr = realizedApr(130, 10_000, 45);
+const apr = realizedApr(90, 10_000, 45);
 assert.ok(apr !== null);
-almostEqual(apr, 0.105444, 5);
+almostEqual(apr, 0.073, 5);
 
-assert.equal(realizedApr(130, 10_000, 0), null);
-assert.equal(realizedApr(130, 10_000, -1), null);
+assert.equal(realizedApr(90, 10_000, 0), null);
+assert.equal(realizedApr(90, 10_000, -1), null);
 
 const closed = closePaperCarry({
   entryBasis: 0.012,
   exitBasis: -0.001,
   notionalUsdt: 10_000,
+  feeRate: 0.002,
   openedAtMs: 0,
   closedAtMs: 45 * 86_400_000,
 });
-almostEqual(closed.realizedUsdt, 130);
+almostEqual(closed.realizedUsdt, 90);
 almostEqual(closed.daysHeld, 45);
 assert.ok(closed.realizedApr !== null);
-almostEqual(closed.realizedApr, 0.105444, 5);
+almostEqual(closed.realizedApr, 0.073, 5);
 
-assert.throws(() => carryPnlUsdt(0.01, 0.009, 0));
-assert.throws(() => carryPnlUsdt(Number.NaN, 0.01, 1_000));
+assert.throws(() => carryPnlUsdt(0.01, 0.009, 0, 0.002));
+assert.throws(() => carryPnlUsdt(Number.NaN, 0.01, 1_000, 0.002));
+assert.throws(() => carryPnlUsdt(0.01, 0.009, 1_000, -0.001));
 
 console.log("paper carry math checks passed");

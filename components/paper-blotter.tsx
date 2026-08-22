@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ColumnHint } from "@/components/column-hint";
 import { TokenIcon } from "@/components/token-icon";
 import {
   formatPct,
@@ -47,19 +48,54 @@ function OpenPaperTrades({
     <section>
       <SectionHead
         title="Current trades"
-        subtitle="Open paper carries. Marks are the live scan net basis. Close is paper only — no Bybit order."
+        subtitle="Open paper carries. Unrealized includes open and close fees on both legs. Close is paper only — no Bybit order."
       />
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[56rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
-              <th className="px-4 py-3 font-medium">Pair</th>
-              <th className="px-4 py-3 font-medium">Notional</th>
-              <th className="px-4 py-3 font-medium">Entry basis</th>
-              <th className="px-4 py-3 font-medium">Mark basis</th>
-              <th className="px-4 py-3 font-medium">Unrealized</th>
-              <th className="px-4 py-3 font-medium">DTE</th>
-              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Pair"
+                  hint="Long USDT spot and short this dated future."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Notional"
+                  hint="Paper size in USDT. P&L scales with this amount."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Entry basis"
+                  hint="Net basis when opened: executable minus VIP0 taker on both legs, 5 bp slip, and delivery (0 on USDT expiry)."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Mark basis"
+                  hint="Live scan net basis now. Same formula as the book. Not mid or last."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Unrealized"
+                  hint="Dollar P&L after open and close costs: (entry net − mark net − 2 × fees and slip) × notional. The fee model is VIP0 taker on both legs plus 5 bp slip, charged once to open and once to close. Delivery is 0."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="DTE"
+                  hint="Days until this future expires."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Actions"
+                  hint="Close this paper carry at the live scan net basis. No Bybit order."
+                />
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -121,12 +157,7 @@ function OpenPaperTrades({
                       : trade.daysToExpiry.toFixed(1)}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
-                        Open
-                      </span>
-                      <ClosePaperButton trade={trade} />
-                    </div>
+                    <ClosePaperButton trade={trade} />
                   </td>
                 </tr>
               ))
@@ -149,19 +180,54 @@ function ClosedPaperTrades({
     <section>
       <SectionHead
         title="Past trades"
-        subtitle="Closed paper carries. Realized P&L is the change in net basis."
+        subtitle="Closed paper carries. Realized P&L uses the same all-in fee model as unrealized."
       />
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[52rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
-              <th className="px-4 py-3 font-medium">Pair</th>
-              <th className="px-4 py-3 font-medium">Closed</th>
-              <th className="px-4 py-3 font-medium">Days held</th>
-              <th className="px-4 py-3 font-medium">Entry</th>
-              <th className="px-4 py-3 font-medium">Exit</th>
-              <th className="px-4 py-3 font-medium">Realized</th>
-              <th className="px-4 py-3 font-medium">APR</th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Pair"
+                  hint="Long USDT spot and short this dated future."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Closed"
+                  hint="UTC date this paper carry was closed."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Days held"
+                  hint="(closed time − opened time) in days."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Entry"
+                  hint="Net basis when opened, after open fees and slip."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Exit"
+                  hint="Live scan net basis at close. Same formula as the book."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Realized"
+                  hint="Locked dollar P&L after open and close costs: (entry net − exit net − 2 × fees and slip) × notional."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="APR"
+                  hint="(realized / notional) × 365 / days held. Blank if held time is zero."
+                />
+              </th>
             </tr>
           </thead>
           <tbody>

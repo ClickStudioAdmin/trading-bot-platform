@@ -4,7 +4,7 @@
 
 Record paper cash-and-carry trades and show them on the strategy overview. No exchange orders. No user API keys. No engine worker.
 
-A paper carry is long USDT spot and short the matching dated future, sized in USDT notional. P&L is the change in basis, not the coin’s direction.
+A paper carry is long USDT spot and short the matching dated future, sized in USDT notional. P&L is the change in basis, not the coin’s direction. A desk can hold more than one open paper carry on the same pair.
 
 ## Current micro-step
 
@@ -34,11 +34,12 @@ Stop after each step.
 
 ## Formulas
 
-- Unrealized / realized USDT = `(entry_basis − current_basis) × notional`
+- Unrealized / realized USDT = `(entry_net − current_net − 2 × fee_rate) × notional`
+- `fee_rate` is the scan model: VIP0 taker on both legs + 5 bp slip + delivery (0 on USDT expiry)
 - Days held = `(closed_at − opened_at) / 86400000`
 - Realized APR = `(realized / notional) × 365 / days held`
 
-Entry and mark basis are the same net basis the scanner already uses. Do not mark on mid or last.
+Entry and mark basis are the same net basis the scanner already uses. Do not mark on mid or last. Because both numbers are already net, the dollar P&L subtracts the fee rate twice so open and close costs stay in the figure.
 
 ## Out of scope
 

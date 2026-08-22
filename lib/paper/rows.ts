@@ -97,6 +97,7 @@ export function markOpenCarries(
         row.entryBasis,
         live.netBasis,
         row.notionalUsdt,
+        live.feeRate,
       ),
       daysToExpiry: live.daysToExpiry,
     };
