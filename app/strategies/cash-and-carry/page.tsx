@@ -85,7 +85,7 @@ export default async function CashAndCarryPage({
             label="Positive / negative basis"
             value={`${positive} / ${negative}`}
           />
-          <StatCard label="Usable book value" value={formatUsd(capacity)} />
+          <StatCard label="Usable book" value={formatUsd(capacity)} />
         </div>
       </section>
 

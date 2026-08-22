@@ -166,7 +166,7 @@ function RuleRow({
               />
               <Field
                 name={`${prefix}minCapacity`}
-                label="Min usable book value"
+                label="Min usable book"
                 defaultValue={layer.minCapacity}
               />
             </>

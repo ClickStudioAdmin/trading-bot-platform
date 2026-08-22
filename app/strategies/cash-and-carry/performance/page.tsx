@@ -31,7 +31,7 @@ export default async function CashAndCarryPerformancePage() {
     <main className="mx-auto max-w-6xl space-y-6 px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Performance" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Closed paper carries and desk statistics. Marks from the live scan.
+        Desk statistics, then closed paper carries. Marks from the live scan.
         Paper only — no Bybit order.
       </p>
       {error ? (
@@ -39,12 +39,12 @@ export default async function CashAndCarryPerformancePage() {
           {error}
         </p>
       ) : null}
-      <ClosedPaperTrades signedIn={desk.signedIn} closed={desk.closed} />
       <PaperDeskStats
         signedIn={desk.signedIn}
         open={desk.open}
         closed={desk.closed}
       />
+      <ClosedPaperTrades signedIn={desk.signedIn} closed={desk.closed} />
     </main>
   );
 }

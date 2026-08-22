@@ -306,7 +306,7 @@ function PaperOrderCard({ order }: { order: PaperOrderRow }) {
               tone: order.theoretical.executableBasis,
             },
             {
-              label: "Capacity",
+              label: "Usable book",
               value:
                 order.theoretical.capacityUsdt === null
                   ? "—"

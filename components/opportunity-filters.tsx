@@ -32,7 +32,7 @@ export function OpportunityFiltersForm({
         <Field
           id="minCapacity"
           name="minCapacity"
-          label="Min usable book value"
+          label="Min usable book"
           defaultValue={values.minCapacity}
         />
       </div>

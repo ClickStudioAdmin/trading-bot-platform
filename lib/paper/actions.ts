@@ -63,7 +63,7 @@ export async function openPaperCarry(formData: FormData) {
   );
   if (!notionalFitsBook(notionalUsdt, usableCapacityUsdt)) {
     redirect(
-      `${next}?paperError=${encodeURIComponent("Size cannot exceed usable book value.")}`,
+      `${next}?paperError=${encodeURIComponent("Size cannot exceed usable book.")}`,
     );
   }
   match = { ...match, capacityUsdt: usableCapacityUsdt };
