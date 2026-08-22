@@ -49,15 +49,15 @@ export function PaperRulesGuide() {
       </h3>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
-          term="Size type"
-          detail="Fixed uses Size as the open. Dynamic clips Size to the pair’s current book value, so thinner books get a smaller open."
+          term="Order Type"
+          detail="Fixed uses Order size as the open. Dynamic clips Order size to the pair’s current book value, so thinner books get a smaller open."
         />
         <GuideItem
-          term="Size USDT"
-          detail="For Fixed, this is the paper size of each open. For Dynamic, this is the ceiling; the open is min(Size, book value). P&L is (entry net − mark net − 2 × fees and slip) × the size that opened. Fees are VIP0 taker on both legs plus 5 bp slip, charged for open and for close."
+          term="Order size"
+          detail="For Fixed, this is the paper size of each open. For Dynamic, this is the ceiling; the open is min(Order size, book value). P&L is (entry net − mark net − 2 × fees and slip) × the size that opened. Fees are VIP0 taker on both legs plus 5 bp slip, charged for open and for close."
         />
         <GuideItem
-          term="Max Size"
+          term="Max Position Size"
           detail="Cap on the sum of open sizes for this layer only. A new open is skipped if this size would push the layer over the cap."
         />
         <GuideItem

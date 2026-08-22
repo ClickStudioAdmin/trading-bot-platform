@@ -68,7 +68,7 @@ export function automationInsertColumns(automation: PaperCarryAutomation) {
 export function formatEntryTriggers(automation: PaperCarryAutomation): string[] {
   const lines: string[] = [];
   if (automation.entrySizeType === "dynamic") {
-    lines.push("Size Dynamic");
+    lines.push("Order Type Dynamic");
   }
   const minApr = formatPctPoints(automation.entryMinNetApr);
   if (minApr) {

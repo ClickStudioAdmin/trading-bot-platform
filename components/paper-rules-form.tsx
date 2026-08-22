@@ -143,7 +143,7 @@ function RuleRow({
         </FieldGroup>
         <FieldGroup title="Position">
           <label className="block text-[11px] text-ink-muted">
-            Size type
+            Order Type
             <select
               name={`${prefix}sizeType`}
               value={sizeType}
@@ -157,19 +157,19 @@ function RuleRow({
             </select>
           </label>
           <label className="block text-[11px] text-ink-muted">
-            Size USDT
+            Order size
             <div className="mt-0.5">
               <UsdtSizeInput
                 name={`${prefix}notionalUsdt`}
                 defaultValue={layer.notionalUsdt}
-                ariaLabel={`Paper size for rule ${index + 1}`}
+                ariaLabel={`Order size for rule ${index + 1}`}
                 compact
               />
             </div>
           </label>
           <Field
             name={`${prefix}maxOpenNotional`}
-            label="Max Size"
+            label="Max Position Size"
             placeholder="50000"
             defaultValue={layer.maxOpenNotional}
           />

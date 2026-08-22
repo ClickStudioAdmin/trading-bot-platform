@@ -163,7 +163,7 @@ function parseLayer(
   const prefix = `r${index}_`;
   const notionalUsdt = parseNotionalUsdt(String(form.get(`${prefix}notionalUsdt`) ?? ""));
   if (notionalUsdt === null) {
-    return { ok: false, error: `Rule ${index + 1}: enter a positive USDT size.` };
+    return { ok: false, error: `Rule ${index + 1}: enter a positive order size.` };
   }
 
   const minDte = parseBound(form.get(`${prefix}minDte`));
@@ -179,7 +179,7 @@ function parseLayer(
 
   const maxOpenNotionalUsdt = parseBound(form.get(`${prefix}maxOpenNotional`));
   if (maxOpenNotionalUsdt !== null && maxOpenNotionalUsdt <= 0) {
-    return { ok: false, error: `Rule ${index + 1}: max size must be positive.` };
+    return { ok: false, error: `Rule ${index + 1}: max position size must be positive.` };
   }
 
   const sizeType = parseSizeType(form.get(`${prefix}sizeType`));
@@ -189,7 +189,7 @@ function parseLayer(
     return { ok: false, error: `Rule ${index + 1}: min size must be positive.` };
   }
   if (minSizeUsdt !== null && minSizeUsdt > notionalUsdt) {
-    return { ok: false, error: `Rule ${index + 1}: min size cannot be greater than size.` };
+    return { ok: false, error: `Rule ${index + 1}: min size cannot be greater than order size.` };
   }
 
   const takeProfitPct = parsePercent(form.get(`${prefix}takeProfit`));
