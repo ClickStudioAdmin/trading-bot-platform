@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "npx --yes tsx lib/opportunities/math.check.ts && npx --yes tsx lib/exchanges/bybit/universe.check.ts && npx --yes tsx lib/opportunities/capacity.check.ts && npx --yes tsx lib/opportunities/filter.check.ts && npx --yes tsx lib/paper/math.check.ts"
+    "test": "npx --yes tsx lib/opportunities/math.check.ts && npx --yes tsx lib/exchanges/bybit/universe.check.ts && npx --yes tsx lib/opportunities/capacity.check.ts && npx --yes tsx lib/opportunities/filter.check.ts && npx --yes tsx lib/paper/math.check.ts && npx --yes tsx lib/paper/open.check.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

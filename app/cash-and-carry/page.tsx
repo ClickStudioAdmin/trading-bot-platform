@@ -6,9 +6,11 @@ import {
   PlaceholderTradeStats,
 } from "@/components/carry-placeholders";
 import { OpportunityTable } from "@/components/opportunity-table";
+import { PaperFlash } from "@/components/paper-flash";
 import { persistOpportunities } from "@/lib/opportunities/persist";
-import type { PersistResult } from "@/lib/opportunities/persist";
 import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
+import { firstSearchValue } from "@/lib/paper/open";
+import { getOpportunityPaperProps } from "@/lib/paper/list";
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
@@ -17,14 +19,19 @@ export const metadata: Metadata = {
   description: "Dated cash-and-carry overview: opportunities, trades, and scan statistics.",
 };
 
-export default async function CashAndCarryPage() {
+export default async function CashAndCarryPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const paper = await getOpportunityPaperProps("/cash-and-carry");
   let rows: ScannedOpportunity[] = [];
   let error: string | null = null;
-  let persist: PersistResult | null = null;
 
   try {
     rows = await scanCarryOpportunities();
-    persist = await persistOpportunities(rows);
+    await persistOpportunities(rows);
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Scan failed";
   }
@@ -62,21 +69,21 @@ export default async function CashAndCarryPage() {
       <main className="mx-auto max-w-6xl space-y-8 px-6 py-8">
         <p className="text-sm text-ink-muted">
           Buy the USDT spot, sell the dated future. Top opportunities are a
-          live scan. Trade tables and desk statistics are layout placeholders
-          until orders exist.
+          live scan. Trade tables are still placeholders. Open on a pair is
+          paper only — no Bybit order.
         </p>
+        <PaperFlash
+          opened={firstSearchValue(params.paper) === "opened"}
+          error={firstSearchValue(params.paperError)}
+        />
 
         {error ? (
           <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
           </p>
         ) : null}
-        {persist?.status === "skipped" ? (
-          <p className="text-sm text-warning">{persist.reason}</p>
-        ) : null}
-        {persist?.status === "error" ? (
-          <p className="text-sm text-danger">{persist.reason}</p>
-        ) : null}
+
+        <PlaceholderTradeStats />
 
         <section>
           <div className="mb-3">
@@ -102,8 +109,6 @@ export default async function CashAndCarryPage() {
           </div>
         </section>
 
-        <PlaceholderTradeStats />
-
         <section>
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
@@ -121,7 +126,7 @@ export default async function CashAndCarryPage() {
               All opportunities
             </Link>
           </div>
-          <OpportunityTable rows={topFive} />
+          <OpportunityTable rows={topFive} paper={paper} />
         </section>
 
         <PlaceholderOpenTrades />

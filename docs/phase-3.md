@@ -8,9 +8,9 @@ A paper carry is long USDT spot and short the matching dated future, sized in US
 
 ## Current micro-step
 
-**3 of 7 — Paper carries table** (complete)
+**4 of 7 — Open paper carry** (complete)
 
-`paper_carries` migration is in git. RLS is by `user_id`. GitHub Actions applies it on push to `develop`. No open/close UI yet.
+Signed-in users can open a paper carry from an opportunity. Entry basis comes from the server scan. No Bybit order.
 
 ## Micro-steps
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { OpportunityFiltersForm } from "@/components/opportunity-filters";
 import { OpportunityTable } from "@/components/opportunity-table";
+import { PaperFlash } from "@/components/paper-flash";
 import {
   applyOpportunityFilters,
   filterInputValues,
@@ -9,7 +10,8 @@ import {
   parseOpportunityFilters,
 } from "@/lib/opportunities/filter";
 import { persistOpportunities } from "@/lib/opportunities/persist";
-import type { PersistResult } from "@/lib/opportunities/persist";
+import { firstSearchValue } from "@/lib/paper/open";
+import { getOpportunityPaperProps } from "@/lib/paper/list";
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
@@ -23,14 +25,15 @@ export default async function OpportunitiesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const filters = parseOpportunityFilters(await searchParams);
+  const params = await searchParams;
+  const filters = parseOpportunityFilters(params);
+  const paper = await getOpportunityPaperProps("/opportunities");
   let rows: ScannedOpportunity[] = [];
   let error: string | null = null;
-  let persist: PersistResult | null = null;
 
   try {
     rows = await scanCarryOpportunities();
-    persist = await persistOpportunities(rows);
+    await persistOpportunities(rows);
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Scan failed";
   }
@@ -70,8 +73,13 @@ export default async function OpportunitiesPage({
       <main className="mx-auto max-w-6xl px-6 py-8">
         <p className="text-sm text-ink-muted">
           Full book. Green basis and APR are a premium (enter if rules allow).
-          Red is a discount or loss of edge.
+          Red is a discount or loss of edge. Open is paper only — no Bybit
+          order.
         </p>
+        <PaperFlash
+          opened={firstSearchValue(params.paper) === "opened"}
+          error={firstSearchValue(params.paperError)}
+        />
         <div className="mt-6">
           <OpportunityFiltersForm values={filterInputValues(filters)} />
         </div>
@@ -86,17 +94,6 @@ export default async function OpportunitiesPage({
               : `${rows.length} pairs`}
           </p>
         )}
-        {persist?.status === "saved" ? (
-          <p className="mt-2 text-sm text-success">
-            Saved {persist.count} latest rows.
-          </p>
-        ) : null}
-        {persist?.status === "skipped" ? (
-          <p className="mt-2 text-sm text-warning">{persist.reason}</p>
-        ) : null}
-        {persist?.status === "error" ? (
-          <p className="mt-2 text-sm text-danger">{persist.reason}</p>
-        ) : null}
         <div className="mt-6">
           {visible.length === 0 && !error ? (
             <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
@@ -105,7 +102,7 @@ export default async function OpportunitiesPage({
                 : "No pairs in the current scan."}
             </p>
           ) : (
-            <OpportunityTable rows={visible} />
+            <OpportunityTable rows={visible} paper={paper} />
           )}
         </div>
       </main>
