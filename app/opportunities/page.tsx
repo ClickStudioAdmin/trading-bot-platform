@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { OpportunityFiltersForm } from "@/components/opportunity-filters";
 import { OpportunityTable } from "@/components/opportunity-table";
+import {
+  applyOpportunityFilters,
+  filterInputValues,
+  filtersAreActive,
+  parseOpportunityFilters,
+} from "@/lib/opportunities/filter";
 import { persistOpportunities } from "@/lib/opportunities/persist";
 import type { PersistResult } from "@/lib/opportunities/persist";
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
@@ -11,7 +18,12 @@ export const metadata: Metadata = {
   description: "Current dated cash-and-carry opportunities from Bybit public books.",
 };
 
-export default async function OpportunitiesPage() {
+export default async function OpportunitiesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const filters = parseOpportunityFilters(await searchParams);
   let rows: ScannedOpportunity[] = [];
   let error: string | null = null;
   let persist: PersistResult | null = null;
@@ -22,6 +34,9 @@ export default async function OpportunitiesPage() {
   } catch (cause) {
     error = cause instanceof Error ? cause.message : "Scan failed";
   }
+
+  const visible = applyOpportunityFilters(rows, filters);
+  const active = filtersAreActive(filters);
 
   return (
     <div className="min-h-dvh bg-canvas text-ink">
@@ -57,12 +72,19 @@ export default async function OpportunitiesPage() {
           Full book. Green basis and APR are a premium (enter if rules allow).
           Red is a discount or loss of edge.
         </p>
+        <div className="mt-6">
+          <OpportunityFiltersForm values={filterInputValues(filters)} />
+        </div>
         {error ? (
           <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}
           </p>
         ) : (
-          <p className="mt-3 text-sm text-ink-faint">{rows.length} pairs</p>
+          <p className="mt-3 text-sm text-ink-faint">
+            {active
+              ? `${visible.length} of ${rows.length} pairs`
+              : `${rows.length} pairs`}
+          </p>
         )}
         {persist?.status === "saved" ? (
           <p className="mt-2 text-sm text-success">
@@ -76,7 +98,15 @@ export default async function OpportunitiesPage() {
           <p className="mt-2 text-sm text-danger">{persist.reason}</p>
         ) : null}
         <div className="mt-6">
-          <OpportunityTable rows={rows} />
+          {visible.length === 0 && !error ? (
+            <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
+              {active
+                ? "No pairs match these filters."
+                : "No pairs in the current scan."}
+            </p>
+          ) : (
+            <OpportunityTable rows={visible} />
+          )}
         </div>
       </main>
     </div>

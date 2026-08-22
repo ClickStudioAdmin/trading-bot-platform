@@ -8,9 +8,9 @@ The web app may call **public** Bybit market endpoints from the server. It must 
 
 ## Current micro-step
 
-**5 of 7 — Current Opportunities UI** (in progress)
+**6 of 7 — Filters** (complete)
 
-`/cash-and-carry` is the strategy overview (top 5, stats, trades placeholders). `/opportunities` is the full book.
+`/opportunities` filters the live book by min net APR, DTE window, and min capacity. The server still persists the unfiltered scan.
 
 ## Micro-steps
 
@@ -42,7 +42,7 @@ Never rank on mid or last price.
 
 ## Screen
 
-`/cash-and-carry` is the strategy home. `/opportunities` is the full book. Theme tokens only. Top opportunities are a live scan. Current trades, past trades, and desk statistics are labeled placeholders until later phases place orders.
+`/cash-and-carry` is the strategy home. `/opportunities` is the full book with GET filters (min net APR %, min/max DTE, min capacity USDT). Theme tokens only. Top opportunities are a live scan. Current trades, past trades, and desk statistics are labeled placeholders until later phases place orders.
 
 ## Out of scope
 
