@@ -32,26 +32,28 @@ export default async function CashAndCarryPositionsPage({
   const desk = await loadPaperDesk(rows);
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-6 pt-6 pb-8">
+    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Current Positions" />
-      {error ? (
-        <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
-        </p>
-      ) : null}
-      <PaperFlash
-        opened={firstSearchValue(params.paper) === "opened"}
-        closed={firstSearchValue(params.paper) === "closed"}
-        exits={firstSearchValue(params.paper) === "exits"}
-        unwinding={firstSearchValue(params.paper) === "unwinding"}
-        error={firstSearchValue(params.paperError)}
-      />
-      <OpenPaperTrades
-        signedIn={desk.signedIn}
-        open={desk.open}
-        next="/strategies/cash-and-carry/positions"
-        showHeading={false}
-      />
+      <div className="space-y-6">
+        {error ? (
+          <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            {error}
+          </p>
+        ) : null}
+        <PaperFlash
+          opened={firstSearchValue(params.paper) === "opened"}
+          closed={firstSearchValue(params.paper) === "closed"}
+          exits={firstSearchValue(params.paper) === "exits"}
+          unwinding={firstSearchValue(params.paper) === "unwinding"}
+          error={firstSearchValue(params.paperError)}
+        />
+        <OpenPaperTrades
+          signedIn={desk.signedIn}
+          open={desk.open}
+          next="/strategies/cash-and-carry/positions"
+          showHeading={false}
+        />
+      </div>
     </main>
   );
 }

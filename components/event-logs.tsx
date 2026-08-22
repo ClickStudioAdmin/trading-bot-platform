@@ -20,7 +20,7 @@ export function EventLogs({
     <>
       <form
         method="get"
-        className="mt-6 rounded-card border border-line bg-surface p-4"
+        className="rounded-card border border-line bg-surface p-4"
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label className="block text-xs text-ink-muted">

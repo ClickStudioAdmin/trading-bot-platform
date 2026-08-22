@@ -34,7 +34,7 @@ export default async function CashAndCarryActivityPage({
           scopes={["strategy", "trade"]}
         />
       ) : (
-        <p className="mt-6 text-sm text-ink-muted">
+        <p className="text-sm text-ink-muted">
           <Link href="/sign-in" className="text-accent">
             Sign in
           </Link>{" "}

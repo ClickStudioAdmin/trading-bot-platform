@@ -55,29 +55,27 @@ export default async function CashAndCarryOpportunitiesPage({
 
   return (
     <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <PageHeading as="h2" title="Opportunities" />
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <PageHeading as="h2" title="Opportunities" className="" />
         <LastScan atMs={scannedAtMs} />
       </div>
-      <PaperFlash
-        opened={firstSearchValue(params.paper) === "opened"}
-        error={firstSearchValue(params.paperError)}
-      />
-      <div className="mt-6">
+      <div className="space-y-6">
+        <PaperFlash
+          opened={firstSearchValue(params.paper) === "opened"}
+          error={firstSearchValue(params.paperError)}
+        />
         <OpportunityFiltersForm values={filterInputValues(filters)} />
-      </div>
-      {error ? (
-        <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
-        </p>
-      ) : (
-        <p className="mt-3 text-sm text-ink-faint">
-          {active
-            ? `${visible.length} of ${rows.length} pairs`
-            : `${rows.length} pairs`}
-        </p>
-      )}
-      <div className="mt-6">
+        {error ? (
+          <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            {error}
+          </p>
+        ) : (
+          <p className="-mb-3 text-sm text-ink-faint">
+            {active
+              ? `${visible.length} of ${rows.length} pairs`
+              : `${rows.length} pairs`}
+          </p>
+        )}
         {visible.length === 0 && !error ? (
           <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
             {active

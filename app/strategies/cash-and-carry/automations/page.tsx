@@ -34,14 +34,12 @@ export default async function CashAndCarryAutomationsPage({
         <p className="mt-4 text-sm text-success">Automations saved.</p>
       ) : null}
       {signedIn ? (
-        <div className="mt-6">
-          <PaperRulesForm
-            values={paperConfigToFormValues(config)}
-            inUseRuleIds={inUseRuleIds}
-          />
-        </div>
+        <PaperRulesForm
+          values={paperConfigToFormValues(config)}
+          inUseRuleIds={inUseRuleIds}
+        />
       ) : (
-        <p className="mt-6 text-sm text-ink-muted">
+        <p className="text-sm text-ink-muted">
           <Link href="/sign-in" className="text-accent">
             Sign in
           </Link>{" "}
