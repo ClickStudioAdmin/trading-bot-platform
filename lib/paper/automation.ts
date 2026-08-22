@@ -174,7 +174,8 @@ export function parseCloseReason(value: unknown): CloseReason | null {
     value === "dte" ||
     value === "mark_apr" ||
     value === "take_profit" ||
-    value === "stop_loss"
+    value === "stop_loss" ||
+    value === "unwind"
   ) {
     return value;
   }
@@ -209,9 +210,15 @@ export function formatCloseHow(
     if (reason === "stop_loss") {
       return "Closed automatically on stop loss.";
     }
+    if (reason === "unwind") {
+      return "Unwound automatically.";
+    }
     return "Closed automatically.";
   }
-  return "Closed manually.";
+  if (reason === "unwind") {
+    return "Unwound manually.";
+  }
+  return "Closed at market.";
 }
 
 function formatDteRange(min: number | null, max: number | null): string | null {

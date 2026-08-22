@@ -19,7 +19,7 @@ export type PaperCarryRow = {
   notionalUsdt: number;
   entryBasis: number;
   openedAtMs: number;
-  status: "open" | "closed";
+  status: "open" | "closing" | "closed";
   exitBasis: number | null;
   closedAtMs: number | null;
   realizedUsdt: number | null;
@@ -46,6 +46,18 @@ export type PaperDeskStats = {
   greenCount: number;
 };
 
+export function parseCarryStatus(
+  value: unknown,
+): PaperCarryRow["status"] {
+  if (value === "closed") {
+    return "closed";
+  }
+  if (value === "closing") {
+    return "closing";
+  }
+  return "open";
+}
+
 export function asNumber(value: unknown): number {
   const parsed = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(parsed)) {
@@ -65,7 +77,7 @@ export function parsePaperCarryRow(row: Record<string, unknown>): PaperCarryRow 
   const openedAt = new Date(String(row.opened_at));
   const closedAt = row.closed_at ? new Date(String(row.closed_at)) : null;
   const delivery = new Date(String(row.delivery_time));
-  const status = row.status === "closed" ? "closed" : "open";
+  const status = parseCarryStatus(row.status);
 
   return {
     id: asNumber(row.id),

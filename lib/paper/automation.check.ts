@@ -93,7 +93,8 @@ assert.equal(parseCloseReason("take_profit"), "take_profit");
 assert.equal(parseCloseReason("hand"), null);
 assert.equal(closedTradeLabel("engine", "manual"), "In Auto · Out Manual");
 assert.equal(closedTradeLabel("manual", "engine"), "In Manual · Out Auto");
-assert.equal(formatCloseHow("manual", null), "Closed manually.");
+assert.equal(formatCloseHow("manual", null), "Closed at market.");
+assert.equal(formatCloseHow("manual", "unwind"), "Unwound manually.");
 assert.equal(
   formatCloseHow("engine", "take_profit"),
   "Closed automatically on take profit.",

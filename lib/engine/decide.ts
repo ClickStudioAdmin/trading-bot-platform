@@ -1,3 +1,4 @@
+import { unwindClipUsdt } from "@/lib/engine/clip";
 import { applyOpportunityFilters } from "@/lib/opportunities/filter";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import { pairKey } from "@/lib/paper/open";
@@ -29,10 +30,12 @@ export type PaperEngineConfig = {
 };
 
 export type EngineOpenPosition = {
+  id?: number;
   spotSymbol: string;
   futureSymbol: string;
   notionalUsdt: number;
   ruleId: number | null;
+  unwinding?: boolean;
 };
 
 export type PositionExits = {
@@ -57,7 +60,12 @@ export type EngineEntry = {
   notionalUsdt: number;
 };
 
-export type ExitReason = "dte" | "mark_apr" | "take_profit" | "stop_loss";
+export type ExitReason =
+  | "dte"
+  | "mark_apr"
+  | "take_profit"
+  | "stop_loss"
+  | "unwind";
 
 export type EngineExit = {
   position: EngineMarkedPosition;
@@ -76,6 +84,11 @@ export function decideEntries(
 
   const occupied = new Set(
     opens.map((row) => pairKey(row.spotSymbol, row.futureSymbol)),
+  );
+  const unwindingPairs = new Set(
+    opens
+      .filter((row) => row.unwinding)
+      .map((row) => pairKey(row.spotSymbol, row.futureSymbol)),
   );
   const clippedThisTick = new Set<string>();
   const ranked = [...scan].sort(
@@ -98,6 +111,9 @@ export function decideEntries(
   const chosen: EngineEntry[] = [];
   for (const opportunity of ranked) {
     const pair = pairKey(opportunity.spotSymbol, opportunity.futureSymbol);
+    if (unwindingPairs.has(pair)) {
+      continue;
+    }
     const layer = bestMatchingLayer(opportunity, config.layers);
     if (!layer) {
       continue;
@@ -139,10 +155,6 @@ export function decideExits(
   positions: EngineMarkedPosition[],
   config: PaperEngineConfig,
 ): EngineExit[] {
-  if (!config.enabled) {
-    return [];
-  }
-
   const byId = new Map(
     config.layers
       .filter((layer) => layer.id !== null)
@@ -151,10 +163,18 @@ export function decideExits(
   const candidates: {
     position: EngineMarkedPosition;
     reason: ExitReason;
-    layer: PaperEngineLayer;
+    layer: PaperEngineLayer | null;
   }[] = [];
   for (const position of positions) {
-    if (position.ruleId === null) {
+    if (position.unwinding) {
+      candidates.push({
+        position,
+        reason: "unwind",
+        layer: position.ruleId !== null ? (byId.get(position.ruleId) ?? null) : null,
+      });
+      continue;
+    }
+    if (!config.enabled || position.ruleId === null) {
       continue;
     }
     const layer = byId.get(position.ruleId);
@@ -244,29 +264,29 @@ export function entryNotionalUsdt(
 }
 
 function exitNotionalUsdt(
-  layer: PaperEngineLayer,
+  layer: PaperEngineLayer | null,
   position: EngineMarkedPosition,
   bookLeft: Map<string, number>,
 ): number | null {
   if (!(position.notionalUsdt > 0)) {
     return null;
   }
-  if (layer.exitSizeType !== "dynamic") {
-    return position.notionalUsdt;
-  }
-  const minSize = layer.minSizeUsdt;
-  if (minSize !== null && position.notionalUsdt <= minSize) {
+  const dynamic = position.unwinding || layer?.exitSizeType === "dynamic";
+  if (!dynamic) {
     return position.notionalUsdt;
   }
   const pair = pairKey(position.spotSymbol, position.futureSymbol);
   const book = bookLeft.has(pair)
     ? bookLeft.get(pair)!
     : (position.capacityUsdt ?? 0);
-  const clip = Math.min(position.notionalUsdt, book);
-  if (!(clip > 0)) {
-    return null;
-  }
-  if (minSize !== null && clip < minSize) {
+  const clip = unwindClipUsdt(
+    position.notionalUsdt,
+    book,
+    position.unwinding && position.ruleId === null
+      ? null
+      : (layer?.minSizeUsdt ?? null),
+  );
+  if (clip === null) {
     return null;
   }
   bookLeft.set(pair, book - clip);

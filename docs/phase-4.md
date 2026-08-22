@@ -8,9 +8,9 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
 ## Current micro-step
 
-**4 of 7 — Rules UI** (complete)
+**5 of 7 — Engine tick** (in progress)
 
-`/strategies/cash-and-carry/automations` saves the user’s automation layers. `/strategies/cash-and-carry/positions` is the open paper table. `/strategies/cash-and-carry/performance` is past positions and desk statistics. `/strategies/cash-and-carry/settings` saves usable book share. Waiting on **5 — Engine tick**.
+`runPaperEngineTick` and `POST /api/engine/tick` apply entries, rule exits, and Closing clips. Manual rows have Close (market) and Unwind. Waiting on **6 — Schedule**.
 
 ## Micro-steps
 
@@ -20,7 +20,7 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 | 2 | Decision math | Agent | `lib/engine` decides entries and exits from scan + opens + rules. Checks pass |
 | 3 | Rules table | Agent | `paper_rules` and `paper_carries.source` migrations. GitHub Actions applies on `develop` |
 | 4 | Rules UI | Agent | `/strategies/cash-and-carry/automations` saves layers. Subnav includes Settings and Automations |
-| 5 | Engine tick | Agent | `runPaperEngineTick` + `POST /api/engine/tick` with `CRON_SECRET`. Service-role writes |
+| 5 | Engine tick | Agent | `runPaperEngineTick` + `POST /api/engine/tick` with `CRON_SECRET`. Service-role writes. Manual Close vs Unwind |
 | 6 | Schedule | Agent | GitHub Actions every 5 minutes hits the matching Vercel URL |
 | 7 | Secrets + push | You + agent | `CRON_SECRET` on Preview and Production. Push `develop`. Production unchanged until you merge |
 
@@ -40,9 +40,11 @@ Vercel Cron is not the scheduler. Hobby cron is once per day and Production-only
 
 Each layer has its own entry and exit order types, entry filters, open caps, and exits. **Fixed entry** opens Order size once on a pair you do not already hold, and can require Min usable book. **Dynamic entry** adds one clip per pair per tick, sized to current usable book or leftover room under Max Position Size, until that cap (and Max opens) is met. Skip a clip below Min Order Size. For a pair, the engine uses the matching layer with the **highest min APR**. Usable book is the user’s Settings share of the top 5 book levels inside 5 bp of impact. Default share is 25%. The scan stores the raw in-range book; the share is applied per user.
 
-**Exit (first match wins, on that layer):** DTE ≤ `close_max_dte`; mark net APR < `close_min_net_apr`; P&L % ≥ `take_profit_pct`; P&L % ≤ `stop_loss_pct`. P&L % is all-in P&L ÷ entry notional (10% on $10,000 is $1,000). **Fixed exit** closes the whole row. **Dynamic exit** closes up to current usable book per tick until the row is flat.
+**Exit (first match wins, on that layer):** DTE ≤ `close_max_dte`; mark net APR < `close_min_net_apr`; P&L % ≥ `take_profit_pct`; P&L % ≤ `stop_loss_pct`. P&L % is all-in P&L ÷ entry notional (10% on $10,000 is $1,000). **Fixed exit** closes the whole row. **Dynamic exit** closes up to current usable book per tick until the row is flat. Mid-unwind rows use status `closing`.
 
-**Engine safety:** Fixed entry skips a pair you already hold. Dynamic entry may add clips on a held pair. Rank by net APR. Caps are per layer. If `enabled` is false, the engine neither opens nor closes. Manual opens have no `rule_id` and are not auto-closed.
+Manual rows: **Close** flattens remaining size at the live scan. **Unwind** clips to usable book and sets `closing` until later ticks finish it. Auto rows follow that layer’s exits. Positions show Manual or Auto.
+
+**Engine safety:** Fixed entry skips a pair you already hold. Dynamic entry may add clips on a held pair. Rank by net APR. Caps are per layer. If `enabled` is false, the engine does not open or fire rule exits. It still clips `closing` rows. Manual opens have no `rule_id` and are not auto-closed unless the user clicks Unwind.
 
 Positions with no live mark are not auto-closed.
 

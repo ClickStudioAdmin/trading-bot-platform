@@ -35,9 +35,9 @@ export default async function CashAndCarryPositionsPage({
     <main className="mx-auto max-w-6xl space-y-6 px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Current Positions" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Open paper carries. Expand a row for the orders, the conditions that
-        fired, and the scan versus paper fill. Close is paper only — no Bybit
-        order.
+        Open paper carries. Type is Manual or Auto. Close flattens at the
+        live scan. Unwind (manual) clips to usable book and stays Closing
+        until flat. Paper only — no Bybit order.
       </p>
       {error ? (
         <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -48,6 +48,7 @@ export default async function CashAndCarryPositionsPage({
         opened={firstSearchValue(params.paper) === "opened"}
         closed={firstSearchValue(params.paper) === "closed"}
         exits={firstSearchValue(params.paper) === "exits"}
+        unwinding={firstSearchValue(params.paper) === "unwinding"}
         error={firstSearchValue(params.paperError)}
       />
       <OpenPaperTrades

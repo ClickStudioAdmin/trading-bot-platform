@@ -293,4 +293,25 @@ assert.equal(
   4_000,
 );
 
+assert.equal(
+  decideExits(
+    [
+      {
+        spotSymbol: "BTCUSDT",
+        futureSymbol: high.futureSymbol,
+        notionalUsdt: 10_000,
+        ruleId: null,
+        unwinding: true,
+        daysToExpiry: 40,
+        markNetApr: 0.2,
+        pnlPct: 0.02,
+        capacityUsdt: 2_500,
+        openedAtMs: 1,
+      },
+    ],
+    { enabled: false, layers: [] },
+  )[0]?.closeNotionalUsdt,
+  2_500,
+);
+
 console.log("engine decide checks passed");

@@ -2,11 +2,13 @@ export function PaperFlash({
   opened,
   closed,
   exits,
+  unwinding,
   error,
 }: {
   opened: boolean;
   closed?: boolean;
   exits?: boolean;
+  unwinding?: boolean;
   error?: string;
 }) {
   if (error) {
@@ -27,6 +29,14 @@ export function PaperFlash({
     return (
       <p className="mt-3 text-sm text-success">
         Paper carry closed. No exchange order was sent.
+      </p>
+    );
+  }
+  if (unwinding) {
+    return (
+      <p className="mt-3 text-sm text-success">
+        Paper carry is closing. Further clips use usable book. No exchange
+        order was sent.
       </p>
     );
   }

@@ -44,7 +44,7 @@ export function OpenPaperCarryRows({
       : carryPnlPct(trade.unrealizedUsdt, trade.notionalUsdt);
 
   return (
-    <ExpandableOrderRows colSpan={8} orders={trade.orders}>
+    <ExpandableOrderRows colSpan={9} orders={trade.orders}>
       {(toggle) => (
         <>
       <td className="px-4 py-3">
@@ -54,22 +54,25 @@ export function OpenPaperCarryRows({
         </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
           Long spot · short {trade.futureSymbol}
-          {" · "}
           {trade.source === "engine" ? (
-            <PaperAutomationTrigger
-              carryId={trade.id}
-              automation={trade.automation}
-              label="Engine"
-              canEdit
-              entrySource="engine"
-              next={next}
-            />
-          ) : (
-            "Manual"
-          )}
+            <>
+              {" · "}
+              <PaperAutomationTrigger
+                carryId={trade.id}
+                automation={trade.automation}
+                label="Rules"
+                canEdit
+                entrySource="engine"
+                next={next}
+              />
+            </>
+          ) : null}
           {" · "}
           {toggle}
         </span>
+      </td>
+      <td className="px-4 py-3">
+        <PositionKind source={trade.source} status={trade.status} />
       </td>
       <td className="px-4 py-3 tabular-nums text-ink-muted">
         {trade.daysToExpiry === null ? "—" : trade.daysToExpiry.toFixed(1)}
@@ -103,8 +106,13 @@ export function OpenPaperCarryRows({
 }
 
 export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
+  const pnlPct =
+    trade.realizedUsdt === null
+      ? null
+      : carryPnlPct(trade.realizedUsdt, trade.notionalUsdt);
+
   return (
-    <ExpandableOrderRows colSpan={7} orders={trade.orders}>
+    <ExpandableOrderRows colSpan={8} orders={trade.orders}>
       {(toggle) => (
         <>
       <td className="px-4 py-3">
@@ -128,6 +136,9 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
           {toggle}
         </span>
       </td>
+      <td className="px-4 py-3">
+        <PositionKind source={trade.source} status={trade.status} />
+      </td>
       <td className="px-4 py-3 text-ink-muted">
         {formatDeskDate(trade.closedAtMs)}
       </td>
@@ -145,8 +156,8 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
           ? "—"
           : formatSignedUsd(trade.realizedUsdt)}
       </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.realizedApr)}`}>
-        {formatPct(trade.realizedApr)}
+      <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
+        {formatPct(pnlPct)}
       </td>
         </>
       )}
@@ -212,16 +223,51 @@ function ClosePaperButton({
   }
 
   return (
-    <form action={closeOpenPaperCarry}>
-      <input type="hidden" name="carryId" value={trade.id} />
-      <input type="hidden" name="next" value={next} />
-      <button
-        type="submit"
-        className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
-      >
-        Close
-      </button>
-    </form>
+    <div className="flex flex-wrap items-center gap-2">
+      <form action={closeOpenPaperCarry}>
+        <input type="hidden" name="carryId" value={trade.id} />
+        <input type="hidden" name="next" value={next} />
+        <input type="hidden" name="mode" value="market" />
+        <button
+          type="submit"
+          className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
+        >
+          Close
+        </button>
+      </form>
+      {trade.source === "manual" && trade.status !== "closing" ? (
+        <form action={closeOpenPaperCarry}>
+          <input type="hidden" name="carryId" value={trade.id} />
+          <input type="hidden" name="next" value={next} />
+          <input type="hidden" name="mode" value="unwind" />
+          <button
+            type="submit"
+            className="rounded-control border border-line px-2.5 py-1 text-xs font-medium text-ink-muted hover:bg-surface-raised hover:text-ink"
+          >
+            Unwind
+          </button>
+        </form>
+      ) : null}
+    </div>
+  );
+}
+
+function PositionKind({
+  source,
+  status,
+}: {
+  source: MarkedPaperCarry["source"];
+  status: MarkedPaperCarry["status"];
+}) {
+  return (
+    <div>
+      <p className="text-sm text-ink">
+        {source === "engine" ? "Auto" : "Manual"}
+      </p>
+      {status === "closing" ? (
+        <p className="text-xs text-warning">Closing</p>
+      ) : null}
+    </div>
   );
 }
 

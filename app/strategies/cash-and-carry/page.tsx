@@ -56,6 +56,7 @@ export default async function CashAndCarryPage({
         opened={firstSearchValue(params.paper) === "opened"}
         closed={firstSearchValue(params.paper) === "closed"}
         exits={firstSearchValue(params.paper) === "exits"}
+        unwinding={firstSearchValue(params.paper) === "unwinding"}
         error={firstSearchValue(params.paperError)}
       />
 

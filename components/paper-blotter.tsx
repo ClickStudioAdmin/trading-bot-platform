@@ -65,6 +65,12 @@ export function OpenPaperTrades({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
+                  label="Type"
+                  hint="Manual is a hand open. Auto is an engine open. Closing means Unwind or a dynamic exit is still clipping to usable book."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
                   label="DTE"
                   hint="Days until this future expires."
                 />
@@ -102,7 +108,7 @@ export function OpenPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Actions"
-                  hint="Close this paper carry at the live scan net basis. No Bybit order."
+                  hint="Close flattens the remaining size at the live scan. Unwind (manual only) clips to usable book and stays Closing until flat. No Bybit order."
                 />
               </th>
             </tr>
@@ -110,7 +116,7 @@ export function OpenPaperTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={8}
+                colSpan={9}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -122,7 +128,7 @@ export function OpenPaperTrades({
               />
             ) : open.length === 0 ? (
               <EmptyRow
-                colSpan={8}
+                colSpan={9}
                 message="No open paper carries. Open one from the book above."
               />
             ) : (
@@ -166,6 +172,12 @@ export function ClosedPaperTrades({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
+                  label="Type"
+                  hint="Manual is a hand open. Auto is an engine open."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
                   label="Closed"
                   hint="UTC date this paper carry was closed."
                 />
@@ -196,8 +208,8 @@ export function ClosedPaperTrades({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
-                  label="APR"
-                  hint="(realized / notional) × 365 / days held. Blank if held time is zero."
+                  label="P&L %"
+                  hint="Realized ÷ notional. All-in percentage of paper size. Same formula as open P&L %."
                 />
               </th>
             </tr>
@@ -205,7 +217,7 @@ export function ClosedPaperTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={7}
+                colSpan={8}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -217,7 +229,7 @@ export function ClosedPaperTrades({
               />
             ) : closed.length === 0 ? (
               <EmptyRow
-                colSpan={7}
+                colSpan={8}
                 message="No closed paper carries yet."
               />
             ) : (

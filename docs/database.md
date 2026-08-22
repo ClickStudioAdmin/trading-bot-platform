@@ -10,7 +10,7 @@ Current tables:
 | --- | --- | --- |
 | `system_health` | 1 | Pipeline proof. One row: `TBP`. |
 | `opportunities` | 2 | Latest scan per spot/future pair. Server upsert only. RLS on, no anon policies. |
-| `paper_carries` | 3 | Paper blotter. RLS by `user_id`. Authenticated select/insert/update. No delete. Multiple open rows per pair are allowed. `source` is how it opened (`manual` or `engine`). `close_source` is how it closed. `close_reason` is the auto-exit that fired. Engine rows also store the entry snapshot and per-trade exits. |
+| `paper_carries` | 3 | Paper blotter. RLS by `user_id`. Authenticated select/insert/update. No delete. Multiple open rows per pair are allowed. `source` is how it opened (`manual` or `engine`). `status` is `open`, `closing`, or `closed`. `close_source` is how it closed. `close_reason` is the auto-exit or `unwind`. Engine rows also store the entry snapshot and per-trade exits. |
 | `paper_orders` | 4 | Append-only paper fills on a carry. RLS by `user_id`. Authenticated select/insert. No update or delete. Each row stores the scan snapshot (theoretical) and the paper fill (actual). Conditions that were armed are copied at fill time. |
 | `paper_engine_settings` | 4 | Per-user engine on/off and usable book share. RLS by `user_id`. |
 | `paper_rules` | 4 | Stacked entry/exit layers. Many rows per user. RLS by `user_id`. Authenticated select/insert/update/delete. |
@@ -24,7 +24,7 @@ Event logs and admins: `supabase/migrations/20260822180000_event_logs_and_admins
 
 Members: `supabase/migrations/20260822190000_members.sql`. Password and no Auth FK: `supabase/migrations/20260822220000_members_password_no_auth_fk.sql`.
 
-Per-trade automation snapshot: `supabase/migrations/20260822200000_paper_carry_automation.sql`. Close source: `supabase/migrations/20260822210000_paper_carry_close_source.sql`. Size type: `supabase/migrations/20260823063000_paper_rule_size_type.sql`. Exit size type: `supabase/migrations/20260823080000_paper_rule_exit_size_type.sql`. Paper orders: `supabase/migrations/20260823090000_paper_orders.sql`. Usable book share: `supabase/migrations/20260823100000_usable_book_share.sql`.
+Per-trade automation snapshot: `supabase/migrations/20260822200000_paper_carry_automation.sql`. Close source: `supabase/migrations/20260822210000_paper_carry_close_source.sql`. Size type: `supabase/migrations/20260823063000_paper_rule_size_type.sql`. Exit size type: `supabase/migrations/20260823080000_paper_rule_exit_size_type.sql`. Paper orders: `supabase/migrations/20260823090000_paper_orders.sql`. Usable book share: `supabase/migrations/20260823100000_usable_book_share.sql`. Closing status: `supabase/migrations/20260823110000_paper_carry_closing.sql`.
 
 `event_logs` is append-only. Writes go through `writeEventLog` with the service role. Authenticated clients can select their own rows; `app_admins` can select every row. Secrets in `data` are redacted before insert. Logging failures must not break the action that produced the event.
 

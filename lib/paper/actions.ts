@@ -2,8 +2,13 @@
 
 import { writeEventLog } from "@/lib/logs/write";
 import { EMPTY_AUTOMATION, parseCarryExitForm } from "@/lib/paper/automation";
-import { closePaperCarry as computeClose } from "@/lib/paper/math";
-import { paperOrderInsertRow } from "@/lib/paper/orders";
+import {
+  insertPaperOrder,
+  priorClosesFromOrders,
+  writeCloseClip,
+} from "@/lib/paper/ledger";
+import { parsePaperOrderRow } from "@/lib/paper/orders";
+import { unwindClipUsdt } from "@/lib/engine/clip";
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import { usableBookUsdt } from "@/lib/opportunities/capacity";
 import {
@@ -125,6 +130,7 @@ export async function openPaperCarry(formData: FormData) {
 
 export async function closeOpenPaperCarry(formData: FormData) {
   const next = safePaperReturnPath(String(formData.get("next") ?? ""));
+  const mode = String(formData.get("mode") ?? "market");
   const user = await getSessionMember();
   if (!user) {
     redirect("/sign-in");
@@ -147,7 +153,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
     .select("*")
     .eq("id", carryId)
     .eq("user_id", user.id)
-    .eq("status", "open")
+    .in("status", ["open", "closing"])
     .maybeSingle();
 
   if (loadError || !data) {
@@ -177,74 +183,93 @@ export async function closeOpenPaperCarry(formData: FormData) {
     );
   }
 
-  const closedAtMs = Date.now();
-  const closed = computeClose({
-    entryBasis: row.entryBasis,
-    exitBasis: match.netBasis,
-    notionalUsdt: row.notionalUsdt,
-    feeRate: match.feeRate,
-    openedAtMs: row.openedAtMs,
-    closedAtMs,
+  const usableCapacityUsdt = usableBookUsdt(
+    match.capacityUsdt,
+    await loadUsableBookShare(),
+  );
+  match = { ...match, capacityUsdt: usableCapacityUsdt };
+
+  let clipUsdt = row.notionalUsdt;
+  let reason: "unwind" | null = null;
+  if (mode === "unwind") {
+    const clip = unwindClipUsdt(row.notionalUsdt, usableCapacityUsdt, null);
+    if (clip === null) {
+      const { error } = await supabase
+        .from("paper_carries")
+        .update({
+          status: "closing",
+          close_source: "manual",
+          close_reason: "unwind",
+        })
+        .eq("id", carryId)
+        .eq("user_id", user.id)
+        .in("status", ["open", "closing"]);
+      if (error) {
+        redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
+      }
+      redirect(`${next}?paper=unwinding`);
+    }
+    clipUsdt = clip;
+    reason = "unwind";
+  }
+
+  const { data: orderRows } = await supabase
+    .from("paper_orders")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("carry_id", carryId);
+
+  const written = await writeCloseClip({
+    supabase,
+    userId: user.id,
+    row,
+    opportunity: match,
+    clipUsdt,
+    source: "manual",
+    reason,
+    priorCloses: priorClosesFromOrders(
+      (orderRows ?? []).map((item) =>
+        parsePaperOrderRow(item as Record<string, unknown>),
+      ),
+      carryId,
+    ),
   });
 
-  const { error } = await supabase
-    .from("paper_carries")
-    .update({
-      status: "closed",
-      exit_basis: match.netBasis,
-      closed_at: new Date(closedAtMs).toISOString(),
-      realized_usdt: closed.realizedUsdt,
-      days_held: closed.daysHeld,
-      realized_apr: closed.realizedApr,
-      close_source: "manual",
-      close_reason: null,
-    })
-    .eq("id", carryId)
-    .eq("user_id", user.id)
-    .eq("status", "open");
-
-  if (error) {
+  if (written.error) {
     await writeEventLog({
       level: "error",
       scope: "trade",
       event: "trade.close_failed",
-      message: error.message,
+      message: written.error,
       userId: user.id,
       strategy: "cash-and-carry",
-      data: { carryId },
+      data: { carryId, mode },
     });
-    redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
+    redirect(`${next}?paperError=${encodeURIComponent(written.error)}`);
   }
-
-  await insertPaperOrder(supabase, {
-    userId: user.id,
-    carryId,
-    side: "close",
-    source: "manual",
-    triggerReason: null,
-    notionalUsdt: row.notionalUsdt,
-    filledAt: new Date(closedAtMs),
-    opportunity: match,
-    automation: row.automation,
-  });
 
   await writeEventLog({
     scope: "trade",
-    event: "trade.closed",
-    message: `Closed paper ${row.futureSymbol}`,
+    event: written.kind === "flat" ? "trade.closed" : "trade.unwound",
+    message:
+      written.kind === "flat"
+        ? `Closed paper ${row.futureSymbol}`
+        : `Unwound paper ${row.futureSymbol}`,
     userId: user.id,
     strategy: "cash-and-carry",
     data: {
       carryId,
       futureSymbol: row.futureSymbol,
-      exitBasis: match.netBasis,
-      realizedUsdt: closed.realizedUsdt,
+      clipUsdt,
       source: row.source,
       closeSource: "manual",
+      mode,
     },
   });
 
-  redirect(`${next}?paper=closed`);
+  redirect(
+    written.kind === "flat" ? `${next}?paper=closed` : `${next}?paper=unwinding`,
+  );
 }
 
 export async function updatePaperCarryExits(formData: FormData) {
@@ -328,24 +353,4 @@ export async function updatePaperCarryExits(formData: FormData) {
   });
 
   redirect(`${next}?paper=exits`);
-}
-
-async function insertPaperOrder(
-  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
-  input: Parameters<typeof paperOrderInsertRow>[0],
-) {
-  const { error } = await supabase
-    .from("paper_orders")
-    .insert(paperOrderInsertRow(input));
-  if (error) {
-    await writeEventLog({
-      level: "warning",
-      scope: "trade",
-      event: "trade.order_failed",
-      message: error.message,
-      userId: input.userId,
-      strategy: "cash-and-carry",
-      data: { carryId: input.carryId, side: input.side },
-    });
-  }
 }

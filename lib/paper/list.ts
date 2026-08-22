@@ -85,7 +85,7 @@ export async function loadPaperDesk(scan: ScannedOpportunity[]): Promise<{
   ]);
   const open = attachOrders(
     markOpenCarries(
-      rows.filter((row) => row.status === "open"),
+      rows.filter((row) => row.status !== "closed"),
       scan,
     ),
     orders,

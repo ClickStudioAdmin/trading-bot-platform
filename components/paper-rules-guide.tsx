@@ -14,7 +14,7 @@ export function PaperRulesGuide() {
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Enable automations"
-          detail="When on, the scheduled tick may open and close paper rows. When off, the tick does nothing. Manual Open and Close on the blotter still work."
+          detail="When on, the scheduled tick may open and close paper rows from these rules. When off, it will not open or auto-exit. Manual Open, Close, and Unwind still work. The tick still clips rows that are already Closing."
         />
         <GuideItem
           term="Add position"
@@ -132,7 +132,7 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Manual trades"
-          detail="Rows you opened by hand are not auto-closed. Close those from Positions."
+          detail="Rows you opened by hand are not auto-closed by these rules. On Positions, Close flattens at market. Unwind clips to usable book and marks the row Closing until it is flat."
         />
       </dl>
     </section>
