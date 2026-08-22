@@ -1,0 +1,163 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import {
+  PlaceholderClosedTrades,
+  PlaceholderOpenTrades,
+  PlaceholderTradeStats,
+} from "@/components/carry-placeholders";
+import { OpportunityTable } from "@/components/opportunity-table";
+import { persistOpportunities } from "@/lib/opportunities/persist";
+import type { PersistResult } from "@/lib/opportunities/persist";
+import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
+import { scanCarryOpportunities } from "@/lib/opportunities/scan";
+import type { ScannedOpportunity } from "@/lib/opportunities/scan";
+
+export const metadata: Metadata = {
+  title: "Cash and carry",
+  description: "Dated cash-and-carry overview: opportunities, trades, and scan statistics.",
+};
+
+export default async function CashAndCarryPage() {
+  let rows: ScannedOpportunity[] = [];
+  let error: string | null = null;
+  let persist: PersistResult | null = null;
+
+  try {
+    rows = await scanCarryOpportunities();
+    persist = await persistOpportunities(rows);
+  } catch (cause) {
+    error = cause instanceof Error ? cause.message : "Scan failed";
+  }
+
+  const topFive = rows.slice(0, 5);
+  const aprs = rows
+    .map((row) => row.netApr)
+    .filter((value): value is number => value !== null);
+  const bestApr = aprs.length > 0 ? Math.max(...aprs) : null;
+  const positive = rows.filter((row) => row.netBasis > 0).length;
+  const negative = rows.filter((row) => row.netBasis < 0).length;
+  const capacity = rows.reduce((sum, row) => sum + row.capacityUsdt, 0);
+
+  return (
+    <div className="min-h-dvh bg-canvas text-ink">
+      <header className="border-b border-line bg-surface">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
+              Strategy
+            </p>
+            <h1 className="text-lg font-semibold tracking-tight">
+              Cash and carry
+            </h1>
+          </div>
+          <Link
+            href="/"
+            className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+          >
+            Home
+          </Link>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl space-y-8 px-6 py-8">
+        <p className="text-sm text-ink-muted">
+          Buy the USDT spot, sell the dated future. Top opportunities are a
+          live scan. Trade tables and desk statistics are layout placeholders
+          until orders exist.
+        </p>
+
+        {error ? (
+          <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            {error}
+          </p>
+        ) : null}
+        {persist?.status === "skipped" ? (
+          <p className="text-sm text-warning">{persist.reason}</p>
+        ) : null}
+        {persist?.status === "error" ? (
+          <p className="text-sm text-danger">{persist.reason}</p>
+        ) : null}
+
+        <section>
+          <div className="mb-3">
+            <h2 className="text-xl font-semibold tracking-tight">
+              Market snapshot
+            </h2>
+            <p className="text-sm text-ink-muted">
+              Live Bybit public books. No API key.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard label="Pairs scanned" value={String(rows.length)} />
+            <StatCard
+              label="Best net APR"
+              value={formatPct(bestApr)}
+              toneClass={signedTone(bestApr)}
+            />
+            <StatCard
+              label="Positive / negative basis"
+              value={`${positive} / ${negative}`}
+            />
+            <StatCard label="Book capacity" value={formatUsd(capacity)} />
+          </div>
+        </section>
+
+        <PlaceholderTradeStats />
+
+        <section>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">
+                Top opportunities
+              </h2>
+              <p className="text-sm text-ink-muted">
+                Best five by net APR. Green is a premium; red is a discount.
+              </p>
+            </div>
+            <Link
+              href="/opportunities"
+              className="text-sm text-accent hover:text-accent-strong"
+            >
+              All opportunities
+            </Link>
+          </div>
+          <OpportunityTable rows={topFive} />
+        </section>
+
+        <PlaceholderOpenTrades />
+        <PlaceholderClosedTrades />
+
+        <p className="text-sm text-ink-faint">
+          <Link href="/instruments" className="text-accent">
+            Full pair universe
+          </Link>
+          {" · "}
+          Live Bybit public books. No API key.
+        </p>
+      </main>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  toneClass,
+}: {
+  label: string;
+  value: string;
+  toneClass?: string;
+}) {
+  return (
+    <div className="rounded-card border border-line bg-surface p-5">
+      <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+        {label}
+      </p>
+      <p
+        className={`mt-3 text-2xl font-semibold tracking-tight ${toneClass ?? "text-ink"}`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}

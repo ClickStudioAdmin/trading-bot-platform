@@ -15,16 +15,10 @@ export default function Home() {
       <p className="mt-8 text-sm text-ink-faint">Build: 002</p>
       <div className="mt-8 flex flex-wrap gap-3">
         <Link
-          href="/opportunities"
+          href="/cash-and-carry"
           className="inline-flex rounded-control border border-line bg-surface px-4 py-2 text-sm text-ink hover:bg-surface-raised"
         >
-          Opportunities
-        </Link>
-        <Link
-          href="/instruments"
-          className="inline-flex rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-        >
-          Carry universe
+          Cash and carry
         </Link>
         <Link
           href="/theme"

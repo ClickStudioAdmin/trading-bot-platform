@@ -8,9 +8,9 @@ The web app may call **public** Bybit market endpoints from the server. It must 
 
 ## Current micro-step
 
-**4 of 7 — Persist scan** (complete)
+**5 of 7 — Current Opportunities UI** (in progress)
 
-`opportunities` migration upserts the latest row per pair. The app server writes with the service role. GitHub Actions applies the migration on push to `develop`.
+`/cash-and-carry` is the strategy overview (top 5, stats, trades placeholders). `/opportunities` is the full book.
 
 ## Micro-steps
 
@@ -42,7 +42,7 @@ Never rank on mid or last price.
 
 ## Screen
 
-`/opportunities` is the product home for this phase. Theme tokens only. Sample data is not allowed on the live page once step 3 exists.
+`/cash-and-carry` is the strategy home. `/opportunities` is the full book. Theme tokens only. Top opportunities are a live scan. Current trades, past trades, and desk statistics are labeled placeholders until later phases place orders.
 
 ## Out of scope
 

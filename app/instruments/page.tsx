@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TokenIcon } from "@/components/token-icon";
 import { listCarryPairs } from "@/lib/exchanges/bybit/list-carry-pairs";
 import type { CarryPair } from "@/lib/exchanges/bybit/universe";
 
@@ -32,10 +33,10 @@ export default async function InstrumentsPage() {
             </h1>
           </div>
           <Link
-            href="/"
+            href="/cash-and-carry"
             className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
           >
-            Home
+            Overview
           </Link>
         </div>
       </header>
@@ -71,7 +72,12 @@ export default async function InstrumentsPage() {
                     key={`${pair.spotSymbol}-${pair.futureSymbol}`}
                     className="border-b border-line last:border-b-0"
                   >
-                    <td className="px-4 py-3">{pair.baseCoin}</td>
+                    <td className="px-4 py-3">
+                      <span className="flex items-center gap-2">
+                        <TokenIcon symbol={pair.baseCoin} />
+                        {pair.baseCoin}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-ink-muted">{pair.spotSymbol}</td>
                     <td className="px-4 py-3">{pair.futureSymbol}</td>
                     <td className="px-4 py-3 text-ink-muted">
