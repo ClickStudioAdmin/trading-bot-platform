@@ -10,7 +10,7 @@ The web app may call **public** Bybit market endpoints from the server. It must 
 
 **2 of 7 — Bybit instruments** (complete)
 
-Public REST only, no API key. `/instruments` lists dated USDT expiry paired to USDT spot. Perps excluded.
+Public REST only, no API key. `/instruments` lists dated USDT expiry paired to USDT spot. Perps excluded. Bybit 403 from Vercel means a US function region — use Sydney (`syd1`).
 
 ## Micro-steps
 

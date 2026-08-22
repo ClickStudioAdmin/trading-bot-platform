@@ -75,6 +75,8 @@ Create two Vercel environments:
 
 In the Vercel project: **Settings → Environments**. Attach `develop` to **Development**. Keep **Production** on `main`.
 
+Bybit returns HTTP 403 to many **US** cloud IPs (their docs list “You are using U.S IP”). Vercel functions for this app must run in **Sydney (`syd1`)**, set in `vercel.json` `regions`. Confirm **Settings → Functions → Function Region** is Sydney, not Washington (iad1). This is not an API-key problem.
+
 Pull request previews may use the Development environment’s variables (development Supabase). They must never use production Supabase.
 
 Phase 1 needs no Vercel environment variables (static homepage). When the app later reads Supabase, set each variable twice — once per Vercel environment:

@@ -20,8 +20,19 @@ async function fetchInstrumentPage(
     url.searchParams.set("cursor", cursor);
   }
 
-  const response = await fetch(url, { cache: "no-store" });
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+    },
+  });
   if (!response.ok) {
+    if (response.status === 403) {
+      throw new Error(
+        "Bybit instruments HTTP 403. Bybit blocks many US cloud IPs. This app’s Vercel functions must run in Sydney (syd1), not iad1.",
+      );
+    }
     throw new Error(`Bybit instruments HTTP ${response.status}`);
   }
 
