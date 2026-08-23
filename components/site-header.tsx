@@ -2,7 +2,7 @@ import { AdminTickButton } from "@/components/admin-tick-button";
 import { SiteLogo } from "@/components/site-logo";
 import { SiteNav } from "@/components/site-nav";
 import { UserMenu } from "@/components/user-menu";
-import { otherPaperAccountsRunning, listTradingAccounts } from "@/lib/accounts/store";
+import { listTradingAccounts } from "@/lib/accounts/store";
 import { getAdminUser } from "@/lib/admin/access";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
 
@@ -12,10 +12,6 @@ export async function SiteHeader() {
   const admin = user ? await getAdminUser() : null;
   const extraLinks = admin ? [{ href: "/admin", label: "Admin" }] : [];
   const accounts = user ? await listTradingAccounts(user.id) : [];
-  const othersRunning =
-    session && user
-      ? await otherPaperAccountsRunning(user.id, session.account.id)
-      : [];
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur-sm">
@@ -39,7 +35,6 @@ export async function SiteHeader() {
             email={user?.email ?? null}
             current={session?.account}
             accounts={accounts}
-            othersRunning={othersRunning}
           />
         </div>
       </div>

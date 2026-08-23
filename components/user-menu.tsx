@@ -10,12 +10,10 @@ export function UserMenu({
   email,
   current,
   accounts,
-  othersRunning,
 }: {
   email: string | null;
   current?: TradingAccount;
   accounts?: TradingAccount[];
-  othersRunning?: TradingAccount[];
 }) {
   if (!email) {
     return (
@@ -30,7 +28,6 @@ export function UserMenu({
 
   const initial = email.slice(0, 1).toUpperCase();
   const books = accounts ?? [];
-  const running = othersRunning ?? [];
 
   return (
     <details className="relative">
@@ -80,12 +77,6 @@ export function UserMenu({
                 </form>
               ),
             )}
-            {running.length > 0 ? (
-              <p className="px-2 pt-1 text-xs text-warning">
-                Other paper accounts still running:{" "}
-                {running.map((account) => account.name).join(", ")}
-              </p>
-            ) : null}
             <Link
               href="/accounts"
               className="mt-1 block rounded-control px-2 py-2 text-sm text-accent hover:bg-surface-raised"

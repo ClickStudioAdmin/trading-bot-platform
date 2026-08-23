@@ -71,42 +71,6 @@ export async function insertTradingAccount(
   return account;
 }
 
-export async function otherPaperAccountsRunning(
-  userId: string,
-  currentAccountId: string,
-): Promise<TradingAccount[]> {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return [];
-  }
-  const accounts = (await listTradingAccounts(userId)).filter(
-    (account) =>
-      account.id !== currentAccountId && account.mode === "paper",
-  );
-  if (accounts.length === 0) {
-    return [];
-  }
-  const ids = accounts.map((account) => account.id);
-  const [{ data: settings }, { data: rules }] = await Promise.all([
-    supabase
-      .from("paper_engine_settings")
-      .select("account_id, enabled")
-      .in("account_id", ids),
-    supabase.from("paper_rules").select("account_id").in("account_id", ids),
-  ]);
-  const enabled = new Set(
-    (settings ?? [])
-      .filter((row) => Boolean((row as { enabled?: unknown }).enabled))
-      .map((row) => String((row as { account_id: string }).account_id)),
-  );
-  const withRules = new Set(
-    (rules ?? []).map((row) => String((row as { account_id: string }).account_id)),
-  );
-  return accounts.filter(
-    (account) => enabled.has(account.id) && withRules.has(account.id),
-  );
-}
-
 export type AccountUsage = {
   openCount: number;
   automationsRunning: boolean;
