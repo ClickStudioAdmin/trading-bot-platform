@@ -32,19 +32,16 @@ export default async function ManageAccountsPage({
   const created = firstSearchValue(params.created) === "1";
   const deleted = firstSearchValue(params.deleted) === "1";
   const accounts = await listTradingAccounts(session.member.id);
-  const usage = await loadAccountUsage(
-    accounts.map((account) => account.id),
-    accounts.length,
-  );
+  const usage = await loadAccountUsage(accounts);
 
   return (
     <main className="mx-auto max-w-3xl px-6 pt-8 pb-8">
       <PageHeading title="Manage sub-accounts" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
         Each account is Paper or Live at create and never changes. Books stay
-        separate. You must keep at least one account. Delete is blocked while a
-        book has open positions or running automations. Deleting an account
-        removes its closed history.
+        separate. You must keep at least one account. Paper books can be deleted
+        any time. Live delete is blocked while the book has open positions or
+        running automations. Deleting an account removes its paper history.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

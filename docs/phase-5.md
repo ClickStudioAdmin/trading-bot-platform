@@ -10,14 +10,14 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
 **Accounts + switcher**
 
-Existing paper rows become the first Paper account. A second empty Paper account must share nothing with it. Live accounts can be created and can hold rules; the tick does not execute them.
+Existing paper rows become the first Demo Account (paper). A second empty Paper account must share nothing with it. Live accounts can be created and can hold rules; the tick does not execute them.
 
 ## What shipped
 
 - `trading_accounts` plus `account_id` on settings, rules, carries, orders, and event logs
-- Backfill one Paper account per member
+- Backfill one Demo Account (paper) per member
 - `tbp_account` cookie; account switch and manage link in the user menu
-- `/accounts` create and delete. Delete is blocked if it is the last account, a book has open or closing positions, or automations are on
+- `/accounts` create and delete. The last account cannot be deleted. Paper books can be deleted any time. Live delete is blocked while the book has open or closing positions or automations are on
 - Tick loops accounts. Paper uses the Phase 4 ledger. Live is skipped
 
 ## Runtime

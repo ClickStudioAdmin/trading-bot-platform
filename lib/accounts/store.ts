@@ -1,5 +1,6 @@
 import {
   accountDeleteBlockers,
+  DEFAULT_ACCOUNT_NAME,
   parseTradingAccountRow,
   type AccountDeleteBlock,
   type TradingAccount,
@@ -38,7 +39,7 @@ export async function ensureDefaultPaperAccount(
   if (existing[0]) {
     return existing[0];
   }
-  return insertTradingAccount(userId, "Paper", "paper");
+  return insertTradingAccount(userId, DEFAULT_ACCOUNT_NAME, "paper");
 }
 
 export async function insertTradingAccount(
@@ -78,28 +79,30 @@ export type AccountUsage = {
 };
 
 export async function loadAccountUsage(
-  accountIds: string[],
-  accountCount: number,
+  accounts: TradingAccount[],
 ): Promise<Map<string, AccountUsage>> {
+  const accountCount = accounts.length;
   const usage = new Map<string, AccountUsage>();
-  for (const id of accountIds) {
-    usage.set(id, {
+  for (const account of accounts) {
+    usage.set(account.id, {
       openCount: 0,
       automationsRunning: false,
       blocks: accountDeleteBlockers({
         accountCount,
         openCount: 0,
         automationsRunning: false,
+        mode: account.mode,
       }),
     });
   }
-  if (accountIds.length === 0) {
+  if (accounts.length === 0) {
     return usage;
   }
   const supabase = createServiceClient();
   if (!supabase) {
     return usage;
   }
+  const accountIds = accounts.map((account) => account.id);
   const [{ data: openRows }, { data: settings }, { data: rules }] =
     await Promise.all([
       supabase
@@ -126,16 +129,18 @@ export async function loadAccountUsage(
   const withRules = new Set(
     (rules ?? []).map((row) => String((row as { account_id: string }).account_id)),
   );
-  for (const id of accountIds) {
-    const opens = openCount.get(id) ?? 0;
-    const automationsRunning = enabled.has(id) && withRules.has(id);
-    usage.set(id, {
+  for (const account of accounts) {
+    const opens = openCount.get(account.id) ?? 0;
+    const automationsRunning =
+      enabled.has(account.id) && withRules.has(account.id);
+    usage.set(account.id, {
       openCount: opens,
       automationsRunning,
       blocks: accountDeleteBlockers({
         accountCount,
         openCount: opens,
         automationsRunning,
+        mode: account.mode,
       }),
     });
   }
@@ -155,10 +160,7 @@ export async function deleteTradingAccountRow(
   if (!target) {
     return { error: "That account was not found." };
   }
-  const usage = await loadAccountUsage(
-    accounts.map((account) => account.id),
-    accounts.length,
-  );
+  const usage = await loadAccountUsage(accounts);
   const blocks = usage.get(accountId)?.blocks ?? ["last"];
   if (blocks.length > 0) {
     return {

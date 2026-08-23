@@ -1,5 +1,7 @@
 export type TradingAccountMode = "paper" | "live";
 
+export const DEFAULT_ACCOUNT_NAME = "Demo Account";
+
 export type TradingAccount = {
   id: string;
   userId: string;
@@ -51,15 +53,16 @@ export function accountDeleteBlockers(input: {
   accountCount: number;
   openCount: number;
   automationsRunning: boolean;
+  mode: TradingAccountMode;
 }): AccountDeleteBlock[] {
   const blocks: AccountDeleteBlock[] = [];
   if (input.accountCount <= 1) {
     blocks.push("last");
   }
-  if (input.openCount > 0) {
+  if (input.mode === "live" && input.openCount > 0) {
     blocks.push("open");
   }
-  if (input.automationsRunning) {
+  if (input.mode === "live" && input.automationsRunning) {
     blocks.push("automations");
   }
   return blocks;

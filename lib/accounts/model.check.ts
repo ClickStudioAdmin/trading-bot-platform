@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import {
   accountDeleteBlockers,
+  DEFAULT_ACCOUNT_NAME,
   formatDeleteBlockers,
   parseAccountName,
   parseAccountMode,
   parseTradingAccountRow,
   pickDefaultAccount,
 } from "./model";
+
+assert.equal(DEFAULT_ACCOUNT_NAME, "Demo Account");
 
 assert.equal(parseAccountMode("live"), "live");
 assert.equal(parseAccountMode("paper"), "paper");
@@ -23,7 +26,7 @@ assert.equal(parseAccountName("x".repeat(41)).ok, false);
 const paper = parseTradingAccountRow({
   id: "acc-1",
   user_id: "user-1",
-  name: "Paper",
+  name: DEFAULT_ACCOUNT_NAME,
   mode: "paper",
   created_at: "2026-08-23T00:00:00.000Z",
 });
@@ -41,16 +44,27 @@ assert.equal(pickDefaultAccount([]), null);
 assert.deepEqual(
   accountDeleteBlockers({
     accountCount: 1,
-    openCount: 0,
-    automationsRunning: false,
+    openCount: 2,
+    automationsRunning: true,
+    mode: "paper",
   }),
   ["last"],
 );
 assert.deepEqual(
   accountDeleteBlockers({
     accountCount: 2,
+    openCount: 2,
+    automationsRunning: true,
+    mode: "paper",
+  }),
+  [],
+);
+assert.deepEqual(
+  accountDeleteBlockers({
+    accountCount: 2,
     openCount: 1,
     automationsRunning: true,
+    mode: "live",
   }),
   ["open", "automations"],
 );
@@ -59,6 +73,7 @@ assert.deepEqual(
     accountCount: 2,
     openCount: 0,
     automationsRunning: false,
+    mode: "live",
   }),
   [],
 );
