@@ -3,7 +3,6 @@ import {
   automationInsertColumns,
   formatEntryTriggers,
   formatExitTriggers,
-  formatSourceWord,
   parseCloseReason,
   parseEntrySizeType,
   parseTradeSource,
@@ -232,11 +231,44 @@ export function formatOrderSide(side: PaperOrderSide): string {
 
 export function formatOrderWhy(order: PaperOrderRow): string {
   if (order.side === "open") {
-    return order.source === "engine"
-      ? "Opened automatically. All entry conditions were true."
-      : "Opened manually.";
+    return formatOpenOrderWhy(order);
   }
   return formatCloseOrderWhy(order);
+}
+
+export function formatOpenEntryMethod(order: PaperOrderRow): "Manual" | "System" {
+  if (order.source === "engine") {
+    return "System";
+  }
+  if (
+    order.conditions.entrySizeType === "dynamic" ||
+    order.conditions.entrySizeType === "fixed"
+  ) {
+    return "System";
+  }
+  return "Manual";
+}
+
+export function formatOpenHowMuch(order: PaperOrderRow): string | null {
+  if (order.conditions.entrySizeType === "dynamic") {
+    return "Scale in";
+  }
+  if (order.conditions.entrySizeType === "fixed") {
+    return "Fixed";
+  }
+  return null;
+}
+
+export function formatOpenOrderWhy(order: PaperOrderRow): string {
+  const parts = [
+    `Trigger ${formatCloseTrigger(order)}`,
+    `Entry ${formatOpenEntryMethod(order)}`,
+  ];
+  const howMuch = formatOpenHowMuch(order);
+  if (howMuch) {
+    parts.push(howMuch);
+  }
+  return parts.join(" · ");
 }
 
 export function formatCloseTrigger(order: PaperOrderRow): "Manual" | "System" {
@@ -302,10 +334,7 @@ export function formatOrderConditions(order: PaperOrderRow): string[] {
 }
 
 export function formatOrderHeadline(order: PaperOrderRow): string {
-  if (order.side === "close") {
-    return "Close";
-  }
-  return `${formatOrderSide(order.side)} · ${formatSourceWord(order.source)}`;
+  return formatOrderSide(order.side);
 }
 
 export function fillSlip(order: PaperOrderRow): number | null {

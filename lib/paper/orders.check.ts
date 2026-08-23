@@ -109,10 +109,18 @@ const stored = parsePaperOrderRow({
 assert.equal(stored.carryId, 9);
 assert.equal(stored.theoretical.spotAsk, 67210);
 assert.equal(fillSlip(stored), 0);
-assert.equal(formatOrderHeadline(stored), "Open · Auto");
+assert.equal(formatOrderHeadline(stored), "Open");
 assert.equal(
   formatOrderWhy(stored),
-  "Opened automatically. All entry conditions were true.",
+  "Trigger System · Entry System · Scale in",
+);
+assert.equal(
+  formatOrderWhy({
+    ...stored,
+    source: "manual",
+    conditions: EMPTY_AUTOMATION,
+  }),
+  "Trigger Manual · Entry Manual",
 );
 assert.deepEqual(formatOrderConditions(stored), [
   "Order Type Dynamic (scale in)",

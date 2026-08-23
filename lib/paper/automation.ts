@@ -206,11 +206,99 @@ export function formatSourceWord(source: TradeSource): string {
   return source === "engine" ? "Auto" : "Manual";
 }
 
+export function formatTriggerWord(source: TradeSource | null): "Manual" | "System" {
+  return source === "engine" ? "System" : "Manual";
+}
+
 export function closedTradeLabel(
   entrySource: TradeSource,
   closeSource: TradeSource | null,
 ): string {
-  return `In ${formatSourceWord(entrySource)} · Out ${formatSourceWord(closeSource ?? "manual")}`;
+  return `In ${formatTriggerWord(entrySource)} · Out ${formatTriggerWord(closeSource)}`;
+}
+
+export function formatCarryEntryWhy(
+  entrySource: TradeSource,
+  automation: PaperCarryAutomation,
+): string {
+  const method =
+    entrySource === "engine" ||
+    automation.entrySizeType === "dynamic" ||
+    automation.entrySizeType === "fixed"
+      ? "System"
+      : "Manual";
+  const parts = [
+    `Trigger ${formatTriggerWord(entrySource)}`,
+    `Entry ${method}`,
+  ];
+  if (automation.entrySizeType === "dynamic") {
+    parts.push("Scale in");
+  } else if (automation.entrySizeType === "fixed") {
+    parts.push("Fixed");
+  }
+  return parts.join(" · ");
+}
+
+export function formatCarryCloseWhy(
+  closeSource: TradeSource | null,
+  closeReason: CloseReason | null,
+  automation: PaperCarryAutomation,
+): string {
+  const trigger = formatTriggerWord(closeSource);
+  const method =
+    closeSource === "engine" ||
+    automation.exitSizeType === "dynamic" ||
+    automation.exitSizeType === "fixed"
+      ? "System"
+      : "Manual";
+  const parts = [`Trigger ${trigger}`, `Exit ${method}`];
+  if (
+    closeReason === "unwind" ||
+    automation.exitSizeType === "dynamic"
+  ) {
+    parts.push("Scale out");
+  } else if (
+    automation.exitSizeType === "fixed" ||
+    closeReason === null
+  ) {
+    parts.push("Flatten");
+  }
+  if (closeSource === "engine") {
+    if (closeReason === "dte") {
+      parts.push("DTE");
+    } else if (closeReason === "mark_apr") {
+      parts.push("Mark APR");
+    } else if (closeReason === "take_profit") {
+      parts.push("Take profit");
+    } else if (closeReason === "stop_loss") {
+      parts.push("Stop loss");
+    }
+  }
+  return parts.join(" · ");
+}
+
+export function formatFiredExitLines(
+  automation: PaperCarryAutomation,
+  closeReason: CloseReason | null,
+): string[] {
+  if (closeReason === "dte" && automation.closeMaxDte !== null) {
+    return [`DTE ≤ ${automation.closeMaxDte}`];
+  }
+  const closeApr = formatPctPoints(automation.closeMinNetApr);
+  if (closeReason === "mark_apr" && closeApr) {
+    return [`APR below ${closeApr}`];
+  }
+  const takeProfit = formatPctPoints(automation.takeProfitPct);
+  if (closeReason === "take_profit" && takeProfit) {
+    return [`Take profit ${takeProfit}`];
+  }
+  const stopLoss = formatPctPoints(
+    automation.stopLossPct === null ? null : Math.abs(automation.stopLossPct),
+  );
+  if (closeReason === "stop_loss" && stopLoss) {
+    return [`Stop loss ${stopLoss}`];
+  }
+  return [];
 }
 
 export function formatCloseHow(

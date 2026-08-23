@@ -3,7 +3,10 @@ import {
   automationFromLayer,
   closedTradeLabel,
   exitFormValues,
+  formatCarryCloseWhy,
+  formatCarryEntryWhy,
   formatCloseHow,
+  formatFiredExitLines,
   formatEntryTriggers,
   formatExitOrderType,
   formatExitTriggers,
@@ -103,8 +106,32 @@ assert.equal(parseTradeSource("engine"), "engine");
 assert.equal(parseTradeSource(null), "manual");
 assert.equal(parseCloseReason("take_profit"), "take_profit");
 assert.equal(parseCloseReason("hand"), null);
-assert.equal(closedTradeLabel("engine", "manual"), "In Auto · Out Manual");
-assert.equal(closedTradeLabel("manual", "engine"), "In Manual · Out Auto");
+assert.equal(closedTradeLabel("engine", "manual"), "In System · Out Manual");
+assert.equal(closedTradeLabel("manual", "engine"), "In Manual · Out System");
+assert.equal(
+  formatCarryEntryWhy("engine", {
+    ...automation,
+    entrySizeType: "dynamic",
+  }),
+  "Trigger System · Entry System · Scale in",
+);
+assert.equal(
+  formatCarryCloseWhy("engine", "unwind", {
+    ...automation,
+    exitSizeType: "dynamic",
+  }),
+  "Trigger System · Exit System · Scale out",
+);
+assert.deepEqual(
+  formatFiredExitLines(
+    { ...automation, exitSizeType: "dynamic" },
+    "unwind",
+  ),
+  [],
+);
+assert.deepEqual(formatFiredExitLines(automation, "mark_apr"), [
+  "APR below 5%",
+]);
 assert.equal(formatCloseHow("manual", null), "Closed at market.");
 assert.equal(formatCloseHow("manual", "unwind"), "Unwound manually.");
 assert.equal(

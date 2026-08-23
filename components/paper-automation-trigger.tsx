@@ -7,10 +7,10 @@ import { updatePaperCarryExits } from "@/lib/paper/actions";
 import type { PaperReturnPath } from "@/lib/paper/open";
 import {
   exitFormValues,
-  formatCloseHow,
+  formatCarryCloseWhy,
+  formatCarryEntryWhy,
   formatEntryTriggers,
-  formatExitTriggers,
-  formatSourceWord,
+  formatFiredExitLines,
   type CloseReason,
   type PaperCarryAutomation,
   type TradeSource,
@@ -42,8 +42,10 @@ export function PaperAutomationTrigger({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const labelId = useId();
-  const entries = formatEntryTriggers(automation);
-  const exits = formatExitTriggers(automation);
+  const entries = formatEntryTriggers(automation).filter(
+    (line) => !line.startsWith("Order Type"),
+  );
+  const exits = formatFiredExitLines(automation, closeReason);
   const form = exitFormValues(automation);
   const closed = !canEdit;
 
@@ -99,26 +101,18 @@ export function PaperAutomationTrigger({
                 left: Math.max(12, Math.min(box.left, window.innerWidth - 300)),
               }}
             >
-              <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-                Entry · {formatSourceWord(entrySource)}
+              <p className="text-[11px] uppercase tracking-[0.12em] text-ink-faint">
+                Entry
               </p>
               <p className="mt-1 text-xs text-ink-muted">
-                {entrySource === "engine"
-                  ? "Opened automatically."
-                  : "Opened manually."}
+                {formatCarryEntryWhy(entrySource, automation)}
               </p>
               <TriggerList
                 lines={entries}
-                empty={
-                  entrySource === "engine"
-                    ? "No entry filters."
-                    : "No automation entry."
-                }
+                empty=""
               />
-              <p className="mt-3 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-                {closed
-                  ? `Exit · ${formatSourceWord(closeSource ?? "manual")}`
-                  : "Exit"}
+              <p className="mt-3 text-[11px] uppercase tracking-[0.12em] text-ink-faint">
+                Exit
               </p>
               {canEdit ? (
                 <form action={updatePaperCarryExits} className="mt-1 space-y-1.5">
@@ -165,16 +159,9 @@ export function PaperAutomationTrigger({
               ) : (
                 <>
                   <p className="mt-1 text-xs text-ink-muted">
-                    {formatCloseHow(closeSource, closeReason)}
+                    {formatCarryCloseWhy(closeSource, closeReason, automation)}
                   </p>
-                  <TriggerList
-                    lines={exits}
-                    empty={
-                      closeSource === "engine"
-                        ? "No exit filters stored."
-                        : "No auto exits armed."
-                    }
-                  />
+                  <TriggerList lines={exits} empty="" />
                 </>
               )}
             </div>,
@@ -187,7 +174,9 @@ export function PaperAutomationTrigger({
 
 function TriggerList({ lines, empty }: { lines: string[]; empty: string }) {
   if (lines.length === 0) {
-    return <p className="mt-1 text-xs text-ink-muted">{empty}</p>;
+    return empty ? (
+      <p className="mt-1 text-xs text-ink-muted">{empty}</p>
+    ) : null;
   }
   return (
     <ul className="mt-1 space-y-0.5 text-xs text-ink-muted">
