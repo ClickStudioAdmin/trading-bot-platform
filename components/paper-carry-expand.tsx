@@ -277,13 +277,7 @@ function PositionKind({
   const auto = source === "engine";
   return (
     <span className="inline-flex items-center gap-1 font-normal">
-      <span
-        className={
-          auto
-            ? "rounded-full bg-accent/15 px-2 py-0.5 text-[11px] text-accent"
-            : "rounded-full bg-surface-raised px-2 py-0.5 text-[11px] text-ink-muted"
-        }
-      >
+      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] text-accent">
         {auto ? "Auto" : "Manual"}
       </span>
       {status === "closing" ? (
