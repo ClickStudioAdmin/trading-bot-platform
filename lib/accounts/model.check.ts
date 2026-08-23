@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import {
+  accountDeleteBlockers,
+  formatDeleteBlockers,
   parseAccountName,
   parseAccountMode,
   parseTradingAccountRow,
@@ -35,5 +37,34 @@ const live = parseTradingAccountRow({
 assert.equal(pickDefaultAccount([live, paper])?.id, "acc-1");
 assert.equal(pickDefaultAccount([live])?.id, "acc-2");
 assert.equal(pickDefaultAccount([]), null);
+
+assert.deepEqual(
+  accountDeleteBlockers({
+    accountCount: 1,
+    openCount: 0,
+    automationsRunning: false,
+  }),
+  ["last"],
+);
+assert.deepEqual(
+  accountDeleteBlockers({
+    accountCount: 2,
+    openCount: 1,
+    automationsRunning: true,
+  }),
+  ["open", "automations"],
+);
+assert.deepEqual(
+  accountDeleteBlockers({
+    accountCount: 2,
+    openCount: 0,
+    automationsRunning: false,
+  }),
+  [],
+);
+assert.equal(
+  formatDeleteBlockers(["last", "open"]),
+  "Keep at least one account · Close or flatten open positions first",
+);
 
 console.log("account model checks passed");

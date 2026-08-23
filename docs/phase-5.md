@@ -16,7 +16,8 @@ Existing paper rows become the first Paper account. A second empty Paper account
 
 - `trading_accounts` plus `account_id` on settings, rules, carries, orders, and event logs
 - Backfill one Paper account per member
-- `tbp_account` cookie; header switcher; create account
+- `tbp_account` cookie; account switch and manage link in the user menu
+- `/accounts` create and delete. Delete is blocked if it is the last account, a book has open or closing positions, or automations are on
 - Tick loops accounts. Paper uses the Phase 4 ledger. Live is skipped
 
 ## Runtime

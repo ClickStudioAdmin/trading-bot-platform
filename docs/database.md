@@ -14,7 +14,7 @@ Current tables:
 | `paper_orders` | 4 | Append-only paper fills on a carry. Scoped by `account_id`. RLS by `user_id`. Authenticated select/insert. No update or delete. Each row stores the scan snapshot (theoretical) and the paper fill (actual). Conditions that were armed are copied at fill time. |
 | `paper_engine_settings` | 4 | Per-account engine on/off and usable book share. Primary key is `account_id`. |
 | `paper_rules` | 4 | Stacked entry/exit layers. Many rows per account. RLS by `user_id`. Authenticated select/insert/update/delete. |
-| `trading_accounts` | 5 | Books under a login. `mode` is `paper` or `live` and cannot change. RLS own-row select. |
+| `trading_accounts` | 5 | Books under a login. `mode` is `paper` or `live` and cannot change. RLS own-row select. Service-role delete is allowed when the account is not last, has no open or closing carries, and automations are off. That teardown removes the account's paper rows; `event_logs.account_id` is set null. |
 | `app_admins` | 4 | Admin allow-list. The desk admin email is hardcoded in `lib/admin/emails.ts` and upserted on sign-in. Users can select only their own row. |
 | `event_logs` | 4 | Append-only system, strategy, and trade events. Authenticated select own or admin. Writes are service-role only. |
 | `members` | 4 | Desk users. Email, password hash, role (`member` / `admin`), status. This is the only login table. Writes and reads for the app are service-role only, scoped by the session. |

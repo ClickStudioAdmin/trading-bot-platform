@@ -44,3 +44,37 @@ export function pickDefaultAccount(
 export function formatAccountMode(mode: TradingAccountMode): string {
   return mode === "live" ? "Live" : "Paper";
 }
+
+export type AccountDeleteBlock = "last" | "open" | "automations";
+
+export function accountDeleteBlockers(input: {
+  accountCount: number;
+  openCount: number;
+  automationsRunning: boolean;
+}): AccountDeleteBlock[] {
+  const blocks: AccountDeleteBlock[] = [];
+  if (input.accountCount <= 1) {
+    blocks.push("last");
+  }
+  if (input.openCount > 0) {
+    blocks.push("open");
+  }
+  if (input.automationsRunning) {
+    blocks.push("automations");
+  }
+  return blocks;
+}
+
+export function formatDeleteBlockers(blocks: AccountDeleteBlock[]): string {
+  return blocks
+    .map((block) => {
+      if (block === "last") {
+        return "Keep at least one account";
+      }
+      if (block === "open") {
+        return "Close or flatten open positions first";
+      }
+      return "Turn off automations first";
+    })
+    .join(" · ");
+}

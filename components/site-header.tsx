@@ -1,4 +1,3 @@
-import { AccountSwitcher } from "@/components/account-switcher";
 import { AdminTickButton } from "@/components/admin-tick-button";
 import { SiteLogo } from "@/components/site-logo";
 import { SiteNav } from "@/components/site-nav";
@@ -27,13 +26,6 @@ export async function SiteHeader() {
           extraLinks={extraLinks}
         />
         <div className="flex items-center gap-2">
-          {session ? (
-            <AccountSwitcher
-              current={session.account}
-              accounts={accounts}
-              othersRunning={othersRunning}
-            />
-          ) : null}
           {admin ? <AdminTickButton /> : null}
           <details className="relative md:hidden">
             <summary className="list-none rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink [&::-webkit-details-marker]:hidden">
@@ -43,7 +35,12 @@ export async function SiteHeader() {
               <SiteNav className="flex flex-col gap-1" extraLinks={extraLinks} />
             </div>
           </details>
-          <UserMenu email={user?.email ?? null} />
+          <UserMenu
+            email={user?.email ?? null}
+            current={session?.account}
+            accounts={accounts}
+            othersRunning={othersRunning}
+          />
         </div>
       </div>
     </header>

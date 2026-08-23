@@ -1,7 +1,15 @@
 "use server";
 
-import { insertTradingAccount, listTradingAccounts } from "@/lib/accounts/store";
-import { parseAccountMode, parseAccountName } from "@/lib/accounts/model";
+import {
+  deleteTradingAccountRow,
+  insertTradingAccount,
+  listTradingAccounts,
+} from "@/lib/accounts/store";
+import {
+  parseAccountMode,
+  parseAccountName,
+  pickDefaultAccount,
+} from "@/lib/accounts/model";
 import { writeEventLog } from "@/lib/logs/write";
 import {
   getSessionContext,
@@ -9,6 +17,10 @@ import {
   setActiveAccountId,
 } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+
+function accountReturnPath(raw: string): "/accounts" | "/strategies/cash-and-carry" {
+  return raw === "/accounts" ? "/accounts" : "/strategies/cash-and-carry";
+}
 
 export async function switchTradingAccount(formData: FormData) {
   const user = await getSessionMember();
@@ -30,9 +42,10 @@ export async function createTradingAccount(formData: FormData) {
   if (!session) {
     redirect("/sign-in");
   }
+  const next = accountReturnPath(String(formData.get("next") ?? ""));
   const named = parseAccountName(formData.get("name"));
   if (!named.ok) {
-    redirect(`/accounts/new?error=${encodeURIComponent(named.error)}`);
+    redirect(`/accounts?error=${encodeURIComponent(named.error)}`);
   }
   const mode = parseAccountMode(formData.get("mode"));
   const created = await insertTradingAccount(
@@ -42,7 +55,7 @@ export async function createTradingAccount(formData: FormData) {
   );
   if (!created) {
     redirect(
-      `/accounts/new?error=${encodeURIComponent("Could not create that account. The name may already be in use.")}`,
+      `/accounts?error=${encodeURIComponent("Could not create that account. The name may already be in use.")}`,
     );
   }
   await writeEventLog({
@@ -53,6 +66,35 @@ export async function createTradingAccount(formData: FormData) {
     accountId: created.id,
     data: { mode, name: named.name },
   });
-  await setActiveAccountId(created.id);
-  redirect("/strategies/cash-and-carry");
+  if (next !== "/accounts") {
+    await setActiveAccountId(created.id);
+  }
+  redirect(next === "/accounts" ? "/accounts?created=1" : next);
+}
+
+export async function deleteTradingAccount(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const accountId = String(formData.get("accountId") ?? "");
+  const written = await deleteTradingAccountRow(session.member.id, accountId);
+  if (written.error) {
+    redirect(`/accounts?error=${encodeURIComponent(written.error)}`);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "account.deleted",
+    message: "Deleted a trading account",
+    userId: session.member.id,
+    data: { accountId },
+  });
+  if (session.account.id === accountId) {
+    const remaining = await listTradingAccounts(session.member.id);
+    const next = pickDefaultAccount(remaining);
+    if (next) {
+      await setActiveAccountId(next.id);
+    }
+  }
+  redirect("/accounts?deleted=1");
 }
