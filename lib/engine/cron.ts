@@ -7,8 +7,8 @@ export function authorizeCronSecret(
   if (!secret || !authorization) {
     return false;
   }
-  const expected = `Bearer ${secret}`;
-  const left = Buffer.from(authorization);
+  const expected = `Bearer ${secret.trim()}`;
+  const left = Buffer.from(authorization.trim());
   const right = Buffer.from(expected);
   if (left.length !== right.length) {
     return false;
