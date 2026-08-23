@@ -7,17 +7,18 @@ import {
 } from "@/lib/engine/rules";
 import { parseUsableBookShare } from "@/lib/opportunities/capacity";
 import { writeEventLog } from "@/lib/logs/write";
-import { getSessionMember } from "@/lib/auth/session";
+import { getSessionContext } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 
 const RULES_PATH = "/strategies/cash-and-carry/automations";
 
 export async function savePaperRules(formData: FormData) {
-  const user = await getSessionMember();
-  if (!user) {
+  const session = await getSessionContext();
+  if (!session) {
     redirect("/sign-in");
   }
+  const { member: user, account } = session;
 
   const parsed = parsePaperRulesForm(formData);
   if (!parsed.ok) {
@@ -33,6 +34,7 @@ export async function savePaperRules(formData: FormData) {
     .from("paper_engine_settings")
     .upsert({
       user_id: user.id,
+      account_id: account.id,
       enabled: parsed.config.enabled,
       updated_at: new Date().toISOString(),
     });
@@ -44,6 +46,7 @@ export async function savePaperRules(formData: FormData) {
       event: "automations.save_failed",
       message: settingsError.message,
       userId: user.id,
+      accountId: account.id,
       strategy: "cash-and-carry",
     });
     redirect(`${RULES_PATH}?error=${encodeURIComponent(settingsError.message)}`);
@@ -52,7 +55,7 @@ export async function savePaperRules(formData: FormData) {
   const { data: existing, error: loadError } = await supabase
     .from("paper_rules")
     .select("id")
-    .eq("user_id", user.id);
+    .eq("account_id", account.id);
 
   if (loadError) {
     await writeEventLog({
@@ -61,6 +64,7 @@ export async function savePaperRules(formData: FormData) {
       event: "automations.save_failed",
       message: loadError.message,
       userId: user.id,
+      accountId: account.id,
       strategy: "cash-and-carry",
     });
     redirect(`${RULES_PATH}?error=${encodeURIComponent(loadError.message)}`);
@@ -79,7 +83,7 @@ export async function savePaperRules(formData: FormData) {
     const { data: openRows, error: openError } = await supabase
       .from("paper_carries")
       .select("rule_id")
-      .eq("user_id", user.id)
+      .eq("account_id", account.id)
       .in("status", ["open", "closing"])
       .in("rule_id", staleIds);
 
@@ -90,6 +94,7 @@ export async function savePaperRules(formData: FormData) {
         event: "automations.save_failed",
         message: openError.message,
         userId: user.id,
+        accountId: account.id,
         strategy: "cash-and-carry",
       });
       redirect(`${RULES_PATH}?error=${encodeURIComponent(openError.message)}`);
@@ -110,7 +115,7 @@ export async function savePaperRules(formData: FormData) {
     const { error } = await supabase
       .from("paper_rules")
       .delete()
-      .eq("user_id", user.id)
+      .eq("account_id", account.id)
       .in("id", staleIds);
     if (error) {
       await writeEventLog({
@@ -119,6 +124,7 @@ export async function savePaperRules(formData: FormData) {
         event: "automations.save_failed",
         message: error.message,
         userId: user.id,
+        accountId: account.id,
         strategy: "cash-and-carry",
       });
       redirect(`${RULES_PATH}?error=${encodeURIComponent(error.message)}`);
@@ -126,13 +132,13 @@ export async function savePaperRules(formData: FormData) {
   }
 
   for (const layer of parsed.config.layers) {
-    const payload = paperLayerToRow(user.id, layer);
+    const payload = paperLayerToRow(user.id, layer, account.id);
     if (layer.id !== null) {
       const { error } = await supabase
         .from("paper_rules")
         .update(payload)
         .eq("id", layer.id)
-        .eq("user_id", user.id);
+        .eq("account_id", account.id);
       if (error) {
         await writeEventLog({
           level: "error",
@@ -140,6 +146,7 @@ export async function savePaperRules(formData: FormData) {
           event: "automations.save_failed",
           message: error.message,
           userId: user.id,
+          accountId: account.id,
           strategy: "cash-and-carry",
         });
         redirect(`${RULES_PATH}?error=${encodeURIComponent(error.message)}`);
@@ -153,6 +160,7 @@ export async function savePaperRules(formData: FormData) {
           event: "automations.save_failed",
           message: error.message,
           userId: user.id,
+          accountId: account.id,
           strategy: "cash-and-carry",
         });
         redirect(`${RULES_PATH}?error=${encodeURIComponent(error.message)}`);
@@ -165,6 +173,7 @@ export async function savePaperRules(formData: FormData) {
     event: "automations.saved",
     message: `Saved ${parsed.config.layers.length} automation layer(s)`,
     userId: user.id,
+    accountId: account.id,
     strategy: "cash-and-carry",
     data: {
       enabled: parsed.config.enabled,
@@ -178,10 +187,11 @@ export async function savePaperRules(formData: FormData) {
 const SETTINGS_PATH = "/strategies/cash-and-carry/settings";
 
 export async function savePaperSettings(formData: FormData) {
-  const user = await getSessionMember();
-  if (!user) {
+  const session = await getSessionContext();
+  if (!session) {
     redirect("/sign-in");
   }
+  const { member: user, account } = session;
 
   const parsed = parseUsableBookShare(formData.get("usableBookShare"));
   if (typeof parsed !== "number") {
@@ -197,6 +207,7 @@ export async function savePaperSettings(formData: FormData) {
 
   const { error } = await supabase.from("paper_engine_settings").upsert({
     user_id: user.id,
+    account_id: account.id,
     usable_book_share: parsed,
     updated_at: new Date().toISOString(),
   });
@@ -208,6 +219,7 @@ export async function savePaperSettings(formData: FormData) {
       event: "settings.save_failed",
       message: error.message,
       userId: user.id,
+      accountId: account.id,
       strategy: "cash-and-carry",
     });
     redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(error.message)}`);
@@ -218,6 +230,7 @@ export async function savePaperSettings(formData: FormData) {
     event: "settings.saved",
     message: "Saved strategy settings",
     userId: user.id,
+    accountId: account.id,
     strategy: "cash-and-carry",
     data: { usableBookShare: parsed },
   });

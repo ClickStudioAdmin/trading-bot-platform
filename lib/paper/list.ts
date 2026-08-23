@@ -1,4 +1,4 @@
-import { getSessionMember } from "@/lib/auth/session";
+import { getSessionContext } from "@/lib/auth/session";
 import { attachLogs, listEventLogs, type EventLogRow } from "@/lib/logs/list";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import { type OpportunityPaperProps } from "@/lib/paper/open";
@@ -18,24 +18,25 @@ import { createServiceClient } from "@/lib/supabase/admin";
 export async function getOpportunityPaperProps(
   next: OpportunityPaperProps["next"],
 ): Promise<OpportunityPaperProps> {
-  const user = await getSessionMember();
+  const session = await getSessionContext();
   return {
-    signedIn: Boolean(user),
+    signedIn: Boolean(session),
+    canOpen: session?.account.mode === "paper",
     next,
   };
 }
 
 export async function listPaperCarries(): Promise<PaperCarryRow[]> {
-  const user = await getSessionMember();
+  const session = await getSessionContext();
   const supabase = createServiceClient();
-  if (!user || !supabase) {
+  if (!session || !supabase) {
     return [];
   }
 
   const { data, error } = await supabase
     .from("paper_carries")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("account_id", session.account.id)
     .order("opened_at", { ascending: false });
 
   if (error || !data) {
@@ -47,16 +48,16 @@ export async function listPaperCarries(): Promise<PaperCarryRow[]> {
 
 export async function listPaperOrders(): Promise<PaperOrderRow[]> {
   try {
-    const user = await getSessionMember();
+    const session = await getSessionContext();
     const supabase = createServiceClient();
-    if (!user || !supabase) {
+    if (!session || !supabase) {
       return [];
     }
 
     const { data, error } = await supabase
       .from("paper_orders")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("account_id", session.account.id)
       .order("filled_at", { ascending: true });
 
     if (error || !data) {
@@ -79,8 +80,8 @@ export async function loadPaperDesk(scan: ScannedOpportunity[]): Promise<{
   open: PaperDeskCarry<MarkedPaperCarry>[];
   closed: PaperDeskCarry<PaperCarryRow>[];
 }> {
-  const user = await getSessionMember();
-  if (!user) {
+  const session = await getSessionContext();
+  if (!session) {
     return { signedIn: false, open: [], closed: [] };
   }
 
@@ -89,7 +90,7 @@ export async function loadPaperDesk(scan: ScannedOpportunity[]): Promise<{
     listPaperOrders(),
     listEventLogs(
       { scope: "trade", level: "", event: "" },
-      { userId: user.id, limit: 400 },
+      { accountId: session.account.id, limit: 400 },
     ),
   ]);
   const open = attachLogs(

@@ -2,21 +2,21 @@ import {
   DEFAULT_USABLE_BOOK_SHARE,
 } from "@/lib/opportunities/capacity";
 import { asNullableNumber } from "@/lib/paper/rows";
-import { getSessionMember } from "@/lib/auth/session";
+import { getSessionContext } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 export async function loadUsableBookShare(): Promise<number> {
   try {
-    const user = await getSessionMember();
+    const session = await getSessionContext();
     const supabase = createServiceClient();
-    if (!user || !supabase) {
+    if (!session || !supabase) {
       return DEFAULT_USABLE_BOOK_SHARE;
     }
 
     const { data, error } = await supabase
       .from("paper_engine_settings")
       .select("usable_book_share")
-      .eq("user_id", user.id)
+      .eq("account_id", session.account.id)
       .maybeSingle();
 
     if (error || !data) {

@@ -20,15 +20,21 @@ import {
 } from "@/lib/paper/open";
 import { asNumber, parsePaperCarryRow } from "@/lib/paper/rows";
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
-import { getSessionMember } from "@/lib/auth/session";
+import { getSessionContext } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 
 export async function openPaperCarry(formData: FormData) {
   const next = safePaperReturnPath(String(formData.get("next") ?? ""));
-  const user = await getSessionMember();
-  if (!user) {
+  const session = await getSessionContext();
+  if (!session) {
     redirect("/sign-in");
+  }
+  const { member: user, account } = session;
+  if (account.mode !== "paper") {
+    redirect(
+      `${next}?paperError=${encodeURIComponent("This is a Live account. Paper fills are off until live execution exists.")}`,
+    );
   }
 
   const supabase = createServiceClient();
@@ -75,7 +81,11 @@ export async function openPaperCarry(formData: FormData) {
 
   const { data, error } = await supabase
     .from("paper_carries")
-    .insert(paperCarryInsertRow(user.id, match, notionalUsdt))
+    .insert(
+      paperCarryInsertRow(user.id, match, notionalUsdt, {
+        accountId: account.id,
+      }),
+    )
     .select("id")
     .single();
 
@@ -86,6 +96,7 @@ export async function openPaperCarry(formData: FormData) {
       event: "trade.open_failed",
       message: error.message,
       userId: user.id,
+      accountId: account.id,
       strategy: "cash-and-carry",
       data: { spotSymbol, futureSymbol, notionalUsdt },
     });
@@ -99,6 +110,7 @@ export async function openPaperCarry(formData: FormData) {
   const carryId = asNumber(data.id);
   await insertPaperOrder(supabase, {
     userId: user.id,
+    accountId: account.id,
     carryId,
     side: "open",
     source: "manual",
@@ -114,6 +126,7 @@ export async function openPaperCarry(formData: FormData) {
     event: "trade.opened",
     message: `Opened paper ${futureSymbol}`,
     userId: user.id,
+    accountId: account.id,
     strategy: "cash-and-carry",
     data: {
       carryId,
@@ -131,10 +144,11 @@ export async function openPaperCarry(formData: FormData) {
 export async function closeOpenPaperCarry(formData: FormData) {
   const next = safePaperReturnPath(String(formData.get("next") ?? ""));
   const mode = String(formData.get("mode") ?? "market");
-  const user = await getSessionMember();
-  if (!user) {
+  const session = await getSessionContext();
+  if (!session) {
     redirect("/sign-in");
   }
+  const { member: user, account } = session;
 
   const supabase = createServiceClient();
   if (!supabase) {
@@ -152,7 +166,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
     .from("paper_carries")
     .select("*")
     .eq("id", carryId)
-    .eq("user_id", user.id)
+    .eq("account_id", account.id)
     .in("status", ["open", "closing"])
     .maybeSingle();
 
@@ -202,7 +216,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
           close_reason: "unwind",
         })
         .eq("id", carryId)
-        .eq("user_id", user.id)
+        .eq("account_id", account.id)
         .in("status", ["open", "closing"]);
       if (error) {
         redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
@@ -216,12 +230,13 @@ export async function closeOpenPaperCarry(formData: FormData) {
   const { data: orderRows } = await supabase
     .from("paper_orders")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("account_id", account.id)
     .eq("carry_id", carryId);
 
   const written = await writeCloseClip({
     supabase,
     userId: user.id,
+    accountId: account.id,
     row,
     opportunity: match,
     clipUsdt,
@@ -242,6 +257,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
       event: "trade.close_failed",
       message: written.error,
       userId: user.id,
+      accountId: account.id,
       strategy: "cash-and-carry",
       data: { carryId, mode },
     });
@@ -256,6 +272,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
         ? `Closed paper ${row.futureSymbol}`
         : `Unwound paper ${row.futureSymbol}`,
     userId: user.id,
+    accountId: account.id,
     strategy: "cash-and-carry",
     data: {
       carryId,
@@ -274,10 +291,11 @@ export async function closeOpenPaperCarry(formData: FormData) {
 
 export async function updatePaperCarryExits(formData: FormData) {
   const next = safePaperReturnPath(String(formData.get("next") ?? ""));
-  const user = await getSessionMember();
-  if (!user) {
+  const session = await getSessionContext();
+  if (!session) {
     redirect("/sign-in");
   }
+  const { member: user, account } = session;
 
   const supabase = createServiceClient();
   if (!supabase) {
@@ -300,7 +318,7 @@ export async function updatePaperCarryExits(formData: FormData) {
     .from("paper_carries")
     .select("*")
     .eq("id", carryId)
-    .eq("user_id", user.id)
+    .eq("account_id", account.id)
     .eq("status", "open")
     .eq("source", "engine")
     .maybeSingle();
@@ -320,7 +338,7 @@ export async function updatePaperCarryExits(formData: FormData) {
       stop_loss_pct: parsed.stopLossPct,
     })
     .eq("id", carryId)
-    .eq("user_id", user.id)
+    .eq("account_id", account.id)
     .eq("status", "open")
     .eq("source", "engine");
 
@@ -331,6 +349,7 @@ export async function updatePaperCarryExits(formData: FormData) {
       event: "trade.exits_failed",
       message: error.message,
       userId: user.id,
+      accountId: account.id,
       strategy: "cash-and-carry",
       data: { carryId },
     });
@@ -342,6 +361,7 @@ export async function updatePaperCarryExits(formData: FormData) {
     event: "trade.exits_updated",
     message: `Updated exits for paper ${String(data.future_symbol)}`,
     userId: user.id,
+    accountId: account.id,
     strategy: "cash-and-carry",
     data: {
       carryId,

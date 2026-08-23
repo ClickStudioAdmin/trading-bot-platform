@@ -18,7 +18,7 @@ export type EventLogRow = {
 
 export async function listEventLogs(
   filters: EventLogFilters,
-  options: { limit?: number; userId?: string } = {},
+  options: { limit?: number; userId?: string; accountId?: string } = {},
 ): Promise<EventLogRow[]> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -32,7 +32,9 @@ export async function listEventLogs(
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (options.userId) {
+  if (options.accountId) {
+    query = query.eq("account_id", options.accountId);
+  } else if (options.userId) {
     query = query.eq("user_id", options.userId);
   }
 

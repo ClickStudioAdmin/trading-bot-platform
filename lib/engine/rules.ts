@@ -151,9 +151,11 @@ export function parsePaperRulesRow(
 export function paperLayerToRow(
   userId: string,
   layer: PaperEngineLayer,
+  accountId?: string,
 ) {
   return {
     user_id: userId,
+    account_id: accountId ?? null,
     name: layer.name,
     sort_order: layer.sortOrder,
     size_type: layer.sizeType,

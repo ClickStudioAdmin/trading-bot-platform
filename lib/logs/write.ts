@@ -10,6 +10,7 @@ export type EventLogInput = {
   event: string;
   message: string;
   userId?: string | null;
+  accountId?: string | null;
   strategy?: string | null;
   data?: Record<string, unknown>;
 };
@@ -33,6 +34,7 @@ export async function writeEventLog(input: EventLogInput): Promise<void> {
       event: input.event,
       message,
       user_id: input.userId ?? null,
+      account_id: input.accountId ?? null,
       strategy: input.strategy ?? null,
       data: redactLogData(input.data ?? {}),
     });

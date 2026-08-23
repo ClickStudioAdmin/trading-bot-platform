@@ -45,23 +45,32 @@ export async function runPaperEngineTick(): Promise<{
   const raw = await scanCarryOpportunities();
   await persistOpportunities(raw);
 
-  const [{ data: settingsRows }, { data: ruleRows }, { data: carryRows }, { data: orderRows }] =
-    await Promise.all([
-      supabase.from("paper_engine_settings").select("user_id, enabled, usable_book_share"),
-      supabase.from("paper_rules").select("*").order("sort_order", { ascending: true }),
-      supabase.from("paper_carries").select("*").in("status", ["open", "closing"]),
-      supabase.from("paper_orders").select("*"),
-    ]);
+  const [
+    { data: accountRows },
+    { data: settingsRows },
+    { data: ruleRows },
+    { data: carryRows },
+    { data: orderRows },
+  ] = await Promise.all([
+    supabase.from("trading_accounts").select("id, user_id, mode"),
+    supabase
+      .from("paper_engine_settings")
+      .select("account_id, user_id, enabled, usable_book_share"),
+    supabase.from("paper_rules").select("*").order("sort_order", { ascending: true }),
+    supabase.from("paper_carries").select("*").in("status", ["open", "closing"]),
+    supabase.from("paper_orders").select("*"),
+  ]);
 
   const orders = (orderRows ?? []).map((row) =>
     parsePaperOrderRow(row as Record<string, unknown>),
   );
   const carries = (carryRows ?? []).map((row) => ({
     userId: String((row as { user_id: string }).user_id),
+    accountId: String((row as { account_id: string }).account_id),
     row: parsePaperCarryRow(row as Record<string, unknown>),
   }));
 
-  const settingsByUser = new Map<
+  const settingsByAccount = new Map<
     string,
     { enabled: boolean; share: number }
   >();
@@ -69,7 +78,7 @@ export async function runPaperEngineTick(): Promise<{
     const share = asNullableNumber(
       (row as { usable_book_share?: unknown }).usable_book_share,
     );
-    settingsByUser.set(String((row as { user_id: string }).user_id), {
+    settingsByAccount.set(String((row as { account_id: string }).account_id), {
       enabled: Boolean((row as { enabled?: unknown }).enabled),
       share:
         share !== null && share > 0 && share <= 1
@@ -78,42 +87,47 @@ export async function runPaperEngineTick(): Promise<{
     });
   }
 
-  const layersByUser = new Map<string, PaperEngineConfig["layers"]>();
+  const layersByAccount = new Map<string, PaperEngineConfig["layers"]>();
   for (const row of ruleRows ?? []) {
-    const userId = String((row as { user_id: string }).user_id);
-    const list = layersByUser.get(userId) ?? [];
+    const accountId = String((row as { account_id: string }).account_id);
+    const list = layersByAccount.get(accountId) ?? [];
     list.push(
       parsePaperRulesRow(
         row as Record<string, unknown>,
         Number((row as { sort_order?: unknown }).sort_order) || list.length,
       ),
     );
-    layersByUser.set(userId, list);
+    layersByAccount.set(accountId, list);
   }
 
-  const userIds = new Set<string>([
-    ...settingsByUser.keys(),
-    ...layersByUser.keys(),
-    ...carries.map((item) => item.userId),
-  ]);
+  const accounts = (accountRows ?? []).map((row) => ({
+    id: String((row as { id: string }).id),
+    userId: String((row as { user_id: string }).user_id),
+    mode: String((row as { mode: string }).mode),
+  }));
+  const userIds = new Set(accounts.map((account) => account.userId));
 
   let opened = 0;
   let closed = 0;
   let clipped = 0;
   let added = 0;
 
-  for (const userId of userIds) {
-    const settings = settingsByUser.get(userId) ?? {
+  for (const account of accounts) {
+    if (account.mode !== "paper") {
+      continue;
+    }
+    const userId = account.userId;
+    const settings = settingsByAccount.get(account.id) ?? {
       enabled: false,
       share: DEFAULT_USABLE_BOOK_SHARE,
     };
     const scan = applyUsableBookShare(raw, settings.share);
     const config: PaperEngineConfig = {
       enabled: settings.enabled,
-      layers: layersByUser.get(userId) ?? [],
+      layers: layersByAccount.get(account.id) ?? [],
     };
     const userCarries = carries
-      .filter((item) => item.userId === userId)
+      .filter((item) => item.accountId === account.id)
       .map((item) => item.row);
     const positions = markEnginePositions(userCarries, scan);
     const exits = decideExits(positions, config);
@@ -131,6 +145,7 @@ export async function runPaperEngineTick(): Promise<{
       const written = await writeCloseClip({
         supabase,
         userId,
+        accountId: account.id,
         row,
         opportunity,
         clipUsdt: exit.closeNotionalUsdt,
@@ -145,6 +160,7 @@ export async function runPaperEngineTick(): Promise<{
           event: "engine.close_failed",
           message: written.error,
           userId,
+          accountId: account.id,
           strategy: "cash-and-carry",
           data: { carryId: row.id, reason: exit.reason },
         });
@@ -163,6 +179,7 @@ export async function runPaperEngineTick(): Promise<{
             ? `Closed paper ${row.futureSymbol}`
             : `Unwound paper ${row.futureSymbol}`,
         userId,
+        accountId: account.id,
         strategy: "cash-and-carry",
         data: {
           carryId: row.id,
@@ -202,6 +219,7 @@ export async function runPaperEngineTick(): Promise<{
         const written = await writeOpenClip({
           supabase,
           userId,
+          accountId: account.id,
           row,
           opportunity: entry.opportunity,
           clipUsdt: entry.notionalUsdt,
@@ -213,6 +231,7 @@ export async function runPaperEngineTick(): Promise<{
             event: "engine.open_failed",
             message: written.error,
             userId,
+            accountId: account.id,
             strategy: "cash-and-carry",
             data: {
               carryId: row.id,
@@ -228,6 +247,7 @@ export async function runPaperEngineTick(): Promise<{
           event: "trade.added",
           message: `Added paper ${entry.opportunity.futureSymbol}`,
           userId,
+          accountId: account.id,
           strategy: "cash-and-carry",
           data: {
             carryId: row.id,
@@ -247,6 +267,7 @@ export async function runPaperEngineTick(): Promise<{
             entry.opportunity,
             entry.notionalUsdt,
             {
+              accountId: account.id,
               source: "engine",
               ruleId: entry.layer.id,
               ruleName: entry.layer.name,
@@ -263,6 +284,7 @@ export async function runPaperEngineTick(): Promise<{
           event: "engine.open_failed",
           message: error?.message ?? "Insert failed",
           userId,
+          accountId: account.id,
           strategy: "cash-and-carry",
           data: {
             futureSymbol: entry.opportunity.futureSymbol,
@@ -273,6 +295,7 @@ export async function runPaperEngineTick(): Promise<{
       }
       await insertPaperOrder(supabase, {
         userId,
+        accountId: account.id,
         carryId: Number(data.id),
         side: "open",
         source: "engine",
@@ -288,6 +311,7 @@ export async function runPaperEngineTick(): Promise<{
         event: "trade.opened",
         message: `Opened paper ${entry.opportunity.futureSymbol}`,
         userId,
+        accountId: account.id,
         strategy: "cash-and-carry",
         data: {
           carryId: Number(data.id),
@@ -307,7 +331,14 @@ export async function runPaperEngineTick(): Promise<{
     event: "engine.tick",
     message: `Paper engine tick opened ${opened}, added ${added}, closed ${closed}, clipped ${clipped}`,
     strategy: "cash-and-carry",
-    data: { users: userIds.size, opened, added, closed, clipped },
+    data: {
+      users: userIds.size,
+      accounts: accounts.length,
+      opened,
+      added,
+      closed,
+      clipped,
+    },
   });
 
   return { users: userIds.size, opened, added, closed, clipped };

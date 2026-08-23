@@ -14,6 +14,7 @@ export type PaperReturnPath =
 
 export type OpportunityPaperProps = {
   signedIn: boolean;
+  canOpen: boolean;
   next: PaperReturnPath;
 };
 
@@ -120,6 +121,7 @@ export function paperCarryInsertRow(
   opportunity: ScannedOpportunity,
   notionalUsdt: number,
   extras?: {
+    accountId?: string;
     automation?: PaperCarryAutomation;
     source?: TradeSource;
     ruleId?: number | null;
@@ -131,6 +133,7 @@ export function paperCarryInsertRow(
   }
   return {
     user_id: userId,
+    account_id: extras?.accountId ?? null,
     base_coin: opportunity.baseCoin,
     spot_symbol: opportunity.spotSymbol,
     future_symbol: opportunity.futureSymbol,

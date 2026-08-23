@@ -46,6 +46,7 @@ export async function insertPaperOrder(
 export async function writeOpenClip(input: {
   supabase: SupabaseClient;
   userId: string;
+  accountId: string;
   row: PaperCarryRow;
   opportunity: ScannedOpportunity;
   clipUsdt: number;
@@ -73,6 +74,7 @@ export async function writeOpenClip(input: {
     })
     .eq("id", input.row.id)
     .eq("user_id", input.userId)
+    .eq("account_id", input.accountId)
     .eq("status", "open")
     .select("id")
     .maybeSingle();
@@ -86,6 +88,7 @@ export async function writeOpenClip(input: {
 
   await insertPaperOrder(input.supabase, {
     userId: input.userId,
+    accountId: input.accountId,
     carryId: input.row.id,
     side: "open",
     source: "engine",
@@ -102,6 +105,7 @@ export async function writeOpenClip(input: {
 export async function writeCloseClip(input: {
   supabase: SupabaseClient;
   userId: string;
+  accountId: string;
   row: PaperCarryRow;
   opportunity: ScannedOpportunity;
   clipUsdt: number;
@@ -146,6 +150,7 @@ export async function writeCloseClip(input: {
     .update(update)
     .eq("id", input.row.id)
     .eq("user_id", input.userId)
+    .eq("account_id", input.accountId)
     .in("status", ["open", "closing"]);
 
   if (error) {
@@ -154,6 +159,7 @@ export async function writeCloseClip(input: {
 
   await insertPaperOrder(input.supabase, {
     userId: input.userId,
+    accountId: input.accountId,
     carryId: input.row.id,
     side: "close",
     source: input.source,

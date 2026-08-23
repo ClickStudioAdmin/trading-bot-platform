@@ -8,9 +8,7 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
 ## Current micro-step
 
-**7 of 7 — Secrets + push** (waiting on you)
-
-`runPaperEngineTick`, `POST /api/engine/tick`, and `.github/workflows/paper-engine-tick.yml` are in the repo. The engine is on when you save at least one rule set. Add `CRON_SECRET` and `ENGINE_TICK_URL` as below, then confirm a tick on `develop`. Do not merge to `main` until that works.
+**Complete.** Current work is Phase 5 — [phase-5.md](phase-5.md).
 
 ## Micro-steps
 
@@ -63,6 +61,6 @@ Expand a current or past position for **Orders** and **Position logs**. Each ord
 ## Out of scope
 
 - Bybit orders, encrypted keys, Fly.io
-- Websockets, auto-switching
+- Websockets, auto-switching (paper switch is later; accounts are Phase 5)
 - Calling Bybit from the browser
 - Public signup beyond the desk accounts you create

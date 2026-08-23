@@ -63,6 +63,7 @@ export function scanSnapshot(
 
 export function paperOrderInsertRow(input: {
   userId: string;
+  accountId?: string;
   carryId: number;
   side: PaperOrderSide;
   source: TradeSource;
@@ -77,6 +78,7 @@ export function paperOrderInsertRow(input: {
   }
   return {
     user_id: input.userId,
+    account_id: input.accountId ?? null,
     carry_id: input.carryId,
     side: input.side,
     source: input.source,

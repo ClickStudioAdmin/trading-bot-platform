@@ -155,7 +155,7 @@ function PaperSizeCell({
   row: ScannedOpportunity;
   paper: OpportunityPaperProps;
 }) {
-  if (!paper.signedIn) {
+  if (!paper.signedIn || !paper.canOpen) {
     return <span className="text-ink-faint">—</span>;
   }
 
@@ -183,6 +183,9 @@ function PaperOpenAction({
         Sign in
       </Link>
     );
+  }
+  if (!paper.canOpen) {
+    return <span className="text-xs text-ink-faint">Live</span>;
   }
 
   return (
