@@ -27,9 +27,12 @@ export function eventLogOptionsForScopes(
   selected = "",
 ): string[] {
   const allowed = new Set(scopes);
-  const names = EVENT_LOG_OPTIONS.filter((option) =>
-    allowed.has(option.scope),
-  ).map((option) => option.event);
+  const names: string[] = [];
+  for (const option of EVENT_LOG_OPTIONS) {
+    if (allowed.has(option.scope)) {
+      names.push(option.event);
+    }
+  }
   const extra = selected.trim();
   if (extra && !names.includes(extra)) {
     names.push(extra);

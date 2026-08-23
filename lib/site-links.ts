@@ -17,6 +17,7 @@ export const CASH_AND_CARRY_SECONDARY_LINKS = [
 ] as const;
 
 export const ADMIN_NAV_LINKS = [
+  { href: "/admin", label: "Overview", exact: true },
   { href: "/admin/settings", label: "Settings" },
   { href: "/admin/members", label: "Members" },
   { href: "/admin/logs", label: "Logs" },

@@ -4,7 +4,7 @@ export type EventLogFilters = {
   scope: string;
   level: string;
   event: string;
-  account: string;
+  account?: string;
 };
 
 export function parseEventLogFilters(

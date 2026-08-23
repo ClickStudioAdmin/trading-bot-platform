@@ -14,8 +14,10 @@ export function AdminSidenav() {
       </p>
       <nav aria-label="Admin" className="mt-3 flex flex-col gap-1">
         {ADMIN_NAV_LINKS.map((link) => {
-          const active =
-            pathname === link.href || pathname.startsWith(`${link.href}/`);
+          const exact = "exact" in link && Boolean(link.exact);
+          const active = exact
+            ? pathname === link.href
+            : pathname === link.href || pathname.startsWith(`${link.href}/`);
           return (
             <Link
               key={link.href}

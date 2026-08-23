@@ -12,7 +12,7 @@ GitHub. Hosted Supabase and Vercel are not.
 - Paper engine tick lives in `lib/engine` and is host-agnostic. It is scheduled by GitHub Actions against the Sydney Vercel function. Fly.io can call the same function later
 - Supabase — Postgres only. Sign-in is the `members` table and a signed cookie. Trading state is scoped to `trading_accounts`, not the login
 - A member can have many accounts. Each account is Paper or Live at create. Paper uses the in-app ledger. Live execution is later.
-- `/admin` — `members.role = admin`, plus `click.studio.admin@gmail.com`. Logs and members now; settings later
+- `/admin` — `members.role = admin`, plus `click.studio.admin@gmail.com`. Overview is the landing page. Members, logs, settings, and theme sit in the left menu
 
 The web app never places exchange orders from a Vercel invocation. Paper `paper_carries` writes are not exchange orders.
 
