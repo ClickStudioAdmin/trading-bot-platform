@@ -125,8 +125,13 @@ function RuleRow({
           />
         </label>
         {inUse ? (
-          <span className="text-xs text-warning">
-            In use by an open position
+          <span
+            className="relative flex size-3.5 shrink-0"
+            title="In use by an open position"
+            aria-label="In use by an open position"
+          >
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60" />
+            <span className="relative inline-flex size-3.5 rounded-full bg-success" />
           </span>
         ) : canRemove ? (
           <button
