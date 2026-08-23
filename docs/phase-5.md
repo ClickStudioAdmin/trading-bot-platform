@@ -17,7 +17,7 @@ Existing paper rows become the first Demo Account (paper). A second empty Paper 
 - `trading_accounts` plus `account_id` on settings, rules, carries, orders, and event logs
 - Backfill one Demo Account (paper) per member
 - `tbp_account` cookie; account switch and manage link in the user menu
-- `/accounts` create and delete. The last account cannot be deleted. Paper books can be deleted any time. Live delete is blocked while the book has open or closing positions or automations are on
+- `/account` manage area with a left nav. Manage sub-accounts is the first page. Create and delete live there. The last account cannot be deleted. Paper books can be deleted any time. Live delete is blocked while the book has open or closing positions or automations are on
 - Tick loops accounts. Paper uses the Phase 4 ledger. Live is skipped
 
 ## Runtime

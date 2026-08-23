@@ -16,3 +16,7 @@ export const CASH_AND_CARRY_SECONDARY_LINKS = [
   { href: "/strategies/cash-and-carry/pairs", label: "Pairs" },
 ] as const;
 
+export const ACCOUNT_NAV_LINKS = [
+  { href: "/account", label: "Manage sub-accounts", exact: true },
+] as const;
+

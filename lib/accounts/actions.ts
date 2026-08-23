@@ -18,8 +18,10 @@ import {
 } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
-function accountReturnPath(raw: string): "/accounts" | "/strategies/cash-and-carry" {
-  return raw === "/accounts" ? "/accounts" : "/strategies/cash-and-carry";
+function accountReturnPath(raw: string): "/account" | "/strategies/cash-and-carry" {
+  return raw === "/account" || raw === "/accounts"
+    ? "/account"
+    : "/strategies/cash-and-carry";
 }
 
 export async function switchTradingAccount(formData: FormData) {
@@ -45,7 +47,7 @@ export async function createTradingAccount(formData: FormData) {
   const next = accountReturnPath(String(formData.get("next") ?? ""));
   const named = parseAccountName(formData.get("name"));
   if (!named.ok) {
-    redirect(`/accounts?error=${encodeURIComponent(named.error)}`);
+    redirect(`/account?error=${encodeURIComponent(named.error)}`);
   }
   const mode = parseAccountMode(formData.get("mode"));
   const created = await insertTradingAccount(
@@ -55,7 +57,7 @@ export async function createTradingAccount(formData: FormData) {
   );
   if (!created) {
     redirect(
-      `/accounts?error=${encodeURIComponent("Could not create that account. The name may already be in use.")}`,
+      `/account?error=${encodeURIComponent("Could not create that account. The name may already be in use.")}`,
     );
   }
   await writeEventLog({
@@ -66,10 +68,10 @@ export async function createTradingAccount(formData: FormData) {
     accountId: created.id,
     data: { mode, name: named.name },
   });
-  if (next !== "/accounts") {
+  if (next !== "/account") {
     await setActiveAccountId(created.id);
   }
-  redirect(next === "/accounts" ? "/accounts?created=1" : next);
+  redirect(next === "/account" ? "/account?created=1" : next);
 }
 
 export async function deleteTradingAccount(formData: FormData) {
@@ -80,7 +82,7 @@ export async function deleteTradingAccount(formData: FormData) {
   const accountId = String(formData.get("accountId") ?? "");
   const written = await deleteTradingAccountRow(session.member.id, accountId);
   if (written.error) {
-    redirect(`/accounts?error=${encodeURIComponent(written.error)}`);
+    redirect(`/account?error=${encodeURIComponent(written.error)}`);
   }
   await writeEventLog({
     scope: "system",
@@ -96,5 +98,5 @@ export async function deleteTradingAccount(formData: FormData) {
       await setActiveAccountId(next.id);
     }
   }
-  redirect("/accounts?deleted=1");
+  redirect("/account?deleted=1");
 }
