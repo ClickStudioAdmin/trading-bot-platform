@@ -414,10 +414,6 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             },
           },
           {
-            left: {
-              label: "Fees + slip",
-              value: formatPct(order.theoretical.feeRate),
-            },
             right: { label: "Slip vs scan", value: formatPct(slip), tone: slip },
           },
           {
@@ -425,6 +421,7 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
               label: "Net APR",
               value: formatPct(order.theoretical.netApr),
               tone: order.theoretical.netApr,
+              hint: `Fees + slip: ${formatPct(order.theoretical.feeRate)}`,
             },
           },
           {
@@ -551,7 +548,12 @@ function CloseOrderCard({
   );
 }
 
-type MetricRow = { label: string; value: string; tone?: number | null };
+type MetricRow = {
+  label: string;
+  value: string;
+  tone?: number | null;
+  hint?: string;
+};
 
 function ComparePairs({
   leftTitle,
@@ -605,14 +607,17 @@ function MetricCell({ row }: { row?: MetricRow }) {
   if (!row) {
     return <div />;
   }
+  const value = (
+    <span
+      className={`tabular-nums ${row.tone === undefined ? "text-ink" : signedTone(row.tone)}`}
+    >
+      {row.value}
+    </span>
+  );
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
       <span className="text-ink-muted">{row.label}</span>
-      <span
-        className={`tabular-nums ${row.tone === undefined ? "text-ink" : signedTone(row.tone)}`}
-      >
-        {row.value}
-      </span>
+      {row.hint ? <ColumnHint label={value} hint={row.hint} /> : value}
     </div>
   );
 }
