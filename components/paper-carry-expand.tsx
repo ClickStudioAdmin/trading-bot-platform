@@ -442,19 +442,6 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
           },
           {
             left: {
-              label: "Capacity",
-              value:
-                order.theoretical.capacityUsdt === null
-                  ? "—"
-                  : formatUsd(order.theoretical.capacityUsdt),
-            },
-            right: {
-              label: "Notional",
-              value: formatUsd(order.notionalUsdt),
-            },
-          },
-          {
-            left: {
               label: "Spot ask",
               value: formatPrice(order.theoretical.spotAsk),
             },
@@ -471,6 +458,19 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             right: {
               label: "Sell future",
               value: formatPrice(order.theoretical.futureBid),
+            },
+          },
+          {
+            left: {
+              label: "Capacity",
+              value:
+                order.theoretical.capacityUsdt === null
+                  ? "—"
+                  : formatUsd(order.theoretical.capacityUsdt),
+            },
+            right: {
+              label: "Notional",
+              value: formatUsd(order.notionalUsdt),
             },
           },
         ]}
