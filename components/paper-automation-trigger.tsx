@@ -25,6 +25,7 @@ export function PaperAutomationTrigger({
   closeSource = null,
   closeReason = null,
   next = "/strategies/cash-and-carry",
+  className = "text-xs text-ink-faint hover:text-ink",
 }: {
   carryId: number;
   automation: PaperCarryAutomation;
@@ -34,6 +35,7 @@ export function PaperAutomationTrigger({
   closeSource?: TradeSource | null;
   closeReason?: CloseReason | null;
   next?: PaperReturnPath;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [box, setBox] = useState<DOMRect | null>(null);
@@ -74,7 +76,7 @@ export function PaperAutomationTrigger({
       <button
         ref={triggerRef}
         type="button"
-        className="text-xs text-ink-faint hover:text-ink"
+        className={className}
         aria-expanded={open}
         aria-controls={open ? labelId : undefined}
         onClick={(event) => {

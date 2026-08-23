@@ -114,7 +114,7 @@ function RuleRow({
   return (
     <section className="rounded-card border border-line bg-surface px-4 py-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <label className="min-w-0 flex-1 text-[11px] text-ink-muted">
+        <label className="min-w-0 w-1/2 text-[11px] text-ink-muted">
           Name
           <input
             name={`${prefix}name`}
