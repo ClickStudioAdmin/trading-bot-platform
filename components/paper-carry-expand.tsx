@@ -425,18 +425,18 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
           },
           {
             left: {
+              label: "Executable",
+              value: formatPct(order.theoretical.executableBasis),
+              tone: order.theoretical.executableBasis,
+            },
+          },
+          {
+            left: {
               label: "DTE",
               value:
                 order.theoretical.daysToExpiry === null
                   ? "—"
                   : order.theoretical.daysToExpiry.toFixed(1),
-            },
-          },
-          {
-            left: {
-              label: "Executable",
-              value: formatPct(order.theoretical.executableBasis),
-              tone: order.theoretical.executableBasis,
             },
           },
           {
@@ -476,12 +476,6 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             left: {
               label: "Fees + slip",
               value: formatPct(order.theoretical.feeRate),
-            },
-          },
-          {
-            right: {
-              label: "Filled",
-              value: formatDeskDateTime(order.filledAtMs),
             },
           },
         ]}
