@@ -47,7 +47,7 @@ const grouped = logsForCarry(
 );
 assert.deepEqual(
   grouped.map((row) => row.id),
-  [1, 3],
+  [3, 1],
 );
 
 const attached = attachLogs([{ id: 7 }, { id: 9 }], grouped);

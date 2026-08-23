@@ -7,6 +7,7 @@ import { TokenIcon } from "@/components/token-icon";
 import {
   closedTradeLabel,
   formatExitOrderType,
+  formatSourceWord,
 } from "@/lib/paper/automation";
 import {
   formatPct,
@@ -470,32 +471,143 @@ function PositionLogList({ logs }: { logs: EventLogRow[] }) {
 
   return (
     <div className="space-y-2">
-      {logs.map((log) => (
-        <article
-          key={log.id}
-          className="rounded-card border border-line bg-surface-raised px-3 py-2.5"
-        >
-          <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-            <h3 className="text-sm font-semibold tracking-tight">
-              {formatLogEvent(log.event)}
-            </h3>
-            <p className="text-xs text-ink-muted">
-              {formatLogTime(log.createdAt)}
+      {logs.map((log) => {
+        const rows = logDetailRows(log);
+        return (
+          <article
+            key={log.id}
+            className="rounded-card border border-line bg-surface-raised p-4"
+          >
+            <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+              <h3 className="text-sm font-semibold tracking-tight">
+                {formatLogEvent(log.event)}
+              </h3>
+              <p className="text-xs text-ink-muted">
+                {formatLogTime(log.createdAt)}
+              </p>
+            </header>
+            <p className="mt-0.5 text-sm text-ink-muted">{log.message}</p>
+            <p className={`mt-0.5 text-xs ${logLevelTone(log.level)}`}>
+              {[log.event, log.scope, log.strategy, log.level !== "info" ? log.level : null]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
-          </header>
-          <p className="mt-0.5 text-sm text-ink-muted">{log.message}</p>
-          {log.level !== "info" ? (
-            <p className={`mt-1 text-xs ${logLevelTone(log.level)}`}>
-              {log.level}
-            </p>
-          ) : null}
-        </article>
-      ))}
+            {rows.length > 0 ? <ValueList rows={rows} /> : null}
+          </article>
+        );
+      })}
       <p className="text-xs text-ink-faint">
         Trade events for this position. Same log as Activity.
       </p>
     </div>
   );
+}
+
+function logDetailRows(log: EventLogRow): MetricRow[] {
+  const rows: MetricRow[] = [];
+  for (const [key, value] of Object.entries(log.data)) {
+    if (key === "carryId" || value === null || value === undefined || value === "") {
+      continue;
+    }
+    const row = formatLogDataField(key, value);
+    if (row) {
+      rows.push(row);
+    }
+  }
+  return rows;
+}
+
+function formatLogDataField(key: string, value: unknown): MetricRow | null {
+  const label = LOG_FIELD_LABELS[key] ?? labelFromKey(key);
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    if (/basis|apr|pct$/i.test(key)) {
+      return { label, value: formatPct(value), tone: value };
+    }
+    if (/usdt$/i.test(key) || key === "notionalUsdt" || key === "clipUsdt") {
+      return { label, value: formatUsd(value) };
+    }
+    if (/dte$/i.test(key)) {
+      return { label, value: Number.isInteger(value) ? String(value) : value.toFixed(1) };
+    }
+    return { label, value: String(value) };
+  }
+
+  if (typeof value === "boolean") {
+    return { label, value: value ? "Yes" : "No" };
+  }
+
+  if (typeof value === "string") {
+    if (key === "source" || key === "closeSource") {
+      return {
+        label,
+        value: value === "engine" || value === "manual" ? formatSourceWord(value) : value,
+      };
+    }
+    if (key === "mode") {
+      return { label, value: formatLogMode(value) };
+    }
+    if (key === "reason" || key === "closeReason") {
+      return { label, value: formatLogReason(value) };
+    }
+    if (key === "side") {
+      return { label, value: value === "close" ? "Close" : "Open" };
+    }
+    return { label, value };
+  }
+
+  if (typeof value === "object") {
+    return { label, value: JSON.stringify(value) };
+  }
+
+  return { label, value: String(value) };
+}
+
+const LOG_FIELD_LABELS: Record<string, string> = {
+  spotSymbol: "Spot",
+  futureSymbol: "Future",
+  notionalUsdt: "Notional",
+  clipUsdt: "Clip value",
+  entryBasis: "Entry basis",
+  source: "Source",
+  closeSource: "Close source",
+  mode: "Mode",
+  reason: "Reason",
+  closeReason: "Reason",
+  ruleName: "Set",
+  closeMaxDte: "Close max DTE",
+  closeMinNetApr: "Close min APR",
+  takeProfitPct: "Take profit",
+  stopLossPct: "Stop loss",
+  side: "Side",
+};
+
+function labelFromKey(key: string): string {
+  return key
+    .replace(/Usdt$/i, "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function formatLogMode(mode: string): string {
+  if (mode === "unwind") {
+    return "Unwind";
+  }
+  if (mode === "market") {
+    return "Flatten";
+  }
+  return mode;
+}
+
+function formatLogReason(reason: string): string {
+  const labels: Record<string, string> = {
+    dte: "DTE",
+    mark_apr: "Mark APR",
+    take_profit: "Take profit",
+    stop_loss: "Stop loss",
+    unwind: "Unwind",
+  };
+  return labels[reason] ?? reason;
 }
 
 function formatLogEvent(event: string): string {

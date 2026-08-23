@@ -88,7 +88,7 @@ export function logsForCarry(
   return logs
     .filter((log) => carryIdFromLogData(log.data) === carryId)
     .sort(
-      (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id - b.id,
+      (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id,
     );
 }
 
