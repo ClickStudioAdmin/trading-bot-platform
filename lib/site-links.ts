@@ -16,7 +16,3 @@ export const CASH_AND_CARRY_SECONDARY_LINKS = [
   { href: "/strategies/cash-and-carry/pairs", label: "Pairs" },
 ] as const;
 
-export const CASH_AND_CARRY_LINKS = [
-  ...CASH_AND_CARRY_PRIMARY_LINKS,
-  ...CASH_AND_CARRY_SECONDARY_LINKS,
-] as const;

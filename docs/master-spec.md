@@ -21,7 +21,7 @@ The web app never places exchange orders from a Vercel invocation. Paper `paper_
 
 ## UI
 
-Dark business portal. Tokens in `app/globals.css`. Visual guide at `/theme`. Written rules in [ui-theme.md](ui-theme.md).
+Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme`. Written rules in [ui-theme.md](ui-theme.md).
 
 ## Current phase
 

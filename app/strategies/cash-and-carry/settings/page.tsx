@@ -54,8 +54,8 @@ export default async function CashAndCarrySettingsPage({
           </label>
           <p className="text-xs text-ink-muted">
             Percent of the top 5 book levels inside 5 bp of impact. 25 means
-            usable book is a quarter of that in-range book. Used for
-            Size USDT, filters, Dynamic clips, and the snapshot.
+            a quarter of that in-range book. Manual Size, Dynamic clips, and
+            Dynamic exits all use this number.
           </p>
           <button
             type="submit"

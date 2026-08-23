@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  blendEntryBasis,
   carryPnlPct,
   carryPnlUsdt,
   closePaperCarry,
@@ -17,6 +18,11 @@ function almostEqual(actual: number, expected: number, digits = 6) {
 almostEqual(carryPnlUsdt(0.02, 0.01, 10_000, 0.002), 60);
 almostEqual(carryPnlUsdt(0.02, 0.02, 10_000, 0.002), -40);
 almostEqual(carryPnlUsdt(0.012, -0.001, 10_000, 0.002), 90);
+almostEqual(blendEntryBasis(2_000, 0.02, 1_000, 0.05), 0.03);
+almostEqual(blendEntryBasis(10_000, 0.018, 10_000, 0.018), 0.018);
+assert.throws(() => blendEntryBasis(0, 0.02, 1_000, 0.03));
+assert.throws(() => blendEntryBasis(1_000, Number.NaN, 1_000, 0.03));
+
 almostEqual(carryPnlPct(60, 10_000), 0.006);
 almostEqual(carryPnlPct(-40, 10_000), -0.004);
 

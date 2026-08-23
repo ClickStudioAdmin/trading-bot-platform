@@ -37,8 +37,8 @@ export function PaperRulesForm({
 
       {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-          No rule sets. Add a position to start, or leave this empty if you
-          only trade by hand.
+          No sets yet. Add a Rule Set to start the paper engine, or leave
+          this empty if you only trade by hand.
         </p>
       ) : (
         layers.map((layer, index) => {
@@ -72,7 +72,7 @@ export function PaperRulesForm({
               : "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
           }
         >
-          Add position
+          Add Rule Set
         </button>
         {empty ? null : (
           <button

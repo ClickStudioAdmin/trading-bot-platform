@@ -122,6 +122,10 @@ export function PaperAutomationTrigger({
               </p>
               {canEdit ? (
                 <form action={updatePaperCarryExits} className="mt-1 space-y-1.5">
+                  <p className="text-xs text-ink-muted">
+                    Used by the next tick. Close on the row uses order type
+                    only.
+                  </p>
                   <input type="hidden" name="carryId" value={carryId} />
                   <input
                     type="hidden"

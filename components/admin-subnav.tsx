@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/admin/members", label: "Members" },
   { href: "/admin/settings", label: "Settings" },
   { href: "/admin/logs", label: "Logs" },
+  { href: "/admin/theme", label: "Theme" },
 ] as const;
 
 export function AdminSubnav() {

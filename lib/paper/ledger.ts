@@ -1,5 +1,6 @@
 import { writeEventLog } from "@/lib/logs/write";
 import { closeClipPlan, type PriorCloseClip } from "@/lib/paper/close";
+import { blendEntryBasis } from "@/lib/paper/math";
 import {
   paperOrderInsertRow,
   type PaperOrderRow,
@@ -40,6 +41,62 @@ export async function insertPaperOrder(
       data: { carryId: input.carryId, side: input.side },
     });
   }
+}
+
+export async function writeOpenClip(input: {
+  supabase: SupabaseClient;
+  userId: string;
+  row: PaperCarryRow;
+  opportunity: ScannedOpportunity;
+  clipUsdt: number;
+}): Promise<{ error: string | null }> {
+  if (!(input.clipUsdt > 0)) {
+    return { error: "Open clip must be positive." };
+  }
+  if (input.row.status !== "open") {
+    return { error: "Can only add size to an open paper carry." };
+  }
+
+  const notionalUsdt = input.row.notionalUsdt + input.clipUsdt;
+  const entryBasis = blendEntryBasis(
+    input.row.notionalUsdt,
+    input.row.entryBasis,
+    input.clipUsdt,
+    input.opportunity.netBasis,
+  );
+
+  const { data, error } = await input.supabase
+    .from("paper_carries")
+    .update({
+      notional_usdt: notionalUsdt,
+      entry_basis: entryBasis,
+    })
+    .eq("id", input.row.id)
+    .eq("user_id", input.userId)
+    .eq("status", "open")
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data) {
+    return { error: "Paper carry was not open." };
+  }
+
+  await insertPaperOrder(input.supabase, {
+    userId: input.userId,
+    carryId: input.row.id,
+    side: "open",
+    source: "engine",
+    triggerReason: null,
+    notionalUsdt: input.clipUsdt,
+    filledAt: new Date(),
+    opportunity: input.opportunity,
+    automation: input.row.automation,
+  });
+
+  return { error: null };
 }
 
 export async function writeCloseClip(input: {

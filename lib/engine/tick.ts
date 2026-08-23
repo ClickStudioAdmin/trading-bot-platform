@@ -18,6 +18,7 @@ import {
   insertPaperOrder,
   priorClosesFromOrders,
   writeCloseClip,
+  writeOpenClip,
 } from "@/lib/paper/ledger";
 import { carryPnlPct, carryPnlUsdt } from "@/lib/paper/math";
 import { pairKey, paperCarryInsertRow } from "@/lib/paper/open";
@@ -34,6 +35,7 @@ export async function runPaperEngineTick(): Promise<{
   opened: number;
   closed: number;
   clipped: number;
+  added: number;
 }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -98,6 +100,7 @@ export async function runPaperEngineTick(): Promise<{
   let opened = 0;
   let closed = 0;
   let clipped = 0;
+  let added = 0;
 
   for (const userId of userIds) {
     const settings = settingsByUser.get(userId) ?? {
@@ -161,16 +164,50 @@ export async function runPaperEngineTick(): Promise<{
     const entries = decideEntries(
       scan,
       userCarries.map((row) => ({
+        id: row.id,
         spotSymbol: row.spotSymbol,
         futureSymbol: row.futureSymbol,
         notionalUsdt: row.notionalUsdt,
         ruleId: row.ruleId,
         unwinding: row.status === "closing",
+        openedAtMs: row.openedAtMs,
       })),
       config,
     );
 
     for (const entry of entries) {
+      if (entry.carryId !== null) {
+        const row = userCarries.find((item) => item.id === entry.carryId);
+        if (!row) {
+          continue;
+        }
+        const written = await writeOpenClip({
+          supabase,
+          userId,
+          row,
+          opportunity: entry.opportunity,
+          clipUsdt: entry.notionalUsdt,
+        });
+        if (written.error) {
+          await writeEventLog({
+            level: "error",
+            scope: "trade",
+            event: "engine.open_failed",
+            message: written.error,
+            userId,
+            strategy: "cash-and-carry",
+            data: {
+              carryId: row.id,
+              futureSymbol: entry.opportunity.futureSymbol,
+              notionalUsdt: entry.notionalUsdt,
+            },
+          });
+          continue;
+        }
+        added += 1;
+        continue;
+      }
+
       const { data, error } = await supabase
         .from("paper_carries")
         .insert(
@@ -221,12 +258,12 @@ export async function runPaperEngineTick(): Promise<{
   await writeEventLog({
     scope: "system",
     event: "engine.tick",
-    message: `Paper engine tick opened ${opened}, closed ${closed}, clipped ${clipped}`,
+    message: `Paper engine tick opened ${opened}, added ${added}, closed ${closed}, clipped ${clipped}`,
     strategy: "cash-and-carry",
-    data: { users: userIds.size, opened, closed, clipped },
+    data: { users: userIds.size, opened, added, closed, clipped },
   });
 
-  return { users: userIds.size, opened, closed, clipped };
+  return { users: userIds.size, opened, added, closed, clipped };
 }
 
 function markEnginePositions(

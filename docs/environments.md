@@ -114,7 +114,7 @@ A member is an admin when `members.role` is `admin`, or the email is `click.stud
 
 The tick is `POST /api/engine/tick` on the Sydney Vercel function, guarded by `CRON_SECRET`. [`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) POSTs it every 5 minutes. Do not use Vercel Cron (Hobby is daily and Production-only).
 
-Confirm a tick from **Actions → Paper Engine Tick → Run workflow**. The JSON body is `{ users, opened, closed, clipped }`. Failures show in that run and in `/admin/logs`.
+Confirm a tick from **Actions → Paper Engine Tick → Run workflow**. The JSON body is `{ users, opened, added, closed, clipped }`. `added` is a Dynamic clip on an existing row. Failures show in that run and in `/admin/logs`.
 
 | Variable | Where | Value |
 | --- | --- | --- |

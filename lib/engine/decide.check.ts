@@ -208,7 +208,49 @@ assert.equal(
   )[0]?.notionalUsdt,
   25_000,
 );
-assert.equal(
+assert.deepEqual(
+  decideEntries(
+    [thin],
+    [
+      {
+        id: 42,
+        spotSymbol: "BTCUSDT",
+        futureSymbol: thin.futureSymbol,
+        notionalUsdt: 10_000,
+        ruleId: 1,
+        openedAtMs: 1,
+      },
+    ],
+    { enabled: true, layers: [dynamicLayer] },
+  ).map((row) => [row.notionalUsdt, row.carryId]),
+  [[8_000, 42]],
+);
+assert.deepEqual(
+  decideEntries(
+    [thin],
+    [
+      {
+        id: 20,
+        spotSymbol: "BTCUSDT",
+        futureSymbol: thin.futureSymbol,
+        notionalUsdt: 2_387,
+        ruleId: 1,
+        openedAtMs: 200,
+      },
+      {
+        id: 10,
+        spotSymbol: "BTCUSDT",
+        futureSymbol: thin.futureSymbol,
+        notionalUsdt: 2_169,
+        ruleId: 1,
+        openedAtMs: 100,
+      },
+    ],
+    { enabled: true, layers: [dynamicLayer] },
+  ).map((row) => row.carryId),
+  [10],
+);
+assert.deepEqual(
   decideEntries(
     [thin],
     [
@@ -220,8 +262,16 @@ assert.equal(
       },
     ],
     { enabled: true, layers: [dynamicLayer] },
-  )[0]?.notionalUsdt,
-  8_000,
+  ),
+  [],
+);
+assert.equal(
+  decideEntries(
+    [thin],
+    [],
+    { enabled: true, layers: [dynamicLayer] },
+  )[0]?.carryId,
+  null,
 );
 assert.deepEqual(
   decideEntries(

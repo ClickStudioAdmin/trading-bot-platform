@@ -37,6 +37,7 @@ export type EngineOpenPosition = {
   notionalUsdt: number;
   ruleId: number | null;
   unwinding?: boolean;
+  openedAtMs?: number;
 };
 
 export type PositionExits = {
@@ -59,6 +60,7 @@ export type EngineEntry = {
   opportunity: ScannedOpportunity;
   layer: PaperEngineLayer;
   notionalUsdt: number;
+  carryId: number | null;
 };
 
 export type ExitReason =
@@ -143,6 +145,12 @@ export function decideEntries(
     if (notionalUsdt === null) {
       continue;
     }
+    const carryId = pairHeld
+      ? existingCarryId(opens, layer.id, pair)
+      : null;
+    if (pairHeld && carryId === null) {
+      continue;
+    }
     const nextPairs = new Set(used.pairs);
     nextPairs.add(pair);
     usedByLayer.set(key, {
@@ -154,7 +162,7 @@ export function decideEntries(
     } else {
       clippedThisTick.add(pair);
     }
-    chosen.push({ opportunity, layer, notionalUsdt });
+    chosen.push({ opportunity, layer, notionalUsdt, carryId });
   }
   return chosen;
 }
@@ -299,6 +307,33 @@ function exitNotionalUsdt(
   }
   bookLeft.set(pair, book - clip);
   return clip;
+}
+
+function existingCarryId(
+  opens: EngineOpenPosition[],
+  layerId: number | null,
+  pair: string,
+): number | null {
+  if (layerId === null) {
+    return null;
+  }
+  const matches = opens.filter(
+    (row) =>
+      row.id !== undefined &&
+      !row.unwinding &&
+      row.ruleId === layerId &&
+      pairKey(row.spotSymbol, row.futureSymbol) === pair,
+  );
+  if (matches.length === 0) {
+    return null;
+  }
+  return [...matches].sort((a, b) => {
+    const openedDelta = (a.openedAtMs ?? 0) - (b.openedAtMs ?? 0);
+    if (openedDelta !== 0) {
+      return openedDelta;
+    }
+    return (a.id ?? 0) - (b.id ?? 0);
+  })[0]?.id ?? null;
 }
 
 function layerUsageKey(layer: { id: number | null; sortOrder: number }): string {

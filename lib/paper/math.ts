@@ -35,6 +35,24 @@ export function daysHeld(openedAtMs: number, closedAtMs: number): number {
   return (closedAtMs - openedAtMs) / 86_400_000;
 }
 
+export function blendEntryBasis(
+  currentNotionalUsdt: number,
+  currentEntryBasis: number,
+  clipUsdt: number,
+  clipBasis: number,
+): number {
+  if (!(currentNotionalUsdt > 0) || !(clipUsdt > 0)) {
+    throw new Error("Notional must be positive");
+  }
+  if (!Number.isFinite(currentEntryBasis) || !Number.isFinite(clipBasis)) {
+    throw new Error("Basis must be finite");
+  }
+  return (
+    (currentEntryBasis * currentNotionalUsdt + clipBasis * clipUsdt) /
+    (currentNotionalUsdt + clipUsdt)
+  );
+}
+
 export function carryPnlPct(pnlUsdt: number, notionalUsdt: number): number {
   if (!(notionalUsdt > 0)) {
     throw new Error("Notional must be positive");

@@ -1,6 +1,6 @@
 # UI theme
 
-Living reference: [/theme](../app/theme/page.tsx) on the deployed site (`/theme`).
+Living reference: [/admin/theme](../app/admin/theme/page.tsx) on the deployed site (`/admin/theme`).
 
 Style: dark modern business portal. Tokens live in `app/globals.css` (`@theme`). Use those names in Tailwind (`bg-canvas`, `text-ink`, `border-line`, `bg-accent`). Do not introduce new brand hex values in components.
 

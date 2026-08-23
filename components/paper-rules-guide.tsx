@@ -3,22 +3,48 @@ export function PaperRulesGuide() {
     <section className="mt-10 rounded-card border border-line bg-surface px-5 py-5">
       <h2 className="text-lg font-semibold tracking-tight">How automations work</h2>
       <p className="mt-2 text-sm text-ink-muted">
-        The paper engine scans the live book, then opens or closes paper
-        carries using these positions. No Bybit order is sent. Empty fields mean
-        that bound is off.
+        A set is a saved rule card. About every few minutes the paper engine
+        scans the live book and may open, add to, or close your paper rows.
+        Nothing is sent to Bybit. Leave a field empty to turn that rule off.
       </p>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Automations
+        The loop
+      </h3>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="When it runs"
+          detail="Each tick: scan the book, then for each of your sets decide whether to open, add size, or start an exit. Rows already marked Closing keep clipping until they are flat."
+        />
+        <GuideItem
+          term="When it is on"
+          detail="The engine is on if you have at least one saved set. With no sets it will not open anything and will not fire DTE, APR, take profit, or stop loss. It still finishes Closing rows."
+        />
+        <GuideItem
+          term="What it can hold"
+          detail="Each set may hold one pair unless you raise Max pairs. Extra clips on that same pair still count as one pair. Manual opens and other sets do not count toward this set’s limit."
+        />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Sets
       </h3>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Name"
-          detail="Label for this rule set. Positions show this name so you can see which set is controlling a paper row."
+          detail="Shown as a purple badge next to Auto on Positions. Click that badge on an open row to see the rules copied onto that trade, and to edit that trade’s exits."
         />
         <GuideItem
-          term="Add position"
-          detail="Adds a named rule set. If any rule sets exist, the engine may open and close paper rows from them. With none, it only continues rows that are already Closing. Each set has its own entry conditions, caps, order types, and exits. One pair per set unless you raise Max pairs. If several match a pair, the engine uses the one with the highest min APR. If min APRs tie, it uses the one that appears first on this page. Remove a set if no current paper row is using it. Save to apply."
+          term="Add Rule Set"
+          detail="Adds another rule card. Each set has its own name, entry filters, size caps, order types, and exits. Save to apply. A green pulse means a live row is using this set — you cannot remove it until that row is flat."
+        />
+        <GuideItem
+          term="Two sets, one pair"
+          detail="If more than one set matches the same pair, the engine uses the one with the higher Min APR. If those tie, it uses the set listed first on this page."
+        />
+        <GuideItem
+          term="Saving later"
+          detail="A new save applies to new opens. An open row keeps the exits copied when it opened. Change that trade from the set badge on Positions, not by hoping a later save will rewrite it."
         />
       </dl>
 
@@ -26,17 +52,17 @@ export function PaperRulesGuide() {
         Entry · Conditions (all must be true)
       </h3>
       <p className="mt-2 text-sm text-ink-muted">
-        All filled entry conditions must be true before this position looks to
-        open. Empty conditions are ignored.
+        A pair must pass every filled entry condition before this set will
+        open it. Empty conditions are ignored.
       </p>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Min APR %"
-          detail="The pair’s live net APR must be at least this. Net APR is the scanner’s net basis annualized by DTE, after fees and slip. Same number as the book’s Net APR column."
+          detail="Live net APR on the book must be at least this. Same number as the Opportunities Net APR column — basis after fees and slip, annualized by DTE."
         />
         <GuideItem
           term="Min DTE / Max DTE"
-          detail="Days until the dated future expires must sit in this range. Use max DTE to avoid very long tenors; use min DTE to avoid contracts that are about to expire."
+          detail="Days until the dated future expires must sit in this range. Use Max DTE to skip very long tenors. Use Min DTE to skip contracts that are about to expire."
         />
       </dl>
 
@@ -46,75 +72,98 @@ export function PaperRulesGuide() {
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Max Position Size"
-          detail="Cap on the sum of open sizes this position created. Dynamic fills up to this cap over time. A new clip is sized to the leftover room when the next book-sized clip would overshoot. Fixed skips if Order size would push the sum over the cap."
+          detail="Cap on how much notional this set may hold in total. Dynamic fills toward the cap over time. Each clip is the smaller of usable book and leftover room. Fixed skips the open if Order size would go over the cap."
         />
         <GuideItem
           term="Max pairs"
-          detail="How many different pairs this set may hold at once. Empty or 1 means one pair. Dynamic clips on that pair still count as one pair. Manual opens and other sets do not count."
+          detail="How many different pairs this set may hold at once. Empty or 1 means one pair. Adding size on the same pair is not a new pair."
         />
         <GuideItem
-          term="Order Type"
-          detail="Fixed opens one Order size on a pair you do not already hold. Dynamic (scale in): each tick may add one clip on the pair this set already holds, or the best matching pair if it holds none, sized to current usable book (or leftover room under Max Position Size), until the cap is met. Usable book is your Settings share of the top 5 book levels inside 5 bp of impact."
+          term="Order Type · Fixed"
+          detail="Opens Order size once, on a pair this set does not already hold. It will not add later clips on that pair."
+        />
+        <GuideItem
+          term="Order Type · Dynamic (scale in)"
+          detail="Each tick may add one clip to the existing Positions row for that pair. If this set holds none, it opens one row on the best matching pair. Clip size is usable book, or leftover room under Max Position Size — whichever is smaller."
         />
         <GuideItem
           term="Order size (USDT)"
-          detail="Fixed only. Paper size of the single open this position creates on a pair."
+          detail="Fixed only. The paper size of that single open."
         />
         <GuideItem
           term="Min usable book"
-          detail="Fixed only. The pair’s usable book must be at least this before that Order size is used."
+          detail="Fixed only. The pair’s usable book must be at least this before Order size is used."
         />
         <GuideItem
           term="Min Order Size"
-          detail="Dynamic entry and exit. Skip a clip if it would be below this, except the last leftover exit which always flattens so the position can finish. The last entry clip is also skipped if leftover room under Max Position Size is below this, so the cap may sit slightly under."
+          detail="Dynamic only. Skip a clip if it would be smaller than this. The last leftover on an exit still flattens so the row can finish. The last entry clip is skipped if leftover room is below this, so the cap may sit a little under Max Position Size."
+        />
+        <GuideItem
+          term="Usable book"
+          detail="Your Settings share of the top 5 book levels inside 5 bp of impact. Default is 25%. Manual Size, Dynamic clips, and Dynamic exits all use this."
         />
       </dl>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Exit · Conditions (any can be true)
+        Exit · When the engine closes
       </h3>
       <p className="mt-2 text-sm text-ink-muted">
-        Exits apply only to paper rows this position opened. If either filled
-        condition is true, the position starts exiting. First match wins: DTE,
-        then mark APR, then take profit, then stop loss.
+        These conditions apply only to rows this set opened, and only on a
+        tick — not when you click Close. First match wins: DTE, then mark APR,
+        then take profit, then stop loss.
       </p>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="DTE ≤"
-          detail="Start exiting when days to expiry fall to this number or below. Use this to flatten before delivery."
+          detail="Start exiting when days to expiry fall to this number or below."
         />
         <GuideItem
           term="APR % below"
-          detail="Start exiting when the live mark net APR is below this. That is the book’s current net APR, not your P&L %. Use it when the remaining edge has gone."
+          detail="Start exiting when the live mark net APR is below this. That is the book’s current net APR, not your P&L %."
         />
-      </dl>
-
-      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Exit · Position and Orders
-      </h3>
-      <dl className="mt-3 space-y-3 text-sm">
-        <GuideItem
-          term="Order Type"
-          detail="Fixed (entire position) closes the whole paper row when an exit fires. Dynamic (scale out) clips out over ticks: each tick closes up to the current usable book (and not below Min Order Size, unless this is the last leftover). Oldest rows on a pair go first. It keeps clipping until the position is flat."
-        />
-      </dl>
-
-      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Exit · Stops
-      </h3>
-      <p className="mt-2 text-sm text-ink-muted">
-        Percents are of the paper size at entry, not of mark APR. A $10,000
-        entry with a 10% take profit exits when all-in P&L is at least $1,000.
-        A 10% stop exits when all-in P&L is at or below −$1,000.
-      </p>
-      <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Take profit %"
-          detail="Exit when all-in P&L reaches this percent of entry notional, after open and close fee costs. Enter 10 for +10% ($1,000 on a $10,000 entry)."
+          detail="Exit when all-in P&L reaches this percent of the size at entry. Enter 10 for +10% ($1,000 on a $10,000 entry). Fees to open and close are already in that P&L."
         />
         <GuideItem
           term="Stop loss %"
-          detail="Exit when all-in P&L is at or below this loss, as a percent of entry notional. Enter 10 to stop at −10% (−$1,000 on a $10,000 entry). You type a positive number; the engine treats it as a loss."
+          detail="Exit when all-in P&L is at or below this loss. Enter 10 to stop at −10% (−$1,000 on a $10,000 entry). Type a positive number; the engine treats it as a loss."
+        />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Exit · How much closes
+      </h3>
+      <p className="mt-2 text-sm text-ink-muted">
+        Once an exit has started — from a rule or from you clicking Close —
+        only the exit order type decides how much comes off.
+      </p>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="Order Type · Fixed"
+          detail="Closes the whole remaining row in one go."
+        />
+        <GuideItem
+          term="Order Type · Dynamic (scale out)"
+          detail="Each tick closes up to the current usable book. The row shows Closing until it is flat. A leftover smaller than Min Order Size still finishes so the row can close."
+        />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Close and Unwind on Positions
+      </h3>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="Auto Close"
+          detail="You already chose to exit. DTE, APR, take profit, and stop loss are ignored. Only this set’s exit order type is used: Fixed flattens now, Dynamic clips once and marks Closing."
+        />
+        <GuideItem
+          term="Manual Close"
+          detail="Always flattens the remaining size at the live scan."
+        />
+        <GuideItem
+          term="Unwind"
+          detail="Manual rows only. Clips to usable book and marks Closing. Later ticks finish the rest."
         />
       </dl>
 
@@ -123,16 +172,12 @@ export function PaperRulesGuide() {
       </h3>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
-          term="Fixed: one open per pair"
-          detail="A set will not open a second pair unless Max pairs is raised. Fixed will not open a pair you already hold. Dynamic may add clips on the pair this set already holds until Max Position Size is reached. Manual Open can still stack the same pair."
-        />
-        <GuideItem
           term="No live mark"
           detail="If the pair is missing from the current scan, the engine will not auto-close it. There is no honest exit price or usable book."
         />
         <GuideItem
           term="Manual trades"
-          detail="Rows you opened by hand are not auto-closed by these rules. On Positions, Close flattens at market. Unwind clips to usable book and marks the row Closing until it is flat."
+          detail="Rows you opened by hand are not closed by these rules. Use Close or Unwind yourself."
         />
       </dl>
     </section>
