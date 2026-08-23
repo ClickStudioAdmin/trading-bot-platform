@@ -181,6 +181,7 @@ export async function runPaperEngineTick(): Promise<{
             {
               source: "engine",
               ruleId: entry.layer.id,
+              ruleName: entry.layer.name,
               automation: automationFromLayer(entry.layer),
             },
           ),

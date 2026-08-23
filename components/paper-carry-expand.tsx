@@ -60,7 +60,7 @@ export function OpenPaperCarryRows({
               <PaperAutomationTrigger
                 carryId={trade.id}
                 automation={trade.automation}
-                label="Rules"
+                label={trade.ruleName ?? "Rules"}
                 canEdit
                 entrySource="engine"
                 next={next}
@@ -115,6 +115,12 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
         <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
           {trade.futureSymbol}
           {" · "}
+          {trade.ruleName ? (
+            <>
+              {trade.ruleName}
+              {" · "}
+            </>
+          ) : null}
           <PaperAutomationTrigger
             carryId={trade.id}
             automation={trade.automation}

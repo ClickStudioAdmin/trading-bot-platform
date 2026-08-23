@@ -35,6 +35,7 @@ function layer(
 ): PaperEngineLayer {
   return {
     id: 1,
+    name: "Set 1",
     sortOrder: 0,
     sizeType: "fixed",
     exitSizeType: "fixed",
@@ -221,6 +222,26 @@ assert.equal(
     { enabled: true, layers: [dynamicLayer] },
   )[0]?.notionalUsdt,
   8_000,
+);
+assert.deepEqual(
+  decideEntries(
+    [
+      opportunity("BTCUSDT-25AUG27", { netApr: 0.22, capacityUsdt: 8_000 }),
+      opportunity("BTCUSDT-25JUL27", { netApr: 0.21, capacityUsdt: 8_000 }),
+    ],
+    [],
+    {
+      enabled: true,
+      layers: [
+        layer({
+          sizeType: "dynamic",
+          minSizeUsdt: 5_000,
+          maxOpenCount: null,
+        }),
+      ],
+    },
+  ).map((row) => row.opportunity.futureSymbol),
+  ["BTCUSDT-25AUG27"],
 );
 assert.deepEqual(
   decideEntries(

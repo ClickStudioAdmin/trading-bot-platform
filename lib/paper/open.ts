@@ -123,6 +123,7 @@ export function paperCarryInsertRow(
     automation?: PaperCarryAutomation;
     source?: TradeSource;
     ruleId?: number | null;
+    ruleName?: string | null;
   },
 ) {
   if (!(notionalUsdt > 0)) {
@@ -139,6 +140,7 @@ export function paperCarryInsertRow(
     status: "open" as const,
     source: extras?.source ?? "manual",
     rule_id: extras?.ruleId ?? null,
+    rule_name: extras?.ruleName ?? null,
     ...(extras?.automation ? automationInsertColumns(extras.automation) : {}),
   };
 }

@@ -13,6 +13,7 @@ import {
 
 const layer = {
   id: 1,
+  name: "Set 1",
   sortOrder: 0,
   sizeType: "fixed" as const,
   exitSizeType: "fixed" as const,

@@ -9,6 +9,7 @@ import { asNullableNumber, asNumber } from "@/lib/paper/rows";
 export type PaperLayerFormValues = {
   key: string;
   id: string;
+  name: string;
   sizeType: PaperSizeType;
   exitSizeType: PaperSizeType;
   notionalUsdt: number;
@@ -33,6 +34,7 @@ export type PaperRulesFormValues = {
 export function defaultPaperLayer(sortOrder = 0): PaperEngineLayer {
   return {
     id: null,
+    name: `Set ${sortOrder + 1}`,
     sortOrder,
     sizeType: "dynamic",
     exitSizeType: "dynamic",
@@ -42,7 +44,7 @@ export function defaultPaperLayer(sortOrder = 0): PaperEngineLayer {
     maxDte: null,
     minCapacityUsdt: null,
     minSizeUsdt: null,
-    maxOpenCount: null,
+    maxOpenCount: 1,
     maxOpenNotionalUsdt: null,
     closeMaxDte: null,
     closeMinNetApr: null,
@@ -74,6 +76,7 @@ export function paperConfigToFormValues(
     layers: config.layers.map((layer, index) => ({
       key: layer.id !== null ? `id-${layer.id}` : `new-${index}`,
       id: layer.id === null ? "" : String(layer.id),
+      name: layer.name,
       sizeType: layer.sizeType,
       exitSizeType: layer.exitSizeType,
       notionalUsdt: layer.notionalUsdt,
@@ -126,6 +129,7 @@ export function parsePaperRulesRow(
 ): PaperEngineLayer {
   return {
     id: asNumber(row.id),
+    name: parseRuleName(row.name, sortOrder),
     sortOrder,
     sizeType: parseSizeType(row.size_type),
     exitSizeType: parseSizeType(row.exit_size_type),
@@ -150,6 +154,7 @@ export function paperLayerToRow(
 ) {
   return {
     user_id: userId,
+    name: layer.name,
     sort_order: layer.sortOrder,
     size_type: layer.sizeType,
     exit_size_type: layer.exitSizeType,
@@ -223,6 +228,7 @@ function parseLayer(
     layer: {
       id:
         idRaw === "" || !Number.isFinite(Number(idRaw)) ? null : Number(idRaw),
+      name: parseRuleName(form.get(`${prefix}name`), index),
       sortOrder: index,
       sizeType,
       exitSizeType,
@@ -245,6 +251,14 @@ function parseLayer(
 
 export function parseSizeType(value: unknown): PaperSizeType {
   return value === "fixed" ? "fixed" : "dynamic";
+}
+
+export function parseRuleName(raw: unknown, index: number): string {
+  const text = String(raw ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 40);
+  return text === "" ? `Set ${index + 1}` : text;
 }
 
 function parseBound(raw: FormDataEntryValue | null): number | null {

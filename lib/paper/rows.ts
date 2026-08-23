@@ -29,6 +29,7 @@ export type PaperCarryRow = {
   closeSource: TradeSource | null;
   closeReason: CloseReason | null;
   ruleId: number | null;
+  ruleName: string | null;
   automation: PaperCarryAutomation;
 };
 
@@ -73,6 +74,11 @@ export function asNullableNumber(value: unknown): number | null {
   return asNumber(value);
 }
 
+function asNullableName(value: unknown): string | null {
+  const text = String(value ?? "").trim();
+  return text === "" ? null : text;
+}
+
 export function parsePaperCarryRow(row: Record<string, unknown>): PaperCarryRow {
   const openedAt = new Date(String(row.opened_at));
   const closedAt = row.closed_at ? new Date(String(row.closed_at)) : null;
@@ -99,6 +105,7 @@ export function parsePaperCarryRow(row: Record<string, unknown>): PaperCarryRow 
       status === "closed" ? parseTradeSource(row.close_source) : null,
     closeReason: parseCloseReason(row.close_reason),
     ruleId: asNullableNumber(row.rule_id),
+    ruleName: asNullableName(row.rule_name),
     automation: {
       entrySizeType: parseEntrySizeType(row.entry_size_type),
       exitSizeType: parseEntrySizeType(row.exit_size_type),

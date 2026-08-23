@@ -13,8 +13,12 @@ export function PaperRulesGuide() {
       </h3>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
+          term="Name"
+          detail="Label for this rule set. Positions show this name so you can see which set is controlling a paper row."
+        />
+        <GuideItem
           term="Add position"
-          detail="Adds a rule set. If any rule sets exist, the engine may open and close paper rows from them. With none, it only continues rows that are already Closing. Each set has its own entry conditions, caps, order types, and exits. If several match a pair, the engine uses the one with the highest min APR. If min APRs tie, it uses the one that appears first on this page. Remove a set if no current paper row is using it. Save to apply."
+          detail="Adds a named rule set. If any rule sets exist, the engine may open and close paper rows from them. With none, it only continues rows that are already Closing. Each set has its own entry conditions, caps, order types, and exits. One pair per set unless you raise Max pairs. If several match a pair, the engine uses the one with the highest min APR. If min APRs tie, it uses the one that appears first on this page. Remove a set if no current paper row is using it. Save to apply."
         />
       </dl>
 
@@ -45,12 +49,12 @@ export function PaperRulesGuide() {
           detail="Cap on the sum of open sizes this position created. Dynamic fills up to this cap over time. A new clip is sized to the leftover room when the next book-sized clip would overshoot. Fixed skips if Order size would push the sum over the cap."
         />
         <GuideItem
-          term="Max opens"
-          detail="Maximum number of open paper rows this position may have. Each Dynamic clip counts as one open. Manual opens and other positions do not count."
+          term="Max pairs"
+          detail="How many different pairs this set may hold at once. Empty or 1 means one pair. Dynamic clips on that pair still count as one pair. Manual opens and other sets do not count."
         />
         <GuideItem
           term="Order Type"
-          detail="Fixed opens one Order size on a pair you do not already hold. Dynamic (scale in): each tick may add one clip on a matching pair, sized to current usable book (or leftover room under Max Position Size), until the cap is met. Usable book is your Settings share of the top 5 book levels inside 5 bp of impact."
+          detail="Fixed opens one Order size on a pair you do not already hold. Dynamic (scale in): each tick may add one clip on the pair this set already holds, or the best matching pair if it holds none, sized to current usable book (or leftover room under Max Position Size), until the cap is met. Usable book is your Settings share of the top 5 book levels inside 5 bp of impact."
         />
         <GuideItem
           term="Order size (USDT)"
@@ -120,7 +124,7 @@ export function PaperRulesGuide() {
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Fixed: one open per pair"
-          detail="A Fixed position will not open a pair you already hold. Dynamic may add clips on a pair you already hold until Max Position Size or Max opens is reached. Manual Open can still stack the same pair."
+          detail="A set will not open a second pair unless Max pairs is raised. Fixed will not open a pair you already hold. Dynamic may add clips on the pair this set already holds until Max Position Size is reached. Manual Open can still stack the same pair."
         />
         <GuideItem
           term="No live mark"

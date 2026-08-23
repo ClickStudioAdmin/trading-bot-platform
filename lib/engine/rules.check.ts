@@ -16,6 +16,8 @@ assert.equal(parsedEmpty.ok, true);
 if (parsedEmpty.ok) {
   assert.equal(parsedEmpty.config.enabled, true);
   assert.equal(parsedEmpty.config.layers[0]?.sizeType, "dynamic");
+  assert.equal(parsedEmpty.config.layers[0]?.name, "Set 1");
+  assert.equal(parsedEmpty.config.layers[0]?.maxOpenCount, null);
   assert.equal(parsedEmpty.config.layers[0]?.notionalUsdt, 10_000);
   assert.equal(parsedEmpty.config.layers[0]?.minNetApr, null);
   assert.equal(parsedEmpty.config.layers[0]?.minSizeUsdt, null);
@@ -25,6 +27,7 @@ const filled = new FormData();
 filled.set("enabled", "on");
 filled.set("ruleCount", "2");
 filled.set("r0_id", "4");
+filled.set("r0_name", "Core carry");
 filled.set("r0_notionalUsdt", "10000");
 filled.set("r0_minApr", "10");
 filled.set("r0_stopLoss", "2");
@@ -37,6 +40,8 @@ assert.equal(parsed.ok, true);
 if (parsed.ok) {
   assert.equal(parsed.config.enabled, true);
   assert.equal(parsed.config.layers.length, 2);
+  assert.equal(parsed.config.layers[0]?.name, "Core carry");
+  assert.equal(parsed.config.layers[1]?.name, "Set 2");
   assert.equal(parsed.config.layers[0]?.minNetApr, 0.1);
   assert.equal(parsed.config.layers[0]?.stopLossPct, -0.02);
   assert.equal(parsed.config.layers[1]?.minNetApr, 0.2);

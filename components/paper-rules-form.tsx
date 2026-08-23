@@ -114,9 +114,16 @@ function RuleRow({
   return (
     <section className="rounded-card border border-line bg-surface px-4 py-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold tracking-tight">
-          Position {index + 1}
-        </h2>
+        <label className="min-w-0 flex-1 text-[11px] text-ink-muted">
+          Name
+          <input
+            name={`${prefix}name`}
+            defaultValue={layer.name}
+            maxLength={40}
+            placeholder={`Set ${index + 1}`}
+            className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
+          />
+        </label>
         {inUse ? (
           <span className="text-xs text-warning">
             In use by an open position
@@ -162,8 +169,8 @@ function RuleRow({
           />
           <Field
             name={`${prefix}maxOpenCount`}
-            label="Max opens"
-            defaultValue={layer.maxOpenCount}
+            label="Max pairs"
+            defaultValue={layer.maxOpenCount || "1"}
           />
           <label className="block text-[11px] text-ink-muted">
             Order Type

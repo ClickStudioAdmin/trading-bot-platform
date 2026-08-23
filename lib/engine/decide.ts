@@ -7,6 +7,7 @@ export type PaperSizeType = "fixed" | "dynamic";
 
 export type PaperEngineLayer = {
   id: number | null;
+  name: string;
   sortOrder: number;
   sizeType: PaperSizeType;
   exitSizeType: PaperSizeType;
@@ -96,14 +97,17 @@ export function decideEntries(
       (b.netApr ?? Number.NEGATIVE_INFINITY) -
       (a.netApr ?? Number.NEGATIVE_INFINITY),
   );
-  const usedByLayer = new Map<string, { count: number; notional: number }>();
+  const usedByLayer = new Map<
+    string,
+    { pairs: Set<string>; notional: number }
+  >();
   for (const open of opens) {
     if (open.ruleId === null) {
       continue;
     }
     const key = layerUsageKey({ id: open.ruleId, sortOrder: 0 });
-    const used = usedByLayer.get(key) ?? { count: 0, notional: 0 };
-    used.count += 1;
+    const used = usedByLayer.get(key) ?? { pairs: new Set(), notional: 0 };
+    used.pairs.add(pairKey(open.spotSymbol, open.futureSymbol));
     used.notional += open.notionalUsdt;
     usedByLayer.set(key, used);
   }
@@ -125,8 +129,10 @@ export function decideEntries(
       continue;
     }
     const key = layerUsageKey(layer);
-    const used = usedByLayer.get(key) ?? { count: 0, notional: 0 };
-    if (layer.maxOpenCount !== null && used.count + 1 > layer.maxOpenCount) {
+    const used = usedByLayer.get(key) ?? { pairs: new Set(), notional: 0 };
+    const pairHeld = used.pairs.has(pair);
+    const maxPairs = layer.maxOpenCount ?? 1;
+    if (!pairHeld && used.pairs.size >= maxPairs) {
       continue;
     }
     const remainingUsdt =
@@ -137,8 +143,10 @@ export function decideEntries(
     if (notionalUsdt === null) {
       continue;
     }
+    const nextPairs = new Set(used.pairs);
+    nextPairs.add(pair);
     usedByLayer.set(key, {
-      count: used.count + 1,
+      pairs: nextPairs,
       notional: used.notional + notionalUsdt,
     });
     if (layer.sizeType === "fixed") {
