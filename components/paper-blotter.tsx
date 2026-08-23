@@ -244,21 +244,18 @@ export function ClosedPaperTrades({
   );
 }
 
-export function PaperDeskStats({
+export function PaperPerformanceStats({
   signedIn,
-  open,
   closed,
 }: {
   signedIn: boolean;
-  open: MarkedPaperCarry[];
   closed: PaperCarryRow[];
 }) {
-  const stats = paperDeskStats(open, closed);
-  const exposure = openExposure(open);
+  const stats = paperDeskStats([], closed);
   const closedMix =
     stats.closedCount === 0
       ? "0"
-      : `${stats.closedCount} · ${Math.round((stats.greenCount / stats.closedCount) * 100)}% green`;
+      : `${stats.closedCount} · ${Math.round((stats.greenCount / stats.closedCount) * 100)}% win rate`;
 
   return (
     <section>
@@ -268,7 +265,31 @@ export function PaperDeskStats({
           signedIn ? undefined : "Sign in to see your paper desk numbers."
         }
       />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StatCard
+          label="Realized P&L"
+          value={signedIn ? formatSignedUsd(stats.realizedUsdt) : "—"}
+          toneClass={signedTone(signedIn ? stats.realizedUsdt : null)}
+        />
+        <StatCard label="Closed trades" value={signedIn ? closedMix : "—"} />
+      </div>
+    </section>
+  );
+}
+
+export function PaperOpenStats({
+  signedIn,
+  open,
+}: {
+  signedIn: boolean;
+  open: MarkedPaperCarry[];
+}) {
+  const stats = paperDeskStats(open, []);
+  const exposure = openExposure(open);
+
+  return (
+    <section>
+      <div className="grid gap-4 sm:grid-cols-2">
         <StatCard
           label="Open notional"
           value={
@@ -286,12 +307,6 @@ export function PaperDeskStats({
           }
           toneClass={signedTone(signedIn ? stats.unrealizedUsdt : null)}
         />
-        <StatCard
-          label="Realized P&L"
-          value={signedIn ? formatSignedUsd(stats.realizedUsdt) : "—"}
-          toneClass={signedTone(signedIn ? stats.realizedUsdt : null)}
-        />
-        <StatCard label="Closed trades" value={signedIn ? closedMix : "—"} />
       </div>
       <div className="mt-4 rounded-card border border-line bg-surface p-6">
         <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">

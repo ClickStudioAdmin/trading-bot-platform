@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeading } from "@/components/page-heading";
-import { OpenPaperTrades } from "@/components/paper-blotter";
+import { OpenPaperTrades, PaperOpenStats } from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
 import { persistOpportunities } from "@/lib/opportunities/persist";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -47,6 +47,7 @@ export default async function CashAndCarryPositionsPage({
           unwinding={firstSearchValue(params.paper) === "unwinding"}
           error={firstSearchValue(params.paperError)}
         />
+        <PaperOpenStats signedIn={desk.signedIn} open={desk.open} />
         <OpenPaperTrades
           signedIn={desk.signedIn}
           open={desk.open}

@@ -10,6 +10,7 @@ import {
 } from "@/lib/paper/automation";
 import {
   formatPct,
+  formatPrice,
   formatSignedUsd,
   formatUsd,
   signedTone,
@@ -17,6 +18,7 @@ import {
 import { closeOpenPaperCarry } from "@/lib/paper/actions";
 import { carryPnlPct, clipPnl } from "@/lib/paper/math";
 import {
+  fillSlip,
   formatCloseOrderWhy,
   formatOrderConditions,
   formatOrderHeadline,
@@ -379,34 +381,10 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
   const conditions = formatOrderConditions(order).filter(
     (line) => !line.startsWith("Order Type"),
   );
-  const rows: { label: string; value: string; tone?: number | null }[] = [
-    {
-      label: "Entry basis",
-      value: formatPct(order.fillBasis),
-      tone: order.fillBasis,
-    },
-    {
-      label: "Mark APR",
-      value: formatPct(order.theoretical.netApr),
-      tone: order.theoretical.netApr,
-    },
-    {
-      label: "DTE",
-      value:
-        order.theoretical.daysToExpiry === null
-          ? "—"
-          : order.theoretical.daysToExpiry.toFixed(1),
-    },
-  ];
-  if (order.theoretical.capacityUsdt !== null) {
-    rows.push({
-      label: "Usable book",
-      value: formatUsd(order.theoretical.capacityUsdt),
-    });
-  }
+  const slip = fillSlip(order);
 
   return (
-    <article className="rounded-card border border-line bg-surface-raised px-3 py-2.5">
+    <article className="rounded-card border border-line bg-surface-raised p-4">
       <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <h3 className="text-sm font-semibold tracking-tight">
           {formatOrderHeadline(order)}
@@ -421,7 +399,76 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
       {conditions.length > 0 ? (
         <p className="mt-0.5 text-xs text-ink-faint">{conditions.join(" · ")}</p>
       ) : null}
-      <ValueList rows={rows} />
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <SnapshotList
+          title="Theoretical · scan"
+          rows={[
+            {
+              label: "Net basis",
+              value: formatPct(order.theoretical.netBasis),
+              tone: order.theoretical.netBasis,
+            },
+            {
+              label: "Net APR",
+              value: formatPct(order.theoretical.netApr),
+              tone: order.theoretical.netApr,
+            },
+            {
+              label: "DTE",
+              value:
+                order.theoretical.daysToExpiry === null
+                  ? "—"
+                  : order.theoretical.daysToExpiry.toFixed(1),
+            },
+            {
+              label: "Executable",
+              value: formatPct(order.theoretical.executableBasis),
+              tone: order.theoretical.executableBasis,
+            },
+            {
+              label: "Capacity",
+              value:
+                order.theoretical.capacityUsdt === null
+                  ? "—"
+                  : formatUsd(order.theoretical.capacityUsdt),
+            },
+            {
+              label: "Spot ask",
+              value: formatPrice(order.theoretical.spotAsk),
+            },
+            {
+              label: "Future bid",
+              value: formatPrice(order.theoretical.futureBid),
+            },
+            {
+              label: "Fees + slip",
+              value: formatPct(order.theoretical.feeRate),
+              tone: order.theoretical.feeRate,
+            },
+          ]}
+        />
+        <SnapshotList
+          title="Execution · paper"
+          rows={[
+            {
+              label: "Fill basis",
+              value: formatPct(order.fillBasis),
+              tone: order.fillBasis,
+            },
+            { label: "Slip vs scan", value: formatPct(slip), tone: slip },
+            { label: "Notional", value: formatUsd(order.notionalUsdt) },
+            {
+              label: "Buy spot",
+              value: formatPrice(order.theoretical.spotAsk),
+            },
+            {
+              label: "Sell future",
+              value: formatPrice(order.theoretical.futureBid),
+            },
+            { label: "Filled", value: formatDeskDateTime(order.filledAtMs) },
+          ]}
+        />
+      </div>
     </article>
   );
 }
@@ -502,13 +549,42 @@ function CloseOrderCard({
   );
 }
 
+function SnapshotList({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { label: string; value: string; tone?: number | null }[];
+}) {
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        {title}
+      </p>
+      <ValueRows rows={rows} className="mt-2 space-y-1" />
+    </div>
+  );
+}
+
 function ValueList({
   rows,
 }: {
   rows: { label: string; value: string; tone?: number | null }[];
 }) {
   return (
-    <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
+    <ValueRows rows={rows} className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2" />
+  );
+}
+
+function ValueRows({
+  rows,
+  className,
+}: {
+  rows: { label: string; value: string; tone?: number | null }[];
+  className: string;
+}) {
+  return (
+    <dl className={`text-sm ${className}`}>
       {rows.map((row) => (
         <div key={row.label} className="flex items-center justify-between gap-3">
           <dt className="text-ink-muted">{row.label}</dt>
