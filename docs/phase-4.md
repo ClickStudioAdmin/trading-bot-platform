@@ -28,7 +28,7 @@ Stop after each step.
 
 ## Runtime
 
-The tick is host-agnostic: `runPaperEngineTick` in `lib/engine`. Phase 4 calls it from `POST /api/engine/tick` on Vercel in Sydney. GitHub Actions schedules the POST. Fly.io can later call the same function; do not add Fly this phase.
+The tick is host-agnostic: `runPaperEngineTick` in `lib/engine`. Phase 4 calls it from `POST /api/engine/tick` on Vercel in Sydney (cron secret). Admins can also run it from the header **Tick** button (`POST /api/engine/admin-tick`, session admin only — no cron secret in the browser). GitHub Actions schedules the POST. Fly.io can later call the same function; do not add Fly this phase.
 
 Vercel Cron is not the scheduler. Hobby cron is once per day and Production-only, so `develop` would not tick.
 
@@ -56,7 +56,7 @@ Expand a current or past position to see its paper orders. Each order stores the
 
 ## Event logs and admin
 
-`event_logs` records system, strategy, and trade events. Writes are service-role only via `writeEventLog`. Manual paper open/close, unwinds, automation saves, and engine clips are logged. Page scans are not.
+`event_logs` records system, strategy, and trade events. Writes are service-role only via `writeEventLog`. Manual paper open/close, unwinds, automation saves, engine clips, and admin header ticks are logged. Page scans are not.
 
 `/strategies/cash-and-carry/activity` is the signed-in user’s own trade and strategy events. `/admin/logs` is the full system log for admins. Logs and members are live. Admin settings is a placeholder.
 

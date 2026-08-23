@@ -1,3 +1,4 @@
+import { AdminTickButton } from "@/components/admin-tick-button";
 import { SiteLogo } from "@/components/site-logo";
 import { SiteNav } from "@/components/site-nav";
 import { UserMenu } from "@/components/user-menu";
@@ -18,6 +19,7 @@ export async function SiteHeader() {
           extraLinks={extraLinks}
         />
         <div className="flex items-center gap-2">
+          {admin ? <AdminTickButton /> : null}
           <details className="relative md:hidden">
             <summary className="list-none rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink [&::-webkit-details-marker]:hidden">
               Menu
