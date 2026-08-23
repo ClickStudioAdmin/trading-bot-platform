@@ -405,7 +405,6 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             left: {
               label: "Net basis",
               value: formatPct(order.theoretical.netBasis),
-              tone: order.theoretical.netBasis,
               hint: `Fees + slip: ${formatPct(order.theoretical.feeRate)}`,
             },
             right: {
@@ -421,7 +420,6 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             left: {
               label: "Net APR",
               value: formatPct(order.theoretical.netApr),
-              tone: order.theoretical.netApr,
             },
           },
           {
@@ -520,7 +518,6 @@ function CloseOrderCard({
     {
       label: "Exit basis",
       value: formatPct(order.fillBasis),
-      tone: order.fillBasis,
     },
     {
       label: "Clip P&L",
