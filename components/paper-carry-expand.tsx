@@ -493,11 +493,6 @@ function CloseOrderCard({
       tone: order.fillBasis,
     },
     {
-      label: "Entry basis",
-      value: formatPct(entryBasis),
-      tone: entryBasis,
-    },
-    {
       label: "Basis captured",
       value: formatPct(captured),
       tone: captured,
