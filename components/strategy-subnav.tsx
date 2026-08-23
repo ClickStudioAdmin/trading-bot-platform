@@ -34,13 +34,13 @@ export function StrategySubnav({
           <Link
             href="/strategies/cash-and-carry/automations"
             className="mt-8 flex items-center gap-2 text-sm text-success"
-            title="Automations running"
+            title="Automations Running"
           >
             <span className="relative flex size-2.5" aria-hidden>
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60" />
               <span className="relative inline-flex size-2.5 rounded-full bg-success" />
             </span>
-            Automations
+            Automations Running
           </Link>
         ) : null}
       </div>
