@@ -53,7 +53,7 @@ export function OpenPaperCarryRows({
         <span className="flex items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
-          <PositionKind source={trade.source} status={trade.status} />
+          <PositionKind source={trade.source} />
           {trade.ruleName ? (
             <PaperAutomationTrigger
               carryId={trade.id}
@@ -111,7 +111,7 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
         <span className="flex items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
-          <PositionKind source={trade.source} status={trade.status} />
+          <PositionKind source={trade.source} />
           {trade.ruleName ? (
             <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent">
               {trade.ruleName}
@@ -222,6 +222,19 @@ function ClosePaperButton({
   trade: MarkedPaperCarry;
   next: PaperReturnPath;
 }) {
+  if (trade.status === "closing") {
+    return (
+      <ColumnHint
+        hint="Exit already submitted. Later ticks clip to usable book until the row is flat."
+        label={
+          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
+            Closing
+          </span>
+        }
+      />
+    );
+  }
+
   if (trade.markBasis === null) {
     return (
       <span
@@ -259,7 +272,7 @@ function ClosePaperButton({
           }
         />
       </form>
-      {trade.source === "manual" && trade.status !== "closing" ? (
+      {trade.source === "manual" ? (
         <form action={closeOpenPaperCarry}>
           <input type="hidden" name="carryId" value={trade.id} />
           <input type="hidden" name="next" value={next} />
@@ -300,22 +313,12 @@ function AutoCloseHint({
 
 function PositionKind({
   source,
-  status,
 }: {
   source: MarkedPaperCarry["source"];
-  status: MarkedPaperCarry["status"];
 }) {
-  const auto = source === "engine";
   return (
-    <span className="inline-flex items-center gap-1 font-normal">
-      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] text-accent">
-        {auto ? "Auto" : "Manual"}
-      </span>
-      {status === "closing" ? (
-        <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
-          Closing
-        </span>
-      ) : null}
+    <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent">
+      {source === "engine" ? "Auto" : "Manual"}
     </span>
   );
 }
