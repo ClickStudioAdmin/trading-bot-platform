@@ -420,6 +420,7 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             left: {
               label: "Net APR",
               value: formatPct(order.theoretical.netApr),
+              tone: order.theoretical.netApr,
             },
           },
           {
