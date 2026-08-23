@@ -8,7 +8,7 @@ export function AccountSidenav() {
   const pathname = usePathname();
 
   return (
-    <aside className="rounded-card border border-line bg-surface p-4 lg:w-56 lg:shrink-0">
+    <aside className="w-56 shrink-0 border-r border-line bg-surface px-5 py-6">
       <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
         Account
       </p>

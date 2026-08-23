@@ -25,7 +25,7 @@ export default function RootLayout({
     <html lang="en" className={geist.className}>
       <body className="flex min-h-dvh flex-col bg-canvas text-ink">
         <SiteHeader />
-        <div className="flex-1">{children}</div>
+        <div className="flex flex-1 flex-col">{children}</div>
         <SiteFooter />
       </body>
     </html>
