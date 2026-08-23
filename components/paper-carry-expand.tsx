@@ -59,7 +59,7 @@ export function OpenPaperCarryRows({
               canEdit
               entrySource="engine"
               next={next}
-              className="rounded-full bg-surface-raised px-2 py-0.5 text-[11px] font-normal text-ink-muted hover:text-ink"
+              className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent hover:text-accent-strong"
             />
           ) : null}
         </span>
@@ -110,7 +110,7 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
           {trade.baseCoin}
           <PositionKind source={trade.source} status={trade.status} />
           {trade.ruleName ? (
-            <span className="rounded-full bg-surface-raised px-2 py-0.5 text-[11px] font-normal text-ink-muted">
+            <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent">
               {trade.ruleName}
             </span>
           ) : null}
