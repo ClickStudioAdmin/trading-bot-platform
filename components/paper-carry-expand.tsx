@@ -428,6 +428,7 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             left: {
               label: "Scan basis",
               value: formatPct(order.theoretical.executableBasis),
+              hint: "Gross basis before slippage + fees",
             },
           },
           {
