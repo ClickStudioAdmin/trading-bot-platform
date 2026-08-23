@@ -105,12 +105,23 @@ export function formatEntryTriggers(automation: PaperCarryAutomation): string[] 
   return lines;
 }
 
+export function formatExitOrderType(
+  automation: Pick<PaperCarryAutomation, "exitSizeType">,
+): string | null {
+  if (automation.exitSizeType === "dynamic") {
+    return "Order Type Dynamic (scale out)";
+  }
+  if (automation.exitSizeType === "fixed") {
+    return "Order Type Fixed (entire position)";
+  }
+  return null;
+}
+
 export function formatExitTriggers(automation: PaperCarryAutomation): string[] {
   const lines: string[] = [];
-  if (automation.exitSizeType === "dynamic") {
-    lines.push("Order Type Dynamic (scale out)");
-  } else if (automation.exitSizeType === "fixed") {
-    lines.push("Order Type Fixed (entire position)");
+  const orderType = formatExitOrderType(automation);
+  if (orderType) {
+    lines.push(orderType);
   }
   if (automation.closeMaxDte !== null) {
     lines.push(`DTE ≤ ${automation.closeMaxDte}`);

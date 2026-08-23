@@ -5,6 +5,7 @@ import {
   exitFormValues,
   formatCloseHow,
   formatEntryTriggers,
+  formatExitOrderType,
   formatExitTriggers,
   parseCarryExitForm,
   parseCloseReason,
@@ -38,6 +39,10 @@ assert.deepEqual(formatEntryTriggers(automation), [
   "Max Position Size $25,000",
   "Min usable book $5,000",
 ]);
+assert.equal(
+  formatExitOrderType(automation),
+  "Order Type Fixed (entire position)",
+);
 assert.deepEqual(formatExitTriggers(automation), [
   "Order Type Fixed (entire position)",
   "DTE ≤ 3",

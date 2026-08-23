@@ -4,7 +4,10 @@ import { useId, useState, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
 import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
 import { TokenIcon } from "@/components/token-icon";
-import { closedTradeLabel, formatExitTriggers } from "@/lib/paper/automation";
+import {
+  closedTradeLabel,
+  formatExitOrderType,
+} from "@/lib/paper/automation";
 import {
   formatPct,
   formatPrice,
@@ -280,18 +283,16 @@ function AutoCloseHint({
 }: {
   automation: MarkedPaperCarry["automation"];
 }) {
-  const lines = formatExitTriggers(automation);
+  const orderType = formatExitOrderType(automation);
   return (
     <span className="block space-y-1">
-      <span className="block text-ink">Close based on automation rules</span>
-      {lines.length > 0 ? (
-        lines.map((line) => (
-          <span key={line} className="block">
-            {line}
-          </span>
-        ))
+      <span className="block text-ink">
+        Close using this set’s exit order type
+      </span>
+      {orderType ? (
+        <span className="block">{orderType}</span>
       ) : (
-        <span className="block">No exit filters stored.</span>
+        <span className="block">No exit order type stored.</span>
       )}
     </span>
   );
