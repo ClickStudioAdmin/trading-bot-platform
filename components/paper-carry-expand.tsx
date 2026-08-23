@@ -391,8 +391,6 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
         </h3>
         <p className="text-xs text-ink-muted">
           {formatDeskDateTime(order.filledAtMs)}
-          {" · "}
-          {formatUsd(order.notionalUsdt)}
         </p>
       </header>
       <p className="mt-0.5 text-xs text-ink-muted">{formatOrderWhy(order)}</p>
@@ -553,8 +551,6 @@ function CloseOrderCard({
         </h3>
         <p className="text-xs text-ink-muted">
           {formatDeskDateTime(order.filledAtMs)}
-          {" · "}
-          {formatUsd(order.notionalUsdt)}
         </p>
       </header>
       <p className="mt-0.5 text-xs text-ink-muted">{formatCloseOrderWhy(order)}</p>
