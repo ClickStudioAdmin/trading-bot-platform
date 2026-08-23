@@ -107,6 +107,9 @@ export function parsePaperCarryRow(row: Record<string, unknown>): PaperCarryRow 
       entryMaxDte: asNullableNumber(row.entry_max_dte),
       entryMinCapacityUsdt: asNullableNumber(row.entry_min_capacity_usdt),
       entryMinSizeUsdt: asNullableNumber(row.entry_min_size_usdt),
+      entryMaxOpenNotionalUsdt: asNullableNumber(
+        row.entry_max_open_notional_usdt,
+      ),
       closeMaxDte: asNullableNumber(row.close_max_dte),
       closeMinNetApr: asNullableNumber(row.close_min_net_apr),
       takeProfitPct: asNullableNumber(row.take_profit_pct),

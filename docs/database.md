@@ -24,7 +24,7 @@ Event logs and admins: `supabase/migrations/20260822180000_event_logs_and_admins
 
 Members: `supabase/migrations/20260822190000_members.sql`. Password and no Auth FK: `supabase/migrations/20260822220000_members_password_no_auth_fk.sql`.
 
-Per-trade automation snapshot: `supabase/migrations/20260822200000_paper_carry_automation.sql`. Close source: `supabase/migrations/20260822210000_paper_carry_close_source.sql`. Size type: `supabase/migrations/20260823063000_paper_rule_size_type.sql`. Exit size type: `supabase/migrations/20260823080000_paper_rule_exit_size_type.sql`. Paper orders: `supabase/migrations/20260823090000_paper_orders.sql`. Usable book share: `supabase/migrations/20260823100000_usable_book_share.sql`. Closing status: `supabase/migrations/20260823110000_paper_carry_closing.sql`.
+Per-trade automation snapshot: `supabase/migrations/20260822200000_paper_carry_automation.sql`. Close source: `supabase/migrations/20260822210000_paper_carry_close_source.sql`. Size type: `supabase/migrations/20260823063000_paper_rule_size_type.sql`. Exit size type: `supabase/migrations/20260823080000_paper_rule_exit_size_type.sql`. Paper orders: `supabase/migrations/20260823090000_paper_orders.sql`. Usable book share: `supabase/migrations/20260823100000_usable_book_share.sql`. Closing status: `supabase/migrations/20260823110000_paper_carry_closing.sql`. Max position size on the fill snapshot: `supabase/migrations/20260823120000_entry_max_open_notional.sql`.
 
 `event_logs` is append-only. Writes go through `writeEventLog` with the service role. Authenticated clients can select their own rows; `app_admins` can select every row. Secrets in `data` are redacted before insert. Logging failures must not break the action that produced the event.
 

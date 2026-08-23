@@ -15,6 +15,7 @@ export type PaperCarryAutomation = {
   entryMaxDte: number | null;
   entryMinCapacityUsdt: number | null;
   entryMinSizeUsdt: number | null;
+  entryMaxOpenNotionalUsdt: number | null;
   closeMaxDte: number | null;
   closeMinNetApr: number | null;
   takeProfitPct: number | null;
@@ -29,6 +30,7 @@ export const EMPTY_AUTOMATION: PaperCarryAutomation = {
   entryMaxDte: null,
   entryMinCapacityUsdt: null,
   entryMinSizeUsdt: null,
+  entryMaxOpenNotionalUsdt: null,
   closeMaxDte: null,
   closeMinNetApr: null,
   takeProfitPct: null,
@@ -46,6 +48,7 @@ export function automationFromLayer(
     entryMaxDte: layer.maxDte,
     entryMinCapacityUsdt: layer.minCapacityUsdt,
     entryMinSizeUsdt: layer.minSizeUsdt,
+    entryMaxOpenNotionalUsdt: layer.maxOpenNotionalUsdt,
     closeMaxDte: layer.closeMaxDte,
     closeMinNetApr: layer.closeMinNetApr,
     takeProfitPct: layer.takeProfitPct,
@@ -62,6 +65,7 @@ export function automationInsertColumns(automation: PaperCarryAutomation) {
     entry_max_dte: automation.entryMaxDte,
     entry_min_capacity_usdt: automation.entryMinCapacityUsdt,
     entry_min_size_usdt: automation.entryMinSizeUsdt,
+    entry_max_open_notional_usdt: automation.entryMaxOpenNotionalUsdt,
     close_max_dte: automation.closeMaxDte,
     close_min_net_apr: automation.closeMinNetApr,
     take_profit_pct: automation.takeProfitPct,
@@ -81,6 +85,11 @@ export function formatEntryTriggers(automation: PaperCarryAutomation): string[] 
   const dte = formatDteRange(automation.entryMinDte, automation.entryMaxDte);
   if (dte) {
     lines.push(dte);
+  }
+  if (automation.entryMaxOpenNotionalUsdt !== null) {
+    lines.push(
+      `Max Position Size $${Math.round(automation.entryMaxOpenNotionalUsdt).toLocaleString("en-US")}`,
+    );
   }
   if (automation.entrySizeType === "dynamic") {
     if (automation.entryMinSizeUsdt !== null) {

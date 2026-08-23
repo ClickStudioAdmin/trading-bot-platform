@@ -34,6 +34,7 @@ const automation = automationFromLayer(layer);
 assert.deepEqual(formatEntryTriggers(automation), [
   "Min APR 10%",
   "DTE 7–90",
+  "Max Position Size $25,000",
   "Min usable book $5,000",
 ]);
 assert.deepEqual(formatExitTriggers(automation), [
@@ -49,6 +50,7 @@ assert.deepEqual(formatEntryTriggers({
   entryMinDte: null,
   entryMaxDte: null,
   entryMinCapacityUsdt: null,
+  entryMaxOpenNotionalUsdt: null,
 }), []);
 assert.deepEqual(
   formatEntryTriggers({
@@ -62,7 +64,11 @@ assert.deepEqual(
     entryMinDte: null,
     entryMaxDte: null,
   }),
-  ["Order Type Dynamic (scale in)", "Min Order Size $4,000"],
+  [
+    "Order Type Dynamic (scale in)",
+    "Max Position Size $25,000",
+    "Min Order Size $4,000",
+  ],
 );
 
 const form = new FormData();
