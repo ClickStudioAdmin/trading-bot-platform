@@ -81,8 +81,9 @@ export function UserMenu({
               href="/account"
               className="mt-1 block rounded-control px-2 py-2 text-sm text-accent hover:bg-surface-raised"
             >
-              Manage account
+              Manage sub-accounts
             </Link>
+            <div className="my-1 border-t border-line" />
           </>
         ) : null}
         <form action={signOut}>
