@@ -12,6 +12,7 @@ import {
   formatUsd,
   signedTone,
 } from "@/lib/opportunities/format";
+import type { EventLogRow } from "@/lib/logs/list";
 import type { PaperOrderRow } from "@/lib/paper/orders";
 import type { PaperReturnPath } from "@/lib/paper/open";
 import {
@@ -21,8 +22,14 @@ import {
   type PaperCarryRow,
 } from "@/lib/paper/rows";
 
-type OpenCarryView = MarkedPaperCarry & { orders: PaperOrderRow[] };
-type ClosedCarryView = PaperCarryRow & { orders: PaperOrderRow[] };
+type OpenCarryView = MarkedPaperCarry & {
+  orders: PaperOrderRow[];
+  logs: EventLogRow[];
+};
+type ClosedCarryView = PaperCarryRow & {
+  orders: PaperOrderRow[];
+  logs: EventLogRow[];
+};
 
 const EXPOSURE_BARS = ["bg-accent", "bg-success", "bg-warning"] as const;
 
@@ -61,7 +68,7 @@ export function OpenPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Details"
-                  hint="Paper orders for this carry. Expand to see fills, scan values, and why it opened or closed."
+                  hint="Expand for paper orders and the event log for this position."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -174,7 +181,7 @@ export function ClosedPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Details"
-                  hint="Paper orders for this carry. Expand to see fills, scan values, and why it opened or closed."
+                  hint="Expand for paper orders and the event log for this position."
                 />
               </th>
               <th className="px-4 py-3 font-medium">

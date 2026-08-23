@@ -155,6 +155,24 @@ export async function runPaperEngineTick(): Promise<{
       } else {
         clipped += 1;
       }
+      await writeEventLog({
+        scope: "trade",
+        event: written.kind === "flat" ? "trade.closed" : "trade.unwound",
+        message:
+          written.kind === "flat"
+            ? `Closed paper ${row.futureSymbol}`
+            : `Unwound paper ${row.futureSymbol}`,
+        userId,
+        strategy: "cash-and-carry",
+        data: {
+          carryId: row.id,
+          futureSymbol: row.futureSymbol,
+          clipUsdt: exit.closeNotionalUsdt,
+          source: row.source,
+          closeSource: row.source === "manual" ? "manual" : "engine",
+          reason: exit.reason,
+        },
+      });
     }
 
     if (!config.enabled || config.layers.length === 0) {
@@ -205,6 +223,19 @@ export async function runPaperEngineTick(): Promise<{
           continue;
         }
         added += 1;
+        await writeEventLog({
+          scope: "trade",
+          event: "trade.added",
+          message: `Added paper ${entry.opportunity.futureSymbol}`,
+          userId,
+          strategy: "cash-and-carry",
+          data: {
+            carryId: row.id,
+            futureSymbol: entry.opportunity.futureSymbol,
+            notionalUsdt: entry.notionalUsdt,
+            source: "engine",
+          },
+        });
         continue;
       }
 
@@ -252,6 +283,22 @@ export async function runPaperEngineTick(): Promise<{
         automation: automationFromLayer(entry.layer),
       });
       opened += 1;
+      await writeEventLog({
+        scope: "trade",
+        event: "trade.opened",
+        message: `Opened paper ${entry.opportunity.futureSymbol}`,
+        userId,
+        strategy: "cash-and-carry",
+        data: {
+          carryId: Number(data.id),
+          spotSymbol: entry.opportunity.spotSymbol,
+          futureSymbol: entry.opportunity.futureSymbol,
+          notionalUsdt: entry.notionalUsdt,
+          entryBasis: entry.opportunity.netBasis,
+          source: "engine",
+          ruleName: entry.layer.name,
+        },
+      });
     }
   }
 

@@ -66,3 +66,38 @@ export async function listEventLogs(
         : {},
   }));
 }
+
+export function carryIdFromLogData(
+  data: Record<string, unknown>,
+): number | null {
+  const raw = data.carryId;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return raw;
+  }
+  if (typeof raw === "string" && raw.trim()) {
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+export function logsForCarry(
+  logs: EventLogRow[],
+  carryId: number,
+): EventLogRow[] {
+  return logs
+    .filter((log) => carryIdFromLogData(log.data) === carryId)
+    .sort(
+      (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id - b.id,
+    );
+}
+
+export function attachLogs<T extends { id: number }>(
+  rows: T[],
+  logs: EventLogRow[],
+): (T & { logs: EventLogRow[] })[] {
+  return rows.map((row) => ({
+    ...row,
+    logs: logsForCarry(logs, row.id),
+  }));
+}

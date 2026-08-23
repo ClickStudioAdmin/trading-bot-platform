@@ -52,7 +52,7 @@ Positions with no live mark are not auto-closed.
 
 Engine opens copy that layer’s entry filters and exits onto the carry. Click **Engine** on an open row to see them and edit that trade’s exits. Past Positions show **In System/Manual · Out System/Manual**; click for trigger, entry/exit method, and the rule that actually fired. `close_source` is `manual` or `engine`. The tick uses the carry’s exits and writes `close_reason` when it auto-closes.
 
-Expand a current or past position to see its paper orders. Each order stores the conditions that were armed, the scan values at fill time (net basis, APR, DTE, capacity, legs), and the paper execution (fill basis and notional). Paper fill equals the scan. `paper_orders` is append-only. The tick should insert a row per clip.
+Expand a current or past position for **Orders** and **Position logs**. Each order stores the conditions that were armed, the scan values at fill time (net basis, APR, DTE, capacity, legs), and the paper execution (fill basis and notional). Paper fill equals the scan. `paper_orders` is append-only. The tick should insert a row per clip. Position logs are that carry’s trade events (`open`, `add`, `close`, `unwind`, exit edits, and failures).
 
 ## Event logs and admin
 

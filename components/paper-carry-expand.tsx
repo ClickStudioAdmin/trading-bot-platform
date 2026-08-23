@@ -15,6 +15,7 @@ import {
   formatUsd,
   signedTone,
 } from "@/lib/opportunities/format";
+import type { EventLogRow } from "@/lib/logs/list";
 import { closeOpenPaperCarry } from "@/lib/paper/actions";
 import { carryPnlPct, clipPnl } from "@/lib/paper/math";
 import {
@@ -33,8 +34,14 @@ import {
   type PaperCarryRow,
 } from "@/lib/paper/rows";
 
-type OpenCarryView = MarkedPaperCarry & { orders: PaperOrderRow[] };
-type ClosedCarryView = PaperCarryRow & { orders: PaperOrderRow[] };
+type OpenCarryView = MarkedPaperCarry & {
+  orders: PaperOrderRow[];
+  logs: EventLogRow[];
+};
+type ClosedCarryView = PaperCarryRow & {
+  orders: PaperOrderRow[];
+  logs: EventLogRow[];
+};
 
 export function OpenPaperCarryRows({
   trade,
@@ -52,6 +59,7 @@ export function OpenPaperCarryRows({
     <ExpandableOrderRows
       colSpan={10}
       orders={trade.orders}
+      logs={trade.logs}
       entryBasis={trade.entryBasis}
     >
       <td className="px-4 py-3">
@@ -72,7 +80,7 @@ export function OpenPaperCarryRows({
           ) : null}
         </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
-          Long spot · short {trade.futureSymbol}
+          {trade.futureSymbol}
         </span>
       </td>
       <td className="px-4 py-3 tabular-nums text-ink-muted">
@@ -117,6 +125,7 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
     <ExpandableOrderRows
       colSpan={8}
       orders={trade.orders}
+      logs={trade.logs}
       entryBasis={trade.entryBasis}
     >
       <td className="px-4 py-3">
@@ -170,11 +179,13 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
 
 function ExpandableOrderRows({
   orders,
+  logs,
   entryBasis,
   colSpan,
   children,
 }: {
   orders: PaperOrderRow[];
+  logs: EventLogRow[];
   entryBasis: number;
   colSpan: number;
   children: ReactNode;
@@ -191,7 +202,7 @@ function ExpandableOrderRows({
             className="inline-flex h-8 w-8 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
             aria-expanded={open}
             aria-controls={open ? panelId : undefined}
-            aria-label={open ? "Hide order details" : "Show order details"}
+            aria-label={open ? "Hide position details" : "Show position details"}
             onClick={() => setOpen((current) => !current)}
           >
             <ChevronIcon className={open ? "rotate-90" : undefined} />
@@ -202,7 +213,11 @@ function ExpandableOrderRows({
       {open ? (
         <tr className="border-b border-line last:border-b-0">
           <td colSpan={colSpan} className="bg-canvas px-4 py-4" id={panelId}>
-            <PaperOrderList orders={orders} entryBasis={entryBasis} />
+            <PositionDetailTabs
+              orders={orders}
+              logs={logs}
+              entryBasis={entryBasis}
+            />
           </td>
         </tr>
       ) : null}
@@ -337,6 +352,85 @@ function PositionKind({
   );
 }
 
+function PositionDetailTabs({
+  orders,
+  logs,
+  entryBasis,
+}: {
+  orders: PaperOrderRow[];
+  logs: EventLogRow[];
+  entryBasis: number;
+}) {
+  const [tab, setTab] = useState<"orders" | "logs">("orders");
+  const ordersPanelId = useId();
+  const logsPanelId = useId();
+
+  return (
+    <div>
+      <div
+        role="tablist"
+        aria-label="Position details"
+        className="flex gap-1 border-b border-line"
+      >
+        <TabButton
+          selected={tab === "orders"}
+          panelId={ordersPanelId}
+          onClick={() => setTab("orders")}
+        >
+          Orders
+        </TabButton>
+        <TabButton
+          selected={tab === "logs"}
+          panelId={logsPanelId}
+          onClick={() => setTab("logs")}
+        >
+          Position logs
+        </TabButton>
+      </div>
+      <div
+        className="pt-4"
+        role="tabpanel"
+        id={tab === "orders" ? ordersPanelId : logsPanelId}
+      >
+        {tab === "orders" ? (
+          <PaperOrderList orders={orders} entryBasis={entryBasis} />
+        ) : (
+          <PositionLogList logs={logs} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TabButton({
+  selected,
+  panelId,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  panelId: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={selected}
+      aria-controls={panelId}
+      className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+        selected
+          ? "border-accent text-ink"
+          : "border-transparent text-ink-muted hover:text-ink"
+      }`}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
 function PaperOrderList({
   orders,
   entryBasis,
@@ -350,9 +444,6 @@ function PaperOrderList({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs uppercase tracking-[0.08em] text-ink-faint">
-        Orders
-      </p>
       {orders.map((order) => (
         <PaperOrderCard
           key={order.id}
@@ -365,6 +456,78 @@ function PaperOrderList({
       </p>
     </div>
   );
+}
+
+function PositionLogList({ logs }: { logs: EventLogRow[] }) {
+  if (logs.length === 0) {
+    return (
+      <p className="text-sm text-ink-muted">
+        No events recorded for this position yet. New opens, adds, closes, and
+        exit edits appear here.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {logs.map((log) => (
+        <article
+          key={log.id}
+          className="rounded-card border border-line bg-surface-raised px-3 py-2.5"
+        >
+          <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+            <h3 className="text-sm font-semibold tracking-tight">
+              {formatLogEvent(log.event)}
+            </h3>
+            <p className="text-xs text-ink-muted">
+              {formatLogTime(log.createdAt)}
+            </p>
+          </header>
+          <p className="mt-0.5 text-sm text-ink-muted">{log.message}</p>
+          {log.level !== "info" ? (
+            <p className={`mt-1 text-xs ${logLevelTone(log.level)}`}>
+              {log.level}
+            </p>
+          ) : null}
+        </article>
+      ))}
+      <p className="text-xs text-ink-faint">
+        Trade events for this position. Same log as Activity.
+      </p>
+    </div>
+  );
+}
+
+function formatLogEvent(event: string): string {
+  const labels: Record<string, string> = {
+    "trade.opened": "Opened",
+    "trade.added": "Added",
+    "trade.closed": "Closed",
+    "trade.unwound": "Unwound",
+    "trade.exits_updated": "Exits updated",
+    "trade.open_failed": "Open failed",
+    "trade.close_failed": "Close failed",
+    "trade.exits_failed": "Exit update failed",
+    "trade.order_failed": "Order write failed",
+    "engine.open_failed": "Engine open failed",
+    "engine.close_failed": "Engine close failed",
+  };
+  return labels[event] ?? event;
+}
+
+function formatLogTime(createdAt: string): string {
+  const ms = Date.parse(createdAt);
+  return formatDeskDateTime(Number.isFinite(ms) ? ms : null);
+}
+
+function logLevelTone(level: EventLogRow["level"]): string {
+  if (level === "error") {
+    return "text-danger";
+  }
+  if (level === "warning") {
+    return "text-warning";
+  }
+  return "text-ink-muted";
 }
 
 function PaperOrderCard({
