@@ -385,4 +385,61 @@ assert.equal(
   2_500,
 );
 
+const heldBtc = opportunity("BTCUSDT-25JUN27", {
+  baseCoin: "BTC",
+  netApr: 0.042,
+  daysToExpiry: 300,
+  capacityUsdt: 2_000,
+});
+const heldEth = opportunity("ETHUSDT-25JUN27", {
+  baseCoin: "ETH",
+  spotSymbol: "ETHUSDT",
+  netApr: 0.033,
+  daysToExpiry: 300,
+  capacityUsdt: 8_000,
+});
+const scaleLayer = layer({
+  sizeType: "dynamic",
+  minNetApr: 0.03,
+  minDte: 300,
+  maxDte: null,
+  minCapacityUsdt: null,
+  minSizeUsdt: 500,
+  maxOpenCount: 1,
+  maxOpenNotionalUsdt: 10_000,
+});
+const legacyOpens = [
+  {
+    id: 1,
+    spotSymbol: "BTCUSDT",
+    futureSymbol: heldBtc.futureSymbol,
+    notionalUsdt: 596,
+    ruleId: 1,
+    openedAtMs: 1,
+  },
+  {
+    id: 2,
+    spotSymbol: "ETHUSDT",
+    futureSymbol: heldEth.futureSymbol,
+    notionalUsdt: 2_000,
+    ruleId: 1,
+    openedAtMs: 2,
+  },
+];
+assert.deepEqual(
+  decideEntries([heldEth, heldBtc], legacyOpens, {
+    enabled: true,
+    layers: [scaleLayer],
+  }).map((row) => [row.opportunity.futureSymbol, row.carryId]),
+  [[heldBtc.futureSymbol, 1]],
+);
+assert.deepEqual(
+  decideEntries(
+    [heldEth, { ...heldBtc, capacityUsdt: 400 }],
+    legacyOpens,
+    { enabled: true, layers: [scaleLayer] },
+  ).map((row) => row.opportunity.futureSymbol),
+  [heldEth.futureSymbol],
+);
+
 console.log("engine decide checks passed");

@@ -84,7 +84,7 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Order Type · Dynamic (scale in)"
-          detail="Each tick may add one clip to the existing Positions row for that pair. If this set holds none, it opens one row on the best matching pair. Clip size is usable book, or leftover room under Max Position Size — whichever is smaller."
+          detail="Each tick may add one clip. If this set holds a pair, the clip goes on the held pair with the highest net APR that still clears Min Order Size. If it holds none, it opens one row on the best matching pair. Clip size is usable book, or leftover room under Max Position Size — whichever is smaller."
         />
         <GuideItem
           term="Order size (USDT)"

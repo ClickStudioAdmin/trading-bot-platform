@@ -94,6 +94,7 @@ export function decideEntries(
       .map((row) => pairKey(row.spotSymbol, row.futureSymbol)),
   );
   const clippedThisTick = new Set<string>();
+  const scaledLayerThisTick = new Set<string>();
   const ranked = [...scan].sort(
     (a, b) =>
       (b.netApr ?? Number.NEGATIVE_INFINITY) -
@@ -133,6 +134,13 @@ export function decideEntries(
     const key = layerUsageKey(layer);
     const used = usedByLayer.get(key) ?? { pairs: new Set(), notional: 0 };
     const pairHeld = used.pairs.has(pair);
+    if (
+      layer.sizeType === "dynamic" &&
+      pairHeld &&
+      scaledLayerThisTick.has(key)
+    ) {
+      continue;
+    }
     const maxPairs = layer.maxOpenCount ?? 1;
     if (!pairHeld && used.pairs.size >= maxPairs) {
       continue;
@@ -161,6 +169,9 @@ export function decideEntries(
       occupied.add(pair);
     } else {
       clippedThisTick.add(pair);
+      if (pairHeld) {
+        scaledLayerThisTick.add(key);
+      }
     }
     chosen.push({ opportunity, layer, notionalUsdt, carryId });
   }
