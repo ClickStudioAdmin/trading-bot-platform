@@ -4,6 +4,7 @@ export type EventLogFilters = {
   scope: string;
   level: string;
   event: string;
+  account: string;
 };
 
 export function parseEventLogFilters(
@@ -13,5 +14,6 @@ export function parseEventLogFilters(
     scope: firstSearchValue(params.scope) ?? "",
     level: firstSearchValue(params.level) ?? "",
     event: firstSearchValue(params.event) ?? "",
+    account: firstSearchValue(params.account) ?? "",
   };
 }

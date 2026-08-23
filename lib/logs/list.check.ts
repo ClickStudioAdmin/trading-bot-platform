@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { eventLogOptionsForScopes } from "./events";
 import { parseEventLogFilters } from "./filters";
 import {
   attachLogs,
@@ -20,6 +21,19 @@ const empty = parseEventLogFilters({});
 assert.equal(empty.scope, "");
 assert.equal(empty.level, "");
 assert.equal(empty.event, "");
+assert.equal(empty.account, "");
+assert.equal(
+  parseEventLogFilters({ account: "acc-1" }).account,
+  "acc-1",
+);
+assert.ok(eventLogOptionsForScopes(["trade"]).includes("trade.opened"));
+assert.equal(
+  eventLogOptionsForScopes(["trade"]).includes("member.created"),
+  false,
+);
+assert.ok(
+  eventLogOptionsForScopes(["trade"], "legacy.event").includes("legacy.event"),
+);
 
 assert.equal(carryIdFromLogData({ carryId: 12 }), 12);
 assert.equal(carryIdFromLogData({ carryId: "12" }), 12);
@@ -33,6 +47,7 @@ const sample = (id: number, carryId: unknown, createdAt: string): EventLogRow =>
   event: "trade.opened",
   message: "Opened paper BTCUSDT",
   userId: "user-1",
+  accountId: "acc-1",
   strategy: "cash-and-carry",
   data: { carryId },
 });

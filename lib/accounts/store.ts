@@ -6,7 +6,12 @@ import {
   type TradingAccount,
   type TradingAccountMode,
 } from "@/lib/accounts/model";
+import { memberDisplayName } from "@/lib/members/sync";
 import { createServiceClient } from "@/lib/supabase/admin";
+
+export type TradingAccountOption = TradingAccount & {
+  ownerName: string;
+};
 
 export async function listTradingAccounts(
   userId: string,
@@ -26,6 +31,45 @@ export async function listTradingAccounts(
   return data.map((row) =>
     parseTradingAccountRow(row as Record<string, unknown>),
   );
+}
+
+export async function listAllTradingAccounts(): Promise<TradingAccountOption[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("trading_accounts")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error || !data) {
+    return [];
+  }
+  const accounts = data.map((row) =>
+    parseTradingAccountRow(row as Record<string, unknown>),
+  );
+  const userIds = [...new Set(accounts.map((account) => account.userId))];
+  const owners = new Map<string, string>();
+  if (userIds.length > 0) {
+    const { data: members } = await supabase
+      .from("members")
+      .select("user_id, name, email")
+      .in("user_id", userIds);
+    for (const row of members ?? []) {
+      const id = String((row as { user_id: string }).user_id);
+      owners.set(
+        id,
+        memberDisplayName(
+          String((row as { email: string }).email),
+          String((row as { name?: string }).name ?? ""),
+        ),
+      );
+    }
+  }
+  return accounts.map((account) => ({
+    ...account,
+    ownerName: owners.get(account.userId) ?? "Member",
+  }));
 }
 
 export async function ensureDefaultPaperAccount(

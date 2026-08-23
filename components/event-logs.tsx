@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { eventLogOptionsForScopes } from "@/lib/logs/events";
 import type { EventLogFilters, EventLogRow } from "@/lib/logs/list";
 
 export function EventLogs({
@@ -7,14 +8,21 @@ export function EventLogs({
   clearHref,
   showUser,
   scopes,
+  accounts,
 }: {
   rows: EventLogRow[];
   filters: EventLogFilters;
   clearHref: string;
   showUser: boolean;
   scopes: Array<"system" | "strategy" | "trade">;
+  accounts?: { id: string; label: string }[];
 }) {
-  const columns = showUser ? 6 : 5;
+  const showAccount = Boolean(accounts);
+  const columns = 5 + (showUser ? 1 : 0) + (showAccount ? 1 : 0);
+  const accountLabel = new Map(
+    (accounts ?? []).map((account) => [account.id, account.label]),
+  );
+  const events = eventLogOptionsForScopes(scopes, filters.event);
 
   return (
     <>
@@ -22,7 +30,24 @@ export function EventLogs({
         method="get"
         className="rounded-card border border-line bg-surface p-4"
       >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {accounts ? (
+            <label className="block text-xs text-ink-muted">
+              Account
+              <select
+                name="account"
+                defaultValue={filters.account}
+                className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+              >
+                <option value="">All</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label className="block text-xs text-ink-muted">
             Scope
             <select
@@ -57,11 +82,18 @@ export function EventLogs({
           </label>
           <label className="block text-xs text-ink-muted">
             Event
-            <input
+            <select
               name="event"
               defaultValue={filters.event}
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            />
+            >
+              <option value="">All</option>
+              {events.map((event) => (
+                <option key={event} value={event}>
+                  {event}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -90,6 +122,9 @@ export function EventLogs({
               <th className="px-4 py-3 font-medium">Event</th>
               {showUser ? (
                 <th className="px-4 py-3 font-medium">User</th>
+              ) : null}
+              {showAccount ? (
+                <th className="px-4 py-3 font-medium">Account</th>
               ) : null}
               <th className="px-4 py-3 font-medium">Message</th>
             </tr>
@@ -128,6 +163,13 @@ export function EventLogs({
                   {showUser ? (
                     <td className="px-4 py-3 align-top font-mono text-xs text-ink-muted">
                       {row.userId ? row.userId.slice(0, 8) : "—"}
+                    </td>
+                  ) : null}
+                  {showAccount ? (
+                    <td className="px-4 py-3 align-top text-ink-muted">
+                      {row.accountId
+                        ? accountLabel.get(row.accountId) ?? "—"
+                        : "—"}
                     </td>
                   ) : null}
                   <td className="px-4 py-3 align-top">

@@ -12,6 +12,7 @@ export type EventLogRow = {
   event: string;
   message: string;
   userId: string | null;
+  accountId: string | null;
   strategy: string | null;
   data: Record<string, unknown>;
 };
@@ -61,6 +62,7 @@ export async function listEventLogs(
     event: String(row.event),
     message: String(row.message),
     userId: row.user_id ? String(row.user_id) : null,
+    accountId: row.account_id ? String(row.account_id) : null,
     strategy: row.strategy ? String(row.strategy) : null,
     data:
       row.data && typeof row.data === "object" && !Array.isArray(row.data)
