@@ -399,75 +399,95 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
       {conditions.length > 0 ? (
         <p className="mt-0.5 text-sm text-ink-muted">{conditions.join(" · ")}</p>
       ) : null}
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <SnapshotList
-          title="Theoretical · scan"
-          rows={[
-            {
+      <ComparePairs
+        leftTitle="Theoretical · scan"
+        rightTitle="Execution · paper"
+        rows={[
+          {
+            left: {
               label: "Net basis",
               value: formatPct(order.theoretical.netBasis),
               tone: order.theoretical.netBasis,
             },
-            {
+            right: {
+              label: "Fill basis",
+              value: formatPct(order.fillBasis),
+              tone: order.fillBasis,
+            },
+          },
+          {
+            right: { label: "Slip vs scan", value: formatPct(slip), tone: slip },
+          },
+          {
+            left: {
               label: "Net APR",
               value: formatPct(order.theoretical.netApr),
               tone: order.theoretical.netApr,
             },
-            {
+          },
+          {
+            left: {
               label: "DTE",
               value:
                 order.theoretical.daysToExpiry === null
                   ? "—"
                   : order.theoretical.daysToExpiry.toFixed(1),
             },
-            {
+          },
+          {
+            left: {
               label: "Executable",
               value: formatPct(order.theoretical.executableBasis),
               tone: order.theoretical.executableBasis,
             },
-            {
+          },
+          {
+            left: {
               label: "Capacity",
               value:
                 order.theoretical.capacityUsdt === null
                   ? "—"
                   : formatUsd(order.theoretical.capacityUsdt),
             },
-            {
+            right: {
+              label: "Notional",
+              value: formatUsd(order.notionalUsdt),
+            },
+          },
+          {
+            left: {
               label: "Spot ask",
               value: formatPrice(order.theoretical.spotAsk),
             },
-            {
-              label: "Future bid",
-              value: formatPrice(order.theoretical.futureBid),
-            },
-            {
-              label: "Fees + slip",
-              value: formatPct(order.theoretical.feeRate),
-            },
-          ]}
-        />
-        <SnapshotList
-          title="Execution · paper"
-          rows={[
-            {
-              label: "Fill basis",
-              value: formatPct(order.fillBasis),
-              tone: order.fillBasis,
-            },
-            { label: "Slip vs scan", value: formatPct(slip), tone: slip },
-            { label: "Notional", value: formatUsd(order.notionalUsdt) },
-            {
+            right: {
               label: "Buy spot",
               value: formatPrice(order.theoretical.spotAsk),
             },
-            {
+          },
+          {
+            left: {
+              label: "Future bid",
+              value: formatPrice(order.theoretical.futureBid),
+            },
+            right: {
               label: "Sell future",
               value: formatPrice(order.theoretical.futureBid),
             },
-            { label: "Filled", value: formatDeskDateTime(order.filledAtMs) },
-          ]}
-        />
-      </div>
+          },
+          {
+            left: {
+              label: "Fees + slip",
+              value: formatPct(order.theoretical.feeRate),
+            },
+          },
+          {
+            right: {
+              label: "Filled",
+              value: formatDeskDateTime(order.filledAtMs),
+            },
+          },
+        ]}
+      />
     </article>
   );
 }
@@ -543,19 +563,38 @@ function CloseOrderCard({
   );
 }
 
-function SnapshotList({
-  title,
+type MetricRow = { label: string; value: string; tone?: number | null };
+
+function ComparePairs({
+  leftTitle,
+  rightTitle,
   rows,
 }: {
-  title: string;
-  rows: { label: string; value: string; tone?: number | null }[];
+  leftTitle: string;
+  rightTitle: string;
+  rows: { left?: MetricRow; right?: MetricRow }[];
 }) {
   return (
-    <div>
-      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-        {title}
-      </p>
-      <ValueRows rows={rows} className="mt-2 space-y-1" />
+    <div className="mt-4">
+      <div className="grid grid-cols-2 gap-x-6">
+        <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+          {leftTitle}
+        </p>
+        <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+          {rightTitle}
+        </p>
+      </div>
+      <div className="mt-2 space-y-1">
+        {rows.map((row, index) => (
+          <div
+            key={`${row.left?.label ?? "empty"}-${row.right?.label ?? "empty"}-${index}`}
+            className="grid grid-cols-2 gap-x-6"
+          >
+            <MetricCell row={row.left} />
+            <MetricCell row={row.right} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -563,32 +602,29 @@ function SnapshotList({
 function ValueList({
   rows,
 }: {
-  rows: { label: string; value: string; tone?: number | null }[];
+  rows: MetricRow[];
 }) {
   return (
-    <ValueRows rows={rows} className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2" />
+    <div className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+      {rows.map((row) => (
+        <MetricCell key={row.label} row={row} />
+      ))}
+    </div>
   );
 }
 
-function ValueRows({
-  rows,
-  className,
-}: {
-  rows: { label: string; value: string; tone?: number | null }[];
-  className: string;
-}) {
+function MetricCell({ row }: { row?: MetricRow }) {
+  if (!row) {
+    return <div />;
+  }
   return (
-    <dl className={`text-sm ${className}`}>
-      {rows.map((row) => (
-        <div key={row.label} className="flex items-center justify-between gap-3">
-          <dt className="text-ink-muted">{row.label}</dt>
-          <dd
-            className={`tabular-nums ${row.tone === undefined ? "text-ink" : signedTone(row.tone)}`}
-          >
-            {row.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-ink-muted">{row.label}</span>
+      <span
+        className={`tabular-nums ${row.tone === undefined ? "text-ink" : signedTone(row.tone)}`}
+      >
+        {row.value}
+      </span>
+    </div>
   );
 }
