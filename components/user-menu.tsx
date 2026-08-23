@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { switchTradingAccount } from "@/lib/accounts/actions";
 import {
   formatAccountMode,
@@ -15,6 +18,36 @@ export function UserMenu({
   current?: TradingAccount;
   accounts?: TradingAccount[];
 }) {
+  const rootRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    function closeMenu() {
+      if (rootRef.current) {
+        rootRef.current.open = false;
+      }
+    }
+    function onPointerDown(event: PointerEvent) {
+      const root = rootRef.current;
+      if (!root?.open) {
+        return;
+      }
+      if (!root.contains(event.target as Node)) {
+        closeMenu();
+      }
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeMenu();
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
   if (!email) {
     return (
       <Link
@@ -30,7 +63,7 @@ export function UserMenu({
   const books = accounts ?? [];
 
   return (
-    <details className="relative">
+    <details ref={rootRef} className="relative">
       <summary className="flex cursor-pointer list-none items-center gap-2 rounded-control border border-line px-2 py-1 hover:bg-surface-raised [&::-webkit-details-marker]:hidden">
         <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold text-accent">
           {initial}
