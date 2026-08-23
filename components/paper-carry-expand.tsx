@@ -488,14 +488,32 @@ function CloseOrderCard({
   });
   const rows: { label: string; value: string; tone?: number | null }[] = [
     {
-      label: "Exit basis",
-      value: formatPct(order.fillBasis),
-      tone: order.fillBasis,
+      label: "Usable book",
+      value:
+        order.theoretical.capacityUsdt === null
+          ? "—"
+          : formatUsd(order.theoretical.capacityUsdt),
+    },
+    {
+      label: "Clip amount",
+      value: formatUsd(order.notionalUsdt),
+    },
+    {
+      label: "DTE",
+      value:
+        order.theoretical.daysToExpiry === null
+          ? "—"
+          : order.theoretical.daysToExpiry.toFixed(1),
     },
     {
       label: "Basis captured",
       value: formatPct(captured),
       tone: captured,
+    },
+    {
+      label: "Exit basis",
+      value: formatPct(order.fillBasis),
+      tone: order.fillBasis,
     },
     {
       label: "Clip P&L",
@@ -505,20 +523,7 @@ function CloseOrderCard({
           : `${formatSignedUsd(pnl.usdt)} (${formatPct(pnl.pct)})`,
       tone: pnl?.usdt ?? null,
     },
-    {
-      label: "DTE",
-      value:
-        order.theoretical.daysToExpiry === null
-          ? "—"
-          : order.theoretical.daysToExpiry.toFixed(1),
-    },
   ];
-  if (order.theoretical.capacityUsdt !== null) {
-    rows.push({
-      label: "Usable book",
-      value: formatUsd(order.theoretical.capacityUsdt),
-    });
-  }
 
   return (
     <article className="rounded-card border border-line bg-surface-raised px-3 py-2.5">
