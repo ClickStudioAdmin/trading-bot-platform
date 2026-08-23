@@ -6,7 +6,9 @@ import {
   attachOrders,
   fillSlip,
   formatOrderConditions,
+  formatCloseExitMethod,
   formatCloseOrderWhy,
+  formatCloseTrigger,
   formatOrderHeadline,
   formatOrderWhy,
   ordersForCarry,
@@ -118,6 +120,25 @@ assert.deepEqual(formatOrderConditions(stored), [
   "Min DTE 30",
 ]);
 assert.equal(
+  formatCloseTrigger({
+    ...stored,
+    side: "close",
+    source: "manual",
+    triggerReason: "unwind",
+  }),
+  "Manual",
+);
+assert.equal(
+  formatCloseExitMethod({
+    ...stored,
+    side: "close",
+    source: "manual",
+    triggerReason: "unwind",
+    conditions: { ...EMPTY_AUTOMATION, exitSizeType: "dynamic" },
+  }),
+  "System",
+);
+assert.equal(
   formatCloseOrderWhy({
     ...stored,
     side: "close",
@@ -125,7 +146,7 @@ assert.equal(
     triggerReason: "unwind",
     conditions: { ...EMPTY_AUTOMATION, exitSizeType: "dynamic" },
   }),
-  "You closed · Dynamic (scale out)",
+  "Trigger Manual · Exit System · Scale out",
 );
 assert.equal(
   formatCloseOrderWhy({
@@ -135,7 +156,17 @@ assert.equal(
     triggerReason: "unwind",
     conditions: EMPTY_AUTOMATION,
   }),
-  "You unwound this clip.",
+  "Trigger Manual · Exit Manual · Scale out",
+);
+assert.equal(
+  formatCloseOrderWhy({
+    ...stored,
+    side: "close",
+    source: "engine",
+    triggerReason: "unwind",
+    conditions: { ...EMPTY_AUTOMATION, exitSizeType: "dynamic" },
+  }),
+  "Trigger System · Exit System · Scale out",
 );
 assert.equal(
   formatCloseOrderWhy({
@@ -143,9 +174,21 @@ assert.equal(
     side: "close",
     source: "engine",
     triggerReason: "mark_apr",
+    conditions: { ...EMPTY_AUTOMATION, exitSizeType: "dynamic" },
   }),
-  "Closed on mark APR.",
+  "Trigger System · Exit System · Scale out · Mark APR",
 );
+assert.equal(
+  formatCloseOrderWhy({
+    ...stored,
+    side: "close",
+    source: "manual",
+    triggerReason: null,
+    conditions: EMPTY_AUTOMATION,
+  }),
+  "Trigger Manual · Exit Manual · Flatten",
+);
+assert.equal(formatOrderHeadline({ ...stored, side: "close" }), "Close");
 
 const carry = parsePaperCarryRow({
   id: "3",

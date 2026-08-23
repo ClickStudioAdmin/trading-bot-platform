@@ -239,32 +239,60 @@ export function formatOrderWhy(order: PaperOrderRow): string {
   return formatCloseOrderWhy(order);
 }
 
+export function formatCloseTrigger(order: PaperOrderRow): "Manual" | "System" {
+  return order.source === "engine" ? "System" : "Manual";
+}
+
+export function formatCloseExitMethod(order: PaperOrderRow): "Manual" | "System" {
+  if (order.source === "engine") {
+    return "System";
+  }
+  if (
+    order.conditions.exitSizeType === "dynamic" ||
+    order.conditions.exitSizeType === "fixed"
+  ) {
+    return "System";
+  }
+  return "Manual";
+}
+
+export function formatCloseHowMuch(order: PaperOrderRow): string | null {
+  if (
+    order.triggerReason === "unwind" ||
+    order.conditions.exitSizeType === "dynamic"
+  ) {
+    return "Scale out";
+  }
+  if (
+    order.conditions.exitSizeType === "fixed" ||
+    order.triggerReason === null
+  ) {
+    return "Flatten";
+  }
+  return null;
+}
+
 export function formatCloseOrderWhy(order: PaperOrderRow): string {
+  const parts = [
+    `Trigger ${formatCloseTrigger(order)}`,
+    `Exit ${formatCloseExitMethod(order)}`,
+  ];
+  const howMuch = formatCloseHowMuch(order);
+  if (howMuch) {
+    parts.push(howMuch);
+  }
   if (order.source === "engine") {
     if (order.triggerReason === "dte") {
-      return "Closed on DTE.";
+      parts.push("DTE");
+    } else if (order.triggerReason === "mark_apr") {
+      parts.push("Mark APR");
+    } else if (order.triggerReason === "take_profit") {
+      parts.push("Take profit");
+    } else if (order.triggerReason === "stop_loss") {
+      parts.push("Stop loss");
     }
-    if (order.triggerReason === "mark_apr") {
-      return "Closed on mark APR.";
-    }
-    if (order.triggerReason === "take_profit") {
-      return "Closed on take profit.";
-    }
-    if (order.triggerReason === "stop_loss") {
-      return "Closed on stop loss.";
-    }
-    if (order.triggerReason === "unwind") {
-      return "Unwound automatically.";
-    }
-    return "Closed automatically.";
   }
-  if (order.triggerReason === "unwind") {
-    if (order.conditions.exitSizeType === "dynamic") {
-      return "You closed · Dynamic (scale out)";
-    }
-    return "You unwound this clip.";
-  }
-  return "You closed this clip.";
+  return parts.join(" · ");
 }
 
 export function formatOrderConditions(order: PaperOrderRow): string[] {
@@ -274,6 +302,9 @@ export function formatOrderConditions(order: PaperOrderRow): string[] {
 }
 
 export function formatOrderHeadline(order: PaperOrderRow): string {
+  if (order.side === "close") {
+    return "Close";
+  }
   return `${formatOrderSide(order.side)} · ${formatSourceWord(order.source)}`;
 }
 
