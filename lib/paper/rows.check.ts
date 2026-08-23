@@ -67,8 +67,32 @@ const stats = paperDeskStats(marked, [
 assert.equal(stats.openNotionalUsdt, 10_000);
 assert.equal(stats.unrealizedUsdt, 1210);
 assert.equal(stats.realizedUsdt, 100);
+assert.equal(stats.realizedPct, 0.01);
 assert.equal(stats.closedCount, 1);
 assert.equal(stats.greenCount, 1);
+const closedA = {
+  ...row,
+  id: 4,
+  status: "closed" as const,
+  realizedUsdt: 100,
+  notionalUsdt: 10_000,
+  exitBasis: 0.01,
+  closedAtMs: row.openedAtMs + 86_400_000,
+  daysHeld: 1,
+  realizedApr: 3.65,
+  source: "manual" as const,
+  closeSource: "manual" as const,
+  closeReason: null,
+  ruleId: null,
+};
+assert.equal(
+  paperDeskStats([], [
+    closedA,
+    { ...closedA, id: 5, realizedUsdt: -50, notionalUsdt: 5_000 },
+  ]).realizedPct,
+  50 / 15_000,
+);
+assert.equal(paperDeskStats([], []).realizedPct, null);
 
 const unmarked = markOpenCarries([row], []);
 assert.equal(unmarked[0]?.markBasis, null);

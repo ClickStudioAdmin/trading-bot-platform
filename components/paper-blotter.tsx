@@ -7,6 +7,7 @@ import {
 } from "@/components/paper-carry-expand";
 import { TokenIcon } from "@/components/token-icon";
 import {
+  formatPct,
   formatSignedUsd,
   formatUsd,
   signedTone,
@@ -252,10 +253,10 @@ export function PaperPerformanceStats({
   closed: PaperCarryRow[];
 }) {
   const stats = paperDeskStats([], closed);
-  const closedMix =
+  const winRate =
     stats.closedCount === 0
-      ? "0"
-      : `${stats.closedCount} · ${Math.round((stats.greenCount / stats.closedCount) * 100)}% win rate`;
+      ? "—"
+      : `${Math.round((stats.greenCount / stats.closedCount) * 100)}%`;
 
   return (
     <section>
@@ -268,10 +269,25 @@ export function PaperPerformanceStats({
       <div className="grid gap-4 sm:grid-cols-2">
         <StatCard
           label="Realized P&L"
-          value={signedIn ? formatSignedUsd(stats.realizedUsdt) : "—"}
+          value={
+            signedIn
+              ? stats.realizedPct === null
+                ? formatSignedUsd(stats.realizedUsdt)
+                : `${formatSignedUsd(stats.realizedUsdt)} (${formatPct(stats.realizedPct)})`
+              : "—"
+          }
           toneClass={signedTone(signedIn ? stats.realizedUsdt : null)}
         />
-        <StatCard label="Closed trades" value={signedIn ? closedMix : "—"} />
+        <div className="grid grid-cols-2 gap-6 rounded-card border border-line bg-surface p-5">
+          <StatBlock
+            label="Completed Trades"
+            value={signedIn ? String(stats.closedCount) : "—"}
+          />
+          <StatBlock
+            label="Win Rate"
+            value={signedIn ? winRate : "—"}
+          />
+        </div>
       </div>
     </section>
   );
@@ -400,6 +416,22 @@ function StatCard({
 }) {
   return (
     <div className="rounded-card border border-line bg-surface p-5">
+      <StatBlock label={label} value={value} toneClass={toneClass} />
+    </div>
+  );
+}
+
+function StatBlock({
+  label,
+  value,
+  toneClass,
+}: {
+  label: string;
+  value: string;
+  toneClass?: string;
+}) {
+  return (
+    <div>
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
         {label}
       </p>

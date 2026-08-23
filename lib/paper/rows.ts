@@ -6,7 +6,7 @@ import {
   type PaperCarryAutomation,
   type TradeSource,
 } from "@/lib/paper/automation";
-import { carryPnlUsdt } from "@/lib/paper/math";
+import { carryPnlPct, carryPnlUsdt } from "@/lib/paper/math";
 import { pairKey } from "@/lib/paper/open";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
@@ -43,6 +43,7 @@ export type PaperDeskStats = {
   openNotionalUsdt: number;
   unrealizedUsdt: number | null;
   realizedUsdt: number;
+  realizedPct: number | null;
   closedCount: number;
   greenCount: number;
 };
@@ -176,6 +177,14 @@ export function paperDeskStats(
   closed: PaperCarryRow[],
 ): PaperDeskStats {
   const missingMark = open.some((row) => row.unrealizedUsdt === null);
+  const realizedUsdt = closed.reduce(
+    (sum, row) => sum + (row.realizedUsdt ?? 0),
+    0,
+  );
+  const closedNotionalUsdt = closed.reduce(
+    (sum, row) => sum + row.notionalUsdt,
+    0,
+  );
 
   return {
     openNotionalUsdt: open.reduce((sum, row) => sum + row.notionalUsdt, 0),
@@ -185,7 +194,11 @@ export function paperDeskStats(
         : missingMark
           ? null
           : open.reduce((sum, row) => sum + (row.unrealizedUsdt ?? 0), 0),
-    realizedUsdt: closed.reduce((sum, row) => sum + (row.realizedUsdt ?? 0), 0),
+    realizedUsdt,
+    realizedPct:
+      closedNotionalUsdt > 0
+        ? carryPnlPct(realizedUsdt, closedNotionalUsdt)
+        : null,
     closedCount: closed.length,
     greenCount: closed.filter((row) => (row.realizedUsdt ?? 0) > 0).length,
   };
