@@ -468,7 +468,7 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
                   : formatUsd(order.theoretical.capacityUsdt),
             },
             right: {
-              label: "Notional",
+              label: "Order value",
               value: formatUsd(order.notionalUsdt),
             },
           },
@@ -501,7 +501,7 @@ function CloseOrderCard({
           : formatUsd(order.theoretical.capacityUsdt),
     },
     {
-      label: "Clip amount",
+      label: "Clip value",
       value: formatUsd(order.notionalUsdt),
     },
     {
