@@ -406,6 +406,7 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
               label: "Net basis",
               value: formatPct(order.theoretical.netBasis),
               tone: order.theoretical.netBasis,
+              hint: `Fees + slip: ${formatPct(order.theoretical.feeRate)}`,
             },
             right: {
               label: "Fill basis",
@@ -421,12 +422,11 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
               label: "Net APR",
               value: formatPct(order.theoretical.netApr),
               tone: order.theoretical.netApr,
-              hint: `Fees + slip: ${formatPct(order.theoretical.feeRate)}`,
             },
           },
           {
             left: {
-              label: "Executable",
+              label: "Scan basis",
               value: formatPct(order.theoretical.executableBasis),
               tone: order.theoretical.executableBasis,
             },
