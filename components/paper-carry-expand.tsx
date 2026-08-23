@@ -506,11 +506,6 @@ function CloseOrderCard({
       tone: pnl?.usdt ?? null,
     },
     {
-      label: "Mark APR",
-      value: formatPct(order.theoretical.netApr),
-      tone: order.theoretical.netApr,
-    },
-    {
       label: "DTE",
       value:
         order.theoretical.daysToExpiry === null
