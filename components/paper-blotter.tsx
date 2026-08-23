@@ -55,7 +55,7 @@ export function OpenPaperTrades({
         </div>
       ) : null}
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
-        <table className="w-full min-w-[56rem] text-left text-sm">
+        <table className="w-full min-w-[60rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <th className="px-4 py-3 font-medium">
@@ -96,6 +96,12 @@ export function OpenPaperTrades({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
+                  label="Net APR"
+                  hint="Mark net basis × 365 / DTE. Same figure as the Opportunities book. Used to rank pairs and for mark APR exits."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
                   label="Unrealized"
                   hint="Dollar P&L after open and close costs: (entry net − mark net − 2 × fees and slip) × notional. The fee model is VIP0 taker on both legs plus 5 bp slip, charged once to open and once to close. Delivery is 0."
                 />
@@ -117,7 +123,7 @@ export function OpenPaperTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={9}
+                colSpan={10}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -129,7 +135,7 @@ export function OpenPaperTrades({
               />
             ) : open.length === 0 ? (
               <EmptyRow
-                colSpan={9}
+                colSpan={10}
                 message="No open paper carries. Open one from the book above."
               />
             ) : (

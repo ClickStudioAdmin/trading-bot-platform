@@ -46,6 +46,7 @@ const scan: ScannedOpportunity[] = [
 
 const marked = markOpenCarries([row], scan);
 assert.equal(marked[0]?.markBasis, 0.125);
+assert.equal(marked[0]?.markApr, 0.04);
 assert.equal(marked[0]?.unrealizedUsdt, 1210);
 
 const stats = paperDeskStats(marked, [

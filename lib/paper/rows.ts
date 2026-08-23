@@ -35,6 +35,7 @@ export type PaperCarryRow = {
 
 export type MarkedPaperCarry = PaperCarryRow & {
   markBasis: number | null;
+  markApr: number | null;
   unrealizedUsdt: number | null;
   daysToExpiry: number | null;
 };
@@ -140,6 +141,7 @@ export function markOpenCarries(
       return {
         ...row,
         markBasis: null,
+        markApr: null,
         unrealizedUsdt: null,
         daysToExpiry: null,
       };
@@ -147,6 +149,7 @@ export function markOpenCarries(
     return {
       ...row,
       markBasis: live.netBasis,
+      markApr: live.netApr,
       unrealizedUsdt: carryPnlUsdt(
         row.entryBasis,
         live.netBasis,

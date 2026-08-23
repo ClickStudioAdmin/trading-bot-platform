@@ -50,7 +50,7 @@ export function OpenPaperCarryRows({
 
   return (
     <ExpandableOrderRows
-      colSpan={9}
+      colSpan={10}
       orders={trade.orders}
       entryBasis={trade.entryBasis}
     >
@@ -86,6 +86,9 @@ export function OpenPaperCarryRows({
       </td>
       <td className={`px-4 py-3 tabular-nums ${signedTone(trade.markBasis)}`}>
         {formatPct(trade.markBasis)}
+      </td>
+      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.markApr)}`}>
+        {formatPct(trade.markApr)}
       </td>
       <td
         className={`px-4 py-3 tabular-nums ${signedTone(trade.unrealizedUsdt)}`}
