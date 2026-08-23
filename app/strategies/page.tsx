@@ -24,7 +24,7 @@ export default function StrategiesPage() {
             Strategy
           </p>
           <h2 className="mt-2 text-xl font-semibold tracking-tight">
-            Cash and carry
+            Cash and Carry
           </h2>
           <p className="mt-2 text-sm text-ink-muted">
             Buy USDT spot, sell the dated future. Live book, paper carries,

@@ -22,7 +22,7 @@ export function SiteFooter() {
                 href="/strategies/cash-and-carry"
                 className="text-ink-muted hover:text-ink"
               >
-                Cash and carry
+                Cash and Carry
               </Link>
             </li>
           </ul>

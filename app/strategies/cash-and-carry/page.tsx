@@ -17,7 +17,7 @@ import { scanCarryOpportunities } from "@/lib/opportunities/scan";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
 export const metadata: Metadata = {
-  title: "Cash and carry",
+  title: "Cash and Carry",
   description: "Dated cash-and-carry: live book, top opportunities, and paper desk.",
 };
 

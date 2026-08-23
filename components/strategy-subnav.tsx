@@ -24,7 +24,7 @@ export function StrategySubnav({
             </Link>
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-            Cash and carry
+            Cash and Carry
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
             Buy the USDT spot, sell the dated future.
@@ -45,7 +45,7 @@ export function StrategySubnav({
         ) : null}
       </div>
       <nav
-        aria-label="Cash and carry"
+        aria-label="Cash and Carry"
         className="mt-5 flex items-end justify-between gap-4 border-b border-line"
       >
         <div className="flex min-w-0 flex-wrap gap-1">
