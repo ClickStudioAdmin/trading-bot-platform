@@ -428,7 +428,6 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             left: {
               label: "Scan basis",
               value: formatPct(order.theoretical.executableBasis),
-              tone: order.theoretical.executableBasis,
             },
           },
           {
