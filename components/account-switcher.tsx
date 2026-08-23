@@ -36,10 +36,10 @@ export function AccountSwitcher({
           account.id === current.id ? (
             <p
               key={account.id}
-              className="rounded-control bg-surface-raised px-2 py-2 text-sm"
+              className="flex w-full items-center justify-between rounded-control bg-surface-raised px-2 py-2 text-sm"
             >
-              {account.name}
-              <span className="ml-2 text-xs text-ink-faint">
+              <span>{account.name}</span>
+              <span className="text-xs text-ink-faint">
                 {formatAccountMode(account.mode)}
               </span>
             </p>
