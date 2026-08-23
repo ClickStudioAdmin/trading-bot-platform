@@ -124,8 +124,8 @@ assert.equal(
 );
 assert.deepEqual(formatOrderConditions(stored), [
   "Order Type Dynamic (scale in)",
-  "Min APR 4%",
-  "Min DTE 30",
+  "Min APR: 4%",
+  "Min DTE: 30",
 ]);
 assert.equal(
   formatCloseTrigger({

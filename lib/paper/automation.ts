@@ -80,7 +80,7 @@ export function formatEntryTriggers(automation: PaperCarryAutomation): string[] 
   }
   const minApr = formatPctPoints(automation.entryMinNetApr);
   if (minApr) {
-    lines.push(`Min APR ${minApr}`);
+    lines.push(`Min APR: ${minApr}`);
   }
   const dte = formatDteRange(automation.entryMinDte, automation.entryMaxDte);
   if (dte) {
@@ -88,18 +88,18 @@ export function formatEntryTriggers(automation: PaperCarryAutomation): string[] 
   }
   if (automation.entryMaxOpenNotionalUsdt !== null) {
     lines.push(
-      `Max Position Size $${Math.round(automation.entryMaxOpenNotionalUsdt).toLocaleString("en-US")}`,
+      `Max Position Size: $${Math.round(automation.entryMaxOpenNotionalUsdt).toLocaleString("en-US")}`,
     );
   }
   if (automation.entrySizeType === "dynamic") {
     if (automation.entryMinSizeUsdt !== null) {
       lines.push(
-        `Min Order Size $${Math.round(automation.entryMinSizeUsdt).toLocaleString("en-US")}`,
+        `Min Order Size: $${Math.round(automation.entryMinSizeUsdt).toLocaleString("en-US")}`,
       );
     }
   } else if (automation.entryMinCapacityUsdt !== null) {
     lines.push(
-      `Min usable book $${Math.round(automation.entryMinCapacityUsdt).toLocaleString("en-US")}`,
+      `Min usable book: $${Math.round(automation.entryMinCapacityUsdt).toLocaleString("en-US")}`,
     );
   }
   return lines;
@@ -331,13 +331,13 @@ export function formatCloseHow(
 
 function formatDteRange(min: number | null, max: number | null): string | null {
   if (min !== null && max !== null) {
-    return `DTE ${min}–${max}`;
+    return `DTE: ${min}–${max}`;
   }
   if (min !== null) {
-    return `Min DTE ${min}`;
+    return `Min DTE: ${min}`;
   }
   if (max !== null) {
-    return `Max DTE ${max}`;
+    return `Max DTE: ${max}`;
   }
   return null;
 }

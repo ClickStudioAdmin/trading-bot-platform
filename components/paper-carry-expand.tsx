@@ -397,7 +397,7 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
       </header>
       <p className="mt-0.5 text-xs text-ink-muted">{formatOrderWhy(order)}</p>
       {conditions.length > 0 ? (
-        <p className="mt-0.5 text-xs text-ink-faint">{conditions.join(" · ")}</p>
+        <p className="mt-0.5 text-sm text-ink-muted">{conditions.join(" · ")}</p>
       ) : null}
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <SnapshotList
@@ -443,7 +443,6 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             {
               label: "Fees + slip",
               value: formatPct(order.theoretical.feeRate),
-              tone: order.theoretical.feeRate,
             },
           ]}
         />

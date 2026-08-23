@@ -37,10 +37,10 @@ const layer = {
 
 const automation = automationFromLayer(layer);
 assert.deepEqual(formatEntryTriggers(automation), [
-  "Min APR 10%",
-  "DTE 7–90",
-  "Max Position Size $25,000",
-  "Min usable book $5,000",
+  "Min APR: 10%",
+  "DTE: 7–90",
+  "Max Position Size: $25,000",
+  "Min usable book: $5,000",
 ]);
 assert.equal(
   formatExitOrderType(automation),
@@ -75,8 +75,8 @@ assert.deepEqual(
   }),
   [
     "Order Type Dynamic (scale in)",
-    "Max Position Size $25,000",
-    "Min Order Size $4,000",
+    "Max Position Size: $25,000",
+    "Min Order Size: $4,000",
   ],
 );
 
