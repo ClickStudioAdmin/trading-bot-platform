@@ -414,6 +414,10 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             },
           },
           {
+            left: {
+              label: "Fees + slip",
+              value: formatPct(order.theoretical.feeRate),
+            },
             right: { label: "Slip vs scan", value: formatPct(slip), tone: slip },
           },
           {
@@ -470,12 +474,6 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             right: {
               label: "Sell future",
               value: formatPrice(order.theoretical.futureBid),
-            },
-          },
-          {
-            left: {
-              label: "Fees + slip",
-              value: formatPct(order.theoretical.feeRate),
             },
           },
         ]}
