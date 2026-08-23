@@ -42,7 +42,7 @@ Each layer has a name, its own entry and exit order types, entry filters, open c
 
 **Exit (first match wins, on that layer):** DTE ≤ `close_max_dte`; mark net APR < `close_min_net_apr`; P&L % ≥ `take_profit_pct`; P&L % ≤ `stop_loss_pct`. P&L % is all-in P&L ÷ entry notional (10% on $10,000 is $1,000). **Fixed exit** closes the whole row. **Dynamic exit** closes up to current usable book per tick until the row is flat. Mid-unwind rows use status `closing`.
 
-Manual rows: **Close** flattens remaining size at the live scan. **Unwind** clips to usable book and sets `closing` until later ticks finish it. Auto rows follow that layer’s exits. Positions show Manual or Auto.
+Manual rows: **Close** flattens remaining size at the live scan. **Unwind** clips to usable book and sets `closing` until later ticks finish it. Auto rows follow that layer’s exits on each tick. Clicking **Close** on an Auto row uses that set’s exit order type (Fixed flattens; Dynamic clips). Positions show Manual or Auto.
 
 **Engine safety:** A set will not open a second pair unless Max pairs is raised. Fixed entry skips a pair you already hold. Dynamic entry may add clips on the pair this set already holds. Rank by net APR. Caps are per layer. If there are no rule sets, the engine does not open or fire rule exits. It still clips `closing` rows. Manual opens have no `rule_id` and are not auto-closed unless the user clicks Unwind.
 

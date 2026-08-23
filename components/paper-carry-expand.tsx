@@ -4,7 +4,7 @@ import { useId, useState, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
 import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
 import { TokenIcon } from "@/components/token-icon";
-import { closedTradeLabel } from "@/lib/paper/automation";
+import { closedTradeLabel, formatExitTriggers } from "@/lib/paper/automation";
 import {
   formatPct,
   formatPrice,
@@ -232,15 +232,23 @@ function ClosePaperButton({
 
   const actionClass =
     "rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium whitespace-nowrap text-ink";
+  const auto = trade.source === "engine";
+  const dynamicExit = trade.automation.exitSizeType === "dynamic";
 
   return (
     <div className="flex flex-nowrap items-center gap-2">
       <form action={closeOpenPaperCarry}>
         <input type="hidden" name="carryId" value={trade.id} />
         <input type="hidden" name="next" value={next} />
-        <input type="hidden" name="mode" value="market" />
+        <input type="hidden" name="mode" value={auto && dynamicExit ? "unwind" : "market"} />
         <ColumnHint
-          hint="Close at market"
+          hint={
+            auto ? (
+              <AutoCloseHint automation={trade.automation} />
+            ) : (
+              "Close at market"
+            )
+          }
           label={
             <button type="submit" className={actionClass}>
               Close
@@ -264,6 +272,28 @@ function ClosePaperButton({
         </form>
       ) : null}
     </div>
+  );
+}
+
+function AutoCloseHint({
+  automation,
+}: {
+  automation: MarkedPaperCarry["automation"];
+}) {
+  const lines = formatExitTriggers(automation);
+  return (
+    <span className="block space-y-1">
+      <span className="block text-ink">Close based on automation rules</span>
+      {lines.length > 0 ? (
+        lines.map((line) => (
+          <span key={line} className="block">
+            {line}
+          </span>
+        ))
+      ) : (
+        <span className="block">No exit filters stored.</span>
+      )}
+    </span>
   );
 }
 

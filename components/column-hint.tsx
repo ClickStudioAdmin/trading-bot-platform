@@ -8,7 +8,7 @@ export function ColumnHint({
   hint,
 }: {
   label: ReactNode;
-  hint: string;
+  hint: ReactNode;
 }) {
   const [box, setBox] = useState<DOMRect | null>(null);
 

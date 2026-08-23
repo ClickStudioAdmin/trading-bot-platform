@@ -108,7 +108,7 @@ export function OpenPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Actions"
-                  hint="Close flattens the remaining size at the live scan. Unwind (manual only) clips to usable book and stays Closing until flat. No Bybit order."
+                  hint="Manual Close flattens remaining size at the live scan. Auto Close follows that set’s exit order type: Fixed flattens, Dynamic clips to usable book. Unwind is manual only. No Bybit order."
                 />
               </th>
             </tr>
