@@ -16,9 +16,10 @@ import {
   signedTone,
 } from "@/lib/opportunities/format";
 import { closeOpenPaperCarry } from "@/lib/paper/actions";
-import { carryPnlPct } from "@/lib/paper/math";
+import { carryPnlPct, clipPnl } from "@/lib/paper/math";
 import {
   fillSlip,
+  formatCloseOrderWhy,
   formatOrderConditions,
   formatOrderHeadline,
   formatOrderWhy,
@@ -48,7 +49,11 @@ export function OpenPaperCarryRows({
       : carryPnlPct(trade.unrealizedUsdt, trade.notionalUsdt);
 
   return (
-    <ExpandableOrderRows colSpan={9} orders={trade.orders}>
+    <ExpandableOrderRows
+      colSpan={9}
+      orders={trade.orders}
+      entryBasis={trade.entryBasis}
+    >
       <td className="px-4 py-3">
         <span className="flex items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
@@ -106,7 +111,11 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
       : carryPnlPct(trade.realizedUsdt, trade.notionalUsdt);
 
   return (
-    <ExpandableOrderRows colSpan={8} orders={trade.orders}>
+    <ExpandableOrderRows
+      colSpan={8}
+      orders={trade.orders}
+      entryBasis={trade.entryBasis}
+    >
       <td className="px-4 py-3">
         <span className="flex items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
@@ -158,10 +167,12 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
 
 function ExpandableOrderRows({
   orders,
+  entryBasis,
   colSpan,
   children,
 }: {
   orders: PaperOrderRow[];
+  entryBasis: number;
   colSpan: number;
   children: ReactNode;
 }) {
@@ -188,7 +199,7 @@ function ExpandableOrderRows({
       {open ? (
         <tr className="border-b border-line last:border-b-0">
           <td colSpan={colSpan} className="bg-canvas px-4 py-4" id={panelId}>
-            <PaperOrderList orders={orders} />
+            <PaperOrderList orders={orders} entryBasis={entryBasis} />
           </td>
         </tr>
       ) : null}
@@ -323,7 +334,13 @@ function PositionKind({
   );
 }
 
-function PaperOrderList({ orders }: { orders: PaperOrderRow[] }) {
+function PaperOrderList({
+  orders,
+  entryBasis,
+}: {
+  orders: PaperOrderRow[];
+  entryBasis: number;
+}) {
   if (orders.length === 0) {
     return <p className="text-sm text-ink-muted">No orders recorded.</p>;
   }
@@ -334,7 +351,11 @@ function PaperOrderList({ orders }: { orders: PaperOrderRow[] }) {
         Orders
       </p>
       {orders.map((order) => (
-        <PaperOrderCard key={order.id} order={order} />
+        <PaperOrderCard
+          key={order.id}
+          order={order}
+          entryBasis={entryBasis}
+        />
       ))}
       <p className="text-xs text-ink-faint">
         Paper fill equals the scan. No Bybit order.
@@ -343,17 +364,21 @@ function PaperOrderList({ orders }: { orders: PaperOrderRow[] }) {
   );
 }
 
-function PaperOrderCard({ order }: { order: PaperOrderRow }) {
+function PaperOrderCard({
+  order,
+  entryBasis,
+}: {
+  order: PaperOrderRow;
+  entryBasis: number;
+}) {
+  if (order.side === "close") {
+    return <CloseOrderCard order={order} entryBasis={entryBasis} />;
+  }
+
   const conditions = formatOrderConditions(order);
   const slip = fillSlip(order);
   const empty =
-    order.side === "open"
-      ? order.source === "engine"
-        ? "No entry filters."
-        : "No automation entry."
-      : order.source === "engine"
-        ? "No exit filters stored."
-        : "No auto exits armed.";
+    order.source === "engine" ? "No entry filters." : "No automation entry.";
 
   return (
     <article className="rounded-card border border-line bg-surface-raised p-4">
@@ -446,6 +471,85 @@ function PaperOrderCard({ order }: { order: PaperOrderRow }) {
             { label: "Filled", value: formatDeskDateTime(order.filledAtMs) },
           ]}
         />
+      </div>
+    </article>
+  );
+}
+
+function CloseOrderCard({
+  order,
+  entryBasis,
+}: {
+  order: PaperOrderRow;
+  entryBasis: number;
+}) {
+  const captured = entryBasis - order.fillBasis;
+  const pnl = clipPnl({
+    entryBasis,
+    fillBasis: order.fillBasis,
+    notionalUsdt: order.notionalUsdt,
+    feeRate: order.theoretical.feeRate,
+  });
+  const rows: { label: string; value: string; tone?: number | null }[] = [
+    { label: "Size closed", value: formatUsd(order.notionalUsdt) },
+    {
+      label: "Exit basis",
+      value: formatPct(order.fillBasis),
+      tone: order.fillBasis,
+    },
+    {
+      label: "Entry basis",
+      value: formatPct(entryBasis),
+      tone: entryBasis,
+    },
+    {
+      label: "Basis captured",
+      value: formatPct(captured),
+      tone: captured,
+    },
+    {
+      label: "Clip P&L",
+      value:
+        pnl === null
+          ? "—"
+          : `${formatSignedUsd(pnl.usdt)} (${formatPct(pnl.pct)})`,
+      tone: pnl?.usdt ?? null,
+    },
+    {
+      label: "Mark APR",
+      value: formatPct(order.theoretical.netApr),
+      tone: order.theoretical.netApr,
+    },
+    {
+      label: "DTE",
+      value:
+        order.theoretical.daysToExpiry === null
+          ? "—"
+          : order.theoretical.daysToExpiry.toFixed(1),
+    },
+  ];
+  if (order.theoretical.capacityUsdt !== null) {
+    rows.push({
+      label: "Usable book",
+      value: formatUsd(order.theoretical.capacityUsdt),
+    });
+  }
+
+  return (
+    <article className="rounded-card border border-line bg-surface-raised p-4">
+      <header className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="text-sm font-semibold tracking-tight">
+          {formatOrderHeadline(order)}
+        </h3>
+        <p className="text-xs text-ink-muted">
+          {formatDeskDateTime(order.filledAtMs)}
+          {" · "}
+          {formatUsd(order.notionalUsdt)}
+        </p>
+      </header>
+      <p className="mt-2 text-sm text-ink-muted">{formatCloseOrderWhy(order)}</p>
+      <div className="mt-4 max-w-md">
+        <ValueList title="This clip" rows={rows} />
       </div>
     </article>
   );

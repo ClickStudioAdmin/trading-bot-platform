@@ -3,6 +3,7 @@ import {
   blendEntryBasis,
   carryPnlPct,
   carryPnlUsdt,
+  clipPnl,
   closePaperCarry,
   daysHeld,
   realizedApr,
@@ -22,6 +23,25 @@ almostEqual(blendEntryBasis(2_000, 0.02, 1_000, 0.05), 0.03);
 almostEqual(blendEntryBasis(10_000, 0.018, 10_000, 0.018), 0.018);
 assert.throws(() => blendEntryBasis(0, 0.02, 1_000, 0.03));
 assert.throws(() => blendEntryBasis(1_000, Number.NaN, 1_000, 0.03));
+
+const clip = clipPnl({
+  entryBasis: 0.02,
+  fillBasis: 0.01,
+  notionalUsdt: 10_000,
+  feeRate: 0.002,
+});
+assert.ok(clip !== null);
+almostEqual(clip.usdt, 60);
+almostEqual(clip.pct, 0.006);
+assert.equal(
+  clipPnl({
+    entryBasis: 0.02,
+    fillBasis: 0.01,
+    notionalUsdt: 10_000,
+    feeRate: null,
+  }),
+  null,
+);
 
 almostEqual(carryPnlPct(60, 10_000), 0.006);
 almostEqual(carryPnlPct(-40, 10_000), -0.004);

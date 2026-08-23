@@ -6,6 +6,7 @@ import {
   attachOrders,
   fillSlip,
   formatOrderConditions,
+  formatCloseOrderWhy,
   formatOrderHeadline,
   formatOrderWhy,
   ordersForCarry,
@@ -116,6 +117,35 @@ assert.deepEqual(formatOrderConditions(stored), [
   "Min APR 4%",
   "Min DTE 30",
 ]);
+assert.equal(
+  formatCloseOrderWhy({
+    ...stored,
+    side: "close",
+    source: "manual",
+    triggerReason: "unwind",
+    conditions: { ...EMPTY_AUTOMATION, exitSizeType: "dynamic" },
+  }),
+  "You closed · Dynamic (scale out)",
+);
+assert.equal(
+  formatCloseOrderWhy({
+    ...stored,
+    side: "close",
+    source: "manual",
+    triggerReason: "unwind",
+    conditions: EMPTY_AUTOMATION,
+  }),
+  "You unwound this clip.",
+);
+assert.equal(
+  formatCloseOrderWhy({
+    ...stored,
+    side: "close",
+    source: "engine",
+    triggerReason: "mark_apr",
+  }),
+  "Closed on mark APR.",
+);
 
 const carry = parsePaperCarryRow({
   id: "3",

@@ -53,6 +53,24 @@ export function blendEntryBasis(
   );
 }
 
+export function clipPnl(input: {
+  entryBasis: number;
+  fillBasis: number;
+  notionalUsdt: number;
+  feeRate: number | null;
+}): { usdt: number; pct: number } | null {
+  if (input.feeRate === null) {
+    return null;
+  }
+  const usdt = carryPnlUsdt(
+    input.entryBasis,
+    input.fillBasis,
+    input.notionalUsdt,
+    input.feeRate,
+  );
+  return { usdt, pct: carryPnlPct(usdt, input.notionalUsdt) };
+}
+
 export function carryPnlPct(pnlUsdt: number, notionalUsdt: number): number {
   if (!(notionalUsdt > 0)) {
     throw new Error("Notional must be positive");

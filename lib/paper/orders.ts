@@ -1,7 +1,6 @@
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import {
   automationInsertColumns,
-  formatCloseHow,
   formatEntryTriggers,
   formatExitTriggers,
   formatSourceWord,
@@ -237,7 +236,35 @@ export function formatOrderWhy(order: PaperOrderRow): string {
       ? "Opened automatically. All entry conditions were true."
       : "Opened manually.";
   }
-  return formatCloseHow(order.source, order.triggerReason);
+  return formatCloseOrderWhy(order);
+}
+
+export function formatCloseOrderWhy(order: PaperOrderRow): string {
+  if (order.source === "engine") {
+    if (order.triggerReason === "dte") {
+      return "Closed on DTE.";
+    }
+    if (order.triggerReason === "mark_apr") {
+      return "Closed on mark APR.";
+    }
+    if (order.triggerReason === "take_profit") {
+      return "Closed on take profit.";
+    }
+    if (order.triggerReason === "stop_loss") {
+      return "Closed on stop loss.";
+    }
+    if (order.triggerReason === "unwind") {
+      return "Unwound automatically.";
+    }
+    return "Closed automatically.";
+  }
+  if (order.triggerReason === "unwind") {
+    if (order.conditions.exitSizeType === "dynamic") {
+      return "You closed · Dynamic (scale out)";
+    }
+    return "You unwound this clip.";
+  }
+  return "You closed this clip.";
 }
 
 export function formatOrderConditions(order: PaperOrderRow): string[] {
