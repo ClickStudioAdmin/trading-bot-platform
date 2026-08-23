@@ -10,11 +10,11 @@ import {
 import { signOut } from "@/lib/auth/actions";
 
 export function UserMenu({
-  email,
+  name,
   current,
   accounts,
 }: {
-  email: string | null;
+  name: string | null;
   current?: TradingAccount;
   accounts?: TradingAccount[];
 }) {
@@ -48,7 +48,7 @@ export function UserMenu({
     };
   }, []);
 
-  if (!email) {
+  if (!name) {
     return (
       <Link
         href="/sign-in"
@@ -59,7 +59,7 @@ export function UserMenu({
     );
   }
 
-  const initial = email.slice(0, 1).toUpperCase();
+  const initial = name.slice(0, 1).toUpperCase();
   const books = accounts ?? [];
 
   return (
@@ -69,7 +69,7 @@ export function UserMenu({
           {initial}
         </span>
         <span className="hidden max-w-[10rem] truncate text-sm text-ink-muted sm:inline">
-          {email}
+          {name}
         </span>
         {current ? (
           <span className="hidden max-w-[7rem] truncate text-xs text-ink-faint sm:inline">
@@ -78,7 +78,7 @@ export function UserMenu({
         ) : null}
       </summary>
       <div className="absolute right-0 z-20 mt-2 w-72 rounded-card border border-line bg-surface p-2 shadow-none">
-        <p className="truncate px-2 py-2 text-xs text-ink-faint">{email}</p>
+        <p className="truncate px-2 py-2 text-xs text-ink-faint">{name}</p>
         {current ? (
           <>
             <p className="px-2 pt-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">

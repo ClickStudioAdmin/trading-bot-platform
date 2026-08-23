@@ -5,6 +5,7 @@ import { UserMenu } from "@/components/user-menu";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { getAdminUser } from "@/lib/admin/access";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
+import { memberDisplayName } from "@/lib/members/sync";
 
 export async function SiteHeader() {
   const user = await getSessionMember();
@@ -32,7 +33,7 @@ export async function SiteHeader() {
             </div>
           </details>
           <UserMenu
-            email={user?.email ?? null}
+            name={user ? memberDisplayName(user.email, user.name) : null}
             current={session?.account}
             accounts={accounts}
           />

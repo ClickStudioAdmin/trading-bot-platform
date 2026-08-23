@@ -32,7 +32,7 @@ export default async function AdminEditMemberPage({
   const error = firstSearchValue(query.error);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
+    <div>
       <PageHeading overline="Admin" title="Edit member" />
       <p className="-mt-4 text-sm text-ink-muted">{member.email}</p>
       {error ? (
@@ -56,6 +56,6 @@ export default async function AdminEditMemberPage({
           Back to members
         </Link>
       </p>
-    </main>
+    </div>
   );
 }

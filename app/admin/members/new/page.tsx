@@ -18,7 +18,7 @@ export default async function AdminNewMemberPage({
   const error = firstSearchValue(params.error);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
+    <div>
       <PageHeading overline="Admin" title="New member" />
       <p className="-mt-4 text-sm text-ink-muted">
         Creates a desk login on the members table. No public sign-up.
@@ -43,6 +43,6 @@ export default async function AdminNewMemberPage({
           Back to members
         </Link>
       </p>
-    </main>
+    </div>
   );
 }

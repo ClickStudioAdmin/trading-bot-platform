@@ -18,7 +18,7 @@ export default async function AdminLogsPage({
   const rows = await listEventLogs(filters);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
+    <div>
       <PageHeading overline="Admin" title="System logs" />
       <EventLogs
         rows={rows}
@@ -27,6 +27,6 @@ export default async function AdminLogsPage({
         showUser
         scopes={["system", "strategy", "trade"]}
       />
-    </main>
+    </div>
   );
 }

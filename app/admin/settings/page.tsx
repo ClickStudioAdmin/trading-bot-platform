@@ -8,11 +8,11 @@ export const metadata: Metadata = {
 
 export default function AdminSettingsPage() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
+    <div>
       <PageHeading overline="Admin" title="Settings" />
       <p className="-mt-4 text-sm text-ink-muted">
-        System settings will land here. Members and logs are on their own tabs.
+        System settings will land here. Members and logs are in the menu.
       </p>
-    </main>
+    </div>
   );
 }

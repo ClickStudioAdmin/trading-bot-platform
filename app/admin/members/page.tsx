@@ -28,7 +28,7 @@ export default async function AdminMembersPage({
   const error = firstSearchValue(params.error);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
+    <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <PageHeading overline="Admin" title="Members" />
         <Link
@@ -140,6 +140,6 @@ export default async function AdminMembersPage({
           ) : null}
         </div>
       </div>
-    </main>
+    </div>
   );
 }

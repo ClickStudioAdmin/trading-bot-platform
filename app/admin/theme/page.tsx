@@ -40,9 +40,9 @@ const swatchClass: Record<(typeof colours)[number]["name"], string> = {
 
 export default function ThemePage() {
   return (
-    <div>
-      <div className="overflow-hidden border-b border-line bg-surface">
-        <div className="flex gap-8 px-6 py-2.5 text-xs whitespace-nowrap text-ink-muted">
+    <div className="space-y-12">
+      <div className="overflow-hidden rounded-card border border-line bg-surface">
+        <div className="flex gap-8 px-5 py-2.5 text-xs whitespace-nowrap text-ink-muted">
           <span>
             ETH <span className="text-success">+1.4%</span>
           </span>
@@ -59,7 +59,7 @@ export default function ThemePage() {
         </div>
       </div>
 
-      <main className="mx-auto max-w-6xl space-y-12 px-6 py-10">
+      <div className="space-y-12">
         <PageHeading overline="Reference" title="Portal theme" />
         <section>
           <h2 className="text-xl font-semibold tracking-tight">Colour</h2>
@@ -364,7 +364,7 @@ export default function ThemePage() {
         <p className="text-xs text-ink-faint">
           Sample figures are for theme review only. Source: docs/ui-theme.md
         </p>
-      </main>
+      </div>
     </div>
   );
 }
