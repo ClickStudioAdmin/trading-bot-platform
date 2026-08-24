@@ -74,12 +74,12 @@ export function ExchangeConnectForm({
         <input name="label" maxLength={40} className={fieldClass} />
       </label>
       <p className="text-sm text-ink-muted">
-        Use a trade-only key with no withdrawal permission. The secret is
-        encrypted and is not shown again. This app does not place exchange
-        orders yet.
+        Use a trade-only key with no withdrawal permission. We check that
+        with Bybit before saving. The secret is encrypted and is not shown
+        again. This app does not place exchange orders yet.
       </p>
       <PendingSubmitButton
-        pendingLabel="Saving"
+        pendingLabel="Verifying…"
         successKey="exchange-connect"
         className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
       >

@@ -39,6 +39,7 @@ export async function insertExchangeConnection(input: {
   fingerprint: string;
   ciphertext: Buffer;
   nonce: Buffer;
+  verifiedAt: string;
 }): Promise<{ id: string } | { error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -56,6 +57,7 @@ export async function insertExchangeConnection(input: {
       credentials_ciphertext: toByteaParam(input.ciphertext),
       credentials_nonce: toByteaParam(input.nonce),
       status: "active",
+      verified_at: input.verifiedAt,
     })
     .select("id")
     .single();

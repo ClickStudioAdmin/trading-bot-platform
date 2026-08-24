@@ -27,6 +27,9 @@ assert.equal(
   "acc-1",
 );
 assert.ok(eventLogOptionsForScopes(["trade"]).includes("trade.opened"));
+assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("exchange.verify_failed"),
+);
 assert.equal(
   eventLogOptionsForScopes(["trade"]).includes("member.created"),
   false,

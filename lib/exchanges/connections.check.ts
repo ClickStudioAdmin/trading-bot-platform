@@ -69,6 +69,20 @@ assert.deepEqual(
   }),
   { name: "TBP ByBit Demo", venue: "Bybit" },
 );
+assert.equal(
+  parseExchangeConnectionRow({
+    id: "conn-2",
+    account_id: "acc-1",
+    venue: "bybit",
+    environment: "demo",
+    label: "Desk",
+    key_fingerprint: "9876",
+    status: "active",
+    verified_at: "2026-08-25T00:00:00.000Z",
+    created_at: "2026-08-25T00:00:00.000Z",
+  })?.verifiedAtMs,
+  Date.parse("2026-08-25T00:00:00.000Z"),
+);
 assert.equal(parseExchangeConnectionRow({}), null);
 
 assert.equal(toByteaParam(Buffer.from("ab")), "\\x6162");

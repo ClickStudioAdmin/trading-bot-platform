@@ -162,6 +162,7 @@ function ConnectionList({
                       {formatEnvironmentLabel(row.venue, row.environment)}
                       {" · "}
                       Key ••••{row.fingerprint}
+                      {row.verifiedAtMs ? " · Verified" : null}
                       {row.status === "invalid" ? " · Invalid" : null}
                     </p>
                   </td>

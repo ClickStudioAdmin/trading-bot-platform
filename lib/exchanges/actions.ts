@@ -17,6 +17,7 @@ import {
   deleteExchangeConnection,
   insertExchangeConnection,
 } from "@/lib/exchanges/store";
+import { verifyExchangeCredentials } from "@/lib/exchanges/verify";
 import {
   accountCanHoldConnections,
   parseVenueCredentials,
@@ -72,6 +73,29 @@ export async function saveExchangeConnection(formData: FormData) {
     fail("API key is too short to save.");
   }
 
+  const verified = await verifyExchangeCredentials({
+    venueId: venue.venue.id,
+    environmentId: environment.environment.id,
+    credentials: parsed.credentials,
+  });
+  if (!verified.ok) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "exchange.verify_failed",
+      message: verified.error,
+      userId: session.member.id,
+      accountId: session.account.id,
+      data: {
+        venue: venue.venue.id,
+        environment: environment.environment.id,
+        fingerprint,
+        reason: verified.error,
+      },
+    });
+    fail(verified.error);
+  }
+
   let packed;
   try {
     packed = encryptCredentials(parsed.credentials);
@@ -88,6 +112,7 @@ export async function saveExchangeConnection(formData: FormData) {
     fingerprint,
     ciphertext: packed.ciphertext,
     nonce: packed.nonce,
+    verifiedAt: new Date().toISOString(),
   });
   if ("error" in written) {
     await writeEventLog({

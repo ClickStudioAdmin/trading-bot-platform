@@ -1,4 +1,9 @@
 export const BYBIT_PUBLIC_REST = "https://api.bybit.com";
+export const BYBIT_DEMO_REST = "https://api-demo.bybit.com";
+
+export function bybitRestHost(environmentId: string): string {
+  return environmentId === "demo" ? BYBIT_DEMO_REST : BYBIT_PUBLIC_REST;
+}
 
 export const CARRY_BASE_COINS = [
   "BTC",

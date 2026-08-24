@@ -137,6 +137,7 @@ function ConnectionList({ rows }: { rows: ExchangeConnection[] }) {
               </p>
               <p className="mt-1 text-xs text-ink-faint">
                 {formatEnvironmentLabel(row.venue, row.environment)}
+                {row.verifiedAtMs ? " · Verified" : null}
                 {row.status === "invalid" ? " · Invalid" : null}
               </p>
             </div>

@@ -10,9 +10,9 @@ Paper accounts do not hold exchange connections.
 
 ## Current micro-step
 
-**5 of 6 — Exchanges UI** (complete)
+**6 of 6 — Verify trade-only** (complete)
 
-Phase 6 is current. Waiting on **6 — Verify trade-only**.
+Phase 6 code is in. Saving a Bybit key now checks trade permission and rejects withdrawal. Wait for desk testing before starting later-phase work.
 
 ## Micro-steps
 
@@ -34,7 +34,7 @@ Stop after each step. Do not start the next until you say so.
 - One connection per **account + venue + environment** (a Live book may have Bybit Live and Bybit Demo, or a second venue).
 - Credentials are an **encrypted JSON object**. Each venue declares its fields in the registry (Bybit: API key + secret. A later venue may add passphrase without a migration).
 - The Exchanges form is driven by the registry. Adding a venue is a new adapter + enable flag, not a fork of the page.
-- Public market data and private trading are separate clients. Today only the public Bybit scanner exists. Private REST is Bybit-only when verify lands; other venues stay disabled.
+- Public market data and private trading are separate clients. Today only the public Bybit scanner exists. Private REST is Bybit-only for trade-only verify (`GET /v5/user/query-api`). Other venues stay disabled. No orders.
 - Decision math stays venue-agnostic. A later live adapter will consume the same engine decisions paper already uses. Not this phase.
 
 ## Who can connect
@@ -72,7 +72,7 @@ RLS: own-row select. Writes are service-role, scoped by the session account. Aut
 
 ## Runtime
 
-Unchanged for live execution. Tick still paper-only. Vercel still must not place exchange orders. Paper ticks honour per-set mode and account **Reduce only**: no new automated entries or scale-ins when Reduce only; exits, clips, Unwind, and manual Open/Close still run.
+Unchanged for live execution. Tick still paper-only. Vercel still must not place exchange orders. Verify is a signed Bybit GET from the server (Live → `api.bybit.com`, Demo → `api-demo.bybit.com`). Paper ticks honour per-set mode and account **Reduce only**: no new automated entries or scale-ins when Reduce only; exits, clips, Unwind, and manual Open/Close still run.
 
 ## Out of scope
 

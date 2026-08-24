@@ -12,6 +12,7 @@ export const EVENT_LOG_OPTIONS = [
   { event: "exchange.removed", scope: "system" },
   { event: "exchange.save_failed", scope: "system" },
   { event: "exchange.saved", scope: "system" },
+  { event: "exchange.verify_failed", scope: "system" },
   { event: "member.created", scope: "system" },
   { event: "member.password_changed", scope: "system" },
   { event: "member.profile_updated", scope: "system" },
