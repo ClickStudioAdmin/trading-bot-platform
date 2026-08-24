@@ -104,10 +104,6 @@ export function AccountDeleteControl({
           ) : (
             <form action={deleteTradingAccount} className="space-y-3">
               <input type="hidden" name="accountId" value={accountId} />
-              <SwitchFields
-                options={options}
-                defaultSwitchId={defaultSwitchId}
-              />
               <p className="text-xs text-ink-muted">
                 Remove {accountName} and its closed history? This cannot be
                 undone.
@@ -118,6 +114,10 @@ export function AccountDeleteControl({
               >
                 Delete account
               </PendingSubmitButton>
+              <SwitchFields
+                options={options}
+                defaultSwitchId={defaultSwitchId}
+              />
             </form>
           )}
         </div>
@@ -141,15 +141,13 @@ function SwitchFields({
     return (
       <>
         <input type="hidden" name="switchToAccountId" value={only.id} />
-        <p className="text-xs text-ink-muted">
-          You&apos;ll switch to {only.name}.
-        </p>
+        <p className="text-xs text-ink-muted">Switch to {only.name}.</p>
       </>
     );
   }
   return (
     <label className="block text-xs text-ink-muted">
-      You&apos;ll switch to
+      Switch to
       <select
         name="switchToAccountId"
         defaultValue={defaultSwitchId ?? options[0]?.id}
