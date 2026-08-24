@@ -65,27 +65,24 @@ export function OpenPaperCarryRows({
       entryBasis={trade.entryBasis}
     >
       <td className="min-w-0 px-4 py-3">
-        <span className="flex items-center gap-2 font-medium">
+        <span className="flex flex-wrap items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
           <PositionKind source={trade.source} />
+          {trade.ruleName ? (
+            <PaperAutomationTrigger
+              carryId={trade.id}
+              automation={trade.automation}
+              label={trade.ruleName}
+              canEdit
+              entrySource="engine"
+              next={next}
+              className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent hover:text-accent-strong"
+            />
+          ) : null}
         </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
           {trade.futureSymbol}
-          {trade.ruleName ? (
-            <>
-              {" · "}
-              <PaperAutomationTrigger
-                carryId={trade.id}
-                automation={trade.automation}
-                label={trade.ruleName}
-                canEdit
-                entrySource="engine"
-                next={next}
-                className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent hover:text-accent-strong"
-              />
-            </>
-          ) : null}
         </span>
       </td>
       <td className="px-4 py-3 tabular-nums text-ink-muted">

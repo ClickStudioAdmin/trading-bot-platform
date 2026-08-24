@@ -196,7 +196,7 @@ function PaperOpenAction({
       <input type="hidden" name="next" value={paper.next} />
       <PendingSubmitButton
         pendingLabel="Opening"
-        className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium whitespace-nowrap text-ink"
+        className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
       >
         Open
       </PendingSubmitButton>

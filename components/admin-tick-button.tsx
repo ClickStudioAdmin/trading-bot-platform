@@ -45,16 +45,17 @@ export function AdminTickButton() {
         disabled={busy}
         aria-busy={busy}
         onClick={() => void runTick()}
-        className="inline-flex items-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
+        className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
+        aria-label={busy ? "Ticking" : undefined}
       >
-        {busy ? (
-          <>
-            <ButtonBusyIcon />
-            Ticking…
-          </>
-        ) : (
-          "Tick"
-        )}
+        <span className="inline-grid justify-items-center">
+          <span className="invisible col-start-1 row-start-1" aria-hidden>
+            Tick
+          </span>
+          <span className="col-start-1 row-start-1 inline-flex items-center justify-center">
+            {busy ? <ButtonBusyIcon /> : "Tick"}
+          </span>
+        </span>
       </button>
       {note ? (
         <span className="hidden max-w-[16rem] truncate text-xs text-ink-faint lg:inline">
