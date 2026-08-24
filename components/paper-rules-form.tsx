@@ -8,6 +8,7 @@ import {
   type PaperLayerFormValues,
   type PaperRulesFormValues,
 } from "@/lib/engine/rules";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 
 export function PaperRulesForm({
@@ -75,12 +76,12 @@ export function PaperRulesForm({
           Add Rule Set
         </button>
         {empty ? null : (
-          <button
-            type="submit"
+          <PendingSubmitButton
+            pendingLabel="Saving…"
             className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
             Save automations
-          </button>
+          </PendingSubmitButton>
         )}
       </div>
     </form>

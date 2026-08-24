@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { eventLogOptionsForScopes } from "@/lib/logs/events";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import type { EventLogFilters, EventLogRow } from "@/lib/logs/list";
 
 export function EventLogs({
@@ -97,12 +98,12 @@ export function EventLogs({
           </label>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="submit"
+          <PendingSubmitButton
+            pendingLabel="Applying…"
             className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
             Apply filters
-          </button>
+          </PendingSubmitButton>
           <Link
             href={clearHref}
             className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"

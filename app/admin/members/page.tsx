@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminMembersTable } from "@/components/admin-members-table";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { PageHeading } from "@/components/page-heading";
 import { listMembers } from "@/lib/members/list";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -98,12 +99,12 @@ export default async function AdminMembersPage({
           </label>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="submit"
+          <PendingSubmitButton
+            pendingLabel="Applying…"
             className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
             Apply filters
-          </button>
+          </PendingSubmitButton>
           <Link
             href="/admin/members"
             className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"

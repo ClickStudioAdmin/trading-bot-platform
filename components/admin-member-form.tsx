@@ -1,4 +1,5 @@
 import { emailIsListedAdmin } from "@/lib/admin/emails";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { createMember, updateMember } from "@/lib/members/actions";
 import type { MemberFormValues } from "@/lib/members/form";
 
@@ -93,12 +94,12 @@ export function AdminMemberForm({
           <input type="hidden" name="status" value="active" />
         </>
       ) : null}
-      <button
-        type="submit"
+      <PendingSubmitButton
+        pendingLabel={mode === "create" ? "Creating…" : "Saving…"}
         className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
       >
         {mode === "create" ? "Create member" : "Save member"}
-      </button>
+      </PendingSubmitButton>
     </form>
   );
 }

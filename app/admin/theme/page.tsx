@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeading } from "@/components/page-heading";
+import { ButtonBusyIcon } from "@/components/pending-submit-button";
 
 export const metadata: Metadata = {
   title: "Theme",
@@ -250,6 +251,10 @@ export default function ThemePage() {
 
         <section>
           <h2 className="text-xl font-semibold tracking-tight">Controls</h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            Press scales the control. Submits show a spinner and stay disabled
+            until the request finishes.
+          </p>
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <button
               type="button"
@@ -274,6 +279,15 @@ export default function ThemePage() {
               className="rounded-control bg-danger/15 px-4 py-2 text-sm font-medium text-danger"
             >
               Danger
+            </button>
+            <button
+              type="button"
+              disabled
+              aria-busy
+              className="inline-flex items-center gap-1.5 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            >
+              <ButtonBusyIcon />
+              Saving…
             </button>
             <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs text-success">
               Success

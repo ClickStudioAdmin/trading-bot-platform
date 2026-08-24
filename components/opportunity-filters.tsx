@@ -1,4 +1,5 @@
 import type { OpportunityFilterInputs } from "@/lib/opportunities/filter";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 
 export function OpportunityFiltersForm({
   values,
@@ -37,12 +38,12 @@ export function OpportunityFiltersForm({
         />
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="submit"
+        <PendingSubmitButton
+          pendingLabel="Applying…"
           className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
         >
           Apply filters
-        </button>
+        </PendingSubmitButton>
         <a
           href="/strategies/cash-and-carry/opportunities"
           className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"

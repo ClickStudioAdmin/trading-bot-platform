@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { switchTradingAccount } from "@/lib/accounts/actions";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   formatAccountMode,
   type TradingAccount,
@@ -104,15 +105,15 @@ export function UserMenu({
               ) : (
                 <form key={account.id} action={switchTradingAccount}>
                   <input type="hidden" name="accountId" value={account.id} />
-                  <button
-                    type="submit"
+                  <PendingSubmitButton
+                    pendingLabel="Switching…"
                     className="flex w-full items-center justify-between rounded-control px-2 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
                   >
                     <span>{account.name}</span>
                     <span className="text-xs text-ink-faint">
                       {formatAccountMode(account.mode)}
                     </span>
-                  </button>
+                  </PendingSubmitButton>
                 </form>
               ),
             )}
@@ -132,12 +133,12 @@ export function UserMenu({
           </>
         ) : null}
         <form action={signOut}>
-          <button
-            type="submit"
+          <PendingSubmitButton
+            pendingLabel="Signing out…"
             className="w-full rounded-control px-2 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
           >
             Sign out
-          </button>
+          </PendingSubmitButton>
         </form>
       </div>
     </details>

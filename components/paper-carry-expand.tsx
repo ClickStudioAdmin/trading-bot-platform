@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
 import { TokenIcon } from "@/components/token-icon";
 import {
@@ -282,42 +283,47 @@ function ClosePaperButton({
   const dynamicExit = trade.automation.exitSizeType === "dynamic";
 
   return (
-    <div className="flex flex-nowrap items-center gap-2">
-      <form action={closeOpenPaperCarry}>
-        <input type="hidden" name="carryId" value={trade.id} />
-        <input type="hidden" name="next" value={next} />
-        <input type="hidden" name="mode" value={auto && dynamicExit ? "unwind" : "market"} />
+    <form
+      action={closeOpenPaperCarry}
+      className="flex flex-nowrap items-center gap-2"
+    >
+      <input type="hidden" name="carryId" value={trade.id} />
+      <input type="hidden" name="next" value={next} />
+      <ColumnHint
+        hint={
+          auto ? (
+            <AutoCloseHint automation={trade.automation} />
+          ) : (
+            "Close at market"
+          )
+        }
+        label={
+          <PendingSubmitButton
+            name="mode"
+            value={auto && dynamicExit ? "unwind" : "market"}
+            pendingLabel="Closing…"
+            className={actionClass}
+          >
+            Close
+          </PendingSubmitButton>
+        }
+      />
+      {trade.source === "manual" ? (
         <ColumnHint
-          hint={
-            auto ? (
-              <AutoCloseHint automation={trade.automation} />
-            ) : (
-              "Close at market"
-            )
-          }
+          hint="Unwind position over time & ASAP (based on the usable book setting)"
           label={
-            <button type="submit" className={actionClass}>
-              Close
-            </button>
+            <PendingSubmitButton
+              name="mode"
+              value="unwind"
+              pendingLabel="Unwinding…"
+              className={actionClass}
+            >
+              Unwind
+            </PendingSubmitButton>
           }
         />
-      </form>
-      {trade.source === "manual" ? (
-        <form action={closeOpenPaperCarry}>
-          <input type="hidden" name="carryId" value={trade.id} />
-          <input type="hidden" name="next" value={next} />
-          <input type="hidden" name="mode" value="unwind" />
-          <ColumnHint
-            hint="Unwind position over time & ASAP (based on the usable book setting)"
-            label={
-              <button type="submit" className={actionClass}>
-                Unwind
-              </button>
-            }
-          />
-        </form>
       ) : null}
-    </div>
+    </form>
   );
 }
 

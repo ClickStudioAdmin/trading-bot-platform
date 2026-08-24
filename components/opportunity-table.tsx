@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ColumnHint } from "@/components/column-hint";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TokenIcon } from "@/components/token-icon";
 import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
 import { openPaperCarry } from "@/lib/paper/actions";
@@ -193,12 +194,12 @@ function PaperOpenAction({
       <input type="hidden" name="spotSymbol" value={row.spotSymbol} />
       <input type="hidden" name="futureSymbol" value={row.futureSymbol} />
       <input type="hidden" name="next" value={paper.next} />
-      <button
-        type="submit"
+      <PendingSubmitButton
+        pendingLabel="Opening…"
         className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
       >
         Open
-      </button>
+      </PendingSubmitButton>
     </form>
   );
 }

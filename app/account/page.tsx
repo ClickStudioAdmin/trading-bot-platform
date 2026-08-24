@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeading } from "@/components/page-heading";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   createTradingAccount,
   deleteTradingAccount,
@@ -94,12 +95,12 @@ export default async function ManageSubAccountsPage({
                     <form action={switchTradingAccount}>
                       <input type="hidden" name="accountId" value={account.id} />
                       <input type="hidden" name="next" value="/account" />
-                      <button
-                        type="submit"
+                      <PendingSubmitButton
+                        pendingLabel="Switching…"
                         className="rounded-control px-3 py-1.5 text-sm text-accent hover:bg-surface-raised"
                       >
                         Switch to account
-                      </button>
+                      </PendingSubmitButton>
                     </form>
                   )}
                   {canDelete ? (
@@ -118,12 +119,12 @@ export default async function ManageSubAccountsPage({
                             name="accountId"
                             value={account.id}
                           />
-                          <button
-                            type="submit"
+                          <PendingSubmitButton
+                            pendingLabel="Deleting…"
                             className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
                           >
                             Delete account
-                          </button>
+                          </PendingSubmitButton>
                         </form>
                       </div>
                     </details>
@@ -169,12 +170,12 @@ export default async function ManageSubAccountsPage({
           Live accounts can store their own rules. This app will not place
           exchange orders until live execution exists.
         </p>
-        <button
-          type="submit"
+        <PendingSubmitButton
+          pendingLabel="Creating…"
           className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
         >
           Create account
-        </button>
+        </PendingSubmitButton>
       </form>
     </div>
   );

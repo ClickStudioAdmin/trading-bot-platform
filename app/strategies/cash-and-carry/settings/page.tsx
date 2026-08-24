@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { savePaperSettings } from "@/lib/engine/actions";
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import { usableBookShareToInput } from "@/lib/opportunities/capacity";
@@ -57,12 +58,12 @@ export default async function CashAndCarrySettingsPage({
             a quarter of that in-range book. Manual Size, Dynamic clips, and
             Dynamic exits all use this number.
           </p>
-          <button
-            type="submit"
+          <PendingSubmitButton
+            pendingLabel="Saving…"
             className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
           >
             Save settings
-          </button>
+          </PendingSubmitButton>
         </form>
       ) : (
         <p className="mt-6 text-sm text-ink-muted">

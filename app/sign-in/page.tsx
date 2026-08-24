@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { signIn } from "@/lib/auth/actions";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getSessionMember } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
@@ -58,12 +59,12 @@ export default async function SignInPage({
               className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
             />
           </label>
-          <button
-            type="submit"
+          <PendingSubmitButton
+            pendingLabel="Signing in…"
             className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
             Sign in
-          </button>
+          </PendingSubmitButton>
         </form>
       </main>
   );

@@ -36,4 +36,4 @@ Primary: `bg-accent-strong` / `text-ink`. Secondary: surface + `border-line`. Gh
 
 ## Motion
 
-None required on the theme page. Later: short hover on cards/nav, no decorative animation.
+Short press on buttons (`scale` + opacity). Server-action submits show a spinner and stay disabled until the request finishes. No decorative animation.

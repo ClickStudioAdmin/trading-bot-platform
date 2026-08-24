@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { updatePaperCarryExits } from "@/lib/paper/actions";
 import type { PaperReturnPath } from "@/lib/paper/open";
 import {
@@ -149,12 +150,12 @@ export function PaperAutomationTrigger({
                     defaultValue={form.stopLoss}
                     allowDecimal
                   />
-                  <button
-                    type="submit"
+                  <PendingSubmitButton
+                    pendingLabel="Saving…"
                     className="mt-1 rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
                   >
                     Save exits
-                  </button>
+                  </PendingSubmitButton>
                 </form>
               ) : (
                 <>

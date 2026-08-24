@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ButtonBusyIcon } from "@/components/pending-submit-button";
 
 export function AdminTickButton() {
   const router = useRouter();
@@ -42,10 +43,18 @@ export function AdminTickButton() {
       <button
         type="button"
         disabled={busy}
+        aria-busy={busy}
         onClick={() => void runTick()}
-        className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
       >
-        {busy ? "Ticking…" : "Tick"}
+        {busy ? (
+          <>
+            <ButtonBusyIcon />
+            Ticking…
+          </>
+        ) : (
+          "Tick"
+        )}
       </button>
       {note ? (
         <span className="hidden max-w-[16rem] truncate text-xs text-ink-faint lg:inline">
