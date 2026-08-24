@@ -11,7 +11,7 @@ Work only on the current phase. The current phase is Phase 6. See [docs/phase-6.
 
 Feature work happens on `develop`. Merge to `main` only when the user is ready for production.
 
-Phase 6 is exchange connections. Store encrypted, trade-only keys on Live accounts. The model is venue-agnostic; Bybit is the first enabled venue. Do not place exchange orders. Do not add a Fly.io worker. Do not call private exchange APIs from the browser. Paper accounts still use the Phase 4 paper ledger. Live accounts may exist; the tick must not execute them. Paper auto-switch is postponed.
+Phase 6 is exchange connections. Store encrypted, trade-only keys on Live accounts. The model is venue-agnostic; Bybit is the first enabled venue. Do not place exchange orders. Do not add a Fly.io worker. Do not call private exchange APIs from the browser. Paper accounts still use the Phase 4 paper ledger. Live accounts may exist; the tick must not execute them. Paper auto-switch is postponed. Phase 7 (additional exchanges, UI refine, Paper market-data venue picker) is written in [docs/phase-7.md](docs/phase-7.md) — do not start it until Phase 6 is accepted and Bybit connections are confirmed.
 
 Do not create later-phase tables or speculative architecture.
 

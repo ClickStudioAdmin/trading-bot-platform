@@ -40,7 +40,7 @@ Stop after each step. Do not start the next until you say so.
 ## Who can connect
 
 - **Live** account: can save connections.
-- **Paper** account: `/account/exchanges` explains that paper does not use keys. Cash-and-carry Settings has no exchange picker.
+- **Paper** account: `/account/exchanges` explains that paper does not use keys. Cash-and-carry Settings has no exchange picker. A Paper **venue** picker for market data is Phase 7, once a second venue can scan — [phase-7.md](phase-7.md).
 - Keys belong to the **trading account**, not the login. Switching accounts shows that book’s connections only.
 - Cash and Carry binds one **active** connection in strategy Settings (`paper_engine_settings.exchange_connection_id`). The strategy header shows that bind (left of the status badge), or “Connect an exchange to start trading”.
 - Cannot **remove** a connection while Cash and Carry (or a later strategy) is attached to it. Unused keys on the same account stay removable.
@@ -79,7 +79,8 @@ Unchanged for live execution. Tick still paper-only. Vercel still must not place
 - Placing or cancelling exchange orders
 - Fly.io worker
 - Live blotter / live ledger (do not write `paper_carries` for live fills)
-- Enabling a second venue in the UI
+- Enabling a second venue in the UI ([phase-7.md](phase-7.md), after Bybit connections are confirmed)
+- Paper venue picker for market data ([phase-7.md](phase-7.md))
 - Paper auto-switch ([phase-auto-switch.md](phase-auto-switch.md))
 - Maker future ask
 - Mapping a TBP account onto an exchange sub-account product

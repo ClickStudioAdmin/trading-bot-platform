@@ -26,7 +26,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 6 — Exchange connections. See [phase-6.md](phase-6.md). Phase 1, Phase 2, Phase 3, Phase 4, and Phase 5 are complete. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
+Phase 6 — Exchange connections. See [phase-6.md](phase-6.md). Phase 1, Phase 2, Phase 3, Phase 4, and Phase 5 are complete. After Phase 6 is accepted and Bybit connections are confirmed, next is Phase 7 — additional exchanges ([phase-7.md](phase-7.md)). Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
 
 ## Multi-tenancy
 

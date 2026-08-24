@@ -12,6 +12,8 @@ See [docs/phase-6.md](docs/phase-6.md). Daily work is on `develop` against the *
 
 Phase 6 stores encrypted, trade-only exchange keys on Live accounts. Bybit is first; the model is built for more venues. No exchange orders. No Fly.io.
 
+Next, after Bybit connections are confirmed: [Phase 7 — Additional exchanges](docs/phase-7.md) (second venue, UI refine, Paper market-data picker).
+
 ## Technology stack
 
 - Next.js, TypeScript, App Router
