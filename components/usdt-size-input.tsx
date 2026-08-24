@@ -1,16 +1,76 @@
 "use client";
 
 import { useState } from "react";
+import { formatUsdCapacity } from "@/lib/opportunities/format";
 import {
   clampNotionalInput,
   formatGroupedNumberInput,
   formatNotionalInput,
+  maxPaperNotionalUsdt,
   parseNotionalUsdt,
+  type OpportunityPaperProps,
 } from "@/lib/paper/open";
+import type { ScannedOpportunity } from "@/lib/opportunities/scan";
+
+export function OpportunityBookAndSize({
+  row,
+  paper,
+  formId,
+}: {
+  row: ScannedOpportunity;
+  paper?: OpportunityPaperProps;
+  formId: string;
+}) {
+  const [size, setSize] = useState("");
+  const label = formatUsdCapacity(row.capacityUsdt);
+  const canFill = Boolean(paper?.signedIn && paper.canOpen) && label !== "—";
+
+  return (
+    <>
+      <td className="px-4 py-3 tabular-nums text-ink-muted">
+        {canFill ? (
+          <span
+            aria-label={`Fill size with ${label}`}
+            onClick={() =>
+              setSize(
+                clampNotionalInput(
+                  String(maxPaperNotionalUsdt(row.capacityUsdt)),
+                  row.capacityUsdt,
+                ),
+              )
+            }
+          >
+            {label}
+          </span>
+        ) : (
+          label
+        )}
+      </td>
+      {paper ? (
+        <td className="px-4 py-3">
+          {paper.signedIn && paper.canOpen ? (
+            <UsdtSizeInput
+              name="notionalUsdt"
+              display={size}
+              onDisplayChange={setSize}
+              maxUsdt={row.capacityUsdt}
+              ariaLabel={`Paper size in USDT for ${row.futureSymbol}`}
+              form={formId}
+            />
+          ) : (
+            <span className="text-ink-faint">—</span>
+          )}
+        </td>
+      ) : null}
+    </>
+  );
+}
 
 export function UsdtSizeInput({
   name,
   defaultValue,
+  display: displayProp,
+  onDisplayChange,
   ariaLabel,
   form,
   compact,
@@ -19,15 +79,19 @@ export function UsdtSizeInput({
 }: {
   name: string;
   defaultValue?: number | string;
+  display?: string;
+  onDisplayChange?: (value: string) => void;
   ariaLabel: string;
   form?: string;
   compact?: boolean;
   showPrefix?: boolean;
   maxUsdt?: number;
 }) {
-  const [display, setDisplay] = useState(
+  const [internal, setInternal] = useState(
     formatNotionalInput(String(defaultValue ?? "")),
   );
+  const display = displayProp ?? internal;
+  const setDisplay = onDisplayChange ?? setInternal;
   const parsed = parseNotionalUsdt(display);
 
   return (

@@ -2,9 +2,9 @@ import Link from "next/link";
 import { ColumnHint } from "@/components/column-hint";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TokenIcon } from "@/components/token-icon";
-import { formatPct, formatUsdCapacity, signedTone } from "@/lib/opportunities/format";
+import { formatPct, signedTone } from "@/lib/opportunities/format";
 import { openPaperCarry } from "@/lib/paper/actions";
-import { UsdtSizeInput } from "@/components/usdt-size-input";
+import { OpportunityBookAndSize } from "@/components/usdt-size-input";
 import { type OpportunityPaperProps } from "@/lib/paper/open";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
@@ -48,18 +48,15 @@ export function OpportunityRows({
           <td className={`px-4 py-3 tabular-nums ${signedTone(row.netApr)}`}>
             {formatPct(row.netApr)}
           </td>
-          <td className="px-4 py-3 tabular-nums text-ink-muted">
-            {formatUsdCapacity(row.capacityUsdt)}
-          </td>
+          <OpportunityBookAndSize
+            row={row}
+            paper={paper}
+            formId={openFormId(row)}
+          />
           {paper ? (
-            <>
-              <td className="px-4 py-3">
-                <PaperSizeCell row={row} paper={paper} />
-              </td>
-              <td className="px-4 py-3">
-                <PaperOpenAction row={row} paper={paper} />
-              </td>
-            </>
+            <td className="px-4 py-3">
+              <PaperOpenAction row={row} paper={paper} />
+            </td>
           ) : null}
         </tr>
       ))}
@@ -147,28 +144,6 @@ export function OpportunityTable({
 
 function openFormId(row: ScannedOpportunity) {
   return `open-${row.spotSymbol}-${row.futureSymbol}`;
-}
-
-function PaperSizeCell({
-  row,
-  paper,
-}: {
-  row: ScannedOpportunity;
-  paper: OpportunityPaperProps;
-}) {
-  if (!paper.signedIn || !paper.canOpen) {
-    return <span className="text-ink-faint">—</span>;
-  }
-
-  return (
-    <UsdtSizeInput
-      name="notionalUsdt"
-      defaultValue=""
-      maxUsdt={row.capacityUsdt}
-      ariaLabel={`Paper size in USDT for ${row.futureSymbol}`}
-      form={openFormId(row)}
-    />
-  );
 }
 
 function PaperOpenAction({
