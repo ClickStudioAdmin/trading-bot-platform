@@ -450,15 +450,22 @@ function PaperOrderList({
   }
 
   return (
-    <div className="space-y-2">
-      {orders.map((order) => (
-        <PaperOrderCard
-          key={order.id}
-          order={order}
-          entryBasis={entryBasis}
-        />
-      ))}
-      <p className="text-xs text-ink-faint">
+    <div>
+      <div
+        className="panel-scroll space-y-2"
+        tabIndex={0}
+        role="region"
+        aria-label="Orders"
+      >
+        {orders.map((order) => (
+          <PaperOrderCard
+            key={order.id}
+            order={order}
+            entryBasis={entryBasis}
+          />
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-ink-faint">
         Paper fill equals the scan. No Bybit order.
       </p>
     </div>
@@ -476,33 +483,40 @@ function PositionLogList({ logs }: { logs: EventLogRow[] }) {
   }
 
   return (
-    <div className="space-y-2">
-      {logs.map((log) => {
-        const rows = logDetailRows(log);
-        return (
-          <article
-            key={log.id}
-            className="rounded-card border border-line bg-surface-raised p-4"
-          >
-            <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-              <h3 className="text-sm font-semibold tracking-tight">
-                {formatLogEvent(log.event)}
-              </h3>
-              <p className="text-xs text-ink-muted">
-                {formatLogTime(log.createdAt)}
+    <div>
+      <div
+        className="panel-scroll space-y-2"
+        tabIndex={0}
+        role="region"
+        aria-label="Position logs"
+      >
+        {logs.map((log) => {
+          const rows = logDetailRows(log);
+          return (
+            <article
+              key={log.id}
+              className="rounded-card border border-line bg-surface-raised p-4"
+            >
+              <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                <h3 className="text-sm font-semibold tracking-tight">
+                  {formatLogEvent(log.event)}
+                </h3>
+                <p className="text-xs text-ink-muted">
+                  {formatLogTime(log.createdAt)}
+                </p>
+              </header>
+              <p className="mt-0.5 text-sm text-ink-muted">{log.message}</p>
+              <p className={`mt-0.5 text-xs ${logLevelTone(log.level)}`}>
+                {[log.event, log.scope, log.strategy, log.level !== "info" ? log.level : null]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
-            </header>
-            <p className="mt-0.5 text-sm text-ink-muted">{log.message}</p>
-            <p className={`mt-0.5 text-xs ${logLevelTone(log.level)}`}>
-              {[log.event, log.scope, log.strategy, log.level !== "info" ? log.level : null]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-            {rows.length > 0 ? <ValueList rows={rows} /> : null}
-          </article>
-        );
-      })}
-      <p className="text-xs text-ink-faint">
+              {rows.length > 0 ? <ValueList rows={rows} /> : null}
+            </article>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-xs text-ink-faint">
         Trade events for this position. Same log as Activity.
       </p>
     </div>
