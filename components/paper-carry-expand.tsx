@@ -22,6 +22,7 @@ import { closeOpenPaperCarry } from "@/lib/paper/actions";
 import { carryPnlPct, clipPnl } from "@/lib/paper/math";
 import {
   fillSlip,
+  hasVenueFill,
   formatCloseOrderWhy,
   formatOrderConditions,
   formatOrderHeadline,
@@ -49,10 +50,12 @@ export function OpenPaperCarryRows({
   trade,
   next,
   hideUnwind = false,
+  exchangeBook = false,
 }: {
   trade: OpenCarryView;
   next: PaperReturnPath;
   hideUnwind?: boolean;
+  exchangeBook?: boolean;
 }) {
   const pnlPct =
     trade.unrealizedUsdt === null
@@ -65,6 +68,7 @@ export function OpenPaperCarryRows({
       orders={trade.orders}
       logs={trade.logs}
       entryBasis={trade.entryBasis}
+      exchangeBook={exchangeBook}
     >
       <td className="min-w-0 px-4 py-3">
         <span className="flex flex-wrap items-center gap-2 font-medium">
@@ -119,7 +123,13 @@ export function OpenPaperCarryRows({
   );
 }
 
-export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
+export function ClosedPaperCarryRows({
+  trade,
+  exchangeBook = false,
+}: {
+  trade: ClosedCarryView;
+  exchangeBook?: boolean;
+}) {
   const pnlPct =
     trade.realizedUsdt === null
       ? null
@@ -131,6 +141,7 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
       orders={trade.orders}
       logs={trade.logs}
       entryBasis={trade.entryBasis}
+      exchangeBook={exchangeBook}
     >
       <td className="min-w-0 px-4 py-3">
         <span className="flex flex-wrap items-center gap-2 font-medium">
@@ -186,12 +197,14 @@ function ExpandableOrderRows({
   logs,
   entryBasis,
   colSpan,
+  exchangeBook = false,
   children,
 }: {
   orders: PaperOrderRow[];
   logs: EventLogRow[];
   entryBasis: number;
   colSpan: number;
+  exchangeBook?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -221,6 +234,7 @@ function ExpandableOrderRows({
               orders={orders}
               logs={logs}
               entryBasis={entryBasis}
+              exchangeBook={exchangeBook}
             />
           </td>
         </tr>
@@ -375,10 +389,12 @@ function PositionDetailTabs({
   orders,
   logs,
   entryBasis,
+  exchangeBook = false,
 }: {
   orders: PaperOrderRow[];
   logs: EventLogRow[];
   entryBasis: number;
+  exchangeBook?: boolean;
 }) {
   const [tab, setTab] = useState<"orders" | "logs">("orders");
   const ordersPanelId = useId();
@@ -412,7 +428,11 @@ function PositionDetailTabs({
         id={tab === "orders" ? ordersPanelId : logsPanelId}
       >
         {tab === "orders" ? (
-          <PaperOrderList orders={orders} entryBasis={entryBasis} />
+          <PaperOrderList
+            orders={orders}
+            entryBasis={entryBasis}
+            exchangeBook={exchangeBook}
+          />
         ) : (
           <PositionLogList logs={logs} />
         )}
@@ -453,13 +473,17 @@ function TabButton({
 function PaperOrderList({
   orders,
   entryBasis,
+  exchangeBook = false,
 }: {
   orders: PaperOrderRow[];
   entryBasis: number;
+  exchangeBook?: boolean;
 }) {
   if (orders.length === 0) {
     return <p className="text-sm text-ink-muted">No orders recorded.</p>;
   }
+
+  const venueDesk = exchangeBook || orders.some(hasVenueFill);
 
   return (
     <div>
@@ -478,7 +502,9 @@ function PaperOrderList({
         ))}
       </div>
       <p className="mt-2 text-xs text-ink-faint">
-        Paper fill equals the scan. No Bybit order.
+        {venueDesk
+          ? "Scan is the public book at order time. Executed is the Bybit fill. Net basis is the scan after assumed fees — same figure as Entry basis."
+          : "Paper fill equals the scan net. No Bybit order. Scan basis is the book; net basis is after assumed fees."}
       </p>
     </div>
   );
@@ -692,6 +718,11 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
     (line) => !line.startsWith("Order Type"),
   );
   const slip = fillSlip(order);
+  const venueFill = hasVenueFill(order);
+  const buySpot = venueFill ? order.fillSpotPrice : order.theoretical.spotAsk;
+  const sellFuture = venueFill
+    ? order.fillFuturePrice
+    : order.theoretical.futureBid;
 
   return (
     <article className="rounded-card border border-line bg-surface-raised p-4">
@@ -708,23 +739,55 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
         <p className="mt-0.5 text-sm text-ink-muted">{conditions.join(" · ")}</p>
       ) : null}
       <ComparePairs
-        leftTitle="Theoretical · scan"
-        rightTitle="Execution · paper"
+        leftTitle="Scan"
+        rightTitle="Executed"
         rows={[
           {
             left: {
-              label: "Net basis",
-              value: formatPct(order.theoretical.netBasis),
-              hint: `Fees + slip: ${formatPct(order.theoretical.feeRate)}`,
+              label: "Scan basis",
+              value: formatPct(order.theoretical.executableBasis),
+              hint: "Gross (future bid − spot ask) / spot ask. Before fees.",
             },
             right: {
               label: "Fill basis",
               value: formatPct(order.fillBasis),
-              tone: order.fillBasis,
+              hint: venueFill
+                ? "Gross from the exchange fill prices. Before fees."
+                : "Paper records the scan net — same figure as Entry basis.",
             },
           },
           {
-            right: { label: "Slip vs scan", value: formatPct(slip), tone: slip },
+            left: {
+              label: "Spot ask",
+              value: formatPrice(order.theoretical.spotAsk),
+            },
+            right: {
+              label: "Buy spot",
+              value: formatPrice(buySpot),
+            },
+          },
+          {
+            left: {
+              label: "Future bid",
+              value: formatPrice(order.theoretical.futureBid),
+            },
+            right: {
+              label: "Sell future",
+              value: formatPrice(sellFuture),
+            },
+          },
+          {
+            left: {
+              label: "Net basis",
+              value: formatPct(order.theoretical.netBasis),
+              hint: `Scan after assumed fees and 5 bp slip (${formatPct(order.theoretical.feeRate)}). Same figure as Entry basis.`,
+            },
+            right: {
+              label: "Slip vs scan",
+              value: formatPct(slip),
+              tone: slip,
+              hint: "Fill basis minus scan basis. Negative is a worse fill than the book.",
+            },
           },
           {
             left: {
@@ -732,12 +795,9 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
               value: formatPct(order.theoretical.netApr),
               tone: order.theoretical.netApr,
             },
-          },
-          {
-            left: {
-              label: "Scan basis",
-              value: formatPct(order.theoretical.executableBasis),
-              hint: "Gross basis before slippage + fees",
+            right: {
+              label: "Order value",
+              value: formatUsd(order.notionalUsdt),
             },
           },
           {
@@ -751,35 +811,11 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
           },
           {
             left: {
-              label: "Spot ask",
-              value: formatPrice(order.theoretical.spotAsk),
-            },
-            right: {
-              label: "Buy spot",
-              value: formatPrice(order.theoretical.spotAsk),
-            },
-          },
-          {
-            left: {
-              label: "Future bid",
-              value: formatPrice(order.theoretical.futureBid),
-            },
-            right: {
-              label: "Sell future",
-              value: formatPrice(order.theoretical.futureBid),
-            },
-          },
-          {
-            left: {
               label: "Capacity",
               value:
                 order.theoretical.capacityUsdt === null
                   ? "—"
                   : formatUsd(order.theoretical.capacityUsdt),
-            },
-            right: {
-              label: "Order value",
-              value: formatUsd(order.notionalUsdt),
             },
           },
         ]}

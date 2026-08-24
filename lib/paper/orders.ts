@@ -41,6 +41,8 @@ export type PaperOrderRow = {
   spotOrderId: string | null;
   futureOrderId: string | null;
   fillQty: number | null;
+  fillSpotPrice: number | null;
+  fillFuturePrice: number | null;
 };
 
 export type PaperCarryWithOrders = PaperCarryRow & {
@@ -155,6 +157,8 @@ export function parsePaperOrderRow(row: Record<string, unknown>): PaperOrderRow 
     spotOrderId: row.spot_order_id ? String(row.spot_order_id) : null,
     futureOrderId: row.future_order_id ? String(row.future_order_id) : null,
     fillQty: asNullableNumber(row.fill_qty),
+    fillSpotPrice: asNullableNumber(row.fill_spot_price),
+    fillFuturePrice: asNullableNumber(row.fill_future_price),
     theoretical: {
       netBasis: asNullableNumber(row.theo_net_basis),
       netApr: asNullableNumber(row.theo_net_apr),
@@ -200,6 +204,8 @@ export function synthesizeOrders(carry: PaperCarryRow): PaperOrderRow[] {
       spotOrderId: null,
       futureOrderId: null,
       fillQty: null,
+      fillSpotPrice: null,
+      fillFuturePrice: null,
       theoretical: {
         netBasis: carry.entryBasis,
         netApr: null,
@@ -233,6 +239,8 @@ export function synthesizeOrders(carry: PaperCarryRow): PaperOrderRow[] {
       spotOrderId: null,
       futureOrderId: null,
       fillQty: null,
+      fillSpotPrice: null,
+      fillFuturePrice: null,
       theoretical: {
         netBasis: carry.exitBasis,
         netApr: null,
@@ -395,9 +403,19 @@ export function formatOrderHeadline(order: PaperOrderRow): string {
   return formatOrderSide(order.side);
 }
 
+export function hasVenueFill(order: PaperOrderRow): boolean {
+  return (
+    order.venue !== null ||
+    (order.fillSpotPrice !== null && order.fillFuturePrice !== null)
+  );
+}
+
 export function fillSlip(order: PaperOrderRow): number | null {
-  if (order.theoretical.netBasis === null) {
+  if (!hasVenueFill(order)) {
+    return order.theoretical.netBasis === null ? null : 0;
+  }
+  if (order.theoretical.executableBasis === null) {
     return null;
   }
-  return order.fillBasis - order.theoretical.netBasis;
+  return order.fillBasis - order.theoretical.executableBasis;
 }
