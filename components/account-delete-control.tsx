@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { PanelCloseButton } from "@/components/panel-close-button";
 import { deleteTradingAccount } from "@/lib/accounts/actions";
 
 const BLOCKED_MS = 4000;
@@ -96,9 +97,10 @@ export function AccountDeleteControl({
       {open ? (
         <div
           ref={panelRef}
-          className="fixed z-50 w-72 rounded-card border border-line bg-surface p-3"
+          className="fixed z-50 w-72 rounded-card border border-line bg-surface p-3 pt-8"
           style={{ top: coords.top, left: coords.left }}
         >
+          <PanelCloseButton onClick={() => setOpen(false)} />
           {blockedMessage ? (
             <p className="text-xs text-ink-muted">{blockedMessage}.</p>
           ) : (

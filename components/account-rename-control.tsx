@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { PanelCloseButton } from "@/components/panel-close-button";
 import { renameTradingAccount } from "@/lib/accounts/actions";
 
 export function AccountRenameControl({
@@ -83,9 +84,10 @@ export function AccountRenameControl({
       {open ? (
         <div
           ref={panelRef}
-          className="fixed z-50 w-64 rounded-card border border-line bg-surface p-3"
+          className="fixed z-50 w-64 rounded-card border border-line bg-surface p-3 pt-8"
           style={{ top: coords.top, left: coords.left }}
         >
+          <PanelCloseButton onClick={close} />
           <form action={renameTradingAccount} className="space-y-3">
             <input type="hidden" name="accountId" value={accountId} />
             <label className="block text-xs text-ink-muted">
@@ -98,22 +100,13 @@ export function AccountRenameControl({
                 className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
               />
             </label>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={close}
-                className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-              >
-                Close
-              </button>
-              <PendingSubmitButton
-                pendingLabel="Saving"
-                successKey={`account-rename-${accountId}`}
-                className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
-              >
-                Save name
-              </PendingSubmitButton>
-            </div>
+            <PendingSubmitButton
+              pendingLabel="Saving"
+              successKey={`account-rename-${accountId}`}
+              className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
+            >
+              Save name
+            </PendingSubmitButton>
           </form>
         </div>
       ) : null}
