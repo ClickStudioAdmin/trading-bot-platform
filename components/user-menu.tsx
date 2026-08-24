@@ -127,7 +127,7 @@ export function UserMenu({
               href="/account/settings"
               className="block rounded-control px-2 py-2 text-sm text-accent hover:bg-surface-raised"
             >
-              Manage account
+              Settings
             </Link>
             <div className="my-1 border-t border-line" />
           </>

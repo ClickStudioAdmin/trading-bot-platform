@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parseMemberForm, parseMemberId } from "./form";
+import { parseMemberForm, parseMemberId, parseOwnPasswordChange, parseOwnProfile } from "./form";
 
 const create = new FormData();
 create.set("name", " Desk Trader ");
@@ -47,5 +47,33 @@ if (forced.ok) {
 
 assert.equal(parseMemberId("12"), 12);
 assert.equal(parseMemberId("nope"), null);
+
+const profile = new FormData();
+profile.set("name", " Click ");
+const named = parseOwnProfile(profile);
+assert.equal(named.ok, true);
+if (named.ok) {
+  assert.equal(named.name, "Click");
+}
+assert.equal(parseOwnProfile(new FormData()).ok, false);
+
+const passwordOk = new FormData();
+passwordOk.set("currentPassword", "password1");
+passwordOk.set("newPassword", "password2");
+passwordOk.set("confirmPassword", "password2");
+const changed = parseOwnPasswordChange(passwordOk);
+assert.equal(changed.ok, true);
+
+const mismatch = new FormData();
+mismatch.set("currentPassword", "password1");
+mismatch.set("newPassword", "password2");
+mismatch.set("confirmPassword", "password3");
+assert.equal(parseOwnPasswordChange(mismatch).ok, false);
+
+const same = new FormData();
+same.set("currentPassword", "password1");
+same.set("newPassword", "password1");
+same.set("confirmPassword", "password1");
+assert.equal(parseOwnPasswordChange(same).ok, false);
 
 console.log("member form checks passed");

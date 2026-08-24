@@ -3,10 +3,17 @@
 import { requireAdmin } from "@/lib/admin/access";
 import { emailIsListedAdmin } from "@/lib/admin/emails";
 import { ensureDefaultPaperAccount } from "@/lib/accounts/store";
-import { hashPassword } from "@/lib/auth/password";
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { getSessionMember } from "@/lib/auth/session";
 import { writeEventLog } from "@/lib/logs/write";
-import { parseMemberForm, parseMemberId } from "@/lib/members/form";
+import {
+  parseMemberForm,
+  parseMemberId,
+  parseOwnPasswordChange,
+  parseOwnProfile,
+} from "@/lib/members/form";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export async function createMember(formData: FormData) {
@@ -138,4 +145,90 @@ export async function updateMember(formData: FormData) {
   });
 
   redirect("/admin/members?updated=1");
+}
+
+const SETTINGS_PATH = "/account/settings";
+
+export async function updateOwnProfile(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  const parsed = parseOwnProfile(formData);
+  if (!parsed.ok) {
+    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(parsed.error)}`);
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    redirect(
+      `${SETTINGS_PATH}?error=${encodeURIComponent("Auth is not configured.")}`,
+    );
+  }
+  const { error } = await supabase
+    .from("members")
+    .update({ name: parsed.name, updated_at: new Date().toISOString() })
+    .eq("user_id", member.id);
+  if (error) {
+    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(error.message)}`);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "member.profile_updated",
+    message: "Updated profile name",
+    userId: member.id,
+    data: { name: parsed.name },
+  });
+  revalidatePath("/", "layout");
+  redirect(`${SETTINGS_PATH}?saved=profile`);
+}
+
+export async function changeOwnPassword(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  const parsed = parseOwnPasswordChange(formData);
+  if (!parsed.ok) {
+    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(parsed.error)}`);
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    redirect(
+      `${SETTINGS_PATH}?error=${encodeURIComponent("Auth is not configured.")}`,
+    );
+  }
+  const { data, error: loadError } = await supabase
+    .from("members")
+    .select("password_hash")
+    .eq("user_id", member.id)
+    .maybeSingle();
+  if (loadError || !data) {
+    redirect(
+      `${SETTINGS_PATH}?error=${encodeURIComponent("That member was not found.")}`,
+    );
+  }
+  const stored = String(data.password_hash ?? "");
+  if (!stored || !verifyPassword(parsed.current, stored)) {
+    redirect(
+      `${SETTINGS_PATH}?error=${encodeURIComponent("Current password is incorrect.")}`,
+    );
+  }
+  const { error } = await supabase
+    .from("members")
+    .update({
+      password_hash: hashPassword(parsed.next),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", member.id);
+  if (error) {
+    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(error.message)}`);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "member.password_changed",
+    message: "Changed desk password",
+    userId: member.id,
+  });
+  revalidatePath("/", "layout");
+  redirect(`${SETTINGS_PATH}?saved=password`);
 }

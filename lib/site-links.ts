@@ -24,9 +24,12 @@ export const ADMIN_NAV_LINKS = [
   { href: "/admin/theme", label: "Theme" },
 ] as const;
 
-export const ACCOUNT_NAV_LINKS = [
+export const ACCOUNT_DESK_LINKS = [
   { href: "/account/settings", label: "Settings", exact: true },
   { href: "/account", label: "Manage sub-accounts", exact: true },
+] as const;
+
+export const ACCOUNT_BOOK_LINKS = [
   { href: "/account/exchanges", label: "Exchanges", exact: true },
 ] as const;
 

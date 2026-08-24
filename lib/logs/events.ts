@@ -13,6 +13,8 @@ export const EVENT_LOG_OPTIONS = [
   { event: "exchange.save_failed", scope: "system" },
   { event: "exchange.saved", scope: "system" },
   { event: "member.created", scope: "system" },
+  { event: "member.password_changed", scope: "system" },
+  { event: "member.profile_updated", scope: "system" },
   { event: "member.updated", scope: "system" },
   { event: "settings.save_failed", scope: "strategy" },
   { event: "settings.saved", scope: "strategy" },

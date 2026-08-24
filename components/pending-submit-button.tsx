@@ -46,6 +46,8 @@ function queryLooksSuccessful() {
     paper === "unwinding" ||
     paper === "exits" ||
     params.get("saved") === "1" ||
+    params.get("saved") === "profile" ||
+    params.get("saved") === "password" ||
     params.get("reduce") === "1" ||
     params.get("removed") === "1" ||
     params.get("renamed") === "1"
