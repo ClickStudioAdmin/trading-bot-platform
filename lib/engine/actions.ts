@@ -195,6 +195,7 @@ export async function savePaperRules(formData: FormData) {
 
   revalidatePath("/account/exchanges");
   revalidatePath("/account");
+  revalidatePath("/account/book");
   revalidatePath("/strategies/cash-and-carry");
   redirect(`${RULES_PATH}?saved=1`);
 }
@@ -299,6 +300,7 @@ export async function savePaperSettings(formData: FormData) {
   });
 
   revalidatePath("/account/exchanges");
+  revalidatePath("/account/book");
   revalidatePath("/strategies/cash-and-carry");
   redirect(`${SETTINGS_PATH}?saved=1`);
 }
@@ -357,6 +359,7 @@ export async function saveAccountReduceOnly(formData: FormData) {
   });
 
   revalidatePath("/account/exchanges");
+  revalidatePath("/account/book");
   revalidatePath("/strategies/cash-and-carry");
   redirect(`${RULES_PATH}?reduce=1`);
 }

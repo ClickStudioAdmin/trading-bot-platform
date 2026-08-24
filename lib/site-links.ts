@@ -31,6 +31,7 @@ export const ACCOUNT_DESK_LINKS = [
 ] as const;
 
 export const ACCOUNT_BOOK_LINKS = [
+  { href: "/account/book", label: "Overview", exact: true },
   { href: "/account/exchanges", label: "Exchanges", exact: true },
 ] as const;
 

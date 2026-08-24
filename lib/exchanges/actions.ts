@@ -119,6 +119,7 @@ export async function saveExchangeConnection(formData: FormData) {
     },
   });
   revalidatePath("/account/exchanges");
+  revalidatePath("/account/book");
   redirect("/account/exchanges?saved=1");
 }
 
@@ -166,6 +167,7 @@ export async function removeExchangeConnection(formData: FormData) {
     data: { connectionId },
   });
   revalidatePath("/account/exchanges");
+  revalidatePath("/account/book");
   revalidatePath("/strategies/cash-and-carry");
   revalidatePath("/strategies/cash-and-carry/settings");
   redirect("/account/exchanges?removed=1");

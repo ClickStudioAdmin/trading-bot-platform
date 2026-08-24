@@ -25,6 +25,7 @@ const SUB_ACCOUNTS_PATH = "/account/sub-accounts";
 function refreshAccountChrome() {
   revalidatePath("/", "layout");
   revalidatePath("/account");
+  revalidatePath("/account/book");
   revalidatePath(SUB_ACCOUNTS_PATH);
   revalidatePath("/account/exchanges");
 }

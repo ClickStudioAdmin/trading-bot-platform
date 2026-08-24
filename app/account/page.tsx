@@ -3,23 +3,14 @@ import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { switchTradingAccount } from "@/lib/accounts/actions";
-import {
-  formatAccountMode,
-  formatAccountUsageStatus,
-} from "@/lib/accounts/model";
-import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
+import { formatAccountMode } from "@/lib/accounts/model";
+import { listTradingAccounts } from "@/lib/accounts/store";
 import { getSessionContext } from "@/lib/auth/session";
-import {
-  formatConnectionSummary,
-  type ExchangeConnection,
-} from "@/lib/exchanges/connections";
-import { listExchangeConnections } from "@/lib/exchanges/store";
-import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Overview",
-  description: "Desk login and the current trading book.",
+  description: "Desk login and the books you trade.",
 };
 
 export default async function AccountOverviewPage() {
@@ -28,37 +19,17 @@ export default async function AccountOverviewPage() {
     redirect("/sign-in");
   }
   const accounts = await listTradingAccounts(session.member.id);
-  const usage = await loadAccountUsage(accounts);
   const current = session.account;
-  const currentUsage = usage.get(current.id);
-  const live = accountCanHoldConnections(current.mode);
-  const connections = live
-    ? await listExchangeConnections(session.member.id, current.id)
-    : [];
   const paperCount = accounts.filter((account) => account.mode === "paper").length;
   const liveCount = accounts.length - paperCount;
-  const openCount = currentUsage?.openCount ?? 0;
-  const automationsRunning = Boolean(currentUsage?.automationsRunning);
-  const reduceOnly = Boolean(currentUsage?.reduceOnly);
-  const boundId = currentUsage?.strategyConnectionId ?? null;
-  const bound = connections.find((row) => row.id === boundId) ?? null;
-  const automationLabel = reduceOnly
-    ? "Reduce only"
-    : automationsRunning
-      ? "On"
-      : "Off";
-  const usageStatus = formatAccountUsageStatus({
-    openCount,
-    automationsRunning,
-    reduceOnly,
-  });
 
   return (
     <div className="space-y-8">
       <div>
-        <PageHeading title="Overview" />
+        <PageHeading overline="Desk" title="Overview" />
         <p className="-mt-4 text-sm text-ink-muted">
-          Desk login and the books you trade. The current book is {current.name}.
+          Login and books. Positions, automations, and keys live on the
+          current book.
         </p>
       </div>
 
@@ -74,24 +45,7 @@ export default async function AccountOverviewPage() {
             label="Current book"
             value={current.name}
             hint={formatAccountMode(current.mode)}
-          />
-          <StatCard
-            label="Open positions"
-            value={String(openCount)}
-            hint="On this book"
-            href="/strategies/cash-and-carry/positions"
-          />
-          <StatCard
-            label="Automations"
-            value={automationLabel}
-            hint={
-              reduceOnly
-                ? "No new automated entries"
-                : automationsRunning
-                  ? "At least one set is on"
-                  : "All sets off"
-            }
-            href="/strategies/cash-and-carry/automations"
+            href="/account/book"
           />
         </div>
       </section>
@@ -127,20 +81,13 @@ export default async function AccountOverviewPage() {
             <Row label="Name" value={current.name} />
             <Row label="Mode" value={formatAccountMode(current.mode)} />
             <Row label="Created" value={formatCreated(current.createdAtMs)} />
-            <Row label="Status" value={usageStatus || "Idle"} />
           </dl>
-          {live ? (
-            <ExchangeStatus
-              connections={connections}
-              bound={bound}
-              boundId={boundId}
-            />
-          ) : (
-            <p className="mt-4 text-xs text-ink-faint">
-              This is a Paper account. It uses the in-app ledger. Exchange keys
-              belong on a Live book.
-            </p>
-          )}
+          <Link
+            href="/account/book"
+            className="mt-4 inline-block text-sm text-accent hover:text-accent-strong"
+          >
+            Open book overview
+          </Link>
         </div>
       </section>
 
@@ -156,13 +103,7 @@ export default async function AccountOverviewPage() {
         </div>
         <ul className="mt-4 divide-y divide-line">
           {accounts.map((account) => {
-            const row = usage.get(account.id);
             const isCurrent = account.id === current.id;
-            const status = formatAccountUsageStatus({
-              openCount: row?.openCount ?? 0,
-              automationsRunning: Boolean(row?.automationsRunning),
-              reduceOnly: Boolean(row?.reduceOnly),
-            });
             return (
               <li
                 key={account.id}
@@ -177,7 +118,6 @@ export default async function AccountOverviewPage() {
                   </p>
                   <p className="mt-1 text-xs text-ink-faint">
                     {formatAccountMode(account.mode)}
-                    {status ? ` · ${status}` : null}
                   </p>
                 </div>
                 {isCurrent ? null : (
@@ -212,59 +152,12 @@ export default async function AccountOverviewPage() {
             hint="Create, rename, delete"
           />
           <Shortcut
-            href="/account/exchanges"
-            label="Exchanges"
-            hint={`${current.name} keys`}
-          />
-          <Shortcut
-            href="/strategies/cash-and-carry"
-            label="Cash and Carry"
-            hint="Strategy desk"
+            href="/account/book"
+            label="Book overview"
+            hint={`${current.name} activity`}
           />
         </div>
       </section>
-    </div>
-  );
-}
-
-function ExchangeStatus({
-  connections,
-  bound,
-  boundId,
-}: {
-  connections: ExchangeConnection[];
-  bound: ExchangeConnection | null;
-  boundId: string | null;
-}) {
-  if (connections.length === 0) {
-    return (
-      <p className="mt-4 text-xs text-ink-faint">
-        No exchange connected. The engine will not place exchange orders until
-        a key is added.{" "}
-        <Link href="/account/exchanges" className="text-accent hover:text-accent-strong">
-          Connect an exchange
-        </Link>
-      </p>
-    );
-  }
-  return (
-    <div className="mt-4">
-      <p className="text-xs text-ink-faint">
-        {connections.length === 1
-          ? "1 exchange connected"
-          : `${connections.length} exchanges connected`}
-        {bound
-          ? ` · Cash and Carry: ${formatConnectionSummary(bound)}`
-          : boundId
-            ? " · Cash and Carry bound"
-            : " · Cash and Carry unbound"}
-      </p>
-      <Link
-        href="/account/exchanges"
-        className="mt-3 inline-block text-sm text-accent hover:text-accent-strong"
-      >
-        Open Exchanges
-      </Link>
     </div>
   );
 }
