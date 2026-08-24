@@ -8,11 +8,13 @@ This phase **stores and verifies** keys. It does not place orders. It does not a
 
 Paper accounts do not hold exchange connections.
 
+## Status
+
+Connections desk-tested (Bybit Demo save, verify, bind, header, remove-while-bound, detach, Paper has no key picker). **Execution is not in this phase.** Connected Exchange Opportunities show Size — and a disabled Live label. No paper Open. No Bybit orders. The tick still skips this book. Live execution is a later phase. Phase 7 (more venues) waits until you say so — [phase-7.md](phase-7.md).
+
 ## Current micro-step
 
-**6 of 6 — Verify trade-only** (complete)
-
-Phase 6 code is in. Saving a Bybit key now checks trade permission and rejects withdrawal. Wait for desk testing before starting later-phase work.
+**6 of 6 — Verify trade-only** (complete). Phase accepted.
 
 ## Micro-steps
 

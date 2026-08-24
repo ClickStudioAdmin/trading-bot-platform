@@ -1,6 +1,6 @@
 # Phase 7 — Additional exchanges
 
-Not current. Do not start until Phase 6 is accepted and Bybit connections are confirmed working (save, trade-only verify, bind in Strategy Settings). Current work is [phase-6.md](phase-6.md).
+Not current. Phase 6 is accepted. Do not start until you say so. See [phase-6.md](phase-6.md).
 
 ## Purpose
 

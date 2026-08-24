@@ -8,7 +8,7 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
 ## Current micro-step
 
-**Complete.** Current work is Phase 6 — [phase-6.md](phase-6.md) (exchange connections).
+**Complete.** Phase 6 is complete — [phase-6.md](phase-6.md). Next is Phase 7 when you say so — [phase-7.md](phase-7.md).
 
 ## Micro-steps
 
