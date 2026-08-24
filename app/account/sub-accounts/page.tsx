@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { AccountDeleteControl } from "@/components/account-delete-control";
+import { AccountRenameControl } from "@/components/account-rename-control";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   createTradingAccount,
-  renameTradingAccount,
   switchTradingAccount,
 } from "@/lib/accounts/actions";
 import {
@@ -108,33 +108,10 @@ export default async function ManageSubAccountsPage({
                       </PendingSubmitButton>
                     </form>
                   )}
-                  <details className="relative">
-                    <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-accent hover:bg-surface-raised [&::-webkit-details-marker]:hidden">
-                      Rename
-                    </summary>
-                    <div className="absolute right-0 z-10 mt-2 w-64 rounded-card border border-line bg-surface p-3">
-                      <form action={renameTradingAccount} className="space-y-3">
-                        <input type="hidden" name="accountId" value={account.id} />
-                        <label className="block text-xs text-ink-muted">
-                          Name
-                          <input
-                            name="name"
-                            required
-                            maxLength={40}
-                            defaultValue={account.name}
-                            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-                          />
-                        </label>
-                        <PendingSubmitButton
-                          pendingLabel="Saving"
-                          successKey={`account-rename-${account.id}`}
-                          className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
-                        >
-                          Save name
-                        </PendingSubmitButton>
-                      </form>
-                    </div>
-                  </details>
+                  <AccountRenameControl
+                    accountId={account.id}
+                    accountName={account.name}
+                  />
                   <AccountDeleteControl
                     accountId={account.id}
                     accountName={account.name}
