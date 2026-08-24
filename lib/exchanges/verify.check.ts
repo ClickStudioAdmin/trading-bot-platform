@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { judgeBybitApiKey } from "./bybit/permissions";
 import { bybitSignPayload, hmacSha256Hex } from "./bybit/sign";
 import { bybitRestHost, BYBIT_DEMO_REST, BYBIT_PUBLIC_REST } from "./bybit/universe";
+import { formatBybitVerifyReject } from "./bybit/verify";
 import { venueSupportsVerify } from "./verify";
 
 assert.equal(
@@ -80,5 +81,10 @@ if (!withdrawBeatsReadOnly.ok) {
 
 assert.equal(venueSupportsVerify("bybit"), true);
 assert.equal(venueSupportsVerify("okx"), false);
+
+assert.match(formatBybitVerifyReject(10003, "API key is invalid."), /Demo keys need Environment Demo/);
+assert.match(formatBybitVerifyReject(10004, "error sign!"), /API secret/);
+assert.match(formatBybitVerifyReject(10010, "Unmatched IP"), /allow list/);
+assert.match(formatBybitVerifyReject(33004, "Your api key has expired"), /expired/);
 
 console.log("exchange verify checks passed");

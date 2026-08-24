@@ -61,16 +61,20 @@ export default async function AccountExchangesPage({
         {formatAccountMode(session.account.mode)}). Switch accounts from the
         header to see another book.
       </p>
-      {error ? (
-        <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
-        </p>
-      ) : null}
-      {saved ? (
-        <p className="text-sm text-success">Connection saved.</p>
-      ) : null}
-      {removed ? (
-        <p className="text-sm text-success">Connection removed.</p>
+      {error || saved || removed ? (
+        <div className="mb-6 space-y-3">
+          {error ? (
+            <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+              {error}
+            </p>
+          ) : null}
+          {saved ? (
+            <p className="text-sm text-success">Connection saved.</p>
+          ) : null}
+          {removed ? (
+            <p className="text-sm text-success">Connection removed.</p>
+          ) : null}
+        </div>
       ) : null}
 
       {live && !canSave ? (

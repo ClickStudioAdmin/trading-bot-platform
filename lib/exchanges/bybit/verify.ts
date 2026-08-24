@@ -68,8 +68,21 @@ export async function verifyBybitCredentials(
   if (body.retCode !== 0 || !body.result) {
     return {
       ok: false,
-      error: `Bybit rejected that key${body.retMsg ? `: ${body.retMsg}` : "."}`,
+      error: formatBybitVerifyReject(body.retCode, body.retMsg ?? ""),
     };
   }
   return judgeBybitApiKey(body.result);
+}
+
+export function formatBybitVerifyReject(retCode: number, retMsg: string): string {
+  if (retCode === 10003 || /api key is invalid/i.test(retMsg)) {
+    return "Bybit rejected that key. Demo keys need Environment Demo; production keys need Live.";
+  }
+  if (retCode === 10004 || /error sign/i.test(retMsg)) {
+    return "Bybit rejected that key. Check the API secret.";
+  }
+  if (retCode === 10010 || /unmatched ip/i.test(retMsg)) {
+    return "Bybit rejected that key. This server IP is not on the key's allow list.";
+  }
+  return `Bybit rejected that key${retMsg ? `: ${retMsg}` : "."}`;
 }
