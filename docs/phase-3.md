@@ -10,7 +10,7 @@ A paper carry is long USDT spot and short the matching dated future, sized in US
 
 Complete. Manual paper blotter is in use. Push any remaining Phase 3 commits on `develop` if they are not on GitHub yet.
 
-Phase 4 (automated paper engine) is current. See [phase-4.md](phase-4.md).
+Phase 6 (exchange connections) is current. See [phase-6.md](phase-6.md).
 
 ## Micro-steps
 

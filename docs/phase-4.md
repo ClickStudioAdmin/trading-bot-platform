@@ -8,7 +8,7 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
 ## Current micro-step
 
-**Complete.** Current work is Phase 5 — [phase-5.md](phase-5.md).
+**Complete.** Current work is Phase 6 — [phase-6.md](phase-6.md) (exchange connections).
 
 ## Micro-steps
 
@@ -61,6 +61,6 @@ Expand a current or past position for **Orders** and **Position logs**. Each ord
 ## Out of scope
 
 - Bybit orders, encrypted keys, Fly.io
-- Websockets, auto-switching (paper switch is later; accounts are Phase 5)
+- Websockets, auto-switching (postponed — [phase-auto-switch.md](phase-auto-switch.md); accounts are Phase 5)
 - Calling Bybit from the browser
 - Public signup beyond the desk accounts you create

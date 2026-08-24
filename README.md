@@ -6,11 +6,11 @@ GitHub is the source of truth. The hosted database and Vercel deployment are not
 
 ## Current phase
 
-**Phase 4 — Automated paper engine**
+**Phase 6 — Exchange connections**
 
-See [docs/phase-4.md](docs/phase-4.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** / Preview environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
+See [docs/phase-6.md](docs/phase-6.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** / Preview environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
 
-Phase 4 auto-opens and auto-closes paper cash-and-carry rows from saved rules. No exchange orders. No Fly.io.
+Phase 6 stores encrypted, trade-only exchange keys on Live accounts. Bybit is first; the model is built for more venues. No exchange orders. No Fly.io.
 
 ## Technology stack
 

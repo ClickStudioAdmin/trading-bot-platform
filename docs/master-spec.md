@@ -26,8 +26,8 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 5 — Trading accounts. See [phase-5.md](phase-5.md). Phase 1, Phase 2, Phase 3, and Phase 4 are complete.
+Phase 6 — Exchange connections. See [phase-6.md](phase-6.md). Phase 1, Phase 2, Phase 3, Phase 4, and Phase 5 are complete. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
 
-## Multi-tenancy (later)
+## Multi-tenancy
 
-Bring-your-own API keys. No custody of user funds. Trade-only keys, no withdrawal.
+Bring-your-own API keys, stored per **Live** trading account. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue.

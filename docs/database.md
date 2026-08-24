@@ -31,4 +31,4 @@ Per-trade automation snapshot: `supabase/migrations/20260822200000_paper_carry_a
 
 The `system_health` migration is `supabase/migrations/20260822000000_system_health.sql`. GitHub Actions applies it on push to `develop` (development project) and `main` (production project).
 
-See [phase-1.md](phase-1.md) and [environments.md](environments.md).
+See [phase-1.md](phase-1.md) and [environments.md](environments.md). Phase 6 `exchange_connections` is specified in [phase-6.md](phase-6.md); it lands with that phase’s migration.

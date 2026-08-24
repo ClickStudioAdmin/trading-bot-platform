@@ -6,11 +6,9 @@ Give each login one or more trading accounts. An account is Paper or Live at cre
 
 No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
-## Current micro-step
+## Status
 
-**Accounts + switcher**
-
-Existing paper rows become the first Demo Account (paper). A second empty Paper account must share nothing with it. Live accounts can be created and can hold rules; the tick does not execute them.
+Complete. Accepted after desk testing. Current work is Phase 6 — [phase-6.md](phase-6.md) (exchange connections). Paper auto-switch is postponed — [phase-auto-switch.md](phase-auto-switch.md).
 
 ## What shipped
 
@@ -18,18 +16,18 @@ Existing paper rows become the first Demo Account (paper). A second empty Paper 
 - Backfill one Demo Account (paper) per member
 - `tbp_account` cookie; account switch and manage link in the user menu
 - `/account` manage area with a left nav: Settings, Manage sub-accounts, Exchanges. Settings and Exchanges are placeholders. Create and delete live on Manage sub-accounts. The last account cannot be deleted. Paper books can be deleted any time. Live delete is blocked while the book has open or closing positions or automations are on
-- Tick loops accounts. Paper uses the Phase 4 ledger. Live is skipped
+- Tick loops accounts. Paper uses the Phase 4 paper ledger. Live is skipped
 
 ## Runtime
 
-Same tick door as Phase 4 (`POST /api/engine/tick` and admin Tick). One Bybit public scan. Each **paper** account applies its own usable-book share and rules.
+Same tick door as Phase 4 (`POST /api/engine/tick` and admin **Tick**). One Bybit public scan. Each **paper** account applies its own usable-book share and rules.
 
 A Live account is a separate book for later execution. It must not receive `paper_carries` writes.
 
-## Out of scope
+## Out of scope (then)
 
 - Bybit orders, encrypted keys, Fly.io, exchange demo
-- Auto-switch
+- Auto-switch (postponed — [phase-auto-switch.md](phase-auto-switch.md))
 - Maker future ask
 - Copy or convert accounts
 - Mapping a TBP account onto a Bybit sub-account
