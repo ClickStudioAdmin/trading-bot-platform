@@ -43,8 +43,7 @@ export default async function CashAndCarryLayout({
           live
             ? bound
               ? {
-                  label: formatConnectionSummary(bound),
-                  href: "/strategies/cash-and-carry/settings",
+                  label: `Connected Exchange: ${formatConnectionSummary(bound)}`,
                 }
               : {
                   label: "Connect an exchange to start trading",

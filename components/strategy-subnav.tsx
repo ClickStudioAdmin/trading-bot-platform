@@ -14,7 +14,7 @@ export function StrategySubnav({
 }: {
   automationsRunning?: boolean;
   reduceOnly?: boolean;
-  connection?: { label: string; href: string } | null;
+  connection?: { label: string; href?: string } | null;
 }) {
   const pathname = usePathname();
   const status = reduceOnly
@@ -54,13 +54,18 @@ export function StrategySubnav({
         {connection || status ? (
           <div className="mt-8 flex max-w-[min(100%,32rem)] flex-wrap items-center justify-end gap-x-4 gap-y-2">
             {connection ? (
-              <Link
-                href={connection.href}
-                className="text-right text-sm text-ink-muted hover:text-ink"
-                title={connection.label}
-              >
-                {connection.label}
-              </Link>
+              connection.href ? (
+                <Link
+                  href={connection.href}
+                  className="text-right text-sm text-ink-muted hover:text-ink"
+                >
+                  {connection.label}
+                </Link>
+              ) : (
+                <p className="text-right text-sm text-ink-muted">
+                  {connection.label}
+                </p>
+              )
             ) : null}
             {status ? (
               <Link
