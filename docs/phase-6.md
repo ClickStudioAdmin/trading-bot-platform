@@ -10,9 +10,9 @@ Paper accounts do not hold exchange connections.
 
 ## Current micro-step
 
-**2 of 6 — Venue registry** (complete)
+**3 of 6 — Envelope encrypt** (complete)
 
-Phase 6 is current. Waiting on **3 — Envelope encrypt**.
+Phase 6 is current. Waiting on **4 — Connections table**.
 
 ## Micro-steps
 

@@ -128,6 +128,17 @@ The function already uses `SUPABASE_SERVICE_ROLE_KEY` on that Vercel environment
 
 Fly.io is a later runner for the same `runPaperEngineTick` function. Do not add Fly apps this phase.
 
+## Exchange credentials (Phase 6)
+
+Encrypts API keys at rest. Server only. Different values on Development and Production. Generate with `openssl rand -hex 32`.
+
+| Variable | Where | Value |
+| --- | --- | --- |
+| `EXCHANGE_CREDENTIALS_KEY` | Vercel Development (`develop`) | 64 hex characters. TBP-dev only |
+| `EXCHANGE_CREDENTIALS_KEY` | Vercel Production (`main`) | A **different** 64 hex characters. TBP-prod only |
+
+Never `NEXT_PUBLIC_`. Never put the production key on Development. Local `.env.local` may hold a dev-only key; do not commit it.
+
 ## Merge to production
 
 Open a pull request from `develop` into `main`. After merge:
