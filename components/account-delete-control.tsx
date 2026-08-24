@@ -5,20 +5,26 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { deleteTradingAccount } from "@/lib/accounts/actions";
 
 const BLOCKED_MS = 4000;
+const PANEL_WIDTH = 288;
 
 export function AccountDeleteControl({
   accountId,
   accountName,
   blockedMessage,
+  switchOptions,
+  defaultSwitchId,
 }: {
   accountId: string;
   accountName: string;
   blockedMessage: string | null;
+  switchOptions?: { id: string; name: string; mode: string }[];
+  defaultSwitchId?: string;
 }) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const options = switchOptions ?? [];
 
   function place() {
     const button = buttonRef.current;
@@ -26,10 +32,9 @@ export function AccountDeleteControl({
       return;
     }
     const rect = button.getBoundingClientRect();
-    const width = 256;
     setCoords({
       top: rect.bottom + 8,
-      left: Math.max(8, rect.right - width),
+      left: Math.max(8, rect.right - PANEL_WIDTH),
     });
   }
 
@@ -91,30 +96,71 @@ export function AccountDeleteControl({
       {open ? (
         <div
           ref={panelRef}
-          className="fixed z-50 w-64 rounded-card border border-line bg-surface p-3"
+          className="fixed z-50 w-72 rounded-card border border-line bg-surface p-3"
           style={{ top: coords.top, left: coords.left }}
         >
           {blockedMessage ? (
             <p className="text-xs text-ink-muted">{blockedMessage}.</p>
           ) : (
-            <>
+            <form action={deleteTradingAccount} className="space-y-3">
+              <input type="hidden" name="accountId" value={accountId} />
+              <SwitchFields
+                options={options}
+                defaultSwitchId={defaultSwitchId}
+              />
               <p className="text-xs text-ink-muted">
                 Remove {accountName} and its closed history? This cannot be
                 undone.
               </p>
-              <form action={deleteTradingAccount} className="mt-3">
-                <input type="hidden" name="accountId" value={accountId} />
-                <PendingSubmitButton
-                  pendingLabel="Deleting…"
-                  className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
-                >
-                  Delete account
-                </PendingSubmitButton>
-              </form>
-            </>
+              <PendingSubmitButton
+                pendingLabel="Deleting…"
+                className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
+              >
+                Delete account
+              </PendingSubmitButton>
+            </form>
           )}
         </div>
       ) : null}
     </>
+  );
+}
+
+function SwitchFields({
+  options,
+  defaultSwitchId,
+}: {
+  options: { id: string; name: string; mode: string }[];
+  defaultSwitchId?: string;
+}) {
+  if (options.length === 0) {
+    return null;
+  }
+  if (options.length === 1) {
+    const only = options[0];
+    return (
+      <>
+        <input type="hidden" name="switchToAccountId" value={only.id} />
+        <p className="text-xs text-ink-muted">
+          You&apos;ll switch to {only.name}.
+        </p>
+      </>
+    );
+  }
+  return (
+    <label className="block text-xs text-ink-muted">
+      You&apos;ll switch to
+      <select
+        name="switchToAccountId"
+        defaultValue={defaultSwitchId ?? options[0]?.id}
+        className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+      >
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.name} ({option.mode})
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

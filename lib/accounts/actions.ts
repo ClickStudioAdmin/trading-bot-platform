@@ -9,7 +9,7 @@ import {
 import {
   parseAccountMode,
   parseAccountName,
-  pickDefaultAccount,
+  pickSwitchAfterDelete,
 } from "@/lib/accounts/model";
 import { writeEventLog } from "@/lib/logs/write";
 import {
@@ -119,7 +119,10 @@ export async function deleteTradingAccount(formData: FormData) {
   });
   if (session.account.id === accountId) {
     const remaining = await listTradingAccounts(session.member.id);
-    const next = pickDefaultAccount(remaining);
+    const next = pickSwitchAfterDelete(
+      remaining,
+      formData.get("switchToAccountId"),
+    );
     if (next) {
       await setActiveAccountId(next.id);
     }

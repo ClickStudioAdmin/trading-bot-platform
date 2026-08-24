@@ -43,6 +43,14 @@ export function pickDefaultAccount(
   return accounts.find((account) => account.mode === "paper") ?? accounts[0] ?? null;
 }
 
+export function pickSwitchAfterDelete(
+  remaining: TradingAccount[],
+  requestedId: unknown,
+): TradingAccount | null {
+  const id = String(requestedId ?? "").trim();
+  return remaining.find((account) => account.id === id) ?? pickDefaultAccount(remaining);
+}
+
 export function formatAccountMode(mode: TradingAccountMode): string {
   return mode === "live" ? "Live" : "Paper";
 }

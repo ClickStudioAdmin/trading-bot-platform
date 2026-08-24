@@ -11,6 +11,7 @@ import {
   parseAccountMode,
   parseTradingAccountRow,
   pickDefaultAccount,
+  pickSwitchAfterDelete,
 } from "./model";
 
 assert.equal(DEFAULT_ACCOUNT_NAME, "Demo Account");
@@ -44,6 +45,9 @@ const live = parseTradingAccountRow({
 assert.equal(pickDefaultAccount([live, paper])?.id, "acc-1");
 assert.equal(pickDefaultAccount([live])?.id, "acc-2");
 assert.equal(pickDefaultAccount([]), null);
+assert.equal(pickSwitchAfterDelete([live, paper], "acc-2")?.id, "acc-2");
+assert.equal(pickSwitchAfterDelete([live, paper], "")?.id, "acc-1");
+assert.equal(pickSwitchAfterDelete([], "acc-1"), null);
 
 assert.deepEqual(
   accountDeleteBlockers({

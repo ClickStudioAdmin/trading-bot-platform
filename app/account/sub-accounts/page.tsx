@@ -11,6 +11,7 @@ import {
   formatAccountMode,
   formatAccountUsageStatus,
   formatDeleteBlockers,
+  pickDefaultAccount,
 } from "@/lib/accounts/model";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
 import { getSessionContext } from "@/lib/auth/session";
@@ -78,6 +79,8 @@ export default async function ManageSubAccountsPage({
               automationsRunning: Boolean(row?.automationsRunning),
               reduceOnly: Boolean(row?.reduceOnly),
             });
+            const remaining = accounts.filter((item) => item.id !== account.id);
+            const defaultSwitch = pickDefaultAccount(remaining);
             return (
               <li
                 key={account.id}
@@ -117,6 +120,18 @@ export default async function ManageSubAccountsPage({
                     accountName={account.name}
                     blockedMessage={
                       canDelete ? null : formatDeleteBlockers(blocks)
+                    }
+                    switchOptions={
+                      current && canDelete
+                        ? remaining.map((item) => ({
+                            id: item.id,
+                            name: item.name,
+                            mode: formatAccountMode(item.mode),
+                          }))
+                        : undefined
+                    }
+                    defaultSwitchId={
+                      current && canDelete ? defaultSwitch?.id : undefined
                     }
                   />
                 </div>
