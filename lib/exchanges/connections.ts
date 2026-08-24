@@ -114,3 +114,18 @@ export function parseExchangeConnectionRow(
 export function toByteaParam(value: Buffer): string {
   return `\\x${value.toString("hex")}`;
 }
+
+export function fromByteaParam(value: unknown): Buffer | null {
+  if (value instanceof Uint8Array) {
+    return Buffer.from(value);
+  }
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+  const hex = raw.startsWith("\\x") ? raw.slice(2) : raw;
+  if (!hex || hex.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(hex)) {
+    return null;
+  }
+  return Buffer.from(hex, "hex");
+}

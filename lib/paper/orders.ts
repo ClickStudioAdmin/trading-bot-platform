@@ -36,6 +36,11 @@ export type PaperOrderRow = {
   fillBasis: number;
   theoretical: PaperOrderTheoretical;
   conditions: PaperCarryAutomation;
+  venue: string | null;
+  environment: string | null;
+  spotOrderId: string | null;
+  futureOrderId: string | null;
+  fillQty: number | null;
 };
 
 export type PaperCarryWithOrders = PaperCarryRow & {
@@ -72,10 +77,23 @@ export function paperOrderInsertRow(input: {
   filledAt: Date;
   opportunity: ScannedOpportunity;
   automation: PaperCarryAutomation;
+  venue?: string | null;
+  environment?: string | null;
+  spotOrderId?: string | null;
+  futureOrderId?: string | null;
+  fillQty?: number | null;
+  fillSpotPrice?: number | null;
+  fillFuturePrice?: number | null;
 }) {
   if (!(input.notionalUsdt > 0)) {
     throw new Error("Notional must be positive");
   }
+  const fillBasis =
+    input.fillSpotPrice &&
+    input.fillFuturePrice &&
+    input.fillSpotPrice > 0
+      ? (input.fillFuturePrice - input.fillSpotPrice) / input.fillSpotPrice
+      : input.opportunity.netBasis;
   return {
     user_id: input.userId,
     account_id: input.accountId ?? null,
@@ -85,7 +103,14 @@ export function paperOrderInsertRow(input: {
     trigger_reason: input.triggerReason,
     notional_usdt: input.notionalUsdt,
     filled_at: input.filledAt.toISOString(),
-    fill_basis: input.opportunity.netBasis,
+    fill_basis: fillBasis,
+    venue: input.venue ?? null,
+    environment: input.environment ?? null,
+    spot_order_id: input.spotOrderId ?? null,
+    future_order_id: input.futureOrderId ?? null,
+    fill_qty: input.fillQty ?? null,
+    fill_spot_price: input.fillSpotPrice ?? null,
+    fill_future_price: input.fillFuturePrice ?? null,
     theo_net_basis: input.opportunity.netBasis,
     theo_net_apr: input.opportunity.netApr,
     theo_days_to_expiry: input.opportunity.daysToExpiry,
@@ -109,6 +134,11 @@ export function parsePaperOrderRow(row: Record<string, unknown>): PaperOrderRow 
     notionalUsdt: asNumber(row.notional_usdt),
     filledAtMs: filledAt.getTime(),
     fillBasis: asNumber(row.fill_basis),
+    venue: row.venue ? String(row.venue) : null,
+    environment: row.environment ? String(row.environment) : null,
+    spotOrderId: row.spot_order_id ? String(row.spot_order_id) : null,
+    futureOrderId: row.future_order_id ? String(row.future_order_id) : null,
+    fillQty: asNullableNumber(row.fill_qty),
     theoretical: {
       netBasis: asNullableNumber(row.theo_net_basis),
       netApr: asNullableNumber(row.theo_net_apr),
@@ -149,6 +179,11 @@ export function synthesizeOrders(carry: PaperCarryRow): PaperOrderRow[] {
       notionalUsdt: carry.notionalUsdt,
       filledAtMs: carry.openedAtMs,
       fillBasis: carry.entryBasis,
+      venue: null,
+      environment: null,
+      spotOrderId: null,
+      futureOrderId: null,
+      fillQty: null,
       theoretical: {
         netBasis: carry.entryBasis,
         netApr: null,
@@ -177,6 +212,11 @@ export function synthesizeOrders(carry: PaperCarryRow): PaperOrderRow[] {
       notionalUsdt: carry.notionalUsdt,
       filledAtMs: carry.closedAtMs,
       fillBasis: carry.exitBasis,
+      venue: null,
+      environment: null,
+      spotOrderId: null,
+      futureOrderId: null,
+      fillQty: null,
       theoretical: {
         netBasis: carry.exitBasis,
         netApr: null,

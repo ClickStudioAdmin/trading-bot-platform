@@ -35,6 +35,8 @@ export default async function CashAndCarryPositionsPage({
         <PaperFlash
           opened={firstSearchValue(params.paper) === "opened"}
           closed={firstSearchValue(params.paper) === "closed"}
+          liveOpened={firstSearchValue(params.paper) === "live-opened"}
+          liveClosed={firstSearchValue(params.paper) === "live-closed"}
           exits={firstSearchValue(params.paper) === "exits"}
           unwinding={firstSearchValue(params.paper) === "unwinding"}
           error={firstSearchValue(params.paperError)}
@@ -45,6 +47,7 @@ export default async function CashAndCarryPositionsPage({
           open={desk.open}
           next="/strategies/cash-and-carry/positions"
           showHeading={false}
+          exchangeBook={desk.exchangeBook}
         />
       </div>
     </main>

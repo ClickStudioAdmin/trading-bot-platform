@@ -6,13 +6,11 @@ GitHub is the source of truth. The hosted database and Vercel deployment are not
 
 ## Current phase
 
-**Phase 6 — Exchange connections** (complete)
+**Phase 7 — Live execution (manual)**
 
-See [docs/phase-6.md](docs/phase-6.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** / Preview environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
+See [docs/phase-7.md](docs/phase-7.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** / Preview environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
 
-Phase 6 stores encrypted, trade-only exchange keys on Connected Exchange accounts. Bybit is first. No exchange orders. No Fly.io.
-
-Next, when you say so: [Phase 7 — Additional exchanges](docs/phase-7.md).
+Phase 7 places Bybit cash-and-carry from Sydney Vercel on a Connected Exchange book with a bound trade-only key. Manual Open/Close first. The tick still skips those books. No Fly.io. Additional exchanges wait ([docs/phase-8.md](docs/phase-8.md)).
 
 ## Technology stack
 

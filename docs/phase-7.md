@@ -10,7 +10,9 @@ Paper Trading books still use the Phase 4 paper ledger and never send exchange o
 
 ## Current micro-step
 
-**In progress — 1 of 6 — Docs**, then Bybit order helpers, bound-key load, migration, manual Open, manual Close.
+**5–6 of 6 — Manual Open and Close** (in progress, desk test next)
+
+Code for docs, Bybit order helpers, bound-key load, fill columns, and manual Open/Close is in. The tick still skips Connected Exchange books. Wait for a `develop` migration and a Demo Open on your desk.
 
 | # | Step | Who | Done when |
 | --- | --- | --- | --- |

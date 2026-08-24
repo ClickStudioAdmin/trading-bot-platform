@@ -31,7 +31,10 @@ export default async function CashAndCarryOpportunitiesPage({
   const paper = await getOpportunityPaperProps(
     "/strategies/cash-and-carry/opportunities",
   );
-  const justActed = Boolean(firstSearchValue(params.paper));
+  const justActed = Boolean(
+    firstSearchValue(params.paper) === "opened" ||
+      firstSearchValue(params.paper) === "live-opened",
+  );
   const book = await loadOpportunityBook(justActed ? "stored" : "fresh");
   const error = book.error;
   const scannedAtMs = book.scannedAtMs;
@@ -49,6 +52,7 @@ export default async function CashAndCarryOpportunitiesPage({
       <div className="space-y-6">
         <PaperFlash
           opened={firstSearchValue(params.paper) === "opened"}
+          liveOpened={firstSearchValue(params.paper) === "live-opened"}
           error={firstSearchValue(params.paperError)}
         />
         <OpportunityFiltersForm values={filterInputValues(filters)} />

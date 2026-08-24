@@ -15,6 +15,7 @@ export type PaperReturnPath =
 export type OpportunityPaperProps = {
   signedIn: boolean;
   canOpen: boolean;
+  venueOpen: boolean;
   next: PaperReturnPath;
 };
 

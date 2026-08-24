@@ -10,7 +10,7 @@ A paper carry is long USDT spot and short the matching dated future, sized in US
 
 Complete. Manual paper blotter is in use. Push any remaining Phase 3 commits on `develop` if they are not on GitHub yet.
 
-Phase 6 is complete. See [phase-6.md](phase-6.md). Next is Phase 7 when you say so — [phase-7.md](phase-7.md).
+Phase 6 is complete. Current work is Phase 7 — [phase-7.md](phase-7.md).
 
 ## Micro-steps
 

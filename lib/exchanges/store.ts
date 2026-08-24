@@ -1,8 +1,10 @@
 import {
+  fromByteaParam,
   parseExchangeConnectionRow,
   toByteaParam,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
+import { decryptCredentials } from "@/lib/exchanges/encrypt";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 const LIST_COLUMNS =
@@ -93,4 +95,55 @@ export async function deleteExchangeConnection(input: {
     .eq("user_id", input.userId)
     .eq("account_id", input.accountId);
   return { error: error?.message ?? null };
+}
+
+export type BoundConnectionSecrets = {
+  id: string;
+  venue: string;
+  environment: string;
+  credentials: Record<string, string>;
+};
+
+export async function loadBoundConnectionSecrets(input: {
+  userId: string;
+  accountId: string;
+  connectionId: string;
+}): Promise<{ ok: true; connection: BoundConnectionSecrets } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Auth is not configured." };
+  }
+  const { data, error } = await supabase
+    .from("exchange_connections")
+    .select(
+      "id, venue, environment, status, credentials_ciphertext, credentials_nonce",
+    )
+    .eq("id", input.connectionId)
+    .eq("user_id", input.userId)
+    .eq("account_id", input.accountId)
+    .maybeSingle();
+  if (error || !data) {
+    return { ok: false, error: "Connect an exchange in Strategy Settings first." };
+  }
+  if (String(data.status ?? "") !== "active") {
+    return { ok: false, error: "That exchange connection is not active." };
+  }
+  const ciphertext = fromByteaParam(data.credentials_ciphertext);
+  const nonce = fromByteaParam(data.credentials_nonce);
+  if (!ciphertext || !nonce) {
+    return { ok: false, error: "Could not read those credentials." };
+  }
+  const credentials = decryptCredentials(ciphertext, nonce);
+  if (!credentials?.apiKey || !credentials.apiSecret) {
+    return { ok: false, error: "Could not decrypt those credentials." };
+  }
+  return {
+    ok: true,
+    connection: {
+      id: String(data.id),
+      venue: String(data.venue),
+      environment: String(data.environment),
+      credentials,
+    },
+  };
 }

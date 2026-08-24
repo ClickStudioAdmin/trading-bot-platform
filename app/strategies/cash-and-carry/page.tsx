@@ -46,6 +46,8 @@ export default async function CashAndCarryPage({
       <PaperFlash
         opened={firstSearchValue(params.paper) === "opened"}
         closed={firstSearchValue(params.paper) === "closed"}
+        liveOpened={firstSearchValue(params.paper) === "live-opened"}
+        liveClosed={firstSearchValue(params.paper) === "live-closed"}
         exits={firstSearchValue(params.paper) === "exits"}
         unwinding={firstSearchValue(params.paper) === "unwinding"}
         error={firstSearchValue(params.paperError)}
@@ -99,7 +101,11 @@ export default async function CashAndCarryPage({
         <OpportunityTable rows={topFive} paper={paper} />
       </section>
 
-      <OpenPaperTrades signedIn={desk.signedIn} open={desk.open} />
+      <OpenPaperTrades
+        signedIn={desk.signedIn}
+        open={desk.open}
+        exchangeBook={desk.exchangeBook}
+      />
 
       <p className="text-sm text-ink-faint">
         <Link href="/strategies/cash-and-carry/pairs" className="text-accent">

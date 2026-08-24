@@ -1,4 +1,7 @@
 import { getSessionContext } from "@/lib/auth/session";
+import { loadEngineSettings } from "@/lib/engine/settings";
+import { listExchangeConnections } from "@/lib/exchanges/store";
+import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { attachLogs, listEventLogs, type EventLogRow } from "@/lib/logs/list";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import { type OpportunityPaperProps } from "@/lib/paper/open";
@@ -19,9 +22,30 @@ export async function getOpportunityPaperProps(
   next: OpportunityPaperProps["next"],
 ): Promise<OpportunityPaperProps> {
   const session = await getSessionContext();
+  if (!session) {
+    return { signedIn: false, canOpen: false, venueOpen: false, next };
+  }
+  if (session.account.mode === "paper") {
+    return { signedIn: true, canOpen: true, venueOpen: false, next };
+  }
+  if (!accountCanHoldConnections(session.account.mode)) {
+    return { signedIn: true, canOpen: false, venueOpen: false, next };
+  }
+  const settings = await loadEngineSettings();
+  if (!settings.connectionId) {
+    return { signedIn: true, canOpen: false, venueOpen: false, next };
+  }
+  const connections = await listExchangeConnections(
+    session.member.id,
+    session.account.id,
+  );
+  const bound = connections.find(
+    (row) => row.id === settings.connectionId && row.status === "active",
+  );
   return {
-    signedIn: Boolean(session),
-    canOpen: session?.account.mode === "paper",
+    signedIn: true,
+    canOpen: Boolean(bound),
+    venueOpen: Boolean(bound),
     next,
   };
 }
@@ -77,12 +101,13 @@ export type PaperDeskCarry<T> = T & {
 
 export async function loadPaperDesk(scan: ScannedOpportunity[]): Promise<{
   signedIn: boolean;
+  exchangeBook: boolean;
   open: PaperDeskCarry<MarkedPaperCarry>[];
   closed: PaperDeskCarry<PaperCarryRow>[];
 }> {
   const session = await getSessionContext();
   if (!session) {
-    return { signedIn: false, open: [], closed: [] };
+    return { signedIn: false, exchangeBook: false, open: [], closed: [] };
   }
 
   const [rows, orders, logs] = await Promise.all([
@@ -110,5 +135,10 @@ export async function loadPaperDesk(scan: ScannedOpportunity[]): Promise<{
     ),
     logs,
   );
-  return { signedIn: true, open, closed };
+  return {
+    signedIn: true,
+    exchangeBook: accountCanHoldConnections(session.account.mode),
+    open,
+    closed,
+  };
 }

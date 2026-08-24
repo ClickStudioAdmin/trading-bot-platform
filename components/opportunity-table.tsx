@@ -123,13 +123,21 @@ export function OpportunityTable({
                 <th className="px-4 py-3 font-medium">
                   <ColumnHint
                     label="Size USDT"
-                    hint="Paper notional to open. Cannot exceed usable book. Each Open creates a new paper row."
+                    hint={
+                      paper.venueOpen
+                        ? "USDT notional to open on the bound exchange. Cannot exceed usable book."
+                        : "Paper notional to open. Cannot exceed usable book. Each Open creates a new paper row."
+                    }
                   />
                 </th>
                 <th className="px-4 py-3 font-medium">
                   <ColumnHint
                     label="Actions"
-                    hint="Open a paper carry at the live scan net basis. No Bybit order."
+                    hint={
+                      paper.venueOpen
+                        ? "Open cash-and-carry on the bound exchange (buy spot, short the dated future)."
+                        : "Open a paper carry at the live scan net basis. No Bybit order."
+                    }
                   />
                 </th>
               </>

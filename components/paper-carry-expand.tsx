@@ -48,9 +48,11 @@ type ClosedCarryView = PaperCarryRow & {
 export function OpenPaperCarryRows({
   trade,
   next,
+  hideUnwind = false,
 }: {
   trade: OpenCarryView;
   next: PaperReturnPath;
+  hideUnwind?: boolean;
 }) {
   const pnlPct =
     trade.unrealizedUsdt === null
@@ -111,7 +113,7 @@ export function OpenPaperCarryRows({
         {formatPct(pnlPct)}
       </td>
       <td className="px-4 py-3">
-        <ClosePaperButton trade={trade} next={next} />
+        <ClosePaperButton trade={trade} next={next} hideUnwind={hideUnwind} />
       </td>
     </ExpandableOrderRows>
   );
@@ -249,9 +251,11 @@ function ChevronIcon({ className }: { className?: string }) {
 function ClosePaperButton({
   trade,
   next,
+  hideUnwind = false,
 }: {
   trade: MarkedPaperCarry;
   next: PaperReturnPath;
+  hideUnwind?: boolean;
 }) {
   const closeKey = `close-${trade.id}`;
   const ok = useStoredButtonSuccess(closeKey);
@@ -306,7 +310,7 @@ function ClosePaperButton({
         label={
           <PendingSubmitButton
             name="mode"
-            value={auto && dynamicExit ? "unwind" : "market"}
+            value={auto && dynamicExit && !hideUnwind ? "unwind" : "market"}
             pendingLabel="Closing"
             successKey={closeKey}
             className={actionClass}
@@ -315,7 +319,7 @@ function ClosePaperButton({
           </PendingSubmitButton>
         }
       />
-      {trade.source === "manual" ? (
+      {trade.source === "manual" && !hideUnwind ? (
         <ColumnHint
           hint="Unwind position over time & ASAP (based on the usable book setting)"
           label={

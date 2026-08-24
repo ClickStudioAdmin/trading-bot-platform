@@ -10,6 +10,15 @@ import {
 import { parsePaperOrderRow } from "@/lib/paper/orders";
 import { unwindClipUsdt } from "@/lib/engine/clip";
 import { loadUsableBookShare } from "@/lib/engine/settings";
+import {
+  closeCashAndCarryOnVenue,
+  openCashAndCarryOnVenue,
+} from "@/lib/exchanges/execute";
+import {
+  loadBoundVenueForAccount,
+  qtyTextFromFill,
+} from "@/lib/exchanges/live-trade";
+import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { usableBookUsdt } from "@/lib/opportunities/capacity";
 import {
   paperCarryInsertRow,
@@ -31,11 +40,7 @@ export async function openPaperCarry(formData: FormData) {
     redirect("/sign-in");
   }
   const { member: user, account } = session;
-  if (account.mode !== "paper") {
-    redirect(
-      `${next}?paperError=${encodeURIComponent("This is a Connected Exchange account. Paper fills are off until live execution exists.")}`,
-    );
-  }
+  const liveBook = accountCanHoldConnections(account.mode);
 
   const supabase = createServiceClient();
   if (!supabase) {
@@ -83,6 +88,39 @@ export async function openPaperCarry(formData: FormData) {
   const rawScan = match;
   match = { ...match, capacityUsdt: usableCapacityUsdt };
 
+  let venueFill: Awaited<ReturnType<typeof openCashAndCarryOnVenue>> | null =
+    null;
+  if (liveBook) {
+    const bound = await loadBoundVenueForAccount({
+      userId: user.id,
+      accountId: account.id,
+      mode: account.mode,
+    });
+    if (!bound.ok) {
+      redirect(`${next}?paperError=${encodeURIComponent(bound.error)}`);
+    }
+    venueFill = await openCashAndCarryOnVenue({
+      connection: bound.connection,
+      spotSymbol,
+      futureSymbol,
+      spotAsk: match.spotAsk,
+      notionalUsdt: sized,
+    });
+    if (!venueFill.ok) {
+      await writeEventLog({
+        level: "error",
+        scope: "trade",
+        event: "trade.open_failed",
+        message: venueFill.error,
+        userId: user.id,
+        accountId: account.id,
+        strategy: "cash-and-carry",
+        data: { spotSymbol, futureSymbol, notionalUsdt: sized, venue: "bybit" },
+      });
+      redirect(`${next}?paperError=${encodeURIComponent(venueFill.error)}`);
+    }
+  }
+
   const { data, error } = await supabase
     .from("paper_carries")
     .insert(
@@ -94,6 +132,21 @@ export async function openPaperCarry(formData: FormData) {
     .single();
 
   if (error) {
+    if (venueFill?.ok) {
+      const bound = await loadBoundVenueForAccount({
+        userId: user.id,
+        accountId: account.id,
+        mode: account.mode,
+      });
+      if (bound.ok) {
+        await closeCashAndCarryOnVenue({
+          connection: bound.connection,
+          spotSymbol,
+          futureSymbol,
+          qty: venueFill.fill.qty,
+        });
+      }
+    }
     await writeEventLog({
       level: "error",
       scope: "trade",
@@ -123,12 +176,21 @@ export async function openPaperCarry(formData: FormData) {
     filledAt: new Date(),
     opportunity: match,
     automation: EMPTY_AUTOMATION,
+    venue: venueFill?.ok ? venueFill.fill.venue : null,
+    environment: venueFill?.ok ? venueFill.fill.environment : null,
+    spotOrderId: venueFill?.ok ? venueFill.fill.spotOrderId : null,
+    futureOrderId: venueFill?.ok ? venueFill.fill.futureOrderId : null,
+    fillQty: venueFill?.ok ? Number(venueFill.fill.qty) : null,
+    fillSpotPrice: venueFill?.ok ? venueFill.fill.spotPrice : null,
+    fillFuturePrice: venueFill?.ok ? venueFill.fill.futurePrice : null,
   });
 
   await writeEventLog({
     scope: "trade",
     event: "trade.opened",
-    message: `Opened paper ${futureSymbol}`,
+    message: liveBook
+      ? `Opened ${futureSymbol} on the connected exchange`
+      : `Opened paper ${futureSymbol}`,
     userId: user.id,
     accountId: account.id,
     strategy: "cash-and-carry",
@@ -139,12 +201,13 @@ export async function openPaperCarry(formData: FormData) {
       notionalUsdt: sized,
       entryBasis: match.netBasis,
       source: "manual",
+      venue: venueFill?.ok ? venueFill.fill.venue : undefined,
     },
   });
 
   await persistOpportunities([rawScan]);
 
-  redirect(`${next}?paper=opened`);
+  redirect(`${next}?paper=${liveBook ? "live-opened" : "opened"}`);
 }
 
 export async function closeOpenPaperCarry(formData: FormData) {
@@ -155,6 +218,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
     redirect("/sign-in");
   }
   const { member: user, account } = session;
+  const liveBook = accountCanHoldConnections(account.mode);
 
   const supabase = createServiceClient();
   if (!supabase) {
@@ -212,6 +276,11 @@ export async function closeOpenPaperCarry(formData: FormData) {
 
   let clipUsdt = row.notionalUsdt;
   let reason: "unwind" | null = null;
+  if (liveBook && mode === "unwind") {
+    redirect(
+      `${next}?paperError=${encodeURIComponent("Unwind on the exchange is not available yet. Use Close.")}`,
+    );
+  }
   if (mode === "unwind") {
     const clip = unwindClipUsdt(row.notionalUsdt, usableCapacityUsdt, null);
     if (clip === null) {
@@ -240,6 +309,51 @@ export async function closeOpenPaperCarry(formData: FormData) {
     .eq("account_id", account.id)
     .eq("carry_id", carryId);
 
+  const orders = (orderRows ?? []).map((item) =>
+    parsePaperOrderRow(item as Record<string, unknown>),
+  );
+  let venueClose: Awaited<ReturnType<typeof closeCashAndCarryOnVenue>> | null =
+    null;
+  if (liveBook) {
+    const bound = await loadBoundVenueForAccount({
+      userId: user.id,
+      accountId: account.id,
+      mode: account.mode,
+    });
+    if (!bound.ok) {
+      redirect(`${next}?paperError=${encodeURIComponent(bound.error)}`);
+    }
+    const openQty = orders.find((item) => item.side === "open")?.fillQty ?? null;
+    const qty = qtyTextFromFill(
+      openQty,
+      match.spotAsk > 0 ? String(clipUsdt / match.spotAsk) : "",
+    );
+    if (!qty) {
+      redirect(
+        `${next}?paperError=${encodeURIComponent("Could not size the close on the exchange.")}`,
+      );
+    }
+    venueClose = await closeCashAndCarryOnVenue({
+      connection: bound.connection,
+      spotSymbol: row.spotSymbol,
+      futureSymbol: row.futureSymbol,
+      qty,
+    });
+    if (!venueClose.ok) {
+      await writeEventLog({
+        level: "error",
+        scope: "trade",
+        event: "trade.close_failed",
+        message: venueClose.error,
+        userId: user.id,
+        accountId: account.id,
+        strategy: "cash-and-carry",
+        data: { carryId, mode, venue: "bybit" },
+      });
+      redirect(`${next}?paperError=${encodeURIComponent(venueClose.error)}`);
+    }
+  }
+
   const written = await writeCloseClip({
     supabase,
     userId: user.id,
@@ -249,12 +363,14 @@ export async function closeOpenPaperCarry(formData: FormData) {
     clipUsdt,
     source: "manual",
     reason,
-    priorCloses: priorClosesFromOrders(
-      (orderRows ?? []).map((item) =>
-        parsePaperOrderRow(item as Record<string, unknown>),
-      ),
-      carryId,
-    ),
+    priorCloses: priorClosesFromOrders(orders, carryId),
+    venue: venueClose?.ok ? venueClose.fill.venue : null,
+    environment: venueClose?.ok ? venueClose.fill.environment : null,
+    spotOrderId: venueClose?.ok ? venueClose.fill.spotOrderId : null,
+    futureOrderId: venueClose?.ok ? venueClose.fill.futureOrderId : null,
+    fillQty: venueClose?.ok ? Number(venueClose.fill.qty) : null,
+    fillSpotPrice: venueClose?.ok ? venueClose.fill.spotPrice : null,
+    fillFuturePrice: venueClose?.ok ? venueClose.fill.futurePrice : null,
   });
 
   if (written.error) {
@@ -276,7 +392,9 @@ export async function closeOpenPaperCarry(formData: FormData) {
     event: written.kind === "flat" ? "trade.closed" : "trade.unwound",
     message:
       written.kind === "flat"
-        ? `Closed paper ${row.futureSymbol}`
+        ? liveBook
+          ? `Closed ${row.futureSymbol} on the connected exchange`
+          : `Closed paper ${row.futureSymbol}`
         : `Unwound paper ${row.futureSymbol}`,
     userId: user.id,
     accountId: account.id,
@@ -292,7 +410,9 @@ export async function closeOpenPaperCarry(formData: FormData) {
   });
 
   redirect(
-    written.kind === "flat" ? `${next}?paper=closed` : `${next}?paper=unwinding`,
+    written.kind === "flat"
+      ? `${next}?paper=${liveBook ? "live-closed" : "closed"}`
+      : `${next}?paper=unwinding`,
   );
 }
 

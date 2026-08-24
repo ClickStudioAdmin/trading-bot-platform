@@ -112,6 +112,13 @@ export async function writeCloseClip(input: {
   source: TradeSource;
   reason: CloseReason | null;
   priorCloses: PriorCloseClip[];
+  venue?: string | null;
+  environment?: string | null;
+  spotOrderId?: string | null;
+  futureOrderId?: string | null;
+  fillQty?: number | null;
+  fillSpotPrice?: number | null;
+  fillFuturePrice?: number | null;
 }): Promise<{ kind: "partial" | "flat"; error: string | null }> {
   const closedAtMs = Date.now();
   const plan = closeClipPlan({
@@ -168,6 +175,13 @@ export async function writeCloseClip(input: {
     filledAt: new Date(closedAtMs),
     opportunity: input.opportunity,
     automation: input.row.automation,
+    venue: input.venue,
+    environment: input.environment,
+    spotOrderId: input.spotOrderId,
+    futureOrderId: input.futureOrderId,
+    fillQty: input.fillQty,
+    fillSpotPrice: input.fillSpotPrice,
+    fillFuturePrice: input.fillFuturePrice,
   });
 
   return { kind: plan.kind, error: null };

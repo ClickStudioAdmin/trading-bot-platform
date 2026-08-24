@@ -38,11 +38,13 @@ export function OpenPaperTrades({
   open,
   next = "/strategies/cash-and-carry",
   showHeading = true,
+  exchangeBook = false,
 }: {
   signedIn: boolean;
   open: OpenCarryView[];
   next?: PaperReturnPath;
   showHeading?: boolean;
+  exchangeBook?: boolean;
 }) {
   return (
     <section>
@@ -50,7 +52,11 @@ export function OpenPaperTrades({
         <div className="mb-3 flex items-end justify-between gap-3">
           <SectionHead
             title="Current Positions"
-            subtitle="Open paper carries. Unrealized includes open and close fees on both legs. Close is paper only — no Bybit order."
+            subtitle={
+              exchangeBook
+                ? "Open cash-and-carry on the bound exchange. Close flattens both Bybit legs."
+                : "Open paper carries. Unrealized includes open and close fees on both legs. Close is paper only — no Bybit order."
+            }
             className=""
           />
           <Link
@@ -143,7 +149,11 @@ export function OpenPaperTrades({
             ) : open.length === 0 ? (
               <EmptyRow
                 colSpan={10}
-                message="No open paper carries. Open one from the book above."
+                message={
+                  exchangeBook
+                    ? "No open carries. Open one from Opportunities."
+                    : "No open paper carries. Open one from the book above."
+                }
               />
             ) : (
               open.map((trade) => (
@@ -151,6 +161,7 @@ export function OpenPaperTrades({
                   key={trade.id}
                   trade={trade}
                   next={next}
+                  hideUnwind={exchangeBook}
                 />
               ))
             )}

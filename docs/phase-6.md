@@ -10,7 +10,7 @@ Paper accounts do not hold exchange connections.
 
 ## Status
 
-Connections desk-tested (Bybit Demo save, verify, bind, header, remove-while-bound, detach, Paper has no key picker). **Execution is not in this phase.** Connected Exchange Opportunities show Size — and a disabled Live label. No paper Open. No Bybit orders. The tick still skips this book. Live execution is a later phase. Phase 7 (more venues) waits until you say so — [phase-7.md](phase-7.md).
+Complete. Connections desk-tested. Current work is Phase 7 — live execution ([phase-7.md](phase-7.md)). Additional exchanges wait ([phase-8.md](phase-8.md)).
 
 ## Current micro-step
 
@@ -42,7 +42,7 @@ Stop after each step. Do not start the next until you say so.
 ## Who can connect
 
 - **Live** account: can save connections.
-- **Paper** account: `/account/exchanges` explains that paper does not use keys. Cash-and-carry Settings has no exchange picker. A Paper **venue** picker for market data is Phase 7, once a second venue can scan — [phase-7.md](phase-7.md).
+- **Paper** account: `/account/exchanges` explains that paper does not use keys. Cash-and-carry Settings has no exchange picker. A Paper **venue** picker for market data is Phase 8, once a second venue can scan — [phase-8.md](phase-8.md).
 - Keys belong to the **trading account**, not the login. Switching accounts shows that book’s connections only.
 - Cash and Carry binds one **active** connection in strategy Settings (`paper_engine_settings.exchange_connection_id`). The strategy header shows that bind (left of the status badge), or “Connect an exchange to start trading”.
 - Cannot **remove** a connection while Cash and Carry (or a later strategy) is attached to it. Unused keys on the same account stay removable.
@@ -81,8 +81,8 @@ Unchanged for live execution. Tick still paper-only. Vercel still must not place
 - Placing or cancelling exchange orders
 - Fly.io worker
 - Live blotter / live ledger (do not write `paper_carries` for live fills)
-- Enabling a second venue in the UI ([phase-7.md](phase-7.md), after Bybit connections are confirmed)
-- Paper venue picker for market data ([phase-7.md](phase-7.md))
+- Enabling a second venue in the UI ([phase-8.md](phase-8.md))
+- Paper venue picker for market data ([phase-8.md](phase-8.md))
 - Paper auto-switch ([phase-auto-switch.md](phase-auto-switch.md))
 - Maker future ask
 - Mapping a TBP account onto an exchange sub-account product

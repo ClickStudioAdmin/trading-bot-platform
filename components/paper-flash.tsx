@@ -3,18 +3,36 @@ export function PaperFlash({
   closed,
   exits,
   unwinding,
+  liveOpened,
+  liveClosed,
   error,
 }: {
   opened: boolean;
   closed?: boolean;
   exits?: boolean;
   unwinding?: boolean;
+  liveOpened?: boolean;
+  liveClosed?: boolean;
   error?: string;
 }) {
   if (error) {
     return (
       <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
         {error}
+      </p>
+    );
+  }
+  if (liveOpened) {
+    return (
+      <p className="text-sm text-success">
+        Cash-and-carry opened on the connected exchange.
+      </p>
+    );
+  }
+  if (liveClosed) {
+    return (
+      <p className="text-sm text-success">
+        Cash-and-carry closed on the connected exchange.
       </p>
     );
   }

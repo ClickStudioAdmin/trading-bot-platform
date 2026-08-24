@@ -7,14 +7,16 @@ alwaysApply: true
 
 Read [docs/master-spec.md](docs/master-spec.md) and the current phase doc before changing code.
 
-Work only on the current phase. Phase 6 is complete and accepted. See [docs/phase-6.md](docs/phase-6.md). Phase 1 through Phase 5 are complete. Do not start Phase 7 until the user says so. See [docs/phase-7.md](docs/phase-7.md).
+Work only on the current phase. The current phase is Phase 7 — live execution (manual). See [docs/phase-7.md](docs/phase-7.md). Phase 1 through Phase 6 are complete. Phase 8 (additional exchanges) waits. See [docs/phase-8.md](docs/phase-8.md).
 
 Feature work happens on `develop`. Merge to `main` only when the user is ready for production.
 
-Phase 6 stored encrypted, trade-only keys on Connected Exchange accounts. Bybit is the first enabled venue. Do not place exchange orders. Do not add a Fly.io worker. Do not call private exchange APIs from the browser. Paper accounts still use the Phase 4 paper ledger. The tick must not execute Connected Exchange books. Paper auto-switch is postponed.
+Phase 7 places Bybit cash-and-carry from Sydney Vercel on a Connected Exchange book that has a bound trade-only key. First slice is manual Open and Close. The tick must not execute Connected Exchange books. Do not add a Fly.io worker. Do not call private exchange APIs from the browser. Paper accounts still use the Phase 4 paper ledger.
 
 Do not create later-phase tables or speculative architecture.
 
 Keep dependencies minimal. Prefer the simplest solution that satisfies the current phase.
+
+Work one micro-step at a time as listed in [docs/phase-7.md](docs/phase-7.md). Stop at the end of each micro-step and wait for instruction.
 
 Stop at the end of the phase. After acceptance criteria pass, report results and wait for instruction.

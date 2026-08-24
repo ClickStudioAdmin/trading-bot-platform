@@ -45,6 +45,7 @@ type InstrumentsResult = {
 
 export async function fetchBybitInstruments(
   category: "linear" | "spot",
+  symbol?: string,
 ): Promise<BybitInstrument[]> {
   const rows: BybitInstrument[] = [];
   let cursor: string | undefined;
@@ -54,6 +55,9 @@ export async function fetchBybitInstruments(
       category,
       limit: "1000",
     };
+    if (symbol) {
+      params.symbol = symbol;
+    }
     if (cursor) {
       params.cursor = cursor;
     }

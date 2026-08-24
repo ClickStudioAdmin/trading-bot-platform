@@ -24,6 +24,12 @@ export type BybitInstrument = {
   quoteCoin: string;
   settleCoin?: string;
   deliveryTime?: string;
+  lotSizeFilter?: {
+    qtyStep?: string;
+    minOrderQty?: string;
+    basePrecision?: string;
+    minOrderAmt?: string;
+  };
 };
 
 export type CarryPair = {

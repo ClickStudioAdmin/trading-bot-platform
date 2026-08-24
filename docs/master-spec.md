@@ -11,10 +11,10 @@ GitHub. Hosted Supabase and Vercel are not.
 - Repo-root Next.js on Vercel — UI and the paper tick HTTP door
 - Paper engine tick lives in `lib/engine` and is host-agnostic. It is scheduled by GitHub Actions against the Sydney Vercel function. Fly.io can call the same function later
 - Supabase — Postgres only. Sign-in is the `members` table and a signed cookie. Trading state is scoped to `trading_accounts`, not the login
-- A member can have many accounts. Each account is Paper or Live at create. Paper uses the in-app ledger. Live execution is later.
+- A member can have many accounts. Each account is Paper or Live at create. Paper uses the in-app ledger. Connected Exchange books can place venue orders from Sydney Vercel when a key is bound (Phase 7, manual first).
 - `/admin` — `members.role = admin`, plus `click.studio.admin@gmail.com`. Overview is the landing page. Members, logs, settings, and theme sit in the left menu
 
-The web app never places exchange orders from a Vercel invocation. Paper `paper_carries` writes are not exchange orders.
+Paper `paper_carries` writes on a Paper book are not exchange orders. On a Connected Exchange book, the same tables store venue fills. Private exchange calls stay on the server. The browser is never given decrypted keys. The tick still skips Connected Exchange books until a later slice. Fly.io can call the same functions later; it is not required this phase.
 
 ## Environments
 
@@ -26,7 +26,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 6 — Exchange connections. Connections desk-tested; execution is not on. See [phase-6.md](phase-6.md). Phase 1 through Phase 5 are complete. Live execution is later. Phase 7 — additional exchanges ([phase-7.md](phase-7.md)) when you say so. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
+Phase 7 — Live execution (manual). See [phase-7.md](phase-7.md). Phase 1 through Phase 6 are complete. Additional exchanges wait ([phase-8.md](phase-8.md)). Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
 
 ## Multi-tenancy
 

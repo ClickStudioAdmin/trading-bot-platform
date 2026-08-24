@@ -7,6 +7,7 @@ import {
   keyFingerprint,
   parseConnectionLabel,
   parseExchangeConnectionRow,
+  fromByteaParam,
   toByteaParam,
 } from "./connections";
 import { parseVenueId } from "./venues";
@@ -86,5 +87,6 @@ assert.equal(
 assert.equal(parseExchangeConnectionRow({}), null);
 
 assert.equal(toByteaParam(Buffer.from("ab")), "\\x6162");
+assert.deepEqual(fromByteaParam("\\x6162"), Buffer.from("ab"));
 
 console.log("exchange connection checks passed");
