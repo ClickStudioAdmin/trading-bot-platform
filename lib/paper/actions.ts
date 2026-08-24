@@ -13,13 +13,13 @@ import { loadUsableBookShare } from "@/lib/engine/settings";
 import { usableBookUsdt } from "@/lib/opportunities/capacity";
 import {
   notionalFitsBook,
-  pairKey,
   paperCarryInsertRow,
   parseNotionalUsdt,
   safePaperReturnPath,
 } from "@/lib/paper/open";
 import { asNumber, parsePaperCarryRow } from "@/lib/paper/rows";
-import { scanCarryOpportunities } from "@/lib/opportunities/scan";
+import { persistOpportunities } from "@/lib/opportunities/persist";
+import { scanOneOpportunity } from "@/lib/opportunities/scan";
 import { getSessionContext } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
@@ -51,12 +51,7 @@ export async function openPaperCarry(formData: FormData) {
 
   let match;
   try {
-    const rows = await scanCarryOpportunities();
-    match = rows.find(
-      (row) =>
-        pairKey(row.spotSymbol, row.futureSymbol) ===
-        pairKey(spotSymbol, futureSymbol),
-    );
+    match = await scanOneOpportunity({ spotSymbol, futureSymbol });
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : "Scan failed";
     redirect(`${next}?paperError=${encodeURIComponent(message)}`);
@@ -138,6 +133,8 @@ export async function openPaperCarry(formData: FormData) {
     },
   });
 
+  await persistOpportunities([match]);
+
   redirect(`${next}?paper=opened`);
 }
 
@@ -180,12 +177,12 @@ export async function closeOpenPaperCarry(formData: FormData) {
 
   let match;
   try {
-    const scan = await scanCarryOpportunities();
-    match = scan.find(
-      (item) =>
-        pairKey(item.spotSymbol, item.futureSymbol) ===
-        pairKey(row.spotSymbol, row.futureSymbol),
-    );
+    match = await scanOneOpportunity({
+      spotSymbol: row.spotSymbol,
+      futureSymbol: row.futureSymbol,
+      baseCoin: row.baseCoin,
+      deliveryTimeMs: row.deliveryTimeMs,
+    });
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : "Scan failed";
     redirect(`${next}?paperError=${encodeURIComponent(message)}`);
@@ -221,6 +218,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
       if (error) {
         redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
       }
+      await persistOpportunities([match]);
       redirect(`${next}?paper=unwinding`);
     }
     clipUsdt = clip;
@@ -284,6 +282,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
     },
   });
 
+  await persistOpportunities([match]);
   redirect(
     written.kind === "flat" ? `${next}?paper=closed` : `${next}?paper=unwinding`,
   );

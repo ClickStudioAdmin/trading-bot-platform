@@ -12,14 +12,9 @@ import {
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import { applyUsableBookShare } from "@/lib/opportunities/capacity";
 import { LastScan } from "@/components/last-scan";
-import {
-  loadLatestScannedAt,
-  persistOpportunities,
-} from "@/lib/opportunities/persist";
+import { loadOpportunityBook } from "@/lib/opportunities/load";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getOpportunityPaperProps } from "@/lib/paper/list";
-import { scanCarryOpportunities } from "@/lib/opportunities/scan";
-import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
 export const metadata: Metadata = {
   title: "Opportunities",
@@ -36,19 +31,11 @@ export default async function CashAndCarryOpportunitiesPage({
   const paper = await getOpportunityPaperProps(
     "/strategies/cash-and-carry/opportunities",
   );
-  let rows: ScannedOpportunity[] = [];
-  let error: string | null = null;
-  let scannedAtMs: number | null = null;
-
-  try {
-    const raw = await scanCarryOpportunities();
-    scannedAtMs = Date.now();
-    await persistOpportunities(raw);
-    rows = applyUsableBookShare(raw, await loadUsableBookShare());
-  } catch (cause) {
-    error = cause instanceof Error ? cause.message : "Scan failed";
-    scannedAtMs = await loadLatestScannedAt();
-  }
+  const justActed = Boolean(firstSearchValue(params.paper));
+  const book = await loadOpportunityBook(justActed ? "stored" : "fresh");
+  const error = book.error;
+  const scannedAtMs = book.scannedAtMs;
+  const rows = applyUsableBookShare(book.rows, await loadUsableBookShare());
 
   const visible = applyOpportunityFilters(rows, filters);
   const active = filtersAreActive(filters);

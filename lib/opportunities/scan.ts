@@ -4,6 +4,7 @@ import {
 } from "@/lib/exchanges/bybit/client";
 import { listCarryPairs } from "@/lib/exchanges/bybit/list-carry-pairs";
 import type { CarryPair } from "@/lib/exchanges/bybit/universe";
+import { loadStoredPairMeta } from "@/lib/opportunities/persist";
 import {
   DELIVERY_FEE_RATE,
   ENTRY_FEE_RATE,
@@ -73,6 +74,111 @@ function tickerLevel(
   return { price: parsedPrice, size: parsedSize };
 }
 
+function rankedOpportunity(
+  pair: { baseCoin: string; spotSymbol: string; futureSymbol: string; deliveryTimeMs: number },
+  spotAsks: BookLevel[],
+  futureBids: BookLevel[],
+  nowMs: number,
+): ScannedOpportunity | null {
+  if (spotAsks.length === 0 || futureBids.length === 0) {
+    return null;
+  }
+  const spotAsk = spotAsks[0].price;
+  const futureBid = futureBids[0].price;
+  const ranked = rankOpportunity({
+    futureBid,
+    spotAsk,
+    feeRate: ENTRY_FEE_RATE,
+    slippageRate: SLIPPAGE_RATE,
+    deliveryFeeRate: DELIVERY_FEE_RATE,
+    deliveryTimeMs: pair.deliveryTimeMs,
+    nowMs,
+  });
+  return {
+    baseCoin: pair.baseCoin,
+    spotSymbol: pair.spotSymbol,
+    futureSymbol: pair.futureSymbol,
+    deliveryTimeMs: pair.deliveryTimeMs,
+    deliveryDate: new Date(pair.deliveryTimeMs).toISOString().slice(0, 10),
+    daysToExpiry: ranked.daysToExpiry,
+    futureBid,
+    spotAsk,
+    executableBasis: ranked.executableBasis,
+    feeRate: ENTRY_FEE_RATE + SLIPPAGE_RATE + DELIVERY_FEE_RATE,
+    netBasis: ranked.netBasis,
+    netApr: ranked.netApr,
+    capacityUsdt: pairCapacityUsdt(spotAsks, futureBids),
+  };
+}
+
+async function booksForPair(spotSymbol: string, futureSymbol: string) {
+  const [spotBook, futureBook] = await Promise.all([
+    fetchBybitOrderbook("spot", spotSymbol, ORDERBOOK_LEVELS).catch(() => ({
+      a: [] as string[][],
+    })),
+    fetchBybitOrderbook("linear", futureSymbol, ORDERBOOK_LEVELS).catch(() => ({
+      b: [] as string[][],
+    })),
+  ]);
+  return {
+    spotAsks: levelsFromBook(spotBook.a),
+    futureBids: levelsFromBook(futureBook.b),
+  };
+}
+
+export async function scanOneOpportunity(
+  input: {
+    spotSymbol: string;
+    futureSymbol: string;
+    baseCoin?: string;
+    deliveryTimeMs?: number;
+  },
+  nowMs = Date.now(),
+): Promise<ScannedOpportunity | null> {
+  let pair: {
+    baseCoin: string;
+    spotSymbol: string;
+    futureSymbol: string;
+    deliveryTimeMs: number;
+  } | null = null;
+
+  if (input.baseCoin && input.deliveryTimeMs) {
+    pair = {
+      baseCoin: input.baseCoin,
+      spotSymbol: input.spotSymbol,
+      futureSymbol: input.futureSymbol,
+      deliveryTimeMs: input.deliveryTimeMs,
+    };
+  } else {
+    const stored = await loadStoredPairMeta(input.spotSymbol, input.futureSymbol);
+    if (stored) {
+      pair = {
+        baseCoin: stored.baseCoin,
+        spotSymbol: input.spotSymbol,
+        futureSymbol: input.futureSymbol,
+        deliveryTimeMs: stored.deliveryTimeMs,
+      };
+    } else {
+      const pairs = await listCarryPairs();
+      const match = pairs.find(
+        (item) =>
+          item.spotSymbol === input.spotSymbol &&
+          item.futureSymbol === input.futureSymbol,
+      );
+      if (match) {
+        pair = match;
+      }
+    }
+  }
+
+  if (!pair) {
+    return null;
+  }
+
+  const books = await booksForPair(pair.spotSymbol, pair.futureSymbol);
+  return rankedOpportunity(pair, books.spotAsks, books.futureBids, nowMs);
+}
+
 export async function scanCarryOpportunities(
   nowMs = Date.now(),
 ): Promise<ScannedOpportunity[]> {
@@ -89,18 +195,9 @@ export async function scanCarryOpportunities(
       return null;
     }
 
-    let spotAsks = levelsFromBook(
-      (await fetchBybitOrderbook("spot", pair.spotSymbol, ORDERBOOK_LEVELS).catch(
-        () => ({ a: [] }),
-      )).a,
-    );
-    let futureBids = levelsFromBook(
-      (await fetchBybitOrderbook(
-        "linear",
-        pair.futureSymbol,
-        ORDERBOOK_LEVELS,
-      ).catch(() => ({ b: [] }))).b,
-    );
+    const books = await booksForPair(pair.spotSymbol, pair.futureSymbol);
+    let spotAsks = books.spotAsks;
+    let futureBids = books.futureBids;
 
     if (spotAsks.length === 0) {
       const fallback = tickerLevel(spotTicker.ask1Price, spotTicker.ask1Size);
@@ -114,37 +211,8 @@ export async function scanCarryOpportunities(
         futureBids = [fallback];
       }
     }
-    if (spotAsks.length === 0 || futureBids.length === 0) {
-      return null;
-    }
 
-    const spotAsk = spotAsks[0].price;
-    const futureBid = futureBids[0].price;
-    const ranked = rankOpportunity({
-      futureBid,
-      spotAsk,
-      feeRate: ENTRY_FEE_RATE,
-      slippageRate: SLIPPAGE_RATE,
-      deliveryFeeRate: DELIVERY_FEE_RATE,
-      deliveryTimeMs: pair.deliveryTimeMs,
-      nowMs,
-    });
-
-    return {
-      baseCoin: pair.baseCoin,
-      spotSymbol: pair.spotSymbol,
-      futureSymbol: pair.futureSymbol,
-      deliveryTimeMs: pair.deliveryTimeMs,
-      deliveryDate: new Date(pair.deliveryTimeMs).toISOString().slice(0, 10),
-      daysToExpiry: ranked.daysToExpiry,
-      futureBid,
-      spotAsk,
-      executableBasis: ranked.executableBasis,
-      feeRate: ENTRY_FEE_RATE + SLIPPAGE_RATE + DELIVERY_FEE_RATE,
-      netBasis: ranked.netBasis,
-      netApr: ranked.netApr,
-      capacityUsdt: pairCapacityUsdt(spotAsks, futureBids),
-    };
+    return rankedOpportunity(pair, spotAsks, futureBids, nowMs);
   });
 
   const rows: ScannedOpportunity[] = [];

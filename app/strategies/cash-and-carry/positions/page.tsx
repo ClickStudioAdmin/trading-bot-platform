@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { PageHeading } from "@/components/page-heading";
 import { OpenPaperTrades, PaperOpenStats } from "@/components/paper-blotter";
 import { PaperFlash } from "@/components/paper-flash";
-import { persistOpportunities } from "@/lib/opportunities/persist";
+import { loadUsableBookShare } from "@/lib/engine/settings";
+import { applyUsableBookShare } from "@/lib/opportunities/capacity";
+import { loadOpportunityBook } from "@/lib/opportunities/load";
 import { firstSearchValue } from "@/lib/paper/open";
 import { loadPaperDesk } from "@/lib/paper/list";
-import { scanCarryOpportunities } from "@/lib/opportunities/scan";
-import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
 export const metadata: Metadata = {
   title: "Current Positions",
@@ -19,25 +19,17 @@ export default async function CashAndCarryPositionsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  let rows: ScannedOpportunity[] = [];
-  let error: string | null = null;
-
-  try {
-    rows = await scanCarryOpportunities();
-    await persistOpportunities(rows);
-  } catch (cause) {
-    error = cause instanceof Error ? cause.message : "Scan failed";
-  }
-
+  const book = await loadOpportunityBook("stored");
+  const rows = applyUsableBookShare(book.rows, await loadUsableBookShare());
   const desk = await loadPaperDesk(rows);
 
   return (
     <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Current Positions" />
       <div className="space-y-6">
-        {error ? (
+        {book.error ? (
           <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {error}
+            {book.error}
           </p>
         ) : null}
         <PaperFlash
