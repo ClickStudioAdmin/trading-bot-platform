@@ -11,6 +11,7 @@ import {
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
+import { exchangeCredentialsConfigured } from "@/lib/exchanges/encrypt";
 import {
   accountCanHoldConnections,
   enabledVenues,
@@ -42,6 +43,7 @@ export default async function AccountExchangesPage({
     ? await listExchangeConnections(session.member.id, session.account.id)
     : [];
   const venues = enabledVenues();
+  const canSave = live && exchangeCredentialsConfigured();
 
   return (
     <div>
@@ -63,10 +65,21 @@ export default async function AccountExchangesPage({
         <p className="text-sm text-success">Connection removed.</p>
       ) : null}
 
+      {live && !canSave ? (
+        <p className="mb-6 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          Set <span className="font-mono text-ink">EXCHANGE_CREDENTIALS_KEY</span>{" "}
+          on this Vercel environment (64 hex characters from{" "}
+          <span className="font-mono text-ink">openssl rand -hex 32</span>),
+          then redeploy. Use a Development key on <span className="font-mono text-ink">develop</span>
+          — never the Production value. If the deployment badge says Preview,
+          add the same Development key there too.
+        </p>
+      ) : null}
+
       {live ? (
         <>
           <ConnectionList rows={connections} />
-          <ExchangeConnectForm venues={venues} />
+          {canSave ? <ExchangeConnectForm venues={venues} /> : null}
         </>
       ) : (
         <p className="rounded-card border border-line bg-surface p-5 text-sm text-ink-muted">

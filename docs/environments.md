@@ -135,6 +135,7 @@ Encrypts API keys at rest. Server only. Different values on Development and Prod
 | Variable | Where | Value |
 | --- | --- | --- |
 | `EXCHANGE_CREDENTIALS_KEY` | Vercel Development (`develop`) | 64 hex characters. TBP-dev only |
+| `EXCHANGE_CREDENTIALS_KEY` | Vercel Preview (if `develop` deploys as Preview) | Same value as Development. TBP-dev only |
 | `EXCHANGE_CREDENTIALS_KEY` | Vercel Production (`main`) | A **different** 64 hex characters. TBP-prod only |
 
 Never `NEXT_PUBLIC_`. Never put the production key on Development. Local `.env.local` may hold a dev-only key; do not commit it.
