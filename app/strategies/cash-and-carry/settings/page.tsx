@@ -139,22 +139,24 @@ function ExchangeBindField({
   return (
     <div>
       <p className="text-sm text-ink">Exchange</p>
-      <div className="mt-1 flex flex-wrap items-start gap-2">
-        <select
-          name="exchangeConnectionId"
-          defaultValue={selectedId ?? "none"}
-          className="min-w-0 flex-1 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-        >
-          {selected ? null : <option value="none">None</option>}
-          {options.map((row) => (
-            <option key={row.id} value={row.id}>
-              {formatConnectionSummary(row)}
-              {row.status === "invalid" ? " (Invalid)" : ""}
-            </option>
-          ))}
-        </select>
-        {selected ? <StrategyDetachControl blocked={detachBlocked} /> : null}
-      </div>
+      <select
+        name="exchangeConnectionId"
+        defaultValue={selectedId ?? "none"}
+        className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+      >
+        {selected ? null : <option value="none">None</option>}
+        {options.map((row) => (
+          <option key={row.id} value={row.id}>
+            {formatConnectionSummary(row)}
+            {row.status === "invalid" ? " (Invalid)" : ""}
+          </option>
+        ))}
+      </select>
+      {selected ? (
+        <div className="mt-2">
+          <StrategyDetachControl blocked={detachBlocked} />
+        </div>
+      ) : null}
     </div>
   );
 }
