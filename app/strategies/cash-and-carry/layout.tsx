@@ -44,8 +44,8 @@ export default async function CashAndCarryLayout({
       {live ? (
         <div className="mx-auto max-w-6xl px-6 pt-4">
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-            This is a Live account. The engine will not place paper fills or
-            exchange orders until live execution exists.
+            This is a Live account. The engine will not place exchange
+            orders until live execution exists.
             {bound ? (
               <>
                 {" "}
