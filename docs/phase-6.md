@@ -40,9 +40,11 @@ Stop after each step. Do not start the next until you say so.
 ## Who can connect
 
 - **Live** account: can save connections.
-- **Paper** account: `/account/exchanges` explains that paper does not use keys.
+- **Paper** account: `/account/exchanges` explains that paper does not use keys. Cash-and-carry Settings has no exchange picker.
 - Keys belong to the **trading account**, not the login. Switching accounts shows that book’s connections only.
-- Cannot **remove** a connection while the account has open or closing positions, or while any automation set is Active or Reduce only. Account **Reduce only** (Automations page) stops new entries so the book can flatten. Set every set to Disabled, then remove the key. Open-position checks use `paper_carries` today (live blotter is out of scope). Manual Open, Close, and Unwind still work in Reduce only.
+- Cash and Carry binds one **active** connection in strategy Settings (`paper_engine_settings.exchange_connection_id`). The Live banner shows that bind, or “Connect an exchange to start trading”.
+- Cannot **remove** a connection while Cash and Carry (or a later strategy) is attached to it. Unused keys on the same account stay removable.
+- Cannot **detach or switch** the bound key while that strategy has open or closing positions, or while any automation set is Active or Reduce only. First attach (none → a key) is allowed. Open-position checks use `paper_carries` today. Account delete nulls the bind before deleting connections.
 
 ## Security
 

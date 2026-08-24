@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  formatConnectionSummary,
   formatEnvironmentLabel,
   formatVenueLabel,
   keyFingerprint,
@@ -51,6 +52,10 @@ const row = parseExchangeConnectionRow({
 });
 assert.equal(row?.fingerprint, "1234");
 assert.equal(row?.verifiedAtMs, null);
+assert.equal(
+  formatConnectionSummary(row!),
+  "Bybit Live · ••••1234",
+);
 assert.equal(parseExchangeConnectionRow({}), null);
 
 assert.equal(toByteaParam(Buffer.from("ab")), "\\x6162");

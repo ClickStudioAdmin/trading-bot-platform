@@ -6,6 +6,7 @@ import {
   formatAccountUsageStatus,
   formatConnectionRemoveBlockers,
   formatDeleteBlockers,
+  strategyDetachBlockers,
   parseAccountName,
   parseAccountMode,
   parseTradingAccountRow,
@@ -93,24 +94,28 @@ assert.equal(
   "Disable automations first",
 );
 assert.deepEqual(
-  connectionRemoveBlockers({ openCount: 0, automationsRunning: false }),
+  connectionRemoveBlockers({ inUse: false }),
   [],
 );
 assert.deepEqual(
-  connectionRemoveBlockers({ openCount: 2, automationsRunning: false }),
-  ["open"],
+  connectionRemoveBlockers({ inUse: true }),
+  ["in_use"],
+);
+assert.equal(
+  formatConnectionRemoveBlockers(["in_use"]),
+  "Detach this connection from Cash and Carry first",
 );
 assert.deepEqual(
-  connectionRemoveBlockers({ openCount: 0, automationsRunning: true }),
-  ["automations"],
+  strategyDetachBlockers({ openCount: 0, automationsRunning: false }),
+  [],
 );
 assert.deepEqual(
-  connectionRemoveBlockers({ openCount: 1, automationsRunning: true }),
+  strategyDetachBlockers({ openCount: 1, automationsRunning: true }),
   ["open", "automations"],
 );
 assert.equal(
-  formatConnectionRemoveBlockers(["open", "automations"]),
-  "Close or flatten open positions first · Turn off automations first",
+  formatDeleteBlockers(strategyDetachBlockers({ openCount: 1, automationsRunning: true })),
+  "Disable automations and exit all positions first",
 );
 
 assert.equal(

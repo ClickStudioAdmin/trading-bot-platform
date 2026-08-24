@@ -18,7 +18,7 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="When it is on"
-          detail="Each set has a mode. Active may open and exit. Reduce only will not open or add size, but still exits. Disabled does neither. Account Reduce only at the top of this page makes every Active set behave as Reduce only. Manual Open, Close, and Unwind always work. Closing rows keep clipping until they are flat."
+          detail="Each set has a mode. Active may open and exit. Reduce only will not open or add size, but still exits. Disabled does neither. Account Reduce only (shown when you have at least one set) makes every Active set behave as Reduce only. Manual Open, Close, and Unwind always work. Closing rows keep clipping until they are flat."
         />
         <GuideItem
           term="What it can hold"
@@ -36,7 +36,7 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Mode"
-          detail="Active, Reduce only, or Disabled for this set only. Account Reduce only overrides Active sets until you turn it off."
+          detail="Active, Reduce only, or Disabled for this set only. Account Reduce only overrides Active sets until you turn it off. It is hidden when you have no sets."
         />
         <GuideItem
           term="Add Rule Set"

@@ -48,7 +48,8 @@ export function formatAccountMode(mode: TradingAccountMode): string {
 }
 
 export type AccountDeleteBlock = "last" | "open" | "automations";
-export type ConnectionRemoveBlock = "open" | "automations";
+export type ConnectionRemoveBlock = "in_use";
+export type StrategyDetachBlock = "open" | "automations";
 
 export function accountDeleteBlockers(input: {
   accountCount: number;
@@ -69,7 +70,9 @@ export function accountDeleteBlockers(input: {
   return blocks;
 }
 
-export function formatDeleteBlockers(blocks: AccountDeleteBlock[]): string {
+export function formatDeleteBlockers(
+  blocks: readonly AccountDeleteBlock[],
+): string {
   const parts: string[] = [];
   if (blocks.includes("last")) {
     parts.push("Keep at least one account");
@@ -109,10 +112,25 @@ export function formatAccountUsageStatus(input: {
 }
 
 export function connectionRemoveBlockers(input: {
+  inUse: boolean;
+}): ConnectionRemoveBlock[] {
+  return input.inUse ? ["in_use"] : [];
+}
+
+export function formatConnectionRemoveBlockers(
+  blocks: ConnectionRemoveBlock[],
+): string {
+  if (blocks.includes("in_use")) {
+    return "Detach this connection from Cash and Carry first";
+  }
+  return "";
+}
+
+export function strategyDetachBlockers(input: {
   openCount: number;
   automationsRunning: boolean;
-}): ConnectionRemoveBlock[] {
-  const blocks: ConnectionRemoveBlock[] = [];
+}): StrategyDetachBlock[] {
+  const blocks: StrategyDetachBlock[] = [];
   if (input.openCount > 0) {
     blocks.push("open");
   }
@@ -122,15 +140,8 @@ export function connectionRemoveBlockers(input: {
   return blocks;
 }
 
-export function formatConnectionRemoveBlockers(
-  blocks: ConnectionRemoveBlock[],
+export function formatStrategyDetachBlockers(
+  blocks: StrategyDetachBlock[],
 ): string {
-  return blocks
-    .map((block) => {
-      if (block === "open") {
-        return "Close or flatten open positions first";
-      }
-      return "Turn off automations first";
-    })
-    .join(" · ");
+  return formatDeleteBlockers(blocks);
 }

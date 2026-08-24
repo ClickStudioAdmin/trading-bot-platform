@@ -9,9 +9,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export type EngineSettings = {
   share: number;
   reduceOnly: boolean;
+  connectionId: string | null;
 };
 
 const SETTINGS_SELECT =
+  "account_id, user_id, enabled, reduce_only, usable_book_share, exchange_connection_id";
+const SETTINGS_SELECT_WITHOUT_CONNECTION =
   "account_id, user_id, enabled, reduce_only, usable_book_share";
 const SETTINGS_SELECT_FALLBACK =
   "account_id, user_id, enabled, usable_book_share";
@@ -37,6 +40,10 @@ export async function selectPaperEngineSettings(
   if (!full.error) {
     return (full.data ?? []) as unknown as Record<string, unknown>[];
   }
+  const withoutConnection = await run(SETTINGS_SELECT_WITHOUT_CONNECTION);
+  if (!withoutConnection.error) {
+    return (withoutConnection.data ?? []) as unknown as Record<string, unknown>[];
+  }
   const fallback = await run(SETTINGS_SELECT_FALLBACK);
   return (fallback.data ?? []) as unknown as Record<string, unknown>[];
 }
@@ -49,6 +56,7 @@ export async function loadEngineSettings(): Promise<EngineSettings> {
       return {
         share: DEFAULT_USABLE_BOOK_SHARE,
         reduceOnly: false,
+        connectionId: null,
       };
     }
 
@@ -60,21 +68,25 @@ export async function loadEngineSettings(): Promise<EngineSettings> {
       return {
         share: DEFAULT_USABLE_BOOK_SHARE,
         reduceOnly: false,
+        connectionId: null,
       };
     }
 
     const share = asNullableNumber(data.usable_book_share);
+    const connectionId = String(data.exchange_connection_id ?? "").trim();
     return {
       share:
         share !== null && share > 0 && share <= 1
           ? share
           : DEFAULT_USABLE_BOOK_SHARE,
       reduceOnly: Boolean(data.reduce_only),
+      connectionId: connectionId || null,
     };
   } catch {
     return {
       share: DEFAULT_USABLE_BOOK_SHARE,
       reduceOnly: false,
+      connectionId: null,
     };
   }
 }

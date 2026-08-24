@@ -45,6 +45,13 @@ export function keyFingerprint(
   return value.slice(-4);
 }
 
+export function formatConnectionSummary(row: ExchangeConnection): string {
+  const venue = formatVenueLabel(row.venue);
+  const environment = formatEnvironmentLabel(row.venue, row.environment);
+  const named = row.label ? `${row.label} · ` : "";
+  return `${venue} ${environment} · ${named}••••${row.fingerprint}`;
+}
+
 export function formatVenueLabel(venueId: string): string {
   return getVenue(venueId)?.label ?? venueId;
 }

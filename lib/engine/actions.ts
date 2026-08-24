@@ -5,7 +5,14 @@ import {
   paperLayerToRow,
   parsePaperRulesForm,
 } from "@/lib/engine/rules";
+import { loadAccountUsage } from "@/lib/accounts/store";
+import {
+  formatStrategyDetachBlockers,
+  strategyDetachBlockers,
+} from "@/lib/accounts/model";
+import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { parseReduceOnly } from "@/lib/engine/settings";
+import { listExchangeConnections } from "@/lib/exchanges/store";
 import { parseUsableBookShare } from "@/lib/opportunities/capacity";
 import { writeEventLog } from "@/lib/logs/write";
 import { getSessionContext } from "@/lib/auth/session";
@@ -32,12 +39,14 @@ export async function savePaperRules(formData: FormData) {
     redirect(`${RULES_PATH}?error=${encodeURIComponent("Auth is not configured.")}`);
   }
 
+  const clearReduceOnly = parsed.config.layers.length === 0;
   const { error: settingsError } = await supabase
     .from("paper_engine_settings")
     .upsert({
       user_id: user.id,
       account_id: account.id,
       enabled: parsed.config.enabled,
+      ...(clearReduceOnly ? { reduce_only: false } : {}),
       updated_at: new Date().toISOString(),
     });
 
@@ -180,10 +189,13 @@ export async function savePaperRules(formData: FormData) {
     data: {
       enabled: parsed.config.enabled,
       layerCount: parsed.config.layers.length,
+      ...(clearReduceOnly ? { reduceOnly: false } : {}),
     },
   });
 
   revalidatePath("/account/exchanges");
+  revalidatePath("/account");
+  revalidatePath("/strategies/cash-and-carry");
   redirect(`${RULES_PATH}?saved=1`);
 }
 
@@ -208,10 +220,55 @@ export async function savePaperSettings(formData: FormData) {
     );
   }
 
+  let connectionId: string | null = null;
+  const bindSubmitted = formData.has("exchangeConnectionId");
+  if (accountCanHoldConnections(account.mode) && bindSubmitted) {
+    const nextId = String(formData.get("exchangeConnectionId") ?? "").trim();
+    connectionId = nextId === "" || nextId === "none" ? null : nextId;
+    const currentRows = await supabase
+      .from("paper_engine_settings")
+      .select("exchange_connection_id")
+      .eq("account_id", account.id)
+      .maybeSingle();
+    const currentId = String(
+      (currentRows.data as { exchange_connection_id?: unknown } | null)
+        ?.exchange_connection_id ?? "",
+    ).trim() || null;
+    if (currentId !== null && connectionId !== currentId) {
+      const usage = await loadAccountUsage([account]);
+      const row = usage.get(account.id);
+      const detach = strategyDetachBlockers({
+        openCount: row?.openCount ?? 0,
+        automationsRunning: Boolean(row?.automationsRunning),
+      });
+      if (detach.length > 0) {
+        redirect(
+          `${SETTINGS_PATH}?error=${encodeURIComponent(formatStrategyDetachBlockers(detach))}`,
+        );
+      }
+    }
+    if (connectionId) {
+      const connections = await listExchangeConnections(user.id, account.id);
+      const match = connections.find((item) => item.id === connectionId);
+      if (!match) {
+        redirect(
+          `${SETTINGS_PATH}?error=${encodeURIComponent("Pick an exchange connection on this account.")}`,
+        );
+      } else if (match.status !== "active" && match.id !== currentId) {
+        redirect(
+          `${SETTINGS_PATH}?error=${encodeURIComponent("That connection is not active.")}`,
+        );
+      }
+    }
+  }
+
   const { error } = await supabase.from("paper_engine_settings").upsert({
     user_id: user.id,
     account_id: account.id,
     usable_book_share: parsed,
+    ...(accountCanHoldConnections(account.mode) && bindSubmitted
+      ? { exchange_connection_id: connectionId }
+      : {}),
     updated_at: new Date().toISOString(),
   });
 
@@ -235,10 +292,14 @@ export async function savePaperSettings(formData: FormData) {
     userId: user.id,
     accountId: account.id,
     strategy: "cash-and-carry",
-    data: { usableBookShare: parsed },
+    data: {
+      usableBookShare: parsed,
+      ...(bindSubmitted ? { exchangeConnectionId: connectionId } : {}),
+    },
   });
 
   revalidatePath("/account/exchanges");
+  revalidatePath("/strategies/cash-and-carry");
   redirect(`${SETTINGS_PATH}?saved=1`);
 }
 
@@ -248,14 +309,22 @@ export async function saveAccountReduceOnly(formData: FormData) {
     redirect("/sign-in");
   }
   const { member: user, account } = session;
-  const reduceOnly = parseReduceOnly(formData.get("reduceOnly"));
-
   const supabase = createServiceClient();
   if (!supabase) {
     redirect(
       `${RULES_PATH}?error=${encodeURIComponent("Auth is not configured.")}`,
     );
   }
+
+  const { count: setCount, error: countError } = await supabase
+    .from("paper_rules")
+    .select("id", { count: "exact", head: true })
+    .eq("account_id", account.id);
+  if (countError) {
+    redirect(`${RULES_PATH}?error=${encodeURIComponent(countError.message)}`);
+  }
+  const reduceOnly =
+    (setCount ?? 0) > 0 && parseReduceOnly(formData.get("reduceOnly"));
 
   const { error } = await supabase.from("paper_engine_settings").upsert({
     user_id: user.id,

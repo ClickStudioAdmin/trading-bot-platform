@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { savePaperRules } from "@/lib/engine/actions";
+import {
+  saveAccountReduceOnly,
+  savePaperRules,
+} from "@/lib/engine/actions";
 import {
   defaultPaperLayer,
   paperConfigToFormValues,
@@ -11,7 +14,7 @@ import {
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 
-export function PaperRulesForm({
+export function AutomationsDesk({
   values,
   inUseRuleIds,
   reduceOnly = false,
@@ -20,6 +23,61 @@ export function PaperRulesForm({
   inUseRuleIds: number[];
   reduceOnly?: boolean;
 }) {
+  const [hasSets, setHasSets] = useState(values.layers.length > 0);
+  return (
+    <div className="space-y-4">
+      {hasSets ? (
+        <form
+          action={saveAccountReduceOnly}
+          className="max-w-md space-y-3 rounded-card border border-line bg-surface p-5"
+        >
+          <label className="flex items-start gap-3 text-sm text-ink">
+            <input
+              type="checkbox"
+              name="reduceOnly"
+              value="on"
+              defaultChecked={reduceOnly}
+              className="mt-1 size-4"
+            />
+            <span>
+              Reduce only
+              <span className="mt-1 block text-xs text-ink-muted">
+                Stops every set from opening or adding size. Automated
+                exits still run unless a set is Disabled. Manual Open,
+                Close, and Unwind still work.
+              </span>
+            </span>
+          </label>
+          <PendingSubmitButton
+            pendingLabel="Saving…"
+            successKey="save-reduce-only"
+            className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
+          >
+            Save
+          </PendingSubmitButton>
+        </form>
+      ) : null}
+      <PaperRulesForm
+        values={values}
+        inUseRuleIds={inUseRuleIds}
+        reduceOnly={reduceOnly}
+        onHasSetsChange={setHasSets}
+      />
+    </div>
+  );
+}
+
+export function PaperRulesForm({
+  values,
+  inUseRuleIds,
+  reduceOnly = false,
+  onHasSetsChange,
+}: {
+  values: PaperRulesFormValues;
+  inUseRuleIds: number[];
+  reduceOnly?: boolean;
+  onHasSetsChange?: (hasSets: boolean) => void;
+}) {
   const [layers, setLayers] = useState(values.layers);
   const inUse = new Set(inUseRuleIds);
   const empty = layers.length === 0;
@@ -27,6 +85,7 @@ export function PaperRulesForm({
   function removeLayer(key: string, id: string) {
     const next = layers.filter((item) => item.key !== key);
     setLayers(next);
+    onHasSetsChange?.(next.length > 0);
     if (next.length === 0 && id !== "") {
       const data = new FormData();
       data.set("ruleCount", "0");

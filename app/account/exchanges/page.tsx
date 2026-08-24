@@ -5,6 +5,7 @@ import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   formatAccountMode,
+  connectionRemoveBlockers,
   formatConnectionRemoveBlockers,
 } from "@/lib/accounts/model";
 import { loadAccountUsage } from "@/lib/accounts/store";
@@ -46,11 +47,7 @@ export default async function AccountExchangesPage({
   const usage = live
     ? (await loadAccountUsage([session.account])).get(session.account.id)
     : null;
-  const removeBlocks = usage?.connectionBlocks ?? [];
-  const removeBlocked =
-    removeBlocks.length > 0
-      ? formatConnectionRemoveBlockers(removeBlocks)
-      : null;
+  const boundId = usage?.strategyConnectionId ?? null;
   const connections = live
     ? await listExchangeConnections(session.member.id, session.account.id)
     : [];
@@ -90,7 +87,7 @@ export default async function AccountExchangesPage({
 
       {live ? (
         <>
-          <ConnectionList rows={connections} removeBlocked={removeBlocked} />
+          <ConnectionList rows={connections} boundId={boundId} />
           {canSave ? <ExchangeConnectForm venues={venues} /> : null}
         </>
       ) : (
@@ -108,10 +105,10 @@ export default async function AccountExchangesPage({
 
 function ConnectionList({
   rows,
-  removeBlocked,
+  boundId,
 }: {
   rows: ExchangeConnection[];
-  removeBlocked: string | null;
+  boundId: string | null;
 }) {
   if (rows.length === 0) {
     return (
@@ -124,26 +121,23 @@ function ConnectionList({
   return (
     <section className="rounded-card border border-line bg-surface p-5">
       <h2 className="text-lg font-semibold tracking-tight">Connected</h2>
-      {removeBlocked ? (
-        <p className="mt-2 text-sm text-ink-muted">
-          {removeBlocked}. Turn on Reduce only in{" "}
-          <Link
-            href="/strategies/cash-and-carry/automations"
-            className="text-accent hover:text-accent-strong"
-          >
-            Automations
-          </Link>{" "}
-          to stop new entries, flatten, then set every set to Disabled
-          before removing a key.
-        </p>
-      ) : (
-        <p className="mt-2 text-sm text-ink-muted">
-          You can remove a connection only while this account has no open
-          positions and automations are off.
-        </p>
-      )}
+      <p className="mt-2 text-sm text-ink-muted">
+        Keys belong to this account. Cash and Carry picks one in{" "}
+        <Link
+          href="/strategies/cash-and-carry/settings"
+          className="text-accent hover:text-accent-strong"
+        >
+          Settings
+        </Link>
+        . You cannot remove a key while a strategy is using it.
+      </p>
       <ul className="mt-4 divide-y divide-line">
-        {rows.map((row) => (
+        {rows.map((row) => {
+          const inUse = boundId === row.id;
+          const removeBlocked = formatConnectionRemoveBlockers(
+            connectionRemoveBlockers({ inUse }),
+          );
+          return (
           <li
             key={row.id}
             className="flex flex-wrap items-start justify-between gap-3 py-4 first:pt-0 last:pb-0"
@@ -154,6 +148,9 @@ function ConnectionList({
                 {row.label ? (
                   <span className="ml-2 text-xs text-ink-muted">{row.label}</span>
                 ) : null}
+                {inUse ? (
+                  <span className="ml-2 text-xs text-accent">Cash and Carry</span>
+                ) : null}
               </p>
               <p className="mt-1 text-xs text-ink-faint">
                 {formatEnvironmentLabel(row.venue, row.environment)}
@@ -162,7 +159,7 @@ function ConnectionList({
                 {row.status === "invalid" ? " · Invalid" : null}
               </p>
             </div>
-            {removeBlocked ? (
+            {inUse ? (
               <p className="max-w-56 text-right text-xs text-ink-muted">
                 {removeBlocked}
               </p>
@@ -189,7 +186,8 @@ function ConnectionList({
               </details>
             )}
           </li>
-        ))}
+          );
+        })}
       </ul>
     </section>
   );

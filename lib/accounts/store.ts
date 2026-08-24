@@ -1,11 +1,9 @@
 import {
   accountDeleteBlockers,
-  connectionRemoveBlockers,
   DEFAULT_ACCOUNT_NAME,
   formatDeleteBlockers,
   parseTradingAccountRow,
   type AccountDeleteBlock,
-  type ConnectionRemoveBlock,
   type TradingAccount,
   type TradingAccountMode,
 } from "@/lib/accounts/model";
@@ -126,8 +124,8 @@ export type AccountUsage = {
   openCount: number;
   automationsRunning: boolean;
   reduceOnly: boolean;
+  strategyConnectionId: string | null;
   blocks: AccountDeleteBlock[];
-  connectionBlocks: ConnectionRemoveBlock[];
 };
 
 export async function loadAccountUsage(
@@ -140,13 +138,13 @@ export async function loadAccountUsage(
       openCount: 0,
       automationsRunning: false,
       reduceOnly: false,
+      strategyConnectionId: null,
       blocks: accountDeleteBlockers({
         accountCount,
         openCount: 0,
         automationsRunning: false,
         mode: account.mode,
       }),
-      connectionBlocks: [],
     });
   }
   if (accounts.length === 0) {
@@ -183,6 +181,14 @@ export async function loadAccountUsage(
       runningIds.add(id);
     }
   }
+  const connectionByAccount = new Map<string, string>();
+  for (const row of settings) {
+    const accountId = String(row.account_id ?? "");
+    const connectionId = String(row.exchange_connection_id ?? "").trim();
+    if (accountId && connectionId) {
+      connectionByAccount.set(accountId, connectionId);
+    }
+  }
   for (const account of accounts) {
     const opens = openCount.get(account.id) ?? 0;
     const automationsRunning = runningIds.has(account.id);
@@ -191,15 +197,12 @@ export async function loadAccountUsage(
       openCount: opens,
       automationsRunning,
       reduceOnly,
+      strategyConnectionId: connectionByAccount.get(account.id) ?? null,
       blocks: accountDeleteBlockers({
         accountCount,
         openCount: opens,
         automationsRunning,
         mode: account.mode,
-      }),
-      connectionBlocks: connectionRemoveBlockers({
-        openCount: opens,
-        automationsRunning,
       }),
     });
   }
@@ -223,6 +226,14 @@ export async function deleteTradingAccountRow(
   const blocks = usage.get(accountId)?.blocks ?? ["last"];
   if (blocks.length > 0) {
     return { error: `${formatDeleteBlockers(blocks)}.` };
+  }
+  const { error: unbindError } = await supabase
+    .from("paper_engine_settings")
+    .update({ exchange_connection_id: null, updated_at: new Date().toISOString() })
+    .eq("account_id", accountId)
+    .eq("user_id", userId);
+  if (unbindError) {
+    return { error: unbindError.message };
   }
   const { error: connectionError } = await supabase
     .from("exchange_connections")

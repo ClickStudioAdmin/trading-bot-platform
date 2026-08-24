@@ -1,6 +1,11 @@
 import { StrategySubnav } from "@/components/strategy-subnav";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadPaperRules } from "@/lib/engine/load";
+import { loadEngineSettings } from "@/lib/engine/settings";
+import { formatConnectionSummary } from "@/lib/exchanges/connections";
+import { listExchangeConnections } from "@/lib/exchanges/store";
+import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import Link from "next/link";
 
 export default async function CashAndCarryLayout({
   children,
@@ -9,6 +14,14 @@ export default async function CashAndCarryLayout({
 }) {
   const session = await getSessionContext();
   const { signedIn, config } = await loadPaperRules();
+  const live = Boolean(session && accountCanHoldConnections(session.account.mode));
+  const settings = live ? await loadEngineSettings() : null;
+  const connections =
+    live && session
+      ? await listExchangeConnections(session.member.id, session.account.id)
+      : [];
+  const bound =
+    connections.find((row) => row.id === settings?.connectionId) ?? null;
   const anyActive = config.layers.some(
     (layer) => (layer.mode ?? "active") === "active",
   );
@@ -28,11 +41,32 @@ export default async function CashAndCarryLayout({
         automationsRunning={paperRunning}
         reduceOnly={automationsOn && (accountReduce || !anyActive)}
       />
-      {session?.account.mode === "live" ? (
+      {live ? (
         <div className="mx-auto max-w-6xl px-6 pt-4">
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-            This is a Live account. Rules stay here. The engine will not place
-            paper fills or exchange orders until live execution exists.
+            This is a Live account. The engine will not place paper fills or
+            exchange orders until live execution exists.
+            {bound ? (
+              <>
+                {" "}
+                Using {formatConnectionSummary(bound)}.
+              </>
+            ) : (
+              <>
+                {" "}
+                <Link
+                  href={
+                    connections.length === 0
+                      ? "/account/exchanges"
+                      : "/strategies/cash-and-carry/settings"
+                  }
+                  className="text-accent hover:text-accent-strong"
+                >
+                  Connect an exchange to start trading
+                </Link>
+                .
+              </>
+            )}
           </p>
         </div>
       ) : null}

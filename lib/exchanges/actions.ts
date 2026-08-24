@@ -1,7 +1,10 @@
 "use server";
 
 import { loadAccountUsage } from "@/lib/accounts/store";
-import { formatConnectionRemoveBlockers } from "@/lib/accounts/model";
+import {
+  connectionRemoveBlockers,
+  formatConnectionRemoveBlockers,
+} from "@/lib/accounts/model";
 import {
   keyFingerprint,
   parseConnectionLabel,
@@ -132,7 +135,8 @@ export async function removeExchangeConnection(formData: FormData) {
     fail("Missing connection.");
   }
   const usage = await loadAccountUsage([session.account]);
-  const blocks = usage.get(session.account.id)?.connectionBlocks ?? [];
+  const boundId = usage.get(session.account.id)?.strategyConnectionId ?? null;
+  const blocks = connectionRemoveBlockers({ inUse: boundId === connectionId });
   if (blocks.length > 0) {
     fail(formatConnectionRemoveBlockers(blocks));
   }
@@ -162,5 +166,7 @@ export async function removeExchangeConnection(formData: FormData) {
     data: { connectionId },
   });
   revalidatePath("/account/exchanges");
+  revalidatePath("/strategies/cash-and-carry");
+  revalidatePath("/strategies/cash-and-carry/settings");
   redirect("/account/exchanges?removed=1");
 }
