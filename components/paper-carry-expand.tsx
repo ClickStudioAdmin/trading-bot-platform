@@ -50,12 +50,10 @@ export function OpenPaperCarryRows({
   trade,
   next,
   hideUnwind = false,
-  exchangeBook = false,
 }: {
   trade: OpenCarryView;
   next: PaperReturnPath;
   hideUnwind?: boolean;
-  exchangeBook?: boolean;
 }) {
   const pnlPct =
     trade.unrealizedUsdt === null
@@ -68,7 +66,6 @@ export function OpenPaperCarryRows({
       orders={trade.orders}
       logs={trade.logs}
       entryBasis={trade.entryBasis}
-      exchangeBook={exchangeBook}
     >
       <td className="min-w-0 px-4 py-3">
         <span className="flex flex-wrap items-center gap-2 font-medium">
@@ -123,13 +120,7 @@ export function OpenPaperCarryRows({
   );
 }
 
-export function ClosedPaperCarryRows({
-  trade,
-  exchangeBook = false,
-}: {
-  trade: ClosedCarryView;
-  exchangeBook?: boolean;
-}) {
+export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
   const pnlPct =
     trade.realizedUsdt === null
       ? null
@@ -141,7 +132,6 @@ export function ClosedPaperCarryRows({
       orders={trade.orders}
       logs={trade.logs}
       entryBasis={trade.entryBasis}
-      exchangeBook={exchangeBook}
     >
       <td className="min-w-0 px-4 py-3">
         <span className="flex flex-wrap items-center gap-2 font-medium">
@@ -197,14 +187,12 @@ function ExpandableOrderRows({
   logs,
   entryBasis,
   colSpan,
-  exchangeBook = false,
   children,
 }: {
   orders: PaperOrderRow[];
   logs: EventLogRow[];
   entryBasis: number;
   colSpan: number;
-  exchangeBook?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -234,7 +222,6 @@ function ExpandableOrderRows({
               orders={orders}
               logs={logs}
               entryBasis={entryBasis}
-              exchangeBook={exchangeBook}
             />
           </td>
         </tr>
@@ -389,12 +376,10 @@ function PositionDetailTabs({
   orders,
   logs,
   entryBasis,
-  exchangeBook = false,
 }: {
   orders: PaperOrderRow[];
   logs: EventLogRow[];
   entryBasis: number;
-  exchangeBook?: boolean;
 }) {
   const [tab, setTab] = useState<"orders" | "logs">("orders");
   const ordersPanelId = useId();
@@ -428,11 +413,7 @@ function PositionDetailTabs({
         id={tab === "orders" ? ordersPanelId : logsPanelId}
       >
         {tab === "orders" ? (
-          <PaperOrderList
-            orders={orders}
-            entryBasis={entryBasis}
-            exchangeBook={exchangeBook}
-          />
+          <PaperOrderList orders={orders} entryBasis={entryBasis} />
         ) : (
           <PositionLogList logs={logs} />
         )}
@@ -473,39 +454,28 @@ function TabButton({
 function PaperOrderList({
   orders,
   entryBasis,
-  exchangeBook = false,
 }: {
   orders: PaperOrderRow[];
   entryBasis: number;
-  exchangeBook?: boolean;
 }) {
   if (orders.length === 0) {
     return <p className="text-sm text-ink-muted">No orders recorded.</p>;
   }
 
-  const venueDesk = exchangeBook || orders.some(hasVenueFill);
-
   return (
-    <div>
-      <div
-        className="panel-scroll space-y-2"
-        tabIndex={0}
-        role="region"
-        aria-label="Orders"
-      >
-        {orders.map((order) => (
-          <PaperOrderCard
-            key={order.id}
-            order={order}
-            entryBasis={entryBasis}
-          />
-        ))}
-      </div>
-      <p className="mt-2 text-xs text-ink-faint">
-        {venueDesk
-          ? "Scan is the public book at order time. Executed is the Bybit fill. Net basis is the scan after assumed fees — same figure as Entry basis."
-          : "Paper fill equals the scan net. No Bybit order. Scan basis is the book; net basis is after assumed fees."}
-      </p>
+    <div
+      className="panel-scroll space-y-2"
+      tabIndex={0}
+      role="region"
+      aria-label="Orders"
+    >
+      {orders.map((order) => (
+        <PaperOrderCard
+          key={order.id}
+          order={order}
+          entryBasis={entryBasis}
+        />
+      ))}
     </div>
   );
 }

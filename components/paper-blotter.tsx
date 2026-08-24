@@ -162,7 +162,6 @@ export function OpenPaperTrades({
                   trade={trade}
                   next={next}
                   hideUnwind={exchangeBook}
-                  exchangeBook={exchangeBook}
                 />
               ))
             )}
