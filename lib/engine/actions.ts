@@ -363,3 +363,58 @@ export async function saveAccountReduceOnly(formData: FormData) {
   revalidatePath("/strategies/cash-and-carry");
   redirect(`${RULES_PATH}?reduce=1`);
 }
+
+export async function detachStrategyConnection() {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const { member: user, account } = session;
+  if (!accountCanHoldConnections(account.mode)) {
+    redirect(SETTINGS_PATH);
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    redirect(
+      `${SETTINGS_PATH}?error=${encodeURIComponent("Auth is not configured.")}`,
+    );
+  }
+  const usage = await loadAccountUsage([account]);
+  const row = usage.get(account.id);
+  if (!row?.strategyConnectionId) {
+    redirect(SETTINGS_PATH);
+  }
+  const blocks = strategyDetachBlockers({
+    openCount: row.openCount,
+    automationsRunning: row.automationsRunning,
+  });
+  if (blocks.length > 0) {
+    redirect(
+      `${SETTINGS_PATH}?error=${encodeURIComponent(formatStrategyDetachBlockers(blocks))}`,
+    );
+  }
+  const { error } = await supabase
+    .from("paper_engine_settings")
+    .update({
+      exchange_connection_id: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("account_id", account.id)
+    .eq("user_id", user.id);
+  if (error) {
+    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(error.message)}`);
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "settings.saved",
+    message: "Detached exchange connection",
+    userId: user.id,
+    accountId: account.id,
+    strategy: "cash-and-carry",
+    data: { exchangeConnectionId: null },
+  });
+  revalidatePath("/account/exchanges");
+  revalidatePath("/account/book");
+  revalidatePath("/strategies/cash-and-carry");
+  redirect(`${SETTINGS_PATH}?saved=1`);
+}

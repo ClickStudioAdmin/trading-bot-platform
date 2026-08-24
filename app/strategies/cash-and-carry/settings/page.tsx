@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { StrategyDetachControl } from "@/components/strategy-detach-control";
 import { savePaperSettings } from "@/lib/engine/actions";
 import { loadEngineSettings } from "@/lib/engine/settings";
+import { strategyDetachBlockers } from "@/lib/accounts/model";
+import { loadAccountUsage } from "@/lib/accounts/store";
 import {
   formatConnectionSummary,
   type ExchangeConnection,
@@ -36,6 +39,15 @@ export default async function CashAndCarrySettingsPage({
     ? await listExchangeConnections(session.member.id, session.account.id)
     : [];
   const selected = connections.find((row) => row.id === settings.connectionId) ?? null;
+  const usage = live
+    ? (await loadAccountUsage([session.account])).get(session.account.id)
+    : null;
+  const detachBlocked =
+    Boolean(selected) &&
+    strategyDetachBlockers({
+      openCount: usage?.openCount ?? 0,
+      automationsRunning: Boolean(usage?.automationsRunning),
+    }).length > 0;
   const saved = firstSearchValue(params.saved) === "1";
   const error = firstSearchValue(params.error);
 
@@ -62,6 +74,7 @@ export default async function CashAndCarrySettingsPage({
             connections={connections}
             selectedId={settings.connectionId}
             selected={selected}
+            detachBlocked={detachBlocked}
           />
         ) : null}
         <label className="block text-sm text-ink">
@@ -95,10 +108,12 @@ function ExchangeBindField({
   connections,
   selectedId,
   selected,
+  detachBlocked,
 }: {
   connections: ExchangeConnection[];
   selectedId: string | null;
   selected: ExchangeConnection | null;
+  detachBlocked: boolean;
 }) {
   if (connections.length === 0) {
     return (
@@ -122,26 +137,24 @@ function ExchangeBindField({
   );
 
   return (
-    <label className="block text-sm text-ink">
-      Exchange
-      <select
-        name="exchangeConnectionId"
-        defaultValue={selectedId ?? "none"}
-        className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-      >
-        <option value="none">None</option>
-        {options.map((row) => (
-          <option key={row.id} value={row.id}>
-            {formatConnectionSummary(row)}
-            {row.status === "invalid" ? " (Invalid)" : ""}
-          </option>
-        ))}
-      </select>
-      <span className="mt-1 block text-xs text-ink-muted">
-        {selected
-          ? `Cash and Carry uses ${formatConnectionSummary(selected)}. Detach is blocked while this strategy has open positions or automations on.`
-          : "Pick an active connection on this Live account. Manual Open, Close, and Unwind still work without one; live execution will need it later."}
-      </span>
-    </label>
+    <div>
+      <p className="text-sm text-ink">Exchange</p>
+      <div className="mt-1 flex flex-wrap items-start gap-2">
+        <select
+          name="exchangeConnectionId"
+          defaultValue={selectedId ?? "none"}
+          className="min-w-0 flex-1 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+        >
+          {selected ? null : <option value="none">None</option>}
+          {options.map((row) => (
+            <option key={row.id} value={row.id}>
+              {formatConnectionSummary(row)}
+              {row.status === "invalid" ? " (Invalid)" : ""}
+            </option>
+          ))}
+        </select>
+        {selected ? <StrategyDetachControl blocked={detachBlocked} /> : null}
+      </div>
+    </div>
   );
 }
