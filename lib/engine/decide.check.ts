@@ -286,12 +286,45 @@ assert.deepEqual(
         layer({
           sizeType: "dynamic",
           minSizeUsdt: 5_000,
-          maxOpenCount: null,
+          maxOpenCount: 3,
         }),
       ],
     },
   ).map((row) => row.opportunity.futureSymbol),
   ["BTCUSDT-25AUG27"],
+);
+assert.deepEqual(
+  decideEntries(
+    [
+      opportunity("BTCUSDT-25JUN27", { netApr: 0.043, capacityUsdt: 5_000 }),
+      opportunity("BTCUSDT-26MAR27", { netApr: 0.0408, capacityUsdt: 5_000 }),
+    ],
+    [
+      {
+        id: 7,
+        spotSymbol: "BTCUSDT",
+        futureSymbol: "BTCUSDT-25JUN27",
+        notionalUsdt: 5_000,
+        ruleId: 1,
+        openedAtMs: 1,
+      },
+    ],
+    {
+      enabled: true,
+      layers: [
+        layer({
+          sizeType: "dynamic",
+          minNetApr: 0.04,
+          minDte: 30,
+          maxDte: null,
+          minSizeUsdt: 500,
+          maxOpenCount: 3,
+          maxOpenNotionalUsdt: 20_000,
+        }),
+      ],
+    },
+  ).map((row) => [row.opportunity.futureSymbol, row.carryId]),
+  [["BTCUSDT-25JUN27", 7]],
 );
 assert.deepEqual(
   decideEntries(

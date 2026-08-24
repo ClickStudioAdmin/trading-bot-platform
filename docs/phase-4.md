@@ -42,7 +42,7 @@ Each layer has a name, its own entry and exit order types, entry filters, open c
 
 Manual rows: **Close** flattens remaining size at the live scan. **Unwind** clips to usable book and sets `closing` until later ticks finish it. Auto rows follow that layer’s exits on each tick. Clicking **Close** on an Auto row uses that set’s exit order type (Fixed flattens; Dynamic clips). Positions show Manual or Auto.
 
-**Engine safety:** A set will not open a second pair unless Max pairs is raised. Fixed entry skips a pair you already hold. Dynamic entry may add clips on the existing row for a pair this set already holds. If it holds more than one pair, it adds to the best net APR that still has book. It does not insert a second row for a held pair. Rank by net APR. Caps are per layer. If there are no rule sets, the engine does not open or fire rule exits. It still clips `closing` rows. Manual opens have no `rule_id` and are not auto-closed unless the user clicks Unwind.
+**Engine safety:** A set will not open a second pair unless Max pairs is raised. Fixed entry skips a pair you already hold. Dynamic entry takes **one clip per set per tick**. If it holds none, it opens only the best matching pair. If it already holds any pair, it adds only to the held pair with the highest net APR that still clears Min Order Size. Max pairs is a ceiling, not a fill-now target. Dynamic does not open another pair just because slots remain. Rank by net APR. Caps are per layer. If there are no rule sets, the engine does not open or fire rule exits. It still clips `closing` rows. Manual opens have no `rule_id` and are not auto-closed unless the user clicks Unwind.
 
 Positions with no live mark are not auto-closed.
 

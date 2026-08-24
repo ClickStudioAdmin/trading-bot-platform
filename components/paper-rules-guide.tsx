@@ -76,7 +76,7 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Max pairs"
-          detail="How many different pairs this set may hold at once. Empty or 1 means one pair. Adding size on the same pair is not a new pair."
+          detail="Ceiling on how many different pairs this set may hold at once. Empty or 1 means one pair. Dynamic still opens only the best pair first and adds to it. Adding size on the same pair is not a new pair."
         />
         <GuideItem
           term="Order Type · Fixed"
@@ -84,7 +84,7 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="Order Type · Dynamic (scale in)"
-          detail="Each tick may add one clip. If this set holds a pair, the clip goes on the held pair with the highest net APR that still clears Min Order Size. If it holds none, it opens one row on the best matching pair. Clip size is usable book, or leftover room under Max Position Size — whichever is smaller."
+          detail="Each tick may add one clip. If this set holds a pair, the clip goes on the held pair with the highest net APR that still clears Min Order Size. If it holds none, it opens one row on the best matching pair. It will not open a second pair on the same tick, even if Max pairs is higher. Clip size is usable book, or leftover room under Max Position Size — whichever is smaller."
         />
         <GuideItem
           term="Order size (USDT)"
