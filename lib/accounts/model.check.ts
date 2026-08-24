@@ -7,6 +7,8 @@ import {
   formatConnectionRemoveBlockers,
   formatDeleteBlockers,
   strategyDetachBlockers,
+  formatAccountMode,
+  formatAccountModeChoice,
   parseAccountName,
   parseAccountMode,
   parseTradingAccountRow,
@@ -19,6 +21,16 @@ assert.equal(DEFAULT_ACCOUNT_NAME, "Demo Account");
 assert.equal(parseAccountMode("live"), "live");
 assert.equal(parseAccountMode("paper"), "paper");
 assert.equal(parseAccountMode("other"), "paper");
+assert.equal(formatAccountMode("paper"), "Paper");
+assert.equal(formatAccountMode("live"), "Live");
+assert.equal(
+  formatAccountModeChoice("paper"),
+  "Paper Trading (no exchange connected)",
+);
+assert.equal(
+  formatAccountModeChoice("live"),
+  "Live (exchange connected)",
+);
 
 const named = parseAccountName("  Book 1  ");
 assert.equal(named.ok, true);

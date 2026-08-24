@@ -9,6 +9,7 @@ import {
 } from "@/lib/accounts/actions";
 import {
   formatAccountMode,
+  formatAccountModeChoice,
   formatAccountUsageStatus,
   formatDeleteBlockers,
   pickDefaultAccount,
@@ -163,13 +164,15 @@ export default async function ManageSubAccountsPage({
             defaultValue="paper"
             className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
           >
-            <option value="paper">Paper</option>
-            <option value="live">Live</option>
+            <option value="paper">{formatAccountModeChoice("paper")}</option>
+            <option value="live">{formatAccountModeChoice("live")}</option>
           </select>
         </label>
         <p className="text-sm text-ink-muted">
-          Live accounts can store their own rules. This app will not place
-          exchange orders until live execution exists.
+          Paper uses the in-app ledger and cannot hold exchange keys. Live can
+          store Bybit keys (Demo or production). Mode is set at create and
+          never changes. This app will not place exchange orders until live
+          execution exists.
         </p>
         <PendingSubmitButton
           pendingLabel="Creating…"

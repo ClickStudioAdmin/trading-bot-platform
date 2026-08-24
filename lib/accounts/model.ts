@@ -55,6 +55,12 @@ export function formatAccountMode(mode: TradingAccountMode): string {
   return mode === "live" ? "Live" : "Paper";
 }
 
+export function formatAccountModeChoice(mode: TradingAccountMode): string {
+  return mode === "live"
+    ? "Live (exchange connected)"
+    : "Paper Trading (no exchange connected)";
+}
+
 export type AccountDeleteBlock = "last" | "open" | "automations";
 export type ConnectionRemoveBlock = "in_use";
 export type StrategyDetachBlock = "open" | "automations";
