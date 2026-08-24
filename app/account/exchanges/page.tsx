@@ -2,14 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ExchangeConnectForm } from "@/components/exchange-connect-form";
 import { PageHeading } from "@/components/page-heading";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { RemoveConnectionControl } from "@/components/remove-connection-control";
 import {
   formatAccountMode,
   connectionRemoveBlockers,
   formatConnectionRemoveBlockers,
 } from "@/lib/accounts/model";
 import { loadAccountUsage } from "@/lib/accounts/store";
-import { removeExchangeConnection } from "@/lib/exchanges/actions";
 import {
   formatEnvironmentLabel,
   formatVenueLabel,
@@ -187,42 +186,10 @@ function ConnectionList({
                     )}
                   </td>
                   <td className="px-4 py-3 align-top text-right">
-                    <details className="relative inline-block text-left">
-                      <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-danger hover:bg-danger/10 [&::-webkit-details-marker]:hidden">
-                        Remove
-                      </summary>
-                      <div className="absolute right-0 z-10 mt-2 w-64 rounded-card border border-line bg-surface p-3">
-                        {inUse ? (
-                          <p className="text-xs text-ink-muted">
-                            {removeBlocked}.
-                          </p>
-                        ) : (
-                          <>
-                            <p className="text-xs text-ink-muted">
-                              Remove this connection? You can add the key
-                              again later.
-                            </p>
-                            <form
-                              action={removeExchangeConnection}
-                              className="mt-3"
-                            >
-                              <input
-                                type="hidden"
-                                name="connectionId"
-                                value={row.id}
-                              />
-                              <PendingSubmitButton
-                                pendingLabel="Removing"
-                                successKey={`exchange-remove-${row.id}`}
-                                className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
-                              >
-                                Remove connection
-                              </PendingSubmitButton>
-                            </form>
-                          </>
-                        )}
-                      </div>
-                    </details>
+                    <RemoveConnectionControl
+                      connectionId={row.id}
+                      blockedMessage={inUse ? removeBlocked : null}
+                    />
                   </td>
                 </tr>
               );
