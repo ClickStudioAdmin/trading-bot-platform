@@ -87,7 +87,11 @@ export default async function AccountExchangesPage({
 
       {live ? (
         <>
-          <ConnectionList rows={connections} boundId={boundId} />
+          <ConnectionList
+            rows={connections}
+            boundId={boundId}
+            accountName={session.account.name}
+          />
           {canSave ? <ExchangeConnectForm venues={venues} /> : null}
         </>
       ) : (
@@ -106,9 +110,11 @@ export default async function AccountExchangesPage({
 function ConnectionList({
   rows,
   boundId,
+  accountName,
 }: {
   rows: ExchangeConnection[];
   boundId: string | null;
+  accountName: string;
 }) {
   if (rows.length === 0) {
     return (
@@ -155,6 +161,9 @@ function ConnectionList({
                 >
                   <td className="px-4 py-3 align-top">
                     <p>{formatVenueLabel(row.venue)}</p>
+                    {row.label ? (
+                      <p className="mt-1 text-xs text-ink-muted">{row.label}</p>
+                    ) : null}
                     <p className="mt-1 text-xs text-ink-faint">
                       {formatEnvironmentLabel(row.venue, row.environment)}
                       {" · "}
@@ -163,22 +172,18 @@ function ConnectionList({
                     </p>
                   </td>
                   <td className="px-4 py-3 align-top">
-                    {row.label || inUse ? (
-                      <>
-                        {row.label ? <p>{row.label}</p> : null}
-                        {inUse ? (
-                          <p className={row.label ? "mt-1" : undefined}>
-                            <Link
-                              href="/strategies/cash-and-carry/settings"
-                              className="text-xs text-accent hover:text-accent-strong"
-                            >
-                              Cash and Carry
-                            </Link>
-                          </p>
-                        ) : null}
-                      </>
+                    <p>{accountName}</p>
+                    {inUse ? (
+                      <p className="mt-1">
+                        <Link
+                          href="/strategies/cash-and-carry/settings"
+                          className="text-xs text-accent hover:text-accent-strong"
+                        >
+                          Cash and Carry
+                        </Link>
+                      </p>
                     ) : (
-                      <p className="text-ink-faint">—</p>
+                      <p className="mt-1 text-xs text-ink-faint">—</p>
                     )}
                   </td>
                   <td className="px-4 py-3 align-top text-right">

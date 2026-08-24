@@ -8,8 +8,7 @@ export function SiteFooter() {
         <div className="lg:col-span-2">
           <SiteLogo />
           <p className="mt-3 max-w-sm text-sm text-ink-muted">
-            Dated cash-and-carry desk. Buy USDT spot, sell the expiry. Paper
-            first. No exchange orders from this app.
+            Your strategies. Your keys. One desk.
           </p>
         </div>
         <div>
