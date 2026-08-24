@@ -2,7 +2,7 @@ import { StrategySubnav } from "@/components/strategy-subnav";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadPaperRules } from "@/lib/engine/load";
 import { loadEngineSettings } from "@/lib/engine/settings";
-import { formatConnectionSummary } from "@/lib/exchanges/connections";
+import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 
@@ -43,10 +43,13 @@ export default async function CashAndCarryLayout({
           live
             ? bound
               ? {
-                  label: `Connected Exchange: ${formatConnectionSummary(bound)}`,
+                  ...formatStrategyConnectionCaption(bound),
+                  connected: true,
                 }
               : {
-                  label: "Connect an exchange to start trading",
+                  name: "Connect an exchange",
+                  venue: null,
+                  connected: false,
                   href:
                     connections.length === 0
                       ? "/account/exchanges"

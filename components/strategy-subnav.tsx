@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 import {
   CASH_AND_CARRY_PRIMARY_LINKS,
   CASH_AND_CARRY_SECONDARY_LINKS,
@@ -14,7 +15,12 @@ export function StrategySubnav({
 }: {
   automationsRunning?: boolean;
   reduceOnly?: boolean;
-  connection?: { label: string; href?: string } | null;
+  connection?: {
+    name: string;
+    venue: string | null;
+    connected: boolean;
+    href?: string;
+  } | null;
 }) {
   const pathname = usePathname();
   const status = reduceOnly
@@ -29,7 +35,7 @@ export function StrategySubnav({
       ? {
           href: "/strategies/cash-and-carry/automations",
           title: "Automations Running",
-          label: "Automations Running",
+          label: "Running",
           tone: "success" as const,
           pulse: true,
         }
@@ -52,41 +58,45 @@ export function StrategySubnav({
           </p>
         </div>
         {connection || status ? (
-          <div className="mt-8 flex max-w-[min(100%,32rem)] flex-wrap items-center justify-end gap-x-4 gap-y-2">
+          <div className="mt-6 flex max-w-[min(100%,32rem)] flex-wrap items-stretch justify-end gap-2">
             {connection ? (
-              connection.href ? (
-                <Link
-                  href={connection.href}
-                  className="text-right text-sm text-ink-muted hover:text-ink"
+              <HeaderMeta
+                overline="Exchange Connection"
+                href={connection.href}
+              >
+                <span
+                  className={`flex items-center justify-end gap-2 text-sm ${
+                    connection.connected ? "text-ink" : "text-warning"
+                  }`}
                 >
-                  {connection.label}
-                </Link>
-              ) : (
-                <p className="text-right text-sm text-ink-muted">
-                  {connection.label}
-                </p>
-              )
+                  <StatusDot
+                    tone={connection.connected ? "success" : "warning"}
+                    pulse={false}
+                  />
+                  <span className="min-w-0 truncate">
+                    {connection.name}
+                    {connection.venue ? (
+                      <span className="text-ink-muted">
+                        {" "}
+                        ({connection.venue})
+                      </span>
+                    ) : null}
+                  </span>
+                </span>
+              </HeaderMeta>
             ) : null}
             {status ? (
-              <Link
-                href={status.href}
-                className={`flex shrink-0 items-center gap-2 text-sm ${
-                  status.tone === "warning" ? "text-warning" : "text-success"
-                }`}
-                title={status.title}
-              >
-                <span className="relative flex size-2.5" aria-hidden>
-                  {status.pulse ? (
-                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60" />
-                  ) : null}
-                  <span
-                    className={`relative inline-flex size-2.5 rounded-full ${
-                      status.tone === "warning" ? "bg-warning" : "bg-success"
-                    }`}
-                  />
+              <HeaderMeta overline="Automations" href={status.href}>
+                <span
+                  className={`flex items-center justify-end gap-2 text-sm ${
+                    status.tone === "warning" ? "text-warning" : "text-success"
+                  }`}
+                  title={status.title}
+                >
+                  <StatusDot tone={status.tone} pulse={status.pulse} />
+                  {status.label}
                 </span>
-                {status.label}
-              </Link>
+              </HeaderMeta>
             ) : null}
           </div>
         ) : null}
@@ -112,6 +122,56 @@ export function StrategySubnav({
         </div>
       </nav>
     </div>
+  );
+}
+
+function HeaderMeta({
+  overline,
+  href,
+  children,
+}: {
+  overline: string;
+  href?: string;
+  children: ReactNode;
+}) {
+  const className =
+    "min-w-[11rem] rounded-card border border-line bg-surface px-3 py-2 text-right";
+  const body = (
+    <>
+      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+        {overline}
+      </p>
+      <div className="mt-1">{children}</div>
+    </>
+  );
+  if (href) {
+    return (
+      <Link href={href} className={`${className} hover:border-line-strong`}>
+        {body}
+      </Link>
+    );
+  }
+  return <div className={className}>{body}</div>;
+}
+
+function StatusDot({
+  tone,
+  pulse,
+}: {
+  tone: "success" | "warning";
+  pulse: boolean;
+}) {
+  return (
+    <span className="relative flex size-2.5 shrink-0" aria-hidden>
+      {pulse ? (
+        <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60" />
+      ) : null}
+      <span
+        className={`relative inline-flex size-2.5 rounded-full ${
+          tone === "warning" ? "bg-warning" : "bg-success"
+        }`}
+      />
+    </span>
   );
 }
 

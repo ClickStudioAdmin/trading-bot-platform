@@ -52,6 +52,15 @@ export function formatConnectionSummary(row: ExchangeConnection): string {
   return `${venue} ${environment} · ${named}••••${row.fingerprint}`;
 }
 
+export function formatStrategyConnectionCaption(row: ExchangeConnection): {
+  name: string;
+  venue: string | null;
+} {
+  const venue = formatVenueLabel(row.venue);
+  const named = row.label?.trim() || null;
+  return named ? { name: named, venue } : { name: venue, venue: null };
+}
+
 export function formatVenueLabel(venueId: string): string {
   return getVenue(venueId)?.label ?? venueId;
 }

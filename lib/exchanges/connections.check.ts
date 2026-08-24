@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   formatConnectionSummary,
   formatEnvironmentLabel,
+  formatStrategyConnectionCaption,
   formatVenueLabel,
   keyFingerprint,
   parseConnectionLabel,
@@ -55,6 +56,18 @@ assert.equal(row?.verifiedAtMs, null);
 assert.equal(
   formatConnectionSummary(row!),
   "Bybit Live · ••••1234",
+);
+assert.deepEqual(formatStrategyConnectionCaption(row!), {
+  name: "Bybit",
+  venue: null,
+});
+assert.deepEqual(
+  formatStrategyConnectionCaption({
+    ...row!,
+    environment: "demo",
+    label: "TBP ByBit Demo",
+  }),
+  { name: "TBP ByBit Demo", venue: "Bybit" },
 );
 assert.equal(parseExchangeConnectionRow({}), null);
 
