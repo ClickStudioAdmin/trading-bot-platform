@@ -20,7 +20,7 @@ export function PendingSubmitButton({
   value,
 }: {
   children: ReactNode;
-  pendingLabel?: ReactNode;
+  pendingLabel?: string;
   className?: string;
   name?: string;
   value?: string;
@@ -31,7 +31,6 @@ export function PendingSubmitButton({
     (name === undefined ||
       value === undefined ||
       data?.get(name) === value);
-  const pendingContent = pendingLabel ?? children;
   const stretch = /(^|\s)w-full(\s|$)/.test(className);
 
   return (
@@ -41,6 +40,7 @@ export function PendingSubmitButton({
       value={value}
       disabled={pending}
       aria-busy={thisPending}
+      aria-label={thisPending ? pendingLabel : undefined}
       className={`disabled:opacity-70 ${className}`}
     >
       <span
@@ -52,38 +52,22 @@ export function PendingSubmitButton({
       >
         <span
           className={`invisible col-start-1 row-start-1 whitespace-nowrap ${
-            stretch
-              ? "flex w-full items-center justify-between"
-              : "inline-flex items-center justify-center gap-1.5"
+            stretch ? "flex w-full items-center justify-between" : ""
           }`}
           aria-hidden
         >
           {children}
         </span>
         <span
-          className="invisible col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
-          aria-hidden
+          className={
+            stretch
+              ? `col-start-1 row-start-1 flex w-full items-center ${
+                  thisPending ? "justify-center" : "justify-between"
+                }`
+              : "col-start-1 row-start-1 inline-flex items-center justify-center"
+          }
         >
-          <span className="inline-block size-3 shrink-0" />
-          {pendingContent}
-        </span>
-        <span
-          className={`col-start-1 row-start-1 whitespace-nowrap ${
-            thisPending
-              ? "inline-flex items-center justify-center gap-1.5"
-              : stretch
-                ? "flex w-full items-center justify-between"
-                : "inline-flex items-center justify-center gap-1.5"
-          }`}
-        >
-          {thisPending ? (
-            <>
-              <ButtonBusyIcon />
-              {pendingContent}
-            </>
-          ) : (
-            children
-          )}
+          {thisPending ? <ButtonBusyIcon /> : children}
         </span>
       </span>
     </button>

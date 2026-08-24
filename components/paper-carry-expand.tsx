@@ -64,25 +64,28 @@ export function OpenPaperCarryRows({
       logs={trade.logs}
       entryBasis={trade.entryBasis}
     >
-      <td className="px-4 py-3">
+      <td className="min-w-0 px-4 py-3">
         <span className="flex items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
           <PositionKind source={trade.source} />
-          {trade.ruleName ? (
-            <PaperAutomationTrigger
-              carryId={trade.id}
-              automation={trade.automation}
-              label={trade.ruleName}
-              canEdit
-              entrySource="engine"
-              next={next}
-              className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent hover:text-accent-strong"
-            />
-          ) : null}
         </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
           {trade.futureSymbol}
+          {trade.ruleName ? (
+            <>
+              {" · "}
+              <PaperAutomationTrigger
+                carryId={trade.id}
+                automation={trade.automation}
+                label={trade.ruleName}
+                canEdit
+                entrySource="engine"
+                next={next}
+                className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent hover:text-accent-strong"
+              />
+            </>
+          ) : null}
         </span>
       </td>
       <td className="px-4 py-3 tabular-nums text-ink-muted">
@@ -110,7 +113,7 @@ export function OpenPaperCarryRows({
       <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
         {formatPct(pnlPct)}
       </td>
-      <td className="w-0 whitespace-nowrap px-4 py-3">
+      <td className="px-4 py-3">
         <ClosePaperButton trade={trade} next={next} />
       </td>
     </ExpandableOrderRows>
@@ -130,8 +133,8 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
       logs={trade.logs}
       entryBasis={trade.entryBasis}
     >
-      <td className="px-4 py-3">
-        <span className="flex items-center gap-2 font-medium">
+      <td className="min-w-0 px-4 py-3">
+        <span className="flex flex-wrap items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
           <PositionKind source={trade.source} />
@@ -246,32 +249,6 @@ function ChevronIcon({ className }: { className?: string }) {
   );
 }
 
-function ActionReserve({
-  unwind,
-  children,
-}: {
-  unwind: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <div className="relative">
-      <div className="flex flex-nowrap items-center gap-2" aria-hidden>
-        <span className="invisible inline-flex items-center justify-center gap-1.5 rounded-control px-2.5 py-1 text-xs font-medium whitespace-nowrap">
-          <span className="inline-block size-3 shrink-0" />
-          Closing…
-        </span>
-        {unwind ? (
-          <span className="invisible inline-flex items-center justify-center gap-1.5 rounded-control px-2.5 py-1 text-xs font-medium whitespace-nowrap">
-            <span className="inline-block size-3 shrink-0" />
-            Unwinding…
-          </span>
-        ) : null}
-      </div>
-      <div className="absolute inset-0 flex items-center">{children}</div>
-    </div>
-  );
-}
-
 function ClosePaperButton({
   trade,
   next,
@@ -279,33 +256,27 @@ function ClosePaperButton({
   trade: MarkedPaperCarry;
   next: PaperReturnPath;
 }) {
-  const unwind = trade.source === "manual";
-
   if (trade.status === "closing") {
     return (
-      <ActionReserve unwind={unwind}>
-        <ColumnHint
-          hint="Exit already submitted. Later ticks clip to usable book until the row is flat."
-          label={
-            <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
-              Closing
-            </span>
-          }
-        />
-      </ActionReserve>
+      <ColumnHint
+        hint="Exit already submitted. Later ticks clip to usable book until the row is flat."
+        label={
+          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
+            Closing
+          </span>
+        }
+      />
     );
   }
 
   if (trade.markBasis === null) {
     return (
-      <ActionReserve unwind={unwind}>
-        <span
-          className="text-xs text-ink-faint"
-          title="That pair is not in the live scan"
-        >
-          No mark
-        </span>
-      </ActionReserve>
+      <span
+        className="text-xs text-ink-faint"
+        title="That pair is not in the live scan"
+      >
+        No mark
+      </span>
     );
   }
 
@@ -315,49 +286,47 @@ function ClosePaperButton({
   const dynamicExit = trade.automation.exitSizeType === "dynamic";
 
   return (
-    <ActionReserve unwind={unwind}>
-      <form
-        action={closeOpenPaperCarry}
-        className="flex flex-nowrap items-center gap-2"
-      >
-        <input type="hidden" name="carryId" value={trade.id} />
-        <input type="hidden" name="next" value={next} />
+    <form
+      action={closeOpenPaperCarry}
+      className="flex flex-nowrap items-center gap-2"
+    >
+      <input type="hidden" name="carryId" value={trade.id} />
+      <input type="hidden" name="next" value={next} />
+      <ColumnHint
+        hint={
+          auto ? (
+            <AutoCloseHint automation={trade.automation} />
+          ) : (
+            "Close at market"
+          )
+        }
+        label={
+          <PendingSubmitButton
+            name="mode"
+            value={auto && dynamicExit ? "unwind" : "market"}
+            pendingLabel="Closing"
+            className={actionClass}
+          >
+            Close
+          </PendingSubmitButton>
+        }
+      />
+      {trade.source === "manual" ? (
         <ColumnHint
-          hint={
-            auto ? (
-              <AutoCloseHint automation={trade.automation} />
-            ) : (
-              "Close at market"
-            )
-          }
+          hint="Unwind position over time & ASAP (based on the usable book setting)"
           label={
             <PendingSubmitButton
               name="mode"
-              value={auto && dynamicExit ? "unwind" : "market"}
-              pendingLabel="Closing…"
+              value="unwind"
+              pendingLabel="Unwinding"
               className={actionClass}
             >
-              Close
+              Unwind
             </PendingSubmitButton>
           }
         />
-        {unwind ? (
-          <ColumnHint
-            hint="Unwind position over time & ASAP (based on the usable book setting)"
-            label={
-              <PendingSubmitButton
-                name="mode"
-                value="unwind"
-                pendingLabel="Unwinding…"
-                className={actionClass}
-              >
-                Unwind
-              </PendingSubmitButton>
-            }
-          />
-        ) : null}
-      </form>
-    </ActionReserve>
+      ) : null}
+    </form>
   );
 }
 

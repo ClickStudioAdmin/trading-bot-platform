@@ -56,7 +56,7 @@ export function OpportunityRows({
               <td className="px-4 py-3">
                 <PaperSizeCell row={row} paper={paper} />
               </td>
-              <td className="w-0 whitespace-nowrap px-4 py-3">
+              <td className="px-4 py-3">
                 <PaperOpenAction row={row} paper={paper} />
               </td>
             </>
@@ -129,7 +129,7 @@ export function OpportunityTable({
                     hint="Paper notional to open. Cannot exceed usable book. Each Open creates a new paper row."
                   />
                 </th>
-                <th className="w-0 whitespace-nowrap px-4 py-3 font-medium">
+                <th className="px-4 py-3 font-medium">
                   <ColumnHint
                     label="Actions"
                     hint="Open a paper carry at the live scan net basis. No Bybit order."
@@ -195,7 +195,7 @@ function PaperOpenAction({
       <input type="hidden" name="futureSymbol" value={row.futureSymbol} />
       <input type="hidden" name="next" value={paper.next} />
       <PendingSubmitButton
-        pendingLabel="Opening…"
+        pendingLabel="Opening"
         className="rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium whitespace-nowrap text-ink"
       >
         Open
