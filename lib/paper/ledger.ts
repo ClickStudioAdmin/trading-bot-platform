@@ -50,6 +50,14 @@ export async function writeOpenClip(input: {
   row: PaperCarryRow;
   opportunity: ScannedOpportunity;
   clipUsdt: number;
+  source?: TradeSource;
+  venue?: string | null;
+  environment?: string | null;
+  spotOrderId?: string | null;
+  futureOrderId?: string | null;
+  fillQty?: number | null;
+  fillSpotPrice?: number | null;
+  fillFuturePrice?: number | null;
 }): Promise<{ error: string | null }> {
   if (!(input.clipUsdt > 0)) {
     return { error: "Open clip must be positive." };
@@ -91,12 +99,19 @@ export async function writeOpenClip(input: {
     accountId: input.accountId,
     carryId: input.row.id,
     side: "open",
-    source: "engine",
+    source: input.source ?? "engine",
     triggerReason: null,
     notionalUsdt: input.clipUsdt,
     filledAt: new Date(),
     opportunity: input.opportunity,
     automation: input.row.automation,
+    venue: input.venue,
+    environment: input.environment,
+    spotOrderId: input.spotOrderId,
+    futureOrderId: input.futureOrderId,
+    fillQty: input.fillQty,
+    fillSpotPrice: input.fillSpotPrice,
+    fillFuturePrice: input.fillFuturePrice,
   });
 
   return { error: null };

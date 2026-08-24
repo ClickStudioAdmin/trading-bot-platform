@@ -32,7 +32,7 @@ export async function loadBoundVenueForAccount(input: {
 
 export function qtyTextFromFill(qty: number | null, fallback: string): string {
   if (qty !== null && qty > 0) {
-    return String(qty);
+    return String(Number(qty.toPrecision(12)));
   }
   return fallback;
 }

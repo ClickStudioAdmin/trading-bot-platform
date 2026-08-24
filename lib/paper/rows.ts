@@ -33,6 +33,23 @@ export type PaperCarryRow = {
   automation: PaperCarryAutomation;
 };
 
+export function pickOpenCarryForPair(
+  rows: PaperCarryRow[],
+  spotSymbol: string,
+  futureSymbol: string,
+): PaperCarryRow | null {
+  return (
+    rows
+      .filter(
+        (row) =>
+          row.status === "open" &&
+          row.spotSymbol === spotSymbol &&
+          row.futureSymbol === futureSymbol,
+      )
+      .sort((left, right) => left.openedAtMs - right.openedAtMs)[0] ?? null
+  );
+}
+
 export type MarkedPaperCarry = PaperCarryRow & {
   markBasis: number | null;
   markApr: number | null;

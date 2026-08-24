@@ -32,13 +32,13 @@ Stop after each step. Do not start the next until you say so.
 3. Server decrypts the bound key. Demo → `api-demo.bybit.com`. Production → `api.bybit.com`.
 4. Qty is base-coin, rounded down to each instrument’s step. Same qty on both legs.
 5. Market **buy spot**, then market **sell dated linear**. If the future fails, flatten the spot. If flatten fails, log and do not write an open carry.
-6. Write `paper_carries` + `paper_orders` on this book only. Marks still come from the public scan.
+6. Write `paper_carries` + `paper_orders` on this book only. Marks still come from the public scan. If an **open** row already exists for that pair, add size to it (weighted entry basis) instead of inserting a second row. Paper Trading books still allow more than one row per pair.
 
 Close is the reverse: buy the linear to cover, sell the spot. If the spot sell fails, re-short the future to restore the hedge. Do not mark the carry closed unless both legs are flat.
 
 ## Ledger
 
-Reuse `paper_carries` / `paper_orders`. A book is paper or live forever, so fills do not mix on one account. Live rows store venue, environment, and exchange order ids.
+Reuse `paper_carries` / `paper_orders`. A book is paper or live forever, so fills do not mix on one account. Live rows store venue, environment, and exchange order ids. On a Connected Exchange book the venue nets one position per pair, so the blotter does the same: later Opens add clips to the oldest open row for that pair. Do not add to a `closing` row. Duplicate live rows from before this rule stay until they Close.
 
 ## Out of scope
 

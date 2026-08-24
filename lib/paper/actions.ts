@@ -6,8 +6,9 @@ import {
   insertPaperOrder,
   priorClosesFromOrders,
   writeCloseClip,
+  writeOpenClip,
 } from "@/lib/paper/ledger";
-import { parsePaperOrderRow } from "@/lib/paper/orders";
+import { parsePaperOrderRow, remainingOpenFillQty } from "@/lib/paper/orders";
 import { unwindClipUsdt } from "@/lib/engine/clip";
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import {
@@ -26,7 +27,11 @@ import {
   safePaperReturnPath,
   sizeOpenNotional,
 } from "@/lib/paper/open";
-import { asNumber, parsePaperCarryRow } from "@/lib/paper/rows";
+import {
+  asNumber,
+  parsePaperCarryRow,
+  pickOpenCarryForPair,
+} from "@/lib/paper/rows";
 import { persistOpportunities } from "@/lib/opportunities/persist";
 import { scanOneOpportunity } from "@/lib/opportunities/scan";
 import { getSessionContext } from "@/lib/auth/session";
@@ -121,6 +126,103 @@ export async function openPaperCarry(formData: FormData) {
     }
   }
 
+  async function flattenVenueOpen() {
+    if (!venueFill?.ok) {
+      return;
+    }
+    const bound = await loadBoundVenueForAccount({
+      userId: user.id,
+      accountId: account.id,
+      mode: account.mode,
+    });
+    if (bound.ok) {
+      await closeCashAndCarryOnVenue({
+        connection: bound.connection,
+        spotSymbol,
+        futureSymbol,
+        qty: venueFill.fill.qty,
+      });
+    }
+  }
+
+  const existing =
+    liveBook && venueFill?.ok
+      ? pickOpenCarryForPair(
+          (
+            await supabase
+              .from("paper_carries")
+              .select("*")
+              .eq("account_id", account.id)
+              .eq("spot_symbol", spotSymbol)
+              .eq("future_symbol", futureSymbol)
+              .eq("status", "open")
+          ).data?.map((row) =>
+            parsePaperCarryRow(row as Record<string, unknown>),
+          ) ?? [],
+          spotSymbol,
+          futureSymbol,
+        )
+      : null;
+
+  if (existing && venueFill?.ok) {
+    const written = await writeOpenClip({
+      supabase,
+      userId: user.id,
+      accountId: account.id,
+      row: existing,
+      opportunity: match,
+      clipUsdt: sized,
+      source: "manual",
+      venue: venueFill.fill.venue,
+      environment: venueFill.fill.environment,
+      spotOrderId: venueFill.fill.spotOrderId,
+      futureOrderId: venueFill.fill.futureOrderId,
+      fillQty: Number(venueFill.fill.qty),
+      fillSpotPrice: venueFill.fill.spotPrice,
+      fillFuturePrice: venueFill.fill.futurePrice,
+    });
+    if (written.error) {
+      await flattenVenueOpen();
+      await writeEventLog({
+        level: "error",
+        scope: "trade",
+        event: "trade.open_failed",
+        message: written.error,
+        userId: user.id,
+        accountId: account.id,
+        strategy: "cash-and-carry",
+        data: {
+          carryId: existing.id,
+          spotSymbol,
+          futureSymbol,
+          notionalUsdt: sized,
+        },
+      });
+      redirect(`${next}?paperError=${encodeURIComponent(written.error)}`);
+    }
+
+    await writeEventLog({
+      scope: "trade",
+      event: "trade.added",
+      message: `Added to ${futureSymbol} on the connected exchange`,
+      userId: user.id,
+      accountId: account.id,
+      strategy: "cash-and-carry",
+      data: {
+        carryId: existing.id,
+        spotSymbol,
+        futureSymbol,
+        notionalUsdt: sized,
+        entryBasis: match.netBasis,
+        source: "manual",
+        venue: venueFill.fill.venue,
+      },
+    });
+
+    await persistOpportunities([rawScan]);
+    redirect(`${next}?paper=live-added`);
+  }
+
   const { data, error } = await supabase
     .from("paper_carries")
     .insert(
@@ -132,21 +234,7 @@ export async function openPaperCarry(formData: FormData) {
     .single();
 
   if (error) {
-    if (venueFill?.ok) {
-      const bound = await loadBoundVenueForAccount({
-        userId: user.id,
-        accountId: account.id,
-        mode: account.mode,
-      });
-      if (bound.ok) {
-        await closeCashAndCarryOnVenue({
-          connection: bound.connection,
-          spotSymbol,
-          futureSymbol,
-          qty: venueFill.fill.qty,
-        });
-      }
-    }
+    await flattenVenueOpen();
     await writeEventLog({
       level: "error",
       scope: "trade",
@@ -323,7 +411,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
     if (!bound.ok) {
       redirect(`${next}?paperError=${encodeURIComponent(bound.error)}`);
     }
-    const openQty = orders.find((item) => item.side === "open")?.fillQty ?? null;
+    const openQty = remainingOpenFillQty(orders);
     const qty = qtyTextFromFill(
       openQty,
       match.spotAsk > 0 ? String(clipUsdt / match.spotAsk) : "",

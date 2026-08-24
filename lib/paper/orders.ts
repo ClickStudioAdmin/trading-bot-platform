@@ -47,6 +47,22 @@ export type PaperCarryWithOrders = PaperCarryRow & {
   orders: PaperOrderRow[];
 };
 
+export function remainingOpenFillQty(orders: PaperOrderRow[]): number | null {
+  let remaining = 0;
+  let sawFill = false;
+  for (const order of orders) {
+    if (order.fillQty === null || !(order.fillQty > 0)) {
+      continue;
+    }
+    sawFill = true;
+    remaining += order.side === "open" ? order.fillQty : -order.fillQty;
+  }
+  if (!sawFill || !(remaining > 0)) {
+    return null;
+  }
+  return remaining;
+}
+
 export function parseOrderSide(value: unknown): PaperOrderSide {
   return value === "close" ? "close" : "open";
 }

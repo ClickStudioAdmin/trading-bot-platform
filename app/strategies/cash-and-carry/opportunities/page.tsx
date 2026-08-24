@@ -33,7 +33,8 @@ export default async function CashAndCarryOpportunitiesPage({
   );
   const justActed = Boolean(
     firstSearchValue(params.paper) === "opened" ||
-      firstSearchValue(params.paper) === "live-opened",
+      firstSearchValue(params.paper) === "live-opened" ||
+      firstSearchValue(params.paper) === "live-added",
   );
   const book = await loadOpportunityBook(justActed ? "stored" : "fresh");
   const error = book.error;
@@ -53,6 +54,7 @@ export default async function CashAndCarryOpportunitiesPage({
         <PaperFlash
           opened={firstSearchValue(params.paper) === "opened"}
           liveOpened={firstSearchValue(params.paper) === "live-opened"}
+          liveAdded={firstSearchValue(params.paper) === "live-added"}
           error={firstSearchValue(params.paperError)}
         />
         <OpportunityFiltersForm values={filterInputValues(filters)} />

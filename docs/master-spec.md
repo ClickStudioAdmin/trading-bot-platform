@@ -14,7 +14,7 @@ GitHub. Hosted Supabase and Vercel are not.
 - A member can have many accounts. Each account is Paper or Live at create. Paper uses the in-app ledger. Connected Exchange books can place venue orders from Sydney Vercel when a key is bound (Phase 7, manual first).
 - `/admin` — `members.role = admin`, plus `click.studio.admin@gmail.com`. Overview is the landing page. Members, logs, settings, and theme sit in the left menu
 
-Paper `paper_carries` writes on a Paper book are not exchange orders. On a Connected Exchange book, the same tables store venue fills. Private exchange calls stay on the server. The browser is never given decrypted keys. The tick still skips Connected Exchange books until a later slice. Fly.io can call the same functions later; it is not required this phase.
+Paper `paper_carries` writes on a Paper book are not exchange orders. On a Connected Exchange book, the same tables store venue fills. A second manual Open on the same pair adds size to the existing open row. Private exchange calls stay on the server. The browser is never given decrypted keys. The tick still skips Connected Exchange books until a later slice. Fly.io can call the same functions later; it is not required this phase.
 
 ## Environments
 

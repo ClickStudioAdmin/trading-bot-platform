@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { markOpenCarries, paperDeskStats, parsePaperCarryRow } from "./rows";
+import {
+  markOpenCarries,
+  paperDeskStats,
+  parsePaperCarryRow,
+  pickOpenCarryForPair,
+} from "./rows";
 import type { ScannedOpportunity } from "../opportunities/scan";
 
 const raw = {
@@ -94,6 +99,19 @@ assert.equal(
   50 / 15_000,
 );
 assert.equal(paperDeskStats([], []).realizedPct, null);
+
+assert.equal(
+  pickOpenCarryForPair(
+    [
+      { ...row, id: 8, openedAtMs: 2, futureSymbol: "BTCUSDT-25JUN27" },
+      { ...row, id: 7, openedAtMs: 1, futureSymbol: "BTCUSDT-25JUN27" },
+      { ...row, id: 9, status: "closing", openedAtMs: 0, futureSymbol: "BTCUSDT-25JUN27" },
+    ],
+    "BTCUSDT",
+    "BTCUSDT-25JUN27",
+  )?.id,
+  7,
+);
 
 const unmarked = markOpenCarries([row], []);
 assert.equal(unmarked[0]?.markBasis, null);

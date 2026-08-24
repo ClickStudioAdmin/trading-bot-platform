@@ -125,7 +125,7 @@ export function OpportunityTable({
                     label="Size USDT"
                     hint={
                       paper.venueOpen
-                        ? "USDT notional to open on the bound exchange. Cannot exceed usable book."
+                        ? "USDT notional on the bound exchange. Cannot exceed usable book. A second Open on the same pair adds to the existing position."
                         : "Paper notional to open. Cannot exceed usable book. Each Open creates a new paper row."
                     }
                   />
@@ -135,7 +135,7 @@ export function OpportunityTable({
                     label="Actions"
                     hint={
                       paper.venueOpen
-                        ? "Open cash-and-carry on the bound exchange (buy spot, short the dated future)."
+                        ? "Open cash-and-carry on the bound exchange (buy spot, short the dated future). Same pair adds size."
                         : "Open a paper carry at the live scan net basis. No Bybit order."
                     }
                   />

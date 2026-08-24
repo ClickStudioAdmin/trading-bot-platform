@@ -6,6 +6,7 @@ import {
   attachOrders,
   fillSlip,
   formatOrderConditions,
+  remainingOpenFillQty,
   formatCloseExitMethod,
   formatCloseOrderWhy,
   formatCloseTrigger,
@@ -229,5 +230,15 @@ const attached = attachOrders(
   [{ ...stored, carryId: carry.id }],
 );
 assert.equal(attached[0]?.orders[0]?.id, 12);
+
+assert.equal(
+  remainingOpenFillQty([
+    { ...stored, side: "open", fillQty: 6 },
+    { ...stored, id: 13, side: "open", fillQty: 5 },
+    { ...stored, id: 14, side: "close", fillQty: 2 },
+  ]),
+  9,
+);
+assert.equal(remainingOpenFillQty([{ ...stored, fillQty: null }]), null);
 
 console.log("paper order checks passed");
