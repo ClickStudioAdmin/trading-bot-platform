@@ -31,6 +31,8 @@ export function PendingSubmitButton({
     (name === undefined ||
       value === undefined ||
       data?.get(name) === value);
+  const pendingContent = pendingLabel ?? children;
+  const stretch = /(^|\s)w-full(\s|$)/.test(className);
 
   return (
     <button
@@ -41,14 +43,49 @@ export function PendingSubmitButton({
       aria-busy={thisPending}
       className={`disabled:opacity-70 ${className}`}
     >
-      {thisPending ? (
-        <span className="inline-flex items-center gap-1.5">
-          <ButtonBusyIcon />
-          {pendingLabel ?? children}
+      <span
+        className={
+          stretch
+            ? "grid w-full justify-items-stretch"
+            : "inline-grid justify-items-center"
+        }
+      >
+        <span
+          className={`invisible col-start-1 row-start-1 whitespace-nowrap ${
+            stretch
+              ? "flex w-full items-center justify-between"
+              : "inline-flex items-center justify-center gap-1.5"
+          }`}
+          aria-hidden
+        >
+          {children}
         </span>
-      ) : (
-        children
-      )}
+        <span
+          className="invisible col-start-1 row-start-1 inline-flex items-center justify-center gap-1.5 whitespace-nowrap"
+          aria-hidden
+        >
+          <span className="inline-block size-3 shrink-0" />
+          {pendingContent}
+        </span>
+        <span
+          className={`col-start-1 row-start-1 whitespace-nowrap ${
+            thisPending
+              ? "inline-flex items-center justify-center gap-1.5"
+              : stretch
+                ? "flex w-full items-center justify-between"
+                : "inline-flex items-center justify-center gap-1.5"
+          }`}
+        >
+          {thisPending ? (
+            <>
+              <ButtonBusyIcon />
+              {pendingContent}
+            </>
+          ) : (
+            children
+          )}
+        </span>
+      </span>
     </button>
   );
 }

@@ -119,7 +119,7 @@ export function OpenPaperTrades({
                   hint="Unrealized ÷ notional. All-in percentage of paper size. Not annualized — that is APR on past trades."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="w-0 whitespace-nowrap px-4 py-3 font-medium">
                 <ColumnHint
                   label="Actions"
                   hint="Manual Close flattens remaining size at the live scan. Auto Close uses only that set’s exit order type — Fixed flattens, Dynamic clips to usable book. It does not wait for APR, DTE, take profit, or stop loss. Unwind is manual only. After an exit is submitted, Close is replaced by Closing. No Bybit order."
