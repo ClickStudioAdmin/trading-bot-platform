@@ -10,9 +10,9 @@ Paper accounts do not hold exchange connections.
 
 ## Current micro-step
 
-**4 of 6 — Connections table** (complete)
+**5 of 6 — Exchanges UI** (complete)
 
-Phase 6 is current. Waiting on **5 — Exchanges UI**. The migration applies on the next push to `develop`.
+Phase 6 is current. Waiting on **6 — Verify trade-only**.
 
 ## Micro-steps
 

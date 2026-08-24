@@ -45,7 +45,8 @@ function queryLooksSuccessful() {
     paper === "closed" ||
     paper === "unwinding" ||
     paper === "exits" ||
-    params.get("saved") === "1"
+    params.get("saved") === "1" ||
+    params.get("removed") === "1"
   );
 }
 
