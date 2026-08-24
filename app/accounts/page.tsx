@@ -8,12 +8,12 @@ export default async function AccountsRedirectPage({
 }) {
   const params = await searchParams;
   const query = new URLSearchParams();
-  for (const key of ["error", "created", "deleted"] as const) {
+  for (const key of ["error", "created", "deleted", "renamed"] as const) {
     const value = firstSearchValue(params[key]);
     if (value) {
       query.set(key, value);
     }
   }
   const suffix = query.toString();
-  redirect(`/account${suffix ? `?${suffix}` : ""}`);
+  redirect(`/account/sub-accounts${suffix ? `?${suffix}` : ""}`);
 }

@@ -20,16 +20,31 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+const SUB_ACCOUNTS_PATH = "/account/sub-accounts";
+
 function refreshAccountChrome() {
   revalidatePath("/", "layout");
   revalidatePath("/account");
+  revalidatePath(SUB_ACCOUNTS_PATH);
   revalidatePath("/account/exchanges");
 }
 
-function accountReturnPath(raw: string): "/account" | "/strategies/cash-and-carry" {
-  return raw === "/account" || raw === "/accounts"
-    ? "/account"
-    : "/strategies/cash-and-carry";
+function accountReturnPath(
+  raw: string,
+): "/account" | typeof SUB_ACCOUNTS_PATH | "/strategies/cash-and-carry" {
+  if (raw === SUB_ACCOUNTS_PATH || raw === "/accounts") {
+    return SUB_ACCOUNTS_PATH;
+  }
+  if (raw === "/account") {
+    return "/account";
+  }
+  return "/strategies/cash-and-carry";
+}
+
+function staysOnManagePage(
+  next: ReturnType<typeof accountReturnPath>,
+): next is typeof SUB_ACCOUNTS_PATH {
+  return next === SUB_ACCOUNTS_PATH;
 }
 
 export async function switchTradingAccount(formData: FormData) {
@@ -56,7 +71,7 @@ export async function createTradingAccount(formData: FormData) {
   const next = accountReturnPath(String(formData.get("next") ?? ""));
   const named = parseAccountName(formData.get("name"));
   if (!named.ok) {
-    redirect(`/account?error=${encodeURIComponent(named.error)}`);
+    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(named.error)}`);
   }
   const mode = parseAccountMode(formData.get("mode"));
   const created = await insertTradingAccount(
@@ -66,7 +81,7 @@ export async function createTradingAccount(formData: FormData) {
   );
   if (!created) {
     redirect(
-      `/account?error=${encodeURIComponent("Could not create that account. The name may already be in use.")}`,
+      `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent("Could not create that account. The name may already be in use.")}`,
     );
   }
   await writeEventLog({
@@ -77,11 +92,11 @@ export async function createTradingAccount(formData: FormData) {
     accountId: created.id,
     data: { mode, name: named.name },
   });
-  if (next !== "/account") {
+  if (!staysOnManagePage(next)) {
     await setActiveAccountId(created.id);
   }
   refreshAccountChrome();
-  redirect(next === "/account" ? "/account?created=1" : next);
+  redirect(staysOnManagePage(next) ? `${SUB_ACCOUNTS_PATH}?created=1` : next);
 }
 
 export async function deleteTradingAccount(formData: FormData) {
@@ -92,7 +107,7 @@ export async function deleteTradingAccount(formData: FormData) {
   const accountId = String(formData.get("accountId") ?? "");
   const written = await deleteTradingAccountRow(session.member.id, accountId);
   if (written.error) {
-    redirect(`/account?error=${encodeURIComponent(written.error)}`);
+    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(written.error)}`);
   }
   await writeEventLog({
     scope: "system",
@@ -109,7 +124,7 @@ export async function deleteTradingAccount(formData: FormData) {
     }
   }
   refreshAccountChrome();
-  redirect("/account?deleted=1");
+  redirect(`${SUB_ACCOUNTS_PATH}?deleted=1`);
 }
 
 export async function renameTradingAccount(formData: FormData) {
@@ -120,15 +135,17 @@ export async function renameTradingAccount(formData: FormData) {
   const accountId = String(formData.get("accountId") ?? "");
   const named = parseAccountName(formData.get("name"));
   if (!named.ok) {
-    redirect(`/account?error=${encodeURIComponent(named.error)}`);
+    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(named.error)}`);
   }
   const accounts = await listTradingAccounts(session.member.id);
   const target = accounts.find((account) => account.id === accountId);
   if (!target) {
-    redirect(`/account?error=${encodeURIComponent("That account was not found.")}`);
+    redirect(
+      `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent("That account was not found.")}`,
+    );
   }
   if (target.name === named.name) {
-    redirect("/account");
+    redirect(SUB_ACCOUNTS_PATH);
   }
   const written = await renameTradingAccountRow(
     session.member.id,
@@ -136,7 +153,7 @@ export async function renameTradingAccount(formData: FormData) {
     named.name,
   );
   if (written.error) {
-    redirect(`/account?error=${encodeURIComponent(written.error)}`);
+    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(written.error)}`);
   }
   await writeEventLog({
     scope: "system",
@@ -147,5 +164,5 @@ export async function renameTradingAccount(formData: FormData) {
     data: { name: named.name },
   });
   refreshAccountChrome();
-  redirect("/account?renamed=1");
+  redirect(`${SUB_ACCOUNTS_PATH}?renamed=1`);
 }

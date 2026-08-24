@@ -92,7 +92,10 @@ export default async function AccountExchangesPage({
       ) : (
         <p className="rounded-card border border-line bg-surface p-5 text-sm text-ink-muted">
           This is a Paper account. Exchange API keys belong on a Live account.{" "}
-          <Link href="/account" className="text-accent hover:text-accent-strong">
+          <Link
+            href="/account/sub-accounts"
+            className="text-accent hover:text-accent-strong"
+          >
             Manage sub-accounts
           </Link>{" "}
           to create or switch to Live.
