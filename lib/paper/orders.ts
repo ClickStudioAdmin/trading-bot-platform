@@ -403,19 +403,9 @@ export function formatOrderHeadline(order: PaperOrderRow): string {
   return formatOrderSide(order.side);
 }
 
-export function hasVenueFill(order: PaperOrderRow): boolean {
-  return (
-    order.venue !== null ||
-    (order.fillSpotPrice !== null && order.fillFuturePrice !== null)
-  );
-}
-
 export function fillSlip(order: PaperOrderRow): number | null {
-  if (!hasVenueFill(order)) {
-    return order.theoretical.netBasis === null ? null : 0;
-  }
-  if (order.theoretical.executableBasis === null) {
+  if (order.theoretical.netBasis === null) {
     return null;
   }
-  return order.fillBasis - order.theoretical.executableBasis;
+  return order.fillBasis - order.theoretical.netBasis;
 }

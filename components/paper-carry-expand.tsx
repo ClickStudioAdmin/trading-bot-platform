@@ -22,7 +22,6 @@ import { closeOpenPaperCarry } from "@/lib/paper/actions";
 import { carryPnlPct, clipPnl } from "@/lib/paper/math";
 import {
   fillSlip,
-  hasVenueFill,
   formatCloseOrderWhy,
   formatOrderConditions,
   formatOrderHeadline,
@@ -688,11 +687,6 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
     (line) => !line.startsWith("Order Type"),
   );
   const slip = fillSlip(order);
-  const venueFill = hasVenueFill(order);
-  const buySpot = venueFill ? order.fillSpotPrice : order.theoretical.spotAsk;
-  const sellFuture = venueFill
-    ? order.fillFuturePrice
-    : order.theoretical.futureBid;
 
   return (
     <article className="rounded-card border border-line bg-surface-raised p-4">
@@ -709,55 +703,23 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
         <p className="mt-0.5 text-sm text-ink-muted">{conditions.join(" · ")}</p>
       ) : null}
       <ComparePairs
-        leftTitle="Scan"
-        rightTitle="Executed"
+        leftTitle="Theoretical · scan"
+        rightTitle="Execution · paper"
         rows={[
           {
             left: {
               label: "Scan basis",
               value: formatPct(order.theoretical.executableBasis),
-              hint: "Gross (future bid − spot ask) / spot ask. Before fees.",
+              hint: "Gross basis before slippage + fees",
             },
             right: {
               label: "Fill basis",
               value: formatPct(order.fillBasis),
-              hint: venueFill
-                ? "Gross from the exchange fill prices. Before fees."
-                : "Paper records the scan net — same figure as Entry basis.",
+              tone: order.fillBasis,
             },
           },
           {
-            left: {
-              label: "Spot ask",
-              value: formatPrice(order.theoretical.spotAsk),
-            },
-            right: {
-              label: "Buy spot",
-              value: formatPrice(buySpot),
-            },
-          },
-          {
-            left: {
-              label: "Future bid",
-              value: formatPrice(order.theoretical.futureBid),
-            },
-            right: {
-              label: "Sell future",
-              value: formatPrice(sellFuture),
-            },
-          },
-          {
-            left: {
-              label: "Net basis",
-              value: formatPct(order.theoretical.netBasis),
-              hint: `Scan after assumed fees and 5 bp slip (${formatPct(order.theoretical.feeRate)}). Same figure as Entry basis.`,
-            },
-            right: {
-              label: "Slip vs scan",
-              value: formatPct(slip),
-              tone: slip,
-              hint: "Fill basis minus scan basis. Negative is a worse fill than the book.",
-            },
+            right: { label: "Slip vs scan", value: formatPct(slip), tone: slip },
           },
           {
             left: {
@@ -765,9 +727,12 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
               value: formatPct(order.theoretical.netApr),
               tone: order.theoretical.netApr,
             },
-            right: {
-              label: "Order value",
-              value: formatUsd(order.notionalUsdt),
+          },
+          {
+            left: {
+              label: "Net basis",
+              value: formatPct(order.theoretical.netBasis),
+              hint: `Fees + slip: ${formatPct(order.theoretical.feeRate)}`,
             },
           },
           {
@@ -781,11 +746,35 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
           },
           {
             left: {
+              label: "Spot ask",
+              value: formatPrice(order.theoretical.spotAsk),
+            },
+            right: {
+              label: "Buy spot",
+              value: formatPrice(order.theoretical.spotAsk),
+            },
+          },
+          {
+            left: {
+              label: "Future bid",
+              value: formatPrice(order.theoretical.futureBid),
+            },
+            right: {
+              label: "Sell future",
+              value: formatPrice(order.theoretical.futureBid),
+            },
+          },
+          {
+            left: {
               label: "Capacity",
               value:
                 order.theoretical.capacityUsdt === null
                   ? "—"
                   : formatUsd(order.theoretical.capacityUsdt),
+            },
+            right: {
+              label: "Order value",
+              value: formatUsd(order.notionalUsdt),
             },
           },
         ]}

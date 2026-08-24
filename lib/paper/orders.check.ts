@@ -5,7 +5,6 @@ import { EMPTY_AUTOMATION } from "./automation";
 import {
   attachOrders,
   fillSlip,
-  hasVenueFill,
   formatOrderConditions,
   remainingOpenFillQty,
   formatCloseExitMethod,
@@ -111,18 +110,6 @@ const stored = parsePaperOrderRow({
 assert.equal(stored.carryId, 9);
 assert.equal(stored.theoretical.spotAsk, 67210);
 assert.equal(fillSlip(stored), 0);
-assert.equal(hasVenueFill(stored), false);
-assert.equal(
-  fillSlip({
-    ...stored,
-    venue: "bybit",
-    fillBasis: 0.0132,
-    fillSpotPrice: 78_935.5,
-    fillFuturePrice: 79_977,
-    theoretical: { ...stored.theoretical, executableBasis: 0.0141 },
-  }),
-  0.0132 - 0.0141,
-);
 assert.equal(formatOrderHeadline(stored), "Open");
 assert.equal(
   formatOrderWhy(stored),
