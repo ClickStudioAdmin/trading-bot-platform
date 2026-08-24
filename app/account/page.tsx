@@ -9,6 +9,7 @@ import {
 } from "@/lib/accounts/actions";
 import {
   formatAccountMode,
+  formatAccountUsageStatus,
   formatDeleteBlockers,
 } from "@/lib/accounts/model";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
@@ -43,8 +44,8 @@ export default async function ManageSubAccountsPage({
       <PageHeading title="Manage sub-accounts" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
         Each account is Paper or Live at create and never changes. Books stay
-        separate. You must keep at least one account. Paper books can be deleted
-        any time. You can rename an account any time. Live delete is blocked while the book has open positions or
+        separate. You must keep at least one account. You can rename an account
+        any time. Delete is blocked while the book has open positions or
         running automations. Deleting an account removes its paper history.
       </p>
       {error ? (
@@ -70,6 +71,11 @@ export default async function ManageSubAccountsPage({
             const blocks = row?.blocks ?? [];
             const canDelete = blocks.length === 0;
             const current = account.id === session.account.id;
+            const usageStatus = formatAccountUsageStatus({
+              openCount: row?.openCount ?? 0,
+              automationsRunning: Boolean(row?.automationsRunning),
+              reduceOnly: Boolean(row?.reduceOnly),
+            });
             return (
               <li
                 key={account.id}
@@ -84,17 +90,8 @@ export default async function ManageSubAccountsPage({
                   </p>
                   <p className="mt-1 text-xs text-ink-faint">
                     {formatAccountMode(account.mode)}
-                    {row && row.openCount > 0
-                      ? ` · ${row.openCount} open`
-                      : null}
-                    {row?.automationsRunning ? " · Automations on" : null}
-                    {row?.reduceOnly ? " · Reduce only" : null}
+                    {usageStatus ? ` · ${usageStatus}` : null}
                   </p>
-                  {!canDelete ? (
-                    <p className="mt-1 text-xs text-ink-muted">
-                      {formatDeleteBlockers(blocks)}
-                    </p>
-                  ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {current ? null : (
@@ -136,36 +133,38 @@ export default async function ManageSubAccountsPage({
                       </form>
                     </div>
                   </details>
-                  {canDelete ? (
-                    <details className="relative">
-                      <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-danger hover:bg-danger/10 [&::-webkit-details-marker]:hidden">
-                        Delete
-                      </summary>
-                      <div className="absolute right-0 z-10 mt-2 w-64 rounded-card border border-line bg-surface p-3">
-                        <p className="text-xs text-ink-muted">
-                          Remove {account.name} and its closed history? This
-                          cannot be undone.
-                        </p>
-                        <form action={deleteTradingAccount} className="mt-3">
-                          <input
-                            type="hidden"
-                            name="accountId"
-                            value={account.id}
-                          />
-                          <PendingSubmitButton
-                            pendingLabel="Deleting…"
-                            className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
-                          >
-                            Delete account
-                          </PendingSubmitButton>
-                        </form>
-                      </div>
-                    </details>
-                  ) : (
-                    <span className="rounded-control px-3 py-1.5 text-sm text-ink-faint">
+                  <details className="relative">
+                    <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-danger hover:bg-danger/10 [&::-webkit-details-marker]:hidden">
                       Delete
-                    </span>
-                  )}
+                    </summary>
+                    <div className="absolute right-0 z-10 mt-2 w-64 rounded-card border border-line bg-surface p-3">
+                      {canDelete ? (
+                        <>
+                          <p className="text-xs text-ink-muted">
+                            Remove {account.name} and its closed history? This
+                            cannot be undone.
+                          </p>
+                          <form action={deleteTradingAccount} className="mt-3">
+                            <input
+                              type="hidden"
+                              name="accountId"
+                              value={account.id}
+                            />
+                            <PendingSubmitButton
+                              pendingLabel="Deleting…"
+                              className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
+                            >
+                              Delete account
+                            </PendingSubmitButton>
+                          </form>
+                        </>
+                      ) : (
+                        <p className="text-xs text-ink-muted">
+                          {formatDeleteBlockers(blocks)}.
+                        </p>
+                      )}
+                    </div>
+                  </details>
                 </div>
               </li>
             );

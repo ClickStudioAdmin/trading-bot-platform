@@ -3,6 +3,7 @@ import {
   accountDeleteBlockers,
   connectionRemoveBlockers,
   DEFAULT_ACCOUNT_NAME,
+  formatAccountUsageStatus,
   formatConnectionRemoveBlockers,
   formatDeleteBlockers,
   parseAccountName,
@@ -50,7 +51,7 @@ assert.deepEqual(
     automationsRunning: true,
     mode: "paper",
   }),
-  ["last"],
+  ["last", "open", "automations"],
 );
 assert.deepEqual(
   accountDeleteBlockers({
@@ -59,7 +60,7 @@ assert.deepEqual(
     automationsRunning: true,
     mode: "paper",
   }),
-  [],
+  ["open", "automations"],
 );
 assert.deepEqual(
   accountDeleteBlockers({
@@ -81,7 +82,15 @@ assert.deepEqual(
 );
 assert.equal(
   formatDeleteBlockers(["last", "open"]),
-  "Keep at least one account · Close or flatten open positions first",
+  "Keep at least one account · Exit all positions first",
+);
+assert.equal(
+  formatDeleteBlockers(["open", "automations"]),
+  "Disable automations and exit all positions first",
+);
+assert.equal(
+  formatDeleteBlockers(["automations"]),
+  "Disable automations first",
 );
 assert.deepEqual(
   connectionRemoveBlockers({ openCount: 0, automationsRunning: false }),
@@ -102,6 +111,15 @@ assert.deepEqual(
 assert.equal(
   formatConnectionRemoveBlockers(["open", "automations"]),
   "Close or flatten open positions first · Turn off automations first",
+);
+
+assert.equal(
+  formatAccountUsageStatus({ openCount: 2, automationsRunning: true }),
+  "2 Open positions - Automations on",
+);
+assert.equal(
+  formatAccountUsageStatus({ openCount: 1, automationsRunning: false }),
+  "1 Open position",
 );
 
 console.log("account model checks passed");

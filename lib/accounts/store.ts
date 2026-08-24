@@ -2,6 +2,7 @@ import {
   accountDeleteBlockers,
   connectionRemoveBlockers,
   DEFAULT_ACCOUNT_NAME,
+  formatDeleteBlockers,
   parseTradingAccountRow,
   type AccountDeleteBlock,
   type ConnectionRemoveBlock,
@@ -221,14 +222,7 @@ export async function deleteTradingAccountRow(
   const usage = await loadAccountUsage(accounts);
   const blocks = usage.get(accountId)?.blocks ?? ["last"];
   if (blocks.length > 0) {
-    return {
-      error:
-        blocks[0] === "last"
-          ? "Keep at least one account."
-          : blocks[0] === "open"
-            ? "Close or flatten open positions first."
-            : "Turn off automations first.",
-    };
+    return { error: `${formatDeleteBlockers(blocks)}.` };
   }
   const { error: connectionError } = await supabase
     .from("exchange_connections")

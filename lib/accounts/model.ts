@@ -60,27 +60,52 @@ export function accountDeleteBlockers(input: {
   if (input.accountCount <= 1) {
     blocks.push("last");
   }
-  if (input.mode === "live" && input.openCount > 0) {
+  if (input.openCount > 0) {
     blocks.push("open");
   }
-  if (input.mode === "live" && input.automationsRunning) {
+  if (input.automationsRunning) {
     blocks.push("automations");
   }
   return blocks;
 }
 
 export function formatDeleteBlockers(blocks: AccountDeleteBlock[]): string {
-  return blocks
-    .map((block) => {
-      if (block === "last") {
-        return "Keep at least one account";
-      }
-      if (block === "open") {
-        return "Close or flatten open positions first";
-      }
-      return "Turn off automations first";
-    })
-    .join(" · ");
+  const parts: string[] = [];
+  if (blocks.includes("last")) {
+    parts.push("Keep at least one account");
+  }
+  const open = blocks.includes("open");
+  const automations = blocks.includes("automations");
+  if (open && automations) {
+    parts.push("Disable automations and exit all positions first");
+  } else if (open) {
+    parts.push("Exit all positions first");
+  } else if (automations) {
+    parts.push("Disable automations first");
+  }
+  return parts.join(" · ");
+}
+
+export function formatAccountUsageStatus(input: {
+  openCount: number;
+  automationsRunning: boolean;
+  reduceOnly?: boolean;
+}): string {
+  const parts: string[] = [];
+  if (input.openCount > 0) {
+    parts.push(
+      input.openCount === 1
+        ? "1 Open position"
+        : `${input.openCount} Open positions`,
+    );
+  }
+  if (input.automationsRunning) {
+    parts.push("Automations on");
+  }
+  if (input.reduceOnly) {
+    parts.push("Reduce only");
+  }
+  return parts.join(" - ");
 }
 
 export function connectionRemoveBlockers(input: {
