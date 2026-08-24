@@ -103,7 +103,8 @@ export default async function BookOverviewPage() {
             <ConnectionList rows={connections} />
           ) : (
             <p className="mt-4 text-sm text-ink-muted">
-              Paper uses the in-app ledger. Exchange keys belong on a Live book.
+              Paper Trading uses the in-app ledger. Exchange keys belong on a
+              Connected Exchange book.
             </p>
           )}
         </div>

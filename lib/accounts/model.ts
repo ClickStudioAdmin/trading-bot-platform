@@ -52,13 +52,13 @@ export function pickSwitchAfterDelete(
 }
 
 export function formatAccountMode(mode: TradingAccountMode): string {
-  return mode === "live" ? "Live" : "Paper";
+  return mode === "live" ? "Connected Exchange" : "Paper Trading";
 }
 
 export function formatAccountModeChoice(mode: TradingAccountMode): string {
   return mode === "live"
-    ? "Live (exchange connected)"
-    : "Paper Trading (no exchange connected)";
+    ? "Connected Exchange (uses a connected exchange)"
+    : "Paper Trading (uses live market data - no real trades)";
 }
 
 export type AccountDeleteBlock = "last" | "open" | "automations";

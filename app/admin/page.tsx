@@ -81,11 +81,12 @@ export default async function AdminOverviewPage() {
         <div className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">Accounts</h2>
           <p className="mt-1 text-sm text-ink-muted">
-            Each book is Paper or Live at create and never changes.
+            Each book is Paper Trading or Connected Exchange at create and
+            never changes.
           </p>
           <dl className="mt-4 space-y-2 text-sm">
-            <Row label="Paper" value={overview.accounts.paper} />
-            <Row label="Live" value={overview.accounts.live} />
+            <Row label="Paper Trading" value={overview.accounts.paper} />
+            <Row label="Connected Exchange" value={overview.accounts.live} />
             <Row
               label="Live execution"
               value="Off"

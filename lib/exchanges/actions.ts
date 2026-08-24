@@ -39,7 +39,7 @@ export async function saveExchangeConnection(formData: FormData) {
     redirect("/sign-in");
   }
   if (!accountCanHoldConnections(session.account.mode)) {
-    fail("Switch to a Live account to connect an exchange.");
+    fail("Switch to a Connected Exchange account to connect an exchange.");
   }
   if (!exchangeCredentialsConfigured()) {
     fail("Exchange credentials key is not configured on this environment.");
@@ -154,7 +154,7 @@ export async function removeExchangeConnection(formData: FormData) {
     redirect("/sign-in");
   }
   if (!accountCanHoldConnections(session.account.mode)) {
-    fail("Switch to a Live account to manage exchange connections.");
+    fail("Switch to a Connected Exchange account to manage exchange connections.");
   }
   const connectionId = String(formData.get("connectionId") ?? "");
   if (!connectionId) {

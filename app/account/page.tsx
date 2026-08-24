@@ -38,7 +38,7 @@ export default async function AccountOverviewPage() {
           <StatCard
             label="Books"
             value={String(accounts.length)}
-            hint={`${paperCount} paper · ${liveCount} live`}
+            hint={`${paperCount} Paper Trading · ${liveCount} Connected Exchange`}
             href="/account/sub-accounts"
           />
           <StatCard

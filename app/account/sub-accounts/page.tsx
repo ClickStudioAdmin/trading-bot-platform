@@ -21,7 +21,7 @@ import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Manage sub-accounts",
-  description: "Create and delete Paper or Live trading accounts.",
+  description: "Create and delete Paper Trading or Connected Exchange accounts.",
 };
 
 const PATH = "/account/sub-accounts";
@@ -47,10 +47,11 @@ export default async function ManageSubAccountsPage({
     <div>
       <PageHeading title="Manage sub-accounts" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
-        Each account is Paper or Live at create and never changes. Books stay
-        separate. You must keep at least one account. You can rename an account
-        any time. Delete is blocked while the book has open positions or
-        running automations. Deleting an account removes its paper history.
+        Each account is Paper Trading or Connected Exchange at create and never
+        changes. Books stay separate. You must keep at least one account. You
+        can rename an account any time. Delete is blocked while the book has
+        open positions or running automations. Deleting an account removes its
+        paper history.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -169,10 +170,10 @@ export default async function ManageSubAccountsPage({
           </select>
         </label>
         <p className="text-sm text-ink-muted">
-          Paper uses the in-app ledger and cannot hold exchange keys. Live can
-          store Bybit keys (Demo or production). Mode is set at create and
-          never changes. This app will not place exchange orders until live
-          execution exists.
+          Paper Trading uses live market data and fills on the in-app ledger.
+          No real trades. Connected Exchange stores keys for a venue (Bybit
+          Demo or production). Mode is set at create and never changes. This
+          app will not place exchange orders until live execution exists.
         </p>
         <PendingSubmitButton
           pendingLabel="Creating…"

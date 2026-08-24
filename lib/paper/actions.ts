@@ -33,7 +33,7 @@ export async function openPaperCarry(formData: FormData) {
   const { member: user, account } = session;
   if (account.mode !== "paper") {
     redirect(
-      `${next}?paperError=${encodeURIComponent("This is a Live account. Paper fills are off until live execution exists.")}`,
+      `${next}?paperError=${encodeURIComponent("This is a Connected Exchange account. Paper fills are off until live execution exists.")}`,
     );
   }
 

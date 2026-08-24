@@ -95,7 +95,8 @@ export default async function AccountExchangesPage({
         </>
       ) : (
         <p className="rounded-card border border-line bg-surface p-5 text-sm text-ink-muted">
-          This is a Paper account. Exchange API keys belong on a Live account.{" "}
+          This is a Paper Trading account. Exchange API keys belong on a
+          Connected Exchange account.{" "}
           <Link
             href="/account/sub-accounts"
             className="text-accent hover:text-accent-strong"

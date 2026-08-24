@@ -61,8 +61,8 @@ export default async function CashAndCarryLayout({
       {live && !bound ? (
         <div className="mx-auto max-w-6xl px-6 pt-4">
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-            This is a Live account. The engine will not place exchange
-            orders until an exchange connection is added.
+            This is a Connected Exchange account. The engine will not place
+            exchange orders until an exchange connection is added.
           </p>
         </div>
       ) : null}

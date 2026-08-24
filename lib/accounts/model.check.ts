@@ -21,15 +21,15 @@ assert.equal(DEFAULT_ACCOUNT_NAME, "Demo Account");
 assert.equal(parseAccountMode("live"), "live");
 assert.equal(parseAccountMode("paper"), "paper");
 assert.equal(parseAccountMode("other"), "paper");
-assert.equal(formatAccountMode("paper"), "Paper");
-assert.equal(formatAccountMode("live"), "Live");
+assert.equal(formatAccountMode("paper"), "Paper Trading");
+assert.equal(formatAccountMode("live"), "Connected Exchange");
 assert.equal(
   formatAccountModeChoice("paper"),
-  "Paper Trading (no exchange connected)",
+  "Paper Trading (uses live market data - no real trades)",
 );
 assert.equal(
   formatAccountModeChoice("live"),
-  "Live (exchange connected)",
+  "Connected Exchange (uses a connected exchange)",
 );
 
 const named = parseAccountName("  Book 1  ");
