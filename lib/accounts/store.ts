@@ -216,6 +216,14 @@ export async function deleteTradingAccountRow(
             : "Turn off automations first.",
     };
   }
+  const { error: connectionError } = await supabase
+    .from("exchange_connections")
+    .delete()
+    .eq("account_id", accountId)
+    .eq("user_id", userId);
+  if (connectionError) {
+    return { error: connectionError.message };
+  }
   const { error: orderError } = await supabase
     .from("paper_orders")
     .delete()

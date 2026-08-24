@@ -10,9 +10,9 @@ Paper accounts do not hold exchange connections.
 
 ## Current micro-step
 
-**3 of 6 — Envelope encrypt** (complete)
+**4 of 6 — Connections table** (complete)
 
-Phase 6 is current. Waiting on **4 — Connections table**.
+Phase 6 is current. Waiting on **5 — Exchanges UI**. The migration applies on the next push to `develop`.
 
 ## Micro-steps
 
