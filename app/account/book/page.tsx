@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
-import {
-  formatAccountMode,
-  formatAccountUsageStatus,
-} from "@/lib/accounts/model";
+import { formatAccountMode } from "@/lib/accounts/model";
 import { loadAccountUsage } from "@/lib/accounts/store";
 import { getSessionContext } from "@/lib/auth/session";
 import {
+  formatEnvironmentLabel,
   formatStrategyConnectionCaption,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
@@ -34,32 +32,11 @@ export default async function BookOverviewPage() {
   const openCount = usage?.openCount ?? 0;
   const automationsRunning = Boolean(usage?.automationsRunning);
   const reduceOnly = Boolean(usage?.reduceOnly);
-  const boundId = usage?.strategyConnectionId ?? null;
-  const bound = connections.find((row) => row.id === boundId) ?? null;
   const automationLabel = reduceOnly
     ? "Reduce only"
     : automationsRunning
       ? "On"
       : "Off";
-  const usageStatus = formatAccountUsageStatus({
-    openCount,
-    automationsRunning,
-    reduceOnly,
-  });
-  const exchangeValue = live
-    ? bound
-      ? captionName(bound)
-      : connections.length > 0
-        ? "Unbound"
-        : "None"
-    : "Paper";
-  const exchangeHint = live
-    ? bound
-      ? captionVenue(bound) ?? "Cash and Carry"
-      : connections.length > 0
-        ? "Not attached to Cash and Carry"
-        : "Add a key to trade"
-    : "Ledger only";
 
   return (
     <div className="space-y-8">
@@ -91,150 +68,83 @@ export default async function BookOverviewPage() {
             }
             href="/strategies/cash-and-carry/automations"
           />
-          <StatCard
-            label="Exchange connection"
-            value={exchangeValue}
-            hint={exchangeHint}
-            href="/account/exchanges"
-          />
         </div>
       </section>
 
-      {live && !bound ? (
-        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          This is a Live account. The engine will not place exchange orders
-          until an exchange connection is added.
+      <section className="rounded-card border border-line bg-surface p-5">
+        <h2 className="text-lg font-semibold tracking-tight">This book</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Switch books from the header. Mode is set at create.
         </p>
-      ) : null}
+        <dl className="mt-4 space-y-2 text-sm">
+          <Row label="Name" value={current.name} />
+          <Row label="Mode" value={formatAccountMode(current.mode)} />
+          <Row label="Created" value={formatCreated(current.createdAtMs)} />
+        </dl>
 
-      <section className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">This book</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Switch books from the header. Mode is set at create.
-          </p>
-          <dl className="mt-4 space-y-2 text-sm">
-            <Row label="Name" value={current.name} />
-            <Row label="Mode" value={formatAccountMode(current.mode)} />
-            <Row label="Created" value={formatCreated(current.createdAtMs)} />
-            <Row label="Status" value={usageStatus || "Idle"} />
-          </dl>
-        </div>
-
-        <div className="rounded-card border border-line bg-surface p-5">
-          <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
-            Exchange Connection
-          </p>
+        <div className="mt-6 border-t border-line pt-5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold tracking-tight">
+                Exchange connections
+              </h3>
+              <p className="mt-1 text-sm text-ink-muted">
+                Keys belong to this book. Strategies pick one when they trade.
+              </p>
+            </div>
+            <Link
+              href="/account/exchanges"
+              className="text-sm text-accent hover:text-accent-strong"
+            >
+              Manage
+            </Link>
+          </div>
           {live ? (
-            <ExchangeCard
-              connections={connections}
-              bound={bound}
-            />
+            <ConnectionList rows={connections} />
           ) : (
-            <p className="mt-3 text-sm text-ink-muted">
-              This is a Paper account. It uses the in-app ledger. Exchange keys
-              belong on a Live book.
+            <p className="mt-4 text-sm text-ink-muted">
+              Paper uses the in-app ledger. Exchange keys belong on a Live book.
             </p>
           )}
         </div>
       </section>
-
-      <section>
-        <h2 className="text-lg font-semibold tracking-tight">Shortcuts</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Shortcut
-            href="/strategies/cash-and-carry/positions"
-            label="Positions"
-            hint="Open and closed carries"
-          />
-          <Shortcut
-            href="/strategies/cash-and-carry/automations"
-            label="Automations"
-            hint="Sets and reduce only"
-          />
-          <Shortcut
-            href="/account/exchanges"
-            label="Exchange Connection"
-            hint={live ? `${current.name} keys` : "Live books only"}
-          />
-          <Shortcut
-            href="/strategies/cash-and-carry/settings"
-            label="Strategy Settings"
-            hint="Cash and Carry knobs"
-          />
-        </div>
-      </section>
     </div>
   );
 }
 
-function ExchangeCard({
-  connections,
-  bound,
-}: {
-  connections: ExchangeConnection[];
-  bound: ExchangeConnection | null;
-}) {
-  if (connections.length === 0) {
+function ConnectionList({ rows }: { rows: ExchangeConnection[] }) {
+  if (rows.length === 0) {
     return (
-      <div className="mt-3">
-        <p className="flex items-center gap-2 text-sm text-warning">
-          <span className="size-2.5 shrink-0 rounded-full bg-warning" aria-hidden />
-          Connect an exchange
-        </p>
-        <Link
-          href="/account/exchanges"
-          className="mt-3 inline-block text-sm text-accent hover:text-accent-strong"
-        >
-          Open Exchanges
-        </Link>
-      </div>
+      <p className="mt-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+        No keys on this book yet. The engine will not place exchange orders
+        until a connection is added.
+      </p>
     );
   }
-  const caption = bound ? formatStrategyConnectionCaption(bound) : null;
+
   return (
-    <div className="mt-3">
-      <p className="flex items-center gap-2 text-sm text-ink">
-        <span
-          className={`size-2.5 shrink-0 rounded-full ${
-            bound ? "bg-success" : "bg-warning"
-          }`}
-          aria-hidden
-        />
-        <span className="min-w-0 truncate">
-          {caption ? (
-            <>
-              {caption.name}
-              {caption.venue ? (
-                <span className="text-ink-muted"> ({caption.venue})</span>
-              ) : null}
-            </>
-          ) : (
-            <span className="text-warning">Not attached to Cash and Carry</span>
-          )}
-        </span>
-      </p>
-      <p className="mt-2 text-xs text-ink-faint">
-        {connections.length === 1
-          ? "1 key on this book"
-          : `${connections.length} keys on this book`}
-      </p>
-      <Link
-        href="/account/exchanges"
-        className="mt-3 inline-block text-sm text-accent hover:text-accent-strong"
-      >
-        Open Exchanges
-      </Link>
-    </div>
+    <ul className="mt-4 divide-y divide-line">
+      {rows.map((row) => {
+        const caption = formatStrategyConnectionCaption(row);
+        return (
+          <li key={row.id} className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+            <div className="min-w-0">
+              <p className="truncate text-sm">
+                {caption.name}
+                {caption.venue ? (
+                  <span className="text-ink-muted"> ({caption.venue})</span>
+                ) : null}
+              </p>
+              <p className="mt-1 text-xs text-ink-faint">
+                {formatEnvironmentLabel(row.venue, row.environment)}
+                {row.status === "invalid" ? " · Invalid" : null}
+              </p>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
-}
-
-function captionName(row: ExchangeConnection): string {
-  return formatStrategyConnectionCaption(row).name;
-}
-
-function captionVenue(row: ExchangeConnection): string | null {
-  return formatStrategyConnectionCaption(row).venue;
 }
 
 function StatCard({
@@ -280,26 +190,6 @@ function Row({ label, value }: { label: string; value: string }) {
       <dt className="shrink-0 text-ink-muted">{label}</dt>
       <dd className="truncate text-right">{value}</dd>
     </div>
-  );
-}
-
-function Shortcut({
-  href,
-  label,
-  hint,
-}: {
-  href: string;
-  label: string;
-  hint: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="rounded-card border border-line bg-surface p-4 hover:border-line-strong"
-    >
-      <p className="text-sm">{label}</p>
-      <p className="mt-1 text-xs text-ink-faint">{hint}</p>
-    </Link>
   );
 }
 
