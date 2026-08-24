@@ -152,6 +152,7 @@ export function PaperAutomationTrigger({
                   />
                   <PendingSubmitButton
                     pendingLabel="Saving…"
+                    successKey={`exits-${carryId}`}
                     className="mt-1 rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium text-ink"
                   >
                     Save exits

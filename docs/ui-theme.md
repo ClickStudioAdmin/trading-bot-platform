@@ -36,4 +36,4 @@ Primary: `bg-accent-strong` / `text-ink`. Secondary: surface + `border-line`. Gh
 
 ## Motion
 
-Short press on buttons (`scale` + opacity). Server-action submits show a spinner and stay disabled until the request finishes. No decorative animation.
+Short press on buttons (`scale` + opacity). Server-action submits swap the label for a spinner, then a success check for 1.5s. No decorative animation.

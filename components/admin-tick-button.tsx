@@ -1,16 +1,37 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { ButtonBusyIcon } from "@/components/pending-submit-button";
+import { useEffect, useState } from "react";
+import {
+  ButtonBusyIcon,
+  ButtonCheckIcon,
+} from "@/components/pending-submit-button";
+
+const TICK_OK_KEY = "tbp-tick-ok";
 
 export function AdminTickButton() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [ok, setOk] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(TICK_OK_KEY) !== "1") {
+        return;
+      }
+      sessionStorage.removeItem(TICK_OK_KEY);
+    } catch {
+      return;
+    }
+    setOk(true);
+    const timer = window.setTimeout(() => setOk(false), 1500);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   async function runTick() {
     setBusy(true);
+    setOk(false);
     setNote(null);
     try {
       const response = await fetch("/api/engine/admin-tick", {
@@ -30,6 +51,12 @@ export function AdminTickButton() {
       setNote(
         `Opened ${body.opened ?? 0} · added ${body.added ?? 0} · closed ${body.closed ?? 0} · clipped ${body.clipped ?? 0}`,
       );
+      try {
+        sessionStorage.setItem(TICK_OK_KEY, "1");
+      } catch {
+        setOk(true);
+        window.setTimeout(() => setOk(false), 1500);
+      }
       router.refresh();
     } catch {
       setNote("Tick failed");
@@ -46,14 +73,20 @@ export function AdminTickButton() {
         aria-busy={busy}
         onClick={() => void runTick()}
         className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
-        aria-label={busy ? "Ticking" : undefined}
+        aria-label={busy ? "Ticking" : ok ? "Done" : undefined}
       >
         <span className="inline-grid justify-items-center">
           <span className="invisible col-start-1 row-start-1" aria-hidden>
             Tick
           </span>
           <span className="col-start-1 row-start-1 inline-flex items-center justify-center">
-            {busy ? <ButtonBusyIcon /> : "Tick"}
+            {busy ? (
+              <ButtonBusyIcon />
+            ) : ok ? (
+              <ButtonCheckIcon />
+            ) : (
+              "Tick"
+            )}
           </span>
         </span>
       </button>

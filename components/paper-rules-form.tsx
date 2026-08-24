@@ -78,6 +78,7 @@ export function PaperRulesForm({
         {empty ? null : (
           <PendingSubmitButton
             pendingLabel="Saving…"
+            successKey="save-rules"
             className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
             Save automations

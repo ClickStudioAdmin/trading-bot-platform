@@ -2,7 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { PendingSubmitButton, ButtonCheckIcon, useStoredButtonSuccess } from "@/components/pending-submit-button";
 import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
 import { TokenIcon } from "@/components/token-icon";
 import {
@@ -253,13 +253,19 @@ function ClosePaperButton({
   trade: MarkedPaperCarry;
   next: PaperReturnPath;
 }) {
+  const closeKey = `close-${trade.id}`;
+  const ok = useStoredButtonSuccess(closeKey);
+
   if (trade.status === "closing") {
     return (
       <ColumnHint
         hint="Exit already submitted. Later ticks clip to usable book until the row is flat."
         label={
-          <span className="rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
-            Closing
+          <span className="inline-grid justify-items-center rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
+            <span className="invisible col-start-1 row-start-1">Closing</span>
+            <span className="col-start-1 row-start-1 inline-flex items-center justify-center">
+              {ok ? <ButtonCheckIcon /> : "Closing"}
+            </span>
           </span>
         }
       />
@@ -302,6 +308,7 @@ function ClosePaperButton({
             name="mode"
             value={auto && dynamicExit ? "unwind" : "market"}
             pendingLabel="Closing"
+            successKey={closeKey}
             className={actionClass}
           >
             Close
@@ -316,6 +323,7 @@ function ClosePaperButton({
               name="mode"
               value="unwind"
               pendingLabel="Unwinding"
+              successKey={closeKey}
               className={actionClass}
             >
               Unwind

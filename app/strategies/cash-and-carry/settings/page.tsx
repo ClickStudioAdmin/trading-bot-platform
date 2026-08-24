@@ -60,6 +60,7 @@ export default async function CashAndCarrySettingsPage({
           </p>
           <PendingSubmitButton
             pendingLabel="Saving…"
+            successKey="save-settings"
             className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
           >
             Save settings
