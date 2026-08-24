@@ -9,13 +9,13 @@ import {
 } from "./rules";
 
 const empty = new FormData();
-empty.set("enabled", "on");
 empty.set("ruleCount", "1");
 empty.set("r0_notionalUsdt", "10,000");
 const parsedEmpty = parsePaperRulesForm(empty);
 assert.equal(parsedEmpty.ok, true);
 if (parsedEmpty.ok) {
   assert.equal(parsedEmpty.config.enabled, true);
+  assert.equal(parsedEmpty.config.layers[0]?.mode, "active");
   assert.equal(parsedEmpty.config.layers[0]?.sizeType, "dynamic");
   assert.equal(parsedEmpty.config.layers[0]?.name, "Set 1");
   assert.equal(parsedEmpty.config.layers[0]?.maxOpenCount, null);
@@ -25,7 +25,6 @@ if (parsedEmpty.ok) {
 }
 
 const filled = new FormData();
-filled.set("enabled", "on");
 filled.set("ruleCount", "2");
 filled.set("r0_id", "4");
 filled.set("r0_name", "Core carry");
@@ -49,6 +48,7 @@ if (parsed.ok) {
   assert.equal(parsed.config.layers[1]?.takeProfitPct, 0.01);
   const row = paperLayerToRow("user-1", parsed.config.layers[0]!);
   assert.equal(row.user_id, "user-1");
+  assert.equal(row.mode, "active");
   assert.equal(row.size_type, "dynamic");
   const roundTrip = parsePaperRulesRow({ id: 4, ...row }, 0);
   assert.equal(roundTrip.id, 4);
@@ -67,10 +67,23 @@ if (parsedNone.ok) {
 const paused = new FormData();
 paused.set("ruleCount", "1");
 paused.set("r0_notionalUsdt", "10000");
+paused.set("r0_mode", "disabled");
 const parsedPaused = parsePaperRulesForm(paused);
 assert.equal(parsedPaused.ok, true);
 if (parsedPaused.ok) {
   assert.equal(parsedPaused.config.enabled, false);
+  assert.equal(parsedPaused.config.layers[0]?.mode, "disabled");
+}
+
+const reduceSet = new FormData();
+reduceSet.set("ruleCount", "1");
+reduceSet.set("r0_notionalUsdt", "10000");
+reduceSet.set("r0_mode", "reduce_only");
+const parsedReduce = parsePaperRulesForm(reduceSet);
+assert.equal(parsedReduce.ok, true);
+if (parsedReduce.ok) {
+  assert.equal(parsedReduce.config.enabled, true);
+  assert.equal(parsedReduce.config.layers[0]?.mode, "reduce_only");
 }
 
 const swapped = new FormData();

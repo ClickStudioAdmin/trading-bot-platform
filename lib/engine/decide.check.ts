@@ -37,6 +37,7 @@ function layer(
     id: 1,
     name: "Set 1",
     sortOrder: 0,
+    mode: "active",
     sizeType: "fixed",
     exitSizeType: "fixed",
     notionalUsdt: 10_000,
@@ -74,9 +75,22 @@ assert.equal(bestMatchingLayer(high, config.layers)?.id, 2);
 assert.equal(bestMatchingLayer(mid, config.layers)?.id, 1);
 assert.equal(bestMatchingLayer(low, config.layers), null);
 
-assert.deepEqual(decideEntries([high], [], { ...config, enabled: false }), []);
 assert.deepEqual(
   decideEntries([high], [], { ...config, reduceOnly: true }),
+  [],
+);
+assert.deepEqual(
+  decideEntries([high], [], {
+    enabled: true,
+    layers: [layer({ mode: "disabled" })],
+  }),
+  [],
+);
+assert.deepEqual(
+  decideEntries([high], [], {
+    enabled: true,
+    layers: [layer({ mode: "reduce_only" })],
+  }),
   [],
 );
 
@@ -438,6 +452,42 @@ assert.equal(
     { enabled: true, reduceOnly: true, layers: [base] },
   )[0]?.reason,
   "dte",
+);
+assert.equal(
+  decideExits(
+    [
+      {
+        spotSymbol: "BTCUSDT",
+        futureSymbol: high.futureSymbol,
+        notionalUsdt: 10_000,
+        ruleId: 1,
+        daysToExpiry: 2,
+        markNetApr: 0.2,
+        pnlPct: 0.02,
+        openedAtMs: 1,
+      },
+    ],
+    { enabled: true, layers: [layer({ mode: "reduce_only" })] },
+  )[0]?.reason,
+  "dte",
+);
+assert.equal(
+  decideExits(
+    [
+      {
+        spotSymbol: "BTCUSDT",
+        futureSymbol: high.futureSymbol,
+        notionalUsdt: 10_000,
+        ruleId: 1,
+        daysToExpiry: 2,
+        markNetApr: 0.2,
+        pnlPct: 0.02,
+        openedAtMs: 1,
+      },
+    ],
+    { enabled: true, layers: [layer({ mode: "disabled" })] },
+  ).length,
+  0,
 );
 
 const heldBtc = opportunity("BTCUSDT-25JUN27", {

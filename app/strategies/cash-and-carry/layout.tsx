@@ -9,17 +9,24 @@ export default async function CashAndCarryLayout({
 }) {
   const session = await getSessionContext();
   const { signedIn, config } = await loadPaperRules();
-  const automationsOn =
-    signedIn && Boolean(config.enabled) && config.layers.length > 0;
+  const anyActive = config.layers.some(
+    (layer) => (layer.mode ?? "active") === "active",
+  );
+  const anyLive = config.layers.some(
+    (layer) => (layer.mode ?? "active") !== "disabled",
+  );
+  const accountReduce = Boolean(config.reduceOnly);
+  const automationsOn = signedIn && anyLive;
   const paperRunning =
     automationsOn &&
     session?.account.mode === "paper" &&
-    !config.reduceOnly;
+    anyActive &&
+    !accountReduce;
   return (
     <div>
       <StrategySubnav
         automationsRunning={paperRunning}
-        reduceOnly={automationsOn && Boolean(config.reduceOnly)}
+        reduceOnly={automationsOn && (accountReduce || !anyActive)}
       />
       {session?.account.mode === "live" ? (
         <div className="mx-auto max-w-6xl px-6 pt-4">

@@ -9,8 +9,10 @@ import {
   type TradingAccountMode,
 } from "@/lib/accounts/model";
 import { memberDisplayName } from "@/lib/members/sync";
+import { parseAutomationMode } from "@/lib/engine/decide";
 import { selectPaperEngineSettings } from "@/lib/engine/settings";
 import { createServiceClient } from "@/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type TradingAccountOption = TradingAccount & {
   ownerName: string;
@@ -154,37 +156,35 @@ export async function loadAccountUsage(
     return usage;
   }
   const accountIds = accounts.map((account) => account.id);
-  const [{ data: openRows }, settings, { data: rules }] = await Promise.all([
+  const [{ data: openRows }, settings, ruleRows] = await Promise.all([
     supabase
       .from("paper_carries")
       .select("account_id")
       .in("account_id", accountIds)
       .in("status", ["open", "closing"]),
     selectPaperEngineSettings(supabase, { accountIds }),
-    supabase.from("paper_rules").select("account_id").in("account_id", accountIds),
+    selectPaperRuleModes(supabase, accountIds),
   ]);
   const openCount = new Map<string, number>();
   for (const row of openRows ?? []) {
     const id = String((row as { account_id: string }).account_id);
     openCount.set(id, (openCount.get(id) ?? 0) + 1);
   }
-  const enabled = new Set(
-    settings
-      .filter((row) => Boolean(row.enabled))
-      .map((row) => String(row.account_id)),
-  );
   const reduceOnlyIds = new Set(
     settings
       .filter((row) => Boolean(row.reduce_only))
       .map((row) => String(row.account_id)),
   );
-  const withRules = new Set(
-    (rules ?? []).map((row) => String((row as { account_id: string }).account_id)),
-  );
+  const runningIds = new Set<string>();
+  for (const row of ruleRows) {
+    const id = String(row.account_id ?? "");
+    if (id && parseAutomationMode(row.mode) !== "disabled") {
+      runningIds.add(id);
+    }
+  }
   for (const account of accounts) {
     const opens = openCount.get(account.id) ?? 0;
-    const automationsRunning =
-      enabled.has(account.id) && withRules.has(account.id);
+    const automationsRunning = runningIds.has(account.id);
     const reduceOnly = reduceOnlyIds.has(account.id);
     usage.set(account.id, {
       openCount: opens,
@@ -296,4 +296,22 @@ export async function renameTradingAccountRow(
     return { error: "That name is already in use." };
   }
   return { error: error?.message ?? null };
+}
+
+async function selectPaperRuleModes(
+  supabase: SupabaseClient,
+  accountIds: string[],
+): Promise<Record<string, unknown>[]> {
+  const full = await supabase
+    .from("paper_rules")
+    .select("account_id, mode")
+    .in("account_id", accountIds);
+  if (!full.error) {
+    return (full.data ?? []) as unknown as Record<string, unknown>[];
+  }
+  const fallback = await supabase
+    .from("paper_rules")
+    .select("account_id")
+    .in("account_id", accountIds);
+  return (fallback.data ?? []) as unknown as Record<string, unknown>[];
 }

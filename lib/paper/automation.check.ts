@@ -19,6 +19,7 @@ const layer = {
   id: 1,
   name: "Set 1",
   sortOrder: 0,
+  mode: "active" as const,
   sizeType: "fixed" as const,
   exitSizeType: "fixed" as const,
   notionalUsdt: 10_000,

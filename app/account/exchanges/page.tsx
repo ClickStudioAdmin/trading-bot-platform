@@ -128,18 +128,12 @@ function ConnectionList({
         <p className="mt-2 text-sm text-ink-muted">
           {removeBlocked}. Turn on Reduce only in{" "}
           <Link
-            href="/strategies/cash-and-carry/settings"
-            className="text-accent hover:text-accent-strong"
-          >
-            Settings
-          </Link>{" "}
-          to stop new entries, flatten, then turn off{" "}
-          <Link
             href="/strategies/cash-and-carry/automations"
             className="text-accent hover:text-accent-strong"
           >
-            automations
+            Automations
           </Link>{" "}
+          to stop new entries, flatten, then set every set to Disabled
           before removing a key.
         </p>
       ) : (

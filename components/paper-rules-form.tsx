@@ -21,7 +21,6 @@ export function PaperRulesForm({
   reduceOnly?: boolean;
 }) {
   const [layers, setLayers] = useState(values.layers);
-  const [enabled, setEnabled] = useState(values.enabled);
   const inUse = new Set(inUseRuleIds);
   const empty = layers.length === 0;
 
@@ -41,31 +40,11 @@ export function PaperRulesForm({
 
       {reduceOnly && !empty ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Reduce only is on. Automations will not open new positions or add
-          size. Exits, clips, and Unwind still run. Change this in Settings.
+          Account Reduce only is on. Active sets will not open or add size.
+          Exits still run unless a set is Disabled. Manual Open, Close, and
+          Unwind still work.
         </p>
       ) : null}
-
-      {empty ? null : (
-        <label className="flex items-start gap-3 rounded-card border border-line bg-surface px-4 py-3 text-sm text-ink">
-          <input
-            type="checkbox"
-            name="enabled"
-            value="on"
-            checked={enabled}
-            onChange={(event) => setEnabled(event.target.checked)}
-            className="mt-1 size-4"
-          />
-          <span>
-            Automations on
-            <span className="mt-1 block text-xs text-ink-muted">
-              Off keeps these rule sets but stops new entries and automated
-              exits. Use Reduce only in Settings to stop entries while the
-              book still winds down.
-            </span>
-          </span>
-        </label>
-      )}
 
       {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
@@ -93,15 +72,10 @@ export function PaperRulesForm({
         <button
           type="button"
           onClick={() =>
-            setLayers((current) => {
-              if (current.length === 0) {
-                setEnabled(true);
-              }
-              return [
-                ...current,
-                layerToForm(current.length),
-              ];
-            })
+            setLayers((current) => [
+              ...current,
+              layerToForm(current.length),
+            ])
           }
           className={
             empty
@@ -151,8 +125,8 @@ function RuleRow({
   const [exitSizeType, setExitSizeType] = useState(layer.exitSizeType);
   return (
     <section className="rounded-card border border-line bg-surface px-4 py-3">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <label className="min-w-0 w-1/2 text-[11px] text-ink-muted">
+      <div className="mb-2 flex items-end gap-2">
+        <label className="min-w-0 flex-1 text-[11px] text-ink-muted">
           Name
           <input
             name={`${prefix}name`}
@@ -162,9 +136,21 @@ function RuleRow({
             className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
           />
         </label>
+        <label className="w-40 shrink-0 text-[11px] text-ink-muted">
+          Mode
+          <select
+            name={`${prefix}mode`}
+            defaultValue={layer.mode}
+            className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
+          >
+            <option value="active">Active</option>
+            <option value="reduce_only">Reduce only</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </label>
         {inUse ? (
           <span
-            className="relative flex size-3.5 shrink-0"
+            className="relative mb-1.5 flex size-3.5 shrink-0"
             title="In use by an open position"
             aria-label="In use by an open position"
           >
@@ -175,7 +161,7 @@ function RuleRow({
           <button
             type="button"
             onClick={onRemove}
-            className="text-xs text-ink-muted hover:text-danger"
+            className="mb-1.5 text-xs text-ink-muted hover:text-danger"
           >
             Remove
           </button>

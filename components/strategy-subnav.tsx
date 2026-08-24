@@ -34,7 +34,7 @@ export function StrategySubnav({
         </div>
         {reduceOnly ? (
           <Link
-            href="/strategies/cash-and-carry/settings"
+            href="/strategies/cash-and-carry/automations"
             className="mt-8 flex items-center gap-2 text-sm text-warning"
             title="Reduce only"
           >

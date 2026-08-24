@@ -18,7 +18,7 @@ export function PaperRulesGuide() {
         />
         <GuideItem
           term="When it is on"
-          detail="The engine is on if you have at least one saved set. With no sets it will not open anything and will not fire DTE, APR, take profit, or stop loss. It still finishes Closing rows."
+          detail="Each set has a mode. Active may open and exit. Reduce only will not open or add size, but still exits. Disabled does neither. Account Reduce only at the top of this page makes every Active set behave as Reduce only. Manual Open, Close, and Unwind always work. Closing rows keep clipping until they are flat."
         />
         <GuideItem
           term="What it can hold"
@@ -33,6 +33,10 @@ export function PaperRulesGuide() {
         <GuideItem
           term="Name"
           detail="Shown as a purple badge next to Auto on Positions. Click that badge on an open row to see the rules copied onto that trade, and to edit that trade’s exits."
+        />
+        <GuideItem
+          term="Mode"
+          detail="Active, Reduce only, or Disabled for this set only. Account Reduce only overrides Active sets until you turn it off."
         />
         <GuideItem
           term="Add Rule Set"

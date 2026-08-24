@@ -1,6 +1,7 @@
 import {
   decideEntries,
   decideExits,
+  layerAllowsEntries,
   type EngineMarkedPosition,
   type PaperEngineConfig,
 } from "@/lib/engine/decide";
@@ -194,7 +195,11 @@ export async function runPaperEngineTick(): Promise<{
       });
     }
 
-    if (!config.enabled || config.reduceOnly || config.layers.length === 0) {
+    if (
+      !config.layers.some((layer) =>
+        layerAllowsEntries(layer, Boolean(config.reduceOnly)),
+      )
+    ) {
       continue;
     }
 

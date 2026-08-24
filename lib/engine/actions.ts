@@ -200,7 +200,6 @@ export async function savePaperSettings(formData: FormData) {
   if (typeof parsed !== "number") {
     redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(parsed.error)}`);
   }
-  const reduceOnly = parseReduceOnly(formData.get("reduceOnly"));
 
   const supabase = createServiceClient();
   if (!supabase) {
@@ -213,7 +212,6 @@ export async function savePaperSettings(formData: FormData) {
     user_id: user.id,
     account_id: account.id,
     usable_book_share: parsed,
-    reduce_only: reduceOnly,
     updated_at: new Date().toISOString(),
   });
 
@@ -237,9 +235,59 @@ export async function savePaperSettings(formData: FormData) {
     userId: user.id,
     accountId: account.id,
     strategy: "cash-and-carry",
-    data: { usableBookShare: parsed, reduceOnly },
+    data: { usableBookShare: parsed },
   });
 
   revalidatePath("/account/exchanges");
   redirect(`${SETTINGS_PATH}?saved=1`);
+}
+
+export async function saveAccountReduceOnly(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const { member: user, account } = session;
+  const reduceOnly = parseReduceOnly(formData.get("reduceOnly"));
+
+  const supabase = createServiceClient();
+  if (!supabase) {
+    redirect(
+      `${RULES_PATH}?error=${encodeURIComponent("Auth is not configured.")}`,
+    );
+  }
+
+  const { error } = await supabase.from("paper_engine_settings").upsert({
+    user_id: user.id,
+    account_id: account.id,
+    reduce_only: reduceOnly,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    await writeEventLog({
+      level: "error",
+      scope: "strategy",
+      event: "settings.save_failed",
+      message: error.message,
+      userId: user.id,
+      accountId: account.id,
+      strategy: "cash-and-carry",
+    });
+    redirect(`${RULES_PATH}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await writeEventLog({
+    scope: "strategy",
+    event: "settings.saved",
+    message: reduceOnly ? "Turned on reduce only" : "Turned off reduce only",
+    userId: user.id,
+    accountId: account.id,
+    strategy: "cash-and-carry",
+    data: { reduceOnly },
+  });
+
+  revalidatePath("/account/exchanges");
+  revalidatePath("/strategies/cash-and-carry");
+  redirect(`${RULES_PATH}?reduce=1`);
 }

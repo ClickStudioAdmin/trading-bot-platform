@@ -4,11 +4,13 @@ import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import { pairKey } from "@/lib/paper/open";
 
 export type PaperSizeType = "fixed" | "dynamic";
+export type AutomationMode = "active" | "reduce_only" | "disabled";
 
 export type PaperEngineLayer = {
   id: number | null;
   name: string;
   sortOrder: number;
+  mode: AutomationMode;
   sizeType: PaperSizeType;
   exitSizeType: PaperSizeType;
   notionalUsdt: number;
@@ -77,15 +79,32 @@ export type EngineExit = {
   closeNotionalUsdt: number;
 };
 
+export function parseAutomationMode(value: unknown): AutomationMode {
+  if (value === "reduce_only" || value === "disabled") {
+    return value;
+  }
+  return "active";
+}
+
+export function layerAllowsEntries(
+  layer: PaperEngineLayer,
+  accountReduceOnly = false,
+): boolean {
+  if (layer.mode === "disabled" || layer.mode === "reduce_only") {
+    return false;
+  }
+  return !accountReduceOnly;
+}
+
+export function layerAllowsExits(layer: PaperEngineLayer): boolean {
+  return layer.mode !== "disabled";
+}
+
 export function decideEntries(
   scan: ScannedOpportunity[],
   opens: EngineOpenPosition[],
   config: PaperEngineConfig,
 ): EngineEntry[] {
-  if (!config.enabled || config.reduceOnly) {
-    return [];
-  }
-
   const occupied = new Set(
     opens.map((row) => pairKey(row.spotSymbol, row.futureSymbol)),
   );
@@ -122,7 +141,11 @@ export function decideEntries(
     if (unwindingPairs.has(pair)) {
       continue;
     }
-    const layer = bestMatchingLayer(opportunity, config.layers);
+    const layer = bestMatchingLayer(
+      opportunity,
+      config.layers,
+      Boolean(config.reduceOnly),
+    );
     if (!layer) {
       continue;
     }
@@ -199,11 +222,11 @@ export function decideExits(
       });
       continue;
     }
-    if (!config.enabled || position.ruleId === null) {
+    if (position.ruleId === null) {
       continue;
     }
     const layer = byId.get(position.ruleId);
-    if (!layer) {
+    if (!layer || !layerAllowsExits(layer)) {
       continue;
     }
     const reason = exitReason(position, position.exits ?? layer);
@@ -237,15 +260,18 @@ export function decideExits(
 export function bestMatchingLayer(
   opportunity: ScannedOpportunity,
   layers: PaperEngineLayer[],
+  accountReduceOnly = false,
 ): PaperEngineLayer | null {
-  const matches = layers.filter((layer) =>
-    applyOpportunityFilters([opportunity], {
-      minNetApr: layer.minNetApr,
-      minDte: layer.minDte,
-      maxDte: layer.maxDte,
-      minCapacityUsdt:
-        layer.sizeType === "dynamic" ? null : layer.minCapacityUsdt,
-    }).length > 0,
+  const matches = layers.filter(
+    (layer) =>
+      layerAllowsEntries(layer, accountReduceOnly) &&
+      applyOpportunityFilters([opportunity], {
+        minNetApr: layer.minNetApr,
+        minDte: layer.minDte,
+        maxDte: layer.maxDte,
+        minCapacityUsdt:
+          layer.sizeType === "dynamic" ? null : layer.minCapacityUsdt,
+      }).length > 0,
   );
   if (matches.length === 0) {
     return null;

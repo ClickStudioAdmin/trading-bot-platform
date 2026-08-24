@@ -1,7 +1,9 @@
-import type {
-  PaperEngineConfig,
-  PaperEngineLayer,
-  PaperSizeType,
+import {
+  parseAutomationMode,
+  type AutomationMode,
+  type PaperEngineConfig,
+  type PaperEngineLayer,
+  type PaperSizeType,
 } from "@/lib/engine/decide";
 import { DEFAULT_PAPER_NOTIONAL_USDT, parseNotionalUsdt } from "@/lib/paper/open";
 import { asNullableNumber, asNumber } from "@/lib/paper/rows";
@@ -10,6 +12,7 @@ export type PaperLayerFormValues = {
   key: string;
   id: string;
   name: string;
+  mode: AutomationMode;
   sizeType: PaperSizeType;
   exitSizeType: PaperSizeType;
   notionalUsdt: number;
@@ -36,6 +39,7 @@ export function defaultPaperLayer(sortOrder = 0): PaperEngineLayer {
     id: null,
     name: `Set ${sortOrder + 1}`,
     sortOrder,
+    mode: "active",
     sizeType: "dynamic",
     exitSizeType: "dynamic",
     notionalUsdt: DEFAULT_PAPER_NOTIONAL_USDT,
@@ -78,6 +82,7 @@ export function paperConfigToFormValues(
       key: layer.id !== null ? `id-${layer.id}` : `new-${index}`,
       id: layer.id === null ? "" : String(layer.id),
       name: layer.name,
+      mode: layer.mode ?? "active",
       sizeType: layer.sizeType,
       exitSizeType: layer.exitSizeType,
       notionalUsdt: layer.notionalUsdt,
@@ -118,7 +123,7 @@ export function parsePaperRulesForm(
   return {
     ok: true,
     config: {
-      enabled: layers.length > 0 && form.get("enabled") === "on",
+      enabled: layers.some((layer) => layer.mode !== "disabled"),
       layers,
     },
   };
@@ -132,6 +137,7 @@ export function parsePaperRulesRow(
     id: asNumber(row.id),
     name: parseRuleName(row.name, sortOrder),
     sortOrder,
+    mode: parseAutomationMode(row.mode),
     sizeType: parseSizeType(row.size_type),
     exitSizeType: parseSizeType(row.exit_size_type),
     notionalUsdt: asNumber(row.notional_usdt),
@@ -159,6 +165,7 @@ export function paperLayerToRow(
     account_id: accountId ?? null,
     name: layer.name,
     sort_order: layer.sortOrder,
+    mode: layer.mode,
     size_type: layer.sizeType,
     exit_size_type: layer.exitSizeType,
     notional_usdt: layer.notionalUsdt,
@@ -233,6 +240,7 @@ function parseLayer(
         idRaw === "" || !Number.isFinite(Number(idRaw)) ? null : Number(idRaw),
       name: parseRuleName(form.get(`${prefix}name`), index),
       sortOrder: index,
+      mode: parseAutomationMode(form.get(`${prefix}mode`)),
       sizeType,
       exitSizeType,
       notionalUsdt,
