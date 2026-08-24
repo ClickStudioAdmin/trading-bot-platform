@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   clampNotionalInput,
+  clipNotionalToBook,
   formatGroupedNumberInput,
   formatNotionalInput,
   maxPaperNotionalUsdt,
@@ -9,6 +10,7 @@ import {
   paperCarryInsertRow,
   parseNotionalUsdt,
   safePaperReturnPath,
+  sizeOpenNotional,
 } from "./open";
 import type { ScannedOpportunity } from "../opportunities/scan";
 
@@ -66,8 +68,18 @@ assert.throws(() => paperCarryInsertRow("user-1", opportunity, 0));
 assert.equal(maxPaperNotionalUsdt(50_000.9), 50_000);
 assert.equal(maxPaperNotionalUsdt(0), 0);
 assert.equal(notionalFitsBook(10_000, 50_000), true);
-assert.equal(notionalFitsBook(50_001, 50_000), false);
+assert.equal(notionalFitsBook(50_001, 50_000), true);
+assert.equal(clipNotionalToBook(50_001, 50_000), 50_000);
+assert.equal(notionalFitsBook(50_002, 50_000), false);
 assert.equal(notionalFitsBook(1, 0), false);
+assert.equal(notionalFitsBook(1_021, 1_020.6), true);
+assert.equal(notionalFitsBook(1_021, 1_020.4), true);
+assert.equal(notionalFitsBook(1_022, 1_020.6), false);
+assert.equal(clipNotionalToBook(1_021, 1_020.6), 1_020);
+assert.equal(sizeOpenNotional(1_021, 1_020.6, 1_021), 1_020);
+assert.equal(sizeOpenNotional(1_021, 900, 1_021), 900);
+assert.equal(sizeOpenNotional(5_000, 900, 1_021), null);
+assert.equal(sizeOpenNotional(1_021, 0, 1_021), null);
 assert.equal(clampNotionalInput("60,000", 50_000), "50,000");
 assert.equal(clampNotionalInput("12,000", 50_000), "12,000");
 

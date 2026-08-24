@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ColumnHint } from "@/components/column-hint";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TokenIcon } from "@/components/token-icon";
-import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
+import { formatPct, formatUsdCapacity, signedTone } from "@/lib/opportunities/format";
 import { openPaperCarry } from "@/lib/paper/actions";
 import { UsdtSizeInput } from "@/components/usdt-size-input";
 import { type OpportunityPaperProps } from "@/lib/paper/open";
@@ -49,7 +49,7 @@ export function OpportunityRows({
             {formatPct(row.netApr)}
           </td>
           <td className="px-4 py-3 tabular-nums text-ink-muted">
-            {formatUsd(row.capacityUsdt)}
+            {formatUsdCapacity(row.capacityUsdt)}
           </td>
           {paper ? (
             <>
@@ -193,6 +193,7 @@ function PaperOpenAction({
     <form id={openFormId(row)} action={openPaperCarry}>
       <input type="hidden" name="spotSymbol" value={row.spotSymbol} />
       <input type="hidden" name="futureSymbol" value={row.futureSymbol} />
+      <input type="hidden" name="shownCapacityUsdt" value={String(row.capacityUsdt)} />
       <input type="hidden" name="next" value={paper.next} />
       <PendingSubmitButton
         pendingLabel="Opening"

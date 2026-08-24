@@ -71,12 +71,49 @@ export function maxPaperNotionalUsdt(capacityUsdt: number): number {
   return Math.floor(capacityUsdt);
 }
 
+export function clipNotionalToBook(
+  notionalUsdt: number,
+  capacityUsdt: number,
+): number | null {
+  const max = maxPaperNotionalUsdt(capacityUsdt);
+  if (!(notionalUsdt > 0) || max <= 0) {
+    return null;
+  }
+  if (notionalUsdt <= max) {
+    return notionalUsdt;
+  }
+  // Usable book is shown as a whole dollar. Rounding the label, or a live
+  // book sitting $1 under the stored row, should still open at the floor.
+  if (notionalUsdt <= Math.max(Math.round(capacityUsdt), max + 1)) {
+    return max;
+  }
+  return null;
+}
+
 export function notionalFitsBook(
   notionalUsdt: number,
   capacityUsdt: number,
 ): boolean {
-  const max = maxPaperNotionalUsdt(capacityUsdt);
-  return notionalUsdt > 0 && max > 0 && notionalUsdt <= max;
+  return clipNotionalToBook(notionalUsdt, capacityUsdt) !== null;
+}
+
+export function sizeOpenNotional(
+  requestedUsdt: number,
+  liveUsableUsdt: number,
+  shownUsableUsdt: number | null,
+): number | null {
+  const fromLive = clipNotionalToBook(requestedUsdt, liveUsableUsdt);
+  if (fromLive !== null) {
+    return fromLive;
+  }
+  if (
+    shownUsableUsdt === null ||
+    clipNotionalToBook(requestedUsdt, shownUsableUsdt) === null
+  ) {
+    return null;
+  }
+  const liveMax = maxPaperNotionalUsdt(liveUsableUsdt);
+  return liveMax > 0 ? liveMax : null;
 }
 
 export function clampNotionalInput(raw: string, maxUsdt: number): string {

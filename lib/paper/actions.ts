@@ -12,10 +12,10 @@ import { unwindClipUsdt } from "@/lib/engine/clip";
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import { usableBookUsdt } from "@/lib/opportunities/capacity";
 import {
-  notionalFitsBook,
   paperCarryInsertRow,
   parseNotionalUsdt,
   safePaperReturnPath,
+  sizeOpenNotional,
 } from "@/lib/paper/open";
 import { asNumber, parsePaperCarryRow } from "@/lib/paper/rows";
 import { persistOpportunities } from "@/lib/opportunities/persist";
@@ -44,8 +44,11 @@ export async function openPaperCarry(formData: FormData) {
 
   const spotSymbol = String(formData.get("spotSymbol") ?? "");
   const futureSymbol = String(formData.get("futureSymbol") ?? "");
-  const notionalUsdt = parseNotionalUsdt(String(formData.get("notionalUsdt") ?? ""));
-  if (!spotSymbol || !futureSymbol || notionalUsdt === null) {
+  const requested = parseNotionalUsdt(String(formData.get("notionalUsdt") ?? ""));
+  const shownUsableUsdt = parseNotionalUsdt(
+    String(formData.get("shownCapacityUsdt") ?? ""),
+  );
+  if (!spotSymbol || !futureSymbol || requested === null) {
     redirect(`${next}?paperError=${encodeURIComponent("Enter a positive USDT notional.")}`);
   }
 
@@ -67,17 +70,23 @@ export async function openPaperCarry(formData: FormData) {
     match.capacityUsdt,
     await loadUsableBookShare(),
   );
-  if (!notionalFitsBook(notionalUsdt, usableCapacityUsdt)) {
+  const sized = sizeOpenNotional(
+    requested,
+    usableCapacityUsdt,
+    shownUsableUsdt,
+  );
+  if (sized === null) {
     redirect(
       `${next}?paperError=${encodeURIComponent("Size cannot exceed usable book.")}`,
     );
   }
+  const rawScan = match;
   match = { ...match, capacityUsdt: usableCapacityUsdt };
 
   const { data, error } = await supabase
     .from("paper_carries")
     .insert(
-      paperCarryInsertRow(user.id, match, notionalUsdt, {
+      paperCarryInsertRow(user.id, match, sized, {
         accountId: account.id,
       }),
     )
@@ -93,7 +102,7 @@ export async function openPaperCarry(formData: FormData) {
       userId: user.id,
       accountId: account.id,
       strategy: "cash-and-carry",
-      data: { spotSymbol, futureSymbol, notionalUsdt },
+      data: { spotSymbol, futureSymbol, notionalUsdt: sized },
     });
     redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
   }
@@ -110,7 +119,7 @@ export async function openPaperCarry(formData: FormData) {
     side: "open",
     source: "manual",
     triggerReason: null,
-    notionalUsdt,
+    notionalUsdt: sized,
     filledAt: new Date(),
     opportunity: match,
     automation: EMPTY_AUTOMATION,
@@ -127,13 +136,13 @@ export async function openPaperCarry(formData: FormData) {
       carryId,
       spotSymbol,
       futureSymbol,
-      notionalUsdt,
+      notionalUsdt: sized,
       entryBasis: match.netBasis,
       source: "manual",
     },
   });
 
-  await persistOpportunities([match]);
+  await persistOpportunities([rawScan]);
 
   redirect(`${next}?paper=opened`);
 }
@@ -194,6 +203,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
     );
   }
 
+  await persistOpportunities([match]);
   const usableCapacityUsdt = usableBookUsdt(
     match.capacityUsdt,
     await loadUsableBookShare(),
@@ -218,7 +228,6 @@ export async function closeOpenPaperCarry(formData: FormData) {
       if (error) {
         redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
       }
-      await persistOpportunities([match]);
       redirect(`${next}?paper=unwinding`);
     }
     clipUsdt = clip;
@@ -282,7 +291,6 @@ export async function closeOpenPaperCarry(formData: FormData) {
     },
   });
 
-  await persistOpportunities([match]);
   redirect(
     written.kind === "flat" ? `${next}?paper=closed` : `${next}?paper=unwinding`,
   );

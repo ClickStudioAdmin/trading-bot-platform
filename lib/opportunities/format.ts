@@ -19,6 +19,14 @@ export function formatUsd(value: number): string {
   return `$${Math.round(value).toLocaleString("en-US")}`;
 }
 
+export function formatUsdCapacity(value: number): string {
+  const whole = Math.floor(value);
+  if (!(whole > 0)) {
+    return "—";
+  }
+  return `$${whole.toLocaleString("en-US")}`;
+}
+
 export function formatPrice(value: number | null): string {
   if (value === null || !(value > 0)) {
     return "—";
