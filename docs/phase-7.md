@@ -1,34 +1,49 @@
-# Phase 7 — Additional exchanges
-
-Not current. Phase 6 is accepted. Do not start until you say so. See [phase-6.md](phase-6.md).
+# Phase 7 — Live execution (manual)
 
 ## Purpose
 
-Add another exchange (and refine the UI for more than one venue). Bybit stays first. The next venue is chosen when this phase starts — the connections table is already venue-agnostic.
+Let a **Connected Exchange** book place cash-and-carry on the bound venue. First venue is Bybit. First slice is **manual Open and Close**. The tick still skips these books. Automations do not place exchange orders.
 
-This phase still does not place exchange orders. Paper still uses the in-app ledger. Connected Exchange still stores trade-only keys.
+Orders run on **Sydney Vercel** (same host as trade-only verify). No Fly.io this phase. No private exchange calls from the browser.
 
-## Paper market data (do this once a second venue can scan)
+Paper Trading books still use the Phase 4 paper ledger and never send exchange orders.
 
-Paper Trading does not hold API keys. In Cash and Carry **Strategy Settings**, Paper picks a **venue** from exchanges that have a public scanner for that strategy. Same place as the Connected Exchange key picker; different list:
+## Current micro-step
 
-- **Paper Trading** — venue ids that support this strategy’s public market data. No key. No Demo vs Live (Bybit’s public book is the same on both hosts).
-- **Connected Exchange** — saved keys on that book (`exchange_connection_id`), unchanged from Phase 6.
+**In progress — 1 of 6 — Docs**, then Bybit order helpers, bound-key load, migration, manual Open, manual Close.
 
-Do not ship the Paper picker while only Bybit can scan. A one-item dropdown is noise.
+| # | Step | Who | Done when |
+| --- | --- | --- | --- |
+| 1 | Docs | Agent | This file is live execution. Additional exchanges are [phase-8.md](phase-8.md). Master spec allows Sydney Vercel to place orders |
+| 2 | Bybit private orders | Agent | Signed POST helper, qty-from-notional, fill parse. Checks pass. No live order in CI |
+| 3 | Bound key load | Agent | Server decrypts only the bound connection. Ciphertext never goes to the browser |
+| 4 | Fill columns | Agent | `paper_orders` migration for venue, environment, exchange order ids, fill qty/price. Actions apply on `develop` |
+| 5 | Manual Open | Agent | Bound Connected Exchange book shows Size + Open. Both Bybit legs fill before the blotter row is written |
+| 6 | Manual Close | Agent | Close flattens both Bybit legs, then writes the close clip. Unwind-to-book on the exchange is later |
 
-## What this phase includes
+Stop after each step. Do not start the next until you say so.
 
-- Enable a second venue in the registry (adapter + public cash-and-carry scan)
-- Trade-only verify for that venue (reject withdrawal; never send secrets to the browser)
-- Refine Exchanges and Strategy Settings so venue vs key vs Paper data source is obvious
-- Paper Strategy Settings: venue list for market data, once two venues can scan
-- Persist the Paper scan venue on the book/strategy settings (not on `exchange_connections`)
+## How an open works
+
+1. Book is Connected Exchange. Cash and Carry has a bound, active key.
+2. Size is USDT notional, clipped to usable book (same as paper).
+3. Server decrypts the bound key. Demo → `api-demo.bybit.com`. Production → `api.bybit.com`.
+4. Qty is base-coin, rounded down to each instrument’s step. Same qty on both legs.
+5. Market **buy spot**, then market **sell dated linear**. If the future fails, flatten the spot. If flatten fails, log and do not write an open carry.
+6. Write `paper_carries` + `paper_orders` on this book only. Marks still come from the public scan.
+
+Close is the reverse: buy the linear to cover, sell the spot. If the spot sell fails, re-short the future to restore the hedge. Do not mark the carry closed unless both legs are flat.
+
+## Ledger
+
+Reuse `paper_carries` / `paper_orders`. A book is paper or live forever, so fills do not mix on one account. Live rows store venue, environment, and exchange order ids.
 
 ## Out of scope
 
-- Placing or cancelling exchange orders
-- Live blotter / live ledger
-- Fly.io worker
+- Tick / automations placing Bybit orders
+- Fly.io
+- Second venue ([phase-8.md](phase-8.md))
 - Paper auto-switch ([phase-auto-switch.md](phase-auto-switch.md))
-- Calling private exchange APIs from the browser
+- Maker / limit entry
+- Unwind-to-book on the exchange
+- Calling private APIs from the browser
