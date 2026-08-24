@@ -10,11 +10,30 @@ import {
 export function StrategySubnav({
   automationsRunning = false,
   reduceOnly = false,
+  connection,
 }: {
   automationsRunning?: boolean;
   reduceOnly?: boolean;
+  connection?: { label: string; href: string } | null;
 }) {
   const pathname = usePathname();
+  const status = reduceOnly
+    ? {
+        href: "/strategies/cash-and-carry/automations",
+        title: "Reduce only",
+        label: "Reduce only",
+        tone: "warning" as const,
+        pulse: false,
+      }
+    : automationsRunning
+      ? {
+          href: "/strategies/cash-and-carry/automations",
+          title: "Automations Running",
+          label: "Automations Running",
+          tone: "success" as const,
+          pulse: true,
+        }
+      : null;
 
   return (
     <div className="mx-auto max-w-6xl px-6 pt-8">
@@ -32,29 +51,39 @@ export function StrategySubnav({
             Buy the USDT spot, sell the dated future.
           </p>
         </div>
-        {reduceOnly ? (
-          <Link
-            href="/strategies/cash-and-carry/automations"
-            className="mt-8 flex items-center gap-2 text-sm text-warning"
-            title="Reduce only"
-          >
-            <span className="relative flex size-2.5" aria-hidden>
-              <span className="relative inline-flex size-2.5 rounded-full bg-warning" />
-            </span>
-            Reduce only
-          </Link>
-        ) : automationsRunning ? (
-          <Link
-            href="/strategies/cash-and-carry/automations"
-            className="mt-8 flex items-center gap-2 text-sm text-success"
-            title="Automations Running"
-          >
-            <span className="relative flex size-2.5" aria-hidden>
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60" />
-              <span className="relative inline-flex size-2.5 rounded-full bg-success" />
-            </span>
-            Automations Running
-          </Link>
+        {connection || status ? (
+          <div className="mt-8 flex max-w-[min(100%,32rem)] flex-wrap items-center justify-end gap-x-4 gap-y-2">
+            {connection ? (
+              <Link
+                href={connection.href}
+                className="text-right text-sm text-ink-muted hover:text-ink"
+                title={connection.label}
+              >
+                {connection.label}
+              </Link>
+            ) : null}
+            {status ? (
+              <Link
+                href={status.href}
+                className={`flex shrink-0 items-center gap-2 text-sm ${
+                  status.tone === "warning" ? "text-warning" : "text-success"
+                }`}
+                title={status.title}
+              >
+                <span className="relative flex size-2.5" aria-hidden>
+                  {status.pulse ? (
+                    <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60" />
+                  ) : null}
+                  <span
+                    className={`relative inline-flex size-2.5 rounded-full ${
+                      status.tone === "warning" ? "bg-warning" : "bg-success"
+                    }`}
+                  />
+                </span>
+                {status.label}
+              </Link>
+            ) : null}
+          </div>
         ) : null}
       </div>
       <nav

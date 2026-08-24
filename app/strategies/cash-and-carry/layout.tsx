@@ -5,7 +5,6 @@ import { loadEngineSettings } from "@/lib/engine/settings";
 import { formatConnectionSummary } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
-import Link from "next/link";
 
 export default async function CashAndCarryLayout({
   children,
@@ -40,33 +39,28 @@ export default async function CashAndCarryLayout({
       <StrategySubnav
         automationsRunning={paperRunning}
         reduceOnly={automationsOn && (accountReduce || !anyActive)}
+        connection={
+          live
+            ? bound
+              ? {
+                  label: formatConnectionSummary(bound),
+                  href: "/strategies/cash-and-carry/settings",
+                }
+              : {
+                  label: "Connect an exchange to start trading",
+                  href:
+                    connections.length === 0
+                      ? "/account/exchanges"
+                      : "/strategies/cash-and-carry/settings",
+                }
+            : null
+        }
       />
       {live ? (
         <div className="mx-auto max-w-6xl px-6 pt-4">
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
             This is a Live account. The engine will not place exchange
             orders until live execution exists.
-            {bound ? (
-              <>
-                {" "}
-                Using {formatConnectionSummary(bound)}.
-              </>
-            ) : (
-              <>
-                {" "}
-                <Link
-                  href={
-                    connections.length === 0
-                      ? "/account/exchanges"
-                      : "/strategies/cash-and-carry/settings"
-                  }
-                  className="text-accent hover:text-accent-strong"
-                >
-                  Connect an exchange to start trading
-                </Link>
-                .
-              </>
-            )}
           </p>
         </div>
       ) : null}
