@@ -119,7 +119,7 @@ function ConnectionList({
   }
 
   return (
-    <section className="rounded-card border border-line bg-surface p-5">
+    <section>
       <h2 className="text-lg font-semibold tracking-tight">Connected</h2>
       <p className="mt-2 text-sm text-ink-muted">
         Keys belong to this account. Cash and Carry picks one in{" "}
@@ -131,64 +131,100 @@ function ConnectionList({
         </Link>
         . You cannot remove a key while a strategy is using it.
       </p>
-      <ul className="mt-4 divide-y divide-line">
-        {rows.map((row) => {
-          const inUse = boundId === row.id;
-          const removeBlocked = formatConnectionRemoveBlockers(
-            connectionRemoveBlockers({ inUse }),
-          );
-          return (
-          <li
-            key={row.id}
-            className="flex flex-wrap items-start justify-between gap-3 py-4 first:pt-0 last:pb-0"
-          >
-            <div>
-              <p className="text-sm">
-                {formatVenueLabel(row.venue)}
-                {row.label ? (
-                  <span className="ml-2 text-xs text-ink-muted">{row.label}</span>
-                ) : null}
-                {inUse ? (
-                  <span className="ml-2 text-xs text-accent">Cash and Carry</span>
-                ) : null}
-              </p>
-              <p className="mt-1 text-xs text-ink-faint">
-                {formatEnvironmentLabel(row.venue, row.environment)}
-                {" · "}
-                Key ••••{row.fingerprint}
-                {row.status === "invalid" ? " · Invalid" : null}
-              </p>
-            </div>
-            {inUse ? (
-              <p className="max-w-56 text-right text-xs text-ink-muted">
-                {removeBlocked}
-              </p>
-            ) : (
-              <details className="relative">
-                <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-danger hover:bg-danger/10 [&::-webkit-details-marker]:hidden">
-                  Remove
-                </summary>
-                <div className="absolute right-0 z-10 mt-2 w-64 rounded-card border border-line bg-surface p-3">
-                  <p className="text-xs text-ink-muted">
-                    Remove this connection? You can add the key again later.
-                  </p>
-                  <form action={removeExchangeConnection} className="mt-3">
-                    <input type="hidden" name="connectionId" value={row.id} />
-                    <PendingSubmitButton
-                      pendingLabel="Removing"
-                      successKey={`exchange-remove-${row.id}`}
-                      className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
-                    >
-                      Remove connection
-                    </PendingSubmitButton>
-                  </form>
-                </div>
-              </details>
-            )}
-          </li>
-          );
-        })}
-      </ul>
+      <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
+        <table className="w-full min-w-[36rem] text-left text-sm">
+          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+            <tr>
+              <th className="px-4 py-3 font-medium">Exchange</th>
+              <th className="px-4 py-3 font-medium">
+                Connected Accounts / Strategies
+              </th>
+              <th className="px-4 py-3 text-right font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => {
+              const inUse = boundId === row.id;
+              const removeBlocked = formatConnectionRemoveBlockers(
+                connectionRemoveBlockers({ inUse }),
+              );
+              return (
+                <tr
+                  key={row.id}
+                  className="border-b border-line last:border-b-0"
+                >
+                  <td className="px-4 py-3 align-top">
+                    <p>{formatVenueLabel(row.venue)}</p>
+                    <p className="mt-1 text-xs text-ink-faint">
+                      {formatEnvironmentLabel(row.venue, row.environment)}
+                      {" · "}
+                      Key ••••{row.fingerprint}
+                      {row.status === "invalid" ? " · Invalid" : null}
+                    </p>
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    {row.label || inUse ? (
+                      <>
+                        {row.label ? <p>{row.label}</p> : null}
+                        {inUse ? (
+                          <p className={row.label ? "mt-1" : undefined}>
+                            <Link
+                              href="/strategies/cash-and-carry/settings"
+                              className="text-xs text-accent hover:text-accent-strong"
+                            >
+                              Cash and Carry
+                            </Link>
+                          </p>
+                        ) : null}
+                      </>
+                    ) : (
+                      <p className="text-ink-faint">—</p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 align-top text-right">
+                    <details className="relative inline-block text-left">
+                      <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-danger hover:bg-danger/10 [&::-webkit-details-marker]:hidden">
+                        Remove
+                      </summary>
+                      <div className="absolute right-0 z-10 mt-2 w-64 rounded-card border border-line bg-surface p-3">
+                        {inUse ? (
+                          <p className="text-xs text-ink-muted">
+                            {removeBlocked}.
+                          </p>
+                        ) : (
+                          <>
+                            <p className="text-xs text-ink-muted">
+                              Remove this connection? You can add the key
+                              again later.
+                            </p>
+                            <form
+                              action={removeExchangeConnection}
+                              className="mt-3"
+                            >
+                              <input
+                                type="hidden"
+                                name="connectionId"
+                                value={row.id}
+                              />
+                              <PendingSubmitButton
+                                pendingLabel="Removing"
+                                successKey={`exchange-remove-${row.id}`}
+                                className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
+                              >
+                                Remove connection
+                              </PendingSubmitButton>
+                            </form>
+                          </>
+                        )}
+                      </div>
+                    </details>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
