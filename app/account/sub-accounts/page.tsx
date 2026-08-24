@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import { AccountDeleteControl } from "@/components/account-delete-control";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   createTradingAccount,
-  deleteTradingAccount,
   renameTradingAccount,
   switchTradingAccount,
 } from "@/lib/accounts/actions";
@@ -135,38 +135,13 @@ export default async function ManageSubAccountsPage({
                       </form>
                     </div>
                   </details>
-                  <details className="relative">
-                    <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-danger hover:bg-danger/10 [&::-webkit-details-marker]:hidden">
-                      Delete
-                    </summary>
-                    <div className="absolute right-0 z-10 mt-2 w-64 rounded-card border border-line bg-surface p-3">
-                      {canDelete ? (
-                        <>
-                          <p className="text-xs text-ink-muted">
-                            Remove {account.name} and its closed history? This
-                            cannot be undone.
-                          </p>
-                          <form action={deleteTradingAccount} className="mt-3">
-                            <input
-                              type="hidden"
-                              name="accountId"
-                              value={account.id}
-                            />
-                            <PendingSubmitButton
-                              pendingLabel="Deleting…"
-                              className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
-                            >
-                              Delete account
-                            </PendingSubmitButton>
-                          </form>
-                        </>
-                      ) : (
-                        <p className="text-xs text-ink-muted">
-                          {formatDeleteBlockers(blocks)}.
-                        </p>
-                      )}
-                    </div>
-                  </details>
+                  <AccountDeleteControl
+                    accountId={account.id}
+                    accountName={account.name}
+                    blockedMessage={
+                      canDelete ? null : formatDeleteBlockers(blocks)
+                    }
+                  />
                 </div>
               </li>
             );
