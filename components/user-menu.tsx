@@ -72,9 +72,15 @@ export function UserMenu({
           {name}
         </span>
         {current ? (
-          <span className="hidden max-w-[7rem] truncate text-xs text-ink-faint sm:inline">
-            {current.name}
-          </span>
+          <>
+            <span
+              className="hidden h-4 w-px bg-line sm:block"
+              aria-hidden
+            />
+            <span className="hidden max-w-[7rem] truncate text-xs text-ink-faint sm:inline">
+              {current.name}
+            </span>
+          </>
         ) : null}
       </summary>
       <div className="absolute right-0 z-20 mt-2 w-72 rounded-card border border-line bg-surface p-2 shadow-none">

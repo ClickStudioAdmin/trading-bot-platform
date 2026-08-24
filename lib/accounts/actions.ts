@@ -16,7 +16,13 @@ import {
   getSessionMember,
   setActiveAccountId,
 } from "@/lib/auth/session";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+function refreshAccountChrome() {
+  revalidatePath("/", "layout");
+  revalidatePath("/account");
+}
 
 function accountReturnPath(raw: string): "/account" | "/strategies/cash-and-carry" {
   return raw === "/account" || raw === "/accounts"
@@ -36,7 +42,8 @@ export async function switchTradingAccount(formData: FormData) {
     redirect("/strategies/cash-and-carry");
   }
   await setActiveAccountId(match.id);
-  redirect("/strategies/cash-and-carry");
+  refreshAccountChrome();
+  redirect(accountReturnPath(String(formData.get("next") ?? "")));
 }
 
 export async function createTradingAccount(formData: FormData) {
@@ -71,6 +78,7 @@ export async function createTradingAccount(formData: FormData) {
   if (next !== "/account") {
     await setActiveAccountId(created.id);
   }
+  refreshAccountChrome();
   redirect(next === "/account" ? "/account?created=1" : next);
 }
 
@@ -98,5 +106,6 @@ export async function deleteTradingAccount(formData: FormData) {
       await setActiveAccountId(next.id);
     }
   }
+  refreshAccountChrome();
   redirect("/account?deleted=1");
 }

@@ -6,8 +6,10 @@ import { listTradingAccounts } from "@/lib/accounts/store";
 import { getAdminUser } from "@/lib/admin/access";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
 import { memberDisplayName } from "@/lib/members/sync";
+import { connection } from "next/server";
 
 export async function SiteHeader() {
+  await connection();
   const user = await getSessionMember();
   const session = user ? await getSessionContext() : null;
   const admin = user ? await getAdminUser() : null;

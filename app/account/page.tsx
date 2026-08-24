@@ -3,6 +3,7 @@ import { PageHeading } from "@/components/page-heading";
 import {
   createTradingAccount,
   deleteTradingAccount,
+  switchTradingAccount,
 } from "@/lib/accounts/actions";
 import {
   formatAccountMode,
@@ -88,36 +89,50 @@ export default async function ManageSubAccountsPage({
                     </p>
                   ) : null}
                 </div>
-                {canDelete ? (
-                  <details className="relative">
-                    <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-danger hover:bg-danger/10 [&::-webkit-details-marker]:hidden">
+                <div className="flex flex-wrap items-center gap-2">
+                  {current ? null : (
+                    <form action={switchTradingAccount}>
+                      <input type="hidden" name="accountId" value={account.id} />
+                      <input type="hidden" name="next" value="/account" />
+                      <button
+                        type="submit"
+                        className="rounded-control px-3 py-1.5 text-sm text-accent hover:bg-surface-raised"
+                      >
+                        Switch to account
+                      </button>
+                    </form>
+                  )}
+                  {canDelete ? (
+                    <details className="relative">
+                      <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-danger hover:bg-danger/10 [&::-webkit-details-marker]:hidden">
+                        Delete
+                      </summary>
+                      <div className="absolute right-0 z-10 mt-2 w-64 rounded-card border border-line bg-surface p-3">
+                        <p className="text-xs text-ink-muted">
+                          Remove {account.name} and its closed history? This
+                          cannot be undone.
+                        </p>
+                        <form action={deleteTradingAccount} className="mt-3">
+                          <input
+                            type="hidden"
+                            name="accountId"
+                            value={account.id}
+                          />
+                          <button
+                            type="submit"
+                            className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
+                          >
+                            Delete account
+                          </button>
+                        </form>
+                      </div>
+                    </details>
+                  ) : (
+                    <span className="rounded-control px-3 py-1.5 text-sm text-ink-faint">
                       Delete
-                    </summary>
-                    <div className="absolute right-0 z-10 mt-2 w-64 rounded-card border border-line bg-surface p-3">
-                      <p className="text-xs text-ink-muted">
-                        Remove {account.name} and its closed history? This cannot
-                        be undone.
-                      </p>
-                      <form action={deleteTradingAccount} className="mt-3">
-                        <input
-                          type="hidden"
-                          name="accountId"
-                          value={account.id}
-                        />
-                        <button
-                          type="submit"
-                          className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
-                        >
-                          Delete account
-                        </button>
-                      </form>
-                    </div>
-                  </details>
-                ) : (
-                  <span className="rounded-control px-3 py-1.5 text-sm text-ink-faint">
-                    Delete
-                  </span>
-                )}
+                    </span>
+                  )}
+                </div>
               </li>
             );
           })}
