@@ -137,27 +137,6 @@ export default async function AccountOverviewPage() {
           })}
         </ul>
       </section>
-
-      <section>
-        <h2 className="text-lg font-semibold tracking-tight">Shortcuts</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Shortcut
-            href="/account/settings"
-            label="Settings"
-            hint="Name and password"
-          />
-          <Shortcut
-            href="/account/sub-accounts"
-            label="Manage sub-accounts"
-            hint="Create, rename, delete"
-          />
-          <Shortcut
-            href="/account/book"
-            label="Book overview"
-            hint={`${current.name} activity`}
-          />
-        </div>
-      </section>
     </div>
   );
 }
@@ -205,26 +184,6 @@ function Row({ label, value }: { label: string; value: string }) {
       <dt className="shrink-0 text-ink-muted">{label}</dt>
       <dd className="truncate text-right">{value}</dd>
     </div>
-  );
-}
-
-function Shortcut({
-  href,
-  label,
-  hint,
-}: {
-  href: string;
-  label: string;
-  hint: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="rounded-card border border-line bg-surface p-4 hover:border-line-strong"
-    >
-      <p className="text-sm">{label}</p>
-      <p className="mt-1 text-xs text-ink-faint">{hint}</p>
-    </Link>
   );
 }
 
