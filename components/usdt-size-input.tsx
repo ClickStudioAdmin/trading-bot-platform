@@ -30,6 +30,7 @@ export function OpportunityBookAndSize({
       <td className="px-4 py-3 tabular-nums text-ink-muted">
         {canFill ? (
           <span
+            className="cursor-pointer"
             aria-label={`Fill size with ${label}`}
             onClick={() =>
               setSize(
