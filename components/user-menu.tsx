@@ -117,21 +117,16 @@ export function UserMenu({
                 </form>
               ),
             )}
-            <Link
-              href="/account"
-              className="mt-1 block rounded-control px-2 py-2 text-sm text-accent hover:bg-surface-raised"
-            >
-              Manage sub-accounts
-            </Link>
-            <Link
-              href="/account/settings"
-              className="block rounded-control px-2 py-2 text-sm text-accent hover:bg-surface-raised"
-            >
-              Settings
-            </Link>
             <div className="my-1 border-t border-line" />
           </>
         ) : null}
+        <Link
+          href="/account/settings"
+          className="block rounded-control px-2 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+        >
+          Settings
+        </Link>
+        <div className="my-1 border-t border-line" />
         <form action={signOut}>
           <PendingSubmitButton
             pendingLabel="Signing out…"
