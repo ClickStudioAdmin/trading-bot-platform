@@ -149,6 +149,25 @@ export async function updateMember(formData: FormData) {
 
 const SETTINGS_PATH = "/account/settings";
 
+function settingsPath(query: {
+  tab?: "password";
+  error?: string;
+  saved?: "profile" | "password";
+}): string {
+  const params = new URLSearchParams();
+  if (query.tab) {
+    params.set("tab", query.tab);
+  }
+  if (query.error) {
+    params.set("error", query.error);
+  }
+  if (query.saved) {
+    params.set("saved", query.saved);
+  }
+  const encoded = params.toString();
+  return encoded ? `${SETTINGS_PATH}?${encoded}` : SETTINGS_PATH;
+}
+
 export async function updateOwnProfile(formData: FormData) {
   const member = await getSessionMember();
   if (!member) {
@@ -156,20 +175,18 @@ export async function updateOwnProfile(formData: FormData) {
   }
   const parsed = parseOwnProfile(formData);
   if (!parsed.ok) {
-    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(parsed.error)}`);
+    redirect(settingsPath({ error: parsed.error }));
   }
   const supabase = createServiceClient();
   if (!supabase) {
-    redirect(
-      `${SETTINGS_PATH}?error=${encodeURIComponent("Auth is not configured.")}`,
-    );
+    redirect(settingsPath({ error: "Auth is not configured." }));
   }
   const { error } = await supabase
     .from("members")
     .update({ name: parsed.name, updated_at: new Date().toISOString() })
     .eq("user_id", member.id);
   if (error) {
-    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(error.message)}`);
+    redirect(settingsPath({ error: error.message }));
   }
   await writeEventLog({
     scope: "system",
@@ -179,7 +196,7 @@ export async function updateOwnProfile(formData: FormData) {
     data: { name: parsed.name },
   });
   revalidatePath("/", "layout");
-  redirect(`${SETTINGS_PATH}?saved=profile`);
+  redirect(settingsPath({ saved: "profile" }));
 }
 
 export async function changeOwnPassword(formData: FormData) {
@@ -189,13 +206,11 @@ export async function changeOwnPassword(formData: FormData) {
   }
   const parsed = parseOwnPasswordChange(formData);
   if (!parsed.ok) {
-    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(parsed.error)}`);
+    redirect(settingsPath({ tab: "password", error: parsed.error }));
   }
   const supabase = createServiceClient();
   if (!supabase) {
-    redirect(
-      `${SETTINGS_PATH}?error=${encodeURIComponent("Auth is not configured.")}`,
-    );
+    redirect(settingsPath({ tab: "password", error: "Auth is not configured." }));
   }
   const { data, error: loadError } = await supabase
     .from("members")
@@ -204,13 +219,16 @@ export async function changeOwnPassword(formData: FormData) {
     .maybeSingle();
   if (loadError || !data) {
     redirect(
-      `${SETTINGS_PATH}?error=${encodeURIComponent("That member was not found.")}`,
+      settingsPath({ tab: "password", error: "That member was not found." }),
     );
   }
   const stored = String(data.password_hash ?? "");
   if (!stored || !verifyPassword(parsed.current, stored)) {
     redirect(
-      `${SETTINGS_PATH}?error=${encodeURIComponent("Current password is incorrect.")}`,
+      settingsPath({
+        tab: "password",
+        error: "Current password is incorrect.",
+      }),
     );
   }
   const { error } = await supabase
@@ -221,7 +239,7 @@ export async function changeOwnPassword(formData: FormData) {
     })
     .eq("user_id", member.id);
   if (error) {
-    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(error.message)}`);
+    redirect(settingsPath({ tab: "password", error: error.message }));
   }
   await writeEventLog({
     scope: "system",
@@ -230,5 +248,5 @@ export async function changeOwnPassword(formData: FormData) {
     userId: member.id,
   });
   revalidatePath("/", "layout");
-  redirect(`${SETTINGS_PATH}?saved=password`);
+  redirect(settingsPath({ tab: "password", saved: "password" }));
 }

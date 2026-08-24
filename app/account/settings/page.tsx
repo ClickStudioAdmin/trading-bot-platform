@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { changeOwnPassword, updateOwnProfile } from "@/lib/members/actions";
@@ -26,112 +27,153 @@ export default async function AccountSettingsPage({
   const params = await searchParams;
   const error = firstSearchValue(params.error);
   const saved = firstSearchValue(params.saved);
+  const tab =
+    firstSearchValue(params.tab) === "password" || saved === "password"
+      ? "password"
+      : "profile";
 
   return (
     <div>
       <PageHeading title="Settings" />
-      <p className="-mt-4 mb-6 text-sm text-ink-muted">
+      <p className="-mt-4 text-sm text-ink-muted">
         Your desk login. Sub-accounts and exchange keys stay on their own
         pages.
       </p>
+      <nav
+        aria-label="Settings"
+        className="mt-5 flex border-b border-line"
+      >
+        <TabLink href="/account/settings" selected={tab === "profile"}>
+          Profile
+        </TabLink>
+        <TabLink
+          href="/account/settings?tab=password"
+          selected={tab === "password"}
+        >
+          Password
+        </TabLink>
+      </nav>
       {error ? (
-        <p className="mb-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+        <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
       ) : null}
       {saved === "profile" ? (
-        <p className="mb-6 text-sm text-success">Profile saved.</p>
+        <p className="mt-6 text-sm text-success">Profile saved.</p>
       ) : null}
       {saved === "password" ? (
-        <p className="mb-6 text-sm text-success">Password changed.</p>
+        <p className="mt-6 text-sm text-success">Password changed.</p>
       ) : null}
 
-      <form
-        action={updateOwnProfile}
-        className="space-y-4 rounded-card border border-line bg-surface p-5"
-      >
-        <h2 className="text-lg font-semibold tracking-tight">Profile</h2>
-        <label className="block text-xs text-ink-muted">
-          Name
-          <input
-            name="name"
-            defaultValue={member.name}
-            required
-            maxLength={80}
-            autoComplete="name"
-            className={fieldClass}
-          />
-        </label>
-        <label className="block text-xs text-ink-muted">
-          Email
-          <input
-            type="email"
-            value={member.email}
-            readOnly
-            autoComplete="username"
-            className={`${fieldClass} text-ink-muted`}
-          />
-          <span className="mt-1 block text-xs text-ink-faint">
-            Email is the login. An admin can change it from Members.
-          </span>
-        </label>
-        <PendingSubmitButton
-          pendingLabel="Saving…"
-          successKey="save-profile"
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+      {tab === "password" ? (
+        <form
+          action={changeOwnPassword}
+          className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
         >
-          Save profile
-        </PendingSubmitButton>
-      </form>
-
-      <form
-        action={changeOwnPassword}
-        className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
-      >
-        <h2 className="text-lg font-semibold tracking-tight">Password</h2>
-        <label className="block text-xs text-ink-muted">
-          Current password
-          <input
-            name="currentPassword"
-            type="password"
-            required
-            autoComplete="current-password"
-            className={fieldClass}
-          />
-        </label>
-        <label className="block text-xs text-ink-muted">
-          New password
-          <input
-            name="newPassword"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            className={fieldClass}
-          />
-        </label>
-        <label className="block text-xs text-ink-muted">
-          Confirm new password
-          <input
-            name="confirmPassword"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            className={fieldClass}
-          />
-          <span className="mt-1 block text-xs text-ink-faint">
-            At least 8 characters.
-          </span>
-        </label>
-        <PendingSubmitButton
-          pendingLabel="Saving…"
-          successKey="save-password"
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          <label className="block text-xs text-ink-muted">
+            Current password
+            <input
+              name="currentPassword"
+              type="password"
+              required
+              autoComplete="current-password"
+              className={fieldClass}
+            />
+          </label>
+          <label className="block text-xs text-ink-muted">
+            New password
+            <input
+              name="newPassword"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              className={fieldClass}
+            />
+          </label>
+          <label className="block text-xs text-ink-muted">
+            Confirm new password
+            <input
+              name="confirmPassword"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              className={fieldClass}
+            />
+            <span className="mt-1 block text-xs text-ink-faint">
+              At least 8 characters.
+            </span>
+          </label>
+          <PendingSubmitButton
+            pendingLabel="Saving…"
+            successKey="save-password"
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          >
+            Change password
+          </PendingSubmitButton>
+        </form>
+      ) : (
+        <form
+          action={updateOwnProfile}
+          className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
         >
-          Change password
-        </PendingSubmitButton>
-      </form>
+          <label className="block text-xs text-ink-muted">
+            Name
+            <input
+              name="name"
+              defaultValue={member.name}
+              required
+              maxLength={80}
+              autoComplete="name"
+              className={fieldClass}
+            />
+          </label>
+          <label className="block text-xs text-ink-muted">
+            Email
+            <input
+              type="email"
+              value={member.email}
+              readOnly
+              autoComplete="username"
+              className={`${fieldClass} text-ink-muted`}
+            />
+            <span className="mt-1 block text-xs text-ink-faint">
+              Email is the login. An admin can change it from Members.
+            </span>
+          </label>
+          <PendingSubmitButton
+            pendingLabel="Saving…"
+            successKey="save-profile"
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          >
+            Save profile
+          </PendingSubmitButton>
+        </form>
+      )}
     </div>
+  );
+}
+
+function TabLink({
+  href,
+  selected,
+  children,
+}: {
+  href: string;
+  selected: boolean;
+  children: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+        selected
+          ? "border-accent text-ink"
+          : "border-transparent text-ink-muted hover:text-ink"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }
