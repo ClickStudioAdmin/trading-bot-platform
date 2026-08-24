@@ -24,11 +24,18 @@ assert.equal(parseVenueId("").ok, false);
 assert.equal(parseVenueId("okx").ok, false);
 assert.equal(parseVenueId("BYBIT").ok, false);
 
-const mainnet = parseVenueEnvironment(bybit.venue, "mainnet");
-assert.equal(mainnet.ok, true);
-if (mainnet.ok) {
-  assert.equal(mainnet.environment.label, "Mainnet");
+const liveEnv = parseVenueEnvironment(bybit.venue, "live");
+assert.equal(liveEnv.ok, true);
+if (liveEnv.ok) {
+  assert.equal(liveEnv.environment.id, "live");
+  assert.equal(liveEnv.environment.label, "Live");
 }
+const aliased = parseVenueEnvironment(bybit.venue, "mainnet");
+assert.equal(aliased.ok, true);
+if (aliased.ok) {
+  assert.equal(aliased.environment.id, "live");
+}
+assert.equal(parseVenueEnvironment(bybit.venue, "production").ok, true);
 assert.equal(parseVenueEnvironment(bybit.venue, "demo").ok, true);
 assert.equal(parseVenueEnvironment(bybit.venue, "testnet").ok, false);
 

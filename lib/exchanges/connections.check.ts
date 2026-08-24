@@ -34,12 +34,15 @@ assert.equal(parseConnectionLabel("x".repeat(41)).ok, false);
 assert.equal(formatVenueLabel("bybit"), "Bybit");
 assert.equal(formatVenueLabel("okx"), "okx");
 assert.equal(formatEnvironmentLabel("bybit", "demo"), "Demo");
+assert.equal(formatEnvironmentLabel("bybit", "live"), "Live");
+assert.equal(formatEnvironmentLabel("bybit", "production"), "Live");
+assert.equal(formatEnvironmentLabel("bybit", "mainnet"), "Live");
 
 const row = parseExchangeConnectionRow({
   id: "conn-1",
   account_id: "acc-1",
   venue: "bybit",
-  environment: "mainnet",
+  environment: "live",
   label: null,
   key_fingerprint: "1234",
   status: "active",

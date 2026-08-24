@@ -4,6 +4,7 @@ import {
   deleteTradingAccountRow,
   insertTradingAccount,
   listTradingAccounts,
+  renameTradingAccountRow,
 } from "@/lib/accounts/store";
 import {
   parseAccountMode,
@@ -22,6 +23,7 @@ import { redirect } from "next/navigation";
 function refreshAccountChrome() {
   revalidatePath("/", "layout");
   revalidatePath("/account");
+  revalidatePath("/account/exchanges");
 }
 
 function accountReturnPath(raw: string): "/account" | "/strategies/cash-and-carry" {
@@ -108,4 +110,42 @@ export async function deleteTradingAccount(formData: FormData) {
   }
   refreshAccountChrome();
   redirect("/account?deleted=1");
+}
+
+export async function renameTradingAccount(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const accountId = String(formData.get("accountId") ?? "");
+  const named = parseAccountName(formData.get("name"));
+  if (!named.ok) {
+    redirect(`/account?error=${encodeURIComponent(named.error)}`);
+  }
+  const accounts = await listTradingAccounts(session.member.id);
+  const target = accounts.find((account) => account.id === accountId);
+  if (!target) {
+    redirect(`/account?error=${encodeURIComponent("That account was not found.")}`);
+  }
+  if (target.name === named.name) {
+    redirect("/account");
+  }
+  const written = await renameTradingAccountRow(
+    session.member.id,
+    accountId,
+    named.name,
+  );
+  if (written.error) {
+    redirect(`/account?error=${encodeURIComponent(written.error)}`);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "account.renamed",
+    message: `Renamed account to ${named.name}`,
+    userId: session.member.id,
+    accountId,
+    data: { name: named.name },
+  });
+  refreshAccountChrome();
+  redirect("/account?renamed=1");
 }

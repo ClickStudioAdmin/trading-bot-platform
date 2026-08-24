@@ -7,6 +7,7 @@ export type VenueCredentialField = {
 export type VenueEnvironment = {
   id: string;
   label: string;
+  aliases?: readonly string[];
 };
 
 export type VenueDefinition = {
@@ -23,7 +24,7 @@ export const VENUES: readonly VenueDefinition[] = [
     label: "Bybit",
     enabled: true,
     environments: [
-      { id: "mainnet", label: "Mainnet" },
+      { id: "live", label: "Live", aliases: ["production", "mainnet"] },
       { id: "demo", label: "Demo" },
     ],
     credentialFields: [
@@ -60,7 +61,9 @@ export function parseVenueEnvironment(
   raw: unknown,
 ): { ok: true; environment: VenueEnvironment } | { ok: false; error: string } {
   const id = String(raw ?? "").trim();
-  const environment = venue.environments.find((item) => item.id === id);
+  const environment = venue.environments.find(
+    (item) => item.id === id || item.aliases?.includes(id),
+  );
   if (!environment) {
     return { ok: false, error: "Unknown environment for that exchange." };
   }

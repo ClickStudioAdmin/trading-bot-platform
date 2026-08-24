@@ -1,6 +1,7 @@
 export const EVENT_LOG_OPTIONS = [
   { event: "account.created", scope: "system" },
   { event: "account.deleted", scope: "system" },
+  { event: "account.renamed", scope: "system" },
   { event: "automations.save_failed", scope: "strategy" },
   { event: "automations.saved", scope: "strategy" },
   { event: "engine.close_failed", scope: "trade" },

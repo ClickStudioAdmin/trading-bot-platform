@@ -263,3 +263,23 @@ export async function deleteTradingAccountRow(
     .eq("user_id", userId);
   return { error: error?.message ?? null };
 }
+
+export async function renameTradingAccountRow(
+  userId: string,
+  accountId: string,
+  name: string,
+): Promise<{ error: string | null }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { error: "Auth is not configured." };
+  }
+  const { error } = await supabase
+    .from("trading_accounts")
+    .update({ name })
+    .eq("id", accountId)
+    .eq("user_id", userId);
+  if (error?.code === "23505") {
+    return { error: "That name is already in use." };
+  }
+  return { error: error?.message ?? null };
+}

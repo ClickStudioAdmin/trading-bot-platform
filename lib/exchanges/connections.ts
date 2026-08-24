@@ -55,8 +55,9 @@ export function formatEnvironmentLabel(
 ): string {
   const venue = getVenue(venueId);
   return (
-    venue?.environments.find((item) => item.id === environmentId)?.label ??
-    environmentId
+    venue?.environments.find(
+      (item) => item.id === environmentId || item.aliases?.includes(environmentId),
+    )?.label ?? environmentId
   );
 }
 

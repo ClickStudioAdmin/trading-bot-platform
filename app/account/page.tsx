@@ -4,6 +4,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   createTradingAccount,
   deleteTradingAccount,
+  renameTradingAccount,
   switchTradingAccount,
 } from "@/lib/accounts/actions";
 import {
@@ -33,6 +34,7 @@ export default async function ManageSubAccountsPage({
   const error = firstSearchValue(params.error);
   const created = firstSearchValue(params.created) === "1";
   const deleted = firstSearchValue(params.deleted) === "1";
+  const renamed = firstSearchValue(params.renamed) === "1";
   const accounts = await listTradingAccounts(session.member.id);
   const usage = await loadAccountUsage(accounts);
 
@@ -42,7 +44,7 @@ export default async function ManageSubAccountsPage({
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
         Each account is Paper or Live at create and never changes. Books stay
         separate. You must keep at least one account. Paper books can be deleted
-        any time. Live delete is blocked while the book has open positions or
+        any time. You can rename an account any time. Live delete is blocked while the book has open positions or
         running automations. Deleting an account removes its paper history.
       </p>
       {error ? (
@@ -55,6 +57,9 @@ export default async function ManageSubAccountsPage({
       ) : null}
       {deleted ? (
         <p className="mt-4 text-sm text-success">Account deleted.</p>
+      ) : null}
+      {renamed ? (
+        <p className="mt-4 text-sm text-success">Account renamed.</p>
       ) : null}
 
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
@@ -103,6 +108,33 @@ export default async function ManageSubAccountsPage({
                       </PendingSubmitButton>
                     </form>
                   )}
+                  <details className="relative">
+                    <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-accent hover:bg-surface-raised [&::-webkit-details-marker]:hidden">
+                      Rename
+                    </summary>
+                    <div className="absolute right-0 z-10 mt-2 w-64 rounded-card border border-line bg-surface p-3">
+                      <form action={renameTradingAccount} className="space-y-3">
+                        <input type="hidden" name="accountId" value={account.id} />
+                        <label className="block text-xs text-ink-muted">
+                          Name
+                          <input
+                            name="name"
+                            required
+                            maxLength={40}
+                            defaultValue={account.name}
+                            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                          />
+                        </label>
+                        <PendingSubmitButton
+                          pendingLabel="Saving"
+                          successKey={`account-rename-${account.id}`}
+                          className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
+                        >
+                          Save name
+                        </PendingSubmitButton>
+                      </form>
+                    </div>
+                  </details>
                   {canDelete ? (
                     <details className="relative">
                       <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-danger hover:bg-danger/10 [&::-webkit-details-marker]:hidden">

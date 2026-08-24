@@ -31,7 +31,7 @@ Stop after each step. Do not start the next until you say so.
 
 - Table, types, and routes are **`exchange_*` / `venue`**, never `bybit_keys`.
 - `venue` is a stable string id (`bybit` now; `okx` later). Postgres stores text. The registry in code is the allow-list.
-- One connection per **account + venue + environment** (a Live book may have Bybit mainnet and, later, Bybit demo, or a second venue).
+- One connection per **account + venue + environment** (a Live book may have Bybit Live and Bybit Demo, or a second venue).
 - Credentials are an **encrypted JSON object**. Each venue declares its fields in the registry (Bybit: API key + secret. A later venue may add passphrase without a migration).
 - The Exchanges form is driven by the registry. Adding a venue is a new adapter + enable flag, not a fork of the page.
 - Public market data and private trading are separate clients. Today only the public Bybit scanner exists. Private REST is Bybit-only when verify lands; other venues stay disabled.
@@ -57,7 +57,7 @@ Stop after each step. Do not start the next until you say so.
 
 - `account_id`, `user_id`
 - `venue` (text)
-- `environment` (text; Bybit: `mainnet` or `demo`)
+- `environment` (text; Bybit: `live` or `demo`. Older `mainnet` / `production` rows still display as Live.)
 - `label` (optional)
 - `credentials_ciphertext`, `credentials_nonce` (opaque)
 - `key_fingerprint` (display only)

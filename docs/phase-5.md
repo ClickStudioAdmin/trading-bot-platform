@@ -15,7 +15,7 @@ Complete. Accepted after desk testing. Current work is Phase 6 — [phase-6.md](
 - `trading_accounts` plus `account_id` on settings, rules, carries, orders, and event logs
 - Backfill one Demo Account (paper) per member
 - `tbp_account` cookie; account switch and manage link in the user menu
-- `/account` manage area with a left nav: Settings, Manage sub-accounts, Exchanges. Settings and Exchanges are placeholders. Create and delete live on Manage sub-accounts. The last account cannot be deleted. Paper books can be deleted any time. Live delete is blocked while the book has open or closing positions or automations are on
+- `/account` manage area with a left nav: Settings, Manage sub-accounts, Exchanges. Create, rename, and delete live on Manage sub-accounts. The last account cannot be deleted. Paper books can be deleted any time. Live delete is blocked while the book has open or closing positions or automations are on
 - Tick loops accounts. Paper uses the Phase 4 paper ledger. Live is skipped
 
 ## Runtime
