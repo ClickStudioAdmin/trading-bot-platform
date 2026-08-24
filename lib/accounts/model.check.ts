@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
   accountDeleteBlockers,
+  connectionRemoveBlockers,
   DEFAULT_ACCOUNT_NAME,
+  formatConnectionRemoveBlockers,
   formatDeleteBlockers,
   parseAccountName,
   parseAccountMode,
@@ -80,6 +82,26 @@ assert.deepEqual(
 assert.equal(
   formatDeleteBlockers(["last", "open"]),
   "Keep at least one account · Close or flatten open positions first",
+);
+assert.deepEqual(
+  connectionRemoveBlockers({ openCount: 0, automationsRunning: false }),
+  [],
+);
+assert.deepEqual(
+  connectionRemoveBlockers({ openCount: 2, automationsRunning: false }),
+  ["open"],
+);
+assert.deepEqual(
+  connectionRemoveBlockers({ openCount: 0, automationsRunning: true }),
+  ["automations"],
+);
+assert.deepEqual(
+  connectionRemoveBlockers({ openCount: 1, automationsRunning: true }),
+  ["open", "automations"],
+);
+assert.equal(
+  formatConnectionRemoveBlockers(["open", "automations"]),
+  "Close or flatten open positions first · Turn off automations first",
 );
 
 console.log("account model checks passed");

@@ -1,5 +1,6 @@
 import { defaultPaperConfig, parsePaperRulesRow } from "@/lib/engine/rules";
 import type { PaperEngineConfig } from "@/lib/engine/decide";
+import { selectPaperEngineSettings } from "@/lib/engine/settings";
 import { getSessionContext } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/admin";
 
@@ -18,13 +19,9 @@ export async function loadPaperRules(): Promise<{
     return { signedIn: true, config: defaultPaperConfig(), inUseRuleIds: [] };
   }
 
-  const [{ data: settings }, { data: rows }, { data: openRows }] =
+  const [settingsRows, { data: rows }, { data: openRows }] =
     await Promise.all([
-      supabase
-        .from("paper_engine_settings")
-        .select("enabled")
-        .eq("account_id", session.account.id)
-        .maybeSingle(),
+      selectPaperEngineSettings(supabase, { accountId: session.account.id }),
       supabase
         .from("paper_rules")
         .select("*")
@@ -37,6 +34,7 @@ export async function loadPaperRules(): Promise<{
         .in("status", ["open", "closing"])
         .not("rule_id", "is", null),
     ]);
+  const settings = settingsRows[0];
 
   const layers = (rows ?? []).map((row, index) =>
     parsePaperRulesRow(row as Record<string, unknown>, index),
@@ -53,6 +51,7 @@ export async function loadPaperRules(): Promise<{
     signedIn: true,
     config: {
       enabled: Boolean(settings?.enabled),
+      reduceOnly: Boolean(settings?.reduce_only),
       layers,
     },
     inUseRuleIds,

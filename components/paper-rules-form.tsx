@@ -14,11 +14,14 @@ import { GroupedNumberInput } from "@/components/usdt-size-input";
 export function PaperRulesForm({
   values,
   inUseRuleIds,
+  reduceOnly = false,
 }: {
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
+  reduceOnly?: boolean;
 }) {
   const [layers, setLayers] = useState(values.layers);
+  const [enabled, setEnabled] = useState(values.enabled);
   const inUse = new Set(inUseRuleIds);
   const empty = layers.length === 0;
 
@@ -35,6 +38,34 @@ export function PaperRulesForm({
   return (
     <form action={savePaperRules} className="space-y-4">
       <input type="hidden" name="ruleCount" value={layers.length} />
+
+      {reduceOnly && !empty ? (
+        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          Reduce only is on. Automations will not open new positions or add
+          size. Exits, clips, and Unwind still run. Change this in Settings.
+        </p>
+      ) : null}
+
+      {empty ? null : (
+        <label className="flex items-start gap-3 rounded-card border border-line bg-surface px-4 py-3 text-sm text-ink">
+          <input
+            type="checkbox"
+            name="enabled"
+            value="on"
+            checked={enabled}
+            onChange={(event) => setEnabled(event.target.checked)}
+            className="mt-1 size-4"
+          />
+          <span>
+            Automations on
+            <span className="mt-1 block text-xs text-ink-muted">
+              Off keeps these rule sets but stops new entries and automated
+              exits. Use Reduce only in Settings to stop entries while the
+              book still winds down.
+            </span>
+          </span>
+        </label>
+      )}
 
       {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
@@ -62,10 +93,15 @@ export function PaperRulesForm({
         <button
           type="button"
           onClick={() =>
-            setLayers((current) => [
-              ...current,
-              layerToForm(current.length),
-            ])
+            setLayers((current) => {
+              if (current.length === 0) {
+                setEnabled(true);
+              }
+              return [
+                ...current,
+                layerToForm(current.length),
+              ];
+            })
           }
           className={
             empty

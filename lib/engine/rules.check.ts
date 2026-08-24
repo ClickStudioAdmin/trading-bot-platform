@@ -9,6 +9,7 @@ import {
 } from "./rules";
 
 const empty = new FormData();
+empty.set("enabled", "on");
 empty.set("ruleCount", "1");
 empty.set("r0_notionalUsdt", "10,000");
 const parsedEmpty = parsePaperRulesForm(empty);
@@ -58,6 +59,19 @@ if (parsed.ok) {
 const none = new FormData();
 none.set("ruleCount", "0");
 assert.equal(parsePaperRulesForm(none).ok, true);
+const parsedNone = parsePaperRulesForm(none);
+if (parsedNone.ok) {
+  assert.equal(parsedNone.config.enabled, false);
+}
+
+const paused = new FormData();
+paused.set("ruleCount", "1");
+paused.set("r0_notionalUsdt", "10000");
+const parsedPaused = parsePaperRulesForm(paused);
+assert.equal(parsedPaused.ok, true);
+if (parsedPaused.ok) {
+  assert.equal(parsedPaused.config.enabled, false);
+}
 
 const swapped = new FormData();
 swapped.set("ruleCount", "1");

@@ -37,6 +37,7 @@ export default async function CashAndCarryAutomationsPage({
         <PaperRulesForm
           values={paperConfigToFormValues(config)}
           inUseRuleIds={inUseRuleIds}
+          reduceOnly={Boolean(config.reduceOnly)}
         />
       ) : (
         <p className="text-sm text-ink-muted">

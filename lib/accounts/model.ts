@@ -48,6 +48,7 @@ export function formatAccountMode(mode: TradingAccountMode): string {
 }
 
 export type AccountDeleteBlock = "last" | "open" | "automations";
+export type ConnectionRemoveBlock = "open" | "automations";
 
 export function accountDeleteBlockers(input: {
   accountCount: number;
@@ -74,6 +75,33 @@ export function formatDeleteBlockers(blocks: AccountDeleteBlock[]): string {
       if (block === "last") {
         return "Keep at least one account";
       }
+      if (block === "open") {
+        return "Close or flatten open positions first";
+      }
+      return "Turn off automations first";
+    })
+    .join(" · ");
+}
+
+export function connectionRemoveBlockers(input: {
+  openCount: number;
+  automationsRunning: boolean;
+}): ConnectionRemoveBlock[] {
+  const blocks: ConnectionRemoveBlock[] = [];
+  if (input.openCount > 0) {
+    blocks.push("open");
+  }
+  if (input.automationsRunning) {
+    blocks.push("automations");
+  }
+  return blocks;
+}
+
+export function formatConnectionRemoveBlockers(
+  blocks: ConnectionRemoveBlock[],
+): string {
+  return blocks
+    .map((block) => {
       if (block === "open") {
         return "Close or flatten open positions first";
       }

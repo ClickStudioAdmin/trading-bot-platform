@@ -42,6 +42,7 @@ Stop after each step. Do not start the next until you say so.
 - **Live** account: can save connections.
 - **Paper** account: `/account/exchanges` explains that paper does not use keys.
 - Keys belong to the **trading account**, not the login. Switching accounts shows that book’s connections only.
+- Cannot **remove** a connection while the account has open or closing positions, or while automations are on. Turn on **Reduce only** in strategy Settings to stop new entries so the book can flatten, then turn off automations before removing the key. Open-position checks use `paper_carries` today (live blotter is out of scope).
 
 ## Security
 
@@ -69,7 +70,7 @@ RLS: own-row select. Writes are service-role, scoped by the session account. Aut
 
 ## Runtime
 
-Unchanged. Tick still paper-only. Vercel still must not place exchange orders.
+Unchanged for live execution. Tick still paper-only. Vercel still must not place exchange orders. Paper ticks honour **Reduce only**: no new automated entries or scale-ins; exits, clips, and Unwind still run.
 
 ## Out of scope
 

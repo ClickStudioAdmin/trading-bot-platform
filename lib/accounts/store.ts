@@ -1,12 +1,15 @@
 import {
   accountDeleteBlockers,
+  connectionRemoveBlockers,
   DEFAULT_ACCOUNT_NAME,
   parseTradingAccountRow,
   type AccountDeleteBlock,
+  type ConnectionRemoveBlock,
   type TradingAccount,
   type TradingAccountMode,
 } from "@/lib/accounts/model";
 import { memberDisplayName } from "@/lib/members/sync";
+import { selectPaperEngineSettings } from "@/lib/engine/settings";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 export type TradingAccountOption = TradingAccount & {
@@ -119,7 +122,9 @@ export async function insertTradingAccount(
 export type AccountUsage = {
   openCount: number;
   automationsRunning: boolean;
+  reduceOnly: boolean;
   blocks: AccountDeleteBlock[];
+  connectionBlocks: ConnectionRemoveBlock[];
 };
 
 export async function loadAccountUsage(
@@ -131,12 +136,14 @@ export async function loadAccountUsage(
     usage.set(account.id, {
       openCount: 0,
       automationsRunning: false,
+      reduceOnly: false,
       blocks: accountDeleteBlockers({
         accountCount,
         openCount: 0,
         automationsRunning: false,
         mode: account.mode,
       }),
+      connectionBlocks: [],
     });
   }
   if (accounts.length === 0) {
@@ -147,28 +154,29 @@ export async function loadAccountUsage(
     return usage;
   }
   const accountIds = accounts.map((account) => account.id);
-  const [{ data: openRows }, { data: settings }, { data: rules }] =
-    await Promise.all([
-      supabase
-        .from("paper_carries")
-        .select("account_id")
-        .in("account_id", accountIds)
-        .in("status", ["open", "closing"]),
-      supabase
-        .from("paper_engine_settings")
-        .select("account_id, enabled")
-        .in("account_id", accountIds),
-      supabase.from("paper_rules").select("account_id").in("account_id", accountIds),
-    ]);
+  const [{ data: openRows }, settings, { data: rules }] = await Promise.all([
+    supabase
+      .from("paper_carries")
+      .select("account_id")
+      .in("account_id", accountIds)
+      .in("status", ["open", "closing"]),
+    selectPaperEngineSettings(supabase, { accountIds }),
+    supabase.from("paper_rules").select("account_id").in("account_id", accountIds),
+  ]);
   const openCount = new Map<string, number>();
   for (const row of openRows ?? []) {
     const id = String((row as { account_id: string }).account_id);
     openCount.set(id, (openCount.get(id) ?? 0) + 1);
   }
   const enabled = new Set(
-    (settings ?? [])
-      .filter((row) => Boolean((row as { enabled?: unknown }).enabled))
-      .map((row) => String((row as { account_id: string }).account_id)),
+    settings
+      .filter((row) => Boolean(row.enabled))
+      .map((row) => String(row.account_id)),
+  );
+  const reduceOnlyIds = new Set(
+    settings
+      .filter((row) => Boolean(row.reduce_only))
+      .map((row) => String(row.account_id)),
   );
   const withRules = new Set(
     (rules ?? []).map((row) => String((row as { account_id: string }).account_id)),
@@ -177,14 +185,20 @@ export async function loadAccountUsage(
     const opens = openCount.get(account.id) ?? 0;
     const automationsRunning =
       enabled.has(account.id) && withRules.has(account.id);
+    const reduceOnly = reduceOnlyIds.has(account.id);
     usage.set(account.id, {
       openCount: opens,
       automationsRunning,
+      reduceOnly,
       blocks: accountDeleteBlockers({
         accountCount,
         openCount: opens,
         automationsRunning,
         mode: account.mode,
+      }),
+      connectionBlocks: connectionRemoveBlockers({
+        openCount: opens,
+        automationsRunning,
       }),
     });
   }

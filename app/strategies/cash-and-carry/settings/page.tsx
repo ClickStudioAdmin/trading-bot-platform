@@ -3,7 +3,7 @@ import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { savePaperSettings } from "@/lib/engine/actions";
-import { loadUsableBookShare } from "@/lib/engine/settings";
+import { loadEngineSettings } from "@/lib/engine/settings";
 import { usableBookShareToInput } from "@/lib/opportunities/capacity";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionMember } from "@/lib/auth/session";
@@ -20,7 +20,7 @@ export default async function CashAndCarrySettingsPage({
 }) {
   const params = await searchParams;
   const user = await getSessionMember();
-  const share = await loadUsableBookShare();
+  const settings = await loadEngineSettings();
   const saved = firstSearchValue(params.saved) === "1";
   const error = firstSearchValue(params.error);
 
@@ -49,7 +49,7 @@ export default async function CashAndCarrySettingsPage({
               name="usableBookShare"
               inputMode="decimal"
               autoComplete="off"
-              defaultValue={usableBookShareToInput(share)}
+              defaultValue={usableBookShareToInput(settings.share)}
               className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
             />
           </label>
@@ -58,6 +58,24 @@ export default async function CashAndCarrySettingsPage({
             a quarter of that in-range book. Manual Size, Dynamic clips, and
             Dynamic exits all use this number.
           </p>
+          <label className="flex items-start gap-3 text-sm text-ink">
+            <input
+              type="checkbox"
+              name="reduceOnly"
+              value="on"
+              defaultChecked={settings.reduceOnly}
+              className="mt-1 size-4"
+            />
+            <span>
+              Reduce only
+              <span className="mt-1 block text-xs text-ink-muted">
+                Automations will not open new positions or add to existing
+                ones. Exits, Dynamic clips, Unwind, and manual Close still
+                run so the book can flatten. Turn this on to wind down before
+                removing an exchange connection, then turn automations off.
+              </span>
+            </span>
+          </label>
           <PendingSubmitButton
             pendingLabel="Saving…"
             successKey="save-settings"

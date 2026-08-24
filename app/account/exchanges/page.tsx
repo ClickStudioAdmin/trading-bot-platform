@@ -3,7 +3,11 @@ import Link from "next/link";
 import { ExchangeConnectForm } from "@/components/exchange-connect-form";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { formatAccountMode } from "@/lib/accounts/model";
+import {
+  formatAccountMode,
+  formatConnectionRemoveBlockers,
+} from "@/lib/accounts/model";
+import { loadAccountUsage } from "@/lib/accounts/store";
 import { removeExchangeConnection } from "@/lib/exchanges/actions";
 import {
   formatEnvironmentLabel,
@@ -39,6 +43,14 @@ export default async function AccountExchangesPage({
   const saved = firstSearchValue(params.saved) === "1";
   const removed = firstSearchValue(params.removed) === "1";
   const live = accountCanHoldConnections(session.account.mode);
+  const usage = live
+    ? (await loadAccountUsage([session.account])).get(session.account.id)
+    : null;
+  const removeBlocks = usage?.connectionBlocks ?? [];
+  const removeBlocked =
+    removeBlocks.length > 0
+      ? formatConnectionRemoveBlockers(removeBlocks)
+      : null;
   const connections = live
     ? await listExchangeConnections(session.member.id, session.account.id)
     : [];
@@ -78,7 +90,7 @@ export default async function AccountExchangesPage({
 
       {live ? (
         <>
-          <ConnectionList rows={connections} />
+          <ConnectionList rows={connections} removeBlocked={removeBlocked} />
           {canSave ? <ExchangeConnectForm venues={venues} /> : null}
         </>
       ) : (
@@ -94,7 +106,13 @@ export default async function AccountExchangesPage({
   );
 }
 
-function ConnectionList({ rows }: { rows: ExchangeConnection[] }) {
+function ConnectionList({
+  rows,
+  removeBlocked,
+}: {
+  rows: ExchangeConnection[];
+  removeBlocked: string | null;
+}) {
   if (rows.length === 0) {
     return (
       <p className="rounded-card border border-line bg-surface p-5 text-sm text-ink-muted">
@@ -106,6 +124,30 @@ function ConnectionList({ rows }: { rows: ExchangeConnection[] }) {
   return (
     <section className="rounded-card border border-line bg-surface p-5">
       <h2 className="text-lg font-semibold tracking-tight">Connected</h2>
+      {removeBlocked ? (
+        <p className="mt-2 text-sm text-ink-muted">
+          {removeBlocked}. Turn on Reduce only in{" "}
+          <Link
+            href="/strategies/cash-and-carry/settings"
+            className="text-accent hover:text-accent-strong"
+          >
+            Settings
+          </Link>{" "}
+          to stop new entries, flatten, then turn off{" "}
+          <Link
+            href="/strategies/cash-and-carry/automations"
+            className="text-accent hover:text-accent-strong"
+          >
+            automations
+          </Link>{" "}
+          before removing a key.
+        </p>
+      ) : (
+        <p className="mt-2 text-sm text-ink-muted">
+          You can remove a connection only while this account has no open
+          positions and automations are off.
+        </p>
+      )}
       <ul className="mt-4 divide-y divide-line">
         {rows.map((row) => (
           <li
@@ -126,26 +168,32 @@ function ConnectionList({ rows }: { rows: ExchangeConnection[] }) {
                 {row.status === "invalid" ? " · Invalid" : null}
               </p>
             </div>
-            <details className="relative">
-              <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-danger hover:bg-danger/10 [&::-webkit-details-marker]:hidden">
-                Remove
-              </summary>
-              <div className="absolute right-0 z-10 mt-2 w-64 rounded-card border border-line bg-surface p-3">
-                <p className="text-xs text-ink-muted">
-                  Remove this connection? You can add the key again later.
-                </p>
-                <form action={removeExchangeConnection} className="mt-3">
-                  <input type="hidden" name="connectionId" value={row.id} />
-                  <PendingSubmitButton
-                    pendingLabel="Removing"
-                    successKey={`exchange-remove-${row.id}`}
-                    className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
-                  >
-                    Remove connection
-                  </PendingSubmitButton>
-                </form>
-              </div>
-            </details>
+            {removeBlocked ? (
+              <p className="max-w-56 text-right text-xs text-ink-muted">
+                {removeBlocked}
+              </p>
+            ) : (
+              <details className="relative">
+                <summary className="cursor-pointer list-none rounded-control px-3 py-1.5 text-sm text-danger hover:bg-danger/10 [&::-webkit-details-marker]:hidden">
+                  Remove
+                </summary>
+                <div className="absolute right-0 z-10 mt-2 w-64 rounded-card border border-line bg-surface p-3">
+                  <p className="text-xs text-ink-muted">
+                    Remove this connection? You can add the key again later.
+                  </p>
+                  <form action={removeExchangeConnection} className="mt-3">
+                    <input type="hidden" name="connectionId" value={row.id} />
+                    <PendingSubmitButton
+                      pendingLabel="Removing"
+                      successKey={`exchange-remove-${row.id}`}
+                      className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
+                    >
+                      Remove connection
+                    </PendingSubmitButton>
+                  </form>
+                </div>
+              </details>
+            )}
           </li>
         ))}
       </ul>

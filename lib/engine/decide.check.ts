@@ -75,6 +75,10 @@ assert.equal(bestMatchingLayer(mid, config.layers)?.id, 1);
 assert.equal(bestMatchingLayer(low, config.layers), null);
 
 assert.deepEqual(decideEntries([high], [], { ...config, enabled: false }), []);
+assert.deepEqual(
+  decideEntries([high], [], { ...config, reduceOnly: true }),
+  [],
+);
 
 const ranked = decideEntries([mid, low, high], [], config);
 assert.deepEqual(
@@ -416,6 +420,24 @@ assert.equal(
     { enabled: false, layers: [] },
   )[0]?.closeNotionalUsdt,
   2_500,
+);
+assert.equal(
+  decideExits(
+    [
+      {
+        spotSymbol: "BTCUSDT",
+        futureSymbol: high.futureSymbol,
+        notionalUsdt: 10_000,
+        ruleId: 1,
+        daysToExpiry: 2,
+        markNetApr: 0.2,
+        pnlPct: 0.02,
+        openedAtMs: 1,
+      },
+    ],
+    { enabled: true, reduceOnly: true, layers: [base] },
+  )[0]?.reason,
+  "dte",
 );
 
 const heldBtc = opportunity("BTCUSDT-25JUN27", {

@@ -88,6 +88,7 @@ export default async function ManageSubAccountsPage({
                       ? ` · ${row.openCount} open`
                       : null}
                     {row?.automationsRunning ? " · Automations on" : null}
+                    {row?.reduceOnly ? " · Reduce only" : null}
                   </p>
                   {!canDelete ? (
                     <p className="mt-1 text-xs text-ink-muted">

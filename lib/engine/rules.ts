@@ -56,6 +56,7 @@ export function defaultPaperLayer(sortOrder = 0): PaperEngineLayer {
 export function defaultPaperConfig(): PaperEngineConfig {
   return {
     enabled: false,
+    reduceOnly: false,
     layers: [defaultPaperLayer(0)],
   };
 }
@@ -117,7 +118,7 @@ export function parsePaperRulesForm(
   return {
     ok: true,
     config: {
-      enabled: layers.length > 0,
+      enabled: layers.length > 0 && form.get("enabled") === "on",
       layers,
     },
   };

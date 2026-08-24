@@ -1,5 +1,7 @@
 "use server";
 
+import { loadAccountUsage } from "@/lib/accounts/store";
+import { formatConnectionRemoveBlockers } from "@/lib/accounts/model";
 import {
   keyFingerprint,
   parseConnectionLabel,
@@ -128,6 +130,11 @@ export async function removeExchangeConnection(formData: FormData) {
   const connectionId = String(formData.get("connectionId") ?? "");
   if (!connectionId) {
     fail("Missing connection.");
+  }
+  const usage = await loadAccountUsage([session.account]);
+  const blocks = usage.get(session.account.id)?.connectionBlocks ?? [];
+  if (blocks.length > 0) {
+    fail(formatConnectionRemoveBlockers(blocks));
   }
   const written = await deleteExchangeConnection({
     userId: session.member.id,

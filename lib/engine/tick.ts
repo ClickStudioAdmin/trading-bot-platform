@@ -5,6 +5,7 @@ import {
   type PaperEngineConfig,
 } from "@/lib/engine/decide";
 import { parsePaperRulesRow } from "@/lib/engine/rules";
+import { selectPaperEngineSettings } from "@/lib/engine/settings";
 import { writeEventLog } from "@/lib/logs/write";
 import {
   applyUsableBookShare,
@@ -47,15 +48,13 @@ export async function runPaperEngineTick(): Promise<{
 
   const [
     { data: accountRows },
-    { data: settingsRows },
+    settingsRows,
     { data: ruleRows },
     { data: carryRows },
     { data: orderRows },
   ] = await Promise.all([
     supabase.from("trading_accounts").select("id, user_id, mode"),
-    supabase
-      .from("paper_engine_settings")
-      .select("account_id, user_id, enabled, usable_book_share"),
+    selectPaperEngineSettings(supabase),
     supabase.from("paper_rules").select("*").order("sort_order", { ascending: true }),
     supabase.from("paper_carries").select("*").in("status", ["open", "closing"]),
     supabase.from("paper_orders").select("*"),
@@ -72,14 +71,15 @@ export async function runPaperEngineTick(): Promise<{
 
   const settingsByAccount = new Map<
     string,
-    { enabled: boolean; share: number }
+    { enabled: boolean; reduceOnly: boolean; share: number }
   >();
-  for (const row of settingsRows ?? []) {
+  for (const row of settingsRows) {
     const share = asNullableNumber(
       (row as { usable_book_share?: unknown }).usable_book_share,
     );
     settingsByAccount.set(String((row as { account_id: string }).account_id), {
       enabled: Boolean((row as { enabled?: unknown }).enabled),
+      reduceOnly: Boolean((row as { reduce_only?: unknown }).reduce_only),
       share:
         share !== null && share > 0 && share <= 1
           ? share
@@ -119,11 +119,13 @@ export async function runPaperEngineTick(): Promise<{
     const userId = account.userId;
     const settings = settingsByAccount.get(account.id) ?? {
       enabled: false,
+      reduceOnly: false,
       share: DEFAULT_USABLE_BOOK_SHARE,
     };
     const scan = applyUsableBookShare(raw, settings.share);
     const config: PaperEngineConfig = {
       enabled: settings.enabled,
+      reduceOnly: settings.reduceOnly,
       layers: layersByAccount.get(account.id) ?? [],
     };
     const userCarries = carries
@@ -192,7 +194,7 @@ export async function runPaperEngineTick(): Promise<{
       });
     }
 
-    if (!config.enabled || config.layers.length === 0) {
+    if (!config.enabled || config.reduceOnly || config.layers.length === 0) {
       continue;
     }
 

@@ -27,6 +27,7 @@ export type PaperEngineLayer = {
 
 export type PaperEngineConfig = {
   enabled: boolean;
+  reduceOnly?: boolean;
   layers: PaperEngineLayer[];
 };
 
@@ -81,7 +82,7 @@ export function decideEntries(
   opens: EngineOpenPosition[],
   config: PaperEngineConfig,
 ): EngineEntry[] {
-  if (!config.enabled) {
+  if (!config.enabled || config.reduceOnly) {
     return [];
   }
 

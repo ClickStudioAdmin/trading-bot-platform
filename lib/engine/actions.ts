@@ -5,10 +5,12 @@ import {
   paperLayerToRow,
   parsePaperRulesForm,
 } from "@/lib/engine/rules";
+import { parseReduceOnly } from "@/lib/engine/settings";
 import { parseUsableBookShare } from "@/lib/opportunities/capacity";
 import { writeEventLog } from "@/lib/logs/write";
 import { getSessionContext } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 const RULES_PATH = "/strategies/cash-and-carry/automations";
@@ -181,6 +183,7 @@ export async function savePaperRules(formData: FormData) {
     },
   });
 
+  revalidatePath("/account/exchanges");
   redirect(`${RULES_PATH}?saved=1`);
 }
 
@@ -197,6 +200,7 @@ export async function savePaperSettings(formData: FormData) {
   if (typeof parsed !== "number") {
     redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(parsed.error)}`);
   }
+  const reduceOnly = parseReduceOnly(formData.get("reduceOnly"));
 
   const supabase = createServiceClient();
   if (!supabase) {
@@ -209,6 +213,7 @@ export async function savePaperSettings(formData: FormData) {
     user_id: user.id,
     account_id: account.id,
     usable_book_share: parsed,
+    reduce_only: reduceOnly,
     updated_at: new Date().toISOString(),
   });
 
@@ -232,8 +237,9 @@ export async function savePaperSettings(formData: FormData) {
     userId: user.id,
     accountId: account.id,
     strategy: "cash-and-carry",
-    data: { usableBookShare: parsed },
+    data: { usableBookShare: parsed, reduceOnly },
   });
 
+  revalidatePath("/account/exchanges");
   redirect(`${SETTINGS_PATH}?saved=1`);
 }

@@ -9,8 +9,10 @@ import {
 
 export function StrategySubnav({
   automationsRunning = false,
+  reduceOnly = false,
 }: {
   automationsRunning?: boolean;
+  reduceOnly?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -30,7 +32,18 @@ export function StrategySubnav({
             Buy the USDT spot, sell the dated future.
           </p>
         </div>
-        {automationsRunning ? (
+        {reduceOnly ? (
+          <Link
+            href="/strategies/cash-and-carry/settings"
+            className="mt-8 flex items-center gap-2 text-sm text-warning"
+            title="Reduce only"
+          >
+            <span className="relative flex size-2.5" aria-hidden>
+              <span className="relative inline-flex size-2.5 rounded-full bg-warning" />
+            </span>
+            Reduce only
+          </Link>
+        ) : automationsRunning ? (
           <Link
             href="/strategies/cash-and-carry/automations"
             className="mt-8 flex items-center gap-2 text-sm text-success"
