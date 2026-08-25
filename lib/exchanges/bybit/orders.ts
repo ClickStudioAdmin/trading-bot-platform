@@ -109,13 +109,7 @@ export function sizeVenueCloseQty(input: {
       text: floored.toFixed(stepDecimals(input.step)),
     };
   }
-  if (remaining >= input.minQty) {
-    return {
-      ok: true,
-      text: input.minQty.toFixed(stepDecimals(input.step)),
-    };
-  }
-  if (remaining > 0 && Number.isFinite(remaining)) {
+  if (remaining > 0 && remaining < input.minQty) {
     return { ok: true, text: String(Number(remaining.toPrecision(12))) };
   }
   return {

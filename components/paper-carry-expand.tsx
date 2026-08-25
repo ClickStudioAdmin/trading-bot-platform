@@ -7,6 +7,7 @@ import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
 import { TokenIcon } from "@/components/token-icon";
 import {
   closedTradeLabel,
+  formatExitOrderType,
   formatSourceWord,
 } from "@/lib/paper/automation";
 import {
@@ -287,6 +288,8 @@ function ClosePaperButton({
 
   const actionClass =
     "rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium whitespace-nowrap text-ink";
+  const auto = trade.source === "engine";
+  const dynamicExit = trade.automation.exitSizeType === "dynamic";
 
   return (
     <form
@@ -296,11 +299,19 @@ function ClosePaperButton({
       <input type="hidden" name="carryId" value={trade.id} />
       <input type="hidden" name="next" value={next} />
       <ColumnHint
-        hint="Flatten both Bybit legs at market."
+        hint={
+          auto ? (
+            <AutoCloseHint automation={trade.automation} />
+          ) : hideUnwind ? (
+            "Flatten both Bybit legs at market."
+          ) : (
+            "Close at market"
+          )
+        }
         label={
           <PendingSubmitButton
             name="mode"
-            value="market"
+            value={auto && dynamicExit && !hideUnwind ? "unwind" : "market"}
             pendingLabel="Closing"
             successKey={closeKey}
             className={actionClass}
@@ -309,7 +320,7 @@ function ClosePaperButton({
           </PendingSubmitButton>
         }
       />
-      {!hideUnwind ? (
+      {trade.source === "manual" && !hideUnwind ? (
         <ColumnHint
           hint="Unwind position over time & ASAP (based on the usable book setting)"
           label={
@@ -326,6 +337,26 @@ function ClosePaperButton({
         />
       ) : null}
     </form>
+  );
+}
+
+function AutoCloseHint({
+  automation,
+}: {
+  automation: MarkedPaperCarry["automation"];
+}) {
+  const orderType = formatExitOrderType(automation);
+  return (
+    <span className="block space-y-1">
+      <span className="block text-ink">
+        Close using this set’s exit order type
+      </span>
+      {orderType ? (
+        <span className="block">{orderType}</span>
+      ) : (
+        <span className="block">No exit order type stored.</span>
+      )}
+    </span>
   );
 }
 

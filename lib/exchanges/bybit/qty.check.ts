@@ -94,10 +94,7 @@ const thinUnwind = sizeVenueCloseQty({
   step: 0.001,
   minQty: 0.001,
 });
-assert.equal(thinUnwind.ok, true);
-if (thinUnwind.ok) {
-  assert.equal(thinUnwind.text, "0.001");
-}
+assert.equal(thinUnwind.ok, false);
 
 const dust = sizeVenueCloseQty({
   rawQty: 0.0004,
