@@ -193,6 +193,15 @@ function RuleRow({
   return (
     <section className="rounded-card border border-line bg-surface px-4 py-3">
       <div className="mb-2 flex items-end gap-2">
+        {canRemove ? (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="mb-0.5 shrink-0 rounded-control px-2 py-1 text-xs text-danger hover:bg-danger/10"
+          >
+            Remove
+          </button>
+        ) : null}
         <label className="min-w-0 flex-1 text-[11px] text-ink-muted">
           Name
           <input
@@ -203,35 +212,28 @@ function RuleRow({
             className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
           />
         </label>
-        <label className="w-52 shrink-0 text-[11px] text-ink-muted">
-          Mode
-          <select
-            name={`${prefix}mode`}
-            value={mode}
-            onChange={(event) => setMode(parseAutomationMode(event.target.value))}
-            className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
-          >
-            <option value="active">
-              {accountReduceOnly ? "Active (Reduce only)" : "Active"}
-            </option>
-            <option value="reduce_only">Reduce only</option>
-            <option value="disabled">Disabled</option>
-          </select>
-        </label>
-        <ModeLight
-          mode={mode}
-          inUse={inUse}
-          accountReduceOnly={accountReduceOnly}
-        />
-        {!inUse && canRemove ? (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="mb-1.5 text-xs text-ink-muted hover:text-danger"
-          >
-            Remove
-          </button>
-        ) : null}
+        <div className="flex shrink-0 items-end gap-2">
+          <label className="w-52 text-[11px] text-ink-muted">
+            Mode
+            <select
+              name={`${prefix}mode`}
+              value={mode}
+              onChange={(event) => setMode(parseAutomationMode(event.target.value))}
+              className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
+            >
+              <option value="active">
+                {accountReduceOnly ? "Active (Reduce only)" : "Active"}
+              </option>
+              <option value="reduce_only">Reduce only</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </label>
+          <ModeLight
+            mode={mode}
+            inUse={inUse}
+            accountReduceOnly={accountReduceOnly}
+          />
+        </div>
       </div>
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
       <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
@@ -441,7 +443,7 @@ function ModeLight({
     : modeLightLabel(mode, accountReduceOnly);
   return (
     <span
-      className="relative mb-1.5 flex size-3.5 shrink-0"
+      className="relative flex size-3.5 shrink-0"
       title={label}
       aria-label={label}
     >
