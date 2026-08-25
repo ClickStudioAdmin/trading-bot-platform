@@ -28,6 +28,7 @@ export function AutomationsDesk({
   reduceOnly?: boolean;
 }) {
   const [hasSets, setHasSets] = useState(values.layers.length > 0);
+  const [accountReduceOnly, setAccountReduceOnly] = useState(reduceOnly);
   return (
     <div className="space-y-4">
       {hasSets ? (
@@ -40,7 +41,8 @@ export function AutomationsDesk({
               type="checkbox"
               name="reduceOnly"
               value="on"
-              defaultChecked={reduceOnly}
+              checked={accountReduceOnly}
+              onChange={(event) => setAccountReduceOnly(event.target.checked)}
               className="mt-1 size-4"
             />
             <span>
@@ -64,7 +66,7 @@ export function AutomationsDesk({
       <PaperRulesForm
         values={values}
         inUseRuleIds={inUseRuleIds}
-        reduceOnly={reduceOnly}
+        reduceOnly={accountReduceOnly}
         onHasSetsChange={setHasSets}
       />
     </div>
@@ -125,6 +127,7 @@ export function PaperRulesForm({
               layer={layer}
               canRemove={!used}
               inUse={used}
+              accountReduceOnly={reduceOnly}
               onRemove={() => removeLayer(layer.key, layer.id)}
             />
           );
@@ -175,12 +178,14 @@ function RuleRow({
   layer,
   canRemove,
   inUse,
+  accountReduceOnly,
   onRemove,
 }: {
   index: number;
   layer: PaperLayerFormValues;
   canRemove: boolean;
   inUse: boolean;
+  accountReduceOnly: boolean;
   onRemove: () => void;
 }) {
   const prefix = `r${index}_`;
@@ -200,7 +205,7 @@ function RuleRow({
             className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
           />
         </label>
-        <label className="w-40 shrink-0 text-[11px] text-ink-muted">
+        <label className="w-52 shrink-0 text-[11px] text-ink-muted">
           Mode
           <select
             name={`${prefix}mode`}
@@ -208,12 +213,18 @@ function RuleRow({
             onChange={(event) => setMode(parseAutomationMode(event.target.value))}
             className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
           >
-            <option value="active">Active</option>
+            <option value="active">
+              {accountReduceOnly ? "Active (Reduce only)" : "Active"}
+            </option>
             <option value="reduce_only">Reduce only</option>
             <option value="disabled">Disabled</option>
           </select>
         </label>
-        <ModeLight mode={mode} inUse={inUse} />
+        <ModeLight
+          mode={mode}
+          inUse={inUse}
+          accountReduceOnly={accountReduceOnly}
+        />
         {!inUse && canRemove ? (
           <button
             type="button"
@@ -389,32 +400,47 @@ function Field({
   );
 }
 
-function modeLightLabel(mode: AutomationMode): string {
+function modeLightLabel(
+  mode: AutomationMode,
+  accountReduceOnly: boolean,
+): string {
   if (mode === "reduce_only") {
     return "Reduce only";
   }
   if (mode === "disabled") {
     return "Disabled";
   }
-  return "Active";
+  return accountReduceOnly
+    ? "Active · account Reduce only has priority"
+    : "Active";
+}
+
+function modeLightFill(
+  mode: AutomationMode,
+  accountReduceOnly: boolean,
+): string {
+  if (mode === "disabled") {
+    return "bg-ink-faint";
+  }
+  if (mode === "reduce_only" || accountReduceOnly) {
+    return "bg-warning";
+  }
+  return "bg-success";
 }
 
 function ModeLight({
   mode,
   inUse,
+  accountReduceOnly,
 }: {
   mode: AutomationMode;
   inUse: boolean;
+  accountReduceOnly: boolean;
 }) {
-  const fill =
-    mode === "reduce_only"
-      ? "bg-warning"
-      : mode === "disabled"
-        ? "bg-ink-faint"
-        : "bg-success";
+  const fill = modeLightFill(mode, accountReduceOnly);
   const label = inUse
-    ? `${modeLightLabel(mode)} · in use by an open position`
-    : modeLightLabel(mode);
+    ? `${modeLightLabel(mode, accountReduceOnly)} · in use by an open position`
+    : modeLightLabel(mode, accountReduceOnly);
   return (
     <span
       className="relative mb-1.5 flex size-3.5 shrink-0"
