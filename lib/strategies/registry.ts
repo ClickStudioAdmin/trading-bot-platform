@@ -10,5 +10,7 @@ export const FUTURES_PATHS = {
   positions: "/strategies/futures/positions",
   automations: "/strategies/futures/automations",
   performance: "/strategies/futures/performance",
+  activity: "/strategies/futures/activity",
+  pairs: "/strategies/futures/pairs",
   settings: "/strategies/futures/settings",
 } as const;

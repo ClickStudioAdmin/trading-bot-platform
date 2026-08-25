@@ -35,7 +35,7 @@ Stop at the end of this phase for a Demo desk test. Do not start TradingView ([p
 
 ## What this phase includes
 
-- Strategy slug `futures` under `/strategies/futures` (overview, positions, automations, performance, settings)
+- Strategy slug `futures` under `/strategies/futures` (overview, positions, automations, performance, settings, activity, pairs)
 - `strategy_settings` for the Futures bind and reduce-only flag
 - Single-leg blotter tables
 - Manual Buy / Sell / Flatten on Bybit linear USDT perps

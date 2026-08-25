@@ -160,7 +160,7 @@ export async function submitFuturesTrade(formData: FormData) {
         userId: user.id,
         accountId: account.id,
         strategy: FUTURES_STRATEGY_ID,
-        data: { symbol, action: actionParsed.action },
+        data: { symbol, action: actionParsed.action, positionId: open?.id ?? null },
       });
       fail(next, placed.error);
     }
@@ -178,6 +178,7 @@ export async function submitFuturesTrade(formData: FormData) {
 
   let written: { error: string | null };
   let flash = liveBook ? "live-opened" : "opened";
+  let positionId = open?.id ?? null;
   if (decided.kind === "open") {
     const created = await writeFuturesOpen({
       supabase,
@@ -195,6 +196,7 @@ export async function submitFuturesTrade(formData: FormData) {
       written = { error: created.error };
     } else {
       written = { error: null };
+      positionId = created.positionId;
     }
   } else if (decided.kind === "add" && open) {
     written = await writeFuturesAdd({
@@ -248,7 +250,7 @@ export async function submitFuturesTrade(formData: FormData) {
       userId: user.id,
       accountId: account.id,
       strategy: FUTURES_STRATEGY_ID,
-      data: { symbol, action: actionParsed.action },
+      data: { symbol, action: actionParsed.action, positionId: open?.id ?? null },
     });
     fail(next, written.error);
   }
@@ -270,11 +272,13 @@ export async function submitFuturesTrade(formData: FormData) {
       action: actionParsed.action,
       qty: qtyNumber,
       live: liveBook,
+      positionId,
     },
   });
 
   revalidatePath(FUTURES_PATHS.root);
   revalidatePath(FUTURES_PATHS.positions);
+  revalidatePath(FUTURES_PATHS.performance);
   redirect(`${next}?paper=${flash}`);
 }
 

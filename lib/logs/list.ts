@@ -105,3 +105,34 @@ export function attachLogs<T extends { id: number }>(
     logs: logsForCarry(logs, row.id),
   }));
 }
+
+export function positionIdFromLogData(
+  data: Record<string, unknown>,
+): string | null {
+  const raw = data.positionId;
+  if (typeof raw === "string" && raw.trim()) {
+    return raw;
+  }
+  return null;
+}
+
+export function logsForPosition(
+  logs: EventLogRow[],
+  positionId: string,
+): EventLogRow[] {
+  return logs
+    .filter((log) => positionIdFromLogData(log.data) === positionId)
+    .sort(
+      (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id,
+    );
+}
+
+export function attachPositionLogs<T extends { id: string }>(
+  rows: T[],
+  logs: EventLogRow[],
+): (T & { logs: EventLogRow[] })[] {
+  return rows.map((row) => ({
+    ...row,
+    logs: logsForPosition(logs, row.id),
+  }));
+}

@@ -68,14 +68,14 @@ export function StrategySubnav({
           <p className="mt-1 text-sm text-ink-muted">{description}</p>
         </div>
         {connection || status ? (
-          <div className="mt-6 flex max-w-[min(100%,32rem)] flex-wrap items-stretch justify-end gap-2">
+          <div className="mt-6 flex max-w-[min(100%,32rem)] flex-wrap items-start justify-end gap-2">
             {connection ? (
               <HeaderMeta
                 overline="Exchange Connection"
                 href={connection.href}
               >
                 <span
-                  className={`flex items-center justify-end gap-2 text-sm ${
+                  className={`flex items-center gap-2 text-sm ${
                     connection.connected ? "text-ink" : "text-warning"
                   }`}
                 >
@@ -83,7 +83,7 @@ export function StrategySubnav({
                     tone={connection.connected ? "success" : "warning"}
                     pulse={false}
                   />
-                  <span className="min-w-0 truncate">
+                  <span className="max-w-[14rem] truncate">
                     {connection.name}
                     {connection.venue ? (
                       <span className="text-ink-muted">
@@ -98,7 +98,7 @@ export function StrategySubnav({
             {status ? (
               <HeaderMeta overline="Automations" href={status.href}>
                 <span
-                  className={`flex items-center justify-end gap-2 text-sm ${
+                  className={`flex items-center gap-2 text-sm ${
                     status.tone === "warning" ? "text-warning" : "text-success"
                   }`}
                   title={status.title}
@@ -145,13 +145,13 @@ function HeaderMeta({
   children: ReactNode;
 }) {
   const className =
-    "min-w-[11rem] rounded-card border border-line bg-surface px-3 py-2 text-right";
+    "block w-max max-w-full rounded-card border border-line bg-surface px-3 py-2 text-left";
   const body = (
     <>
-      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+      <p className="whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
         {overline}
       </p>
-      <div className="mt-1">{children}</div>
+      <div className="mt-1 whitespace-nowrap">{children}</div>
     </>
   );
   if (href) {

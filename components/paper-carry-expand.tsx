@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
 import { ColumnHint } from "@/components/column-hint";
 import { PendingSubmitButton, ButtonCheckIcon, useStoredButtonSuccess } from "@/components/pending-submit-button";
 import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
@@ -59,11 +59,15 @@ export function OpenPaperCarryRows({
       : carryPnlPct(trade.unrealizedUsdt, trade.notionalUsdt);
 
   return (
-    <ExpandableOrderRows
+    <ExpandableTradeRows
       colSpan={10}
-      orders={trade.orders}
-      logs={trade.logs}
-      entryBasis={trade.entryBasis}
+      details={
+        <PositionDetailTabs
+          orders={trade.orders}
+          logs={trade.logs}
+          entryBasis={trade.entryBasis}
+        />
+      }
     >
       <td className="min-w-0 px-4 py-3">
         <span className="flex flex-wrap items-center gap-2 font-medium">
@@ -114,7 +118,7 @@ export function OpenPaperCarryRows({
       <td className="px-4 py-3">
         <ClosePaperButton trade={trade} next={next} hideUnwind={hideUnwind} />
       </td>
-    </ExpandableOrderRows>
+    </ExpandableTradeRows>
   );
 }
 
@@ -125,11 +129,15 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
       : carryPnlPct(trade.realizedUsdt, trade.notionalUsdt);
 
   return (
-    <ExpandableOrderRows
+    <ExpandableTradeRows
       colSpan={8}
-      orders={trade.orders}
-      logs={trade.logs}
-      entryBasis={trade.entryBasis}
+      details={
+        <PositionDetailTabs
+          orders={trade.orders}
+          logs={trade.logs}
+          entryBasis={trade.entryBasis}
+        />
+      }
     >
       <td className="min-w-0 px-4 py-3">
         <span className="flex flex-wrap items-center gap-2 font-medium">
@@ -176,74 +184,7 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
       <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
         {formatPct(pnlPct)}
       </td>
-    </ExpandableOrderRows>
-  );
-}
-
-function ExpandableOrderRows({
-  orders,
-  logs,
-  entryBasis,
-  colSpan,
-  children,
-}: {
-  orders: PaperOrderRow[];
-  logs: EventLogRow[];
-  entryBasis: number;
-  colSpan: number;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const panelId = useId();
-
-  return (
-    <>
-      <tr className="border-b border-line last:border-b-0">
-        <td className="px-4 py-3">
-          <button
-            type="button"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
-            aria-expanded={open}
-            aria-controls={open ? panelId : undefined}
-            aria-label={open ? "Hide position details" : "Show position details"}
-            onClick={() => setOpen((current) => !current)}
-          >
-            <ChevronIcon className={open ? "rotate-90" : undefined} />
-          </button>
-        </td>
-        {children}
-      </tr>
-      {open ? (
-        <tr className="border-b border-line last:border-b-0">
-          <td colSpan={colSpan} className="bg-canvas px-4 py-4" id={panelId}>
-            <PositionDetailTabs
-              orders={orders}
-              logs={logs}
-              entryBasis={entryBasis}
-            />
-          </td>
-        </tr>
-      ) : null}
-    </>
-  );
-}
-
-function ChevronIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      className={`h-4 w-4 ${className ?? ""}`}
-    >
-      <path
-        d="M6 3.5 11 8l-5 4.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    </ExpandableTradeRows>
   );
 }
 
@@ -381,73 +322,11 @@ function PositionDetailTabs({
   logs: EventLogRow[];
   entryBasis: number;
 }) {
-  const [tab, setTab] = useState<"orders" | "logs">("orders");
-  const ordersPanelId = useId();
-  const logsPanelId = useId();
-
   return (
-    <div>
-      <div
-        role="tablist"
-        aria-label="Position details"
-        className="flex gap-1 border-b border-line"
-      >
-        <TabButton
-          selected={tab === "orders"}
-          panelId={ordersPanelId}
-          onClick={() => setTab("orders")}
-        >
-          Orders
-        </TabButton>
-        <TabButton
-          selected={tab === "logs"}
-          panelId={logsPanelId}
-          onClick={() => setTab("logs")}
-        >
-          Position logs
-        </TabButton>
-      </div>
-      <div
-        className="pt-4"
-        role="tabpanel"
-        id={tab === "orders" ? ordersPanelId : logsPanelId}
-      >
-        {tab === "orders" ? (
-          <PaperOrderList orders={orders} entryBasis={entryBasis} />
-        ) : (
-          <PositionLogList logs={logs} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TabButton({
-  selected,
-  panelId,
-  onClick,
-  children,
-}: {
-  selected: boolean;
-  panelId: string;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={selected}
-      aria-controls={panelId}
-      className={`-mb-px border-b-2 px-3 py-2 text-sm ${
-        selected
-          ? "border-accent text-ink"
-          : "border-transparent text-ink-muted hover:text-ink"
-      }`}
-      onClick={onClick}
-    >
-      {children}
-    </button>
+    <TradeDetailTabs
+      orders={<PaperOrderList orders={orders} entryBasis={entryBasis} />}
+      logs={<PositionLogList logs={logs} />}
+    />
   );
 }
 
@@ -480,7 +359,7 @@ function PaperOrderList({
   );
 }
 
-function PositionLogList({ logs }: { logs: EventLogRow[] }) {
+export function PositionLogList({ logs }: { logs: EventLogRow[] }) {
   if (logs.length === 0) {
     return (
       <p className="text-sm text-ink-muted">
@@ -534,7 +413,7 @@ function PositionLogList({ logs }: { logs: EventLogRow[] }) {
 function logDetailRows(log: EventLogRow): MetricRow[] {
   const rows: MetricRow[] = [];
   for (const [key, value] of Object.entries(log.data)) {
-    if (key === "carryId" || value === null || value === undefined || value === "") {
+    if (key === "carryId" || key === "positionId" || value === null || value === undefined || value === "") {
       continue;
     }
     const row = formatLogDataField(key, value);
@@ -579,7 +458,23 @@ function formatLogDataField(key: string, value: unknown): MetricRow | null {
       return { label, value: formatLogReason(value) };
     }
     if (key === "side") {
-      return { label, value: value === "close" ? "Close" : "Open" };
+      if (value === "close") {
+        return { label, value: "Close" };
+      }
+      if (value === "open") {
+        return { label, value: "Open" };
+      }
+      if (value === "long" || value === "short") {
+        return { label, value: value === "long" ? "Long" : "Short" };
+      }
+    }
+    if (key === "action") {
+      if (value === "buy" || value === "sell" || value === "flatten") {
+        return {
+          label,
+          value: value === "buy" ? "Buy" : value === "sell" ? "Sell" : "Flatten",
+        };
+      }
     }
     return { label, value };
   }
@@ -607,7 +502,13 @@ const LOG_FIELD_LABELS: Record<string, string> = {
   closeMinNetApr: "Close min APR",
   takeProfitPct: "Take profit",
   stopLossPct: "Stop loss",
+  symbol: "Contract",
+  qty: "Qty",
+  action: "Action",
   side: "Side",
+  price: "Price",
+  entryPrice: "Entry",
+  positionId: "Position",
 };
 
 function labelFromKey(key: string): string {
@@ -649,6 +550,8 @@ function formatLogEvent(event: string): string {
     "trade.close_failed": "Close failed",
     "trade.exits_failed": "Exit update failed",
     "trade.order_failed": "Order write failed",
+    "trade.futures": "Futures",
+    "trade.futures_failed": "Futures failed",
     "engine.open_failed": "Engine open failed",
     "engine.close_failed": "Engine close failed",
   };

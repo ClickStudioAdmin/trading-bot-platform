@@ -99,6 +99,26 @@ export function asPositiveNumber(raw: unknown): number | null {
   return value > 0 && Number.isFinite(value) ? value : null;
 }
 
+export function parseFuturesOrderRow(
+  row: Record<string, unknown>,
+): FuturesOrder {
+  const filled = new Date(String(row.filled_at ?? "")).getTime();
+  const action = String(row.action ?? "");
+  return {
+    id: String(row.id),
+    positionId: String(row.position_id),
+    action:
+      action === "buy" || action === "sell" || action === "flatten"
+        ? action
+        : "buy",
+    qty: Number(row.qty) || 0,
+    price: Number(row.price) > 0 ? Number(row.price) : null,
+    notionalUsdt: Number(row.notional_usdt) > 0 ? Number(row.notional_usdt) : null,
+    venueOrderId: row.venue_order_id ? String(row.venue_order_id) : null,
+    filledAtMs: Number.isFinite(filled) ? filled : 0,
+  };
+}
+
 export function parseFuturesPositionRow(
   row: Record<string, unknown>,
 ): FuturesPosition {

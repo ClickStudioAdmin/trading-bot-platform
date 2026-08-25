@@ -3,8 +3,10 @@ import { eventLogOptionsForScopes } from "./events";
 import { parseEventLogFilters } from "./filters";
 import {
   attachLogs,
+  attachPositionLogs,
   carryIdFromLogData,
   logsForCarry,
+  positionIdFromLogData,
   type EventLogRow,
 } from "./list";
 
@@ -71,5 +73,19 @@ assert.deepEqual(
 const attached = attachLogs([{ id: 7 }, { id: 9 }], grouped);
 assert.equal(attached[0]?.logs.length, 2);
 assert.equal(attached[1]?.logs.length, 0);
+
+assert.equal(positionIdFromLogData({ positionId: "pos-1" }), "pos-1");
+assert.equal(positionIdFromLogData({}), null);
+const byPosition = attachPositionLogs(
+  [{ id: "pos-1" }, { id: "pos-2" }],
+  [
+    {
+      ...sample(10, 7, "2026-08-23T08:00:00.000Z"),
+      data: { positionId: "pos-1" },
+    },
+  ],
+);
+assert.equal(byPosition[0]?.logs.length, 1);
+assert.equal(byPosition[1]?.logs.length, 0);
 
 console.log("event log list checks passed");

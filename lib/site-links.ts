@@ -44,6 +44,8 @@ export const FUTURES_PRIMARY_LINKS = [
 
 export const FUTURES_SECONDARY_LINKS = [
   { href: "/strategies/futures/settings", label: "Strategy Settings" },
+  { href: "/strategies/futures/activity", label: "Activity" },
+  { href: "/strategies/futures/pairs", label: "Pairs" },
 ] as const;
 
 export const ACCOUNT_BOOK_LINKS = [

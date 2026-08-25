@@ -118,6 +118,16 @@ export async function loadUsdtLinearPerps(): Promise<LinearPerp[]> {
   return listUsdtLinearPerps(await fetchBybitInstruments("linear"));
 }
 
+export function baseCoinForPerpSymbol(
+  symbol: string,
+  options: LinearPerp[],
+): string {
+  return (
+    options.find((row) => row.symbol === symbol)?.baseCoin ??
+    symbol.replace(/USDT$/, "")
+  );
+}
+
 export async function loadPerpInstrument(
   symbol: string,
 ): Promise<BybitInstrument | undefined> {
