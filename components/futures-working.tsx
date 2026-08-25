@@ -4,6 +4,7 @@ import { LocalTime } from "@/components/local-time";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TokenIcon } from "@/components/token-icon";
 import { TpslPair } from "@/components/futures-tpsl";
+import { FuturesWorkingEdit } from "@/components/futures-working-edit";
 import { cancelFuturesWorking } from "@/lib/futures/actions";
 import {
   workingActionLabel,
@@ -34,8 +35,8 @@ export function FuturesWorkingOrders({
         <h2 className="text-xl font-semibold tracking-tight">Open orders</h2>
         <p className="text-sm text-ink-muted">
           {exchangeBook
-            ? "Working limits on Bybit. Fills appear on the position when they match. Cancel removes the rest."
-            : "Working paper limits. They fill when mark crosses the limit. Cancel drops the rest."}
+            ? "Working limits on Bybit. Fills appear on the position when they match. Edit remaining qty or limit. Cancel removes the rest."
+            : "Working paper limits. They fill when mark crosses the limit. Edit remaining qty or limit. Cancel drops the rest."}
         </p>
       </div>
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
@@ -62,13 +63,13 @@ export function FuturesWorkingOrders({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
-                  label="Notional"
+                  label="Order Value"
                   hint="Remaining qty × limit."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
-                  label="Working since"
+                  label="Open Time"
                   hint="Local time this limit was placed. Hover for UTC."
                 />
               </th>
@@ -80,11 +81,17 @@ export function FuturesWorkingOrders({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
+                  label="Trailing"
+                  hint="Retracement attached when this limit was placed. It moves onto the position when it fills."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
                   label="Actions"
                   hint={
                     exchangeBook
-                      ? "Cancel this order on Bybit."
-                      : "Cancel this paper order. No Bybit order."
+                      ? "Edit remaining qty or limit on Bybit, or cancel the rest."
+                      : "Edit remaining qty or limit, or cancel this paper order. No Bybit order."
                   }
                 />
               </th>
@@ -93,7 +100,7 @@ export function FuturesWorkingOrders({
           <tbody>
             {!signedIn ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-sm text-ink-muted">
+                <td colSpan={9} className="px-4 py-6 text-sm text-ink-muted">
                   <Link href="/sign-in" className="text-accent">
                     Sign in
                   </Link>{" "}
@@ -102,7 +109,7 @@ export function FuturesWorkingOrders({
               </tr>
             ) : working.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-sm text-ink-muted">
+                <td colSpan={9} className="px-4 py-6 text-sm text-ink-muted">
                   No working limits. Choose Limit on Place an order.
                 </td>
               </tr>
@@ -136,11 +143,11 @@ function WorkingRow({
   return (
     <tr className="border-b border-line last:border-b-0">
       <td className="px-4 py-3">
-        <span className="flex flex-wrap items-center gap-2 font-medium">
+        <span className="flex flex-wrap items-center gap-4 font-medium">
           <TokenIcon symbol={baseCoin} />
-          {baseCoin}
+          <span>{baseCoin}</span>
         </span>
-        <p className="text-xs text-ink-faint">{row.symbol}</p>
+        <p className="pl-9 text-xs text-ink-faint">{row.symbol}</p>
       </td>
       <td className="px-4 py-3">{workingActionLabel(row.action)}</td>
       <td className="px-4 py-3 tabular-nums">
@@ -160,26 +167,53 @@ function WorkingRow({
         {row.takeProfit === null && row.stopLoss === null ? (
           <span className="text-ink-faint">—</span>
         ) : (
-          <TpslPair takeProfit={row.takeProfit} stopLoss={row.stopLoss} />
+          <TpslPair
+            takeProfit={row.takeProfit}
+            stopLoss={row.stopLoss}
+            mode={row.tpslMode}
+          />
         )}
       </td>
       <td className="px-4 py-3">
-        <form action={cancelFuturesWorking}>
-          <input type="hidden" name="next" value={next} />
-          <input type="hidden" name="workingId" value={row.id} />
+        {row.trailingStop === null ? (
+          <span className="text-ink-faint">—</span>
+        ) : (
+          <span className="tabular-nums">{formatPrice(row.trailingStop)}</span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2">
           <ColumnHint
-            hint="Cancel remaining size"
+            hint="Change remaining qty or limit"
             label={
-              <PendingSubmitButton
-                pendingLabel="Cancelling"
-                successKey={`working-cancel-${row.id}`}
-                className={ACTION_CLASS}
-              >
-                Cancel
-              </PendingSubmitButton>
+              <FuturesWorkingEdit
+                workingId={row.id}
+                symbol={row.symbol}
+                action={row.action}
+                remainingQty={row.remainingQty}
+                filledQty={row.filledQty}
+                limitPrice={row.limitPrice}
+                next={next}
+              />
             }
           />
-        </form>
+          <form action={cancelFuturesWorking}>
+            <input type="hidden" name="next" value={next} />
+            <input type="hidden" name="workingId" value={row.id} />
+            <ColumnHint
+              hint="Cancel remaining size"
+              label={
+                <PendingSubmitButton
+                  pendingLabel="Cancelling"
+                  successKey={`working-cancel-${row.id}`}
+                  className={ACTION_CLASS}
+                >
+                  Cancel
+                </PendingSubmitButton>
+              }
+            />
+          </form>
+        </div>
       </td>
     </tr>
   );

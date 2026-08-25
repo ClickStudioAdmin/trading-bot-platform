@@ -99,7 +99,7 @@ export function FuturesSymbolSelect({
           setOpen((current) => !current);
           setQuery("");
         }}
-        className="flex w-full items-center gap-2 rounded-control border border-line bg-surface-raised px-3 py-2 text-left text-sm text-ink hover:border-line-strong focus:border-line-strong focus:outline-none"
+        className="flex w-full items-center gap-4 rounded-control border border-line bg-surface-raised px-3 py-2 text-left text-sm text-ink hover:border-line-strong focus:border-line-strong focus:outline-none"
       >
         {selected ? (
           <>
@@ -163,7 +163,7 @@ export function FuturesSymbolSelect({
                       role="option"
                       aria-selected={active}
                       onClick={() => choose(row.symbol)}
-                      className={`flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-sm ${
+                      className={`flex w-full items-center gap-4 rounded-control px-2 py-1.5 text-left text-sm ${
                         active
                           ? "bg-surface-raised text-ink"
                           : "text-ink-muted hover:bg-surface-raised hover:text-ink"

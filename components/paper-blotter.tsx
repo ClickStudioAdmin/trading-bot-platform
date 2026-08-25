@@ -95,7 +95,7 @@ export function OpenPaperTrades({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
-                  label="Notional"
+                  label="Order Value"
                   hint={
                     exchangeBook
                       ? "Open size in USDT. P&L scales with this amount."

@@ -35,6 +35,8 @@ assert.equal(parseNotionalUsdt("10000"), 10_000);
 assert.equal(parseNotionalUsdt("10,000"), 10_000);
 assert.equal(formatNotionalInput("10000"), "10,000");
 assert.equal(formatNotionalInput("10,000"), "10,000");
+assert.equal(formatGroupedNumberInput("10000", true), "10,000");
+assert.equal(formatGroupedNumberInput("40000", true), "40,000");
 assert.equal(formatGroupedNumberInput("1234.5", true), "1,234.5");
 assert.equal(formatGroupedNumberInput("1,234.50", true), "1,234.50");
 assert.equal(formatGroupedNumberInput(".", true), "0.");

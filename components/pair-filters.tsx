@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { PairFilterInputs } from "@/lib/pairs/filter";
+
+const FILTER_INPUT_CLASS =
+  "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
 export function PairFiltersForm({
   clearHref,
@@ -62,24 +66,20 @@ export function PairFiltersForm({
           <>
             <label className="block text-xs text-ink-muted">
               Min DTE
-              <input
+              <GroupedNumberInput
                 name="minDte"
-                type="number"
-                step="any"
-                inputMode="decimal"
                 defaultValue={values.minDte}
-                className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                allowDecimal
+                className={FILTER_INPUT_CLASS}
               />
             </label>
             <label className="block text-xs text-ink-muted">
               Max DTE
-              <input
+              <GroupedNumberInput
                 name="maxDte"
-                type="number"
-                step="any"
-                inputMode="decimal"
                 defaultValue={values.maxDte}
-                className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                allowDecimal
+                className={FILTER_INPUT_CLASS}
               />
             </label>
           </>

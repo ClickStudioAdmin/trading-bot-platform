@@ -4,12 +4,16 @@ export function FuturesFlash({
   closed,
   working,
   cancelled,
+  amended,
   liveOpened,
   liveAdded,
   liveClosed,
   liveWorking,
+  liveAmended,
   tpsl,
   liveTpsl,
+  trailing,
+  liveTrailing,
   error,
 }: {
   opened: boolean;
@@ -17,12 +21,16 @@ export function FuturesFlash({
   closed?: boolean;
   working?: boolean;
   cancelled?: boolean;
+  amended?: boolean;
   liveOpened?: boolean;
   liveAdded?: boolean;
   liveClosed?: boolean;
   liveWorking?: boolean;
+  liveAmended?: boolean;
   tpsl?: boolean;
   liveTpsl?: boolean;
+  trailing?: boolean;
+  liveTrailing?: boolean;
   error?: string;
 }) {
   if (error) {
@@ -60,10 +68,24 @@ export function FuturesFlash({
       </p>
     );
   }
+  if (liveAmended) {
+    return (
+      <p className="text-sm text-success">
+        Limit updated on the connected exchange.
+      </p>
+    );
+  }
   if (liveTpsl) {
     return (
       <p className="text-sm text-success">
         TP/SL updated on the connected exchange.
+      </p>
+    );
+  }
+  if (liveTrailing) {
+    return (
+      <p className="text-sm text-success">
+        Trailing stop updated on the connected exchange.
       </p>
     );
   }
@@ -82,8 +104,14 @@ export function FuturesFlash({
   if (cancelled) {
     return <p className="text-sm text-success">Order cancelled.</p>;
   }
+  if (amended) {
+    return <p className="text-sm text-success">Paper limit updated.</p>;
+  }
   if (tpsl) {
     return <p className="text-sm text-success">TP/SL updated.</p>;
+  }
+  if (trailing) {
+    return <p className="text-sm text-success">Trailing stop updated.</p>;
   }
   return null;
 }

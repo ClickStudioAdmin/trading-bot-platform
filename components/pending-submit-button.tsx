@@ -51,9 +51,13 @@ function queryLooksSuccessful() {
     paper === "working" ||
     paper === "live-working" ||
     paper === "cancelled" ||
+    paper === "amended" ||
+    paper === "live-amended" ||
     paper === "added" ||
     paper === "tpsl" ||
     paper === "live-tpsl" ||
+    paper === "trailing" ||
+    paper === "live-trailing" ||
     paper === "exits" ||
     params.get("saved") === "1" ||
     params.get("saved") === "profile" ||

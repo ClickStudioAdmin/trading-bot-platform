@@ -103,6 +103,6 @@ function parseBound(raw: string | undefined): number | null {
   if (raw === undefined || raw.trim() === "") {
     return null;
   }
-  const value = Number(raw);
+  const value = Number(raw.replace(/,/g, "").trim());
   return Number.isFinite(value) ? value : null;
 }

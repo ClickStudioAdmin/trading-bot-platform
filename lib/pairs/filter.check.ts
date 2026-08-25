@@ -7,6 +7,8 @@ import {
   uniquePairBases,
 } from "./filter";
 
+assert.equal(parsePairFilters({ minDte: "1,000" }).minDte, 1000);
+
 const parsed = parsePairFilters({
   q: " btc ",
   base: "eth",

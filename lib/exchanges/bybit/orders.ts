@@ -34,6 +34,9 @@ export type BybitTpslAttach = {
   stopLoss?: string;
   tpTriggerBy?: "LastPrice" | "MarkPrice" | "IndexPrice";
   slTriggerBy?: "LastPrice" | "MarkPrice" | "IndexPrice";
+  tpslMode?: "Full" | "Partial";
+  tpSize?: string;
+  slSize?: string;
 };
 
 function applyTpslToBody(
@@ -52,7 +55,18 @@ function applyTpslToBody(
     body.slTriggerBy = tpsl.slTriggerBy ?? "LastPrice";
   }
   if (tpsl.takeProfit || tpsl.stopLoss) {
-    body.tpslMode = "Full";
+    const partial = tpsl.tpslMode === "Partial";
+    body.tpslMode = partial ? "Partial" : "Full";
+    if (partial) {
+      body.tpOrderType = "Market";
+      body.slOrderType = "Market";
+      if (tpsl.tpSize) {
+        body.tpSize = tpsl.tpSize;
+      }
+      if (tpsl.slSize) {
+        body.slSize = tpsl.slSize;
+      }
+    }
   }
 }
 
@@ -260,6 +274,39 @@ export async function bybitCreateLinearLimitOrder(input: {
   return { ok: true, orderId };
 }
 
+export async function bybitAmendLinearOrder(input: {
+  environmentId: string;
+  credentials: BybitPrivateCreds;
+  symbol: string;
+  orderId: string;
+  qty?: string;
+  price?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const body: Record<string, string> = {
+    category: "linear",
+    symbol: input.symbol,
+    orderId: input.orderId,
+  };
+  if (input.qty) {
+    body.qty = input.qty;
+  }
+  if (input.price) {
+    body.price = input.price;
+  }
+  const amended = await bybitPrivateRequest<Record<string, unknown>>({
+    environmentId: input.environmentId,
+    credentials: input.credentials,
+    method: "POST",
+    path: "/v5/order/amend",
+    body: JSON.stringify(body),
+    allowMissingResult: true,
+  });
+  if (amended.ok) {
+    return { ok: true };
+  }
+  return amended;
+}
+
 export async function bybitReadLinearOrder(input: {
   environmentId: string;
   credentials: BybitPrivateCreds;
@@ -390,17 +437,39 @@ export async function bybitSetTradingStop(input: {
   stopLoss: string;
   tpTriggerBy: "LastPrice" | "MarkPrice" | "IndexPrice";
   slTriggerBy: "LastPrice" | "MarkPrice" | "IndexPrice";
+  tpslMode?: "Full" | "Partial";
+  tpSize?: string;
+  slSize?: string;
+  trailingStop?: string;
+  activePrice?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const partial = input.tpslMode === "Partial";
   const body: Record<string, string | number> = {
     category: "linear",
     symbol: input.symbol,
-    tpslMode: "Full",
+    tpslMode: partial ? "Partial" : "Full",
     positionIdx: input.positionIdx,
     takeProfit: input.takeProfit,
     stopLoss: input.stopLoss,
     tpTriggerBy: input.tpTriggerBy,
     slTriggerBy: input.slTriggerBy,
   };
+  if (partial) {
+    body.tpOrderType = "Market";
+    body.slOrderType = "Market";
+    if (input.tpSize) {
+      body.tpSize = input.tpSize;
+    }
+    if (input.slSize) {
+      body.slSize = input.slSize;
+    }
+  }
+  if (input.trailingStop !== undefined) {
+    body.trailingStop = input.trailingStop;
+    if (input.trailingStop !== "0" && input.activePrice) {
+      body.activePrice = input.activePrice;
+    }
+  }
   const set = await bybitPrivateRequest<Record<string, unknown>>({
     environmentId: input.environmentId,
     credentials: input.credentials,

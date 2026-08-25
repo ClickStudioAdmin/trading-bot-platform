@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { FuturesTpslFields } from "@/components/futures-tpsl";
+import { FuturesTrailingFields } from "@/components/futures-trailing";
+import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 
-export function FuturesOrderTicket({ options }: { options: LinearPerp[] }) {
+export function FuturesOrderTicket({
+  options,
+  actions,
+}: {
+  options: LinearPerp[];
+  actions?: ReactNode;
+}) {
   const [symbol, setSymbol] = useState(
     () => options.find((row) => row.symbol === "BTCUSDT")?.symbol ?? options[0]?.symbol ?? "BTCUSDT",
   );
@@ -54,14 +62,13 @@ export function FuturesOrderTicket({ options }: { options: LinearPerp[] }) {
                 $
               </span>
             ) : null}
-            <input
+            <GroupedNumberInput
               name="size"
               value={size}
-              onChange={(event) => setSize(event.target.value)}
-              inputMode="decimal"
-              autoComplete="off"
+              onChange={setSize}
+              allowDecimal
               placeholder={unit === "usdt" ? "100" : "0.001"}
-              aria-label={
+              ariaLabel={
                 unit === "usdt"
                   ? `Size in ${quoteCoin}`
                   : `Size in ${baseCoin}`
@@ -101,20 +108,20 @@ export function FuturesOrderTicket({ options }: { options: LinearPerp[] }) {
             <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
               $
             </span>
-            <input
+            <GroupedNumberInput
               name="limitPrice"
               value={limitPrice}
-              onChange={(event) => setLimitPrice(event.target.value)}
-              inputMode="decimal"
-              autoComplete="off"
+              onChange={setLimitPrice}
+              allowDecimal
               placeholder="0.0"
-              aria-label="Limit price"
+              ariaLabel="Limit price"
               className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
             />
           </span>
         </div>
       ) : null}
-      <FuturesTpslFields />
+      <FuturesTpslFields actions={actions} />
+      <FuturesTrailingFields />
     </>
   );
 }

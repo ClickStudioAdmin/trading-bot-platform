@@ -63,12 +63,16 @@ export default async function FuturesOverviewPage({
         closed={firstSearchValue(params.paper) === "closed"}
         working={firstSearchValue(params.paper) === "working"}
         cancelled={firstSearchValue(params.paper) === "cancelled"}
+        amended={firstSearchValue(params.paper) === "amended"}
         liveOpened={firstSearchValue(params.paper) === "live-opened"}
         liveAdded={firstSearchValue(params.paper) === "live-added"}
         liveClosed={firstSearchValue(params.paper) === "live-closed"}
           liveWorking={firstSearchValue(params.paper) === "live-working"}
+          liveAmended={firstSearchValue(params.paper) === "live-amended"}
           tpsl={firstSearchValue(params.paper) === "tpsl"}
           liveTpsl={firstSearchValue(params.paper) === "live-tpsl"}
+          trailing={firstSearchValue(params.paper) === "trailing"}
+          liveTrailing={firstSearchValue(params.paper) === "live-trailing"}
           error={firstSearchValue(params.paperError)}
       />
       <FuturesWorkingOrders

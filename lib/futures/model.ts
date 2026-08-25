@@ -2,6 +2,7 @@ export type FuturesSide = "long" | "short";
 export type FuturesAction = "buy" | "sell" | "flatten";
 export type FuturesOrderType = "market" | "limit";
 export type FuturesTrigger = "last" | "mark" | "index";
+export type FuturesTpslMode = "full" | "partial";
 export type FuturesPositionStatus = "open" | "closed";
 
 export type FuturesPosition = {
@@ -24,6 +25,12 @@ export type FuturesPosition = {
   stopLoss: number | null;
   tpTrigger: FuturesTrigger;
   slTrigger: FuturesTrigger;
+  tpslMode: FuturesTpslMode;
+  tpQty: number | null;
+  slQty: number | null;
+  trailingStop: number | null;
+  trailingActive: number | null;
+  trailingPeak: number | null;
 };
 
 export type FuturesOrder = {
@@ -183,5 +190,12 @@ export function parseFuturesPositionRow(
     stopLoss: Number(row.stop_loss) > 0 ? Number(row.stop_loss) : null,
     tpTrigger: parseFuturesTriggerColumn(row.tp_trigger),
     slTrigger: parseFuturesTriggerColumn(row.sl_trigger),
+    tpslMode: row.tpsl_mode === "partial" ? "partial" : "full",
+    tpQty: Number(row.tp_qty) > 0 ? Number(row.tp_qty) : null,
+    slQty: Number(row.sl_qty) > 0 ? Number(row.sl_qty) : null,
+    trailingStop: Number(row.trailing_stop) > 0 ? Number(row.trailing_stop) : null,
+    trailingActive:
+      Number(row.trailing_active) > 0 ? Number(row.trailing_active) : null,
+    trailingPeak: Number(row.trailing_peak) > 0 ? Number(row.trailing_peak) : null,
   };
 }

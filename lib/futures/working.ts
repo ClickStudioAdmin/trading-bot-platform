@@ -1,4 +1,9 @@
-import type { FuturesAction, FuturesSide, FuturesTrigger } from "./model";
+import type {
+  FuturesAction,
+  FuturesSide,
+  FuturesTpslMode,
+  FuturesTrigger,
+} from "./model";
 import { parseFuturesTriggerColumn } from "./model";
 
 export type FuturesWorkingStatus = "open" | "filled" | "cancelled" | "rejected";
@@ -24,6 +29,11 @@ export type FuturesWorkingOrder = {
   stopLoss: number | null;
   tpTrigger: FuturesTrigger;
   slTrigger: FuturesTrigger;
+  tpslMode: FuturesTpslMode;
+  tpQty: number | null;
+  slQty: number | null;
+  trailingStop: number | null;
+  trailingActive: number | null;
 };
 
 export function paperLimitShouldFill(input: {
@@ -38,6 +48,61 @@ export function paperLimitShouldFill(input: {
     return input.mark <= input.limitPrice;
   }
   return input.mark >= input.limitPrice;
+}
+
+const SAME = 1e-12;
+
+export function sameWorkingNumber(a: number, b: number): boolean {
+  return Math.abs(a - b) <= SAME;
+}
+
+export function nextWorkingAmend(input: {
+  filledQty: number;
+  qty: number;
+  limitPrice: number;
+  nextRemainingQty: number;
+  nextLimitPrice: number;
+}):
+  | {
+      ok: true;
+      qty: number;
+      remainingQty: number;
+      limitPrice: number;
+      qtyChanged: boolean;
+      priceChanged: boolean;
+    }
+  | { ok: false; error: string } {
+  if (!(input.nextRemainingQty > 0) || !Number.isFinite(input.nextRemainingQty)) {
+    return {
+      ok: false,
+      error: "Enter a positive qty. Use Cancel to drop the rest.",
+    };
+  }
+  if (!(input.nextLimitPrice > 0) || !Number.isFinite(input.nextLimitPrice)) {
+    return { ok: false, error: "Enter a positive limit price." };
+  }
+  const filled = Math.max(0, input.filledQty);
+  const remainingQty = input.nextRemainingQty;
+  const qty = filled + remainingQty;
+  if (qty <= filled + SAME) {
+    return { ok: false, error: "Qty must stay above the filled amount." };
+  }
+  const qtyChanged = !sameWorkingNumber(qty, input.qty);
+  const priceChanged = !sameWorkingNumber(
+    input.nextLimitPrice,
+    input.limitPrice,
+  );
+  if (!qtyChanged && !priceChanged) {
+    return { ok: false, error: "Qty and limit are unchanged." };
+  }
+  return {
+    ok: true,
+    qty,
+    remainingQty,
+    limitPrice: input.nextLimitPrice,
+    qtyChanged,
+    priceChanged,
+  };
 }
 
 export function nextWorkingFill(input: {
@@ -108,6 +173,12 @@ export function parseFuturesWorkingRow(
     stopLoss: Number(row.stop_loss) > 0 ? Number(row.stop_loss) : null,
     tpTrigger: parseFuturesTriggerColumn(row.tp_trigger),
     slTrigger: parseFuturesTriggerColumn(row.sl_trigger),
+    tpslMode: row.tpsl_mode === "partial" ? "partial" : "full",
+    tpQty: Number(row.tp_qty) > 0 ? Number(row.tp_qty) : null,
+    slQty: Number(row.sl_qty) > 0 ? Number(row.sl_qty) : null,
+    trailingStop: Number(row.trailing_stop) > 0 ? Number(row.trailing_stop) : null,
+    trailingActive:
+      Number(row.trailing_active) > 0 ? Number(row.trailing_active) : null,
   };
 }
 

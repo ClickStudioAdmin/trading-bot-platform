@@ -1,11 +1,23 @@
-import { writeFuturesAdd, writeFuturesFlatten, writeFuturesOpen } from "./ledger";
+import { writeFuturesAdd, writeFuturesCloseSlice, writeFuturesOpen, patchFuturesTrailingPeak, patchFuturesWorking } from "./ledger";
 import { parseFuturesPositionRow, type FuturesPosition } from "./model";
 import {
-  paperStopHit,
+  paperStopCloseQty,
+  paperStopLossHit,
+  paperTakeProfitHit,
+  remainingTpslFromVenue,
   tickerTriggerPrices,
+  tpslAfterStopHit,
   tpslFromRow,
   tpslHasLevels,
+  combinedVenueTradingStop,
+  type FuturesTpsl,
 } from "./tpsl";
+import {
+  armTrailingAt,
+  paperTrailingAdvance,
+  trailingFromRow,
+  trailingHasStop,
+} from "./trailing";
 import {
   mapBybitOrderStatus,
   nextWorkingFill,
@@ -23,9 +35,11 @@ import {
   type BybitTicker,
 } from "@/lib/exchanges/bybit/client";
 import {
+  amendPerpOrderOnVenue,
   cancelPerpOrderOnVenue,
   readPerpOrderOnVenue,
   readPerpPositionOnVenue,
+  setPerpTradingStopOnVenue,
 } from "@/lib/exchanges/execute";
 import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
@@ -137,6 +151,7 @@ async function reconcileOneWorkingOrder(input: {
     fillPrice: input.row.limitPrice,
     venueFilledQty: input.row.qty,
     nextStatus: "filled",
+    connection: null,
   });
 }
 
@@ -176,6 +191,7 @@ async function reconcileLiveWorking(input: {
       fillPrice,
       venueFilledQty: venueFilled,
       nextStatus: venueStatus === "open" && !progress.done ? "open" : venueStatus,
+      connection: input.connection,
     });
   } else if (venueStatus !== "open") {
     applied = await closeWorkingOrder({
@@ -194,6 +210,7 @@ async function applyWorkingFill(input: {
   fillPrice: number;
   venueFilledQty: number;
   nextStatus: FuturesWorkingStatus;
+  connection: BoundConnectionSecrets | null;
 }): Promise<boolean> {
   const progress = nextWorkingFill({
     qty: input.row.qty,
@@ -247,6 +264,7 @@ async function applyWorkingFill(input: {
   const sameSide = opens.find((row) => row.side === input.row.side) ?? null;
   let positionId = sameSide?.id ?? input.row.positionId;
   const tpsl = tpslFromRow(input.row);
+  const trailing = armTrailingAt(trailingFromRow(input.row), input.fillPrice);
   if (!sameSide) {
     const created = await writeFuturesOpen({
       supabase: input.supabase,
@@ -260,6 +278,7 @@ async function applyWorkingFill(input: {
       environment: input.row.environment,
       venueOrderId: input.row.venueOrderId,
       tpsl,
+      trailing,
     });
     if (!created.ok) {
       await writeEventLog({
@@ -285,6 +304,7 @@ async function applyWorkingFill(input: {
       environment: input.row.environment,
       venueOrderId: input.row.venueOrderId,
       tpsl,
+      trailing,
     });
     if (added.error) {
       await writeEventLog({
@@ -306,6 +326,31 @@ async function applyWorkingFill(input: {
       .update({ position_id: positionId, updated_at: now })
       .eq("id", input.row.id)
       .eq("account_id", input.row.accountId);
+  }
+  if (input.connection && trailingHasStop(trailing)) {
+    const set = await setPerpTradingStopOnVenue({
+      connection: input.connection,
+      symbol: input.row.symbol,
+      positionIdx: hedgePositionIdx(input.row.side),
+      ...combinedVenueTradingStop(tpsl, trailing),
+    });
+    if (!set.ok) {
+      await writeEventLog({
+        level: "warning",
+        scope: "trade",
+        event: "trade.futures_failed",
+        message: set.error,
+        userId: input.row.userId,
+        accountId: input.row.accountId,
+        strategy: FUTURES_STRATEGY_ID,
+        data: {
+          workingId: input.row.id,
+          symbol: input.row.symbol,
+          action: "trailing",
+          positionId,
+        },
+      });
+    }
   }
   await writeEventLog({
     scope: "trade",
@@ -378,6 +423,45 @@ export async function cancelFuturesWorkingRow(input: {
     return { ok: false, error: "Could not cancel that order." };
   }
   return { ok: true };
+}
+
+export async function amendFuturesWorkingRow(input: {
+  supabase: SupabaseClient;
+  row: FuturesWorkingOrder;
+  connection: BoundConnectionSecrets | null;
+  qty: number;
+  qtyText: string;
+  remainingQty: number;
+  limitPrice: number;
+  priceText: string;
+  qtyChanged: boolean;
+  priceChanged: boolean;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.row.status !== "open") {
+    return { ok: false, error: "That order is no longer open." };
+  }
+  if (input.connection) {
+    if (!input.row.venueOrderId) {
+      return { ok: false, error: "That order is not on the exchange." };
+    }
+    const amended = await amendPerpOrderOnVenue({
+      connection: input.connection,
+      symbol: input.row.symbol,
+      orderId: input.row.venueOrderId,
+      qty: input.qtyChanged ? input.qtyText : undefined,
+      price: input.priceChanged ? input.priceText : undefined,
+    });
+    if (!amended.ok) {
+      return amended;
+    }
+  }
+  return patchFuturesWorking({
+    supabase: input.supabase,
+    row: input.row,
+    qty: input.qty,
+    remainingQty: input.remainingQty,
+    limitPrice: input.limitPrice,
+  });
 }
 
 async function connectionForAccount(input: {
@@ -454,7 +538,10 @@ export async function reconcileOpenFuturesStops(input?: {
   }
   const rows = data
     .map((row) => parseFuturesPositionRow(row as Record<string, unknown>))
-    .filter((row) => tpslHasLevels(tpslFromRow(row)));
+    .filter(
+      (row) =>
+        tpslHasLevels(tpslFromRow(row)) || trailingHasStop(trailingFromRow(row)),
+    );
   if (rows.length === 0) {
     return 0;
   }
@@ -487,7 +574,8 @@ async function reconcileOneStop(input: {
   connections: Map<string, BoundConnectionSecrets | null | undefined>;
 }): Promise<boolean> {
   const tpsl = tpslFromRow(input.row);
-  if (!tpsl) {
+  const trailing = trailingFromRow(input.row);
+  if (!tpsl && !trailing) {
     return false;
   }
   const ticker =
@@ -503,6 +591,32 @@ async function reconcileOneStop(input: {
   if (live === undefined) {
     return false;
   }
+  const slHit = tpsl
+    ? paperStopLossHit({
+        side: input.row.side,
+        tpsl,
+        last: prices.last,
+        mark: prices.mark,
+        index: prices.index,
+      })
+    : null;
+  const trail =
+    trailing && prices.last !== null && prices.last > 0
+      ? paperTrailingAdvance({
+          side: input.row.side,
+          trailing,
+          last: prices.last,
+        })
+      : null;
+  const tpHit = tpsl
+    ? paperTakeProfitHit({
+        side: input.row.side,
+        tpsl,
+        last: prices.last,
+        mark: prices.mark,
+        index: prices.index,
+      })
+    : null;
   if (live) {
     const venue = await readPerpPositionOnVenue({
       connection: live,
@@ -512,62 +626,131 @@ async function reconcileOneStop(input: {
     if (!venue.ok) {
       return false;
     }
-    if (venue.position && venue.position.size > 0) {
+    const venueSize = venue.position?.size ?? 0;
+    if (venueSize + 1e-12 >= input.row.qty) {
       return false;
     }
-    const hit = paperStopHit({
-      side: input.row.side,
-      tpsl,
-      last: prices.last,
-      mark: prices.mark,
-      index: prices.index,
-    });
+    const kind = slHit
+      ? slHit.kind
+      : trail?.hit
+        ? "trailing"
+        : tpHit
+          ? tpHit.kind
+          : "venue";
     const fillPrice =
-      hit?.price ?? prices.mark ?? prices.last ?? input.row.entryPrice;
+      slHit?.price ??
+      (trail?.hit ? trail.fillPrice : null) ??
+      tpHit?.price ??
+      prices.mark ??
+      prices.last ??
+      input.row.entryPrice;
+    const remainingTpsl =
+      venueSize <= 1e-12 || !tpsl
+        ? null
+        : slHit
+          ? tpslAfterStopHit(tpsl, slHit.kind, venueSize)
+          : tpHit
+            ? tpslAfterStopHit(tpsl, tpHit.kind, venueSize)
+            : remainingTpslFromVenue(tpsl, venue.position, venueSize);
     return closeStopPosition({
       supabase: input.supabase,
       row: input.row,
-      price: fillPrice,
+      qty: input.row.qty - venueSize,
+      price: fillPrice ?? input.row.entryPrice,
       venue: live.venue,
       environment: live.environment,
-      kind: hit?.kind ?? "venue",
+      kind,
+      remainingTpsl,
     });
   }
-  const hit = paperStopHit({
-    side: input.row.side,
-    tpsl,
-    last: prices.last,
-    mark: prices.mark,
-    index: prices.index,
-  });
-  if (!hit) {
-    return false;
+  if (slHit && tpsl) {
+    const closeQty = paperStopCloseQty({
+      positionQty: input.row.qty,
+      tpsl,
+      kind: slHit.kind,
+    });
+    const remainingQty = input.row.qty - closeQty;
+    return closeStopPosition({
+      supabase: input.supabase,
+      row: input.row,
+      qty: closeQty,
+      price: slHit.price,
+      venue: null,
+      environment: null,
+      kind: slHit.kind,
+      remainingTpsl:
+        remainingQty > 1e-12
+          ? tpslAfterStopHit(tpsl, slHit.kind, remainingQty)
+          : null,
+    });
   }
-  return closeStopPosition({
-    supabase: input.supabase,
-    row: input.row,
-    price: hit.price,
-    venue: null,
-    environment: null,
-    kind: hit.kind,
-  });
+  if (trail) {
+    if (
+      trail.peak !== trailing?.peak &&
+      !trail.hit &&
+      trail.peak !== null
+    ) {
+      await patchFuturesTrailingPeak({
+        supabase: input.supabase,
+        row: input.row,
+        peak: trail.peak,
+      });
+    }
+    if (trail.hit && trail.fillPrice !== null) {
+      return closeStopPosition({
+        supabase: input.supabase,
+        row: input.row,
+        qty: input.row.qty,
+        price: trail.fillPrice,
+        venue: null,
+        environment: null,
+        kind: "trailing",
+        remainingTpsl: null,
+      });
+    }
+  }
+  if (tpHit && tpsl) {
+    const closeQty = paperStopCloseQty({
+      positionQty: input.row.qty,
+      tpsl,
+      kind: tpHit.kind,
+    });
+    const remainingQty = input.row.qty - closeQty;
+    return closeStopPosition({
+      supabase: input.supabase,
+      row: input.row,
+      qty: closeQty,
+      price: tpHit.price,
+      venue: null,
+      environment: null,
+      kind: tpHit.kind,
+      remainingTpsl:
+        remainingQty > 1e-12
+          ? tpslAfterStopHit(tpsl, tpHit.kind, remainingQty)
+          : null,
+    });
+  }
+  return false;
 }
 
 async function closeStopPosition(input: {
   supabase: SupabaseClient;
   row: FuturesPosition;
+  qty: number;
   price: number;
   venue: string | null;
   environment: string | null;
-  kind: "take_profit" | "stop_loss" | "venue";
+  kind: "take_profit" | "stop_loss" | "trailing" | "venue";
+  remainingTpsl: FuturesTpsl | null;
 }): Promise<boolean> {
-  const written = await writeFuturesFlatten({
+  const written = await writeFuturesCloseSlice({
     supabase: input.supabase,
     row: input.row,
-    qty: input.row.qty,
+    qty: input.qty,
     price: input.price,
     venue: input.venue,
     environment: input.environment,
+    remainingTpsl: input.remainingTpsl,
   });
   if (written.error) {
     await writeEventLog({
@@ -586,23 +769,33 @@ async function closeStopPosition(input: {
     });
     return false;
   }
+  const closed = written.remaining <= 1e-12;
   await writeEventLog({
     scope: "trade",
     event: "trade.futures",
     message:
       input.kind === "stop_loss"
-        ? `Stop loss closed ${input.row.symbol} ${input.row.side}`
+        ? closed
+          ? `Stop loss closed ${input.row.symbol} ${input.row.side}`
+          : `Stop loss reduced ${input.row.symbol} ${input.row.side}`
         : input.kind === "take_profit"
-          ? `Take profit closed ${input.row.symbol} ${input.row.side}`
-          : `Venue closed ${input.row.symbol} ${input.row.side}`,
+          ? closed
+            ? `Take profit closed ${input.row.symbol} ${input.row.side}`
+            : `Take profit reduced ${input.row.symbol} ${input.row.side}`
+          : input.kind === "trailing"
+            ? `Trailing stop closed ${input.row.symbol} ${input.row.side}`
+            : closed
+              ? `Venue closed ${input.row.symbol} ${input.row.side}`
+              : `Venue reduced ${input.row.symbol} ${input.row.side}`,
     userId: input.row.userId,
     accountId: input.row.accountId,
     strategy: FUTURES_STRATEGY_ID,
     data: {
       symbol: input.row.symbol,
       action: input.kind,
-      qty: input.row.qty,
+      qty: input.qty,
       price: input.price,
+      remaining: written.remaining,
       positionId: input.row.id,
     },
   });

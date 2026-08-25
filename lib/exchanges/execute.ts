@@ -1,4 +1,5 @@
 import {
+  bybitAmendLinearOrder,
   bybitCancelLinearOrder,
   bybitCreateLinearLimitOrder,
   bybitCreateMarketOrder,
@@ -281,6 +282,29 @@ export async function placePerpLimitOnVenue(input: {
   return created;
 }
 
+export async function amendPerpOrderOnVenue(input: {
+  connection: BoundConnectionSecrets;
+  symbol: string;
+  orderId: string;
+  qty?: string;
+  price?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.connection.venue !== "bybit") {
+    return { ok: false, error: "That exchange cannot amend futures orders yet." };
+  }
+  if (!input.qty && !input.price) {
+    return { ok: false, error: "Qty and limit are unchanged." };
+  }
+  return bybitAmendLinearOrder({
+    environmentId: input.connection.environment,
+    credentials: creds(input.connection),
+    symbol: input.symbol,
+    orderId: input.orderId,
+    qty: input.qty,
+    price: input.price,
+  });
+}
+
 export async function readPerpOrderOnVenue(input: {
   connection: BoundConnectionSecrets;
   orderId: string;
@@ -339,6 +363,11 @@ export async function setPerpTradingStopOnVenue(input: {
   stopLoss: string;
   tpTriggerBy: "LastPrice" | "MarkPrice" | "IndexPrice";
   slTriggerBy: "LastPrice" | "MarkPrice" | "IndexPrice";
+  tpslMode?: "Full" | "Partial";
+  tpSize?: string;
+  slSize?: string;
+  trailingStop?: string;
+  activePrice?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot set TP/SL yet." };
@@ -352,5 +381,10 @@ export async function setPerpTradingStopOnVenue(input: {
     stopLoss: input.stopLoss,
     tpTriggerBy: input.tpTriggerBy,
     slTriggerBy: input.slTriggerBy,
+    tpslMode: input.tpslMode,
+    tpSize: input.tpSize,
+    slSize: input.slSize,
+    trailingStop: input.trailingStop,
+    activePrice: input.activePrice,
   });
 }

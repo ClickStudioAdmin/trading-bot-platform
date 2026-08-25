@@ -36,7 +36,7 @@ export function formatGroupedNumberInput(
     if (digits === "") {
       return "";
     }
-    return Number(digits).toLocaleString("en-US");
+    return groupThousands(digits);
   }
 
   const stripped = raw.replace(/[^\d.]/g, "");
@@ -50,11 +50,20 @@ export function formatGroupedNumberInput(
   const [wholeRaw = "", ...rest] = stripped.split(".");
   const fraction = rest.join("");
   const wholeDigits = wholeRaw === "" ? "0" : wholeRaw;
-  const grouped = Number(wholeDigits).toLocaleString("en-US");
   if (!Number.isFinite(Number(wholeDigits))) {
     return "";
   }
+  const grouped = groupThousands(wholeDigits);
   return hasDot ? `${grouped}.${fraction}` : grouped;
+}
+
+function groupThousands(digits: string): string {
+  const normalized = String(Number(digits));
+  if (!Number.isFinite(Number(normalized))) {
+    return "";
+  }
+  const [whole = "0"] = normalized.split(".");
+  return whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 export function parseNotionalUsdt(raw: string): number | null {

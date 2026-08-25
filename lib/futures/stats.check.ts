@@ -28,6 +28,12 @@ function closed(partial: Partial<FuturesPosition> & { realizedUsdt: number; noti
     stopLoss: null,
     tpTrigger: "last",
     slTrigger: "last",
+    tpslMode: "full",
+    tpQty: null,
+    slQty: null,
+    trailingStop: null,
+    trailingActive: null,
+    trailingPeak: null,
   };
 }
 

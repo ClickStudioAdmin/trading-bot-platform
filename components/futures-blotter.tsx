@@ -10,6 +10,7 @@ import { TokenIcon } from "@/components/token-icon";
 import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
 import { submitFuturesTrade } from "@/lib/futures/actions";
 import { FuturesTpslCell } from "@/components/futures-tpsl";
+import { FuturesTrailingCell } from "@/components/futures-trailing";
 import type { FuturesDeskPosition } from "@/lib/futures/list";
 import type { MarkedFutures } from "@/lib/futures/mark";
 import type { FuturesOrder } from "@/lib/futures/model";
@@ -194,6 +195,12 @@ export function OpenFuturesTrades({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
+                  label="Trailing Stop"
+                  hint="Retracement distance from the best price since activation. Closes the whole row at market. Add on the ticket or here."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
                   label="Actions"
                   hint={
                     exchangeBook
@@ -207,7 +214,7 @@ export function OpenFuturesTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={11}
+                colSpan={12}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -219,7 +226,7 @@ export function OpenFuturesTrades({
               />
             ) : open.length === 0 ? (
               <EmptyRow
-                colSpan={11}
+                colSpan={12}
                 message={
                   emptyMessage ?? "No open futures. Place an order above."
                 }
@@ -391,7 +398,7 @@ function OpenFuturesRows({
 
   return (
     <ExpandableTradeRows
-      colSpan={11}
+      colSpan={12}
       details={
         <TradeDetailTabs
           orders={<FuturesOrderList orders={trade.orders} />}
@@ -400,14 +407,14 @@ function OpenFuturesRows({
       }
     >
       <td className="min-w-0 px-4 py-3">
-        <span className="flex flex-wrap items-center gap-2 font-medium">
+        <span className="flex flex-wrap items-center gap-4 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
-          {trade.baseCoin}
+          <span>{trade.baseCoin}</span>
           <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent">
             Manual
           </span>
         </span>
-        <span className="mt-0.5 block pl-7 text-xs text-ink-faint">
+        <span className="mt-0.5 block pl-9 text-xs text-ink-faint">
           {trade.symbol}
         </span>
       </td>
@@ -434,10 +441,27 @@ function OpenFuturesRows({
           qty={trade.qty}
           entryPrice={trade.entryPrice}
           mark={trade.mark}
+          last={trade.last}
           takeProfit={trade.takeProfit}
           stopLoss={trade.stopLoss}
           tpTrigger={trade.tpTrigger}
           slTrigger={trade.slTrigger}
+          tpslMode={trade.tpslMode}
+          tpQty={trade.tpQty}
+          slQty={trade.slQty}
+          next={next}
+        />
+      </td>
+      <td className="px-4 py-3">
+        <FuturesTrailingCell
+          positionId={trade.id}
+          symbol={trade.symbol}
+          side={trade.side}
+          entryPrice={trade.entryPrice}
+          mark={trade.mark}
+          last={trade.last}
+          trailingStop={trade.trailingStop}
+          trailingActive={trade.trailingActive}
           next={next}
         />
       </td>
@@ -488,14 +512,14 @@ function ClosedFuturesRows({
       }
     >
       <td className="min-w-0 px-4 py-3">
-        <span className="flex flex-wrap items-center gap-2 font-medium">
+        <span className="flex flex-wrap items-center gap-4 font-medium">
           <TokenIcon symbol={baseCoin} />
-          {baseCoin}
+          <span>{baseCoin}</span>
           <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent">
             Manual
           </span>
         </span>
-        <span className="mt-0.5 block pl-7 text-xs text-ink-faint">
+        <span className="mt-0.5 block pl-9 text-xs text-ink-faint">
           {trade.symbol}
           {trade.qty ? ` · ${trade.qty}` : ""}
         </span>

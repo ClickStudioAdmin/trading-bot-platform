@@ -26,7 +26,7 @@ export function TokenIcon({
   if (failed) {
     return (
       <span
-        className="inline-flex items-center justify-center rounded-full bg-surface-raised text-[10px] font-semibold text-ink-muted"
+        className="inline-flex shrink-0 items-center justify-center rounded-full bg-surface-raised text-[10px] font-semibold text-ink-muted"
         style={{ width: size, height: size }}
       >
         {iconSymbol.slice(0, 1)}
@@ -44,7 +44,7 @@ export function TokenIcon({
       height={size}
       loading="lazy"
       decoding="async"
-      className="inline-block rounded-full"
+      className="inline-block shrink-0 rounded-full"
       onError={() => setFailed(true)}
     />
   );

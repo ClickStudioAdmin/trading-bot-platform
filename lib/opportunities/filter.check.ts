@@ -33,6 +33,8 @@ const rows = [
   row({ futureSymbol: "D", netApr: 0.2, daysToExpiry: 200, capacityUsdt: 1_000 }),
 ];
 
+assert.equal(parseOpportunityFilters({ minCapacity: "5,000" }).minCapacityUsdt, 5000);
+
 const parsed = parseOpportunityFilters({
   minApr: "10",
   minDte: "7",

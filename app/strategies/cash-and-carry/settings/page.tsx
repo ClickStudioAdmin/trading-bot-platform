@@ -15,6 +15,7 @@ import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { usableBookShareToInput } from "@/lib/opportunities/capacity";
 import { firstSearchValue } from "@/lib/paper/open";
+import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { getSessionContext } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
@@ -79,11 +80,10 @@ export default async function CashAndCarrySettingsPage({
         ) : null}
         <label className="block text-sm text-ink">
           Usable book share %
-          <input
+          <GroupedNumberInput
             name="usableBookShare"
-            inputMode="decimal"
-            autoComplete="off"
             defaultValue={usableBookShareToInput(settings.share)}
+            allowDecimal
             className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
           />
         </label>

@@ -1,5 +1,9 @@
 import type { OpportunityFilterInputs } from "@/lib/opportunities/filter";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { GroupedNumberInput } from "@/components/usdt-size-input";
+
+const FILTER_INPUT_CLASS =
+  "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
 export function OpportunityFiltersForm({
   values,
@@ -69,14 +73,12 @@ function Field({
   return (
     <label htmlFor={id} className="block text-xs text-ink-muted">
       {label}
-      <input
+      <GroupedNumberInput
         id={id}
         name={name}
-        type="number"
-        step="any"
-        inputMode="decimal"
         defaultValue={defaultValue}
-        className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+        allowDecimal
+        className={FILTER_INPUT_CLASS}
       />
     </label>
   );

@@ -121,29 +121,61 @@ export function UsdtSizeInput({
   );
 }
 
+const DEFAULT_GROUPED_CLASS =
+  "mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs tabular-nums text-ink focus:border-line-strong focus:outline-none";
+
 export function GroupedNumberInput({
   name,
-  defaultValue,
+  id,
+  defaultValue = "",
+  value,
+  onChange,
   allowDecimal = false,
+  placeholder,
+  className = DEFAULT_GROUPED_CLASS,
+  ariaLabel,
 }: {
-  name: string;
-  defaultValue: string;
+  name?: string;
+  id?: string;
+  defaultValue?: string;
+  value?: string;
+  onChange?: (next: string) => void;
   allowDecimal?: boolean;
+  placeholder?: string;
+  className?: string;
+  ariaLabel?: string;
 }) {
-  const [display, setDisplay] = useState(
+  const [internal, setInternal] = useState(() =>
     formatGroupedNumberInput(defaultValue, allowDecimal),
   );
+  const display = value !== undefined ? value : internal;
+
+  function apply(raw: string) {
+    const next = formatGroupedNumberInput(raw, allowDecimal);
+    if (value === undefined) {
+      setInternal(next);
+    }
+    onChange?.(next);
+  }
 
   return (
     <input
+      id={id}
       name={name}
+      type="text"
       inputMode={allowDecimal ? "decimal" : "numeric"}
       autoComplete="off"
+      spellCheck={false}
+      aria-label={ariaLabel}
+      placeholder={placeholder}
       value={display}
-      onChange={(event) =>
-        setDisplay(formatGroupedNumberInput(event.target.value, allowDecimal))
-      }
-      className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs tabular-nums text-ink focus:border-line-strong focus:outline-none"
+      onChange={(event) => {
+        apply(event.target.value);
+      }}
+      onBlur={(event) => {
+        apply(event.target.value);
+      }}
+      className={className}
     />
   );
 }

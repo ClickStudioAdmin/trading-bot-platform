@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   mapBybitOrderStatus,
+  nextWorkingAmend,
   nextWorkingFill,
   paperLimitShouldFill,
   parseFuturesWorkingRow,
@@ -41,6 +42,56 @@ const noDouble = nextWorkingFill({
 });
 assert.equal(noDouble.delta, 0);
 
+const priceOnly = nextWorkingAmend({
+  filledQty: 0,
+  qty: 0.01,
+  limitPrice: 80000,
+  nextRemainingQty: 0.01,
+  nextLimitPrice: 79000,
+});
+assert.equal(priceOnly.ok, true);
+if (priceOnly.ok) {
+  assert.equal(priceOnly.qtyChanged, false);
+  assert.equal(priceOnly.priceChanged, true);
+  assert.equal(priceOnly.limitPrice, 79000);
+}
+
+const sizeOnly = nextWorkingAmend({
+  filledQty: 0.2,
+  qty: 1,
+  limitPrice: 80000,
+  nextRemainingQty: 0.5,
+  nextLimitPrice: 80000,
+});
+assert.equal(sizeOnly.ok, true);
+if (sizeOnly.ok) {
+  assert.equal(sizeOnly.qty, 0.7);
+  assert.equal(sizeOnly.remainingQty, 0.5);
+  assert.equal(sizeOnly.qtyChanged, true);
+  assert.equal(sizeOnly.priceChanged, false);
+}
+
+assert.equal(
+  nextWorkingAmend({
+    filledQty: 0,
+    qty: 0.01,
+    limitPrice: 80000,
+    nextRemainingQty: 0.01,
+    nextLimitPrice: 80000,
+  }).ok,
+  false,
+);
+assert.equal(
+  nextWorkingAmend({
+    filledQty: 0.2,
+    qty: 1,
+    limitPrice: 80000,
+    nextRemainingQty: 0,
+    nextLimitPrice: 80000,
+  }).ok,
+  false,
+);
+
 assert.equal(mapBybitOrderStatus("New"), "open");
 assert.equal(mapBybitOrderStatus("PartiallyFilled"), "open");
 assert.equal(mapBybitOrderStatus("Filled"), "filled");
@@ -70,5 +121,9 @@ assert.equal(parsed.remainingQty, 0.01);
 assert.equal(parsed.takeProfit, null);
 assert.equal(parsed.stopLoss, null);
 assert.equal(parsed.tpTrigger, "last");
+assert.equal(parsed.tpslMode, "full");
+assert.equal(parsed.tpQty, null);
+assert.equal(parsed.trailingStop, null);
+assert.equal(parsed.trailingActive, null);
 
 console.log("futures working checks passed");
