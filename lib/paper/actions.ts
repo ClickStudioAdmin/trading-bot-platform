@@ -8,7 +8,11 @@ import {
   writeCloseClip,
   writeOpenClip,
 } from "@/lib/paper/ledger";
-import { parsePaperOrderRow, remainingOpenFillQty } from "@/lib/paper/orders";
+import {
+  clipFillBasis,
+  parsePaperOrderRow,
+  remainingOpenFillQty,
+} from "@/lib/paper/orders";
 import { unwindClipUsdt } from "@/lib/engine/clip";
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import {
@@ -228,6 +232,11 @@ export async function openPaperCarry(formData: FormData) {
     .insert(
       paperCarryInsertRow(user.id, match, sized, {
         accountId: account.id,
+        entryBasis: clipFillBasis(
+          match,
+          venueFill?.ok ? venueFill.fill.spotPrice : null,
+          venueFill?.ok ? venueFill.fill.futurePrice : null,
+        ),
       }),
     )
     .select("id")

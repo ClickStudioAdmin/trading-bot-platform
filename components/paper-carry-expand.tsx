@@ -303,6 +303,8 @@ function ClosePaperButton({
         hint={
           auto ? (
             <AutoCloseHint automation={trade.automation} />
+          ) : hideUnwind ? (
+            "Flatten both Bybit legs at market."
           ) : (
             "Close at market"
           )
@@ -704,28 +706,35 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
       ) : null}
       <ComparePairs
         leftTitle="Theoretical · scan"
-        rightTitle="Execution · paper"
+        rightTitle="Fill"
         rows={[
           {
             left: {
               label: "Scan basis",
               value: formatPct(order.theoretical.executableBasis),
-              hint: "Gross basis before slippage + fees",
+              hint: "Gross (future bid − spot ask) / spot ask from the scan. Before fees.",
             },
             right: {
               label: "Fill basis",
               value: formatPct(order.fillBasis),
               tone: order.fillBasis,
+              hint: "Gross from exchange fill prices when present. Paper copies the scan net.",
             },
           },
           {
-            right: { label: "Slip vs scan", value: formatPct(slip), tone: slip },
+            right: {
+              label: "Scan vs Fill",
+              value: formatPct(slip),
+              tone: slip,
+              hint: "Fill basis minus scan basis when this clip has exchange fill prices. Paper is 0.",
+            },
           },
           {
             left: {
               label: "Net APR",
               value: formatPct(order.theoretical.netApr),
               tone: order.theoretical.netApr,
+              hint: "Scan net basis × 365 / DTE. After assumed fees and slip.",
             },
           },
           {
@@ -863,10 +872,10 @@ function ComparePairs({
   return (
     <div className="mt-4">
       <div className="grid grid-cols-2 gap-x-6">
-        <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        <p className="text-sm font-semibold tracking-tight">
           {leftTitle}
         </p>
-        <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        <p className="text-sm font-semibold tracking-tight">
           {rightTitle}
         </p>
       </div>

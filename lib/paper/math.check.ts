@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   blendEntryBasis,
+  weightedOpenFillBasis,
   carryPnlPct,
   carryPnlUsdt,
   clipPnl,
@@ -23,6 +24,14 @@ almostEqual(blendEntryBasis(2_000, 0.02, 1_000, 0.05), 0.03);
 almostEqual(blendEntryBasis(10_000, 0.018, 10_000, 0.018), 0.018);
 assert.throws(() => blendEntryBasis(0, 0.02, 1_000, 0.03));
 assert.throws(() => blendEntryBasis(1_000, Number.NaN, 1_000, 0.03));
+almostEqual(
+  weightedOpenFillBasis([
+    { notionalUsdt: 1_574, fillBasis: 0.0389 },
+    { notionalUsdt: 1_962, fillBasis: 0.0388 },
+  ]) ?? Number.NaN,
+  (1_574 * 0.0389 + 1_962 * 0.0388) / (1_574 + 1_962),
+);
+assert.equal(weightedOpenFillBasis([]), null);
 
 const clip = clipPnl({
   entryBasis: 0.02,

@@ -2,6 +2,7 @@ import { writeEventLog } from "@/lib/logs/write";
 import { closeClipPlan, type PriorCloseClip } from "@/lib/paper/close";
 import { blendEntryBasis } from "@/lib/paper/math";
 import {
+  clipFillBasis,
   paperOrderInsertRow,
   type PaperOrderRow,
 } from "@/lib/paper/orders";
@@ -71,7 +72,11 @@ export async function writeOpenClip(input: {
     input.row.notionalUsdt,
     input.row.entryBasis,
     input.clipUsdt,
-    input.opportunity.netBasis,
+    clipFillBasis(
+      input.opportunity,
+      input.fillSpotPrice,
+      input.fillFuturePrice,
+    ),
   );
 
   const { data, error } = await input.supabase

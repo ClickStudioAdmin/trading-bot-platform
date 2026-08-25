@@ -50,6 +50,28 @@ const scan: ScannedOpportunity[] = [
 ];
 
 const marked = markOpenCarries([row], scan);
+assert.equal(
+  markOpenCarries([row], scan, [
+    {
+      carryId: row.id,
+      notionalUsdt: 1_574,
+      fillBasis: 0.0389,
+      hasFillPrices: true,
+    },
+  ])[0]?.entryBasis,
+  0.0389,
+);
+assert.equal(
+  markOpenCarries([row], scan, [
+    {
+      carryId: row.id,
+      notionalUsdt: 1_574,
+      fillBasis: 0.0389,
+      hasFillPrices: true,
+    },
+  ])[0]?.markBasis,
+  0.02,
+);
 assert.equal(marked[0]?.markBasis, 0.125);
 assert.equal(marked[0]?.markApr, 0.04);
 assert.equal(marked[0]?.unrealizedUsdt, 1210);

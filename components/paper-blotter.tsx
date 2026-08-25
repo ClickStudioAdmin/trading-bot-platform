@@ -74,7 +74,11 @@ export function OpenPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Details"
-                  hint="Expand for paper orders and the event log for this position."
+                  hint={
+                    exchangeBook
+                      ? "Expand for orders and the event log for this position."
+                      : "Expand for paper orders and the event log for this position."
+                  }
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -92,43 +96,51 @@ export function OpenPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Notional"
-                  hint="Paper size in USDT. P&L scales with this amount."
+                  hint={
+                    exchangeBook
+                      ? "Open size in USDT. P&L scales with this amount."
+                      : "Paper size in USDT. P&L scales with this amount."
+                  }
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Entry basis"
-                  hint="Net basis when opened: executable minus VIP0 taker on both legs, 5 bp slip, and delivery (0 on USDT expiry)."
+                  hint="Size-weighted average fill basis of the open clips. Connected Exchange: gross from fill prices. Paper: scan net (fill equals the scan)."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Mark basis"
-                  hint="Live scan net basis now. Same formula as the book. Not mid or last."
+                  hint="Current scan for this pair, not mid or last. Connected Exchange: scan basis (gross), same unit as fill. Paper: net basis after assumed fees."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Net APR"
-                  hint="Mark net basis × 365 / DTE. Same figure as the Opportunities book. Used to rank pairs and for mark APR exits."
+                  hint="Scan net basis × 365 / DTE. After assumed fees and slip. Same figure as Opportunities — not computed from Entry or Mark fill. Used to rank pairs and for mark APR exits."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Unrealized"
-                  hint="Dollar P&L after open and close costs: (entry net − mark net − 2 × fees and slip) × notional. The fee model is VIP0 taker on both legs plus 5 bp slip, charged once to open and once to close. Delivery is 0."
+                  hint="(entry − mark − 2 × assumed fees and slip) × notional. Cost model is VIP0 taker on both legs plus 5 bp slip, counted once to open and once to close — not Bybit’s invoice. Connected Exchange: entry is fill, mark is scan. Paper: both are net."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="P&L %"
-                  hint="Unrealized ÷ notional. All-in percentage of paper size. Not annualized — that is APR on past trades."
+                  hint="Unrealized ÷ notional. Same assumed fee model as Unrealized. Not annualized."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Actions"
-                  hint="Manual Close flattens remaining size at the live scan. Auto Close uses only that set’s exit order type — Fixed flattens, Dynamic clips to usable book. It does not wait for APR, DTE, take profit, or stop loss. Unwind is manual only. After an exit is submitted, Close is replaced by Closing. No Bybit order."
+                  hint={
+                    exchangeBook
+                      ? "Manual Close flattens both Bybit legs at market. Auto Close uses that set’s exit order type. Unwind on the exchange is not available yet."
+                      : "Manual Close flattens remaining size at the live scan. Auto Close uses only that set’s exit order type — Fixed flattens, Dynamic clips to usable book. It does not wait for APR, DTE, take profit, or stop loss. Unwind is manual only. After an exit is submitted, Close is replaced by Closing. No Bybit order."
+                  }
                 />
               </th>
             </tr>
@@ -192,7 +204,7 @@ export function ClosedPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Details"
-                  hint="Expand for paper orders and the event log for this position."
+                  hint="Expand for orders and the event log for this position."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -204,7 +216,7 @@ export function ClosedPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Closed"
-                  hint="UTC date this paper carry was closed."
+                  hint="UTC date this carry was closed."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -216,25 +228,25 @@ export function ClosedPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Entry"
-                  hint="Net basis when opened, after open fees and slip."
+                  hint="Size-weighted average fill basis of the open clips. Connected Exchange: gross from fill prices. Paper: scan net (fill equals the scan)."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Exit"
-                  hint="Live scan net basis at close. Same formula as the book."
+                  hint="Scan net basis at close (after assumed fees). Same net figure as the Opportunities book."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Realized"
-                  hint="Locked dollar P&L after open and close costs: (entry net − exit net − 2 × fees and slip) × notional."
+                  hint="(entry − exit − 2 × assumed fees and slip) × notional. Same cost model as Unrealized. Exit is scan net. Not Bybit’s actual invoice."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="P&L %"
-                  hint="Realized ÷ notional. All-in percentage of paper size. Same formula as open P&L %."
+                  hint="Realized ÷ notional. Same assumed fee model as Realized."
                 />
               </th>
             </tr>

@@ -164,6 +164,7 @@ export function paperCarryInsertRow(
     source?: TradeSource;
     ruleId?: number | null;
     ruleName?: string | null;
+    entryBasis?: number;
   },
 ) {
   if (!(notionalUsdt > 0)) {
@@ -177,7 +178,7 @@ export function paperCarryInsertRow(
     future_symbol: opportunity.futureSymbol,
     delivery_time: new Date(opportunity.deliveryTimeMs).toISOString(),
     notional_usdt: notionalUsdt,
-    entry_basis: opportunity.netBasis,
+    entry_basis: extras?.entryBasis ?? opportunity.netBasis,
     status: "open" as const,
     source: extras?.source ?? "manual",
     rule_id: extras?.ruleId ?? null,

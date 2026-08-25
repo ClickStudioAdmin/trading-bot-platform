@@ -103,13 +103,13 @@ export function OpportunityTable({
             <th className="px-4 py-3 font-medium">
               <ColumnHint
                 label="Net basis"
-                hint="Executable minus fees and slip. This is the entry basis used when you open a paper carry."
+                hint="Scan basis minus assumed VIP0 taker on both legs and 5 bp slip. After the cost model, not after Bybit’s actual bill. Paper Open still stores this as entry."
               />
             </th>
             <th className="px-4 py-3 font-medium">
               <ColumnHint
                 label="Net APR"
-                hint="Net basis × 365 / DTE. Used to rank the book."
+                hint="Net basis × 365 / DTE. After assumed fees and slip. Used to rank the book."
               />
             </th>
             <th className="px-4 py-3 font-medium">

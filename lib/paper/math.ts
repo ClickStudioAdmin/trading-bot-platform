@@ -53,6 +53,24 @@ export function blendEntryBasis(
   );
 }
 
+export function weightedOpenFillBasis(
+  clips: { notionalUsdt: number; fillBasis: number }[],
+): number | null {
+  let notional = 0;
+  let weighted = 0;
+  for (const clip of clips) {
+    if (!(clip.notionalUsdt > 0) || !Number.isFinite(clip.fillBasis)) {
+      continue;
+    }
+    notional += clip.notionalUsdt;
+    weighted += clip.fillBasis * clip.notionalUsdt;
+  }
+  if (!(notional > 0)) {
+    return null;
+  }
+  return weighted / notional;
+}
+
 export function clipPnl(input: {
   entryBasis: number;
   fillBasis: number;

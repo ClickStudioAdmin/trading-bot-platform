@@ -65,6 +65,21 @@ export function remainingOpenFillQty(orders: PaperOrderRow[]): number | null {
   return remaining;
 }
 
+export function clipFillBasis(
+  opportunity: ScannedOpportunity,
+  fillSpotPrice?: number | null,
+  fillFuturePrice?: number | null,
+): number {
+  if (
+    fillSpotPrice &&
+    fillFuturePrice &&
+    fillSpotPrice > 0
+  ) {
+    return (fillFuturePrice - fillSpotPrice) / fillSpotPrice;
+  }
+  return opportunity.netBasis;
+}
+
 export function parseOrderSide(value: unknown): PaperOrderSide {
   return value === "close" ? "close" : "open";
 }
@@ -106,12 +121,11 @@ export function paperOrderInsertRow(input: {
   if (!(input.notionalUsdt > 0)) {
     throw new Error("Notional must be positive");
   }
-  const fillBasis =
-    input.fillSpotPrice &&
-    input.fillFuturePrice &&
-    input.fillSpotPrice > 0
-      ? (input.fillFuturePrice - input.fillSpotPrice) / input.fillSpotPrice
-      : input.opportunity.netBasis;
+  const fillBasis = clipFillBasis(
+    input.opportunity,
+    input.fillSpotPrice,
+    input.fillFuturePrice,
+  );
   return {
     user_id: input.userId,
     account_id: input.accountId ?? null,

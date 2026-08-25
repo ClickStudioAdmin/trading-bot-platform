@@ -10,6 +10,7 @@ import {
   parsePaperOrderRow,
   type PaperOrderRow,
 } from "@/lib/paper/orders";
+import { weightedOpenFillBasis } from "@/lib/paper/math";
 import {
   markOpenCarries,
   parsePaperCarryRow,
@@ -123,6 +124,15 @@ export async function loadPaperDesk(scan: ScannedOpportunity[]): Promise<{
       markOpenCarries(
         rows.filter((row) => row.status !== "closed"),
         scan,
+        orders
+          .filter((order) => order.side === "open")
+          .map((order) => ({
+            carryId: order.carryId,
+            notionalUsdt: order.notionalUsdt,
+            fillBasis: order.fillBasis,
+            hasFillPrices:
+              order.fillSpotPrice !== null && order.fillFuturePrice !== null,
+          })),
       ),
       orders,
     ),
@@ -130,7 +140,16 @@ export async function loadPaperDesk(scan: ScannedOpportunity[]): Promise<{
   );
   const closed = attachLogs(
     attachOrders(
-      rows.filter((row) => row.status === "closed"),
+      rows
+        .filter((row) => row.status === "closed")
+        .map((row) => {
+          const entry = weightedOpenFillBasis(
+            orders.filter(
+              (order) => order.carryId === row.id && order.side === "open",
+            ),
+          );
+          return entry === null ? row : { ...row, entryBasis: entry };
+        }),
       orders,
     ),
     logs,

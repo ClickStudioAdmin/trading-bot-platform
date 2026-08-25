@@ -6,7 +6,11 @@ import {
   type PaperCarryAutomation,
   type TradeSource,
 } from "@/lib/paper/automation";
-import { carryPnlPct, carryPnlUsdt } from "@/lib/paper/math";
+import {
+  carryPnlPct,
+  carryPnlUsdt,
+  weightedOpenFillBasis,
+} from "@/lib/paper/math";
 import { pairKey } from "@/lib/paper/open";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 
@@ -144,32 +148,53 @@ export function parsePaperCarryRow(row: Record<string, unknown>): PaperCarryRow 
   };
 }
 
+export type OpenFillClip = {
+  carryId: number;
+  notionalUsdt: number;
+  fillBasis: number;
+  hasFillPrices: boolean;
+};
+
 export function markOpenCarries(
   rows: PaperCarryRow[],
   scan: ScannedOpportunity[],
+  openFills: OpenFillClip[] = [],
 ): MarkedPaperCarry[] {
   const byPair = new Map(
     scan.map((item) => [pairKey(item.spotSymbol, item.futureSymbol), item]),
   );
+  const fillsByCarry = new Map<number, OpenFillClip[]>();
+  for (const clip of openFills) {
+    const list = fillsByCarry.get(clip.carryId) ?? [];
+    list.push(clip);
+    fillsByCarry.set(clip.carryId, list);
+  }
 
   return rows.map((row) => {
     const live = byPair.get(pairKey(row.spotSymbol, row.futureSymbol));
+    const clips = fillsByCarry.get(row.id) ?? [];
+    const fillEntry = weightedOpenFillBasis(clips);
+    const entryBasis = fillEntry ?? row.entryBasis;
+    const liveFill = clips.some((clip) => clip.hasFillPrices);
     if (!live) {
       return {
         ...row,
+        entryBasis,
         markBasis: null,
         markApr: null,
         unrealizedUsdt: null,
         daysToExpiry: null,
       };
     }
+    const markBasis = liveFill ? live.executableBasis : live.netBasis;
     return {
       ...row,
-      markBasis: live.netBasis,
+      entryBasis,
+      markBasis,
       markApr: live.netApr,
       unrealizedUsdt: carryPnlUsdt(
-        row.entryBasis,
-        live.netBasis,
+        entryBasis,
+        markBasis,
         row.notionalUsdt,
         live.feeRate,
       ),
