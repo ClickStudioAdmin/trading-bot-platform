@@ -730,13 +730,6 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
           },
           {
             left: {
-              label: "Net basis",
-              value: formatPct(order.theoretical.netBasis),
-              hint: `Fees + slip: ${formatPct(order.theoretical.feeRate)}`,
-            },
-          },
-          {
-            left: {
               label: "DTE",
               value:
                 order.theoretical.daysToExpiry === null
