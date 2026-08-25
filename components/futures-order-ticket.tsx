@@ -27,7 +27,7 @@ export function FuturesOrderTicket({
 
   return (
     <div className="space-y-4">
-      <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.2fr)_auto_minmax(14rem,1.3fr)_auto]">
+      <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.1fr)_auto_minmax(13rem,1.2fr)_minmax(10rem,1fr)]">
         <div className="block text-sm text-ink">
           Symbol
           <FuturesSymbolSelect
@@ -102,31 +102,31 @@ export function FuturesOrderTicket({
             </div>
           </div>
         </div>
-        {actions ? (
-          <div className="flex flex-wrap items-end gap-2">{actions}</div>
+        {orderType === "limit" ? (
+          <div className="block text-sm text-ink">
+            Limit price
+            <span className="relative mt-1 block">
+              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
+                $
+              </span>
+              <GroupedNumberInput
+                name="limitPrice"
+                value={limitPrice}
+                onChange={setLimitPrice}
+                allowDecimal
+                placeholder="0.0"
+                ariaLabel="Limit price"
+                className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+              />
+            </span>
+          </div>
         ) : null}
       </div>
-      {orderType === "limit" ? (
-        <div className="block max-w-xs text-sm text-ink">
-          Limit price
-          <span className="relative mt-1 block">
-            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-              $
-            </span>
-            <GroupedNumberInput
-              name="limitPrice"
-              value={limitPrice}
-              onChange={setLimitPrice}
-              allowDecimal
-              placeholder="0.0"
-              ariaLabel="Limit price"
-              className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
-            />
-          </span>
-        </div>
-      ) : null}
       <FuturesTpslFields />
       <FuturesTrailingFields />
+      {actions ? (
+        <div className="flex flex-wrap justify-end gap-2">{actions}</div>
+      ) : null}
     </div>
   );
 }

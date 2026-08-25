@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
 import { LocalTime } from "@/components/local-time";
+import { OpenStats } from "@/components/open-stats";
 import { PositionLogList } from "@/components/paper-carry-expand";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TokenIcon } from "@/components/token-icon";
@@ -31,7 +32,6 @@ import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
 const ACTION_CLASS =
   "rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium whitespace-nowrap text-ink";
-const EXPOSURE_BARS = ["bg-accent", "bg-success", "bg-warning"] as const;
 
 export function FuturesOpenStats({
   signedIn,
@@ -44,61 +44,13 @@ export function FuturesOpenStats({
   const unrealized = open.every((row) => row.unrealizedUsdt === null)
     ? null
     : open.reduce((sum, row) => sum + (row.unrealizedUsdt ?? 0), 0);
-  const exposure = futuresOpenExposure(open);
-
   return (
-    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <StatCard
-        label="Open notional"
-        value={signedIn && notional > 0 ? formatUsd(notional) : "—"}
-      />
-      <StatCard
-        label="Unrealized P&L"
-        value={
-          signedIn && unrealized !== null ? formatSignedUsd(unrealized) : "—"
-        }
-        toneClass={signedTone(signedIn ? unrealized : null)}
-      />
-      <div className="rounded-card border border-line bg-surface p-5">
-        <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-          Open exposure
-        </p>
-        {signedIn && exposure.length > 0 ? (
-          <>
-            <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-surface-raised">
-              {exposure.map((slice, index) => (
-                <span
-                  key={slice.baseCoin}
-                  className={EXPOSURE_BARS[index % EXPOSURE_BARS.length]}
-                  style={{ width: `${slice.share * 100}%` }}
-                />
-              ))}
-            </div>
-            <ul className="mt-3 space-y-1.5 text-sm">
-              {exposure.map((slice) => (
-                <li
-                  key={slice.baseCoin}
-                  className="flex items-center justify-between"
-                >
-                  <span className="flex items-center gap-2">
-                    <TokenIcon symbol={slice.baseCoin} />
-                    {slice.baseCoin}
-                  </span>
-                  <span className="tabular-nums text-ink-muted">
-                    {formatUsd(slice.notionalUsdt)} ·{" "}
-                    {(slice.share * 100).toFixed(0)}%
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className="mt-3 text-sm text-ink-muted">
-            {signedIn ? "No open exposure." : "Sign in to see exposure."}
-          </p>
-        )}
-      </div>
-    </section>
+    <OpenStats
+      signedIn={signedIn}
+      notional={notional}
+      unrealized={unrealized}
+      exposure={futuresOpenExposure(open)}
+    />
   );
 }
 
