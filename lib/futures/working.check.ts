@@ -5,6 +5,7 @@ import {
   nextWorkingFill,
   paperLimitShouldFill,
   parseFuturesWorkingRow,
+  workingActionLabel,
 } from "./working";
 
 assert.equal(
@@ -125,5 +126,30 @@ assert.equal(parsed.tpslMode, "full");
 assert.equal(parsed.tpQty, null);
 assert.equal(parsed.trailingStop, null);
 assert.equal(parsed.trailingActive, null);
+assert.equal(parsed.reduceOnly, false);
+
+const closeLimit = parseFuturesWorkingRow({
+  id: "w2",
+  user_id: "u1",
+  account_id: "a1",
+  position_id: "p1",
+  symbol: "BTCUSDT",
+  action: "sell",
+  side: "long",
+  qty: 0.01,
+  filled_qty: 0,
+  remaining_qty: 0.01,
+  limit_price: 90000,
+  status: "open",
+  reduce_only: true,
+  venue: null,
+  environment: null,
+  venue_order_id: null,
+  created_at: "2026-08-26T00:00:00.000Z",
+});
+assert.equal(closeLimit.reduceOnly, true);
+assert.equal(closeLimit.positionId, "p1");
+assert.equal(workingActionLabel(closeLimit.action, closeLimit.reduceOnly), "Close");
+assert.equal(workingActionLabel("buy"), "Buy");
 
 console.log("futures working checks passed");

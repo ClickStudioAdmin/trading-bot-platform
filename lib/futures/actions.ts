@@ -1,6 +1,6 @@
 "use server";
 
-import { decideFuturesAction, hedgePositionIdx } from "./decide";
+import { decideFuturesAction, flattenOrderAction, hedgePositionIdx } from "./decide";
 import {
   insertFuturesWorking,
   patchFuturesTpsl,
@@ -25,6 +25,7 @@ import { safeFuturesReturnPath } from "./path";
 import {
   amendFuturesWorkingRow,
   cancelFuturesWorkingRow,
+  cancelReduceOnlyWorkingForPosition,
   reconcileOpenFuturesBooks,
 } from "./reconcile";
 import { loadFuturesSettings } from "./settings";
@@ -159,6 +160,10 @@ export async function submitFuturesTrade(formData: FormData) {
 
   if (actionParsed.action === "flatten") {
     const connection = await boundLive();
+    const typeParsed = parseFuturesOrderType(formData.get("orderType"));
+    if (!typeParsed.ok) {
+      fail(next, typeParsed.error);
+    }
     for (const row of flattenTargets) {
       const decided = decideFuturesAction({
         action: "flatten",
@@ -167,6 +172,115 @@ export async function submitFuturesTrade(formData: FormData) {
       });
       if (!decided.ok || decided.kind !== "flatten") {
         fail(next, decided.ok ? "Could not close that position." : decided.error);
+      }
+      if (typeParsed.orderType === "limit") {
+        const parsedPrice = parseFuturesLimitPrice(formData.get("limitPrice"));
+        if (!parsedPrice.ok) {
+          fail(next, parsedPrice.error);
+        }
+        const priced = priceForPerp(parsedPrice.price, instrument);
+        if (!priced.ok) {
+          fail(next, priced.error);
+        }
+        const qtyRaw = formData.get("size") ?? formData.get("qty");
+        const qtyParsed =
+          String(qtyRaw ?? "").trim() === ""
+            ? { ok: true as const, qty: row.qty }
+            : parseFuturesQty(qtyRaw);
+        if (!qtyParsed.ok) {
+          fail(next, qtyParsed.error);
+        }
+        const closeQty = Math.min(qtyParsed.qty, row.qty);
+        const sized = qtyForPerp(closeQty, instrument);
+        if (!sized.ok) {
+          fail(next, sized.error);
+        }
+        let venue: string | null = null;
+        let environment: string | null = null;
+        let venueOrderId: string | null = null;
+        if (connection) {
+          const placed = await placePerpLimitOnVenue({
+            connection,
+            symbol,
+            side: decided.orderSide,
+            qty: sized.text,
+            price: priced.text,
+            reduceOnly: true,
+            positionIdx: hedgePositionIdx(row.side),
+            requireHedge: flattenTargets.length > 1 || opens.length > 1,
+          });
+          if (!placed.ok) {
+            await writeEventLog({
+              level: "error",
+              scope: "trade",
+              event: "trade.futures_failed",
+              message: placed.error,
+              userId: user.id,
+              accountId: account.id,
+              strategy: FUTURES_STRATEGY_ID,
+              data: { symbol, action: "flatten", positionId: row.id },
+            });
+            fail(next, placed.error);
+          }
+          venue = connection.venue;
+          environment = connection.environment;
+          venueOrderId = placed.orderId;
+        }
+        const working = await insertFuturesWorking(supabase, {
+          userId: user.id,
+          accountId: account.id,
+          symbol,
+          action: flattenOrderAction(row.side),
+          side: row.side,
+          qty: sized.qty,
+          limitPrice: priced.price,
+          venue,
+          environment,
+          venueOrderId,
+          positionId: row.id,
+          reduceOnly: true,
+        });
+        if (!working.ok) {
+          if (connection && venueOrderId) {
+            await cancelPerpOrderOnVenue({
+              connection,
+              symbol,
+              orderId: venueOrderId,
+            });
+          }
+          fail(next, working.error);
+        }
+        await writeEventLog({
+          scope: "trade",
+          event: "trade.futures",
+          message: `Limit Close ${symbol} ${row.side} working`,
+          userId: user.id,
+          accountId: account.id,
+          strategy: FUTURES_STRATEGY_ID,
+          data: {
+            symbol,
+            action: "flatten",
+            qty: sized.qty,
+            limitPrice: priced.price,
+            live: liveBook,
+            workingId: working.id,
+            positionId: row.id,
+          },
+        });
+        await reconcileOpenFuturesBooks({
+          accountId: account.id,
+          userId: user.id,
+        });
+        const stillWorking = (await loadOpenFuturesWorking()).some(
+          (item) => item.id === working.id,
+        );
+        revalidatePath(FUTURES_PATHS.root);
+        revalidatePath(FUTURES_PATHS.positions);
+        revalidatePath(FUTURES_PATHS.performance);
+        if (!stillWorking) {
+          redirect(`${next}?paper=${liveBook ? "live-closed" : "closed"}`);
+        }
+        redirect(`${next}?paper=${liveBook ? "live-working" : "working"}`);
       }
       const sized = qtyForPerp(row.qty, instrument);
       if (!sized.ok) {
@@ -178,6 +292,13 @@ export async function submitFuturesTrade(formData: FormData) {
       let environment: string | null = null;
       let venueOrderId: string | null = null;
       if (connection) {
+        await cancelReduceOnlyWorkingForPosition({
+          supabase,
+          accountId: account.id,
+          userId: user.id,
+          positionId: row.id,
+          connection,
+        });
         const placed = await placePerpMarketOnVenue({
           connection,
           symbol,
@@ -210,6 +331,14 @@ export async function submitFuturesTrade(formData: FormData) {
         if (placed.fill.price != null && placed.fill.price > 0) {
           fillPrice = placed.fill.price;
         }
+      } else {
+        await cancelReduceOnlyWorkingForPosition({
+          supabase,
+          accountId: account.id,
+          userId: user.id,
+          positionId: row.id,
+          connection: null,
+        });
       }
       const written = await writeFuturesFlatten({
         supabase,

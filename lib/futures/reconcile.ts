@@ -255,6 +255,16 @@ async function applyWorkingFill(input: {
     return false;
   }
 
+  if (input.row.reduceOnly) {
+    return applyReduceOnlyWorkingFill({
+      supabase: input.supabase,
+      row: input.row,
+      fillQty,
+      fillPrice: input.fillPrice,
+      connection: input.connection,
+    });
+  }
+
   const opens = await loadOpenOnSymbol(
     input.supabase,
     input.row.accountId,
@@ -372,6 +382,89 @@ async function applyWorkingFill(input: {
   return true;
 }
 
+async function applyReduceOnlyWorkingFill(input: {
+  supabase: SupabaseClient;
+  row: FuturesWorkingOrder;
+  fillQty: number;
+  fillPrice: number;
+  connection: BoundConnectionSecrets | null;
+}): Promise<boolean> {
+  const opens = await loadOpenOnSymbol(
+    input.supabase,
+    input.row.accountId,
+    input.row.userId,
+    input.row.symbol,
+  );
+  const target =
+    opens.find((row) => row.id === input.row.positionId) ??
+    opens.find((row) => row.side === input.row.side) ??
+    null;
+  if (!target) {
+    await writeEventLog({
+      level: "warning",
+      scope: "trade",
+      event: "trade.futures_failed",
+      message: "Close limit filled with no open row left.",
+      userId: input.row.userId,
+      accountId: input.row.accountId,
+      strategy: FUTURES_STRATEGY_ID,
+      data: { workingId: input.row.id, symbol: input.row.symbol },
+    });
+    return true;
+  }
+  const closed = await writeFuturesCloseSlice({
+    supabase: input.supabase,
+    row: target,
+    qty: input.fillQty,
+    price: input.fillPrice,
+    venue: input.row.venue,
+    environment: input.row.environment,
+    venueOrderId: input.row.venueOrderId,
+  });
+  if (closed.error) {
+    await writeEventLog({
+      level: "error",
+      scope: "trade",
+      event: "trade.futures_failed",
+      message: closed.error,
+      userId: input.row.userId,
+      accountId: input.row.accountId,
+      strategy: FUTURES_STRATEGY_ID,
+      data: { workingId: input.row.id, symbol: input.row.symbol },
+    });
+    return false;
+  }
+  if (closed.remaining <= 1e-12) {
+    await cancelReduceOnlyWorkingForPosition({
+      supabase: input.supabase,
+      accountId: input.row.accountId,
+      userId: input.row.userId,
+      positionId: target.id,
+      connection: input.connection,
+      exceptWorkingId: input.row.id,
+    });
+  }
+  await writeEventLog({
+    scope: "trade",
+    event: "trade.futures",
+    message:
+      closed.remaining <= 1e-12
+        ? `Closed ${input.row.symbol} ${target.side} from limit`
+        : `Reduced ${input.row.symbol} ${target.side} from limit`,
+    userId: input.row.userId,
+    accountId: input.row.accountId,
+    strategy: FUTURES_STRATEGY_ID,
+    data: {
+      symbol: input.row.symbol,
+      action: "flatten",
+      qty: input.fillQty,
+      workingId: input.row.id,
+      positionId: target.id,
+    },
+  });
+  return true;
+}
+
 async function closeWorkingOrder(input: {
   supabase: SupabaseClient;
   row: FuturesWorkingOrder;
@@ -423,6 +516,38 @@ export async function cancelFuturesWorkingRow(input: {
     return { ok: false, error: "Could not cancel that order." };
   }
   return { ok: true };
+}
+
+export async function cancelReduceOnlyWorkingForPosition(input: {
+  supabase: SupabaseClient;
+  accountId: string;
+  userId: string;
+  positionId: string;
+  connection: BoundConnectionSecrets | null;
+  exceptWorkingId?: string;
+}): Promise<void> {
+  const { data, error } = await input.supabase
+    .from("futures_working_orders")
+    .select("*")
+    .eq("account_id", input.accountId)
+    .eq("user_id", input.userId)
+    .eq("status", "open")
+    .eq("reduce_only", true)
+    .eq("position_id", input.positionId);
+  if (error || !data) {
+    return;
+  }
+  for (const raw of data) {
+    const row = parseFuturesWorkingRow(raw as Record<string, unknown>);
+    if (input.exceptWorkingId && row.id === input.exceptWorkingId) {
+      continue;
+    }
+    await cancelFuturesWorkingRow({
+      supabase: input.supabase,
+      row,
+      connection: input.connection,
+    });
+  }
 }
 
 export async function amendFuturesWorkingRow(input: {

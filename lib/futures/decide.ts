@@ -27,6 +27,10 @@ export function hedgePositionIdx(side: FuturesSide): 1 | 2 {
   return side === "long" ? 1 : 2;
 }
 
+export function flattenOrderAction(side: FuturesSide): "buy" | "sell" {
+  return side === "long" ? "sell" : "buy";
+}
+
 export function decideFuturesAction(input: {
   action: FuturesAction;
   open: OpenFutures | null;

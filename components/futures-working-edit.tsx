@@ -16,6 +16,7 @@ export function FuturesWorkingEdit({
   workingId,
   symbol,
   action,
+  reduceOnly = false,
   remainingQty,
   filledQty,
   limitPrice,
@@ -24,6 +25,7 @@ export function FuturesWorkingEdit({
   workingId: string;
   symbol: string;
   action: "buy" | "sell";
+  reduceOnly?: boolean;
   remainingQty: number;
   filledQty: number;
   limitPrice: number;
@@ -40,6 +42,7 @@ export function FuturesWorkingEdit({
           workingId={workingId}
           symbol={symbol}
           action={action}
+          reduceOnly={reduceOnly}
           remainingQty={remainingQty}
           filledQty={filledQty}
           limitPrice={limitPrice}
@@ -55,6 +58,7 @@ function FuturesWorkingEditDialog({
   workingId,
   symbol,
   action,
+  reduceOnly,
   remainingQty,
   filledQty,
   limitPrice,
@@ -64,6 +68,7 @@ function FuturesWorkingEditDialog({
   workingId: string;
   symbol: string;
   action: "buy" | "sell";
+  reduceOnly: boolean;
   remainingQty: number;
   filledQty: number;
   limitPrice: number;
@@ -120,7 +125,7 @@ function FuturesWorkingEditDialog({
           </button>
         </div>
         <p className="mt-2 text-sm text-ink-muted">
-          {workingActionLabel(action)} {symbol}
+          {workingActionLabel(action, reduceOnly)} {symbol}
           {filledQty > 0 ? (
             <span className="mt-1 block text-xs text-ink-faint">
               {filledQty} filled stays. Qty is the rest.

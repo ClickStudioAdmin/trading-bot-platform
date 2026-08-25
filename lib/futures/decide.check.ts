@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { decideFuturesAction, hedgePositionIdx } from "./decide";
+import { decideFuturesAction, flattenOrderAction, hedgePositionIdx } from "./decide";
 
 const openLong = decideFuturesAction({
   action: "buy",
@@ -62,6 +62,9 @@ if (flattenLong.ok && flattenLong.kind === "flatten") {
   assert.equal(flattenLong.reduceOnly, true);
   assert.equal(flattenLong.qty, 0.5);
 }
+
+assert.equal(flattenOrderAction("long"), "sell");
+assert.equal(flattenOrderAction("short"), "buy");
 
 const flattenEmpty = decideFuturesAction({
   action: "flatten",

@@ -288,6 +288,8 @@ export async function insertFuturesWorking(
     venue?: string | null;
     environment?: string | null;
     venueOrderId?: string | null;
+    positionId?: string | null;
+    reduceOnly?: boolean;
     tpsl?: FuturesTpsl | null;
     trailing?: FuturesTrailing | null;
   },
@@ -309,6 +311,8 @@ export async function insertFuturesWorking(
       venue: input.venue ?? null,
       environment: input.environment ?? null,
       venue_order_id: input.venueOrderId ?? null,
+      position_id: input.positionId ?? null,
+      reduce_only: Boolean(input.reduceOnly),
       ...tpslColumns(input.tpsl),
       ...trailingWorkingColumns(input.trailing),
     })

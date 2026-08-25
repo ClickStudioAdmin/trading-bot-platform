@@ -6,10 +6,9 @@ import { ColumnHint } from "@/components/column-hint";
 import { LocalTime } from "@/components/local-time";
 import { OpenStats } from "@/components/open-stats";
 import { PositionLogList } from "@/components/paper-carry-expand";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TokenIcon } from "@/components/token-icon";
 import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
-import { submitFuturesTrade } from "@/lib/futures/actions";
+import { FuturesCloseActions } from "@/components/futures-close";
 import { FuturesTpslCell } from "@/components/futures-tpsl";
 import { FuturesTrailingCell } from "@/components/futures-trailing";
 import type { FuturesDeskPosition } from "@/lib/futures/list";
@@ -29,9 +28,6 @@ import {
   signedTone,
 } from "@/lib/opportunities/format";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
-
-const ACTION_CLASS =
-  "rounded-control bg-accent-strong px-2.5 py-1 text-xs font-medium whitespace-nowrap text-ink";
 
 export function FuturesOpenStats({
   signedIn,
@@ -151,13 +147,13 @@ export function OpenFuturesTrades({
                   hint="Retracement distance from the best price since activation. Closes the whole row at market. Add on the ticket or here."
                 />
               </th>
-              <th className="w-[4.5rem] px-3 py-3 font-medium">
+              <th className="w-[5.75rem] px-3 py-3 font-medium">
                 <ColumnHint
                   label="Actions"
                   hint={
                     exchangeBook
-                      ? "Close this row at market on Bybit. A long and a short on the same contract are separate rows."
-                      : "Close this row. A long and a short on the same contract are separate rows."
+                      ? "Market closes this row on Bybit now. Limit rests a reduce-only close until last trades through it."
+                      : "Market closes this row now. Limit rests a reduce-only close until mark trades through it."
                   }
                 />
               </th>
@@ -422,25 +418,7 @@ function OpenFuturesRows({
         />
       </td>
       <td className="px-3 py-3">
-        <form action={submitFuturesTrade}>
-          <input type="hidden" name="next" value={next} />
-          <input type="hidden" name="symbol" value={trade.symbol} />
-          <input type="hidden" name="positionId" value={trade.id} />
-          <ColumnHint
-            hint="Close at market"
-            label={
-              <PendingSubmitButton
-                pendingLabel="Closing"
-                successKey={`flatten-${trade.id}`}
-                name="action"
-                value="close"
-                className={ACTION_CLASS}
-              >
-                Close
-              </PendingSubmitButton>
-            }
-          />
-        </form>
+        <FuturesCloseActions trade={trade} next={next} />
       </td>
     </ExpandableTradeRows>
   );

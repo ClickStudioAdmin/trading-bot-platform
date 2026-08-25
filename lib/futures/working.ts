@@ -25,6 +25,7 @@ export type FuturesWorkingOrder = {
   environment: string | null;
   venueOrderId: string | null;
   createdAtMs: number;
+  reduceOnly: boolean;
   takeProfit: number | null;
   stopLoss: number | null;
   tpTrigger: FuturesTrigger;
@@ -169,6 +170,7 @@ export function parseFuturesWorkingRow(
     environment: row.environment ? String(row.environment) : null,
     venueOrderId: row.venue_order_id ? String(row.venue_order_id) : null,
     createdAtMs: Number.isFinite(created) ? created : 0,
+    reduceOnly: Boolean(row.reduce_only),
     takeProfit: Number(row.take_profit) > 0 ? Number(row.take_profit) : null,
     stopLoss: Number(row.stop_loss) > 0 ? Number(row.stop_loss) : null,
     tpTrigger: parseFuturesTriggerColumn(row.tp_trigger),
@@ -202,6 +204,12 @@ export function formatWorkingStatus(status: FuturesWorkingStatus): string {
   return "Open";
 }
 
-export function workingActionLabel(action: FuturesAction | "buy" | "sell"): string {
+export function workingActionLabel(
+  action: FuturesAction | "buy" | "sell",
+  reduceOnly = false,
+): string {
+  if (reduceOnly) {
+    return "Close";
+  }
   return action === "sell" ? "Sell" : "Buy";
 }

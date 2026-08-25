@@ -50,7 +50,10 @@ export function FuturesWorkingOrders({
                 />
               </th>
               <th className="px-4 py-3 font-medium">
-                <ColumnHint label="Side" hint="Buy opens or adds a long. Sell opens or adds a short." />
+                <ColumnHint
+                  label="Side"
+                  hint="Buy opens or adds a long. Sell opens or adds a short. Close is a reduce-only limit on an open row."
+                />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint label="Qty" hint="Original size. Filled is how much has matched so far." />
@@ -110,7 +113,7 @@ export function FuturesWorkingOrders({
             ) : working.length === 0 ? (
               <tr>
                 <td colSpan={9} className="px-4 py-6 text-sm text-ink-muted">
-                  No working limits. Choose Limit on Place an order.
+                  No working limits. Choose Limit on Place an order, or Limit on an open row.
                 </td>
               </tr>
             ) : (
@@ -151,7 +154,9 @@ function WorkingRow({
           </span>
         </span>
       </td>
-      <td className="px-4 py-3">{workingActionLabel(row.action)}</td>
+      <td className="px-4 py-3">
+        {workingActionLabel(row.action, row.reduceOnly)}
+      </td>
       <td className="px-4 py-3 tabular-nums">
         {row.remainingQty}
         {row.filledQty > 0 ? (
@@ -192,6 +197,7 @@ function WorkingRow({
                 workingId={row.id}
                 symbol={row.symbol}
                 action={row.action}
+                reduceOnly={row.reduceOnly}
                 remainingQty={row.remainingQty}
                 filledQty={row.filledQty}
                 limitPrice={row.limitPrice}
