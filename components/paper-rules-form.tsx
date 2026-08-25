@@ -28,7 +28,6 @@ export function AutomationsDesk({
   reduceOnly?: boolean;
 }) {
   const [hasSets, setHasSets] = useState(values.layers.length > 0);
-  const [accountReduceOnly, setAccountReduceOnly] = useState(reduceOnly);
   return (
     <div className="space-y-4">
       {hasSets ? (
@@ -41,8 +40,7 @@ export function AutomationsDesk({
               type="checkbox"
               name="reduceOnly"
               value="on"
-              checked={accountReduceOnly}
-              onChange={(event) => setAccountReduceOnly(event.target.checked)}
+              defaultChecked={reduceOnly}
               className="mt-1 size-4"
             />
             <span>
@@ -66,7 +64,7 @@ export function AutomationsDesk({
       <PaperRulesForm
         values={values}
         inUseRuleIds={inUseRuleIds}
-        reduceOnly={accountReduceOnly}
+        reduceOnly={reduceOnly}
         onHasSetsChange={setHasSets}
       />
     </div>
