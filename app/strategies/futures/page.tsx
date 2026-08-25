@@ -85,7 +85,11 @@ export default async function FuturesOverviewPage({
           <div>
             <h2 className="text-xl font-semibold tracking-tight">Desk</h2>
             <p className="text-sm text-ink-muted">
-              Manual Buy, Sell, and Flatten. TradingView is the next phase.
+              Manual Buy, Sell, and Flatten. Alert automations land on{" "}
+              <Link href={FUTURES_PATHS.automations} className="text-accent">
+                Automations
+              </Link>
+              .
             </p>
           </div>
           <Link

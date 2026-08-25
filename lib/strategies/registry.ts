@@ -8,5 +8,7 @@ export type StrategyId =
 export const FUTURES_PATHS = {
   root: "/strategies/futures",
   positions: "/strategies/futures/positions",
+  automations: "/strategies/futures/automations",
+  performance: "/strategies/futures/performance",
   settings: "/strategies/futures/settings",
 } as const;

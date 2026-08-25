@@ -17,7 +17,7 @@ export default async function FuturesLayout({
 }) {
   const session = await getSessionContext();
   const live = Boolean(session && accountCanHoldConnections(session.account.mode));
-  const settings = live ? await loadFuturesSettings() : null;
+  const settings = session ? await loadFuturesSettings() : null;
   const connections =
     live && session
       ? await listExchangeConnections(session.member.id, session.account.id)
@@ -32,6 +32,8 @@ export default async function FuturesLayout({
         navLabel="Futures"
         primaryLinks={FUTURES_PRIMARY_LINKS}
         secondaryLinks={FUTURES_SECONDARY_LINKS}
+        automationsHref={FUTURES_PATHS.automations}
+        reduceOnly={Boolean(settings?.reduceOnly)}
         connection={
           live
             ? bound
