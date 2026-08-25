@@ -6,6 +6,10 @@ import {
   savePaperRules,
 } from "@/lib/engine/actions";
 import {
+  parseAutomationMode,
+  type AutomationMode,
+} from "@/lib/engine/decide";
+import {
   defaultPaperLayer,
   paperConfigToFormValues,
   type PaperLayerFormValues,
@@ -182,6 +186,7 @@ function RuleRow({
   const prefix = `r${index}_`;
   const [sizeType, setSizeType] = useState(layer.sizeType);
   const [exitSizeType, setExitSizeType] = useState(layer.exitSizeType);
+  const [mode, setMode] = useState(layer.mode);
   return (
     <section className="rounded-card border border-line bg-surface px-4 py-3">
       <div className="mb-2 flex items-end gap-2">
@@ -199,7 +204,8 @@ function RuleRow({
           Mode
           <select
             name={`${prefix}mode`}
-            defaultValue={layer.mode}
+            value={mode}
+            onChange={(event) => setMode(parseAutomationMode(event.target.value))}
             className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
           >
             <option value="active">Active</option>
@@ -207,16 +213,8 @@ function RuleRow({
             <option value="disabled">Disabled</option>
           </select>
         </label>
-        {inUse ? (
-          <span
-            className="relative mb-1.5 flex size-3.5 shrink-0"
-            title="In use by an open position"
-            aria-label="In use by an open position"
-          >
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-60" />
-            <span className="relative inline-flex size-3.5 rounded-full bg-success" />
-          </span>
-        ) : canRemove ? (
+        <ModeLight mode={mode} inUse={inUse} />
+        {!inUse && canRemove ? (
           <button
             type="button"
             onClick={onRemove}
@@ -388,5 +386,47 @@ function Field({
         allowDecimal={allowDecimal}
       />
     </label>
+  );
+}
+
+function modeLightLabel(mode: AutomationMode): string {
+  if (mode === "reduce_only") {
+    return "Reduce only";
+  }
+  if (mode === "disabled") {
+    return "Disabled";
+  }
+  return "Active";
+}
+
+function ModeLight({
+  mode,
+  inUse,
+}: {
+  mode: AutomationMode;
+  inUse: boolean;
+}) {
+  const fill =
+    mode === "reduce_only"
+      ? "bg-warning"
+      : mode === "disabled"
+        ? "bg-ink-faint"
+        : "bg-success";
+  const label = inUse
+    ? `${modeLightLabel(mode)} · in use by an open position`
+    : modeLightLabel(mode);
+  return (
+    <span
+      className="relative mb-1.5 flex size-3.5 shrink-0"
+      title={label}
+      aria-label={label}
+    >
+      {inUse ? (
+        <span
+          className={`absolute inline-flex size-full animate-ping rounded-full opacity-60 ${fill}`}
+        />
+      ) : null}
+      <span className={`relative inline-flex size-3.5 rounded-full ${fill}`} />
+    </span>
   );
 }

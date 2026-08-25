@@ -716,19 +716,17 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             },
           },
           {
-            right: {
-              label: "Scan vs Fill",
-              value: formatPct(slip),
-              tone: slip,
-              hint: "Fill basis minus scan basis when this clip has exchange fill prices. Paper is 0.",
-            },
-          },
-          {
             left: {
               label: "Net APR",
               value: formatPct(order.theoretical.netApr),
               tone: order.theoretical.netApr,
               hint: "Scan net basis × 365 / DTE. After assumed fees and slip.",
+            },
+            right: {
+              label: "Scan vs Fill",
+              value: formatPct(slip),
+              tone: slip,
+              hint: "Fill basis minus scan basis when this clip has exchange fill prices. Paper is 0.",
             },
           },
           {
@@ -739,6 +737,16 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
                   ? "—"
                   : order.theoretical.daysToExpiry.toFixed(1),
             },
+            right:
+              order.fillQty !== null && order.fillQty > 0
+                ? {
+                    label: "Fill qty",
+                    value: String(Number(order.fillQty.toPrecision(8))),
+                  }
+                : {
+                    label: "Order value",
+                    value: formatUsd(order.notionalUsdt),
+                  },
           },
           {
             left: {
@@ -747,7 +755,9 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             },
             right: {
               label: "Buy spot",
-              value: formatPrice(order.theoretical.spotAsk),
+              value: formatPrice(
+                order.fillSpotPrice ?? order.theoretical.spotAsk,
+              ),
             },
           },
           {
@@ -757,7 +767,9 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
             },
             right: {
               label: "Sell future",
-              value: formatPrice(order.theoretical.futureBid),
+              value: formatPrice(
+                order.fillFuturePrice ?? order.theoretical.futureBid,
+              ),
             },
           },
           {
@@ -768,10 +780,13 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
                   ? "—"
                   : formatUsd(order.theoretical.capacityUsdt),
             },
-            right: {
-              label: "Order value",
-              value: formatUsd(order.notionalUsdt),
-            },
+            right:
+              order.fillQty !== null && order.fillQty > 0
+                ? {
+                    label: "Order value",
+                    value: formatUsd(order.notionalUsdt),
+                  }
+                : undefined,
           },
         ]}
       />
@@ -863,8 +878,9 @@ function ComparePairs({
   rightTitle: string;
   rows: { left?: MetricRow; right?: MetricRow }[];
 }) {
+  const packed = rows.filter((row) => row.left || row.right);
   return (
-    <div className="mt-4">
+    <div className="mt-3">
       <div className="grid grid-cols-2 gap-x-6">
         <p className="text-sm font-semibold tracking-tight">
           {leftTitle}
@@ -874,7 +890,7 @@ function ComparePairs({
         </p>
       </div>
       <div className="mt-2 space-y-1">
-        {rows.map((row, index) => (
+        {packed.map((row, index) => (
           <div
             key={`${row.left?.label ?? "empty"}-${row.right?.label ?? "empty"}-${index}`}
             className="grid grid-cols-2 gap-x-6"

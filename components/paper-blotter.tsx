@@ -138,7 +138,7 @@ export function OpenPaperTrades({
                   label="Actions"
                   hint={
                     exchangeBook
-                      ? "Manual Close flattens both Bybit legs at market. Auto Close uses that set’s exit order type. Unwind on the exchange is not available yet."
+                      ? "Manual Close flattens both Bybit legs at market. Auto Close uses that set’s exit order type. Unwind clips to usable book on the exchange."
                       : "Manual Close flattens remaining size at the live scan. Auto Close uses only that set’s exit order type — Fixed flattens, Dynamic clips to usable book. It does not wait for APR, DTE, take profit, or stop loss. Unwind is manual only. After an exit is submitted, Close is replaced by Closing. No Bybit order."
                   }
                 />
@@ -339,38 +339,31 @@ export function PaperOpenStats({
   const exposure = openExposure(open);
 
   return (
-    <section>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <StatCard
-          label="Open notional"
-          value={
-            signedIn && stats.openNotionalUsdt > 0
-              ? formatUsd(stats.openNotionalUsdt)
-              : "—"
-          }
-        />
-        <StatCard
-          label="Unrealized P&L"
-          value={
-            signedIn && stats.unrealizedUsdt !== null
-              ? formatSignedUsd(stats.unrealizedUsdt)
-              : "—"
-          }
-          toneClass={signedTone(signedIn ? stats.unrealizedUsdt : null)}
-        />
-      </div>
-      <div className="mt-4 rounded-card border border-line bg-surface p-6">
+    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <StatCard
+        label="Open notional"
+        value={
+          signedIn && stats.openNotionalUsdt > 0
+            ? formatUsd(stats.openNotionalUsdt)
+            : "—"
+        }
+      />
+      <StatCard
+        label="Unrealized P&L"
+        value={
+          signedIn && stats.unrealizedUsdt !== null
+            ? formatSignedUsd(stats.unrealizedUsdt)
+            : "—"
+        }
+        toneClass={signedTone(signedIn ? stats.unrealizedUsdt : null)}
+      />
+      <div className="rounded-card border border-line bg-surface p-5">
         <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
           Open exposure
         </p>
-        <p className="mt-2 text-2xl font-semibold tracking-tight">
-          {signedIn && stats.openNotionalUsdt > 0
-            ? formatUsd(stats.openNotionalUsdt)
-            : "—"}
-        </p>
         {signedIn && exposure.length > 0 ? (
           <>
-            <div className="mt-6 flex h-2 overflow-hidden rounded-full bg-surface-raised">
+            <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-surface-raised">
               {exposure.map((slice, index) => (
                 <span
                   key={slice.baseCoin}
@@ -379,7 +372,7 @@ export function PaperOpenStats({
                 />
               ))}
             </div>
-            <ul className="mt-4 space-y-2 text-sm">
+            <ul className="mt-3 space-y-1.5 text-sm">
               {exposure.map((slice) => (
                 <li
                   key={slice.baseCoin}
@@ -398,7 +391,7 @@ export function PaperOpenStats({
             </ul>
           </>
         ) : (
-          <p className="mt-4 text-sm text-ink-muted">
+          <p className="mt-3 text-sm text-ink-muted">
             {signedIn ? "No open exposure." : "Sign in to see exposure."}
           </p>
         )}
