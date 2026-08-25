@@ -30,7 +30,7 @@ export function FuturesOrderTicket({ options }: { options: LinearPerp[] }) {
       <div className="block text-sm text-ink">
         Type
         <input type="hidden" name="orderType" value={orderType} />
-        <div className="mt-1 inline-flex rounded-control border border-line bg-surface p-0.5">
+        <div className="mt-1 flex w-fit rounded-control border border-line bg-surface p-0.5">
           <UnitButton
             active={orderType === "market"}
             onClick={() => setOrderType("market")}
