@@ -3,6 +3,7 @@ import { getSessionContext } from "@/lib/auth/session";
 import { loadPaperRules } from "@/lib/engine/load";
 import { loadEngineSettings } from "@/lib/engine/settings";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
+import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 
@@ -21,6 +22,14 @@ export default async function CashAndCarryLayout({
       : [];
   const bound =
     connections.find((row) => row.id === settings?.connectionId) ?? null;
+  const snapshot =
+    live && session && bound
+      ? await loadAccountSnapshot(
+          session.member.id,
+          session.account.id,
+          bound.id,
+        )
+      : null;
   const anyActive = config.layers.some(
     (layer) => (layer.mode ?? "active") === "active",
   );
@@ -45,6 +54,7 @@ export default async function CashAndCarryLayout({
               ? {
                   ...formatStrategyConnectionCaption(bound),
                   connected: true,
+                  snapshot,
                 }
               : {
                   name: "Connect an exchange",

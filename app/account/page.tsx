@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { AccountSnapshotBody } from "@/components/account-snapshot";
 import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -8,6 +9,14 @@ import { switchTradingAccount } from "@/lib/accounts/actions";
 import { formatAccountMode } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { getSessionContext } from "@/lib/auth/session";
+import { loadAccountSnapshots } from "@/lib/exchanges/account-snapshot";
+import type { AccountSnapshotView } from "@/lib/exchanges/account-view";
+import {
+  formatStrategyConnectionCaption,
+  type ExchangeConnection,
+} from "@/lib/exchanges/connections";
+import { listExchangeConnections } from "@/lib/exchanges/store";
+import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -24,6 +33,17 @@ export default async function AccountOverviewPage() {
   const current = session.account;
   const paperCount = accounts.filter((account) => account.mode === "paper").length;
   const liveCount = accounts.length - paperCount;
+  const live = accountCanHoldConnections(current.mode);
+  const connections = live
+    ? await listExchangeConnections(session.member.id, current.id)
+    : [];
+  const snapshots = live
+    ? await loadAccountSnapshots(
+        session.member.id,
+        current.id,
+        connections.map((row) => row.id),
+      )
+    : new Map();
 
   return (
     <div className="space-y-8">
@@ -96,6 +116,46 @@ export default async function AccountOverviewPage() {
         </div>
       </section>
 
+      {live ? (
+        <section className="rounded-card border border-line bg-surface p-5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">
+                Unified account
+              </h2>
+              <p className="mt-1 text-sm text-ink-muted">
+                Available, margin, and IM/MM on this book’s keys.
+              </p>
+            </div>
+            <Link
+              href="/account/exchanges"
+              className="text-sm text-accent hover:text-accent-strong"
+            >
+              Exchanges
+            </Link>
+          </div>
+          {connections.length === 0 ? (
+            <p className="mt-4 text-sm text-ink-muted">
+              No keys on this book yet.
+            </p>
+          ) : (
+            <ul className="mt-4 divide-y divide-line">
+              {connections.map((row) => (
+                <li
+                  key={row.id}
+                  className="py-4 first:pt-0 last:pb-0"
+                >
+                  <ConnectionSnapshot
+                    row={row}
+                    snapshot={snapshots.get(row.id) ?? null}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
       <section className="rounded-card border border-line bg-surface p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Books</h2>
@@ -142,6 +202,33 @@ export default async function AccountOverviewPage() {
           })}
         </ul>
       </section>
+    </div>
+  );
+}
+
+function ConnectionSnapshot({
+  row,
+  snapshot,
+}: {
+  row: ExchangeConnection;
+  snapshot: AccountSnapshotView | null;
+}) {
+  const caption = formatStrategyConnectionCaption(row);
+  return (
+    <div>
+      <p className="text-sm">
+        {caption.name}
+        {caption.venue ? (
+          <span className="text-ink-muted"> ({caption.venue})</span>
+        ) : null}
+      </p>
+      <div className="mt-2 max-w-xs text-sm">
+        {snapshot ? (
+          <AccountSnapshotBody snapshot={snapshot} />
+        ) : (
+          <p className="text-ink-muted">Could not read the unified account.</p>
+        )}
+      </div>
     </div>
   );
 }

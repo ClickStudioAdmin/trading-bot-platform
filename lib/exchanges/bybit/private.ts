@@ -22,6 +22,7 @@ export async function bybitPrivateRequest<T>(input: {
   query?: string;
   body?: string;
   allowMissingResult?: boolean;
+  timeoutMs?: number;
 }): Promise<{ ok: true; result: T } | { ok: false; error: string }> {
   const apiKey = input.credentials.apiKey;
   const apiSecret = input.credentials.apiSecret;
@@ -54,7 +55,7 @@ export async function bybitPrivateRequest<T>(input: {
         "X-BAPI-RECV-WINDOW": RECV_WINDOW,
       },
       body: input.method === "POST" ? input.body : undefined,
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(input.timeoutMs ?? 15_000),
     });
   } catch {
     return { ok: false, error: "Could not reach Bybit." };

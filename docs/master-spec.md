@@ -30,4 +30,4 @@ Phase 8 — Futures strategy on Bybit. See [phase-8.md](phase-8.md). Phase 1 thr
 
 ## Multi-tenancy
 
-Bring-your-own API keys, stored per **Live** trading account. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue.
+Bring-your-own API keys, stored per **Live** trading account. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue. Connected Exchange books show a Unified account snapshot (available, margin, IM/MM) from the bound key on My Account and on hover of the strategy exchange chip.

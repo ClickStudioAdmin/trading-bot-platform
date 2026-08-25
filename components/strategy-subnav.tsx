@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { AccountSnapshotHover } from "@/components/account-snapshot";
+import type { AccountSnapshotView } from "@/lib/exchanges/account-view";
 import {
   CASH_AND_CARRY_PRIMARY_LINKS,
   CASH_AND_CARRY_SECONDARY_LINKS,
@@ -32,6 +34,7 @@ export function StrategySubnav({
     venue: string | null;
     connected: boolean;
     href?: string;
+    snapshot?: AccountSnapshotView | null;
   } | null;
 }) {
   const pathname = usePathname();
@@ -70,30 +73,36 @@ export function StrategySubnav({
         {connection || status ? (
           <div className="mt-6 flex max-w-[min(100%,32rem)] flex-wrap items-start justify-end gap-2">
             {connection ? (
-              <HeaderMeta
-                overline="Exchange Connection"
-                href={connection.href}
+              <AccountSnapshotHover
+                snapshot={
+                  connection.connected ? connection.snapshot ?? null : null
+                }
               >
-                <span
-                  className={`flex items-center gap-2 text-sm ${
-                    connection.connected ? "text-ink" : "text-warning"
-                  }`}
+                <HeaderMeta
+                  overline="Exchange Connection"
+                  href={connection.href}
                 >
-                  <StatusDot
-                    tone={connection.connected ? "success" : "warning"}
-                    pulse={false}
-                  />
-                  <span className="max-w-[14rem] truncate">
-                    {connection.name}
-                    {connection.venue ? (
-                      <span className="text-ink-muted">
-                        {" "}
-                        ({connection.venue})
-                      </span>
-                    ) : null}
+                  <span
+                    className={`flex items-center gap-2 text-sm ${
+                      connection.connected ? "text-ink" : "text-warning"
+                    }`}
+                  >
+                    <StatusDot
+                      tone={connection.connected ? "success" : "warning"}
+                      pulse={false}
+                    />
+                    <span className="max-w-[14rem] truncate">
+                      {connection.name}
+                      {connection.venue ? (
+                        <span className="text-ink-muted">
+                          {" "}
+                          ({connection.venue})
+                        </span>
+                      ) : null}
+                    </span>
                   </span>
-                </span>
-              </HeaderMeta>
+                </HeaderMeta>
+              </AccountSnapshotHover>
             ) : null}
             {status ? (
               <HeaderMeta overline="Automations" href={status.href}>

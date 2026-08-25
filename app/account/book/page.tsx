@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { AccountSnapshotBody } from "@/components/account-snapshot";
 import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
 import { formatAccountMode } from "@/lib/accounts/model";
 import { loadAccountUsage } from "@/lib/accounts/store";
 import { getSessionContext } from "@/lib/auth/session";
+import { loadAccountSnapshots } from "@/lib/exchanges/account-snapshot";
+import type { AccountSnapshotView } from "@/lib/exchanges/account-view";
 import {
   formatEnvironmentLabel,
   formatStrategyConnectionCaption,
@@ -31,6 +34,13 @@ export default async function BookOverviewPage() {
   const connections = live
     ? await listExchangeConnections(session.member.id, current.id)
     : [];
+  const snapshots = live
+    ? await loadAccountSnapshots(
+        session.member.id,
+        current.id,
+        connections.map((row) => row.id),
+      )
+    : new Map();
   const openCount = usage?.openCount ?? 0;
   const automationsRunning = Boolean(usage?.automationsRunning);
   const reduceOnly = Boolean(usage?.reduceOnly);
@@ -105,7 +115,7 @@ export default async function BookOverviewPage() {
             </Link>
           </div>
           {live ? (
-            <ConnectionList rows={connections} />
+            <ConnectionList rows={connections} snapshots={snapshots} />
           ) : (
             <p className="mt-4 text-sm text-ink-muted">
               Paper Trading uses the in-app ledger. Exchange keys belong on a
@@ -118,7 +128,13 @@ export default async function BookOverviewPage() {
   );
 }
 
-function ConnectionList({ rows }: { rows: ExchangeConnection[] }) {
+function ConnectionList({
+  rows,
+  snapshots,
+}: {
+  rows: ExchangeConnection[];
+  snapshots: Map<string, AccountSnapshotView>;
+}) {
   if (rows.length === 0) {
     return (
       <p className="mt-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
@@ -132,6 +148,7 @@ function ConnectionList({ rows }: { rows: ExchangeConnection[] }) {
     <ul className="mt-4 divide-y divide-line">
       {rows.map((row) => {
         const caption = formatStrategyConnectionCaption(row);
+        const snapshot = snapshots.get(row.id) ?? null;
         return (
           <li key={row.id} className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
             <div className="min-w-0">
@@ -146,6 +163,15 @@ function ConnectionList({ rows }: { rows: ExchangeConnection[] }) {
                 {row.verifiedAtMs ? " · Verified" : null}
                 {row.status === "invalid" ? " · Invalid" : null}
               </p>
+              <div className="mt-2 max-w-xs text-sm">
+                {snapshot ? (
+                  <AccountSnapshotBody snapshot={snapshot} />
+                ) : (
+                  <p className="text-ink-muted">
+                    Could not read the unified account.
+                  </p>
+                )}
+              </div>
             </div>
           </li>
         );

@@ -1,6 +1,7 @@
 import { StrategySubnav } from "@/components/strategy-subnav";
 import { getSessionContext } from "@/lib/auth/session";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
+import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { loadFuturesSettings } from "@/lib/futures/settings";
@@ -24,6 +25,14 @@ export default async function FuturesLayout({
       : [];
   const bound =
     connections.find((row) => row.id === settings?.connectionId) ?? null;
+  const snapshot =
+    live && session && bound
+      ? await loadAccountSnapshot(
+          session.member.id,
+          session.account.id,
+          bound.id,
+        )
+      : null;
   return (
     <div>
       <StrategySubnav
@@ -40,6 +49,7 @@ export default async function FuturesLayout({
               ? {
                   ...formatStrategyConnectionCaption(bound),
                   connected: true,
+                  snapshot,
                 }
               : {
                   name: "Connect an exchange",
