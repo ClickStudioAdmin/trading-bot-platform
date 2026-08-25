@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { FuturesFlash } from "@/components/futures-flash";
+import { FuturesOrderTicket } from "@/components/futures-order-ticket";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getSessionContext } from "@/lib/auth/session";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
+import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { submitFuturesTrade } from "@/lib/futures/actions";
 import { loadFuturesPositions } from "@/lib/futures/list";
@@ -40,15 +42,16 @@ export default async function FuturesPositionsPage({
   const closed = (await loadFuturesPositions({ status: "closed" })).slice(0, 8);
   const settings = await loadFuturesSettings(session.account.id);
   const live = accountCanHoldConnections(session.account.mode);
-  let tickers = new Map<
-    string,
-    { lastPrice?: string; bid1Price?: string; ask1Price?: string }
-  >();
-  try {
-    tickers = await fetchBybitTickers("linear");
-  } catch {
-    tickers = new Map();
-  }
+  const [tickers, pairs] = await Promise.all([
+    fetchBybitTickers("linear").catch(
+      () =>
+        new Map<
+          string,
+          { lastPrice?: string; bid1Price?: string; ask1Price?: string }
+        >(),
+    ),
+    loadUsdtLinearPerps().catch(() => []),
+  ]);
 
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-6 pt-6 pb-8">
@@ -67,33 +70,18 @@ export default async function FuturesPositionsPage({
         <h3 className="text-sm font-medium text-ink">Place an order</h3>
         <p className="mt-1 text-sm text-ink-muted">
           USDT linear perpetual. Buy opens or adds a long. Sell opens or adds
-          a short. Flatten closes the open row. No flip in one click.
+          a short. Flatten closes the open row. No flip in one click. Size is
+          token quantity or USDT notional at mark.
           {settings.reduceOnly
             ? " Reduce only is on — Buy and Sell are blocked."
             : ""}
         </p>
-        <form action={submitFuturesTrade} className="mt-4 grid gap-3 sm:grid-cols-3">
+        <form
+          action={submitFuturesTrade}
+          className="mt-4 grid gap-3 sm:grid-cols-[minmax(14rem,1.1fr)_minmax(16rem,1.2fr)_auto]"
+        >
           <input type="hidden" name="next" value={NEXT} />
-          <label className="block text-sm text-ink">
-            Symbol
-            <input
-              name="symbol"
-              defaultValue="BTCUSDT"
-              autoComplete="off"
-              spellCheck={false}
-              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm uppercase text-ink focus:border-line-strong focus:outline-none"
-            />
-          </label>
-          <label className="block text-sm text-ink">
-            Qty
-            <input
-              name="qty"
-              inputMode="decimal"
-              autoComplete="off"
-              placeholder="0.001"
-              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
-            />
-          </label>
+          <FuturesOrderTicket options={pairs} />
           <div className="flex flex-wrap items-end gap-2">
             <PendingSubmitButton
               pendingLabel="Buying…"

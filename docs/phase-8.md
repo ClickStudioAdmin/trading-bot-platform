@@ -28,7 +28,7 @@ Stop at the end of this phase for a Demo desk test. Do not start TradingView ([p
 1. Book is Paper or Connected Exchange. Futures has its own bind (not the cash-and-carry bind).
 2. Action is **Buy** (open or add long), **Sell** (open or add short), or **Flatten** (close whatever is open on that symbol).
 3. Do not flip in one click. Buy while short, or Sell while long, is rejected — Flatten first.
-4. Qty is base coin, floored to the instrument step. Below minimum is rejected.
+4. Size is base-coin quantity, or USDT/USDC notional converted at mark. Both floor to the instrument step. Below minimum is rejected.
 5. Live: server decrypts the Futures-bound key. Demo → `api-demo.bybit.com`. Market order on `linear`. Flatten is `reduceOnly`.
 6. Write `futures_positions` + `futures_orders` on this book only. Live books keep one open row per symbol and add size to it. Paper does the same.
 7. Reduce only (Futures settings) blocks Buy and Sell. Flatten still runs.

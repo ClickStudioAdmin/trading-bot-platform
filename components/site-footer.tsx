@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { STRATEGY_LINKS } from "@/lib/site-links";
 import { SiteLogo } from "@/components/site-logo";
 
 export function SiteFooter() {
@@ -16,14 +17,16 @@ export function SiteFooter() {
             Strategies
           </p>
           <ul className="mt-3 space-y-2 text-sm">
-            <li>
-              <Link
-                href="/strategies/cash-and-carry"
-                className="text-ink-muted hover:text-ink"
-              >
-                Cash and Carry
-              </Link>
-            </li>
+            {STRATEGY_LINKS.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="text-ink-muted hover:text-ink"
+                >
+                  {link.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
         <div>

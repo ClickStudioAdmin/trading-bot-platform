@@ -29,6 +29,7 @@ export type BybitInstrument = {
     minOrderQty?: string;
     basePrecision?: string;
     minOrderAmt?: string;
+    minNotionalValue?: string;
   };
 };
 

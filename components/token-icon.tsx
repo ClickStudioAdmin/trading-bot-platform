@@ -19,7 +19,8 @@ export function TokenIcon({
   size?: number;
 }) {
   const [failed, setFailed] = useState(false);
-  const slug = ICON_SLUG[symbol] ?? symbol.toLowerCase();
+  const iconSymbol = symbol.replace(/^(10000000|1000000|10000|1000)/, "") || symbol;
+  const slug = ICON_SLUG[iconSymbol] ?? iconSymbol.toLowerCase();
   const src = `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${slug}.svg`;
 
   if (failed) {
@@ -28,7 +29,7 @@ export function TokenIcon({
         className="inline-flex items-center justify-center rounded-full bg-surface-raised text-[10px] font-semibold text-ink-muted"
         style={{ width: size, height: size }}
       >
-        {symbol.slice(0, 1)}
+        {iconSymbol.slice(0, 1)}
       </span>
     );
   }
@@ -41,6 +42,8 @@ export function TokenIcon({
       alt=""
       width={size}
       height={size}
+      loading="lazy"
+      decoding="async"
       className="inline-block rounded-full"
       onError={() => setFailed(true)}
     />

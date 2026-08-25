@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
   parseFuturesAction,
+  parseFuturesNotional,
   parseFuturesQty,
+  parseFuturesSizeUnit,
   parseFuturesSymbol,
 } from "./model";
 
@@ -17,6 +19,20 @@ assert.equal(parseFuturesSymbol("xx").ok, false);
 assert.equal(parseFuturesQty("0.001").ok, true);
 assert.equal(parseFuturesQty("0").ok, false);
 assert.equal(parseFuturesQty("abc").ok, false);
+
+assert.equal(parseFuturesSizeUnit("").ok, true);
+assert.equal(parseFuturesSizeUnit("qty").ok, true);
+assert.equal(parseFuturesSizeUnit("USDT").ok, true);
+assert.equal(parseFuturesSizeUnit("usdc").ok, true);
+assert.equal(parseFuturesSizeUnit("shares").ok, false);
+const usdtUnit = parseFuturesSizeUnit("USDC");
+assert.equal(usdtUnit.ok, true);
+if (usdtUnit.ok) {
+  assert.equal(usdtUnit.unit, "usdt");
+}
+
+assert.equal(parseFuturesNotional("100").ok, true);
+assert.equal(parseFuturesNotional("0").ok, false);
 
 assert.equal(parseFuturesAction("Buy").ok, true);
 assert.equal(parseFuturesAction("flatten").ok, true);

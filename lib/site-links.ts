@@ -2,6 +2,11 @@ export const SITE_LINKS = [
   { href: "/strategies", label: "Strategies" },
 ] as const;
 
+export const STRATEGY_LINKS = [
+  { href: "/strategies/cash-and-carry", label: "Cash and Carry" },
+  { href: "/strategies/futures", label: "Futures" },
+] as const;
+
 export const CASH_AND_CARRY_PRIMARY_LINKS = [
   { href: "/strategies/cash-and-carry", label: "Overview", exact: true },
   { href: "/strategies/cash-and-carry/opportunities", label: "Opportunities" },

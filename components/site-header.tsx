@@ -31,7 +31,11 @@ export async function SiteHeader() {
               Menu
             </summary>
             <div className="absolute right-0 z-20 mt-2 w-48 rounded-card border border-line bg-surface p-2">
-              <SiteNav className="flex flex-col gap-1" extraLinks={extraLinks} />
+              <SiteNav
+                className="flex flex-col gap-1"
+                extraLinks={extraLinks}
+                stacked
+              />
             </div>
           </details>
           <UserMenu

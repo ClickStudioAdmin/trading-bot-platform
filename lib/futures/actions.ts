@@ -10,7 +10,9 @@ import { loadOpenFuturesForSymbol } from "./list";
 import { markFromTicker } from "./math";
 import {
   parseFuturesAction,
+  parseFuturesNotional,
   parseFuturesQty,
+  parseFuturesSizeUnit,
   parseFuturesSymbol,
 } from "./model";
 import { safeFuturesReturnPath } from "./path";
@@ -21,7 +23,7 @@ import {
 } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
 import { fetchBybitTicker } from "@/lib/exchanges/bybit/client";
-import { loadPerpInstrument, qtyForPerp } from "@/lib/exchanges/bybit/perp";
+import { loadPerpInstrument, qtyForPerp, qtyForPerpNotional } from "@/lib/exchanges/bybit/perp";
 import { placePerpMarketOnVenue } from "@/lib/exchanges/execute";
 import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
 import { listExchangeConnections } from "@/lib/exchanges/store";
@@ -82,6 +84,12 @@ export async function submitFuturesTrade(formData: FormData) {
     fail(next, "That symbol is not a trading USDT linear perpetual on Bybit.");
   }
 
+  const ticker = await fetchBybitTicker("linear", symbol);
+  const mark = markFromTicker(ticker ?? {});
+  if (mark === null) {
+    fail(next, "Could not read a mark price for that contract.");
+  }
+
   let qtyText: string;
   let qtyNumber: number;
   if (decided.kind === "flatten") {
@@ -92,22 +100,30 @@ export async function submitFuturesTrade(formData: FormData) {
     qtyText = sized.text;
     qtyNumber = sized.qty;
   } else {
-    const qtyParsed = parseFuturesQty(formData.get("qty"));
-    if (!qtyParsed.ok) {
-      fail(next, qtyParsed.error);
+    const unitParsed = parseFuturesSizeUnit(formData.get("sizeUnit"));
+    if (!unitParsed.ok) {
+      fail(next, unitParsed.error);
     }
-    const sized = qtyForPerp(qtyParsed.qty, instrument);
+    const sizeRaw = formData.get("size") ?? formData.get("qty");
+    let sized: { ok: true; qty: number; text: string } | { ok: false; error: string };
+    if (unitParsed.unit === "usdt") {
+      const notional = parseFuturesNotional(sizeRaw);
+      if (!notional.ok) {
+        fail(next, notional.error);
+      }
+      sized = qtyForPerpNotional(notional.qty, mark, instrument);
+    } else {
+      const qtyParsed = parseFuturesQty(sizeRaw);
+      if (!qtyParsed.ok) {
+        fail(next, qtyParsed.error);
+      }
+      sized = qtyForPerp(qtyParsed.qty, instrument);
+    }
     if (!sized.ok) {
       fail(next, sized.error);
     }
     qtyText = sized.text;
     qtyNumber = sized.qty;
-  }
-
-  const ticker = await fetchBybitTicker("linear", symbol);
-  const mark = markFromTicker(ticker ?? {});
-  if (mark === null) {
-    fail(next, "Could not read a mark price for that contract.");
   }
 
   let fillPrice = mark;

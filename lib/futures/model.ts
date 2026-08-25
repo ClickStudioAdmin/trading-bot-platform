@@ -57,6 +57,29 @@ export function parseFuturesQty(
   return { ok: true, qty };
 }
 
+export function parseFuturesSizeUnit(
+  raw: unknown,
+): { ok: true; unit: "qty" | "usdt" } | { ok: false; error: string } {
+  const unit = String(raw ?? "qty").trim().toLowerCase();
+  if (unit === "" || unit === "qty" || unit === "base" || unit === "token") {
+    return { ok: true, unit: "qty" };
+  }
+  if (unit === "usdt" || unit === "usdc" || unit === "quote") {
+    return { ok: true, unit: "usdt" };
+  }
+  return { ok: false, error: "Choose token quantity or USDT size." };
+}
+
+export function parseFuturesNotional(
+  raw: unknown,
+): { ok: true; qty: number } | { ok: false; error: string } {
+  const parsed = parseFuturesQty(raw);
+  if (!parsed.ok) {
+    return { ok: false, error: "Enter a positive USDT or USDC amount." };
+  }
+  return parsed;
+}
+
 export function parseFuturesAction(
   raw: unknown,
 ): { ok: true; action: FuturesAction } | { ok: false; error: string } {
