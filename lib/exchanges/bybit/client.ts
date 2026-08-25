@@ -79,6 +79,8 @@ export type BybitTicker = {
   ask1Price?: string;
   bid1Size?: string;
   ask1Size?: string;
+  markPrice?: string;
+  indexPrice?: string;
 };
 
 export async function fetchBybitTicker(

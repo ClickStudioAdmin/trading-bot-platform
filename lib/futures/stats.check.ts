@@ -24,6 +24,10 @@ function closed(partial: Partial<FuturesPosition> & { realizedUsdt: number; noti
     closedAtMs: 2,
     venue: null,
     environment: null,
+    takeProfit: null,
+    stopLoss: null,
+    tpTrigger: "last",
+    slTrigger: "last",
   };
 }
 

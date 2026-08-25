@@ -3,6 +3,7 @@ import { ColumnHint } from "@/components/column-hint";
 import { LocalTime } from "@/components/local-time";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TokenIcon } from "@/components/token-icon";
+import { TpslPair } from "@/components/futures-tpsl";
 import { cancelFuturesWorking } from "@/lib/futures/actions";
 import {
   workingActionLabel,
@@ -73,6 +74,12 @@ export function FuturesWorkingOrders({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
+                  label="TP/SL"
+                  hint="Stops attached when this limit was placed. They move onto the position when it fills."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
                   label="Actions"
                   hint={
                     exchangeBook
@@ -86,7 +93,7 @@ export function FuturesWorkingOrders({
           <tbody>
             {!signedIn ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-sm text-ink-muted">
+                <td colSpan={8} className="px-4 py-6 text-sm text-ink-muted">
                   <Link href="/sign-in" className="text-accent">
                     Sign in
                   </Link>{" "}
@@ -95,7 +102,7 @@ export function FuturesWorkingOrders({
               </tr>
             ) : working.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-sm text-ink-muted">
+                <td colSpan={8} className="px-4 py-6 text-sm text-ink-muted">
                   No working limits. Choose Limit on Place an order.
                 </td>
               </tr>
@@ -148,6 +155,13 @@ function WorkingRow({
       <td className="px-4 py-3 tabular-nums">{formatUsd(remainingNotional)}</td>
       <td className="px-4 py-3 text-ink-muted">
         <LocalTime at={row.createdAtMs} />
+      </td>
+      <td className="px-4 py-3">
+        {row.takeProfit === null && row.stopLoss === null ? (
+          <span className="text-ink-faint">—</span>
+        ) : (
+          <TpslPair takeProfit={row.takeProfit} stopLoss={row.stopLoss} />
+        )}
       </td>
       <td className="px-4 py-3">
         <form action={cancelFuturesWorking}>

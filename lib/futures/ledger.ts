@@ -1,5 +1,6 @@
 import { blendEntryPrice, futuresNotionalUsdt, futuresPnlUsdt } from "./math";
 import type { FuturesAction, FuturesPosition, FuturesSide } from "./model";
+import { tpslColumns, type FuturesTpsl } from "./tpsl";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -59,6 +60,7 @@ export async function writeFuturesOpen(input: {
   venue?: string | null;
   environment?: string | null;
   venueOrderId?: string | null;
+  tpsl?: FuturesTpsl | null;
 }): Promise<{ ok: true; positionId: string } | { ok: false; error: string }> {
   const { data, error } = await input.supabase
     .from("futures_positions")
@@ -75,6 +77,7 @@ export async function writeFuturesOpen(input: {
       source: "manual",
       venue: input.venue ?? null,
       environment: input.environment ?? null,
+      ...tpslColumns(input.tpsl),
     })
     .select("id")
     .single();
@@ -108,6 +111,7 @@ export async function writeFuturesAdd(input: {
   venue?: string | null;
   environment?: string | null;
   venueOrderId?: string | null;
+  tpsl?: FuturesTpsl | null;
 }): Promise<{ error: string | null }> {
   if (input.row.status !== "open") {
     return { error: "Can only add size to an open position." };
@@ -127,6 +131,7 @@ export async function writeFuturesAdd(input: {
       notional_usdt: futuresNotionalUsdt(qty, entryPrice),
       venue: input.venue ?? input.row.venue,
       environment: input.environment ?? input.row.environment,
+      ...(input.tpsl ? tpslColumns(input.tpsl) : {}),
     })
     .eq("id", input.row.id)
     .eq("account_id", input.row.accountId)
@@ -206,6 +211,7 @@ export async function insertFuturesWorking(
     venue?: string | null;
     environment?: string | null;
     venueOrderId?: string | null;
+    tpsl?: FuturesTpsl | null;
   },
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const { data, error } = await supabase
@@ -225,6 +231,7 @@ export async function insertFuturesWorking(
       venue: input.venue ?? null,
       environment: input.environment ?? null,
       venue_order_id: input.venueOrderId ?? null,
+      ...tpslColumns(input.tpsl),
     })
     .select("id")
     .single();
@@ -235,4 +242,23 @@ export async function insertFuturesWorking(
     };
   }
   return { ok: true, id: String((data as { id: string }).id) };
+}
+
+export async function patchFuturesTpsl(input: {
+  supabase: SupabaseClient;
+  row: FuturesPosition;
+  tpsl: FuturesTpsl;
+}): Promise<{ error: string | null }> {
+  if (input.row.status !== "open") {
+    return { error: "Can only set TP/SL on an open position." };
+  }
+  const { error } = await input.supabase
+    .from("futures_positions")
+    .update({
+      ...tpslColumns(input.tpsl),
+    })
+    .eq("id", input.row.id)
+    .eq("account_id", input.row.accountId)
+    .eq("status", "open");
+  return { error: error?.message ?? null };
 }

@@ -3,6 +3,7 @@
 import { decideFuturesAction, hedgePositionIdx } from "./decide";
 import {
   insertFuturesWorking,
+  patchFuturesTpsl,
   writeFuturesAdd,
   writeFuturesFlatten,
   writeFuturesOpen,
@@ -21,7 +22,7 @@ import {
 import { safeFuturesReturnPath } from "./path";
 import {
   cancelFuturesWorkingRow,
-  reconcileOpenFuturesWorkingOrders,
+  reconcileOpenFuturesBooks,
 } from "./reconcile";
 import { loadFuturesSettings } from "./settings";
 import {
@@ -35,6 +36,7 @@ import {
   cancelPerpOrderOnVenue,
   placePerpLimitOnVenue,
   placePerpMarketOnVenue,
+  setPerpTradingStopOnVenue,
 } from "@/lib/exchanges/execute";
 import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
 import {
@@ -47,6 +49,14 @@ import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  parseFuturesTpslForm,
+  parseFuturesTpslPatch,
+  tpslHasLevels,
+  validateTpslVsReference,
+  venueTpslFields,
+  venueTradingStopFields,
+} from "./tpsl";
 
 function fail(next: string, message: string): never {
   redirect(`${next}?paperError=${encodeURIComponent(message)}`);
@@ -286,6 +296,23 @@ export async function submitFuturesTrade(formData: FormData) {
   const qtyText = sized.text;
   let qtyNumber = sized.qty;
 
+  const tpslParsed = parseFuturesTpslForm(formData, instrument);
+  if (!tpslParsed.ok) {
+    fail(next, tpslParsed.error);
+  }
+  const tpsl = tpslParsed.tpsl;
+  if (tpsl) {
+    const checked = validateTpslVsReference({
+      side: decided.positionSide,
+      tpsl,
+      reference: sizePrice,
+    });
+    if (!checked.ok) {
+      fail(next, checked.error);
+    }
+  }
+  const venueTpsl = venueTpslFields(tpsl);
+
   if (limit) {
     const connection = await boundLive();
     let venue: string | null = null;
@@ -303,6 +330,7 @@ export async function submitFuturesTrade(formData: FormData) {
         requireHedge:
           decided.kind === "open" &&
           opens.some((row) => row.side !== decided.positionSide),
+        tpsl: venueTpsl,
       });
       if (!placed.ok) {
         await writeEventLog({
@@ -332,6 +360,7 @@ export async function submitFuturesTrade(formData: FormData) {
       venue,
       environment,
       venueOrderId,
+      tpsl,
     });
     if (!working.ok) {
       if (connection && venueOrderId) {
@@ -359,7 +388,7 @@ export async function submitFuturesTrade(formData: FormData) {
         workingId: working.id,
       },
     });
-    await reconcileOpenFuturesWorkingOrders({
+    await reconcileOpenFuturesBooks({
       accountId: account.id,
       userId: user.id,
     });
@@ -403,6 +432,7 @@ export async function submitFuturesTrade(formData: FormData) {
       requireHedge:
         decided.kind === "open" &&
         opens.some((row) => row.side !== decided.positionSide),
+      tpsl: venueTpsl,
     });
     if (!placed.ok) {
       await writeEventLog({
@@ -448,6 +478,7 @@ export async function submitFuturesTrade(formData: FormData) {
       venue,
       environment,
       venueOrderId,
+      tpsl,
     });
     if (!created.ok) {
       written = { error: created.error };
@@ -464,6 +495,7 @@ export async function submitFuturesTrade(formData: FormData) {
       venue,
       environment,
       venueOrderId,
+      tpsl,
     });
     flash = liveBook ? "live-added" : "added";
   } else {
@@ -524,6 +556,120 @@ export async function submitFuturesTrade(formData: FormData) {
   revalidatePath(FUTURES_PATHS.positions);
   revalidatePath(FUTURES_PATHS.performance);
   redirect(`${next}?paper=${flash}`);
+}
+
+export async function saveFuturesTpsl(formData: FormData) {
+  const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const { member: user, account } = session;
+  const liveBook = accountCanHoldConnections(account.mode);
+  const supabase = createServiceClient();
+  if (!supabase) {
+    fail(next, "Auth is not configured.");
+  }
+  const positionId = String(formData.get("positionId") ?? "").trim();
+  const symbolParsed = parseFuturesSymbol(formData.get("symbol"));
+  if (!symbolParsed.ok) {
+    fail(next, symbolParsed.error);
+  }
+  const symbol = symbolParsed.symbol;
+  const opens = await loadOpenFuturesOnSymbol(symbol);
+  const row = opens.find((item) => item.id === positionId) ?? null;
+  if (!row) {
+    fail(next, "That position is no longer open.");
+  }
+  const instrument = await loadPerpInstrument(symbol);
+  if (!instrument) {
+    fail(next, "That symbol is not a trading USDT linear perpetual on Bybit.");
+  }
+  const parsed = parseFuturesTpslPatch(formData, instrument);
+  if (!parsed.ok) {
+    fail(next, parsed.error);
+  }
+  const tpsl = parsed.tpsl;
+  const ticker = await fetchBybitTicker("linear", symbol);
+  const mark = markFromTicker(ticker ?? {});
+  if (tpslHasLevels(tpsl)) {
+    const checked = validateTpslVsReference({
+      side: row.side,
+      tpsl,
+      reference: mark ?? row.entryPrice,
+    });
+    if (!checked.ok) {
+      fail(next, checked.error);
+    }
+  }
+  if (liveBook) {
+    const settings = await loadFuturesSettings(account.id);
+    if (!settings.connectionId) {
+      fail(next, "Bind an exchange in Futures Strategy Settings before trading.");
+    }
+    const bound = await loadBoundVenueForAccount({
+      userId: user.id,
+      accountId: account.id,
+      mode: account.mode,
+      connectionId: settings.connectionId,
+    });
+    if (!bound.ok) {
+      fail(next, bound.error);
+    }
+    const stop = venueTradingStopFields(tpsl);
+    const set = await setPerpTradingStopOnVenue({
+      connection: bound.connection,
+      symbol,
+      positionIdx: hedgePositionIdx(row.side),
+      takeProfit: stop.takeProfit,
+      stopLoss: stop.stopLoss,
+      tpTriggerBy: stop.tpTriggerBy,
+      slTriggerBy: stop.slTriggerBy,
+    });
+    if (!set.ok) {
+      await writeEventLog({
+        level: "error",
+        scope: "trade",
+        event: "trade.futures_failed",
+        message: set.error,
+        userId: user.id,
+        accountId: account.id,
+        strategy: FUTURES_STRATEGY_ID,
+        data: { symbol, action: "tpsl", positionId: row.id },
+      });
+      fail(next, set.error);
+    }
+  }
+  const written = await patchFuturesTpsl({
+    supabase,
+    row,
+    tpsl,
+  });
+  if (written.error) {
+    fail(next, written.error);
+  }
+  await writeEventLog({
+    scope: "trade",
+    event: "trade.futures",
+    message: tpslHasLevels(tpsl)
+      ? `Set TP/SL on ${symbol} ${row.side}`
+      : `Cleared TP/SL on ${symbol} ${row.side}`,
+    userId: user.id,
+    accountId: account.id,
+    strategy: FUTURES_STRATEGY_ID,
+    data: {
+      symbol,
+      action: "tpsl",
+      positionId: row.id,
+      takeProfit: tpsl.takeProfit,
+      stopLoss: tpsl.stopLoss,
+      live: liveBook,
+    },
+  });
+  revalidatePath(FUTURES_PATHS.root);
+  revalidatePath(FUTURES_PATHS.positions);
+  revalidatePath(FUTURES_PATHS.performance);
+  redirect(`${next}?paper=${liveBook ? "live-tpsl" : "tpsl"}`);
 }
 
 export async function cancelFuturesWorking(formData: FormData) {

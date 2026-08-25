@@ -11,7 +11,7 @@ import {
 } from "@/lib/exchanges/bybit/perp";
 import { loadFuturesDesk } from "@/lib/futures/list";
 import { markFuturesOpen } from "@/lib/futures/mark";
-import { reconcileOpenFuturesWorkingOrders } from "@/lib/futures/reconcile";
+import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { firstSearchValue } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
@@ -28,7 +28,7 @@ export default async function FuturesOverviewPage({
   const params = await searchParams;
   const session = await getSessionContext();
   if (session) {
-    await reconcileOpenFuturesWorkingOrders({
+    await reconcileOpenFuturesBooks({
       accountId: session.account.id,
       userId: session.member.id,
     });
@@ -66,8 +66,10 @@ export default async function FuturesOverviewPage({
         liveOpened={firstSearchValue(params.paper) === "live-opened"}
         liveAdded={firstSearchValue(params.paper) === "live-added"}
         liveClosed={firstSearchValue(params.paper) === "live-closed"}
-        liveWorking={firstSearchValue(params.paper) === "live-working"}
-        error={firstSearchValue(params.paperError)}
+          liveWorking={firstSearchValue(params.paper) === "live-working"}
+          tpsl={firstSearchValue(params.paper) === "tpsl"}
+          liveTpsl={firstSearchValue(params.paper) === "live-tpsl"}
+          error={firstSearchValue(params.paperError)}
       />
       <FuturesWorkingOrders
         signedIn={desk.signedIn}

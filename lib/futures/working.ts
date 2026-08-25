@@ -1,4 +1,5 @@
-import type { FuturesAction, FuturesSide } from "./model";
+import type { FuturesAction, FuturesSide, FuturesTrigger } from "./model";
+import { parseFuturesTriggerColumn } from "./model";
 
 export type FuturesWorkingStatus = "open" | "filled" | "cancelled" | "rejected";
 
@@ -19,6 +20,10 @@ export type FuturesWorkingOrder = {
   environment: string | null;
   venueOrderId: string | null;
   createdAtMs: number;
+  takeProfit: number | null;
+  stopLoss: number | null;
+  tpTrigger: FuturesTrigger;
+  slTrigger: FuturesTrigger;
 };
 
 export function paperLimitShouldFill(input: {
@@ -99,6 +104,10 @@ export function parseFuturesWorkingRow(
     environment: row.environment ? String(row.environment) : null,
     venueOrderId: row.venue_order_id ? String(row.venue_order_id) : null,
     createdAtMs: Number.isFinite(created) ? created : 0,
+    takeProfit: Number(row.take_profit) > 0 ? Number(row.take_profit) : null,
+    stopLoss: Number(row.stop_loss) > 0 ? Number(row.stop_loss) : null,
+    tpTrigger: parseFuturesTriggerColumn(row.tp_trigger),
+    slTrigger: parseFuturesTriggerColumn(row.sl_trigger),
   };
 }
 

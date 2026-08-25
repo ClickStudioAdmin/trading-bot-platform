@@ -39,7 +39,7 @@ import {
   pickOpenCarryForPair,
   type PaperCarryRow,
 } from "@/lib/paper/rows";
-import { reconcileOpenFuturesWorkingOrders } from "@/lib/futures/reconcile";
+import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 export async function runPaperEngineTick(): Promise<{
@@ -477,7 +477,7 @@ export async function runPaperEngineTick(): Promise<{
   }
 
   try {
-    await reconcileOpenFuturesWorkingOrders();
+    await reconcileOpenFuturesBooks();
   } catch (cause) {
     await writeEventLog({
       level: "error",

@@ -9,6 +9,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TokenIcon } from "@/components/token-icon";
 import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
 import { submitFuturesTrade } from "@/lib/futures/actions";
+import { FuturesTpslCell } from "@/components/futures-tpsl";
 import type { FuturesDeskPosition } from "@/lib/futures/list";
 import type { MarkedFutures } from "@/lib/futures/mark";
 import type { FuturesOrder } from "@/lib/futures/model";
@@ -187,6 +188,12 @@ export function OpenFuturesTrades({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
+                  label="TP/SL"
+                  hint="Take profit and stop loss on this row. Add when the position is open, or attach them on the order ticket."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
                   label="Actions"
                   hint={
                     exchangeBook
@@ -200,7 +207,7 @@ export function OpenFuturesTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={10}
+                colSpan={11}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -212,7 +219,7 @@ export function OpenFuturesTrades({
               />
             ) : open.length === 0 ? (
               <EmptyRow
-                colSpan={10}
+                colSpan={11}
                 message={
                   emptyMessage ?? "No open futures. Place an order above."
                 }
@@ -384,7 +391,7 @@ function OpenFuturesRows({
 
   return (
     <ExpandableTradeRows
-      colSpan={10}
+      colSpan={11}
       details={
         <TradeDetailTabs
           orders={<FuturesOrderList orders={trade.orders} />}
@@ -418,6 +425,21 @@ function OpenFuturesRows({
       </td>
       <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
         {formatPct(pnlPct)}
+      </td>
+      <td className="px-4 py-3">
+        <FuturesTpslCell
+          positionId={trade.id}
+          symbol={trade.symbol}
+          side={trade.side}
+          qty={trade.qty}
+          entryPrice={trade.entryPrice}
+          mark={trade.mark}
+          takeProfit={trade.takeProfit}
+          stopLoss={trade.stopLoss}
+          tpTrigger={trade.tpTrigger}
+          slTrigger={trade.slTrigger}
+          next={next}
+        />
       </td>
       <td className="px-4 py-3">
         <form action={submitFuturesTrade}>

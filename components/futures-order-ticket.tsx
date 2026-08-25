@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
+import { FuturesTpslFields } from "@/components/futures-tpsl";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 
 export function FuturesOrderTicket({ options }: { options: LinearPerp[] }) {
@@ -29,7 +30,7 @@ export function FuturesOrderTicket({ options }: { options: LinearPerp[] }) {
       <div className="block text-sm text-ink">
         Type
         <input type="hidden" name="orderType" value={orderType} />
-        <div className="mt-1 flex rounded-control border border-line bg-surface p-0.5">
+        <div className="mt-1 inline-flex rounded-control border border-line bg-surface p-0.5">
           <UnitButton
             active={orderType === "market"}
             onClick={() => setOrderType("market")}
@@ -113,6 +114,7 @@ export function FuturesOrderTicket({ options }: { options: LinearPerp[] }) {
           </span>
         </div>
       ) : null}
+      <FuturesTpslFields />
     </>
   );
 }

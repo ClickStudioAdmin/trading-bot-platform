@@ -29,13 +29,32 @@ type OrderRow = {
   leavesQty?: string;
 };
 
-export type BybitLinearOrderSnapshot = {
-  orderId: string;
-  status: string;
-  avgPrice: number | null;
-  cumExecQty: number;
-  qty: number;
+export type BybitTpslAttach = {
+  takeProfit?: string;
+  stopLoss?: string;
+  tpTriggerBy?: "LastPrice" | "MarkPrice" | "IndexPrice";
+  slTriggerBy?: "LastPrice" | "MarkPrice" | "IndexPrice";
 };
+
+function applyTpslToBody(
+  body: Record<string, string | boolean | number>,
+  tpsl?: BybitTpslAttach,
+) {
+  if (!tpsl) {
+    return;
+  }
+  if (tpsl.takeProfit) {
+    body.takeProfit = tpsl.takeProfit;
+    body.tpTriggerBy = tpsl.tpTriggerBy ?? "LastPrice";
+  }
+  if (tpsl.stopLoss) {
+    body.stopLoss = tpsl.stopLoss;
+    body.slTriggerBy = tpsl.slTriggerBy ?? "LastPrice";
+  }
+  if (tpsl.takeProfit || tpsl.stopLoss) {
+    body.tpslMode = "Full";
+  }
+}
 
 function lotStep(instrument: BybitInstrument | undefined, fallback: number): number {
   const filter = instrument?.lotSizeFilter;
@@ -154,6 +173,7 @@ export async function bybitCreateMarketOrder(input: {
   qty: string;
   reduceOnly?: boolean;
   positionIdx?: 0 | 1 | 2;
+  tpsl?: BybitTpslAttach;
 }): Promise<{ ok: true; fill: BybitOrderFill } | { ok: false; error: string }> {
   const body: Record<string, string | boolean | number> = {
     category: input.category,
@@ -170,6 +190,7 @@ export async function bybitCreateMarketOrder(input: {
     if (input.reduceOnly) {
       body.reduceOnly = true;
     }
+    applyTpslToBody(body, input.tpsl);
   }
   const created = await bybitPrivateRequest<CreateResult>({
     environmentId: input.environmentId,
@@ -206,6 +227,7 @@ export async function bybitCreateLinearLimitOrder(input: {
   price: string;
   reduceOnly?: boolean;
   positionIdx?: 0 | 1 | 2;
+  tpsl?: BybitTpslAttach;
 }): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
   const body: Record<string, string | boolean | number> = {
     category: "linear",
@@ -220,6 +242,7 @@ export async function bybitCreateLinearLimitOrder(input: {
   if (input.reduceOnly) {
     body.reduceOnly = true;
   }
+  applyTpslToBody(body, input.tpsl);
   const created = await bybitPrivateRequest<CreateResult>({
     environmentId: input.environmentId,
     credentials: input.credentials,
@@ -295,6 +318,101 @@ export async function bybitCancelLinearOrder(input: {
     return { ok: true };
   }
   return cancelled;
+}
+
+export type BybitLinearOrderSnapshot = {
+  orderId: string;
+  status: string;
+  avgPrice: number | null;
+  cumExecQty: number;
+  qty: number;
+};
+
+export type BybitLinearPosition = {
+  size: number;
+  positionIdx: number;
+  takeProfit: number | null;
+  stopLoss: number | null;
+};
+
+export async function bybitReadLinearPosition(input: {
+  environmentId: string;
+  credentials: BybitPrivateCreds;
+  symbol: string;
+  positionIdx: 1 | 2;
+}): Promise<
+  { ok: true; position: BybitLinearPosition | null } | { ok: false; error: string }
+> {
+  const query = `category=linear&symbol=${encodeURIComponent(input.symbol)}`;
+  const listed = await bybitPrivateRequest<{
+    list?: {
+      size?: string;
+      positionIdx?: number;
+      takeProfit?: string;
+      stopLoss?: string;
+    }[];
+  }>({
+    environmentId: input.environmentId,
+    credentials: input.credentials,
+    method: "GET",
+    path: "/v5/position/list",
+    query,
+  });
+  if (!listed.ok) {
+    return listed;
+  }
+  const row = (listed.result.list ?? []).find(
+    (item) => Number(item.positionIdx) === input.positionIdx,
+  );
+  if (!row) {
+    return { ok: true, position: null };
+  }
+  const size = Number(row.size ?? "");
+  const takeProfit = Number(row.takeProfit ?? "");
+  const stopLoss = Number(row.stopLoss ?? "");
+  return {
+    ok: true,
+    position: {
+      size: size > 0 ? size : 0,
+      positionIdx: input.positionIdx,
+      takeProfit: takeProfit > 0 ? takeProfit : null,
+      stopLoss: stopLoss > 0 ? stopLoss : null,
+    },
+  };
+}
+
+export async function bybitSetTradingStop(input: {
+  environmentId: string;
+  credentials: BybitPrivateCreds;
+  symbol: string;
+  positionIdx: 1 | 2;
+  takeProfit: string;
+  stopLoss: string;
+  tpTriggerBy: "LastPrice" | "MarkPrice" | "IndexPrice";
+  slTriggerBy: "LastPrice" | "MarkPrice" | "IndexPrice";
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const body: Record<string, string | number> = {
+    category: "linear",
+    symbol: input.symbol,
+    tpslMode: "Full",
+    positionIdx: input.positionIdx,
+    takeProfit: input.takeProfit,
+    stopLoss: input.stopLoss,
+    tpTriggerBy: input.tpTriggerBy,
+    slTriggerBy: input.slTriggerBy,
+  };
+  const set = await bybitPrivateRequest<Record<string, unknown>>({
+    environmentId: input.environmentId,
+    credentials: input.credentials,
+    method: "POST",
+    path: "/v5/position/trading-stop",
+    body: JSON.stringify(body),
+    allowMissingResult: true,
+  });
+  if (set.ok) {
+    return { ok: true };
+  }
+  return set;
 }
 
 function snapshotFromRow(

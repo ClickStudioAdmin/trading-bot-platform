@@ -1,6 +1,7 @@
 export type FuturesSide = "long" | "short";
 export type FuturesAction = "buy" | "sell" | "flatten";
 export type FuturesOrderType = "market" | "limit";
+export type FuturesTrigger = "last" | "mark" | "index";
 export type FuturesPositionStatus = "open" | "closed";
 
 export type FuturesPosition = {
@@ -19,6 +20,10 @@ export type FuturesPosition = {
   closedAtMs: number | null;
   venue: string | null;
   environment: string | null;
+  takeProfit: number | null;
+  stopLoss: number | null;
+  tpTrigger: FuturesTrigger;
+  slTrigger: FuturesTrigger;
 };
 
 export type FuturesOrder = {
@@ -121,6 +126,10 @@ export function parseFuturesSide(raw: unknown): FuturesSide | null {
   return raw === "long" || raw === "short" ? raw : null;
 }
 
+export function parseFuturesTriggerColumn(raw: unknown): FuturesTrigger {
+  return raw === "mark" || raw === "index" ? raw : "last";
+}
+
 export function asPositiveNumber(raw: unknown): number | null {
   const value = Number(raw);
   return value > 0 && Number.isFinite(value) ? value : null;
@@ -170,5 +179,9 @@ export function parseFuturesPositionRow(
     closedAtMs: Number.isFinite(closed) ? closed : null,
     venue: row.venue ? String(row.venue) : null,
     environment: row.environment ? String(row.environment) : null,
+    takeProfit: Number(row.take_profit) > 0 ? Number(row.take_profit) : null,
+    stopLoss: Number(row.stop_loss) > 0 ? Number(row.stop_loss) : null,
+    tpTrigger: parseFuturesTriggerColumn(row.tp_trigger),
+    slTrigger: parseFuturesTriggerColumn(row.sl_trigger),
   };
 }

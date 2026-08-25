@@ -18,7 +18,7 @@ import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { submitFuturesTrade } from "@/lib/futures/actions";
 import { loadFuturesDesk } from "@/lib/futures/list";
 import { markFuturesOpen } from "@/lib/futures/mark";
-import { reconcileOpenFuturesWorkingOrders } from "@/lib/futures/reconcile";
+import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { firstSearchValue } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
@@ -38,7 +38,7 @@ export default async function FuturesPositionsPage({
   const session = await getSessionContext();
   const params = await searchParams;
   if (session) {
-    await reconcileOpenFuturesWorkingOrders({
+    await reconcileOpenFuturesBooks({
       accountId: session.account.id,
       userId: session.member.id,
     });
@@ -78,70 +78,76 @@ export default async function FuturesPositionsPage({
           liveAdded={firstSearchValue(params.paper) === "live-added"}
           liveClosed={firstSearchValue(params.paper) === "live-closed"}
           liveWorking={firstSearchValue(params.paper) === "live-working"}
+          tpsl={firstSearchValue(params.paper) === "tpsl"}
+          liveTpsl={firstSearchValue(params.paper) === "live-tpsl"}
           error={firstSearchValue(params.paperError)}
         />
 
-        <section className="rounded-card border border-line bg-surface p-5">
-          <h3 className="text-sm font-medium text-ink">Place an order</h3>
-          <p className="mt-1 text-sm text-ink-muted">
-            USDT linear perpetual. Buy opens or adds a long. Sell opens or adds
-            a short. Both sides can be open on the same contract. Market fills
-            now. Limit rests until it matches — watch it under Open orders.
-            Close is on each open row. Size is token quantity or USDT notional
-            (mark for market, limit price for limit).
-            {settings.reduceOnly
-              ? " Reduce only is on — Buy and Sell are blocked."
-              : ""}
-          </p>
-          <form
-            action={submitFuturesTrade}
-            className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.1fr)_minmax(9rem,0.7fr)_minmax(14rem,1.1fr)_minmax(10rem,0.8fr)_auto]"
-          >
-            <input type="hidden" name="next" value={NEXT} />
-            <FuturesOrderTicket options={pairs} />
-            <div className="flex flex-wrap items-end gap-2">
-              <PendingSubmitButton
-                pendingLabel="Buying…"
-                successKey="futures-buy"
-                name="action"
-                value="buy"
-                className="rounded-control bg-accent-strong px-3 py-2 text-xs font-medium text-ink"
-              >
-                Buy
-              </PendingSubmitButton>
-              <PendingSubmitButton
-                pendingLabel="Selling…"
-                successKey="futures-sell"
-                name="action"
-                value="sell"
-                className="rounded-control bg-accent-strong px-3 py-2 text-xs font-medium text-ink"
-              >
-                Sell
-              </PendingSubmitButton>
-            </div>
-          </form>
-          {live && !settings.connectionId ? (
-            <p className="mt-3 text-xs text-warning">
-              Bind an exchange in Strategy Settings before these buttons place
-              venue orders.
-            </p>
-          ) : null}
-        </section>
-
         <FuturesOpenStats signedIn={desk.signedIn} open={open} />
-        <FuturesWorkingOrders
-          signedIn={desk.signedIn}
-          working={desk.working}
-          next={NEXT}
-          exchangeBook={desk.exchangeBook}
-          baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
-        />
         <OpenFuturesTrades
           signedIn={desk.signedIn}
           open={open}
           next={NEXT}
           showHeading={false}
           exchangeBook={desk.exchangeBook}
+        />
+
+        <section>
+          <h2 className="text-xl font-semibold tracking-tight">Place an order</h2>
+          <p className="text-sm text-ink-muted">
+            USDT linear perpetual. Buy opens or adds a long. Sell opens or adds
+            a short. Both sides can be open on the same contract. Market fills
+            now. Limit rests until it matches — watch it under Open orders.
+            Optional TP/SL attaches to that order. Add or edit stops on an open
+            row. Close is on each open row. Size is token quantity or USDT
+            notional (mark for market, limit price for limit).
+            {settings.reduceOnly
+              ? " Reduce only is on — Buy and Sell are blocked."
+              : ""}
+          </p>
+          <div className="mt-3 rounded-card border border-line bg-surface p-5">
+            <form
+              action={submitFuturesTrade}
+              className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.1fr)_auto_minmax(16rem,1.3fr)_minmax(10rem,0.8fr)_auto]"
+            >
+              <input type="hidden" name="next" value={NEXT} />
+              <FuturesOrderTicket options={pairs} />
+              <div className="flex flex-wrap items-end gap-2">
+                <PendingSubmitButton
+                  pendingLabel="Buying…"
+                  successKey="futures-buy"
+                  name="action"
+                  value="buy"
+                  className="rounded-control bg-accent-strong px-3 py-2 text-xs font-medium text-ink"
+                >
+                  Buy
+                </PendingSubmitButton>
+                <PendingSubmitButton
+                  pendingLabel="Selling…"
+                  successKey="futures-sell"
+                  name="action"
+                  value="sell"
+                  className="rounded-control bg-accent-strong px-3 py-2 text-xs font-medium text-ink"
+                >
+                  Sell
+                </PendingSubmitButton>
+              </div>
+            </form>
+            {live && !settings.connectionId ? (
+              <p className="mt-3 text-xs text-warning">
+                Bind an exchange in Strategy Settings before these buttons place
+                venue orders.
+              </p>
+            ) : null}
+          </div>
+        </section>
+
+        <FuturesWorkingOrders
+          signedIn={desk.signedIn}
+          working={desk.working}
+          next={NEXT}
+          exchangeBook={desk.exchangeBook}
+          baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
         />
       </div>
     </main>

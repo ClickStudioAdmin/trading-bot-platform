@@ -67,5 +67,8 @@ const parsed = parseFuturesWorkingRow({
 });
 assert.equal(parsed.symbol, "BTCUSDT");
 assert.equal(parsed.remainingQty, 0.01);
+assert.equal(parsed.takeProfit, null);
+assert.equal(parsed.stopLoss, null);
+assert.equal(parsed.tpTrigger, "last");
 
 console.log("futures working checks passed");

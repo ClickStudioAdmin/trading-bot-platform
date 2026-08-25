@@ -8,6 +8,8 @@ export function FuturesFlash({
   liveAdded,
   liveClosed,
   liveWorking,
+  tpsl,
+  liveTpsl,
   error,
 }: {
   opened: boolean;
@@ -19,6 +21,8 @@ export function FuturesFlash({
   liveAdded?: boolean;
   liveClosed?: boolean;
   liveWorking?: boolean;
+  tpsl?: boolean;
+  liveTpsl?: boolean;
   error?: string;
 }) {
   if (error) {
@@ -56,6 +60,13 @@ export function FuturesFlash({
       </p>
     );
   }
+  if (liveTpsl) {
+    return (
+      <p className="text-sm text-success">
+        TP/SL updated on the connected exchange.
+      </p>
+    );
+  }
   if (opened) {
     return <p className="text-sm text-success">Paper futures opened.</p>;
   }
@@ -70,6 +81,9 @@ export function FuturesFlash({
   }
   if (cancelled) {
     return <p className="text-sm text-success">Order cancelled.</p>;
+  }
+  if (tpsl) {
+    return <p className="text-sm text-success">TP/SL updated.</p>;
   }
   return null;
 }

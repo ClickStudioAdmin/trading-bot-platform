@@ -4,10 +4,14 @@ import {
   bybitCreateMarketOrder,
   bybitEnsureHedgeMode,
   bybitReadLinearOrder,
+  bybitReadLinearPosition,
+  bybitSetTradingStop,
   explainHedgeModeError,
   loadCarryInstruments,
   qtyForCarryLegs,
   type BybitLinearOrderSnapshot,
+  type BybitLinearPosition,
+  type BybitTpslAttach,
 } from "@/lib/exchanges/bybit/orders";
 import { loadPerpInstrument, qtyForPerp } from "@/lib/exchanges/bybit/perp";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
@@ -187,6 +191,7 @@ export async function placePerpMarketOnVenue(input: {
   reduceOnly?: boolean;
   positionIdx: 1 | 2;
   requireHedge?: boolean;
+  tpsl?: BybitTpslAttach;
 }): Promise<{ ok: true; fill: PerpVenueFill } | { ok: false; error: string }> {
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot place futures orders yet." };
@@ -219,6 +224,7 @@ export async function placePerpMarketOnVenue(input: {
     qty: sized.text,
     reduceOnly: input.reduceOnly,
     positionIdx: hedge.ok ? input.positionIdx : 0,
+    tpsl: input.tpsl,
   });
   if (!created.ok) {
     return { ok: false, error: explainHedgeModeError(created.error) };
@@ -245,6 +251,7 @@ export async function placePerpLimitOnVenue(input: {
   reduceOnly?: boolean;
   positionIdx: 1 | 2;
   requireHedge?: boolean;
+  tpsl?: BybitTpslAttach;
 }): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot place futures orders yet." };
@@ -266,6 +273,7 @@ export async function placePerpLimitOnVenue(input: {
     price: input.price,
     reduceOnly: input.reduceOnly,
     positionIdx: hedge.ok ? input.positionIdx : 0,
+    tpsl: input.tpsl,
   });
   if (!created.ok) {
     return { ok: false, error: explainHedgeModeError(created.error) };
@@ -302,5 +310,47 @@ export async function cancelPerpOrderOnVenue(input: {
     credentials: creds(input.connection),
     symbol: input.symbol,
     orderId: input.orderId,
+  });
+}
+
+export async function readPerpPositionOnVenue(input: {
+  connection: BoundConnectionSecrets;
+  symbol: string;
+  positionIdx: 1 | 2;
+}): Promise<
+  { ok: true; position: BybitLinearPosition | null } | { ok: false; error: string }
+> {
+  if (input.connection.venue !== "bybit") {
+    return { ok: false, error: "That exchange cannot read futures positions yet." };
+  }
+  return bybitReadLinearPosition({
+    environmentId: input.connection.environment,
+    credentials: creds(input.connection),
+    symbol: input.symbol,
+    positionIdx: input.positionIdx,
+  });
+}
+
+export async function setPerpTradingStopOnVenue(input: {
+  connection: BoundConnectionSecrets;
+  symbol: string;
+  positionIdx: 1 | 2;
+  takeProfit: string;
+  stopLoss: string;
+  tpTriggerBy: "LastPrice" | "MarkPrice" | "IndexPrice";
+  slTriggerBy: "LastPrice" | "MarkPrice" | "IndexPrice";
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.connection.venue !== "bybit") {
+    return { ok: false, error: "That exchange cannot set TP/SL yet." };
+  }
+  return bybitSetTradingStop({
+    environmentId: input.connection.environment,
+    credentials: creds(input.connection),
+    symbol: input.symbol,
+    positionIdx: input.positionIdx,
+    takeProfit: input.takeProfit,
+    stopLoss: input.stopLoss,
+    tpTriggerBy: input.tpTriggerBy,
+    slTriggerBy: input.slTriggerBy,
   });
 }
