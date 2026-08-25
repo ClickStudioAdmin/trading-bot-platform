@@ -90,68 +90,68 @@ export function OpenFuturesTrades({
           </Link>
         </div>
       ) : null}
-      <div className="overflow-x-auto rounded-card border border-line bg-surface">
-        <table className="w-full min-w-[60rem] text-left text-sm">
+      <div className="min-w-0 overflow-x-auto rounded-card border border-line bg-surface">
+        <table className="w-full table-fixed text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
-              <th className="px-4 py-3 font-medium">
+              <th className="w-10 px-2 py-3 font-medium">
                 <ColumnHint
-                  label="Details"
+                  label={<span className="sr-only">Details</span>}
                   hint="Expand for orders and the event log for this position."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="w-36 px-3 py-3 font-medium">
                 <ColumnHint
                   label="Contract"
                   hint="USDT linear perpetual. Badge is Manual until alert automations ship."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="w-14 px-3 py-3 font-medium">
                 <ColumnHint label="Side" hint="Long or short. Both can be open on the same contract." />
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="w-16 px-3 py-3 font-medium">
                 <ColumnHint label="Qty" hint="Base-coin size on this row." />
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="px-3 py-3 font-medium">
                 <ColumnHint
                   label="Notional"
                   hint="Qty × entry. P&L scales with this amount."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="px-3 py-3 font-medium">
                 <ColumnHint
                   label="Entry"
                   hint="Size-weighted average fill price."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="px-3 py-3 font-medium">
                 <ColumnHint label="Mark" hint="Last price from the live Bybit ticker." />
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="px-3 py-3 font-medium">
                 <ColumnHint
                   label="Unrealized"
                   hint="Mark-to-market versus entry. Not Bybit’s invoice."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="w-16 px-3 py-3 font-medium">
                 <ColumnHint
                   label="P&L %"
                   hint="Unrealized ÷ notional. Not annualized."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="w-[4.5rem] px-3 py-3 font-medium">
                 <ColumnHint
                   label="TP/SL"
                   hint="Take profit and stop loss on this row. Add when the position is open, or attach them on the order ticket."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="w-20 px-3 py-3 font-medium">
                 <ColumnHint
-                  label="Trailing Stop"
+                  label="Trailing"
                   hint="Retracement distance from the best price since activation. Closes the whole row at market. Add on the ticket or here."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
+              <th className="w-[4.5rem] px-3 py-3 font-medium">
                 <ColumnHint
                   label="Actions"
                   hint={
@@ -358,8 +358,8 @@ function OpenFuturesRows({
         />
       }
     >
-      <td className="min-w-0 px-4 py-3">
-        <span className="flex items-start gap-4">
+      <td className="min-w-0 px-3 py-3">
+        <span className="flex items-start gap-2">
           <TokenIcon symbol={trade.baseCoin} />
           <span className="min-w-0">
             <span className="flex items-center gap-2 font-medium">
@@ -374,22 +374,22 @@ function OpenFuturesRows({
           </span>
         </span>
       </td>
-      <td className="px-4 py-3 capitalize text-ink-muted">{trade.side}</td>
-      <td className="px-4 py-3 tabular-nums">{trade.qty}</td>
-      <td className="px-4 py-3 tabular-nums text-ink-muted">
+      <td className="px-3 py-3 capitalize text-ink-muted">{trade.side}</td>
+      <td className="px-3 py-3 tabular-nums whitespace-nowrap">{trade.qty}</td>
+      <td className="px-3 py-3 tabular-nums whitespace-nowrap text-ink-muted">
         {formatUsd(trade.notionalUsdt)}
       </td>
-      <td className="px-4 py-3 tabular-nums">{formatPrice(trade.entryPrice)}</td>
-      <td className="px-4 py-3 tabular-nums">{formatPrice(trade.mark)}</td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.unrealizedUsdt)}`}>
+      <td className="px-3 py-3 tabular-nums whitespace-nowrap">{formatPrice(trade.entryPrice)}</td>
+      <td className="px-3 py-3 tabular-nums whitespace-nowrap">{formatPrice(trade.mark)}</td>
+      <td className={`px-3 py-3 tabular-nums whitespace-nowrap ${signedTone(trade.unrealizedUsdt)}`}>
         {trade.unrealizedUsdt === null
           ? "—"
           : formatSignedUsd(trade.unrealizedUsdt)}
       </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
+      <td className={`px-3 py-3 tabular-nums whitespace-nowrap ${signedTone(pnlPct)}`}>
         {formatPct(pnlPct)}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-3">
         <FuturesTpslCell
           positionId={trade.id}
           symbol={trade.symbol}
@@ -408,7 +408,7 @@ function OpenFuturesRows({
           next={next}
         />
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-3">
         <FuturesTrailingCell
           positionId={trade.id}
           symbol={trade.symbol}
@@ -421,7 +421,7 @@ function OpenFuturesRows({
           next={next}
         />
       </td>
-      <td className="px-4 py-3">
+      <td className="px-3 py-3">
         <form action={submitFuturesTrade}>
           <input type="hidden" name="next" value={next} />
           <input type="hidden" name="symbol" value={trade.symbol} />

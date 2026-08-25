@@ -40,13 +40,13 @@ export function OpenStats({
     <section
       className={
         compact
-          ? "grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(0,2.2fr)]"
+          ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(10rem,1fr)_minmax(10rem,1fr)_minmax(0,2.2fr)]"
           : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
       }
     >
       {kpis}
       <div
-        className={`rounded-card border border-line bg-surface p-5${
+        className={`flex h-full min-h-0 flex-col rounded-card border border-line bg-surface p-5${
           compact ? " sm:col-span-2 lg:col-span-1" : ""
         }`}
       >
@@ -108,7 +108,7 @@ function StatCard({
   toneClass?: string;
 }) {
   return (
-    <div className="rounded-card border border-line bg-surface p-5">
+    <div className="h-full rounded-card border border-line bg-surface p-5">
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
         {label}
       </p>

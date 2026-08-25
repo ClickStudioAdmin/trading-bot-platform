@@ -17,7 +17,7 @@ export function ExpandableTradeRows({
   return (
     <>
       <tr className="border-b border-line last:border-b-0">
-        <td className="px-4 py-3">
+        <td className="w-10 px-2 py-3">
           <button
             type="button"
             className="inline-flex h-8 w-8 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink"
