@@ -3,6 +3,7 @@ import {
   loadCarryInstruments,
   qtyForCarryLegs,
 } from "@/lib/exchanges/bybit/orders";
+import { loadPerpInstrument, qtyForPerp } from "@/lib/exchanges/bybit/perp";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
 
 export type VenueFill = {
@@ -159,6 +160,61 @@ export async function closeCashAndCarryOnVenue(input: {
       futureOrderId: future.fill.orderId,
       spotPrice: spot.fill.avgPrice,
       futurePrice: future.fill.avgPrice,
+    },
+  };
+}
+
+export type PerpVenueFill = {
+  venue: string;
+  environment: string;
+  qty: string;
+  orderId: string;
+  price: number | null;
+  side: "Buy" | "Sell";
+};
+
+export async function placePerpMarketOnVenue(input: {
+  connection: BoundConnectionSecrets;
+  symbol: string;
+  side: "Buy" | "Sell";
+  qty: string;
+  reduceOnly?: boolean;
+}): Promise<{ ok: true; fill: PerpVenueFill } | { ok: false; error: string }> {
+  if (input.connection.venue !== "bybit") {
+    return { ok: false, error: "That exchange cannot place futures orders yet." };
+  }
+  const instrument = await loadPerpInstrument(input.symbol);
+  if (!instrument) {
+    return {
+      ok: false,
+      error: "That symbol is not a trading USDT linear perpetual on Bybit.",
+    };
+  }
+  const sized = qtyForPerp(Number(input.qty), instrument);
+  if (!sized.ok) {
+    return sized;
+  }
+  const created = await bybitCreateMarketOrder({
+    environmentId: input.connection.environment,
+    credentials: creds(input.connection),
+    category: "linear",
+    symbol: input.symbol,
+    side: input.side,
+    qty: sized.text,
+    reduceOnly: input.reduceOnly,
+  });
+  if (!created.ok) {
+    return created;
+  }
+  return {
+    ok: true,
+    fill: {
+      venue: input.connection.venue,
+      environment: input.connection.environment,
+      qty: created.fill.qty != null ? String(created.fill.qty) : sized.text,
+      orderId: created.fill.orderId,
+      price: created.fill.avgPrice,
+      side: input.side,
     },
   };
 }

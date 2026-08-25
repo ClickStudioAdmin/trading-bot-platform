@@ -10,6 +10,7 @@ import {
 import { memberDisplayName } from "@/lib/members/sync";
 import { parseAutomationMode } from "@/lib/engine/decide";
 import { selectPaperEngineSettings } from "@/lib/engine/settings";
+import { listFuturesConnectionIds } from "@/lib/futures/settings";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -122,9 +123,12 @@ export async function insertTradingAccount(
 
 export type AccountUsage = {
   openCount: number;
+  carryOpenCount: number;
+  futuresOpenCount: number;
   automationsRunning: boolean;
   reduceOnly: boolean;
   strategyConnectionId: string | null;
+  futuresConnectionId: string | null;
   blocks: AccountDeleteBlock[];
 };
 
@@ -136,9 +140,12 @@ export async function loadAccountUsage(
   for (const account of accounts) {
     usage.set(account.id, {
       openCount: 0,
+      carryOpenCount: 0,
+      futuresOpenCount: 0,
       automationsRunning: false,
       reduceOnly: false,
       strategyConnectionId: null,
+      futuresConnectionId: null,
       blocks: accountDeleteBlockers({
         accountCount,
         openCount: 0,
@@ -155,19 +162,31 @@ export async function loadAccountUsage(
     return usage;
   }
   const accountIds = accounts.map((account) => account.id);
-  const [{ data: openRows }, settings, ruleRows] = await Promise.all([
+  const [{ data: openRows }, { data: futuresOpenRows }, settings, ruleRows, futuresBinds] =
+    await Promise.all([
     supabase
       .from("paper_carries")
       .select("account_id")
       .in("account_id", accountIds)
       .in("status", ["open", "closing"]),
+    supabase
+      .from("futures_positions")
+      .select("account_id")
+      .in("account_id", accountIds)
+      .eq("status", "open"),
     selectPaperEngineSettings(supabase, { accountIds }),
     selectPaperRuleModes(supabase, accountIds),
+    listFuturesConnectionIds(supabase, accountIds),
   ]);
-  const openCount = new Map<string, number>();
+  const carryOpenCount = new Map<string, number>();
+  const futuresOpenCount = new Map<string, number>();
   for (const row of openRows ?? []) {
     const id = String((row as { account_id: string }).account_id);
-    openCount.set(id, (openCount.get(id) ?? 0) + 1);
+    carryOpenCount.set(id, (carryOpenCount.get(id) ?? 0) + 1);
+  }
+  for (const row of futuresOpenRows ?? []) {
+    const id = String((row as { account_id: string }).account_id);
+    futuresOpenCount.set(id, (futuresOpenCount.get(id) ?? 0) + 1);
   }
   const reduceOnlyIds = new Set(
     settings
@@ -190,14 +209,19 @@ export async function loadAccountUsage(
     }
   }
   for (const account of accounts) {
-    const opens = openCount.get(account.id) ?? 0;
+    const carries = carryOpenCount.get(account.id) ?? 0;
+    const futures = futuresOpenCount.get(account.id) ?? 0;
+    const opens = carries + futures;
     const automationsRunning = runningIds.has(account.id);
     const reduceOnly = reduceOnlyIds.has(account.id);
     usage.set(account.id, {
       openCount: opens,
+      carryOpenCount: carries,
+      futuresOpenCount: futures,
       automationsRunning,
       reduceOnly,
       strategyConnectionId: connectionByAccount.get(account.id) ?? null,
+      futuresConnectionId: futuresBinds.get(account.id) ?? null,
       blocks: accountDeleteBlockers({
         accountCount,
         openCount: opens,
@@ -235,6 +259,14 @@ export async function deleteTradingAccountRow(
   if (unbindError) {
     return { error: unbindError.message };
   }
+  const { error: futuresUnbindError } = await supabase
+    .from("strategy_settings")
+    .update({ exchange_connection_id: null, updated_at: new Date().toISOString() })
+    .eq("account_id", accountId)
+    .eq("user_id", userId);
+  if (futuresUnbindError) {
+    return { error: futuresUnbindError.message };
+  }
   const { error: connectionError } = await supabase
     .from("exchange_connections")
     .delete()
@@ -242,6 +274,30 @@ export async function deleteTradingAccountRow(
     .eq("user_id", userId);
   if (connectionError) {
     return { error: connectionError.message };
+  }
+  const { error: futuresOrderError } = await supabase
+    .from("futures_orders")
+    .delete()
+    .eq("account_id", accountId)
+    .eq("user_id", userId);
+  if (futuresOrderError) {
+    return { error: futuresOrderError.message };
+  }
+  const { error: futuresPositionError } = await supabase
+    .from("futures_positions")
+    .delete()
+    .eq("account_id", accountId)
+    .eq("user_id", userId);
+  if (futuresPositionError) {
+    return { error: futuresPositionError.message };
+  }
+  const { error: strategySettingsError } = await supabase
+    .from("strategy_settings")
+    .delete()
+    .eq("account_id", accountId)
+    .eq("user_id", userId);
+  if (strategySettingsError) {
+    return { error: strategySettingsError.message };
   }
   const { error: orderError } = await supabase
     .from("paper_orders")

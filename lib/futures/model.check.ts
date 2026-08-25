@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import {
+  parseFuturesAction,
+  parseFuturesQty,
+  parseFuturesSymbol,
+} from "./model";
+
+const cleaned = parseFuturesSymbol("btc-usdt");
+assert.equal(cleaned.ok, true);
+if (cleaned.ok) {
+  assert.equal(cleaned.symbol, "BTCUSDT");
+}
+assert.equal(parseFuturesSymbol("BTCUSDT").ok, true);
+assert.equal(parseFuturesSymbol("BTCUSD").ok, false);
+assert.equal(parseFuturesSymbol("xx").ok, false);
+
+assert.equal(parseFuturesQty("0.001").ok, true);
+assert.equal(parseFuturesQty("0").ok, false);
+assert.equal(parseFuturesQty("abc").ok, false);
+
+assert.equal(parseFuturesAction("Buy").ok, true);
+assert.equal(parseFuturesAction("flatten").ok, true);
+assert.equal(parseFuturesAction("flip").ok, false);
+
+console.log("futures model checks passed");

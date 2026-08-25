@@ -1,6 +1,6 @@
 # Master spec
 
-Trading Bot Platform is a multi-tenant desk: each trader connects their own exchange API keys and can run strategies. Version 1 focus is dated cash-and-carry on Bybit (USDT spot + USDT expiry).
+Trading Bot Platform is a multi-tenant desk: each trader connects their own exchange API keys and can run strategies. Version 1 strategies are dated cash-and-carry on Bybit (USDT spot + USDT expiry) and a single-leg Futures strategy (USDT linear perpetual buy / sell / flatten).
 
 ## Source of truth
 
@@ -26,7 +26,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 7 — Live execution is complete. See [phase-7.md](phase-7.md). Phase 1 through Phase 7 are complete. Additional exchanges wait until you say so ([phase-8.md](phase-8.md)). Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
+Phase 8 — Futures strategy on Bybit. See [phase-8.md](phase-8.md). Phase 1 through Phase 7 are complete. TradingView, Hyperliquid, and additional CEX adapters wait until Phase 8 is accepted. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
 
 ## Multi-tenancy
 

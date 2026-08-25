@@ -135,7 +135,7 @@ export function formatConnectionRemoveBlockers(
   blocks: ConnectionRemoveBlock[],
 ): string {
   if (blocks.includes("in_use")) {
-    return "Detach this connection from Cash and Carry first";
+    return "Detach this connection from Strategy Settings first";
   }
   return "";
 }

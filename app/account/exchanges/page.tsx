@@ -46,7 +46,10 @@ export default async function AccountExchangesPage({
   const usage = live
     ? (await loadAccountUsage([session.account])).get(session.account.id)
     : null;
-  const boundId = usage?.strategyConnectionId ?? null;
+  const boundIds = {
+    cashAndCarry: usage?.strategyConnectionId ?? null,
+    futures: usage?.futuresConnectionId ?? null,
+  };
   const connections = live
     ? await listExchangeConnections(session.member.id, session.account.id)
     : [];
@@ -90,7 +93,7 @@ export default async function AccountExchangesPage({
 
       {live ? (
         <>
-          <ConnectionList rows={connections} boundId={boundId} />
+          <ConnectionList rows={connections} boundIds={boundIds} />
           {canSave ? <ExchangeConnectForm venues={venues} /> : null}
         </>
       ) : (
@@ -112,10 +115,10 @@ export default async function AccountExchangesPage({
 
 function ConnectionList({
   rows,
-  boundId,
+  boundIds,
 }: {
   rows: ExchangeConnection[];
-  boundId: string | null;
+  boundIds: { cashAndCarry: string | null; futures: string | null };
 }) {
   if (rows.length === 0) {
     return (
@@ -129,14 +132,8 @@ function ConnectionList({
     <section>
       <h2 className="text-lg font-semibold tracking-tight">Connected</h2>
       <p className="mt-2 text-sm text-ink-muted">
-        Keys belong to this account. Cash and Carry picks one in{" "}
-        <Link
-          href="/strategies/cash-and-carry/settings"
-          className="text-accent hover:text-accent-strong"
-        >
-          Settings
-        </Link>
-        . You cannot remove a key while a strategy is using it.
+        Keys belong to this account. Each strategy picks a key in its
+        Settings. You cannot remove a key while a strategy is using it.
       </p>
       <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[36rem] text-left text-sm">
@@ -149,7 +146,23 @@ function ConnectionList({
           </thead>
           <tbody>
             {rows.map((row) => {
-              const inUse = boundId === row.id;
+              const strategies = [
+                boundIds.cashAndCarry === row.id
+                  ? {
+                      href: "/strategies/cash-and-carry/settings",
+                      label: "Cash and Carry",
+                    }
+                  : null,
+                boundIds.futures === row.id
+                  ? {
+                      href: "/strategies/futures/settings",
+                      label: "Futures",
+                    }
+                  : null,
+              ].filter((item): item is { href: string; label: string } =>
+                Boolean(item),
+              );
+              const inUse = strategies.length > 0;
               const removeBlocked = formatConnectionRemoveBlockers(
                 connectionRemoveBlockers({ inUse }),
               );
@@ -172,13 +185,18 @@ function ConnectionList({
                     </p>
                   </td>
                   <td className="px-4 py-3 align-top">
-                    {inUse ? (
-                      <Link
-                        href="/strategies/cash-and-carry/settings"
-                        className="text-accent hover:text-accent-strong"
-                      >
-                        Cash and Carry
-                      </Link>
+                    {strategies.length > 0 ? (
+                      <span className="flex flex-col gap-1">
+                        {strategies.map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className="text-accent hover:text-accent-strong"
+                          >
+                            {item.label}
+                          </Link>
+                        ))}
+                      </span>
                     ) : (
                       <span className="text-ink-faint">—</span>
                     )}

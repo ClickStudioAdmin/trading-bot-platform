@@ -30,6 +30,15 @@ export const ACCOUNT_DESK_LINKS = [
   { href: "/account/sub-accounts", label: "Manage sub-accounts", exact: true },
 ] as const;
 
+export const FUTURES_PRIMARY_LINKS = [
+  { href: "/strategies/futures", label: "Overview", exact: true },
+  { href: "/strategies/futures/positions", label: "Positions" },
+] as const;
+
+export const FUTURES_SECONDARY_LINKS = [
+  { href: "/strategies/futures/settings", label: "Strategy Settings" },
+] as const;
+
 export const ACCOUNT_BOOK_LINKS = [
   { href: "/account/book", label: "Overview", exact: true },
   { href: "/account/exchanges", label: "Exchanges", exact: true },

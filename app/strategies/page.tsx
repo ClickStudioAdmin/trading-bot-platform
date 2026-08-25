@@ -31,6 +31,20 @@ export default function StrategiesPage() {
             and the pair list.
           </p>
         </Link>
+        <Link
+          href="/strategies/futures"
+          className="rounded-card border border-line bg-surface p-6 hover:border-line-strong hover:bg-surface-raised"
+        >
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
+            Strategy
+          </p>
+          <h2 className="mt-2 text-xl font-semibold tracking-tight">
+            Futures
+          </h2>
+          <p className="mt-2 text-sm text-ink-muted">
+            Buy or sell one USDT linear perpetual on Bybit. Flatten to close.
+          </p>
+        </Link>
       </div>
     </main>
   );

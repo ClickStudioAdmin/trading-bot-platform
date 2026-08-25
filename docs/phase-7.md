@@ -8,7 +8,7 @@ Paper Trading books still use the Phase 4 paper ledger and never send exchange o
 
 ## Status
 
-Complete. Accepted after desk testing on a Connected Exchange book with a Bybit Demo key. Phase 8 (additional exchanges) waits until you say so. See [phase-8.md](phase-8.md).
+Complete. Accepted after desk testing on a Connected Exchange book with a Bybit Demo key. Phase 8 is the Futures strategy on Bybit. See [phase-8.md](phase-8.md).
 
 ## Current micro-step
 
@@ -52,7 +52,7 @@ Reuse `paper_carries` / `paper_orders`. A book is paper or live forever, so fill
 ## Out of scope
 
 - Fly.io
-- Second venue ([phase-8.md](phase-8.md))
+- Second strategy and later venues ([phase-8.md](phase-8.md))
 - Paper auto-switch ([phase-auto-switch.md](phase-auto-switch.md))
 - Maker / limit entry
 - Calling private APIs from the browser

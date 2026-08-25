@@ -161,8 +161,11 @@ export async function removeExchangeConnection(formData: FormData) {
     fail("Missing connection.");
   }
   const usage = await loadAccountUsage([session.account]);
-  const boundId = usage.get(session.account.id)?.strategyConnectionId ?? null;
-  const blocks = connectionRemoveBlockers({ inUse: boundId === connectionId });
+  const used = usage.get(session.account.id);
+  const inUse =
+    used?.strategyConnectionId === connectionId ||
+    used?.futuresConnectionId === connectionId;
+  const blocks = connectionRemoveBlockers({ inUse });
   if (blocks.length > 0) {
     fail(formatConnectionRemoveBlockers(blocks));
   }

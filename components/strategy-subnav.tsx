@@ -9,10 +9,22 @@ import {
 } from "@/lib/site-links";
 
 export function StrategySubnav({
+  title = "Cash and Carry",
+  description = "Buy the USDT spot, sell the dated future.",
+  navLabel = "Cash and Carry",
+  primaryLinks = CASH_AND_CARRY_PRIMARY_LINKS,
+  secondaryLinks = CASH_AND_CARRY_SECONDARY_LINKS,
+  automationsHref = "/strategies/cash-and-carry/automations",
   automationsRunning = false,
   reduceOnly = false,
   connection,
 }: {
+  title?: string;
+  description?: string;
+  navLabel?: string;
+  primaryLinks?: readonly { href: string; label: string; exact?: boolean }[];
+  secondaryLinks?: readonly { href: string; label: string; exact?: boolean }[];
+  automationsHref?: string;
   automationsRunning?: boolean;
   reduceOnly?: boolean;
   connection?: {
@@ -25,7 +37,7 @@ export function StrategySubnav({
   const pathname = usePathname();
   const status = reduceOnly
     ? {
-        href: "/strategies/cash-and-carry/automations",
+        href: automationsHref,
         title: "Reduce only",
         label: "Reduce only",
         tone: "warning" as const,
@@ -33,8 +45,8 @@ export function StrategySubnav({
       }
     : automationsRunning
       ? {
-          href: "/strategies/cash-and-carry/automations",
-          title: "Automations Running",
+        href: automationsHref,
+        title: "Automations Running",
           label: "Running",
           tone: "success" as const,
           pulse: true,
@@ -51,11 +63,9 @@ export function StrategySubnav({
             </Link>
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-            Cash and Carry
+            {title}
           </h1>
-          <p className="mt-1 text-sm text-ink-muted">
-            Buy the USDT spot, sell the dated future.
-          </p>
+          <p className="mt-1 text-sm text-ink-muted">{description}</p>
         </div>
         {connection || status ? (
           <div className="mt-6 flex max-w-[min(100%,32rem)] flex-wrap items-stretch justify-end gap-2">
@@ -102,16 +112,16 @@ export function StrategySubnav({
         ) : null}
       </div>
       <nav
-        aria-label="Cash and Carry"
+        aria-label={navLabel}
         className="mt-5 flex items-end justify-between gap-4 border-b border-line"
       >
         <div className="flex min-w-0 flex-wrap gap-1">
-          {CASH_AND_CARRY_PRIMARY_LINKS.map((link) => (
+          {primaryLinks.map((link) => (
             <SubnavLink key={link.href} link={link} pathname={pathname} />
           ))}
         </div>
         <div className="flex shrink-0 gap-1">
-          {CASH_AND_CARRY_SECONDARY_LINKS.map((link) => (
+          {secondaryLinks.map((link) => (
             <SubnavLink
               key={link.href}
               link={link}

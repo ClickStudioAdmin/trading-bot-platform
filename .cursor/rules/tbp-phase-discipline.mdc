@@ -7,16 +7,14 @@ alwaysApply: true
 
 Read [docs/master-spec.md](docs/master-spec.md) and the current phase doc before changing code.
 
-Work only on the current phase. Phase 1 through Phase 7 are complete. See [docs/phase-7.md](docs/phase-7.md). Phase 8 (additional exchanges) waits until the user says so. See [docs/phase-8.md](docs/phase-8.md).
+Work only on the current phase. Phase 1 through Phase 7 are complete. See [docs/phase-7.md](docs/phase-7.md). Phase 8 is the Futures strategy on Bybit. See [docs/phase-8.md](docs/phase-8.md).
 
 Feature work happens on `develop`. Merge to `main` only when the user is ready for production.
 
-Phase 7 places Bybit cash-and-carry from Sydney Vercel on a Connected Exchange book that has a bound trade-only key. Manual Open, Close, and Unwind, and the engine tick, may place venue orders. Do not add a Fly.io worker. Do not call private exchange APIs from the browser. Paper accounts still use the Phase 4 paper ledger.
+Phase 7 places Bybit cash-and-carry from Sydney Vercel on a Connected Exchange book that has a bound trade-only key. Phase 8 adds a second strategy (USDT linear perp buy / sell / flatten) with its own bind and blotter. Do not add a Fly.io worker. Do not call private exchange APIs from the browser. Paper accounts still use the in-app ledger.
 
-Do not create later-phase tables or speculative architecture.
+Do not create later-phase tables or speculative architecture. Do not start TradingView, Hyperliquid, or MEXC/XT until Phase 8 is accepted.
 
 Keep dependencies minimal. Prefer the simplest solution that satisfies the current phase.
-
-Do not start Phase 8 until the user says so.
 
 Stop at the end of the phase. After acceptance criteria pass, report results and wait for instruction.

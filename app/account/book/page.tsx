@@ -55,8 +55,8 @@ export default async function BookOverviewPage() {
           <StatCard
             label="Open positions"
             value={String(openCount)}
-            hint="On this book"
-            href="/strategies/cash-and-carry/positions"
+            hint="Cash and Carry and Futures"
+            href="/strategies"
           />
           <StatCard
             label="Automations"

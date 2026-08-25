@@ -1,0 +1,65 @@
+import { StrategySubnav } from "@/components/strategy-subnav";
+import { getSessionContext } from "@/lib/auth/session";
+import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
+import { listExchangeConnections } from "@/lib/exchanges/store";
+import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import { loadFuturesSettings } from "@/lib/futures/settings";
+import {
+  FUTURES_PRIMARY_LINKS,
+  FUTURES_SECONDARY_LINKS,
+} from "@/lib/site-links";
+import { FUTURES_PATHS } from "@/lib/strategies/registry";
+
+export default async function FuturesLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await getSessionContext();
+  const live = Boolean(session && accountCanHoldConnections(session.account.mode));
+  const settings = live ? await loadFuturesSettings() : null;
+  const connections =
+    live && session
+      ? await listExchangeConnections(session.member.id, session.account.id)
+      : [];
+  const bound =
+    connections.find((row) => row.id === settings?.connectionId) ?? null;
+  return (
+    <div>
+      <StrategySubnav
+        title="Futures"
+        description="Buy or sell one USDT linear perpetual. Flatten to close."
+        navLabel="Futures"
+        primaryLinks={FUTURES_PRIMARY_LINKS}
+        secondaryLinks={FUTURES_SECONDARY_LINKS}
+        connection={
+          live
+            ? bound
+              ? {
+                  ...formatStrategyConnectionCaption(bound),
+                  connected: true,
+                }
+              : {
+                  name: "Connect an exchange",
+                  venue: null,
+                  connected: false,
+                  href:
+                    connections.length === 0
+                      ? "/account/exchanges"
+                      : FUTURES_PATHS.settings,
+                }
+            : null
+        }
+      />
+      {live && !bound ? (
+        <div className="mx-auto max-w-6xl px-6 pt-4">
+          <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+            This is a Connected Exchange account. Bind an exchange in Strategy
+            Settings before Buy, Sell, or Flatten can place orders.
+          </p>
+        </div>
+      ) : null}
+      {children}
+    </div>
+  );
+}

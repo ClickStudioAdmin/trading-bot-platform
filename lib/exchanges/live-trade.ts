@@ -24,7 +24,9 @@ export async function loadBoundVenueForAccount(input: {
     return { ok: false, error: "This book does not hold exchange keys." };
   }
   const connectionId =
-    input.connectionId ?? (await loadEngineSettings()).connectionId;
+    input.connectionId !== undefined
+      ? input.connectionId
+      : (await loadEngineSettings()).connectionId;
   if (!connectionId) {
     return {
       ok: false,

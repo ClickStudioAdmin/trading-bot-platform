@@ -119,7 +119,7 @@ assert.deepEqual(
 );
 assert.equal(
   formatConnectionRemoveBlockers(["in_use"]),
-  "Detach this connection from Cash and Carry first",
+  "Detach this connection from Strategy Settings first",
 );
 assert.deepEqual(
   strategyDetachBlockers({ openCount: 0, automationsRunning: false }),

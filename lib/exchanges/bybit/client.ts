@@ -74,11 +74,23 @@ export async function fetchBybitInstruments(
 
 export type BybitTicker = {
   symbol: string;
+  lastPrice?: string;
   bid1Price?: string;
   ask1Price?: string;
   bid1Size?: string;
   ask1Size?: string;
 };
+
+export async function fetchBybitTicker(
+  category: "linear" | "spot",
+  symbol: string,
+): Promise<BybitTicker | null> {
+  const result = await bybitGet<{ list?: BybitTicker[] }>(
+    "/v5/market/tickers",
+    { category, symbol },
+  );
+  return result.list?.find((row) => row.symbol === symbol) ?? result.list?.[0] ?? null;
+}
 
 export async function fetchBybitTickers(
   category: "linear" | "spot",

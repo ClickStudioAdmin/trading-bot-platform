@@ -8,7 +8,13 @@ const BLOCKED_MS = 4000;
 const DETACH_BLOCKED =
   "Detach is blocked while this strategy has open positions or automations on.";
 
-export function StrategyDetachControl({ blocked }: { blocked: boolean }) {
+export function StrategyDetachControl({
+  blocked,
+  detachAction = detachStrategyConnection,
+}: {
+  blocked: boolean;
+  detachAction?: () => Promise<void>;
+}) {
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -72,7 +78,7 @@ export function StrategyDetachControl({ blocked }: { blocked: boolean }) {
 
   if (!blocked) {
     return (
-      <button type="submit" formAction={detachStrategyConnection} className={className}>
+      <button type="submit" formAction={detachAction} className={className}>
         Detach
       </button>
     );

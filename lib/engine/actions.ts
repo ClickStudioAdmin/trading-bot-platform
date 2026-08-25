@@ -239,7 +239,7 @@ export async function savePaperSettings(formData: FormData) {
       const usage = await loadAccountUsage([account]);
       const row = usage.get(account.id);
       const detach = strategyDetachBlockers({
-        openCount: row?.openCount ?? 0,
+        openCount: row?.carryOpenCount ?? 0,
         automationsRunning: Boolean(row?.automationsRunning),
       });
       if (detach.length > 0) {
@@ -385,7 +385,7 @@ export async function detachStrategyConnection() {
     redirect(SETTINGS_PATH);
   }
   const blocks = strategyDetachBlockers({
-    openCount: row.openCount,
+    openCount: row.carryOpenCount,
     automationsRunning: row.automationsRunning,
   });
   if (blocks.length > 0) {
