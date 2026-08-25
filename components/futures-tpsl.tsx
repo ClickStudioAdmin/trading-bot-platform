@@ -35,7 +35,7 @@ export function FuturesTpslFields() {
             onChange={(event) => setEnabled(event.target.checked)}
             className="size-4 rounded-control accent-accent"
           />
-          TP/SL
+          Take profit / Stop loss
         </label>
         {enabled ? (
           <>
