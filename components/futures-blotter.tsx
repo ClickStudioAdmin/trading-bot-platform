@@ -96,7 +96,7 @@ export function OpenFuturesTrades({
                   hint="Expand for orders and the event log for this position."
                 />
               </th>
-              <th className="w-36 px-3 py-3 font-medium">
+              <th className="px-3 py-3 font-medium">
                 <ColumnHint
                   label="Contract"
                   hint="USDT linear perpetual. Badge is Manual until alert automations ship."
@@ -108,22 +108,22 @@ export function OpenFuturesTrades({
               <th className="w-16 px-3 py-3 font-medium">
                 <ColumnHint label="Qty" hint="Base-coin size on this row." />
               </th>
-              <th className="px-3 py-3 font-medium">
+              <th className="w-24 px-2 py-3 font-medium">
                 <ColumnHint
                   label="Notional"
                   hint="Qty × entry. P&L scales with this amount."
                 />
               </th>
-              <th className="px-3 py-3 font-medium">
+              <th className="w-24 px-2 py-3 font-medium">
                 <ColumnHint
                   label="Entry"
                   hint="Size-weighted average fill price."
                 />
               </th>
-              <th className="px-3 py-3 font-medium">
+              <th className="w-24 px-2 py-3 font-medium">
                 <ColumnHint label="Mark" hint="Last price from the live Bybit ticker." />
               </th>
-              <th className="px-3 py-3 font-medium">
+              <th className="w-24 px-2 py-3 font-medium">
                 <ColumnHint
                   label="Unrealized"
                   hint="Mark-to-market versus entry. Not Bybit’s invoice."
@@ -147,7 +147,7 @@ export function OpenFuturesTrades({
                   hint="Retracement distance from the best price since activation. Closes the whole row at market. Add on the ticket or here."
                 />
               </th>
-              <th className="w-[5.75rem] px-3 py-3 font-medium">
+              <th className="w-[8.75rem] px-2 py-3 font-medium">
                 <ColumnHint
                   label="Actions"
                   hint={
@@ -372,12 +372,12 @@ function OpenFuturesRows({
       </td>
       <td className="px-3 py-3 capitalize text-ink-muted">{trade.side}</td>
       <td className="px-3 py-3 tabular-nums whitespace-nowrap">{trade.qty}</td>
-      <td className="px-3 py-3 tabular-nums whitespace-nowrap text-ink-muted">
+      <td className="px-2 py-3 tabular-nums whitespace-nowrap text-ink-muted">
         {formatUsd(trade.notionalUsdt)}
       </td>
-      <td className="px-3 py-3 tabular-nums whitespace-nowrap">{formatPrice(trade.entryPrice)}</td>
-      <td className="px-3 py-3 tabular-nums whitespace-nowrap">{formatPrice(trade.mark)}</td>
-      <td className={`px-3 py-3 tabular-nums whitespace-nowrap ${signedTone(trade.unrealizedUsdt)}`}>
+      <td className="px-2 py-3 tabular-nums whitespace-nowrap">{formatPrice(trade.entryPrice)}</td>
+      <td className="px-2 py-3 tabular-nums whitespace-nowrap">{formatPrice(trade.mark)}</td>
+      <td className={`px-2 py-3 tabular-nums whitespace-nowrap ${signedTone(trade.unrealizedUsdt)}`}>
         {trade.unrealizedUsdt === null
           ? "—"
           : formatSignedUsd(trade.unrealizedUsdt)}
@@ -417,7 +417,7 @@ function OpenFuturesRows({
           next={next}
         />
       </td>
-      <td className="px-3 py-3">
+      <td className="px-2 py-3">
         <FuturesCloseActions trade={trade} next={next} />
       </td>
     </ExpandableTradeRows>

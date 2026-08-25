@@ -10,7 +10,7 @@ import { formatPrice } from "@/lib/opportunities/format";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 
 const ACTION_CLASS =
-  "w-full rounded-control bg-accent-strong px-2 py-1 text-xs font-medium whitespace-nowrap text-ink";
+  "inline-flex items-center justify-center rounded-control bg-accent-strong px-2 py-1 text-center text-xs font-medium whitespace-nowrap text-ink";
 const INPUT_CLASS =
   "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
@@ -22,7 +22,7 @@ export function FuturesCloseActions({
   next: string;
 }) {
   return (
-    <div className="flex min-w-[4.5rem] flex-col gap-1">
+    <div className="flex items-center gap-1">
       <form action={submitFuturesTrade}>
         <input type="hidden" name="next" value={next} />
         <input type="hidden" name="symbol" value={trade.symbol} />
