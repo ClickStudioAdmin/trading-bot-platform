@@ -37,6 +37,7 @@ import { persistOpportunities } from "@/lib/opportunities/persist";
 import { scanOneOpportunity } from "@/lib/opportunities/scan";
 import { getSessionContext } from "@/lib/auth/session";
 import { createServiceClient } from "@/lib/supabase/admin";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 
 export async function openPaperCarry(formData: FormData) {
@@ -371,25 +372,34 @@ export async function closeOpenPaperCarry(formData: FormData) {
   let clipUsdt = row.notionalUsdt;
   let reason: "unwind" | null = null;
   if (mode === "unwind") {
+    reason = "unwind";
+    const parked = await parkManualUnwind({
+      supabase,
+      carryId,
+      accountId: account.id,
+      userId: user.id,
+    });
+    if (parked.error) {
+      redirect(`${next}?paperError=${encodeURIComponent(parked.error)}`);
+    }
     const clip = unwindClipUsdt(row.notionalUsdt, usableCapacityUsdt, null);
     if (clip === null) {
-      const { error } = await supabase
-        .from("paper_carries")
-        .update({
-          status: "closing",
-          close_source: "manual",
-          close_reason: "unwind",
-        })
-        .eq("id", carryId)
-        .eq("account_id", account.id)
-        .in("status", ["open", "closing"]);
-      if (error) {
-        redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
-      }
-      redirect(`${next}?paper=unwinding`);
+      await writeEventLog({
+        level: "warning",
+        scope: "trade",
+        event: "trade.unwinding",
+        message:
+          "Unwind queued. Usable book is too small for a clip; later ticks retry.",
+        userId: user.id,
+        accountId: account.id,
+        strategy: "cash-and-carry",
+        data: { carryId, futureSymbol: row.futureSymbol },
+      });
+      redirect(
+        `${next}?paper=${liveBook ? "live-unwinding" : "unwinding"}`,
+      );
     }
     clipUsdt = clip;
-    reason = "unwind";
   }
 
   const { data: orderRows } = await supabase
@@ -421,6 +431,21 @@ export async function closeOpenPaperCarry(formData: FormData) {
       spotAsk: match.spotAsk,
     });
     if (!qty.ok) {
+      if (mode === "unwind") {
+        await writeEventLog({
+          level: "warning",
+          scope: "trade",
+          event: "trade.unwinding",
+          message: `${qty.error} Unwind is queued; later ticks retry.`,
+          userId: user.id,
+          accountId: account.id,
+          strategy: "cash-and-carry",
+          data: { carryId, mode, venue: "bybit" },
+        });
+        redirect(
+          `${next}?paper=${liveBook ? "live-unwinding" : "unwinding"}`,
+        );
+      }
       redirect(`${next}?paperError=${encodeURIComponent(qty.error)}`);
     }
     venueClose = await closeCashAndCarryOnVenue({
@@ -440,6 +465,11 @@ export async function closeOpenPaperCarry(formData: FormData) {
         strategy: "cash-and-carry",
         data: { carryId, mode, venue: "bybit" },
       });
+      if (mode === "unwind") {
+        redirect(
+          `${next}?paper=${liveBook ? "live-unwinding" : "unwinding"}`,
+        );
+      }
       redirect(`${next}?paperError=${encodeURIComponent(venueClose.error)}`);
     }
   }
@@ -586,4 +616,24 @@ export async function updatePaperCarryExits(formData: FormData) {
   });
 
   redirect(`${next}?paper=exits`);
+}
+
+async function parkManualUnwind(input: {
+  supabase: SupabaseClient;
+  carryId: number;
+  accountId: string;
+  userId: string;
+}): Promise<{ error: string | null }> {
+  const { error } = await input.supabase
+    .from("paper_carries")
+    .update({
+      status: "closing",
+      close_source: "manual",
+      close_reason: "unwind",
+    })
+    .eq("id", input.carryId)
+    .eq("account_id", input.accountId)
+    .eq("user_id", input.userId)
+    .in("status", ["open", "closing"]);
+  return { error: error?.message ?? null };
 }

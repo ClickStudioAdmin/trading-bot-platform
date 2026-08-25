@@ -1,5 +1,9 @@
 import { loadEngineSettings } from "@/lib/engine/settings";
-import { floorCarryQty, loadCarryInstruments } from "@/lib/exchanges/bybit/orders";
+import {
+  carryQtyLimits,
+  loadCarryInstruments,
+  sizeVenueCloseQty,
+} from "@/lib/exchanges/bybit/orders";
 import type { VenueFill } from "@/lib/exchanges/execute";
 import {
   loadBoundConnectionSecrets,
@@ -9,6 +13,7 @@ import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import type { TradingAccountMode } from "@/lib/accounts/model";
 import {
   closeQtyFromOpenFills,
+  remainingOpenFillQty,
   type PaperOrderRow,
 } from "@/lib/paper/orders";
 
@@ -90,20 +95,28 @@ export async function qtyTextForVenueClose(input: {
   const flatten =
     input.remainingNotionalUsdt > 0 &&
     input.clipUsdt >= input.remainingNotionalUsdt - 1e-9;
+  const remainingQty = remainingOpenFillQty(input.orders);
   if (flatten) {
-    const qty = qtyTextFromFill(raw, "");
-    if (!qty) {
-      return { ok: false, error: "Could not size the close on the exchange." };
-    }
-    return { ok: true, qty };
+    const sized = sizeVenueCloseQty({
+      rawQty: raw,
+      remainingQty,
+      flatten: true,
+      step: 0.001,
+      minQty: 0.001,
+    });
+    return sized.ok ? { ok: true, qty: sized.text } : sized;
   }
   const instruments = await loadCarryInstruments({
     spotSymbol: input.spotSymbol,
     futureSymbol: input.futureSymbol,
   });
-  const floored = floorCarryQty(raw, instruments.spot, instruments.future);
-  if (!floored.ok) {
-    return floored;
-  }
-  return { ok: true, qty: floored.text };
+  const limits = carryQtyLimits(instruments.spot, instruments.future);
+  const sized = sizeVenueCloseQty({
+    rawQty: raw,
+    remainingQty,
+    flatten: false,
+    step: limits.step,
+    minQty: limits.minQty,
+  });
+  return sized.ok ? { ok: true, qty: sized.text } : sized;
 }

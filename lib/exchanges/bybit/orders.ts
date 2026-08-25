@@ -54,15 +54,23 @@ export function qtyForCarryLegs(input: {
   });
 }
 
+export function carryQtyLimits(
+  spot: BybitInstrument | undefined,
+  future: BybitInstrument | undefined,
+): { step: number; minQty: number } {
+  const spotStep = lotStep(spot, 0.000001);
+  const futureStep = lotStep(future, 0.001);
+  const step = maxStep(spotStep, futureStep);
+  const minQty = Math.max(lotMin(spot, step), lotMin(future, step), step);
+  return { step, minQty };
+}
+
 export function floorCarryQty(
   qty: number,
   spot: BybitInstrument | undefined,
   future: BybitInstrument | undefined,
 ): { ok: true; qty: number; text: string } | { ok: false; error: string } {
-  const spotStep = lotStep(spot, 0.000001);
-  const futureStep = lotStep(future, 0.001);
-  const step = maxStep(spotStep, futureStep);
-  const minQty = Math.max(lotMin(spot, step), lotMin(future, step), step);
+  const { step, minQty } = carryQtyLimits(spot, future);
   const floored = floorToStep(qty, step);
   if (!(floored > 0) || floored < minQty) {
     return {
@@ -74,6 +82,45 @@ export function floorCarryQty(
     ok: true,
     qty: floored,
     text: floored.toFixed(stepDecimals(step)),
+  };
+}
+
+export function sizeVenueCloseQty(input: {
+  rawQty: number;
+  remainingQty: number | null;
+  flatten: boolean;
+  step: number;
+  minQty: number;
+}): { ok: true; text: string } | { ok: false; error: string } {
+  const remaining =
+    input.remainingQty !== null && input.remainingQty > 0
+      ? input.remainingQty
+      : input.rawQty;
+  if (input.flatten) {
+    if (!(remaining > 0) || !Number.isFinite(remaining)) {
+      return { ok: false, error: "Could not size the close on the exchange." };
+    }
+    return { ok: true, text: String(Number(remaining.toPrecision(12))) };
+  }
+  const floored = floorToStep(input.rawQty, input.step);
+  if (floored >= input.minQty) {
+    return {
+      ok: true,
+      text: floored.toFixed(stepDecimals(input.step)),
+    };
+  }
+  if (remaining >= input.minQty) {
+    return {
+      ok: true,
+      text: input.minQty.toFixed(stepDecimals(input.step)),
+    };
+  }
+  if (remaining > 0 && Number.isFinite(remaining)) {
+    return { ok: true, text: String(Number(remaining.toPrecision(12))) };
+  }
+  return {
+    ok: false,
+    error: "That size is below the exchange minimum order quantity.",
   };
 }
 

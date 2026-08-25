@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { floorToStep, maxStep, qtyFromNotionalUsdt, stepDecimals } from "./qty";
-import { floorCarryQty, qtyForCarryLegs } from "./orders";
+import { floorCarryQty, qtyForCarryLegs, sizeVenueCloseQty } from "./orders";
 
 assert.equal(stepDecimals(0.001), 3);
 assert.equal(floorToStep(0.1234, 0.001), 0.123);
@@ -74,5 +74,41 @@ if (clipped.ok) {
 
 const belowMin = floorCarryQty(0.0004, spot, future);
 assert.equal(belowMin.ok, false);
+
+const flatten = sizeVenueCloseQty({
+  rawQty: 0.083,
+  remainingQty: 0.083,
+  flatten: true,
+  step: 0.001,
+  minQty: 0.001,
+});
+assert.equal(flatten.ok, true);
+if (flatten.ok) {
+  assert.equal(flatten.text, "0.083");
+}
+
+const thinUnwind = sizeVenueCloseQty({
+  rawQty: 0.0004,
+  remainingQty: 0.083,
+  flatten: false,
+  step: 0.001,
+  minQty: 0.001,
+});
+assert.equal(thinUnwind.ok, true);
+if (thinUnwind.ok) {
+  assert.equal(thinUnwind.text, "0.001");
+}
+
+const dust = sizeVenueCloseQty({
+  rawQty: 0.0004,
+  remainingQty: 0.0004,
+  flatten: false,
+  step: 0.001,
+  minQty: 0.001,
+});
+assert.equal(dust.ok, true);
+if (dust.ok) {
+  assert.equal(dust.text, "0.0004");
+}
 
 console.log("bybit qty checks passed");
