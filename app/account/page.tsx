@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
+import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { switchTradingAccount } from "@/lib/accounts/actions";
@@ -80,7 +82,10 @@ export default async function AccountOverviewPage() {
           <dl className="mt-4 space-y-2 text-sm">
             <Row label="Name" value={current.name} />
             <Row label="Mode" value={formatAccountMode(current.mode)} />
-            <Row label="Created" value={formatCreated(current.createdAtMs)} />
+            <Row
+              label="Created"
+              value={<LocalTime at={current.createdAtMs} mode="date" />}
+            />
           </dl>
           <Link
             href="/account/book"
@@ -178,7 +183,13 @@ function StatCard({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+}: {
+  label: string;
+  value: ReactNode;
+}) {
   return (
     <div className="flex items-start justify-between gap-3">
       <dt className="shrink-0 text-ink-muted">{label}</dt>
@@ -187,9 +198,3 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatCreated(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) {
-    return "—";
-  }
-  return new Date(ms).toISOString().slice(0, 10);
-}

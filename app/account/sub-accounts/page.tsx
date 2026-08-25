@@ -173,7 +173,7 @@ export default async function ManageSubAccountsPage({
           Paper Trading uses live market data and fills on the in-app ledger.
           No real trades. Connected Exchange stores keys for a venue (Bybit
           Demo or production). Mode is set at create and never changes. This
-          app will not place exchange orders until live execution exists.
+          app places venue orders on that book when a key is bound.
         </p>
         <PendingSubmitButton
           pendingLabel="Creating…"

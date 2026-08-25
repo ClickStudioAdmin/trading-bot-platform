@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { floorToStep, maxStep, qtyFromNotionalUsdt, stepDecimals } from "./qty";
-import { qtyForCarryLegs } from "./orders";
+import { floorCarryQty, qtyForCarryLegs } from "./orders";
 
 assert.equal(stepDecimals(0.001), 3);
 assert.equal(floorToStep(0.1234, 0.001), 0.123);
@@ -50,5 +50,29 @@ assert.equal(legs.ok, true);
 if (legs.ok) {
   assert.equal(legs.qty, 0.1);
 }
+
+const spot = {
+  symbol: "BTCUSDT",
+  status: "Trading",
+  baseCoin: "BTC",
+  quoteCoin: "USDT",
+  lotSizeFilter: { qtyStep: "0.0001", minOrderQty: "0.0001" },
+};
+const future = {
+  symbol: "BTCUSDT-25JUN27",
+  status: "Trading",
+  baseCoin: "BTC",
+  quoteCoin: "USDT",
+  lotSizeFilter: { qtyStep: "0.001", minOrderQty: "0.001" },
+};
+const clipped = floorCarryQty(0.0015, spot, future);
+assert.equal(clipped.ok, true);
+if (clipped.ok) {
+  assert.equal(clipped.qty, 0.001);
+  assert.equal(clipped.text, "0.001");
+}
+
+const belowMin = floorCarryQty(0.0004, spot, future);
+assert.equal(belowMin.ok, false);
 
 console.log("bybit qty checks passed");

@@ -8,11 +8,7 @@ import {
   writeCloseClip,
   writeOpenClip,
 } from "@/lib/paper/ledger";
-import {
-  clipFillBasis,
-  parsePaperOrderRow,
-  remainingOpenFillQty,
-} from "@/lib/paper/orders";
+import { clipFillBasis, parsePaperOrderRow } from "@/lib/paper/orders";
 import { unwindClipUsdt } from "@/lib/engine/clip";
 import { loadUsableBookShare } from "@/lib/engine/settings";
 import {
@@ -21,7 +17,8 @@ import {
 } from "@/lib/exchanges/execute";
 import {
   loadBoundVenueForAccount,
-  qtyTextFromFill,
+  qtyTextForVenueClose,
+  venueOrderFields,
 } from "@/lib/exchanges/live-trade";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { usableBookUsdt } from "@/lib/opportunities/capacity";
@@ -373,11 +370,6 @@ export async function closeOpenPaperCarry(formData: FormData) {
 
   let clipUsdt = row.notionalUsdt;
   let reason: "unwind" | null = null;
-  if (liveBook && mode === "unwind") {
-    redirect(
-      `${next}?paperError=${encodeURIComponent("Unwind on the exchange is not available yet. Use Close.")}`,
-    );
-  }
   if (mode === "unwind") {
     const clip = unwindClipUsdt(row.notionalUsdt, usableCapacityUsdt, null);
     if (clip === null) {
@@ -420,21 +412,22 @@ export async function closeOpenPaperCarry(formData: FormData) {
     if (!bound.ok) {
       redirect(`${next}?paperError=${encodeURIComponent(bound.error)}`);
     }
-    const openQty = remainingOpenFillQty(orders);
-    const qty = qtyTextFromFill(
-      openQty,
-      match.spotAsk > 0 ? String(clipUsdt / match.spotAsk) : "",
-    );
-    if (!qty) {
-      redirect(
-        `${next}?paperError=${encodeURIComponent("Could not size the close on the exchange.")}`,
-      );
+    const qty = await qtyTextForVenueClose({
+      spotSymbol: row.spotSymbol,
+      futureSymbol: row.futureSymbol,
+      orders,
+      clipUsdt,
+      remainingNotionalUsdt: row.notionalUsdt,
+      spotAsk: match.spotAsk,
+    });
+    if (!qty.ok) {
+      redirect(`${next}?paperError=${encodeURIComponent(qty.error)}`);
     }
     venueClose = await closeCashAndCarryOnVenue({
       connection: bound.connection,
       spotSymbol: row.spotSymbol,
       futureSymbol: row.futureSymbol,
-      qty,
+      qty: qty.qty,
     });
     if (!venueClose.ok) {
       await writeEventLog({
@@ -461,13 +454,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
     source: "manual",
     reason,
     priorCloses: priorClosesFromOrders(orders, carryId),
-    venue: venueClose?.ok ? venueClose.fill.venue : null,
-    environment: venueClose?.ok ? venueClose.fill.environment : null,
-    spotOrderId: venueClose?.ok ? venueClose.fill.spotOrderId : null,
-    futureOrderId: venueClose?.ok ? venueClose.fill.futureOrderId : null,
-    fillQty: venueClose?.ok ? Number(venueClose.fill.qty) : null,
-    fillSpotPrice: venueClose?.ok ? venueClose.fill.spotPrice : null,
-    fillFuturePrice: venueClose?.ok ? venueClose.fill.futurePrice : null,
+    ...venueOrderFields(venueClose?.ok ? venueClose.fill : null),
   });
 
   if (written.error) {
@@ -492,7 +479,9 @@ export async function closeOpenPaperCarry(formData: FormData) {
         ? liveBook
           ? `Closed ${row.futureSymbol} on the connected exchange`
           : `Closed paper ${row.futureSymbol}`
-        : `Unwound paper ${row.futureSymbol}`,
+        : liveBook
+          ? `Unwound ${row.futureSymbol} on the connected exchange`
+          : `Unwound paper ${row.futureSymbol}`,
     userId: user.id,
     accountId: account.id,
     strategy: "cash-and-carry",
@@ -509,7 +498,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
   redirect(
     written.kind === "flat"
       ? `${next}?paper=${liveBook ? "live-closed" : "closed"}`
-      : `${next}?paper=unwinding`,
+      : `${next}?paper=${liveBook ? "live-unwinding" : "unwinding"}`,
   );
 }
 

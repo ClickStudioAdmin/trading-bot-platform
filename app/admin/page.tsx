@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { loadAdminOverview } from "@/lib/admin/overview";
-import { formatScanAt } from "@/lib/opportunities/format";
+import { LocalTime } from "@/components/local-time";
 
 export const metadata: Metadata = {
   title: "Admin overview",
@@ -89,13 +89,13 @@ export default async function AdminOverviewPage() {
             <Row label="Connected Exchange" value={overview.accounts.live} />
             <Row
               label="Live execution"
-              value="Off"
-              tone="text-warning"
+              value="On"
+              tone="text-success"
             />
           </dl>
           <p className="mt-4 text-xs text-ink-faint">
-            The tick loops every account and skips Live. No exchange orders
-            from this app.
+            The tick loops every account. Bound Connected Exchange books
+            place Bybit orders from Sydney Vercel. Paper stays on the ledger.
           </p>
         </div>
       </section>
@@ -103,7 +103,7 @@ export default async function AdminOverviewPage() {
       <section className="rounded-card border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold tracking-tight">Engine</h2>
         <p className="mt-1 text-sm text-ink-muted">
-          One public Bybit scan per tick. Paper accounts apply their own rules.
+          One public Bybit scan per tick. Each account applies its own rules.
         </p>
         <dl className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
           <div>
@@ -112,7 +112,7 @@ export default async function AdminOverviewPage() {
             </p>
             <p className="mt-1 tabular-nums">
               {overview.lastTick
-                ? formatLogTime(overview.lastTick.at)
+                ? <LocalTime at={overview.lastTick.at} />
                 : "—"}
             </p>
             <p className="mt-1 text-xs text-ink-faint">
@@ -126,7 +126,7 @@ export default async function AdminOverviewPage() {
               Last stored scan
             </p>
             <p className="mt-1 tabular-nums">
-              {formatScanAt(overview.scan.lastAtMs)}
+              <LocalTime at={overview.scan.lastAtMs} mode="datetime-short" />
             </p>
             <p className="mt-1 text-xs text-ink-faint">
               {overview.scan.count} pair{overview.scan.count === 1 ? "" : "s"} in
@@ -155,7 +155,7 @@ export default async function AdminOverviewPage() {
             {overview.issues.map((issue) => (
               <li key={issue.id} className="py-3 first:pt-0 last:pb-0">
                 <p className="text-xs tabular-nums text-ink-faint">
-                  {formatLogTime(issue.createdAt)}
+                  <LocalTime at={issue.createdAt} />
                   <span
                     className={`ml-2 ${
                       issue.level === "error" ? "text-danger" : "text-warning"
@@ -257,6 +257,3 @@ function Shortcut({
   );
 }
 
-function formatLogTime(value: string): string {
-  return `${value.slice(0, 19).replace("T", " ")} UTC`;
-}

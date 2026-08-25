@@ -76,7 +76,8 @@ export function ExchangeConnectForm({
       <p className="text-sm text-ink-muted">
         Use a trade-only key with no withdrawal permission. We check that
         with Bybit before saving. The secret is encrypted and is not shown
-        again. This app does not place exchange orders yet.
+        again. Bound keys are used for Open, Close, Unwind, and automations
+        on this book.
       </p>
       <PendingSubmitButton
         pendingLabel="Verifying…"

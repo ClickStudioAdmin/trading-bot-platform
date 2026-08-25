@@ -6,6 +6,7 @@ export function PaperFlash({
   liveOpened,
   liveAdded,
   liveClosed,
+  liveUnwinding,
   error,
 }: {
   opened: boolean;
@@ -15,6 +16,7 @@ export function PaperFlash({
   liveOpened?: boolean;
   liveAdded?: boolean;
   liveClosed?: boolean;
+  liveUnwinding?: boolean;
   error?: string;
 }) {
   if (error) {
@@ -42,6 +44,14 @@ export function PaperFlash({
     return (
       <p className="text-sm text-success">
         Cash-and-carry closed on the connected exchange.
+      </p>
+    );
+  }
+  if (liveUnwinding) {
+    return (
+      <p className="text-sm text-success">
+        Cash-and-carry is closing on the connected exchange. Later ticks clip
+        to usable book.
       </p>
     );
   }

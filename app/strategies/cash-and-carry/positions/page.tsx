@@ -38,6 +38,7 @@ export default async function CashAndCarryPositionsPage({
           liveOpened={firstSearchValue(params.paper) === "live-opened"}
           liveAdded={firstSearchValue(params.paper) === "live-added"}
           liveClosed={firstSearchValue(params.paper) === "live-closed"}
+          liveUnwinding={firstSearchValue(params.paper) === "live-unwinding"}
           exits={firstSearchValue(params.paper) === "exits"}
           unwinding={firstSearchValue(params.paper) === "unwinding"}
           error={firstSearchValue(params.paperError)}

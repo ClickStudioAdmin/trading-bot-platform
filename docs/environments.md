@@ -126,7 +126,7 @@ Confirm a tick from **Actions → Paper Engine Tick → Run workflow**, or from 
 
 The function already uses `SUPABASE_SERVICE_ROLE_KEY` on that Vercel environment. Never put the service role or `CRON_SECRET` in `NEXT_PUBLIC_*`. Never put production secrets on Preview or the `development` GitHub Environment.
 
-Fly.io can later call the same functions. Phase 7 places manual Bybit orders from Sydney Vercel. Do not add Fly apps this phase.
+Fly.io can later call the same functions. Phase 7 places Bybit orders (manual and tick) from Sydney Vercel. Do not add Fly apps this phase.
 
 ## Exchange credentials (Phase 6)
 

@@ -1,11 +1,15 @@
-export function PaperRulesGuide() {
+export function PaperRulesGuide({
+  exchangeBook = false,
+}: {
+  exchangeBook?: boolean;
+}) {
   return (
     <section className="mt-10 rounded-card border border-line bg-surface px-5 py-5">
       <h2 className="text-lg font-semibold tracking-tight">How automations work</h2>
       <p className="mt-2 text-sm text-ink-muted">
-        A set is a saved rule card. About every few minutes the paper engine
-        scans the live book and may open, add to, or close your paper rows.
-        Nothing is sent to Bybit. Leave a field empty to turn that rule off.
+        {exchangeBook
+          ? "A set is a saved rule card. About every few minutes the engine scans the book and may open, add to, or close carries on the bound exchange. Those are real market orders. Leave a field empty to turn that rule off."
+          : "A set is a saved rule card. About every few minutes the engine scans the live book and may open, add to, or close your paper rows. Nothing is sent to Bybit. Leave a field empty to turn that rule off."}
       </p>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
@@ -14,7 +18,11 @@ export function PaperRulesGuide() {
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="When it runs"
-          detail="Each tick: scan the book, then for each of your sets decide whether to open, add size, or start an exit. Rows already marked Closing keep clipping until they are flat."
+          detail={
+            exchangeBook
+              ? "Each tick: scan the book, then for each of your sets decide whether to open, add size, or start an exit. Those decisions place market orders on the bound exchange. Rows already marked Closing keep clipping until they are flat."
+              : "Each tick: scan the book, then for each of your sets decide whether to open, add size, or start an exit. Rows already marked Closing keep clipping until they are flat."
+          }
         />
         <GuideItem
           term="When it is on"

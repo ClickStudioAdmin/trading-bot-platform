@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LocalTime } from "@/components/local-time";
 import { eventLogOptionsForScopes } from "@/lib/logs/events";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import type { EventLogFilters, EventLogRow } from "@/lib/logs/list";
@@ -117,7 +118,7 @@ export function EventLogs({
         <table className="w-full min-w-[48rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
-              <th className="px-4 py-3 font-medium">Time (UTC)</th>
+              <th className="px-4 py-3 font-medium">Time</th>
               <th className="px-4 py-3 font-medium">Level</th>
               <th className="px-4 py-3 font-medium">Scope</th>
               <th className="px-4 py-3 font-medium">Event</th>
@@ -147,7 +148,7 @@ export function EventLogs({
                   className="border-b border-line last:border-b-0"
                 >
                   <td className="px-4 py-3 align-top tabular-nums text-ink-muted">
-                    {row.createdAt.slice(0, 19).replace("T", " ")}
+                    <LocalTime at={row.createdAt} />
                   </td>
                   <td className={`px-4 py-3 align-top ${levelTone(row.level)}`}>
                     {row.level}

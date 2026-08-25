@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LocalTime } from "@/components/local-time";
 import {
   memberListHref,
   toggleMemberSort,
@@ -48,7 +49,7 @@ export function AdminMembersTable({
                   {row.status}
                 </td>
                 <td className="px-4 py-3 tabular-nums text-ink-muted">
-                  {row.createdAt.slice(0, 10)}
+                  <LocalTime at={row.createdAt} mode="date" />
                 </td>
                 <td className="px-4 py-3">
                   <Link

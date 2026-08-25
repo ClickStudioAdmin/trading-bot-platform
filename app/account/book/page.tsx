@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
+import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
 import { formatAccountMode } from "@/lib/accounts/model";
 import { loadAccountUsage } from "@/lib/accounts/store";
@@ -79,7 +81,10 @@ export default async function BookOverviewPage() {
         <dl className="mt-4 space-y-2 text-sm">
           <Row label="Name" value={current.name} />
           <Row label="Mode" value={formatAccountMode(current.mode)} />
-          <Row label="Created" value={formatCreated(current.createdAtMs)} />
+          <Row
+            label="Created"
+            value={<LocalTime at={current.createdAtMs} mode="date" />}
+          />
         </dl>
 
         <div className="mt-6 border-t border-line pt-5">
@@ -186,7 +191,13 @@ function StatCard({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+}: {
+  label: string;
+  value: ReactNode;
+}) {
   return (
     <div className="flex items-start justify-between gap-3">
       <dt className="shrink-0 text-ink-muted">{label}</dt>
@@ -195,9 +206,3 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatCreated(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) {
-    return "—";
-  }
-  return new Date(ms).toISOString().slice(0, 10);
-}

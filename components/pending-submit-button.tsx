@@ -44,6 +44,10 @@ function queryLooksSuccessful() {
     paper === "opened" ||
     paper === "closed" ||
     paper === "unwinding" ||
+    paper === "live-opened" ||
+    paper === "live-added" ||
+    paper === "live-closed" ||
+    paper === "live-unwinding" ||
     paper === "exits" ||
     params.get("saved") === "1" ||
     params.get("saved") === "profile" ||

@@ -1,9 +1,11 @@
 import { fetchBybitInstruments } from "./client";
 import { bybitPrivateRequest, type BybitPrivateCreds } from "./private";
 import {
+  floorToStep,
   maxStep,
   parseStep,
   qtyFromNotionalUsdt,
+  stepDecimals,
 } from "./qty";
 import type { BybitInstrument } from "./universe";
 
@@ -50,6 +52,29 @@ export function qtyForCarryLegs(input: {
     step,
     minQty,
   });
+}
+
+export function floorCarryQty(
+  qty: number,
+  spot: BybitInstrument | undefined,
+  future: BybitInstrument | undefined,
+): { ok: true; qty: number; text: string } | { ok: false; error: string } {
+  const spotStep = lotStep(spot, 0.000001);
+  const futureStep = lotStep(future, 0.001);
+  const step = maxStep(spotStep, futureStep);
+  const minQty = Math.max(lotMin(spot, step), lotMin(future, step), step);
+  const floored = floorToStep(qty, step);
+  if (!(floored > 0) || floored < minQty) {
+    return {
+      ok: false,
+      error: "That size is below the exchange minimum order quantity.",
+    };
+  }
+  return {
+    ok: true,
+    qty: floored,
+    text: floored.toFixed(stepDecimals(step)),
+  };
 }
 
 export async function loadCarryInstruments(input: {

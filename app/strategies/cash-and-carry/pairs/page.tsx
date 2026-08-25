@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
 import { TokenIcon } from "@/components/token-icon";
 import { listCarryPairs } from "@/lib/exchanges/bybit/list-carry-pairs";
@@ -42,7 +43,7 @@ export default async function CashAndCarryPairsPage() {
               <th className="px-4 py-3 font-medium">Base</th>
               <th className="px-4 py-3 font-medium">Spot</th>
               <th className="px-4 py-3 font-medium">Future</th>
-              <th className="px-4 py-3 font-medium">Delivery (UTC)</th>
+              <th className="px-4 py-3 font-medium">Delivery</th>
               <th className="px-4 py-3 font-medium">DTE</th>
             </tr>
           </thead>
@@ -61,7 +62,7 @@ export default async function CashAndCarryPairsPage() {
                 <td className="px-4 py-3 text-ink-muted">{pair.spotSymbol}</td>
                 <td className="px-4 py-3">{pair.futureSymbol}</td>
                 <td className="px-4 py-3 text-ink-muted">
-                  {new Date(pair.deliveryTimeMs).toISOString().slice(0, 10)}
+                  <LocalTime at={pair.deliveryTimeMs} mode="date" />
                 </td>
                 <td className="px-4 py-3 tabular-nums">
                   {pair.daysToExpiry > 0 ? pair.daysToExpiry.toFixed(1) : "—"}

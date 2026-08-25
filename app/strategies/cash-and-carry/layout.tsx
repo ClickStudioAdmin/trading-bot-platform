@@ -29,15 +29,15 @@ export default async function CashAndCarryLayout({
   );
   const accountReduce = Boolean(config.reduceOnly);
   const automationsOn = signedIn && anyLive;
-  const paperRunning =
+  const engineRunning =
     automationsOn &&
-    session?.account.mode === "paper" &&
     anyActive &&
-    !accountReduce;
+    !accountReduce &&
+    (!live || Boolean(bound));
   return (
     <div>
       <StrategySubnav
-        automationsRunning={paperRunning}
+        automationsRunning={engineRunning}
         reduceOnly={automationsOn && (accountReduce || !anyActive)}
         connection={
           live
@@ -61,8 +61,9 @@ export default async function CashAndCarryLayout({
       {live && !bound ? (
         <div className="mx-auto max-w-6xl px-6 pt-4">
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-            This is a Connected Exchange account. The engine will not place
-            exchange orders until an exchange connection is added.
+            This is a Connected Exchange account. Bind an exchange in Strategy
+            Settings before Open, Close, Unwind, or automations can place
+            orders.
           </p>
         </div>
       ) : null}

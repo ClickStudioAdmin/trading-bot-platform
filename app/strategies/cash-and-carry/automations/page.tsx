@@ -5,11 +5,13 @@ import { AutomationsDesk } from "@/components/paper-rules-form";
 import { PaperRulesGuide } from "@/components/paper-rules-guide";
 import { loadPaperRules } from "@/lib/engine/load";
 import { paperConfigToFormValues } from "@/lib/engine/rules";
+import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { firstSearchValue } from "@/lib/paper/open";
+import { getSessionContext } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Automations",
-  description: "Paper cash-and-carry automation rules.",
+  description: "Cash-and-carry automation rules.",
 };
 
 export default async function CashAndCarryAutomationsPage({
@@ -18,6 +20,10 @@ export default async function CashAndCarryAutomationsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const session = await getSessionContext();
+  const exchangeBook = Boolean(
+    session && accountCanHoldConnections(session.account.mode),
+  );
   const { signedIn, config, inUseRuleIds } = await loadPaperRules();
   const saved = firstSearchValue(params.saved) === "1";
   const reduceSaved = firstSearchValue(params.reduce) === "1";
@@ -51,7 +57,7 @@ export default async function CashAndCarryAutomationsPage({
           to save automations.
         </p>
       )}
-      <PaperRulesGuide />
+      <PaperRulesGuide exchangeBook={exchangeBook} />
     </main>
   );
 }

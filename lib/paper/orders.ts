@@ -65,6 +65,26 @@ export function remainingOpenFillQty(orders: PaperOrderRow[]): number | null {
   return remaining;
 }
 
+export function closeQtyFromOpenFills(input: {
+  orders: PaperOrderRow[];
+  clipUsdt: number;
+  remainingNotionalUsdt: number;
+  spotAsk: number;
+}): number | null {
+  const remainingQty = remainingOpenFillQty(input.orders);
+  if (remainingQty !== null && input.remainingNotionalUsdt > 0) {
+    const share = Math.min(1, input.clipUsdt / input.remainingNotionalUsdt);
+    const qty = remainingQty * share;
+    if (qty > 0 && Number.isFinite(qty)) {
+      return qty;
+    }
+  }
+  if (input.spotAsk > 0 && input.clipUsdt > 0) {
+    return input.clipUsdt / input.spotAsk;
+  }
+  return null;
+}
+
 export function clipFillBasis(
   opportunity: ScannedOpportunity,
   fillSpotPrice?: number | null,

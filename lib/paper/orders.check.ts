@@ -6,6 +6,7 @@ import {
   attachOrders,
   fillSlip,
   formatOrderConditions,
+  closeQtyFromOpenFills,
   remainingOpenFillQty,
   formatCloseExitMethod,
   formatCloseOrderWhy,
@@ -250,5 +251,36 @@ assert.equal(
   9,
 );
 assert.equal(remainingOpenFillQty([{ ...stored, fillQty: null }]), null);
+
+assert.equal(
+  closeQtyFromOpenFills({
+    orders: [
+      { ...stored, side: "open", fillQty: 6 },
+      { ...stored, id: 13, side: "open", fillQty: 4 },
+    ],
+    clipUsdt: 5_000,
+    remainingNotionalUsdt: 10_000,
+    spotAsk: 50_000,
+  }),
+  5,
+);
+assert.equal(
+  closeQtyFromOpenFills({
+    orders: [{ ...stored, side: "open", fillQty: 0.2 }],
+    clipUsdt: 10_000,
+    remainingNotionalUsdt: 10_000,
+    spotAsk: 50_000,
+  }),
+  0.2,
+);
+assert.equal(
+  closeQtyFromOpenFills({
+    orders: [{ ...stored, fillQty: null }],
+    clipUsdt: 10_000,
+    remainingNotionalUsdt: 10_000,
+    spotAsk: 50_000,
+  }),
+  0.2,
+);
 
 console.log("paper order checks passed");

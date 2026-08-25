@@ -173,7 +173,6 @@ export function OpenPaperTrades({
                   key={trade.id}
                   trade={trade}
                   next={next}
-                  hideUnwind={exchangeBook}
                 />
               ))
             )}
@@ -216,7 +215,7 @@ export function ClosedPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Closed"
-                  hint="UTC date this carry was closed."
+                  hint="Local date this carry was closed. Hover for UTC."
                 />
               </th>
               <th className="px-4 py-3 font-medium">

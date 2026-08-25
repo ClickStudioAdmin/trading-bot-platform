@@ -5,9 +5,17 @@ import {
   type EngineMarkedPosition,
   type PaperEngineConfig,
 } from "@/lib/engine/decide";
+import {
+  boundVenueForTick,
+  closeLiveCarry,
+  flattenLiveOpen,
+  openLiveCarry,
+} from "@/lib/engine/live-tick";
 import { parsePaperRulesRow } from "@/lib/engine/rules";
 import { selectPaperEngineSettings } from "@/lib/engine/settings";
 import { writeEventLog } from "@/lib/logs/write";
+import type { VenueFill } from "@/lib/exchanges/execute";
+import { venueOrderFields } from "@/lib/exchanges/live-trade";
 import {
   applyUsableBookShare,
   DEFAULT_USABLE_BOOK_SHARE,
@@ -24,10 +32,11 @@ import {
 } from "@/lib/paper/ledger";
 import { carryPnlPct, carryPnlUsdt } from "@/lib/paper/math";
 import { pairKey, paperCarryInsertRow } from "@/lib/paper/open";
-import { parsePaperOrderRow } from "@/lib/paper/orders";
+import { clipFillBasis, parsePaperOrderRow } from "@/lib/paper/orders";
 import {
   asNullableNumber,
   parsePaperCarryRow,
+  pickOpenCarryForPair,
   type PaperCarryRow,
 } from "@/lib/paper/rows";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -72,12 +81,20 @@ export async function runPaperEngineTick(): Promise<{
 
   const settingsByAccount = new Map<
     string,
-    { enabled: boolean; reduceOnly: boolean; share: number }
+    {
+      enabled: boolean;
+      reduceOnly: boolean;
+      share: number;
+      connectionId: string | null;
+    }
   >();
   for (const row of settingsRows) {
     const share = asNullableNumber(
       (row as { usable_book_share?: unknown }).usable_book_share,
     );
+    const connectionId = String(
+      (row as { exchange_connection_id?: unknown }).exchange_connection_id ?? "",
+    ).trim();
     settingsByAccount.set(String((row as { account_id: string }).account_id), {
       enabled: Boolean((row as { enabled?: unknown }).enabled),
       reduceOnly: Boolean((row as { reduce_only?: unknown }).reduce_only),
@@ -85,6 +102,7 @@ export async function runPaperEngineTick(): Promise<{
         share !== null && share > 0 && share <= 1
           ? share
           : DEFAULT_USABLE_BOOK_SHARE,
+      connectionId: connectionId || null,
     });
   }
 
@@ -114,24 +132,49 @@ export async function runPaperEngineTick(): Promise<{
   let added = 0;
 
   for (const account of accounts) {
-    if (account.mode !== "paper") {
-      continue;
-    }
     const userId = account.userId;
     const settings = settingsByAccount.get(account.id) ?? {
       enabled: false,
       reduceOnly: false,
       share: DEFAULT_USABLE_BOOK_SHARE,
+      connectionId: null,
     };
+    const layers = layersByAccount.get(account.id) ?? [];
+    const userCarries = carries
+      .filter((item) => item.accountId === account.id)
+      .map((item) => item.row);
+    const venue = await boundVenueForTick({
+      userId,
+      accountId: account.id,
+      mode: account.mode,
+      connectionId: settings.connectionId,
+    });
+    if (venue.live && !venue.ok) {
+      const wantsEngine =
+        settings.enabled ||
+        userCarries.length > 0 ||
+        layers.some((layer) => layerAllowsEntries(layer, settings.reduceOnly));
+      if (wantsEngine) {
+        await writeEventLog({
+          level: "warning",
+          scope: "trade",
+          event: "engine.skip_live",
+          message: venue.error,
+          userId,
+          accountId: account.id,
+          strategy: "cash-and-carry",
+        });
+      }
+      continue;
+    }
+    const liveVenue = venue.live ? venue.connection : null;
     const scan = applyUsableBookShare(raw, settings.share);
     const config: PaperEngineConfig = {
       enabled: settings.enabled,
       reduceOnly: settings.reduceOnly,
-      layers: layersByAccount.get(account.id) ?? [],
+      layers,
     };
-    const userCarries = carries
-      .filter((item) => item.accountId === account.id)
-      .map((item) => item.row);
+    const flattened = new Set<number>();
     const positions = markEnginePositions(userCarries, scan);
     const exits = decideExits(positions, config);
 
@@ -145,6 +188,31 @@ export async function runPaperEngineTick(): Promise<{
       if (!row || !opportunity) {
         continue;
       }
+      const carryOrders = orders.filter((order) => order.carryId === row.id);
+      let venueClose: VenueFill | null = null;
+      if (liveVenue) {
+        const closedOnVenue = await closeLiveCarry({
+          connection: liveVenue,
+          row,
+          opportunity,
+          orders: carryOrders,
+          clipUsdt: exit.closeNotionalUsdt,
+        });
+        if (!closedOnVenue.ok) {
+          await writeEventLog({
+            level: "error",
+            scope: "trade",
+            event: "engine.close_failed",
+            message: closedOnVenue.error,
+            userId,
+            accountId: account.id,
+            strategy: "cash-and-carry",
+            data: { carryId: row.id, reason: exit.reason, venue: liveVenue.venue },
+          });
+          continue;
+        }
+        venueClose = closedOnVenue.fill;
+      }
       const written = await writeCloseClip({
         supabase,
         userId,
@@ -155,6 +223,7 @@ export async function runPaperEngineTick(): Promise<{
         source: row.source === "manual" ? "manual" : "engine",
         reason: exit.reason,
         priorCloses: priorClosesFromOrders(orders, row.id),
+        ...venueOrderFields(venueClose),
       });
       if (written.error) {
         await writeEventLog({
@@ -171,6 +240,7 @@ export async function runPaperEngineTick(): Promise<{
       }
       if (written.kind === "flat") {
         closed += 1;
+        flattened.add(row.id);
       } else {
         clipped += 1;
       }
@@ -179,8 +249,12 @@ export async function runPaperEngineTick(): Promise<{
         event: written.kind === "flat" ? "trade.closed" : "trade.unwound",
         message:
           written.kind === "flat"
-            ? `Closed paper ${row.futureSymbol}`
-            : `Unwound paper ${row.futureSymbol}`,
+            ? liveVenue
+              ? `Closed ${row.futureSymbol} on the connected exchange`
+              : `Closed paper ${row.futureSymbol}`
+            : liveVenue
+              ? `Unwound ${row.futureSymbol} on the connected exchange`
+              : `Unwound paper ${row.futureSymbol}`,
         userId,
         accountId: account.id,
         strategy: "cash-and-carry",
@@ -191,6 +265,7 @@ export async function runPaperEngineTick(): Promise<{
           source: row.source,
           closeSource: row.source === "manual" ? "manual" : "engine",
           reason: exit.reason,
+          venue: venueClose?.venue,
         },
       });
     }
@@ -211,27 +286,81 @@ export async function runPaperEngineTick(): Promise<{
         futureSymbol: row.futureSymbol,
         notionalUsdt: row.notionalUsdt,
         ruleId: row.ruleId,
-        unwinding: row.status === "closing",
+        unwinding: row.status === "closing" || flattened.has(row.id),
         openedAtMs: row.openedAtMs,
       })),
       config,
     );
 
     for (const entry of entries) {
-      if (entry.carryId !== null) {
-        const row = userCarries.find((item) => item.id === entry.carryId);
-        if (!row) {
+      const existing =
+        entry.carryId !== null
+          ? userCarries.find(
+              (item) => item.id === entry.carryId && !flattened.has(item.id),
+            )
+          : liveVenue
+            ? pickOpenCarryForPair(
+                userCarries.filter(
+                  (item) => item.status === "open" && !flattened.has(item.id),
+                ),
+                entry.opportunity.spotSymbol,
+                entry.opportunity.futureSymbol,
+              )
+            : null;
+      if (entry.carryId !== null && !existing) {
+        continue;
+      }
+
+      let venueFill: VenueFill | null = null;
+      if (liveVenue) {
+        const openedOnVenue = await openLiveCarry({
+          connection: liveVenue,
+          opportunity: entry.opportunity,
+          notionalUsdt: entry.notionalUsdt,
+        });
+        if (!openedOnVenue.ok) {
+          await writeEventLog({
+            level: "error",
+            scope: "trade",
+            event: "engine.open_failed",
+            message: openedOnVenue.error,
+            userId,
+            accountId: account.id,
+            strategy: "cash-and-carry",
+            data: {
+              futureSymbol: entry.opportunity.futureSymbol,
+              notionalUsdt: entry.notionalUsdt,
+              venue: liveVenue.venue,
+            },
+          });
           continue;
         }
+        venueFill = openedOnVenue.fill;
+      }
+
+      async function flattenIfNeeded() {
+        if (!liveVenue || !venueFill) {
+          return;
+        }
+        await flattenLiveOpen({
+          connection: liveVenue,
+          opportunity: entry.opportunity,
+          qty: venueFill.qty,
+        });
+      }
+
+      if (existing) {
         const written = await writeOpenClip({
           supabase,
           userId,
           accountId: account.id,
-          row,
+          row: existing,
           opportunity: entry.opportunity,
           clipUsdt: entry.notionalUsdt,
+          ...venueOrderFields(venueFill),
         });
         if (written.error) {
+          await flattenIfNeeded();
           await writeEventLog({
             level: "error",
             scope: "trade",
@@ -241,7 +370,7 @@ export async function runPaperEngineTick(): Promise<{
             accountId: account.id,
             strategy: "cash-and-carry",
             data: {
-              carryId: row.id,
+              carryId: existing.id,
               futureSymbol: entry.opportunity.futureSymbol,
               notionalUsdt: entry.notionalUsdt,
             },
@@ -252,15 +381,18 @@ export async function runPaperEngineTick(): Promise<{
         await writeEventLog({
           scope: "trade",
           event: "trade.added",
-          message: `Added paper ${entry.opportunity.futureSymbol}`,
+          message: liveVenue
+            ? `Added ${entry.opportunity.futureSymbol} on the connected exchange`
+            : `Added paper ${entry.opportunity.futureSymbol}`,
           userId,
           accountId: account.id,
           strategy: "cash-and-carry",
           data: {
-            carryId: row.id,
+            carryId: existing.id,
             futureSymbol: entry.opportunity.futureSymbol,
             notionalUsdt: entry.notionalUsdt,
             source: "engine",
+            venue: venueFill?.venue,
           },
         });
         continue;
@@ -279,12 +411,18 @@ export async function runPaperEngineTick(): Promise<{
               ruleId: entry.layer.id,
               ruleName: entry.layer.name,
               automation: automationFromLayer(entry.layer),
+              entryBasis: clipFillBasis(
+                entry.opportunity,
+                venueFill?.spotPrice,
+                venueFill?.futurePrice,
+              ),
             },
           ),
         )
         .select("id")
         .single();
       if (error || !data) {
+        await flattenIfNeeded();
         await writeEventLog({
           level: "error",
           scope: "trade",
@@ -311,12 +449,15 @@ export async function runPaperEngineTick(): Promise<{
         filledAt: new Date(),
         opportunity: entry.opportunity,
         automation: automationFromLayer(entry.layer),
+        ...venueOrderFields(venueFill),
       });
       opened += 1;
       await writeEventLog({
         scope: "trade",
         event: "trade.opened",
-        message: `Opened paper ${entry.opportunity.futureSymbol}`,
+        message: liveVenue
+          ? `Opened ${entry.opportunity.futureSymbol} on the connected exchange`
+          : `Opened paper ${entry.opportunity.futureSymbol}`,
         userId,
         accountId: account.id,
         strategy: "cash-and-carry",
@@ -328,6 +469,7 @@ export async function runPaperEngineTick(): Promise<{
           entryBasis: entry.opportunity.netBasis,
           source: "engine",
           ruleName: entry.layer.name,
+          venue: venueFill?.venue,
         },
       });
     }
@@ -336,7 +478,7 @@ export async function runPaperEngineTick(): Promise<{
   await writeEventLog({
     scope: "system",
     event: "engine.tick",
-    message: `Paper engine tick opened ${opened}, added ${added}, closed ${closed}, clipped ${clipped}`,
+    message: `Engine tick opened ${opened}, added ${added}, closed ${closed}, clipped ${clipped}`,
     strategy: "cash-and-carry",
     data: {
       users: userIds.size,

@@ -29,9 +29,8 @@ import {
   type PaperOrderRow,
 } from "@/lib/paper/orders";
 import type { PaperReturnPath } from "@/lib/paper/open";
+import { LocalTime } from "@/components/local-time";
 import {
-  formatDeskDate,
-  formatDeskDateTime,
   type MarkedPaperCarry,
   type PaperCarryRow,
 } from "@/lib/paper/rows";
@@ -158,7 +157,7 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
         </span>
       </td>
       <td className="px-4 py-3 text-ink-muted">
-        {formatDeskDate(trade.closedAtMs)}
+        <LocalTime at={trade.closedAtMs} mode="date" />
       </td>
       <td className="px-4 py-3 tabular-nums text-ink-muted">
         {trade.daysHeld === null ? "—" : trade.daysHeld.toFixed(1)}
@@ -511,7 +510,7 @@ function PositionLogList({ logs }: { logs: EventLogRow[] }) {
                   {formatLogEvent(log.event)}
                 </h3>
                 <p className="text-xs text-ink-muted">
-                  {formatLogTime(log.createdAt)}
+                  <LocalTime at={log.createdAt} />
                 </p>
               </header>
               <p className="mt-0.5 text-sm text-ink-muted">{log.message}</p>
@@ -656,11 +655,6 @@ function formatLogEvent(event: string): string {
   return labels[event] ?? event;
 }
 
-function formatLogTime(createdAt: string): string {
-  const ms = Date.parse(createdAt);
-  return formatDeskDateTime(Number.isFinite(ms) ? ms : null);
-}
-
 function logLevelTone(level: EventLogRow["level"]): string {
   if (level === "error") {
     return "text-danger";
@@ -697,7 +691,7 @@ function OpenOrderCard({ order }: { order: PaperOrderRow }) {
           {formatOrderHeadline(order)}
         </h3>
         <p className="text-xs text-ink-muted">
-          {formatDeskDateTime(order.filledAtMs)}
+          <LocalTime at={order.filledAtMs} />
         </p>
       </header>
       <p className="mt-0.5 text-xs text-ink-muted">{formatOrderWhy(order)}</p>
@@ -844,7 +838,7 @@ function CloseOrderCard({
           {formatOrderHeadline(order)}
         </h3>
         <p className="text-xs text-ink-muted">
-          {formatDeskDateTime(order.filledAtMs)}
+          <LocalTime at={order.filledAtMs} />
         </p>
       </header>
       <p className="mt-0.5 text-xs text-ink-muted">{formatCloseOrderWhy(order)}</p>
