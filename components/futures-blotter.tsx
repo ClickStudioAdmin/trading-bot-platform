@@ -407,15 +407,19 @@ function OpenFuturesRows({
       }
     >
       <td className="min-w-0 px-4 py-3">
-        <span className="flex flex-wrap items-center gap-4 font-medium">
+        <span className="flex items-start gap-4">
           <TokenIcon symbol={trade.baseCoin} />
-          <span>{trade.baseCoin}</span>
-          <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent">
-            Manual
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 font-medium">
+              <span>{trade.baseCoin}</span>
+              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal whitespace-nowrap text-accent">
+                Manual
+              </span>
+            </span>
+            <span className="mt-0.5 block text-xs text-ink-faint">
+              {trade.symbol}
+            </span>
           </span>
-        </span>
-        <span className="mt-0.5 block pl-9 text-xs text-ink-faint">
-          {trade.symbol}
         </span>
       </td>
       <td className="px-4 py-3 capitalize text-ink-muted">{trade.side}</td>
@@ -512,16 +516,20 @@ function ClosedFuturesRows({
       }
     >
       <td className="min-w-0 px-4 py-3">
-        <span className="flex flex-wrap items-center gap-4 font-medium">
+        <span className="flex items-start gap-4">
           <TokenIcon symbol={baseCoin} />
-          <span>{baseCoin}</span>
-          <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent">
-            Manual
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 font-medium">
+              <span>{baseCoin}</span>
+              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal whitespace-nowrap text-accent">
+                Manual
+              </span>
+            </span>
+            <span className="mt-0.5 block text-xs text-ink-faint">
+              {trade.symbol}
+              {trade.qty ? ` · ${trade.qty}` : ""}
+            </span>
           </span>
-        </span>
-        <span className="mt-0.5 block pl-9 text-xs text-ink-faint">
-          {trade.symbol}
-          {trade.qty ? ` · ${trade.qty}` : ""}
         </span>
       </td>
       <td className="px-4 py-3 text-ink-muted">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -13,18 +13,20 @@ import { formatGroupedNumberInput } from "@/lib/paper/open";
 const INPUT_CLASS =
   "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 const SELECT_CLASS =
-  "rounded-control border border-line bg-surface-raised px-2 py-2 text-xs text-ink focus:border-line-strong focus:outline-none";
-const COMPACT_INPUT =
-  "w-28 rounded-control border border-line bg-surface-raised px-2 py-1.5 text-xs tabular-nums text-ink focus:border-line-strong focus:outline-none";
+  "shrink-0 rounded-control border border-line bg-surface-raised px-2 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+const TICKET_INPUT =
+  "min-w-0 flex-1 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
+const TICKET_QTY =
+  "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
-export function FuturesTpslFields({ actions }: { actions?: ReactNode }) {
+export function FuturesTpslFields() {
   const [enabled, setEnabled] = useState(false);
   const [mode, setMode] = useState<FuturesTpslMode>("full");
   const partial = enabled && mode === "partial";
   return (
-    <div className="col-span-full flex flex-wrap items-end gap-3">
-      <div className="flex flex-wrap items-start gap-3">
-        <label className="flex shrink-0 items-center gap-2 text-sm text-ink">
+    <div className="space-y-3 border-t border-line-strong pt-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm text-ink">
           <input
             type="checkbox"
             name="tpsl"
@@ -39,25 +41,26 @@ export function FuturesTpslFields({ actions }: { actions?: ReactNode }) {
           <>
             <input type="hidden" name="tpslMode" value={mode} />
             <ModeToggle mode={mode} onChange={setMode} />
-            <TpslPriceField
-              name="takeProfit"
-              triggerName="tpTrigger"
-              label="Take profit"
-              qtyName={partial ? "tpQty" : undefined}
-              qtyAria={partial ? "Take profit qty" : undefined}
-            />
-            <TpslPriceField
-              name="stopLoss"
-              triggerName="slTrigger"
-              label="Stop loss"
-              qtyName={partial ? "slQty" : undefined}
-              qtyAria={partial ? "Stop loss qty" : undefined}
-            />
           </>
         ) : null}
       </div>
-      {actions ? (
-        <div className="ml-auto flex flex-wrap items-end gap-2">{actions}</div>
+      {enabled ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TpslPriceField
+            name="takeProfit"
+            triggerName="tpTrigger"
+            label="Take profit"
+            qtyName={partial ? "tpQty" : undefined}
+            qtyAria={partial ? "Take profit qty" : undefined}
+          />
+          <TpslPriceField
+            name="stopLoss"
+            triggerName="slTrigger"
+            label="Stop loss"
+            qtyName={partial ? "slQty" : undefined}
+            qtyAria={partial ? "Stop loss qty" : undefined}
+          />
+        </div>
       ) : null}
     </div>
   );
@@ -426,27 +429,32 @@ function TpslPriceField({
   qtyAria?: string;
 }) {
   return (
-    <label className="block text-[11px] text-ink-muted">
-      {label}
-      <span className="mt-0.5 flex gap-1">
-        <GroupedNumberInput
-          name={name}
-          allowDecimal
-          placeholder="0.0"
-          className={COMPACT_INPUT}
-        />
-        <TriggerSelect name={triggerName} defaultValue="last" compact />
-        {qtyName ? (
+    <div className="space-y-2">
+      <label className="block text-xs text-ink-muted">
+        {label}
+        <span className="mt-1 flex gap-1">
+          <GroupedNumberInput
+            name={name}
+            allowDecimal
+            placeholder="0.0"
+            className={TICKET_INPUT}
+          />
+          <TriggerSelect name={triggerName} defaultValue="last" />
+        </span>
+      </label>
+      {qtyName ? (
+        <label className="block text-xs text-ink-muted">
+          Qty
           <GroupedNumberInput
             name={qtyName}
             allowDecimal
-            placeholder="Qty"
+            placeholder="0.0"
             ariaLabel={qtyAria}
-            className={COMPACT_INPUT}
+            className={`${TICKET_QTY} mt-1`}
           />
-        ) : null}
-      </span>
-    </label>
+        </label>
+      ) : null}
+    </div>
   );
 }
 
@@ -608,17 +616,15 @@ function ModeButton({
 function TriggerSelect({
   name,
   defaultValue,
-  compact = false,
 }: {
   name: string;
   defaultValue: FuturesTrigger;
-  compact?: boolean;
 }) {
   return (
     <select
       name={name}
       defaultValue={defaultValue}
-      className={compact ? `${SELECT_CLASS} px-1.5 py-1.5` : SELECT_CLASS}
+      className={SELECT_CLASS}
       aria-label="Trigger"
     >
       <option value="last">Last</option>

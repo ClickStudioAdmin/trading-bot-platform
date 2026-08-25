@@ -143,11 +143,13 @@ function WorkingRow({
   return (
     <tr className="border-b border-line last:border-b-0">
       <td className="px-4 py-3">
-        <span className="flex flex-wrap items-center gap-4 font-medium">
+        <span className="flex items-start gap-4">
           <TokenIcon symbol={baseCoin} />
-          <span>{baseCoin}</span>
+          <span className="min-w-0">
+            <span className="block font-medium">{baseCoin}</span>
+            <p className="mt-0.5 text-xs text-ink-faint">{row.symbol}</p>
+          </span>
         </span>
-        <p className="pl-9 text-xs text-ink-faint">{row.symbol}</p>
       </td>
       <td className="px-4 py-3">{workingActionLabel(row.action)}</td>
       <td className="px-4 py-3 tabular-nums">

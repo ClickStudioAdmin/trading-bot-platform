@@ -110,10 +110,7 @@ export default async function FuturesPositionsPage({
               : ""}
           </p>
           <div className="mt-3 rounded-card border border-line bg-surface p-5">
-            <form
-              action={submitFuturesTrade}
-              className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.1fr)_auto_minmax(16rem,1.3fr)_minmax(10rem,0.8fr)]"
-            >
+            <form action={submitFuturesTrade} className="block">
               <input type="hidden" name="next" value={NEXT} />
               <FuturesOrderTicket
                 options={pairs}

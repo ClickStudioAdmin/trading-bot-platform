@@ -11,15 +11,15 @@ import { formatGroupedNumberInput } from "@/lib/paper/open";
 
 const INPUT_CLASS =
   "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
-const COMPACT_INPUT =
-  "w-28 rounded-control border border-line bg-surface-raised px-2 py-1.5 text-xs tabular-nums text-ink focus:border-line-strong focus:outline-none";
+const TICKET_INPUT =
+  "min-w-0 flex-1 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
 export function FuturesTrailingFields() {
   const [enabled, setEnabled] = useState(false);
   const [activationOn, setActivationOn] = useState(false);
   return (
-    <div className="col-span-full flex flex-wrap items-start gap-3">
-      <label className="flex shrink-0 items-center gap-2 text-sm text-ink">
+    <div className="space-y-3 border-t border-line-strong pt-4">
+      <label className="flex items-center gap-2 text-sm text-ink">
         <input
           type="checkbox"
           name="trailing"
@@ -31,39 +31,43 @@ export function FuturesTrailingFields() {
         Trailing stop
       </label>
       {enabled ? (
-        <>
-          <label className="block text-[11px] text-ink-muted">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-xs text-ink-muted">
             Retracement
             <GroupedNumberInput
               name="trailingStop"
               allowDecimal
               placeholder="0.0"
-              className={`${COMPACT_INPUT} mt-0.5 block`}
+              className={`${TICKET_INPUT} mt-1 block w-full`}
             />
           </label>
-          <label className="flex items-center gap-2 pt-4 text-sm text-ink">
-            <input
-              type="checkbox"
-              name="trailingActivation"
-              value="on"
-              checked={activationOn}
-              onChange={(event) => setActivationOn(event.target.checked)}
-              className="size-4 rounded-control accent-accent"
-            />
-            Activation
-          </label>
-          {activationOn ? (
-            <label className="block text-[11px] text-ink-muted">
+          <div>
+            <label className="flex items-center gap-2 text-xs text-ink-muted">
+              <input
+                type="checkbox"
+                name="trailingActivation"
+                value="on"
+                checked={activationOn}
+                onChange={(event) => setActivationOn(event.target.checked)}
+                className="size-4 rounded-control accent-accent"
+              />
               Activation price
+            </label>
+            {activationOn ? (
               <GroupedNumberInput
                 name="trailingActive"
                 allowDecimal
                 placeholder="0.0"
-                className={`${COMPACT_INPUT} mt-0.5 block`}
+                ariaLabel="Activation price"
+                className={`${TICKET_INPUT} mt-1 block w-full`}
               />
-            </label>
-          ) : null}
-        </>
+            ) : (
+              <p className="mt-1 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink-faint">
+                Arms immediately
+              </p>
+            )}
+          </div>
+        </div>
       ) : null}
     </div>
   );

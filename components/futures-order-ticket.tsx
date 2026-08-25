@@ -26,83 +26,88 @@ export function FuturesOrderTicket({
   const quoteCoin = quoteLabel(selected?.quoteCoin);
 
   return (
-    <>
-      <div className="block text-sm text-ink">
-        Symbol
-        <FuturesSymbolSelect
-          options={options}
-          value={symbol}
-          onChange={setSymbol}
-        />
-      </div>
-      <div className="block text-sm text-ink">
-        Type
-        <input type="hidden" name="orderType" value={orderType} />
-        <div className="mt-1 flex w-fit rounded-control border border-line bg-surface p-0.5">
-          <UnitButton
-            active={orderType === "market"}
-            onClick={() => setOrderType("market")}
-          >
-            Market
-          </UnitButton>
-          <UnitButton
-            active={orderType === "limit"}
-            onClick={() => setOrderType("limit")}
-          >
-            Limit
-          </UnitButton>
+    <div className="space-y-4">
+      <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.2fr)_auto_minmax(14rem,1.3fr)_auto]">
+        <div className="block text-sm text-ink">
+          Symbol
+          <FuturesSymbolSelect
+            options={options}
+            value={symbol}
+            onChange={setSymbol}
+          />
         </div>
-      </div>
-      <div className="block text-sm text-ink">
-        Size
-        <div className="mt-1 flex gap-1">
-          <span className="relative min-w-0 flex-1">
-            {unit === "usdt" ? (
-              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-                $
-              </span>
-            ) : null}
-            <GroupedNumberInput
-              name="size"
-              value={size}
-              onChange={setSize}
-              allowDecimal
-              placeholder={unit === "usdt" ? "100" : "0.001"}
-              ariaLabel={
-                unit === "usdt"
-                  ? `Size in ${quoteCoin}`
-                  : `Size in ${baseCoin}`
-              }
-              className={`w-full rounded-control border border-line bg-surface-raised py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none ${
-                unit === "usdt" ? "pr-3 pl-7" : "px-3"
-              }`}
-            />
-          </span>
-          <input type="hidden" name="sizeUnit" value={unit} />
-          <div className="flex shrink-0 rounded-control border border-line bg-surface p-0.5">
+        <div className="block text-sm text-ink">
+          Type
+          <input type="hidden" name="orderType" value={orderType} />
+          <div className="mt-1 flex w-fit rounded-control border border-line bg-surface p-0.5">
             <UnitButton
-              active={unit === "qty"}
-              onClick={() => {
-                setUnit("qty");
-                setSize("");
-              }}
+              active={orderType === "market"}
+              onClick={() => setOrderType("market")}
             >
-              {baseCoin}
+              Market
             </UnitButton>
             <UnitButton
-              active={unit === "usdt"}
-              onClick={() => {
-                setUnit("usdt");
-                setSize("");
-              }}
+              active={orderType === "limit"}
+              onClick={() => setOrderType("limit")}
             >
-              {quoteCoin}
+              Limit
             </UnitButton>
           </div>
         </div>
+        <div className="block text-sm text-ink">
+          Size
+          <div className="mt-1 flex gap-1">
+            <span className="relative min-w-0 flex-1">
+              {unit === "usdt" ? (
+                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
+                  $
+                </span>
+              ) : null}
+              <GroupedNumberInput
+                name="size"
+                value={size}
+                onChange={setSize}
+                allowDecimal
+                placeholder={unit === "usdt" ? "100" : "0.001"}
+                ariaLabel={
+                  unit === "usdt"
+                    ? `Size in ${quoteCoin}`
+                    : `Size in ${baseCoin}`
+                }
+                className={`w-full rounded-control border border-line bg-surface-raised py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none ${
+                  unit === "usdt" ? "pr-3 pl-7" : "px-3"
+                }`}
+              />
+            </span>
+            <input type="hidden" name="sizeUnit" value={unit} />
+            <div className="flex shrink-0 rounded-control border border-line bg-surface p-0.5">
+              <UnitButton
+                active={unit === "qty"}
+                onClick={() => {
+                  setUnit("qty");
+                  setSize("");
+                }}
+              >
+                {baseCoin}
+              </UnitButton>
+              <UnitButton
+                active={unit === "usdt"}
+                onClick={() => {
+                  setUnit("usdt");
+                  setSize("");
+                }}
+              >
+                {quoteCoin}
+              </UnitButton>
+            </div>
+          </div>
+        </div>
+        {actions ? (
+          <div className="flex flex-wrap items-end gap-2">{actions}</div>
+        ) : null}
       </div>
       {orderType === "limit" ? (
-        <div className="block text-sm text-ink">
+        <div className="block max-w-xs text-sm text-ink">
           Limit price
           <span className="relative mt-1 block">
             <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
@@ -120,9 +125,9 @@ export function FuturesOrderTicket({
           </span>
         </div>
       ) : null}
-      <FuturesTpslFields actions={actions} />
+      <FuturesTpslFields />
       <FuturesTrailingFields />
-    </>
+    </div>
   );
 }
 
