@@ -22,9 +22,19 @@ type CreateResult = {
 
 type OrderRow = {
   orderId?: string;
+  orderStatus?: string;
   avgPrice?: string;
   cumExecQty?: string;
   qty?: string;
+  leavesQty?: string;
+};
+
+export type BybitLinearOrderSnapshot = {
+  orderId: string;
+  status: string;
+  avgPrice: number | null;
+  cumExecQty: number;
+  qty: number;
 };
 
 function lotStep(instrument: BybitInstrument | undefined, fallback: number): number {
@@ -185,6 +195,122 @@ export async function bybitCreateMarketOrder(input: {
     return { ok: true, fill: { orderId, avgPrice: null, qty: null } };
   }
   return { ok: true, fill: filled.fill };
+}
+
+export async function bybitCreateLinearLimitOrder(input: {
+  environmentId: string;
+  credentials: BybitPrivateCreds;
+  symbol: string;
+  side: "Buy" | "Sell";
+  qty: string;
+  price: string;
+  reduceOnly?: boolean;
+  positionIdx?: 0 | 1 | 2;
+}): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
+  const body: Record<string, string | boolean | number> = {
+    category: "linear",
+    symbol: input.symbol,
+    side: input.side,
+    orderType: "Limit",
+    qty: input.qty,
+    price: input.price,
+    timeInForce: "GTC",
+    positionIdx: input.positionIdx ?? 0,
+  };
+  if (input.reduceOnly) {
+    body.reduceOnly = true;
+  }
+  const created = await bybitPrivateRequest<CreateResult>({
+    environmentId: input.environmentId,
+    credentials: input.credentials,
+    method: "POST",
+    path: "/v5/order/create",
+    body: JSON.stringify(body),
+  });
+  if (!created.ok) {
+    return created;
+  }
+  const orderId = String(created.result.orderId ?? "");
+  if (!orderId) {
+    return { ok: false, error: "Bybit did not return an order id." };
+  }
+  return { ok: true, orderId };
+}
+
+export async function bybitReadLinearOrder(input: {
+  environmentId: string;
+  credentials: BybitPrivateCreds;
+  orderId: string;
+}): Promise<
+  { ok: true; order: BybitLinearOrderSnapshot } | { ok: false; error: string }
+> {
+  const query = `category=linear&orderId=${encodeURIComponent(input.orderId)}`;
+  const realtime = await bybitPrivateRequest<{ list?: OrderRow[] }>({
+    environmentId: input.environmentId,
+    credentials: input.credentials,
+    method: "GET",
+    path: "/v5/order/realtime",
+    query,
+  });
+  const live = realtime.ok ? realtime.result.list?.[0] : undefined;
+  if (live) {
+    return { ok: true, order: snapshotFromRow(live, input.orderId) };
+  }
+  const history = await bybitPrivateRequest<{ list?: OrderRow[] }>({
+    environmentId: input.environmentId,
+    credentials: input.credentials,
+    method: "GET",
+    path: "/v5/order/history",
+    query,
+  });
+  const past = history.ok ? history.result.list?.[0] : undefined;
+  if (past) {
+    return { ok: true, order: snapshotFromRow(past, input.orderId) };
+  }
+  return { ok: false, error: "Bybit did not return that order." };
+}
+
+export async function bybitCancelLinearOrder(input: {
+  environmentId: string;
+  credentials: BybitPrivateCreds;
+  symbol: string;
+  orderId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const cancelled = await bybitPrivateRequest<Record<string, unknown>>({
+    environmentId: input.environmentId,
+    credentials: input.credentials,
+    method: "POST",
+    path: "/v5/order/cancel",
+    body: JSON.stringify({
+      category: "linear",
+      symbol: input.symbol,
+      orderId: input.orderId,
+    }),
+    allowMissingResult: true,
+  });
+  if (cancelled.ok) {
+    return { ok: true };
+  }
+  if (/not exists|not found|already|110001|110010/i.test(cancelled.error)) {
+    return { ok: true };
+  }
+  return cancelled;
+}
+
+function snapshotFromRow(
+  row: OrderRow,
+  fallbackId: string,
+): BybitLinearOrderSnapshot {
+  const avg = Number(row.avgPrice ?? "");
+  const cum = Number(row.cumExecQty ?? "");
+  const qty = Number(row.qty ?? "");
+  return {
+    orderId: String(row.orderId ?? fallbackId),
+    status: String(row.orderStatus ?? ""),
+    avgPrice: avg > 0 ? avg : null,
+    cumExecQty: cum > 0 ? cum : 0,
+    qty: qty > 0 ? qty : 0,
+  };
 }
 
 async function readOrderFill(input: {

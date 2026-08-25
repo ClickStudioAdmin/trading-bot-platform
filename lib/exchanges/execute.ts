@@ -1,9 +1,13 @@
 import {
+  bybitCancelLinearOrder,
+  bybitCreateLinearLimitOrder,
   bybitCreateMarketOrder,
   bybitEnsureHedgeMode,
+  bybitReadLinearOrder,
   explainHedgeModeError,
   loadCarryInstruments,
   qtyForCarryLegs,
+  type BybitLinearOrderSnapshot,
 } from "@/lib/exchanges/bybit/orders";
 import { loadPerpInstrument, qtyForPerp } from "@/lib/exchanges/bybit/perp";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
@@ -230,4 +234,73 @@ export async function placePerpMarketOnVenue(input: {
       side: input.side,
     },
   };
+}
+
+export async function placePerpLimitOnVenue(input: {
+  connection: BoundConnectionSecrets;
+  symbol: string;
+  side: "Buy" | "Sell";
+  qty: string;
+  price: string;
+  reduceOnly?: boolean;
+  positionIdx: 1 | 2;
+  requireHedge?: boolean;
+}): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
+  if (input.connection.venue !== "bybit") {
+    return { ok: false, error: "That exchange cannot place futures orders yet." };
+  }
+  const hedge = await bybitEnsureHedgeMode({
+    environmentId: input.connection.environment,
+    credentials: creds(input.connection),
+    symbol: input.symbol,
+  });
+  if (!hedge.ok && input.requireHedge) {
+    return { ok: false, error: explainHedgeModeError(hedge.error) };
+  }
+  const created = await bybitCreateLinearLimitOrder({
+    environmentId: input.connection.environment,
+    credentials: creds(input.connection),
+    symbol: input.symbol,
+    side: input.side,
+    qty: input.qty,
+    price: input.price,
+    reduceOnly: input.reduceOnly,
+    positionIdx: hedge.ok ? input.positionIdx : 0,
+  });
+  if (!created.ok) {
+    return { ok: false, error: explainHedgeModeError(created.error) };
+  }
+  return created;
+}
+
+export async function readPerpOrderOnVenue(input: {
+  connection: BoundConnectionSecrets;
+  orderId: string;
+}): Promise<
+  { ok: true; order: BybitLinearOrderSnapshot } | { ok: false; error: string }
+> {
+  if (input.connection.venue !== "bybit") {
+    return { ok: false, error: "That exchange cannot read futures orders yet." };
+  }
+  return bybitReadLinearOrder({
+    environmentId: input.connection.environment,
+    credentials: creds(input.connection),
+    orderId: input.orderId,
+  });
+}
+
+export async function cancelPerpOrderOnVenue(input: {
+  connection: BoundConnectionSecrets;
+  symbol: string;
+  orderId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.connection.venue !== "bybit") {
+    return { ok: false, error: "That exchange cannot cancel futures orders yet." };
+  }
+  return bybitCancelLinearOrder({
+    environmentId: input.connection.environment,
+    credentials: creds(input.connection),
+    symbol: input.symbol,
+    orderId: input.orderId,
+  });
 }

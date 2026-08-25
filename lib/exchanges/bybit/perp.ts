@@ -82,6 +82,26 @@ export function qtyForPerpNotional(
   });
 }
 
+export function priceForPerp(
+  price: number,
+  instrument: BybitInstrument | undefined,
+): { ok: true; price: number; text: string } | { ok: false; error: string } {
+  const tick = parseStep(instrument?.priceFilter?.tickSize, 0.01);
+  const floored = floorToStep(price, tick);
+  if (!(floored > 0)) {
+    return { ok: false, error: "Enter a positive limit price." };
+  }
+  const minPrice = parseStep(instrument?.priceFilter?.minPrice, 0);
+  if (minPrice > 0 && floored < minPrice) {
+    return { ok: false, error: "That limit is below the exchange minimum price." };
+  }
+  return {
+    ok: true,
+    price: floored,
+    text: floored.toFixed(stepDecimals(tick)),
+  };
+}
+
 function baseRank(baseCoin: string): number {
   const pinned = PINNED_BASE_COINS.indexOf(baseCoin);
   return pinned === -1 ? PINNED_BASE_COINS.length : pinned;

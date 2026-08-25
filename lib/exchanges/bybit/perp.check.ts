@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { isUsdtLinearPerp, listUsdtLinearPerps, qtyForPerp, qtyForPerpNotional } from "./perp";
+import {
+  isUsdtLinearPerp,
+  listUsdtLinearPerps,
+  priceForPerp,
+  qtyForPerp,
+  qtyForPerpNotional,
+} from "./perp";
 
 assert.equal(
   isUsdtLinearPerp({
@@ -125,5 +131,18 @@ const notionalTooSmall = qtyForPerpNotional(1, 50_000, {
   },
 });
 assert.equal(notionalTooSmall.ok, false);
+
+const priced = priceForPerp(80123.456, {
+  symbol: "BTCUSDT",
+  status: "Trading",
+  baseCoin: "BTC",
+  quoteCoin: "USDT",
+  priceFilter: { tickSize: "0.1" },
+});
+assert.equal(priced.ok, true);
+if (priced.ok) {
+  assert.equal(priced.price, 80123.4);
+  assert.equal(priced.text, "80123.4");
+}
 
 console.log("bybit perp checks passed");

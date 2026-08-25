@@ -1,5 +1,6 @@
 export type FuturesSide = "long" | "short";
 export type FuturesAction = "buy" | "sell" | "flatten";
+export type FuturesOrderType = "market" | "limit";
 export type FuturesPositionStatus = "open" | "closed";
 
 export type FuturesPosition = {
@@ -78,6 +79,29 @@ export function parseFuturesNotional(
     return { ok: false, error: "Enter a positive USDT or USDC amount." };
   }
   return parsed;
+}
+
+export function parseFuturesOrderType(
+  raw: unknown,
+): { ok: true; orderType: FuturesOrderType } | { ok: false; error: string } {
+  const orderType = String(raw ?? "market").trim().toLowerCase();
+  if (orderType === "" || orderType === "market") {
+    return { ok: true, orderType: "market" };
+  }
+  if (orderType === "limit") {
+    return { ok: true, orderType: "limit" };
+  }
+  return { ok: false, error: "Choose Market or Limit." };
+}
+
+export function parseFuturesLimitPrice(
+  raw: unknown,
+): { ok: true; price: number } | { ok: false; error: string } {
+  const price = Number(String(raw ?? "").replace(/,/g, "").trim());
+  if (!(price > 0) || !Number.isFinite(price)) {
+    return { ok: false, error: "Enter a positive limit price." };
+  }
+  return { ok: true, price };
 }
 
 export function parseFuturesAction(

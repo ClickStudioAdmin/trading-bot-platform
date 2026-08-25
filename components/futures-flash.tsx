@@ -2,17 +2,23 @@ export function FuturesFlash({
   opened,
   added,
   closed,
+  working,
+  cancelled,
   liveOpened,
   liveAdded,
   liveClosed,
+  liveWorking,
   error,
 }: {
   opened: boolean;
   added?: boolean;
   closed?: boolean;
+  working?: boolean;
+  cancelled?: boolean;
   liveOpened?: boolean;
   liveAdded?: boolean;
   liveClosed?: boolean;
+  liveWorking?: boolean;
   error?: string;
 }) {
   if (error) {
@@ -43,6 +49,13 @@ export function FuturesFlash({
       </p>
     );
   }
+  if (liveWorking) {
+    return (
+      <p className="text-sm text-success">
+        Limit working on the connected exchange.
+      </p>
+    );
+  }
   if (opened) {
     return <p className="text-sm text-success">Paper futures opened.</p>;
   }
@@ -51,6 +64,12 @@ export function FuturesFlash({
   }
   if (closed) {
     return <p className="text-sm text-success">Paper futures closed.</p>;
+  }
+  if (working) {
+    return <p className="text-sm text-success">Paper limit is working.</p>;
+  }
+  if (cancelled) {
+    return <p className="text-sm text-success">Order cancelled.</p>;
   }
   return null;
 }

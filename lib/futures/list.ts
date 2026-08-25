@@ -4,6 +4,10 @@ import {
   type FuturesOrder,
   type FuturesPosition,
 } from "./model";
+import {
+  parseFuturesWorkingRow,
+  type FuturesWorkingOrder,
+} from "./working";
 import { getSessionContext } from "@/lib/auth/session";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import {
@@ -59,6 +63,27 @@ export async function loadFuturesOrders(): Promise<FuturesOrder[]> {
   );
 }
 
+export async function loadOpenFuturesWorking(): Promise<FuturesWorkingOrder[]> {
+  const session = await getSessionContext();
+  const supabase = createServiceClient();
+  if (!session || !supabase) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("futures_working_orders")
+    .select("*")
+    .eq("account_id", session.account.id)
+    .eq("user_id", session.member.id)
+    .eq("status", "open")
+    .order("created_at", { ascending: false });
+  if (error || !data) {
+    return [];
+  }
+  return data.map((row) =>
+    parseFuturesWorkingRow(row as Record<string, unknown>),
+  );
+}
+
 export type FuturesDeskPosition = FuturesPosition & {
   orders: FuturesOrder[];
   logs: EventLogRow[];
@@ -79,18 +104,26 @@ export async function loadFuturesDesk(): Promise<{
   exchangeBook: boolean;
   open: FuturesDeskPosition[];
   closed: FuturesDeskPosition[];
+  working: FuturesWorkingOrder[];
 }> {
   const session = await getSessionContext();
   if (!session) {
-    return { signedIn: false, exchangeBook: false, open: [], closed: [] };
+    return {
+      signedIn: false,
+      exchangeBook: false,
+      open: [],
+      closed: [],
+      working: [],
+    };
   }
-  const [rows, orders, logs] = await Promise.all([
+  const [rows, orders, logs, working] = await Promise.all([
     loadFuturesPositions(),
     loadFuturesOrders(),
     listEventLogs(
       { scope: "trade", level: "", event: "" },
       { accountId: session.account.id, limit: 400 },
     ),
+    loadOpenFuturesWorking(),
   ]);
   const withOrders = attachOrders(rows, orders);
   const withLogs = attachPositionLogs(withOrders, logs);
@@ -99,6 +132,7 @@ export async function loadFuturesDesk(): Promise<{
     exchangeBook: accountCanHoldConnections(session.account.mode),
     open: withLogs.filter((row) => row.status === "open"),
     closed: withLogs.filter((row) => row.status === "closed"),
+    working,
   };
 }
 

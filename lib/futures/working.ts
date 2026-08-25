@@ -1,0 +1,127 @@
+import type { FuturesAction, FuturesSide } from "./model";
+
+export type FuturesWorkingStatus = "open" | "filled" | "cancelled" | "rejected";
+
+export type FuturesWorkingOrder = {
+  id: string;
+  userId: string;
+  accountId: string;
+  positionId: string | null;
+  symbol: string;
+  action: "buy" | "sell";
+  side: FuturesSide;
+  qty: number;
+  filledQty: number;
+  remainingQty: number;
+  limitPrice: number;
+  status: FuturesWorkingStatus;
+  venue: string | null;
+  environment: string | null;
+  venueOrderId: string | null;
+  createdAtMs: number;
+};
+
+export function paperLimitShouldFill(input: {
+  orderSide: "Buy" | "Sell";
+  limitPrice: number;
+  mark: number;
+}): boolean {
+  if (!(input.limitPrice > 0) || !(input.mark > 0)) {
+    return false;
+  }
+  if (input.orderSide === "Buy") {
+    return input.mark <= input.limitPrice;
+  }
+  return input.mark >= input.limitPrice;
+}
+
+export function nextWorkingFill(input: {
+  qty: number;
+  filledQty: number;
+  venueFilledQty: number;
+}): { delta: number; nextFilled: number; remaining: number; done: boolean } {
+  const cap = input.qty > 0 ? input.qty : 0;
+  const already = Math.max(0, input.filledQty);
+  const venue = Math.min(cap, Math.max(0, input.venueFilledQty));
+  const delta = Math.max(0, venue - already);
+  const nextFilled = already + delta;
+  const remaining = Math.max(0, cap - nextFilled);
+  return {
+    delta,
+    nextFilled,
+    remaining,
+    done: remaining <= 1e-12,
+  };
+}
+
+export function mapBybitOrderStatus(status: string): FuturesWorkingStatus {
+  const value = status.trim().toLowerCase();
+  if (value === "filled") {
+    return "filled";
+  }
+  if (
+    value === "cancelled" ||
+    value === "canceled" ||
+    value === "rejected" ||
+    value === "deactivated" ||
+    value === "partiallyfilledcanceled" ||
+    value === "partiallyfilledcancelled"
+  ) {
+    return value === "rejected" ? "rejected" : "cancelled";
+  }
+  return "open";
+}
+
+export function workingOrderSide(action: "buy" | "sell"): "Buy" | "Sell" {
+  return action === "buy" ? "Buy" : "Sell";
+}
+
+export function parseFuturesWorkingRow(
+  row: Record<string, unknown>,
+): FuturesWorkingOrder {
+  const created = new Date(String(row.created_at ?? "")).getTime();
+  const action = row.action === "sell" ? "sell" : "buy";
+  const status = parseWorkingStatus(row.status);
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    accountId: String(row.account_id),
+    positionId: row.position_id ? String(row.position_id) : null,
+    symbol: String(row.symbol),
+    action,
+    side: row.side === "short" ? "short" : "long",
+    qty: Number(row.qty) || 0,
+    filledQty: Number(row.filled_qty) || 0,
+    remainingQty: Number(row.remaining_qty) || 0,
+    limitPrice: Number(row.limit_price) || 0,
+    status,
+    venue: row.venue ? String(row.venue) : null,
+    environment: row.environment ? String(row.environment) : null,
+    venueOrderId: row.venue_order_id ? String(row.venue_order_id) : null,
+    createdAtMs: Number.isFinite(created) ? created : 0,
+  };
+}
+
+function parseWorkingStatus(raw: unknown): FuturesWorkingStatus {
+  if (raw === "filled" || raw === "cancelled" || raw === "rejected") {
+    return raw;
+  }
+  return "open";
+}
+
+export function formatWorkingStatus(status: FuturesWorkingStatus): string {
+  if (status === "filled") {
+    return "Filled";
+  }
+  if (status === "cancelled") {
+    return "Cancelled";
+  }
+  if (status === "rejected") {
+    return "Rejected";
+  }
+  return "Open";
+}
+
+export function workingActionLabel(action: FuturesAction | "buy" | "sell"): string {
+  return action === "sell" ? "Sell" : "Buy";
+}

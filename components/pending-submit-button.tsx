@@ -48,6 +48,9 @@ function queryLooksSuccessful() {
     paper === "live-added" ||
     paper === "live-closed" ||
     paper === "live-unwinding" ||
+    paper === "working" ||
+    paper === "live-working" ||
+    paper === "cancelled" ||
     paper === "exits" ||
     params.get("saved") === "1" ||
     params.get("saved") === "profile" ||

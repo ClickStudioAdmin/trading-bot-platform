@@ -39,6 +39,7 @@ import {
   pickOpenCarryForPair,
   type PaperCarryRow,
 } from "@/lib/paper/rows";
+import { reconcileOpenFuturesWorkingOrders } from "@/lib/futures/reconcile";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 export async function runPaperEngineTick(): Promise<{
@@ -473,6 +474,19 @@ export async function runPaperEngineTick(): Promise<{
         },
       });
     }
+  }
+
+  try {
+    await reconcileOpenFuturesWorkingOrders();
+  } catch (cause) {
+    await writeEventLog({
+      level: "error",
+      scope: "strategy",
+      event: "trade.futures_working_failed",
+      message:
+        cause instanceof Error ? cause.message : "Working order tick failed",
+      strategy: "futures",
+    });
   }
 
   await writeEventLog({

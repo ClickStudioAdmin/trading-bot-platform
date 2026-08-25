@@ -192,3 +192,47 @@ export async function writeFuturesFlatten(input: {
     venueOrderId: input.venueOrderId,
   });
 }
+
+export async function insertFuturesWorking(
+  supabase: SupabaseClient,
+  input: {
+    userId: string;
+    accountId: string;
+    symbol: string;
+    action: "buy" | "sell";
+    side: FuturesSide;
+    qty: number;
+    limitPrice: number;
+    venue?: string | null;
+    environment?: string | null;
+    venueOrderId?: string | null;
+  },
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const { data, error } = await supabase
+    .from("futures_working_orders")
+    .insert({
+      user_id: input.userId,
+      account_id: input.accountId,
+      symbol: input.symbol,
+      action: input.action,
+      side: input.side,
+      qty: input.qty,
+      filled_qty: 0,
+      remaining_qty: input.qty,
+      limit_price: input.limitPrice,
+      status: "open",
+      source: "manual",
+      venue: input.venue ?? null,
+      environment: input.environment ?? null,
+      venue_order_id: input.venueOrderId ?? null,
+    })
+    .select("id")
+    .single();
+  if (error || !data) {
+    return {
+      ok: false,
+      error: error?.message ?? "Could not save the working order.",
+    };
+  }
+  return { ok: true, id: String((data as { id: string }).id) };
+}

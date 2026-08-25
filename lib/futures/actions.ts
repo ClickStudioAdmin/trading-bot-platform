@@ -2,20 +2,27 @@
 
 import { decideFuturesAction, hedgePositionIdx } from "./decide";
 import {
+  insertFuturesWorking,
   writeFuturesAdd,
   writeFuturesFlatten,
   writeFuturesOpen,
 } from "./ledger";
-import { loadOpenFuturesOnSymbol } from "./list";
+import { loadOpenFuturesOnSymbol, loadOpenFuturesWorking } from "./list";
 import { markFromTicker } from "./math";
 import {
   parseFuturesAction,
+  parseFuturesLimitPrice,
   parseFuturesNotional,
+  parseFuturesOrderType,
   parseFuturesQty,
   parseFuturesSizeUnit,
   parseFuturesSymbol,
 } from "./model";
 import { safeFuturesReturnPath } from "./path";
+import {
+  cancelFuturesWorkingRow,
+  reconcileOpenFuturesWorkingOrders,
+} from "./reconcile";
 import { loadFuturesSettings } from "./settings";
 import {
   formatStrategyDetachBlockers,
@@ -23,10 +30,17 @@ import {
 } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
 import { fetchBybitTicker } from "@/lib/exchanges/bybit/client";
-import { loadPerpInstrument, qtyForPerp, qtyForPerpNotional } from "@/lib/exchanges/bybit/perp";
-import { placePerpMarketOnVenue } from "@/lib/exchanges/execute";
+import { loadPerpInstrument, priceForPerp, qtyForPerp, qtyForPerpNotional } from "@/lib/exchanges/bybit/perp";
+import {
+  cancelPerpOrderOnVenue,
+  placePerpLimitOnVenue,
+  placePerpMarketOnVenue,
+} from "@/lib/exchanges/execute";
 import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
-import { listExchangeConnections } from "@/lib/exchanges/store";
+import {
+  listExchangeConnections,
+  type BoundConnectionSecrets,
+} from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
@@ -232,6 +246,25 @@ export async function submitFuturesTrade(formData: FormData) {
   if (!unitParsed.ok) {
     fail(next, unitParsed.error);
   }
+  const typeParsed = parseFuturesOrderType(formData.get("orderType"));
+  if (!typeParsed.ok) {
+    fail(next, typeParsed.error);
+  }
+  let limit:
+    | { price: number; text: string }
+    | null = null;
+  if (typeParsed.orderType === "limit") {
+    const parsed = parseFuturesLimitPrice(formData.get("limitPrice"));
+    if (!parsed.ok) {
+      fail(next, parsed.error);
+    }
+    const priced = priceForPerp(parsed.price, instrument);
+    if (!priced.ok) {
+      fail(next, priced.error);
+    }
+    limit = priced;
+  }
+  const sizePrice = limit?.price ?? mark;
   const sizeRaw = formData.get("size") ?? formData.get("qty");
   let sized: { ok: true; qty: number; text: string } | { ok: false; error: string };
   if (unitParsed.unit === "usdt") {
@@ -239,7 +272,7 @@ export async function submitFuturesTrade(formData: FormData) {
     if (!notional.ok) {
       fail(next, notional.error);
     }
-    sized = qtyForPerpNotional(notional.qty, mark, instrument);
+    sized = qtyForPerpNotional(notional.qty, sizePrice, instrument);
   } else {
     const qtyParsed = parseFuturesQty(sizeRaw);
     if (!qtyParsed.ok) {
@@ -252,6 +285,103 @@ export async function submitFuturesTrade(formData: FormData) {
   }
   const qtyText = sized.text;
   let qtyNumber = sized.qty;
+
+  if (limit) {
+    const connection = await boundLive();
+    let venue: string | null = null;
+    let environment: string | null = null;
+    let venueOrderId: string | null = null;
+    if (connection) {
+      const placed = await placePerpLimitOnVenue({
+        connection,
+        symbol,
+        side: decided.orderSide,
+        qty: qtyText,
+        price: limit.text,
+        reduceOnly: decided.reduceOnly,
+        positionIdx: hedgePositionIdx(decided.positionSide),
+        requireHedge:
+          decided.kind === "open" &&
+          opens.some((row) => row.side !== decided.positionSide),
+      });
+      if (!placed.ok) {
+        await writeEventLog({
+          level: "error",
+          scope: "trade",
+          event: "trade.futures_failed",
+          message: placed.error,
+          userId: user.id,
+          accountId: account.id,
+          strategy: FUTURES_STRATEGY_ID,
+          data: { symbol, action: actionParsed.action },
+        });
+        fail(next, placed.error);
+      }
+      venue = connection.venue;
+      environment = connection.environment;
+      venueOrderId = placed.orderId;
+    }
+    const working = await insertFuturesWorking(supabase, {
+      userId: user.id,
+      accountId: account.id,
+      symbol,
+      action: actionParsed.action === "sell" ? "sell" : "buy",
+      side: decided.positionSide,
+      qty: qtyNumber,
+      limitPrice: limit.price,
+      venue,
+      environment,
+      venueOrderId,
+    });
+    if (!working.ok) {
+      if (connection && venueOrderId) {
+        await cancelPerpOrderOnVenue({
+          connection,
+          symbol,
+          orderId: venueOrderId,
+        });
+      }
+      fail(next, working.error);
+    }
+    await writeEventLog({
+      scope: "trade",
+      event: "trade.futures",
+      message: `Limit ${actionParsed.action === "sell" ? "Sell" : "Buy"} ${symbol} working`,
+      userId: user.id,
+      accountId: account.id,
+      strategy: FUTURES_STRATEGY_ID,
+      data: {
+        symbol,
+        action: actionParsed.action,
+        qty: qtyNumber,
+        limitPrice: limit.price,
+        live: liveBook,
+        workingId: working.id,
+      },
+    });
+    await reconcileOpenFuturesWorkingOrders({
+      accountId: account.id,
+      userId: user.id,
+    });
+    const stillWorking = (await loadOpenFuturesWorking()).some(
+      (row) => row.id === working.id,
+    );
+    revalidatePath(FUTURES_PATHS.root);
+    revalidatePath(FUTURES_PATHS.positions);
+    revalidatePath(FUTURES_PATHS.performance);
+    if (!stillWorking) {
+      const filledFlash =
+        decided.kind === "add"
+          ? liveBook
+            ? "live-added"
+            : "added"
+          : liveBook
+            ? "live-opened"
+            : "opened";
+      redirect(`${next}?paper=${filledFlash}`);
+    }
+    redirect(`${next}?paper=${liveBook ? "live-working" : "working"}`);
+  }
 
   let fillPrice = mark;
   let venue: string | null = null;
@@ -396,6 +526,64 @@ export async function submitFuturesTrade(formData: FormData) {
   redirect(`${next}?paper=${flash}`);
 }
 
+export async function cancelFuturesWorking(formData: FormData) {
+  const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const { member: user, account } = session;
+  const supabase = createServiceClient();
+  if (!supabase) {
+    fail(next, "Auth is not configured.");
+  }
+  const workingId = String(formData.get("workingId") ?? "").trim();
+  const opens = await loadOpenFuturesWorking();
+  const row = opens.find((item) => item.id === workingId) ?? null;
+  if (!row) {
+    fail(next, "That order is no longer open.");
+  }
+  let connection: BoundConnectionSecrets | null = null;
+  if (accountCanHoldConnections(account.mode)) {
+    const settings = await loadFuturesSettings(account.id);
+    if (!settings.connectionId && row.venueOrderId) {
+      fail(next, "Bind an exchange in Futures Strategy Settings before cancelling.");
+    }
+    if (settings.connectionId) {
+      const bound = await loadBoundVenueForAccount({
+        userId: user.id,
+        accountId: account.id,
+        mode: account.mode,
+        connectionId: settings.connectionId,
+      });
+      if (!bound.ok) {
+        fail(next, bound.error);
+      }
+      connection = bound.connection;
+    }
+  }
+  const cancelled = await cancelFuturesWorkingRow({
+    supabase,
+    row,
+    connection,
+  });
+  if (!cancelled.ok) {
+    fail(next, cancelled.error);
+  }
+  await writeEventLog({
+    scope: "trade",
+    event: "trade.futures",
+    message: `Cancelled limit ${row.symbol}`,
+    userId: user.id,
+    accountId: account.id,
+    strategy: FUTURES_STRATEGY_ID,
+    data: { symbol: row.symbol, workingId: row.id, action: row.action },
+  });
+  revalidatePath(FUTURES_PATHS.root);
+  revalidatePath(FUTURES_PATHS.positions);
+  redirect(`${next}?paper=cancelled`);
+}
+
 export async function saveFuturesSettings(formData: FormData) {
   const session = await getSessionContext();
   if (!session) {
@@ -531,11 +719,17 @@ async function loadOpenFuturesCount(
   if (!supabase) {
     return 0;
   }
-  const { count } = await supabase
+  const { count: positions } = await supabase
     .from("futures_positions")
     .select("id", { count: "exact", head: true })
     .eq("account_id", accountId)
     .eq("user_id", userId)
     .eq("status", "open");
-  return count ?? 0;
+  const { count: working } = await supabase
+    .from("futures_working_orders")
+    .select("id", { count: "exact", head: true })
+    .eq("account_id", accountId)
+    .eq("user_id", userId)
+    .eq("status", "open");
+  return (positions ?? 0) + (working ?? 0);
 }

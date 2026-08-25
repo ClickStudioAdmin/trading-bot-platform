@@ -162,7 +162,7 @@ export async function loadAccountUsage(
     return usage;
   }
   const accountIds = accounts.map((account) => account.id);
-  const [{ data: openRows }, { data: futuresOpenRows }, settings, ruleRows, futuresBinds] =
+  const [{ data: openRows }, { data: futuresOpenRows }, { data: futuresWorkingRows }, settings, ruleRows, futuresBinds] =
     await Promise.all([
     supabase
       .from("paper_carries")
@@ -171,6 +171,11 @@ export async function loadAccountUsage(
       .in("status", ["open", "closing"]),
     supabase
       .from("futures_positions")
+      .select("account_id")
+      .in("account_id", accountIds)
+      .eq("status", "open"),
+    supabase
+      .from("futures_working_orders")
       .select("account_id")
       .in("account_id", accountIds)
       .eq("status", "open"),
@@ -185,6 +190,10 @@ export async function loadAccountUsage(
     carryOpenCount.set(id, (carryOpenCount.get(id) ?? 0) + 1);
   }
   for (const row of futuresOpenRows ?? []) {
+    const id = String((row as { account_id: string }).account_id);
+    futuresOpenCount.set(id, (futuresOpenCount.get(id) ?? 0) + 1);
+  }
+  for (const row of futuresWorkingRows ?? []) {
     const id = String((row as { account_id: string }).account_id);
     futuresOpenCount.set(id, (futuresOpenCount.get(id) ?? 0) + 1);
   }
@@ -274,6 +283,14 @@ export async function deleteTradingAccountRow(
     .eq("user_id", userId);
   if (connectionError) {
     return { error: connectionError.message };
+  }
+  const { error: futuresWorkingError } = await supabase
+    .from("futures_working_orders")
+    .delete()
+    .eq("account_id", accountId)
+    .eq("user_id", userId);
+  if (futuresWorkingError) {
+    return { error: futuresWorkingError.message };
   }
   const { error: futuresOrderError } = await supabase
     .from("futures_orders")

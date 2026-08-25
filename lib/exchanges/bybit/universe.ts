@@ -31,6 +31,11 @@ export type BybitInstrument = {
     minOrderAmt?: string;
     minNotionalValue?: string;
   };
+  priceFilter?: {
+    tickSize?: string;
+    minPrice?: string;
+    maxPrice?: string;
+  };
 };
 
 export type CarryPair = {

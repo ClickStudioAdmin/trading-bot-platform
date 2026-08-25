@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FuturesFlash } from "@/components/futures-flash";
-import {
-  OpenFuturesTrades,
-} from "@/components/futures-blotter";
+import { OpenFuturesTrades } from "@/components/futures-blotter";
+import { FuturesWorkingOrders } from "@/components/futures-working";
+import { getSessionContext } from "@/lib/auth/session";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
 import {
   baseCoinForPerpSymbol,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/exchanges/bybit/perp";
 import { loadFuturesDesk } from "@/lib/futures/list";
 import { markFuturesOpen } from "@/lib/futures/mark";
+import { reconcileOpenFuturesWorkingOrders } from "@/lib/futures/reconcile";
 import { firstSearchValue } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
@@ -25,6 +26,13 @@ export default async function FuturesOverviewPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const session = await getSessionContext();
+  if (session) {
+    await reconcileOpenFuturesWorkingOrders({
+      accountId: session.account.id,
+      userId: session.member.id,
+    });
+  }
   const desk = await loadFuturesDesk();
   const [tickers, pairs] = await Promise.all([
     desk.open.length > 0
@@ -53,10 +61,20 @@ export default async function FuturesOverviewPage({
         opened={firstSearchValue(params.paper) === "opened"}
         added={firstSearchValue(params.paper) === "added"}
         closed={firstSearchValue(params.paper) === "closed"}
+        working={firstSearchValue(params.paper) === "working"}
+        cancelled={firstSearchValue(params.paper) === "cancelled"}
         liveOpened={firstSearchValue(params.paper) === "live-opened"}
         liveAdded={firstSearchValue(params.paper) === "live-added"}
         liveClosed={firstSearchValue(params.paper) === "live-closed"}
+        liveWorking={firstSearchValue(params.paper) === "live-working"}
         error={firstSearchValue(params.paperError)}
+      />
+      <FuturesWorkingOrders
+        signedIn={desk.signedIn}
+        working={desk.working}
+        next={FUTURES_PATHS.root}
+        exchangeBook={desk.exchangeBook}
+        baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
       />
       <OpenFuturesTrades
         signedIn={desk.signedIn}

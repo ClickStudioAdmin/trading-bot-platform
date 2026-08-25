@@ -42,8 +42,8 @@ export default function StrategiesPage() {
             Futures
           </h2>
           <p className="mt-2 text-sm text-ink-muted">
-            Buy or sell one USDT linear perpetual on Bybit. Close from the open
-            row.
+            Buy or sell one USDT linear perpetual on Bybit, market or limit.
+            Close from the open row.
           </p>
         </Link>
       </div>

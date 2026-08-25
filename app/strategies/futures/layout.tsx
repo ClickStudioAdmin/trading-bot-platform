@@ -28,7 +28,7 @@ export default async function FuturesLayout({
     <div>
       <StrategySubnav
         title="Futures"
-        description="Buy or sell one USDT linear perpetual. Long and short can both be open."
+        description="Buy, sell, or close one USDT linear perpetual. Market or limit. Long and short can both be open."
         navLabel="Futures"
         primaryLinks={FUTURES_PRIMARY_LINKS}
         secondaryLinks={FUTURES_SECONDARY_LINKS}

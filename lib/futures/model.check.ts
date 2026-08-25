@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
   parseFuturesAction,
+  parseFuturesLimitPrice,
   parseFuturesNotional,
+  parseFuturesOrderType,
   parseFuturesQty,
   parseFuturesSizeUnit,
   parseFuturesSymbol,
@@ -43,5 +45,16 @@ if (closed.ok) {
   assert.equal(closed.action, "flatten");
 }
 assert.equal(parseFuturesAction("flip").ok, false);
+
+assert.equal(parseFuturesOrderType("").ok, true);
+assert.equal(parseFuturesOrderType("Limit").ok, true);
+const limitType = parseFuturesOrderType("limit");
+assert.equal(limitType.ok, true);
+if (limitType.ok) {
+  assert.equal(limitType.orderType, "limit");
+}
+assert.equal(parseFuturesOrderType("stop").ok, false);
+assert.equal(parseFuturesLimitPrice("80123.4").ok, true);
+assert.equal(parseFuturesLimitPrice("0").ok, false);
 
 console.log("futures model checks passed");
