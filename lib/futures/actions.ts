@@ -1,12 +1,12 @@
 "use server";
 
-import { decideFuturesAction } from "./decide";
+import { decideFuturesAction, hedgePositionIdx } from "./decide";
 import {
   writeFuturesAdd,
   writeFuturesFlatten,
   writeFuturesOpen,
 } from "./ledger";
-import { loadOpenFuturesForSymbol } from "./list";
+import { loadOpenFuturesOnSymbol } from "./list";
 import { markFromTicker } from "./math";
 import {
   parseFuturesAction,
@@ -69,14 +69,22 @@ export async function submitFuturesTrade(formData: FormData) {
   }
 
   const settings = await loadFuturesSettings(account.id);
-  const open = await loadOpenFuturesForSymbol(symbol);
-  const decided = decideFuturesAction({
-    action: actionParsed.action,
-    open: open ? { side: open.side, qty: open.qty } : null,
-    reduceOnly: settings.reduceOnly,
-  });
-  if (!decided.ok) {
-    fail(next, decided.error);
+  const opens = await loadOpenFuturesOnSymbol(symbol);
+  const wantedSide = actionParsed.action === "buy" ? "long" : "short";
+  const flattenId = String(formData.get("positionId") ?? "").trim();
+  const flattenTargets =
+    actionParsed.action === "flatten"
+      ? flattenId
+        ? opens.filter((row) => row.id === flattenId)
+        : []
+      : [];
+  if (actionParsed.action === "flatten" && flattenTargets.length === 0) {
+    fail(
+      next,
+      flattenId
+        ? "That position is no longer open."
+        : "Flatten from the open row.",
+    );
   }
 
   const instrument = await loadPerpInstrument(symbol);
@@ -90,48 +98,10 @@ export async function submitFuturesTrade(formData: FormData) {
     fail(next, "Could not read a mark price for that contract.");
   }
 
-  let qtyText: string;
-  let qtyNumber: number;
-  if (decided.kind === "flatten") {
-    const sized = qtyForPerp(open?.qty ?? decided.qty, instrument);
-    if (!sized.ok) {
-      fail(next, sized.error);
+  const boundLive = async () => {
+    if (!liveBook) {
+      return null;
     }
-    qtyText = sized.text;
-    qtyNumber = sized.qty;
-  } else {
-    const unitParsed = parseFuturesSizeUnit(formData.get("sizeUnit"));
-    if (!unitParsed.ok) {
-      fail(next, unitParsed.error);
-    }
-    const sizeRaw = formData.get("size") ?? formData.get("qty");
-    let sized: { ok: true; qty: number; text: string } | { ok: false; error: string };
-    if (unitParsed.unit === "usdt") {
-      const notional = parseFuturesNotional(sizeRaw);
-      if (!notional.ok) {
-        fail(next, notional.error);
-      }
-      sized = qtyForPerpNotional(notional.qty, mark, instrument);
-    } else {
-      const qtyParsed = parseFuturesQty(sizeRaw);
-      if (!qtyParsed.ok) {
-        fail(next, qtyParsed.error);
-      }
-      sized = qtyForPerp(qtyParsed.qty, instrument);
-    }
-    if (!sized.ok) {
-      fail(next, sized.error);
-    }
-    qtyText = sized.text;
-    qtyNumber = sized.qty;
-  }
-
-  let fillPrice = mark;
-  let venue: string | null = null;
-  let environment: string | null = null;
-  let venueOrderId: string | null = null;
-
-  if (liveBook) {
     if (!settings.connectionId) {
       fail(next, "Bind an exchange in Futures Strategy Settings before trading.");
     }
@@ -144,12 +114,165 @@ export async function submitFuturesTrade(formData: FormData) {
     if (!bound.ok) {
       fail(next, bound.error);
     }
+    return bound.connection;
+  };
+
+  if (actionParsed.action === "flatten") {
+    const connection = await boundLive();
+    for (const row of flattenTargets) {
+      const decided = decideFuturesAction({
+        action: "flatten",
+        open: { side: row.side, qty: row.qty },
+        reduceOnly: settings.reduceOnly,
+      });
+      if (!decided.ok || decided.kind !== "flatten") {
+        fail(next, decided.ok ? "Could not flatten that position." : decided.error);
+      }
+      const sized = qtyForPerp(row.qty, instrument);
+      if (!sized.ok) {
+        fail(next, sized.error);
+      }
+      let qtyNumber = sized.qty;
+      let fillPrice = mark;
+      let venue: string | null = null;
+      let environment: string | null = null;
+      let venueOrderId: string | null = null;
+      if (connection) {
+        const placed = await placePerpMarketOnVenue({
+          connection,
+          symbol,
+          side: decided.orderSide,
+          qty: sized.text,
+          reduceOnly: true,
+          positionIdx: hedgePositionIdx(row.side),
+          requireHedge: flattenTargets.length > 1 || opens.length > 1,
+        });
+        if (!placed.ok) {
+          await writeEventLog({
+            level: "error",
+            scope: "trade",
+            event: "trade.futures_failed",
+            message: placed.error,
+            userId: user.id,
+            accountId: account.id,
+            strategy: FUTURES_STRATEGY_ID,
+            data: { symbol, action: "flatten", positionId: row.id },
+          });
+          fail(next, placed.error);
+        }
+        venue = placed.fill.venue;
+        environment = placed.fill.environment;
+        venueOrderId = placed.fill.orderId;
+        const filledQty = Number(placed.fill.qty);
+        if (filledQty > 0) {
+          qtyNumber = filledQty;
+        }
+        if (placed.fill.price != null && placed.fill.price > 0) {
+          fillPrice = placed.fill.price;
+        }
+      }
+      const written = await writeFuturesFlatten({
+        supabase,
+        row,
+        qty: qtyNumber,
+        price: fillPrice,
+        venue,
+        environment,
+        venueOrderId,
+      });
+      if (written.error) {
+        await writeEventLog({
+          level: "error",
+          scope: "trade",
+          event: "trade.futures_failed",
+          message: written.error,
+          userId: user.id,
+          accountId: account.id,
+          strategy: FUTURES_STRATEGY_ID,
+          data: { symbol, action: "flatten", positionId: row.id },
+        });
+        fail(next, written.error);
+      }
+      await writeEventLog({
+        scope: "trade",
+        event: "trade.futures",
+        message: `Flattened ${symbol} ${row.side}`,
+        userId: user.id,
+        accountId: account.id,
+        strategy: FUTURES_STRATEGY_ID,
+        data: {
+          symbol,
+          action: "flatten",
+          qty: qtyNumber,
+          live: liveBook,
+          positionId: row.id,
+          side: row.side,
+        },
+      });
+    }
+    revalidatePath(FUTURES_PATHS.root);
+    revalidatePath(FUTURES_PATHS.positions);
+    revalidatePath(FUTURES_PATHS.performance);
+    redirect(
+      `${next}?paper=${liveBook ? "live-closed" : "closed"}`,
+    );
+  }
+
+  const sameSide = opens.find((row) => row.side === wantedSide) ?? null;
+  const decided = decideFuturesAction({
+    action: actionParsed.action,
+    open: sameSide ? { side: sameSide.side, qty: sameSide.qty } : null,
+    reduceOnly: settings.reduceOnly,
+  });
+  if (!decided.ok) {
+    fail(next, decided.error);
+  }
+
+  const unitParsed = parseFuturesSizeUnit(formData.get("sizeUnit"));
+  if (!unitParsed.ok) {
+    fail(next, unitParsed.error);
+  }
+  const sizeRaw = formData.get("size") ?? formData.get("qty");
+  let sized: { ok: true; qty: number; text: string } | { ok: false; error: string };
+  if (unitParsed.unit === "usdt") {
+    const notional = parseFuturesNotional(sizeRaw);
+    if (!notional.ok) {
+      fail(next, notional.error);
+    }
+    sized = qtyForPerpNotional(notional.qty, mark, instrument);
+  } else {
+    const qtyParsed = parseFuturesQty(sizeRaw);
+    if (!qtyParsed.ok) {
+      fail(next, qtyParsed.error);
+    }
+    sized = qtyForPerp(qtyParsed.qty, instrument);
+  }
+  if (!sized.ok) {
+    fail(next, sized.error);
+  }
+  const qtyText = sized.text;
+  let qtyNumber = sized.qty;
+
+  let fillPrice = mark;
+  let venue: string | null = null;
+  let environment: string | null = null;
+  let venueOrderId: string | null = null;
+
+  if (liveBook) {
+    const connection = await boundLive();
+    if (!connection) {
+      fail(next, "Bind an exchange in Futures Strategy Settings before trading.");
+    }
     const placed = await placePerpMarketOnVenue({
-      connection: bound.connection,
+      connection,
       symbol,
       side: decided.orderSide,
       qty: qtyText,
       reduceOnly: decided.reduceOnly,
+      positionIdx: hedgePositionIdx(decided.positionSide),
+      requireHedge:
+        decided.kind === "open" &&
+        opens.some((row) => row.side !== decided.positionSide),
     });
     if (!placed.ok) {
       await writeEventLog({
@@ -160,7 +283,11 @@ export async function submitFuturesTrade(formData: FormData) {
         userId: user.id,
         accountId: account.id,
         strategy: FUTURES_STRATEGY_ID,
-        data: { symbol, action: actionParsed.action, positionId: open?.id ?? null },
+        data: {
+          symbol,
+          action: actionParsed.action,
+          positionId: sameSide?.id ?? null,
+        },
       });
       fail(next, placed.error);
     }
@@ -178,7 +305,7 @@ export async function submitFuturesTrade(formData: FormData) {
 
   let written: { error: string | null };
   let flash = liveBook ? "live-opened" : "opened";
-  let positionId = open?.id ?? null;
+  let positionId = sameSide?.id ?? null;
   if (decided.kind === "open") {
     const created = await writeFuturesOpen({
       supabase,
@@ -198,10 +325,10 @@ export async function submitFuturesTrade(formData: FormData) {
       written = { error: null };
       positionId = created.positionId;
     }
-  } else if (decided.kind === "add" && open) {
+  } else if (decided.kind === "add" && sameSide) {
     written = await writeFuturesAdd({
       supabase,
-      row: open,
+      row: sameSide,
       qty: qtyNumber,
       price: fillPrice,
       venue,
@@ -209,36 +336,24 @@ export async function submitFuturesTrade(formData: FormData) {
       venueOrderId,
     });
     flash = liveBook ? "live-added" : "added";
-  } else if (decided.kind === "flatten" && open) {
-    written = await writeFuturesFlatten({
-      supabase,
-      row: open,
-      qty: qtyNumber,
-      price: fillPrice,
-      venue,
-      environment,
-      venueOrderId,
-    });
-    flash = liveBook ? "live-closed" : "closed";
   } else {
     written = { error: "Could not apply that futures action." };
   }
 
   if (written.error) {
-    if (liveBook && venueOrderId && decided.kind !== "flatten") {
-      const bound = await loadBoundVenueForAccount({
-        userId: user.id,
-        accountId: account.id,
-        mode: account.mode,
-        connectionId: settings.connectionId,
-      });
-      if (bound.ok) {
+    if (liveBook && venueOrderId) {
+      const connection = await boundLive();
+      if (connection) {
         await placePerpMarketOnVenue({
-          connection: bound.connection,
+          connection,
           symbol,
           side: decided.orderSide === "Buy" ? "Sell" : "Buy",
           qty: qtyText,
           reduceOnly: true,
+          positionIdx: hedgePositionIdx(decided.positionSide),
+          requireHedge:
+            decided.kind === "open" &&
+            opens.some((row) => row.side !== decided.positionSide),
         });
       }
     }
@@ -250,7 +365,7 @@ export async function submitFuturesTrade(formData: FormData) {
       userId: user.id,
       accountId: account.id,
       strategy: FUTURES_STRATEGY_ID,
-      data: { symbol, action: actionParsed.action, positionId: open?.id ?? null },
+      data: { symbol, action: actionParsed.action, positionId: sameSide?.id ?? null },
     });
     fail(next, written.error);
   }
@@ -259,11 +374,9 @@ export async function submitFuturesTrade(formData: FormData) {
     scope: "trade",
     event: "trade.futures",
     message:
-      decided.kind === "flatten"
-        ? `Flattened ${symbol}`
-        : decided.kind === "add"
-          ? `Added ${symbol}`
-          : `Opened ${symbol}`,
+      decided.kind === "add"
+        ? `Added ${symbol} ${decided.positionSide}`
+        : `Opened ${symbol} ${decided.positionSide}`,
     userId: user.id,
     accountId: account.id,
     strategy: FUTURES_STRATEGY_ID,
@@ -273,6 +386,7 @@ export async function submitFuturesTrade(formData: FormData) {
       qty: qtyNumber,
       live: liveBook,
       positionId,
+      side: decided.positionSide,
     },
   });
 

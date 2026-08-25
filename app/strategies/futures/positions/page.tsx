@@ -74,8 +74,8 @@ export default async function FuturesPositionsPage({
           <h3 className="text-sm font-medium text-ink">Place an order</h3>
           <p className="mt-1 text-sm text-ink-muted">
             USDT linear perpetual. Buy opens or adds a long. Sell opens or adds
-            a short. Flatten closes the open row. No flip in one click. Size is
-            token quantity or USDT notional at mark.
+            a short. Both sides can be open on the same contract. Flatten is on
+            each open row. Size is token quantity or USDT notional at mark.
             {settings.reduceOnly
               ? " Reduce only is on — Buy and Sell are blocked."
               : ""}
@@ -104,15 +104,6 @@ export default async function FuturesPositionsPage({
                 className="rounded-control bg-accent-strong px-3 py-2 text-xs font-medium text-ink"
               >
                 Sell
-              </PendingSubmitButton>
-              <PendingSubmitButton
-                pendingLabel="Flattening…"
-                successKey="futures-flatten"
-                name="action"
-                value="flatten"
-                className="rounded-control bg-accent-strong px-3 py-2 text-xs font-medium text-ink"
-              >
-                Flatten
               </PendingSubmitButton>
             </div>
           </form>

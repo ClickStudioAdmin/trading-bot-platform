@@ -23,6 +23,10 @@ export type FuturesDecision =
     }
   | { ok: false; error: string };
 
+export function hedgePositionIdx(side: FuturesSide): 1 | 2 {
+  return side === "long" ? 1 : 2;
+}
+
 export function decideFuturesAction(input: {
   action: FuturesAction;
   open: OpenFutures | null;
@@ -65,10 +69,7 @@ export function decideFuturesAction(input: {
   if (input.open.side !== positionSide) {
     return {
       ok: false,
-      error:
-        input.open.side === "long"
-          ? "A long is open. Flatten before selling short."
-          : "A short is open. Flatten before buying long.",
+      error: "Could not match that order to an open row.",
     };
   }
 

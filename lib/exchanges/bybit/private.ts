@@ -21,6 +21,7 @@ export async function bybitPrivateRequest<T>(input: {
   path: string;
   query?: string;
   body?: string;
+  allowMissingResult?: boolean;
 }): Promise<{ ok: true; result: T } | { ok: false; error: string }> {
   const apiKey = input.credentials.apiKey;
   const apiSecret = input.credentials.apiSecret;
@@ -76,7 +77,16 @@ export async function bybitPrivateRequest<T>(input: {
   } catch {
     return { ok: false, error: "Bybit rejected that request." };
   }
-  if (body.retCode !== 0 || body.result === undefined) {
+  if (body.retCode !== 0) {
+    return {
+      ok: false,
+      error: `Bybit rejected that order${body.retMsg ? `: ${body.retMsg}` : "."}`,
+    };
+  }
+  if (body.result === undefined) {
+    if (input.allowMissingResult) {
+      return { ok: true, result: {} as T };
+    }
     return {
       ok: false,
       error: `Bybit rejected that order${body.retMsg ? `: ${body.retMsg}` : "."}`,

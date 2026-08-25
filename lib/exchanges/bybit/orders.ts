@@ -143,6 +143,7 @@ export async function bybitCreateMarketOrder(input: {
   side: "Buy" | "Sell";
   qty: string;
   reduceOnly?: boolean;
+  positionIdx?: 0 | 1 | 2;
 }): Promise<{ ok: true; fill: BybitOrderFill } | { ok: false; error: string }> {
   const body: Record<string, string | boolean | number> = {
     category: input.category,
@@ -155,7 +156,7 @@ export async function bybitCreateMarketOrder(input: {
     body.marketUnit = "baseCoin";
   }
   if (input.category === "linear") {
-    body.positionIdx = 0;
+    body.positionIdx = input.positionIdx ?? 0;
     if (input.reduceOnly) {
       body.reduceOnly = true;
     }
@@ -214,4 +215,48 @@ async function readOrderFill(input: {
       qty: qty > 0 ? qty : null,
     },
   };
+}
+
+export async function bybitEnsureHedgeMode(input: {
+  environmentId: string;
+  credentials: BybitPrivateCreds;
+  symbol: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const switched = await bybitPrivateRequest<Record<string, unknown>>({
+    environmentId: input.environmentId,
+    credentials: input.credentials,
+    method: "POST",
+    path: "/v5/position/switch-mode",
+    body: JSON.stringify({
+      category: "linear",
+      symbol: input.symbol,
+      mode: 3,
+    }),
+    allowMissingResult: true,
+  });
+  if (switched.ok) {
+    return { ok: true };
+  }
+  if (alreadyHedgeMode(switched.error)) {
+    return { ok: true };
+  }
+  return switched;
+}
+
+export function explainHedgeModeError(error: string): string {
+  if (alreadyHedgeMode(error)) {
+    return error;
+  }
+  if (
+    /position idx|positionIdx|one-way|one way|Merged Single|110025|110026|110043/i.test(
+      error,
+    )
+  ) {
+    return "Bybit is in one-way mode on this contract. Flatten the venue position, then Buy and Sell can hold a long and a short together.";
+  }
+  return error;
+}
+
+function alreadyHedgeMode(error: string): boolean {
+  return /not modified|already|both side|hedge mode/i.test(error);
 }

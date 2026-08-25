@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { decideFuturesAction } from "./decide";
+import { decideFuturesAction, hedgePositionIdx } from "./decide";
 
 const openLong = decideFuturesAction({
   action: "buy",
@@ -24,12 +24,20 @@ if (addLong.ok) {
   assert.equal(addLong.kind, "add");
 }
 
-const flipBlocked = decideFuturesAction({
+const hedgeShort = decideFuturesAction({
   action: "sell",
-  open: { side: "long", qty: 1 },
+  open: null,
   reduceOnly: false,
 });
-assert.equal(flipBlocked.ok, false);
+assert.equal(hedgeShort.ok, true);
+if (hedgeShort.ok) {
+  assert.equal(hedgeShort.kind, "open");
+  assert.equal(hedgeShort.positionSide, "short");
+  assert.equal(hedgeShort.orderSide, "Sell");
+}
+
+assert.equal(hedgePositionIdx("long"), 1);
+assert.equal(hedgePositionIdx("short"), 2);
 
 const openShort = decideFuturesAction({
   action: "sell",

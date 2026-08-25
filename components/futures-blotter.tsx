@@ -123,7 +123,7 @@ export function OpenFuturesTrades({
             title="Current Positions"
             subtitle={
               exchangeBook
-                ? "Open USDT perpetuals on the bound exchange. Flatten closes the Bybit row."
+                ? "Open USDT perpetuals on the bound exchange. Flatten closes that side on Bybit."
                 : "Open paper futures. Flatten writes the ledger only — no Bybit order."
             }
             className=""
@@ -153,7 +153,7 @@ export function OpenFuturesTrades({
                 />
               </th>
               <th className="px-4 py-3 font-medium">
-                <ColumnHint label="Side" hint="Long or short. Flatten first to flip." />
+                <ColumnHint label="Side" hint="Long or short. Both can be open on the same contract." />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint label="Qty" hint="Base-coin size on this row." />
@@ -190,8 +190,8 @@ export function OpenFuturesTrades({
                   label="Actions"
                   hint={
                     exchangeBook
-                      ? "Flatten sends a reduce-only market order on Bybit."
-                      : "Flatten closes the paper row. No Bybit order."
+                      ? "Flatten this row at market on Bybit. A long and a short on the same contract are separate rows."
+                      : "Flatten this row. A long and a short on the same contract are separate rows."
                   }
                 />
               </th>
@@ -423,6 +423,7 @@ function OpenFuturesRows({
         <form action={submitFuturesTrade}>
           <input type="hidden" name="next" value={next} />
           <input type="hidden" name="symbol" value={trade.symbol} />
+          <input type="hidden" name="positionId" value={trade.id} />
           <ColumnHint
             hint="Flatten at market"
             label={

@@ -47,9 +47,9 @@ export default async function FuturesAutomationsPage() {
           How automations will work
         </h2>
         <p className="mt-2 text-sm text-ink-muted">
-          Same desk rules as a manual click: one USDT linear perpetual, no flip
-          in one click, Flatten to close. Paper writes the ledger only. Live
-          places one Bybit market order from the Futures bind.
+          Same desk rules as a manual click: one USDT linear perpetual, long and
+          short can both be open, Flatten to close a side. Paper writes the
+          ledger only. Live places one Bybit market order from the Futures bind.
         </p>
       </section>
     </main>

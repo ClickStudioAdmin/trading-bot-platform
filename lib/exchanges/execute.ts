@@ -1,5 +1,7 @@
 import {
   bybitCreateMarketOrder,
+  bybitEnsureHedgeMode,
+  explainHedgeModeError,
   loadCarryInstruments,
   qtyForCarryLegs,
 } from "@/lib/exchanges/bybit/orders";
@@ -179,6 +181,8 @@ export async function placePerpMarketOnVenue(input: {
   side: "Buy" | "Sell";
   qty: string;
   reduceOnly?: boolean;
+  positionIdx: 1 | 2;
+  requireHedge?: boolean;
 }): Promise<{ ok: true; fill: PerpVenueFill } | { ok: false; error: string }> {
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot place futures orders yet." };
@@ -194,6 +198,14 @@ export async function placePerpMarketOnVenue(input: {
   if (!sized.ok) {
     return sized;
   }
+  const hedge = await bybitEnsureHedgeMode({
+    environmentId: input.connection.environment,
+    credentials: creds(input.connection),
+    symbol: input.symbol,
+  });
+  if (!hedge.ok && input.requireHedge) {
+    return { ok: false, error: explainHedgeModeError(hedge.error) };
+  }
   const created = await bybitCreateMarketOrder({
     environmentId: input.connection.environment,
     credentials: creds(input.connection),
@@ -202,9 +214,10 @@ export async function placePerpMarketOnVenue(input: {
     side: input.side,
     qty: sized.text,
     reduceOnly: input.reduceOnly,
+    positionIdx: hedge.ok ? input.positionIdx : 0,
   });
   if (!created.ok) {
-    return created;
+    return { ok: false, error: explainHedgeModeError(created.error) };
   }
   return {
     ok: true,

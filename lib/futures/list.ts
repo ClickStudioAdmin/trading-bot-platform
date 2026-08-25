@@ -102,13 +102,13 @@ export async function loadFuturesDesk(): Promise<{
   };
 }
 
-export async function loadOpenFuturesForSymbol(
+export async function loadOpenFuturesOnSymbol(
   symbol: string,
-): Promise<FuturesPosition | null> {
+): Promise<FuturesPosition[]> {
   const session = await getSessionContext();
   const supabase = createServiceClient();
   if (!session || !supabase) {
-    return null;
+    return [];
   }
   const { data, error } = await supabase
     .from("futures_positions")
@@ -116,10 +116,11 @@ export async function loadOpenFuturesForSymbol(
     .eq("account_id", session.account.id)
     .eq("user_id", session.member.id)
     .eq("symbol", symbol)
-    .eq("status", "open")
-    .maybeSingle();
+    .eq("status", "open");
   if (error || !data) {
-    return null;
+    return [];
   }
-  return parseFuturesPositionRow(data as Record<string, unknown>);
+  return data.map((row) =>
+    parseFuturesPositionRow(row as Record<string, unknown>),
+  );
 }
