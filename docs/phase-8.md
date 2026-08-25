@@ -1,6 +1,6 @@
 # Phase 8 — Additional exchanges
 
-Not current. Do not start until Phase 7 live execution is accepted and you say so. See [phase-7.md](phase-7.md).
+Not current. Phase 7 is accepted. Do not start until you say so. See [phase-7.md](phase-7.md).
 
 ## Purpose
 

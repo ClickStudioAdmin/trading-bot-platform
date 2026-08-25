@@ -8,7 +8,7 @@ No Bybit orders. No exchange API keys. No Fly.io. No browser Bybit calls.
 
 ## Status
 
-Complete. Accepted after desk testing. Current work is Phase 7 — [phase-7.md](phase-7.md). Paper auto-switch is postponed — [phase-auto-switch.md](phase-auto-switch.md).
+Complete. Accepted after desk testing. Phase 7 is complete — [phase-7.md](phase-7.md). Paper auto-switch is postponed — [phase-auto-switch.md](phase-auto-switch.md).
 
 ## What shipped
 

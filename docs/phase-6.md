@@ -10,7 +10,7 @@ Paper accounts do not hold exchange connections.
 
 ## Status
 
-Complete. Connections desk-tested. Current work is Phase 7 — live execution ([phase-7.md](phase-7.md)). Additional exchanges wait ([phase-8.md](phase-8.md)).
+Complete. Connections desk-tested. Phase 7 is complete ([phase-7.md](phase-7.md)). Additional exchanges wait ([phase-8.md](phase-8.md)).
 
 ## Current micro-step
 

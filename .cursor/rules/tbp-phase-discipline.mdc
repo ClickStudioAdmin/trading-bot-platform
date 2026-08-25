@@ -7,7 +7,7 @@ alwaysApply: true
 
 Read [docs/master-spec.md](docs/master-spec.md) and the current phase doc before changing code.
 
-Work only on the current phase. The current phase is Phase 7 — live execution. See [docs/phase-7.md](docs/phase-7.md). Phase 1 through Phase 6 are complete. Phase 8 (additional exchanges) waits. See [docs/phase-8.md](docs/phase-8.md).
+Work only on the current phase. Phase 1 through Phase 7 are complete. See [docs/phase-7.md](docs/phase-7.md). Phase 8 (additional exchanges) waits until the user says so. See [docs/phase-8.md](docs/phase-8.md).
 
 Feature work happens on `develop`. Merge to `main` only when the user is ready for production.
 
@@ -17,6 +17,6 @@ Do not create later-phase tables or speculative architecture.
 
 Keep dependencies minimal. Prefer the simplest solution that satisfies the current phase.
 
-Work one micro-step at a time as listed in [docs/phase-7.md](docs/phase-7.md). Stop at the end of each micro-step and wait for instruction.
+Do not start Phase 8 until the user says so.
 
 Stop at the end of the phase. After acceptance criteria pass, report results and wait for instruction.

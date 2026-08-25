@@ -6,11 +6,13 @@ Let a **Connected Exchange** book place cash-and-carry on the bound venue. First
 
 Paper Trading books still use the Phase 4 paper ledger and never send exchange orders.
 
+## Status
+
+Complete. Accepted after desk testing on a Connected Exchange book with a Bybit Demo key. Phase 8 (additional exchanges) waits until you say so. See [phase-8.md](phase-8.md).
+
 ## Current micro-step
 
-**7 of 7 — Automations and Unwind** (desk test next)
-
-Code for docs, Bybit order helpers, bound-key load, fill columns, manual Open/Close/Unwind, and tick execution on Connected Exchange books is in. Wait for a `develop` deploy, then desk-test on Demo.
+**7 of 7 — Automations and Unwind** (complete). Phase accepted.
 
 | # | Step | Who | Done when |
 | --- | --- | --- | --- |

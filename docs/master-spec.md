@@ -26,7 +26,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 7 — Live execution. See [phase-7.md](phase-7.md). Phase 1 through Phase 6 are complete. Additional exchanges wait ([phase-8.md](phase-8.md)). Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
+Phase 7 — Live execution is complete. See [phase-7.md](phase-7.md). Phase 1 through Phase 7 are complete. Additional exchanges wait until you say so ([phase-8.md](phase-8.md)). Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
 
 ## Multi-tenancy
 

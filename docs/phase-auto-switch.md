@@ -1,6 +1,6 @@
 # Paper auto-switch (postponed)
 
-Postponed. Not the current phase. Current work is Phase 7 — [phase-7.md](phase-7.md).
+Postponed. Not the current phase. Phase 7 is complete — [phase-7.md](phase-7.md).
 
 ## Purpose
 
