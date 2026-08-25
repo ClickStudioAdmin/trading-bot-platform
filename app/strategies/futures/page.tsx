@@ -16,7 +16,7 @@ import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
 export const metadata: Metadata = {
   title: "Futures",
-  description: "USDT linear perpetual buy, sell, and flatten.",
+  description: "USDT linear perpetual buy, sell, and close.",
 };
 
 export default async function FuturesOverviewPage({

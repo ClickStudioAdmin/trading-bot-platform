@@ -399,7 +399,7 @@ export function formatCloseHowMuch(order: PaperOrderRow): string | null {
     order.conditions.exitSizeType === "fixed" ||
     order.triggerReason === null
   ) {
-    return "Flatten";
+    return "Close remaining";
   }
   return null;
 }

@@ -108,7 +108,7 @@ export function PaperRulesGuide({
         />
         <GuideItem
           term="Min Order Size"
-          detail="Dynamic only. Skip a clip if it would be smaller than this. The last leftover on an exit still flattens so the row can finish. The last entry clip is skipped if leftover room is below this, so the cap may sit a little under Max Position Size."
+          detail="Dynamic only. Skip a clip if it would be smaller than this. The last leftover on an exit still closes remaining size so the row can finish. The last entry clip is skipped if leftover room is below this, so the cap may sit a little under Max Position Size."
         />
         <GuideItem
           term="Usable book"
@@ -167,11 +167,11 @@ export function PaperRulesGuide({
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Auto Close"
-          detail="You already chose to exit. DTE, APR, take profit, and stop loss are ignored. Only this set’s exit order type is used: Fixed flattens now, Dynamic clips once and marks Closing."
+          detail="You already chose to exit. DTE, APR, take profit, and stop loss are ignored. Only this set’s exit order type is used: Fixed closes remaining size now, Dynamic clips once and marks Closing."
         />
         <GuideItem
           term="Manual Close"
-          detail="Always flattens the remaining size at the live scan."
+          detail="Always closes the remaining size at the live scan."
         />
         <GuideItem
           term="Unwind"

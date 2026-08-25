@@ -74,7 +74,7 @@ export default async function FuturesPositionsPage({
           <h3 className="text-sm font-medium text-ink">Place an order</h3>
           <p className="mt-1 text-sm text-ink-muted">
             USDT linear perpetual. Buy opens or adds a long. Sell opens or adds
-            a short. Both sides can be open on the same contract. Flatten is on
+            a short. Both sides can be open on the same contract. Close is on
             each open row. Size is token quantity or USDT notional at mark.
             {settings.reduceOnly
               ? " Reduce only is on — Buy and Sell are blocked."

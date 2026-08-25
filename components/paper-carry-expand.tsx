@@ -244,7 +244,7 @@ function ClosePaperButton({
           auto ? (
             <AutoCloseHint automation={trade.automation} />
           ) : hideUnwind ? (
-            "Flatten both Bybit legs at market."
+            "Close both Bybit legs at market."
           ) : (
             "Close at market"
           )
@@ -472,7 +472,7 @@ function formatLogDataField(key: string, value: unknown): MetricRow | null {
       if (value === "buy" || value === "sell" || value === "flatten") {
         return {
           label,
-          value: value === "buy" ? "Buy" : value === "sell" ? "Sell" : "Flatten",
+          value: value === "buy" ? "Buy" : value === "sell" ? "Sell" : "Close",
         };
       }
     }
@@ -523,7 +523,7 @@ function formatLogMode(mode: string): string {
     return "Unwind";
   }
   if (mode === "market") {
-    return "Flatten";
+    return "Close";
   }
   return mode;
 }

@@ -39,7 +39,7 @@ export function FuturesFlash({
   if (liveClosed) {
     return (
       <p className="text-sm text-success">
-        Futures flattened on the connected exchange.
+        Futures closed on the connected exchange.
       </p>
     );
   }
@@ -50,7 +50,7 @@ export function FuturesFlash({
     return <p className="text-sm text-success">Paper size added.</p>;
   }
   if (closed) {
-    return <p className="text-sm text-success">Paper futures flattened.</p>;
+    return <p className="text-sm text-success">Paper futures closed.</p>;
   }
   return null;
 }

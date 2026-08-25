@@ -54,7 +54,7 @@ export function OpenPaperTrades({
             title="Current Positions"
             subtitle={
               exchangeBook
-                ? "Open cash-and-carry on the bound exchange. Close flattens both Bybit legs."
+                ? "Open cash-and-carry on the bound exchange. Close exits both Bybit legs."
                 : "Open paper carries. Unrealized includes open and close fees on both legs. Close is paper only — no Bybit order."
             }
             className=""
@@ -138,8 +138,8 @@ export function OpenPaperTrades({
                   label="Actions"
                   hint={
                     exchangeBook
-                      ? "Manual Close flattens both Bybit legs at market. Auto Close uses that set’s exit order type. Unwind clips to usable book on the exchange."
-                      : "Manual Close flattens remaining size at the live scan. Auto Close uses only that set’s exit order type — Fixed flattens, Dynamic clips to usable book. It does not wait for APR, DTE, take profit, or stop loss. Unwind is manual only. After an exit is submitted, Close is replaced by Closing. No Bybit order."
+                      ? "Manual Close exits both Bybit legs at market. Auto Close uses that set’s exit order type. Unwind clips to usable book on the exchange."
+                      : "Manual Close exits remaining size at the live scan. Auto Close uses only that set’s exit order type — Fixed closes remaining size, Dynamic clips to usable book. It does not wait for APR, DTE, take profit, or stop loss. Unwind is manual only. After an exit is submitted, Close is replaced by Closing. No Bybit order."
                   }
                 />
               </th>

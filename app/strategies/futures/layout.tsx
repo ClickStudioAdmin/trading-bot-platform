@@ -57,7 +57,7 @@ export default async function FuturesLayout({
         <div className="mx-auto max-w-6xl px-6 pt-4">
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
             This is a Connected Exchange account. Bind an exchange in Strategy
-            Settings before Buy, Sell, or Flatten can place orders.
+            Settings before Buy, Sell, or Close can place orders.
           </p>
         </div>
       ) : null}

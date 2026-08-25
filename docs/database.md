@@ -20,7 +20,7 @@ Current tables:
 | `members` | 4 | Desk users. Email, password hash, role (`member` / `admin`), status. This is the only login table. Writes and reads for the app are service-role only, scoped by the session. |
 | `exchange_connections` | 6 | Encrypted exchange API credentials on a Live trading account. Venue-agnostic (`venue` + `environment`). Unique `(account_id, venue, environment)`. Writes are service-role. Authenticated own-row select excludes ciphertext and nonce. Paper accounts cannot hold rows. |
 | `strategy_settings` | 8 | Per-account, per-strategy bind. Phase 8 uses `strategy_id = futures` for the Futures exchange bind and reduce-only flag. Cash-and-carry stays on `paper_engine_settings`. RLS by `user_id`. Service-role writes. Authenticated select. |
-| `futures_positions` | 8 | Single-leg Futures blotter. One open row per `(account_id, symbol)`. Buy adds to a long, Sell adds to a short, Flatten closes. RLS by `user_id`. Authenticated select/insert/update. No delete. |
+| `futures_positions` | 8 | Single-leg Futures blotter. One open row per `(account_id, symbol, side)`. Buy adds to a long, Sell adds to a short, Close closes that side. RLS by `user_id`. Authenticated select/insert/update. No delete. |
 | `futures_orders` | 8 | Append-only Futures fills. One venue order id per row. RLS by `user_id`. Authenticated select/insert. No update or delete. |
 
 Phase 4 rules migrations: `supabase/migrations/20260822160000_paper_rules.sql` then `supabase/migrations/20260822170000_paper_rule_layers.sql`.

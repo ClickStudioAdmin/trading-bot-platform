@@ -84,10 +84,13 @@ export function parseFuturesAction(
   raw: unknown,
 ): { ok: true; action: FuturesAction } | { ok: false; error: string } {
   const action = String(raw ?? "").trim().toLowerCase();
+  if (action === "close") {
+    return { ok: true, action: "flatten" };
+  }
   if (action === "buy" || action === "sell" || action === "flatten") {
     return { ok: true, action };
   }
-  return { ok: false, error: "Choose Buy, Sell, or Flatten." };
+  return { ok: false, error: "Choose Buy, Sell, or Close." };
 }
 
 export function parseFuturesSide(raw: unknown): FuturesSide | null {

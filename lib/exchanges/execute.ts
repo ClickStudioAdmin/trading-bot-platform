@@ -83,8 +83,8 @@ export async function openCashAndCarryOnVenue(input: {
     return {
       ok: false,
       error: flat.ok
-        ? `Future leg failed and the spot was flattened. ${future.error}`
-        : `Future leg failed and spot flatten failed. ${future.error}`,
+        ? `Future leg failed and the spot was closed. ${future.error}`
+        : `Future leg failed and spot close failed. ${future.error}`,
     };
   }
 

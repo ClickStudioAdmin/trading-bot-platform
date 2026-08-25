@@ -34,7 +34,7 @@ export function decideFuturesAction(input: {
 }): FuturesDecision {
   if (input.action === "flatten") {
     if (!input.open) {
-      return { ok: false, error: "There is no open position to flatten." };
+      return { ok: false, error: "There is no open position to close." };
     }
     return {
       ok: true,
@@ -49,7 +49,7 @@ export function decideFuturesAction(input: {
   if (input.reduceOnly) {
     return {
       ok: false,
-      error: "Reduce only is on. Flatten still works; Buy and Sell do not.",
+      error: "Reduce only is on. Close still works; Buy and Sell do not.",
     };
   }
 

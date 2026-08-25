@@ -36,6 +36,12 @@ assert.equal(parseFuturesNotional("0").ok, false);
 
 assert.equal(parseFuturesAction("Buy").ok, true);
 assert.equal(parseFuturesAction("flatten").ok, true);
+assert.equal(parseFuturesAction("close").ok, true);
+const closed = parseFuturesAction("Close");
+assert.equal(closed.ok, true);
+if (closed.ok) {
+  assert.equal(closed.action, "flatten");
+}
 assert.equal(parseFuturesAction("flip").ok, false);
 
 console.log("futures model checks passed");

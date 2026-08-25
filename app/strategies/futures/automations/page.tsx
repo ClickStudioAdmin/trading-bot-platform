@@ -29,7 +29,7 @@ export default async function FuturesAutomationsPage() {
       <section className="rounded-card border border-line bg-surface p-5">
         <h3 className="text-sm font-medium text-ink">Nothing automated yet</h3>
         <p className="mt-2 text-sm text-ink-muted">
-          This tab will hold alert automations for Buy, Sell, and Flatten on the
+          This tab will hold alert automations for Buy, Sell, and Close on the
           bound book. TradingView webhooks are next. Until then, orders are
           manual.
         </p>
@@ -48,7 +48,7 @@ export default async function FuturesAutomationsPage() {
         </h2>
         <p className="mt-2 text-sm text-ink-muted">
           Same desk rules as a manual click: one USDT linear perpetual, long and
-          short can both be open, Flatten to close a side. Paper writes the
+          short can both be open. Close a side from the open row. Paper writes the
           ledger only. Live places one Bybit market order from the Futures bind.
         </p>
       </section>

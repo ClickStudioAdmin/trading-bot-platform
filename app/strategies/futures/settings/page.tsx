@@ -95,7 +95,7 @@ export default async function FuturesSettingsPage({
           <span>
             Reduce only
             <span className="mt-1 block text-xs text-ink-muted">
-              Blocks Buy and Sell. Flatten still works.
+              Blocks Buy and Sell. Close still works.
             </span>
           </span>
         </label>

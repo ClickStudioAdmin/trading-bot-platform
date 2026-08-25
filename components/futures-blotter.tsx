@@ -123,8 +123,8 @@ export function OpenFuturesTrades({
             title="Current Positions"
             subtitle={
               exchangeBook
-                ? "Open USDT perpetuals on the bound exchange. Flatten closes that side on Bybit."
-                : "Open paper futures. Flatten writes the ledger only — no Bybit order."
+                ? "Open USDT perpetuals on the bound exchange. Close that side on Bybit."
+                : "Open paper futures. Close writes the ledger only — no Bybit order."
             }
             className=""
           />
@@ -190,8 +190,8 @@ export function OpenFuturesTrades({
                   label="Actions"
                   hint={
                     exchangeBook
-                      ? "Flatten this row at market on Bybit. A long and a short on the same contract are separate rows."
-                      : "Flatten this row. A long and a short on the same contract are separate rows."
+                      ? "Close this row at market on Bybit. A long and a short on the same contract are separate rows."
+                      : "Close this row. A long and a short on the same contract are separate rows."
                   }
                 />
               </th>
@@ -240,7 +240,7 @@ export function ClosedFuturesTrades({
     <section>
       <SectionHead
         title="Past Positions"
-        subtitle="Closed futures. Realized is mark-to-market at flatten."
+        subtitle="Closed futures. Realized is mark-to-market at close."
       />
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[52rem] text-left text-sm">
@@ -253,12 +253,12 @@ export function ClosedFuturesTrades({
                 />
               </th>
               <th className="px-4 py-3 font-medium">
-                <ColumnHint label="Contract" hint="USDT linear perpetual that was flattened." />
+                <ColumnHint label="Contract" hint="USDT linear perpetual that was closed." />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Closed"
-                  hint="Local date this row was flattened. Hover for UTC."
+                  hint="Local date this row was closed. Hover for UTC."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -276,13 +276,13 @@ export function ClosedFuturesTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Exit"
-                  hint="Flatten fill price. Paper uses mark at close."
+                  hint="Close fill price. Paper uses mark at close."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Realized"
-                  hint="P&L from entry to flatten mark or fill."
+                  hint="P&L from entry to close mark or fill."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -425,16 +425,16 @@ function OpenFuturesRows({
           <input type="hidden" name="symbol" value={trade.symbol} />
           <input type="hidden" name="positionId" value={trade.id} />
           <ColumnHint
-            hint="Flatten at market"
+            hint="Close at market"
             label={
               <PendingSubmitButton
-                pendingLabel="Flattening"
+                pendingLabel="Closing"
                 successKey={`flatten-${trade.id}`}
                 name="action"
-                value="flatten"
+                value="close"
                 className={ACTION_CLASS}
               >
-                Flatten
+                Close
               </PendingSubmitButton>
             }
           />
@@ -522,7 +522,7 @@ function FuturesOrderList({ orders }: { orders: FuturesOrder[] }) {
           <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
             <h3 className="text-sm font-semibold tracking-tight">
               {order.action === "flatten"
-                ? "Flatten"
+                ? "Close"
                 : order.action === "sell"
                   ? "Sell"
                   : "Buy"}

@@ -261,7 +261,7 @@ export function formatCarryCloseWhy(
     automation.exitSizeType === "fixed" ||
     closeReason === null
   ) {
-    parts.push("Flatten");
+    parts.push("Close remaining");
   }
   if (closeSource === "engine") {
     if (closeReason === "dte") {

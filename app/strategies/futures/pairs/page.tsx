@@ -47,7 +47,7 @@ export default async function FuturesPairsPage({
       <PageHeading as="h2" title="Pairs" />
       <p className="-mt-2 mb-6 text-sm text-ink-muted">
         Every trading USDT linear perpetual this strategy can buy, sell, or
-        flatten. No API key. Dated futures are excluded.
+        close. No API key. Dated futures are excluded.
       </p>
       <PairFiltersForm
         clearHref={FUTURES_PATHS.pairs}

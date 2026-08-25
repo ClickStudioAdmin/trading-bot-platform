@@ -252,7 +252,7 @@ export function explainHedgeModeError(error: string): string {
       error,
     )
   ) {
-    return "Bybit is in one-way mode on this contract. Flatten the venue position, then Buy and Sell can hold a long and a short together.";
+    return "Bybit is in one-way mode on this contract. Close the venue position, then Buy and Sell can hold a long and a short together.";
   }
   return error;
 }

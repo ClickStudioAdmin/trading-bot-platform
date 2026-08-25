@@ -83,7 +83,7 @@ export async function submitFuturesTrade(formData: FormData) {
       next,
       flattenId
         ? "That position is no longer open."
-        : "Flatten from the open row.",
+        : "Close from the open row.",
     );
   }
 
@@ -126,7 +126,7 @@ export async function submitFuturesTrade(formData: FormData) {
         reduceOnly: settings.reduceOnly,
       });
       if (!decided.ok || decided.kind !== "flatten") {
-        fail(next, decided.ok ? "Could not flatten that position." : decided.error);
+        fail(next, decided.ok ? "Could not close that position." : decided.error);
       }
       const sized = qtyForPerp(row.qty, instrument);
       if (!sized.ok) {
@@ -196,7 +196,7 @@ export async function submitFuturesTrade(formData: FormData) {
       await writeEventLog({
         scope: "trade",
         event: "trade.futures",
-        message: `Flattened ${symbol} ${row.side}`,
+        message: `Closed ${symbol} ${row.side}`,
         userId: user.id,
         accountId: account.id,
         strategy: FUTURES_STRATEGY_ID,

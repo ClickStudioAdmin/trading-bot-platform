@@ -206,7 +206,7 @@ assert.equal(
     triggerReason: null,
     conditions: EMPTY_AUTOMATION,
   }),
-  "Trigger Manual · Exit Manual · Flatten",
+  "Trigger Manual · Exit Manual · Close remaining",
 );
 assert.equal(formatOrderHeadline({ ...stored, side: "close" }), "Close");
 
