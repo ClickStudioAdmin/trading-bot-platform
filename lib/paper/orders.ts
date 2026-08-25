@@ -404,8 +404,16 @@ export function formatOrderHeadline(order: PaperOrderRow): string {
 }
 
 export function fillSlip(order: PaperOrderRow): number | null {
-  if (order.theoretical.netBasis === null) {
-    return null;
+  if (order.theoretical.executableBasis === null) {
+    return order.theoretical.netBasis === null
+      ? null
+      : order.fillBasis - order.theoretical.netBasis;
   }
-  return order.fillBasis - order.theoretical.netBasis;
+  if (
+    order.fillSpotPrice !== null &&
+    order.fillFuturePrice !== null
+  ) {
+    return order.fillBasis - order.theoretical.executableBasis;
+  }
+  return 0;
 }

@@ -110,6 +110,16 @@ const stored = parsePaperOrderRow({
 assert.equal(stored.carryId, 9);
 assert.equal(stored.theoretical.spotAsk, 67210);
 assert.equal(fillSlip(stored), 0);
+assert.equal(
+  fillSlip({
+    ...stored,
+    fillBasis: 0.0389,
+    fillSpotPrice: 78_893.2,
+    fillFuturePrice: 81_960,
+    theoretical: { ...stored.theoretical, executableBasis: 0.0367 },
+  }),
+  0.0389 - 0.0367,
+);
 assert.equal(formatOrderHeadline(stored), "Open");
 assert.equal(
   formatOrderWhy(stored),
