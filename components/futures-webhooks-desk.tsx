@@ -98,7 +98,7 @@ export function FuturesWebhooksDesk({
           className="space-y-5 rounded-card border border-line bg-surface p-5"
         >
           <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-ink">URL</p>
               <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal whitespace-nowrap text-accent">
                 {hook.kind === "signal"
@@ -149,11 +149,6 @@ export function FuturesWebhooksDesk({
                 Save name
               </PendingSubmitButton>
             </form>
-            <p className="text-xs text-ink-muted">
-              {hook.kind === "signal"
-                ? "Automations When shows this name."
-                : "Same URL. One TradingView alert per action."}
-            </p>
           </div>
           {hook.kind === "signal" ? (
             <PayloadSample label="Arm" text={SIGNAL_PAYLOAD} />
