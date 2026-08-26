@@ -10,8 +10,8 @@ export function FuturesRulesGuide({
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
         {exchangeBook
-          ? "Each rule watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on the bound book. Those are the same commands as a click on Positions. TradingView webhooks are next."
-          : "Each rule watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on this paper book. Nothing is sent to Bybit. TradingView webhooks are next."}
+          ? "Each rule watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on the bound book. Those are the same commands as a click on Positions. TradingView posts to the webhook on Strategy Settings."
+          : "Each rule watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on this paper book. Nothing is sent to Bybit. TradingView posts to the webhook on Strategy Settings."}
       </p>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">

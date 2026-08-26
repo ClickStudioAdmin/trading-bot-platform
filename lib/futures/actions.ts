@@ -13,6 +13,10 @@ import {
 } from "./risk";
 import { loadFuturesSettings } from "./settings";
 import {
+  disableFuturesWebhookToken,
+  rotateFuturesWebhookToken,
+} from "./webhook-load";
+import {
   formatStrategyDetachBlockers,
   strategyDetachBlockers,
 } from "@/lib/accounts/model";
@@ -399,6 +403,63 @@ export async function detachFuturesConnection() {
   revalidatePath(FUTURES_PATHS.root);
   revalidatePath(FUTURES_PATHS.settings);
   redirect(`${FUTURES_PATHS.settings}?saved=1`);
+}
+
+export async function rotateFuturesWebhook() {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    settingsFail("Auth is not configured.");
+  }
+  const rotated = await rotateFuturesWebhookToken({
+    supabase,
+    userId: session.member.id,
+    accountId: session.account.id,
+  });
+  if (!rotated.ok) {
+    settingsFail(rotated.error);
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "webhook.rotated",
+    message: "Rotated the Futures webhook URL",
+    userId: session.member.id,
+    accountId: session.account.id,
+    strategy: FUTURES_STRATEGY_ID,
+  });
+  revalidatePath(FUTURES_PATHS.settings);
+  redirect(`${FUTURES_PATHS.settings}?webhook=1`);
+}
+
+export async function disableFuturesWebhook() {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    settingsFail("Auth is not configured.");
+  }
+  const disabled = await disableFuturesWebhookToken({
+    supabase,
+    accountId: session.account.id,
+  });
+  if (!disabled.ok) {
+    settingsFail(disabled.error);
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "webhook.disabled",
+    message: "Disabled the Futures webhook",
+    userId: session.member.id,
+    accountId: session.account.id,
+    strategy: FUTURES_STRATEGY_ID,
+  });
+  revalidatePath(FUTURES_PATHS.settings);
+  redirect(`${FUTURES_PATHS.settings}?webhookOff=1`);
 }
 
 async function loadOpenFuturesCount(
