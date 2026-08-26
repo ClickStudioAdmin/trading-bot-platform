@@ -6,6 +6,7 @@ import { switchTradingAccount } from "@/lib/accounts/actions";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   formatAccountMode,
+  formatDeskType,
   type TradingAccount,
 } from "@/lib/accounts/model";
 import { signOut } from "@/lib/auth/actions";
@@ -61,7 +62,7 @@ export function UserMenu({
   }
 
   const initial = name.slice(0, 1).toUpperCase();
-  const books = accounts ?? [];
+  const desks = accounts ?? [];
 
   return (
     <details ref={rootRef} className="relative">
@@ -88,16 +89,17 @@ export function UserMenu({
         {current ? (
           <>
             <p className="px-2 pt-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-              Accounts
+              Desks
             </p>
-            {books.map((account) =>
+            {desks.map((account) =>
               account.id === current.id ? (
                 <p
                   key={account.id}
-                  className="flex w-full items-center justify-between rounded-control bg-surface-raised px-2 py-2 text-sm"
+                  className="rounded-control bg-surface-raised px-2 py-2 text-sm"
                 >
-                  <span>{account.name}</span>
+                  <span className="block truncate">{account.name}</span>
                   <span className="text-xs text-ink-faint">
+                    {formatDeskType(account.deskType)} ·{" "}
                     {formatAccountMode(account.mode)}
                   </span>
                 </p>
@@ -106,10 +108,11 @@ export function UserMenu({
                   <input type="hidden" name="accountId" value={account.id} />
                   <PendingSubmitButton
                     pendingLabel="Switching…"
-                    className="flex w-full items-center justify-between rounded-control px-2 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+                    className="w-full rounded-control px-2 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
                   >
-                    <span>{account.name}</span>
+                    <span className="block truncate">{account.name}</span>
                     <span className="text-xs text-ink-faint">
+                      {formatDeskType(account.deskType)} ·{" "}
                       {formatAccountMode(account.mode)}
                     </span>
                   </PendingSubmitButton>
@@ -120,10 +123,16 @@ export function UserMenu({
           </>
         ) : null}
         <Link
-          href="/account/settings"
+          href="/account/sub-accounts"
           className="block rounded-control px-2 py-2 text-sm text-accent hover:bg-surface-raised hover:text-accent-strong"
         >
-          Manage account
+          Manage desks
+        </Link>
+        <Link
+          href="/account/settings"
+          className="block rounded-control px-2 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+        >
+          Login settings
         </Link>
         <div className="my-1 border-t border-line" />
         <form action={signOut}>

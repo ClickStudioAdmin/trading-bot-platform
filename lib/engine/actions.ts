@@ -15,7 +15,7 @@ import { parseReduceOnly } from "@/lib/engine/settings";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { parseUsableBookShare } from "@/lib/opportunities/capacity";
 import { writeEventLog } from "@/lib/logs/write";
-import { getSessionContext } from "@/lib/auth/session";
+import { requireCashAndCarrySession } from "@/lib/accounts/guard";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -23,10 +23,7 @@ import { redirect } from "next/navigation";
 const RULES_PATH = "/strategies/cash-and-carry/automations";
 
 export async function savePaperRules(formData: FormData) {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requireCashAndCarrySession();
   const { member: user, account } = session;
 
   const parsed = parsePaperRulesForm(formData);
@@ -203,10 +200,7 @@ export async function savePaperRules(formData: FormData) {
 const SETTINGS_PATH = "/strategies/cash-and-carry/settings";
 
 export async function savePaperSettings(formData: FormData) {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requireCashAndCarrySession();
   const { member: user, account } = session;
 
   const parsed = parseUsableBookShare(formData.get("usableBookShare"));
@@ -306,10 +300,7 @@ export async function savePaperSettings(formData: FormData) {
 }
 
 export async function saveAccountReduceOnly(formData: FormData) {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requireCashAndCarrySession();
   const { member: user, account } = session;
   const supabase = createServiceClient();
   if (!supabase) {
@@ -365,10 +356,7 @@ export async function saveAccountReduceOnly(formData: FormData) {
 }
 
 export async function detachStrategyConnection() {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requireCashAndCarrySession();
   const { member: user, account } = session;
   if (!accountCanHoldConnections(account.mode)) {
     redirect(SETTINGS_PATH);

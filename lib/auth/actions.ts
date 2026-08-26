@@ -1,11 +1,17 @@
 "use server";
 
 import { emailIsListedAdmin } from "@/lib/admin/emails";
-import { createSession, clearSession, getSessionMember } from "@/lib/auth/session";
+import { createSession, clearSession, getSessionContext, getSessionMember } from "@/lib/auth/session";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { memberDisplayName } from "@/lib/members/sync";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { deskHomePath } from "@/lib/accounts/model";
 import { redirect } from "next/navigation";
+
+async function redirectToDeskHome() {
+  const session = await getSessionContext();
+  redirect(session ? deskHomePath(session.account.deskType) : "/strategies");
+}
 
 export async function signIn(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -67,7 +73,7 @@ export async function signIn(formData: FormData) {
       redirect(`/sign-in?error=${encodeURIComponent(error.message)}`);
     }
     await createSession(userId);
-    redirect("/strategies/cash-and-carry");
+    await redirectToDeskHome();
   }
 
   if (!existing) {
@@ -92,7 +98,7 @@ export async function signIn(formData: FormData) {
       redirect(`/sign-in?error=${encodeURIComponent(error.message)}`);
     }
     await createSession(userId);
-    redirect("/strategies/cash-and-carry");
+    await redirectToDeskHome();
   }
 
   if (!stored || !verifyPassword(password, stored)) {
@@ -100,7 +106,7 @@ export async function signIn(formData: FormData) {
   }
 
   await createSession(userId);
-  redirect("/strategies/cash-and-carry");
+  await redirectToDeskHome();
 }
 
 export async function signOut() {

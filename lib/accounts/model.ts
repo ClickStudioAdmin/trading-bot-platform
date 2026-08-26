@@ -58,6 +58,20 @@ export function formatDeskTypeChoice(deskType: DeskType): string {
   return "Cash and Carry (spot + dated future)";
 }
 
+export function deskHomePath(deskType: DeskType): string {
+  return deskType === "cash_and_carry"
+    ? "/strategies/cash-and-carry"
+    : "/strategies/futures";
+}
+
+export function deskUsesCashAndCarry(deskType: DeskType): boolean {
+  return deskType === "cash_and_carry";
+}
+
+export function deskUsesPerpsUi(deskType: DeskType): boolean {
+  return deskType === "perps" || deskType === "signal_follower";
+}
+
 export function parseAccountName(
   value: unknown,
 ): { ok: true; name: string } | { ok: false; error: string } {
@@ -134,7 +148,7 @@ export function formatDeleteBlockers(
 ): string {
   const parts: string[] = [];
   if (blocks.includes("last")) {
-    parts.push("Keep at least one account");
+    parts.push("Keep at least one desk");
   }
   const open = blocks.includes("open");
   const automations = blocks.includes("automations");

@@ -29,7 +29,7 @@ export function CreateAccountForm({
       action={createTradingAccount}
       className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
     >
-      <h2 className="text-lg font-semibold tracking-tight">New account</h2>
+      <h2 className="text-lg font-semibold tracking-tight">New desk</h2>
       <input type="hidden" name="next" value="/account/sub-accounts" />
       <label className="block text-xs text-ink-muted">
         Name
@@ -106,7 +106,7 @@ export function CreateAccountForm({
         pendingLabel="Creating…"
         className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
       >
-        Create account
+        Create desk
       </PendingSubmitButton>
     </form>
   );

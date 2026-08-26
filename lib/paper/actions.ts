@@ -35,17 +35,14 @@ import {
 } from "@/lib/paper/rows";
 import { persistOpportunities } from "@/lib/opportunities/persist";
 import { scanOneOpportunity } from "@/lib/opportunities/scan";
-import { getSessionContext } from "@/lib/auth/session";
+import { requireCashAndCarrySession } from "@/lib/accounts/guard";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 
 export async function openPaperCarry(formData: FormData) {
   const next = safePaperReturnPath(String(formData.get("next") ?? ""));
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requireCashAndCarrySession();
   const { member: user, account } = session;
   const liveBook = accountCanHoldConnections(account.mode);
 
@@ -308,10 +305,7 @@ export async function openPaperCarry(formData: FormData) {
 export async function closeOpenPaperCarry(formData: FormData) {
   const next = safePaperReturnPath(String(formData.get("next") ?? ""));
   const mode = String(formData.get("mode") ?? "market");
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requireCashAndCarrySession();
   const { member: user, account } = session;
   const liveBook = accountCanHoldConnections(account.mode);
 
@@ -534,10 +528,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
 
 export async function updatePaperCarryExits(formData: FormData) {
   const next = safePaperReturnPath(String(formData.get("next") ?? ""));
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requireCashAndCarrySession();
   const { member: user, account } = session;
 
   const supabase = createServiceClient();

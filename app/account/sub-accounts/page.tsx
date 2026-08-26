@@ -19,8 +19,8 @@ import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Manage sub-accounts",
-  description: "Create and delete Paper Trading or Connected Exchange accounts.",
+  title: "Manage desks",
+  description: "Create and delete Paper Trading or Connected Exchange desks.",
 };
 
 const PATH = "/account/sub-accounts";
@@ -45,14 +45,13 @@ export default async function ManageSubAccountsPage({
 
   return (
     <div>
-      <PageHeading title="Manage sub-accounts" />
+      <PageHeading title="Manage desks" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
-        Each account is Paper Trading or Connected Exchange at create and never
+        Each desk is Paper Trading or Connected Exchange at create and never
         changes. Type is also set at create. Books stay separate. You must keep
-        at least one account. You can rename an account any time. Delete is
-        blocked while the book has open positions or running automations.
-        Deleting an account removes its paper history. Exchange keys stay on
-        this login.
+        at least one desk. You can rename a desk any time. Delete is blocked
+        while the book has open positions or running automations. Deleting a
+        desk removes its paper history. Exchange keys stay on this login.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -60,17 +59,17 @@ export default async function ManageSubAccountsPage({
         </p>
       ) : null}
       {created ? (
-        <p className="mt-4 text-sm text-success">Account created.</p>
+        <p className="mt-4 text-sm text-success">Desk created.</p>
       ) : null}
       {deleted ? (
-        <p className="mt-4 text-sm text-success">Account deleted.</p>
+        <p className="mt-4 text-sm text-success">Desk deleted.</p>
       ) : null}
       {renamed ? (
-        <p className="mt-4 text-sm text-success">Account renamed.</p>
+        <p className="mt-4 text-sm text-success">Desk renamed.</p>
       ) : null}
 
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Accounts</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Desks</h2>
         <ul className="mt-4 divide-y divide-line">
           {accounts.map((account) => {
             const row = usage.get(account.id);
@@ -111,7 +110,7 @@ export default async function ManageSubAccountsPage({
                         pendingLabel="Switching…"
                         className="rounded-control px-3 py-1.5 text-sm text-accent hover:bg-surface-raised"
                       >
-                        Switch to account
+                        Switch to desk
                       </PendingSubmitButton>
                     </form>
                   )}

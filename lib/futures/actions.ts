@@ -25,7 +25,7 @@ import {
   formatStrategyDetachBlockers,
   strategyDetachBlockers,
 } from "@/lib/accounts/model";
-import { getSessionContext } from "@/lib/auth/session";
+import { requirePerpsUiSession } from "@/lib/accounts/guard";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
@@ -52,10 +52,7 @@ function webhookFail(message: string): never {
 
 export async function submitFuturesTrade(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const { member, account } = session;
   const result = await runFuturesCommand({
     actor: {
@@ -85,10 +82,7 @@ export async function submitFuturesTrade(formData: FormData) {
 
 export async function saveFuturesTpsl(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const { member, account } = session;
   const result = await runFuturesCommand({
     actor: {
@@ -112,10 +106,7 @@ export async function saveFuturesTpsl(formData: FormData) {
 
 export async function saveFuturesTrailing(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const { member, account } = session;
   const result = await runFuturesCommand({
     actor: {
@@ -139,10 +130,7 @@ export async function saveFuturesTrailing(formData: FormData) {
 
 export async function cancelFuturesWorking(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const { member, account } = session;
   const result = await runFuturesCommand({
     actor: {
@@ -164,10 +152,7 @@ export async function cancelFuturesWorking(formData: FormData) {
 
 export async function closeAllFutures(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const { member, account } = session;
   const result = await runFuturesCommand({
     actor: {
@@ -191,10 +176,7 @@ export async function closeAllFutures(formData: FormData) {
 
 export async function amendFuturesWorking(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const { member, account } = session;
   const result = await runFuturesCommand({
     actor: {
@@ -217,10 +199,7 @@ export async function amendFuturesWorking(formData: FormData) {
 }
 
 export async function saveFuturesSettings(formData: FormData) {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const { member: user, account } = session;
   const supabase = createServiceClient();
   if (!supabase) {
@@ -310,11 +289,11 @@ export async function saveFuturesSettings(formData: FormData) {
 }
 
 export async function saveFuturesAutomations(formData: FormData) {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const { member: user, account } = session;
+  if (account.deskType === "signal_follower") {
+    redirect(FUTURES_PATHS.webhooks);
+  }
   const parsed = parseFuturesAutomationForm(formData);
   if (!parsed.ok) {
     redirect(
@@ -365,10 +344,7 @@ export async function saveFuturesAutomations(formData: FormData) {
 }
 
 export async function detachFuturesConnection() {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const { member: user, account } = session;
   if (!accountCanHoldConnections(account.mode)) {
     redirect(FUTURES_PATHS.settings);
@@ -417,10 +393,7 @@ export async function detachFuturesConnection() {
 }
 
 export async function createFuturesWebhookAction(formData: FormData) {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const supabase = createServiceClient();
   if (!supabase) {
     webhookFail("Auth is not configured.");
@@ -450,10 +423,7 @@ export async function createFuturesWebhookAction(formData: FormData) {
 }
 
 export async function renameFuturesWebhookAction(formData: FormData) {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const supabase = createServiceClient();
   if (!supabase) {
     webhookFail("Auth is not configured.");
@@ -486,10 +456,7 @@ export async function renameFuturesWebhookAction(formData: FormData) {
 }
 
 export async function rotateFuturesWebhook(formData: FormData) {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const supabase = createServiceClient();
   if (!supabase) {
     webhookFail("Auth is not configured.");
@@ -520,10 +487,7 @@ export async function rotateFuturesWebhook(formData: FormData) {
 }
 
 export async function deleteFuturesWebhookAction(formData: FormData) {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const supabase = createServiceClient();
   if (!supabase) {
     webhookFail("Auth is not configured.");
@@ -557,10 +521,7 @@ export async function deleteFuturesWebhookAction(formData: FormData) {
 
 export async function testFuturesWebhook(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
-  }
+  const session = await requirePerpsUiSession();
   const supabase = createServiceClient();
   if (!supabase) {
     fail(next, "Auth is not configured.");

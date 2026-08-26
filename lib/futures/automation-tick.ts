@@ -13,7 +13,7 @@ import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { triggerPrice, tickerTriggerPrices } from "./tpsl";
-import type { TradingAccountMode } from "@/lib/accounts/model";
+import { parseDeskType, type TradingAccountMode } from "@/lib/accounts/model";
 
 export async function runFuturesAutomationTick(): Promise<{ fired: number }> {
   const supabase = createServiceClient();
@@ -42,7 +42,7 @@ export async function runFuturesAutomationTick(): Promise<{ fired: number }> {
   ] = await Promise.all([
     supabase
       .from("trading_accounts")
-      .select("id, user_id, mode")
+      .select("id, user_id, mode, desk_type")
       .in("id", uniqueAccountIds),
     supabase
       .from("strategy_settings")
@@ -74,6 +74,7 @@ export async function runFuturesAutomationTick(): Promise<{ fired: number }> {
       {
         userId: String((row as { user_id: string }).user_id),
         mode: String((row as { mode: string }).mode) as TradingAccountMode,
+        deskType: parseDeskType((row as { desk_type?: unknown }).desk_type),
       },
     ]),
   );
@@ -100,7 +101,7 @@ export async function runFuturesAutomationTick(): Promise<{ fired: number }> {
     }
     const accountId = String((raw as { account_id: string }).account_id);
     const account = accounts.get(accountId);
-    if (!account || !rule.id) {
+    if (!account || !rule.id || account.deskType !== "perps") {
       continue;
     }
     const ticker = tickers.get(rule.symbol);

@@ -1,4 +1,8 @@
 import { StrategySubnav } from "@/components/strategy-subnav";
+import {
+  deskHomePath,
+  deskUsesCashAndCarry,
+} from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadPaperRules } from "@/lib/engine/load";
 import { loadEngineSettings } from "@/lib/engine/settings";
@@ -6,6 +10,7 @@ import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import { redirect } from "next/navigation";
 
 export default async function CashAndCarryLayout({
   children,
@@ -13,6 +18,9 @@ export default async function CashAndCarryLayout({
   children: React.ReactNode;
 }) {
   const session = await getSessionContext();
+  if (session && !deskUsesCashAndCarry(session.account.deskType)) {
+    redirect(deskHomePath(session.account.deskType));
+  }
   const { signedIn, config } = await loadPaperRules();
   const live = Boolean(session && accountCanHoldConnections(session.account.mode));
   const settings = live ? await loadEngineSettings() : null;
@@ -70,7 +78,7 @@ export default async function CashAndCarryLayout({
       {live && !bound ? (
         <div className="mx-auto max-w-7xl px-6 pt-4">
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-            This is a Connected Exchange account. Bind an exchange in Strategy
+            This is a Connected Exchange desk. Bind an exchange in Strategy
             Settings before Open, Close, Unwind, or automations can place
             orders.
           </p>

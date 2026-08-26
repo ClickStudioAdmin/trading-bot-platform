@@ -11,6 +11,9 @@ import {
   formatAccountModeChoice,
   formatDeskType,
   formatDeskTypeChoice,
+  deskHomePath,
+  deskUsesCashAndCarry,
+  deskUsesPerpsUi,
   parseAccountName,
   parseAccountMode,
   parseDeskType,
@@ -57,6 +60,17 @@ assert.equal(
   formatDeskTypeChoice("perps"),
   "Perps (buy / sell / close one USDT perpetual)",
 );
+assert.equal(
+  deskHomePath("cash_and_carry"),
+  "/strategies/cash-and-carry",
+);
+assert.equal(deskHomePath("perps"), "/strategies/futures");
+assert.equal(deskHomePath("signal_follower"), "/strategies/futures");
+assert.equal(deskUsesCashAndCarry("cash_and_carry"), true);
+assert.equal(deskUsesCashAndCarry("perps"), false);
+assert.equal(deskUsesPerpsUi("perps"), true);
+assert.equal(deskUsesPerpsUi("signal_follower"), true);
+assert.equal(deskUsesPerpsUi("cash_and_carry"), false);
 
 const paper = parseTradingAccountRow({
   id: "acc-1",
@@ -121,7 +135,7 @@ assert.deepEqual(
 );
 assert.equal(
   formatDeleteBlockers(["last", "open"]),
-  "Keep at least one account · Exit all positions first",
+  "Keep at least one desk · Exit all positions first",
 );
 assert.equal(
   formatDeleteBlockers(["open", "automations"]),

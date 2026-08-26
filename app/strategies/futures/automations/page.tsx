@@ -17,6 +17,7 @@ import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
 import { headers } from "next/headers";
 import { firstSearchValue } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Futures automations",
@@ -30,6 +31,9 @@ export default async function FuturesAutomationsPage({
 }) {
   const params = await searchParams;
   const session = await getSessionContext();
+  if (session?.account.deskType === "signal_follower") {
+    redirect(FUTURES_PATHS.webhooks);
+  }
   const settings = session ? await loadFuturesSettings(session.account.id) : null;
   const rules = session ? await loadFuturesAutomationRules(session.account.id) : [];
   const inUseRuleIds = session

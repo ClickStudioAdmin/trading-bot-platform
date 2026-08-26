@@ -67,7 +67,7 @@ export async function runPaperEngineTick(options?: {
     { data: carryRows },
     { data: orderRows },
   ] = await Promise.all([
-    supabase.from("trading_accounts").select("id, user_id, mode"),
+    supabase.from("trading_accounts").select("id, user_id, mode").eq("desk_type", "cash_and_carry"),
     selectPaperEngineSettings(supabase),
     supabase.from("paper_rules").select("*").order("sort_order", { ascending: true }),
     supabase.from("paper_carries").select("*").in("status", ["open", "closing"]),

@@ -1,4 +1,4 @@
-import { parseAccountMode } from "@/lib/accounts/model";
+import { parseAccountMode, parseDeskType } from "@/lib/accounts/model";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -76,7 +76,7 @@ export async function handleFuturesWebhook(input: {
   }
   const { data: account, error: accountError } = await supabase
     .from("trading_accounts")
-    .select("id, user_id, mode")
+    .select("id, user_id, mode, desk_type")
     .eq("id", accountId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -84,10 +84,20 @@ export async function handleFuturesWebhook(input: {
     return unauthorized();
   }
   const mode = parseAccountMode((account as { mode?: unknown }).mode);
+  const deskType = parseDeskType((account as { desk_type?: unknown }).desk_type);
+  if (deskType === "cash_and_carry") {
+    return {
+      status: 400,
+      body: {
+        ok: false,
+        error: "This desk does not accept Futures webhooks.",
+      },
+    };
+  }
 
   if (parsed.parsed.kind === "arm") {
     let fired = 0;
-    if (parsed.parsed.verb === "arm" && found.id) {
+    if (parsed.parsed.verb === "arm" && found.id && deskType === "perps") {
       const entries = await fireWebhookAutomationEntries({
         webhookId: found.id,
         accountId,

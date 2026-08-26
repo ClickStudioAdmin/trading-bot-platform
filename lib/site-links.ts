@@ -1,5 +1,5 @@
 export const SITE_LINKS = [
-  { href: "/strategies", label: "Strategies" },
+  { href: "/strategies", label: "Desks" },
 ] as const;
 
 export const STRATEGY_LINKS = [
@@ -33,13 +33,20 @@ export const ACCOUNT_DESK_LINKS = [
   { href: "/account", label: "Overview", exact: true },
   { href: "/account/settings", label: "Settings", exact: true },
   { href: "/account/exchanges", label: "Exchanges", exact: true },
-  { href: "/account/sub-accounts", label: "Manage sub-accounts", exact: true },
+  { href: "/account/sub-accounts", label: "Manage desks", exact: true },
 ] as const;
 
 export const FUTURES_PRIMARY_LINKS = [
   { href: "/strategies/futures", label: "Overview", exact: true },
   { href: "/strategies/futures/positions", label: "Positions" },
   { href: "/strategies/futures/automations", label: "Automations" },
+  { href: "/strategies/futures/webhooks", label: "Webhooks" },
+  { href: "/strategies/futures/performance", label: "Performance" },
+] as const;
+
+export const SIGNAL_FOLLOWER_PRIMARY_LINKS = [
+  { href: "/strategies/futures", label: "Overview", exact: true },
+  { href: "/strategies/futures/positions", label: "Positions" },
   { href: "/strategies/futures/webhooks", label: "Webhooks" },
   { href: "/strategies/futures/performance", label: "Performance" },
 ] as const;

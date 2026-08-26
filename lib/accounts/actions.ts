@@ -12,6 +12,7 @@ import {
   parseAccountName,
   parseDeskTypeChoice,
   pickSwitchAfterDelete,
+  deskHomePath,
 } from "@/lib/accounts/model";
 import { parseBoundConnectionId } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
@@ -36,14 +37,14 @@ function refreshAccountChrome() {
 
 function accountReturnPath(
   raw: string,
-): "/account" | typeof SUB_ACCOUNTS_PATH | "/strategies/cash-and-carry" {
+): "/account" | typeof SUB_ACCOUNTS_PATH | null {
   if (raw === SUB_ACCOUNTS_PATH || raw === "/accounts") {
     return SUB_ACCOUNTS_PATH;
   }
   if (raw === "/account") {
     return "/account";
   }
-  return "/strategies/cash-and-carry";
+  return null;
 }
 
 function staysOnManagePage(
@@ -61,11 +62,12 @@ export async function switchTradingAccount(formData: FormData) {
   const accounts = await listTradingAccounts(user.id);
   const match = accounts.find((account) => account.id === accountId);
   if (!match) {
-    redirect("/strategies/cash-and-carry");
+    redirect("/strategies");
   }
   await setActiveAccountId(match.id);
   refreshAccountChrome();
-  redirect(accountReturnPath(String(formData.get("next") ?? "")));
+  const next = accountReturnPath(String(formData.get("next") ?? ""));
+  redirect(next ?? deskHomePath(match.deskType));
 }
 
 export async function createTradingAccount(formData: FormData) {
@@ -104,7 +106,7 @@ export async function createTradingAccount(formData: FormData) {
   );
   if (!created) {
     redirect(
-      `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent("Could not create that account. The name may already be in use.")}`,
+      `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent("Could not create that desk. The name may already be in use.")}`,
     );
   }
   if (connectionId) {
@@ -123,7 +125,7 @@ export async function createTradingAccount(formData: FormData) {
   await writeEventLog({
     scope: "system",
     event: "account.created",
-    message: `Created ${mode} account ${named.name}`,
+    message: `Created ${mode} desk ${named.name}`,
     userId: session.member.id,
     accountId: created.id,
     data: {
@@ -137,7 +139,11 @@ export async function createTradingAccount(formData: FormData) {
     await setActiveAccountId(created.id);
   }
   refreshAccountChrome();
-  redirect(staysOnManagePage(next) ? `${SUB_ACCOUNTS_PATH}?created=1` : next);
+  redirect(
+    staysOnManagePage(next)
+      ? `${SUB_ACCOUNTS_PATH}?created=1`
+      : (next ?? deskHomePath(created.deskType)),
+  );
 }
 
 export async function deleteTradingAccount(formData: FormData) {

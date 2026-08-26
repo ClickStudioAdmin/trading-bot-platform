@@ -10,7 +10,7 @@ GitHub is the source of truth. The hosted database and Vercel deployment are not
 
 See [docs/phase-10.md](docs/phase-10.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** / Preview environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
 
-Phase 9 (TradingView door) is complete. This phase adds `desk_type` and splits dual-strategy books. No Fly.io. Hyperliquid and additional CEX adapters wait.
+Phase 9 (TradingView door) is complete. This phase adds typed desks (`desk_type`), login-owned keys, and splits dual-strategy books. No Fly.io. Hyperliquid and additional CEX adapters wait.
 
 ## Technology stack
 

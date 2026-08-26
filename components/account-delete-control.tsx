@@ -114,7 +114,7 @@ export function AccountDeleteControl({
                 pendingLabel="Deleting…"
                 className="rounded-control bg-danger px-3 py-1.5 text-sm font-medium text-ink"
               >
-                Delete account
+                Delete desk
               </PendingSubmitButton>
               <SwitchFields
                 options={options}

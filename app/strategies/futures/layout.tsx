@@ -1,5 +1,10 @@
 import { FuturesVenueBalanceGate } from "@/components/futures-venue-balance-gate";
 import { StrategySubnav } from "@/components/strategy-subnav";
+import {
+  deskHomePath,
+  deskUsesPerpsUi,
+  formatDeskType,
+} from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
@@ -11,8 +16,10 @@ import { loadFuturesSettings } from "@/lib/futures/settings";
 import {
   FUTURES_PRIMARY_LINKS,
   FUTURES_SECONDARY_LINKS,
+  SIGNAL_FOLLOWER_PRIMARY_LINKS,
 } from "@/lib/site-links";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
+import { redirect } from "next/navigation";
 
 export default async function FuturesLayout({
   children,
@@ -20,6 +27,11 @@ export default async function FuturesLayout({
   children: React.ReactNode;
 }) {
   const session = await getSessionContext();
+  if (session && !deskUsesPerpsUi(session.account.deskType)) {
+    redirect(deskHomePath(session.account.deskType));
+  }
+  const deskType = session?.account.deskType ?? "perps";
+  const signalFollower = deskType === "signal_follower";
   const live = Boolean(session && accountCanHoldConnections(session.account.mode));
   const settings = session ? await loadFuturesSettings() : null;
   const rules = session
@@ -48,13 +60,25 @@ export default async function FuturesLayout({
   return (
     <div>
       <StrategySubnav
-        title="Futures"
-        description="Buy, sell, or close one USDT linear perpetual. Market or limit. Long and short can both be open."
-        navLabel="Futures"
-        primaryLinks={FUTURES_PRIMARY_LINKS}
+        title={formatDeskType(deskType)}
+        description={
+          signalFollower
+            ? "TradingView sends buy, sell, and close. This desk only protects: caps, reduce-only, Close All, and row TP/SL."
+            : "Buy, sell, or close one USDT linear perpetual. Market or limit. Long and short can both be open."
+        }
+        navLabel={formatDeskType(deskType)}
+        primaryLinks={
+          signalFollower
+            ? SIGNAL_FOLLOWER_PRIMARY_LINKS
+            : FUTURES_PRIMARY_LINKS
+        }
         secondaryLinks={FUTURES_SECONDARY_LINKS}
-        automationsHref={FUTURES_PATHS.automations}
-        automationsRunning={deskStatus.automationsRunning}
+        automationsHref={
+          signalFollower ? FUTURES_PATHS.settings : FUTURES_PATHS.automations
+        }
+        automationsRunning={
+          signalFollower ? false : deskStatus.automationsRunning
+        }
         reduceOnly={deskStatus.reduceOnly}
         connection={
           live
@@ -79,7 +103,7 @@ export default async function FuturesLayout({
       {live && !bound ? (
         <div className="mx-auto max-w-7xl px-6 pt-4">
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-            This is a Connected Exchange account. Bind an exchange in Strategy
+            This is a Connected Exchange desk. Bind an exchange in Strategy
             Settings before Buy, Sell, or Close can place orders.
           </p>
         </div>

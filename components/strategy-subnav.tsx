@@ -62,7 +62,7 @@ export function StrategySubnav({
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
             <Link href="/strategies" className="hover:text-accent-strong">
-              Strategies
+              Desks
             </Link>
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">
