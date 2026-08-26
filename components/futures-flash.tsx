@@ -55,7 +55,7 @@ export function FuturesFlash({
   if (webhookArm) {
     return (
       <p className="text-sm text-success">
-        Signal accepted. No playbook on this book yet.
+        Signal accepted. If an automation uses that webhook, it just fired.
       </p>
     );
   }

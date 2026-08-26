@@ -36,10 +36,11 @@ export default async function FuturesWebhooksPage({
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Webhooks" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Each URL is a door into this book. An <span className="text-ink">Order</span>{" "}
-        webhook needs symbol and size in the JSON. A{" "}
-        <span className="text-ink">Signal</span> webhook only arms or exits — a
-        playbook (later) owns clips. Test from{" "}
+        Create a webhook and pick the type.{" "}
+        <span className="text-ink">TradingView strategy</span> means TV sends
+        every buy, sell, and close.{" "}
+        <span className="text-ink">Signal</span> is just the entry ping —
+        pick that webhook as the When on an automation. Test from{" "}
         <Link href={FUTURES_PATHS.positions} className="text-accent">
           Positions
         </Link>

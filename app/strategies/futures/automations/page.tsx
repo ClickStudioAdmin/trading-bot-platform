@@ -9,6 +9,9 @@ import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { futuresRuleToForm } from "@/lib/futures/automation";
 import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
 import { loadFuturesSettings } from "@/lib/futures/settings";
+import { futuresWebhookOrigin } from "@/lib/futures/webhook";
+import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
+import { headers } from "next/headers";
 import { firstSearchValue } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
@@ -26,6 +29,14 @@ export default async function FuturesAutomationsPage({
   const session = await getSessionContext();
   const settings = session ? await loadFuturesSettings(session.account.id) : null;
   const rules = session ? await loadFuturesAutomationRules(session.account.id) : [];
+  const triggerWebhooks = session
+    ? (
+        await listFuturesWebhooks({
+          accountId: session.account.id,
+          origin: futuresWebhookOrigin(await headers()),
+        })
+      ).filter((row) => row.kind === "signal")
+    : [];
   const pairs = await loadUsdtLinearPerps().catch(() => []);
   const exchangeBook = Boolean(
     session && accountCanHoldConnections(session.account.mode),
@@ -57,6 +68,7 @@ export default async function FuturesAutomationsPage({
         <FuturesAutomationsDesk
           rules={rules.map(futuresRuleToForm)}
           options={pairs}
+          triggerWebhooks={triggerWebhooks}
           reduceOnly={Boolean(settings?.reduceOnly)}
         />
       ) : (

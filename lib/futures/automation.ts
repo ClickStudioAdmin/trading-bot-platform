@@ -19,6 +19,7 @@ import {
 import { parseFuturesTrigger } from "./tpsl";
 
 export type FuturesTriggerCompare = "gte" | "lte";
+export type FuturesAutomationEntry = "price" | "webhook";
 
 export type FuturesAutomationRule = {
   id: string | null;
@@ -32,6 +33,8 @@ export type FuturesAutomationRule = {
   sizeUnit: "qty" | "usdt";
   size: number | null;
   limitPrice: number | null;
+  entrySource: FuturesAutomationEntry;
+  webhookId: string | null;
   triggerBy: FuturesTrigger;
   triggerCompare: FuturesTriggerCompare;
   triggerPrice: number;
@@ -51,6 +54,8 @@ export type FuturesAutomationFormValues = {
   sizeUnit: "qty" | "usdt";
   size: string;
   limitPrice: string;
+  entrySource: FuturesAutomationEntry;
+  webhookId: string;
   triggerBy: FuturesTrigger;
   triggerCompare: FuturesTriggerCompare;
   triggerPrice: string;
@@ -72,6 +77,8 @@ export function defaultFuturesAutomationForm(
     sizeUnit: "qty",
     size: "",
     limitPrice: "",
+    entrySource: "price",
+    webhookId: "",
     triggerBy: "last",
     triggerCompare: "gte",
     triggerPrice: "",
@@ -214,6 +221,8 @@ export function parseFuturesAutomationForm(
       sizeUnit: form.get(`${prefix}sizeUnit`),
       size: form.get(`${prefix}size`),
       limitPrice: form.get(`${prefix}limitPrice`),
+      entrySource: form.get(`${prefix}entrySource`),
+      webhookId: form.get(`${prefix}webhookId`),
       triggerBy: form.get(`${prefix}triggerBy`),
       triggerCompare: form.get(`${prefix}triggerCompare`),
       triggerPrice: form.get(`${prefix}triggerPrice`),
@@ -240,6 +249,8 @@ export function parseFuturesAutomationFields(input: {
   sizeUnit?: unknown;
   size?: unknown;
   limitPrice?: unknown;
+  entrySource?: unknown;
+  webhookId?: unknown;
   triggerBy?: unknown;
   triggerCompare?: unknown;
   triggerPrice?: unknown;
@@ -285,15 +296,26 @@ export function parseFuturesAutomationFields(input: {
     }
     limitPrice = parsed.price;
   }
+  const entrySource = parseAutomationEntry(input.entrySource);
+  const webhookId = String(input.webhookId ?? "").trim() || null;
+  if (entrySource === "webhook" && !webhookId) {
+    return { ok: false, error: "Pick a Signal webhook." };
+  }
   const triggerBy = parseFuturesTrigger(input.triggerBy);
   if (!triggerBy.ok) {
     return triggerBy;
   }
-  const compare = parseFuturesTriggerCompare(input.triggerCompare);
+  const compare =
+    entrySource === "webhook"
+      ? { ok: true as const, compare: "gte" as const }
+      : parseFuturesTriggerCompare(input.triggerCompare);
   if (!compare.ok) {
     return compare;
   }
-  const triggerPrice = parseFuturesLimitPrice(input.triggerPrice);
+  const triggerPrice =
+    entrySource === "webhook"
+      ? { ok: true as const, price: 1 }
+      : parseFuturesLimitPrice(input.triggerPrice);
   if (!triggerPrice.ok) {
     return { ok: false, error: "Enter a trigger price." };
   }
@@ -320,6 +342,8 @@ export function parseFuturesAutomationFields(input: {
       sizeUnit: unit,
       size: size.size,
       limitPrice,
+      entrySource,
+      webhookId: entrySource === "webhook" ? webhookId : null,
       triggerBy: triggerBy.trigger,
       triggerCompare: compare.compare,
       triggerPrice: triggerPrice.price,
@@ -361,6 +385,10 @@ function parseSkipIfOpen(raw: unknown): boolean {
   return value === "on" || value === "true" || value === "1";
 }
 
+export function parseAutomationEntry(raw: unknown): FuturesAutomationEntry {
+  return raw === "webhook" ? "webhook" : "price";
+}
+
 function emptyParsedRule(): FuturesAutomationRule {
   return {
     id: null,
@@ -374,6 +402,8 @@ function emptyParsedRule(): FuturesAutomationRule {
     sizeUnit: "qty",
     size: 1,
     limitPrice: null,
+    entrySource: "price",
+    webhookId: null,
     triggerBy: "last",
     triggerCompare: "gte",
     triggerPrice: 1,
@@ -397,6 +427,8 @@ export function parseFuturesAutomationRow(
     sizeUnit: row.size_unit,
     size: row.size,
     limitPrice: row.limit_price,
+    entrySource: row.entry_source,
+    webhookId: row.webhook_id,
     triggerBy: row.trigger_by,
     triggerCompare: row.trigger_compare,
     triggerPrice: row.trigger_price,
@@ -432,6 +464,8 @@ export function futuresRuleToForm(
     sizeUnit: rule.sizeUnit,
     size: rule.size == null ? "" : String(rule.size),
     limitPrice: rule.limitPrice == null ? "" : String(rule.limitPrice),
+    entrySource: rule.entrySource,
+    webhookId: rule.webhookId ?? "",
     triggerBy: rule.triggerBy,
     triggerCompare: rule.triggerCompare,
     triggerPrice: String(rule.triggerPrice),
@@ -458,6 +492,8 @@ export function futuresAutomationToRow(
     size_unit: rule.sizeUnit,
     size: rule.size,
     limit_price: rule.orderType === "limit" ? rule.limitPrice : null,
+    entry_source: rule.entrySource,
+    webhook_id: rule.entrySource === "webhook" ? rule.webhookId : null,
     trigger_by: rule.triggerBy,
     trigger_compare: rule.triggerCompare,
     trigger_price: rule.triggerPrice,

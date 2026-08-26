@@ -4,7 +4,7 @@ Current. Phase 8 is complete. See [phase-8.md](phase-8.md).
 
 ## Purpose
 
-Give each Futures book one HTTPS webhook on Sydney Vercel. TradingView (or curl) posts Buy / Sell / Close into `runFuturesCommand`. Arm / disarm / close-playbook are accepted and logged so Phase 11 can run a playbook. The webhook is a door, not a brain. No typed desks this phase.
+Give each Futures book named HTTPS webhooks on Sydney Vercel. Create picks the type: **TradingView strategy** (TV sends every Buy / Sell / Close) or **Signal** (TV only pings; an automation owns size and action). No typed desks this phase.
 
 Paper Trading books write the in-app ledger only. Connected Exchange books use the existing Futures bind.
 
@@ -27,10 +27,10 @@ Stop at the end of this phase for a desk test. Do not start typed desks ([phase-
 
 ## How a webhook works
 
-1. On **Webhooks**, create a named URL: `{origin}/api/futures/webhook/{token}`. **Order** webhooks need symbol and size in the JSON (signal follower). **Signal** webhooks only accept `arm` / `disarm` / `close-playbook` — a playbook owns clips (Phase 11). The token is 64 hex characters, stored as a SHA-256 hash plus ciphertext. Rotate invalidates the old URL. Positions can send a dummy call through the same door.
+1. On **Webhooks**, create a named URL: `{origin}/api/futures/webhook/{token}`. **TradingView strategy** (`order`) needs symbol and size in the JSON. **Signal** (`signal`) accepts `arm` and fires any automation that uses that webhook as its When. The token is 64 hex characters, stored as a SHA-256 hash plus ciphertext. Rotate invalidates the old URL. Positions can send a dummy call through the same door.
 2. TradingView POSTs JSON to that URL. The path token is the secret. Do not put the token in the JSON. Do not send a Bybit private-API dump.
 3. **Order** — `action` is `buy`, `sell`, or `close` (aliases `flatten`, `close_long`, `close_short`). `symbol` is a USDT linear perp. Size is `qty` or `usdt` (`sizeUnit`). Optional `orderType` `market` or `limit` with `limitPrice`. Close looks up the open row on that symbol (and `side` when both sides are open). Same reduce-only and risk caps as a desk click.
-4. **Arm** — `action` is `arm`, `disarm`, or `close-playbook`. Logged only. Phase 11 implements the playbook.
+4. **Signal** — `action` is `arm`, `disarm`, or `close-playbook`. `arm` runs automations whose When is that webhook. The rule still owns symbol, size, and Buy / Sell / Close. Phase 11 can also arm a DCA playbook from the same ping.
 5. Optional `id` (or `idempotencyKey`) is stored on `futures_command_receipts`. Live sends it to Bybit as `orderLinkId` when it fits. A replay returns the same flash and does not place again.
 6. Source is `engine`, `rule_name` is TradingView. The blotter badge is Auto.
 

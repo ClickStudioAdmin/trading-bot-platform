@@ -94,6 +94,10 @@ export function parseWebhookName(
   return { ok: true, name };
 }
 
+export function webhookKindLabel(kind: WebhookKind): string {
+  return kind === "signal" ? "Signal" : "TradingView strategy";
+}
+
 export function parseWebhookKind(
   raw: unknown,
 ): { ok: true; kind: WebhookKind } | { ok: false; error: string } {

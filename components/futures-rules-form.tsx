@@ -14,14 +14,18 @@ import {
   type FuturesAutomationFormValues,
 } from "@/lib/futures/automation";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
+import { parseAutomationEntry } from "@/lib/futures/automation";
+import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 
 export function FuturesAutomationsDesk({
   rules,
   options,
+  triggerWebhooks = [],
   reduceOnly = false,
 }: {
   rules: FuturesAutomationFormValues[];
   options: LinearPerp[];
+  triggerWebhooks?: Pick<FuturesWebhookRow, "id" | "name">[];
   reduceOnly?: boolean;
 }) {
   const [layers, setLayers] = useState(rules);
@@ -37,7 +41,8 @@ export function FuturesAutomationsDesk({
       {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
           No rules yet. Add a rule to fire Buy, Sell, or Close when last,
-          mark, or index crosses a price. Leave this empty to trade by hand.
+          mark, or index crosses a price, or when a Signal webhook
+          fires. Leave this empty to trade by hand.
         </p>
       ) : (
         layers.map((layer, index) => (
@@ -46,6 +51,7 @@ export function FuturesAutomationsDesk({
             index={index}
             layer={layer}
             options={options}
+            triggerWebhooks={triggerWebhooks}
             accountReduceOnly={reduceOnly}
             onRemove={() => {
               const next = layers.filter((item) => item.key !== layer.key);
@@ -94,12 +100,14 @@ function RuleCard({
   index,
   layer,
   options,
+  triggerWebhooks,
   accountReduceOnly,
   onRemove,
 }: {
   index: number;
   layer: FuturesAutomationFormValues;
   options: LinearPerp[];
+  triggerWebhooks: Pick<FuturesWebhookRow, "id" | "name">[];
   accountReduceOnly: boolean;
   onRemove: () => void;
 }) {
@@ -112,7 +120,9 @@ function RuleCard({
   const [limitPrice, setLimitPrice] = useState(layer.limitPrice);
   const [triggerPrice, setTriggerPrice] = useState(layer.triggerPrice);
   const [symbol, setSymbol] = useState(layer.symbol);
+  const [entrySource, setEntrySource] = useState(layer.entrySource);
   const closing = formAction === "close_long" || formAction === "close_short";
+  const webhookEntry = entrySource === "webhook";
   const selected = options.find((row) => row.symbol === symbol);
   const baseCoin = selected?.baseCoin ?? "Token";
 
@@ -274,42 +284,80 @@ function RuleCard({
       <div className="mt-3 grid items-end gap-3 md:grid-cols-3">
         <label className="block text-sm text-ink">
           When
+          <input type="hidden" name={`${prefix}entrySource`} value={entrySource} />
           <select
-            name={`${prefix}triggerBy`}
-            defaultValue={layer.triggerBy}
+            value={entrySource}
+            onChange={(event) =>
+              setEntrySource(parseAutomationEntry(event.target.value))
+            }
             className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
           >
-            <option value="last">Last is</option>
-            <option value="mark">Mark is</option>
-            <option value="index">Index is</option>
+            <option value="price">Price cross</option>
+            <option value="webhook">Signal webhook</option>
           </select>
         </label>
-        <label className="block text-sm text-ink">
-          Compare
-          <select
-            name={`${prefix}triggerCompare`}
-            defaultValue={layer.triggerCompare}
-            className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-          >
-            <option value="gte">At or above</option>
-            <option value="lte">At or below</option>
-          </select>
-        </label>
-        <label className="block text-sm text-ink">
-          Price
-          <span className="relative mt-1 block">
-            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-              $
-            </span>
-            <GroupedNumberInput
-              name={`${prefix}triggerPrice`}
-              value={triggerPrice}
-              onChange={setTriggerPrice}
-              allowDecimal
-              className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
-            />
-          </span>
-        </label>
+        {webhookEntry ? (
+          <label className="block text-sm text-ink md:col-span-2">
+            Webhook
+            <select
+              name={`${prefix}webhookId`}
+              defaultValue={layer.webhookId}
+              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+            >
+              <option value="">
+                {triggerWebhooks.length === 0
+                  ? "Create a Signal webhook first"
+                  : "Pick a webhook"}
+              </option>
+              {triggerWebhooks.map((hook) => (
+                <option key={hook.id} value={hook.id}>
+                  {hook.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <>
+            <label className="block text-sm text-ink">
+              Price source
+              <select
+                name={`${prefix}triggerBy`}
+                defaultValue={layer.triggerBy}
+                className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+              >
+                <option value="last">Last is</option>
+                <option value="mark">Mark is</option>
+                <option value="index">Index is</option>
+              </select>
+            </label>
+            <label className="block text-sm text-ink">
+              Compare
+              <select
+                name={`${prefix}triggerCompare`}
+                defaultValue={layer.triggerCompare}
+                className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+              >
+                <option value="gte">At or above</option>
+                <option value="lte">At or below</option>
+              </select>
+            </label>
+            <label className="block text-sm text-ink">
+              Price
+              <span className="relative mt-1 block">
+                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
+                  $
+                </span>
+                <GroupedNumberInput
+                  name={`${prefix}triggerPrice`}
+                  value={triggerPrice}
+                  onChange={setTriggerPrice}
+                  allowDecimal
+                  className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+                />
+              </span>
+            </label>
+          </>
+        )}
       </div>
 
       {closing ? null : (
@@ -324,7 +372,7 @@ function RuleCard({
           <span>
             Skip if this side is already open
             <span className="mt-1 block text-xs text-ink-muted">
-              Off means each new cross can add size to the same row.
+              Off means each new cross or trigger can add size to the same row.
             </span>
           </span>
         </label>

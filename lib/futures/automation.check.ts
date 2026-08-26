@@ -171,4 +171,22 @@ if (blank.ok) {
 
 assert.equal(defaultFuturesAutomationForm(0).formAction, "buy");
 
+const webhookRule = new FormData();
+webhookRule.set("ruleCount", "1");
+webhookRule.set("r0_name", "TV start");
+webhookRule.set("r0_symbol", "BTCUSDT");
+webhookRule.set("r0_action", "buy");
+webhookRule.set("r0_size", "0.01");
+webhookRule.set("r0_entrySource", "webhook");
+webhookRule.set("r0_webhookId", "11111111-1111-1111-1111-111111111111");
+const webhookParsed = parseFuturesAutomationForm(webhookRule);
+assert.equal(webhookParsed.ok, true);
+if (webhookParsed.ok) {
+  assert.equal(webhookParsed.rules[0]?.entrySource, "webhook");
+  assert.equal(
+    webhookParsed.rules[0]?.webhookId,
+    "11111111-1111-1111-1111-111111111111",
+  );
+}
+
 console.log("futures automation checks passed");

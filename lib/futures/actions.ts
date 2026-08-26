@@ -560,6 +560,9 @@ export async function testFuturesWebhook(formData: FormData) {
     fail(next, String(result.body.error ?? "Webhook test failed."));
   }
   if (result.body.accepted) {
+    if (Number(result.body.fired) > 0) {
+      redirect(`${next}?paper=${session.account.mode === "live" ? "live-opened" : "opened"}`);
+    }
     redirect(`${next}?paper=webhook-arm`);
   }
   redirect(`${next}?paper=${String(result.body.flash ?? "opened")}`);

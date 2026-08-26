@@ -95,6 +95,9 @@ export async function runFuturesAutomationTick(): Promise<{ fired: number }> {
   let fired = 0;
   for (const raw of ruleRows) {
     const rule = parseFuturesAutomationRow(raw as Record<string, unknown>);
+    if (rule.entrySource === "webhook") {
+      continue;
+    }
     const accountId = String((raw as { account_id: string }).account_id);
     const account = accounts.get(accountId);
     if (!account || !rule.id) {
@@ -165,6 +168,94 @@ export async function runFuturesAutomationTick(): Promise<{ fired: number }> {
   return { fired };
 }
 
+export async function fireWebhookAutomationEntries(input: {
+  webhookId: string;
+  accountId: string;
+  userId: string;
+  mode: TradingAccountMode;
+}): Promise<{ fired: number }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { fired: 0 };
+  }
+  const { data: ruleRows } = await supabase
+    .from("futures_automation_rules")
+    .select("*")
+    .eq("account_id", input.accountId)
+    .eq("webhook_id", input.webhookId)
+    .eq("entry_source", "webhook")
+    .neq("mode", "disabled")
+    .order("sort_order", { ascending: true });
+  if (!ruleRows || ruleRows.length === 0) {
+    return { fired: 0 };
+  }
+  const { data: settingsRow } = await supabase
+    .from("strategy_settings")
+    .select("reduce_only")
+    .eq("strategy_id", FUTURES_STRATEGY_ID)
+    .eq("account_id", input.accountId)
+    .maybeSingle();
+  const { data: openRows } = await supabase
+    .from("futures_positions")
+    .select("*")
+    .eq("status", "open")
+    .eq("account_id", input.accountId);
+  const bookReduceOnly = Boolean(
+    (settingsRow as { reduce_only?: unknown } | null)?.reduce_only,
+  );
+  const opens = (openRows ?? []).map((row) =>
+    parseFuturesPositionRow(row as Record<string, unknown>),
+  );
+  let fired = 0;
+  for (const raw of ruleRows) {
+    const rule = parseFuturesAutomationRow(raw as Record<string, unknown>);
+    if (!rule.id) {
+      continue;
+    }
+    const side = automationSide(rule);
+    const openOnSide = opens.find(
+      (row) => row.symbol === rule.symbol && row.side === side,
+    );
+    const decision = decideFuturesAutomationTick({
+      conditionMet: true,
+      wasTrue: false,
+      action: rule.action,
+      mode: rule.mode,
+      bookReduceOnly,
+      skipIfOpen: rule.skipIfOpen,
+      hasOpenOnSide: Boolean(openOnSide),
+    });
+    if (!decision.fire) {
+      continue;
+    }
+    const result = await fireAutomationRule({
+      rule,
+      accountId: input.accountId,
+      userId: input.userId,
+      mode: input.mode,
+      positionId: openOnSide?.id ?? null,
+    });
+    if (result.ok) {
+      fired += 1;
+      await patchRule(supabase, rule.id, {
+        last_fired_at: new Date().toISOString(),
+      });
+    } else {
+      await writeEventLog({
+        level: "warning",
+        scope: "trade",
+        event: "engine.open_failed",
+        message: result.error,
+        userId: input.userId,
+        accountId: input.accountId,
+        strategy: FUTURES_STRATEGY_ID,
+        data: { ruleId: rule.id, webhookId: input.webhookId },
+      });
+    }
+  }
+  return { fired };
+}
+
 async function fireAutomationRule(input: {
   rule: FuturesAutomationRule;
   accountId: string;
@@ -191,7 +282,7 @@ async function fireAutomationRule(input: {
       size: rule.size == null ? "" : String(rule.size),
       sizeUnit: rule.sizeUnit,
       limitPrice: rule.limitPrice == null ? undefined : String(rule.limitPrice),
-      idempotencyKey: futuresAutomationIdempotencyKey(rule.id),
+      idempotencyKey: futuresAutomationIdempotencyKey(rule.id, Date.now()),
       source: "engine",
       ruleId: rule.id,
       ruleName: rule.name,

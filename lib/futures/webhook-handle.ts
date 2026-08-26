@@ -2,6 +2,7 @@ import { parseAccountMode } from "@/lib/accounts/model";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { fireWebhookAutomationEntries } from "./automation-tick";
 import { runFuturesCommand } from "./command";
 import { loadOpenFuturesOnSymbol } from "./list";
 import {
@@ -58,7 +59,8 @@ export async function handleFuturesWebhook(input: {
       status: 400,
       body: {
         ok: false,
-        error: "This webhook is a signal. Send arm, disarm, or close-playbook.",
+        error:
+          "This webhook is a Signal. Send arm, disarm, or close-playbook.",
       },
     };
   }
@@ -67,7 +69,8 @@ export async function handleFuturesWebhook(input: {
       status: 400,
       body: {
         ok: false,
-        error: "This webhook is an order door. Send buy, sell, or close.",
+        error:
+          "This webhook is a TradingView strategy. Send buy, sell, or close.",
       },
     };
   }
@@ -83,14 +86,29 @@ export async function handleFuturesWebhook(input: {
   const mode = parseAccountMode((account as { mode?: unknown }).mode);
 
   if (parsed.parsed.kind === "arm") {
+    let fired = 0;
+    if (parsed.parsed.verb === "arm" && found.id) {
+      const entries = await fireWebhookAutomationEntries({
+        webhookId: found.id,
+        accountId,
+        userId,
+        mode,
+      });
+      fired = entries.fired;
+    }
     await writeEventLog({
       scope: "strategy",
       event: `webhook.${parsed.parsed.verb}`,
-      message: `Accepted ${parsed.parsed.verb}. No playbook on this book yet.`,
+      message:
+        parsed.parsed.verb === "arm"
+          ? fired > 0
+            ? `Signal fired ${fired} automation ${fired === 1 ? "rule" : "rules"}.`
+            : "Signal accepted. No automation uses this webhook yet."
+          : `Accepted ${parsed.parsed.verb}.`,
       userId,
       accountId,
       strategy: FUTURES_STRATEGY_ID,
-      data: { verb: parsed.parsed.verb },
+      data: { verb: parsed.parsed.verb, fired },
     });
     return {
       status: 200,
@@ -99,6 +117,7 @@ export async function handleFuturesWebhook(input: {
         accepted: true,
         playbook: false,
         verb: parsed.parsed.verb,
+        fired,
       },
     };
   }
@@ -163,18 +182,20 @@ async function lookupWebhookByHash(
 ): Promise<{
   accountId: string;
   userId: string;
+  id: string | null;
   hash: string;
   name: string;
   kind: WebhookKind;
 } | null> {
   const named = await supabase
     .from("futures_webhooks")
-    .select("account_id, user_id, webhook_token_hash, name, kind")
+    .select("id, account_id, user_id, webhook_token_hash, name, kind")
     .eq("webhook_token_hash", hash)
     .maybeSingle();
   if (!named.error && named.data) {
     const kind = parseWebhookKind((named.data as { kind?: unknown }).kind);
     return {
+      id: String((named.data as { id: string }).id),
       accountId: String((named.data as { account_id: string }).account_id),
       userId: String((named.data as { user_id: string }).user_id),
       hash: String(
@@ -196,6 +217,7 @@ async function lookupWebhookByHash(
     return null;
   }
   return {
+    id: null,
     accountId: String((legacy.data as { account_id: string }).account_id),
     userId: String((legacy.data as { user_id: string }).user_id),
     hash: String(
