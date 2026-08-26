@@ -7,15 +7,12 @@ import { SITE_LINKS, STRATEGY_LINKS } from "@/lib/site-links";
 
 export function SiteNav({
   className = "",
-  extraLinks = [],
   stacked = false,
 }: {
   className?: string;
-  extraLinks?: { href: string; label: string }[];
   stacked?: boolean;
 }) {
   const pathname = usePathname();
-  const extra = extraLinks.filter((link) => link.href !== "/strategies");
 
   return (
     <nav className={className} aria-label="Primary">
@@ -24,19 +21,6 @@ export function SiteNav({
       ) : (
         <StrategiesMenu pathname={pathname} />
       )}
-      {extra.map((link) => {
-        const active =
-          pathname === link.href || pathname.startsWith(`${link.href}/`);
-        return (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={navItemClass(active)}
-          >
-            {link.label}
-          </Link>
-        );
-      })}
     </nav>
   );
 }
@@ -163,4 +147,14 @@ function navItemClass(active: boolean): string {
       ? "bg-surface-raised text-ink"
       : "text-ink-muted hover:bg-surface-raised hover:text-ink"
   }`;
+}
+
+export function HeaderAdminLink() {
+  const pathname = usePathname();
+  const active = pathname === "/admin" || pathname.startsWith("/admin/");
+  return (
+    <Link href="/admin" className={navItemClass(active)}>
+      Admin
+    </Link>
+  );
 }
