@@ -14,6 +14,8 @@ import {
   deskHomePath,
   deskUsesCashAndCarry,
   deskUsesPerpsUi,
+  deskAllowsManualPerpTicket,
+  deskAllowsSignalWebhooks,
   parseAccountName,
   parseAccountMode,
   parseDeskType,
@@ -54,11 +56,15 @@ assert.equal(parseDeskType("other"), "cash_and_carry");
 assert.equal(parseDeskTypeChoice("perps").ok, true);
 assert.equal(parseDeskTypeChoice("").ok, false);
 assert.equal(formatDeskType("perps"), "Perps");
-assert.equal(formatDeskType("signal_follower"), "Signal follower");
+assert.equal(formatDeskType("signal_follower"), "TradingView Strategy");
 assert.equal(formatDeskType("cash_and_carry"), "Cash and Carry");
 assert.equal(
   formatDeskTypeChoice("perps"),
   "Perps (buy / sell / close one USDT perpetual)",
+);
+assert.equal(
+  formatDeskTypeChoice("signal_follower"),
+  "TradingView Strategy (alerts send buy / sell / close)",
 );
 assert.equal(
   deskHomePath("cash_and_carry"),
@@ -71,6 +77,12 @@ assert.equal(deskUsesCashAndCarry("perps"), false);
 assert.equal(deskUsesPerpsUi("perps"), true);
 assert.equal(deskUsesPerpsUi("signal_follower"), true);
 assert.equal(deskUsesPerpsUi("cash_and_carry"), false);
+assert.equal(deskAllowsManualPerpTicket("perps"), true);
+assert.equal(deskAllowsManualPerpTicket("signal_follower"), false);
+assert.equal(deskAllowsManualPerpTicket("cash_and_carry"), false);
+assert.equal(deskAllowsSignalWebhooks("perps"), true);
+assert.equal(deskAllowsSignalWebhooks("signal_follower"), false);
+assert.equal(deskAllowsSignalWebhooks("cash_and_carry"), false);
 
 const paper = parseTradingAccountRow({
   id: "acc-1",

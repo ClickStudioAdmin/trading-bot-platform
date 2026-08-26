@@ -15,6 +15,7 @@ import {
   loadUsdtLinearPerps,
 } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import { deskAllowsManualPerpTicket, deskAllowsSignalWebhooks } from "@/lib/accounts/model";
 import { FuturesWebhookTest } from "@/components/futures-webhook-test";
 import { submitFuturesTrade } from "@/lib/futures/actions";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
@@ -90,6 +91,15 @@ export default async function FuturesPositionsPage({
       lastPrices[symbol] = last;
     }
   }
+  const showTicket = deskAllowsManualPerpTicket(
+    session?.account.deskType ?? "perps",
+  );
+  const allowSignal = deskAllowsSignalWebhooks(
+    session?.account.deskType ?? "perps",
+  );
+  const testWebhooks = allowSignal
+    ? webhooks
+    : webhooks.filter((row) => row.kind !== "signal");
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -134,73 +144,85 @@ export default async function FuturesPositionsPage({
           showCloseAll
           workingCount={desk.working.length}
           webhookNames={desk.webhookNames}
+          emptyMessage={
+            showTicket
+              ? undefined
+              : "No open futures. TradingView opens them through a webhook."
+          }
         />
 
-        <section>
-          <h2 className="text-xl font-semibold tracking-tight">Place an order</h2>
-          <p className="text-sm text-ink-muted">
-            USDT linear perpetual. Buy opens or adds a long. Sell opens or adds
-            a short. Both sides can be open on the same contract. Market fills
-            now. Limit rests until it matches — watch it under Open orders.
-            Optional TP/SL and trailing stop attach to that order. Add or edit
-            stops on an open row. Market or Limit close is on each open row;
-            both set qty (full row or a slice). Close All and Close All & Cancel
-            All Open Orders sit above the table. Cancel All Open Orders sits
-            above Open orders. Size is token quantity or USDT
-            value (mark for market, limit price for limit).
-            {settings.reduceOnly
-              ? " Reduce only is on — Buy and Sell are blocked."
-              : ""}
-          </p>
-          <div className="mt-3 rounded-card border border-line bg-surface p-5">
-            <form action={submitFuturesTrade} className="block">
-              <input type="hidden" name="next" value={NEXT} />
-              <FuturesOrderTicket
-                options={pairs}
-                lastPrices={lastPrices}
-                actions={
-                  <>
-                    <PendingSubmitButton
-                      pendingLabel="Buying…"
-                      successKey="futures-buy"
-                      name="action"
-                      value="buy"
-                      className="rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
-                    >
-                      Buy
-                    </PendingSubmitButton>
-                    <PendingSubmitButton
-                      pendingLabel="Selling…"
-                      successKey="futures-sell"
-                      name="action"
-                      value="sell"
-                      className="rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
-                    >
-                      Sell
-                    </PendingSubmitButton>
-                  </>
-                }
-              />
-              {webhooks.length > 0 ? (
-                <FuturesWebhookTest webhooks={webhooks} />
-              ) : session ? (
-                <p className="mt-4 text-xs text-ink-muted">
-                  Create a named webhook on{" "}
-                  <Link href={FUTURES_PATHS.webhooks} className="text-accent">
-                    Webhooks
-                  </Link>{" "}
-                  to send a dummy TradingView call from this ticket.
+        {showTicket ? (
+          <section>
+            <h2 className="text-xl font-semibold tracking-tight">
+              Place an order
+            </h2>
+            <p className="text-sm text-ink-muted">
+              USDT linear perpetual. Buy opens or adds a long. Sell opens or
+              adds a short. Both sides can be open on the same contract. Market
+              fills now. Limit rests until it matches — watch it under Open
+              orders. Optional TP/SL and trailing stop attach to that order.
+              Add or edit stops on an open row. Market or Limit close is on
+              each open row; both set qty (full row or a slice). Close All and
+              Close All & Cancel All Open Orders sit above the table. Cancel
+              All Open Orders sits above Open orders. Size is token quantity or
+              USDT value (mark for market, limit price for limit).
+              {settings.reduceOnly
+                ? " Reduce only is on — Buy and Sell are blocked."
+                : ""}
+            </p>
+            <div className="mt-3 rounded-card border border-line bg-surface p-5">
+              <form action={submitFuturesTrade} className="block">
+                <input type="hidden" name="next" value={NEXT} />
+                <FuturesOrderTicket
+                  options={pairs}
+                  lastPrices={lastPrices}
+                  actions={
+                    <>
+                      <PendingSubmitButton
+                        pendingLabel="Buying…"
+                        successKey="futures-buy"
+                        name="action"
+                        value="buy"
+                        className="rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
+                      >
+                        Buy
+                      </PendingSubmitButton>
+                      <PendingSubmitButton
+                        pendingLabel="Selling…"
+                        successKey="futures-sell"
+                        name="action"
+                        value="sell"
+                        className="rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
+                      >
+                        Sell
+                      </PendingSubmitButton>
+                    </>
+                  }
+                />
+                {testWebhooks.length > 0 ? (
+                  <FuturesWebhookTest
+                    webhooks={testWebhooks}
+                    allowSignal={allowSignal}
+                  />
+                ) : session ? (
+                  <p className="mt-4 text-xs text-ink-muted">
+                    Create a named webhook on{" "}
+                    <Link href={FUTURES_PATHS.webhooks} className="text-accent">
+                      Webhooks
+                    </Link>{" "}
+                    to send a dummy TradingView call from this ticket.
+                  </p>
+                ) : null}
+              </form>
+              {live && !settings.connectionId ? (
+                <p className="mt-3 text-xs text-warning">
+                  Bind an exchange in Desk Settings before these buttons place
+                  venue orders.
                 </p>
               ) : null}
-            </form>
-            {live && !settings.connectionId ? (
-              <p className="mt-3 text-xs text-warning">
-                Bind an exchange in Desk Settings before these buttons place
-                venue orders.
-              </p>
-            ) : null}
-          </div>
-        </section>
+            </div>
+          </section>
+        ) : null}
 
         <FuturesWorkingOrders
           signedIn={desk.signedIn}
@@ -209,6 +231,11 @@ export default async function FuturesPositionsPage({
           exchangeBook={desk.exchangeBook}
           baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
           webhookNames={desk.webhookNames}
+          emptyMessage={
+            showTicket
+              ? undefined
+              : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
+          }
         />
       </div>
     </main>

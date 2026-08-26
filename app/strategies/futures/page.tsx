@@ -15,6 +15,7 @@ import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { loadFuturesVenueRisk } from "@/lib/futures/venue-risk-load";
 import { attachFuturesVenueRisk } from "@/lib/futures/venue-risk";
 import { firstSearchValue } from "@/lib/paper/open";
+import { deskAllowsManualPerpTicket } from "@/lib/accounts/model";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
 export const metadata: Metadata = {
@@ -36,6 +37,9 @@ export default async function FuturesOverviewPage({
     });
   }
   const desk = await loadFuturesDesk();
+  const showTicket = deskAllowsManualPerpTicket(
+    session?.account.deskType ?? "perps",
+  );
   const [tickers, pairs, venueRisk] = await Promise.all([
     desk.open.length > 0
       ? fetchBybitTickers("linear").catch(
@@ -99,6 +103,11 @@ export default async function FuturesOverviewPage({
         exchangeBook={desk.exchangeBook}
         baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
         webhookNames={desk.webhookNames}
+        emptyMessage={
+          showTicket
+            ? undefined
+            : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
+        }
       />
       <OpenFuturesTrades
         signedIn={desk.signedIn}
@@ -106,13 +115,23 @@ export default async function FuturesOverviewPage({
         exchangeBook={desk.exchangeBook}
         webhookNames={desk.webhookNames}
         emptyMessage={
-          <>
-            No open futures on this book. Open from{" "}
-            <Link href={FUTURES_PATHS.positions} className="text-accent">
-              Positions
-            </Link>
-            .
-          </>
+          showTicket ? (
+            <>
+              No open futures on this book. Open from{" "}
+              <Link href={FUTURES_PATHS.positions} className="text-accent">
+                Positions
+              </Link>
+              .
+            </>
+          ) : (
+            <>
+              No open futures on this book. TradingView opens them through a{" "}
+              <Link href={FUTURES_PATHS.webhooks} className="text-accent">
+                webhook
+              </Link>
+              .
+            </>
+          )
         }
       />
 

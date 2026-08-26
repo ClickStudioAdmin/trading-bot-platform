@@ -45,8 +45,10 @@ const SIGNAL_PAYLOAD = `{
 
 export function FuturesWebhooksDesk({
   webhooks,
+  allowSignal = true,
 }: {
   webhooks: FuturesWebhookRow[];
+  allowSignal?: boolean;
 }) {
   return (
     <div className="mt-6 space-y-4">
@@ -67,21 +69,25 @@ export function FuturesWebhooksDesk({
               className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
             />
           </label>
-          <label className="min-w-[16rem] flex-[1.4] text-sm text-ink">
-            Type
-            <select
-              name="kind"
-              defaultValue="order"
-              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            >
-              <option value="order">
-                TradingView strategy — TV controls the orders
-              </option>
-              <option value="signal">
-                Signal — entry condition on an automation
-              </option>
-            </select>
-          </label>
+          {allowSignal ? (
+            <label className="min-w-[16rem] flex-[1.4] text-sm text-ink">
+              Type
+              <select
+                name="kind"
+                defaultValue="order"
+                className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+              >
+                <option value="order">
+                  TradingView strategy — TV controls the orders
+                </option>
+                <option value="signal">
+                  Signal — entry condition on an automation
+                </option>
+              </select>
+            </label>
+          ) : (
+            <input type="hidden" name="kind" value="order" />
+          )}
           <PendingSubmitButton
             pendingLabel="Creating…"
             successKey="create-futures-webhook"
@@ -127,6 +133,11 @@ export function FuturesWebhooksDesk({
                 : "TradingView strategy"}
             </span>
           </div>
+          {!allowSignal && hook.kind === "signal" ? (
+            <p className="text-sm text-warning">
+              Signal webhooks do nothing on this desk. Delete this URL.
+            </p>
+          ) : null}
           <div className="space-y-1">
             <p className="text-sm text-ink">URL</p>
             {hook.url ? (

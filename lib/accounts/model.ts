@@ -43,7 +43,7 @@ export function formatDeskType(deskType: DeskType): string {
     return "Perps";
   }
   if (deskType === "signal_follower") {
-    return "Signal follower";
+    return "TradingView Strategy";
   }
   return "Cash and Carry";
 }
@@ -53,7 +53,7 @@ export function formatDeskTypeChoice(deskType: DeskType): string {
     return "Perps (buy / sell / close one USDT perpetual)";
   }
   if (deskType === "signal_follower") {
-    return "Signal follower (TradingView sends the orders)";
+    return "TradingView Strategy (alerts send buy / sell / close)";
   }
   return "Cash and Carry (spot + dated future)";
 }
@@ -70,6 +70,14 @@ export function deskUsesCashAndCarry(deskType: DeskType): boolean {
 
 export function deskUsesPerpsUi(deskType: DeskType): boolean {
   return deskType === "perps" || deskType === "signal_follower";
+}
+
+export function deskAllowsManualPerpTicket(deskType: DeskType): boolean {
+  return deskType === "perps";
+}
+
+export function deskAllowsSignalWebhooks(deskType: DeskType): boolean {
+  return deskType === "perps";
 }
 
 export function parseAccountName(

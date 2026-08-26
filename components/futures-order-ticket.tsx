@@ -17,10 +17,12 @@ export function FuturesOrderTicket({
   options,
   lastPrices = {},
   actions,
+  includeStops = true,
 }: {
   options: LinearPerp[];
   lastPrices?: Record<string, number>;
   actions?: ReactNode;
+  includeStops?: boolean;
 }) {
   const [symbol, setSymbol] = useState(
     () =>
@@ -196,8 +198,12 @@ export function FuturesOrderTicket({
           </div>
         ) : null}
       </div>
-      <FuturesTpslFields />
-      <FuturesTrailingFields />
+      {includeStops ? (
+        <>
+          <FuturesTpslFields />
+          <FuturesTrailingFields />
+        </>
+      ) : null}
     </div>
   );
 }

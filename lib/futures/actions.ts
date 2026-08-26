@@ -6,6 +6,7 @@ import {
   saveFuturesAutomationRules,
 } from "./automation-load";
 import { runFuturesCommand } from "./command";
+import { parseFuturesAction } from "./model";
 import { safeFuturesReturnPath } from "./path";
 import {
   parseOptionalPositive,
@@ -22,6 +23,8 @@ import {
 } from "./webhook-load";
 import { parseWebhookKind } from "./webhook";
 import {
+  deskAllowsManualPerpTicket,
+  deskAllowsSignalWebhooks,
   formatStrategyDetachBlockers,
   strategyDetachBlockers,
 } from "@/lib/accounts/model";
@@ -54,6 +57,17 @@ export async function submitFuturesTrade(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
   const session = await requirePerpsUiSession();
   const { member, account } = session;
+  const parsed = parseFuturesAction(formData.get("action"));
+  if (
+    !deskAllowsManualPerpTicket(account.deskType) &&
+    parsed.ok &&
+    (parsed.action === "buy" || parsed.action === "sell")
+  ) {
+    fail(
+      next,
+      "This is a TradingView Strategy desk. Buy and Sell come from a webhook.",
+    );
+  }
   const result = await runFuturesCommand({
     actor: {
       userId: member.id,
@@ -398,6 +412,14 @@ export async function createFuturesWebhookAction(formData: FormData) {
   if (!supabase) {
     webhookFail("Auth is not configured.");
   }
+  const kind = parseWebhookKind(formData.get("kind"));
+  if (
+    kind.ok &&
+    kind.kind === "signal" &&
+    !deskAllowsSignalWebhooks(session.account.deskType)
+  ) {
+    webhookFail("This desk only uses TradingView strategy webhooks.");
+  }
   const created = await createFuturesWebhook({
     supabase,
     userId: session.member.id,
@@ -521,6 +543,9 @@ export async function deleteFuturesWebhookAction(formData: FormData) {
 
 export async function testFuturesWebhook(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
+  const successNext = safeFuturesReturnPath(
+    String(formData.get("successNext") ?? next),
+  );
   const session = await requirePerpsUiSession();
   const supabase = createServiceClient();
   if (!supabase) {
@@ -561,11 +586,11 @@ export async function testFuturesWebhook(formData: FormData) {
   }
   if (result.body.accepted) {
     if (Number(result.body.fired) > 0) {
-      redirect(`${next}?paper=${session.account.mode === "live" ? "live-opened" : "opened"}`);
+      redirect(`${successNext}?paper=${session.account.mode === "live" ? "live-opened" : "opened"}`);
     }
-    redirect(`${next}?paper=webhook-arm`);
+    redirect(`${successNext}?paper=webhook-arm`);
   }
-  redirect(`${next}?paper=${String(result.body.flash ?? "opened")}`);
+  redirect(`${successNext}?paper=${String(result.body.flash ?? "opened")}`);
 }
 
 async function loadOpenFuturesCount(

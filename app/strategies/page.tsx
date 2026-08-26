@@ -21,7 +21,7 @@ export default async function StrategiesPage() {
       <PageHeading overline="Desk" title="Desks" />
       <p className="-mt-2 text-sm text-ink-muted">
         Sign in to open a typed desk. Type locks the manager: Cash and Carry,
-        Perps, or Signal follower.
+        Perps, or TradingView Strategy.
       </p>
       <p className="mt-8 text-sm">
         <Link href="/sign-in" className="text-accent hover:text-accent-strong">

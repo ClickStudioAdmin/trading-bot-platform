@@ -1,4 +1,8 @@
-import { parseAccountMode, parseDeskType } from "@/lib/accounts/model";
+import {
+  deskAllowsSignalWebhooks,
+  parseAccountMode,
+  parseDeskType,
+} from "@/lib/accounts/model";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -91,6 +95,19 @@ export async function handleFuturesWebhook(input: {
       body: {
         ok: false,
         error: "This desk does not accept Futures webhooks.",
+      },
+    };
+  }
+  if (
+    !deskAllowsSignalWebhooks(deskType) &&
+    (found.kind === "signal" || parsed.parsed.kind === "arm")
+  ) {
+    return {
+      status: 400,
+      body: {
+        ok: false,
+        error:
+          "This desk only accepts TradingView strategy orders. Send buy, sell, or close.",
       },
     };
   }

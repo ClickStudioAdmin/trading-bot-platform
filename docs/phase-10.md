@@ -23,7 +23,7 @@ Current. Agent steps 1–7 are in the tree. Step 8 is Click’s desk test. Dual 
 | 3 | Login keys | Agent | `exchange_connections` owned by `user_id`. Unique `(user_id, venue, environment, key_fingerprint)`. Exchanges page is login-level. Live create can bind an existing key. Cannot remove while any desk is bound. Delete desk unbinds, does not delete keys. Done |
 | 4 | Split dual books | Agent | A book with both C&C and Futures data becomes two desks. Ledgers stay on the matching desk id. Keys rebound with a same-key warning. One-strategy books just get that type. Done |
 | 5 | Create Desk | Agent | Manage desks creates: name, mode, type, then Live bind. Copy warns that two desks on one key share venue margin. Done |
-| 6 | Chrome | Agent | Header switcher says Desk. Nav Strategies → Desks. Perps shows Futures routes only. C&C shows C&C only. Signal follower shows perp blotter + webhook, hides the recipe form. Done |
+| 6 | Chrome | Agent | Header switcher says Desk. Nav Strategies → Desks. Perps shows Futures routes only. C&C shows C&C only. TradingView Strategy shows perp blotter + order webhook, hides the recipe form, Buy/Sell ticket, and Signal webhooks. Done |
 | 7 | Bind | Agent | One bind on the desk. Ticket, header chip, balance, kill switch, TV door all use it. Desk A cannot place on Desk B. Done |
 | 8 | Desk test | Click | Create a Perps desk and a C&C desk on one login. Each has its own bind. Split Demo book is usable. Shared-key warning visible. |
 
@@ -33,7 +33,7 @@ Stop at the end of this phase for a desk test. Do not start DCA ([phase-11 is no
 
 - **Cash and Carry** — current C&C UI and engine (spot + dated future).
 - **Perps** — current Futures ticket, blotter, price-cross automations. Optional TradingView strategy door.
-- **Signal follower** — same perp blotter. The webhook is the order. Desk only protects (caps, reduce-only, Close All, row TP/SL). No recipe form.
+- **TradingView Strategy** (`signal_follower`) — same perp blotter. The webhook is the order. No Buy/Sell ticket. Order webhooks only (no Signal). Dummy send lives on Webhooks. Desk only protects (caps, reduce-only, Close All, row TP/SL). No recipe form.
 
 Perp types share `futures_positions` / `futures_orders` scoped to that desk id. Do not add `/strategies/dca` as a second ledger. Keep internal slugs (`futures`, `cash-and-carry`) if cheaper than `/desks/:id`.
 

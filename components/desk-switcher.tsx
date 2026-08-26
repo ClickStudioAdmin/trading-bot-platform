@@ -83,7 +83,7 @@ export function DeskSwitcher({
             />
           </svg>
         </summary>
-        <div className="absolute left-0 z-30 mt-2 w-[min(32rem,calc(100vw-2rem))] rounded-card border border-line bg-surface p-2">
+        <div className="absolute left-1/2 z-30 mt-2 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 rounded-card border border-line bg-surface p-2">
           <p className="px-3 pt-1.5 pb-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
             Desks
           </p>

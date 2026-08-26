@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
 import { LocalTime } from "@/components/local-time";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -25,6 +26,7 @@ export function FuturesWorkingOrders({
   exchangeBook = false,
   baseCoinFor,
   webhookNames = [],
+  emptyMessage,
 }: {
   signedIn: boolean;
   working: FuturesWorkingOrder[];
@@ -32,6 +34,7 @@ export function FuturesWorkingOrders({
   exchangeBook?: boolean;
   baseCoinFor: (symbol: string) => string;
   webhookNames?: readonly string[];
+  emptyMessage?: ReactNode;
 }) {
   return (
     <section>
@@ -132,7 +135,8 @@ export function FuturesWorkingOrders({
             ) : working.length === 0 ? (
               <tr>
                 <td colSpan={10} className="px-4 py-6 text-sm text-ink-muted">
-                  No working limits. Choose Limit on Place an order, or Limit on an open row.
+                  {emptyMessage ??
+                    "No working limits. Choose Limit on Place an order, or Limit on an open row."}
                 </td>
               </tr>
             ) : (
