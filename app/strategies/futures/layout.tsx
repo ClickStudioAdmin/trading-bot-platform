@@ -65,7 +65,7 @@ export default async function FuturesLayout({
     bound: Boolean(bound),
   });
   const automationsRunning = dca
-    ? playbooks.some((playbook) => dcaPlaybookIsRunning(playbook.status))
+    ? playbooks.some((playbook) => dcaPlaybookIsRunning(playbook))
     : deskStatus.automationsRunning;
   return (
     <div>

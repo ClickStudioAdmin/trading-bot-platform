@@ -13,8 +13,18 @@ import {
 } from "@/lib/futures/automation";
 import { parseFuturesTrigger } from "@/lib/futures/tpsl";
 import { futuresPnlUsdt } from "@/lib/futures/math";
+import { dcaDipPctAt } from "./grid";
+import {
+  indicatorStartMet,
+  type DcaIndicatorKind,
+  type DcaIndicatorTimeframe,
+} from "./indicators";
 
 export type DcaStatus = "idle" | "armed" | "stop_adding";
+export type DcaDirection = "long" | "short" | "both";
+export type DcaStartKind = "immediate" | "price" | "webhook" | "indicator";
+export type DcaMode = "position" | "order";
+export type DcaExitBasis = "average" | "first_entry";
 
 export type DcaPriceTrigger = {
   triggerBy: FuturesTrigger;
@@ -22,35 +32,68 @@ export type DcaPriceTrigger = {
   price: number;
 };
 
+export type DcaLegState = {
+  status: DcaStatus;
+  clipsFilled: number;
+  lastClipPrice: number | null;
+  lastClipAtMs: number | null;
+  firstFillPrice: number | null;
+  breakevenDone: boolean;
+};
+
 export type DcaPlaybookConfig = {
   name: string;
   symbol: string;
-  side: FuturesSide;
+  direction: DcaDirection;
+  startKind: DcaStartKind;
+  webhookId: string | null;
+  dcaMode: DcaMode;
   clipSize: number;
   sizeUnit: "qty" | "usdt";
   maxClips: number | null;
   maxValue: number | null;
   dipPct: number | null;
   intervalMinutes: number | null;
+  sizeMultiplier: number;
+  deviationMultiplier: number;
   takeProfitPct: number | null;
   stopLossPct: number | null;
+  takeProfitBasis: DcaExitBasis;
+  stopLossBasis: DcaExitBasis;
+  breakevenActivationPct: number | null;
+  breakevenOffsetPct: number | null;
+  trailingTriggerPct: number | null;
+  trailingPct: number | null;
   armTrigger: DcaPriceTrigger | null;
   disarmTrigger: DcaPriceTrigger | null;
+  indicatorKind: DcaIndicatorKind | null;
+  indicatorTimeframe: DcaIndicatorTimeframe | null;
+  indicatorCompare: FuturesTriggerCompare | null;
+  indicatorLevel: number | null;
 };
 
 export type DcaPlaybook = DcaPlaybookConfig & {
   id: string;
   userId: string;
   accountId: string;
-  status: DcaStatus;
-  clipsFilled: number;
-  lastClipPrice: number | null;
-  lastClipAtMs: number | null;
+  long: DcaLegState;
+  short: DcaLegState;
   armConditionTrue: boolean;
   disarmConditionTrue: boolean;
+  longIndicatorTrue: boolean;
+  shortIndicatorTrue: boolean;
 };
 
 export const DEFAULT_DCA_NAME = "DCA";
+
+export const IDLE_DCA_LEG: DcaLegState = {
+  status: "idle",
+  clipsFilled: 0,
+  lastClipPrice: null,
+  lastClipAtMs: null,
+  firstFillPrice: null,
+  breakevenDone: false,
+};
 
 export type DcaTickAction =
   | { kind: "none" }
@@ -58,12 +101,14 @@ export type DcaTickAction =
   | { kind: "disarm" }
   | { kind: "clip" }
   | { kind: "close"; reason: "take_profit" | "stop_loss" }
-  | { kind: "stop_adding" };
+  | { kind: "stop_adding" }
+  | { kind: "breakeven" };
 
 export type DcaTickDecision = {
   action: DcaTickAction;
   nextArmTrue: boolean;
   nextDisarmTrue: boolean;
+  nextIndicatorTrue: boolean;
 };
 
 export function parseDcaStatus(value: unknown): DcaStatus {
@@ -73,8 +118,54 @@ export function parseDcaStatus(value: unknown): DcaStatus {
   return "idle";
 }
 
-export function dcaPlaybookIsRunning(status: DcaStatus): boolean {
+export function parseDcaDirection(value: unknown): DcaDirection | null {
+  if (value === "long" || value === "short" || value === "both") {
+    return value;
+  }
+  return null;
+}
+
+export function parseDcaStartKind(value: unknown): DcaStartKind {
+  if (
+    value === "price" ||
+    value === "webhook" ||
+    value === "indicator"
+  ) {
+    return value;
+  }
+  return "immediate";
+}
+
+export function parseDcaMode(value: unknown): DcaMode {
+  return value === "order" ? "order" : "position";
+}
+
+export function parseDcaExitBasis(value: unknown): DcaExitBasis {
+  return value === "first_entry" ? "first_entry" : "average";
+}
+
+export function dcaEnabledSides(direction: DcaDirection): FuturesSide[] {
+  if (direction === "both") {
+    return ["long", "short"];
+  }
+  return [direction];
+}
+
+export function dcaLegIsRunning(status: DcaStatus): boolean {
   return status === "armed" || status === "stop_adding";
+}
+
+export function dcaPlaybookIsRunning(
+  playbook: Pick<DcaPlaybook, "long" | "short">,
+): boolean {
+  return dcaLegIsRunning(playbook.long.status) || dcaLegIsRunning(playbook.short.status);
+}
+
+export function dcaLegFor(
+  playbook: DcaPlaybook,
+  side: FuturesSide,
+): DcaLegState {
+  return side === "long" ? playbook.long : playbook.short;
 }
 
 export type DcaOpenHint = {
@@ -97,6 +188,20 @@ export function parseOptionalPositive(
   const value = Number(text);
   if (!(value > 0) || !Number.isFinite(value)) {
     return { ok: false, error: "Enter a positive number, or leave empty." };
+  }
+  return { ok: true, value };
+}
+
+export function parseOptionalNonNegative(
+  raw: unknown,
+): { ok: true; value: number | null } | { ok: false; error: string } {
+  const text = String(raw ?? "").replace(/,/g, "").trim();
+  if (text === "") {
+    return { ok: true, value: null };
+  }
+  const value = Number(text);
+  if (!(value >= 0) || !Number.isFinite(value)) {
+    return { ok: false, error: "Enter zero or a positive number, or leave empty." };
   }
   return { ok: true, value };
 }
@@ -130,14 +235,11 @@ export function parseDcaPlaybookId(raw: unknown): string | null {
 }
 
 export function dcaPlaybookConflict(
-  playbooks: readonly Pick<DcaPlaybook, "id" | "symbol" | "side">[],
-  candidate: { id?: string | null; symbol: string; side: FuturesSide },
+  playbooks: readonly Pick<DcaPlaybook, "id" | "symbol">[],
+  candidate: { id?: string | null; symbol: string },
 ): boolean {
   return playbooks.some(
-    (row) =>
-      row.symbol === candidate.symbol &&
-      row.side === candidate.side &&
-      row.id !== candidate.id,
+    (row) => row.symbol === candidate.symbol && row.id !== candidate.id,
   );
 }
 
@@ -149,6 +251,21 @@ export function parseDcaPlaybookName(
     return { ok: false, error: "Name must be 40 characters or fewer." };
   }
   return { ok: true, name };
+}
+
+function parseMultiplier(
+  raw: unknown,
+  fallback: number,
+): { ok: true; value: number } | { ok: false; error: string } {
+  const text = String(raw ?? "").replace(/,/g, "").trim();
+  if (text === "") {
+    return { ok: true, value: fallback };
+  }
+  const value = Number(text);
+  if (!(value > 0) || !Number.isFinite(value)) {
+    return { ok: false, error: "Multipliers must be greater than zero." };
+  }
+  return { ok: true, value };
 }
 
 function parseOptionalTrigger(
@@ -188,23 +305,45 @@ export function parseDcaPlaybookForm(
 ): { ok: true; config: DcaPlaybookConfig } | { ok: false; error: string } {
   const name = parseDcaPlaybookName(form.get("name"));
   const symbol = parseFuturesSymbol(form.get("symbol"));
-  const side = parseFuturesSide(form.get("side"));
+  const direction =
+    parseDcaDirection(form.get("direction")) ??
+    parseFuturesSide(form.get("side"));
+  const startKind = parseDcaStartKind(form.get("startKind"));
+  const dcaMode = parseDcaMode(form.get("dcaMode"));
   const sizeUnit = parseFuturesSizeUnit(form.get("sizeUnit"));
   const clipSize = parseFuturesQty(form.get("clipSize"));
   const maxClips = parseOptionalPositiveInt(form.get("maxClips"));
   const maxValue = parseOptionalPositive(form.get("maxValue"));
   const dipPct = parseOptionalPositive(form.get("dipPct"));
-  const intervalMinutes = parseOptionalPositiveInt(form.get("intervalMinutes"));
+  const intervalMinutes =
+    dcaMode === "order"
+      ? { ok: true as const, value: null }
+      : parseOptionalPositiveInt(form.get("intervalMinutes"));
+  const sizeMultiplier = parseMultiplier(form.get("sizeMultiplier"), 1);
+  const deviationMultiplier = parseMultiplier(
+    form.get("deviationMultiplier"),
+    1,
+  );
   const takeProfitPct = parseOptionalPositive(form.get("takeProfitPct"));
   const stopLossPct = parseOptionalPositive(form.get("stopLossPct"));
+  const breakevenActivationPct = parseOptionalPositive(
+    form.get("breakevenActivationPct"),
+  );
+  const breakevenOffsetPct = parseOptionalNonNegative(
+    form.get("breakevenOffsetPct"),
+  );
+  const trailingTriggerPct = parseOptionalPositive(
+    form.get("trailingTriggerPct"),
+  );
+  const trailingPct = parseOptionalPositive(form.get("trailingPct"));
   if (!name.ok) {
     return name;
   }
   if (!symbol.ok) {
     return symbol;
   }
-  if (!side) {
-    return { ok: false, error: "Choose long or short." };
+  if (!direction) {
+    return { ok: false, error: "Choose long, short, or both." };
   }
   if (!sizeUnit.ok) {
     return sizeUnit;
@@ -224,25 +363,43 @@ export function parseDcaPlaybookForm(
   if (!intervalMinutes.ok) {
     return intervalMinutes;
   }
+  if (!sizeMultiplier.ok) {
+    return sizeMultiplier;
+  }
+  if (!deviationMultiplier.ok) {
+    return deviationMultiplier;
+  }
   if (!takeProfitPct.ok) {
     return takeProfitPct;
   }
   if (!stopLossPct.ok) {
     return stopLossPct;
   }
+  if (!breakevenActivationPct.ok) {
+    return breakevenActivationPct;
+  }
+  if (!breakevenOffsetPct.ok) {
+    return breakevenOffsetPct;
+  }
+  if (!trailingTriggerPct.ok) {
+    return trailingTriggerPct;
+  }
+  if (!trailingPct.ok) {
+    return trailingPct;
+  }
   const armTrigger = parseOptionalTrigger(
-    form.get("armEnabled") === "1",
+    startKind === "price",
     form.get("armTriggerBy"),
     form.get("armCompare"),
     form.get("armPrice"),
-    "Arm when",
+    "Start price",
   );
   const disarmTrigger = parseOptionalTrigger(
     form.get("disarmEnabled") === "1",
     form.get("disarmTriggerBy"),
     form.get("disarmCompare"),
     form.get("disarmPrice"),
-    "Disarm when",
+    "Stop adding when",
   );
   if (!armTrigger.ok) {
     return armTrigger;
@@ -250,23 +407,96 @@ export function parseDcaPlaybookForm(
   if (!disarmTrigger.ok) {
     return disarmTrigger;
   }
+  if (startKind === "price" && !armTrigger.trigger) {
+    return { ok: false, error: "Enter a start price." };
+  }
+  const webhookId =
+    startKind === "webhook" ? parseDcaPlaybookId(form.get("webhookId")) : null;
+  if (startKind === "webhook" && !webhookId) {
+    return { ok: false, error: "Choose a Signal webhook." };
+  }
+  let indicatorKind: DcaIndicatorKind | null = null;
+  let indicatorTimeframe: DcaIndicatorTimeframe | null = null;
+  let indicatorCompare: FuturesTriggerCompare | null = null;
+  let indicatorLevel: number | null = null;
+  if (startKind === "indicator") {
+    const kind = String(form.get("indicatorKind") ?? "").trim();
+    if (kind !== "rsi" && kind !== "macd" && kind !== "ema_cross") {
+      return { ok: false, error: "Choose RSI, MACD, or EMA cross." };
+    }
+    indicatorKind = kind;
+    const timeframe = String(form.get("indicatorTimeframe") ?? "15").trim();
+    if (timeframe !== "5" && timeframe !== "15" && timeframe !== "60") {
+      return { ok: false, error: "Choose 5m, 15m, or 1h." };
+    }
+    indicatorTimeframe = timeframe;
+    if (kind === "rsi") {
+      const cmp = parseFuturesTriggerCompare(
+        form.get("indicatorCompare") ?? "lte",
+      );
+      const level = parseOptionalPositive(form.get("indicatorLevel"));
+      if (!cmp.ok) {
+        return { ok: false, error: "RSI needs at or above, or at or below." };
+      }
+      if (!level.ok || level.value === null) {
+        return { ok: false, error: "Enter an RSI level." };
+      }
+      indicatorCompare = cmp.compare;
+      indicatorLevel = level.value;
+    }
+  }
   return {
     ok: true,
     config: {
       name: name.name,
       symbol: symbol.symbol,
-      side,
+      direction,
+      startKind,
+      webhookId,
+      dcaMode,
       clipSize: clipSize.qty,
       sizeUnit: sizeUnit.unit,
       maxClips: maxClips.value,
       maxValue: maxValue.value,
       dipPct: dipPct.value,
       intervalMinutes: intervalMinutes.value,
+      sizeMultiplier: sizeMultiplier.value,
+      deviationMultiplier: deviationMultiplier.value,
       takeProfitPct: takeProfitPct.value,
       stopLossPct: stopLossPct.value,
+      takeProfitBasis: parseDcaExitBasis(form.get("takeProfitBasis")),
+      stopLossBasis: parseDcaExitBasis(form.get("stopLossBasis")),
+      breakevenActivationPct: breakevenActivationPct.value,
+      breakevenOffsetPct: breakevenOffsetPct.value,
+      trailingTriggerPct: trailingTriggerPct.value,
+      trailingPct: trailingPct.value,
       armTrigger: armTrigger.trigger,
       disarmTrigger: disarmTrigger.trigger,
+      indicatorKind,
+      indicatorTimeframe,
+      indicatorCompare,
+      indicatorLevel,
     },
+  };
+}
+
+function parseLeg(
+  prefix: "long" | "short",
+  row: Record<string, unknown>,
+): DcaLegState {
+  const lastClipAt = new Date(
+    String(row[`${prefix}_last_clip_at`] ?? ""),
+  ).getTime();
+  return {
+    status: parseDcaStatus(row[`${prefix}_status`]),
+    clipsFilled: Math.max(
+      0,
+      Math.floor(Number(row[`${prefix}_clips_filled`]) || 0),
+    ),
+    lastClipPrice: asPositiveOrNull(row[`${prefix}_last_clip_price`]),
+    lastClipAtMs: Number.isFinite(lastClipAt) ? lastClipAt : null,
+    firstFillPrice: asPositiveOrNull(row[`${prefix}_first_fill_price`]),
+    breakevenDone: Boolean(row[`${prefix}_breakeven_done`]),
   };
 }
 
@@ -277,7 +507,8 @@ export function parseDcaPlaybookRow(
   const userId = String(row.user_id ?? "").trim();
   const accountId = String(row.account_id ?? "").trim();
   const symbol = parseFuturesSymbol(row.symbol);
-  const side = parseFuturesSide(row.side);
+  const direction =
+    parseDcaDirection(row.direction) ?? parseFuturesSide(row.side);
   const sizeUnit = parseFuturesSizeUnit(row.size_unit);
   const clipSize = Number(row.clip_size);
   if (
@@ -285,29 +516,57 @@ export function parseDcaPlaybookRow(
     !userId ||
     !accountId ||
     !symbol.ok ||
-    !side ||
+    !direction ||
     !sizeUnit.ok ||
     !(clipSize > 0)
   ) {
     return null;
   }
-  const lastClipAt = new Date(String(row.last_clip_at ?? "")).getTime();
   const named = parseDcaPlaybookName(row.name);
+  const indicatorKindRaw = String(row.indicator_kind ?? "").trim();
+  const indicatorKind: DcaIndicatorKind | null =
+    indicatorKindRaw === "rsi" ||
+    indicatorKindRaw === "macd" ||
+    indicatorKindRaw === "ema_cross"
+      ? indicatorKindRaw
+      : null;
+  const timeframeRaw = String(row.indicator_timeframe ?? "").trim();
+  const indicatorTimeframe: DcaIndicatorTimeframe | null =
+    timeframeRaw === "5" || timeframeRaw === "15" || timeframeRaw === "60"
+      ? timeframeRaw
+      : null;
+  const indicatorCompare = parseFuturesTriggerCompare(row.indicator_compare);
   return {
     id,
     userId,
     accountId,
     name: named.ok ? named.name : DEFAULT_DCA_NAME,
     symbol: symbol.symbol,
-    side: side,
+    direction,
+    startKind: parseDcaStartKind(row.start_kind),
+    webhookId: parseDcaPlaybookId(row.webhook_id),
+    dcaMode: parseDcaMode(row.dca_mode),
     clipSize,
     sizeUnit: sizeUnit.unit,
     maxClips: asPositiveIntOrNull(row.max_clips),
     maxValue: asPositiveOrNull(row.max_value),
     dipPct: asPositiveOrNull(row.dip_pct),
     intervalMinutes: asPositiveIntOrNull(row.interval_minutes),
+    sizeMultiplier: asPositiveOrNull(row.size_multiplier) ?? 1,
+    deviationMultiplier: asPositiveOrNull(row.deviation_multiplier) ?? 1,
     takeProfitPct: asPositiveOrNull(row.take_profit_pct),
     stopLossPct: asPositiveOrNull(row.stop_loss_pct),
+    takeProfitBasis: parseDcaExitBasis(row.take_profit_basis),
+    stopLossBasis: parseDcaExitBasis(row.stop_loss_basis),
+    breakevenActivationPct: asPositiveOrNull(row.breakeven_activation_pct),
+    breakevenOffsetPct:
+      row.breakeven_offset_pct == null || row.breakeven_offset_pct === ""
+        ? null
+        : Number(row.breakeven_offset_pct) >= 0
+          ? Number(row.breakeven_offset_pct)
+          : null,
+    trailingTriggerPct: asPositiveOrNull(row.trailing_trigger_pct),
+    trailingPct: asPositiveOrNull(row.trailing_pct),
     armTrigger: parseStoredTrigger(
       row.arm_trigger_by,
       row.arm_compare,
@@ -318,12 +577,16 @@ export function parseDcaPlaybookRow(
       row.disarm_compare,
       row.disarm_price,
     ),
-    status: parseDcaStatus(row.status),
-    clipsFilled: Math.max(0, Math.floor(Number(row.clips_filled) || 0)),
-    lastClipPrice: asPositiveOrNull(row.last_clip_price),
-    lastClipAtMs: Number.isFinite(lastClipAt) ? lastClipAt : null,
+    indicatorKind,
+    indicatorTimeframe,
+    indicatorCompare: indicatorCompare.ok ? indicatorCompare.compare : null,
+    indicatorLevel: asPositiveOrNull(row.indicator_level),
+    long: parseLeg("long", row),
+    short: parseLeg("short", row),
     armConditionTrue: Boolean(row.arm_condition_true),
     disarmConditionTrue: Boolean(row.disarm_condition_true),
+    longIndicatorTrue: Boolean(row.long_indicator_true),
+    shortIndicatorTrue: Boolean(row.short_indicator_true),
   };
 }
 
@@ -433,9 +696,13 @@ export function decideDcaTick(input: {
   mark: number | null;
   lastClipPrice: number | null;
   lastClipAtMs: number | null;
+  firstFillPrice?: number | null;
   nowMs: number;
+  startKind?: DcaStartKind;
+  dcaMode?: DcaMode;
   dipPct: number | null;
   intervalMinutes: number | null;
+  deviationMultiplier?: number;
   clipsFilled: number;
   maxClips: number | null;
   maxValue: number | null;
@@ -443,15 +710,38 @@ export function decideDcaTick(input: {
   entryPrice: number | null;
   takeProfitPct: number | null;
   stopLossPct: number | null;
+  takeProfitBasis?: DcaExitBasis;
+  stopLossBasis?: DcaExitBasis;
+  breakevenActivationPct?: number | null;
+  breakevenDone?: boolean;
   armTrigger: DcaPriceTrigger | null;
   armConditionTrue: boolean;
   disarmTrigger: DcaPriceTrigger | null;
   disarmConditionTrue: boolean;
+  indicatorKind?: DcaIndicatorKind | null;
+  indicatorCompare?: FuturesTriggerCompare | null;
+  indicatorLevel?: number | null;
+  indicatorConditionTrue?: boolean;
+  closes?: number[] | null;
   triggerPrices: { last: number | null; mark: number | null; index: number | null };
 }): DcaTickDecision {
+  const startKind =
+    input.startKind ?? (input.armTrigger ? "price" : "immediate");
+  const dcaMode = input.dcaMode ?? "position";
+  const deviationMultiplier = input.deviationMultiplier ?? 1;
+  const takeProfitBasis = input.takeProfitBasis ?? "average";
+  const stopLossBasis = input.stopLossBasis ?? "average";
+  const firstFillPrice = input.firstFillPrice ?? null;
+  const breakevenDone = input.breakevenDone ?? false;
+  const breakevenActivationPct = input.breakevenActivationPct ?? null;
+  const indicatorKind = input.indicatorKind ?? null;
+  const indicatorCompare = input.indicatorCompare ?? null;
+  const indicatorLevel = input.indicatorLevel ?? null;
+  const closes = input.closes ?? null;
   const armPrice = triggerPrice(input.armTrigger, input.triggerPrices);
   const armMet = Boolean(
-    input.armTrigger &&
+    startKind === "price" &&
+      input.armTrigger &&
       armPrice !== null &&
       triggerConditionMet(
         armPrice,
@@ -469,58 +759,129 @@ export function decideDcaTick(input: {
         input.disarmTrigger.price,
       ),
   );
+  const indicatorMet = Boolean(
+    startKind === "indicator" &&
+      indicatorKind &&
+      closes &&
+      indicatorStartMet({
+        kind: indicatorKind,
+        side: input.side,
+        closes,
+        compare: indicatorCompare,
+        level: indicatorLevel,
+      }),
+  );
   const nextArmTrue = armMet;
   const nextDisarmTrue = disarmMet;
-  const armEdge = armMet && !input.armConditionTrue;
+  const nextIndicatorTrue = indicatorMet;
   const disarmEdge = disarmMet && !input.disarmConditionTrue;
 
   if (input.status === "idle") {
-    if (armEdge && !input.reduceOnly) {
-      return { action: { kind: "arm" }, nextArmTrue, nextDisarmTrue };
-    }
-    return { action: { kind: "none" }, nextArmTrue, nextDisarmTrue };
+    return {
+      action: { kind: "none" },
+      nextArmTrue,
+      nextDisarmTrue,
+      nextIndicatorTrue,
+    };
   }
 
-  const pnlPct =
-    input.positionQty !== null &&
-    input.entryPrice !== null &&
-    input.mark !== null
+  const basisFor = (basis: DcaExitBasis): number | null => {
+    if (basis === "first_entry") {
+      return firstFillPrice ?? input.entryPrice;
+    }
+    return input.entryPrice;
+  };
+  const slBasis = basisFor(stopLossBasis);
+  const tpBasis = basisFor(takeProfitBasis);
+  const pnlVs = (basis: number | null): number | null =>
+    input.positionQty !== null && basis !== null && input.mark !== null
       ? dcaPnlPct({
           side: input.side,
           qty: input.positionQty,
-          entryPrice: input.entryPrice,
+          entryPrice: basis,
           mark: input.mark,
         })
       : null;
+  const slPnl = pnlVs(slBasis);
+  const tpPnl = pnlVs(tpBasis);
   if (
-    pnlPct !== null &&
+    slPnl !== null &&
     input.stopLossPct !== null &&
-    pnlPct <= -input.stopLossPct
+    slPnl <= -input.stopLossPct
   ) {
     return {
       action: { kind: "close", reason: "stop_loss" },
       nextArmTrue,
       nextDisarmTrue,
+      nextIndicatorTrue,
     };
   }
   if (
-    pnlPct !== null &&
+    tpPnl !== null &&
     input.takeProfitPct !== null &&
-    pnlPct >= input.takeProfitPct
+    tpPnl >= input.takeProfitPct
   ) {
     return {
       action: { kind: "close", reason: "take_profit" },
       nextArmTrue,
       nextDisarmTrue,
+      nextIndicatorTrue,
+    };
+  }
+
+  const avgPnl = pnlVs(input.entryPrice);
+  if (
+    input.status === "armed" &&
+    !breakevenDone &&
+    breakevenActivationPct !== null &&
+    avgPnl !== null &&
+    avgPnl >= breakevenActivationPct
+  ) {
+    return {
+      action: { kind: "breakeven" },
+      nextArmTrue,
+      nextDisarmTrue,
+      nextIndicatorTrue,
     };
   }
 
   if (input.status === "armed" && disarmEdge) {
-    return { action: { kind: "disarm" }, nextArmTrue, nextDisarmTrue };
+    return {
+      action: { kind: "disarm" },
+      nextArmTrue,
+      nextDisarmTrue,
+      nextIndicatorTrue,
+    };
   }
 
   if (input.status !== "armed") {
-    return { action: { kind: "none" }, nextArmTrue, nextDisarmTrue };
+    return {
+      action: { kind: "none" },
+      nextArmTrue,
+      nextDisarmTrue,
+      nextIndicatorTrue,
+    };
+  }
+
+  if (input.clipsFilled === 0) {
+    const startReady =
+      startKind === "immediate" ||
+      (startKind === "price" && armMet) ||
+      (startKind === "indicator" && indicatorMet);
+    if (!input.reduceOnly && startReady) {
+      return {
+        action: { kind: "arm" },
+        nextArmTrue,
+        nextDisarmTrue,
+        nextIndicatorTrue,
+      };
+    }
+    return {
+      action: { kind: "none" },
+      nextArmTrue,
+      nextDisarmTrue,
+      nextIndicatorTrue,
+    };
   }
 
   const markValue =
@@ -535,22 +896,40 @@ export function decideDcaTick(input: {
       markValue,
     })
   ) {
-    return { action: { kind: "stop_adding" }, nextArmTrue, nextDisarmTrue };
+    return {
+      action: { kind: "stop_adding" },
+      nextArmTrue,
+      nextDisarmTrue,
+      nextIndicatorTrue,
+    };
   }
 
-  if (input.reduceOnly) {
-    return { action: { kind: "none" }, nextArmTrue, nextDisarmTrue };
+  if (input.reduceOnly || dcaMode === "order") {
+    return {
+      action: { kind: "none" },
+      nextArmTrue,
+      nextDisarmTrue,
+      nextIndicatorTrue,
+    };
   }
 
+  const nextDip =
+    input.dipPct === null
+      ? null
+      : dcaDipPctAt(
+          Math.max(0, input.clipsFilled - 1),
+          input.dipPct,
+          deviationMultiplier,
+        );
   const dip =
-    input.dipPct !== null &&
+    nextDip !== null &&
     input.lastPrice !== null &&
     input.lastClipPrice !== null
       ? dcaDipMet({
           side: input.side,
           lastPrice: input.lastPrice,
           lastClipPrice: input.lastClipPrice,
-          dipPct: input.dipPct,
+          dipPct: nextDip,
         })
       : false;
   const interval = dcaIntervalMet({
@@ -559,9 +938,19 @@ export function decideDcaTick(input: {
     intervalMinutes: input.intervalMinutes,
   });
   if (dip || interval) {
-    return { action: { kind: "clip" }, nextArmTrue, nextDisarmTrue };
+    return {
+      action: { kind: "clip" },
+      nextArmTrue,
+      nextDisarmTrue,
+      nextIndicatorTrue,
+    };
   }
-  return { action: { kind: "none" }, nextArmTrue, nextDisarmTrue };
+  return {
+    action: { kind: "none" },
+    nextArmTrue,
+    nextDisarmTrue,
+    nextIndicatorTrue,
+  };
 }
 
 function triggerPrice(
@@ -582,6 +971,9 @@ function triggerPrice(
 
 export function formatDcaNextAdd(input: {
   status: DcaStatus;
+  startKind?: DcaStartKind;
+  dcaMode?: DcaMode;
+  clipsFilled?: number;
   dipPct: number | null;
   intervalMinutes: number | null;
   lastClipAtMs: number | null;
@@ -592,6 +984,21 @@ export function formatDcaNextAdd(input: {
   }
   if (input.status === "stop_adding") {
     return "Stopped";
+  }
+  if ((input.clipsFilled ?? 0) === 0) {
+    if (input.startKind === "webhook") {
+      return "Waiting for signal";
+    }
+    if (input.startKind === "indicator") {
+      return "Waiting for indicator";
+    }
+    if (input.startKind === "price") {
+      return "Waiting for price";
+    }
+    return "First clip";
+  }
+  if (input.dcaMode === "order") {
+    return "Grid";
   }
   const parts: string[] = [];
   if (input.dipPct !== null) {
@@ -641,6 +1048,36 @@ export function dcaClipAction(side: FuturesSide): "buy" | "sell" {
   return side === "long" ? "buy" : "sell";
 }
 
+export function dcaClipKey(
+  playbookId: string,
+  side: FuturesSide,
+  clipIndex: number,
+): string {
+  const compact = playbookId.replace(/-/g, "").slice(0, 8);
+  const sideChar = side === "long" ? "l" : "s";
+  return `d${compact}${sideChar}${clipIndex}`;
+}
+
+export function dcaPlaybookStatusLabel(playbook: DcaPlaybook): string {
+  const sides = dcaEnabledSides(playbook.direction);
+  return sides
+    .map((side) => {
+      const leg = dcaLegFor(playbook, side);
+      const status =
+        leg.status === "armed"
+          ? "Armed"
+          : leg.status === "stop_adding"
+            ? "Stopped adding"
+            : "Idle";
+      const clips = leg.clipsFilled > 0 ? ` · ${leg.clipsFilled} clips` : "";
+      if (sides.length === 1) {
+        return `${status}${clips}`;
+      }
+      return `${side === "long" ? "Long" : "Short"} ${status.toLowerCase()}${clips}`;
+    })
+    .join(" · ");
+}
+
 export function dcaOpenHint(input: {
   playbook: DcaPlaybook;
   symbol: string;
@@ -649,26 +1086,32 @@ export function dcaOpenHint(input: {
   mark: number | null;
   nowMs: number;
 }): DcaOpenHint | null {
-  if (
-    input.playbook.status === "idle" ||
-    input.playbook.symbol !== input.symbol ||
-    input.playbook.side !== input.side
-  ) {
+  if (input.playbook.symbol !== input.symbol) {
+    return null;
+  }
+  if (!dcaEnabledSides(input.playbook.direction).includes(input.side)) {
+    return null;
+  }
+  const leg = dcaLegFor(input.playbook, input.side);
+  if (leg.status === "idle") {
     return null;
   }
   const markValue =
     input.mark !== null && input.qty > 0 ? input.qty * input.mark : null;
   return {
-    clips: input.playbook.clipsFilled,
+    clips: leg.clipsFilled,
     nextAdd: formatDcaNextAdd({
-      status: input.playbook.status,
+      status: leg.status,
+      startKind: input.playbook.startKind,
+      dcaMode: input.playbook.dcaMode,
+      clipsFilled: leg.clipsFilled,
       dipPct: input.playbook.dipPct,
       intervalMinutes: input.playbook.intervalMinutes,
-      lastClipAtMs: input.playbook.lastClipAtMs,
+      lastClipAtMs: leg.lastClipAtMs,
       nowMs: input.nowMs,
     }),
     remaining: formatDcaRemaining({
-      clipsFilled: input.playbook.clipsFilled,
+      clipsFilled: leg.clipsFilled,
       maxClips: input.playbook.maxClips,
       maxValue: input.playbook.maxValue,
       markValue,
@@ -688,9 +1131,7 @@ export function dcaHintsForOpen(
 ): Record<string, DcaOpenHint> {
   const hints: Record<string, DcaOpenHint> = {};
   for (const row of open) {
-    const playbook = playbooks.find(
-      (item) => item.symbol === row.symbol && item.side === row.side,
-    );
+    const playbook = playbooks.find((item) => item.symbol === row.symbol);
     if (!playbook) {
       continue;
     }

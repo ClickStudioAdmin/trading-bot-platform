@@ -124,3 +124,24 @@ export async function fetchBybitOrderbook(
     limit: String(limit),
   });
 }
+
+export async function fetchBybitKlines(input: {
+  symbol: string;
+  interval: "5" | "15" | "60";
+  limit?: number;
+}): Promise<number[]> {
+  const result = await bybitGet<{ list?: string[][] }>("/v5/market/kline", {
+    category: "linear",
+    symbol: input.symbol,
+    interval: input.interval,
+    limit: String(input.limit ?? 80),
+  });
+  const closes: number[] = [];
+  for (const row of [...(result.list ?? [])].reverse()) {
+    const close = Number(row[4]);
+    if (close > 0 && Number.isFinite(close)) {
+      closes.push(close);
+    }
+  }
+  return closes;
+}

@@ -61,16 +61,6 @@ export async function handleFuturesWebhook(input: {
   const accountId = found.accountId;
   const userId = found.userId;
   const ruleName = found.name;
-  if (found.kind === "signal" && parsed.parsed.kind === "order") {
-    return {
-      status: 400,
-      body: {
-        ok: false,
-        error:
-          "This webhook is a Signal. Send arm, disarm, or close-playbook.",
-      },
-    };
-  }
   if (found.kind === "order" && parsed.parsed.kind === "arm") {
     return {
       status: 400,
@@ -115,6 +105,30 @@ export async function handleFuturesWebhook(input: {
     };
   }
   if (
+    found.kind === "signal" &&
+    parsed.parsed.kind === "order"
+  ) {
+    if (
+      deskType === "dca" &&
+      (parsed.parsed.action === "buy" || parsed.parsed.action === "sell")
+    ) {
+      parsed.parsed = {
+        kind: "arm",
+        verb: "arm",
+        side: parsed.parsed.action === "buy" ? "long" : "short",
+      };
+    } else {
+      return {
+        status: 400,
+        body: {
+          ok: false,
+          error:
+            "This webhook is a Signal. Send arm, disarm, or close-playbook.",
+        },
+      };
+    }
+  }
+  if (
     !deskAllowsOrderWebhooks(deskType) &&
     (found.kind === "order" || parsed.parsed.kind === "order")
   ) {
@@ -130,12 +144,14 @@ export async function handleFuturesWebhook(input: {
 
   if (parsed.parsed.kind === "arm") {
     if (deskType === "dca") {
-      const playbooks = await listDcaPlaybooksForAccount(accountId);
+      const playbooks = (await listDcaPlaybooksForAccount(accountId)).filter(
+        (row) => row.webhookId === found.id,
+      );
       if (playbooks.length === 0) {
         await writeEventLog({
           scope: "strategy",
           event: `webhook.${parsed.parsed.verb}`,
-          message: "Signal accepted. Save a DCA playbook first.",
+          message: "Signal accepted. Bind this webhook on a playbook first.",
           userId,
           accountId,
           strategy: FUTURES_STRATEGY_ID,
@@ -158,6 +174,8 @@ export async function handleFuturesWebhook(input: {
             playbook,
             mode,
             verb: parsed.parsed.verb,
+            side: parsed.parsed.side,
+            source: "webhook",
           }),
         );
       }

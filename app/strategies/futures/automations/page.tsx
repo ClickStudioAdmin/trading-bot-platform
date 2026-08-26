@@ -6,7 +6,9 @@ import { FuturesAutomationsDesk } from "@/components/futures-rules-form";
 import { FuturesRulesGuide } from "@/components/futures-rules-guide";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { getSessionContext } from "@/lib/auth/session";
+import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
+import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { futuresRuleToForm } from "@/lib/futures/automation";
 import {
@@ -40,6 +42,25 @@ export default async function FuturesAutomationsPage({
     const playbooks = await listDcaPlaybooksForAccount(session.account.id);
     const settings = await loadFuturesSettings(session.account.id);
     const pairs = await loadUsdtLinearPerps().catch(() => []);
+    const signalWebhooks = (
+      await listFuturesWebhooks({
+        accountId: session.account.id,
+        origin: futuresWebhookOrigin(await headers()),
+      })
+    )
+      .filter((row) => row.kind === "signal")
+      .map((row) => ({ id: row.id, name: row.name }));
+    let availableUsdt: number | null = null;
+    if (accountCanHoldConnections(session.account.mode) && settings.connectionId) {
+      const connections = await listExchangeConnections(session.member.id);
+      const bound = connections.find((row) => row.id === settings.connectionId);
+      if (bound) {
+        const snapshot = await loadAccountSnapshot(session.member.id, bound.id);
+        if (snapshot.ok) {
+          availableUsdt = snapshot.snapshot.availableBalance;
+        }
+      }
+    }
     const saved = firstSearchValue(params.saved) === "1";
     const error = firstSearchValue(params.error);
     const notice = firstSearchValue(params.notice);
@@ -47,8 +68,8 @@ export default async function FuturesAutomationsPage({
       <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
         <PageHeading as="h2" title="Automations" />
         <p className="-mt-4 text-sm text-ink-muted">
-          Add a playbook per contract and side. The app owns clips and
-          exits. Arm here or from a Signal webhook. Stop adding leaves the
+          Add a playbook per contract. The app owns clips and exits. Arm
+          here or from a bound Signal webhook. Stop adding leaves the
           position. Close playbook flattens it.
         </p>
         {error ? (
@@ -63,6 +84,8 @@ export default async function FuturesAutomationsPage({
           <DcaPlaybooksDesk
             playbooks={playbooks}
             options={pairs}
+            signalWebhooks={signalWebhooks}
+            availableUsdt={availableUsdt}
             reduceOnly={Boolean(settings.reduceOnly)}
           />
         </div>

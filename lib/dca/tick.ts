@@ -1,13 +1,34 @@
 import { parseDeskType, type TradingAccountMode } from "@/lib/accounts/model";
-import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
+import {
+  fetchBybitKlines,
+  fetchBybitTickers,
+} from "@/lib/exchanges/bybit/client";
+import { loadOpenFuturesWorking } from "@/lib/futures/list";
 import { parseFuturesPositionRow } from "@/lib/futures/model";
+import type { FuturesSide } from "@/lib/futures/model";
 import { tickerTriggerPrices } from "@/lib/futures/tpsl";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { decideDcaTick, type DcaPlaybook } from "./playbook";
-import { applyDcaVerb, flattenPlaybook, placeClip } from "./run";
-import { listDcaPlaybooks, patchDcaPlaybook, resetDcaPlaybook } from "./store";
+import {
+  dcaClipAction,
+  dcaEnabledSides,
+  dcaLegFor,
+  decideDcaTick,
+  type DcaPlaybook,
+} from "./playbook";
+import {
+  applyDcaVerb,
+  flattenPlaybook,
+  moveStopToBreakeven,
+  placeClip,
+} from "./run";
+import {
+  listDcaPlaybooks,
+  patchDcaLeg,
+  patchDcaPlaybook,
+  resetDcaLeg,
+} from "./store";
 
 export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
   const supabase = createServiceClient();
@@ -69,6 +90,7 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
   const opens = (openRows ?? []).map((row) =>
     parseFuturesPositionRow(row as Record<string, unknown>),
   );
+  const klineCache = new Map<string, number[]>();
 
   let acted = 0;
   for (const playbook of playbooks) {
@@ -78,55 +100,146 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
     }
     const ticker = tickers.get(playbook.symbol) ?? {};
     const prices = tickerTriggerPrices(ticker);
-    const open = opens.find(
-      (row) =>
-        row.accountId === playbook.accountId &&
-        row.symbol === playbook.symbol &&
-        row.side === playbook.side,
-    );
-    const decision = decideDcaTick({
-      status: playbook.status,
-      side: playbook.side,
-      reduceOnly: reduceOnly.has(playbook.accountId),
-      lastPrice: prices.last,
-      mark: prices.mark,
-      lastClipPrice: playbook.lastClipPrice,
-      lastClipAtMs: playbook.lastClipAtMs,
-      nowMs: Date.now(),
-      dipPct: playbook.dipPct,
-      intervalMinutes: playbook.intervalMinutes,
-      clipsFilled: playbook.clipsFilled,
-      maxClips: playbook.maxClips,
-      maxValue: playbook.maxValue,
-      positionQty: open?.qty ?? null,
-      entryPrice: open?.entryPrice ?? null,
-      takeProfitPct: playbook.takeProfitPct,
-      stopLossPct: playbook.stopLossPct,
-      armTrigger: playbook.armTrigger,
-      armConditionTrue: playbook.armConditionTrue,
-      disarmTrigger: playbook.disarmTrigger,
-      disarmConditionTrue: playbook.disarmConditionTrue,
-      triggerPrices: prices,
-    });
-    const flags = await patchDcaPlaybook({
-      supabase,
-      id: playbook.id,
-      patch: {
-        armConditionTrue: decision.nextArmTrue,
-        disarmConditionTrue: decision.nextDisarmTrue,
-      },
-    });
-    if (!flags.ok) {
-      continue;
+    let closes: number[] | null = null;
+    if (
+      playbook.startKind === "indicator" &&
+      playbook.indicatorTimeframe
+    ) {
+      const key = `${playbook.symbol}:${playbook.indicatorTimeframe}`;
+      if (!klineCache.has(key)) {
+        const fetched = await fetchBybitKlines({
+          symbol: playbook.symbol,
+          interval: playbook.indicatorTimeframe,
+        }).catch(() => []);
+        klineCache.set(key, fetched);
+      }
+      closes = klineCache.get(key) ?? [];
     }
-    const result = await applyTickAction({
-      playbook,
-      mode: account.mode,
-      lastPrice: prices.last,
-      action: decision.action,
-    });
-    if (result.acted) {
-      acted += 1;
+    const working =
+      playbook.dcaMode === "order"
+        ? await loadOpenFuturesWorking({
+            accountId: playbook.accountId,
+            userId: playbook.userId,
+          })
+        : [];
+    for (const side of dcaEnabledSides(playbook.direction)) {
+      let leg = dcaLegFor(playbook, side);
+      if (
+        playbook.dcaMode === "order" &&
+        playbook.maxClips !== null &&
+        leg.status === "armed" &&
+        leg.clipsFilled >= 1
+      ) {
+        const openWorking = working.filter(
+          (row) =>
+            row.symbol === playbook.symbol &&
+            row.action === dcaClipAction(side) &&
+            row.ruleName === playbook.name &&
+            row.source === "engine" &&
+            !row.reduceOnly,
+        ).length;
+        const implied = playbook.maxClips - openWorking;
+        if (implied > leg.clipsFilled) {
+          await patchDcaLeg({
+            supabase,
+            id: playbook.id,
+            side,
+            patch: {
+              clipsFilled: implied,
+              lastClipPrice: prices.last ?? leg.lastClipPrice,
+              lastClipAtMs: Date.now(),
+            },
+          });
+          leg = {
+            ...leg,
+            clipsFilled: implied,
+            lastClipPrice: prices.last ?? leg.lastClipPrice,
+            lastClipAtMs: Date.now(),
+          };
+          if (side === "long") {
+            playbook.long = leg;
+          } else {
+            playbook.short = leg;
+          }
+        }
+      }
+      const open = opens.find(
+        (row) =>
+          row.accountId === playbook.accountId &&
+          row.symbol === playbook.symbol &&
+          row.side === side,
+      );
+      const decision = decideDcaTick({
+        status: leg.status,
+        side,
+        reduceOnly: reduceOnly.has(playbook.accountId),
+        lastPrice: prices.last,
+        mark: prices.mark,
+        lastClipPrice: leg.lastClipPrice,
+        lastClipAtMs: leg.lastClipAtMs,
+        firstFillPrice: leg.firstFillPrice,
+        nowMs: Date.now(),
+        startKind: playbook.startKind,
+        dcaMode: playbook.dcaMode,
+        dipPct: playbook.dipPct,
+        intervalMinutes: playbook.intervalMinutes,
+        deviationMultiplier: playbook.deviationMultiplier,
+        clipsFilled: leg.clipsFilled,
+        maxClips: playbook.maxClips,
+        maxValue: playbook.maxValue,
+        positionQty: open?.qty ?? null,
+        entryPrice: open?.entryPrice ?? null,
+        takeProfitPct: playbook.takeProfitPct,
+        stopLossPct: playbook.stopLossPct,
+        takeProfitBasis: playbook.takeProfitBasis,
+        stopLossBasis: playbook.stopLossBasis,
+        breakevenActivationPct: playbook.breakevenActivationPct,
+        breakevenDone: leg.breakevenDone,
+        armTrigger: playbook.armTrigger,
+        armConditionTrue: playbook.armConditionTrue,
+        disarmTrigger: playbook.disarmTrigger,
+        disarmConditionTrue: playbook.disarmConditionTrue,
+        indicatorKind: playbook.indicatorKind,
+        indicatorCompare: playbook.indicatorCompare,
+        indicatorLevel: playbook.indicatorLevel,
+        indicatorConditionTrue:
+          side === "long"
+            ? playbook.longIndicatorTrue
+            : playbook.shortIndicatorTrue,
+        closes,
+        triggerPrices: prices,
+      });
+      const flags = await patchDcaPlaybook({
+        supabase,
+        id: playbook.id,
+        patch: {
+          armConditionTrue: decision.nextArmTrue,
+          disarmConditionTrue: decision.nextDisarmTrue,
+          ...(side === "long"
+            ? { longIndicatorTrue: decision.nextIndicatorTrue }
+            : { shortIndicatorTrue: decision.nextIndicatorTrue }),
+        },
+      });
+      if (!flags.ok) {
+        continue;
+      }
+      playbook.armConditionTrue = decision.nextArmTrue;
+      playbook.disarmConditionTrue = decision.nextDisarmTrue;
+      if (side === "long") {
+        playbook.longIndicatorTrue = decision.nextIndicatorTrue;
+      } else {
+        playbook.shortIndicatorTrue = decision.nextIndicatorTrue;
+      }
+      const result = await applyTickAction({
+        playbook,
+        mode: account.mode,
+        side,
+        lastPrice: prices.last,
+        action: decision.action,
+      });
+      if (result.acted) {
+        acted += 1;
+      }
     }
   }
   return { acted };
@@ -135,6 +248,7 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
 async function applyTickAction(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
+  side: FuturesSide;
   lastPrice: number | null;
   action: ReturnType<typeof decideDcaTick>["action"];
 }): Promise<{ acted: boolean }> {
@@ -150,6 +264,8 @@ async function applyTickAction(input: {
       playbook: input.playbook,
       mode: input.mode,
       verb: "arm",
+      side: input.side,
+      forcePlace: true,
     });
     return { acted: armed.ok };
   }
@@ -158,16 +274,26 @@ async function applyTickAction(input: {
       playbook: input.playbook,
       mode: input.mode,
       verb: "disarm",
+      side: input.side,
     });
     return { acted: disarmed.ok };
   }
   if (input.action.kind === "stop_adding") {
-    const patched = await patchDcaPlaybook({
+    const patched = await patchDcaLeg({
       supabase,
       id: input.playbook.id,
+      side: input.side,
       patch: { status: "stop_adding" },
     });
     return { acted: patched.ok };
+  }
+  if (input.action.kind === "breakeven") {
+    const moved = await moveStopToBreakeven({
+      playbook: input.playbook,
+      mode: input.mode,
+      side: input.side,
+    });
+    return { acted: moved.ok };
   }
   if (input.action.kind === "clip") {
     if (input.lastPrice === null) {
@@ -176,6 +302,7 @@ async function applyTickAction(input: {
     const placed = await placeClip({
       playbook: input.playbook,
       mode: input.mode,
+      side: input.side,
       lastPrice: input.lastPrice,
     });
     if (!placed.ok) {
@@ -187,7 +314,7 @@ async function applyTickAction(input: {
         userId: input.playbook.userId,
         accountId: input.playbook.accountId,
         strategy: FUTURES_STRATEGY_ID,
-        data: { playbookId: input.playbook.id },
+        data: { playbookId: input.playbook.id, side: input.side },
       });
       return { acted: false };
     }
@@ -196,6 +323,7 @@ async function applyTickAction(input: {
   const closed = await flattenPlaybook({
     playbook: input.playbook,
     mode: input.mode,
+    side: input.side,
   });
   if (!closed.ok) {
     await writeEventLog({
@@ -208,12 +336,17 @@ async function applyTickAction(input: {
       strategy: FUTURES_STRATEGY_ID,
       data: {
         playbookId: input.playbook.id,
+        side: input.side,
         reason: input.action.reason,
       },
     });
     return { acted: false };
   }
-  await resetDcaPlaybook({ supabase, id: input.playbook.id });
+  await resetDcaLeg({
+    supabase,
+    id: input.playbook.id,
+    side: input.side,
+  });
   await writeEventLog({
     scope: "trade",
     event: "dca.closed",
@@ -224,7 +357,11 @@ async function applyTickAction(input: {
     userId: input.playbook.userId,
     accountId: input.playbook.accountId,
     strategy: FUTURES_STRATEGY_ID,
-    data: { playbookId: input.playbook.id, reason: input.action.reason },
+    data: {
+      playbookId: input.playbook.id,
+      side: input.side,
+      reason: input.action.reason,
+    },
   });
   return { acted: true };
 }

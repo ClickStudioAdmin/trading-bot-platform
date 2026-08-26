@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import {
   dcaCapHit,
   dcaClipAction,
+  dcaClipKey,
   dcaDipMet,
+  dcaEnabledSides,
+  dcaHintsForOpen,
   dcaIntervalMet,
+  dcaOpenHint,
   dcaPlaybookConflict,
   dcaPlaybookIsRunning,
-  dcaOpenHint,
-  dcaHintsForOpen,
   dcaPnlPct,
   decideDcaTick,
   DEFAULT_DCA_NAME,
@@ -17,6 +19,7 @@ import {
   parseDcaPlaybookId,
   parseDcaPlaybookRow,
   parseDcaStatus,
+  type DcaPlaybook,
 } from "./playbook";
 
 assert.equal(parseDcaStatus("armed"), "armed");
@@ -24,9 +27,8 @@ assert.equal(parseDcaStatus("stop_adding"), "stop_adding");
 assert.equal(parseDcaStatus("nope"), "idle");
 assert.equal(dcaClipAction("long"), "buy");
 assert.equal(dcaClipAction("short"), "sell");
-assert.equal(dcaPlaybookIsRunning("armed"), true);
-assert.equal(dcaPlaybookIsRunning("stop_adding"), true);
-assert.equal(dcaPlaybookIsRunning("idle"), false);
+assert.equal(dcaClipKey("11111111-1111-4111-8111-111111111111", "long", 2), "d11111111l2");
+assert.deepEqual(dcaEnabledSides("both"), ["long", "short"]);
 assert.equal(
   parseDcaPlaybookId("11111111-1111-1111-1111-111111111111"),
   "11111111-1111-1111-1111-111111111111",
@@ -34,22 +36,22 @@ assert.equal(
 assert.equal(parseDcaPlaybookId("nope"), null);
 assert.equal(
   dcaPlaybookConflict(
-    [{ id: "a", symbol: "BTCUSDT", side: "long" }],
-    { symbol: "BTCUSDT", side: "long" },
+    [{ id: "a", symbol: "BTCUSDT" }],
+    { symbol: "BTCUSDT" },
   ),
   true,
 );
 assert.equal(
   dcaPlaybookConflict(
-    [{ id: "a", symbol: "BTCUSDT", side: "long" }],
-    { id: "a", symbol: "BTCUSDT", side: "long" },
+    [{ id: "a", symbol: "BTCUSDT" }],
+    { id: "a", symbol: "BTCUSDT" },
   ),
   false,
 );
 assert.equal(
   dcaPlaybookConflict(
-    [{ id: "a", symbol: "BTCUSDT", side: "long" }],
-    { symbol: "ETHUSDT", side: "long" },
+    [{ id: "a", symbol: "BTCUSDT" }],
+    { symbol: "ETHUSDT" },
   ),
   false,
 );
@@ -138,7 +140,26 @@ assert.equal(
     armTrigger: { triggerBy: "last", compare: "gte", price: 100 },
     armConditionTrue: false,
   }).action.kind,
+  "none",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    armTrigger: { triggerBy: "last", compare: "gte", price: 100 },
+  }).action.kind,
   "arm",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "webhook",
+  }).action.kind,
+  "none",
 );
 assert.equal(
   decideDcaTick({
@@ -147,6 +168,15 @@ assert.equal(
     lastPrice: 97,
   }).action.kind,
   "clip",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    lastPrice: 97,
+    dcaMode: "order",
+  }).action.kind,
+  "none",
 );
 assert.equal(
   decideDcaTick({
@@ -163,6 +193,40 @@ assert.equal(
     mark: 111,
   }).action.kind,
   "close",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    firstFillPrice: 100,
+    entryPrice: 90,
+    mark: 95,
+    takeProfitPct: 6,
+    takeProfitBasis: "first_entry",
+  }).action.kind,
+  "none",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    firstFillPrice: 100,
+    entryPrice: 90,
+    mark: 107,
+    takeProfitPct: 6,
+    takeProfitBasis: "first_entry",
+  }).action.kind,
+  "close",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    mark: 103,
+    breakevenActivationPct: 2,
+    breakevenDone: false,
+  }).action.kind,
+  "breakeven",
 );
 assert.equal(
   decideDcaTick({
@@ -209,7 +273,28 @@ assert.equal(parsed.ok, true);
 if (parsed.ok) {
   assert.equal(parsed.config.name, DEFAULT_DCA_NAME);
   assert.equal(parsed.config.symbol, "BTCUSDT");
-  assert.equal(parsed.config.side, "long");
+  assert.equal(parsed.config.direction, "long");
+  assert.equal(parsed.config.startKind, "immediate");
+  assert.equal(parsed.config.dcaMode, "position");
+  assert.equal(parsed.config.sizeMultiplier, 1);
+}
+
+const bothForm = new FormData();
+bothForm.set("symbol", "ETHUSDT");
+bothForm.set("direction", "both");
+bothForm.set("clipSize", "100");
+bothForm.set("sizeUnit", "usdt");
+bothForm.set("startKind", "webhook");
+bothForm.set("webhookId", "11111111-1111-1111-1111-111111111111");
+bothForm.set("dcaMode", "order");
+bothForm.set("sizeMultiplier", "2");
+const bothParsed = parseDcaPlaybookForm(bothForm);
+assert.equal(bothParsed.ok, true);
+if (bothParsed.ok) {
+  assert.equal(bothParsed.config.direction, "both");
+  assert.equal(bothParsed.config.startKind, "webhook");
+  assert.equal(bothParsed.config.dcaMode, "order");
+  assert.equal(bothParsed.config.sizeMultiplier, 2);
 }
 
 const row = parseDcaPlaybookRow({
@@ -218,18 +303,43 @@ const row = parseDcaPlaybookRow({
   account_id: "acc-1",
   name: "Desk DCA",
   symbol: "BTCUSDT",
-  side: "long",
+  direction: "long",
   clip_size: "0.01",
   size_unit: "qty",
-  status: "armed",
-  clips_filled: 2,
-  last_clip_price: "100",
-  last_clip_at: "2026-08-27T00:00:00.000Z",
+  long_status: "armed",
+  long_clips_filled: 2,
+  long_last_clip_price: "100",
+  long_last_clip_at: "2026-08-27T00:00:00.000Z",
+  long_first_fill_price: "101",
 });
 assert.equal(row?.name, "Desk DCA");
-assert.equal(row?.clipsFilled, 2);
-assert.equal(row?.status, "armed");
+assert.equal(row?.direction, "long");
+assert.equal(row?.long.clipsFilled, 2);
+assert.equal(row?.long.status, "armed");
+assert.equal(row?.long.firstFillPrice, 101);
 assert.ok(row);
+assert.equal(dcaPlaybookIsRunning(row), true);
+assert.equal(
+  dcaPlaybookIsRunning({
+    long: {
+      status: "idle",
+      clipsFilled: 0,
+      lastClipPrice: null,
+      lastClipAtMs: null,
+      firstFillPrice: null,
+      breakevenDone: false,
+    },
+    short: {
+      status: "idle",
+      clipsFilled: 0,
+      lastClipPrice: null,
+      lastClipAtMs: null,
+      firstFillPrice: null,
+      breakevenDone: false,
+    },
+  }),
+  false,
+);
 
 assert.equal(
   formatDcaNextAdd({
@@ -253,6 +363,7 @@ assert.equal(
 assert.equal(
   formatDcaNextAdd({
     status: "armed",
+    clipsFilled: 1,
     dipPct: null,
     intervalMinutes: null,
     lastClipAtMs: 1,
@@ -263,16 +374,18 @@ assert.equal(
 assert.equal(
   formatDcaNextAdd({
     status: "armed",
+    clipsFilled: 0,
+    startKind: "webhook",
     dipPct: null,
     intervalMinutes: null,
     lastClipAtMs: null,
     nowMs: 0,
   }),
-  "First clip",
+  "Waiting for signal",
 );
 assert.equal(
   dcaOpenHint({
-    playbook: row,
+    playbook: row as DcaPlaybook,
     symbol: "ETHUSDT",
     side: "long",
     qty: 1,
@@ -283,7 +396,7 @@ assert.equal(
 );
 assert.equal(
   dcaOpenHint({
-    playbook: row,
+    playbook: row as DcaPlaybook,
     symbol: "BTCUSDT",
     side: "long",
     qty: 0.02,
@@ -294,7 +407,7 @@ assert.equal(
 );
 assert.deepEqual(
   dcaHintsForOpen(
-    [row],
+    [row as DcaPlaybook],
     [{ symbol: "BTCUSDT", side: "long", qty: 0.02, mark: 100 }],
     Date.parse("2026-08-27T00:10:00.000Z"),
   )["BTCUSDT:long"]?.clips,

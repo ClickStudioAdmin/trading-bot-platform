@@ -58,7 +58,7 @@ export async function saveDcaPlaybookAction(formData: FormData) {
     data: {
       playbookId: saved.playbook.id,
       symbol: parsed.config.symbol,
-      side: parsed.config.side,
+      side: parsed.config.direction,
     },
   });
   revalidatePath(FUTURES_PATHS.automations);

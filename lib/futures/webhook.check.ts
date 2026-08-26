@@ -52,7 +52,26 @@ if (arm.ok) {
   assert.equal(arm.parsed.kind, "arm");
   if (arm.parsed.kind === "arm") {
     assert.equal(arm.parsed.verb, "arm");
+    assert.equal(arm.parsed.side, null);
   }
+}
+
+const armLong = parseFuturesWebhook({ action: "arm", side: "long" });
+assert.equal(armLong.ok, true);
+if (armLong.ok && armLong.parsed.kind === "arm") {
+  assert.equal(armLong.parsed.side, "long");
+}
+
+const signalBuy = parseFuturesWebhook({ action: "buy" });
+assert.equal(signalBuy.ok, true);
+if (signalBuy.ok && signalBuy.parsed.kind === "arm") {
+  assert.equal(signalBuy.parsed.side, "long");
+}
+
+const signalSell = parseFuturesWebhook({ action: "sell" });
+assert.equal(signalSell.ok, true);
+if (signalSell.ok && signalSell.parsed.kind === "arm") {
+  assert.equal(signalSell.parsed.side, "short");
 }
 
 const closePlaybook = parseFuturesWebhook({ action: "close-playbook" });
@@ -82,10 +101,13 @@ assert.equal(parseWebhookKind("signal").ok, true);
 assert.equal(parseWebhookKind("other").ok, false);
 
 assert.equal(parseFuturesWebhook({ action: "flip", symbol: "BTCUSDT" }).ok, false);
-assert.equal(
-  parseFuturesWebhook({ action: "buy", symbol: "BTCUSDT" }).ok,
-  false,
-);
+const buyNoSize = parseFuturesWebhook({ action: "buy", symbol: "BTCUSDT" });
+assert.equal(buyNoSize.ok, true);
+if (buyNoSize.ok && buyNoSize.parsed.kind === "arm") {
+  assert.equal(buyNoSize.parsed.side, "long");
+} else {
+  assert.fail("buy without size should arm long");
+}
 
 assert.equal(
   looksLikeVenueWebhookPayload({ retCode: 0, result: { orderId: "1" } }),

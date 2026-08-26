@@ -47,6 +47,18 @@ const SIGNAL_PAYLOADS = [
 }`,
   },
   {
+    label: "Buy (arm long)",
+    text: `{
+  "action": "buy"
+}`,
+  },
+  {
+    label: "Sell (arm short)",
+    text: `{
+  "action": "sell"
+}`,
+  },
+  {
     label: "Disarm",
     text: `{
   "action": "disarm"

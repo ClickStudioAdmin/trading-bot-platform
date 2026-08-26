@@ -230,9 +230,11 @@ export async function loadAccountUsage(
     listFuturesConnectionIds(supabase, accountIds),
     supabase
       .from("dca_playbooks")
-      .select("account_id, status")
+      .select("account_id")
       .in("account_id", accountIds)
-      .in("status", ["armed", "stop_adding"]),
+      .or(
+        "long_status.in.(armed,stop_adding),short_status.in.(armed,stop_adding)",
+      ),
   ]);
   const carryOpenCount = new Map<string, number>();
   const futuresOpenCount = new Map<string, number>();

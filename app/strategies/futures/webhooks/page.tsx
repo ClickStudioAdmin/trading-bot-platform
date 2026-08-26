@@ -90,8 +90,9 @@ export default async function FuturesWebhooksPage({
           </>
         ) : allowSignal ? (
           <>
-            Signal webhooks arm this playbook. TradingView does not send buy,
-            sell, or close here. Send a dummy below. Armed clips open{" "}
+            Signal webhooks arm the bound playbook. Arm / disarm /
+            close-playbook still work. Buy / sell arms that side only; the
+            playbook owns size. Send a dummy below. Armed clips open{" "}
             <Link href={FUTURES_PATHS.positions} className="text-accent">
               Positions
             </Link>

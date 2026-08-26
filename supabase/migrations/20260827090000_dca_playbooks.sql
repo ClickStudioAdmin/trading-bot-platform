@@ -1,4 +1,4 @@
--- Phase 11: stacked DCA playbooks. One per desk contract+side. Runtime state lives on the same row.
+-- Phase 11: stacked DCA playbooks. One per desk contract. Both runs two independent legs.
 
 create table public.dca_playbooks (
     id uuid primary key default gen_random_uuid(),
@@ -10,7 +10,13 @@ create table public.dca_playbooks (
         char_length(symbol) between 4 and 32
         and symbol ~ '^[A-Z0-9]+$'
     ),
-    side text not null check (side in ('long', 'short')),
+    direction text not null default 'long'
+        check (direction in ('long', 'short', 'both')),
+    start_kind text not null default 'immediate'
+        check (start_kind in ('immediate', 'price', 'webhook', 'indicator')),
+    webhook_id uuid references public.futures_webhooks (id) on delete set null,
+    dca_mode text not null default 'position'
+        check (dca_mode in ('position', 'order')),
     clip_size numeric not null check (clip_size > 0),
     size_unit text not null default 'qty'
         check (size_unit in ('qty', 'usdt')),
@@ -18,8 +24,22 @@ create table public.dca_playbooks (
     max_value numeric check (max_value is null or max_value > 0),
     dip_pct numeric check (dip_pct is null or dip_pct > 0),
     interval_minutes integer check (interval_minutes is null or interval_minutes > 0),
+    size_multiplier numeric not null default 1 check (size_multiplier > 0),
+    deviation_multiplier numeric not null default 1 check (deviation_multiplier > 0),
     take_profit_pct numeric check (take_profit_pct is null or take_profit_pct > 0),
     stop_loss_pct numeric check (stop_loss_pct is null or stop_loss_pct > 0),
+    take_profit_basis text not null default 'average'
+        check (take_profit_basis in ('average', 'first_entry')),
+    stop_loss_basis text not null default 'average'
+        check (stop_loss_basis in ('average', 'first_entry')),
+    breakeven_activation_pct numeric
+        check (breakeven_activation_pct is null or breakeven_activation_pct > 0),
+    breakeven_offset_pct numeric
+        check (breakeven_offset_pct is null or breakeven_offset_pct >= 0),
+    trailing_trigger_pct numeric
+        check (trailing_trigger_pct is null or trailing_trigger_pct > 0),
+    trailing_pct numeric
+        check (trailing_pct is null or trailing_pct > 0),
     arm_trigger_by text check (
         arm_trigger_by is null
         or arm_trigger_by in ('last', 'mark', 'index')
@@ -40,14 +60,38 @@ create table public.dca_playbooks (
     ),
     disarm_price numeric check (disarm_price is null or disarm_price > 0),
     disarm_condition_true boolean not null default false,
-    status text not null default 'idle'
-        check (status in ('idle', 'armed', 'stop_adding')),
-    clips_filled integer not null default 0 check (clips_filled >= 0),
-    last_clip_price numeric check (last_clip_price is null or last_clip_price > 0),
-    last_clip_at timestamptz,
+    indicator_kind text check (
+        indicator_kind is null
+        or indicator_kind in ('rsi', 'macd', 'ema_cross')
+    ),
+    indicator_timeframe text check (
+        indicator_timeframe is null
+        or indicator_timeframe in ('5', '15', '60')
+    ),
+    indicator_compare text check (
+        indicator_compare is null
+        or indicator_compare in ('gte', 'lte')
+    ),
+    indicator_level numeric check (indicator_level is null or indicator_level > 0),
+    long_indicator_true boolean not null default false,
+    short_indicator_true boolean not null default false,
+    long_status text not null default 'idle'
+        check (long_status in ('idle', 'armed', 'stop_adding')),
+    long_clips_filled integer not null default 0 check (long_clips_filled >= 0),
+    long_last_clip_price numeric check (long_last_clip_price is null or long_last_clip_price > 0),
+    long_last_clip_at timestamptz,
+    long_first_fill_price numeric check (long_first_fill_price is null or long_first_fill_price > 0),
+    long_breakeven_done boolean not null default false,
+    short_status text not null default 'idle'
+        check (short_status in ('idle', 'armed', 'stop_adding')),
+    short_clips_filled integer not null default 0 check (short_clips_filled >= 0),
+    short_last_clip_price numeric check (short_last_clip_price is null or short_last_clip_price > 0),
+    short_last_clip_at timestamptz,
+    short_first_fill_price numeric check (short_first_fill_price is null or short_first_fill_price > 0),
+    short_breakeven_done boolean not null default false,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
-    unique (account_id, symbol, side),
+    unique (account_id, symbol),
     check (
         (arm_price is null and arm_trigger_by is null and arm_compare is null)
         or (
@@ -63,11 +107,26 @@ create table public.dca_playbooks (
             and disarm_trigger_by is not null
             and disarm_compare is not null
         )
+    ),
+    check (
+        start_kind <> 'webhook'
+        or webhook_id is not null
+    ),
+    check (
+        start_kind <> 'price'
+        or arm_price is not null
+    ),
+    check (
+        start_kind <> 'indicator'
+        or indicator_kind is not null
     )
 );
 
 create index dca_playbooks_status_idx
-    on public.dca_playbooks (status);
+    on public.dca_playbooks (long_status, short_status);
+
+create index dca_playbooks_webhook_idx
+    on public.dca_playbooks (webhook_id);
 
 create or replace function public.dca_playbooks_match_account_user()
 returns trigger

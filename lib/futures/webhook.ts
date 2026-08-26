@@ -37,6 +37,7 @@ export type ParsedWebhookOrder = {
 export type ParsedWebhookArm = {
   kind: "arm";
   verb: WebhookArmVerb;
+  side: FuturesSide | null;
 };
 
 export type ParsedWebhook =
@@ -196,7 +197,28 @@ export function parseFuturesWebhook(
     return verb;
   }
   if (verb.kind === "arm") {
-    return { ok: true, parsed: { kind: "arm", verb: verb.verb } };
+    return {
+      ok: true,
+      parsed: {
+        kind: "arm",
+        verb: verb.verb,
+        side: parseFuturesSide(row.side),
+      },
+    };
+  }
+
+  if (
+    (verb.action === "buy" || verb.action === "sell") &&
+    String(row.size ?? row.qty ?? row.contracts ?? "").trim() === ""
+  ) {
+    return {
+      ok: true,
+      parsed: {
+        kind: "arm",
+        verb: "arm",
+        side: verb.action === "buy" ? "long" : "short",
+      },
+    };
   }
 
   const symbol = parseWebhookSymbol(row.symbol ?? row.ticker);
