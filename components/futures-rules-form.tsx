@@ -21,15 +21,18 @@ export function FuturesAutomationsDesk({
   rules,
   options,
   triggerWebhooks = [],
+  inUseRuleIds = [],
   reduceOnly = false,
 }: {
   rules: FuturesAutomationFormValues[];
   options: LinearPerp[];
   triggerWebhooks?: Pick<FuturesWebhookRow, "id" | "name">[];
+  inUseRuleIds?: string[];
   reduceOnly?: boolean;
 }) {
   const [layers, setLayers] = useState(rules);
   const empty = layers.length === 0;
+  const inUse = new Set(inUseRuleIds);
   const defaultSymbol =
     options.find((row) => row.symbol === "BTCUSDT")?.symbol ??
     options[0]?.symbol ??
@@ -53,6 +56,7 @@ export function FuturesAutomationsDesk({
             options={options}
             triggerWebhooks={triggerWebhooks}
             accountReduceOnly={reduceOnly}
+            inUse={Boolean(layer.id && inUse.has(layer.id))}
             onRemove={() => {
               const next = layers.filter((item) => item.key !== layer.key);
               setLayers(next);
@@ -102,6 +106,7 @@ function RuleCard({
   options,
   triggerWebhooks,
   accountReduceOnly,
+  inUse,
   onRemove,
 }: {
   index: number;
@@ -109,6 +114,7 @@ function RuleCard({
   options: LinearPerp[];
   triggerWebhooks: Pick<FuturesWebhookRow, "id" | "name">[];
   accountReduceOnly: boolean;
+  inUse: boolean;
   onRemove: () => void;
 }) {
   const prefix = `r${index}_`;
@@ -163,7 +169,11 @@ function RuleCard({
               <option value="reduce_only">Reduce only</option>
               <option value="disabled">Disabled</option>
             </select>
-            <ModeLight mode={mode} accountReduceOnly={accountReduceOnly} />
+            <ModeLight
+              mode={mode}
+              inUse={inUse}
+              accountReduceOnly={accountReduceOnly}
+            />
           </span>
         </label>
       </div>
@@ -387,13 +397,19 @@ function RuleCard({
             </span>
           </label>
         )}
-        <button
-          type="button"
-          onClick={onRemove}
-          className="shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
-        >
-          Remove
-        </button>
+        {inUse ? (
+          <p className="text-xs text-ink-muted">
+            This rule has an open position. Close that row before removing it.
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
+          >
+            Remove
+          </button>
+        )}
       </div>
     </section>
   );
@@ -425,9 +441,11 @@ function Toggle({
 
 function ModeLight({
   mode,
+  inUse,
   accountReduceOnly,
 }: {
   mode: AutomationMode;
+  inUse: boolean;
   accountReduceOnly: boolean;
 }) {
   const fill =
@@ -444,12 +462,18 @@ function ModeLight({
         : accountReduceOnly
           ? "Active · book Reduce only has priority"
           : "Active";
+  const title = inUse ? `${label} · in use by an open position` : label;
   return (
     <span
       className="relative flex size-3.5 shrink-0"
-      title={label}
-      aria-label={label}
+      title={title}
+      aria-label={title}
     >
+      {inUse ? (
+        <span
+          className={`absolute inline-flex size-full animate-ping rounded-full opacity-60 ${fill}`}
+        />
+      ) : null}
       <span className={`relative inline-flex size-3.5 rounded-full ${fill}`} />
     </span>
   );

@@ -1,4 +1,6 @@
 import {
+  blockedFuturesRuleDeletes,
+  FUTURES_RULE_IN_USE,
   futuresAutomationToRow,
   parseFuturesAutomationRow,
   type FuturesAutomationRule,
@@ -28,6 +30,29 @@ export async function loadFuturesAutomationRules(
   return data.map((row) =>
     parseFuturesAutomationRow(row as Record<string, unknown>),
   );
+}
+
+export async function listFuturesAutomationRuleIdsInUse(
+  accountId: string,
+  supabaseClient?: SupabaseClient,
+): Promise<string[]> {
+  const supabase = supabaseClient ?? createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data } = await supabase
+    .from("futures_positions")
+    .select("rule_id")
+    .eq("account_id", accountId)
+    .eq("status", "open")
+    .not("rule_id", "is", null);
+  return [
+    ...new Set(
+      (data ?? [])
+        .map((row) => String((row as { rule_id?: unknown }).rule_id ?? "").trim())
+        .filter(Boolean),
+    ),
+  ];
 }
 
 export async function futuresAutomationsAreRunning(
@@ -66,6 +91,14 @@ export async function saveFuturesAutomationRules(input: {
     .map((row) => String((row as { id: string }).id))
     .filter((id) => !keep.has(id));
   if (stale.length > 0) {
+    const inUse = await listFuturesAutomationRuleIdsInUse(
+      input.accountId,
+      input.supabase,
+    );
+    const blocked = blockedFuturesRuleDeletes(stale, inUse);
+    if (blocked.length > 0) {
+      return { ok: false, error: FUTURES_RULE_IN_USE };
+    }
     const { error } = await input.supabase
       .from("futures_automation_rules")
       .delete()

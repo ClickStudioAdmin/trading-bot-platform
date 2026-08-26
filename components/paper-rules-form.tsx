@@ -192,18 +192,7 @@ function RuleRow({
   const [mode, setMode] = useState(layer.mode);
   return (
     <section className="rounded-card border border-line bg-surface px-4 py-3">
-      <div className="mb-2 grid grid-cols-[auto_minmax(0,1fr)_13rem_auto] items-center gap-x-2 gap-y-0.5">
-        {canRemove ? (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="justify-self-start rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
-          >
-            Remove
-          </button>
-        ) : (
-          <span />
-        )}
+      <div className="mb-2 grid grid-cols-[minmax(0,1fr)_13rem_auto] items-center gap-x-2 gap-y-0.5">
         <label
           htmlFor={`${prefix}name`}
           className="text-[11px] text-ink-muted"
@@ -221,7 +210,6 @@ function RuleRow({
           inUse={inUse}
           accountReduceOnly={accountReduceOnly}
         />
-        <span />
         <input
           id={`${prefix}name`}
           name={`${prefix}name`}
@@ -365,6 +353,21 @@ function RuleRow({
             allowDecimal
           />
         </FieldGroup>
+      </div>
+      <div className="mt-3 flex items-end justify-end gap-3">
+        {canRemove ? (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
+          >
+            Remove
+          </button>
+        ) : (
+          <p className="text-xs text-ink-muted">
+            This set has an open position. Close that row before removing it.
+          </p>
+        )}
       </div>
     </section>
   );

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
   automationSide,
+  blockedFuturesRuleDeletes,
   decideFuturesAutomationTick,
   defaultFuturesAutomationForm,
+  FUTURES_RULE_IN_USE,
   futuresAutomationIdempotencyKey,
   futuresDeskAutomationStatus,
   parseFuturesAutomationForm,
@@ -239,6 +241,16 @@ assert.deepEqual(
     bound: true,
   }),
   { automationsRunning: false, reduceOnly: false },
+);
+
+assert.deepEqual(
+  blockedFuturesRuleDeletes(["a", "b", "c"], ["b", "z"]),
+  ["b"],
+);
+assert.deepEqual(blockedFuturesRuleDeletes(["a"], []), []);
+assert.equal(
+  FUTURES_RULE_IN_USE,
+  "Cannot remove a rule that has an open position.",
 );
 
 console.log("futures automation checks passed");

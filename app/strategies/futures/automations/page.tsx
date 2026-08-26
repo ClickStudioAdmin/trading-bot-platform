@@ -7,7 +7,10 @@ import { getSessionContext } from "@/lib/auth/session";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { futuresRuleToForm } from "@/lib/futures/automation";
-import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
+import {
+  listFuturesAutomationRuleIdsInUse,
+  loadFuturesAutomationRules,
+} from "@/lib/futures/automation-load";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
@@ -29,6 +32,9 @@ export default async function FuturesAutomationsPage({
   const session = await getSessionContext();
   const settings = session ? await loadFuturesSettings(session.account.id) : null;
   const rules = session ? await loadFuturesAutomationRules(session.account.id) : [];
+  const inUseRuleIds = session
+    ? await listFuturesAutomationRuleIdsInUse(session.account.id)
+    : [];
   const triggerWebhooks = session
     ? (
         await listFuturesWebhooks({
@@ -69,6 +75,7 @@ export default async function FuturesAutomationsPage({
           rules={rules.map(futuresRuleToForm)}
           options={pairs}
           triggerWebhooks={triggerWebhooks}
+          inUseRuleIds={inUseRuleIds}
           reduceOnly={Boolean(settings?.reduceOnly)}
         />
       ) : (

@@ -117,6 +117,17 @@ export function automationSide(rule: {
   return rule.action === "buy" ? "long" : "short";
 }
 
+export const FUTURES_RULE_IN_USE =
+  "Cannot remove a rule that has an open position.";
+
+export function blockedFuturesRuleDeletes(
+  staleIds: string[],
+  inUseIds: string[],
+): string[] {
+  const used = new Set(inUseIds.filter(Boolean));
+  return staleIds.filter((id) => used.has(id));
+}
+
 export function futuresDeskAutomationStatus(input: {
   signedIn: boolean;
   modes: AutomationMode[];
