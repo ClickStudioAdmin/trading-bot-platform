@@ -95,87 +95,89 @@ export function FuturesWebhooksDesk({
       {webhooks.map((hook) => (
         <section
           key={hook.id}
-          className="rounded-card border border-line bg-surface p-5"
+          className="space-y-5 rounded-card border border-line bg-surface p-5"
         >
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-start">
-            <div className="space-y-3">
-              <form
-                action={renameFuturesWebhookAction}
-                className="flex flex-wrap items-end gap-x-4 gap-y-3"
+          {hook.url ? (
+            <label className="block text-sm text-ink">
+              URL
+              <span className="mt-1 flex items-center gap-3">
+                <textarea
+                  readOnly
+                  rows={2}
+                  value={hook.url}
+                  className="min-w-0 flex-1 resize-none break-all rounded-control border border-line bg-surface-raised px-3 py-2 font-mono text-xs leading-5 text-ink focus:border-line-strong focus:outline-none"
+                />
+                <span className="shrink-0">
+                  <CopyTextButton text={hook.url} label="Copy URL" />
+                </span>
+              </span>
+            </label>
+          ) : (
+            <p className="text-sm text-ink-muted">
+              URL is stored but could not be shown. Set APP_BASE_URL or rotate.
+            </p>
+          )}
+          <div className="space-y-3">
+            <form
+              action={renameFuturesWebhookAction}
+              className="flex flex-wrap items-end gap-x-4 gap-y-3"
+            >
+              <input type="hidden" name="webhookId" value={hook.id} />
+              <label className="min-w-[12rem] flex-1 text-sm text-ink">
+                Name
+                <input
+                  name="name"
+                  defaultValue={hook.name}
+                  required
+                  maxLength={40}
+                  className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                />
+              </label>
+              <PendingSubmitButton
+                pendingLabel="Saving…"
+                successKey={`rename-webhook-${hook.id}`}
+                className="rounded-control border border-line bg-surface-raised px-3 py-2 text-xs font-medium text-ink"
               >
+                Save name
+              </PendingSubmitButton>
+            </form>
+            <p className="text-xs text-ink-muted">
+              {hook.kind === "signal"
+                ? "Signal — Automations When shows this name"
+                : "TradingView strategy — same URL, one alert message per action"}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <form action={rotateFuturesWebhook}>
                 <input type="hidden" name="webhookId" value={hook.id} />
-                <label className="min-w-[12rem] flex-1 text-sm text-ink">
-                  Name
-                  <input
-                    name="name"
-                    defaultValue={hook.name}
-                    required
-                    maxLength={40}
-                    className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-                  />
-                </label>
                 <PendingSubmitButton
-                  pendingLabel="Saving…"
-                  successKey={`rename-webhook-${hook.id}`}
-                  className="rounded-control border border-line bg-surface-raised px-3 py-2 text-xs font-medium text-ink"
+                  pendingLabel="Rotating…"
+                  successKey={`rotate-webhook-${hook.id}`}
+                  className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
                 >
-                  Save name
+                  Rotate URL
                 </PendingSubmitButton>
               </form>
-              <p className="text-xs text-ink-muted">
-                {hook.kind === "signal"
-                  ? "Signal — Automations When shows this name"
-                  : "TradingView strategy — same URL, one alert message per action"}
-              </p>
-              {hook.url ? (
-                <div className="space-y-2">
-                  <label className="block text-sm text-ink">
-                    URL
-                    <input
-                      readOnly
-                      value={hook.url}
-                      className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 font-mono text-xs text-ink focus:border-line-strong focus:outline-none"
-                    />
-                  </label>
-                  <CopyTextButton text={hook.url} label="Copy URL" />
-                </div>
-              ) : (
-                <p className="text-sm text-ink-muted">
-                  URL is stored but could not be shown. Set APP_BASE_URL or
-                  rotate.
-                </p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                <form action={rotateFuturesWebhook}>
-                  <input type="hidden" name="webhookId" value={hook.id} />
-                  <PendingSubmitButton
-                    pendingLabel="Rotating…"
-                    successKey={`rotate-webhook-${hook.id}`}
-                    className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
-                  >
-                    Rotate URL
-                  </PendingSubmitButton>
-                </form>
-                <form action={deleteFuturesWebhookAction}>
-                  <input type="hidden" name="webhookId" value={hook.id} />
-                  <PendingSubmitButton
-                    pendingLabel="Deleting…"
-                    successKey={`delete-webhook-${hook.id}`}
-                    className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
-                  >
-                    Delete
-                  </PendingSubmitButton>
-                </form>
-              </div>
+              <form action={deleteFuturesWebhookAction}>
+                <input type="hidden" name="webhookId" value={hook.id} />
+                <PendingSubmitButton
+                  pendingLabel="Deleting…"
+                  successKey={`delete-webhook-${hook.id}`}
+                  className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
+                >
+                  Delete
+                </PendingSubmitButton>
+              </form>
             </div>
-            {hook.kind === "signal" ? (
-              <PayloadSample label="Arm" text={SIGNAL_PAYLOAD} />
-            ) : (
-              <div className="space-y-3">
-                <p className="text-xs text-ink-muted">
-                  Paste one of these into each TradingView alert. Sell opens or
-                  adds a short. Close exits the open row.
-                </p>
+          </div>
+          {hook.kind === "signal" ? (
+            <PayloadSample label="Arm" text={SIGNAL_PAYLOAD} />
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-ink-muted">
+                Paste one of these into each TradingView alert. Sell opens or
+                adds a short. Close exits the open row.
+              </p>
+              <div className="grid gap-4 md:grid-cols-3">
                 {STRATEGY_PAYLOADS.map((sample) => (
                   <PayloadSample
                     key={sample.label}
@@ -184,8 +186,8 @@ export function FuturesWebhooksDesk({
                   />
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </section>
       ))}
     </div>
@@ -194,7 +196,7 @@ export function FuturesWebhooksDesk({
 
 function PayloadSample({ label, text }: { label: string; text: string }) {
   return (
-    <div className="space-y-1">
+    <div className="min-w-0 space-y-1">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-ink-muted">{label}</p>
         <CopyTextButton text={text} label="Copy" />
