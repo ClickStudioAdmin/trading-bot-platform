@@ -30,11 +30,39 @@ export function FuturesWebhookTest({
     [webhookId, webhooks],
   );
   const signal = selected?.kind === "signal";
+  const help = standalone
+    ? [
+        "Posts through the same door as TradingView.",
+        signal
+          ? null
+          : "Symbol and size go in the dummy payload.",
+        allowSignal
+          ? "A Signal test arms and fires any automation that uses that webhook."
+          : null,
+        "A fill opens Positions.",
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : [
+        "Posts through the same door as TradingView.",
+        "A TradingView strategy test uses the symbol and size above.",
+        allowSignal
+          ? "A Signal test arms and fires any automation that uses that webhook."
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ");
   const fields = (
     <>
       {next ? <input type="hidden" name="next" value={next} /> : null}
       {successNext ? (
         <input type="hidden" name="successNext" value={successNext} />
+      ) : null}
+      {standalone ? (
+        <div className="mb-4">
+          <p className="text-sm text-ink">Send a Webhook</p>
+          <p className="mt-1 text-sm text-ink-muted">{help}</p>
+        </div>
       ) : null}
       {standalone && !signal ? (
         <FuturesOrderTicket
@@ -43,22 +71,13 @@ export function FuturesWebhookTest({
           includeStops={false}
         />
       ) : null}
-      <div className={standalone ? "space-y-2" : "mt-4 space-y-2 border-t border-line pt-4"}>
-        <p className="text-sm text-ink">Send a test</p>
-        <p className="text-xs text-ink-muted">
-          Posts through the same door as TradingView.
-          {standalone && !signal
-            ? " Symbol and size go in the dummy payload."
-            : !standalone
-              ? " A TradingView strategy test uses the symbol and size above."
-              : ""}
-          {allowSignal
-            ? " A Signal test arms and fires any automation that uses that webhook."
-            : ""}
-          {standalone
-            ? " A fill opens Positions."
-            : ""}
-        </p>
+      <div className={standalone ? "mt-4 space-y-2" : "mt-4 space-y-2 border-t border-line pt-4"}>
+        {standalone ? null : (
+          <>
+            <p className="text-sm text-ink">Send a test</p>
+            <p className="text-xs text-ink-muted">{help}</p>
+          </>
+        )}
         <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-4">
           <label className="block min-w-[14rem] flex-1 text-sm text-ink">
             Webhook
