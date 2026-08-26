@@ -4,6 +4,7 @@ import {
   dcaClipAction,
   dcaDipMet,
   dcaIntervalMet,
+  dcaPlaybookConflict,
   dcaPlaybookIsRunning,
   dcaOpenHint,
   dcaHintsForOpen,
@@ -13,6 +14,7 @@ import {
   formatDcaNextAdd,
   formatDcaRemaining,
   parseDcaPlaybookForm,
+  parseDcaPlaybookId,
   parseDcaPlaybookRow,
   parseDcaStatus,
 } from "./playbook";
@@ -25,6 +27,32 @@ assert.equal(dcaClipAction("short"), "sell");
 assert.equal(dcaPlaybookIsRunning("armed"), true);
 assert.equal(dcaPlaybookIsRunning("stop_adding"), true);
 assert.equal(dcaPlaybookIsRunning("idle"), false);
+assert.equal(
+  parseDcaPlaybookId("11111111-1111-1111-1111-111111111111"),
+  "11111111-1111-1111-1111-111111111111",
+);
+assert.equal(parseDcaPlaybookId("nope"), null);
+assert.equal(
+  dcaPlaybookConflict(
+    [{ id: "a", symbol: "BTCUSDT", side: "long" }],
+    { symbol: "BTCUSDT", side: "long" },
+  ),
+  true,
+);
+assert.equal(
+  dcaPlaybookConflict(
+    [{ id: "a", symbol: "BTCUSDT", side: "long" }],
+    { id: "a", symbol: "BTCUSDT", side: "long" },
+  ),
+  false,
+);
+assert.equal(
+  dcaPlaybookConflict(
+    [{ id: "a", symbol: "BTCUSDT", side: "long" }],
+    { symbol: "ETHUSDT", side: "long" },
+  ),
+  false,
+);
 
 assert.equal(
   dcaDipMet({ side: "long", lastPrice: 98, lastClipPrice: 100, dipPct: 2 }),
@@ -266,7 +294,7 @@ assert.equal(
 );
 assert.deepEqual(
   dcaHintsForOpen(
-    row,
+    [row],
     [{ symbol: "BTCUSDT", side: "long", qty: 0.02, mark: 100 }],
     Date.parse("2026-08-27T00:10:00.000Z"),
   )["BTCUSDT:long"]?.clips,

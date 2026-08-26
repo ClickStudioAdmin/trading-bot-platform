@@ -17,7 +17,7 @@ import {
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { deskAllowsManualPerpTicket, deskAllowsSignalWebhooks } from "@/lib/accounts/model";
 import { dcaHintsForOpen } from "@/lib/dca/playbook";
-import { loadDcaPlaybook } from "@/lib/dca/store";
+import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { FuturesWebhookTest } from "@/components/futures-webhook-test";
 import { submitFuturesTrade } from "@/lib/futures/actions";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
@@ -97,9 +97,11 @@ export default async function FuturesPositionsPage({
   const showTicket = deskAllowsManualPerpTicket(deskType);
   const allowSignal = deskAllowsSignalWebhooks(deskType);
   const dca = deskType === "dca";
-  const playbook =
-    dca && session ? await loadDcaPlaybook(session.account.id) : null;
-  const dcaHints = dca ? dcaHintsForOpen(playbook, open) : undefined;
+  const playbooks =
+    dca && session
+      ? await listDcaPlaybooksForAccount(session.account.id)
+      : [];
+  const dcaHints = dca ? dcaHintsForOpen(playbooks, open) : undefined;
   const testWebhooks = allowSignal
     ? webhooks
     : webhooks.filter((row) => row.kind !== "signal");

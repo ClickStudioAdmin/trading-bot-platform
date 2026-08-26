@@ -11,7 +11,7 @@ Work only on the current phase. Phase 1 through Phase 10 are complete. See [docs
 
 Feature work happens on `develop`. Merge to `main` only when the user is ready for production.
 
-Phase 11 is the first managing playbook. Type `dca` on the desk. Same `futures_*` ledger and `runFuturesCommand`. The app owns clips and exits. Signals only arm. Do not add a Fly.io worker. Do not call private exchange APIs from the browser. Paper accounts still use the in-app ledger.
+Phase 11 is the first managing playbook. Type `dca` on the desk. Same `futures_*` ledger and `runFuturesCommand`. The app owns clips and exits. Signals only arm. Stacked playbooks, one per contract and side. Do not add a Fly.io worker. Do not call private exchange APIs from the browser. Paper accounts still use the in-app ledger.
 
 Do not create later-phase tables or speculative architecture. Do not start scale-in, Hyperliquid, or MEXC/XT until Phase 11 is accepted.
 

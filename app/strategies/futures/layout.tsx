@@ -6,7 +6,7 @@ import {
   formatDeskType,
 } from "@/lib/accounts/model";
 import { dcaPlaybookIsRunning } from "@/lib/dca/playbook";
-import { loadDcaPlaybook } from "@/lib/dca/store";
+import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
@@ -53,8 +53,10 @@ export default async function FuturesLayout({
           bound.id,
         )
       : null;
-  const playbook =
-    dca && session ? await loadDcaPlaybook(session.account.id) : null;
+  const playbooks =
+    dca && session
+      ? await listDcaPlaybooksForAccount(session.account.id)
+      : [];
   const deskStatus = futuresDeskAutomationStatus({
     signedIn: Boolean(session),
     modes: rules.map((rule) => rule.mode),
@@ -63,7 +65,7 @@ export default async function FuturesLayout({
     bound: Boolean(bound),
   });
   const automationsRunning = dca
-    ? Boolean(playbook && dcaPlaybookIsRunning(playbook.status))
+    ? playbooks.some((playbook) => dcaPlaybookIsRunning(playbook.status))
     : deskStatus.automationsRunning;
   return (
     <div>

@@ -5,7 +5,7 @@ import {
   parseDeskType,
 } from "@/lib/accounts/model";
 import { applyDcaVerb } from "@/lib/dca/run";
-import { loadDcaPlaybook } from "@/lib/dca/store";
+import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -130,8 +130,8 @@ export async function handleFuturesWebhook(input: {
 
   if (parsed.parsed.kind === "arm") {
     if (deskType === "dca") {
-      const playbook = await loadDcaPlaybook(accountId);
-      if (!playbook) {
+      const playbooks = await listDcaPlaybooksForAccount(accountId);
+      if (playbooks.length === 0) {
         await writeEventLog({
           scope: "strategy",
           event: `webhook.${parsed.parsed.verb}`,
@@ -151,26 +151,44 @@ export async function handleFuturesWebhook(input: {
           },
         };
       }
-      const ran = await applyDcaVerb({
-        playbook,
-        mode,
-        verb: parsed.parsed.verb,
-      });
+      const results = [];
+      for (const playbook of playbooks) {
+        results.push(
+          await applyDcaVerb({
+            playbook,
+            mode,
+            verb: parsed.parsed.verb,
+          }),
+        );
+      }
+      const okCount = results.filter((row) => row.ok).length;
+      const firstError = results.find((row) => !row.ok);
+      const message =
+        firstError && !firstError.ok
+          ? okCount > 0
+            ? `${okCount} playbook${okCount === 1 ? "" : "s"} ran. ${firstError.error}`
+            : firstError.error
+          : results[0] && results[0].ok
+            ? playbooks.length === 1
+              ? results[0].message
+              : `${okCount} playbooks ran.`
+            : "Signal accepted.";
       await writeEventLog({
         scope: "strategy",
         event: `webhook.${parsed.parsed.verb}`,
-        message: ran.ok ? ran.message : ran.error,
+        message,
         userId,
         accountId,
         strategy: FUTURES_STRATEGY_ID,
         data: {
           verb: parsed.parsed.verb,
           webhook: found.name,
-          playbookId: playbook.id,
+          playbookIds: playbooks.map((row) => row.id),
+          okCount,
         },
       });
-      if (!ran.ok) {
-        return { status: 200, body: { ok: false, error: ran.error } };
+      if (okCount === 0 && firstError && !firstError.ok) {
+        return { status: 200, body: { ok: false, error: firstError.error } };
       }
       return {
         status: 200,
@@ -179,6 +197,7 @@ export async function handleFuturesWebhook(input: {
           accepted: true,
           playbook: true,
           verb: parsed.parsed.verb,
+          count: okCount,
         },
       };
     }

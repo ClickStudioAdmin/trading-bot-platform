@@ -1,4 +1,6 @@
 import {
+  dcaPlaybookConflict,
+  dcaPlaybookIsRunning,
   parseDcaPlaybookRow,
   type DcaPlaybook,
   type DcaPlaybookConfig,
@@ -29,7 +31,36 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
   };
 }
 
-export async function loadDcaPlaybook(
+function saveError(error: { code?: string; message?: string } | null): string {
+  if (error?.code === "23505") {
+    return "A playbook already covers that contract and side.";
+  }
+  return error?.message ?? "Could not save the playbook.";
+}
+
+export async function listDcaPlaybooksForAccount(
+  accountId: string,
+  supabaseClient?: SupabaseClient,
+): Promise<DcaPlaybook[]> {
+  const supabase = supabaseClient ?? createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("dca_playbooks")
+    .select("*")
+    .eq("account_id", accountId)
+    .order("created_at", { ascending: true });
+  if (error || !data) {
+    return [];
+  }
+  return data
+    .map((row) => parseDcaPlaybookRow(row as Record<string, unknown>))
+    .filter((row): row is DcaPlaybook => Boolean(row));
+}
+
+export async function loadDcaPlaybookById(
+  id: string,
   accountId: string,
   supabaseClient?: SupabaseClient,
 ): Promise<DcaPlaybook | null> {
@@ -40,6 +71,7 @@ export async function loadDcaPlaybook(
   const { data, error } = await supabase
     .from("dca_playbooks")
     .select("*")
+    .eq("id", id)
     .eq("account_id", accountId)
     .maybeSingle();
   if (error || !data) {
@@ -55,7 +87,10 @@ export async function listDcaPlaybooks(
   if (!supabase) {
     return [];
   }
-  const { data, error } = await supabase.from("dca_playbooks").select("*");
+  const { data, error } = await supabase
+    .from("dca_playbooks")
+    .select("*")
+    .order("created_at", { ascending: true });
   if (error || !data) {
     return [];
   }
@@ -69,9 +104,31 @@ export async function saveDcaPlaybook(input: {
   userId: string;
   accountId: string;
   config: DcaPlaybookConfig;
+  id?: string | null;
 }): Promise<{ ok: true; playbook: DcaPlaybook } | { ok: false; error: string }> {
   const now = new Date().toISOString();
-  const existing = await loadDcaPlaybook(input.accountId, input.supabase);
+  const existing = input.id
+    ? await loadDcaPlaybookById(input.id, input.accountId, input.supabase)
+    : null;
+  if (input.id && !existing) {
+    return { ok: false, error: "That playbook was not found." };
+  }
+  const siblings = await listDcaPlaybooksForAccount(
+    input.accountId,
+    input.supabase,
+  );
+  if (
+    dcaPlaybookConflict(siblings, {
+      id: existing?.id,
+      symbol: input.config.symbol,
+      side: input.config.side,
+    })
+  ) {
+    return {
+      ok: false,
+      error: "A playbook already covers that contract and side.",
+    };
+  }
   if (existing) {
     const { data, error } = await input.supabase
       .from("dca_playbooks")
@@ -83,7 +140,7 @@ export async function saveDcaPlaybook(input: {
       .select("*")
       .single();
     if (error || !data) {
-      return { ok: false, error: error?.message ?? "Could not save the playbook." };
+      return { ok: false, error: saveError(error) };
     }
     const playbook = parseDcaPlaybookRow(data as Record<string, unknown>);
     if (!playbook) {
@@ -104,13 +161,43 @@ export async function saveDcaPlaybook(input: {
     .select("*")
     .single();
   if (error || !data) {
-    return { ok: false, error: error?.message ?? "Could not save the playbook." };
+    return { ok: false, error: saveError(error) };
   }
   const playbook = parseDcaPlaybookRow(data as Record<string, unknown>);
   if (!playbook) {
     return { ok: false, error: "Could not save the playbook." };
   }
   return { ok: true, playbook };
+}
+
+export async function deleteDcaPlaybook(input: {
+  supabase: SupabaseClient;
+  id: string;
+  accountId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const existing = await loadDcaPlaybookById(
+    input.id,
+    input.accountId,
+    input.supabase,
+  );
+  if (!existing) {
+    return { ok: false, error: "That playbook was not found." };
+  }
+  if (dcaPlaybookIsRunning(existing.status)) {
+    return {
+      ok: false,
+      error: "Stop adding or close this playbook before removing it.",
+    };
+  }
+  const { error } = await input.supabase
+    .from("dca_playbooks")
+    .delete()
+    .eq("id", input.id)
+    .eq("account_id", input.accountId);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }
 
 export async function patchDcaPlaybook(input: {

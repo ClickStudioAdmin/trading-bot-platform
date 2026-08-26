@@ -5,11 +5,13 @@ import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
+  deleteDcaPlaybookAction,
   runDcaPlaybookVerb,
   saveDcaPlaybookAction,
 } from "@/lib/dca/actions";
 import {
   DEFAULT_DCA_NAME,
+  dcaPlaybookIsRunning,
   type DcaPlaybook,
 } from "@/lib/dca/playbook";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
@@ -21,14 +23,88 @@ function optional(value: number | null | undefined): string {
   return value == null ? "" : String(value);
 }
 
+export function DcaPlaybooksDesk({
+  playbooks,
+  options,
+  reduceOnly = false,
+}: {
+  playbooks: DcaPlaybook[];
+  options: LinearPerp[];
+  reduceOnly?: boolean;
+}) {
+  const [cards, setCards] = useState<
+    { key: string; playbook: DcaPlaybook | null }[]
+  >(() => playbooks.map((playbook) => ({ key: playbook.id, playbook })));
+  const empty = cards.length === 0;
+
+  return (
+    <div className="space-y-4">
+      {reduceOnly ? (
+        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          Reduce only is on. New clips stay blocked until you turn it off in
+          Desk Settings. Take profit and stop still run.
+        </p>
+      ) : null}
+      {empty ? (
+        <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
+          No playbooks yet. Add a playbook to own clips and exits on one
+          contract and side. Leave this empty if you are not ready to arm.
+        </p>
+      ) : (
+        cards.map((card, index) => (
+          <DcaPlaybookForm
+            key={card.key}
+            playbook={card.playbook}
+            options={options}
+            defaultName={
+              card.playbook?.name ??
+              (index === 0 ? DEFAULT_DCA_NAME : `DCA ${index + 1}`)
+            }
+            onRemoveDraft={
+              card.playbook
+                ? undefined
+                : () =>
+                    setCards((current) =>
+                      current.filter((item) => item.key !== card.key),
+                    )
+            }
+          />
+        ))
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            setCards((current) => [
+              ...current,
+              { key: `new-${current.length}-${Date.now()}`, playbook: null },
+            ])
+          }
+          className={
+            empty
+              ? "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+              : "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
+          }
+        >
+          Add playbook
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function DcaPlaybookForm({
   playbook,
   options,
   reduceOnly = false,
+  defaultName,
+  onRemoveDraft,
 }: {
   playbook: DcaPlaybook | null;
   options: LinearPerp[];
   reduceOnly?: boolean;
+  defaultName?: string;
+  onRemoveDraft?: () => void;
 }) {
   const [armEnabled, setArmEnabled] = useState(Boolean(playbook?.armTrigger));
   const [disarmEnabled, setDisarmEnabled] = useState(
@@ -46,15 +122,44 @@ export function DcaPlaybookForm({
       : status === "stop_adding"
         ? "Stopped adding"
         : "Idle";
+  const running = Boolean(playbook && dcaPlaybookIsRunning(playbook.status));
 
   return (
-    <form action={saveDcaPlaybookAction} className="max-w-lg space-y-4">
+    <form
+      action={saveDcaPlaybookAction}
+      className="space-y-4 rounded-card border border-line bg-surface px-4 py-4"
+    >
+      <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-ink">
           Status{" "}
           <span className="text-ink-muted">· {statusLabel}</span>
           {playbook ? ` · ${playbook.clipsFilled} clips` : null}
         </p>
+        {playbook ? (
+          running ? (
+            <p className="text-xs text-ink-muted">
+              Stop adding or close before removing.
+            </p>
+          ) : (
+            <PendingSubmitButton
+              formAction={deleteDcaPlaybookAction}
+              pendingLabel="Removing…"
+              successKey={`remove-dca-${playbook.id}`}
+              className="text-xs text-ink-muted hover:text-danger"
+            >
+              Remove
+            </PendingSubmitButton>
+          )
+        ) : onRemoveDraft ? (
+          <button
+            type="button"
+            onClick={onRemoveDraft}
+            className="text-xs text-ink-muted hover:text-danger"
+          >
+            Remove
+          </button>
+        ) : null}
       </div>
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
@@ -66,7 +171,7 @@ export function DcaPlaybookForm({
         Name
         <input
           name="name"
-          defaultValue={playbook?.name ?? DEFAULT_DCA_NAME}
+          defaultValue={playbook?.name ?? defaultName ?? DEFAULT_DCA_NAME}
           maxLength={40}
           className={fieldClass}
         />
@@ -225,7 +330,7 @@ export function DcaPlaybookForm({
       <div className="flex flex-wrap items-center gap-2">
         <PendingSubmitButton
           pendingLabel="Saving…"
-          successKey="save-dca-playbook"
+          successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
           className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
         >
           Save playbook
@@ -235,7 +340,7 @@ export function DcaPlaybookForm({
           name="verb"
           value="arm"
           pendingLabel="Arming…"
-          successKey="arm-dca-playbook"
+          successKey={`arm-dca-playbook-${playbook?.id ?? "new"}`}
           className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
         >
           Arm
@@ -245,7 +350,7 @@ export function DcaPlaybookForm({
           name="verb"
           value="disarm"
           pendingLabel="Stopping…"
-          successKey="disarm-dca-playbook"
+          successKey={`disarm-dca-playbook-${playbook?.id ?? "new"}`}
           className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
         >
           Stop adding
@@ -255,7 +360,7 @@ export function DcaPlaybookForm({
           name="verb"
           value="close-playbook"
           pendingLabel="Closing…"
-          successKey="close-dca-playbook"
+          successKey={`close-dca-playbook-${playbook?.id ?? "new"}`}
           className="rounded-control border border-danger/30 px-3 py-1.5 text-xs font-medium text-danger"
         >
           Close playbook

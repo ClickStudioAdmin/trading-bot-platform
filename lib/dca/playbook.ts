@@ -117,6 +117,30 @@ export function parseOptionalPositiveInt(
   return parsed;
 }
 
+export function parseDcaPlaybookId(raw: unknown): string | null {
+  const text = String(raw ?? "").trim();
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      text,
+    )
+  ) {
+    return null;
+  }
+  return text;
+}
+
+export function dcaPlaybookConflict(
+  playbooks: readonly Pick<DcaPlaybook, "id" | "symbol" | "side">[],
+  candidate: { id?: string | null; symbol: string; side: FuturesSide },
+): boolean {
+  return playbooks.some(
+    (row) =>
+      row.symbol === candidate.symbol &&
+      row.side === candidate.side &&
+      row.id !== candidate.id,
+  );
+}
+
 export function parseDcaPlaybookName(
   raw: unknown,
 ): { ok: true; name: string } | { ok: false; error: string } {
@@ -653,7 +677,7 @@ export function dcaOpenHint(input: {
 }
 
 export function dcaHintsForOpen(
-  playbook: DcaPlaybook | null,
+  playbooks: readonly DcaPlaybook[],
   open: Array<{
     symbol: string;
     side: FuturesSide;
@@ -663,10 +687,13 @@ export function dcaHintsForOpen(
   nowMs = Date.now(),
 ): Record<string, DcaOpenHint> {
   const hints: Record<string, DcaOpenHint> = {};
-  if (!playbook) {
-    return hints;
-  }
   for (const row of open) {
+    const playbook = playbooks.find(
+      (item) => item.symbol === row.symbol && item.side === row.side,
+    );
+    if (!playbook) {
+      continue;
+    }
     const hint = dcaOpenHint({
       playbook,
       symbol: row.symbol,

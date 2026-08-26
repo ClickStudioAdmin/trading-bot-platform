@@ -1,4 +1,4 @@
--- Phase 11: one DCA playbook per desk. Runtime state lives on the same row.
+-- Phase 11: stacked DCA playbooks. One per desk contract+side. Runtime state lives on the same row.
 
 create table public.dca_playbooks (
     id uuid primary key default gen_random_uuid(),
@@ -47,7 +47,7 @@ create table public.dca_playbooks (
     last_clip_at timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
-    unique (account_id),
+    unique (account_id, symbol, side),
     check (
         (arm_price is null and arm_trigger_by is null and arm_compare is null)
         or (

@@ -10,7 +10,7 @@ GitHub is the source of truth. The hosted database and Vercel deployment are not
 
 See [docs/phase-11.md](docs/phase-11.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** / Preview environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
 
-Phase 10 (typed desks) is complete. This phase adds the DCA desk type: one playbook per desk, app-owned clips and exits, Signal arm only. No Fly.io. Hyperliquid and additional CEX adapters wait.
+Phase 10 (typed desks) is complete. This phase adds the DCA desk type: stacked playbooks (one per contract and side), app-owned clips and exits, Signal arm only. No Fly.io. Hyperliquid and additional CEX adapters wait.
 
 ## Technology stack
 

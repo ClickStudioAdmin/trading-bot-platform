@@ -1,9 +1,12 @@
 "use server";
 
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
-import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
+import { parseDcaPlaybookForm, parseDcaPlaybookId } from "@/lib/dca/playbook";
 import { applyDcaVerb, type DcaVerb } from "@/lib/dca/run";
-import { saveDcaPlaybook } from "@/lib/dca/store";
+import {
+  deleteDcaPlaybook,
+  saveDcaPlaybook,
+} from "@/lib/dca/store";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -40,6 +43,7 @@ export async function saveDcaPlaybookAction(formData: FormData) {
     userId: session.member.id,
     accountId: session.account.id,
     config: parsed.config,
+    id: parseDcaPlaybookId(formData.get("playbookId")),
   });
   if (!saved.ok) {
     fail(saved.error);
@@ -51,10 +55,48 @@ export async function saveDcaPlaybookAction(formData: FormData) {
     userId: session.member.id,
     accountId: session.account.id,
     strategy: FUTURES_STRATEGY_ID,
-    data: { symbol: parsed.config.symbol, side: parsed.config.side },
+    data: {
+      playbookId: saved.playbook.id,
+      symbol: parsed.config.symbol,
+      side: parsed.config.side,
+    },
   });
   revalidatePath(FUTURES_PATHS.automations);
   succeed("Playbook saved.");
+}
+
+export async function deleteDcaPlaybookAction(formData: FormData) {
+  const session = await requirePerpsUiSession();
+  if (session.account.deskType !== "dca") {
+    fail("This desk is not a DCA desk.");
+  }
+  const id = parseDcaPlaybookId(formData.get("playbookId"));
+  if (!id) {
+    fail("That playbook was not found.");
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    fail("Auth is not configured.");
+  }
+  const deleted = await deleteDcaPlaybook({
+    supabase,
+    id,
+    accountId: session.account.id,
+  });
+  if (!deleted.ok) {
+    fail(deleted.error);
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "dca.deleted",
+    message: "Removed DCA playbook",
+    userId: session.member.id,
+    accountId: session.account.id,
+    strategy: FUTURES_STRATEGY_ID,
+    data: { playbookId: id },
+  });
+  revalidatePath(FUTURES_PATHS.automations);
+  succeed("Playbook removed.");
 }
 
 export async function runDcaPlaybookVerb(formData: FormData) {
@@ -79,6 +121,7 @@ export async function runDcaPlaybookVerb(formData: FormData) {
     userId: session.member.id,
     accountId: session.account.id,
     config: parsed.config,
+    id: parseDcaPlaybookId(formData.get("playbookId")),
   });
   if (!saved.ok) {
     fail(saved.error);
