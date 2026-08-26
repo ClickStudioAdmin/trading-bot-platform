@@ -142,6 +142,31 @@ export async function cancelFuturesWorking(formData: FormData) {
   redirect(`${next}?paper=${result.flash}`);
 }
 
+export async function closeAllFutures(formData: FormData) {
+  const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const { member, account } = session;
+  const result = await runFuturesCommand({
+    actor: {
+      userId: member.id,
+      accountId: account.id,
+      mode: account.mode,
+    },
+    command: {
+      kind: "close-all",
+      confirm: formData.get("confirm"),
+      idempotencyKey: formData.get("idempotencyKey"),
+    },
+  });
+  if (!result.ok) {
+    fail(next, result.error);
+  }
+  redirect(`${next}?paper=${result.flash}`);
+}
+
 export async function amendFuturesWorking(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
   const session = await getSessionContext();

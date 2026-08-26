@@ -40,17 +40,18 @@ async function resolveFuturesListScope(
 
 export async function loadFuturesPositions(input?: {
   status?: "open" | "closed";
+  scope?: FuturesListScope;
 }): Promise<FuturesPosition[]> {
-  const session = await getSessionContext();
+  const resolved = await resolveFuturesListScope(input?.scope);
   const supabase = createServiceClient();
-  if (!session || !supabase) {
+  if (!resolved || !supabase) {
     return [];
   }
   let query = supabase
     .from("futures_positions")
     .select("*")
-    .eq("account_id", session.account.id)
-    .eq("user_id", session.member.id)
+    .eq("account_id", resolved.accountId)
+    .eq("user_id", resolved.userId)
     .order("opened_at", { ascending: false });
   if (input?.status) {
     query = query.eq("status", input.status);

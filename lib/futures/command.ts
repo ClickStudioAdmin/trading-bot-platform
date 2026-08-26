@@ -26,7 +26,9 @@ export type FuturesCommandFlash =
   | "live-trailing"
   | "cancelled"
   | "amended"
-  | "live-amended";
+  | "live-amended"
+  | "closed-all"
+  | "live-closed-all";
 
 export type FuturesCommandResult =
   | { ok: true; flash: FuturesCommandFlash; replayed?: boolean }
@@ -77,7 +79,14 @@ export type FuturesCommand =
       qty: unknown;
       limitPrice: unknown;
       idempotencyKey?: unknown;
+    }
+  | {
+      kind: "close-all";
+      confirm: unknown;
+      idempotencyKey?: unknown;
     };
+
+export { CLOSE_ALL_CONFIRM, closeAllFlash, parseCloseAllConfirm } from "./close-all";
 
 export function parseIdempotencyKey(
   raw: unknown,

@@ -7,7 +7,7 @@ import {
   writeFuturesCloseSlice,
   writeFuturesOpen,
 } from "./ledger";
-import { loadOpenFuturesOnSymbol, loadOpenFuturesWorking } from "./list";
+import { loadOpenFuturesOnSymbol, loadOpenFuturesWorking, loadFuturesPositions } from "./list";
 import { markFromTicker } from "./math";
 import {
   parseFuturesAction,
@@ -44,6 +44,7 @@ import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { closeAllFlash, parseCloseAllConfirm } from "./close-all";
 import {
   parseIdempotencyKey,
   replayOrNull,
@@ -226,6 +227,9 @@ export async function runFuturesCommand(input: {
       break;
     case "amend-working":
       outcome = await runAmendWorking(ctx, input.command);
+      break;
+    case "close-all":
+      outcome = await runCloseAll(ctx, input.command);
       break;
   }
 
@@ -1368,5 +1372,107 @@ async function runAmendWorking(
     ok: true,
     flash: liveBook ? "live-amended" : "amended",
     workingId: row.id,
+  };
+}
+
+async function runCloseAll(
+  ctx: CommandCtx,
+  command: Extract<FuturesCommand, { kind: "close-all" }>,
+): Promise<CommandOutcome> {
+  const confirmed = parseCloseAllConfirm(command.confirm);
+  if (!confirmed.ok) {
+    return fail(confirmed.error);
+  }
+  const { actor, supabase, liveBook } = ctx;
+  const scope = actorScope(actor);
+  const working = await loadOpenFuturesWorking(scope);
+  const opens = await loadFuturesPositions({ status: "open", scope });
+  if (working.length === 0 && opens.length === 0) {
+    return fail("Nothing to cancel or close.");
+  }
+
+  let connection: BoundConnectionSecrets | null = null;
+  if (working.length > 0 && accountCanHoldConnections(actor.mode)) {
+    const settings = await loadFuturesSettings(actor.accountId);
+    if (!settings.connectionId && working.some((row) => row.venueOrderId)) {
+      return fail(
+        "Bind an exchange in Futures Strategy Settings before cancelling.",
+      );
+    }
+    if (settings.connectionId) {
+      const bound = await loadBoundVenueForAccount({
+        userId: actor.userId,
+        accountId: actor.accountId,
+        mode: actor.mode,
+        connectionId: settings.connectionId,
+      });
+      if (!bound.ok) {
+        return fail(bound.error);
+      }
+      connection = bound.connection;
+    }
+  }
+
+  const childCtx: CommandCtx = { ...ctx, key: null };
+  let cancelledCount = 0;
+  for (const row of working) {
+    const cancelled = await cancelFuturesWorkingRow({
+      supabase,
+      row,
+      connection,
+    });
+    if (!cancelled.ok) {
+      return fail(`Could not cancel ${row.symbol}: ${cancelled.error}`);
+    }
+    cancelledCount += 1;
+    await writeEventLog({
+      scope: "trade",
+      event: "trade.futures",
+      message: `Cancelled limit ${row.symbol}`,
+      userId: actor.userId,
+      accountId: actor.accountId,
+      strategy: FUTURES_STRATEGY_ID,
+      data: { symbol: row.symbol, workingId: row.id, action: row.action },
+    });
+  }
+
+  let closedCount = 0;
+  for (const row of opens) {
+    const closed = await runPlace(childCtx, {
+      kind: "place",
+      action: "close",
+      symbol: row.symbol,
+      positionId: row.id,
+      orderType: "market",
+    });
+    if (!closed.ok) {
+      return fail(`Could not close ${row.symbol}: ${closed.error}`);
+    }
+    closedCount += 1;
+  }
+
+  await writeEventLog({
+    scope: "trade",
+    event: "trade.futures",
+    message:
+      cancelledCount > 0 && closedCount > 0
+        ? "Cancelled working orders and closed all open futures"
+        : closedCount > 0
+          ? "Closed all open futures"
+          : "Cancelled all working futures orders",
+    userId: actor.userId,
+    accountId: actor.accountId,
+    strategy: FUTURES_STRATEGY_ID,
+    data: {
+      action: "close-all",
+      cancelledCount,
+      closedCount,
+      live: liveBook,
+    },
+  });
+
+  return {
+    ok: true,
+    flash: closeAllFlash({ live: liveBook, closedCount }),
   };
 }

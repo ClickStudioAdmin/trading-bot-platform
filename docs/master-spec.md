@@ -1,6 +1,6 @@
 # Master spec
 
-Trading Bot Platform is a multi-tenant desk: each trader connects their own exchange API keys and can run strategies. Version 1 strategies are dated cash-and-carry on Bybit (USDT spot + USDT expiry) and a single-leg Futures strategy (USDT linear perpetual buy / sell / close, market or GTC limit with amend, including a market or reduce-only limit close with qty, with entire or partial take profit / stop loss, and a trailing stop by distance, plus optional Buy/Sell risk caps).
+Trading Bot Platform is a multi-tenant desk: each trader connects their own exchange API keys and can run strategies. Version 1 strategies are dated cash-and-carry on Bybit (USDT spot + USDT expiry) and a single-leg Futures strategy (USDT linear perpetual buy / sell / close, market or GTC limit with amend, including a market or reduce-only limit close with qty, with entire or partial take profit / stop loss, a trailing stop by distance, optional Buy/Sell risk caps, and Cancel & close all on Positions).
 
 ## Source of truth
 

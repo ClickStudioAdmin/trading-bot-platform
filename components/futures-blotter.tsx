@@ -8,6 +8,7 @@ import { OpenStats } from "@/components/open-stats";
 import { PositionLogList } from "@/components/paper-carry-expand";
 import { TokenIcon } from "@/components/token-icon";
 import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
+import { FuturesCloseAll } from "@/components/futures-close-all";
 import { FuturesCloseActions } from "@/components/futures-close";
 import { FuturesTpslCell } from "@/components/futures-tpsl";
 import { FuturesTrailingCell } from "@/components/futures-trailing";
@@ -57,6 +58,8 @@ export function OpenFuturesTrades({
   showHeading = true,
   exchangeBook = false,
   emptyMessage,
+  showCloseAll = false,
+  workingCount = 0,
 }: {
   signedIn: boolean;
   open: MarkedFutures[];
@@ -64,7 +67,10 @@ export function OpenFuturesTrades({
   showHeading?: boolean;
   exchangeBook?: boolean;
   emptyMessage?: ReactNode;
+  showCloseAll?: boolean;
+  workingCount?: number;
 }) {
+  const canCloseAll = open.length > 0 || workingCount > 0;
   return (
     <section>
       {showHeading ? (
@@ -84,6 +90,16 @@ export function OpenFuturesTrades({
           >
             All positions
           </Link>
+        </div>
+      ) : null}
+      {showCloseAll ? (
+        <div className="mb-3 flex justify-end">
+          <FuturesCloseAll
+            next={next}
+            enabled={signedIn && canCloseAll}
+            openCount={open.length}
+            workingCount={workingCount}
+          />
         </div>
       ) : null}
       <div className="min-w-0 overflow-x-auto rounded-card border border-line bg-surface">

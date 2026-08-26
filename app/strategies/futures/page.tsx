@@ -73,6 +73,8 @@ export default async function FuturesOverviewPage({
           liveTpsl={firstSearchValue(params.paper) === "live-tpsl"}
           trailing={firstSearchValue(params.paper) === "trailing"}
           liveTrailing={firstSearchValue(params.paper) === "live-trailing"}
+          closedAll={firstSearchValue(params.paper) === "closed-all"}
+          liveClosedAll={firstSearchValue(params.paper) === "live-closed-all"}
           error={firstSearchValue(params.paperError)}
       />
       <FuturesWorkingOrders

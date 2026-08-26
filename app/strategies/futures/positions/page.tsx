@@ -84,6 +84,8 @@ export default async function FuturesPositionsPage({
           liveTpsl={firstSearchValue(params.paper) === "live-tpsl"}
           trailing={firstSearchValue(params.paper) === "trailing"}
           liveTrailing={firstSearchValue(params.paper) === "live-trailing"}
+          closedAll={firstSearchValue(params.paper) === "closed-all"}
+          liveClosedAll={firstSearchValue(params.paper) === "live-closed-all"}
           error={firstSearchValue(params.paperError)}
         />
 
@@ -94,6 +96,8 @@ export default async function FuturesPositionsPage({
           next={NEXT}
           showHeading={false}
           exchangeBook={desk.exchangeBook}
+          showCloseAll
+          workingCount={desk.working.length}
         />
 
         <section>
@@ -104,7 +108,8 @@ export default async function FuturesPositionsPage({
             now. Limit rests until it matches — watch it under Open orders.
             Optional TP/SL and trailing stop attach to that order. Add or edit
             stops on an open row. Market or Limit close is on each open row;
-            both set qty (full row or a slice). Size is token quantity or USDT
+            both set qty (full row or a slice). Cancel & close all sits above
+            the table. Size is token quantity or USDT
             notional (mark for market, limit price for limit).
             {settings.reduceOnly
               ? " Reduce only is on — Buy and Sell are blocked."
