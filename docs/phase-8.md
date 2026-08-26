@@ -1,6 +1,6 @@
 # Phase 8 — Futures strategy on Bybit
 
-Current. Phase 7 is complete. See [phase-7.md](phase-7.md).
+Complete. Phase 7 is complete. See [phase-7.md](phase-7.md). Phase 9 is the TradingView door. See [phase-9.md](phase-9.md).
 
 ## Purpose
 
@@ -10,7 +10,7 @@ Paper Trading books write the in-app ledger only. Connected Exchange books place
 
 ## Status
 
-In progress. Steps 1–4 are in code. Waiting on Click’s Bybit Demo desk test (step 5).
+Complete. Accepted after Click’s Bybit Demo desk test (26 Aug 2026). Phase 9 is the TradingView door. See [phase-9.md](phase-9.md).
 
 ## Current micro-step
 
@@ -20,9 +20,9 @@ In progress. Steps 1–4 are in code. Waiting on Click’s Bybit Demo desk test 
 | 2 | Settings bind | Agent | `strategy_settings` holds the Futures bind. Cash-and-carry stays on `paper_engine_settings`. |
 | 3 | Ledger + Bybit perp | Agent | `futures_positions` + `futures_orders` + working limits + TP/SL + trailing stop. Market or GTC limit. Checks pass. |
 | 4 | Alert automations | Agent | Futures Automations save Buy / Sell / Close rules. The paper tick fires `runFuturesCommand`. Close All reduce-only also sets Active rules to Reduce only. |
-| 5 | Manual desk test | Click | Bybit Demo: Buy, Sell, Market Close (full and a slice), Limit Close, a Limit that rests, Edit, and Cancel, plus TP/SL (market and limit) and trailing stop on an order and on an open row, plus Close All, Cancel All Open Orders, and Close All & Cancel All Open Orders. Live open row shows leverage and liq from Bybit. Paper shows —. Columns picker persists in this browser. Live Futures pages show Available, Balance, IM/MM, and margin mode. Paper book writes the ledger only. Automations: a last/mark/index cross fires Buy, Sell, or Close on the bound book; Auto badge on those rows. |
+| 5 | Manual desk test | Click | Accepted. Bybit Demo: Buy, Sell, closes, limits, TP/SL, trailing, Close All / Cancel All, leverage / liq, balance strip, and a price-cross automation fire. |
 
-Stop at the end of this phase for a Demo desk test. Do not start TradingView ([phase-9 is not written until this phase is accepted]).
+Phase accepted. TradingView is [phase-9.md](phase-9.md).
 
 ## How a trade works
 

@@ -26,7 +26,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 8 — Futures strategy on Bybit. See [phase-8.md](phase-8.md). Futures commands are a typed `runFuturesCommand` runner; form server actions are adapters. Phase 1 through Phase 7 are complete. TradingView, Hyperliquid, and additional CEX adapters wait until Phase 8 is accepted. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
+Phase 9 — TradingView door into `runFuturesCommand`. See [phase-9.md](phase-9.md). Phase 1 through Phase 8 are complete. Hyperliquid, additional CEX adapters, and typed desks wait until Phase 9 is accepted. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
 
 ## Multi-tenancy
 

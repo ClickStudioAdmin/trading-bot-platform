@@ -140,6 +140,19 @@ Encrypts API keys at rest. Server only. Different values on Development and Prod
 
 Never `NEXT_PUBLIC_`. Never put the production key on Development. Local `.env.local` may hold a dev-only key; do not commit it.
 
+The same key encrypts the Futures webhook token (AAD `tbp.futures.webhook.v1`) so Settings can show the URL. The path token is the secret. Never `NEXT_PUBLIC_`.
+
+## TradingView webhook (Phase 9)
+
+`POST /api/futures/webhook/{token}` on the Sydney Vercel function. The token in the path is the book secret. No `CRON_SECRET`. No session cookie.
+
+| Variable | Where | Value |
+| --- | --- | --- |
+| `APP_BASE_URL` | Vercel Development / Preview (`develop`) | Optional. Stable `https://…` host used when Futures Settings prints the webhook URL. If unset, the page uses the request `Host` |
+| `APP_BASE_URL` | Vercel Production (`main`) | Optional. Production origin, no trailing slash |
+
+Never put the webhook token in `NEXT_PUBLIC_*`. Rotate the token on Futures Settings if it leaks.
+
 ## Merge to production
 
 Open a pull request from `develop` into `main`. After merge:
