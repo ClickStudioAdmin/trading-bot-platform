@@ -16,10 +16,12 @@ export function DeskSwitcher({
   current,
   desks,
   connections,
+  sharedConnectionIds,
 }: {
   current: TradingAccount;
   desks: TradingAccount[];
   connections: ExchangeConnection[];
+  sharedConnectionIds: string[];
 }) {
   const rootRef = useRef<HTMLDetailsElement>(null);
   const [creating, setCreating] = useState(false);
@@ -143,6 +145,7 @@ export function DeskSwitcher({
       {creating ? (
         <CreateDeskDialog
           connections={connections}
+          sharedConnectionIds={sharedConnectionIds}
           onClose={() => setCreating(false)}
         />
       ) : null}
@@ -152,9 +155,11 @@ export function DeskSwitcher({
 
 function CreateDeskDialog({
   connections,
+  sharedConnectionIds,
   onClose,
 }: {
   connections: ExchangeConnection[];
+  sharedConnectionIds: string[];
   onClose: () => void;
 }) {
   const titleId = useId();
@@ -207,6 +212,7 @@ function CreateDeskDialog({
         </div>
         <CreateAccountForm
           connections={connections}
+          sharedConnectionIds={sharedConnectionIds}
           embedded
           onCancel={onClose}
         />

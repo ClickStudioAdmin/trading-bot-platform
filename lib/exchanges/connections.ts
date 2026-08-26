@@ -23,6 +23,42 @@ export function parseBoundConnectionId(raw: unknown): string | null {
   return id;
 }
 
+export function connectionIdsBoundToOtherDesks(
+  binds: readonly { connectionId: string; accountId: string }[],
+  currentAccountId?: string | null,
+): string[] {
+  const ids = new Set<string>();
+  for (const bind of binds) {
+    if (currentAccountId && bind.accountId === currentAccountId) {
+      continue;
+    }
+    if (bind.connectionId) {
+      ids.add(bind.connectionId);
+    }
+  }
+  return [...ids];
+}
+
+export type SharedKeyWarningKind = "pending" | "shared";
+
+export function sharedKeyWarningKind(input: {
+  connectionId: string;
+  savedConnectionId?: string | null;
+  sharedConnectionIds: readonly string[];
+}): SharedKeyWarningKind | null {
+  const id = input.connectionId.trim();
+  if (!id || id === "none") {
+    return null;
+  }
+  if (!input.sharedConnectionIds.includes(id)) {
+    return null;
+  }
+  if (input.savedConnectionId && id === input.savedConnectionId) {
+    return "shared";
+  }
+  return "pending";
+}
+
 export function formatDeskBindLabel(input: {
   accountName: string;
   strategy: "cash_and_carry" | "futures";

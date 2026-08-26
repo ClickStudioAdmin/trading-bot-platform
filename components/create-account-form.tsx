@@ -11,6 +11,7 @@ import {
 } from "@/lib/accounts/model";
 import {
   formatConnectionSummary,
+  sharedKeyWarningKind,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
 import { SharedKeyWarning } from "@/components/shared-key-warning";
@@ -20,19 +21,29 @@ const fieldClass =
 
 export function CreateAccountForm({
   connections,
+  sharedConnectionIds = [],
   next,
   embedded = false,
   onCancel,
 }: {
   connections: ExchangeConnection[];
+  sharedConnectionIds?: string[];
   next?: string;
   embedded?: boolean;
   onCancel?: () => void;
 }) {
   const [mode, setMode] = useState<"paper" | "live">("paper");
   const [bindChoice, setBindChoice] = useState<"later" | "existing">("later");
+  const [connectionId, setConnectionId] = useState("");
   const liveKeys = connections.filter((row) => row.status === "active");
   const stayPath = usePathname();
+  const warningKind =
+    bindChoice === "existing"
+      ? sharedKeyWarningKind({
+          connectionId,
+          sharedConnectionIds,
+        })
+      : null;
 
   return (
     <form
@@ -80,6 +91,7 @@ export function CreateAccountForm({
             setMode(nextMode);
             if (nextMode !== "live") {
               setBindChoice("later");
+              setConnectionId("");
             }
           }}
           className={fieldClass}
@@ -94,11 +106,14 @@ export function CreateAccountForm({
             Exchange Connection
             <select
               value={bindChoice}
-              onChange={(event) =>
-                setBindChoice(
-                  event.target.value === "existing" ? "existing" : "later",
-                )
-              }
+              onChange={(event) => {
+                const nextChoice =
+                  event.target.value === "existing" ? "existing" : "later";
+                setBindChoice(nextChoice);
+                if (nextChoice !== "existing") {
+                  setConnectionId("");
+                }
+              }}
               className={fieldClass}
             >
               <option value="later">Bind Later in Desk Settings</option>
@@ -114,7 +129,8 @@ export function CreateAccountForm({
                 <select
                   name="exchangeConnectionId"
                   required
-                  defaultValue=""
+                  value={connectionId}
+                  onChange={(event) => setConnectionId(event.target.value)}
                   className={fieldClass}
                 >
                   <option value="" disabled>
@@ -140,7 +156,7 @@ export function CreateAccountForm({
               </p>
             )
           ) : null}
-          <SharedKeyWarning />
+          {warningKind ? <SharedKeyWarning kind={warningKind} /> : null}
         </div>
       ) : null}
       <p className="text-sm text-ink-muted">

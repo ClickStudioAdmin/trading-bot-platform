@@ -3,16 +3,19 @@ import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
-import { SharedKeyWarning } from "@/components/shared-key-warning";
+import { ExchangeBindSelect } from "@/components/exchange-bind-select";
 import { savePaperSettings } from "@/lib/engine/actions";
 import { loadEngineSettings } from "@/lib/engine/settings";
 import { strategyDetachBlockers } from "@/lib/accounts/model";
 import { loadAccountUsage } from "@/lib/accounts/store";
 import {
-  formatConnectionSummary,
+  connectionIdsBoundToOtherDesks,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
-import { listExchangeConnections } from "@/lib/exchanges/store";
+import {
+  listConnectionDeskBinds,
+  listExchangeConnections,
+} from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { usableBookShareToInput } from "@/lib/opportunities/capacity";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -39,6 +42,12 @@ export default async function CashAndCarrySettingsPage({
   const live = accountCanHoldConnections(session.account.mode);
   const connections = live
     ? await listExchangeConnections(session.member.id)
+    : [];
+  const sharedConnectionIds = live
+    ? connectionIdsBoundToOtherDesks(
+        await listConnectionDeskBinds(session.member.id),
+        session.account.id,
+      )
     : [];
   const selected = connections.find((row) => row.id === settings.connectionId) ?? null;
   const usage = live
@@ -77,6 +86,7 @@ export default async function CashAndCarrySettingsPage({
             selectedId={settings.connectionId}
             selected={selected}
             detachBlocked={detachBlocked}
+            sharedConnectionIds={sharedConnectionIds}
           />
         ) : null}
         <label className="block text-sm text-ink">
@@ -110,11 +120,13 @@ function ExchangeBindField({
   selectedId,
   selected,
   detachBlocked,
+  sharedConnectionIds,
 }: {
   connections: ExchangeConnection[];
   selectedId: string | null;
   selected: ExchangeConnection | null;
   detachBlocked: boolean;
+  sharedConnectionIds: string[];
 }) {
   if (connections.length === 0) {
     return (
@@ -129,7 +141,6 @@ function ExchangeBindField({
             Exchanges
           </Link>
         </p>
-        <SharedKeyWarning className="mt-2" />
       </div>
     );
   }
@@ -141,25 +152,17 @@ function ExchangeBindField({
   return (
     <div>
       <p className="text-sm text-ink">Exchange</p>
-      <select
-        name="exchangeConnectionId"
-        defaultValue={selectedId ?? "none"}
-        className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-      >
-        {selected ? null : <option value="none">None</option>}
-        {options.map((row) => (
-          <option key={row.id} value={row.id}>
-            {formatConnectionSummary(row)}
-            {row.status === "invalid" ? " (Invalid)" : ""}
-          </option>
-        ))}
-      </select>
+      <ExchangeBindSelect
+        options={options}
+        selectedId={selectedId}
+        allowNone={!selected}
+        sharedConnectionIds={sharedConnectionIds}
+      />
       {selected ? (
         <div className="mt-2">
           <StrategyDetachControl blocked={detachBlocked} />
         </div>
       ) : null}
-      <SharedKeyWarning className="mt-2" />
     </div>
   );
 }

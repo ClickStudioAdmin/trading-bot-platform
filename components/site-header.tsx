@@ -7,7 +7,11 @@ import { listTradingAccounts } from "@/lib/accounts/store";
 import { getAdminUser } from "@/lib/admin/access";
 import { loadAutoTickEnabled } from "@/lib/admin/settings";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
-import { listExchangeConnections } from "@/lib/exchanges/store";
+import { connectionIdsBoundToOtherDesks } from "@/lib/exchanges/connections";
+import {
+  listConnectionDeskBinds,
+  listExchangeConnections,
+} from "@/lib/exchanges/store";
 import { memberDisplayName } from "@/lib/members/sync";
 import { connection } from "next/server";
 
@@ -18,6 +22,8 @@ export async function SiteHeader() {
   const admin = user ? await getAdminUser() : null;
   const accounts = user ? await listTradingAccounts(user.id) : [];
   const connections = user ? await listExchangeConnections(user.id) : [];
+  const binds = user ? await listConnectionDeskBinds(user.id) : [];
+  const sharedConnectionIds = connectionIdsBoundToOtherDesks(binds);
   const autoTick = admin ? await loadAutoTickEnabled() : false;
 
   return (
@@ -32,6 +38,7 @@ export async function SiteHeader() {
               current={session.account}
               desks={accounts}
               connections={connections}
+              sharedConnectionIds={sharedConnectionIds}
             />
           ) : null}
         </div>

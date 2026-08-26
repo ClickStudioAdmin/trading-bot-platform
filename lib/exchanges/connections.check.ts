@@ -7,6 +7,8 @@ import {
   formatVenueLabel,
   keyFingerprint,
   parseBoundConnectionId,
+  connectionIdsBoundToOtherDesks,
+  sharedKeyWarningKind,
   parseConnectionLabel,
   parseExchangeConnectionRow,
   fromByteaParam,
@@ -46,6 +48,69 @@ assert.equal(formatEnvironmentLabel("bybit", "mainnet"), "Live");
 assert.equal(parseBoundConnectionId(""), null);
 assert.equal(parseBoundConnectionId("none"), null);
 assert.equal(parseBoundConnectionId("  conn-1  "), "conn-1");
+assert.deepEqual(
+  connectionIdsBoundToOtherDesks(
+    [
+      { connectionId: "k1", accountId: "a" },
+      { connectionId: "k1", accountId: "b" },
+      { connectionId: "k2", accountId: "a" },
+    ],
+    "a",
+  ),
+  ["k1"],
+);
+assert.deepEqual(
+  connectionIdsBoundToOtherDesks(
+    [{ connectionId: "k1", accountId: "a" }],
+  ),
+  ["k1"],
+);
+assert.deepEqual(
+  connectionIdsBoundToOtherDesks(
+    [{ connectionId: "k1", accountId: "a" }],
+    "a",
+  ),
+  [],
+);
+assert.deepEqual(connectionIdsBoundToOtherDesks([]), []);
+assert.equal(
+  sharedKeyWarningKind({
+    connectionId: "k1",
+    sharedConnectionIds: ["k1"],
+  }),
+  "pending",
+);
+assert.equal(
+  sharedKeyWarningKind({
+    connectionId: "k1",
+    savedConnectionId: "k1",
+    sharedConnectionIds: ["k1"],
+  }),
+  "shared",
+);
+assert.equal(
+  sharedKeyWarningKind({
+    connectionId: "k2",
+    savedConnectionId: "k1",
+    sharedConnectionIds: ["k2"],
+  }),
+  "pending",
+);
+assert.equal(
+  sharedKeyWarningKind({
+    connectionId: "k1",
+    savedConnectionId: "k1",
+    sharedConnectionIds: [],
+  }),
+  null,
+);
+assert.equal(
+  sharedKeyWarningKind({
+    connectionId: "none",
+    sharedConnectionIds: ["k1"],
+  }),
+  null,
+);
 assert.equal(
   formatDeskBindLabel({
     accountName: "Demo Account",

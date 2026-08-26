@@ -13,7 +13,11 @@ import {
   pickDefaultAccount,
 } from "@/lib/accounts/model";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
-import { listExchangeConnections } from "@/lib/exchanges/store";
+import { connectionIdsBoundToOtherDesks } from "@/lib/exchanges/connections";
+import {
+  listConnectionDeskBinds,
+  listExchangeConnections,
+} from "@/lib/exchanges/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
@@ -42,6 +46,9 @@ export default async function ManageSubAccountsPage({
   const accounts = await listTradingAccounts(session.member.id);
   const usage = await loadAccountUsage(accounts);
   const connections = await listExchangeConnections(session.member.id);
+  const sharedConnectionIds = connectionIdsBoundToOtherDesks(
+    await listConnectionDeskBinds(session.member.id),
+  );
 
   return (
     <div>
@@ -146,6 +153,7 @@ export default async function ManageSubAccountsPage({
 
       <CreateAccountForm
         connections={connections}
+        sharedConnectionIds={sharedConnectionIds}
         next="/account/sub-accounts"
       />
     </div>
