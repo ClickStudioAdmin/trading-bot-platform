@@ -1,6 +1,5 @@
 "use server";
 
-import { loadAccountUsage } from "@/lib/accounts/store";
 import {
   connectionRemoveBlockers,
   formatConnectionRemoveBlockers,
@@ -16,10 +15,10 @@ import {
 import {
   deleteExchangeConnection,
   insertExchangeConnection,
+  listConnectionDeskBinds,
 } from "@/lib/exchanges/store";
 import { verifyExchangeCredentials } from "@/lib/exchanges/verify";
 import {
-  accountCanHoldConnections,
   parseVenueCredentials,
   parseVenueEnvironment,
   parseVenueId,
@@ -37,9 +36,6 @@ export async function saveExchangeConnection(formData: FormData) {
   const session = await getSessionContext();
   if (!session) {
     redirect("/sign-in");
-  }
-  if (!accountCanHoldConnections(session.account.mode)) {
-    fail("Switch to a Connected Exchange account to connect an exchange.");
   }
   if (!exchangeCredentialsConfigured()) {
     fail("Exchange credentials key is not configured on this environment.");
@@ -105,7 +101,6 @@ export async function saveExchangeConnection(formData: FormData) {
 
   const written = await insertExchangeConnection({
     userId: session.member.id,
-    accountId: session.account.id,
     venue: venue.venue.id,
     environment: environment.environment.id,
     label: labeled.label,
@@ -144,7 +139,9 @@ export async function saveExchangeConnection(formData: FormData) {
     },
   });
   revalidatePath("/account/exchanges");
+  revalidatePath("/account");
   revalidatePath("/account/book");
+  revalidatePath("/account/sub-accounts");
   redirect("/account/exchanges?saved=1");
 }
 
@@ -153,25 +150,18 @@ export async function removeExchangeConnection(formData: FormData) {
   if (!session) {
     redirect("/sign-in");
   }
-  if (!accountCanHoldConnections(session.account.mode)) {
-    fail("Switch to a Connected Exchange account to manage exchange connections.");
-  }
   const connectionId = String(formData.get("connectionId") ?? "");
   if (!connectionId) {
     fail("Missing connection.");
   }
-  const usage = await loadAccountUsage([session.account]);
-  const used = usage.get(session.account.id);
-  const inUse =
-    used?.strategyConnectionId === connectionId ||
-    used?.futuresConnectionId === connectionId;
+  const binds = await listConnectionDeskBinds(session.member.id);
+  const inUse = binds.some((bind) => bind.connectionId === connectionId);
   const blocks = connectionRemoveBlockers({ inUse });
   if (blocks.length > 0) {
     fail(formatConnectionRemoveBlockers(blocks));
   }
   const written = await deleteExchangeConnection({
     userId: session.member.id,
-    accountId: session.account.id,
     connectionId,
   });
   if (written.error) {
@@ -195,8 +185,12 @@ export async function removeExchangeConnection(formData: FormData) {
     data: { connectionId },
   });
   revalidatePath("/account/exchanges");
+  revalidatePath("/account");
   revalidatePath("/account/book");
+  revalidatePath("/account/sub-accounts");
   revalidatePath("/strategies/cash-and-carry");
   revalidatePath("/strategies/cash-and-carry/settings");
+  revalidatePath("/strategies/futures");
+  revalidatePath("/strategies/futures/settings");
   redirect("/account/exchanges?removed=1");
 }

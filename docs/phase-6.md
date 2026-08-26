@@ -10,7 +10,7 @@ Paper accounts do not hold exchange connections.
 
 ## Status
 
-Complete. Connections desk-tested. Phase 7 is complete ([phase-7.md](phase-7.md)). Additional exchanges wait ([phase-8.md](phase-8.md)).
+Complete. Connections desk-tested. Phase 7 is complete ([phase-7.md](phase-7.md)). Additional exchanges wait ([phase-8.md](phase-8.md)). Phase 10 moved keys from the book to the login ([phase-10.md](phase-10.md)).
 
 ## Current micro-step
 
@@ -43,10 +43,10 @@ Stop after each step. Do not start the next until you say so.
 
 - **Live** account: can save connections.
 - **Paper** account: `/account/exchanges` explains that paper does not use keys. Cash-and-carry Settings has no exchange picker. A Paper **venue** picker for market data is Phase 8, once a second venue can scan — [phase-8.md](phase-8.md).
-- Keys belong to the **trading account**, not the login. Switching accounts shows that book’s connections only.
+- Keys belong to the **trading account**, not the login. Switching accounts shows that book’s connections only. **Phase 10 reversed this:** keys belong to the login; desks bind. Unique is `(user_id, venue, environment, key_fingerprint)`.
 - Cash and Carry binds one **active** connection in strategy Settings (`paper_engine_settings.exchange_connection_id`). The strategy header shows that bind (left of the status badge), or “Connect an exchange to start trading”.
-- Cannot **remove** a connection while Cash and Carry (or a later strategy) is attached to it. Unused keys on the same account stay removable.
-- Cannot **detach or switch** the bound key while that strategy has open or closing positions, or while any automation set is Active or Reduce only. First attach (none → a key) is allowed. Open-position checks use `paper_carries` today. Account delete nulls the bind before deleting connections.
+- Cannot **remove** a connection while Cash and Carry (or a later strategy) is attached to it. Unused keys on the same account stay removable. Phase 10: cannot remove while **any** desk is bound.
+- Cannot **detach or switch** the bound key while that strategy has open or closing positions, or while any automation set is Active or Reduce only. First attach (none → a key) is allowed. Open-position checks use `paper_carries` today. Account delete nulls the bind before deleting connections. Phase 10: account delete unbinds only; login keys stay.
 
 ## Security
 
@@ -68,7 +68,7 @@ Stop after each step. Do not start the next until you say so.
 - `key_fingerprint` (display only)
 - `status` (`active` / `invalid`)
 - `verified_at`
-- Unique `(account_id, venue, environment)`
+- Unique `(account_id, venue, environment)`. Phase 10: unique `(user_id, venue, environment, key_fingerprint)` and no `account_id`.
 
 RLS: own-row select. Writes are service-role, scoped by the session account. Authenticated clients must not `select` ciphertext.
 

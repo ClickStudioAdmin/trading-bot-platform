@@ -31,13 +31,18 @@ export default async function BookOverviewPage() {
   const current = session.account;
   const usage = (await loadAccountUsage([current])).get(current.id);
   const live = accountCanHoldConnections(current.mode);
+  const boundIds = [
+    usage?.strategyConnectionId,
+    usage?.futuresConnectionId,
+  ].filter((id): id is string => Boolean(id));
   const connections = live
-    ? await listExchangeConnections(session.member.id, current.id)
+    ? (await listExchangeConnections(session.member.id)).filter((row) =>
+        boundIds.includes(row.id),
+      )
     : [];
   const snapshots = live
     ? await loadAccountSnapshots(
         session.member.id,
-        current.id,
         connections.map((row) => row.id),
       )
     : new Map();
@@ -55,8 +60,9 @@ export default async function BookOverviewPage() {
       <div>
         <PageHeading overline={current.name} title="Overview" />
         <p className="-mt-4 text-sm text-ink-muted">
-          This book is {formatAccountMode(current.mode)}. Positions, automations,
-          and keys stay here. Login and other books are on Desk.
+          This book is {formatAccountMode(current.mode)}. Positions and
+          automations stay here. Keys belong to the login and bind on this
+          book. Login and other books are on Desk.
         </p>
       </div>
 
@@ -104,7 +110,8 @@ export default async function BookOverviewPage() {
                 Exchange connections
               </h3>
               <p className="mt-1 text-sm text-ink-muted">
-                Keys belong to this book. Strategies pick one when they trade.
+                This book binds a key from the login. Keys are managed on
+                Exchanges.
               </p>
             </div>
             <Link
@@ -118,8 +125,8 @@ export default async function BookOverviewPage() {
             <ConnectionList rows={connections} snapshots={snapshots} />
           ) : (
             <p className="mt-4 text-sm text-ink-muted">
-              Paper Trading uses the in-app ledger. Exchange keys belong on a
-              Connected Exchange book.
+              Paper Trading uses the in-app ledger. Bind a key on a Connected
+              Exchange book.
             </p>
           )}
         </div>
@@ -138,8 +145,8 @@ function ConnectionList({
   if (rows.length === 0) {
     return (
       <p className="mt-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-        No keys on this book yet. The engine will not place exchange orders
-        until a connection is added.
+        No key bound on this book yet. The engine will not place exchange
+        orders until Strategy Settings picks a key from this login.
       </p>
     );
   }

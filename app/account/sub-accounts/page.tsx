@@ -1,22 +1,19 @@
 import type { Metadata } from "next";
 import { AccountDeleteControl } from "@/components/account-delete-control";
 import { AccountRenameControl } from "@/components/account-rename-control";
+import { CreateAccountForm } from "@/components/create-account-form";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import {
-  createTradingAccount,
-  switchTradingAccount,
-} from "@/lib/accounts/actions";
+import { switchTradingAccount } from "@/lib/accounts/actions";
 import {
   formatAccountMode,
-  formatAccountModeChoice,
   formatAccountUsageStatus,
   formatDeskType,
-  formatDeskTypeChoice,
   formatDeleteBlockers,
   pickDefaultAccount,
 } from "@/lib/accounts/model";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
+import { listExchangeConnections } from "@/lib/exchanges/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
@@ -44,6 +41,7 @@ export default async function ManageSubAccountsPage({
   const renamed = firstSearchValue(params.renamed) === "1";
   const accounts = await listTradingAccounts(session.member.id);
   const usage = await loadAccountUsage(accounts);
+  const connections = await listExchangeConnections(session.member.id);
 
   return (
     <div>
@@ -53,7 +51,8 @@ export default async function ManageSubAccountsPage({
         changes. Type is also set at create. Books stay separate. You must keep
         at least one account. You can rename an account any time. Delete is
         blocked while the book has open positions or running automations.
-        Deleting an account removes its paper history.
+        Deleting an account removes its paper history. Exchange keys stay on
+        this login.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -146,62 +145,7 @@ export default async function ManageSubAccountsPage({
         </ul>
       </section>
 
-      <form
-        action={createTradingAccount}
-        className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
-      >
-        <h2 className="text-lg font-semibold tracking-tight">New account</h2>
-        <input type="hidden" name="next" value={PATH} />
-        <label className="block text-xs text-ink-muted">
-          Name
-          <input
-            name="name"
-            required
-            maxLength={40}
-            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-          />
-        </label>
-        <label className="block text-xs text-ink-muted">
-          Type
-          <select
-            name="deskType"
-            defaultValue="cash_and_carry"
-            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-          >
-            <option value="cash_and_carry">
-              {formatDeskTypeChoice("cash_and_carry")}
-            </option>
-            <option value="perps">{formatDeskTypeChoice("perps")}</option>
-            <option value="signal_follower">
-              {formatDeskTypeChoice("signal_follower")}
-            </option>
-          </select>
-        </label>
-        <label className="block text-xs text-ink-muted">
-          Mode
-          <select
-            name="mode"
-            defaultValue="paper"
-            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-          >
-            <option value="paper">{formatAccountModeChoice("paper")}</option>
-            <option value="live">{formatAccountModeChoice("live")}</option>
-          </select>
-        </label>
-        <p className="text-sm text-ink-muted">
-          Paper Trading uses live market data and fills on the in-app ledger.
-          No real trades. Connected Exchange stores keys for a venue (Bybit
-          Demo or production). Mode and type are set at create and never
-          change. Two desks on the same exchange key still share venue margin.
-          Isolation needs another trade-only key.
-        </p>
-        <PendingSubmitButton
-          pendingLabel="Creating…"
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-        >
-          Create account
-        </PendingSubmitButton>
-      </form>
+      <CreateAccountForm connections={connections} />
     </div>
   );
 }

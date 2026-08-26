@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  bindConnectionToDesk,
   deleteTradingAccountRow,
   insertTradingAccount,
   listTradingAccounts,
@@ -12,6 +13,8 @@ import {
   parseDeskTypeChoice,
   pickSwitchAfterDelete,
 } from "@/lib/accounts/model";
+import { parseBoundConnectionId } from "@/lib/exchanges/connections";
+import { listExchangeConnections } from "@/lib/exchanges/store";
 import { writeEventLog } from "@/lib/logs/write";
 import {
   getSessionContext,
@@ -80,6 +83,19 @@ export async function createTradingAccount(formData: FormData) {
     redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(typed.error)}`);
   }
   const mode = parseAccountMode(formData.get("mode"));
+  let connectionId: string | null = null;
+  if (mode === "live") {
+    connectionId = parseBoundConnectionId(formData.get("exchangeConnectionId"));
+    if (connectionId) {
+      const connections = await listExchangeConnections(session.member.id);
+      const match = connections.find((item) => item.id === connectionId);
+      if (!match || match.status !== "active") {
+        redirect(
+          `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent("Pick an exchange key saved on this login.")}`,
+        );
+      }
+    }
+  }
   const created = await insertTradingAccount(
     session.member.id,
     named.name,
@@ -91,13 +107,31 @@ export async function createTradingAccount(formData: FormData) {
       `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent("Could not create that account. The name may already be in use.")}`,
     );
   }
+  if (connectionId) {
+    const bound = await bindConnectionToDesk({
+      userId: session.member.id,
+      accountId: created.id,
+      deskType: typed.deskType,
+      connectionId,
+    });
+    if (bound.error) {
+      redirect(
+        `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(bound.error)}`,
+      );
+    }
+  }
   await writeEventLog({
     scope: "system",
     event: "account.created",
     message: `Created ${mode} account ${named.name}`,
     userId: session.member.id,
     accountId: created.id,
-    data: { mode, name: named.name, deskType: typed.deskType },
+    data: {
+      mode,
+      name: named.name,
+      deskType: typed.deskType,
+      ...(connectionId ? { exchangeConnectionId: connectionId } : {}),
+    },
   });
   if (!staysOnManagePage(next)) {
     await setActiveAccountId(created.id);

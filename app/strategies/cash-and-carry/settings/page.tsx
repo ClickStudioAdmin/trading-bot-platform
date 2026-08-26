@@ -37,7 +37,7 @@ export default async function CashAndCarrySettingsPage({
   const settings = await loadEngineSettings();
   const live = accountCanHoldConnections(session.account.mode);
   const connections = live
-    ? await listExchangeConnections(session.member.id, session.account.id)
+    ? await listExchangeConnections(session.member.id)
     : [];
   const selected = connections.find((row) => row.id === settings.connectionId) ?? null;
   const usage = live
@@ -120,7 +120,7 @@ function ExchangeBindField({
       <div>
         <p className="text-sm text-ink">Exchange</p>
         <p className="mt-1 text-sm text-ink-muted">
-          Connect an exchange to start trading.{" "}
+          Add a key on this login first.{" "}
           <Link
             href="/account/exchanges"
             className="text-accent hover:text-accent-strong"

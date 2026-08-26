@@ -14,12 +14,10 @@ function creds(credentials: Record<string, string>) {
 
 export const loadAccountSnapshot = cache(async (
   userId: string,
-  accountId: string,
   connectionId: string,
 ): Promise<AccountSnapshotView> => {
   const bound = await loadBoundConnectionSecrets({
     userId,
-    accountId,
     connectionId,
   });
   if (!bound.ok) {
@@ -43,13 +41,12 @@ export const loadAccountSnapshot = cache(async (
 
 export async function loadAccountSnapshots(
   userId: string,
-  accountId: string,
   connectionIds: string[],
 ): Promise<Map<string, AccountSnapshotView>> {
   const unique = [...new Set(connectionIds.filter(Boolean))];
   const rows = await Promise.all(
     unique.map(async (connectionId) => {
-      const view = await loadAccountSnapshot(userId, accountId, connectionId);
+      const view = await loadAccountSnapshot(userId, connectionId);
       return [connectionId, view] as const;
     }),
   );

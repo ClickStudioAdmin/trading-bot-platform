@@ -76,8 +76,8 @@ export function ExchangeConnectForm({
       <p className="text-sm text-ink-muted">
         Use a trade-only key with no withdrawal permission. We check that
         with Bybit before saving. The secret is encrypted and is not shown
-        again. Bound keys are used for Open, Close, Unwind, and automations
-        on this book.
+        again. Live desks bind a key in Strategy Settings. The same key on
+        two desks shares venue margin.
       </p>
       <PendingSubmitButton
         pendingLabel="Verifying…"

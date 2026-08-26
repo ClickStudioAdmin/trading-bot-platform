@@ -27,7 +27,7 @@ export default async function FuturesLayout({
     : [];
   const connections =
     live && session
-      ? await listExchangeConnections(session.member.id, session.account.id)
+      ? await listExchangeConnections(session.member.id)
       : [];
   const bound =
     connections.find((row) => row.id === settings?.connectionId) ?? null;
@@ -35,7 +35,6 @@ export default async function FuturesLayout({
     live && session && bound
       ? await loadAccountSnapshot(
           session.member.id,
-          session.account.id,
           bound.id,
         )
       : null;

@@ -262,10 +262,10 @@ export async function saveFuturesSettings(formData: FormData) {
       }
     }
     if (connectionId) {
-      const connections = await listExchangeConnections(user.id, account.id);
+      const connections = await listExchangeConnections(user.id);
       const match = connections.find((item) => item.id === connectionId);
       if (!match) {
-        settingsFail("Pick an exchange connection on this account.");
+        settingsFail("Pick an exchange key saved on this login.");
       } else if (match.status !== "active" && match.id !== current.connectionId) {
         settingsFail("That connection is not active.");
       }

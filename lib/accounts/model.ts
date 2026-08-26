@@ -180,7 +180,7 @@ export function formatConnectionRemoveBlockers(
   blocks: ConnectionRemoveBlock[],
 ): string {
   if (blocks.includes("in_use")) {
-    return "Detach this connection from Strategy Settings first";
+    return "Detach this key from every desk in Strategy Settings first";
   }
   return "";
 }

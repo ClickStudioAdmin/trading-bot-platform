@@ -5,7 +5,7 @@ import {
 
 export type ExchangeConnection = {
   id: string;
-  accountId: string;
+  userId: string;
   venue: string;
   environment: string;
   label: string | null;
@@ -14,6 +14,23 @@ export type ExchangeConnection = {
   verifiedAtMs: number | null;
   createdAtMs: number;
 };
+
+export function parseBoundConnectionId(raw: unknown): string | null {
+  const id = String(raw ?? "").trim();
+  if (!id || id === "none") {
+    return null;
+  }
+  return id;
+}
+
+export function formatDeskBindLabel(input: {
+  accountName: string;
+  strategy: "cash_and_carry" | "futures";
+}): string {
+  const strategy =
+    input.strategy === "futures" ? "Futures" : "Cash and Carry";
+  return `${input.accountName} · ${strategy}`;
+}
 
 export function parseConnectionLabel(
   raw: unknown,
@@ -81,12 +98,12 @@ export function parseExchangeConnectionRow(
   row: Record<string, unknown>,
 ): ExchangeConnection | null {
   const id = String(row.id ?? "");
-  const accountId = String(row.account_id ?? "");
+  const userId = String(row.user_id ?? "");
   const venue = String(row.venue ?? "");
   const environment = String(row.environment ?? "");
   const fingerprint = String(row.key_fingerprint ?? "");
   const status = row.status === "invalid" ? "invalid" : "active";
-  if (!id || !accountId || !venue || !environment || fingerprint.length < 4) {
+  if (!id || !userId || !venue || !environment || fingerprint.length < 4) {
     return null;
   }
   const created = new Date(String(row.created_at ?? "")).getTime();
@@ -100,7 +117,7 @@ export function parseExchangeConnectionRow(
       : String(labelRaw).trim() || null;
   return {
     id,
-    accountId,
+    userId,
     venue,
     environment,
     label,

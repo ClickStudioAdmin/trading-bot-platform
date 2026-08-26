@@ -8,11 +8,10 @@ import { decryptCredentials } from "@/lib/exchanges/encrypt";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 const LIST_COLUMNS =
-  "id, account_id, user_id, venue, environment, label, key_fingerprint, status, verified_at, created_at";
+  "id, user_id, venue, environment, label, key_fingerprint, status, verified_at, created_at";
 
 export async function listExchangeConnections(
   userId: string,
-  accountId: string,
 ): Promise<ExchangeConnection[]> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -22,7 +21,6 @@ export async function listExchangeConnections(
     .from("exchange_connections")
     .select(LIST_COLUMNS)
     .eq("user_id", userId)
-    .eq("account_id", accountId)
     .order("created_at", { ascending: true });
   if (error || !data) {
     return [];
@@ -34,7 +32,6 @@ export async function listExchangeConnections(
 
 export async function insertExchangeConnection(input: {
   userId: string;
-  accountId: string;
   venue: string;
   environment: string;
   label: string | null;
@@ -51,7 +48,6 @@ export async function insertExchangeConnection(input: {
     .from("exchange_connections")
     .insert({
       user_id: input.userId,
-      account_id: input.accountId,
       venue: input.venue,
       environment: input.environment,
       label: input.label,
@@ -67,7 +63,7 @@ export async function insertExchangeConnection(input: {
     if (error.code === "23505") {
       return {
         error:
-          "That exchange is already connected for this environment. Remove it first to replace the key.",
+          "That key is already saved. Pick it on a desk, or add a different key.",
       };
     }
     return { error: error.message };
@@ -81,7 +77,6 @@ export async function insertExchangeConnection(input: {
 
 export async function deleteExchangeConnection(input: {
   userId: string;
-  accountId: string;
   connectionId: string;
 }): Promise<{ error: string | null }> {
   const supabase = createServiceClient();
@@ -92,8 +87,7 @@ export async function deleteExchangeConnection(input: {
     .from("exchange_connections")
     .delete()
     .eq("id", input.connectionId)
-    .eq("user_id", input.userId)
-    .eq("account_id", input.accountId);
+    .eq("user_id", input.userId);
   return { error: error?.message ?? null };
 }
 
@@ -106,7 +100,6 @@ export type BoundConnectionSecrets = {
 
 export async function loadBoundConnectionSecrets(input: {
   userId: string;
-  accountId: string;
   connectionId: string;
 }): Promise<{ ok: true; connection: BoundConnectionSecrets } | { ok: false; error: string }> {
   const supabase = createServiceClient();
@@ -120,7 +113,6 @@ export async function loadBoundConnectionSecrets(input: {
     )
     .eq("id", input.connectionId)
     .eq("user_id", input.userId)
-    .eq("account_id", input.accountId)
     .maybeSingle();
   if (error || !data) {
     return { ok: false, error: "Connect an exchange in Strategy Settings first." };
@@ -146,4 +138,74 @@ export async function loadBoundConnectionSecrets(input: {
       credentials,
     },
   };
+}
+
+export type ConnectionDeskBind = {
+  connectionId: string;
+  accountId: string;
+  accountName: string;
+  strategy: "cash_and_carry" | "futures";
+};
+
+export async function listConnectionDeskBinds(
+  userId: string,
+): Promise<ConnectionDeskBind[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const [{ data: accounts }, { data: carry }, { data: futures }] =
+    await Promise.all([
+      supabase
+        .from("trading_accounts")
+        .select("id, name")
+        .eq("user_id", userId),
+      supabase
+        .from("paper_engine_settings")
+        .select("account_id, exchange_connection_id")
+        .eq("user_id", userId)
+        .not("exchange_connection_id", "is", null),
+      supabase
+        .from("strategy_settings")
+        .select("account_id, exchange_connection_id")
+        .eq("user_id", userId)
+        .eq("strategy_id", "futures")
+        .not("exchange_connection_id", "is", null),
+    ]);
+  const names = new Map(
+    (accounts ?? []).map((row) => [
+      String((row as { id: string }).id),
+      String((row as { name: string }).name).trim() || "Desk",
+    ]),
+  );
+  const binds: ConnectionDeskBind[] = [];
+  for (const row of carry ?? []) {
+    const accountId = String((row as { account_id: string }).account_id);
+    const connectionId = String(
+      (row as { exchange_connection_id: string }).exchange_connection_id,
+    );
+    if (accountId && connectionId) {
+      binds.push({
+        connectionId,
+        accountId,
+        accountName: names.get(accountId) ?? "Desk",
+        strategy: "cash_and_carry",
+      });
+    }
+  }
+  for (const row of futures ?? []) {
+    const accountId = String((row as { account_id: string }).account_id);
+    const connectionId = String(
+      (row as { exchange_connection_id: string }).exchange_connection_id,
+    );
+    if (accountId && connectionId) {
+      binds.push({
+        connectionId,
+        accountId,
+        accountName: names.get(accountId) ?? "Desk",
+        strategy: "futures",
+      });
+    }
+  }
+  return binds;
 }

@@ -16,7 +16,6 @@ import {
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
-import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -33,25 +32,19 @@ export default async function AccountOverviewPage() {
   const current = session.account;
   const paperCount = accounts.filter((account) => account.mode === "paper").length;
   const liveCount = accounts.length - paperCount;
-  const live = accountCanHoldConnections(current.mode);
-  const connections = live
-    ? await listExchangeConnections(session.member.id, current.id)
-    : [];
-  const snapshots = live
-    ? await loadAccountSnapshots(
-        session.member.id,
-        current.id,
-        connections.map((row) => row.id),
-      )
-    : new Map();
+  const connections = await listExchangeConnections(session.member.id);
+  const snapshots = await loadAccountSnapshots(
+    session.member.id,
+    connections.map((row) => row.id),
+  );
 
   return (
     <div className="space-y-8">
       <div>
         <PageHeading overline="Desk" title="Overview" />
         <p className="-mt-4 text-sm text-ink-muted">
-          Login and books. Positions, automations, and keys live on the
-          current book.
+          Login and books. Positions and automations live on the current
+          book. Exchange keys belong to this login.
         </p>
       </div>
 
@@ -116,15 +109,15 @@ export default async function AccountOverviewPage() {
         </div>
       </section>
 
-      {live ? (
-        <section className="rounded-card border border-line bg-surface p-5">
+      <section className="rounded-card border border-line bg-surface p-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold tracking-tight">
                 Unified account
               </h2>
               <p className="mt-1 text-sm text-ink-muted">
-                Available, margin, and IM/MM on this book’s keys.
+                Available, margin, and IM/MM on this login’s keys. Live desks
+                bind one of these.
               </p>
             </div>
             <Link
@@ -136,7 +129,7 @@ export default async function AccountOverviewPage() {
           </div>
           {connections.length === 0 ? (
             <p className="mt-4 text-sm text-ink-muted">
-              No keys on this book yet.
+              No keys on this login yet.
             </p>
           ) : (
             <ul className="mt-4 divide-y divide-line">
@@ -154,7 +147,6 @@ export default async function AccountOverviewPage() {
             </ul>
           )}
         </section>
-      ) : null}
 
       <section className="rounded-card border border-line bg-surface p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">

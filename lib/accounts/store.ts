@@ -12,6 +12,7 @@ import { memberDisplayName } from "@/lib/members/sync";
 import { parseAutomationMode } from "@/lib/engine/decide";
 import { selectPaperEngineSettings } from "@/lib/engine/settings";
 import { listFuturesConnectionIds } from "@/lib/futures/settings";
+import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -127,6 +128,42 @@ export async function insertTradingAccount(
     enabled: false,
   });
   return account;
+}
+
+export async function bindConnectionToDesk(input: {
+  userId: string;
+  accountId: string;
+  deskType: DeskType;
+  connectionId: string;
+}): Promise<{ error: string | null }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { error: "Auth is not configured." };
+  }
+  const now = new Date().toISOString();
+  if (input.deskType === "cash_and_carry") {
+    const { error } = await supabase.from("paper_engine_settings").upsert(
+      {
+        user_id: input.userId,
+        account_id: input.accountId,
+        exchange_connection_id: input.connectionId,
+        updated_at: now,
+      },
+      { onConflict: "account_id" },
+    );
+    return { error: error?.message ?? null };
+  }
+  const { error } = await supabase.from("strategy_settings").upsert(
+    {
+      user_id: input.userId,
+      account_id: input.accountId,
+      strategy_id: FUTURES_STRATEGY_ID,
+      exchange_connection_id: input.connectionId,
+      updated_at: now,
+    },
+    { onConflict: "account_id,strategy_id" },
+  );
+  return { error: error?.message ?? null };
 }
 
 export type AccountUsage = {
@@ -290,14 +327,6 @@ export async function deleteTradingAccountRow(
     .eq("user_id", userId);
   if (futuresUnbindError) {
     return { error: futuresUnbindError.message };
-  }
-  const { error: connectionError } = await supabase
-    .from("exchange_connections")
-    .delete()
-    .eq("account_id", accountId)
-    .eq("user_id", userId);
-  if (connectionError) {
-    return { error: connectionError.message };
   }
   const { error: futuresWorkingError } = await supabase
     .from("futures_working_orders")

@@ -30,4 +30,4 @@ Phase 10 — Typed desks. See [phase-10.md](phase-10.md). Phase 1 through Phase 
 
 ## Multi-tenancy
 
-Bring-your-own API keys, stored per **Live** trading account. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue. Connected Exchange books show a Unified account snapshot (available, margin, IM/MM) from the bound key on My Account and on hover of the strategy exchange chip.
+Bring-your-own API keys, stored on the **login**. Live desks bind one key. The same key on two desks shares venue margin. Isolation needs another trade-only key. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue. Connected Exchange books show a Unified account snapshot (available, margin, IM/MM) from the bound key on My Account and on hover of the strategy exchange chip.

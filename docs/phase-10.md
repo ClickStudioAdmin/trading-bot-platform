@@ -8,11 +8,11 @@ The thing you create is a **Desk**. Type picks the UI and locks the manager. One
 
 Today one `trading_accounts` row can run both cash-and-carry and Futures. This phase **splits** those books.
 
-Paper Trading desks write the in-app ledger only. Connected Exchange desks use the existing binds.
+Paper Trading desks write the in-app ledger only. Connected Exchange desks bind a key from the login.
 
 ## Status
 
-Current. Step 2 in progress (`desk_type` on the book).
+Current. Login-owned keys in progress (`desk_type` is in the tree). Dual-book split waits until keys live on the login.
 
 ## Current micro-step
 
@@ -20,11 +20,12 @@ Current. Step 2 in progress (`desk_type` on the book).
 | --- | --- | --- | --- |
 | 1 | Docs | Agent | This file is typed desks. Master spec current phase is 10. Nav word is Desks. |
 | 2 | `desk_type` | Agent | Column on `trading_accounts`. Allowed: `cash_and_carry`, `perps`, `signal_follower`. Immutable after create (same as Paper/Live). Create Desk picks type. |
-| 3 | Split dual books | Agent | A book with both C&C and Futures data becomes two desks. Ledgers stay on the matching desk id. Keys rebound with a same-key warning. One-strategy books just get that type. |
-| 4 | Create Desk | Agent | Manage desks creates: name, mode, type, then Live bind. Copy warns that two desks on one key share venue margin. |
-| 5 | Chrome | Agent | Header switcher says Desk. Nav Strategies → Desks. Perps shows Futures routes only. C&C shows C&C only. Signal follower shows perp blotter + webhook, hides the recipe form. |
-| 6 | Bind | Agent | One bind on the desk. Ticket, header chip, balance, kill switch, TV door all use it. Desk A cannot place on Desk B. |
-| 7 | Desk test | Click | Create a Perps desk and a C&C desk on one login. Each has its own bind. Split Demo book is usable. Shared-key warning visible. |
+| 3 | Login keys | Agent | `exchange_connections` owned by `user_id`. Unique `(user_id, venue, environment, key_fingerprint)`. Exchanges page is login-level. Live create can bind an existing key. Cannot remove while any desk is bound. Delete desk unbinds, does not delete keys. |
+| 4 | Split dual books | Agent | A book with both C&C and Futures data becomes two desks. Ledgers stay on the matching desk id. Keys rebound with a same-key warning. One-strategy books just get that type. |
+| 5 | Create Desk | Agent | Manage desks creates: name, mode, type, then Live bind. Copy warns that two desks on one key share venue margin. |
+| 6 | Chrome | Agent | Header switcher says Desk. Nav Strategies → Desks. Perps shows Futures routes only. C&C shows C&C only. Signal follower shows perp blotter + webhook, hides the recipe form. |
+| 7 | Bind | Agent | One bind on the desk. Ticket, header chip, balance, kill switch, TV door all use it. Desk A cannot place on Desk B. |
+| 8 | Desk test | Click | Create a Perps desk and a C&C desk on one login. Each has its own bind. Split Demo book is usable. Shared-key warning visible. |
 
 Stop at the end of this phase for a desk test. Do not start DCA ([phase-11 is not written until this phase is accepted]).
 
@@ -48,8 +49,9 @@ Same venue key on two desks still shares IM. Isolation = another desk **and** an
 ## What this phase includes
 
 - `desk_type` on `trading_accounts`
+- Login-owned exchange keys; desks bind
 - Split dual-strategy books
-- Create Desk: name, Paper/Live, type
+- Create Desk: name, Paper/Live, type, optional Live bind
 - Nav and header say Desk / Desks
 - Type-locked UI (one strategy surface per desk)
 - Shared-key margin warning on create

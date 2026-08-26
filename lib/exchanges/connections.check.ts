@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import {
   formatConnectionSummary,
+  formatDeskBindLabel,
   formatEnvironmentLabel,
   formatStrategyConnectionCaption,
   formatVenueLabel,
   keyFingerprint,
+  parseBoundConnectionId,
   parseConnectionLabel,
   parseExchangeConnectionRow,
   fromByteaParam,
@@ -41,9 +43,24 @@ assert.equal(formatEnvironmentLabel("bybit", "live"), "Live");
 assert.equal(formatEnvironmentLabel("bybit", "production"), "Live");
 assert.equal(formatEnvironmentLabel("bybit", "mainnet"), "Live");
 
+assert.equal(parseBoundConnectionId(""), null);
+assert.equal(parseBoundConnectionId("none"), null);
+assert.equal(parseBoundConnectionId("  conn-1  "), "conn-1");
+assert.equal(
+  formatDeskBindLabel({
+    accountName: "Demo Account",
+    strategy: "cash_and_carry",
+  }),
+  "Demo Account · Cash and Carry",
+);
+assert.equal(
+  formatDeskBindLabel({ accountName: "Perps Live", strategy: "futures" }),
+  "Perps Live · Futures",
+);
+
 const row = parseExchangeConnectionRow({
   id: "conn-1",
-  account_id: "acc-1",
+  user_id: "user-1",
   venue: "bybit",
   environment: "live",
   label: null,
@@ -53,6 +70,7 @@ const row = parseExchangeConnectionRow({
   created_at: "2026-08-24T00:00:00.000Z",
 });
 assert.equal(row?.fingerprint, "1234");
+assert.equal(row?.userId, "user-1");
 assert.equal(row?.verifiedAtMs, null);
 assert.equal(
   formatConnectionSummary(row!),
@@ -73,7 +91,7 @@ assert.deepEqual(
 assert.equal(
   parseExchangeConnectionRow({
     id: "conn-2",
-    account_id: "acc-1",
+    user_id: "user-1",
     venue: "bybit",
     environment: "demo",
     label: "Desk",

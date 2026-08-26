@@ -17,4 +17,4 @@ Use database transactions for concurrent money and position operations.
 
 Payment and webhook handling must be idempotent.
 
-API keys stored for exchanges must be trade-only, with no withdrawal permission. Store them per Live trading account, encrypted at rest, on a venue-agnostic connections table. Never send decrypted secrets to the browser or `NEXT_PUBLIC_` variables.
+API keys stored for exchanges must be trade-only, with no withdrawal permission. Store them on the login, encrypted at rest, on a venue-agnostic connections table. Live desks bind one key. Never send decrypted secrets to the browser or `NEXT_PUBLIC_` variables.

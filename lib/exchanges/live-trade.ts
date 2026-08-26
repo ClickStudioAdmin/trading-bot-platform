@@ -40,7 +40,6 @@ export async function loadBoundVenueForAccount(input: {
   }
   return loadBoundConnectionSecrets({
     userId: input.userId,
-    accountId: input.accountId,
     connectionId,
   });
 }

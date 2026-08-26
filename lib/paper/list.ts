@@ -36,10 +36,7 @@ export async function getOpportunityPaperProps(
   if (!settings.connectionId) {
     return { signedIn: true, canOpen: false, venueOpen: false, next };
   }
-  const connections = await listExchangeConnections(
-    session.member.id,
-    session.account.id,
-  );
+  const connections = await listExchangeConnections(session.member.id);
   const bound = connections.find(
     (row) => row.id === settings.connectionId && row.status === "active",
   );

@@ -40,7 +40,7 @@ export default async function FuturesSettingsPage({
   const settings = await loadFuturesSettings(session.account.id);
   const live = accountCanHoldConnections(session.account.mode);
   const connections = live
-    ? await listExchangeConnections(session.member.id, session.account.id)
+    ? await listExchangeConnections(session.member.id)
     : [];
   const selected =
     connections.find((row) => row.id === settings.connectionId) ?? null;
@@ -65,8 +65,8 @@ export default async function FuturesSettingsPage({
         <Link href={FUTURES_PATHS.webhooks} className="text-accent">
           Webhooks
         </Link>
-        . Bind the Bybit key this strategy uses — cash-and-carry has its own
-        bind.
+        .         Bind the Bybit key this strategy uses from this login. Cash-and-carry
+        has its own bind.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -174,7 +174,7 @@ function ExchangeBindField({
       <div>
         <p className="text-sm text-ink">Exchange</p>
         <p className="mt-1 text-sm text-ink-muted">
-          Connect an exchange to start trading.{" "}
+          Add a key on this login first.{" "}
           <Link
             href="/account/exchanges"
             className="text-accent hover:text-accent-strong"

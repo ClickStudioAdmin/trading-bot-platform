@@ -4,22 +4,22 @@ import { ExchangeConnectForm } from "@/components/exchange-connect-form";
 import { PageHeading } from "@/components/page-heading";
 import { RemoveConnectionControl } from "@/components/remove-connection-control";
 import {
-  formatAccountMode,
   connectionRemoveBlockers,
   formatConnectionRemoveBlockers,
 } from "@/lib/accounts/model";
-import { loadAccountUsage } from "@/lib/accounts/store";
 import {
+  formatDeskBindLabel,
   formatEnvironmentLabel,
   formatVenueLabel,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
-import { listExchangeConnections } from "@/lib/exchanges/store";
-import { exchangeCredentialsConfigured } from "@/lib/exchanges/encrypt";
 import {
-  accountCanHoldConnections,
-  enabledVenues,
-} from "@/lib/exchanges/venues";
+  listConnectionDeskBinds,
+  listExchangeConnections,
+  type ConnectionDeskBind,
+} from "@/lib/exchanges/store";
+import { exchangeCredentialsConfigured } from "@/lib/exchanges/encrypt";
+import { enabledVenues } from "@/lib/exchanges/venues";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionContext } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
@@ -42,27 +42,19 @@ export default async function AccountExchangesPage({
   const error = firstSearchValue(params.error);
   const saved = firstSearchValue(params.saved) === "1";
   const removed = firstSearchValue(params.removed) === "1";
-  const live = accountCanHoldConnections(session.account.mode);
-  const usage = live
-    ? (await loadAccountUsage([session.account])).get(session.account.id)
-    : null;
-  const boundIds = {
-    cashAndCarry: usage?.strategyConnectionId ?? null,
-    futures: usage?.futuresConnectionId ?? null,
-  };
-  const connections = live
-    ? await listExchangeConnections(session.member.id, session.account.id)
-    : [];
+  const [connections, binds] = await Promise.all([
+    listExchangeConnections(session.member.id),
+    listConnectionDeskBinds(session.member.id),
+  ]);
   const venues = enabledVenues();
-  const canSave = live && exchangeCredentialsConfigured();
+  const canSave = exchangeCredentialsConfigured();
 
   return (
     <div>
       <PageHeading title="Exchanges" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
-        API keys belong to the current account, {session.account.name} (
-        {formatAccountMode(session.account.mode)}). Switch accounts from the
-        header to see another book.
+        API keys belong to this login. Live desks bind one key. Paper desks
+        do not use keys. The same key on two desks shares venue margin.
       </p>
       {error || saved || removed ? (
         <div className="mb-6 space-y-3">
@@ -80,50 +72,41 @@ export default async function AccountExchangesPage({
         </div>
       ) : null}
 
-      {live && !canSave ? (
+      {!canSave ? (
         <p className="mb-6 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Set <span className="font-mono text-ink">EXCHANGE_CREDENTIALS_KEY</span>{" "}
           on this Vercel environment (64 hex characters from{" "}
           <span className="font-mono text-ink">openssl rand -hex 32</span>),
-          then redeploy. Use a Development key on <span className="font-mono text-ink">develop</span>
+          then redeploy. Use a Development key on{" "}
+          <span className="font-mono text-ink">develop</span>
           — never the Production value. If the deployment badge says Preview,
           add the same Development key there too.
         </p>
       ) : null}
 
-      {live ? (
-        <>
-          <ConnectionList rows={connections} boundIds={boundIds} />
-          {canSave ? <ExchangeConnectForm venues={venues} /> : null}
-        </>
-      ) : (
-        <p className="rounded-card border border-line bg-surface p-5 text-sm text-ink-muted">
-          This is a Paper Trading account. Exchange API keys belong on a
-          Connected Exchange account.{" "}
-          <Link
-            href="/account/sub-accounts"
-            className="text-accent hover:text-accent-strong"
-          >
-            Manage sub-accounts
-          </Link>{" "}
-          to create or switch to Live.
-        </p>
-      )}
+      <ConnectionList
+        rows={connections}
+        binds={binds}
+        currentAccountId={session.account.id}
+      />
+      {canSave ? <ExchangeConnectForm venues={venues} /> : null}
     </div>
   );
 }
 
 function ConnectionList({
   rows,
-  boundIds,
+  binds,
+  currentAccountId,
 }: {
   rows: ExchangeConnection[];
-  boundIds: { cashAndCarry: string | null; futures: string | null };
+  binds: ConnectionDeskBind[];
+  currentAccountId: string;
 }) {
   if (rows.length === 0) {
     return (
       <p className="rounded-card border border-line bg-surface p-5 text-sm text-ink-muted">
-        No exchanges connected on this account yet.
+        No exchanges connected on this login yet.
       </p>
     );
   }
@@ -132,37 +115,24 @@ function ConnectionList({
     <section>
       <h2 className="text-lg font-semibold tracking-tight">Connected</h2>
       <p className="mt-2 text-sm text-ink-muted">
-        Keys belong to this account. Each strategy picks a key in its
-        Settings. You cannot remove a key while a strategy is using it.
+        Live desks pick a key when you create them, or in Strategy Settings.
+        You cannot remove a key while any desk is using it.
       </p>
       <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[36rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <th className="px-4 py-3 font-medium">Exchange</th>
-              <th className="px-4 py-3 font-medium">Connected Strategies</th>
+              <th className="px-4 py-3 font-medium">Bound desks</th>
               <th className="px-4 py-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => {
-              const strategies = [
-                boundIds.cashAndCarry === row.id
-                  ? {
-                      href: "/strategies/cash-and-carry/settings",
-                      label: "Cash and Carry",
-                    }
-                  : null,
-                boundIds.futures === row.id
-                  ? {
-                      href: "/strategies/futures/settings",
-                      label: "Futures",
-                    }
-                  : null,
-              ].filter((item): item is { href: string; label: string } =>
-                Boolean(item),
+              const used = binds.filter(
+                (bind) => bind.connectionId === row.id,
               );
-              const inUse = strategies.length > 0;
+              const inUse = used.length > 0;
               const removeBlocked = formatConnectionRemoveBlockers(
                 connectionRemoveBlockers({ inUse }),
               );
@@ -185,17 +155,33 @@ function ConnectionList({
                     </p>
                   </td>
                   <td className="px-4 py-3 align-top">
-                    {strategies.length > 0 ? (
+                    {used.length > 0 ? (
                       <span className="flex flex-col gap-1">
-                        {strategies.map((item) => (
-                          <Link
-                            key={item.href}
-                            href={item.href}
-                            className="text-accent hover:text-accent-strong"
-                          >
-                            {item.label}
-                          </Link>
-                        ))}
+                        {used.map((bind) => {
+                          const label = formatDeskBindLabel(bind);
+                          const href =
+                            bind.accountId === currentAccountId
+                              ? bind.strategy === "futures"
+                                ? "/strategies/futures/settings"
+                                : "/strategies/cash-and-carry/settings"
+                              : null;
+                          return href ? (
+                            <Link
+                              key={`${bind.accountId}-${bind.strategy}`}
+                              href={href}
+                              className="text-accent hover:text-accent-strong"
+                            >
+                              {label}
+                            </Link>
+                          ) : (
+                            <span
+                              key={`${bind.accountId}-${bind.strategy}`}
+                              className="text-ink-muted"
+                            >
+                              {label}
+                            </span>
+                          );
+                        })}
                       </span>
                     ) : (
                       <span className="text-ink-faint">—</span>
