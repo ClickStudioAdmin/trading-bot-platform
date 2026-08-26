@@ -97,15 +97,38 @@ export function FuturesWebhooksDesk({
           key={hook.id}
           className="space-y-5 rounded-card border border-line bg-surface p-5"
         >
+          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+            <form
+              action={renameFuturesWebhookAction}
+              className="flex flex-wrap items-end gap-x-4 gap-y-3"
+            >
+              <input type="hidden" name="webhookId" value={hook.id} />
+              <label className="w-72 max-w-full text-sm text-ink">
+                Name
+                <input
+                  name="name"
+                  defaultValue={hook.name}
+                  required
+                  maxLength={40}
+                  className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                />
+              </label>
+              <PendingSubmitButton
+                pendingLabel="Saving…"
+                successKey={`rename-webhook-${hook.id}`}
+                className="rounded-control border border-line bg-surface-raised px-3 py-2 text-xs font-medium text-ink"
+              >
+                Save name
+              </PendingSubmitButton>
+            </form>
+            <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal whitespace-nowrap text-accent">
+              {hook.kind === "signal"
+                ? "Signal"
+                : "TradingView strategy"}
+            </span>
+          </div>
           <div className="space-y-1">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-ink">URL</p>
-              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal whitespace-nowrap text-accent">
-                {hook.kind === "signal"
-                  ? "Signal"
-                  : "TradingView strategy"}
-              </span>
-            </div>
+            <p className="text-sm text-ink">URL</p>
             {hook.url ? (
               <span className="flex items-center gap-3">
                 <textarea
@@ -124,31 +147,6 @@ export function FuturesWebhooksDesk({
                 rotate.
               </p>
             )}
-          </div>
-          <div className="space-y-3">
-            <form
-              action={renameFuturesWebhookAction}
-              className="flex flex-wrap items-end gap-x-4 gap-y-3"
-            >
-              <input type="hidden" name="webhookId" value={hook.id} />
-              <label className="min-w-[12rem] flex-1 text-sm text-ink">
-                Name
-                <input
-                  name="name"
-                  defaultValue={hook.name}
-                  required
-                  maxLength={40}
-                  className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-                />
-              </label>
-              <PendingSubmitButton
-                pendingLabel="Saving…"
-                successKey={`rename-webhook-${hook.id}`}
-                className="rounded-control border border-line bg-surface-raised px-3 py-2 text-xs font-medium text-ink"
-              >
-                Save name
-              </PendingSubmitButton>
-            </form>
           </div>
           {hook.kind === "signal" ? (
             <PayloadSample label="Arm" text={SIGNAL_PAYLOAD} />
