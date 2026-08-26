@@ -62,14 +62,14 @@ export function FuturesWorkingOrders({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
-                  label="Side"
-                  hint="Buy opens or adds a long. Sell opens or adds a short. Close is a reduce-only limit on an open row."
+                  label="Source"
+                  hint="Manual is a desk click. Auto is an automation or TradingView strategy webhook. The name is the rule or webhook that placed this limit."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
-                  label="Source"
-                  hint="Manual is a desk click. Auto is an automation or TradingView strategy webhook. The name is the rule or webhook that placed this limit."
+                  label="Side"
+                  hint="Buy opens or adds a long. Sell opens or adds a short. Close is a reduce-only limit on an open row."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -172,10 +172,10 @@ function WorkingRow({
         </span>
       </td>
       <td className="px-4 py-3">
-        {workingActionLabel(row.action, row.reduceOnly)}
+        <FuturesSourceCell source={row.source} ruleName={row.ruleName} />
       </td>
       <td className="px-4 py-3">
-        <FuturesSourceCell source={row.source} ruleName={row.ruleName} />
+        {workingActionLabel(row.action, row.reduceOnly)}
       </td>
       <td className="px-4 py-3 tabular-nums">
         {row.remainingQty}

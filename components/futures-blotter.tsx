@@ -132,14 +132,14 @@ export function OpenFuturesTrades({
                   hint="USDT linear perpetual."
                 />
               </th>
-              <th className="w-14 px-3 py-3 font-medium">
-                <ColumnHint label="Side" hint="Long or short. Both can be open on the same contract." />
-              </th>
               <th className="w-28 px-3 py-3 font-medium">
                 <ColumnHint
                   label="Source"
                   hint="Manual is a desk click. Auto is an automation or TradingView strategy webhook. The name is the rule or webhook that opened this row."
                 />
+              </th>
+              <th className="w-14 px-3 py-3 font-medium">
+                <ColumnHint label="Side" hint="Long or short. Both can be open on the same contract." />
               </th>
               {visible.qty ? (
                 <th className="w-16 px-3 py-3 font-medium">
@@ -457,10 +457,10 @@ function OpenFuturesRows({
           </span>
         </span>
       </td>
-      <td className="px-3 py-3 capitalize text-ink-muted">{trade.side}</td>
       <td className="px-3 py-3">
         <FuturesSourceCell source={trade.source} ruleName={trade.ruleName} />
       </td>
+      <td className="px-3 py-3 capitalize text-ink-muted">{trade.side}</td>
       {visible.qty ? (
         <td className="px-3 py-3 tabular-nums whitespace-nowrap">{trade.qty}</td>
       ) : null}
