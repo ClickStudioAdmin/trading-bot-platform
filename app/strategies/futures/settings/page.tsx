@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
@@ -71,7 +72,7 @@ export default async function FuturesSettingsPage({
       ) : null}
       <form
         action={saveFuturesSettings}
-        className="mt-6 max-w-md space-y-4 rounded-card border border-line bg-surface p-5"
+        className="mt-6 max-w-lg space-y-4 rounded-card border border-line bg-surface p-5"
       >
         {live ? (
           <ExchangeBindField
@@ -99,6 +100,58 @@ export default async function FuturesSettingsPage({
             </span>
           </span>
         </label>
+        <div className="space-y-3 border-t border-line pt-4">
+          <p className="text-sm text-ink">Risk caps</p>
+          <p className="text-xs text-ink-muted">
+            Empty means no cap. Buy and Sell reject if they would breach. Close
+            is never blocked.
+          </p>
+          <label className="block text-sm text-ink">
+            Max qty per symbol
+            <GroupedNumberInput
+              name="maxQtyPerSymbol"
+              defaultValue={
+                settings.maxQtyPerSymbol === null
+                  ? ""
+                  : String(settings.maxQtyPerSymbol)
+              }
+              allowDecimal
+              placeholder="No cap"
+              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+            />
+          </label>
+          <label className="block text-sm text-ink">
+            Max notional per symbol
+            <span className="relative mt-1 block">
+              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
+                $
+              </span>
+              <GroupedNumberInput
+                name="maxNotionalPerSymbol"
+                defaultValue={
+                  settings.maxNotionalPerSymbol === null
+                    ? ""
+                    : String(settings.maxNotionalPerSymbol)
+                }
+                allowDecimal
+                placeholder="No cap"
+                ariaLabel="Max notional per symbol"
+                className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+              />
+            </span>
+          </label>
+          <label className="block text-sm text-ink">
+            Max open rows
+            <GroupedNumberInput
+              name="maxOpenRows"
+              defaultValue={
+                settings.maxOpenRows === null ? "" : String(settings.maxOpenRows)
+              }
+              placeholder="No cap"
+              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+            />
+          </label>
+        </div>
         <PendingSubmitButton
           pendingLabel="Saving…"
           successKey="save-futures-settings"

@@ -31,13 +31,13 @@ Stop at the end of this phase for a Demo desk test. Do not start TradingView ([p
 4. Size is base-coin quantity, or USDT/USDC notional converted at mark for market and at the limit price for limit. Both floor to the instrument step. Below minimum is rejected.
 5. Live: server decrypts the Futures-bound key. Demo → `api-demo.bybit.com`. Market or GTC limit on `linear` in **hedge mode** (`positionIdx` 1 long / 2 short). Market Close is `reduceOnly`. Limit Close is a reduce-only GTC. Working limits, TP/SL, and trailing stops are polled on Positions load and on the paper engine tick. If the Bybit account is still one-way on that contract, opening the second side is rejected until the venue position is closed and the mode can switch.
 6. Write `futures_positions` + `futures_orders` on this book only. Live books keep one open row per **symbol and side** and add size to that row. Paper does the same. Resting limits live on `futures_working_orders` until they fill or cancel. TP/SL and trailing stop live on the working row until fill, then on the position. Live trailing is set with Bybit `trading-stop` after the position exists (not on order create). Setting TP/SL re-sends the current trailing, and the reverse, so one does not cancel the other.
-7. Reduce only (Futures settings) blocks Buy and Sell. Close still runs.
+7. Reduce only (Futures settings) blocks Buy and Sell. Close still runs. Optional max qty per symbol, max notional per symbol, and max open rows reject Buy and Sell that would breach; Close is uncapped.
 8. Desk clicks and later automations go through `runFuturesCommand`. Form server actions are thin adapters (session + redirect). An optional idempotency key is stored on `futures_command_receipts` and on working/order rows; live sends it to Bybit as `orderLinkId`. No webhook this phase.
 
 ## What this phase includes
 
 - Strategy slug `futures` under `/strategies/futures` (overview, positions, automations, performance, settings, activity, pairs)
-- `strategy_settings` for the Futures bind and reduce-only flag
+- `strategy_settings` for the Futures bind, reduce-only flag, and optional Buy/Sell risk caps
 - Single-leg blotter tables
 - Manual Buy / Sell / Close on Bybit linear USDT perps
 - Buy/Sell Market or GTC Limit. Close is Market or reduce-only GTC Limit; both take a qty (full or a slice). Open orders table + Edit remaining qty/limit + Cancel.

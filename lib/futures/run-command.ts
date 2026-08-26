@@ -27,6 +27,7 @@ import {
   reconcileOpenFuturesBooks,
 } from "./reconcile";
 import { loadFuturesSettings } from "./settings";
+import { checkFuturesRiskCaps } from "./risk";
 import { fetchBybitTicker } from "@/lib/exchanges/bybit/client";
 import { loadPerpInstrument, priceForPerp, qtyForPerp, qtyForPerpNotional } from "@/lib/exchanges/bybit/perp";
 import {
@@ -645,6 +646,20 @@ async function runPlace(
     if (!checked.ok) {
       return fail(checked.error);
     }
+  }
+
+  const working = await loadOpenFuturesWorking(actorScope(actor));
+  const risk = checkFuturesRiskCaps({
+    caps: settings,
+    symbol,
+    side: decided.positionSide,
+    orderQty: qtyNumber,
+    orderNotional: qtyNumber * sizePrice,
+    opens,
+    working,
+  });
+  if (!risk.ok) {
+    return fail(risk.error);
   }
 
   if (limit) {

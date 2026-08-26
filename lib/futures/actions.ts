@@ -2,6 +2,10 @@
 
 import { runFuturesCommand } from "./command";
 import { safeFuturesReturnPath } from "./path";
+import {
+  parseOptionalPositive,
+  parseOptionalPositiveInt,
+} from "./risk";
 import { loadFuturesSettings } from "./settings";
 import {
   formatStrategyDetachBlockers,
@@ -179,6 +183,27 @@ export async function saveFuturesSettings(formData: FormData) {
   const reduceOnly =
     formData.get("reduceOnly") === "on" ||
     formData.get("reduceOnly") === "true";
+  const maxQty = parseOptionalPositive(
+    formData.get("maxQtyPerSymbol"),
+    "Max qty per symbol",
+  );
+  if (!maxQty.ok) {
+    settingsFail(maxQty.error);
+  }
+  const maxNotional = parseOptionalPositive(
+    formData.get("maxNotionalPerSymbol"),
+    "Max notional per symbol",
+  );
+  if (!maxNotional.ok) {
+    settingsFail(maxNotional.error);
+  }
+  const maxRows = parseOptionalPositiveInt(
+    formData.get("maxOpenRows"),
+    "Max open rows",
+  );
+  if (!maxRows.ok) {
+    settingsFail(maxRows.error);
+  }
 
   let connectionId: string | null = null;
   const bindSubmitted = formData.has("exchangeConnectionId");
@@ -212,6 +237,9 @@ export async function saveFuturesSettings(formData: FormData) {
     account_id: account.id,
     strategy_id: FUTURES_STRATEGY_ID,
     reduce_only: reduceOnly,
+    max_qty_per_symbol: maxQty.value,
+    max_notional_per_symbol: maxNotional.value,
+    max_open_rows: maxRows.value,
     ...(accountCanHoldConnections(account.mode) && bindSubmitted
       ? { exchange_connection_id: connectionId }
       : {}),
@@ -230,6 +258,9 @@ export async function saveFuturesSettings(formData: FormData) {
     strategy: FUTURES_STRATEGY_ID,
     data: {
       reduceOnly,
+      maxQtyPerSymbol: maxQty.value,
+      maxNotionalPerSymbol: maxNotional.value,
+      maxOpenRows: maxRows.value,
       ...(bindSubmitted ? { exchangeConnectionId: connectionId } : {}),
     },
   });
