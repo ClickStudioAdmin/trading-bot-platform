@@ -17,15 +17,33 @@ export async function signIn(formData: FormData) {
   const supabase = createServiceClient();
   if (!supabase) {
     redirect(
-      "/sign-in?error=Set%20SUPABASE_SERVICE_ROLE_KEY%20on%20this%20Vercel%20environment%20(TBP-dev%20service_role.%20Leave%20Sensitive%20off%20if%20the%20badge%20says%20Preview).%20This%20is%20the%20database%20key%2C%20not%20Supabase%20Auth.",
+      "/sign-in?error=Set%20SUPABASE_SERVICE_ROLE_KEY%20(local%3A%20.env.local%20with%20the%20TBP-dev%20service_role%3B%20Vercel%3A%20Development%20environment.%20This%20is%20the%20database%20key%2C%20not%20Supabase%20Auth).",
     );
   }
 
-  const { data: existing } = await supabase
-    .from("members")
-    .select("user_id, email, name, role, status, password_hash")
-    .eq("email", email)
-    .maybeSingle();
+  let existing: {
+    user_id?: unknown;
+    status?: unknown;
+    password_hash?: unknown;
+  } | null = null;
+  try {
+    const lookedUp = await supabase
+      .from("members")
+      .select("user_id, email, name, role, status, password_hash")
+      .eq("email", email)
+      .maybeSingle();
+    if (lookedUp.error) {
+      redirect(`/sign-in?error=${encodeURIComponent(lookedUp.error.message)}`);
+    }
+    existing = lookedUp.data;
+  } catch (cause) {
+    const raw = cause instanceof Error ? cause.message : "fetch failed";
+    const hint =
+      raw.toLowerCase().includes("fetch")
+        ? "Could not reach the database. SUPABASE_URL must be https://….supabase.co from TBP-dev Project Settings → API, not the Vercel host. Restart next dev after editing .env.local."
+        : raw;
+    redirect(`/sign-in?error=${encodeURIComponent(hint)}`);
+  }
 
   let userId = existing ? String(existing.user_id) : "";
 

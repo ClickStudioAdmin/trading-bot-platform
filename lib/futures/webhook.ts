@@ -83,6 +83,22 @@ export function futuresWebhookPath(token: string): string {
   return `/api/futures/webhook/${token}`;
 }
 
+export function futuresWebhookPublicUrl(
+  origin: string,
+  token: string,
+): string | null {
+  const base = origin.trim().replace(/\/$/, "");
+  if (!base || !token) {
+    return null;
+  }
+  const url = `${base}${futuresWebhookPath(token)}`;
+  const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim() ?? "";
+  if (!bypass) {
+    return url;
+  }
+  return `${url}?x-vercel-protection-bypass=${encodeURIComponent(bypass)}`;
+}
+
 export function parseWebhookName(
   raw: unknown,
 ): { ok: true; name: string } | { ok: false; error: string } {
@@ -94,6 +110,18 @@ export function parseWebhookName(
     };
   }
   return { ok: true, name };
+}
+
+export function parseWebhookSymbol(
+  raw: unknown,
+): { ok: true; symbol: string } | { ok: false; error: string } {
+  let text = String(raw ?? "").trim().toUpperCase();
+  const colon = text.lastIndexOf(":");
+  if (colon >= 0) {
+    text = text.slice(colon + 1).trim();
+  }
+  text = text.replace(/\.P$/i, "").replace(/PERP$/i, "");
+  return parseFuturesSymbol(text);
 }
 
 export function webhookNameTakenAmong(
@@ -171,7 +199,7 @@ export function parseFuturesWebhook(
     return { ok: true, parsed: { kind: "arm", verb: verb.verb } };
   }
 
-  const symbol = parseFuturesSymbol(row.symbol ?? row.ticker);
+  const symbol = parseWebhookSymbol(row.symbol ?? row.ticker);
   if (!symbol.ok) {
     return symbol;
   }
@@ -184,7 +212,7 @@ export function parseFuturesWebhook(
     return sizeUnit;
   }
   const closeSide = parseWebhookCloseSide(verb.action, row);
-  const sizeRaw = row.size ?? row.qty ?? "";
+  const sizeRaw = row.size ?? row.qty ?? row.contracts ?? "";
   const needsSize = verb.action !== "flatten";
   if (needsSize && String(sizeRaw).trim() === "") {
     return { ok: false, error: "Enter a size." };

@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   generateWebhookToken,
   hashWebhookToken,
-  futuresWebhookPath,
+  futuresWebhookPublicUrl,
   parseWebhookKind,
   parseWebhookName,
   webhookNameTakenAmong,
@@ -92,10 +92,7 @@ export async function listFuturesWebhooks(input: {
       id: String((row as { id: string }).id),
       name: String((row as { name?: string }).name ?? "").trim() || "TradingView",
       kind: kind.ok ? kind.kind : "order",
-      url:
-        token && input.origin
-          ? `${input.origin}${futuresWebhookPath(token)}`
-          : null,
+      url: token ? futuresWebhookPublicUrl(input.origin, token) : null,
     };
   });
 }

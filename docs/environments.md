@@ -148,8 +148,9 @@ The same key encrypts the Futures webhook token (AAD `tbp.futures.webhook.v1`) s
 
 | Variable | Where | Value |
 | --- | --- | --- |
-| `APP_BASE_URL` | Vercel Development / Preview (`develop`) | Optional. Stable `https://…` host used when Futures Settings prints the webhook URL. If unset, the page uses the request `Host` |
+| `APP_BASE_URL` | Vercel Development / Preview (`develop`) | Optional. Stable `https://…` host used when the Webhooks tab prints the URL. If unset, the page uses the request `Host` |
 | `APP_BASE_URL` | Vercel Production (`main`) | Optional. Production origin, no trailing slash |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | Vercel Development / Preview (`develop`) | Same Protection Bypass for Automation secret as the tick. TradingView cannot send headers, so the Webhooks tab appends it as `x-vercel-protection-bypass` on the copied URL. Do not set this on Production. |
 
 Never put the webhook token in `NEXT_PUBLIC_*`. Rotate the token on Futures Settings if it leaks.
 

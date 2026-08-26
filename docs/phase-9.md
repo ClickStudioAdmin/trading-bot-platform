@@ -27,13 +27,13 @@ Stop at the end of this phase for a desk test. Do not start typed desks ([phase-
 
 ## Later
 
-- Live TradingView alert test (not the Positions dummy). Use the Vercel Development URL, not localhost. Confirm Buy / Sell / Close, duplicate `id` does not double-fill, a bad token is 401, Signal arm fires the automation, and the blotter Source is Webhook. If both sides are open, Close needs `close_long` / `close_short` or `side`.
+- Live TradingView alert test (not the Positions dummy). Copy the URL from Webhooks on the Vercel Development host, not localhost. If Vercel Deployment Protection is on, that URL must include the automation bypass query (the desk adds it when `VERCEL_AUTOMATION_BYPASS_SECRET` is set). Confirm Buy / Sell / Close, duplicate `id` does not double-fill, a bad token is 401, Signal arm fires the automation, and the blotter Source is Webhook. If both sides are open, Close needs `close_long` / `close_short` or `side`.
 
 ## How a webhook works
 
-1. On **Webhooks**, create a named URL: `{origin}/api/futures/webhook/{token}`. Name is required and unique on the book. That name is what Automations **When** shows for a Signal webhook. **TradingView strategy** (`order`) needs symbol and size in the JSON. **Signal** (`signal`) accepts `arm` and fires any automation whose When is that name. The token is 64 hex characters, stored as a SHA-256 hash plus ciphertext. Rotate invalidates the old URL. Positions can send a dummy call through the same door.
+1. On **Webhooks**, create a named URL: `{origin}/api/futures/webhook/{token}`. Name is required and unique on the book. That name is what Automations **When** shows for a Signal webhook. **TradingView strategy** (`order`) needs symbol and size in the JSON. **Signal** (`signal`) accepts `arm` and fires any automation whose When is that name. The token is 64 hex characters, stored as a SHA-256 hash plus ciphertext. Rotate invalidates the old URL. Positions can send a dummy call through the same door. On a protection-gated Vercel Preview, the copied URL also includes `x-vercel-protection-bypass` so TradingView can POST without a custom header.
 2. TradingView POSTs JSON to that URL. The path token is the secret. Do not put the token in the JSON. Do not send a Bybit private-API dump.
-3. **Order** — `action` is `buy`, `sell`, or `close` (aliases `flatten`, `close_long`, `close_short`). Same URL for all three. Each TradingView alert has its own message. `symbol` is a USDT linear perp. Size is `qty` or `usdt` (`sizeUnit`). Optional `orderType` `market` or `limit` with `limitPrice`. Close looks up the open row on that symbol (and `side` when both sides are open). Same reduce-only and risk caps as a desk click.
+3. **Order** — `action` is `buy`, `sell`, or `close` (aliases `flatten`, `close_long`, `close_short`). Same URL for all three. Each TradingView alert has its own message. `symbol` may be `{{ticker}}` (Bybit `BTCUSDT.P` and `BYBIT:BTCUSDT.P` are accepted). Size is `qty`, `usdt` (`sizeUnit`), or `contracts`. Optional `orderType` `market` or `limit` with `limitPrice`. Close looks up the open row on that symbol (and `side` when both sides are open). Same reduce-only and risk caps as a desk click. Do not map Pine `strategy.order.action` onto Sell — that sell often means close-long.
 4. **Signal** — `action` is `arm`, `disarm`, or `close-playbook`. `arm` runs automations whose When is that webhook. The rule still owns symbol, size, and Buy / Sell / Close. Phase 11 can also arm a DCA playbook from the same ping.
 5. Optional `id` (or `idempotencyKey`) is stored on `futures_command_receipts`. Live sends it to Bybit as `orderLinkId` when it fits. A replay returns the same flash and does not place again.
 6. TradingView strategy fills store source `webhook`. Automations store `engine`. `rule_name` is the webhook or automation name. Positions, open orders, order details, and Activity show Webhook or Auto plus that name. Manual is a desk click.
@@ -43,7 +43,7 @@ Example order body:
 ```json
 {
   "action": "buy",
-  "symbol": "BTCUSDT",
+  "symbol": "{{ticker}}",
   "size": "0.001",
   "sizeUnit": "qty",
   "id": "{{ticker}}{{timenow}}"

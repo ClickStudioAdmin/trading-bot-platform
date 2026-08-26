@@ -8,6 +8,8 @@ import {
   parseWebhookJson,
   parseWebhookKind,
   parseWebhookName,
+  parseWebhookSymbol,
+  futuresWebhookPublicUrl,
   webhookNameTakenAmong,
   webhookTokensMatch,
 } from "./webhook";
@@ -104,6 +106,51 @@ const longId = parseFuturesWebhook({
 assert.equal(longId.ok, true);
 if (longId.ok && longId.parsed.kind === "order") {
   assert.equal(longId.parsed.idempotencyKey?.length, 32);
+}
+
+const fromTicker = parseFuturesWebhook({
+  action: "buy",
+  ticker: "BYBIT:BTCUSDT.P",
+  contracts: "0.001",
+  id: "tv-1",
+});
+assert.equal(fromTicker.ok, true);
+if (fromTicker.ok && fromTicker.parsed.kind === "order") {
+  assert.equal(fromTicker.parsed.symbol, "BTCUSDT");
+  assert.equal(fromTicker.parsed.size, "0.001");
+} else {
+  assert.fail("TradingView ticker should parse as BTCUSDT");
+}
+
+assert.equal(parseWebhookSymbol("BTCUSDT.P").ok, true);
+const dotted = parseWebhookSymbol("btcusdt.p");
+assert.equal(dotted.ok, true);
+if (dotted.ok) {
+  assert.equal(dotted.symbol, "BTCUSDT");
+}
+const prefixed = parseWebhookSymbol("BYBIT:ETHUSDT.P");
+assert.equal(prefixed.ok, true);
+if (prefixed.ok) {
+  assert.equal(prefixed.symbol, "ETHUSDT");
+}
+assert.equal(parseWebhookSymbol("BTCUSDTPERP").ok, true);
+
+const previousBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+delete process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+assert.equal(
+  futuresWebhookPublicUrl("https://desk.example", "ab".repeat(32)),
+  `https://desk.example/api/futures/webhook/${"ab".repeat(32)}`,
+);
+process.env.VERCEL_AUTOMATION_BYPASS_SECRET = "bypass-secret";
+assert.equal(
+  futuresWebhookPublicUrl("https://desk.example/", "ab".repeat(32)),
+  `https://desk.example/api/futures/webhook/${"ab".repeat(32)}?x-vercel-protection-bypass=bypass-secret`,
+);
+assert.equal(futuresWebhookPublicUrl("", "ab".repeat(32)), null);
+if (previousBypass === undefined) {
+  delete process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+} else {
+  process.env.VERCEL_AUTOMATION_BYPASS_SECRET = previousBypass;
 }
 
 const fromText = parseWebhookJson('{"action":"disarm"}');

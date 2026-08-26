@@ -32,7 +32,7 @@ export async function listMembers(
     return {
       ...empty,
       error:
-        "Set SUPABASE_SERVICE_ROLE_KEY on this Vercel environment (TBP-dev service role, not Sensitive if the badge says Preview). Same key already used to upsert opportunities.",
+        "Set SUPABASE_SERVICE_ROLE_KEY (local: .env.local with the TBP-dev service_role; Vercel: Development environment). Same key already used to upsert opportunities.",
     };
   }
 

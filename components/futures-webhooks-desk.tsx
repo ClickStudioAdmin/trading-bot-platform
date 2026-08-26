@@ -13,7 +13,7 @@ const STRATEGY_PAYLOADS = [
     label: "Buy",
     text: `{
   "action": "buy",
-  "symbol": "BTCUSDT",
+  "symbol": "{{ticker}}",
   "size": "0.001",
   "sizeUnit": "qty",
   "id": "{{ticker}}{{timenow}}"
@@ -23,7 +23,7 @@ const STRATEGY_PAYLOADS = [
     label: "Sell",
     text: `{
   "action": "sell",
-  "symbol": "BTCUSDT",
+  "symbol": "{{ticker}}",
   "size": "0.001",
   "sizeUnit": "qty",
   "id": "{{ticker}}{{timenow}}"
@@ -33,7 +33,7 @@ const STRATEGY_PAYLOADS = [
     label: "Close",
     text: `{
   "action": "close",
-  "symbol": "BTCUSDT",
+  "symbol": "{{ticker}}",
   "id": "{{ticker}}{{timenow}}"
 }`,
   },
@@ -155,8 +155,11 @@ export function FuturesWebhooksDesk({
             ) : (
               <>
                 <p className="text-xs text-ink-muted">
-                  Paste one of these into each TradingView alert. Sell opens or
-                  adds a short. Close exits the open row.
+                  Paste one of these into each TradingView alert. The ticker
+                  placeholder may be BTCUSDT.P. Sell opens or adds a short.
+                  Close exits the open row. Do not use strategy.order.action —
+                  a Pine sell can mean close-long, which is not Sell on this
+                  desk.
                 </p>
                 <div className="grid gap-4 md:grid-cols-3">
                   {STRATEGY_PAYLOADS.map((sample) => (
