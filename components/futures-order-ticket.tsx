@@ -77,7 +77,13 @@ export function FuturesOrderTicket({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start gap-3">
-        <div className="grid min-w-0 flex-1 items-start gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.1fr)_auto_minmax(13rem,1.2fr)]">
+        <div
+          className={
+            orderType === "limit"
+              ? "grid min-w-0 flex-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(9rem,1.1fr)_auto_minmax(10rem,1.2fr)_minmax(8rem,0.95fr)]"
+              : "grid min-w-0 flex-1 items-start gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.1fr)_auto_minmax(13rem,1.2fr)]"
+          }
+        >
           <div className="block text-sm text-ink">
             Symbol
             <FuturesSymbolSelect
