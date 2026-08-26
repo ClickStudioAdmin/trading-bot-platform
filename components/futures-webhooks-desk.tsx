@@ -103,7 +103,7 @@ export function FuturesWebhooksDesk({
               className="flex flex-wrap items-end gap-x-4 gap-y-3"
             >
               <input type="hidden" name="webhookId" value={hook.id} />
-              <label className="w-72 max-w-full text-sm text-ink">
+              <label className="w-[27rem] max-w-full text-sm text-ink">
                 Name
                 <input
                   name="name"
@@ -148,25 +148,28 @@ export function FuturesWebhooksDesk({
               </p>
             )}
           </div>
-          {hook.kind === "signal" ? (
-            <PayloadSample label="Arm" text={SIGNAL_PAYLOAD} />
-          ) : (
-            <div className="space-y-3">
-              <p className="text-xs text-ink-muted">
-                Paste one of these into each TradingView alert. Sell opens or
-                adds a short. Close exits the open row.
-              </p>
-              <div className="grid gap-4 md:grid-cols-3">
-                {STRATEGY_PAYLOADS.map((sample) => (
-                  <PayloadSample
-                    key={sample.label}
-                    label={sample.label}
-                    text={sample.text}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="space-y-3">
+            <p className="text-sm text-ink">Payload</p>
+            {hook.kind === "signal" ? (
+              <PayloadSample label="Arm" text={SIGNAL_PAYLOAD} />
+            ) : (
+              <>
+                <p className="text-xs text-ink-muted">
+                  Paste one of these into each TradingView alert. Sell opens or
+                  adds a short. Close exits the open row.
+                </p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {STRATEGY_PAYLOADS.map((sample) => (
+                    <PayloadSample
+                      key={sample.label}
+                      label={sample.label}
+                      text={sample.text}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
             <form action={rotateFuturesWebhook}>
               <input type="hidden" name="webhookId" value={hook.id} />
