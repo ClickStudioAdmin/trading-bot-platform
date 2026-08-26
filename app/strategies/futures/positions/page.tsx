@@ -83,6 +83,14 @@ export default async function FuturesPositionsPage({
     venueRisk,
   );
 
+  const lastPrices: Record<string, number> = {};
+  for (const [symbol, row] of tickers) {
+    const last = Number(row.lastPrice);
+    if (last > 0) {
+      lastPrices[symbol] = last;
+    }
+  }
+
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Current Positions" />
@@ -148,6 +156,7 @@ export default async function FuturesPositionsPage({
               <input type="hidden" name="next" value={NEXT} />
               <FuturesOrderTicket
                 options={pairs}
+                lastPrices={lastPrices}
                 actions={
                   <>
                     <PendingSubmitButton

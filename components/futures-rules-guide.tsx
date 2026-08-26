@@ -45,8 +45,8 @@ export function FuturesRulesGuide({
           detail="Closes that side on this contract. Empty qty closes the whole row. If nothing is open, the rule waits until there is a row, then closes it while the condition is still true."
         />
         <GuideItem
-          term="Auto badge"
-          detail="Positions opened by a rule show Auto. Manual clicks stay Manual. Take profit, stop loss, and trailing stay on the row, the same as a desk order."
+          term="Source"
+          detail="Positions, open orders, order details, and Activity logs show Manual or Auto. Auto includes the automation or webhook name that placed that fill."
         />
       </dl>
     </section>

@@ -33,6 +33,10 @@ import {
   loadFuturesSettings,
 } from "./settings";
 import { checkFuturesRiskCaps } from "./risk";
+import {
+  futuresOriginLog,
+  withFuturesOrigin,
+} from "./source";
 import { fetchBybitTicker } from "@/lib/exchanges/bybit/client";
 import { loadPerpInstrument, priceForPerp, qtyForPerp, qtyForPerpNotional } from "@/lib/exchanges/bybit/perp";
 import {
@@ -288,6 +292,7 @@ async function runPlace(
   const source = parseFuturesTradeSource(command.source);
   const ruleId = String(command.ruleId ?? "").trim() || null;
   const ruleName = String(command.ruleName ?? "").trim() || null;
+  const origin = futuresOriginLog({ source, ruleName });
   const settings = await loadFuturesSettings(actor.accountId);
   const opens = await loadOpenFuturesOnSymbol(symbol, actorScope(actor));
   const wantedSide = actionParsed.action === "buy" ? "long" : "short";
@@ -411,6 +416,7 @@ async function runPlace(
           reduceOnly: true,
           idempotencyKey: key,
           source,
+          ruleName,
         });
         if (!working.ok) {
           if (connection && venueOrderId) {
@@ -425,7 +431,10 @@ async function runPlace(
         await writeEventLog({
           scope: "trade",
           event: "trade.futures",
-          message: `Limit Close ${symbol} ${row.side} working`,
+          message: withFuturesOrigin(
+            `Limit Close ${symbol} ${row.side} working`,
+            origin,
+          ),
           userId: actor.userId,
           accountId: actor.accountId,
           strategy: FUTURES_STRATEGY_ID,
@@ -437,6 +446,7 @@ async function runPlace(
             live: liveBook,
             workingId: working.id,
             positionId: row.id,
+            ...origin,
           },
         });
         await reconcileOpenFuturesBooks({
@@ -520,6 +530,7 @@ async function runPlace(
         remainingTpsl: tpslFromRow(row),
         idempotencyKey: key,
         source,
+        ruleName,
       });
       if (written.error) {
         await writeEventLog({
@@ -546,10 +557,12 @@ async function runPlace(
       await writeEventLog({
         scope: "trade",
         event: "trade.futures",
-        message:
+        message: withFuturesOrigin(
           written.remaining <= 1e-12
             ? `Closed ${symbol} ${row.side}`
             : `Reduced ${symbol} ${row.side}`,
+          origin,
+        ),
         userId: actor.userId,
         accountId: actor.accountId,
         strategy: FUTURES_STRATEGY_ID,
@@ -560,6 +573,7 @@ async function runPlace(
           live: liveBook,
           positionId: row.id,
           side: row.side,
+          ...origin,
         },
       });
       return {
@@ -736,6 +750,7 @@ async function runPlace(
       trailing,
       idempotencyKey: key,
       source,
+      ruleName,
     });
     if (!working.ok) {
       if (connection && venueOrderId) {
@@ -750,7 +765,10 @@ async function runPlace(
     await writeEventLog({
       scope: "trade",
       event: "trade.futures",
-      message: `Limit ${actionParsed.action === "sell" ? "Sell" : "Buy"} ${symbol} working`,
+      message: withFuturesOrigin(
+        `Limit ${actionParsed.action === "sell" ? "Sell" : "Buy"} ${symbol} working`,
+        origin,
+      ),
       userId: actor.userId,
       accountId: actor.accountId,
       strategy: FUTURES_STRATEGY_ID,
@@ -761,6 +779,7 @@ async function runPlace(
         limitPrice: limit.price,
         live: liveBook,
         workingId: working.id,
+        ...origin,
       },
     });
     await reconcileOpenFuturesBooks({
@@ -893,6 +912,7 @@ async function runPlace(
       trailing: armTrailingAt(trailing, fillPrice),
       idempotencyKey: key,
       source,
+      ruleName,
     });
     flash = liveBook ? "live-added" : "added";
   } else {
@@ -965,10 +985,12 @@ async function runPlace(
   await writeEventLog({
     scope: "trade",
     event: "trade.futures",
-    message:
+    message: withFuturesOrigin(
       decided.kind === "add"
         ? `Added ${symbol} ${decided.positionSide}`
         : `Opened ${symbol} ${decided.positionSide}`,
+      origin,
+    ),
     userId: actor.userId,
     accountId: actor.accountId,
     strategy: FUTURES_STRATEGY_ID,
@@ -979,6 +1001,7 @@ async function runPlace(
       live: liveBook,
       positionId,
       side: decided.positionSide,
+      ...origin,
     },
   });
 
@@ -1265,11 +1288,19 @@ async function runCancelWorking(
   await writeEventLog({
     scope: "trade",
     event: "trade.futures",
-    message: `Cancelled limit ${row.symbol}`,
+    message: withFuturesOrigin(`Cancelled limit ${row.symbol}`, {
+      source: row.source,
+      ruleName: row.ruleName,
+    }),
     userId: actor.userId,
     accountId: actor.accountId,
     strategy: FUTURES_STRATEGY_ID,
-    data: { symbol: row.symbol, workingId: row.id, action: row.action },
+    data: {
+      symbol: row.symbol,
+      workingId: row.id,
+      action: row.action,
+      ...futuresOriginLog({ source: row.source, ruleName: row.ruleName }),
+    },
   });
   return { ok: true, flash: "cancelled", workingId: row.id };
 }
@@ -1374,7 +1405,10 @@ async function runAmendWorking(
   await writeEventLog({
     scope: "trade",
     event: "trade.futures",
-    message: `Amended limit ${row.symbol}`,
+    message: withFuturesOrigin(`Amended limit ${row.symbol}`, {
+      source: row.source,
+      ruleName: row.ruleName,
+    }),
     userId: actor.userId,
     accountId: actor.accountId,
     strategy: FUTURES_STRATEGY_ID,
@@ -1385,6 +1419,7 @@ async function runAmendWorking(
       qty: totalSized.qty,
       limitPrice: amended.limitPrice,
       live: liveBook,
+      ...futuresOriginLog({ source: row.source, ruleName: row.ruleName }),
     },
   });
   return {
@@ -1492,11 +1527,19 @@ async function runCloseAll(
     await writeEventLog({
       scope: "trade",
       event: "trade.futures",
-      message: `Cancelled limit ${row.symbol}`,
+      message: withFuturesOrigin(`Cancelled limit ${row.symbol}`, {
+        source: row.source,
+        ruleName: row.ruleName,
+      }),
       userId: actor.userId,
       accountId: actor.accountId,
       strategy: FUTURES_STRATEGY_ID,
-      data: { symbol: row.symbol, workingId: row.id, action: row.action },
+      data: {
+        symbol: row.symbol,
+        workingId: row.id,
+        action: row.action,
+        ...futuresOriginLog({ source: row.source, ruleName: row.ruleName }),
+      },
     });
   }
 

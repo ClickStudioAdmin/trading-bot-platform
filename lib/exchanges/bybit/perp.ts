@@ -8,6 +8,10 @@ export type LinearPerp = {
   symbol: string;
   baseCoin: string;
   quoteCoin: string;
+  minQty: number;
+  minNotional: number;
+  minPrice: number;
+  tickSize: number;
 };
 
 export function isUsdtLinearPerp(instrument: BybitInstrument): boolean {
@@ -112,11 +116,22 @@ export function listUsdtLinearPerps(
 ): LinearPerp[] {
   return instruments
     .filter(isUsdtLinearPerp)
-    .map((row) => ({
-      symbol: row.symbol,
-      baseCoin: row.baseCoin,
-      quoteCoin: row.quoteCoin || row.settleCoin || "USDT",
-    }))
+    .map((row) => {
+      const step = lotStep(row, 0.001);
+      const tickSize = parseStep(row.priceFilter?.tickSize, 0.01);
+      return {
+        symbol: row.symbol,
+        baseCoin: row.baseCoin,
+        quoteCoin: row.quoteCoin || row.settleCoin || "USDT",
+        minQty: Math.max(lotMin(row, step), step),
+        minNotional: parseStep(
+          row.lotSizeFilter?.minNotionalValue ?? row.lotSizeFilter?.minOrderAmt,
+          0,
+        ),
+        minPrice: parseStep(row.priceFilter?.minPrice, 0),
+        tickSize,
+      };
+    })
     .sort((a, b) => {
       const rank = baseRank(a.baseCoin) - baseRank(b.baseCoin);
       if (rank !== 0) {

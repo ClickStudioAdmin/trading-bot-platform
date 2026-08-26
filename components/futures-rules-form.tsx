@@ -136,43 +136,36 @@ function RuleCard({
 
   return (
     <section className="rounded-card border border-line bg-surface px-4 py-3">
-      <div className="mb-2 grid grid-cols-[auto_minmax(0,1fr)_13rem_auto] items-center gap-x-2 gap-y-0.5">
-        <button
-          type="button"
-          onClick={onRemove}
-          className="justify-self-start rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
-        >
-          Remove
-        </button>
-        <label htmlFor={`${prefix}name`} className="text-[11px] text-ink-muted">
+      <div className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-3">
+        <label htmlFor={`${prefix}name`} className="block text-[11px] text-ink-muted">
           Name
+          <input
+            id={`${prefix}name`}
+            name={`${prefix}name`}
+            defaultValue={layer.name}
+            maxLength={40}
+            className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
+          />
         </label>
-        <label htmlFor={`${prefix}mode`} className="text-[11px] text-ink-muted">
+        <label htmlFor={`${prefix}mode`} className="block text-[11px] text-ink-muted">
           Mode
+          <span className="mt-0.5 flex items-center gap-2">
+            <select
+              id={`${prefix}mode`}
+              name={`${prefix}mode`}
+              value={mode}
+              onChange={(event) => setMode(parseAutomationMode(event.target.value))}
+              className="w-52 rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
+            >
+              <option value="active">
+                {accountReduceOnly ? "Active (Reduce only)" : "Active"}
+              </option>
+              <option value="reduce_only">Reduce only</option>
+              <option value="disabled">Disabled</option>
+            </select>
+            <ModeLight mode={mode} accountReduceOnly={accountReduceOnly} />
+          </span>
         </label>
-        <ModeLight mode={mode} accountReduceOnly={accountReduceOnly} />
-        <span />
-        <input
-          id={`${prefix}name`}
-          name={`${prefix}name`}
-          defaultValue={layer.name}
-          maxLength={40}
-          className="w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
-        />
-        <select
-          id={`${prefix}mode`}
-          name={`${prefix}mode`}
-          value={mode}
-          onChange={(event) => setMode(parseAutomationMode(event.target.value))}
-          className="w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
-        >
-          <option value="active">
-            {accountReduceOnly ? "Active (Reduce only)" : "Active"}
-          </option>
-          <option value="reduce_only">Reduce only</option>
-          <option value="disabled">Disabled</option>
-        </select>
-        <span />
       </div>
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
 
@@ -289,7 +282,13 @@ function RuleCard({
         </label>
       ) : null}
 
-      <div className="mt-3 grid items-end gap-3 md:grid-cols-3">
+      <div
+        className={`mt-3 grid items-end gap-3 ${
+          webhookEntry
+            ? "md:grid-cols-3"
+            : "sm:grid-cols-2 md:grid-cols-4"
+        }`}
+      >
         <label className="block text-sm text-ink">
           When
           <input type="hidden" name={`${prefix}entrySource`} value={entrySource} />
@@ -368,23 +367,34 @@ function RuleCard({
         )}
       </div>
 
-      {closing ? null : (
-        <label className="mt-3 flex items-start gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
-            name={`${prefix}skipIfOpen`}
-            value="on"
-            defaultChecked={layer.skipIfOpen}
-            className="mt-0.5 size-4"
-          />
-          <span>
-            Skip if this side is already open
-            <span className="mt-1 block text-xs text-ink-muted">
-              Off means each new cross or trigger can add size to the same row.
+      <div className="mt-3 flex items-end justify-between gap-3">
+        {closing ? (
+          <span />
+        ) : (
+          <label className="flex items-start gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              name={`${prefix}skipIfOpen`}
+              value="on"
+              defaultChecked={layer.skipIfOpen}
+              className="mt-0.5 size-4"
+            />
+            <span>
+              Skip if this side is already open
+              <span className="mt-1 block text-xs text-ink-muted">
+                Off means each new cross or trigger can add size to the same row.
+              </span>
             </span>
-          </span>
-        </label>
-      )}
+          </label>
+        )}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
+        >
+          Remove
+        </button>
+      </div>
     </section>
   );
 }

@@ -18,6 +18,7 @@ import {
   signedTone,
 } from "@/lib/opportunities/format";
 import type { EventLogRow } from "@/lib/logs/list";
+import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { closeOpenPaperCarry } from "@/lib/paper/actions";
 import { carryPnlPct, clipPnl } from "@/lib/paper/math";
 import {
@@ -413,10 +414,19 @@ export function PositionLogList({ logs }: { logs: EventLogRow[] }) {
 function logDetailRows(log: EventLogRow): MetricRow[] {
   const rows: MetricRow[] = [];
   for (const [key, value] of Object.entries(log.data)) {
-    if (key === "carryId" || key === "positionId" || value === null || value === undefined || value === "") {
+    if (
+      key === "carryId" ||
+      key === "positionId" ||
+      key === "ruleId" ||
+      key === "workingId" ||
+      key === "webhookId" ||
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
       continue;
     }
-    const row = formatLogDataField(key, value);
+    const row = formatLogDataField(key, value, log.strategy);
     if (row) {
       rows.push(row);
     }
@@ -424,8 +434,15 @@ function logDetailRows(log: EventLogRow): MetricRow[] {
   return rows;
 }
 
-function formatLogDataField(key: string, value: unknown): MetricRow | null {
-  const label = LOG_FIELD_LABELS[key] ?? labelFromKey(key);
+function formatLogDataField(
+  key: string,
+  value: unknown,
+  strategy?: string | null,
+): MetricRow | null {
+  const label =
+    key === "ruleName" && strategy === FUTURES_STRATEGY_ID
+      ? "Automation"
+      : (LOG_FIELD_LABELS[key] ?? labelFromKey(key));
 
   if (typeof value === "number" && Number.isFinite(value)) {
     if (/basis|apr|pct$/i.test(key)) {
@@ -498,6 +515,7 @@ const LOG_FIELD_LABELS: Record<string, string> = {
   reason: "Reason",
   closeReason: "Reason",
   ruleName: "Set",
+  webhook: "Webhook",
   closeMaxDte: "Close max DTE",
   closeMinNetApr: "Close min APR",
   takeProfitPct: "Take profit",

@@ -8,7 +8,7 @@ import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 
 export const metadata: Metadata = {
   title: "Activity",
-  description: "Your manual futures activity.",
+  description: "Your manual and automated futures activity.",
 };
 
 export default async function FuturesActivityPage({

@@ -117,6 +117,26 @@ export function automationSide(rule: {
   return rule.action === "buy" ? "long" : "short";
 }
 
+export function futuresDeskAutomationStatus(input: {
+  signedIn: boolean;
+  modes: AutomationMode[];
+  reduceOnly: boolean;
+  liveBook: boolean;
+  bound: boolean;
+}): { automationsRunning: boolean; reduceOnly: boolean } {
+  const anyActive = input.modes.some((mode) => mode === "active");
+  const anyLive = input.modes.some((mode) => mode !== "disabled");
+  const automationsOn = input.signedIn && anyLive;
+  return {
+    automationsRunning:
+      automationsOn &&
+      anyActive &&
+      !input.reduceOnly &&
+      (!input.liveBook || input.bound),
+    reduceOnly: automationsOn && (input.reduceOnly || !anyActive),
+  };
+}
+
 export function decideFuturesAutomationTick(input: {
   conditionMet: boolean;
   wasTrue: boolean;

@@ -108,7 +108,7 @@ export async function handleFuturesWebhook(input: {
       userId,
       accountId,
       strategy: FUTURES_STRATEGY_ID,
-      data: { verb: parsed.parsed.verb, fired },
+      data: { verb: parsed.parsed.verb, fired, webhook: found.name },
     });
     return {
       status: 200,
@@ -162,7 +162,7 @@ export async function handleFuturesWebhook(input: {
       userId,
       accountId,
       strategy: FUTURES_STRATEGY_ID,
-      data: { symbol: order.symbol, action: order.action },
+      data: { symbol: order.symbol, action: order.action, webhook: ruleName },
     });
     return { status: 200, body: { ok: false, error: result.error } };
   }

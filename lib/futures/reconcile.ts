@@ -28,6 +28,10 @@ import {
   type FuturesWorkingStatus,
 } from "./working";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
+import {
+  futuresOriginLog,
+  withFuturesOrigin,
+} from "./source";
 import { parseAccountMode } from "@/lib/accounts/model";
 import {
   fetchBybitTicker,
@@ -289,6 +293,8 @@ async function applyWorkingFill(input: {
       venueOrderId: input.row.venueOrderId,
       tpsl,
       trailing,
+      source: input.row.source,
+      ruleName: input.row.ruleName,
     });
     if (!created.ok) {
       await writeEventLog({
@@ -315,6 +321,8 @@ async function applyWorkingFill(input: {
       venueOrderId: input.row.venueOrderId,
       tpsl,
       trailing,
+      source: input.row.source,
+      ruleName: input.row.ruleName,
     });
     if (added.error) {
       await writeEventLog({
@@ -365,9 +373,12 @@ async function applyWorkingFill(input: {
   await writeEventLog({
     scope: "trade",
     event: "trade.futures",
-    message: sameSide
-      ? `Added ${input.row.symbol} ${input.row.side} from limit`
-      : `Opened ${input.row.symbol} ${input.row.side} from limit`,
+    message: withFuturesOrigin(
+      sameSide
+        ? `Added ${input.row.symbol} ${input.row.side} from limit`
+        : `Opened ${input.row.symbol} ${input.row.side} from limit`,
+      { source: input.row.source, ruleName: input.row.ruleName },
+    ),
     userId: input.row.userId,
     accountId: input.row.accountId,
     strategy: FUTURES_STRATEGY_ID,
@@ -377,6 +388,10 @@ async function applyWorkingFill(input: {
       qty: fillQty,
       workingId: input.row.id,
       positionId,
+      ...futuresOriginLog({
+        source: input.row.source,
+        ruleName: input.row.ruleName,
+      }),
     },
   });
   return true;
@@ -420,6 +435,8 @@ async function applyReduceOnlyWorkingFill(input: {
     venue: input.row.venue,
     environment: input.row.environment,
     venueOrderId: input.row.venueOrderId,
+    source: input.row.source,
+    ruleName: input.row.ruleName,
   });
   if (closed.error) {
     await writeEventLog({
@@ -447,10 +464,12 @@ async function applyReduceOnlyWorkingFill(input: {
   await writeEventLog({
     scope: "trade",
     event: "trade.futures",
-    message:
+    message: withFuturesOrigin(
       closed.remaining <= 1e-12
         ? `Closed ${input.row.symbol} ${target.side} from limit`
         : `Reduced ${input.row.symbol} ${target.side} from limit`,
+      { source: input.row.source, ruleName: input.row.ruleName },
+    ),
     userId: input.row.userId,
     accountId: input.row.accountId,
     strategy: FUTURES_STRATEGY_ID,
@@ -460,6 +479,10 @@ async function applyReduceOnlyWorkingFill(input: {
       qty: input.fillQty,
       workingId: input.row.id,
       positionId: target.id,
+      ...futuresOriginLog({
+        source: input.row.source,
+        ruleName: input.row.ruleName,
+      }),
     },
   });
   return true;
@@ -876,6 +899,8 @@ async function closeStopPosition(input: {
     venue: input.venue,
     environment: input.environment,
     remainingTpsl: input.remainingTpsl,
+    source: input.row.source,
+    ruleName: input.row.ruleName,
   });
   if (written.error) {
     await writeEventLog({
@@ -898,7 +923,7 @@ async function closeStopPosition(input: {
   await writeEventLog({
     scope: "trade",
     event: "trade.futures",
-    message:
+    message: withFuturesOrigin(
       input.kind === "stop_loss"
         ? closed
           ? `Stop loss closed ${input.row.symbol} ${input.row.side}`
@@ -912,6 +937,8 @@ async function closeStopPosition(input: {
             : closed
               ? `Venue closed ${input.row.symbol} ${input.row.side}`
               : `Venue reduced ${input.row.symbol} ${input.row.side}`,
+      { source: input.row.source, ruleName: input.row.ruleName },
+    ),
     userId: input.row.userId,
     accountId: input.row.accountId,
     strategy: FUTURES_STRATEGY_ID,
@@ -922,6 +949,10 @@ async function closeStopPosition(input: {
       price: input.price,
       remaining: written.remaining,
       positionId: input.row.id,
+      ...futuresOriginLog({
+        source: input.row.source,
+        ruleName: input.row.ruleName,
+      }),
     },
   });
   return true;

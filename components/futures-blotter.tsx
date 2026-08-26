@@ -14,6 +14,7 @@ import {
 } from "@/components/futures-column-picker";
 import { FuturesPositionBulkActions } from "@/components/futures-close-all";
 import { FuturesCloseActions } from "@/components/futures-close";
+import { FuturesSourceCell } from "@/components/futures-source";
 import { FuturesTpslCell } from "@/components/futures-tpsl";
 import { FuturesTrailingCell } from "@/components/futures-trailing";
 import {
@@ -23,7 +24,8 @@ import {
 import type { FuturesDeskPosition } from "@/lib/futures/list";
 import type { MarkedFutures } from "@/lib/futures/mark";
 import { formatLeverage } from "@/lib/futures/venue-risk";
-import type { FuturesOrder } from "@/lib/futures/model";
+import type { FuturesOrder, FuturesTradeSource } from "@/lib/futures/model";
+import { resolveOrderOrigin } from "@/lib/futures/source";
 import {
   flattenExitPrice,
   futuresClosedStats,
@@ -127,11 +129,17 @@ export function OpenFuturesTrades({
               <th className="px-3 py-3 font-medium">
                 <ColumnHint
                   label="Contract"
-                  hint="USDT linear perpetual. Badge is Manual or Auto."
+                  hint="USDT linear perpetual."
                 />
               </th>
               <th className="w-14 px-3 py-3 font-medium">
                 <ColumnHint label="Side" hint="Long or short. Both can be open on the same contract." />
+              </th>
+              <th className="w-28 px-3 py-3 font-medium">
+                <ColumnHint
+                  label="Source"
+                  hint="Manual is a desk click. Auto is an automation or TradingView strategy webhook. The name is the rule or webhook that opened this row."
+                />
               </th>
               {visible.qty ? (
                 <th className="w-16 px-3 py-3 font-medium">
@@ -285,6 +293,12 @@ export function ClosedFuturesTrades({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
+                  label="Source"
+                  hint="Manual is a desk click. Auto is an automation or TradingView strategy webhook. The name is the rule or webhook that opened this row."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
                   label="Closed"
                   hint="Local date this row was closed. Hover for UTC."
                 />
@@ -324,7 +338,7 @@ export function ClosedFuturesTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={8}
+                colSpan={9}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -335,7 +349,7 @@ export function ClosedFuturesTrades({
                 }
               />
             ) : closed.length === 0 ? (
-              <EmptyRow colSpan={8} message="No closed futures yet." />
+              <EmptyRow colSpan={9} message="No closed futures yet." />
             ) : (
               closed.map((trade) => (
                 <ClosedFuturesRows key={trade.id} trade={trade} />
@@ -419,7 +433,13 @@ function OpenFuturesRows({
       colSpan={colSpan}
       details={
         <TradeDetailTabs
-          orders={<FuturesOrderList orders={trade.orders} />}
+          orders={
+            <FuturesOrderList
+              orders={trade.orders}
+              positionSource={trade.source}
+              positionRuleName={trade.ruleName}
+            />
+          }
           logs={<PositionLogList logs={trade.logs} />}
         />
       }
@@ -430,12 +450,6 @@ function OpenFuturesRows({
           <span className="min-w-0">
             <span className="flex items-center gap-2 font-medium">
               <span>{trade.baseCoin}</span>
-              <span
-                className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal whitespace-nowrap text-accent"
-                title={trade.ruleName ?? undefined}
-              >
-                {trade.source === "engine" ? "Auto" : "Manual"}
-              </span>
             </span>
             <span className="mt-0.5 block text-xs text-ink-faint">
               {trade.symbol}
@@ -444,6 +458,9 @@ function OpenFuturesRows({
         </span>
       </td>
       <td className="px-3 py-3 capitalize text-ink-muted">{trade.side}</td>
+      <td className="px-3 py-3">
+        <FuturesSourceCell source={trade.source} ruleName={trade.ruleName} />
+      </td>
       {visible.qty ? (
         <td className="px-3 py-3 tabular-nums whitespace-nowrap">{trade.qty}</td>
       ) : null}
@@ -550,10 +567,16 @@ function ClosedFuturesRows({
 
   return (
     <ExpandableTradeRows
-      colSpan={8}
+      colSpan={9}
       details={
         <TradeDetailTabs
-          orders={<FuturesOrderList orders={trade.orders} />}
+          orders={
+            <FuturesOrderList
+              orders={trade.orders}
+              positionSource={trade.source}
+              positionRuleName={trade.ruleName}
+            />
+          }
           logs={<PositionLogList logs={trade.logs} />}
         />
       }
@@ -564,12 +587,6 @@ function ClosedFuturesRows({
           <span className="min-w-0">
             <span className="flex items-center gap-2 font-medium">
               <span>{baseCoin}</span>
-              <span
-                className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal whitespace-nowrap text-accent"
-                title={trade.ruleName ?? undefined}
-              >
-                {trade.source === "engine" ? "Auto" : "Manual"}
-              </span>
             </span>
             <span className="mt-0.5 block text-xs text-ink-faint">
               {trade.symbol}
@@ -577,6 +594,9 @@ function ClosedFuturesRows({
             </span>
           </span>
         </span>
+      </td>
+      <td className="px-4 py-3">
+        <FuturesSourceCell source={trade.source} ruleName={trade.ruleName} />
       </td>
       <td className="px-4 py-3 text-ink-muted">
         {trade.closedAtMs ? (
@@ -602,7 +622,15 @@ function ClosedFuturesRows({
   );
 }
 
-function FuturesOrderList({ orders }: { orders: FuturesOrder[] }) {
+function FuturesOrderList({
+  orders,
+  positionSource,
+  positionRuleName,
+}: {
+  orders: FuturesOrder[];
+  positionSource: FuturesTradeSource;
+  positionRuleName: string | null;
+}) {
   if (orders.length === 0) {
     return <p className="text-sm text-ink-muted">No orders recorded.</p>;
   }
@@ -614,39 +642,53 @@ function FuturesOrderList({ orders }: { orders: FuturesOrder[] }) {
       role="region"
       aria-label="Orders"
     >
-      {orders.map((order) => (
-        <article
-          key={order.id}
-          className="rounded-card border border-line bg-surface-raised p-4"
-        >
-          <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-            <h3 className="text-sm font-semibold tracking-tight">
-              {order.action === "flatten"
-                ? "Close"
-                : order.action === "sell"
-                  ? "Sell"
-                  : "Buy"}
-            </h3>
-            <p className="text-xs text-ink-muted">
-              <LocalTime at={order.filledAtMs} />
+      {orders.map((order) => {
+        const origin = resolveOrderOrigin(order, {
+          source: positionSource,
+          ruleName: positionRuleName,
+        });
+        return (
+          <article
+            key={order.id}
+            className="rounded-card border border-line bg-surface-raised p-4"
+          >
+            <header className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+              <div className="min-w-0">
+                <h3 className="text-sm font-semibold tracking-tight">
+                  {order.action === "flatten"
+                    ? "Close"
+                    : order.action === "sell"
+                      ? "Sell"
+                      : "Buy"}
+                </h3>
+                <span className="mt-1 block">
+                  <FuturesSourceCell
+                    source={origin.source}
+                    ruleName={origin.ruleName}
+                  />
+                </span>
+              </div>
+              <p className="text-xs text-ink-muted">
+                <LocalTime at={order.filledAtMs} />
+              </p>
+            </header>
+            <p className="mt-0.5 text-sm text-ink-muted">
+              {order.qty}
+              {order.price ? ` @ ${formatPrice(order.price)}` : ""}
+              {order.notionalUsdt
+                ? ` · ${formatUsd(order.notionalUsdt)}`
+                : ""}
             </p>
-          </header>
-          <p className="mt-0.5 text-sm text-ink-muted">
-            {order.qty}
-            {order.price ? ` @ ${formatPrice(order.price)}` : ""}
-            {order.notionalUsdt
-              ? ` · ${formatUsd(order.notionalUsdt)}`
-              : ""}
-          </p>
-          {order.venueOrderId ? (
-            <p className="mt-0.5 text-xs text-ink-faint">
-              Venue {order.venueOrderId}
-            </p>
-          ) : (
-            <p className="mt-0.5 text-xs text-ink-faint">Paper fill</p>
-          )}
-        </article>
-      ))}
+            {order.venueOrderId ? (
+              <p className="mt-0.5 text-xs text-ink-faint">
+                Venue {order.venueOrderId}
+              </p>
+            ) : (
+              <p className="mt-0.5 text-xs text-ink-faint">Paper fill</p>
+            )}
+          </article>
+        );
+      })}
     </div>
   );
 }

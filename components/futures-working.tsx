@@ -5,6 +5,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TokenIcon } from "@/components/token-icon";
 import { TpslPair } from "@/components/futures-tpsl";
 import { FuturesCancelAllOrders } from "@/components/futures-close-all";
+import { FuturesSourceCell } from "@/components/futures-source";
 import { FuturesWorkingEdit } from "@/components/futures-working-edit";
 import { cancelFuturesWorking } from "@/lib/futures/actions";
 import {
@@ -66,6 +67,12 @@ export function FuturesWorkingOrders({
                 />
               </th>
               <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Source"
+                  hint="Manual is a desk click. Auto is an automation or TradingView strategy webhook. The name is the rule or webhook that placed this limit."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
                 <ColumnHint label="Qty" hint="Original size. Filled is how much has matched so far." />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -113,7 +120,7 @@ export function FuturesWorkingOrders({
           <tbody>
             {!signedIn ? (
               <tr>
-                <td colSpan={9} className="px-4 py-6 text-sm text-ink-muted">
+                <td colSpan={10} className="px-4 py-6 text-sm text-ink-muted">
                   <Link href="/sign-in" className="text-accent">
                     Sign in
                   </Link>{" "}
@@ -122,7 +129,7 @@ export function FuturesWorkingOrders({
               </tr>
             ) : working.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-6 text-sm text-ink-muted">
+                <td colSpan={10} className="px-4 py-6 text-sm text-ink-muted">
                   No working limits. Choose Limit on Place an order, or Limit on an open row.
                 </td>
               </tr>
@@ -166,6 +173,9 @@ function WorkingRow({
       </td>
       <td className="px-4 py-3">
         {workingActionLabel(row.action, row.reduceOnly)}
+      </td>
+      <td className="px-4 py-3">
+        <FuturesSourceCell source={row.source} ruleName={row.ruleName} />
       </td>
       <td className="px-4 py-3 tabular-nums">
         {row.remainingQty}

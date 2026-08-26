@@ -93,5 +93,7 @@ function order(
     notionalUsdt: 100,
     venueOrderId: null,
     filledAtMs: 1,
+    source: "manual",
+    ruleName: null,
   };
 }

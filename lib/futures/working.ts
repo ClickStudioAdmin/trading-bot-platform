@@ -3,9 +3,10 @@ import type {
   FuturesOrderType,
   FuturesSide,
   FuturesTpslMode,
+  FuturesTradeSource,
   FuturesTrigger,
 } from "./model";
-import { parseFuturesTriggerColumn } from "./model";
+import { parseFuturesTriggerColumn, parseFuturesTradeSource } from "./model";
 
 export type FuturesWorkingStatus = "open" | "filled" | "cancelled" | "rejected";
 
@@ -40,6 +41,8 @@ export type FuturesWorkingOrder = {
   slLimitPrice: number | null;
   trailingStop: number | null;
   trailingActive: number | null;
+  source: FuturesTradeSource;
+  ruleName: string | null;
 };
 
 export function paperLimitShouldFill(input: {
@@ -192,6 +195,8 @@ export function parseFuturesWorkingRow(
     trailingStop: Number(row.trailing_stop) > 0 ? Number(row.trailing_stop) : null,
     trailingActive:
       Number(row.trailing_active) > 0 ? Number(row.trailing_active) : null,
+    source: parseFuturesTradeSource(row.source),
+    ruleName: String(row.rule_name ?? "").trim() || null,
   };
 }
 

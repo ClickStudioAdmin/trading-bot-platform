@@ -4,6 +4,7 @@ import {
   decideFuturesAutomationTick,
   defaultFuturesAutomationForm,
   futuresAutomationIdempotencyKey,
+  futuresDeskAutomationStatus,
   parseFuturesAutomationForm,
   parseFuturesTriggerCompare,
   triggerConditionMet,
@@ -188,5 +189,56 @@ if (webhookParsed.ok) {
     "11111111-1111-1111-1111-111111111111",
   );
 }
+
+assert.deepEqual(
+  futuresDeskAutomationStatus({
+    signedIn: true,
+    modes: ["active"],
+    reduceOnly: false,
+    liveBook: true,
+    bound: true,
+  }),
+  { automationsRunning: true, reduceOnly: false },
+);
+assert.deepEqual(
+  futuresDeskAutomationStatus({
+    signedIn: true,
+    modes: ["active"],
+    reduceOnly: true,
+    liveBook: true,
+    bound: true,
+  }),
+  { automationsRunning: false, reduceOnly: true },
+);
+assert.deepEqual(
+  futuresDeskAutomationStatus({
+    signedIn: true,
+    modes: ["reduce_only"],
+    reduceOnly: false,
+    liveBook: false,
+    bound: false,
+  }),
+  { automationsRunning: false, reduceOnly: true },
+);
+assert.deepEqual(
+  futuresDeskAutomationStatus({
+    signedIn: true,
+    modes: ["active"],
+    reduceOnly: false,
+    liveBook: true,
+    bound: false,
+  }),
+  { automationsRunning: false, reduceOnly: false },
+);
+assert.deepEqual(
+  futuresDeskAutomationStatus({
+    signedIn: true,
+    modes: [],
+    reduceOnly: true,
+    liveBook: true,
+    bound: true,
+  }),
+  { automationsRunning: false, reduceOnly: false },
+);
 
 console.log("futures automation checks passed");

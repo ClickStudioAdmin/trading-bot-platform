@@ -21,7 +21,7 @@ export type FuturesOpenColumnVisibility = Record<
 
 export const FUTURES_OPEN_COLUMNS_KEY = "tbp-columns:futures-open";
 
-export const FUTURES_OPEN_LOCKED_COLUMN_COUNT = 4;
+export const FUTURES_OPEN_LOCKED_COLUMN_COUNT = 5;
 
 export const FUTURES_OPEN_COLUMN_LABELS: Record<
   FuturesOpenOptionalColumn,

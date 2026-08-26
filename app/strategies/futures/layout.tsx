@@ -5,6 +5,8 @@ import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import { futuresDeskAutomationStatus } from "@/lib/futures/automation";
+import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import {
   FUTURES_PRIMARY_LINKS,
@@ -20,6 +22,9 @@ export default async function FuturesLayout({
   const session = await getSessionContext();
   const live = Boolean(session && accountCanHoldConnections(session.account.mode));
   const settings = session ? await loadFuturesSettings() : null;
+  const rules = session
+    ? await loadFuturesAutomationRules(session.account.id)
+    : [];
   const connections =
     live && session
       ? await listExchangeConnections(session.member.id, session.account.id)
@@ -34,6 +39,13 @@ export default async function FuturesLayout({
           bound.id,
         )
       : null;
+  const deskStatus = futuresDeskAutomationStatus({
+    signedIn: Boolean(session),
+    modes: rules.map((rule) => rule.mode),
+    reduceOnly: Boolean(settings?.reduceOnly),
+    liveBook: live,
+    bound: Boolean(bound),
+  });
   return (
     <div>
       <StrategySubnav
@@ -43,7 +55,8 @@ export default async function FuturesLayout({
         primaryLinks={FUTURES_PRIMARY_LINKS}
         secondaryLinks={FUTURES_SECONDARY_LINKS}
         automationsHref={FUTURES_PATHS.automations}
-        reduceOnly={Boolean(settings?.reduceOnly)}
+        automationsRunning={deskStatus.automationsRunning}
+        reduceOnly={deskStatus.reduceOnly}
         connection={
           live
             ? bound

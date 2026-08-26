@@ -6,16 +6,26 @@ import { FuturesTpslFields } from "@/components/futures-tpsl";
 import { FuturesTrailingFields } from "@/components/futures-trailing";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
+import {
+  formatPerpMinQty,
+  perpTicketLimitError,
+  perpTicketSizeError,
+} from "@/lib/exchanges/bybit/ticket-size";
 
 export function FuturesOrderTicket({
   options,
+  lastPrices = {},
   actions,
 }: {
   options: LinearPerp[];
+  lastPrices?: Record<string, number>;
   actions?: ReactNode;
 }) {
   const [symbol, setSymbol] = useState(
-    () => options.find((row) => row.symbol === "BTCUSDT")?.symbol ?? options[0]?.symbol ?? "BTCUSDT",
+    () =>
+      options.find((row) => row.symbol === "BTCUSDT")?.symbol ??
+      options[0]?.symbol ??
+      "BTCUSDT",
   );
   const [unit, setUnit] = useState<"qty" | "usdt">("qty");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");
@@ -24,10 +34,40 @@ export function FuturesOrderTicket({
   const selected = options.find((row) => row.symbol === symbol);
   const baseCoin = selected?.baseCoin ?? "Token";
   const quoteCoin = quoteLabel(selected?.quoteCoin);
+  const minQty = selected?.minQty ?? 0;
+  const minNotional = selected?.minNotional ?? 0;
+  const minPrice = selected?.minPrice ?? 0;
+  const tickSize = selected?.tickSize ?? 0;
+  const sizeError = perpTicketSizeError({
+    size,
+    unit,
+    minQty,
+    minNotional,
+    lastPrice: lastPrices[symbol] ?? null,
+    limitPrice,
+    orderType,
+    baseCoin,
+  });
+  const limitError =
+    orderType === "limit"
+      ? perpTicketLimitError({
+          limitPrice,
+          minPrice,
+          tickSize,
+        })
+      : null;
+  const ticketError = sizeError ?? limitError;
+  const qtyPlaceholder = minQty > 0 ? formatPerpMinQty(minQty) : "0.001";
+  const limitPlaceholder =
+    minPrice > 0
+      ? formatPerpMinQty(minPrice)
+      : tickSize > 0
+        ? formatPerpMinQty(tickSize)
+        : "0.0";
 
   return (
     <div className="space-y-4">
-      <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.1fr)_auto_minmax(13rem,1.2fr)_minmax(10rem,1fr)]">
+      <div className="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.1fr)_auto_minmax(13rem,1.2fr)_minmax(10rem,1fr)]">
         <div className="block text-sm text-ink">
           Symbol
           <FuturesSymbolSelect
@@ -68,15 +108,17 @@ export function FuturesOrderTicket({
                 value={size}
                 onChange={setSize}
                 allowDecimal
-                placeholder={unit === "usdt" ? "100" : "0.001"}
+                placeholder={unit === "usdt" ? "100" : qtyPlaceholder}
                 ariaLabel={
                   unit === "usdt"
                     ? `Size in ${quoteCoin}`
                     : `Size in ${baseCoin}`
                 }
-                className={`w-full rounded-control border border-line bg-surface-raised py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none ${
-                  unit === "usdt" ? "pr-3 pl-7" : "px-3"
-                }`}
+                className={`w-full rounded-control border bg-surface-raised py-2 text-sm tabular-nums text-ink focus:outline-none ${
+                  sizeError
+                    ? "border-danger focus:border-danger"
+                    : "border-line focus:border-line-strong"
+                } ${unit === "usdt" ? "pr-3 pl-7" : "px-3"}`}
               />
             </span>
             <input type="hidden" name="sizeUnit" value={unit} />
@@ -101,6 +143,9 @@ export function FuturesOrderTicket({
               </UnitButton>
             </div>
           </div>
+          {sizeError ? (
+            <p className="mt-1 text-xs text-danger">{sizeError}</p>
+          ) : null}
         </div>
         {orderType === "limit" ? (
           <div className="block text-sm text-ink">
@@ -114,18 +159,32 @@ export function FuturesOrderTicket({
                 value={limitPrice}
                 onChange={setLimitPrice}
                 allowDecimal
-                placeholder="0.0"
+                placeholder={limitPlaceholder}
                 ariaLabel="Limit price"
-                className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+                className={`w-full rounded-control border bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:outline-none ${
+                  limitError
+                    ? "border-danger focus:border-danger"
+                    : "border-line focus:border-line-strong"
+                }`}
               />
             </span>
+            {limitError ? (
+              <p className="mt-1 text-xs text-danger">{limitError}</p>
+            ) : null}
           </div>
         ) : null}
       </div>
       <FuturesTpslFields />
       <FuturesTrailingFields />
       {actions ? (
-        <div className="flex flex-wrap justify-end gap-2">{actions}</div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <fieldset
+            disabled={Boolean(ticketError)}
+            className="flex flex-wrap justify-end gap-2 border-0 p-0 disabled:opacity-40"
+          >
+            {actions}
+          </fieldset>
+        </div>
       ) : null}
     </div>
   );

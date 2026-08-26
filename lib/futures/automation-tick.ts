@@ -147,7 +147,12 @@ export async function runFuturesAutomationTick(): Promise<{ fired: number }> {
           userId: account.userId,
           accountId,
           strategy: FUTURES_STRATEGY_ID,
-          data: { ruleId: rule.id, symbol: rule.symbol, action: rule.action },
+          data: {
+            ruleId: rule.id,
+            ruleName: rule.name,
+            symbol: rule.symbol,
+            action: rule.action,
+          },
         });
         continue;
       }
@@ -249,7 +254,11 @@ export async function fireWebhookAutomationEntries(input: {
         userId: input.userId,
         accountId: input.accountId,
         strategy: FUTURES_STRATEGY_ID,
-        data: { ruleId: rule.id, webhookId: input.webhookId },
+        data: {
+          ruleId: rule.id,
+          ruleName: rule.name,
+          webhookId: input.webhookId,
+        },
       });
     }
   }

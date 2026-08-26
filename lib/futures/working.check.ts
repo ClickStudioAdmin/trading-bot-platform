@@ -129,6 +129,32 @@ assert.equal(parsed.tpLimitPrice, null);
 assert.equal(parsed.trailingStop, null);
 assert.equal(parsed.trailingActive, null);
 assert.equal(parsed.reduceOnly, false);
+assert.equal(parsed.source, "manual");
+assert.equal(parsed.ruleName, null);
+
+const engineRaw = {
+  id: "w1",
+  user_id: "u1",
+  account_id: "a1",
+  position_id: null,
+  symbol: "BTCUSDT",
+  action: "buy",
+  side: "long",
+  qty: 0.01,
+  filled_qty: 0,
+  remaining_qty: 0.01,
+  limit_price: 80000,
+  status: "open",
+  source: "engine",
+  rule_name: "DCA 1INCH",
+  venue: null,
+  environment: null,
+  venue_order_id: null,
+  created_at: "2026-08-25T00:00:00.000Z",
+};
+const engineWorking = parseFuturesWorkingRow(engineRaw);
+assert.equal(engineWorking.source, "engine");
+assert.equal(engineWorking.ruleName, "DCA 1INCH");
 
 const closeLimit = parseFuturesWorkingRow({
   id: "w2",
