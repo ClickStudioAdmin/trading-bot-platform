@@ -14,5 +14,5 @@ from (
 where hook.id = ranked.id
     and ranked.n > 1;
 
-create unique index futures_webhooks_account_name_idx
+create unique index if not exists futures_webhooks_account_name_idx
     on public.futures_webhooks (account_id, lower(name));
