@@ -55,7 +55,7 @@ function tickChanged(body: TickBody): boolean {
   );
 }
 
-export function AdminTickButton() {
+export function AdminTickButton({ autoTick }: { autoTick: boolean }) {
   const router = useRouter();
   const inFlight = useRef(false);
   const runTickRef = useRef<(auto: boolean) => Promise<void>>(async () => {});
@@ -148,7 +148,7 @@ export function AdminTickButton() {
 
     function start() {
       stop();
-      if (document.hidden) {
+      if (!autoTick || document.hidden) {
         return;
       }
       void runTickRef.current(true);
@@ -173,7 +173,7 @@ export function AdminTickButton() {
       stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, []);
+  }, [autoTick]);
 
   return (
     <span className="relative">
@@ -184,9 +184,15 @@ export function AdminTickButton() {
         onClick={() => void runTick(false)}
         className="relative rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
         aria-label={busy ? "Ticking" : ok ? "Done" : "Tick"}
-        title="Ticks every 5 seconds while this tab is open. Click for a count."
+        title={
+          autoTick
+            ? "Ticks every 5 seconds while this tab is open. Click for a count."
+            : "Auto tick is off. Click to run once."
+        }
       >
-        <span className="absolute top-1 right-1 size-1.5 rounded-full bg-success" />
+        {autoTick ? (
+          <span className="absolute top-1 right-1 size-1.5 rounded-full bg-success" />
+        ) : null}
         <span className="inline-grid justify-items-center">
           <span className="invisible col-start-1 row-start-1" aria-hidden>
             Tick

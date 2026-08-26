@@ -114,7 +114,7 @@ A member is an admin when `members.role` is `admin`, or the email is `click.stud
 
 The tick is `POST /api/engine/tick` on the Sydney Vercel function, guarded by `CRON_SECRET`. [`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) POSTs it every 5 minutes. Do not use Vercel Cron (Hobby is daily and Production-only).
 
-Confirm a tick from **Actions → Paper Engine Tick → Run workflow**, or from the header **Tick** button (admins only). While an admin has a visible tab open, that button also POSTs `/api/engine/admin-tick?auto=1` every 5 seconds. Hidden tabs pause. Auto ticks skip idle log rows. The JSON body is `{ users, opened, added, closed, clipped }`. `added` is a Dynamic clip on an existing row. Failures show in that run and in `/admin/logs`. The header button calls `POST /api/engine/admin-tick` with the signed-in admin session. It does not use `CRON_SECRET`.
+Confirm a tick from **Actions → Paper Engine Tick → Run workflow**, or from the header **Tick** button (admins only). While an admin has a visible tab open, that button also POSTs `/api/engine/admin-tick?auto=1` every 5 seconds unless **Auto tick** is off in `/admin/settings`. Hidden tabs pause. Auto ticks skip idle log rows. The JSON body is `{ users, opened, added, closed, clipped }`. `added` is a Dynamic clip on an existing row. Failures show in that run and in `/admin/logs`. The header button calls `POST /api/engine/admin-tick` with the signed-in admin session. It does not use `CRON_SECRET`.
 
 | Variable | Where | Value |
 | --- | --- | --- |

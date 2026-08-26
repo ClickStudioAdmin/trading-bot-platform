@@ -4,6 +4,7 @@ import { SiteNav } from "@/components/site-nav";
 import { UserMenu } from "@/components/user-menu";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { getAdminUser } from "@/lib/admin/access";
+import { loadAutoTickEnabled } from "@/lib/admin/settings";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
 import { memberDisplayName } from "@/lib/members/sync";
 import { connection } from "next/server";
@@ -15,6 +16,7 @@ export async function SiteHeader() {
   const admin = user ? await getAdminUser() : null;
   const extraLinks = admin ? [{ href: "/admin", label: "Admin" }] : [];
   const accounts = user ? await listTradingAccounts(user.id) : [];
+  const autoTick = admin ? await loadAutoTickEnabled() : false;
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur-sm">
@@ -42,7 +44,7 @@ export async function SiteHeader() {
             current={session?.account}
             accounts={accounts}
           />
-          {admin ? <AdminTickButton /> : null}
+          {admin ? <AdminTickButton autoTick={autoTick} /> : null}
         </div>
       </div>
     </header>
