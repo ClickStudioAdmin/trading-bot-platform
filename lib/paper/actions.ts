@@ -61,7 +61,7 @@ export async function openPaperCarry(formData: FormData) {
     String(formData.get("shownCapacityUsdt") ?? ""),
   );
   if (!spotSymbol || !futureSymbol || requested === null) {
-    redirect(`${next}?paperError=${encodeURIComponent("Enter a positive USDT notional.")}`);
+    redirect(`${next}?paperError=${encodeURIComponent("Enter a positive USDT value.")}`);
   }
 
   let match;

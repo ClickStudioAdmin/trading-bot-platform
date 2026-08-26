@@ -157,6 +157,7 @@ export async function closeAllFutures(formData: FormData) {
     },
     command: {
       kind: "close-all",
+      scope: formData.get("scope"),
       confirm: formData.get("confirm"),
       idempotencyKey: formData.get("idempotencyKey"),
     },
@@ -208,23 +209,16 @@ export async function saveFuturesSettings(formData: FormData) {
   const reduceOnly =
     formData.get("reduceOnly") === "on" ||
     formData.get("reduceOnly") === "true";
-  const maxQty = parseOptionalPositive(
-    formData.get("maxQtyPerSymbol"),
-    "Max qty per symbol",
+  const maxValue = parseOptionalPositive(
+    formData.get("maxValuePerSymbol") ?? formData.get("maxNotionalPerSymbol"),
+    "Max value per symbol",
   );
-  if (!maxQty.ok) {
-    settingsFail(maxQty.error);
-  }
-  const maxNotional = parseOptionalPositive(
-    formData.get("maxNotionalPerSymbol"),
-    "Max notional per symbol",
-  );
-  if (!maxNotional.ok) {
-    settingsFail(maxNotional.error);
+  if (!maxValue.ok) {
+    settingsFail(maxValue.error);
   }
   const maxRows = parseOptionalPositiveInt(
-    formData.get("maxOpenRows"),
-    "Max open rows",
+    formData.get("maxOpenPositions") ?? formData.get("maxOpenRows"),
+    "Max open positions",
   );
   if (!maxRows.ok) {
     settingsFail(maxRows.error);
@@ -262,8 +256,7 @@ export async function saveFuturesSettings(formData: FormData) {
     account_id: account.id,
     strategy_id: FUTURES_STRATEGY_ID,
     reduce_only: reduceOnly,
-    max_qty_per_symbol: maxQty.value,
-    max_notional_per_symbol: maxNotional.value,
+    max_notional_per_symbol: maxValue.value,
     max_open_rows: maxRows.value,
     ...(accountCanHoldConnections(account.mode) && bindSubmitted
       ? { exchange_connection_id: connectionId }
@@ -283,9 +276,8 @@ export async function saveFuturesSettings(formData: FormData) {
     strategy: FUTURES_STRATEGY_ID,
     data: {
       reduceOnly,
-      maxQtyPerSymbol: maxQty.value,
-      maxNotionalPerSymbol: maxNotional.value,
-      maxOpenRows: maxRows.value,
+      maxValuePerSymbol: maxValue.value,
+      maxOpenPositions: maxRows.value,
       ...(bindSubmitted ? { exchangeConnectionId: connectionId } : {}),
     },
   });

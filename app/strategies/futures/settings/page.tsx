@@ -107,45 +107,33 @@ export default async function FuturesSettingsPage({
             is never blocked.
           </p>
           <label className="block text-sm text-ink">
-            Max qty per symbol
-            <GroupedNumberInput
-              name="maxQtyPerSymbol"
-              defaultValue={
-                settings.maxQtyPerSymbol === null
-                  ? ""
-                  : String(settings.maxQtyPerSymbol)
-              }
-              allowDecimal
-              placeholder="No cap"
-              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
-            />
-          </label>
-          <label className="block text-sm text-ink">
-            Max notional per symbol
+            Max value per symbol
             <span className="relative mt-1 block">
               <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
                 $
               </span>
               <GroupedNumberInput
-                name="maxNotionalPerSymbol"
+                name="maxValuePerSymbol"
                 defaultValue={
-                  settings.maxNotionalPerSymbol === null
+                  settings.maxValuePerSymbol === null
                     ? ""
-                    : String(settings.maxNotionalPerSymbol)
+                    : String(settings.maxValuePerSymbol)
                 }
                 allowDecimal
                 placeholder="No cap"
-                ariaLabel="Max notional per symbol"
+                ariaLabel="Max value per symbol"
                 className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
               />
             </span>
           </label>
           <label className="block text-sm text-ink">
-            Max open rows
+            Max open positions
             <GroupedNumberInput
-              name="maxOpenRows"
+              name="maxOpenPositions"
               defaultValue={
-                settings.maxOpenRows === null ? "" : String(settings.maxOpenRows)
+                settings.maxOpenPositions === null
+                  ? ""
+                  : String(settings.maxOpenPositions)
               }
               placeholder="No cap"
               className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"

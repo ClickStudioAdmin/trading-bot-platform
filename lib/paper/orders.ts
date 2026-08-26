@@ -139,7 +139,7 @@ export function paperOrderInsertRow(input: {
   fillFuturePrice?: number | null;
 }) {
   if (!(input.notionalUsdt > 0)) {
-    throw new Error("Notional must be positive");
+    throw new Error("Value must be positive");
   }
   const fillBasis = clipFillBasis(
     input.opportunity,

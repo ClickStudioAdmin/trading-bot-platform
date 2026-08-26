@@ -489,7 +489,7 @@ function formatLogDataField(key: string, value: unknown): MetricRow | null {
 const LOG_FIELD_LABELS: Record<string, string> = {
   spotSymbol: "Spot",
   futureSymbol: "Future",
-  notionalUsdt: "Notional",
+  notionalUsdt: "Value",
   clipUsdt: "Clip value",
   entryBasis: "Entry basis",
   source: "Source",

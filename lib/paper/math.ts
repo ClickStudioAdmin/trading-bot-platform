@@ -14,7 +14,7 @@ export function carryPnlUsdt(
   feeRate: number,
 ): number {
   if (!(notionalUsdt > 0)) {
-    throw new Error("Notional must be positive");
+    throw new Error("Value must be positive");
   }
   if (
     !Number.isFinite(entryBasis) ||
@@ -42,7 +42,7 @@ export function blendEntryBasis(
   clipBasis: number,
 ): number {
   if (!(currentNotionalUsdt > 0) || !(clipUsdt > 0)) {
-    throw new Error("Notional must be positive");
+    throw new Error("Value must be positive");
   }
   if (!Number.isFinite(currentEntryBasis) || !Number.isFinite(clipBasis)) {
     throw new Error("Basis must be finite");
@@ -91,7 +91,7 @@ export function clipPnl(input: {
 
 export function carryPnlPct(pnlUsdt: number, notionalUsdt: number): number {
   if (!(notionalUsdt > 0)) {
-    throw new Error("Notional must be positive");
+    throw new Error("Value must be positive");
   }
   if (!Number.isFinite(pnlUsdt)) {
     throw new Error("P&L must be finite");

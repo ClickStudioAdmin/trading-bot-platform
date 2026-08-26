@@ -8,7 +8,7 @@ import { OpenStats } from "@/components/open-stats";
 import { PositionLogList } from "@/components/paper-carry-expand";
 import { TokenIcon } from "@/components/token-icon";
 import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
-import { FuturesCloseAll } from "@/components/futures-close-all";
+import { FuturesPositionBulkActions } from "@/components/futures-close-all";
 import { FuturesCloseActions } from "@/components/futures-close";
 import { FuturesTpslCell } from "@/components/futures-tpsl";
 import { FuturesTrailingCell } from "@/components/futures-trailing";
@@ -70,7 +70,6 @@ export function OpenFuturesTrades({
   showCloseAll?: boolean;
   workingCount?: number;
 }) {
-  const canCloseAll = open.length > 0 || workingCount > 0;
   return (
     <section>
       {showHeading ? (
@@ -93,14 +92,12 @@ export function OpenFuturesTrades({
         </div>
       ) : null}
       {showCloseAll ? (
-        <div className="mb-3 flex justify-end">
-          <FuturesCloseAll
-            next={next}
-            enabled={signedIn && canCloseAll}
-            openCount={open.length}
-            workingCount={workingCount}
-          />
-        </div>
+        <FuturesPositionBulkActions
+          next={next}
+          signedIn={signedIn}
+          openCount={open.length}
+          workingCount={workingCount}
+        />
       ) : null}
       <div className="min-w-0 overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full table-fixed text-left text-sm">
@@ -126,7 +123,7 @@ export function OpenFuturesTrades({
               </th>
               <th className="w-24 px-2 py-3 font-medium">
                 <ColumnHint
-                  label="Notional"
+                  label="Value"
                   hint="Qty × entry. P&L scales with this amount."
                 />
               </th>
@@ -148,7 +145,7 @@ export function OpenFuturesTrades({
               <th className="w-16 px-3 py-3 font-medium">
                 <ColumnHint
                   label="P&L %"
-                  hint="Unrealized ÷ notional. Not annualized."
+                  hint="Unrealized ÷ value. Not annualized."
                 />
               </th>
               <th className="w-[4.5rem] px-3 py-3 font-medium">
@@ -266,7 +263,7 @@ export function ClosedFuturesTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="P&L %"
-                  hint="Realized ÷ notional. Same figure as Realized."
+                  hint="Realized ÷ value. Same figure as Realized."
                 />
               </th>
             </tr>

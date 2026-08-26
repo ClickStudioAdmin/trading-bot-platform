@@ -5,22 +5,20 @@ import {
   parseOptionalPositiveInt,
 } from "./risk";
 
-assert.deepEqual(parseOptionalPositive("", "Max qty"), { ok: true, value: null });
-assert.deepEqual(parseOptionalPositive("1.5", "Max qty"), { ok: true, value: 1.5 });
-assert.equal(parseOptionalPositive("0", "Max qty").ok, false);
+assert.deepEqual(parseOptionalPositive("", "Max value"), { ok: true, value: null });
+assert.deepEqual(parseOptionalPositive("1.5", "Max value"), { ok: true, value: 1.5 });
+assert.equal(parseOptionalPositive("0", "Max value").ok, false);
 assert.equal(parseOptionalPositiveInt("3", "Max rows").ok, true);
 assert.equal(parseOptionalPositiveInt("1.5", "Max rows").ok, false);
 
 const base = {
   caps: {
-    maxQtyPerSymbol: null as number | null,
-    maxNotionalPerSymbol: null as number | null,
-    maxOpenRows: null as number | null,
+    maxValuePerSymbol: null as number | null,
+    maxOpenPositions: null as number | null,
   },
   symbol: "BTCUSDT",
   side: "long" as const,
-  orderQty: 0.1,
-  orderNotional: 10_000,
+  orderValue: 10_000,
   opens: [] as { symbol: string; side: "long" | "short"; qty: number; notionalUsdt: number }[],
   working: [] as {
     symbol: string;
@@ -36,54 +34,39 @@ assert.equal(checkFuturesRiskCaps(base).ok, true);
 assert.equal(
   checkFuturesRiskCaps({
     ...base,
-    caps: { ...base.caps, maxQtyPerSymbol: 0.05 },
+    caps: { ...base.caps, maxValuePerSymbol: 9_000 },
   }).ok,
   false,
 );
 assert.equal(
   checkFuturesRiskCaps({
     ...base,
-    caps: { ...base.caps, maxQtyPerSymbol: 0.2 },
-    opens: [{ symbol: "BTCUSDT", side: "long", qty: 0.05, notionalUsdt: 5_000 }],
+    caps: { ...base.caps, maxValuePerSymbol: 20_000 },
   }).ok,
   true,
 );
-assert.equal(
-  checkFuturesRiskCaps({
-    ...base,
-    caps: { ...base.caps, maxQtyPerSymbol: 0.1 },
-    opens: [{ symbol: "BTCUSDT", side: "long", qty: 0.05, notionalUsdt: 5_000 }],
-  }).ok,
-  false,
-);
+const valueBreach = checkFuturesRiskCaps({
+  ...base,
+  caps: { ...base.caps, maxValuePerSymbol: 9_000 },
+});
+assert.equal(valueBreach.ok, false);
+if (!valueBreach.ok) {
+  assert.match(valueBreach.error, /Max value/);
+}
 
+const rowsBreach = checkFuturesRiskCaps({
+  ...base,
+  caps: { ...base.caps, maxOpenPositions: 1 },
+  opens: [{ symbol: "ETHUSDT", side: "long", qty: 1, notionalUsdt: 4_000 }],
+});
+assert.equal(rowsBreach.ok, false);
+if (!rowsBreach.ok) {
+  assert.match(rowsBreach.error, /Max open positions/);
+}
 assert.equal(
   checkFuturesRiskCaps({
     ...base,
-    caps: { ...base.caps, maxNotionalPerSymbol: 9_000 },
-  }).ok,
-  false,
-);
-assert.equal(
-  checkFuturesRiskCaps({
-    ...base,
-    caps: { ...base.caps, maxNotionalPerSymbol: 20_000 },
-  }).ok,
-  true,
-);
-
-assert.equal(
-  checkFuturesRiskCaps({
-    ...base,
-    caps: { ...base.caps, maxOpenRows: 1 },
-    opens: [{ symbol: "ETHUSDT", side: "long", qty: 1, notionalUsdt: 4_000 }],
-  }).ok,
-  false,
-);
-assert.equal(
-  checkFuturesRiskCaps({
-    ...base,
-    caps: { ...base.caps, maxOpenRows: 1 },
+    caps: { ...base.caps, maxOpenPositions: 1 },
     opens: [{ symbol: "BTCUSDT", side: "long", qty: 0.01, notionalUsdt: 1_000 }],
   }).ok,
   true,
@@ -91,7 +74,7 @@ assert.equal(
 assert.equal(
   checkFuturesRiskCaps({
     ...base,
-    caps: { ...base.caps, maxOpenRows: 1 },
+    caps: { ...base.caps, maxOpenPositions: 1 },
     working: [
       {
         symbol: "ETHUSDT",
@@ -107,7 +90,7 @@ assert.equal(
 assert.equal(
   checkFuturesRiskCaps({
     ...base,
-    caps: { ...base.caps, maxOpenRows: 1 },
+    caps: { ...base.caps, maxOpenPositions: 1 },
     working: [
       {
         symbol: "ETHUSDT",

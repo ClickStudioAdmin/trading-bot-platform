@@ -4,18 +4,103 @@ import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { closeAllFutures } from "@/lib/futures/actions";
-import { CLOSE_ALL_CONFIRM } from "@/lib/futures/close-all";
+import {
+  confirmPhraseForScope,
+  type CloseAllScope,
+} from "@/lib/futures/close-all";
 
 const INPUT_CLASS =
   "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+const BUTTON_CLASS =
+  "rounded-control border border-danger/40 px-3 py-1.5 text-center text-sm text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40";
 
-export function FuturesCloseAll({
+const COPY: Record<
+  CloseAllScope,
+  { label: string; title: string; body: string; confirm: string; pending: string }
+> = {
+  positions: {
+    label: "Close All",
+    title: "Close All",
+    body: "Market-closes every open position at full size. Working orders stay, except a leftover reduce-only close limit on a row that fully closes. This cannot be undone.",
+    confirm: "Confirm close all",
+    pending: "Closing…",
+  },
+  orders: {
+    label: "Cancel All Open Orders",
+    title: "Cancel All Open Orders",
+    body: "Cancels every open working order on this book. Open positions stay. This cannot be undone.",
+    confirm: "Confirm cancel all",
+    pending: "Cancelling…",
+  },
+  all: {
+    label: "Close All & Cancel All Open Orders",
+    title: "Close All & Cancel All Open Orders",
+    body: "Cancels every open working order on this book, then market-closes every open position at full size. This cannot be undone.",
+    confirm: "Confirm close all",
+    pending: "Closing…",
+  },
+};
+
+export function FuturesPositionBulkActions({
   next,
+  signedIn,
+  openCount,
+  workingCount,
+}: {
+  next: string;
+  signedIn: boolean;
+  openCount: number;
+  workingCount: number;
+}) {
+  return (
+    <div className="mb-3 flex flex-wrap justify-end gap-2">
+      <FuturesBulkButton
+        next={next}
+        scope="positions"
+        enabled={signedIn && openCount > 0}
+        openCount={openCount}
+        workingCount={workingCount}
+      />
+      <FuturesBulkButton
+        next={next}
+        scope="all"
+        enabled={signedIn && (openCount > 0 || workingCount > 0)}
+        openCount={openCount}
+        workingCount={workingCount}
+      />
+    </div>
+  );
+}
+
+export function FuturesCancelAllOrders({
+  next,
+  signedIn,
+  workingCount,
+}: {
+  next: string;
+  signedIn: boolean;
+  workingCount: number;
+}) {
+  return (
+    <FuturesBulkButton
+      next={next}
+      scope="orders"
+      enabled={signedIn && workingCount > 0}
+      openCount={0}
+      workingCount={workingCount}
+    />
+  );
+}
+
+function FuturesBulkButton({
+  next,
+  scope,
   enabled,
   openCount,
   workingCount,
 }: {
   next: string;
+  scope: CloseAllScope;
   enabled: boolean;
   openCount: number;
   workingCount: number;
@@ -27,13 +112,14 @@ export function FuturesCloseAll({
         type="button"
         disabled={!enabled}
         onClick={() => setOpen(true)}
-        className="rounded-control border border-danger/40 px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
+        className={BUTTON_CLASS}
       >
-        Cancel & close all
+        {COPY[scope].label}
       </button>
       {open ? (
-        <FuturesCloseAllDialog
+        <FuturesBulkDialog
           next={next}
+          scope={scope}
           openCount={openCount}
           workingCount={workingCount}
           onClose={() => setOpen(false)}
@@ -43,20 +129,26 @@ export function FuturesCloseAll({
   );
 }
 
-function FuturesCloseAllDialog({
+function FuturesBulkDialog({
   next,
+  scope,
   openCount,
   workingCount,
   onClose,
 }: {
   next: string;
+  scope: CloseAllScope;
   openCount: number;
   workingCount: number;
   onClose: () => void;
 }) {
   const titleId = useId();
+  const copy = COPY[scope];
+  const phrase = confirmPhraseForScope(scope);
   const [confirm, setConfirm] = useState("");
-  const matched = confirm.trim() === CLOSE_ALL_CONFIRM;
+  const matched = confirm.trim() === phrase;
+  const showPositions = scope !== "orders";
+  const showOrders = scope !== "positions";
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -88,7 +180,7 @@ function FuturesCloseAllDialog({
       >
         <div className="flex items-start justify-between gap-3">
           <h2 id={titleId} className="text-lg font-semibold tracking-tight">
-            Cancel & close all
+            {copy.title}
           </h2>
           <button
             type="button"
@@ -99,26 +191,30 @@ function FuturesCloseAllDialog({
             ×
           </button>
         </div>
-        <p className="mt-2 text-sm text-ink-muted">
-          Cancels every open working order on this book, then market-closes
-          every open row at full size. This cannot be undone.
-        </p>
-        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
-          <div>
-            <dt className="text-[11px] text-ink-muted">Open rows</dt>
-            <dd className="mt-0.5 text-sm tabular-nums text-ink">{openCount}</dd>
-          </div>
-          <div>
-            <dt className="text-[11px] text-ink-muted">Working orders</dt>
-            <dd className="mt-0.5 text-sm tabular-nums text-ink">
-              {workingCount}
-            </dd>
-          </div>
+        <p className="mt-2 text-sm text-ink-muted">{copy.body}</p>
+        <dl
+          className={`mt-3 grid gap-x-4 gap-y-3 ${showPositions && showOrders ? "grid-cols-2" : "grid-cols-1"}`}
+        >
+          {showPositions ? (
+            <div>
+              <dt className="text-[11px] text-ink-muted">Open positions</dt>
+              <dd className="mt-0.5 text-sm tabular-nums text-ink">{openCount}</dd>
+            </div>
+          ) : null}
+          {showOrders ? (
+            <div>
+              <dt className="text-[11px] text-ink-muted">Working orders</dt>
+              <dd className="mt-0.5 text-sm tabular-nums text-ink">
+                {workingCount}
+              </dd>
+            </div>
+          ) : null}
         </dl>
         <form action={closeAllFutures} className="mt-4 space-y-3">
           <input type="hidden" name="next" value={next} />
+          <input type="hidden" name="scope" value={scope} />
           <label className="block text-sm text-ink">
-            Type {CLOSE_ALL_CONFIRM} to confirm
+            Type {phrase} to confirm
             <input
               name="confirm"
               value={confirm}
@@ -131,11 +227,11 @@ function FuturesCloseAllDialog({
           <div className="flex flex-col gap-2 pt-2">
             {matched ? (
               <PendingSubmitButton
-                pendingLabel="Closing…"
-                successKey="close-all"
+                pendingLabel={copy.pending}
+                successKey={`bulk-${scope}`}
                 className="rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
               >
-                Confirm close all
+                {copy.confirm}
               </PendingSubmitButton>
             ) : (
               <button
@@ -143,7 +239,7 @@ function FuturesCloseAllDialog({
                 disabled
                 className="rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink opacity-40"
               >
-                Confirm close all
+                {copy.confirm}
               </button>
             )}
             <button

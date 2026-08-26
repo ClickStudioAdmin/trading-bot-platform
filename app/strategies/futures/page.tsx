@@ -75,6 +75,13 @@ export default async function FuturesOverviewPage({
           liveTrailing={firstSearchValue(params.paper) === "live-trailing"}
           closedAll={firstSearchValue(params.paper) === "closed-all"}
           liveClosedAll={firstSearchValue(params.paper) === "live-closed-all"}
+          cancelledAll={firstSearchValue(params.paper) === "cancelled-all"}
+          closedAndCancelled={
+            firstSearchValue(params.paper) === "closed-and-cancelled"
+          }
+          liveClosedAndCancelled={
+            firstSearchValue(params.paper) === "live-closed-and-cancelled"
+          }
           error={firstSearchValue(params.paperError)}
       />
       <FuturesWorkingOrders

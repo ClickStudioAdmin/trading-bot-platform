@@ -177,7 +177,7 @@ export function paperCarryInsertRow(
   },
 ) {
   if (!(notionalUsdt > 0)) {
-    throw new Error("Notional must be positive");
+    throw new Error("Value must be positive");
   }
   return {
     user_id: userId,

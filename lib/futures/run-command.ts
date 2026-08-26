@@ -44,7 +44,11 @@ import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { closeAllFlash, parseCloseAllConfirm } from "./close-all";
+import {
+  closeAllFlash,
+  parseCloseAllConfirm,
+  parseCloseAllScope,
+} from "./close-all";
 import {
   parseIdempotencyKey,
   replayOrNull,
@@ -657,8 +661,7 @@ async function runPlace(
     caps: settings,
     symbol,
     side: decided.positionSide,
-    orderQty: qtyNumber,
-    orderNotional: qtyNumber * sizePrice,
+    orderValue: qtyNumber * sizePrice,
     opens,
     working,
   });
@@ -1379,16 +1382,30 @@ async function runCloseAll(
   ctx: CommandCtx,
   command: Extract<FuturesCommand, { kind: "close-all" }>,
 ): Promise<CommandOutcome> {
-  const confirmed = parseCloseAllConfirm(command.confirm);
+  const scoped = parseCloseAllScope(command.scope);
+  if (!scoped.ok) {
+    return fail(scoped.error);
+  }
+  const confirmed = parseCloseAllConfirm(command.confirm, scoped.scope);
   if (!confirmed.ok) {
     return fail(confirmed.error);
   }
+  const cancelOrders = scoped.scope === "orders" || scoped.scope === "all";
+  const closePositions = scoped.scope === "positions" || scoped.scope === "all";
   const { actor, supabase, liveBook } = ctx;
-  const scope = actorScope(actor);
-  const working = await loadOpenFuturesWorking(scope);
-  const opens = await loadFuturesPositions({ status: "open", scope });
+  const listScope = actorScope(actor);
+  const working = cancelOrders ? await loadOpenFuturesWorking(listScope) : [];
+  const opens = closePositions
+    ? await loadFuturesPositions({ status: "open", scope: listScope })
+    : [];
   if (working.length === 0 && opens.length === 0) {
-    return fail("Nothing to cancel or close.");
+    return fail(
+      closePositions && cancelOrders
+        ? "Nothing to cancel or close."
+        : closePositions
+          ? "Nothing to close."
+          : "Nothing to cancel.",
+    );
   }
 
   let connection: BoundConnectionSecrets | null = null;
@@ -1465,6 +1482,7 @@ async function runCloseAll(
     strategy: FUTURES_STRATEGY_ID,
     data: {
       action: "close-all",
+      scope: scoped.scope,
       cancelledCount,
       closedCount,
       live: liveBook,
@@ -1473,6 +1491,10 @@ async function runCloseAll(
 
   return {
     ok: true,
-    flash: closeAllFlash({ live: liveBook, closedCount }),
+    flash: closeAllFlash({
+      live: liveBook,
+      closedCount,
+      cancelledCount,
+    }),
   };
 }

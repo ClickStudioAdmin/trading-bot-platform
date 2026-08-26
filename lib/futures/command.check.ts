@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
+  CANCEL_ALL_CONFIRM,
   CLOSE_ALL_CONFIRM,
   closeAllFlash,
   parseCloseAllConfirm,
+  parseCloseAllScope,
 } from "./close-all";
 import { FUTURES_IDEMPOTENCY_MAX, parseIdempotencyKey } from "./command";
 
@@ -14,12 +16,32 @@ assert.equal(parseIdempotencyKey("a".repeat(FUTURES_IDEMPOTENCY_MAX)).ok, true);
 assert.equal(parseIdempotencyKey("a".repeat(FUTURES_IDEMPOTENCY_MAX + 1)).ok, false);
 
 assert.equal(CLOSE_ALL_CONFIRM, "CLOSE ALL");
-assert.equal(parseCloseAllConfirm("CLOSE ALL").ok, true);
-assert.equal(parseCloseAllConfirm(" CLOSE ALL ").ok, true);
-assert.equal(parseCloseAllConfirm("close all").ok, false);
-assert.equal(parseCloseAllConfirm("").ok, false);
-assert.equal(closeAllFlash({ live: false, closedCount: 2 }), "closed-all");
-assert.equal(closeAllFlash({ live: true, closedCount: 1 }), "live-closed-all");
-assert.equal(closeAllFlash({ live: true, closedCount: 0 }), "cancelled");
+assert.equal(CANCEL_ALL_CONFIRM, "CANCEL ALL");
+assert.equal(parseCloseAllScope("positions").ok, true);
+assert.equal(parseCloseAllScope("orders").ok, true);
+assert.equal(parseCloseAllScope("all").ok, true);
+assert.equal(parseCloseAllScope("").ok, false);
+assert.equal(parseCloseAllConfirm("CLOSE ALL", "positions").ok, true);
+assert.equal(parseCloseAllConfirm(" CLOSE ALL ", "all").ok, true);
+assert.equal(parseCloseAllConfirm("CANCEL ALL", "orders").ok, true);
+assert.equal(parseCloseAllConfirm("CLOSE ALL", "orders").ok, false);
+assert.equal(parseCloseAllConfirm("close all", "positions").ok, false);
+assert.equal(parseCloseAllConfirm("", "all").ok, false);
+assert.equal(
+  closeAllFlash({ live: false, closedCount: 2, cancelledCount: 0 }),
+  "closed-all",
+);
+assert.equal(
+  closeAllFlash({ live: true, closedCount: 1, cancelledCount: 0 }),
+  "live-closed-all",
+);
+assert.equal(
+  closeAllFlash({ live: false, closedCount: 1, cancelledCount: 2 }),
+  "closed-and-cancelled",
+);
+assert.equal(
+  closeAllFlash({ live: true, closedCount: 0, cancelledCount: 3 }),
+  "cancelled-all",
+);
 
 console.log("futures command checks passed");

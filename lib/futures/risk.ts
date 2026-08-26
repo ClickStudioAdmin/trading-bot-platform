@@ -1,9 +1,8 @@
 import type { FuturesSide } from "./model";
 
 export type FuturesRiskCaps = {
-  maxQtyPerSymbol: number | null;
-  maxNotionalPerSymbol: number | null;
-  maxOpenRows: number | null;
+  maxValuePerSymbol: number | null;
+  maxOpenPositions: number | null;
 };
 
 export type FuturesRiskOpen = {
@@ -58,8 +57,7 @@ export function checkFuturesRiskCaps(input: {
   caps: FuturesRiskCaps;
   symbol: string;
   side: FuturesSide;
-  orderQty: number;
-  orderNotional: number;
+  orderValue: number;
   opens: FuturesRiskOpen[];
   working: FuturesRiskWorking[];
 }): { ok: true } | { ok: false; error: string } {
@@ -73,49 +71,31 @@ export function checkFuturesRiskCaps(input: {
   }
   const thisKey = rowKey(input.symbol, input.side);
   if (
-    input.caps.maxOpenRows !== null &&
+    input.caps.maxOpenPositions !== null &&
     !keys.has(thisKey) &&
-    keys.size >= input.caps.maxOpenRows
+    keys.size >= input.caps.maxOpenPositions
   ) {
     return {
       ok: false,
-      error: `Max open rows is ${input.caps.maxOpenRows}. Close or cancel before opening another.`,
+      error: `Max open positions is ${input.caps.maxOpenPositions}. Close or cancel before opening another.`,
     };
   }
 
-  const sameSideQty =
-    input.opens
-      .filter((row) => row.symbol === input.symbol && row.side === input.side)
-      .reduce((sum, row) => sum + row.qty, 0) +
-    entries
-      .filter((row) => row.symbol === input.symbol && row.side === input.side)
-      .reduce((sum, row) => sum + row.remainingQty, 0);
-  const nextQty = sameSideQty + input.orderQty;
-  if (
-    input.caps.maxQtyPerSymbol !== null &&
-    nextQty > input.caps.maxQtyPerSymbol + 1e-12
-  ) {
-    return {
-      ok: false,
-      error: `Max qty for this contract is ${input.caps.maxQtyPerSymbol}. This order would take it to ${nextQty}.`,
-    };
-  }
-
-  const sameSideNotional =
+  const sameSideValue =
     input.opens
       .filter((row) => row.symbol === input.symbol && row.side === input.side)
       .reduce((sum, row) => sum + row.notionalUsdt, 0) +
     entries
       .filter((row) => row.symbol === input.symbol && row.side === input.side)
       .reduce((sum, row) => sum + row.remainingQty * row.limitPrice, 0);
-  const nextNotional = sameSideNotional + input.orderNotional;
+  const nextValue = sameSideValue + input.orderValue;
   if (
-    input.caps.maxNotionalPerSymbol !== null &&
-    nextNotional > input.caps.maxNotionalPerSymbol + 1e-8
+    input.caps.maxValuePerSymbol !== null &&
+    nextValue > input.caps.maxValuePerSymbol + 1e-8
   ) {
     return {
       ok: false,
-      error: `Max notional for this contract is ${input.caps.maxNotionalPerSymbol} USDT. This order would take it to ${Math.round(nextNotional)} USDT.`,
+      error: `Max value for this contract is ${input.caps.maxValuePerSymbol} USDT. This order would take it to ${Math.round(nextValue)} USDT.`,
     };
   }
 

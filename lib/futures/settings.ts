@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FuturesRiskCaps } from "./risk";
 
 const SETTINGS_COLUMNS =
-  "account_id, strategy_id, user_id, exchange_connection_id, reduce_only, max_qty_per_symbol, max_notional_per_symbol, max_open_rows";
+  "account_id, strategy_id, user_id, exchange_connection_id, reduce_only, max_notional_per_symbol, max_open_rows";
 
 export type FuturesSettings = {
   connectionId: string | null;
@@ -15,9 +15,8 @@ export type FuturesSettings = {
 const EMPTY_SETTINGS: FuturesSettings = {
   connectionId: null,
   reduceOnly: false,
-  maxQtyPerSymbol: null,
-  maxNotionalPerSymbol: null,
-  maxOpenRows: null,
+  maxValuePerSymbol: null,
+  maxOpenPositions: null,
 };
 
 function asPositiveOrNull(raw: unknown): number | null {
@@ -27,14 +26,15 @@ function asPositiveOrNull(raw: unknown): number | null {
 
 function parseSettingsRow(row: Record<string, unknown>): FuturesSettings {
   const connectionId = String(row.exchange_connection_id ?? "").trim();
-  const maxOpenRows = asPositiveOrNull(row.max_open_rows);
+  const maxOpenPositions = asPositiveOrNull(row.max_open_rows);
   return {
     connectionId: connectionId || null,
     reduceOnly: Boolean(row.reduce_only),
-    maxQtyPerSymbol: asPositiveOrNull(row.max_qty_per_symbol),
-    maxNotionalPerSymbol: asPositiveOrNull(row.max_notional_per_symbol),
-    maxOpenRows:
-      maxOpenRows !== null && Number.isInteger(maxOpenRows) ? maxOpenRows : null,
+    maxValuePerSymbol: asPositiveOrNull(row.max_notional_per_symbol),
+    maxOpenPositions:
+      maxOpenPositions !== null && Number.isInteger(maxOpenPositions)
+        ? maxOpenPositions
+        : null,
   };
 }
 

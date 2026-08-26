@@ -84,7 +84,7 @@ export function PaperRulesGuide({
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Max Position Size"
-          detail="Cap on how much notional this set may hold in total. Dynamic fills toward the cap over time. Each clip is the smaller of usable book and leftover room. Fixed skips the open if Order size would go over the cap."
+          detail="Cap on how much value this set may hold in total. Dynamic fills toward the cap over time. Each clip is the smaller of usable book and leftover room. Fixed skips the open if Order size would go over the cap."
         />
         <GuideItem
           term="Max pairs"

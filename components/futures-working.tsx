@@ -4,6 +4,7 @@ import { LocalTime } from "@/components/local-time";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TokenIcon } from "@/components/token-icon";
 import { TpslPair } from "@/components/futures-tpsl";
+import { FuturesCancelAllOrders } from "@/components/futures-close-all";
 import { FuturesWorkingEdit } from "@/components/futures-working-edit";
 import { cancelFuturesWorking } from "@/lib/futures/actions";
 import {
@@ -31,13 +32,22 @@ export function FuturesWorkingOrders({
 }) {
   return (
     <section>
-      <div className="mb-3">
-        <h2 className="text-xl font-semibold tracking-tight">Open orders</h2>
-        <p className="text-sm text-ink-muted">
-          {exchangeBook
-            ? "Working limits on Bybit. Fills appear on the position when they match. Edit remaining qty or limit. Cancel removes the rest."
-            : "Working paper limits. They fill when mark crosses the limit. Edit remaining qty or limit. Cancel drops the rest."}
-        </p>
+      <div className="mb-3 flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">Open orders</h2>
+          <p className="text-sm text-ink-muted">
+            {exchangeBook
+              ? "Working limits on Bybit. Fills appear on the position when they match. Edit remaining qty or limit. Cancel removes the rest."
+              : "Working paper limits. They fill when mark crosses the limit. Edit remaining qty or limit. Cancel drops the rest."}
+          </p>
+        </div>
+        <div className="shrink-0">
+          <FuturesCancelAllOrders
+            next={next}
+            signedIn={signedIn}
+            workingCount={working.length}
+          />
+        </div>
       </div>
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[48rem] text-left text-sm">

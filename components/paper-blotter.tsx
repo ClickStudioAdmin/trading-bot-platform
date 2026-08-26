@@ -123,13 +123,13 @@ export function OpenPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Unrealized"
-                  hint="(entry − mark − 2 × assumed fees and slip) × notional. Cost model is VIP0 taker on both legs plus 5 bp slip, counted once to open and once to close — not Bybit’s invoice. Connected Exchange: entry is fill, mark is scan. Paper: both are net."
+                  hint="(entry − mark − 2 × assumed fees and slip) × value. Cost model is VIP0 taker on both legs plus 5 bp slip, counted once to open and once to close — not Bybit’s invoice. Connected Exchange: entry is fill, mark is scan. Paper: both are net."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="P&L %"
-                  hint="Unrealized ÷ notional. Same assumed fee model as Unrealized. Not annualized."
+                  hint="Unrealized ÷ value. Same assumed fee model as Unrealized. Not annualized."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -238,13 +238,13 @@ export function ClosedPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Realized"
-                  hint="(entry − exit − 2 × assumed fees and slip) × notional. Same cost model as Unrealized. Exit is scan net. Not Bybit’s actual invoice."
+                  hint="(entry − exit − 2 × assumed fees and slip) × value. Same cost model as Unrealized. Exit is scan net. Not Bybit’s actual invoice."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="P&L %"
-                  hint="Realized ÷ notional. Same assumed fee model as Realized."
+                  hint="Realized ÷ value. Same assumed fee model as Realized."
                 />
               </th>
             </tr>

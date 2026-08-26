@@ -16,6 +16,9 @@ export function FuturesFlash({
   liveTrailing,
   closedAll,
   liveClosedAll,
+  cancelledAll,
+  closedAndCancelled,
+  liveClosedAndCancelled,
   error,
 }: {
   opened: boolean;
@@ -35,6 +38,9 @@ export function FuturesFlash({
   liveTrailing?: boolean;
   closedAll?: boolean;
   liveClosedAll?: boolean;
+  cancelledAll?: boolean;
+  closedAndCancelled?: boolean;
+  liveClosedAndCancelled?: boolean;
   error?: string;
 }) {
   if (error) {
@@ -58,11 +64,18 @@ export function FuturesFlash({
       </p>
     );
   }
-  if (liveClosedAll) {
+  if (liveClosedAndCancelled) {
     return (
       <p className="text-sm text-success">
         Working orders cancelled and open positions closed on the connected
         exchange.
+      </p>
+    );
+  }
+  if (liveClosedAll) {
+    return (
+      <p className="text-sm text-success">
+        Open positions closed on the connected exchange.
       </p>
     );
   }
@@ -107,12 +120,18 @@ export function FuturesFlash({
   if (added) {
     return <p className="text-sm text-success">Paper size added.</p>;
   }
-  if (closedAll) {
+  if (closedAndCancelled) {
     return (
       <p className="text-sm text-success">
         Working orders cancelled and paper positions closed.
       </p>
     );
+  }
+  if (closedAll) {
+    return <p className="text-sm text-success">Open positions closed.</p>;
+  }
+  if (cancelledAll) {
+    return <p className="text-sm text-success">Working orders cancelled.</p>;
   }
   if (closed) {
     return <p className="text-sm text-success">Paper close filled.</p>;

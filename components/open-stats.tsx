@@ -23,7 +23,7 @@ export function OpenStats({
   const kpis = (
     <>
       <StatCard
-        label="Open notional"
+        label="Open value"
         value={signedIn && notional > 0 ? formatUsd(notional) : "—"}
       />
       <StatCard

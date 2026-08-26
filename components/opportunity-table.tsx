@@ -125,8 +125,8 @@ export function OpportunityTable({
                     label="Size USDT"
                     hint={
                       paper.venueOpen
-                        ? "USDT notional on the bound exchange. Cannot exceed usable book. A second Open on the same pair adds to the existing position."
-                        : "Paper notional to open. Cannot exceed usable book. Each Open creates a new paper row."
+                        ? "USDT value on the bound exchange. Cannot exceed usable book. A second Open on the same pair adds to the existing position."
+                        : "Paper value to open. Cannot exceed usable book. Each Open creates a new paper row."
                     }
                   />
                 </th>
