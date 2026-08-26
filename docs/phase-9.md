@@ -10,7 +10,7 @@ Paper Trading books write the in-app ledger only. Connected Exchange books use t
 
 ## Status
 
-In progress. Steps 1–5 are in code. Waiting on Click’s TradingView / curl desk test (step 6).
+Steps 1–6 are done (dummy desk test from Positions). Live TradingView alerts are deferred — see Later.
 
 ## Current micro-step
 
@@ -21,9 +21,13 @@ In progress. Steps 1–5 are in code. Waiting on Click’s TradingView / curl de
 | 3 | Order verb | Agent | JSON `action` Buy / Sell / Close + symbol + size becomes `runFuturesCommand`. Same reduce-only and caps as a click. Optional `id` is the idempotency key (≤36 chars, longer ids are hashed). Paper writes the ledger only. Live uses the Futures bind. Source is Webhook plus the webhook name. |
 | 4 | Arm verb | Agent | `arm` / `disarm` / `close-playbook` return 200 and write an event log. No playbook body this phase. |
 | 5 | Webhooks tab | Agent | `/strategies/futures/webhooks` holds named Order and Signal URLs. Positions can send a dummy call through the same door. |
-| 6 | Desk test | Click | Create an Order webhook. Send test from Positions. TradingView or curl Buy / Sell / Close on Demo. Bad token rejected. Duplicate `id` does not double-fill. A Signal webhook accepts arm only. |
+| 6 | Dummy desk test | Click | Named URL. Send test from Positions. Custom TV Strategy fills. Source shows Webhook. Signal arm fires a matching automation. |
 
 Stop at the end of this phase for a desk test. Do not start typed desks ([phase-10 is not written until this phase is accepted]).
+
+## Later
+
+- Live TradingView alert test (not the Positions dummy). Use the Vercel Development URL, not localhost. Confirm Buy / Sell / Close, duplicate `id` does not double-fill, a bad token is 401, Signal arm fires the automation, and the blotter Source is Webhook. If both sides are open, Close needs `close_long` / `close_short` or `side`.
 
 ## How a webhook works
 
@@ -52,7 +56,7 @@ Example order body:
 - Webhook token columns on `strategy_settings`
 - Order → `runFuturesCommand` (no second private API path)
 - Arm / disarm / close-playbook accepted and logged
-- Futures Settings: URL, rotate, disable
+- Webhooks tab: named URLs, rotate, delete. Positions dummy call through the same door
 - Optional `APP_BASE_URL` so the shown URL is the stable Vercel host
 
 ## Out of scope
