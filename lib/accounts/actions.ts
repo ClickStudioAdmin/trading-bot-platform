@@ -9,6 +9,7 @@ import {
 import {
   parseAccountMode,
   parseAccountName,
+  parseDeskTypeChoice,
   pickSwitchAfterDelete,
 } from "@/lib/accounts/model";
 import { writeEventLog } from "@/lib/logs/write";
@@ -74,11 +75,16 @@ export async function createTradingAccount(formData: FormData) {
   if (!named.ok) {
     redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(named.error)}`);
   }
+  const typed = parseDeskTypeChoice(formData.get("deskType"));
+  if (!typed.ok) {
+    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(typed.error)}`);
+  }
   const mode = parseAccountMode(formData.get("mode"));
   const created = await insertTradingAccount(
     session.member.id,
     named.name,
     mode,
+    typed.deskType,
   );
   if (!created) {
     redirect(
@@ -91,7 +97,7 @@ export async function createTradingAccount(formData: FormData) {
     message: `Created ${mode} account ${named.name}`,
     userId: session.member.id,
     accountId: created.id,
-    data: { mode, name: named.name },
+    data: { mode, name: named.name, deskType: typed.deskType },
   });
   if (!staysOnManagePage(next)) {
     await setActiveAccountId(created.id);

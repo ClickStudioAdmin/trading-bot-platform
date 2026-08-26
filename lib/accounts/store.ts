@@ -4,6 +4,7 @@ import {
   formatDeleteBlockers,
   parseTradingAccountRow,
   type AccountDeleteBlock,
+  type DeskType,
   type TradingAccount,
   type TradingAccountMode,
 } from "@/lib/accounts/model";
@@ -88,13 +89,19 @@ export async function ensureDefaultPaperAccount(
   if (existing[0]) {
     return existing[0];
   }
-  return insertTradingAccount(userId, DEFAULT_ACCOUNT_NAME, "paper");
+  return insertTradingAccount(
+    userId,
+    DEFAULT_ACCOUNT_NAME,
+    "paper",
+    "cash_and_carry",
+  );
 }
 
 export async function insertTradingAccount(
   userId: string,
   name: string,
   mode: TradingAccountMode,
+  deskType: DeskType,
 ): Promise<TradingAccount | null> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -106,6 +113,7 @@ export async function insertTradingAccount(
       user_id: userId,
       name,
       mode,
+      desk_type: deskType,
     })
     .select("*")
     .single();

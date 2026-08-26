@@ -11,6 +11,8 @@ import {
   formatAccountMode,
   formatAccountModeChoice,
   formatAccountUsageStatus,
+  formatDeskType,
+  formatDeskTypeChoice,
   formatDeleteBlockers,
   pickDefaultAccount,
 } from "@/lib/accounts/model";
@@ -48,10 +50,10 @@ export default async function ManageSubAccountsPage({
       <PageHeading title="Manage sub-accounts" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
         Each account is Paper Trading or Connected Exchange at create and never
-        changes. Books stay separate. You must keep at least one account. You
-        can rename an account any time. Delete is blocked while the book has
-        open positions or running automations. Deleting an account removes its
-        paper history.
+        changes. Type is also set at create. Books stay separate. You must keep
+        at least one account. You can rename an account any time. Delete is
+        blocked while the book has open positions or running automations.
+        Deleting an account removes its paper history.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -96,6 +98,7 @@ export default async function ManageSubAccountsPage({
                     ) : null}
                   </p>
                   <p className="mt-1 text-xs text-ink-faint">
+                    {formatDeskType(account.deskType)} ·{" "}
                     {formatAccountMode(account.mode)}
                     {usageStatus ? ` · ${usageStatus}` : null}
                   </p>
@@ -159,6 +162,22 @@ export default async function ManageSubAccountsPage({
           />
         </label>
         <label className="block text-xs text-ink-muted">
+          Type
+          <select
+            name="deskType"
+            defaultValue="cash_and_carry"
+            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+          >
+            <option value="cash_and_carry">
+              {formatDeskTypeChoice("cash_and_carry")}
+            </option>
+            <option value="perps">{formatDeskTypeChoice("perps")}</option>
+            <option value="signal_follower">
+              {formatDeskTypeChoice("signal_follower")}
+            </option>
+          </select>
+        </label>
+        <label className="block text-xs text-ink-muted">
           Mode
           <select
             name="mode"
@@ -172,8 +191,9 @@ export default async function ManageSubAccountsPage({
         <p className="text-sm text-ink-muted">
           Paper Trading uses live market data and fills on the in-app ledger.
           No real trades. Connected Exchange stores keys for a venue (Bybit
-          Demo or production). Mode is set at create and never changes. This
-          app places venue orders on that book when a key is bound.
+          Demo or production). Mode and type are set at create and never
+          change. Two desks on the same exchange key still share venue margin.
+          Isolation needs another trade-only key.
         </p>
         <PendingSubmitButton
           pendingLabel="Creating…"

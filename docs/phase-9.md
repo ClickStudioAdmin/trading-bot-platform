@@ -1,6 +1,6 @@
 # Phase 9 — TradingView door
 
-Current. Phase 8 is complete. See [phase-8.md](phase-8.md).
+Complete. Phase 8 is complete. See [phase-8.md](phase-8.md). Phase 10 is typed desks. See [phase-10.md](phase-10.md).
 
 ## Purpose
 
@@ -10,7 +10,7 @@ Paper Trading books write the in-app ledger only. Connected Exchange books use t
 
 ## Status
 
-Steps 1–6 are done (dummy desk test from Positions). Live TradingView alerts are deferred — see Later.
+Complete. Accepted after Click’s dummy desk test (26 Aug 2026). Live TradingView alerts stay in Later. Phase 10 is typed desks. See [phase-10.md](phase-10.md).
 
 ## Current micro-step
 
@@ -23,7 +23,7 @@ Steps 1–6 are done (dummy desk test from Positions). Live TradingView alerts a
 | 5 | Webhooks tab | Agent | `/strategies/futures/webhooks` holds named Order and Signal URLs. Positions can send a dummy call through the same door. |
 | 6 | Dummy desk test | Click | Named URL. Send test from Positions. Custom TV Strategy fills. Source shows Webhook. Signal arm fires a matching automation. |
 
-Stop at the end of this phase for a desk test. Do not start typed desks ([phase-10 is not written until this phase is accepted]).
+Phase accepted. Typed desks are [phase-10.md](phase-10.md).
 
 ## Later
 

@@ -1,6 +1,6 @@
 # Phase 8 — Futures strategy on Bybit
 
-Complete. Phase 7 is complete. See [phase-7.md](phase-7.md). Phase 9 is the TradingView door. See [phase-9.md](phase-9.md).
+Complete. Phase 7 is complete. See [phase-7.md](phase-7.md). Phase 9 is complete. Phase 10 is typed desks. See [phase-10.md](phase-10.md).
 
 ## Purpose
 
@@ -10,7 +10,7 @@ Paper Trading books write the in-app ledger only. Connected Exchange books place
 
 ## Status
 
-Complete. Accepted after Click’s Bybit Demo desk test (26 Aug 2026). Phase 9 is the TradingView door. See [phase-9.md](phase-9.md).
+Complete. Accepted after Click’s Bybit Demo desk test (26 Aug 2026). Phase 9 is complete. Phase 10 is typed desks. See [phase-10.md](phase-10.md).
 
 ## Current micro-step
 

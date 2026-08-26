@@ -26,7 +26,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 9 — TradingView door into `runFuturesCommand`. See [phase-9.md](phase-9.md). Phase 1 through Phase 8 are complete. Hyperliquid, additional CEX adapters, and typed desks wait until Phase 9 is accepted. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
+Phase 10 — Typed desks. See [phase-10.md](phase-10.md). Phase 1 through Phase 9 are complete. Hyperliquid and additional CEX adapters wait. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
 
 ## Multi-tenancy
 

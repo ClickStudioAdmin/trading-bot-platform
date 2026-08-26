@@ -9,8 +9,12 @@ import {
   strategyDetachBlockers,
   formatAccountMode,
   formatAccountModeChoice,
+  formatDeskType,
+  formatDeskTypeChoice,
   parseAccountName,
   parseAccountMode,
+  parseDeskType,
+  parseDeskTypeChoice,
   parseTradingAccountRow,
   pickDefaultAccount,
   pickSwitchAfterDelete,
@@ -40,20 +44,38 @@ if (named.ok) {
 assert.equal(parseAccountName("").ok, false);
 assert.equal(parseAccountName("x".repeat(41)).ok, false);
 
+assert.equal(parseDeskType("perps"), "perps");
+assert.equal(parseDeskType("signal_follower"), "signal_follower");
+assert.equal(parseDeskType("cash_and_carry"), "cash_and_carry");
+assert.equal(parseDeskType("other"), "cash_and_carry");
+assert.equal(parseDeskTypeChoice("perps").ok, true);
+assert.equal(parseDeskTypeChoice("").ok, false);
+assert.equal(formatDeskType("perps"), "Perps");
+assert.equal(formatDeskType("signal_follower"), "Signal follower");
+assert.equal(formatDeskType("cash_and_carry"), "Cash and Carry");
+assert.equal(
+  formatDeskTypeChoice("perps"),
+  "Perps (buy / sell / close one USDT perpetual)",
+);
+
 const paper = parseTradingAccountRow({
   id: "acc-1",
   user_id: "user-1",
   name: DEFAULT_ACCOUNT_NAME,
   mode: "paper",
+  desk_type: "cash_and_carry",
   created_at: "2026-08-23T00:00:00.000Z",
 });
+assert.equal(paper.deskType, "cash_and_carry");
 const live = parseTradingAccountRow({
   id: "acc-2",
   user_id: "user-1",
   name: "Live",
   mode: "live",
+  desk_type: "perps",
   created_at: "2026-08-23T01:00:00.000Z",
 });
+assert.equal(live.deskType, "perps");
 assert.equal(pickDefaultAccount([live, paper])?.id, "acc-1");
 assert.equal(pickDefaultAccount([live])?.id, "acc-2");
 assert.equal(pickDefaultAccount([]), null);

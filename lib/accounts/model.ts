@@ -1,17 +1,61 @@
 export type TradingAccountMode = "paper" | "live";
+export type DeskType = "cash_and_carry" | "perps" | "signal_follower";
 
 export const DEFAULT_ACCOUNT_NAME = "Demo Account";
+export const DEFAULT_DESK_TYPE: DeskType = "cash_and_carry";
 
 export type TradingAccount = {
   id: string;
   userId: string;
   name: string;
   mode: TradingAccountMode;
+  deskType: DeskType;
   createdAtMs: number;
 };
 
 export function parseAccountMode(value: unknown): TradingAccountMode {
   return value === "live" ? "live" : "paper";
+}
+
+export function parseDeskType(value: unknown): DeskType {
+  if (value === "perps" || value === "signal_follower") {
+    return value;
+  }
+  return "cash_and_carry";
+}
+
+export function parseDeskTypeChoice(
+  value: unknown,
+): { ok: true; deskType: DeskType } | { ok: false; error: string } {
+  const raw = String(value ?? "").trim();
+  if (
+    raw === "cash_and_carry" ||
+    raw === "perps" ||
+    raw === "signal_follower"
+  ) {
+    return { ok: true, deskType: raw };
+  }
+  return { ok: false, error: "Choose a desk type." };
+}
+
+export function formatDeskType(deskType: DeskType): string {
+  if (deskType === "perps") {
+    return "Perps";
+  }
+  if (deskType === "signal_follower") {
+    return "Signal follower";
+  }
+  return "Cash and Carry";
+}
+
+export function formatDeskTypeChoice(deskType: DeskType): string {
+  if (deskType === "perps") {
+    return "Perps (buy / sell / close one USDT perpetual)";
+  }
+  if (deskType === "signal_follower") {
+    return "Signal follower (TradingView sends the orders)";
+  }
+  return "Cash and Carry (spot + dated future)";
 }
 
 export function parseAccountName(
@@ -33,6 +77,7 @@ export function parseTradingAccountRow(
     userId: String(row.user_id),
     name: String(row.name).trim(),
     mode: parseAccountMode(row.mode),
+    deskType: parseDeskType(row.desk_type),
     createdAtMs: Number.isFinite(created) ? created : 0,
   };
 }
