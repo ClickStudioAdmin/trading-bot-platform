@@ -57,7 +57,7 @@ export function FuturesFlash({
   if (liveClosed) {
     return (
       <p className="text-sm text-success">
-        Futures closed on the connected exchange.
+        Close filled on the connected exchange.
       </p>
     );
   }
@@ -96,7 +96,7 @@ export function FuturesFlash({
     return <p className="text-sm text-success">Paper size added.</p>;
   }
   if (closed) {
-    return <p className="text-sm text-success">Paper futures closed.</p>;
+    return <p className="text-sm text-success">Paper close filled.</p>;
   }
   if (working) {
     return <p className="text-sm text-success">Paper limit is working.</p>;

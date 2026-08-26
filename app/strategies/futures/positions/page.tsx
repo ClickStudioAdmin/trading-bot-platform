@@ -103,8 +103,9 @@ export default async function FuturesPositionsPage({
             a short. Both sides can be open on the same contract. Market fills
             now. Limit rests until it matches — watch it under Open orders.
             Optional TP/SL and trailing stop attach to that order. Add or edit
-            stops on an open row. Market or Limit close is on each open row. Size is token
-            quantity or USDT notional (mark for market, limit price for limit).
+            stops on an open row. Market or Limit close is on each open row;
+            both set qty (full row or a slice). Size is token quantity or USDT
+            notional (mark for market, limit price for limit).
             {settings.reduceOnly
               ? " Reduce only is on — Buy and Sell are blocked."
               : ""}

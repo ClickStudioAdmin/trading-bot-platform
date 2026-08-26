@@ -4,13 +4,14 @@ import {
   patchFuturesTpsl,
   patchFuturesTrailing,
   writeFuturesAdd,
-  writeFuturesFlatten,
+  writeFuturesCloseSlice,
   writeFuturesOpen,
 } from "./ledger";
 import { loadOpenFuturesOnSymbol, loadOpenFuturesWorking } from "./list";
 import { markFromTicker } from "./math";
 import {
   parseFuturesAction,
+  parseCloseQty,
   parseFuturesLimitPrice,
   parseFuturesNotional,
   parseFuturesOrderType,
@@ -337,15 +338,11 @@ async function runPlace(
         if (!priced.ok) {
           return fail(priced.error);
         }
-        const qtyParsed =
-          String(command.size ?? "").trim() === ""
-            ? { ok: true as const, qty: row.qty }
-            : parseFuturesQty(command.size);
+        const qtyParsed = parseCloseQty(command.size, row.qty);
         if (!qtyParsed.ok) {
           return fail(qtyParsed.error);
         }
-        const closeQty = Math.min(qtyParsed.qty, row.qty);
-        const sized = qtyForPerp(closeQty, instrument);
+        const sized = qtyForPerp(qtyParsed.qty, instrument);
         if (!sized.ok) {
           return fail(sized.error);
         }
@@ -445,7 +442,11 @@ async function runPlace(
           positionId: row.id,
         };
       }
-      const sized = qtyForPerp(row.qty, instrument);
+      const qtyParsed = parseCloseQty(command.size, row.qty);
+      if (!qtyParsed.ok) {
+        return fail(qtyParsed.error);
+      }
+      const sized = qtyForPerp(qtyParsed.qty, instrument);
       if (!sized.ok) {
         return fail(sized.error);
       }
@@ -455,13 +456,6 @@ async function runPlace(
       let environment: string | null = null;
       let venueOrderId: string | null = null;
       if (connection) {
-        await cancelReduceOnlyWorkingForPosition({
-          supabase,
-          accountId: actor.accountId,
-          userId: actor.userId,
-          positionId: row.id,
-          connection,
-        });
         const placed = await placePerpMarketOnVenue({
           connection,
           symbol,
@@ -495,16 +489,8 @@ async function runPlace(
         if (placed.fill.price != null && placed.fill.price > 0) {
           fillPrice = placed.fill.price;
         }
-      } else {
-        await cancelReduceOnlyWorkingForPosition({
-          supabase,
-          accountId: actor.accountId,
-          userId: actor.userId,
-          positionId: row.id,
-          connection: null,
-        });
       }
-      const written = await writeFuturesFlatten({
+      const written = await writeFuturesCloseSlice({
         supabase,
         row,
         qty: qtyNumber,
@@ -512,6 +498,7 @@ async function runPlace(
         venue,
         environment,
         venueOrderId,
+        remainingTpsl: tpslFromRow(row),
         idempotencyKey: key,
       });
       if (written.error) {
@@ -527,10 +514,22 @@ async function runPlace(
         });
         return fail(written.error);
       }
+      if (written.remaining <= 1e-12) {
+        await cancelReduceOnlyWorkingForPosition({
+          supabase,
+          accountId: actor.accountId,
+          userId: actor.userId,
+          positionId: row.id,
+          connection,
+        });
+      }
       await writeEventLog({
         scope: "trade",
         event: "trade.futures",
-        message: `Closed ${symbol} ${row.side}`,
+        message:
+          written.remaining <= 1e-12
+            ? `Closed ${symbol} ${row.side}`
+            : `Reduced ${symbol} ${row.side}`,
         userId: actor.userId,
         accountId: actor.accountId,
         strategy: FUTURES_STRATEGY_ID,
@@ -543,6 +542,11 @@ async function runPlace(
           side: row.side,
         },
       });
+      return {
+        ok: true,
+        flash: liveBook ? "live-closed" : "closed",
+        positionId: row.id,
+      };
     }
     return {
       ok: true,

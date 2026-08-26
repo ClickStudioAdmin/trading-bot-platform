@@ -3,6 +3,7 @@ import {
   parseFuturesAction,
   parseFuturesLimitPrice,
   parseFuturesNotional,
+  parseCloseQty,
   parseFuturesOrderType,
   parseFuturesQty,
   parseFuturesSizeUnit,
@@ -56,5 +57,10 @@ if (limitType.ok) {
 assert.equal(parseFuturesOrderType("stop").ok, false);
 assert.equal(parseFuturesLimitPrice("80123.4").ok, true);
 assert.equal(parseFuturesLimitPrice("0").ok, false);
+
+assert.deepEqual(parseCloseQty("", 1.5), { ok: true, qty: 1.5 });
+assert.deepEqual(parseCloseQty("0.4", 1.5), { ok: true, qty: 0.4 });
+assert.deepEqual(parseCloseQty("9", 1.5), { ok: true, qty: 1.5 });
+assert.equal(parseCloseQty("0", 1.5).ok, false);
 
 console.log("futures model checks passed");

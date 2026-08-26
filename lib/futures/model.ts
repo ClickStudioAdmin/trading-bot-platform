@@ -70,6 +70,23 @@ export function parseFuturesQty(
   return { ok: true, qty };
 }
 
+export function parseCloseQty(
+  raw: unknown,
+  positionQty: number,
+): { ok: true; qty: number } | { ok: false; error: string } {
+  const qtyParsed =
+    String(raw ?? "").trim() === ""
+      ? { ok: true as const, qty: positionQty }
+      : parseFuturesQty(raw);
+  if (!qtyParsed.ok) {
+    return qtyParsed;
+  }
+  if (!(positionQty > 0)) {
+    return { ok: false, error: "There is no open position to close." };
+  }
+  return { ok: true, qty: Math.min(qtyParsed.qty, positionQty) };
+}
+
 export function parseFuturesSizeUnit(
   raw: unknown,
 ): { ok: true; unit: "qty" | "usdt" } | { ok: false; error: string } {

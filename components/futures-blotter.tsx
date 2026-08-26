@@ -152,8 +152,8 @@ export function OpenFuturesTrades({
                   label="Actions"
                   hint={
                     exchangeBook
-                      ? "Market closes this row on Bybit now. Limit rests a reduce-only close until last trades through it."
-                      : "Market closes this row now. Limit rests a reduce-only close until mark trades through it."
+                      ? "Market or Limit opens a qty dialog. Market fills on Bybit now. Limit rests a reduce-only close until last trades through it."
+                      : "Market or Limit opens a qty dialog. Market fills now. Limit rests a reduce-only close until mark trades through it."
                   }
                 />
               </th>

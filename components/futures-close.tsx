@@ -23,43 +23,32 @@ export function FuturesCloseActions({
 }) {
   return (
     <div className="flex items-center gap-1">
-      <form action={submitFuturesTrade}>
-        <input type="hidden" name="next" value={next} />
-        <input type="hidden" name="symbol" value={trade.symbol} />
-        <input type="hidden" name="positionId" value={trade.id} />
-        <input type="hidden" name="orderType" value="market" />
-        <PendingSubmitButton
-          pendingLabel="Closing"
-          successKey={`flatten-${trade.id}`}
-          name="action"
-          value="close"
-          className={ACTION_CLASS}
-        >
-          Market
-        </PendingSubmitButton>
-      </form>
-      <FuturesLimitCloseButton trade={trade} next={next} />
+      <FuturesCloseButton trade={trade} next={next} orderType="market" />
+      <FuturesCloseButton trade={trade} next={next} orderType="limit" />
     </div>
   );
 }
 
-function FuturesLimitCloseButton({
+function FuturesCloseButton({
   trade,
   next,
+  orderType,
 }: {
   trade: MarkedFutures;
   next: string;
+  orderType: "market" | "limit";
 }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className={ACTION_CLASS}>
-        Limit
+        {orderType === "market" ? "Market" : "Limit"}
       </button>
       {open ? (
-        <FuturesLimitCloseDialog
+        <FuturesCloseDialog
           trade={trade}
           next={next}
+          orderType={orderType}
           onClose={() => setOpen(false)}
         />
       ) : null}
@@ -67,17 +56,20 @@ function FuturesLimitCloseButton({
   );
 }
 
-function FuturesLimitCloseDialog({
+function FuturesCloseDialog({
   trade,
   next,
+  orderType,
   onClose,
 }: {
   trade: MarkedFutures;
   next: string;
+  orderType: "market" | "limit";
   onClose: () => void;
 }) {
   const titleId = useId();
   const last = trade.last ?? trade.mark;
+  const limit = orderType === "limit";
   const [qty, setQty] = useState(() =>
     formatGroupedNumberInput(String(trade.qty), true),
   );
@@ -115,7 +107,7 @@ function FuturesLimitCloseDialog({
       >
         <div className="flex items-start justify-between gap-3">
           <h2 id={titleId} className="text-lg font-semibold tracking-tight">
-            Set Limit Close
+            {limit ? "Set Limit Close" : "Set Market Close"}
           </h2>
           <button
             type="button"
@@ -127,10 +119,16 @@ function FuturesLimitCloseDialog({
           </button>
         </div>
         <p className="mt-2 text-sm text-ink-muted">
-          {trade.side === "long"
-            ? "Sells this long when last trades at the limit."
-            : "Buys this short when last trades at the limit."}{" "}
-          GTC. Watch it under Open orders.
+          {limit
+            ? trade.side === "long"
+              ? "Sells this long when last trades at the limit."
+              : "Buys this short when last trades at the limit."
+            : trade.side === "long"
+              ? "Sells this long at market now."
+              : "Buys this short at market now."}{" "}
+          {limit
+            ? "GTC. Watch it under Open orders."
+            : "Qty can be the whole row or a slice."}
         </p>
         <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
           <HeaderStat label="Entry Price" value={formatPrice(trade.entryPrice)} />
@@ -149,7 +147,7 @@ function FuturesLimitCloseDialog({
           <input type="hidden" name="symbol" value={trade.symbol} />
           <input type="hidden" name="positionId" value={trade.id} />
           <input type="hidden" name="action" value="close" />
-          <input type="hidden" name="orderType" value="limit" />
+          <input type="hidden" name="orderType" value={orderType} />
           <input type="hidden" name="sizeUnit" value="qty" />
           <label className="block text-sm text-ink">
             Qty
@@ -162,27 +160,29 @@ function FuturesLimitCloseDialog({
               className={`${INPUT_CLASS} mt-1`}
             />
           </label>
-          <label className="block text-sm text-ink">
-            Limit price
-            <span className="relative mt-1 block">
-              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-                $
+          {limit ? (
+            <label className="block text-sm text-ink">
+              Limit price
+              <span className="relative mt-1 block">
+                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
+                  $
+                </span>
+                <GroupedNumberInput
+                  name="limitPrice"
+                  value={price}
+                  onChange={setPrice}
+                  allowDecimal
+                  placeholder="0.0"
+                  ariaLabel="Limit price"
+                  className={`${INPUT_CLASS} pr-3 pl-7`}
+                />
               </span>
-              <GroupedNumberInput
-                name="limitPrice"
-                value={price}
-                onChange={setPrice}
-                allowDecimal
-                placeholder="0.0"
-                ariaLabel="Limit price"
-                className={`${INPUT_CLASS} pr-3 pl-7`}
-              />
-            </span>
-          </label>
+            </label>
+          ) : null}
           <div className="flex flex-col gap-2 pt-2">
             <PendingSubmitButton
-              pendingLabel="Placing"
-              successKey={`flatten-limit-${trade.id}`}
+              pendingLabel={limit ? "Placing" : "Closing"}
+              successKey={`flatten-${orderType}-${trade.id}`}
               className="w-full rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink"
             >
               Confirm
