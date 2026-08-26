@@ -4,6 +4,7 @@ import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
+import { SharedKeyWarning } from "@/components/shared-key-warning";
 import { strategyDetachBlockers } from "@/lib/accounts/model";
 import { loadAccountUsage } from "@/lib/accounts/store";
 import {
@@ -181,6 +182,7 @@ function ExchangeBindField({
             Exchanges
           </Link>
         </p>
+        <SharedKeyWarning className="mt-2" />
       </div>
     );
   }
@@ -213,6 +215,7 @@ function ExchangeBindField({
           />
         </div>
       ) : null}
+      <SharedKeyWarning className="mt-2" />
     </div>
   );
 }

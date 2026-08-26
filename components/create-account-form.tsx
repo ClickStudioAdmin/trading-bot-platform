@@ -13,6 +13,7 @@ import {
   formatConnectionSummary,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
+import { SharedKeyWarning } from "@/components/shared-key-warning";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -139,14 +140,13 @@ export function CreateAccountForm({
               </p>
             )
           ) : null}
+          <SharedKeyWarning />
         </div>
       ) : null}
       <p className="text-sm text-ink-muted">
         Paper Trading uses live market data and fills on the in-app ledger.
         No real trades. Connected Exchange binds a key from this login (Bybit
         Demo or production). Mode and type are set at create and never change.
-        Two desks on the same exchange key still share venue margin. Isolation
-        needs another trade-only key.
       </p>
       {embedded ? (
         <label className="flex items-start gap-2 text-sm text-ink">

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
+import { SharedKeyWarning } from "@/components/shared-key-warning";
 import { savePaperSettings } from "@/lib/engine/actions";
 import { loadEngineSettings } from "@/lib/engine/settings";
 import { strategyDetachBlockers } from "@/lib/accounts/model";
@@ -128,6 +129,7 @@ function ExchangeBindField({
             Exchanges
           </Link>
         </p>
+        <SharedKeyWarning className="mt-2" />
       </div>
     );
   }
@@ -157,6 +159,7 @@ function ExchangeBindField({
           <StrategyDetachControl blocked={detachBlocked} />
         </div>
       ) : null}
+      <SharedKeyWarning className="mt-2" />
     </div>
   );
 }
