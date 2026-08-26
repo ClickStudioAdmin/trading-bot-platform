@@ -26,6 +26,7 @@ export async function signIn(formData: FormData) {
     status?: unknown;
     password_hash?: unknown;
   } | null = null;
+  let lookupFailed: string | null = null;
   try {
     const lookedUp = await supabase
       .from("members")
@@ -33,16 +34,18 @@ export async function signIn(formData: FormData) {
       .eq("email", email)
       .maybeSingle();
     if (lookedUp.error) {
-      redirect(`/sign-in?error=${encodeURIComponent(lookedUp.error.message)}`);
+      lookupFailed = lookedUp.error.message;
+    } else {
+      existing = lookedUp.data;
     }
-    existing = lookedUp.data;
   } catch (cause) {
     const raw = cause instanceof Error ? cause.message : "fetch failed";
-    const hint =
-      raw.toLowerCase().includes("fetch")
-        ? "Could not reach the database. SUPABASE_URL must be https://….supabase.co from TBP-dev Project Settings → API, not the Vercel host. Restart next dev after editing .env.local."
-        : raw;
-    redirect(`/sign-in?error=${encodeURIComponent(hint)}`);
+    lookupFailed = raw.toLowerCase().includes("fetch")
+      ? "Could not reach the database. SUPABASE_URL must be https://….supabase.co from TBP-dev Project Settings → API, not the Vercel host. Restart next dev after editing .env.local."
+      : raw;
+  }
+  if (lookupFailed) {
+    redirect(`/sign-in?error=${encodeURIComponent(lookupFailed)}`);
   }
 
   let userId = existing ? String(existing.user_id) : "";
