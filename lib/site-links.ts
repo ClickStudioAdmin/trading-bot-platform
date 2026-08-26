@@ -32,6 +32,7 @@ export const ADMIN_NAV_LINKS = [
 export const ACCOUNT_DESK_LINKS = [
   { href: "/account", label: "Overview", exact: true },
   { href: "/account/settings", label: "Settings", exact: true },
+  { href: "/account/exchanges", label: "Exchanges", exact: true },
   { href: "/account/sub-accounts", label: "Manage sub-accounts", exact: true },
 ] as const;
 
@@ -51,6 +52,5 @@ export const FUTURES_SECONDARY_LINKS = [
 
 export const ACCOUNT_BOOK_LINKS = [
   { href: "/account/book", label: "Overview", exact: true },
-  { href: "/account/exchanges", label: "Exchanges", exact: true },
 ] as const;
 

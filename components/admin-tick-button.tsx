@@ -1,79 +1,196 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ButtonBusyIcon,
   ButtonCheckIcon,
 } from "@/components/pending-submit-button";
 
 const TICK_OK_KEY = "tbp-tick-ok";
+const TICK_NOTE_KEY = "tbp-tick-note";
+const NOTE_MS = 5000;
+const OK_MS = 1500;
+const POLL_MS = 5000;
+
+type TickBody = {
+  error?: string;
+  opened?: number;
+  added?: number;
+  closed?: number;
+  clipped?: number;
+};
+
+function readStored(key: string): string | null {
+  try {
+    const value = sessionStorage.getItem(key);
+    if (!value) {
+      return null;
+    }
+    sessionStorage.removeItem(key);
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+function writeStored(key: string, value: string) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    return;
+  }
+}
+
+function tickSummary(body: TickBody): string {
+  return `Opened ${body.opened ?? 0} · added ${body.added ?? 0} · closed ${body.closed ?? 0} · clipped ${body.clipped ?? 0}`;
+}
+
+function tickChanged(body: TickBody): boolean {
+  return (
+    (body.opened ?? 0) > 0 ||
+    (body.added ?? 0) > 0 ||
+    (body.closed ?? 0) > 0 ||
+    (body.clipped ?? 0) > 0
+  );
+}
 
 export function AdminTickButton() {
   const router = useRouter();
+  const inFlight = useRef(false);
+  const runTickRef = useRef<(auto: boolean) => Promise<void>>(async () => {});
   const [busy, setBusy] = useState(false);
   const [ok, setOk] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      if (sessionStorage.getItem(TICK_OK_KEY) !== "1") {
-        return;
-      }
-      sessionStorage.removeItem(TICK_OK_KEY);
-    } catch {
-      return;
+    if (readStored(TICK_OK_KEY) === "1") {
+      setOk(true);
     }
-    setOk(true);
-    const timer = window.setTimeout(() => setOk(false), 1500);
-    return () => window.clearTimeout(timer);
+    const storedNote = readStored(TICK_NOTE_KEY);
+    if (storedNote) {
+      setNote(storedNote);
+    }
   }, []);
 
-  async function runTick() {
-    setBusy(true);
-    setOk(false);
-    setNote(null);
+  useEffect(() => {
+    if (!ok) {
+      return;
+    }
+    const timer = window.setTimeout(() => setOk(false), OK_MS);
+    return () => window.clearTimeout(timer);
+  }, [ok]);
+
+  useEffect(() => {
+    if (!note) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setNote(null);
+      try {
+        sessionStorage.removeItem(TICK_NOTE_KEY);
+      } catch {
+        /* ignore */
+      }
+    }, NOTE_MS);
+    return () => window.clearTimeout(timer);
+  }, [note]);
+
+  async function runTick(auto: boolean) {
+    if (inFlight.current) {
+      return;
+    }
+    inFlight.current = true;
+    if (!auto) {
+      setBusy(true);
+      setOk(false);
+      setNote(null);
+    }
     try {
-      const response = await fetch("/api/engine/admin-tick", {
-        method: "POST",
-      });
-      const body = (await response.json()) as {
-        error?: string;
-        opened?: number;
-        added?: number;
-        closed?: number;
-        clipped?: number;
-      };
+      const response = await fetch(
+        auto ? "/api/engine/admin-tick?auto=1" : "/api/engine/admin-tick",
+        { method: "POST" },
+      );
+      const body = (await response.json()) as TickBody;
       if (!response.ok) {
-        setNote(body.error ?? "Tick failed");
+        if (!auto) {
+          setNote(body.error ?? "Tick failed");
+        }
         return;
       }
-      setNote(
-        `Opened ${body.opened ?? 0} · added ${body.added ?? 0} · closed ${body.closed ?? 0} · clipped ${body.clipped ?? 0}`,
-      );
-      try {
-        sessionStorage.setItem(TICK_OK_KEY, "1");
-      } catch {
-        setOk(true);
-        window.setTimeout(() => setOk(false), 1500);
+      if (auto) {
+        if (tickChanged(body)) {
+          router.refresh();
+        }
+        return;
       }
+      const summary = tickSummary(body);
+      setNote(summary);
+      writeStored(TICK_NOTE_KEY, summary);
+      writeStored(TICK_OK_KEY, "1");
+      setOk(true);
       router.refresh();
     } catch {
-      setNote("Tick failed");
+      if (!auto) {
+        setNote("Tick failed");
+      }
     } finally {
-      setBusy(false);
+      inFlight.current = false;
+      if (!auto) {
+        setBusy(false);
+      }
     }
   }
 
+  runTickRef.current = runTick;
+
+  useEffect(() => {
+    let timer = 0;
+
+    function stop() {
+      window.clearInterval(timer);
+      timer = 0;
+    }
+
+    function start() {
+      stop();
+      if (document.hidden) {
+        return;
+      }
+      void runTickRef.current(true);
+      timer = window.setInterval(() => {
+        if (!document.hidden) {
+          void runTickRef.current(true);
+        }
+      }, POLL_MS);
+    }
+
+    function onVisibility() {
+      if (document.hidden) {
+        stop();
+      } else {
+        start();
+      }
+    }
+
+    start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
   return (
-    <span className="flex items-center gap-2">
+    <span className="relative">
       <button
         type="button"
         disabled={busy}
         aria-busy={busy}
-        onClick={() => void runTick()}
+        onClick={() => void runTick(false)}
         className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
-        aria-label={busy ? "Ticking" : ok ? "Done" : undefined}
+        aria-label={busy ? "Ticking" : ok ? "Done" : "Tick"}
+        title="Runs every 5 seconds while this tab is open"
       >
         <span className="inline-grid justify-items-center">
           <span className="invisible col-start-1 row-start-1" aria-hidden>
@@ -91,7 +208,10 @@ export function AdminTickButton() {
         </span>
       </button>
       {note ? (
-        <span className="hidden max-w-[16rem] truncate text-xs text-ink-faint lg:inline">
+        <span
+          role="status"
+          className="absolute top-full right-0 z-30 mt-2 whitespace-nowrap rounded-card border border-line bg-surface px-3 py-2 text-xs text-ink-muted"
+        >
           {note}
         </span>
       ) : null}

@@ -43,12 +43,14 @@ import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { runFuturesAutomationTick } from "@/lib/futures/automation-tick";
 import { createServiceClient } from "@/lib/supabase/admin";
 
-export async function runPaperEngineTick(): Promise<{
+export async function runPaperEngineTick(options?: {
+  silent?: boolean;
+}): Promise<{
   users: number;
   opened: number;
+  added: number;
   closed: number;
   clipped: number;
-  added: number;
 }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -505,20 +507,22 @@ export async function runPaperEngineTick(): Promise<{
     });
   }
 
-  await writeEventLog({
-    scope: "system",
-    event: "engine.tick",
-    message: `Engine tick opened ${opened}, added ${added}, closed ${closed}, clipped ${clipped}`,
-    strategy: "cash-and-carry",
-    data: {
-      users: userIds.size,
-      accounts: accounts.length,
-      opened,
-      added,
-      closed,
-      clipped,
-    },
-  });
+  if (!options?.silent) {
+    await writeEventLog({
+      scope: "system",
+      event: "engine.tick",
+      message: `Engine tick opened ${opened}, added ${added}, closed ${closed}, clipped ${clipped}`,
+      strategy: "cash-and-carry",
+      data: {
+        users: userIds.size,
+        accounts: accounts.length,
+        opened,
+        added,
+        closed,
+        clipped,
+      },
+    });
+  }
 
   return { users: userIds.size, opened, added, closed, clipped };
 }

@@ -25,7 +25,6 @@ export async function SiteHeader() {
           extraLinks={extraLinks}
         />
         <div className="flex items-center gap-2">
-          {admin ? <AdminTickButton /> : null}
           <details className="relative md:hidden">
             <summary className="list-none rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink [&::-webkit-details-marker]:hidden">
               Menu
@@ -43,6 +42,7 @@ export async function SiteHeader() {
             current={session?.account}
             accounts={accounts}
           />
+          {admin ? <AdminTickButton /> : null}
         </div>
       </div>
     </header>
