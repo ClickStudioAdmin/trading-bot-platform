@@ -115,7 +115,7 @@ export async function loadBoundConnectionSecrets(input: {
     .eq("user_id", input.userId)
     .maybeSingle();
   if (error || !data) {
-    return { ok: false, error: "Connect an exchange in Strategy Settings first." };
+    return { ok: false, error: "Connect an exchange in Desk Settings first." };
   }
   if (String(data.status ?? "") !== "active") {
     return { ok: false, error: "That exchange connection is not active." };

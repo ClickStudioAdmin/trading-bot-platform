@@ -115,7 +115,7 @@ function ConnectionList({
     <section>
       <h2 className="text-lg font-semibold tracking-tight">Connected</h2>
       <p className="mt-2 text-sm text-ink-muted">
-        Live desks pick a key when you create them, or in Strategy Settings.
+        Live desks pick a key when you create them, or in Desk Settings.
         You cannot remove a key while any desk is using it.
       </p>
       <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">

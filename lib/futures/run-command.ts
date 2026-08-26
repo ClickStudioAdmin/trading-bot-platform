@@ -136,7 +136,7 @@ async function boundLive(input: {
   }
   if (!input.connectionId) {
     return fail(
-      "Bind an exchange in Futures Strategy Settings before trading.",
+      "Bind an exchange in Desk Settings before trading.",
     );
   }
   const bound = await loadBoundVenueForAccount({
@@ -825,7 +825,7 @@ async function runPlace(
     }
     if (!connectionBound.connection) {
       return fail(
-        "Bind an exchange in Futures Strategy Settings before trading.",
+        "Bind an exchange in Desk Settings before trading.",
       );
     }
     const connection = connectionBound.connection;
@@ -1072,7 +1072,7 @@ async function runSetTpsl(
     }
     if (!connectionBound.connection) {
       return fail(
-        "Bind an exchange in Futures Strategy Settings before trading.",
+        "Bind an exchange in Desk Settings before trading.",
       );
     }
     const stop = combinedVenueTradingStop(tpsl, trailingFromRow(row));
@@ -1188,7 +1188,7 @@ async function runSetTrailing(
     }
     if (!connectionBound.connection) {
       return fail(
-        "Bind an exchange in Futures Strategy Settings before trading.",
+        "Bind an exchange in Desk Settings before trading.",
       );
     }
     const set = await applyVenueTradingStop({
@@ -1261,7 +1261,7 @@ async function runCancelWorking(
     const settings = await loadFuturesSettings(actor.accountId);
     if (!settings.connectionId && row.venueOrderId) {
       return fail(
-        "Bind an exchange in Futures Strategy Settings before cancelling.",
+        "Bind an exchange in Desk Settings before cancelling.",
       );
     }
     if (settings.connectionId) {
@@ -1371,7 +1371,7 @@ async function runAmendWorking(
     const settings = await loadFuturesSettings(actor.accountId);
     if (!settings.connectionId && row.venueOrderId) {
       return fail(
-        "Bind an exchange in Futures Strategy Settings before editing.",
+        "Bind an exchange in Desk Settings before editing.",
       );
     }
     if (settings.connectionId) {
@@ -1495,7 +1495,7 @@ async function runCloseAll(
     const settings = await loadFuturesSettings(actor.accountId);
     if (!settings.connectionId && working.some((row) => row.venueOrderId)) {
       return fail(
-        "Bind an exchange in Futures Strategy Settings before cancelling.",
+        "Bind an exchange in Desk Settings before cancelling.",
       );
     }
     if (settings.connectionId) {

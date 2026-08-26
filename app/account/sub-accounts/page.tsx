@@ -144,7 +144,10 @@ export default async function ManageSubAccountsPage({
         </ul>
       </section>
 
-      <CreateAccountForm connections={connections} />
+      <CreateAccountForm
+        connections={connections}
+        next="/account/sub-accounts"
+      />
     </div>
   );
 }

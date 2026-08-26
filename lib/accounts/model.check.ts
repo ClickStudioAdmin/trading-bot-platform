@@ -155,7 +155,7 @@ assert.deepEqual(
 );
 assert.equal(
   formatConnectionRemoveBlockers(["in_use"]),
-  "Detach this key from every desk in Strategy Settings first",
+  "Detach this key from every desk in Desk Settings first",
 );
 assert.deepEqual(
   strategyDetachBlockers({ openCount: 0, automationsRunning: false }),

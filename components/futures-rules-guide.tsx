@@ -24,7 +24,7 @@ export function FuturesRulesGuide({
         />
         <GuideItem
           term="When it is on"
-          detail="Active may Buy, Sell, and Close. Reduce only will not Buy or Sell, but still Closes. Disabled does neither. Book Reduce only (Strategy Settings, or the Close All checkbox) makes every Active rule behave as Reduce only. Manual Buy, Sell, and Close always work."
+          detail="Active may Buy, Sell, and Close. Reduce only will not Buy or Sell, but still Closes. Disabled does neither. Book Reduce only (Desk Settings, or the Close All checkbox) makes every Active rule behave as Reduce only. Manual Buy, Sell, and Close always work."
         />
         <GuideItem
           term="Same desk path"

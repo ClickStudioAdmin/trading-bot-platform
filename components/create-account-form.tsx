@@ -18,19 +18,32 @@ const fieldClass =
 
 export function CreateAccountForm({
   connections,
+  next,
+  embedded = false,
+  onCancel,
 }: {
   connections: ExchangeConnection[];
+  next?: string;
+  embedded?: boolean;
+  onCancel?: () => void;
 }) {
   const [mode, setMode] = useState<"paper" | "live">("paper");
+  const [bindChoice, setBindChoice] = useState<"later" | "existing">("later");
   const liveKeys = connections.filter((row) => row.status === "active");
 
   return (
     <form
       action={createTradingAccount}
-      className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
+      className={
+        embedded
+          ? "mt-4 space-y-4"
+          : "mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
+      }
     >
-      <h2 className="text-lg font-semibold tracking-tight">New desk</h2>
-      <input type="hidden" name="next" value="/account/sub-accounts" />
+      {embedded ? null : (
+        <h2 className="text-lg font-semibold tracking-tight">New desk</h2>
+      )}
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <label className="block text-xs text-ink-muted">
         Name
         <input name="name" required maxLength={40} className={fieldClass} />
@@ -56,9 +69,13 @@ export function CreateAccountForm({
         <select
           name="mode"
           value={mode}
-          onChange={(event) =>
-            setMode(event.target.value === "live" ? "live" : "paper")
-          }
+          onChange={(event) => {
+            const nextMode = event.target.value === "live" ? "live" : "paper";
+            setMode(nextMode);
+            if (nextMode !== "live") {
+              setBindChoice("later");
+            }
+          }}
           className={fieldClass}
         >
           <option value="paper">{formatAccountModeChoice("paper")}</option>
@@ -66,34 +83,58 @@ export function CreateAccountForm({
         </select>
       </label>
       {mode === "live" ? (
-        liveKeys.length > 0 ? (
+        <div className="space-y-4">
           <label className="block text-xs text-ink-muted">
-            Exchange key
+            Exchange Connection
             <select
-              name="exchangeConnectionId"
-              defaultValue="none"
+              value={bindChoice}
+              onChange={(event) =>
+                setBindChoice(
+                  event.target.value === "existing" ? "existing" : "later",
+                )
+              }
               className={fieldClass}
             >
-              <option value="none">Bind later in Strategy Settings</option>
-              {liveKeys.map((row) => (
-                <option key={row.id} value={row.id}>
-                  {formatConnectionSummary(row)}
-                </option>
-              ))}
+              <option value="later">Bind Later in Desk Settings</option>
+              <option value="existing">
+                Select Existing Exchange Connection
+              </option>
             </select>
           </label>
-        ) : (
-          <p className="text-sm text-ink-muted">
-            No keys saved yet.{" "}
-            <Link
-              href="/account/exchanges"
-              className="text-accent hover:text-accent-strong"
-            >
-              Add a key on Exchanges
-            </Link>{" "}
-            first, or bind later in Strategy Settings.
-          </p>
-        )
+          {bindChoice === "existing" ? (
+            liveKeys.length > 0 ? (
+              <label className="block text-xs text-ink-muted">
+                Connection
+                <select
+                  name="exchangeConnectionId"
+                  required
+                  defaultValue=""
+                  className={fieldClass}
+                >
+                  <option value="" disabled>
+                    Choose a connection
+                  </option>
+                  {liveKeys.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {formatConnectionSummary(row)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <p className="text-sm text-ink-muted">
+                No connections saved yet.{" "}
+                <Link
+                  href="/account/exchanges"
+                  className="text-accent hover:text-accent-strong"
+                >
+                  Add a connection on Exchanges
+                </Link>{" "}
+                first, or bind later in Desk Settings.
+              </p>
+            )
+          ) : null}
+        </div>
       ) : null}
       <p className="text-sm text-ink-muted">
         Paper Trading uses live market data and fills on the in-app ledger.
@@ -102,12 +143,23 @@ export function CreateAccountForm({
         Two desks on the same exchange key still share venue margin. Isolation
         needs another trade-only key.
       </p>
-      <PendingSubmitButton
-        pendingLabel="Creating…"
-        className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-      >
-        Create desk
-      </PendingSubmitButton>
+      <div className="flex flex-wrap items-center gap-2">
+        <PendingSubmitButton
+          pendingLabel="Creating…"
+          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+        >
+          Create desk
+        </PendingSubmitButton>
+        {onCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+          >
+            Cancel
+          </button>
+        ) : null}
+      </div>
     </form>
   );
 }

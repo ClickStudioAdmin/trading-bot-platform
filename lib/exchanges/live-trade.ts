@@ -35,7 +35,7 @@ export async function loadBoundVenueForAccount(input: {
   if (!connectionId) {
     return {
       ok: false,
-      error: "Bind an exchange in Strategy Settings before opening.",
+      error: "Bind an exchange in Desk Settings before opening.",
     };
   }
   return loadBoundConnectionSecrets({

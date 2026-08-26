@@ -2,23 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { switchTradingAccount } from "@/lib/accounts/actions";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import {
-  formatAccountMode,
-  formatDeskType,
-  type TradingAccount,
-} from "@/lib/accounts/model";
 import { signOut } from "@/lib/auth/actions";
 
 export function UserMenu({
   name,
-  current,
-  accounts,
 }: {
   name: string | null;
-  current?: TradingAccount;
-  accounts?: TradingAccount[];
 }) {
   const rootRef = useRef<HTMLDetailsElement>(null);
 
@@ -62,7 +52,6 @@ export function UserMenu({
   }
 
   const initial = name.slice(0, 1).toUpperCase();
-  const desks = accounts ?? [];
 
   return (
     <details ref={rootRef} className="relative">
@@ -73,66 +62,19 @@ export function UserMenu({
         <span className="hidden max-w-[10rem] truncate text-sm text-ink-muted sm:inline">
           {name}
         </span>
-        {current ? (
-          <>
-            <span
-              className="hidden h-4 w-px bg-line sm:block"
-              aria-hidden
-            />
-            <span className="hidden max-w-[7rem] truncate text-xs text-ink-faint sm:inline">
-              {current.name}
-            </span>
-          </>
-        ) : null}
       </summary>
-      <div className="absolute right-0 z-20 mt-2 w-72 rounded-card border border-line bg-surface p-2 shadow-none">
-        {current ? (
-          <>
-            <p className="px-2 pt-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-              Desks
-            </p>
-            {desks.map((account) =>
-              account.id === current.id ? (
-                <p
-                  key={account.id}
-                  className="rounded-control bg-surface-raised px-2 py-2 text-sm"
-                >
-                  <span className="block truncate">{account.name}</span>
-                  <span className="text-xs text-ink-faint">
-                    {formatDeskType(account.deskType)} ·{" "}
-                    {formatAccountMode(account.mode)}
-                  </span>
-                </p>
-              ) : (
-                <form key={account.id} action={switchTradingAccount}>
-                  <input type="hidden" name="accountId" value={account.id} />
-                  <PendingSubmitButton
-                    pendingLabel="Switching…"
-                    className="w-full rounded-control px-2 py-2 text-left text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-                  >
-                    <span className="block truncate">{account.name}</span>
-                    <span className="text-xs text-ink-faint">
-                      {formatDeskType(account.deskType)} ·{" "}
-                      {formatAccountMode(account.mode)}
-                    </span>
-                  </PendingSubmitButton>
-                </form>
-              ),
-            )}
-            <div className="my-1 border-t border-line" />
-          </>
-        ) : null}
-        <Link
-          href="/account/sub-accounts"
-          className="block rounded-control px-2 py-2 text-sm text-accent hover:bg-surface-raised hover:text-accent-strong"
-        >
-          Manage desks
-        </Link>
+      <div className="absolute right-0 z-20 mt-2 w-56 rounded-card border border-line bg-surface p-2 shadow-none">
         <Link
           href="/account/settings"
           className="block rounded-control px-2 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
         >
-          Login settings
+          Settings
+        </Link>
+        <Link
+          href="/account/exchanges"
+          className="block rounded-control px-2 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+        >
+          Exchanges
         </Link>
         <div className="my-1 border-t border-line" />
         <form action={signOut}>

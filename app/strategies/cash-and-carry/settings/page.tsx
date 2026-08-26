@@ -20,8 +20,8 @@ import { getSessionContext } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Strategy Settings",
-  description: "Cash-and-carry strategy settings.",
+  title: "Desk Settings",
+  description: "Cash and Carry desk settings.",
 };
 
 export default async function CashAndCarrySettingsPage({
@@ -54,9 +54,9 @@ export default async function CashAndCarrySettingsPage({
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Strategy Settings" />
+      <PageHeading as="h2" title="Desk Settings" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Strategy-wide knobs. Automations stay on their own page.
+        Desk-wide knobs. Automations stay on their own page.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

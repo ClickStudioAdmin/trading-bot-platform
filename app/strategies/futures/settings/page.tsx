@@ -23,8 +23,8 @@ import { redirect } from "next/navigation";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
 export const metadata: Metadata = {
-  title: "Futures settings",
-  description: "Futures strategy settings.",
+  title: "Desk Settings",
+  description: "Perps desk settings.",
 };
 
 export default async function FuturesSettingsPage({
@@ -58,15 +58,14 @@ export default async function FuturesSettingsPage({
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Strategy Settings" />
+      <PageHeading as="h2" title="Desk Settings" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Strategy-wide knobs. Automations stay on their own page. TradingView
-        URLs live on{" "}
+        Desk-wide knobs. Automations stay on their own page. TradingView URLs
+        live on{" "}
         <Link href={FUTURES_PATHS.webhooks} className="text-accent">
           Webhooks
         </Link>
-        .         Bind the Bybit key this strategy uses from this login. Cash-and-carry
-        has its own bind.
+        . Bind the Bybit key this desk uses from this login.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

@@ -76,7 +76,7 @@ export function ExchangeConnectForm({
       <p className="text-sm text-ink-muted">
         Use a trade-only key with no withdrawal permission. We check that
         with Bybit before saving. The secret is encrypted and is not shown
-        again. Live desks bind a key in Strategy Settings. The same key on
+        again. Live desks bind a key in Desk Settings. The same key on
         two desks shares venue margin.
       </p>
       <PendingSubmitButton

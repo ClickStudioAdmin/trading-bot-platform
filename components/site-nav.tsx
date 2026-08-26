@@ -2,25 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SITE_LINKS } from "@/lib/site-links";
-
-export function SiteNav({
-  className = "",
-}: {
-  className?: string;
-  stacked?: boolean;
-}) {
-  const pathname = usePathname();
-  const active = pathname === "/strategies" || pathname.startsWith("/strategies/");
-
-  return (
-    <nav className={className} aria-label="Primary">
-      <Link href="/strategies" className={navItemClass(active)}>
-        {SITE_LINKS[0].label}
-      </Link>
-    </nav>
-  );
-}
 
 function navItemClass(active: boolean): string {
   return `rounded-control px-3 py-1.5 text-sm ${

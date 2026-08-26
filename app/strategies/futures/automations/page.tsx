@@ -69,7 +69,7 @@ export default async function FuturesAutomationsPage({
         <p className="mt-4 mb-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. Buy and Sell stay blocked until you turn it off in{" "}
           <Link href={FUTURES_PATHS.settings} className="underline">
-            Strategy Settings
+            Desk Settings
           </Link>
           .
         </p>

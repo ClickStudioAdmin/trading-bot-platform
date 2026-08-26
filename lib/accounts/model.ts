@@ -194,7 +194,7 @@ export function formatConnectionRemoveBlockers(
   blocks: ConnectionRemoveBlock[],
 ): string {
   if (blocks.includes("in_use")) {
-    return "Detach this key from every desk in Strategy Settings first";
+    return "Detach this key from every desk in Desk Settings first";
   }
   return "";
 }

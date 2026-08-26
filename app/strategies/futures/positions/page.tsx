@@ -195,7 +195,7 @@ export default async function FuturesPositionsPage({
             </form>
             {live && !settings.connectionId ? (
               <p className="mt-3 text-xs text-warning">
-                Bind an exchange in Strategy Settings before these buttons place
+                Bind an exchange in Desk Settings before these buttons place
                 venue orders.
               </p>
             ) : null}

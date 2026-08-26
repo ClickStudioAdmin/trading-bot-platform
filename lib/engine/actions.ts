@@ -283,7 +283,7 @@ export async function savePaperSettings(formData: FormData) {
   await writeEventLog({
     scope: "strategy",
     event: "settings.saved",
-    message: "Saved strategy settings",
+    message: "Saved desk settings",
     userId: user.id,
     accountId: account.id,
     strategy: "cash-and-carry",

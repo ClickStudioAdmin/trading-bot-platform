@@ -146,7 +146,7 @@ function ConnectionList({
     return (
       <p className="mt-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
         No key bound on this book yet. The engine will not place exchange
-        orders until Strategy Settings picks a key from this login.
+        orders until Desk Settings picks a key from this login.
       </p>
     );
   }
