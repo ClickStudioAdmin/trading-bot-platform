@@ -28,6 +28,10 @@ export type FuturesPosition = {
   tpslMode: FuturesTpslMode;
   tpQty: number | null;
   slQty: number | null;
+  tpOrderType: FuturesOrderType;
+  slOrderType: FuturesOrderType;
+  tpLimitPrice: number | null;
+  slLimitPrice: number | null;
   trailingStop: number | null;
   trailingActive: number | null;
   trailingPeak: number | null;
@@ -210,6 +214,12 @@ export function parseFuturesPositionRow(
     tpslMode: row.tpsl_mode === "partial" ? "partial" : "full",
     tpQty: Number(row.tp_qty) > 0 ? Number(row.tp_qty) : null,
     slQty: Number(row.sl_qty) > 0 ? Number(row.sl_qty) : null,
+    tpOrderType: row.tp_order_type === "limit" ? "limit" : "market",
+    slOrderType: row.sl_order_type === "limit" ? "limit" : "market",
+    tpLimitPrice:
+      Number(row.tp_limit_price) > 0 ? Number(row.tp_limit_price) : null,
+    slLimitPrice:
+      Number(row.sl_limit_price) > 0 ? Number(row.sl_limit_price) : null,
     trailingStop: Number(row.trailing_stop) > 0 ? Number(row.trailing_stop) : null,
     trailingActive:
       Number(row.trailing_active) > 0 ? Number(row.trailing_active) : null,

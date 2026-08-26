@@ -124,6 +124,8 @@ assert.equal(parsed.stopLoss, null);
 assert.equal(parsed.tpTrigger, "last");
 assert.equal(parsed.tpslMode, "full");
 assert.equal(parsed.tpQty, null);
+assert.equal(parsed.tpOrderType, "market");
+assert.equal(parsed.tpLimitPrice, null);
 assert.equal(parsed.trailingStop, null);
 assert.equal(parsed.trailingActive, null);
 assert.equal(parsed.reduceOnly, false);

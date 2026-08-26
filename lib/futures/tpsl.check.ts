@@ -22,6 +22,10 @@ function levels(
     mode: "full",
     tpQty: null,
     slQty: null,
+    tpOrderType: "market",
+    slOrderType: "market",
+    tpLimitPrice: null,
+    slLimitPrice: null,
     ...partial,
   };
 }
@@ -279,5 +283,74 @@ const partialVenue = venueTpslFields(
 assert.equal(partialVenue?.tpslMode, "Partial");
 assert.equal(partialVenue?.tpSize, "0.25");
 assert.equal(partialVenue?.slSize, "0.5");
+assert.equal(partialVenue?.tpOrderType, "Market");
+
+const limitForm = new FormData();
+limitForm.set("tpsl", "on");
+limitForm.set("takeProfit", "90000");
+limitForm.set("tpTrigger", "last");
+limitForm.set("slTrigger", "last");
+limitForm.set("tpOrderType", "limit");
+limitForm.set("tpLimitPrice", "91000");
+const limitParsed = parseFuturesTpslForm(limitForm, undefined);
+assert.equal(limitParsed.ok, true);
+if (limitParsed.ok && limitParsed.tpsl) {
+  assert.equal(limitParsed.tpsl.tpOrderType, "limit");
+  assert.equal(limitParsed.tpsl.tpLimitPrice, 91000);
+}
+
+const limitDefault = new FormData();
+limitDefault.set("tpsl", "on");
+limitDefault.set("takeProfit", "90000");
+limitDefault.set("tpTrigger", "last");
+limitDefault.set("slTrigger", "last");
+limitDefault.set("tpOrderType", "limit");
+const limitDefaultParsed = parseFuturesTpslForm(limitDefault, undefined);
+assert.equal(limitDefaultParsed.ok, true);
+if (limitDefaultParsed.ok && limitDefaultParsed.tpsl) {
+  assert.equal(limitDefaultParsed.tpsl.tpLimitPrice, 90000);
+}
+
+assert.equal(
+  paperStopHit({
+    side: "long",
+    tpsl: levels({
+      takeProfit: 90000,
+      stopLoss: null,
+      tpOrderType: "limit",
+      tpLimitPrice: 91000,
+    }),
+    last: 90000,
+    mark: 90000,
+    index: 90000,
+  }),
+  null,
+);
+assert.equal(
+  paperStopHit({
+    side: "long",
+    tpsl: levels({
+      takeProfit: 90000,
+      stopLoss: null,
+      tpOrderType: "limit",
+      tpLimitPrice: 91000,
+    }),
+    last: 90000,
+    mark: 91000,
+    index: 90000,
+  })?.price,
+  91000,
+);
+
+const limitVenue = venueTpslFields(
+  levels({
+    takeProfit: 90000,
+    stopLoss: null,
+    tpOrderType: "limit",
+    tpLimitPrice: 91000,
+  }),
+);
+assert.equal(limitVenue?.tpOrderType, "Limit");
+assert.equal(limitVenue?.tpLimitPrice, "91000");
 
 console.log("futures tpsl checks passed");

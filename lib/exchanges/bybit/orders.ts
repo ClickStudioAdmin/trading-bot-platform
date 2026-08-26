@@ -37,6 +37,10 @@ export type BybitTpslAttach = {
   tpslMode?: "Full" | "Partial";
   tpSize?: string;
   slSize?: string;
+  tpOrderType?: "Market" | "Limit";
+  slOrderType?: "Market" | "Limit";
+  tpLimitPrice?: string;
+  slLimitPrice?: string;
 };
 
 function applyTpslToBody(
@@ -49,17 +53,23 @@ function applyTpslToBody(
   if (tpsl.takeProfit) {
     body.takeProfit = tpsl.takeProfit;
     body.tpTriggerBy = tpsl.tpTriggerBy ?? "LastPrice";
+    body.tpOrderType = tpsl.tpOrderType ?? "Market";
+    if (body.tpOrderType === "Limit" && tpsl.tpLimitPrice) {
+      body.tpLimitPrice = tpsl.tpLimitPrice;
+    }
   }
   if (tpsl.stopLoss) {
     body.stopLoss = tpsl.stopLoss;
     body.slTriggerBy = tpsl.slTriggerBy ?? "LastPrice";
+    body.slOrderType = tpsl.slOrderType ?? "Market";
+    if (body.slOrderType === "Limit" && tpsl.slLimitPrice) {
+      body.slLimitPrice = tpsl.slLimitPrice;
+    }
   }
   if (tpsl.takeProfit || tpsl.stopLoss) {
     const partial = tpsl.tpslMode === "Partial";
     body.tpslMode = partial ? "Partial" : "Full";
     if (partial) {
-      body.tpOrderType = "Market";
-      body.slOrderType = "Market";
       if (tpsl.tpSize) {
         body.tpSize = tpsl.tpSize;
       }
@@ -509,10 +519,16 @@ export async function bybitSetTradingStop(input: {
   tpslMode?: "Full" | "Partial";
   tpSize?: string;
   slSize?: string;
+  tpOrderType?: "Market" | "Limit";
+  slOrderType?: "Market" | "Limit";
+  tpLimitPrice?: string;
+  slLimitPrice?: string;
   trailingStop?: string;
   activePrice?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const partial = input.tpslMode === "Partial";
+  const tpOrderType = input.tpOrderType ?? "Market";
+  const slOrderType = input.slOrderType ?? "Market";
   const body: Record<string, string | number> = {
     category: "linear",
     symbol: input.symbol,
@@ -522,10 +538,16 @@ export async function bybitSetTradingStop(input: {
     stopLoss: input.stopLoss,
     tpTriggerBy: input.tpTriggerBy,
     slTriggerBy: input.slTriggerBy,
+    tpOrderType,
+    slOrderType,
   };
+  if (tpOrderType === "Limit" && input.tpLimitPrice) {
+    body.tpLimitPrice = input.tpLimitPrice;
+  }
+  if (slOrderType === "Limit" && input.slLimitPrice) {
+    body.slLimitPrice = input.slLimitPrice;
+  }
   if (partial) {
-    body.tpOrderType = "Market";
-    body.slOrderType = "Market";
     if (input.tpSize) {
       body.tpSize = input.tpSize;
     }

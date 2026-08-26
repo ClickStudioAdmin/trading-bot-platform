@@ -6,7 +6,12 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { saveFuturesTpsl } from "@/lib/futures/actions";
 import { estimatedTpslPnl } from "@/lib/futures/tpsl";
-import type { FuturesSide, FuturesTpslMode, FuturesTrigger } from "@/lib/futures/model";
+import type {
+  FuturesOrderType,
+  FuturesSide,
+  FuturesTpslMode,
+  FuturesTrigger,
+} from "@/lib/futures/model";
 import { formatPrice, formatSignedUsd } from "@/lib/opportunities/format";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 
@@ -82,6 +87,10 @@ export function FuturesTpslCell({
   tpslMode,
   tpQty,
   slQty,
+  tpOrderType,
+  slOrderType,
+  tpLimitPrice,
+  slLimitPrice,
   next,
 }: {
   positionId: string;
@@ -99,6 +108,10 @@ export function FuturesTpslCell({
   tpslMode: FuturesTpslMode;
   tpQty: number | null;
   slQty: number | null;
+  tpOrderType: FuturesOrderType;
+  slOrderType: FuturesOrderType;
+  tpLimitPrice: number | null;
+  slLimitPrice: number | null;
   next: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -111,6 +124,8 @@ export function FuturesTpslCell({
             takeProfit={takeProfit}
             stopLoss={stopLoss}
             mode={tpslMode}
+            tpOrderType={tpOrderType}
+            slOrderType={slOrderType}
           />
           <button
             type="button"
@@ -147,6 +162,10 @@ export function FuturesTpslCell({
           tpslMode={tpslMode}
           tpQty={tpQty}
           slQty={slQty}
+          tpOrderType={tpOrderType}
+          slOrderType={slOrderType}
+          tpLimitPrice={tpLimitPrice}
+          slLimitPrice={slLimitPrice}
           next={next}
           onClose={() => setOpen(false)}
         />
@@ -159,11 +178,18 @@ export function TpslPair({
   takeProfit,
   stopLoss,
   mode,
+  tpOrderType,
+  slOrderType,
 }: {
   takeProfit: number | null;
   stopLoss: number | null;
   mode?: FuturesTpslMode;
+  tpOrderType?: FuturesOrderType;
+  slOrderType?: FuturesOrderType;
 }) {
+  const limited =
+    (takeProfit !== null && tpOrderType === "limit") ||
+    (stopLoss !== null && slOrderType === "limit");
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className="tabular-nums">
@@ -177,6 +203,9 @@ export function TpslPair({
       </span>
       {mode === "partial" ? (
         <span className="text-[11px] text-ink-faint">Partial</span>
+      ) : null}
+      {limited ? (
+        <span className="text-[11px] text-ink-faint">Limit</span>
       ) : null}
     </span>
   );
@@ -198,6 +227,10 @@ function FuturesTpslDialog({
   tpslMode,
   tpQty,
   slQty,
+  tpOrderType,
+  slOrderType,
+  tpLimitPrice,
+  slLimitPrice,
   next,
   onClose,
 }: {
@@ -216,6 +249,10 @@ function FuturesTpslDialog({
   tpslMode: FuturesTpslMode;
   tpQty: number | null;
   slQty: number | null;
+  tpOrderType: FuturesOrderType;
+  slOrderType: FuturesOrderType;
+  tpLimitPrice: number | null;
+  slLimitPrice: number | null;
   next: string;
   onClose: () => void;
 }) {
@@ -235,6 +272,22 @@ function FuturesTpslDialog({
   const [slQtyText, setSlQtyText] = useState(qtyText(slQty, qty, tpslMode));
   const [tpPct, setTpPct] = useState(percentFromQty(tpQtyText, qty));
   const [slPct, setSlPct] = useState(percentFromQty(slQtyText, qty));
+  const [tpType, setTpType] = useState<FuturesOrderType>(
+    tpOrderType === "limit" ? "limit" : "market",
+  );
+  const [slType, setSlType] = useState<FuturesOrderType>(
+    slOrderType === "limit" ? "limit" : "market",
+  );
+  const [tpLimit, setTpLimit] = useState(
+    tpLimitPrice === null
+      ? ""
+      : formatGroupedNumberInput(String(tpLimitPrice), true),
+  );
+  const [slLimit, setSlLimit] = useState(
+    slLimitPrice === null
+      ? ""
+      : formatGroupedNumberInput(String(slLimitPrice), true),
+  );
   const tpCloseQty =
     mode === "partial" ? optionalNumber(tpQtyText) ?? qty : qty;
   const slCloseQty =
@@ -243,13 +296,19 @@ function FuturesTpslDialog({
     side,
     qty: tpCloseQty,
     entryPrice,
-    exitPrice: optionalNumber(tp),
+    exitPrice:
+      tpType === "limit"
+        ? (optionalNumber(tpLimit) ?? optionalNumber(tp))
+        : optionalNumber(tp),
   });
   const loss = estimatedTpslPnl({
     side,
     qty: slCloseQty,
     entryPrice,
-    exitPrice: optionalNumber(sl),
+    exitPrice:
+      slType === "limit"
+        ? (optionalNumber(slLimit) ?? optionalNumber(sl))
+        : optionalNumber(sl),
   });
 
   useEffect(() => {
@@ -335,6 +394,12 @@ function FuturesTpslDialog({
             value={tp}
             onChange={setTp}
             defaultTrigger={tpTrigger}
+            orderType={tpType}
+            onOrderTypeChange={setTpType}
+            orderTypeName="tpOrderType"
+            limitName="tpLimitPrice"
+            limitValue={tpLimit}
+            onLimitChange={setTpLimit}
             result={profit}
             resultClass="text-success"
             partial={mode === "partial"}
@@ -363,6 +428,12 @@ function FuturesTpslDialog({
             value={sl}
             onChange={setSl}
             defaultTrigger={slTrigger}
+            orderType={slType}
+            onOrderTypeChange={setSlType}
+            orderTypeName="slOrderType"
+            limitName="slLimitPrice"
+            limitValue={slLimit}
+            onLimitChange={setSlLimit}
             result={loss}
             resultClass="text-danger"
             partial={mode === "partial"}
@@ -428,6 +499,9 @@ function TpslPriceField({
   qtyName?: string;
   qtyAria?: string;
 }) {
+  const [orderType, setOrderType] = useState<FuturesOrderType>("market");
+  const orderName = name === "stopLoss" ? "slOrderType" : "tpOrderType";
+  const limitName = name === "stopLoss" ? "slLimitPrice" : "tpLimitPrice";
   return (
     <div className="space-y-2">
       <label className="block text-xs text-ink-muted">
@@ -440,8 +514,26 @@ function TpslPriceField({
             className={TICKET_INPUT}
           />
           <TriggerSelect name={triggerName} defaultValue="last" />
+          <OrderTypeSelect
+            name={orderName}
+            value={orderType}
+            onChange={setOrderType}
+          />
         </span>
       </label>
+      {orderType === "limit" ? (
+        <label className="block text-xs text-ink-muted">
+          Limit
+          <GroupedNumberInput
+            name={limitName}
+            allowDecimal
+            placeholder="Trigger price"
+            className={`${TICKET_QTY} mt-1`}
+          />
+        </label>
+      ) : (
+        <input type="hidden" name={limitName} value="" />
+      )}
       {qtyName ? (
         <label className="block text-xs text-ink-muted">
           Qty
@@ -466,6 +558,12 @@ function TpslDialogRow({
   value,
   onChange,
   defaultTrigger,
+  orderType,
+  onOrderTypeChange,
+  orderTypeName,
+  limitName,
+  limitValue,
+  onLimitChange,
   result,
   resultClass,
   partial,
@@ -483,6 +581,12 @@ function TpslDialogRow({
   value: string;
   onChange: (next: string) => void;
   defaultTrigger: FuturesTrigger;
+  orderType: FuturesOrderType;
+  onOrderTypeChange: (next: FuturesOrderType) => void;
+  orderTypeName: string;
+  limitName: string;
+  limitValue: string;
+  onLimitChange: (next: string) => void;
   result: number | null;
   resultClass: string;
   partial: boolean;
@@ -508,6 +612,11 @@ function TpslDialogRow({
               className={INPUT_CLASS}
             />
             <TriggerSelect name={triggerName} defaultValue={defaultTrigger} />
+            <OrderTypeSelect
+              name={orderTypeName}
+              value={orderType}
+              onChange={onOrderTypeChange}
+            />
           </span>
         </label>
         <p className="block text-sm text-ink">
@@ -521,6 +630,21 @@ function TpslDialogRow({
           </span>
         </p>
       </div>
+      {orderType === "limit" ? (
+        <label className="block text-sm text-ink">
+          Limit
+          <GroupedNumberInput
+            name={limitName}
+            value={limitValue}
+            onChange={onLimitChange}
+            allowDecimal
+            placeholder="Trigger price"
+            className={`${INPUT_CLASS} mt-1`}
+          />
+        </label>
+      ) : (
+        <input type="hidden" name={limitName} value="" />
+      )}
       {partial ? (
         <div>
           <div className="grid grid-cols-2 gap-2">
@@ -630,6 +754,31 @@ function TriggerSelect({
       <option value="last">Last</option>
       <option value="mark">Mark</option>
       <option value="index">Index</option>
+    </select>
+  );
+}
+
+function OrderTypeSelect({
+  name,
+  value,
+  onChange,
+}: {
+  name: string;
+  value: FuturesOrderType;
+  onChange: (next: FuturesOrderType) => void;
+}) {
+  return (
+    <select
+      name={name}
+      value={value}
+      onChange={(event) =>
+        onChange(event.target.value === "limit" ? "limit" : "market")
+      }
+      className={SELECT_CLASS}
+      aria-label="Order type"
+    >
+      <option value="market">Market</option>
+      <option value="limit">Limit</option>
     </select>
   );
 }

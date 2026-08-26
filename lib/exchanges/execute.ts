@@ -386,6 +386,10 @@ export async function setPerpTradingStopOnVenue(input: {
   tpslMode?: "Full" | "Partial";
   tpSize?: string;
   slSize?: string;
+  tpOrderType?: "Market" | "Limit";
+  slOrderType?: "Market" | "Limit";
+  tpLimitPrice?: string;
+  slLimitPrice?: string;
   trailingStop?: string;
   activePrice?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -404,6 +408,10 @@ export async function setPerpTradingStopOnVenue(input: {
     tpslMode: input.tpslMode,
     tpSize: input.tpSize,
     slSize: input.slSize,
+    tpOrderType: input.tpOrderType,
+    slOrderType: input.slOrderType,
+    tpLimitPrice: input.tpLimitPrice,
+    slLimitPrice: input.slLimitPrice,
     trailingStop: input.trailingStop,
     activePrice: input.activePrice,
   });

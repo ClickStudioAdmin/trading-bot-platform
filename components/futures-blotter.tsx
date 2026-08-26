@@ -195,7 +195,7 @@ export function OpenFuturesTrades({
                 <th className="w-[4.5rem] px-3 py-3 font-medium">
                   <ColumnHint
                     label="TP/SL"
-                    hint="Take profit and stop loss on this row. Add when the position is open, or attach them on the order ticket."
+                    hint="Take profit and stop loss on this row. Market fills when the trigger hits. Limit rests until mark can fill. Add when the position is open, or attach them on the order ticket."
                   />
                 </th>
               ) : null}
@@ -502,6 +502,10 @@ function OpenFuturesRows({
             tpslMode={trade.tpslMode}
             tpQty={trade.tpQty}
             slQty={trade.slQty}
+            tpOrderType={trade.tpOrderType}
+            slOrderType={trade.slOrderType}
+            tpLimitPrice={trade.tpLimitPrice}
+            slLimitPrice={trade.slLimitPrice}
             liqPrice={trade.liqPrice}
             next={next}
           />

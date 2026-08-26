@@ -188,6 +188,8 @@ function WorkingRow({
             takeProfit={row.takeProfit}
             stopLoss={row.stopLoss}
             mode={row.tpslMode}
+            tpOrderType={row.tpOrderType}
+            slOrderType={row.slOrderType}
           />
         )}
       </td>
