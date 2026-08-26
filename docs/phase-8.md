@@ -32,6 +32,7 @@ Stop at the end of this phase for a Demo desk test. Do not start TradingView ([p
 5. Live: server decrypts the Futures-bound key. Demo → `api-demo.bybit.com`. Market or GTC limit on `linear` in **hedge mode** (`positionIdx` 1 long / 2 short). Market Close is `reduceOnly`. Limit Close is a reduce-only GTC. Working limits, TP/SL, and trailing stops are polled on Positions load and on the paper engine tick. If the Bybit account is still one-way on that contract, opening the second side is rejected until the venue position is closed and the mode can switch.
 6. Write `futures_positions` + `futures_orders` on this book only. Live books keep one open row per **symbol and side** and add size to that row. Paper does the same. Resting limits live on `futures_working_orders` until they fill or cancel. TP/SL and trailing stop live on the working row until fill, then on the position. Live trailing is set with Bybit `trading-stop` after the position exists (not on order create). Setting TP/SL re-sends the current trailing, and the reverse, so one does not cancel the other.
 7. Reduce only (Futures settings) blocks Buy and Sell. Close still runs.
+8. Desk clicks and later automations go through `runFuturesCommand`. Form server actions are thin adapters (session + redirect). An optional idempotency key is stored on `futures_command_receipts` and on working/order rows; live sends it to Bybit as `orderLinkId`. No webhook this phase.
 
 ## What this phase includes
 
@@ -43,6 +44,7 @@ Stop at the end of this phase for a Demo desk test. Do not start TradingView ([p
 - Take profit / stop loss on Buy and Sell (market or limit), and add/edit on an open position. Last / Mark / Index trigger. Entire-position or partial market stops. Partial qty can differ on TP vs SL.
 - Trailing stop on Buy and Sell (market or limit), and add/edit on an open position. Retracement by price distance. Optional activation price. Entire-position market close. Paper: SL, then trailing, then TP.
 - Event logs with `strategy = futures`
+- Typed `runFuturesCommand` for place / close / TP-SL / trailing / amend / cancel. Form actions are adapters. Optional idempotency key (Bybit `orderLinkId` on live). No webhook this phase.
 
 ## Out of scope
 

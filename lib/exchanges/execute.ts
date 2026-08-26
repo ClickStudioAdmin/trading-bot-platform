@@ -193,6 +193,7 @@ export async function placePerpMarketOnVenue(input: {
   positionIdx: 1 | 2;
   requireHedge?: boolean;
   tpsl?: BybitTpslAttach;
+  orderLinkId?: string;
 }): Promise<{ ok: true; fill: PerpVenueFill } | { ok: false; error: string }> {
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot place futures orders yet." };
@@ -226,6 +227,7 @@ export async function placePerpMarketOnVenue(input: {
     reduceOnly: input.reduceOnly,
     positionIdx: hedge.ok ? input.positionIdx : 0,
     tpsl: input.tpsl,
+    orderLinkId: input.orderLinkId,
   });
   if (!created.ok) {
     return { ok: false, error: explainHedgeModeError(created.error) };
@@ -253,6 +255,7 @@ export async function placePerpLimitOnVenue(input: {
   positionIdx: 1 | 2;
   requireHedge?: boolean;
   tpsl?: BybitTpslAttach;
+  orderLinkId?: string;
 }): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot place futures orders yet." };
@@ -275,6 +278,7 @@ export async function placePerpLimitOnVenue(input: {
     reduceOnly: input.reduceOnly,
     positionIdx: hedge.ok ? input.positionIdx : 0,
     tpsl: input.tpsl,
+    orderLinkId: input.orderLinkId,
   });
   if (!created.ok) {
     return { ok: false, error: explainHedgeModeError(created.error) };

@@ -20,6 +20,7 @@ export async function insertFuturesOrder(
     venue?: string | null;
     environment?: string | null;
     venueOrderId?: string | null;
+    idempotencyKey?: string | null;
   },
 ): Promise<{ error: string | null }> {
   const { error } = await supabase.from("futures_orders").insert({
@@ -34,6 +35,7 @@ export async function insertFuturesOrder(
     venue: input.venue ?? null,
     environment: input.environment ?? null,
     venue_order_id: input.venueOrderId ?? null,
+    idempotency_key: input.idempotencyKey ?? null,
   });
   if (error) {
     await writeEventLog({
@@ -64,6 +66,7 @@ export async function writeFuturesOpen(input: {
   venueOrderId?: string | null;
   tpsl?: FuturesTpsl | null;
   trailing?: FuturesTrailing | null;
+  idempotencyKey?: string | null;
 }): Promise<{ ok: true; positionId: string } | { ok: false; error: string }> {
   const { data, error } = await input.supabase
     .from("futures_positions")
@@ -100,6 +103,7 @@ export async function writeFuturesOpen(input: {
     venue: input.venue,
     environment: input.environment,
     venueOrderId: input.venueOrderId,
+    idempotencyKey: input.idempotencyKey,
   });
   if (order.error) {
     return { ok: false, error: order.error };
@@ -117,6 +121,7 @@ export async function writeFuturesAdd(input: {
   venueOrderId?: string | null;
   tpsl?: FuturesTpsl | null;
   trailing?: FuturesTrailing | null;
+  idempotencyKey?: string | null;
 }): Promise<{ error: string | null }> {
   if (input.row.status !== "open") {
     return { error: "Can only add size to an open position." };
@@ -156,6 +161,7 @@ export async function writeFuturesAdd(input: {
     venue: input.venue,
     environment: input.environment,
     venueOrderId: input.venueOrderId,
+    idempotencyKey: input.idempotencyKey,
   });
 }
 
@@ -167,6 +173,7 @@ export async function writeFuturesFlatten(input: {
   venue?: string | null;
   environment?: string | null;
   venueOrderId?: string | null;
+  idempotencyKey?: string | null;
 }): Promise<{ error: string | null }> {
   if (input.row.status !== "open") {
     return { error: "That position is already closed." };
@@ -203,6 +210,7 @@ export async function writeFuturesFlatten(input: {
     venue: input.venue,
     environment: input.environment,
     venueOrderId: input.venueOrderId,
+    idempotencyKey: input.idempotencyKey,
   });
 }
 
@@ -217,6 +225,7 @@ export async function writeFuturesCloseSlice(input: {
   environment?: string | null;
   venueOrderId?: string | null;
   remainingTpsl?: FuturesTpsl | null;
+  idempotencyKey?: string | null;
 }): Promise<{ error: string | null; remaining: number }> {
   if (input.row.status !== "open") {
     return { error: "That position is already closed.", remaining: 0 };
@@ -235,6 +244,7 @@ export async function writeFuturesCloseSlice(input: {
       venue: input.venue,
       environment: input.environment,
       venueOrderId: input.venueOrderId,
+      idempotencyKey: input.idempotencyKey,
     });
     return { error: flattened.error, remaining: 0 };
   }
@@ -271,6 +281,7 @@ export async function writeFuturesCloseSlice(input: {
     venue: input.venue,
     environment: input.environment,
     venueOrderId: input.venueOrderId,
+    idempotencyKey: input.idempotencyKey,
   });
   return { error: order.error, remaining };
 }
@@ -292,6 +303,7 @@ export async function insertFuturesWorking(
     reduceOnly?: boolean;
     tpsl?: FuturesTpsl | null;
     trailing?: FuturesTrailing | null;
+    idempotencyKey?: string | null;
   },
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const { data, error } = await supabase
@@ -313,6 +325,7 @@ export async function insertFuturesWorking(
       venue_order_id: input.venueOrderId ?? null,
       position_id: input.positionId ?? null,
       reduce_only: Boolean(input.reduceOnly),
+      idempotency_key: input.idempotencyKey ?? null,
       ...tpslColumns(input.tpsl),
       ...trailingWorkingColumns(input.trailing),
     })

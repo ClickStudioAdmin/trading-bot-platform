@@ -17,6 +17,27 @@ import {
 } from "@/lib/logs/list";
 import { createServiceClient } from "@/lib/supabase/admin";
 
+export type FuturesListScope = {
+  accountId: string;
+  userId: string;
+};
+
+async function resolveFuturesListScope(
+  scope?: FuturesListScope,
+): Promise<FuturesListScope | null> {
+  if (scope) {
+    return scope;
+  }
+  const session = await getSessionContext();
+  if (!session) {
+    return null;
+  }
+  return {
+    accountId: session.account.id,
+    userId: session.member.id,
+  };
+}
+
 export async function loadFuturesPositions(input?: {
   status?: "open" | "closed";
 }): Promise<FuturesPosition[]> {
@@ -63,17 +84,19 @@ export async function loadFuturesOrders(): Promise<FuturesOrder[]> {
   );
 }
 
-export async function loadOpenFuturesWorking(): Promise<FuturesWorkingOrder[]> {
-  const session = await getSessionContext();
+export async function loadOpenFuturesWorking(
+  scope?: FuturesListScope,
+): Promise<FuturesWorkingOrder[]> {
+  const resolved = await resolveFuturesListScope(scope);
   const supabase = createServiceClient();
-  if (!session || !supabase) {
+  if (!resolved || !supabase) {
     return [];
   }
   const { data, error } = await supabase
     .from("futures_working_orders")
     .select("*")
-    .eq("account_id", session.account.id)
-    .eq("user_id", session.member.id)
+    .eq("account_id", resolved.accountId)
+    .eq("user_id", resolved.userId)
     .eq("status", "open")
     .order("created_at", { ascending: false });
   if (error || !data) {
@@ -138,17 +161,18 @@ export async function loadFuturesDesk(): Promise<{
 
 export async function loadOpenFuturesOnSymbol(
   symbol: string,
+  scope?: FuturesListScope,
 ): Promise<FuturesPosition[]> {
-  const session = await getSessionContext();
+  const resolved = await resolveFuturesListScope(scope);
   const supabase = createServiceClient();
-  if (!session || !supabase) {
+  if (!resolved || !supabase) {
     return [];
   }
   const { data, error } = await supabase
     .from("futures_positions")
     .select("*")
-    .eq("account_id", session.account.id)
-    .eq("user_id", session.member.id)
+    .eq("account_id", resolved.accountId)
+    .eq("user_id", resolved.userId)
     .eq("symbol", symbol)
     .eq("status", "open");
   if (error || !data) {

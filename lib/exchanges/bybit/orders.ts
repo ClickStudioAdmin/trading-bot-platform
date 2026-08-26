@@ -188,6 +188,7 @@ export async function bybitCreateMarketOrder(input: {
   reduceOnly?: boolean;
   positionIdx?: 0 | 1 | 2;
   tpsl?: BybitTpslAttach;
+  orderLinkId?: string;
 }): Promise<{ ok: true; fill: BybitOrderFill } | { ok: false; error: string }> {
   const body: Record<string, string | boolean | number> = {
     category: input.category,
@@ -196,6 +197,9 @@ export async function bybitCreateMarketOrder(input: {
     orderType: "Market",
     qty: input.qty,
   };
+  if (input.orderLinkId) {
+    body.orderLinkId = input.orderLinkId;
+  }
   if (input.category === "spot") {
     body.marketUnit = "baseCoin";
   }
@@ -242,6 +246,7 @@ export async function bybitCreateLinearLimitOrder(input: {
   reduceOnly?: boolean;
   positionIdx?: 0 | 1 | 2;
   tpsl?: BybitTpslAttach;
+  orderLinkId?: string;
 }): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
   const body: Record<string, string | boolean | number> = {
     category: "linear",
@@ -253,6 +258,9 @@ export async function bybitCreateLinearLimitOrder(input: {
     timeInForce: "GTC",
     positionIdx: input.positionIdx ?? 0,
   };
+  if (input.orderLinkId) {
+    body.orderLinkId = input.orderLinkId;
+  }
   if (input.reduceOnly) {
     body.reduceOnly = true;
   }
