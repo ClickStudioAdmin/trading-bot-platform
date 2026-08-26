@@ -384,14 +384,14 @@ export function paperTakeProfitHit(input: {
   return null;
 }
 
-function paperStopFill(input: {
+function paperStopFill<K extends "take_profit" | "stop_loss">(input: {
   side: FuturesSide;
-  kind: "take_profit" | "stop_loss";
+  kind: K;
   triggerPrice: number;
   orderType: FuturesOrderType;
   limitPrice: number | null;
   mark: number | null;
-}): { kind: "take_profit" | "stop_loss"; price: number } | null {
+}): { kind: K; price: number } | null {
   if (input.orderType !== "limit") {
     return { kind: input.kind, price: input.triggerPrice };
   }
