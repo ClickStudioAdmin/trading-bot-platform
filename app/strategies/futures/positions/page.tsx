@@ -60,6 +60,7 @@ export default async function FuturesPositionsPage({
         origin: futuresWebhookOrigin(await headers()),
       })
     : [];
+  const strategyWebhooks = webhooks.filter((row) => row.kind === "order");
   const live = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );
@@ -171,15 +172,16 @@ export default async function FuturesPositionsPage({
                   </>
                 }
               />
-              {webhooks.length > 0 ? (
-                <FuturesWebhookTest webhooks={webhooks} />
+              {strategyWebhooks.length > 0 ? (
+                <FuturesWebhookTest webhooks={strategyWebhooks} />
               ) : session ? (
                 <p className="mt-4 text-xs text-ink-muted">
-                  Create a named webhook on{" "}
+                  Create a TradingView strategy webhook on{" "}
                   <Link href={FUTURES_PATHS.webhooks} className="text-accent">
                     Webhooks
                   </Link>{" "}
-                  to send a dummy TradingView call from this ticket.
+                  to send a dummy call from this ticket. Signal webhooks fire
+                  from Automations.
                 </p>
               ) : null}
             </form>
