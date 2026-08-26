@@ -97,10 +97,17 @@ export function FuturesWebhooksDesk({
           key={hook.id}
           className="space-y-5 rounded-card border border-line bg-surface p-5"
         >
-          {hook.url ? (
-            <label className="block text-sm text-ink">
-              URL
-              <span className="mt-1 flex items-center gap-3">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm text-ink">URL</p>
+              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal whitespace-nowrap text-accent">
+                {hook.kind === "signal"
+                  ? "Signal"
+                  : "TradingView strategy"}
+              </span>
+            </div>
+            {hook.url ? (
+              <span className="flex items-center gap-3">
                 <textarea
                   readOnly
                   rows={2}
@@ -111,12 +118,13 @@ export function FuturesWebhooksDesk({
                   <CopyTextButton text={hook.url} label="Copy URL" />
                 </span>
               </span>
-            </label>
-          ) : (
-            <p className="text-sm text-ink-muted">
-              URL is stored but could not be shown. Set APP_BASE_URL or rotate.
-            </p>
-          )}
+            ) : (
+              <p className="text-sm text-ink-muted">
+                URL is stored but could not be shown. Set APP_BASE_URL or
+                rotate.
+              </p>
+            )}
+          </div>
           <div className="space-y-3">
             <form
               action={renameFuturesWebhookAction}
@@ -143,8 +151,8 @@ export function FuturesWebhooksDesk({
             </form>
             <p className="text-xs text-ink-muted">
               {hook.kind === "signal"
-                ? "Signal — Automations When shows this name"
-                : "TradingView strategy — same URL, one alert message per action"}
+                ? "Automations When shows this name."
+                : "Same URL. One TradingView alert per action."}
             </p>
           </div>
           {hook.kind === "signal" ? (
