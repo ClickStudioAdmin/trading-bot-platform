@@ -19,7 +19,7 @@ In progress. Steps 1–3 are in code. Waiting on Click’s Bybit Demo desk test 
 | 1 | Docs + registry | Agent | This file is the Futures strategy. Master spec lists two strategies. |
 | 2 | Settings bind | Agent | `strategy_settings` holds the Futures bind. Cash-and-carry stays on `paper_engine_settings`. |
 | 3 | Ledger + Bybit perp | Agent | `futures_positions` + `futures_orders` + working limits + TP/SL + trailing stop. Market or GTC limit. Checks pass. |
-| 4 | Manual desk test | Click | Bybit Demo: Buy, Sell, Market Close (full and a slice), Limit Close, a Limit that rests, Edit, and Cancel, plus TP/SL (market and limit) and trailing stop on an order and on an open row, plus Close All, Cancel All Open Orders, and Close All & Cancel All Open Orders. Live open row shows leverage and liq from Bybit. Paper shows —. Columns picker persists in this browser. Paper book writes the ledger only. |
+| 4 | Manual desk test | Click | Bybit Demo: Buy, Sell, Market Close (full and a slice), Limit Close, a Limit that rests, Edit, and Cancel, plus TP/SL (market and limit) and trailing stop on an order and on an open row, plus Close All, Cancel All Open Orders, and Close All & Cancel All Open Orders. Live open row shows leverage and liq from Bybit. Paper shows —. Columns picker persists in this browser. Live Futures pages show Available, Balance, IM/MM, and margin mode. Paper book writes the ledger only. |
 
 Stop at the end of this phase for a Demo desk test. Do not start TradingView ([phase-9 is not written until this phase is accepted]).
 
@@ -35,6 +35,7 @@ Stop at the end of this phase for a Demo desk test. Do not start TradingView ([p
 8. Positions has **Close All** (market-close every open position; confirm `CLOSE ALL`), **Close All & Cancel All Open Orders** (cancel every working order, then close every position; confirm `CLOSE ALL`), and Open orders has **Cancel All Open Orders** (confirm `CANCEL ALL`). Each uses the same close or cancel path as the row buttons. Stops on the first error. The parent command may carry an idempotency key; child cancels and closes do not reuse it. Close All dialogs can optionally **Set reduce only** (book-wide Buy/Sell block) so size cannot come back. When Futures automations ship, that checkbox must also put automation-controlled rules into reduce only so they cannot reopen.
 9. Desk clicks and later automations go through `runFuturesCommand`. Form server actions are thin adapters (session + redirect). An optional idempotency key is stored on `futures_command_receipts` and on working/order rows; live sends it to Bybit as `orderLinkId`. No webhook this phase.
 10. Open rows show venue **Leverage** and **Liq** from Bybit on Connected Exchange books. Paper does not invent a liquidation price. Those fields are not written to the ledger. Columns on the open table can be hidden; Contract, Side, and Actions stay.
+11. Connected Exchange Futures pages show the bound Unified account: Available, Balance, IM/MM, and margin mode. Same private read as the exchange-chip hover. Paper does not invent venue balances.
 
 ## What this phase includes
 
@@ -49,6 +50,7 @@ Stop at the end of this phase for a Demo desk test. Do not start TradingView ([p
 - Typed `runFuturesCommand` for place / close / close-all / TP-SL / trailing / amend / cancel. Form actions are adapters. Optional idempotency key (Bybit `orderLinkId` on live). No webhook this phase.
 - **Close All**, **Close All & Cancel All Open Orders**, and **Cancel All Open Orders**. Confirm `CLOSE ALL` or `CANCEL ALL`. Close All can optionally set reduce only. When automations ship, that option must also set those rules to reduce only.
 - Open-row **Leverage** and **Liq** from one Bybit `position/list` call (`settleCoin=USDT`). Snapshot only — not stored on `futures_positions`. Paper shows —. A Columns picker on the open table hides optional fields; choice lives in browser `localStorage` (`tbp-columns:futures-open`).
+- Venue **Available**, **Balance**, **IM/MM**, and margin mode on Futures pages from the bound Unified account. Paper omits the strip.
 
 ## Out of scope
 

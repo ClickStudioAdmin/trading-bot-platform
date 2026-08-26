@@ -1,3 +1,4 @@
+import { FuturesVenueBalance } from "@/components/futures-venue-balance";
 import { StrategySubnav } from "@/components/strategy-subnav";
 import { getSessionContext } from "@/lib/auth/session";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
@@ -71,6 +72,7 @@ export default async function FuturesLayout({
           </p>
         </div>
       ) : null}
+      {snapshot ? <FuturesVenueBalance snapshot={snapshot} /> : null}
       {children}
     </div>
   );
