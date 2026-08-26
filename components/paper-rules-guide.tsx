@@ -40,7 +40,7 @@ export function PaperRulesGuide({
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Name"
-          detail="Shown as a purple badge next to Auto on Positions. Click that badge on an open row to see the rules copied onto that trade, and to edit that trade’s exits."
+          detail="The Source column on Positions shows Manual or Auto. Auto includes this set name. Click that name on an open row to see the rules copied onto that trade, and to edit that trade’s exits."
         />
         <GuideItem
           term="Mode"
@@ -56,7 +56,7 @@ export function PaperRulesGuide({
         />
         <GuideItem
           term="Saving later"
-          detail="A new save applies to new opens. An open row keeps the exits copied when it opened. Change that trade from the set badge on Positions, not by hoping a later save will rewrite it."
+          detail="A new save applies to new opens. An open row keeps the exits copied when it opened. Change that trade from the set name in Source on Positions, not by hoping a later save will rewrite it."
         />
       </dl>
 

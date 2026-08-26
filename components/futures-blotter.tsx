@@ -25,7 +25,7 @@ import type { FuturesDeskPosition } from "@/lib/futures/list";
 import type { MarkedFutures } from "@/lib/futures/mark";
 import { formatLeverage } from "@/lib/futures/venue-risk";
 import type { FuturesOrder, FuturesTradeSource } from "@/lib/futures/model";
-import { resolveOrderOrigin } from "@/lib/futures/source";
+import { formatFuturesOrigin, resolveOrderOrigin } from "@/lib/futures/source";
 import {
   flattenExitPrice,
   futuresClosedStats,
@@ -71,6 +71,7 @@ export function OpenFuturesTrades({
   emptyMessage,
   showCloseAll = false,
   workingCount = 0,
+  webhookNames = [],
 }: {
   signedIn: boolean;
   open: MarkedFutures[];
@@ -80,6 +81,7 @@ export function OpenFuturesTrades({
   emptyMessage?: ReactNode;
   showCloseAll?: boolean;
   workingCount?: number;
+  webhookNames?: readonly string[];
 }) {
   const { visible, setColumn } = useFuturesOpenColumns();
   const colSpan = futuresOpenColumnCount(visible);
@@ -117,7 +119,7 @@ export function OpenFuturesTrades({
         ) : null}
       </div>
       <div className="min-w-0 overflow-x-auto rounded-card border border-line bg-surface">
-        <table className="w-full text-left text-sm">
+        <table className="w-full table-fixed text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <th className="w-10 px-2 py-3 font-medium">
@@ -132,22 +134,22 @@ export function OpenFuturesTrades({
                   hint="USDT linear perpetual."
                 />
               </th>
-              <th className="w-28 px-3 py-3 font-medium">
+              <th className="px-3 py-3 font-medium">
                 <ColumnHint
                   label="Source"
-                  hint="Manual is a desk click. Auto is an automation or TradingView strategy webhook. The name is the rule or webhook that opened this row."
+                  hint="Manual is a desk click. Auto is an automation. Webhook is a TradingView strategy fill. The name is the rule or webhook that opened this row."
                 />
               </th>
-              <th className="w-14 px-3 py-3 font-medium">
+              <th className="px-3 py-3 font-medium">
                 <ColumnHint label="Side" hint="Long or short. Both can be open on the same contract." />
               </th>
               {visible.qty ? (
-                <th className="w-16 px-3 py-3 font-medium">
+                <th className="px-3 py-3 font-medium">
                   <ColumnHint label="Qty" hint="Base-coin size on this row." />
                 </th>
               ) : null}
               {visible.value ? (
-                <th className="w-24 px-2 py-3 font-medium">
+                <th className="px-2 py-3 font-medium">
                   <ColumnHint
                     label="Value"
                     hint="Qty × entry. P&L scales with this amount."
@@ -155,7 +157,7 @@ export function OpenFuturesTrades({
                 </th>
               ) : null}
               {visible.entry ? (
-                <th className="w-24 px-2 py-3 font-medium">
+                <th className="px-2 py-3 font-medium">
                   <ColumnHint
                     label="Entry"
                     hint="Size-weighted average fill price."
@@ -163,12 +165,12 @@ export function OpenFuturesTrades({
                 </th>
               ) : null}
               {visible.mark ? (
-                <th className="w-24 px-2 py-3 font-medium">
+                <th className="px-2 py-3 font-medium">
                   <ColumnHint label="Mark" hint="Last price from the live Bybit ticker." />
                 </th>
               ) : null}
               {visible.unrealized ? (
-                <th className="w-24 px-2 py-3 font-medium">
+                <th className="px-2 py-3 font-medium">
                   <ColumnHint
                     label="Unrealized"
                     hint="Mark-to-market versus entry. Not Bybit’s invoice."
@@ -176,7 +178,7 @@ export function OpenFuturesTrades({
                 </th>
               ) : null}
               {visible.pnl ? (
-                <th className="w-16 px-3 py-3 font-medium">
+                <th className="px-3 py-3 font-medium">
                   <ColumnHint
                     label="P&L %"
                     hint="Unrealized ÷ value. Not annualized."
@@ -184,7 +186,7 @@ export function OpenFuturesTrades({
                 </th>
               ) : null}
               {visible.leverage ? (
-                <th className="w-16 px-3 py-3 font-medium">
+                <th className="px-3 py-3 font-medium">
                   <ColumnHint
                     label="Leverage"
                     hint="Venue leverage on this side. Live reads Bybit. Paper shows —."
@@ -192,7 +194,7 @@ export function OpenFuturesTrades({
                 </th>
               ) : null}
               {visible.liq ? (
-                <th className="w-24 px-2 py-3 font-medium">
+                <th className="px-2 py-3 font-medium">
                   <ColumnHint
                     label="Liq"
                     hint="Venue estimated liquidation price. Live reads Bybit. Paper shows —."
@@ -200,7 +202,7 @@ export function OpenFuturesTrades({
                 </th>
               ) : null}
               {visible.tpsl ? (
-                <th className="w-[4.5rem] px-3 py-3 font-medium">
+                <th className="px-3 py-3 font-medium">
                   <ColumnHint
                     label="TP/SL"
                     hint="Take profit and stop loss on this row. Market fills when the trigger hits. Limit rests until mark can fill. Add when the position is open, or attach them on the order ticket."
@@ -208,7 +210,7 @@ export function OpenFuturesTrades({
                 </th>
               ) : null}
               {visible.trailing ? (
-                <th className="w-20 px-3 py-3 font-medium">
+                <th className="px-3 py-3 font-medium">
                   <ColumnHint
                     label="Trailing"
                     hint="Retracement distance from the best price since activation. Closes the whole row at market. Add on the ticket or here."
@@ -217,7 +219,7 @@ export function OpenFuturesTrades({
               ) : null}
               <th className="w-[8.75rem] px-2 py-3 font-medium">
                 <ColumnHint
-                  label="Actions"
+                  label="Close By"
                   hint={
                     exchangeBook
                       ? "Market or Limit opens a qty dialog. Market fills on Bybit now. Limit rests a reduce-only close until last trades through it."
@@ -255,6 +257,7 @@ export function OpenFuturesTrades({
                   next={next}
                   visible={visible}
                   colSpan={colSpan}
+                  webhookNames={webhookNames}
                 />
               ))
             )}
@@ -268,9 +271,11 @@ export function OpenFuturesTrades({
 export function ClosedFuturesTrades({
   signedIn,
   closed,
+  webhookNames = [],
 }: {
   signedIn: boolean;
   closed: FuturesDeskPosition[];
+  webhookNames?: readonly string[];
 }) {
   return (
     <section>
@@ -294,7 +299,7 @@ export function ClosedFuturesTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Source"
-                  hint="Manual is a desk click. Auto is an automation or TradingView strategy webhook. The name is the rule or webhook that opened this row."
+                  hint="Manual is a desk click. Auto is an automation. Webhook is a TradingView strategy fill. The name is the rule or webhook that opened this row."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -352,7 +357,11 @@ export function ClosedFuturesTrades({
               <EmptyRow colSpan={9} message="No closed futures yet." />
             ) : (
               closed.map((trade) => (
-                <ClosedFuturesRows key={trade.id} trade={trade} />
+                <ClosedFuturesRows
+                  key={trade.id}
+                  trade={trade}
+                  webhookNames={webhookNames}
+                />
               ))
             )}
           </tbody>
@@ -415,11 +424,13 @@ function OpenFuturesRows({
   next,
   visible,
   colSpan,
+  webhookNames,
 }: {
   trade: MarkedFutures;
   next: string;
   visible: FuturesOpenColumnVisibility;
   colSpan: number;
+  webhookNames: readonly string[];
 }) {
   const pnlPct =
     trade.unrealizedUsdt === null
@@ -438,6 +449,7 @@ function OpenFuturesRows({
               orders={trade.orders}
               positionSource={trade.source}
               positionRuleName={trade.ruleName}
+              webhookNames={webhookNames}
             />
           }
           logs={<PositionLogList logs={trade.logs} />}
@@ -451,37 +463,47 @@ function OpenFuturesRows({
             <span className="flex items-center gap-2 font-medium">
               <span>{trade.baseCoin}</span>
             </span>
-            <span className="mt-0.5 block text-xs text-ink-faint">
+            <span className="mt-0.5 block truncate text-xs text-ink-faint">
               {trade.symbol}
             </span>
           </span>
         </span>
       </td>
-      <td className="px-3 py-3">
-        <FuturesSourceCell source={trade.source} ruleName={trade.ruleName} />
+      <td className="min-w-0 px-3 py-3">
+        <FuturesSourceCell
+          source={trade.source}
+          ruleName={trade.ruleName}
+          webhookNames={webhookNames}
+        />
       </td>
-      <td className="px-3 py-3 capitalize text-ink-muted">{trade.side}</td>
+      <td
+        className={`min-w-0 px-3 py-3 capitalize ${
+          trade.side === "short" ? "text-danger" : "text-success"
+        }`}
+      >
+        {trade.side}
+      </td>
       {visible.qty ? (
-        <td className="px-3 py-3 tabular-nums whitespace-nowrap">{trade.qty}</td>
+        <td className="min-w-0 px-3 py-3 tabular-nums whitespace-nowrap">{trade.qty}</td>
       ) : null}
       {visible.value ? (
-        <td className="px-2 py-3 tabular-nums whitespace-nowrap text-ink-muted">
+        <td className="min-w-0 px-2 py-3 tabular-nums whitespace-nowrap text-ink-muted">
           {formatUsd(trade.notionalUsdt)}
         </td>
       ) : null}
       {visible.entry ? (
-        <td className="px-2 py-3 tabular-nums whitespace-nowrap">
+        <td className="min-w-0 px-2 py-3 tabular-nums whitespace-nowrap">
           {formatPrice(trade.entryPrice)}
         </td>
       ) : null}
       {visible.mark ? (
-        <td className="px-2 py-3 tabular-nums whitespace-nowrap">
+        <td className="min-w-0 px-2 py-3 tabular-nums whitespace-nowrap">
           {formatPrice(trade.mark)}
         </td>
       ) : null}
       {visible.unrealized ? (
         <td
-          className={`px-2 py-3 tabular-nums whitespace-nowrap ${signedTone(trade.unrealizedUsdt)}`}
+          className={`min-w-0 px-2 py-3 tabular-nums whitespace-nowrap ${signedTone(trade.unrealizedUsdt)}`}
         >
           {trade.unrealizedUsdt === null
             ? "—"
@@ -490,23 +512,23 @@ function OpenFuturesRows({
       ) : null}
       {visible.pnl ? (
         <td
-          className={`px-3 py-3 tabular-nums whitespace-nowrap ${signedTone(pnlPct)}`}
+          className={`min-w-0 px-3 py-3 tabular-nums whitespace-nowrap ${signedTone(pnlPct)}`}
         >
           {formatPct(pnlPct)}
         </td>
       ) : null}
       {visible.leverage ? (
-        <td className="px-3 py-3 tabular-nums whitespace-nowrap text-ink-muted">
+        <td className="min-w-0 px-3 py-3 tabular-nums whitespace-nowrap text-ink-muted">
           {formatLeverage(trade.leverage)}
         </td>
       ) : null}
       {visible.liq ? (
-        <td className="px-2 py-3 tabular-nums whitespace-nowrap text-ink-muted">
+        <td className="min-w-0 px-2 py-3 tabular-nums whitespace-nowrap text-ink-muted">
           {trade.liqPrice === null ? "—" : formatPrice(trade.liqPrice)}
         </td>
       ) : null}
       {visible.tpsl ? (
-        <td className="px-3 py-3">
+        <td className="min-w-0 px-3 py-3">
           <FuturesTpslCell
             positionId={trade.id}
             symbol={trade.symbol}
@@ -532,7 +554,7 @@ function OpenFuturesRows({
         </td>
       ) : null}
       {visible.trailing ? (
-        <td className="px-3 py-3">
+        <td className="min-w-0 px-3 py-3">
           <FuturesTrailingCell
             positionId={trade.id}
             symbol={trade.symbol}
@@ -547,7 +569,7 @@ function OpenFuturesRows({
           />
         </td>
       ) : null}
-      <td className="px-2 py-3">
+      <td className="px-2 py-3 whitespace-nowrap">
         <FuturesCloseActions trade={trade} next={next} />
       </td>
     </ExpandableTradeRows>
@@ -556,8 +578,10 @@ function OpenFuturesRows({
 
 function ClosedFuturesRows({
   trade,
+  webhookNames,
 }: {
   trade: FuturesDeskPosition;
+  webhookNames: readonly string[];
 }) {
   const pnlPct =
     trade.notionalUsdt > 0 ? trade.realizedUsdt / trade.notionalUsdt : null;
@@ -575,6 +599,7 @@ function ClosedFuturesRows({
               orders={trade.orders}
               positionSource={trade.source}
               positionRuleName={trade.ruleName}
+              webhookNames={webhookNames}
             />
           }
           logs={<PositionLogList logs={trade.logs} />}
@@ -596,7 +621,11 @@ function ClosedFuturesRows({
         </span>
       </td>
       <td className="px-4 py-3">
-        <FuturesSourceCell source={trade.source} ruleName={trade.ruleName} />
+        <FuturesSourceCell
+          source={trade.source}
+          ruleName={trade.ruleName}
+          webhookNames={webhookNames}
+        />
       </td>
       <td className="px-4 py-3 text-ink-muted">
         {trade.closedAtMs ? (
@@ -626,10 +655,12 @@ function FuturesOrderList({
   orders,
   positionSource,
   positionRuleName,
+  webhookNames,
 }: {
   orders: FuturesOrder[];
   positionSource: FuturesTradeSource;
   positionRuleName: string | null;
+  webhookNames: readonly string[];
 }) {
   if (orders.length === 0) {
     return <p className="text-sm text-ink-muted">No orders recorded.</p>;
@@ -647,48 +678,86 @@ function FuturesOrderList({
           source: positionSource,
           ruleName: positionRuleName,
         });
+        const venue = formatFuturesVenueFill(order.venueOrderId);
         return (
           <article
             key={order.id}
-            className="rounded-card border border-line bg-surface-raised p-4"
+            className="rounded-card border border-line bg-surface-raised px-3 py-2.5"
           >
-            <header className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
-              <div className="min-w-0">
-                <h3 className="text-sm font-semibold tracking-tight">
-                  {order.action === "flatten"
-                    ? "Close"
-                    : order.action === "sell"
-                      ? "Sell"
-                      : "Buy"}
-                </h3>
-                <span className="mt-1 block">
-                  <FuturesSourceCell
-                    source={origin.source}
-                    ruleName={origin.ruleName}
-                  />
-                </span>
-              </div>
+            <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+              <h3 className="text-sm font-semibold tracking-tight">
+                {order.action === "flatten"
+                  ? "Close"
+                  : order.action === "sell"
+                    ? "Sell"
+                    : "Buy"}
+              </h3>
               <p className="text-xs text-ink-muted">
                 <LocalTime at={order.filledAtMs} />
               </p>
             </header>
-            <p className="mt-0.5 text-sm text-ink-muted">
-              {order.qty}
-              {order.price ? ` @ ${formatPrice(order.price)}` : ""}
-              {order.notionalUsdt
-                ? ` · ${formatUsd(order.notionalUsdt)}`
-                : ""}
+            <p className="mt-0.5 text-xs text-ink-muted">
+              {formatFuturesOrigin({ ...origin, webhookNames })}
             </p>
-            {order.venueOrderId ? (
-              <p className="mt-0.5 text-xs text-ink-faint">
-                Venue {order.venueOrderId}
-              </p>
-            ) : (
-              <p className="mt-0.5 text-xs text-ink-faint">Paper fill</p>
-            )}
+            <div className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+              <OrderMetric label="Qty" value={String(order.qty)} />
+              <OrderMetric
+                label="Price"
+                value={formatPrice(order.price)}
+              />
+              <OrderMetric
+                label="Value"
+                value={
+                  order.notionalUsdt ? formatUsd(order.notionalUsdt) : "—"
+                }
+              />
+              <OrderMetric
+                label="Venue"
+                value={venue.value}
+                title={venue.title}
+              />
+            </div>
           </article>
         );
       })}
+    </div>
+  );
+}
+
+function formatFuturesVenueFill(venueOrderId: string | null): {
+  value: string;
+  title?: string;
+} {
+  if (!venueOrderId) {
+    return { value: "Paper" };
+  }
+  if (venueOrderId.length <= 20) {
+    return { value: venueOrderId, title: venueOrderId };
+  }
+  return {
+    value: `${venueOrderId.slice(0, 8)}…`,
+    title: venueOrderId,
+  };
+}
+
+function OrderMetric({
+  label,
+  value,
+  title,
+}: {
+  label: string;
+  value: string;
+  title?: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-3 text-sm">
+      <span className="shrink-0 text-ink-muted">{label}</span>
+      <span
+        className="min-w-0 truncate tabular-nums text-ink"
+        title={title ?? value}
+      >
+        {value}
+      </span>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
 import { ColumnHint } from "@/components/column-hint";
+import { FuturesSourceCell } from "@/components/futures-source";
 import { PendingSubmitButton, ButtonCheckIcon, useStoredButtonSuccess } from "@/components/pending-submit-button";
 import { PaperAutomationTrigger } from "@/components/paper-automation-trigger";
 import { TokenIcon } from "@/components/token-icon";
@@ -61,7 +62,7 @@ export function OpenPaperCarryRows({
 
   return (
     <ExpandableTradeRows
-      colSpan={10}
+      colSpan={11}
       details={
         <PositionDetailTabs
           orders={trade.orders}
@@ -74,22 +75,28 @@ export function OpenPaperCarryRows({
         <span className="flex flex-wrap items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
-          <PositionKind source={trade.source} />
-          {trade.ruleName ? (
-            <PaperAutomationTrigger
-              carryId={trade.id}
-              automation={trade.automation}
-              label={trade.ruleName}
-              canEdit
-              entrySource="engine"
-              next={next}
-              className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent hover:text-accent-strong"
-            />
-          ) : null}
         </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
           {trade.futureSymbol}
         </span>
+      </td>
+      <td className="px-4 py-3">
+        <FuturesSourceCell
+          source={trade.source}
+          name={
+            trade.ruleName ? (
+              <PaperAutomationTrigger
+                carryId={trade.id}
+                automation={trade.automation}
+                label={trade.ruleName}
+                canEdit
+                entrySource="engine"
+                next={next}
+                className="text-left text-xs text-ink-muted hover:text-ink"
+              />
+            ) : undefined
+          }
+        />
       </td>
       <td className="px-4 py-3 tabular-nums text-ink-muted">
         {trade.daysToExpiry === null ? "—" : trade.daysToExpiry.toFixed(1)}
@@ -131,7 +138,7 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
 
   return (
     <ExpandableTradeRows
-      colSpan={8}
+      colSpan={9}
       details={
         <PositionDetailTabs
           orders={trade.orders}
@@ -144,26 +151,27 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
         <span className="flex flex-wrap items-center gap-2 font-medium">
           <TokenIcon symbol={trade.baseCoin} />
           {trade.baseCoin}
-          <PositionKind source={trade.source} />
-          {trade.ruleName ? (
-            <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent">
-              {trade.ruleName}
-            </span>
-          ) : null}
         </span>
         <span className="mt-0.5 flex flex-wrap items-center gap-1 pl-7 text-xs text-ink-faint">
           {trade.futureSymbol}
-          {" · "}
-          <PaperAutomationTrigger
-            carryId={trade.id}
-            automation={trade.automation}
-            label={closedTradeLabel(trade.source, trade.closeSource)}
-            canEdit={false}
-            entrySource={trade.source}
-            closeSource={trade.closeSource}
-            closeReason={trade.closeReason}
-          />
         </span>
+      </td>
+      <td className="px-4 py-3">
+        <FuturesSourceCell
+          source={trade.source}
+          ruleName={trade.ruleName}
+          footer={
+            <PaperAutomationTrigger
+              carryId={trade.id}
+              automation={trade.automation}
+              label={closedTradeLabel(trade.source, trade.closeSource)}
+              canEdit={false}
+              entrySource={trade.source}
+              closeSource={trade.closeSource}
+              closeReason={trade.closeReason}
+            />
+          }
+        />
       </td>
       <td className="px-4 py-3 text-ink-muted">
         <LocalTime at={trade.closedAtMs} mode="date" />
@@ -298,18 +306,6 @@ function AutoCloseHint({
       ) : (
         <span className="block">No exit order type stored.</span>
       )}
-    </span>
-  );
-}
-
-function PositionKind({
-  source,
-}: {
-  source: MarkedPaperCarry["source"];
-}) {
-  return (
-    <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal text-accent">
-      {source === "engine" ? "Auto" : "Manual"}
     </span>
   );
 }
@@ -463,6 +459,9 @@ function formatLogDataField(
 
   if (typeof value === "string") {
     if (key === "source" || key === "closeSource") {
+      if (value === "webhook") {
+        return { label, value: "Webhook" };
+      }
       return {
         label,
         value: value === "engine" || value === "manual" ? formatSourceWord(value) : value,

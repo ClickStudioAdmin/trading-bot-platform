@@ -27,6 +27,8 @@ export type BybitInstrument = {
   lotSizeFilter?: {
     qtyStep?: string;
     minOrderQty?: string;
+    maxOrderQty?: string;
+    maxMktOrderQty?: string;
     basePrecision?: string;
     minOrderAmt?: string;
     minNotionalValue?: string;

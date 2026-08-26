@@ -4,7 +4,7 @@ export type FuturesOrderType = "market" | "limit";
 export type FuturesTrigger = "last" | "mark" | "index";
 export type FuturesTpslMode = "full" | "partial";
 export type FuturesPositionStatus = "open" | "closed";
-export type FuturesTradeSource = "manual" | "engine";
+export type FuturesTradeSource = "manual" | "engine" | "webhook";
 
 export type FuturesPosition = {
   id: string;
@@ -159,7 +159,13 @@ export function parseFuturesSide(raw: unknown): FuturesSide | null {
 }
 
 export function parseFuturesTradeSource(raw: unknown): FuturesTradeSource {
-  return raw === "engine" ? "engine" : "manual";
+  if (raw === "engine") {
+    return "engine";
+  }
+  if (raw === "webhook") {
+    return "webhook";
+  }
+  return "manual";
 }
 
 export function parseFuturesTriggerColumn(raw: unknown): FuturesTrigger {

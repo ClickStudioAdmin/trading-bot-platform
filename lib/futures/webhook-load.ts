@@ -21,6 +21,34 @@ export type FuturesWebhookRow = {
   url: string | null;
 };
 
+export async function listFuturesOrderWebhookNames(
+  accountId: string,
+): Promise<string[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("futures_webhooks")
+    .select("name, kind")
+    .eq("account_id", accountId);
+  if (error || !data) {
+    return [];
+  }
+  const names: string[] = [];
+  for (const row of data) {
+    const kind = parseWebhookKind((row as { kind?: unknown }).kind);
+    if (!kind.ok || kind.kind !== "order") {
+      continue;
+    }
+    const name = String((row as { name?: string }).name ?? "").trim();
+    if (name) {
+      names.push(name);
+    }
+  }
+  return names;
+}
+
 type StoredWebhook = {
   id: string;
   user_id: string;

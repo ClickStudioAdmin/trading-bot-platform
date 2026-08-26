@@ -98,11 +98,13 @@ export default async function FuturesOverviewPage({
         next={FUTURES_PATHS.root}
         exchangeBook={desk.exchangeBook}
         baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
+        webhookNames={desk.webhookNames}
       />
       <OpenFuturesTrades
         signedIn={desk.signedIn}
         open={open}
         exchangeBook={desk.exchangeBook}
+        webhookNames={desk.webhookNames}
         emptyMessage={
           <>
             No open futures on this book. Open from{" "}

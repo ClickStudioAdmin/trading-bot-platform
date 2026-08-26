@@ -156,6 +156,15 @@ const engineWorking = parseFuturesWorkingRow(engineRaw);
 assert.equal(engineWorking.source, "engine");
 assert.equal(engineWorking.ruleName, "DCA 1INCH");
 
+const webhookWorking = parseFuturesWorkingRow({
+  ...engineRaw,
+  id: "w1b",
+  source: "webhook",
+  rule_name: "Custom TV Strategy",
+});
+assert.equal(webhookWorking.source, "webhook");
+assert.equal(webhookWorking.ruleName, "Custom TV Strategy");
+
 const closeLimit = parseFuturesWorkingRow({
   id: "w2",
   user_id: "u1",

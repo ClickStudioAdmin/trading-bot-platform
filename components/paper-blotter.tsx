@@ -83,7 +83,13 @@ export function OpenPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Pair"
-                  hint="Long USDT spot and short this dated future. The badge is Manual or Auto."
+                  hint="Long USDT spot and short this dated future."
+                />
+              </th>
+              <th className="w-28 px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Source"
+                  hint="Manual is a desk click. Auto is a set. The name is the set that opened this row. Click the name on an open Auto row to see copied rules and edit that trade’s exits."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -134,7 +140,7 @@ export function OpenPaperTrades({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
-                  label="Actions"
+                  label="Close By"
                   hint={
                     exchangeBook
                       ? "Manual Close exits both Bybit legs at market. Auto Close uses that set’s exit order type. Unwind clips to usable book on the exchange."
@@ -147,7 +153,7 @@ export function OpenPaperTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={10}
+                colSpan={11}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -159,7 +165,7 @@ export function OpenPaperTrades({
               />
             ) : open.length === 0 ? (
               <EmptyRow
-                colSpan={10}
+                colSpan={11}
                 message={
                   exchangeBook
                     ? "No open carries. Open one from Opportunities."
@@ -208,7 +214,13 @@ export function ClosedPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Pair"
-                  hint="Long USDT spot and short this dated future. The badge is Manual or Auto."
+                  hint="Long USDT spot and short this dated future."
+                />
+              </th>
+              <th className="w-28 px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Source"
+                  hint="Manual is a desk click. Auto is a set. The name is the set that opened this row. In / Out is whether the open and close were Manual or System."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -252,7 +264,7 @@ export function ClosedPaperTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={8}
+                colSpan={9}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -264,7 +276,7 @@ export function ClosedPaperTrades({
               />
             ) : closed.length === 0 ? (
               <EmptyRow
-                colSpan={8}
+                colSpan={9}
                 message="No closed paper carries yet."
               />
             ) : (

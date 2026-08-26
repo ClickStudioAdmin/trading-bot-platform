@@ -46,7 +46,7 @@ export function FuturesRulesGuide({
         />
         <GuideItem
           term="Source"
-          detail="Positions, open orders, order details, and Activity logs show Manual or Auto. Auto includes the automation or webhook name that placed that fill."
+          detail="Positions, open orders, order details, and Activity logs show Manual, Auto, or Webhook. Auto is an automation (price cross or a Signal that fired a rule). Webhook is a TradingView strategy that placed Buy, Sell, or Close itself. The name is that rule or webhook."
         />
       </dl>
     </section>

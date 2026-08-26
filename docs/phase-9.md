@@ -18,7 +18,7 @@ In progress. Steps 1–5 are in code. Waiting on Click’s TradingView / curl de
 | --- | --- | --- | --- |
 | 1 | Docs | Agent | This file is the TradingView door. Master spec current phase is 9. |
 | 2 | Door | Agent | Each Futures book can mint a URL. Path token is the secret. Hash + encrypted token on `strategy_settings`. Unsigned / unknown token is 401. Raw Bybit payloads are 400. |
-| 3 | Order verb | Agent | JSON `action` Buy / Sell / Close + symbol + size becomes `runFuturesCommand`. Same reduce-only and caps as a click. Optional `id` is the idempotency key (≤36 chars, longer ids are hashed). Paper writes the ledger only. Live uses the Futures bind. Source is Auto plus the webhook name. |
+| 3 | Order verb | Agent | JSON `action` Buy / Sell / Close + symbol + size becomes `runFuturesCommand`. Same reduce-only and caps as a click. Optional `id` is the idempotency key (≤36 chars, longer ids are hashed). Paper writes the ledger only. Live uses the Futures bind. Source is Webhook plus the webhook name. |
 | 4 | Arm verb | Agent | `arm` / `disarm` / `close-playbook` return 200 and write an event log. No playbook body this phase. |
 | 5 | Webhooks tab | Agent | `/strategies/futures/webhooks` holds named Order and Signal URLs. Positions can send a dummy call through the same door. |
 | 6 | Desk test | Click | Create an Order webhook. Send test from Positions. TradingView or curl Buy / Sell / Close on Demo. Bad token rejected. Duplicate `id` does not double-fill. A Signal webhook accepts arm only. |
@@ -32,7 +32,7 @@ Stop at the end of this phase for a desk test. Do not start typed desks ([phase-
 3. **Order** — `action` is `buy`, `sell`, or `close` (aliases `flatten`, `close_long`, `close_short`). Same URL for all three. Each TradingView alert has its own message. `symbol` is a USDT linear perp. Size is `qty` or `usdt` (`sizeUnit`). Optional `orderType` `market` or `limit` with `limitPrice`. Close looks up the open row on that symbol (and `side` when both sides are open). Same reduce-only and risk caps as a desk click.
 4. **Signal** — `action` is `arm`, `disarm`, or `close-playbook`. `arm` runs automations whose When is that webhook. The rule still owns symbol, size, and Buy / Sell / Close. Phase 11 can also arm a DCA playbook from the same ping.
 5. Optional `id` (or `idempotencyKey`) is stored on `futures_command_receipts`. Live sends it to Bybit as `orderLinkId` when it fits. A replay returns the same flash and does not place again.
-6. Source is `engine`. `rule_name` is the webhook or automation name. Positions, open orders, order details, and Activity show Auto plus that name.
+6. TradingView strategy fills store source `webhook`. Automations store `engine`. `rule_name` is the webhook or automation name. Positions, open orders, order details, and Activity show Webhook or Auto plus that name. Manual is a desk click.
 
 Example order body:
 

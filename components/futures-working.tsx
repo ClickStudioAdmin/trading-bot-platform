@@ -24,12 +24,14 @@ export function FuturesWorkingOrders({
   next = FUTURES_PATHS.positions,
   exchangeBook = false,
   baseCoinFor,
+  webhookNames = [],
 }: {
   signedIn: boolean;
   working: FuturesWorkingOrder[];
   next?: string;
   exchangeBook?: boolean;
   baseCoinFor: (symbol: string) => string;
+  webhookNames?: readonly string[];
 }) {
   return (
     <section>
@@ -63,7 +65,7 @@ export function FuturesWorkingOrders({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Source"
-                  hint="Manual is a desk click. Auto is an automation or TradingView strategy webhook. The name is the rule or webhook that placed this limit."
+                  hint="Manual is a desk click. Auto is an automation. Webhook is a TradingView strategy fill. The name is the rule or webhook that placed this limit."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -140,6 +142,7 @@ export function FuturesWorkingOrders({
                   row={row}
                   next={next}
                   baseCoin={baseCoinFor(row.symbol)}
+                  webhookNames={webhookNames}
                 />
               ))
             )}
@@ -154,10 +157,12 @@ function WorkingRow({
   row,
   next,
   baseCoin,
+  webhookNames,
 }: {
   row: FuturesWorkingOrder;
   next: string;
   baseCoin: string;
+  webhookNames: readonly string[];
 }) {
   const remainingNotional = row.remainingQty * row.limitPrice;
   return (
@@ -172,7 +177,11 @@ function WorkingRow({
         </span>
       </td>
       <td className="px-4 py-3">
-        <FuturesSourceCell source={row.source} ruleName={row.ruleName} />
+        <FuturesSourceCell
+          source={row.source}
+          ruleName={row.ruleName}
+          webhookNames={webhookNames}
+        />
       </td>
       <td className="px-4 py-3">
         {workingActionLabel(row.action, row.reduceOnly)}

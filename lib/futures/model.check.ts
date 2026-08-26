@@ -8,6 +8,7 @@ import {
   parseFuturesQty,
   parseFuturesSizeUnit,
   parseFuturesSymbol,
+  parseFuturesTradeSource,
 } from "./model";
 
 const cleaned = parseFuturesSymbol("btc-usdt");
@@ -62,5 +63,10 @@ assert.deepEqual(parseCloseQty("", 1.5), { ok: true, qty: 1.5 });
 assert.deepEqual(parseCloseQty("0.4", 1.5), { ok: true, qty: 0.4 });
 assert.deepEqual(parseCloseQty("9", 1.5), { ok: true, qty: 1.5 });
 assert.equal(parseCloseQty("0", 1.5).ok, false);
+
+assert.equal(parseFuturesTradeSource("engine"), "engine");
+assert.equal(parseFuturesTradeSource("webhook"), "webhook");
+assert.equal(parseFuturesTradeSource("manual"), "manual");
+assert.equal(parseFuturesTradeSource(null), "manual");
 
 console.log("futures model checks passed");

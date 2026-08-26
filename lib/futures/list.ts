@@ -8,6 +8,7 @@ import {
   parseFuturesWorkingRow,
   type FuturesWorkingOrder,
 } from "./working";
+import { listFuturesOrderWebhookNames } from "./webhook-load";
 import { getSessionContext } from "@/lib/auth/session";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import {
@@ -129,6 +130,7 @@ export async function loadFuturesDesk(): Promise<{
   open: FuturesDeskPosition[];
   closed: FuturesDeskPosition[];
   working: FuturesWorkingOrder[];
+  webhookNames: string[];
 }> {
   const session = await getSessionContext();
   if (!session) {
@@ -138,9 +140,10 @@ export async function loadFuturesDesk(): Promise<{
       open: [],
       closed: [],
       working: [],
+      webhookNames: [],
     };
   }
-  const [rows, orders, logs, working] = await Promise.all([
+  const [rows, orders, logs, working, webhookNames] = await Promise.all([
     loadFuturesPositions(),
     loadFuturesOrders(),
     listEventLogs(
@@ -148,6 +151,7 @@ export async function loadFuturesDesk(): Promise<{
       { accountId: session.account.id, limit: 400 },
     ),
     loadOpenFuturesWorking(),
+    listFuturesOrderWebhookNames(session.account.id),
   ]);
   const withOrders = attachOrders(rows, orders);
   const withLogs = attachPositionLogs(withOrders, logs);
@@ -157,6 +161,7 @@ export async function loadFuturesDesk(): Promise<{
     open: withLogs.filter((row) => row.status === "open"),
     closed: withLogs.filter((row) => row.status === "closed"),
     working,
+    webhookNames,
   };
 }
 

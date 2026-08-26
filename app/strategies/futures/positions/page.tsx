@@ -133,6 +133,7 @@ export default async function FuturesPositionsPage({
           exchangeBook={desk.exchangeBook}
           showCloseAll
           workingCount={desk.working.length}
+          webhookNames={desk.webhookNames}
         />
 
         <section>
@@ -164,7 +165,7 @@ export default async function FuturesPositionsPage({
                       successKey="futures-buy"
                       name="action"
                       value="buy"
-                      className="rounded-control bg-accent-strong px-3 py-2 text-xs font-medium text-ink"
+                      className="rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas"
                     >
                       Buy
                     </PendingSubmitButton>
@@ -173,7 +174,7 @@ export default async function FuturesPositionsPage({
                       successKey="futures-sell"
                       name="action"
                       value="sell"
-                      className="rounded-control bg-accent-strong px-3 py-2 text-xs font-medium text-ink"
+                      className="rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink"
                     >
                       Sell
                     </PendingSubmitButton>
@@ -207,6 +208,7 @@ export default async function FuturesPositionsPage({
           next={NEXT}
           exchangeBook={desk.exchangeBook}
           baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
+          webhookNames={desk.webhookNames}
         />
       </div>
     </main>

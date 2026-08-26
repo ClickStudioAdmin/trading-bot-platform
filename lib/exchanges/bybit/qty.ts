@@ -28,6 +28,7 @@ export function qtyFromNotionalUsdt(input: {
   price: number;
   step: number;
   minQty: number;
+  maxQty?: number;
 }): { ok: true; qty: number; text: string } | { ok: false; error: string } {
   if (!(input.notionalUsdt > 0) || !(input.price > 0)) {
     return { ok: false, error: "Size and price must be positive." };
@@ -41,6 +42,12 @@ export function qtyFromNotionalUsdt(input: {
     return {
       ok: false,
       error: "That size is below the exchange minimum order quantity.",
+    };
+  }
+  if (input.maxQty && input.maxQty > 0 && qty > input.maxQty) {
+    return {
+      ok: false,
+      error: "That size is above the exchange maximum order quantity.",
     };
   }
   return {

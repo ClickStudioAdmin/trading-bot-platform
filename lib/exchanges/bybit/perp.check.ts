@@ -102,6 +102,24 @@ const tooSmall = qtyForPerp(0.0004, {
 });
 assert.equal(tooSmall.ok, false);
 
+const tooLarge = qtyForPerp(5, {
+  symbol: "BTCUSDT",
+  status: "Trading",
+  baseCoin: "BTC",
+  quoteCoin: "USDT",
+  lotSizeFilter: { qtyStep: "0.001", minOrderQty: "0.001", maxOrderQty: "2" },
+});
+assert.equal(tooLarge.ok, false);
+
+const atMax = qtyForPerp(2, {
+  symbol: "BTCUSDT",
+  status: "Trading",
+  baseCoin: "BTC",
+  quoteCoin: "USDT",
+  lotSizeFilter: { qtyStep: "0.001", minOrderQty: "0.001", maxOrderQty: "2" },
+});
+assert.equal(atMax.ok, true);
+
 const fromUsdt = qtyForPerpNotional(10_000, 50_000, {
   symbol: "BTCUSDT",
   status: "Trading",

@@ -26,6 +26,15 @@ const tooSmall = qtyFromNotionalUsdt({
 });
 assert.equal(tooSmall.ok, false);
 
+const tooLarge = qtyFromNotionalUsdt({
+  notionalUsdt: 200_000,
+  price: 50_000,
+  step: 0.001,
+  minQty: 0.001,
+  maxQty: 1,
+});
+assert.equal(tooLarge.ok, false);
+
 assert.equal(maxStep(0.001, 0.01), 0.01);
 
 const legs = qtyForCarryLegs({

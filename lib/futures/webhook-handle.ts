@@ -149,7 +149,7 @@ export async function handleFuturesWebhook(input: {
       sizeUnit: order.sizeUnit,
       limitPrice: order.limitPrice ?? undefined,
       idempotencyKey: order.idempotencyKey,
-      source: "engine",
+      source: "webhook",
       ruleName,
     },
   });

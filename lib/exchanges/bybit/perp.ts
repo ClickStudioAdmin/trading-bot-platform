@@ -9,6 +9,8 @@ export type LinearPerp = {
   baseCoin: string;
   quoteCoin: string;
   minQty: number;
+  maxQty: number;
+  maxMktQty: number;
   minNotional: number;
   minPrice: number;
   tickSize: number;
@@ -40,6 +42,14 @@ function lotMin(instrument: BybitInstrument | undefined, step: number): number {
   return parseStep(instrument?.lotSizeFilter?.minOrderQty, step);
 }
 
+function lotMax(instrument: BybitInstrument | undefined): number {
+  return parseStep(instrument?.lotSizeFilter?.maxOrderQty, 0);
+}
+
+function lotMaxMkt(instrument: BybitInstrument | undefined): number {
+  return parseStep(instrument?.lotSizeFilter?.maxMktOrderQty, 0);
+}
+
 export function qtyForPerp(
   qty: number,
   instrument: BybitInstrument | undefined,
@@ -51,6 +61,13 @@ export function qtyForPerp(
     return {
       ok: false,
       error: "That size is below the exchange minimum order quantity.",
+    };
+  }
+  const maxQty = lotMax(instrument);
+  if (maxQty > 0 && floored > maxQty) {
+    return {
+      ok: false,
+      error: "That size is above the exchange maximum order quantity.",
     };
   }
   return {
@@ -83,6 +100,7 @@ export function qtyForPerpNotional(
     price,
     step,
     minQty,
+    maxQty: lotMax(instrument),
   });
 }
 
@@ -124,6 +142,8 @@ export function listUsdtLinearPerps(
         baseCoin: row.baseCoin,
         quoteCoin: row.quoteCoin || row.settleCoin || "USDT",
         minQty: Math.max(lotMin(row, step), step),
+        maxQty: lotMax(row),
+        maxMktQty: lotMaxMkt(row),
         minNotional: parseStep(
           row.lotSizeFilter?.minNotionalValue ?? row.lotSizeFilter?.minOrderAmt,
           0,
