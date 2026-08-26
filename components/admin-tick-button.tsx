@@ -101,8 +101,8 @@ export function AdminTickButton() {
       return;
     }
     inFlight.current = true;
+    setBusy(true);
     if (!auto) {
-      setBusy(true);
       setOk(false);
       setNote(null);
     }
@@ -113,9 +113,7 @@ export function AdminTickButton() {
       );
       const body = (await response.json()) as TickBody;
       if (!response.ok) {
-        if (!auto) {
-          setNote(body.error ?? "Tick failed");
-        }
+        setNote(body.error ?? "Tick failed");
         return;
       }
       if (auto) {
@@ -131,14 +129,10 @@ export function AdminTickButton() {
       setOk(true);
       router.refresh();
     } catch {
-      if (!auto) {
-        setNote("Tick failed");
-      }
+      setNote("Tick failed");
     } finally {
       inFlight.current = false;
-      if (!auto) {
-        setBusy(false);
-      }
+      setBusy(false);
     }
   }
 
@@ -188,10 +182,11 @@ export function AdminTickButton() {
         disabled={busy}
         aria-busy={busy}
         onClick={() => void runTick(false)}
-        className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
+        className="relative rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
         aria-label={busy ? "Ticking" : ok ? "Done" : "Tick"}
-        title="Runs every 5 seconds while this tab is open"
+        title="Ticks every 5 seconds while this tab is open. Click for a count."
       >
+        <span className="absolute top-1 right-1 size-1.5 rounded-full bg-success" />
         <span className="inline-grid justify-items-center">
           <span className="invisible col-start-1 row-start-1" aria-hidden>
             Tick
