@@ -4,6 +4,7 @@ export type FuturesOrderType = "market" | "limit";
 export type FuturesTrigger = "last" | "mark" | "index";
 export type FuturesTpslMode = "full" | "partial";
 export type FuturesPositionStatus = "open" | "closed";
+export type FuturesTradeSource = "manual" | "engine";
 
 export type FuturesPosition = {
   id: string;
@@ -16,7 +17,8 @@ export type FuturesPosition = {
   notionalUsdt: number;
   realizedUsdt: number;
   status: FuturesPositionStatus;
-  source: "manual";
+  source: FuturesTradeSource;
+  ruleName: string | null;
   openedAtMs: number;
   closedAtMs: number | null;
   venue: string | null;
@@ -154,6 +156,10 @@ export function parseFuturesSide(raw: unknown): FuturesSide | null {
   return raw === "long" || raw === "short" ? raw : null;
 }
 
+export function parseFuturesTradeSource(raw: unknown): FuturesTradeSource {
+  return raw === "engine" ? "engine" : "manual";
+}
+
 export function parseFuturesTriggerColumn(raw: unknown): FuturesTrigger {
   return raw === "mark" || raw === "index" ? raw : "last";
 }
@@ -202,7 +208,8 @@ export function parseFuturesPositionRow(
     notionalUsdt: Number(row.notional_usdt) || 0,
     realizedUsdt: Number(row.realized_usdt) || 0,
     status: row.status === "closed" ? "closed" : "open",
-    source: "manual",
+    source: parseFuturesTradeSource(row.source),
+    ruleName: String(row.rule_name ?? "").trim() || null,
     openedAtMs: Number.isFinite(opened) ? opened : 0,
     closedAtMs: Number.isFinite(closed) ? closed : null,
     venue: row.venue ? String(row.venue) : null,

@@ -51,6 +51,9 @@ export type FuturesPlaceCommand = {
   trailing?: FuturesTrailing | null;
   tpslForm?: FormData;
   trailingForm?: FormData;
+  source?: unknown;
+  ruleId?: unknown;
+  ruleName?: unknown;
 };
 
 export type FuturesCommand =

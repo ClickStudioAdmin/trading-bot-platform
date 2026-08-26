@@ -1,5 +1,10 @@
 "use server";
 
+import { parseFuturesAutomationForm } from "./automation";
+import {
+  futuresAutomationsAreRunning,
+  saveFuturesAutomationRules,
+} from "./automation-load";
 import { runFuturesCommand } from "./command";
 import { safeFuturesReturnPath } from "./path";
 import {
@@ -289,6 +294,61 @@ export async function saveFuturesSettings(formData: FormData) {
   redirect(`${FUTURES_PATHS.settings}?saved=1`);
 }
 
+export async function saveFuturesAutomations(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const { member: user, account } = session;
+  const parsed = parseFuturesAutomationForm(formData);
+  if (!parsed.ok) {
+    redirect(
+      `${FUTURES_PATHS.automations}?error=${encodeURIComponent(parsed.error)}`,
+    );
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    redirect(
+      `${FUTURES_PATHS.automations}?error=${encodeURIComponent("Auth is not configured.")}`,
+    );
+  }
+  const saved = await saveFuturesAutomationRules({
+    supabase,
+    userId: user.id,
+    accountId: account.id,
+    rules: parsed.rules,
+  });
+  if (!saved.ok) {
+    await writeEventLog({
+      level: "error",
+      scope: "strategy",
+      event: "automations.save_failed",
+      message: saved.error,
+      userId: user.id,
+      accountId: account.id,
+      strategy: FUTURES_STRATEGY_ID,
+    });
+    redirect(
+      `${FUTURES_PATHS.automations}?error=${encodeURIComponent(saved.error)}`,
+    );
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "automations.saved",
+    message:
+      parsed.rules.length === 0
+        ? "Cleared futures automations"
+        : `Saved ${parsed.rules.length} futures automation ${parsed.rules.length === 1 ? "rule" : "rules"}`,
+    userId: user.id,
+    accountId: account.id,
+    strategy: FUTURES_STRATEGY_ID,
+    data: { count: parsed.rules.length },
+  });
+  revalidatePath(FUTURES_PATHS.automations);
+  revalidatePath(FUTURES_PATHS.positions);
+  redirect(`${FUTURES_PATHS.automations}?saved=1`);
+}
+
 export async function detachFuturesConnection() {
   const session = await getSessionContext();
   if (!session) {
@@ -309,7 +369,7 @@ export async function detachFuturesConnection() {
   const opens = await loadOpenFuturesCount(account.id, user.id);
   const blocks = strategyDetachBlockers({
     openCount: opens,
-    automationsRunning: false,
+    automationsRunning: await futuresAutomationsAreRunning(account.id),
   });
   if (blocks.length > 0) {
     settingsFail(formatStrategyDetachBlockers(blocks));

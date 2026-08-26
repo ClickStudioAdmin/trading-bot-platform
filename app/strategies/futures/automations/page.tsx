@@ -1,24 +1,51 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
+import { FuturesAutomationsDesk } from "@/components/futures-rules-form";
+import { FuturesRulesGuide } from "@/components/futures-rules-guide";
 import { getSessionContext } from "@/lib/auth/session";
+import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
+import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import { futuresRuleToForm } from "@/lib/futures/automation";
+import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
 import { loadFuturesSettings } from "@/lib/futures/settings";
+import { firstSearchValue } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
 export const metadata: Metadata = {
   title: "Futures automations",
-  description: "Automation rules for USDT linear perpetuals.",
+  description: "Alert rules for USDT linear perpetuals.",
 };
 
-export default async function FuturesAutomationsPage() {
+export default async function FuturesAutomationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
   const session = await getSessionContext();
   const settings = session ? await loadFuturesSettings(session.account.id) : null;
+  const rules = session ? await loadFuturesAutomationRules(session.account.id) : [];
+  const pairs = await loadUsdtLinearPerps().catch(() => []);
+  const exchangeBook = Boolean(
+    session && accountCanHoldConnections(session.account.mode),
+  );
+  const saved = firstSearchValue(params.saved) === "1";
+  const error = firstSearchValue(params.error);
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Automations" />
+      {error ? (
+        <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
+      {saved ? (
+        <p className="mt-4 text-sm text-success">Automations saved.</p>
+      ) : null}
       {settings?.reduceOnly ? (
-        <p className="mb-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+        <p className="mt-4 mb-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. Buy and Sell stay blocked until you turn it off in{" "}
           <Link href={FUTURES_PATHS.settings} className="underline">
             Strategy Settings
@@ -26,34 +53,21 @@ export default async function FuturesAutomationsPage() {
           .
         </p>
       ) : null}
-      <section className="rounded-card border border-line bg-surface p-5">
-        <h3 className="text-sm font-medium text-ink">Nothing automated yet</h3>
-        <p className="mt-2 text-sm text-ink-muted">
-          This tab will hold alert automations for Buy, Sell, and Close on the
-          bound book. TradingView webhooks are next. Until then, orders are
-          manual.
+      {session ? (
+        <FuturesAutomationsDesk
+          rules={rules.map(futuresRuleToForm)}
+          options={pairs}
+          reduceOnly={Boolean(settings?.reduceOnly)}
+        />
+      ) : (
+        <p className="text-sm text-ink-muted">
+          <Link href="/sign-in" className="text-accent">
+            Sign in
+          </Link>{" "}
+          to save automations.
         </p>
-        <p className="mt-4">
-          <Link
-            href={FUTURES_PATHS.positions}
-            className="text-sm text-accent hover:text-accent-strong"
-          >
-            Place an order on Positions
-          </Link>
-        </p>
-      </section>
-      <section className="mt-8 rounded-card border border-line bg-surface px-5 py-5">
-        <h2 className="text-lg font-semibold tracking-tight">
-          How automations will work
-        </h2>
-        <p className="mt-2 text-sm text-ink-muted">
-          Same desk rules as a manual click: one USDT linear perpetual, long and
-          short can both be open. Close a side from the open row. Paper writes the
-          ledger only. Live places one Bybit market order from the Futures bind.
-          Close All can set reduce only so automations cannot reopen after a
-          kill switch.
-        </p>
-      </section>
+      )}
+      <FuturesRulesGuide exchangeBook={exchangeBook} />
     </main>
   );
 }

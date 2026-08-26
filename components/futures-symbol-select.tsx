@@ -9,11 +9,13 @@ export function FuturesSymbolSelect({
   defaultSymbol = "BTCUSDT",
   value,
   onChange,
+  name = "symbol",
 }: {
   options: LinearPerp[];
   defaultSymbol?: string;
   value?: string;
   onChange?: (symbol: string) => void;
+  name?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -69,7 +71,7 @@ export function FuturesSymbolSelect({
   if (options.length === 0) {
     return (
       <input
-        name="symbol"
+        name={name}
         defaultValue={value ?? defaultSymbol}
         onChange={(event) => onChange?.(event.target.value.toUpperCase())}
         autoComplete="off"
@@ -90,7 +92,7 @@ export function FuturesSymbolSelect({
 
   return (
     <div ref={rootRef} className="relative mt-1">
-      <input type="hidden" name="symbol" value={selected?.symbol ?? symbol} />
+      <input type="hidden" name={name} value={selected?.symbol ?? symbol} />
       <button
         type="button"
         aria-haspopup="listbox"

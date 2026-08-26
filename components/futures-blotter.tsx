@@ -127,7 +127,7 @@ export function OpenFuturesTrades({
               <th className="px-3 py-3 font-medium">
                 <ColumnHint
                   label="Contract"
-                  hint="USDT linear perpetual. Badge is Manual until alert automations ship."
+                  hint="USDT linear perpetual. Badge is Manual or Auto."
                 />
               </th>
               <th className="w-14 px-3 py-3 font-medium">
@@ -430,8 +430,11 @@ function OpenFuturesRows({
           <span className="min-w-0">
             <span className="flex items-center gap-2 font-medium">
               <span>{trade.baseCoin}</span>
-              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal whitespace-nowrap text-accent">
-                Manual
+              <span
+                className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal whitespace-nowrap text-accent"
+                title={trade.ruleName ?? undefined}
+              >
+                {trade.source === "engine" ? "Auto" : "Manual"}
               </span>
             </span>
             <span className="mt-0.5 block text-xs text-ink-faint">
@@ -561,8 +564,11 @@ function ClosedFuturesRows({
           <span className="min-w-0">
             <span className="flex items-center gap-2 font-medium">
               <span>{baseCoin}</span>
-              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal whitespace-nowrap text-accent">
-                Manual
+              <span
+                className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-normal whitespace-nowrap text-accent"
+                title={trade.ruleName ?? undefined}
+              >
+                {trade.source === "engine" ? "Auto" : "Manual"}
               </span>
             </span>
             <span className="mt-0.5 block text-xs text-ink-faint">

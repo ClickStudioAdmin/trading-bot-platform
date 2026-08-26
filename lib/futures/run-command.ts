@@ -18,6 +18,7 @@ import {
   parseFuturesQty,
   parseFuturesSizeUnit,
   parseFuturesSymbol,
+  parseFuturesTradeSource,
   type FuturesSide,
 } from "./model";
 import {
@@ -26,7 +27,11 @@ import {
   cancelReduceOnlyWorkingForPosition,
   reconcileOpenFuturesBooks,
 } from "./reconcile";
-import { armFuturesReduceOnly, loadFuturesSettings } from "./settings";
+import {
+  armFuturesAutomationReduceOnly,
+  armFuturesReduceOnly,
+  loadFuturesSettings,
+} from "./settings";
 import { checkFuturesRiskCaps } from "./risk";
 import { fetchBybitTicker } from "@/lib/exchanges/bybit/client";
 import { loadPerpInstrument, priceForPerp, qtyForPerp, qtyForPerpNotional } from "@/lib/exchanges/bybit/perp";
@@ -280,6 +285,9 @@ async function runPlace(
     return fail(symbolParsed.error);
   }
   const symbol = symbolParsed.symbol;
+  const source = parseFuturesTradeSource(command.source);
+  const ruleId = String(command.ruleId ?? "").trim() || null;
+  const ruleName = String(command.ruleName ?? "").trim() || null;
   const settings = await loadFuturesSettings(actor.accountId);
   const opens = await loadOpenFuturesOnSymbol(symbol, actorScope(actor));
   const wantedSide = actionParsed.action === "buy" ? "long" : "short";
@@ -402,6 +410,7 @@ async function runPlace(
           positionId: row.id,
           reduceOnly: true,
           idempotencyKey: key,
+          source,
         });
         if (!working.ok) {
           if (connection && venueOrderId) {
@@ -510,6 +519,7 @@ async function runPlace(
         venueOrderId,
         remainingTpsl: tpslFromRow(row),
         idempotencyKey: key,
+        source,
       });
       if (written.error) {
         await writeEventLog({
@@ -725,6 +735,7 @@ async function runPlace(
       tpsl,
       trailing,
       idempotencyKey: key,
+      source,
     });
     if (!working.ok) {
       if (connection && venueOrderId) {
@@ -859,6 +870,9 @@ async function runPlace(
       tpsl,
       trailing: armTrailingAt(trailing, fillPrice),
       idempotencyKey: key,
+      source,
+      ruleId,
+      ruleName,
     });
     if (!created.ok) {
       written = { error: created.error };
@@ -878,6 +892,7 @@ async function runPlace(
       tpsl,
       trailing: armTrailingAt(trailing, fillPrice),
       idempotencyKey: key,
+      source,
     });
     flash = liveBook ? "live-added" : "added";
   } else {
@@ -1420,6 +1435,13 @@ async function runCloseAll(
     if (!armed.ok) {
       return fail(armed.error);
     }
+    const automationArmed = await armFuturesAutomationReduceOnly({
+      supabase,
+      accountId: actor.accountId,
+    });
+    if (!automationArmed.ok) {
+      return fail(automationArmed.error);
+    }
     await writeEventLog({
       scope: "strategy",
       event: "settings.saved",
@@ -1427,9 +1449,10 @@ async function runCloseAll(
       userId: actor.userId,
       accountId: actor.accountId,
       strategy: FUTURES_STRATEGY_ID,
-      data: { reduceOnly: true, source: "close-all" },
+      data: { reduceOnly: true, source: "close-all", automations: true },
     });
     revalidatePath(FUTURES_PATHS.settings);
+    revalidatePath(FUTURES_PATHS.automations);
   }
 
   let connection: BoundConnectionSecrets | null = null;

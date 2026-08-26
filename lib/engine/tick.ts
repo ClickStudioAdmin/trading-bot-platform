@@ -40,6 +40,7 @@ import {
   type PaperCarryRow,
 } from "@/lib/paper/rows";
 import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
+import { runFuturesAutomationTick } from "@/lib/futures/automation-tick";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 export async function runPaperEngineTick(): Promise<{
@@ -485,6 +486,21 @@ export async function runPaperEngineTick(): Promise<{
       event: "trade.futures_working_failed",
       message:
         cause instanceof Error ? cause.message : "Working order tick failed",
+      strategy: "futures",
+    });
+  }
+
+  try {
+    await runFuturesAutomationTick();
+  } catch (cause) {
+    await writeEventLog({
+      level: "error",
+      scope: "strategy",
+      event: "engine.open_failed",
+      message:
+        cause instanceof Error
+          ? cause.message
+          : "Futures automations tick failed",
       strategy: "futures",
     });
   }

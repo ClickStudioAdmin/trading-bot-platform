@@ -224,8 +224,7 @@ function FuturesBulkDialog({
                 Set reduce only
                 <span className="mt-1 block text-xs text-ink-muted">
                   Blocks Buy and Sell on this book so size cannot come back.
-                  When automations exist, those rules should also go reduce
-                  only.
+                  Active automation rules also switch to Reduce only.
                 </span>
               </span>
             </label>

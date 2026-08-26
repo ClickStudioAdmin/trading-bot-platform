@@ -10,7 +10,7 @@ Paper Trading books write the in-app ledger only. Connected Exchange books place
 
 ## Status
 
-In progress. Steps 1–3 are in code. Waiting on Click’s Bybit Demo desk test (step 4).
+In progress. Steps 1–4 are in code. Waiting on Click’s Bybit Demo desk test (step 5).
 
 ## Current micro-step
 
@@ -19,7 +19,8 @@ In progress. Steps 1–3 are in code. Waiting on Click’s Bybit Demo desk test 
 | 1 | Docs + registry | Agent | This file is the Futures strategy. Master spec lists two strategies. |
 | 2 | Settings bind | Agent | `strategy_settings` holds the Futures bind. Cash-and-carry stays on `paper_engine_settings`. |
 | 3 | Ledger + Bybit perp | Agent | `futures_positions` + `futures_orders` + working limits + TP/SL + trailing stop. Market or GTC limit. Checks pass. |
-| 4 | Manual desk test | Click | Bybit Demo: Buy, Sell, Market Close (full and a slice), Limit Close, a Limit that rests, Edit, and Cancel, plus TP/SL (market and limit) and trailing stop on an order and on an open row, plus Close All, Cancel All Open Orders, and Close All & Cancel All Open Orders. Live open row shows leverage and liq from Bybit. Paper shows —. Columns picker persists in this browser. Live Futures pages show Available, Balance, IM/MM, and margin mode. Paper book writes the ledger only. |
+| 4 | Alert automations | Agent | Futures Automations save Buy / Sell / Close rules. The paper tick fires `runFuturesCommand`. Close All reduce-only also sets Active rules to Reduce only. |
+| 5 | Manual desk test | Click | Bybit Demo: Buy, Sell, Market Close (full and a slice), Limit Close, a Limit that rests, Edit, and Cancel, plus TP/SL (market and limit) and trailing stop on an order and on an open row, plus Close All, Cancel All Open Orders, and Close All & Cancel All Open Orders. Live open row shows leverage and liq from Bybit. Paper shows —. Columns picker persists in this browser. Live Futures pages show Available, Balance, IM/MM, and margin mode. Paper book writes the ledger only. Automations: a last/mark/index cross fires Buy, Sell, or Close on the bound book; Auto badge on those rows. |
 
 Stop at the end of this phase for a Demo desk test. Do not start TradingView ([phase-9 is not written until this phase is accepted]).
 
@@ -32,10 +33,11 @@ Stop at the end of this phase for a Demo desk test. Do not start TradingView ([p
 5. Live: server decrypts the Futures-bound key. Demo → `api-demo.bybit.com`. Market or GTC limit on `linear` in **hedge mode** (`positionIdx` 1 long / 2 short). Market Close is `reduceOnly`. Limit Close is a reduce-only GTC. Working limits, TP/SL, and trailing stops are polled on Positions load and on the paper engine tick. If the Bybit account is still one-way on that contract, opening the second side is rejected until the venue position is closed and the mode can switch.
 6. Write `futures_positions` + `futures_orders` on this book only. Live books keep one open row per **symbol and side** and add size to that row. Paper does the same. Resting limits live on `futures_working_orders` until they fill or cancel. TP/SL and trailing stop live on the working row until fill, then on the position. Live trailing is set with Bybit `trading-stop` after the position exists (not on order create). Setting TP/SL re-sends the current trailing, and the reverse, so one does not cancel the other.
 7. Reduce only (Futures settings) blocks Buy and Sell. Close still runs. Optional max value per symbol and max open positions reject Buy and Sell that would breach; Close is uncapped. The desk says Value, not notional.
-8. Positions has **Close All** (market-close every open position; confirm `CLOSE ALL`), **Close All & Cancel All Open Orders** (cancel every working order, then close every position; confirm `CLOSE ALL`), and Open orders has **Cancel All Open Orders** (confirm `CANCEL ALL`). Each uses the same close or cancel path as the row buttons. Stops on the first error. The parent command may carry an idempotency key; child cancels and closes do not reuse it. Close All dialogs can optionally **Set reduce only** (book-wide Buy/Sell block) so size cannot come back. When Futures automations ship, that checkbox must also put automation-controlled rules into reduce only so they cannot reopen.
-9. Desk clicks and later automations go through `runFuturesCommand`. Form server actions are thin adapters (session + redirect). An optional idempotency key is stored on `futures_command_receipts` and on working/order rows; live sends it to Bybit as `orderLinkId`. No webhook this phase.
+8. Positions has **Close All** (market-close every open position; confirm `CLOSE ALL`), **Close All & Cancel All Open Orders** (cancel every working order, then close every position; confirm `CLOSE ALL`), and Open orders has **Cancel All Open Orders** (confirm `CANCEL ALL`). Each uses the same close or cancel path as the row buttons. Stops on the first error. The parent command may carry an idempotency key; child cancels and closes do not reuse it. Close All dialogs can optionally **Set reduce only** (book-wide Buy/Sell block) so size cannot come back. That checkbox also switches Active Futures automation rules to Reduce only so they cannot reopen.
+9. Desk clicks and automations go through `runFuturesCommand`. Form server actions are thin adapters (session + redirect). An optional idempotency key is stored on `futures_command_receipts` and on working/order rows; live sends it to Bybit as `orderLinkId`. No webhook this phase.
 10. Open rows show venue **Leverage** and **Liq** from Bybit on Connected Exchange books. Paper does not invent a liquidation price. Those fields are not written to the ledger. Columns on the open table can be hidden; Contract, Side, and Actions stay.
 11. Connected Exchange Futures pages show the bound Unified account: Available, Balance, IM/MM, and margin mode. Same private read as the exchange-chip hover. Paper does not invent venue balances.
+12. **Automations** are per-book alert rules (not cash-and-carry layers). Each rule watches last, mark, or index at or above / at or below a price, then Buy, Sell, Close long, or Close short on the same command path. Fires once per stretch the condition is true. The existing engine tick evaluates them after working-order reconcile. Paper writes the ledger only. Live uses the Futures bind. Opened rows show **Auto**. TradingView HTTP is still next.
 
 ## What this phase includes
 
@@ -48,9 +50,10 @@ Stop at the end of this phase for a Demo desk test. Do not start TradingView ([p
 - Trailing stop on Buy and Sell (market or limit), and add/edit on an open position. Retracement by price distance. Optional activation price. Entire-position market close. Paper: SL, then trailing, then TP.
 - Event logs with `strategy = futures`
 - Typed `runFuturesCommand` for place / close / close-all / TP-SL / trailing / amend / cancel. Form actions are adapters. Optional idempotency key (Bybit `orderLinkId` on live). No webhook this phase.
-- **Close All**, **Close All & Cancel All Open Orders**, and **Cancel All Open Orders**. Confirm `CLOSE ALL` or `CANCEL ALL`. Close All can optionally set reduce only. When automations ship, that option must also set those rules to reduce only.
+- **Close All**, **Close All & Cancel All Open Orders**, and **Cancel All Open Orders**. Confirm `CLOSE ALL` or `CANCEL ALL`. Close All can optionally set reduce only, which also switches Active Futures automation rules to Reduce only.
 - Open-row **Leverage** and **Liq** from one Bybit `position/list` call (`settleCoin=USDT`). Snapshot only — not stored on `futures_positions`. Paper shows —. A Columns picker on the open table hides optional fields; choice lives in browser `localStorage` (`tbp-columns:futures-open`).
 - Venue **Available**, **Balance**, **IM/MM**, and margin mode on Futures pages from the bound Unified account. Paper omits the strip.
+- **Alert automations** on `/strategies/futures/automations`: named Buy / Sell / Close rules on last, mark, or index. The paper tick fires `runFuturesCommand`. Not a copy of cash-and-carry rule sets.
 
 ## Out of scope
 

@@ -113,6 +113,21 @@ export async function armFuturesReduceOnly(input: {
   return { ok: true };
 }
 
+export async function armFuturesAutomationReduceOnly(input: {
+  supabase: SupabaseClient;
+  accountId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { error } = await input.supabase
+    .from("futures_automation_rules")
+    .update({ mode: "reduce_only", updated_at: new Date().toISOString() })
+    .eq("account_id", input.accountId)
+    .eq("mode", "active");
+  if (error) {
+    return { ok: false, error: "Could not set automations to reduce only." };
+  }
+  return { ok: true };
+}
+
 export async function listFuturesConnectionIds(
   supabase: SupabaseClient,
   accountIds: string[],

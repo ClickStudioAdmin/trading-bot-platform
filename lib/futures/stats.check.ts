@@ -20,6 +20,7 @@ function closed(partial: Partial<FuturesPosition> & { realizedUsdt: number; noti
     realizedUsdt: partial.realizedUsdt,
     status: "closed",
     source: "manual",
+    ruleName: null,
     openedAtMs: 1,
     closedAtMs: 2,
     venue: null,

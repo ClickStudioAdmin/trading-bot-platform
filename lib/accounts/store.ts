@@ -162,7 +162,7 @@ export async function loadAccountUsage(
     return usage;
   }
   const accountIds = accounts.map((account) => account.id);
-  const [{ data: openRows }, { data: futuresOpenRows }, { data: futuresWorkingRows }, settings, ruleRows, futuresBinds] =
+  const [{ data: openRows }, { data: futuresOpenRows }, { data: futuresWorkingRows }, settings, ruleRows, futuresRuleRows, futuresBinds] =
     await Promise.all([
     supabase
       .from("paper_carries")
@@ -181,6 +181,7 @@ export async function loadAccountUsage(
       .eq("status", "open"),
     selectPaperEngineSettings(supabase, { accountIds }),
     selectPaperRuleModes(supabase, accountIds),
+    selectFuturesAutomationModes(supabase, accountIds),
     listFuturesConnectionIds(supabase, accountIds),
   ]);
   const carryOpenCount = new Map<string, number>();
@@ -204,6 +205,12 @@ export async function loadAccountUsage(
   );
   const runningIds = new Set<string>();
   for (const row of ruleRows) {
+    const id = String(row.account_id ?? "");
+    if (id && parseAutomationMode(row.mode) !== "disabled") {
+      runningIds.add(id);
+    }
+  }
+  for (const row of futuresRuleRows) {
     const id = String(row.account_id ?? "");
     if (id && parseAutomationMode(row.mode) !== "disabled") {
       runningIds.add(id);
@@ -308,6 +315,14 @@ export async function deleteTradingAccountRow(
   if (futuresPositionError) {
     return { error: futuresPositionError.message };
   }
+  const { error: futuresRuleError } = await supabase
+    .from("futures_automation_rules")
+    .delete()
+    .eq("account_id", accountId)
+    .eq("user_id", userId);
+  if (futuresRuleError) {
+    return { error: futuresRuleError.message };
+  }
   const { error: strategySettingsError } = await supabase
     .from("strategy_settings")
     .delete()
@@ -374,6 +389,20 @@ export async function renameTradingAccountRow(
     return { error: "That name is already in use." };
   }
   return { error: error?.message ?? null };
+}
+
+async function selectFuturesAutomationModes(
+  supabase: SupabaseClient,
+  accountIds: string[],
+): Promise<Record<string, unknown>[]> {
+  const result = await supabase
+    .from("futures_automation_rules")
+    .select("account_id, mode")
+    .in("account_id", accountIds);
+  if (result.error) {
+    return [];
+  }
+  return (result.data ?? []) as unknown as Record<string, unknown>[];
 }
 
 async function selectPaperRuleModes(
