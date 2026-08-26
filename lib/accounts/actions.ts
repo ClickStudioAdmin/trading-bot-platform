@@ -53,6 +53,14 @@ function staysOnManagePage(
   return next === SUB_ACCOUNTS_PATH;
 }
 
+function safeStayPath(raw: unknown): string | null {
+  const path = String(raw ?? "").trim();
+  if (!path.startsWith("/") || path.startsWith("//") || path.includes("://")) {
+    return null;
+  }
+  return path;
+}
+
 export async function switchTradingAccount(formData: FormData) {
   const user = await getSessionMember();
   if (!user) {
@@ -76,6 +84,7 @@ export async function createTradingAccount(formData: FormData) {
     redirect("/sign-in");
   }
   const next = accountReturnPath(String(formData.get("next") ?? ""));
+  const switchToNew = formData.get("switchToDesk") === "1";
   const named = parseAccountName(formData.get("name"));
   if (!named.ok) {
     redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(named.error)}`);
@@ -135,14 +144,19 @@ export async function createTradingAccount(formData: FormData) {
       ...(connectionId ? { exchangeConnectionId: connectionId } : {}),
     },
   });
-  if (!staysOnManagePage(next)) {
+  if (switchToNew) {
     await setActiveAccountId(created.id);
   }
   refreshAccountChrome();
+  if (staysOnManagePage(next)) {
+    redirect(`${SUB_ACCOUNTS_PATH}?created=1`);
+  }
+  if (switchToNew) {
+    redirect(deskHomePath(created.deskType));
+  }
   redirect(
-    staysOnManagePage(next)
-      ? `${SUB_ACCOUNTS_PATH}?created=1`
-      : (next ?? deskHomePath(created.deskType)),
+    safeStayPath(formData.get("stayPath")) ??
+      deskHomePath(session.account.deskType),
   );
 }
 

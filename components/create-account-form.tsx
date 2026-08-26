@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { createTradingAccount } from "@/lib/accounts/actions";
 import {
@@ -30,6 +31,7 @@ export function CreateAccountForm({
   const [mode, setMode] = useState<"paper" | "live">("paper");
   const [bindChoice, setBindChoice] = useState<"later" | "existing">("later");
   const liveKeys = connections.filter((row) => row.status === "active");
+  const stayPath = usePathname();
 
   return (
     <form
@@ -44,6 +46,9 @@ export function CreateAccountForm({
         <h2 className="text-lg font-semibold tracking-tight">New desk</h2>
       )}
       {next ? <input type="hidden" name="next" value={next} /> : null}
+      {embedded ? (
+        <input type="hidden" name="stayPath" value={stayPath} />
+      ) : null}
       <label className="block text-xs text-ink-muted">
         Name
         <input name="name" required maxLength={40} className={fieldClass} />
@@ -143,6 +148,18 @@ export function CreateAccountForm({
         Two desks on the same exchange key still share venue margin. Isolation
         needs another trade-only key.
       </p>
+      {embedded ? (
+        <label className="flex items-start gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            name="switchToDesk"
+            value="1"
+            defaultChecked
+            className="mt-0.5"
+          />
+          <span>Switch to New Desk</span>
+        </label>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <PendingSubmitButton
           pendingLabel="Creating…"

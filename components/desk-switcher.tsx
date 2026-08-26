@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CreateAccountForm } from "@/components/create-account-form";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { switchTradingAccount } from "@/lib/accounts/actions";
 import {
   formatAccountMode,
@@ -84,53 +83,58 @@ export function DeskSwitcher({
             />
           </svg>
         </summary>
-        <div className="absolute left-0 z-30 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-card border border-line bg-surface p-2">
-          <p className="px-2 pt-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        <div className="absolute left-0 z-30 mt-2 w-[min(32rem,calc(100vw-2rem))] rounded-card border border-line bg-surface p-2">
+          <p className="px-3 pt-1.5 pb-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
             Desks
           </p>
-          <div className="mt-1 max-h-[min(24rem,70vh)] overflow-y-auto">
-            {desks.map((desk) =>
-              desk.id === current.id ? (
-                <p
-                  key={desk.id}
-                  className="rounded-control bg-surface-raised px-2 py-2"
-                >
+          <div className="max-h-[min(24rem,70vh)] space-y-0.5 overflow-y-auto">
+            {desks.map((desk) => {
+              const meta = `${formatDeskType(desk.deskType)} · ${formatAccountMode(desk.mode)}`;
+              const currentDesk = desk.id === current.id;
+              const body = (
+                <>
                   <span className="block truncate text-sm text-ink">
                     {desk.name}
                   </span>
-                  <span className="text-xs text-ink-faint">
-                    {formatDeskType(desk.deskType)} ·{" "}
-                    {formatAccountMode(desk.mode)}
+                  <span className="mt-0.5 block truncate text-xs text-ink-faint">
+                    {meta}
                   </span>
-                </p>
-              ) : (
+                </>
+              );
+              if (currentDesk) {
+                return (
+                  <p
+                    key={desk.id}
+                    className="rounded-control bg-surface-raised px-3 py-2.5"
+                  >
+                    {body}
+                  </p>
+                );
+              }
+              return (
                 <form key={desk.id} action={switchTradingAccount}>
                   <input type="hidden" name="accountId" value={desk.id} />
-                  <PendingSubmitButton
-                    pendingLabel="Switching…"
-                    className="w-full rounded-control px-2 py-2 text-left text-ink-muted hover:bg-surface-raised hover:text-ink"
+                  <button
+                    type="submit"
+                    className="w-full rounded-control px-3 py-2.5 text-left text-ink-muted hover:bg-surface-raised hover:text-ink"
                   >
-                    <span className="block truncate text-sm">{desk.name}</span>
-                    <span className="text-xs text-ink-faint">
-                      {formatDeskType(desk.deskType)} ·{" "}
-                      {formatAccountMode(desk.mode)}
-                    </span>
-                  </PendingSubmitButton>
+                    {body}
+                  </button>
                 </form>
-              ),
-            )}
+              );
+            })}
           </div>
-          <div className="my-1 border-t border-line" />
+          <div className="my-1.5 border-t border-line" />
           <button
             type="button"
             onClick={openCreate}
-            className="block w-full rounded-control px-2 py-2 text-left text-sm text-accent hover:bg-surface-raised hover:text-accent-strong"
+            className="block w-full rounded-control px-3 py-2 text-left text-sm text-accent hover:bg-surface-raised hover:text-accent-strong"
           >
             Create new desk
           </button>
           <Link
             href="/account/sub-accounts"
-            className="block rounded-control px-2 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            className="block rounded-control px-3 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
           >
             Manage desks
           </Link>
