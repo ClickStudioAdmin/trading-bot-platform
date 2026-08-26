@@ -9,6 +9,7 @@ export const FUTURES_PATHS = {
   root: "/strategies/futures",
   positions: "/strategies/futures/positions",
   automations: "/strategies/futures/automations",
+  webhooks: "/strategies/futures/webhooks",
   performance: "/strategies/futures/performance",
   activity: "/strategies/futures/activity",
   pairs: "/strategies/futures/pairs",

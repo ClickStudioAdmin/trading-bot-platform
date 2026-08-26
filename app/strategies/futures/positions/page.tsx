@@ -15,7 +15,12 @@ import {
   loadUsdtLinearPerps,
 } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import { FuturesWebhookTest } from "@/components/futures-webhook-test";
 import { submitFuturesTrade } from "@/lib/futures/actions";
+import { futuresWebhookOrigin } from "@/lib/futures/webhook";
+import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
+import { headers } from "next/headers";
+import Link from "next/link";
 import { loadFuturesDesk } from "@/lib/futures/list";
 import { markFuturesOpen } from "@/lib/futures/mark";
 import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
@@ -49,6 +54,12 @@ export default async function FuturesPositionsPage({
   const settings = session
     ? await loadFuturesSettings(session.account.id)
     : { reduceOnly: false, connectionId: null };
+  const webhooks = session
+    ? await listFuturesWebhooks({
+        accountId: session.account.id,
+        origin: futuresWebhookOrigin(await headers()),
+      })
+    : [];
   const live = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );
@@ -101,6 +112,7 @@ export default async function FuturesPositionsPage({
           liveClosedAndCancelled={
             firstSearchValue(params.paper) === "live-closed-and-cancelled"
           }
+          webhookArm={firstSearchValue(params.paper) === "webhook-arm"}
           error={firstSearchValue(params.paperError)}
         />
 
@@ -159,6 +171,17 @@ export default async function FuturesPositionsPage({
                   </>
                 }
               />
+              {webhooks.length > 0 ? (
+                <FuturesWebhookTest webhooks={webhooks} />
+              ) : session ? (
+                <p className="mt-4 text-xs text-ink-muted">
+                  Create a named webhook on{" "}
+                  <Link href={FUTURES_PATHS.webhooks} className="text-accent">
+                    Webhooks
+                  </Link>{" "}
+                  to send a dummy TradingView call from this ticket.
+                </p>
+              ) : null}
             </form>
             {live && !settings.connectionId ? (
               <p className="mt-3 text-xs text-warning">

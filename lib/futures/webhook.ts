@@ -14,6 +14,9 @@ import { FUTURES_IDEMPOTENCY_MAX } from "./command";
 
 export const WEBHOOK_TOKEN_HEX = 64;
 export const WEBHOOK_RULE_NAME = "TradingView";
+export const WEBHOOK_NAME_MAX = 40;
+export const WEBHOOK_MAX_PER_BOOK = 8;
+export type WebhookKind = "order" | "signal";
 
 export type WebhookArmVerb = "arm" | "disarm" | "close-playbook";
 
@@ -76,6 +79,29 @@ export function futuresWebhookOrigin(headerStore: Headers): string {
 
 export function futuresWebhookPath(token: string): string {
   return `/api/futures/webhook/${token}`;
+}
+
+export function parseWebhookName(
+  raw: unknown,
+): { ok: true; name: string } | { ok: false; error: string } {
+  const name = String(raw ?? "").trim();
+  if (name.length < 1 || name.length > WEBHOOK_NAME_MAX) {
+    return {
+      ok: false,
+      error: `Name must be 1 to ${WEBHOOK_NAME_MAX} characters.`,
+    };
+  }
+  return { ok: true, name };
+}
+
+export function parseWebhookKind(
+  raw: unknown,
+): { ok: true; kind: WebhookKind } | { ok: false; error: string } {
+  const kind = String(raw ?? "order").trim().toLowerCase();
+  if (kind === "order" || kind === "signal") {
+    return { ok: true, kind };
+  }
+  return { ok: false, error: "Choose Order or Signal." };
 }
 
 export function looksLikeVenueWebhookPayload(body: unknown): boolean {

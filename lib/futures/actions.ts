@@ -12,10 +12,14 @@ import {
   parseOptionalPositiveInt,
 } from "./risk";
 import { loadFuturesSettings } from "./settings";
+import { handleFuturesWebhook } from "./webhook-handle";
 import {
-  disableFuturesWebhookToken,
+  createFuturesWebhook,
+  deleteFuturesWebhook,
+  loadWebhookTokenForTest,
   rotateFuturesWebhookToken,
 } from "./webhook-load";
+import { parseWebhookKind } from "./webhook";
 import {
   formatStrategyDetachBlockers,
   strategyDetachBlockers,
@@ -36,6 +40,12 @@ function fail(next: string, message: string): never {
 function settingsFail(message: string): never {
   redirect(
     `${FUTURES_PATHS.settings}?error=${encodeURIComponent(message)}`,
+  );
+}
+
+function webhookFail(message: string): never {
+  redirect(
+    `${FUTURES_PATHS.webhooks}?error=${encodeURIComponent(message)}`,
   );
 }
 
@@ -405,61 +415,154 @@ export async function detachFuturesConnection() {
   redirect(`${FUTURES_PATHS.settings}?saved=1`);
 }
 
-export async function rotateFuturesWebhook() {
+export async function createFuturesWebhookAction(formData: FormData) {
   const session = await getSessionContext();
   if (!session) {
     redirect("/sign-in");
   }
   const supabase = createServiceClient();
   if (!supabase) {
-    settingsFail("Auth is not configured.");
+    webhookFail("Auth is not configured.");
+  }
+  const created = await createFuturesWebhook({
+    supabase,
+    userId: session.member.id,
+    accountId: session.account.id,
+    name: formData.get("name"),
+    kind: formData.get("kind"),
+  });
+  if (!created.ok) {
+    webhookFail(created.error);
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "webhook.created",
+    message: "Created a Futures webhook",
+    userId: session.member.id,
+    accountId: session.account.id,
+    strategy: FUTURES_STRATEGY_ID,
+  });
+  revalidatePath(FUTURES_PATHS.webhooks);
+  revalidatePath(FUTURES_PATHS.positions);
+  redirect(`${FUTURES_PATHS.webhooks}?created=1`);
+}
+
+export async function rotateFuturesWebhook(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    webhookFail("Auth is not configured.");
+  }
+  const webhookId = String(formData.get("webhookId") ?? "").trim();
+  if (!webhookId) {
+    webhookFail("Pick a webhook.");
   }
   const rotated = await rotateFuturesWebhookToken({
     supabase,
     userId: session.member.id,
     accountId: session.account.id,
+    webhookId,
   });
   if (!rotated.ok) {
-    settingsFail(rotated.error);
+    webhookFail(rotated.error);
   }
   await writeEventLog({
     scope: "strategy",
     event: "webhook.rotated",
-    message: "Rotated the Futures webhook URL",
+    message: "Rotated a Futures webhook URL",
     userId: session.member.id,
     accountId: session.account.id,
     strategy: FUTURES_STRATEGY_ID,
   });
-  revalidatePath(FUTURES_PATHS.settings);
-  redirect(`${FUTURES_PATHS.settings}?webhook=1`);
+  revalidatePath(FUTURES_PATHS.webhooks);
+  redirect(`${FUTURES_PATHS.webhooks}?rotated=1`);
 }
 
-export async function disableFuturesWebhook() {
+export async function deleteFuturesWebhookAction(formData: FormData) {
   const session = await getSessionContext();
   if (!session) {
     redirect("/sign-in");
   }
   const supabase = createServiceClient();
   if (!supabase) {
-    settingsFail("Auth is not configured.");
+    webhookFail("Auth is not configured.");
   }
-  const disabled = await disableFuturesWebhookToken({
+  const webhookId = String(formData.get("webhookId") ?? "").trim();
+  if (!webhookId) {
+    webhookFail("Pick a webhook.");
+  }
+  const removed = await deleteFuturesWebhook({
     supabase,
+    userId: session.member.id,
     accountId: session.account.id,
+    webhookId,
   });
-  if (!disabled.ok) {
-    settingsFail(disabled.error);
+  if (!removed.ok) {
+    webhookFail(removed.error);
   }
   await writeEventLog({
     scope: "strategy",
-    event: "webhook.disabled",
-    message: "Disabled the Futures webhook",
+    event: "webhook.deleted",
+    message: "Deleted a Futures webhook",
     userId: session.member.id,
     accountId: session.account.id,
     strategy: FUTURES_STRATEGY_ID,
   });
-  revalidatePath(FUTURES_PATHS.settings);
-  redirect(`${FUTURES_PATHS.settings}?webhookOff=1`);
+  revalidatePath(FUTURES_PATHS.webhooks);
+  revalidatePath(FUTURES_PATHS.positions);
+  redirect(`${FUTURES_PATHS.webhooks}?deleted=1`);
+}
+
+export async function testFuturesWebhook(formData: FormData) {
+  const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    fail(next, "Auth is not configured.");
+  }
+  const webhookId = String(formData.get("webhookId") ?? "").trim();
+  const loaded = await loadWebhookTokenForTest({
+    supabase,
+    userId: session.member.id,
+    accountId: session.account.id,
+    webhookId,
+  });
+  if (!loaded.ok) {
+    fail(next, loaded.error);
+  }
+  const kind = parseWebhookKind(loaded.kind);
+  const testAction = String(formData.get("testAction") ?? "buy")
+    .trim()
+    .toLowerCase();
+  const rawBody =
+    kind.ok && kind.kind === "signal"
+      ? { action: testAction.startsWith("close-playbook") ? "close-playbook" : testAction === "disarm" ? "disarm" : "arm" }
+      : {
+          action: testAction === "sell" || testAction === "close" ? testAction : "buy",
+          symbol: formData.get("symbol"),
+          size: formData.get("size") ?? formData.get("qty"),
+          sizeUnit: formData.get("sizeUnit"),
+          orderType: formData.get("orderType"),
+          limitPrice: formData.get("limitPrice"),
+          id: `test-${Date.now()}`.slice(0, 36),
+        };
+  const result = await handleFuturesWebhook({
+    token: loaded.token,
+    rawBody,
+  });
+  if (!result.body.ok) {
+    fail(next, String(result.body.error ?? "Webhook test failed."));
+  }
+  if (result.body.accepted) {
+    redirect(`${next}?paper=webhook-arm`);
+  }
+  redirect(`${next}?paper=${String(result.body.flash ?? "opened")}`);
 }
 
 async function loadOpenFuturesCount(

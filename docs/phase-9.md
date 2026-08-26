@@ -20,14 +20,14 @@ In progress. Steps 1–5 are in code. Waiting on Click’s TradingView / curl de
 | 2 | Door | Agent | Each Futures book can mint a URL. Path token is the secret. Hash + encrypted token on `strategy_settings`. Unsigned / unknown token is 401. Raw Bybit payloads are 400. |
 | 3 | Order verb | Agent | JSON `action` Buy / Sell / Close + symbol + size becomes `runFuturesCommand`. Same reduce-only and caps as a click. Optional `id` is the idempotency key (≤36 chars, longer ids are hashed). Paper writes the ledger only. Live uses the Futures bind. Rows show Auto. |
 | 4 | Arm verb | Agent | `arm` / `disarm` / `close-playbook` return 200 and write an event log. No playbook body this phase. |
-| 5 | Settings chrome | Agent | Futures Settings shows the webhook URL, example JSON, Create / Rotate, and Disable. |
-| 6 | Desk test | Click | TradingView or curl Buy / Sell / Close on Demo. Bad token rejected. Duplicate `id` does not double-fill. Arm returns accepted. |
+| 5 | Webhooks tab | Agent | `/strategies/futures/webhooks` holds named Order and Signal URLs. Positions can send a dummy call through the same door. |
+| 6 | Desk test | Click | Create an Order webhook. Send test from Positions. TradingView or curl Buy / Sell / Close on Demo. Bad token rejected. Duplicate `id` does not double-fill. A Signal webhook accepts arm only. |
 
 Stop at the end of this phase for a desk test. Do not start typed desks ([phase-10 is not written until this phase is accepted]).
 
 ## How a webhook works
 
-1. On Futures Settings, Create or Rotate mint a URL: `{origin}/api/futures/webhook/{token}`. The token is 64 hex characters. It is stored as a SHA-256 hash for lookup and encrypted with `EXCHANGE_CREDENTIALS_KEY` (AAD `tbp.futures.webhook.v1`) so the desk can show the URL again. Rotate invalidates the old URL.
+1. On **Webhooks**, create a named URL: `{origin}/api/futures/webhook/{token}`. **Order** webhooks need symbol and size in the JSON (signal follower). **Signal** webhooks only accept `arm` / `disarm` / `close-playbook` — a playbook owns clips (Phase 11). The token is 64 hex characters, stored as a SHA-256 hash plus ciphertext. Rotate invalidates the old URL. Positions can send a dummy call through the same door.
 2. TradingView POSTs JSON to that URL. The path token is the secret. Do not put the token in the JSON. Do not send a Bybit private-API dump.
 3. **Order** — `action` is `buy`, `sell`, or `close` (aliases `flatten`, `close_long`, `close_short`). `symbol` is a USDT linear perp. Size is `qty` or `usdt` (`sizeUnit`). Optional `orderType` `market` or `limit` with `limitPrice`. Close looks up the open row on that symbol (and `side` when both sides are open). Same reduce-only and risk caps as a desk click.
 4. **Arm** — `action` is `arm`, `disarm`, or `close-playbook`. Logged only. Phase 11 implements the playbook.

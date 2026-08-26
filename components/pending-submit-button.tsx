@@ -64,7 +64,9 @@ function queryLooksSuccessful() {
     params.get("saved") === "password" ||
     params.get("reduce") === "1" ||
     params.get("removed") === "1" ||
-    params.get("renamed") === "1"
+    params.get("renamed") === "1" ||
+    paper === "webhook-arm" ||
+    params.get("created") === "1"
   );
 }
 
@@ -107,6 +109,7 @@ export function PendingSubmitButton({
   className = "",
   name,
   value,
+  formAction,
 }: {
   children: ReactNode;
   pendingLabel?: string;
@@ -114,6 +117,7 @@ export function PendingSubmitButton({
   className?: string;
   name?: string;
   value?: string;
+  formAction?: (formData: FormData) => void | Promise<void>;
 }) {
   const { pending, data } = useFormStatus();
   const thisPending =
@@ -154,6 +158,7 @@ export function PendingSubmitButton({
       type="submit"
       name={name}
       value={value}
+      formAction={formAction}
       disabled={pending}
       aria-busy={thisPending}
       aria-label={thisPending ? pendingLabel : ok ? "Done" : undefined}

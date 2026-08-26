@@ -9,8 +9,10 @@ import {
   isWebhookTokenShape,
   parseFuturesWebhook,
   parseWebhookJson,
+  parseWebhookKind,
   WEBHOOK_RULE_NAME,
   webhookTokensMatch,
+  type WebhookKind,
 } from "./webhook";
 
 export type FuturesWebhookHttpResult = {
@@ -40,24 +42,35 @@ export async function handleFuturesWebhook(input: {
   }
 
   const hash = hashWebhookToken(input.token);
-  const { data, error } = await supabase
-    .from("strategy_settings")
-    .select("account_id, user_id, webhook_token_hash")
-    .eq("strategy_id", FUTURES_STRATEGY_ID)
-    .eq("webhook_token_hash", hash)
-    .maybeSingle();
-  if (error || !data) {
+  const found = await lookupWebhookByHash(supabase, hash);
+  if (!found) {
     return unauthorized();
   }
-  const storedHash = String(
-    (data as { webhook_token_hash?: string }).webhook_token_hash ?? "",
-  );
-  if (!webhookTokensMatch(storedHash, hash)) {
+  if (!webhookTokensMatch(found.hash, hash)) {
     return unauthorized();
   }
 
-  const accountId = String((data as { account_id: string }).account_id);
-  const userId = String((data as { user_id: string }).user_id);
+  const accountId = found.accountId;
+  const userId = found.userId;
+  const ruleName = found.name;
+  if (found.kind === "signal" && parsed.parsed.kind === "order") {
+    return {
+      status: 400,
+      body: {
+        ok: false,
+        error: "This webhook is a signal. Send arm, disarm, or close-playbook.",
+      },
+    };
+  }
+  if (found.kind === "order" && parsed.parsed.kind === "arm") {
+    return {
+      status: 400,
+      body: {
+        ok: false,
+        error: "This webhook is an order door. Send buy, sell, or close.",
+      },
+    };
+  }
   const { data: account, error: accountError } = await supabase
     .from("trading_accounts")
     .select("id, user_id, mode")
@@ -118,7 +131,7 @@ export async function handleFuturesWebhook(input: {
       limitPrice: order.limitPrice ?? undefined,
       idempotencyKey: order.idempotencyKey,
       source: "engine",
-      ruleName: WEBHOOK_RULE_NAME,
+      ruleName,
     },
   });
   if (!result.ok) {
@@ -141,6 +154,55 @@ export async function handleFuturesWebhook(input: {
       flash: result.flash,
       replayed: result.replayed === true,
     },
+  };
+}
+
+async function lookupWebhookByHash(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  hash: string,
+): Promise<{
+  accountId: string;
+  userId: string;
+  hash: string;
+  name: string;
+  kind: WebhookKind;
+} | null> {
+  const named = await supabase
+    .from("futures_webhooks")
+    .select("account_id, user_id, webhook_token_hash, name, kind")
+    .eq("webhook_token_hash", hash)
+    .maybeSingle();
+  if (!named.error && named.data) {
+    const kind = parseWebhookKind((named.data as { kind?: unknown }).kind);
+    return {
+      accountId: String((named.data as { account_id: string }).account_id),
+      userId: String((named.data as { user_id: string }).user_id),
+      hash: String(
+        (named.data as { webhook_token_hash?: string }).webhook_token_hash ?? "",
+      ),
+      name:
+        String((named.data as { name?: string }).name ?? "").trim() ||
+        WEBHOOK_RULE_NAME,
+      kind: kind.ok ? kind.kind : "order",
+    };
+  }
+  const legacy = await supabase
+    .from("strategy_settings")
+    .select("account_id, user_id, webhook_token_hash")
+    .eq("strategy_id", FUTURES_STRATEGY_ID)
+    .eq("webhook_token_hash", hash)
+    .maybeSingle();
+  if (legacy.error || !legacy.data) {
+    return null;
+  }
+  return {
+    accountId: String((legacy.data as { account_id: string }).account_id),
+    userId: String((legacy.data as { user_id: string }).user_id),
+    hash: String(
+      (legacy.data as { webhook_token_hash?: string }).webhook_token_hash ?? "",
+    ),
+    name: WEBHOOK_RULE_NAME,
+    kind: "order",
   };
 }
 

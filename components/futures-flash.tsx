@@ -19,6 +19,7 @@ export function FuturesFlash({
   cancelledAll,
   closedAndCancelled,
   liveClosedAndCancelled,
+  webhookArm,
   error,
 }: {
   opened: boolean;
@@ -41,12 +42,20 @@ export function FuturesFlash({
   cancelledAll?: boolean;
   closedAndCancelled?: boolean;
   liveClosedAndCancelled?: boolean;
+  webhookArm?: boolean;
   error?: string;
 }) {
   if (error) {
     return (
       <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
         {error}
+      </p>
+    );
+  }
+  if (webhookArm) {
+    return (
+      <p className="text-sm text-success">
+        Signal accepted. No playbook on this book yet.
       </p>
     );
   }

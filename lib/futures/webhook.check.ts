@@ -6,6 +6,8 @@ import {
   looksLikeVenueWebhookPayload,
   parseFuturesWebhook,
   parseWebhookJson,
+  parseWebhookKind,
+  parseWebhookName,
   webhookTokensMatch,
 } from "./webhook";
 import {
@@ -55,6 +57,11 @@ assert.equal(closePlaybook.ok, true);
 if (closePlaybook.ok && closePlaybook.parsed.kind === "arm") {
   assert.equal(closePlaybook.parsed.verb, "close-playbook");
 }
+
+assert.equal(parseWebhookName("BTC scalp").ok, true);
+assert.equal(parseWebhookName("").ok, false);
+assert.equal(parseWebhookKind("signal").ok, true);
+assert.equal(parseWebhookKind("other").ok, false);
 
 assert.equal(parseFuturesWebhook({ action: "flip", symbol: "BTCUSDT" }).ok, false);
 assert.equal(
