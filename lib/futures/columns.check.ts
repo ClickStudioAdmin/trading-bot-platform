@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  FUTURES_DCA_OPEN_COLUMN_COUNT,
   FUTURES_OPEN_COLUMN_DEFAULTS,
   FUTURES_OPEN_LOCKED_COLUMN_COUNT,
   futuresOpenColumnCount,
@@ -39,4 +40,11 @@ assert.equal(
     value: false,
   }),
   FUTURES_OPEN_LOCKED_COLUMN_COUNT + 8,
+);
+assert.equal(
+  futuresOpenColumnCount(
+    FUTURES_OPEN_COLUMN_DEFAULTS,
+    FUTURES_DCA_OPEN_COLUMN_COUNT,
+  ),
+  FUTURES_OPEN_LOCKED_COLUMN_COUNT + 10 + FUTURES_DCA_OPEN_COLUMN_COUNT,
 );

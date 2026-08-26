@@ -10,6 +10,7 @@ import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 export function FuturesWebhookTest({
   webhooks,
   allowSignal = true,
+  signalFiresRecipes = true,
   standalone = false,
   next,
   successNext,
@@ -18,6 +19,7 @@ export function FuturesWebhookTest({
 }: {
   webhooks: Pick<FuturesWebhookRow, "id" | "name" | "kind">[];
   allowSignal?: boolean;
+  signalFiresRecipes?: boolean;
   standalone?: boolean;
   next?: string;
   successNext?: string;
@@ -33,13 +35,13 @@ export function FuturesWebhookTest({
   const help = standalone
     ? [
         "Posts through the same door as TradingView.",
+        signal ? null : "Symbol and size go in the dummy payload.",
         signal
-          ? null
-          : "Symbol and size go in the dummy payload.",
-        allowSignal
-          ? "A Signal test arms and fires any automation that uses that webhook."
+          ? signalFiresRecipes
+            ? "A Signal test arms and fires any automation that uses that webhook."
+            : "A Signal test sends arm, disarm, or close-playbook through this door."
           : null,
-        "A fill opens Positions.",
+        signal ? null : "A fill opens Positions.",
       ]
         .filter(Boolean)
         .join(" ")
@@ -47,7 +49,9 @@ export function FuturesWebhookTest({
         "Posts through the same door as TradingView.",
         "A TradingView strategy test uses the symbol and size above.",
         allowSignal
-          ? "A Signal test arms and fires any automation that uses that webhook."
+          ? signalFiresRecipes
+            ? "A Signal test arms and fires any automation that uses that webhook."
+            : "A Signal test sends arm, disarm, or close-playbook through this door."
           : null,
       ]
         .filter(Boolean)

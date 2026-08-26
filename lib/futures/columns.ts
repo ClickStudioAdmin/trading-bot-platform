@@ -23,6 +23,8 @@ export const FUTURES_OPEN_COLUMNS_KEY = "tbp-columns:futures-open";
 
 export const FUTURES_OPEN_LOCKED_COLUMN_COUNT = 5;
 
+export const FUTURES_DCA_OPEN_COLUMN_COUNT = 3;
+
 export const FUTURES_OPEN_COLUMN_LABELS: Record<
   FuturesOpenOptionalColumn,
   string
@@ -83,9 +85,11 @@ export function parseStoredFuturesOpenColumns(
 
 export function futuresOpenColumnCount(
   visible: FuturesOpenColumnVisibility,
+  extra = 0,
 ): number {
   return (
     FUTURES_OPEN_LOCKED_COLUMN_COUNT +
-    FUTURES_OPEN_OPTIONAL_COLUMNS.filter((id) => visible[id]).length
+    FUTURES_OPEN_OPTIONAL_COLUMNS.filter((id) => visible[id]).length +
+    extra
   );
 }

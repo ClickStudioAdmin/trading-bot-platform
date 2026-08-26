@@ -41,6 +41,7 @@ import {
 } from "@/lib/paper/rows";
 import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { runFuturesAutomationTick } from "@/lib/futures/automation-tick";
+import { runDcaPlaybookTick } from "@/lib/dca/tick";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 export async function runPaperEngineTick(options?: {
@@ -503,6 +504,19 @@ export async function runPaperEngineTick(options?: {
         cause instanceof Error
           ? cause.message
           : "Futures automations tick failed",
+      strategy: "futures",
+    });
+  }
+
+  try {
+    await runDcaPlaybookTick();
+  } catch (cause) {
+    await writeEventLog({
+      level: "error",
+      scope: "strategy",
+      event: "engine.open_failed",
+      message:
+        cause instanceof Error ? cause.message : "DCA playbook tick failed",
       strategy: "futures",
     });
   }

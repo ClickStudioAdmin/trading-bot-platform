@@ -16,6 +16,8 @@ import { loadFuturesVenueRisk } from "@/lib/futures/venue-risk-load";
 import { attachFuturesVenueRisk } from "@/lib/futures/venue-risk";
 import { firstSearchValue } from "@/lib/paper/open";
 import { deskAllowsManualPerpTicket } from "@/lib/accounts/model";
+import { dcaHintsForOpen } from "@/lib/dca/playbook";
+import { loadDcaPlaybook } from "@/lib/dca/store";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
 export const metadata: Metadata = {
@@ -40,6 +42,8 @@ export default async function FuturesOverviewPage({
   const deskType = session?.account.deskType ?? "perps";
   const showTicket = deskAllowsManualPerpTicket(deskType);
   const dca = deskType === "dca";
+  const playbook =
+    dca && session ? await loadDcaPlaybook(session.account.id) : null;
   const [tickers, pairs, venueRisk] = await Promise.all([
     desk.open.length > 0
       ? fetchBybitTickers("linear").catch(
@@ -66,6 +70,7 @@ export default async function FuturesOverviewPage({
     ),
     venueRisk,
   );
+  const dcaHints = dca ? dcaHintsForOpen(playbook, open) : undefined;
 
   return (
     <main className="mx-auto max-w-7xl space-y-8 px-6 pt-6 pb-8">
@@ -116,6 +121,8 @@ export default async function FuturesOverviewPage({
         open={open}
         exchangeBook={desk.exchangeBook}
         webhookNames={desk.webhookNames}
+        showDcaColumns={dca}
+        dcaHints={dcaHints}
         emptyMessage={
           showTicket ? (
             <>

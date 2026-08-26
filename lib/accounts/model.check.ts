@@ -18,6 +18,7 @@ import {
   deskAllowsSignalWebhooks,
   deskAllowsOrderWebhooks,
   deskAllowsPerpsRecipes,
+  deskManualBuySellBlockReason,
   parseAccountName,
   parseAccountMode,
   parseDeskType,
@@ -101,6 +102,15 @@ assert.equal(deskAllowsSignalWebhooks("cash_and_carry"), false);
 assert.equal(deskAllowsOrderWebhooks("perps"), true);
 assert.equal(deskAllowsOrderWebhooks("signal_follower"), true);
 assert.equal(deskAllowsOrderWebhooks("dca"), false);
+assert.equal(deskManualBuySellBlockReason("perps"), null);
+assert.equal(
+  deskManualBuySellBlockReason("dca"),
+  "This is a DCA desk. The playbook owns clips. Buy and Sell are not on this ticket.",
+);
+assert.equal(
+  deskManualBuySellBlockReason("signal_follower"),
+  "This is a TradingView Strategy desk. Buy and Sell come from a webhook.",
+);
 
 const paper = parseTradingAccountRow({
   id: "acc-1",

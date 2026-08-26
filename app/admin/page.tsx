@@ -116,7 +116,8 @@ export default async function AdminOverviewPage() {
         <p className="mt-1 text-sm text-ink-muted">
           One public Bybit scan per tick. Cash and Carry automations run only
           on those desks. Perps price-cross recipes run on Perps desks.
-          TradingView Strategy desks take orders from alerts only.
+          TradingView Strategy desks take orders from alerts only. DCA desks
+          do not run Perps recipes.
         </p>
         <dl className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
           <div>

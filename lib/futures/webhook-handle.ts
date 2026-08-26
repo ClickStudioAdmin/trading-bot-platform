@@ -4,6 +4,8 @@ import {
   parseAccountMode,
   parseDeskType,
 } from "@/lib/accounts/model";
+import { applyDcaVerb } from "@/lib/dca/run";
+import { loadDcaPlaybook } from "@/lib/dca/store";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -127,6 +129,59 @@ export async function handleFuturesWebhook(input: {
   }
 
   if (parsed.parsed.kind === "arm") {
+    if (deskType === "dca") {
+      const playbook = await loadDcaPlaybook(accountId);
+      if (!playbook) {
+        await writeEventLog({
+          scope: "strategy",
+          event: `webhook.${parsed.parsed.verb}`,
+          message: "Signal accepted. Save a DCA playbook first.",
+          userId,
+          accountId,
+          strategy: FUTURES_STRATEGY_ID,
+          data: { verb: parsed.parsed.verb, webhook: found.name },
+        });
+        return {
+          status: 200,
+          body: {
+            ok: true,
+            accepted: true,
+            playbook: false,
+            verb: parsed.parsed.verb,
+          },
+        };
+      }
+      const ran = await applyDcaVerb({
+        playbook,
+        mode,
+        verb: parsed.parsed.verb,
+      });
+      await writeEventLog({
+        scope: "strategy",
+        event: `webhook.${parsed.parsed.verb}`,
+        message: ran.ok ? ran.message : ran.error,
+        userId,
+        accountId,
+        strategy: FUTURES_STRATEGY_ID,
+        data: {
+          verb: parsed.parsed.verb,
+          webhook: found.name,
+          playbookId: playbook.id,
+        },
+      });
+      if (!ran.ok) {
+        return { status: 200, body: { ok: false, error: ran.error } };
+      }
+      return {
+        status: 200,
+        body: {
+          ok: true,
+          accepted: true,
+          playbook: true,
+          verb: parsed.parsed.verb,
+        },
+      };
+    }
     let fired = 0;
     if (parsed.parsed.verb === "arm" && found.id && deskType === "perps") {
       const entries = await fireWebhookAutomationEntries({

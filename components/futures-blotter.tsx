@@ -18,9 +18,12 @@ import { FuturesSourceCell } from "@/components/futures-source";
 import { FuturesTpslCell } from "@/components/futures-tpsl";
 import { FuturesTrailingCell } from "@/components/futures-trailing";
 import {
+  FUTURES_DCA_OPEN_COLUMN_COUNT,
   futuresOpenColumnCount,
   type FuturesOpenColumnVisibility,
 } from "@/lib/futures/columns";
+import type { DcaOpenHint } from "@/lib/dca/playbook";
+import { dcaHintKey } from "@/lib/dca/playbook";
 import type { FuturesDeskPosition } from "@/lib/futures/list";
 import type { MarkedFutures } from "@/lib/futures/mark";
 import { formatLeverage } from "@/lib/futures/venue-risk";
@@ -72,6 +75,8 @@ export function OpenFuturesTrades({
   showCloseAll = false,
   workingCount = 0,
   webhookNames = [],
+  showDcaColumns = false,
+  dcaHints = {},
 }: {
   signedIn: boolean;
   open: MarkedFutures[];
@@ -82,9 +87,14 @@ export function OpenFuturesTrades({
   showCloseAll?: boolean;
   workingCount?: number;
   webhookNames?: readonly string[];
+  showDcaColumns?: boolean;
+  dcaHints?: Readonly<Record<string, DcaOpenHint>>;
 }) {
   const { visible, setColumn } = useFuturesOpenColumns();
-  const colSpan = futuresOpenColumnCount(visible);
+  const colSpan = futuresOpenColumnCount(
+    visible,
+    showDcaColumns ? FUTURES_DCA_OPEN_COLUMN_COUNT : 0,
+  );
 
   return (
     <section>
@@ -217,6 +227,28 @@ export function OpenFuturesTrades({
                   />
                 </th>
               ) : null}
+              {showDcaColumns ? (
+                <>
+                  <th className="px-3 py-3 font-medium">
+                    <ColumnHint
+                      label="Clip"
+                      hint="How many playbook clips have filled on this row."
+                    />
+                  </th>
+                  <th className="px-3 py-3 font-medium">
+                    <ColumnHint
+                      label="Next add"
+                      hint="Dip from the last clip, interval remaining, or wait for take profit / stop."
+                    />
+                  </th>
+                  <th className="px-2 py-3 font-medium">
+                    <ColumnHint
+                      label="Remaining"
+                      hint="Clips and USDT still allowed before the playbook stops adding. Does not flatten."
+                    />
+                  </th>
+                </>
+              ) : null}
               <th className="w-[8.75rem] px-2 py-3 font-medium">
                 <ColumnHint
                   label="Close By"
@@ -258,6 +290,10 @@ export function OpenFuturesTrades({
                   visible={visible}
                   colSpan={colSpan}
                   webhookNames={webhookNames}
+                  showDcaColumns={showDcaColumns}
+                  dcaHint={
+                    dcaHints[dcaHintKey(trade.symbol, trade.side)] ?? null
+                  }
                 />
               ))
             )}
@@ -425,12 +461,16 @@ function OpenFuturesRows({
   visible,
   colSpan,
   webhookNames,
+  showDcaColumns,
+  dcaHint,
 }: {
   trade: MarkedFutures;
   next: string;
   visible: FuturesOpenColumnVisibility;
   colSpan: number;
   webhookNames: readonly string[];
+  showDcaColumns: boolean;
+  dcaHint: DcaOpenHint | null;
 }) {
   const pnlPct =
     trade.unrealizedUsdt === null
@@ -568,6 +608,19 @@ function OpenFuturesRows({
             next={next}
           />
         </td>
+      ) : null}
+      {showDcaColumns ? (
+        <>
+          <td className="min-w-0 px-3 py-3 tabular-nums whitespace-nowrap">
+            {dcaHint ? dcaHint.clips : "—"}
+          </td>
+          <td className="min-w-0 px-3 py-3 whitespace-nowrap text-ink-muted">
+            {dcaHint?.nextAdd ?? "—"}
+          </td>
+          <td className="min-w-0 px-2 py-3 whitespace-nowrap text-ink-muted">
+            {dcaHint?.remaining ?? "—"}
+          </td>
+        </>
       ) : null}
       <td className="px-2 py-3 whitespace-nowrap">
         <FuturesCloseActions trade={trade} next={next} />

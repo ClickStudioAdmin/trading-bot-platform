@@ -39,9 +39,26 @@ const STRATEGY_PAYLOADS = [
   },
 ] as const;
 
-const SIGNAL_PAYLOAD = `{
+const SIGNAL_PAYLOADS = [
+  {
+    label: "Arm",
+    text: `{
   "action": "arm"
-}`;
+}`,
+  },
+  {
+    label: "Disarm",
+    text: `{
+  "action": "disarm"
+}`,
+  },
+  {
+    label: "Close playbook",
+    text: `{
+  "action": "close-playbook"
+}`,
+  },
+] as const;
 
 export function FuturesWebhooksDesk({
   webhooks,
@@ -142,6 +159,12 @@ export function FuturesWebhooksDesk({
               Signal webhooks do nothing on this desk. Delete this URL.
             </p>
           ) : null}
+          {!allowOrder && hook.kind === "order" ? (
+            <p className="text-sm text-warning">
+              TradingView strategy webhooks do nothing on this desk. The
+              playbook owns clips. Delete this URL.
+            </p>
+          ) : null}
           <div className="space-y-1">
             <p className="text-sm text-ink">URL</p>
             {hook.url ? (
@@ -166,7 +189,21 @@ export function FuturesWebhooksDesk({
           <div className="space-y-3">
             <p className="text-sm text-ink">Payload</p>
             {hook.kind === "signal" ? (
-              <PayloadSample label="Arm" text={SIGNAL_PAYLOAD} />
+              <>
+                <p className="text-xs text-ink-muted">
+                  Signal only arms, disarms, or closes the playbook. It does
+                  not send buy, sell, or close.
+                </p>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {SIGNAL_PAYLOADS.map((sample) => (
+                    <PayloadSample
+                      key={sample.label}
+                      label={sample.label}
+                      text={sample.text}
+                    />
+                  ))}
+                </div>
+              </>
             ) : (
               <>
                 <p className="text-xs text-ink-muted">

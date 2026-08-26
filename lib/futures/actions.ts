@@ -27,6 +27,7 @@ import {
   deskAllowsOrderWebhooks,
   deskAllowsPerpsRecipes,
   deskAllowsSignalWebhooks,
+  deskManualBuySellBlockReason,
   formatStrategyDetachBlockers,
   strategyDetachBlockers,
 } from "@/lib/accounts/model";
@@ -67,7 +68,8 @@ export async function submitFuturesTrade(formData: FormData) {
   ) {
     fail(
       next,
-      "This is a TradingView Strategy desk. Buy and Sell come from a webhook.",
+      deskManualBuySellBlockReason(account.deskType) ??
+        "This desk does not take Buy or Sell from the ticket.",
     );
   }
   const result = await runFuturesCommand({

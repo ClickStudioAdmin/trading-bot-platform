@@ -207,7 +207,7 @@ export async function loadAccountUsage(
     return usage;
   }
   const accountIds = accounts.map((account) => account.id);
-  const [{ data: openRows }, { data: futuresOpenRows }, { data: futuresWorkingRows }, settings, ruleRows, futuresRuleRows, futuresBinds] =
+  const [{ data: openRows }, { data: futuresOpenRows }, { data: futuresWorkingRows }, settings, ruleRows, futuresRuleRows, futuresBinds, dcaRows] =
     await Promise.all([
     supabase
       .from("paper_carries")
@@ -228,6 +228,11 @@ export async function loadAccountUsage(
     selectPaperRuleModes(supabase, accountIds),
     selectFuturesAutomationModes(supabase, accountIds),
     listFuturesConnectionIds(supabase, accountIds),
+    supabase
+      .from("dca_playbooks")
+      .select("account_id, status")
+      .in("account_id", accountIds)
+      .in("status", ["armed", "stop_adding"]),
   ]);
   const carryOpenCount = new Map<string, number>();
   const futuresOpenCount = new Map<string, number>();
@@ -258,6 +263,12 @@ export async function loadAccountUsage(
   for (const row of futuresRuleRows) {
     const id = String(row.account_id ?? "");
     if (id && parseAutomationMode(row.mode) !== "disabled") {
+      runningIds.add(id);
+    }
+  }
+  for (const row of dcaRows.data ?? []) {
+    const id = String((row as { account_id?: string }).account_id ?? "");
+    if (id) {
       runningIds.add(id);
     }
   }

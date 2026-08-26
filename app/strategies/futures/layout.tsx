@@ -5,6 +5,8 @@ import {
   deskUsesPerpsUi,
   formatDeskType,
 } from "@/lib/accounts/model";
+import { dcaPlaybookIsRunning } from "@/lib/dca/playbook";
+import { loadDcaPlaybook } from "@/lib/dca/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
@@ -51,6 +53,8 @@ export default async function FuturesLayout({
           bound.id,
         )
       : null;
+  const playbook =
+    dca && session ? await loadDcaPlaybook(session.account.id) : null;
   const deskStatus = futuresDeskAutomationStatus({
     signedIn: Boolean(session),
     modes: rules.map((rule) => rule.mode),
@@ -58,6 +62,9 @@ export default async function FuturesLayout({
     liveBook: live,
     bound: Boolean(bound),
   });
+  const automationsRunning = dca
+    ? Boolean(playbook && dcaPlaybookIsRunning(playbook.status))
+    : deskStatus.automationsRunning;
   return (
     <div>
       <StrategySubnav
@@ -80,7 +87,7 @@ export default async function FuturesLayout({
           signalFollower ? FUTURES_PATHS.settings : FUTURES_PATHS.automations
         }
         automationsRunning={
-          signalFollower ? false : deskStatus.automationsRunning
+          signalFollower ? false : automationsRunning
         }
         reduceOnly={deskStatus.reduceOnly}
         connection={

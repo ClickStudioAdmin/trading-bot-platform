@@ -103,6 +103,21 @@ export function deskAllowsOrderWebhooks(deskType: DeskType): boolean {
   return deskType === "perps" || deskType === "signal_follower";
 }
 
+export function deskManualBuySellBlockReason(
+  deskType: DeskType,
+): string | null {
+  if (deskAllowsManualPerpTicket(deskType)) {
+    return null;
+  }
+  if (deskType === "dca") {
+    return "This is a DCA desk. The playbook owns clips. Buy and Sell are not on this ticket.";
+  }
+  if (deskType === "signal_follower") {
+    return "This is a TradingView Strategy desk. Buy and Sell come from a webhook.";
+  }
+  return "This desk does not take Buy or Sell from the ticket.";
+}
+
 export function parseAccountName(
   value: unknown,
 ): { ok: true; name: string } | { ok: false; error: string } {

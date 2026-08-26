@@ -5,7 +5,7 @@ import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
 import { ExchangeBindSelect } from "@/components/exchange-bind-select";
-import { strategyDetachBlockers } from "@/lib/accounts/model";
+import { strategyDetachBlockers, deskAllowsPerpsRecipes } from "@/lib/accounts/model";
 import { loadAccountUsage } from "@/lib/accounts/store";
 import {
   connectionIdsBoundToOtherDesks,
@@ -70,8 +70,11 @@ export default async function FuturesSettingsPage({
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Desk Settings" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Desk-wide knobs. Automations stay on their own page. TradingView URLs
-        live on{" "}
+        Desk-wide knobs.{" "}
+        {deskAllowsPerpsRecipes(session.account.deskType)
+          ? "Automations stay on their own page."
+          : "The playbook will live on Automations."}{" "}
+        TradingView URLs live on{" "}
         <Link href={FUTURES_PATHS.webhooks} className="text-accent">
           Webhooks
         </Link>
