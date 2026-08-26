@@ -146,28 +146,6 @@ export function FuturesWebhooksDesk({
                 ? "Signal — Automations When shows this name"
                 : "TradingView strategy — same URL, one alert message per action"}
             </p>
-            <div className="flex flex-wrap gap-2">
-              <form action={rotateFuturesWebhook}>
-                <input type="hidden" name="webhookId" value={hook.id} />
-                <PendingSubmitButton
-                  pendingLabel="Rotating…"
-                  successKey={`rotate-webhook-${hook.id}`}
-                  className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
-                >
-                  Rotate URL
-                </PendingSubmitButton>
-              </form>
-              <form action={deleteFuturesWebhookAction}>
-                <input type="hidden" name="webhookId" value={hook.id} />
-                <PendingSubmitButton
-                  pendingLabel="Deleting…"
-                  successKey={`delete-webhook-${hook.id}`}
-                  className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
-                >
-                  Delete
-                </PendingSubmitButton>
-              </form>
-            </div>
           </div>
           {hook.kind === "signal" ? (
             <PayloadSample label="Arm" text={SIGNAL_PAYLOAD} />
@@ -188,6 +166,28 @@ export function FuturesWebhooksDesk({
               </div>
             </div>
           )}
+          <div className="flex flex-wrap gap-2">
+            <form action={rotateFuturesWebhook}>
+              <input type="hidden" name="webhookId" value={hook.id} />
+              <PendingSubmitButton
+                pendingLabel="Rotating…"
+                successKey={`rotate-webhook-${hook.id}`}
+                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
+              >
+                Rotate URL
+              </PendingSubmitButton>
+            </form>
+            <form action={deleteFuturesWebhookAction}>
+              <input type="hidden" name="webhookId" value={hook.id} />
+              <PendingSubmitButton
+                pendingLabel="Deleting…"
+                successKey={`delete-webhook-${hook.id}`}
+                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
+              >
+                Delete
+              </PendingSubmitButton>
+            </form>
+          </div>
         </section>
       ))}
     </div>
