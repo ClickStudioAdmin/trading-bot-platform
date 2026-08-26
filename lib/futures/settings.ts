@@ -79,6 +79,40 @@ export async function loadFuturesSettings(
   }
 }
 
+export async function armFuturesReduceOnly(input: {
+  supabase: SupabaseClient;
+  userId: string;
+  accountId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const now = new Date().toISOString();
+  const existing = await selectStrategySettings(input.supabase, {
+    accountId: input.accountId,
+    strategyId: FUTURES_STRATEGY_ID,
+  });
+  if (existing) {
+    const { error } = await input.supabase
+      .from("strategy_settings")
+      .update({ reduce_only: true, updated_at: now })
+      .eq("account_id", input.accountId)
+      .eq("strategy_id", FUTURES_STRATEGY_ID);
+    if (error) {
+      return { ok: false, error: "Could not set reduce only." };
+    }
+    return { ok: true };
+  }
+  const { error } = await input.supabase.from("strategy_settings").insert({
+    user_id: input.userId,
+    account_id: input.accountId,
+    strategy_id: FUTURES_STRATEGY_ID,
+    reduce_only: true,
+    updated_at: now,
+  });
+  if (error) {
+    return { ok: false, error: "Could not set reduce only." };
+  }
+  return { ok: true };
+}
+
 export async function listFuturesConnectionIds(
   supabase: SupabaseClient,
   accountIds: string[],

@@ -17,6 +17,11 @@ export function confirmPhraseForScope(scope: CloseAllScope): string {
   return scope === "orders" ? CANCEL_ALL_CONFIRM : CLOSE_ALL_CONFIRM;
 }
 
+export function parseSetReduceOnly(raw: unknown): boolean {
+  const value = String(raw ?? "").trim().toLowerCase();
+  return value === "on" || value === "true" || value === "1";
+}
+
 export function parseCloseAllConfirm(
   raw: unknown,
   scope: CloseAllScope = "all",

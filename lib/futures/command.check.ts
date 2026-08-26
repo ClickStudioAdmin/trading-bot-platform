@@ -5,6 +5,7 @@ import {
   closeAllFlash,
   parseCloseAllConfirm,
   parseCloseAllScope,
+  parseSetReduceOnly,
 } from "./close-all";
 import { FUTURES_IDEMPOTENCY_MAX, parseIdempotencyKey } from "./command";
 
@@ -27,6 +28,10 @@ assert.equal(parseCloseAllConfirm("CANCEL ALL", "orders").ok, true);
 assert.equal(parseCloseAllConfirm("CLOSE ALL", "orders").ok, false);
 assert.equal(parseCloseAllConfirm("close all", "positions").ok, false);
 assert.equal(parseCloseAllConfirm("", "all").ok, false);
+assert.equal(parseSetReduceOnly("on"), true);
+assert.equal(parseSetReduceOnly("true"), true);
+assert.equal(parseSetReduceOnly(""), false);
+assert.equal(parseSetReduceOnly("off"), false);
 assert.equal(
   closeAllFlash({ live: false, closedCount: 2, cancelledCount: 0 }),
   "closed-all",

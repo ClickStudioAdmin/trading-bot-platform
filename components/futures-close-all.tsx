@@ -213,6 +213,23 @@ function FuturesBulkDialog({
         <form action={closeAllFutures} className="mt-4 space-y-3">
           <input type="hidden" name="next" value={next} />
           <input type="hidden" name="scope" value={scope} />
+          {scope !== "orders" ? (
+            <label className="flex items-start gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                name="setReduceOnly"
+                className="mt-0.5"
+              />
+              <span>
+                Set reduce only
+                <span className="mt-1 block text-xs text-ink-muted">
+                  Blocks Buy and Sell on this book so size cannot come back.
+                  When automations exist, those rules should also go reduce
+                  only.
+                </span>
+              </span>
+            </label>
+          ) : null}
           <label className="block text-sm text-ink">
             Type {phrase} to confirm
             <input

@@ -87,6 +87,7 @@ export type FuturesCommand =
       kind: "close-all";
       scope: unknown;
       confirm: unknown;
+      setReduceOnly?: unknown;
       idempotencyKey?: unknown;
     };
 

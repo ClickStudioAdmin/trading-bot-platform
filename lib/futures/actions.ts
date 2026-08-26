@@ -159,6 +159,7 @@ export async function closeAllFutures(formData: FormData) {
       kind: "close-all",
       scope: formData.get("scope"),
       confirm: formData.get("confirm"),
+      setReduceOnly: formData.get("setReduceOnly"),
       idempotencyKey: formData.get("idempotencyKey"),
     },
   });

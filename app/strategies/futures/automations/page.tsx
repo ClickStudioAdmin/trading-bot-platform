@@ -50,6 +50,8 @@ export default async function FuturesAutomationsPage() {
           Same desk rules as a manual click: one USDT linear perpetual, long and
           short can both be open. Close a side from the open row. Paper writes the
           ledger only. Live places one Bybit market order from the Futures bind.
+          Close All can set reduce only so automations cannot reopen after a
+          kill switch.
         </p>
       </section>
     </main>

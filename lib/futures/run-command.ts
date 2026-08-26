@@ -26,7 +26,7 @@ import {
   cancelReduceOnlyWorkingForPosition,
   reconcileOpenFuturesBooks,
 } from "./reconcile";
-import { loadFuturesSettings } from "./settings";
+import { armFuturesReduceOnly, loadFuturesSettings } from "./settings";
 import { checkFuturesRiskCaps } from "./risk";
 import { fetchBybitTicker } from "@/lib/exchanges/bybit/client";
 import { loadPerpInstrument, priceForPerp, qtyForPerp, qtyForPerpNotional } from "@/lib/exchanges/bybit/perp";
@@ -48,6 +48,7 @@ import {
   closeAllFlash,
   parseCloseAllConfirm,
   parseCloseAllScope,
+  parseSetReduceOnly,
 } from "./close-all";
 import {
   parseIdempotencyKey,
@@ -1392,6 +1393,8 @@ async function runCloseAll(
   }
   const cancelOrders = scoped.scope === "orders" || scoped.scope === "all";
   const closePositions = scoped.scope === "positions" || scoped.scope === "all";
+  const setReduceOnly =
+    closePositions && parseSetReduceOnly(command.setReduceOnly);
   const { actor, supabase, liveBook } = ctx;
   const listScope = actorScope(actor);
   const working = cancelOrders ? await loadOpenFuturesWorking(listScope) : [];
@@ -1406,6 +1409,27 @@ async function runCloseAll(
           ? "Nothing to close."
           : "Nothing to cancel.",
     );
+  }
+
+  if (setReduceOnly) {
+    const armed = await armFuturesReduceOnly({
+      supabase,
+      userId: actor.userId,
+      accountId: actor.accountId,
+    });
+    if (!armed.ok) {
+      return fail(armed.error);
+    }
+    await writeEventLog({
+      scope: "strategy",
+      event: "settings.saved",
+      message: "Set reduce only from Close All",
+      userId: actor.userId,
+      accountId: actor.accountId,
+      strategy: FUTURES_STRATEGY_ID,
+      data: { reduceOnly: true, source: "close-all" },
+    });
+    revalidatePath(FUTURES_PATHS.settings);
   }
 
   let connection: BoundConnectionSecrets | null = null;
@@ -1485,6 +1509,7 @@ async function runCloseAll(
       scope: scoped.scope,
       cancelledCount,
       closedCount,
+      setReduceOnly,
       live: liveBook,
     },
   });
