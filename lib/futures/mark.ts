@@ -6,6 +6,8 @@ export type MarkedFutures = FuturesDeskPosition & {
   mark: number | null;
   last: number | null;
   unrealizedUsdt: number | null;
+  leverage: number | null;
+  liqPrice: number | null;
 };
 
 export function markFuturesOpen(
@@ -32,6 +34,8 @@ export function markFuturesOpen(
               entryPrice: row.entryPrice,
               exitPrice: mark,
             }),
+      leverage: null,
+      liqPrice: null,
     };
   });
 }

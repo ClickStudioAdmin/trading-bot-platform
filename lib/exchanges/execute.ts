@@ -4,6 +4,7 @@ import {
   bybitCreateLinearLimitOrder,
   bybitCreateMarketOrder,
   bybitEnsureHedgeMode,
+  bybitListLinearPositions,
   bybitReadLinearOrder,
   bybitReadLinearPosition,
   bybitSetTradingStop,
@@ -12,6 +13,7 @@ import {
   qtyForCarryLegs,
   type BybitLinearOrderSnapshot,
   type BybitLinearPosition,
+  type BybitLinearRisk,
   type BybitTpslAttach,
 } from "@/lib/exchanges/bybit/orders";
 import { loadPerpInstrument, qtyForPerp } from "@/lib/exchanges/bybit/perp";
@@ -356,6 +358,20 @@ export async function readPerpPositionOnVenue(input: {
     credentials: creds(input.connection),
     symbol: input.symbol,
     positionIdx: input.positionIdx,
+  });
+}
+
+export async function listLinearPositionRisk(input: {
+  connection: BoundConnectionSecrets;
+}): Promise<
+  { ok: true; positions: BybitLinearRisk[] } | { ok: false; error: string }
+> {
+  if (input.connection.venue !== "bybit") {
+    return { ok: false, error: "That exchange cannot read futures positions yet." };
+  }
+  return bybitListLinearPositions({
+    environmentId: input.connection.environment,
+    credentials: creds(input.connection),
   });
 }
 

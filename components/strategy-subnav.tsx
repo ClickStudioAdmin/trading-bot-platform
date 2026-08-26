@@ -57,7 +57,7 @@ export function StrategySubnav({
       : null;
 
   return (
-    <div className="mx-auto max-w-6xl px-6 pt-8">
+    <div className="mx-auto max-w-7xl px-6 pt-8">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">

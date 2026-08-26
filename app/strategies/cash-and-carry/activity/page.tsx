@@ -23,7 +23,7 @@ export default async function CashAndCarryActivityPage({
     : [];
 
   return (
-    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Activity" />
       {session ? (
         <EventLogs

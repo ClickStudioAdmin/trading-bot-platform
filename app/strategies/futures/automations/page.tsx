@@ -15,7 +15,7 @@ export default async function FuturesAutomationsPage() {
   const settings = session ? await loadFuturesSettings(session.account.id) : null;
 
   return (
-    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Automations" />
       {settings?.reduceOnly ? (
         <p className="mb-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">

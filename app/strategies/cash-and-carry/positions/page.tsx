@@ -24,7 +24,7 @@ export default async function CashAndCarryPositionsPage({
   const desk = await loadPaperDesk(rows);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Current Positions" />
       <div className="space-y-6">
         {book.error ? (

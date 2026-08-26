@@ -8,12 +8,21 @@ import { OpenStats } from "@/components/open-stats";
 import { PositionLogList } from "@/components/paper-carry-expand";
 import { TokenIcon } from "@/components/token-icon";
 import { ExpandableTradeRows, TradeDetailTabs } from "@/components/trade-expand";
+import {
+  FuturesOpenColumnPicker,
+  useFuturesOpenColumns,
+} from "@/components/futures-column-picker";
 import { FuturesPositionBulkActions } from "@/components/futures-close-all";
 import { FuturesCloseActions } from "@/components/futures-close";
 import { FuturesTpslCell } from "@/components/futures-tpsl";
 import { FuturesTrailingCell } from "@/components/futures-trailing";
+import {
+  futuresOpenColumnCount,
+  type FuturesOpenColumnVisibility,
+} from "@/lib/futures/columns";
 import type { FuturesDeskPosition } from "@/lib/futures/list";
 import type { MarkedFutures } from "@/lib/futures/mark";
+import { formatLeverage } from "@/lib/futures/venue-risk";
 import type { FuturesOrder } from "@/lib/futures/model";
 import {
   flattenExitPrice,
@@ -70,6 +79,9 @@ export function OpenFuturesTrades({
   showCloseAll?: boolean;
   workingCount?: number;
 }) {
+  const { visible, setColumn } = useFuturesOpenColumns();
+  const colSpan = futuresOpenColumnCount(visible);
+
   return (
     <section>
       {showHeading ? (
@@ -91,16 +103,19 @@ export function OpenFuturesTrades({
           </Link>
         </div>
       ) : null}
-      {showCloseAll ? (
-        <FuturesPositionBulkActions
-          next={next}
-          signedIn={signedIn}
-          openCount={open.length}
-          workingCount={workingCount}
-        />
-      ) : null}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <FuturesOpenColumnPicker visible={visible} setColumn={setColumn} />
+        {showCloseAll ? (
+          <FuturesPositionBulkActions
+            next={next}
+            signedIn={signedIn}
+            openCount={open.length}
+            workingCount={workingCount}
+          />
+        ) : null}
+      </div>
       <div className="min-w-0 overflow-x-auto rounded-card border border-line bg-surface">
-        <table className="w-full table-fixed text-left text-sm">
+        <table className="w-full text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
               <th className="w-10 px-2 py-3 font-medium">
@@ -118,48 +133,80 @@ export function OpenFuturesTrades({
               <th className="w-14 px-3 py-3 font-medium">
                 <ColumnHint label="Side" hint="Long or short. Both can be open on the same contract." />
               </th>
-              <th className="w-16 px-3 py-3 font-medium">
-                <ColumnHint label="Qty" hint="Base-coin size on this row." />
-              </th>
-              <th className="w-24 px-2 py-3 font-medium">
-                <ColumnHint
-                  label="Value"
-                  hint="Qty × entry. P&L scales with this amount."
-                />
-              </th>
-              <th className="w-24 px-2 py-3 font-medium">
-                <ColumnHint
-                  label="Entry"
-                  hint="Size-weighted average fill price."
-                />
-              </th>
-              <th className="w-24 px-2 py-3 font-medium">
-                <ColumnHint label="Mark" hint="Last price from the live Bybit ticker." />
-              </th>
-              <th className="w-24 px-2 py-3 font-medium">
-                <ColumnHint
-                  label="Unrealized"
-                  hint="Mark-to-market versus entry. Not Bybit’s invoice."
-                />
-              </th>
-              <th className="w-16 px-3 py-3 font-medium">
-                <ColumnHint
-                  label="P&L %"
-                  hint="Unrealized ÷ value. Not annualized."
-                />
-              </th>
-              <th className="w-[4.5rem] px-3 py-3 font-medium">
-                <ColumnHint
-                  label="TP/SL"
-                  hint="Take profit and stop loss on this row. Add when the position is open, or attach them on the order ticket."
-                />
-              </th>
-              <th className="w-20 px-3 py-3 font-medium">
-                <ColumnHint
-                  label="Trailing"
-                  hint="Retracement distance from the best price since activation. Closes the whole row at market. Add on the ticket or here."
-                />
-              </th>
+              {visible.qty ? (
+                <th className="w-16 px-3 py-3 font-medium">
+                  <ColumnHint label="Qty" hint="Base-coin size on this row." />
+                </th>
+              ) : null}
+              {visible.value ? (
+                <th className="w-24 px-2 py-3 font-medium">
+                  <ColumnHint
+                    label="Value"
+                    hint="Qty × entry. P&L scales with this amount."
+                  />
+                </th>
+              ) : null}
+              {visible.entry ? (
+                <th className="w-24 px-2 py-3 font-medium">
+                  <ColumnHint
+                    label="Entry"
+                    hint="Size-weighted average fill price."
+                  />
+                </th>
+              ) : null}
+              {visible.mark ? (
+                <th className="w-24 px-2 py-3 font-medium">
+                  <ColumnHint label="Mark" hint="Last price from the live Bybit ticker." />
+                </th>
+              ) : null}
+              {visible.unrealized ? (
+                <th className="w-24 px-2 py-3 font-medium">
+                  <ColumnHint
+                    label="Unrealized"
+                    hint="Mark-to-market versus entry. Not Bybit’s invoice."
+                  />
+                </th>
+              ) : null}
+              {visible.pnl ? (
+                <th className="w-16 px-3 py-3 font-medium">
+                  <ColumnHint
+                    label="P&L %"
+                    hint="Unrealized ÷ value. Not annualized."
+                  />
+                </th>
+              ) : null}
+              {visible.leverage ? (
+                <th className="w-16 px-3 py-3 font-medium">
+                  <ColumnHint
+                    label="Leverage"
+                    hint="Venue leverage on this side. Live reads Bybit. Paper shows —."
+                  />
+                </th>
+              ) : null}
+              {visible.liq ? (
+                <th className="w-24 px-2 py-3 font-medium">
+                  <ColumnHint
+                    label="Liq"
+                    hint="Venue estimated liquidation price. Live reads Bybit. Paper shows —."
+                  />
+                </th>
+              ) : null}
+              {visible.tpsl ? (
+                <th className="w-[4.5rem] px-3 py-3 font-medium">
+                  <ColumnHint
+                    label="TP/SL"
+                    hint="Take profit and stop loss on this row. Add when the position is open, or attach them on the order ticket."
+                  />
+                </th>
+              ) : null}
+              {visible.trailing ? (
+                <th className="w-20 px-3 py-3 font-medium">
+                  <ColumnHint
+                    label="Trailing"
+                    hint="Retracement distance from the best price since activation. Closes the whole row at market. Add on the ticket or here."
+                  />
+                </th>
+              ) : null}
               <th className="w-[8.75rem] px-2 py-3 font-medium">
                 <ColumnHint
                   label="Actions"
@@ -175,7 +222,7 @@ export function OpenFuturesTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={12}
+                colSpan={colSpan}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -187,14 +234,20 @@ export function OpenFuturesTrades({
               />
             ) : open.length === 0 ? (
               <EmptyRow
-                colSpan={12}
+                colSpan={colSpan}
                 message={
                   emptyMessage ?? "No open futures. Place an order above."
                 }
               />
             ) : (
               open.map((trade) => (
-                <OpenFuturesRows key={trade.id} trade={trade} next={next} />
+                <OpenFuturesRows
+                  key={trade.id}
+                  trade={trade}
+                  next={next}
+                  visible={visible}
+                  colSpan={colSpan}
+                />
               ))
             )}
           </tbody>
@@ -346,9 +399,13 @@ export function FuturesPerformanceStats({
 function OpenFuturesRows({
   trade,
   next,
+  visible,
+  colSpan,
 }: {
   trade: MarkedFutures;
   next: string;
+  visible: FuturesOpenColumnVisibility;
+  colSpan: number;
 }) {
   const pnlPct =
     trade.unrealizedUsdt === null
@@ -359,7 +416,7 @@ function OpenFuturesRows({
 
   return (
     <ExpandableTradeRows
-      colSpan={12}
+      colSpan={colSpan}
       details={
         <TradeDetailTabs
           orders={<FuturesOrderList orders={trade.orders} />}
@@ -384,52 +441,88 @@ function OpenFuturesRows({
         </span>
       </td>
       <td className="px-3 py-3 capitalize text-ink-muted">{trade.side}</td>
-      <td className="px-3 py-3 tabular-nums whitespace-nowrap">{trade.qty}</td>
-      <td className="px-2 py-3 tabular-nums whitespace-nowrap text-ink-muted">
-        {formatUsd(trade.notionalUsdt)}
-      </td>
-      <td className="px-2 py-3 tabular-nums whitespace-nowrap">{formatPrice(trade.entryPrice)}</td>
-      <td className="px-2 py-3 tabular-nums whitespace-nowrap">{formatPrice(trade.mark)}</td>
-      <td className={`px-2 py-3 tabular-nums whitespace-nowrap ${signedTone(trade.unrealizedUsdt)}`}>
-        {trade.unrealizedUsdt === null
-          ? "—"
-          : formatSignedUsd(trade.unrealizedUsdt)}
-      </td>
-      <td className={`px-3 py-3 tabular-nums whitespace-nowrap ${signedTone(pnlPct)}`}>
-        {formatPct(pnlPct)}
-      </td>
-      <td className="px-3 py-3">
-        <FuturesTpslCell
-          positionId={trade.id}
-          symbol={trade.symbol}
-          side={trade.side}
-          qty={trade.qty}
-          entryPrice={trade.entryPrice}
-          mark={trade.mark}
-          last={trade.last}
-          takeProfit={trade.takeProfit}
-          stopLoss={trade.stopLoss}
-          tpTrigger={trade.tpTrigger}
-          slTrigger={trade.slTrigger}
-          tpslMode={trade.tpslMode}
-          tpQty={trade.tpQty}
-          slQty={trade.slQty}
-          next={next}
-        />
-      </td>
-      <td className="px-3 py-3">
-        <FuturesTrailingCell
-          positionId={trade.id}
-          symbol={trade.symbol}
-          side={trade.side}
-          entryPrice={trade.entryPrice}
-          mark={trade.mark}
-          last={trade.last}
-          trailingStop={trade.trailingStop}
-          trailingActive={trade.trailingActive}
-          next={next}
-        />
-      </td>
+      {visible.qty ? (
+        <td className="px-3 py-3 tabular-nums whitespace-nowrap">{trade.qty}</td>
+      ) : null}
+      {visible.value ? (
+        <td className="px-2 py-3 tabular-nums whitespace-nowrap text-ink-muted">
+          {formatUsd(trade.notionalUsdt)}
+        </td>
+      ) : null}
+      {visible.entry ? (
+        <td className="px-2 py-3 tabular-nums whitespace-nowrap">
+          {formatPrice(trade.entryPrice)}
+        </td>
+      ) : null}
+      {visible.mark ? (
+        <td className="px-2 py-3 tabular-nums whitespace-nowrap">
+          {formatPrice(trade.mark)}
+        </td>
+      ) : null}
+      {visible.unrealized ? (
+        <td
+          className={`px-2 py-3 tabular-nums whitespace-nowrap ${signedTone(trade.unrealizedUsdt)}`}
+        >
+          {trade.unrealizedUsdt === null
+            ? "—"
+            : formatSignedUsd(trade.unrealizedUsdt)}
+        </td>
+      ) : null}
+      {visible.pnl ? (
+        <td
+          className={`px-3 py-3 tabular-nums whitespace-nowrap ${signedTone(pnlPct)}`}
+        >
+          {formatPct(pnlPct)}
+        </td>
+      ) : null}
+      {visible.leverage ? (
+        <td className="px-3 py-3 tabular-nums whitespace-nowrap text-ink-muted">
+          {formatLeverage(trade.leverage)}
+        </td>
+      ) : null}
+      {visible.liq ? (
+        <td className="px-2 py-3 tabular-nums whitespace-nowrap text-ink-muted">
+          {trade.liqPrice === null ? "—" : formatPrice(trade.liqPrice)}
+        </td>
+      ) : null}
+      {visible.tpsl ? (
+        <td className="px-3 py-3">
+          <FuturesTpslCell
+            positionId={trade.id}
+            symbol={trade.symbol}
+            side={trade.side}
+            qty={trade.qty}
+            entryPrice={trade.entryPrice}
+            mark={trade.mark}
+            last={trade.last}
+            takeProfit={trade.takeProfit}
+            stopLoss={trade.stopLoss}
+            tpTrigger={trade.tpTrigger}
+            slTrigger={trade.slTrigger}
+            tpslMode={trade.tpslMode}
+            tpQty={trade.tpQty}
+            slQty={trade.slQty}
+            liqPrice={trade.liqPrice}
+            next={next}
+          />
+        </td>
+      ) : null}
+      {visible.trailing ? (
+        <td className="px-3 py-3">
+          <FuturesTrailingCell
+            positionId={trade.id}
+            symbol={trade.symbol}
+            side={trade.side}
+            entryPrice={trade.entryPrice}
+            mark={trade.mark}
+            last={trade.last}
+            trailingStop={trade.trailingStop}
+            trailingActive={trade.trailingActive}
+            liqPrice={trade.liqPrice}
+            next={next}
+          />
+        </td>
+      ) : null}
       <td className="px-2 py-3">
         <FuturesCloseActions trade={trade} next={next} />
       </td>

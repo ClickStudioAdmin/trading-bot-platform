@@ -30,7 +30,7 @@ export default async function CashAndCarryAutomationsPage({
   const error = firstSearchValue(params.error);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Automations" />
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

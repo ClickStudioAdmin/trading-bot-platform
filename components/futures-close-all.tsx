@@ -53,7 +53,7 @@ export function FuturesPositionBulkActions({
   workingCount: number;
 }) {
   return (
-    <div className="mb-3 flex flex-wrap justify-end gap-2">
+    <div className="flex flex-wrap justify-end gap-2">
       <FuturesBulkButton
         next={next}
         scope="positions"

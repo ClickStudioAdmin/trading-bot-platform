@@ -30,6 +30,10 @@ Geist. Page title 30–36px semibold. Section 18–20px semibold. Body 14px. Lab
 
 Cards: `bg-surface`, `border-line`, radius 16px, padding 20–24px. No heavy drop shadows. Soft border only.
 
+## Layout
+
+Desk chrome (header, footer, strategy nav, strategy pages, `/admin`) uses `max-w-7xl` (~1280px). Narrow forms stay `max-w-lg` or `max-w-3xl`.
+
 ## Controls
 
 Primary: `bg-accent-strong` / `text-ink`. Secondary: surface + `border-line`. Ghost: ink-muted, no fill. Danger: `danger` text or fill for destructive only.

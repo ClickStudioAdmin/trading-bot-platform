@@ -45,7 +45,7 @@ export default async function CashAndCarryOpportunitiesPage({
   const active = filtersAreActive(filters);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <PageHeading as="h2" title="Opportunities" className="" />
         <LastScan atMs={scannedAtMs} />

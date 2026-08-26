@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function StrategiesPage() {
   return (
-    <main className="mx-auto max-w-6xl px-6 py-8">
+    <main className="mx-auto max-w-7xl px-6 py-8">
       <PageHeading overline="Desk" title="Strategies" />
       <p className="-mt-2 text-sm text-ink-muted">
         Each strategy has its own landing page. Related screens live under

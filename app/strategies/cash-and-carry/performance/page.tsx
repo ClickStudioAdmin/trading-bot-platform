@@ -14,7 +14,7 @@ export default async function CashAndCarryPerformancePage() {
   const desk = await loadPaperDesk([]);
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-6 pt-6 pb-8">
+    <main className="mx-auto max-w-7xl space-y-6 px-6 pt-6 pb-8">
       <PaperPerformanceStats
         signedIn={desk.signedIn}
         closed={desk.closed}

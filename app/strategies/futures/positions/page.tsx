@@ -20,6 +20,8 @@ import { loadFuturesDesk } from "@/lib/futures/list";
 import { markFuturesOpen } from "@/lib/futures/mark";
 import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { loadFuturesSettings } from "@/lib/futures/settings";
+import { loadFuturesVenueRisk } from "@/lib/futures/venue-risk-load";
+import { attachFuturesVenueRisk } from "@/lib/futures/venue-risk";
 import { firstSearchValue } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
@@ -50,7 +52,7 @@ export default async function FuturesPositionsPage({
   const live = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );
-  const [tickers, pairs] = await Promise.all([
+  const [tickers, pairs, venueRisk] = await Promise.all([
     fetchBybitTickers("linear").catch(
       () =>
         new Map<
@@ -59,13 +61,19 @@ export default async function FuturesPositionsPage({
         >(),
     ),
     loadUsdtLinearPerps().catch(() => []),
+    desk.exchangeBook && desk.open.length > 0
+      ? loadFuturesVenueRisk()
+      : Promise.resolve(new Map()),
   ]);
-  const open = markFuturesOpen(desk.open, tickers, (symbol) =>
-    baseCoinForPerpSymbol(symbol, pairs),
+  const open = attachFuturesVenueRisk(
+    markFuturesOpen(desk.open, tickers, (symbol) =>
+      baseCoinForPerpSymbol(symbol, pairs),
+    ),
+    venueRisk,
   );
 
   return (
-    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Current Positions" />
       <div className="space-y-6">
         <FuturesFlash

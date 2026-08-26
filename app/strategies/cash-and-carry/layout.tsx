@@ -69,7 +69,7 @@ export default async function CashAndCarryLayout({
         }
       />
       {live && !bound ? (
-        <div className="mx-auto max-w-6xl px-6 pt-4">
+        <div className="mx-auto max-w-7xl px-6 pt-4">
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
             This is a Connected Exchange account. Bind an exchange in Strategy
             Settings before Open, Close, Unwind, or automations can place

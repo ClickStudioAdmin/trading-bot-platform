@@ -42,7 +42,7 @@ export default async function CashAndCarryPage({
   const capacity = rows.reduce((sum, row) => sum + row.capacityUsdt, 0);
 
   return (
-    <main className="mx-auto max-w-6xl space-y-8 px-6 pt-6 pb-8">
+    <main className="mx-auto max-w-7xl space-y-8 px-6 pt-6 pb-8">
       <PaperFlash
         opened={firstSearchValue(params.paper) === "opened"}
         closed={firstSearchValue(params.paper) === "closed"}

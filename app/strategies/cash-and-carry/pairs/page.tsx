@@ -44,7 +44,7 @@ export default async function CashAndCarryPairsPage({
   const active = pairFiltersAreActive(filters);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Pairs" />
       <p className="-mt-2 mb-6 text-sm text-ink-muted">
         Every dated USDT pair in this strategy’s scan. No API key. BTC, ETH,

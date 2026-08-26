@@ -43,7 +43,7 @@ export default async function FuturesPairsPage({
   const active = pairFiltersAreActive(filters);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Pairs" />
       <p className="-mt-2 mb-6 text-sm text-ink-muted">
         Every trading USDT linear perpetual this strategy can buy, sell, or

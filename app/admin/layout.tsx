@@ -14,7 +14,7 @@ export default async function AdminLayout({
     <div className="flex flex-1">
       <AdminSidenav />
       <div className="min-w-0 flex-1 px-6 py-8">
-        <div className="mx-auto max-w-6xl">{children}</div>
+        <div className="mx-auto max-w-7xl">{children}</div>
       </div>
     </div>
   );

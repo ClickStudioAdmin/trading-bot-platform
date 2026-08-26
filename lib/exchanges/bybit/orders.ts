@@ -390,6 +390,19 @@ export type BybitLinearPosition = {
   stopLoss: number | null;
 };
 
+export type BybitLinearRisk = {
+  symbol: string;
+  positionIdx: number;
+  size: number;
+  leverage: number | null;
+  liqPrice: number | null;
+};
+
+function parseBybitPositive(raw: unknown): number | null {
+  const value = Number(raw);
+  return value > 0 && Number.isFinite(value) ? value : null;
+}
+
 export async function bybitReadLinearPosition(input: {
   environmentId: string;
   credentials: BybitPrivateCreds;
@@ -433,6 +446,54 @@ export async function bybitReadLinearPosition(input: {
       takeProfit: takeProfit > 0 ? takeProfit : null,
       stopLoss: stopLoss > 0 ? stopLoss : null,
     },
+  };
+}
+
+export async function bybitListLinearPositions(input: {
+  environmentId: string;
+  credentials: BybitPrivateCreds;
+  settleCoin?: string;
+}): Promise<
+  { ok: true; positions: BybitLinearRisk[] } | { ok: false; error: string }
+> {
+  const settleCoin = input.settleCoin ?? "USDT";
+  const query = `category=linear&settleCoin=${encodeURIComponent(settleCoin)}&limit=200`;
+  const listed = await bybitPrivateRequest<{
+    list?: {
+      symbol?: string;
+      size?: string;
+      positionIdx?: number;
+      leverage?: string;
+      liqPrice?: string;
+    }[];
+  }>({
+    environmentId: input.environmentId,
+    credentials: input.credentials,
+    method: "GET",
+    path: "/v5/position/list",
+    query,
+  });
+  if (!listed.ok) {
+    return listed;
+  }
+  return {
+    ok: true,
+    positions: (listed.result.list ?? [])
+      .map((item) => {
+        const symbol = String(item.symbol ?? "").trim();
+        const positionIdx = Number(item.positionIdx);
+        if (!symbol || (positionIdx !== 1 && positionIdx !== 2)) {
+          return null;
+        }
+        return {
+          symbol,
+          positionIdx,
+          size: Number(item.size ?? "") || 0,
+          leverage: parseBybitPositive(item.leverage),
+          liqPrice: parseBybitPositive(item.liqPrice),
+        } satisfies BybitLinearRisk;
+      })
+      .filter((row): row is BybitLinearRisk => row !== null),
   };
 }
 

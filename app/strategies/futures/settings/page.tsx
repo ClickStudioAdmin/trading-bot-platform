@@ -56,7 +56,7 @@ export default async function FuturesSettingsPage({
   const error = firstSearchValue(params.error);
 
   return (
-    <main className="mx-auto max-w-6xl px-6 pt-6 pb-8">
+    <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Strategy Settings" />
       <p className="-mt-4 text-sm text-ink-muted">
         Strategy-wide knobs. Automations stay on their own page. Bind the Bybit
