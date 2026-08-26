@@ -1,6 +1,6 @@
 # Phase 10 — Typed desks
 
-Current. Phase 9 is complete. See [phase-9.md](phase-9.md).
+Complete. Phase 9 is complete. See [phase-9.md](phase-9.md). Phase 11 is DCA. See [phase-11.md](phase-11.md).
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Paper Trading desks write the in-app ledger only. Connected Exchange desks bind 
 
 ## Status
 
-Current. Agent steps 1–7 are in the tree. Step 8 is Click’s desk test. Dual books split and blotter history is purged on migrate. Do not mark the phase accepted until that test.
+Complete. Accepted after Click’s desk test (27 Aug 2026). Dual books split and blotter history was purged on migrate. Shared-key warnings: pending copy when picking a key already on another desk; status copy on Desk Settings after that bind. Phase 11 is DCA.
 
 ## Current micro-step
 
@@ -25,9 +25,9 @@ Current. Agent steps 1–7 are in the tree. Step 8 is Click’s desk test. Dual 
 | 5 | Create Desk | Agent | Manage desks creates: name, mode, type, then Live bind. Pending shared-key warning only if the chosen connection is already bound to another desk. Bound shared-key status on Desk Settings. Done |
 | 6 | Chrome | Agent | Header switcher says Desk. Nav Strategies → Desks. Perps shows Futures routes only. C&C shows C&C only. TradingView Strategy shows perp blotter + order webhook, hides the recipe form, Buy/Sell ticket, and Signal webhooks. Done |
 | 7 | Bind | Agent | One bind on the desk. Ticket, header chip, balance, kill switch, TV door all use it. Desk A cannot place on Desk B. Done |
-| 8 | Desk test | Click | Create a Perps desk and a C&C desk on one login. Each has its own bind. Split Demo book is usable. Pending warning when picking a key already on another desk. Shared status on Desk Settings after bind. |
+| 8 | Desk test | Click | Create a Perps desk and a C&C desk on one login. Each has its own bind. Split Demo book is usable. Pending warning when picking a key already on another desk. Shared status on Desk Settings after bind. Done |
 
-Stop at the end of this phase for a desk test. Do not start DCA ([phase-11 is not written until this phase is accepted]).
+Phase accepted. DCA is [phase-11.md](phase-11.md).
 
 ## Desk types
 
@@ -54,7 +54,7 @@ Same venue key on two desks still shares IM. Isolation = another desk **and** an
 - Create Desk: name, Paper/Live, type, optional Live bind
 - Nav and header say Desk / Desks
 - Type-locked UI (one strategy surface per desk)
-- Shared-key margin warning on create
+- Shared-key margin warning on create and Desk Settings
 
 ## Out of scope
 

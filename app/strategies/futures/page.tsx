@@ -37,9 +37,9 @@ export default async function FuturesOverviewPage({
     });
   }
   const desk = await loadFuturesDesk();
-  const showTicket = deskAllowsManualPerpTicket(
-    session?.account.deskType ?? "perps",
-  );
+  const deskType = session?.account.deskType ?? "perps";
+  const showTicket = deskAllowsManualPerpTicket(deskType);
+  const dca = deskType === "dca";
   const [tickers, pairs, venueRisk] = await Promise.all([
     desk.open.length > 0
       ? fetchBybitTickers("linear").catch(
@@ -106,7 +106,9 @@ export default async function FuturesOverviewPage({
         emptyMessage={
           showTicket
             ? undefined
-            : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
+            : dca
+              ? "No working limits. Playbook clips rest here when they are limit orders. Limit close on an open row also appears here."
+              : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
         }
       />
       <OpenFuturesTrades
@@ -120,6 +122,15 @@ export default async function FuturesOverviewPage({
               No open futures on this book. Open from{" "}
               <Link href={FUTURES_PATHS.positions} className="text-accent">
                 Positions
+              </Link>
+              .
+            </>
+          ) : dca ? (
+            <>
+              No open futures on this book. The playbook adds clips once it is
+              armed on{" "}
+              <Link href={FUTURES_PATHS.automations} className="text-accent">
+                Automations
               </Link>
               .
             </>

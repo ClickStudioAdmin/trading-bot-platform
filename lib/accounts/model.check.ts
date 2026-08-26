@@ -16,6 +16,8 @@ import {
   deskUsesPerpsUi,
   deskAllowsManualPerpTicket,
   deskAllowsSignalWebhooks,
+  deskAllowsOrderWebhooks,
+  deskAllowsPerpsRecipes,
   parseAccountName,
   parseAccountMode,
   parseDeskType,
@@ -51,12 +53,15 @@ assert.equal(parseAccountName("x".repeat(41)).ok, false);
 
 assert.equal(parseDeskType("perps"), "perps");
 assert.equal(parseDeskType("signal_follower"), "signal_follower");
+assert.equal(parseDeskType("dca"), "dca");
 assert.equal(parseDeskType("cash_and_carry"), "cash_and_carry");
 assert.equal(parseDeskType("other"), "cash_and_carry");
 assert.equal(parseDeskTypeChoice("perps").ok, true);
+assert.equal(parseDeskTypeChoice("dca").ok, true);
 assert.equal(parseDeskTypeChoice("").ok, false);
 assert.equal(formatDeskType("perps"), "Perps");
 assert.equal(formatDeskType("signal_follower"), "TradingView Strategy");
+assert.equal(formatDeskType("dca"), "DCA");
 assert.equal(formatDeskType("cash_and_carry"), "Cash and Carry");
 assert.equal(
   formatDeskTypeChoice("perps"),
@@ -67,22 +72,35 @@ assert.equal(
   "TradingView Strategy (alerts send buy / sell / close)",
 );
 assert.equal(
+  formatDeskTypeChoice("dca"),
+  "DCA (app owns clips and exits)",
+);
+assert.equal(
   deskHomePath("cash_and_carry"),
   "/strategies/cash-and-carry",
 );
 assert.equal(deskHomePath("perps"), "/strategies/futures");
 assert.equal(deskHomePath("signal_follower"), "/strategies/futures");
+assert.equal(deskHomePath("dca"), "/strategies/futures");
 assert.equal(deskUsesCashAndCarry("cash_and_carry"), true);
 assert.equal(deskUsesCashAndCarry("perps"), false);
 assert.equal(deskUsesPerpsUi("perps"), true);
 assert.equal(deskUsesPerpsUi("signal_follower"), true);
+assert.equal(deskUsesPerpsUi("dca"), true);
 assert.equal(deskUsesPerpsUi("cash_and_carry"), false);
 assert.equal(deskAllowsManualPerpTicket("perps"), true);
 assert.equal(deskAllowsManualPerpTicket("signal_follower"), false);
+assert.equal(deskAllowsManualPerpTicket("dca"), false);
 assert.equal(deskAllowsManualPerpTicket("cash_and_carry"), false);
+assert.equal(deskAllowsPerpsRecipes("perps"), true);
+assert.equal(deskAllowsPerpsRecipes("dca"), false);
 assert.equal(deskAllowsSignalWebhooks("perps"), true);
+assert.equal(deskAllowsSignalWebhooks("dca"), true);
 assert.equal(deskAllowsSignalWebhooks("signal_follower"), false);
 assert.equal(deskAllowsSignalWebhooks("cash_and_carry"), false);
+assert.equal(deskAllowsOrderWebhooks("perps"), true);
+assert.equal(deskAllowsOrderWebhooks("signal_follower"), true);
+assert.equal(deskAllowsOrderWebhooks("dca"), false);
 
 const paper = parseTradingAccountRow({
   id: "acc-1",

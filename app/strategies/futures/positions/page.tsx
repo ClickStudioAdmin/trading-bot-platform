@@ -91,12 +91,10 @@ export default async function FuturesPositionsPage({
       lastPrices[symbol] = last;
     }
   }
-  const showTicket = deskAllowsManualPerpTicket(
-    session?.account.deskType ?? "perps",
-  );
-  const allowSignal = deskAllowsSignalWebhooks(
-    session?.account.deskType ?? "perps",
-  );
+  const deskType = session?.account.deskType ?? "perps";
+  const showTicket = deskAllowsManualPerpTicket(deskType);
+  const allowSignal = deskAllowsSignalWebhooks(deskType);
+  const dca = deskType === "dca";
   const testWebhooks = allowSignal
     ? webhooks
     : webhooks.filter((row) => row.kind !== "signal");
@@ -147,7 +145,9 @@ export default async function FuturesPositionsPage({
           emptyMessage={
             showTicket
               ? undefined
-              : "No open futures. TradingView opens them through a webhook."
+              : dca
+                ? "No open futures. The playbook adds clips once it is armed."
+                : "No open futures. TradingView opens them through a webhook."
           }
         />
 
@@ -234,7 +234,9 @@ export default async function FuturesPositionsPage({
           emptyMessage={
             showTicket
               ? undefined
-              : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
+              : dca
+                ? "No working limits. Playbook clips rest here when they are limit orders. Limit close on an open row also appears here."
+                : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
           }
         />
       </div>

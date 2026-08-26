@@ -25,6 +25,7 @@ export type AdminOverview = {
     cashAndCarry: number;
     perps: number;
     signalFollower: number;
+    dca: number;
   };
   keys: { total: number };
   positions: {
@@ -52,6 +53,7 @@ const emptyOverview: AdminOverview = {
     cashAndCarry: 0,
     perps: 0,
     signalFollower: 0,
+    dca: 0,
   },
   keys: { total: 0 },
   positions: {
@@ -134,6 +136,7 @@ export async function loadAdminOverview(): Promise<AdminOverview> {
   let cashAndCarry = 0;
   let perps = 0;
   let signalFollower = 0;
+  let dca = 0;
   for (const row of deskRows) {
     const id = String((row as { id: string }).id);
     const type = parseDeskType((row as { desk_type?: unknown }).desk_type);
@@ -147,6 +150,8 @@ export async function loadAdminOverview(): Promise<AdminOverview> {
       perpsIds.add(id);
     } else if (type === "signal_follower") {
       signalFollower += 1;
+    } else if (type === "dca") {
+      dca += 1;
     } else {
       cashAndCarry += 1;
       cashAndCarryIds.add(id);
@@ -205,6 +210,7 @@ export async function loadAdminOverview(): Promise<AdminOverview> {
       cashAndCarry,
       perps,
       signalFollower,
+      dca,
     },
     keys: { total: keys.count ?? 0 },
     positions: {

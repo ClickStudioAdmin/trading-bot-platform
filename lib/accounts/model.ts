@@ -1,5 +1,9 @@
 export type TradingAccountMode = "paper" | "live";
-export type DeskType = "cash_and_carry" | "perps" | "signal_follower";
+export type DeskType =
+  | "cash_and_carry"
+  | "perps"
+  | "signal_follower"
+  | "dca";
 
 export const DEFAULT_ACCOUNT_NAME = "Demo Account";
 export const DEFAULT_DESK_TYPE: DeskType = "cash_and_carry";
@@ -18,7 +22,11 @@ export function parseAccountMode(value: unknown): TradingAccountMode {
 }
 
 export function parseDeskType(value: unknown): DeskType {
-  if (value === "perps" || value === "signal_follower") {
+  if (
+    value === "perps" ||
+    value === "signal_follower" ||
+    value === "dca"
+  ) {
     return value;
   }
   return "cash_and_carry";
@@ -31,7 +39,8 @@ export function parseDeskTypeChoice(
   if (
     raw === "cash_and_carry" ||
     raw === "perps" ||
-    raw === "signal_follower"
+    raw === "signal_follower" ||
+    raw === "dca"
   ) {
     return { ok: true, deskType: raw };
   }
@@ -45,6 +54,9 @@ export function formatDeskType(deskType: DeskType): string {
   if (deskType === "signal_follower") {
     return "TradingView Strategy";
   }
+  if (deskType === "dca") {
+    return "DCA";
+  }
   return "Cash and Carry";
 }
 
@@ -54,6 +66,9 @@ export function formatDeskTypeChoice(deskType: DeskType): string {
   }
   if (deskType === "signal_follower") {
     return "TradingView Strategy (alerts send buy / sell / close)";
+  }
+  if (deskType === "dca") {
+    return "DCA (app owns clips and exits)";
   }
   return "Cash and Carry (spot + dated future)";
 }
@@ -69,15 +84,23 @@ export function deskUsesCashAndCarry(deskType: DeskType): boolean {
 }
 
 export function deskUsesPerpsUi(deskType: DeskType): boolean {
-  return deskType === "perps" || deskType === "signal_follower";
+  return deskType !== "cash_and_carry";
 }
 
 export function deskAllowsManualPerpTicket(deskType: DeskType): boolean {
   return deskType === "perps";
 }
 
-export function deskAllowsSignalWebhooks(deskType: DeskType): boolean {
+export function deskAllowsPerpsRecipes(deskType: DeskType): boolean {
   return deskType === "perps";
+}
+
+export function deskAllowsSignalWebhooks(deskType: DeskType): boolean {
+  return deskType === "perps" || deskType === "dca";
+}
+
+export function deskAllowsOrderWebhooks(deskType: DeskType): boolean {
+  return deskType === "perps" || deskType === "signal_follower";
 }
 
 export function parseAccountName(

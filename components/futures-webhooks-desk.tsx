@@ -46,9 +46,11 @@ const SIGNAL_PAYLOAD = `{
 export function FuturesWebhooksDesk({
   webhooks,
   allowSignal = true,
+  allowOrder = true,
 }: {
   webhooks: FuturesWebhookRow[];
   allowSignal?: boolean;
+  allowOrder?: boolean;
 }) {
   return (
     <div className="mt-6 space-y-4">
@@ -69,7 +71,7 @@ export function FuturesWebhooksDesk({
               className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
             />
           </label>
-          {allowSignal ? (
+          {allowSignal && allowOrder ? (
             <label className="min-w-[16rem] flex-[1.4] text-sm text-ink">
               Type
               <select
@@ -85,6 +87,8 @@ export function FuturesWebhooksDesk({
                 </option>
               </select>
             </label>
+          ) : allowSignal ? (
+            <input type="hidden" name="kind" value="signal" />
           ) : (
             <input type="hidden" name="kind" value="order" />
           )}

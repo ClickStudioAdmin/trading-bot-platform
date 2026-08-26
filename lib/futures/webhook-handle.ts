@@ -1,4 +1,5 @@
 import {
+  deskAllowsOrderWebhooks,
   deskAllowsSignalWebhooks,
   parseAccountMode,
   parseDeskType,
@@ -108,6 +109,19 @@ export async function handleFuturesWebhook(input: {
         ok: false,
         error:
           "This desk only accepts TradingView strategy orders. Send buy, sell, or close.",
+      },
+    };
+  }
+  if (
+    !deskAllowsOrderWebhooks(deskType) &&
+    (found.kind === "order" || parsed.parsed.kind === "order")
+  ) {
+    return {
+      status: 400,
+      body: {
+        ok: false,
+        error:
+          "This desk only accepts Signal arm. The playbook owns clips.",
       },
     };
   }

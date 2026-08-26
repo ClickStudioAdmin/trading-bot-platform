@@ -79,6 +79,7 @@ export default async function AdminOverviewPage() {
               label={formatDeskType("signal_follower")}
               value={overview.desks.signalFollower}
             />
+            <Row label={formatDeskType("dca")} value={overview.desks.dca} />
           </dl>
           <p className="mt-4 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
             Mode
@@ -215,8 +216,9 @@ function deskTypeHint(desks: {
   cashAndCarry: number;
   perps: number;
   signalFollower: number;
+  dca: number;
 }): string {
-  return `${desks.cashAndCarry} ${formatDeskType("cash_and_carry")} · ${desks.perps} ${formatDeskType("perps")} · ${desks.signalFollower} ${formatDeskType("signal_follower")}`;
+  return `${desks.cashAndCarry} ${formatDeskType("cash_and_carry")} · ${desks.perps} ${formatDeskType("perps")} · ${desks.signalFollower} ${formatDeskType("signal_follower")} · ${desks.dca} ${formatDeskType("dca")}`;
 }
 
 function openPositionHint(positions: {

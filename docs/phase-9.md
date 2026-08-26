@@ -1,6 +1,6 @@
 # Phase 9 — TradingView door
 
-Complete. Phase 8 is complete. See [phase-8.md](phase-8.md). Phase 10 is typed desks. See [phase-10.md](phase-10.md).
+Complete. Phase 8 is complete. See [phase-8.md](phase-8.md). Phase 10 is complete. See [phase-10.md](phase-10.md). Phase 11 is DCA. See [phase-11.md](phase-11.md).
 
 ## Purpose
 
@@ -23,7 +23,7 @@ Complete. Accepted after Click’s dummy desk test (26 Aug 2026). Live TradingVi
 | 5 | Webhooks tab | Agent | `/strategies/futures/webhooks` holds named Order and Signal URLs. Positions can send a dummy call through the same door. |
 | 6 | Dummy desk test | Click | Named URL. Send test from Positions. Custom TV Strategy fills. Source shows Webhook. Signal arm fires a matching automation. |
 
-Phase accepted. Typed desks are [phase-10.md](phase-10.md).
+Phase accepted. Typed desks are [phase-10.md](phase-10.md). DCA is [phase-11.md](phase-11.md).
 
 ## Later
 

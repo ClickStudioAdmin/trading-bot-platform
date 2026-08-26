@@ -32,6 +32,7 @@ export default async function FuturesLayout({
   }
   const deskType = session?.account.deskType ?? "perps";
   const signalFollower = deskType === "signal_follower";
+  const dca = deskType === "dca";
   const live = Boolean(session && accountCanHoldConnections(session.account.mode));
   const settings = session ? await loadFuturesSettings() : null;
   const rules = session
@@ -64,7 +65,9 @@ export default async function FuturesLayout({
         description={
           signalFollower
             ? "TradingView sends buy, sell, and close. This desk only protects: caps, reduce-only, Close All, and row TP/SL."
-            : "Buy, sell, or close one USDT linear perpetual. Market or limit. Long and short can both be open."
+            : dca
+              ? "This desk owns clips and exits. Arm from Automations or a Signal webhook. Close All and row TP/SL still protect."
+              : "Buy, sell, or close one USDT linear perpetual. Market or limit. Long and short can both be open."
         }
         navLabel={formatDeskType(deskType)}
         primaryLinks={
@@ -107,7 +110,9 @@ export default async function FuturesLayout({
             Settings before{" "}
             {signalFollower
               ? "TradingView orders can place."
-              : "Buy, Sell, or Close can place orders."}
+              : dca
+                ? "the playbook can place."
+                : "Buy, Sell, or Close can place orders."}
           </p>
         </div>
       ) : null}

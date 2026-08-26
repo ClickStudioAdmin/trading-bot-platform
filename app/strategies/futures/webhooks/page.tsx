@@ -4,7 +4,7 @@ import { PageHeading } from "@/components/page-heading";
 import { FuturesWebhooksDesk } from "@/components/futures-webhooks-desk";
 import { FuturesWebhookTest } from "@/components/futures-webhook-test";
 import { getSessionContext } from "@/lib/auth/session";
-import { deskAllowsSignalWebhooks } from "@/lib/accounts/model";
+import { deskAllowsOrderWebhooks, deskAllowsSignalWebhooks } from "@/lib/accounts/model";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
@@ -27,18 +27,18 @@ export default async function FuturesWebhooksPage({
 }) {
   const params = await searchParams;
   const session = await getSessionContext();
-  const allowSignal = deskAllowsSignalWebhooks(
-    session?.account.deskType ?? "perps",
-  );
+  const deskType = session?.account.deskType ?? "perps";
+  const allowSignal = deskAllowsSignalWebhooks(deskType);
+  const allowOrder = deskAllowsOrderWebhooks(deskType);
   const webhooks = session
     ? await listFuturesWebhooks({
         accountId: session.account.id,
         origin: futuresWebhookOrigin(await headers()),
       })
     : [];
-  const testWebhooks = allowSignal
-    ? webhooks
-    : webhooks.filter((row) => row.kind !== "signal");
+  const testWebhooks = webhooks.filter((row) =>
+    row.kind === "signal" ? allowSignal : allowOrder,
+  );
   const settings = session
     ? await loadFuturesSettings(session.account.id)
     : { connectionId: null };
@@ -75,7 +75,7 @@ export default async function FuturesWebhooksPage({
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Webhooks" />
       <p className="-mt-4 text-sm text-ink-muted">
-        {allowSignal ? (
+        {allowSignal && allowOrder ? (
           <>
             Create a webhook and pick the type.{" "}
             <span className="text-ink">TradingView strategy</span> means TV
@@ -83,6 +83,15 @@ export default async function FuturesWebhooksPage({
             <span className="text-ink">Signal</span> is just the entry ping —
             Automations When shows the webhook name. Send a dummy below. A fill
             opens{" "}
+            <Link href={FUTURES_PATHS.positions} className="text-accent">
+              Positions
+            </Link>
+            .
+          </>
+        ) : allowSignal ? (
+          <>
+            Signal webhooks arm this playbook. TradingView does not send buy,
+            sell, or close here. Send a dummy below. Armed clips open{" "}
             <Link href={FUTURES_PATHS.positions} className="text-accent">
               Positions
             </Link>
@@ -120,7 +129,11 @@ export default async function FuturesWebhooksPage({
       ) : null}
       {session ? (
         <div className="space-y-4">
-          <FuturesWebhooksDesk webhooks={webhooks} allowSignal={allowSignal} />
+          <FuturesWebhooksDesk
+            webhooks={webhooks}
+            allowSignal={allowSignal}
+            allowOrder={allowOrder}
+          />
           {testWebhooks.length > 0 ? (
             <div>
               <FuturesWebhookTest

@@ -79,6 +79,7 @@ export function CreateAccountForm({
           <option value="signal_follower">
             {formatDeskTypeChoice("signal_follower")}
           </option>
+          <option value="dca">{formatDeskTypeChoice("dca")}</option>
         </select>
       </label>
       <label className="block text-xs text-ink-muted">

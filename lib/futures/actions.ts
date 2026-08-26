@@ -24,6 +24,8 @@ import {
 import { parseWebhookKind } from "./webhook";
 import {
   deskAllowsManualPerpTicket,
+  deskAllowsOrderWebhooks,
+  deskAllowsPerpsRecipes,
   deskAllowsSignalWebhooks,
   formatStrategyDetachBlockers,
   strategyDetachBlockers,
@@ -305,8 +307,11 @@ export async function saveFuturesSettings(formData: FormData) {
 export async function saveFuturesAutomations(formData: FormData) {
   const session = await requirePerpsUiSession();
   const { member: user, account } = session;
-  if (account.deskType === "signal_follower") {
-    redirect(FUTURES_PATHS.webhooks);
+  if (!deskAllowsPerpsRecipes(account.deskType)) {
+    if (account.deskType === "signal_follower") {
+      redirect(FUTURES_PATHS.webhooks);
+    }
+    redirect(FUTURES_PATHS.automations);
   }
   const parsed = parseFuturesAutomationForm(formData);
   if (!parsed.ok) {
@@ -419,6 +424,13 @@ export async function createFuturesWebhookAction(formData: FormData) {
     !deskAllowsSignalWebhooks(session.account.deskType)
   ) {
     webhookFail("This desk only uses TradingView strategy webhooks.");
+  }
+  if (
+    kind.ok &&
+    kind.kind === "order" &&
+    !deskAllowsOrderWebhooks(session.account.deskType)
+  ) {
+    webhookFail("This desk only uses Signal webhooks to arm the playbook.");
   }
   const created = await createFuturesWebhook({
     supabase,

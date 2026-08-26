@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { FuturesAutomationsDesk } from "@/components/futures-rules-form";
 import { FuturesRulesGuide } from "@/components/futures-rules-guide";
+import { deskAllowsPerpsRecipes } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
@@ -33,6 +34,17 @@ export default async function FuturesAutomationsPage({
   const session = await getSessionContext();
   if (session?.account.deskType === "signal_follower") {
     redirect(FUTURES_PATHS.webhooks);
+  }
+  if (session && !deskAllowsPerpsRecipes(session.account.deskType)) {
+    return (
+      <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
+        <PageHeading as="h2" title="Automations" />
+        <p className="-mt-4 text-sm text-ink-muted">
+          This desk owns one DCA playbook. Clip size, max clips, add-on-dip,
+          and exits land next. Perps recipes stay on Perps desks.
+        </p>
+      </main>
+    );
   }
   const settings = session ? await loadFuturesSettings(session.account.id) : null;
   const rules = session ? await loadFuturesAutomationRules(session.account.id) : [];
