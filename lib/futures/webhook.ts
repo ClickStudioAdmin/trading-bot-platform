@@ -16,6 +16,8 @@ export const WEBHOOK_TOKEN_HEX = 64;
 export const WEBHOOK_RULE_NAME = "TradingView";
 export const WEBHOOK_NAME_MAX = 40;
 export const WEBHOOK_MAX_PER_BOOK = 8;
+export const WEBHOOK_NAME_IN_USE =
+  "A webhook on this book already uses that name.";
 export type WebhookKind = "order" | "signal";
 
 export type WebhookArmVerb = "arm" | "disarm" | "close-playbook";
@@ -92,6 +94,19 @@ export function parseWebhookName(
     };
   }
   return { ok: true, name };
+}
+
+export function webhookNameTakenAmong(
+  rows: { id: string; name: string }[],
+  name: string,
+  exceptId?: string,
+): boolean {
+  const needle = name.trim().toLowerCase();
+  return rows.some(
+    (row) =>
+      row.id !== exceptId &&
+      String(row.name ?? "").trim().toLowerCase() === needle,
+  );
 }
 
 export function webhookKindLabel(kind: WebhookKind): string {

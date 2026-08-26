@@ -29,6 +29,7 @@ export default async function FuturesWebhooksPage({
     : [];
   const error = firstSearchValue(params.error);
   const created = firstSearchValue(params.created) === "1";
+  const renamed = firstSearchValue(params.renamed) === "1";
   const rotated = firstSearchValue(params.rotated) === "1";
   const deleted = firstSearchValue(params.deleted) === "1";
 
@@ -40,7 +41,7 @@ export default async function FuturesWebhooksPage({
         <span className="text-ink">TradingView strategy</span> means TV sends
         every buy, sell, and close.{" "}
         <span className="text-ink">Signal</span> is just the entry ping —
-        pick that webhook as the When on an automation. Test from{" "}
+        Automations When shows the webhook name. Test from{" "}
         <Link href={FUTURES_PATHS.positions} className="text-accent">
           Positions
         </Link>
@@ -53,6 +54,9 @@ export default async function FuturesWebhooksPage({
       ) : null}
       {created ? (
         <p className="mt-4 text-sm text-success">Webhook created.</p>
+      ) : null}
+      {renamed ? (
+        <p className="mt-4 text-sm text-success">Webhook renamed.</p>
       ) : null}
       {rotated ? (
         <p className="mt-4 text-sm text-success">

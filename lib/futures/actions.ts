@@ -17,6 +17,7 @@ import {
   createFuturesWebhook,
   deleteFuturesWebhook,
   loadWebhookTokenForTest,
+  renameFuturesWebhook,
   rotateFuturesWebhookToken,
 } from "./webhook-load";
 import { parseWebhookKind } from "./webhook";
@@ -444,7 +445,44 @@ export async function createFuturesWebhookAction(formData: FormData) {
   });
   revalidatePath(FUTURES_PATHS.webhooks);
   revalidatePath(FUTURES_PATHS.positions);
+  revalidatePath(FUTURES_PATHS.automations);
   redirect(`${FUTURES_PATHS.webhooks}?created=1`);
+}
+
+export async function renameFuturesWebhookAction(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    webhookFail("Auth is not configured.");
+  }
+  const webhookId = String(formData.get("webhookId") ?? "").trim();
+  if (!webhookId) {
+    webhookFail("Pick a webhook.");
+  }
+  const renamed = await renameFuturesWebhook({
+    supabase,
+    userId: session.member.id,
+    accountId: session.account.id,
+    webhookId,
+    name: formData.get("name"),
+  });
+  if (!renamed.ok) {
+    webhookFail(renamed.error);
+  }
+  await writeEventLog({
+    scope: "strategy",
+    event: "webhook.renamed",
+    message: "Renamed a Futures webhook",
+    userId: session.member.id,
+    accountId: session.account.id,
+    strategy: FUTURES_STRATEGY_ID,
+  });
+  revalidatePath(FUTURES_PATHS.webhooks);
+  revalidatePath(FUTURES_PATHS.automations);
+  redirect(`${FUTURES_PATHS.webhooks}?renamed=1`);
 }
 
 export async function rotateFuturesWebhook(formData: FormData) {
@@ -513,6 +551,7 @@ export async function deleteFuturesWebhookAction(formData: FormData) {
   });
   revalidatePath(FUTURES_PATHS.webhooks);
   revalidatePath(FUTURES_PATHS.positions);
+  revalidatePath(FUTURES_PATHS.automations);
   redirect(`${FUTURES_PATHS.webhooks}?deleted=1`);
 }
 

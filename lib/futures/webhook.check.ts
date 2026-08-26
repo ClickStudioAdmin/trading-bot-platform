@@ -8,6 +8,7 @@ import {
   parseWebhookJson,
   parseWebhookKind,
   parseWebhookName,
+  webhookNameTakenAmong,
   webhookTokensMatch,
 } from "./webhook";
 import {
@@ -60,6 +61,21 @@ if (closePlaybook.ok && closePlaybook.parsed.kind === "arm") {
 
 assert.equal(parseWebhookName("BTC scalp").ok, true);
 assert.equal(parseWebhookName("").ok, false);
+assert.equal(
+  webhookNameTakenAmong(
+    [{ id: "a", name: "BTC scalp" }],
+    "btc scalp",
+  ),
+  true,
+);
+assert.equal(
+  webhookNameTakenAmong(
+    [{ id: "a", name: "BTC scalp" }],
+    "btc scalp",
+    "a",
+  ),
+  false,
+);
 assert.equal(parseWebhookKind("signal").ok, true);
 assert.equal(parseWebhookKind("other").ok, false);
 

@@ -14,7 +14,6 @@ import {
   type FuturesAutomationFormValues,
 } from "@/lib/futures/automation";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
-import { parseAutomationEntry } from "@/lib/futures/automation";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 
 export function FuturesAutomationsDesk({
@@ -120,9 +119,21 @@ function RuleCard({
   const [limitPrice, setLimitPrice] = useState(layer.limitPrice);
   const [triggerPrice, setTriggerPrice] = useState(layer.triggerPrice);
   const [symbol, setSymbol] = useState(layer.symbol);
-  const [entrySource, setEntrySource] = useState(layer.entrySource);
+  const [when, setWhen] = useState(
+    layer.entrySource === "webhook" && layer.webhookId
+      ? layer.webhookId
+      : "price",
+  );
   const closing = formAction === "close_long" || formAction === "close_short";
-  const webhookEntry = entrySource === "webhook";
+  const webhookEntry = when !== "price";
+  const whenWebhooks =
+    layer.webhookId &&
+    !triggerWebhooks.some((hook) => hook.id === layer.webhookId)
+      ? [
+          ...triggerWebhooks,
+          { id: layer.webhookId, name: "Webhook (removed)" },
+        ]
+      : triggerWebhooks;
   const selected = options.find((row) => row.symbol === symbol);
   const baseCoin = selected?.baseCoin ?? "Token";
 
@@ -284,39 +295,35 @@ function RuleCard({
       <div className="mt-3 grid items-end gap-3 md:grid-cols-3">
         <label className="block text-sm text-ink">
           When
-          <input type="hidden" name={`${prefix}entrySource`} value={entrySource} />
+          <input
+            type="hidden"
+            name={`${prefix}entrySource`}
+            value={webhookEntry ? "webhook" : "price"}
+          />
+          <input
+            type="hidden"
+            name={`${prefix}webhookId`}
+            value={webhookEntry ? when : ""}
+          />
           <select
-            value={entrySource}
-            onChange={(event) =>
-              setEntrySource(parseAutomationEntry(event.target.value))
-            }
+            value={when}
+            onChange={(event) => setWhen(event.target.value)}
             className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
           >
             <option value="price">Price cross</option>
-            <option value="webhook">Signal webhook</option>
-          </select>
-        </label>
-        {webhookEntry ? (
-          <label className="block text-sm text-ink md:col-span-2">
-            Webhook
-            <select
-              name={`${prefix}webhookId`}
-              defaultValue={layer.webhookId}
-              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            >
-              <option value="">
-                {triggerWebhooks.length === 0
-                  ? "Create a Signal webhook first"
-                  : "Pick a webhook"}
+            {whenWebhooks.map((hook) => (
+              <option key={hook.id} value={hook.id}>
+                {hook.name}
               </option>
-              {triggerWebhooks.map((hook) => (
-                <option key={hook.id} value={hook.id}>
-                  {hook.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : (
+            ))}
+          </select>
+          {triggerWebhooks.length === 0 ? (
+            <span className="mt-1 block text-xs text-ink-muted">
+              Create a Signal webhook to use its name here.
+            </span>
+          ) : null}
+        </label>
+        {webhookEntry ? null : (
           <>
             <label className="block text-sm text-ink">
               Price source

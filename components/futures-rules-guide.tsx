@@ -20,7 +20,7 @@ export function FuturesRulesGuide({
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="When it fires"
-          detail="A rule fires on the first tick the condition is true, then waits until it is false again. It does not repeat every tick while price stays through the level."
+          detail="When can be a price cross or a named Signal webhook. A price rule fires on the first tick the condition is true, then waits until it is false again. A Signal rule fires when that webhook arms."
         />
         <GuideItem
           term="When it is on"

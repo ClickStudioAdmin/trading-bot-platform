@@ -3,17 +3,41 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   createFuturesWebhookAction,
   deleteFuturesWebhookAction,
+  renameFuturesWebhookAction,
   rotateFuturesWebhook,
 } from "@/lib/futures/actions";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 
-const STRATEGY_PAYLOAD = `{
+const STRATEGY_PAYLOADS = [
+  {
+    label: "Buy",
+    text: `{
   "action": "buy",
   "symbol": "BTCUSDT",
   "size": "0.001",
   "sizeUnit": "qty",
   "id": "{{ticker}}{{timenow}}"
-}`;
+}`,
+  },
+  {
+    label: "Sell",
+    text: `{
+  "action": "sell",
+  "symbol": "BTCUSDT",
+  "size": "0.001",
+  "sizeUnit": "qty",
+  "id": "{{ticker}}{{timenow}}"
+}`,
+  },
+  {
+    label: "Close",
+    text: `{
+  "action": "close",
+  "symbol": "BTCUSDT",
+  "id": "{{ticker}}{{timenow}}"
+}`,
+  },
+] as const;
 
 const SIGNAL_PAYLOAD = `{
   "action": "arm"
@@ -36,8 +60,10 @@ export function FuturesWebhooksDesk({
             Name
             <input
               name="name"
-              defaultValue="TradingView"
+              required
               maxLength={40}
+              placeholder="Name this webhook"
+              autoComplete="off"
               className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
             />
           </label>
@@ -73,14 +99,34 @@ export function FuturesWebhooksDesk({
         >
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-start">
             <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-ink">{hook.name}</p>
-                <p className="text-xs text-ink-muted">
-                  {hook.kind === "signal"
-                    ? "Signal — add this as the When on an automation"
-                    : "TradingView strategy — TV sends every buy, sell, and close"}
-                </p>
-              </div>
+              <form
+                action={renameFuturesWebhookAction}
+                className="flex flex-wrap items-end gap-x-4 gap-y-3"
+              >
+                <input type="hidden" name="webhookId" value={hook.id} />
+                <label className="min-w-[12rem] flex-1 text-sm text-ink">
+                  Name
+                  <input
+                    name="name"
+                    defaultValue={hook.name}
+                    required
+                    maxLength={40}
+                    className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                  />
+                </label>
+                <PendingSubmitButton
+                  pendingLabel="Saving…"
+                  successKey={`rename-webhook-${hook.id}`}
+                  className="rounded-control border border-line bg-surface-raised px-3 py-2 text-xs font-medium text-ink"
+                >
+                  Save name
+                </PendingSubmitButton>
+              </form>
+              <p className="text-xs text-ink-muted">
+                {hook.kind === "signal"
+                  ? "Signal — Automations When shows this name"
+                  : "TradingView strategy — same URL, one alert message per action"}
+              </p>
               {hook.url ? (
                 <div className="space-y-2">
                   <label className="block text-sm text-ink">
@@ -122,12 +168,40 @@ export function FuturesWebhooksDesk({
                 </form>
               </div>
             </div>
-            <pre className="overflow-x-auto rounded-control border border-line bg-surface-raised px-3 py-2 font-mono text-xs whitespace-pre text-ink-muted">
-              {hook.kind === "signal" ? SIGNAL_PAYLOAD : STRATEGY_PAYLOAD}
-            </pre>
+            {hook.kind === "signal" ? (
+              <PayloadSample label="Arm" text={SIGNAL_PAYLOAD} />
+            ) : (
+              <div className="space-y-3">
+                <p className="text-xs text-ink-muted">
+                  Paste one of these into each TradingView alert. Sell opens or
+                  adds a short. Close exits the open row.
+                </p>
+                {STRATEGY_PAYLOADS.map((sample) => (
+                  <PayloadSample
+                    key={sample.label}
+                    label={sample.label}
+                    text={sample.text}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </section>
       ))}
+    </div>
+  );
+}
+
+function PayloadSample({ label, text }: { label: string; text: string }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-ink-muted">{label}</p>
+        <CopyTextButton text={text} label="Copy" />
+      </div>
+      <pre className="overflow-x-auto rounded-control border border-line bg-surface-raised px-3 py-2 font-mono text-xs whitespace-pre text-ink-muted">
+        {text}
+      </pre>
     </div>
   );
 }

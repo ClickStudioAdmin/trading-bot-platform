@@ -7,7 +7,9 @@ import {
   futuresWebhookPath,
   parseWebhookKind,
   parseWebhookName,
+  webhookNameTakenAmong,
   WEBHOOK_MAX_PER_BOOK,
+  WEBHOOK_NAME_IN_USE,
   type WebhookKind,
 } from "./webhook";
 import { decryptWebhookToken, encryptWebhookToken } from "./webhook-secret";
@@ -85,6 +87,14 @@ export async function createFuturesWebhook(input: {
   if (!kind.ok) {
     return kind;
   }
+  const clash = await webhookNameInUse({
+    supabase: input.supabase,
+    accountId: input.accountId,
+    name: name.name,
+  });
+  if (clash) {
+    return { ok: false, error: WEBHOOK_NAME_IN_USE };
+  }
   const { count } = await input.supabase
     .from("futures_webhooks")
     .select("id", { count: "exact", head: true })
@@ -110,9 +120,55 @@ export async function createFuturesWebhook(input: {
     updated_at: new Date().toISOString(),
   });
   if (error) {
+    if (error.code === "23505") {
+      return { ok: false, error: WEBHOOK_NAME_IN_USE };
+    }
     return { ok: false, error: "Could not save the webhook URL." };
   }
   return { ok: true, token: minted.token };
+}
+
+export async function renameFuturesWebhook(input: {
+  supabase: SupabaseClient;
+  userId: string;
+  accountId: string;
+  webhookId: string;
+  name: unknown;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const name = parseWebhookName(input.name);
+  if (!name.ok) {
+    return name;
+  }
+  const clash = await webhookNameInUse({
+    supabase: input.supabase,
+    accountId: input.accountId,
+    name: name.name,
+    exceptId: input.webhookId,
+  });
+  if (clash) {
+    return { ok: false, error: WEBHOOK_NAME_IN_USE };
+  }
+  const { data, error } = await input.supabase
+    .from("futures_webhooks")
+    .update({
+      name: name.name,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.webhookId)
+    .eq("account_id", input.accountId)
+    .eq("user_id", input.userId)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    if (error.code === "23505") {
+      return { ok: false, error: WEBHOOK_NAME_IN_USE };
+    }
+    return { ok: false, error: "Could not rename that webhook." };
+  }
+  if (!data) {
+    return { ok: false, error: "Could not rename that webhook." };
+  }
+  return { ok: true };
 }
 
 export async function rotateFuturesWebhookToken(input: {
@@ -200,6 +256,29 @@ export async function loadWebhookTokenForTest(input: {
       String((data as StoredWebhook).name ?? "").trim() || "TradingView",
     kind: kind.ok ? kind.kind : "order",
   };
+}
+
+async function webhookNameInUse(input: {
+  supabase: SupabaseClient;
+  accountId: string;
+  name: string;
+  exceptId?: string;
+}): Promise<boolean> {
+  const { data, error } = await input.supabase
+    .from("futures_webhooks")
+    .select("id, name")
+    .eq("account_id", input.accountId);
+  if (error || !data) {
+    return false;
+  }
+  return webhookNameTakenAmong(
+    data.map((row) => ({
+      id: String((row as { id: string }).id),
+      name: String((row as { name?: string }).name ?? ""),
+    })),
+    input.name,
+    input.exceptId,
+  );
 }
 
 function mintWebhookToken():
