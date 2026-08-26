@@ -87,7 +87,7 @@ export function DeskSwitcher({
           <p className="px-3 pt-1.5 pb-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
             Desks
           </p>
-          <div className="max-h-[min(24rem,70vh)] space-y-0.5 overflow-y-auto">
+          <div className="panel-scroll space-y-0.5">
             {desks.map((desk) => {
               const meta = `${formatDeskType(desk.deskType)} · ${formatAccountMode(desk.mode)}`;
               const currentDesk = desk.id === current.id;

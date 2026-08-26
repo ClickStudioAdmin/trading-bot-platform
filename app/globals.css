@@ -86,18 +86,28 @@ button[aria-busy="true"],
   overscroll-behavior: contain;
   padding-right: 0.25rem;
   scrollbar-width: thin;
-  scrollbar-color: var(--color-line-strong) var(--color-canvas);
+  scrollbar-color: var(--color-line-strong) transparent;
 }
 
 .panel-scroll::-webkit-scrollbar {
   width: 8px;
 }
 
+.panel-scroll::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .panel-scroll::-webkit-scrollbar-track {
-  background: var(--color-canvas);
+  background: transparent;
 }
 
 .panel-scroll::-webkit-scrollbar-thumb {
   background: var(--color-line-strong);
   border-radius: 999px;
+}
+
+.panel-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-faint);
 }
