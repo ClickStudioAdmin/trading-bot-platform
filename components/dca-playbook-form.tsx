@@ -59,7 +59,7 @@ const fieldClass =
   "mt-0.5 w-full rounded-control border border-line bg-surface-raised px-2 py-1.5 text-sm text-ink focus:border-line-strong focus:outline-none";
 const labelClass = "block text-xs text-ink-muted";
 const sectionClass =
-  "space-y-2 rounded-card border border-line px-3 py-2";
+  "space-y-2 rounded-card border border-line bg-canvas px-3 py-2";
 const rowClass = "grid gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-4";
 const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
 const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
@@ -1212,7 +1212,7 @@ export function DcaPlaybookForm({
           Exit
         </legend>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2 rounded-card border border-line px-3 py-2">
+          <div className="space-y-2 rounded-card border border-line bg-canvas px-3 py-2">
             <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
               Take profit
             </p>
@@ -1288,7 +1288,7 @@ export function DcaPlaybookForm({
               </label>
             </div>
           </div>
-          <div className="space-y-2 rounded-card border border-line px-3 py-2">
+          <div className="space-y-2 rounded-card border border-line bg-canvas px-3 py-2">
             <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
               Stop loss
             </p>
@@ -1470,7 +1470,8 @@ export function DcaPlaybookForm({
           />
         </div>
         <p className="mt-2 text-xs text-ink-muted">
-          Summary is based on the current parameters above
+          Ladder is based on the current asset price and the parameters
+          configured above
         </p>
         {summary.levels.length > 0 ? (
           <div className="thin-scroll mt-4 max-h-80 overflow-auto rounded-card border border-line">
