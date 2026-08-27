@@ -29,8 +29,8 @@ Stop at the end of this phase for a desk test. Do not start scale-in ([phase-12 
 
 1. Create a **DCA** desk. Type is immutable. Bind is the same Futures bind as Perps.
 2. The desk owns stacked playbooks. Automations is that list (Add playbook). One playbook per contract. Perps price-cross recipes stay on Perps desks only.
-3. Direction is long, short, or both. Both opens two blotter rows that add independently and never flatten each other.
-4. Start is Immediate, price cross, a bound Signal webhook, or an indicator on public klines (RSI 14, MACD, EMA 9/21; 5m / 15m / 1h). Arm enables. Immediate places the first order now. Other starts wait for the trigger. Webhook `arm` / buy / sell places the first order for the bound playbook.
+3. Direction is long, short, or both. Both opens two blotter rows that add independently and never flatten each other. Manual start uses Trigger Long and Trigger Short for that side.
+4. Start is Immediate, price cross, a bound Signal webhook, or an indicator on public klines (RSI 14, MACD, EMA 9/21; 5m / 15m / 1h). Arm enables. Immediate: Trigger Long / Trigger Short places that side’s first order. Other starts wait for the trigger. Webhook `arm` / buy / sell places the first order for the bound playbook.
 5. Adds: order size (qty or USDT), max orders / max position value (USDT), then one averaging kind — add on price deviation or add on interval (minutes, hours, or days). Price deviation can place remaining orders as GTC limits instead of market. Size and deviation multipliers scale later orders. Caps stop adding. They do not flatten.
 6. Exit: take profit / stop vs average or first fill, optional move-stop-to-breakeven, optional trailing on the existing row trailing engine. Stop adding leaves the position. Close playbook flattens then returns to idle.
 7. No Buy/Sell ticket. Close All, reduce-only, caps, and row TP/SL still protect. Reduce-only blocks new orders; TP/SL still run.

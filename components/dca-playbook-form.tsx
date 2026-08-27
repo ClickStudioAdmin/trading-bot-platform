@@ -22,6 +22,7 @@ import {
 import {
   DEFAULT_DCA_NAME,
   dcaAveragingKind,
+  dcaEnabledSides,
   dcaIntervalParts,
   dcaMaxTypeFromCaps,
   dcaPlaybookIsRunning,
@@ -371,18 +372,63 @@ export function DcaPlaybookForm({
             <>
               <span className="hidden h-5 w-px bg-line sm:block" aria-hidden />
               <div className="inline-flex overflow-hidden rounded-control border border-line bg-surface">
-                <PendingSubmitButton
-                  formAction={runDcaPlaybookVerb}
-                  name="verb"
-                  value="arm"
-                  pendingLabel={
-                    startKind === "immediate" ? "Triggering…" : "Arming…"
-                  }
-                  successKey={`arm-dca-playbook-${playbook.id}`}
-                  className={headerSegmentClass}
-                >
-                  {startKind === "immediate" ? "Trigger Manual Entry" : "Arm"}
-                </PendingSubmitButton>
+                {(startKind === "immediate"
+                  ? (
+                      [
+                        {
+                          side: "long" as const,
+                          value: "arm-long",
+                          label: "Trigger Long",
+                        },
+                        {
+                          side: "short" as const,
+                          value: "arm-short",
+                          label: "Trigger Short",
+                        },
+                      ] as const
+                    ).map((item) => ({
+                      ...item,
+                      enabled: dcaEnabledSides(direction).includes(item.side),
+                      pendingLabel: "Triggering…",
+                      successKey: `arm-dca-playbook-${playbook.id}-${item.side}`,
+                    }))
+                  : [
+                      {
+                        value: "arm",
+                        label: "Arm",
+                        enabled: true,
+                        pendingLabel: "Arming…",
+                        successKey: `arm-dca-playbook-${playbook.id}`,
+                      },
+                    ]
+                ).map((item, index) => (
+                  <span key={item.value} className="contents">
+                    {index > 0 ? (
+                      <span className="w-px self-stretch bg-line" aria-hidden />
+                    ) : null}
+                    {item.enabled ? (
+                      <PendingSubmitButton
+                        formAction={runDcaPlaybookVerb}
+                        name="verb"
+                        value={item.value}
+                        pendingLabel={item.pendingLabel}
+                        successKey={item.successKey}
+                        className={headerSegmentClass}
+                      >
+                        {item.label}
+                      </PendingSubmitButton>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        title="Set Direction to include this side"
+                        className={`${headerSegmentClass} text-ink-faint`}
+                      >
+                        {item.label}
+                      </button>
+                    )}
+                  </span>
+                ))}
                 <span className="w-px self-stretch bg-line" aria-hidden />
                 <PendingSubmitButton
                   formAction={runDcaPlaybookVerb}
@@ -608,8 +654,7 @@ export function DcaPlaybookForm({
           ) : null}
           {startKind === "immediate" ? (
             <p className="self-end text-xs text-ink-muted sm:col-span-2">
-              Save first. Then trigger the first order
-              {direction === "both" ? "s" : ""}.
+              Save first. Then trigger Long or Short.
             </p>
           ) : null}
         </div>

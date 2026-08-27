@@ -39,6 +39,23 @@ import {
 
 export type DcaVerb = "arm" | "disarm" | "close-playbook";
 
+export function parseDcaPlaybookVerb(value: unknown): {
+  verb: DcaVerb;
+  side: FuturesSide | null;
+} | null {
+  const raw = String(value ?? "").trim();
+  if (raw === "arm-long") {
+    return { verb: "arm", side: "long" };
+  }
+  if (raw === "arm-short") {
+    return { verb: "arm", side: "short" };
+  }
+  if (raw === "arm" || raw === "disarm" || raw === "close-playbook") {
+    return { verb: raw, side: null };
+  }
+  return null;
+}
+
 function sidesForVerb(
   playbook: DcaPlaybook,
   side: FuturesSide | null | undefined,

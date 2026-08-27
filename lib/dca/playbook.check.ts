@@ -302,6 +302,19 @@ if (bothParsed.ok) {
   assert.equal(bothParsed.config.sizeMultiplier, 2);
 }
 
+const bothManual = new FormData();
+bothManual.set("symbol", "BTCUSDT");
+bothManual.set("direction", "both");
+bothManual.set("clipSize", "100");
+bothManual.set("sizeUnit", "usdt");
+bothManual.set("startKind", "immediate");
+const bothManualParsed = parseDcaPlaybookForm(bothManual);
+assert.equal(bothManualParsed.ok, true);
+if (bothManualParsed.ok) {
+  assert.equal(bothManualParsed.config.direction, "both");
+  assert.equal(bothManualParsed.config.startKind, "immediate");
+}
+
 assert.equal(
   dcaAveragingKind({
     dcaMode: "order",

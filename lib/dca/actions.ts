@@ -2,7 +2,7 @@
 
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
 import { parseDcaPlaybookForm, parseDcaPlaybookId } from "@/lib/dca/playbook";
-import { applyDcaVerb, type DcaVerb } from "@/lib/dca/run";
+import { applyDcaVerb, parseDcaPlaybookVerb } from "@/lib/dca/run";
 import {
   deleteDcaPlaybook,
   saveDcaPlaybook,
@@ -104,10 +104,11 @@ export async function runDcaPlaybookVerb(formData: FormData) {
   if (session.account.deskType !== "dca") {
     fail("This desk is not a DCA desk.");
   }
-  const verb = String(formData.get("verb") ?? "").trim() as DcaVerb | "";
-  if (verb !== "arm" && verb !== "disarm" && verb !== "close-playbook") {
+  const parsedVerb = parseDcaPlaybookVerb(formData.get("verb"));
+  if (!parsedVerb) {
     fail("Choose Arm, Disarm, or Close playbook.");
   }
+  const { verb, side } = parsedVerb;
   const parsed = parseDcaPlaybookForm(formData);
   if (!parsed.ok) {
     fail(parsed.error);
@@ -130,6 +131,7 @@ export async function runDcaPlaybookVerb(formData: FormData) {
     playbook: saved.playbook,
     mode: session.account.mode,
     verb,
+    side,
   });
   if (!result.ok) {
     fail(result.error);
