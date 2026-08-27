@@ -424,7 +424,7 @@ export function DcaPlaybookForm({
 
       <fieldset className={sectionClass}>
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
-          Adds
+          Initial clip and caps
         </legend>
         <div className={rowClass}>
           <label className={labelClass}>
@@ -471,6 +471,14 @@ export function DcaPlaybookForm({
               placeholder="No cap"
             />
           </label>
+        </div>
+      </fieldset>
+
+      <fieldset className={sectionClass}>
+        <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+          Additional clips
+        </legend>
+        <div className={rowClass}>
           <label className={labelClass}>
             Averaging
             <select
