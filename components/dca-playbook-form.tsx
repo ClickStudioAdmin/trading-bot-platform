@@ -451,7 +451,7 @@ export function DcaPlaybookForm({
           successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
           className={headerPrimaryClass}
         >
-          {showSaveAndArm ? "Save" : "Save playbook"}
+          Save
         </PendingSubmitButton>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           {showSaveAndArm ? (
