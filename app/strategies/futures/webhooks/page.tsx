@@ -92,7 +92,7 @@ export default async function FuturesWebhooksPage({
           <>
             Signal webhooks arm the bound playbook. Arm / disarm /
             close-playbook still work. Buy / sell arms that side only; the
-            playbook owns size. Send a dummy below. Armed clips open{" "}
+            playbook owns size. Send a dummy below. Armed orders open{" "}
             <Link href={FUTURES_PATHS.positions} className="text-accent">
               Positions
             </Link>

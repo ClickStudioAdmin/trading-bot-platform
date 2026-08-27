@@ -174,7 +174,7 @@ export function FuturesWebhooksDesk({
           {!allowOrder && hook.kind === "order" ? (
             <p className="text-sm text-warning">
               TradingView strategy webhooks do nothing on this desk. The
-              playbook owns clips. Delete this URL.
+              playbook owns orders. Delete this URL.
             </p>
           ) : null}
           <div className="space-y-1">

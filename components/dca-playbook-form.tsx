@@ -70,13 +70,13 @@ export function DcaPlaybooksDesk({
     <div className="space-y-3">
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Reduce only is on. New clips stay blocked until you turn it off in
+          Reduce only is on. New orders stay blocked until you turn it off in
           Desk Settings. Take profit and stop still run.
         </p>
       ) : null}
       {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-          No playbooks yet. Add a playbook to own clips and exits on one
+          No playbooks yet. Add a playbook to own orders and exits on one
           contract. Leave this empty if you are not ready to arm.
         </p>
       ) : (
@@ -149,6 +149,9 @@ export function DcaPlaybookForm({
   );
   const [averaging, setAveraging] = useState<DcaAveragingKind>(() =>
     playbook ? dcaAveragingKind(playbook) : "dip",
+  );
+  const [restGrid, setRestGrid] = useState(
+    playbook?.dcaMode === "order",
   );
   const [clipSize, setClipSize] = useState(
     playbook ? String(playbook.clipSize) : "",
@@ -251,7 +254,7 @@ export function DcaPlaybookForm({
       </div>
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Reduce only is on. New clips stay blocked until you turn it off in
+          Reduce only is on. New orders stay blocked until you turn it off in
           Desk Settings. Take profit and stop still run.
         </p>
       ) : null}
@@ -295,7 +298,7 @@ export function DcaPlaybookForm({
         </div>
         {direction === "both" ? (
           <p className="text-xs text-ink-muted">
-            Long and short clip independently and never flatten each other.
+            Long and short add independently and never flatten each other.
           </p>
         ) : null}
       </fieldset>
@@ -306,7 +309,7 @@ export function DcaPlaybookForm({
         </legend>
         <div className={rowClass}>
           <label className={labelClass}>
-            First clip
+            First order
             <select
               name="startKind"
               value={startKind}
@@ -420,7 +423,7 @@ export function DcaPlaybookForm({
           ) : null}
           {startKind === "immediate" ? (
             <p className="self-end text-xs text-ink-muted lg:col-span-3">
-              Arm places the first clip{direction === "both" ? "s" : ""} now.
+              Arm places the first order{direction === "both" ? "s" : ""} now.
             </p>
           ) : null}
         </div>
@@ -429,19 +432,9 @@ export function DcaPlaybookForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <fieldset className={sectionClass}>
           <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
-            Initial clip
+            Initial order
           </legend>
           <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-            <label className={labelClass}>
-              Clip size
-              <GroupedNumberInput
-                name="clipSize"
-                value={clipSize}
-                onChange={setClipSize}
-                allowDecimal
-                className={fieldClass}
-              />
-            </label>
             <label className={labelClass}>
               Size unit
               <select
@@ -456,6 +449,16 @@ export function DcaPlaybookForm({
                 <option value="usdt">USDT</option>
               </select>
             </label>
+            <label className={labelClass}>
+              Order size
+              <GroupedNumberInput
+                name="clipSize"
+                value={clipSize}
+                onChange={setClipSize}
+                allowDecimal
+                className={fieldClass}
+              />
+            </label>
           </div>
         </fieldset>
         <fieldset className={sectionClass}>
@@ -464,7 +467,7 @@ export function DcaPlaybookForm({
           </legend>
           <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
             <label className={labelClass}>
-              Max clips
+              Max orders
               <GroupedNumberInput
                 name="maxClips"
                 value={maxClips}
@@ -490,7 +493,7 @@ export function DcaPlaybookForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <fieldset className={sectionClass}>
           <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
-            Additional clips
+            Additional orders
           </legend>
           <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
             <label className={labelClass}>
@@ -503,14 +506,13 @@ export function DcaPlaybookForm({
                 }
                 className={fieldClass}
               >
-                <option value="dip">Position — add on dip</option>
+                <option value="dip">Position — add on price deviation</option>
                 <option value="interval">Position — add on interval</option>
-                <option value="order">Order — rest a grid</option>
               </select>
             </label>
-            {averaging === "dip" || averaging === "order" ? (
+            {averaging === "dip" ? (
               <label className={labelClass}>
-                Add on dip %
+                Price deviation %
                 <GroupedNumberInput
                   name="dipPct"
                   value={dipPct}
@@ -532,17 +534,29 @@ export function DcaPlaybookForm({
                 />
               </label>
             ) : null}
-            {averaging === "order" ? (
-              <p className="self-end text-xs text-ink-muted sm:col-span-2">
-                After the first market clip, remaining clips rest as GTC limits.
-                Dip % sets the grid.
+            {averaging === "dip" ? (
+              <label className="flex items-center gap-2 self-end pb-1.5 text-xs text-ink sm:col-span-2">
+                <input
+                  type="checkbox"
+                  name="restGrid"
+                  value="1"
+                  checked={restGrid}
+                  onChange={(event) => setRestGrid(event.target.checked)}
+                />
+                Rest remaining as GTC limits
+              </label>
+            ) : null}
+            {averaging === "dip" && restGrid ? (
+              <p className="text-xs text-ink-muted sm:col-span-2">
+                After the first market order, remaining orders rest at the
+                price-deviation ladder. Needs max orders.
               </p>
             ) : null}
           </div>
         </fieldset>
         <fieldset className={sectionClass}>
           <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
-            Additional clip multipliers
+            Additional order multipliers
           </legend>
           <div className="flex flex-wrap gap-2 pb-2">
             <button
@@ -553,7 +567,7 @@ export function DcaPlaybookForm({
               }}
               className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
             >
-              Equal clips
+              Equal orders
             </button>
             <button
               type="button"
@@ -622,6 +636,11 @@ export function DcaPlaybookForm({
                   <option value="first_entry">First fill</option>
                 </select>
               </label>
+            </div>
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+              Trailing stop
+            </p>
+            <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
               <label className={labelClass}>
                 Trail after profit %
                 <GroupedNumberInput
@@ -723,11 +742,11 @@ export function DcaPlaybookForm({
           Covered{" "}
           <span className="text-ink-muted">
             {summary.covered === null
-              ? "set max clips and dip %"
+              ? "set max orders and price deviation %"
               : `${trimPct(summary.covered)}%`}
           </span>
           <span className="text-ink-faint"> · </span>
-          Last clip{" "}
+          Last order{" "}
           <span className="text-ink-muted">
             {summary.lastDev === null ? "—" : `${trimPct(summary.lastDev)}%`}
           </span>

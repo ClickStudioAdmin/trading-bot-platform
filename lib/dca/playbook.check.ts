@@ -288,6 +288,8 @@ bothForm.set("sizeUnit", "usdt");
 bothForm.set("startKind", "webhook");
 bothForm.set("webhookId", "11111111-1111-1111-1111-111111111111");
 bothForm.set("dcaMode", "order");
+bothForm.set("dipPct", "1");
+bothForm.set("maxClips", "5");
 bothForm.set("sizeMultiplier", "2");
 const bothParsed = parseDcaPlaybookForm(bothForm);
 assert.equal(bothParsed.ok, true);
@@ -304,7 +306,7 @@ assert.equal(
     dipPct: 1,
     intervalMinutes: 15,
   }),
-  "order",
+  "dip",
 );
 assert.equal(
   dcaAveragingKind({
@@ -356,6 +358,35 @@ if (dipParsed.ok) {
   assert.equal(dipParsed.config.intervalMinutes, null);
   assert.equal(dcaAveragingKind(dipParsed.config), "dip");
 }
+
+const gridForm = new FormData();
+gridForm.set("symbol", "BTCUSDT");
+gridForm.set("side", "long");
+gridForm.set("clipSize", "0.01");
+gridForm.set("sizeUnit", "qty");
+gridForm.set("averaging", "dip");
+gridForm.set("restGrid", "1");
+gridForm.set("dipPct", "2");
+gridForm.set("maxClips", "5");
+const gridParsed = parseDcaPlaybookForm(gridForm);
+assert.equal(gridParsed.ok, true);
+if (gridParsed.ok) {
+  assert.equal(gridParsed.config.dcaMode, "order");
+  assert.equal(gridParsed.config.dipPct, 2);
+  assert.equal(gridParsed.config.intervalMinutes, null);
+  assert.equal(dcaAveragingKind(gridParsed.config), "dip");
+}
+
+const gridMissingMax = new FormData();
+gridMissingMax.set("symbol", "BTCUSDT");
+gridMissingMax.set("side", "long");
+gridMissingMax.set("clipSize", "0.01");
+gridMissingMax.set("sizeUnit", "qty");
+gridMissingMax.set("averaging", "dip");
+gridMissingMax.set("restGrid", "1");
+gridMissingMax.set("dipPct", "2");
+const gridMissingMaxParsed = parseDcaPlaybookForm(gridMissingMax);
+assert.equal(gridMissingMaxParsed.ok, false);
 
 const missingInterval = new FormData();
 missingInterval.set("symbol", "BTCUSDT");
@@ -427,7 +458,7 @@ assert.equal(
     maxValue: 1000,
     markValue: 400,
   }),
-  "3 clips · $600",
+  "3 orders · $600",
 );
 assert.equal(
   formatDcaNextAdd({

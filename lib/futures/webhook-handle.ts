@@ -137,7 +137,7 @@ export async function handleFuturesWebhook(input: {
       body: {
         ok: false,
         error:
-          "This desk only accepts Signal arm. The playbook owns clips.",
+          "This desk only accepts Signal arm. The playbook owns orders.",
       },
     };
   }

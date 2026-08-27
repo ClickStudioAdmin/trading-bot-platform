@@ -68,7 +68,7 @@ export function formatDeskTypeChoice(deskType: DeskType): string {
     return "TradingView Strategy (alerts send buy / sell / close)";
   }
   if (deskType === "dca") {
-    return "DCA (app owns clips and exits)";
+    return "DCA (app owns orders and exits)";
   }
   return "Cash and Carry (spot + dated future)";
 }
@@ -110,7 +110,7 @@ export function deskManualBuySellBlockReason(
     return null;
   }
   if (deskType === "dca") {
-    return "This is a DCA desk. The playbook owns clips. Buy and Sell are not on this ticket.";
+    return "This is a DCA desk. The playbook owns orders. Buy and Sell are not on this ticket.";
   }
   if (deskType === "signal_follower") {
     return "This is a TradingView Strategy desk. Buy and Sell come from a webhook.";

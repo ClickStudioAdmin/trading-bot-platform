@@ -75,7 +75,7 @@ export default async function FuturesLayout({
           signalFollower
             ? "TradingView sends buy, sell, and close. This desk only protects: caps, reduce-only, Close All, and row TP/SL."
             : dca
-              ? "This desk owns clips and exits. Arm from Automations or a Signal webhook. Close All and row TP/SL still protect."
+              ? "This desk owns orders and exits. Arm from Automations or a Signal webhook. Close All and row TP/SL still protect."
               : "Buy, sell, or close one USDT linear perpetual. Market or limit. Long and short can both be open."
         }
         navLabel={formatDeskType(deskType)}

@@ -140,22 +140,20 @@ export function parseDcaMode(value: unknown): DcaMode {
   return value === "order" ? "order" : "position";
 }
 
-export type DcaAveragingKind = "dip" | "interval" | "order";
+export type DcaAveragingKind = "dip" | "interval";
 
 export function parseDcaAveragingKind(value: unknown): DcaAveragingKind {
-  if (value === "interval" || value === "order") {
-    return value;
-  }
-  return "dip";
+  return value === "interval" ? "interval" : "dip";
 }
 
 export function dcaAveragingKind(
   playbook: Pick<DcaPlaybookConfig, "dcaMode" | "dipPct" | "intervalMinutes">,
 ): DcaAveragingKind {
-  if (playbook.dcaMode === "order") {
-    return "order";
-  }
-  if (playbook.intervalMinutes !== null && playbook.dipPct === null) {
+  if (
+    playbook.dcaMode !== "order" &&
+    playbook.intervalMinutes !== null &&
+    playbook.dipPct === null
+  ) {
     return "interval";
   }
   return "dip";
@@ -330,10 +328,14 @@ export function parseDcaPlaybookForm(
     parseDcaDirection(form.get("direction")) ??
     parseFuturesSide(form.get("side"));
   const startKind = parseDcaStartKind(form.get("startKind"));
-  const averaging = parseDcaAveragingKind(
-    form.get("averaging") ?? form.get("dcaMode"),
-  );
-  const dcaMode: DcaMode = averaging === "order" ? "order" : "position";
+  const averagingRaw = form.get("averaging") ?? form.get("dcaMode");
+  const averaging = parseDcaAveragingKind(averagingRaw);
+  const restGrid =
+    averaging !== "interval" &&
+    (form.get("restGrid") === "1" ||
+      averagingRaw === "order" ||
+      form.get("dcaMode") === "order");
+  const dcaMode: DcaMode = restGrid ? "order" : "position";
   const sizeUnit = parseFuturesSizeUnit(form.get("sizeUnit"));
   const clipSize = parseFuturesQty(form.get("clipSize"));
   const maxClips = parseOptionalPositiveInt(form.get("maxClips"));
@@ -376,7 +378,7 @@ export function parseDcaPlaybookForm(
     return sizeUnit;
   }
   if (!clipSize.ok) {
-    return { ok: false, error: "Enter a clip size." };
+    return { ok: false, error: "Enter an order size." };
   }
   if (!maxClips.ok) {
     return maxClips;
@@ -391,7 +393,13 @@ export function parseDcaPlaybookForm(
     return intervalMinutes;
   }
   if (averaging === "interval" && intervalMinutes.value === null) {
-    return { ok: false, error: "Enter how often to add a clip." };
+    return { ok: false, error: "Enter how often to add an order." };
+  }
+  if (restGrid && dipPct.value === null) {
+    return { ok: false, error: "Enter a price deviation % for the grid." };
+  }
+  if (restGrid && (maxClips.value === null || maxClips.value < 2)) {
+    return { ok: false, error: "Enter max orders for the grid." };
   }
   if (!sizeMultiplier.ok) {
     return sizeMultiplier;
@@ -1025,14 +1033,14 @@ export function formatDcaNextAdd(input: {
     if (input.startKind === "price") {
       return "Waiting for price";
     }
-    return "First clip";
+    return "First order";
   }
   if (input.dcaMode === "order") {
     return "Grid";
   }
   const parts: string[] = [];
   if (input.dipPct !== null) {
-    parts.push(`${trimNumber(input.dipPct)}% dip`);
+    parts.push(`${trimNumber(input.dipPct)}%`);
   }
   if (input.intervalMinutes !== null) {
     if (input.lastClipAtMs !== null) {
@@ -1051,7 +1059,7 @@ export function formatDcaNextAdd(input: {
   if (parts.length > 0) {
     return parts.join(" or ");
   }
-  return input.lastClipAtMs === null ? "First clip" : "Wait for TP/SL";
+  return input.lastClipAtMs === null ? "First order" : "Wait for TP/SL";
 }
 
 export function formatDcaRemaining(input: {
@@ -1062,7 +1070,7 @@ export function formatDcaRemaining(input: {
 }): string {
   const parts: string[] = [];
   if (input.maxClips !== null) {
-    parts.push(`${Math.max(0, input.maxClips - input.clipsFilled)} clips`);
+    parts.push(`${Math.max(0, input.maxClips - input.clipsFilled)} orders`);
   }
   if (input.maxValue !== null) {
     const left =
@@ -1099,7 +1107,7 @@ export function dcaPlaybookStatusLabel(playbook: DcaPlaybook): string {
           : leg.status === "stop_adding"
             ? "Stopped adding"
             : "Idle";
-      const clips = leg.clipsFilled > 0 ? ` · ${leg.clipsFilled} clips` : "";
+      const clips = leg.clipsFilled > 0 ? ` · ${leg.clipsFilled} orders` : "";
       if (sides.length === 1) {
         return `${status}${clips}`;
       }

@@ -231,20 +231,20 @@ export function OpenFuturesTrades({
                 <>
                   <th className="px-3 py-3 font-medium">
                     <ColumnHint
-                      label="Clip"
-                      hint="How many playbook clips have filled on this row."
+                      label="Orders"
+                      hint="How many playbook orders have filled on this row."
                     />
                   </th>
                   <th className="px-3 py-3 font-medium">
                     <ColumnHint
                       label="Next add"
-                      hint="Next add from dip, interval, grid, or wait for take profit / stop."
+                      hint="Next add from price deviation, interval, grid, or wait for take profit / stop."
                     />
                   </th>
                   <th className="px-2 py-3 font-medium">
                     <ColumnHint
                       label="Remaining"
-                      hint="Clips and USDT still allowed before the playbook stops adding. Does not flatten."
+                      hint="Orders and USDT still allowed before the playbook stops adding. Does not flatten."
                     />
                   </th>
                 </>
@@ -353,7 +353,7 @@ export function ClosedFuturesTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Entry"
-                  hint="Size-weighted average fill price of the open clips."
+                  hint="Size-weighted average fill price of the open orders."
                 />
               </th>
               <th className="px-4 py-3 font-medium">

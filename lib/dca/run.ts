@@ -513,7 +513,7 @@ export async function applyDcaVerb(input: {
     },
   });
   if (placed > 0) {
-    return { ok: true, message: "Playbook armed. First clip placed." };
+    return { ok: true, message: "Playbook armed. First order placed." };
   }
   if (resumed > 0) {
     return { ok: true, message: "Playbook resumed adding." };

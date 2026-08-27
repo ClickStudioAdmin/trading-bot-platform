@@ -68,7 +68,7 @@ export default async function FuturesAutomationsPage({
       <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
         <PageHeading as="h2" title="Automations" />
         <p className="-mt-4 text-sm text-ink-muted">
-          Add a playbook per contract. The app owns clips and exits. Arm
+          Add a playbook per contract. The app owns orders and exits. Arm
           here or from a bound Signal webhook. Stop adding leaves the
           position. Close playbook flattens it.
         </p>

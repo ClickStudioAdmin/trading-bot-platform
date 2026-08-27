@@ -74,7 +74,7 @@ assert.equal(
 );
 assert.equal(
   formatDeskTypeChoice("dca"),
-  "DCA (app owns clips and exits)",
+  "DCA (app owns orders and exits)",
 );
 assert.equal(
   deskHomePath("cash_and_carry"),
@@ -105,7 +105,7 @@ assert.equal(deskAllowsOrderWebhooks("dca"), false);
 assert.equal(deskManualBuySellBlockReason("perps"), null);
 assert.equal(
   deskManualBuySellBlockReason("dca"),
-  "This is a DCA desk. The playbook owns clips. Buy and Sell are not on this ticket.",
+  "This is a DCA desk. The playbook owns orders. Buy and Sell are not on this ticket.",
 );
 assert.equal(
   deskManualBuySellBlockReason("signal_follower"),
