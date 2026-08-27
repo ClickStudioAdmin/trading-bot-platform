@@ -1,4 +1,5 @@
 import type { FuturesSide } from "@/lib/futures/model";
+import { futuresPnlUsdt } from "@/lib/futures/math";
 
 export function dcaClipSizeAt(
   clipIndex: number,
@@ -90,10 +91,69 @@ export type DcaLadderLevel = {
   price: number;
   deviationPct: number;
   size: number;
+  qty: number;
   orderUsdt: number;
   totalUsdt: number;
   averagePrice: number;
+  profitUsdt: number;
 };
+
+export function dcaTakeProfitPrice(input: {
+  side: FuturesSide;
+  firstPrice: number;
+  averagePrice: number;
+  takeProfitPct: number | null;
+  takeProfitBasis: "average" | "first_entry";
+}): number | null {
+  if (!(input.firstPrice > 0) || !(input.averagePrice > 0)) {
+    return null;
+  }
+  if (input.takeProfitPct !== null && input.takeProfitPct > 0) {
+    const basis =
+      input.takeProfitBasis === "first_entry"
+        ? input.firstPrice
+        : input.averagePrice;
+    return input.side === "long"
+      ? basis * (1 + input.takeProfitPct / 100)
+      : basis * (1 - input.takeProfitPct / 100);
+  }
+  return input.firstPrice;
+}
+
+export function dcaLadderProfitUsdt(input: {
+  side: FuturesSide;
+  qty: number;
+  firstPrice: number;
+  averagePrice: number;
+  takeProfitPct: number | null;
+  takeProfitBasis: "average" | "first_entry";
+}): number {
+  const exit = dcaTakeProfitPrice(input);
+  if (exit === null || !(input.qty > 0) || !(input.averagePrice > 0)) {
+    return 0;
+  }
+  return futuresPnlUsdt({
+    side: input.side,
+    qty: input.qty,
+    entryPrice: input.averagePrice,
+    exitPrice: exit,
+  });
+}
+
+export function dcaLadderProfitRange(
+  levels: readonly DcaLadderLevel[],
+): { min: number; max: number } | null {
+  if (levels.length === 0) {
+    return null;
+  }
+  let min = levels[0]?.profitUsdt ?? 0;
+  let max = min;
+  for (const row of levels) {
+    min = Math.min(min, row.profitUsdt);
+    max = Math.max(max, row.profitUsdt);
+  }
+  return { min, max };
+}
 
 export function dcaLadderLevels(input: {
   side: FuturesSide;
@@ -104,6 +164,8 @@ export function dcaLadderLevels(input: {
   sizeUnit: "qty" | "usdt";
   sizeMultiplier: number;
   deviationMultiplier: number;
+  takeProfitPct?: number | null;
+  takeProfitBasis?: "average" | "first_entry";
 }): DcaLadderLevel[] {
   const count = Math.min(input.maxClips ?? 0, DCA_LADDER_PREVIEW_MAX);
   if (
@@ -144,14 +206,24 @@ export function dcaLadderLevels(input: {
     totalQty += qty;
     weighted += price * qty;
     totalUsdt += orderUsdt;
+    const averagePrice = totalQty > 0 ? weighted / totalQty : price;
     rows.push({
       index: i + 1,
       price,
       deviationPct: ((price - first) / first) * 100,
       size,
+      qty: totalQty,
       orderUsdt,
       totalUsdt,
-      averagePrice: totalQty > 0 ? weighted / totalQty : price,
+      averagePrice,
+      profitUsdt: dcaLadderProfitUsdt({
+        side: input.side,
+        qty: totalQty,
+        firstPrice: first,
+        averagePrice,
+        takeProfitPct: input.takeProfitPct ?? null,
+        takeProfitBasis: input.takeProfitBasis ?? "average",
+      }),
     });
   }
   return rows;

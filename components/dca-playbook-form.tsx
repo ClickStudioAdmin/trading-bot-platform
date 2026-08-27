@@ -12,6 +12,7 @@ import {
 } from "@/lib/dca/actions";
 import {
   dcaLadderLevels,
+  dcaLadderProfitRange,
   dcaLastClipDeviationPct,
   dcaMaxDropCoveredPct,
   dcaRequiredUsdt,
@@ -22,7 +23,9 @@ import {
   dcaIntervalParts,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
+  parseDcaExitBasis,
   type DcaAveragingKind,
+  type DcaExitBasis,
   type DcaIntervalUnit,
   type DcaPlaybook,
   type DcaStartKind,
@@ -204,6 +207,12 @@ export function DcaPlaybookForm({
   const [deviationMultiplier, setDeviationMultiplier] = useState(
     playbook ? String(playbook.deviationMultiplier) : "1",
   );
+  const [takeProfitPct, setTakeProfitPct] = useState(
+    optional(playbook?.takeProfitPct),
+  );
+  const [takeProfitBasis, setTakeProfitBasis] = useState<DcaExitBasis>(
+    playbook?.takeProfitBasis ?? "average",
+  );
   const [indicatorKind, setIndicatorKind] = useState(
     playbook?.indicatorKind ?? "rsi",
   );
@@ -236,6 +245,7 @@ export function DcaPlaybookForm({
       dipPct: dip,
       deviationMultiplier: devMult,
     });
+    const tpPct = asNumber(takeProfitPct);
     const levels = dcaLadderLevels({
       side,
       entryPrice,
@@ -245,6 +255,8 @@ export function DcaPlaybookForm({
       sizeUnit,
       sizeMultiplier: sizeMult,
       deviationMultiplier: devMult,
+      takeProfitPct: tpPct,
+      takeProfitBasis,
     });
     const requiredFromLadder = levels[levels.length - 1]?.totalUsdt ?? null;
     const required =
@@ -264,7 +276,15 @@ export function DcaPlaybookForm({
             sizeMultiplier: sizeMult,
             mark: null,
           });
-    return { covered, lastDev, required, levels, priceFromLast };
+    return {
+      covered,
+      lastDev,
+      required,
+      levels,
+      priceFromLast,
+      profitRange: dcaLadderProfitRange(levels),
+      profitFromTp: tpPct !== null,
+    };
   }, [
     averaging,
     clipSize,
@@ -275,6 +295,8 @@ export function DcaPlaybookForm({
     maxClips,
     sizeMultiplier,
     sizeUnit,
+    takeProfitBasis,
+    takeProfitPct,
   ]);
 
   return (
@@ -705,7 +727,8 @@ export function DcaPlaybookForm({
                 Take profit target
                 <GroupedNumberInput
                   name="takeProfitPct"
-                  defaultValue={optional(playbook?.takeProfitPct)}
+                  value={takeProfitPct}
+                  onChange={setTakeProfitPct}
                   allowDecimal
                   className={fieldClass}
                   placeholder="Off"
@@ -715,7 +738,10 @@ export function DcaPlaybookForm({
                 Take profit type
                 <select
                   name="takeProfitBasis"
-                  defaultValue={playbook?.takeProfitBasis ?? "average"}
+                  value={takeProfitBasis}
+                  onChange={(event) =>
+                    setTakeProfitBasis(parseDcaExitBasis(event.target.value))
+                  }
                   className={fieldClass}
                 >
                   <option value="average">Average entry</option>
@@ -810,7 +836,7 @@ export function DcaPlaybookForm({
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           Summary
         </legend>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SummaryStat
             label="Covered"
             value={
@@ -854,9 +880,30 @@ export function DcaPlaybookForm({
                   : null
             }
           />
+          <SummaryStat
+            label="Profit range"
+            value={
+              summary.profitRange === null
+                ? "—"
+                : formatProfitRange(
+                    summary.profitRange.min,
+                    summary.profitRange.max,
+                  )
+            }
+            valueClass={
+              summary.profitRange === null ? "text-ink" : "text-success"
+            }
+            hint={
+              summary.levels.length === 0
+                ? "Enter order size and max orders"
+                : summary.profitFromTp
+                  ? "If take profit hits after that fill"
+                  : "If price returns to the first order. Set take profit to use the target."
+            }
+          />
         </div>
         {summary.levels.length > 0 ? (
-          <div className="mt-4 max-h-80 overflow-auto rounded-card border border-line">
+          <div className="thin-scroll mt-4 max-h-80 overflow-auto rounded-card border border-line">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
                 <tr>
@@ -869,6 +916,16 @@ export function DcaPlaybookForm({
                   <th className="px-3 py-2 font-medium">Order value</th>
                   <th className="px-3 py-2 font-medium">Total value</th>
                   <th className="px-3 py-2 font-medium">Avg entry</th>
+                  <th className="px-3 py-2 font-medium">
+                    <ColumnHint
+                      label="Profit"
+                      hint={
+                        summary.profitFromTp
+                          ? "USDT if take profit hits after this order fills. Uses take profit type (average or first fill)."
+                          : "USDT if price returns to the first order after this fill. Set take profit to use the target instead."
+                      }
+                    />
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -895,6 +952,13 @@ export function DcaPlaybookForm({
                     <td className="px-3 py-2 tabular-nums text-ink-muted">
                       {formatLadderPrice(row.averagePrice)}
                     </td>
+                    <td
+                      className={`px-3 py-2 tabular-nums ${
+                        row.profitUsdt > 0 ? "text-success" : "text-ink-muted"
+                      }`}
+                    >
+                      {formatUsdAmount(row.profitUsdt)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -907,6 +971,9 @@ export function DcaPlaybookForm({
                 ? " Interval adds use the same last as an estimate."
                 : ""}
               {direction === "both" ? " Long ladder shown. Short is the inverse." : ""}
+              {summary.profitFromTp
+                ? " Profit is take profit from that average."
+                : " Profit is a return to the first order."}
             </p>
           </div>
         ) : (
@@ -1023,6 +1090,22 @@ function formatLadderPrice(value: number): string {
     maximumFractionDigits: digits,
     minimumFractionDigits: 0,
   });
+}
+
+function formatUsdAmount(value: number): string {
+  const abs = Math.abs(value);
+  const text = trimPct(abs);
+  if (value < 0) {
+    return `-$${text}`;
+  }
+  return `$${text}`;
+}
+
+function formatProfitRange(min: number, max: number): string {
+  if (Math.abs(max - min) < 0.005) {
+    return formatUsdAmount(max);
+  }
+  return `${formatUsdAmount(min)} – ${formatUsdAmount(max)}`;
 }
 
 function trimPct(value: number): string {

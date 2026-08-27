@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { CreateAccountForm } from "@/components/create-account-form";
 import { switchTradingAccount } from "@/lib/accounts/actions";
 import {
+  deskHomePath,
   formatAccountMode,
   formatDeskType,
   type TradingAccount,
@@ -105,12 +106,14 @@ export function DeskSwitcher({
               );
               if (currentDesk) {
                 return (
-                  <p
+                  <Link
                     key={desk.id}
-                    className="rounded-control bg-surface-raised px-3 py-2.5"
+                    href={deskHomePath(desk.deskType)}
+                    aria-current="true"
+                    className="block rounded-control bg-surface-raised px-3 py-2.5 hover:bg-line"
                   >
                     {body}
-                  </p>
+                  </Link>
                 );
               }
               return (

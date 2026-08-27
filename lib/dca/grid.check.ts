@@ -4,10 +4,12 @@ import {
   dcaClipSizeAt,
   dcaDipPctAt,
   dcaLadderLevels,
+  dcaLadderProfitRange,
   dcaLastClipDeviationPct,
   dcaMaxDropCoveredPct,
   dcaRequiredUsdt,
   dcaSafetyPrices,
+  dcaTakeProfitPrice,
   dcaTrailingActivationPrice,
   dcaTrailingDistance,
 } from "./grid";
@@ -105,6 +107,44 @@ const qtyLadder = dcaLadderLevels({
 assert.equal(qtyLadder[0]?.orderUsdt, 100);
 assert.equal(qtyLadder[1]?.orderUsdt, 99);
 assert.equal(qtyLadder[1]?.totalUsdt, 199);
+assert.equal(ladder[0]?.profitUsdt, 0);
+assert.ok((ladder[2]?.profitUsdt ?? 0) > (ladder[1]?.profitUsdt ?? 0));
+assert.equal(
+  dcaTakeProfitPrice({
+    side: "long",
+    firstPrice: 100,
+    averagePrice: 98,
+    takeProfitPct: 2,
+    takeProfitBasis: "average",
+  })?.toFixed(2),
+  "99.96",
+);
+assert.equal(
+  dcaTakeProfitPrice({
+    side: "long",
+    firstPrice: 100,
+    averagePrice: 98,
+    takeProfitPct: 2,
+    takeProfitBasis: "first_entry",
+  }),
+  102,
+);
+const tpLadder = dcaLadderLevels({
+  side: "long",
+  entryPrice: 100,
+  maxClips: 2,
+  dipPct: null,
+  clipSize: 100,
+  sizeUnit: "usdt",
+  sizeMultiplier: 1,
+  deviationMultiplier: 1,
+  takeProfitPct: 10,
+  takeProfitBasis: "average",
+});
+assert.equal(tpLadder[0]?.profitUsdt.toFixed(2), "10.00");
+assert.equal(tpLadder[1]?.profitUsdt.toFixed(2), "20.00");
+assert.equal(dcaLadderProfitRange(tpLadder)?.min.toFixed(2), "10.00");
+assert.equal(dcaLadderProfitRange(tpLadder)?.max.toFixed(2), "20.00");
 assert.equal(
   dcaBreakevenPrice({ side: "long", basisPrice: 100, offsetPct: 1 }),
   101,
