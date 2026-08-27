@@ -8,6 +8,7 @@ import {
   dcaEnabledSides,
   dcaHintsForOpen,
   dcaIntervalMet,
+  dcaIntervalParts,
   dcaOpenHint,
   dcaPlaybookConflict,
   dcaPlaybookIsRunning,
@@ -341,6 +342,38 @@ if (intervalParsed.ok) {
   assert.equal(intervalParsed.config.dipPct, null);
   assert.equal(dcaAveragingKind(intervalParsed.config), "interval");
 }
+
+const intervalHours = new FormData();
+intervalHours.set("symbol", "BTCUSDT");
+intervalHours.set("side", "long");
+intervalHours.set("clipSize", "0.01");
+intervalHours.set("sizeUnit", "qty");
+intervalHours.set("averaging", "interval");
+intervalHours.set("intervalUnit", "hours");
+intervalHours.set("intervalValue", "2");
+const intervalHoursParsed = parseDcaPlaybookForm(intervalHours);
+assert.equal(intervalHoursParsed.ok, true);
+if (intervalHoursParsed.ok) {
+  assert.equal(intervalHoursParsed.config.intervalMinutes, 120);
+}
+
+const intervalDays = new FormData();
+intervalDays.set("symbol", "BTCUSDT");
+intervalDays.set("side", "long");
+intervalDays.set("clipSize", "0.01");
+intervalDays.set("sizeUnit", "qty");
+intervalDays.set("averaging", "interval");
+intervalDays.set("intervalUnit", "days");
+intervalDays.set("intervalValue", "1");
+const intervalDaysParsed = parseDcaPlaybookForm(intervalDays);
+assert.equal(intervalDaysParsed.ok, true);
+if (intervalDaysParsed.ok) {
+  assert.equal(intervalDaysParsed.config.intervalMinutes, 1440);
+}
+
+assert.deepEqual(dcaIntervalParts(15), { unit: "minutes", value: "15" });
+assert.deepEqual(dcaIntervalParts(120), { unit: "hours", value: "2" });
+assert.deepEqual(dcaIntervalParts(1440), { unit: "days", value: "1" });
 
 const dipForm = new FormData();
 dipForm.set("symbol", "BTCUSDT");

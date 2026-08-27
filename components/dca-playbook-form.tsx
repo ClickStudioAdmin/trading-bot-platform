@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ColumnHint } from "@/components/column-hint";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -17,9 +18,11 @@ import {
 import {
   DEFAULT_DCA_NAME,
   dcaAveragingKind,
+  dcaIntervalParts,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
   type DcaAveragingKind,
+  type DcaIntervalUnit,
   type DcaPlaybook,
   type DcaStartKind,
 } from "@/lib/dca/playbook";
@@ -41,6 +44,32 @@ function optional(value: number | null | undefined): string {
 function asNumber(text: string): number | null {
   const value = Number(text.replace(/,/g, "").trim());
   return value > 0 && Number.isFinite(value) ? value : null;
+}
+
+function SummaryStat({
+  label,
+  value,
+  hint,
+  valueClass = "text-ink",
+}: {
+  label: string;
+  value: string;
+  hint?: string | null;
+  valueClass?: string;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+        {label}
+      </p>
+      <p
+        className={`mt-1 text-2xl font-semibold tabular-nums ${valueClass}`}
+      >
+        {value}
+      </p>
+      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
+    </div>
+  );
 }
 
 export type DcaSignalWebhookOption = {
@@ -156,9 +185,13 @@ export function DcaPlaybookForm({
   const [clipSize, setClipSize] = useState(
     playbook ? String(playbook.clipSize) : "",
   );
-  const [sizeUnit, setSizeUnit] = useState(playbook?.sizeUnit ?? "qty");
+  const [sizeUnit, setSizeUnit] = useState(playbook?.sizeUnit ?? "usdt");
   const [maxClips, setMaxClips] = useState(optional(playbook?.maxClips));
   const [dipPct, setDipPct] = useState(optional(playbook?.dipPct));
+  const intervalParts = dcaIntervalParts(playbook?.intervalMinutes ?? null);
+  const [intervalUnit, setIntervalUnit] = useState<DcaIntervalUnit>(
+    intervalParts.unit,
+  );
   const [sizeMultiplier, setSizeMultiplier] = useState(
     playbook ? String(playbook.sizeMultiplier) : "1",
   );
@@ -445,8 +478,8 @@ export function DcaPlaybookForm({
                 }
                 className={fieldClass}
               >
-                <option value="qty">Token qty</option>
                 <option value="usdt">USDT</option>
+                <option value="qty">Token qty</option>
               </select>
             </label>
             <label className={labelClass}>
@@ -477,7 +510,7 @@ export function DcaPlaybookForm({
               />
             </label>
             <label className={labelClass}>
-              Max value
+              Max position value (USDT)
               <GroupedNumberInput
                 name="maxValue"
                 defaultValue={optional(playbook?.maxValue)}
@@ -524,31 +557,52 @@ export function DcaPlaybookForm({
               </label>
             ) : null}
             {averaging === "interval" ? (
-              <label className={labelClass}>
-                Add every (minutes)
-                <GroupedNumberInput
-                  name="intervalMinutes"
-                  defaultValue={optional(playbook?.intervalMinutes)}
-                  className={fieldClass}
-                  placeholder="15"
-                />
-              </label>
+              <div>
+                <p className={labelClass}>Add every</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    name="intervalUnit"
+                    value={intervalUnit}
+                    onChange={(event) =>
+                      setIntervalUnit(event.target.value as DcaIntervalUnit)
+                    }
+                    className={fieldClass}
+                    aria-label="Interval unit"
+                  >
+                    <option value="minutes">Minutes</option>
+                    <option value="hours">Hours</option>
+                    <option value="days">Days</option>
+                  </select>
+                  <GroupedNumberInput
+                    name="intervalValue"
+                    defaultValue={intervalParts.value}
+                    className={fieldClass}
+                    placeholder={
+                      intervalUnit === "minutes"
+                        ? "15"
+                        : "1"
+                    }
+                    ariaLabel="Interval"
+                  />
+                </div>
+              </div>
             ) : null}
             {averaging === "dip" ? (
-              <label className="flex items-center gap-2 self-end pb-1.5 text-xs text-ink sm:col-span-2">
+              <label className="flex items-start gap-2 text-xs text-ink sm:col-span-2">
                 <input
                   type="checkbox"
                   name="restGrid"
                   value="1"
                   checked={restGrid}
                   onChange={(event) => setRestGrid(event.target.checked)}
+                  className="mt-0.5"
                 />
-                Rest remaining as GTC limits
+                Remaining orders placed as GTC limit (instead of market)
               </label>
             ) : null}
             {averaging === "dip" && restGrid ? (
               <p className="text-xs text-ink-muted sm:col-span-2">
-                After the first market order, remaining orders rest at the
+                After the first market order, later adds use the
                 price-deviation ladder. Needs max orders.
               </p>
             ) : null}
@@ -616,7 +670,7 @@ export function DcaPlaybookForm({
             </p>
             <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
               <label className={labelClass}>
-                Take profit %
+                Take profit target
                 <GroupedNumberInput
                   name="takeProfitPct"
                   defaultValue={optional(playbook?.takeProfitPct)}
@@ -626,7 +680,7 @@ export function DcaPlaybookForm({
                 />
               </label>
               <label className={labelClass}>
-                vs
+                Take profit type
                 <select
                   name="takeProfitBasis"
                   defaultValue={playbook?.takeProfitBasis ?? "average"}
@@ -642,7 +696,10 @@ export function DcaPlaybookForm({
             </p>
             <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
               <label className={labelClass}>
-                Trail after profit %
+                <ColumnHint
+                  label="Trigger %"
+                  hint="The trailing stop will be triggered once the price moves by this %."
+                />
                 <GroupedNumberInput
                   name="trailingTriggerPct"
                   defaultValue={optional(playbook?.trailingTriggerPct)}
@@ -652,7 +709,10 @@ export function DcaPlaybookForm({
                 />
               </label>
               <label className={labelClass}>
-                Trail %
+                <ColumnHint
+                  label="Trailing %"
+                  hint="The % from the price where the stop will be placed."
+                />
                 <GroupedNumberInput
                   name="trailingPct"
                   defaultValue={optional(playbook?.trailingPct)}
@@ -679,7 +739,7 @@ export function DcaPlaybookForm({
                 />
               </label>
               <label className={labelClass}>
-                vs
+                Stop loss type
                 <select
                   name="stopLossBasis"
                   defaultValue={playbook?.stopLossBasis ?? "average"}
@@ -738,45 +798,51 @@ export function DcaPlaybookForm({
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           Summary
         </legend>
-        <p className="text-xs text-ink">
-          Covered{" "}
-          <span className="text-ink-muted">
-            {summary.covered === null
-              ? "set max orders and price deviation %"
-              : `${trimPct(summary.covered)}%`}
-          </span>
-          <span className="text-ink-faint"> · </span>
-          Last order{" "}
-          <span className="text-ink-muted">
-            {summary.lastDev === null ? "—" : `${trimPct(summary.lastDev)}%`}
-          </span>
-          <span className="text-ink-faint"> · </span>
-          Required{" "}
-          <span className="text-ink-muted">
-            {summary.required === null
-              ? sizeUnit === "qty"
-                ? "use USDT size to estimate"
-                : "—"
-              : `$${trimPct(summary.required)}`}
-          </span>
-          {availableUsdt !== null && summary.required !== null ? (
-            <>
-              <span className="text-ink-faint"> · </span>
-              <span
-                className={
-                  summary.required > availableUsdt
-                    ? "text-warning"
-                    : "text-ink-muted"
-                }
-              >
-                Available ${trimPct(availableUsdt)}
-                {summary.required > availableUsdt
-                  ? " — less than the full grid"
-                  : ""}
-              </span>
-            </>
-          ) : null}
-        </p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <SummaryStat
+            label="Covered"
+            value={
+              summary.covered === null ? "—" : `${trimPct(summary.covered)}%`
+            }
+            hint={
+              summary.covered === null
+                ? "Set max orders and price deviation %"
+                : null
+            }
+          />
+          <SummaryStat
+            label="Last order"
+            value={
+              summary.lastDev === null ? "—" : `${trimPct(summary.lastDev)}%`
+            }
+          />
+          <SummaryStat
+            label="Required"
+            value={
+              summary.required === null
+                ? "—"
+                : `$${trimPct(summary.required)}`
+            }
+            valueClass={
+              availableUsdt !== null &&
+              summary.required !== null &&
+              summary.required > availableUsdt
+                ? "text-warning"
+                : "text-ink"
+            }
+            hint={
+              summary.required === null
+                ? sizeUnit === "qty"
+                  ? "Use USDT size to estimate"
+                  : null
+                : availableUsdt !== null
+                  ? summary.required > availableUsdt
+                    ? `Available $${trimPct(availableUsdt)} — less than the full grid`
+                    : `Available $${trimPct(availableUsdt)}`
+                  : null
+            }
+          />
+        </div>
       </fieldset>
 
       <div className="flex flex-wrap items-center gap-2">

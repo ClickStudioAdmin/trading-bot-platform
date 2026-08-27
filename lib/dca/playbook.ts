@@ -141,9 +141,73 @@ export function parseDcaMode(value: unknown): DcaMode {
 }
 
 export type DcaAveragingKind = "dip" | "interval";
+export type DcaIntervalUnit = "minutes" | "hours" | "days";
+
+const INTERVAL_TO_MINUTES: Record<DcaIntervalUnit, number> = {
+  minutes: 1,
+  hours: 60,
+  days: 1440,
+};
 
 export function parseDcaAveragingKind(value: unknown): DcaAveragingKind {
   return value === "interval" ? "interval" : "dip";
+}
+
+export function parseDcaIntervalUnit(value: unknown): DcaIntervalUnit {
+  if (value === "hours" || value === "days") {
+    return value;
+  }
+  return "minutes";
+}
+
+export function dcaIntervalParts(minutes: number | null): {
+  unit: DcaIntervalUnit;
+  value: string;
+} {
+  if (minutes === null || !(minutes > 0)) {
+    return { unit: "minutes", value: "" };
+  }
+  if (minutes % 1440 === 0) {
+    return { unit: "days", value: String(minutes / 1440) };
+  }
+  if (minutes % 60 === 0) {
+    return { unit: "hours", value: String(minutes / 60) };
+  }
+  return { unit: "minutes", value: String(minutes) };
+}
+
+export function formatDcaIntervalShort(minutes: number): string {
+  if (minutes % 1440 === 0) {
+    return `${minutes / 1440}d`;
+  }
+  if (minutes % 60 === 0) {
+    return `${minutes / 60}h`;
+  }
+  return `${minutes}m`;
+}
+
+function parseIntervalMinutesFromForm(
+  form: FormData,
+  averaging: DcaAveragingKind,
+): { ok: true; value: number | null } | { ok: false; error: string } {
+  if (averaging !== "interval") {
+    return { ok: true, value: null };
+  }
+  const parsed = parseOptionalPositiveInt(
+    form.get("intervalValue") ?? form.get("intervalMinutes"),
+  );
+  if (!parsed.ok) {
+    return parsed;
+  }
+  if (parsed.value === null) {
+    return parsed;
+  }
+  const unit = parseDcaIntervalUnit(form.get("intervalUnit"));
+  const minutes = parsed.value * INTERVAL_TO_MINUTES[unit];
+  if (!Number.isInteger(minutes) || minutes < 1 || minutes > 2_147_483_647) {
+    return { ok: false, error: "Enter a smaller interval." };
+  }
+  return { ok: true, value: minutes };
 }
 
 export function dcaAveragingKind(
@@ -344,10 +408,7 @@ export function parseDcaPlaybookForm(
     averaging === "interval"
       ? { ok: true as const, value: null }
       : parseOptionalPositive(form.get("dipPct"));
-  const intervalMinutes =
-    averaging === "interval"
-      ? parseOptionalPositiveInt(form.get("intervalMinutes"))
-      : { ok: true as const, value: null };
+  const intervalMinutes = parseIntervalMinutesFromForm(form, averaging);
   const sizeMultiplier = parseMultiplier(form.get("sizeMultiplier"), 1);
   const deviationMultiplier = parseMultiplier(
     form.get("deviationMultiplier"),
@@ -1050,10 +1111,10 @@ export function formatDcaNextAdd(input: {
         parts.push("due");
       } else {
         const minutes = Math.ceil(remainMs / 60_000);
-        parts.push(`${minutes}m`);
+        parts.push(formatDcaIntervalShort(minutes));
       }
     } else {
-      parts.push(`${input.intervalMinutes}m`);
+      parts.push(formatDcaIntervalShort(input.intervalMinutes));
     }
   }
   if (parts.length > 0) {
