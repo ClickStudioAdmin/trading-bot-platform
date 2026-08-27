@@ -215,7 +215,11 @@ function WorkingRow({
           webhookNames={webhookNames}
         />
       </td>
-      <td className="px-4 py-3">
+      <td
+        className={`px-4 py-3 ${
+          row.action === "sell" ? "text-danger" : "text-success"
+        }`}
+      >
         {workingSideLabel(row.action)}
       </td>
       <td className="px-4 py-3">
