@@ -44,6 +44,12 @@ const labelClass = "block text-xs text-ink-muted";
 const sectionClass =
   "space-y-2 rounded-card border border-line px-3 py-2";
 const rowClass = "grid gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-4";
+const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
+const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
+const headerDangerClass = `${headerBtnClass} bg-danger/15 text-danger hover:bg-danger/25`;
+const headerGhostClass = `${headerBtnClass} text-ink-muted hover:bg-danger/10 hover:text-danger`;
+const headerSegmentClass =
+  "rounded-none border-0 bg-transparent px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface-raised";
 
 function optional(value: number | null | undefined): string {
   return value == null ? "" : String(value);
@@ -354,35 +360,48 @@ export function DcaPlaybookForm({
           </span>
         </p>
         <div className="flex flex-wrap items-center gap-2">
+          <PendingSubmitButton
+            pendingLabel="Saving…"
+            successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
+            className={headerPrimaryClass}
+          >
+            Save playbook
+          </PendingSubmitButton>
           {playbook ? (
             <>
-              <PendingSubmitButton
-                formAction={runDcaPlaybookVerb}
-                name="verb"
-                value="arm"
-                pendingLabel="Arming…"
-                successKey={`arm-dca-playbook-${playbook.id}`}
-                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
-              >
-                Arm
-              </PendingSubmitButton>
-              <PendingSubmitButton
-                formAction={runDcaPlaybookVerb}
-                name="verb"
-                value="disarm"
-                pendingLabel="Stopping…"
-                successKey={`disarm-dca-playbook-${playbook.id}`}
-                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
-              >
-                Stop adding
-              </PendingSubmitButton>
+              <span className="hidden h-5 w-px bg-line sm:block" aria-hidden />
+              <div className="inline-flex overflow-hidden rounded-control border border-line bg-surface">
+                <PendingSubmitButton
+                  formAction={runDcaPlaybookVerb}
+                  name="verb"
+                  value="arm"
+                  pendingLabel={
+                    startKind === "immediate" ? "Triggering…" : "Arming…"
+                  }
+                  successKey={`arm-dca-playbook-${playbook.id}`}
+                  className={headerSegmentClass}
+                >
+                  {startKind === "immediate" ? "Trigger Manual Entry" : "Arm"}
+                </PendingSubmitButton>
+                <span className="w-px self-stretch bg-line" aria-hidden />
+                <PendingSubmitButton
+                  formAction={runDcaPlaybookVerb}
+                  name="verb"
+                  value="disarm"
+                  pendingLabel="Stopping…"
+                  successKey={`disarm-dca-playbook-${playbook.id}`}
+                  className={headerSegmentClass}
+                >
+                  Stop adding
+                </PendingSubmitButton>
+              </div>
               <PendingSubmitButton
                 formAction={runDcaPlaybookVerb}
                 name="verb"
                 value="close-playbook"
                 pendingLabel="Closing…"
                 successKey={`close-dca-playbook-${playbook.id}`}
-                className="rounded-control border border-danger/30 px-3 py-1.5 text-xs font-medium text-danger"
+                className={headerDangerClass}
               >
                 Close playbook
               </PendingSubmitButton>
@@ -398,7 +417,7 @@ export function DcaPlaybookForm({
                 formAction={deleteDcaPlaybookAction}
                 pendingLabel="Removing…"
                 successKey={`remove-dca-${playbook.id}`}
-                className="text-xs text-ink-muted hover:text-danger"
+                className={headerGhostClass}
               >
                 Remove
               </PendingSubmitButton>
@@ -407,7 +426,7 @@ export function DcaPlaybookForm({
             <button
               type="button"
               onClick={onRemoveDraft}
-              className="text-xs text-ink-muted hover:text-danger"
+              className={headerGhostClass}
             >
               Remove
             </button>
@@ -472,7 +491,7 @@ export function DcaPlaybookForm({
           Start
         </legend>
         <div className={rowClass}>
-          <label className={labelClass}>
+          <label className={`${labelClass} sm:col-span-2`}>
             First order
             <select
               name="startKind"
@@ -483,7 +502,7 @@ export function DcaPlaybookForm({
               className={fieldClass}
             >
               <option value="immediate">
-                Manual - When you click the Arm button (must save first)
+                Manual - When you manually trigger the entry
               </option>
               <option value="price">Price cross</option>
               <option value="webhook">Signal webhook</option>
@@ -588,8 +607,8 @@ export function DcaPlaybookForm({
             </>
           ) : null}
           {startKind === "immediate" ? (
-            <p className="self-end text-xs text-ink-muted lg:col-span-3">
-              Save first. Arm places the first order
+            <p className="self-end text-xs text-ink-muted sm:col-span-2">
+              Save first. Then trigger the first order
               {direction === "both" ? "s" : ""}.
             </p>
           ) : null}
@@ -1046,7 +1065,7 @@ export function DcaPlaybookForm({
               summary.levels.length === 0
                 ? "Enter order size and max orders"
                 : summary.lossFromSl
-                  ? "If stop loss hits after that fill. Does not consider trailing or breakeven stops"
+                  ? "Does not consider trailing or breakeven stops"
                   : "No stop loss — unlimited"
             }
           />
@@ -1161,16 +1180,6 @@ export function DcaPlaybookForm({
           </p>
         )}
       </fieldset>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <PendingSubmitButton
-          pendingLabel="Saving…"
-          successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
-          className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
-        >
-          Save playbook
-        </PendingSubmitButton>
-      </div>
     </form>
   );
 }
