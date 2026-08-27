@@ -54,6 +54,11 @@ function asNumber(text: string): number | null {
   return value > 0 && Number.isFinite(value) ? value : null;
 }
 
+function asNonNegative(text: string): number | null {
+  const value = Number(text.replace(/,/g, "").trim());
+  return value >= 0 && Number.isFinite(value) ? value : null;
+}
+
 function SummaryStat({
   label,
   value,
@@ -227,6 +232,12 @@ export function DcaPlaybookForm({
   const [stopLossBasis, setStopLossBasis] = useState<DcaExitBasis>(
     playbook?.stopLossBasis ?? "average",
   );
+  const [breakevenActivationPct, setBreakevenActivationPct] = useState(
+    optional(playbook?.breakevenActivationPct),
+  );
+  const [breakevenOffsetPct, setBreakevenOffsetPct] = useState(
+    optional(playbook?.breakevenOffsetPct),
+  );
   const [indicatorKind, setIndicatorKind] = useState(
     playbook?.indicatorKind ?? "rsi",
   );
@@ -278,6 +289,8 @@ export function DcaPlaybookForm({
     });
     const tpPct = asNumber(takeProfitPct);
     const slPct = asNumber(stopLossPct);
+    const beActivation = asNumber(breakevenActivationPct);
+    const beOffset = asNonNegative(breakevenOffsetPct);
     const levels = dcaLadderLevels({
       side,
       entryPrice,
@@ -291,6 +304,8 @@ export function DcaPlaybookForm({
       takeProfitBasis,
       stopLossPct: slPct,
       stopLossBasis,
+      breakevenActivationPct: beActivation,
+      breakevenOffsetPct: beOffset,
     });
     const requiredFromLadder = levels[levels.length - 1]?.totalUsdt ?? null;
     const required =
@@ -320,9 +335,12 @@ export function DcaPlaybookForm({
       lossRange: dcaLadderLossRange(levels),
       profitFromTp: tpPct !== null,
       lossFromSl: slPct !== null,
+      lossFromBe: beActivation !== null,
     };
   }, [
     averaging,
+    breakevenActivationPct,
+    breakevenOffsetPct,
     clipSize,
     deviationMultiplier,
     direction,
@@ -930,7 +948,8 @@ export function DcaPlaybookForm({
                 Move stop to breakeven at %
                 <GroupedNumberInput
                   name="breakevenActivationPct"
-                  defaultValue={optional(playbook?.breakevenActivationPct)}
+                  value={breakevenActivationPct}
+                  onChange={setBreakevenActivationPct}
                   allowDecimal
                   className={fieldClass}
                   placeholder="Off"
@@ -940,7 +959,8 @@ export function DcaPlaybookForm({
                 Breakeven offset %
                 <GroupedNumberInput
                   name="breakevenOffsetPct"
-                  defaultValue={optional(playbook?.breakevenOffsetPct)}
+                  value={breakevenOffsetPct}
+                  onChange={setBreakevenOffsetPct}
                   allowDecimal
                   className={fieldClass}
                   placeholder="0"
@@ -1034,9 +1054,13 @@ export function DcaPlaybookForm({
             hint={
               summary.levels.length === 0
                 ? "Enter order size and max orders"
-                : summary.lossFromSl
-                  ? "If stop loss hits after that fill"
-                  : "Set stop loss % to estimate"
+                : summary.lossFromSl && summary.lossFromBe
+                  ? "If stop loss hits, or breakeven stop after it arms"
+                  : summary.lossFromBe
+                    ? "If breakeven stop hits after it arms"
+                    : summary.lossFromSl
+                      ? "If stop loss hits after that fill"
+                      : "Set stop loss or breakeven to estimate"
             }
           />
         </div>
@@ -1068,9 +1092,11 @@ export function DcaPlaybookForm({
                     <ColumnHint
                       label="Loss"
                       hint={
-                        summary.lossFromSl
-                          ? "USDT if stop loss hits after this order fills. Uses stop loss type (average or first fill)."
-                          : "Set stop loss % to estimate the loss if it hits after this fill."
+                        summary.lossFromSl && summary.lossFromBe
+                          ? "USDT if stop loss hits after this order fills. Loss range also includes the breakeven stop if it arms."
+                          : summary.lossFromSl
+                            ? "USDT if stop loss hits after this order fills. Uses stop loss type (average or first fill)."
+                            : "Set stop loss % to estimate the loss if it hits after this fill."
                       }
                     />
                   </th>
@@ -1135,6 +1161,9 @@ export function DcaPlaybookForm({
                 : " Profit is a return to the first order."}
               {summary.lossFromSl
                 ? " Loss is stop loss from that average."
+                : ""}
+              {summary.lossFromBe
+                ? " Loss range includes the breakeven stop after it arms."
                 : ""}
             </p>
           </div>

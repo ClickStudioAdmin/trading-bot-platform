@@ -97,6 +97,7 @@ export type DcaLadderLevel = {
   averagePrice: number;
   profitUsdt: number;
   lossUsdt: number | null;
+  breakevenStopUsdt: number | null;
 };
 
 export function dcaTakeProfitPrice(input: {
@@ -192,10 +193,55 @@ export function dcaLadderLossUsdt(input: {
   return Math.max(0, -pnl);
 }
 
+export function dcaLadderBreakevenStopUsdt(input: {
+  side: FuturesSide;
+  qty: number;
+  averagePrice: number;
+  breakevenActivationPct: number | null;
+  breakevenOffsetPct: number | null;
+}): number | null {
+  if (
+    input.breakevenActivationPct === null ||
+    !(input.breakevenActivationPct > 0) ||
+    !(input.qty > 0) ||
+    !(input.averagePrice > 0)
+  ) {
+    return null;
+  }
+  const exit = dcaBreakevenPrice({
+    side: input.side,
+    basisPrice: input.averagePrice,
+    offsetPct: input.breakevenOffsetPct ?? 0,
+  });
+  const pnl = futuresPnlUsdt({
+    side: input.side,
+    qty: input.qty,
+    entryPrice: input.averagePrice,
+    exitPrice: exit,
+  });
+  return Math.max(0, -pnl);
+}
+
 export function dcaLadderLossRange(
   levels: readonly DcaLadderLevel[],
 ): { min: number; max: number } | null {
-  return dcaLadderFieldRange(levels, (row) => row.lossUsdt);
+  const values = levels.flatMap((row) => {
+    const out: number[] = [];
+    if (row.lossUsdt !== null) {
+      out.push(row.lossUsdt);
+    }
+    if (row.breakevenStopUsdt !== null) {
+      out.push(row.breakevenStopUsdt);
+    }
+    return out;
+  });
+  if (values.length === 0) {
+    return null;
+  }
+  return {
+    min: Math.min(...values),
+    max: Math.max(...values),
+  };
 }
 
 function dcaLadderFieldRange(
@@ -227,6 +273,8 @@ export function dcaLadderLevels(input: {
   takeProfitBasis?: "average" | "first_entry";
   stopLossPct?: number | null;
   stopLossBasis?: "average" | "first_entry";
+  breakevenActivationPct?: number | null;
+  breakevenOffsetPct?: number | null;
 }): DcaLadderLevel[] {
   const count = Math.min(input.maxClips ?? 0, DCA_LADDER_PREVIEW_MAX);
   if (
@@ -292,6 +340,13 @@ export function dcaLadderLevels(input: {
         averagePrice,
         stopLossPct: input.stopLossPct ?? null,
         stopLossBasis: input.stopLossBasis ?? "average",
+      }),
+      breakevenStopUsdt: dcaLadderBreakevenStopUsdt({
+        side: input.side,
+        qty: totalQty,
+        averagePrice,
+        breakevenActivationPct: input.breakevenActivationPct ?? null,
+        breakevenOffsetPct: input.breakevenOffsetPct ?? null,
       }),
     });
   }
