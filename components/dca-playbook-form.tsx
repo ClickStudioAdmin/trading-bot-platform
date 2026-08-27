@@ -296,6 +296,15 @@ export function DcaPlaybookForm({
   const [symbol, setSymbol] = useState(defaultSymbol);
   const lastPrice = lastPrices[symbol] ?? null;
   const running = Boolean(playbook && dcaPlaybookIsRunning(playbook));
+  const liveLegs = playbook
+    ? dcaEnabledSides(playbook.direction).map((side) =>
+        dcaLegFor(playbook, side),
+      )
+    : [];
+  const showStopAdding = liveLegs.some((leg) => leg.status === "armed");
+  const showClosePlaybook = liveLegs.some(
+    (leg) => leg.clipsFilled > 0 || leg.status === "stop_adding",
+  );
   const effectiveMaxType: DcaMaxType = restGrid ? "orders" : maxType;
   const summary = useMemo(() => {
     const orderCap = asNumber(maxClips);
@@ -485,7 +494,7 @@ export function DcaPlaybookForm({
                     </button>
                   );
                 })
-              ) : (
+              ) : showStopAdding ? (
                 <div className="inline-flex overflow-hidden rounded-control border border-line bg-surface">
                   <PendingSubmitButton
                     formAction={runDcaPlaybookVerb}
@@ -508,14 +517,25 @@ export function DcaPlaybookForm({
                       value="disarm"
                       pendingLabel="Stopping…"
                       successKey={`disarm-dca-playbook-${playbook.id}`}
-                      className={`${headerDangerClass} rounded-none`}
+                      className="rounded-none bg-danger/15 px-3 py-1.5 text-xs font-medium text-danger hover:bg-danger/25"
                     >
                       Stop adding
                     </PendingSubmitButton>
                   </span>
                 </div>
+              ) : (
+                <PendingSubmitButton
+                  formAction={runDcaPlaybookVerb}
+                  name="verb"
+                  value="arm"
+                  pendingLabel="Arming…"
+                  successKey={`arm-dca-playbook-${playbook.id}`}
+                  className={`${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`}
+                >
+                  Arm
+                </PendingSubmitButton>
               )}
-              {startKind === "immediate" ? (
+              {startKind === "immediate" && showStopAdding ? (
                 <span
                   className="inline-flex"
                   title="Stop adding any new orders (also cancels any existing entry limit orders)"
@@ -532,21 +552,23 @@ export function DcaPlaybookForm({
                   </PendingSubmitButton>
                 </span>
               ) : null}
-              <span
-                className="inline-flex"
-                title="Close all positions and place the playbook in idle mode (no new entries)"
-              >
-                <PendingSubmitButton
-                  formAction={runDcaPlaybookVerb}
-                  name="verb"
-                  value="close-playbook"
-                  pendingLabel="Closing…"
-                  successKey={`close-dca-playbook-${playbook.id}`}
-                  className={headerDangerClass}
+              {showClosePlaybook ? (
+                <span
+                  className="inline-flex"
+                  title="Close all positions and place the playbook in idle mode (no new entries)"
                 >
-                  Close playbook
-                </PendingSubmitButton>
-              </span>
+                  <PendingSubmitButton
+                    formAction={runDcaPlaybookVerb}
+                    name="verb"
+                    value="close-playbook"
+                    pendingLabel="Closing…"
+                    successKey={`close-dca-playbook-${playbook.id}`}
+                    className={headerDangerClass}
+                  >
+                    Close playbook
+                  </PendingSubmitButton>
+                </span>
+              ) : null}
             </>
           ) : null}
         </div>
