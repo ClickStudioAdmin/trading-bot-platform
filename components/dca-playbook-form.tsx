@@ -1959,8 +1959,8 @@ function IndicatorBothDetails({
                 <thead className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
                   <tr className="border-b border-line">
                     <th className="px-3 py-2 font-medium">Setting</th>
-                    <th className="px-3 py-2 font-medium">Long</th>
-                    <th className="px-3 py-2 font-medium">Short</th>
+                    <th className="px-3 py-2 font-medium text-success">Long</th>
+                    <th className="px-3 py-2 font-medium text-danger">Short</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1978,8 +1978,8 @@ function IndicatorBothDetails({
                         <td className="px-3 py-2 font-medium text-ink">
                           {row.setting}
                         </td>
-                        <td className="px-3 py-2">{row.long}</td>
-                        <td className="px-3 py-2">{row.short}</td>
+                        <td className="px-3 py-2 text-success">{row.long}</td>
+                        <td className="px-3 py-2 text-danger">{row.short}</td>
                       </tr>
                     );
                   })}
