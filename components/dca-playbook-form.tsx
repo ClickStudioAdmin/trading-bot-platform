@@ -4,7 +4,7 @@ import { useId, useMemo, useState, type FormEvent } from "react";
 import { ColumnHint } from "@/components/column-hint";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { TabButton } from "@/components/trade-expand";
+import { ChevronIcon, TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   deleteDcaPlaybookAction,
@@ -514,6 +514,7 @@ export function DcaPlaybookForm({
     "BTCUSDT";
   const [symbol, setSymbol] = useState(defaultSymbol);
   const [ladderTab, setLadderTab] = useState<"long" | "short">("long");
+  const [ladderOpen, setLadderOpen] = useState(false);
   const ladderPanelId = useId();
   const lastPrice = lastPrices[symbol] ?? null;
   const running = Boolean(playbook && dcaPlaybookIsRunning(playbook));
@@ -1341,10 +1342,39 @@ export function DcaPlaybookForm({
       </fieldset>
       </div>
 
+      {running && !ladderOpen ? (
+        <div>
+          {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
+            aria-expanded={false}
+            onClick={() => setLadderOpen(true)}
+          >
+            Show Ladder
+            <ChevronIcon />
+          </button>
+        </div>
+      ) : (
       <fieldset className={sectionClass}>
-        <p className={sectionTitleClass}>
-          Summary
-        </p>
+        {running ? (
+          <div className="flex items-center justify-between gap-2">
+            <p className={sectionTitleClass}>Summary</p>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
+              aria-expanded={true}
+              onClick={() => setLadderOpen(false)}
+            >
+              Hide Ladder
+              <ChevronIcon className="rotate-90" />
+            </button>
+          </div>
+        ) : (
+          <p className={sectionTitleClass}>
+            Summary
+          </p>
+        )}
         {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         {showLadderTabs ? (
           <div
@@ -1618,6 +1648,7 @@ export function DcaPlaybookForm({
         )}
         </div>
       </fieldset>
+      )}
     </form>
   );
 }

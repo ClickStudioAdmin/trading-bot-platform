@@ -115,7 +115,7 @@ export function TabButton({
   );
 }
 
-function ChevronIcon({ className }: { className?: string }) {
+export function ChevronIcon({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 16 16"
