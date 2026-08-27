@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import {
   blockedRuleDeletes,
+  clonePaperLayerForm,
+  copyPaperSetName,
   defaultPaperConfig,
   paperConfigToFormValues,
   paperLayerToRow,
@@ -116,5 +118,28 @@ assert.deepEqual(blockedRuleDeletes([4], []), []);
 assert.equal(paperConfigToFormValues({ enabled: false, layers: [] }).layers.length, 0);
 
 assert.equal(defaultPaperConfig().layers.length, 1);
+
+assert.equal(copyPaperSetName("Core carry"), "Core carry (copy)");
+assert.equal(copyPaperSetName("Core carry (copy)"), "Core carry (copy)");
+assert.equal(copyPaperSetName("A".repeat(40)).length, 40);
+assert.equal(copyPaperSetName("A".repeat(40)).endsWith(" (copy)"), true);
+const cloneSource = paperConfigToFormValues({
+  enabled: true,
+  layers: [
+    {
+      ...defaultPaperConfig().layers[0]!,
+      id: 4,
+      name: "Core carry",
+      minNetApr: 0.1,
+      mode: "reduce_only",
+    },
+  ],
+}).layers[0]!;
+const clonedSet = clonePaperLayerForm(cloneSource);
+assert.equal(clonedSet.id, "");
+assert.equal(clonedSet.name, "Core carry (copy)");
+assert.notEqual(clonedSet.key, cloneSource.key);
+assert.equal(clonedSet.minApr, "10");
+assert.equal(clonedSet.mode, "reduce_only");
 
 console.log("engine rules checks passed");

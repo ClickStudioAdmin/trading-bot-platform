@@ -10,6 +10,7 @@ import {
   type AutomationMode,
 } from "@/lib/engine/decide";
 import {
+  clonePaperLayerForm,
   defaultPaperLayer,
   paperConfigToFormValues,
   type PaperLayerFormValues,
@@ -83,8 +84,10 @@ export function PaperRulesForm({
   onHasSetsChange?: (hasSets: boolean) => void;
 }) {
   const [layers, setLayers] = useState(values.layers);
+  const [cloneMenu, setCloneMenu] = useState(0);
   const inUse = new Set(inUseRuleIds);
   const empty = layers.length === 0;
+  const cloneSources = layers.filter((layer) => layer.id);
 
   function removeLayer(key: string, id: string) {
     const next = layers.filter((item) => item.key !== key);
@@ -149,6 +152,34 @@ export function PaperRulesForm({
         >
           Add Rule Set
         </button>
+        {cloneSources.length > 0 ? (
+          <select
+            key={cloneMenu}
+            aria-label="Clone existing set"
+            defaultValue=""
+            onChange={(event) => {
+              const key = event.target.value;
+              const source = cloneSources.find((item) => item.key === key);
+              if (!source) {
+                return;
+              }
+              setLayers((current) => [
+                ...current,
+                clonePaperLayerForm(source),
+              ]);
+              onHasSetsChange?.(true);
+              setCloneMenu((n) => n + 1);
+            }}
+            className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
+          >
+            <option value="">Clone existing set</option>
+            {cloneSources.map((item) => (
+              <option key={item.key} value={item.key}>
+                {item.name || "Set"}
+              </option>
+            ))}
+          </select>
+        ) : null}
         {empty ? null : (
           <PendingSubmitButton
             pendingLabel="Saving…"

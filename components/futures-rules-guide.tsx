@@ -37,6 +37,10 @@ export function FuturesRulesGuide({
       </h3>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
+          term="Add rule"
+          detail="Adds a blank rule card. Clone existing rule copies a saved rule, names it with (copy), and leaves it unsaved until you Save automations. A new clone can fire on the next cross — change the contract or disable it first if you do not want two of the same rule."
+        />
+        <GuideItem
           term="Skip if this side is already open"
           detail="On by default for Buy and Sell so a cross does not add size. Turn it off if you want each new cross to add to the same long or short."
         />

@@ -36,7 +36,7 @@ Phase accepted. TradingView is [phase-9.md](phase-9.md).
 8. Positions has **Close All** (market-close every open position; confirm `CLOSE ALL`), **Close All & Cancel All Open Orders** (cancel every working order, then close every position; confirm `CLOSE ALL`), and Open orders has **Cancel All Open Orders** (confirm `CANCEL ALL`). Each uses the same close or cancel path as the row buttons. Stops on the first error. The parent command may carry an idempotency key; child cancels and closes do not reuse it. Close All dialogs can optionally **Set reduce only** (book-wide Buy/Sell block) so size cannot come back. That checkbox also switches Active Futures automation rules to Reduce only so they cannot reopen.
 9. Desk clicks and automations go through `runFuturesCommand`. Form server actions are thin adapters (session + redirect). An optional idempotency key is stored on `futures_command_receipts` and on working/order rows; live sends it to Bybit as `orderLinkId`. No webhook this phase.
 10. Open rows show venue **Leverage** and **Liq** from Bybit on Connected Exchange books. Paper does not invent a liquidation price. Those fields are not written to the ledger. Columns on the open table can be hidden; Contract, Side, and Actions stay.
-11. Connected Exchange Futures pages show the bound Unified account: Available, Balance, IM/MM, and margin mode. Same private read as the exchange-chip hover. Paper does not invent venue balances.
+11. Connected Exchange books show the bound Unified account (Available, Balance, IM/MM, margin mode) on hover of the exchange chip. Paper does not invent venue balances.
 12. **Automations** are per-book alert rules (not cash-and-carry layers). Each rule watches last, mark, or index at or above / at or below a price, then Buy, Sell, Close long, or Close short on the same command path. Fires once per stretch the condition is true. The existing engine tick evaluates them after working-order reconcile. Paper writes the ledger only. Live uses the Futures bind. Opened rows show **Auto**. TradingView HTTP is still next.
 
 ## What this phase includes
@@ -52,7 +52,7 @@ Phase accepted. TradingView is [phase-9.md](phase-9.md).
 - Typed `runFuturesCommand` for place / close / close-all / TP-SL / trailing / amend / cancel. Form actions are adapters. Optional idempotency key (Bybit `orderLinkId` on live). No webhook this phase.
 - **Close All**, **Close All & Cancel All Open Orders**, and **Cancel All Open Orders**. Confirm `CLOSE ALL` or `CANCEL ALL`. Close All can optionally set reduce only, which also switches Active Futures automation rules to Reduce only.
 - Open-row **Leverage** and **Liq** from one Bybit `position/list` call (`settleCoin=USDT`). Snapshot only — not stored on `futures_positions`. Paper shows —. A Columns picker on the open table hides optional fields; choice lives in browser `localStorage` (`tbp-columns:futures-open`).
-- Venue **Available**, **Balance**, **IM/MM**, and margin mode on Futures pages from the bound Unified account. Paper omits the strip.
+- Venue **Available**, **Balance**, **IM/MM**, and margin mode on hover of the strategy exchange chip from the bound Unified account. Paper omits it.
 - **Alert automations** on `/strategies/futures/automations`: named Buy / Sell / Close rules on last, mark, or index. The paper tick fires `runFuturesCommand`. Not a copy of cash-and-carry rule sets.
 
 ## Out of scope

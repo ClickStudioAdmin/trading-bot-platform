@@ -86,6 +86,30 @@ export function defaultFuturesAutomationForm(
   };
 }
 
+const COPY_SUFFIX = " (copy)";
+
+export function copyFuturesRuleName(name: string): string {
+  const trimmed = name.trim() || "Rule";
+  if (trimmed.endsWith(COPY_SUFFIX)) {
+    return trimmed.slice(0, 40);
+  }
+  if (trimmed.length + COPY_SUFFIX.length <= 40) {
+    return `${trimmed}${COPY_SUFFIX}`;
+  }
+  return `${trimmed.slice(0, 40 - COPY_SUFFIX.length).trimEnd()}${COPY_SUFFIX}`;
+}
+
+export function cloneFuturesAutomationForm(
+  source: FuturesAutomationFormValues,
+): FuturesAutomationFormValues {
+  return {
+    ...source,
+    id: "",
+    key: `clone-${source.key}-${Date.now()}`,
+    name: copyFuturesRuleName(source.name),
+  };
+}
+
 export function parseFuturesTriggerCompare(
   raw: unknown,
 ): { ok: true; compare: FuturesTriggerCompare } | { ok: false; error: string } {

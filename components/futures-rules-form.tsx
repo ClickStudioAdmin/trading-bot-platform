@@ -10,6 +10,7 @@ import {
 } from "@/lib/engine/decide";
 import { saveFuturesAutomations } from "@/lib/futures/actions";
 import {
+  cloneFuturesAutomationForm,
   defaultFuturesAutomationForm,
   parseAutomationEntry,
   type FuturesAutomationFormValues,
@@ -31,8 +32,10 @@ export function FuturesAutomationsDesk({
   reduceOnly?: boolean;
 }) {
   const [layers, setLayers] = useState(rules);
+  const [cloneMenu, setCloneMenu] = useState(0);
   const empty = layers.length === 0;
   const inUse = new Set(inUseRuleIds);
+  const cloneSources = layers.filter((layer) => layer.id);
   const defaultSymbol =
     options.find((row) => row.symbol === "BTCUSDT")?.symbol ??
     options[0]?.symbol ??
@@ -86,6 +89,33 @@ export function FuturesAutomationsDesk({
         >
           Add rule
         </button>
+        {cloneSources.length > 0 ? (
+          <select
+            key={cloneMenu}
+            aria-label="Clone existing rule"
+            defaultValue=""
+            onChange={(event) => {
+              const key = event.target.value;
+              const source = cloneSources.find((item) => item.key === key);
+              if (!source) {
+                return;
+              }
+              setLayers((current) => [
+                ...current,
+                cloneFuturesAutomationForm(source),
+              ]);
+              setCloneMenu((n) => n + 1);
+            }}
+            className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
+          >
+            <option value="">Clone existing rule</option>
+            {cloneSources.map((item) => (
+              <option key={item.key} value={item.key}>
+                {item.name} · {item.symbol}
+              </option>
+            ))}
+          </select>
+        ) : null}
         {empty ? null : (
           <PendingSubmitButton
             pendingLabel="Saving…"

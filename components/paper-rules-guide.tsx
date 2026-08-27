@@ -51,6 +51,10 @@ export function PaperRulesGuide({
           detail="Adds another rule card. Each set has its own name, entry filters, size caps, order types, and exits. Save to apply. A green pulse means a live row is using this set — you cannot remove it until that row is flat."
         />
         <GuideItem
+          term="Clone existing set"
+          detail="Copies a saved set, names it with (copy), and leaves it unsaved until you Save automations. Change filters or disable it first if you do not want two sets competing for the same pair."
+        />
+        <GuideItem
           term="Two sets, one pair"
           detail="If more than one set matches the same pair, the engine uses the one with the higher Min APR. If those tie, it uses the set listed first on this page."
         />

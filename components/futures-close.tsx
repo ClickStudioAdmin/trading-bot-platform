@@ -12,8 +12,6 @@ import { formatGroupedNumberInput } from "@/lib/paper/open";
 
 const ACTION_CLASS =
   "inline-flex items-center justify-center rounded-control bg-accent-strong px-2 py-1 text-center text-xs font-medium whitespace-nowrap text-ink";
-const PLAYBOOK_CLOSE_CLASS =
-  "inline-flex items-center justify-center rounded-control bg-danger/15 px-2 py-1 text-center text-xs font-medium whitespace-nowrap text-danger hover:bg-danger/25";
 const INPUT_CLASS =
   "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
@@ -60,7 +58,7 @@ function CloseDcaPlaybookButton({
         <PendingSubmitButton
           pendingLabel="Closing…"
           successKey={`close-dca-playbook-row-${playbookId}`}
-          className={PLAYBOOK_CLOSE_CLASS}
+          className={ACTION_CLASS}
           skipSizeGuard
         >
           Close Playbook

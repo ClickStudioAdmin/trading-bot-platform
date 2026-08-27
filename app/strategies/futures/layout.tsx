@@ -1,4 +1,3 @@
-import { FuturesVenueBalanceGate } from "@/components/futures-venue-balance-gate";
 import { StrategySubnav } from "@/components/strategy-subnav";
 import {
   deskHomePath,
@@ -152,7 +151,6 @@ export default async function FuturesLayout({
           </p>
         </div>
       ) : null}
-      {snapshot ? <FuturesVenueBalanceGate snapshot={snapshot} /> : null}
       {children}
     </div>
   );

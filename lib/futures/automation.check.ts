@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import {
   automationSide,
   blockedFuturesRuleDeletes,
+  cloneFuturesAutomationForm,
+  copyFuturesRuleName,
   decideFuturesAutomationTick,
   defaultFuturesAutomationForm,
   FUTURES_RULE_IN_USE,
@@ -252,5 +254,26 @@ assert.equal(
   FUTURES_RULE_IN_USE,
   "Cannot remove a rule that has an open position.",
 );
+
+assert.equal(copyFuturesRuleName("ETH bounce"), "ETH bounce (copy)");
+assert.equal(copyFuturesRuleName("ETH bounce (copy)"), "ETH bounce (copy)");
+assert.equal(copyFuturesRuleName("A".repeat(40)).length, 40);
+assert.equal(copyFuturesRuleName("A".repeat(40)).endsWith(" (copy)"), true);
+const cloneSource = {
+  ...defaultFuturesAutomationForm(0, "ETHUSDT"),
+  id: "rule-1",
+  key: "rule-1",
+  name: "ETH bounce",
+  size: "0.5",
+  formAction: "sell" as const,
+};
+const clonedRule = cloneFuturesAutomationForm(cloneSource);
+assert.equal(clonedRule.id, "");
+assert.equal(clonedRule.name, "ETH bounce (copy)");
+assert.notEqual(clonedRule.key, cloneSource.key);
+assert.equal(clonedRule.symbol, "ETHUSDT");
+assert.equal(clonedRule.size, "0.5");
+assert.equal(clonedRule.formAction, "sell");
+assert.equal(clonedRule.mode, "active");
 
 console.log("futures automation checks passed");

@@ -103,6 +103,30 @@ export function paperConfigToFormValues(
   };
 }
 
+const COPY_SUFFIX = " (copy)";
+
+export function copyPaperSetName(name: string): string {
+  const trimmed = name.trim() || "Set";
+  if (trimmed.endsWith(COPY_SUFFIX)) {
+    return trimmed.slice(0, 40);
+  }
+  if (trimmed.length + COPY_SUFFIX.length <= 40) {
+    return `${trimmed}${COPY_SUFFIX}`;
+  }
+  return `${trimmed.slice(0, 40 - COPY_SUFFIX.length).trimEnd()}${COPY_SUFFIX}`;
+}
+
+export function clonePaperLayerForm(
+  source: PaperLayerFormValues,
+): PaperLayerFormValues {
+  return {
+    ...source,
+    id: "",
+    key: `clone-${source.key}-${Date.now()}`,
+    name: copyPaperSetName(source.name),
+  };
+}
+
 export function parsePaperRulesForm(
   form: FormData,
 ): { ok: true; config: PaperEngineConfig } | { ok: false; error: string } {
