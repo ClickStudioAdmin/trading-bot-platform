@@ -47,8 +47,13 @@ const sectionClass =
 const rowClass = "grid gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-4";
 const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
 const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
+const headerLongClass =
+  "px-3 py-1.5 text-xs font-medium bg-success text-canvas";
+const headerShortClass = "px-3 py-1.5 text-xs font-medium bg-danger text-ink";
+const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`;
 const headerDangerClass = `${headerBtnClass} bg-danger/15 text-danger hover:bg-danger/25`;
-const headerGhostClass = `${headerBtnClass} text-ink-muted hover:bg-danger/10 hover:text-danger`;
+const headerRemoveClass =
+  "shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
 const headerSegmentClass =
   "rounded-none border-0 bg-transparent px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface-raised";
 
@@ -371,76 +376,89 @@ export function DcaPlaybookForm({
           {playbook ? (
             <>
               <span className="hidden h-5 w-px bg-line sm:block" aria-hidden />
-              <div className="inline-flex overflow-hidden rounded-control border border-line bg-surface">
-                {(startKind === "immediate"
-                  ? (
-                      [
-                        {
-                          side: "long" as const,
-                          value: "arm-long",
-                          label: "Trigger Long",
-                        },
-                        {
-                          side: "short" as const,
-                          value: "arm-short",
-                          label: "Trigger Short",
-                        },
-                      ] as const
-                    ).map((item) => ({
-                      ...item,
-                      enabled: dcaEnabledSides(direction).includes(item.side),
-                      pendingLabel: "Triggering…",
-                      successKey: `arm-dca-playbook-${playbook.id}-${item.side}`,
-                    }))
-                  : [
+              {startKind === "immediate" ? (
+                <div className="inline-flex overflow-hidden rounded-control">
+                  {(
+                    [
                       {
-                        value: "arm",
-                        label: "Arm",
-                        enabled: true,
-                        pendingLabel: "Arming…",
-                        successKey: `arm-dca-playbook-${playbook.id}`,
+                        side: "long" as const,
+                        value: "arm-long",
+                        label: "Trigger Long",
+                        className: headerLongClass,
                       },
-                    ]
-                ).map((item, index) => (
-                  <span key={item.value} className="contents">
-                    {index > 0 ? (
-                      <span className="w-px self-stretch bg-line" aria-hidden />
-                    ) : null}
-                    {item.enabled ? (
+                      {
+                        side: "short" as const,
+                        value: "arm-short",
+                        label: "Trigger Short",
+                        className: headerShortClass,
+                      },
+                    ] as const
+                  ).map((item) => {
+                    const enabled = dcaEnabledSides(direction).includes(
+                      item.side,
+                    );
+                    return enabled ? (
                       <PendingSubmitButton
+                        key={item.value}
                         formAction={runDcaPlaybookVerb}
                         name="verb"
                         value={item.value}
-                        pendingLabel={item.pendingLabel}
-                        successKey={item.successKey}
-                        className={headerSegmentClass}
+                        pendingLabel="Triggering…"
+                        successKey={`arm-dca-playbook-${playbook.id}-${item.side}`}
+                        className={item.className}
                       >
                         {item.label}
                       </PendingSubmitButton>
                     ) : (
                       <button
+                        key={item.value}
                         type="button"
                         disabled
                         title="Set Direction to include this side"
-                        className={`${headerSegmentClass} text-ink-faint`}
+                        className={`${item.className} opacity-40`}
                       >
                         {item.label}
                       </button>
-                    )}
-                  </span>
-                ))}
-                <span className="w-px self-stretch bg-line" aria-hidden />
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="inline-flex overflow-hidden rounded-control border border-line bg-surface">
+                  <PendingSubmitButton
+                    formAction={runDcaPlaybookVerb}
+                    name="verb"
+                    value="arm"
+                    pendingLabel="Arming…"
+                    successKey={`arm-dca-playbook-${playbook.id}`}
+                    className={headerSegmentClass}
+                  >
+                    Arm
+                  </PendingSubmitButton>
+                  <span className="w-px self-stretch bg-line" aria-hidden />
+                  <PendingSubmitButton
+                    formAction={runDcaPlaybookVerb}
+                    name="verb"
+                    value="disarm"
+                    pendingLabel="Stopping…"
+                    successKey={`disarm-dca-playbook-${playbook.id}`}
+                    className={headerSegmentClass}
+                  >
+                    Stop adding
+                  </PendingSubmitButton>
+                </div>
+              )}
+              {startKind === "immediate" ? (
                 <PendingSubmitButton
                   formAction={runDcaPlaybookVerb}
                   name="verb"
                   value="disarm"
                   pendingLabel="Stopping…"
                   successKey={`disarm-dca-playbook-${playbook.id}`}
-                  className={headerSegmentClass}
+                  className={headerSecondaryClass}
                 >
                   Stop adding
                 </PendingSubmitButton>
-              </div>
+              ) : null}
               <PendingSubmitButton
                 formAction={runDcaPlaybookVerb}
                 name="verb"
@@ -463,7 +481,7 @@ export function DcaPlaybookForm({
                 formAction={deleteDcaPlaybookAction}
                 pendingLabel="Removing…"
                 successKey={`remove-dca-${playbook.id}`}
-                className={headerGhostClass}
+                className={headerRemoveClass}
               >
                 Remove
               </PendingSubmitButton>
@@ -472,7 +490,7 @@ export function DcaPlaybookForm({
             <button
               type="button"
               onClick={onRemoveDraft}
-              className={headerGhostClass}
+              className={headerRemoveClass}
             >
               Remove
             </button>
@@ -1115,6 +1133,9 @@ export function DcaPlaybookForm({
             }
           />
         </div>
+        <p className="mt-2 text-xs text-ink-muted">
+          Summary is based on the current parameters above
+        </p>
         {summary.levels.length > 0 ? (
           <div className="thin-scroll mt-4 max-h-80 overflow-auto rounded-card border border-line">
             <table className="w-full text-left text-sm">
