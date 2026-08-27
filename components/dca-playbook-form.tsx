@@ -32,6 +32,7 @@ import {
   dcaEnabledSides,
   dcaIntervalParts,
   dcaLegFor,
+  dcaLegIsRunning,
   dcaMaxTypeFromCaps,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
@@ -46,6 +47,7 @@ import {
 } from "@/lib/dca/playbook";
 import type { FuturesSide } from "@/lib/futures/model";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
+import { perpTicketSizeError } from "@/lib/exchanges/bybit/ticket-size";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import Link from "next/link";
 
@@ -431,6 +433,15 @@ export function DcaPlaybookForm({
   const showSaveAndArm = dcaStartListens(startKind) && !running;
   const showArmButton =
     dcaStartListens(startKind) && Boolean(playbook) && running;
+  const selectedPair = options.find((row) => row.symbol === symbol);
+  const sizeError = perpTicketSizeError({
+    size: clipSize,
+    unit: sizeUnit,
+    minQty: selectedPair?.minQty ?? 0,
+    minNotional: selectedPair?.minNotional ?? 0,
+    lastPrice,
+    baseCoin: selectedPair?.baseCoin ?? "Token",
+  });
   const effectiveMaxType: DcaMaxType = restGrid ? "orders" : maxType;
   const summaryBySide = useMemo(() => {
     const input = {
@@ -524,6 +535,8 @@ export function DcaPlaybookForm({
               pendingLabel="Arming…"
               successKey={`save-arm-dca-playbook-${playbook?.id ?? "new"}`}
               className={headerLongClass}
+              disabled={Boolean(sizeError)}
+              title={sizeError ?? undefined}
             >
               Save and Arm
             </PendingSubmitButton>
@@ -547,10 +560,29 @@ export function DcaPlaybookForm({
                     },
                   ] as const
                 ).map((item) => {
-                  const enabled = dcaEnabledSides(direction).includes(
+                  const onDirection = dcaEnabledSides(direction).includes(
                     item.side,
                   );
-                  return enabled ? (
+                  const sideRunning = dcaLegIsRunning(
+                    dcaLegFor(playbook, item.side).status,
+                  );
+                  const blockedReason = !onDirection
+                    ? "Set Direction to include this side"
+                    : sideRunning
+                      ? `${item.side === "long" ? "Long" : "Short"} is already running`
+                      : sizeError;
+                  const blocked = Boolean(blockedReason);
+                  return blocked ? (
+                    <button
+                      key={item.side}
+                      type="button"
+                      disabled
+                      title={blockedReason ?? undefined}
+                      className={`${item.className} opacity-40`}
+                    >
+                      {item.label}
+                    </button>
+                  ) : (
                     <PendingSubmitButton
                       key={item.side}
                       formAction={item.action}
@@ -560,16 +592,6 @@ export function DcaPlaybookForm({
                     >
                       {item.label}
                     </PendingSubmitButton>
-                  ) : (
-                    <button
-                      key={item.side}
-                      type="button"
-                      disabled
-                      title="Set Direction to include this side"
-                      className={`${item.className} opacity-40`}
-                    >
-                      {item.label}
-                    </button>
                   );
                 })
               ) : null}
@@ -827,8 +849,15 @@ export function DcaPlaybookForm({
                 value={clipSize}
                 onChange={setClipSize}
                 allowDecimal
-                className={fieldClass}
+                className={`mt-0.5 w-full rounded-control border bg-surface-raised px-2 py-1.5 text-sm text-ink focus:outline-none ${
+                  sizeError
+                    ? "border-danger focus:border-danger"
+                    : "border-line focus:border-line-strong"
+                }`}
               />
+              {sizeError ? (
+                <p className="mt-1 text-xs text-danger">{sizeError}</p>
+              ) : null}
             </label>
           </div>
         </fieldset>

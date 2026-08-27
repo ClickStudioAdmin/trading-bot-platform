@@ -53,15 +53,24 @@ export function perpTicketSizeError(input: {
   }
   const maxQty = input.maxQty && input.maxQty > 0 ? input.maxQty : 0;
   if (input.unit === "usdt") {
-    if (input.minNotional > 0 && amount < input.minNotional) {
-      return `Minimum order value is $${formatPerpMinQty(input.minNotional)}.`;
-    }
     const price =
       input.orderType === "limit"
         ? parseTicketSize(input.limitPrice ?? "")
         : null;
     const mark = input.lastPrice && input.lastPrice > 0 ? input.lastPrice : null;
     const sizePrice = price && price > 0 ? price : mark;
+    const minFromQty =
+      sizePrice && input.minQty > 0 ? input.minQty * sizePrice : 0;
+    const minUsdt = Math.max(
+      input.minNotional > 0 ? input.minNotional : 0,
+      minFromQty,
+    );
+    if (minUsdt > 0 && amount < minUsdt) {
+      if (minFromQty > input.minNotional) {
+        return `Minimum order is $${formatPerpMinQty(minUsdt)} (${formatPerpMinQty(input.minQty)} ${input.baseCoin}).`;
+      }
+      return `Minimum order value is $${formatPerpMinQty(input.minNotional)}.`;
+    }
     if (maxQty > 0 && sizePrice) {
       const qty = amount / sizePrice;
       if (qty > maxQty) {

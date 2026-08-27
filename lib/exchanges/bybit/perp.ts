@@ -1,5 +1,6 @@
 import { fetchBybitInstruments } from "./client";
 import { floorToStep, parseStep, qtyFromNotionalUsdt, stepDecimals } from "./qty";
+import { formatPerpMinQty } from "./ticket-size";
 import type { BybitInstrument } from "./universe";
 
 const PINNED_BASE_COINS = ["BTC", "ETH", "SOL", "DOGE", "XRP", "MNT"];
@@ -58,9 +59,10 @@ export function qtyForPerp(
   const minQty = Math.max(lotMin(instrument, step), step);
   const floored = floorToStep(qty, step);
   if (!(floored > 0) || floored < minQty) {
+    const coin = instrument?.baseCoin ? ` ${instrument.baseCoin}` : "";
     return {
       ok: false,
-      error: "That size is below the exchange minimum order quantity.",
+      error: `Minimum size is ${formatPerpMinQty(minQty)}${coin}.`,
     };
   }
   const maxQty = lotMax(instrument);
@@ -92,16 +94,25 @@ export function qtyForPerpNotional(
   if (minNotional > 0 && notionalUsdt < minNotional) {
     return {
       ok: false,
-      error: "That size is below the exchange minimum order value.",
+      error: `Minimum order value is $${formatPerpMinQty(minNotional)}.`,
     };
   }
-  return qtyFromNotionalUsdt({
+  const sized = qtyFromNotionalUsdt({
     notionalUsdt,
     price,
     step,
     minQty,
     maxQty: lotMax(instrument),
   });
+  if (!sized.ok && sized.error.includes("minimum order quantity")) {
+    const minUsdt = minQty * price;
+    const coin = instrument?.baseCoin ? ` ${instrument.baseCoin}` : "";
+    return {
+      ok: false,
+      error: `Minimum order is $${formatPerpMinQty(minUsdt)} (${formatPerpMinQty(minQty)}${coin}).`,
+    };
+  }
+  return sized;
 }
 
 export function priceForPerp(

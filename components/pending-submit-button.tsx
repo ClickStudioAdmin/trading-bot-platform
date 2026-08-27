@@ -110,6 +110,8 @@ export function PendingSubmitButton({
   name,
   value,
   formAction,
+  disabled = false,
+  title,
 }: {
   children: ReactNode;
   pendingLabel?: string;
@@ -118,6 +120,8 @@ export function PendingSubmitButton({
   name?: string;
   value?: string;
   formAction?: (formData: FormData) => void | Promise<void>;
+  disabled?: boolean;
+  title?: string;
 }) {
   const { pending, data } = useFormStatus();
   const thisPending =
@@ -159,7 +163,8 @@ export function PendingSubmitButton({
       name={name}
       value={value}
       formAction={formAction}
-      disabled={pending}
+      disabled={pending || disabled}
+      title={title}
       aria-busy={thisPending}
       aria-label={thisPending ? pendingLabel : ok ? "Done" : undefined}
       className={`disabled:opacity-70 ${className}`}

@@ -50,6 +50,18 @@ assert.equal(
 
 assert.equal(
   perpTicketSizeError({
+    size: "50",
+    unit: "usdt",
+    minQty: 0.001,
+    minNotional: 5,
+    lastPrice: 100_000,
+    baseCoin: "BTC",
+  }),
+  "Minimum order is $100 (0.001 BTC).",
+);
+
+assert.equal(
+  perpTicketSizeError({
     size: "1",
     unit: "usdt",
     minQty: 0.001,
