@@ -7,6 +7,7 @@ import { FuturesRulesGuide } from "@/components/futures-rules-guide";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
+import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
@@ -41,7 +42,19 @@ export default async function FuturesAutomationsPage({
   if (session?.account.deskType === "dca") {
     const playbooks = await listDcaPlaybooksForAccount(session.account.id);
     const settings = await loadFuturesSettings(session.account.id);
-    const pairs = await loadUsdtLinearPerps().catch(() => []);
+    const [pairs, tickers] = await Promise.all([
+      loadUsdtLinearPerps().catch(() => []),
+      fetchBybitTickers("linear").catch(() => null),
+    ]);
+    const lastPrices: Record<string, number> = {};
+    if (tickers) {
+      for (const [symbol, row] of tickers) {
+        const last = Number(row.lastPrice);
+        if (last > 0) {
+          lastPrices[symbol] = last;
+        }
+      }
+    }
     const signalWebhooks = (
       await listFuturesWebhooks({
         accountId: session.account.id,
@@ -86,6 +99,7 @@ export default async function FuturesAutomationsPage({
             options={pairs}
             signalWebhooks={signalWebhooks}
             availableUsdt={availableUsdt}
+            lastPrices={lastPrices}
             reduceOnly={Boolean(settings.reduceOnly)}
           />
         </div>

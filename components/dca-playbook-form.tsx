@@ -11,6 +11,7 @@ import {
   saveDcaPlaybookAction,
 } from "@/lib/dca/actions";
 import {
+  dcaLadderLevels,
   dcaLastClipDeviationPct,
   dcaMaxDropCoveredPct,
   dcaRequiredUsdt,
@@ -82,12 +83,14 @@ export function DcaPlaybooksDesk({
   options,
   signalWebhooks,
   availableUsdt = null,
+  lastPrices = {},
   reduceOnly = false,
 }: {
   playbooks: DcaPlaybook[];
   options: LinearPerp[];
   signalWebhooks: DcaSignalWebhookOption[];
   availableUsdt?: number | null;
+  lastPrices?: Record<string, number>;
   reduceOnly?: boolean;
 }) {
   const [cards, setCards] = useState<
@@ -116,6 +119,7 @@ export function DcaPlaybooksDesk({
             options={options}
             signalWebhooks={signalWebhooks}
             availableUsdt={availableUsdt}
+            lastPrices={lastPrices}
             defaultName={
               card.playbook?.name ??
               (index === 0 ? DEFAULT_DCA_NAME : `DCA ${index + 1}`)
@@ -158,6 +162,7 @@ export function DcaPlaybookForm({
   options,
   signalWebhooks,
   availableUsdt = null,
+  lastPrices = {},
   reduceOnly = false,
   defaultName,
   onRemoveDraft,
@@ -166,6 +171,7 @@ export function DcaPlaybookForm({
   options: LinearPerp[];
   signalWebhooks: DcaSignalWebhookOption[];
   availableUsdt?: number | null;
+  lastPrices?: Record<string, number>;
   reduceOnly?: boolean;
   defaultName?: string;
   onRemoveDraft?: () => void;
@@ -201,22 +207,23 @@ export function DcaPlaybookForm({
   const [indicatorKind, setIndicatorKind] = useState(
     playbook?.indicatorKind ?? "rsi",
   );
-  const [disarmEnabled, setDisarmEnabled] = useState(
-    Boolean(playbook?.disarmTrigger),
-  );
   const defaultSymbol =
     playbook?.symbol ??
     options.find((row) => row.symbol === "BTCUSDT")?.symbol ??
     options[0]?.symbol ??
     "BTCUSDT";
+  const [symbol, setSymbol] = useState(defaultSymbol);
+  const lastPrice = lastPrices[symbol] ?? null;
   const running = Boolean(playbook && dcaPlaybookIsRunning(playbook));
   const summary = useMemo(() => {
     const clips = asNumber(maxClips);
-    const dip = asNumber(dipPct);
+    const dip = averaging === "dip" ? asNumber(dipPct) : null;
     const size = asNumber(clipSize);
     const sizeMult = asNumber(sizeMultiplier) ?? 1;
     const devMult = asNumber(deviationMultiplier) ?? 1;
     const side = direction === "short" ? "short" : "long";
+    const entryPrice = lastPrice !== null && lastPrice > 0 ? lastPrice : 100;
+    const priceFromLast = lastPrice !== null && lastPrice > 0;
     const covered = dcaMaxDropCoveredPct({
       side,
       maxClips: clips,
@@ -229,19 +236,42 @@ export function DcaPlaybookForm({
       dipPct: dip,
       deviationMultiplier: devMult,
     });
-    const required = dcaRequiredUsdt({
+    const levels = dcaLadderLevels({
+      side,
+      entryPrice,
+      maxClips: clips,
+      dipPct: dip,
       clipSize: size ?? 0,
       sizeUnit,
-      maxClips: clips,
       sizeMultiplier: sizeMult,
-      mark: null,
+      deviationMultiplier: devMult,
     });
-    return { covered, lastDev, required };
+    const requiredFromLadder = levels[levels.length - 1]?.totalUsdt ?? null;
+    const required =
+      sizeUnit === "usdt" || priceFromLast
+        ? requiredFromLadder ??
+          dcaRequiredUsdt({
+            clipSize: size ?? 0,
+            sizeUnit,
+            maxClips: clips,
+            sizeMultiplier: sizeMult,
+            mark: lastPrice,
+          })
+        : dcaRequiredUsdt({
+            clipSize: size ?? 0,
+            sizeUnit,
+            maxClips: clips,
+            sizeMultiplier: sizeMult,
+            mark: null,
+          });
+    return { covered, lastDev, required, levels, priceFromLast };
   }, [
+    averaging,
     clipSize,
     deviationMultiplier,
     direction,
     dipPct,
+    lastPrice,
     maxClips,
     sizeMultiplier,
     sizeUnit,
@@ -311,6 +341,8 @@ export function DcaPlaybookForm({
             <FuturesSymbolSelect
               options={options}
               defaultSymbol={defaultSymbol}
+              value={symbol}
+              onChange={setSymbol}
             />
           </label>
           <label className={labelClass}>
@@ -772,26 +804,6 @@ export function DcaPlaybookForm({
             </div>
           </div>
         </div>
-        <div className={rowClass}>
-          <label className="flex items-center gap-2 self-end pb-1.5 text-xs text-ink">
-            <input
-              type="checkbox"
-              name="disarmEnabled"
-              value="1"
-              checked={disarmEnabled}
-              onChange={(event) => setDisarmEnabled(event.target.checked)}
-            />
-            Stop adding when price crosses
-          </label>
-          {disarmEnabled ? (
-            <TriggerFields
-              prefix="disarm"
-              triggerBy={playbook?.disarmTrigger?.triggerBy ?? "last"}
-              compare={playbook?.disarmTrigger?.compare ?? "lte"}
-              price={optional(playbook?.disarmTrigger?.price)}
-            />
-          ) : null}
-        </div>
       </fieldset>
 
       <fieldset className={sectionClass}>
@@ -843,6 +855,67 @@ export function DcaPlaybookForm({
             }
           />
         </div>
+        {summary.levels.length > 0 ? (
+          <div className="mt-4 max-h-80 overflow-auto rounded-card border border-line">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Order</th>
+                  <th className="px-3 py-2 font-medium">Price</th>
+                  <th className="px-3 py-2 font-medium">Deviation</th>
+                  <th className="px-3 py-2 font-medium">
+                    {sizeUnit === "qty" ? "Qty" : "Size"}
+                  </th>
+                  <th className="px-3 py-2 font-medium">Order value</th>
+                  <th className="px-3 py-2 font-medium">Total value</th>
+                  <th className="px-3 py-2 font-medium">Avg entry</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.levels.map((row) => (
+                  <tr key={row.index} className="border-t border-line">
+                    <td className="px-3 py-2 tabular-nums text-ink">{row.index}</td>
+                    <td className="px-3 py-2 tabular-nums text-ink">
+                      {formatLadderPrice(row.price)}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums text-ink-muted">
+                      {row.index === 1
+                        ? "—"
+                        : `${row.deviationPct > 0 ? "+" : ""}${trimPct(row.deviationPct)}%`}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums text-ink">
+                      {trimPct(row.size)}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums text-ink">
+                      ${trimPct(row.orderUsdt)}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums text-ink">
+                      ${trimPct(row.totalUsdt)}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums text-ink-muted">
+                      {formatLadderPrice(row.averagePrice)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="border-t border-line px-3 py-2 text-xs text-ink-muted">
+              {summary.priceFromLast
+                ? `Prices from last on ${symbol}.`
+                : "Prices indexed from 100 until last is available."}
+              {averaging === "interval"
+                ? " Interval adds use the same last as an estimate."
+                : ""}
+              {direction === "both" ? " Long ladder shown. Short is the inverse." : ""}
+            </p>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-ink-muted">
+            Enter order size and max orders to preview price and value at each
+            level.
+            {averaging === "dip" ? " Price deviation % sets later prices." : ""}
+          </p>
+        )}
       </fieldset>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -939,6 +1012,17 @@ function TriggerFields({
       </label>
     </>
   );
+}
+
+function formatLadderPrice(value: number): string {
+  if (!(value > 0) || !Number.isFinite(value)) {
+    return "—";
+  }
+  const digits = value >= 1000 ? 2 : value >= 1 ? 4 : 6;
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: 0,
+  });
 }
 
 function trimPct(value: number): string {

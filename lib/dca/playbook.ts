@@ -493,18 +493,8 @@ export function parseDcaPlaybookForm(
     form.get("armPrice"),
     "Start price",
   );
-  const disarmTrigger = parseOptionalTrigger(
-    form.get("disarmEnabled") === "1",
-    form.get("disarmTriggerBy"),
-    form.get("disarmCompare"),
-    form.get("disarmPrice"),
-    "Stop adding when",
-  );
   if (!armTrigger.ok) {
     return armTrigger;
-  }
-  if (!disarmTrigger.ok) {
-    return disarmTrigger;
   }
   if (startKind === "price" && !armTrigger.trigger) {
     return { ok: false, error: "Enter a start price." };
@@ -570,7 +560,7 @@ export function parseDcaPlaybookForm(
       trailingTriggerPct: trailingTriggerPct.value,
       trailingPct: trailingPct.value,
       armTrigger: armTrigger.trigger,
-      disarmTrigger: disarmTrigger.trigger,
+      disarmTrigger: null,
       indicatorKind,
       indicatorTimeframe,
       indicatorCompare,

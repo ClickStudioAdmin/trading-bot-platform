@@ -3,6 +3,7 @@ import {
   dcaBreakevenPrice,
   dcaClipSizeAt,
   dcaDipPctAt,
+  dcaLadderLevels,
   dcaLastClipDeviationPct,
   dcaMaxDropCoveredPct,
   dcaRequiredUsdt,
@@ -71,6 +72,39 @@ assert.equal(
   }),
   100,
 );
+
+const ladder = dcaLadderLevels({
+  side: "long",
+  entryPrice: 100,
+  maxClips: 3,
+  dipPct: 1,
+  clipSize: 10,
+  sizeUnit: "usdt",
+  sizeMultiplier: 1,
+  deviationMultiplier: 1,
+});
+assert.equal(ladder.length, 3);
+assert.equal(ladder[0]?.price, 100);
+assert.equal(ladder[0]?.orderUsdt, 10);
+assert.equal(ladder[0]?.totalUsdt, 10);
+assert.equal(ladder[1]?.price, 99);
+assert.equal(ladder[1]?.totalUsdt, 20);
+assert.equal(ladder[2]?.price, 98.01);
+assert.equal(ladder[2]?.totalUsdt, 30);
+
+const qtyLadder = dcaLadderLevels({
+  side: "long",
+  entryPrice: 100,
+  maxClips: 2,
+  dipPct: 1,
+  clipSize: 1,
+  sizeUnit: "qty",
+  sizeMultiplier: 1,
+  deviationMultiplier: 1,
+});
+assert.equal(qtyLadder[0]?.orderUsdt, 100);
+assert.equal(qtyLadder[1]?.orderUsdt, 99);
+assert.equal(qtyLadder[1]?.totalUsdt, 199);
 assert.equal(
   dcaBreakevenPrice({ side: "long", basisPrice: 100, offsetPct: 1 }),
   101,

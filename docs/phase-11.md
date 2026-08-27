@@ -10,7 +10,7 @@ Paper Trading desks write the in-app ledger only. Connected Exchange desks use t
 
 ## Status
 
-Current. Agent steps 1–5 are in the tree. Wait for Click’s desk test. Do not mark accepted until that test. `dca_playbooks` migrates on push to `develop`.
+Current. Agent steps 1–5 are in the tree. Wait for Click’s desk test. Do not mark accepted until that test. `dca_playbooks` migrates on push to `develop`. If Automations errors on `breakeven_activation_pct`, the first playbook migration already ran without later columns; push `20260827140000_dca_playbooks_advanced.sql`.
 
 ## Current micro-step
 

@@ -83,6 +83,80 @@ export function dcaLastClipDeviationPct(input: {
   return dcaMaxDropCoveredPct(input);
 }
 
+export const DCA_LADDER_PREVIEW_MAX = 40;
+
+export type DcaLadderLevel = {
+  index: number;
+  price: number;
+  deviationPct: number;
+  size: number;
+  orderUsdt: number;
+  totalUsdt: number;
+  averagePrice: number;
+};
+
+export function dcaLadderLevels(input: {
+  side: FuturesSide;
+  entryPrice: number;
+  maxClips: number | null;
+  dipPct: number | null;
+  clipSize: number;
+  sizeUnit: "qty" | "usdt";
+  sizeMultiplier: number;
+  deviationMultiplier: number;
+}): DcaLadderLevel[] {
+  const count = Math.min(input.maxClips ?? 0, DCA_LADDER_PREVIEW_MAX);
+  if (
+    count < 1 ||
+    !(input.clipSize > 0) ||
+    !(input.sizeMultiplier > 0) ||
+    !(input.entryPrice > 0)
+  ) {
+    return [];
+  }
+  const first = input.entryPrice;
+  const addPrices =
+    input.dipPct !== null && input.dipPct > 0 && count >= 2
+      ? dcaSafetyPrices({
+          side: input.side,
+          entryPrice: first,
+          maxClips: count,
+          dipPct: input.dipPct,
+          deviationMultiplier: input.deviationMultiplier,
+        })
+      : [];
+  const prices = [first, ...addPrices];
+  while (prices.length < count) {
+    prices.push(prices[prices.length - 1] ?? first);
+  }
+  const rows: DcaLadderLevel[] = [];
+  let totalQty = 0;
+  let weighted = 0;
+  let totalUsdt = 0;
+  for (let i = 0; i < count; i += 1) {
+    const price = prices[i] ?? first;
+    if (!(price > 0)) {
+      break;
+    }
+    const size = dcaClipSizeAt(i, input.clipSize, input.sizeMultiplier);
+    const qty = input.sizeUnit === "qty" ? size : size / price;
+    const orderUsdt = input.sizeUnit === "usdt" ? size : size * price;
+    totalQty += qty;
+    weighted += price * qty;
+    totalUsdt += orderUsdt;
+    rows.push({
+      index: i + 1,
+      price,
+      deviationPct: ((price - first) / first) * 100,
+      size,
+      orderUsdt,
+      totalUsdt,
+      averagePrice: totalQty > 0 ? weighted / totalQty : price,
+    });
+  }
+  return rows;
+}
+
 export function dcaRequiredUsdt(input: {
   clipSize: number;
   sizeUnit: "qty" | "usdt";
