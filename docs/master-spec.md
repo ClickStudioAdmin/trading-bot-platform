@@ -26,7 +26,19 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Next is scale-in (Phase 12) — wait for instruction; do not write or start it yet. Hyperliquid and additional CEX adapters wait. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
+Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Next is scale-in (Phase 12) — wait for instruction; do not write or start it yet. Hyperliquid and additional CEX adapters wait. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)). Backup market-data vendors wait (see Later, below).
+
+## Later (unscheduled)
+
+Do not implement until Click starts this work. Not Phase 12.
+
+**Backup market data.** Indicator start and other public candles stay on **Bybit public klines first**. A later stage adds failover when that call fails (timeout, HTTP 403, empty list):
+
+1. Public linear klines from **Binance** and/or **OKX**, mapped to the same Bybit contract. Same RSI / MACD / EMA math. Prefer the trading venue’s book; backups are for uptime, not a second truth.
+2. If public failover is not enough: a paid candle SLA (**CoinAPI** or **Kaiko**).
+3. Optional extra filters (not candle backup): open interest / funding from Bybit public stats or **Coinglass**.
+
+TradingView stays a Signal webhook, not a candle vendor. Orders stay on the bound exchange. Do not call private exchange APIs from the browser.
 
 ## Multi-tenancy
 
