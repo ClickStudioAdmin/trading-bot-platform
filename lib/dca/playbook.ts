@@ -287,7 +287,6 @@ export function dcaLegFor(
 
 export type DcaOpenHint = {
   clips: number;
-  nextAdd: string;
   remaining: string;
 };
 
@@ -1214,7 +1213,6 @@ export function dcaOpenHint(input: {
   side: FuturesSide;
   qty: number;
   mark: number | null;
-  nowMs: number;
 }): DcaOpenHint | null {
   if (input.playbook.symbol !== input.symbol) {
     return null;
@@ -1230,16 +1228,6 @@ export function dcaOpenHint(input: {
     input.mark !== null && input.qty > 0 ? input.qty * input.mark : null;
   return {
     clips: leg.clipsFilled,
-    nextAdd: formatDcaNextAdd({
-      status: leg.status,
-      startKind: input.playbook.startKind,
-      dcaMode: input.playbook.dcaMode,
-      clipsFilled: leg.clipsFilled,
-      dipPct: input.playbook.dipPct,
-      intervalMinutes: input.playbook.intervalMinutes,
-      lastClipAtMs: leg.lastClipAtMs,
-      nowMs: input.nowMs,
-    }),
     remaining: formatDcaRemaining({
       clipsFilled: leg.clipsFilled,
       maxClips: input.playbook.maxClips,
@@ -1257,7 +1245,6 @@ export function dcaHintsForOpen(
     qty: number;
     mark: number | null;
   }>,
-  nowMs = Date.now(),
 ): Record<string, DcaOpenHint> {
   const hints: Record<string, DcaOpenHint> = {};
   for (const row of open) {
@@ -1271,7 +1258,6 @@ export function dcaHintsForOpen(
       side: row.side,
       qty: row.qty,
       mark: row.mark,
-      nowMs,
     });
     if (hint) {
       hints[dcaHintKey(row.symbol, row.side)] = hint;

@@ -110,6 +110,7 @@ export default async function FuturesOverviewPage({
         exchangeBook={desk.exchangeBook}
         baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
         webhookNames={desk.webhookNames}
+        playbookOwnsOrders={dca}
         emptyMessage={
           showTicket
             ? undefined
@@ -124,6 +125,7 @@ export default async function FuturesOverviewPage({
         exchangeBook={desk.exchangeBook}
         webhookNames={desk.webhookNames}
         showDcaColumns={dca}
+        playbookOwnsOrders={dca}
         dcaHints={dcaHints}
         emptyMessage={
           showTicket ? (

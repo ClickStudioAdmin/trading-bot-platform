@@ -92,6 +92,7 @@ export function FuturesTpslCell({
   tpLimitPrice,
   slLimitPrice,
   next,
+  readOnly = false,
 }: {
   positionId: string;
   symbol: string;
@@ -113,9 +114,23 @@ export function FuturesTpslCell({
   tpLimitPrice: number | null;
   slLimitPrice: number | null;
   next: string;
+  readOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const hasLevels = takeProfit !== null || stopLoss !== null;
+  if (readOnly) {
+    return hasLevels ? (
+      <TpslPair
+        takeProfit={takeProfit}
+        stopLoss={stopLoss}
+        mode={tpslMode}
+        tpOrderType={tpOrderType}
+        slOrderType={slOrderType}
+      />
+    ) : (
+      <span className="text-ink-faint">—</span>
+    );
+  }
   return (
     <>
       {hasLevels ? (

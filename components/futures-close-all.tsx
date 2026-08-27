@@ -46,27 +46,36 @@ export function FuturesPositionBulkActions({
   signedIn,
   openCount,
   workingCount,
+  panicOnly = false,
 }: {
   next: string;
   signedIn: boolean;
   openCount: number;
   workingCount: number;
+  panicOnly?: boolean;
 }) {
   return (
     <div className="flex flex-wrap justify-end gap-2">
-      <FuturesBulkButton
-        next={next}
-        scope="positions"
-        enabled={signedIn && openCount > 0}
-        openCount={openCount}
-        workingCount={workingCount}
-      />
+      {panicOnly ? null : (
+        <FuturesBulkButton
+          next={next}
+          scope="positions"
+          enabled={signedIn && openCount > 0}
+          openCount={openCount}
+          workingCount={workingCount}
+        />
+      )}
       <FuturesBulkButton
         next={next}
         scope="all"
         enabled={signedIn && (openCount > 0 || workingCount > 0)}
         openCount={openCount}
         workingCount={workingCount}
+        extraBody={
+          panicOnly
+            ? " The playbook stays armed unless you Close playbook on Automations or turn on Reduce only."
+            : undefined
+        }
       />
     </div>
   );
@@ -98,12 +107,14 @@ function FuturesBulkButton({
   enabled,
   openCount,
   workingCount,
+  extraBody,
 }: {
   next: string;
   scope: CloseAllScope;
   enabled: boolean;
   openCount: number;
   workingCount: number;
+  extraBody?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -122,6 +133,7 @@ function FuturesBulkButton({
           scope={scope}
           openCount={openCount}
           workingCount={workingCount}
+          extraBody={extraBody}
           onClose={() => setOpen(false)}
         />
       ) : null}
@@ -134,12 +146,14 @@ function FuturesBulkDialog({
   scope,
   openCount,
   workingCount,
+  extraBody,
   onClose,
 }: {
   next: string;
   scope: CloseAllScope;
   openCount: number;
   workingCount: number;
+  extraBody?: string;
   onClose: () => void;
 }) {
   const titleId = useId();
@@ -191,7 +205,10 @@ function FuturesBulkDialog({
             ×
           </button>
         </div>
-        <p className="mt-2 text-sm text-ink-muted">{copy.body}</p>
+        <p className="mt-2 text-sm text-ink-muted">
+          {copy.body}
+          {extraBody}
+        </p>
         <dl
           className={`mt-3 grid gap-x-4 gap-y-3 ${showPositions && showOrders ? "grid-cols-2" : "grid-cols-1"}`}
         >

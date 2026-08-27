@@ -27,6 +27,7 @@ export function FuturesWorkingOrders({
   baseCoinFor,
   webhookNames = [],
   emptyMessage,
+  playbookOwnsOrders = false,
 }: {
   signedIn: boolean;
   working: FuturesWorkingOrder[];
@@ -35,25 +36,34 @@ export function FuturesWorkingOrders({
   baseCoinFor: (symbol: string) => string;
   webhookNames?: readonly string[];
   emptyMessage?: ReactNode;
+  playbookOwnsOrders?: boolean;
 }) {
+  const showOrderMeta = !playbookOwnsOrders;
+  const colSpan = showOrderMeta ? 10 : 7;
   return (
     <section>
       <div className="mb-3 flex items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Open orders</h2>
           <p className="text-sm text-ink-muted">
-            {exchangeBook
-              ? "Working limits on Bybit. Fills appear on the position when they match. Edit remaining qty or limit. Cancel removes the rest."
-              : "Working paper limits. They fill when mark crosses the limit. Edit remaining qty or limit. Cancel drops the rest."}
+            {playbookOwnsOrders
+              ? exchangeBook
+                ? "Working playbook limits on Bybit. Fills appear on the position when they match. Stop adding or Close playbook on Automations."
+                : "Working playbook limits. They fill when mark crosses the limit. Stop adding or Close playbook on Automations."
+              : exchangeBook
+                ? "Working limits on Bybit. Fills appear on the position when they match. Edit remaining qty or limit. Cancel removes the rest."
+                : "Working paper limits. They fill when mark crosses the limit. Edit remaining qty or limit. Cancel drops the rest."}
           </p>
         </div>
-        <div className="shrink-0">
-          <FuturesCancelAllOrders
-            next={next}
-            signedIn={signedIn}
-            workingCount={working.length}
-          />
-        </div>
+        {showOrderMeta ? (
+          <div className="shrink-0">
+            <FuturesCancelAllOrders
+              next={next}
+              signedIn={signedIn}
+              workingCount={working.length}
+            />
+          </div>
+        ) : null}
       </div>
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[48rem] text-left text-sm">
@@ -98,34 +108,38 @@ export function FuturesWorkingOrders({
                   hint="Local time this limit was placed. Hover for UTC."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="TP/SL"
-                  hint="Stops attached when this limit was placed. They move onto the position when it fills."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Trailing"
-                  hint="Retracement attached when this limit was placed. It moves onto the position when it fills."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Actions"
-                  hint={
-                    exchangeBook
-                      ? "Edit remaining qty or limit on Bybit, or cancel the rest."
-                      : "Edit remaining qty or limit, or cancel this paper order. No Bybit order."
-                  }
-                />
-              </th>
+              {showOrderMeta ? (
+                <>
+                  <th className="px-4 py-3 font-medium">
+                    <ColumnHint
+                      label="TP/SL"
+                      hint="Stops attached when this limit was placed. They move onto the position when it fills."
+                    />
+                  </th>
+                  <th className="px-4 py-3 font-medium">
+                    <ColumnHint
+                      label="Trailing"
+                      hint="Retracement attached when this limit was placed. It moves onto the position when it fills."
+                    />
+                  </th>
+                  <th className="px-4 py-3 font-medium">
+                    <ColumnHint
+                      label="Actions"
+                      hint={
+                        exchangeBook
+                          ? "Edit remaining qty or limit on Bybit, or cancel the rest."
+                          : "Edit remaining qty or limit, or cancel this paper order. No Bybit order."
+                      }
+                    />
+                  </th>
+                </>
+              ) : null}
             </tr>
           </thead>
           <tbody>
             {!signedIn ? (
               <tr>
-                <td colSpan={10} className="px-4 py-6 text-sm text-ink-muted">
+                <td colSpan={colSpan} className="px-4 py-6 text-sm text-ink-muted">
                   <Link href="/sign-in" className="text-accent">
                     Sign in
                   </Link>{" "}
@@ -134,7 +148,7 @@ export function FuturesWorkingOrders({
               </tr>
             ) : working.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-4 py-6 text-sm text-ink-muted">
+                <td colSpan={colSpan} className="px-4 py-6 text-sm text-ink-muted">
                   {emptyMessage ??
                     "No working limits. Choose Limit on Place an order, or Limit on an open row."}
                 </td>
@@ -147,6 +161,7 @@ export function FuturesWorkingOrders({
                   next={next}
                   baseCoin={baseCoinFor(row.symbol)}
                   webhookNames={webhookNames}
+                  showOrderMeta={showOrderMeta}
                 />
               ))
             )}
@@ -162,11 +177,13 @@ function WorkingRow({
   next,
   baseCoin,
   webhookNames,
+  showOrderMeta,
 }: {
   row: FuturesWorkingOrder;
   next: string;
   baseCoin: string;
   webhookNames: readonly string[];
+  showOrderMeta: boolean;
 }) {
   const remainingNotional = row.remainingQty * row.limitPrice;
   return (
@@ -203,61 +220,65 @@ function WorkingRow({
       <td className="px-4 py-3 text-ink-muted">
         <LocalTime at={row.createdAtMs} />
       </td>
-      <td className="px-4 py-3">
-        {row.takeProfit === null && row.stopLoss === null ? (
-          <span className="text-ink-faint">—</span>
-        ) : (
-          <TpslPair
-            takeProfit={row.takeProfit}
-            stopLoss={row.stopLoss}
-            mode={row.tpslMode}
-            tpOrderType={row.tpOrderType}
-            slOrderType={row.slOrderType}
-          />
-        )}
-      </td>
-      <td className="px-4 py-3">
-        {row.trailingStop === null ? (
-          <span className="text-ink-faint">—</span>
-        ) : (
-          <span className="tabular-nums">{formatPrice(row.trailingStop)}</span>
-        )}
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <ColumnHint
-            hint="Change remaining qty or limit"
-            label={
-              <FuturesWorkingEdit
-                workingId={row.id}
-                symbol={row.symbol}
-                action={row.action}
-                reduceOnly={row.reduceOnly}
-                remainingQty={row.remainingQty}
-                filledQty={row.filledQty}
-                limitPrice={row.limitPrice}
-                next={next}
+      {showOrderMeta ? (
+        <>
+          <td className="px-4 py-3">
+            {row.takeProfit === null && row.stopLoss === null ? (
+              <span className="text-ink-faint">—</span>
+            ) : (
+              <TpslPair
+                takeProfit={row.takeProfit}
+                stopLoss={row.stopLoss}
+                mode={row.tpslMode}
+                tpOrderType={row.tpOrderType}
+                slOrderType={row.slOrderType}
               />
-            }
-          />
-          <form action={cancelFuturesWorking}>
-            <input type="hidden" name="next" value={next} />
-            <input type="hidden" name="workingId" value={row.id} />
-            <ColumnHint
-              hint="Cancel remaining size"
-              label={
-                <PendingSubmitButton
-                  pendingLabel="Cancelling"
-                  successKey={`working-cancel-${row.id}`}
-                  className={ACTION_CLASS}
-                >
-                  Cancel
-                </PendingSubmitButton>
-              }
-            />
-          </form>
-        </div>
-      </td>
+            )}
+          </td>
+          <td className="px-4 py-3">
+            {row.trailingStop === null ? (
+              <span className="text-ink-faint">—</span>
+            ) : (
+              <span className="tabular-nums">{formatPrice(row.trailingStop)}</span>
+            )}
+          </td>
+          <td className="px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <ColumnHint
+                hint="Change remaining qty or limit"
+                label={
+                  <FuturesWorkingEdit
+                    workingId={row.id}
+                    symbol={row.symbol}
+                    action={row.action}
+                    reduceOnly={row.reduceOnly}
+                    remainingQty={row.remainingQty}
+                    filledQty={row.filledQty}
+                    limitPrice={row.limitPrice}
+                    next={next}
+                  />
+                }
+              />
+              <form action={cancelFuturesWorking}>
+                <input type="hidden" name="next" value={next} />
+                <input type="hidden" name="workingId" value={row.id} />
+                <ColumnHint
+                  hint="Cancel remaining size"
+                  label={
+                    <PendingSubmitButton
+                      pendingLabel="Cancelling"
+                      successKey={`working-cancel-${row.id}`}
+                      className={ACTION_CLASS}
+                    >
+                      Cancel
+                    </PendingSubmitButton>
+                  }
+                />
+              </form>
+            </div>
+          </td>
+        </>
+      ) : null}
     </tr>
   );
 }

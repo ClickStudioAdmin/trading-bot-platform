@@ -609,7 +609,6 @@ assert.equal(
     side: "long",
     qty: 1,
     mark: 100,
-    nowMs: 0,
   }),
   null,
 );
@@ -620,7 +619,6 @@ assert.equal(
     side: "long",
     qty: 0.02,
     mark: 100,
-    nowMs: Date.parse("2026-08-27T00:10:00.000Z"),
   })?.clips,
   2,
 );
@@ -628,7 +626,6 @@ assert.deepEqual(
   dcaHintsForOpen(
     [row as DcaPlaybook],
     [{ symbol: "BTCUSDT", side: "long", qty: 0.02, mark: 100 }],
-    Date.parse("2026-08-27T00:10:00.000Z"),
   )["BTCUSDT:long"]?.clips,
   2,
 );

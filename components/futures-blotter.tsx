@@ -76,6 +76,7 @@ export function OpenFuturesTrades({
   workingCount = 0,
   webhookNames = [],
   showDcaColumns = false,
+  playbookOwnsOrders = false,
   dcaHints = {},
 }: {
   signedIn: boolean;
@@ -88,6 +89,7 @@ export function OpenFuturesTrades({
   workingCount?: number;
   webhookNames?: readonly string[];
   showDcaColumns?: boolean;
+  playbookOwnsOrders?: boolean;
   dcaHints?: Readonly<Record<string, DcaOpenHint>>;
 }) {
   const { visible, setColumn } = useFuturesOpenColumns();
@@ -125,6 +127,7 @@ export function OpenFuturesTrades({
             signedIn={signedIn}
             openCount={open.length}
             workingCount={workingCount}
+            panicOnly={playbookOwnsOrders}
           />
         ) : null}
       </div>
@@ -215,7 +218,11 @@ export function OpenFuturesTrades({
                 <th className="px-3 py-3 font-medium">
                   <ColumnHint
                     label="TP/SL"
-                    hint="Take profit and stop loss on this row. Market fills when the trigger hits. Limit rests until mark can fill. Add when the position is open, or attach them on the order ticket."
+                    hint={
+                      playbookOwnsOrders
+                        ? "Take profit and stop loss the playbook writes on this row. Change them on Automations."
+                        : "Take profit and stop loss on this row. Market fills when the trigger hits. Limit rests until mark can fill. Add when the position is open, or attach them on the order ticket."
+                    }
                   />
                 </th>
               ) : null}
@@ -223,7 +230,11 @@ export function OpenFuturesTrades({
                 <th className="px-3 py-3 font-medium">
                   <ColumnHint
                     label="Trailing"
-                    hint="Retracement distance from the best price since activation. Closes the whole row at market. Add on the ticket or here."
+                    hint={
+                      playbookOwnsOrders
+                        ? "Retracement the playbook attaches on this row. Change it on Automations."
+                        : "Retracement distance from the best price since activation. Closes the whole row at market. Add on the ticket or here."
+                    }
                   />
                 </th>
               ) : null}
@@ -233,12 +244,6 @@ export function OpenFuturesTrades({
                     <ColumnHint
                       label="Orders"
                       hint="How many playbook orders have filled on this row."
-                    />
-                  </th>
-                  <th className="px-3 py-3 font-medium">
-                    <ColumnHint
-                      label="Next add"
-                      hint="Next add from price deviation, interval, grid, or wait for take profit / stop."
                     />
                   </th>
                   <th className="px-2 py-3 font-medium">
@@ -291,6 +296,7 @@ export function OpenFuturesTrades({
                   colSpan={colSpan}
                   webhookNames={webhookNames}
                   showDcaColumns={showDcaColumns}
+                  playbookOwnsOrders={playbookOwnsOrders}
                   dcaHint={
                     dcaHints[dcaHintKey(trade.symbol, trade.side)] ?? null
                   }
@@ -462,6 +468,7 @@ function OpenFuturesRows({
   colSpan,
   webhookNames,
   showDcaColumns,
+  playbookOwnsOrders,
   dcaHint,
 }: {
   trade: MarkedFutures;
@@ -470,6 +477,7 @@ function OpenFuturesRows({
   colSpan: number;
   webhookNames: readonly string[];
   showDcaColumns: boolean;
+  playbookOwnsOrders: boolean;
   dcaHint: DcaOpenHint | null;
 }) {
   const pnlPct =
@@ -590,6 +598,7 @@ function OpenFuturesRows({
             slLimitPrice={trade.slLimitPrice}
             liqPrice={trade.liqPrice}
             next={next}
+            readOnly={playbookOwnsOrders}
           />
         </td>
       ) : null}
@@ -606,6 +615,7 @@ function OpenFuturesRows({
             trailingActive={trade.trailingActive}
             liqPrice={trade.liqPrice}
             next={next}
+            readOnly={playbookOwnsOrders}
           />
         </td>
       ) : null}
@@ -613,9 +623,6 @@ function OpenFuturesRows({
         <>
           <td className="min-w-0 px-3 py-3 tabular-nums whitespace-nowrap">
             {dcaHint ? dcaHint.clips : "—"}
-          </td>
-          <td className="min-w-0 px-3 py-3 whitespace-nowrap text-ink-muted">
-            {dcaHint?.nextAdd ?? "—"}
           </td>
           <td className="min-w-0 px-2 py-3 whitespace-nowrap text-ink-muted">
             {dcaHint?.remaining ?? "—"}

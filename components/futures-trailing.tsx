@@ -84,6 +84,7 @@ export function FuturesTrailingCell({
   trailingStop,
   trailingActive,
   next,
+  readOnly = false,
 }: {
   positionId: string;
   symbol: string;
@@ -95,9 +96,17 @@ export function FuturesTrailingCell({
   trailingStop: number | null;
   trailingActive: number | null;
   next: string;
+  readOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const hasStop = trailingStop !== null;
+  if (readOnly) {
+    return hasStop ? (
+      <span className="tabular-nums">{formatPrice(trailingStop)}</span>
+    ) : (
+      <span className="text-ink-faint">—</span>
+    );
+  }
   return (
     <>
       {hasStop ? (
