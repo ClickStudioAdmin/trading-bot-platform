@@ -659,6 +659,13 @@ export function DcaPlaybookForm({
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
+          {showSaveAndArm ||
+          showManualTriggers ||
+          (playbook && showArmButton && !showStopAdding) ? (
+            <p className="shrink-0 text-xs text-ink-muted">
+              Initial Order Triggers
+            </p>
+          ) : null}
           {showSaveAndArm ? (
             <PendingSubmitButton
               formAction={saveAndArmDcaPlaybookAction}
