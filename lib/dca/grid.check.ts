@@ -19,6 +19,9 @@ import {
   dcaTakeProfitPrice,
   dcaTrailingActivationPrice,
   dcaTrailingDistance,
+  dcaTighterStopPrice,
+  dcaTighterTrailingActivation,
+  dcaTighterTrailingDistance,
 } from "./grid";
 import {
   emaCrossBullish,
@@ -346,6 +349,28 @@ assert.equal(
   99,
 );
 assert.equal(dcaTrailingDistance(100, 2), 2);
+assert.equal(
+  dcaTighterStopPrice({ side: "long", current: 95, candidate: 90 }),
+  95,
+);
+assert.equal(
+  dcaTighterStopPrice({ side: "long", current: 95, candidate: 97 }),
+  97,
+);
+assert.equal(
+  dcaTighterStopPrice({ side: "short", current: 105, candidate: 110 }),
+  105,
+);
+assert.equal(dcaTighterTrailingDistance(2, 3), 2);
+assert.equal(dcaTighterTrailingDistance(null, 2), 2);
+assert.equal(
+  dcaTighterTrailingActivation({
+    side: "long",
+    current: 103,
+    candidate: 101,
+  }),
+  103,
+);
 const planned = dcaPlannedExits({
   side: "long",
   entryPrice: 100,

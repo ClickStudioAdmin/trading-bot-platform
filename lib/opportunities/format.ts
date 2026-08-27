@@ -31,6 +31,31 @@ export function formatPrice(value: number | null): string {
   });
 }
 
+const QTY_DISPLAY_DECIMALS = 3;
+const QTY_FLOOR_EPS = 1e-8;
+
+export function formatQty(value: number): string {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+  if (value === 0) {
+    return (0).toFixed(QTY_DISPLAY_DECIMALS);
+  }
+  const factor = 10 ** QTY_DISPLAY_DECIMALS;
+  const floored = Math.floor(value * factor + QTY_FLOOR_EPS) / factor;
+  if (!(floored > 0) && value > 0) {
+    return formatQtyFull(value);
+  }
+  return floored.toFixed(QTY_DISPLAY_DECIMALS);
+}
+
+export function formatQtyFull(value: number): string {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+  return String(value);
+}
+
 export function formatSignedUsd(value: number): string {
   const formatted = `$${Math.abs(Math.round(value)).toLocaleString("en-US")}`;
   if (value > 0) {

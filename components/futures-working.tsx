@@ -16,7 +16,7 @@ import {
   workingTypeLabel,
   type FuturesWorkingOrder,
 } from "@/lib/futures/working";
-import { formatPrice, formatUsd } from "@/lib/opportunities/format";
+import { formatPrice, formatQty, formatQtyFull, formatUsd } from "@/lib/opportunities/format";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
 const ACTION_CLASS =
@@ -226,10 +226,15 @@ function WorkingRow({
         {workingTypeLabel(row)}
       </td>
       <td className="px-4 py-3 tabular-nums">
-        {row.remainingQty}
+        <span title={formatQtyFull(row.remainingQty)}>
+          {formatQty(row.remainingQty)}
+        </span>
         {row.filledQty > 0 ? (
-          <span className="block text-xs text-ink-faint">
-            {row.filledQty} filled
+          <span
+            className="block text-xs text-ink-faint"
+            title={formatQtyFull(row.filledQty)}
+          >
+            {formatQty(row.filledQty)} filled
           </span>
         ) : null}
       </td>

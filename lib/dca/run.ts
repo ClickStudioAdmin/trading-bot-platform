@@ -16,7 +16,6 @@ import {
   tpslWithoutLimitExits,
   type FuturesTpsl,
 } from "@/lib/futures/tpsl";
-import { sameWorkingNumber } from "@/lib/futures/working";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -24,23 +23,28 @@ import {
   dcaBreakevenPrice,
   dcaClipSizeAt,
   dcaPlannedExits,
+  dcaTighterStopPrice,
+  dcaTighterTrailingActivation,
+  dcaTighterTrailingDistance,
   dcaTrailingActivationPrice,
   dcaTrailingDistance,
 } from "./grid";
 import {
   dcaClipAction,
-  dcaClipKey,
   dcaClipRestKey,
   dcaCycleEnded,
   dcaEnabledSides,
-  dcaExitLimitKey,
+  dcaExitLimitRestKey,
+  dcaFlattenKey,
   dcaLegFor,
   dcaLegIsRunning,
+  dcaOpenExitLimits,
   dcaWebhookSignalApplies,
   IDLE_DCA_LEG,
   isDcaClipKey,
-  isDcaExitLimitKey,
   parseDcaClipIndex,
+  planDcaExitLimitKeep,
+  planDcaExitLimitSync,
   planDcaSafetySync,
   type DcaExitLimitKind,
   type DcaPlaybook,
@@ -55,6 +59,41 @@ import {
 export type DcaVerb = "arm" | "disarm" | "close-playbook";
 
 const gridSyncLocks = new Map<string, Promise<void>>();
+const exitSyncLocks = new Map<string, Promise<void>>();
+
+function playbookActor(playbook: DcaPlaybook, mode: TradingAccountMode) {
+  return {
+    userId: playbook.userId,
+    accountId: playbook.accountId,
+    mode,
+  };
+}
+
+function touchPlaybook(playbook: DcaPlaybook): void {
+  playbook.updatedAtMs = Date.now();
+}
+
+async function logDcaSyncFailed(input: {
+  playbook: DcaPlaybook;
+  side: FuturesSide;
+  error: string;
+  reason: string;
+}): Promise<void> {
+  await writeEventLog({
+    level: "warning",
+    scope: "trade",
+    event: "dca.sync_failed",
+    message: input.error,
+    userId: input.playbook.userId,
+    accountId: input.playbook.accountId,
+    strategy: FUTURES_STRATEGY_ID,
+    data: {
+      playbookId: input.playbook.id,
+      side: input.side,
+      reason: input.reason,
+    },
+  });
+}
 
 export function parseDcaPlaybookVerb(value: unknown): {
   verb: DcaVerb;
@@ -124,6 +163,7 @@ async function cancelSafetyOrders(input: {
     accountId: input.playbook.accountId,
     userId: input.playbook.userId,
   });
+  const actor = playbookActor(input.playbook, input.mode);
   for (const row of working) {
     if (row.reduceOnly) {
       continue;
@@ -131,17 +171,21 @@ async function cancelSafetyOrders(input: {
     if (!isDcaClipKey(row.idempotencyKey, input.playbook.id, input.side)) {
       continue;
     }
-    await runFuturesCommand({
-      actor: {
-        userId: input.playbook.userId,
-        accountId: input.playbook.accountId,
-        mode: input.mode,
-      },
+    const result = await runFuturesCommand({
+      actor,
       command: {
         kind: "cancel-working",
         workingId: row.id,
       },
     });
+    if (!result.ok) {
+      await logDcaSyncFailed({
+        playbook: input.playbook,
+        side: input.side,
+        error: result.error,
+        reason: "cancel_grid",
+      });
+    }
   }
 }
 
@@ -150,33 +194,37 @@ async function cancelExitLimit(input: {
   mode: TradingAccountMode;
   side: FuturesSide;
   kind: DcaExitLimitKind;
-}): Promise<void> {
-  const key = dcaExitLimitKey(input.playbook.id, input.side, input.kind);
+}): Promise<{ ok: true } | { ok: false; error: string }> {
   const working = await loadOpenFuturesWorking({
     accountId: input.playbook.accountId,
     userId: input.playbook.userId,
   });
-  const rows = working.filter((item) =>
-    isDcaExitLimitKey(
-      item.idempotencyKey,
-      input.playbook.id,
-      input.side,
-      input.kind,
-    ),
+  const rows = dcaOpenExitLimits(
+    working,
+    input.playbook.id,
+    input.side,
+    input.kind,
   );
+  const actor = playbookActor(input.playbook, input.mode);
   for (const row of rows) {
-    await runFuturesCommand({
-      actor: {
-        userId: input.playbook.userId,
-        accountId: input.playbook.accountId,
-        mode: input.mode,
-      },
+    const result = await runFuturesCommand({
+      actor,
       command: {
         kind: "cancel-working",
         workingId: row.id,
       },
     });
+    if (!result.ok) {
+      await logDcaSyncFailed({
+        playbook: input.playbook,
+        side: input.side,
+        error: result.error,
+        reason: `cancel_${input.kind}`,
+      });
+      return result;
+    }
   }
+  return { ok: true };
 }
 
 async function restExitLimit(input: {
@@ -187,51 +235,90 @@ async function restExitLimit(input: {
   positionId: string;
   qty: number;
   limitPrice: number;
-}): Promise<void> {
+}): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!(input.qty > 0) || !(input.limitPrice > 0)) {
-    return;
+    return { ok: true };
   }
-  const key = dcaExitLimitKey(input.playbook.id, input.side, input.kind);
   const working = await loadOpenFuturesWorking({
     accountId: input.playbook.accountId,
     userId: input.playbook.userId,
   });
-  const row = working.find((item) =>
-    isDcaExitLimitKey(
-      item.idempotencyKey,
-      input.playbook.id,
-      input.side,
-      input.kind,
-    ),
+  const matching = dcaOpenExitLimits(
+    working,
+    input.playbook.id,
+    input.side,
+    input.kind,
   );
-  if (row) {
-    if (
-      sameWorkingNumber(row.remainingQty, input.qty) &&
-      sameWorkingNumber(row.limitPrice, input.limitPrice)
-    ) {
-      return;
+  const { keep, cancelIds } = planDcaExitLimitKeep(
+    matching,
+    input.qty,
+    input.limitPrice,
+  );
+  const actor = playbookActor(input.playbook, input.mode);
+  for (const workingId of cancelIds) {
+    const cancelled = await runFuturesCommand({
+      actor,
+      command: { kind: "cancel-working", workingId },
+    });
+    if (!cancelled.ok) {
+      await logDcaSyncFailed({
+        playbook: input.playbook,
+        side: input.side,
+        error: cancelled.error,
+        reason: `cancel_extra_${input.kind}`,
+      });
+      return cancelled;
     }
-    await runFuturesCommand({
-      actor: {
-        userId: input.playbook.userId,
-        accountId: input.playbook.accountId,
-        mode: input.mode,
-      },
+  }
+  const plan = planDcaExitLimitSync({
+    qty: input.qty,
+    limitPrice: input.limitPrice,
+    existing: keep
+      ? { remainingQty: keep.remainingQty, limitPrice: keep.limitPrice }
+      : null,
+  });
+  if (plan.kind === "keep") {
+    return { ok: true };
+  }
+  let replace = plan.kind === "replace" || plan.kind === "rest";
+  if (plan.kind === "amend" && keep) {
+    const amended = await runFuturesCommand({
+      actor,
       command: {
         kind: "amend-working",
-        workingId: row.id,
-        qty: String(input.qty),
-        limitPrice: String(input.limitPrice),
+        workingId: keep.id,
+        qty: String(plan.qty),
+        limitPrice: String(plan.limitPrice),
       },
     });
-    return;
+    if (amended.ok) {
+      return { ok: true };
+    }
+    await logDcaSyncFailed({
+      playbook: input.playbook,
+      side: input.side,
+      error: amended.error,
+      reason: `amend_${input.kind}`,
+    });
+    replace = true;
   }
-  await runFuturesCommand({
-    actor: {
-      userId: input.playbook.userId,
-      accountId: input.playbook.accountId,
-      mode: input.mode,
-    },
+  if (replace && keep) {
+    const cancelled = await runFuturesCommand({
+      actor,
+      command: { kind: "cancel-working", workingId: keep.id },
+    });
+    if (!cancelled.ok) {
+      await logDcaSyncFailed({
+        playbook: input.playbook,
+        side: input.side,
+        error: cancelled.error,
+        reason: `replace_${input.kind}`,
+      });
+      return cancelled;
+    }
+  }
+  const placed = await runFuturesCommand({
+    actor,
     command: {
       kind: "place",
       action: "flatten",
@@ -240,11 +327,27 @@ async function restExitLimit(input: {
       orderType: "limit",
       limitPrice: String(input.limitPrice),
       size: String(input.qty),
-      idempotencyKey: `${key}${String(Date.now()).slice(-6)}`,
+      idempotencyKey: dcaExitLimitRestKey(
+        input.playbook.id,
+        input.side,
+        input.kind,
+        input.qty,
+        input.limitPrice,
+      ),
       source: "engine",
       ruleName: input.playbook.name,
     },
   });
+  if (!placed.ok) {
+    await logDcaSyncFailed({
+      playbook: input.playbook,
+      side: input.side,
+      error: placed.error,
+      reason: `rest_${input.kind}`,
+    });
+    return placed;
+  }
+  return { ok: true };
 }
 
 export async function syncDcaPlaybookGrid(input: {
@@ -310,19 +413,23 @@ async function syncDcaPlaybookGridUnlocked(input: {
       status: row.status,
     })),
   });
-  const actor = {
-    userId: input.playbook.userId,
-    accountId: input.playbook.accountId,
-    mode: input.mode,
-  };
+  const actor = playbookActor(input.playbook, input.mode);
   for (const workingId of plan.cancelIds) {
-    await runFuturesCommand({
+    const cancelled = await runFuturesCommand({
       actor,
       command: { kind: "cancel-working", workingId },
     });
+    if (!cancelled.ok) {
+      await logDcaSyncFailed({
+        playbook: input.playbook,
+        side: input.side,
+        error: cancelled.error,
+        reason: "cancel_grid",
+      });
+    }
   }
   for (const item of plan.amend) {
-    await runFuturesCommand({
+    const amended = await runFuturesCommand({
       actor,
       command: {
         kind: "amend-working",
@@ -331,6 +438,14 @@ async function syncDcaPlaybookGridUnlocked(input: {
         limitPrice: String(item.limitPrice),
       },
     });
+    if (!amended.ok) {
+      await logDcaSyncFailed({
+        playbook: input.playbook,
+        side: input.side,
+        error: amended.error,
+        reason: "amend_grid",
+      });
+    }
   }
   const openAfter = await loadOpenFuturesWorking({
     accountId: input.playbook.accountId,
@@ -350,7 +465,7 @@ async function syncDcaPlaybookGridUnlocked(input: {
     if (openIndices.has(item.clipIndex)) {
       continue;
     }
-    await runFuturesCommand({
+    const rested = await runFuturesCommand({
       actor,
       command: {
         kind: "place",
@@ -370,6 +485,15 @@ async function syncDcaPlaybookGridUnlocked(input: {
         ruleName: input.playbook.name,
       },
     });
+    if (!rested.ok) {
+      await logDcaSyncFailed({
+        playbook: input.playbook,
+        side: input.side,
+        error: rested.error,
+        reason: "rest_grid",
+      });
+      continue;
+    }
     openIndices.add(item.clipIndex);
   }
 }
@@ -387,12 +511,12 @@ async function placeClip(input: {
     input.playbook.sizeMultiplier,
   );
   const firstClip = leg.clipsFilled === 0;
+  const generation =
+    firstClip
+      ? input.playbook.updatedAtMs
+      : (leg.lastClipAtMs ?? input.playbook.updatedAtMs);
   const result = await runFuturesCommand({
-    actor: {
-      userId: input.playbook.userId,
-      accountId: input.playbook.accountId,
-      mode: input.mode,
-    },
+    actor: playbookActor(input.playbook, input.mode),
     command: {
       kind: "place",
       action: dcaClipAction(input.side),
@@ -400,7 +524,12 @@ async function placeClip(input: {
       orderType: "market",
       size: String(size),
       sizeUnit: input.playbook.sizeUnit,
-      idempotencyKey: `${dcaClipKey(input.playbook.id, input.side, leg.clipsFilled)}x${Date.now()}`,
+      idempotencyKey: dcaClipRestKey(
+        input.playbook.id,
+        input.side,
+        leg.clipsFilled,
+        generation,
+      ),
       source: "engine",
       ruleName: input.playbook.name,
       trailing: firstClip
@@ -464,6 +593,28 @@ export async function syncDcaPlaybookExits(input: {
   side: FuturesSide;
   lastPrice: number | null;
 }): Promise<void> {
+  const lockKey = `${input.playbook.id}:${input.side}:exit`;
+  const previous = exitSyncLocks.get(lockKey) ?? Promise.resolve();
+  const next = previous.then(
+    () => syncDcaPlaybookExitsUnlocked(input),
+    () => syncDcaPlaybookExitsUnlocked(input),
+  );
+  exitSyncLocks.set(lockKey, next);
+  try {
+    await next;
+  } finally {
+    if (exitSyncLocks.get(lockKey) === next) {
+      exitSyncLocks.delete(lockKey);
+    }
+  }
+}
+
+async function syncDcaPlaybookExitsUnlocked(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+  side: FuturesSide;
+  lastPrice: number | null;
+}): Promise<void> {
   const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
     accountId: input.playbook.accountId,
     userId: input.playbook.userId,
@@ -484,14 +635,19 @@ export async function syncDcaPlaybookExits(input: {
     stopLossBasis: input.playbook.stopLossBasis,
     trailingPct: input.playbook.trailingPct,
   });
-  const stopLoss = leg.breakevenDone
+  const current = tpslFromRow(open) ?? emptyFuturesTpsl();
+  const rawStop = leg.breakevenDone
     ? dcaBreakevenPrice({
         side: input.side,
         basisPrice: open.entryPrice,
         offsetPct: input.playbook.breakevenOffsetPct ?? 0,
       })
     : planned.stopLoss;
-  const current = tpslFromRow(open) ?? emptyFuturesTpsl();
+  const stopLoss = dcaTighterStopPrice({
+    side: input.side,
+    current: current.stopLoss,
+    candidate: rawStop,
+  });
   const tpType =
     planned.takeProfit === null ? "market" : input.playbook.takeProfitOrderType;
   const nextTpsl: FuturesTpsl = {
@@ -506,18 +662,15 @@ export async function syncDcaPlaybookExits(input: {
         : null,
     slLimitPrice: null,
   };
+  const actor = playbookActor(input.playbook, input.mode);
   if (
     !sameExitPrice(current.takeProfit, planned.takeProfit) ||
     !sameExitPrice(current.stopLoss, stopLoss) ||
     (planned.takeProfit !== null && current.tpOrderType !== tpType) ||
     (stopLoss !== null && current.slOrderType !== "market")
   ) {
-    await runFuturesCommand({
-      actor: {
-        userId: input.playbook.userId,
-        accountId: input.playbook.accountId,
-        mode: input.mode,
-      },
+    const set = await runFuturesCommand({
+      actor,
       command: {
         kind: "set-tpsl",
         positionId: open.id,
@@ -527,6 +680,14 @@ export async function syncDcaPlaybookExits(input: {
         venueTpsl: tpslWithoutLimitExits(nextTpsl),
       },
     });
+    if (!set.ok) {
+      await logDcaSyncFailed({
+        playbook: input.playbook,
+        side: input.side,
+        error: set.error,
+        reason: "set_tpsl",
+      });
+    }
   }
   if (tpType === "limit" && planned.takeProfit !== null) {
     await restExitLimit({
@@ -552,6 +713,97 @@ export async function syncDcaPlaybookExits(input: {
     side: input.side,
     kind: "sl",
   });
+  await syncDcaTrailing({
+    playbook: input.playbook,
+    mode: input.mode,
+    side: input.side,
+    positionId: open.id,
+    lastPrice: input.lastPrice,
+    currentDistance: open.trailingStop,
+    currentActive: open.trailingActive,
+    currentPeak: open.trailingPeak,
+  });
+}
+
+async function syncDcaTrailing(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+  side: FuturesSide;
+  positionId: string;
+  lastPrice: number | null;
+  currentDistance: number | null;
+  currentActive: number | null;
+  currentPeak: number | null;
+}): Promise<void> {
+  const lastPrice = input.lastPrice;
+  if (input.playbook.trailingPct === null || lastPrice === null || !(lastPrice > 0)) {
+    if (input.currentDistance !== null) {
+      const cleared = await runFuturesCommand({
+        actor: playbookActor(input.playbook, input.mode),
+        command: {
+          kind: "set-trailing",
+          positionId: input.positionId,
+          symbol: input.playbook.symbol,
+          form: new FormData(),
+          trailing: null,
+        },
+      });
+      if (!cleared.ok) {
+        await logDcaSyncFailed({
+          playbook: input.playbook,
+          side: input.side,
+          error: cleared.error,
+          reason: "clear_trailing",
+        });
+      }
+    }
+    return;
+  }
+  const candidate = clipTrailing(input.playbook, input.side, lastPrice);
+  if (!candidate) {
+    return;
+  }
+  const distance = dcaTighterTrailingDistance(
+    input.currentDistance,
+    candidate.distance,
+  );
+  if (distance === null) {
+    return;
+  }
+  const activePrice = dcaTighterTrailingActivation({
+    side: input.side,
+    current: input.currentActive,
+    candidate: candidate.activePrice,
+  });
+  const next: FuturesTrailing = {
+    distance,
+    activePrice,
+    peak: input.currentPeak,
+  };
+  if (
+    sameExitPrice(input.currentDistance, next.distance) &&
+    sameExitPrice(input.currentActive, next.activePrice)
+  ) {
+    return;
+  }
+  const set = await runFuturesCommand({
+    actor: playbookActor(input.playbook, input.mode),
+    command: {
+      kind: "set-trailing",
+      positionId: input.positionId,
+      symbol: input.playbook.symbol,
+      form: new FormData(),
+      trailing: next,
+    },
+  });
+  if (!set.ok) {
+    await logDcaSyncFailed({
+      playbook: input.playbook,
+      side: input.side,
+      error: set.error,
+      reason: "set_trailing",
+    });
+  }
 }
 
 async function flattenSide(input: {
@@ -570,13 +822,8 @@ async function flattenSide(input: {
   if (!open) {
     return { ok: true };
   }
-  const compact = dcaClipKey(input.playbook.id, input.side, 0);
   const result = await runFuturesCommand({
-    actor: {
-      userId: input.playbook.userId,
-      accountId: input.playbook.accountId,
-      mode: input.mode,
-    },
+    actor: playbookActor(input.playbook, input.mode),
     command: {
       kind: "place",
       action: "flatten",
@@ -585,7 +832,7 @@ async function flattenSide(input: {
       orderType: "market",
       source: "engine",
       ruleName: input.playbook.name,
-      idempotencyKey: `c${compact.slice(1)}${String(Date.now()).slice(-6)}`,
+      idempotencyKey: dcaFlattenKey(input.playbook.id, input.side, open.id),
     },
   });
   return result.ok ? { ok: true } : result;
@@ -604,18 +851,18 @@ async function moveStopToBreakeven(input: {
   if (!open) {
     return { ok: true };
   }
-  const stop = dcaBreakevenPrice({
-    side: input.side,
-    basisPrice: open.entryPrice,
-    offsetPct: input.playbook.breakevenOffsetPct ?? 0,
-  });
   const current = tpslFromRow(open) ?? emptyFuturesTpsl();
+  const stop = dcaTighterStopPrice({
+    side: input.side,
+    current: current.stopLoss,
+    candidate: dcaBreakevenPrice({
+      side: input.side,
+      basisPrice: open.entryPrice,
+      offsetPct: input.playbook.breakevenOffsetPct ?? 0,
+    }),
+  });
   const result = await runFuturesCommand({
-    actor: {
-      userId: input.playbook.userId,
-      accountId: input.playbook.accountId,
-      mode: input.mode,
-    },
+    actor: playbookActor(input.playbook, input.mode),
     command: {
       kind: "set-tpsl",
       positionId: open.id,
@@ -725,8 +972,7 @@ export async function applyDcaVerb(input: {
       if (!reset.ok) {
         return reset;
       }
-    }
-    const remaining = dcaEnabledSides(input.playbook.direction).filter(
+      touchPlaybook(input.playbook);
       (side) =>
         !sides.includes(side) &&
         dcaLegIsRunning(dcaLegFor(input.playbook, side).status),
@@ -739,6 +985,7 @@ export async function applyDcaVerb(input: {
       if (!reset.ok) {
         return reset;
       }
+      touchPlaybook(input.playbook);
     }
     return { ok: true, message: "Playbook closed." };
   }
@@ -789,6 +1036,7 @@ export async function applyDcaVerb(input: {
       if (!reset.ok) {
         return reset;
       }
+      touchPlaybook(playbook);
       leg = { ...IDLE_DCA_LEG };
       if (side === "long") {
         playbook.long = leg;

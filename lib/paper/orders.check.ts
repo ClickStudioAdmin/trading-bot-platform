@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { formatPrice } from "../opportunities/format";
+import { formatPrice, formatQty, formatQtyFull } from "../opportunities/format";
 import type { ScannedOpportunity } from "../opportunities/scan";
 import { EMPTY_AUTOMATION } from "./automation";
 import {
@@ -24,6 +24,10 @@ import { parsePaperCarryRow } from "./rows";
 assert.equal(formatPrice(67210.25), "67,210.25");
 assert.equal(formatPrice(1.23456), "1.2346");
 assert.equal(formatPrice(null), "—");
+assert.equal(formatQty(0.16000000000000003), "0.160");
+assert.equal(formatQty(0.16), "0.160");
+assert.equal(formatQty(0.001), "0.001");
+assert.equal(formatQtyFull(0.16000000000000003), "0.16000000000000003");
 
 const opportunity: ScannedOpportunity = {
   baseCoin: "BTC",

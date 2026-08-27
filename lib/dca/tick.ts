@@ -3,7 +3,7 @@ import {
   fetchBybitKlines,
   fetchBybitTickers,
 } from "@/lib/exchanges/bybit/client";
-import { loadFuturesWorking } from "@/lib/futures/list";
+import { loadFuturesWorking, loadOpenFuturesWorking } from "@/lib/futures/list";
 import { parseFuturesPositionRow } from "@/lib/futures/model";
 import type { FuturesSide } from "@/lib/futures/model";
 import { tickerTriggerPrices } from "@/lib/futures/tpsl";
@@ -16,6 +16,7 @@ import {
   dcaGridClipCounts,
   dcaLegFor,
   dcaLegIsRunning,
+  dcaOpenExitLimits,
   dcaStartListens,
   decideDcaTick,
   type DcaPlaybook,
@@ -171,6 +172,23 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
           row.symbol === playbook.symbol &&
           row.side === side,
       );
+      await syncDcaPlaybookGrid({
+        playbook,
+        mode: account.mode,
+        side,
+      });
+      await syncDcaPlaybookExits({
+        playbook,
+        mode: account.mode,
+        side,
+        lastPrice: prices.last,
+      });
+      const openWorking = await loadOpenFuturesWorking({
+        accountId: playbook.accountId,
+        userId: playbook.userId,
+      });
+      const tpLimitResting =
+        dcaOpenExitLimits(openWorking, playbook.id, side, "tp").length > 0;
       const decision = decideDcaTick({
         status: leg.status,
         side,
@@ -195,6 +213,8 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
         stopLossPct: playbook.stopLossPct,
         takeProfitBasis: playbook.takeProfitBasis,
         stopLossBasis: playbook.stopLossBasis,
+        takeProfitOrderType: playbook.takeProfitOrderType,
+        tpLimitResting,
         breakevenActivationPct: playbook.breakevenActivationPct,
         breakevenDone: leg.breakevenDone,
         armTrigger: playbook.armTrigger,

@@ -10,10 +10,14 @@ import {
   dcaCycleEnded,
   dcaGridClipCounts,
   dcaExitLimitKey,
+  dcaExitLimitRestKey,
+  dcaFlattenKey,
   parseDcaClipIndex,
   parseDcaExitLimitKind,
   isDcaClipKey,
   isDcaExitLimitKey,
+  planDcaExitLimitKeep,
+  planDcaExitLimitSync,
   planDcaSafetySync,
   formatDcaEntryType,
   dcaDipMet,
@@ -80,6 +84,103 @@ assert.equal(parseDcaExitLimitKind("d11111111lsl"), "sl");
 assert.equal(parseDcaExitLimitKind("d11111111ltp847291"), "tp");
 assert.equal(parseDcaClipIndex("d11111111ltp847291"), null);
 assert.equal(parseDcaClipIndex("d11111111l10x847291"), 10);
+const tpRestKey = dcaExitLimitRestKey(
+  "11111111-1111-4111-8111-111111111111",
+  "short",
+  "tp",
+  0.03,
+  2489.18,
+);
+assert.equal(parseDcaExitLimitKind(tpRestKey), "tp");
+assert.equal(
+  isDcaExitLimitKey(
+    tpRestKey,
+    "11111111-1111-4111-8111-111111111111",
+    "short",
+    "tp",
+  ),
+  true,
+);
+assert.equal(
+  dcaExitLimitRestKey(
+    "11111111-1111-4111-8111-111111111111",
+    "short",
+    "tp",
+    0.03,
+    2489.18,
+  ),
+  tpRestKey,
+);
+assert.ok(tpRestKey.length <= 36);
+assert.equal(
+  dcaFlattenKey(
+    "11111111-1111-4111-8111-111111111111",
+    "short",
+    "22222222-2222-4222-8222-222222222222",
+  ),
+  "c11111111s22222222",
+);
+assert.deepEqual(
+  planDcaExitLimitSync({
+    qty: 1,
+    limitPrice: 100,
+    existing: null,
+  }),
+  { kind: "rest" },
+);
+assert.deepEqual(
+  planDcaExitLimitSync({
+    qty: 1,
+    limitPrice: 100,
+    existing: { remainingQty: 1, limitPrice: 100 },
+  }),
+  { kind: "keep" },
+);
+assert.deepEqual(
+  planDcaExitLimitSync({
+    qty: 2,
+    limitPrice: 100,
+    existing: { remainingQty: 1, limitPrice: 100 },
+  }),
+  { kind: "replace" },
+);
+assert.deepEqual(
+  planDcaExitLimitSync({
+    qty: 0.5,
+    limitPrice: 110,
+    existing: { remainingQty: 1, limitPrice: 100 },
+  }),
+  { kind: "amend", qty: 0.5, limitPrice: 110 },
+);
+assert.deepEqual(
+  planDcaExitLimitKeep(
+    [
+      {
+        id: "a",
+        idempotencyKey: "d11111111ltp1",
+        remainingQty: 1,
+        limitPrice: 100,
+        reduceOnly: true,
+      },
+      {
+        id: "b",
+        idempotencyKey: "d11111111ltp2",
+        remainingQty: 1,
+        limitPrice: 100,
+        reduceOnly: true,
+      },
+    ],
+    1,
+    100,
+  ),
+  { keep: {
+    id: "a",
+    idempotencyKey: "d11111111ltp1",
+    remainingQty: 1,
+    limitPrice: 100,
+    reduceOnly: true,
+  }, cancelIds: ["b"] },
+);
 assert.equal(
   isDcaClipKey(
     "d11111111l10",
@@ -584,6 +685,26 @@ assert.equal(
     mark: 111,
   }).action.kind,
   "close",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    mark: 111,
+    takeProfitOrderType: "limit",
+    tpLimitResting: true,
+  }).action.kind,
+  "none",
+);
+assert.deepEqual(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    mark: 111,
+    takeProfitOrderType: "limit",
+    tpLimitResting: false,
+  }).action,
+  { kind: "close", reason: "take_profit" },
 );
 assert.equal(
   decideDcaTick({

@@ -591,6 +591,51 @@ export function dcaTrailingDistance(mark: number, trailingPct: number): number {
   return mark * (trailingPct / 100);
 }
 
+export function dcaTighterStopPrice(input: {
+  side: FuturesSide;
+  current: number | null;
+  candidate: number | null;
+}): number | null {
+  if (input.candidate === null || !(input.candidate > 0)) {
+    return input.current !== null && input.current > 0 ? input.current : null;
+  }
+  if (input.current === null || !(input.current > 0)) {
+    return input.candidate;
+  }
+  return input.side === "long"
+    ? Math.max(input.current, input.candidate)
+    : Math.min(input.current, input.candidate);
+}
+
+export function dcaTighterTrailingDistance(
+  current: number | null,
+  candidate: number | null,
+): number | null {
+  if (candidate === null || !(candidate > 0)) {
+    return current !== null && current > 0 ? current : null;
+  }
+  if (current === null || !(current > 0)) {
+    return candidate;
+  }
+  return Math.min(current, candidate);
+}
+
+export function dcaTighterTrailingActivation(input: {
+  side: FuturesSide;
+  current: number | null;
+  candidate: number | null;
+}): number | null {
+  if (input.candidate === null || !(input.candidate > 0)) {
+    return input.current !== null && input.current > 0 ? input.current : null;
+  }
+  if (input.current === null || !(input.current > 0)) {
+    return input.candidate;
+  }
+  return input.side === "long"
+    ? Math.max(input.current, input.candidate)
+    : Math.min(input.current, input.candidate);
+}
+
 export function dcaTrailingActivationPrice(input: {
   side: FuturesSide;
   basisPrice: number;

@@ -1010,6 +1010,8 @@ export function decideDcaTick(input: {
   indicatorLevel?: number | null;
   indicatorConditionTrue?: boolean;
   closes?: number[] | null;
+  takeProfitOrderType?: FuturesOrderType;
+  tpLimitResting?: boolean;
   triggerPrices: { last: number | null; mark: number | null; index: number | null };
 }): DcaTickDecision {
   const startKind =
@@ -1108,6 +1110,17 @@ export function decideDcaTick(input: {
     input.takeProfitPct !== null &&
     tpPnl >= input.takeProfitPct
   ) {
+    const waitForLimit =
+      (input.takeProfitOrderType ?? "market") === "limit" &&
+      Boolean(input.tpLimitResting);
+    if (waitForLimit) {
+      return {
+        action: { kind: "none" },
+        nextArmTrue,
+        nextDisarmTrue,
+        nextIndicatorTrue,
+      };
+    }
     return {
       action: { kind: "close", reason: "take_profit" },
       nextArmTrue,
@@ -1422,13 +1435,39 @@ export function dcaExitLimitKey(
   return `d${compact}${sideChar}${kind}`;
 }
 
+export function dcaExitLimitRestKey(
+  playbookId: string,
+  side: FuturesSide,
+  kind: DcaExitLimitKind,
+  qty: number,
+  limitPrice: number,
+): string {
+  const q = Math.max(0, Math.round(qty * 1e8)).toString(36);
+  const p = Math.max(0, Math.round(limitPrice * 1e4)).toString(36);
+  const key = `${dcaExitLimitKey(playbookId, side, kind)}x${q}p${p}`;
+  return key.length <= 36 ? key : key.slice(0, 36);
+}
+
+export function dcaFlattenKey(
+  playbookId: string,
+  side: FuturesSide,
+  positionId: string,
+): string {
+  const compact = playbookId.replace(/-/g, "").slice(0, 8);
+  const pos = positionId.replace(/-/g, "").slice(0, 8);
+  const sideChar = side === "long" ? "l" : "s";
+  return `c${compact}${sideChar}${pos}`;
+}
+
 export function parseDcaExitLimitKind(
   key: string | null | undefined,
 ): DcaExitLimitKind | null {
   if (!key) {
     return null;
   }
-  const match = /^d[a-f0-9]{8}[ls](tp|sl)\d*$/i.exec(key.trim());
+  const match = /^d[a-f0-9]{8}[ls](tp|sl)(?:\d+|x[a-z0-9]+)?$/i.exec(
+    key.trim(),
+  );
   if (!match) {
     return null;
   }
@@ -1464,6 +1503,64 @@ export type DcaSafetyWorkingRow = {
   reduceOnly: boolean;
   status?: string;
 };
+
+export function dcaOpenExitLimits(
+  working: readonly DcaSafetyWorkingRow[],
+  playbookId: string,
+  side: FuturesSide,
+  kind: DcaExitLimitKind,
+): DcaSafetyWorkingRow[] {
+  return working.filter(
+    (row) =>
+      (!row.status || row.status === "open") &&
+      isDcaExitLimitKey(row.idempotencyKey, playbookId, side, kind),
+  );
+}
+
+export function planDcaExitLimitKeep(
+  rows: readonly DcaSafetyWorkingRow[],
+  qty: number,
+  limitPrice: number,
+): { keep: DcaSafetyWorkingRow | null; cancelIds: string[] } {
+  if (rows.length === 0) {
+    return { keep: null, cancelIds: [] };
+  }
+  const match = rows.find(
+    (row) =>
+      sameSafetyNumber(row.remainingQty, qty) &&
+      sameSafetyNumber(row.limitPrice, limitPrice),
+  );
+  const keep = match ?? rows[0]!;
+  return {
+    keep,
+    cancelIds: rows.filter((row) => row.id !== keep.id).map((row) => row.id),
+  };
+}
+
+export type DcaExitLimitPlan =
+  | { kind: "keep" }
+  | { kind: "amend"; qty: number; limitPrice: number }
+  | { kind: "replace" }
+  | { kind: "rest" };
+
+export function planDcaExitLimitSync(input: {
+  qty: number;
+  limitPrice: number;
+  existing: { remainingQty: number; limitPrice: number } | null;
+}): DcaExitLimitPlan {
+  if (!input.existing) {
+    return { kind: "rest" };
+  }
+  const sameQty = sameSafetyNumber(input.existing.remainingQty, input.qty);
+  const samePrice = sameSafetyNumber(input.existing.limitPrice, input.limitPrice);
+  if (sameQty && samePrice) {
+    return { kind: "keep" };
+  }
+  if (input.qty > input.existing.remainingQty + SAME_SAFETY) {
+    return { kind: "replace" };
+  }
+  return { kind: "amend", qty: input.qty, limitPrice: input.limitPrice };
+}
 
 export type DcaSafetySyncPlan = {
   cancelIds: string[];

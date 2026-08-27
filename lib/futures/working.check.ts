@@ -210,6 +210,13 @@ assert.equal(
   }),
   "Take Profit",
 );
+assert.equal(
+  workingTypeLabel({
+    reduceOnly: true,
+    idempotencyKey: "d11111111stpx1clp1b5e",
+  }),
+  "Take Profit",
+);
 assert.deepEqual(
   sortFuturesWorkingRows([
     { idempotencyKey: "d11111111l19", createdAtMs: 3 },

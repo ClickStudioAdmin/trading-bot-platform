@@ -38,6 +38,8 @@ import {
 import {
   formatPct,
   formatPrice,
+  formatQty,
+  formatQtyFull,
   formatSignedUsd,
   formatUsd,
   signedTone,
@@ -156,6 +158,14 @@ export function OpenFuturesTrades({
               <th className="px-3 py-3 font-medium">
                 <ColumnHint label="Side" hint="Long or short. Both can be open on the same contract." />
               </th>
+              {showDcaColumns ? (
+                <th className="px-3 py-3 font-medium">
+                  <ColumnHint
+                    label="Orders"
+                    hint="Playbook orders filled versus the max. Resting limits are not filled yet."
+                  />
+                </th>
+              ) : null}
               {visible.qty ? (
                 <th className="px-3 py-3 font-medium">
                   <ColumnHint label="Qty" hint="Base-coin size on this row." />
@@ -235,14 +245,6 @@ export function OpenFuturesTrades({
                         ? "Retracement from Automations. Faint is the recipe distance. Green means it is attached on this row."
                         : "Retracement distance from the best price since activation. Closes the whole row at market. Add on the ticket or here."
                     }
-                  />
-                </th>
-              ) : null}
-              {showDcaColumns ? (
-                <th className="px-3 py-3 font-medium">
-                  <ColumnHint
-                    label="Orders"
-                    hint="Playbook orders filled versus the max. Resting limits are not filled yet."
                   />
                 </th>
               ) : null}
@@ -523,8 +525,15 @@ function OpenFuturesRows({
       >
         {trade.side}
       </td>
+      {showDcaColumns ? (
+        <td className="min-w-0 px-3 py-3 tabular-nums whitespace-nowrap">
+          {dcaHint?.orders ?? "—"}
+        </td>
+      ) : null}
       {visible.qty ? (
-        <td className="min-w-0 px-3 py-3 tabular-nums whitespace-nowrap">{trade.qty}</td>
+        <td className="min-w-0 px-3 py-3 tabular-nums whitespace-nowrap">
+          <span title={formatQtyFull(trade.qty)}>{formatQty(trade.qty)}</span>
+        </td>
       ) : null}
       {visible.value ? (
         <td className="min-w-0 px-2 py-3 tabular-nums whitespace-nowrap text-ink-muted">
@@ -616,11 +625,6 @@ function OpenFuturesRows({
           />
         </td>
       ) : null}
-      {showDcaColumns ? (
-        <td className="min-w-0 px-3 py-3 tabular-nums whitespace-nowrap">
-          {dcaHint?.orders ?? "—"}
-        </td>
-      ) : null}
       <td className="px-2 py-3 whitespace-nowrap">
         <FuturesCloseActions trade={trade} next={next} />
       </td>
@@ -665,9 +669,12 @@ function ClosedFuturesRows({
             <span className="flex items-center gap-2 font-medium">
               <span>{baseCoin}</span>
             </span>
-            <span className="mt-0.5 block text-xs text-ink-faint">
+            <span
+              className="mt-0.5 block text-xs text-ink-faint"
+              title={trade.qty ? formatQtyFull(trade.qty) : undefined}
+            >
               {trade.symbol}
-              {trade.qty ? ` · ${trade.qty}` : ""}
+              {trade.qty ? ` · ${formatQty(trade.qty)}` : ""}
             </span>
           </span>
         </span>
