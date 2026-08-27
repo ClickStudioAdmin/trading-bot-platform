@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { ColumnHint } from "@/components/column-hint";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -1065,7 +1066,11 @@ export function DcaPlaybookForm({
               ) : null}
               {direction === "both" ? (
                 <p className="text-xs text-ink-muted sm:col-span-2 lg:col-span-4">
-                  {indicatorBothSidesHint(indicatorKind, indicatorCompare)}
+                  {indicatorBothSidesHint(indicatorKind, indicatorCompare)}{" "}
+                  <IndicatorBothDetails
+                    kind={indicatorKind}
+                    compare={indicatorCompare}
+                  />
                 </p>
               ) : (
                 <>
@@ -1794,6 +1799,178 @@ function indicatorBothSidesHint(
     return "Triggers Long while RSI is at or below the level. Triggers Short while RSI is at or above the level.";
   }
   return "Triggers Long when RSI crosses below the level. Triggers Short when RSI crosses above the level.";
+}
+
+const bothDetailsRows: {
+  id: string;
+  setting: string;
+  long: string;
+  short: string;
+}[] = [
+  {
+    id: "macd-cross",
+    setting: "MACD · Crosses zero",
+    long: "Histogram crosses above 0",
+    short: "Histogram crosses below 0",
+  },
+  {
+    id: "macd-sign",
+    setting: "MACD · Histogram sign",
+    long: "Histogram is positive",
+    short: "Histogram is negative",
+  },
+  {
+    id: "ema-pair",
+    setting: "EMA · 9/21 cross",
+    long: "EMA 9 crosses above EMA 21",
+    short: "EMA 9 crosses below EMA 21",
+  },
+  {
+    id: "ema-price",
+    setting: "EMA · 21 vs price",
+    long: "EMA 21 crosses above the price",
+    short: "EMA 21 crosses below the price",
+  },
+  {
+    id: "rsi-cross",
+    setting: "RSI · Crosses the level",
+    long: "RSI crosses below the level",
+    short: "RSI crosses above the level",
+  },
+  {
+    id: "rsi-at",
+    setting: "RSI · At the level",
+    long: "RSI is at or below the level",
+    short: "RSI is at or above the level",
+  },
+];
+
+function indicatorBothDetailsRowId(
+  kind: "rsi" | "macd" | "ema_cross",
+  compare: string,
+): string {
+  if (kind === "macd") {
+    return compare === "gte" ? "macd-sign" : "macd-cross";
+  }
+  if (kind === "ema_cross") {
+    return compare === "pair" ? "ema-pair" : "ema-price";
+  }
+  return compare === "lte" || compare === "gte" ? "rsi-at" : "rsi-cross";
+}
+
+function IndicatorBothDetails({
+  kind,
+  compare,
+}: {
+  kind: "rsi" | "macd" | "ema_cross";
+  compare: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [box, setBox] = useState<DOMRect | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const currentId = indicatorBothDetailsRowId(kind, compare);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+    const onPointer = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        buttonRef.current?.contains(target) ||
+        panelRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onPointer);
+    };
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="text-accent hover:text-accent-strong"
+        aria-expanded={open}
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          setBox(
+            next
+              ? (buttonRef.current?.getBoundingClientRect() ?? null)
+              : null,
+          );
+        }}
+      >
+        Show more details
+      </button>
+      {open && box && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={panelRef}
+              role="dialog"
+              aria-label="When Direction is Both"
+              className="fixed z-50 w-[min(36rem,calc(100vw-1.5rem))] overflow-hidden rounded-card border border-line bg-surface-raised text-xs text-ink shadow-none"
+              style={{
+                top: box.bottom + 8,
+                left: Math.max(
+                  12,
+                  Math.min(box.left, window.innerWidth - 36 * 16 - 12),
+                ),
+              }}
+            >
+              <p className="border-b border-line px-3 py-2 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+                When Direction is Both
+              </p>
+              <table className="w-full text-left">
+                <thead className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+                  <tr className="border-b border-line">
+                    <th className="px-3 py-2 font-medium">Setting</th>
+                    <th className="px-3 py-2 font-medium">Long</th>
+                    <th className="px-3 py-2 font-medium">Short</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bothDetailsRows.map((row) => {
+                    const current = row.id === currentId;
+                    return (
+                      <tr
+                        key={row.id}
+                        className={
+                          current
+                            ? "bg-accent/10 text-ink"
+                            : "text-ink-muted"
+                        }
+                      >
+                        <td className="px-3 py-2 font-medium text-ink">
+                          {row.setting}
+                        </td>
+                        <td className="px-3 py-2">{row.long}</td>
+                        <td className="px-3 py-2">{row.short}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
+  );
 }
 
 function TriggerFields({
