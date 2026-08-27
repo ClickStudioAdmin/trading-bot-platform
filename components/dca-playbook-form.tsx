@@ -848,12 +848,10 @@ export function DcaPlaybookForm({
               }
               className={fieldClass}
             >
-              <option value="immediate">
-                Manual - When you manually trigger the entry
-              </option>
-              <option value="price">Price cross</option>
-              <option value="webhook">Signal webhook</option>
+              <option value="immediate">Manual</option>
               <option value="indicator">Indicator</option>
+              <option value="price">Price Cross</option>
+              <option value="webhook">Signal Webhook</option>
             </select>
           </label>
         </div>
@@ -882,7 +880,7 @@ export function DcaPlaybookForm({
             signalWebhooks.length > 0 ? (
               <>
                 <label className={`${labelClass} lg:col-span-2`}>
-                  Signal
+                  Signal Webhook
                   <select
                     name="webhookId"
                     defaultValue={source?.webhookId ?? signalWebhooks[0]?.id}
@@ -1141,7 +1139,7 @@ export function DcaPlaybookForm({
               </div>
             ) : null}
             {averaging === "dip" ? (
-              <label className="flex items-start gap-2 text-xs text-ink sm:col-span-2">
+              <label className="flex items-start gap-2 py-2 text-xs text-ink sm:col-span-2">
                 <input
                   type="checkbox"
                   name="restGrid"
@@ -1246,7 +1244,7 @@ export function DcaPlaybookForm({
             </select>
           </label>
         </div>
-        <label className="flex items-start gap-2 text-xs text-ink">
+        <label className="flex items-start gap-2 py-2 text-xs text-ink">
           <input
             type="hidden"
             name="takeProfitOrderType"
