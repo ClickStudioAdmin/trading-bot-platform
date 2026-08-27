@@ -20,7 +20,7 @@ Complete. Accepted 27 Aug 2026. Click will keep desk-testing; treat the phase as
 | 2 | Playbook store | Agent | Stacked DCA playbooks per desk (one per contract). Direction long / short / both. Start, adds, exit, and per-side runtime. Done |
 | 3 | Tick | Agent | Engine tick adds/closes through `runFuturesCommand`. Same caps, reduce-only, Close All & Cancel All. Auto badge + playbook name. Done |
 | 4 | Signals | Agent | Manual arm. Bound Signal `arm` / `disarm` / `close-playbook`. Buy / sell arms that side only. Price, indicator, or immediate start. Done |
-| 5 | UI | Agent | Create Desk → DCA. Type-locked chrome. Automations is grouped playbook cards (General / Start / Initial order / Maximum Exposure / Additional orders / Additional order multipliers / Exit / Summary). Positions show Orders as filled/max. Done |
+| 5 | UI | Agent | Create Desk → DCA. Type-locked chrome. Automations is grouped playbook cards (General / Start / Initial order / Maximum Exposure / Additional orders / Additional order multipliers / Take profit / Stop loss / Summary). Positions show Orders as filled/max. Done |
 | 6 | Desk test | Click | Paper then Bybit Demo: arm, orders add, TP/stop, Close All & Cancel All, reduce-only. Cannot add a scale-in or Perps recipe on that desk. Done |
 
 Phase accepted. Do not start scale-in until Click asks. Phase 12 is not written yet.

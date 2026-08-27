@@ -60,6 +60,8 @@ const fieldClass =
 const labelClass = "block text-xs text-ink-muted";
 const sectionClass =
   "space-y-2 rounded-card border border-line bg-canvas px-3 py-2";
+const sectionTitleClass =
+  "text-[11px] uppercase tracking-[0.08em] text-ink-faint";
 const rowClass = "grid gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-4";
 const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
 const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
@@ -793,9 +795,9 @@ export function DcaPlaybookForm({
       ) : null}
 
       <fieldset className={sectionClass}>
-        <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+        <p className={sectionTitleClass}>
           General
-        </legend>
+        </p>
         <div className={rowClass}>
           <label className={labelClass}>
             Name
@@ -839,9 +841,9 @@ export function DcaPlaybookForm({
       </fieldset>
 
       <fieldset className={sectionClass}>
-        <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+        <p className={sectionTitleClass}>
           Start
-        </legend>
+        </p>
         <div className={rowClass}>
           <label className={`${labelClass} sm:col-span-2`}>
             First order
@@ -969,9 +971,9 @@ export function DcaPlaybookForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <fieldset className={sectionClass}>
-          <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+          <p className={sectionTitleClass}>
             Initial order
-          </legend>
+          </p>
           <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
             <label className={labelClass}>
               Size unit
@@ -1007,9 +1009,9 @@ export function DcaPlaybookForm({
           </div>
         </fieldset>
         <fieldset className={sectionClass}>
-          <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+          <p className={sectionTitleClass}>
             Maximum Exposure
-          </legend>
+          </p>
           <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
             <label className={labelClass}>
               Maximum type
@@ -1069,9 +1071,9 @@ export function DcaPlaybookForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <fieldset className={sectionClass}>
-          <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+          <p className={sectionTitleClass}>
             Additional orders
-          </legend>
+          </p>
           <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
             <label className={labelClass}>
               Averaging
@@ -1152,9 +1154,9 @@ export function DcaPlaybookForm({
           </div>
         </fieldset>
         <fieldset className={sectionClass}>
-          <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+          <p className={sectionTitleClass}>
             Additional order multipliers
-          </legend>
+          </p>
           <div className="flex flex-wrap gap-2 pb-2">
             <button
               type="button"
@@ -1208,142 +1210,136 @@ export function DcaPlaybookForm({
       </div>
 
       <fieldset className={sectionClass}>
-        <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
-          Exit
-        </legend>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2 rounded-card border border-line bg-canvas px-3 py-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-              Take profit
-            </p>
-            <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-              <label className={labelClass}>
-                Take profit target
-                <PercentInput
-                  name="takeProfitPct"
-                  value={takeProfitPct}
-                  onChange={setTakeProfitPct}
-                  placeholder="Off"
-                  ariaLabel="Take profit target percent"
-                />
-              </label>
-              <label className={labelClass}>
-                Take profit type
-                <select
-                  name="takeProfitBasis"
-                  value={takeProfitBasis}
-                  onChange={(event) =>
-                    setTakeProfitBasis(parseDcaExitBasis(event.target.value))
-                  }
-                  className={fieldClass}
-                >
-                  <option value="average">Average entry</option>
-                  <option value="first_entry">First fill</option>
-                </select>
-              </label>
-            </div>
-            <label className="flex items-start gap-2 text-xs text-ink sm:col-span-2">
-              <input
-                type="hidden"
-                name="takeProfitOrderType"
-                value={takeProfitOrderType}
-              />
-              <input
-                type="checkbox"
-                checked={takeProfitOrderType === "limit"}
-                onChange={(event) =>
-                  setTakeProfitOrderType(event.target.checked ? "limit" : "market")
-                }
-                className="mt-0.5"
-              />
-              Take profit placed as GTC limit (instead of market)
-            </label>
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-              Trailing stop
-            </p>
-            <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-              <label className={labelClass}>
-                <ColumnHint
-                  label="Trigger %"
-                  hint="The trailing stop will be triggered once the price moves by this %."
-                />
-                <PercentInput
-                  name="trailingTriggerPct"
-                  defaultValue={optional(source?.trailingTriggerPct)}
-                  placeholder="Off"
-                  ariaLabel="Trailing trigger percent"
-                />
-              </label>
-              <label className={labelClass}>
-                <ColumnHint
-                  label="Trailing %"
-                  hint="The % from the price where the stop will be placed."
-                />
-                <PercentInput
-                  name="trailingPct"
-                  defaultValue={optional(source?.trailingPct)}
-                  placeholder="Off"
-                  ariaLabel="Trailing percent"
-                />
-              </label>
-            </div>
-          </div>
-          <div className="space-y-2 rounded-card border border-line bg-canvas px-3 py-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-              Stop loss
-            </p>
-            <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-              <label className={labelClass}>
-                Stop loss %
-                <PercentInput
-                  name="stopLossPct"
-                  value={stopLossPct}
-                  onChange={setStopLossPct}
-                  placeholder="Off"
-                  ariaLabel="Stop loss percent"
-                />
-              </label>
-              <label className={labelClass}>
-                Stop loss type
-                <select
-                  name="stopLossBasis"
-                  value={stopLossBasis}
-                  onChange={(event) =>
-                    setStopLossBasis(parseDcaExitBasis(event.target.value))
-                  }
-                  className={fieldClass}
-                >
-                  <option value="average">Average entry</option>
-                  <option value="first_entry">First fill</option>
-                </select>
-              </label>
-              <label className={labelClass}>
-                Move stop to breakeven at %
-                <PercentInput
-                  name="breakevenActivationPct"
-                  defaultValue={optional(source?.breakevenActivationPct)}
-                  placeholder="Off"
-                  ariaLabel="Move stop to breakeven at percent"
-                />
-              </label>
-              <label className={labelClass}>
-                Breakeven offset %
-                <PercentInput
-                  name="breakevenOffsetPct"
-                  defaultValue={optional(source?.breakevenOffsetPct)}
-                  placeholder="0"
-                  ariaLabel="Breakeven offset percent"
-                />
-              </label>
-            </div>
-          </div>
+        <p className={sectionTitleClass}>
+          Take profit
+        </p>
+        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+          <label className={labelClass}>
+            Take profit target
+            <PercentInput
+              name="takeProfitPct"
+              value={takeProfitPct}
+              onChange={setTakeProfitPct}
+              placeholder="Off"
+              ariaLabel="Take profit target percent"
+            />
+          </label>
+          <label className={labelClass}>
+            Take profit type
+            <select
+              name="takeProfitBasis"
+              value={takeProfitBasis}
+              onChange={(event) =>
+                setTakeProfitBasis(parseDcaExitBasis(event.target.value))
+              }
+              className={fieldClass}
+            >
+              <option value="average">Average entry</option>
+              <option value="first_entry">First fill</option>
+            </select>
+          </label>
+        </div>
+        <label className="flex items-start gap-2 text-xs text-ink">
+          <input
+            type="hidden"
+            name="takeProfitOrderType"
+            value={takeProfitOrderType}
+          />
+          <input
+            type="checkbox"
+            checked={takeProfitOrderType === "limit"}
+            onChange={(event) =>
+              setTakeProfitOrderType(event.target.checked ? "limit" : "market")
+            }
+            className="mt-0.5"
+          />
+          Take profit placed as GTC limit (instead of market)
+        </label>
+        <p className={sectionTitleClass}>
+          Trailing stop
+        </p>
+        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+          <label className={labelClass}>
+            <ColumnHint
+              label="Trigger %"
+              hint="The trailing stop will be triggered once the price moves by this %."
+            />
+            <PercentInput
+              name="trailingTriggerPct"
+              defaultValue={optional(source?.trailingTriggerPct)}
+              placeholder="Off"
+              ariaLabel="Trailing trigger percent"
+            />
+          </label>
+          <label className={labelClass}>
+            <ColumnHint
+              label="Trailing %"
+              hint="The % from the price where the stop will be placed."
+            />
+            <PercentInput
+              name="trailingPct"
+              defaultValue={optional(source?.trailingPct)}
+              placeholder="Off"
+              ariaLabel="Trailing percent"
+            />
+          </label>
         </div>
       </fieldset>
 
       <fieldset className={sectionClass}>
-        <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+        <p className={sectionTitleClass}>
+          Stop loss
+        </p>
+        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+          <label className={labelClass}>
+            Stop loss %
+            <PercentInput
+              name="stopLossPct"
+              value={stopLossPct}
+              onChange={setStopLossPct}
+              placeholder="Off"
+              ariaLabel="Stop loss percent"
+            />
+          </label>
+          <label className={labelClass}>
+            Stop loss type
+            <select
+              name="stopLossBasis"
+              value={stopLossBasis}
+              onChange={(event) =>
+                setStopLossBasis(parseDcaExitBasis(event.target.value))
+              }
+              className={fieldClass}
+            >
+              <option value="average">Average entry</option>
+              <option value="first_entry">First fill</option>
+            </select>
+          </label>
+          <label className={labelClass}>
+            Move stop to breakeven at %
+            <PercentInput
+              name="breakevenActivationPct"
+              defaultValue={optional(source?.breakevenActivationPct)}
+              placeholder="Off"
+              ariaLabel="Move stop to breakeven at percent"
+            />
+          </label>
+          <label className={labelClass}>
+            Breakeven offset %
+            <PercentInput
+              name="breakevenOffsetPct"
+              defaultValue={optional(source?.breakevenOffsetPct)}
+              placeholder="0"
+              ariaLabel="Breakeven offset percent"
+            />
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset className={sectionClass}>
+        <p className={sectionTitleClass}>
           Summary
-        </legend>
+        </p>
         {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         {showLadderTabs ? (
           <div
