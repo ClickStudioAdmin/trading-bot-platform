@@ -607,6 +607,40 @@ export function DcaPlaybookForm({
       ? "short"
       : "long";
   const summary = summaryBySide[activeLadderSide];
+  const removeControl = playbook ? (
+    running ? (
+      <span
+        className="inline-flex"
+        title="Stop adding or close before removing."
+      >
+        <button
+          type="button"
+          disabled
+          className={`${headerRemoveClass} pointer-events-none opacity-40`}
+        >
+          Remove
+        </button>
+      </span>
+    ) : (
+      <PendingSubmitButton
+        formAction={deleteDcaPlaybookAction}
+        pendingLabel="Removing…"
+        successKey={`remove-dca-${playbook.id}`}
+        className={headerRemoveClass}
+        skipSizeGuard
+      >
+        Remove
+      </PendingSubmitButton>
+    )
+  ) : onRemoveDraft ? (
+    <button
+      type="button"
+      onClick={onRemoveDraft}
+      className={headerRemoveClass}
+    >
+      Remove
+    </button>
+  ) : null;
 
   return (
     <form
@@ -624,42 +658,6 @@ export function DcaPlaybookForm({
     >
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex shrink-0 items-center gap-2">
-          {playbook ? (
-            running ? (
-              <span
-                className="inline-flex"
-                title="Stop adding or close before removing."
-              >
-                <button
-                  type="button"
-                  disabled
-                  className={`${headerRemoveClass} pointer-events-none opacity-40`}
-                >
-                  Remove
-                </button>
-              </span>
-            ) : (
-                <PendingSubmitButton
-                  formAction={deleteDcaPlaybookAction}
-                  pendingLabel="Removing…"
-                  successKey={`remove-dca-${playbook.id}`}
-                  className={headerRemoveClass}
-                  skipSizeGuard
-                >
-                Remove
-              </PendingSubmitButton>
-            )
-          ) : onRemoveDraft ? (
-            <button
-              type="button"
-              onClick={onRemoveDraft}
-              className={headerRemoveClass}
-            >
-              Remove
-            </button>
-          ) : null}
-        </div>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           {showSaveAndArm ? (
             <PendingSubmitButton
@@ -1340,22 +1338,27 @@ export function DcaPlaybookForm({
       </fieldset>
       </div>
 
-      {running ? (
-        <div>
-          {ladderMaxError && !ladderOpen ? (
-            <SizeGuardNote message={ladderMaxError} />
-          ) : null}
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
-            aria-expanded={ladderOpen}
-            onClick={() => setLadderOpen((open) => !open)}
-          >
-            {ladderOpen ? "Hide Summary" : "Show Summary"}
-            <ChevronIcon className={ladderOpen ? "rotate-90" : undefined} />
-          </button>
-        </div>
-      ) : null}
+      <div className="flex items-center gap-2">
+        {running ? (
+          <div>
+            {ladderMaxError && !ladderOpen ? (
+              <SizeGuardNote message={ladderMaxError} />
+            ) : null}
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
+              aria-expanded={ladderOpen}
+              onClick={() => setLadderOpen((open) => !open)}
+            >
+              {ladderOpen ? "Hide Summary" : "Show Summary"}
+              <ChevronIcon className={ladderOpen ? "rotate-90" : undefined} />
+            </button>
+          </div>
+        ) : null}
+        {removeControl ? (
+          <div className="ml-auto">{removeControl}</div>
+        ) : null}
+      </div>
       {!running || ladderOpen ? (
       <fieldset className={sectionClass}>
         <p className={sectionTitleClass}>
