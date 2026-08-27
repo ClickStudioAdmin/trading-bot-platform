@@ -11,10 +11,10 @@ import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
-  dcaClipAction,
   dcaEnabledSides,
   dcaLegFor,
   decideDcaTick,
+  isDcaClipKey,
   type DcaPlaybook,
 } from "./playbook";
 import {
@@ -23,6 +23,7 @@ import {
   moveStopToBreakeven,
   placeClip,
   syncDcaPlaybookExits,
+  syncDcaPlaybookGrid,
 } from "./run";
 import {
   listDcaPlaybooks,
@@ -131,13 +132,8 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
         leg.status === "armed" &&
         leg.clipsFilled >= 1
       ) {
-        const openWorking = working.filter(
-          (row) =>
-            row.symbol === playbook.symbol &&
-            row.action === dcaClipAction(side) &&
-            row.ruleName === playbook.name &&
-            row.source === "engine" &&
-            !row.reduceOnly,
+        const openWorking = working.filter((row) =>
+          isDcaClipKey(row.idempotencyKey, playbook.id, side),
         ).length;
         const implied = playbook.maxClips - openWorking;
         if (implied > leg.clipsFilled) {
@@ -241,6 +237,11 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
       if (result.acted) {
         acted += 1;
       }
+      await syncDcaPlaybookGrid({
+        playbook,
+        mode: account.mode,
+        side,
+      });
       await syncDcaPlaybookExits({
         playbook,
         mode: account.mode,

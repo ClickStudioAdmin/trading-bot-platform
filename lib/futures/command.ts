@@ -64,6 +64,7 @@ export type FuturesCommand =
       symbol: unknown;
       form: FormData;
       tpsl?: FuturesTpsl;
+      venueTpsl?: FuturesTpsl;
       idempotencyKey?: unknown;
     }
   | {

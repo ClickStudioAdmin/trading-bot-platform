@@ -1,4 +1,4 @@
-import { formatDcaEntryType, parseDcaClipIndex } from "@/lib/dca/playbook";
+import { formatDcaEntryType, parseDcaClipIndex, parseDcaExitLimitKind } from "@/lib/dca/playbook";
 import type {
   FuturesAction,
   FuturesOrderType,
@@ -244,6 +244,13 @@ export function workingTypeLabel(row: {
   const clipIndex = parseDcaClipIndex(row.idempotencyKey);
   if (clipIndex !== null) {
     return formatDcaEntryType(clipIndex);
+  }
+  const exitKind = parseDcaExitLimitKind(row.idempotencyKey);
+  if (exitKind === "tp") {
+    return "Take Profit";
+  }
+  if (exitKind === "sl") {
+    return "Stop Loss";
   }
   if (row.reduceOnly) {
     return "Close";

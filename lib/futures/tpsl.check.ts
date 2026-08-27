@@ -11,6 +11,7 @@ import {
   validateTpslVsReference,
   venueTpslFields,
   venueTradingStopFields,
+  tpslWithoutLimitExits,
 } from "./tpsl";
 
 function levels(
@@ -352,5 +353,18 @@ const limitVenue = venueTpslFields(
 );
 assert.equal(limitVenue?.tpOrderType, "Limit");
 assert.equal(limitVenue?.tpLimitPrice, "91000");
+
+const venueWithoutLimitTp = tpslWithoutLimitExits(
+  levels({
+    takeProfit: 90000,
+    stopLoss: 70000,
+    tpOrderType: "limit",
+    tpLimitPrice: 90000,
+  }),
+);
+assert.equal(venueWithoutLimitTp.takeProfit, null);
+assert.equal(venueWithoutLimitTp.stopLoss, 70000);
+assert.equal(venueWithoutLimitTp.tpOrderType, "market");
+assert.equal(venueWithoutLimitTp.slOrderType, "market");
 
 console.log("futures tpsl checks passed");

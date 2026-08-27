@@ -635,6 +635,22 @@ export function emptyFuturesTpsl(): FuturesTpsl {
   };
 }
 
+export function tpslWithoutLimitExits(tpsl: FuturesTpsl): FuturesTpsl {
+  const clearTp = tpsl.tpOrderType === "limit";
+  const clearSl = tpsl.slOrderType === "limit";
+  return {
+    ...tpsl,
+    takeProfit: clearTp ? null : tpsl.takeProfit,
+    stopLoss: clearSl ? null : tpsl.stopLoss,
+    tpOrderType: clearTp ? "market" : tpsl.tpOrderType,
+    slOrderType: clearSl ? "market" : tpsl.slOrderType,
+    tpLimitPrice: clearTp ? null : tpsl.tpLimitPrice,
+    slLimitPrice: clearSl ? null : tpsl.slLimitPrice,
+    tpQty: clearTp ? null : tpsl.tpQty,
+    slQty: clearSl ? null : tpsl.slQty,
+  };
+}
+
 export function combinedVenueTradingStop(
   tpsl: FuturesTpsl | null | undefined,
   trailing: { distance: number; activePrice: number | null } | null,

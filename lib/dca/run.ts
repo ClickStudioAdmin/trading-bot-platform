@@ -11,16 +11,15 @@ import {
   emptyFuturesTpsl,
   tickerTriggerPrices,
   tpslFromRow,
+  tpslWithoutLimitExits,
 } from "@/lib/futures/tpsl";
-import type { FuturesTrailing } from "@/lib/futures/trailing";
+import { sameWorkingNumber } from "@/lib/futures/working";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   dcaBreakevenPrice,
-  dcaClipSizeAt,
   dcaPlannedExits,
-  dcaSafetyPrices,
   dcaTrailingActivationPrice,
   dcaTrailingDistance,
 } from "./grid";
@@ -28,10 +27,16 @@ import {
   dcaClipAction,
   dcaClipKey,
   dcaEnabledSides,
+  dcaExitLimitKey,
   dcaLegFor,
   dcaLegIsRunning,
   dcaWebhookSignalApplies,
+  isDcaClipKey,
+  isDcaExitLimitKey,
+  planDcaSafetySync,
+  type DcaExitLimitKind,
   type DcaPlaybook,
+  type DcaStatus,
 } from "./playbook";
 import {
   patchDcaLeg,
@@ -110,13 +115,10 @@ async function cancelSafetyOrders(input: {
     userId: input.playbook.userId,
   });
   for (const row of working) {
-    if (
-      row.symbol !== input.playbook.symbol ||
-      row.action !== dcaClipAction(input.side) ||
-      row.ruleName !== input.playbook.name ||
-      row.source !== "engine" ||
-      row.reduceOnly
-    ) {
+    if (row.reduceOnly) {
+      continue;
+    }
+    if (!isDcaClipKey(row.idempotencyKey, input.playbook.id, input.side)) {
       continue;
     }
     await runFuturesCommand({
@@ -133,34 +135,71 @@ async function cancelSafetyOrders(input: {
   }
 }
 
-async function restSafetyOrders(input: {
+async function cancelExitLimit(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
   side: FuturesSide;
-  entryPrice: number;
+  kind: DcaExitLimitKind;
 }): Promise<void> {
-  if (input.playbook.dcaMode !== "order" || input.playbook.maxClips === null) {
-    return;
-  }
-  if (input.playbook.maxClips < 2 || input.playbook.dipPct === null) {
-    return;
-  }
-  const prices = dcaSafetyPrices({
-    side: input.side,
-    entryPrice: input.entryPrice,
-    maxClips: input.playbook.maxClips,
-    dipPct: input.playbook.dipPct,
-    deviationMultiplier: input.playbook.deviationMultiplier,
+  const key = dcaExitLimitKey(input.playbook.id, input.side, input.kind);
+  const working = await loadOpenFuturesWorking({
+    accountId: input.playbook.accountId,
+    userId: input.playbook.userId,
   });
-  for (let i = 0; i < prices.length; i += 1) {
-    const clipIndex = i + 1;
-    const size = dcaClipSizeAt(
-      clipIndex,
-      input.playbook.clipSize,
-      input.playbook.sizeMultiplier,
-    );
-    if (!(size > 0) || !(prices[i] > 0)) {
-      continue;
+  const rows = working.filter((item) =>
+    isDcaExitLimitKey(
+      item.idempotencyKey,
+      input.playbook.id,
+      input.side,
+      input.kind,
+    ),
+  );
+  for (const row of rows) {
+    await runFuturesCommand({
+      actor: {
+        userId: input.playbook.userId,
+        accountId: input.playbook.accountId,
+        mode: input.mode,
+      },
+      command: {
+        kind: "cancel-working",
+        workingId: row.id,
+      },
+    });
+  }
+}
+
+async function restExitLimit(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+  side: FuturesSide;
+  kind: DcaExitLimitKind;
+  positionId: string;
+  qty: number;
+  limitPrice: number;
+}): Promise<void> {
+  if (!(input.qty > 0) || !(input.limitPrice > 0)) {
+    return;
+  }
+  const key = dcaExitLimitKey(input.playbook.id, input.side, input.kind);
+  const working = await loadOpenFuturesWorking({
+    accountId: input.playbook.accountId,
+    userId: input.playbook.userId,
+  });
+  const row = working.find((item) =>
+    isDcaExitLimitKey(
+      item.idempotencyKey,
+      input.playbook.id,
+      input.side,
+      input.kind,
+    ),
+  );
+  if (row) {
+    if (
+      sameWorkingNumber(row.remainingQty, input.qty) &&
+      sameWorkingNumber(row.limitPrice, input.limitPrice)
+    ) {
+      return;
     }
     await runFuturesCommand({
       actor: {
@@ -169,14 +208,105 @@ async function restSafetyOrders(input: {
         mode: input.mode,
       },
       command: {
+        kind: "amend-working",
+        workingId: row.id,
+        qty: String(input.qty),
+        limitPrice: String(input.limitPrice),
+      },
+    });
+    return;
+  }
+  await runFuturesCommand({
+    actor: {
+      userId: input.playbook.userId,
+      accountId: input.playbook.accountId,
+      mode: input.mode,
+    },
+    command: {
+      kind: "place",
+      action: "flatten",
+      symbol: input.playbook.symbol,
+      positionId: input.positionId,
+      orderType: "limit",
+      limitPrice: String(input.limitPrice),
+      size: String(input.qty),
+      idempotencyKey: `${key}${String(Date.now()).slice(-6)}`,
+      source: "engine",
+      ruleName: input.playbook.name,
+    },
+  });
+}
+
+export async function syncDcaPlaybookGrid(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+  side: FuturesSide;
+  entryPrice?: number | null;
+  status?: DcaStatus;
+}): Promise<void> {
+  const enabled = dcaEnabledSides(input.playbook.direction).includes(
+    input.side,
+  );
+  const leg = dcaLegFor(input.playbook, input.side);
+  const working = await loadOpenFuturesWorking({
+    accountId: input.playbook.accountId,
+    userId: input.playbook.userId,
+  });
+  const plan = planDcaSafetySync({
+    playbookId: input.playbook.id,
+    side: input.side,
+    status: !enabled ? "idle" : (input.status ?? leg.status),
+    dcaMode: input.playbook.dcaMode,
+    maxClips: input.playbook.maxClips,
+    dipPct: input.playbook.dipPct,
+    deviationMultiplier: input.playbook.deviationMultiplier,
+    clipSize: input.playbook.clipSize,
+    sizeMultiplier: input.playbook.sizeMultiplier,
+    sizeUnit: input.playbook.sizeUnit,
+    entryPrice:
+      input.entryPrice ?? leg.firstFillPrice ?? leg.lastClipPrice,
+    working: working.map((row) => ({
+      id: row.id,
+      idempotencyKey: row.idempotencyKey,
+      remainingQty: row.remainingQty,
+      limitPrice: row.limitPrice,
+      reduceOnly: row.reduceOnly,
+    })),
+  });
+  const actor = {
+    userId: input.playbook.userId,
+    accountId: input.playbook.accountId,
+    mode: input.mode,
+  };
+  for (const workingId of plan.cancelIds) {
+    await runFuturesCommand({
+      actor,
+      command: { kind: "cancel-working", workingId },
+    });
+  }
+  for (const item of plan.amend) {
+    await runFuturesCommand({
+      actor,
+      command: {
+        kind: "amend-working",
+        workingId: item.workingId,
+        qty: String(item.qty),
+        limitPrice: String(item.limitPrice),
+      },
+    });
+  }
+  for (const item of plan.rest) {
+    await runFuturesCommand({
+      actor,
+      command: {
         kind: "place",
         action: dcaClipAction(input.side),
         symbol: input.playbook.symbol,
         orderType: "limit",
-        limitPrice: String(prices[i]),
-        size: String(size),
+        limitPrice: String(item.limitPrice),
+        size: String(item.qty),
         sizeUnit: input.playbook.sizeUnit,
-        idempotencyKey: dcaClipKey(input.playbook.id, input.side, clipIndex),
+        idempotencyKey: `${dcaClipKey(input.playbook.id, input.side, item.clipIndex)}x${Date.now()}`,
         source: "engine",
         ruleName: input.playbook.name,
       },
@@ -240,14 +370,15 @@ async function placeClip(input: {
   if (!patched.ok) {
     return patched;
   }
-  if (firstClip) {
-    await restSafetyOrders({
-      playbook: input.playbook,
-      mode: input.mode,
-      side: input.side,
-      entryPrice: input.lastPrice,
-    });
-  }
+  await syncDcaPlaybookGrid({
+    playbook: input.playbook,
+    mode: input.mode,
+    side: input.side,
+    status: "armed",
+    entryPrice: firstClip
+      ? input.lastPrice
+      : (leg.firstFillPrice ?? input.lastPrice),
+  });
   await syncDcaPlaybookExits({
     playbook: input.playbook,
     mode: input.mode,
@@ -303,40 +434,65 @@ export async function syncDcaPlaybookExits(input: {
   const current = tpslFromRow(open) ?? emptyFuturesTpsl();
   const tpType =
     planned.takeProfit === null ? "market" : input.playbook.takeProfitOrderType;
-  const slType = stopLoss === null ? "market" : input.playbook.stopLossOrderType;
+  const slType = "market";
+  const nextTpsl = {
+    ...current,
+    takeProfit: planned.takeProfit,
+    stopLoss,
+    tpOrderType: tpType,
+    slOrderType: slType,
+    tpLimitPrice:
+      planned.takeProfit !== null && tpType === "limit"
+        ? planned.takeProfit
+        : null,
+    slLimitPrice:
+      stopLoss !== null && slType === "limit" ? stopLoss : null,
+  };
   if (
-    sameExitPrice(current.takeProfit, planned.takeProfit) &&
-    sameExitPrice(current.stopLoss, stopLoss) &&
-    (planned.takeProfit === null || current.tpOrderType === tpType) &&
-    (stopLoss === null || current.slOrderType === slType)
+    !sameExitPrice(current.takeProfit, planned.takeProfit) ||
+    !sameExitPrice(current.stopLoss, stopLoss) ||
+    (planned.takeProfit !== null && current.tpOrderType !== tpType) ||
+    (stopLoss !== null && current.slOrderType !== slType)
   ) {
-    return;
-  }
-  await runFuturesCommand({
-    actor: {
-      userId: input.playbook.userId,
-      accountId: input.playbook.accountId,
-      mode: input.mode,
-    },
-    command: {
-      kind: "set-tpsl",
-      positionId: open.id,
-      symbol: input.playbook.symbol,
-      form: new FormData(),
-      tpsl: {
-        ...current,
-        takeProfit: planned.takeProfit,
-        stopLoss,
-        tpOrderType: tpType,
-        slOrderType: slType,
-        tpLimitPrice:
-          planned.takeProfit !== null && tpType === "limit"
-            ? planned.takeProfit
-            : null,
-        slLimitPrice:
-          stopLoss !== null && slType === "limit" ? stopLoss : null,
+    await runFuturesCommand({
+      actor: {
+        userId: input.playbook.userId,
+        accountId: input.playbook.accountId,
+        mode: input.mode,
       },
-    },
+      command: {
+        kind: "set-tpsl",
+        positionId: open.id,
+        symbol: input.playbook.symbol,
+        form: new FormData(),
+        tpsl: nextTpsl,
+        venueTpsl: tpslWithoutLimitExits(nextTpsl),
+      },
+    });
+  }
+  if (tpType === "limit" && planned.takeProfit !== null) {
+    await restExitLimit({
+      playbook: input.playbook,
+      mode: input.mode,
+      side: input.side,
+      kind: "tp",
+      positionId: open.id,
+      qty: open.qty,
+      limitPrice: planned.takeProfit,
+    });
+  } else {
+    await cancelExitLimit({
+      playbook: input.playbook,
+      mode: input.mode,
+      side: input.side,
+      kind: "tp",
+    });
+  }
+  await cancelExitLimit({
+    playbook: input.playbook,
+    mode: input.mode,
+    side: input.side,
+    kind: "sl",
   });
 }
 
@@ -346,6 +502,8 @@ async function flattenSide(input: {
   side: FuturesSide;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   await cancelSafetyOrders(input);
+  await cancelExitLimit({ ...input, kind: "tp" });
+  await cancelExitLimit({ ...input, kind: "sl" });
   const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
     accountId: input.playbook.accountId,
     userId: input.playbook.userId,
@@ -408,9 +566,8 @@ async function moveStopToBreakeven(input: {
       tpsl: {
         ...current,
         stopLoss: stop,
-        slOrderType: input.playbook.stopLossOrderType,
-        slLimitPrice:
-          input.playbook.stopLossOrderType === "limit" ? stop : null,
+        slOrderType: "market",
+        slLimitPrice: null,
       },
     },
   });
@@ -642,6 +799,47 @@ export async function applyDcaVerb(input: {
     return { ok: true, message: "Playbook resumed adding." };
   }
   return { ok: true, message: "Playbook armed. Waiting for the start trigger." };
+}
+
+export async function syncDcaPlaybookWorking(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+  lastPrice?: number | null;
+}): Promise<void> {
+  const lastPrice =
+    input.lastPrice === undefined
+      ? await lastPriceFor(input.playbook.symbol)
+      : input.lastPrice;
+  for (const side of ["long", "short"] as const) {
+    await syncDcaPlaybookGrid({
+      playbook: input.playbook,
+      mode: input.mode,
+      side,
+    });
+    const enabled = dcaEnabledSides(input.playbook.direction).includes(side);
+    const running = dcaLegIsRunning(dcaLegFor(input.playbook, side).status);
+    if (enabled && running) {
+      await syncDcaPlaybookExits({
+        playbook: input.playbook,
+        mode: input.mode,
+        side,
+        lastPrice,
+      });
+    } else {
+      await cancelExitLimit({
+        playbook: input.playbook,
+        mode: input.mode,
+        side,
+        kind: "tp",
+      });
+      await cancelExitLimit({
+        playbook: input.playbook,
+        mode: input.mode,
+        side,
+        kind: "sl",
+      });
+    }
+  }
 }
 
 export {

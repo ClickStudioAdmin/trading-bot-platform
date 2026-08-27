@@ -15,7 +15,7 @@ import {
 } from "@/lib/futures/automation";
 import { parseFuturesTrigger } from "@/lib/futures/tpsl";
 import { futuresPnlUsdt } from "@/lib/futures/math";
-import { dcaDipPctAt, dcaPlannedExits } from "./grid";
+import { dcaClipSizeAt, dcaDipPctAt, dcaPlannedExits, dcaSafetyPrices } from "./grid";
 import {
   indicatorStartMet,
   type DcaIndicatorKind,
@@ -609,7 +609,7 @@ export function parseDcaPlaybookForm(
       takeProfitBasis: parseDcaExitBasis(form.get("takeProfitBasis")),
       stopLossBasis: parseDcaExitBasis(form.get("stopLossBasis")),
       takeProfitOrderType: parseDcaExitOrderType(form.get("takeProfitOrderType")),
-      stopLossOrderType: parseDcaExitOrderType(form.get("stopLossOrderType")),
+      stopLossOrderType: "market",
       breakevenActivationPct: breakevenActivationPct.value,
       breakevenOffsetPct: breakevenOffsetPct.value,
       trailingTriggerPct: trailingTriggerPct.value,
@@ -703,7 +703,7 @@ export function parseDcaPlaybookRow(
     takeProfitBasis: parseDcaExitBasis(row.take_profit_basis),
     stopLossBasis: parseDcaExitBasis(row.stop_loss_basis),
     takeProfitOrderType: parseDcaExitOrderType(row.take_profit_order_type),
-    stopLossOrderType: parseDcaExitOrderType(row.stop_loss_order_type),
+    stopLossOrderType: "market",
     breakevenActivationPct: asPositiveOrNull(row.breakeven_activation_pct),
     breakevenOffsetPct:
       row.breakeven_offset_pct == null || row.breakeven_offset_pct === ""
@@ -1219,15 +1219,177 @@ export function parseDcaClipIndex(key: string | null | undefined): number | null
   if (!key) {
     return null;
   }
-  const match = /^d[a-f0-9]{8}[ls](\d+)$/i.exec(key.trim());
+  const match = /^d[a-f0-9]{8}[ls](\d+)(?:x\d+)?$/i.exec(key.trim());
   if (!match) {
     return null;
   }
   return Number(match[1]);
 }
 
+export function isDcaClipKey(
+  key: string | null | undefined,
+  playbookId: string,
+  side: FuturesSide,
+): boolean {
+  const index = parseDcaClipIndex(key);
+  if (index === null || !key) {
+    return false;
+  }
+  const expected = dcaClipKey(playbookId, side, index).toLowerCase();
+  const raw = key.trim().toLowerCase();
+  return raw === expected || raw.startsWith(`${expected}x`);
+}
+
 export function formatDcaEntryType(clipIndex: number): string {
   return `Entry # ${clipIndex + 1}`;
+}
+
+export type DcaExitLimitKind = "tp" | "sl";
+
+export function dcaExitLimitKey(
+  playbookId: string,
+  side: FuturesSide,
+  kind: DcaExitLimitKind,
+): string {
+  const compact = playbookId.replace(/-/g, "").slice(0, 8);
+  const sideChar = side === "long" ? "l" : "s";
+  return `d${compact}${sideChar}${kind}`;
+}
+
+export function parseDcaExitLimitKind(
+  key: string | null | undefined,
+): DcaExitLimitKind | null {
+  if (!key) {
+    return null;
+  }
+  const match = /^d[a-f0-9]{8}[ls](tp|sl)\d*$/i.exec(key.trim());
+  if (!match) {
+    return null;
+  }
+  return match[1].toLowerCase() === "sl" ? "sl" : "tp";
+}
+
+export function isDcaExitLimitKey(
+  key: string | null | undefined,
+  playbookId: string,
+  side: FuturesSide,
+  kind: DcaExitLimitKind,
+): boolean {
+  if (!key || parseDcaExitLimitKind(key) !== kind) {
+    return false;
+  }
+  return key
+    .trim()
+    .toLowerCase()
+    .startsWith(dcaExitLimitKey(playbookId, side, kind).toLowerCase());
+}
+
+const SAME_SAFETY = 1e-12;
+
+function sameSafetyNumber(left: number, right: number): boolean {
+  return Math.abs(left - right) <= SAME_SAFETY;
+}
+
+export type DcaSafetyWorkingRow = {
+  id: string;
+  idempotencyKey: string | null;
+  remainingQty: number;
+  limitPrice: number;
+  reduceOnly: boolean;
+};
+
+export type DcaSafetySyncPlan = {
+  cancelIds: string[];
+  amend: { workingId: string; qty: number; limitPrice: number }[];
+  rest: { clipIndex: number; qty: number; limitPrice: number }[];
+};
+
+export function planDcaSafetySync(input: {
+  playbookId: string;
+  side: FuturesSide;
+  status: DcaStatus;
+  dcaMode: DcaMode;
+  maxClips: number | null;
+  dipPct: number | null;
+  deviationMultiplier: number;
+  clipSize: number;
+  sizeMultiplier: number;
+  sizeUnit: "qty" | "usdt";
+  entryPrice: number | null;
+  working: readonly DcaSafetyWorkingRow[];
+}): DcaSafetySyncPlan {
+  const matching = input.working.filter(
+    (row) =>
+      !row.reduceOnly &&
+      isDcaClipKey(row.idempotencyKey, input.playbookId, input.side),
+  );
+  const restGrid =
+    input.status === "armed" &&
+    input.dcaMode === "order" &&
+    input.maxClips !== null &&
+    input.maxClips >= 2 &&
+    input.dipPct !== null &&
+    input.entryPrice !== null &&
+    input.entryPrice > 0;
+  if (!restGrid) {
+    return {
+      cancelIds: matching.map((row) => row.id),
+      amend: [],
+      rest: [],
+    };
+  }
+  const prices = dcaSafetyPrices({
+    side: input.side,
+    entryPrice: input.entryPrice as number,
+    maxClips: input.maxClips as number,
+    dipPct: input.dipPct as number,
+    deviationMultiplier: input.deviationMultiplier,
+  });
+  const planned = new Map<number, { qty: number; limitPrice: number }>();
+  for (let i = 0; i < prices.length; i += 1) {
+    const clipIndex = i + 1;
+    const qty = dcaClipSizeAt(
+      clipIndex,
+      input.clipSize,
+      input.sizeMultiplier,
+    );
+    if (!(qty > 0) || !(prices[i] > 0)) {
+      continue;
+    }
+    planned.set(clipIndex, { qty, limitPrice: prices[i] });
+  }
+  const openByIndex = new Map<number, DcaSafetyWorkingRow>();
+  const cancelIds: string[] = [];
+  for (const row of matching) {
+    const index = parseDcaClipIndex(row.idempotencyKey);
+    if (index === null || !planned.has(index) || openByIndex.has(index)) {
+      cancelIds.push(row.id);
+      continue;
+    }
+    openByIndex.set(index, row);
+  }
+  const amend: DcaSafetySyncPlan["amend"] = [];
+  const rest: DcaSafetySyncPlan["rest"] = [];
+  for (const [clipIndex, want] of planned) {
+    const row = openByIndex.get(clipIndex);
+    if (!row) {
+      rest.push({ clipIndex, qty: want.qty, limitPrice: want.limitPrice });
+      continue;
+    }
+    const priceChanged = !sameSafetyNumber(row.limitPrice, want.limitPrice);
+    const qtyChanged =
+      input.sizeUnit === "qty" &&
+      !sameSafetyNumber(row.remainingQty, want.qty);
+    if (!priceChanged && !qtyChanged) {
+      continue;
+    }
+    amend.push({
+      workingId: row.id,
+      qty: input.sizeUnit === "qty" ? want.qty : row.remainingQty,
+      limitPrice: want.limitPrice,
+    });
+  }
+  return { cancelIds, amend, rest };
 }
 
 export function dcaPlaybookStatusLabel(playbook: DcaPlaybook): string {
@@ -1300,7 +1462,7 @@ export function dcaOpenHint(input: {
     plannedStopLoss: planned.stopLoss,
     plannedTrailing: planned.trailingStop,
     takeProfitOrderType: input.playbook.takeProfitOrderType,
-    stopLossOrderType: input.playbook.stopLossOrderType,
+    stopLossOrderType: "market",
   };
 }
 

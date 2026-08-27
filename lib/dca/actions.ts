@@ -2,12 +2,17 @@
 
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
 import {
+  dcaPlaybookIsRunning,
   dcaStartListens,
   parseDcaPlaybookForm,
   parseDcaPlaybookId,
   parseDcaSaveIntent,
 } from "@/lib/dca/playbook";
-import { applyDcaVerb, parseDcaPlaybookVerb } from "@/lib/dca/run";
+import {
+  applyDcaVerb,
+  parseDcaPlaybookVerb,
+  syncDcaPlaybookWorking,
+} from "@/lib/dca/run";
 import {
   deleteDcaPlaybook,
   saveDcaPlaybook,
@@ -28,6 +33,19 @@ function succeed(notice: string): never {
   redirect(
     `${FUTURES_PATHS.automations}?saved=1&notice=${encodeURIComponent(notice)}`,
   );
+}
+
+async function syncRunningPlaybookWorking(input: {
+  playbook: Parameters<typeof syncDcaPlaybookWorking>[0]["playbook"];
+  mode: Parameters<typeof syncDcaPlaybookWorking>[0]["mode"];
+}): Promise<void> {
+  if (!dcaPlaybookIsRunning(input.playbook)) {
+    return;
+  }
+  await syncDcaPlaybookWorking({
+    playbook: input.playbook,
+    mode: input.mode,
+  });
 }
 
 export async function saveDcaPlaybookAction(formData: FormData) {
@@ -77,6 +95,13 @@ async function saveDcaPlaybookWith(
       side: parsed.config.direction,
     },
   });
+  await syncRunningPlaybookWorking({
+    playbook: saved.playbook,
+    mode: session.account.mode,
+  });
+  if (dcaPlaybookIsRunning(saved.playbook)) {
+    revalidatePath(FUTURES_PATHS.positions);
+  }
   revalidatePath(FUTURES_PATHS.automations);
   const intent = parseDcaSaveIntent(intentRaw);
   if (intent === "arm" && dcaStartListens(parsed.config.startKind)) {

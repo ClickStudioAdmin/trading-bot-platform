@@ -4,7 +4,12 @@ import {
   dcaCapHit,
   dcaClipAction,
   dcaClipKey,
+  dcaExitLimitKey,
   parseDcaClipIndex,
+  parseDcaExitLimitKind,
+  isDcaClipKey,
+  isDcaExitLimitKey,
+  planDcaSafetySync,
   formatDcaEntryType,
   dcaDipMet,
   dcaEnabledSides,
@@ -43,6 +48,133 @@ assert.equal(parseDcaClipIndex("d11111111l2"), 2);
 assert.equal(formatDcaEntryType(0), "Entry # 1");
 assert.equal(formatDcaEntryType(1), "Entry # 2");
 assert.equal(parseDcaClipIndex("c123"), null);
+assert.equal(
+  dcaExitLimitKey("11111111-1111-4111-8111-111111111111", "long", "tp"),
+  "d11111111ltp",
+);
+assert.equal(parseDcaExitLimitKind("d11111111ltp"), "tp");
+assert.equal(parseDcaExitLimitKind("d11111111lsl"), "sl");
+assert.equal(parseDcaExitLimitKind("d11111111ltp847291"), "tp");
+assert.equal(parseDcaClipIndex("d11111111ltp847291"), null);
+assert.equal(parseDcaClipIndex("d11111111l10x847291"), 10);
+assert.equal(
+  isDcaClipKey(
+    "d11111111l10",
+    "11111111-1111-4111-8111-111111111111",
+    "long",
+  ),
+  true,
+);
+assert.equal(
+  isDcaClipKey(
+    "d11111111l10x847291",
+    "11111111-1111-4111-8111-111111111111",
+    "long",
+  ),
+  true,
+);
+assert.equal(
+  isDcaClipKey(
+    "d11111111l1",
+    "11111111-1111-4111-8111-111111111111",
+    "long",
+  ),
+  true,
+);
+assert.equal(
+  isDcaClipKey(
+    "d11111111l10",
+    "11111111-1111-4111-8111-111111111111",
+    "short",
+  ),
+  false,
+);
+assert.equal(
+  isDcaClipKey(
+    "d11111111ltp",
+    "11111111-1111-4111-8111-111111111111",
+    "long",
+  ),
+  false,
+);
+const safetyId = "11111111-1111-4111-8111-111111111111";
+const safetyWorking = Array.from({ length: 19 }, (_, index) => ({
+  id: `w${index + 1}`,
+  idempotencyKey: dcaClipKey(safetyId, "long", index + 1),
+  remainingQty: 0.01,
+  limitPrice: 99 - index,
+  reduceOnly: false,
+}));
+const toMarket = planDcaSafetySync({
+  playbookId: safetyId,
+  side: "long",
+  status: "armed",
+  dcaMode: "position",
+  maxClips: 20,
+  dipPct: 1,
+  deviationMultiplier: 1,
+  clipSize: 0.01,
+  sizeMultiplier: 1,
+  sizeUnit: "qty",
+  entryPrice: 100,
+  working: safetyWorking,
+});
+assert.equal(toMarket.cancelIds.length, 19);
+assert.equal(toMarket.rest.length, 0);
+assert.equal(toMarket.amend.length, 0);
+const maxTen = planDcaSafetySync({
+  playbookId: safetyId,
+  side: "long",
+  status: "armed",
+  dcaMode: "order",
+  maxClips: 10,
+  dipPct: 1,
+  deviationMultiplier: 1,
+  clipSize: 0.01,
+  sizeMultiplier: 1,
+  sizeUnit: "qty",
+  entryPrice: 100,
+  working: safetyWorking,
+});
+assert.equal(maxTen.cancelIds.length, 10);
+assert.equal(maxTen.rest.length, 0);
+assert.ok(maxTen.cancelIds.includes("w10"));
+assert.ok(maxTen.cancelIds.includes("w19"));
+assert.ok(!maxTen.cancelIds.includes("w1"));
+assert.ok(!maxTen.cancelIds.includes("w9"));
+const stopped = planDcaSafetySync({
+  playbookId: safetyId,
+  side: "long",
+  status: "stop_adding",
+  dcaMode: "order",
+  maxClips: 20,
+  dipPct: 1,
+  deviationMultiplier: 1,
+  clipSize: 0.01,
+  sizeMultiplier: 1,
+  sizeUnit: "qty",
+  entryPrice: 100,
+  working: safetyWorking,
+});
+assert.equal(stopped.cancelIds.length, 19);
+assert.equal(
+  isDcaExitLimitKey(
+    "d11111111ltp847291",
+    "11111111-1111-4111-8111-111111111111",
+    "long",
+    "tp",
+  ),
+  true,
+);
+assert.equal(
+  isDcaExitLimitKey(
+    "d11111111lsl",
+    "11111111-1111-4111-8111-111111111111",
+    "long",
+    "tp",
+  ),
+  false,
+);
 assert.deepEqual(dcaEnabledSides("both"), ["long", "short"]);
 assert.equal(dcaStartListens("immediate"), false);
 assert.equal(dcaStartListens("price"), true);
@@ -328,6 +460,19 @@ if (parsed.ok) {
   assert.equal(parsed.config.sizeMultiplier, 1);
   assert.equal(parsed.config.takeProfitOrderType, "market");
   assert.equal(parsed.config.stopLossOrderType, "market");
+}
+
+const tpLimitForm = new FormData();
+tpLimitForm.set("symbol", "BTCUSDT");
+tpLimitForm.set("side", "long");
+tpLimitForm.set("clipSize", "0.01");
+tpLimitForm.set("sizeUnit", "qty");
+tpLimitForm.set("takeProfitPct", "10");
+tpLimitForm.set("takeProfitOrderType", "limit");
+const tpLimitParsed = parseDcaPlaybookForm(tpLimitForm);
+assert.equal(tpLimitParsed.ok, true);
+if (tpLimitParsed.ok) {
+  assert.equal(tpLimitParsed.config.takeProfitOrderType, "limit");
 }
 
 const bothForm = new FormData();

@@ -202,5 +202,12 @@ assert.equal(
   }),
   "Entry # 2",
 );
+assert.equal(
+  workingTypeLabel({
+    reduceOnly: true,
+    idempotencyKey: "d11111111ltp847291",
+  }),
+  "Take Profit",
+);
 
 console.log("futures working checks passed");

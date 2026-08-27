@@ -38,7 +38,6 @@ import {
   dcaPlaybookStatusLabel,
   dcaStartListens,
   parseDcaExitBasis,
-  parseDcaExitOrderType,
   type DcaAveragingKind,
   type DcaExitBasis,
   type DcaIntervalUnit,
@@ -410,9 +409,6 @@ export function DcaPlaybookForm({
   );
   const [takeProfitOrderType, setTakeProfitOrderType] =
     useState<FuturesOrderType>(playbook?.takeProfitOrderType ?? "market");
-  const [stopLossOrderType, setStopLossOrderType] = useState<FuturesOrderType>(
-    playbook?.stopLossOrderType ?? "market",
-  );
   const [indicatorKind, setIndicatorKind] = useState(
     playbook?.indicatorKind ?? "rsi",
   );
@@ -1109,21 +1105,18 @@ export function DcaPlaybookForm({
                 </select>
               </label>
             </div>
-            <label className={labelClass}>
-              Take profit fill
-              <select
+            <label className="flex items-start gap-2 text-xs text-ink sm:col-span-2">
+              <input
+                type="checkbox"
                 name="takeProfitOrderType"
-                value={takeProfitOrderType}
+                value="limit"
+                checked={takeProfitOrderType === "limit"}
                 onChange={(event) =>
-                  setTakeProfitOrderType(
-                    parseDcaExitOrderType(event.target.value),
-                  )
+                  setTakeProfitOrderType(event.target.checked ? "limit" : "market")
                 }
-                className={fieldClass}
-              >
-                <option value="market">Market</option>
-                <option value="limit">Limit</option>
-              </select>
+                className="mt-0.5"
+              />
+              Take profit placed as GTC limit (instead of market)
             </label>
             <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
               Trailing stop
@@ -1185,22 +1178,6 @@ export function DcaPlaybookForm({
                 >
                   <option value="average">Average entry</option>
                   <option value="first_entry">First fill</option>
-                </select>
-              </label>
-              <label className={labelClass}>
-                Stop loss fill
-                <select
-                  name="stopLossOrderType"
-                  value={stopLossOrderType}
-                  onChange={(event) =>
-                    setStopLossOrderType(
-                      parseDcaExitOrderType(event.target.value),
-                    )
-                  }
-                  className={fieldClass}
-                >
-                  <option value="market">Market</option>
-                  <option value="limit">Limit</option>
                 </select>
               </label>
               <label className={labelClass}>

@@ -1075,7 +1075,10 @@ async function runSetTpsl(
         "Bind an exchange in Desk Settings before trading.",
       );
     }
-    const stop = combinedVenueTradingStop(tpsl, trailingFromRow(row));
+    const stop = combinedVenueTradingStop(
+      command.venueTpsl ?? tpsl,
+      trailingFromRow(row),
+    );
     const set = await setPerpTradingStopOnVenue({
       connection: connectionBound.connection,
       symbol,
