@@ -749,38 +749,6 @@ export function DcaPlaybookForm({
                   Arm
                 </PendingSubmitButton>
               ) : null}
-              {showStopAdding ? (
-                <span
-                  className="inline-flex"
-                  title="Stop adding any new orders (also cancels any existing entry limit orders)"
-                >
-                  <PendingSubmitButton
-                    formAction={runDcaDisarmAction}
-                    pendingLabel="Stopping…"
-                    successKey={`disarm-dca-playbook-${playbook.id}`}
-                    className={headerDangerClass}
-                    skipSizeGuard
-                  >
-                    Stop adding
-                  </PendingSubmitButton>
-                </span>
-              ) : null}
-              {showClosePlaybook ? (
-                <span
-                  className="inline-flex"
-                  title="Close all positions and place the playbook in idle mode (no new entries)"
-                >
-                  <PendingSubmitButton
-                    formAction={runDcaClosePlaybookAction}
-                    pendingLabel="Closing…"
-                    successKey={`close-dca-playbook-${playbook.id}`}
-                    className={headerDangerClass}
-                    skipSizeGuard
-                  >
-                    Close playbook
-                  </PendingSubmitButton>
-                </span>
-              ) : null}
             </>
           ) : null}
         </div>
@@ -794,15 +762,53 @@ export function DcaPlaybookForm({
         </p>
       ) : null}
 
-      <label className="block text-[11px] text-ink-muted">
-        Name
-        <input
-          name="name"
-          defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
-          maxLength={40}
-          className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
-        />
-      </label>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="min-w-0 flex-1 text-[11px] text-ink-muted">
+          Name
+          <input
+            name="name"
+            defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+            maxLength={40}
+            className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
+          />
+        </label>
+        {playbook && (showStopAdding || showClosePlaybook) ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {showStopAdding ? (
+              <span
+                className="inline-flex"
+                title="Stop adding any new orders (also cancels any existing entry limit orders)"
+              >
+                <PendingSubmitButton
+                  formAction={runDcaDisarmAction}
+                  pendingLabel="Stopping…"
+                  successKey={`disarm-dca-playbook-${playbook.id}`}
+                  className={headerDangerClass}
+                  skipSizeGuard
+                >
+                  Stop adding
+                </PendingSubmitButton>
+              </span>
+            ) : null}
+            {showClosePlaybook ? (
+              <span
+                className="inline-flex"
+                title="Close all positions and place the playbook in idle mode (no new entries)"
+              >
+                <PendingSubmitButton
+                  formAction={runDcaClosePlaybookAction}
+                  pendingLabel="Closing…"
+                  successKey={`close-dca-playbook-${playbook.id}`}
+                  className={headerDangerClass}
+                  skipSizeGuard
+                >
+                  Close playbook
+                </PendingSubmitButton>
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
 
       <fieldset className={sectionClass}>
         <p className={sectionTitleClass}>
