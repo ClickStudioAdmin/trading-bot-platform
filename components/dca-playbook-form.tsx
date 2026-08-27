@@ -1029,19 +1029,28 @@ export function DcaPlaybookForm({
                   />
                 </label>
               ) : null}
-              {indicatorKind === "macd" ? (
-                <p className="self-end text-xs text-ink-muted sm:col-span-2">
-                  {indicatorCompare === "gte"
-                    ? "Long while the histogram is positive. Short while negative."
-                    : "Long when the histogram crosses above zero. Short when it crosses below."}
+              {direction === "both" ? (
+                <p className="text-xs text-ink-muted sm:col-span-2 lg:col-span-4">
+                  {indicatorBothSidesHint(indicatorKind, indicatorCompare)}
                 </p>
-              ) : null}
-              {indicatorKind === "ema_cross" && indicatorCompare === "pair" ? (
-                <p className="self-end text-xs text-ink-muted sm:col-span-2">
-                  Long when EMA 9 crosses above EMA 21. Short when it crosses
-                  below.
-                </p>
-              ) : null}
+              ) : (
+                <>
+                  {indicatorKind === "macd" ? (
+                    <p className="self-end text-xs text-ink-muted sm:col-span-2">
+                      {indicatorCompare === "gte"
+                        ? "Long while the histogram is positive. Short while negative."
+                        : "Long when the histogram crosses above zero. Short when it crosses below."}
+                    </p>
+                  ) : null}
+                  {indicatorKind === "ema_cross" &&
+                  indicatorCompare === "pair" ? (
+                    <p className="self-end text-xs text-ink-muted sm:col-span-2">
+                      Long when EMA 9 crosses above EMA 21. Short when it
+                      crosses below.
+                    </p>
+                  ) : null}
+                </>
+              )}
             </>
           ) : null}
         </div>
@@ -1729,6 +1738,37 @@ export function DcaPlaybookForm({
       ) : null}
     </form>
   );
+}
+
+function indicatorBothSidesHint(
+  kind: "rsi" | "macd" | "ema_cross",
+  compare: string,
+): string {
+  if (kind === "macd") {
+    if (compare === "gte") {
+      return "Triggers Long while the histogram is positive. Triggers Short while it is negative.";
+    }
+    return "Triggers Long when the histogram crosses above zero. Triggers Short when it crosses below zero.";
+  }
+  if (kind === "ema_cross") {
+    if (compare === "cross_gte") {
+      return "Triggers Long and Short when EMA 21 crosses above the price level.";
+    }
+    if (compare === "cross_lte") {
+      return "Triggers Long and Short when EMA 21 crosses below the price level.";
+    }
+    return "Triggers Long when EMA 9 crosses above EMA 21. Triggers Short when EMA 9 crosses below EMA 21.";
+  }
+  if (compare === "cross_gte") {
+    return "Triggers Long and Short when RSI crosses above the level.";
+  }
+  if (compare === "cross_lte") {
+    return "Triggers Long and Short when RSI crosses below the level.";
+  }
+  if (compare === "gte") {
+    return "Triggers Long and Short while RSI is at or above the level.";
+  }
+  return "Triggers Long and Short while RSI is at or below the level.";
 }
 
 function TriggerFields({
