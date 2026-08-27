@@ -676,60 +676,60 @@ export function DcaPlaybookForm({
               Save and Arm
             </PendingSubmitButton>
           ) : null}
+          {showManualTriggers
+            ? (
+                [
+                  {
+                    side: "long" as const,
+                    action: runDcaArmLongAction,
+                    label: "Save and Trigger Long",
+                    className: headerLongClass,
+                  },
+                  {
+                    side: "short" as const,
+                    action: runDcaArmShortAction,
+                    label: "Save and Trigger Short",
+                    className: headerShortClass,
+                  },
+                ] as const
+              ).map((item) => {
+                const onDirection = dcaEnabledSides(direction).includes(
+                  item.side,
+                );
+                const sideRunning = playbook
+                  ? dcaLegIsRunning(dcaLegFor(playbook, item.side).status)
+                  : false;
+                const blockedReason = !onDirection
+                  ? "Set Direction to include this side"
+                  : sideRunning
+                    ? `${item.side === "long" ? "Long" : "Short"} is already running`
+                    : saveError;
+                const blocked = Boolean(blockedReason);
+                return blocked ? (
+                  <button
+                    key={item.side}
+                    type="button"
+                    disabled
+                    title={blockedReason ?? undefined}
+                    className={`${item.className} opacity-40`}
+                  >
+                    {item.label}
+                  </button>
+                ) : (
+                  <PendingSubmitButton
+                    key={item.side}
+                    formAction={item.action}
+                    pendingLabel="Triggering…"
+                    successKey={`arm-dca-playbook-${playbook?.id ?? "new"}-${item.side}`}
+                    className={item.className}
+                  >
+                    {item.label}
+                  </PendingSubmitButton>
+                );
+              })
+            : null}
           {playbook ? (
             <>
-              {showManualTriggers ? (
-                (
-                  [
-                    {
-                      side: "long" as const,
-                      action: runDcaArmLongAction,
-                      label: "Save and Trigger Long",
-                      className: headerLongClass,
-                    },
-                    {
-                      side: "short" as const,
-                      action: runDcaArmShortAction,
-                      label: "Save and Trigger Short",
-                      className: headerShortClass,
-                    },
-                  ] as const
-                ).map((item) => {
-                  const onDirection = dcaEnabledSides(direction).includes(
-                    item.side,
-                  );
-                  const sideRunning = dcaLegIsRunning(
-                    dcaLegFor(playbook, item.side).status,
-                  );
-                  const blockedReason = !onDirection
-                    ? "Set Direction to include this side"
-                    : sideRunning
-                      ? `${item.side === "long" ? "Long" : "Short"} is already running`
-                      : saveError;
-                  const blocked = Boolean(blockedReason);
-                  return blocked ? (
-                    <button
-                      key={item.side}
-                      type="button"
-                      disabled
-                      title={blockedReason ?? undefined}
-                      className={`${item.className} opacity-40`}
-                    >
-                      {item.label}
-                    </button>
-                  ) : (
-                    <PendingSubmitButton
-                      key={item.side}
-                      formAction={item.action}
-                      pendingLabel="Triggering…"
-                      successKey={`arm-dca-playbook-${playbook.id}-${item.side}`}
-                      className={item.className}
-                    >
-                      {item.label}
-                    </PendingSubmitButton>
-                  );
-                })
-              ) : null}
               {showArmButton && !showStopAdding ? (
                 <PendingSubmitButton
                   formAction={runDcaArmAction}
