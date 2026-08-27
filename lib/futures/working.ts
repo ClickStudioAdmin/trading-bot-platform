@@ -276,11 +276,28 @@ function workingSortRank(row: {
   return [3, 0, row.createdAtMs];
 }
 
+function workingSourceSortKey(row: {
+  source?: string;
+  ruleName?: string | null;
+}): string {
+  const name = String(row.ruleName ?? "").trim().toLowerCase();
+  const kind = String(row.source ?? "");
+  return `${name}\0${kind}`;
+}
+
 export function sortFuturesWorkingRows<T extends {
   idempotencyKey: string | null;
   createdAtMs: number;
+  source?: string;
+  ruleName?: string | null;
 }>(rows: readonly T[]): T[] {
   return [...rows].sort((left, right) => {
+    const sourceCmp = workingSourceSortKey(left).localeCompare(
+      workingSourceSortKey(right),
+    );
+    if (sourceCmp !== 0) {
+      return sourceCmp;
+    }
     const a = workingSortRank(left);
     const b = workingSortRank(right);
     if (a[0] !== b[0]) {

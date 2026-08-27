@@ -219,5 +219,19 @@ assert.deepEqual(
   ]).map((row) => row.idempotencyKey),
   ["d11111111l1", "d11111111l10", "d11111111l19", "d11111111ltp1"],
 );
+assert.deepEqual(
+  sortFuturesWorkingRows([
+    { idempotencyKey: "d11111111l2", createdAtMs: 2, ruleName: "DCA Test - ETH" },
+    { idempotencyKey: "d22222222l1", createdAtMs: 1, ruleName: "DCA Test" },
+    { idempotencyKey: "d11111111l1", createdAtMs: 1, ruleName: "DCA Test - ETH" },
+    { idempotencyKey: "d22222222l2", createdAtMs: 2, ruleName: "DCA Test" },
+  ]).map((row) => row.ruleName + " " + row.idempotencyKey),
+  [
+    "DCA Test d22222222l1",
+    "DCA Test d22222222l2",
+    "DCA Test - ETH d11111111l1",
+    "DCA Test - ETH d11111111l2",
+  ],
+);
 
 console.log("futures working checks passed");
