@@ -422,57 +422,66 @@ export function DcaPlaybookForm({
         </div>
       </fieldset>
 
-      <fieldset className={sectionClass}>
-        <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
-          Initial clip and caps
-        </legend>
-        <div className={rowClass}>
-          <label className={labelClass}>
-            Clip size
-            <GroupedNumberInput
-              name="clipSize"
-              value={clipSize}
-              onChange={setClipSize}
-              allowDecimal
-              className={fieldClass}
-            />
-          </label>
-          <label className={labelClass}>
-            Size unit
-            <select
-              name="sizeUnit"
-              value={sizeUnit}
-              onChange={(event) =>
-                setSizeUnit(event.target.value as "qty" | "usdt")
-              }
-              className={fieldClass}
-            >
-              <option value="qty">Token qty</option>
-              <option value="usdt">USDT</option>
-            </select>
-          </label>
-          <label className={labelClass}>
-            Max clips
-            <GroupedNumberInput
-              name="maxClips"
-              value={maxClips}
-              onChange={setMaxClips}
-              className={fieldClass}
-              placeholder="No cap"
-            />
-          </label>
-          <label className={labelClass}>
-            Max value
-            <GroupedNumberInput
-              name="maxValue"
-              defaultValue={optional(playbook?.maxValue)}
-              allowDecimal
-              className={fieldClass}
-              placeholder="No cap"
-            />
-          </label>
-        </div>
-      </fieldset>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <fieldset className={sectionClass}>
+          <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+            Initial clip
+          </legend>
+          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+            <label className={labelClass}>
+              Clip size
+              <GroupedNumberInput
+                name="clipSize"
+                value={clipSize}
+                onChange={setClipSize}
+                allowDecimal
+                className={fieldClass}
+              />
+            </label>
+            <label className={labelClass}>
+              Size unit
+              <select
+                name="sizeUnit"
+                value={sizeUnit}
+                onChange={(event) =>
+                  setSizeUnit(event.target.value as "qty" | "usdt")
+                }
+                className={fieldClass}
+              >
+                <option value="qty">Token qty</option>
+                <option value="usdt">USDT</option>
+              </select>
+            </label>
+          </div>
+        </fieldset>
+        <fieldset className={sectionClass}>
+          <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+            Maximums
+          </legend>
+          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+            <label className={labelClass}>
+              Max clips
+              <GroupedNumberInput
+                name="maxClips"
+                value={maxClips}
+                onChange={setMaxClips}
+                className={fieldClass}
+                placeholder="No cap"
+              />
+            </label>
+            <label className={labelClass}>
+              Max value
+              <GroupedNumberInput
+                name="maxValue"
+                defaultValue={optional(playbook?.maxValue)}
+                allowDecimal
+                className={fieldClass}
+                placeholder="No cap"
+              />
+            </label>
+          </div>
+        </fieldset>
+      </div>
 
       <fieldset className={sectionClass}>
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
