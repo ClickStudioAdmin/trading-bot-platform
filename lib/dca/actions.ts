@@ -31,6 +31,17 @@ function succeed(notice: string): never {
 }
 
 export async function saveDcaPlaybookAction(formData: FormData) {
+  await saveDcaPlaybookWith("save", formData);
+}
+
+export async function saveAndArmDcaPlaybookAction(formData: FormData) {
+  await saveDcaPlaybookWith("arm", formData);
+}
+
+async function saveDcaPlaybookWith(
+  intentRaw: string,
+  formData: FormData,
+): Promise<void> {
   const session = await requirePerpsUiSession();
   if (session.account.deskType !== "dca") {
     fail("This desk is not a DCA desk.");
@@ -67,7 +78,7 @@ export async function saveDcaPlaybookAction(formData: FormData) {
     },
   });
   revalidatePath(FUTURES_PATHS.automations);
-  const intent = parseDcaSaveIntent(formData.get("saveIntent"));
+  const intent = parseDcaSaveIntent(intentRaw);
   if (intent === "arm" && dcaStartListens(parsed.config.startKind)) {
     const armed = await applyDcaVerb({
       playbook: saved.playbook,
@@ -117,12 +128,37 @@ export async function deleteDcaPlaybookAction(formData: FormData) {
   succeed("Playbook removed.");
 }
 
-export async function runDcaPlaybookVerb(formData: FormData) {
+export async function runDcaArmAction(formData: FormData) {
+  await runDcaPlaybookVerb("arm", formData);
+}
+
+export async function runDcaArmLongAction(formData: FormData) {
+  await runDcaPlaybookVerb("arm-long", formData);
+}
+
+export async function runDcaArmShortAction(formData: FormData) {
+  await runDcaPlaybookVerb("arm-short", formData);
+}
+
+export async function runDcaDisarmAction(formData: FormData) {
+  await runDcaPlaybookVerb("disarm", formData);
+}
+
+export async function runDcaClosePlaybookAction(formData: FormData) {
+  await runDcaPlaybookVerb("close-playbook", formData);
+}
+
+export async function runDcaPlaybookVerb(
+  verbRaw: string,
+  formData: FormData,
+) {
   const session = await requirePerpsUiSession();
   if (session.account.deskType !== "dca") {
     fail("This desk is not a DCA desk.");
   }
-  const parsedVerb = parseDcaPlaybookVerb(formData.get("verb"));
+  const parsedVerb =
+    parseDcaPlaybookVerb(verbRaw) ??
+    parseDcaPlaybookVerb(formData.get("verb"));
   if (!parsedVerb) {
     fail("Choose Arm, Disarm, or Close playbook.");
   }

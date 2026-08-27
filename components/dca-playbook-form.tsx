@@ -8,7 +8,12 @@ import { TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   deleteDcaPlaybookAction,
-  runDcaPlaybookVerb,
+  runDcaArmAction,
+  runDcaArmLongAction,
+  runDcaArmShortAction,
+  runDcaClosePlaybookAction,
+  runDcaDisarmAction,
+  saveAndArmDcaPlaybookAction,
   saveDcaPlaybookAction,
 } from "@/lib/dca/actions";
 import {
@@ -506,8 +511,6 @@ export function DcaPlaybookForm({
           ) : null}
         </div>
         <PendingSubmitButton
-          name="saveIntent"
-          value="save"
           pendingLabel="Saving…"
           successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
           className={headerPrimaryClass}
@@ -517,8 +520,7 @@ export function DcaPlaybookForm({
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           {showSaveAndArm ? (
             <PendingSubmitButton
-              name="saveIntent"
-              value="arm"
+              formAction={saveAndArmDcaPlaybookAction}
               pendingLabel="Arming…"
               successKey={`save-arm-dca-playbook-${playbook?.id ?? "new"}`}
               className={headerLongClass}
@@ -533,13 +535,13 @@ export function DcaPlaybookForm({
                   [
                     {
                       side: "long" as const,
-                      value: "arm-long",
+                      action: runDcaArmLongAction,
                       label: "Save and Trigger Long",
                       className: headerLongClass,
                     },
                     {
                       side: "short" as const,
-                      value: "arm-short",
+                      action: runDcaArmShortAction,
                       label: "Save and Trigger Short",
                       className: headerShortClass,
                     },
@@ -550,10 +552,8 @@ export function DcaPlaybookForm({
                   );
                   return enabled ? (
                     <PendingSubmitButton
-                      key={item.value}
-                      formAction={runDcaPlaybookVerb}
-                      name="verb"
-                      value={item.value}
+                      key={item.side}
+                      formAction={item.action}
                       pendingLabel="Triggering…"
                       successKey={`arm-dca-playbook-${playbook.id}-${item.side}`}
                       className={item.className}
@@ -562,7 +562,7 @@ export function DcaPlaybookForm({
                     </PendingSubmitButton>
                   ) : (
                     <button
-                      key={item.value}
+                      key={item.side}
                       type="button"
                       disabled
                       title="Set Direction to include this side"
@@ -575,9 +575,7 @@ export function DcaPlaybookForm({
               ) : null}
               {showArmButton && !showStopAdding ? (
                 <PendingSubmitButton
-                  formAction={runDcaPlaybookVerb}
-                  name="verb"
-                  value="arm"
+                  formAction={runDcaArmAction}
                   pendingLabel="Arming…"
                   successKey={`arm-dca-playbook-${playbook.id}`}
                   className={headerSecondaryClass}
@@ -591,9 +589,7 @@ export function DcaPlaybookForm({
                   title="Stop adding any new orders (also cancels any existing entry limit orders)"
                 >
                   <PendingSubmitButton
-                    formAction={runDcaPlaybookVerb}
-                    name="verb"
-                    value="disarm"
+                    formAction={runDcaDisarmAction}
                     pendingLabel="Stopping…"
                     successKey={`disarm-dca-playbook-${playbook.id}`}
                     className={headerDangerClass}
@@ -608,9 +604,7 @@ export function DcaPlaybookForm({
                   title="Close all positions and place the playbook in idle mode (no new entries)"
                 >
                   <PendingSubmitButton
-                    formAction={runDcaPlaybookVerb}
-                    name="verb"
-                    value="close-playbook"
+                    formAction={runDcaClosePlaybookAction}
                     pendingLabel="Closing…"
                     successKey={`close-dca-playbook-${playbook.id}`}
                     className={headerDangerClass}
