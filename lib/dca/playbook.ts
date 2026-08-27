@@ -249,8 +249,27 @@ export function dcaEnabledSides(direction: DcaDirection): FuturesSide[] {
   return [direction];
 }
 
+export function dcaStartListens(startKind: DcaStartKind): boolean {
+  return (
+    startKind === "price" ||
+    startKind === "indicator" ||
+    startKind === "webhook"
+  );
+}
+
 export function dcaLegIsRunning(status: DcaStatus): boolean {
   return status === "armed" || status === "stop_adding";
+}
+
+export function dcaWebhookSignalApplies(input: {
+  startKind: DcaStartKind;
+  fromSignal: boolean;
+  status: DcaStatus;
+}): boolean {
+  if (!input.fromSignal || input.startKind !== "webhook") {
+    return true;
+  }
+  return dcaLegIsRunning(input.status);
 }
 
 export function dcaPlaybookIsRunning(
@@ -330,6 +349,10 @@ export function parseDcaPlaybookId(raw: unknown): string | null {
     return null;
   }
   return text;
+}
+
+export function parseDcaSaveIntent(raw: unknown): "save" | "arm" {
+  return String(raw ?? "").trim() === "arm" ? "arm" : "save";
 }
 
 export function dcaPlaybookConflict(

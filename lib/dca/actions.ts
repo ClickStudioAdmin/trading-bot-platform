@@ -1,7 +1,12 @@
 "use server";
 
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
-import { parseDcaPlaybookForm, parseDcaPlaybookId } from "@/lib/dca/playbook";
+import {
+  dcaStartListens,
+  parseDcaPlaybookForm,
+  parseDcaPlaybookId,
+  parseDcaSaveIntent,
+} from "@/lib/dca/playbook";
 import { applyDcaVerb, parseDcaPlaybookVerb } from "@/lib/dca/run";
 import {
   deleteDcaPlaybook,
@@ -62,6 +67,19 @@ export async function saveDcaPlaybookAction(formData: FormData) {
     },
   });
   revalidatePath(FUTURES_PATHS.automations);
+  const intent = parseDcaSaveIntent(formData.get("saveIntent"));
+  if (intent === "arm" && dcaStartListens(parsed.config.startKind)) {
+    const armed = await applyDcaVerb({
+      playbook: saved.playbook,
+      mode: session.account.mode,
+      verb: "arm",
+    });
+    if (!armed.ok) {
+      fail(armed.error);
+    }
+    revalidatePath(FUTURES_PATHS.positions);
+    succeed(armed.message);
+  }
   succeed("Playbook saved.");
 }
 

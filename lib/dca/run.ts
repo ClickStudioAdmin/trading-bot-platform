@@ -24,11 +24,8 @@ import {
   dcaTrailingDistance,
 } from "./grid";
 import {
-  dcaClipAction,
-  dcaClipKey,
-  dcaEnabledSides,
-  dcaLegFor,
   dcaLegIsRunning,
+  dcaWebhookSignalApplies,
   type DcaPlaybook,
 } from "./playbook";
 import {
@@ -447,10 +444,21 @@ export async function applyDcaVerb(input: {
   let resumed = 0;
   let waiting = 0;
   let already = 0;
+  let skippedIdle = 0;
   const playbook = input.playbook;
 
   for (const side of sides) {
     const leg = dcaLegFor(playbook, side);
+    if (
+      !dcaWebhookSignalApplies({
+        startKind: playbook.startKind,
+        fromSignal,
+        status: leg.status,
+      })
+    ) {
+      skippedIdle += 1;
+      continue;
+    }
     if (leg.status === "armed" && leg.clipsFilled > 0) {
       already += 1;
       continue;
@@ -512,6 +520,9 @@ export async function applyDcaVerb(input: {
     }
   }
 
+  if (skippedIdle === sides.length) {
+    return { ok: false, error: "Arm the playbook first." };
+  }
   if (placed === 0 && waiting === 0 && resumed === 0 && already > 0) {
     return { ok: true, message: "Playbook is already armed." };
   }

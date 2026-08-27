@@ -81,10 +81,10 @@ export default async function FuturesAutomationsPage({
       <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
         <PageHeading as="h2" title="Automations" />
         <p className="-mt-4 text-sm text-ink-muted">
-          Add a playbook per contract. The app owns orders and exits.
-          Manual trigger, Arm for price or indicator, or a bound Signal
-          webhook. Stop adding leaves the position. Close playbook
-          flattens it.
+          Add a playbook per contract. The app owns orders and exits. Save
+          and Arm to listen, then price, indicator, or a bound Signal.
+          Manual uses Trigger Long or Short. Stop adding leaves the
+          position. Close playbook flattens it.
         </p>
         {error ? (
           <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

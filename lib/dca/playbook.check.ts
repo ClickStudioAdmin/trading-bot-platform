@@ -6,6 +6,9 @@ import {
   dcaClipKey,
   dcaDipMet,
   dcaEnabledSides,
+  dcaStartListens,
+  dcaLegIsRunning,
+  dcaWebhookSignalApplies,
   dcaHintsForOpen,
   dcaIntervalMet,
   dcaIntervalParts,
@@ -19,6 +22,7 @@ import {
   formatDcaRemaining,
   parseDcaPlaybookForm,
   parseDcaPlaybookId,
+  parseDcaSaveIntent,
   parseDcaPlaybookRow,
   parseDcaStatus,
   dcaMaxTypeFromCaps,
@@ -32,11 +36,45 @@ assert.equal(dcaClipAction("long"), "buy");
 assert.equal(dcaClipAction("short"), "sell");
 assert.equal(dcaClipKey("11111111-1111-4111-8111-111111111111", "long", 2), "d11111111l2");
 assert.deepEqual(dcaEnabledSides("both"), ["long", "short"]);
+assert.equal(dcaStartListens("immediate"), false);
+assert.equal(dcaStartListens("price"), true);
+assert.equal(dcaStartListens("webhook"), true);
+assert.equal(dcaStartListens("indicator"), true);
+assert.equal(dcaLegIsRunning("idle"), false);
+assert.equal(dcaLegIsRunning("armed"), true);
+assert.equal(dcaLegIsRunning("stop_adding"), true);
+assert.equal(
+  dcaWebhookSignalApplies({
+    startKind: "webhook",
+    fromSignal: true,
+    status: "idle",
+  }),
+  false,
+);
+assert.equal(
+  dcaWebhookSignalApplies({
+    startKind: "webhook",
+    fromSignal: true,
+    status: "armed",
+  }),
+  true,
+);
+assert.equal(
+  dcaWebhookSignalApplies({
+    startKind: "webhook",
+    fromSignal: false,
+    status: "idle",
+  }),
+  true,
+);
 assert.equal(
   parseDcaPlaybookId("11111111-1111-1111-1111-111111111111"),
   "11111111-1111-1111-1111-111111111111",
 );
 assert.equal(parseDcaPlaybookId("nope"), null);
+assert.equal(parseDcaSaveIntent("arm"), "arm");
+assert.equal(parseDcaSaveIntent("save"), "save");
+assert.equal(parseDcaSaveIntent(""), "save");
 assert.equal(
   dcaPlaybookConflict(
     [{ id: "a", symbol: "BTCUSDT" }],

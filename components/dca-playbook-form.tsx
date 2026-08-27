@@ -28,6 +28,7 @@ import {
   dcaMaxTypeFromCaps,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
+  dcaStartListens,
   parseDcaExitBasis,
   type DcaAveragingKind,
   type DcaExitBasis,
@@ -48,6 +49,7 @@ const sectionClass =
 const rowClass = "grid gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-4";
 const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
 const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
+const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`;
 const headerLongClass =
   "rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas";
 const headerShortClass =
@@ -55,8 +57,6 @@ const headerShortClass =
 const headerDangerClass = `${headerBtnClass} bg-danger/15 text-danger hover:bg-danger/25`;
 const headerRemoveClass =
   "shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
-const headerSegmentClass =
-  "rounded-none border-0 bg-transparent px-3 py-1.5 text-xs font-medium text-ink hover:bg-surface-raised";
 
 function optional(value: number | null | undefined): string {
   return value == null ? "" : String(value);
@@ -306,7 +306,9 @@ export function DcaPlaybookForm({
     (leg) => leg.clipsFilled > 0 || leg.status === "stop_adding",
   );
   const showManualTriggers = startKind === "immediate";
-  const showArmButton = startKind === "price" || startKind === "indicator";
+  const showSaveAndArm = dcaStartListens(startKind) && !running;
+  const showArmButton =
+    dcaStartListens(startKind) && Boolean(playbook) && running;
   const effectiveMaxType: DcaMaxType = restGrid ? "orders" : maxType;
   const summary = useMemo(() => {
     const orderCap = asNumber(maxClips);
@@ -442,13 +444,38 @@ export function DcaPlaybookForm({
             </button>
           ) : null}
         </div>
-        <PendingSubmitButton
-          pendingLabel="Saving…"
-          successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
-          className={headerPrimaryClass}
-        >
-          Save playbook
-        </PendingSubmitButton>
+        {showSaveAndArm ? (
+          <>
+            <PendingSubmitButton
+              name="saveIntent"
+              value="save"
+              pendingLabel="Saving…"
+              successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
+              className={headerSecondaryClass}
+            >
+              Save
+            </PendingSubmitButton>
+            <PendingSubmitButton
+              name="saveIntent"
+              value="arm"
+              pendingLabel="Arming…"
+              successKey={`save-arm-dca-playbook-${playbook?.id ?? "new"}`}
+              className={headerPrimaryClass}
+            >
+              Save and Arm
+            </PendingSubmitButton>
+          </>
+        ) : (
+          <PendingSubmitButton
+            name="saveIntent"
+            value="save"
+            pendingLabel="Saving…"
+            successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
+            className={headerPrimaryClass}
+          >
+            Save playbook
+          </PendingSubmitButton>
+        )}
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           {playbook ? (
             <>
@@ -497,36 +524,6 @@ export function DcaPlaybookForm({
                   );
                 })
               ) : null}
-              {showArmButton && showStopAdding ? (
-                <div className="inline-flex overflow-hidden rounded-control border border-line bg-surface">
-                  <PendingSubmitButton
-                    formAction={runDcaPlaybookVerb}
-                    name="verb"
-                    value="arm"
-                    pendingLabel="Arming…"
-                    successKey={`arm-dca-playbook-${playbook.id}`}
-                    className={headerSegmentClass}
-                  >
-                    Arm
-                  </PendingSubmitButton>
-                  <span className="w-px self-stretch bg-line" aria-hidden />
-                  <span
-                    className="inline-flex"
-                    title="Stop adding any new orders (also cancels any existing entry limit orders)"
-                  >
-                    <PendingSubmitButton
-                      formAction={runDcaPlaybookVerb}
-                      name="verb"
-                      value="disarm"
-                      pendingLabel="Stopping…"
-                      successKey={`disarm-dca-playbook-${playbook.id}`}
-                      className="rounded-none bg-danger/15 px-3 py-1.5 text-xs font-medium text-danger hover:bg-danger/25"
-                    >
-                      Stop adding
-                    </PendingSubmitButton>
-                  </span>
-                </div>
-              ) : null}
               {showArmButton && !showStopAdding ? (
                 <PendingSubmitButton
                   formAction={runDcaPlaybookVerb}
@@ -534,13 +531,12 @@ export function DcaPlaybookForm({
                   value="arm"
                   pendingLabel="Arming…"
                   successKey={`arm-dca-playbook-${playbook.id}`}
-                  className={`${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`}
+                  className={headerSecondaryClass}
                 >
                   Arm
                 </PendingSubmitButton>
               ) : null}
-              {(showManualTriggers || startKind === "webhook") &&
-              showStopAdding ? (
+              {showStopAdding ? (
                 <span
                   className="inline-flex"
                   title="Stop adding any new orders (also cancels any existing entry limit orders)"
@@ -681,7 +677,8 @@ export function DcaPlaybookForm({
                   </select>
                 </label>
                 <p className="self-end text-xs text-ink-muted sm:col-span-2">
-                  Save first. Then arm from the bound Signal.
+                  Save and Arm first. Then the bound Signal starts the first
+                  order.
                 </p>
               </>
             ) : (
@@ -690,7 +687,7 @@ export function DcaPlaybookForm({
                 <Link href={FUTURES_PATHS.webhooks} className="text-accent">
                   Webhooks
                 </Link>{" "}
-                first. Buy / sell arms that side only.
+                first. Save and Arm, then buy / sell starts that side only.
               </p>
             )
           ) : null}

@@ -30,11 +30,11 @@ Stop at the end of this phase for a desk test. Do not start scale-in ([phase-12 
 1. Create a **DCA** desk. Type is immutable. Bind is the same Futures bind as Perps.
 2. The desk owns stacked playbooks. Automations is that list (Add playbook). One playbook per contract. Perps price-cross recipes stay on Perps desks only.
 3. Direction is long, short, or both. Both opens two blotter rows that add independently and never flatten each other. Manual start uses Trigger Long and Trigger Short for that side.
-4. Start is Immediate, price cross, a bound Signal webhook, or an indicator on public klines (RSI 14, MACD, EMA 9/21; 5m / 15m / 1h). Immediate: Trigger Long / Trigger Short places that side’s first order. Price and indicator: Arm enables, then wait for the trigger. Webhook: no Arm on Automations; `arm` / buy / sell on the bound Signal places the first order.
+4. Start is Immediate, price cross, a bound Signal webhook, or an indicator on public klines (RSI 14, MACD, EMA 9/21; 5m / 15m / 1h). Immediate: Save, then Trigger Long / Trigger Short places that side’s first order. Price, indicator, and webhook: idle uses Save and Save and Arm. Live uses Save; Arm resumes after Stop adding. Close returns to idle. Price/indicator then wait for the condition. Webhook: the bound Signal’s `arm` / buy / sell places the first order only after Arm. Idle recipes ignore the Signal.
 5. Adds: order size (qty or USDT), max orders / max position value (USDT), then one averaging kind — add on price deviation or add on interval (minutes, hours, or days). Price deviation can place remaining orders as GTC limits instead of market. Size and deviation multipliers scale later orders. Caps stop adding. They do not flatten.
 6. Exit: take profit / stop vs average or first fill, optional move-stop-to-breakeven, optional trailing on the existing row trailing engine. Stop adding leaves the position. Close playbook flattens then returns to idle.
 7. No Buy/Sell ticket. Close All, reduce-only, caps, and row TP/SL still protect. Reduce-only blocks new orders; TP/SL still run.
-8. A Signal webhook only drives playbooks bound to it. TradingView **Order** webhooks are not the brain on this desk. Buy / sell on that Signal arms that side only and does not send TV size.
+8. A Signal webhook only drives playbooks bound to it, and only after Arm. TradingView **Order** webhooks are not the brain on this desk. Buy / sell on that Signal starts that side only and does not send TV size.
 9. The tick places orders and exits through `runFuturesCommand`. Opened rows show Auto plus the playbook name, plus Orders / Next add / Remaining.
 10. Isolation is another desk **and** another trade-only key. Same-key warning copy from Phase 10 still applies.
 
