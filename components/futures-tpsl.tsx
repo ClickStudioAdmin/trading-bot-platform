@@ -148,8 +148,14 @@ export function FuturesTpslCell({
             ? slOrderType
             : (plannedSlOrderType ?? slOrderType)
         }
-        tpTone={liveTakeProfit !== null ? "live" : "planned"}
-        slTone={liveStopLoss !== null ? "live" : "planned"}
+        tpTone={
+          liveTakeProfit !== null && tpOrderType === "limit"
+            ? "live"
+            : "planned"
+        }
+        slTone={
+          liveStopLoss !== null && slOrderType === "limit" ? "live" : "planned"
+        }
       />
     ) : (
       <span className="text-ink-faint">—</span>

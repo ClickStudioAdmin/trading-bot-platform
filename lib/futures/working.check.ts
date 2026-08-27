@@ -6,6 +6,8 @@ import {
   paperLimitShouldFill,
   parseFuturesWorkingRow,
   workingActionLabel,
+  workingSideLabel,
+  workingTypeLabel,
 } from "./working";
 
 assert.equal(
@@ -131,6 +133,9 @@ assert.equal(parsed.trailingActive, null);
 assert.equal(parsed.reduceOnly, false);
 assert.equal(parsed.source, "manual");
 assert.equal(parsed.ruleName, null);
+assert.equal(parsed.idempotencyKey, null);
+assert.equal(workingTypeLabel(parsed), "Entry");
+assert.equal(workingSideLabel("buy"), "Buy");
 
 const engineRaw = {
   id: "w1",
@@ -187,6 +192,15 @@ const closeLimit = parseFuturesWorkingRow({
 assert.equal(closeLimit.reduceOnly, true);
 assert.equal(closeLimit.positionId, "p1");
 assert.equal(workingActionLabel(closeLimit.action, closeLimit.reduceOnly), "Close");
+assert.equal(workingTypeLabel(closeLimit), "Close");
+assert.equal(workingSideLabel(closeLimit.action), "Sell");
 assert.equal(workingActionLabel("buy"), "Buy");
+assert.equal(
+  workingTypeLabel({
+    reduceOnly: false,
+    idempotencyKey: "d11111111l1",
+  }),
+  "Entry # 2",
+);
 
 console.log("futures working checks passed");

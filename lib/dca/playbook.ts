@@ -1215,6 +1215,21 @@ export function dcaClipKey(
   return `d${compact}${sideChar}${clipIndex}`;
 }
 
+export function parseDcaClipIndex(key: string | null | undefined): number | null {
+  if (!key) {
+    return null;
+  }
+  const match = /^d[a-f0-9]{8}[ls](\d+)$/i.exec(key.trim());
+  if (!match) {
+    return null;
+  }
+  return Number(match[1]);
+}
+
+export function formatDcaEntryType(clipIndex: number): string {
+  return `Entry # ${clipIndex + 1}`;
+}
+
 export function dcaPlaybookStatusLabel(playbook: DcaPlaybook): string {
   const sides = dcaEnabledSides(playbook.direction);
   return sides

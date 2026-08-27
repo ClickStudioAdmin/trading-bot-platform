@@ -1,3 +1,4 @@
+import { formatDcaEntryType, parseDcaClipIndex } from "@/lib/dca/playbook";
 import type {
   FuturesAction,
   FuturesOrderType,
@@ -43,6 +44,7 @@ export type FuturesWorkingOrder = {
   trailingActive: number | null;
   source: FuturesTradeSource;
   ruleName: string | null;
+  idempotencyKey: string | null;
 };
 
 export function paperLimitShouldFill(input: {
@@ -197,6 +199,7 @@ export function parseFuturesWorkingRow(
       Number(row.trailing_active) > 0 ? Number(row.trailing_active) : null,
     source: parseFuturesTradeSource(row.source),
     ruleName: String(row.rule_name ?? "").trim() || null,
+    idempotencyKey: String(row.idempotency_key ?? "").trim() || null,
   };
 }
 
@@ -228,4 +231,22 @@ export function workingActionLabel(
     return "Close";
   }
   return action === "sell" ? "Sell" : "Buy";
+}
+
+export function workingSideLabel(action: "buy" | "sell"): "Buy" | "Sell" {
+  return action === "sell" ? "Sell" : "Buy";
+}
+
+export function workingTypeLabel(row: {
+  reduceOnly: boolean;
+  idempotencyKey: string | null;
+}): string {
+  const clipIndex = parseDcaClipIndex(row.idempotencyKey);
+  if (clipIndex !== null) {
+    return formatDcaEntryType(clipIndex);
+  }
+  if (row.reduceOnly) {
+    return "Close";
+  }
+  return "Entry";
 }

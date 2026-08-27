@@ -10,7 +10,8 @@ import { FuturesSourceCell } from "@/components/futures-source";
 import { FuturesWorkingEdit } from "@/components/futures-working-edit";
 import { cancelFuturesWorking } from "@/lib/futures/actions";
 import {
-  workingActionLabel,
+  workingSideLabel,
+  workingTypeLabel,
   type FuturesWorkingOrder,
 } from "@/lib/futures/working";
 import { formatPrice, formatUsd } from "@/lib/opportunities/format";
@@ -39,7 +40,7 @@ export function FuturesWorkingOrders({
   playbookOwnsOrders?: boolean;
 }) {
   const showOrderMeta = !playbookOwnsOrders;
-  const colSpan = showOrderMeta ? 10 : 7;
+  const colSpan = showOrderMeta ? 11 : 8;
   return (
     <section>
       <div className="mb-3 flex items-end justify-between gap-3">
@@ -84,7 +85,13 @@ export function FuturesWorkingOrders({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Side"
-                  hint="Buy opens or adds a long. Sell opens or adds a short. Close is a reduce-only limit on an open row."
+                  hint="Buy or Sell. A close is still Buy or Sell on the close side."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Type"
+                  hint="Entry # is the ladder step, including the first fill as # 1. Close is a reduce-only limit. Take profit, stop loss, and trailing rest on the position unless they are working limits."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -205,7 +212,10 @@ function WorkingRow({
         />
       </td>
       <td className="px-4 py-3">
-        {workingActionLabel(row.action, row.reduceOnly)}
+        {workingSideLabel(row.action)}
+      </td>
+      <td className="px-4 py-3">
+        {workingTypeLabel(row)}
       </td>
       <td className="px-4 py-3 tabular-nums">
         {row.remainingQty}

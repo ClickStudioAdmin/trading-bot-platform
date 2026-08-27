@@ -220,7 +220,7 @@ export function OpenFuturesTrades({
                     label="TP/SL"
                     hint={
                       playbookOwnsOrders
-                        ? "Recipe take profit / stop on this row. Faint is the target from Automations. Colour means it is resting on the position."
+                        ? "Recipe take profit / stop. Faint is the target from Automations, or a market exit. Colour means a limit is resting."
                         : "Take profit and stop loss on this row. Market fills when the trigger hits. Limit rests until mark can fill. Add when the position is open, or attach them on the order ticket."
                     }
                   />

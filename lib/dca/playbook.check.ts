@@ -4,6 +4,8 @@ import {
   dcaCapHit,
   dcaClipAction,
   dcaClipKey,
+  parseDcaClipIndex,
+  formatDcaEntryType,
   dcaDipMet,
   dcaEnabledSides,
   dcaStartListens,
@@ -37,6 +39,10 @@ assert.equal(parseDcaStatus("nope"), "idle");
 assert.equal(dcaClipAction("long"), "buy");
 assert.equal(dcaClipAction("short"), "sell");
 assert.equal(dcaClipKey("11111111-1111-4111-8111-111111111111", "long", 2), "d11111111l2");
+assert.equal(parseDcaClipIndex("d11111111l2"), 2);
+assert.equal(formatDcaEntryType(0), "Entry # 1");
+assert.equal(formatDcaEntryType(1), "Entry # 2");
+assert.equal(parseDcaClipIndex("c123"), null);
 assert.deepEqual(dcaEnabledSides("both"), ["long", "short"]);
 assert.equal(dcaStartListens("immediate"), false);
 assert.equal(dcaStartListens("price"), true);
