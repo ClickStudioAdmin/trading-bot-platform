@@ -49,8 +49,9 @@ const rowClass = "grid gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-4";
 const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
 const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
 const headerLongClass =
-  "px-3 py-1.5 text-xs font-medium bg-success text-canvas";
-const headerShortClass = "px-3 py-1.5 text-xs font-medium bg-danger text-ink";
+  "rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas";
+const headerShortClass =
+  "rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink";
 const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`;
 const headerDangerClass = `${headerBtnClass} bg-danger/15 text-danger hover:bg-danger/25`;
 const headerRemoveClass =
@@ -124,7 +125,7 @@ function DcaStatusLight({
       : label;
   return (
     <span
-      className="relative ml-auto flex size-3.5 shrink-0"
+      className="relative flex size-3.5 shrink-0"
       title={title}
       aria-label={title}
     >
@@ -405,62 +406,60 @@ export function DcaPlaybookForm({
     >
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <div className="flex flex-wrap items-center gap-2">
-          <PendingSubmitButton
-            pendingLabel="Saving…"
-            successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
-            className={headerPrimaryClass}
-          >
-            Save playbook
-          </PendingSubmitButton>
+        <PendingSubmitButton
+          pendingLabel="Saving…"
+          successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
+          className={headerPrimaryClass}
+        >
+          Save playbook
+        </PendingSubmitButton>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           {playbook ? (
             <>
-              <span className="hidden h-5 w-px bg-line sm:block" aria-hidden />
               {startKind === "immediate" ? (
-                <div className="inline-flex overflow-hidden rounded-control">
-                  {(
-                    [
-                      {
-                        side: "long" as const,
-                        value: "arm-long",
-                        label: "Trigger Long",
-                        className: headerLongClass,
-                      },
-                      {
-                        side: "short" as const,
-                        value: "arm-short",
-                        label: "Trigger Short",
-                        className: headerShortClass,
-                      },
-                    ] as const
-                  ).map((item) => {
-                    const enabled = dcaEnabledSides(direction).includes(
-                      item.side,
-                    );
-                    return enabled ? (
-                      <PendingSubmitButton
-                        key={item.value}
-                        formAction={runDcaPlaybookVerb}
-                        name="verb"
-                        value={item.value}
-                        pendingLabel="Triggering…"
-                        successKey={`arm-dca-playbook-${playbook.id}-${item.side}`}
-                        className={item.className}
-                      >
-                        {item.label}
-                      </PendingSubmitButton>
-                    ) : (
-                      <button
-                        key={item.value}
-                        type="button"
-                        disabled
-                        title="Set Direction to include this side"
-                        className={`${item.className} opacity-40`}
-                      >
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </div>
+                (
+                  [
+                    {
+                      side: "long" as const,
+                      value: "arm-long",
+                      label: "Trigger Long",
+                      className: headerLongClass,
+                    },
+                    {
+                      side: "short" as const,
+                      value: "arm-short",
+                      label: "Trigger Short",
+                      className: headerShortClass,
+                    },
+                  ] as const
+                ).map((item) => {
+                  const enabled = dcaEnabledSides(direction).includes(
+                    item.side,
+                  );
+                  return enabled ? (
+                    <PendingSubmitButton
+                      key={item.value}
+                      formAction={runDcaPlaybookVerb}
+                      name="verb"
+                      value={item.value}
+                      pendingLabel="Triggering…"
+                      successKey={`arm-dca-playbook-${playbook.id}-${item.side}`}
+                      className={item.className}
+                    >
+                      {item.label}
+                    </PendingSubmitButton>
+                  ) : (
+                    <button
+                      key={item.value}
+                      type="button"
+                      disabled
+                      title="Set Direction to include this side"
+                      className={`${item.className} opacity-40`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })
               ) : (
                 <div className="inline-flex overflow-hidden rounded-control border border-line bg-surface">
                   <PendingSubmitButton
@@ -510,6 +509,8 @@ export function DcaPlaybookForm({
               </PendingSubmitButton>
             </>
           ) : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
           {playbook ? (
             running ? (
               <p className="text-xs text-ink-muted">
@@ -535,6 +536,7 @@ export function DcaPlaybookForm({
             </button>
           ) : null}
           <DcaStatusLight playbook={playbook ?? null} reduceOnly={reduceOnly} />
+        </div>
       </div>
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
