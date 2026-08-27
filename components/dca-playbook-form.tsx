@@ -431,7 +431,6 @@ export function DcaPlaybookForm({
               Remove
             </button>
           ) : null}
-          <DcaStatusLight playbook={playbook ?? null} reduceOnly={reduceOnly} />
         </div>
         <PendingSubmitButton
           pendingLabel="Saving…"
@@ -537,6 +536,7 @@ export function DcaPlaybookForm({
             </>
           ) : null}
         </div>
+        <DcaStatusLight playbook={playbook ?? null} reduceOnly={reduceOnly} />
       </div>
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
