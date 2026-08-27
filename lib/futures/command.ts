@@ -102,6 +102,12 @@ export {
   parseCloseAllConfirm,
 } from "./close-all";
 
+export function idempotencyWorkingReplay(
+  status: string | null | undefined,
+): "replay" | "new" {
+  return status === "open" || status === "filled" ? "replay" : "new";
+}
+
 export function parseIdempotencyKey(
   raw: unknown,
 ): { ok: true; key: string | null } | { ok: false; error: string } {
@@ -157,6 +163,18 @@ export async function saveCommandReceipt(input: {
   });
 }
 
+export async function deleteCommandReceipt(input: {
+  supabase: SupabaseClient;
+  accountId: string;
+  key: string;
+}): Promise<void> {
+  await input.supabase
+    .from("futures_command_receipts")
+    .delete()
+    .eq("account_id", input.accountId)
+    .eq("idempotency_key", input.key);
+}
+
 export async function replayOrNull(input: {
   supabase: SupabaseClient;
   accountId: string;
@@ -166,14 +184,6 @@ export async function replayOrNull(input: {
   if (!input.key) {
     return null;
   }
-  const receipt = await loadCommandReceipt(
-    input.supabase,
-    input.accountId,
-    input.key,
-  );
-  if (receipt) {
-    return { ok: true, flash: receipt.flash, replayed: true };
-  }
   const { data: working } = await input.supabase
     .from("futures_working_orders")
     .select("status, reduce_only")
@@ -181,6 +191,9 @@ export async function replayOrNull(input: {
     .eq("idempotency_key", input.key)
     .maybeSingle();
   if (working) {
+    if (idempotencyWorkingReplay(String(working.status)) === "new") {
+      return null;
+    }
     const live = Boolean(input.liveBook);
     const open = String(working.status) === "open";
     const close = Boolean(working.reduce_only);
@@ -196,6 +209,14 @@ export async function replayOrNull(input: {
           ? "live-opened"
           : "opened";
     return { ok: true, flash, replayed: true };
+  }
+  const receipt = await loadCommandReceipt(
+    input.supabase,
+    input.accountId,
+    input.key,
+  );
+  if (receipt) {
+    return { ok: true, flash: receipt.flash, replayed: true };
   }
   const { data: order } = await input.supabase
     .from("futures_orders")

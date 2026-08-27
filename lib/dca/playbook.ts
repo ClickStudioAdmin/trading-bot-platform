@@ -1442,11 +1442,20 @@ export function dcaExitLimitRestKey(
   kind: DcaExitLimitKind,
   qty: number,
   limitPrice: number,
+  positionId?: string,
 ): string {
+  const prefix = dcaExitLimitKey(playbookId, side, kind);
+  const pos = String(positionId ?? "")
+    .replace(/-/g, "")
+    .slice(0, 8);
   const q = Math.max(0, Math.round(qty * 1e8)).toString(36);
   const p = Math.max(0, Math.round(limitPrice * 1e4)).toString(36);
-  const key = `${dcaExitLimitKey(playbookId, side, kind)}x${q}p${p}`;
-  return key.length <= 36 ? key : key.slice(0, 36);
+  const withPos = pos ? `${prefix}${pos}x${q}p${p}` : `${prefix}x${q}p${p}`;
+  if (withPos.length <= 36) {
+    return withPos;
+  }
+  const short = pos ? `${prefix}${pos}` : prefix;
+  return short.length <= 36 ? short : short.slice(0, 36);
 }
 
 export function dcaFlattenKey(
@@ -1466,9 +1475,10 @@ export function parseDcaExitLimitKind(
   if (!key) {
     return null;
   }
-  const match = /^d[a-f0-9]{8}[ls](tp|sl)(?:\d+|x[a-z0-9]+)?$/i.exec(
-    key.trim(),
-  );
+  const match =
+    /^d[a-f0-9]{8}[ls](tp|sl)(?:[a-f0-9]{8})?(?:\d+|x[a-z0-9]+)?$/i.exec(
+      key.trim(),
+    );
   if (!match) {
     return null;
   }

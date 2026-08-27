@@ -497,6 +497,8 @@ async function closeWorkingOrder(input: {
     return false;
   }
   const now = new Date().toISOString();
+  const dropKey =
+    input.status === "cancelled" || input.status === "rejected";
   const { data, error } = await input.supabase
     .from("futures_working_orders")
     .update({
@@ -504,12 +506,23 @@ async function closeWorkingOrder(input: {
       remaining_qty: input.row.remainingQty,
       closed_at: now,
       updated_at: now,
+      ...(dropKey ? { idempotency_key: null } : {}),
     })
     .eq("id", input.row.id)
     .eq("account_id", input.row.accountId)
     .eq("status", "open")
     .select("id");
-  return !error && Boolean(data && data.length > 0);
+  if (error || !data || data.length === 0) {
+    return false;
+  }
+  if (dropKey && input.row.idempotencyKey) {
+    await input.supabase
+      .from("futures_command_receipts")
+      .delete()
+      .eq("account_id", input.row.accountId)
+      .eq("idempotency_key", input.row.idempotencyKey);
+  }
+  return true;
 }
 
 export async function cancelFuturesWorkingRow(input: {

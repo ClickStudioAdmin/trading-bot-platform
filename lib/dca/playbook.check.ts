@@ -112,6 +112,37 @@ assert.equal(
   tpRestKey,
 );
 assert.ok(tpRestKey.length <= 36);
+const tpPosKey = dcaExitLimitRestKey(
+  "11111111-1111-4111-8111-111111111111",
+  "short",
+  "tp",
+  0.03,
+  2489.18,
+  "22222222-2222-4222-8222-222222222222",
+);
+assert.equal(parseDcaExitLimitKind(tpPosKey), "tp");
+assert.equal(
+  isDcaExitLimitKey(
+    tpPosKey,
+    "11111111-1111-4111-8111-111111111111",
+    "short",
+    "tp",
+  ),
+  true,
+);
+assert.notEqual(tpPosKey, tpRestKey);
+assert.ok(tpPosKey.length <= 36);
+assert.equal(
+  dcaExitLimitRestKey(
+    "11111111-1111-4111-8111-111111111111",
+    "short",
+    "tp",
+    0.03,
+    2489.18,
+    "33333333-3333-4333-8333-333333333333",
+  ) === tpPosKey,
+  false,
+);
 assert.equal(
   dcaFlattenKey(
     "11111111-1111-4111-8111-111111111111",

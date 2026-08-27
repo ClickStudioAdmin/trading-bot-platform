@@ -333,6 +333,7 @@ async function restExitLimit(input: {
         input.kind,
         input.qty,
         input.limitPrice,
+        input.positionId,
       ),
       source: "engine",
       ruleName: input.playbook.name,

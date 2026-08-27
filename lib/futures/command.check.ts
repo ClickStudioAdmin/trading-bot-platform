@@ -7,7 +7,7 @@ import {
   parseCloseAllScope,
   parseSetReduceOnly,
 } from "./close-all";
-import { FUTURES_IDEMPOTENCY_MAX, parseIdempotencyKey } from "./command";
+import { FUTURES_IDEMPOTENCY_MAX, idempotencyWorkingReplay, parseIdempotencyKey } from "./command";
 
 assert.equal(parseIdempotencyKey(null).ok, true);
 assert.equal(parseIdempotencyKey("").ok, true);
@@ -15,6 +15,11 @@ assert.deepEqual(parseIdempotencyKey("  "), { ok: true, key: null });
 assert.deepEqual(parseIdempotencyKey("alert-1"), { ok: true, key: "alert-1" });
 assert.equal(parseIdempotencyKey("a".repeat(FUTURES_IDEMPOTENCY_MAX)).ok, true);
 assert.equal(parseIdempotencyKey("a".repeat(FUTURES_IDEMPOTENCY_MAX + 1)).ok, false);
+assert.equal(idempotencyWorkingReplay("open"), "replay");
+assert.equal(idempotencyWorkingReplay("filled"), "replay");
+assert.equal(idempotencyWorkingReplay("cancelled"), "new");
+assert.equal(idempotencyWorkingReplay("rejected"), "new");
+assert.equal(idempotencyWorkingReplay(null), "new");
 
 assert.equal(CLOSE_ALL_CONFIRM, "CLOSE ALL");
 assert.equal(CANCEL_ALL_CONFIRM, "CANCEL ALL");

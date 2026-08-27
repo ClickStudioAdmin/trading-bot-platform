@@ -1244,9 +1244,12 @@ export function DcaPlaybookForm({
             </div>
             <label className="flex items-start gap-2 text-xs text-ink sm:col-span-2">
               <input
-                type="checkbox"
+                type="hidden"
                 name="takeProfitOrderType"
-                value="limit"
+                value={takeProfitOrderType}
+              />
+              <input
+                type="checkbox"
                 checked={takeProfitOrderType === "limit"}
                 onChange={(event) =>
                   setTakeProfitOrderType(event.target.checked ? "limit" : "market")

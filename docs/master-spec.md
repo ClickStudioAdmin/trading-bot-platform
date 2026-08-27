@@ -26,7 +26,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 11 — DCA desk type. See [phase-11.md](phase-11.md). Phase 1 through Phase 10 are complete. Hyperliquid and additional CEX adapters wait. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
+Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Next is scale-in (Phase 12) — wait for instruction; do not write or start it yet. Hyperliquid and additional CEX adapters wait. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)).
 
 ## Multi-tenancy
 

@@ -1,6 +1,6 @@
 # Phase 10 — Typed desks
 
-Complete. Phase 9 is complete. See [phase-9.md](phase-9.md). Phase 11 is DCA. See [phase-11.md](phase-11.md).
+Complete. Phase 9 is complete. See [phase-9.md](phase-9.md). Phase 11 is complete. See [phase-11.md](phase-11.md).
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Paper Trading desks write the in-app ledger only. Connected Exchange desks bind 
 
 ## Status
 
-Complete. Accepted after Click’s desk test (27 Aug 2026). Dual books split and blotter history was purged on migrate. Shared-key warnings: pending copy when picking a key already on another desk; status copy on Desk Settings after that bind. Phase 11 is DCA.
+Complete. Accepted after Click’s desk test (27 Aug 2026). Dual books split and blotter history was purged on migrate. Shared-key warnings: pending copy when picking a key already on another desk; status copy on Desk Settings after that bind. Phase 11 is complete.
 
 ## Current micro-step
 
@@ -27,7 +27,7 @@ Complete. Accepted after Click’s desk test (27 Aug 2026). Dual books split and
 | 7 | Bind | Agent | One bind on the desk. Ticket, header chip, balance, kill switch, TV door all use it. Desk A cannot place on Desk B. Done |
 | 8 | Desk test | Click | Create a Perps desk and a C&C desk on one login. Each has its own bind. Split Demo book is usable. Pending warning when picking a key already on another desk. Shared status on Desk Settings after bind. Done |
 
-Phase accepted. DCA is [phase-11.md](phase-11.md).
+Phase accepted. DCA is complete ([phase-11.md](phase-11.md)).
 
 ## Desk types
 
@@ -41,8 +41,8 @@ Same venue key on two desks still shares IM. Isolation = another desk **and** an
 
 ## Later
 
-- DCA desk type (Phase 11)
-- Scale-in desk type (Phase 12)
+- DCA desk type (Phase 11, complete)
+- Scale-in desk type (Phase 12, not started)
 - Richer Perps recipes (Phase 13)
 - Live TradingView alert test ([phase-9.md](phase-9.md) Later)
 
