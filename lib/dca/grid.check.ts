@@ -495,24 +495,22 @@ assert.equal(
 assert.equal(
   indicatorStartMet({
     kind: "ema_cross",
-    side: "short",
-    closes: [...Array(30).fill(100), 200],
-    compare: "cross_gte",
-    level: 105,
-    splitBySide: true,
-  }),
-  false,
-);
-assert.equal(
-  indicatorStartMet({
-    kind: "ema_cross",
     side: "long",
     closes: [...Array(30).fill(100), 200],
     compare: "cross_lte",
     level: 105,
-    splitBySide: true,
   }),
   true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "ema_cross",
+    side: "short",
+    closes: [...Array(30).fill(100), 200],
+    compare: "cross_lte",
+    level: 105,
+  }),
+  false,
 );
 assert.equal(
   indicatorStartMet({

@@ -224,14 +224,12 @@ export function indicatorStartMet(input: {
     if (!pair) {
       return false;
     }
-    const direction = split
-      ? input.side === "long"
-        ? "up"
-        : "down"
-      : input.compare === "cross_gte"
-        ? "up"
-        : "down";
-    return crossedLevel(pair.prev, pair.now, input.level, direction);
+    return crossedLevel(
+      pair.prev,
+      pair.now,
+      input.level,
+      input.side === "long" ? "up" : "down",
+    );
   }
   if (input.side === "long") {
     return emaCrossBullish(input.closes) === true;

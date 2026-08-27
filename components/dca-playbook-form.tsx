@@ -860,9 +860,13 @@ export function DcaPlaybookForm({
             <select
               name="direction"
               value={direction}
-              onChange={(event) =>
-                setDirection(event.target.value as typeof direction)
-              }
+              onChange={(event) => {
+                const next = event.target.value as typeof direction;
+                setDirection(next);
+                setIndicatorCompare((current) =>
+                  indicatorCompareForDirection(next, indicatorKind, current),
+                );
+              }}
               className={fieldClass}
             >
               <option value="long">Long</option>
@@ -954,11 +958,7 @@ export function DcaPlaybookForm({
                       | "ema_cross";
                     setIndicatorKind(next);
                     setIndicatorCompare(
-                      next === "rsi"
-                        ? "cross_lte"
-                        : next === "macd"
-                          ? "cross_gte"
-                          : "pair",
+                      indicatorCompareForDirection(direction, next, ""),
                     );
                   }}
                   className={fieldClass}
@@ -986,48 +986,29 @@ export function DcaPlaybookForm({
                 When
                 <select
                   name="indicatorCompare"
-                  value={
-                    direction === "both" && indicatorKind === "rsi"
-                      ? indicatorCompare.startsWith("cross")
-                        ? "cross_lte"
-                        : "lte"
-                      : direction === "both" && indicatorKind === "ema_cross"
-                        ? indicatorCompare === "pair"
-                          ? "pair"
-                          : "cross_gte"
-                        : indicatorCompare
-                  }
+                  value={indicatorCompareForDirection(
+                    direction,
+                    indicatorKind,
+                    indicatorCompare,
+                  )}
                   onChange={(event) => setIndicatorCompare(event.target.value)}
                   className={fieldClass}
                 >
-              {direction === "both" ? (
-                <>
-                  {indicatorKind === "rsi" ? (
+                  {indicatorKind === "rsi" && direction === "both" ? (
                     <>
                       <option value="cross_lte">Crosses the level</option>
                       <option value="lte">At the level</option>
                     </>
                   ) : null}
-                  {indicatorKind === "macd" ? (
-                    <>
-                      <option value="cross_gte">Crosses zero</option>
-                      <option value="gte">Histogram sign</option>
-                    </>
-                  ) : null}
-                  {indicatorKind === "ema_cross" ? (
-                    <>
-                      <option value="pair">EMA 9/21 cross</option>
-                      <option value="cross_gte">EMA 21 vs price</option>
-                    </>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  {indicatorKind === "rsi" ? (
+                  {indicatorKind === "rsi" && direction === "long" ? (
                     <>
                       <option value="cross_lte">Crosses below</option>
-                      <option value="cross_gte">Crosses above</option>
                       <option value="lte">At or below</option>
+                    </>
+                  ) : null}
+                  {indicatorKind === "rsi" && direction === "short" ? (
+                    <>
+                      <option value="cross_gte">Crosses above</option>
                       <option value="gte">At or above</option>
                     </>
                   ) : null}
@@ -1040,12 +1021,9 @@ export function DcaPlaybookForm({
                   {indicatorKind === "ema_cross" ? (
                     <>
                       <option value="pair">EMA 9/21 cross</option>
-                      <option value="cross_gte">EMA 21 crosses above</option>
-                      <option value="cross_lte">EMA 21 crosses below</option>
+                      <option value="cross_gte">EMA 21 crosses</option>
                     </>
                   ) : null}
-                </>
-              )}
                 </select>
               </label>
               {indicatorKind === "rsi" ||
@@ -1076,16 +1054,40 @@ export function DcaPlaybookForm({
                 <>
                   {indicatorKind === "macd" ? (
                     <p className="self-end text-xs text-ink-muted sm:col-span-2">
-                      {indicatorCompare === "gte"
-                        ? "Long while the histogram is positive. Short while negative."
-                        : "Long when the histogram crosses above zero. Short when it crosses below."}
+                      {direction === "long"
+                        ? indicatorCompare === "gte"
+                          ? "Triggers Long while the histogram is positive."
+                          : "Triggers Long when the histogram crosses above zero."
+                        : indicatorCompare === "gte"
+                          ? "Triggers Short while the histogram is negative."
+                          : "Triggers Short when the histogram crosses below zero."}
                     </p>
                   ) : null}
                   {indicatorKind === "ema_cross" &&
                   indicatorCompare === "pair" ? (
                     <p className="self-end text-xs text-ink-muted sm:col-span-2">
-                      Long when EMA 9 crosses above EMA 21. Short when it
-                      crosses below.
+                      {direction === "long"
+                        ? "Triggers Long when EMA 9 crosses above EMA 21."
+                        : "Triggers Short when EMA 9 crosses below EMA 21."}
+                    </p>
+                  ) : null}
+                  {indicatorKind === "ema_cross" &&
+                  indicatorCompare !== "pair" ? (
+                    <p className="text-xs text-ink-muted sm:col-span-2">
+                      {direction === "long"
+                        ? "Triggers Long when EMA 21 crosses above the price level."
+                        : "Triggers Short when EMA 21 crosses below the price level."}
+                    </p>
+                  ) : null}
+                  {indicatorKind === "rsi" ? (
+                    <p className="text-xs text-ink-muted sm:col-span-2">
+                      {direction === "long"
+                        ? indicatorCompare.startsWith("cross")
+                          ? "Triggers Long when RSI crosses below the level."
+                          : "Triggers Long while RSI is at or below the level."
+                        : indicatorCompare.startsWith("cross")
+                          ? "Triggers Short when RSI crosses above the level."
+                          : "Triggers Short while RSI is at or above the level."}
                     </p>
                   ) : null}
                 </>
@@ -1779,6 +1781,24 @@ export function DcaPlaybookForm({
   );
 }
 
+function indicatorCompareForDirection(
+  direction: "long" | "short" | "both",
+  kind: "rsi" | "macd" | "ema_cross",
+  compare: string,
+): string {
+  if (kind === "macd") {
+    return compare === "gte" ? "gte" : "cross_gte";
+  }
+  if (kind === "ema_cross") {
+    return compare === "pair" || compare === "" ? "pair" : "cross_gte";
+  }
+  const isCross = compare.startsWith("cross") || compare === "";
+  if (direction === "short") {
+    return isCross ? "cross_gte" : "gte";
+  }
+  return isCross ? "cross_lte" : "lte";
+}
+
 function indicatorBothSidesHint(
   kind: "rsi" | "macd" | "ema_cross",
   compare: string,
@@ -1827,7 +1847,7 @@ const bothDetailsRows: {
   },
   {
     id: "ema-price",
-    setting: "EMA · 21 vs price",
+    setting: "EMA · 21 crosses",
     long: "EMA 21 crosses above the price",
     short: "EMA 21 crosses below the price",
   },
