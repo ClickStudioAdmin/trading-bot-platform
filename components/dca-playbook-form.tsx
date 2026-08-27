@@ -24,6 +24,7 @@ import {
   dcaAveragingKind,
   dcaEnabledSides,
   dcaIntervalParts,
+  dcaLegFor,
   dcaMaxTypeFromCaps,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
@@ -89,6 +90,51 @@ function SummaryStat({
       </p>
       {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
     </div>
+  );
+}
+
+function DcaStatusLight({
+  playbook,
+  reduceOnly,
+}: {
+  playbook: DcaPlaybook | null;
+  reduceOnly: boolean;
+}) {
+  const label = playbook ? dcaPlaybookStatusLabel(playbook) : "Idle";
+  const sides = playbook ? dcaEnabledSides(playbook.direction) : [];
+  const legs = playbook
+    ? sides.map((side) => dcaLegFor(playbook, side))
+    : [];
+  const armed = legs.some((leg) => leg.status === "armed");
+  const stopped = legs.some((leg) => leg.status === "stop_adding");
+  const inUse = legs.some(
+    (leg) => leg.clipsFilled > 0 || leg.status !== "idle",
+  );
+  const fill =
+    reduceOnly && (armed || stopped)
+      ? "bg-warning"
+      : armed
+        ? "bg-success"
+        : stopped
+          ? "bg-warning"
+          : "bg-ink-faint";
+  const title =
+    reduceOnly && (armed || stopped)
+      ? `${label} · book Reduce only has priority`
+      : label;
+  return (
+    <span
+      className="relative ml-auto flex size-3.5 shrink-0"
+      title={title}
+      aria-label={title}
+    >
+      {inUse ? (
+        <span
+          className={`absolute inline-flex size-full animate-ping rounded-full opacity-60 ${fill}`}
+        />
+      ) : null}
+      <span className={`relative inline-flex size-3.5 rounded-full ${fill}`} />
+    </span>
   );
 }
 
@@ -358,14 +404,7 @@ export function DcaPlaybookForm({
       className="space-y-3 rounded-card border border-line bg-surface px-4 py-3"
     >
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-ink">
-          Status{" "}
-          <span className="text-ink-muted">
-            · {playbook ? dcaPlaybookStatusLabel(playbook) : "Idle"}
-          </span>
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
           <PendingSubmitButton
             pendingLabel="Saving…"
             successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
@@ -495,7 +534,7 @@ export function DcaPlaybookForm({
               Remove
             </button>
           ) : null}
-        </div>
+          <DcaStatusLight playbook={playbook ?? null} reduceOnly={reduceOnly} />
       </div>
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
