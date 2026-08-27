@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { ColumnHint } from "@/components/column-hint";
+import { PanelCloseButton } from "@/components/panel-close-button";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ChevronIcon, TabButton } from "@/components/trade-expand";
@@ -1952,9 +1953,15 @@ function IndicatorBothDetails({
                 ),
               }}
             >
-              <p className="border-b border-line px-3 py-2 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+              <p className="border-b border-line py-2 pr-9 pl-3 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
                 When Direction is Both
               </p>
+              <PanelCloseButton
+                onClick={() => {
+                  setOpen(false);
+                  setBox(null);
+                }}
+              />
               <table className="w-full text-left">
                 <thead className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
                   <tr className="border-b border-line">
@@ -1978,8 +1985,8 @@ function IndicatorBothDetails({
                         <td className="px-3 py-2 font-medium text-ink">
                           {row.setting}
                         </td>
-                        <td className="px-3 py-2 text-success">{row.long}</td>
-                        <td className="px-3 py-2 text-danger">{row.short}</td>
+                        <td className="px-3 py-2 text-ink">{row.long}</td>
+                        <td className="px-3 py-2 text-ink">{row.short}</td>
                       </tr>
                     );
                   })}
