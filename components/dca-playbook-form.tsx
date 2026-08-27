@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { ColumnHint } from "@/components/column-hint";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   deleteDcaPlaybookAction,
@@ -18,6 +19,7 @@ import {
   dcaLastClipDeviationPct,
   dcaMaxDropCoveredPct,
   dcaRequiredUsdt,
+  type DcaLadderLevel,
 } from "@/lib/dca/grid";
 import {
   DEFAULT_DCA_NAME,
@@ -37,6 +39,7 @@ import {
   type DcaPlaybook,
   type DcaStartKind,
 } from "@/lib/dca/playbook";
+import type { FuturesSide } from "@/lib/futures/model";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import Link from "next/link";
@@ -65,6 +68,118 @@ function optional(value: number | null | undefined): string {
 function asNumber(text: string): number | null {
   const value = Number(text.replace(/,/g, "").trim());
   return value > 0 && Number.isFinite(value) ? value : null;
+}
+
+type DcaSummaryPreview = {
+  covered: number | null;
+  lastDev: number | null;
+  required: number | null;
+  levels: DcaLadderLevel[];
+  priceFromLast: boolean;
+  profitRange: { min: number; max: number } | null;
+  lossRange: { min: number; max: number } | null;
+  profitFromTp: boolean;
+  lossFromSl: boolean;
+};
+
+function dcaSummaryPreview(input: {
+  side: FuturesSide;
+  lastPrice: number | null;
+  averaging: DcaAveragingKind;
+  clipSize: string;
+  sizeUnit: "qty" | "usdt";
+  sizeMultiplier: string;
+  deviationMultiplier: string;
+  dipPct: string;
+  maxClips: string;
+  maxValue: string;
+  effectiveMaxType: DcaMaxType;
+  takeProfitPct: string;
+  takeProfitBasis: DcaExitBasis;
+  stopLossPct: string;
+  stopLossBasis: DcaExitBasis;
+}): DcaSummaryPreview {
+  const orderCap = asNumber(input.maxClips);
+  const valueCap = asNumber(input.maxValue);
+  const dip = input.averaging === "dip" ? asNumber(input.dipPct) : null;
+  const size = asNumber(input.clipSize);
+  const sizeMult = asNumber(input.sizeMultiplier) ?? 1;
+  const devMult = asNumber(input.deviationMultiplier) ?? 1;
+  const entryPrice =
+    input.lastPrice !== null && input.lastPrice > 0 ? input.lastPrice : 100;
+  const priceFromLast = input.lastPrice !== null && input.lastPrice > 0;
+  const clips =
+    input.effectiveMaxType === "orders"
+      ? orderCap
+      : valueCap !== null && size !== null
+        ? dcaClipsUntilMaxValue({
+            side: input.side,
+            entryPrice,
+            maxValue: valueCap,
+            dipPct: dip,
+            clipSize: size,
+            sizeUnit: input.sizeUnit,
+            sizeMultiplier: sizeMult,
+            deviationMultiplier: devMult,
+          })
+        : null;
+  const covered = dcaMaxDropCoveredPct({
+    side: input.side,
+    maxClips: clips,
+    dipPct: dip,
+    deviationMultiplier: devMult,
+  });
+  const lastDev = dcaLastClipDeviationPct({
+    side: input.side,
+    maxClips: clips,
+    dipPct: dip,
+    deviationMultiplier: devMult,
+  });
+  const tpPct = asNumber(input.takeProfitPct);
+  const slPct = asNumber(input.stopLossPct);
+  const levels = dcaLadderLevels({
+    side: input.side,
+    entryPrice,
+    maxClips: clips,
+    dipPct: dip,
+    clipSize: size ?? 0,
+    sizeUnit: input.sizeUnit,
+    sizeMultiplier: sizeMult,
+    deviationMultiplier: devMult,
+    takeProfitPct: tpPct,
+    takeProfitBasis: input.takeProfitBasis,
+    stopLossPct: slPct,
+    stopLossBasis: input.stopLossBasis,
+  });
+  const requiredFromLadder = levels[levels.length - 1]?.totalUsdt ?? null;
+  const required =
+    input.sizeUnit === "usdt" || priceFromLast
+      ? requiredFromLadder ??
+        dcaRequiredUsdt({
+          clipSize: size ?? 0,
+          sizeUnit: input.sizeUnit,
+          maxClips: clips,
+          sizeMultiplier: sizeMult,
+          mark: input.lastPrice,
+        })
+      : dcaRequiredUsdt({
+          clipSize: size ?? 0,
+          sizeUnit: input.sizeUnit,
+          maxClips: clips,
+          sizeMultiplier: sizeMult,
+          mark: null,
+        });
+  return {
+    covered,
+    lastDev,
+    required,
+    levels,
+    priceFromLast,
+    profitRange: dcaLadderProfitRange(levels),
+    lossRange: dcaLadderLossRange(levels),
+    profitFromTp: tpPct !== null,
+    lossFromSl: slPct !== null,
+  };
 }
 
 function SummaryStat({
@@ -294,6 +409,8 @@ export function DcaPlaybookForm({
     options[0]?.symbol ??
     "BTCUSDT";
   const [symbol, setSymbol] = useState(defaultSymbol);
+  const [ladderTab, setLadderTab] = useState<"long" | "short">("long");
+  const ladderPanelId = useId();
   const lastPrice = lastPrices[symbol] ?? null;
   const running = Boolean(playbook && dcaPlaybookIsRunning(playbook));
   const liveLegs = playbook
@@ -310,98 +427,35 @@ export function DcaPlaybookForm({
   const showArmButton =
     dcaStartListens(startKind) && Boolean(playbook) && running;
   const effectiveMaxType: DcaMaxType = restGrid ? "orders" : maxType;
-  const summary = useMemo(() => {
-    const orderCap = asNumber(maxClips);
-    const valueCap = asNumber(maxValue);
-    const dip = averaging === "dip" ? asNumber(dipPct) : null;
-    const size = asNumber(clipSize);
-    const sizeMult = asNumber(sizeMultiplier) ?? 1;
-    const devMult = asNumber(deviationMultiplier) ?? 1;
-    const side = direction === "short" ? "short" : "long";
-    const entryPrice = lastPrice !== null && lastPrice > 0 ? lastPrice : 100;
-    const priceFromLast = lastPrice !== null && lastPrice > 0;
-    const clips =
-      effectiveMaxType === "orders"
-        ? orderCap
-        : valueCap !== null && size !== null
-          ? dcaClipsUntilMaxValue({
-              side,
-              entryPrice,
-              maxValue: valueCap,
-              dipPct: dip,
-              clipSize: size,
-              sizeUnit,
-              sizeMultiplier: sizeMult,
-              deviationMultiplier: devMult,
-            })
-          : null;
-    const covered = dcaMaxDropCoveredPct({
-      side,
-      maxClips: clips,
-      dipPct: dip,
-      deviationMultiplier: devMult,
-    });
-    const lastDev = dcaLastClipDeviationPct({
-      side,
-      maxClips: clips,
-      dipPct: dip,
-      deviationMultiplier: devMult,
-    });
-    const tpPct = asNumber(takeProfitPct);
-    const slPct = asNumber(stopLossPct);
-    const levels = dcaLadderLevels({
-      side,
-      entryPrice,
-      maxClips: clips,
-      dipPct: dip,
-      clipSize: size ?? 0,
+  const summaryBySide = useMemo(() => {
+    const input = {
+      lastPrice,
+      averaging,
+      clipSize,
       sizeUnit,
-      sizeMultiplier: sizeMult,
-      deviationMultiplier: devMult,
-      takeProfitPct: tpPct,
+      sizeMultiplier,
+      deviationMultiplier,
+      dipPct,
+      maxClips,
+      maxValue,
+      effectiveMaxType,
+      takeProfitPct,
       takeProfitBasis,
-      stopLossPct: slPct,
+      stopLossPct,
       stopLossBasis,
-    });
-    const requiredFromLadder = levels[levels.length - 1]?.totalUsdt ?? null;
-    const required =
-      sizeUnit === "usdt" || priceFromLast
-        ? requiredFromLadder ??
-          dcaRequiredUsdt({
-            clipSize: size ?? 0,
-            sizeUnit,
-            maxClips: clips,
-            sizeMultiplier: sizeMult,
-            mark: lastPrice,
-          })
-        : dcaRequiredUsdt({
-            clipSize: size ?? 0,
-            sizeUnit,
-            maxClips: clips,
-            sizeMultiplier: sizeMult,
-            mark: null,
-          });
+    };
     return {
-      covered,
-      lastDev,
-      required,
-      levels,
-      priceFromLast,
-      profitRange: dcaLadderProfitRange(levels),
-      lossRange: dcaLadderLossRange(levels),
-      profitFromTp: tpPct !== null,
-      lossFromSl: slPct !== null,
+      long: dcaSummaryPreview({ ...input, side: "long" }),
+      short: dcaSummaryPreview({ ...input, side: "short" }),
     };
   }, [
     averaging,
     clipSize,
     deviationMultiplier,
-    direction,
     dipPct,
     lastPrice,
     maxClips,
     maxValue,
-    restGrid,
     sizeMultiplier,
     sizeUnit,
     stopLossBasis,
@@ -410,6 +464,13 @@ export function DcaPlaybookForm({
     takeProfitPct,
     effectiveMaxType,
   ]);
+  const showLadderTabs = direction === "both";
+  const activeLadderSide: FuturesSide = showLadderTabs
+    ? ladderTab
+    : direction === "short"
+      ? "short"
+      : "long";
+  const summary = summaryBySide[activeLadderSide];
 
   return (
     <form
@@ -1113,6 +1174,32 @@ export function DcaPlaybookForm({
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           Summary
         </legend>
+        {showLadderTabs ? (
+          <div
+            role="tablist"
+            aria-label="Ladder side"
+            className="mb-3 flex gap-1 border-b border-line"
+          >
+            <TabButton
+              selected={ladderTab === "long"}
+              panelId={ladderPanelId}
+              onClick={() => setLadderTab("long")}
+            >
+              Long ladder
+            </TabButton>
+            <TabButton
+              selected={ladderTab === "short"}
+              panelId={ladderPanelId}
+              onClick={() => setLadderTab("short")}
+            >
+              Short ladder
+            </TabButton>
+          </div>
+        ) : null}
+        <div
+          role={showLadderTabs ? "tabpanel" : undefined}
+          id={showLadderTabs ? ladderPanelId : undefined}
+        >
         <div className="flex flex-wrap">
           <SummaryStat
             label="Covered"
@@ -1150,11 +1237,16 @@ export function DcaPlaybookForm({
                 ? sizeUnit === "qty"
                   ? "Use USDT size to estimate"
                   : null
-                : availableUsdt !== null
-                  ? summary.required > availableUsdt
-                    ? `Available ${formatUsdAmount(availableUsdt)} — less than the full grid`
-                    : `Available ${formatUsdAmount(availableUsdt)}`
-                  : null
+                : [
+                    availableUsdt !== null
+                      ? summary.required > availableUsdt
+                        ? `Available ${formatUsdAmount(availableUsdt)} — less than the full grid`
+                        : `Available ${formatUsdAmount(availableUsdt)}`
+                      : null,
+                    showLadderTabs ? "This side only" : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || null
             }
           />
           <SummaryStat
@@ -1302,7 +1394,9 @@ export function DcaPlaybookForm({
               {averaging === "interval"
                 ? " Interval adds use the same last as an estimate."
                 : ""}
-              {direction === "both" ? " Long ladder shown. Short is the inverse." : ""}
+              {showLadderTabs
+                ? " This ladder is one side. Long and short add independently."
+                : ""}
               {summary.profitFromTp
                 ? " Profit is take profit from that average."
                 : " No take profit — profit is unlimited."}
@@ -1318,6 +1412,7 @@ export function DcaPlaybookForm({
             {averaging === "dip" ? " Price deviation % sets later prices." : ""}
           </p>
         )}
+        </div>
       </fieldset>
     </form>
   );
