@@ -811,7 +811,7 @@ export function DcaPlaybookForm({
 
       <fieldset className={sectionClass}>
         <p className={sectionTitleClass}>
-          General
+          Pair and Trigger
         </p>
         <div className={rowClass}>
           <label className={labelClass}>
@@ -839,7 +839,7 @@ export function DcaPlaybookForm({
             </select>
           </label>
           <label className={`${labelClass} sm:col-span-2`}>
-            First order
+            Initial Order Trigger
             <select
               name="startKind"
               value={startKind}
