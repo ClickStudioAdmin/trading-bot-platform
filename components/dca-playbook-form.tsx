@@ -26,7 +26,11 @@ import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import Link from "next/link";
 
 const fieldClass =
-  "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+  "mt-0.5 w-full rounded-control border border-line bg-surface-raised px-2 py-1.5 text-sm text-ink focus:border-line-strong focus:outline-none";
+const labelClass = "block text-xs text-ink-muted";
+const sectionClass =
+  "space-y-2 rounded-card border border-line px-3 py-2";
+const rowClass = "grid gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-4";
 
 function optional(value: number | null | undefined): string {
   return value == null ? "" : String(value);
@@ -61,7 +65,7 @@ export function DcaPlaybooksDesk({
   const empty = cards.length === 0;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. New clips stay blocked until you turn it off in
@@ -206,7 +210,7 @@ export function DcaPlaybookForm({
   return (
     <form
       action={saveDcaPlaybookAction}
-      className="space-y-4 rounded-card border border-line bg-surface px-4 py-4"
+      className="space-y-3 rounded-card border border-line bg-surface px-4 py-3"
     >
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -248,205 +252,182 @@ export function DcaPlaybookForm({
         </p>
       ) : null}
 
-      <fieldset className="space-y-3 rounded-card border border-line p-4">
+      <fieldset className={sectionClass}>
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           General
         </legend>
-        <label className="block text-sm text-ink">
-          Name
-          <input
-            name="name"
-            defaultValue={playbook?.name ?? defaultName ?? DEFAULT_DCA_NAME}
-            maxLength={40}
-            className={fieldClass}
-          />
-        </label>
-        <label className="block text-sm text-ink">
-          Contract
-          <div className="mt-1">
+        <div className={rowClass}>
+          <label className={labelClass}>
+            Name
+            <input
+              name="name"
+              defaultValue={playbook?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+              maxLength={40}
+              className={fieldClass}
+            />
+          </label>
+          <label className={labelClass}>
+            Contract
             <FuturesSymbolSelect
               options={options}
               defaultSymbol={defaultSymbol}
             />
-          </div>
-        </label>
-        <label className="block text-sm text-ink">
-          Direction
-          <select
-            name="direction"
-            value={direction}
-            onChange={(event) =>
-              setDirection(event.target.value as typeof direction)
-            }
-            className={fieldClass}
-          >
-            <option value="long">Long</option>
-            <option value="short">Short</option>
-            <option value="both">Both</option>
-          </select>
-        </label>
+          </label>
+          <label className={labelClass}>
+            Direction
+            <select
+              name="direction"
+              value={direction}
+              onChange={(event) =>
+                setDirection(event.target.value as typeof direction)
+              }
+              className={fieldClass}
+            >
+              <option value="long">Long</option>
+              <option value="short">Short</option>
+              <option value="both">Both</option>
+            </select>
+          </label>
+        </div>
         {direction === "both" ? (
           <p className="text-xs text-ink-muted">
             Long and short clip independently and never flatten each other.
           </p>
         ) : null}
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setSizeMultiplier("1");
-              setDeviationMultiplier("1");
-              setDcaMode("position");
-            }}
-            className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
-          >
-            Equal clips
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSizeMultiplier("2");
-              setDeviationMultiplier("1.5");
-              setDcaMode("position");
-            }}
-            className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
-          >
-            Martingale
-          </button>
-        </div>
       </fieldset>
 
-      <fieldset className="space-y-3 rounded-card border border-line p-4">
+      <fieldset className={sectionClass}>
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           Start
         </legend>
-        <label className="block text-sm text-ink">
-          When to place the first clip
-          <select
-            name="startKind"
-            value={startKind}
-            onChange={(event) =>
-              setStartKind(event.target.value as DcaStartKind)
-            }
-            className={fieldClass}
-          >
-            <option value="immediate">Immediate — Arm places now</option>
-            <option value="price">Price cross</option>
-            <option value="webhook">Signal webhook</option>
-            <option value="indicator">Indicator</option>
-          </select>
-        </label>
-        {startKind === "immediate" ? (
-          <p className="text-xs text-ink-muted">
-            Arm places the first clip{direction === "both" ? "s" : ""} now.
-          </p>
-        ) : null}
-        {startKind === "price" ? (
-          <TriggerFields
-            prefix="arm"
-            triggerBy={playbook?.armTrigger?.triggerBy ?? "last"}
-            compare={playbook?.armTrigger?.compare ?? "gte"}
-            price={optional(playbook?.armTrigger?.price)}
-          />
-        ) : null}
-        {startKind === "webhook" ? (
-          signalWebhooks.length > 0 ? (
-            <label className="block text-sm text-ink">
-              Signal
-              <select
-                name="webhookId"
-                defaultValue={playbook?.webhookId ?? signalWebhooks[0]?.id}
-                className={fieldClass}
-              >
-                {signalWebhooks.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <p className="text-sm text-ink-muted">
-              Create a Signal on{" "}
-              <Link href={FUTURES_PATHS.webhooks} className="text-accent">
-                Webhooks
-              </Link>{" "}
-              first. Arm / disarm / close-playbook still work. Buy / sell arms
-              that side only.
-            </p>
-          )
-        ) : null}
-        {startKind === "indicator" ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm text-ink">
-              Indicator
-              <select
-                name="indicatorKind"
-                value={indicatorKind}
-                onChange={(event) =>
-              setIndicatorKind(
-                event.target.value as "rsi" | "macd" | "ema_cross",
-              )
-            }
-                className={fieldClass}
-              >
-                <option value="rsi">RSI 14</option>
-                <option value="macd">MACD histogram</option>
-                <option value="ema_cross">EMA 9/21 cross</option>
-              </select>
-            </label>
-            <label className="block text-sm text-ink">
-              Timeframe
-              <select
-                name="indicatorTimeframe"
-                defaultValue={playbook?.indicatorTimeframe ?? "15"}
-                className={fieldClass}
-              >
-                <option value="5">5m</option>
-                <option value="15">15m</option>
-                <option value="60">1h</option>
-              </select>
-            </label>
-            {indicatorKind === "rsi" ? (
-              <>
-                <label className="block text-sm text-ink">
-                  When
-                  <select
-                    name="indicatorCompare"
-                    defaultValue={playbook?.indicatorCompare ?? "lte"}
-                    className={fieldClass}
-                  >
-                    <option value="lte">At or below</option>
-                    <option value="gte">At or above</option>
-                  </select>
-                </label>
-                <label className="block text-sm text-ink">
-                  Level
-                  <GroupedNumberInput
-                    name="indicatorLevel"
-                    defaultValue={optional(playbook?.indicatorLevel) || "30"}
-                    allowDecimal
-                    className={fieldClass}
-                  />
-                </label>
-              </>
+        <div className={rowClass}>
+          <label className={labelClass}>
+            First clip
+            <select
+              name="startKind"
+              value={startKind}
+              onChange={(event) =>
+                setStartKind(event.target.value as DcaStartKind)
+              }
+              className={fieldClass}
+            >
+              <option value="immediate">Immediate — Arm places now</option>
+              <option value="price">Price cross</option>
+              <option value="webhook">Signal webhook</option>
+              <option value="indicator">Indicator</option>
+            </select>
+          </label>
+          {startKind === "price" ? (
+            <TriggerFields
+              prefix="arm"
+              triggerBy={playbook?.armTrigger?.triggerBy ?? "last"}
+              compare={playbook?.armTrigger?.compare ?? "gte"}
+              price={optional(playbook?.armTrigger?.price)}
+            />
+          ) : null}
+          {startKind === "webhook" ? (
+            signalWebhooks.length > 0 ? (
+              <label className={`${labelClass} lg:col-span-2`}>
+                Signal
+                <select
+                  name="webhookId"
+                  defaultValue={playbook?.webhookId ?? signalWebhooks[0]?.id}
+                  className={fieldClass}
+                >
+                  {signalWebhooks.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
             ) : (
-              <p className="sm:col-span-2 text-xs text-ink-muted">
-                {indicatorKind === "macd"
-                  ? "Long starts when the histogram turns positive. Short starts when it turns negative."
-                  : "Long starts on a bullish EMA cross. Short starts on a bearish cross."}
+              <p className="self-end text-xs text-ink-muted lg:col-span-3">
+                Create a Signal on{" "}
+                <Link href={FUTURES_PATHS.webhooks} className="text-accent">
+                  Webhooks
+                </Link>{" "}
+                first. Buy / sell arms that side only.
               </p>
-            )}
-          </div>
-        ) : null}
+            )
+          ) : null}
+          {startKind === "indicator" ? (
+            <>
+              <label className={labelClass}>
+                Indicator
+                <select
+                  name="indicatorKind"
+                  value={indicatorKind}
+                  onChange={(event) =>
+                    setIndicatorKind(
+                      event.target.value as "rsi" | "macd" | "ema_cross",
+                    )
+                  }
+                  className={fieldClass}
+                >
+                  <option value="rsi">RSI 14</option>
+                  <option value="macd">MACD histogram</option>
+                  <option value="ema_cross">EMA 9/21 cross</option>
+                </select>
+              </label>
+              <label className={labelClass}>
+                Timeframe
+                <select
+                  name="indicatorTimeframe"
+                  defaultValue={playbook?.indicatorTimeframe ?? "15"}
+                  className={fieldClass}
+                >
+                  <option value="5">5m</option>
+                  <option value="15">15m</option>
+                  <option value="60">1h</option>
+                </select>
+              </label>
+              {indicatorKind === "rsi" ? (
+                <>
+                  <label className={labelClass}>
+                    When
+                    <select
+                      name="indicatorCompare"
+                      defaultValue={playbook?.indicatorCompare ?? "lte"}
+                      className={fieldClass}
+                    >
+                      <option value="lte">At or below</option>
+                      <option value="gte">At or above</option>
+                    </select>
+                  </label>
+                  <label className={labelClass}>
+                    Level
+                    <GroupedNumberInput
+                      name="indicatorLevel"
+                      defaultValue={optional(playbook?.indicatorLevel) || "30"}
+                      allowDecimal
+                      className={fieldClass}
+                    />
+                  </label>
+                </>
+              ) : (
+                <p className="self-end text-xs text-ink-muted">
+                  {indicatorKind === "macd"
+                    ? "Long when histogram is positive. Short when negative."
+                    : "Long on a bullish EMA cross. Short on a bearish cross."}
+                </p>
+              )}
+            </>
+          ) : null}
+          {startKind === "immediate" ? (
+            <p className="self-end text-xs text-ink-muted lg:col-span-3">
+              Arm places the first clip{direction === "both" ? "s" : ""} now.
+            </p>
+          ) : null}
+        </div>
       </fieldset>
 
-      <fieldset className="space-y-3 rounded-card border border-line p-4">
+      <fieldset className={sectionClass}>
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           Adds
         </legend>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm text-ink">
+        <div className={rowClass}>
+          <label className={labelClass}>
             Clip size
             <GroupedNumberInput
               name="clipSize"
@@ -456,7 +437,7 @@ export function DcaPlaybookForm({
               className={fieldClass}
             />
           </label>
-          <label className="block text-sm text-ink">
+          <label className={labelClass}>
             Size unit
             <select
               name="sizeUnit"
@@ -470,9 +451,7 @@ export function DcaPlaybookForm({
               <option value="usdt">USDT</option>
             </select>
           </label>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm text-ink">
+          <label className={labelClass}>
             Max clips
             <GroupedNumberInput
               name="maxClips"
@@ -482,7 +461,7 @@ export function DcaPlaybookForm({
               placeholder="No cap"
             />
           </label>
-          <label className="block text-sm text-ink">
+          <label className={labelClass}>
             Max value
             <GroupedNumberInput
               name="maxValue"
@@ -492,23 +471,21 @@ export function DcaPlaybookForm({
               placeholder="No cap"
             />
           </label>
-        </div>
-        <label className="block text-sm text-ink">
-          Averaging
-          <select
-            name="dcaMode"
-            value={dcaMode}
-            onChange={(event) =>
-              setDcaMode(event.target.value as "position" | "order")
-            }
-            className={fieldClass}
-          >
-            <option value="position">Position — add when price dips</option>
-            <option value="order">Order — rest a safety-order grid</option>
-          </select>
-        </label>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm text-ink">
+          <label className={labelClass}>
+            Averaging
+            <select
+              name="dcaMode"
+              value={dcaMode}
+              onChange={(event) =>
+                setDcaMode(event.target.value as "position" | "order")
+              }
+              className={fieldClass}
+            >
+              <option value="position">Position — add on dip</option>
+              <option value="order">Order — rest a grid</option>
+            </select>
+          </label>
+          <label className={labelClass}>
             Add on dip %
             <GroupedNumberInput
               name="dipPct"
@@ -520,7 +497,7 @@ export function DcaPlaybookForm({
             />
           </label>
           {dcaMode === "position" ? (
-            <label className="block text-sm text-ink">
+            <label className={labelClass}>
               Add every (minutes)
               <GroupedNumberInput
                 name="intervalMinutes"
@@ -530,14 +507,37 @@ export function DcaPlaybookForm({
               />
             </label>
           ) : (
-            <p className="self-end text-xs text-ink-muted">
+            <p className="self-end text-xs text-ink-muted lg:col-span-2">
               After the first market clip, remaining clips rest as GTC limits.
-              Needs max clips and a dip %.
             </p>
           )}
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm text-ink">
+        <div className={rowClass}>
+          <div className="flex flex-wrap items-end gap-2 pb-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                setSizeMultiplier("1");
+                setDeviationMultiplier("1");
+                setDcaMode("position");
+              }}
+              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
+            >
+              Equal clips
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSizeMultiplier("2");
+                setDeviationMultiplier("1.5");
+                setDcaMode("position");
+              }}
+              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
+            >
+              Martingale
+            </button>
+          </div>
+          <label className={labelClass}>
             Order size multiplier
             <GroupedNumberInput
               name="sizeMultiplier"
@@ -547,7 +547,7 @@ export function DcaPlaybookForm({
               className={fieldClass}
             />
           </label>
-          <label className="block text-sm text-ink">
+          <label className={labelClass}>
             Price deviation multiplier
             <GroupedNumberInput
               name="deviationMultiplier"
@@ -560,12 +560,12 @@ export function DcaPlaybookForm({
         </div>
       </fieldset>
 
-      <fieldset className="space-y-3 rounded-card border border-line p-4">
+      <fieldset className={sectionClass}>
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           Exit
         </legend>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm text-ink">
+        <div className={rowClass}>
+          <label className={labelClass}>
             Take profit %
             <GroupedNumberInput
               name="takeProfitPct"
@@ -575,7 +575,7 @@ export function DcaPlaybookForm({
               placeholder="Off"
             />
           </label>
-          <label className="block text-sm text-ink">
+          <label className={labelClass}>
             vs
             <select
               name="takeProfitBasis"
@@ -586,9 +586,7 @@ export function DcaPlaybookForm({
               <option value="first_entry">First fill</option>
             </select>
           </label>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm text-ink">
+          <label className={labelClass}>
             Stop loss %
             <GroupedNumberInput
               name="stopLossPct"
@@ -598,7 +596,7 @@ export function DcaPlaybookForm({
               placeholder="Off"
             />
           </label>
-          <label className="block text-sm text-ink">
+          <label className={labelClass}>
             vs
             <select
               name="stopLossBasis"
@@ -609,9 +607,7 @@ export function DcaPlaybookForm({
               <option value="first_entry">First fill</option>
             </select>
           </label>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm text-ink">
+          <label className={labelClass}>
             Move stop to breakeven at %
             <GroupedNumberInput
               name="breakevenActivationPct"
@@ -621,7 +617,7 @@ export function DcaPlaybookForm({
               placeholder="Off"
             />
           </label>
-          <label className="block text-sm text-ink">
+          <label className={labelClass}>
             Breakeven offset %
             <GroupedNumberInput
               name="breakevenOffsetPct"
@@ -631,9 +627,7 @@ export function DcaPlaybookForm({
               placeholder="0"
             />
           </label>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm text-ink">
+          <label className={labelClass}>
             Trail after profit %
             <GroupedNumberInput
               name="trailingTriggerPct"
@@ -643,7 +637,7 @@ export function DcaPlaybookForm({
               placeholder="Off"
             />
           </label>
-          <label className="block text-sm text-ink">
+          <label className={labelClass}>
             Trail %
             <GroupedNumberInput
               name="trailingPct"
@@ -654,71 +648,71 @@ export function DcaPlaybookForm({
             />
           </label>
         </div>
-        <label className="flex items-center gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
-            name="disarmEnabled"
-            value="1"
-            checked={disarmEnabled}
-            onChange={(event) => setDisarmEnabled(event.target.checked)}
-          />
-          Stop adding when price crosses
-        </label>
-        {disarmEnabled ? (
-          <TriggerFields
-            prefix="disarm"
-            triggerBy={playbook?.disarmTrigger?.triggerBy ?? "last"}
-            compare={playbook?.disarmTrigger?.compare ?? "lte"}
-            price={optional(playbook?.disarmTrigger?.price)}
-          />
-        ) : null}
+        <div className={rowClass}>
+          <label className="flex items-center gap-2 self-end pb-1.5 text-xs text-ink">
+            <input
+              type="checkbox"
+              name="disarmEnabled"
+              value="1"
+              checked={disarmEnabled}
+              onChange={(event) => setDisarmEnabled(event.target.checked)}
+            />
+            Stop adding when price crosses
+          </label>
+          {disarmEnabled ? (
+            <TriggerFields
+              prefix="disarm"
+              triggerBy={playbook?.disarmTrigger?.triggerBy ?? "last"}
+              compare={playbook?.disarmTrigger?.compare ?? "lte"}
+              price={optional(playbook?.disarmTrigger?.price)}
+            />
+          ) : null}
+        </div>
       </fieldset>
 
-      <fieldset className="space-y-2 rounded-card border border-line p-4">
+      <fieldset className={sectionClass}>
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           Summary
         </legend>
-        <p className="text-sm text-ink">
-          Max price move covered{" "}
+        <p className="text-xs text-ink">
+          Covered{" "}
           <span className="text-ink-muted">
-            ·{" "}
             {summary.covered === null
-              ? "Set max clips and dip %"
+              ? "set max clips and dip %"
               : `${trimPct(summary.covered)}%`}
           </span>
-        </p>
-        <p className="text-sm text-ink">
-          Last-clip deviation{" "}
+          <span className="text-ink-faint"> · </span>
+          Last clip{" "}
           <span className="text-ink-muted">
-            ·{" "}
-            {summary.lastDev === null
-              ? "—"
-              : `${trimPct(summary.lastDev)}%`}
+            {summary.lastDev === null ? "—" : `${trimPct(summary.lastDev)}%`}
           </span>
-        </p>
-        <p className="text-sm text-ink">
-          Required if all clips fill{" "}
+          <span className="text-ink-faint"> · </span>
+          Required{" "}
           <span className="text-ink-muted">
-            ·{" "}
             {summary.required === null
               ? sizeUnit === "qty"
-                ? "Use USDT size to estimate"
+                ? "use USDT size to estimate"
                 : "—"
               : `$${trimPct(summary.required)}`}
           </span>
+          {availableUsdt !== null && summary.required !== null ? (
+            <>
+              <span className="text-ink-faint"> · </span>
+              <span
+                className={
+                  summary.required > availableUsdt
+                    ? "text-warning"
+                    : "text-ink-muted"
+                }
+              >
+                Available ${trimPct(availableUsdt)}
+                {summary.required > availableUsdt
+                  ? " — less than the full grid"
+                  : ""}
+              </span>
+            </>
+          ) : null}
         </p>
-        {availableUsdt !== null && summary.required !== null ? (
-          <p
-            className={`text-sm ${
-              summary.required > availableUsdt ? "text-warning" : "text-ink-muted"
-            }`}
-          >
-            Available {`$${trimPct(availableUsdt)}`}
-            {summary.required > availableUsdt
-              ? " — less than the full grid."
-              : "."}
-          </p>
-        ) : null}
       </fieldset>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -776,8 +770,8 @@ function TriggerFields({
   price: string;
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
-      <label className="block text-xs text-ink-muted">
+    <>
+      <label className={labelClass}>
         Price
         <select
           name={`${prefix}TriggerBy`}
@@ -789,7 +783,7 @@ function TriggerFields({
           <option value="index">Index</option>
         </select>
       </label>
-      <label className="block text-xs text-ink-muted">
+      <label className={labelClass}>
         When
         <select
           name={`${prefix}Compare`}
@@ -800,7 +794,7 @@ function TriggerFields({
           <option value="lte">At or below</option>
         </select>
       </label>
-      <label className="block text-xs text-ink-muted">
+      <label className={labelClass}>
         Level
         <GroupedNumberInput
           name={`${prefix}Price`}
@@ -809,7 +803,7 @@ function TriggerFields({
           className={fieldClass}
         />
       </label>
-    </div>
+    </>
   );
 }
 
