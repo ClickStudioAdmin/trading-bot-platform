@@ -1364,28 +1364,44 @@ export function DcaPlaybookForm({
           Summary
         </p>
         {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
-        {showLadderTabs ? (
-          <div
-            role="tablist"
-            aria-label="Ladder side"
-            className="mb-3 flex gap-1 border-b border-line"
+        <div
+          className={
+            showLadderTabs
+              ? "mb-3 flex items-end justify-between gap-3 border-b border-line"
+              : "mb-2"
+          }
+        >
+          {showLadderTabs ? (
+            <div
+              role="tablist"
+              aria-label="Ladder side"
+              className="flex gap-1"
+            >
+              <TabButton
+                selected={ladderTab === "long"}
+                panelId={ladderPanelId}
+                onClick={() => setLadderTab("long")}
+              >
+                Long ladder
+              </TabButton>
+              <TabButton
+                selected={ladderTab === "short"}
+                panelId={ladderPanelId}
+                onClick={() => setLadderTab("short")}
+              >
+                Short ladder
+              </TabButton>
+            </div>
+          ) : null}
+          <p
+            className={`text-xs text-ink-muted ${
+              showLadderTabs ? "pb-2 text-right" : ""
+            }`}
           >
-            <TabButton
-              selected={ladderTab === "long"}
-              panelId={ladderPanelId}
-              onClick={() => setLadderTab("long")}
-            >
-              Long ladder
-            </TabButton>
-            <TabButton
-              selected={ladderTab === "short"}
-              panelId={ladderPanelId}
-              onClick={() => setLadderTab("short")}
-            >
-              Short ladder
-            </TabButton>
-          </div>
-        ) : null}
+            Summary is based on the current asset price and the parameters
+            configured above
+          </p>
+        </div>
         <div
           role={showLadderTabs ? "tabpanel" : undefined}
           id={showLadderTabs ? ladderPanelId : undefined}
@@ -1488,10 +1504,6 @@ export function DcaPlaybookForm({
             }
           />
         </div>
-        <p className="mt-2 text-xs text-ink-muted">
-          Ladder is based on the current asset price and the parameters
-          configured above
-        </p>
         {summary.levels.length > 0 ? (
           <div className="thin-scroll mt-4 max-h-80 overflow-auto rounded-card border border-line">
             <table className="w-full text-left text-sm">
