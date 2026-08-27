@@ -498,9 +498,18 @@ export function DcaPlaybookForm({
         <div className="flex shrink-0 items-center gap-2">
           {playbook ? (
             running ? (
-              <p className="text-xs text-ink-muted">
-                Stop adding or close before removing.
-              </p>
+              <span
+                className="inline-flex"
+                title="Stop adding or close before removing."
+              >
+                <button
+                  type="button"
+                  disabled
+                  className={`${headerRemoveClass} pointer-events-none opacity-40`}
+                >
+                  Remove
+                </button>
+              </span>
             ) : (
               <PendingSubmitButton
                 formAction={deleteDcaPlaybookAction}
