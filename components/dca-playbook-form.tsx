@@ -985,10 +985,43 @@ export function DcaPlaybookForm({
                 When
                 <select
                   name="indicatorCompare"
-                  value={indicatorCompare}
+                  value={
+                    direction === "both" && indicatorKind === "rsi"
+                      ? indicatorCompare.startsWith("cross")
+                        ? "cross_lte"
+                        : "lte"
+                      : direction === "both" && indicatorKind === "ema_cross"
+                        ? indicatorCompare === "pair"
+                          ? "pair"
+                          : "cross_gte"
+                        : indicatorCompare
+                  }
                   onChange={(event) => setIndicatorCompare(event.target.value)}
                   className={fieldClass}
                 >
+              {direction === "both" ? (
+                <>
+                  {indicatorKind === "rsi" ? (
+                    <>
+                      <option value="cross_lte">Crosses the level</option>
+                      <option value="lte">At the level</option>
+                    </>
+                  ) : null}
+                  {indicatorKind === "macd" ? (
+                    <>
+                      <option value="cross_gte">Crosses zero</option>
+                      <option value="gte">Histogram sign</option>
+                    </>
+                  ) : null}
+                  {indicatorKind === "ema_cross" ? (
+                    <>
+                      <option value="pair">EMA 9/21 cross</option>
+                      <option value="cross_gte">EMA 21 vs price</option>
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                <>
                   {indicatorKind === "rsi" ? (
                     <>
                       <option value="cross_lte">Crosses below</option>
@@ -1010,12 +1043,13 @@ export function DcaPlaybookForm({
                       <option value="cross_lte">EMA 21 crosses below</option>
                     </>
                   ) : null}
+                </>
+              )}
                 </select>
               </label>
               {indicatorKind === "rsi" ||
               (indicatorKind === "ema_cross" &&
-                (indicatorCompare === "cross_gte" ||
-                  indicatorCompare === "cross_lte")) ? (
+                indicatorCompare !== "pair") ? (
                 <label className={labelClass}>
                   {indicatorKind === "ema_cross" ? "Level (price)" : "Level"}
                   <GroupedNumberInput
@@ -1751,24 +1785,15 @@ function indicatorBothSidesHint(
     return "Triggers Long when the histogram crosses above zero. Triggers Short when it crosses below zero.";
   }
   if (kind === "ema_cross") {
-    if (compare === "cross_gte") {
-      return "Triggers Long and Short when EMA 21 crosses above the price level.";
+    if (compare === "pair") {
+      return "Triggers Long when EMA 9 crosses above EMA 21. Triggers Short when EMA 9 crosses below EMA 21.";
     }
-    if (compare === "cross_lte") {
-      return "Triggers Long and Short when EMA 21 crosses below the price level.";
-    }
-    return "Triggers Long when EMA 9 crosses above EMA 21. Triggers Short when EMA 9 crosses below EMA 21.";
+    return "Triggers Long when EMA 21 crosses above the price level. Triggers Short when EMA 21 crosses below the price level.";
   }
-  if (compare === "cross_gte") {
-    return "Triggers Long and Short when RSI crosses above the level.";
+  if (compare === "lte" || compare === "gte") {
+    return "Triggers Long while RSI is at or below the level. Triggers Short while RSI is at or above the level.";
   }
-  if (compare === "cross_lte") {
-    return "Triggers Long and Short when RSI crosses below the level.";
-  }
-  if (compare === "gte") {
-    return "Triggers Long and Short while RSI is at or above the level.";
-  }
-  return "Triggers Long and Short while RSI is at or below the level.";
+  return "Triggers Long when RSI crosses below the level. Triggers Short when RSI crosses above the level.";
 }
 
 function TriggerFields({

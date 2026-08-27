@@ -492,5 +492,49 @@ assert.equal(
   }),
   true,
 );
+assert.equal(
+  indicatorStartMet({
+    kind: "ema_cross",
+    side: "short",
+    closes: [...Array(30).fill(100), 200],
+    compare: "cross_gte",
+    level: 105,
+    splitBySide: true,
+  }),
+  false,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "ema_cross",
+    side: "long",
+    closes: [...Array(30).fill(100), 200],
+    compare: "cross_lte",
+    level: 105,
+    splitBySide: true,
+  }),
+  true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "rsi",
+    side: "short",
+    closes: rsiDump,
+    compare: "cross_lte",
+    level: 50,
+    splitBySide: true,
+  }),
+  false,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "rsi",
+    side: "long",
+    closes: rsiDump,
+    compare: "cross_gte",
+    level: 50,
+    splitBySide: true,
+  }),
+  true,
+);
 
 console.log("dca grid checks passed");

@@ -1032,6 +1032,7 @@ export function decideDcaTick(input: {
   indicatorCompare?: DcaIndicatorCompare | null;
   indicatorLevel?: number | null;
   indicatorConditionTrue?: boolean;
+  splitIndicatorSides?: boolean;
   closes?: number[] | null;
   takeProfitOrderType?: FuturesOrderType;
   tpLimitResting?: boolean;
@@ -1081,6 +1082,7 @@ export function decideDcaTick(input: {
         closes,
         compare: indicatorCompare,
         level: indicatorLevel,
+        splitBySide: Boolean(input.splitIndicatorSides),
       }),
   );
   const nextArmTrue = armMet;

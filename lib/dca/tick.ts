@@ -224,6 +224,7 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
         indicatorKind: playbook.indicatorKind,
         indicatorCompare: playbook.indicatorCompare,
         indicatorLevel: playbook.indicatorLevel,
+        splitIndicatorSides: playbook.direction === "both",
         indicatorConditionTrue:
           side === "long"
             ? playbook.longIndicatorTrue

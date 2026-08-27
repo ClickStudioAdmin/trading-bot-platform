@@ -166,7 +166,9 @@ export function indicatorStartMet(input: {
   closes: number[];
   compare: DcaIndicatorCompare | null;
   level: number | null;
+  splitBySide?: boolean;
 }): boolean {
+  const split = Boolean(input.splitBySide);
   const cross = input.compare === "cross_gte" || input.compare === "cross_lte";
   if (input.kind === "rsi") {
     if (input.level === null || !input.compare) {
@@ -177,16 +179,21 @@ export function indicatorStartMet(input: {
       if (!pair) {
         return false;
       }
-      return crossedLevel(
-        pair.prev,
-        pair.now,
-        input.level,
-        input.compare === "cross_gte" ? "up" : "down",
-      );
+      const direction = split
+        ? input.side === "long"
+          ? "down"
+          : "up"
+        : input.compare === "cross_gte"
+          ? "up"
+          : "down";
+      return crossedLevel(pair.prev, pair.now, input.level, direction);
     }
     const rsi = rsiValue(input.closes);
     if (rsi === null) {
       return false;
+    }
+    if (split) {
+      return input.side === "long" ? rsi <= input.level : rsi >= input.level;
     }
     if (input.compare === "gte") {
       return rsi >= input.level;
@@ -217,12 +224,14 @@ export function indicatorStartMet(input: {
     if (!pair) {
       return false;
     }
-    return crossedLevel(
-      pair.prev,
-      pair.now,
-      input.level,
-      input.compare === "cross_gte" ? "up" : "down",
-    );
+    const direction = split
+      ? input.side === "long"
+        ? "up"
+        : "down"
+      : input.compare === "cross_gte"
+        ? "up"
+        : "down";
+    return crossedLevel(pair.prev, pair.now, input.level, direction);
   }
   if (input.side === "long") {
     return emaCrossBullish(input.closes) === true;
