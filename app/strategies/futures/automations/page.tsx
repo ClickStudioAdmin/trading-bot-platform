@@ -83,7 +83,7 @@ export default async function FuturesAutomationsPage({
         <p className="-mt-4 text-sm text-ink-muted">
           Add a playbook per contract. The app owns orders and exits. Save
           and Arm to listen, then price, indicator, or a bound Signal.
-          Manual uses Trigger Long or Short. Stop adding leaves the
+          Manual uses Save and Trigger Long or Short. Stop adding leaves the
           position. Close playbook flattens it.
         </p>
         {error ? (

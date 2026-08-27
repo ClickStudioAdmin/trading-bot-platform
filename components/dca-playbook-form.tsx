@@ -473,13 +473,13 @@ export function DcaPlaybookForm({
                     {
                       side: "long" as const,
                       value: "arm-long",
-                      label: "Trigger Long",
+                      label: "Save and Trigger Long",
                       className: headerLongClass,
                     },
                     {
                       side: "short" as const,
                       value: "arm-short",
-                      label: "Trigger Short",
+                      label: "Save and Trigger Short",
                       className: headerShortClass,
                     },
                   ] as const
@@ -744,7 +744,8 @@ export function DcaPlaybookForm({
           ) : null}
           {startKind === "immediate" ? (
             <p className="self-end text-xs text-ink-muted sm:col-span-2">
-              Save first. Then trigger Long or Short.
+              Save without placing. Save and Trigger Long / Short starts
+              that side.
             </p>
           ) : null}
         </div>
