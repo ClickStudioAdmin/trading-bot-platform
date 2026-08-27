@@ -649,6 +649,5 @@ export {
   placeClip,
   flattenSide as flattenPlaybook,
   moveStopToBreakeven,
-  syncDcaPlaybookExits,
   cancelSafetyOrders,
 };
