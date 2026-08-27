@@ -68,7 +68,6 @@ const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg
 const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`;
 const headerLongClass = `${headerBtnClass} bg-success text-canvas`;
 const headerShortClass = `${headerBtnClass} bg-danger text-ink`;
-const headerDangerClass = `${headerBtnClass} bg-danger/15 text-danger hover:bg-danger/25`;
 const headerRemoveClass =
   "shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
 
@@ -786,7 +785,7 @@ export function DcaPlaybookForm({
                   formAction={runDcaDisarmAction}
                   pendingLabel="Stopping…"
                   successKey={`disarm-dca-playbook-${playbook.id}`}
-                  className={headerDangerClass}
+                  className={headerPrimaryClass}
                   skipSizeGuard
                 >
                   Stop adding
@@ -802,7 +801,7 @@ export function DcaPlaybookForm({
                   formAction={runDcaClosePlaybookAction}
                   pendingLabel="Closing…"
                   successKey={`close-dca-playbook-${playbook.id}`}
-                  className={headerDangerClass}
+                  className={headerPrimaryClass}
                   skipSizeGuard
                 >
                   Close playbook
