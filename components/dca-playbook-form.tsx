@@ -803,12 +803,6 @@ export function DcaPlaybookForm({
               )}
             </>
           ) : null}
-          {startKind === "immediate" ? (
-            <p className="self-end text-xs text-ink-muted sm:col-span-2">
-              Save without placing. Save and Trigger Long / Short starts
-              that side.
-            </p>
-          ) : null}
         </div>
       </fieldset>
 
@@ -987,12 +981,6 @@ export function DcaPlaybookForm({
                 />
                 Remaining orders placed as GTC limit (instead of market)
               </label>
-            ) : null}
-            {averaging === "dip" && restGrid ? (
-              <p className="text-xs text-ink-muted sm:col-span-2">
-                After the first market order, later adds use the
-                price-deviation ladder. Needs max orders.
-              </p>
             ) : null}
           </div>
         </fieldset>
