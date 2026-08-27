@@ -737,36 +737,41 @@ export function DcaPlaybookForm({
         >
           Save playbook
         </PendingSubmitButton>
-        <PendingSubmitButton
-          formAction={runDcaPlaybookVerb}
-          name="verb"
-          value="arm"
-          pendingLabel="Arming…"
-          successKey={`arm-dca-playbook-${playbook?.id ?? "new"}`}
-          className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
-        >
-          Arm
-        </PendingSubmitButton>
-        <PendingSubmitButton
-          formAction={runDcaPlaybookVerb}
-          name="verb"
-          value="disarm"
-          pendingLabel="Stopping…"
-          successKey={`disarm-dca-playbook-${playbook?.id ?? "new"}`}
-          className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
-        >
-          Stop adding
-        </PendingSubmitButton>
-        <PendingSubmitButton
-          formAction={runDcaPlaybookVerb}
-          name="verb"
-          value="close-playbook"
-          pendingLabel="Closing…"
-          successKey={`close-dca-playbook-${playbook?.id ?? "new"}`}
-          className="rounded-control border border-danger/30 px-3 py-1.5 text-xs font-medium text-danger"
-        >
-          Close playbook
-        </PendingSubmitButton>
+        {playbook ? (
+          <>
+            <PendingSubmitButton
+              formAction={runDcaPlaybookVerb}
+              name="verb"
+              value="arm"
+              pendingLabel="Arming…"
+              successKey={`arm-dca-playbook-${playbook.id}`}
+              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
+            >
+              Arm
+            </PendingSubmitButton>
+            <PendingSubmitButton
+              formAction={runDcaPlaybookVerb}
+              name="verb"
+              value="disarm"
+              pendingLabel="Stopping…"
+              successKey={`disarm-dca-playbook-${playbook.id}`}
+              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
+            >
+              Stop adding
+            </PendingSubmitButton>
+            <PendingSubmitButton
+              formAction={runDcaPlaybookVerb}
+              name="verb"
+              value="close-playbook"
+              pendingLabel="Closing…"
+              successKey={`close-dca-playbook-${playbook.id}`}
+              className="rounded-control border border-danger/30 px-3 py-1.5 text-xs font-medium text-danger"
+            >
+              Close playbook
+            </PendingSubmitButton>
+          </>
+        ) : null}
+      </div>
       </div>
     </form>
   );
