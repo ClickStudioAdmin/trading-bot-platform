@@ -838,19 +838,6 @@ export function DcaPlaybookForm({
               <option value="both">Both</option>
             </select>
           </label>
-        </div>
-        {direction === "both" ? (
-          <p className="text-xs text-ink-muted">
-            Long and Short are independent positions and never flatten each other
-          </p>
-        ) : null}
-      </fieldset>
-
-      <fieldset className={sectionClass}>
-        <p className={sectionTitleClass}>
-          Start
-        </p>
-        <div className={rowClass}>
           <label className={`${labelClass} sm:col-span-2`}>
             First order
             <select
@@ -869,6 +856,20 @@ export function DcaPlaybookForm({
               <option value="indicator">Indicator</option>
             </select>
           </label>
+        </div>
+        {direction === "both" ? (
+          <p className="text-xs text-ink-muted">
+            Long and Short are independent positions and never flatten each other
+          </p>
+        ) : null}
+      </fieldset>
+
+      {startKind !== "immediate" ? (
+      <fieldset className={sectionClass}>
+        <p className={sectionTitleClass}>
+          Start
+        </p>
+        <div className={rowClass}>
           {startKind === "price" ? (
             <TriggerFields
               prefix="arm"
@@ -974,6 +975,7 @@ export function DcaPlaybookForm({
           ) : null}
         </div>
       </fieldset>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <fieldset className={sectionClass}>
