@@ -66,7 +66,7 @@ function SummaryStat({
   valueClass?: string;
 }) {
   return (
-    <div>
+    <div className="min-w-0 flex-1 basis-36 text-center">
       <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
         {label}
       </p>
@@ -627,7 +627,7 @@ export function DcaPlaybookForm({
         </fieldset>
         <fieldset className={sectionClass}>
           <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
-            Maximums
+            Maximum Exposure
           </legend>
           <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
             <label className={labelClass}>
@@ -955,7 +955,7 @@ export function DcaPlaybookForm({
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           Summary
         </legend>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="flex flex-wrap">
           <SummaryStat
             label="Covered"
             value={
@@ -1089,7 +1089,7 @@ export function DcaPlaybookForm({
                         : `${row.deviationPct > 0 ? "+" : ""}${trimPct(row.deviationPct)}%`}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-ink">
-                      {trimPct(row.size)}
+                      {formatGroupedNumber(row.size)}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-ink">
                       {formatUsdAmount(row.orderUsdt)}
@@ -1214,9 +1214,21 @@ function formatLadderPrice(value: number): string {
     return "—";
   }
   const digits = value >= 1000 ? 2 : value >= 1 ? 4 : 6;
-  return value.toLocaleString(undefined, {
+  return value.toLocaleString("en-US", {
     maximumFractionDigits: digits,
     minimumFractionDigits: 0,
+  });
+}
+
+function formatGroupedNumber(value: number): string {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+  const abs = Math.abs(value);
+  const decimals = Number.isInteger(abs) ? 0 : 2;
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: 2,
   });
 }
 
