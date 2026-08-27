@@ -18,7 +18,9 @@ import { futuresPnlUsdt } from "@/lib/futures/math";
 import { dcaClipSizeAt, dcaDipPctAt, dcaLadderMaxOrderError, dcaPlannedExits, dcaSafetyPrices } from "./grid";
 import {
   indicatorStartMet,
+  parseDcaIndicatorCompare,
   parseDcaIndicatorTimeframe,
+  type DcaIndicatorCompare,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "./indicators";
@@ -74,7 +76,7 @@ export type DcaPlaybookConfig = {
   disarmTrigger: DcaPriceTrigger | null;
   indicatorKind: DcaIndicatorKind | null;
   indicatorTimeframe: DcaIndicatorTimeframe | null;
-  indicatorCompare: FuturesTriggerCompare | null;
+  indicatorCompare: DcaIndicatorCompare | null;
   indicatorLevel: number | null;
 };
 
@@ -638,7 +640,7 @@ export function parseDcaPlaybookForm(
   }
   let indicatorKind: DcaIndicatorKind | null = null;
   let indicatorTimeframe: DcaIndicatorTimeframe | null = null;
-  let indicatorCompare: FuturesTriggerCompare | null = null;
+  let indicatorCompare: DcaIndicatorCompare | null = null;
   let indicatorLevel: number | null = null;
   if (startKind === "indicator") {
     const kind = String(form.get("indicatorKind") ?? "").trim();
@@ -653,18 +655,37 @@ export function parseDcaPlaybookForm(
       return { ok: false, error: "Choose a timeframe." };
     }
     indicatorTimeframe = timeframe;
+    const compareRaw = String(form.get("indicatorCompare") ?? "").trim();
     if (kind === "rsi") {
-      const cmp = parseFuturesTriggerCompare(
-        form.get("indicatorCompare") ?? "lte",
-      );
+      const cmp = parseDcaIndicatorCompare(compareRaw || "cross_lte");
       const level = parseOptionalPositive(form.get("indicatorLevel"));
-      if (!cmp.ok) {
-        return { ok: false, error: "RSI needs at or above, or at or below." };
+      if (!cmp) {
+        return { ok: false, error: "Choose when RSI should fire." };
       }
       if (!level.ok || level.value === null) {
         return { ok: false, error: "Enter an RSI level." };
       }
-      indicatorCompare = cmp.compare;
+      indicatorCompare = cmp;
+      indicatorLevel = level.value;
+    } else if (kind === "macd") {
+      const cmp = parseDcaIndicatorCompare(compareRaw || "cross_gte");
+      if (!cmp) {
+        return { ok: false, error: "Choose when MACD should fire." };
+      }
+      indicatorCompare =
+        cmp === "cross_gte" || cmp === "cross_lte" ? "cross_gte" : "gte";
+    } else if (compareRaw === "pair" || compareRaw === "") {
+      indicatorCompare = null;
+    } else {
+      const cmp = parseDcaIndicatorCompare(compareRaw);
+      if (cmp !== "cross_gte" && cmp !== "cross_lte") {
+        return { ok: false, error: "Choose when EMA should fire." };
+      }
+      const level = parseOptionalPositive(form.get("indicatorLevel"));
+      if (!level.ok || level.value === null) {
+        return { ok: false, error: "Enter an EMA price level." };
+      }
+      indicatorCompare = cmp;
       indicatorLevel = level.value;
     }
   }
@@ -758,7 +779,7 @@ export function parseDcaPlaybookRow(
   const indicatorTimeframe = parseDcaIndicatorTimeframe(
     row.indicator_timeframe,
   );
-  const indicatorCompare = parseFuturesTriggerCompare(row.indicator_compare);
+  const indicatorCompare = parseDcaIndicatorCompare(row.indicator_compare);
   return {
     id,
     userId,
@@ -804,7 +825,7 @@ export function parseDcaPlaybookRow(
     ),
     indicatorKind,
     indicatorTimeframe,
-    indicatorCompare: indicatorCompare.ok ? indicatorCompare.compare : null,
+    indicatorCompare,
     indicatorLevel: asPositiveOrNull(row.indicator_level),
     updatedAtMs: (() => {
       const ms = new Date(String(row.updated_at ?? "")).getTime();
@@ -1008,7 +1029,7 @@ export function decideDcaTick(input: {
   disarmTrigger: DcaPriceTrigger | null;
   disarmConditionTrue: boolean;
   indicatorKind?: DcaIndicatorKind | null;
-  indicatorCompare?: FuturesTriggerCompare | null;
+  indicatorCompare?: DcaIndicatorCompare | null;
   indicatorLevel?: number | null;
   indicatorConditionTrue?: boolean;
   closes?: number[] | null;

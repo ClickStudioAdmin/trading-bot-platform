@@ -510,6 +510,31 @@ export function DcaPlaybookForm({
   const [indicatorKind, setIndicatorKind] = useState(
     source?.indicatorKind ?? "rsi",
   );
+  const [indicatorCompare, setIndicatorCompare] = useState(() => {
+    const kind = source?.indicatorKind ?? "rsi";
+    if (kind === "rsi") {
+      return source?.indicatorCompare ?? "cross_lte";
+    }
+    if (kind === "macd") {
+      if (
+        source?.indicatorCompare === "cross_gte" ||
+        source?.indicatorCompare === "cross_lte"
+      ) {
+        return "cross_gte";
+      }
+      if (source?.indicatorKind === "macd") {
+        return "gte";
+      }
+      return "cross_gte";
+    }
+    if (
+      source?.indicatorCompare === "cross_gte" ||
+      source?.indicatorCompare === "cross_lte"
+    ) {
+      return source.indicatorCompare;
+    }
+    return "pair";
+  });
   const defaultSymbol =
     source?.symbol ??
     options.find((row) => row.symbol === "BTCUSDT")?.symbol ??
@@ -921,11 +946,20 @@ export function DcaPlaybookForm({
                 <select
                   name="indicatorKind"
                   value={indicatorKind}
-                  onChange={(event) =>
-                    setIndicatorKind(
-                      event.target.value as "rsi" | "macd" | "ema_cross",
-                    )
-                  }
+                  onChange={(event) => {
+                    const next = event.target.value as
+                      | "rsi"
+                      | "macd"
+                      | "ema_cross";
+                    setIndicatorKind(next);
+                    setIndicatorCompare(
+                      next === "rsi"
+                        ? "cross_lte"
+                        : next === "macd"
+                          ? "cross_gte"
+                          : "pair",
+                    );
+                  }}
                   className={fieldClass}
                 >
                   <option value="rsi">RSI 14</option>
@@ -947,36 +981,67 @@ export function DcaPlaybookForm({
                   ))}
                 </select>
               </label>
-              {indicatorKind === "rsi" ? (
-                <>
-                  <label className={labelClass}>
-                    When
-                    <select
-                      name="indicatorCompare"
-                      defaultValue={source?.indicatorCompare ?? "lte"}
-                      className={fieldClass}
-                    >
+              <label className={labelClass}>
+                When
+                <select
+                  name="indicatorCompare"
+                  value={indicatorCompare}
+                  onChange={(event) => setIndicatorCompare(event.target.value)}
+                  className={fieldClass}
+                >
+                  {indicatorKind === "rsi" ? (
+                    <>
+                      <option value="cross_lte">Crosses below</option>
+                      <option value="cross_gte">Crosses above</option>
                       <option value="lte">At or below</option>
                       <option value="gte">At or above</option>
-                    </select>
-                  </label>
-                  <label className={labelClass}>
-                    Level
-                    <GroupedNumberInput
-                      name="indicatorLevel"
-                      defaultValue={optional(source?.indicatorLevel) || "30"}
-                      allowDecimal
-                      className={fieldClass}
-                    />
-                  </label>
-                </>
-              ) : (
-                <p className="self-end text-xs text-ink-muted">
-                  {indicatorKind === "macd"
-                    ? "Long when histogram is positive. Short when negative."
-                    : "Long on a bullish EMA cross. Short on a bearish cross."}
+                    </>
+                  ) : null}
+                  {indicatorKind === "macd" ? (
+                    <>
+                      <option value="cross_gte">Crosses zero</option>
+                      <option value="gte">Histogram sign</option>
+                    </>
+                  ) : null}
+                  {indicatorKind === "ema_cross" ? (
+                    <>
+                      <option value="pair">EMA 9/21 cross</option>
+                      <option value="cross_gte">EMA 21 crosses above</option>
+                      <option value="cross_lte">EMA 21 crosses below</option>
+                    </>
+                  ) : null}
+                </select>
+              </label>
+              {indicatorKind === "rsi" ||
+              (indicatorKind === "ema_cross" &&
+                (indicatorCompare === "cross_gte" ||
+                  indicatorCompare === "cross_lte")) ? (
+                <label className={labelClass}>
+                  {indicatorKind === "ema_cross" ? "Level (price)" : "Level"}
+                  <GroupedNumberInput
+                    name="indicatorLevel"
+                    defaultValue={
+                      optional(source?.indicatorLevel) ||
+                      (indicatorKind === "rsi" ? "30" : "")
+                    }
+                    allowDecimal
+                    className={fieldClass}
+                  />
+                </label>
+              ) : null}
+              {indicatorKind === "macd" ? (
+                <p className="self-end text-xs text-ink-muted sm:col-span-2">
+                  {indicatorCompare === "gte"
+                    ? "Long while the histogram is positive. Short while negative."
+                    : "Long when the histogram crosses above zero. Short when it crosses below."}
                 </p>
-              )}
+              ) : null}
+              {indicatorKind === "ema_cross" && indicatorCompare === "pair" ? (
+                <p className="self-end text-xs text-ink-muted sm:col-span-2">
+                  Long when EMA 9 crosses above EMA 21. Short when it crosses
+                  below.
+                </p>
+              ) : null}
             </>
           ) : null}
         </div>

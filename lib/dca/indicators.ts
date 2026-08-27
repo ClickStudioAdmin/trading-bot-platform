@@ -1,7 +1,7 @@
 import type { FuturesSide } from "@/lib/futures/model";
-import type { FuturesTriggerCompare } from "@/lib/futures/automation";
 
 export type DcaIndicatorKind = "rsi" | "macd" | "ema_cross";
+export type DcaIndicatorCompare = "gte" | "lte" | "cross_gte" | "cross_lte";
 export const DCA_INDICATOR_TIMEFRAMES = [
   "5",
   "15",
@@ -36,6 +36,28 @@ export function parseDcaIndicatorTimeframe(
   return (DCA_INDICATOR_TIMEFRAMES as readonly string[]).includes(raw)
     ? (raw as DcaIndicatorTimeframe)
     : null;
+}
+
+export function parseDcaIndicatorCompare(
+  value: unknown,
+): DcaIndicatorCompare | null {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (raw === "gte" || raw === "lte" || raw === "cross_gte" || raw === "cross_lte") {
+    return raw;
+  }
+  return null;
+}
+
+export function crossedLevel(
+  prev: number,
+  now: number,
+  level: number,
+  direction: "up" | "down",
+): boolean {
+  if (direction === "up") {
+    return prev < level && now >= level;
+  }
+  return prev > level && now <= level;
 }
 
 export function emaValues(closes: number[], period: number): number[] {
@@ -99,6 +121,32 @@ export function macdHistogram(closes: number[]): number | null {
   return macdLine[macdLine.length - 1] - signal[signal.length - 1];
 }
 
+function lastTwoOf(
+  compute: (closes: number[]) => number | null,
+  closes: number[],
+): { prev: number; now: number } | null {
+  if (closes.length < 2) {
+    return null;
+  }
+  const now = compute(closes);
+  const prev = compute(closes.slice(0, -1));
+  if (now === null || prev === null) {
+    return null;
+  }
+  return { prev, now };
+}
+
+function lastTwoEma(
+  closes: number[],
+  period: number,
+): { prev: number; now: number } | null {
+  const ema = emaValues(closes, period);
+  if (ema.length < 2) {
+    return null;
+  }
+  return { prev: ema[ema.length - 2], now: ema[ema.length - 1] };
+}
+
 export function emaCrossBullish(closes: number[]): boolean | null {
   const fast = emaValues(closes, 9);
   const slow = emaValues(closes, 21);
@@ -116,12 +164,28 @@ export function indicatorStartMet(input: {
   kind: DcaIndicatorKind;
   side: FuturesSide;
   closes: number[];
-  compare: FuturesTriggerCompare | null;
+  compare: DcaIndicatorCompare | null;
   level: number | null;
 }): boolean {
+  const cross = input.compare === "cross_gte" || input.compare === "cross_lte";
   if (input.kind === "rsi") {
+    if (input.level === null || !input.compare) {
+      return false;
+    }
+    if (cross) {
+      const pair = lastTwoOf(rsiValue, input.closes);
+      if (!pair) {
+        return false;
+      }
+      return crossedLevel(
+        pair.prev,
+        pair.now,
+        input.level,
+        input.compare === "cross_gte" ? "up" : "down",
+      );
+    }
     const rsi = rsiValue(input.closes);
-    if (rsi === null || input.level === null || !input.compare) {
+    if (rsi === null) {
       return false;
     }
     if (input.compare === "gte") {
@@ -130,11 +194,35 @@ export function indicatorStartMet(input: {
     return rsi <= input.level;
   }
   if (input.kind === "macd") {
+    if (cross) {
+      const pair = lastTwoOf(macdHistogram, input.closes);
+      if (!pair) {
+        return false;
+      }
+      return input.side === "long"
+        ? crossedLevel(pair.prev, pair.now, 0, "up")
+        : crossedLevel(pair.prev, pair.now, 0, "down");
+    }
     const hist = macdHistogram(input.closes);
     if (hist === null) {
       return false;
     }
     return input.side === "long" ? hist > 0 : hist < 0;
+  }
+  if (cross) {
+    if (input.level === null) {
+      return false;
+    }
+    const pair = lastTwoEma(input.closes, 21);
+    if (!pair) {
+      return false;
+    }
+    return crossedLevel(
+      pair.prev,
+      pair.now,
+      input.level,
+      input.compare === "cross_gte" ? "up" : "down",
+    );
   }
   if (input.side === "long") {
     return emaCrossBullish(input.closes) === true;

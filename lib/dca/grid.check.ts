@@ -24,10 +24,12 @@ import {
   dcaTighterTrailingDistance,
 } from "./grid";
 import {
+  crossedLevel,
   emaCrossBullish,
   emaValues,
   indicatorStartMet,
   macdHistogram,
+  parseDcaIndicatorCompare,
   parseDcaIndicatorTimeframe,
   rsiValue,
 } from "./indicators";
@@ -452,5 +454,43 @@ assert.ok(
 assert.equal(parseDcaIndicatorTimeframe("D"), "D");
 assert.equal(parseDcaIndicatorTimeframe("240"), "240");
 assert.equal(parseDcaIndicatorTimeframe("W"), null);
+assert.equal(parseDcaIndicatorCompare("cross_lte"), "cross_lte");
+assert.equal(parseDcaIndicatorCompare("pair"), null);
+assert.equal(crossedLevel(40, 25, 30, "down"), true);
+assert.equal(crossedLevel(25, 20, 30, "down"), false);
+assert.equal(crossedLevel(-0.1, 0.05, 0, "up"), true);
+assert.equal(crossedLevel(0.2, 0.3, 0, "up"), false);
+
+const rsiDump = [...Array(19).fill(100), 1];
+assert.equal(
+  indicatorStartMet({
+    kind: "rsi",
+    side: "long",
+    closes: rsiDump,
+    compare: "cross_lte",
+    level: 50,
+  }),
+  true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "rsi",
+    side: "long",
+    closes: rsiDump,
+    compare: "lte",
+    level: 50,
+  }),
+  true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "ema_cross",
+    side: "long",
+    closes: [...Array(30).fill(100), 200],
+    compare: "cross_gte",
+    level: 105,
+  }),
+  true,
+);
 
 console.log("dca grid checks passed");

@@ -1262,6 +1262,55 @@ if (indicatorDailyParsed.ok) {
   assert.equal(indicatorDailyParsed.config.indicatorTimeframe, "D");
 }
 
+const rsiCrossForm = new FormData();
+rsiCrossForm.set("symbol", "BTCUSDT");
+rsiCrossForm.set("side", "long");
+rsiCrossForm.set("clipSize", "0.01");
+rsiCrossForm.set("sizeUnit", "qty");
+rsiCrossForm.set("startKind", "indicator");
+rsiCrossForm.set("indicatorKind", "rsi");
+rsiCrossForm.set("indicatorTimeframe", "15");
+rsiCrossForm.set("indicatorCompare", "cross_lte");
+rsiCrossForm.set("indicatorLevel", "30");
+const rsiCrossParsed = parseDcaPlaybookForm(rsiCrossForm);
+assert.equal(rsiCrossParsed.ok, true);
+if (rsiCrossParsed.ok) {
+  assert.equal(rsiCrossParsed.config.indicatorCompare, "cross_lte");
+}
+
+const macdCrossForm = new FormData();
+macdCrossForm.set("symbol", "BTCUSDT");
+macdCrossForm.set("side", "long");
+macdCrossForm.set("clipSize", "0.01");
+macdCrossForm.set("sizeUnit", "qty");
+macdCrossForm.set("startKind", "indicator");
+macdCrossForm.set("indicatorKind", "macd");
+macdCrossForm.set("indicatorTimeframe", "60");
+macdCrossForm.set("indicatorCompare", "cross_gte");
+const macdCrossParsed = parseDcaPlaybookForm(macdCrossForm);
+assert.equal(macdCrossParsed.ok, true);
+if (macdCrossParsed.ok) {
+  assert.equal(macdCrossParsed.config.indicatorCompare, "cross_gte");
+  assert.equal(macdCrossParsed.config.indicatorLevel, null);
+}
+
+const emaLevelForm = new FormData();
+emaLevelForm.set("symbol", "BTCUSDT");
+emaLevelForm.set("side", "long");
+emaLevelForm.set("clipSize", "0.01");
+emaLevelForm.set("sizeUnit", "qty");
+emaLevelForm.set("startKind", "indicator");
+emaLevelForm.set("indicatorKind", "ema_cross");
+emaLevelForm.set("indicatorTimeframe", "240");
+emaLevelForm.set("indicatorCompare", "cross_gte");
+emaLevelForm.set("indicatorLevel", "80000");
+const emaLevelParsed = parseDcaPlaybookForm(emaLevelForm);
+assert.equal(emaLevelParsed.ok, true);
+if (emaLevelParsed.ok) {
+  assert.equal(emaLevelParsed.config.indicatorCompare, "cross_gte");
+  assert.equal(emaLevelParsed.config.indicatorLevel, 80000);
+}
+
 const indicatorBadTf = new FormData();
 indicatorBadTf.set("symbol", "BTCUSDT");
 indicatorBadTf.set("side", "long");
