@@ -444,39 +444,27 @@ export function DcaPlaybookForm({
             </button>
           ) : null}
         </div>
-        {showSaveAndArm ? (
-          <>
-            <PendingSubmitButton
-              name="saveIntent"
-              value="save"
-              pendingLabel="Saving…"
-              successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
-              className={headerSecondaryClass}
-            >
-              Save
-            </PendingSubmitButton>
+        <PendingSubmitButton
+          name="saveIntent"
+          value="save"
+          pendingLabel="Saving…"
+          successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
+          className={headerPrimaryClass}
+        >
+          {showSaveAndArm ? "Save" : "Save playbook"}
+        </PendingSubmitButton>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
+          {showSaveAndArm ? (
             <PendingSubmitButton
               name="saveIntent"
               value="arm"
               pendingLabel="Arming…"
               successKey={`save-arm-dca-playbook-${playbook?.id ?? "new"}`}
-              className={headerPrimaryClass}
+              className={headerLongClass}
             >
               Save and Arm
             </PendingSubmitButton>
-          </>
-        ) : (
-          <PendingSubmitButton
-            name="saveIntent"
-            value="save"
-            pendingLabel="Saving…"
-            successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
-            className={headerPrimaryClass}
-          >
-            Save playbook
-          </PendingSubmitButton>
-        )}
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
+          ) : null}
           {playbook ? (
             <>
               {showManualTriggers ? (
