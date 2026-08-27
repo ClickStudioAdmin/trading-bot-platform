@@ -236,9 +236,8 @@ export function TpslPair({
   tpTone?: "live" | "planned";
   slTone?: "live" | "planned";
 }) {
-  const limited =
-    (takeProfit !== null && tpOrderType === "limit") ||
-    (stopLoss !== null && slOrderType === "limit");
+  const tpLimited = takeProfit !== null && tpOrderType === "limit";
+  const slLimited = stopLoss !== null && slOrderType === "limit";
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className="tabular-nums">
@@ -247,18 +246,21 @@ export function TpslPair({
         >
           {takeProfit === null ? "--" : formatPrice(takeProfit)}
         </span>
+        {tpLimited ? (
+          <span className="ml-1 text-[11px] text-ink-faint">Limit</span>
+        ) : null}
         <span className="text-ink-faint"> / </span>
         <span
           className={slTone === "planned" ? "text-ink-faint" : "text-danger"}
         >
           {stopLoss === null ? "--" : formatPrice(stopLoss)}
         </span>
+        {slLimited ? (
+          <span className="ml-1 text-[11px] text-ink-faint">Limit</span>
+        ) : null}
       </span>
       {mode === "partial" ? (
         <span className="text-[11px] text-ink-faint">Partial</span>
-      ) : null}
-      {limited ? (
-        <span className="text-[11px] text-ink-faint">Limit</span>
       ) : null}
     </span>
   );

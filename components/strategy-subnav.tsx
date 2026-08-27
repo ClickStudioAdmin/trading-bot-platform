@@ -33,6 +33,7 @@ export function StrategySubnav({
     name: string;
     venue: string | null;
     connected: boolean;
+    overline?: string;
     href?: string;
     snapshot?: AccountSnapshotView | null;
   } | null;
@@ -79,7 +80,7 @@ export function StrategySubnav({
                 }
               >
                 <HeaderMeta
-                  overline="Exchange Connection"
+                  overline={connection.overline ?? "Exchange Connection"}
                   href={connection.href}
                 >
                   <span

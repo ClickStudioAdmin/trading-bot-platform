@@ -3,6 +3,7 @@ import { StrategySubnav } from "@/components/strategy-subnav";
 import {
   deskHomePath,
   deskUsesPerpsUi,
+  formatAccountMode,
   formatDeskType,
 } from "@/lib/accounts/model";
 import { dcaPlaybookIsRunning } from "@/lib/dca/playbook";
@@ -109,7 +110,13 @@ export default async function FuturesLayout({
                       ? "/account/exchanges"
                       : FUTURES_PATHS.settings,
                 }
-            : null
+            : {
+                name: formatAccountMode("paper"),
+                venue: null,
+                connected: true,
+                overline: "Book",
+                href: FUTURES_PATHS.settings,
+              }
         }
       />
       {live && !bound ? (

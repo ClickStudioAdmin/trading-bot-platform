@@ -2,6 +2,7 @@ import { StrategySubnav } from "@/components/strategy-subnav";
 import {
   deskHomePath,
   deskUsesCashAndCarry,
+  formatAccountMode,
 } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadPaperRules } from "@/lib/engine/load";
@@ -72,7 +73,13 @@ export default async function CashAndCarryLayout({
                       ? "/account/exchanges"
                       : "/strategies/cash-and-carry/settings",
                 }
-            : null
+            : {
+                name: formatAccountMode("paper"),
+                venue: null,
+                connected: true,
+                overline: "Book",
+                href: "/strategies/cash-and-carry/settings",
+              }
         }
       />
       {live && !bound ? (
