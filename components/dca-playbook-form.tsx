@@ -1406,7 +1406,7 @@ export function DcaPlaybookForm({
             </p>
           </div>
         ) : (
-          <p className="mt-3 text-sm text-ink-muted">
+          <p className="mt-3 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
             Enter order size and max orders to preview price and value at each
             level.
             {averaging === "dip" ? " Price deviation % sets later prices." : ""}
