@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, type FormEvent } from "react";
 import { ColumnHint } from "@/components/column-hint";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -79,6 +79,20 @@ function optional(value: number | null | undefined): string {
 function asNumber(text: string): number | null {
   const value = Number(text.replace(/,/g, "").trim());
   return value > 0 && Number.isFinite(value) ? value : null;
+}
+
+function SizeGuardNote({ message }: { message: string | null }) {
+  if (!message) {
+    return null;
+  }
+  return (
+    <p
+      className="rounded-card border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning"
+      role="status"
+    >
+      {message} Save is blocked so this recipe is not lost.
+    </p>
+  );
 }
 
 function PercentInput({
@@ -591,6 +605,15 @@ export function DcaPlaybookForm({
   return (
     <form
       action={saveDcaPlaybookAction}
+      onSubmit={(event: FormEvent<HTMLFormElement>) => {
+        const submitter = (event.nativeEvent as SubmitEvent).submitter as
+          | HTMLElement
+          | null;
+        const skip = submitter?.dataset.skipSizeGuard === "1";
+        if (saveError && !skip) {
+          event.preventDefault();
+        }
+      }}
       className="space-y-3 rounded-card border border-line bg-surface px-4 py-3"
     >
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
@@ -611,12 +634,13 @@ export function DcaPlaybookForm({
                 </button>
               </span>
             ) : (
-              <PendingSubmitButton
-                formAction={deleteDcaPlaybookAction}
-                pendingLabel="Removing…"
-                successKey={`remove-dca-${playbook.id}`}
-                className={headerRemoveClass}
-              >
+                <PendingSubmitButton
+                  formAction={deleteDcaPlaybookAction}
+                  pendingLabel="Removing…"
+                  successKey={`remove-dca-${playbook.id}`}
+                  className={headerRemoveClass}
+                  skipSizeGuard
+                >
                 Remove
               </PendingSubmitButton>
             )
@@ -728,6 +752,7 @@ export function DcaPlaybookForm({
                     pendingLabel="Stopping…"
                     successKey={`disarm-dca-playbook-${playbook.id}`}
                     className={headerDangerClass}
+                    skipSizeGuard
                   >
                     Stop adding
                   </PendingSubmitButton>
@@ -743,6 +768,7 @@ export function DcaPlaybookForm({
                     pendingLabel="Closing…"
                     successKey={`close-dca-playbook-${playbook.id}`}
                     className={headerDangerClass}
+                    skipSizeGuard
                   >
                     Close playbook
                   </PendingSubmitButton>
@@ -753,6 +779,7 @@ export function DcaPlaybookForm({
         </div>
         <DcaStatusLight playbook={playbook ?? null} reduceOnly={reduceOnly} />
       </div>
+      {saveError ? <SizeGuardNote message={saveError} /> : null}
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. New orders stay blocked until you turn it off in
@@ -1153,7 +1180,11 @@ export function DcaPlaybookForm({
                 value={sizeMultiplier}
                 onChange={setSizeMultiplier}
                 allowDecimal
-                className={fieldClass}
+                className={`mt-0.5 w-full rounded-control border bg-surface-raised px-2 py-1.5 text-sm text-ink focus:outline-none ${
+                  ladderMaxError
+                    ? "border-warning focus:border-warning"
+                    : "border-line focus:border-line-strong"
+                }`}
               />
             </label>
             <label className={labelClass}>
@@ -1167,6 +1198,7 @@ export function DcaPlaybookForm({
               />
             </label>
           </div>
+          {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         </fieldset>
       </div>
 
@@ -1304,9 +1336,7 @@ export function DcaPlaybookForm({
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           Summary
         </legend>
-        {ladderMaxError ? (
-          <p className="mb-3 text-xs text-danger">{ladderMaxError}</p>
-        ) : null}
+        {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         {showLadderTabs ? (
           <div
             role="tablist"
@@ -1493,7 +1523,7 @@ export function DcaPlaybookForm({
                   return (
                 <tr
                   key={row.index}
-                  className={`border-t border-line${overMax ? " bg-danger/10" : ""}`}
+                  className={`border-t border-line${overMax ? " bg-warning/10" : ""}`}
                 >
                     <td className="px-3 py-2 tabular-nums text-ink">{row.index}</td>
                     <td className="px-3 py-2 tabular-nums text-ink">
@@ -1506,14 +1536,14 @@ export function DcaPlaybookForm({
                     </td>
                     <td
                       className={`px-3 py-2 tabular-nums ${
-                        overMax ? "text-danger" : "text-ink"
+                        overMax ? "text-warning" : "text-ink"
                       }`}
                     >
                       {formatGroupedNumber(row.size)}
                     </td>
                     <td
                       className={`px-3 py-2 tabular-nums ${
-                        overMax ? "text-danger" : "text-ink"
+                        overMax ? "text-warning" : "text-ink"
                       }`}
                     >
                       {formatUsdAmount(row.orderUsdt)}

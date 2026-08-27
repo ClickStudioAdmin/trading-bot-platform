@@ -112,6 +112,7 @@ export function PendingSubmitButton({
   formAction,
   disabled = false,
   title,
+  skipSizeGuard = false,
 }: {
   children: ReactNode;
   pendingLabel?: string;
@@ -122,6 +123,7 @@ export function PendingSubmitButton({
   formAction?: (formData: FormData) => void | Promise<void>;
   disabled?: boolean;
   title?: string;
+  skipSizeGuard?: boolean;
 }) {
   const { pending, data } = useFormStatus();
   const thisPending =
@@ -165,6 +167,7 @@ export function PendingSubmitButton({
       formAction={formAction}
       disabled={pending || disabled}
       title={title}
+      data-skip-size-guard={skipSizeGuard ? "1" : undefined}
       aria-busy={thisPending}
       aria-label={thisPending ? pendingLabel : ok ? "Done" : undefined}
       className={`disabled:opacity-70 ${className}`}
