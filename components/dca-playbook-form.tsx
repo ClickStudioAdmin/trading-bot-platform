@@ -660,15 +660,6 @@ export function DcaPlaybookForm({
             </button>
           ) : null}
         </div>
-        <PendingSubmitButton
-          pendingLabel="Saving…"
-          successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
-          className={headerPrimaryClass}
-          disabled={Boolean(saveError)}
-          title={saveError ?? undefined}
-        >
-          Save
-        </PendingSubmitButton>
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           {showSaveAndArm ? (
             <PendingSubmitButton
@@ -771,9 +762,17 @@ export function DcaPlaybookForm({
             className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
           />
         </label>
-        {playbook && (showStopAdding || showClosePlaybook) ? (
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            {showStopAdding ? (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <PendingSubmitButton
+            pendingLabel="Saving…"
+            successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
+            className={headerPrimaryClass}
+            disabled={Boolean(saveError)}
+            title={saveError ?? undefined}
+          >
+            Save
+          </PendingSubmitButton>
+          {playbook && showStopAdding ? (
               <span
                 className="inline-flex"
                 title="Stop adding any new orders (also cancels any existing entry limit orders)"
@@ -789,7 +788,7 @@ export function DcaPlaybookForm({
                 </PendingSubmitButton>
               </span>
             ) : null}
-            {showClosePlaybook ? (
+          {playbook && showClosePlaybook ? (
               <span
                 className="inline-flex"
                 title="Close all positions and place the playbook in idle mode (no new entries)"
@@ -805,8 +804,7 @@ export function DcaPlaybookForm({
                 </PendingSubmitButton>
               </span>
             ) : null}
-          </div>
-        ) : null}
+        </div>
       </div>
 
       <fieldset className={sectionClass}>
