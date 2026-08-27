@@ -81,6 +81,7 @@ export type DcaPlaybook = DcaPlaybookConfig & {
   id: string;
   userId: string;
   accountId: string;
+  updatedAtMs: number;
   long: DcaLegState;
   short: DcaLegState;
   armConditionTrue: boolean;
@@ -728,6 +729,10 @@ export function parseDcaPlaybookRow(
     indicatorTimeframe,
     indicatorCompare: indicatorCompare.ok ? indicatorCompare.compare : null,
     indicatorLevel: asPositiveOrNull(row.indicator_level),
+    updatedAtMs: (() => {
+      const ms = new Date(String(row.updated_at ?? "")).getTime();
+      return Number.isFinite(ms) ? ms : 0;
+    })(),
     long: parseLeg("long", row),
     short: parseLeg("short", row),
     armConditionTrue: Boolean(row.arm_condition_true),
@@ -1289,6 +1294,16 @@ export function dcaClipKey(
   const compact = playbookId.replace(/-/g, "").slice(0, 8);
   const sideChar = side === "long" ? "l" : "s";
   return `d${compact}${sideChar}${clipIndex}`;
+}
+
+export function dcaClipRestKey(
+  playbookId: string,
+  side: FuturesSide,
+  clipIndex: number,
+  generationMs: number,
+): string {
+  const generation = Math.max(0, Math.floor(generationMs));
+  return `${dcaClipKey(playbookId, side, clipIndex)}x${generation}`;
 }
 
 export function parseDcaClipIndex(key: string | null | undefined): number | null {

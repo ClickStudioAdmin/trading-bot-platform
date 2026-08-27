@@ -5,6 +5,7 @@ import {
   dcaClipsFilledFromGrid,
   dcaClipAction,
   dcaClipKey,
+  dcaClipRestKey,
   dcaCycleEnded,
   dcaGridClipCounts,
   dcaExitLimitKey,
@@ -47,6 +48,22 @@ assert.equal(parseDcaStatus("nope"), "idle");
 assert.equal(dcaClipAction("long"), "buy");
 assert.equal(dcaClipAction("short"), "sell");
 assert.equal(dcaClipKey("11111111-1111-4111-8111-111111111111", "long", 2), "d11111111l2");
+assert.equal(
+  dcaClipRestKey("11111111-1111-4111-8111-111111111111", "long", 3, 1_700_000_000_000),
+  dcaClipRestKey("11111111-1111-4111-8111-111111111111", "long", 3, 1_700_000_000_000),
+);
+assert.ok(
+  dcaClipRestKey("11111111-1111-4111-8111-111111111111", "long", 20, 1_700_000_000_000)
+    .length <= 36,
+);
+assert.equal(
+  isDcaClipKey(
+    dcaClipRestKey("11111111-1111-4111-8111-111111111111", "long", 3, 1_700_000_000_000),
+    "11111111-1111-4111-8111-111111111111",
+    "long",
+  ),
+  true,
+);
 assert.equal(parseDcaClipIndex("d11111111l2"), 2);
 assert.equal(formatDcaEntryType(0), "Entry # 1");
 assert.equal(formatDcaEntryType(1), "Entry # 2");
@@ -194,6 +211,43 @@ const filledSkip = planDcaSafetySync({
 assert.deepEqual(filledSkip.rest.map((row) => row.clipIndex), [3]);
 assert.equal(filledSkip.cancelIds.length, 0);
 assert.equal(filledSkip.amend.length, 0);
+const dupes = planDcaSafetySync({
+  playbookId: safetyId,
+  side: "long",
+  status: "armed",
+  dcaMode: "order",
+  maxClips: 4,
+  dipPct: 1,
+  deviationMultiplier: 1,
+  clipSize: 0.01,
+  sizeMultiplier: 1,
+  sizeUnit: "qty",
+  entryPrice: 100,
+  working: [
+    {
+      id: "w3a",
+      idempotencyKey: dcaClipRestKey(safetyId, "long", 3, 100),
+      remainingQty: 0.01,
+      limitPrice: 97.0299,
+      reduceOnly: false,
+      status: "open",
+    },
+    {
+      id: "w3b",
+      idempotencyKey: dcaClipRestKey(safetyId, "long", 3, 200),
+      remainingQty: 0.01,
+      limitPrice: 97.0299,
+      reduceOnly: false,
+      status: "open",
+    },
+  ],
+});
+assert.equal(dupes.cancelIds.length, 1);
+assert.ok(dupes.cancelIds.includes("w3b"));
+assert.deepEqual(
+  dupes.rest.map((row) => row.clipIndex).sort((a, b) => a - b),
+  [1, 2],
+);
 assert.equal(
   isDcaExitLimitKey(
     "d11111111ltp847291",

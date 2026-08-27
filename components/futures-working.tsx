@@ -6,6 +6,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TokenIcon } from "@/components/token-icon";
 import { TpslPair } from "@/components/futures-tpsl";
 import { FuturesCancelAllOrders } from "@/components/futures-close-all";
+import { FuturesDeskRefresh } from "@/components/futures-desk-refresh";
 import { FuturesSourceCell } from "@/components/futures-source";
 import { FuturesWorkingEdit } from "@/components/futures-working-edit";
 import { cancelFuturesWorking } from "@/lib/futures/actions";
@@ -45,6 +46,7 @@ export function FuturesWorkingOrders({
   const rows = sortFuturesWorkingRows(working);
   return (
     <section>
+      <FuturesDeskRefresh />
       <div className="mb-3 flex items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Open orders</h2>

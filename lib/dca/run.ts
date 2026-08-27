@@ -30,6 +30,7 @@ import {
 import {
   dcaClipAction,
   dcaClipKey,
+  dcaClipRestKey,
   dcaCycleEnded,
   dcaEnabledSides,
   dcaExitLimitKey,
@@ -39,6 +40,7 @@ import {
   IDLE_DCA_LEG,
   isDcaClipKey,
   isDcaExitLimitKey,
+  parseDcaClipIndex,
   planDcaSafetySync,
   type DcaExitLimitKind,
   type DcaPlaybook,
@@ -51,6 +53,8 @@ import {
 } from "./store";
 
 export type DcaVerb = "arm" | "disarm" | "close-playbook";
+
+const gridSyncLocks = new Map<string, Promise<void>>();
 
 export function parseDcaPlaybookVerb(value: unknown): {
   verb: DcaVerb;
@@ -250,6 +254,29 @@ export async function syncDcaPlaybookGrid(input: {
   entryPrice?: number | null;
   status?: DcaStatus;
 }): Promise<void> {
+  const lockKey = `${input.playbook.id}:${input.side}`;
+  const previous = gridSyncLocks.get(lockKey) ?? Promise.resolve();
+  const next = previous.then(
+    () => syncDcaPlaybookGridUnlocked(input),
+    () => syncDcaPlaybookGridUnlocked(input),
+  );
+  gridSyncLocks.set(lockKey, next);
+  try {
+    await next;
+  } finally {
+    if (gridSyncLocks.get(lockKey) === next) {
+      gridSyncLocks.delete(lockKey);
+    }
+  }
+}
+
+async function syncDcaPlaybookGridUnlocked(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+  side: FuturesSide;
+  entryPrice?: number | null;
+  status?: DcaStatus;
+}): Promise<void> {
   const enabled = dcaEnabledSides(input.playbook.direction).includes(
     input.side,
   );
@@ -305,7 +332,24 @@ export async function syncDcaPlaybookGrid(input: {
       },
     });
   }
+  const openAfter = await loadOpenFuturesWorking({
+    accountId: input.playbook.accountId,
+    userId: input.playbook.userId,
+  });
+  const openIndices = new Set<number>();
+  for (const row of openAfter) {
+    if (!isDcaClipKey(row.idempotencyKey, input.playbook.id, input.side)) {
+      continue;
+    }
+    const index = parseDcaClipIndex(row.idempotencyKey);
+    if (index !== null) {
+      openIndices.add(index);
+    }
+  }
   for (const item of plan.rest) {
+    if (openIndices.has(item.clipIndex)) {
+      continue;
+    }
     await runFuturesCommand({
       actor,
       command: {
@@ -316,11 +360,17 @@ export async function syncDcaPlaybookGrid(input: {
         limitPrice: String(item.limitPrice),
         size: String(item.qty),
         sizeUnit: input.playbook.sizeUnit,
-        idempotencyKey: `${dcaClipKey(input.playbook.id, input.side, item.clipIndex)}x${Date.now()}`,
+        idempotencyKey: dcaClipRestKey(
+          input.playbook.id,
+          input.side,
+          item.clipIndex,
+          input.playbook.updatedAtMs,
+        ),
         source: "engine",
         ruleName: input.playbook.name,
       },
     });
+    openIndices.add(item.clipIndex);
   }
 }
 

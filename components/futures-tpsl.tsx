@@ -164,7 +164,7 @@ export function FuturesTpslCell({
   return (
     <>
       {liveLevels ? (
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-start gap-1.5">
           <TpslPair
             takeProfit={takeProfit}
             stopLoss={stopLoss}
@@ -239,25 +239,29 @@ export function TpslPair({
   const tpLimited = takeProfit !== null && tpOrderType === "limit";
   const slLimited = stopLoss !== null && slOrderType === "limit";
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className="tabular-nums">
-        <span
-          className={tpTone === "planned" ? "text-ink-faint" : "text-success"}
-        >
-          {takeProfit === null ? "--" : formatPrice(takeProfit)}
+    <span className="inline-flex items-start gap-1.5">
+      <span className="inline-flex items-start gap-1.5 tabular-nums">
+        <span className="inline-flex flex-col items-start leading-tight">
+          <span
+            className={tpTone === "planned" ? "text-ink-faint" : "text-success"}
+          >
+            {takeProfit === null ? "--" : formatPrice(takeProfit)}
+          </span>
+          {tpLimited ? (
+            <span className="text-[11px] text-ink-faint">Limit</span>
+          ) : null}
         </span>
-        {tpLimited ? (
-          <span className="ml-1 text-[11px] text-ink-faint">Limit</span>
-        ) : null}
-        <span className="text-ink-faint"> / </span>
-        <span
-          className={slTone === "planned" ? "text-ink-faint" : "text-danger"}
-        >
-          {stopLoss === null ? "--" : formatPrice(stopLoss)}
+        <span className="text-ink-faint">/</span>
+        <span className="inline-flex flex-col items-start leading-tight">
+          <span
+            className={slTone === "planned" ? "text-ink-faint" : "text-danger"}
+          >
+            {stopLoss === null ? "--" : formatPrice(stopLoss)}
+          </span>
+          {slLimited ? (
+            <span className="text-[11px] text-ink-faint">Limit</span>
+          ) : null}
         </span>
-        {slLimited ? (
-          <span className="ml-1 text-[11px] text-ink-faint">Limit</span>
-        ) : null}
       </span>
       {mode === "partial" ? (
         <span className="text-[11px] text-ink-faint">Partial</span>

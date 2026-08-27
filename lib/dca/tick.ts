@@ -30,6 +30,7 @@ import {
 } from "./run";
 import {
   listDcaPlaybooks,
+  loadDcaPlaybookById,
   patchDcaLeg,
   patchDcaPlaybook,
   resetDcaLeg,
@@ -98,7 +99,10 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
   const klineCache = new Map<string, number[]>();
 
   let acted = 0;
-  for (const playbook of playbooks) {
+  for (const listed of playbooks) {
+    const playbook =
+      (await loadDcaPlaybookById(listed.id, listed.accountId, supabase)) ??
+      listed;
     const account = accounts.get(playbook.accountId);
     if (!account || account.deskType !== "dca") {
       continue;
