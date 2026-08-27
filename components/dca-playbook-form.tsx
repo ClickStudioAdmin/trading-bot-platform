@@ -11,7 +11,9 @@ import {
   saveDcaPlaybookAction,
 } from "@/lib/dca/actions";
 import {
+  dcaClipsUntilMaxValue,
   dcaLadderLevels,
+  dcaLadderLossRange,
   dcaLadderProfitRange,
   dcaLastClipDeviationPct,
   dcaMaxDropCoveredPct,
@@ -21,12 +23,14 @@ import {
   DEFAULT_DCA_NAME,
   dcaAveragingKind,
   dcaIntervalParts,
+  dcaMaxTypeFromCaps,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
   parseDcaExitBasis,
   type DcaAveragingKind,
   type DcaExitBasis,
   type DcaIntervalUnit,
+  type DcaMaxType,
   type DcaPlaybook,
   type DcaStartKind,
 } from "@/lib/dca/playbook";
@@ -196,6 +200,10 @@ export function DcaPlaybookForm({
   );
   const [sizeUnit, setSizeUnit] = useState(playbook?.sizeUnit ?? "usdt");
   const [maxClips, setMaxClips] = useState(optional(playbook?.maxClips));
+  const [maxValue, setMaxValue] = useState(optional(playbook?.maxValue));
+  const [maxType, setMaxType] = useState<DcaMaxType>(() =>
+    dcaMaxTypeFromCaps(playbook?.maxClips ?? null, playbook?.maxValue ?? null),
+  );
   const [dipPct, setDipPct] = useState(optional(playbook?.dipPct));
   const intervalParts = dcaIntervalParts(playbook?.intervalMinutes ?? null);
   const [intervalUnit, setIntervalUnit] = useState<DcaIntervalUnit>(
@@ -213,6 +221,12 @@ export function DcaPlaybookForm({
   const [takeProfitBasis, setTakeProfitBasis] = useState<DcaExitBasis>(
     playbook?.takeProfitBasis ?? "average",
   );
+  const [stopLossPct, setStopLossPct] = useState(
+    optional(playbook?.stopLossPct),
+  );
+  const [stopLossBasis, setStopLossBasis] = useState<DcaExitBasis>(
+    playbook?.stopLossBasis ?? "average",
+  );
   const [indicatorKind, setIndicatorKind] = useState(
     playbook?.indicatorKind ?? "rsi",
   );
@@ -224,8 +238,10 @@ export function DcaPlaybookForm({
   const [symbol, setSymbol] = useState(defaultSymbol);
   const lastPrice = lastPrices[symbol] ?? null;
   const running = Boolean(playbook && dcaPlaybookIsRunning(playbook));
+  const effectiveMaxType: DcaMaxType = restGrid ? "orders" : maxType;
   const summary = useMemo(() => {
-    const clips = asNumber(maxClips);
+    const orderCap = asNumber(maxClips);
+    const valueCap = asNumber(maxValue);
     const dip = averaging === "dip" ? asNumber(dipPct) : null;
     const size = asNumber(clipSize);
     const sizeMult = asNumber(sizeMultiplier) ?? 1;
@@ -233,6 +249,21 @@ export function DcaPlaybookForm({
     const side = direction === "short" ? "short" : "long";
     const entryPrice = lastPrice !== null && lastPrice > 0 ? lastPrice : 100;
     const priceFromLast = lastPrice !== null && lastPrice > 0;
+    const clips =
+      effectiveMaxType === "orders"
+        ? orderCap
+        : valueCap !== null && size !== null
+          ? dcaClipsUntilMaxValue({
+              side,
+              entryPrice,
+              maxValue: valueCap,
+              dipPct: dip,
+              clipSize: size,
+              sizeUnit,
+              sizeMultiplier: sizeMult,
+              deviationMultiplier: devMult,
+            })
+          : null;
     const covered = dcaMaxDropCoveredPct({
       side,
       maxClips: clips,
@@ -246,6 +277,7 @@ export function DcaPlaybookForm({
       deviationMultiplier: devMult,
     });
     const tpPct = asNumber(takeProfitPct);
+    const slPct = asNumber(stopLossPct);
     const levels = dcaLadderLevels({
       side,
       entryPrice,
@@ -257,6 +289,8 @@ export function DcaPlaybookForm({
       deviationMultiplier: devMult,
       takeProfitPct: tpPct,
       takeProfitBasis,
+      stopLossPct: slPct,
+      stopLossBasis,
     });
     const requiredFromLadder = levels[levels.length - 1]?.totalUsdt ?? null;
     const required =
@@ -283,7 +317,9 @@ export function DcaPlaybookForm({
       levels,
       priceFromLast,
       profitRange: dcaLadderProfitRange(levels),
+      lossRange: dcaLadderLossRange(levels),
       profitFromTp: tpPct !== null,
+      lossFromSl: slPct !== null,
     };
   }, [
     averaging,
@@ -293,10 +329,15 @@ export function DcaPlaybookForm({
     dipPct,
     lastPrice,
     maxClips,
+    maxValue,
+    restGrid,
     sizeMultiplier,
     sizeUnit,
+    stopLossBasis,
+    stopLossPct,
     takeProfitBasis,
     takeProfitPct,
+    effectiveMaxType,
   ]);
 
   return (
@@ -312,30 +353,66 @@ export function DcaPlaybookForm({
             · {playbook ? dcaPlaybookStatusLabel(playbook) : "Idle"}
           </span>
         </p>
-        {playbook ? (
-          running ? (
-            <p className="text-xs text-ink-muted">
-              Stop adding or close before removing.
-            </p>
-          ) : (
-            <PendingSubmitButton
-              formAction={deleteDcaPlaybookAction}
-              pendingLabel="Removing…"
-              successKey={`remove-dca-${playbook.id}`}
+        <div className="flex flex-wrap items-center gap-2">
+          {playbook ? (
+            <>
+              <PendingSubmitButton
+                formAction={runDcaPlaybookVerb}
+                name="verb"
+                value="arm"
+                pendingLabel="Arming…"
+                successKey={`arm-dca-playbook-${playbook.id}`}
+                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
+              >
+                Arm
+              </PendingSubmitButton>
+              <PendingSubmitButton
+                formAction={runDcaPlaybookVerb}
+                name="verb"
+                value="disarm"
+                pendingLabel="Stopping…"
+                successKey={`disarm-dca-playbook-${playbook.id}`}
+                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
+              >
+                Stop adding
+              </PendingSubmitButton>
+              <PendingSubmitButton
+                formAction={runDcaPlaybookVerb}
+                name="verb"
+                value="close-playbook"
+                pendingLabel="Closing…"
+                successKey={`close-dca-playbook-${playbook.id}`}
+                className="rounded-control border border-danger/30 px-3 py-1.5 text-xs font-medium text-danger"
+              >
+                Close playbook
+              </PendingSubmitButton>
+            </>
+          ) : null}
+          {playbook ? (
+            running ? (
+              <p className="text-xs text-ink-muted">
+                Stop adding or close before removing.
+              </p>
+            ) : (
+              <PendingSubmitButton
+                formAction={deleteDcaPlaybookAction}
+                pendingLabel="Removing…"
+                successKey={`remove-dca-${playbook.id}`}
+                className="text-xs text-ink-muted hover:text-danger"
+              >
+                Remove
+              </PendingSubmitButton>
+            )
+          ) : onRemoveDraft ? (
+            <button
+              type="button"
+              onClick={onRemoveDraft}
               className="text-xs text-ink-muted hover:text-danger"
             >
               Remove
-            </PendingSubmitButton>
-          )
-        ) : onRemoveDraft ? (
-          <button
-            type="button"
-            onClick={onRemoveDraft}
-            className="text-xs text-ink-muted hover:text-danger"
-          >
-            Remove
-          </button>
-        ) : null}
+            </button>
+          ) : null}
+        </div>
       </div>
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
@@ -554,26 +631,58 @@ export function DcaPlaybookForm({
           </legend>
           <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
             <label className={labelClass}>
-              Max orders
-              <GroupedNumberInput
-                name="maxClips"
-                value={maxClips}
-                onChange={setMaxClips}
+              Maximum type
+              <select
+                name="maxType"
+                value={effectiveMaxType}
+                onChange={(event) =>
+                  setMaxType(
+                    event.target.value === "value" ? "value" : "orders",
+                  )
+                }
                 className={fieldClass}
-                placeholder="No cap"
-              />
+              >
+                <option value="orders">Orders</option>
+                <option value="value" disabled={restGrid}>
+                  Value
+                </option>
+              </select>
             </label>
-            <label className={labelClass}>
-              Max position value (USDT)
-              <GroupedNumberInput
-                name="maxValue"
-                defaultValue={optional(playbook?.maxValue)}
-                allowDecimal
-                className={fieldClass}
-                placeholder="No cap"
-              />
-            </label>
+            {effectiveMaxType === "orders" ? (
+              <label className={labelClass}>
+                Max orders
+                <GroupedNumberInput
+                  name="maxClips"
+                  value={maxClips}
+                  onChange={setMaxClips}
+                  className={fieldClass}
+                  placeholder="No cap"
+                />
+              </label>
+            ) : (
+              <label className={labelClass}>
+                Max position value (USDT)
+                <GroupedNumberInput
+                  name="maxValue"
+                  value={maxValue}
+                  onChange={setMaxValue}
+                  allowDecimal
+                  className={fieldClass}
+                  placeholder="No cap"
+                />
+              </label>
+            )}
           </div>
+          {effectiveMaxType === "orders" ? (
+            <input type="hidden" name="maxValue" value="" />
+          ) : (
+            <input type="hidden" name="maxClips" value="" />
+          )}
+          {restGrid ? (
+            <p className="text-xs text-ink-muted">
+              Remaining GTC limits use max orders.
+            </p>
+          ) : null}
         </fieldset>
       </div>
 
@@ -648,7 +757,13 @@ export function DcaPlaybookForm({
                   name="restGrid"
                   value="1"
                   checked={restGrid}
-                  onChange={(event) => setRestGrid(event.target.checked)}
+                  onChange={(event) => {
+                    const on = event.target.checked;
+                    setRestGrid(on);
+                    if (on) {
+                      setMaxType("orders");
+                    }
+                  }}
                   className="mt-0.5"
                 />
                 Remaining orders placed as GTC limit (instead of market)
@@ -790,7 +905,8 @@ export function DcaPlaybookForm({
                 Stop loss %
                 <GroupedNumberInput
                   name="stopLossPct"
-                  defaultValue={optional(playbook?.stopLossPct)}
+                  value={stopLossPct}
+                  onChange={setStopLossPct}
                   allowDecimal
                   className={fieldClass}
                   placeholder="Off"
@@ -800,7 +916,10 @@ export function DcaPlaybookForm({
                 Stop loss type
                 <select
                   name="stopLossBasis"
-                  defaultValue={playbook?.stopLossBasis ?? "average"}
+                  value={stopLossBasis}
+                  onChange={(event) =>
+                    setStopLossBasis(parseDcaExitBasis(event.target.value))
+                  }
                   className={fieldClass}
                 >
                   <option value="average">Average entry</option>
@@ -836,7 +955,7 @@ export function DcaPlaybookForm({
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           Summary
         </legend>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <SummaryStat
             label="Covered"
             value={
@@ -859,7 +978,7 @@ export function DcaPlaybookForm({
             value={
               summary.required === null
                 ? "—"
-                : `$${trimPct(summary.required)}`
+                : formatUsdAmount(summary.required)
             }
             valueClass={
               availableUsdt !== null &&
@@ -875,8 +994,8 @@ export function DcaPlaybookForm({
                   : null
                 : availableUsdt !== null
                   ? summary.required > availableUsdt
-                    ? `Available $${trimPct(availableUsdt)} — less than the full grid`
-                    : `Available $${trimPct(availableUsdt)}`
+                    ? `Available ${formatUsdAmount(availableUsdt)} — less than the full grid`
+                    : `Available ${formatUsdAmount(availableUsdt)}`
                   : null
             }
           />
@@ -896,9 +1015,28 @@ export function DcaPlaybookForm({
             hint={
               summary.levels.length === 0
                 ? "Enter order size and max orders"
-                : summary.profitFromTp
-                  ? "If take profit hits after that fill"
-                  : "If price returns to the first order. Set take profit to use the target."
+                : "Does not consider Trailing Stops"
+            }
+          />
+          <SummaryStat
+            label="Loss range"
+            value={
+              summary.lossRange === null
+                ? "—"
+                : formatProfitRange(
+                    summary.lossRange.min,
+                    summary.lossRange.max,
+                  )
+            }
+            valueClass={
+              summary.lossRange === null ? "text-ink" : "text-danger"
+            }
+            hint={
+              summary.levels.length === 0
+                ? "Enter order size and max orders"
+                : summary.lossFromSl
+                  ? "If stop loss hits after that fill"
+                  : "Set stop loss % to estimate"
             }
           />
         </div>
@@ -926,6 +1064,16 @@ export function DcaPlaybookForm({
                       }
                     />
                   </th>
+                  <th className="px-3 py-2 font-medium">
+                    <ColumnHint
+                      label="Loss"
+                      hint={
+                        summary.lossFromSl
+                          ? "USDT if stop loss hits after this order fills. Uses stop loss type (average or first fill)."
+                          : "Set stop loss % to estimate the loss if it hits after this fill."
+                      }
+                    />
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -944,10 +1092,10 @@ export function DcaPlaybookForm({
                       {trimPct(row.size)}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-ink">
-                      ${trimPct(row.orderUsdt)}
+                      {formatUsdAmount(row.orderUsdt)}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-ink">
-                      ${trimPct(row.totalUsdt)}
+                      {formatUsdAmount(row.totalUsdt)}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-ink-muted">
                       {formatLadderPrice(row.averagePrice)}
@@ -958,6 +1106,17 @@ export function DcaPlaybookForm({
                       }`}
                     >
                       {formatUsdAmount(row.profitUsdt)}
+                    </td>
+                    <td
+                      className={`px-3 py-2 tabular-nums ${
+                        row.lossUsdt !== null && row.lossUsdt > 0
+                          ? "text-danger"
+                          : "text-ink-muted"
+                      }`}
+                    >
+                      {row.lossUsdt === null
+                        ? "—"
+                        : formatUsdAmount(row.lossUsdt)}
                     </td>
                   </tr>
                 ))}
@@ -974,6 +1133,9 @@ export function DcaPlaybookForm({
               {summary.profitFromTp
                 ? " Profit is take profit from that average."
                 : " Profit is a return to the first order."}
+              {summary.lossFromSl
+                ? " Loss is stop loss from that average."
+                : ""}
             </p>
           </div>
         ) : (
@@ -993,40 +1155,6 @@ export function DcaPlaybookForm({
         >
           Save playbook
         </PendingSubmitButton>
-        {playbook ? (
-          <>
-            <PendingSubmitButton
-              formAction={runDcaPlaybookVerb}
-              name="verb"
-              value="arm"
-              pendingLabel="Arming…"
-              successKey={`arm-dca-playbook-${playbook.id}`}
-              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
-            >
-              Arm
-            </PendingSubmitButton>
-            <PendingSubmitButton
-              formAction={runDcaPlaybookVerb}
-              name="verb"
-              value="disarm"
-              pendingLabel="Stopping…"
-              successKey={`disarm-dca-playbook-${playbook.id}`}
-              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
-            >
-              Stop adding
-            </PendingSubmitButton>
-            <PendingSubmitButton
-              formAction={runDcaPlaybookVerb}
-              name="verb"
-              value="close-playbook"
-              pendingLabel="Closing…"
-              successKey={`close-dca-playbook-${playbook.id}`}
-              className="rounded-control border border-danger/30 px-3 py-1.5 text-xs font-medium text-danger"
-            >
-              Close playbook
-            </PendingSubmitButton>
-          </>
-        ) : null}
       </div>
     </form>
   );
@@ -1093,12 +1221,14 @@ function formatLadderPrice(value: number): string {
 }
 
 function formatUsdAmount(value: number): string {
-  const abs = Math.abs(value);
-  const text = trimPct(abs);
+  const formatted = Math.abs(value).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
   if (value < 0) {
-    return `-$${text}`;
+    return `-$${formatted}`;
   }
-  return `$${text}`;
+  return `$${formatted}`;
 }
 
 function formatProfitRange(min: number, max: number): string {

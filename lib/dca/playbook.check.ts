@@ -21,6 +21,7 @@ import {
   parseDcaPlaybookId,
   parseDcaPlaybookRow,
   parseDcaStatus,
+  dcaMaxTypeFromCaps,
   type DcaPlaybook,
 } from "./playbook";
 
@@ -429,6 +430,40 @@ missingInterval.set("sizeUnit", "qty");
 missingInterval.set("averaging", "interval");
 const missingIntervalParsed = parseDcaPlaybookForm(missingInterval);
 assert.equal(missingIntervalParsed.ok, false);
+
+assert.equal(dcaMaxTypeFromCaps(20, 50_000), "orders");
+assert.equal(dcaMaxTypeFromCaps(null, 50_000), "value");
+assert.equal(dcaMaxTypeFromCaps(null, null), "orders");
+
+const ordersOnly = new FormData();
+ordersOnly.set("symbol", "BTCUSDT");
+ordersOnly.set("side", "long");
+ordersOnly.set("clipSize", "50");
+ordersOnly.set("sizeUnit", "usdt");
+ordersOnly.set("maxType", "orders");
+ordersOnly.set("maxClips", "20");
+ordersOnly.set("maxValue", "50000");
+const ordersOnlyParsed = parseDcaPlaybookForm(ordersOnly);
+assert.equal(ordersOnlyParsed.ok, true);
+if (ordersOnlyParsed.ok) {
+  assert.equal(ordersOnlyParsed.config.maxClips, 20);
+  assert.equal(ordersOnlyParsed.config.maxValue, null);
+}
+
+const valueOnly = new FormData();
+valueOnly.set("symbol", "BTCUSDT");
+valueOnly.set("side", "long");
+valueOnly.set("clipSize", "50");
+valueOnly.set("sizeUnit", "usdt");
+valueOnly.set("maxType", "value");
+valueOnly.set("maxClips", "20");
+valueOnly.set("maxValue", "50000");
+const valueOnlyParsed = parseDcaPlaybookForm(valueOnly);
+assert.equal(valueOnlyParsed.ok, true);
+if (valueOnlyParsed.ok) {
+  assert.equal(valueOnlyParsed.config.maxClips, null);
+  assert.equal(valueOnlyParsed.config.maxValue, 50000);
+}
 
 const row = parseDcaPlaybookRow({
   id: "pb-1",

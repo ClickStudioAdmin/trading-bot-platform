@@ -25,6 +25,7 @@ export type DcaDirection = "long" | "short" | "both";
 export type DcaStartKind = "immediate" | "price" | "webhook" | "indicator";
 export type DcaMode = "position" | "order";
 export type DcaExitBasis = "average" | "first_entry";
+export type DcaMaxType = "orders" | "value";
 
 export type DcaPriceTrigger = {
   triggerBy: FuturesTrigger;
@@ -227,6 +228,20 @@ export function parseDcaExitBasis(value: unknown): DcaExitBasis {
   return value === "first_entry" ? "first_entry" : "average";
 }
 
+export function parseDcaMaxType(value: unknown): DcaMaxType {
+  return value === "value" ? "value" : "orders";
+}
+
+export function dcaMaxTypeFromCaps(
+  maxClips: number | null,
+  maxValue: number | null,
+): DcaMaxType {
+  if (maxClips === null && maxValue !== null) {
+    return "value";
+  }
+  return "orders";
+}
+
 export function dcaEnabledSides(direction: DcaDirection): FuturesSide[] {
   if (direction === "both") {
     return ["long", "short"];
@@ -404,6 +419,7 @@ export function parseDcaPlaybookForm(
   const clipSize = parseFuturesQty(form.get("clipSize"));
   const maxClips = parseOptionalPositiveInt(form.get("maxClips"));
   const maxValue = parseOptionalPositive(form.get("maxValue"));
+  const maxType = parseDcaMaxType(form.get("maxType"));
   const dipPct =
     averaging === "interval"
       ? { ok: true as const, value: null }
@@ -447,6 +463,8 @@ export function parseDcaPlaybookForm(
   if (!maxValue.ok) {
     return maxValue;
   }
+  const clipsCap = maxType === "orders" ? maxClips.value : null;
+  const valueCap = maxType === "value" ? maxValue.value : null;
   if (!dipPct.ok) {
     return dipPct;
   }
@@ -459,7 +477,7 @@ export function parseDcaPlaybookForm(
   if (restGrid && dipPct.value === null) {
     return { ok: false, error: "Enter a price deviation % for the grid." };
   }
-  if (restGrid && (maxClips.value === null || maxClips.value < 2)) {
+  if (restGrid && (clipsCap === null || clipsCap < 2)) {
     return { ok: false, error: "Enter max orders for the grid." };
   }
   if (!sizeMultiplier.ok) {
@@ -545,8 +563,8 @@ export function parseDcaPlaybookForm(
       dcaMode,
       clipSize: clipSize.qty,
       sizeUnit: sizeUnit.unit,
-      maxClips: maxClips.value,
-      maxValue: maxValue.value,
+      maxClips: clipsCap,
+      maxValue: valueCap,
       dipPct: dipPct.value,
       intervalMinutes: intervalMinutes.value,
       sizeMultiplier: sizeMultiplier.value,

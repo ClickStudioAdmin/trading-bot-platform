@@ -3,12 +3,15 @@ import {
   dcaBreakevenPrice,
   dcaClipSizeAt,
   dcaDipPctAt,
+  dcaClipsUntilMaxValue,
   dcaLadderLevels,
+  dcaLadderLossRange,
   dcaLadderProfitRange,
   dcaLastClipDeviationPct,
   dcaMaxDropCoveredPct,
   dcaRequiredUsdt,
   dcaSafetyPrices,
+  dcaStopLossPrice,
   dcaTakeProfitPrice,
   dcaTrailingActivationPrice,
   dcaTrailingDistance,
@@ -145,6 +148,46 @@ assert.equal(tpLadder[0]?.profitUsdt.toFixed(2), "10.00");
 assert.equal(tpLadder[1]?.profitUsdt.toFixed(2), "20.00");
 assert.equal(dcaLadderProfitRange(tpLadder)?.min.toFixed(2), "10.00");
 assert.equal(dcaLadderProfitRange(tpLadder)?.max.toFixed(2), "20.00");
+assert.equal(tpLadder[0]?.lossUsdt, null);
+assert.equal(
+  dcaStopLossPrice({
+    side: "long",
+    firstPrice: 100,
+    averagePrice: 98,
+    stopLossPct: 2,
+    stopLossBasis: "average",
+  })?.toFixed(2),
+  "96.04",
+);
+const slLadder = dcaLadderLevels({
+  side: "long",
+  entryPrice: 100,
+  maxClips: 2,
+  dipPct: null,
+  clipSize: 100,
+  sizeUnit: "usdt",
+  sizeMultiplier: 1,
+  deviationMultiplier: 1,
+  stopLossPct: 10,
+  stopLossBasis: "average",
+});
+assert.equal(slLadder[0]?.lossUsdt?.toFixed(2), "10.00");
+assert.equal(slLadder[1]?.lossUsdt?.toFixed(2), "20.00");
+assert.equal(dcaLadderLossRange(slLadder)?.min.toFixed(2), "10.00");
+assert.equal(dcaLadderLossRange(slLadder)?.max.toFixed(2), "20.00");
+assert.equal(
+  dcaClipsUntilMaxValue({
+    side: "long",
+    entryPrice: 100,
+    maxValue: 250,
+    dipPct: null,
+    clipSize: 100,
+    sizeUnit: "usdt",
+    sizeMultiplier: 1,
+    deviationMultiplier: 1,
+  }),
+  3,
+);
 assert.equal(
   dcaBreakevenPrice({ side: "long", basisPrice: 100, offsetPct: 1 }),
   101,
