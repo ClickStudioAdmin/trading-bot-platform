@@ -500,7 +500,9 @@ export function DcaPlaybookForm({
               }
               className={fieldClass}
             >
-              <option value="immediate">Immediate — Arm places now</option>
+              <option value="immediate">
+                Manual - When you click the Arm button (must save first)
+              </option>
               <option value="price">Price cross</option>
               <option value="webhook">Signal webhook</option>
               <option value="indicator">Indicator</option>
@@ -605,7 +607,8 @@ export function DcaPlaybookForm({
           ) : null}
           {startKind === "immediate" ? (
             <p className="self-end text-xs text-ink-muted lg:col-span-3">
-              Arm places the first order{direction === "both" ? "s" : ""} now.
+              Save first. Arm places the first order
+              {direction === "both" ? "s" : ""}.
             </p>
           ) : null}
         </div>
