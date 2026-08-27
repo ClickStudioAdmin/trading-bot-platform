@@ -129,8 +129,8 @@ export function OpenFuturesTrades({
         ) : null}
       </div>
       <div className="min-w-0 overflow-x-auto rounded-card border border-line bg-surface">
-        <table className="w-full table-fixed text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+        <table className="w-full min-w-max text-left text-sm">
+          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
             <tr>
               <th className="w-10 px-2 py-3 font-medium">
                 <ColumnHint
