@@ -28,6 +28,7 @@ import {
   emaValues,
   indicatorStartMet,
   macdHistogram,
+  parseDcaIndicatorTimeframe,
   rsiValue,
 } from "./indicators";
 
@@ -447,5 +448,9 @@ assert.ok(
       10, 10, 10, 12,
     ]) === null,
 );
+
+assert.equal(parseDcaIndicatorTimeframe("D"), "D");
+assert.equal(parseDcaIndicatorTimeframe("240"), "240");
+assert.equal(parseDcaIndicatorTimeframe("W"), null);
 
 console.log("dca grid checks passed");

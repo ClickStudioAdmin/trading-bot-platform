@@ -2,7 +2,41 @@ import type { FuturesSide } from "@/lib/futures/model";
 import type { FuturesTriggerCompare } from "@/lib/futures/automation";
 
 export type DcaIndicatorKind = "rsi" | "macd" | "ema_cross";
-export type DcaIndicatorTimeframe = "5" | "15" | "60";
+export const DCA_INDICATOR_TIMEFRAMES = [
+  "5",
+  "15",
+  "30",
+  "60",
+  "120",
+  "240",
+  "360",
+  "720",
+  "D",
+] as const;
+export type DcaIndicatorTimeframe = (typeof DCA_INDICATOR_TIMEFRAMES)[number];
+export const DCA_INDICATOR_TIMEFRAME_LABELS: Record<
+  DcaIndicatorTimeframe,
+  string
+> = {
+  "5": "5m",
+  "15": "15m",
+  "30": "30m",
+  "60": "1h",
+  "120": "2h",
+  "240": "4h",
+  "360": "6h",
+  "720": "12h",
+  D: "Daily",
+};
+
+export function parseDcaIndicatorTimeframe(
+  value: unknown,
+): DcaIndicatorTimeframe | null {
+  const raw = String(value ?? "").trim();
+  return (DCA_INDICATOR_TIMEFRAMES as readonly string[]).includes(raw)
+    ? (raw as DcaIndicatorTimeframe)
+    : null;
+}
 
 export function emaValues(closes: number[], period: number): number[] {
   if (period < 1 || closes.length < period) {

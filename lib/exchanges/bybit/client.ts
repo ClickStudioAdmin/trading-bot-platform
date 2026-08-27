@@ -127,7 +127,7 @@ export async function fetchBybitOrderbook(
 
 export async function fetchBybitKlines(input: {
   symbol: string;
-  interval: "5" | "15" | "60";
+  interval: "5" | "15" | "30" | "60" | "120" | "240" | "360" | "720" | "D";
   limit?: number;
 }): Promise<number[]> {
   const result = await bybitGet<{ list?: string[][] }>("/v5/market/kline", {

@@ -18,6 +18,7 @@ import { futuresPnlUsdt } from "@/lib/futures/math";
 import { dcaClipSizeAt, dcaDipPctAt, dcaLadderMaxOrderError, dcaPlannedExits, dcaSafetyPrices } from "./grid";
 import {
   indicatorStartMet,
+  parseDcaIndicatorTimeframe,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "./indicators";
@@ -645,9 +646,11 @@ export function parseDcaPlaybookForm(
       return { ok: false, error: "Choose RSI, MACD, or EMA cross." };
     }
     indicatorKind = kind;
-    const timeframe = String(form.get("indicatorTimeframe") ?? "15").trim();
-    if (timeframe !== "5" && timeframe !== "15" && timeframe !== "60") {
-      return { ok: false, error: "Choose 5m, 15m, or 1h." };
+    const timeframe = parseDcaIndicatorTimeframe(
+      form.get("indicatorTimeframe") ?? "15",
+    );
+    if (!timeframe) {
+      return { ok: false, error: "Choose a timeframe." };
     }
     indicatorTimeframe = timeframe;
     if (kind === "rsi") {
@@ -752,11 +755,9 @@ export function parseDcaPlaybookRow(
     indicatorKindRaw === "ema_cross"
       ? indicatorKindRaw
       : null;
-  const timeframeRaw = String(row.indicator_timeframe ?? "").trim();
-  const indicatorTimeframe: DcaIndicatorTimeframe | null =
-    timeframeRaw === "5" || timeframeRaw === "15" || timeframeRaw === "60"
-      ? timeframeRaw
-      : null;
+  const indicatorTimeframe = parseDcaIndicatorTimeframe(
+    row.indicator_timeframe,
+  );
   const indicatorCompare = parseFuturesTriggerCompare(row.indicator_compare);
   return {
     id,

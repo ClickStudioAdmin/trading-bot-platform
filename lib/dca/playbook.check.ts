@@ -1245,4 +1245,34 @@ assert.equal(
   100 * (1 + 10 / 100),
 );
 
+const indicatorDaily = new FormData();
+indicatorDaily.set("symbol", "BTCUSDT");
+indicatorDaily.set("side", "long");
+indicatorDaily.set("clipSize", "0.01");
+indicatorDaily.set("sizeUnit", "qty");
+indicatorDaily.set("startKind", "indicator");
+indicatorDaily.set("indicatorKind", "rsi");
+indicatorDaily.set("indicatorTimeframe", "D");
+indicatorDaily.set("indicatorCompare", "lte");
+indicatorDaily.set("indicatorLevel", "30");
+const indicatorDailyParsed = parseDcaPlaybookForm(indicatorDaily);
+assert.equal(indicatorDailyParsed.ok, true);
+if (indicatorDailyParsed.ok) {
+  assert.equal(indicatorDailyParsed.config.indicatorKind, "rsi");
+  assert.equal(indicatorDailyParsed.config.indicatorTimeframe, "D");
+}
+
+const indicatorBadTf = new FormData();
+indicatorBadTf.set("symbol", "BTCUSDT");
+indicatorBadTf.set("side", "long");
+indicatorBadTf.set("clipSize", "0.01");
+indicatorBadTf.set("sizeUnit", "qty");
+indicatorBadTf.set("startKind", "indicator");
+indicatorBadTf.set("indicatorKind", "rsi");
+indicatorBadTf.set("indicatorTimeframe", "W");
+indicatorBadTf.set("indicatorCompare", "lte");
+indicatorBadTf.set("indicatorLevel", "30");
+const indicatorBadTfParsed = parseDcaPlaybookForm(indicatorBadTf);
+assert.equal(indicatorBadTfParsed.ok, false);
+
 console.log("dca playbook checks passed");

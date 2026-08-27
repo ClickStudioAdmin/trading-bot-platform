@@ -49,6 +49,10 @@ import {
   type DcaPlaybook,
   type DcaStartKind,
 } from "@/lib/dca/playbook";
+import {
+  DCA_INDICATOR_TIMEFRAMES,
+  DCA_INDICATOR_TIMEFRAME_LABELS,
+} from "@/lib/dca/indicators";
 import type { FuturesOrderType, FuturesSide } from "@/lib/futures/model";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { perpEffectiveMaxQty, perpTicketSizeError } from "@/lib/exchanges/bybit/ticket-size";
@@ -936,9 +940,11 @@ export function DcaPlaybookForm({
                   defaultValue={source?.indicatorTimeframe ?? "15"}
                   className={fieldClass}
                 >
-                  <option value="5">5m</option>
-                  <option value="15">15m</option>
-                  <option value="60">1h</option>
+                  {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
+                    <option key={interval} value={interval}>
+                      {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
+                    </option>
+                  ))}
                 </select>
               </label>
               {indicatorKind === "rsi" ? (
