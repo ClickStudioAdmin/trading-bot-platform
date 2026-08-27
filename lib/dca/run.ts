@@ -24,6 +24,10 @@ import {
   dcaTrailingDistance,
 } from "./grid";
 import {
+  dcaClipAction,
+  dcaClipKey,
+  dcaEnabledSides,
+  dcaLegFor,
   dcaLegIsRunning,
   dcaWebhookSignalApplies,
   type DcaPlaybook,
