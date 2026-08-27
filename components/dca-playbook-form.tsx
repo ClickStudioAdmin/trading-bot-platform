@@ -487,59 +487,64 @@ export function DcaPlaybookForm({
         </fieldset>
       </div>
 
-      <fieldset className={sectionClass}>
-        <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
-          Additional clips
-        </legend>
-        <div className={rowClass}>
-          <label className={labelClass}>
-            Averaging
-            <select
-              name="averaging"
-              value={averaging}
-              onChange={(event) =>
-                setAveraging(event.target.value as DcaAveragingKind)
-              }
-              className={fieldClass}
-            >
-              <option value="dip">Position — add on dip</option>
-              <option value="interval">Position — add on interval</option>
-              <option value="order">Order — rest a grid</option>
-            </select>
-          </label>
-          {averaging === "dip" || averaging === "order" ? (
+      <div className="grid gap-3 sm:grid-cols-2">
+        <fieldset className={sectionClass}>
+          <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+            Additional clips
+          </legend>
+          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
             <label className={labelClass}>
-              Add on dip %
-              <GroupedNumberInput
-                name="dipPct"
-                value={dipPct}
-                onChange={setDipPct}
-                allowDecimal
+              Averaging
+              <select
+                name="averaging"
+                value={averaging}
+                onChange={(event) =>
+                  setAveraging(event.target.value as DcaAveragingKind)
+                }
                 className={fieldClass}
-                placeholder="Off"
-              />
+              >
+                <option value="dip">Position — add on dip</option>
+                <option value="interval">Position — add on interval</option>
+                <option value="order">Order — rest a grid</option>
+              </select>
             </label>
-          ) : null}
-          {averaging === "interval" ? (
-            <label className={labelClass}>
-              Add every (minutes)
-              <GroupedNumberInput
-                name="intervalMinutes"
-                defaultValue={optional(playbook?.intervalMinutes)}
-                className={fieldClass}
-                placeholder="15"
-              />
-            </label>
-          ) : null}
-          {averaging === "order" ? (
-            <p className="self-end text-xs text-ink-muted lg:col-span-2">
-              After the first market clip, remaining clips rest as GTC limits.
-              Dip % sets the grid.
-            </p>
-          ) : null}
-        </div>
-        <div className={rowClass}>
-          <div className="flex flex-wrap items-end gap-2 pb-0.5">
+            {averaging === "dip" || averaging === "order" ? (
+              <label className={labelClass}>
+                Add on dip %
+                <GroupedNumberInput
+                  name="dipPct"
+                  value={dipPct}
+                  onChange={setDipPct}
+                  allowDecimal
+                  className={fieldClass}
+                  placeholder="Off"
+                />
+              </label>
+            ) : null}
+            {averaging === "interval" ? (
+              <label className={labelClass}>
+                Add every (minutes)
+                <GroupedNumberInput
+                  name="intervalMinutes"
+                  defaultValue={optional(playbook?.intervalMinutes)}
+                  className={fieldClass}
+                  placeholder="15"
+                />
+              </label>
+            ) : null}
+            {averaging === "order" ? (
+              <p className="self-end text-xs text-ink-muted sm:col-span-2">
+                After the first market clip, remaining clips rest as GTC limits.
+                Dip % sets the grid.
+              </p>
+            ) : null}
+          </div>
+        </fieldset>
+        <fieldset className={sectionClass}>
+          <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
+            Additional clip multipliers
+          </legend>
+          <div className="flex flex-wrap gap-2 pb-2">
             <button
               type="button"
               onClick={() => {
@@ -561,28 +566,30 @@ export function DcaPlaybookForm({
               Martingale
             </button>
           </div>
-          <label className={labelClass}>
-            Order size multiplier
-            <GroupedNumberInput
-              name="sizeMultiplier"
-              value={sizeMultiplier}
-              onChange={setSizeMultiplier}
-              allowDecimal
-              className={fieldClass}
-            />
-          </label>
-          <label className={labelClass}>
-            Price deviation multiplier
-            <GroupedNumberInput
-              name="deviationMultiplier"
-              value={deviationMultiplier}
-              onChange={setDeviationMultiplier}
-              allowDecimal
-              className={fieldClass}
-            />
-          </label>
-        </div>
-      </fieldset>
+          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+            <label className={labelClass}>
+              Order size multiplier
+              <GroupedNumberInput
+                name="sizeMultiplier"
+                value={sizeMultiplier}
+                onChange={setSizeMultiplier}
+                allowDecimal
+                className={fieldClass}
+              />
+            </label>
+            <label className={labelClass}>
+              Price deviation multiplier
+              <GroupedNumberInput
+                name="deviationMultiplier"
+                value={deviationMultiplier}
+                onChange={setDeviationMultiplier}
+                allowDecimal
+                className={fieldClass}
+              />
+            </label>
+          </div>
+        </fieldset>
+      </div>
 
       <fieldset className={sectionClass}>
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">

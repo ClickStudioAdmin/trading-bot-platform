@@ -20,7 +20,7 @@ Current. Agent steps 1–5 are in the tree. Wait for Click’s desk test. Do not
 | 2 | Playbook store | Agent | Stacked DCA playbooks per desk (one per contract). Direction long / short / both. Start, adds, exit, and per-side runtime. Done |
 | 3 | Tick | Agent | Engine tick adds/closes through `runFuturesCommand`. Same caps, reduce-only, Close All. Auto badge + playbook name. Done |
 | 4 | Signals | Agent | Manual arm. Bound Signal `arm` / `disarm` / `close-playbook`. Buy / sell arms that side only. Price, indicator, or immediate start. Done |
-| 5 | UI | Agent | Create Desk → DCA. Type-locked chrome. Automations is grouped playbook cards (General / Start / Adds / Exit / Summary). Positions show Clip / Next add / Remaining. Done |
+| 5 | UI | Agent | Create Desk → DCA. Type-locked chrome. Automations is grouped playbook cards (General / Start / Initial clip / Maximums / Additional clips / Additional clip multipliers / Exit / Summary). Positions show Clip / Next add / Remaining. Done |
 | 6 | Desk test | Click | Paper then Bybit Demo: arm, clips add, TP/stop, Close All, reduce-only. Cannot add a scale-in or Perps recipe on that desk. |
 
 Stop at the end of this phase for a desk test. Do not start scale-in ([phase-12 is not written until this phase is accepted]).
