@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  dcaAveragingKind,
   dcaCapHit,
   dcaClipAction,
   dcaClipKey,
@@ -296,6 +297,74 @@ if (bothParsed.ok) {
   assert.equal(bothParsed.config.dcaMode, "order");
   assert.equal(bothParsed.config.sizeMultiplier, 2);
 }
+
+assert.equal(
+  dcaAveragingKind({
+    dcaMode: "order",
+    dipPct: 1,
+    intervalMinutes: 15,
+  }),
+  "order",
+);
+assert.equal(
+  dcaAveragingKind({
+    dcaMode: "position",
+    dipPct: 2,
+    intervalMinutes: 15,
+  }),
+  "dip",
+);
+assert.equal(
+  dcaAveragingKind({
+    dcaMode: "position",
+    dipPct: null,
+    intervalMinutes: 15,
+  }),
+  "interval",
+);
+
+const intervalForm = new FormData();
+intervalForm.set("symbol", "BTCUSDT");
+intervalForm.set("side", "long");
+intervalForm.set("clipSize", "0.01");
+intervalForm.set("sizeUnit", "qty");
+intervalForm.set("averaging", "interval");
+intervalForm.set("intervalMinutes", "15");
+intervalForm.set("dipPct", "2");
+const intervalParsed = parseDcaPlaybookForm(intervalForm);
+assert.equal(intervalParsed.ok, true);
+if (intervalParsed.ok) {
+  assert.equal(intervalParsed.config.dcaMode, "position");
+  assert.equal(intervalParsed.config.intervalMinutes, 15);
+  assert.equal(intervalParsed.config.dipPct, null);
+  assert.equal(dcaAveragingKind(intervalParsed.config), "interval");
+}
+
+const dipForm = new FormData();
+dipForm.set("symbol", "BTCUSDT");
+dipForm.set("side", "long");
+dipForm.set("clipSize", "0.01");
+dipForm.set("sizeUnit", "qty");
+dipForm.set("averaging", "dip");
+dipForm.set("dipPct", "2");
+dipForm.set("intervalMinutes", "15");
+const dipParsed = parseDcaPlaybookForm(dipForm);
+assert.equal(dipParsed.ok, true);
+if (dipParsed.ok) {
+  assert.equal(dipParsed.config.dcaMode, "position");
+  assert.equal(dipParsed.config.dipPct, 2);
+  assert.equal(dipParsed.config.intervalMinutes, null);
+  assert.equal(dcaAveragingKind(dipParsed.config), "dip");
+}
+
+const missingInterval = new FormData();
+missingInterval.set("symbol", "BTCUSDT");
+missingInterval.set("side", "long");
+missingInterval.set("clipSize", "0.01");
+missingInterval.set("sizeUnit", "qty");
+missingInterval.set("averaging", "interval");
+const missingIntervalParsed = parseDcaPlaybookForm(missingInterval);
+assert.equal(missingIntervalParsed.ok, false);
 
 const row = parseDcaPlaybookRow({
   id: "pb-1",

@@ -238,7 +238,7 @@ export function OpenFuturesTrades({
                   <th className="px-3 py-3 font-medium">
                     <ColumnHint
                       label="Next add"
-                      hint="Dip from the last clip, interval remaining, or wait for take profit / stop."
+                      hint="Next add from dip, interval, grid, or wait for take profit / stop."
                     />
                   </th>
                   <th className="px-2 py-3 font-medium">

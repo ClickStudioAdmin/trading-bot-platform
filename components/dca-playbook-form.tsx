@@ -16,8 +16,10 @@ import {
 } from "@/lib/dca/grid";
 import {
   DEFAULT_DCA_NAME,
+  dcaAveragingKind,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
+  type DcaAveragingKind,
   type DcaPlaybook,
   type DcaStartKind,
 } from "@/lib/dca/playbook";
@@ -145,7 +147,9 @@ export function DcaPlaybookForm({
   const [startKind, setStartKind] = useState<DcaStartKind>(
     playbook?.startKind ?? "immediate",
   );
-  const [dcaMode, setDcaMode] = useState(playbook?.dcaMode ?? "position");
+  const [averaging, setAveraging] = useState<DcaAveragingKind>(() =>
+    playbook ? dcaAveragingKind(playbook) : "dip",
+  );
   const [clipSize, setClipSize] = useState(
     playbook ? String(playbook.clipSize) : "",
   );
@@ -491,43 +495,48 @@ export function DcaPlaybookForm({
           <label className={labelClass}>
             Averaging
             <select
-              name="dcaMode"
-              value={dcaMode}
+              name="averaging"
+              value={averaging}
               onChange={(event) =>
-                setDcaMode(event.target.value as "position" | "order")
+                setAveraging(event.target.value as DcaAveragingKind)
               }
               className={fieldClass}
             >
-              <option value="position">Position — add on dip</option>
+              <option value="dip">Position — add on dip</option>
+              <option value="interval">Position — add on interval</option>
               <option value="order">Order — rest a grid</option>
             </select>
           </label>
-          <label className={labelClass}>
-            Add on dip %
-            <GroupedNumberInput
-              name="dipPct"
-              value={dipPct}
-              onChange={setDipPct}
-              allowDecimal
-              className={fieldClass}
-              placeholder="Off"
-            />
-          </label>
-          {dcaMode === "position" ? (
+          {averaging === "dip" || averaging === "order" ? (
+            <label className={labelClass}>
+              Add on dip %
+              <GroupedNumberInput
+                name="dipPct"
+                value={dipPct}
+                onChange={setDipPct}
+                allowDecimal
+                className={fieldClass}
+                placeholder="Off"
+              />
+            </label>
+          ) : null}
+          {averaging === "interval" ? (
             <label className={labelClass}>
               Add every (minutes)
               <GroupedNumberInput
                 name="intervalMinutes"
                 defaultValue={optional(playbook?.intervalMinutes)}
                 className={fieldClass}
-                placeholder="Off"
+                placeholder="15"
               />
             </label>
-          ) : (
+          ) : null}
+          {averaging === "order" ? (
             <p className="self-end text-xs text-ink-muted lg:col-span-2">
               After the first market clip, remaining clips rest as GTC limits.
+              Dip % sets the grid.
             </p>
-          )}
+          ) : null}
         </div>
         <div className={rowClass}>
           <div className="flex flex-wrap items-end gap-2 pb-0.5">
@@ -536,7 +545,6 @@ export function DcaPlaybookForm({
               onClick={() => {
                 setSizeMultiplier("1");
                 setDeviationMultiplier("1");
-                setDcaMode("position");
               }}
               className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
             >
@@ -547,7 +555,6 @@ export function DcaPlaybookForm({
               onClick={() => {
                 setSizeMultiplier("2");
                 setDeviationMultiplier("1.5");
-                setDcaMode("position");
               }}
               className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
             >

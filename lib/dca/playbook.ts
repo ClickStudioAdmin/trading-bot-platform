@@ -140,6 +140,27 @@ export function parseDcaMode(value: unknown): DcaMode {
   return value === "order" ? "order" : "position";
 }
 
+export type DcaAveragingKind = "dip" | "interval" | "order";
+
+export function parseDcaAveragingKind(value: unknown): DcaAveragingKind {
+  if (value === "interval" || value === "order") {
+    return value;
+  }
+  return "dip";
+}
+
+export function dcaAveragingKind(
+  playbook: Pick<DcaPlaybookConfig, "dcaMode" | "dipPct" | "intervalMinutes">,
+): DcaAveragingKind {
+  if (playbook.dcaMode === "order") {
+    return "order";
+  }
+  if (playbook.intervalMinutes !== null && playbook.dipPct === null) {
+    return "interval";
+  }
+  return "dip";
+}
+
 export function parseDcaExitBasis(value: unknown): DcaExitBasis {
   return value === "first_entry" ? "first_entry" : "average";
 }
@@ -309,16 +330,22 @@ export function parseDcaPlaybookForm(
     parseDcaDirection(form.get("direction")) ??
     parseFuturesSide(form.get("side"));
   const startKind = parseDcaStartKind(form.get("startKind"));
-  const dcaMode = parseDcaMode(form.get("dcaMode"));
+  const averaging = parseDcaAveragingKind(
+    form.get("averaging") ?? form.get("dcaMode"),
+  );
+  const dcaMode: DcaMode = averaging === "order" ? "order" : "position";
   const sizeUnit = parseFuturesSizeUnit(form.get("sizeUnit"));
   const clipSize = parseFuturesQty(form.get("clipSize"));
   const maxClips = parseOptionalPositiveInt(form.get("maxClips"));
   const maxValue = parseOptionalPositive(form.get("maxValue"));
-  const dipPct = parseOptionalPositive(form.get("dipPct"));
-  const intervalMinutes =
-    dcaMode === "order"
+  const dipPct =
+    averaging === "interval"
       ? { ok: true as const, value: null }
-      : parseOptionalPositiveInt(form.get("intervalMinutes"));
+      : parseOptionalPositive(form.get("dipPct"));
+  const intervalMinutes =
+    averaging === "interval"
+      ? parseOptionalPositiveInt(form.get("intervalMinutes"))
+      : { ok: true as const, value: null };
   const sizeMultiplier = parseMultiplier(form.get("sizeMultiplier"), 1);
   const deviationMultiplier = parseMultiplier(
     form.get("deviationMultiplier"),
@@ -362,6 +389,9 @@ export function parseDcaPlaybookForm(
   }
   if (!intervalMinutes.ok) {
     return intervalMinutes;
+  }
+  if (averaging === "interval" && intervalMinutes.value === null) {
+    return { ok: false, error: "Enter how often to add a clip." };
   }
   if (!sizeMultiplier.ok) {
     return sizeMultiplier;

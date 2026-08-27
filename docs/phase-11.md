@@ -31,7 +31,7 @@ Stop at the end of this phase for a desk test. Do not start scale-in ([phase-12 
 2. The desk owns stacked playbooks. Automations is that list (Add playbook). One playbook per contract. Perps price-cross recipes stay on Perps desks only.
 3. Direction is long, short, or both. Both opens two blotter rows that clip independently and never flatten each other.
 4. Start is Immediate, price cross, a bound Signal webhook, or an indicator on public klines (RSI 14, MACD, EMA 9/21; 5m / 15m / 1h). Arm enables. Immediate places the first clip now. Other starts wait for the trigger. Webhook `arm` / buy / sell places the first clip for the bound playbook.
-5. Adds: clip size (qty or USDT), max clips / max value, dip % and optional interval (position averaging), or a resting GTC safety-order grid (order averaging). Size and deviation multipliers scale later clips. Caps stop adding. They do not flatten.
+5. Adds: clip size (qty or USDT), max clips / max value, then one averaging kind — add on dip, add on interval, or a resting GTC safety-order grid. Size and deviation multipliers scale later clips. Caps stop adding. They do not flatten.
 6. Exit: take profit / stop vs average or first fill, optional move-stop-to-breakeven, optional trailing on the existing row trailing engine. Stop adding leaves the position. Close playbook flattens then returns to idle.
 7. No Buy/Sell ticket. Close All, reduce-only, caps, and row TP/SL still protect. Reduce-only blocks new clips; TP/SL still run.
 8. A Signal webhook only drives playbooks bound to it. TradingView **Order** webhooks are not the brain on this desk. Buy / sell on that Signal arms that side only and does not send TV size.
