@@ -2,17 +2,21 @@
 
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
 import {
+  dcaConfigMaxOrderError,
   dcaPlaybookIsRunning,
   dcaStartListens,
   parseDcaPlaybookForm,
   parseDcaPlaybookId,
   parseDcaSaveIntent,
+  type DcaPlaybookConfig,
 } from "@/lib/dca/playbook";
 import {
   applyDcaVerb,
+  lastPriceFor,
   parseDcaPlaybookVerb,
   syncDcaPlaybookWorking,
 } from "@/lib/dca/run";
+import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import {
   deleteDcaPlaybook,
   saveDcaPlaybook,
@@ -56,6 +60,25 @@ export async function saveAndArmDcaPlaybookAction(formData: FormData) {
   await saveDcaPlaybookWith("arm", formData);
 }
 
+async function rejectIfOverMaxOrder(config: DcaPlaybookConfig): Promise<void> {
+  const pairs = await loadUsdtLinearPerps().catch(() => []);
+  const pair = pairs.find((row) => row.symbol === config.symbol);
+  if (!pair) {
+    fail("That contract is not available.");
+  }
+  const lastPrice = await lastPriceFor(config.symbol);
+  const error = dcaConfigMaxOrderError({
+    config,
+    lastPrice,
+    maxQty: pair.maxQty,
+    maxMktQty: pair.maxMktQty,
+    baseCoin: pair.baseCoin,
+  });
+  if (error) {
+    fail(error);
+  }
+}
+
 async function saveDcaPlaybookWith(
   intentRaw: string,
   formData: FormData,
@@ -68,6 +91,7 @@ async function saveDcaPlaybookWith(
   if (!parsed.ok) {
     fail(parsed.error);
   }
+  await rejectIfOverMaxOrder(parsed.config);
   const supabase = createServiceClient();
   if (!supabase) {
     fail("Auth is not configured.");
@@ -191,6 +215,9 @@ export async function runDcaPlaybookVerb(
   const parsed = parseDcaPlaybookForm(formData);
   if (!parsed.ok) {
     fail(parsed.error);
+  }
+  if (verb === "arm") {
+    await rejectIfOverMaxOrder(parsed.config);
   }
   const supabase = createServiceClient();
   if (!supabase) {

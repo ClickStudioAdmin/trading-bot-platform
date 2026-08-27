@@ -1,5 +1,9 @@
 import type { FuturesSide } from "@/lib/futures/model";
 import { futuresPnlUsdt } from "@/lib/futures/math";
+import {
+  formatPerpMinQty,
+  perpEffectiveMaxQty,
+} from "@/lib/exchanges/bybit/ticket-size";
 
 export function dcaClipSizeAt(
   clipIndex: number,
@@ -10,6 +14,20 @@ export function dcaClipSizeAt(
     return 0;
   }
   return clipSize * sizeMultiplier ** clipIndex;
+}
+
+export function dcaClipQtyAt(
+  clipIndex: number,
+  clipSize: number,
+  sizeMultiplier: number,
+  sizeUnit: "qty" | "usdt",
+  price: number,
+): number {
+  const size = dcaClipSizeAt(clipIndex, clipSize, sizeMultiplier);
+  if (!(size > 0) || !(price > 0)) {
+    return 0;
+  }
+  return sizeUnit === "qty" ? size : size / price;
 }
 
 export function dcaDipPctAt(
@@ -85,6 +103,7 @@ export function dcaLastClipDeviationPct(input: {
 }
 
 export const DCA_LADDER_PREVIEW_MAX = 40;
+export const DCA_LADDER_CHECK_MAX = 500;
 
 export type DcaLadderLevel = {
   index: number;
@@ -265,6 +284,34 @@ function dcaLadderFieldRange(
   };
 }
 
+function dcaLadderOrderPrices(input: {
+  side: FuturesSide;
+  entryPrice: number;
+  count: number;
+  dipPct: number | null;
+  deviationMultiplier: number;
+}): number[] {
+  if (!(input.entryPrice > 0) || input.count < 1) {
+    return [];
+  }
+  const first = input.entryPrice;
+  const addPrices =
+    input.dipPct !== null && input.dipPct > 0 && input.count >= 2
+      ? dcaSafetyPrices({
+          side: input.side,
+          entryPrice: first,
+          maxClips: input.count,
+          dipPct: input.dipPct,
+          deviationMultiplier: input.deviationMultiplier,
+        })
+      : [];
+  const prices = [first, ...addPrices];
+  while (prices.length < input.count) {
+    prices.push(prices[prices.length - 1] ?? first);
+  }
+  return prices.slice(0, input.count);
+}
+
 export function dcaLadderLevels(input: {
   side: FuturesSide;
   entryPrice: number;
@@ -289,20 +336,13 @@ export function dcaLadderLevels(input: {
     return [];
   }
   const first = input.entryPrice;
-  const addPrices =
-    input.dipPct !== null && input.dipPct > 0 && count >= 2
-      ? dcaSafetyPrices({
-          side: input.side,
-          entryPrice: first,
-          maxClips: count,
-          dipPct: input.dipPct,
-          deviationMultiplier: input.deviationMultiplier,
-        })
-      : [];
-  const prices = [first, ...addPrices];
-  while (prices.length < count) {
-    prices.push(prices[prices.length - 1] ?? first);
-  }
+  const prices = dcaLadderOrderPrices({
+    side: input.side,
+    entryPrice: first,
+    count,
+    dipPct: input.dipPct,
+    deviationMultiplier: input.deviationMultiplier,
+  });
   const rows: DcaLadderLevel[] = [];
   let totalQty = 0;
   let weighted = 0;
@@ -395,6 +435,132 @@ export function dcaRequiredUsdt(input: {
     return null;
   }
   return totalQtyOrUsdt * input.mark;
+}
+
+export function dcaPlannedOrderCount(input: {
+  side: FuturesSide;
+  entryPrice: number;
+  maxClips: number | null;
+  maxValue: number | null;
+  dipPct: number | null;
+  clipSize: number;
+  sizeUnit: "qty" | "usdt";
+  sizeMultiplier: number;
+  deviationMultiplier: number;
+}): number {
+  if (input.maxClips !== null && input.maxClips >= 1) {
+    return Math.min(Math.floor(input.maxClips), DCA_LADDER_CHECK_MAX);
+  }
+  if (input.maxValue !== null && input.maxValue > 0) {
+    const until = dcaClipsUntilMaxValue(input);
+    return until !== null ? Math.min(until, DCA_LADDER_CHECK_MAX) : 1;
+  }
+  return 1;
+}
+
+export type DcaOverMaxOrder = {
+  side: FuturesSide;
+  orderNumber: number;
+  qty: number;
+  maxQty: number;
+  orderType: "market" | "limit";
+};
+
+export function dcaClipOrderType(
+  clipIndex: number,
+  restGrid: boolean,
+): "market" | "limit" {
+  return restGrid && clipIndex >= 1 ? "limit" : "market";
+}
+
+export function dcaFirstOrderOverMaxQty(input: {
+  side: FuturesSide;
+  entryPrice: number;
+  maxClips: number | null;
+  maxValue: number | null;
+  dipPct: number | null;
+  clipSize: number;
+  sizeUnit: "qty" | "usdt";
+  sizeMultiplier: number;
+  deviationMultiplier: number;
+  restGrid: boolean;
+  maxQty: number;
+  maxMktQty: number;
+}): DcaOverMaxOrder | null {
+  if (
+    !(input.clipSize > 0) ||
+    !(input.sizeMultiplier > 0) ||
+    !(input.entryPrice > 0)
+  ) {
+    return null;
+  }
+  const count = dcaPlannedOrderCount(input);
+  const prices = dcaLadderOrderPrices({
+    side: input.side,
+    entryPrice: input.entryPrice,
+    count,
+    dipPct: input.dipPct,
+    deviationMultiplier: input.deviationMultiplier,
+  });
+  for (let i = 0; i < count; i += 1) {
+    const price = prices[i] ?? input.entryPrice;
+    const qty = dcaClipQtyAt(
+      i,
+      input.clipSize,
+      input.sizeMultiplier,
+      input.sizeUnit,
+      price,
+    );
+    const orderType = dcaClipOrderType(i, input.restGrid);
+    const cap = perpEffectiveMaxQty({
+      maxQty: input.maxQty,
+      maxMktQty: input.maxMktQty,
+      orderType,
+    });
+    if (cap > 0 && qty > cap) {
+      return {
+        side: input.side,
+        orderNumber: i + 1,
+        qty,
+        maxQty: cap,
+        orderType,
+      };
+    }
+  }
+  return null;
+}
+
+export function dcaLadderMaxOrderError(input: {
+  sides: readonly FuturesSide[];
+  entryPrice: number;
+  maxClips: number | null;
+  maxValue: number | null;
+  dipPct: number | null;
+  clipSize: number;
+  sizeUnit: "qty" | "usdt";
+  sizeMultiplier: number;
+  deviationMultiplier: number;
+  restGrid: boolean;
+  maxQty: number;
+  maxMktQty: number;
+  baseCoin: string;
+}): string | null {
+  for (const side of input.sides) {
+    const hit = dcaFirstOrderOverMaxQty({ ...input, side });
+    if (!hit) {
+      continue;
+    }
+    const qtyText = formatPerpMinQty(hit.qty);
+    const maxText = formatPerpMinQty(hit.maxQty);
+    const entry = `Entry # ${hit.orderNumber}`;
+    const label =
+      input.sides.length > 1
+        ? `${hit.side === "long" ? "Long" : "Short"} ${entry}`
+        : entry;
+    const kind = hit.orderType === "market" ? "market maximum" : "maximum";
+    return `${label} is ${qtyText} ${input.baseCoin}, above the ${maxText} ${input.baseCoin} ${kind}.`;
+  }
+  return null;
 }
 
 export function dcaBreakevenPrice(input: {

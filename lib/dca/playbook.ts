@@ -15,7 +15,7 @@ import {
 } from "@/lib/futures/automation";
 import { parseFuturesTrigger } from "@/lib/futures/tpsl";
 import { futuresPnlUsdt } from "@/lib/futures/math";
-import { dcaClipSizeAt, dcaDipPctAt, dcaPlannedExits, dcaSafetyPrices } from "./grid";
+import { dcaClipSizeAt, dcaDipPctAt, dcaLadderMaxOrderError, dcaPlannedExits, dcaSafetyPrices } from "./grid";
 import {
   indicatorStartMet,
   type DcaIndicatorKind,
@@ -91,6 +91,7 @@ export type DcaPlaybook = DcaPlaybookConfig & {
 };
 
 export const DEFAULT_DCA_NAME = "DCA";
+export const DCA_COPY_SUFFIX = " (copy)";
 
 export const IDLE_DCA_LEG: DcaLegState = {
   status: "idle",
@@ -260,6 +261,54 @@ export function dcaEnabledSides(direction: DcaDirection): FuturesSide[] {
   return [direction];
 }
 
+export const DCA_LAST_PRICE_MAX_CHECK =
+  "Last price is unavailable, so order size cannot be checked against the exchange maximum.";
+
+export function dcaConfigMaxOrderError(input: {
+  config: Pick<
+    DcaPlaybookConfig,
+    | "direction"
+    | "dcaMode"
+    | "clipSize"
+    | "sizeUnit"
+    | "maxClips"
+    | "maxValue"
+    | "dipPct"
+    | "sizeMultiplier"
+    | "deviationMultiplier"
+  >;
+  lastPrice: number | null;
+  maxQty: number;
+  maxMktQty: number;
+  baseCoin: string;
+}): string | null {
+  const { config } = input;
+  if (!(config.clipSize > 0)) {
+    return null;
+  }
+  if (config.sizeUnit === "usdt" && !(input.lastPrice && input.lastPrice > 0)) {
+    return DCA_LAST_PRICE_MAX_CHECK;
+  }
+  if (!(input.maxQty > 0) && !(input.maxMktQty > 0)) {
+    return null;
+  }
+  return dcaLadderMaxOrderError({
+    sides: dcaEnabledSides(config.direction),
+    restGrid: config.dcaMode === "order",
+    entryPrice: input.lastPrice && input.lastPrice > 0 ? input.lastPrice : 1,
+    maxClips: config.maxClips,
+    maxValue: config.maxValue,
+    dipPct: config.dipPct,
+    clipSize: config.clipSize,
+    sizeUnit: config.sizeUnit,
+    sizeMultiplier: config.sizeMultiplier,
+    deviationMultiplier: config.deviationMultiplier,
+    maxQty: input.maxQty,
+    maxMktQty: input.maxMktQty,
+    baseCoin: input.baseCoin,
+  });
+}
+
 export function dcaStartListens(startKind: DcaStartKind): boolean {
   return (
     startKind === "price" ||
@@ -376,6 +425,32 @@ export function dcaPlaybookConflict(
   return playbooks.some(
     (row) => row.symbol === candidate.symbol && row.id !== candidate.id,
   );
+}
+
+export function dcaCopyName(name: string): string {
+  const trimmed = name.trim() || DEFAULT_DCA_NAME;
+  if (trimmed.endsWith(DCA_COPY_SUFFIX)) {
+    return trimmed.slice(0, 40);
+  }
+  if (trimmed.length + DCA_COPY_SUFFIX.length <= 40) {
+    return `${trimmed}${DCA_COPY_SUFFIX}`;
+  }
+  return `${trimmed.slice(0, 40 - DCA_COPY_SUFFIX.length).trimEnd()}${DCA_COPY_SUFFIX}`;
+}
+
+export function dcaCloneIdleDraft(source: DcaPlaybook): DcaPlaybook {
+  return {
+    ...source,
+    id: "",
+    name: dcaCopyName(source.name),
+    long: { ...IDLE_DCA_LEG },
+    short: { ...IDLE_DCA_LEG },
+    armConditionTrue: false,
+    disarmConditionTrue: false,
+    longIndicatorTrue: false,
+    shortIndicatorTrue: false,
+    updatedAtMs: 0,
+  };
 }
 
 export function parseDcaPlaybookName(

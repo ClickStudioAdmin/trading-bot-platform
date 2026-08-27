@@ -17,6 +17,8 @@ import {
   saveDcaPlaybookAction,
 } from "@/lib/dca/actions";
 import {
+  dcaClipOrderType,
+  dcaClipQtyAt,
   dcaClipsUntilMaxValue,
   dcaLadderLevels,
   dcaLadderLossRange,
@@ -29,6 +31,8 @@ import {
 import {
   DEFAULT_DCA_NAME,
   dcaAveragingKind,
+  dcaCloneIdleDraft,
+  dcaConfigMaxOrderError,
   dcaEnabledSides,
   dcaIntervalParts,
   dcaLegFor,
@@ -47,7 +51,7 @@ import {
 } from "@/lib/dca/playbook";
 import type { FuturesOrderType, FuturesSide } from "@/lib/futures/model";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
-import { perpTicketSizeError } from "@/lib/exchanges/bybit/ticket-size";
+import { perpEffectiveMaxQty, perpTicketSizeError } from "@/lib/exchanges/bybit/ticket-size";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import Link from "next/link";
 
@@ -315,9 +319,14 @@ export function DcaPlaybooksDesk({
   reduceOnly?: boolean;
 }) {
   const [cards, setCards] = useState<
-    { key: string; playbook: DcaPlaybook | null }[]
+    { key: string; playbook: DcaPlaybook | null; seed?: DcaPlaybook }[]
   >(() => playbooks.map((playbook) => ({ key: playbook.id, playbook })));
+  const [cloneMenu, setCloneMenu] = useState(0);
   const empty = cards.length === 0;
+  const cloneSources = playbooks.filter((playbook) => playbook.id);
+  const addPlaybookClass = empty
+    ? "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+    : "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
 
   return (
     <div className="space-y-3">
@@ -337,12 +346,14 @@ export function DcaPlaybooksDesk({
           <DcaPlaybookForm
             key={card.key}
             playbook={card.playbook}
+            seed={card.seed}
             options={options}
             signalWebhooks={signalWebhooks}
             availableUsdt={availableUsdt}
             lastPrices={lastPrices}
             defaultName={
               card.playbook?.name ??
+              card.seed?.name ??
               (index === 0 ? DEFAULT_DCA_NAME : `DCA ${index + 1}`)
             }
             onRemoveDraft={
@@ -365,14 +376,42 @@ export function DcaPlaybooksDesk({
               { key: `new-${current.length}-${Date.now()}`, playbook: null },
             ])
           }
-          className={
-            empty
-              ? "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-              : "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
-          }
+          className={addPlaybookClass}
         >
           Add playbook
         </button>
+        {cloneSources.length > 0 ? (
+          <select
+            key={cloneMenu}
+            aria-label="Clone existing playbook"
+            defaultValue=""
+            onChange={(event) => {
+              const id = event.target.value;
+              const source = cloneSources.find((item) => item.id === id);
+              if (!source) {
+                return;
+              }
+              const seed = dcaCloneIdleDraft(source);
+              setCards((current) => [
+                ...current,
+                {
+                  key: `clone-${source.id}-${Date.now()}`,
+                  playbook: null,
+                  seed,
+                },
+              ]);
+              setCloneMenu((n) => n + 1);
+            }}
+            className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
+          >
+            <option value="">Clone existing playbook</option>
+            {cloneSources.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name} · {item.symbol}
+              </option>
+            ))}
+          </select>
+        ) : null}
       </div>
     </div>
   );
@@ -380,6 +419,7 @@ export function DcaPlaybooksDesk({
 
 export function DcaPlaybookForm({
   playbook,
+  seed = null,
   options,
   signalWebhooks,
   availableUsdt = null,
@@ -389,6 +429,7 @@ export function DcaPlaybookForm({
   onRemoveDraft,
 }: {
   playbook: DcaPlaybook | null;
+  seed?: DcaPlaybook | null;
   options: LinearPerp[];
   signalWebhooks: DcaSignalWebhookOption[];
   availableUsdt?: number | null;
@@ -397,57 +438,58 @@ export function DcaPlaybookForm({
   defaultName?: string;
   onRemoveDraft?: () => void;
 }) {
+  const source = playbook ?? seed;
   const [direction, setDirection] = useState(
-    playbook?.direction ?? "long",
+    source?.direction ?? "long",
   );
   const [startKind, setStartKind] = useState<DcaStartKind>(
-    playbook?.startKind ?? "immediate",
+    source?.startKind ?? "immediate",
   );
   const [averaging, setAveraging] = useState<DcaAveragingKind>(() =>
-    playbook ? dcaAveragingKind(playbook) : "dip",
+    source ? dcaAveragingKind(source) : "dip",
   );
   const [restGrid, setRestGrid] = useState(
-    playbook?.dcaMode === "order",
+    source?.dcaMode === "order",
   );
   const [clipSize, setClipSize] = useState(
-    playbook ? String(playbook.clipSize) : "",
+    source ? String(source.clipSize) : "",
   );
-  const [sizeUnit, setSizeUnit] = useState(playbook?.sizeUnit ?? "usdt");
-  const [maxClips, setMaxClips] = useState(optional(playbook?.maxClips));
-  const [maxValue, setMaxValue] = useState(optional(playbook?.maxValue));
+  const [sizeUnit, setSizeUnit] = useState(source?.sizeUnit ?? "usdt");
+  const [maxClips, setMaxClips] = useState(optional(source?.maxClips));
+  const [maxValue, setMaxValue] = useState(optional(source?.maxValue));
   const [maxType, setMaxType] = useState<DcaMaxType>(() =>
-    dcaMaxTypeFromCaps(playbook?.maxClips ?? null, playbook?.maxValue ?? null),
+    dcaMaxTypeFromCaps(source?.maxClips ?? null, source?.maxValue ?? null),
   );
-  const [dipPct, setDipPct] = useState(optional(playbook?.dipPct));
-  const intervalParts = dcaIntervalParts(playbook?.intervalMinutes ?? null);
+  const [dipPct, setDipPct] = useState(optional(source?.dipPct));
+  const intervalParts = dcaIntervalParts(source?.intervalMinutes ?? null);
   const [intervalUnit, setIntervalUnit] = useState<DcaIntervalUnit>(
     intervalParts.unit,
   );
   const [sizeMultiplier, setSizeMultiplier] = useState(
-    playbook ? String(playbook.sizeMultiplier) : "1",
+    source ? String(source.sizeMultiplier) : "1",
   );
   const [deviationMultiplier, setDeviationMultiplier] = useState(
-    playbook ? String(playbook.deviationMultiplier) : "1",
+    source ? String(source.deviationMultiplier) : "1",
   );
   const [takeProfitPct, setTakeProfitPct] = useState(
-    optional(playbook?.takeProfitPct),
+    optional(source?.takeProfitPct),
   );
   const [takeProfitBasis, setTakeProfitBasis] = useState<DcaExitBasis>(
-    playbook?.takeProfitBasis ?? "average",
+    source?.takeProfitBasis ?? "average",
   );
   const [stopLossPct, setStopLossPct] = useState(
-    optional(playbook?.stopLossPct),
+    optional(source?.stopLossPct),
   );
   const [stopLossBasis, setStopLossBasis] = useState<DcaExitBasis>(
-    playbook?.stopLossBasis ?? "average",
+    source?.stopLossBasis ?? "average",
   );
   const [takeProfitOrderType, setTakeProfitOrderType] =
-    useState<FuturesOrderType>(playbook?.takeProfitOrderType ?? "market");
+    useState<FuturesOrderType>(source?.takeProfitOrderType ?? "market");
   const [indicatorKind, setIndicatorKind] = useState(
-    playbook?.indicatorKind ?? "rsi",
+    source?.indicatorKind ?? "rsi",
   );
   const defaultSymbol =
-    playbook?.symbol ??
+    source?.symbol ??
     options.find((row) => row.symbol === "BTCUSDT")?.symbol ??
     options[0]?.symbol ??
     "BTCUSDT";
@@ -479,6 +521,28 @@ export function DcaPlaybookForm({
     baseCoin: selectedPair?.baseCoin ?? "Token",
   });
   const effectiveMaxType: DcaMaxType = restGrid ? "orders" : maxType;
+  const ladderMaxError = dcaConfigMaxOrderError({
+    config: {
+      direction,
+      dcaMode: averaging !== "interval" && restGrid ? "order" : "position",
+      clipSize: asNumber(clipSize) ?? 0,
+      sizeUnit,
+      maxClips:
+        effectiveMaxType === "orders" ? asNumber(maxClips) : null,
+      maxValue:
+        effectiveMaxType === "value" ? asNumber(maxValue) : null,
+      dipPct: averaging === "dip" ? asNumber(dipPct) : null,
+      sizeMultiplier: asNumber(sizeMultiplier) ?? 1,
+      deviationMultiplier: asNumber(deviationMultiplier) ?? 1,
+    },
+    lastPrice,
+    maxQty: selectedPair?.maxQty ?? 0,
+    maxMktQty: selectedPair?.maxMktQty ?? 0,
+    baseCoin: selectedPair?.baseCoin ?? "Token",
+  });
+  const saveError =
+    asNumber(clipSize) === null ? sizeError : (sizeError ?? ladderMaxError);
+  const restGridEffective = averaging !== "interval" && restGrid;
   const summaryBySide = useMemo(() => {
     const input = {
       lastPrice,
@@ -570,6 +634,8 @@ export function DcaPlaybookForm({
           pendingLabel="Saving…"
           successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
           className={headerPrimaryClass}
+          disabled={Boolean(saveError)}
+          title={saveError ?? undefined}
         >
           Save
         </PendingSubmitButton>
@@ -580,8 +646,8 @@ export function DcaPlaybookForm({
               pendingLabel="Arming…"
               successKey={`save-arm-dca-playbook-${playbook?.id ?? "new"}`}
               className={headerLongClass}
-              disabled={Boolean(sizeError)}
-              title={sizeError ?? undefined}
+              disabled={Boolean(saveError)}
+              title={saveError ?? undefined}
             >
               Save and Arm
             </PendingSubmitButton>
@@ -615,7 +681,7 @@ export function DcaPlaybookForm({
                     ? "Set Direction to include this side"
                     : sideRunning
                       ? `${item.side === "long" ? "Long" : "Short"} is already running`
-                      : sizeError;
+                      : saveError;
                   const blocked = Boolean(blockedReason);
                   return blocked ? (
                     <button
@@ -646,6 +712,8 @@ export function DcaPlaybookForm({
                   pendingLabel="Arming…"
                   successKey={`arm-dca-playbook-${playbook.id}`}
                   className={headerSecondaryClass}
+                  disabled={Boolean(saveError)}
+                  title={saveError ?? undefined}
                 >
                   Arm
                 </PendingSubmitButton>
@@ -701,7 +769,7 @@ export function DcaPlaybookForm({
             Name
             <input
               name="name"
-              defaultValue={playbook?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+              defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
               maxLength={40}
               className={fieldClass}
             />
@@ -764,9 +832,9 @@ export function DcaPlaybookForm({
           {startKind === "price" ? (
             <TriggerFields
               prefix="arm"
-              triggerBy={playbook?.armTrigger?.triggerBy ?? "last"}
-              compare={playbook?.armTrigger?.compare ?? "gte"}
-              price={optional(playbook?.armTrigger?.price)}
+              triggerBy={source?.armTrigger?.triggerBy ?? "last"}
+              compare={source?.armTrigger?.compare ?? "gte"}
+              price={optional(source?.armTrigger?.price)}
             />
           ) : null}
           {startKind === "webhook" ? (
@@ -776,7 +844,7 @@ export function DcaPlaybookForm({
                   Signal
                   <select
                     name="webhookId"
-                    defaultValue={playbook?.webhookId ?? signalWebhooks[0]?.id}
+                    defaultValue={source?.webhookId ?? signalWebhooks[0]?.id}
                     className={fieldClass}
                   >
                     {signalWebhooks.map((row) => (
@@ -824,7 +892,7 @@ export function DcaPlaybookForm({
                 Timeframe
                 <select
                   name="indicatorTimeframe"
-                  defaultValue={playbook?.indicatorTimeframe ?? "15"}
+                  defaultValue={source?.indicatorTimeframe ?? "15"}
                   className={fieldClass}
                 >
                   <option value="5">5m</option>
@@ -838,7 +906,7 @@ export function DcaPlaybookForm({
                     When
                     <select
                       name="indicatorCompare"
-                      defaultValue={playbook?.indicatorCompare ?? "lte"}
+                      defaultValue={source?.indicatorCompare ?? "lte"}
                       className={fieldClass}
                     >
                       <option value="lte">At or below</option>
@@ -849,7 +917,7 @@ export function DcaPlaybookForm({
                     Level
                     <GroupedNumberInput
                       name="indicatorLevel"
-                      defaultValue={optional(playbook?.indicatorLevel) || "30"}
+                      defaultValue={optional(source?.indicatorLevel) || "30"}
                       allowDecimal
                       className={fieldClass}
                     />
@@ -1161,7 +1229,7 @@ export function DcaPlaybookForm({
                 />
                 <PercentInput
                   name="trailingTriggerPct"
-                  defaultValue={optional(playbook?.trailingTriggerPct)}
+                  defaultValue={optional(source?.trailingTriggerPct)}
                   placeholder="Off"
                   ariaLabel="Trailing trigger percent"
                 />
@@ -1173,7 +1241,7 @@ export function DcaPlaybookForm({
                 />
                 <PercentInput
                   name="trailingPct"
-                  defaultValue={optional(playbook?.trailingPct)}
+                  defaultValue={optional(source?.trailingPct)}
                   placeholder="Off"
                   ariaLabel="Trailing percent"
                 />
@@ -1213,7 +1281,7 @@ export function DcaPlaybookForm({
                 Move stop to breakeven at %
                 <PercentInput
                   name="breakevenActivationPct"
-                  defaultValue={optional(playbook?.breakevenActivationPct)}
+                  defaultValue={optional(source?.breakevenActivationPct)}
                   placeholder="Off"
                   ariaLabel="Move stop to breakeven at percent"
                 />
@@ -1222,7 +1290,7 @@ export function DcaPlaybookForm({
                 Breakeven offset %
                 <PercentInput
                   name="breakevenOffsetPct"
-                  defaultValue={optional(playbook?.breakevenOffsetPct)}
+                  defaultValue={optional(source?.breakevenOffsetPct)}
                   placeholder="0"
                   ariaLabel="Breakeven offset percent"
                 />
@@ -1236,6 +1304,9 @@ export function DcaPlaybookForm({
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           Summary
         </legend>
+        {ladderMaxError ? (
+          <p className="mb-3 text-xs text-danger">{ladderMaxError}</p>
+        ) : null}
         {showLadderTabs ? (
           <div
             role="tablist"
@@ -1400,8 +1471,30 @@ export function DcaPlaybookForm({
                 </tr>
               </thead>
               <tbody>
-                {summary.levels.map((row) => (
-                  <tr key={row.index} className="border-t border-line">
+                {summary.levels.map((row) => {
+                  const size = asNumber(clipSize) ?? 0;
+                  const sizeMult = asNumber(sizeMultiplier) ?? 1;
+                  const qty = dcaClipQtyAt(
+                    row.index - 1,
+                    size,
+                    sizeMult,
+                    sizeUnit,
+                    row.price,
+                  );
+                  const cap = perpEffectiveMaxQty({
+                    maxQty: selectedPair?.maxQty ?? 0,
+                    maxMktQty: selectedPair?.maxMktQty ?? 0,
+                    orderType: dcaClipOrderType(
+                      row.index - 1,
+                      restGridEffective,
+                    ),
+                  });
+                  const overMax = cap > 0 && qty > cap;
+                  return (
+                <tr
+                  key={row.index}
+                  className={`border-t border-line${overMax ? " bg-danger/10" : ""}`}
+                >
                     <td className="px-3 py-2 tabular-nums text-ink">{row.index}</td>
                     <td className="px-3 py-2 tabular-nums text-ink">
                       {formatLadderPrice(row.price)}
@@ -1411,10 +1504,18 @@ export function DcaPlaybookForm({
                         ? "—"
                         : `${row.deviationPct > 0 ? "+" : ""}${trimPct(row.deviationPct)}%`}
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-ink">
+                    <td
+                      className={`px-3 py-2 tabular-nums ${
+                        overMax ? "text-danger" : "text-ink"
+                      }`}
+                    >
                       {formatGroupedNumber(row.size)}
                     </td>
-                    <td className="px-3 py-2 tabular-nums text-ink">
+                    <td
+                      className={`px-3 py-2 tabular-nums ${
+                        overMax ? "text-danger" : "text-ink"
+                      }`}
+                    >
                       {formatUsdAmount(row.orderUsdt)}
                     </td>
                     <td className="px-3 py-2 tabular-nums text-ink">
@@ -1446,7 +1547,8 @@ export function DcaPlaybookForm({
                         : formatUsdAmount(row.lossUsdt)}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
             <p className="border-t border-line px-3 py-2 text-xs text-ink-muted">

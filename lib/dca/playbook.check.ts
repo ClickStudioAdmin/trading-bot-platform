@@ -6,6 +6,7 @@ import {
   dcaClipAction,
   dcaClipKey,
   dcaClipRestKey,
+  dcaConfigMaxOrderError,
   dcaCycleEnded,
   dcaGridClipCounts,
   dcaExitLimitKey,
@@ -26,6 +27,8 @@ import {
   dcaOpenHint,
   dcaPlaybookConflict,
   dcaPlaybookIsRunning,
+  dcaCloneIdleDraft,
+  dcaCopyName,
   dcaPnlPct,
   decideDcaTick,
   DEFAULT_DCA_NAME,
@@ -267,6 +270,46 @@ assert.equal(
   false,
 );
 assert.deepEqual(dcaEnabledSides("both"), ["long", "short"]);
+assert.equal(
+  dcaConfigMaxOrderError({
+    config: {
+      direction: "long",
+      dcaMode: "position",
+      clipSize: 10,
+      sizeUnit: "qty",
+      maxClips: 5,
+      maxValue: null,
+      dipPct: null,
+      sizeMultiplier: 2,
+      deviationMultiplier: 1,
+    },
+    lastPrice: 100,
+    maxQty: 50,
+    maxMktQty: 50,
+    baseCoin: "BTC",
+  }),
+  "Entry # 4 is 80 BTC, above the 50 BTC market maximum.",
+);
+assert.equal(
+  dcaConfigMaxOrderError({
+    config: {
+      direction: "long",
+      dcaMode: "position",
+      clipSize: 100,
+      sizeUnit: "usdt",
+      maxClips: 20,
+      maxValue: null,
+      dipPct: null,
+      sizeMultiplier: 2,
+      deviationMultiplier: 1,
+    },
+    lastPrice: null,
+    maxQty: 119,
+    maxMktQty: 119,
+    baseCoin: "BTC",
+  }),
+  "Last price is unavailable, so order size cannot be checked against the exchange maximum.",
+);
 assert.equal(dcaStartListens("immediate"), false);
 assert.equal(dcaStartListens("price"), true);
 assert.equal(dcaStartListens("webhook"), true);
@@ -327,6 +370,10 @@ assert.equal(
   ),
   false,
 );
+assert.equal(dcaCopyName("DCA Test"), "DCA Test (copy)");
+assert.equal(dcaCopyName("DCA Test (copy)"), "DCA Test (copy)");
+assert.equal(dcaCopyName("A".repeat(40)).length, 40);
+assert.equal(dcaCopyName("A".repeat(40)).endsWith(" (copy)"), true);
 
 assert.equal(
   dcaDipMet({ side: "long", lastPrice: 98, lastClipPrice: 100, dipPct: 2 }),
@@ -874,6 +921,16 @@ assert.equal(row?.long.status, "armed");
 assert.equal(row?.long.firstFillPrice, 101);
 assert.ok(row);
 assert.equal(dcaPlaybookIsRunning(row), true);
+const cloned = dcaCloneIdleDraft(row);
+assert.equal(cloned.name, "Desk DCA (copy)");
+assert.equal(cloned.id, "");
+assert.equal(cloned.symbol, row.symbol);
+assert.equal(cloned.clipSize, row.clipSize);
+assert.equal(cloned.long.status, "idle");
+assert.equal(cloned.short.status, "idle");
+assert.equal(cloned.long.clipsFilled, 0);
+assert.equal(cloned.armConditionTrue, false);
+assert.equal(dcaPlaybookIsRunning(cloned), false);
 assert.equal(
   dcaPlaybookIsRunning({
     long: {

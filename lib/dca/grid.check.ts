@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import {
   dcaBreakevenPrice,
+  dcaClipQtyAt,
   dcaClipSizeAt,
   dcaDipPctAt,
   dcaClipsUntilMaxValue,
+  dcaFirstOrderOverMaxQty,
   dcaLadderLevels,
   dcaLadderLossRange,
+  dcaLadderMaxOrderError,
   dcaLadderProfitRange,
   dcaLastClipDeviationPct,
   dcaMaxDropCoveredPct,
@@ -28,6 +31,151 @@ import {
 assert.equal(dcaClipSizeAt(0, 10, 2), 10);
 assert.equal(dcaClipSizeAt(1, 10, 2), 20);
 assert.equal(dcaClipSizeAt(2, 10, 2), 40);
+assert.equal(dcaClipQtyAt(0, 10, 2, "qty", 100), 10);
+assert.equal(dcaClipQtyAt(1, 100, 2, "usdt", 50), 4);
+assert.equal(
+  dcaFirstOrderOverMaxQty({
+    side: "long",
+    entryPrice: 100,
+    maxClips: 5,
+    maxValue: null,
+    dipPct: null,
+    clipSize: 10,
+    sizeUnit: "qty",
+    sizeMultiplier: 2,
+    deviationMultiplier: 1,
+    restGrid: false,
+    maxQty: 50,
+    maxMktQty: 50,
+  })?.orderNumber,
+  4,
+);
+assert.equal(
+  dcaLadderMaxOrderError({
+    sides: ["long"],
+    entryPrice: 100,
+    maxClips: 5,
+    maxValue: null,
+    dipPct: null,
+    clipSize: 10,
+    sizeUnit: "qty",
+    sizeMultiplier: 2,
+    deviationMultiplier: 1,
+    restGrid: false,
+    maxQty: 50,
+    maxMktQty: 50,
+    baseCoin: "BTC",
+  }),
+  "Entry # 4 is 80 BTC, above the 50 BTC market maximum.",
+);
+assert.equal(
+  dcaLadderMaxOrderError({
+    sides: ["long"],
+    entryPrice: 80_000,
+    maxClips: 20,
+    maxValue: null,
+    dipPct: null,
+    clipSize: 100,
+    sizeUnit: "usdt",
+    sizeMultiplier: 2,
+    deviationMultiplier: 1,
+    restGrid: false,
+    maxQty: 119,
+    maxMktQty: 119,
+    baseCoin: "BTC",
+  }),
+  "Entry # 18 is 163.84 BTC, above the 119 BTC market maximum.",
+);
+assert.equal(
+  dcaLadderMaxOrderError({
+    sides: ["long"],
+    entryPrice: 100,
+    maxClips: 3,
+    maxValue: null,
+    dipPct: null,
+    clipSize: 10,
+    sizeUnit: "qty",
+    sizeMultiplier: 2,
+    deviationMultiplier: 1,
+    restGrid: false,
+    maxQty: 80,
+    maxMktQty: 80,
+    baseCoin: "BTC",
+  }),
+  null,
+);
+assert.equal(
+  dcaLadderMaxOrderError({
+    sides: ["long"],
+    entryPrice: 100,
+    maxClips: 3,
+    maxValue: null,
+    dipPct: null,
+    clipSize: 6,
+    sizeUnit: "qty",
+    sizeMultiplier: 1,
+    deviationMultiplier: 1,
+    restGrid: true,
+    maxQty: 100,
+    maxMktQty: 5,
+    baseCoin: "BTC",
+  }),
+  "Entry # 1 is 6 BTC, above the 5 BTC market maximum.",
+);
+assert.equal(
+  dcaLadderMaxOrderError({
+    sides: ["long"],
+    entryPrice: 100,
+    maxClips: 3,
+    maxValue: null,
+    dipPct: null,
+    clipSize: 1,
+    sizeUnit: "qty",
+    sizeMultiplier: 10,
+    deviationMultiplier: 1,
+    restGrid: true,
+    maxQty: 8,
+    maxMktQty: 5,
+    baseCoin: "BTC",
+  }),
+  "Entry # 2 is 10 BTC, above the 8 BTC maximum.",
+);
+assert.equal(
+  dcaLadderMaxOrderError({
+    sides: ["long"],
+    entryPrice: 100,
+    maxClips: 3,
+    maxValue: null,
+    dipPct: 50,
+    clipSize: 100,
+    sizeUnit: "usdt",
+    sizeMultiplier: 1,
+    deviationMultiplier: 1,
+    restGrid: true,
+    maxQty: 1.5,
+    maxMktQty: 1.5,
+    baseCoin: "BTC",
+  }),
+  "Entry # 2 is 2 BTC, above the 1.5 BTC maximum.",
+);
+assert.equal(
+  dcaLadderMaxOrderError({
+    sides: ["long", "short"],
+    entryPrice: 100,
+    maxClips: 5,
+    maxValue: null,
+    dipPct: null,
+    clipSize: 10,
+    sizeUnit: "qty",
+    sizeMultiplier: 2,
+    deviationMultiplier: 1,
+    restGrid: false,
+    maxQty: 50,
+    maxMktQty: 50,
+    baseCoin: "BTC",
+  }),
+  "Long Entry # 4 is 80 BTC, above the 50 BTC market maximum.",
+);
 assert.equal(dcaDipPctAt(0, 1, 2), 1);
 assert.equal(dcaDipPctAt(1, 1, 2), 2);
 assert.deepEqual(
