@@ -794,20 +794,21 @@ export function DcaPlaybookForm({
         </p>
       ) : null}
 
+      <label className="block text-[11px] text-ink-muted">
+        Name
+        <input
+          name="name"
+          defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+          maxLength={40}
+          className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
+        />
+      </label>
+
       <fieldset className={sectionClass}>
         <p className={sectionTitleClass}>
           General
         </p>
         <div className={rowClass}>
-          <label className={labelClass}>
-            Name
-            <input
-              name="name"
-              defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
-              maxLength={40}
-              className={fieldClass}
-            />
-          </label>
           <label className={labelClass}>
             Contract
             <FuturesSymbolSelect
