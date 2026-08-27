@@ -257,3 +257,38 @@ export function workingTypeLabel(row: {
   }
   return "Entry";
 }
+
+function workingSortRank(row: {
+  idempotencyKey: string | null;
+  createdAtMs: number;
+}): [number, number, number] {
+  const clipIndex = parseDcaClipIndex(row.idempotencyKey);
+  if (clipIndex !== null) {
+    return [0, clipIndex, row.createdAtMs];
+  }
+  const exitKind = parseDcaExitLimitKind(row.idempotencyKey);
+  if (exitKind === "tp") {
+    return [1, 0, row.createdAtMs];
+  }
+  if (exitKind === "sl") {
+    return [2, 0, row.createdAtMs];
+  }
+  return [3, 0, row.createdAtMs];
+}
+
+export function sortFuturesWorkingRows<T extends {
+  idempotencyKey: string | null;
+  createdAtMs: number;
+}>(rows: readonly T[]): T[] {
+  return [...rows].sort((left, right) => {
+    const a = workingSortRank(left);
+    const b = workingSortRank(right);
+    if (a[0] !== b[0]) {
+      return a[0] - b[0];
+    }
+    if (a[1] !== b[1]) {
+      return a[1] - b[1];
+    }
+    return a[2] - b[2];
+  });
+}

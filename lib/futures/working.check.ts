@@ -7,6 +7,7 @@ import {
   parseFuturesWorkingRow,
   workingActionLabel,
   workingSideLabel,
+  sortFuturesWorkingRows,
   workingTypeLabel,
 } from "./working";
 
@@ -208,6 +209,15 @@ assert.equal(
     idempotencyKey: "d11111111ltp847291",
   }),
   "Take Profit",
+);
+assert.deepEqual(
+  sortFuturesWorkingRows([
+    { idempotencyKey: "d11111111l19", createdAtMs: 3 },
+    { idempotencyKey: "d11111111ltp1", createdAtMs: 4 },
+    { idempotencyKey: "d11111111l1", createdAtMs: 1 },
+    { idempotencyKey: "d11111111l10", createdAtMs: 2 },
+  ]).map((row) => row.idempotencyKey),
+  ["d11111111l1", "d11111111l10", "d11111111l19", "d11111111ltp1"],
 );
 
 console.log("futures working checks passed");

@@ -7,11 +7,13 @@ import {
 } from "@/lib/futures/list";
 import { triggerConditionMet } from "@/lib/futures/automation";
 import type { FuturesSide } from "@/lib/futures/model";
+import type { FuturesTrailing } from "@/lib/futures/trailing";
 import {
   emptyFuturesTpsl,
   tickerTriggerPrices,
   tpslFromRow,
   tpslWithoutLimitExits,
+  type FuturesTpsl,
 } from "@/lib/futures/tpsl";
 import { sameWorkingNumber } from "@/lib/futures/working";
 import { writeEventLog } from "@/lib/logs/write";
@@ -19,6 +21,7 @@ import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   dcaBreakevenPrice,
+  dcaClipSizeAt,
   dcaPlannedExits,
   dcaTrailingActivationPrice,
   dcaTrailingDistance,
@@ -434,25 +437,23 @@ export async function syncDcaPlaybookExits(input: {
   const current = tpslFromRow(open) ?? emptyFuturesTpsl();
   const tpType =
     planned.takeProfit === null ? "market" : input.playbook.takeProfitOrderType;
-  const slType = "market";
-  const nextTpsl = {
+  const nextTpsl: FuturesTpsl = {
     ...current,
     takeProfit: planned.takeProfit,
     stopLoss,
     tpOrderType: tpType,
-    slOrderType: slType,
+    slOrderType: "market",
     tpLimitPrice:
       planned.takeProfit !== null && tpType === "limit"
         ? planned.takeProfit
         : null,
-    slLimitPrice:
-      stopLoss !== null && slType === "limit" ? stopLoss : null,
+    slLimitPrice: null,
   };
   if (
     !sameExitPrice(current.takeProfit, planned.takeProfit) ||
     !sameExitPrice(current.stopLoss, stopLoss) ||
     (planned.takeProfit !== null && current.tpOrderType !== tpType) ||
-    (stopLoss !== null && current.slOrderType !== slType)
+    (stopLoss !== null && current.slOrderType !== "market")
   ) {
     await runFuturesCommand({
       actor: {

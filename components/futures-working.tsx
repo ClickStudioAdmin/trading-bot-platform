@@ -11,6 +11,7 @@ import { FuturesWorkingEdit } from "@/components/futures-working-edit";
 import { cancelFuturesWorking } from "@/lib/futures/actions";
 import {
   workingSideLabel,
+  sortFuturesWorkingRows,
   workingTypeLabel,
   type FuturesWorkingOrder,
 } from "@/lib/futures/working";
@@ -41,6 +42,7 @@ export function FuturesWorkingOrders({
 }) {
   const showOrderMeta = !playbookOwnsOrders;
   const colSpan = showOrderMeta ? 11 : 8;
+  const rows = sortFuturesWorkingRows(working);
   return (
     <section>
       <div className="mb-3 flex items-end justify-between gap-3">
@@ -161,7 +163,7 @@ export function FuturesWorkingOrders({
                 </td>
               </tr>
             ) : (
-              working.map((row) => (
+              rows.map((row) => (
                 <WorkingRow
                   key={row.id}
                   row={row}
