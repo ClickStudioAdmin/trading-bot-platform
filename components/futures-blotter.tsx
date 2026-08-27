@@ -220,7 +220,7 @@ export function OpenFuturesTrades({
                     label="TP/SL"
                     hint={
                       playbookOwnsOrders
-                        ? "Take profit and stop loss the playbook writes on this row. Change them on Automations."
+                        ? "Recipe take profit / stop on this row. Faint is the target from Automations. Colour means it is resting on the position."
                         : "Take profit and stop loss on this row. Market fills when the trigger hits. Limit rests until mark can fill. Add when the position is open, or attach them on the order ticket."
                     }
                   />
@@ -232,7 +232,7 @@ export function OpenFuturesTrades({
                     label="Trailing"
                     hint={
                       playbookOwnsOrders
-                        ? "Retracement the playbook attaches on this row. Change it on Automations."
+                        ? "Retracement from Automations. Faint is the recipe distance. Green means it is attached on this row."
                         : "Retracement distance from the best price since activation. Closes the whole row at market. Add on the ticket or here."
                     }
                   />
@@ -591,6 +591,10 @@ function OpenFuturesRows({
             liqPrice={trade.liqPrice}
             next={next}
             readOnly={playbookOwnsOrders}
+            plannedTakeProfit={dcaHint?.plannedTakeProfit ?? null}
+            plannedStopLoss={dcaHint?.plannedStopLoss ?? null}
+            plannedTpOrderType={dcaHint?.takeProfitOrderType}
+            plannedSlOrderType={dcaHint?.stopLossOrderType}
           />
         </td>
       ) : null}
@@ -608,6 +612,7 @@ function OpenFuturesRows({
             liqPrice={trade.liqPrice}
             next={next}
             readOnly={playbookOwnsOrders}
+            plannedTrailing={dcaHint?.plannedTrailing ?? null}
           />
         </td>
       ) : null}

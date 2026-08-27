@@ -320,6 +320,8 @@ if (parsed.ok) {
   assert.equal(parsed.config.startKind, "immediate");
   assert.equal(parsed.config.dcaMode, "position");
   assert.equal(parsed.config.sizeMultiplier, 1);
+  assert.equal(parsed.config.takeProfitOrderType, "market");
+  assert.equal(parsed.config.stopLossOrderType, "market");
 }
 
 const bothForm = new FormData();
@@ -662,6 +664,36 @@ assert.equal(
     orders: [{ action: "buy" }],
   })?.orders,
   "1/20",
+);
+const withExit = parseDcaPlaybookRow({
+  id: "pb-1",
+  user_id: "user-1",
+  account_id: "acc-1",
+  name: "Desk DCA",
+  symbol: "BTCUSDT",
+  direction: "long",
+  clip_size: "0.01",
+  size_unit: "qty",
+  take_profit_pct: 10,
+  stop_loss_pct: 5,
+  take_profit_order_type: "limit",
+  long_status: "armed",
+  long_clips_filled: 1,
+  long_last_clip_price: "100",
+  long_last_clip_at: "2026-08-27T00:00:00.000Z",
+  long_first_fill_price: "100",
+});
+assert.ok(withExit);
+assert.equal(withExit.takeProfitOrderType, "limit");
+assert.equal(
+  dcaOpenHint({
+    playbook: withExit,
+    symbol: "BTCUSDT",
+    side: "long",
+    entryPrice: 100,
+    mark: 100,
+  })?.plannedTakeProfit,
+  100 * (1 + 10 / 100),
 );
 
 console.log("dca playbook checks passed");

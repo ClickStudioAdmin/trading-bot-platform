@@ -30,6 +30,8 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     stop_loss_pct: config.stopLossPct,
     take_profit_basis: config.takeProfitBasis,
     stop_loss_basis: config.stopLossBasis,
+    take_profit_order_type: config.takeProfitOrderType,
+    stop_loss_order_type: config.stopLossOrderType,
     breakeven_activation_pct: config.breakevenActivationPct,
     breakeven_offset_pct: config.breakevenOffsetPct,
     trailing_trigger_pct: config.trailingTriggerPct,

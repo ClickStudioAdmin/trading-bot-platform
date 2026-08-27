@@ -3,6 +3,8 @@ import {
   parseFuturesSide,
   parseFuturesSizeUnit,
   parseFuturesSymbol,
+  parseFuturesOrderType,
+  type FuturesOrderType,
   type FuturesSide,
   type FuturesTrigger,
 } from "@/lib/futures/model";
@@ -13,7 +15,7 @@ import {
 } from "@/lib/futures/automation";
 import { parseFuturesTrigger } from "@/lib/futures/tpsl";
 import { futuresPnlUsdt } from "@/lib/futures/math";
-import { dcaDipPctAt } from "./grid";
+import { dcaDipPctAt, dcaPlannedExits } from "./grid";
 import {
   indicatorStartMet,
   type DcaIndicatorKind,
@@ -61,6 +63,8 @@ export type DcaPlaybookConfig = {
   stopLossPct: number | null;
   takeProfitBasis: DcaExitBasis;
   stopLossBasis: DcaExitBasis;
+  takeProfitOrderType: FuturesOrderType;
+  stopLossOrderType: FuturesOrderType;
   breakevenActivationPct: number | null;
   breakevenOffsetPct: number | null;
   trailingTriggerPct: number | null;
@@ -139,6 +143,11 @@ export function parseDcaStartKind(value: unknown): DcaStartKind {
 
 export function parseDcaMode(value: unknown): DcaMode {
   return value === "order" ? "order" : "position";
+}
+
+export function parseDcaExitOrderType(value: unknown): FuturesOrderType {
+  const parsed = parseFuturesOrderType(value);
+  return parsed.ok ? parsed.orderType : "market";
 }
 
 export type DcaAveragingKind = "dip" | "interval";
@@ -287,6 +296,11 @@ export function dcaLegFor(
 
 export type DcaOpenHint = {
   orders: string;
+  plannedTakeProfit: number | null;
+  plannedStopLoss: number | null;
+  plannedTrailing: number | null;
+  takeProfitOrderType: FuturesOrderType;
+  stopLossOrderType: FuturesOrderType;
 };
 
 export function dcaHintKey(symbol: string, side: FuturesSide): string {
@@ -594,6 +608,8 @@ export function parseDcaPlaybookForm(
       stopLossPct: stopLossPct.value,
       takeProfitBasis: parseDcaExitBasis(form.get("takeProfitBasis")),
       stopLossBasis: parseDcaExitBasis(form.get("stopLossBasis")),
+      takeProfitOrderType: parseDcaExitOrderType(form.get("takeProfitOrderType")),
+      stopLossOrderType: parseDcaExitOrderType(form.get("stopLossOrderType")),
       breakevenActivationPct: breakevenActivationPct.value,
       breakevenOffsetPct: breakevenOffsetPct.value,
       trailingTriggerPct: trailingTriggerPct.value,
@@ -686,6 +702,8 @@ export function parseDcaPlaybookRow(
     stopLossPct: asPositiveOrNull(row.stop_loss_pct),
     takeProfitBasis: parseDcaExitBasis(row.take_profit_basis),
     stopLossBasis: parseDcaExitBasis(row.stop_loss_basis),
+    takeProfitOrderType: parseDcaExitOrderType(row.take_profit_order_type),
+    stopLossOrderType: parseDcaExitOrderType(row.stop_loss_order_type),
     breakevenActivationPct: asPositiveOrNull(row.breakeven_activation_pct),
     breakevenOffsetPct:
       row.breakeven_offset_pct == null || row.breakeven_offset_pct === ""
@@ -1233,6 +1251,8 @@ export function dcaOpenHint(input: {
   symbol: string;
   side: FuturesSide;
   orders?: readonly { action: string }[];
+  entryPrice?: number | null;
+  mark?: number | null;
 }): DcaOpenHint | null {
   if (input.playbook.symbol !== input.symbol) {
     return null;
@@ -1245,11 +1265,27 @@ export function dcaOpenHint(input: {
     return null;
   }
   const filled = dcaFilledClipCount(input.orders) ?? leg.clipsFilled;
+  const planned = dcaPlannedExits({
+    side: input.side,
+    entryPrice: input.entryPrice ?? null,
+    firstFillPrice: leg.firstFillPrice,
+    mark: input.mark ?? null,
+    takeProfitPct: input.playbook.takeProfitPct,
+    stopLossPct: input.playbook.stopLossPct,
+    takeProfitBasis: input.playbook.takeProfitBasis,
+    stopLossBasis: input.playbook.stopLossBasis,
+    trailingPct: input.playbook.trailingPct,
+  });
   return {
     orders: formatDcaOrdersProgress({
       filled,
       maxClips: input.playbook.maxClips,
     }),
+    plannedTakeProfit: planned.takeProfit,
+    plannedStopLoss: planned.stopLoss,
+    plannedTrailing: planned.trailingStop,
+    takeProfitOrderType: input.playbook.takeProfitOrderType,
+    stopLossOrderType: input.playbook.stopLossOrderType,
   };
 }
 
@@ -1259,6 +1295,8 @@ export function dcaHintsForOpen(
     symbol: string;
     side: FuturesSide;
     orders?: readonly { action: string }[];
+    entryPrice?: number | null;
+    mark?: number | null;
   }>,
 ): Record<string, DcaOpenHint> {
   const hints: Record<string, DcaOpenHint> = {};
@@ -1272,6 +1310,8 @@ export function dcaHintsForOpen(
       symbol: row.symbol,
       side: row.side,
       orders: row.orders,
+      entryPrice: row.entryPrice,
+      mark: row.mark,
     });
     if (hint) {
       hints[dcaHintKey(row.symbol, row.side)] = hint;

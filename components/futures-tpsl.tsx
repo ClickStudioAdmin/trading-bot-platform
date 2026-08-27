@@ -93,6 +93,10 @@ export function FuturesTpslCell({
   slLimitPrice,
   next,
   readOnly = false,
+  plannedTakeProfit = null,
+  plannedStopLoss = null,
+  plannedTpOrderType,
+  plannedSlOrderType,
 }: {
   positionId: string;
   symbol: string;
@@ -115,17 +119,37 @@ export function FuturesTpslCell({
   slLimitPrice: number | null;
   next: string;
   readOnly?: boolean;
+  plannedTakeProfit?: number | null;
+  plannedStopLoss?: number | null;
+  plannedTpOrderType?: FuturesOrderType;
+  plannedSlOrderType?: FuturesOrderType;
 }) {
   const [open, setOpen] = useState(false);
-  const hasLevels = takeProfit !== null || stopLoss !== null;
+  const liveTakeProfit = takeProfit;
+  const liveStopLoss = stopLoss;
+  const displayTakeProfit = liveTakeProfit ?? plannedTakeProfit;
+  const displayStopLoss = liveStopLoss ?? plannedStopLoss;
+  const plannedLevels =
+    displayTakeProfit !== null || displayStopLoss !== null;
+  const liveLevels = liveTakeProfit !== null || liveStopLoss !== null;
   if (readOnly) {
-    return hasLevels ? (
+    return plannedLevels ? (
       <TpslPair
-        takeProfit={takeProfit}
-        stopLoss={stopLoss}
+        takeProfit={displayTakeProfit}
+        stopLoss={displayStopLoss}
         mode={tpslMode}
-        tpOrderType={tpOrderType}
-        slOrderType={slOrderType}
+        tpOrderType={
+          liveTakeProfit !== null
+            ? tpOrderType
+            : (plannedTpOrderType ?? tpOrderType)
+        }
+        slOrderType={
+          liveStopLoss !== null
+            ? slOrderType
+            : (plannedSlOrderType ?? slOrderType)
+        }
+        tpTone={liveTakeProfit !== null ? "live" : "planned"}
+        slTone={liveStopLoss !== null ? "live" : "planned"}
       />
     ) : (
       <span className="text-ink-faint">—</span>
@@ -133,7 +157,7 @@ export function FuturesTpslCell({
   }
   return (
     <>
-      {hasLevels ? (
+      {liveLevels ? (
         <span className="flex items-center gap-1.5">
           <TpslPair
             takeProfit={takeProfit}
@@ -195,12 +219,16 @@ export function TpslPair({
   mode,
   tpOrderType,
   slOrderType,
+  tpTone = "live",
+  slTone = "live",
 }: {
   takeProfit: number | null;
   stopLoss: number | null;
   mode?: FuturesTpslMode;
   tpOrderType?: FuturesOrderType;
   slOrderType?: FuturesOrderType;
+  tpTone?: "live" | "planned";
+  slTone?: "live" | "planned";
 }) {
   const limited =
     (takeProfit !== null && tpOrderType === "limit") ||
@@ -208,11 +236,15 @@ export function TpslPair({
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className="tabular-nums">
-        <span className="text-success">
+        <span
+          className={tpTone === "planned" ? "text-ink-faint" : "text-success"}
+        >
           {takeProfit === null ? "--" : formatPrice(takeProfit)}
         </span>
         <span className="text-ink-faint"> / </span>
-        <span className="text-danger">
+        <span
+          className={slTone === "planned" ? "text-ink-faint" : "text-danger"}
+        >
           {stopLoss === null ? "--" : formatPrice(stopLoss)}
         </span>
       </span>

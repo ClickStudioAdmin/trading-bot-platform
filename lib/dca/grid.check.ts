@@ -9,6 +9,7 @@ import {
   dcaLadderProfitRange,
   dcaLastClipDeviationPct,
   dcaMaxDropCoveredPct,
+  dcaPlannedExits,
   dcaRequiredUsdt,
   dcaSafetyPrices,
   dcaStopLossPrice,
@@ -197,6 +198,34 @@ assert.equal(
   99,
 );
 assert.equal(dcaTrailingDistance(100, 2), 2);
+const planned = dcaPlannedExits({
+  side: "long",
+  entryPrice: 100,
+  firstFillPrice: 100,
+  mark: 100,
+  takeProfitPct: 10,
+  stopLossPct: 5,
+  takeProfitBasis: "average",
+  stopLossBasis: "average",
+  trailingPct: 2,
+});
+assert.equal(planned.takeProfit, 100 * (1 + 10 / 100));
+assert.equal(planned.stopLoss, 95);
+assert.equal(planned.trailingStop, 2);
+assert.deepEqual(
+  dcaPlannedExits({
+    side: "long",
+    entryPrice: null,
+    firstFillPrice: null,
+    mark: null,
+    takeProfitPct: 10,
+    stopLossPct: 5,
+    takeProfitBasis: "average",
+    stopLossBasis: "average",
+    trailingPct: 2,
+  }),
+  { takeProfit: null, stopLoss: null, trailingStop: null },
+);
 assert.equal(
   dcaTrailingActivationPrice({
     side: "long",

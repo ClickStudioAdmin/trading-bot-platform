@@ -171,6 +171,57 @@ export function dcaStopLossPrice(input: {
     : basis * (1 + input.stopLossPct / 100);
 }
 
+export function dcaPlannedExits(input: {
+  side: FuturesSide;
+  entryPrice: number | null;
+  firstFillPrice: number | null;
+  mark: number | null;
+  takeProfitPct: number | null;
+  stopLossPct: number | null;
+  takeProfitBasis: "average" | "first_entry";
+  stopLossBasis: "average" | "first_entry";
+  trailingPct: number | null;
+}): {
+  takeProfit: number | null;
+  stopLoss: number | null;
+  trailingStop: number | null;
+} {
+  const entry = input.entryPrice;
+  const first = input.firstFillPrice ?? entry;
+  const takeProfit =
+    input.takeProfitPct !== null &&
+    first !== null &&
+    entry !== null
+      ? dcaTakeProfitPrice({
+          side: input.side,
+          firstPrice: first,
+          averagePrice: entry,
+          takeProfitPct: input.takeProfitPct,
+          takeProfitBasis: input.takeProfitBasis,
+        })
+      : null;
+  const stopLoss =
+    input.stopLossPct !== null && first !== null && entry !== null
+      ? dcaStopLossPrice({
+          side: input.side,
+          firstPrice: first,
+          averagePrice: entry,
+          stopLossPct: input.stopLossPct,
+          stopLossBasis: input.stopLossBasis,
+        })
+      : null;
+  const trailFrom = input.mark ?? entry;
+  const trailingStop =
+    input.trailingPct !== null && trailFrom !== null && trailFrom > 0
+      ? dcaTrailingDistance(trailFrom, input.trailingPct)
+      : null;
+  return {
+    takeProfit,
+    stopLoss,
+    trailingStop: trailingStop !== null && trailingStop > 0 ? trailingStop : null,
+  };
+}
+
 export function dcaLadderLossUsdt(input: {
   side: FuturesSide;
   qty: number;

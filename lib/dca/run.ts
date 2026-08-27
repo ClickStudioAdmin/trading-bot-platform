@@ -19,6 +19,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import {
   dcaBreakevenPrice,
   dcaClipSizeAt,
+  dcaPlannedExits,
   dcaSafetyPrices,
   dcaTrailingActivationPrice,
   dcaTrailingDistance,
@@ -247,7 +248,96 @@ async function placeClip(input: {
       entryPrice: input.lastPrice,
     });
   }
+  await syncDcaPlaybookExits({
+    playbook: input.playbook,
+    mode: input.mode,
+    side: input.side,
+    lastPrice: input.lastPrice,
+  });
   return { ok: true };
+}
+
+function sameExitPrice(left: number | null, right: number | null): boolean {
+  if (left === null && right === null) {
+    return true;
+  }
+  if (left === null || right === null) {
+    return false;
+  }
+  return Math.abs(left - right) < 1e-8;
+}
+
+export async function syncDcaPlaybookExits(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+  side: FuturesSide;
+  lastPrice: number | null;
+}): Promise<void> {
+  const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
+    accountId: input.playbook.accountId,
+    userId: input.playbook.userId,
+  });
+  const open = opens.find((row) => row.side === input.side);
+  if (!open) {
+    return;
+  }
+  const leg = dcaLegFor(input.playbook, input.side);
+  const planned = dcaPlannedExits({
+    side: input.side,
+    entryPrice: open.entryPrice,
+    firstFillPrice: leg.firstFillPrice,
+    mark: input.lastPrice,
+    takeProfitPct: input.playbook.takeProfitPct,
+    stopLossPct: input.playbook.stopLossPct,
+    takeProfitBasis: input.playbook.takeProfitBasis,
+    stopLossBasis: input.playbook.stopLossBasis,
+    trailingPct: input.playbook.trailingPct,
+  });
+  const stopLoss = leg.breakevenDone
+    ? dcaBreakevenPrice({
+        side: input.side,
+        basisPrice: open.entryPrice,
+        offsetPct: input.playbook.breakevenOffsetPct ?? 0,
+      })
+    : planned.stopLoss;
+  const current = tpslFromRow(open) ?? emptyFuturesTpsl();
+  const tpType =
+    planned.takeProfit === null ? "market" : input.playbook.takeProfitOrderType;
+  const slType = stopLoss === null ? "market" : input.playbook.stopLossOrderType;
+  if (
+    sameExitPrice(current.takeProfit, planned.takeProfit) &&
+    sameExitPrice(current.stopLoss, stopLoss) &&
+    (planned.takeProfit === null || current.tpOrderType === tpType) &&
+    (stopLoss === null || current.slOrderType === slType)
+  ) {
+    return;
+  }
+  await runFuturesCommand({
+    actor: {
+      userId: input.playbook.userId,
+      accountId: input.playbook.accountId,
+      mode: input.mode,
+    },
+    command: {
+      kind: "set-tpsl",
+      positionId: open.id,
+      symbol: input.playbook.symbol,
+      form: new FormData(),
+      tpsl: {
+        ...current,
+        takeProfit: planned.takeProfit,
+        stopLoss,
+        tpOrderType: tpType,
+        slOrderType: slType,
+        tpLimitPrice:
+          planned.takeProfit !== null && tpType === "limit"
+            ? planned.takeProfit
+            : null,
+        slLimitPrice:
+          stopLoss !== null && slType === "limit" ? stopLoss : null,
+      },
+    },
+  });
 }
 
 async function flattenSide(input: {
@@ -318,8 +408,9 @@ async function moveStopToBreakeven(input: {
       tpsl: {
         ...current,
         stopLoss: stop,
-        slOrderType: "market",
-        slLimitPrice: null,
+        slOrderType: input.playbook.stopLossOrderType,
+        slLimitPrice:
+          input.playbook.stopLossOrderType === "limit" ? stop : null,
       },
     },
   });
@@ -558,5 +649,6 @@ export {
   placeClip,
   flattenSide as flattenPlaybook,
   moveStopToBreakeven,
+  syncDcaPlaybookExits,
   cancelSafetyOrders,
 };

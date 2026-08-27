@@ -22,6 +22,7 @@ import {
   flattenPlaybook,
   moveStopToBreakeven,
   placeClip,
+  syncDcaPlaybookExits,
 } from "./run";
 import {
   listDcaPlaybooks,
@@ -240,6 +241,12 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
       if (result.acted) {
         acted += 1;
       }
+      await syncDcaPlaybookExits({
+        playbook,
+        mode: account.mode,
+        side,
+        lastPrice: prices.last,
+      });
     }
   }
   return { acted };
