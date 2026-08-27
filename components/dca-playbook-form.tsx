@@ -305,6 +305,8 @@ export function DcaPlaybookForm({
   const showClosePlaybook = liveLegs.some(
     (leg) => leg.clipsFilled > 0 || leg.status === "stop_adding",
   );
+  const showManualTriggers = startKind === "immediate";
+  const showArmButton = startKind === "price" || startKind === "indicator";
   const effectiveMaxType: DcaMaxType = restGrid ? "orders" : maxType;
   const summary = useMemo(() => {
     const orderCap = asNumber(maxClips);
@@ -450,7 +452,7 @@ export function DcaPlaybookForm({
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           {playbook ? (
             <>
-              {startKind === "immediate" ? (
+              {showManualTriggers ? (
                 (
                   [
                     {
@@ -494,7 +496,8 @@ export function DcaPlaybookForm({
                     </button>
                   );
                 })
-              ) : showStopAdding ? (
+              ) : null}
+              {showArmButton && showStopAdding ? (
                 <div className="inline-flex overflow-hidden rounded-control border border-line bg-surface">
                   <PendingSubmitButton
                     formAction={runDcaPlaybookVerb}
@@ -523,7 +526,8 @@ export function DcaPlaybookForm({
                     </PendingSubmitButton>
                   </span>
                 </div>
-              ) : (
+              ) : null}
+              {showArmButton && !showStopAdding ? (
                 <PendingSubmitButton
                   formAction={runDcaPlaybookVerb}
                   name="verb"
@@ -534,8 +538,9 @@ export function DcaPlaybookForm({
                 >
                   Arm
                 </PendingSubmitButton>
-              )}
-              {startKind === "immediate" && showStopAdding ? (
+              ) : null}
+              {(showManualTriggers || startKind === "webhook") &&
+              showStopAdding ? (
                 <span
                   className="inline-flex"
                   title="Stop adding any new orders (also cancels any existing entry limit orders)"
@@ -660,20 +665,25 @@ export function DcaPlaybookForm({
           ) : null}
           {startKind === "webhook" ? (
             signalWebhooks.length > 0 ? (
-              <label className={`${labelClass} lg:col-span-2`}>
-                Signal
-                <select
-                  name="webhookId"
-                  defaultValue={playbook?.webhookId ?? signalWebhooks[0]?.id}
-                  className={fieldClass}
-                >
-                  {signalWebhooks.map((row) => (
-                    <option key={row.id} value={row.id}>
-                      {row.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <>
+                <label className={`${labelClass} lg:col-span-2`}>
+                  Signal
+                  <select
+                    name="webhookId"
+                    defaultValue={playbook?.webhookId ?? signalWebhooks[0]?.id}
+                    className={fieldClass}
+                  >
+                    {signalWebhooks.map((row) => (
+                      <option key={row.id} value={row.id}>
+                        {row.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="self-end text-xs text-ink-muted sm:col-span-2">
+                  Save first. Then arm from the bound Signal.
+                </p>
+              </>
             ) : (
               <p className="self-end text-xs text-ink-muted lg:col-span-3">
                 Create a Signal on{" "}
