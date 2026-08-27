@@ -77,6 +77,40 @@ function asNumber(text: string): number | null {
   return value > 0 && Number.isFinite(value) ? value : null;
 }
 
+function PercentInput({
+  name,
+  value,
+  defaultValue,
+  onChange,
+  placeholder,
+  ariaLabel,
+}: {
+  name: string;
+  value?: string;
+  defaultValue?: string;
+  onChange?: (next: string) => void;
+  placeholder?: string;
+  ariaLabel?: string;
+}) {
+  return (
+    <span className="relative mt-0.5 block">
+      <GroupedNumberInput
+        name={name}
+        value={value}
+        defaultValue={defaultValue}
+        onChange={onChange}
+        allowDecimal
+        placeholder={placeholder}
+        ariaLabel={ariaLabel}
+        className={`${fieldClass} mt-0 pr-7`}
+      />
+      <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+        %
+      </span>
+    </span>
+  );
+}
+
 type DcaSummaryPreview = {
   covered: number | null;
   lastDev: number | null;
@@ -956,13 +990,12 @@ export function DcaPlaybookForm({
             {averaging === "dip" ? (
               <label className={labelClass}>
                 Price deviation %
-                <GroupedNumberInput
+                <PercentInput
                   name="dipPct"
                   value={dipPct}
                   onChange={setDipPct}
-                  allowDecimal
-                  className={fieldClass}
                   placeholder="Off"
+                  ariaLabel="Price deviation percent"
                 />
               </label>
             ) : null}
@@ -1081,13 +1114,12 @@ export function DcaPlaybookForm({
             <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
               <label className={labelClass}>
                 Take profit target
-                <GroupedNumberInput
+                <PercentInput
                   name="takeProfitPct"
                   value={takeProfitPct}
                   onChange={setTakeProfitPct}
-                  allowDecimal
-                  className={fieldClass}
                   placeholder="Off"
+                  ariaLabel="Take profit target percent"
                 />
               </label>
               <label className={labelClass}>
@@ -1127,12 +1159,11 @@ export function DcaPlaybookForm({
                   label="Trigger %"
                   hint="The trailing stop will be triggered once the price moves by this %."
                 />
-                <GroupedNumberInput
+                <PercentInput
                   name="trailingTriggerPct"
                   defaultValue={optional(playbook?.trailingTriggerPct)}
-                  allowDecimal
-                  className={fieldClass}
                   placeholder="Off"
+                  ariaLabel="Trailing trigger percent"
                 />
               </label>
               <label className={labelClass}>
@@ -1140,12 +1171,11 @@ export function DcaPlaybookForm({
                   label="Trailing %"
                   hint="The % from the price where the stop will be placed."
                 />
-                <GroupedNumberInput
+                <PercentInput
                   name="trailingPct"
                   defaultValue={optional(playbook?.trailingPct)}
-                  allowDecimal
-                  className={fieldClass}
                   placeholder="Off"
+                  ariaLabel="Trailing percent"
                 />
               </label>
             </div>
@@ -1157,13 +1187,12 @@ export function DcaPlaybookForm({
             <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
               <label className={labelClass}>
                 Stop loss %
-                <GroupedNumberInput
+                <PercentInput
                   name="stopLossPct"
                   value={stopLossPct}
                   onChange={setStopLossPct}
-                  allowDecimal
-                  className={fieldClass}
                   placeholder="Off"
+                  ariaLabel="Stop loss percent"
                 />
               </label>
               <label className={labelClass}>
@@ -1182,22 +1211,20 @@ export function DcaPlaybookForm({
               </label>
               <label className={labelClass}>
                 Move stop to breakeven at %
-                <GroupedNumberInput
+                <PercentInput
                   name="breakevenActivationPct"
                   defaultValue={optional(playbook?.breakevenActivationPct)}
-                  allowDecimal
-                  className={fieldClass}
                   placeholder="Off"
+                  ariaLabel="Move stop to breakeven at percent"
                 />
               </label>
               <label className={labelClass}>
                 Breakeven offset %
-                <GroupedNumberInput
+                <PercentInput
                   name="breakevenOffsetPct"
                   defaultValue={optional(playbook?.breakevenOffsetPct)}
-                  allowDecimal
-                  className={fieldClass}
                   placeholder="0"
+                  ariaLabel="Breakeven offset percent"
                 />
               </label>
             </div>
