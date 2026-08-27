@@ -564,89 +564,103 @@ export function DcaPlaybookForm({
         <legend className="px-1 text-xs font-medium uppercase tracking-wide text-ink-muted">
           Exit
         </legend>
-        <div className={rowClass}>
-          <label className={labelClass}>
-            Take profit %
-            <GroupedNumberInput
-              name="takeProfitPct"
-              defaultValue={optional(playbook?.takeProfitPct)}
-              allowDecimal
-              className={fieldClass}
-              placeholder="Off"
-            />
-          </label>
-          <label className={labelClass}>
-            vs
-            <select
-              name="takeProfitBasis"
-              defaultValue={playbook?.takeProfitBasis ?? "average"}
-              className={fieldClass}
-            >
-              <option value="average">Average entry</option>
-              <option value="first_entry">First fill</option>
-            </select>
-          </label>
-          <label className={labelClass}>
-            Stop loss %
-            <GroupedNumberInput
-              name="stopLossPct"
-              defaultValue={optional(playbook?.stopLossPct)}
-              allowDecimal
-              className={fieldClass}
-              placeholder="Off"
-            />
-          </label>
-          <label className={labelClass}>
-            vs
-            <select
-              name="stopLossBasis"
-              defaultValue={playbook?.stopLossBasis ?? "average"}
-              className={fieldClass}
-            >
-              <option value="average">Average entry</option>
-              <option value="first_entry">First fill</option>
-            </select>
-          </label>
-          <label className={labelClass}>
-            Move stop to breakeven at %
-            <GroupedNumberInput
-              name="breakevenActivationPct"
-              defaultValue={optional(playbook?.breakevenActivationPct)}
-              allowDecimal
-              className={fieldClass}
-              placeholder="Off"
-            />
-          </label>
-          <label className={labelClass}>
-            Breakeven offset %
-            <GroupedNumberInput
-              name="breakevenOffsetPct"
-              defaultValue={optional(playbook?.breakevenOffsetPct)}
-              allowDecimal
-              className={fieldClass}
-              placeholder="0"
-            />
-          </label>
-          <label className={labelClass}>
-            Trail after profit %
-            <GroupedNumberInput
-              name="trailingTriggerPct"
-              defaultValue={optional(playbook?.trailingTriggerPct)}
-              allowDecimal
-              className={fieldClass}
-              placeholder="Off"
-            />
-          </label>
-          <label className={labelClass}>
-            Trail %
-            <GroupedNumberInput
-              name="trailingPct"
-              defaultValue={optional(playbook?.trailingPct)}
-              allowDecimal
-              className={fieldClass}
-              placeholder="Off"
-            />
-          </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2 rounded-card border border-line px-3 py-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+              Take profit
+            </p>
+            <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+              <label className={labelClass}>
+                Take profit %
+                <GroupedNumberInput
+                  name="takeProfitPct"
+                  defaultValue={optional(playbook?.takeProfitPct)}
+                  allowDecimal
+                  className={fieldClass}
+                  placeholder="Off"
+                />
+              </label>
+              <label className={labelClass}>
+                vs
+                <select
+                  name="takeProfitBasis"
+                  defaultValue={playbook?.takeProfitBasis ?? "average"}
+                  className={fieldClass}
+                >
+                  <option value="average">Average entry</option>
+                  <option value="first_entry">First fill</option>
+                </select>
+              </label>
+              <label className={labelClass}>
+                Trail after profit %
+                <GroupedNumberInput
+                  name="trailingTriggerPct"
+                  defaultValue={optional(playbook?.trailingTriggerPct)}
+                  allowDecimal
+                  className={fieldClass}
+                  placeholder="Off"
+                />
+              </label>
+              <label className={labelClass}>
+                Trail %
+                <GroupedNumberInput
+                  name="trailingPct"
+                  defaultValue={optional(playbook?.trailingPct)}
+                  allowDecimal
+                  className={fieldClass}
+                  placeholder="Off"
+                />
+              </label>
+            </div>
+          </div>
+          <div className="space-y-2 rounded-card border border-line px-3 py-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+              Stop loss
+            </p>
+            <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+              <label className={labelClass}>
+                Stop loss %
+                <GroupedNumberInput
+                  name="stopLossPct"
+                  defaultValue={optional(playbook?.stopLossPct)}
+                  allowDecimal
+                  className={fieldClass}
+                  placeholder="Off"
+                />
+              </label>
+              <label className={labelClass}>
+                vs
+                <select
+                  name="stopLossBasis"
+                  defaultValue={playbook?.stopLossBasis ?? "average"}
+                  className={fieldClass}
+                >
+                  <option value="average">Average entry</option>
+                  <option value="first_entry">First fill</option>
+                </select>
+              </label>
+              <label className={labelClass}>
+                Move stop to breakeven at %
+                <GroupedNumberInput
+                  name="breakevenActivationPct"
+                  defaultValue={optional(playbook?.breakevenActivationPct)}
+                  allowDecimal
+                  className={fieldClass}
+                  placeholder="Off"
+                />
+              </label>
+              <label className={labelClass}>
+                Breakeven offset %
+                <GroupedNumberInput
+                  name="breakevenOffsetPct"
+                  defaultValue={optional(playbook?.breakevenOffsetPct)}
+                  allowDecimal
+                  className={fieldClass}
+                  placeholder="0"
+                />
+              </label>
+            </div>
+          </div>
         </div>
         <div className={rowClass}>
           <label className="flex items-center gap-2 self-end pb-1.5 text-xs text-ink">
