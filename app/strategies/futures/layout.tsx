@@ -112,9 +112,8 @@ export default async function FuturesLayout({
                 }
             : {
                 name: formatAccountMode("paper"),
-                venue: null,
+                venue: "Bybit",
                 connected: true,
-                overline: "Book",
                 href: FUTURES_PATHS.settings,
               }
         }

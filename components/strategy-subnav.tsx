@@ -60,7 +60,7 @@ export function StrategySubnav({
   return (
     <div className="mx-auto max-w-7xl px-6 pt-8">
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
             <Link href="/strategies" className="hover:text-accent-strong">
               Desks
@@ -72,7 +72,7 @@ export function StrategySubnav({
           <p className="mt-1 text-sm text-ink-muted">{description}</p>
         </div>
         {connection || status ? (
-          <div className="mt-6 flex max-w-[min(100%,32rem)] flex-wrap items-start justify-end gap-2">
+          <div className="mt-6 flex shrink-0 items-start justify-end gap-2">
             {connection ? (
               <AccountSnapshotHover
                 snapshot={

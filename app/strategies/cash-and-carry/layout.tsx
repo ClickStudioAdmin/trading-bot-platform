@@ -75,9 +75,8 @@ export default async function CashAndCarryLayout({
                 }
             : {
                 name: formatAccountMode("paper"),
-                venue: null,
+                venue: "Bybit",
                 connected: true,
-                overline: "Book",
                 href: "/strategies/cash-and-carry/settings",
               }
         }
