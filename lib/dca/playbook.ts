@@ -286,8 +286,7 @@ export function dcaLegFor(
 }
 
 export type DcaOpenHint = {
-  clips: number;
-  remaining: string;
+  orders: string;
 };
 
 export function dcaHintKey(symbol: string, side: FuturesSide): string {
@@ -1153,6 +1152,17 @@ export function formatDcaNextAdd(input: {
   return input.lastClipAtMs === null ? "First order" : "Wait for TP/SL";
 }
 
+export function formatDcaOrdersProgress(input: {
+  filled: number;
+  maxClips: number | null;
+}): string {
+  const filled = Math.max(0, input.filled);
+  if (input.maxClips !== null) {
+    return `${filled}/${input.maxClips}`;
+  }
+  return String(filled);
+}
+
 export function formatDcaRemaining(input: {
   clipsFilled: number;
   maxClips: number | null;
@@ -1207,12 +1217,22 @@ export function dcaPlaybookStatusLabel(playbook: DcaPlaybook): string {
     .join(" · ");
 }
 
+export function dcaFilledClipCount(
+  orders: readonly { action: string }[] | undefined,
+): number | null {
+  if (!orders) {
+    return null;
+  }
+  return orders.filter(
+    (row) => row.action === "buy" || row.action === "sell",
+  ).length;
+}
+
 export function dcaOpenHint(input: {
   playbook: DcaPlaybook;
   symbol: string;
   side: FuturesSide;
-  qty: number;
-  mark: number | null;
+  orders?: readonly { action: string }[];
 }): DcaOpenHint | null {
   if (input.playbook.symbol !== input.symbol) {
     return null;
@@ -1224,15 +1244,11 @@ export function dcaOpenHint(input: {
   if (leg.status === "idle") {
     return null;
   }
-  const markValue =
-    input.mark !== null && input.qty > 0 ? input.qty * input.mark : null;
+  const filled = dcaFilledClipCount(input.orders) ?? leg.clipsFilled;
   return {
-    clips: leg.clipsFilled,
-    remaining: formatDcaRemaining({
-      clipsFilled: leg.clipsFilled,
+    orders: formatDcaOrdersProgress({
+      filled,
       maxClips: input.playbook.maxClips,
-      maxValue: input.playbook.maxValue,
-      markValue,
     }),
   };
 }
@@ -1242,8 +1258,7 @@ export function dcaHintsForOpen(
   open: Array<{
     symbol: string;
     side: FuturesSide;
-    qty: number;
-    mark: number | null;
+    orders?: readonly { action: string }[];
   }>,
 ): Record<string, DcaOpenHint> {
   const hints: Record<string, DcaOpenHint> = {};
@@ -1256,8 +1271,7 @@ export function dcaHintsForOpen(
       playbook,
       symbol: row.symbol,
       side: row.side,
-      qty: row.qty,
-      mark: row.mark,
+      orders: row.orders,
     });
     if (hint) {
       hints[dcaHintKey(row.symbol, row.side)] = hint;

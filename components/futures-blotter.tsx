@@ -239,20 +239,12 @@ export function OpenFuturesTrades({
                 </th>
               ) : null}
               {showDcaColumns ? (
-                <>
-                  <th className="px-3 py-3 font-medium">
-                    <ColumnHint
-                      label="Orders"
-                      hint="How many playbook orders have filled on this row."
-                    />
-                  </th>
-                  <th className="px-2 py-3 font-medium">
-                    <ColumnHint
-                      label="Remaining"
-                      hint="Orders and USDT still allowed before the playbook stops adding. Does not flatten."
-                    />
-                  </th>
-                </>
+                <th className="px-3 py-3 font-medium">
+                  <ColumnHint
+                    label="Orders"
+                    hint="Playbook orders filled versus the max. Resting limits are not filled yet."
+                  />
+                </th>
               ) : null}
               <th className="w-[8.75rem] px-2 py-3 font-medium">
                 <ColumnHint
@@ -620,14 +612,9 @@ function OpenFuturesRows({
         </td>
       ) : null}
       {showDcaColumns ? (
-        <>
-          <td className="min-w-0 px-3 py-3 tabular-nums whitespace-nowrap">
-            {dcaHint ? dcaHint.clips : "—"}
-          </td>
-          <td className="min-w-0 px-2 py-3 whitespace-nowrap text-ink-muted">
-            {dcaHint?.remaining ?? "—"}
-          </td>
-        </>
+        <td className="min-w-0 px-3 py-3 tabular-nums whitespace-nowrap">
+          {dcaHint?.orders ?? "—"}
+        </td>
       ) : null}
       <td className="px-2 py-3 whitespace-nowrap">
         <FuturesCloseActions trade={trade} next={next} />

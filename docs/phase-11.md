@@ -20,7 +20,7 @@ Current. Agent steps 1–5 are in the tree. Wait for Click’s desk test. Do not
 | 2 | Playbook store | Agent | Stacked DCA playbooks per desk (one per contract). Direction long / short / both. Start, adds, exit, and per-side runtime. Done |
 | 3 | Tick | Agent | Engine tick adds/closes through `runFuturesCommand`. Same caps, reduce-only, Close All & Cancel All. Auto badge + playbook name. Done |
 | 4 | Signals | Agent | Manual arm. Bound Signal `arm` / `disarm` / `close-playbook`. Buy / sell arms that side only. Price, indicator, or immediate start. Done |
-| 5 | UI | Agent | Create Desk → DCA. Type-locked chrome. Automations is grouped playbook cards (General / Start / Initial order / Maximum Exposure / Additional orders / Additional order multipliers / Exit / Summary). Positions show Orders / Remaining. Done |
+| 5 | UI | Agent | Create Desk → DCA. Type-locked chrome. Automations is grouped playbook cards (General / Start / Initial order / Maximum Exposure / Additional orders / Additional order multipliers / Exit / Summary). Positions show Orders as filled/max. Done |
 | 6 | Desk test | Click | Paper then Bybit Demo: arm, orders add, TP/stop, Close All & Cancel All, reduce-only. Cannot add a scale-in or Perps recipe on that desk. |
 
 Stop at the end of this phase for a desk test. Do not start scale-in ([phase-12 is not written until this phase is accepted]).
@@ -35,7 +35,7 @@ Stop at the end of this phase for a desk test. Do not start scale-in ([phase-12 
 6. Exit: take profit / stop vs average or first fill, optional move-stop-to-breakeven, optional trailing on the existing row trailing engine. Stop adding leaves the position. Close playbook flattens then returns to idle.
 7. No Buy/Sell ticket. Positions panic is **Close All & Cancel All Open Orders** only (does not idle the playbook). Reduce-only, caps, and playbook TP/SL still protect. Positions show those levels read-only; no Add/Edit on the row. No positions-only Close All, Cancel All Open Orders, or row Edit/Cancel on working limits. Open orders hide TP/SL and Trailing: those attach on the position, not each GTC. Reduce-only blocks new orders; TP/SL still run.
 8. A Signal webhook only drives playbooks bound to it, and only after Arm. TradingView **Order** webhooks are not the brain on this desk. Buy / sell on that Signal starts that side only and does not send TV size.
-9. The tick places orders and exits through `runFuturesCommand`. Opened rows show Auto plus the playbook name, plus Orders / Remaining.
+9. The tick places orders and exits through `runFuturesCommand`. Opened rows show Auto plus the playbook name, plus Orders as filled/max.
 10. Isolation is another desk **and** another trade-only key. Same-key warning copy from Phase 10 still applies.
 
 ## What this phase includes
@@ -47,7 +47,7 @@ Stop at the end of this phase for a desk test. Do not start scale-in ([phase-12 
 - Tick orders and exits on `runFuturesCommand`
 - Manual arm plus Phase 9 arm verbs, per-playbook Signal bind, buy/sell as side arm
 - Automations grouped playbook form (Add playbook)
-- Open blotter Orders / Remaining columns
+- Open blotter Orders column (filled/max)
 
 ## Out of scope
 

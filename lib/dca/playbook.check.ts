@@ -19,7 +19,9 @@ import {
   decideDcaTick,
   DEFAULT_DCA_NAME,
   formatDcaNextAdd,
+  formatDcaOrdersProgress,
   formatDcaRemaining,
+  dcaFilledClipCount,
   parseDcaPlaybookForm,
   parseDcaPlaybookId,
   parseDcaSaveIntent,
@@ -571,6 +573,16 @@ assert.equal(
   "Stopped",
 );
 assert.equal(
+  formatDcaOrdersProgress({ filled: 1, maxClips: 20 }),
+  "1/20",
+);
+assert.equal(
+  formatDcaOrdersProgress({ filled: 2, maxClips: null }),
+  "2",
+);
+assert.equal(dcaFilledClipCount(undefined), null);
+assert.equal(dcaFilledClipCount([{ action: "buy" }, { action: "flatten" }]), 1);
+assert.equal(
   formatDcaRemaining({
     clipsFilled: 2,
     maxClips: 5,
@@ -607,8 +619,6 @@ assert.equal(
     playbook: row as DcaPlaybook,
     symbol: "ETHUSDT",
     side: "long",
-    qty: 1,
-    mark: 100,
   }),
   null,
 );
@@ -617,17 +627,41 @@ assert.equal(
     playbook: row as DcaPlaybook,
     symbol: "BTCUSDT",
     side: "long",
-    qty: 0.02,
-    mark: 100,
-  })?.clips,
-  2,
+  })?.orders,
+  "2",
 );
-assert.deepEqual(
+assert.equal(
   dcaHintsForOpen(
     [row as DcaPlaybook],
-    [{ symbol: "BTCUSDT", side: "long", qty: 0.02, mark: 100 }],
-  )["BTCUSDT:long"]?.clips,
-  2,
+    [{ symbol: "BTCUSDT", side: "long" }],
+  )["BTCUSDT:long"]?.orders,
+  "2",
+);
+const capped = parseDcaPlaybookRow({
+  id: "pb-1",
+  user_id: "user-1",
+  account_id: "acc-1",
+  name: "Desk DCA",
+  symbol: "BTCUSDT",
+  direction: "long",
+  clip_size: "0.01",
+  size_unit: "qty",
+  max_clips: 20,
+  long_status: "armed",
+  long_clips_filled: 19,
+  long_last_clip_price: "100",
+  long_last_clip_at: "2026-08-27T00:00:00.000Z",
+  long_first_fill_price: "101",
+});
+assert.ok(capped);
+assert.equal(
+  dcaOpenHint({
+    playbook: capped,
+    symbol: "BTCUSDT",
+    side: "long",
+    orders: [{ action: "buy" }],
+  })?.orders,
+  "1/20",
 );
 
 console.log("dca playbook checks passed");
