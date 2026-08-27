@@ -452,7 +452,16 @@ export function dcaPlannedOrderCount(input: {
     return Math.min(Math.floor(input.maxClips), DCA_LADDER_CHECK_MAX);
   }
   if (input.maxValue !== null && input.maxValue > 0) {
-    const until = dcaClipsUntilMaxValue(input);
+    const until = dcaClipsUntilMaxValue({
+      side: input.side,
+      entryPrice: input.entryPrice,
+      maxValue: input.maxValue,
+      dipPct: input.dipPct,
+      clipSize: input.clipSize,
+      sizeUnit: input.sizeUnit,
+      sizeMultiplier: input.sizeMultiplier,
+      deviationMultiplier: input.deviationMultiplier,
+    });
     return until !== null ? Math.min(until, DCA_LADDER_CHECK_MAX) : 1;
   }
   return 1;
