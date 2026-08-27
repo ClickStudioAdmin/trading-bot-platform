@@ -978,7 +978,7 @@ export function DcaPlaybookForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <fieldset className={sectionClass}>
           <p className={sectionTitleClass}>
-            Initial order
+            Initial Order Size
           </p>
           <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
             <label className={labelClass}>
