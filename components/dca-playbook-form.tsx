@@ -841,7 +841,7 @@ export function DcaPlaybookForm({
         </div>
         {direction === "both" ? (
           <p className="text-xs text-ink-muted">
-            Long and short add independently and never flatten each other.
+            Long and Short are independent positions and never flatten each other
           </p>
         ) : null}
       </fieldset>
