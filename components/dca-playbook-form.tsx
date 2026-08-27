@@ -1005,41 +1005,49 @@ export function DcaPlaybookForm({
           <SummaryStat
             label="Profit range"
             value={
-              summary.profitRange === null
+              summary.levels.length === 0
                 ? "—"
-                : formatProfitRange(
-                    summary.profitRange.min,
-                    summary.profitRange.max,
-                  )
+                : summary.profitFromTp
+                  ? summary.profitRange === null
+                    ? "—"
+                    : formatProfitRange(
+                        summary.profitRange.min,
+                        summary.profitRange.max,
+                      )
+                  : "∞"
             }
             valueClass={
-              summary.profitRange === null ? "text-ink" : "text-success"
+              summary.levels.length === 0 ? "text-ink" : "text-success"
             }
             hint={
               summary.levels.length === 0
                 ? "Enter order size and max orders"
-                : "Does not consider trailing or breakeven stops"
+                : summary.profitFromTp
+                  ? "Does not consider trailing or breakeven stops"
+                  : "No take profit — unlimited"
             }
           />
           <SummaryStat
             label="Loss range"
             value={
-              summary.lossRange === null
+              summary.levels.length === 0
                 ? "—"
-                : formatProfitRange(
-                    summary.lossRange.min,
-                    summary.lossRange.max,
-                  )
+                : summary.lossRange === null
+                  ? "∞"
+                  : formatProfitRange(
+                      summary.lossRange.min,
+                      summary.lossRange.max,
+                    )
             }
             valueClass={
-              summary.lossRange === null ? "text-ink" : "text-danger"
+              summary.levels.length === 0 ? "text-ink" : "text-danger"
             }
             hint={
               summary.levels.length === 0
                 ? "Enter order size and max orders"
                 : summary.lossFromSl
                   ? "If stop loss hits after that fill. Does not consider trailing or breakeven stops"
-                  : "Set stop loss % to estimate"
+                  : "No stop loss — unlimited"
             }
           />
         </div>
@@ -1063,7 +1071,7 @@ export function DcaPlaybookForm({
                       hint={
                         summary.profitFromTp
                           ? "USDT if take profit hits after this order fills. Uses take profit type (average or first fill)."
-                          : "USDT if price returns to the first order after this fill. Set take profit to use the target instead."
+                          : "No take profit. Theoretical profit is unlimited."
                       }
                     />
                   </th>
@@ -1073,7 +1081,7 @@ export function DcaPlaybookForm({
                       hint={
                         summary.lossFromSl
                           ? "USDT if stop loss hits after this order fills. Uses stop loss type (average or first fill)."
-                          : "Set stop loss % to estimate the loss if it hits after this fill."
+                          : "No stop loss. Theoretical loss is unlimited."
                       }
                     />
                   </th>
@@ -1105,20 +1113,24 @@ export function DcaPlaybookForm({
                     </td>
                     <td
                       className={`px-3 py-2 tabular-nums ${
-                        row.profitUsdt > 0 ? "text-success" : "text-ink-muted"
+                        !summary.profitFromTp || row.profitUsdt > 0
+                          ? "text-success"
+                          : "text-ink-muted"
                       }`}
                     >
-                      {formatUsdAmount(row.profitUsdt)}
+                      {summary.profitFromTp
+                        ? formatUsdAmount(row.profitUsdt)
+                        : "∞"}
                     </td>
                     <td
                       className={`px-3 py-2 tabular-nums ${
-                        row.lossUsdt !== null && row.lossUsdt > 0
+                        row.lossUsdt === null || row.lossUsdt > 0
                           ? "text-danger"
                           : "text-ink-muted"
                       }`}
                     >
                       {row.lossUsdt === null
-                        ? "—"
+                        ? "∞"
                         : formatUsdAmount(row.lossUsdt)}
                     </td>
                   </tr>
@@ -1135,10 +1147,10 @@ export function DcaPlaybookForm({
               {direction === "both" ? " Long ladder shown. Short is the inverse." : ""}
               {summary.profitFromTp
                 ? " Profit is take profit from that average."
-                : " Profit is a return to the first order."}
+                : " No take profit — profit is unlimited."}
               {summary.lossFromSl
                 ? " Loss is stop loss from that average."
-                : ""}
+                : " No stop loss — loss is unlimited."}
             </p>
           </div>
         ) : (
