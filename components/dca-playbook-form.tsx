@@ -867,7 +867,7 @@ export function DcaPlaybookForm({
       {startKind !== "immediate" ? (
       <fieldset className={sectionClass}>
         <p className={sectionTitleClass}>
-          Start
+          Initial Order Trigger Parameters
         </p>
         <div className={rowClass}>
           {startKind === "price" ? (
