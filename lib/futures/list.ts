@@ -86,8 +86,9 @@ export async function loadFuturesOrders(): Promise<FuturesOrder[]> {
   );
 }
 
-export async function loadOpenFuturesWorking(
+export async function loadFuturesWorking(
   scope?: FuturesListScope,
+  statuses: readonly string[] = ["open"],
 ): Promise<FuturesWorkingOrder[]> {
   const resolved = await resolveFuturesListScope(scope);
   const supabase = createServiceClient();
@@ -99,7 +100,7 @@ export async function loadOpenFuturesWorking(
     .select("*")
     .eq("account_id", resolved.accountId)
     .eq("user_id", resolved.userId)
-    .eq("status", "open")
+    .in("status", [...statuses])
     .order("created_at", { ascending: false });
   if (error || !data) {
     return [];
@@ -107,6 +108,12 @@ export async function loadOpenFuturesWorking(
   return data.map((row) =>
     parseFuturesWorkingRow(row as Record<string, unknown>),
   );
+}
+
+export async function loadOpenFuturesWorking(
+  scope?: FuturesListScope,
+): Promise<FuturesWorkingOrder[]> {
+  return loadFuturesWorking(scope, ["open"]);
 }
 
 export type FuturesDeskPosition = FuturesPosition & {

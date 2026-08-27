@@ -3,7 +3,7 @@ import {
   fetchBybitKlines,
   fetchBybitTickers,
 } from "@/lib/exchanges/bybit/client";
-import { loadOpenFuturesWorking } from "@/lib/futures/list";
+import { loadFuturesWorking } from "@/lib/futures/list";
 import { parseFuturesPositionRow } from "@/lib/futures/model";
 import type { FuturesSide } from "@/lib/futures/model";
 import { tickerTriggerPrices } from "@/lib/futures/tpsl";
@@ -11,10 +11,13 @@ import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
+  dcaClipsFilledFromGrid,
   dcaEnabledSides,
+  dcaGridClipCounts,
   dcaLegFor,
+  dcaLegIsRunning,
+  dcaStartListens,
   decideDcaTick,
-  isDcaClipKey,
   type DcaPlaybook,
 } from "./playbook";
 import {
@@ -119,40 +122,38 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
     }
     const working =
       playbook.dcaMode === "order"
-        ? await loadOpenFuturesWorking({
-            accountId: playbook.accountId,
-            userId: playbook.userId,
-          })
+        ? await loadFuturesWorking(
+            {
+              accountId: playbook.accountId,
+              userId: playbook.userId,
+            },
+            ["open", "filled"],
+          )
         : [];
     for (const side of dcaEnabledSides(playbook.direction)) {
       let leg = dcaLegFor(playbook, side);
       if (
         playbook.dcaMode === "order" &&
         playbook.maxClips !== null &&
-        leg.status === "armed" &&
-        leg.clipsFilled >= 1
+        dcaLegIsRunning(leg.status)
       ) {
-        const openWorking = working.filter((row) =>
-          isDcaClipKey(row.idempotencyKey, playbook.id, side),
-        ).length;
-        const implied = playbook.maxClips - openWorking;
-        if (implied > leg.clipsFilled) {
+        const counts = dcaGridClipCounts(working, playbook.id, side);
+        const hasFirstFill =
+          leg.clipsFilled >= 1 || leg.firstFillPrice !== null;
+        const computed = dcaClipsFilledFromGrid({
+          hasFirstFill,
+          maxClips: playbook.maxClips,
+          openWorking: counts.open,
+          filledAdds: counts.filledAdds,
+        });
+        if (computed !== leg.clipsFilled) {
           await patchDcaLeg({
             supabase,
             id: playbook.id,
             side,
-            patch: {
-              clipsFilled: implied,
-              lastClipPrice: prices.last ?? leg.lastClipPrice,
-              lastClipAtMs: Date.now(),
-            },
+            patch: { clipsFilled: computed },
           });
-          leg = {
-            ...leg,
-            clipsFilled: implied,
-            lastClipPrice: prices.last ?? leg.lastClipPrice,
-            lastClipAtMs: Date.now(),
-          };
+          leg = { ...leg, clipsFilled: computed };
           if (side === "long") {
             playbook.long = leg;
           } else {
@@ -327,6 +328,58 @@ async function applyTickAction(input: {
       return { acted: false };
     }
     return { acted: true };
+  }
+  if (input.action.kind === "end_cycle") {
+    const flattened = await flattenPlaybook({
+      playbook: input.playbook,
+      mode: input.mode,
+      side: input.side,
+    });
+    if (!flattened.ok) {
+      return { acted: false };
+    }
+    if (dcaStartListens(input.playbook.startKind)) {
+      const patched = await patchDcaLeg({
+        supabase,
+        id: input.playbook.id,
+        side: input.side,
+        patch: {
+          status: "armed",
+          clipsFilled: 0,
+          lastClipPrice: null,
+          lastClipAtMs: null,
+          firstFillPrice: null,
+          breakevenDone: false,
+        },
+      });
+      if (!patched.ok) {
+        return { acted: false };
+      }
+    } else {
+      const reset = await resetDcaLeg({
+        supabase,
+        id: input.playbook.id,
+        side: input.side,
+      });
+      if (!reset.ok) {
+        return { acted: false };
+      }
+    }
+    await writeEventLog({
+      scope: "trade",
+      event: "dca.closed",
+      message: dcaStartListens(input.playbook.startKind)
+        ? `${input.playbook.name} position closed. Waiting for the next start.`
+        : `${input.playbook.name} position closed. Playbook is idle.`,
+      userId: input.playbook.userId,
+      accountId: input.playbook.accountId,
+      strategy: FUTURES_STRATEGY_ID,
+      data: { playbookId: input.playbook.id, side: input.side },
+    });
+    return { acted: true };
+  }
+  if (input.action.kind !== "close") {
+    return { acted: false };
   }
   const closed = await flattenPlaybook({
     playbook: input.playbook,

@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import {
   dcaAveragingKind,
   dcaCapHit,
+  dcaClipsFilledFromGrid,
   dcaClipAction,
   dcaClipKey,
+  dcaCycleEnded,
+  dcaGridClipCounts,
   dcaExitLimitKey,
   parseDcaClipIndex,
   parseDcaExitLimitKind,
@@ -157,6 +160,40 @@ const stopped = planDcaSafetySync({
   working: safetyWorking,
 });
 assert.equal(stopped.cancelIds.length, 19);
+const filledSkip = planDcaSafetySync({
+  playbookId: safetyId,
+  side: "long",
+  status: "armed",
+  dcaMode: "order",
+  maxClips: 4,
+  dipPct: 1,
+  deviationMultiplier: 1,
+  clipSize: 0.01,
+  sizeMultiplier: 1,
+  sizeUnit: "qty",
+  entryPrice: 100,
+  working: [
+    {
+      id: "f1",
+      idempotencyKey: dcaClipKey(safetyId, "long", 1),
+      remainingQty: 0,
+      limitPrice: 99,
+      reduceOnly: false,
+      status: "filled",
+    },
+    {
+      id: "w2",
+      idempotencyKey: dcaClipKey(safetyId, "long", 2),
+      remainingQty: 0.01,
+      limitPrice: 98.01,
+      reduceOnly: false,
+      status: "open",
+    },
+  ],
+});
+assert.deepEqual(filledSkip.rest.map((row) => row.clipIndex), [3]);
+assert.equal(filledSkip.cancelIds.length, 0);
+assert.equal(filledSkip.amend.length, 0);
 assert.equal(
   isDcaExitLimitKey(
     "d11111111ltp847291",
@@ -276,6 +313,78 @@ assert.equal(
     markValue: 1000,
   }),
   true,
+);
+
+assert.equal(
+  dcaClipsFilledFromGrid({
+    hasFirstFill: true,
+    maxClips: 10,
+    openWorking: 0,
+    filledAdds: 0,
+  }),
+  1,
+);
+assert.equal(
+  dcaClipsFilledFromGrid({
+    hasFirstFill: true,
+    maxClips: 10,
+    openWorking: 9,
+    filledAdds: 0,
+  }),
+  1,
+);
+assert.equal(
+  dcaClipsFilledFromGrid({
+    hasFirstFill: true,
+    maxClips: 10,
+    openWorking: 0,
+    filledAdds: 9,
+  }),
+  10,
+);
+assert.equal(
+  dcaClipsFilledFromGrid({
+    hasFirstFill: true,
+    maxClips: 10,
+    openWorking: 19,
+    filledAdds: 0,
+  }),
+  1,
+);
+assert.equal(
+  dcaGridClipCounts(
+    [
+      { status: "open", idempotencyKey: dcaClipKey(safetyId, "long", 1) },
+      { status: "filled", idempotencyKey: dcaClipKey(safetyId, "long", 2) },
+    ],
+    safetyId,
+    "long",
+  ).filledAdds,
+  1,
+);
+assert.equal(
+  dcaCycleEnded({
+    status: "stop_adding",
+    clipsFilled: 10,
+    positionQty: null,
+  }),
+  true,
+);
+assert.equal(
+  dcaCycleEnded({
+    status: "armed",
+    clipsFilled: 2,
+    positionQty: 1,
+  }),
+  false,
+);
+assert.equal(
+  dcaCycleEnded({
+    status: "idle",
+    clipsFilled: 2,
+    positionQty: null,
+  }),
+  false,
 );
 assert.equal(
   dcaPnlPct({ side: "long", qty: 1, entryPrice: 100, mark: 110 }),
@@ -433,6 +542,24 @@ assert.equal(
     lastPrice: 97,
   }).action.kind,
   "none",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "stop_adding",
+    clipsFilled: 10,
+    positionQty: null,
+  }).action.kind,
+  "end_cycle",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 3,
+    positionQty: null,
+  }).action.kind,
+  "end_cycle",
 );
 assert.equal(
   decideDcaTick({

@@ -4,6 +4,7 @@ import { runFuturesCommand } from "@/lib/futures/command";
 import {
   loadOpenFuturesOnSymbol,
   loadOpenFuturesWorking,
+  loadFuturesWorking,
 } from "@/lib/futures/list";
 import { triggerConditionMet } from "@/lib/futures/automation";
 import type { FuturesSide } from "@/lib/futures/model";
@@ -29,11 +30,13 @@ import {
 import {
   dcaClipAction,
   dcaClipKey,
+  dcaCycleEnded,
   dcaEnabledSides,
   dcaExitLimitKey,
   dcaLegFor,
   dcaLegIsRunning,
   dcaWebhookSignalApplies,
+  IDLE_DCA_LEG,
   isDcaClipKey,
   isDcaExitLimitKey,
   planDcaSafetySync,
@@ -251,10 +254,13 @@ export async function syncDcaPlaybookGrid(input: {
     input.side,
   );
   const leg = dcaLegFor(input.playbook, input.side);
-  const working = await loadOpenFuturesWorking({
-    accountId: input.playbook.accountId,
-    userId: input.playbook.userId,
-  });
+  const working = await loadFuturesWorking(
+    {
+      accountId: input.playbook.accountId,
+      userId: input.playbook.userId,
+    },
+    ["open", "filled"],
+  );
   const plan = planDcaSafetySync({
     playbookId: input.playbook.id,
     side: input.side,
@@ -274,6 +280,7 @@ export async function syncDcaPlaybookGrid(input: {
       remainingQty: row.remainingQty,
       limitPrice: row.limitPrice,
       reduceOnly: row.reduceOnly,
+      status: row.status,
     })),
   });
   const actor = {
@@ -343,7 +350,7 @@ async function placeClip(input: {
       orderType: "market",
       size: String(size),
       sizeUnit: input.playbook.sizeUnit,
-      idempotencyKey: dcaClipKey(input.playbook.id, input.side, leg.clipsFilled),
+      idempotencyKey: `${dcaClipKey(input.playbook.id, input.side, leg.clipsFilled)}x${Date.now()}`,
       source: "engine",
       ruleName: input.playbook.name,
       trailing: firstClip
@@ -699,9 +706,13 @@ export async function applyDcaVerb(input: {
   let already = 0;
   let skippedIdle = 0;
   const playbook = input.playbook;
+  const opens = await loadOpenFuturesOnSymbol(playbook.symbol, {
+    accountId: playbook.accountId,
+    userId: playbook.userId,
+  });
 
   for (const side of sides) {
-    const leg = dcaLegFor(playbook, side);
+    let leg = dcaLegFor(playbook, side);
     if (
       !dcaWebhookSignalApplies({
         startKind: playbook.startKind,
@@ -711,6 +722,29 @@ export async function applyDcaVerb(input: {
     ) {
       skippedIdle += 1;
       continue;
+    }
+    const open = opens.find((row) => row.side === side);
+    if (
+      dcaCycleEnded({
+        status: leg.status,
+        clipsFilled: leg.clipsFilled,
+        positionQty: open?.qty ?? null,
+      })
+    ) {
+      const reset = await resetDcaLeg({
+        supabase,
+        id: playbook.id,
+        side,
+      });
+      if (!reset.ok) {
+        return reset;
+      }
+      leg = { ...IDLE_DCA_LEG };
+      if (side === "long") {
+        playbook.long = leg;
+      } else {
+        playbook.short = leg;
+      }
     }
     if (leg.status === "armed" && leg.clipsFilled > 0) {
       already += 1;

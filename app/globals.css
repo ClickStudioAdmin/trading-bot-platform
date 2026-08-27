@@ -81,37 +81,49 @@ button[aria-busy="true"],
 }
 
 .thin-scroll,
-.panel-scroll {
+.panel-scroll,
+.overflow-x-auto,
+.overflow-auto {
   scrollbar-width: thin;
   scrollbar-color: var(--color-line-strong) transparent;
 }
 
 .thin-scroll::-webkit-scrollbar,
-.panel-scroll::-webkit-scrollbar {
+.panel-scroll::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 .thin-scroll::-webkit-scrollbar-button,
-.panel-scroll::-webkit-scrollbar-button {
+.panel-scroll::-webkit-scrollbar-button,
+.overflow-x-auto::-webkit-scrollbar-button,
+.overflow-auto::-webkit-scrollbar-button {
   display: none;
   width: 0;
   height: 0;
 }
 
 .thin-scroll::-webkit-scrollbar-track,
-.panel-scroll::-webkit-scrollbar-track {
+.panel-scroll::-webkit-scrollbar-track,
+.overflow-x-auto::-webkit-scrollbar-track,
+.overflow-auto::-webkit-scrollbar-track {
   background: transparent;
 }
 
 .thin-scroll::-webkit-scrollbar-thumb,
-.panel-scroll::-webkit-scrollbar-thumb {
+.panel-scroll::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb,
+.overflow-auto::-webkit-scrollbar-thumb {
   background: var(--color-line-strong);
   border-radius: 999px;
 }
 
 .thin-scroll::-webkit-scrollbar-thumb:hover,
-.panel-scroll::-webkit-scrollbar-thumb:hover {
+.panel-scroll::-webkit-scrollbar-thumb:hover,
+.overflow-x-auto::-webkit-scrollbar-thumb:hover,
+.overflow-auto::-webkit-scrollbar-thumb:hover {
   background: var(--color-ink-faint);
 }
 

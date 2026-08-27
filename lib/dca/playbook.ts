@@ -107,6 +107,7 @@ export type DcaTickAction =
   | { kind: "clip" }
   | { kind: "close"; reason: "take_profit" | "stop_loss" }
   | { kind: "stop_adding" }
+  | { kind: "end_cycle" }
   | { kind: "breakeven" };
 
 export type DcaTickDecision = {
@@ -834,6 +835,66 @@ export function dcaCapHit(input: {
   return false;
 }
 
+export function dcaGridClipCounts(
+  rows: readonly { status?: string; idempotencyKey: string | null }[],
+  playbookId: string,
+  side: FuturesSide,
+): { open: number; filledAdds: number } {
+  const filledAdds = new Set<number>();
+  let open = 0;
+  for (const row of rows) {
+    if (!isDcaClipKey(row.idempotencyKey, playbookId, side)) {
+      continue;
+    }
+    const index = parseDcaClipIndex(row.idempotencyKey);
+    if (index === null) {
+      continue;
+    }
+    if (!row.status || row.status === "open") {
+      open += 1;
+    }
+    if (row.status === "filled" && index >= 1) {
+      filledAdds.add(index);
+    }
+  }
+  return { open, filledAdds: filledAdds.size };
+}
+
+export function dcaClipsFilledFromGrid(input: {
+  hasFirstFill: boolean;
+  maxClips: number | null;
+  openWorking: number;
+  filledAdds: number;
+}): number {
+  const floor = input.hasFirstFill ? 1 : 0;
+  const fromFilled = floor + Math.max(0, input.filledAdds);
+  if (input.maxClips === null) {
+    return fromFilled;
+  }
+  if (input.openWorking > 0) {
+    const fromOpen = input.maxClips - input.openWorking;
+    return Math.min(
+      input.maxClips,
+      Math.max(floor, fromFilled, fromOpen),
+    );
+  }
+  return Math.min(input.maxClips, Math.max(floor, fromFilled));
+}
+
+export function dcaCycleEnded(input: {
+  status: DcaStatus;
+  clipsFilled: number;
+  positionQty: number | null;
+}): boolean {
+  if (!dcaLegIsRunning(input.status)) {
+    return false;
+  }
+  if (input.clipsFilled < 1) {
+    return false;
+  }
+  return !(input.positionQty !== null && input.positionQty > 0);
+}
+
 export function decideDcaTick(input: {
   status: DcaStatus;
   side: FuturesSide;
@@ -969,6 +1030,21 @@ export function decideDcaTick(input: {
   ) {
     return {
       action: { kind: "close", reason: "take_profit" },
+      nextArmTrue,
+      nextDisarmTrue,
+      nextIndicatorTrue,
+    };
+  }
+
+  if (
+    dcaCycleEnded({
+      status: input.status,
+      clipsFilled: input.clipsFilled,
+      positionQty: input.positionQty,
+    })
+  ) {
+    return {
+      action: { kind: "end_cycle" },
       nextArmTrue,
       nextDisarmTrue,
       nextIndicatorTrue,
@@ -1296,6 +1372,7 @@ export type DcaSafetyWorkingRow = {
   remainingQty: number;
   limitPrice: number;
   reduceOnly: boolean;
+  status?: string;
 };
 
 export type DcaSafetySyncPlan = {
@@ -1323,6 +1400,19 @@ export function planDcaSafetySync(input: {
       !row.reduceOnly &&
       isDcaClipKey(row.idempotencyKey, input.playbookId, input.side),
   );
+  const matchingOpen = matching.filter(
+    (row) => !row.status || row.status === "open",
+  );
+  const filledIndices = new Set<number>();
+  for (const row of matching) {
+    if (row.status !== "filled") {
+      continue;
+    }
+    const index = parseDcaClipIndex(row.idempotencyKey);
+    if (index !== null && index >= 1) {
+      filledIndices.add(index);
+    }
+  }
   const restGrid =
     input.status === "armed" &&
     input.dcaMode === "order" &&
@@ -1333,7 +1423,7 @@ export function planDcaSafetySync(input: {
     input.entryPrice > 0;
   if (!restGrid) {
     return {
-      cancelIds: matching.map((row) => row.id),
+      cancelIds: matchingOpen.map((row) => row.id),
       amend: [],
       rest: [],
     };
@@ -1360,7 +1450,7 @@ export function planDcaSafetySync(input: {
   }
   const openByIndex = new Map<number, DcaSafetyWorkingRow>();
   const cancelIds: string[] = [];
-  for (const row of matching) {
+  for (const row of matchingOpen) {
     const index = parseDcaClipIndex(row.idempotencyKey);
     if (index === null || !planned.has(index) || openByIndex.has(index)) {
       cancelIds.push(row.id);
@@ -1371,6 +1461,9 @@ export function planDcaSafetySync(input: {
   const amend: DcaSafetySyncPlan["amend"] = [];
   const rest: DcaSafetySyncPlan["rest"] = [];
   for (const [clipIndex, want] of planned) {
+    if (filledIndices.has(clipIndex)) {
+      continue;
+    }
     const row = openByIndex.get(clipIndex);
     if (!row) {
       rest.push({ clipIndex, qty: want.qty, limitPrice: want.limitPrice });
