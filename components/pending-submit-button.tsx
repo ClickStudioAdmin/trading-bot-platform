@@ -66,6 +66,8 @@ function queryLooksSuccessful() {
     params.get("removed") === "1" ||
     params.get("renamed") === "1" ||
     paper === "webhook-arm" ||
+    paper === "playbook-closed" ||
+    paper === "live-playbook-closed" ||
     params.get("created") === "1"
   );
 }

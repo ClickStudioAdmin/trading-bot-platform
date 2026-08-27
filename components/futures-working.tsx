@@ -53,8 +53,8 @@ export function FuturesWorkingOrders({
           <p className="text-sm text-ink-muted">
             {playbookOwnsOrders
               ? exchangeBook
-                ? "Working playbook limits on Bybit. Fills appear on the position when they match. Stop adding or Close playbook on Automations."
-                : "Working playbook limits. They fill when mark crosses the limit. Stop adding or Close playbook on Automations."
+                ? "Working playbook limits on Bybit. Fills appear on the position when they match. Stop adding or Close Playbook on Positions or Automations."
+                : "Working playbook limits. They fill when mark crosses the limit. Stop adding or Close Playbook on Positions or Automations."
               : exchangeBook
                 ? "Working limits on Bybit. Fills appear on the position when they match. Edit remaining qty or limit. Cancel removes the rest."
                 : "Working paper limits. They fill when mark crosses the limit. Edit remaining qty or limit. Cancel drops the rest."}

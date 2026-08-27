@@ -103,6 +103,10 @@ export default async function FuturesOverviewPage({
           liveClosedAndCancelled={
             firstSearchValue(params.paper) === "live-closed-and-cancelled"
           }
+          playbookClosed={firstSearchValue(params.paper) === "playbook-closed"}
+          livePlaybookClosed={
+            firstSearchValue(params.paper) === "live-playbook-closed"
+          }
           error={firstSearchValue(params.paperError)}
       />
       <FuturesWorkingOrders
@@ -117,7 +121,7 @@ export default async function FuturesOverviewPage({
           showTicket
             ? undefined
             : dca
-              ? "No working limits. Playbook orders rest here when they are limits. Limit close on an open row also appears here."
+              ? "No working limits. Playbook orders rest here when they are limits."
               : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
         }
       />

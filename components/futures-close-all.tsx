@@ -73,7 +73,7 @@ export function FuturesPositionBulkActions({
         workingCount={workingCount}
         extraBody={
           panicOnly
-            ? " The playbook stays armed unless you Close playbook on Automations or turn on Reduce only."
+            ? " The playbook stays armed unless you Close Playbook on the row or Automations, or turn on Reduce only."
             : undefined
         }
       />

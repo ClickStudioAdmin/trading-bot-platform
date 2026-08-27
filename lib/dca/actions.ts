@@ -19,10 +19,12 @@ import {
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import {
   deleteDcaPlaybook,
+  loadDcaPlaybookById,
   saveDcaPlaybook,
 } from "@/lib/dca/store";
 import { writeEventLog } from "@/lib/logs/write";
-import { deskPath } from "@/lib/accounts/model";
+import { deskPath, withQuery } from "@/lib/accounts/model";
+import { safeFuturesReturnPath } from "@/lib/futures/path";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
@@ -200,6 +202,41 @@ export async function runDcaDisarmAction(formData: FormData) {
 
 export async function runDcaClosePlaybookAction(formData: FormData) {
   await runDcaPlaybookVerb("close-playbook", formData);
+}
+
+export async function closeDcaPlaybookFromRow(formData: FormData) {
+  const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
+  const session = await requirePerpsUiSession();
+  if (session.account.deskType !== "dca") {
+    redirect(withQuery(next, { paperError: "This desk is not a DCA desk." }));
+  }
+  const id = parseDcaPlaybookId(formData.get("playbookId"));
+  if (!id) {
+    redirect(withQuery(next, { paperError: "That playbook was not found." }));
+  }
+  const playbook = await loadDcaPlaybookById(id, session.account.id);
+  if (!playbook) {
+    redirect(withQuery(next, { paperError: "That playbook was not found." }));
+  }
+  const result = await applyDcaVerb({
+    playbook,
+    mode: session.account.mode,
+    verb: "close-playbook",
+  });
+  if (!result.ok) {
+    redirect(withQuery(next, { paperError: result.error }));
+  }
+  revalidatePath(FUTURES_PATHS.automations);
+  revalidatePath(FUTURES_PATHS.positions);
+  revalidatePath(FUTURES_PATHS.root);
+  redirect(
+    withQuery(next, {
+      paper:
+        session.account.mode === "live"
+          ? "live-playbook-closed"
+          : "playbook-closed",
+    }),
+  );
 }
 
 export async function runDcaPlaybookVerb(

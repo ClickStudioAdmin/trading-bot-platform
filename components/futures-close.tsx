@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import { closeDcaPlaybookFromRow } from "@/lib/dca/actions";
 import { submitFuturesTrade } from "@/lib/futures/actions";
 import type { MarkedFutures } from "@/lib/futures/mark";
 import { formatPrice } from "@/lib/opportunities/format";
@@ -11,21 +12,61 @@ import { formatGroupedNumberInput } from "@/lib/paper/open";
 
 const ACTION_CLASS =
   "inline-flex items-center justify-center rounded-control bg-accent-strong px-2 py-1 text-center text-xs font-medium whitespace-nowrap text-ink";
+const PLAYBOOK_CLOSE_CLASS =
+  "inline-flex items-center justify-center rounded-control bg-danger/15 px-2 py-1 text-center text-xs font-medium whitespace-nowrap text-danger hover:bg-danger/25";
 const INPUT_CLASS =
   "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
 export function FuturesCloseActions({
   trade,
   next,
+  playbookOwnsOrders = false,
+  playbookId = null,
 }: {
   trade: MarkedFutures;
   next: string;
+  playbookOwnsOrders?: boolean;
+  playbookId?: string | null;
 }) {
+  if (playbookId) {
+    return <CloseDcaPlaybookButton playbookId={playbookId} next={next} />;
+  }
+  if (playbookOwnsOrders) {
+    return null;
+  }
   return (
     <div className="flex items-center gap-1">
       <FuturesCloseButton trade={trade} next={next} orderType="market" />
       <FuturesCloseButton trade={trade} next={next} orderType="limit" />
     </div>
+  );
+}
+
+function CloseDcaPlaybookButton({
+  playbookId,
+  next,
+}: {
+  playbookId: string;
+  next: string;
+}) {
+  return (
+    <form action={closeDcaPlaybookFromRow}>
+      <input type="hidden" name="next" value={next} />
+      <input type="hidden" name="playbookId" value={playbookId} />
+      <span
+        className="inline-flex"
+        title="Close all positions and place the playbook in idle mode (no new entries)"
+      >
+        <PendingSubmitButton
+          pendingLabel="Closing…"
+          successKey={`close-dca-playbook-row-${playbookId}`}
+          className={PLAYBOOK_CLOSE_CLASS}
+          skipSizeGuard
+        >
+          Close Playbook
+        </PendingSubmitButton>
+      </span>
+    </form>
   );
 }
 

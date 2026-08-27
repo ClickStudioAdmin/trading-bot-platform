@@ -250,13 +250,17 @@ export function OpenFuturesTrades({
                   />
                 </th>
               ) : null}
-              <th className="w-[8.75rem] px-2 py-3 font-medium">
+              <th
+                className={`${playbookOwnsOrders ? "w-[9.5rem]" : "w-[8.75rem]"} px-2 py-3 font-medium`}
+              >
                 <ColumnHint
                   label="Close By"
                   hint={
-                    exchangeBook
-                      ? "Market or Limit opens a qty dialog. Market fills on Bybit now. Limit rests a reduce-only close until last trades through it."
-                      : "Market or Limit opens a qty dialog. Market fills now. Limit rests a reduce-only close until mark trades through it."
+                    playbookOwnsOrders
+                      ? "Close Playbook flattens every side, cancels working playbook orders, and sets the playbook to idle. Same as Close playbook on Automations."
+                      : exchangeBook
+                        ? "Market or Limit opens a qty dialog. Market fills on Bybit now. Limit rests a reduce-only close until last trades through it."
+                        : "Market or Limit opens a qty dialog. Market fills now. Limit rests a reduce-only close until mark trades through it."
                   }
                 />
               </th>
@@ -628,7 +632,12 @@ function OpenFuturesRows({
         </td>
       ) : null}
       <td className="px-2 py-3 whitespace-nowrap">
-        <FuturesCloseActions trade={trade} next={next} />
+        <FuturesCloseActions
+          trade={trade}
+          next={next}
+          playbookOwnsOrders={playbookOwnsOrders}
+          playbookId={dcaHint?.playbookId ?? null}
+        />
       </td>
     </ExpandableTradeRows>
   );

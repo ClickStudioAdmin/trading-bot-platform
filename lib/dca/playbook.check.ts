@@ -1143,6 +1143,14 @@ assert.equal(
   "2",
 );
 assert.equal(
+  dcaOpenHint({
+    playbook: row as DcaPlaybook,
+    symbol: "BTCUSDT",
+    side: "long",
+  })?.playbookId,
+  (row as DcaPlaybook).id,
+);
+assert.equal(
   dcaHintsForOpen(
     [row as DcaPlaybook],
     [{ symbol: "BTCUSDT", side: "long" }],

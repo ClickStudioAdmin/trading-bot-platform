@@ -20,6 +20,8 @@ export function FuturesFlash({
   closedAndCancelled,
   liveClosedAndCancelled,
   webhookArm,
+  playbookClosed,
+  livePlaybookClosed,
   error,
 }: {
   opened: boolean;
@@ -43,6 +45,8 @@ export function FuturesFlash({
   closedAndCancelled?: boolean;
   liveClosedAndCancelled?: boolean;
   webhookArm?: boolean;
+  playbookClosed?: boolean;
+  livePlaybookClosed?: boolean;
   error?: string;
 }) {
   if (error) {
@@ -70,6 +74,14 @@ export function FuturesFlash({
     return (
       <p className="text-sm text-success">
         Size added on the connected exchange.
+      </p>
+    );
+  }
+  if (livePlaybookClosed) {
+    return (
+      <p className="text-sm text-success">
+        Playbook closed on the connected exchange. Positions flattened and the
+        playbook is idle.
       </p>
     );
   }
@@ -128,6 +140,13 @@ export function FuturesFlash({
   }
   if (added) {
     return <p className="text-sm text-success">Paper size added.</p>;
+  }
+  if (playbookClosed) {
+    return (
+      <p className="text-sm text-success">
+        Playbook closed. Positions flattened and the playbook is idle.
+      </p>
+    );
   }
   if (closedAndCancelled) {
     return (

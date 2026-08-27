@@ -346,6 +346,7 @@ export function dcaLegFor(
 }
 
 export type DcaOpenHint = {
+  playbookId: string;
   orders: string;
   plannedTakeProfit: number | null;
   plannedStopLoss: number | null;
@@ -1734,6 +1735,7 @@ export function dcaOpenHint(input: {
     trailingPct: input.playbook.trailingPct,
   });
   return {
+    playbookId: input.playbook.id,
     orders: formatDcaOrdersProgress({
       filled,
       maxClips: input.playbook.maxClips,
