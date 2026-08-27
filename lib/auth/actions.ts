@@ -10,7 +10,7 @@ import { redirect } from "next/navigation";
 
 async function redirectToDeskHome() {
   const session = await getSessionContext();
-  redirect(session ? deskHomePath(session.account.deskType) : "/strategies");
+  redirect(session ? deskHomePath(session.account.deskType, session.account.id) : "/strategies");
 }
 
 export async function signIn(formData: FormData) {

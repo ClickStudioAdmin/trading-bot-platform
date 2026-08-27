@@ -75,7 +75,7 @@ export async function switchTradingAccount(formData: FormData) {
   await setActiveAccountId(match.id);
   refreshAccountChrome();
   const next = accountReturnPath(String(formData.get("next") ?? ""));
-  redirect(next ?? deskHomePath(match.deskType));
+  redirect(next ?? deskHomePath(match.deskType, match.id));
 }
 
 export async function createTradingAccount(formData: FormData) {
@@ -152,11 +152,11 @@ export async function createTradingAccount(formData: FormData) {
     redirect(`${SUB_ACCOUNTS_PATH}?created=1`);
   }
   if (switchToNew) {
-    redirect(deskHomePath(created.deskType));
+    redirect(deskHomePath(created.deskType, created.id));
   }
   redirect(
     safeStayPath(formData.get("stayPath")) ??
-      deskHomePath(session.account.deskType),
+      deskHomePath(session.account.deskType, session.account.id),
   );
 }
 

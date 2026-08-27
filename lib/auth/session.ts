@@ -1,9 +1,11 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import {
   ensureDefaultPaperAccount,
   listTradingAccounts,
 } from "@/lib/accounts/store";
 import {
+  DESK_HEADER,
+  parseDeskQuery,
   pickDefaultAccount,
   type TradingAccount,
 } from "@/lib/accounts/model";
@@ -76,7 +78,8 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     return null;
   }
   const store = await cookies();
-  const requested = store.get(ACCOUNT_COOKIE)?.value;
+  const headerDesk = parseDeskQuery((await headers()).get(DESK_HEADER));
+  const requested = headerDesk ?? store.get(ACCOUNT_COOKIE)?.value;
   const current =
     accounts.find((account) => account.id === requested) ?? fallback;
   return { member, account: current };

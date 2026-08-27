@@ -22,6 +22,7 @@ import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
 import { headers } from "next/headers";
 import { firstSearchValue } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
+import { deskHref } from "@/lib/accounts/model";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -37,7 +38,7 @@ export default async function FuturesAutomationsPage({
   const params = await searchParams;
   const session = await getSessionContext();
   if (session?.account.deskType === "signal_follower") {
-    redirect(FUTURES_PATHS.webhooks);
+    redirect(deskHref(FUTURES_PATHS.webhooks, session.account.id));
   }
   if (session?.account.deskType === "dca") {
     const playbooks = await listDcaPlaybooksForAccount(session.account.id);
@@ -102,6 +103,7 @@ export default async function FuturesAutomationsPage({
             availableUsdt={availableUsdt}
             lastPrices={lastPrices}
             reduceOnly={Boolean(settings.reduceOnly)}
+            webhooksHref={deskHref(FUTURES_PATHS.webhooks, session.account.id)}
           />
         </div>
       </main>
@@ -141,7 +143,7 @@ export default async function FuturesAutomationsPage({
       {settings?.reduceOnly ? (
         <p className="mt-4 mb-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. Buy and Sell stay blocked until you turn it off in{" "}
-          <Link href={FUTURES_PATHS.settings} className="underline">
+          <Link href={deskHref(FUTURES_PATHS.settings, session?.account.id)} className="underline">
             Desk Settings
           </Link>
           .

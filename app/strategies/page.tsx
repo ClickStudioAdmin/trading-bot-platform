@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default async function StrategiesPage() {
   const session = await getSessionContext();
   if (session) {
-    redirect(deskHomePath(session.account.deskType));
+    redirect(deskHomePath(session.account.deskType, session.account.id));
   }
 
   return (

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { PairFilterInputs } from "@/lib/pairs/filter";
+import { DESK_QUERY } from "@/lib/accounts/model";
 
 const FILTER_INPUT_CLASS =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
@@ -11,17 +12,22 @@ export function PairFiltersForm({
   values,
   bases,
   showDte = false,
+  deskId,
 }: {
   clearHref: string;
   values: PairFilterInputs;
   bases?: readonly string[];
   showDte?: boolean;
+  deskId?: string | null;
 }) {
   return (
     <form
       method="get"
       className="rounded-card border border-line bg-surface p-4"
     >
+      {deskId ? (
+        <input type="hidden" name={DESK_QUERY} value={deskId} />
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block text-xs text-ink-muted">
           Search

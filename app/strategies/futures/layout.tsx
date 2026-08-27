@@ -5,7 +5,10 @@ import {
   deskUsesPerpsUi,
   formatAccountMode,
   formatDeskType,
+  navLinksWithDesk,
+  pathWithDesk,
 } from "@/lib/accounts/model";
+import { pinDeskSearchParam } from "@/lib/accounts/guard";
 import { dcaPlaybookIsRunning } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { getSessionContext } from "@/lib/auth/session";
@@ -31,7 +34,10 @@ export default async function FuturesLayout({
 }) {
   const session = await getSessionContext();
   if (session && !deskUsesPerpsUi(session.account.deskType)) {
-    redirect(deskHomePath(session.account.deskType));
+    redirect(deskHomePath(session.account.deskType, session.account.id));
+  }
+  if (session) {
+    await pinDeskSearchParam(session);
   }
   const deskType = session?.account.deskType ?? "perps";
   const signalFollower = deskType === "signal_follower";
@@ -68,6 +74,27 @@ export default async function FuturesLayout({
   const automationsRunning = dca
     ? playbooks.some((playbook) => dcaPlaybookIsRunning(playbook))
     : deskStatus.automationsRunning;
+  const deskId = session?.account.id ?? null;
+  const primaryBase = signalFollower
+    ? SIGNAL_FOLLOWER_PRIMARY_LINKS
+    : FUTURES_PRIMARY_LINKS;
+  const primaryLinks = deskId
+    ? navLinksWithDesk(primaryBase, deskId)
+    : primaryBase;
+  const secondaryLinks = deskId
+    ? navLinksWithDesk(FUTURES_SECONDARY_LINKS, deskId)
+    : FUTURES_SECONDARY_LINKS;
+  const settingsHref = deskId
+    ? pathWithDesk(FUTURES_PATHS.settings, deskId)
+    : FUTURES_PATHS.settings;
+  const automationsHref = deskId
+    ? pathWithDesk(
+        signalFollower ? FUTURES_PATHS.settings : FUTURES_PATHS.automations,
+        deskId,
+      )
+    : signalFollower
+      ? FUTURES_PATHS.settings
+      : FUTURES_PATHS.automations;
   return (
     <div>
       <StrategySubnav
@@ -80,15 +107,9 @@ export default async function FuturesLayout({
               : "Buy, sell, or close one USDT linear perpetual. Market or limit. Long and short can both be open."
         }
         navLabel={formatDeskType(deskType)}
-        primaryLinks={
-          signalFollower
-            ? SIGNAL_FOLLOWER_PRIMARY_LINKS
-            : FUTURES_PRIMARY_LINKS
-        }
-        secondaryLinks={FUTURES_SECONDARY_LINKS}
-        automationsHref={
-          signalFollower ? FUTURES_PATHS.settings : FUTURES_PATHS.automations
-        }
+        primaryLinks={primaryLinks}
+        secondaryLinks={secondaryLinks}
+        automationsHref={automationsHref}
         automationsRunning={
           signalFollower ? false : automationsRunning
         }
@@ -108,13 +129,13 @@ export default async function FuturesLayout({
                   href:
                     connections.length === 0
                       ? "/account/exchanges"
-                      : FUTURES_PATHS.settings,
+                      : settingsHref,
                 }
             : {
                 name: formatAccountMode("paper"),
                 venue: "Bybit",
                 connected: true,
-                href: FUTURES_PATHS.settings,
+                href: settingsHref,
               }
         }
       />

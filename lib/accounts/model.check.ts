@@ -12,6 +12,14 @@ import {
   formatDeskType,
   formatDeskTypeChoice,
   deskHomePath,
+  DESK_QUERY,
+  parseDeskQuery,
+  pathWithDesk,
+  withQuery,
+  withDeskFrom,
+  deskHref,
+  deskPath,
+  deskIdFromHref,
   deskUsesCashAndCarry,
   deskUsesPerpsUi,
   deskAllowsManualPerpTicket,
@@ -83,6 +91,48 @@ assert.equal(
 assert.equal(deskHomePath("perps"), "/strategies/futures");
 assert.equal(deskHomePath("signal_follower"), "/strategies/futures");
 assert.equal(deskHomePath("dca"), "/strategies/futures");
+assert.equal(
+  deskHomePath("perps", "11111111-1111-4111-8111-111111111111"),
+  "/strategies/futures?desk=11111111-1111-4111-8111-111111111111",
+);
+assert.equal(
+  parseDeskQuery("11111111-1111-4111-8111-111111111111"),
+  "11111111-1111-4111-8111-111111111111",
+);
+assert.equal(parseDeskQuery("not-a-desk"), null);
+assert.equal(DESK_QUERY, "desk");
+assert.equal(
+  pathWithDesk("/strategies/futures/positions", "11111111-1111-4111-8111-111111111111"),
+  "/strategies/futures/positions?desk=11111111-1111-4111-8111-111111111111",
+);
+assert.equal(
+  withQuery("/strategies/futures/positions?desk=11111111-1111-4111-8111-111111111111", {
+    paperError: "boom",
+  }),
+  "/strategies/futures/positions?desk=11111111-1111-4111-8111-111111111111&paperError=boom",
+);
+assert.equal(
+  deskIdFromHref("/strategies/futures/positions?desk=11111111-1111-4111-8111-111111111111"),
+  "11111111-1111-4111-8111-111111111111",
+);
+assert.equal(
+  withDeskFrom(
+    "/strategies/futures/positions",
+    "/strategies/futures?desk=11111111-1111-4111-8111-111111111111",
+  ),
+  "/strategies/futures/positions?desk=11111111-1111-4111-8111-111111111111",
+);
+assert.equal(
+  deskHref("/strategies/futures", "11111111-1111-4111-8111-111111111111"),
+  "/strategies/futures?desk=11111111-1111-4111-8111-111111111111",
+);
+assert.equal(deskHref("/strategies/futures", null), "/strategies/futures");
+assert.equal(
+  deskPath("/strategies/futures/automations", "11111111-1111-4111-8111-111111111111", {
+    saved: "1",
+  }),
+  "/strategies/futures/automations?desk=11111111-1111-4111-8111-111111111111&saved=1",
+);
 assert.equal(deskUsesCashAndCarry("cash_and_carry"), true);
 assert.equal(deskUsesCashAndCarry("perps"), false);
 assert.equal(deskUsesPerpsUi("perps"), true);

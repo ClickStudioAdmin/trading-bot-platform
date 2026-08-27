@@ -1,20 +1,30 @@
 import type { OpportunityFilterInputs } from "@/lib/opportunities/filter";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import { DESK_QUERY, deskHref } from "@/lib/accounts/model";
 
 const FILTER_INPUT_CLASS =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
 export function OpportunityFiltersForm({
   values,
+  deskId,
 }: {
   values: OpportunityFilterInputs;
+  deskId?: string | null;
 }) {
+  const clearHref = deskHref(
+    "/strategies/cash-and-carry/opportunities",
+    deskId,
+  );
   return (
     <form
       method="get"
       className="rounded-card border border-line bg-surface p-4"
     >
+      {deskId ? (
+        <input type="hidden" name={DESK_QUERY} value={deskId} />
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Field
           id="minApr"
@@ -49,7 +59,7 @@ export function OpportunityFiltersForm({
           Apply filters
         </PendingSubmitButton>
         <a
-          href="/strategies/cash-and-carry/opportunities"
+          href={clearHref}
           className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
         >
           Clear

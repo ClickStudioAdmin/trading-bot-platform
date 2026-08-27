@@ -10,6 +10,7 @@ import { loadOpportunityBook } from "@/lib/opportunities/load";
 import { formatPct, formatUsd, signedTone } from "@/lib/opportunities/format";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getOpportunityPaperProps, loadPaperDesk } from "@/lib/paper/list";
+import { deskHref, deskIdFromHref } from "@/lib/accounts/model";
 
 export const metadata: Metadata = {
   title: "Cash and Carry",
@@ -23,6 +24,7 @@ export default async function CashAndCarryPage({
 }) {
   const params = await searchParams;
   const paper = await getOpportunityPaperProps("/strategies/cash-and-carry");
+  const deskId = deskIdFromHref(paper.next);
   const justActed = Boolean(firstSearchValue(params.paper));
   const book = await loadOpportunityBook(justActed ? "stored" : "fresh");
   const raw = book.rows;
@@ -93,7 +95,7 @@ export default async function CashAndCarryPage({
           <div className="shrink-0 text-right">
             <LastScan atMs={scannedAtMs} />
             <Link
-              href="/strategies/cash-and-carry/opportunities"
+              href={deskHref("/strategies/cash-and-carry/opportunities", deskId)}
               className="mt-1 inline-block text-sm text-accent hover:text-accent-strong"
             >
               All opportunities
@@ -106,11 +108,13 @@ export default async function CashAndCarryPage({
       <OpenPaperTrades
         signedIn={desk.signedIn}
         open={desk.open}
+        next={paper.next}
         exchangeBook={desk.exchangeBook}
+        positionsHref={deskHref("/strategies/cash-and-carry/positions", deskId)}
       />
 
       <p className="text-sm text-ink-faint">
-        <Link href="/strategies/cash-and-carry/pairs" className="text-accent">
+        <Link href={deskHref("/strategies/cash-and-carry/pairs", deskId)} className="text-accent">
           Full pair list
         </Link>
         {" · "}

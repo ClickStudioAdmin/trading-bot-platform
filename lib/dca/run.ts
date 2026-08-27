@@ -973,6 +973,8 @@ export async function applyDcaVerb(input: {
         return reset;
       }
       touchPlaybook(input.playbook);
+    }
+    const remaining = dcaEnabledSides(input.playbook.direction).filter(
       (side) =>
         !sides.includes(side) &&
         dcaLegIsRunning(dcaLegFor(input.playbook, side).status),

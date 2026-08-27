@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { updatePaperCarryExits } from "@/lib/paper/actions";
-import type { PaperReturnPath } from "@/lib/paper/open";
 import {
   exitFormValues,
   formatCarryCloseWhy,
@@ -35,7 +34,7 @@ export function PaperAutomationTrigger({
   entrySource: TradeSource;
   closeSource?: TradeSource | null;
   closeReason?: CloseReason | null;
-  next?: PaperReturnPath;
+  next?: string;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);

@@ -42,7 +42,7 @@ Stop at the end of this phase for a desk test. Do not start scale-in ([phase-12 
 
 - `desk_type = dca` on `trading_accounts`
 - Create Desk can pick DCA
-- Type-locked chrome: perp blotter, no ticket, no Perps recipes, Signal arm door
+- Type-locked chrome: perp blotter, no ticket, no Perps recipes, Signal arm door. Desk-scoped URLs keep `?desk=` so two tabs can stay on different desks.
 - Stacked playbook rows per desk (`dca_playbooks`, unique account + symbol)
 - Tick orders and exits on `runFuturesCommand`
 - Manual arm plus Phase 9 arm verbs, per-playbook Signal bind, buy/sell as side arm

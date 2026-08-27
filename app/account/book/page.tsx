@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AccountSnapshotBody } from "@/components/account-snapshot";
 import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
-import { formatAccountMode } from "@/lib/accounts/model";
+import { formatAccountMode, deskHref, deskHomePath } from "@/lib/accounts/model";
 import { loadAccountUsage } from "@/lib/accounts/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadAccountSnapshots } from "@/lib/exchanges/account-snapshot";
@@ -72,7 +72,7 @@ export default async function BookOverviewPage() {
             label="Open positions"
             value={String(openCount)}
             hint="Cash and Carry and Futures"
-            href="/strategies"
+            href={deskHomePath(current.deskType, current.id)}
           />
           <StatCard
             label="Automations"
@@ -84,7 +84,12 @@ export default async function BookOverviewPage() {
                   ? "At least one set is on"
                   : "All sets off"
             }
-            href="/strategies/cash-and-carry/automations"
+            href={deskHref(
+              current.deskType === "cash_and_carry"
+                ? "/strategies/cash-and-carry/automations"
+                : "/strategies/futures/automations",
+              current.id,
+            )}
           />
         </div>
       </section>

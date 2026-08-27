@@ -73,10 +73,107 @@ export function formatDeskTypeChoice(deskType: DeskType): string {
   return "Cash and Carry (spot + dated future)";
 }
 
-export function deskHomePath(deskType: DeskType): string {
-  return deskType === "cash_and_carry"
-    ? "/strategies/cash-and-carry"
-    : "/strategies/futures";
+export const DESK_QUERY = "desk";
+export const DESK_HEADER = "x-tbp-desk";
+export const DESK_PATHNAME_HEADER = "x-tbp-pathname";
+export const DESK_SEARCH_HEADER = "x-tbp-search";
+
+export function parseDeskQuery(value: unknown): string | null {
+  const raw = String(value ?? "").trim();
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      raw,
+    )
+  ) {
+    return null;
+  }
+  return raw.toLowerCase();
+}
+
+export function withQuery(
+  path: string,
+  extra: Record<string, string>,
+): string {
+  const hashIndex = path.indexOf("#");
+  const hash = hashIndex >= 0 ? path.slice(hashIndex) : "";
+  const withoutHash = hashIndex >= 0 ? path.slice(0, hashIndex) : path;
+  const queryIndex = withoutHash.indexOf("?");
+  const pathname =
+    queryIndex >= 0 ? withoutHash.slice(0, queryIndex) : withoutHash;
+  const params = new URLSearchParams(
+    queryIndex >= 0 ? withoutHash.slice(queryIndex + 1) : "",
+  );
+  for (const [key, value] of Object.entries(extra)) {
+    params.set(key, value);
+  }
+  const query = params.toString();
+  return `${pathname}${query ? `?${query}` : ""}${hash}`;
+}
+
+export function pathWithDesk(path: string, accountId: string): string {
+  return withQuery(path, { [DESK_QUERY]: accountId });
+}
+
+export function hrefPathname(href: string): string {
+  const withoutHash = href.split("#")[0] ?? href;
+  return withoutHash.split("?")[0] ?? withoutHash;
+}
+
+export function isDeskScopedPath(pathname: string): boolean {
+  return (
+    pathname === "/strategies/futures" ||
+    pathname.startsWith("/strategies/futures/") ||
+    pathname === "/strategies/cash-and-carry" ||
+    pathname.startsWith("/strategies/cash-and-carry/") ||
+    pathname === "/account/book" ||
+    pathname.startsWith("/account/book/")
+  );
+}
+
+export function deskHref(path: string, accountId: string | null | undefined): string {
+  return accountId ? pathWithDesk(path, accountId) : path;
+}
+
+export function deskIdFromHref(href: string): string | null {
+  const withoutHash = href.split("#")[0] ?? href;
+  const queryIndex = withoutHash.indexOf("?");
+  if (queryIndex < 0) {
+    return null;
+  }
+  return parseDeskQuery(
+    new URLSearchParams(withoutHash.slice(queryIndex + 1)).get(DESK_QUERY),
+  );
+}
+
+export function withDeskFrom(path: string, sourceHref: string): string {
+  const desk = deskIdFromHref(sourceHref);
+  return desk ? pathWithDesk(path, desk) : path;
+}
+
+export function deskPath(
+  path: string,
+  accountId: string | null | undefined,
+  extra: Record<string, string> = {},
+): string {
+  return withQuery(deskHref(path, accountId), extra);
+}
+
+export function navLinksWithDesk<T extends { href: string }>(
+  links: readonly T[],
+  accountId: string,
+): T[] {
+  return links.map((link) => ({
+    ...link,
+    href: pathWithDesk(link.href, accountId),
+  }));
+}
+
+export function deskHomePath(deskType: DeskType, accountId?: string): string {
+  const base =
+    deskType === "cash_and_carry"
+      ? "/strategies/cash-and-carry"
+      : "/strategies/futures";
+  return accountId ? pathWithDesk(base, accountId) : base;
 }
 
 export function deskUsesCashAndCarry(deskType: DeskType): boolean {

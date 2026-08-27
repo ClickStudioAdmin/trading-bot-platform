@@ -3,7 +3,10 @@ import {
   deskHomePath,
   deskUsesCashAndCarry,
   formatAccountMode,
+  navLinksWithDesk,
+  pathWithDesk,
 } from "@/lib/accounts/model";
+import { pinDeskSearchParam } from "@/lib/accounts/guard";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadPaperRules } from "@/lib/engine/load";
 import { loadEngineSettings } from "@/lib/engine/settings";
@@ -11,6 +14,10 @@ import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import {
+  CASH_AND_CARRY_PRIMARY_LINKS,
+  CASH_AND_CARRY_SECONDARY_LINKS,
+} from "@/lib/site-links";
 import { redirect } from "next/navigation";
 
 export default async function CashAndCarryLayout({
@@ -20,8 +27,15 @@ export default async function CashAndCarryLayout({
 }) {
   const session = await getSessionContext();
   if (session && !deskUsesCashAndCarry(session.account.deskType)) {
-    redirect(deskHomePath(session.account.deskType));
+    redirect(deskHomePath(session.account.deskType, session.account.id));
   }
+  if (session) {
+    await pinDeskSearchParam(session);
+  }
+  const deskId = session?.account.id ?? null;
+  const settingsHref = deskId
+    ? pathWithDesk("/strategies/cash-and-carry/settings", deskId)
+    : "/strategies/cash-and-carry/settings";
   const { signedIn, config } = await loadPaperRules();
   const live = Boolean(session && accountCanHoldConnections(session.account.mode));
   const settings = live ? await loadEngineSettings() : null;
@@ -54,6 +68,21 @@ export default async function CashAndCarryLayout({
   return (
     <div>
       <StrategySubnav
+        primaryLinks={
+          deskId
+            ? navLinksWithDesk(CASH_AND_CARRY_PRIMARY_LINKS, deskId)
+            : CASH_AND_CARRY_PRIMARY_LINKS
+        }
+        secondaryLinks={
+          deskId
+            ? navLinksWithDesk(CASH_AND_CARRY_SECONDARY_LINKS, deskId)
+            : CASH_AND_CARRY_SECONDARY_LINKS
+        }
+        automationsHref={
+          deskId
+            ? pathWithDesk("/strategies/cash-and-carry/automations", deskId)
+            : "/strategies/cash-and-carry/automations"
+        }
         automationsRunning={engineRunning}
         reduceOnly={automationsOn && (accountReduce || !anyActive)}
         connection={
@@ -71,13 +100,13 @@ export default async function CashAndCarryLayout({
                   href:
                     connections.length === 0
                       ? "/account/exchanges"
-                      : "/strategies/cash-and-carry/settings",
+                      : settingsHref,
                 }
             : {
                 name: formatAccountMode("paper"),
                 venue: "Bybit",
                 connected: true,
-                href: "/strategies/cash-and-carry/settings",
+                href: settingsHref,
               }
         }
       />

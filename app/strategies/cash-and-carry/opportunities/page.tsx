@@ -15,6 +15,7 @@ import { LastScan } from "@/components/last-scan";
 import { loadOpportunityBook } from "@/lib/opportunities/load";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getOpportunityPaperProps } from "@/lib/paper/list";
+import { deskIdFromHref } from "@/lib/accounts/model";
 
 export const metadata: Metadata = {
   title: "Opportunities",
@@ -57,7 +58,10 @@ export default async function CashAndCarryOpportunitiesPage({
           liveAdded={firstSearchValue(params.paper) === "live-added"}
           error={firstSearchValue(params.paperError)}
         />
-        <OpportunityFiltersForm values={filterInputValues(filters)} />
+        <OpportunityFiltersForm
+          values={filterInputValues(filters)}
+          deskId={deskIdFromHref(paper.next)}
+        />
         {error ? (
           <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}

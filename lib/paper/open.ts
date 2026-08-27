@@ -1,5 +1,9 @@
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import {
+  hrefPathname,
+  withDeskFrom,
+} from "@/lib/accounts/model";
+import {
   automationInsertColumns,
   type PaperCarryAutomation,
   type TradeSource,
@@ -16,7 +20,7 @@ export type OpportunityPaperProps = {
   signedIn: boolean;
   canOpen: boolean;
   venueOpen: boolean;
-  next: PaperReturnPath;
+  next: string;
 };
 
 export function pairKey(spotSymbol: string, futureSymbol: string): string {
@@ -148,19 +152,22 @@ export function firstSearchValue(
   return Array.isArray(value) ? value[0] : value;
 }
 
-export function safePaperReturnPath(raw: string): PaperReturnPath {
-  if (raw === "/strategies/cash-and-carry/positions") {
-    return raw;
-  }
-  if (
-    raw === "/strategies/cash-and-carry" ||
-    raw === "/strategies/universe" ||
-    raw === "/universe" ||
-    raw === "/cash-and-carry"
+export function safePaperReturnPath(raw: string): string {
+  const pathname = hrefPathname(raw);
+  let base: PaperReturnPath;
+  if (pathname === "/strategies/cash-and-carry/positions") {
+    base = pathname;
+  } else if (
+    pathname === "/strategies/cash-and-carry" ||
+    pathname === "/strategies/universe" ||
+    pathname === "/universe" ||
+    pathname === "/cash-and-carry"
   ) {
-    return "/strategies/cash-and-carry";
+    base = "/strategies/cash-and-carry";
+  } else {
+    base = "/strategies/cash-and-carry/opportunities";
   }
-  return "/strategies/cash-and-carry/opportunities";
+  return withDeskFrom(base, raw);
 }
 
 export function paperCarryInsertRow(

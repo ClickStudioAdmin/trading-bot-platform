@@ -15,7 +15,6 @@ import {
 } from "@/lib/opportunities/format";
 import type { EventLogRow } from "@/lib/logs/list";
 import type { PaperOrderRow } from "@/lib/paper/orders";
-import type { PaperReturnPath } from "@/lib/paper/open";
 import {
   openExposure,
   paperDeskStats,
@@ -38,12 +37,14 @@ export function OpenPaperTrades({
   next = "/strategies/cash-and-carry",
   showHeading = true,
   exchangeBook = false,
+  positionsHref = "/strategies/cash-and-carry/positions",
 }: {
   signedIn: boolean;
   open: OpenCarryView[];
-  next?: PaperReturnPath;
+  next?: string;
   showHeading?: boolean;
   exchangeBook?: boolean;
+  positionsHref?: string;
 }) {
   return (
     <section>
@@ -59,7 +60,7 @@ export function OpenPaperTrades({
             className=""
           />
           <Link
-            href="/strategies/cash-and-carry/positions"
+            href={positionsHref}
             className="shrink-0 text-sm text-accent hover:text-accent-strong"
           >
             All positions

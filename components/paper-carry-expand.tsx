@@ -30,7 +30,6 @@ import {
   formatOrderWhy,
   type PaperOrderRow,
 } from "@/lib/paper/orders";
-import type { PaperReturnPath } from "@/lib/paper/open";
 import { LocalTime } from "@/components/local-time";
 import {
   type MarkedPaperCarry,
@@ -52,7 +51,7 @@ export function OpenPaperCarryRows({
   hideUnwind = false,
 }: {
   trade: OpenCarryView;
-  next: PaperReturnPath;
+  next: string;
   hideUnwind?: boolean;
 }) {
   const pnlPct =
@@ -203,7 +202,7 @@ function ClosePaperButton({
   hideUnwind = false,
 }: {
   trade: MarkedPaperCarry;
-  next: PaperReturnPath;
+  next: string;
   hideUnwind?: boolean;
 }) {
   const closeKey = `close-${trade.id}`;

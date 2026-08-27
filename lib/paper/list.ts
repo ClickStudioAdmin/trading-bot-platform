@@ -1,4 +1,5 @@
 import { getSessionContext } from "@/lib/auth/session";
+import { deskHref } from "@/lib/accounts/model";
 import { loadEngineSettings } from "@/lib/engine/settings";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
@@ -23,18 +24,19 @@ export async function getOpportunityPaperProps(
   next: OpportunityPaperProps["next"],
 ): Promise<OpportunityPaperProps> {
   const session = await getSessionContext();
+  const stamped = deskHref(next, session?.account.id);
   if (!session) {
-    return { signedIn: false, canOpen: false, venueOpen: false, next };
+    return { signedIn: false, canOpen: false, venueOpen: false, next: stamped };
   }
   if (session.account.mode === "paper") {
-    return { signedIn: true, canOpen: true, venueOpen: false, next };
+    return { signedIn: true, canOpen: true, venueOpen: false, next: stamped };
   }
   if (!accountCanHoldConnections(session.account.mode)) {
-    return { signedIn: true, canOpen: false, venueOpen: false, next };
+    return { signedIn: true, canOpen: false, venueOpen: false, next: stamped };
   }
   const settings = await loadEngineSettings();
   if (!settings.connectionId) {
-    return { signedIn: true, canOpen: false, venueOpen: false, next };
+    return { signedIn: true, canOpen: false, venueOpen: false, next: stamped };
   }
   const connections = await listExchangeConnections(session.member.id);
   const bound = connections.find(
@@ -44,7 +46,7 @@ export async function getOpportunityPaperProps(
     signedIn: true,
     canOpen: Boolean(bound),
     venueOpen: Boolean(bound),
-    next,
+    next: stamped,
   };
 }
 

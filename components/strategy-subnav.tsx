@@ -205,9 +205,10 @@ function SubnavLink({
   secondary?: boolean;
 }) {
   const exact = Boolean(link.exact);
+  const linkPath = link.href.split("?")[0] ?? link.href;
   const active = exact
-    ? pathname === link.href
-    : pathname === link.href || pathname.startsWith(`${link.href}/`);
+    ? pathname === linkPath
+    : pathname === linkPath || pathname.startsWith(`${linkPath}/`);
 
   return (
     <Link

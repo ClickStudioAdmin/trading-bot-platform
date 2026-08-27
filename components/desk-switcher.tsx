@@ -108,7 +108,7 @@ export function DeskSwitcher({
                 return (
                   <Link
                     key={desk.id}
-                    href={deskHomePath(desk.deskType)}
+                    href={deskHomePath(desk.deskType, desk.id)}
                     aria-current="true"
                     className="block rounded-control bg-surface-raised px-3 py-2.5 hover:bg-line"
                   >
@@ -121,7 +121,7 @@ export function DeskSwitcher({
                   <input type="hidden" name="accountId" value={desk.id} />
                   <button
                     type="submit"
-                    className="w-full rounded-control px-3 py-2.5 text-left text-ink-muted hover:bg-surface-raised hover:text-ink"
+                    className="block w-full rounded-control px-3 py-2.5 text-left text-ink-muted hover:bg-surface-raised hover:text-ink"
                   >
                     {body}
                   </button>

@@ -5,7 +5,7 @@ import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
 import { ExchangeBindSelect } from "@/components/exchange-bind-select";
-import { strategyDetachBlockers, deskAllowsPerpsRecipes } from "@/lib/accounts/model";
+import { strategyDetachBlockers, deskAllowsPerpsRecipes, deskHref } from "@/lib/accounts/model";
 import { loadAccountUsage } from "@/lib/accounts/store";
 import {
   connectionIdsBoundToOtherDesks,
@@ -75,7 +75,7 @@ export default async function FuturesSettingsPage({
           ? "Automations stay on their own page."
           : "The playbook will live on Automations."}{" "}
         TradingView URLs live on{" "}
-        <Link href={FUTURES_PATHS.webhooks} className="text-accent">
+        <Link href={deskHref(FUTURES_PATHS.webhooks, session.account.id)} className="text-accent">
           Webhooks
         </Link>
         . Bind the Bybit key this desk uses from this login.

@@ -36,9 +36,14 @@ import {
 import { persistOpportunities } from "@/lib/opportunities/persist";
 import { scanOneOpportunity } from "@/lib/opportunities/scan";
 import { requireCashAndCarrySession } from "@/lib/accounts/guard";
+import { withQuery } from "@/lib/accounts/model";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+
+function flash(next: string, extra: Record<string, string>): never {
+  redirect(withQuery(next, extra));
+}
 
 export async function openPaperCarry(formData: FormData) {
   const next = safePaperReturnPath(String(formData.get("next") ?? ""));
@@ -48,7 +53,7 @@ export async function openPaperCarry(formData: FormData) {
 
   const supabase = createServiceClient();
   if (!supabase) {
-    redirect(`${next}?paperError=${encodeURIComponent("Auth is not configured.")}`);
+    flash(next, { paperError:"Auth is not configured." });
   }
 
   const spotSymbol = String(formData.get("spotSymbol") ?? "");
@@ -58,7 +63,7 @@ export async function openPaperCarry(formData: FormData) {
     String(formData.get("shownCapacityUsdt") ?? ""),
   );
   if (!spotSymbol || !futureSymbol || requested === null) {
-    redirect(`${next}?paperError=${encodeURIComponent("Enter a positive USDT value.")}`);
+    flash(next, { paperError:"Enter a positive USDT value." });
   }
 
   let match;
@@ -66,13 +71,11 @@ export async function openPaperCarry(formData: FormData) {
     match = await scanOneOpportunity({ spotSymbol, futureSymbol });
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : "Scan failed";
-    redirect(`${next}?paperError=${encodeURIComponent(message)}`);
+    flash(next, { paperError:message });
   }
 
   if (!match) {
-    redirect(
-      `${next}?paperError=${encodeURIComponent("That pair is not in the live scan.")}`,
-    );
+    flash(next, { paperError: "That pair is not in the live scan." });
   }
 
   const usableCapacityUsdt = usableBookUsdt(
@@ -85,9 +88,7 @@ export async function openPaperCarry(formData: FormData) {
     shownUsableUsdt,
   );
   if (sized === null) {
-    redirect(
-      `${next}?paperError=${encodeURIComponent("Size cannot exceed usable book.")}`,
-    );
+    flash(next, { paperError: "Size cannot exceed usable book." });
   }
   const rawScan = match;
   match = { ...match, capacityUsdt: usableCapacityUsdt };
@@ -101,7 +102,7 @@ export async function openPaperCarry(formData: FormData) {
       mode: account.mode,
     });
     if (!bound.ok) {
-      redirect(`${next}?paperError=${encodeURIComponent(bound.error)}`);
+      flash(next, { paperError:bound.error });
     }
     venueFill = await openCashAndCarryOnVenue({
       connection: bound.connection,
@@ -121,7 +122,7 @@ export async function openPaperCarry(formData: FormData) {
         strategy: "cash-and-carry",
         data: { spotSymbol, futureSymbol, notionalUsdt: sized, venue: "bybit" },
       });
-      redirect(`${next}?paperError=${encodeURIComponent(venueFill.error)}`);
+      flash(next, { paperError:venueFill.error });
     }
   }
 
@@ -197,7 +198,7 @@ export async function openPaperCarry(formData: FormData) {
           notionalUsdt: sized,
         },
       });
-      redirect(`${next}?paperError=${encodeURIComponent(written.error)}`);
+      flash(next, { paperError:written.error });
     }
 
     await writeEventLog({
@@ -219,7 +220,7 @@ export async function openPaperCarry(formData: FormData) {
     });
 
     await persistOpportunities([rawScan]);
-    redirect(`${next}?paper=live-added`);
+    flash(next, { paper: "live-added" });
   }
 
   const { data, error } = await supabase
@@ -249,11 +250,11 @@ export async function openPaperCarry(formData: FormData) {
       strategy: "cash-and-carry",
       data: { spotSymbol, futureSymbol, notionalUsdt: sized },
     });
-    redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
+    flash(next, { paperError:error.message });
   }
 
   if (!data) {
-    redirect(`${next}?paper=opened`);
+    flash(next, { paper: "opened" });
   }
 
   const carryId = asNumber(data.id);
@@ -299,7 +300,7 @@ export async function openPaperCarry(formData: FormData) {
 
   await persistOpportunities([rawScan]);
 
-  redirect(`${next}?paper=${liveBook ? "live-opened" : "opened"}`);
+  flash(next, { paper: liveBook ? "live-opened" : "opened" });
 }
 
 export async function closeOpenPaperCarry(formData: FormData) {
@@ -311,14 +312,14 @@ export async function closeOpenPaperCarry(formData: FormData) {
 
   const supabase = createServiceClient();
   if (!supabase) {
-    redirect(`${next}?paperError=${encodeURIComponent("Auth is not configured.")}`);
+    flash(next, { paperError:"Auth is not configured." });
   }
 
   let carryId: number;
   try {
     carryId = asNumber(formData.get("carryId"));
   } catch {
-    redirect(`${next}?paperError=${encodeURIComponent("Missing paper carry.")}`);
+    flash(next, { paperError:"Missing paper carry." });
   }
 
   const { data, error: loadError } = await supabase
@@ -330,9 +331,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
     .maybeSingle();
 
   if (loadError || !data) {
-    redirect(
-      `${next}?paperError=${encodeURIComponent("That paper carry is not open.")}`,
-    );
+    flash(next, { paperError: "That paper carry is not open." });
   }
 
   const row = parsePaperCarryRow(data as Record<string, unknown>);
@@ -347,13 +346,14 @@ export async function closeOpenPaperCarry(formData: FormData) {
     });
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : "Scan failed";
-    redirect(`${next}?paperError=${encodeURIComponent(message)}`);
+    flash(next, { paperError:message });
   }
 
   if (!match) {
-    redirect(
-      `${next}?paperError=${encodeURIComponent("That pair is not in the live scan, so it cannot be marked or closed.")}`,
-    );
+    flash(next, {
+      paperError:
+        "That pair is not in the live scan, so it cannot be marked or closed.",
+    });
   }
 
   await persistOpportunities([match]);
@@ -374,7 +374,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
       userId: user.id,
     });
     if (parked.error) {
-      redirect(`${next}?paperError=${encodeURIComponent(parked.error)}`);
+      flash(next, { paperError:parked.error });
     }
     const clip = unwindClipUsdt(row.notionalUsdt, usableCapacityUsdt, null);
     if (clip === null) {
@@ -389,9 +389,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
         strategy: "cash-and-carry",
         data: { carryId, futureSymbol: row.futureSymbol },
       });
-      redirect(
-        `${next}?paper=${liveBook ? "live-unwinding" : "unwinding"}`,
-      );
+      flash(next, { paper: liveBook ? "live-unwinding" : "unwinding" });
     }
     clipUsdt = clip;
   }
@@ -414,7 +412,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
       mode: account.mode,
     });
     if (!bound.ok) {
-      redirect(`${next}?paperError=${encodeURIComponent(bound.error)}`);
+      flash(next, { paperError:bound.error });
     }
     const qty = await qtyTextForVenueClose({
       spotSymbol: row.spotSymbol,
@@ -436,11 +434,9 @@ export async function closeOpenPaperCarry(formData: FormData) {
           strategy: "cash-and-carry",
           data: { carryId, mode, venue: "bybit" },
         });
-        redirect(
-          `${next}?paper=${liveBook ? "live-unwinding" : "unwinding"}`,
-        );
+        flash(next, { paper: liveBook ? "live-unwinding" : "unwinding" });
       }
-      redirect(`${next}?paperError=${encodeURIComponent(qty.error)}`);
+      flash(next, { paperError:qty.error });
     }
     venueClose = await closeCashAndCarryOnVenue({
       connection: bound.connection,
@@ -460,11 +456,9 @@ export async function closeOpenPaperCarry(formData: FormData) {
         data: { carryId, mode, venue: "bybit" },
       });
       if (mode === "unwind") {
-        redirect(
-          `${next}?paper=${liveBook ? "live-unwinding" : "unwinding"}`,
-        );
+        flash(next, { paper: liveBook ? "live-unwinding" : "unwinding" });
       }
-      redirect(`${next}?paperError=${encodeURIComponent(venueClose.error)}`);
+      flash(next, { paperError:venueClose.error });
     }
   }
 
@@ -492,7 +486,7 @@ export async function closeOpenPaperCarry(formData: FormData) {
       strategy: "cash-and-carry",
       data: { carryId, mode },
     });
-    redirect(`${next}?paperError=${encodeURIComponent(written.error)}`);
+    flash(next, { paperError:written.error });
   }
 
   await writeEventLog({
@@ -519,10 +513,11 @@ export async function closeOpenPaperCarry(formData: FormData) {
     },
   });
 
-  redirect(
+  flash(
+    next,
     written.kind === "flat"
-      ? `${next}?paper=${liveBook ? "live-closed" : "closed"}`
-      : `${next}?paper=${liveBook ? "live-unwinding" : "unwinding"}`,
+      ? { paper: liveBook ? "live-closed" : "closed" }
+      : { paper: liveBook ? "live-unwinding" : "unwinding" },
   );
 }
 
@@ -533,19 +528,19 @@ export async function updatePaperCarryExits(formData: FormData) {
 
   const supabase = createServiceClient();
   if (!supabase) {
-    redirect(`${next}?paperError=${encodeURIComponent("Auth is not configured.")}`);
+    flash(next, { paperError:"Auth is not configured." });
   }
 
   let carryId: number;
   try {
     carryId = asNumber(formData.get("carryId"));
   } catch {
-    redirect(`${next}?paperError=${encodeURIComponent("Missing paper carry.")}`);
+    flash(next, { paperError:"Missing paper carry." });
   }
 
   const parsed = parseCarryExitForm(formData);
   if ("error" in parsed) {
-    redirect(`${next}?paperError=${encodeURIComponent(parsed.error)}`);
+    flash(next, { paperError:parsed.error });
   }
 
   const { data, error: loadError } = await supabase
@@ -558,9 +553,7 @@ export async function updatePaperCarryExits(formData: FormData) {
     .maybeSingle();
 
   if (loadError || !data) {
-    redirect(
-      `${next}?paperError=${encodeURIComponent("That automated paper carry is not open.")}`,
-    );
+    flash(next, { paperError: "That automated paper carry is not open." });
   }
 
   const { error } = await supabase
@@ -587,7 +580,7 @@ export async function updatePaperCarryExits(formData: FormData) {
       strategy: "cash-and-carry",
       data: { carryId },
     });
-    redirect(`${next}?paperError=${encodeURIComponent(error.message)}`);
+    flash(next, { paperError:error.message });
   }
 
   await writeEventLog({
@@ -606,7 +599,7 @@ export async function updatePaperCarryExits(formData: FormData) {
     },
   });
 
-  redirect(`${next}?paper=exits`);
+  flash(next, { paper: "exits" });
 }
 
 async function parkManualUnwind(input: {

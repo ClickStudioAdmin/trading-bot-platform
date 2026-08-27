@@ -22,20 +22,22 @@ import {
   saveDcaPlaybook,
 } from "@/lib/dca/store";
 import { writeEventLog } from "@/lib/logs/write";
+import { deskPath } from "@/lib/accounts/model";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-function fail(message: string): never {
-  redirect(
-    `${FUTURES_PATHS.automations}?error=${encodeURIComponent(message)}`,
-  );
+function fail(accountId: string, message: string): never {
+  redirect(deskPath(FUTURES_PATHS.automations, accountId, { error: message }));
 }
 
-function succeed(notice: string): never {
+function succeed(accountId: string, notice: string): never {
   redirect(
-    `${FUTURES_PATHS.automations}?saved=1&notice=${encodeURIComponent(notice)}`,
+    deskPath(FUTURES_PATHS.automations, accountId, {
+      saved: "1",
+      notice,
+    }),
   );
 }
 
@@ -60,11 +62,14 @@ export async function saveAndArmDcaPlaybookAction(formData: FormData) {
   await saveDcaPlaybookWith("arm", formData);
 }
 
-async function rejectIfOverMaxOrder(config: DcaPlaybookConfig): Promise<void> {
+async function rejectIfOverMaxOrder(
+  accountId: string,
+  config: DcaPlaybookConfig,
+): Promise<void> {
   const pairs = await loadUsdtLinearPerps().catch(() => []);
   const pair = pairs.find((row) => row.symbol === config.symbol);
   if (!pair) {
-    fail("That contract is not available.");
+    fail(accountId, "That contract is not available.");
   }
   const lastPrice = await lastPriceFor(config.symbol);
   const error = dcaConfigMaxOrderError({
@@ -75,7 +80,7 @@ async function rejectIfOverMaxOrder(config: DcaPlaybookConfig): Promise<void> {
     baseCoin: pair.baseCoin,
   });
   if (error) {
-    fail(error);
+    fail(accountId, error);
   }
 }
 
@@ -85,16 +90,16 @@ async function saveDcaPlaybookWith(
 ): Promise<void> {
   const session = await requirePerpsUiSession();
   if (session.account.deskType !== "dca") {
-    fail("This desk is not a DCA desk.");
+    fail(session.account.id, "This desk is not a DCA desk.");
   }
   const parsed = parseDcaPlaybookForm(formData);
   if (!parsed.ok) {
-    fail(parsed.error);
+    fail(session.account.id, parsed.error);
   }
-  await rejectIfOverMaxOrder(parsed.config);
+  await rejectIfOverMaxOrder(session.account.id, parsed.config);
   const supabase = createServiceClient();
   if (!supabase) {
-    fail("Auth is not configured.");
+    fail(session.account.id, "Auth is not configured.");
   }
   const saved = await saveDcaPlaybook({
     supabase,
@@ -104,7 +109,7 @@ async function saveDcaPlaybookWith(
     id: parseDcaPlaybookId(formData.get("playbookId")),
   });
   if (!saved.ok) {
-    fail(saved.error);
+    fail(session.account.id, saved.error);
   }
   await writeEventLog({
     scope: "strategy",
@@ -135,26 +140,26 @@ async function saveDcaPlaybookWith(
       verb: "arm",
     });
     if (!armed.ok) {
-      fail(armed.error);
+      fail(session.account.id, armed.error);
     }
     revalidatePath(FUTURES_PATHS.positions);
-    succeed(armed.message);
+    succeed(session.account.id, armed.message);
   }
-  succeed("Playbook saved.");
+  succeed(session.account.id, "Playbook saved.");
 }
 
 export async function deleteDcaPlaybookAction(formData: FormData) {
   const session = await requirePerpsUiSession();
   if (session.account.deskType !== "dca") {
-    fail("This desk is not a DCA desk.");
+    fail(session.account.id, "This desk is not a DCA desk.");
   }
   const id = parseDcaPlaybookId(formData.get("playbookId"));
   if (!id) {
-    fail("That playbook was not found.");
+    fail(session.account.id, "That playbook was not found.");
   }
   const supabase = createServiceClient();
   if (!supabase) {
-    fail("Auth is not configured.");
+    fail(session.account.id, "Auth is not configured.");
   }
   const deleted = await deleteDcaPlaybook({
     supabase,
@@ -162,7 +167,7 @@ export async function deleteDcaPlaybookAction(formData: FormData) {
     accountId: session.account.id,
   });
   if (!deleted.ok) {
-    fail(deleted.error);
+    fail(session.account.id, deleted.error);
   }
   await writeEventLog({
     scope: "strategy",
@@ -174,7 +179,7 @@ export async function deleteDcaPlaybookAction(formData: FormData) {
     data: { playbookId: id },
   });
   revalidatePath(FUTURES_PATHS.automations);
-  succeed("Playbook removed.");
+  succeed(session.account.id, "Playbook removed.");
 }
 
 export async function runDcaArmAction(formData: FormData) {
@@ -203,25 +208,25 @@ export async function runDcaPlaybookVerb(
 ) {
   const session = await requirePerpsUiSession();
   if (session.account.deskType !== "dca") {
-    fail("This desk is not a DCA desk.");
+    fail(session.account.id, "This desk is not a DCA desk.");
   }
   const parsedVerb =
     parseDcaPlaybookVerb(verbRaw) ??
     parseDcaPlaybookVerb(formData.get("verb"));
   if (!parsedVerb) {
-    fail("Choose Arm, Disarm, or Close playbook.");
+    fail(session.account.id, "Choose Arm, Disarm, or Close playbook.");
   }
   const { verb, side } = parsedVerb;
   const parsed = parseDcaPlaybookForm(formData);
   if (!parsed.ok) {
-    fail(parsed.error);
+    fail(session.account.id, parsed.error);
   }
   if (verb === "arm") {
-    await rejectIfOverMaxOrder(parsed.config);
+    await rejectIfOverMaxOrder(session.account.id, parsed.config);
   }
   const supabase = createServiceClient();
   if (!supabase) {
-    fail("Auth is not configured.");
+    fail(session.account.id, "Auth is not configured.");
   }
   const saved = await saveDcaPlaybook({
     supabase,
@@ -231,7 +236,7 @@ export async function runDcaPlaybookVerb(
     id: parseDcaPlaybookId(formData.get("playbookId")),
   });
   if (!saved.ok) {
-    fail(saved.error);
+    fail(session.account.id, saved.error);
   }
   const result = await applyDcaVerb({
     playbook: saved.playbook,
@@ -240,9 +245,9 @@ export async function runDcaPlaybookVerb(
     side,
   });
   if (!result.ok) {
-    fail(result.error);
+    fail(session.account.id, result.error);
   }
   revalidatePath(FUTURES_PATHS.automations);
   revalidatePath(FUTURES_PATHS.positions);
-  succeed(result.message);
+  succeed(session.account.id, result.message);
 }

@@ -4,7 +4,7 @@ import { PageHeading } from "@/components/page-heading";
 import { FuturesWebhooksDesk } from "@/components/futures-webhooks-desk";
 import { FuturesWebhookTest } from "@/components/futures-webhook-test";
 import { getSessionContext } from "@/lib/auth/session";
-import { deskAllowsOrderWebhooks, deskAllowsPerpsRecipes, deskAllowsSignalWebhooks } from "@/lib/accounts/model";
+import { deskAllowsOrderWebhooks, deskAllowsPerpsRecipes, deskAllowsSignalWebhooks, deskHref } from "@/lib/accounts/model";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
@@ -27,6 +27,7 @@ export default async function FuturesWebhooksPage({
 }) {
   const params = await searchParams;
   const session = await getSessionContext();
+  const href = (path: string) => deskHref(path, session?.account.id);
   const deskType = session?.account.deskType ?? "perps";
   const allowSignal = deskAllowsSignalWebhooks(deskType);
   const allowOrder = deskAllowsOrderWebhooks(deskType);
@@ -83,7 +84,7 @@ export default async function FuturesWebhooksPage({
             <span className="text-ink">Signal</span> is just the entry ping —
             Automations When shows the webhook name. Send a dummy below. A fill
             opens{" "}
-            <Link href={FUTURES_PATHS.positions} className="text-accent">
+            <Link href={href(FUTURES_PATHS.positions)} className="text-accent">
               Positions
             </Link>
             .
@@ -93,7 +94,7 @@ export default async function FuturesWebhooksPage({
             Signal webhooks arm the bound playbook. Arm / disarm /
             close-playbook still work. Buy / sell arms that side only; the
             playbook owns size. Send a dummy below. Armed orders open{" "}
-            <Link href={FUTURES_PATHS.positions} className="text-accent">
+            <Link href={href(FUTURES_PATHS.positions)} className="text-accent">
               Positions
             </Link>
             .
@@ -102,7 +103,7 @@ export default async function FuturesWebhooksPage({
           <>
             TradingView sends buy, sell, and close on this URL. Send a dummy
             below. A fill opens{" "}
-            <Link href={FUTURES_PATHS.positions} className="text-accent">
+            <Link href={href(FUTURES_PATHS.positions)} className="text-accent">
               Positions
             </Link>
             .
@@ -142,8 +143,8 @@ export default async function FuturesWebhooksPage({
                 allowSignal={allowSignal}
                 signalFiresRecipes={deskAllowsPerpsRecipes(deskType)}
                 standalone
-                next={FUTURES_PATHS.webhooks}
-                successNext={FUTURES_PATHS.positions}
+                next={href(FUTURES_PATHS.webhooks)}
+                successNext={href(FUTURES_PATHS.positions)}
                 pairs={pairs}
                 lastPrices={lastPrices}
               />

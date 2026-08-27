@@ -58,6 +58,18 @@ assert.equal(
   safePaperReturnPath("/evil"),
   "/strategies/cash-and-carry/opportunities",
 );
+assert.equal(
+  safePaperReturnPath(
+    "/strategies/cash-and-carry/positions?desk=11111111-1111-4111-8111-111111111111",
+  ),
+  "/strategies/cash-and-carry/positions?desk=11111111-1111-4111-8111-111111111111",
+);
+assert.equal(
+  safePaperReturnPath(
+    "/strategies/cash-and-carry?desk=11111111-1111-4111-8111-111111111111&paper=opened",
+  ),
+  "/strategies/cash-and-carry?desk=11111111-1111-4111-8111-111111111111",
+);
 
 const row = paperCarryInsertRow("user-1", opportunity, 10_000);
 assert.equal(row.user_id, "user-1");

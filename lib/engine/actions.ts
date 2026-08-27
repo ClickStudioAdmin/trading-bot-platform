@@ -7,6 +7,7 @@ import {
 } from "@/lib/engine/rules";
 import { loadAccountUsage } from "@/lib/accounts/store";
 import {
+  deskPath,
   formatStrategyDetachBlockers,
   strategyDetachBlockers,
 } from "@/lib/accounts/model";
@@ -21,6 +22,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 const RULES_PATH = "/strategies/cash-and-carry/automations";
+const SETTINGS_PATH = "/strategies/cash-and-carry/settings";
+
+function rulesFail(accountId: string, error: string): never {
+  redirect(deskPath(RULES_PATH, accountId, { error }));
+}
+
+function settingsFail(accountId: string, error: string): never {
+  redirect(deskPath(SETTINGS_PATH, accountId, { error }));
+}
 
 export async function savePaperRules(formData: FormData) {
   const session = await requireCashAndCarrySession();
@@ -28,12 +38,12 @@ export async function savePaperRules(formData: FormData) {
 
   const parsed = parsePaperRulesForm(formData);
   if (!parsed.ok) {
-    redirect(`${RULES_PATH}?error=${encodeURIComponent(parsed.error)}`);
+    rulesFail(account.id, parsed.error);
   }
 
   const supabase = createServiceClient();
   if (!supabase) {
-    redirect(`${RULES_PATH}?error=${encodeURIComponent("Auth is not configured.")}`);
+    rulesFail(account.id, "Auth is not configured.");
   }
 
   const clearReduceOnly = parsed.config.layers.length === 0;
@@ -57,7 +67,7 @@ export async function savePaperRules(formData: FormData) {
       accountId: account.id,
       strategy: "cash-and-carry",
     });
-    redirect(`${RULES_PATH}?error=${encodeURIComponent(settingsError.message)}`);
+    rulesFail(account.id, settingsError.message);
   }
 
   const { data: existing, error: loadError } = await supabase
@@ -75,7 +85,7 @@ export async function savePaperRules(formData: FormData) {
       accountId: account.id,
       strategy: "cash-and-carry",
     });
-    redirect(`${RULES_PATH}?error=${encodeURIComponent(loadError.message)}`);
+    rulesFail(account.id, loadError.message);
   }
 
   const keepIds = new Set(
@@ -105,7 +115,7 @@ export async function savePaperRules(formData: FormData) {
         accountId: account.id,
         strategy: "cash-and-carry",
       });
-      redirect(`${RULES_PATH}?error=${encodeURIComponent(openError.message)}`);
+      rulesFail(account.id, openError.message);
     }
 
     const blocked = blockedRuleDeletes(
@@ -115,8 +125,9 @@ export async function savePaperRules(formData: FormData) {
         .filter((id) => Number.isFinite(id)),
     );
     if (blocked.length > 0) {
-      redirect(
-        `${RULES_PATH}?error=${encodeURIComponent("Cannot remove a rule set that has an open position.")}`,
+      rulesFail(
+        account.id,
+        "Cannot remove a rule set that has an open position.",
       );
     }
 
@@ -135,7 +146,7 @@ export async function savePaperRules(formData: FormData) {
         accountId: account.id,
         strategy: "cash-and-carry",
       });
-      redirect(`${RULES_PATH}?error=${encodeURIComponent(error.message)}`);
+      rulesFail(account.id, error.message);
     }
   }
 
@@ -157,7 +168,7 @@ export async function savePaperRules(formData: FormData) {
           accountId: account.id,
           strategy: "cash-and-carry",
         });
-        redirect(`${RULES_PATH}?error=${encodeURIComponent(error.message)}`);
+        rulesFail(account.id, error.message);
       }
     } else {
       const { error } = await supabase.from("paper_rules").insert(payload);
@@ -171,7 +182,7 @@ export async function savePaperRules(formData: FormData) {
           accountId: account.id,
           strategy: "cash-and-carry",
         });
-        redirect(`${RULES_PATH}?error=${encodeURIComponent(error.message)}`);
+        rulesFail(account.id, error.message);
       }
     }
   }
@@ -194,10 +205,8 @@ export async function savePaperRules(formData: FormData) {
   revalidatePath("/account");
   revalidatePath("/account/book");
   revalidatePath("/strategies/cash-and-carry");
-  redirect(`${RULES_PATH}?saved=1`);
+  redirect(deskPath(RULES_PATH, account.id, { saved: "1" }));
 }
-
-const SETTINGS_PATH = "/strategies/cash-and-carry/settings";
 
 export async function savePaperSettings(formData: FormData) {
   const session = await requireCashAndCarrySession();
@@ -205,14 +214,12 @@ export async function savePaperSettings(formData: FormData) {
 
   const parsed = parseUsableBookShare(formData.get("usableBookShare"));
   if (typeof parsed !== "number") {
-    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(parsed.error)}`);
+    settingsFail(account.id, parsed.error);
   }
 
   const supabase = createServiceClient();
   if (!supabase) {
-    redirect(
-      `${SETTINGS_PATH}?error=${encodeURIComponent("Auth is not configured.")}`,
-    );
+    settingsFail(account.id, "Auth is not configured.");
   }
 
   let connectionId: string | null = null;
@@ -237,22 +244,16 @@ export async function savePaperSettings(formData: FormData) {
         automationsRunning: Boolean(row?.automationsRunning),
       });
       if (detach.length > 0) {
-        redirect(
-          `${SETTINGS_PATH}?error=${encodeURIComponent(formatStrategyDetachBlockers(detach))}`,
-        );
+        settingsFail(account.id, formatStrategyDetachBlockers(detach));
       }
     }
     if (connectionId) {
       const connections = await listExchangeConnections(user.id);
       const match = connections.find((item) => item.id === connectionId);
       if (!match) {
-        redirect(
-          `${SETTINGS_PATH}?error=${encodeURIComponent("Pick an exchange key saved on this login.")}`,
-        );
+        settingsFail(account.id, "Pick an exchange key saved on this login.");
       } else if (match.status !== "active" && match.id !== currentId) {
-        redirect(
-          `${SETTINGS_PATH}?error=${encodeURIComponent("That connection is not active.")}`,
-        );
+        settingsFail(account.id, "That connection is not active.");
       }
     }
   }
@@ -277,7 +278,7 @@ export async function savePaperSettings(formData: FormData) {
       accountId: account.id,
       strategy: "cash-and-carry",
     });
-    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(error.message)}`);
+    settingsFail(account.id, error.message);
   }
 
   await writeEventLog({
@@ -296,7 +297,7 @@ export async function savePaperSettings(formData: FormData) {
   revalidatePath("/account/exchanges");
   revalidatePath("/account/book");
   revalidatePath("/strategies/cash-and-carry");
-  redirect(`${SETTINGS_PATH}?saved=1`);
+  redirect(deskPath(SETTINGS_PATH, account.id, { saved: "1" }));
 }
 
 export async function saveAccountReduceOnly(formData: FormData) {
@@ -304,9 +305,7 @@ export async function saveAccountReduceOnly(formData: FormData) {
   const { member: user, account } = session;
   const supabase = createServiceClient();
   if (!supabase) {
-    redirect(
-      `${RULES_PATH}?error=${encodeURIComponent("Auth is not configured.")}`,
-    );
+    rulesFail(account.id, "Auth is not configured.");
   }
 
   const { count: setCount, error: countError } = await supabase
@@ -314,7 +313,7 @@ export async function saveAccountReduceOnly(formData: FormData) {
     .select("id", { count: "exact", head: true })
     .eq("account_id", account.id);
   if (countError) {
-    redirect(`${RULES_PATH}?error=${encodeURIComponent(countError.message)}`);
+    rulesFail(account.id, countError.message);
   }
   const reduceOnly =
     (setCount ?? 0) > 0 && parseReduceOnly(formData.get("reduceOnly"));
@@ -336,7 +335,7 @@ export async function saveAccountReduceOnly(formData: FormData) {
       accountId: account.id,
       strategy: "cash-and-carry",
     });
-    redirect(`${RULES_PATH}?error=${encodeURIComponent(error.message)}`);
+    rulesFail(account.id, error.message);
   }
 
   await writeEventLog({
@@ -352,34 +351,30 @@ export async function saveAccountReduceOnly(formData: FormData) {
   revalidatePath("/account/exchanges");
   revalidatePath("/account/book");
   revalidatePath("/strategies/cash-and-carry");
-  redirect(`${RULES_PATH}?reduce=1`);
+  redirect(deskPath(RULES_PATH, account.id, { reduce: "1" }));
 }
 
 export async function detachStrategyConnection() {
   const session = await requireCashAndCarrySession();
   const { member: user, account } = session;
   if (!accountCanHoldConnections(account.mode)) {
-    redirect(SETTINGS_PATH);
+    redirect(deskPath(SETTINGS_PATH, account.id));
   }
   const supabase = createServiceClient();
   if (!supabase) {
-    redirect(
-      `${SETTINGS_PATH}?error=${encodeURIComponent("Auth is not configured.")}`,
-    );
+    settingsFail(account.id, "Auth is not configured.");
   }
   const usage = await loadAccountUsage([account]);
   const row = usage.get(account.id);
   if (!row?.strategyConnectionId) {
-    redirect(SETTINGS_PATH);
+    redirect(deskPath(SETTINGS_PATH, account.id));
   }
   const blocks = strategyDetachBlockers({
     openCount: row.carryOpenCount,
     automationsRunning: row.automationsRunning,
   });
   if (blocks.length > 0) {
-    redirect(
-      `${SETTINGS_PATH}?error=${encodeURIComponent(formatStrategyDetachBlockers(blocks))}`,
-    );
+    settingsFail(account.id, formatStrategyDetachBlockers(blocks));
   }
   const { error } = await supabase
     .from("paper_engine_settings")
@@ -390,7 +385,7 @@ export async function detachStrategyConnection() {
     .eq("account_id", account.id)
     .eq("user_id", user.id);
   if (error) {
-    redirect(`${SETTINGS_PATH}?error=${encodeURIComponent(error.message)}`);
+    settingsFail(account.id, error.message);
   }
   await writeEventLog({
     scope: "strategy",
@@ -404,5 +399,5 @@ export async function detachStrategyConnection() {
   revalidatePath("/account/exchanges");
   revalidatePath("/account/book");
   revalidatePath("/strategies/cash-and-carry");
-  redirect(`${SETTINGS_PATH}?saved=1`);
+  redirect(deskPath(SETTINGS_PATH, account.id, { saved: "1" }));
 }

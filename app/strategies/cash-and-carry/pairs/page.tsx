@@ -5,6 +5,8 @@ import { PairFiltersForm } from "@/components/pair-filters";
 import { TokenIcon } from "@/components/token-icon";
 import { listCarryPairs } from "@/lib/exchanges/bybit/list-carry-pairs";
 import { CARRY_BASE_COINS, type CarryPair } from "@/lib/exchanges/bybit/universe";
+import { deskHref } from "@/lib/accounts/model";
+import { getSessionContext } from "@/lib/auth/session";
 import {
   applyPairFilters,
   pairFilterInputValues,
@@ -25,6 +27,7 @@ export default async function CashAndCarryPairsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const session = await getSessionContext();
   const filters = parsePairFilters(params);
   let pairs: CarryPair[] = [];
   let error: string | null = null;
@@ -51,7 +54,8 @@ export default async function CashAndCarryPairsPage({
         SOL, DOGE, XRP, MNT only. Perps are excluded.
       </p>
       <PairFiltersForm
-        clearHref={CLEAR}
+        clearHref={deskHref(CLEAR, session?.account.id)}
+        deskId={session?.account.id}
         values={pairFilterInputValues(filters)}
         bases={CARRY_BASE_COINS}
         showDte

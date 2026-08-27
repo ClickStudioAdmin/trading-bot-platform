@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -36,7 +36,7 @@ export function CreateAccountForm({
   const [bindChoice, setBindChoice] = useState<"later" | "existing">("later");
   const [connectionId, setConnectionId] = useState("");
   const liveKeys = connections.filter((row) => row.status === "active");
-  const stayPath = usePathname();
+  const pathname = usePathname();
   const warningKind =
     bindChoice === "existing"
       ? sharedKeyWarningKind({
@@ -45,9 +45,17 @@ export function CreateAccountForm({
         })
       : null;
 
+  function stampStayPath(event: FormEvent<HTMLFormElement>) {
+    const field = event.currentTarget.elements.namedItem("stayPath");
+    if (field instanceof HTMLInputElement) {
+      field.value = `${window.location.pathname}${window.location.search}`;
+    }
+  }
+
   return (
     <form
       action={createTradingAccount}
+      onSubmit={stampStayPath}
       className={
         embedded
           ? "mt-4 space-y-4"
@@ -59,7 +67,7 @@ export function CreateAccountForm({
       )}
       {next ? <input type="hidden" name="next" value={next} /> : null}
       {embedded ? (
-        <input type="hidden" name="stayPath" value={stayPath} />
+        <input type="hidden" name="stayPath" defaultValue={pathname} />
       ) : null}
       <label className="block text-xs text-ink-muted">
         Name

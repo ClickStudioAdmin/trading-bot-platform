@@ -22,7 +22,7 @@ Paper `paper_carries` writes on a Paper book are not exchange orders. On a Conne
 
 ## UI
 
-Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme`. Written rules in [ui-theme.md](ui-theme.md).
+Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme`. Written rules in [ui-theme.md](ui-theme.md). Desk-scoped pages (`/strategies/futures`, `/strategies/cash-and-carry`, `/account/book`) put the desk id in `?desk=`. Each browser tab can stay on its own desk. The `tbp_account` cookie is the last-used default for URLs that omit `?desk=`. Mutations follow the tab’s URL, not another tab’s cookie.
 
 ## Current phase
 
@@ -30,4 +30,4 @@ Phase 11 — DCA desk type. See [phase-11.md](phase-11.md). Phase 1 through Phas
 
 ## Multi-tenancy
 
-Bring-your-own API keys, stored on the **login**. Live desks bind one key. The same key on two desks shares venue margin. Isolation needs another trade-only key. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue. Connected Exchange books show a Unified account snapshot (available, margin, IM/MM) from the bound key on My Account and on hover of the strategy exchange chip.
+Bring-your-own API keys, stored on the **login**. Live desks bind one key. The same key on two desks shares venue margin. Isolation needs another trade-only key. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue. Connected Exchange books show a Unified account snapshot (available, margin, IM/MM) from the bound key on My Account and on hover of the strategy exchange chip. The active desk for a tab is `?desk=` on desk-scoped URLs. The session cookie is last-used only.

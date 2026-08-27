@@ -15,7 +15,7 @@ import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { loadFuturesVenueRisk } from "@/lib/futures/venue-risk-load";
 import { attachFuturesVenueRisk } from "@/lib/futures/venue-risk";
 import { firstSearchValue } from "@/lib/paper/open";
-import { deskAllowsManualPerpTicket } from "@/lib/accounts/model";
+import { deskAllowsManualPerpTicket, deskHref } from "@/lib/accounts/model";
 import { dcaHintsForOpen } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
@@ -40,6 +40,8 @@ export default async function FuturesOverviewPage({
   }
   const desk = await loadFuturesDesk();
   const deskType = session?.account.deskType ?? "perps";
+  const href = (path: string) => deskHref(path, session?.account.id);
+  const next = href(FUTURES_PATHS.root);
   const showTicket = deskAllowsManualPerpTicket(deskType);
   const dca = deskType === "dca";
   const playbooks =
@@ -106,7 +108,7 @@ export default async function FuturesOverviewPage({
       <FuturesWorkingOrders
         signedIn={desk.signedIn}
         working={desk.working}
-        next={FUTURES_PATHS.root}
+        next={next}
         exchangeBook={desk.exchangeBook}
         baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
         webhookNames={desk.webhookNames}
@@ -122,16 +124,18 @@ export default async function FuturesOverviewPage({
       <OpenFuturesTrades
         signedIn={desk.signedIn}
         open={open}
+        next={href(FUTURES_PATHS.positions)}
         exchangeBook={desk.exchangeBook}
         webhookNames={desk.webhookNames}
         showDcaColumns={dca}
         playbookOwnsOrders={dca}
         dcaHints={dcaHints}
+        positionsHref={href(FUTURES_PATHS.positions)}
         emptyMessage={
           showTicket ? (
             <>
               No open futures on this book. Open from{" "}
-              <Link href={FUTURES_PATHS.positions} className="text-accent">
+              <Link href={href(FUTURES_PATHS.positions)} className="text-accent">
                 Positions
               </Link>
               .
@@ -140,7 +144,7 @@ export default async function FuturesOverviewPage({
             <>
               No open futures on this book. The playbook adds orders once it is
               armed on{" "}
-              <Link href={FUTURES_PATHS.automations} className="text-accent">
+              <Link href={href(FUTURES_PATHS.automations)} className="text-accent">
                 Automations
               </Link>
               .
@@ -148,7 +152,7 @@ export default async function FuturesOverviewPage({
           ) : (
             <>
               No open futures on this book. TradingView opens them through a{" "}
-              <Link href={FUTURES_PATHS.webhooks} className="text-accent">
+              <Link href={href(FUTURES_PATHS.webhooks)} className="text-accent">
                 webhook
               </Link>
               .
@@ -158,7 +162,7 @@ export default async function FuturesOverviewPage({
       />
 
       <p className="text-sm text-ink-faint">
-        <Link href={FUTURES_PATHS.pairs} className="text-accent">
+        <Link href={href(FUTURES_PATHS.pairs)} className="text-accent">
           Full pair list
         </Link>
         {" · "}

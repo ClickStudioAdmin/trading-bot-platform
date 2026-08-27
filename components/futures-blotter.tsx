@@ -80,6 +80,7 @@ export function OpenFuturesTrades({
   showDcaColumns = false,
   playbookOwnsOrders = false,
   dcaHints = {},
+  positionsHref = FUTURES_PATHS.positions,
 }: {
   signedIn: boolean;
   open: MarkedFutures[];
@@ -93,6 +94,7 @@ export function OpenFuturesTrades({
   showDcaColumns?: boolean;
   playbookOwnsOrders?: boolean;
   dcaHints?: Readonly<Record<string, DcaOpenHint>>;
+  positionsHref?: string;
 }) {
   const { visible, setColumn } = useFuturesOpenColumns();
   const colSpan = futuresOpenColumnCount(
@@ -114,7 +116,7 @@ export function OpenFuturesTrades({
             className=""
           />
           <Link
-            href={FUTURES_PATHS.positions}
+            href={positionsHref}
             className="shrink-0 text-sm text-accent hover:text-accent-strong"
           >
             All positions

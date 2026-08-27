@@ -15,7 +15,7 @@ import {
   loadUsdtLinearPerps,
 } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
-import { deskAllowsManualPerpTicket, deskAllowsSignalWebhooks } from "@/lib/accounts/model";
+import { deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref } from "@/lib/accounts/model";
 import { dcaHintsForOpen } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { FuturesWebhookTest } from "@/components/futures-webhook-test";
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   description: "Open USDT perpetual positions.",
 };
 
-const NEXT = FUTURES_PATHS.positions;
+const NEXT_PATH = FUTURES_PATHS.positions;
 
 export default async function FuturesPositionsPage({
   searchParams,
@@ -46,6 +46,7 @@ export default async function FuturesPositionsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getSessionContext();
+  const NEXT = deskHref(NEXT_PATH, session?.account.id);
   const params = await searchParams;
   if (session) {
     await reconcileOpenFuturesBooks({
@@ -217,7 +218,7 @@ export default async function FuturesPositionsPage({
                 ) : session ? (
                   <p className="mt-4 text-xs text-ink-muted">
                     Create a named webhook on{" "}
-                    <Link href={FUTURES_PATHS.webhooks} className="text-accent">
+                    <Link href={deskHref(FUTURES_PATHS.webhooks, session?.account.id)} className="text-accent">
                       Webhooks
                     </Link>{" "}
                     to send a dummy TradingView call from this ticket.

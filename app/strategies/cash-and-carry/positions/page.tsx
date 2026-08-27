@@ -7,6 +7,8 @@ import { applyUsableBookShare } from "@/lib/opportunities/capacity";
 import { loadOpportunityBook } from "@/lib/opportunities/load";
 import { firstSearchValue } from "@/lib/paper/open";
 import { loadPaperDesk } from "@/lib/paper/list";
+import { deskHref } from "@/lib/accounts/model";
+import { getSessionContext } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Current Positions",
@@ -19,6 +21,11 @@ export default async function CashAndCarryPositionsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const session = await getSessionContext();
+  const next = deskHref(
+    "/strategies/cash-and-carry/positions",
+    session?.account.id,
+  );
   const book = await loadOpportunityBook("stored");
   const rows = applyUsableBookShare(book.rows, await loadUsableBookShare());
   const desk = await loadPaperDesk(rows);
@@ -47,7 +54,7 @@ export default async function CashAndCarryPositionsPage({
         <OpenPaperTrades
           signedIn={desk.signedIn}
           open={desk.open}
-          next="/strategies/cash-and-carry/positions"
+          next={next}
           showHeading={false}
           exchangeBook={desk.exchangeBook}
         />

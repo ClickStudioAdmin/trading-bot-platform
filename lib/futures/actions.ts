@@ -28,8 +28,10 @@ import {
   deskAllowsPerpsRecipes,
   deskAllowsSignalWebhooks,
   deskManualBuySellBlockReason,
+  deskPath,
   formatStrategyDetachBlockers,
   strategyDetachBlockers,
+  withQuery,
 } from "@/lib/accounts/model";
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
 import { listExchangeConnections } from "@/lib/exchanges/store";
@@ -41,19 +43,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 function fail(next: string, message: string): never {
-  redirect(`${next}?paperError=${encodeURIComponent(message)}`);
+  redirect(withQuery(next, { paperError: message }));
 }
 
-function settingsFail(message: string): never {
-  redirect(
-    `${FUTURES_PATHS.settings}?error=${encodeURIComponent(message)}`,
-  );
+function settingsFail(accountId: string, message: string): never {
+  redirect(deskPath(FUTURES_PATHS.settings, accountId, { error: message }));
 }
 
-function webhookFail(message: string): never {
-  redirect(
-    `${FUTURES_PATHS.webhooks}?error=${encodeURIComponent(message)}`,
-  );
+function webhookFail(accountId: string, message: string): never {
+  redirect(deskPath(FUTURES_PATHS.webhooks, accountId, { error: message }));
 }
 
 export async function submitFuturesTrade(formData: FormData) {
@@ -95,7 +93,7 @@ export async function submitFuturesTrade(formData: FormData) {
   if (!result.ok) {
     fail(next, result.error);
   }
-  redirect(`${next}?paper=${result.flash}`);
+  redirect(withQuery(next, { paper: result.flash }));
 }
 
 export async function saveFuturesTpsl(formData: FormData) {
@@ -119,7 +117,7 @@ export async function saveFuturesTpsl(formData: FormData) {
   if (!result.ok) {
     fail(next, result.error);
   }
-  redirect(`${next}?paper=${result.flash}`);
+  redirect(withQuery(next, { paper: result.flash }));
 }
 
 export async function saveFuturesTrailing(formData: FormData) {
@@ -143,7 +141,7 @@ export async function saveFuturesTrailing(formData: FormData) {
   if (!result.ok) {
     fail(next, result.error);
   }
-  redirect(`${next}?paper=${result.flash}`);
+  redirect(withQuery(next, { paper: result.flash }));
 }
 
 export async function cancelFuturesWorking(formData: FormData) {
@@ -165,7 +163,7 @@ export async function cancelFuturesWorking(formData: FormData) {
   if (!result.ok) {
     fail(next, result.error);
   }
-  redirect(`${next}?paper=${result.flash}`);
+  redirect(withQuery(next, { paper: result.flash }));
 }
 
 export async function closeAllFutures(formData: FormData) {
@@ -189,7 +187,7 @@ export async function closeAllFutures(formData: FormData) {
   if (!result.ok) {
     fail(next, result.error);
   }
-  redirect(`${next}?paper=${result.flash}`);
+  redirect(withQuery(next, { paper: result.flash }));
 }
 
 export async function amendFuturesWorking(formData: FormData) {
@@ -213,7 +211,7 @@ export async function amendFuturesWorking(formData: FormData) {
   if (!result.ok) {
     fail(next, result.error);
   }
-  redirect(`${next}?paper=${result.flash}`);
+  redirect(withQuery(next, { paper: result.flash }));
 }
 
 export async function saveFuturesSettings(formData: FormData) {
@@ -221,7 +219,7 @@ export async function saveFuturesSettings(formData: FormData) {
   const { member: user, account } = session;
   const supabase = createServiceClient();
   if (!supabase) {
-    settingsFail("Auth is not configured.");
+    settingsFail(account.id, "Auth is not configured.");
   }
 
   const reduceOnly =
@@ -232,14 +230,14 @@ export async function saveFuturesSettings(formData: FormData) {
     "Max value per symbol",
   );
   if (!maxValue.ok) {
-    settingsFail(maxValue.error);
+    settingsFail(account.id, maxValue.error);
   }
   const maxRows = parseOptionalPositiveInt(
     formData.get("maxOpenPositions") ?? formData.get("maxOpenRows"),
     "Max open positions",
   );
   if (!maxRows.ok) {
-    settingsFail(maxRows.error);
+    settingsFail(account.id, maxRows.error);
   }
 
   let connectionId: string | null = null;
@@ -255,16 +253,16 @@ export async function saveFuturesSettings(formData: FormData) {
         automationsRunning: false,
       });
       if (detach.length > 0) {
-        settingsFail(formatStrategyDetachBlockers(detach));
+        settingsFail(account.id, formatStrategyDetachBlockers(detach));
       }
     }
     if (connectionId) {
       const connections = await listExchangeConnections(user.id);
       const match = connections.find((item) => item.id === connectionId);
       if (!match) {
-        settingsFail("Pick an exchange key saved on this login.");
+        settingsFail(account.id, "Pick an exchange key saved on this login.");
       } else if (match.status !== "active" && match.id !== current.connectionId) {
-        settingsFail("That connection is not active.");
+        settingsFail(account.id, "That connection is not active.");
       }
     }
   }
@@ -282,7 +280,7 @@ export async function saveFuturesSettings(formData: FormData) {
     updated_at: new Date().toISOString(),
   });
   if (error) {
-    settingsFail(error.message);
+    settingsFail(account.id, error.message);
   }
 
   await writeEventLog({
@@ -303,7 +301,7 @@ export async function saveFuturesSettings(formData: FormData) {
   revalidatePath("/account/exchanges");
   revalidatePath(FUTURES_PATHS.root);
   revalidatePath(FUTURES_PATHS.settings);
-  redirect(`${FUTURES_PATHS.settings}?saved=1`);
+  redirect(deskPath(FUTURES_PATHS.settings, account.id, { saved: "1" }));
 }
 
 export async function saveFuturesAutomations(formData: FormData) {
@@ -311,20 +309,22 @@ export async function saveFuturesAutomations(formData: FormData) {
   const { member: user, account } = session;
   if (!deskAllowsPerpsRecipes(account.deskType)) {
     if (account.deskType === "signal_follower") {
-      redirect(FUTURES_PATHS.webhooks);
+      redirect(deskPath(FUTURES_PATHS.webhooks, account.id));
     }
-    redirect(FUTURES_PATHS.automations);
+    redirect(deskPath(FUTURES_PATHS.automations, account.id));
   }
   const parsed = parseFuturesAutomationForm(formData);
   if (!parsed.ok) {
     redirect(
-      `${FUTURES_PATHS.automations}?error=${encodeURIComponent(parsed.error)}`,
+      deskPath(FUTURES_PATHS.automations, account.id, { error: parsed.error }),
     );
   }
   const supabase = createServiceClient();
   if (!supabase) {
     redirect(
-      `${FUTURES_PATHS.automations}?error=${encodeURIComponent("Auth is not configured.")}`,
+      deskPath(FUTURES_PATHS.automations, account.id, {
+        error: "Auth is not configured.",
+      }),
     );
   }
   const saved = await saveFuturesAutomationRules({
@@ -344,7 +344,7 @@ export async function saveFuturesAutomations(formData: FormData) {
       strategy: FUTURES_STRATEGY_ID,
     });
     redirect(
-      `${FUTURES_PATHS.automations}?error=${encodeURIComponent(saved.error)}`,
+      deskPath(FUTURES_PATHS.automations, account.id, { error: saved.error }),
     );
   }
   await writeEventLog({
@@ -361,22 +361,22 @@ export async function saveFuturesAutomations(formData: FormData) {
   });
   revalidatePath(FUTURES_PATHS.automations);
   revalidatePath(FUTURES_PATHS.positions);
-  redirect(`${FUTURES_PATHS.automations}?saved=1`);
+  redirect(deskPath(FUTURES_PATHS.automations, account.id, { saved: "1" }));
 }
 
 export async function detachFuturesConnection() {
   const session = await requirePerpsUiSession();
   const { member: user, account } = session;
   if (!accountCanHoldConnections(account.mode)) {
-    redirect(FUTURES_PATHS.settings);
+    redirect(deskPath(FUTURES_PATHS.settings, account.id));
   }
   const supabase = createServiceClient();
   if (!supabase) {
-    settingsFail("Auth is not configured.");
+    settingsFail(account.id, "Auth is not configured.");
   }
   const settings = await loadFuturesSettings(account.id);
   if (!settings.connectionId) {
-    redirect(FUTURES_PATHS.settings);
+    redirect(deskPath(FUTURES_PATHS.settings, account.id));
   }
   const opens = await loadOpenFuturesCount(account.id, user.id);
   const blocks = strategyDetachBlockers({
@@ -384,7 +384,7 @@ export async function detachFuturesConnection() {
     automationsRunning: await futuresAutomationsAreRunning(account.id),
   });
   if (blocks.length > 0) {
-    settingsFail(formatStrategyDetachBlockers(blocks));
+    settingsFail(account.id, formatStrategyDetachBlockers(blocks));
   }
   const { error } = await supabase
     .from("strategy_settings")
@@ -396,7 +396,7 @@ export async function detachFuturesConnection() {
     .eq("user_id", user.id)
     .eq("strategy_id", FUTURES_STRATEGY_ID);
   if (error) {
-    settingsFail(error.message);
+    settingsFail(account.id, error.message);
   }
   await writeEventLog({
     scope: "strategy",
@@ -410,14 +410,14 @@ export async function detachFuturesConnection() {
   revalidatePath("/account/exchanges");
   revalidatePath(FUTURES_PATHS.root);
   revalidatePath(FUTURES_PATHS.settings);
-  redirect(`${FUTURES_PATHS.settings}?saved=1`);
+  redirect(deskPath(FUTURES_PATHS.settings, account.id, { saved: "1" }));
 }
 
 export async function createFuturesWebhookAction(formData: FormData) {
   const session = await requirePerpsUiSession();
   const supabase = createServiceClient();
   if (!supabase) {
-    webhookFail("Auth is not configured.");
+    webhookFail(session.account.id, "Auth is not configured.");
   }
   const kind = parseWebhookKind(formData.get("kind"));
   if (
@@ -425,14 +425,14 @@ export async function createFuturesWebhookAction(formData: FormData) {
     kind.kind === "signal" &&
     !deskAllowsSignalWebhooks(session.account.deskType)
   ) {
-    webhookFail("This desk only uses TradingView strategy webhooks.");
+    webhookFail(session.account.id, "This desk only uses TradingView strategy webhooks.");
   }
   if (
     kind.ok &&
     kind.kind === "order" &&
     !deskAllowsOrderWebhooks(session.account.deskType)
   ) {
-    webhookFail("This desk only uses Signal webhooks to arm the playbook.");
+    webhookFail(session.account.id, "This desk only uses Signal webhooks to arm the playbook.");
   }
   const created = await createFuturesWebhook({
     supabase,
@@ -442,7 +442,7 @@ export async function createFuturesWebhookAction(formData: FormData) {
     kind: formData.get("kind"),
   });
   if (!created.ok) {
-    webhookFail(created.error);
+    webhookFail(session.account.id, created.error);
   }
   await writeEventLog({
     scope: "strategy",
@@ -455,18 +455,18 @@ export async function createFuturesWebhookAction(formData: FormData) {
   revalidatePath(FUTURES_PATHS.webhooks);
   revalidatePath(FUTURES_PATHS.positions);
   revalidatePath(FUTURES_PATHS.automations);
-  redirect(`${FUTURES_PATHS.webhooks}?created=1`);
+  redirect(deskPath(FUTURES_PATHS.webhooks, session.account.id, { created: "1" }));
 }
 
 export async function renameFuturesWebhookAction(formData: FormData) {
   const session = await requirePerpsUiSession();
   const supabase = createServiceClient();
   if (!supabase) {
-    webhookFail("Auth is not configured.");
+    webhookFail(session.account.id, "Auth is not configured.");
   }
   const webhookId = String(formData.get("webhookId") ?? "").trim();
   if (!webhookId) {
-    webhookFail("Pick a webhook.");
+    webhookFail(session.account.id, "Pick a webhook.");
   }
   const renamed = await renameFuturesWebhook({
     supabase,
@@ -476,7 +476,7 @@ export async function renameFuturesWebhookAction(formData: FormData) {
     name: formData.get("name"),
   });
   if (!renamed.ok) {
-    webhookFail(renamed.error);
+    webhookFail(session.account.id, renamed.error);
   }
   await writeEventLog({
     scope: "strategy",
@@ -488,18 +488,18 @@ export async function renameFuturesWebhookAction(formData: FormData) {
   });
   revalidatePath(FUTURES_PATHS.webhooks);
   revalidatePath(FUTURES_PATHS.automations);
-  redirect(`${FUTURES_PATHS.webhooks}?renamed=1`);
+  redirect(deskPath(FUTURES_PATHS.webhooks, session.account.id, { renamed: "1" }));
 }
 
 export async function rotateFuturesWebhook(formData: FormData) {
   const session = await requirePerpsUiSession();
   const supabase = createServiceClient();
   if (!supabase) {
-    webhookFail("Auth is not configured.");
+    webhookFail(session.account.id, "Auth is not configured.");
   }
   const webhookId = String(formData.get("webhookId") ?? "").trim();
   if (!webhookId) {
-    webhookFail("Pick a webhook.");
+    webhookFail(session.account.id, "Pick a webhook.");
   }
   const rotated = await rotateFuturesWebhookToken({
     supabase,
@@ -508,7 +508,7 @@ export async function rotateFuturesWebhook(formData: FormData) {
     webhookId,
   });
   if (!rotated.ok) {
-    webhookFail(rotated.error);
+    webhookFail(session.account.id, rotated.error);
   }
   await writeEventLog({
     scope: "strategy",
@@ -519,18 +519,18 @@ export async function rotateFuturesWebhook(formData: FormData) {
     strategy: FUTURES_STRATEGY_ID,
   });
   revalidatePath(FUTURES_PATHS.webhooks);
-  redirect(`${FUTURES_PATHS.webhooks}?rotated=1`);
+  redirect(deskPath(FUTURES_PATHS.webhooks, session.account.id, { rotated: "1" }));
 }
 
 export async function deleteFuturesWebhookAction(formData: FormData) {
   const session = await requirePerpsUiSession();
   const supabase = createServiceClient();
   if (!supabase) {
-    webhookFail("Auth is not configured.");
+    webhookFail(session.account.id, "Auth is not configured.");
   }
   const webhookId = String(formData.get("webhookId") ?? "").trim();
   if (!webhookId) {
-    webhookFail("Pick a webhook.");
+    webhookFail(session.account.id, "Pick a webhook.");
   }
   const removed = await deleteFuturesWebhook({
     supabase,
@@ -539,7 +539,7 @@ export async function deleteFuturesWebhookAction(formData: FormData) {
     webhookId,
   });
   if (!removed.ok) {
-    webhookFail(removed.error);
+    webhookFail(session.account.id, removed.error);
   }
   await writeEventLog({
     scope: "strategy",
@@ -552,7 +552,7 @@ export async function deleteFuturesWebhookAction(formData: FormData) {
   revalidatePath(FUTURES_PATHS.webhooks);
   revalidatePath(FUTURES_PATHS.positions);
   revalidatePath(FUTURES_PATHS.automations);
-  redirect(`${FUTURES_PATHS.webhooks}?deleted=1`);
+  redirect(deskPath(FUTURES_PATHS.webhooks, session.account.id, { deleted: "1" }));
 }
 
 export async function testFuturesWebhook(formData: FormData) {
@@ -600,11 +600,19 @@ export async function testFuturesWebhook(formData: FormData) {
   }
   if (result.body.accepted) {
     if (Number(result.body.fired) > 0) {
-      redirect(`${successNext}?paper=${session.account.mode === "live" ? "live-opened" : "opened"}`);
+      redirect(
+        withQuery(successNext, {
+          paper: session.account.mode === "live" ? "live-opened" : "opened",
+        }),
+      );
     }
-    redirect(`${successNext}?paper=webhook-arm`);
+    redirect(withQuery(successNext, { paper: "webhook-arm" }));
   }
-  redirect(`${successNext}?paper=${String(result.body.flash ?? "opened")}`);
+  redirect(
+    withQuery(successNext, {
+      paper: String(result.body.flash ?? "opened"),
+    }),
+  );
 }
 
 async function loadOpenFuturesCount(

@@ -324,6 +324,7 @@ export function DcaPlaybooksDesk({
   availableUsdt = null,
   lastPrices = {},
   reduceOnly = false,
+  webhooksHref = FUTURES_PATHS.webhooks,
 }: {
   playbooks: DcaPlaybook[];
   options: LinearPerp[];
@@ -331,6 +332,7 @@ export function DcaPlaybooksDesk({
   availableUsdt?: number | null;
   lastPrices?: Record<string, number>;
   reduceOnly?: boolean;
+  webhooksHref?: string;
 }) {
   const [cards, setCards] = useState<
     { key: string; playbook: DcaPlaybook | null; seed?: DcaPlaybook }[]
@@ -365,6 +367,7 @@ export function DcaPlaybooksDesk({
             signalWebhooks={signalWebhooks}
             availableUsdt={availableUsdt}
             lastPrices={lastPrices}
+            webhooksHref={webhooksHref}
             defaultName={
               card.playbook?.name ??
               card.seed?.name ??
@@ -441,6 +444,7 @@ export function DcaPlaybookForm({
   reduceOnly = false,
   defaultName,
   onRemoveDraft,
+  webhooksHref = FUTURES_PATHS.webhooks,
 }: {
   playbook: DcaPlaybook | null;
   seed?: DcaPlaybook | null;
@@ -451,6 +455,7 @@ export function DcaPlaybookForm({
   reduceOnly?: boolean;
   defaultName?: string;
   onRemoveDraft?: () => void;
+  webhooksHref?: string;
 }) {
   const source = playbook ?? seed;
   const [direction, setDirection] = useState(
@@ -889,7 +894,7 @@ export function DcaPlaybookForm({
             ) : (
               <p className="self-end text-xs text-ink-muted lg:col-span-3">
                 Create a Signal on{" "}
-                <Link href={FUTURES_PATHS.webhooks} className="text-accent">
+                <Link href={webhooksHref} className="text-accent">
                   Webhooks
                 </Link>{" "}
                 first. Save and Arm, then buy / sell starts that side only.

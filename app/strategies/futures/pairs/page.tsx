@@ -13,6 +13,8 @@ import {
   parsePairFilters,
 } from "@/lib/pairs/filter";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
+import { deskHref } from "@/lib/accounts/model";
+import { getSessionContext } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Pairs",
@@ -25,6 +27,7 @@ export default async function FuturesPairsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+  const session = await getSessionContext();
   const filters = parsePairFilters(params);
   let pairs: LinearPerp[] = [];
   let error: string | null = null;
@@ -50,7 +53,8 @@ export default async function FuturesPairsPage({
         close. No API key. Dated futures are excluded.
       </p>
       <PairFiltersForm
-        clearHref={FUTURES_PATHS.pairs}
+        clearHref={deskHref(FUTURES_PATHS.pairs, session?.account.id)}
+        deskId={session?.account.id}
         values={pairFilterInputValues(filters)}
       />
       {error ? (

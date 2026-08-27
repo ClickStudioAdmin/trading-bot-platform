@@ -1,4 +1,5 @@
 import { AccountSidenav } from "@/components/account-sidenav";
+import { pinDeskSearchParam } from "@/lib/accounts/guard";
 import { getSessionContext } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
@@ -11,10 +12,14 @@ export default async function AccountLayout({
   if (!session) {
     redirect("/sign-in");
   }
+  await pinDeskSearchParam(session);
 
   return (
     <div className="flex flex-1">
-      <AccountSidenav bookName={session.account.name} />
+      <AccountSidenav
+        bookName={session.account.name}
+        deskId={session.account.id}
+      />
       <div className="min-w-0 flex-1 px-6 py-8">
         <div className="mx-auto max-w-3xl">{children}</div>
       </div>
