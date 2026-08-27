@@ -52,7 +52,6 @@ const headerLongClass =
   "rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas";
 const headerShortClass =
   "rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink";
-const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`;
 const headerDangerClass = `${headerBtnClass} bg-danger/15 text-danger hover:bg-danger/25`;
 const headerRemoveClass =
   "shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
@@ -499,40 +498,55 @@ export function DcaPlaybookForm({
                     Arm
                   </PendingSubmitButton>
                   <span className="w-px self-stretch bg-line" aria-hidden />
+                  <span
+                    className="inline-flex"
+                    title="Stop adding any new orders (also cancels any existing entry limit orders)"
+                  >
+                    <PendingSubmitButton
+                      formAction={runDcaPlaybookVerb}
+                      name="verb"
+                      value="disarm"
+                      pendingLabel="Stopping…"
+                      successKey={`disarm-dca-playbook-${playbook.id}`}
+                      className={`${headerDangerClass} rounded-none`}
+                    >
+                      Stop adding
+                    </PendingSubmitButton>
+                  </span>
+                </div>
+              )}
+              {startKind === "immediate" ? (
+                <span
+                  className="inline-flex"
+                  title="Stop adding any new orders (also cancels any existing entry limit orders)"
+                >
                   <PendingSubmitButton
                     formAction={runDcaPlaybookVerb}
                     name="verb"
                     value="disarm"
                     pendingLabel="Stopping…"
                     successKey={`disarm-dca-playbook-${playbook.id}`}
-                    className={headerSegmentClass}
+                    className={headerDangerClass}
                   >
                     Stop adding
                   </PendingSubmitButton>
-                </div>
-              )}
-              {startKind === "immediate" ? (
+                </span>
+              ) : null}
+              <span
+                className="inline-flex"
+                title="Close all positions and place the playbook in idle mode (no new entries)"
+              >
                 <PendingSubmitButton
                   formAction={runDcaPlaybookVerb}
                   name="verb"
-                  value="disarm"
-                  pendingLabel="Stopping…"
-                  successKey={`disarm-dca-playbook-${playbook.id}`}
-                  className={headerSecondaryClass}
+                  value="close-playbook"
+                  pendingLabel="Closing…"
+                  successKey={`close-dca-playbook-${playbook.id}`}
+                  className={headerDangerClass}
                 >
-                  Stop adding
+                  Close playbook
                 </PendingSubmitButton>
-              ) : null}
-              <PendingSubmitButton
-                formAction={runDcaPlaybookVerb}
-                name="verb"
-                value="close-playbook"
-                pendingLabel="Closing…"
-                successKey={`close-dca-playbook-${playbook.id}`}
-                className={headerDangerClass}
-              >
-                Close playbook
-              </PendingSubmitButton>
+              </span>
             </>
           ) : null}
         </div>
