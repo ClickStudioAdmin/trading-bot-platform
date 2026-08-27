@@ -1209,11 +1209,10 @@ export function DcaPlaybookForm({
         </fieldset>
       </div>
 
-      <fieldset className={sectionClass}>
-        <p className={sectionTitleClass}>
-          Take profit
-        </p>
-        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <fieldset className={sectionClass}>
+          <p className={sectionTitleClass}>Take profit</p>
+          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
           <label className={labelClass}>
             Take profit target
             <PercentInput
@@ -1335,6 +1334,7 @@ export function DcaPlaybookForm({
           </label>
         </div>
       </fieldset>
+      </div>
 
       <fieldset className={sectionClass}>
         <p className={sectionTitleClass}>
