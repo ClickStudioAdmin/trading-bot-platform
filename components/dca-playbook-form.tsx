@@ -66,10 +66,8 @@ const rowClass = "grid gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-4";
 const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
 const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
 const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`;
-const headerLongClass =
-  "rounded-control bg-success px-3 py-2 text-sm font-medium text-canvas";
-const headerShortClass =
-  "rounded-control bg-danger px-3 py-2 text-sm font-medium text-ink";
+const headerLongClass = `${headerBtnClass} bg-success text-canvas`;
+const headerShortClass = `${headerBtnClass} bg-danger text-ink`;
 const headerDangerClass = `${headerBtnClass} bg-danger/15 text-danger hover:bg-danger/25`;
 const headerRemoveClass =
   "shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
