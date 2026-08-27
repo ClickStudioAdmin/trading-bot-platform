@@ -406,6 +406,33 @@ export function DcaPlaybookForm({
     >
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <div className="flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
+          {playbook ? (
+            running ? (
+              <p className="text-xs text-ink-muted">
+                Stop adding or close before removing.
+              </p>
+            ) : (
+              <PendingSubmitButton
+                formAction={deleteDcaPlaybookAction}
+                pendingLabel="Removing…"
+                successKey={`remove-dca-${playbook.id}`}
+                className={headerRemoveClass}
+              >
+                Remove
+              </PendingSubmitButton>
+            )
+          ) : onRemoveDraft ? (
+            <button
+              type="button"
+              onClick={onRemoveDraft}
+              className={headerRemoveClass}
+            >
+              Remove
+            </button>
+          ) : null}
+          <DcaStatusLight playbook={playbook ?? null} reduceOnly={reduceOnly} />
+        </div>
         <PendingSubmitButton
           pendingLabel="Saving…"
           successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
@@ -509,33 +536,6 @@ export function DcaPlaybookForm({
               </PendingSubmitButton>
             </>
           ) : null}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {playbook ? (
-            running ? (
-              <p className="text-xs text-ink-muted">
-                Stop adding or close before removing.
-              </p>
-            ) : (
-              <PendingSubmitButton
-                formAction={deleteDcaPlaybookAction}
-                pendingLabel="Removing…"
-                successKey={`remove-dca-${playbook.id}`}
-                className={headerRemoveClass}
-              >
-                Remove
-              </PendingSubmitButton>
-            )
-          ) : onRemoveDraft ? (
-            <button
-              type="button"
-              onClick={onRemoveDraft}
-              className={headerRemoveClass}
-            >
-              Remove
-            </button>
-          ) : null}
-          <DcaStatusLight playbook={playbook ?? null} reduceOnly={reduceOnly} />
         </div>
       </div>
       {reduceOnly ? (
