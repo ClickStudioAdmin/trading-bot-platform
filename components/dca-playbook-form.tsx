@@ -780,7 +780,6 @@ export function DcaPlaybookForm({
           </>
         ) : null}
       </div>
-      </div>
     </form>
   );
 }
