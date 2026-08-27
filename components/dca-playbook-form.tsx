@@ -1342,39 +1342,27 @@ export function DcaPlaybookForm({
       </fieldset>
       </div>
 
-      {running && !ladderOpen ? (
+      {running ? (
         <div>
-          {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
+          {ladderMaxError && !ladderOpen ? (
+            <SizeGuardNote message={ladderMaxError} />
+          ) : null}
           <button
             type="button"
             className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
-            aria-expanded={false}
-            onClick={() => setLadderOpen(true)}
+            aria-expanded={ladderOpen}
+            onClick={() => setLadderOpen((open) => !open)}
           >
-            Show Ladder
-            <ChevronIcon />
+            {ladderOpen ? "Hide Summary" : "Show Summary"}
+            <ChevronIcon className={ladderOpen ? "rotate-90" : undefined} />
           </button>
         </div>
-      ) : (
+      ) : null}
+      {!running || ladderOpen ? (
       <fieldset className={sectionClass}>
-        {running ? (
-          <div className="flex items-center justify-between gap-2">
-            <p className={sectionTitleClass}>Summary</p>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
-              aria-expanded={true}
-              onClick={() => setLadderOpen(false)}
-            >
-              Hide Ladder
-              <ChevronIcon className="rotate-90" />
-            </button>
-          </div>
-        ) : (
-          <p className={sectionTitleClass}>
-            Summary
-          </p>
-        )}
+        <p className={sectionTitleClass}>
+          Summary
+        </p>
         {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         {showLadderTabs ? (
           <div
@@ -1648,7 +1636,7 @@ export function DcaPlaybookForm({
         )}
         </div>
       </fieldset>
-      )}
+      ) : null}
     </form>
   );
 }
