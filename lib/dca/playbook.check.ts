@@ -26,6 +26,7 @@ import {
   dcaStartListens,
   dcaLegIsRunning,
   dcaWebhookSignalApplies,
+  dcaExitTpslNeedsVenueSync,
   dcaHintsForOpen,
   dcaIntervalMet,
   dcaIntervalParts,
@@ -49,6 +50,7 @@ import {
   dcaMaxTypeFromCaps,
   type DcaPlaybook,
 } from "./playbook";
+import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
 
 assert.equal(parseDcaStatus("armed"), "armed");
 assert.equal(parseDcaStatus("stop_adding"), "stop_adding");
@@ -1275,6 +1277,95 @@ assert.equal(
     mark: 100,
   })?.plannedTakeProfit,
   100 * (1 + 10 / 100),
+);
+assert.equal(
+  dcaOpenHint({
+    playbook: withExit,
+    symbol: "BTCUSDT",
+    side: "long",
+  })?.tpLimitResting,
+  false,
+);
+
+const uuidExit = parseDcaPlaybookRow({
+  id: "11111111-1111-4111-8111-111111111111",
+  user_id: "user-1",
+  account_id: "acc-1",
+  name: "Desk DCA",
+  symbol: "BTCUSDT",
+  direction: "long",
+  clip_size: "0.01",
+  size_unit: "qty",
+  take_profit_pct: "10",
+  take_profit_order_type: "limit",
+  long_status: "armed",
+  long_clips_filled: 1,
+  long_first_fill_price: "100",
+});
+assert.ok(uuidExit);
+assert.equal(
+  dcaOpenHint({
+    playbook: uuidExit,
+    symbol: "BTCUSDT",
+    side: "long",
+    working: [
+      {
+        idempotencyKey: dcaExitLimitRestKey(
+          uuidExit.id,
+          "long",
+          "tp",
+          0.01,
+          110,
+        ),
+        status: "open",
+      },
+    ],
+  })?.tpLimitResting,
+  true,
+);
+
+const emptyTpsl = emptyFuturesTpsl();
+assert.equal(
+  dcaExitTpslNeedsVenueSync(emptyTpsl, {
+    ...emptyTpsl,
+    takeProfit: 2.5,
+    tpOrderType: "limit",
+    tpLimitPrice: 2.5,
+  }),
+  false,
+);
+assert.equal(
+  dcaExitTpslNeedsVenueSync(emptyTpsl, {
+    ...emptyTpsl,
+    stopLoss: 1.5,
+  }),
+  true,
+);
+assert.equal(
+  dcaExitTpslNeedsVenueSync(
+    { ...emptyTpsl, takeProfit: 2.4, tpOrderType: "market" },
+    { ...emptyTpsl, takeProfit: 2.5, tpOrderType: "market" },
+  ),
+  true,
+);
+assert.equal(
+  dcaExitTpslNeedsVenueSync(
+    {
+      ...emptyTpsl,
+      takeProfit: 2.4,
+      stopLoss: 1.5,
+      tpOrderType: "limit",
+      tpLimitPrice: 2.4,
+    },
+    {
+      ...emptyTpsl,
+      takeProfit: 2.6,
+      stopLoss: 1.5,
+      tpOrderType: "limit",
+      tpLimitPrice: 2.6,
+    },
+  ),
+  false,
 );
 
 const indicatorDaily = new FormData();

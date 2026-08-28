@@ -114,6 +114,15 @@ export function idempotencyWorkingReplay(
   return status === "open" || status === "filled" ? "replay" : "new";
 }
 
+export function commandReceiptReplay(
+  flash: FuturesCommandFlash | null | undefined,
+): "replay" | "new" {
+  if (flash === "working" || flash === "live-working") {
+    return "new";
+  }
+  return "replay";
+}
+
 export function parseIdempotencyKey(
   raw: unknown,
 ): { ok: true; key: string | null } | { ok: false; error: string } {
@@ -222,6 +231,9 @@ export async function replayOrNull(input: {
     input.key,
   );
   if (receipt) {
+    if (commandReceiptReplay(receipt.flash) === "new") {
+      return null;
+    }
     return { ok: true, flash: receipt.flash, replayed: true };
   }
   const { data: order } = await input.supabase

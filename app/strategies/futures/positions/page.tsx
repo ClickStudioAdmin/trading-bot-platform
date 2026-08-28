@@ -102,7 +102,9 @@ export default async function FuturesPositionsPage({
     dca && session
       ? await listDcaPlaybooksForAccount(session.account.id)
       : [];
-  const dcaHints = dca ? dcaHintsForOpen(playbooks, open) : undefined;
+  const dcaHints = dca
+    ? dcaHintsForOpen(playbooks, open, desk.working)
+    : undefined;
   const testWebhooks = allowSignal
     ? webhooks
     : webhooks.filter((row) => row.kind !== "signal");

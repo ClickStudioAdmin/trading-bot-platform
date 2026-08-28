@@ -610,6 +610,7 @@ function OpenFuturesRows({
             plannedStopLoss={dcaHint?.plannedStopLoss ?? null}
             plannedTpOrderType={dcaHint?.takeProfitOrderType}
             plannedSlOrderType={dcaHint?.stopLossOrderType}
+            tpLimitResting={Boolean(dcaHint?.tpLimitResting)}
           />
         </td>
       ) : null}

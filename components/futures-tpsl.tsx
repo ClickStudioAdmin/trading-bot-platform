@@ -97,6 +97,7 @@ export function FuturesTpslCell({
   plannedStopLoss = null,
   plannedTpOrderType,
   plannedSlOrderType,
+  tpLimitResting = false,
 }: {
   positionId: string;
   symbol: string;
@@ -123,6 +124,7 @@ export function FuturesTpslCell({
   plannedStopLoss?: number | null;
   plannedTpOrderType?: FuturesOrderType;
   plannedSlOrderType?: FuturesOrderType;
+  tpLimitResting?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const liveTakeProfit = takeProfit;
@@ -149,7 +151,8 @@ export function FuturesTpslCell({
             : (plannedSlOrderType ?? slOrderType)
         }
         tpTone={
-          liveTakeProfit !== null && tpOrderType === "limit"
+          tpLimitResting ||
+          (liveTakeProfit !== null && tpOrderType === "limit")
             ? "live"
             : "planned"
         }

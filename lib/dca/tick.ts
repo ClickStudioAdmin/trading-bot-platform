@@ -303,17 +303,19 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
       if (result.acted) {
         acted += 1;
       }
-      await syncDcaPlaybookGrid({
-        playbook,
-        mode: account.mode,
-        side,
-      });
-      await syncDcaPlaybookExits({
-        playbook,
-        mode: account.mode,
-        side,
-        lastPrice: prices.last,
-      });
+      if (decision.action.kind !== "none") {
+        await syncDcaPlaybookGrid({
+          playbook,
+          mode: account.mode,
+          side,
+        });
+        await syncDcaPlaybookExits({
+          playbook,
+          mode: account.mode,
+          side,
+          lastPrice: prices.last,
+        });
+      }
     }
   }
   return { acted };

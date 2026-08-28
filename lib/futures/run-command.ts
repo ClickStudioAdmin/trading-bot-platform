@@ -3,6 +3,7 @@ import {
   insertFuturesWorking,
   patchFuturesTpsl,
   patchFuturesTrailing,
+  patchFuturesWorking,
   writeFuturesAdd,
   writeFuturesCloseSlice,
   writeFuturesOpen,
@@ -1408,6 +1409,23 @@ async function runAmendWorking(
     priceChanged: amended.priceChanged,
   });
   if (!saved.ok) {
+    if (isUnchangedWorkingAmend(saved.error)) {
+      const patched = await patchFuturesWorking({
+        supabase,
+        row,
+        qty: totalSized.qty,
+        remainingQty: remaining,
+        limitPrice: priced.price,
+      });
+      if (!patched.ok) {
+        return fail(patched.error);
+      }
+      return {
+        ok: true,
+        flash: liveBook ? "live-amended" : "amended",
+        workingId: row.id,
+      };
+    }
     return fail(saved.error);
   }
   await writeEventLog({

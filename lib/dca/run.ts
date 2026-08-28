@@ -1,6 +1,6 @@
 import type { TradingAccountMode } from "@/lib/accounts/model";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
-import { runFuturesCommand } from "@/lib/futures/command";
+import { runFuturesCommand, deleteCommandReceipt } from "@/lib/futures/command";
 import {
   loadOpenFuturesOnSymbol,
   loadOpenFuturesWorking,
@@ -35,6 +35,7 @@ import {
   dcaCycleEnded,
   dcaEnabledSides,
   dcaExitLimitRestKey,
+  dcaExitTpslNeedsVenueSync,
   dcaFlattenKey,
   dcaLegFor,
   dcaLegIsRunning,
@@ -349,27 +350,56 @@ async function restExitLimit(input: {
       return cancelled;
     }
   }
-  const placed = await runFuturesCommand({
+  const restKey = dcaExitLimitRestKey(
+    input.playbook.id,
+    input.side,
+    input.kind,
+    input.qty,
+    input.limitPrice,
+    input.positionId,
+  );
+  const placeCommand = {
+    kind: "place" as const,
+    action: "flatten",
+    symbol: input.playbook.symbol,
+    positionId: input.positionId,
+    orderType: "limit" as const,
+    limitPrice: String(input.limitPrice),
+    size: String(input.qty),
+    idempotencyKey: restKey,
+    ...playbookCommandMeta(input.playbook),
+  };
+  let placed = await runFuturesCommand({
     actor,
-    command: {
-      kind: "place",
-      action: "flatten",
-      symbol: input.playbook.symbol,
-      positionId: input.positionId,
-      orderType: "limit",
-      limitPrice: String(input.limitPrice),
-      size: String(input.qty),
-      idempotencyKey: dcaExitLimitRestKey(
+    command: placeCommand,
+  });
+  if (placed.ok && placed.replayed) {
+    const after = await loadOpenFuturesWorking({
+      accountId: input.playbook.accountId,
+      userId: input.playbook.userId,
+    });
+    if (
+      dcaOpenExitLimits(
+        after,
         input.playbook.id,
         input.side,
         input.kind,
-        input.qty,
-        input.limitPrice,
-        input.positionId,
-      ),
-      ...playbookCommandMeta(input.playbook),
-    },
-  });
+      ).length === 0
+    ) {
+      const supabase = createServiceClient();
+      if (supabase) {
+        await deleteCommandReceipt({
+          supabase,
+          accountId: input.playbook.accountId,
+          key: restKey,
+        });
+      }
+      placed = await runFuturesCommand({
+        actor,
+        command: placeCommand,
+      });
+    }
+  }
   if (!placed.ok) {
     await logDcaSyncFailed({
       playbook: input.playbook,
@@ -378,6 +408,32 @@ async function restExitLimit(input: {
       reason: `rest_${input.kind}`,
     });
     return placed;
+  }
+  if (placed.replayed) {
+    const confirmed = await loadOpenFuturesWorking({
+      accountId: input.playbook.accountId,
+      userId: input.playbook.userId,
+    });
+    if (
+      dcaOpenExitLimits(
+        confirmed,
+        input.playbook.id,
+        input.side,
+        input.kind,
+      ).length === 0
+    ) {
+      const missing =
+        input.kind === "tp"
+          ? "Take-profit GTC did not rest."
+          : "Stop GTC did not rest.";
+      await logDcaSyncFailed({
+        playbook: input.playbook,
+        side: input.side,
+        error: missing,
+        reason: `rest_${input.kind}`,
+      });
+      return { ok: false, error: missing };
+    }
   }
   await logDcaEvent({
     playbook: input.playbook,
@@ -485,7 +541,7 @@ async function syncDcaPlaybookGridUnlocked(input: {
         limitPrice: String(item.limitPrice),
       },
     });
-    if (!amended.ok) {
+    if (!amended.ok && !isUnchangedWorkingAmend(amended.error ?? "")) {
       await logDcaSyncFailed({
         playbook: input.playbook,
         side: input.side,
@@ -622,16 +678,6 @@ async function placeClip(input: {
   return { ok: true };
 }
 
-function sameExitPrice(left: number | null, right: number | null): boolean {
-  if (left === null && right === null) {
-    return true;
-  }
-  if (left === null || right === null) {
-    return false;
-  }
-  return Math.abs(left - right) < 1e-8;
-}
-
 export async function syncDcaPlaybookExits(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
@@ -708,12 +754,7 @@ async function syncDcaPlaybookExitsUnlocked(input: {
     slLimitPrice: null,
   };
   const actor = playbookActor(input.playbook, input.mode);
-  if (
-    !sameExitPrice(current.takeProfit, planned.takeProfit) ||
-    !sameExitPrice(current.stopLoss, stopLoss) ||
-    (planned.takeProfit !== null && current.tpOrderType !== tpType) ||
-    (stopLoss !== null && current.slOrderType !== "market")
-  ) {
+  if (dcaExitTpslNeedsVenueSync(current, nextTpsl)) {
     const set = await runFuturesCommand({
       actor,
       command: {
@@ -768,6 +809,16 @@ async function syncDcaPlaybookExitsUnlocked(input: {
     currentActive: open.trailingActive,
     currentPeak: open.trailingPeak,
   });
+}
+
+function sameExitPrice(left: number | null, right: number | null): boolean {
+  if (left === null && right === null) {
+    return true;
+  }
+  if (left === null || right === null) {
+    return false;
+  }
+  return Math.abs(left - right) < 1e-8;
 }
 
 async function syncDcaTrailing(input: {

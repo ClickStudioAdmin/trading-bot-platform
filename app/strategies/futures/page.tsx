@@ -74,7 +74,9 @@ export default async function FuturesOverviewPage({
     ),
     venueRisk,
   );
-  const dcaHints = dca ? dcaHintsForOpen(playbooks, open) : undefined;
+  const dcaHints = dca
+    ? dcaHintsForOpen(playbooks, open, desk.working)
+    : undefined;
 
   return (
     <main className="mx-auto max-w-7xl space-y-8 px-6 pt-6 pb-8">

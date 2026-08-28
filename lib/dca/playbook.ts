@@ -13,7 +13,11 @@ import {
   triggerConditionMet,
   type FuturesTriggerCompare,
 } from "@/lib/futures/automation";
-import { parseFuturesTrigger } from "@/lib/futures/tpsl";
+import {
+  parseFuturesTrigger,
+  tpslWithoutLimitExits,
+  type FuturesTpsl,
+} from "@/lib/futures/tpsl";
 import { futuresPnlUsdt } from "@/lib/futures/math";
 import { dcaClipSizeAt, dcaDipPctAt, dcaLadderMaxOrderError, dcaPlannedExits, dcaSafetyPrices } from "./grid";
 import {
@@ -356,6 +360,7 @@ export type DcaOpenHint = {
   plannedTrailing: number | null;
   takeProfitOrderType: FuturesOrderType;
   stopLossOrderType: FuturesOrderType;
+  tpLimitResting: boolean;
 };
 
 export function dcaHintKey(symbol: string, side: FuturesSide): string {
@@ -1540,6 +1545,30 @@ function sameSafetyNumber(left: number, right: number): boolean {
   return Math.abs(left - right) <= SAME_SAFETY;
 }
 
+function sameNullablePrice(left: number | null, right: number | null): boolean {
+  if (left === null && right === null) {
+    return true;
+  }
+  if (left === null || right === null) {
+    return false;
+  }
+  return sameSafetyNumber(left, right);
+}
+
+export function dcaExitTpslNeedsVenueSync(
+  current: FuturesTpsl,
+  next: FuturesTpsl,
+): boolean {
+  const from = tpslWithoutLimitExits(current);
+  const to = tpslWithoutLimitExits(next);
+  return (
+    !sameNullablePrice(from.takeProfit, to.takeProfit) ||
+    !sameNullablePrice(from.stopLoss, to.stopLoss) ||
+    (to.takeProfit !== null && from.tpOrderType !== to.tpOrderType) ||
+    (to.stopLoss !== null && from.slOrderType !== to.slOrderType)
+  );
+}
+
 export type DcaSafetyWorkingRow = {
   id: string;
   idempotencyKey: string | null;
@@ -1755,6 +1784,10 @@ export function dcaOpenHint(input: {
   orders?: readonly { action: string }[];
   entryPrice?: number | null;
   mark?: number | null;
+  working?: readonly {
+    idempotencyKey?: string | null;
+    status?: string | null;
+  }[];
 }): DcaOpenHint | null {
   if (input.playbook.symbol !== input.symbol) {
     return null;
@@ -1778,6 +1811,16 @@ export function dcaOpenHint(input: {
     stopLossBasis: input.playbook.stopLossBasis,
     trailingPct: input.playbook.trailingPct,
   });
+  const tpLimitResting = (input.working ?? []).some(
+    (row) =>
+      (!row.status || row.status === "open") &&
+      isDcaExitLimitKey(
+        row.idempotencyKey,
+        input.playbook.id,
+        input.side,
+        "tp",
+      ),
+  );
   return {
     playbookId: input.playbook.id,
     orders: formatDcaOrdersProgress({
@@ -1789,6 +1832,7 @@ export function dcaOpenHint(input: {
     plannedTrailing: planned.trailingStop,
     takeProfitOrderType: input.playbook.takeProfitOrderType,
     stopLossOrderType: "market",
+    tpLimitResting,
   };
 }
 
@@ -1801,6 +1845,10 @@ export function dcaHintsForOpen(
     entryPrice?: number | null;
     mark?: number | null;
   }>,
+  working?: readonly {
+    idempotencyKey?: string | null;
+    status?: string | null;
+  }[],
 ): Record<string, DcaOpenHint> {
   const hints: Record<string, DcaOpenHint> = {};
   for (const row of open) {
@@ -1815,6 +1863,7 @@ export function dcaHintsForOpen(
       orders: row.orders,
       entryPrice: row.entryPrice,
       mark: row.mark,
+      working,
     });
     if (hint) {
       hints[dcaHintKey(row.symbol, row.side)] = hint;
