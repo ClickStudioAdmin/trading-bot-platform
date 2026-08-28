@@ -17,6 +17,7 @@ import {
   type FuturesTpsl,
 } from "@/lib/futures/tpsl";
 import { withDeskLease, engineWorkerId } from "@/lib/engine/lease-store";
+import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
