@@ -58,7 +58,7 @@ Phase accepted. TradingView is [phase-9.md](phase-9.md).
 ## Out of scope
 
 - TradingView webhooks (next phase)
-- Hyperliquid wallets
+- Hyperliquid wallets ([phase-hyperliquid.md](phase-hyperliquid.md); implement after Click accepts)
 - MEXC / XT / Binance adapters
 - Post-only / maker
 - Trailing stop by percentage

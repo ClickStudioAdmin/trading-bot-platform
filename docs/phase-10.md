@@ -44,6 +44,8 @@ Same venue key on two desks still shares IM. Isolation = another desk **and** an
 - DCA desk type (Phase 11, complete)
 - Scale-in desk type (Phase 12, not started)
 - Richer Perps recipes (Phase 13)
+- Hyperliquid venue ([phase-hyperliquid.md](phase-hyperliquid.md)), then MEXC
+- Copy trading; Hedged DCA; Starter Pack CTA on new desk; Backtesting ([master-spec.md](master-spec.md) Later)
 - Live TradingView alert test ([phase-9.md](phase-9.md) Later)
 
 ## What this phase includes

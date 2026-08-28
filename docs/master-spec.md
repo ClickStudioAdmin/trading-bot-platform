@@ -11,7 +11,7 @@ GitHub. Hosted Supabase and Vercel are not.
 - Repo-root Next.js on Vercel — UI and the paper tick HTTP door
 - Paper engine tick lives in `lib/engine` and is host-agnostic. It is scheduled by GitHub Actions against the Sydney Vercel function. Fly.io can call the same function later
 - Supabase — Postgres only. Sign-in is the `members` table and a signed cookie. Trading state is scoped to `trading_accounts`, not the login
-- A member can have many desks. Each desk is Paper or Live at create, and has a type (`cash_and_carry`, `perps`, `signal_follower` / TradingView Strategy, `dca`) that locks the UI. Paper uses the in-app ledger. Connected Exchange desks place venue orders from Sydney Vercel when a key is bound (Phase 7).
+- A member can have many desks. Each desk is Paper or Live at create, and has a type (`cash_and_carry`, `perps`, `signal_follower` / TradingView Strategy, `dca`) that locks the UI. Hyperliquid (planned) also locks **venue** on the desk so Bybit pages stay Bybit ([phase-hyperliquid.md](phase-hyperliquid.md)). Paper uses the in-app ledger. Connected Exchange desks place venue orders from Sydney Vercel when a key is bound (Phase 7).
 - New members start with zero desks. First sign-in sends them to `/welcome` to create the first desk. Existing members who already have desks are unchanged. After the first desk exists, at least one must remain.
 - `/admin` — `members.role = admin`, plus `click.studio.admin@gmail.com`. Overview is the landing page. Members, templates, logs, settings, and theme sit in the left menu
 
@@ -27,13 +27,23 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Next is scale-in (Phase 12) — wait for instruction; do not write or start it yet. Hyperliquid and additional CEX adapters wait. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)). Onboarding wizard refine is postponed ([phase-onboarding.md](phase-onboarding.md)). Backup market-data vendors wait (see Later, below). Automation templates are in [templates.md](templates.md).
+Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Next numbered desk type is scale-in (Phase 12) — not written until Click starts it. Next venue work is Hyperliquid ([phase-hyperliquid.md](phase-hyperliquid.md)), then MEXC. Do not implement Hyperliquid until Click accepts that plan. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)). Onboarding wizard refine is postponed ([phase-onboarding.md](phase-onboarding.md)). Other later work is below. Automation templates are in [templates.md](templates.md).
 
 ## Later (unscheduled)
 
-Do not implement until Click starts this work. Not Phase 12.
+Do not implement until Click starts this work. Not Phase 12. Hyperliquid is planned separately ([phase-hyperliquid.md](phase-hyperliquid.md)).
 
 **Onboarding wizard.** `/welcome` already gates first sign-in and creates the first desk. A later stage refines that wizard (clearer type/mode, optional Starter Pack delivery, a next-step land). See [phase-onboarding.md](phase-onboarding.md).
+
+**Starter Pack CTA on new desk.** When a member creates a desk (first or later), offer matching Starter Pack templates/folders for that desk type: copy into their library and/or apply idle/disabled. Never arm. Distinct from the `/welcome` splash; can ship with the onboarding refine or on Manage desks alone.
+
+**Copy trading.** A later product: follow another account’s fills onto the member’s bound desk. Not a venue adapter. Not this Hyperliquid phase.
+
+**Hedged DCA.** A later managing playbook whose core is a hedge (simultaneous long and short), not today’s one-way DCA or Bybit `Both` on hedge-mode perps. Not Hyperliquid one-way. Not Phase 12 scale-in.
+
+**Backtesting.** Replay a recipe against historical candles and print a blotter / stats without placing. Not a venue adapter. Not this Hyperliquid phase. Paper desks and live marks stay as they are until this work starts.
+
+**MEXC.** After Hyperliquid ships, add MEXC as a CEX adapter (HMAC key, closer to Bybit). Write `phase-mexc.md` then. Not in the Hyperliquid pass.
 
 **Backup market data.** Indicator start and other public candles stay on **Bybit public klines first**. A later stage adds failover when that call fails (timeout, HTTP 403, empty list):
 
@@ -45,4 +55,4 @@ TradingView stays a Signal webhook, not a candle vendor. Orders stay on the boun
 
 ## Multi-tenancy
 
-Bring-your-own API keys, stored on the **login**. Live desks bind one key. The same key on two desks shares venue margin. Isolation needs another trade-only key. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue. Connected Exchange books show a Unified account snapshot (available, margin, IM/MM) from the bound key on My Account and on hover of the strategy exchange chip. The active desk for a tab is `?desk=` on desk-scoped URLs. The session cookie is last-used only.
+Bring-your-own API keys, stored on the **login**. Live desks bind one key. The same key on two desks shares venue margin. Isolation needs another trade-only key. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue. Hyperliquid is next ([phase-hyperliquid.md](phase-hyperliquid.md)), then MEXC. Connected Exchange books show a Unified account snapshot (available, margin, IM/MM) from the bound key on My Account and on hover of the strategy exchange chip. The active desk for a tab is `?desk=` on desk-scoped URLs. The session cookie is last-used only.

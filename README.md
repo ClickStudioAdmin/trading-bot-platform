@@ -10,7 +10,7 @@ GitHub is the source of truth. The hosted database and Vercel deployment are not
 
 See [docs/phase-11.md](docs/phase-11.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** / Preview environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
 
-Phase 1 through Phase 11 are complete. Next is scale-in (Phase 12) — wait for instruction. No Fly.io. Hyperliquid and additional CEX adapters wait. Backup market-data vendors wait ([docs/master-spec.md](docs/master-spec.md) Later). Onboarding wizard refine is postponed ([docs/phase-onboarding.md](docs/phase-onboarding.md)). Automation templates: [docs/templates.md](docs/templates.md).
+Phase 1 through Phase 11 are complete. Next numbered desk type is scale-in (Phase 12) — wait for instruction. Next venue is Hyperliquid ([docs/phase-hyperliquid.md](docs/phase-hyperliquid.md)), then MEXC — do not implement until that plan is accepted. No Fly.io. Backup market-data vendors wait ([docs/master-spec.md](docs/master-spec.md) Later). Onboarding wizard refine is postponed ([docs/phase-onboarding.md](docs/phase-onboarding.md)). Automation templates: [docs/templates.md](docs/templates.md).
 
 ## Technology stack
 

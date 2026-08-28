@@ -226,4 +226,6 @@ Stop after acceptance. Do not start scale-in, Hyperliquid, or backup klines in t
 - Marketplace
 - Fly.io, private APIs from the browser
 - Phase 12 scale-in
-- Starter Pack delivery to new members (later; [phase-onboarding.md](phase-onboarding.md))
+- Starter Pack delivery to new members and CTA on new desk (later; [phase-onboarding.md](phase-onboarding.md), [master-spec.md](master-spec.md) Later)
+- Hyperliquid / MEXC ([phase-hyperliquid.md](phase-hyperliquid.md))
+- Copy trading; Hedged DCA; Backtesting

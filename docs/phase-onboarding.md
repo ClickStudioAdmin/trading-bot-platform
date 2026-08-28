@@ -22,6 +22,7 @@ Lock screens with Click before coding. Likely pieces, not a build list until the
 2. **Create the first desk.** Same create action and validation as Manage desks. No auto Demo Account. Optional key bind stays trade-only and server-side.
 3. **Starter Pack.** If a platform template or folder is flagged, copy those rows into the new member’s library and/or apply them **idle / disabled** to the first desk of matching type. Never arm, never enable the C&C engine, never place orders. Skip desk types that do not match. TradingView Strategy desks have no recipe templates.
 4. **Land.** After create, a short “what to do next” on that desk (Automations, bind a key, apply a template) instead of dropping the member on a bare home with no hint.
+5. **Starter Pack CTA.** Same offer when **any** new desk is created (Manage desks, not only `/welcome`): matching Starter Pack templates/folders for that type, copy and/or apply idle. Never arm. Can also ship as its own later item ([master-spec.md](master-spec.md) Later).
 
 ## Out of scope (when this work starts)
 

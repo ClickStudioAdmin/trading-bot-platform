@@ -59,4 +59,6 @@ Phase accepted. Do not start scale-in until Click asks. Phase 12 is not written 
 - Calling private exchange APIs from the browser
 - Paper auto-switch ([phase-auto-switch.md](phase-auto-switch.md))
 - Onboarding wizard refine ([phase-onboarding.md](phase-onboarding.md))
+- Hyperliquid ([phase-hyperliquid.md](phase-hyperliquid.md)), then MEXC
+- Copy trading; Hedged DCA; Starter Pack CTA on new desk; Backtesting ([master-spec.md](master-spec.md) Later)
 - Backup market-data vendors (later; [master-spec.md](master-spec.md) Later)

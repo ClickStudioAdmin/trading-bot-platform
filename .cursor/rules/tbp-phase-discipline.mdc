@@ -13,7 +13,7 @@ Feature work happens on `develop`. Merge to `main` only when the user is ready f
 
 Phase 11 is the first managing playbook. Type `dca` on the desk. Same `futures_*` ledger and `runFuturesCommand`. The app owns orders and exits. Signals only arm. Stacked playbooks, one per contract and side. Do not add a Fly.io worker. Do not call private exchange APIs from the browser. Paper accounts still use the in-app ledger.
 
-Do not create later-phase tables or speculative architecture. Do not start scale-in, Hyperliquid, MEXC/XT, or onboarding wizard refine until Click asks. See [docs/phase-onboarding.md](docs/phase-onboarding.md).
+Do not create later-phase tables or speculative architecture. Do not start scale-in, MEXC, or onboarding wizard refine until Click asks. Hyperliquid is planned in [docs/phase-hyperliquid.md](docs/phase-hyperliquid.md); implement only after Click accepts that plan. See [docs/phase-onboarding.md](docs/phase-onboarding.md).
 
 Keep dependencies minimal. Prefer the simplest solution that satisfies the current phase.
 
