@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PageHeading } from "@/components/page-heading";
 import { TemplatesLibrary } from "@/components/templates-library";
 import { parseLibraryTab } from "@/lib/templates/library-tab";
 import { getSessionMember } from "@/lib/auth/session";
@@ -27,20 +26,14 @@ export default async function AdminTemplatesPage({
   ]);
 
   return (
-    <div>
-      <PageHeading overline="Admin" title="Templates" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Platform templates and folders are visible to every member. Edit,
-        unpublish, or export this catalog here. Add a platform row with
-        Save as platform template from Automations. Member libraries stay
-        on Account / Templates.
-      </p>
-      <TemplatesLibrary
-        variant="admin"
-        templates={templates}
-        sets={sets}
-        initialTab={parseLibraryTab(params.tab)}
-      />
-    </div>
+    <TemplatesLibrary
+      variant="admin"
+      overline="Admin"
+      title="Templates"
+      description="Platform templates and folders are visible to every member. Edit, unpublish, or export this catalog here. Add a platform row with Save as platform template from Automations. Member libraries stay on Account / Templates."
+      templates={templates}
+      sets={sets}
+      initialTab={parseLibraryTab(params.tab)}
+    />
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { LocalTime } from "@/components/local-time";
+import { PageHeading } from "@/components/page-heading";
 import { Modal } from "@/components/template-modals";
 import { formatDeskType } from "@/lib/accounts/model";
 import {
@@ -28,6 +29,10 @@ import type {
   AutomationTemplate,
   AutomationTemplateSet,
 } from "@/lib/templates/store";
+import {
+  parseTemplateLibraryJson,
+  type TemplateLibraryFile,
+} from "@/lib/templates/transfer";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -144,6 +149,9 @@ function foldersForAll(
 
 export function TemplatesLibrary({
   variant,
+  title,
+  description,
+  overline,
   templates,
   sets,
   sharedTemplates = [],
@@ -151,6 +159,9 @@ export function TemplatesLibrary({
   initialTab = "templates",
 }: {
   variant: "account" | "admin";
+  title: string;
+  description: string;
+  overline?: string;
   templates: AutomationTemplate[];
   sets: AutomationTemplateSet[];
   sharedTemplates?: AutomationTemplate[];
@@ -173,6 +184,7 @@ export function TemplatesLibrary({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkFolderOpen, setBulkFolderOpen] = useState(false);
   const [creatingFolder, setCreatingFolder] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     setTab(tabForVariant(initialTab, variant));
@@ -505,9 +517,39 @@ export function TemplatesLibrary({
     flash(await exportTemplateLibraryAction(data));
   }
 
+  async function exportAll() {
+    const data = new FormData();
+    data.set("scope", variant === "admin" ? "platform" : "own");
+    flash(await exportTemplateLibraryAction(data));
+  }
+
   return (
     <div>
-      <nav className="mt-5 flex flex-wrap border-b border-line">
+      <PageHeading
+        overline={overline}
+        title={title}
+        className="mb-2"
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => void exportAll()}
+              className={secondaryBtn}
+            >
+              Export all
+            </button>
+            <button
+              type="button"
+              onClick={() => setImporting(true)}
+              className={secondaryBtn}
+            >
+              Import
+            </button>
+          </>
+        }
+      />
+      <p className="mb-6 text-sm text-ink-muted">{description}</p>
+      <nav className="flex flex-wrap border-b border-line">
         <TabButton selected={tab === "templates"} onClick={() => changeTab("templates")}>
           {variant === "admin" ? "Templates" : "My Templates"}
         </TabButton>
@@ -531,21 +573,17 @@ export function TemplatesLibrary({
           </>
         ) : null}
       </nav>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <LibraryTransferBar
-          exportScope={variant === "admin" ? "platform" : "own"}
-          onResult={flash}
-        />
-        {tab === "sets" ? (
+      {tab === "sets" ? (
+        <div className="mt-4 flex justify-end">
           <button
             type="button"
             onClick={() => setCreatingFolder(true)}
-            className={`${primaryBtn} ml-auto`}
+            className={primaryBtn}
           >
             Add New Folder
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <label className="block text-xs text-ink-muted">
           Search
@@ -890,6 +928,18 @@ export function TemplatesLibrary({
         </>
       ) : null}
 
+      {importing ? (
+        <ImportModal
+          onClose={() => setImporting(false)}
+          onResult={(result) => {
+            flash(result);
+            if (result.ok) {
+              setImporting(false);
+              router.refresh();
+            }
+          }}
+        />
+      ) : null}
       {creatingFolder && tab === "sets" ? (
         <CreateFolderModal
           templates={
@@ -1074,48 +1124,180 @@ function downloadJson(json: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function LibraryTransferBar({
-  exportScope,
+function ImportModal({
+  onClose,
   onResult,
 }: {
-  exportScope: "own" | "platform";
+  onClose: () => void;
   onResult: (result: TemplateActionResult) => void;
 }) {
-  async function onExport() {
-    const data = new FormData();
-    data.set("scope", exportScope);
-    onResult(await exportTemplateLibraryAction(data));
-  }
+  const [raw, setRaw] = useState<string | null>(null);
+  const [file, setFile] = useState<TemplateLibraryFile | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [templateIds, setTemplateIds] = useState<Set<string>>(new Set());
+  const [setIds, setSetIds] = useState<Set<string>>(new Set());
+  const [pending, setPending] = useState(false);
 
-  async function onImport(file: File | undefined) {
-    if (!file) {
+  async function onPick(picked: File | undefined) {
+    if (!picked) {
       return;
     }
-    const text = await file.text();
-    const data = new FormData();
-    data.set("libraryJson", text);
-    onResult(await importTemplateLibraryAction(data));
+    const text = await picked.text();
+    const parsed = parseTemplateLibraryJson(text);
+    if (!parsed.ok) {
+      setRaw(null);
+      setFile(null);
+      setParseError(parsed.error);
+      return;
+    }
+    setParseError(null);
+    setRaw(text);
+    setFile(parsed.file);
+    setTemplateIds(new Set(parsed.file.templates.map((row) => row.id)));
+    setSetIds(new Set(parsed.file.sets.map((row) => row.id)));
   }
 
+  function toggle(id: string, kind: "template" | "folder") {
+    const update = (current: Set<string>) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    };
+    if (kind === "template") {
+      setTemplateIds(update);
+    } else {
+      setSetIds(update);
+    }
+  }
+
+  async function importSelected() {
+    if (!raw || !file) {
+      return;
+    }
+    setPending(true);
+    const data = new FormData();
+    data.set("libraryJson", raw);
+    data.set("templateIds", [...templateIds].join(","));
+    data.set("setIds", [...setIds].join(","));
+    const result = await importTemplateLibraryAction(data);
+    setPending(false);
+    onResult(result);
+  }
+
+  const canImport = Boolean(file) && templateIds.size > 0;
+
   return (
-    <>
-      <button type="button" onClick={() => void onExport()} className={secondaryBtn}>
-        Export all
-      </button>
-      <label className={`${secondaryBtn} cursor-pointer`}>
-        Import all
+    <Modal title="Import" onClose={onClose} wide>
+      <p className="mt-1 text-sm text-ink-muted">
+        Upload a JSON library file. Untick anything you do not want to import.
+        Import creates copies in your library.
+      </p>
+      <label className={`${secondaryBtn} mt-4 inline-flex cursor-pointer`}>
+        Choose file
         <input
           type="file"
           accept="application/json,.json"
           className="sr-only"
           onChange={(event) => {
-            const file = event.target.files?.[0];
+            const picked = event.target.files?.[0];
             event.target.value = "";
-            void onImport(file);
+            void onPick(picked);
           }}
         />
       </label>
-    </>
+      {parseError ? (
+        <p className="mt-3 rounded-card border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {parseError}
+        </p>
+      ) : null}
+      {file ? (
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <ImportPickList
+            title="Templates"
+            empty="This file has no templates."
+            rows={file.templates.map((row) => ({
+              id: row.id,
+              name: row.name,
+              detail: formatDeskType(row.deskType),
+            }))}
+            selected={templateIds}
+            onToggle={(id) => toggle(id, "template")}
+          />
+          <ImportPickList
+            title="Folders"
+            empty="This file has no folders."
+            rows={file.sets.map((row) => ({
+              id: row.id,
+              name: row.name,
+              detail: `${formatDeskType(row.deskType)} · ${row.items.length} template${row.items.length === 1 ? "" : "s"}`,
+            }))}
+            selected={setIds}
+            onToggle={(id) => toggle(id, "folder")}
+          />
+        </div>
+      ) : null}
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
+        <button type="button" onClick={onClose} className={secondaryBtn}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          disabled={pending || !canImport}
+          onClick={() => void importSelected()}
+          className={primaryBtn}
+        >
+          {pending ? "Importing…" : "Import"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function ImportPickList({
+  title,
+  empty,
+  rows,
+  selected,
+  onToggle,
+}: {
+  title: string;
+  empty: string;
+  rows: { id: string; name: string; detail: string }[];
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <div className="rounded-card border border-line bg-canvas p-3">
+      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        {title}
+      </p>
+      {rows.length === 0 ? (
+        <p className="mt-2 text-sm text-ink-muted">{empty}</p>
+      ) : (
+        <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+          {rows.map((row) => (
+            <li key={row.id}>
+              <label className="flex items-start gap-2 rounded-control px-1 py-1.5 text-sm text-ink hover:bg-surface-raised">
+                <input
+                  type="checkbox"
+                  checked={selected.has(row.id)}
+                  onChange={() => onToggle(row.id)}
+                  className="mt-0.5 size-4"
+                />
+                <span className="min-w-0">
+                  <span className="block truncate">{row.name}</span>
+                  <span className="text-xs text-ink-faint">{row.detail}</span>
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

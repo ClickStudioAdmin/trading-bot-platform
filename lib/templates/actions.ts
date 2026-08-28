@@ -59,6 +59,7 @@ import {
   parseShareEmail,
   parseTemplateLibraryJson,
   planLibraryImport,
+  filterLibraryFile,
   selectLibraryExport,
 } from "./transfer";
 
@@ -1461,13 +1462,26 @@ export async function importTemplateLibraryAction(
   if (!parsed.ok) {
     return parsed;
   }
+  let file = parsed.file;
+  if (formData.has("templateIds") || formData.has("setIds")) {
+    file = filterLibraryFile(file, {
+      templateIds: String(formData.get("templateIds") ?? "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean),
+      setIds: String(formData.get("setIds") ?? "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean),
+    });
+  }
   const existingTemplates = (
     await listVisibleTemplates({ userId: auth.member.id })
   ).filter((row) => row.visibility === "user" && row.userId === auth.member.id);
   const existingSets = (
     await listVisibleSets({ userId: auth.member.id })
   ).filter((row) => row.visibility === "user" && row.userId === auth.member.id);
-  const plan = planLibraryImport(parsed.file, {
+  const plan = planLibraryImport(file, {
     templates: existingTemplates.map((row) => ({
       deskType: row.deskType,
       name: row.name,

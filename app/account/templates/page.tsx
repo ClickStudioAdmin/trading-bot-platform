@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PageHeading } from "@/components/page-heading";
 import { TemplatesLibrary } from "@/components/templates-library";
 import { parseLibraryTab } from "@/lib/templates/library-tab";
 import { getSessionMember } from "@/lib/auth/session";
@@ -29,21 +28,15 @@ export default async function AccountTemplatesPage({
   ]);
 
   return (
-    <div>
-      <PageHeading title="Templates" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Your templates. Add a platform or personal template to a matching
-        desk from Automations. Export a JSON backup, import one, or share a
-        template or folder with another member by email.
-      </p>
-      <TemplatesLibrary
-        variant="account"
-        templates={templates}
-        sets={sets}
-        sharedTemplates={sharedTemplates}
-        sharedSets={sharedSets}
-        initialTab={parseLibraryTab(params.tab)}
-      />
-    </div>
+    <TemplatesLibrary
+      variant="account"
+      title="Templates"
+      description="Your templates. Add a platform or personal template to a matching desk from Automations. Export a JSON backup, import one, or share a template or folder with another member by email."
+      templates={templates}
+      sets={sets}
+      sharedTemplates={sharedTemplates}
+      sharedSets={sharedSets}
+      initialTab={parseLibraryTab(params.tab)}
+    />
   );
 }

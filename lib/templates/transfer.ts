@@ -135,9 +135,13 @@ export function selectLibraryExport<
 ): { templates: T[]; sets: S[] } {
   const wanted = new Set(selection.ids);
   if (selection.kind === "template") {
+    const templates = catalog.templates.filter((row) => wanted.has(row.id));
+    const needed = new Set(templates.map((row) => row.id));
     return {
-      templates: catalog.templates.filter((row) => wanted.has(row.id)),
-      sets: [],
+      templates,
+      sets: catalog.sets.filter((folder) =>
+        folder.items.some((item) => needed.has(item.templateId)),
+      ),
     };
   }
   const sets = catalog.sets.filter((row) => wanted.has(row.id));
@@ -146,6 +150,27 @@ export function selectLibraryExport<
   );
   return {
     templates: catalog.templates.filter((row) => needed.has(row.id)),
+    sets,
+  };
+}
+
+export function filterLibraryFile(
+  file: TemplateLibraryFile,
+  selection: { templateIds: string[]; setIds: string[] },
+): TemplateLibraryFile {
+  const wantedTemplates = new Set(selection.templateIds);
+  const wantedSets = new Set(selection.setIds);
+  const templates = file.templates.filter((row) => wantedTemplates.has(row.id));
+  const known = new Set(templates.map((row) => row.id));
+  const sets = file.sets
+    .filter((row) => wantedSets.has(row.id))
+    .map((row) => ({
+      ...row,
+      items: row.items.filter((id) => known.has(id)),
+    }));
+  return {
+    ...file,
+    templates,
     sets,
   };
 }

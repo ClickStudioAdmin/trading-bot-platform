@@ -3,6 +3,7 @@ import { defaultPaperLayer } from "@/lib/engine/rules";
 import { snapshotPaperRecipe } from "./recipe";
 import {
   buildTemplateLibraryFile,
+  filterLibraryFile,
   parseShareEmail,
   parseTemplateLibraryJson,
   planLibraryImport,
@@ -55,7 +56,8 @@ const pickedTemplates = selectLibraryExport(
   { kind: "template", ids: ["tpl-1"] },
 );
 assert.equal(pickedTemplates.templates.length, 1);
-assert.equal(pickedTemplates.sets.length, 0);
+assert.equal(pickedTemplates.sets.length, 1);
+assert.equal(pickedTemplates.sets[0]?.id, "set-1");
 
 const pickedFolders = selectLibraryExport(
   { templates: [template, { ...template, id: "tpl-2", name: "Other" }], sets: [set] },
@@ -66,6 +68,13 @@ assert.deepEqual(
   pickedFolders.templates.map((row) => row.id),
   ["tpl-1"],
 );
+
+const filtered = filterLibraryFile(file, {
+  templateIds: ["tpl-1"],
+  setIds: [],
+});
+assert.equal(filtered.templates.length, 1);
+assert.equal(filtered.sets.length, 0);
 
 const roundTrip = parseTemplateLibraryJson(JSON.stringify(file));
 assert.equal(roundTrip.ok, true);

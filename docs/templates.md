@@ -75,12 +75,12 @@ Share is a grant, not a copy. The owner keeps the template. Deleting the templat
 
 ## Export and import
 
-`/account/templates` and `/admin/templates` both have **Export all** and **Import all**. Row checkboxes add bulk **Export** of the current selection.
+`/account/templates` and `/admin/templates` both have **Export all** and **Import** on the page title. Row checkboxes add bulk **Export** of the current selection.
 
-- Account export is the current member’s **user** templates and folders (not platform, not inbound shares).
-- Admin export is the **platform** catalog only.
-- Selected **templates** export those rows. Selected **folders** export those folders plus the templates they contain, so import can rebuild the folder.
-- Import always creates **new user-owned copies** for the signed-in member. Name collisions get a ` (import)` suffix. Folders remap to the newly inserted templates. Invalid templates are skipped. An admin import lands in **their** `/account/templates`, not the platform catalog.
+- Account export is the current member’s **user** templates and the folders those templates sit in (not platform, not inbound shares).
+- Admin export is the **platform** catalog: templates and folders.
+- Selected **templates** export those rows plus any folders that contain them (folder membership is limited to the exported templates). Selected **folders** export those folders plus the templates they contain.
+- **Import** opens a modal: choose a JSON file, then tick templates and folders. Unticked rows are skipped. Import always creates **new user-owned copies** for the signed-in member. Name collisions get a ` (import)` suffix. Folders remap to the newly inserted templates. Invalid templates are skipped. An admin import lands in **their** `/account/templates`, not the platform catalog.
 
 The file format is `tbp.automation-templates` version 1 JSON. No API keys or webhook tokens.
 
@@ -154,7 +154,7 @@ Tokens from [ui-theme.md](ui-theme.md).
 Login library. Not desk-scoped. Account nav: Templates, with Settings, Exchanges, Manage desks.
 
 - Tabs: **My Templates**, **My Folders**, **Shared Templates**, **Shared Folders**. Table with columns, search, desk-type filter, folder filter, click-to-sort, and row checkboxes. Bulk: **Add to folder** (templates), **Export**, **Delete**. **Edit** is name, description, and folders. **Share** is a separate action and modal (email grant). **Edit** folder uses **In Folder** / **Not in Folder** columns; Save writes membership. Apply is on Automations.
-- **Export all** / **Import all** JSON library file.
+- **Export all** / **Import** on the page title. Import is a modal: pick a JSON file, then choose templates and folders.
 - **Folders tab:** same table. **Add New Folder** opens a modal for name, desk type, and optional templates. Add templates now or later from Edit.
 - **Platform rows** do not appear on My Templates / My Folders. Members apply them from Automations. **Shared** tabs: **Remove** drops the grant, not the owner’s copy.
 - Empty states: no templates yet; point at Automations **Save as template**. No folders yet; use **Add New Folder** (templates optional).
@@ -169,7 +169,7 @@ Admin nav next to Members / Logs. Members who are not admins get the usual admin
 - **Unpublish** removes the platform row. Members will no longer see it. User copies are unchanged.
 - **Add New Folder** opens a modal. Create a platform folder from platform templates of one desk type.
 - Add a new platform row with **Save as platform template** from a desk the admin owns.
-- **Export all** downloads the platform catalog. Bulk **Export** downloads the selected platform templates or folders. **Import all** still creates user-owned copies for the signed-in admin.
+- **Export all** downloads the platform catalog (templates and folders). Bulk **Export** downloads the selected platform templates (with the folders they sit in) or selected folders (with their templates). **Import** still creates user-owned copies for the signed-in admin.
 
 Admin does **not** rewrite a user’s `recipe` JSON in place. Support path: save a platform snapshot from Automations, then edit that snapshot. Prevents a silent change to what the member thinks they saved.
 
