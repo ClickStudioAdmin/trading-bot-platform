@@ -12,7 +12,7 @@ Standing (unordered) desk-test and product notes: [click-list.md](click-list.md)
 
 | # | Item | Notes |
 | --- | --- | --- |
-| 1 | **Fly.io engine worker** | Structure accepted: [phase-fly.md](phase-fly.md). Per-desk Postgres leases; Fly Sydney; Vercel stays UI. Do not implement until Click starts that work. |
+| 1 | **Fly.io engine worker** | In progress: [phase-fly.md](phase-fly.md). Per-desk Postgres leases; Fly Sydney; Vercel stays UI. |
 | 2 | **Second exchange: Hyperliquid** | Venue-locked desks, capabilities registry, adapter, UI module. Refine exchange rules and uniqueness (Bybit pages stay Bybit). Plan: [phase-hyperliquid.md](phase-hyperliquid.md). Starts after Fly.io so private calls can use the worker. |
 | 3 | **Copy trading** | Follow another account’s fills onto the member’s bound desk. Not a venue adapter. |
 | 4 | **Internal (and maybe external) webhooks; event-driven bot signals** | Trigger bots/trades from our own events as well as inbound webhooks. Example: DCA playbook reaches 5 opens → signal a Perps desk bot to open a hedge. This is the cross-desk hedge path; not a separate “hedged DCA” desk type unless Click adds one later. |

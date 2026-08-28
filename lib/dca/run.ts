@@ -16,7 +16,7 @@ import {
   tpslWithoutLimitExits,
   type FuturesTpsl,
 } from "@/lib/futures/tpsl";
-import { writeEventLog } from "@/lib/logs/write";
+import { withDeskLease, engineWorkerId } from "@/lib/engine/lease-store";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
@@ -1052,7 +1052,7 @@ function priceStartMet(
   );
 }
 
-export async function applyDcaVerb(input: {
+async function applyDcaVerbUnlocked(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
   verb: DcaVerb;
@@ -1289,45 +1289,66 @@ export async function applyDcaVerb(input: {
   return { ok: true, message: "Bot armed. Waiting for the start trigger." };
 }
 
+export async function applyDcaVerb(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+  verb: DcaVerb;
+  side?: FuturesSide | null;
+  source?: "manual" | "webhook";
+  forcePlace?: boolean;
+}): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
+  return withDeskLease({
+    accountId: input.playbook.accountId,
+    holder: engineWorkerId(),
+    run: () => applyDcaVerbUnlocked(input),
+  });
+}
+
 export async function syncDcaPlaybookWorking(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
   lastPrice?: number | null;
 }): Promise<void> {
-  const lastPrice =
-    input.lastPrice === undefined
-      ? await lastPriceFor(input.playbook.symbol)
-      : input.lastPrice;
-  for (const side of ["long", "short"] as const) {
-    const enabled = dcaEnabledSides(input.playbook.direction).includes(side);
-    const running = dcaLegIsRunning(dcaLegFor(input.playbook, side).status);
-    if (enabled && running) {
-      await syncDcaPlaybookExits({
-        playbook: input.playbook,
-        mode: input.mode,
-        side,
-        lastPrice,
-      });
-    } else {
-      await cancelExitLimit({
-        playbook: input.playbook,
-        side,
-        kind: "tp",
-        mode: input.mode,
-      });
-      await cancelExitLimit({
-        playbook: input.playbook,
-        side,
-        kind: "sl",
-        mode: input.mode,
-      });
-    }
-    await syncDcaPlaybookGrid({
-      playbook: input.playbook,
-      mode: input.mode,
-      side,
-    });
-  }
+  await withDeskLease({
+    accountId: input.playbook.accountId,
+    holder: engineWorkerId(),
+    run: async () => {
+      const lastPrice =
+        input.lastPrice === undefined
+          ? await lastPriceFor(input.playbook.symbol)
+          : input.lastPrice;
+      for (const side of ["long", "short"] as const) {
+        const enabled = dcaEnabledSides(input.playbook.direction).includes(side);
+        const running = dcaLegIsRunning(dcaLegFor(input.playbook, side).status);
+        if (enabled && running) {
+          await syncDcaPlaybookExits({
+            playbook: input.playbook,
+            mode: input.mode,
+            side,
+            lastPrice,
+          });
+        } else {
+          await cancelExitLimit({
+            playbook: input.playbook,
+            side,
+            kind: "tp",
+            mode: input.mode,
+          });
+          await cancelExitLimit({
+            playbook: input.playbook,
+            side,
+            kind: "sl",
+            mode: input.mode,
+          });
+        }
+        await syncDcaPlaybookGrid({
+          playbook: input.playbook,
+          mode: input.mode,
+          side,
+        });
+      }
+    },
+  });
 }
 
 export {

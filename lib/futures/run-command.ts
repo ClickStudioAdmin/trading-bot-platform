@@ -117,10 +117,17 @@ function fail(error: string): { ok: false; error: string } {
 }
 
 function revalidateFutures(kind: FuturesCommand["kind"]) {
-  revalidatePath(FUTURES_PATHS.root);
-  revalidatePath(FUTURES_PATHS.positions);
-  if (kind !== "cancel-working" && kind !== "amend-working") {
-    revalidatePath(FUTURES_PATHS.performance);
+  if (process.env.TBP_ENGINE_WORKER === "1") {
+    return;
+  }
+  try {
+    revalidatePath(FUTURES_PATHS.root);
+    revalidatePath(FUTURES_PATHS.positions);
+    if (kind !== "cancel-working" && kind !== "amend-working") {
+      revalidatePath(FUTURES_PATHS.performance);
+    }
+  } catch {
+    return;
   }
 }
 
@@ -1514,8 +1521,7 @@ async function runCloseAll(
       strategy: FUTURES_STRATEGY_ID,
       data: { reduceOnly: true, source: "close-all", automations: true },
     });
-    revalidatePath(FUTURES_PATHS.settings);
-    revalidatePath(FUTURES_PATHS.automations);
+    revalidateFutures("close-all");
   }
 
   let connection: BoundConnectionSecrets | null = null;

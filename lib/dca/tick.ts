@@ -2,6 +2,7 @@ import { parseDeskType, type TradingAccountMode } from "@/lib/accounts/model";
 import {
   fetchBybitKlines,
   fetchBybitTickers,
+  type BybitTicker,
 } from "@/lib/exchanges/bybit/client";
 import {
   loadFuturesWorking,
@@ -38,18 +39,24 @@ import {
 } from "./run";
 import {
   listDcaPlaybooks,
+  listDcaPlaybooksForAccount,
   loadDcaPlaybookById,
   patchDcaLeg,
   patchDcaPlaybook,
   resetDcaLeg,
 } from "./store";
 
-export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
+export async function runDcaPlaybookTick(input?: {
+  accountId?: string;
+  tickers?: Map<string, BybitTicker>;
+}): Promise<{ acted: number }> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { acted: 0 };
   }
-  const playbooks = await listDcaPlaybooks(supabase);
+  const playbooks = input?.accountId
+    ? await listDcaPlaybooksForAccount(input.accountId, supabase)
+    : await listDcaPlaybooks(supabase);
   if (playbooks.length === 0) {
     return { acted: 0 };
   }
@@ -58,7 +65,7 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
     { data: accountRows },
     { data: settingsRows },
     { data: openRows },
-    tickers,
+    fetchedTickers,
   ] = await Promise.all([
     supabase
       .from("trading_accounts")
@@ -74,8 +81,11 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
       .select("*")
       .eq("status", "open")
       .in("account_id", accountIds),
-    fetchBybitTickers("linear").catch(() => null),
+    input?.tickers
+      ? Promise.resolve(input.tickers)
+      : fetchBybitTickers("linear").catch(() => null),
   ]);
+  const tickers = fetchedTickers;
   if (!tickers) {
     await writeEventLog({
       level: "warning",

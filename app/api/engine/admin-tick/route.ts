@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   const auto = new URL(request.url).searchParams.get("auto") === "1";
 
   try {
-    const result = await runPaperEngineTick({ silent: auto });
+    const result = await runPaperEngineTick({ silent: auto, maxMs: 50_000 });
     if (!auto) {
       await writeEventLog({
         scope: "system",

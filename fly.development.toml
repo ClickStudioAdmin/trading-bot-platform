@@ -1,0 +1,25 @@
+# Trading Bot Platform engine worker (development).
+# Create: fly apps create tbp-engine-dev --region syd
+# Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY
+# (development Supabase only)
+
+app = "tbp-engine-dev"
+primary_region = "syd"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  TBP_ENGINE_WORKER = "1"
+  ENGINE_LOOP_MS = "20000"
+
+[http_service]
+  internal_port = 8080
+  auto_stop_machines = "off"
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+  cpus = 1

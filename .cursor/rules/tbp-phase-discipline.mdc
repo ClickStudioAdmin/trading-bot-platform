@@ -7,11 +7,11 @@ alwaysApply: true
 
 Read [docs/master-spec.md](docs/master-spec.md) and the current phase doc before changing code.
 
-Work only on the current phase. Phase 1 through Phase 11 are complete. See [docs/phase-11.md](docs/phase-11.md). Locked sequence: [docs/roadmap.md](docs/roadmap.md). Fly.io **structure is accepted** ([docs/phase-fly.md](docs/phase-fly.md)). Do not implement Fly (apps, worker code, lease tables) until Click starts implementation.
+Work only on the current phase. Phase 1 through Phase 11 are complete. See [docs/phase-11.md](docs/phase-11.md). Locked sequence: [docs/roadmap.md](docs/roadmap.md). Fly.io implementation is in progress ([docs/phase-fly.md](docs/phase-fly.md)). Do not start Hyperliquid until Click asks.
 
 Feature work happens on `develop`. Merge to `main` only when the user is ready for production.
 
-Phase 11 is the first managing playbook. Type `dca` on the desk. Same `futures_*` ledger and `runFuturesCommand`. The app owns orders and exits. Signals only arm. Stacked playbooks, one per contract and side. Do not add a Fly.io worker until the Fly phase is accepted and started. Do not call private exchange APIs from the browser. Paper accounts still use the in-app ledger.
+Phase 11 is the first managing playbook. Type `dca` on the desk. Same `futures_*` ledger and `runFuturesCommand`. The app owns orders and exits. Signals only arm. Stacked playbooks, one per contract and side. The engine worker claims **one desk at a time** (Postgres leases). Do not call private exchange APIs from the browser. Paper accounts still use the in-app ledger.
 
 Do not create later-phase tables or speculative architecture. Do not start Hyperliquid, copy trading, scale-in, MEXC, or onboarding wizard refine until Click starts that roadmap item. Standing unordered notes: [docs/click-list.md](docs/click-list.md). Hyperliquid is roadmap 2 ([docs/phase-hyperliquid.md](docs/phase-hyperliquid.md)). Scale-in / position builder is roadmap 6. See [docs/phase-onboarding.md](docs/phase-onboarding.md) (roadmap 9).
 

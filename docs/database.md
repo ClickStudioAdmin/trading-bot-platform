@@ -32,6 +32,8 @@ Current tables:
 | `automation_template_set_items` | templates | Folder membership (`set_id`, `template_id`, `sort_order`). Deleting a template drops it from folders. |
 | `automation_template_shares` | templates | Member-to-member access grants on a user template. Email is resolved to `to_user_id` on share. Unique `(template_id, to_user_id)`. Cascade on template or member delete. |
 | `automation_template_set_shares` | templates | Same grant model for folders. Sharing a folder also lets the recipient apply the folder’s items. |
+| `engine_desk_leases` | Fly | Per-desk worker lease (`worker_id`, `leased_until`). Service-role RPCs `claim_engine_desks`, `try_claim_engine_desk`, `release_engine_desk`. RLS on, no anon policies. |
+| `engine_venue_gates` | Fly | Per-connection Bybit spacing (`take_engine_venue_slot`). |
 
 Phase 4 rules migrations: `supabase/migrations/20260822160000_paper_rules.sql` then `supabase/migrations/20260822170000_paper_rule_layers.sql`.
 
@@ -43,6 +45,6 @@ Per-trade automation snapshot: `supabase/migrations/20260822200000_paper_carry_a
 
 `event_logs` is append-only. Writes go through `writeEventLog` with the service role. Authenticated clients can select their own rows; `app_admins` can select every row. Secrets in `data` are redacted before insert. Logging failures must not break the action that produced the event. Perps and DCA blotter rows attach trade and strategy events by `positionId`, or by bot/automation name plus contract, side, and time window. Fill events (`trade.opened` / `added` / `closed` / `unwound`) are written from the futures ledger. DCA also logs arm, stop-adding, decisions, GTC take-profit rests, and cycle close. Idle ticks are not logged.
 
-The `system_health` migration is `supabase/migrations/20260822000000_system_health.sql`. GitHub Actions applies it on push to `develop` (development project) and `main` (production project).
+The `system_health` migration is `supabase/migrations/20260822000000_system_health.sql`. Engine leases: `supabase/migrations/20260829080000_engine_desk_leases.sql`. GitHub Actions applies it on push to `develop` (development project) and `main` (production project).
 
 See [phase-1.md](phase-1.md) and [environments.md](environments.md).

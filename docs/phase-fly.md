@@ -1,8 +1,6 @@
 # Fly.io engine worker
 
-Roadmap 1. **Accepted 29 Aug 2026.** Structure is locked. **Do not implement** (Fly apps, worker process, lease tables, schedule cutover) until Click starts implementation.
-
-Vercel stays the UI. Private exchange APIs stay on the server. The browser never sees decrypted keys. Paper desks stay on the in-app ledger. Same `runFuturesCommand` and `futures_*` / paper ledgers.
+Roadmap 1. **Accepted 29 Aug 2026.** Implementation started 29 Aug 2026. Vercel stays the UI. Private exchange APIs stay on the server. The browser never sees decrypted keys. Paper desks stay on the in-app ledger. Same `runFuturesCommand` and `futures_*` / paper ledgers.
 
 ## Purpose
 
@@ -111,11 +109,22 @@ If those pass, adding machines and desks is capacity, not a redesign.
 
 ## Status
 
-Accepted 29 Aug 2026. Structure below is locked. Implementation waits until Click asks: lease migration, split tick into `runDeskTick`, Fly apps (Sydney, two apps), cut over the GitHub → Vercel schedule, admin Tick nudge, scale-proof tests.
+Accepted 29 Aug 2026. Implementation started 29 Aug 2026.
 
-## Out of scope until implementation starts
+Shipped in repo: `engine_desk_leases` + claim RPCs (`20260829080000_engine_desk_leases.sql`), `runEngineCycle` / per-desk tick, in-memory lease tests, Fly configs (`fly.development.toml`, `fly.production.toml`), worker (`lib/engine/worker.ts`), GitHub **Deploy Engine**. Vercel tick and admin Tick call the same leased cycle (`maxMs` 50s). GitHub’s 5-minute POST stays as a leased fallback until Fly is healthy.
 
-- Creating Fly apps
-- New dependencies (queue libraries, Redis)
-- Changing the 5-minute GitHub → Vercel tick in production
-- Backup market data, other exchanges
+### Click: turn Fly on (development first)
+
+1. Create app in **Sydney**: `fly apps create tbp-engine-dev --region syd`
+2. GitHub Environment `development`: `FLY_API_TOKEN`
+3. Fly secrets (development Supabase **only**): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EXCHANGE_CREDENTIALS_KEY` — same values as Vercel Development
+4. Push `develop` (migrations + deploy-engine). Confirm worker logs and a DCA tick
+5. Production later: `tbp-engine`, GitHub `production` token, production secrets. Never mix
+6. After Fly is the clock, remove the schedule from `paper-engine-tick.yml` (keep **Run workflow**)
+
+## Out of scope
+
+- Redis / queue libraries
+- Moving inbound TradingView webhooks onto Fly
+- Backup market data, other exchanges, Hyperliquid
+

@@ -8,23 +8,33 @@ import {
 } from "./automation";
 import { runFuturesCommand } from "./command";
 import { parseFuturesPositionRow, type FuturesPosition } from "./model";
-import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
+import {
+  fetchBybitTickers,
+  type BybitTicker,
+} from "@/lib/exchanges/bybit/client";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { triggerPrice, tickerTriggerPrices } from "./tpsl";
 import { parseDeskType, type TradingAccountMode } from "@/lib/accounts/model";
 
-export async function runFuturesAutomationTick(): Promise<{ fired: number }> {
+export async function runFuturesAutomationTick(input?: {
+  accountId?: string;
+  tickers?: Map<string, BybitTicker>;
+}): Promise<{ fired: number }> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { fired: 0 };
   }
-  const { data: ruleRows, error: ruleError } = await supabase
+  let rulesQuery = supabase
     .from("futures_automation_rules")
     .select("*")
     .neq("mode", "disabled")
     .order("sort_order", { ascending: true });
+  if (input?.accountId) {
+    rulesQuery = rulesQuery.eq("account_id", input.accountId);
+  }
+  const { data: ruleRows, error: ruleError } = await rulesQuery;
   if (ruleError || !ruleRows || ruleRows.length === 0) {
     return { fired: 0 };
   }
@@ -38,7 +48,7 @@ export async function runFuturesAutomationTick(): Promise<{ fired: number }> {
     { data: accountRows },
     { data: settingsRows },
     { data: openRows },
-    tickers,
+    fetchedTickers,
   ] = await Promise.all([
     supabase
       .from("trading_accounts")
@@ -54,8 +64,11 @@ export async function runFuturesAutomationTick(): Promise<{ fired: number }> {
       .select("*")
       .eq("status", "open")
       .in("account_id", uniqueAccountIds),
-    fetchBybitTickers("linear").catch(() => null),
+    input?.tickers
+      ? Promise.resolve(input.tickers)
+      : fetchBybitTickers("linear").catch(() => null),
   ]);
+  const tickers = fetchedTickers;
 
   if (!tickers) {
     await writeEventLog({

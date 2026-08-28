@@ -1,9 +1,9 @@
 name: Paper Engine Tick
 
-# develop Preview and Production use different URLs and CRON_SECRET values.
-# GitHub only runs scheduled workflows from the default branch. Keep the
-# default branch as develop until you merge to main; then both jobs can run
-# from main. Do not use Vercel Cron.
+# Fallback tick. Fly (`tbp-engine-dev` / `tbp-engine`) is the scheduler (~20s).
+# This POST still works: leases stop a Fly worker and this run from double-placing.
+# After Fly is healthy, remove the schedule (keep workflow_dispatch).
+# Do not use Vercel Cron.
 
 on:
   schedule:

@@ -9,13 +9,13 @@ GitHub. Hosted Supabase and Vercel are not.
 ## Runtime split
 
 - Repo-root Next.js on Vercel — UI and the paper tick HTTP door
-- Paper engine tick lives in `lib/engine` and is host-agnostic. It is scheduled by GitHub Actions against the Sydney Vercel function. Fly.io is the next roadmap item ([roadmap.md](roadmap.md)); it is not implemented yet
+- Paper engine tick lives in `lib/engine` and is host-agnostic. Fly.io (Sydney) is the always-on worker (`runEngineCycle`, per-desk leases). GitHub Actions can still POST the Vercel tick as a leased fallback. See [phase-fly.md](phase-fly.md).
 - Supabase — Postgres only. Sign-in is the `members` table and a signed cookie. Trading state is scoped to `trading_accounts`, not the login
-- A member can have many desks. Each desk is Paper or Live at create, and has a type (`cash_and_carry`, `perps`, `signal_follower` / TradingView Strategy, `dca`) that locks the UI. Hyperliquid (roadmap 2) also locks **venue** on the desk so Bybit pages stay Bybit ([phase-hyperliquid.md](phase-hyperliquid.md)). Paper uses the in-app ledger. Connected Exchange desks place venue orders from Sydney Vercel when a key is bound (Phase 7). After Fly.io, the worker can call the same functions.
+- A member can have many desks. Each desk is Paper or Live at create, and has a type (`cash_and_carry`, `perps`, `signal_follower` / TradingView Strategy, `dca`) that locks the UI. Hyperliquid (roadmap 2) also locks **venue** on the desk so Bybit pages stay Bybit ([phase-hyperliquid.md](phase-hyperliquid.md)). Paper uses the in-app ledger. Connected Exchange desks place venue orders from the Fly worker (Sydney) or the Vercel tick fallback when a key is bound.
 - New members start with zero desks. First sign-in sends them to `/welcome` to create the first desk. Existing members who already have desks are unchanged. After the first desk exists, at least one must remain.
 - `/admin` — `members.role = admin`, plus `click.studio.admin@gmail.com`. Overview is the landing page. Members, templates, logs, settings, and theme sit in the left menu
 
-Paper `paper_carries` writes on a Paper book are not exchange orders. On a Connected Exchange book, the same tables store venue fills. A second Open on the same pair (manual or engine) adds size to the existing open row. Private exchange calls stay on the server. The browser is never given decrypted keys. The tick places Bybit orders on bound Connected Exchange books. Fly.io is locked as the next build item; do not add it until Click starts roadmap 1.
+Paper `paper_carries` writes on a Paper book are not exchange orders. On a Connected Exchange book, the same tables store venue fills. A second Open on the same pair (manual or engine) adds size to the existing open row. Private exchange calls stay on the server. The browser is never given decrypted keys. The Fly worker (and the Vercel tick fallback) place Bybit orders on bound Connected Exchange books through `runFuturesCommand`.
 
 ## Environments
 
@@ -27,7 +27,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Fly.io **structure is accepted** ([phase-fly.md](phase-fly.md)). Do not implement Fly until Click starts that work.
+Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Fly.io **structure is accepted and implementation is in progress** ([phase-fly.md](phase-fly.md)). Push `develop` to migrate `engine_desk_leases`. Create Fly apps in Sydney and set secrets before the deploy-engine workflow succeeds.
 
 The locked sequence after Phase 11 is [roadmap.md](roadmap.md). Standing unordered notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
 

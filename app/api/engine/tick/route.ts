@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await runPaperEngineTick();
+    const result = await runPaperEngineTick({ maxMs: 50_000 });
     return Response.json(result);
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : "Tick failed";

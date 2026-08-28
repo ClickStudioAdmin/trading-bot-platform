@@ -110,11 +110,13 @@ The service role is in the Supabase dashboard: **Project Settings → API → `s
 
 A member is an admin when `members.role` is `admin`, or the email is `click.studio.admin@gmail.com`. Manage accounts at `/admin/members`.
 
-## Paper engine tick (Phase 4)
+## Paper engine tick
 
-The tick is `POST /api/engine/tick` on the Sydney Vercel function, guarded by `CRON_SECRET`. [`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) POSTs it every 5 minutes. Do not use Vercel Cron (Hobby is daily and Production-only).
+The tick is `runEngineCycle` in `lib/engine`: shared scan, then **per-desk leases**, then that desk only. Fly.io in **Sydney** (`tbp-engine-dev` / `tbp-engine`) loops about every 20 seconds. See [phase-fly.md](phase-fly.md).
 
-Confirm a tick from **Actions → Paper Engine Tick → Run workflow**, or from the header **Tick** button (admins only). While an admin has a visible tab open, that button also POSTs `/api/engine/admin-tick?auto=1` every 5 seconds unless **Auto tick** is off in `/admin/settings`. Hidden tabs pause. Auto ticks skip idle log rows. The JSON body is `{ users, opened, added, closed, clipped }`. `added` is a Dynamic clip on an existing row. Failures show in that run and in `/admin/logs`. The header button calls `POST /api/engine/admin-tick` with the signed-in admin session. It does not use `CRON_SECRET`.
+`POST /api/engine/tick` on Sydney Vercel is a **fallback** (same leases, 50s budget). [`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) still POSTs every 5 minutes until Fly is healthy. Do not use Vercel Cron.
+
+Admin header **Tick** runs the same cycle (`POST /api/engine/admin-tick`). Auto tick still POSTs that door every 5 seconds while an admin tab is visible.
 
 | Variable | Where | Value |
 | --- | --- | --- |
@@ -123,10 +125,13 @@ Confirm a tick from **Actions → Paper Engine Tick → Run workflow**, or from 
 | `ENGINE_TICK_URL` | GitHub Environment `development` | The stable `develop` Preview URL + `/api/engine/tick` |
 | `ENGINE_TICK_URL` | GitHub Environment `production` | The Production URL + `/api/engine/tick` |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub Environment `development` | Same value as Vercel **Protection Bypass for Automation**. Preview deployments are SSO-protected; without this header the tick gets `401 Protected Deployment` |
+| `FLY_API_TOKEN` | GitHub Environments `development` and `production` | Fly deploy token. [`.github/workflows/deploy-engine.yml`](../.github/workflows/deploy-engine.yml) |
 
-The function already uses `SUPABASE_SERVICE_ROLE_KEY` on that Vercel environment. Never put the service role or `CRON_SECRET` in `NEXT_PUBLIC_*`. Never put production secrets on Preview or the `development` GitHub Environment.
+Fly app secrets (not GitHub): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EXCHANGE_CREDENTIALS_KEY` — development values on `tbp-engine-dev`, production on `tbp-engine`. Never mix.
 
-Fly.io is roadmap 1 ([roadmap.md](roadmap.md)). Until that item starts, Phase 7 places Bybit orders (manual and tick) from Sydney Vercel. Do not add Fly apps from this file.
+The Vercel function already uses `SUPABASE_SERVICE_ROLE_KEY` on that Vercel environment. Never put the service role or `CRON_SECRET` in `NEXT_PUBLIC_*`. Never put production secrets on Preview or the `development` GitHub Environment.
+
+Private Bybit calls stay on Sydney (Vercel `syd1` and Fly `syd`).
 
 ## Exchange credentials (Phase 6)
 
