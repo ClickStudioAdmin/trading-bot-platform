@@ -1628,12 +1628,7 @@ function TemplateEditModal({
 
   return (
     <Modal title="Edit template" onClose={onClose}>
-      <p className="mt-1 text-xs text-ink-muted">
-        {formatDeskType(template.deskType)} ·{" "}
-        {template.visibility === "platform" ? "Platform" : "User"}
-        {template.ownerEmail ? ` · ${template.ownerEmail}` : ""}
-      </p>
-      <p className="mt-2 text-xs text-ink-faint">{recipePreview(template.recipe)}</p>
+      <p className="mt-1 text-xs text-ink-faint">{recipePreview(template.recipe)}</p>
       <label className="mt-4 block text-xs text-ink-muted">
         Name
         <input
@@ -1782,11 +1777,6 @@ function FolderEditModal({
 
   return (
     <Modal title="Edit folder" onClose={onClose} wide>
-      <p className="mt-1 text-xs text-ink-muted">
-        {formatDeskType(set.deskType)} ·{" "}
-        {set.visibility === "platform" ? "Platform" : "User"}
-        {set.ownerEmail ? ` · ${set.ownerEmail}` : ""}
-      </p>
       <label className="mt-4 block text-xs text-ink-muted">
         Name
         <input
@@ -1850,21 +1840,24 @@ function FolderMembership({
   const notInFolder = allowed.filter((row) => !ids.includes(row.id));
 
   return (
-    <div className="mt-3 grid gap-3 sm:grid-cols-2">
-      <MembershipColumn
-        title="In Folder"
-        empty="None yet. Add from the other column."
-        rows={inFolder}
-        action="Remove"
-        onAction={onRemove}
-      />
-      <MembershipColumn
-        title="Not in Folder"
-        empty="No matching templates, or they are all in this folder."
-        rows={notInFolder}
-        action="Add"
-        onAction={onAdd}
-      />
+    <div className="mt-3">
+      <p className="text-xs text-ink-muted">Templates</p>
+      <div className="mt-1 grid gap-3 sm:grid-cols-2">
+        <MembershipColumn
+          title="In Folder"
+          empty="None yet. Add from the other column."
+          rows={inFolder}
+          action="Remove"
+          onAction={onRemove}
+        />
+        <MembershipColumn
+          title="Not in Folder"
+          empty="No matching templates, or they are all in this folder."
+          rows={notInFolder}
+          action="Add"
+          onAction={onAdd}
+        />
+      </div>
     </div>
   );
 }
