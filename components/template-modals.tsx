@@ -309,10 +309,10 @@ function ApplyTemplateButton({
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className={secondaryBtn}>
-        From template
+        Add from Template
       </button>
       {open ? (
-        <Modal title="From template" onClose={() => setOpen(false)}>
+        <Modal title="Add from Template" onClose={() => setOpen(false)}>
           <p className="mt-1 text-sm text-ink-muted">
             Creates an idle or disabled recipe on this desk. Nothing is armed.
           </p>

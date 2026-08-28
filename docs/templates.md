@@ -141,9 +141,9 @@ Tokens from [ui-theme.md](ui-theme.md).
 
 ### Automations (desk)
 
-- Header: **Add**, **From template**, **From set**. Picker: Platform group, then My templates. Preview name, description, contract. Confirm apply to **this** desk.
+- Header: **Add**, **Add from Template**, **From set**. Picker: Platform group, then My templates. Preview name, description, contract. Confirm apply to **this** desk.
 - Each recipe card: **Save as template**. Admins also see **Save as platform template** (confirm: visible to every member).
-- TradingView Strategy desk: no From template. Webhook tokens are not templates.
+- TradingView Strategy desk: no Add from Template. Webhook tokens are not templates.
 
 ### `/account/templates` (every member)
 

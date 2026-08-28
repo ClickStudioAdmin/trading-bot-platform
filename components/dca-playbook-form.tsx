@@ -1505,9 +1505,17 @@ export function DcaPlaybookForm({
             </button>
           </div>
         ) : null}
-        {removeControl ? (
-          <div className="ml-auto">{removeControl}</div>
-        ) : null}
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          <SaveAsTemplateButton
+            isAdmin={isAdmin}
+            defaultName={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+            kind="dca"
+            buildForm={() =>
+              formRef.current ? new FormData(formRef.current) : new FormData()
+            }
+          />
+          {removeControl}
+        </div>
       </div>
       {!running || ladderOpen ? (
       <fieldset className={sectionClass}>
@@ -1800,16 +1808,6 @@ export function DcaPlaybookForm({
         </div>
       </fieldset>
       ) : null}
-      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-        <SaveAsTemplateButton
-          isAdmin={isAdmin}
-          defaultName={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
-          kind="dca"
-          buildForm={() =>
-            formRef.current ? new FormData(formRef.current) : new FormData()
-          }
-        />
-      </div>
     </form>
   );
 }
