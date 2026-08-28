@@ -69,9 +69,9 @@ Applying a folder walks the list and applies each template to a **chosen desk** 
 | --- | --- | --- |
 | User template / folder | Owning member | Owner applies to **their** desks. Other members cannot see it unless it is **shared** with them. Not listed on `/admin/templates`. |
 | Platform template / folder | Admin only | Every member can read and apply. Members cannot edit or delete. |
-| Shared template / folder | Owner (or admin) grants access by recipient email; stored as `to_user_id` | Recipient can apply to **their** desks. Read-only on Shared tabs except **Import**, which copies into their library. Cannot edit, delete, or re-share. |
+| Shared template / folder | Owner (or admin) grants access by recipient email; stored as `to_user_id` | Recipient can apply to **their** desks. Shared tabs are read-only except **Import** (copy into their library) and **Remove** (drop the grant). Cannot edit, delete, or re-share. |
 
-Share is a grant, not a copy. The owner keeps the template. Recipients can **Import** a shared template or folder to copy it into their own library (name collisions get a ` (import)` suffix). Sharing a folder also lists its templates on Shared Templates. Deleting the template or folder drops the shares. Platform templates are already public — do not share them.
+Share is a grant, not a copy. The owner keeps the template. Recipients can **Import** a shared template or folder to copy it into their own library (name collisions get a ` (import)` suffix). Sharing a folder also lists its templates on Shared Templates. Recipients can **Remove** that grant; if the template is only visible because it sits in a shared folder, Remove also drops those folder grants. Deleting the template or folder drops the shares. Platform templates are already public — do not share them.
 
 ## Export and import
 
@@ -157,7 +157,7 @@ Login library. Not desk-scoped. Account nav: Templates, with Settings, Exchanges
 - Tabs: **My Templates**, **My Folders**, **Shared Templates**, **Shared Folders**. Table with columns, search, desk-type filter, folder filter, click-to-sort, and row checkboxes. Bulk: **Add to folder** (templates), **Export**, **Delete**. **Edit** is name, description, and folders. **Share** is a separate action and modal (email grant). **Edit** folder uses **In Folder** / **Not in Folder** columns; Save writes membership. Apply is on Automations.
 - **Export all** / **Import** on the page title. Import is a modal: pick a JSON file, then choose templates and folders.
 - **Folders tab:** same table. **Add New Folder** opens a modal for name, desk type, and optional templates. Add templates now or later from Edit.
-- **Platform rows** do not appear on My Templates / My Folders. Members apply them from Automations. **Shared** tabs: **Import** copies the template (or the folder and its templates) into My Templates / My Folders. **Remove** drops the grant, not the owner’s copy. Templates inside a folder shared with you also appear on Shared Templates.
+- **Platform rows** do not appear on My Templates / My Folders. Members apply them from Automations. **Shared** tabs: **Import** copies the template (or the folder and its templates) into My Templates / My Folders. **Remove** drops the grant, not the owner’s copy, including templates that only appear because a folder was shared with you.
 - Empty states: no templates yet; point at Automations **Save as template**. No folders yet; use **Add New Folder** (templates optional).
 
 ### `/admin/templates` (admins only)
@@ -166,7 +166,7 @@ Admin nav next to Members / Logs. Members who are not admins get the usual admin
 
 **Templates** and **Folders** list **platform** rows only. No user templates, user folders, Scope filter, or owner column. Inbound **Shared Templates / Shared Folders** live on `/account/templates`, not here.
 
-- **Edit** to rename, description, **Include in Starter Pack**, delete, edit folder membership (platform templates only) on the **Folders** tab or from a template’s Edit dialog.
+- **Edit** to rename, description, **Include in Starter Pack**, delete, edit folder membership (platform templates only) on the **Folders** tab or from a template’s Edit dialog. The Templates table **Starter Pack** column ticks if the template’s own flag is on **or** it sits in a folder whose flag is on. Edit still shows only the template’s own flag.
 - **Unpublish** removes the platform row. Members will no longer see it. User copies are unchanged.
 - **Add New Folder** opens a modal. Create a platform folder from platform templates of one desk type.
 - Add a new platform row with **Save as platform template** from a desk the admin owns. That dialog and Edit both include **Include in Starter Pack**. **Add New Folder** on admin can set the same flag.
@@ -186,6 +186,7 @@ Admin does **not** rewrite a user’s `recipe` JSON in place. Support path: save
 | Share a user template/folder by email | Own rows | Own rows |
 | Apply my, platform, or shared-with-me template/folder to **my** desk | Yes | Yes |
 | Import a shared template or folder into my library | Yes | Yes |
+| Remove an inbound share | Yes | Yes |
 | Apply to someone else’s desk | No | No |
 | List platform rows | Apply from Automations | Yes (`/admin/templates`, service role) |
 
@@ -225,3 +226,4 @@ Stop after acceptance. Do not start scale-in, Hyperliquid, or backup klines in t
 - Marketplace
 - Fly.io, private APIs from the browser
 - Phase 12 scale-in
+- Starter Pack delivery to new members (later; [phase-onboarding.md](phase-onboarding.md))

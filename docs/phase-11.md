@@ -58,4 +58,5 @@ Phase accepted. Do not start scale-in until Click asks. Phase 12 is not written 
 - Fly.io
 - Calling private exchange APIs from the browser
 - Paper auto-switch ([phase-auto-switch.md](phase-auto-switch.md))
+- Onboarding wizard refine ([phase-onboarding.md](phase-onboarding.md))
 - Backup market-data vendors (later; [master-spec.md](master-spec.md) Later)

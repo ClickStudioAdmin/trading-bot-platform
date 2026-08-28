@@ -1116,7 +1116,7 @@ export async function listSharedSets(input: {
     .filter((row): row is AutomationTemplateSet => Boolean(row));
 }
 
-export async function templateIsSharedWith(
+export async function hasDirectTemplateShare(
   userId: string,
   templateId: string,
 ): Promise<boolean> {
@@ -1124,14 +1124,22 @@ export async function templateIsSharedWith(
   if (!supabase) {
     return false;
   }
-  const { data: direct } = await supabase
+  const { data } = await supabase
     .from("automation_template_shares")
     .select("id")
     .eq("to_user_id", userId)
     .eq("template_id", templateId)
     .maybeSingle();
-  if (direct) {
-    return true;
+  return Boolean(data);
+}
+
+export async function listInboundSetIdsHoldingTemplate(
+  userId: string,
+  templateId: string,
+): Promise<string[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
   }
   const { data: setShares } = await supabase
     .from("automation_template_set_shares")
@@ -1141,15 +1149,28 @@ export async function templateIsSharedWith(
     String((row as { set_id: string }).set_id),
   );
   if (setIds.length === 0) {
-    return false;
+    return [];
   }
   const { data: items } = await supabase
     .from("automation_template_set_items")
     .select("set_id")
     .eq("template_id", templateId)
-    .in("set_id", setIds)
-    .limit(1);
-  return Boolean(items && items.length > 0);
+    .in("set_id", setIds);
+  return [
+    ...new Set(
+      (items ?? []).map((row) => String((row as { set_id: string }).set_id)),
+    ),
+  ];
+}
+
+export async function templateIsSharedWith(
+  userId: string,
+  templateId: string,
+): Promise<boolean> {
+  if (await hasDirectTemplateShare(userId, templateId)) {
+    return true;
+  }
+  return (await listInboundSetIdsHoldingTemplate(userId, templateId)).length > 0;
 }
 
 export async function setIsSharedWith(

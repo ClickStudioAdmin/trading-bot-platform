@@ -10,6 +10,7 @@ import {
   selectLibraryExport,
   uniqueLibraryName,
   inboundTemplateGrantsFromSets,
+  inboundSetIdsHoldingTemplate,
 } from "./transfer";
 
 assert.equal(uniqueLibraryName("Core", []), "Core");
@@ -120,5 +121,22 @@ const grants = inboundTemplateGrantsFromSets([
 assert.equal(grants.get("tpl-a")?.sharedByEmail, "newer@click.studio");
 assert.equal(grants.get("tpl-b")?.sharedByEmail, "older@click.studio");
 assert.equal(grants.size, 2);
+assert.deepEqual(
+  inboundSetIdsHoldingTemplate(
+    [
+      { id: "set-old", items: [{ templateId: "tpl-a" }, { templateId: "tpl-b" }] },
+      { id: "set-new", items: [{ templateId: "tpl-a" }] },
+    ],
+    "tpl-a",
+  ),
+  ["set-old", "set-new"],
+);
+assert.deepEqual(
+  inboundSetIdsHoldingTemplate(
+    [{ id: "set-old", items: [{ templateId: "tpl-a" }] }],
+    "tpl-b",
+  ),
+  [],
+);
 
 console.log("template library transfer checks passed");

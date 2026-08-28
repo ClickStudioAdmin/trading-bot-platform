@@ -27,11 +27,13 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Next is scale-in (Phase 12) — wait for instruction; do not write or start it yet. Hyperliquid and additional CEX adapters wait. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)). Backup market-data vendors wait (see Later, below). Automation templates are in [templates.md](templates.md).
+Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Next is scale-in (Phase 12) — wait for instruction; do not write or start it yet. Hyperliquid and additional CEX adapters wait. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)). Onboarding wizard refine is postponed ([phase-onboarding.md](phase-onboarding.md)). Backup market-data vendors wait (see Later, below). Automation templates are in [templates.md](templates.md).
 
 ## Later (unscheduled)
 
 Do not implement until Click starts this work. Not Phase 12.
+
+**Onboarding wizard.** `/welcome` already gates first sign-in and creates the first desk. A later stage refines that wizard (clearer type/mode, optional Starter Pack delivery, a next-step land). See [phase-onboarding.md](phase-onboarding.md).
 
 **Backup market data.** Indicator start and other public candles stay on **Bybit public klines first**. A later stage adds failover when that call fails (timeout, HTTP 403, empty list):
 

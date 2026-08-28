@@ -82,6 +82,21 @@ export function inboundTemplateGrantsFromSets(
   return grants;
 }
 
+export function inboundSetIdsHoldingTemplate(
+  sets: Array<{ id: string; items: Array<{ templateId: string }> }>,
+  templateId: string,
+): string[] {
+  return [
+    ...new Set(
+      sets
+        .filter((folder) =>
+          folder.items.some((item) => item.templateId === templateId),
+        )
+        .map((folder) => folder.id),
+    ),
+  ];
+}
+
 export function uniqueLibraryName(
   base: string,
   existing: string[],

@@ -81,6 +81,16 @@ function foldersHolding(
   );
 }
 
+function templateShowsStarterPack(
+  template: { id: string; starterPack: boolean },
+  folders: AutomationTemplateSet[],
+): boolean {
+  return (
+    template.starterPack ||
+    foldersHolding(template.id, folders).some((folder) => folder.starterPack)
+  );
+}
+
 function folderLabel(folders: AutomationTemplateSet[]): string {
   if (folders.length === 0) {
     return "—";
@@ -281,7 +291,7 @@ export function TemplatesLibrary({
         formatDeskType(row.deskType),
         folderLabel(held),
         sharedLabel(row.sharedWith, row.sharedByEmail),
-        row.starterPack ? "starter pack" : "",
+        templateShowsStarterPack(row, knownFolders) ? "starter pack" : "",
       ]
         .join(" ")
         .toLowerCase();
@@ -315,7 +325,11 @@ export function TemplatesLibrary({
         return compareNum(a.sharedWith.length, b.sharedWith.length, sort.dir);
       }
       if (sort.key === "starter") {
-        return compareNum(Number(a.starterPack), Number(b.starterPack), sort.dir);
+        return compareNum(
+          Number(templateShowsStarterPack(a, knownFolders)),
+          Number(templateShowsStarterPack(b, knownFolders)),
+          sort.dir,
+        );
       }
       return compareNum(a.updatedAtMs, b.updatedAtMs, sort.dir);
     });
@@ -806,7 +820,9 @@ export function TemplatesLibrary({
                   ) : null}
                   {showStarterPack ? (
                     <td className="px-4 py-3">
-                      <StarterPackMark on={row.starterPack} />
+                      <StarterPackMark
+                        on={templateShowsStarterPack(row, knownFolders)}
+                      />
                     </td>
                   ) : null}
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
@@ -852,19 +868,22 @@ export function TemplatesLibrary({
                           >
                             Import
                           </button>
-                          {row.sharedDirectly ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const data = new FormData();
-                                data.set("templateId", row.id);
-                                void unshareTemplateAction(data).then(flash);
-                              }}
-                              className="text-xs font-medium text-danger hover:text-danger"
-                            >
-                              Remove
-                            </button>
-                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const data = new FormData();
+                              data.set("templateId", row.id);
+                              void unshareTemplateAction(data).then((result) => {
+                                flash(result);
+                                if (result.ok) {
+                                  router.refresh();
+                                }
+                              });
+                            }}
+                            className="text-xs font-medium text-danger hover:text-danger"
+                          >
+                            Remove
+                          </button>
                         </>
                       ) : null}
                     </div>
@@ -1015,7 +1034,12 @@ export function TemplatesLibrary({
                               onClick={() => {
                                 const data = new FormData();
                                 data.set("setId", row.id);
-                                void unshareSetAction(data).then(flash);
+                                void unshareSetAction(data).then((result) => {
+                                  flash(result);
+                                  if (result.ok) {
+                                    router.refresh();
+                                  }
+                                });
                               }}
                               className="text-xs font-medium text-danger hover:text-danger"
                             >

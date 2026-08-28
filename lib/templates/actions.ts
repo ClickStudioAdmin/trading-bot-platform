@@ -31,6 +31,7 @@ import {
   deleteTemplate,
   deleteTemplateSet,
   deleteTemplateShare,
+  hasDirectTemplateShare,
   findMemberByEmail,
   findNamedTemplate,
   appendTemplateToSet,
@@ -40,6 +41,7 @@ import {
   insertTemplateShare,
   listAllSets,
   listAllTemplates,
+  listInboundSetIdsHoldingTemplate,
   listVisibleSets,
   listVisibleTemplates,
   loadSetById,
@@ -1383,9 +1385,14 @@ export async function unshareTemplateAction(
     return { ok: false, error: "That template was not found.", code: "forbidden" };
   }
   const isRecipient = toUserId === auth.member.id;
+  const inboundSetIds = isRecipient
+    ? await listInboundSetIdsHoldingTemplate(auth.member.id, id)
+    : [];
   const canRevoke =
     canShareRow(template.visibility, template.userId, auth.member.id, auth.isAdmin) ||
-    (isRecipient && (await templateIsSharedWith(auth.member.id, id)));
+    (isRecipient &&
+      ((await hasDirectTemplateShare(auth.member.id, id)) ||
+        inboundSetIds.length > 0));
   if (!canRevoke) {
     return { ok: false, error: "That share was not found.", code: "forbidden" };
   }
@@ -1393,8 +1400,22 @@ export async function unshareTemplateAction(
   if (!deleted.ok) {
     return deleted;
   }
+  if (isRecipient) {
+    for (const setId of inboundSetIds) {
+      const dropped = await deleteSetShare({
+        setId,
+        toUserId: auth.member.id,
+      });
+      if (!dropped.ok) {
+        return dropped;
+      }
+    }
+  }
   revalidateTemplateSurfaces();
-  return { ok: true };
+  return {
+    ok: true,
+    notes: isRecipient ? ["Removed the share."] : undefined,
+  };
 }
 
 export async function unshareSetAction(
@@ -1422,7 +1443,10 @@ export async function unshareSetAction(
     return deleted;
   }
   revalidateTemplateSurfaces();
-  return { ok: true };
+  return {
+    ok: true,
+    notes: isRecipient ? ["Removed the share."] : undefined,
+  };
 }
 
 async function ownLibraryNames(userId: string) {
