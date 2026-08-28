@@ -1,5 +1,5 @@
 # Trading Bot Platform engine worker (development).
-# Create: fly apps create tbp-engine-dev --region syd
+# GitHub Actions creates this app on first deploy when FLY_API_TOKEN is set.
 # Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY
 # (development Supabase only)
 

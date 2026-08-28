@@ -121,13 +121,28 @@ Leave production alone until this one is ticking. Do these in order.
 The Fly worker and the lease table are on your machine until they are committed and pushed to `develop`. Ask the agent to commit if you want that done for you. After a push to `develop`, GitHub Actions will try two jobs: one applies the new database table to the **development** Supabase project, and one tries to deploy the Fly app. The deploy job will fail until the Fly app and token exist. That is expected.
 
 **2. Sign in to Fly**  
-Use the same Click Studio account if you already have Fly there. If not, create a Fly account and an organization for this product. This is a **new app**, not the FQX one and not Vercel.
+Signing up with GitHub is fine. That only logs you in. It does **not** mean Fly should deploy this repo.
 
-**3. Create the development engine app**  
-In the Fly dashboard, create an app named **tbp-engine-dev**. Set the region to **Sydney**. Bybit blocks many US IPs; Sydney is the same reason Vercel is Sydney. Do not create the production app (`tbp-engine`) yet.
+**3. Skip “Launch an App from GitHub”**  
+That is the page you get when you click **Launch an app**. Fly shows it to GitHub sign-ups. Do **not** click **Connect GitHub account** and do **not** pick `trading-bot-platform`. That wizard would try to host the whole Next.js app on Fly and fight Vercel.
 
-**4. Copy three secrets onto that Fly app**  
-On the Fly app, open Secrets. Add exactly these names, with the **same values already on Vercel Development** (the `develop` environment), not Production:
+There is **no** dashboard button to create an empty app by name. That is normal. Close Launch. GitHub Actions will create **tbp-engine-dev** in Sydney once it has a token.
+
+**4. Give GitHub permission to create and deploy the app**  
+You need an **org** token, not a GitHub-app launch.
+
+1. Close Launch. Open the Fly **dashboard** (your org / Apps list).
+2. In the org menu (not inside an app), open **Tokens**.
+3. Create a token. Copy it once. Treat it like a password.
+4. In GitHub: repo **Settings → Environments → development**. Add a secret named `FLY_API_TOKEN` with that token. Development only for now.
+
+Tell the agent when that secret is saved. Still do not use Launch from GitHub.
+
+**5. Let GitHub create the empty app**  
+After the token is on GitHub, push `develop` or re-run **Deploy Engine**. The job creates **tbp-engine-dev**. It will then stop and say the three app secrets are missing. That is expected. Also run **Deploy Database** if that has not gone green yet.
+
+**6. Copy three secrets onto that Fly app**  
+Once **tbp-engine-dev** appears in the Fly dashboard, open it (do not Launch another app). Open **Secrets**. Add exactly these names, with the **same values already on Vercel Development** (the `develop` environment), not Production:
 
 - `SUPABASE_URL` — development project URL
 - `SUPABASE_SERVICE_ROLE_KEY` — development **service role** key (the secret one, never a `NEXT_PUBLIC_` key)
@@ -135,11 +150,7 @@ On the Fly app, open Secrets. Add exactly these names, with the **same values al
 
 If those three do not match Vercel Development, the worker will talk to the wrong database or fail to decrypt keys. Do not paste production values here.
 
-**5. Give GitHub permission to deploy**  
-In Fly, create an API token that can deploy apps in that organization. In GitHub, open the repo **Settings → Environments → development**. Add a secret named `FLY_API_TOKEN` with that token. Put it on the **development** environment only for now.
-
-**6. Push `develop` again (or re-run the failed deploy)**  
-After the app, secrets, and token exist, push `develop` or re-run the **Deploy Engine** and **Deploy Database** workflows from the Actions tab. You want both green:
+Re-run **Deploy Engine**. You want both green:
 
 - Database job: lease tables exist on **trading-bot-platform-dev**
 - Engine job: Fly built the worker and it is running in Sydney
