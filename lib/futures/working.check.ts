@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import {
+  isUnchangedWorkingAmend,
   mapBybitOrderStatus,
   nextWorkingAmend,
   nextWorkingFill,
   paperLimitShouldFill,
   parseFuturesWorkingRow,
+  WORKING_AMEND_UNCHANGED,
   workingActionLabel,
   workingSideLabel,
   sortFuturesWorkingRows,
@@ -75,16 +77,18 @@ if (sizeOnly.ok) {
   assert.equal(sizeOnly.priceChanged, false);
 }
 
-assert.equal(
-  nextWorkingAmend({
-    filledQty: 0,
-    qty: 0.01,
-    limitPrice: 80000,
-    nextRemainingQty: 0.01,
-    nextLimitPrice: 80000,
-  }).ok,
-  false,
-);
+const unchanged = nextWorkingAmend({
+  filledQty: 0,
+  qty: 0.01,
+  limitPrice: 80000,
+  nextRemainingQty: 0.01,
+  nextLimitPrice: 80000,
+});
+assert.equal(unchanged.ok, false);
+if (!unchanged.ok) {
+  assert.equal(unchanged.error, WORKING_AMEND_UNCHANGED);
+}
+assert.equal(isUnchangedWorkingAmend(WORKING_AMEND_UNCHANGED), true);
 assert.equal(
   nextWorkingAmend({
     filledQty: 0.2,

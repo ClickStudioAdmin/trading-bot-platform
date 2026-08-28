@@ -33,8 +33,8 @@ export function ExpandableTradeRows({
       </tr>
       {open ? (
         <tr className="border-b border-line last:border-b-0">
-          <td colSpan={colSpan} className="bg-canvas px-4 py-4" id={panelId}>
-            {details}
+          <td colSpan={colSpan} className="max-w-0 bg-canvas px-4 py-4" id={panelId}>
+            <div className="min-w-0">{details}</div>
           </td>
         </tr>
       ) : null}
@@ -54,7 +54,7 @@ export function TradeDetailTabs({
   const logsPanelId = useId();
 
   return (
-    <div>
+    <div className="min-w-0">
       <div
         role="tablist"
         aria-label="Position details"
@@ -76,7 +76,7 @@ export function TradeDetailTabs({
         </TabButton>
       </div>
       <div
-        className="pt-4"
+        className="min-w-0 pt-4"
         role="tabpanel"
         id={tab === "orders" ? ordersPanelId : logsPanelId}
       >

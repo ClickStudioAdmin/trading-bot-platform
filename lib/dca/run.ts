@@ -50,6 +50,7 @@ import {
   type DcaPlaybook,
   type DcaStatus,
 } from "./playbook";
+import { isUnchangedWorkingAmend } from "@/lib/futures/working";
 import {
   patchDcaLeg,
   resetDcaLeg,
@@ -322,7 +323,7 @@ async function restExitLimit(input: {
         limitPrice: String(plan.limitPrice),
       },
     });
-    if (amended.ok) {
+    if (amended.ok || isUnchangedWorkingAmend(amended.error ?? "")) {
       return { ok: true };
     }
     await logDcaSyncFailed({

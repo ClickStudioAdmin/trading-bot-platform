@@ -63,6 +63,12 @@ export function paperLimitShouldFill(input: {
 
 const SAME = 1e-12;
 
+export const WORKING_AMEND_UNCHANGED = "Qty and limit are unchanged.";
+
+export function isUnchangedWorkingAmend(error: string): boolean {
+  return error === WORKING_AMEND_UNCHANGED;
+}
+
 export function sameWorkingNumber(a: number, b: number): boolean {
   return Math.abs(a - b) <= SAME;
 }
@@ -104,7 +110,7 @@ export function nextWorkingAmend(input: {
     input.limitPrice,
   );
   if (!qtyChanged && !priceChanged) {
-    return { ok: false, error: "Qty and limit are unchanged." };
+    return { ok: false, error: WORKING_AMEND_UNCHANGED };
   }
   return {
     ok: true,

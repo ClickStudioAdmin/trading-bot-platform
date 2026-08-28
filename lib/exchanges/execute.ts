@@ -18,6 +18,7 @@ import {
 } from "@/lib/exchanges/bybit/orders";
 import { loadPerpInstrument, qtyForPerp } from "@/lib/exchanges/bybit/perp";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
+import { WORKING_AMEND_UNCHANGED } from "@/lib/futures/working";
 
 export type VenueFill = {
   venue: string;
@@ -299,7 +300,7 @@ export async function amendPerpOrderOnVenue(input: {
     return { ok: false, error: "That exchange cannot amend futures orders yet." };
   }
   if (!input.qty && !input.price) {
-    return { ok: false, error: "Qty and limit are unchanged." };
+    return { ok: false, error: WORKING_AMEND_UNCHANGED };
   }
   return bybitAmendLinearOrder({
     environmentId: input.connection.environment,

@@ -89,7 +89,7 @@ import {
   validateTrailingVsReference,
   type FuturesTrailing,
 } from "./trailing";
-import { nextWorkingAmend } from "./working";
+import { isUnchangedWorkingAmend, nextWorkingAmend } from "./working";
 
 type CommandOk = {
   ok: true;
@@ -1358,6 +1358,9 @@ async function runAmendWorking(
     nextLimitPrice: priced.price,
   });
   if (!amended.ok) {
+    if (isUnchangedWorkingAmend(amended.error)) {
+      return { ok: true, flash: "amended", workingId: row.id };
+    }
     return fail(amended.error);
   }
   const tpsl = tpslFromRow(row);

@@ -12,7 +12,7 @@ Create Perps, DCA, or TradingView Strategy desks whose **exchange is Hyperliquid
 
 ## Status
 
-Plan only. Refined after Click: one-way model, separate desk pages, capability registry, Testnet as Demo, scale path for other venues.
+Plan only. **On hold** — Click is checking a few things. Do not implement. Do not start step 1 until Click says go.
 
 ## How this scales
 

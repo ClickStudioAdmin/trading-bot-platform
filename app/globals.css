@@ -129,6 +129,8 @@ button[aria-busy="true"],
 
 .panel-scroll {
   max-height: min(28rem, 55dvh);
+  min-width: 0;
+  overflow-x: auto;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-right: 0.25rem;

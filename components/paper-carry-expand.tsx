@@ -378,18 +378,18 @@ export function PositionLogList({ logs }: { logs: EventLogRow[] }) {
           return (
             <article
               key={log.id}
-              className="rounded-card border border-line bg-surface-raised p-4"
+              className="min-w-0 overflow-hidden rounded-card border border-line bg-surface-raised p-4"
             >
               <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                <h3 className="text-sm font-semibold tracking-tight">
+                <h3 className="min-w-0 text-sm font-semibold tracking-tight">
                   {formatLogEvent(log.event)}
                 </h3>
-                <p className="text-xs text-ink-muted">
+                <p className="shrink-0 text-xs text-ink-muted">
                   <LocalTime at={log.createdAt} />
                 </p>
               </header>
-              <p className="mt-0.5 text-sm text-ink-muted">{log.message}</p>
-              <p className={`mt-0.5 text-xs ${logLevelTone(log.level)}`}>
+              <p className="mt-0.5 break-words text-sm text-ink-muted">{log.message}</p>
+              <p className={`mt-0.5 break-words text-xs ${logLevelTone(log.level)}`}>
                 {[log.event, log.scope, log.strategy, log.level !== "info" ? log.level : null]
                   .filter(Boolean)
                   .join(" · ")}
@@ -848,7 +848,7 @@ function ValueList({
   rows: MetricRow[];
 }) {
   return (
-    <div className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+    <div className="mt-2 grid min-w-0 grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
       {rows.map((row) => (
         <MetricCell key={row.label} row={row} />
       ))}
@@ -862,14 +862,14 @@ function MetricCell({ row }: { row?: MetricRow }) {
   }
   const value = (
     <span
-      className={`tabular-nums ${row.tone === undefined ? "text-ink" : signedTone(row.tone)}`}
+      className={`min-w-0 break-words text-right tabular-nums ${row.tone === undefined ? "text-ink" : signedTone(row.tone)}`}
     >
       {row.value}
     </span>
   );
   return (
-    <div className="flex items-center justify-between gap-3 text-sm">
-      <span className="text-ink-muted">{row.label}</span>
+    <div className="flex min-w-0 items-start justify-between gap-3 text-sm">
+      <span className="shrink-0 text-ink-muted">{row.label}</span>
       {row.hint ? <ColumnHint label={value} hint={row.hint} /> : value}
     </div>
   );

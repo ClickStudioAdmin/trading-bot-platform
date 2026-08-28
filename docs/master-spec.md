@@ -27,7 +27,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Next numbered desk type is scale-in (Phase 12) — not written until Click starts it. Next venue work is Hyperliquid ([phase-hyperliquid.md](phase-hyperliquid.md)), then MEXC. Do not implement Hyperliquid until Click accepts that plan. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)). Onboarding wizard refine is postponed ([phase-onboarding.md](phase-onboarding.md)). Other later work is below. Automation templates are in [templates.md](templates.md).
+Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Next numbered desk type is scale-in (Phase 12) — not written until Click starts it. Hyperliquid is planned ([phase-hyperliquid.md](phase-hyperliquid.md)) then MEXC — **on hold**; do not implement. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)). Onboarding wizard refine is postponed ([phase-onboarding.md](phase-onboarding.md)). Other later work is below. Automation templates are in [templates.md](templates.md).
 
 ## Later (unscheduled)
 
