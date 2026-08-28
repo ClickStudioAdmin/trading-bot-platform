@@ -6,6 +6,8 @@ import {
   ENGINE_VENUE_GAP_MS,
 } from "./lease";
 
+const EPOCH = "1970-01-01T00:00:00.000Z";
+
 export function engineWorkerId(): string {
   const fromEnv = String(process.env.ENGINE_WORKER_ID ?? "").trim();
   if (fromEnv) {
@@ -15,27 +17,33 @@ export function engineWorkerId(): string {
   return `eng:${host}:${process.pid}`.slice(0, 80);
 }
 
-function asAccountIds(data: unknown): string[] {
-  if (data == null) {
-    return [];
+function leaseUntilIso(ttlSeconds: number): string {
+  return new Date(Date.now() + Math.max(5, ttlSeconds) * 1000).toISOString();
+}
+
+async function ensureLeaseRows(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  accountIds?: string[],
+): Promise<void> {
+  let ids = accountIds;
+  if (!ids) {
+    const { data, error } = await supabase.from("trading_accounts").select("id");
+    if (error) {
+      console.error("engine_desk_leases accounts", error.message);
+      return;
+    }
+    ids = (data ?? []).map((row) => String(row.id));
   }
-  const rows = Array.isArray(data) ? data : [data];
-  const ids: string[] = [];
-  for (const row of rows) {
-    if (typeof row === "string" && row.length > 0) {
-      ids.push(row);
-      continue;
-    }
-    if (!row || typeof row !== "object") {
-      continue;
-    }
-    const rec = row as Record<string, unknown>;
-    const id = rec.account_id ?? rec.accountId ?? rec.id;
-    if (typeof id === "string" && id.length > 0) {
-      ids.push(id);
-    }
+  if (!ids.length) {
+    return;
   }
-  return ids;
+  const { error } = await supabase.from("engine_desk_leases").upsert(
+    ids.map((account_id) => ({ account_id })),
+    { onConflict: "account_id", ignoreDuplicates: true },
+  );
+  if (error) {
+    console.error("engine_desk_leases upsert", error.message);
+  }
 }
 
 export async function claimEngineDesks(input?: {
@@ -47,18 +55,45 @@ export async function claimEngineDesks(input?: {
   if (!supabase) {
     return [];
   }
-  const { data, error } = await supabase.rpc("engine_claim_desks", {
-    p: {
-      worker_id: input?.workerId ?? engineWorkerId(),
-      limit: input?.limit ?? ENGINE_CLAIM_BATCH,
-      ttl_seconds: input?.ttlSeconds ?? ENGINE_LEASE_TTL_SECONDS,
-    },
-  });
+  const workerId = input?.workerId ?? engineWorkerId();
+  const limit = Math.max(1, Math.min(50, input?.limit ?? ENGINE_CLAIM_BATCH));
+  const ttlSeconds = input?.ttlSeconds ?? ENGINE_LEASE_TTL_SECONDS;
+  await ensureLeaseRows(supabase);
+  const nowIso = new Date().toISOString();
+  const { data: free, error } = await supabase
+    .from("engine_desk_leases")
+    .select("account_id")
+    .lt("leased_until", nowIso)
+    .order("leased_until", { ascending: true })
+    .order("account_id", { ascending: true })
+    .limit(limit);
   if (error) {
-    console.error("engine_claim_desks", error.message);
+    console.error("engine_desk_leases list", error.message);
     return [];
   }
-  return asAccountIds(data);
+  const claimed: string[] = [];
+  const until = leaseUntilIso(ttlSeconds);
+  const updatedAt = new Date().toISOString();
+  for (const row of free ?? []) {
+    const accountId = String(row.account_id ?? "");
+    if (!accountId) {
+      continue;
+    }
+    const { data } = await supabase
+      .from("engine_desk_leases")
+      .update({
+        worker_id: workerId,
+        leased_until: until,
+        updated_at: updatedAt,
+      })
+      .eq("account_id", accountId)
+      .lt("leased_until", nowIso)
+      .select("account_id");
+    if (data?.length) {
+      claimed.push(accountId);
+    }
+  }
+  return claimed;
 }
 
 export async function tryClaimEngineDesk(input: {
@@ -70,20 +105,40 @@ export async function tryClaimEngineDesk(input: {
   if (!supabase) {
     return "busy";
   }
-  const { data, error } = await supabase.rpc("engine_try_claim_desk", {
-    p: {
-      account_id: input.accountId,
-      worker_id: input.workerId ?? engineWorkerId(),
-      ttl_seconds: input.ttlSeconds ?? ENGINE_MUTATION_TTL_SECONDS,
-    },
-  });
-  if (error) {
+  const workerId = input.workerId ?? engineWorkerId();
+  const ttlSeconds = input.ttlSeconds ?? ENGINE_MUTATION_TTL_SECONDS;
+  await ensureLeaseRows(supabase, [input.accountId]);
+  const nowIso = new Date().toISOString();
+  const { data: current } = await supabase
+    .from("engine_desk_leases")
+    .select("worker_id, leased_until")
+    .eq("account_id", input.accountId)
+    .maybeSingle();
+  if (!current) {
     return "busy";
   }
-  if (data === "acquired" || data === "held") {
-    return data;
+  const occupied = new Date(String(current.leased_until)).getTime() >= Date.now();
+  const holder = String(current.worker_id ?? "");
+  if (occupied && holder !== workerId) {
+    return "busy";
   }
-  return "busy";
+  const until = leaseUntilIso(ttlSeconds);
+  let query = supabase
+    .from("engine_desk_leases")
+    .update({
+      worker_id: workerId,
+      leased_until: until,
+      updated_at: nowIso,
+    })
+    .eq("account_id", input.accountId);
+  query = occupied
+    ? query.eq("worker_id", workerId)
+    : query.lt("leased_until", nowIso);
+  const { data } = await query.select("account_id");
+  if (!data?.length) {
+    return "busy";
+  }
+  return occupied ? "held" : "acquired";
 }
 
 export async function releaseEngineDesk(input: {
@@ -94,12 +149,16 @@ export async function releaseEngineDesk(input: {
   if (!supabase) {
     return;
   }
-  await supabase.rpc("engine_release_desk", {
-    p: {
-      account_id: input.accountId,
-      worker_id: input.workerId ?? engineWorkerId(),
-    },
-  });
+  const workerId = input.workerId ?? engineWorkerId();
+  await supabase
+    .from("engine_desk_leases")
+    .update({
+      worker_id: null,
+      leased_until: EPOCH,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("account_id", input.accountId)
+    .eq("worker_id", workerId);
 }
 
 export async function withDeskLease<T>(input: {
@@ -147,14 +206,33 @@ export async function takeVenueSlot(connectionId: string | null): Promise<void> 
   if (!supabase) {
     return;
   }
-  const { data } = await supabase.rpc("engine_take_venue_slot", {
-    p: {
+  const now = Date.now();
+  const { data: existing } = await supabase
+    .from("engine_venue_gates")
+    .select("next_allowed_at")
+    .eq("connection_id", connectionId)
+    .maybeSingle();
+  if (!existing) {
+    await supabase.from("engine_venue_gates").insert({
       connection_id: connectionId,
-      gap_ms: ENGINE_VENUE_GAP_MS,
-    },
-  });
-  const slot = data ? new Date(String(data)).getTime() : 0;
-  const wait = slot - Date.now();
+      next_allowed_at: new Date(now).toISOString(),
+    });
+  }
+  const { data: row } = await supabase
+    .from("engine_venue_gates")
+    .select("next_allowed_at")
+    .eq("connection_id", connectionId)
+    .maybeSingle();
+  const current = row?.next_allowed_at
+    ? new Date(String(row.next_allowed_at)).getTime()
+    : now;
+  const start = Math.max(now, Number.isFinite(current) ? current : now);
+  const next = start + ENGINE_VENUE_GAP_MS;
+  await supabase
+    .from("engine_venue_gates")
+    .update({ next_allowed_at: new Date(next).toISOString() })
+    .eq("connection_id", connectionId);
+  const wait = start - now;
   if (wait > 0 && wait < 5_000) {
     await sleep(wait);
   }
