@@ -114,7 +114,7 @@ export function FuturesAutomationsDesk({
           }
           className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
         >
-          Add bot
+          Create New Bot
         </button>
         {accountId ? (
           <DeskTemplateBar

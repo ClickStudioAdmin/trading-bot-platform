@@ -47,7 +47,7 @@ export function PaperRulesGuide({
           detail="Active, Reduce only, or Disabled for this bot only. Account Reduce only overrides Active bots until you turn it off. It is hidden when you have no bots."
         />
         <GuideItem
-          term="Add bot"
+          term="Create New Bot"
           detail="Adds another bot card. Each bot has its own name, entry filters, size caps, order types, and exits. Save to apply. A green pulse means a live row is using this bot — you cannot remove it until that row is flat."
         />
         <GuideItem

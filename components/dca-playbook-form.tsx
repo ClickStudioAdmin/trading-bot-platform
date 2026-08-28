@@ -441,7 +441,7 @@ export function DcaPlaybooksDesk({
           }
           className={addPlaybookClass}
         >
-          Add bot
+          Create New Bot
         </button>
         {accountId ? (
           <DeskTemplateBar
