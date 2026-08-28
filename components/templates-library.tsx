@@ -21,6 +21,7 @@ import {
   updateTemplateSetAction,
   type TemplateActionResult,
 } from "@/lib/templates/actions";
+import type { LibraryTab } from "@/lib/templates/library-tab";
 import type { TemplateDeskType } from "@/lib/templates/recipe";
 import { recipePreview } from "@/lib/templates/recipe";
 import type {
@@ -38,22 +39,6 @@ const dangerBtn =
   "rounded-control px-3 py-1.5 text-xs text-danger hover:bg-danger/10";
 const actionLink =
   "text-xs font-medium text-accent hover:text-accent-strong";
-
-type LibraryTab = "templates" | "sets" | "shared-templates" | "shared-sets";
-
-export function parseLibraryTab(
-  raw: string | string[] | undefined,
-): LibraryTab {
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  if (
-    value === "sets" ||
-    value === "shared-templates" ||
-    value === "shared-sets"
-  ) {
-    return value;
-  }
-  return "templates";
-}
 
 type SortKey =
   | "name"

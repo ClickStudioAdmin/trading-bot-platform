@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeading } from "@/components/page-heading";
-import { TemplatesLibrary, parseLibraryTab } from "@/components/templates-library";
+import { TemplatesLibrary } from "@/components/templates-library";
+import { parseLibraryTab } from "@/lib/templates/library-tab";
 import { getSessionMember } from "@/lib/auth/session";
 import { listAllSets, listAllTemplates, listSharedSets, listSharedTemplates } from "@/lib/templates/store";
 import { redirect } from "next/navigation";

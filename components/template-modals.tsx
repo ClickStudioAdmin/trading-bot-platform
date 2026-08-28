@@ -232,7 +232,9 @@ export function SaveAsTemplateButton({
             <p className="text-xs text-ink-muted">Add to folder</p>
             {folderGroups.length === 0 ? (
               <p className="mt-1 text-sm text-ink-faint">
-                None yet. Create one below or on My Folders.
+                {platform
+                  ? "None yet. Create one below."
+                  : "None yet. Create one below or on My Folders."}
               </p>
             ) : (
               <div className="mt-1 space-y-3">
@@ -329,14 +331,13 @@ function saveFolderGroups(
   const matching = folders.filter(
     (row) => row.deskType === kind && !row.sharedByEmail,
   );
-  const mine = matching.filter((row) => row.visibility === "user");
-  const platformRows = matching.filter((row) => row.visibility === "platform");
   if (asPlatform) {
-    return [
-      { label: "Platform folders", rows: platformRows },
-      { label: "My folders", rows: mine },
-    ].filter((group) => group.rows.length > 0);
+    const platformRows = matching.filter((row) => row.visibility === "platform");
+    return platformRows.length > 0
+      ? [{ label: "Platform folders", rows: platformRows }]
+      : [];
   }
+  const mine = matching.filter((row) => row.visibility === "user");
   return mine.length > 0 ? [{ label: "My folders", rows: mine }] : [];
 }
 
