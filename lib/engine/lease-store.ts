@@ -47,13 +47,15 @@ export async function claimEngineDesks(input?: {
   if (!supabase) {
     return [];
   }
-  const { data, error } = await supabase.rpc("claim_engine_desks", {
-    p_worker_id: input?.workerId ?? engineWorkerId(),
-    p_limit: input?.limit ?? ENGINE_CLAIM_BATCH,
-    p_ttl_seconds: input?.ttlSeconds ?? ENGINE_LEASE_TTL_SECONDS,
+  const { data, error } = await supabase.rpc("engine_claim_desks", {
+    p: {
+      worker_id: input?.workerId ?? engineWorkerId(),
+      limit: input?.limit ?? ENGINE_CLAIM_BATCH,
+      ttl_seconds: input?.ttlSeconds ?? ENGINE_LEASE_TTL_SECONDS,
+    },
   });
   if (error) {
-    console.error("claim_engine_desks", error.message);
+    console.error("engine_claim_desks", error.message);
     return [];
   }
   return asAccountIds(data);
@@ -68,10 +70,12 @@ export async function tryClaimEngineDesk(input: {
   if (!supabase) {
     return "busy";
   }
-  const { data, error } = await supabase.rpc("try_claim_engine_desk", {
-    p_account_id: input.accountId,
-    p_worker_id: input.workerId ?? engineWorkerId(),
-    p_ttl_seconds: input.ttlSeconds ?? ENGINE_MUTATION_TTL_SECONDS,
+  const { data, error } = await supabase.rpc("engine_try_claim_desk", {
+    p: {
+      account_id: input.accountId,
+      worker_id: input.workerId ?? engineWorkerId(),
+      ttl_seconds: input.ttlSeconds ?? ENGINE_MUTATION_TTL_SECONDS,
+    },
   });
   if (error) {
     return "busy";
@@ -90,9 +94,11 @@ export async function releaseEngineDesk(input: {
   if (!supabase) {
     return;
   }
-  await supabase.rpc("release_engine_desk", {
-    p_account_id: input.accountId,
-    p_worker_id: input.workerId ?? engineWorkerId(),
+  await supabase.rpc("engine_release_desk", {
+    p: {
+      account_id: input.accountId,
+      worker_id: input.workerId ?? engineWorkerId(),
+    },
   });
 }
 
@@ -141,9 +147,11 @@ export async function takeVenueSlot(connectionId: string | null): Promise<void> 
   if (!supabase) {
     return;
   }
-  const { data } = await supabase.rpc("take_engine_venue_slot", {
-    p_connection_id: connectionId,
-    p_gap_ms: ENGINE_VENUE_GAP_MS,
+  const { data } = await supabase.rpc("engine_take_venue_slot", {
+    p: {
+      connection_id: connectionId,
+      gap_ms: ENGINE_VENUE_GAP_MS,
+    },
   });
   const slot = data ? new Date(String(data)).getTime() : 0;
   const wait = slot - Date.now();
