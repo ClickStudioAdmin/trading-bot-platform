@@ -238,18 +238,18 @@ export function planLibraryImport(
   for (const row of file.sets) {
     const sourceItemIds = row.items.filter((id) => importedIds.has(id));
     if (sourceItemIds.length === 0) {
-      notes.push(`Skipped set “${row.name}”: none of its templates imported.`);
+      notes.push(`Skipped folder “${row.name}”: none of its templates imported.`);
       continue;
     }
     if (sourceItemIds.length < row.items.length) {
       notes.push(
-        `Set “${row.name}” dropped ${row.items.length - sourceItemIds.length} missing template(s).`,
+        `Folder “${row.name}” dropped ${row.items.length - sourceItemIds.length} missing template(s).`,
       );
     }
     const taken = takenSets.get(row.deskType) ?? [];
     const name = uniqueLibraryName(row.name, taken);
     if (name !== row.name) {
-      notes.push(`Renamed set “${row.name}” to “${name}”.`);
+      notes.push(`Renamed folder “${row.name}” to “${name}”.`);
     }
     taken.push(name);
     takenSets.set(row.deskType, taken);

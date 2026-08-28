@@ -8,6 +8,7 @@ import { createTradingAccount } from "@/lib/accounts/actions";
 import {
   formatAccountModeChoice,
   formatDeskTypeChoice,
+  validateNewDeskName,
 } from "@/lib/accounts/model";
 import {
   formatConnectionSummary,
@@ -22,12 +23,14 @@ const fieldClass =
 export function CreateAccountForm({
   connections,
   sharedConnectionIds = [],
+  existingNames = [],
   next,
   embedded = false,
   onCancel,
 }: {
   connections: ExchangeConnection[];
   sharedConnectionIds?: string[];
+  existingNames?: string[];
   next?: string;
   embedded?: boolean;
   onCancel?: () => void;
@@ -35,6 +38,7 @@ export function CreateAccountForm({
   const [mode, setMode] = useState<"paper" | "live">("paper");
   const [bindChoice, setBindChoice] = useState<"later" | "existing">("later");
   const [connectionId, setConnectionId] = useState("");
+  const [name, setName] = useState("");
   const liveKeys = connections.filter((row) => row.status === "active");
   const pathname = usePathname();
   const warningKind =
@@ -44,6 +48,9 @@ export function CreateAccountForm({
           sharedConnectionIds,
         })
       : null;
+  const nameCheck = validateNewDeskName(name, existingNames);
+  const nameError =
+    name.trim().length > 0 && !nameCheck.ok ? nameCheck.error : null;
 
   function stampStayPath(event: FormEvent<HTMLFormElement>) {
     const field = event.currentTarget.elements.namedItem("stayPath");
@@ -52,10 +59,18 @@ export function CreateAccountForm({
     }
   }
 
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    if (!nameCheck.ok) {
+      event.preventDefault();
+      return;
+    }
+    stampStayPath(event);
+  }
+
   return (
     <form
       action={createTradingAccount}
-      onSubmit={stampStayPath}
+      onSubmit={onSubmit}
       className={
         embedded
           ? "mt-4 space-y-4"
@@ -71,7 +86,25 @@ export function CreateAccountForm({
       ) : null}
       <label className="block text-xs text-ink-muted">
         Name
-        <input name="name" required maxLength={40} className={fieldClass} />
+        <input
+          name="name"
+          required
+          maxLength={40}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          aria-invalid={nameError ? true : undefined}
+          aria-describedby={nameError ? "new-desk-name-error" : undefined}
+          className={
+            nameError
+              ? `${fieldClass} border-danger focus:border-danger`
+              : fieldClass
+          }
+        />
+        {nameError ? (
+          <p id="new-desk-name-error" className="mt-1 text-xs text-danger">
+            {nameError}
+          </p>
+        ) : null}
       </label>
       <label className="block text-xs text-ink-muted">
         Type
@@ -188,6 +221,7 @@ export function CreateAccountForm({
       <div className="flex flex-wrap items-center gap-2">
         <PendingSubmitButton
           pendingLabel="Creating…"
+          disabled={!nameCheck.ok}
           className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
         >
           Create desk

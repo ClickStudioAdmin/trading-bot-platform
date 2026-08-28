@@ -1,4 +1,4 @@
-# Automation templates and template sets
+# Automation templates and folders
 
 Shipped. **Not Phase 12** (scale-in). Not backup market data.
 
@@ -6,13 +6,13 @@ Phase 11 is complete. See [phase-11.md](phase-11.md). This is a **login-scoped r
 
 ## Purpose
 
-Users save a playbook or automation as a **template**, or several templates as a **template set**. They create a new idle recipe from one template, or stamp a whole set onto a desk. Admins get extra controls to publish **platform** templates and sets, and an admin library that lists **every** template and set (user and platform). Every member can apply their own templates and platform templates. Desk types that already have automations: **DCA**, **Perps**, **Cash and Carry**. TradingView Strategy desks have no recipe form — out of scope.
+Users save a playbook or automation as a **template**, or several templates as a **folder** (stored as a template set). They create a new idle recipe from one template, or stamp a whole folder onto a desk. Admins get extra controls to publish **platform** templates and folders, and an admin library that lists **every** template and folder (user and platform). Every member can apply their own templates and platform templates. Desk types that already have automations: **DCA**, **Perps**, **Cash and Carry**. TradingView Strategy desks have no recipe form — out of scope.
 
 Clone on Automations stays. Clone is an in-desk duplicate of one live row. Templates are a library, reusable across desks of the same type.
 
 ## Why not many pairs on one playbook
 
-A live DCA playbook still owns one contract (`unique (account_id, symbol)`). Templates do not change that. A set is the way to “install ETH + SOL + BTC with the same idea”: one template per pair (or one template applied three times with three contracts), each becoming its own playbook. Runtime, GTC ladders, TP/SL, and Close playbook stay per contract.
+A live DCA playbook still owns one contract (`unique (account_id, symbol)`). Templates do not change that. A folder is the way to “install ETH + SOL + BTC with the same idea”: one template per pair (or one template applied three times with three contracts), each becoming its own playbook. Runtime, GTC ladders, TP/SL, and Close playbook stay per contract.
 
 ## Current facts this plan sits on
 
@@ -26,12 +26,12 @@ A live DCA playbook still owns one contract (`unique (account_id, symbol)`). Tem
 
 | # | Choice | Decision |
 | --- | --- | --- |
-| 1 | Perps / C&C mode after apply | Always **`disabled`**. Source mode is not copied. A set cannot surprise-trade. The user enables the rule on the desk. DCA apply stays **idle** (not armed). |
-| 2 | Member library | **`/account/templates`**. Login-scoped. View and manage own templates and sets; browse platform (read-only except Apply). Account nav gains Templates. |
+| 1 | Perps / C&C mode after apply | Always **`disabled`**. Source mode is not copied. A folder cannot surprise-trade. The user enables the rule on the desk. DCA apply stays **idle** (not armed). |
+| 2 | Member library | **`/account/templates`**. Login-scoped. View and manage own templates and folders; browse platform (read-only except Apply). Account nav gains Templates. |
 | 3 | Publish to platform | **Copy**, do not promote. The user row stays. Platform is a snapshot with its own id. The member can keep iterating; admins can edit the platform copy without rewriting the user’s library. If the platform name is taken, the confirm dialog asks for another name. |
-| 4 | Set apply | **Skip failures, keep successes.** Not all-or-nothing. The wizard can remap a DCA symbol (or skip) **before** write. After write, a result list shows applied / skipped / failed. One taken contract must not roll back the rest of the set. |
-| 5 | Names | **Unique per owner + desk type**, case-insensitive. Same name is allowed for a different user, or for a different `desk_type`. Platform names are unique per `desk_type` among platform rows. Sets use the same uniqueness as templates. |
-| 6 | Admin library | **`/admin/templates`**. Admins view and manage **user and platform** templates and sets. Left admin nav. Members never see this page. |
+| 4 | Folder apply | **Skip failures, keep successes.** Not all-or-nothing. The wizard can remap a DCA symbol (or skip) **before** write. After write, a result list shows applied / skipped / failed. One taken contract must not roll back the rest of the folder. |
+| 5 | Names | **Unique per owner + desk type**, case-insensitive. Same name is allowed for a different user, or for a different `desk_type`. Platform names are unique per `desk_type` among platform rows. Folders use the same uniqueness as templates. |
+| 6 | Admin library | **`/admin/templates`**. Admins view and manage **user and platform** templates and folders. Left admin nav. Members never see this page. |
 
 ## Shape
 
@@ -52,32 +52,34 @@ After apply:
 - Signal webhook unbound (`webhook_id` null). Copy: “Bind a Signal on this desk after apply.”
 - User must Save / Arm / Enable as today. Never place orders on apply.
 
-### Template set
+### Folder (template set)
 
-An ordered list of templates. All members of a set share one `desk_type`.
+The library UI calls these **folders**. Tables and code still use `automation_template_sets`.
 
-- A **user set** may include the owner’s templates and/or platform templates.
-- A **platform set** may only include platform templates.
+An ordered list of templates. All members of a folder share one `desk_type`.
 
-Applying a set walks the list and applies each template to a **chosen desk** of that type. Collisions (DCA same symbol already on the desk) are handled in the apply wizard, not by merging into one playbook. C&C stacked layers on the same pair stay allowed, same as today.
+- A **user folder** may include the owner’s templates and/or platform templates.
+- A **platform folder** may only include platform templates.
+
+Applying a folder walks the list and applies each template to a **chosen desk** of that type. Collisions (DCA same symbol already on the desk) are handled in the apply wizard, not by merging into one playbook. C&C stacked layers on the same pair stay allowed, same as today.
 
 ### Visibility
 
 | Kind | Who writes | Who reads / applies |
 | --- | --- | --- |
-| User template / set | Owning member; admins may rename, describe, or delete from `/admin/templates` | Owner applies to **their** desks. Other members cannot see it unless it is **shared** with them. Admins see every user row on the admin page. |
-| Platform template / set | Admin only | Every member can read and apply. Members cannot edit or delete. |
-| Shared template / set | Owner (or admin) grants access by recipient email; stored as `to_user_id` | Recipient can apply to **their** desks. Read-only on Shared tabs. Cannot edit, delete, or re-share. |
+| User template / folder | Owning member; admins may rename, describe, or delete from `/admin/templates` | Owner applies to **their** desks. Other members cannot see it unless it is **shared** with them. Admins see every user row on the admin page. |
+| Platform template / folder | Admin only | Every member can read and apply. Members cannot edit or delete. |
+| Shared template / folder | Owner (or admin) grants access by recipient email; stored as `to_user_id` | Recipient can apply to **their** desks. Read-only on Shared tabs. Cannot edit, delete, or re-share. |
 
-Share is a grant, not a copy. The owner keeps the recipe. Deleting the template or set drops the shares. Platform recipes are already public — do not share them.
+Share is a grant, not a copy. The owner keeps the recipe. Deleting the template or folder drops the shares. Platform recipes are already public — do not share them.
 
 ## Export and import
 
 `/account/templates` and `/admin/templates` both have **Export all** and **Import all**.
 
-- Account export is the current member’s **user** templates and sets (not platform, not inbound shares).
-- Admin export is every template and set in the database.
-- Import always creates **new user-owned copies** for the signed-in member. Name collisions get a ` (import)` suffix. Sets remap to the newly inserted templates. Invalid recipes are skipped.
+- Account export is the current member’s **user** templates and folders (not platform, not inbound shares).
+- Admin export is every template and folder in the database.
+- Import always creates **new user-owned copies** for the signed-in member. Name collisions get a ` (import)` suffix. Folders remap to the newly inserted templates. Invalid recipes are skipped.
 
 The file format is `tbp.automation-templates` version 1 JSON. No API keys or webhook tokens.
 
@@ -109,8 +111,8 @@ GitHub migrations when this work starts. Names are indicative.
 
 - `set_id`, `template_id`, `sort_order`
 - Unique `(set_id, template_id)`
-- `ON DELETE CASCADE` from template: deleting a template drops it from sets that listed it
-- Trigger: template `desk_type` must match set `desk_type`; platform set ⇒ platform template only
+- `ON DELETE CASCADE` from template: deleting a template drops it from folders that listed it
+- Trigger: template `desk_type` must match set `desk_type`; platform folder ⇒ platform template only
 
 `automation_template_shares` / `automation_template_set_shares`
 
@@ -125,13 +127,13 @@ Save-as-template with a name the owner already uses for that desk type: dialog a
 
 ## Apply rules
 
-1. Chosen desk `desk_type` must equal the template (or set) `desk_type`. Wrong type is a hard error.
+1. Chosen desk `desk_type` must equal the template (or folder) `desk_type`. Wrong type is a hard error.
 2. DCA: insert a new playbook. If `(account_id, symbol)` is taken, the wizard asks for another contract or skip. Do not overwrite a live playbook.
 3. Perps / C&C: insert a new stacked rule, **`disabled`**. Name collision on the desk: suffix ` (from template)` or ask.
 4. Rebind Signal webhook: leave `webhook_id` null.
 5. Never arm, never enable the C&C engine, never place orders.
 6. Paper vs Live: a template is venue-agnostic recipe. Apply to whichever mode the desk already has. Size vs ticket-size is the same Save guard as today.
-7. Set apply: remap/skip in the wizard first. Then write item by item. Successes stay. Failures (parse error, unique symbol after remap, missing template) are listed. No rollback of siblings.
+7. Folder apply: remap/skip in the wizard first. Then write item by item. Successes stay. Failures (parse error, unique symbol after remap, missing template) are listed. No rollback of siblings.
 
 Apply from Automations uses the current `?desk=`. Apply from `/account/templates` uses a **desk picker** (member’s desks of that type only).
 
@@ -141,47 +143,45 @@ Tokens from [ui-theme.md](ui-theme.md).
 
 ### Automations (desk)
 
-- Header: **Add**, **Add from Template**, **From set**. Picker: Platform group, then My templates. Preview name, description, contract. Confirm apply to **this** desk.
-- Each recipe card: **Save as template**. Admins also see **Save as platform template** (confirm: visible to every member).
+- Header: **Add**, **Add from Template**, **Add from Folder**. Picker: Platform group, then My templates / My folders. Preview name, description, contract. Confirm apply to **this** desk.
+- Each recipe card: **Save as template**. Name, description, optional **Add to folder** (existing writable folders of this desk type) and/or **Create a new folder** in the same dialog. Admins also see **Save as platform template** (confirm: visible to every member; new folder is a platform folder).
 - TradingView Strategy desk: no Add from Template. Webhook tokens are not templates.
 
 ### `/account/templates` (every member)
 
 Login library. Not desk-scoped. Account nav: Templates, with Settings, Exchanges, Manage desks.
 
-- Tabs: **Templates**, **Sets**, **Shared Templates**, **Shared Sets**. Filter by desk type (All / DCA / Perps / Cash and Carry).
+- Tabs: **Templates**, **Folders**, **Shared Templates**, **Shared Folders**. Table with columns, search, desk-type filter, folder filter, click-to-sort, and row checkboxes. Bulk: **Add to folder** (templates), **Publish** / **Unpublish** (admin), **Delete**. **Edit** opens name, folder membership, and sharing. **Apply** (account) opens a desk picker.
 - **Export all** / **Import all** JSON library file.
-- **My templates:** rename, description, delete, share by email (stored as the recipient’s user id). Create a set from checkboxes (same `desk_type` only).
-- **Platform:** read-only cards. **Apply** opens a desk picker (matching type). Members cannot edit or delete platform rows here.
-- **Shared Templates / Shared Sets:** recipes another member shared with this login. Label shows who shared them. Apply only. **Remove** drops the grant, not the owner’s copy.
-- **My sets:** name, description, order items, add/remove (own templates and platform templates), share by email, delete, Apply (desk picker).
-- Empty states: no templates yet; point at Automations **Save as template**.
+- **Folders tab:** same table. Create a folder at the bottom from checkboxes (same `desk_type` only).
+- **Platform rows** on the account library are read-only except **Apply**. **Shared** tabs: Apply only; **Remove** drops the grant, not the owner’s copy.
+- Empty states: no templates yet; point at Automations **Save as template**. No folders yet; create on the Folders tab after a template exists.
 
 ### `/admin/templates` (admins only)
 
 Admin nav next to Members / Logs. Members who are not admins get the usual admin gate.
 
-Two groups on the page (filters, not hidden from each other):
+Two groups on the page (filters, not hidden from each other), shown as **tables** (search, sort, desk type, platform/user, bulk checkboxes):
 
-1. **Platform** — templates and sets the product ships. Create, rename, description, delete, edit set membership (platform templates only). Publish is the usual path in; admins can also **Save as platform template** from a desk they own.
-2. **User** — every member’s templates and sets. Columns: name, desk type, owner email, updated. View recipe preview (no secrets in JSON). Rename, description, delete (confirm: owner loses it). Share by email. **Publish copy to platform** (new platform row; user row unchanged). Cannot apply a user template onto **that member’s** desks from here (no impersonation). An admin applies only to **their own** desks, from Automations or `/account/templates`.
-3. **Shared Templates / Shared Sets** — inbound grants to the signed-in admin, same as the account library.
+1. **Platform** — templates and folders the product ships. **Edit** to rename, description, delete, edit folder membership (platform templates only) on the **Folders** tab or from a template’s Edit dialog. Publish is the usual path in; admins can also **Save as platform template** from a desk they own.
+2. **User** — every member’s templates and folders. Columns: name, desk type, owner email, folder, shared with, updated. **Edit** for name, folder, sharing. Delete (confirm: owner loses it). Share by email. **Publish copy to platform** (new platform row; user row unchanged). Cannot apply a user template onto **that member’s** desks from here (no impersonation). An admin applies only to **their own** desks, from Automations or `/account/templates`.
+3. **Shared Templates / Shared Folders** — inbound grants to the signed-in admin, same as the account library.
 
 Admin does **not** rewrite a user’s `recipe` JSON in place. Support path: publish copy → edit the platform snapshot, or delete the user row if it is junk. Prevents a silent change to what the member thinks they saved.
 
-Creating a platform set: pick platform templates of one desk type, order them.
+Creating a platform folder: on the **Folders** tab, pick platform templates of one desk type, order them.
 
 ## Permissions (never in the browser)
 
 | Action | Member | Admin |
 | --- | --- | --- |
 | Save recipe as my template | Yes | Yes |
-| Save / edit / delete platform template or set | No | Yes |
+| Save / edit / delete platform template or folder | No | Yes |
 | Publish copy of a user template to platform | No | Yes |
-| Rename / describe / delete another member’s user template or set | No | Yes (`/admin/templates` only) |
+| Rename / describe / delete another member’s user template or folder | No | Yes (`/admin/templates` only) |
 | See another member’s user templates on `/account/templates` | No, unless shared | No, unless shared (admin still sees them on `/admin/templates`) |
-| Share a user template/set by email | Own rows | Own rows, or any user row from `/admin/templates` |
-| Apply my, platform, or shared-with-me template/set to **my** desk | Yes | Yes |
+| Share a user template/folder by email | Own rows | Own rows, or any user row from `/admin/templates` |
+| Apply my, platform, or shared-with-me template/folder to **my** desk | Yes | Yes |
 | Apply to someone else’s desk | No | No |
 | List all user + platform rows | No | Yes (service role, admin page) |
 
@@ -203,7 +203,7 @@ Bump `recipe_version` when a breaking key is renamed. Old templates: parser fill
 | 2 | Snapshot / apply DCA | Done |
 | 3 | Perps rules | Done |
 | 4 | Cash and Carry | Done |
-| 5 | Template sets | Done |
+| 5 | Folders (template sets) | Done |
 | 6 | `/account/templates` | Done |
 | 8 | Export / import JSON library | Done |
 | 9 | Member-to-member share by email | Done |

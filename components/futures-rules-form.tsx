@@ -19,6 +19,7 @@ import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
+import type { AppliedDeskItem } from "@/lib/templates/apply";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 
 export function FuturesAutomationsDesk({
@@ -52,6 +53,23 @@ export function FuturesAutomationsDesk({
     options[0]?.symbol ??
     "BTCUSDT";
 
+  function appendApplied(items: AppliedDeskItem[]) {
+    const nextRules = items
+      .filter(
+        (item): item is Extract<AppliedDeskItem, { deskType: "perps" }> =>
+          item.deskType === "perps",
+      )
+      .map((item) => item.rule);
+    if (nextRules.length === 0) {
+      return;
+    }
+    setLayers((current) => {
+      const seen = new Set(current.map((row) => row.id).filter(Boolean));
+      const fresh = nextRules.filter((row) => !row.id || !seen.has(row.id));
+      return fresh.length === 0 ? current : [...current, ...fresh];
+    });
+  }
+
   return (
     <form action={saveFuturesAutomations} className="space-y-4">
       <input type="hidden" name="ruleCount" value={layers.length} />
@@ -72,6 +90,7 @@ export function FuturesAutomationsDesk({
             accountReduceOnly={reduceOnly}
             inUse={Boolean(layer.id && inUse.has(layer.id))}
             isAdmin={isAdmin}
+            folders={sets}
             onRemove={() => {
               const next = layers.filter((item) => item.key !== layer.key);
               setLayers(next);
@@ -103,6 +122,7 @@ export function FuturesAutomationsDesk({
             accountId={accountId}
             templates={templates}
             sets={sets}
+            onApplied={appendApplied}
           />
         ) : null}
         {cloneSources.length > 0 ? (
@@ -155,6 +175,7 @@ function RuleCard({
   inUse,
   isAdmin,
   onRemove,
+  folders = [],
 }: {
   index: number;
   layer: FuturesAutomationFormValues;
@@ -164,6 +185,7 @@ function RuleCard({
   inUse: boolean;
   isAdmin: boolean;
   onRemove: () => void;
+  folders?: AutomationTemplateSet[];
 }) {
   const prefix = `r${index}_`;
   const [mode, setMode] = useState(layer.mode);
@@ -450,6 +472,7 @@ function RuleCard({
             isAdmin={isAdmin}
             defaultName={layer.name}
             kind="perps"
+            folders={folders}
             buildForm={() =>
               perpsFormToSnapshotSource({
                 ...layer,

@@ -77,9 +77,9 @@ export const TEMPLATE_NAME_TAKEN =
 export const PLATFORM_NAME_TAKEN =
   "A platform template with that name already exists for this desk type.";
 export const SET_NAME_TAKEN =
-  "You already have a template set with that name for this desk type.";
+  "You already have a folder with that name for this desk type.";
 export const PLATFORM_SET_NAME_TAKEN =
-  "A platform set with that name already exists for this desk type.";
+  "A platform folder with that name already exists for this desk type.";
 
 function nameTakenMessage(visibility: TemplateVisibility, kind: "template" | "set") {
   if (kind === "set") {
@@ -618,7 +618,7 @@ export async function insertTemplateSet(input: {
         code: "name_taken",
       };
     }
-    return { ok: false, error: error?.message ?? "Could not save the set." };
+    return { ok: false, error: error?.message ?? "Could not save the folder." };
   }
   const setId = String(data.id);
   if (input.templateIds.length > 0) {
@@ -638,7 +638,7 @@ export async function insertTemplateSet(input: {
   }
   const loaded = await loadSetById(setId);
   if (!loaded) {
-    return { ok: false, error: "Could not save the set." };
+    return { ok: false, error: "Could not save the folder." };
   }
   return { ok: true, set: loaded };
 }
@@ -668,6 +668,63 @@ export async function replaceSetItems(input: {
       sort_order: index,
     })),
   );
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  await supabase
+    .from("automation_template_sets")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", input.setId);
+  return { ok: true };
+}
+
+export async function appendTemplateToSet(input: {
+  setId: string;
+  templateId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { data: rows } = await supabase
+    .from("automation_template_set_items")
+    .select("sort_order")
+    .eq("set_id", input.setId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+  const top = Number((rows?.[0] as { sort_order?: number } | undefined)?.sort_order);
+  const sortOrder = Number.isFinite(top) ? top + 1 : 0;
+  const { error } = await supabase.from("automation_template_set_items").insert({
+    set_id: input.setId,
+    template_id: input.templateId,
+    sort_order: sortOrder,
+  });
+  if (error) {
+    if (isUniqueNameError(error) || error.code === "23505") {
+      return { ok: true };
+    }
+    return { ok: false, error: error.message };
+  }
+  await supabase
+    .from("automation_template_sets")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", input.setId);
+  return { ok: true };
+}
+
+export async function removeTemplateFromSet(input: {
+  setId: string;
+  templateId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase
+    .from("automation_template_set_items")
+    .delete()
+    .eq("set_id", input.setId)
+    .eq("template_id", input.templateId);
   if (error) {
     return { ok: false, error: error.message };
   }

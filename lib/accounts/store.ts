@@ -1,6 +1,7 @@
 import {
   accountDeleteBlockers,
   DEFAULT_ACCOUNT_NAME,
+  DESK_NAME_TAKEN,
   formatDeleteBlockers,
   parseTradingAccountRow,
   type AccountDeleteBlock,
@@ -436,7 +437,7 @@ export async function renameTradingAccountRow(
     .eq("id", accountId)
     .eq("user_id", userId);
   if (error?.code === "23505") {
-    return { error: "That name is already in use." };
+    return { error: DESK_NAME_TAKEN };
   }
   return { error: error?.message ?? null };
 }

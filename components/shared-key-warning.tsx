@@ -1,10 +1,11 @@
 import type { SharedKeyWarningKind } from "@/lib/exchanges/connections";
 
+const SHARED_CONNECTION_WARNING =
+  "Another desk uses this exchange connection. This is allowed but understand that it adds risk due to shared exchange balances and margin requirements.";
+
 const COPY: Record<SharedKeyWarningKind, string> = {
-  pending:
-    "Another desk already uses this connection. Both desks will share venue margin. Isolation needs a separate trade-only key.",
-  shared:
-    "This exchange connection is shared with other desks. They share venue margin. Isolation needs a separate trade-only key.",
+  pending: SHARED_CONNECTION_WARNING,
+  shared: SHARED_CONNECTION_WARNING,
 };
 
 export function SharedKeyWarning({

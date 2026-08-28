@@ -69,6 +69,13 @@ function playbookActor(playbook: DcaPlaybook, mode: TradingAccountMode) {
   };
 }
 
+function playbookCommandMeta(playbook: DcaPlaybook) {
+  return {
+    source: "engine" as const,
+    ruleName: playbook.name,
+  };
+}
+
 function touchPlaybook(playbook: DcaPlaybook): void {
   playbook.updatedAtMs = Date.now();
 }
@@ -110,7 +117,6 @@ export async function logDcaEvent(input: {
     strategy: FUTURES_STRATEGY_ID,
     data: {
       playbookId: input.playbook.id,
-      ruleId: input.playbook.id,
       ruleName: input.playbook.name,
       symbol: input.playbook.symbol,
       side: input.side ?? null,
@@ -360,9 +366,7 @@ async function restExitLimit(input: {
         input.limitPrice,
         input.positionId,
       ),
-      source: "engine",
-      ruleId: input.playbook.id,
-      ruleName: input.playbook.name,
+      ...playbookCommandMeta(input.playbook),
     },
   });
   if (!placed.ok) {
@@ -523,9 +527,7 @@ async function syncDcaPlaybookGridUnlocked(input: {
           item.clipIndex,
           input.playbook.updatedAtMs,
         ),
-        source: "engine",
-        ruleId: input.playbook.id,
-        ruleName: input.playbook.name,
+        ...playbookCommandMeta(input.playbook),
       },
     });
     if (!rested.ok) {
@@ -573,9 +575,7 @@ async function placeClip(input: {
         leg.clipsFilled,
         generation,
       ),
-      source: "engine",
-      ruleId: input.playbook.id,
-      ruleName: input.playbook.name,
+      ...playbookCommandMeta(input.playbook),
       trailing: firstClip
         ? clipTrailing(input.playbook, input.side, input.lastPrice)
         : null,
@@ -874,9 +874,7 @@ async function flattenSide(input: {
       symbol: input.playbook.symbol,
       positionId: open.id,
       orderType: "market",
-      source: "engine",
-      ruleId: input.playbook.id,
-      ruleName: input.playbook.name,
+      ...playbookCommandMeta(input.playbook),
       idempotencyKey: dcaFlattenKey(input.playbook.id, input.side, open.id),
     },
   });

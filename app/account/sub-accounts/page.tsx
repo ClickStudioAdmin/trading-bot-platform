@@ -10,6 +10,7 @@ import {
   formatAccountUsageStatus,
   formatDeskType,
   formatDeleteBlockers,
+  otherDeskNames,
   pickDefaultAccount,
 } from "@/lib/accounts/model";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
@@ -56,7 +57,8 @@ export default async function ManageSubAccountsPage({
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
         Each desk is Paper Trading or Connected Exchange at create and never
         changes. Type is also set at create. Books stay separate. You must keep
-        at least one desk. You can rename a desk any time. Delete is blocked
+        at least one desk. You can rename a desk here or in Desk Settings.
+        Delete is blocked
         while the book has open positions or running automations. Deleting a
         desk removes its paper history. Exchange keys stay on this login.
       </p>
@@ -124,6 +126,7 @@ export default async function ManageSubAccountsPage({
                   <AccountRenameControl
                     accountId={account.id}
                     accountName={account.name}
+                    otherNames={otherDeskNames(accounts, account.id)}
                   />
                   <AccountDeleteControl
                     accountId={account.id}
@@ -154,6 +157,7 @@ export default async function ManageSubAccountsPage({
       <CreateAccountForm
         connections={connections}
         sharedConnectionIds={sharedConnectionIds}
+        existingNames={accounts.map((account) => account.name)}
         next="/account/sub-accounts"
       />
     </div>

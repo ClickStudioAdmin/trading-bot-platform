@@ -45,9 +45,9 @@ export default async function AdminTemplatesPage() {
       <p className="-mt-4 text-sm text-ink-muted">
         Platform templates are visible to every member. User templates can
         be renamed, deleted, or published as a platform copy. Export all
-        libraries, import copies into yours, or share a user recipe by
-        email. Apply to your own desks from Automations or Account →
-        Templates.
+        libraries, import copies into yours, or share a user recipe or
+        folder by email. Apply to your own desks from Automations or
+        Account → Templates.
       </p>
       <TemplatesLibrary
         variant="admin"

@@ -104,6 +104,9 @@ export async function writeFuturesOpen(input: {
     .select("id")
     .single();
   if (error || !data) {
+    if (error?.code === "23503") {
+      return { ok: false, error: "Could not write the position." };
+    }
     return { ok: false, error: error?.message ?? "Could not write the position." };
   }
   const positionId = String((data as { id: string }).id);

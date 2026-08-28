@@ -225,6 +225,55 @@ export function parseAccountName(
   return { ok: true, name };
 }
 
+export const DESK_NAME_TAKEN = "You already have a desk with that name.";
+
+export function deskNameTaken(name: string, existing: string[]): boolean {
+  const needle = name.trim().toLowerCase();
+  if (!needle) {
+    return false;
+  }
+  return existing.some((item) => item.trim().toLowerCase() === needle);
+}
+
+export function validateNewDeskName(
+  value: unknown,
+  existing: string[],
+): { ok: true; name: string } | { ok: false; error: string } {
+  const named = parseAccountName(value);
+  if (!named.ok) {
+    return named;
+  }
+  if (deskNameTaken(named.name, existing)) {
+    return { ok: false, error: DESK_NAME_TAKEN };
+  }
+  return named;
+}
+
+export function otherDeskNames(
+  desks: { id: string; name: string }[],
+  currentId: string,
+): string[] {
+  return desks.filter((desk) => desk.id !== currentId).map((desk) => desk.name);
+}
+
+export function parseDeskNameChange(
+  value: unknown,
+  otherNames: string[],
+  currentName: string,
+):
+  | { ok: true; name: string; changed: boolean }
+  | { ok: false; error: string } {
+  const named = validateNewDeskName(value, otherNames);
+  if (!named.ok) {
+    return named;
+  }
+  return {
+    ok: true,
+    name: named.name,
+    changed: named.name !== currentName,
+  };
+}
+
 export function parseTradingAccountRow(
   row: Record<string, unknown>,
 ): TradingAccount {

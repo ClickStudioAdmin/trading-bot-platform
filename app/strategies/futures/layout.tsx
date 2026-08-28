@@ -97,7 +97,8 @@ export default async function FuturesLayout({
   return (
     <div>
       <StrategySubnav
-        title={formatDeskType(deskType)}
+        title={session?.account.name ?? formatDeskType(deskType)}
+        typeLabel={session ? formatDeskType(deskType) : undefined}
         description={
           signalFollower
             ? "TradingView sends buy, sell, and close. This desk only protects: caps, reduce-only, Close All, and row TP/SL."

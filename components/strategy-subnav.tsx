@@ -12,6 +12,7 @@ import {
 
 export function StrategySubnav({
   title = "Cash and Carry",
+  typeLabel,
   description = "Buy the USDT spot, sell the dated future.",
   navLabel = "Cash and Carry",
   primaryLinks = CASH_AND_CARRY_PRIMARY_LINKS,
@@ -22,6 +23,7 @@ export function StrategySubnav({
   connection,
 }: {
   title?: string;
+  typeLabel?: string;
   description?: string;
   navLabel?: string;
   primaryLinks?: readonly { href: string; label: string; exact?: boolean }[];
@@ -66,9 +68,14 @@ export function StrategySubnav({
               Desks
             </Link>
           </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-            {title}
-          </h1>
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h1 className="min-w-0 text-2xl font-semibold tracking-tight">
+              {title}
+            </h1>
+            {typeLabel ? (
+              <p className="text-sm font-medium text-ink-muted">{typeLabel}</p>
+            ) : null}
+          </div>
           <p className="mt-1 text-sm text-ink-muted">{description}</p>
         </div>
         {connection || status ? (

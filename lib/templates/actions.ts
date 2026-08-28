@@ -3,7 +3,6 @@
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
 import { deskPath } from "@/lib/accounts/model";
-import { listTradingAccounts } from "@/lib/accounts/store";
 import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
 import { parsePaperRulesForm } from "@/lib/engine/rules";
 import { parseFuturesAutomationForm } from "@/lib/futures/automation";
@@ -13,6 +12,7 @@ import {
   applyTemplateSetToDesk,
   applyTemplateToDesk,
   automationsPathForDeskType,
+  type AppliedDeskItem,
   type ApplyItemInput,
   type ApplyItemResult,
 } from "./apply";
@@ -33,6 +33,7 @@ import {
   deleteTemplateShare,
   findMemberByEmail,
   findNamedTemplate,
+  appendTemplateToSet,
   insertSetShare,
   insertTemplate,
   insertTemplateSet,
@@ -43,6 +44,7 @@ import {
   listVisibleTemplates,
   loadSetById,
   loadTemplateById,
+  removeTemplateFromSet,
   replaceSetItems,
   replaceTemplateRecipe,
   setIsSharedWith,
@@ -50,6 +52,7 @@ import {
   updateSetMeta,
   updateTemplateMeta,
   type AutomationTemplate,
+  type AutomationTemplateSet,
 } from "./store";
 import {
   buildTemplateLibraryFile,
@@ -65,6 +68,7 @@ export type TemplateActionResult = {
   symbol?: string;
   notes?: string[];
   results?: ApplyItemResult[];
+  applied?: AppliedDeskItem[];
   json?: string;
   filename?: string;
 };
@@ -142,6 +146,170 @@ function canShareRow(
   return visibility === "user" && (ownerId === userId || isAdmin);
 }
 
+function folderCanHoldTemplate(
+  folder: AutomationTemplateSet,
+  template: AutomationTemplate,
+  userId: string,
+  isAdmin: boolean,
+): boolean {
+  if (folder.deskType !== template.deskType) {
+    return false;
+  }
+  if (!canManageRow(folder.visibility, folder.userId, userId, isAdmin)) {
+    return false;
+  }
+  if (template.visibility === "platform") {
+    return (
+      folder.visibility === "platform" ||
+      (folder.visibility === "user" && folder.userId === userId)
+    );
+  }
+  return folder.visibility === "user" && folder.userId === template.userId;
+}
+
+async function syncTemplateFolders(input: {
+  template: AutomationTemplate;
+  userId: string;
+  isAdmin: boolean;
+  folderIds: string[];
+  newFolderName: string | null;
+}): Promise<{ ok: true } | { ok: false; error: string; code?: "name_taken" }> {
+  const folders = input.isAdmin
+    ? await listAllSets()
+    : await listVisibleSets({ userId: input.userId });
+  const candidates = folders.filter((folder) =>
+    folderCanHoldTemplate(folder, input.template, input.userId, input.isAdmin),
+  );
+  const wanted = new Set(input.folderIds);
+  for (const folder of candidates) {
+    const has = folder.items.some((item) => item.templateId === input.template.id);
+    const want = wanted.has(folder.id);
+    if (want && !has) {
+      const added = await appendTemplateToSet({
+        setId: folder.id,
+        templateId: input.template.id,
+      });
+      if (!added.ok) {
+        return added;
+      }
+    }
+    if (!want && has) {
+      const removed = await removeTemplateFromSet({
+        setId: folder.id,
+        templateId: input.template.id,
+      });
+      if (!removed.ok) {
+        return removed;
+      }
+    }
+  }
+  if (input.newFolderName) {
+    const created = await insertTemplateSet({
+      userId:
+        input.template.visibility === "platform" ? null : input.template.userId,
+      visibility: input.template.visibility,
+      deskType: input.template.deskType,
+      name: input.newFolderName,
+      description: null,
+      templateIds: [input.template.id],
+    });
+    if (!created.ok) {
+      return created;
+    }
+  }
+  return { ok: true };
+}
+
+function parseFolderName(raw: unknown) {
+  const parsed = parseTemplateName(raw);
+  if (!parsed.ok && parsed.error === "Enter a template name.") {
+    return { ok: false as const, error: "Enter a folder name." };
+  }
+  return parsed;
+}
+
+async function writableFolderForSave(input: {
+  setId: string;
+  userId: string;
+  isAdmin: boolean;
+  visibility: TemplateVisibility;
+  deskType: TemplateDeskType;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const set = await loadSetById(input.setId);
+  if (
+    !set ||
+    !canManageRow(set.visibility, set.userId, input.userId, input.isAdmin)
+  ) {
+    return { ok: false, error: "That folder was not found." };
+  }
+  if (set.deskType !== input.deskType) {
+    return { ok: false, error: "That folder does not match this desk type." };
+  }
+  if (set.visibility === "platform" && input.visibility !== "platform") {
+    return { ok: false, error: "Platform folders may only contain platform templates." };
+  }
+  return { ok: true };
+}
+
+async function addTemplateToExistingFolder(input: {
+  setId: string;
+  templateId: string;
+  userId: string;
+  isAdmin: boolean;
+  visibility: TemplateVisibility;
+  deskType: TemplateDeskType;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const allowed = await writableFolderForSave(input);
+  if (!allowed.ok) {
+    return allowed;
+  }
+  return appendTemplateToSet({ setId: input.setId, templateId: input.templateId });
+}
+
+async function placeSavedTemplate(input: {
+  templateId: string;
+  userId: string;
+  isAdmin: boolean;
+  visibility: TemplateVisibility;
+  deskType: TemplateDeskType;
+  folderId: string | null;
+  newFolderName: string | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.folderId) {
+    const added = await addTemplateToExistingFolder({
+      setId: input.folderId,
+      templateId: input.templateId,
+      userId: input.userId,
+      isAdmin: input.isAdmin,
+      visibility: input.visibility,
+      deskType: input.deskType,
+    });
+    if (!added.ok) {
+      return {
+        ok: false,
+        error: `Template saved. Could not add it to that folder: ${added.error}`,
+      };
+    }
+  }
+  if (input.newFolderName) {
+    const created = await insertTemplateSet({
+      userId: input.visibility === "platform" ? null : input.userId,
+      visibility: input.visibility,
+      deskType: input.deskType,
+      name: input.newFolderName,
+      description: null,
+      templateIds: [input.templateId],
+    });
+    if (!created.ok) {
+      return {
+        ok: false,
+        error: `Template saved. Could not create the folder: ${created.error}`,
+      };
+    }
+  }
+  return { ok: true };
+}
+
 async function saveNamedRecipe(input: {
   userId: string;
   isAdmin: boolean;
@@ -151,7 +319,28 @@ async function saveNamedRecipe(input: {
   description: string | null;
   replace: boolean;
   recipe: TemplateRecipe;
+  folderId: string | null;
+  newFolderName: string | null;
 }): Promise<TemplateActionResult> {
+  if (input.newFolderName) {
+    const folderName = parseFolderName(input.newFolderName);
+    if (!folderName.ok) {
+      return folderName;
+    }
+    input = { ...input, newFolderName: folderName.name };
+  }
+  if (input.folderId) {
+    const allowed = await writableFolderForSave({
+      setId: input.folderId,
+      userId: input.userId,
+      isAdmin: input.isAdmin,
+      visibility: input.visibility,
+      deskType: input.deskType,
+    });
+    if (!allowed.ok) {
+      return allowed;
+    }
+  }
   if (input.replace) {
     const existing = await findNamedTemplate({
       visibility: input.visibility,
@@ -178,7 +367,19 @@ async function saveNamedRecipe(input: {
         userId: input.userId,
         data: { template_id: existing.id, desk_type: input.deskType },
       });
+      const placed = await placeSavedTemplate({
+        templateId: existing.id,
+        userId: input.userId,
+        isAdmin: input.isAdmin,
+        visibility: input.visibility,
+        deskType: input.deskType,
+        folderId: input.folderId,
+        newFolderName: input.newFolderName,
+      });
       revalidateTemplateSurfaces();
+      if (!placed.ok) {
+        return placed;
+      }
       return { ok: true };
     }
   }
@@ -204,7 +405,19 @@ async function saveNamedRecipe(input: {
       visibility: input.visibility,
     },
   });
+  const placed = await placeSavedTemplate({
+    templateId: inserted.template.id,
+    userId: input.userId,
+    isAdmin: input.isAdmin,
+    visibility: input.visibility,
+    deskType: input.deskType,
+    folderId: input.folderId,
+    newFolderName: input.newFolderName,
+  });
   revalidateTemplateSurfaces();
+  if (!placed.ok) {
+    return placed;
+  }
   return { ok: true };
 }
 
@@ -223,6 +436,8 @@ function metaFromForm(formData: FormData, isAdmin: boolean) {
     description: parseTemplateDescription(formData.get("templateDescription")),
     visibility: visibility.visibility,
     replace: formData.get("replaceExisting") === "1",
+    folderId: String(formData.get("folderId") ?? "").trim() || null,
+    newFolderName: String(formData.get("newFolderName") ?? "").trim() || null,
   };
 }
 
@@ -249,6 +464,8 @@ export async function saveDcaAsTemplateAction(
     name: meta.name,
     description: meta.description,
     replace: meta.replace,
+    folderId: meta.folderId,
+    newFolderName: meta.newFolderName,
     recipe: snapshotDcaRecipe(parsed.config),
   });
 }
@@ -280,6 +497,8 @@ export async function savePerpsAsTemplateAction(
     name: meta.name,
     description: meta.description,
     replace: meta.replace,
+    folderId: meta.folderId,
+    newFolderName: meta.newFolderName,
     recipe: snapshotPerpsRecipe(rule),
   });
 }
@@ -311,6 +530,8 @@ export async function savePaperAsTemplateAction(
     name: meta.name,
     description: meta.description,
     replace: meta.replace,
+    folderId: meta.folderId,
+    newFolderName: meta.newFolderName,
     recipe: snapshotPaperRecipe(layer),
   });
 }
@@ -340,6 +561,37 @@ export async function updateTemplateMetaAction(
   });
   if (!updated.ok) {
     return updated;
+  }
+  const folderIds = String(formData.get("folderIds") ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const newFolderRaw = String(formData.get("newFolderName") ?? "").trim();
+  let newFolderName: string | null = null;
+  if (newFolderRaw) {
+    const parsedFolder = parseTemplateName(newFolderRaw);
+    if (!parsedFolder.ok) {
+      return {
+        ok: false,
+        error:
+          parsedFolder.error === "Enter a template name."
+            ? "Enter a folder name."
+            : parsedFolder.error,
+      };
+    }
+    newFolderName = parsedFolder.name;
+  }
+  if (formData.has("folderIds") || newFolderName) {
+    const synced = await syncTemplateFolders({
+      template,
+      userId: auth.member.id,
+      isAdmin: auth.isAdmin,
+      folderIds,
+      newFolderName,
+    });
+    if (!synced.ok) {
+      return synced;
+    }
   }
   revalidateTemplateSurfaces();
   return { ok: true };
@@ -393,15 +645,37 @@ export async function publishTemplateCopyAction(
   if (!name.ok) {
     return name;
   }
-  const inserted = await insertTemplate({
-    userId: null,
-    visibility: "platform",
-    deskType: template.deskType,
+  const published = await publishTemplateCopy({
+    template,
     name: name.name,
     description: parseTemplateDescription(
       formData.get("templateDescription") ?? template.description,
     ),
-    recipe: template.recipe,
+    actorId: auth.member.id,
+  });
+  if (!published.ok) {
+    return published;
+  }
+  revalidateTemplateSurfaces();
+  return { ok: true };
+}
+
+async function publishTemplateCopy(input: {
+  template: AutomationTemplate;
+  name: string;
+  description: string | null;
+  actorId: string;
+}): Promise<
+  | { ok: true; templateId: string }
+  | { ok: false; error: string; code?: "name_taken" }
+> {
+  const inserted = await insertTemplate({
+    userId: null,
+    visibility: "platform",
+    deskType: input.template.deskType,
+    name: input.name,
+    description: input.description,
+    recipe: input.template.recipe,
   });
   if (!inserted.ok) {
     return inserted;
@@ -409,16 +683,341 @@ export async function publishTemplateCopyAction(
   await writeEventLog({
     scope: "strategy",
     event: "template.saved",
-    message: `Published platform template ${name.name}`,
-    userId: auth.member.id,
+    message: `Published platform template ${input.name}`,
+    userId: input.actorId,
     data: {
       template_id: inserted.template.id,
-      source_id: template.id,
-      desk_type: template.deskType,
+      source_id: input.template.id,
+      desk_type: input.template.deskType,
     },
   });
+  return { ok: true, templateId: inserted.template.id };
+}
+
+function parseBulkIds(formData: FormData): string[] {
+  return String(formData.get("ids") ?? "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+export async function bulkLibraryAction(
+  formData: FormData,
+): Promise<TemplateActionResult> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  const kind = String(formData.get("kind") ?? "");
+  const op = String(formData.get("op") ?? "");
+  const ids = parseBulkIds(formData);
+  if (ids.length === 0) {
+    return { ok: false, error: "Select at least one row." };
+  }
+  if (kind !== "template" && kind !== "folder") {
+    return { ok: false, error: "Choose templates or folders." };
+  }
+  if (
+    op !== "add-to-folder" &&
+    op !== "publish" &&
+    op !== "unpublish" &&
+    op !== "delete"
+  ) {
+    return { ok: false, error: "Choose a bulk action." };
+  }
+  if ((op === "publish" || op === "unpublish") && !auth.isAdmin) {
+    return { ok: false, error: "Only admins can publish or unpublish." };
+  }
+  const notes: string[] = [];
+  let done = 0;
+
+  if (kind === "template" && op === "add-to-folder") {
+    const added = await bulkAddTemplatesToFolder({
+      ids,
+      userId: auth.member.id,
+      isAdmin: auth.isAdmin,
+      folderId: String(formData.get("folderId") ?? "").trim() || null,
+      newFolderName: String(formData.get("newFolderName") ?? "").trim() || null,
+    });
+    if (!added.ok) {
+      return added;
+    }
+    notes.push(...added.notes);
+    done = added.done;
+  } else if (kind === "template") {
+    for (const id of ids) {
+      const template = await loadTemplateById(id);
+      if (!template) {
+        notes.push("Skipped a missing template.");
+        continue;
+      }
+      if (op === "publish") {
+        if (template.visibility === "platform") {
+          notes.push(`Skipped “${template.name}”: already a platform template.`);
+          continue;
+        }
+        if (!canReadTemplate(template, auth.member.id, true)) {
+          notes.push(`Skipped “${template.name}”.`);
+          continue;
+        }
+        const published = await publishTemplateCopy({
+          template,
+          name: template.name,
+          description: template.description,
+          actorId: auth.member.id,
+        });
+        if (!published.ok) {
+          notes.push(`Skipped “${template.name}”: ${published.error}`);
+          continue;
+        }
+        done += 1;
+        continue;
+      }
+      if (op === "unpublish") {
+        if (template.visibility !== "platform") {
+          notes.push(`Skipped “${template.name}”: not a platform template.`);
+          continue;
+        }
+        if (!canManageTemplate(template, auth.member.id, auth.isAdmin)) {
+          notes.push(`Skipped “${template.name}”.`);
+          continue;
+        }
+        const deleted = await deleteTemplate(id);
+        if (!deleted.ok) {
+          notes.push(`Skipped “${template.name}”: ${deleted.error}`);
+          continue;
+        }
+        done += 1;
+        continue;
+      }
+      if (!canManageTemplate(template, auth.member.id, auth.isAdmin)) {
+        notes.push(`Skipped “${template.name}”.`);
+        continue;
+      }
+      const deleted = await deleteTemplate(id);
+      if (!deleted.ok) {
+        notes.push(`Skipped “${template.name}”: ${deleted.error}`);
+        continue;
+      }
+      done += 1;
+    }
+  } else if (op === "add-to-folder") {
+    return { ok: false, error: "Add to folder is for templates." };
+  } else {
+    for (const id of ids) {
+      const folder = await loadSetById(id);
+      if (!folder) {
+        notes.push("Skipped a missing folder.");
+        continue;
+      }
+      if (op === "publish") {
+        if (folder.visibility === "platform") {
+          notes.push(`Skipped “${folder.name}”: already a platform folder.`);
+          continue;
+        }
+        if (!canManageRow(folder.visibility, folder.userId, auth.member.id, auth.isAdmin)) {
+          notes.push(`Skipped “${folder.name}”.`);
+          continue;
+        }
+        const published = await publishFolderCopy({
+          folder,
+          actorId: auth.member.id,
+        });
+        if (!published.ok) {
+          notes.push(`Skipped “${folder.name}”: ${published.error}`);
+          continue;
+        }
+        notes.push(...published.notes);
+        done += 1;
+        continue;
+      }
+      if (op === "unpublish") {
+        if (folder.visibility !== "platform") {
+          notes.push(`Skipped “${folder.name}”: not a platform folder.`);
+          continue;
+        }
+        if (!canManageRow(folder.visibility, folder.userId, auth.member.id, auth.isAdmin)) {
+          notes.push(`Skipped “${folder.name}”.`);
+          continue;
+        }
+        const deleted = await deleteTemplateSet(id);
+        if (!deleted.ok) {
+          notes.push(`Skipped “${folder.name}”: ${deleted.error}`);
+          continue;
+        }
+        done += 1;
+        continue;
+      }
+      if (!canManageRow(folder.visibility, folder.userId, auth.member.id, auth.isAdmin)) {
+        notes.push(`Skipped “${folder.name}”.`);
+        continue;
+      }
+      const deleted = await deleteTemplateSet(id);
+      if (!deleted.ok) {
+        notes.push(`Skipped “${folder.name}”: ${deleted.error}`);
+        continue;
+      }
+      done += 1;
+    }
+  }
+
   revalidateTemplateSurfaces();
-  return { ok: true };
+  const label = kind === "template" ? "template" : "folder";
+  notes.unshift(
+    `Updated ${done} ${label}${done === 1 ? "" : "s"}.`,
+  );
+  return { ok: true, notes };
+}
+
+async function bulkAddTemplatesToFolder(input: {
+  ids: string[];
+  userId: string;
+  isAdmin: boolean;
+  folderId: string | null;
+  newFolderName: string | null;
+}): Promise<
+  | { ok: true; done: number; notes: string[] }
+  | { ok: false; error: string }
+> {
+  const loaded: AutomationTemplate[] = [];
+  for (const id of input.ids) {
+    const template = await loadTemplateById(id);
+    if (
+      !template ||
+      !canReadTemplate(template, input.userId, input.isAdmin)
+    ) {
+      continue;
+    }
+    loaded.push(template);
+  }
+  if (loaded.length === 0) {
+    return { ok: false, error: "Those templates were not found." };
+  }
+  const deskType = loaded[0]?.deskType;
+  if (!deskType || loaded.some((row) => row.deskType !== deskType)) {
+    return { ok: false, error: "Select templates of one desk type." };
+  }
+  const notes: string[] = [];
+  let folderId = input.folderId;
+  if (input.newFolderName) {
+    const parsed = parseFolderName(input.newFolderName);
+    if (!parsed.ok) {
+      return parsed;
+    }
+    const allPlatform = loaded.every((row) => row.visibility === "platform");
+    const userOwners = [
+      ...new Set(
+        loaded
+          .filter((row) => row.visibility === "user")
+          .map((row) => row.userId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    if (!allPlatform && userOwners.length > 1) {
+      return {
+        ok: false,
+        error: "Select templates from one owner to create a folder.",
+      };
+    }
+    const visibility =
+      allPlatform && input.isAdmin ? "platform" : "user";
+    if (visibility === "platform" && !allPlatform) {
+      return {
+        ok: false,
+        error: "Platform folders may only contain platform templates.",
+      };
+    }
+    const created = await insertTemplateSet({
+      userId: visibility === "platform" ? null : (userOwners[0] ?? input.userId),
+      visibility,
+      deskType,
+      name: parsed.name,
+      description: null,
+      templateIds: [],
+    });
+    if (!created.ok) {
+      return created;
+    }
+    folderId = created.set.id;
+  }
+  if (!folderId) {
+    return { ok: false, error: "Choose a folder or create one." };
+  }
+  const folder = await loadSetById(folderId);
+  if (
+    !folder ||
+    !canManageRow(folder.visibility, folder.userId, input.userId, input.isAdmin)
+  ) {
+    return { ok: false, error: "That folder was not found." };
+  }
+  if (folder.deskType !== deskType) {
+    return { ok: false, error: "That folder does not match this desk type." };
+  }
+  let done = 0;
+  for (const template of loaded) {
+    if (folder.visibility === "platform" && template.visibility !== "platform") {
+      notes.push(`Skipped “${template.name}”: platform folders need platform templates.`);
+      continue;
+    }
+    const added = await appendTemplateToSet({
+      setId: folder.id,
+      templateId: template.id,
+    });
+    if (!added.ok) {
+      notes.push(`Skipped “${template.name}”: ${added.error}`);
+      continue;
+    }
+    done += 1;
+  }
+  return { ok: true, done, notes };
+}
+
+async function publishFolderCopy(input: {
+  folder: AutomationTemplateSet;
+  actorId: string;
+}): Promise<
+  | { ok: true; notes: string[] }
+  | { ok: false; error: string }
+> {
+  const notes: string[] = [];
+  const platformIds: string[] = [];
+  for (const item of input.folder.items) {
+    const template = await loadTemplateById(item.templateId);
+    if (!template) {
+      notes.push(`Skipped a missing template in “${input.folder.name}”.`);
+      continue;
+    }
+    if (template.visibility === "platform") {
+      platformIds.push(template.id);
+      continue;
+    }
+    const published = await publishTemplateCopy({
+      template,
+      name: template.name,
+      description: template.description,
+      actorId: input.actorId,
+    });
+    if (!published.ok) {
+      notes.push(`Skipped “${template.name}”: ${published.error}`);
+      continue;
+    }
+    platformIds.push(published.templateId);
+  }
+  if (platformIds.length === 0) {
+    return { ok: false, error: "No platform templates to put in that folder." };
+  }
+  const created = await insertTemplateSet({
+    userId: null,
+    visibility: "platform",
+    deskType: input.folder.deskType,
+    name: input.folder.name,
+    description: input.folder.description,
+    templateIds: platformIds,
+  });
+  if (!created.ok) {
+    return created;
+  }
+  return { ok: true, notes };
 }
 
 export async function applyTemplateAction(
@@ -440,8 +1039,6 @@ export async function applyTemplateAction(
     skip: formData.get("skip") === "1",
   });
   if (result.ok && !result.skipped) {
-    const desks = await listTradingAccounts(session.member.id);
-    const desk = desks.find((row) => row.id === accountId);
     await writeEventLog({
       scope: "strategy",
       event: "template.applied",
@@ -450,16 +1047,8 @@ export async function applyTemplateAction(
       accountId,
       data: { template_id: templateId },
     });
-    if (desk && desk.deskType !== "signal_follower") {
-      revalidateTemplateSurfaces(
-        accountId,
-        desk.deskType === "cash_and_carry" ||
-          desk.deskType === "perps" ||
-          desk.deskType === "dca"
-          ? desk.deskType
-          : undefined,
-      );
-    }
+    revalidatePath("/account/templates");
+    revalidatePath("/admin/templates");
   }
   return {
     ok: result.ok,
@@ -468,6 +1057,7 @@ export async function applyTemplateAction(
     symbol: result.symbol,
     notes: result.notes,
     results: [result],
+    applied: result.applied ? [result.applied] : undefined,
   };
 }
 
@@ -503,15 +1093,20 @@ export async function applyTemplateSetAction(
   await writeEventLog({
     scope: "strategy",
     event: "template.applied",
-    message: `Applied template set`,
+    message: `Applied template folder`,
     userId: session.member.id,
     accountId,
     data: { set_id: setId },
   });
-  if (applied.deskType) {
-    revalidateTemplateSurfaces(accountId, applied.deskType);
-  }
-  return { ok: true, results: applied.results };
+  revalidatePath("/account/templates");
+  revalidatePath("/admin/templates");
+  return {
+    ok: true,
+    results: applied.results,
+    applied: applied.results
+      .map((row) => row.applied)
+      .filter((row): row is AppliedDeskItem => Boolean(row)),
+  };
 }
 
 export async function createTemplateSetAction(
@@ -546,10 +1141,10 @@ export async function createTemplateSetAction(
       return { ok: false, error: "One of those templates was not found." };
     }
     if (template.deskType !== deskTypeRaw) {
-      return { ok: false, error: "Every template in a set must share a desk type." };
+      return { ok: false, error: "Every template in a folder must share a desk type." };
     }
     if (meta.visibility === "platform" && template.visibility !== "platform") {
-      return { ok: false, error: "Platform sets may only contain platform templates." };
+      return { ok: false, error: "Platform folders may only contain platform templates." };
     }
     if (
       meta.visibility === "user" &&
@@ -587,7 +1182,7 @@ export async function updateTemplateSetAction(
     !set ||
     !canManageRow(set.visibility, set.userId, auth.member.id, auth.isAdmin)
   ) {
-    return { ok: false, error: "That set was not found.", code: "forbidden" };
+    return { ok: false, error: "That folder was not found.", code: "forbidden" };
   }
   const name = parseTemplateName(formData.get("templateName") ?? formData.get("name"));
   if (!name.ok) {
@@ -631,7 +1226,7 @@ export async function deleteTemplateSetAction(
     !set ||
     !canManageRow(set.visibility, set.userId, auth.member.id, auth.isAdmin)
   ) {
-    return { ok: false, error: "That set was not found.", code: "forbidden" };
+    return { ok: false, error: "That folder was not found.", code: "forbidden" };
   }
   const deleted = await deleteTemplateSet(id);
   if (!deleted.ok) {
@@ -702,7 +1297,7 @@ export async function shareSetAction(
     !set ||
     !canShareRow(set.visibility, set.userId, auth.member.id, auth.isAdmin)
   ) {
-    return { ok: false, error: "That set was not found.", code: "forbidden" };
+    return { ok: false, error: "That folder was not found.", code: "forbidden" };
   }
   const email = parseShareEmail(formData.get("email"));
   if (!email.ok) {
@@ -729,7 +1324,7 @@ export async function shareSetAction(
   await writeEventLog({
     scope: "strategy",
     event: "template.shared",
-    message: `Shared set ${set.name} with ${member.email}`,
+    message: `Shared folder ${set.name} with ${member.email}`,
     userId: auth.member.id,
     data: { set_id: set.id, to_user_id: member.userId },
   });
@@ -776,7 +1371,7 @@ export async function unshareSetAction(
   const toUserId = String(formData.get("toUserId") ?? "").trim() || auth.member.id;
   const set = await loadSetById(id);
   if (!set) {
-    return { ok: false, error: "That set was not found.", code: "forbidden" };
+    return { ok: false, error: "That folder was not found.", code: "forbidden" };
   }
   const isRecipient = toUserId === auth.member.id;
   const canRevoke =
@@ -877,7 +1472,7 @@ export async function importTemplateLibraryAction(
       .map((id) => idMap.get(id))
       .filter((id): id is string => Boolean(id));
     if (templateIds.length === 0) {
-      notes.push(`Skipped set “${row.name}”: none of its templates imported.`);
+      notes.push(`Skipped folder “${row.name}”: none of its templates imported.`);
       continue;
     }
     const inserted = await insertTemplateSet({
@@ -889,7 +1484,7 @@ export async function importTemplateLibraryAction(
       templateIds,
     });
     if (!inserted.ok) {
-      notes.push(`Skipped set “${row.name}”: ${inserted.error}`);
+      notes.push(`Skipped folder “${row.name}”: ${inserted.error}`);
     }
   }
   const importedTemplates = idMap.size;
@@ -899,7 +1494,7 @@ export async function importTemplateLibraryAction(
   await writeEventLog({
     scope: "strategy",
     event: "template.imported",
-    message: `Imported ${importedTemplates} templates and ${importedSets} sets`,
+    message: `Imported ${importedTemplates} templates and ${importedSets} folders`,
     userId: auth.member.id,
     data: {
       templates: importedTemplates,
@@ -908,7 +1503,7 @@ export async function importTemplateLibraryAction(
   });
   revalidateTemplateSurfaces();
   notes.unshift(
-    `Imported ${importedTemplates} template${importedTemplates === 1 ? "" : "s"} and ${importedSets} set${importedSets === 1 ? "" : "s"}.`,
+    `Imported ${importedTemplates} template${importedTemplates === 1 ? "" : "s"} and ${importedSets} folder${importedSets === 1 ? "" : "s"}.`,
   );
   return { ok: true, notes };
 }

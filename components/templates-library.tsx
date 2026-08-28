@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { LocalTime } from "@/components/local-time";
+import { Modal } from "@/components/template-modals";
 import { formatDeskType } from "@/lib/accounts/model";
 import {
   applyTemplateAction,
@@ -10,6 +12,7 @@ import {
   deleteTemplateSetAction,
   exportTemplateLibraryAction,
   importTemplateLibraryAction,
+  bulkLibraryAction,
   publishTemplateCopyAction,
   shareSetAction,
   shareTemplateAction,
@@ -20,11 +23,11 @@ import {
   type TemplateActionResult,
 } from "@/lib/templates/actions";
 import type { TemplateDeskType } from "@/lib/templates/recipe";
+import { recipePreview } from "@/lib/templates/recipe";
 import type {
   AutomationTemplate,
   AutomationTemplateSet,
 } from "@/lib/templates/store";
-import { recipePreview } from "@/lib/templates/recipe";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -34,6 +37,8 @@ const secondaryBtn =
   "rounded-control border border-line px-3 py-1.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink";
 const dangerBtn =
   "rounded-control px-3 py-1.5 text-xs text-danger hover:bg-danger/10";
+const actionLink =
+  "text-xs font-medium text-accent hover:text-accent-strong";
 
 type DeskOption = {
   id: string;
@@ -42,6 +47,93 @@ type DeskOption = {
 };
 
 type LibraryTab = "templates" | "sets" | "shared-templates" | "shared-sets";
+
+type SortKey =
+  | "name"
+  | "deskType"
+  | "visibility"
+  | "owner"
+  | "folder"
+  | "shared"
+  | "updated"
+  | "items";
+
+type SortState = { key: SortKey; dir: "asc" | "desc" };
+
+function foldersHolding(
+  templateId: string,
+  folders: AutomationTemplateSet[],
+): AutomationTemplateSet[] {
+  return folders.filter((folder) =>
+    folder.items.some((item) => item.templateId === templateId),
+  );
+}
+
+function folderLabel(folders: AutomationTemplateSet[]): string {
+  if (folders.length === 0) {
+    return "—";
+  }
+  return folders.map((folder) => folder.name).join(", ");
+}
+
+function sharedLabel(
+  peers: { email: string }[],
+  sharedBy?: string | null,
+): string {
+  if (sharedBy) {
+    return sharedBy;
+  }
+  if (peers.length === 0) {
+    return "—";
+  }
+  return peers.map((peer) => peer.email).join(", ");
+}
+
+function compareText(a: string, b: string, dir: "asc" | "desc"): number {
+  const n = a.localeCompare(b, undefined, { sensitivity: "base" });
+  return dir === "asc" ? n : -n;
+}
+
+function compareNum(a: number, b: number, dir: "asc" | "desc"): number {
+  const n = a === b ? 0 : a < b ? -1 : 1;
+  return dir === "asc" ? n : -n;
+}
+
+function assignableFolders(
+  template: AutomationTemplate,
+  folders: AutomationTemplateSet[],
+  variant: "account" | "admin",
+): AutomationTemplateSet[] {
+  return folders.filter((folder) => {
+    if (folder.deskType !== template.deskType || folder.sharedByEmail) {
+      return false;
+    }
+    if (variant === "account" && folder.visibility === "platform") {
+      return false;
+    }
+    if (template.visibility === "platform") {
+      return folder.visibility === "platform" || folder.visibility === "user";
+    }
+    return (
+      folder.visibility === "user" && folder.userId === template.userId
+    );
+  });
+}
+
+function foldersForAll(
+  templates: AutomationTemplate[],
+  folders: AutomationTemplateSet[],
+  variant: "account" | "admin",
+): AutomationTemplateSet[] {
+  if (templates.length === 0) {
+    return [];
+  }
+  return folders.filter((folder) =>
+    templates.every(
+      (template) => assignableFolders(template, [folder], variant).length > 0,
+    ),
+  );
+}
 
 export function TemplatesLibrary({
   variant,
@@ -60,11 +152,30 @@ export function TemplatesLibrary({
 }) {
   const [tab, setTab] = useState<LibraryTab>("templates");
   const [deskFilter, setDeskFilter] = useState<"all" | TemplateDeskType>("all");
-  const [scope, setScope] = useState<"all" | "platform" | "user">(
-    variant === "admin" ? "all" : "all",
-  );
+  const [scope, setScope] = useState<"all" | "platform" | "user">("all");
+  const [folderFilter, setFolderFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortState>({ key: "updated", dir: "desc" });
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [applyingTemplateId, setApplyingTemplateId] = useState<string | null>(
+    null,
+  );
+  const [applyingFolderId, setApplyingFolderId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkFolderOpen, setBulkFolderOpen] = useState(false);
+
+  const knownFolders = useMemo(() => {
+    const byId = new Map<string, AutomationTemplateSet>();
+    for (const folder of [...sets, ...sharedSets]) {
+      byId.set(folder.id, folder);
+    }
+    return [...byId.values()];
+  }, [sets, sharedSets]);
+
+  const needle = query.trim().toLowerCase();
 
   const filteredTemplates = templates.filter((row) => {
     if (deskFilter !== "all" && row.deskType !== deskFilter) {
@@ -97,6 +208,156 @@ export function TemplatesLibrary({
     (row) => deskFilter === "all" || row.deskType === deskFilter,
   );
 
+  const listedTemplates = useMemo(() => {
+    const rows = (
+      tab === "shared-templates" ? filteredSharedTemplates : filteredTemplates
+    ).filter((row) => {
+      const held = foldersHolding(row.id, knownFolders);
+      if (folderFilter !== "all" && !held.some((folder) => folder.id === folderFilter)) {
+        return false;
+      }
+      if (!needle) {
+        return true;
+      }
+      const hay = [
+        row.name,
+        row.description ?? "",
+        row.ownerEmail ?? "",
+        row.sharedByEmail ?? "",
+        formatDeskType(row.deskType),
+        folderLabel(held),
+        sharedLabel(row.sharedWith, row.sharedByEmail),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(needle);
+    });
+    return [...rows].sort((a, b) => {
+      if (sort.key === "name") {
+        return compareText(a.name, b.name, sort.dir);
+      }
+      if (sort.key === "deskType") {
+        return compareText(a.deskType, b.deskType, sort.dir);
+      }
+      if (sort.key === "visibility") {
+        return compareText(a.visibility, b.visibility, sort.dir);
+      }
+      if (sort.key === "owner") {
+        return compareText(a.ownerEmail ?? "", b.ownerEmail ?? "", sort.dir);
+      }
+      if (sort.key === "folder") {
+        return compareText(
+          folderLabel(foldersHolding(a.id, knownFolders)),
+          folderLabel(foldersHolding(b.id, knownFolders)),
+          sort.dir,
+        );
+      }
+      if (sort.key === "shared") {
+        return compareText(
+          sharedLabel(a.sharedWith, a.sharedByEmail),
+          sharedLabel(b.sharedWith, b.sharedByEmail),
+          sort.dir,
+        );
+      }
+      return compareNum(a.updatedAtMs, b.updatedAtMs, sort.dir);
+    });
+  }, [
+    tab,
+    filteredTemplates,
+    filteredSharedTemplates,
+    folderFilter,
+    needle,
+    sort,
+    knownFolders,
+  ]);
+
+  const listedFolders = useMemo(() => {
+    const rows = (tab === "shared-sets" ? filteredSharedSets : filteredSets).filter(
+      (row) => {
+        if (!needle) {
+          return true;
+        }
+        const hay = [
+          row.name,
+          row.description ?? "",
+          row.ownerEmail ?? "",
+          row.sharedByEmail ?? "",
+          formatDeskType(row.deskType),
+          row.items.map((item) => item.name).join(" "),
+          sharedLabel(row.sharedWith, row.sharedByEmail),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(needle);
+      },
+    );
+    return [...rows].sort((a, b) => {
+      if (sort.key === "name") {
+        return compareText(a.name, b.name, sort.dir);
+      }
+      if (sort.key === "deskType") {
+        return compareText(a.deskType, b.deskType, sort.dir);
+      }
+      if (sort.key === "visibility") {
+        return compareText(a.visibility, b.visibility, sort.dir);
+      }
+      if (sort.key === "owner") {
+        return compareText(a.ownerEmail ?? "", b.ownerEmail ?? "", sort.dir);
+      }
+      if (sort.key === "items") {
+        return compareNum(a.items.length, b.items.length, sort.dir);
+      }
+      if (sort.key === "shared") {
+        return compareText(
+          sharedLabel(a.sharedWith, a.sharedByEmail),
+          sharedLabel(b.sharedWith, b.sharedByEmail),
+          sort.dir,
+        );
+      }
+      return compareNum(a.updatedAtMs, b.updatedAtMs, sort.dir);
+    });
+  }, [tab, filteredSets, filteredSharedSets, needle, sort]);
+
+  const folderFilterOptions = (
+    tab === "shared-templates" ? sharedSets : sets
+  ).filter((row) => deskFilter === "all" || row.deskType === deskFilter);
+
+  const editingTemplate =
+    templates.find((row) => row.id === editingTemplateId) ??
+    sharedTemplates.find((row) => row.id === editingTemplateId) ??
+    null;
+  const editingFolder =
+    sets.find((row) => row.id === editingFolderId) ??
+    sharedSets.find((row) => row.id === editingFolderId) ??
+    null;
+  const applyingTemplate =
+    templates.find((row) => row.id === applyingTemplateId) ??
+    sharedTemplates.find((row) => row.id === applyingTemplateId) ??
+    null;
+  const applyingFolder =
+    sets.find((row) => row.id === applyingFolderId) ??
+    sharedSets.find((row) => row.id === applyingFolderId) ??
+    null;
+
+  const showOwner = variant === "admin" || tab.startsWith("shared");
+  const sharedTab = tab.startsWith("shared");
+  const templateTab = tab === "templates" || tab === "shared-templates";
+  const listedIds = templateTab
+    ? listedTemplates.map((row) => row.id)
+    : listedFolders.map((row) => row.id);
+  const selectedCount = listedIds.filter((id) => selected.has(id)).length;
+  const allListedSelected =
+    listedIds.length > 0 && listedIds.every((id) => selected.has(id));
+  const selectedTemplates = templates.filter(
+    (row) => selected.has(row.id) && listedIds.includes(row.id),
+  );
+  const bulkFolders = foldersForAll(selectedTemplates, sets, variant);
+  const tableColumns =
+    6 +
+    (sharedTab ? 0 : 1) +
+    (showOwner ? 1 : 0) +
+    (sharedTab ? 0 : 1);
+
   function flash(result: TemplateActionResult) {
     if (result.json && result.filename) {
       downloadJson(result.json, result.filename);
@@ -104,8 +365,7 @@ export function TemplatesLibrary({
     if (result.ok) {
       setError(null);
       setMessage(
-        result.notes?.join(" ") ||
-          (result.json ? "Downloaded." : "Saved."),
+        result.notes?.join(" ") || (result.json ? "Downloaded." : "Saved."),
       );
     } else {
       setMessage(null);
@@ -113,54 +373,184 @@ export function TemplatesLibrary({
     }
   }
 
+  function onSort(key: SortKey) {
+    setSort((current) =>
+      current.key === key
+        ? { key, dir: current.dir === "asc" ? "desc" : "asc" }
+        : { key, dir: key === "updated" ? "desc" : "asc" },
+    );
+  }
+
+  function onEditSaved(result: TemplateActionResult) {
+    flash(result);
+    if (result.ok) {
+      setEditingTemplateId(null);
+      setEditingFolderId(null);
+    }
+  }
+
+  function changeTab(next: LibraryTab) {
+    setTab(next);
+    setSelected(new Set());
+    setBulkFolderOpen(false);
+  }
+
+  function toggleRow(id: string) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleAllListed() {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (allListedSelected) {
+        for (const id of listedIds) {
+          next.delete(id);
+        }
+      } else {
+        for (const id of listedIds) {
+          next.add(id);
+        }
+      }
+      return next;
+    });
+  }
+
+  async function runBulk(op: "publish" | "unpublish" | "delete") {
+    const ids = listedIds.filter((id) => selected.has(id));
+    if (ids.length === 0) {
+      return;
+    }
+    const noun = templateTab ? "template" : "folder";
+    const plural = ids.length === 1 ? noun : `${noun}s`;
+    if (
+      op === "delete" &&
+      !window.confirm(`Delete ${ids.length} ${plural}? This cannot be undone.`)
+    ) {
+      return;
+    }
+    if (
+      op === "unpublish" &&
+      !window.confirm(
+        `Unpublish ${ids.length} platform ${plural}? Members will no longer see them. User copies stay.`,
+      )
+    ) {
+      return;
+    }
+    if (
+      op === "publish" &&
+      !window.confirm(
+        `Publish ${ids.length} ${plural} as platform copies? User rows stay.`,
+      )
+    ) {
+      return;
+    }
+    const data = new FormData();
+    data.set("kind", templateTab ? "template" : "folder");
+    data.set("op", op);
+    data.set("ids", ids.join(","));
+    const result = await bulkLibraryAction(data);
+    flash(result);
+    if (result.ok) {
+      setSelected(new Set());
+    }
+  }
+
+  function openBulkFolder() {
+    const types = new Set(selectedTemplates.map((row) => row.deskType));
+    if (types.size !== 1) {
+      flash({ ok: false, error: "Select templates of one desk type." });
+      return;
+    }
+    setBulkFolderOpen(true);
+  }
+
   return (
     <div>
       <nav className="mt-5 flex flex-wrap border-b border-line">
-        <TabButton selected={tab === "templates"} onClick={() => setTab("templates")}>
+        <TabButton selected={tab === "templates"} onClick={() => changeTab("templates")}>
           Templates
         </TabButton>
-        <TabButton selected={tab === "sets"} onClick={() => setTab("sets")}>
-          Sets
+        <TabButton selected={tab === "sets"} onClick={() => changeTab("sets")}>
+          Folders
         </TabButton>
         <TabButton
           selected={tab === "shared-templates"}
-          onClick={() => setTab("shared-templates")}
+          onClick={() => changeTab("shared-templates")}
         >
           Shared Templates
         </TabButton>
-        <TabButton selected={tab === "shared-sets"} onClick={() => setTab("shared-sets")}>
-          Shared Sets
+        <TabButton selected={tab === "shared-sets"} onClick={() => changeTab("shared-sets")}>
+          Shared Folders
         </TabButton>
       </nav>
       <LibraryTransferBar
         exportScope={variant === "admin" ? "all" : "own"}
         onResult={flash}
       />
-      <div className="mt-4 flex flex-wrap gap-2">
-        <select
-          value={deskFilter}
-          onChange={(event) =>
-            setDeskFilter(event.target.value as "all" | TemplateDeskType)
-          }
-          className="rounded-control border border-line bg-canvas px-3 py-1.5 text-sm text-ink"
-        >
-          <option value="all">All desk types</option>
-          <option value="dca">DCA</option>
-          <option value="perps">Perps</option>
-          <option value="cash_and_carry">Cash and Carry</option>
-        </select>
-        {variant === "admin" && (tab === "templates" || tab === "sets") ? (
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="block text-xs text-ink-muted">
+          Search
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className={fieldClass}
+          />
+        </label>
+        <label className="block text-xs text-ink-muted">
+          Desk type
           <select
-            value={scope}
+            value={deskFilter}
             onChange={(event) =>
-              setScope(event.target.value as "all" | "platform" | "user")
+              setDeskFilter(event.target.value as "all" | TemplateDeskType)
             }
-            className="rounded-control border border-line bg-canvas px-3 py-1.5 text-sm text-ink"
+            className={fieldClass}
           >
-            <option value="all">Platform and user</option>
-            <option value="platform">Platform</option>
-            <option value="user">User</option>
+            <option value="all">All desk types</option>
+            <option value="dca">DCA</option>
+            <option value="perps">Perps</option>
+            <option value="cash_and_carry">Cash and Carry</option>
           </select>
+        </label>
+        {variant === "admin" && (tab === "templates" || tab === "sets") ? (
+          <label className="block text-xs text-ink-muted">
+            Scope
+            <select
+              value={scope}
+              onChange={(event) =>
+                setScope(event.target.value as "all" | "platform" | "user")
+              }
+              className={fieldClass}
+            >
+              <option value="all">Platform and user</option>
+              <option value="platform">Platform</option>
+              <option value="user">User</option>
+            </select>
+          </label>
+        ) : null}
+        {tab === "templates" || tab === "shared-templates" ? (
+          <label className="block text-xs text-ink-muted">
+            Folder
+            <select
+              value={folderFilter}
+              onChange={(event) => setFolderFilter(event.target.value)}
+              className={fieldClass}
+            >
+              <option value="all">All folders</option>
+              {folderFilterOptions.map((folder) => (
+                <option key={folder.id} value={folder.id}>
+                  {folder.name}
+                </option>
+              ))}
+            </select>
+          </label>
         ) : null}
       </div>
       {error ? (
@@ -170,106 +560,480 @@ export function TemplatesLibrary({
       ) : null}
       {message ? <p className="mt-4 text-sm text-success">{message}</p> : null}
 
-      {tab === "templates" ? (
-        <div className="mt-6 space-y-3">
-          {filteredTemplates.length === 0 ? (
-            <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-              {variant === "account"
+      {!sharedTab && selectedCount > 0 ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <p className="text-sm text-ink-muted">{selectedCount} selected</p>
+          {tab === "templates" ? (
+            <button type="button" onClick={openBulkFolder} className={secondaryBtn}>
+              Add to folder
+            </button>
+          ) : null}
+          {variant === "admin" ? (
+            <>
+              <button
+                type="button"
+                onClick={() => void runBulk("publish")}
+                className={secondaryBtn}
+              >
+                Publish
+              </button>
+              <button
+                type="button"
+                onClick={() => void runBulk("unpublish")}
+                className={secondaryBtn}
+              >
+                Unpublish
+              </button>
+            </>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => void runBulk("delete")}
+            className={dangerBtn}
+          >
+            Delete
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className={secondaryBtn}
+          >
+            Clear
+          </button>
+        </div>
+      ) : null}
+
+      {tab === "templates" || tab === "shared-templates" ? (
+        <LibraryTable
+          empty={
+            tab === "templates"
+              ? variant === "account"
                 ? "No templates yet. Open Automations on a DCA, Perps, or Cash and Carry desk and use Save as template."
-                : "No templates match these filters."}
-            </p>
-          ) : (
-            filteredTemplates.map((row) => (
-              <TemplateCard
-                key={row.id}
-                template={row}
-                variant={variant}
-                desks={desks}
-                onResult={flash}
-              />
-            ))
-          )}
-          {variant === "account" ? (
-            <CreateSetCard
-              templates={templates.filter(
-                (row) =>
-                  row.visibility === "user" || row.visibility === "platform",
+                : "No templates match these filters."
+              : "Nothing shared with you yet. Another member can share a template by entering your email."
+          }
+          rows={listedTemplates.length}
+          columns={tableColumns}
+        >
+          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+            <tr>
+              {sharedTab ? null : (
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allListedSelected}
+                    onChange={toggleAllListed}
+                    aria-label="Select all templates"
+                    className="size-4"
+                  />
+                </th>
               )}
-              visibility="user"
-              onResult={flash}
-            />
-          ) : (
-            <CreateSetCard
-              templates={templates.filter((row) => row.visibility === "platform")}
-              visibility="platform"
-              onResult={flash}
-            />
-          )}
-        </div>
+              <SortTh label="Name" k="name" sort={sort} onSort={onSort} />
+              <SortTh label="Desk" k="deskType" sort={sort} onSort={onSort} />
+              <SortTh label="Scope" k="visibility" sort={sort} onSort={onSort} />
+              {showOwner ? (
+                <SortTh
+                  label={sharedTab ? "Shared by" : "Owner"}
+                  k={sharedTab ? "shared" : "owner"}
+                  sort={sort}
+                  onSort={onSort}
+                />
+              ) : null}
+              <SortTh label="Folder" k="folder" sort={sort} onSort={onSort} />
+              {sharedTab ? null : (
+                <SortTh label="Shared with" k="shared" sort={sort} onSort={onSort} />
+              )}
+              <SortTh label="Updated" k="updated" sort={sort} onSort={onSort} />
+              <th className="px-4 py-3 font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {listedTemplates.map((row) => {
+              const canEdit =
+                !sharedTab &&
+                (variant === "admin" || row.visibility === "user");
+              return (
+                <tr key={row.id} className="border-b border-line last:border-b-0">
+                  {sharedTab ? null : (
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(row.id)}
+                        onChange={() => toggleRow(row.id)}
+                        aria-label={`Select ${row.name}`}
+                        className="size-4"
+                      />
+                    </td>
+                  )}
+                  <td className="px-4 py-3 font-medium text-ink">{row.name}</td>
+                  <td className="px-4 py-3 text-ink-muted">
+                    {formatDeskType(row.deskType)}
+                  </td>
+                  <td className="px-4 py-3 text-ink-muted">
+                    {row.visibility === "platform" ? "Platform" : "User"}
+                  </td>
+                  {showOwner ? (
+                    <td className="px-4 py-3 text-ink-muted">
+                      {sharedTab
+                        ? (row.sharedByEmail ?? "—")
+                        : (row.ownerEmail ?? "—")}
+                    </td>
+                  ) : null}
+                  <td className="px-4 py-3 text-ink-muted">
+                    {folderLabel(foldersHolding(row.id, knownFolders))}
+                  </td>
+                  {sharedTab ? null : (
+                    <td className="px-4 py-3 text-ink-muted">
+                      {sharedLabel(row.sharedWith)}
+                    </td>
+                  )}
+                  <td className="px-4 py-3 tabular-nums text-ink-muted">
+                    <LocalTime at={row.updatedAtMs} mode="date" />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-3">
+                      {canEdit ? (
+                        <button
+                          type="button"
+                          onClick={() => setEditingTemplateId(row.id)}
+                          className={actionLink}
+                        >
+                          Edit
+                        </button>
+                      ) : null}
+                      {variant === "account" ? (
+                        <button
+                          type="button"
+                          onClick={() => setApplyingTemplateId(row.id)}
+                          className={actionLink}
+                        >
+                          Apply
+                        </button>
+                      ) : null}
+                      {sharedTab ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const data = new FormData();
+                            data.set("templateId", row.id);
+                            void unshareTemplateAction(data).then(flash);
+                          }}
+                          className="text-xs font-medium text-danger hover:text-danger"
+                        >
+                          Remove
+                        </button>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </LibraryTable>
       ) : null}
-      {tab === "sets" ? (
-        <div className="mt-6 space-y-3">
-          {filteredSets.length === 0 ? (
-            <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-              No sets yet. Create one from the Templates tab.
-            </p>
-          ) : (
-            filteredSets.map((row) => (
-              <SetCard
-                key={row.id}
-                set={row}
-                variant={variant}
-                templates={templates}
-                desks={desks}
-                onResult={flash}
-              />
-            ))
-          )}
-        </div>
+
+      {tab === "sets" || tab === "shared-sets" ? (
+        <>
+          <LibraryTable
+            empty={
+              tab === "sets"
+                ? "No folders yet. Create one below from templates of the same desk type."
+                : "Nothing shared with you yet. Another member can share a folder by entering your email."
+            }
+            rows={listedFolders.length}
+            columns={tableColumns}
+          >
+            <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+              <tr>
+                {sharedTab ? null : (
+                  <th className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allListedSelected}
+                      onChange={toggleAllListed}
+                      aria-label="Select all folders"
+                      className="size-4"
+                    />
+                  </th>
+                )}
+                <SortTh label="Name" k="name" sort={sort} onSort={onSort} />
+                <SortTh label="Desk" k="deskType" sort={sort} onSort={onSort} />
+                <SortTh label="Scope" k="visibility" sort={sort} onSort={onSort} />
+                {showOwner ? (
+                  <SortTh
+                    label={sharedTab ? "Shared by" : "Owner"}
+                    k={sharedTab ? "shared" : "owner"}
+                    sort={sort}
+                    onSort={onSort}
+                  />
+                ) : null}
+                <SortTh label="Templates" k="items" sort={sort} onSort={onSort} />
+                {sharedTab ? null : (
+                  <SortTh label="Shared with" k="shared" sort={sort} onSort={onSort} />
+                )}
+                <SortTh label="Updated" k="updated" sort={sort} onSort={onSort} />
+                <th className="px-4 py-3 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {listedFolders.map((row) => {
+                const canEdit =
+                  !sharedTab &&
+                  (variant === "admin" || row.visibility === "user");
+                return (
+                  <tr key={row.id} className="border-b border-line last:border-b-0">
+                    {sharedTab ? null : (
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(row.id)}
+                          onChange={() => toggleRow(row.id)}
+                          aria-label={`Select ${row.name}`}
+                          className="size-4"
+                        />
+                      </td>
+                    )}
+                    <td className="px-4 py-3 font-medium text-ink">{row.name}</td>
+                    <td className="px-4 py-3 text-ink-muted">
+                      {formatDeskType(row.deskType)}
+                    </td>
+                    <td className="px-4 py-3 text-ink-muted">
+                      {row.visibility === "platform" ? "Platform" : "User"}
+                    </td>
+                    {showOwner ? (
+                      <td className="px-4 py-3 text-ink-muted">
+                        {sharedTab
+                          ? (row.sharedByEmail ?? "—")
+                          : (row.ownerEmail ?? "—")}
+                      </td>
+                    ) : null}
+                    <td className="px-4 py-3 text-ink-muted">
+                      {row.items.length === 0
+                        ? "—"
+                        : row.items.map((item) => item.name).join(", ")}
+                    </td>
+                    {sharedTab ? null : (
+                      <td className="px-4 py-3 text-ink-muted">
+                        {sharedLabel(row.sharedWith)}
+                      </td>
+                    )}
+                    <td className="px-4 py-3 tabular-nums text-ink-muted">
+                      <LocalTime at={row.updatedAtMs} mode="date" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-3">
+                        {canEdit ? (
+                          <button
+                            type="button"
+                            onClick={() => setEditingFolderId(row.id)}
+                            className={actionLink}
+                          >
+                            Edit
+                          </button>
+                        ) : null}
+                        {variant === "account" ? (
+                          <button
+                            type="button"
+                            onClick={() => setApplyingFolderId(row.id)}
+                            className={actionLink}
+                          >
+                            Apply
+                          </button>
+                        ) : null}
+                        {sharedTab ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const data = new FormData();
+                              data.set("setId", row.id);
+                              void unshareSetAction(data).then(flash);
+                            }}
+                            className="text-xs font-medium text-danger hover:text-danger"
+                          >
+                            Remove
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </LibraryTable>
+          {tab === "sets" ? (
+            <div className="mt-4">
+              {variant === "account" ? (
+                <CreateSetCard
+                  templates={templates.filter(
+                    (row) =>
+                      row.visibility === "user" || row.visibility === "platform",
+                  )}
+                  visibility="user"
+                  onResult={flash}
+                />
+              ) : (
+                <CreateSetCard
+                  templates={templates.filter((row) => row.visibility === "platform")}
+                  visibility="platform"
+                  onResult={flash}
+                />
+              )}
+            </div>
+          ) : null}
+        </>
       ) : null}
-      {tab === "shared-templates" ? (
-        <div className="mt-6 space-y-3">
-          {filteredSharedTemplates.length === 0 ? (
-            <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-              Nothing shared with you yet. Another member can share a template
-              by entering your email.
-            </p>
-          ) : (
-            filteredSharedTemplates.map((row) => (
-              <TemplateCard
-                key={row.id}
-                template={row}
-                variant={variant}
-                desks={desks}
-                shared
-                onResult={flash}
-              />
-            ))
-          )}
-        </div>
+
+      {bulkFolderOpen ? (
+        <BulkFolderModal
+          folders={bulkFolders}
+          onClose={() => setBulkFolderOpen(false)}
+          onSubmit={async (folderId, newFolderName) => {
+            const ids = listedIds.filter((id) => selected.has(id));
+            const data = new FormData();
+            data.set("kind", "template");
+            data.set("op", "add-to-folder");
+            data.set("ids", ids.join(","));
+            if (folderId) {
+              data.set("folderId", folderId);
+            }
+            if (newFolderName) {
+              data.set("newFolderName", newFolderName);
+            }
+            const result = await bulkLibraryAction(data);
+            flash(result);
+            if (result.ok) {
+              setSelected(new Set());
+              setBulkFolderOpen(false);
+            }
+          }}
+        />
       ) : null}
-      {tab === "shared-sets" ? (
-        <div className="mt-6 space-y-3">
-          {filteredSharedSets.length === 0 ? (
-            <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-              No shared sets yet.
-            </p>
-          ) : (
-            filteredSharedSets.map((row) => (
-              <SetCard
-                key={row.id}
-                set={row}
-                variant={variant}
-                templates={templates}
-                desks={desks}
-                shared
-                onResult={flash}
-              />
-            ))
-          )}
-        </div>
+      {editingTemplate ? (
+        <TemplateEditModal
+          template={editingTemplate}
+          variant={variant}
+          folders={assignableFolders(editingTemplate, sets, variant)}
+          knownFolders={knownFolders}
+          onClose={() => setEditingTemplateId(null)}
+          onShare={flash}
+          onResult={onEditSaved}
+        />
+      ) : null}
+      {editingFolder ? (
+        <FolderEditModal
+          set={editingFolder}
+          templates={templates}
+          onClose={() => setEditingFolderId(null)}
+          onShare={flash}
+          onResult={onEditSaved}
+        />
+      ) : null}
+      {applyingTemplate ? (
+        <ApplyTemplateModal
+          template={applyingTemplate}
+          desks={desks}
+          onClose={() => setApplyingTemplateId(null)}
+          onResult={(result) => {
+            flash(result);
+            if (result.ok) {
+              setApplyingTemplateId(null);
+            }
+          }}
+        />
+      ) : null}
+      {applyingFolder ? (
+        <ApplyFolderModal
+          set={applyingFolder}
+          desks={desks}
+          onClose={() => setApplyingFolderId(null)}
+          onResult={(result) => {
+            flash(result);
+            if (result.ok) {
+              setApplyingFolderId(null);
+            }
+          }}
+        />
       ) : null}
     </div>
+  );
+}
+
+function LibraryTable({
+  empty,
+  rows,
+  columns,
+  children,
+}: {
+  empty: string;
+  rows: number;
+  columns: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
+      <table className="w-full min-w-[48rem] text-left text-sm">
+        {children}
+        {rows === 0 ? (
+          <tbody>
+            <tr>
+              <td colSpan={columns} className="px-4 py-6 text-sm text-ink-muted">
+                {empty}
+              </td>
+            </tr>
+          </tbody>
+        ) : null}
+      </table>
+    </div>
+  );
+}
+
+function SortTh({
+  label,
+  k,
+  sort,
+  onSort,
+}: {
+  label: string;
+  k: SortKey;
+  sort: SortState;
+  onSort: (key: SortKey) => void;
+}) {
+  const active = sort.key === k;
+  return (
+    <th className="px-4 py-3 font-medium">
+      <button
+        type="button"
+        onClick={() => onSort(k)}
+        className={active ? "text-ink" : "text-ink-faint hover:text-ink"}
+      >
+        {label}
+        {active ? (sort.dir === "asc" ? " ↑" : " ↓") : ""}
+      </button>
+    </th>
+  );
+}
+
+function TabButton({
+  selected,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+        selected
+          ? "border-accent text-ink"
+          : "border-transparent text-ink-muted hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -411,65 +1175,131 @@ function ShareControls({
   );
 }
 
-function TabButton({
-  selected,
-  onClick,
-  children,
+function BulkFolderModal({
+  folders,
+  onClose,
+  onSubmit,
 }: {
-  selected: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
+  folders: AutomationTemplateSet[];
+  onClose: () => void;
+  onSubmit: (folderId: string, newFolderName: string) => Promise<void>;
 }) {
+  const [folderId, setFolderId] = useState(folders[0]?.id ?? "");
+  const [createFolder, setCreateFolder] = useState(folders.length === 0);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [pending, setPending] = useState(false);
+
+  async function submit() {
+    setPending(true);
+    await onSubmit(
+      createFolder ? "" : folderId,
+      createFolder ? newFolderName.trim() : "",
+    );
+    setPending(false);
+  }
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`-mb-px border-b-2 px-3 py-2 text-sm ${
-        selected
-          ? "border-accent text-ink"
-          : "border-transparent text-ink-muted hover:text-ink"
-      }`}
-    >
-      {children}
-    </button>
+    <Modal title="Add to folder" onClose={onClose}>
+      <p className="mt-1 text-sm text-ink-muted">
+        Adds the selected templates to one folder. Mismatched desk types are
+        skipped.
+      </p>
+      {folders.length > 0 && !createFolder ? (
+        <label className="mt-3 block text-xs text-ink-muted">
+          Folder
+          <select
+            value={folderId}
+            onChange={(event) => setFolderId(event.target.value)}
+            className={fieldClass}
+          >
+            <option value="">Choose a folder</option>
+            {folders.map((folder) => (
+              <option key={folder.id} value={folder.id}>
+                {folder.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <label className="mt-3 flex items-start gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={createFolder}
+          onChange={(event) => setCreateFolder(event.target.checked)}
+          className="mt-1 size-4"
+        />
+        Create a new folder
+      </label>
+      {createFolder ? (
+        <label className="mt-2 block text-xs text-ink-muted">
+          Folder name
+          <input
+            value={newFolderName}
+            onChange={(event) => setNewFolderName(event.target.value)}
+            maxLength={80}
+            className={fieldClass}
+          />
+        </label>
+      ) : null}
+      <div className="mt-4 flex justify-end gap-2">
+        <button type="button" onClick={onClose} className={secondaryBtn}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          disabled={
+            pending ||
+            (createFolder ? !newFolderName.trim() : !folderId)
+          }
+          onClick={() => void submit()}
+          className={primaryBtn}
+        >
+          {pending ? "Adding…" : "Add"}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
-function TemplateCard({
+function TemplateEditModal({
   template,
   variant,
-  desks,
-  shared = false,
+  folders,
+  knownFolders,
+  onClose,
+  onShare,
   onResult,
 }: {
   template: AutomationTemplate;
   variant: "account" | "admin";
-  desks: DeskOption[];
-  shared?: boolean;
+  folders: AutomationTemplateSet[];
+  knownFolders: AutomationTemplateSet[];
+  onClose: () => void;
+  onShare: (result: TemplateActionResult) => void;
   onResult: (result: TemplateActionResult) => void;
 }) {
+  const held = foldersHolding(template.id, knownFolders).map((folder) => folder.id);
   const [name, setName] = useState(template.name);
   const [description, setDescription] = useState(template.description ?? "");
-  const [accountId, setAccountId] = useState(
-    desks.find((desk) => desk.deskType === template.deskType)?.id ?? "",
-  );
-  const [symbol, setSymbol] = useState(
-    template.recipe.kind === "cash_and_carry" ? "" : template.recipe.symbol,
-  );
+  const [folderIds, setFolderIds] = useState(held);
+  const [createFolder, setCreateFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
   const [publishName, setPublishName] = useState(template.name);
-  const matchingDesks = desks.filter((desk) => desk.deskType === template.deskType);
-  const canEdit =
-    !shared && (variant === "admin" || template.visibility === "user");
-  const platformReadOnly =
-    shared || (variant === "account" && template.visibility === "platform");
-  const canShare = !shared && template.visibility === "user";
+  const [pending, setPending] = useState(false);
+  const canShare = template.visibility === "user";
 
-  async function saveMeta() {
+  async function save() {
+    setPending(true);
     const data = new FormData();
     data.set("templateId", template.id);
     data.set("templateName", name);
     data.set("templateDescription", description);
+    data.set("folderIds", folderIds.join(","));
+    if (createFolder && newFolderName.trim()) {
+      data.set("newFolderName", newFolderName.trim());
+    }
     onResult(await updateTemplateMetaAction(data));
+    setPending(false);
   }
 
   async function remove() {
@@ -481,17 +1311,6 @@ function TemplateCard({
     onResult(await deleteTemplateAction(data));
   }
 
-  async function apply() {
-    const data = new FormData();
-    data.set("templateId", template.id);
-    data.set("accountId", accountId);
-    if (symbol.trim()) {
-      data.set("symbol", symbol.trim().toUpperCase());
-    }
-    const result = await applyTemplateAction(data);
-    onResult(result);
-  }
-
   async function publish() {
     const data = new FormData();
     data.set("templateId", template.id);
@@ -500,79 +1319,89 @@ function TemplateCard({
     onResult(await publishTemplateCopyAction(data));
   }
 
-  async function removeShare() {
-    const data = new FormData();
-    data.set("templateId", template.id);
-    onResult(await unshareTemplateAction(data));
-  }
-
   return (
-    <article className="rounded-card border border-line bg-surface p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-          {formatDeskType(template.deskType)} ·{" "}
-          {template.visibility === "platform" ? "Platform" : "User"}
-          {template.ownerEmail ? ` · ${template.ownerEmail}` : ""}
-          {template.sharedByEmail
-            ? ` · Shared by ${template.sharedByEmail}`
-            : ""}
-          {template.sharedAtMs
-            ? ` · ${new Date(template.sharedAtMs).toISOString().slice(0, 10)}`
-            : ""}
-        </p>
-        <p className="text-xs text-ink-muted">{recipePreview(template.recipe)}</p>
-      </div>
-      {platformReadOnly ? (
-        <p className="mt-2 text-sm font-semibold text-ink">{template.name}</p>
-      ) : (
+    <Modal title="Edit template" onClose={onClose}>
+      <p className="mt-1 text-xs text-ink-muted">
+        {formatDeskType(template.deskType)} ·{" "}
+        {template.visibility === "platform" ? "Platform" : "User"}
+        {template.ownerEmail ? ` · ${template.ownerEmail}` : ""}
+      </p>
+      <p className="mt-2 text-xs text-ink-faint">{recipePreview(template.recipe)}</p>
+      <label className="mt-4 block text-xs text-ink-muted">
+        Name
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
-          className={`${fieldClass} font-semibold`}
+          maxLength={80}
+          className={fieldClass}
         />
-      )}
-      {template.description || !platformReadOnly ? (
-        platformReadOnly ? (
-          <p className="mt-2 text-sm text-ink-muted">{template.description}</p>
+      </label>
+      <label className="mt-3 block text-xs text-ink-muted">
+        Description
+        <textarea
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          rows={2}
+          className={fieldClass}
+        />
+      </label>
+      <fieldset className="mt-3">
+        <legend className="text-xs text-ink-muted">Folders</legend>
+        {folders.length === 0 ? (
+          <p className="mt-1 text-sm text-ink-muted">
+            No folders for this desk type yet. Create one below.
+          </p>
         ) : (
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={2}
+          <div className="mt-1 space-y-1">
+            {folders.map((folder) => (
+              <label key={folder.id} className="flex items-center gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={folderIds.includes(folder.id)}
+                  onChange={(event) => {
+                    setFolderIds((current) =>
+                      event.target.checked
+                        ? [...current, folder.id]
+                        : current.filter((id) => id !== folder.id),
+                    );
+                  }}
+                />
+                {folder.name}
+                {folder.visibility === "platform" ? (
+                  <span className="text-xs text-ink-faint">Platform</span>
+                ) : null}
+              </label>
+            ))}
+          </div>
+        )}
+        <label className="mt-2 flex items-start gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            checked={createFolder}
+            onChange={(event) => setCreateFolder(event.target.checked)}
+            className="mt-1 size-4"
+          />
+          Create a new folder
+        </label>
+        {createFolder ? (
+          <input
+            value={newFolderName}
+            onChange={(event) => setNewFolderName(event.target.value)}
+            maxLength={80}
+            placeholder="Folder name"
             className={fieldClass}
           />
-        )
+        ) : null}
+      </fieldset>
+      {canShare ? (
+        <ShareControls
+          kind="template"
+          id={template.id}
+          peers={template.sharedWith}
+          onResult={onShare}
+        />
       ) : null}
-      {variant === "account" ? (
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <label className="text-xs text-ink-muted">
-            Apply to desk
-            <select
-              value={accountId}
-              onChange={(event) => setAccountId(event.target.value)}
-              className={fieldClass}
-            >
-              <option value="">Choose a desk</option>
-              {matchingDesks.map((desk) => (
-                <option key={desk.id} value={desk.id}>
-                  {desk.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          {template.deskType === "dca" ? (
-            <label className="text-xs text-ink-muted">
-              Contract
-              <input
-                value={symbol}
-                onChange={(event) => setSymbol(event.target.value)}
-                className={fieldClass}
-              />
-            </label>
-          ) : null}
-        </div>
-      ) : null}
-      {variant === "admin" && !shared && template.visibility === "user" ? (
+      {variant === "admin" && template.visibility === "user" ? (
         <label className="mt-3 block text-xs text-ink-muted">
           Publish copy as
           <input
@@ -582,71 +1411,44 @@ function TemplateCard({
           />
         </label>
       ) : null}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {canEdit && !platformReadOnly ? (
-          <button type="button" onClick={() => void saveMeta()} className={primaryBtn}>
-            Save
-          </button>
-        ) : null}
-        {variant === "account" ? (
-          <button
-            type="button"
-            disabled={!accountId}
-            onClick={() => void apply()}
-            className={primaryBtn}
-          >
-            Apply
-          </button>
-        ) : null}
-        {variant === "admin" && !shared && template.visibility === "user" ? (
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
+        <button type="button" onClick={onClose} className={secondaryBtn}>
+          Cancel
+        </button>
+        {variant === "admin" && template.visibility === "user" ? (
           <button type="button" onClick={() => void publish()} className={secondaryBtn}>
             Publish copy to platform
           </button>
         ) : null}
-        {canEdit ? (
-          <button type="button" onClick={() => void remove()} className={dangerBtn}>
-            Delete
-          </button>
-        ) : null}
-        {shared ? (
-          <button
-            type="button"
-            onClick={() => void removeShare()}
-            className={dangerBtn}
-          >
-            Remove
-          </button>
-        ) : null}
+        <button type="button" onClick={() => void remove()} className={dangerBtn}>
+          Delete
+        </button>
+        <button
+          type="button"
+          disabled={pending || (createFolder && !newFolderName.trim())}
+          onClick={() => void save()}
+          className={primaryBtn}
+        >
+          {pending ? "Saving…" : "Save"}
+        </button>
       </div>
-      {canShare ? (
-        <ShareControls
-          kind="template"
-          id={template.id}
-          peers={template.sharedWith}
-          onResult={onResult}
-        />
-      ) : null}
-    </article>
+    </Modal>
   );
 }
 
-function SetCard({
+function FolderEditModal({
   set,
-  variant,
   templates,
-  desks,
-  shared = false,
+  onClose,
+  onShare,
   onResult,
 }: {
   set: AutomationTemplateSet;
-  variant: "account" | "admin";
   templates: AutomationTemplate[];
-  desks: DeskOption[];
-  shared?: boolean;
+  onClose: () => void;
+  onShare: (result: TemplateActionResult) => void;
   onResult: (result: TemplateActionResult) => void;
 }) {
-  const [name, setName] = useState(set.name);
-  const [description, setDescription] = useState(set.description ?? "");
   const allowed = templates.filter((row) => {
     if (row.deskType !== set.deskType) {
       return false;
@@ -654,29 +1456,27 @@ function SetCard({
     if (set.visibility === "platform") {
       return row.visibility === "platform";
     }
-    return row.visibility === "platform" || row.visibility === "user";
+    return row.visibility === "platform" || row.userId === set.userId;
   });
+  const [name, setName] = useState(set.name);
+  const [description, setDescription] = useState(set.description ?? "");
   const [ids, setIds] = useState(set.items.map((item) => item.templateId));
-  const [accountId, setAccountId] = useState(
-    desks.find((desk) => desk.deskType === set.deskType)?.id ?? "",
-  );
-  const matchingDesks = desks.filter((desk) => desk.deskType === set.deskType);
-  const platformReadOnly =
-    shared || (variant === "account" && set.visibility === "platform");
-  const canEdit = !shared && (variant === "admin" || set.visibility === "user");
-  const canShare = !shared && set.visibility === "user";
+  const [pending, setPending] = useState(false);
+  const canShare = set.visibility === "user";
 
   async function save() {
+    setPending(true);
     const data = new FormData();
     data.set("setId", set.id);
     data.set("templateName", name);
     data.set("templateDescription", description);
     data.set("templateIds", ids.join(","));
     onResult(await updateTemplateSetAction(data));
+    setPending(false);
   }
 
   async function remove() {
-    if (!window.confirm(`Delete set “${set.name}”?`)) {
+    if (!window.confirm(`Delete folder “${set.name}”?`)) {
       return;
     }
     const data = new FormData();
@@ -684,7 +1484,179 @@ function SetCard({
     onResult(await deleteTemplateSetAction(data));
   }
 
+  return (
+    <Modal title="Edit folder" onClose={onClose}>
+      <p className="mt-1 text-xs text-ink-muted">
+        {formatDeskType(set.deskType)} ·{" "}
+        {set.visibility === "platform" ? "Platform" : "User"}
+        {set.ownerEmail ? ` · ${set.ownerEmail}` : ""}
+      </p>
+      <label className="mt-4 block text-xs text-ink-muted">
+        Name
+        <input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          maxLength={80}
+          className={fieldClass}
+        />
+      </label>
+      <label className="mt-3 block text-xs text-ink-muted">
+        Description
+        <textarea
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          rows={2}
+          className={fieldClass}
+        />
+      </label>
+      <fieldset className="mt-3">
+        <legend className="text-xs text-ink-muted">Templates</legend>
+        {allowed.length === 0 ? (
+          <p className="mt-1 text-sm text-ink-muted">No matching templates.</p>
+        ) : (
+          <div className="mt-1 space-y-1">
+            {allowed.map((row) => (
+              <label key={row.id} className="flex items-center gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={ids.includes(row.id)}
+                  onChange={(event) => {
+                    setIds((current) =>
+                      event.target.checked
+                        ? [...current, row.id]
+                        : current.filter((id) => id !== row.id),
+                    );
+                  }}
+                />
+                {row.name}
+                {row.visibility === "platform" ? (
+                  <span className="text-xs text-ink-faint">Platform</span>
+                ) : null}
+              </label>
+            ))}
+          </div>
+        )}
+      </fieldset>
+      {canShare ? (
+        <ShareControls
+          kind="set"
+          id={set.id}
+          peers={set.sharedWith}
+          onResult={onShare}
+        />
+      ) : null}
+      <div className="mt-4 flex flex-wrap justify-end gap-2">
+        <button type="button" onClick={onClose} className={secondaryBtn}>
+          Cancel
+        </button>
+        <button type="button" onClick={() => void remove()} className={dangerBtn}>
+          Delete
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => void save()}
+          className={primaryBtn}
+        >
+          {pending ? "Saving…" : "Save"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function ApplyTemplateModal({
+  template,
+  desks,
+  onClose,
+  onResult,
+}: {
+  template: AutomationTemplate;
+  desks: DeskOption[];
+  onClose: () => void;
+  onResult: (result: TemplateActionResult) => void;
+}) {
+  const matching = desks.filter((desk) => desk.deskType === template.deskType);
+  const [accountId, setAccountId] = useState(matching[0]?.id ?? "");
+  const [symbol, setSymbol] = useState(
+    template.recipe.kind === "cash_and_carry" ? "" : template.recipe.symbol,
+  );
+  const [pending, setPending] = useState(false);
+
   async function apply() {
+    setPending(true);
+    const data = new FormData();
+    data.set("templateId", template.id);
+    data.set("accountId", accountId);
+    if (symbol.trim()) {
+      data.set("symbol", symbol.trim().toUpperCase());
+    }
+    onResult(await applyTemplateAction(data));
+    setPending(false);
+  }
+
+  return (
+    <Modal title="Apply template" onClose={onClose}>
+      <p className="mt-1 text-sm text-ink-muted">{template.name}</p>
+      <label className="mt-3 block text-xs text-ink-muted">
+        Desk
+        <select
+          value={accountId}
+          onChange={(event) => setAccountId(event.target.value)}
+          className={fieldClass}
+        >
+          <option value="">Choose a desk</option>
+          {matching.map((desk) => (
+            <option key={desk.id} value={desk.id}>
+              {desk.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {template.deskType === "dca" ? (
+        <label className="mt-3 block text-xs text-ink-muted">
+          Contract
+          <input
+            value={symbol}
+            onChange={(event) => setSymbol(event.target.value)}
+            className={fieldClass}
+          />
+        </label>
+      ) : null}
+      <div className="mt-4 flex justify-end gap-2">
+        <button type="button" onClick={onClose} className={secondaryBtn}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          disabled={!accountId || pending}
+          onClick={() => void apply()}
+          className={primaryBtn}
+        >
+          {pending ? "Applying…" : "Apply"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function ApplyFolderModal({
+  set,
+  desks,
+  onClose,
+  onResult,
+}: {
+  set: AutomationTemplateSet;
+  desks: DeskOption[];
+  onClose: () => void;
+  onResult: (result: TemplateActionResult) => void;
+}) {
+  const matching = desks.filter((desk) => desk.deskType === set.deskType);
+  const [accountId, setAccountId] = useState(matching[0]?.id ?? "");
+  const [pending, setPending] = useState(false);
+
+  async function apply() {
+    setPending(true);
     const data = new FormData();
     data.set("setId", set.id);
     data.set("accountId", accountId);
@@ -693,128 +1665,46 @@ function SetCard({
       data.set(`i${index}_templateId`, item.templateId);
     });
     onResult(await applyTemplateSetAction(data));
-  }
-
-  async function removeShare() {
-    const data = new FormData();
-    data.set("setId", set.id);
-    onResult(await unshareSetAction(data));
+    setPending(false);
   }
 
   return (
-    <article className="rounded-card border border-line bg-surface p-4">
-      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-        {formatDeskType(set.deskType)} ·{" "}
-        {set.visibility === "platform" ? "Platform" : "User"}
-        {set.ownerEmail ? ` · ${set.ownerEmail}` : ""}
-        {set.sharedByEmail ? ` · Shared by ${set.sharedByEmail}` : ""}
-        {set.sharedAtMs
-          ? ` · ${new Date(set.sharedAtMs).toISOString().slice(0, 10)}`
-          : ""}
-      </p>
-      {platformReadOnly ? (
-        <p className="mt-2 text-sm font-semibold text-ink">{set.name}</p>
-      ) : (
-        <input
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          className={`${fieldClass} font-semibold`}
-        />
-      )}
-      {platformReadOnly ? (
-        set.description ? (
-          <p className="mt-2 text-sm text-ink-muted">{set.description}</p>
-        ) : null
-      ) : (
-        <textarea
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          rows={2}
-          className={fieldClass}
-        />
-      )}
+    <Modal title="Apply folder" onClose={onClose}>
+      <p className="mt-1 text-sm text-ink-muted">{set.name}</p>
       <ul className="mt-2 space-y-1 text-sm text-ink-muted">
         {set.items.map((item) => (
-          <li key={item.templateId}>{item.preview}</li>
+          <li key={item.templateId}>{item.name}</li>
         ))}
       </ul>
-      {canEdit && !platformReadOnly ? (
-        <div className="mt-3 space-y-1">
-          {allowed.map((row) => (
-            <label key={row.id} className="flex items-center gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                checked={ids.includes(row.id)}
-                onChange={(event) => {
-                  setIds((current) =>
-                    event.target.checked
-                      ? [...current, row.id]
-                      : current.filter((id) => id !== row.id),
-                  );
-                }}
-              />
-              {row.name}
-            </label>
+      <label className="mt-3 block text-xs text-ink-muted">
+        Desk
+        <select
+          value={accountId}
+          onChange={(event) => setAccountId(event.target.value)}
+          className={fieldClass}
+        >
+          <option value="">Choose a desk</option>
+          {matching.map((desk) => (
+            <option key={desk.id} value={desk.id}>
+              {desk.name}
+            </option>
           ))}
-        </div>
-      ) : null}
-      {variant === "account" ? (
-        <label className="mt-3 block text-xs text-ink-muted">
-          Apply to desk
-          <select
-            value={accountId}
-            onChange={(event) => setAccountId(event.target.value)}
-            className={fieldClass}
-          >
-            <option value="">Choose a desk</option>
-            {matchingDesks.map((desk) => (
-              <option key={desk.id} value={desk.id}>
-                {desk.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {canEdit && !platformReadOnly ? (
-          <button type="button" onClick={() => void save()} className={primaryBtn}>
-            Save
-          </button>
-        ) : null}
-        {variant === "account" ? (
-          <button
-            type="button"
-            disabled={!accountId}
-            onClick={() => void apply()}
-            className={primaryBtn}
-          >
-            Apply
-          </button>
-        ) : null}
-        {canEdit ? (
-          <button type="button" onClick={() => void remove()} className={dangerBtn}>
-            Delete
-          </button>
-        ) : null}
-        {shared ? (
-          <button
-            type="button"
-            onClick={() => void removeShare()}
-            className={dangerBtn}
-          >
-            Remove
-          </button>
-        ) : null}
+        </select>
+      </label>
+      <div className="mt-4 flex justify-end gap-2">
+        <button type="button" onClick={onClose} className={secondaryBtn}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          disabled={!accountId || pending}
+          onClick={() => void apply()}
+          className={primaryBtn}
+        >
+          {pending ? "Applying…" : "Apply"}
+        </button>
       </div>
-      {canShare ? (
-        <ShareControls
-          kind="set"
-          id={set.id}
-          peers={set.sharedWith}
-          onResult={onResult}
-        />
-      ) : null}
-    </article>
+    </Modal>
   );
 }
 
@@ -849,13 +1739,23 @@ function CreateSetCard({
   }
 
   if (options.length === 0 && deskTypes.length === 0) {
-    return null;
+    return (
+      <article className="rounded-card border border-dashed border-line bg-canvas p-4">
+        <p className="text-sm font-semibold text-ink">
+          {visibility === "platform" ? "New platform folder" : "New folder"}
+        </p>
+        <p className="mt-2 text-sm text-ink-muted">
+          Save a template first, then group matching templates into a folder
+          here.
+        </p>
+      </article>
+    );
   }
 
   return (
     <article className="rounded-card border border-dashed border-line bg-canvas p-4">
       <p className="text-sm font-semibold text-ink">
-        {visibility === "platform" ? "New platform set" : "New set"}
+        {visibility === "platform" ? "New platform folder" : "New folder"}
       </p>
       <label className="mt-2 block text-xs text-ink-muted">
         Name
@@ -911,7 +1811,7 @@ function CreateSetCard({
         onClick={() => void create()}
         className={`${primaryBtn} mt-3`}
       >
-        Create set
+        Create folder
       </button>
     </article>
   );

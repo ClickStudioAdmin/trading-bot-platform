@@ -3,6 +3,7 @@ import {
   deskHomePath,
   deskUsesCashAndCarry,
   formatAccountMode,
+  formatDeskType,
   navLinksWithDesk,
   pathWithDesk,
 } from "@/lib/accounts/model";
@@ -68,6 +69,10 @@ export default async function CashAndCarryLayout({
   return (
     <div>
       <StrategySubnav
+        title={session?.account.name ?? "Cash and Carry"}
+        typeLabel={
+          session ? formatDeskType("cash_and_carry") : undefined
+        }
         primaryLinks={
           deskId
             ? navLinksWithDesk(CASH_AND_CARRY_PRIMARY_LINKS, deskId)

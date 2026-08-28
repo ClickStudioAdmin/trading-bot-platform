@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CreateAccountForm } from "@/components/create-account-form";
-import { switchTradingAccount } from "@/lib/accounts/actions";
+import { rememberTradingAccount } from "@/lib/accounts/actions";
 import {
   deskHomePath,
   formatAccountMode,
@@ -94,38 +94,29 @@ export function DeskSwitcher({
             {desks.map((desk) => {
               const meta = `${formatDeskType(desk.deskType)} · ${formatAccountMode(desk.mode)}`;
               const currentDesk = desk.id === current.id;
-              const body = (
-                <>
+              return (
+                <Link
+                  key={desk.id}
+                  href={deskHomePath(desk.deskType, desk.id)}
+                  aria-current={currentDesk ? "true" : undefined}
+                  onClick={() => {
+                    if (!currentDesk) {
+                      void rememberTradingAccount(desk.id);
+                    }
+                  }}
+                  className={
+                    currentDesk
+                      ? "block rounded-control bg-surface-raised px-3 py-2.5 hover:bg-line"
+                      : "block rounded-control px-3 py-2.5 text-ink-muted hover:bg-surface-raised hover:text-ink"
+                  }
+                >
                   <span className="block truncate text-sm text-ink">
                     {desk.name}
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-ink-faint">
                     {meta}
                   </span>
-                </>
-              );
-              if (currentDesk) {
-                return (
-                  <Link
-                    key={desk.id}
-                    href={deskHomePath(desk.deskType, desk.id)}
-                    aria-current="true"
-                    className="block rounded-control bg-surface-raised px-3 py-2.5 hover:bg-line"
-                  >
-                    {body}
-                  </Link>
-                );
-              }
-              return (
-                <form key={desk.id} action={switchTradingAccount}>
-                  <input type="hidden" name="accountId" value={desk.id} />
-                  <button
-                    type="submit"
-                    className="block w-full rounded-control px-3 py-2.5 text-left text-ink-muted hover:bg-surface-raised hover:text-ink"
-                  >
-                    {body}
-                  </button>
-                </form>
+                </Link>
               );
             })}
           </div>
@@ -147,6 +138,7 @@ export function DeskSwitcher({
       </details>
       {creating ? (
         <CreateDeskDialog
+          desks={desks}
           connections={connections}
           sharedConnectionIds={sharedConnectionIds}
           onClose={() => setCreating(false)}
@@ -157,10 +149,12 @@ export function DeskSwitcher({
 }
 
 function CreateDeskDialog({
+  desks,
   connections,
   sharedConnectionIds,
   onClose,
 }: {
+  desks: TradingAccount[];
   connections: ExchangeConnection[];
   sharedConnectionIds: string[];
   onClose: () => void;
@@ -216,6 +210,7 @@ function CreateDeskDialog({
         <CreateAccountForm
           connections={connections}
           sharedConnectionIds={sharedConnectionIds}
+          existingNames={desks.map((desk) => desk.name)}
           embedded
           onCancel={onClose}
         />

@@ -28,6 +28,11 @@ import {
   deskAllowsPerpsRecipes,
   deskManualBuySellBlockReason,
   parseAccountName,
+  deskNameTaken,
+  validateNewDeskName,
+  otherDeskNames,
+  parseDeskNameChange,
+  DESK_NAME_TAKEN,
   parseAccountMode,
   parseDeskType,
   parseDeskTypeChoice,
@@ -59,6 +64,38 @@ if (named.ok) {
 }
 assert.equal(parseAccountName("").ok, false);
 assert.equal(parseAccountName("x".repeat(41)).ok, false);
+assert.equal(deskNameTaken("Paper", ["paper", "Live"]), true);
+assert.equal(deskNameTaken("  PAPER  ", ["Paper"]), true);
+assert.equal(deskNameTaken("New", ["Paper"]), false);
+assert.equal(deskNameTaken("", ["Paper"]), false);
+const taken = validateNewDeskName("Paper", ["paper"]);
+assert.equal(taken.ok, false);
+if (!taken.ok) {
+  assert.equal(taken.error, DESK_NAME_TAKEN);
+}
+assert.equal(validateNewDeskName("Fresh", ["Paper"]).ok, true);
+assert.deepEqual(
+  otherDeskNames(
+    [
+      { id: "a", name: "DCA" },
+      { id: "b", name: "Paper" },
+    ],
+    "a",
+  ),
+  ["Paper"],
+);
+const sameName = parseDeskNameChange("DCA", ["Paper"], "DCA");
+assert.equal(sameName.ok, true);
+if (sameName.ok) {
+  assert.equal(sameName.changed, false);
+}
+const renamed = parseDeskNameChange("Fresh", ["Paper"], "DCA");
+assert.equal(renamed.ok, true);
+if (renamed.ok) {
+  assert.equal(renamed.changed, true);
+  assert.equal(renamed.name, "Fresh");
+}
+assert.equal(parseDeskNameChange("paper", ["Paper"], "DCA").ok, false);
 
 assert.equal(parseDeskType("perps"), "perps");
 assert.equal(parseDeskType("signal_follower"), "signal_follower");

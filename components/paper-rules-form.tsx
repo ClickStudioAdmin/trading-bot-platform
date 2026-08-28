@@ -20,6 +20,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import { paperFormToSnapshotSource } from "@/lib/templates/recipe";
+import type { AppliedDeskItem } from "@/lib/templates/apply";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 
 export function AutomationsDesk({
@@ -112,6 +113,26 @@ export function PaperRulesForm({
   const empty = layers.length === 0;
   const cloneSources = layers.filter((layer) => layer.id);
 
+  function appendApplied(items: AppliedDeskItem[]) {
+    const nextLayers = items
+      .filter(
+        (
+          item,
+        ): item is Extract<AppliedDeskItem, { deskType: "cash_and_carry" }> =>
+          item.deskType === "cash_and_carry",
+      )
+      .map((item) => item.layer);
+    if (nextLayers.length === 0) {
+      return;
+    }
+    setLayers((current) => {
+      const seen = new Set(current.map((row) => row.id).filter(Boolean));
+      const fresh = nextLayers.filter((row) => !row.id || !seen.has(row.id));
+      return fresh.length === 0 ? current : [...current, ...fresh];
+    });
+    onHasSetsChange?.(true);
+  }
+
   function removeLayer(key: string, id: string) {
     const next = layers.filter((item) => item.key !== key);
     setLayers(next);
@@ -154,6 +175,7 @@ export function PaperRulesForm({
               accountReduceOnly={reduceOnly}
               isAdmin={isAdmin}
               onRemove={() => removeLayer(layer.key, layer.id)}
+              folders={sets}
             />
           );
         })
@@ -178,6 +200,7 @@ export function PaperRulesForm({
             accountId={accountId}
             templates={templates}
             sets={sets}
+            onApplied={appendApplied}
           />
         ) : null}
         {cloneSources.length > 0 ? (
@@ -238,6 +261,7 @@ function RuleRow({
   accountReduceOnly,
   isAdmin,
   onRemove,
+  folders = [],
 }: {
   index: number;
   layer: PaperLayerFormValues;
@@ -246,6 +270,7 @@ function RuleRow({
   accountReduceOnly: boolean;
   isAdmin: boolean;
   onRemove: () => void;
+  folders?: AutomationTemplateSet[];
 }) {
   const prefix = `r${index}_`;
   const [sizeType, setSizeType] = useState(layer.sizeType);
@@ -420,6 +445,7 @@ function RuleRow({
           isAdmin={isAdmin}
           defaultName={layer.name}
           kind="cash_and_carry"
+          folders={folders}
           buildForm={() =>
             paperFormToSnapshotSource({
               ...layer,

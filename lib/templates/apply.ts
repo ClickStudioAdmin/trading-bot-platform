@@ -3,14 +3,18 @@ import type { TradingAccount } from "@/lib/accounts/model";
 import {
   dcaConfigMaxOrderError,
   dcaPlaybookConflict,
+  type DcaPlaybook,
   type DcaPlaybookConfig,
 } from "@/lib/dca/playbook";
 import { lastPriceFor } from "@/lib/dca/run";
 import { saveDcaPlaybook, listDcaPlaybooksForAccount } from "@/lib/dca/store";
-import { paperLayerToRow } from "@/lib/engine/rules";
+import { paperLayerToRow, paperConfigToFormValues, parsePaperRulesRow, type PaperLayerFormValues } from "@/lib/engine/rules";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import {
   futuresAutomationToRow,
+  futuresRuleToForm,
+  parseFuturesAutomationRow,
+  type FuturesAutomationFormValues,
   type FuturesAutomationRule,
 } from "@/lib/futures/automation";
 import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
@@ -32,6 +36,11 @@ export type ApplyItemInput = {
   webhookId?: string | null;
 };
 
+export type AppliedDeskItem =
+  | { deskType: "dca"; playbook: DcaPlaybook }
+  | { deskType: "perps"; rule: FuturesAutomationFormValues }
+  | { deskType: "cash_and_carry"; layer: PaperLayerFormValues };
+
 export type ApplyItemResult = {
   templateId: string;
   name: string;
@@ -41,6 +50,7 @@ export type ApplyItemResult = {
   code?: "symbol_taken" | "desk_type" | "forbidden";
   notes: string[];
   symbol?: string;
+  applied?: AppliedDeskItem;
 };
 
 async function ownedDesk(
@@ -165,6 +175,7 @@ async function applyDcaTemplate(input: {
     ok: true,
     notes: built.notes,
     symbol: built.config.symbol,
+    applied: { deskType: "dca", playbook: saved.playbook },
   };
 }
 
@@ -219,15 +230,17 @@ async function applyPerpsTemplate(input: {
       notes: [],
     };
   }
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("futures_automation_rules")
-    .insert(futuresAutomationToRow(input.userId, input.accountId, rule));
-  if (error) {
+    .insert(futuresAutomationToRow(input.userId, input.accountId, rule))
+    .select("*")
+    .single();
+  if (error || !data) {
     return {
       templateId: input.template.id,
       name: input.template.name,
       ok: false,
-      error: error.message,
+      error: error?.message ?? "Could not apply the template.",
       notes: built.notes,
     };
   }
@@ -236,6 +249,10 @@ async function applyPerpsTemplate(input: {
     name: input.template.name,
     ok: true,
     notes: built.notes,
+    applied: {
+      deskType: "perps",
+      rule: futuresRuleToForm(parseFuturesAutomationRow(data as Record<string, unknown>)),
+    },
   };
 }
 
@@ -292,15 +309,34 @@ async function applyPaperTemplate(input: {
     id: null,
     sortOrder: nextOrder,
   };
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("paper_rules")
-    .insert(paperLayerToRow(input.userId, layer, input.accountId));
-  if (error) {
+    .insert(paperLayerToRow(input.userId, layer, input.accountId))
+    .select("*")
+    .single();
+  if (error || !data) {
     return {
       templateId: input.template.id,
       name: input.template.name,
       ok: false,
-      error: error.message,
+      error: error?.message ?? "Could not apply the template.",
+      notes: built.notes,
+    };
+  }
+  const savedLayer = parsePaperRulesRow(
+    data as Record<string, unknown>,
+    nextOrder,
+  );
+  const formLayer = paperConfigToFormValues({
+    enabled: false,
+    layers: [savedLayer],
+  }).layers[0];
+  if (!formLayer) {
+    return {
+      templateId: input.template.id,
+      name: input.template.name,
+      ok: false,
+      error: "Could not apply the template.",
       notes: built.notes,
     };
   }
@@ -309,6 +345,7 @@ async function applyPaperTemplate(input: {
     name: input.template.name,
     ok: true,
     notes: built.notes,
+    applied: { deskType: "cash_and_carry", layer: formLayer },
   };
 }
 
@@ -407,14 +444,14 @@ export async function applyTemplateSetToDesk(input: {
       set.userId !== input.userId &&
       !(await setIsSharedWith(input.userId, set.id)))
   ) {
-    return { ok: false, deskType: null, results: [], error: "That set was not found." };
+    return { ok: false, deskType: null, results: [], error: "That folder was not found." };
   }
   if (desk.deskType !== set.deskType) {
     return {
       ok: false,
       deskType: set.deskType,
       results: [],
-      error: "This set does not match the desk type.",
+      error: "This folder does not match the desk type.",
     };
   }
   const byId = new Map(input.items.map((item) => [item.templateId, item]));

@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { DeskSettingsForm } from "@/components/desk-settings-form";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
 import { ExchangeBindSelect } from "@/components/exchange-bind-select";
 import { savePaperSettings } from "@/lib/engine/actions";
 import { loadEngineSettings } from "@/lib/engine/settings";
-import { strategyDetachBlockers } from "@/lib/accounts/model";
-import { loadAccountUsage } from "@/lib/accounts/store";
+import { otherDeskNames, strategyDetachBlockers } from "@/lib/accounts/model";
+import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
 import {
   connectionIdsBoundToOtherDesks,
   type ExchangeConnection,
@@ -39,6 +39,7 @@ export default async function CashAndCarrySettingsPage({
   }
   const params = await searchParams;
   const settings = await loadEngineSettings();
+  const desks = await listTradingAccounts(session.member.id);
   const live = accountCanHoldConnections(session.account.mode);
   const connections = live
     ? await listExchangeConnections(session.member.id)
@@ -76,8 +77,11 @@ export default async function CashAndCarrySettingsPage({
       {saved ? (
         <p className="mt-4 text-sm text-success">Settings saved.</p>
       ) : null}
-      <form
+      <DeskSettingsForm
         action={savePaperSettings}
+        defaultName={session.account.name}
+        otherNames={otherDeskNames(desks, session.account.id)}
+        successKey="save-settings"
         className="mt-6 max-w-md space-y-4 rounded-card border border-line bg-surface p-5"
       >
         {live ? (
@@ -103,14 +107,7 @@ export default async function CashAndCarrySettingsPage({
           a quarter of that in-range book. Manual Size, Dynamic clips, and
           Dynamic exits all use this number.
         </p>
-        <PendingSubmitButton
-          pendingLabel="Saving…"
-          successKey="save-settings"
-          className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
-        >
-          Save settings
-        </PendingSubmitButton>
-      </form>
+      </DeskSettingsForm>
     </main>
   );
 }

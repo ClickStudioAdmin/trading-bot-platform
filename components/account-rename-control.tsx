@@ -1,21 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { PanelCloseButton } from "@/components/panel-close-button";
 import { renameTradingAccount } from "@/lib/accounts/actions";
+import { validateNewDeskName } from "@/lib/accounts/model";
 
 export function AccountRenameControl({
   accountId,
   accountName,
+  otherNames = [],
 }: {
   accountId: string;
   accountName: string;
+  otherNames?: string[];
 }) {
   const [open, setOpen] = useState(false);
+  const [name, setName] = useState(accountName);
+  const errorId = useId();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const nameCheck = validateNewDeskName(name, otherNames);
+  const nameError = !nameCheck.ok ? nameCheck.error : null;
 
   function place() {
     const button = buttonRef.current;
@@ -73,6 +80,7 @@ export function AccountRenameControl({
         type="button"
         onClick={() => {
           if (!open) {
+            setName(accountName);
             place();
           }
           setOpen((current) => !current);
@@ -88,7 +96,15 @@ export function AccountRenameControl({
           style={{ top: coords.top, left: coords.left }}
         >
           <PanelCloseButton onClick={close} />
-          <form action={renameTradingAccount} className="space-y-3">
+          <form
+            action={renameTradingAccount}
+            className="space-y-3"
+            onSubmit={(event: FormEvent<HTMLFormElement>) => {
+              if (!nameCheck.ok) {
+                event.preventDefault();
+              }
+            }}
+          >
             <input type="hidden" name="accountId" value={accountId} />
             <label className="block text-xs text-ink-muted">
               Name
@@ -96,12 +112,25 @@ export function AccountRenameControl({
                 name="name"
                 required
                 maxLength={40}
-                defaultValue={accountName}
-                className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                aria-invalid={nameError ? true : undefined}
+                aria-describedby={nameError ? errorId : undefined}
+                className={
+                  nameError
+                    ? "mt-1 w-full rounded-control border border-danger bg-canvas px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none"
+                    : "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                }
               />
+              {nameError ? (
+                <p id={errorId} className="mt-1 text-xs text-danger">
+                  {nameError}
+                </p>
+              ) : null}
             </label>
             <PendingSubmitButton
               pendingLabel="Saving"
+              disabled={!nameCheck.ok}
               successKey={`account-rename-${accountId}`}
               className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
             >

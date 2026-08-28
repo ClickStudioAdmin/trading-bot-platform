@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { PageHeading } from "@/components/page-heading";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { DeskSettingsForm } from "@/components/desk-settings-form";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
 import { ExchangeBindSelect } from "@/components/exchange-bind-select";
-import { strategyDetachBlockers, deskAllowsPerpsRecipes, deskHref } from "@/lib/accounts/model";
-import { loadAccountUsage } from "@/lib/accounts/store";
+import { strategyDetachBlockers, deskAllowsPerpsRecipes, deskHref, otherDeskNames } from "@/lib/accounts/model";
+import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
 import {
   connectionIdsBoundToOtherDesks,
   type ExchangeConnection,
@@ -42,6 +42,7 @@ export default async function FuturesSettingsPage({
   }
   const params = await searchParams;
   const settings = await loadFuturesSettings(session.account.id);
+  const desks = await listTradingAccounts(session.member.id);
   const live = accountCanHoldConnections(session.account.mode);
   const connections = live
     ? await listExchangeConnections(session.member.id)
@@ -88,8 +89,11 @@ export default async function FuturesSettingsPage({
       {saved ? (
         <p className="mt-4 text-sm text-success">Settings saved.</p>
       ) : null}
-      <form
+      <DeskSettingsForm
         action={saveFuturesSettings}
+        defaultName={session.account.name}
+        otherNames={otherDeskNames(desks, session.account.id)}
+        successKey="save-futures-settings"
         className="mt-6 max-w-lg space-y-4 rounded-card border border-line bg-surface p-5"
       >
         {live ? (
@@ -159,14 +163,7 @@ export default async function FuturesSettingsPage({
             />
           </label>
         </div>
-        <PendingSubmitButton
-          pendingLabel="Saving…"
-          successKey="save-futures-settings"
-          className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
-        >
-          Save settings
-        </PendingSubmitButton>
-      </form>
+      </DeskSettingsForm>
     </main>
   );
 }

@@ -9,7 +9,7 @@ import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Templates",
-  description: "Your automation templates and sets.",
+  description: "Your automation templates and folders.",
 };
 
 export default async function AccountTemplatesPage() {
@@ -45,7 +45,7 @@ export default async function AccountTemplatesPage() {
       <p className="-mt-4 text-sm text-ink-muted">
         Your recipes and platform recipes. Apply them to a matching desk as
         idle or disabled automations. Export a JSON backup, import one, or
-        share a recipe with another member by email.
+        share a recipe or folder with another member by email.
       </p>
       <TemplatesLibrary
         variant="account"

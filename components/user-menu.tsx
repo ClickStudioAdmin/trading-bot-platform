@@ -59,7 +59,7 @@ export function UserMenu({
         <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent/20 text-xs font-semibold text-accent">
           {initial}
         </span>
-        <span className="hidden max-w-[10rem] truncate text-sm text-ink-muted sm:inline">
+        <span className="hidden max-w-[10rem] truncate text-sm text-ink sm:inline">
           {name}
         </span>
       </summary>

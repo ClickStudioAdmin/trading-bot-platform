@@ -9,10 +9,13 @@ import {
 } from "@/lib/accounts/store";
 import {
   parseAccountMode,
-  parseAccountName,
   parseDeskTypeChoice,
   pickSwitchAfterDelete,
   deskHomePath,
+  validateNewDeskName,
+  DESK_NAME_TAKEN,
+  otherDeskNames,
+  parseDeskNameChange,
 } from "@/lib/accounts/model";
 import { parseBoundConnectionId } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
@@ -61,6 +64,19 @@ function safeStayPath(raw: unknown): string | null {
   return path;
 }
 
+export async function rememberTradingAccount(accountId: string) {
+  const user = await getSessionMember();
+  if (!user) {
+    return;
+  }
+  const accounts = await listTradingAccounts(user.id);
+  const match = accounts.find((account) => account.id === accountId);
+  if (!match) {
+    return;
+  }
+  await setActiveAccountId(match.id);
+}
+
 export async function switchTradingAccount(formData: FormData) {
   const user = await getSessionMember();
   if (!user) {
@@ -85,7 +101,11 @@ export async function createTradingAccount(formData: FormData) {
   }
   const next = accountReturnPath(String(formData.get("next") ?? ""));
   const switchToNew = formData.get("switchToDesk") === "1";
-  const named = parseAccountName(formData.get("name"));
+  const desks = await listTradingAccounts(session.member.id);
+  const named = validateNewDeskName(
+    formData.get("name"),
+    desks.map((desk) => desk.name),
+  );
   if (!named.ok) {
     redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(named.error)}`);
   }
@@ -191,16 +211,63 @@ export async function deleteTradingAccount(formData: FormData) {
   redirect(`${SUB_ACCOUNTS_PATH}?deleted=1`);
 }
 
+export async function readDeskNameFromSettingsForm(args: {
+  formData: FormData;
+  userId: string;
+  accountId: string;
+  currentName: string;
+}): Promise<
+  | { ok: true; name: string; changed: boolean }
+  | { ok: false; error: string }
+> {
+  const raw = args.formData.get("name");
+  if (raw === null) {
+    return { ok: true, name: args.currentName, changed: false };
+  }
+  const accounts = await listTradingAccounts(args.userId);
+  return parseDeskNameChange(
+    raw,
+    otherDeskNames(accounts, args.accountId),
+    args.currentName,
+  );
+}
+
+export async function commitDeskRename(args: {
+  userId: string;
+  accountId: string;
+  name: string;
+}): Promise<{ error: string | null }> {
+  const written = await renameTradingAccountRow(
+    args.userId,
+    args.accountId,
+    args.name,
+  );
+  if (written.error) {
+    return {
+      error:
+        written.error === "That name is already in use."
+          ? DESK_NAME_TAKEN
+          : written.error,
+    };
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "account.renamed",
+    message: `Renamed account to ${args.name}`,
+    userId: args.userId,
+    accountId: args.accountId,
+    data: { name: args.name },
+  });
+  refreshAccountChrome();
+  return { error: null };
+}
+
 export async function renameTradingAccount(formData: FormData) {
   const session = await getSessionContext();
   if (!session) {
     redirect("/sign-in");
   }
   const accountId = String(formData.get("accountId") ?? "");
-  const named = parseAccountName(formData.get("name"));
-  if (!named.ok) {
-    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(named.error)}`);
-  }
   const accounts = await listTradingAccounts(session.member.id);
   const target = accounts.find((account) => account.id === accountId);
   if (!target) {
@@ -208,25 +275,23 @@ export async function renameTradingAccount(formData: FormData) {
       `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent("That account was not found.")}`,
     );
   }
+  const named = validateNewDeskName(
+    formData.get("name"),
+    otherDeskNames(accounts, accountId),
+  );
+  if (!named.ok) {
+    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(named.error)}`);
+  }
   if (target.name === named.name) {
     redirect(SUB_ACCOUNTS_PATH);
   }
-  const written = await renameTradingAccountRow(
-    session.member.id,
+  const written = await commitDeskRename({
+    userId: session.member.id,
     accountId,
-    named.name,
-  );
+    name: named.name,
+  });
   if (written.error) {
     redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(written.error)}`);
   }
-  await writeEventLog({
-    scope: "system",
-    event: "account.renamed",
-    message: `Renamed account to ${named.name}`,
-    userId: session.member.id,
-    accountId,
-    data: { name: named.name },
-  });
-  refreshAccountChrome();
   redirect(`${SUB_ACCOUNTS_PATH}?renamed=1`);
 }

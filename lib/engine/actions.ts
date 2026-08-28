@@ -17,6 +17,10 @@ import { listExchangeConnections } from "@/lib/exchanges/store";
 import { parseUsableBookShare } from "@/lib/opportunities/capacity";
 import { writeEventLog } from "@/lib/logs/write";
 import { requireCashAndCarrySession } from "@/lib/accounts/guard";
+import {
+  commitDeskRename,
+  readDeskNameFromSettingsForm,
+} from "@/lib/accounts/actions";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -211,6 +215,15 @@ export async function savePaperRules(formData: FormData) {
 export async function savePaperSettings(formData: FormData) {
   const session = await requireCashAndCarrySession();
   const { member: user, account } = session;
+  const nameChange = await readDeskNameFromSettingsForm({
+    formData,
+    userId: user.id,
+    accountId: account.id,
+    currentName: account.name,
+  });
+  if (!nameChange.ok) {
+    settingsFail(account.id, nameChange.error);
+  }
 
   const parsed = parseUsableBookShare(formData.get("usableBookShare"));
   if (typeof parsed !== "number") {
@@ -279,6 +292,17 @@ export async function savePaperSettings(formData: FormData) {
       strategy: "cash-and-carry",
     });
     settingsFail(account.id, error.message);
+  }
+
+  if (nameChange.changed) {
+    const renamed = await commitDeskRename({
+      userId: user.id,
+      accountId: account.id,
+      name: nameChange.name,
+    });
+    if (renamed.error) {
+      settingsFail(account.id, renamed.error);
+    }
   }
 
   await writeEventLog({

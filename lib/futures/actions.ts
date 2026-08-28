@@ -34,6 +34,10 @@ import {
   withQuery,
 } from "@/lib/accounts/model";
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
+import {
+  commitDeskRename,
+  readDeskNameFromSettingsForm,
+} from "@/lib/accounts/actions";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
@@ -217,6 +221,15 @@ export async function amendFuturesWorking(formData: FormData) {
 export async function saveFuturesSettings(formData: FormData) {
   const session = await requirePerpsUiSession();
   const { member: user, account } = session;
+  const nameChange = await readDeskNameFromSettingsForm({
+    formData,
+    userId: user.id,
+    accountId: account.id,
+    currentName: account.name,
+  });
+  if (!nameChange.ok) {
+    settingsFail(account.id, nameChange.error);
+  }
   const supabase = createServiceClient();
   if (!supabase) {
     settingsFail(account.id, "Auth is not configured.");
@@ -281,6 +294,17 @@ export async function saveFuturesSettings(formData: FormData) {
   });
   if (error) {
     settingsFail(account.id, error.message);
+  }
+
+  if (nameChange.changed) {
+    const renamed = await commitDeskRename({
+      userId: user.id,
+      accountId: account.id,
+      name: nameChange.name,
+    });
+    if (renamed.error) {
+      settingsFail(account.id, renamed.error);
+    }
   }
 
   await writeEventLog({

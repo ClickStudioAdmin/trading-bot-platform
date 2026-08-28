@@ -61,6 +61,7 @@ import { perpEffectiveMaxQty, perpTicketSizeError } from "@/lib/exchanges/bybit/
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import Link from "next/link";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
+import type { AppliedDeskItem } from "@/lib/templates/apply";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 
 const fieldClass =
@@ -354,9 +355,38 @@ export function DcaPlaybooksDesk({
   >(() => playbooks.map((playbook) => ({ key: playbook.id, playbook })));
   const [cloneMenu, setCloneMenu] = useState(0);
   const empty = cards.length === 0;
-  const cloneSources = playbooks.filter((playbook) => playbook.id);
+  const cloneSources = cards
+    .map((card) => card.playbook)
+    .filter((playbook): playbook is DcaPlaybook => Boolean(playbook));
   const addPlaybookClass =
     "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
+
+  function appendApplied(items: AppliedDeskItem[]) {
+    const playbooks = items
+      .filter(
+        (item): item is Extract<AppliedDeskItem, { deskType: "dca" }> =>
+          item.deskType === "dca",
+      )
+      .map((item) => item.playbook);
+    if (playbooks.length === 0) {
+      return;
+    }
+    setCards((current) => {
+      const seen = new Set(
+        current
+          .map((card) => card.playbook?.id)
+          .filter((id): id is string => Boolean(id)),
+      );
+      const fresh = playbooks.filter((playbook) => !seen.has(playbook.id));
+      if (fresh.length === 0) {
+        return current;
+      }
+      return [
+        ...current,
+        ...fresh.map((playbook) => ({ key: playbook.id, playbook })),
+      ];
+    });
+  }
 
   return (
     <div className="space-y-3">
@@ -383,6 +413,7 @@ export function DcaPlaybooksDesk({
             lastPrices={lastPrices}
             webhooksHref={webhooksHref}
             isAdmin={isAdmin}
+            folders={sets}
             defaultName={
               card.playbook?.name ??
               card.seed?.name ??
@@ -418,6 +449,7 @@ export function DcaPlaybooksDesk({
             accountId={accountId}
             templates={templates}
             sets={sets}
+            onApplied={appendApplied}
           />
         ) : null}
         {cloneSources.length > 0 ? (
@@ -469,6 +501,7 @@ export function DcaPlaybookForm({
   onRemoveDraft,
   webhooksHref = FUTURES_PATHS.webhooks,
   isAdmin = false,
+  folders = [],
 }: {
   playbook: DcaPlaybook | null;
   seed?: DcaPlaybook | null;
@@ -481,6 +514,7 @@ export function DcaPlaybookForm({
   onRemoveDraft?: () => void;
   webhooksHref?: string;
   isAdmin?: boolean;
+  folders?: AutomationTemplateSet[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const source = playbook ?? seed;
@@ -1510,6 +1544,7 @@ export function DcaPlaybookForm({
             isAdmin={isAdmin}
             defaultName={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
             kind="dca"
+            folders={folders}
             buildForm={() =>
               formRef.current ? new FormData(formRef.current) : new FormData()
             }

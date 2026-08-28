@@ -11,6 +11,7 @@ import {
   savePerpsAsTemplateAction,
   type TemplateActionResult,
 } from "@/lib/templates/actions";
+import type { AppliedDeskItem } from "@/lib/templates/apply";
 import type {
   AutomationTemplateSet,
   TemplateSummary,
@@ -25,7 +26,7 @@ const primaryBtn =
 const secondaryBtn =
   "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
 
-function Modal({
+export function Modal({
   title,
   onClose,
   children,
@@ -101,11 +102,13 @@ export function SaveAsTemplateButton({
   defaultName,
   buildForm,
   kind,
+  folders = [],
 }: {
   isAdmin: boolean;
   defaultName: string;
   buildForm: () => FormData;
   kind: TemplateDeskType;
+  folders?: AutomationTemplateSet[];
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -114,6 +117,34 @@ export function SaveAsTemplateButton({
   const [description, setDescription] = useState("");
   const [platform, setPlatform] = useState(false);
   const [replace, setReplace] = useState(false);
+  const [folderId, setFolderId] = useState("");
+  const [createFolder, setCreateFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+
+  const writableFolders = folders.filter((row) => {
+    if (row.deskType !== kind || row.sharedByEmail) {
+      return false;
+    }
+    if (platform) {
+      return row.visibility === "platform" || row.visibility === "user";
+    }
+    return row.visibility === "user";
+  });
+  const mixVisibility =
+    writableFolders.some((row) => row.visibility === "platform") &&
+    writableFolders.some((row) => row.visibility === "user");
+
+  function resetAndOpen(asPlatform: boolean) {
+    setName(defaultName);
+    setDescription("");
+    setPlatform(asPlatform);
+    setReplace(false);
+    setFolderId("");
+    setCreateFolder(false);
+    setNewFolderName("");
+    setResult(null);
+    setOpen(true);
+  }
 
   async function onSave() {
     setPending(true);
@@ -123,6 +154,12 @@ export function SaveAsTemplateButton({
     data.set("visibility", platform ? "platform" : "user");
     if (replace) {
       data.set("replaceExisting", "1");
+    }
+    if (folderId) {
+      data.set("folderId", folderId);
+    }
+    if (createFolder && newFolderName.trim()) {
+      data.set("newFolderName", newFolderName.trim());
     }
     const action =
       kind === "dca"
@@ -145,14 +182,7 @@ export function SaveAsTemplateButton({
     <>
       <button
         type="button"
-        onClick={() => {
-          setName(defaultName);
-          setDescription("");
-          setPlatform(false);
-          setReplace(false);
-          setResult(null);
-          setOpen(true);
-        }}
+        onClick={() => resetAndOpen(false)}
         className="shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
       >
         Save as template
@@ -160,14 +190,7 @@ export function SaveAsTemplateButton({
       {isAdmin ? (
         <button
           type="button"
-          onClick={() => {
-            setName(defaultName);
-            setDescription("");
-            setPlatform(true);
-            setReplace(false);
-            setResult(null);
-            setOpen(true);
-          }}
+          onClick={() => resetAndOpen(true)}
           className="shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
         >
           Save as platform template
@@ -201,6 +224,48 @@ export function SaveAsTemplateButton({
               className={fieldClass}
             />
           </label>
+          {writableFolders.length > 0 ? (
+            <label className="mt-3 block text-xs text-ink-muted">
+              Add to folder
+              <select
+                value={folderId}
+                onChange={(event) => setFolderId(event.target.value)}
+                className={fieldClass}
+              >
+                <option value="">None</option>
+                {writableFolders.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name}
+                    {mixVisibility
+                      ? row.visibility === "platform"
+                        ? " · Platform"
+                        : " · Mine"
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <label className="mt-3 flex items-start gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={createFolder}
+              onChange={(event) => setCreateFolder(event.target.checked)}
+              className="mt-1 size-4"
+            />
+            {platform ? "Create a new platform folder" : "Create a new folder"}
+          </label>
+          {createFolder ? (
+            <label className="mt-2 block text-xs text-ink-muted">
+              Folder name
+              <input
+                value={newFolderName}
+                onChange={(event) => setNewFolderName(event.target.value)}
+                maxLength={80}
+                className={fieldClass}
+              />
+            </label>
+          ) : null}
           {result?.code === "name_taken" ? (
             <label className="mt-3 flex items-start gap-2 text-sm text-ink">
               <input
@@ -220,7 +285,7 @@ export function SaveAsTemplateButton({
             <button
               type="button"
               onClick={() => void onSave()}
-              disabled={pending}
+              disabled={pending || (createFolder && !newFolderName.trim())}
               className={primaryBtn}
             >
               {pending ? "Saving…" : "Save template"}
@@ -237,11 +302,13 @@ export function DeskTemplateBar({
   accountId,
   templates,
   sets,
+  onApplied,
 }: {
   deskType: TemplateDeskType;
   accountId: string;
   templates: TemplateSummary[];
   sets: AutomationTemplateSet[];
+  onApplied?: (items: AppliedDeskItem[]) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -249,12 +316,14 @@ export function DeskTemplateBar({
         deskType={deskType}
         accountId={accountId}
         templates={templates}
+        onApplied={onApplied}
       />
       {sets.length > 0 ? (
         <ApplySetButton
           deskType={deskType}
           accountId={accountId}
           sets={sets}
+          onApplied={onApplied}
         />
       ) : null}
     </div>
@@ -265,10 +334,12 @@ function ApplyTemplateButton({
   deskType,
   accountId,
   templates,
+  onApplied,
 }: {
   deskType: TemplateDeskType;
   accountId: string;
   templates: TemplateSummary[];
+  onApplied?: (items: AppliedDeskItem[]) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<TemplateSummary | null>(null);
@@ -299,6 +370,9 @@ function ApplyTemplateButton({
     setResult(next);
     setPending(false);
     if (next.ok) {
+      if (next.applied && next.applied.length > 0) {
+        onApplied?.(next.applied);
+      }
       setOpen(false);
     }
     if (next.code === "symbol_taken") {
@@ -377,10 +451,12 @@ function ApplySetButton({
   deskType,
   accountId,
   sets,
+  onApplied,
 }: {
   deskType: TemplateDeskType;
   accountId: string;
   sets: AutomationTemplateSet[];
+  onApplied?: (items: AppliedDeskItem[]) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [setId, setSetId] = useState("");
@@ -415,20 +491,23 @@ function ApplySetButton({
     const next = await applyTemplateSetAction(data);
     setResult(next);
     setPending(false);
+    if (next.ok && next.applied && next.applied.length > 0) {
+      onApplied?.(next.applied);
+    }
   }
 
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className={secondaryBtn}>
-        From set
+        Add from Folder
       </button>
       {open ? (
-        <Modal title="From set" onClose={() => setOpen(false)}>
+        <Modal title="Add from Folder" onClose={() => setOpen(false)}>
           <p className="mt-1 text-sm text-ink-muted">
             Applies each template. Failures are listed; successes stay.
           </p>
           <label className="mt-3 block text-xs text-ink-muted">
-            Set
+            Folder
             <select
               value={setId}
               onChange={(event) => {
@@ -437,7 +516,7 @@ function ApplySetButton({
               }}
               className={fieldClass}
             >
-              <option value="">Choose a set</option>
+              <option value="">Choose a folder</option>
               {platform.length > 0 ? (
                 <optgroup label="Platform">
                   {platform.map((row) => (
@@ -448,7 +527,7 @@ function ApplySetButton({
                 </optgroup>
               ) : null}
               {mine.length > 0 ? (
-                <optgroup label="My sets">
+                <optgroup label="My folders">
                   {mine.map((row) => (
                     <option key={row.id} value={row.id}>
                       {row.name}
@@ -457,7 +536,7 @@ function ApplySetButton({
                 </optgroup>
               ) : null}
               {shared.length > 0 ? (
-                <optgroup label="Shared sets">
+                <optgroup label="Shared folders">
                   {shared.map((row) => (
                     <option key={row.id} value={row.id}>
                       {row.name}
@@ -540,7 +619,7 @@ function ApplySetButton({
                 onClick={() => void onApply()}
                 className={primaryBtn}
               >
-                {pending ? "Applying…" : "Apply set"}
+                {pending ? "Applying…" : "Apply folder"}
               </button>
             ) : null}
           </div>
