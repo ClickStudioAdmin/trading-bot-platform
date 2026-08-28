@@ -16,20 +16,26 @@ export function engineWorkerId(): string {
 }
 
 function asAccountIds(data: unknown): string[] {
-  if (!Array.isArray(data)) {
+  if (data == null) {
     return [];
   }
-  return data
-    .map((row) => {
-      if (typeof row === "string") {
-        return row;
-      }
-      if (row && typeof row === "object" && "account_id" in row) {
-        return String((row as { account_id: unknown }).account_id);
-      }
-      return "";
-    })
-    .filter((id) => id.length > 0);
+  const rows = Array.isArray(data) ? data : [data];
+  const ids: string[] = [];
+  for (const row of rows) {
+    if (typeof row === "string" && row.length > 0) {
+      ids.push(row);
+      continue;
+    }
+    if (!row || typeof row !== "object") {
+      continue;
+    }
+    const rec = row as Record<string, unknown>;
+    const id = rec.account_id ?? rec.accountId ?? rec.id;
+    if (typeof id === "string" && id.length > 0) {
+      ids.push(id);
+    }
+  }
+  return ids;
 }
 
 export async function claimEngineDesks(input?: {
@@ -47,6 +53,7 @@ export async function claimEngineDesks(input?: {
     p_ttl_seconds: input?.ttlSeconds ?? ENGINE_LEASE_TTL_SECONDS,
   });
   if (error) {
+    console.error("claim_engine_desks", error.message);
     return [];
   }
   return asAccountIds(data);
