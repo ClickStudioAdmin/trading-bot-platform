@@ -31,7 +31,7 @@ import {
 } from "./grid";
 import {
   dcaClipAction,
-  dcaClipKey,
+  dcaClipCycleKey,
   dcaClipRestKey,
   capDcaSafetySync,
   DCA_LIVE_GRID_OPS_PER_SYNC,
@@ -490,6 +490,11 @@ async function syncDcaPlaybookGridUnlocked(input: {
     input.side,
   );
   const leg = dcaLegFor(input.playbook, input.side);
+  const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
+    accountId: input.playbook.accountId,
+    userId: input.playbook.userId,
+  });
+  const open = opens.find((row) => row.side === input.side);
   const working = await loadFuturesWorking(
     {
       accountId: input.playbook.accountId,
@@ -509,7 +514,11 @@ async function syncDcaPlaybookGridUnlocked(input: {
     sizeMultiplier: input.playbook.sizeMultiplier,
     sizeUnit: input.playbook.sizeUnit,
     entryPrice:
-      input.entryPrice ?? leg.firstFillPrice ?? leg.lastClipPrice,
+      input.entryPrice ??
+      open?.entryPrice ??
+      leg.firstFillPrice ??
+      leg.lastClipPrice,
+    positionId: open?.id ?? null,
     working: working.map((row) => ({
       id: row.id,
       idempotencyKey: row.idempotencyKey,
@@ -517,6 +526,7 @@ async function syncDcaPlaybookGridUnlocked(input: {
       limitPrice: row.limitPrice,
       reduceOnly: row.reduceOnly,
       status: row.status,
+      positionId: row.positionId,
     })),
   });
   const plan =
@@ -593,6 +603,9 @@ async function syncDcaPlaybookGridUnlocked(input: {
       openIndices.add(item.clipIndex);
       continue;
     }
+    if (!open) {
+      continue;
+    }
     const rested = await runFuturesCommand({
       actor,
       command: {
@@ -603,10 +616,11 @@ async function syncDcaPlaybookGridUnlocked(input: {
         limitPrice: String(item.limitPrice),
         size: String(item.qty),
         sizeUnit: input.playbook.sizeUnit,
-        idempotencyKey: dcaClipKey(
+        idempotencyKey: dcaClipCycleKey(
           input.playbook.id,
           input.side,
           item.clipIndex,
+          open.id,
         ),
         ...playbookCommandMeta(input.playbook),
       },
@@ -620,7 +634,18 @@ async function syncDcaPlaybookGridUnlocked(input: {
       });
       continue;
     }
-    openIndices.add(item.clipIndex);
+    const afterPlace = await loadOpenFuturesWorking({
+      accountId: input.playbook.accountId,
+      userId: input.playbook.userId,
+    });
+    const nowOpen = afterPlace.some(
+      (row) =>
+        isDcaClipKey(row.idempotencyKey, input.playbook.id, input.side) &&
+        parseDcaClipIndex(row.idempotencyKey) === item.clipIndex,
+    );
+    if (nowOpen) {
+      openIndices.add(item.clipIndex);
+    }
   }
 }
 

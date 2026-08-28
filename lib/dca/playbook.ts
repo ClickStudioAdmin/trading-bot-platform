@@ -1434,11 +1434,24 @@ export function dcaClipRestKey(
   return `${dcaClipKey(playbookId, side, clipIndex)}x${generation}`;
 }
 
+export function dcaClipCycleKey(
+  playbookId: string,
+  side: FuturesSide,
+  clipIndex: number,
+  positionId: string,
+): string {
+  const prefix = dcaClipKey(playbookId, side, clipIndex);
+  const pos = positionId.replace(/-/g, "").slice(0, 8);
+  const withPos = `${prefix}p${pos}`;
+  return withPos.length <= 36 ? withPos : prefix;
+}
+
 export function parseDcaClipIndex(key: string | null | undefined): number | null {
   if (!key) {
     return null;
   }
-  const match = /^d[a-f0-9]{8}[ls](\d+)(?:x\d+)?$/i.exec(key.trim());
+  const match =
+    /^d[a-f0-9]{8}[ls](\d+)(?:x\d+|p[a-f0-9]+)?$/i.exec(key.trim());
   if (!match) {
     return null;
   }
@@ -1456,7 +1469,11 @@ export function isDcaClipKey(
   }
   const expected = dcaClipKey(playbookId, side, index).toLowerCase();
   const raw = key.trim().toLowerCase();
-  return raw === expected || raw.startsWith(`${expected}x`);
+  return (
+    raw === expected ||
+    raw.startsWith(`${expected}x`) ||
+    raw.startsWith(`${expected}p`)
+  );
 }
 
 export function formatDcaEntryType(clipIndex: number): string {
@@ -1576,6 +1593,7 @@ export type DcaSafetyWorkingRow = {
   limitPrice: number;
   reduceOnly: boolean;
   status?: string;
+  positionId?: string | null;
 };
 
 export function dcaOpenExitLimits(
@@ -1654,6 +1672,7 @@ export function planDcaSafetySync(input: {
   sizeMultiplier: number;
   sizeUnit: "qty" | "usdt";
   entryPrice: number | null;
+  positionId?: string | null;
   working: readonly DcaSafetyWorkingRow[];
 }): DcaSafetySyncPlan {
   const matching = input.working.filter(
@@ -1670,9 +1689,13 @@ export function planDcaSafetySync(input: {
       continue;
     }
     const index = parseDcaClipIndex(row.idempotencyKey);
-    if (index !== null && index >= 1) {
-      filledIndices.add(index);
+    if (index === null || index < 1) {
+      continue;
     }
+    if (input.positionId && row.positionId !== input.positionId) {
+      continue;
+    }
+    filledIndices.add(index);
   }
   const restGrid =
     input.status === "armed" &&

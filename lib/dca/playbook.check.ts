@@ -5,6 +5,7 @@ import {
   dcaClipsFilledFromGrid,
   dcaClipAction,
   dcaClipKey,
+  dcaClipCycleKey,
   dcaClipRestKey,
   dcaConfigMaxOrderError,
   dcaCycleEnded,
@@ -89,6 +90,55 @@ assert.equal(parseDcaExitLimitKind("d11111111lsl"), "sl");
 assert.equal(parseDcaExitLimitKind("d11111111ltp847291"), "tp");
 assert.equal(parseDcaClipIndex("d11111111ltp847291"), null);
 assert.equal(parseDcaClipIndex("d11111111l10x847291"), 10);
+assert.equal(
+  parseDcaClipIndex(
+    dcaClipCycleKey(
+      "11111111-1111-4111-8111-111111111111",
+      "short",
+      1,
+      "22222222-2222-4222-8222-222222222222",
+    ),
+  ),
+  1,
+);
+assert.equal(
+  parseDcaClipIndex(
+    dcaClipCycleKey(
+      "11111111-1111-4111-8111-111111111111",
+      "short",
+      13,
+      "22222222-2222-4222-8222-222222222222",
+    ),
+  ),
+  13,
+);
+assert.equal(
+  isDcaClipKey(
+    dcaClipCycleKey(
+      "11111111-1111-4111-8111-111111111111",
+      "short",
+      1,
+      "22222222-2222-4222-8222-222222222222",
+    ),
+    "11111111-1111-4111-8111-111111111111",
+    "short",
+  ),
+  true,
+);
+assert.notEqual(
+  dcaClipCycleKey(
+    "11111111-1111-4111-8111-111111111111",
+    "short",
+    1,
+    "22222222-2222-4222-8222-222222222222",
+  ),
+  dcaClipCycleKey(
+    "11111111-1111-4111-8111-111111111111",
+    "short",
+    1,
+    "33333333-3333-4333-8333-333333333333",
+  ),
+);
 const tpRestKey = dcaExitLimitRestKey(
   "11111111-1111-4111-8111-111111111111",
   "short",
@@ -351,6 +401,44 @@ const filledSkip = planDcaSafetySync({
 assert.deepEqual(filledSkip.rest.map((row) => row.clipIndex), [3]);
 assert.equal(filledSkip.cancelIds.length, 0);
 assert.equal(filledSkip.amend.length, 0);
+const priorCycleFilled = planDcaSafetySync({
+  playbookId: safetyId,
+  side: "short",
+  status: "armed",
+  dcaMode: "order",
+  maxClips: 4,
+  dipPct: 1,
+  deviationMultiplier: 1,
+  clipSize: 0.01,
+  sizeMultiplier: 1,
+  sizeUnit: "qty",
+  entryPrice: 100,
+  positionId: "pos-now",
+  working: [
+    {
+      id: "old1",
+      idempotencyKey: dcaClipKey(safetyId, "short", 1),
+      remainingQty: 0,
+      limitPrice: 101,
+      reduceOnly: false,
+      status: "filled",
+      positionId: "pos-old",
+    },
+    {
+      id: "old13",
+      idempotencyKey: dcaClipKey(safetyId, "short", 13),
+      remainingQty: 0,
+      limitPrice: 110,
+      reduceOnly: false,
+      status: "filled",
+      positionId: "pos-old",
+    },
+  ],
+});
+assert.ok(priorCycleFilled.rest.some((row) => row.clipIndex === 1));
+assert.ok(
+  priorCycleFilled.rest.some((row) => row.clipIndex === 2),
+);
 const dupes = planDcaSafetySync({
   playbookId: safetyId,
   side: "long",
