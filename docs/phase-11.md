@@ -1,6 +1,6 @@
 # Phase 11 — DCA desk type
 
-Complete. Phase 10 is complete. See [phase-10.md](phase-10.md). Scale-in is Phase 12 (not written until Click starts it).
+Complete. Phase 10 is complete. See [phase-10.md](phase-10.md). After Phase 11, see [roadmap.md](roadmap.md). Fly.io is next to build; scale-in / position builder is roadmap 6.
 
 ## Purpose
 
@@ -23,7 +23,7 @@ Complete. Accepted 27 Aug 2026. Click will keep desk-testing; treat the phase as
 | 5 | UI | Agent | Create Desk → DCA. Type-locked chrome. Automations is grouped playbook cards (General / Start / Initial order / Maximum Exposure / Additional orders / Additional order multipliers / Take profit / Stop loss / Summary). Positions show Orders as filled/max. Done |
 | 6 | Desk test | Click | Paper then Bybit Demo: arm, orders add, TP/stop, Close All & Cancel All, reduce-only. Cannot add a scale-in or Perps recipe on that desk. Done |
 
-Phase accepted. Do not start scale-in until Click asks. Phase 12 is not written yet.
+Phase accepted. Do not start Fly.io or scale-in until Click asks. Sequence: [roadmap.md](roadmap.md).
 
 ## How it works
 
@@ -51,14 +51,11 @@ Phase accepted. Do not start scale-in until Click asks. Phase 12 is not written 
 
 ## Out of scope
 
-- Scale-in type
+- Scale-in / position builder (roadmap 6)
 - Chained Perps recipes
 - `/strategies/dca` ledger
 - Hyperliquid / MEXC / XT
-- Fly.io
+- Fly.io (roadmap 1; not this phase)
 - Calling private exchange APIs from the browser
 - Paper auto-switch ([phase-auto-switch.md](phase-auto-switch.md))
-- Onboarding wizard refine ([phase-onboarding.md](phase-onboarding.md))
-- Hyperliquid ([phase-hyperliquid.md](phase-hyperliquid.md)), then MEXC
-- Copy trading; Hedged DCA; Starter Pack CTA on new desk; Backtesting ([master-spec.md](master-spec.md) Later)
-- Backup market-data vendors (later; [master-spec.md](master-spec.md) Later)
+- Later items on [roadmap.md](roadmap.md) (copy trading, event-driven signals, onboarding refine, backtesting, backup data, other exchanges)

@@ -1,10 +1,10 @@
 # Hyperliquid venue
 
-Plan. **Not Phase 12** (scale-in). **Not MEXC.** Do not implement until Click accepts this file.
+Plan. **Roadmap 2** after Fly.io ([roadmap.md](roadmap.md)). **Not MEXC** (roadmap 16). Do not implement until Click starts this item.
 
 Bybit desks stay Bybit. Hyperliquid is a **second venue-locked desk**, not a flag inside the existing Perps/DCA pages. Internal **venue capabilities** say what each exchange can do. The next CEX (MEXC) is another capability row + adapter + page module — not another rewrite of Bybit.
 
-Private calls stay on Sydney Vercel. The browser never sees decrypted secrets.
+Private calls stay on the server (Fly worker after roadmap 1; Sydney Vercel until then). The browser never sees decrypted secrets.
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Create Perps, DCA, or TradingView Strategy desks whose **exchange is Hyperliquid
 
 ## Status
 
-Plan only. **On hold** — Click is checking a few things. Do not implement. Do not start step 1 until Click says go.
+Plan only. Locked as roadmap 2. Do not implement until Fly.io (roadmap 1) is in place and Click says go. Do not start step 1 until then.
 
 ## How this scales
 
@@ -166,16 +166,16 @@ Stop after each step until Click says go. Do not start MEXC in this phase.
 
 ## Out of scope
 
-- MEXC / XT / Binance (MEXC next; capability row + adapter + module)
+- MEXC / XT / Binance (roadmap 16; capability row + adapter + module)
 - Cash and Carry on Hyperliquid
 - HIP-3
 - Subaccount fake hedge
 - Generating/approving agents in TBP
-- Copy trading, Hedged DCA, backtesting, Starter Pack CTA
+- Copy trading, event-driven signals, backtesting, Starter Pack CTA ([roadmap.md](roadmap.md))
 - `if (hyperliquid)` inside Bybit components
-- Fly.io; private APIs from the browser
-- Scale-in (Phase 12)
+- Fly.io in this pass (roadmap 1 first); private APIs from the browser
+- Scale-in / position builder (roadmap 6)
 
-## After this: MEXC
+## After this: other exchanges
 
-New capability row (likely HMAC, USDT, Bybit-like hedge if true). Prefer **reusing the Bybit desk module** if parameters match; only a `lib/exchanges/mexc` adapter. If MEXC is one-way or different symbols, it gets its own module like Hyperliquid. Write `docs/phase-mexc.md` when this phase is done.
+Roadmap 16. New capability row (likely HMAC, USDT, Bybit-like hedge if true). Prefer **reusing the Bybit desk module** if parameters match; only a `lib/exchanges/mexc` adapter. If MEXC is one-way or different symbols, it gets its own module like Hyperliquid. Write `docs/phase-mexc.md` when that item starts.

@@ -1,6 +1,6 @@
-# Paper auto-switch (postponed)
+# Paper auto-switch (parked)
 
-Postponed. Not the current phase. Phase 7 is complete — [phase-7.md](phase-7.md).
+Parked. Not in the locked sequence ([roadmap.md](roadmap.md)). Phase 7 is complete — [phase-7.md](phase-7.md).
 
 ## Purpose
 

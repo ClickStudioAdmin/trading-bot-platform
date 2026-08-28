@@ -41,12 +41,7 @@ Same venue key on two desks still shares IM. Isolation = another desk **and** an
 
 ## Later
 
-- DCA desk type (Phase 11, complete)
-- Scale-in desk type (Phase 12, not started)
-- Richer Perps recipes (Phase 13)
-- Hyperliquid venue ([phase-hyperliquid.md](phase-hyperliquid.md)), then MEXC
-- Copy trading; Hedged DCA; Starter Pack CTA on new desk; Backtesting ([master-spec.md](master-spec.md) Later)
-- Live TradingView alert test ([phase-9.md](phase-9.md) Later)
+See [roadmap.md](roadmap.md). DCA is Phase 11 (complete). Scale-in / position builder is roadmap 6. Hyperliquid is roadmap 2. Live TradingView alert test is current desk-test ([phase-9.md](phase-9.md) Later).
 
 ## What this phase includes
 
@@ -60,7 +55,7 @@ Same venue key on two desks still shares IM. Isolation = another desk **and** an
 
 ## Out of scope
 
-- DCA / scale-in types
+- DCA / scale-in types (DCA shipped in Phase 11; scale-in is roadmap 6)
 - Richer if/then recipes
 - Playbook-level venue override
 - Hyperliquid / MEXC / XT

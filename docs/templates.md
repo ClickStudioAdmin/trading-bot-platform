@@ -1,6 +1,6 @@
 # Automation templates and folders
 
-Shipped. **Not Phase 12** (scale-in). Not backup market data.
+Shipped. **Not Fly.io. Not scale-in.** See [roadmap.md](roadmap.md). Not backup market data.
 
 Phase 11 is complete. See [phase-11.md](phase-11.md). This is a **login-scoped template library** that stamps idle bots onto a desk of the matching type. Migrations: `supabase/migrations/20260828100000_automation_templates.sql`, `supabase/migrations/20260828110000_automation_template_shares.sql`, `supabase/migrations/20260828120000_template_starter_pack.sql` (apply on push to `develop`). Stored JSON is still called a `recipe` in code.
 
@@ -213,7 +213,7 @@ Bump `recipe_version` when a breaking key is renamed. Old templates: parser fill
 | 8 | Export / import JSON library | Done |
 | 9 | Member-to-member share by email | Done |
 
-Stop after acceptance. Do not start scale-in, Hyperliquid, or backup klines in the same pass unless Click says so.
+Stop after acceptance. Do not start Fly.io, Hyperliquid, scale-in, or backup klines in the same pass unless Click says so.
 
 ## Out of scope
 
@@ -225,7 +225,7 @@ Stop after acceptance. Do not start scale-in, Hyperliquid, or backup klines in t
 - In-place edit of another member’s `recipe` JSON
 - Marketplace
 - Fly.io, private APIs from the browser
-- Phase 12 scale-in
-- Starter Pack delivery to new members and CTA on new desk (later; [phase-onboarding.md](phase-onboarding.md), [master-spec.md](master-spec.md) Later)
+- Scale-in / position builder (roadmap 6)
+- Starter Pack delivery to new members and CTA on new desk (roadmap 9; [phase-onboarding.md](phase-onboarding.md))
 - Hyperliquid / MEXC ([phase-hyperliquid.md](phase-hyperliquid.md))
 - Copy trading; Hedged DCA; Backtesting
