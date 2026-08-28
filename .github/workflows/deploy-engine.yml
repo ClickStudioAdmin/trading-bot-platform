@@ -44,12 +44,29 @@ jobs:
       - name: Ensure development app exists
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_ORG_OVERRIDE: ${{ vars.FLY_ORG }}
         run: |
           if flyctl status --app tbp-engine-dev >/dev/null 2>&1; then
             echo "tbp-engine-dev already exists"
-          else
-            flyctl apps create tbp-engine-dev
+            exit 0
           fi
+          if [ -n "$FLY_ORG_OVERRIDE" ]; then
+            org="$FLY_ORG_OVERRIDE"
+            echo "using FLY_ORG: $org"
+          else
+            org="$(flyctl orgs list --json | jq -r '
+              if type == "array" then (.[0].Slug // .[0].slug // empty)
+              else (keys | .[0]) // empty
+              end
+            ')"
+            if [ -z "$org" ] || [ "$org" = "null" ]; then
+              echo "Could not detect the Fly org from this token."
+              echo "In GitHub repo Settings → Environments → development, add variable FLY_ORG (the org slug from the Fly dashboard)."
+              exit 1
+            fi
+            echo "detected Fly org: $org"
+          fi
+          flyctl apps create tbp-engine-dev --org "$org" --yes
 
       - name: Check Fly app secrets
         env:
