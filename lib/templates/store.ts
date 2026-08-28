@@ -203,14 +203,18 @@ export async function listVisibleTemplates(input: {
   return attachOutboundTemplateShares(supabase, parsed);
 }
 
-export async function listAllTemplates(): Promise<AutomationTemplate[]> {
+export async function listAllTemplates(opts?: {
+  visibility?: TemplateVisibility;
+}): Promise<AutomationTemplate[]> {
   const supabase = createServiceClient();
   if (!supabase) {
     return [];
   }
-  const { data, error } = await supabase
-    .from("automation_templates")
-    .select("*")
+  let query = supabase.from("automation_templates").select("*");
+  if (opts?.visibility) {
+    query = query.eq("visibility", opts.visibility);
+  }
+  const { data, error } = await query
     .order("visibility", { ascending: true })
     .order("updated_at", { ascending: false });
   if (error || !data) {
@@ -522,14 +526,18 @@ export async function listVisibleSets(input: {
   return attachOutboundSetShares(supabase, parsed);
 }
 
-export async function listAllSets(): Promise<AutomationTemplateSet[]> {
+export async function listAllSets(opts?: {
+  visibility?: TemplateVisibility;
+}): Promise<AutomationTemplateSet[]> {
   const supabase = createServiceClient();
   if (!supabase) {
     return [];
   }
-  const { data, error } = await supabase
-    .from("automation_template_sets")
-    .select("*")
+  let query = supabase.from("automation_template_sets").select("*");
+  if (opts?.visibility) {
+    query = query.eq("visibility", opts.visibility);
+  }
+  const { data, error } = await query
     .order("visibility", { ascending: true })
     .order("updated_at", { ascending: false });
   if (error || !data) {

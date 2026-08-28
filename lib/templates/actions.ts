@@ -59,6 +59,7 @@ import {
   parseShareEmail,
   parseTemplateLibraryJson,
   planLibraryImport,
+  selectLibraryExport,
 } from "./transfer";
 
 export type TemplateActionResult = {
@@ -1396,27 +1397,56 @@ export async function exportTemplateLibraryAction(
     return auth;
   }
   const scope = String(formData.get("scope") ?? "own");
-  if (scope === "all" && !auth.isAdmin) {
-    return { ok: false, error: "Only admins can export every library.", code: "forbidden" };
+  if ((scope === "all" || scope === "platform") && !auth.isAdmin) {
+    return {
+      ok: false,
+      error: "Only admins can export the platform catalog.",
+      code: "forbidden",
+    };
   }
-  const templates =
+  let templates =
     scope === "all"
       ? await listAllTemplates()
-      : (await listVisibleTemplates({ userId: auth.member.id })).filter(
-          (row) => row.visibility === "user" && row.userId === auth.member.id,
-        );
-  const sets =
+      : scope === "platform"
+        ? await listAllTemplates({ visibility: "platform" })
+        : (await listVisibleTemplates({ userId: auth.member.id })).filter(
+            (row) => row.visibility === "user" && row.userId === auth.member.id,
+          );
+  let sets =
     scope === "all"
       ? await listAllSets()
-      : (await listVisibleSets({ userId: auth.member.id })).filter(
-          (row) => row.visibility === "user" && row.userId === auth.member.id,
-        );
+      : scope === "platform"
+        ? await listAllSets({ visibility: "platform" })
+        : (await listVisibleSets({ userId: auth.member.id })).filter(
+            (row) => row.visibility === "user" && row.userId === auth.member.id,
+          );
+  const ids = parseBulkIds(formData);
+  const kind = String(formData.get("kind") ?? "");
+  if (ids.length > 0) {
+    if (kind !== "template" && kind !== "folder") {
+      return { ok: false, error: "Choose templates or folders." };
+    }
+    const picked = selectLibraryExport({ templates, sets }, { kind, ids });
+    templates = picked.templates;
+    sets = picked.sets;
+    if (templates.length === 0 && sets.length === 0) {
+      return { ok: false, error: "None of those rows could be exported." };
+    }
+  }
   const file = buildTemplateLibraryFile({ templates, sets });
   const day = file.exportedAt.slice(0, 10);
+  const selected = ids.length > 0;
   return {
     ok: true,
     json: `${JSON.stringify(file, null, 2)}\n`,
-    filename: `tbp-templates-${day}.json`,
+    filename:
+      scope === "platform"
+        ? selected
+          ? `tbp-platform-selected-${day}.json`
+          : `tbp-platform-templates-${day}.json`
+        : selected
+          ? `tbp-selected-templates-${day}.json`
+          : `tbp-templates-${day}.json`,
   };
 }
 

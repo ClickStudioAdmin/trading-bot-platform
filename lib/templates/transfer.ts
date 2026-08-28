@@ -126,6 +126,30 @@ export function buildTemplateLibraryFile(input: {
   };
 }
 
+export function selectLibraryExport<
+  T extends { id: string },
+  S extends { id: string; items: Array<{ templateId: string }> },
+>(
+  catalog: { templates: T[]; sets: S[] },
+  selection: { kind: "template" | "folder"; ids: string[] },
+): { templates: T[]; sets: S[] } {
+  const wanted = new Set(selection.ids);
+  if (selection.kind === "template") {
+    return {
+      templates: catalog.templates.filter((row) => wanted.has(row.id)),
+      sets: [],
+    };
+  }
+  const sets = catalog.sets.filter((row) => wanted.has(row.id));
+  const needed = new Set(
+    sets.flatMap((row) => row.items.map((item) => item.templateId)),
+  );
+  return {
+    templates: catalog.templates.filter((row) => needed.has(row.id)),
+    sets,
+  };
+}
+
 export function parseTemplateLibraryJson(
   raw: string,
 ):

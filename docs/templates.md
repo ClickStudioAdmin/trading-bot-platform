@@ -6,7 +6,7 @@ Phase 11 is complete. See [phase-11.md](phase-11.md). This is a **login-scoped t
 
 ## Purpose
 
-Users save a bot as a **template**, or several templates as a **folder** (stored as a template set). They create a new idle or disabled bot from one template, or stamp a whole folder onto a desk. Admins get extra controls to publish **platform** templates and folders, and an admin library that lists **every** template and folder (user and platform). Every member can apply their own templates and platform templates. Desk types that already have automations: **DCA**, **Perps**, **Cash and Carry**. TradingView Strategy desks have no bot form — out of scope.
+Users save a bot as a **template**, or several templates as a **folder** (stored as a template set). They create a new idle or disabled bot from one template, or stamp a whole folder onto a desk. Admins manage **platform** templates and folders on `/admin/templates`. Member libraries stay on `/account/templates`. Every member can apply their own templates and platform templates. Desk types that already have automations: **DCA**, **Perps**, **Cash and Carry**. TradingView Strategy desks have no bot form — out of scope.
 
 Clone on Automations stays. Clone is an in-desk duplicate of one live row. Templates are a library, reusable across desks of the same type.
 
@@ -31,7 +31,7 @@ A live DCA bot still owns one contract (`unique (account_id, symbol)`). Template
 | 3 | Publish to platform | **Copy**, do not promote. The user row stays. Platform is a snapshot with its own id. The member can keep iterating; admins can edit the platform copy without rewriting the user’s library. If the platform name is taken, the confirm dialog asks for another name. |
 | 4 | Folder apply | **Skip failures, keep successes.** Not all-or-nothing. Apply uses the template’s saved contract. After write, a result list shows applied / skipped / failed. One taken contract must not roll back the rest of the folder. |
 | 5 | Names | **Unique per owner + desk type**, case-insensitive. Same name is allowed for a different user, or for a different `desk_type`. Platform names are unique per `desk_type` among platform rows. Folders use the same uniqueness as templates. |
-| 6 | Admin library | **`/admin/templates`**. Admins view and manage **user and platform** templates and folders. Left admin nav. Members never see this page. |
+| 6 | Admin library | **`/admin/templates`**. Admins view and manage **platform** templates and folders only. User libraries are not listed here. Left admin nav. Members never see this page. |
 
 ## Shape
 
@@ -67,7 +67,7 @@ Applying a folder walks the list and applies each template to a **chosen desk** 
 
 | Kind | Who writes | Who reads / applies |
 | --- | --- | --- |
-| User template / folder | Owning member; admins may rename, describe, or delete from `/admin/templates` | Owner applies to **their** desks. Other members cannot see it unless it is **shared** with them. Admins see every user row on the admin page. |
+| User template / folder | Owning member | Owner applies to **their** desks. Other members cannot see it unless it is **shared** with them. Not listed on `/admin/templates`. |
 | Platform template / folder | Admin only | Every member can read and apply. Members cannot edit or delete. |
 | Shared template / folder | Owner (or admin) grants access by recipient email; stored as `to_user_id` | Recipient can apply to **their** desks. Read-only on Shared tabs. Cannot edit, delete, or re-share. |
 
@@ -75,11 +75,12 @@ Share is a grant, not a copy. The owner keeps the template. Deleting the templat
 
 ## Export and import
 
-`/account/templates` and `/admin/templates` both have **Export all** and **Import all**.
+`/account/templates` and `/admin/templates` both have **Export all** and **Import all**. Row checkboxes add bulk **Export** of the current selection.
 
 - Account export is the current member’s **user** templates and folders (not platform, not inbound shares).
-- Admin export is every template and folder in the database.
-- Import always creates **new user-owned copies** for the signed-in member. Name collisions get a ` (import)` suffix. Folders remap to the newly inserted templates. Invalid templates are skipped.
+- Admin export is the **platform** catalog only.
+- Selected **templates** export those rows. Selected **folders** export those folders plus the templates they contain, so import can rebuild the folder.
+- Import always creates **new user-owned copies** for the signed-in member. Name collisions get a ` (import)` suffix. Folders remap to the newly inserted templates. Invalid templates are skipped. An admin import lands in **their** `/account/templates`, not the platform catalog.
 
 The file format is `tbp.automation-templates` version 1 JSON. No API keys or webhook tokens.
 
@@ -152,25 +153,25 @@ Tokens from [ui-theme.md](ui-theme.md).
 
 Login library. Not desk-scoped. Account nav: Templates, with Settings, Exchanges, Manage desks.
 
-- Tabs: **My Templates**, **My Folders**, **Shared Templates**, **Shared Folders**. Table with columns, search, desk-type filter, folder filter, click-to-sort, and row checkboxes. Bulk: **Add to folder** (templates), **Publish** / **Unpublish** (admin), **Delete**. **Edit** folder uses **In Folder** / **Not in Folder** columns; Save writes membership. Apply is on Automations.
+- Tabs: **My Templates**, **My Folders**, **Shared Templates**, **Shared Folders**. Table with columns, search, desk-type filter, folder filter, click-to-sort, and row checkboxes. Bulk: **Add to folder** (templates), **Export**, **Delete**. **Edit** is name, description, and folders. **Share** is a separate action and modal (email grant). **Edit** folder uses **In Folder** / **Not in Folder** columns; Save writes membership. Apply is on Automations.
 - **Export all** / **Import all** JSON library file.
-- **Folders tab:** same table. Create a folder at the bottom with a name and desk type. Templates are optional; add them now or later.
+- **Folders tab:** same table. **Add New Folder** opens a modal for name, desk type, and optional templates. Add templates now or later from Edit.
 - **Platform rows** do not appear on My Templates / My Folders. Members apply them from Automations. **Shared** tabs: **Remove** drops the grant, not the owner’s copy.
-- Empty states: no templates yet; point at Automations **Save as template**. No folders yet; create on the Folders tab (templates optional).
+- Empty states: no templates yet; point at Automations **Save as template**. No folders yet; use **Add New Folder** (templates optional).
 
 ### `/admin/templates` (admins only)
 
 Admin nav next to Members / Logs. Members who are not admins get the usual admin gate.
 
-Two groups on the page (filters, not hidden from each other), shown as **tables** (search, sort, desk type, platform/user, bulk checkboxes):
+**Templates** and **Folders** list **platform** rows only. No user templates, user folders, Scope filter, or owner column. Inbound **Shared Templates / Shared Folders** live on `/account/templates`, not here.
 
-1. **Platform** — templates and folders the product ships. **Edit** to rename, description, delete, edit folder membership (platform templates only) on the **Folders** tab or from a template’s Edit dialog. Publish is the usual path in; admins can also **Save as platform template** from a desk they own.
-2. **User** — every member’s templates and folders. Columns: name, desk type, owner email, folder, shared with, updated. **Edit** for name, folder, sharing. Delete (confirm: owner loses it). Share by email. **Publish copy to platform** (new platform row; user row unchanged). Cannot apply a user template onto **that member’s** desks from here (no impersonation). An admin applies only to **their own** desks, from Automations.
-3. **Shared Templates / Shared Folders** — inbound grants to the signed-in admin, same as the account library.
+- **Edit** to rename, description, delete, edit folder membership (platform templates only) on the **Folders** tab or from a template’s Edit dialog.
+- **Unpublish** removes the platform row. Members will no longer see it. User copies are unchanged.
+- **Add New Folder** opens a modal. Create a platform folder from platform templates of one desk type.
+- Add a new platform row with **Save as platform template** from a desk the admin owns.
+- **Export all** downloads the platform catalog. Bulk **Export** downloads the selected platform templates or folders. **Import all** still creates user-owned copies for the signed-in admin.
 
-Admin does **not** rewrite a user’s `recipe` JSON in place. Support path: publish copy → edit the platform snapshot, or delete the user row if it is junk. Prevents a silent change to what the member thinks they saved.
-
-Creating a platform folder: on the **Folders** tab, pick platform templates of one desk type, order them.
+Admin does **not** rewrite a user’s `recipe` JSON in place. Support path: save a platform snapshot from Automations, then edit that snapshot. Prevents a silent change to what the member thinks they saved.
 
 ## Permissions (never in the browser)
 
@@ -178,13 +179,13 @@ Creating a platform folder: on the **Folders** tab, pick platform templates of o
 | --- | --- | --- |
 | Save bot as my template | Yes | Yes |
 | Save / edit / delete platform template or folder | No | Yes |
-| Publish copy of a user template to platform | No | Yes |
-| Rename / describe / delete another member’s user template or folder | No | Yes (`/admin/templates` only) |
-| See another member’s user templates on `/account/templates` | No, unless shared | No, unless shared (admin still sees them on `/admin/templates`) |
-| Share a user template/folder by email | Own rows | Own rows, or any user row from `/admin/templates` |
+| Save as platform template from a desk | No | Yes |
+| Rename / describe / delete another member’s user template or folder | No | No (not listed on `/admin/templates`) |
+| See another member’s user templates on `/account/templates` | No, unless shared | No, unless shared |
+| Share a user template/folder by email | Own rows | Own rows |
 | Apply my, platform, or shared-with-me template/folder to **my** desk | Yes | Yes |
 | Apply to someone else’s desk | No | No |
-| List all user + platform rows | No | Yes (service role, admin page) |
+| List platform rows | Apply from Automations | Yes (`/admin/templates`, service role) |
 
 ## Recipe JSON (per type, version 1)
 

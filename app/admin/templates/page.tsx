@@ -3,12 +3,12 @@ import { PageHeading } from "@/components/page-heading";
 import { TemplatesLibrary } from "@/components/templates-library";
 import { parseLibraryTab } from "@/lib/templates/library-tab";
 import { getSessionMember } from "@/lib/auth/session";
-import { listAllSets, listAllTemplates, listSharedSets, listSharedTemplates } from "@/lib/templates/store";
+import { listAllSets, listAllTemplates } from "@/lib/templates/store";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Templates",
-  description: "Platform and member automation templates.",
+  description: "Platform automation templates and folders.",
 };
 
 export default async function AdminTemplatesPage({
@@ -21,28 +21,24 @@ export default async function AdminTemplatesPage({
   if (!member) {
     redirect("/sign-in");
   }
-  const [templates, sets, sharedTemplates, sharedSets] = await Promise.all([
-    listAllTemplates(),
-    listAllSets(),
-    listSharedTemplates({ userId: member.id }),
-    listSharedSets({ userId: member.id }),
+  const [templates, sets] = await Promise.all([
+    listAllTemplates({ visibility: "platform" }),
+    listAllSets({ visibility: "platform" }),
   ]);
 
   return (
     <div>
       <PageHeading overline="Admin" title="Templates" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Platform templates are visible to every member. User templates can
-        be renamed, deleted, or published as a platform copy. Export all
-        libraries, import copies into yours, or share a user template or
-        folder by email. Add them to a desk from Automations.
+        Platform templates and folders are visible to every member. Edit,
+        unpublish, or export this catalog here. Add a platform row with
+        Save as platform template from Automations. Member libraries stay
+        on Account / Templates.
       </p>
       <TemplatesLibrary
         variant="admin"
         templates={templates}
         sets={sets}
-        sharedTemplates={sharedTemplates}
-        sharedSets={sharedSets}
         initialTab={parseLibraryTab(params.tab)}
       />
     </div>

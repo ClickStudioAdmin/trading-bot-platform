@@ -6,6 +6,7 @@ import {
   parseShareEmail,
   parseTemplateLibraryJson,
   planLibraryImport,
+  selectLibraryExport,
   uniqueLibraryName,
 } from "./transfer";
 
@@ -48,6 +49,23 @@ const file = buildTemplateLibraryFile({
 });
 assert.equal(file.format, "tbp.automation-templates");
 assert.deepEqual(file.sets[0]?.items, ["tpl-1"]);
+
+const pickedTemplates = selectLibraryExport(
+  { templates: [template], sets: [set] },
+  { kind: "template", ids: ["tpl-1"] },
+);
+assert.equal(pickedTemplates.templates.length, 1);
+assert.equal(pickedTemplates.sets.length, 0);
+
+const pickedFolders = selectLibraryExport(
+  { templates: [template, { ...template, id: "tpl-2", name: "Other" }], sets: [set] },
+  { kind: "folder", ids: ["set-1"] },
+);
+assert.equal(pickedFolders.sets.length, 1);
+assert.deepEqual(
+  pickedFolders.templates.map((row) => row.id),
+  ["tpl-1"],
+);
 
 const roundTrip = parseTemplateLibraryJson(JSON.stringify(file));
 assert.equal(roundTrip.ok, true);
