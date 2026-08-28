@@ -1,10 +1,17 @@
 "use server";
 
-import { parseFuturesAutomationForm } from "./automation";
+import {
+  futuresRuleToForm,
+  parseFuturesAutomationForm,
+  type FuturesAutomationFormValues,
+} from "./automation";
 import {
   futuresAutomationsAreRunning,
+  loadFuturesAutomationRules,
   saveFuturesAutomationRules,
 } from "./automation-load";
+import type { DeskActionResult } from "@/lib/ui/desk-action";
+import { deskActionError } from "@/lib/ui/desk-action";
 import { runFuturesCommand } from "./command";
 import { parseFuturesAction } from "./model";
 import { safeFuturesReturnPath } from "./path";
@@ -328,7 +335,13 @@ export async function saveFuturesSettings(formData: FormData) {
   redirect(deskPath(FUTURES_PATHS.settings, account.id, { saved: "1" }));
 }
 
-export async function saveFuturesAutomations(formData: FormData) {
+export type SaveFuturesAutomationsResult = DeskActionResult & {
+  forms?: FuturesAutomationFormValues[];
+};
+
+export async function saveFuturesAutomations(
+  formData: FormData,
+): Promise<SaveFuturesAutomationsResult> {
   const session = await requirePerpsUiSession();
   const { member: user, account } = session;
   if (!deskAllowsPerpsRecipes(account.deskType)) {
@@ -339,17 +352,11 @@ export async function saveFuturesAutomations(formData: FormData) {
   }
   const parsed = parseFuturesAutomationForm(formData);
   if (!parsed.ok) {
-    redirect(
-      deskPath(FUTURES_PATHS.automations, account.id, { error: parsed.error }),
-    );
+    return deskActionError(parsed.error);
   }
   const supabase = createServiceClient();
   if (!supabase) {
-    redirect(
-      deskPath(FUTURES_PATHS.automations, account.id, {
-        error: "Auth is not configured.",
-      }),
-    );
+    return deskActionError("Auth is not configured.");
   }
   const saved = await saveFuturesAutomationRules({
     supabase,
@@ -367,9 +374,7 @@ export async function saveFuturesAutomations(formData: FormData) {
       accountId: account.id,
       strategy: FUTURES_STRATEGY_ID,
     });
-    redirect(
-      deskPath(FUTURES_PATHS.automations, account.id, { error: saved.error }),
-    );
+    return deskActionError(saved.error);
   }
   await writeEventLog({
     scope: "strategy",
@@ -383,9 +388,13 @@ export async function saveFuturesAutomations(formData: FormData) {
     strategy: FUTURES_STRATEGY_ID,
     data: { count: parsed.rules.length },
   });
-  revalidatePath(FUTURES_PATHS.automations);
   revalidatePath(FUTURES_PATHS.positions);
-  redirect(deskPath(FUTURES_PATHS.automations, account.id, { saved: "1" }));
+  const rules = await loadFuturesAutomationRules(account.id);
+  return {
+    ok: true,
+    notice: "Bots saved.",
+    forms: rules.map(futuresRuleToForm),
+  };
 }
 
 export async function detachFuturesConnection() {

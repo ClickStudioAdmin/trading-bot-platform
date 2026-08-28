@@ -4,6 +4,8 @@ import { useState, type ReactNode } from "react";
 import {
   saveAccountReduceOnly,
   savePaperRules,
+  type SavePaperRulesResult,
+  type SaveReduceOnlyResult,
 } from "@/lib/engine/actions";
 import {
   parseAutomationMode,
@@ -17,6 +19,11 @@ import {
   type PaperRulesFormValues,
 } from "@/lib/engine/rules";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import {
+  DeskFormFlash,
+  StayOnPageForm,
+  keepFormKeys,
+} from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import { paperFormToSnapshotSource } from "@/lib/templates/recipe";
@@ -41,11 +48,18 @@ export function AutomationsDesk({
   sets?: AutomationTemplateSet[];
 }) {
   const [hasSets, setHasSets] = useState(values.layers.length > 0);
+  const [accountReduceOnly, setAccountReduceOnly] = useState(reduceOnly);
   return (
     <div className="space-y-4">
       {hasSets ? (
-        <form
+        <StayOnPageForm
           action={saveAccountReduceOnly}
+          onResult={(result) => {
+            const next = result as SaveReduceOnlyResult;
+            if (next.ok && typeof next.reduceOnly === "boolean") {
+              setAccountReduceOnly(next.reduceOnly);
+            }
+          }}
           className="max-w-md space-y-3 rounded-card border border-line bg-surface p-5"
         >
           <label className="flex items-start gap-3 text-sm text-ink">
@@ -53,7 +67,7 @@ export function AutomationsDesk({
               type="checkbox"
               name="reduceOnly"
               value="on"
-              defaultChecked={reduceOnly}
+              defaultChecked={accountReduceOnly}
               className="mt-1 size-4"
             />
             <span>
@@ -65,19 +79,20 @@ export function AutomationsDesk({
               </span>
             </span>
           </label>
+          <DeskFormFlash />
           <PendingSubmitButton
             pendingLabel="Saving…"
-            successKey="save-reduce-only"
+            deskAction="default"
             className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
           >
             Save
           </PendingSubmitButton>
-        </form>
+        </StayOnPageForm>
       ) : null}
       <PaperRulesForm
         values={values}
         inUseRuleIds={inUseRuleIds}
-        reduceOnly={reduceOnly}
+        reduceOnly={accountReduceOnly}
         onHasSetsChange={setHasSets}
         isAdmin={isAdmin}
         accountId={accountId}
@@ -109,9 +124,23 @@ export function PaperRulesForm({
 }) {
   const [layers, setLayers] = useState(values.layers);
   const [cloneMenu, setCloneMenu] = useState(0);
-  const inUse = new Set(inUseRuleIds);
+  const [inUseIds, setInUseIds] = useState(inUseRuleIds);
+  const inUse = new Set(inUseIds);
   const empty = layers.length === 0;
   const cloneSources = layers.filter((layer) => layer.id);
+
+  function applySaveResult(result: SavePaperRulesResult) {
+    if (!result.ok) {
+      return;
+    }
+    if (result.layers) {
+      setLayers((current) => keepFormKeys(current, result.layers ?? []));
+      onHasSetsChange?.(result.layers.length > 0);
+    }
+    if (result.inUseRuleIds) {
+      setInUseIds(result.inUseRuleIds);
+    }
+  }
 
   function appendApplied(items: AppliedDeskItem[]) {
     const nextLayers = items
@@ -140,12 +169,16 @@ export function PaperRulesForm({
     if (next.length === 0 && id !== "") {
       const data = new FormData();
       data.set("ruleCount", "0");
-      void savePaperRules(data);
+      void savePaperRules(data).then(applySaveResult);
     }
   }
 
   return (
-    <form action={savePaperRules} className="space-y-4">
+    <StayOnPageForm
+      action={savePaperRules}
+      onResult={applySaveResult}
+      className="space-y-4"
+    >
       <input type="hidden" name="ruleCount" value={layers.length} />
 
       {reduceOnly && !empty ? (
@@ -232,16 +265,19 @@ export function PaperRulesForm({
           </select>
         ) : null}
         {empty ? null : (
-          <PendingSubmitButton
-            pendingLabel="Saving…"
-            successKey="save-rules"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-          >
-            Save Bots
-          </PendingSubmitButton>
+          <>
+            <DeskFormFlash />
+            <PendingSubmitButton
+              pendingLabel="Saving…"
+              deskAction="default"
+              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            >
+              Save Bots
+            </PendingSubmitButton>
+          </>
         )}
       </div>
-    </form>
+    </StayOnPageForm>
   );
 }
 

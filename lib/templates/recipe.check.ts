@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
 import { defaultPaperLayer } from "@/lib/engine/rules";
 import {
+  dcaFormToSnapshotSource,
   dcaRecipeToConfig,
   paperRecipeToLayer,
   parseTemplateName,
@@ -153,5 +154,40 @@ if (named.ok) {
   assert.equal(named.name, "Grid");
 }
 assert.equal(parseTemplateName("x".repeat(81)).ok, false);
+
+const fromState = dcaFormToSnapshotSource(null, {
+  name: "DCA 123",
+  symbol: "BTCUSDT",
+  direction: "long",
+  startKind: "immediate",
+  averaging: "dip",
+  restGrid: false,
+  sizeUnit: "usdt",
+  clipSize: "1,000",
+  maxType: "orders",
+  maxClips: "5",
+  dipPct: "1.5",
+  sizeMultiplier: "1",
+  deviationMultiplier: "1",
+});
+const fromStateParsed = parseDcaPlaybookForm(fromState);
+assert.equal(fromStateParsed.ok, true);
+if (fromStateParsed.ok) {
+  assert.equal(fromStateParsed.config.clipSize, 1000);
+  assert.equal(fromStateParsed.config.name, "DCA 123");
+  assert.equal(fromStateParsed.config.maxClips, 5);
+}
+
+const missingSize = dcaFormToSnapshotSource(null, {
+  symbol: "BTCUSDT",
+  direction: "long",
+  sizeUnit: "usdt",
+  clipSize: "",
+});
+const missingSizeParsed = parseDcaPlaybookForm(missingSize);
+assert.equal(missingSizeParsed.ok, false);
+if (!missingSizeParsed.ok) {
+  assert.equal(missingSizeParsed.error, "Enter an order size.");
+}
 
 console.log("templates recipe ok");

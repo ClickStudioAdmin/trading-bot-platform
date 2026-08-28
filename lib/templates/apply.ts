@@ -398,6 +398,15 @@ export async function applyTemplateToDesk(input: {
       notes: [],
     };
   }
+  if (template.deskType === "dca" && !input.symbol?.trim()) {
+    return {
+      templateId: template.id,
+      name: template.name,
+      ok: false,
+      error: "Select a contract.",
+      notes: [],
+    };
+  }
   if (template.deskType === "dca") {
     return applyDcaTemplate({
       userId: input.userId,

@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ColumnHint } from "@/components/column-hint";
 import { PanelCloseButton } from "@/components/panel-close-button";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import {
+  DeskFormFlash,
+  StayOnPageForm,
+} from "@/components/stay-on-page-form";
 import { ChevronIcon, TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
@@ -17,6 +21,7 @@ import {
   runDcaDisarmAction,
   saveAndArmDcaPlaybookAction,
   saveDcaPlaybookAction,
+  type DcaDeskActionResult,
 } from "@/lib/dca/actions";
 import {
   dcaClipOrderType,
@@ -62,6 +67,10 @@ import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import Link from "next/link";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
+import {
+  dcaFormToSnapshotSource,
+  readFormControl,
+} from "@/lib/templates/recipe";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 
 const fieldClass =
@@ -419,6 +428,24 @@ export function DcaPlaybooksDesk({
               card.seed?.name ??
               (index === 0 ? DEFAULT_DCA_NAME : `DCA ${index + 1}`)
             }
+            onResult={(result) => {
+              const next = result as DcaDeskActionResult;
+              if (next.deletedId) {
+                setCards((current) =>
+                  current.filter((item) => item.key !== card.key),
+                );
+                return;
+              }
+              if (next.playbook) {
+                setCards((current) =>
+                  current.map((item) =>
+                    item.key === card.key
+                      ? { ...item, playbook: next.playbook ?? null, seed: undefined }
+                      : item,
+                  ),
+                );
+              }
+            }}
             onRemoveDraft={
               card.playbook
                 ? undefined
@@ -449,6 +476,7 @@ export function DcaPlaybooksDesk({
             accountId={accountId}
             templates={templates}
             sets={sets}
+            options={options}
             onApplied={appendApplied}
           />
         ) : null}
@@ -499,6 +527,7 @@ export function DcaPlaybookForm({
   reduceOnly = false,
   defaultName,
   onRemoveDraft,
+  onResult,
   webhooksHref = FUTURES_PATHS.webhooks,
   isAdmin = false,
   folders = [],
@@ -512,6 +541,7 @@ export function DcaPlaybookForm({
   reduceOnly?: boolean;
   defaultName?: string;
   onRemoveDraft?: () => void;
+  onResult?: (result: DcaDeskActionResult) => void;
   webhooksHref?: string;
   isAdmin?: boolean;
   folders?: AutomationTemplateSet[];
@@ -708,9 +738,8 @@ export function DcaPlaybookForm({
       </span>
     ) : (
       <PendingSubmitButton
-        formAction={deleteDcaPlaybookAction}
+        deskAction="delete"
         pendingLabel="Removing…"
-        successKey={`remove-dca-${playbook.id}`}
         className={headerRemoveClass}
         skipSizeGuard
       >
@@ -728,17 +757,28 @@ export function DcaPlaybookForm({
   ) : null;
 
   return (
-    <form
+    <StayOnPageForm
       ref={formRef}
       action={saveDcaPlaybookAction}
-      onSubmit={(event: FormEvent<HTMLFormElement>) => {
+      actions={{
+        "save-arm": saveAndArmDcaPlaybookAction,
+        "arm-long": runDcaArmLongAction,
+        "arm-short": runDcaArmShortAction,
+        arm: runDcaArmAction,
+        disarm: runDcaDisarmAction,
+        close: runDcaClosePlaybookAction,
+        delete: deleteDcaPlaybookAction,
+      }}
+      onResult={(result) => onResult?.(result as DcaDeskActionResult)}
+      guard={(event) => {
         const submitter = (event.nativeEvent as SubmitEvent).submitter as
           | HTMLElement
           | null;
         const skip = submitter?.dataset.skipSizeGuard === "1";
         if (saveError && !skip) {
-          event.preventDefault();
+          return false;
         }
+        return true;
       }}
       className="space-y-3 rounded-card border border-line bg-surface px-4 py-3"
     >
@@ -754,9 +794,8 @@ export function DcaPlaybookForm({
           ) : null}
           {showSaveAndArm ? (
             <PendingSubmitButton
-              formAction={saveAndArmDcaPlaybookAction}
+              deskAction="save-arm"
               pendingLabel="Arming…"
-              successKey={`save-arm-dca-playbook-${playbook?.id ?? "new"}`}
               className={headerLongClass}
               disabled={Boolean(saveError)}
               title={saveError ?? undefined}
@@ -769,13 +808,13 @@ export function DcaPlaybookForm({
                 [
                   {
                     side: "long" as const,
-                    action: runDcaArmLongAction,
+                    deskAction: "arm-long",
                     label: "Save and Trigger Long",
                     className: headerLongClass,
                   },
                   {
                     side: "short" as const,
-                    action: runDcaArmShortAction,
+                    deskAction: "arm-short",
                     label: "Save and Trigger Short",
                     className: headerShortClass,
                   },
@@ -806,9 +845,8 @@ export function DcaPlaybookForm({
                 ) : (
                   <PendingSubmitButton
                     key={item.side}
-                    formAction={item.action}
+                    deskAction={item.deskAction}
                     pendingLabel="Triggering…"
-                    successKey={`arm-dca-playbook-${playbook?.id ?? "new"}-${item.side}`}
                     className={item.className}
                   >
                     {item.label}
@@ -820,9 +858,8 @@ export function DcaPlaybookForm({
             <>
               {showArmButton && !showStopAdding ? (
                 <PendingSubmitButton
-                  formAction={runDcaArmAction}
+                  deskAction="arm"
                   pendingLabel="Arming…"
-                  successKey={`arm-dca-playbook-${playbook.id}`}
                   className={headerSecondaryClass}
                   disabled={Boolean(saveError)}
                   title={saveError ?? undefined}
@@ -835,6 +872,7 @@ export function DcaPlaybookForm({
         </div>
         <DcaStatusLight playbook={playbook ?? null} reduceOnly={reduceOnly} />
       </div>
+      <DeskFormFlash />
       {saveError ? <SizeGuardNote message={saveError} /> : null}
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
@@ -856,7 +894,7 @@ export function DcaPlaybookForm({
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <PendingSubmitButton
             pendingLabel="Saving…"
-            successKey={`save-dca-playbook-${playbook?.id ?? "new"}`}
+            deskAction="default"
             className={headerPrimaryClass}
             disabled={Boolean(saveError)}
             title={saveError ?? undefined}
@@ -869,9 +907,8 @@ export function DcaPlaybookForm({
                 title="Stop adding any new orders (also cancels any existing entry limit orders)"
               >
                 <PendingSubmitButton
-                  formAction={runDcaDisarmAction}
+                  deskAction="disarm"
                   pendingLabel="Stopping…"
-                  successKey={`disarm-dca-playbook-${playbook.id}`}
                   className={headerPrimaryClass}
                   skipSizeGuard
                 >
@@ -885,9 +922,8 @@ export function DcaPlaybookForm({
                 title="Close all positions and place the bot in idle mode (no new entries)"
               >
                 <PendingSubmitButton
-                  formAction={runDcaClosePlaybookAction}
+                  deskAction="close"
                   pendingLabel="Closing…"
-                  successKey={`close-dca-playbook-${playbook.id}`}
                   className={headerPrimaryClass}
                   skipSizeGuard
                 >
@@ -1546,7 +1582,34 @@ export function DcaPlaybookForm({
             kind="dca"
             folders={folders}
             buildForm={() =>
-              formRef.current ? new FormData(formRef.current) : new FormData()
+              dcaFormToSnapshotSource(formRef.current, {
+                name:
+                  readFormControl(formRef.current, "name") ||
+                  source?.name ||
+                  defaultName ||
+                  DEFAULT_DCA_NAME,
+                symbol,
+                direction,
+                startKind,
+                averaging,
+                restGrid: averaging === "dip" && restGrid,
+                sizeUnit,
+                clipSize,
+                maxType: effectiveMaxType,
+                maxClips,
+                maxValue,
+                dipPct,
+                intervalUnit,
+                sizeMultiplier,
+                deviationMultiplier,
+                takeProfitPct,
+                takeProfitBasis,
+                takeProfitOrderType,
+                stopLossPct,
+                stopLossBasis,
+                indicatorKind,
+                indicatorCompare,
+              })
             }
           />
           {removeControl}
@@ -1843,7 +1906,7 @@ export function DcaPlaybookForm({
         </div>
       </fieldset>
       ) : null}
-    </form>
+    </StayOnPageForm>
   );
 }
 

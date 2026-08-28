@@ -3,12 +3,20 @@
 import { useState } from "react";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import {
+  DeskFormFlash,
+  StayOnPageForm,
+  keepFormKeys,
+} from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   parseAutomationMode,
   type AutomationMode,
 } from "@/lib/engine/decide";
-import { saveFuturesAutomations } from "@/lib/futures/actions";
+import {
+  saveFuturesAutomations,
+  type SaveFuturesAutomationsResult,
+} from "@/lib/futures/actions";
 import {
   cloneFuturesAutomationForm,
   defaultFuturesAutomationForm,
@@ -70,8 +78,19 @@ export function FuturesAutomationsDesk({
     });
   }
 
+  function applySaveResult(result: SaveFuturesAutomationsResult) {
+    if (!result.ok || !result.forms) {
+      return;
+    }
+    setLayers((current) => keepFormKeys(current, result.forms ?? []));
+  }
+
   return (
-    <form action={saveFuturesAutomations} className="space-y-4">
+    <StayOnPageForm
+      action={saveFuturesAutomations}
+      onResult={applySaveResult}
+      className="space-y-4"
+    >
       <input type="hidden" name="ruleCount" value={layers.length} />
       {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
@@ -97,7 +116,7 @@ export function FuturesAutomationsDesk({
               if (next.length === 0) {
                 const data = new FormData();
                 data.set("ruleCount", "0");
-                void saveFuturesAutomations(data);
+                void saveFuturesAutomations(data).then(applySaveResult);
               }
             }}
           />
@@ -153,16 +172,19 @@ export function FuturesAutomationsDesk({
           </select>
         ) : null}
         {empty ? null : (
-          <PendingSubmitButton
-            pendingLabel="Saving…"
-            successKey="save-futures-rules"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-          >
-            Save Bots
-          </PendingSubmitButton>
+          <>
+            <DeskFormFlash />
+            <PendingSubmitButton
+              pendingLabel="Saving…"
+              deskAction="default"
+              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            >
+              Save Bots
+            </PendingSubmitButton>
+          </>
         )}
       </div>
-    </form>
+    </StayOnPageForm>
   );
 }
 

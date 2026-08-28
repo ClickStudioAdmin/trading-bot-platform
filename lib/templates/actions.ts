@@ -272,12 +272,12 @@ async function placeSavedTemplate(input: {
   isAdmin: boolean;
   visibility: TemplateVisibility;
   deskType: TemplateDeskType;
-  folderId: string | null;
+  folderIds: string[];
   newFolderName: string | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (input.folderId) {
+  for (const folderId of input.folderIds) {
     const added = await addTemplateToExistingFolder({
-      setId: input.folderId,
+      setId: folderId,
       templateId: input.templateId,
       userId: input.userId,
       isAdmin: input.isAdmin,
@@ -319,7 +319,7 @@ async function saveNamedRecipe(input: {
   description: string | null;
   replace: boolean;
   recipe: TemplateRecipe;
-  folderId: string | null;
+  folderIds: string[];
   newFolderName: string | null;
 }): Promise<TemplateActionResult> {
   if (input.newFolderName) {
@@ -329,9 +329,9 @@ async function saveNamedRecipe(input: {
     }
     input = { ...input, newFolderName: folderName.name };
   }
-  if (input.folderId) {
+  for (const folderId of input.folderIds) {
     const allowed = await writableFolderForSave({
-      setId: input.folderId,
+      setId: folderId,
       userId: input.userId,
       isAdmin: input.isAdmin,
       visibility: input.visibility,
@@ -373,7 +373,7 @@ async function saveNamedRecipe(input: {
         isAdmin: input.isAdmin,
         visibility: input.visibility,
         deskType: input.deskType,
-        folderId: input.folderId,
+        folderIds: input.folderIds,
         newFolderName: input.newFolderName,
       });
       revalidateTemplateSurfaces();
@@ -411,7 +411,7 @@ async function saveNamedRecipe(input: {
     isAdmin: input.isAdmin,
     visibility: input.visibility,
     deskType: input.deskType,
-    folderId: input.folderId,
+    folderIds: input.folderIds,
     newFolderName: input.newFolderName,
   });
   revalidateTemplateSurfaces();
@@ -436,7 +436,10 @@ function metaFromForm(formData: FormData, isAdmin: boolean) {
     description: parseTemplateDescription(formData.get("templateDescription")),
     visibility: visibility.visibility,
     replace: formData.get("replaceExisting") === "1",
-    folderId: String(formData.get("folderId") ?? "").trim() || null,
+    folderIds: formData
+      .getAll("folderId")
+      .map((value) => String(value).trim())
+      .filter(Boolean),
     newFolderName: String(formData.get("newFolderName") ?? "").trim() || null,
   };
 }
@@ -464,7 +467,7 @@ export async function saveDcaAsTemplateAction(
     name: meta.name,
     description: meta.description,
     replace: meta.replace,
-    folderId: meta.folderId,
+    folderIds: meta.folderIds,
     newFolderName: meta.newFolderName,
     recipe: snapshotDcaRecipe(parsed.config),
   });
@@ -497,7 +500,7 @@ export async function savePerpsAsTemplateAction(
     name: meta.name,
     description: meta.description,
     replace: meta.replace,
-    folderId: meta.folderId,
+    folderIds: meta.folderIds,
     newFolderName: meta.newFolderName,
     recipe: snapshotPerpsRecipe(rule),
   });
@@ -530,7 +533,7 @@ export async function savePaperAsTemplateAction(
     name: meta.name,
     description: meta.description,
     replace: meta.replace,
-    folderId: meta.folderId,
+    folderIds: meta.folderIds,
     newFolderName: meta.newFolderName,
     recipe: snapshotPaperRecipe(layer),
   });

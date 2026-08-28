@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
+import { useDeskFormStatus } from "@/components/stay-on-page-form";
 
 const OK_KEY = "tbp-btn-ok";
 const OK_MS = 1500;
@@ -115,6 +116,7 @@ export function PendingSubmitButton({
   disabled = false,
   title,
   skipSizeGuard = false,
+  deskAction,
 }: {
   children: ReactNode;
   pendingLabel?: string;
@@ -126,18 +128,24 @@ export function PendingSubmitButton({
   disabled?: boolean;
   title?: string;
   skipSizeGuard?: boolean;
+  deskAction?: string;
 }) {
   const { pending, data } = useFormStatus();
-  const thisPending =
-    pending &&
-    (name === undefined ||
-      value === undefined ||
-      data?.get(name) === value);
+  const desk = useDeskFormStatus();
+  const actionKey = deskAction ?? "default";
+  const thisPending = desk.active
+    ? desk.pending && desk.pendingAction === actionKey
+    : pending &&
+      (name === undefined ||
+        value === undefined ||
+        data?.get(name) === value);
   const stretch = /(^|\s)w-full(\s|$)/.test(className);
   const restored = useStoredButtonSuccess(successKey);
   const wasPending = useRef(false);
   const [localOk, setLocalOk] = useState(false);
-  const ok = restored || localOk;
+  const ok = desk.active
+    ? desk.ok && desk.okAction === actionKey
+    : restored || localOk;
 
   useEffect(() => {
     if (thisPending) {
@@ -167,9 +175,10 @@ export function PendingSubmitButton({
       name={name}
       value={value}
       formAction={formAction}
-      disabled={pending || disabled}
+      disabled={(desk.active ? desk.pending : pending) || disabled}
       title={title}
       data-skip-size-guard={skipSizeGuard ? "1" : undefined}
+      data-desk-action={deskAction}
       aria-busy={thisPending}
       aria-label={thisPending ? pendingLabel : ok ? "Done" : undefined}
       className={`disabled:opacity-70 ${className}`}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { LocalTime } from "@/components/local-time";
 import { Modal } from "@/components/template-modals";
 import { formatDeskType } from "@/lib/accounts/model";
@@ -39,6 +40,20 @@ const actionLink =
   "text-xs font-medium text-accent hover:text-accent-strong";
 
 type LibraryTab = "templates" | "sets" | "shared-templates" | "shared-sets";
+
+export function parseLibraryTab(
+  raw: string | string[] | undefined,
+): LibraryTab {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (
+    value === "sets" ||
+    value === "shared-templates" ||
+    value === "shared-sets"
+  ) {
+    return value;
+  }
+  return "templates";
+}
 
 type SortKey =
   | "name"
@@ -133,14 +148,18 @@ export function TemplatesLibrary({
   sets,
   sharedTemplates = [],
   sharedSets = [],
+  initialTab = "templates",
 }: {
   variant: "account" | "admin";
   templates: AutomationTemplate[];
   sets: AutomationTemplateSet[];
   sharedTemplates?: AutomationTemplate[];
   sharedSets?: AutomationTemplateSet[];
+  initialTab?: LibraryTab;
 }) {
-  const [tab, setTab] = useState<LibraryTab>("templates");
+  const router = useRouter();
+  const pathname = usePathname();
+  const [tab, setTab] = useState<LibraryTab>(initialTab);
   const [deskFilter, setDeskFilter] = useState<"all" | TemplateDeskType>("all");
   const [scope, setScope] = useState<"all" | "platform" | "user">("all");
   const [folderFilter, setFolderFilter] = useState("all");
@@ -152,6 +171,10 @@ export function TemplatesLibrary({
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkFolderOpen, setBulkFolderOpen] = useState(false);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   const knownFolders = useMemo(() => {
     const byId = new Map<string, AutomationTemplateSet>();
@@ -385,6 +408,14 @@ export function TemplatesLibrary({
     setTab(next);
     setSelected(new Set());
     setBulkFolderOpen(false);
+    const params = new URLSearchParams(window.location.search);
+    if (next === "templates") {
+      params.delete("tab");
+    } else {
+      params.set("tab", next);
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
   function toggleRow(id: string) {

@@ -10,7 +10,9 @@ import {
   savePerpsAsTemplateAction,
   type TemplateActionResult,
 } from "@/lib/templates/actions";
+import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
+import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import type {
   AutomationTemplateSet,
   TemplateSummary,
@@ -118,29 +120,30 @@ export function SaveAsTemplateButton({
   const [description, setDescription] = useState("");
   const [platform, setPlatform] = useState(false);
   const [replace, setReplace] = useState(false);
-  const [folderId, setFolderId] = useState("");
+  const [folderIds, setFolderIds] = useState<Set<string>>(new Set());
   const [createFolder, setCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
 
-  const writableFolders = folders.filter((row) => {
-    if (row.deskType !== kind || row.sharedByEmail) {
-      return false;
-    }
-    if (platform) {
-      return row.visibility === "platform" || row.visibility === "user";
-    }
-    return row.visibility === "user";
-  });
-  const mixVisibility =
-    writableFolders.some((row) => row.visibility === "platform") &&
-    writableFolders.some((row) => row.visibility === "user");
+  const folderGroups = saveFolderGroups(folders, kind, platform);
+
+  function toggleFolder(id: string) {
+    setFolderIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
 
   function resetAndOpen(asPlatform: boolean) {
     setName(defaultName);
     setDescription("");
     setPlatform(asPlatform);
     setReplace(false);
-    setFolderId("");
+    setFolderIds(new Set());
     setCreateFolder(false);
     setNewFolderName("");
     setResult(null);
@@ -156,8 +159,8 @@ export function SaveAsTemplateButton({
     if (replace) {
       data.set("replaceExisting", "1");
     }
-    if (folderId) {
-      data.set("folderId", folderId);
+    for (const id of folderIds) {
+      data.append("folderId", id);
     }
     if (createFolder && newFolderName.trim()) {
       data.set("newFolderName", newFolderName.trim());
@@ -225,28 +228,48 @@ export function SaveAsTemplateButton({
               className={fieldClass}
             />
           </label>
-          {writableFolders.length > 0 ? (
-            <label className="mt-3 block text-xs text-ink-muted">
-              Add to folder
-              <select
-                value={folderId}
-                onChange={(event) => setFolderId(event.target.value)}
-                className={fieldClass}
-              >
-                <option value="">None</option>
-                {writableFolders.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {row.name}
-                    {mixVisibility
-                      ? row.visibility === "platform"
-                        ? " · Platform"
-                        : " · Mine"
-                      : ""}
-                  </option>
+          <div className="mt-3">
+            <p className="text-xs text-ink-muted">Add to folder</p>
+            {folderGroups.length === 0 ? (
+              <p className="mt-1 text-sm text-ink-faint">
+                None yet. Create one below or on My Folders.
+              </p>
+            ) : (
+              <div className="mt-1 space-y-3">
+                {folderGroups.map((group) => (
+                  <div key={group.label}>
+                    {folderGroups.length > 1 ? (
+                      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+                        {group.label}
+                      </p>
+                    ) : null}
+                    <ul className="mt-1 space-y-1 rounded-control border border-line bg-canvas px-3 py-2">
+                      {group.rows.map((row) => (
+                        <li key={row.id}>
+                          <label className="flex items-start gap-2 text-sm text-ink">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 size-4"
+                              checked={folderIds.has(row.id)}
+                              onChange={() => toggleFolder(row.id)}
+                            />
+                            <span>
+                              <span className="block font-medium">{row.name}</span>
+                              <span className="block text-xs text-ink-muted">
+                                {row.items.length === 0
+                                  ? "Empty folder"
+                                  : `${row.items.length} template${row.items.length === 1 ? "" : "s"}`}
+                              </span>
+                            </span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ))}
-              </select>
-            </label>
-          ) : null}
+              </div>
+            )}
+          </div>
           <label className="mt-3 flex items-start gap-2 text-sm text-ink">
             <input
               type="checkbox"
@@ -298,17 +321,38 @@ export function SaveAsTemplateButton({
   );
 }
 
+function saveFolderGroups(
+  folders: AutomationTemplateSet[],
+  kind: TemplateDeskType,
+  asPlatform: boolean,
+): { label: string; rows: AutomationTemplateSet[] }[] {
+  const matching = folders.filter(
+    (row) => row.deskType === kind && !row.sharedByEmail,
+  );
+  const mine = matching.filter((row) => row.visibility === "user");
+  const platformRows = matching.filter((row) => row.visibility === "platform");
+  if (asPlatform) {
+    return [
+      { label: "Platform folders", rows: platformRows },
+      { label: "My folders", rows: mine },
+    ].filter((group) => group.rows.length > 0);
+  }
+  return mine.length > 0 ? [{ label: "My folders", rows: mine }] : [];
+}
+
 export function DeskTemplateBar({
   deskType,
   accountId,
   templates,
   sets,
+  options = [],
   onApplied,
 }: {
   deskType: TemplateDeskType;
   accountId: string;
   templates: TemplateSummary[];
   sets: AutomationTemplateSet[];
+  options?: LinearPerp[];
   onApplied?: (items: AppliedDeskItem[]) => void;
 }) {
   return (
@@ -318,6 +362,7 @@ export function DeskTemplateBar({
         accountId={accountId}
         templates={templates}
         sets={sets}
+        options={options}
         onApplied={onApplied}
       />
     </div>
@@ -329,12 +374,14 @@ function ApplyFromLibraryButton({
   accountId,
   templates,
   sets,
+  options,
   onApplied,
 }: {
   deskType: TemplateDeskType;
   accountId: string;
   templates: TemplateSummary[];
   sets: AutomationTemplateSet[];
+  options: LinearPerp[];
   onApplied?: (items: AppliedDeskItem[]) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -343,7 +390,10 @@ function ApplyFromLibraryButton({
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<TemplateActionResult | null>(null);
   const selected = templates.filter((row) => selectedIds.has(row.id));
-  const groups = libraryGroups(templates, sets);
+  const tree = libraryTree(templates, sets);
+  const contractsReady =
+    deskType !== "dca" ||
+    selected.every((row) => Boolean(symbols[row.id]?.trim()));
 
   function toggleTemplate(id: string) {
     setResult(null);
@@ -376,6 +426,9 @@ function ApplyFromLibraryButton({
 
   async function onApply() {
     if (selected.length === 0) {
+      return;
+    }
+    if (deskType === "dca" && !contractsReady) {
       return;
     }
     setPending(true);
@@ -431,7 +484,7 @@ function ApplyFromLibraryButton({
             bots on this desk. Nothing is armed.
           </p>
           <LibraryTree
-            groups={groups}
+            folders={tree}
             selectedIds={selectedIds}
             onToggleTemplate={toggleTemplate}
             onToggleFolder={toggleFolder}
@@ -441,16 +494,18 @@ function ApplyFromLibraryButton({
               {selected.map((row) => (
                 <label key={row.id} className="block text-xs text-ink-muted">
                   Contract for {row.name}
-                  <input
+                  <FuturesSymbolSelect
+                    name={`symbol-${row.id}`}
+                    options={options}
+                    allowEmpty
+                    placeholder="Select Contract"
                     value={symbols[row.id] ?? ""}
-                    onChange={(event) =>
+                    onChange={(symbol) =>
                       setSymbols((current) => ({
                         ...current,
-                        [row.id]: event.target.value,
+                        [row.id]: symbol,
                       }))
                     }
-                    placeholder="Leave blank to use the template contract"
-                    className={fieldClass}
                   />
                 </label>
               ))}
@@ -482,7 +537,7 @@ function ApplyFromLibraryButton({
             {!result?.results ? (
               <button
                 type="button"
-                disabled={selected.length === 0 || pending}
+                disabled={selected.length === 0 || pending || !contractsReady}
                 onClick={() => void onApply()}
                 className={primaryBtn}
               >
@@ -500,18 +555,18 @@ function ApplyFromLibraryButton({
   );
 }
 
+type PickerItem = {
+  templateId: string;
+  name: string;
+  preview: string;
+};
+
 type PickerFolder = {
   id: string;
   name: string;
-  items: { templateId: string; name: string; preview: string }[];
-  sharedByEmail: string | null;
-};
-
-type LibraryGroup = {
-  key: string;
-  label: string;
+  items: PickerItem[];
   folders: PickerFolder[];
-  loose: TemplateSummary[];
+  sharedByEmail: string | null;
 };
 
 function asPickerFolder(folder: AutomationTemplateSet): PickerFolder {
@@ -523,97 +578,93 @@ function asPickerFolder(folder: AutomationTemplateSet): PickerFolder {
       name: item.name,
       preview: item.preview,
     })),
+    folders: [],
     sharedByEmail: folder.sharedByEmail,
   };
 }
 
-function virtualFolder(
-  id: string,
-  name: string,
-  rows: TemplateSummary[],
-): PickerFolder {
-  return {
-    id,
-    name,
-    items: rows.map((row) => ({
-      templateId: row.id,
-      name: row.name,
-      preview: [
-        row.preview,
-        row.sharedByEmail ? `Shared by ${row.sharedByEmail}` : "",
-        row.description ?? "",
-      ]
-        .filter(Boolean)
-        .join(" · "),
-    })),
-    sharedByEmail: null,
-  };
+function templatesAsItems(rows: TemplateSummary[]): PickerItem[] {
+  return rows.map((row) => ({
+    templateId: row.id,
+    name: row.name,
+    preview: [
+      row.preview,
+      row.sharedByEmail ? `Shared by ${row.sharedByEmail}` : "",
+      row.description ?? "",
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  }));
 }
 
-function libraryGroups(
+function folderTemplateIds(folder: PickerFolder): string[] {
+  return [
+    ...new Set([
+      ...folder.items.map((item) => item.templateId),
+      ...folder.folders.flatMap(folderTemplateIds),
+    ]),
+  ];
+}
+
+function libraryTree(
   templates: TemplateSummary[],
   sets: AutomationTemplateSet[],
-): LibraryGroup[] {
+): PickerFolder[] {
   const scopes = [
     {
       key: "platform",
       label: "Platform",
-      wrapLooseAs: "Platform templates",
       match: (row: { visibility: string; sharedByEmail: string | null }) =>
         row.visibility === "platform",
     },
     {
       key: "shared",
       label: "Shared",
-      wrapLooseAs: "Shared templates",
       match: (row: { visibility: string; sharedByEmail: string | null }) =>
         Boolean(row.sharedByEmail),
     },
     {
       key: "mine",
       label: "My templates",
-      wrapLooseAs: null,
       match: (row: { visibility: string; sharedByEmail: string | null }) =>
         row.visibility === "user" && !row.sharedByEmail,
     },
   ] as const;
-  return scopes
-    .map((scope) => {
-      const scopeFolders = sets.filter((folder) => scope.match(folder));
-      const filedInScope = new Set(
-        scopeFolders.flatMap((folder) =>
-          folder.items.map((item) => item.templateId),
-        ),
-      );
-      const loose = templates.filter(
-        (row) => scope.match(row) && !filedInScope.has(row.id),
-      );
-      const folders = scopeFolders.map(asPickerFolder);
-      if (scope.wrapLooseAs && loose.length > 0) {
-        folders.push(virtualFolder(`virtual-${scope.key}`, scope.wrapLooseAs, loose));
-      }
-      return {
-        key: scope.key,
-        label: scope.label,
-        folders,
-        loose: scope.wrapLooseAs ? [] : loose,
-      };
-    })
-    .filter((group) => group.folders.length > 0 || group.loose.length > 0);
+  return scopes.flatMap((scope) => {
+    const nested = sets.filter((folder) => scope.match(folder)).map(asPickerFolder);
+    const filed = new Set(
+      nested.flatMap((folder) => folder.items.map((item) => item.templateId)),
+    );
+    const loose = templates.filter(
+      (row) => scope.match(row) && !filed.has(row.id),
+    );
+    if (nested.length === 0 && loose.length === 0) {
+      return [];
+    }
+    return [
+      {
+        id: `scope-${scope.key}`,
+        name: scope.label,
+        items: templatesAsItems(loose),
+        folders: nested,
+        sharedByEmail: null,
+      },
+    ];
+  });
 }
 
 function LibraryTree({
-  groups,
+  folders,
   selectedIds,
   onToggleTemplate,
   onToggleFolder,
 }: {
-  groups: LibraryGroup[];
+  folders: PickerFolder[];
   selectedIds: Set<string>;
   onToggleTemplate: (id: string) => void;
   onToggleFolder: (ids: string[]) => void;
 }) {
-  if (groups.length === 0) {
+  if (folders.length === 0) {
     return (
       <p className="mt-3 text-sm text-ink-muted">
         None yet. Save a bot as a template from a card.
@@ -621,95 +672,103 @@ function LibraryTree({
     );
   }
   return (
-    <div className="mt-3 space-y-4">
-      {groups.map((group) => (
-        <section key={group.key}>
-          <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-            {group.label}
-          </p>
-          <ul className="mt-1 space-y-1">
-            {group.folders.map((folder) => {
-              const ids = folder.items.map((item) => item.templateId);
-              const selectedCount = ids.filter((id) => selectedIds.has(id)).length;
-              return (
-                <li
-                  key={folder.id}
-                  className="rounded-control border border-line bg-canvas px-3 py-2"
-                >
-                  <label className="flex items-start gap-2 text-sm text-ink">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 size-4"
-                      checked={ids.length > 0 && selectedCount === ids.length}
-                      ref={(node) => {
-                        if (node) {
-                          node.indeterminate =
-                            selectedCount > 0 && selectedCount < ids.length;
-                        }
-                      }}
-                      onChange={() => onToggleFolder(ids)}
-                    />
-                    <span>
-                      <span className="block font-medium">{folder.name}</span>
-                      <span className="block text-xs text-ink-muted">
-                        {ids.length === 0
-                          ? "Empty folder"
-                          : `${ids.length} template${ids.length === 1 ? "" : "s"}`}
-                        {folder.sharedByEmail
-                          ? ` · Shared by ${folder.sharedByEmail}`
-                          : ""}
-                      </span>
-                    </span>
-                  </label>
-                  {folder.items.length > 0 ? (
-                    <ul className="mt-2 ml-6 space-y-1 border-l border-line pl-3">
-                      {folder.items.map((item) => (
-                        <li key={`${folder.id}-${item.templateId}`}>
-                          <label className="flex items-start gap-2 text-sm text-ink">
-                            <input
-                              type="checkbox"
-                              className="mt-0.5 size-4"
-                              checked={selectedIds.has(item.templateId)}
-                              onChange={() => onToggleTemplate(item.templateId)}
-                            />
-                            <span>
-                              <span className="block">{item.name}</span>
-                              <span className="block text-xs text-ink-muted">
-                                {item.preview}
-                              </span>
-                            </span>
-                          </label>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </li>
-              );
-            })}
-            {group.loose.map((row) => (
-              <li key={row.id}>
-                <label className="flex items-start gap-2 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 size-4"
-                    checked={selectedIds.has(row.id)}
-                    onChange={() => onToggleTemplate(row.id)}
-                  />
-                  <span>
-                    <span className="block">{row.name}</span>
-                    <span className="block text-xs text-ink-muted">
-                      {row.preview}
-                      {row.sharedByEmail ? ` · Shared by ${row.sharedByEmail}` : ""}
-                      {row.description ? ` · ${row.description}` : ""}
-                    </span>
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </section>
+    <ul className="mt-3 space-y-1">
+      {folders.map((folder) => (
+        <FolderNode
+          key={folder.id}
+          folder={folder}
+          nested={false}
+          selectedIds={selectedIds}
+          onToggleTemplate={onToggleTemplate}
+          onToggleFolder={onToggleFolder}
+        />
       ))}
-    </div>
+    </ul>
+  );
+}
+
+function FolderNode({
+  folder,
+  nested,
+  selectedIds,
+  onToggleTemplate,
+  onToggleFolder,
+}: {
+  folder: PickerFolder;
+  nested: boolean;
+  selectedIds: Set<string>;
+  onToggleTemplate: (id: string) => void;
+  onToggleFolder: (ids: string[]) => void;
+}) {
+  const ids = folderTemplateIds(folder);
+  const selectedCount = ids.filter((id) => selectedIds.has(id)).length;
+  const hasChildren = folder.folders.length > 0 || folder.items.length > 0;
+  return (
+    <li
+      className={
+        nested
+          ? undefined
+          : "rounded-control border border-line bg-canvas px-3 py-2"
+      }
+    >
+      <label className="flex items-start gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          className="mt-0.5 size-4"
+          checked={ids.length > 0 && selectedCount === ids.length}
+          ref={(node) => {
+            if (node) {
+              node.indeterminate =
+                selectedCount > 0 && selectedCount < ids.length;
+            }
+          }}
+          onChange={() => onToggleFolder(ids)}
+        />
+        <span>
+          <span className="block font-medium">{folder.name}</span>
+          <span className="block text-xs text-ink-muted">
+            {ids.length === 0
+              ? "Empty folder"
+              : `${ids.length} template${ids.length === 1 ? "" : "s"}`}
+            {folder.sharedByEmail
+              ? ` · Shared by ${folder.sharedByEmail}`
+              : ""}
+          </span>
+        </span>
+      </label>
+      {hasChildren ? (
+        <ul className="mt-2 ml-6 space-y-1 border-l border-line pl-3">
+          {folder.folders.map((child) => (
+            <FolderNode
+              key={child.id}
+              folder={child}
+              nested
+              selectedIds={selectedIds}
+              onToggleTemplate={onToggleTemplate}
+              onToggleFolder={onToggleFolder}
+            />
+          ))}
+          {folder.items.map((item) => (
+            <li key={`${folder.id}-${item.templateId}`}>
+              <label className="flex items-start gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 size-4"
+                  checked={selectedIds.has(item.templateId)}
+                  onChange={() => onToggleTemplate(item.templateId)}
+                />
+                <span>
+                  <span className="block">{item.name}</span>
+                  <span className="block text-xs text-ink-muted">
+                    {item.preview}
+                  </span>
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </li>
   );
 }
 

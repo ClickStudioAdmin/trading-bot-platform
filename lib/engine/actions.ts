@@ -2,9 +2,12 @@
 
 import {
   blockedRuleDeletes,
+  paperConfigToFormValues,
   paperLayerToRow,
   parsePaperRulesForm,
+  type PaperLayerFormValues,
 } from "@/lib/engine/rules";
+import { loadPaperRules } from "@/lib/engine/load";
 import { loadAccountUsage } from "@/lib/accounts/store";
 import {
   deskPath,
@@ -22,32 +25,36 @@ import {
   readDeskNameFromSettingsForm,
 } from "@/lib/accounts/actions";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { deskActionError, type DeskActionResult } from "@/lib/ui/desk-action";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-const RULES_PATH = "/strategies/cash-and-carry/automations";
 const SETTINGS_PATH = "/strategies/cash-and-carry/settings";
-
-function rulesFail(accountId: string, error: string): never {
-  redirect(deskPath(RULES_PATH, accountId, { error }));
-}
 
 function settingsFail(accountId: string, error: string): never {
   redirect(deskPath(SETTINGS_PATH, accountId, { error }));
 }
 
-export async function savePaperRules(formData: FormData) {
+export type SavePaperRulesResult = DeskActionResult & {
+  layers?: PaperLayerFormValues[];
+  inUseRuleIds?: number[];
+  reduceOnly?: boolean;
+};
+
+export async function savePaperRules(
+  formData: FormData,
+): Promise<SavePaperRulesResult> {
   const session = await requireCashAndCarrySession();
   const { member: user, account } = session;
 
   const parsed = parsePaperRulesForm(formData);
   if (!parsed.ok) {
-    rulesFail(account.id, parsed.error);
+    return deskActionError(parsed.error);
   }
 
   const supabase = createServiceClient();
   if (!supabase) {
-    rulesFail(account.id, "Auth is not configured.");
+    return deskActionError("Auth is not configured.");
   }
 
   const clearReduceOnly = parsed.config.layers.length === 0;
@@ -71,7 +78,7 @@ export async function savePaperRules(formData: FormData) {
       accountId: account.id,
       strategy: "cash-and-carry",
     });
-    rulesFail(account.id, settingsError.message);
+    return deskActionError(settingsError.message);
   }
 
   const { data: existing, error: loadError } = await supabase
@@ -89,7 +96,7 @@ export async function savePaperRules(formData: FormData) {
       accountId: account.id,
       strategy: "cash-and-carry",
     });
-    rulesFail(account.id, loadError.message);
+    return deskActionError(loadError.message);
   }
 
   const keepIds = new Set(
@@ -119,7 +126,7 @@ export async function savePaperRules(formData: FormData) {
         accountId: account.id,
         strategy: "cash-and-carry",
       });
-      rulesFail(account.id, openError.message);
+      return deskActionError(openError.message);
     }
 
     const blocked = blockedRuleDeletes(
@@ -129,8 +136,7 @@ export async function savePaperRules(formData: FormData) {
         .filter((id) => Number.isFinite(id)),
     );
     if (blocked.length > 0) {
-      rulesFail(
-        account.id,
+      return deskActionError(
         "Cannot remove a bot that has an open position.",
       );
     }
@@ -150,7 +156,7 @@ export async function savePaperRules(formData: FormData) {
         accountId: account.id,
         strategy: "cash-and-carry",
       });
-      rulesFail(account.id, error.message);
+      return deskActionError(error.message);
     }
   }
 
@@ -172,7 +178,7 @@ export async function savePaperRules(formData: FormData) {
           accountId: account.id,
           strategy: "cash-and-carry",
         });
-        rulesFail(account.id, error.message);
+        return deskActionError(error.message);
       }
     } else {
       const { error } = await supabase.from("paper_rules").insert(payload);
@@ -186,7 +192,7 @@ export async function savePaperRules(formData: FormData) {
           accountId: account.id,
           strategy: "cash-and-carry",
         });
-        rulesFail(account.id, error.message);
+        return deskActionError(error.message);
       }
     }
   }
@@ -205,11 +211,14 @@ export async function savePaperRules(formData: FormData) {
     },
   });
 
-  revalidatePath("/account/exchanges");
-  revalidatePath("/account");
-  revalidatePath("/account/book");
-  revalidatePath("/strategies/cash-and-carry");
-  redirect(deskPath(RULES_PATH, account.id, { saved: "1" }));
+  const loaded = await loadPaperRules();
+  return {
+    ok: true,
+    notice: "Bots saved.",
+    layers: paperConfigToFormValues(loaded.config).layers,
+    inUseRuleIds: loaded.inUseRuleIds,
+    reduceOnly: loaded.config.reduceOnly,
+  };
 }
 
 export async function savePaperSettings(formData: FormData) {
@@ -324,12 +333,18 @@ export async function savePaperSettings(formData: FormData) {
   redirect(deskPath(SETTINGS_PATH, account.id, { saved: "1" }));
 }
 
-export async function saveAccountReduceOnly(formData: FormData) {
+export type SaveReduceOnlyResult = DeskActionResult & {
+  reduceOnly?: boolean;
+};
+
+export async function saveAccountReduceOnly(
+  formData: FormData,
+): Promise<SaveReduceOnlyResult> {
   const session = await requireCashAndCarrySession();
   const { member: user, account } = session;
   const supabase = createServiceClient();
   if (!supabase) {
-    rulesFail(account.id, "Auth is not configured.");
+    return deskActionError("Auth is not configured.");
   }
 
   const { count: setCount, error: countError } = await supabase
@@ -337,7 +352,7 @@ export async function saveAccountReduceOnly(formData: FormData) {
     .select("id", { count: "exact", head: true })
     .eq("account_id", account.id);
   if (countError) {
-    rulesFail(account.id, countError.message);
+    return deskActionError(countError.message);
   }
   const reduceOnly =
     (setCount ?? 0) > 0 && parseReduceOnly(formData.get("reduceOnly"));
@@ -359,7 +374,7 @@ export async function saveAccountReduceOnly(formData: FormData) {
       accountId: account.id,
       strategy: "cash-and-carry",
     });
-    rulesFail(account.id, error.message);
+    return deskActionError(error.message);
   }
 
   await writeEventLog({
@@ -372,10 +387,11 @@ export async function saveAccountReduceOnly(formData: FormData) {
     data: { reduceOnly },
   });
 
-  revalidatePath("/account/exchanges");
-  revalidatePath("/account/book");
-  revalidatePath("/strategies/cash-and-carry");
-  redirect(deskPath(RULES_PATH, account.id, { reduce: "1" }));
+  return {
+    ok: true,
+    notice: reduceOnly ? "Reduce only is on." : "Reduce only is off.",
+    reduceOnly,
+  };
 }
 
 export async function detachStrategyConnection() {

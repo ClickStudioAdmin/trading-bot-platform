@@ -576,6 +576,113 @@ export function uniqueAppliedName(
   return trimmed.slice(0, max);
 }
 
+export type DcaSnapshotOverlay = {
+  name?: string;
+  symbol?: string;
+  direction?: string;
+  startKind?: string;
+  averaging?: string;
+  restGrid?: boolean;
+  sizeUnit?: string;
+  clipSize?: string;
+  maxType?: string;
+  maxClips?: string;
+  maxValue?: string;
+  dipPct?: string;
+  intervalUnit?: string;
+  intervalValue?: string;
+  sizeMultiplier?: string;
+  deviationMultiplier?: string;
+  takeProfitPct?: string;
+  takeProfitBasis?: string;
+  takeProfitOrderType?: string;
+  stopLossPct?: string;
+  stopLossBasis?: string;
+  webhookId?: string;
+  indicatorKind?: string;
+  indicatorTimeframe?: string;
+  indicatorCompare?: string;
+  indicatorLevel?: string;
+  armTriggerBy?: string;
+  armCompare?: string;
+  armPrice?: string;
+  trailingTriggerPct?: string;
+  trailingPct?: string;
+  breakevenActivationPct?: string;
+  breakevenOffsetPct?: string;
+};
+
+export function readFormControl(
+  form: HTMLFormElement | null,
+  name: string,
+): string {
+  const el = form?.elements.namedItem(name);
+  if (
+    el instanceof HTMLInputElement ||
+    el instanceof HTMLSelectElement ||
+    el instanceof HTMLTextAreaElement
+  ) {
+    return el.value;
+  }
+  return "";
+}
+
+function formDataFromNamedControls(form: HTMLFormElement | null): FormData {
+  const data = new FormData();
+  if (!form) {
+    return data;
+  }
+  for (const el of Array.from(form.elements)) {
+    if (
+      !(
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLSelectElement ||
+        el instanceof HTMLTextAreaElement
+      )
+    ) {
+      continue;
+    }
+    if (!el.name || el.disabled) {
+      continue;
+    }
+    if (el instanceof HTMLInputElement) {
+      if (el.type === "submit" || el.type === "button" || el.type === "file") {
+        continue;
+      }
+      if (el.type === "checkbox" || el.type === "radio") {
+        if (el.checked) {
+          data.append(el.name, el.value || "on");
+        }
+        continue;
+      }
+    }
+    data.append(el.name, el.value);
+  }
+  return data;
+}
+
+export function dcaFormToSnapshotSource(
+  form: HTMLFormElement | null,
+  overlay: DcaSnapshotOverlay = {},
+): FormData {
+  const data = formDataFromNamedControls(form);
+  for (const [key, value] of Object.entries(overlay)) {
+    if (value === undefined) {
+      continue;
+    }
+    if (typeof value === "boolean") {
+      if (value) {
+        data.set(key, "1");
+      } else {
+        data.delete(key);
+      }
+      continue;
+    }
+    data.set(key, value);
+  }
+  return data;
+}
+
 export function perpsFormToSnapshotSource(
   layer: FuturesAutomationFormValues,
 ): FormData {

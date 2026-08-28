@@ -143,8 +143,10 @@ Tokens from [ui-theme.md](ui-theme.md).
 
 ### Automations (desk)
 
-- Header: **Create New Bot**, **Add from Template**. One picker lists Platform / Shared / My templates. Named folders stay as groups. Loose platform and shared templates wrap as **Platform templates** and **Shared templates** folders. Tick a folder or individual templates, then apply to **this** desk.
-- Each bot card: **Save as template**. Name, description, optional **Add to folder** (existing writable folders of this desk type) and/or **Create a new folder** in the same dialog. Admins also see **Save as platform template** (confirm: visible to every member; new folder is a platform folder).
+- Header: **Create New Bot**, **Add from Template**. One picker is a single folder tree: **Platform**, **Shared**, and **My templates** as top-level folders. Named folders and loose templates nest under that scope. Tick a folder or individual templates, then apply to **this** desk.
+- Save Bots, Arm, Close bot, and Reduce only stay on the page. They do not reload or jump the scroll.
+- Each bot card: **Save as template**. Name, description, **Add to folder** as a checkbox list of **your** folders (this desk type). **Save as platform template** uses the same list with **Platform folders** and **My folders**. Tick one or more, and/or **Create a new folder**.
+- **Add from Template** on DCA: each selected template has a required empty **Select Contract** field. Apply stays disabled until every selected template has a contract. The template’s saved contract is not used.
 - TradingView Strategy desk: no Add from Template. Webhook tokens are not templates.
 
 ### `/account/templates` (every member)

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeading } from "@/components/page-heading";
-import { TemplatesLibrary } from "@/components/templates-library";
+import { TemplatesLibrary, parseLibraryTab } from "@/components/templates-library";
 import { getSessionMember } from "@/lib/auth/session";
 import { listSharedSets, listSharedTemplates, listVisibleSets, listVisibleTemplates } from "@/lib/templates/store";
 import { redirect } from "next/navigation";
@@ -10,7 +10,12 @@ export const metadata: Metadata = {
   description: "Your automation templates and folders.",
 };
 
-export default async function AccountTemplatesPage() {
+export default async function AccountTemplatesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
   const member = await getSessionMember();
   if (!member) {
     redirect("/sign-in");
@@ -36,6 +41,7 @@ export default async function AccountTemplatesPage() {
         sets={sets}
         sharedTemplates={sharedTemplates}
         sharedSets={sharedSets}
+        initialTab={parseLibraryTab(params.tab)}
       />
     </div>
   );

@@ -10,23 +10,30 @@ export function FuturesSymbolSelect({
   value,
   onChange,
   name = "symbol",
+  allowEmpty = false,
+  placeholder = "Select Contract",
 }: {
   options: LinearPerp[];
   defaultSymbol?: string;
   value?: string;
   onChange?: (symbol: string) => void;
   name?: string;
+  allowEmpty?: boolean;
+  placeholder?: string;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [internal, setInternal] = useState(() =>
-    pickDefault(options, defaultSymbol),
+    allowEmpty ? "" : pickDefault(options, defaultSymbol),
   );
   const symbol = value ?? internal;
 
-  const selected = options.find((row) => row.symbol === symbol) ?? options[0];
+  const selected = allowEmpty && !symbol
+    ? undefined
+    : options.find((row) => row.symbol === symbol) ??
+      (allowEmpty ? undefined : options[0]);
   const filtered = useMemo(() => {
     const needle = query.trim().toUpperCase();
     if (!needle) {
@@ -72,8 +79,9 @@ export function FuturesSymbolSelect({
     return (
       <input
         name={name}
-        defaultValue={value ?? defaultSymbol}
+        value={value ?? (allowEmpty ? "" : defaultSymbol)}
         onChange={(event) => onChange?.(event.target.value.toUpperCase())}
+        placeholder={allowEmpty ? placeholder : undefined}
         autoComplete="off"
         spellCheck={false}
         className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm uppercase text-ink focus:border-line-strong focus:outline-none"
@@ -109,7 +117,7 @@ export function FuturesSymbolSelect({
             <span className="min-w-0 truncate font-medium">{selected.symbol}</span>
           </>
         ) : (
-          <span className="text-ink-muted">Select a pair</span>
+          <span className="text-ink-muted">{placeholder}</span>
         )}
         <svg
           viewBox="0 0 12 12"
@@ -127,7 +135,7 @@ export function FuturesSymbolSelect({
         </svg>
       </button>
       {open ? (
-        <div className="absolute z-30 mt-1 w-full min-w-[16rem] rounded-card border border-line bg-surface p-2">
+        <div className="absolute z-[60] mt-1 w-full min-w-[16rem] rounded-card border border-line bg-surface p-2">
           <input
             ref={searchRef}
             value={query}
