@@ -17,6 +17,9 @@ import {
 } from "@/lib/futures/automation";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
+import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
+import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
+import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 
 export function FuturesAutomationsDesk({
   rules,
@@ -24,12 +27,20 @@ export function FuturesAutomationsDesk({
   triggerWebhooks = [],
   inUseRuleIds = [],
   reduceOnly = false,
+  isAdmin = false,
+  accountId,
+  templates = [],
+  sets = [],
 }: {
   rules: FuturesAutomationFormValues[];
   options: LinearPerp[];
   triggerWebhooks?: Pick<FuturesWebhookRow, "id" | "name">[];
   inUseRuleIds?: string[];
   reduceOnly?: boolean;
+  isAdmin?: boolean;
+  accountId?: string;
+  templates?: TemplateSummary[];
+  sets?: AutomationTemplateSet[];
 }) {
   const [layers, setLayers] = useState(rules);
   const [cloneMenu, setCloneMenu] = useState(0);
@@ -60,6 +71,7 @@ export function FuturesAutomationsDesk({
             triggerWebhooks={triggerWebhooks}
             accountReduceOnly={reduceOnly}
             inUse={Boolean(layer.id && inUse.has(layer.id))}
+            isAdmin={isAdmin}
             onRemove={() => {
               const next = layers.filter((item) => item.key !== layer.key);
               setLayers(next);
@@ -89,6 +101,14 @@ export function FuturesAutomationsDesk({
         >
           Add rule
         </button>
+        {accountId ? (
+          <DeskTemplateBar
+            deskType="perps"
+            accountId={accountId}
+            templates={templates}
+            sets={sets}
+          />
+        ) : null}
         {cloneSources.length > 0 ? (
           <select
             key={cloneMenu}
@@ -137,6 +157,7 @@ function RuleCard({
   triggerWebhooks,
   accountReduceOnly,
   inUse,
+  isAdmin,
   onRemove,
 }: {
   index: number;
@@ -145,6 +166,7 @@ function RuleCard({
   triggerWebhooks: Pick<FuturesWebhookRow, "id" | "name">[];
   accountReduceOnly: boolean;
   inUse: boolean;
+  isAdmin: boolean;
   onRemove: () => void;
 }) {
   const prefix = `r${index}_`;
@@ -427,19 +449,40 @@ function RuleCard({
             </span>
           </label>
         )}
-        {inUse ? (
-          <p className="text-xs text-ink-muted">
-            This rule has an open position. Close that row before removing it.
-          </p>
-        ) : (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
-          >
-            Remove
-          </button>
-        )}
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <SaveAsTemplateButton
+            isAdmin={isAdmin}
+            defaultName={layer.name}
+            kind="perps"
+            buildForm={() =>
+              perpsFormToSnapshotSource({
+                ...layer,
+                mode,
+                formAction,
+                orderType,
+                sizeUnit,
+                size,
+                limitPrice,
+                triggerPrice,
+                symbol,
+                entrySource,
+              })
+            }
+          />
+          {inUse ? (
+            <p className="text-xs text-ink-muted">
+              This rule has an open position. Close that row before removing it.
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
+            >
+              Remove
+            </button>
+          )}
+        </div>
       </div>
     </section>
   );

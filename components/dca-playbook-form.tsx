@@ -60,6 +60,8 @@ import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { perpEffectiveMaxQty, perpTicketSizeError } from "@/lib/exchanges/bybit/ticket-size";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import Link from "next/link";
+import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
+import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 
 const fieldClass =
   "mt-0.5 w-full rounded-control border border-line bg-surface-raised px-2 py-1.5 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -330,6 +332,10 @@ export function DcaPlaybooksDesk({
   lastPrices = {},
   reduceOnly = false,
   webhooksHref = FUTURES_PATHS.webhooks,
+  isAdmin = false,
+  accountId,
+  templates = [],
+  sets = [],
 }: {
   playbooks: DcaPlaybook[];
   options: LinearPerp[];
@@ -338,6 +344,10 @@ export function DcaPlaybooksDesk({
   lastPrices?: Record<string, number>;
   reduceOnly?: boolean;
   webhooksHref?: string;
+  isAdmin?: boolean;
+  accountId?: string;
+  templates?: TemplateSummary[];
+  sets?: AutomationTemplateSet[];
 }) {
   const [cards, setCards] = useState<
     { key: string; playbook: DcaPlaybook | null; seed?: DcaPlaybook }[]
@@ -373,6 +383,7 @@ export function DcaPlaybooksDesk({
             availableUsdt={availableUsdt}
             lastPrices={lastPrices}
             webhooksHref={webhooksHref}
+            isAdmin={isAdmin}
             defaultName={
               card.playbook?.name ??
               card.seed?.name ??
@@ -402,6 +413,14 @@ export function DcaPlaybooksDesk({
         >
           Add playbook
         </button>
+        {accountId ? (
+          <DeskTemplateBar
+            deskType="dca"
+            accountId={accountId}
+            templates={templates}
+            sets={sets}
+          />
+        ) : null}
         {cloneSources.length > 0 ? (
           <select
             key={cloneMenu}
@@ -450,6 +469,7 @@ export function DcaPlaybookForm({
   defaultName,
   onRemoveDraft,
   webhooksHref = FUTURES_PATHS.webhooks,
+  isAdmin = false,
 }: {
   playbook: DcaPlaybook | null;
   seed?: DcaPlaybook | null;
@@ -461,7 +481,9 @@ export function DcaPlaybookForm({
   defaultName?: string;
   onRemoveDraft?: () => void;
   webhooksHref?: string;
+  isAdmin?: boolean;
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
   const source = playbook ?? seed;
   const [direction, setDirection] = useState(
     source?.direction ?? "long",
@@ -674,6 +696,7 @@ export function DcaPlaybookForm({
 
   return (
     <form
+      ref={formRef}
       action={saveDcaPlaybookAction}
       onSubmit={(event: FormEvent<HTMLFormElement>) => {
         const submitter = (event.nativeEvent as SubmitEvent).submitter as
@@ -807,6 +830,14 @@ export function DcaPlaybookForm({
           >
             Save
           </PendingSubmitButton>
+          <SaveAsTemplateButton
+            isAdmin={isAdmin}
+            defaultName={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+            kind="dca"
+            buildForm={() =>
+              formRef.current ? new FormData(formRef.current) : new FormData()
+            }
+          />
           {playbook && showStopAdding ? (
               <span
                 className="inline-flex"

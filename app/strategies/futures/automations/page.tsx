@@ -23,7 +23,13 @@ import { headers } from "next/headers";
 import { firstSearchValue } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { deskHref } from "@/lib/accounts/model";
+import { memberIsAdmin } from "@/lib/admin/access";
 import { redirect } from "next/navigation";
+import {
+  listVisibleSets,
+  listVisibleTemplates,
+  templateToSummary,
+} from "@/lib/templates/store";
 
 export const metadata: Metadata = {
   title: "Futures automations",
@@ -78,6 +84,14 @@ export default async function FuturesAutomationsPage({
     const saved = firstSearchValue(params.saved) === "1";
     const error = firstSearchValue(params.error);
     const notice = firstSearchValue(params.notice);
+    const templates = await listVisibleTemplates({
+      userId: session.member.id,
+      deskType: "dca",
+    });
+    const sets = await listVisibleSets({
+      userId: session.member.id,
+      deskType: "dca",
+    });
     return (
       <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
         <PageHeading as="h2" title="Automations" />
@@ -104,6 +118,10 @@ export default async function FuturesAutomationsPage({
             lastPrices={lastPrices}
             reduceOnly={Boolean(settings.reduceOnly)}
             webhooksHref={deskHref(FUTURES_PATHS.webhooks, session.account.id)}
+            isAdmin={memberIsAdmin(session.member)}
+            accountId={session.account.id}
+            templates={templates.map(templateToSummary)}
+            sets={sets}
           />
         </div>
       </main>
@@ -128,6 +146,18 @@ export default async function FuturesAutomationsPage({
   );
   const saved = firstSearchValue(params.saved) === "1";
   const error = firstSearchValue(params.error);
+  const templates = session
+    ? await listVisibleTemplates({
+        userId: session.member.id,
+        deskType: "perps",
+      })
+    : [];
+  const sets = session
+    ? await listVisibleSets({
+        userId: session.member.id,
+        deskType: "perps",
+      })
+    : [];
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -156,6 +186,10 @@ export default async function FuturesAutomationsPage({
           triggerWebhooks={triggerWebhooks}
           inUseRuleIds={inUseRuleIds}
           reduceOnly={Boolean(settings?.reduceOnly)}
+          isAdmin={memberIsAdmin(session.member)}
+          accountId={session.account.id}
+          templates={templates.map(templateToSummary)}
+          sets={sets}
         />
       ) : (
         <p className="text-sm text-ink-muted">

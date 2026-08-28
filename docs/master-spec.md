@@ -12,7 +12,7 @@ GitHub. Hosted Supabase and Vercel are not.
 - Paper engine tick lives in `lib/engine` and is host-agnostic. It is scheduled by GitHub Actions against the Sydney Vercel function. Fly.io can call the same function later
 - Supabase — Postgres only. Sign-in is the `members` table and a signed cookie. Trading state is scoped to `trading_accounts`, not the login
 - A member can have many desks. Each desk is Paper or Live at create, and has a type (`cash_and_carry`, `perps`, `signal_follower` / TradingView Strategy, `dca`) that locks the UI. Paper uses the in-app ledger. Connected Exchange desks place venue orders from Sydney Vercel when a key is bound (Phase 7).
-- `/admin` — `members.role = admin`, plus `click.studio.admin@gmail.com`. Overview is the landing page. Members, logs, settings, and theme sit in the left menu
+- `/admin` — `members.role = admin`, plus `click.studio.admin@gmail.com`. Overview is the landing page. Members, templates, logs, settings, and theme sit in the left menu
 
 Paper `paper_carries` writes on a Paper book are not exchange orders. On a Connected Exchange book, the same tables store venue fills. A second Open on the same pair (manual or engine) adds size to the existing open row. Private exchange calls stay on the server. The browser is never given decrypted keys. The tick places Bybit orders on bound Connected Exchange books. Fly.io can call the same functions later; it is not required this phase.
 
@@ -26,7 +26,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Next is scale-in (Phase 12) — wait for instruction; do not write or start it yet. Hyperliquid and additional CEX adapters wait. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)). Backup market-data vendors wait (see Later, below).
+Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Next is scale-in (Phase 12) — wait for instruction; do not write or start it yet. Hyperliquid and additional CEX adapters wait. Paper auto-switch is postponed ([phase-auto-switch.md](phase-auto-switch.md)). Backup market-data vendors wait (see Later, below). Automation templates are in [templates.md](templates.md).
 
 ## Later (unscheduled)
 

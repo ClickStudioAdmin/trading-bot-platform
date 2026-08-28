@@ -18,15 +18,26 @@ import {
 } from "@/lib/engine/rules";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
+import { paperFormToSnapshotSource } from "@/lib/templates/recipe";
+import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 
 export function AutomationsDesk({
   values,
   inUseRuleIds,
   reduceOnly = false,
+  isAdmin = false,
+  accountId,
+  templates = [],
+  sets = [],
 }: {
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
   reduceOnly?: boolean;
+  isAdmin?: boolean;
+  accountId?: string;
+  templates?: TemplateSummary[];
+  sets?: AutomationTemplateSet[];
 }) {
   const [hasSets, setHasSets] = useState(values.layers.length > 0);
   return (
@@ -67,6 +78,10 @@ export function AutomationsDesk({
         inUseRuleIds={inUseRuleIds}
         reduceOnly={reduceOnly}
         onHasSetsChange={setHasSets}
+        isAdmin={isAdmin}
+        accountId={accountId}
+        templates={templates}
+        sets={sets}
       />
     </div>
   );
@@ -77,11 +92,19 @@ export function PaperRulesForm({
   inUseRuleIds,
   reduceOnly = false,
   onHasSetsChange,
+  isAdmin = false,
+  accountId,
+  templates = [],
+  sets = [],
 }: {
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
   reduceOnly?: boolean;
   onHasSetsChange?: (hasSets: boolean) => void;
+  isAdmin?: boolean;
+  accountId?: string;
+  templates?: TemplateSummary[];
+  sets?: AutomationTemplateSet[];
 }) {
   const [layers, setLayers] = useState(values.layers);
   const [cloneMenu, setCloneMenu] = useState(0);
@@ -129,6 +152,7 @@ export function PaperRulesForm({
               canRemove={!used}
               inUse={used}
               accountReduceOnly={reduceOnly}
+              isAdmin={isAdmin}
               onRemove={() => removeLayer(layer.key, layer.id)}
             />
           );
@@ -152,6 +176,14 @@ export function PaperRulesForm({
         >
           Add Rule Set
         </button>
+        {accountId ? (
+          <DeskTemplateBar
+            deskType="cash_and_carry"
+            accountId={accountId}
+            templates={templates}
+            sets={sets}
+          />
+        ) : null}
         {cloneSources.length > 0 ? (
           <select
             key={cloneMenu}
@@ -208,6 +240,7 @@ function RuleRow({
   canRemove,
   inUse,
   accountReduceOnly,
+  isAdmin,
   onRemove,
 }: {
   index: number;
@@ -215,6 +248,7 @@ function RuleRow({
   canRemove: boolean;
   inUse: boolean;
   accountReduceOnly: boolean;
+  isAdmin: boolean;
   onRemove: () => void;
 }) {
   const prefix = `r${index}_`;
@@ -386,6 +420,19 @@ function RuleRow({
         </FieldGroup>
       </div>
       <div className="mt-3 flex items-end justify-end gap-3">
+        <SaveAsTemplateButton
+          isAdmin={isAdmin}
+          defaultName={layer.name}
+          kind="cash_and_carry"
+          buildForm={() =>
+            paperFormToSnapshotSource({
+              ...layer,
+              mode,
+              sizeType,
+              exitSizeType,
+            })
+          }
+        />
         {canRemove ? (
           <button
             type="button"

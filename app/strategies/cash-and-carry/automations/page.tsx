@@ -8,6 +8,12 @@ import { paperConfigToFormValues } from "@/lib/engine/rules";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionContext } from "@/lib/auth/session";
+import { memberIsAdmin } from "@/lib/admin/access";
+import {
+  listVisibleSets,
+  listVisibleTemplates,
+  templateToSummary,
+} from "@/lib/templates/store";
 
 export const metadata: Metadata = {
   title: "Automations",
@@ -28,6 +34,18 @@ export default async function CashAndCarryAutomationsPage({
   const saved = firstSearchValue(params.saved) === "1";
   const reduceSaved = firstSearchValue(params.reduce) === "1";
   const error = firstSearchValue(params.error);
+  const templates = session
+    ? await listVisibleTemplates({
+        userId: session.member.id,
+        deskType: "cash_and_carry",
+      })
+    : [];
+  const sets = session
+    ? await listVisibleSets({
+        userId: session.member.id,
+        deskType: "cash_and_carry",
+      })
+    : [];
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -43,11 +61,15 @@ export default async function CashAndCarryAutomationsPage({
       {reduceSaved ? (
         <p className="mt-4 text-sm text-success">Reduce only saved.</p>
       ) : null}
-      {signedIn ? (
+      {signedIn && session ? (
         <AutomationsDesk
           values={paperConfigToFormValues(config)}
           inUseRuleIds={inUseRuleIds}
           reduceOnly={Boolean(config.reduceOnly)}
+          isAdmin={memberIsAdmin(session.member)}
+          accountId={session.account.id}
+          templates={templates.map(templateToSummary)}
+          sets={sets}
         />
       ) : (
         <p className="text-sm text-ink-muted">

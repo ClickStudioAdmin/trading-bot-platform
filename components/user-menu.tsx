@@ -76,6 +76,12 @@ export function UserMenu({
         >
           Exchanges
         </Link>
+        <Link
+          href="/account/templates"
+          className="block rounded-control px-2 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+        >
+          Templates
+        </Link>
         <div className="my-1 border-t border-line" />
         <form action={signOut}>
           <PendingSubmitButton
