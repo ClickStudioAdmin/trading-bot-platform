@@ -113,14 +113,45 @@ Accepted 29 Aug 2026. Implementation started 29 Aug 2026.
 
 Shipped in repo: `engine_desk_leases` + claim RPCs (`20260829080000_engine_desk_leases.sql`), `runEngineCycle` / per-desk tick, in-memory lease tests, Fly configs (`fly.development.toml`, `fly.production.toml`), worker (`lib/engine/worker.ts`), GitHub **Deploy Engine**. Vercel tick and admin Tick call the same leased cycle (`maxMs` 50s). GitHub’s 5-minute POST stays as a leased fallback until Fly is healthy.
 
-### Click: turn Fly on (development first)
+### What Click does first (development only)
 
-1. Create app in **Sydney**: `fly apps create tbp-engine-dev --region syd`
-2. GitHub Environment `development`: `FLY_API_TOKEN`
-3. Fly secrets (development Supabase **only**): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EXCHANGE_CREDENTIALS_KEY` — same values as Vercel Development
-4. Push `develop` (migrations + deploy-engine). Confirm worker logs and a DCA tick
-5. Production later: `tbp-engine`, GitHub `production` token, production secrets. Never mix
-6. After Fly is the clock, remove the schedule from `paper-engine-tick.yml` (keep **Run workflow**)
+Leave production alone until this one is ticking. Do these in order.
+
+**1. Get the code onto GitHub**  
+The Fly worker and the lease table are on your machine until they are committed and pushed to `develop`. Ask the agent to commit if you want that done for you. After a push to `develop`, GitHub Actions will try two jobs: one applies the new database table to the **development** Supabase project, and one tries to deploy the Fly app. The deploy job will fail until the Fly app and token exist. That is expected.
+
+**2. Sign in to Fly**  
+Use the same Click Studio account if you already have Fly there. If not, create a Fly account and an organization for this product. This is a **new app**, not the FQX one and not Vercel.
+
+**3. Create the development engine app**  
+In the Fly dashboard, create an app named **tbp-engine-dev**. Set the region to **Sydney**. Bybit blocks many US IPs; Sydney is the same reason Vercel is Sydney. Do not create the production app (`tbp-engine`) yet.
+
+**4. Copy three secrets onto that Fly app**  
+On the Fly app, open Secrets. Add exactly these names, with the **same values already on Vercel Development** (the `develop` environment), not Production:
+
+- `SUPABASE_URL` — development project URL
+- `SUPABASE_SERVICE_ROLE_KEY` — development **service role** key (the secret one, never a `NEXT_PUBLIC_` key)
+- `EXCHANGE_CREDENTIALS_KEY` — the same 64-character key Vercel Development uses to encrypt exchange API keys
+
+If those three do not match Vercel Development, the worker will talk to the wrong database or fail to decrypt keys. Do not paste production values here.
+
+**5. Give GitHub permission to deploy**  
+In Fly, create an API token that can deploy apps in that organization. In GitHub, open the repo **Settings → Environments → development**. Add a secret named `FLY_API_TOKEN` with that token. Put it on the **development** environment only for now.
+
+**6. Push `develop` again (or re-run the failed deploy)**  
+After the app, secrets, and token exist, push `develop` or re-run the **Deploy Engine** and **Deploy Database** workflows from the Actions tab. You want both green:
+
+- Database job: lease tables exist on **trading-bot-platform-dev**
+- Engine job: Fly built the worker and it is running in Sydney
+
+**7. Check that it is actually looping**  
+In Fly, open **tbp-engine-dev** logs. You should see the worker start, then a cycle about every 20 seconds. In the app, `/admin/logs` should show engine tick lines. A live DCA desk on Demo should keep placing or amending without you sitting on Auto tick.
+
+**8. Leave the old 5-minute tick alone for now**  
+GitHub still POSTs the Vercel tick every five minutes. That is a safety net. Leases mean it should not double-place with Fly. After you trust the Fly logs, we can turn that schedule off.
+
+**Do not do yet**  
+Production Fly app, production secrets on the dev app, or merging to `main` for this. Same split as always: `develop` → dev database + this Fly app; `main` → production later.
 
 ## Out of scope
 
