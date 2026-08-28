@@ -272,9 +272,10 @@ export async function patchDcaPlaybook(input: {
   id: string;
   patch: DcaPlaybookPatch;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const row: Record<string, unknown> = {
-    updated_at: new Date().toISOString(),
-  };
+  const row: Record<string, unknown> = {};
+  if (input.patch.long || input.patch.short) {
+    row.updated_at = new Date().toISOString();
+  }
   if (input.patch.armConditionTrue !== undefined) {
     row.arm_condition_true = input.patch.armConditionTrue;
   }

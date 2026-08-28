@@ -31,7 +31,10 @@ import {
 } from "./grid";
 import {
   dcaClipAction,
+  dcaClipKey,
   dcaClipRestKey,
+  capDcaSafetySync,
+  DCA_LIVE_GRID_OPS_PER_SYNC,
   dcaCycleEnded,
   dcaEnabledSides,
   dcaExitLimitRestKey,
@@ -494,7 +497,7 @@ async function syncDcaPlaybookGridUnlocked(input: {
     },
     ["open", "filled"],
   );
-  const plan = planDcaSafetySync({
+  const rawPlan = planDcaSafetySync({
     playbookId: input.playbook.id,
     side: input.side,
     status: !enabled ? "idle" : (input.status ?? leg.status),
@@ -516,6 +519,10 @@ async function syncDcaPlaybookGridUnlocked(input: {
       status: row.status,
     })),
   });
+  const plan =
+    input.mode === "live"
+      ? capDcaSafetySync(rawPlan, DCA_LIVE_GRID_OPS_PER_SYNC)
+      : rawPlan;
   const actor = playbookActor(input.playbook, input.mode);
   for (const workingId of plan.cancelIds) {
     const cancelled = await runFuturesCommand({
@@ -568,6 +575,24 @@ async function syncDcaPlaybookGridUnlocked(input: {
     if (openIndices.has(item.clipIndex)) {
       continue;
     }
+    const latest = await loadOpenFuturesWorking({
+      accountId: input.playbook.accountId,
+      userId: input.playbook.userId,
+    });
+    let alreadyOpen = false;
+    for (const row of latest) {
+      if (!isDcaClipKey(row.idempotencyKey, input.playbook.id, input.side)) {
+        continue;
+      }
+      if (parseDcaClipIndex(row.idempotencyKey) === item.clipIndex) {
+        alreadyOpen = true;
+        break;
+      }
+    }
+    if (alreadyOpen) {
+      openIndices.add(item.clipIndex);
+      continue;
+    }
     const rested = await runFuturesCommand({
       actor,
       command: {
@@ -578,11 +603,10 @@ async function syncDcaPlaybookGridUnlocked(input: {
         limitPrice: String(item.limitPrice),
         size: String(item.qty),
         sizeUnit: input.playbook.sizeUnit,
-        idempotencyKey: dcaClipRestKey(
+        idempotencyKey: dcaClipKey(
           input.playbook.id,
           input.side,
           item.clipIndex,
-          input.playbook.updatedAtMs,
         ),
         ...playbookCommandMeta(input.playbook),
       },
@@ -660,6 +684,12 @@ async function placeClip(input: {
   if (!patched.ok) {
     return patched;
   }
+  await syncDcaPlaybookExits({
+    playbook: input.playbook,
+    mode: input.mode,
+    side: input.side,
+    lastPrice: input.lastPrice,
+  });
   await syncDcaPlaybookGrid({
     playbook: input.playbook,
     mode: input.mode,
@@ -668,12 +698,6 @@ async function placeClip(input: {
     entryPrice: firstClip
       ? input.lastPrice
       : (leg.firstFillPrice ?? input.lastPrice),
-  });
-  await syncDcaPlaybookExits({
-    playbook: input.playbook,
-    mode: input.mode,
-    side: input.side,
-    lastPrice: input.lastPrice,
   });
   return { ok: true };
 }
@@ -1250,11 +1274,6 @@ export async function syncDcaPlaybookWorking(input: {
       ? await lastPriceFor(input.playbook.symbol)
       : input.lastPrice;
   for (const side of ["long", "short"] as const) {
-    await syncDcaPlaybookGrid({
-      playbook: input.playbook,
-      mode: input.mode,
-      side,
-    });
     const enabled = dcaEnabledSides(input.playbook.direction).includes(side);
     const running = dcaLegIsRunning(dcaLegFor(input.playbook, side).status);
     if (enabled && running) {
@@ -1267,17 +1286,22 @@ export async function syncDcaPlaybookWorking(input: {
     } else {
       await cancelExitLimit({
         playbook: input.playbook,
-        mode: input.mode,
         side,
         kind: "tp",
+        mode: input.mode,
       });
       await cancelExitLimit({
         playbook: input.playbook,
-        mode: input.mode,
         side,
         kind: "sl",
+        mode: input.mode,
       });
     }
+    await syncDcaPlaybookGrid({
+      playbook: input.playbook,
+      mode: input.mode,
+      side,
+    });
   }
 }
 

@@ -194,9 +194,22 @@ export function baseCoinForPerpSymbol(
   );
 }
 
+const INSTRUMENT_TTL_MS = 60_000;
+const instrumentCache = new Map<
+  string,
+  { at: number; row: BybitInstrument | undefined }
+>();
+
 export async function loadPerpInstrument(
   symbol: string,
 ): Promise<BybitInstrument | undefined> {
+  const now = Date.now();
+  const hit = instrumentCache.get(symbol);
+  if (hit && now - hit.at < INSTRUMENT_TTL_MS) {
+    return hit.row;
+  }
   const rows = await fetchBybitInstruments("linear", symbol);
-  return rows.find((row) => row.symbol === symbol && isUsdtLinearPerp(row));
+  const row = rows.find((item) => item.symbol === symbol && isUsdtLinearPerp(item));
+  instrumentCache.set(symbol, { at: now, row });
+  return row;
 }

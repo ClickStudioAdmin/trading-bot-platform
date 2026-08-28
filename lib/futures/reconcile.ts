@@ -58,8 +58,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export async function reconcileOpenFuturesBooks(input?: {
   accountId?: string;
   userId?: string;
+  workingId?: string;
 }): Promise<number> {
   const filled = await reconcileOpenFuturesWorkingOrders(input);
+  if (input?.workingId) {
+    return filled;
+  }
   const closed = await reconcileOpenFuturesStops(input);
   return filled + closed;
 }
@@ -67,6 +71,7 @@ export async function reconcileOpenFuturesBooks(input?: {
 export async function reconcileOpenFuturesWorkingOrders(input?: {
   accountId?: string;
   userId?: string;
+  workingId?: string;
 }): Promise<number> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -82,6 +87,9 @@ export async function reconcileOpenFuturesWorkingOrders(input?: {
   }
   if (input?.userId) {
     query = query.eq("user_id", input.userId);
+  }
+  if (input?.workingId) {
+    query = query.eq("id", input.workingId);
   }
   const { data, error } = await query;
   if (error || !data || data.length === 0) {

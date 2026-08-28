@@ -179,16 +179,16 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
           row.symbol === playbook.symbol &&
           row.side === side,
       );
-      await syncDcaPlaybookGrid({
-        playbook,
-        mode: account.mode,
-        side,
-      });
       await syncDcaPlaybookExits({
         playbook,
         mode: account.mode,
         side,
         lastPrice: prices.last,
+      });
+      await syncDcaPlaybookGrid({
+        playbook,
+        mode: account.mode,
+        side,
       });
       if (
         dcaLegIsRunning(leg.status) &&
@@ -304,16 +304,16 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
         acted += 1;
       }
       if (decision.action.kind !== "none") {
-        await syncDcaPlaybookGrid({
-          playbook,
-          mode: account.mode,
-          side,
-        });
         await syncDcaPlaybookExits({
           playbook,
           mode: account.mode,
           side,
           lastPrice: prices.last,
+        });
+        await syncDcaPlaybookGrid({
+          playbook,
+          mode: account.mode,
+          side,
         });
       }
     }

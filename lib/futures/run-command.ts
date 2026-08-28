@@ -453,6 +453,7 @@ async function runPlace(
         await reconcileOpenFuturesBooks({
           accountId: actor.accountId,
           userId: actor.userId,
+          workingId: working.id,
         });
         const stillWorking = (
           await loadOpenFuturesWorking(actorScope(actor))
@@ -788,6 +789,7 @@ async function runPlace(
     await reconcileOpenFuturesBooks({
       accountId: actor.accountId,
       userId: actor.userId,
+      workingId: working.id,
     });
     const stillWorking = (await loadOpenFuturesWorking(actorScope(actor))).some(
       (row) => row.id === working.id,

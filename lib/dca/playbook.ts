@@ -1746,6 +1746,25 @@ export function planDcaSafetySync(input: {
   return { cancelIds, amend, rest };
 }
 
+export const DCA_LIVE_GRID_OPS_PER_SYNC = 6;
+
+export function capDcaSafetySync(
+  plan: DcaSafetySyncPlan,
+  maxOps: number,
+): DcaSafetySyncPlan {
+  const cap = Math.max(0, Math.floor(maxOps));
+  if (!Number.isFinite(cap) || cap <= 0) {
+    return { cancelIds: [], amend: [], rest: [] };
+  }
+  const cancelIds = plan.cancelIds.slice(0, cap);
+  let left = cap - cancelIds.length;
+  const restSorted = [...plan.rest].sort((a, b) => a.clipIndex - b.clipIndex);
+  const rest = left > 0 ? restSorted.slice(0, left) : [];
+  left -= rest.length;
+  const amend = left > 0 ? plan.amend.slice(0, left) : [];
+  return { cancelIds, rest, amend };
+}
+
 export function dcaPlaybookStatusLabel(playbook: DcaPlaybook): string {
   const sides = dcaEnabledSides(playbook.direction);
   return sides

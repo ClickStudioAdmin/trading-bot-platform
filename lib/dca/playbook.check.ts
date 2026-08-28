@@ -20,6 +20,8 @@ import {
   planDcaExitLimitKeep,
   planDcaExitLimitSync,
   planDcaSafetySync,
+  capDcaSafetySync,
+  DCA_LIVE_GRID_OPS_PER_SYNC,
   formatDcaEntryType,
   dcaDipMet,
   dcaEnabledSides,
@@ -384,6 +386,43 @@ assert.equal(dupes.cancelIds.length, 1);
 assert.ok(dupes.cancelIds.includes("w3b"));
 assert.deepEqual(
   dupes.rest.map((row) => row.clipIndex).sort((a, b) => a - b),
+  [1, 2],
+);
+const cappedDupes = capDcaSafetySync(
+  {
+    cancelIds: ["a", "b", "c"],
+    amend: [
+      { workingId: "w1", qty: 1, limitPrice: 10 },
+      { workingId: "w2", qty: 1, limitPrice: 9 },
+    ],
+    rest: [
+      { clipIndex: 5, qty: 1, limitPrice: 8 },
+      { clipIndex: 1, qty: 1, limitPrice: 9 },
+      { clipIndex: 2, qty: 1, limitPrice: 8.5 },
+    ],
+  },
+  DCA_LIVE_GRID_OPS_PER_SYNC,
+);
+assert.deepEqual(cappedDupes.cancelIds, ["a", "b", "c"]);
+assert.deepEqual(
+  cappedDupes.rest.map((row) => row.clipIndex),
+  [1, 2, 5],
+);
+assert.equal(cappedDupes.amend.length, 0);
+const firstRests = capDcaSafetySync(
+  {
+    cancelIds: [],
+    amend: [],
+    rest: [
+      { clipIndex: 3, qty: 1, limitPrice: 8 },
+      { clipIndex: 1, qty: 1, limitPrice: 9 },
+      { clipIndex: 2, qty: 1, limitPrice: 8.5 },
+    ],
+  },
+  2,
+);
+assert.deepEqual(
+  firstRests.rest.map((row) => row.clipIndex),
   [1, 2],
 );
 assert.equal(
