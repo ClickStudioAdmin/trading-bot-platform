@@ -143,7 +143,7 @@ Tokens from [ui-theme.md](ui-theme.md).
 
 ### Automations (desk)
 
-- Header: **Add**, **Add from Template**. One picker lists Platform / Shared / My templates, with folders as groups. Tick a folder or individual templates, then apply to **this** desk.
+- Header: **Create New Bot**, **Add from Template**. One picker lists Platform / Shared / My templates. Named folders stay as groups. Loose platform and shared templates wrap as **Platform templates** and **Shared templates** folders. Tick a folder or individual templates, then apply to **this** desk.
 - Each bot card: **Save as template**. Name, description, optional **Add to folder** (existing writable folders of this desk type) and/or **Create a new folder** in the same dialog. Admins also see **Save as platform template** (confirm: visible to every member; new folder is a platform folder).
 - TradingView Strategy desk: no Add from Template. Webhook tokens are not templates.
 

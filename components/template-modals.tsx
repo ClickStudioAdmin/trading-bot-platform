@@ -500,49 +500,105 @@ function ApplyFromLibraryButton({
   );
 }
 
+type PickerFolder = {
+  id: string;
+  name: string;
+  items: { templateId: string; name: string; preview: string }[];
+  sharedByEmail: string | null;
+};
+
 type LibraryGroup = {
   key: string;
   label: string;
-  folders: AutomationTemplateSet[];
+  folders: PickerFolder[];
   loose: TemplateSummary[];
 };
+
+function asPickerFolder(folder: AutomationTemplateSet): PickerFolder {
+  return {
+    id: folder.id,
+    name: folder.name,
+    items: folder.items.map((item) => ({
+      templateId: item.templateId,
+      name: item.name,
+      preview: item.preview,
+    })),
+    sharedByEmail: folder.sharedByEmail,
+  };
+}
+
+function virtualFolder(
+  id: string,
+  name: string,
+  rows: TemplateSummary[],
+): PickerFolder {
+  return {
+    id,
+    name,
+    items: rows.map((row) => ({
+      templateId: row.id,
+      name: row.name,
+      preview: [
+        row.preview,
+        row.sharedByEmail ? `Shared by ${row.sharedByEmail}` : "",
+        row.description ?? "",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    })),
+    sharedByEmail: null,
+  };
+}
 
 function libraryGroups(
   templates: TemplateSummary[],
   sets: AutomationTemplateSet[],
 ): LibraryGroup[] {
-  const filed = new Set(
-    sets.flatMap((folder) => folder.items.map((item) => item.templateId)),
-  );
   const scopes = [
     {
       key: "platform",
       label: "Platform",
+      wrapLooseAs: "Platform templates",
       match: (row: { visibility: string; sharedByEmail: string | null }) =>
         row.visibility === "platform",
     },
     {
       key: "shared",
       label: "Shared",
+      wrapLooseAs: "Shared templates",
       match: (row: { visibility: string; sharedByEmail: string | null }) =>
         Boolean(row.sharedByEmail),
     },
     {
       key: "mine",
       label: "My templates",
+      wrapLooseAs: null,
       match: (row: { visibility: string; sharedByEmail: string | null }) =>
         row.visibility === "user" && !row.sharedByEmail,
     },
   ] as const;
   return scopes
-    .map((scope) => ({
-      key: scope.key,
-      label: scope.label,
-      folders: sets.filter((folder) => scope.match(folder)),
-      loose: templates.filter(
-        (row) => scope.match(row) && !filed.has(row.id),
-      ),
-    }))
+    .map((scope) => {
+      const scopeFolders = sets.filter((folder) => scope.match(folder));
+      const filedInScope = new Set(
+        scopeFolders.flatMap((folder) =>
+          folder.items.map((item) => item.templateId),
+        ),
+      );
+      const loose = templates.filter(
+        (row) => scope.match(row) && !filedInScope.has(row.id),
+      );
+      const folders = scopeFolders.map(asPickerFolder);
+      if (scope.wrapLooseAs && loose.length > 0) {
+        folders.push(virtualFolder(`virtual-${scope.key}`, scope.wrapLooseAs, loose));
+      }
+      return {
+        key: scope.key,
+        label: scope.label,
+        folders,
+        loose: scope.wrapLooseAs ? [] : loose,
+      };
+    })
     .filter((group) => group.folders.length > 0 || group.loose.length > 0);
 }
 
