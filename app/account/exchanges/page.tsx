@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ExchangeConnectForm } from "@/components/exchange-connect-form";
 import { PageHeading } from "@/components/page-heading";
 import { RemoveConnectionControl } from "@/components/remove-connection-control";
+import { ReplaceConnectionControl } from "@/components/replace-connection-control";
 import {
   connectionRemoveBlockers,
   formatConnectionRemoveBlockers,
@@ -19,7 +20,7 @@ import {
   type ConnectionDeskBind,
 } from "@/lib/exchanges/store";
 import { exchangeCredentialsConfigured } from "@/lib/exchanges/encrypt";
-import { enabledVenues } from "@/lib/exchanges/venues";
+import { enabledVenues, getVenue } from "@/lib/exchanges/venues";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionContext } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
@@ -41,6 +42,7 @@ export default async function AccountExchangesPage({
   const params = await searchParams;
   const error = firstSearchValue(params.error);
   const saved = firstSearchValue(params.saved) === "1";
+  const replaced = firstSearchValue(params.replaced) === "1";
   const removed = firstSearchValue(params.removed) === "1";
   const [connections, binds] = await Promise.all([
     listExchangeConnections(session.member.id),
@@ -56,7 +58,7 @@ export default async function AccountExchangesPage({
         API keys belong to this login. Live desks bind one key. Paper desks
         do not use keys. The same key on two desks shares venue margin.
       </p>
-      {error || saved || removed ? (
+      {error || saved || replaced || removed ? (
         <div className="mb-6 space-y-3">
           {error ? (
             <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -65,6 +67,11 @@ export default async function AccountExchangesPage({
           ) : null}
           {saved ? (
             <p className="text-sm text-success">Connection saved.</p>
+          ) : null}
+          {replaced ? (
+            <p className="text-sm text-success">
+              Key replaced. Bound desks still use this connection.
+            </p>
           ) : null}
           {removed ? (
             <p className="text-sm text-success">Connection removed.</p>
@@ -88,6 +95,7 @@ export default async function AccountExchangesPage({
         rows={connections}
         binds={binds}
         currentAccountId={session.account.id}
+        canReplace={canSave}
       />
       {canSave ? <ExchangeConnectForm venues={venues} /> : null}
     </div>
@@ -98,10 +106,12 @@ function ConnectionList({
   rows,
   binds,
   currentAccountId,
+  canReplace,
 }: {
   rows: ExchangeConnection[];
   binds: ConnectionDeskBind[];
   currentAccountId: string;
+  canReplace: boolean;
 }) {
   if (rows.length === 0) {
     return (
@@ -116,7 +126,8 @@ function ConnectionList({
       <h2 className="text-lg font-semibold tracking-tight">Connected</h2>
       <p className="mt-2 text-sm text-ink-muted">
         Live desks pick a key when you create them, or in Desk Settings.
-        You cannot remove a key while any desk is using it.
+        Replace key re-saves the API credentials on this connection. Desks
+        stay bound. You cannot remove a key while any desk is using it.
       </p>
       <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[36rem] text-left text-sm">
@@ -188,10 +199,22 @@ function ConnectionList({
                     )}
                   </td>
                   <td className="px-4 py-3 align-top text-right">
-                    <RemoveConnectionControl
-                      connectionId={row.id}
-                      blockedMessage={inUse ? removeBlocked : null}
-                    />
+                    <div className="flex justify-end gap-1">
+                      {canReplace &&
+                      (getVenue(row.venue)?.credentialFields.length ?? 0) >
+                        0 ? (
+                        <ReplaceConnectionControl
+                          connectionId={row.id}
+                          credentialFields={
+                            getVenue(row.venue)?.credentialFields ?? []
+                          }
+                        />
+                      ) : null}
+                      <RemoveConnectionControl
+                        connectionId={row.id}
+                        blockedMessage={inUse ? removeBlocked : null}
+                      />
+                    </div>
                   </td>
                 </tr>
               );

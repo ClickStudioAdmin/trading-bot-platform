@@ -14,8 +14,10 @@ import {
 } from "@/lib/exchanges/encrypt";
 import {
   deleteExchangeConnection,
+  getExchangeConnectionForUser,
   insertExchangeConnection,
   listConnectionDeskBinds,
+  updateExchangeConnectionCredentials,
 } from "@/lib/exchanges/store";
 import { verifyExchangeCredentials } from "@/lib/exchanges/verify";
 import {
@@ -143,6 +145,132 @@ export async function saveExchangeConnection(formData: FormData) {
   revalidatePath("/account/book");
   revalidatePath("/account/sub-accounts");
   redirect("/account/exchanges?saved=1");
+}
+
+export async function replaceExchangeConnection(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  if (!exchangeCredentialsConfigured()) {
+    fail("Exchange credentials key is not configured on this environment.");
+  }
+
+  const connectionId = String(formData.get("connectionId") ?? "").trim();
+  if (!connectionId) {
+    fail("Missing connection.");
+  }
+  const existing = await getExchangeConnectionForUser({
+    userId: session.member.id,
+    connectionId,
+  });
+  if (!existing) {
+    fail("Missing connection.");
+  }
+
+  const venue = parseVenueId(existing.venue);
+  if (!venue.ok) {
+    fail(venue.error);
+  }
+  const environment = parseVenueEnvironment(
+    venue.venue,
+    existing.environment,
+  );
+  if (!environment.ok) {
+    fail(environment.error);
+  }
+  const credentials: Record<string, string> = {};
+  for (const field of venue.venue.credentialFields) {
+    credentials[field.key] = String(formData.get(field.key) ?? "");
+  }
+  const parsed = parseVenueCredentials(venue.venue, credentials);
+  if (!parsed.ok) {
+    fail(parsed.error);
+  }
+  const fingerprint = keyFingerprint(parsed.credentials, venue.venue);
+  if (!fingerprint) {
+    fail("API key is too short to save.");
+  }
+
+  const verified = await verifyExchangeCredentials({
+    venueId: venue.venue.id,
+    environmentId: environment.environment.id,
+    credentials: parsed.credentials,
+  });
+  if (!verified.ok) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "exchange.verify_failed",
+      message: verified.error,
+      userId: session.member.id,
+      accountId: session.account.id,
+      data: {
+        connectionId,
+        venue: venue.venue.id,
+        environment: existing.environment,
+        fingerprint,
+        reason: verified.error,
+      },
+    });
+    fail(verified.error);
+  }
+
+  let packed;
+  try {
+    packed = encryptCredentials(parsed.credentials);
+  } catch {
+    fail("Could not encrypt those credentials.");
+  }
+
+  const written = await updateExchangeConnectionCredentials({
+    userId: session.member.id,
+    connectionId,
+    fingerprint,
+    ciphertext: packed.ciphertext,
+    nonce: packed.nonce,
+    verifiedAt: new Date().toISOString(),
+  });
+  if (written.error) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "exchange.replace_failed",
+      message: written.error,
+      userId: session.member.id,
+      accountId: session.account.id,
+      data: {
+        connectionId,
+        venue: venue.venue.id,
+        environment: existing.environment,
+        fingerprint,
+      },
+    });
+    fail(written.error);
+  }
+
+  await writeEventLog({
+    scope: "system",
+    event: "exchange.replaced",
+    message: `Replaced ${venue.venue.label} key`,
+    userId: session.member.id,
+    accountId: session.account.id,
+    data: {
+      connectionId,
+      venue: venue.venue.id,
+      environment: existing.environment,
+      fingerprint,
+    },
+  });
+  revalidatePath("/account/exchanges");
+  revalidatePath("/account");
+  revalidatePath("/account/book");
+  revalidatePath("/account/sub-accounts");
+  revalidatePath("/strategies/cash-and-carry");
+  revalidatePath("/strategies/cash-and-carry/settings");
+  revalidatePath("/strategies/futures");
+  revalidatePath("/strategies/futures/settings");
+  redirect("/account/exchanges?replaced=1");
 }
 
 export async function removeExchangeConnection(formData: FormData) {

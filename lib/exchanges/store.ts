@@ -75,6 +75,66 @@ export async function insertExchangeConnection(input: {
   return { id };
 }
 
+export async function getExchangeConnectionForUser(input: {
+  userId: string;
+  connectionId: string;
+}): Promise<ExchangeConnection | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("exchange_connections")
+    .select(LIST_COLUMNS)
+    .eq("id", input.connectionId)
+    .eq("user_id", input.userId)
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parseExchangeConnectionRow(data as Record<string, unknown>);
+}
+
+export async function updateExchangeConnectionCredentials(input: {
+  userId: string;
+  connectionId: string;
+  fingerprint: string;
+  ciphertext: Buffer;
+  nonce: Buffer;
+  verifiedAt: string;
+}): Promise<{ error: string | null }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { error: "Auth is not configured." };
+  }
+  const { data, error } = await supabase
+    .from("exchange_connections")
+    .update({
+      key_fingerprint: input.fingerprint,
+      credentials_ciphertext: toByteaParam(input.ciphertext),
+      credentials_nonce: toByteaParam(input.nonce),
+      status: "active",
+      verified_at: input.verifiedAt,
+    })
+    .eq("id", input.connectionId)
+    .eq("user_id", input.userId)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    if (error.code === "23505") {
+      return {
+        error:
+          "That key is already saved on another connection. Remove the other one first, or paste this same key again.",
+      };
+    }
+    return { error: error.message };
+  }
+  if (!data?.id) {
+    return { error: "Could not update that connection." };
+  }
+  return { error: null };
+}
+
 export async function deleteExchangeConnection(input: {
   userId: string;
   connectionId: string;

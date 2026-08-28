@@ -65,6 +65,7 @@ function queryLooksSuccessful() {
     params.get("saved") === "password" ||
     params.get("reduce") === "1" ||
     params.get("removed") === "1" ||
+    params.get("replaced") === "1" ||
     params.get("renamed") === "1" ||
     paper === "webhook-arm" ||
     paper === "playbook-closed" ||
