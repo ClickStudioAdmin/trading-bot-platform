@@ -150,19 +150,19 @@ No new blotter tables.
 
 Agent key only. Encrypt at rest. Never send to the browser. Shared-connection warning still applies (same master margin). Do not log keys.
 
-## Micro-steps (when Click accepts)
+## Micro-steps
 
-| # | Step | Done when |
-| --- | --- | --- |
-| 1 | Capabilities + desk columns | Registry includes Hyperliquid parameters. Migration: `venue`, `venue_environment`. Existing rows `bybit`. Create Desk: type × exchange; HL offers Paper / **Demo (Testnet)** / Live. Checks pass. Bybit create path unchanged. |
-| 2 | HL adapter (testnet first) | Public meta, candles, user state. Signed order on Testnet. Verify rejects master keys. No Bybit file edits except dispatcher. |
-| 3 | Exchanges UI | Registry-driven HL fields. Demo vs Live hosts. Fingerprint = agent last 4. |
-| 4 | HL desk module | Separate Perps/DCA/TV pages/components. One-way blotter. No Both. Bybit pages untouched. Bind only matching HL Demo or Live connections. |
-| 5 | Paper HL | Paper HL desk uses HL public marks and the HL module (in-app fills). Bybit paper still Bybit public. |
-| 6 | DCA + TV on HL | Indicator klines from HL. Webhook still TBP → HL adapter. |
-| 7 | Desk test | Click: **Demo (Testnet)** Buy/Sell/Close, GTC, TP/SL, Cancel, Close All, DCA long, dummy TV. Then a small **Live** clip. Confirm a Bybit Perps desk still hedges and still uses `BTCUSDT`. |
+Stop after each step until Click says go. Do not start MEXC in this phase.
 
-Stop after each step until Click says go.
+| # | Step | Who | Done when |
+| --- | --- | --- | --- |
+| 1 | Capabilities + desk columns | Agent | Venue registry lists Bybit and Hyperliquid parameters (desk types, hedge vs one-way, quote, symbols, auth fields, Demo host). Migration adds immutable `venue` and `venue_environment` on `trading_accounts`. Existing desks are `bybit`. Create Desk: type × exchange. Hyperliquid offers Paper / **Demo (Testnet)** / Live. Bybit create path unchanged. Bind must match venue + environment. Checks pass. |
+| 2 | Adapter (Testnet first) | Agent | `lib/exchanges/hyperliquid/`: public meta, tickers, candles, user state; signed `/exchange` on Testnet; verify rejects master keys. Dispatcher only in `execute.ts`. No edits inside Bybit UI. |
+| 3 | Exchanges | Agent | `/account/exchanges` is registry-driven. Hyperliquid fields: account address + agent key. Demo saves against Testnet, Live against mainnet. Fingerprint is agent last 4. Secret never returns to the browser. |
+| 4 | Hyperliquid desk module | Agent | Separate Perps / DCA / TV Strategy pages and commands. One-way blotter. No Both. Bybit pages untouched. Connected HL desk binds only a matching Demo or Live HL connection. Place / close / GTC / cancel / Close All through the HL adapter. |
+| 5 | Paper Hyperliquid | Agent | Paper HL desk uses the same HL module and HL public marks, in-app fills, no agent. Bybit paper still Bybit public. |
+| 6 | DCA + TradingView | Agent | HL DCA: indicator klines from HL, long or short only. TV Strategy webhook still hits TBP, orders go to the HL adapter. |
+| 7 | Desk test | Click | **Demo (Testnet):** Buy/Sell/Close, GTC, TP/SL, Cancel, Close All, DCA long, dummy TV. Then a small **Live** clip. Confirm a Bybit Perps desk still hedges and still uses `BTCUSDT`. |
 
 ## Out of scope
 
