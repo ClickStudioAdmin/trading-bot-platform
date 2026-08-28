@@ -139,7 +139,7 @@ You need an **org** token, not a GitHub-app launch.
 Tell the agent when that secret is saved. Still do not use Launch from GitHub.
 
 **5. Let GitHub create the empty app**  
-After the token is on GitHub, push `develop` or re-run **Deploy Engine**. The job creates **tbp-engine-dev** in your Fly org (CI must pass an org slug; it detects it from the token). It will then stop and say the three app secrets are missing. That is expected. Also run **Deploy Database** if that has not gone green yet. The app will not appear in Fly until this step succeeds.
+After the token is on GitHub, push `develop`. The job creates **tbp-engine-dev** in Fly org **tbp-154** (the TBP org). It will then stop and say the three app secrets are missing. That is expected. Also run **Deploy Database** if that has not gone green yet. The app will not appear under Apps until this step succeeds. Do not click **Launch an App**.
 
 **6. Copy three secrets onto that Fly app**  
 Once **tbp-engine-dev** appears in the Fly dashboard, open it (do not Launch another app). Open **Secrets**. Add exactly these names, with the **same values already on Vercel Development** (the `develop` environment), not Production:

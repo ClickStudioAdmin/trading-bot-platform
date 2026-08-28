@@ -1,5 +1,5 @@
 # Trading Bot Platform engine worker (development).
-# GitHub Actions creates this app on first deploy when FLY_API_TOKEN is set.
+# GitHub Actions creates this app in org tbp-154 on first deploy when FLY_API_TOKEN is set.
 # Secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY
 # (development Supabase only)
 
