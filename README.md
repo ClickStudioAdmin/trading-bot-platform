@@ -10,7 +10,7 @@ GitHub is the source of truth. The hosted database and Vercel deployment are not
 
 See [docs/phase-11.md](docs/phase-11.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** / Preview environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
 
-Phase 1 through Phase 11 are complete. Locked sequence after that: [docs/roadmap.md](docs/roadmap.md) (Fly.io first; scale-in is roadmap 6, not next). Current work is desk-test — wait for instruction before Fly.io. Automation templates: [docs/templates.md](docs/templates.md).
+Phase 1 through Phase 11 are complete. Locked sequence: [docs/roadmap.md](docs/roadmap.md). Fly.io structure is accepted ([docs/phase-fly.md](docs/phase-fly.md)) — do not implement until Click starts that work. Standing list: [docs/click-list.md](docs/click-list.md). Automation templates: [docs/templates.md](docs/templates.md).
 
 ## Technology stack
 

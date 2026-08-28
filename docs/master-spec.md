@@ -27,9 +27,9 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Current work is desk-test (TradingView webhooks, DCA indicators, Perps and TV desks) plus a product discussion on multi-pair DCA. Do not start the next build item until Click asks.
+Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Fly.io **structure is accepted** ([phase-fly.md](phase-fly.md)). Do not implement Fly until Click starts that work.
 
-The locked sequence after Phase 11 is [roadmap.md](roadmap.md): Fly.io first, then Hyperliquid, then copy trading, event-driven signals, backup data, scale-in / position builder, backtesting, memberships, onboarding, notifications, payments, marketing site, support, docs/videos, beta, then other exchanges. Automation templates are in [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
+The locked sequence after Phase 11 is [roadmap.md](roadmap.md). Standing unordered notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
 
 ## Later
 

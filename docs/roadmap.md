@@ -2,24 +2,17 @@
 
 Locked 29 Aug 2026. Click set this order. Do not reorder or implement a later item until Click starts that item.
 
-Phases **1–11** are shipped. See [master-spec.md](master-spec.md) and [phase-11.md](phase-11.md). This file is the sequence **after** Phase 11. Write a phase doc when that item starts (`phase-fly.md` first). Do not treat “Phase 12” as scale-in anymore.
+Phases **1–11** are shipped. See [master-spec.md](master-spec.md) and [phase-11.md](phase-11.md). This file is the sequence **after** Phase 11. Write a phase doc when that item starts. Fly.io structure accepted: [phase-fly.md](phase-fly.md). Do not treat “Phase 12” as scale-in anymore.
 
 Private exchange APIs stay on the server. The browser never sees decrypted keys. Paper desks stay on the in-app ledger.
 
-## Now (not a build phase)
-
-Desk-test and product discussion on what already shipped. Do not start Fly.io or a new desk type from this list.
-
-1. Test TradingView webhooks (live alerts, not only the Positions dummy). See [phase-9.md](phase-9.md) Later.
-2. Test all DCA indicator start triggers (RSI / MACD / EMA, sit vs cross, timeframes).
-3. More testing on **Perps** and **TradingView Strategy** desks.
-4. Discuss multiple pairs on one DCA bot (including virtual amounts). Today one live playbook owns one contract. Folders already stamp several pairs as separate bots. Do not build multi-pair or virtual size until Click locks that design.
+Standing (unordered) desk-test and product notes: [click-list.md](click-list.md). Not a gate. Pick them up during later phases.
 
 ## Locked sequence
 
 | # | Item | Notes |
 | --- | --- | --- |
-| 1 | **Fly.io engine worker** | Always-on host for the tick. Same `lib/engine` functions the GitHub → Vercel door calls today. Structure so many desks and live ladders do not share one 60s serverless run. Vercel stays the UI. Do not add Fly until Click starts this item. |
+| 1 | **Fly.io engine worker** | Structure accepted: [phase-fly.md](phase-fly.md). Per-desk Postgres leases; Fly Sydney; Vercel stays UI. Do not implement until Click starts that work. |
 | 2 | **Second exchange: Hyperliquid** | Venue-locked desks, capabilities registry, adapter, UI module. Refine exchange rules and uniqueness (Bybit pages stay Bybit). Plan: [phase-hyperliquid.md](phase-hyperliquid.md). Starts after Fly.io so private calls can use the worker. |
 | 3 | **Copy trading** | Follow another account’s fills onto the member’s bound desk. Not a venue adapter. |
 | 4 | **Internal (and maybe external) webhooks; event-driven bot signals** | Trigger bots/trades from our own events as well as inbound webhooks. Example: DCA playbook reaches 5 opens → signal a Perps desk bot to open a hedge. This is the cross-desk hedge path; not a separate “hedged DCA” desk type unless Click adds one later. |
