@@ -143,7 +143,7 @@ Tokens from [ui-theme.md](ui-theme.md).
 
 ### Automations (desk)
 
-- Header: **Add**, **Add from Template**, **Add from Folder**. Picker: Platform group, then My templates / My folders. Preview name, description, contract. Confirm apply to **this** desk.
+- Header: **Add**, **Add from Template**. One picker lists Platform / Shared / My templates, with folders as groups. Tick a folder or individual templates, then apply to **this** desk.
 - Each bot card: **Save as template**. Name, description, optional **Add to folder** (existing writable folders of this desk type) and/or **Create a new folder** in the same dialog. Admins also see **Save as platform template** (confirm: visible to every member; new folder is a platform folder).
 - TradingView Strategy desk: no Add from Template. Webhook tokens are not templates.
 
@@ -151,7 +151,7 @@ Tokens from [ui-theme.md](ui-theme.md).
 
 Login library. Not desk-scoped. Account nav: Templates, with Settings, Exchanges, Manage desks.
 
-- Tabs: **My Templates**, **My Folders**, **Shared Templates**, **Shared Folders**. Table with columns, search, desk-type filter, folder filter, click-to-sort, and row checkboxes. Bulk: **Add to folder** (templates), **Publish** / **Unpublish** (admin), **Delete**. **Edit** opens name, folder membership, and sharing. Apply is on Automations.
+- Tabs: **My Templates**, **My Folders**, **Shared Templates**, **Shared Folders**. Table with columns, search, desk-type filter, folder filter, click-to-sort, and row checkboxes. Bulk: **Add to folder** (templates), **Publish** / **Unpublish** (admin), **Delete**. **Edit** folder uses **In Folder** / **Not in Folder** columns; Save writes membership. Apply is on Automations.
 - **Export all** / **Import all** JSON library file.
 - **Folders tab:** same table. Create a folder at the bottom with a name and desk type. Templates are optional; add them now or later.
 - **Platform rows** do not appear on My Templates / My Folders. Members apply them from Automations. **Shared** tabs: **Remove** drops the grant, not the owner’s copy.

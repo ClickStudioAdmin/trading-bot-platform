@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { PanelCloseButton } from "@/components/panel-close-button";
 import {
   applyTemplateAction,
-  applyTemplateSetAction,
   saveDcaAsTemplateAction,
   savePaperAsTemplateAction,
   savePerpsAsTemplateAction,
@@ -30,10 +29,12 @@ export function Modal({
   title,
   onClose,
   children,
+  wide = false,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  wide?: boolean;
 }) {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -56,7 +57,7 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-card border border-line bg-surface-raised p-5"
+        className={`relative max-h-[90vh] w-full overflow-y-auto rounded-card border border-line bg-surface-raised p-5 ${wide ? "max-w-2xl" : "max-w-lg"}`}
         onClick={(event) => event.stopPropagation()}
       >
         <PanelCloseButton onClick={onClose} />
@@ -312,71 +313,109 @@ export function DeskTemplateBar({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <ApplyTemplateButton
+      <ApplyFromLibraryButton
         deskType={deskType}
         accountId={accountId}
         templates={templates}
+        sets={sets}
         onApplied={onApplied}
       />
-      {sets.length > 0 ? (
-        <ApplySetButton
-          deskType={deskType}
-          accountId={accountId}
-          sets={sets}
-          onApplied={onApplied}
-        />
-      ) : null}
     </div>
   );
 }
 
-function ApplyTemplateButton({
+function ApplyFromLibraryButton({
   deskType,
   accountId,
   templates,
+  sets,
   onApplied,
 }: {
   deskType: TemplateDeskType;
   accountId: string;
   templates: TemplateSummary[];
+  sets: AutomationTemplateSet[];
   onApplied?: (items: AppliedDeskItem[]) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<TemplateSummary | null>(null);
-  const [symbol, setSymbol] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [symbols, setSymbols] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<TemplateActionResult | null>(null);
-  const mine = templates.filter(
-    (row) => row.visibility === "user" && !row.sharedByEmail,
-  );
-  const shared = templates.filter((row) => Boolean(row.sharedByEmail));
-  const platform = templates.filter((row) => row.visibility === "platform");
+  const selected = templates.filter((row) => selectedIds.has(row.id));
+  const groups = libraryGroups(templates, sets);
 
-  async function onApply(skip = false) {
-    if (!selected) {
+  function toggleTemplate(id: string) {
+    setResult(null);
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleFolder(ids: string[]) {
+    setResult(null);
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      const allOn = ids.length > 0 && ids.every((id) => next.has(id));
+      for (const id of ids) {
+        if (allOn) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+      }
+      return next;
+    });
+  }
+
+  async function onApply() {
+    if (selected.length === 0) {
       return;
     }
     setPending(true);
-    const data = new FormData();
-    data.set("templateId", selected.id);
-    data.set("accountId", accountId);
-    if (symbol.trim()) {
-      data.set("symbol", symbol.trim().toUpperCase());
-    }
-    if (skip) {
-      data.set("skip", "1");
-    }
-    const next = await applyTemplateAction(data);
-    setResult(next);
-    setPending(false);
-    if (next.ok) {
-      if (next.applied && next.applied.length > 0) {
-        onApplied?.(next.applied);
+    const results: NonNullable<TemplateActionResult["results"]> = [];
+    const applied: NonNullable<TemplateActionResult["applied"]> = [];
+    const notes: string[] = [];
+    let firstError: string | undefined;
+    for (const row of selected) {
+      const data = new FormData();
+      data.set("templateId", row.id);
+      data.set("accountId", accountId);
+      const symbol = symbols[row.id]?.trim();
+      if (symbol) {
+        data.set("symbol", symbol.toUpperCase());
       }
-      setOpen(false);
+      const next = await applyTemplateAction(data);
+      if (next.results) {
+        results.push(...next.results);
+      }
+      if (next.applied) {
+        applied.push(...next.applied);
+      }
+      if (next.notes) {
+        notes.push(...next.notes);
+      }
+      if (!next.ok && !firstError) {
+        firstError = next.error;
+      }
     }
-    if (next.code === "symbol_taken") {
-      setSymbol(next.symbol ?? "");
+    const merged: TemplateActionResult = {
+      ok: applied.length > 0 || results.some((row) => row.ok && !row.skipped),
+      error: applied.length === 0 ? firstError : undefined,
+      notes,
+      results,
+      applied: applied.length > 0 ? applied : undefined,
+    };
+    setResult(merged);
+    setPending(false);
+    if (merged.applied && merged.applied.length > 0) {
+      onApplied?.(merged.applied);
     }
   }
 
@@ -386,208 +425,36 @@ function ApplyTemplateButton({
         Add from Template
       </button>
       {open ? (
-        <Modal title="Add from Template" onClose={() => setOpen(false)}>
+        <Modal title="Add from Template" onClose={() => setOpen(false)} wide>
           <p className="mt-1 text-sm text-ink-muted">
-            Creates an idle or disabled bot on this desk. Nothing is armed.
+            Tick a folder or individual templates. Creates idle or disabled
+            bots on this desk. Nothing is armed.
           </p>
-          <TemplatePicker
-            platform={platform}
-            mine={mine}
-            shared={shared}
-            selectedId={selected?.id ?? ""}
-            onSelect={(row) => {
-              setSelected(row);
-              setResult(null);
-              setSymbol("");
-            }}
+          <LibraryTree
+            groups={groups}
+            selectedIds={selectedIds}
+            onToggleTemplate={toggleTemplate}
+            onToggleFolder={toggleFolder}
           />
-          {deskType === "dca" && selected ? (
-            <label className="mt-3 block text-xs text-ink-muted">
-              Contract
-              <input
-                value={symbol}
-                onChange={(event) => setSymbol(event.target.value)}
-                placeholder="Leave blank to use the template contract"
-                className={fieldClass}
-              />
-            </label>
-          ) : null}
-          {result?.code === "symbol_taken" ? (
-            <p className="mt-3 text-sm text-warning">
-              A bot already covers {result.symbol}. Pick another contract
-              or skip.
-            </p>
-          ) : null}
-          <ResultNote result={result?.code === "symbol_taken" ? null : result} />
-          <div className="mt-4 flex justify-end gap-2">
-            {result?.code === "symbol_taken" ? (
-              <button
-                type="button"
-                onClick={() => void onApply(true)}
-                className={secondaryBtn}
-              >
-                Skip
-              </button>
-            ) : null}
-            <button type="button" onClick={() => setOpen(false)} className={secondaryBtn}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={!selected || pending}
-              onClick={() => void onApply(false)}
-              className={primaryBtn}
-            >
-              {pending ? "Applying…" : "Apply"}
-            </button>
-          </div>
-        </Modal>
-      ) : null}
-    </>
-  );
-}
-
-function ApplySetButton({
-  deskType,
-  accountId,
-  sets,
-  onApplied,
-}: {
-  deskType: TemplateDeskType;
-  accountId: string;
-  sets: AutomationTemplateSet[];
-  onApplied?: (items: AppliedDeskItem[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [setId, setSetId] = useState("");
-  const [pending, setPending] = useState(false);
-  const [result, setResult] = useState<TemplateActionResult | null>(null);
-  const [symbols, setSymbols] = useState<Record<string, string>>({});
-  const [skips, setSkips] = useState<Record<string, boolean>>({});
-  const selected = sets.find((row) => row.id === setId) ?? null;
-  const mine = sets.filter((row) => row.visibility === "user" && !row.sharedByEmail);
-  const shared = sets.filter((row) => Boolean(row.sharedByEmail));
-  const platform = sets.filter((row) => row.visibility === "platform");
-
-  async function onApply() {
-    if (!selected) {
-      return;
-    }
-    setPending(true);
-    const data = new FormData();
-    data.set("setId", selected.id);
-    data.set("accountId", accountId);
-    data.set("itemCount", String(selected.items.length));
-    selected.items.forEach((item, index) => {
-      data.set(`i${index}_templateId`, item.templateId);
-      if (skips[item.templateId]) {
-        data.set(`i${index}_skip`, "1");
-      }
-      const symbol = symbols[item.templateId]?.trim();
-      if (symbol) {
-        data.set(`i${index}_symbol`, symbol.toUpperCase());
-      }
-    });
-    const next = await applyTemplateSetAction(data);
-    setResult(next);
-    setPending(false);
-    if (next.ok && next.applied && next.applied.length > 0) {
-      onApplied?.(next.applied);
-    }
-  }
-
-  return (
-    <>
-      <button type="button" onClick={() => setOpen(true)} className={secondaryBtn}>
-        Add from Folder
-      </button>
-      {open ? (
-        <Modal title="Add from Folder" onClose={() => setOpen(false)}>
-          <p className="mt-1 text-sm text-ink-muted">
-            Applies each template. Failures are listed; successes stay.
-          </p>
-          <label className="mt-3 block text-xs text-ink-muted">
-            Folder
-            <select
-              value={setId}
-              onChange={(event) => {
-                setSetId(event.target.value);
-                setResult(null);
-              }}
-              className={fieldClass}
-            >
-              <option value="">Choose a folder</option>
-              {platform.length > 0 ? (
-                <optgroup label="Platform">
-                  {platform.map((row) => (
-                    <option key={row.id} value={row.id}>
-                      {row.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : null}
-              {mine.length > 0 ? (
-                <optgroup label="My folders">
-                  {mine.map((row) => (
-                    <option key={row.id} value={row.id}>
-                      {row.name}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : null}
-              {shared.length > 0 ? (
-                <optgroup label="Shared folders">
-                  {shared.map((row) => (
-                    <option key={row.id} value={row.id}>
-                      {row.name}
-                      {row.sharedByEmail ? ` · ${row.sharedByEmail}` : ""}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : null}
-            </select>
-          </label>
-          {selected ? (
-            <ul className="mt-3 space-y-2">
-              {selected.items.map((item) => (
-                <li
-                  key={item.templateId}
-                  className="rounded-card border border-line bg-canvas px-3 py-2"
-                >
-                  <p className="text-sm text-ink">{item.name}</p>
-                  <p className="text-xs text-ink-muted">{item.preview}</p>
-                  {deskType === "dca" ? (
-                    <label className="mt-2 block text-xs text-ink-muted">
-                      Contract
-                      <input
-                        value={symbols[item.templateId] ?? ""}
-                        onChange={(event) =>
-                          setSymbols((current) => ({
-                            ...current,
-                            [item.templateId]: event.target.value,
-                          }))
-                        }
-                        placeholder="Template contract"
-                        className={fieldClass}
-                      />
-                    </label>
-                  ) : null}
-                  <label className="mt-2 flex items-center gap-2 text-xs text-ink-muted">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(skips[item.templateId])}
-                      onChange={(event) =>
-                        setSkips((current) => ({
-                          ...current,
-                          [item.templateId]: event.target.checked,
-                        }))
-                      }
-                    />
-                    Skip
-                  </label>
-                </li>
+          {deskType === "dca" && selected.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {selected.map((row) => (
+                <label key={row.id} className="block text-xs text-ink-muted">
+                  Contract for {row.name}
+                  <input
+                    value={symbols[row.id] ?? ""}
+                    onChange={(event) =>
+                      setSymbols((current) => ({
+                        ...current,
+                        [row.id]: event.target.value,
+                      }))
+                    }
+                    placeholder="Leave blank to use the template contract"
+                    className={fieldClass}
+                  />
+                </label>
               ))}
-            </ul>
+            </div>
           ) : null}
           {result?.results ? (
             <ul className="mt-3 space-y-1 text-sm">
@@ -615,11 +482,15 @@ function ApplySetButton({
             {!result?.results ? (
               <button
                 type="button"
-                disabled={!selected || pending}
+                disabled={selected.length === 0 || pending}
                 onClick={() => void onApply()}
                 className={primaryBtn}
               >
-                {pending ? "Applying…" : "Apply folder"}
+                {pending
+                  ? "Applying…"
+                  : selected.length > 1
+                    ? `Apply ${selected.length}`
+                    : "Apply"}
               </button>
             ) : null}
           </div>
@@ -629,108 +500,160 @@ function ApplySetButton({
   );
 }
 
-function TemplatePicker({
-  platform,
-  mine,
-  shared,
-  selectedId,
-  onSelect,
-}: {
-  platform: TemplateSummary[];
-  mine: TemplateSummary[];
-  shared: TemplateSummary[];
-  selectedId: string;
-  onSelect: (row: TemplateSummary) => void;
-}) {
-  return (
-    <div className="mt-3 space-y-3">
-      {platform.length > 0 ? (
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-            Platform
-          </p>
-          <ul className="mt-1 space-y-1">
-            {platform.map((row) => (
-              <PickerRow
-                key={row.id}
-                row={row}
-                selected={selectedId === row.id}
-                onSelect={onSelect}
-              />
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      {shared.length > 0 ? (
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-            Shared
-          </p>
-          <ul className="mt-1 space-y-1">
-            {shared.map((row) => (
-              <PickerRow
-                key={row.id}
-                row={row}
-                selected={selectedId === row.id}
-                onSelect={onSelect}
-              />
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      <div>
-        <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-          My templates
-        </p>
-        {mine.length === 0 ? (
-          <p className="mt-1 text-sm text-ink-muted">
-            None yet. Save a bot as a template from a card.
-          </p>
-        ) : (
-          <ul className="mt-1 space-y-1">
-            {mine.map((row) => (
-              <PickerRow
-                key={row.id}
-                row={row}
-                selected={selectedId === row.id}
-                onSelect={onSelect}
-              />
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
+type LibraryGroup = {
+  key: string;
+  label: string;
+  folders: AutomationTemplateSet[];
+  loose: TemplateSummary[];
+};
+
+function libraryGroups(
+  templates: TemplateSummary[],
+  sets: AutomationTemplateSet[],
+): LibraryGroup[] {
+  const filed = new Set(
+    sets.flatMap((folder) => folder.items.map((item) => item.templateId)),
   );
+  const scopes = [
+    {
+      key: "platform",
+      label: "Platform",
+      match: (row: { visibility: string; sharedByEmail: string | null }) =>
+        row.visibility === "platform",
+    },
+    {
+      key: "shared",
+      label: "Shared",
+      match: (row: { visibility: string; sharedByEmail: string | null }) =>
+        Boolean(row.sharedByEmail),
+    },
+    {
+      key: "mine",
+      label: "My templates",
+      match: (row: { visibility: string; sharedByEmail: string | null }) =>
+        row.visibility === "user" && !row.sharedByEmail,
+    },
+  ] as const;
+  return scopes
+    .map((scope) => ({
+      key: scope.key,
+      label: scope.label,
+      folders: sets.filter((folder) => scope.match(folder)),
+      loose: templates.filter(
+        (row) => scope.match(row) && !filed.has(row.id),
+      ),
+    }))
+    .filter((group) => group.folders.length > 0 || group.loose.length > 0);
 }
 
-function PickerRow({
-  row,
-  selected,
-  onSelect,
+function LibraryTree({
+  groups,
+  selectedIds,
+  onToggleTemplate,
+  onToggleFolder,
 }: {
-  row: TemplateSummary;
-  selected: boolean;
-  onSelect: (row: TemplateSummary) => void;
+  groups: LibraryGroup[];
+  selectedIds: Set<string>;
+  onToggleTemplate: (id: string) => void;
+  onToggleFolder: (ids: string[]) => void;
 }) {
+  if (groups.length === 0) {
+    return (
+      <p className="mt-3 text-sm text-ink-muted">
+        None yet. Save a bot as a template from a card.
+      </p>
+    );
+  }
   return (
-    <li>
-      <button
-        type="button"
-        onClick={() => onSelect(row)}
-        className={`w-full rounded-control border px-3 py-2 text-left ${
-          selected
-            ? "border-accent bg-surface"
-            : "border-line bg-canvas hover:border-line-strong"
-        }`}
-      >
-        <span className="block text-sm text-ink">{row.name}</span>
-        <span className="block text-xs text-ink-muted">
-          {row.preview}
-          {row.sharedByEmail ? ` · Shared by ${row.sharedByEmail}` : ""}
-          {row.description ? ` · ${row.description}` : ""}
-        </span>
-      </button>
-    </li>
+    <div className="mt-3 space-y-4">
+      {groups.map((group) => (
+        <section key={group.key}>
+          <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+            {group.label}
+          </p>
+          <ul className="mt-1 space-y-1">
+            {group.folders.map((folder) => {
+              const ids = folder.items.map((item) => item.templateId);
+              const selectedCount = ids.filter((id) => selectedIds.has(id)).length;
+              return (
+                <li
+                  key={folder.id}
+                  className="rounded-control border border-line bg-canvas px-3 py-2"
+                >
+                  <label className="flex items-start gap-2 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 size-4"
+                      checked={ids.length > 0 && selectedCount === ids.length}
+                      ref={(node) => {
+                        if (node) {
+                          node.indeterminate =
+                            selectedCount > 0 && selectedCount < ids.length;
+                        }
+                      }}
+                      onChange={() => onToggleFolder(ids)}
+                    />
+                    <span>
+                      <span className="block font-medium">{folder.name}</span>
+                      <span className="block text-xs text-ink-muted">
+                        {ids.length === 0
+                          ? "Empty folder"
+                          : `${ids.length} template${ids.length === 1 ? "" : "s"}`}
+                        {folder.sharedByEmail
+                          ? ` · Shared by ${folder.sharedByEmail}`
+                          : ""}
+                      </span>
+                    </span>
+                  </label>
+                  {folder.items.length > 0 ? (
+                    <ul className="mt-2 ml-6 space-y-1 border-l border-line pl-3">
+                      {folder.items.map((item) => (
+                        <li key={`${folder.id}-${item.templateId}`}>
+                          <label className="flex items-start gap-2 text-sm text-ink">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 size-4"
+                              checked={selectedIds.has(item.templateId)}
+                              onChange={() => onToggleTemplate(item.templateId)}
+                            />
+                            <span>
+                              <span className="block">{item.name}</span>
+                              <span className="block text-xs text-ink-muted">
+                                {item.preview}
+                              </span>
+                            </span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </li>
+              );
+            })}
+            {group.loose.map((row) => (
+              <li key={row.id}>
+                <label className="flex items-start gap-2 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 size-4"
+                    checked={selectedIds.has(row.id)}
+                    onChange={() => onToggleTemplate(row.id)}
+                  />
+                  <span>
+                    <span className="block">{row.name}</span>
+                    <span className="block text-xs text-ink-muted">
+                      {row.preview}
+                      {row.sharedByEmail ? ` · Shared by ${row.sharedByEmail}` : ""}
+                      {row.description ? ` · ${row.description}` : ""}
+                    </span>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
   );
 }
 

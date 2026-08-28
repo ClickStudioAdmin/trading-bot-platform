@@ -1430,7 +1430,7 @@ function FolderEditModal({
   }
 
   return (
-    <Modal title="Edit folder" onClose={onClose}>
+    <Modal title="Edit folder" onClose={onClose} wide>
       <p className="mt-1 text-xs text-ink-muted">
         {formatDeskType(set.deskType)} ·{" "}
         {set.visibility === "platform" ? "Platform" : "User"}
@@ -1454,34 +1454,14 @@ function FolderEditModal({
           className={fieldClass}
         />
       </label>
-      <fieldset className="mt-3">
-        <legend className="text-xs text-ink-muted">Templates</legend>
-        {allowed.length === 0 ? (
-          <p className="mt-1 text-sm text-ink-muted">No matching templates.</p>
-        ) : (
-          <div className="mt-1 space-y-1">
-            {allowed.map((row) => (
-              <label key={row.id} className="flex items-center gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  checked={ids.includes(row.id)}
-                  onChange={(event) => {
-                    setIds((current) =>
-                      event.target.checked
-                        ? [...current, row.id]
-                        : current.filter((id) => id !== row.id),
-                    );
-                  }}
-                />
-                {row.name}
-                {row.visibility === "platform" ? (
-                  <span className="text-xs text-ink-faint">Platform</span>
-                ) : null}
-              </label>
-            ))}
-          </div>
-        )}
-      </fieldset>
+      <FolderMembership
+        allowed={allowed}
+        ids={ids}
+        onAdd={(id) => setIds((current) => [...current, id])}
+        onRemove={(id) =>
+          setIds((current) => current.filter((item) => item !== id))
+        }
+      />
       {canShare ? (
         <ShareControls
           kind="set"
@@ -1507,6 +1487,94 @@ function FolderEditModal({
         </button>
       </div>
     </Modal>
+  );
+}
+
+function FolderMembership({
+  allowed,
+  ids,
+  onAdd,
+  onRemove,
+}: {
+  allowed: AutomationTemplate[];
+  ids: string[];
+  onAdd: (id: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  const inFolder = ids
+    .map((id) => allowed.find((row) => row.id === id))
+    .filter((row): row is AutomationTemplate => Boolean(row));
+  const notInFolder = allowed.filter((row) => !ids.includes(row.id));
+
+  return (
+    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <MembershipColumn
+        title="In Folder"
+        empty="None yet. Add from the other column."
+        rows={inFolder}
+        action="Remove"
+        onAction={onRemove}
+      />
+      <MembershipColumn
+        title="Not in Folder"
+        empty="No matching templates, or they are all in this folder."
+        rows={notInFolder}
+        action="Add"
+        onAction={onAdd}
+      />
+    </div>
+  );
+}
+
+function MembershipColumn({
+  title,
+  empty,
+  rows,
+  action,
+  onAction,
+}: {
+  title: string;
+  empty: string;
+  rows: AutomationTemplate[];
+  action: "Add" | "Remove";
+  onAction: (id: string) => void;
+}) {
+  return (
+    <div className="rounded-card border border-line bg-canvas p-3">
+      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        {title}
+      </p>
+      {rows.length === 0 ? (
+        <p className="mt-2 text-sm text-ink-muted">{empty}</p>
+      ) : (
+        <ul className="mt-2 space-y-1">
+          {rows.map((row) => (
+            <li
+              key={row.id}
+              className="flex items-center justify-between gap-2 rounded-control border border-line bg-surface-raised px-2 py-1.5"
+            >
+              <span className="min-w-0 text-sm text-ink">
+                <span className="block truncate">{row.name}</span>
+                {row.visibility === "platform" ? (
+                  <span className="text-xs text-ink-faint">Platform</span>
+                ) : null}
+              </span>
+              <button
+                type="button"
+                onClick={() => onAction(row.id)}
+                className={
+                  action === "Remove"
+                    ? "shrink-0 text-xs font-medium text-danger hover:text-danger"
+                    : actionLink
+                }
+              >
+                {action}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
