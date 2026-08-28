@@ -59,8 +59,8 @@ export function AutomationsDesk({
             <span>
               Reduce only
               <span className="mt-1 block text-xs text-ink-muted">
-                Stops every set from opening or adding size. Automated
-                exits still run unless a set is Disabled. Manual Open,
+                Stops every bot from opening or adding size. Automated
+                exits still run unless a bot is Disabled. Manual Open,
                 Close, and Unwind still work.
               </span>
             </span>
@@ -150,15 +150,15 @@ export function PaperRulesForm({
 
       {reduceOnly && !empty ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Account Reduce only is on. Active sets will not open or add size.
-          Exits still run unless a set is Disabled. Manual Open, Close, and
+          Account Reduce only is on. Active bots will not open or add size.
+          Exits still run unless a bot is Disabled. Manual Open, Close, and
           Unwind still work.
         </p>
       ) : null}
 
       {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-          No sets yet. Add a Rule Set to start the engine, or leave this
+          No bots yet. Add a bot to start the engine, or leave this
           empty if you only trade by hand.
         </p>
       ) : (
@@ -192,7 +192,7 @@ export function PaperRulesForm({
           }
           className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
         >
-          Add Rule Set
+          Add bot
         </button>
         {accountId ? (
           <DeskTemplateBar
@@ -206,7 +206,7 @@ export function PaperRulesForm({
         {cloneSources.length > 0 ? (
           <select
             key={cloneMenu}
-            aria-label="Clone existing set"
+            aria-label="Clone existing bot"
             defaultValue=""
             onChange={(event) => {
               const key = event.target.value;
@@ -223,10 +223,10 @@ export function PaperRulesForm({
             }}
             className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
           >
-            <option value="">Clone existing set</option>
+            <option value="">Clone existing bot</option>
             {cloneSources.map((item) => (
               <option key={item.key} value={item.key}>
-                {item.name || "Set"}
+                {item.name || "Bot"}
               </option>
             ))}
           </select>
@@ -237,7 +237,7 @@ export function PaperRulesForm({
             successKey="save-rules"
             className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
-            Save automations
+            Save Bots
           </PendingSubmitButton>
         )}
       </div>
@@ -301,7 +301,7 @@ function RuleRow({
           name={`${prefix}name`}
           defaultValue={layer.name}
           maxLength={40}
-          placeholder={`Set ${index + 1}`}
+          placeholder={`Bot ${index + 1}`}
           className="w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
         />
         <select
@@ -466,7 +466,7 @@ function RuleRow({
         ) : (
           <span
             className="inline-flex"
-            title="This set has an open position. Close that row before removing it."
+            title="This bot has an open position. Close that row before removing it."
           >
             <button
               type="button"

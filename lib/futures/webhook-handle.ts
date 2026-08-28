@@ -137,7 +137,7 @@ export async function handleFuturesWebhook(input: {
       body: {
         ok: false,
         error:
-          "This desk only accepts Signal arm. The playbook owns orders.",
+          "This desk only accepts Signal arm. The bot owns orders.",
       },
     };
   }
@@ -151,7 +151,7 @@ export async function handleFuturesWebhook(input: {
         await writeEventLog({
           scope: "strategy",
           event: `webhook.${parsed.parsed.verb}`,
-          message: "Signal accepted. Bind this webhook on a playbook first.",
+          message: "Signal accepted. Bind this webhook on a bot first.",
           userId,
           accountId,
           strategy: FUTURES_STRATEGY_ID,
@@ -184,12 +184,12 @@ export async function handleFuturesWebhook(input: {
       const message =
         firstError && !firstError.ok
           ? okCount > 0
-            ? `${okCount} playbook${okCount === 1 ? "" : "s"} ran. ${firstError.error}`
+            ? `${okCount} bot${okCount === 1 ? "" : "s"} ran. ${firstError.error}`
             : firstError.error
           : results[0] && results[0].ok
             ? playbooks.length === 1
               ? results[0].message
-              : `${okCount} playbooks ran.`
+              : `${okCount} bots ran.`
             : "Signal accepted.";
       await writeEventLog({
         scope: "strategy",

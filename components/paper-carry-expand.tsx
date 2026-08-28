@@ -298,7 +298,7 @@ function AutoCloseHint({
   return (
     <span className="block space-y-1">
       <span className="block text-ink">
-        Close using this set’s exit order type
+        Close using this bot’s exit order type
       </span>
       {orderType ? (
         <span className="block">{orderType}</span>
@@ -437,7 +437,7 @@ function formatLogDataField(
 ): MetricRow | null {
   const label =
     key === "ruleName" && strategy === FUTURES_STRATEGY_ID
-      ? "Automation"
+      ? "Bot"
       : (LOG_FIELD_LABELS[key] ?? labelFromKey(key));
 
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -513,7 +513,7 @@ const LOG_FIELD_LABELS: Record<string, string> = {
   mode: "Mode",
   reason: "Reason",
   closeReason: "Reason",
-  ruleName: "Set",
+  ruleName: "Bot",
   webhook: "Webhook",
   closeMaxDte: "Close max DTE",
   closeMinNetApr: "Close min APR",
@@ -558,7 +558,7 @@ function formatLogReason(reason: string): string {
     take_profit: "Take profit",
     stop_loss: "Stop loss",
     end_cycle: "Cycle end",
-    close_playbook: "Close playbook",
+    close_playbook: "Close bot",
     position_open: "Position still open",
     clip: "Add order",
   };
@@ -579,14 +579,14 @@ function formatLogEvent(event: string): string {
     "trade.futures": "Futures",
     "trade.futures_failed": "Futures failed",
     "dca.armed": "Armed",
-    "dca.closed": "Playbook closed",
+    "dca.closed": "Bot closed",
     "dca.decision": "Decision",
     "dca.disarmed": "Stopped adding",
     "dca.exit_rested": "Exit rested",
-    "dca.saved": "Playbook saved",
-    "dca.deleted": "Playbook removed",
-    "dca.sync_failed": "Playbook sync failed",
-    "engine.fired": "Automation fired",
+    "dca.saved": "Bot saved",
+    "dca.deleted": "Bot removed",
+    "dca.sync_failed": "Bot sync failed",
+    "engine.fired": "Bot fired",
     "engine.open_failed": "Engine open failed",
     "engine.close_failed": "Engine close failed",
   };

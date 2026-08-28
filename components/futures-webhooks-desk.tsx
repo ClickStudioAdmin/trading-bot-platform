@@ -65,7 +65,7 @@ const SIGNAL_PAYLOADS = [
 }`,
   },
   {
-    label: "Close playbook",
+    label: "Close bot",
     text: `{
   "action": "close-playbook"
 }`,
@@ -174,7 +174,7 @@ export function FuturesWebhooksDesk({
           {!allowOrder && hook.kind === "order" ? (
             <p className="text-sm text-warning">
               TradingView strategy webhooks do nothing on this desk. The
-              playbook owns orders. Delete this URL.
+              bot owns orders. Delete this URL.
             </p>
           ) : null}
           <div className="space-y-1">
@@ -203,7 +203,7 @@ export function FuturesWebhooksDesk({
             {hook.kind === "signal" ? (
               <>
                 <p className="text-xs text-ink-muted">
-                  Signal only arms, disarms, or closes the playbook. It does
+                  Signal only arms, disarms, or closes the bot. It does
                   not send buy, sell, or close.
                 </p>
                 <div className="grid gap-4 md:grid-cols-3">

@@ -75,7 +75,7 @@ export default async function BookOverviewPage() {
             href={deskHomePath(current.deskType, current.id)}
           />
           <StatCard
-            label="Automations"
+            label="Bots"
             value={automationLabel}
             hint={
               reduceOnly

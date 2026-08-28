@@ -90,7 +90,7 @@ export function OpenPaperTrades({
               <th className="w-28 px-4 py-3 font-medium">
                 <ColumnHint
                   label="Source"
-                  hint="Manual is a desk click. Auto is a set. The name is the set that opened this row. Click the name on an open Auto row to see copied rules and edit that trade’s exits."
+                  hint="Manual is a desk click. Auto is a bot. The name is the bot that opened this row. Click the name on an open Auto row to see copied rules and edit that trade’s exits."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -144,8 +144,8 @@ export function OpenPaperTrades({
                   label="Close By"
                   hint={
                     exchangeBook
-                      ? "Manual Close exits both Bybit legs at market. Auto Close uses that set’s exit order type. Unwind clips to usable book on the exchange."
-                      : "Manual Close exits remaining size at the live scan. Auto Close uses only that set’s exit order type — Fixed closes remaining size, Dynamic clips to usable book. It does not wait for APR, DTE, take profit, or stop loss. Unwind is manual only. After an exit is submitted, Close is replaced by Closing. No Bybit order."
+                      ? "Manual Close exits both Bybit legs at market. Auto Close uses that bot’s exit order type. Unwind clips to usable book on the exchange."
+                      : "Manual Close exits remaining size at the live scan. Auto Close uses only that bot’s exit order type — Fixed closes remaining size, Dynamic clips to usable book. It does not wait for APR, DTE, take profit, or stop loss. Unwind is manual only. After an exit is submitted, Close is replaced by Closing. No Bybit order."
                   }
                 />
               </th>
@@ -221,7 +221,7 @@ export function ClosedPaperTrades({
               <th className="w-28 px-4 py-3 font-medium">
                 <ColumnHint
                   label="Source"
-                  hint="Manual is a desk click. Auto is a set. The name is the set that opened this row. In / Out is whether the open and close were Manual or System."
+                  hint="Manual is a desk click. Auto is a bot. The name is the bot that opened this row. In / Out is whether the open and close were Manual or System."
                 />
               </th>
               <th className="px-4 py-3 font-medium">

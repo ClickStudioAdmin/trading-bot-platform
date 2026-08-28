@@ -516,7 +516,7 @@ export async function runPaperEngineTick(options?: {
       scope: "strategy",
       event: "engine.open_failed",
       message:
-        cause instanceof Error ? cause.message : "DCA playbook tick failed",
+        cause instanceof Error ? cause.message : "DCA bot tick failed",
       strategy: "futures",
     });
   }

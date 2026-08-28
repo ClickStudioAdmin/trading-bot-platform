@@ -6,12 +6,12 @@ export function FuturesRulesGuide({
   return (
     <section className="mt-10 rounded-card border border-line bg-surface px-5 py-5">
       <h2 className="text-lg font-semibold tracking-tight">
-        How automations work
+        How bots work
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
         {exchangeBook
-          ? "Each rule watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on the bound book. Those are the same commands as a click on Positions. TradingView URLs live on Webhooks."
-          : "Each rule watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on this paper book. Nothing is sent to Bybit. TradingView URLs live on Webhooks."}
+          ? "Each bot watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on the bound book. Those are the same commands as a click on Positions. TradingView URLs live on Webhooks."
+          : "Each bot watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on this paper book. Nothing is sent to Bybit. TradingView URLs live on Webhooks."}
       </p>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
@@ -20,11 +20,11 @@ export function FuturesRulesGuide({
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="When it fires"
-          detail="When can be a price cross or a named Signal webhook. A price rule fires on the first tick the condition is true, then waits until it is false again. A Signal rule fires when that webhook arms."
+          detail="When can be a price cross or a named Signal webhook. A price bot fires on the first tick the condition is true, then waits until it is false again. A Signal bot fires when that webhook arms."
         />
         <GuideItem
           term="When it is on"
-          detail="Active may Buy, Sell, and Close. Reduce only will not Buy or Sell, but still Closes. Disabled does neither. Book Reduce only (Desk Settings, or the Close All checkbox) makes every Active rule behave as Reduce only. Manual Buy, Sell, and Close always work."
+          detail="Active may Buy, Sell, and Close. Reduce only will not Buy or Sell, but still Closes. Disabled does neither. Book Reduce only (Desk Settings, or the Close All checkbox) makes every Active bot behave as Reduce only. Manual Buy, Sell, and Close always work."
         />
         <GuideItem
           term="Same desk path"
@@ -37,8 +37,8 @@ export function FuturesRulesGuide({
       </h3>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
-          term="Add rule"
-          detail="Adds a blank rule card. Clone existing rule copies a saved rule, names it with (copy), and leaves it unsaved until you Save automations. A new clone can fire on the next cross — change the contract or disable it first if you do not want two of the same rule."
+          term="Add bot"
+          detail="Adds a blank bot card. Clone existing bot copies a saved bot, names it with (copy), and leaves it unsaved until you Save Bots. A new clone can fire on the next cross — change the contract or disable it first if you do not want two of the same bot."
         />
         <GuideItem
           term="Skip if this side is already open"
@@ -46,11 +46,11 @@ export function FuturesRulesGuide({
         />
         <GuideItem
           term="Close long / Close short"
-          detail="Closes that side on this contract. Empty qty closes the whole row. If nothing is open, the rule waits until there is a row, then closes it while the condition is still true."
+          detail="Closes that side on this contract. Empty qty closes the whole row. If nothing is open, the bot waits until there is a row, then closes it while the condition is still true."
         />
         <GuideItem
           term="Source"
-          detail="Positions, open orders, order details, and Activity logs show Manual, Auto, or Webhook. Auto is an automation (price cross or a Signal that fired a rule). Webhook is a TradingView strategy that placed Buy, Sell, or Close itself. The name is that rule or webhook."
+          detail="Positions, open orders, order details, and Activity logs show Manual, Auto, or Webhook. Auto is a bot (price cross or a Signal that fired a bot). Webhook is a TradingView strategy that placed Buy, Sell, or Close itself. The name is that bot or webhook."
         />
       </dl>
     </section>

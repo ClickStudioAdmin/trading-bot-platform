@@ -161,7 +161,7 @@ export default async function FuturesPositionsPage({
             showTicket
               ? undefined
               : dca
-                ? "No open futures. The playbook adds orders once it is armed."
+                ? "No open futures. The bot adds orders once it is armed."
                 : "No open futures. TradingView opens them through a webhook."
           }
         />
@@ -251,7 +251,7 @@ export default async function FuturesPositionsPage({
             showTicket
               ? undefined
               : dca
-                ? "No working limits. Playbook orders rest here when they are limits."
+                ? "No working limits. Bot orders rest here when they are limits."
                 : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
           }
         />

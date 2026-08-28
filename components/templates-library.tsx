@@ -5,8 +5,6 @@ import { LocalTime } from "@/components/local-time";
 import { Modal } from "@/components/template-modals";
 import { formatDeskType } from "@/lib/accounts/model";
 import {
-  applyTemplateAction,
-  applyTemplateSetAction,
   createTemplateSetAction,
   deleteTemplateAction,
   deleteTemplateSetAction,
@@ -39,12 +37,6 @@ const dangerBtn =
   "rounded-control px-3 py-1.5 text-xs text-danger hover:bg-danger/10";
 const actionLink =
   "text-xs font-medium text-accent hover:text-accent-strong";
-
-type DeskOption = {
-  id: string;
-  name: string;
-  deskType: TemplateDeskType;
-};
 
 type LibraryTab = "templates" | "sets" | "shared-templates" | "shared-sets";
 
@@ -141,14 +133,12 @@ export function TemplatesLibrary({
   sets,
   sharedTemplates = [],
   sharedSets = [],
-  desks,
 }: {
   variant: "account" | "admin";
   templates: AutomationTemplate[];
   sets: AutomationTemplateSet[];
   sharedTemplates?: AutomationTemplate[];
   sharedSets?: AutomationTemplateSet[];
-  desks: DeskOption[];
 }) {
   const [tab, setTab] = useState<LibraryTab>("templates");
   const [deskFilter, setDeskFilter] = useState<"all" | TemplateDeskType>("all");
@@ -160,10 +150,6 @@ export function TemplatesLibrary({
   const [error, setError] = useState<string | null>(null);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
-  const [applyingTemplateId, setApplyingTemplateId] = useState<string | null>(
-    null,
-  );
-  const [applyingFolderId, setApplyingFolderId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkFolderOpen, setBulkFolderOpen] = useState(false);
 
@@ -178,6 +164,9 @@ export function TemplatesLibrary({
   const needle = query.trim().toLowerCase();
 
   const filteredTemplates = templates.filter((row) => {
+    if (variant === "account" && row.visibility === "platform") {
+      return false;
+    }
     if (deskFilter !== "all" && row.deskType !== deskFilter) {
       return false;
     }
@@ -190,6 +179,9 @@ export function TemplatesLibrary({
     return true;
   });
   const filteredSets = sets.filter((row) => {
+    if (variant === "account" && row.visibility === "platform") {
+      return false;
+    }
     if (deskFilter !== "all" && row.deskType !== deskFilter) {
       return false;
     }
@@ -320,7 +312,15 @@ export function TemplatesLibrary({
 
   const folderFilterOptions = (
     tab === "shared-templates" ? sharedSets : sets
-  ).filter((row) => deskFilter === "all" || row.deskType === deskFilter);
+  ).filter((row) => {
+    if (deskFilter !== "all" && row.deskType !== deskFilter) {
+      return false;
+    }
+    if (variant === "account" && tab === "templates" && row.visibility === "platform") {
+      return false;
+    }
+    return true;
+  });
 
   const editingTemplate =
     templates.find((row) => row.id === editingTemplateId) ??
@@ -329,14 +329,6 @@ export function TemplatesLibrary({
   const editingFolder =
     sets.find((row) => row.id === editingFolderId) ??
     sharedSets.find((row) => row.id === editingFolderId) ??
-    null;
-  const applyingTemplate =
-    templates.find((row) => row.id === applyingTemplateId) ??
-    sharedTemplates.find((row) => row.id === applyingTemplateId) ??
-    null;
-  const applyingFolder =
-    sets.find((row) => row.id === applyingFolderId) ??
-    sharedSets.find((row) => row.id === applyingFolderId) ??
     null;
 
   const showOwner = variant === "admin" || tab.startsWith("shared");
@@ -476,10 +468,10 @@ export function TemplatesLibrary({
     <div>
       <nav className="mt-5 flex flex-wrap border-b border-line">
         <TabButton selected={tab === "templates"} onClick={() => changeTab("templates")}>
-          Templates
+          {variant === "admin" ? "Templates" : "My Templates"}
         </TabButton>
         <TabButton selected={tab === "sets"} onClick={() => changeTab("sets")}>
-          Folders
+          {variant === "admin" ? "Folders" : "My Folders"}
         </TabButton>
         <TabButton
           selected={tab === "shared-templates"}
@@ -701,15 +693,6 @@ export function TemplatesLibrary({
                           Edit
                         </button>
                       ) : null}
-                      {variant === "account" ? (
-                        <button
-                          type="button"
-                          onClick={() => setApplyingTemplateId(row.id)}
-                          className={actionLink}
-                        >
-                          Apply
-                        </button>
-                      ) : null}
                       {sharedTab ? (
                         <button
                           type="button"
@@ -831,15 +814,6 @@ export function TemplatesLibrary({
                             Edit
                           </button>
                         ) : null}
-                        {variant === "account" ? (
-                          <button
-                            type="button"
-                            onClick={() => setApplyingFolderId(row.id)}
-                            className={actionLink}
-                          >
-                            Apply
-                          </button>
-                        ) : null}
                         {sharedTab ? (
                           <button
                             type="button"
@@ -864,10 +838,7 @@ export function TemplatesLibrary({
             <div className="mt-4">
               {variant === "account" ? (
                 <CreateSetCard
-                  templates={templates.filter(
-                    (row) =>
-                      row.visibility === "user" || row.visibility === "platform",
-                  )}
+                  templates={templates.filter((row) => row.visibility === "user")}
                   visibility="user"
                   onResult={flash}
                 />
@@ -926,32 +897,6 @@ export function TemplatesLibrary({
           onClose={() => setEditingFolderId(null)}
           onShare={flash}
           onResult={onEditSaved}
-        />
-      ) : null}
-      {applyingTemplate ? (
-        <ApplyTemplateModal
-          template={applyingTemplate}
-          desks={desks}
-          onClose={() => setApplyingTemplateId(null)}
-          onResult={(result) => {
-            flash(result);
-            if (result.ok) {
-              setApplyingTemplateId(null);
-            }
-          }}
-        />
-      ) : null}
-      {applyingFolder ? (
-        <ApplyFolderModal
-          set={applyingFolder}
-          desks={desks}
-          onClose={() => setApplyingFolderId(null)}
-          onResult={(result) => {
-            flash(result);
-            if (result.ok) {
-              setApplyingFolderId(null);
-            }
-          }}
         />
       ) : null}
     </div>
@@ -1565,149 +1510,6 @@ function FolderEditModal({
   );
 }
 
-function ApplyTemplateModal({
-  template,
-  desks,
-  onClose,
-  onResult,
-}: {
-  template: AutomationTemplate;
-  desks: DeskOption[];
-  onClose: () => void;
-  onResult: (result: TemplateActionResult) => void;
-}) {
-  const matching = desks.filter((desk) => desk.deskType === template.deskType);
-  const [accountId, setAccountId] = useState(matching[0]?.id ?? "");
-  const [symbol, setSymbol] = useState(
-    template.recipe.kind === "cash_and_carry" ? "" : template.recipe.symbol,
-  );
-  const [pending, setPending] = useState(false);
-
-  async function apply() {
-    setPending(true);
-    const data = new FormData();
-    data.set("templateId", template.id);
-    data.set("accountId", accountId);
-    if (symbol.trim()) {
-      data.set("symbol", symbol.trim().toUpperCase());
-    }
-    onResult(await applyTemplateAction(data));
-    setPending(false);
-  }
-
-  return (
-    <Modal title="Apply template" onClose={onClose}>
-      <p className="mt-1 text-sm text-ink-muted">{template.name}</p>
-      <label className="mt-3 block text-xs text-ink-muted">
-        Desk
-        <select
-          value={accountId}
-          onChange={(event) => setAccountId(event.target.value)}
-          className={fieldClass}
-        >
-          <option value="">Choose a desk</option>
-          {matching.map((desk) => (
-            <option key={desk.id} value={desk.id}>
-              {desk.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {template.deskType === "dca" ? (
-        <label className="mt-3 block text-xs text-ink-muted">
-          Contract
-          <input
-            value={symbol}
-            onChange={(event) => setSymbol(event.target.value)}
-            className={fieldClass}
-          />
-        </label>
-      ) : null}
-      <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={onClose} className={secondaryBtn}>
-          Cancel
-        </button>
-        <button
-          type="button"
-          disabled={!accountId || pending}
-          onClick={() => void apply()}
-          className={primaryBtn}
-        >
-          {pending ? "Applying…" : "Apply"}
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
-function ApplyFolderModal({
-  set,
-  desks,
-  onClose,
-  onResult,
-}: {
-  set: AutomationTemplateSet;
-  desks: DeskOption[];
-  onClose: () => void;
-  onResult: (result: TemplateActionResult) => void;
-}) {
-  const matching = desks.filter((desk) => desk.deskType === set.deskType);
-  const [accountId, setAccountId] = useState(matching[0]?.id ?? "");
-  const [pending, setPending] = useState(false);
-
-  async function apply() {
-    setPending(true);
-    const data = new FormData();
-    data.set("setId", set.id);
-    data.set("accountId", accountId);
-    data.set("itemCount", String(set.items.length));
-    set.items.forEach((item, index) => {
-      data.set(`i${index}_templateId`, item.templateId);
-    });
-    onResult(await applyTemplateSetAction(data));
-    setPending(false);
-  }
-
-  return (
-    <Modal title="Apply folder" onClose={onClose}>
-      <p className="mt-1 text-sm text-ink-muted">{set.name}</p>
-      <ul className="mt-2 space-y-1 text-sm text-ink-muted">
-        {set.items.map((item) => (
-          <li key={item.templateId}>{item.name}</li>
-        ))}
-      </ul>
-      <label className="mt-3 block text-xs text-ink-muted">
-        Desk
-        <select
-          value={accountId}
-          onChange={(event) => setAccountId(event.target.value)}
-          className={fieldClass}
-        >
-          <option value="">Choose a desk</option>
-          {matching.map((desk) => (
-            <option key={desk.id} value={desk.id}>
-              {desk.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={onClose} className={secondaryBtn}>
-          Cancel
-        </button>
-        <button
-          type="button"
-          disabled={!accountId || pending}
-          onClick={() => void apply()}
-          className={primaryBtn}
-        >
-          {pending ? "Applying…" : "Apply"}
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
 function CreateSetCard({
   templates,
   visibility,
@@ -1717,12 +1519,7 @@ function CreateSetCard({
   visibility: "user" | "platform";
   onResult: (result: TemplateActionResult) => void;
 }) {
-  const deskTypes = useMemo(
-    () =>
-      Array.from(new Set(templates.map((row) => row.deskType))) as TemplateDeskType[],
-    [templates],
-  );
-  const [deskType, setDeskType] = useState<TemplateDeskType>(deskTypes[0] ?? "dca");
+  const [deskType, setDeskType] = useState<TemplateDeskType>("dca");
   const [name, setName] = useState("");
   const [ids, setIds] = useState<string[]>([]);
   const options = templates.filter((row) => row.deskType === deskType);
@@ -1738,24 +1535,13 @@ function CreateSetCard({
     setIds([]);
   }
 
-  if (options.length === 0 && deskTypes.length === 0) {
-    return (
-      <article className="rounded-card border border-dashed border-line bg-canvas p-4">
-        <p className="text-sm font-semibold text-ink">
-          {visibility === "platform" ? "New platform folder" : "New folder"}
-        </p>
-        <p className="mt-2 text-sm text-ink-muted">
-          Save a template first, then group matching templates into a folder
-          here.
-        </p>
-      </article>
-    );
-  }
-
   return (
     <article className="rounded-card border border-dashed border-line bg-canvas p-4">
       <p className="text-sm font-semibold text-ink">
         {visibility === "platform" ? "New platform folder" : "New folder"}
+      </p>
+      <p className="mt-1 text-sm text-ink-muted">
+        Name and desk type are enough. You can add templates later.
       </p>
       <label className="mt-2 block text-xs text-ink-muted">
         Name
@@ -1775,39 +1561,43 @@ function CreateSetCard({
           }}
           className={fieldClass}
         >
-          {(["dca", "perps", "cash_and_carry"] as const)
-            .filter((type) => templates.some((row) => row.deskType === type))
-            .map((type) => (
-              <option key={type} value={type}>
-                {formatDeskType(type)}
-              </option>
-            ))}
+          {(["dca", "perps", "cash_and_carry"] as const).map((type) => (
+            <option key={type} value={type}>
+              {formatDeskType(type)}
+            </option>
+          ))}
         </select>
       </label>
       <div className="mt-2 space-y-1">
-        {options.map((row) => (
-          <label key={row.id} className="flex items-center gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
-              checked={ids.includes(row.id)}
-              onChange={(event) => {
-                setIds((current) =>
-                  event.target.checked
-                    ? [...current, row.id]
-                    : current.filter((id) => id !== row.id),
-                );
-              }}
-            />
-            {row.name}
-            {row.visibility === "platform" ? (
-              <span className="text-xs text-ink-faint">Platform</span>
-            ) : null}
-          </label>
-        ))}
+        {options.length === 0 ? (
+          <p className="text-sm text-ink-muted">
+            No templates of this desk type yet.
+          </p>
+        ) : (
+          options.map((row) => (
+            <label key={row.id} className="flex items-center gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={ids.includes(row.id)}
+                onChange={(event) => {
+                  setIds((current) =>
+                    event.target.checked
+                      ? [...current, row.id]
+                      : current.filter((id) => id !== row.id),
+                  );
+                }}
+              />
+              {row.name}
+              {row.visibility === "platform" ? (
+                <span className="text-xs text-ink-faint">Platform</span>
+              ) : null}
+            </label>
+          ))
+        )}
       </div>
       <button
         type="button"
-        disabled={!name.trim() || ids.length === 0}
+        disabled={!name.trim()}
         onClick={() => void create()}
         className={`${primaryBtn} mt-3`}
       >

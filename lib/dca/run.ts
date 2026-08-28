@@ -965,7 +965,7 @@ export async function applyDcaVerb(input: {
   }
   const sides = sidesForVerb(input.playbook, input.side);
   if (sides.length === 0) {
-    return { ok: false, error: "That side is not on this playbook." };
+    return { ok: false, error: "That side is not on this bot." };
   }
 
   if (input.verb === "disarm") {
@@ -992,7 +992,7 @@ export async function applyDcaVerb(input: {
       changed = true;
     }
     if (!changed) {
-      return { ok: true, message: "Playbook is idle." };
+      return { ok: true, message: "Bot is idle." };
     }
     await logDcaEvent({
       playbook: input.playbook,
@@ -1044,7 +1044,7 @@ export async function applyDcaVerb(input: {
       message: `Closed ${input.playbook.name}.`,
       data: { sides, reason: "close_playbook" },
     });
-    return { ok: true, message: "Playbook closed." };
+    return { ok: true, message: "Bot closed." };
   }
 
   const lastPrice = await lastPriceFor(input.playbook.symbol);
@@ -1163,10 +1163,10 @@ export async function applyDcaVerb(input: {
   }
 
   if (skippedIdle === sides.length) {
-    return { ok: false, error: "Arm the playbook first." };
+    return { ok: false, error: "Arm the bot first." };
   }
   if (placed === 0 && waiting === 0 && resumed === 0 && already > 0) {
-    return { ok: true, message: "Playbook is already armed." };
+    return { ok: true, message: "Bot is already armed." };
   }
   await logDcaEvent({
     playbook,
@@ -1180,12 +1180,12 @@ export async function applyDcaVerb(input: {
     data: { sides, placed, resumed, waiting },
   });
   if (placed > 0) {
-    return { ok: true, message: "Playbook armed. First order placed." };
+    return { ok: true, message: "Bot armed. First order placed." };
   }
   if (resumed > 0) {
-    return { ok: true, message: "Playbook resumed adding." };
+    return { ok: true, message: "Bot resumed adding." };
   }
-  return { ok: true, message: "Playbook armed. Waiting for the start trigger." };
+  return { ok: true, message: "Bot armed. Waiting for the start trigger." };
 }
 
 export async function syncDcaPlaybookWorking(input: {

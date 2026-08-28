@@ -114,7 +114,7 @@ export function FuturesWebhookTest({
                 <>
                   <option value="arm">Arm</option>
                   <option value="disarm">Disarm</option>
-                  <option value="close-playbook">Close playbook</option>
+                  <option value="close-playbook">Close bot</option>
                 </>
               ) : (
                 <>

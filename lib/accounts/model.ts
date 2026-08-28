@@ -207,7 +207,7 @@ export function deskManualBuySellBlockReason(
     return null;
   }
   if (deskType === "dca") {
-    return "This is a DCA desk. The playbook owns orders. Buy and Sell are not on this ticket.";
+    return "This is a DCA desk. The bot owns orders. Buy and Sell are not on this ticket.";
   }
   if (deskType === "signal_follower") {
     return "This is a TradingView Strategy desk. Buy and Sell come from a webhook.";
@@ -345,11 +345,11 @@ export function formatDeleteBlockers(
   const open = blocks.includes("open");
   const automations = blocks.includes("automations");
   if (open && automations) {
-    parts.push("Disable automations and exit all positions first");
+    parts.push("Disable bots and exit all positions first");
   } else if (open) {
     parts.push("Exit all positions first");
   } else if (automations) {
-    parts.push("Disable automations first");
+    parts.push("Disable bots first");
   }
   return parts.join(" · ");
 }
@@ -368,7 +368,7 @@ export function formatAccountUsageStatus(input: {
     );
   }
   if (input.automationsRunning) {
-    parts.push("Automations on");
+    parts.push("Bots on");
   }
   if (input.reduceOnly) {
     parts.push("Reduce only");

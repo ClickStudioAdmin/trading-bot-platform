@@ -5,11 +5,11 @@ export function PaperRulesGuide({
 }) {
   return (
     <section className="mt-10 rounded-card border border-line bg-surface px-5 py-5">
-      <h2 className="text-lg font-semibold tracking-tight">How automations work</h2>
+      <h2 className="text-lg font-semibold tracking-tight">How bots work</h2>
       <p className="mt-2 text-sm text-ink-muted">
         {exchangeBook
-          ? "A set is a saved rule card. About every few minutes the engine scans the book and may open, add to, or close carries on the bound exchange. Those are real market orders. Leave a field empty to turn that rule off."
-          : "A set is a saved rule card. About every few minutes the engine scans the live book and may open, add to, or close your paper rows. Nothing is sent to Bybit. Leave a field empty to turn that rule off."}
+          ? "A bot is a saved card on this desk. About every few minutes the engine scans the book and may open, add to, or close carries on the bound exchange. Those are real market orders. Leave a field empty to turn that condition off."
+          : "A bot is a saved card on this desk. About every few minutes the engine scans the live book and may open, add to, or close your paper rows. Nothing is sent to Bybit. Leave a field empty to turn that condition off."}
       </p>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
@@ -20,47 +20,47 @@ export function PaperRulesGuide({
           term="When it runs"
           detail={
             exchangeBook
-              ? "Each tick: scan the book, then for each of your sets decide whether to open, add size, or start an exit. Those decisions place market orders on the bound exchange. Rows already marked Closing keep clipping until they are flat."
-              : "Each tick: scan the book, then for each of your sets decide whether to open, add size, or start an exit. Rows already marked Closing keep clipping until they are flat."
+              ? "Each tick: scan the book, then for each of your bots decide whether to open, add size, or start an exit. Those decisions place market orders on the bound exchange. Rows already marked Closing keep clipping until they are flat."
+              : "Each tick: scan the book, then for each of your bots decide whether to open, add size, or start an exit. Rows already marked Closing keep clipping until they are flat."
           }
         />
         <GuideItem
           term="When it is on"
-          detail="Each set has a mode. Active may open and exit. Reduce only will not open or add size, but still exits. Disabled does neither. Account Reduce only (shown when you have at least one set) makes every Active set behave as Reduce only. Manual Open, Close, and Unwind always work. Closing rows keep clipping until they are flat."
+          detail="Each bot has a mode. Active may open and exit. Reduce only will not open or add size, but still exits. Disabled does neither. Account Reduce only (shown when you have at least one bot) makes every Active bot behave as Reduce only. Manual Open, Close, and Unwind always work. Closing rows keep clipping until they are flat."
         />
         <GuideItem
           term="What it can hold"
-          detail="Each set may hold one pair unless you raise Max pairs. Extra clips on that same pair still count as one pair. Manual opens and other sets do not count toward this set’s limit."
+          detail="Each bot may hold one pair unless you raise Max pairs. Extra clips on that same pair still count as one pair. Manual opens and other bots do not count toward this bot’s limit."
         />
       </dl>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
-        Sets
+        Bots
       </h3>
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Name"
-          detail="The Source column on Positions shows Manual or Auto. Auto includes this set name. Click that name on an open row to see the rules copied onto that trade, and to edit that trade’s exits."
+          detail="The Source column on Positions shows Manual or Auto. Auto includes this bot name. Click that name on an open row to see the rules copied onto that trade, and to edit that trade’s exits."
         />
         <GuideItem
           term="Mode"
-          detail="Active, Reduce only, or Disabled for this set only. Account Reduce only overrides Active sets until you turn it off. It is hidden when you have no sets."
+          detail="Active, Reduce only, or Disabled for this bot only. Account Reduce only overrides Active bots until you turn it off. It is hidden when you have no bots."
         />
         <GuideItem
-          term="Add Rule Set"
-          detail="Adds another rule card. Each set has its own name, entry filters, size caps, order types, and exits. Save to apply. A green pulse means a live row is using this set — you cannot remove it until that row is flat."
+          term="Add bot"
+          detail="Adds another bot card. Each bot has its own name, entry filters, size caps, order types, and exits. Save to apply. A green pulse means a live row is using this bot — you cannot remove it until that row is flat."
         />
         <GuideItem
-          term="Clone existing set"
-          detail="Copies a saved set, names it with (copy), and leaves it unsaved until you Save automations. Change filters or disable it first if you do not want two sets competing for the same pair."
+          term="Clone existing bot"
+          detail="Copies a saved bot, names it with (copy), and leaves it unsaved until you Save Bots. Change filters or disable it first if you do not want two bots competing for the same pair."
         />
         <GuideItem
-          term="Two sets, one pair"
-          detail="If more than one set matches the same pair, the engine uses the one with the higher Min APR. If those tie, it uses the set listed first on this page."
+          term="Two bots, one pair"
+          detail="If more than one bot matches the same pair, the engine uses the one with the higher Min APR. If those tie, it uses the bot listed first on this page."
         />
         <GuideItem
           term="Saving later"
-          detail="A new save applies to new opens. An open row keeps the exits copied when it opened. Change that trade from the set name in Source on Positions, not by hoping a later save will rewrite it."
+          detail="A new save applies to new opens. An open row keeps the exits copied when it opened. Change that trade from the bot name in Source on Positions, not by hoping a later save will rewrite it."
         />
       </dl>
 
@@ -68,7 +68,7 @@ export function PaperRulesGuide({
         Entry · Conditions (all must be true)
       </h3>
       <p className="mt-2 text-sm text-ink-muted">
-        A pair must pass every filled entry condition before this set will
+        A pair must pass every filled entry condition before this bot will
         open it. Empty conditions are ignored.
       </p>
       <dl className="mt-3 space-y-3 text-sm">
@@ -88,19 +88,19 @@ export function PaperRulesGuide({
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Max Position Size"
-          detail="Cap on how much value this set may hold in total. Dynamic fills toward the cap over time. Each clip is the smaller of usable book and leftover room. Fixed skips the open if Order size would go over the cap."
+          detail="Cap on how much value this bot may hold in total. Dynamic fills toward the cap over time. Each clip is the smaller of usable book and leftover room. Fixed skips the open if Order size would go over the cap."
         />
         <GuideItem
           term="Max pairs"
-          detail="Ceiling on how many different pairs this set may hold at once. Empty or 1 means one pair. Dynamic still opens only the best pair first and adds to it. Adding size on the same pair is not a new pair."
+          detail="Ceiling on how many different pairs this bot may hold at once. Empty or 1 means one pair. Dynamic still opens only the best pair first and adds to it. Adding size on the same pair is not a new pair."
         />
         <GuideItem
           term="Order Type · Fixed"
-          detail="Opens Order size once, on a pair this set does not already hold. It will not add later clips on that pair."
+          detail="Opens Order size once, on a pair this bot does not already hold. It will not add later clips on that pair."
         />
         <GuideItem
           term="Order Type · Dynamic (scale in)"
-          detail="Each tick may add one clip. If this set holds a pair, the clip goes on the held pair with the highest net APR that still clears Min Order Size. If it holds none, it opens one row on the best matching pair. It will not open a second pair on the same tick, even if Max pairs is higher. Clip size is usable book, or leftover room under Max Position Size — whichever is smaller."
+          detail="Each tick may add one clip. If this bot holds a pair, the clip goes on the held pair with the highest net APR that still clears Min Order Size. If it holds none, it opens one row on the best matching pair. It will not open a second pair on the same tick, even if Max pairs is higher. Clip size is usable book, or leftover room under Max Position Size — whichever is smaller."
         />
         <GuideItem
           term="Order size (USDT)"
@@ -124,7 +124,7 @@ export function PaperRulesGuide({
         Exit · When the engine closes
       </h3>
       <p className="mt-2 text-sm text-ink-muted">
-        These conditions apply only to rows this set opened, and only on a
+        These conditions apply only to rows this bot opened, and only on a
         tick — not when you click Close. First match wins: DTE, then mark APR,
         then take profit, then stop loss.
       </p>
@@ -171,7 +171,7 @@ export function PaperRulesGuide({
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="Auto Close"
-          detail="You already chose to exit. DTE, APR, take profit, and stop loss are ignored. Only this set’s exit order type is used: Fixed closes remaining size now, Dynamic clips once and marks Closing."
+          detail="You already chose to exit. DTE, APR, take profit, and stop loss are ignored. Only this bot’s exit order type is used: Fixed closes remaining size now, Dynamic clips once and marks Closing."
         />
         <GuideItem
           term="Manual Close"

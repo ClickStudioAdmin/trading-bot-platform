@@ -116,7 +116,7 @@ async function saveDcaPlaybookWith(
   await writeEventLog({
     scope: "strategy",
     event: "dca.saved",
-    message: "Saved DCA playbook",
+    message: "Saved DCA bot",
     userId: session.member.id,
     accountId: session.account.id,
     strategy: FUTURES_STRATEGY_ID,
@@ -148,7 +148,7 @@ async function saveDcaPlaybookWith(
     revalidatePath(FUTURES_PATHS.positions);
     succeed(session.account.id, armed.message);
   }
-  succeed(session.account.id, "Playbook saved.");
+  succeed(session.account.id, "Bot saved.");
 }
 
 export async function deleteDcaPlaybookAction(formData: FormData) {
@@ -158,7 +158,7 @@ export async function deleteDcaPlaybookAction(formData: FormData) {
   }
   const id = parseDcaPlaybookId(formData.get("playbookId"));
   if (!id) {
-    fail(session.account.id, "That playbook was not found.");
+    fail(session.account.id, "That bot was not found.");
   }
   const supabase = createServiceClient();
   if (!supabase) {
@@ -175,14 +175,14 @@ export async function deleteDcaPlaybookAction(formData: FormData) {
   await writeEventLog({
     scope: "strategy",
     event: "dca.deleted",
-    message: "Removed DCA playbook",
+    message: "Removed DCA bot",
     userId: session.member.id,
     accountId: session.account.id,
     strategy: FUTURES_STRATEGY_ID,
     data: { playbookId: id },
   });
   revalidatePath(FUTURES_PATHS.automations);
-  succeed(session.account.id, "Playbook removed.");
+  succeed(session.account.id, "Bot removed.");
 }
 
 export async function runDcaArmAction(formData: FormData) {
@@ -213,11 +213,11 @@ export async function closeDcaPlaybookFromRow(formData: FormData) {
   }
   const id = parseDcaPlaybookId(formData.get("playbookId"));
   if (!id) {
-    redirect(withQuery(next, { paperError: "That playbook was not found." }));
+    redirect(withQuery(next, { paperError: "That bot was not found." }));
   }
   const playbook = await loadDcaPlaybookById(id, session.account.id);
   if (!playbook) {
-    redirect(withQuery(next, { paperError: "That playbook was not found." }));
+    redirect(withQuery(next, { paperError: "That bot was not found." }));
   }
   const result = await applyDcaVerb({
     playbook,
@@ -252,7 +252,7 @@ export async function runDcaPlaybookVerb(
     parseDcaPlaybookVerb(verbRaw) ??
     parseDcaPlaybookVerb(formData.get("verb"));
   if (!parsedVerb) {
-    fail(session.account.id, "Choose Arm, Disarm, or Close playbook.");
+    fail(session.account.id, "Choose Arm, Disarm, or Close bot.");
   }
   const { verb, side } = parsedVerb;
   const parsed = parseDcaPlaybookForm(formData);

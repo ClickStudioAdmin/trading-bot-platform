@@ -75,7 +75,7 @@ export function FuturesAutomationsDesk({
       <input type="hidden" name="ruleCount" value={layers.length} />
       {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-          No rules yet. Add a rule to fire Buy, Sell, or Close when last,
+          No bots yet. Add a bot to fire Buy, Sell, or Close when last,
           mark, or index crosses a price, or when a Signal webhook
           fires. Leave this empty to trade by hand.
         </p>
@@ -114,7 +114,7 @@ export function FuturesAutomationsDesk({
           }
           className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
         >
-          Add rule
+          Add bot
         </button>
         {accountId ? (
           <DeskTemplateBar
@@ -128,7 +128,7 @@ export function FuturesAutomationsDesk({
         {cloneSources.length > 0 ? (
           <select
             key={cloneMenu}
-            aria-label="Clone existing rule"
+            aria-label="Clone existing bot"
             defaultValue=""
             onChange={(event) => {
               const key = event.target.value;
@@ -144,7 +144,7 @@ export function FuturesAutomationsDesk({
             }}
             className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
           >
-            <option value="">Clone existing rule</option>
+            <option value="">Clone existing bot</option>
             {cloneSources.map((item) => (
               <option key={item.key} value={item.key}>
                 {item.name} · {item.symbol}
@@ -158,7 +158,7 @@ export function FuturesAutomationsDesk({
             successKey="save-futures-rules"
             className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
-            Save automations
+            Save Bots
           </PendingSubmitButton>
         )}
       </div>
@@ -491,7 +491,7 @@ function RuleCard({
           {inUse ? (
             <span
               className="inline-flex"
-              title="This rule has an open position. Close that row before removing it."
+              title="This bot has an open position. Close that row before removing it."
             >
               <button
                 type="button"

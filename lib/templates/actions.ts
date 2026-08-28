@@ -520,7 +520,7 @@ export async function savePaperAsTemplateAction(
   }
   const layer = parsed.config.layers[0];
   if (!layer) {
-    return { ok: false, error: "That set is incomplete." };
+    return { ok: false, error: "That bot is incomplete." };
   }
   return saveNamedRecipe({
     userId: auth.member.id,
@@ -1132,9 +1132,6 @@ export async function createTemplateSetAction(
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean);
-  if (ids.length === 0) {
-    return { ok: false, error: "Pick at least one template." };
-  }
   for (const id of ids) {
     const template = await loadTemplateById(id);
     if (!template || !canReadTemplate(template, auth.member.id, auth.isAdmin)) {

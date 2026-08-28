@@ -22,7 +22,7 @@ export type TemplateDeskType = (typeof TEMPLATE_DESK_TYPES)[number];
 export type TemplateVisibility = "user" | "platform";
 
 export const STALE_TEMPLATE_ERROR =
-  "This template is from an older app version. Re-save it from a playbook.";
+  "This template is from an older app version. Re-save it from a bot.";
 
 export type DcaTemplateRecipe = {
   kind: "dca";

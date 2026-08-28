@@ -74,7 +74,7 @@ export default async function FuturesSettingsPage({
         Desk-wide knobs.{" "}
         {deskAllowsPerpsRecipes(session.account.deskType)
           ? "Automations stay on their own page."
-          : "The playbook will live on Automations."}{" "}
+          : "The bot will live on Automations."}{" "}
         TradingView URLs live on{" "}
         <Link href={deskHref(FUTURES_PATHS.webhooks, session.account.id)} className="text-accent">
           Webhooks

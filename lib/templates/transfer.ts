@@ -159,7 +159,7 @@ export function parseTemplateLibraryFile(
     };
   }
   if (!Array.isArray(row.templates) || !Array.isArray(row.sets)) {
-    return { ok: false, error: "That file is missing templates or sets." };
+    return { ok: false, error: "That file is missing templates or folders." };
   }
   const templates: TemplateLibraryTemplate[] = [];
   for (const item of row.templates) {
@@ -179,7 +179,7 @@ export function parseTemplateLibraryFile(
     sets.push(parsed.set);
   }
   if (templates.length === 0 && sets.length === 0) {
-    return { ok: false, error: "That file has no templates or sets to import." };
+    return { ok: false, error: "That file has no templates or folders to import." };
   }
   return {
     ok: true,

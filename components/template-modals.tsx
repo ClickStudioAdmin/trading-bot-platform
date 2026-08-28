@@ -388,7 +388,7 @@ function ApplyTemplateButton({
       {open ? (
         <Modal title="Add from Template" onClose={() => setOpen(false)}>
           <p className="mt-1 text-sm text-ink-muted">
-            Creates an idle or disabled recipe on this desk. Nothing is armed.
+            Creates an idle or disabled bot on this desk. Nothing is armed.
           </p>
           <TemplatePicker
             platform={platform}
@@ -414,7 +414,7 @@ function ApplyTemplateButton({
           ) : null}
           {result?.code === "symbol_taken" ? (
             <p className="mt-3 text-sm text-warning">
-              A playbook already covers {result.symbol}. Pick another contract
+              A bot already covers {result.symbol}. Pick another contract
               or skip.
             </p>
           ) : null}
@@ -684,7 +684,7 @@ function TemplatePicker({
         </p>
         {mine.length === 0 ? (
           <p className="mt-1 text-sm text-ink-muted">
-            None yet. Save a recipe as a template from a card.
+            None yet. Save a bot as a template from a card.
           </p>
         ) : (
           <ul className="mt-1 space-y-1">

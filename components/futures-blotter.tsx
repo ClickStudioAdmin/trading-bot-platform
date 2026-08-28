@@ -164,7 +164,7 @@ export function OpenFuturesTrades({
                 <th className="px-3 py-3 font-medium">
                   <ColumnHint
                     label="Orders"
-                    hint="Playbook orders filled versus the max. Resting limits are not filled yet."
+                    hint="Bot orders filled versus the max. Resting limits are not filled yet."
                   />
                 </th>
               ) : null}
@@ -232,7 +232,7 @@ export function OpenFuturesTrades({
                     label="TP/SL"
                     hint={
                       playbookOwnsOrders
-                        ? "Recipe take profit / stop. Faint is the target from Automations, or a market exit. Colour means a limit is resting."
+                        ? "Bot take profit / stop. Faint is the target from Automations, or a market exit. Colour means a limit is resting."
                         : "Take profit and stop loss on this row. Market fills when the trigger hits. Limit rests until mark can fill. Add when the position is open, or attach them on the order ticket."
                     }
                   />
@@ -244,7 +244,7 @@ export function OpenFuturesTrades({
                     label="Trailing"
                     hint={
                       playbookOwnsOrders
-                        ? "Retracement from Automations. Faint is the recipe distance. Green means it is attached on this row."
+                        ? "Retracement from Automations. Faint is the bot distance. Green means it is attached on this row."
                         : "Retracement distance from the best price since activation. Closes the whole row at market. Add on the ticket or here."
                     }
                   />
@@ -257,7 +257,7 @@ export function OpenFuturesTrades({
                   label="Close By"
                   hint={
                     playbookOwnsOrders
-                      ? "Close Playbook flattens every side, cancels working playbook orders, and sets the playbook to idle. Same as Close playbook on Automations."
+                      ? "Close bot flattens every side, cancels working bot orders, and sets the bot to idle. Same as Close bot on Automations."
                       : exchangeBook
                         ? "Market or Limit opens a qty dialog. Market fills on Bybit now. Limit rests a reduce-only close until last trades through it."
                         : "Market or Limit opens a qty dialog. Market fills now. Limit rests a reduce-only close until mark trades through it."

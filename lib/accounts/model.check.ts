@@ -192,7 +192,7 @@ assert.equal(deskAllowsOrderWebhooks("dca"), false);
 assert.equal(deskManualBuySellBlockReason("perps"), null);
 assert.equal(
   deskManualBuySellBlockReason("dca"),
-  "This is a DCA desk. The playbook owns orders. Buy and Sell are not on this ticket.",
+  "This is a DCA desk. The bot owns orders. Buy and Sell are not on this ticket.",
 );
 assert.equal(
   deskManualBuySellBlockReason("signal_follower"),
@@ -266,11 +266,11 @@ assert.equal(
 );
 assert.equal(
   formatDeleteBlockers(["open", "automations"]),
-  "Disable automations and exit all positions first",
+  "Disable bots and exit all positions first",
 );
 assert.equal(
   formatDeleteBlockers(["automations"]),
-  "Disable automations first",
+  "Disable bots first",
 );
 assert.deepEqual(
   connectionRemoveBlockers({ inUse: false }),
@@ -294,12 +294,12 @@ assert.deepEqual(
 );
 assert.equal(
   formatDeleteBlockers(strategyDetachBlockers({ openCount: 1, automationsRunning: true })),
-  "Disable automations and exit all positions first",
+  "Disable bots and exit all positions first",
 );
 
 assert.equal(
   formatAccountUsageStatus({ openCount: 2, automationsRunning: true }),
-  "2 Open positions - Automations on",
+  "2 Open positions - Bots on",
 );
 assert.equal(
   formatAccountUsageStatus({ openCount: 1, automationsRunning: false }),

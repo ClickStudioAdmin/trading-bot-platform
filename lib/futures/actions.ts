@@ -456,7 +456,7 @@ export async function createFuturesWebhookAction(formData: FormData) {
     kind.kind === "order" &&
     !deskAllowsOrderWebhooks(session.account.deskType)
   ) {
-    webhookFail(session.account.id, "This desk only uses Signal webhooks to arm the playbook.");
+    webhookFail(session.account.id, "This desk only uses Signal webhooks to arm the bot.");
   }
   const created = await createFuturesWebhook({
     supabase,

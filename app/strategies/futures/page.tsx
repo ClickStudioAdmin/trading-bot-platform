@@ -121,7 +121,7 @@ export default async function FuturesOverviewPage({
           showTicket
             ? undefined
             : dca
-              ? "No working limits. Playbook orders rest here when they are limits."
+              ? "No working limits. Bot orders rest here when they are limits."
               : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
         }
       />
@@ -146,7 +146,7 @@ export default async function FuturesOverviewPage({
             </>
           ) : dca ? (
             <>
-              No open futures on this book. The playbook adds orders once it is
+              No open futures on this book. The bot adds orders once it is
               armed on{" "}
               <Link href={href(FUTURES_PATHS.automations)} className="text-accent">
                 Automations

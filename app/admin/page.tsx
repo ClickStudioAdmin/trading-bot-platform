@@ -52,7 +52,7 @@ export default async function AdminOverviewPage() {
             hint={openPositionHint(overview.positions)}
           />
           <StatCard
-            label="Automations on"
+            label="Bots on"
             value={String(overview.automations.running)}
             hint={`${overview.automations.cashAndCarry} Cash and Carry · ${overview.automations.perps} Perps`}
           />
@@ -114,10 +114,10 @@ export default async function AdminOverviewPage() {
       <section className="rounded-card border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold tracking-tight">Engine</h2>
         <p className="mt-1 text-sm text-ink-muted">
-          One public Bybit scan per tick. Cash and Carry automations run only
-          on those desks. Perps price-cross recipes run on Perps desks.
+          One public Bybit scan per tick. Cash and Carry bots run only
+          on those desks. Perps price-cross bots run on Perps desks.
           TradingView Strategy desks take orders from alerts only. DCA desks
-          do not run Perps recipes.
+          do not run Perps bots.
         </p>
         <dl className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
           <div>

@@ -102,7 +102,7 @@ async function applyDcaTemplate(input: {
       templateId: input.template.id,
       name: input.template.name,
       ok: false,
-      error: "This template is not a DCA playbook.",
+      error: "This template is not a DCA bot.",
       notes: [],
     };
   }
@@ -135,7 +135,7 @@ async function applyDcaTemplate(input: {
       templateId: input.template.id,
       name: input.template.name,
       ok: false,
-      error: "A playbook already covers that contract.",
+      error: "A bot already covers that contract.",
       code: "symbol_taken",
       notes: built.notes,
       symbol: built.config.symbol,
@@ -191,7 +191,7 @@ async function applyPerpsTemplate(input: {
       templateId: input.template.id,
       name: input.template.name,
       ok: false,
-      error: "This template is not a Perps rule.",
+      error: "This template is not a Perps bot.",
       notes: [],
     };
   }
@@ -267,7 +267,7 @@ async function applyPaperTemplate(input: {
       templateId: input.template.id,
       name: input.template.name,
       ok: false,
-      error: "This template is not a Cash and Carry set.",
+      error: "This template is not a Cash and Carry bot.",
       notes: [],
     };
   }

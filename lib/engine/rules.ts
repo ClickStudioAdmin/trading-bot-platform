@@ -37,7 +37,7 @@ export type PaperRulesFormValues = {
 export function defaultPaperLayer(sortOrder = 0): PaperEngineLayer {
   return {
     id: null,
-    name: `Set ${sortOrder + 1}`,
+    name: `Bot ${sortOrder + 1}`,
     sortOrder,
     mode: "active",
     sizeType: "dynamic",
@@ -106,7 +106,7 @@ export function paperConfigToFormValues(
 const COPY_SUFFIX = " (copy)";
 
 export function copyPaperSetName(name: string): string {
-  const trimmed = name.trim() || "Set";
+  const trimmed = name.trim() || "Bot";
   if (trimmed.endsWith(COPY_SUFFIX)) {
     return trimmed.slice(0, 40);
   }
@@ -293,7 +293,7 @@ export function parseRuleName(raw: unknown, index: number): string {
     .trim()
     .replace(/\s+/g, " ")
     .slice(0, 40);
-  return text === "" ? `Set ${index + 1}` : text;
+  return text === "" ? `Bot ${index + 1}` : text;
 }
 
 function parseBound(raw: FormDataEntryValue | null): number | null {

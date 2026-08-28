@@ -458,7 +458,7 @@ async function applyTickAction(input: {
       event: "dca.closed",
       message: dcaStartListens(input.playbook.startKind)
         ? `${input.playbook.name} position closed. Waiting for the next start.`
-        : `${input.playbook.name} position closed. Playbook is idle.`,
+        : `${input.playbook.name} position closed. Bot is idle.`,
       data: { reason: "end_cycle" },
     });
     return { acted: true };

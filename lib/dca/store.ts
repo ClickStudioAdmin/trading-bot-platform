@@ -92,9 +92,9 @@ function legColumns(
 
 function saveError(error: { code?: string; message?: string } | null): string {
   if (error?.code === "23505") {
-    return "A playbook already covers that contract.";
+    return "A bot already covers that contract.";
   }
-  return error?.message ?? "Could not save the playbook.";
+  return error?.message ?? "Could not save the bot.";
 }
 
 export async function listDcaPlaybooksForAccount(
@@ -170,7 +170,7 @@ export async function saveDcaPlaybook(input: {
     ? await loadDcaPlaybookById(input.id, input.accountId, input.supabase)
     : null;
   if (input.id && !existing) {
-    return { ok: false, error: "That playbook was not found." };
+    return { ok: false, error: "That bot was not found." };
   }
   const siblings = await listDcaPlaybooksForAccount(
     input.accountId,
@@ -184,7 +184,7 @@ export async function saveDcaPlaybook(input: {
   ) {
     return {
       ok: false,
-      error: "A playbook already covers that contract.",
+      error: "A bot already covers that contract.",
     };
   }
   if (existing) {
@@ -202,7 +202,7 @@ export async function saveDcaPlaybook(input: {
     }
     const playbook = parseDcaPlaybookRow(data as Record<string, unknown>);
     if (!playbook) {
-      return { ok: false, error: "Could not save the playbook." };
+      return { ok: false, error: "Could not save the bot." };
     }
     return { ok: true, playbook };
   }
@@ -223,7 +223,7 @@ export async function saveDcaPlaybook(input: {
   }
   const playbook = parseDcaPlaybookRow(data as Record<string, unknown>);
   if (!playbook) {
-    return { ok: false, error: "Could not save the playbook." };
+      return { ok: false, error: "Could not save the bot." };
   }
   return { ok: true, playbook };
 }
@@ -239,12 +239,12 @@ export async function deleteDcaPlaybook(input: {
     input.supabase,
   );
   if (!existing) {
-    return { ok: false, error: "That playbook was not found." };
+    return { ok: false, error: "That bot was not found." };
   }
   if (dcaPlaybookIsRunning(existing)) {
     return {
       ok: false,
-      error: "Stop adding or close this playbook before removing it.",
+      error: "Stop adding or close this bot before removing it.",
     };
   }
   const { error } = await input.supabase

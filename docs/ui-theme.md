@@ -32,7 +32,7 @@ Cards: `bg-surface`, `border-line`, radius 16px, padding 20–24px. No heavy dro
 
 ## Layout
 
-Desk chrome (header, footer, strategy nav, strategy pages, `/admin`) uses `max-w-7xl` (~1280px). Narrow forms stay `max-w-lg` or `max-w-3xl`.
+Desk chrome (header, footer, strategy nav, strategy pages, `/account`, `/admin`) uses `max-w-7xl` (~1280px). Narrow forms stay `max-w-lg` or `max-w-3xl`.
 
 ## Controls
 

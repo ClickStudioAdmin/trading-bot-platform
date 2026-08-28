@@ -53,7 +53,7 @@ function CloseDcaPlaybookButton({
       <input type="hidden" name="playbookId" value={playbookId} />
       <span
         className="inline-flex"
-        title="Close all positions and place the playbook in idle mode (no new entries)"
+        title="Close all positions and place the bot in idle mode (no new entries)"
       >
         <PendingSubmitButton
           pendingLabel="Closing…"
@@ -61,7 +61,7 @@ function CloseDcaPlaybookButton({
           className={ACTION_CLASS}
           skipSizeGuard
         >
-          Close Playbook
+          Close bot
         </PendingSubmitButton>
       </span>
     </form>

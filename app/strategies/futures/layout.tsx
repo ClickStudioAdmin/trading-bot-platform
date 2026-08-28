@@ -147,7 +147,7 @@ export default async function FuturesLayout({
             {signalFollower
               ? "TradingView orders can place."
               : dca
-                ? "the playbook can place."
+                ? "the bot can place."
                 : "Buy, Sell, or Close can place orders."}
           </p>
         </div>

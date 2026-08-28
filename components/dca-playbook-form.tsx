@@ -98,7 +98,7 @@ function SizeGuardNote({ message }: { message: string | null }) {
       className="rounded-card border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning"
       role="status"
     >
-      {message} Save is blocked so this recipe is not lost.
+      {message} Save is blocked so this bot is not lost.
     </p>
   );
 }
@@ -398,7 +398,7 @@ export function DcaPlaybooksDesk({
       ) : null}
       {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-          No playbooks yet. Add a playbook to own orders and exits on one
+          No bots yet. Add a bot to own orders and exits on one
           contract. Leave this empty if you are not ready to arm.
         </p>
       ) : (
@@ -441,7 +441,7 @@ export function DcaPlaybooksDesk({
           }
           className={addPlaybookClass}
         >
-          Add playbook
+          Add bot
         </button>
         {accountId ? (
           <DeskTemplateBar
@@ -455,7 +455,7 @@ export function DcaPlaybooksDesk({
         {cloneSources.length > 0 ? (
           <select
             key={cloneMenu}
-            aria-label="Clone existing playbook"
+            aria-label="Clone existing bot"
             defaultValue=""
             onChange={(event) => {
               const id = event.target.value;
@@ -476,7 +476,7 @@ export function DcaPlaybooksDesk({
             }}
             className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
           >
-            <option value="">Clone existing playbook</option>
+            <option value="">Clone existing bot</option>
             {cloneSources.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name} · {item.symbol}
@@ -882,7 +882,7 @@ export function DcaPlaybookForm({
           {playbook && showClosePlaybook ? (
               <span
                 className="inline-flex"
-                title="Close all positions and place the playbook in idle mode (no new entries)"
+                title="Close all positions and place the bot in idle mode (no new entries)"
               >
                 <PendingSubmitButton
                   formAction={runDcaClosePlaybookAction}
@@ -891,7 +891,7 @@ export function DcaPlaybookForm({
                   className={headerPrimaryClass}
                   skipSizeGuard
                 >
-                  Close playbook
+                  Close bot
                 </PendingSubmitButton>
               </span>
             ) : null}

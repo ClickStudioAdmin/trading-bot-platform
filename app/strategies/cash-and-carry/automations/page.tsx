@@ -16,8 +16,8 @@ import {
 } from "@/lib/templates/store";
 
 export const metadata: Metadata = {
-  title: "Automations",
-  description: "Cash-and-carry automation rules.",
+  title: "Automations (bots)",
+  description: "Cash-and-carry bots.",
 };
 
 export default async function CashAndCarryAutomationsPage({
@@ -49,14 +49,14 @@ export default async function CashAndCarryAutomationsPage({
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Automations" />
+      <PageHeading as="h2" title="Automations (bots)" />
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
       ) : null}
       {saved ? (
-        <p className="mt-4 text-sm text-success">Automations saved.</p>
+        <p className="mt-4 text-sm text-success">Bots saved.</p>
       ) : null}
       {reduceSaved ? (
         <p className="mt-4 text-sm text-success">Reduce only saved.</p>

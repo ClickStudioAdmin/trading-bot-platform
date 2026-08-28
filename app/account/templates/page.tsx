@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { PageHeading } from "@/components/page-heading";
 import { TemplatesLibrary } from "@/components/templates-library";
 import { getSessionMember } from "@/lib/auth/session";
-import { listTradingAccounts } from "@/lib/accounts/store";
 import { listSharedSets, listSharedTemplates, listVisibleSets, listVisibleTemplates } from "@/lib/templates/store";
-import type { TemplateDeskType } from "@/lib/templates/recipe";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -17,35 +15,20 @@ export default async function AccountTemplatesPage() {
   if (!member) {
     redirect("/sign-in");
   }
-  const [templates, sets, sharedTemplates, sharedSets, accounts] = await Promise.all([
+  const [templates, sets, sharedTemplates, sharedSets] = await Promise.all([
     listVisibleTemplates({ userId: member.id }),
     listVisibleSets({ userId: member.id }),
     listSharedTemplates({ userId: member.id }),
     listSharedSets({ userId: member.id }),
-    listTradingAccounts(member.id),
   ]);
-  const desks = accounts
-    .filter(
-      (
-        desk,
-      ): desk is typeof desk & { deskType: TemplateDeskType } =>
-        desk.deskType === "dca" ||
-        desk.deskType === "perps" ||
-        desk.deskType === "cash_and_carry",
-    )
-    .map((desk) => ({
-      id: desk.id,
-      name: desk.name,
-      deskType: desk.deskType,
-    }));
 
   return (
     <div>
       <PageHeading title="Templates" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Your recipes and platform recipes. Apply them to a matching desk as
-        idle or disabled automations. Export a JSON backup, import one, or
-        share a recipe or folder with another member by email.
+        Your templates. Add a platform or personal template to a matching
+        desk from Automations. Export a JSON backup, import one, or share a
+        template or folder with another member by email.
       </p>
       <TemplatesLibrary
         variant="account"
@@ -53,7 +36,6 @@ export default async function AccountTemplatesPage() {
         sets={sets}
         sharedTemplates={sharedTemplates}
         sharedSets={sharedSets}
-        desks={desks}
       />
     </div>
   );

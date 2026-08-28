@@ -131,7 +131,7 @@ export async function savePaperRules(formData: FormData) {
     if (blocked.length > 0) {
       rulesFail(
         account.id,
-        "Cannot remove a rule set that has an open position.",
+        "Cannot remove a bot that has an open position.",
       );
     }
 

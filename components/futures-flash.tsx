@@ -80,8 +80,8 @@ export function FuturesFlash({
   if (livePlaybookClosed) {
     return (
       <p className="text-sm text-success">
-        Playbook closed on the connected exchange. Positions flattened and the
-        playbook is idle.
+        Bot closed on the connected exchange. Positions flattened and the
+        bot is idle.
       </p>
     );
   }
@@ -144,7 +144,7 @@ export function FuturesFlash({
   if (playbookClosed) {
     return (
       <p className="text-sm text-success">
-        Playbook closed. Positions flattened and the playbook is idle.
+        Bot closed. Positions flattened and the bot is idle.
       </p>
     );
   }

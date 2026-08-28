@@ -32,8 +32,8 @@ import {
 } from "@/lib/templates/store";
 
 export const metadata: Metadata = {
-  title: "Futures automations",
-  description: "Alert rules for USDT linear perpetuals.",
+  title: "Automations (bots)",
+  description: "Bots for USDT linear perpetuals.",
 };
 
 export default async function FuturesAutomationsPage({
@@ -94,12 +94,12 @@ export default async function FuturesAutomationsPage({
     });
     return (
       <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-        <PageHeading as="h2" title="Automations" />
+        <PageHeading as="h2" title="Automations (bots)" />
         <p className="-mt-4 text-sm text-ink-muted">
-          Add a playbook per contract. The app owns orders and exits. Save
+          Add a bot per contract. The app owns orders and exits. Save
           and Arm to listen, then price, indicator, or a bound Signal.
           Manual uses Save and Trigger Long or Short. Stop adding leaves the
-          position. Close playbook flattens it.
+          position. Close bot flattens it.
         </p>
         {error ? (
           <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -107,7 +107,7 @@ export default async function FuturesAutomationsPage({
           </p>
         ) : null}
         {saved ? (
-          <p className="mt-4 text-sm text-success">{notice ?? "Playbook saved."}</p>
+          <p className="mt-4 text-sm text-success">{notice ?? "Bot saved."}</p>
         ) : null}
         <div className="mt-6">
           <DcaPlaybooksDesk
@@ -161,14 +161,14 @@ export default async function FuturesAutomationsPage({
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Automations" />
+      <PageHeading as="h2" title="Automations (bots)" />
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
       ) : null}
       {saved ? (
-        <p className="mt-4 text-sm text-success">Automations saved.</p>
+        <p className="mt-4 text-sm text-success">Bots saved.</p>
       ) : null}
       {settings?.reduceOnly ? (
         <p className="mt-4 mb-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
