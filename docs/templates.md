@@ -29,7 +29,7 @@ A live DCA bot still owns one contract (`unique (account_id, symbol)`). Template
 | 1 | Perps / C&C mode after apply | Always **`disabled`**. Source mode is not copied. A folder cannot surprise-trade. The user enables the bot on the desk. DCA apply stays **idle** (not armed). |
 | 2 | Member library | **`/account/templates`**. Login-scoped. View and manage **own** templates and folders. Platform rows stay off this list; members apply them from Automations. Account nav gains Templates. |
 | 3 | Publish to platform | **Copy**, do not promote. The user row stays. Platform is a snapshot with its own id. The member can keep iterating; admins can edit the platform copy without rewriting the user’s library. If the platform name is taken, the confirm dialog asks for another name. |
-| 4 | Folder apply | **Skip failures, keep successes.** Not all-or-nothing. The wizard can remap a DCA symbol (or skip) **before** write. After write, a result list shows applied / skipped / failed. One taken contract must not roll back the rest of the folder. |
+| 4 | Folder apply | **Skip failures, keep successes.** Not all-or-nothing. Apply uses the template’s saved contract. After write, a result list shows applied / skipped / failed. One taken contract must not roll back the rest of the folder. |
 | 5 | Names | **Unique per owner + desk type**, case-insensitive. Same name is allowed for a different user, or for a different `desk_type`. Platform names are unique per `desk_type` among platform rows. Folders use the same uniqueness as templates. |
 | 6 | Admin library | **`/admin/templates`**. Admins view and manage **user and platform** templates and folders. Left admin nav. Members never see this page. |
 
@@ -61,7 +61,7 @@ An ordered list of templates. All members of a folder share one `desk_type`.
 - A **user folder** may include the owner’s templates and/or platform templates.
 - A **platform folder** may only include platform templates.
 
-Applying a folder walks the list and applies each template to a **chosen desk** of that type. Collisions (DCA same symbol already on the desk) are handled in the apply wizard, not by merging into one bot. C&C stacked layers on the same pair stay allowed, same as today.
+Applying a folder walks the list and applies each template to a **chosen desk** of that type. Collisions (DCA same symbol already on the desk) skip or fail that item. C&C stacked layers on the same pair stay allowed, same as today.
 
 ### Visibility
 
@@ -143,10 +143,9 @@ Tokens from [ui-theme.md](ui-theme.md).
 
 ### Automations (desk)
 
-- Header: **Create New Bot**, **Add from Template**. One picker is a single folder tree: **Platform**, **Shared**, and **My templates** as top-level folders. Named folders and loose templates nest under that scope. Tick a folder or individual templates, then apply to **this** desk.
+- Header: **Create New Bot**, **Add from Template**. One picker is a single folder tree: **Platform**, **Shared**, and **My templates** as top-level folders. Named folders and loose templates nest under that scope. Tick a folder or individual templates, then apply to **this** desk. DCA apply uses each template’s saved contract.
 - Save Bots, Arm, Close bot, and Reduce only stay on the page. They do not reload or jump the scroll.
 - Each bot card: **Save as template**. Name, description, **Add to folder** as a checkbox list of **your** folders (this desk type). **Save as platform template** lists **platform folders** only. Tick one or more, and/or **Create a new folder**.
-- **Add from Template** on DCA: each selected template has a required empty **Select Contract** field. Apply stays disabled until every selected template has a contract. The template’s saved contract is not used.
 - TradingView Strategy desk: no Add from Template. Webhook tokens are not templates.
 
 ### `/account/templates` (every member)

@@ -476,7 +476,6 @@ export function DcaPlaybooksDesk({
             accountId={accountId}
             templates={templates}
             sets={sets}
-            options={options}
             onApplied={appendApplied}
           />
         ) : null}

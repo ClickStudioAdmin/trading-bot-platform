@@ -10,9 +10,7 @@ import {
   savePerpsAsTemplateAction,
   type TemplateActionResult,
 } from "@/lib/templates/actions";
-import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
-import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import type {
   AutomationTemplateSet,
   TemplateSummary,
@@ -346,14 +344,12 @@ export function DeskTemplateBar({
   accountId,
   templates,
   sets,
-  options = [],
   onApplied,
 }: {
   deskType: TemplateDeskType;
   accountId: string;
   templates: TemplateSummary[];
   sets: AutomationTemplateSet[];
-  options?: LinearPerp[];
   onApplied?: (items: AppliedDeskItem[]) => void;
 }) {
   return (
@@ -363,7 +359,6 @@ export function DeskTemplateBar({
         accountId={accountId}
         templates={templates}
         sets={sets}
-        options={options}
         onApplied={onApplied}
       />
     </div>
@@ -375,26 +370,23 @@ function ApplyFromLibraryButton({
   accountId,
   templates,
   sets,
-  options,
   onApplied,
 }: {
   deskType: TemplateDeskType;
   accountId: string;
   templates: TemplateSummary[];
   sets: AutomationTemplateSet[];
-  options: LinearPerp[];
   onApplied?: (items: AppliedDeskItem[]) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [symbols, setSymbols] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<TemplateActionResult | null>(null);
   const selected = templates.filter((row) => selectedIds.has(row.id));
-  const tree = libraryTree(templates, sets);
-  const contractsReady =
-    deskType !== "dca" ||
-    selected.every((row) => Boolean(symbols[row.id]?.trim()));
+  const tree = libraryTree(
+    templates.filter((row) => row.deskType === deskType),
+    sets.filter((row) => row.deskType === deskType),
+  );
 
   function toggleTemplate(id: string) {
     setResult(null);
@@ -429,9 +421,6 @@ function ApplyFromLibraryButton({
     if (selected.length === 0) {
       return;
     }
-    if (deskType === "dca" && !contractsReady) {
-      return;
-    }
     setPending(true);
     const results: NonNullable<TemplateActionResult["results"]> = [];
     const applied: NonNullable<TemplateActionResult["applied"]> = [];
@@ -441,10 +430,6 @@ function ApplyFromLibraryButton({
       const data = new FormData();
       data.set("templateId", row.id);
       data.set("accountId", accountId);
-      const symbol = symbols[row.id]?.trim();
-      if (symbol) {
-        data.set("symbol", symbol.toUpperCase());
-      }
       const next = await applyTemplateAction(data);
       if (next.results) {
         results.push(...next.results);
@@ -490,28 +475,6 @@ function ApplyFromLibraryButton({
             onToggleTemplate={toggleTemplate}
             onToggleFolder={toggleFolder}
           />
-          {deskType === "dca" && selected.length > 0 ? (
-            <div className="mt-3 space-y-2">
-              {selected.map((row) => (
-                <label key={row.id} className="block text-xs text-ink-muted">
-                  Contract for {row.name}
-                  <FuturesSymbolSelect
-                    name={`symbol-${row.id}`}
-                    options={options}
-                    allowEmpty
-                    placeholder="Select Contract"
-                    value={symbols[row.id] ?? ""}
-                    onChange={(symbol) =>
-                      setSymbols((current) => ({
-                        ...current,
-                        [row.id]: symbol,
-                      }))
-                    }
-                  />
-                </label>
-              ))}
-            </div>
-          ) : null}
           {result?.results ? (
             <ul className="mt-3 space-y-1 text-sm">
               {result.results.map((row) => (
@@ -538,7 +501,7 @@ function ApplyFromLibraryButton({
             {!result?.results ? (
               <button
                 type="button"
-                disabled={selected.length === 0 || pending || !contractsReady}
+                disabled={selected.length === 0 || pending}
                 onClick={() => void onApply()}
                 className={primaryBtn}
               >
