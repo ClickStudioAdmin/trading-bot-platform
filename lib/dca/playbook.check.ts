@@ -8,6 +8,7 @@ import {
   dcaClipRestKey,
   dcaConfigMaxOrderError,
   dcaCycleEnded,
+  dcaLiveQtyBlocksCycleEnd,
   dcaGridClipCounts,
   dcaExitLimitKey,
   dcaExitLimitRestKey,
@@ -620,6 +621,17 @@ assert.equal(
   false,
 );
 assert.equal(
+  dcaCycleEnded({
+    status: "armed",
+    clipsFilled: 1,
+    positionQty: 1120,
+  }),
+  false,
+);
+assert.equal(dcaLiveQtyBlocksCycleEnd(1120), true);
+assert.equal(dcaLiveQtyBlocksCycleEnd(null), false);
+assert.equal(dcaLiveQtyBlocksCycleEnd(0), false);
+assert.equal(
   dcaPnlPct({ side: "long", qty: 1, entryPrice: 100, mark: 110 }),
   10,
 );
@@ -810,6 +822,26 @@ assert.equal(
     ...base,
     status: "armed",
     clipsFilled: 3,
+    positionQty: null,
+  }).action.kind,
+  "end_cycle",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    takeProfitPct: 1.4,
+    takeProfitOrderType: "limit",
+    tpLimitResting: true,
+    mark: 100.01,
+  }).action.kind,
+  "none",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 1,
     positionQty: null,
   }).action.kind,
   "end_cycle",

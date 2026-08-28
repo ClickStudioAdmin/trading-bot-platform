@@ -3,7 +3,11 @@ import {
   fetchBybitKlines,
   fetchBybitTickers,
 } from "@/lib/exchanges/bybit/client";
-import { loadFuturesWorking, loadOpenFuturesWorking } from "@/lib/futures/list";
+import {
+  loadFuturesWorking,
+  loadOpenFuturesOnSymbol,
+  loadOpenFuturesWorking,
+} from "@/lib/futures/list";
 import { parseFuturesPositionRow } from "@/lib/futures/model";
 import type { FuturesSide } from "@/lib/futures/model";
 import { tickerTriggerPrices } from "@/lib/futures/tpsl";
@@ -12,10 +16,12 @@ import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   dcaClipsFilledFromGrid,
+  dcaCycleEnded,
   dcaEnabledSides,
   dcaGridClipCounts,
   dcaLegFor,
   dcaLegIsRunning,
+  dcaLiveQtyBlocksCycleEnd,
   dcaOpenExitLimits,
   dcaStartListens,
   decideDcaTick,
@@ -166,7 +172,7 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
           }
         }
       }
-      const open = opens.find(
+      let open = opens.find(
         (row) =>
           row.accountId === playbook.accountId &&
           row.symbol === playbook.symbol &&
@@ -183,6 +189,17 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
         side,
         lastPrice: prices.last,
       });
+      if (
+        dcaLegIsRunning(leg.status) &&
+        leg.clipsFilled >= 1 &&
+        !dcaLiveQtyBlocksCycleEnd(open?.qty ?? null)
+      ) {
+        const liveOpens = await loadOpenFuturesOnSymbol(playbook.symbol, {
+          accountId: playbook.accountId,
+          userId: playbook.userId,
+        });
+        open = liveOpens.find((row) => row.side === side);
+      }
       const openWorking = await loadOpenFuturesWorking({
         accountId: playbook.accountId,
         userId: playbook.userId,
@@ -355,6 +372,22 @@ async function applyTickAction(input: {
     return { acted: true };
   }
   if (input.action.kind === "end_cycle") {
+    const liveOpens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
+      accountId: input.playbook.accountId,
+      userId: input.playbook.userId,
+    });
+    const liveQty =
+      liveOpens.find((row) => row.side === input.side)?.qty ?? null;
+    const leg = dcaLegFor(input.playbook, input.side);
+    if (
+      !dcaCycleEnded({
+        status: leg.status,
+        clipsFilled: leg.clipsFilled,
+        positionQty: liveQty,
+      })
+    ) {
+      return { acted: false };
+    }
     const flattened = await flattenPlaybook({
       playbook: input.playbook,
       mode: input.mode,

@@ -998,6 +998,16 @@ export function dcaCycleEnded(input: {
   return !(input.positionQty !== null && input.positionQty > 0);
 }
 
+export function dcaLiveQtyBlocksCycleEnd(
+  livePositionQty: number | null | undefined,
+): boolean {
+  return (
+    livePositionQty !== null &&
+    livePositionQty !== undefined &&
+    livePositionQty > 0
+  );
+}
+
 export function decideDcaTick(input: {
   status: DcaStatus;
   side: FuturesSide;
