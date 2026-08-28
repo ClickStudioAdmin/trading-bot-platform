@@ -80,6 +80,7 @@ export async function listAllTradingAccounts(): Promise<TradingAccountOption[]> 
   }));
 }
 
+/** Legacy helper. New members create their first desk on `/welcome`. */
 export async function ensureDefaultPaperAccount(
   userId: string,
 ): Promise<TradingAccount | null> {

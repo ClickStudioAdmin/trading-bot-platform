@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
-import { Modal } from "@/components/template-modals";
+import { Modal, StarterPackCheckbox } from "@/components/template-modals";
 import { formatDeskType } from "@/lib/accounts/model";
 import {
   createTemplateSetAction,
@@ -12,6 +12,8 @@ import {
   deleteTemplateSetAction,
   exportTemplateLibraryAction,
   importTemplateLibraryAction,
+  importSharedSetAction,
+  importSharedTemplateAction,
   bulkLibraryAction,
   publishTemplateCopyAction,
   shareSetAction,
@@ -65,7 +67,8 @@ type SortKey =
   | "folder"
   | "shared"
   | "updated"
-  | "items";
+  | "items"
+  | "starter";
 
 type SortState = { key: SortKey; dir: "asc" | "desc" };
 
@@ -100,6 +103,30 @@ function sharedLabel(
     return "—";
   }
   return peers.map((peer) => peer.email).join(", ");
+}
+
+function StarterPackMark({ on }: { on: boolean }) {
+  if (!on) {
+    return <span className="text-ink-muted">—</span>;
+  }
+  return (
+    <span className="inline-flex text-success" title="Included in Starter Pack">
+      <svg
+        viewBox="0 0 16 16"
+        fill="none"
+        aria-label="Included in Starter Pack"
+        className="size-4"
+      >
+        <path
+          d="M3.5 8.5 6.5 11.5 12.5 4.5"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
 }
 
 function compareText(a: string, b: string, dir: "asc" | "desc"): number {
@@ -254,6 +281,7 @@ export function TemplatesLibrary({
         formatDeskType(row.deskType),
         folderLabel(held),
         sharedLabel(row.sharedWith, row.sharedByEmail),
+        row.starterPack ? "starter pack" : "",
       ]
         .join(" ")
         .toLowerCase();
@@ -286,6 +314,9 @@ export function TemplatesLibrary({
         }
         return compareNum(a.sharedWith.length, b.sharedWith.length, sort.dir);
       }
+      if (sort.key === "starter") {
+        return compareNum(Number(a.starterPack), Number(b.starterPack), sort.dir);
+      }
       return compareNum(a.updatedAtMs, b.updatedAtMs, sort.dir);
     });
   }, [
@@ -312,6 +343,7 @@ export function TemplatesLibrary({
           formatDeskType(row.deskType),
           row.items.map((item) => item.name).join(" "),
           sharedLabel(row.sharedWith, row.sharedByEmail),
+          row.starterPack ? "starter pack" : "",
         ]
           .join(" ")
           .toLowerCase();
@@ -340,6 +372,9 @@ export function TemplatesLibrary({
           );
         }
         return compareNum(a.sharedWith.length, b.sharedWith.length, sort.dir);
+      }
+      if (sort.key === "starter") {
+        return compareNum(Number(a.starterPack), Number(b.starterPack), sort.dir);
       }
       return compareNum(a.updatedAtMs, b.updatedAtMs, sort.dir);
     });
@@ -386,11 +421,13 @@ export function TemplatesLibrary({
     (row) => selected.has(row.id) && listedIds.includes(row.id),
   );
   const bulkFolders = foldersForAll(selectedTemplates, sets, variant);
+  const showStarterPack = variant === "admin";
   const tableColumns =
     5 +
     (sharedTab ? 0 : 1) +
     (showOwner ? 1 : 0) +
-    (showSharedWith ? 1 : 0);
+    (showSharedWith ? 1 : 0) +
+    (showStarterPack ? 1 : 0);
 
   function flash(result: TemplateActionResult) {
     if (result.json && result.filename) {
@@ -691,7 +728,7 @@ export function TemplatesLibrary({
               ? variant === "account"
                 ? "No templates yet. Open Automations on a DCA, Perps, or Cash and Carry desk and use Save as template."
                 : "No platform templates yet. Save as a platform template from Automations."
-              : "Nothing shared with you yet. Another member can share a template by entering your email."
+              : "Nothing shared with you yet. Another member can share a template, or a folder that contains templates, by entering your email."
           }
           rows={listedTemplates.length}
           columns={tableColumns}
@@ -722,6 +759,9 @@ export function TemplatesLibrary({
               <SortTh label="Folder" k="folder" sort={sort} onSort={onSort} />
               {showSharedWith ? (
                 <SortTh label="Shared with" k="shared" sort={sort} onSort={onSort} />
+              ) : null}
+              {showStarterPack ? (
+                <SortTh label="Starter Pack" k="starter" sort={sort} onSort={onSort} />
               ) : null}
               <SortTh label="Updated" k="updated" sort={sort} onSort={onSort} />
               <th className="px-4 py-3 font-medium">Actions</th>
@@ -764,6 +804,11 @@ export function TemplatesLibrary({
                       {sharedCountLabel(row.sharedWith)}
                     </td>
                   ) : null}
+                  {showStarterPack ? (
+                    <td className="px-4 py-3">
+                      <StarterPackMark on={row.starterPack} />
+                    </td>
+                  ) : null}
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
                     <LocalTime at={row.updatedAtMs} mode="date" />
                   </td>
@@ -788,17 +833,39 @@ export function TemplatesLibrary({
                         </button>
                       ) : null}
                       {sharedTab ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const data = new FormData();
-                            data.set("templateId", row.id);
-                            void unshareTemplateAction(data).then(flash);
-                          }}
-                          className="text-xs font-medium text-danger hover:text-danger"
-                        >
-                          Remove
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const data = new FormData();
+                              data.set("templateId", row.id);
+                              void importSharedTemplateAction(data).then(
+                                (result) => {
+                                  flash(result);
+                                  if (result.ok) {
+                                    router.refresh();
+                                  }
+                                },
+                              );
+                            }}
+                            className={actionLink}
+                          >
+                            Import
+                          </button>
+                          {row.sharedDirectly ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const data = new FormData();
+                                data.set("templateId", row.id);
+                                void unshareTemplateAction(data).then(flash);
+                              }}
+                              className="text-xs font-medium text-danger hover:text-danger"
+                            >
+                              Remove
+                            </button>
+                          ) : null}
+                        </>
                       ) : null}
                     </div>
                   </td>
@@ -849,6 +916,9 @@ export function TemplatesLibrary({
                 {showSharedWith ? (
                   <SortTh label="Shared with" k="shared" sort={sort} onSort={onSort} />
                 ) : null}
+                {showStarterPack ? (
+                  <SortTh label="Starter Pack" k="starter" sort={sort} onSort={onSort} />
+                ) : null}
                 <SortTh label="Updated" k="updated" sort={sort} onSort={onSort} />
                 <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
@@ -892,6 +962,11 @@ export function TemplatesLibrary({
                         {sharedCountLabel(row.sharedWith)}
                       </td>
                     ) : null}
+                    {showStarterPack ? (
+                      <td className="px-4 py-3">
+                        <StarterPackMark on={row.starterPack} />
+                      </td>
+                    ) : null}
                     <td className="px-4 py-3 tabular-nums text-ink-muted">
                       <LocalTime at={row.updatedAtMs} mode="date" />
                     </td>
@@ -916,17 +991,37 @@ export function TemplatesLibrary({
                           </button>
                         ) : null}
                         {sharedTab ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const data = new FormData();
-                              data.set("setId", row.id);
-                              void unshareSetAction(data).then(flash);
-                            }}
-                            className="text-xs font-medium text-danger hover:text-danger"
-                          >
-                            Remove
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const data = new FormData();
+                                data.set("setId", row.id);
+                                void importSharedSetAction(data).then(
+                                  (result) => {
+                                    flash(result);
+                                    if (result.ok) {
+                                      router.refresh();
+                                    }
+                                  },
+                                );
+                              }}
+                              className={actionLink}
+                            >
+                              Import
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const data = new FormData();
+                                data.set("setId", row.id);
+                                void unshareSetAction(data).then(flash);
+                              }}
+                              className="text-xs font-medium text-danger hover:text-danger"
+                            >
+                              Remove
+                            </button>
+                          </>
                         ) : null}
                       </div>
                     </td>
@@ -1592,6 +1687,7 @@ function TemplateEditModal({
   const [folderIds, setFolderIds] = useState(held);
   const [createFolder, setCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [starterPack, setStarterPack] = useState(template.starterPack);
   const [publishName, setPublishName] = useState(template.name);
   const [pending, setPending] = useState(false);
 
@@ -1604,6 +1700,9 @@ function TemplateEditModal({
     data.set("folderIds", folderIds.join(","));
     if (createFolder && newFolderName.trim()) {
       data.set("newFolderName", newFolderName.trim());
+    }
+    if (template.visibility === "platform" && starterPack) {
+      data.set("starterPack", "1");
     }
     onResult(await updateTemplateMetaAction(data));
     setPending(false);
@@ -1623,6 +1722,9 @@ function TemplateEditModal({
     data.set("templateId", template.id);
     data.set("templateName", publishName);
     data.set("templateDescription", description);
+    if (starterPack) {
+      data.set("starterPack", "1");
+    }
     onResult(await publishTemplateCopyAction(data));
   }
 
@@ -1647,6 +1749,13 @@ function TemplateEditModal({
           className={fieldClass}
         />
       </label>
+      {template.visibility === "platform" ||
+      (variant === "admin" && template.visibility === "user") ? (
+        <StarterPackCheckbox
+          checked={starterPack}
+          onChange={setStarterPack}
+        />
+      ) : null}
       <fieldset className="mt-3">
         <legend className="text-xs text-ink-muted">Folders</legend>
         {folders.length === 0 ? (
@@ -1752,6 +1861,7 @@ function FolderEditModal({
   });
   const [name, setName] = useState(set.name);
   const [description, setDescription] = useState(set.description ?? "");
+  const [starterPack, setStarterPack] = useState(set.starterPack);
   const [ids, setIds] = useState(set.items.map((item) => item.templateId));
   const [pending, setPending] = useState(false);
 
@@ -1762,6 +1872,9 @@ function FolderEditModal({
     data.set("templateName", name);
     data.set("templateDescription", description);
     data.set("templateIds", ids.join(","));
+    if (set.visibility === "platform" && starterPack) {
+      data.set("starterPack", "1");
+    }
     onResult(await updateTemplateSetAction(data));
     setPending(false);
   }
@@ -1795,6 +1908,12 @@ function FolderEditModal({
           className={fieldClass}
         />
       </label>
+      {set.visibility === "platform" ? (
+        <StarterPackCheckbox
+          checked={starterPack}
+          onChange={setStarterPack}
+        />
+      ) : null}
       <FolderMembership
         allowed={allowed}
         ids={ids}
@@ -1928,6 +2047,7 @@ function CreateFolderModal({
   const [deskType, setDeskType] = useState<TemplateDeskType>("dca");
   const [name, setName] = useState("");
   const [ids, setIds] = useState<string[]>([]);
+  const [starterPack, setStarterPack] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const options = templates.filter((row) => row.deskType === deskType);
@@ -1940,6 +2060,9 @@ function CreateFolderModal({
     data.set("deskType", deskType);
     data.set("templateIds", ids.join(","));
     data.set("visibility", visibility);
+    if (visibility === "platform" && starterPack) {
+      data.set("starterPack", "1");
+    }
     const result = await createTemplateSetAction(data);
     setPending(false);
     if (!result.ok) {
@@ -1981,6 +2104,12 @@ function CreateFolderModal({
           ))}
         </select>
       </label>
+      {visibility === "platform" ? (
+        <StarterPackCheckbox
+          checked={starterPack}
+          onChange={setStarterPack}
+        />
+      ) : null}
       <FolderMembership
         allowed={options}
         ids={ids}

@@ -44,6 +44,7 @@ import {
   listVisibleTemplates,
   loadSetById,
   loadTemplateById,
+  parseStarterPackFlag,
   removeTemplateFromSet,
   replaceSetItems,
   replaceTemplateRecipe,
@@ -61,6 +62,7 @@ import {
   planLibraryImport,
   filterLibraryFile,
   selectLibraryExport,
+  type LibraryImportPlan,
 } from "./transfer";
 
 export type TemplateActionResult = {
@@ -323,6 +325,7 @@ async function saveNamedRecipe(input: {
   recipe: TemplateRecipe;
   folderIds: string[];
   newFolderName: string | null;
+  starterPack?: boolean;
 }): Promise<TemplateActionResult> {
   if (input.newFolderName) {
     const folderName = parseFolderName(input.newFolderName);
@@ -362,6 +365,16 @@ async function saveNamedRecipe(input: {
       if (!replaced.ok) {
         return replaced;
       }
+      const flagged = await updateTemplateMeta({
+        id: existing.id,
+        name: input.name,
+        description: input.description,
+        visibility: input.visibility,
+        starterPack: input.starterPack,
+      });
+      if (!flagged.ok) {
+        return flagged;
+      }
       await writeEventLog({
         scope: "strategy",
         event: "template.saved",
@@ -392,6 +405,7 @@ async function saveNamedRecipe(input: {
     name: input.name,
     description: input.description,
     recipe: input.recipe,
+    starterPack: input.starterPack,
   });
   if (!inserted.ok) {
     return inserted;
@@ -443,6 +457,10 @@ function metaFromForm(formData: FormData, isAdmin: boolean) {
       .map((value) => String(value).trim())
       .filter(Boolean),
     newFolderName: String(formData.get("newFolderName") ?? "").trim() || null,
+    starterPack: parseStarterPackFlag(
+      formData.get("starterPack"),
+      visibility.visibility,
+    ),
   };
 }
 
@@ -471,6 +489,7 @@ export async function saveDcaAsTemplateAction(
     replace: meta.replace,
     folderIds: meta.folderIds,
     newFolderName: meta.newFolderName,
+    starterPack: meta.starterPack,
     recipe: snapshotDcaRecipe(parsed.config),
   });
 }
@@ -504,6 +523,7 @@ export async function savePerpsAsTemplateAction(
     replace: meta.replace,
     folderIds: meta.folderIds,
     newFolderName: meta.newFolderName,
+    starterPack: meta.starterPack,
     recipe: snapshotPerpsRecipe(rule),
   });
 }
@@ -537,6 +557,7 @@ export async function savePaperAsTemplateAction(
     replace: meta.replace,
     folderIds: meta.folderIds,
     newFolderName: meta.newFolderName,
+    starterPack: meta.starterPack,
     recipe: snapshotPaperRecipe(layer),
   });
 }
@@ -562,6 +583,11 @@ export async function updateTemplateMetaAction(
     name: name.name,
     description: parseTemplateDescription(
       formData.get("templateDescription") ?? formData.get("description"),
+    ),
+    visibility: template.visibility,
+    starterPack: parseStarterPackFlag(
+      formData.get("starterPack"),
+      template.visibility,
     ),
   });
   if (!updated.ok) {
@@ -656,6 +682,10 @@ export async function publishTemplateCopyAction(
     description: parseTemplateDescription(
       formData.get("templateDescription") ?? template.description,
     ),
+    starterPack: parseStarterPackFlag(
+      formData.get("starterPack"),
+      "platform",
+    ),
     actorId: auth.member.id,
   });
   if (!published.ok) {
@@ -669,6 +699,7 @@ async function publishTemplateCopy(input: {
   template: AutomationTemplate;
   name: string;
   description: string | null;
+  starterPack?: boolean;
   actorId: string;
 }): Promise<
   | { ok: true; templateId: string }
@@ -681,6 +712,7 @@ async function publishTemplateCopy(input: {
     name: input.name,
     description: input.description,
     recipe: input.template.recipe,
+    starterPack: input.starterPack,
   });
   if (!inserted.ok) {
     return inserted;
@@ -1163,6 +1195,7 @@ export async function createTemplateSetAction(
     name: meta.name,
     description: meta.description,
     templateIds: ids,
+    starterPack: meta.starterPack,
   });
   if (!inserted.ok) {
     return inserted;
@@ -1196,6 +1229,8 @@ export async function updateTemplateSetAction(
     description: parseTemplateDescription(
       formData.get("templateDescription") ?? formData.get("description"),
     ),
+    visibility: set.visibility,
+    starterPack: parseStarterPackFlag(formData.get("starterPack"), set.visibility),
   });
   if (!updated.ok) {
     return updated;
@@ -1390,6 +1425,144 @@ export async function unshareSetAction(
   return { ok: true };
 }
 
+async function ownLibraryNames(userId: string) {
+  const existingTemplates = (
+    await listVisibleTemplates({ userId })
+  ).filter((row) => row.visibility === "user" && row.userId === userId);
+  const existingSets = (
+    await listVisibleSets({ userId })
+  ).filter((row) => row.visibility === "user" && row.userId === userId);
+  return {
+    templates: existingTemplates.map((row) => ({
+      deskType: row.deskType,
+      name: row.name,
+    })),
+    sets: existingSets.map((row) => ({
+      deskType: row.deskType,
+      name: row.name,
+    })),
+  };
+}
+
+async function writeUserLibraryImport(
+  userId: string,
+  plan: LibraryImportPlan,
+): Promise<TemplateActionResult> {
+  if (plan.templates.length === 0 && plan.sets.length === 0) {
+    return { ok: false, error: "Nothing to import." };
+  }
+  const idMap = new Map<string, string>();
+  const notes = [...plan.notes];
+  for (const row of plan.templates) {
+    const inserted = await insertTemplate({
+      userId,
+      visibility: "user",
+      deskType: row.deskType,
+      name: row.name,
+      description: row.description,
+      recipe: row.recipe,
+    });
+    if (!inserted.ok) {
+      notes.push(`Skipped template “${row.name}”: ${inserted.error}`);
+      continue;
+    }
+    idMap.set(row.sourceId, inserted.template.id);
+  }
+  for (const row of plan.sets) {
+    const templateIds = row.sourceItemIds
+      .map((id) => idMap.get(id))
+      .filter((id): id is string => Boolean(id));
+    if (templateIds.length === 0) {
+      notes.push(`Skipped folder “${row.name}”: none of its templates imported.`);
+      continue;
+    }
+    const inserted = await insertTemplateSet({
+      userId,
+      visibility: "user",
+      deskType: row.deskType,
+      name: row.name,
+      description: row.description,
+      templateIds,
+    });
+    if (!inserted.ok) {
+      notes.push(`Skipped folder “${row.name}”: ${inserted.error}`);
+    }
+  }
+  const importedTemplates = idMap.size;
+  const importedSets = plan.sets.filter((row) =>
+    row.sourceItemIds.some((id) => idMap.has(id)),
+  ).length;
+  await writeEventLog({
+    scope: "strategy",
+    event: "template.imported",
+    message: `Imported ${importedTemplates} templates and ${importedSets} folders`,
+    userId,
+    data: {
+      templates: importedTemplates,
+      sets: importedSets,
+    },
+  });
+  revalidateTemplateSurfaces();
+  notes.unshift(
+    `Imported ${importedTemplates} template${importedTemplates === 1 ? "" : "s"} and ${importedSets} folder${importedSets === 1 ? "" : "s"}.`,
+  );
+  return { ok: true, notes };
+}
+
+export async function importSharedTemplateAction(
+  formData: FormData,
+): Promise<TemplateActionResult> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  const id = String(formData.get("templateId") ?? "").trim();
+  const template = await loadTemplateById(id);
+  if (!template || !(await templateIsSharedWith(auth.member.id, id))) {
+    return { ok: false, error: "That template was not found.", code: "forbidden" };
+  }
+  const plan = planLibraryImport(
+    buildTemplateLibraryFile({
+      templates: [template],
+      sets: [],
+    }),
+    await ownLibraryNames(auth.member.id),
+  );
+  return writeUserLibraryImport(auth.member.id, plan);
+}
+
+export async function importSharedSetAction(
+  formData: FormData,
+): Promise<TemplateActionResult> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  const id = String(formData.get("setId") ?? "").trim();
+  const set = await loadSetById(id);
+  if (!set || !(await setIsSharedWith(auth.member.id, id))) {
+    return { ok: false, error: "That folder was not found.", code: "forbidden" };
+  }
+  const templates: AutomationTemplate[] = [];
+  for (const item of set.items) {
+    const template = await loadTemplateById(item.templateId);
+    if (template) {
+      templates.push(template);
+    }
+  }
+  if (templates.length === 0) {
+    return { ok: false, error: "That folder has no templates to import." };
+  }
+  const plan = planLibraryImport(
+    buildTemplateLibraryFile({
+      templates,
+      sets: [set],
+    }),
+    await ownLibraryNames(auth.member.id),
+  );
+  return writeUserLibraryImport(auth.member.id, plan);
+}
+
 export async function exportTemplateLibraryAction(
   formData: FormData,
 ): Promise<TemplateActionResult> {
@@ -1475,79 +1648,7 @@ export async function importTemplateLibraryAction(
         .filter(Boolean),
     });
   }
-  const existingTemplates = (
-    await listVisibleTemplates({ userId: auth.member.id })
-  ).filter((row) => row.visibility === "user" && row.userId === auth.member.id);
-  const existingSets = (
-    await listVisibleSets({ userId: auth.member.id })
-  ).filter((row) => row.visibility === "user" && row.userId === auth.member.id);
-  const plan = planLibraryImport(file, {
-    templates: existingTemplates.map((row) => ({
-      deskType: row.deskType,
-      name: row.name,
-    })),
-    sets: existingSets.map((row) => ({
-      deskType: row.deskType,
-      name: row.name,
-    })),
-  });
-  if (plan.templates.length === 0 && plan.sets.length === 0) {
-    return { ok: false, error: "Nothing to import." };
-  }
-  const idMap = new Map<string, string>();
-  const notes = [...plan.notes];
-  for (const row of plan.templates) {
-    const inserted = await insertTemplate({
-      userId: auth.member.id,
-      visibility: "user",
-      deskType: row.deskType,
-      name: row.name,
-      description: row.description,
-      recipe: row.recipe,
-    });
-    if (!inserted.ok) {
-      notes.push(`Skipped template “${row.name}”: ${inserted.error}`);
-      continue;
-    }
-    idMap.set(row.sourceId, inserted.template.id);
-  }
-  for (const row of plan.sets) {
-    const templateIds = row.sourceItemIds
-      .map((id) => idMap.get(id))
-      .filter((id): id is string => Boolean(id));
-    if (templateIds.length === 0) {
-      notes.push(`Skipped folder “${row.name}”: none of its templates imported.`);
-      continue;
-    }
-    const inserted = await insertTemplateSet({
-      userId: auth.member.id,
-      visibility: "user",
-      deskType: row.deskType,
-      name: row.name,
-      description: row.description,
-      templateIds,
-    });
-    if (!inserted.ok) {
-      notes.push(`Skipped folder “${row.name}”: ${inserted.error}`);
-    }
-  }
-  const importedTemplates = idMap.size;
-  const importedSets = plan.sets.filter((row) =>
-    row.sourceItemIds.some((id) => idMap.has(id)),
-  ).length;
-  await writeEventLog({
-    scope: "strategy",
-    event: "template.imported",
-    message: `Imported ${importedTemplates} templates and ${importedSets} folders`,
-    userId: auth.member.id,
-    data: {
-      templates: importedTemplates,
-      sets: importedSets,
-    },
-  });
-  revalidateTemplateSurfaces();
-  notes.unshift(
-    `Imported ${importedTemplates} template${importedTemplates === 1 ? "" : "s"} and ${importedSets} folder${importedSets === 1 ? "" : "s"}.`,
-  );
-  return { ok: true, notes };
+  const existing = await ownLibraryNames(auth.member.id);
+  const plan = planLibraryImport(file, existing);
+  return writeUserLibraryImport(auth.member.id, plan);
 }

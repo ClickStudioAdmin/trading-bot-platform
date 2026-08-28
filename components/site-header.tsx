@@ -45,9 +45,12 @@ export async function SiteHeader() {
         <div className="flex shrink-0 items-center justify-end gap-2 justify-self-end">
           <UserMenu
             name={user ? memberDisplayName(user.email, user.name) : null}
+            showAccountLinks={accounts.length > 0}
           />
-          {admin ? <HeaderAdminLink /> : null}
-          {admin ? <AdminTickButton autoTick={autoTick} /> : null}
+          {admin && accounts.length > 0 ? <HeaderAdminLink /> : null}
+          {admin && accounts.length > 0 ? (
+            <AdminTickButton autoTick={autoTick} />
+          ) : null}
         </div>
       </div>
     </header>

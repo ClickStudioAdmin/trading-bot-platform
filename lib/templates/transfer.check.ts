@@ -9,6 +9,7 @@ import {
   planLibraryImport,
   selectLibraryExport,
   uniqueLibraryName,
+  inboundTemplateGrantsFromSets,
 } from "./transfer";
 
 assert.equal(uniqueLibraryName("Core", []), "Core");
@@ -103,5 +104,21 @@ const skipped = parseTemplateLibraryJson(
   }),
 );
 assert.equal(skipped.ok, false);
+
+const grants = inboundTemplateGrantsFromSets([
+  {
+    sharedByEmail: "older@click.studio",
+    sharedAtMs: 1,
+    items: [{ templateId: "tpl-a" }, { templateId: "tpl-b" }],
+  },
+  {
+    sharedByEmail: "newer@click.studio",
+    sharedAtMs: 2,
+    items: [{ templateId: "tpl-a" }],
+  },
+]);
+assert.equal(grants.get("tpl-a")?.sharedByEmail, "newer@click.studio");
+assert.equal(grants.get("tpl-b")?.sharedByEmail, "older@click.studio");
+assert.equal(grants.size, 2);
 
 console.log("template library transfer checks passed");

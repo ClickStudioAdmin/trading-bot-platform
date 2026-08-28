@@ -7,8 +7,10 @@ import { signOut } from "@/lib/auth/actions";
 
 export function UserMenu({
   name,
+  showAccountLinks = true,
 }: {
   name: string | null;
+  showAccountLinks?: boolean;
 }) {
   const rootRef = useRef<HTMLDetailsElement>(null);
 
@@ -64,25 +66,29 @@ export function UserMenu({
         </span>
       </summary>
       <div className="absolute right-0 z-20 mt-2 w-56 rounded-card border border-line bg-surface p-2 shadow-none">
-        <Link
-          href="/account/settings"
-          className="block rounded-control px-2 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-        >
-          Settings
-        </Link>
-        <Link
-          href="/account/exchanges"
-          className="block rounded-control px-2 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-        >
-          Exchanges
-        </Link>
-        <Link
-          href="/account/templates"
-          className="block rounded-control px-2 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-        >
-          Templates
-        </Link>
-        <div className="my-1 border-t border-line" />
+        {showAccountLinks ? (
+          <>
+            <Link
+              href="/account/settings"
+              className="block rounded-control px-2 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            >
+              Settings
+            </Link>
+            <Link
+              href="/account/exchanges"
+              className="block rounded-control px-2 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            >
+              Exchanges
+            </Link>
+            <Link
+              href="/account/templates"
+              className="block rounded-control px-2 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            >
+              Templates
+            </Link>
+            <div className="my-1 border-t border-line" />
+          </>
+        ) : null}
         <form action={signOut}>
           <PendingSubmitButton
             pendingLabel="Signing out…"

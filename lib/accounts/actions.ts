@@ -20,6 +20,7 @@ import {
 import { parseBoundConnectionId } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { writeEventLog } from "@/lib/logs/write";
+import { WELCOME_PATH } from "@/lib/auth/onboarding-path";
 import {
   getSessionContext,
   getSessionMember,
@@ -29,6 +30,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 const SUB_ACCOUNTS_PATH = "/account/sub-accounts";
+
+function createDeskErrorPath(
+  formData: FormData,
+  message: string,
+  firstDesk: boolean,
+): string {
+  const next = String(formData.get("next") ?? "");
+  if (firstDesk || next === WELCOME_PATH) {
+    return `${WELCOME_PATH}?error=${encodeURIComponent(message)}`;
+  }
+  return `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(message)}`;
+}
 
 function refreshAccountChrome() {
   revalidatePath("/", "layout");
@@ -95,67 +108,65 @@ export async function switchTradingAccount(formData: FormData) {
 }
 
 export async function createTradingAccount(formData: FormData) {
-  const session = await getSessionContext();
-  if (!session) {
+  const member = await getSessionMember();
+  if (!member) {
     redirect("/sign-in");
   }
   const next = accountReturnPath(String(formData.get("next") ?? ""));
-  const switchToNew = formData.get("switchToDesk") === "1";
-  const desks = await listTradingAccounts(session.member.id);
+  const fromWelcome = String(formData.get("next") ?? "") === WELCOME_PATH;
+  const desks = await listTradingAccounts(member.id);
+  const firstDesk = desks.length === 0;
+  const switchToNew = firstDesk || fromWelcome || formData.get("switchToDesk") === "1";
+  const fail = (message: string): never =>
+    redirect(createDeskErrorPath(formData, message, firstDesk));
   const named = validateNewDeskName(
     formData.get("name"),
     desks.map((desk) => desk.name),
   );
   if (!named.ok) {
-    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(named.error)}`);
+    return fail(named.error);
   }
   const typed = parseDeskTypeChoice(formData.get("deskType"));
   if (!typed.ok) {
-    redirect(`${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(typed.error)}`);
+    return fail(typed.error);
   }
   const mode = parseAccountMode(formData.get("mode"));
   let connectionId: string | null = null;
   if (mode === "live") {
     connectionId = parseBoundConnectionId(formData.get("exchangeConnectionId"));
     if (connectionId) {
-      const connections = await listExchangeConnections(session.member.id);
+      const connections = await listExchangeConnections(member.id);
       const match = connections.find((item) => item.id === connectionId);
       if (!match || match.status !== "active") {
-        redirect(
-          `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent("Pick an exchange key saved on this login.")}`,
-        );
+        return fail("Pick an exchange key saved on this login.");
       }
     }
   }
   const created = await insertTradingAccount(
-    session.member.id,
+    member.id,
     named.name,
     mode,
     typed.deskType,
   );
   if (!created) {
-    redirect(
-      `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent("Could not create that desk. The name may already be in use.")}`,
-    );
+    return fail("Could not create that desk. The name may already be in use.");
   }
   if (connectionId) {
     const bound = await bindConnectionToDesk({
-      userId: session.member.id,
+      userId: member.id,
       accountId: created.id,
       deskType: typed.deskType,
       connectionId,
     });
     if (bound.error) {
-      redirect(
-        `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(bound.error)}`,
-      );
+      return fail(bound.error);
     }
   }
   await writeEventLog({
     scope: "system",
     event: "account.created",
     message: `Created ${mode} desk ${named.name}`,
-    userId: session.member.id,
+    userId: member.id,
     accountId: created.id,
     data: {
       mode,
@@ -168,15 +179,18 @@ export async function createTradingAccount(formData: FormData) {
     await setActiveAccountId(created.id);
   }
   refreshAccountChrome();
-  if (staysOnManagePage(next)) {
+  if (staysOnManagePage(next) && !firstDesk) {
     redirect(`${SUB_ACCOUNTS_PATH}?created=1`);
   }
   if (switchToNew) {
     redirect(deskHomePath(created.deskType, created.id));
   }
+  const session = await getSessionContext();
   redirect(
     safeStayPath(formData.get("stayPath")) ??
-      deskHomePath(session.account.deskType, session.account.id),
+      (session
+        ? deskHomePath(session.account.deskType, session.account.id)
+        : deskHomePath(created.deskType, created.id)),
   );
 }
 

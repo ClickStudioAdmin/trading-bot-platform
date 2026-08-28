@@ -100,7 +100,7 @@ If the `develop` deployment badge says **Preview** (Vercel default when `develop
 
 Sign-in is email/password against `public.members`. There is no Supabase Auth session. The server sets an httpOnly cookie (`tbp_session`) signed with `SESSION_SECRET`, or `SUPABASE_SERVICE_ROLE_KEY` if that is unset.
 
-Create members from **Admin → Members**. The first sign-in as `click.studio.admin@gmail.com` creates that admin row and sets the password.
+Create members from **Admin → Members**. The first sign-in as `click.studio.admin@gmail.com` creates that admin row and sets the password. Members with no desks land on `/welcome` and create their first desk before the rest of the app.
 
 `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` can stay on Vercel for any remaining public Supabase reads. Desk writes use `SUPABASE_SERVICE_ROLE_KEY` and the session member id.
 

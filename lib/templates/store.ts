@@ -9,6 +9,7 @@ import {
   type TemplateRecipe,
   type TemplateVisibility,
 } from "./recipe";
+import { inboundTemplateGrantsFromSets } from "./transfer";
 
 export type TemplateSharePeer = {
   userId: string;
@@ -29,7 +30,9 @@ export type AutomationTemplate = {
   ownerEmail: string | null;
   sharedByEmail: string | null;
   sharedAtMs: number | null;
+  sharedDirectly: boolean;
   sharedWith: TemplateSharePeer[];
+  starterPack: boolean;
 };
 
 export type AutomationTemplateSet = {
@@ -46,6 +49,7 @@ export type AutomationTemplateSet = {
   sharedAtMs: number | null;
   sharedWith: TemplateSharePeer[];
   items: AutomationTemplateSetItem[];
+  starterPack: boolean;
 };
 
 export type AutomationTemplateSetItem = {
@@ -92,6 +96,20 @@ function parseVisibility(value: unknown): TemplateVisibility {
   return value === "platform" ? "platform" : "user";
 }
 
+export function parseStarterPackFlag(
+  value: unknown,
+  visibility: TemplateVisibility,
+): boolean {
+  if (visibility !== "platform") {
+    return false;
+  }
+  if (value === true || value === 1) {
+    return true;
+  }
+  const raw = String(value ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "on";
+}
+
 function asTime(value: unknown): number {
   const ms = new Date(String(value ?? "")).getTime();
   return Number.isFinite(ms) ? ms : 0;
@@ -126,7 +144,10 @@ function parseTemplateRow(
     ownerEmail,
     sharedByEmail: null,
     sharedAtMs: null,
+    sharedDirectly: false,
     sharedWith: [],
+    starterPack:
+      parseVisibility(row.visibility) === "platform" && row.starter_pack === true,
   };
 }
 
@@ -298,6 +319,7 @@ export async function insertTemplate(input: {
   name: string;
   description: string | null;
   recipe: TemplateRecipe;
+  starterPack?: boolean;
 }): Promise<
   | { ok: true; template: AutomationTemplate }
   | { ok: false; error: string; code?: "name_taken" }
@@ -316,6 +338,7 @@ export async function insertTemplate(input: {
       description: input.description,
       recipe: input.recipe,
       recipe_version: TEMPLATE_RECIPE_VERSION,
+      starter_pack: parseStarterPackFlag(input.starterPack, input.visibility),
       updated_at: new Date().toISOString(),
     })
     .select("*")
@@ -365,6 +388,8 @@ export async function updateTemplateMeta(input: {
   id: string;
   name: string;
   description: string | null;
+  starterPack?: boolean;
+  visibility?: TemplateVisibility;
 }): Promise<
   | { ok: true }
   | { ok: false; error: string; code?: "name_taken" }
@@ -378,6 +403,14 @@ export async function updateTemplateMeta(input: {
     .update({
       name: input.name,
       description: input.description,
+      ...(input.visibility
+        ? {
+            starter_pack: parseStarterPackFlag(
+              input.starterPack,
+              input.visibility,
+            ),
+          }
+        : {}),
       updated_at: new Date().toISOString(),
     })
     .eq("id", input.id);
@@ -481,6 +514,8 @@ function parseSetRow(
     sharedAtMs: null,
     sharedWith: [],
     items,
+    starterPack:
+      parseVisibility(row.visibility) === "platform" && row.starter_pack === true,
   };
 }
 
@@ -598,6 +633,7 @@ export async function insertTemplateSet(input: {
   name: string;
   description: string | null;
   templateIds: string[];
+  starterPack?: boolean;
 }): Promise<
   | { ok: true; set: AutomationTemplateSet }
   | { ok: false; error: string; code?: "name_taken" }
@@ -614,6 +650,7 @@ export async function insertTemplateSet(input: {
       desk_type: input.deskType,
       name: input.name,
       description: input.description,
+      starter_pack: parseStarterPackFlag(input.starterPack, input.visibility),
       updated_at: new Date().toISOString(),
     })
     .select("*")
@@ -747,6 +784,8 @@ export async function updateSetMeta(input: {
   id: string;
   name: string;
   description: string | null;
+  starterPack?: boolean;
+  visibility?: TemplateVisibility;
 }): Promise<
   | { ok: true }
   | { ok: false; error: string; code?: "name_taken" }
@@ -760,6 +799,14 @@ export async function updateSetMeta(input: {
     .update({
       name: input.name,
       description: input.description,
+      ...(input.visibility
+        ? {
+            starter_pack: parseStarterPackFlag(
+              input.starterPack,
+              input.visibility,
+            ),
+          }
+        : {}),
       updated_at: new Date().toISOString(),
     })
     .eq("id", input.id);
@@ -918,20 +965,28 @@ export async function listSharedTemplates(input: {
     .from("automation_template_shares")
     .select("template_id, from_user_id, created_at")
     .eq("to_user_id", input.userId);
-  if (error || !shares || shares.length === 0) {
+  if (error) {
     return [];
   }
-  const ids = shares.map((row) => String((row as { template_id: string }).template_id));
-  const { data } = await supabase.from("automation_templates").select("*").in("id", ids);
+  const directShares = shares ?? [];
+  const ids = directShares.map((row) =>
+    String((row as { template_id: string }).template_id),
+  );
+  const { data } =
+    ids.length > 0
+      ? await supabase.from("automation_templates").select("*").in("id", ids)
+      : { data: [] as Record<string, unknown>[] };
   const emails = await memberEmails(
     supabase,
     [
-      ...shares.map((row) => String((row as { from_user_id: string }).from_user_id)),
+      ...directShares.map((row) =>
+        String((row as { from_user_id: string }).from_user_id),
+      ),
       ...(data ?? []).map((row) => String((row as { user_id?: string }).user_id ?? "")),
     ],
   );
   const shareById = new Map(
-    shares.map((row) => [
+    directShares.map((row) => [
       String((row as { template_id: string }).template_id),
       {
         fromUserId: String((row as { from_user_id: string }).from_user_id),
@@ -939,7 +994,7 @@ export async function listSharedTemplates(input: {
       },
     ]),
   );
-  return (data ?? [])
+  const direct = (data ?? [])
     .map((row) => {
       const parsed = parseTemplateRow(
         row as Record<string, unknown>,
@@ -956,9 +1011,52 @@ export async function listSharedTemplates(input: {
         ...parsed,
         sharedByEmail: emails.get(share?.fromUserId ?? "") ?? null,
         sharedAtMs: share?.createdAtMs ?? null,
+        sharedDirectly: true,
       };
     })
     .filter((row): row is AutomationTemplate => Boolean(row));
+
+  const sharedSets = await listSharedSets(input);
+  const grants = inboundTemplateGrantsFromSets(sharedSets);
+  const missingIds = [...grants.keys()].filter(
+    (id) => !direct.some((row) => row.id === id),
+  );
+  if (missingIds.length === 0) {
+    return direct;
+  }
+  const { data: inheritedRows } = await supabase
+    .from("automation_templates")
+    .select("*")
+    .in("id", missingIds);
+  const inheritedEmails = await memberEmails(
+    supabase,
+    (inheritedRows ?? []).map((row) =>
+      String((row as { user_id?: string }).user_id ?? ""),
+    ),
+  );
+  const inherited = (inheritedRows ?? [])
+    .map((row) => {
+      const parsed = parseTemplateRow(
+        row as Record<string, unknown>,
+        inheritedEmails.get(String((row as { user_id?: string }).user_id ?? "")) ??
+          null,
+      );
+      if (!parsed) {
+        return null;
+      }
+      if (input.deskType && parsed.deskType !== input.deskType) {
+        return null;
+      }
+      const grant = grants.get(parsed.id);
+      return {
+        ...parsed,
+        sharedByEmail: grant?.sharedByEmail ?? null,
+        sharedAtMs: grant?.sharedAtMs ?? null,
+        sharedDirectly: false,
+      };
+    })
+    .filter((row): row is AutomationTemplate => Boolean(row));
+  return [...direct, ...inherited];
 }
 
 export async function listSharedSets(input: {

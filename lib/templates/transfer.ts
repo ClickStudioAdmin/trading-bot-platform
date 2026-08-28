@@ -57,6 +57,31 @@ export type LibraryImportPlan = {
   notes: string[];
 };
 
+export function inboundTemplateGrantsFromSets(
+  sets: Array<{
+    sharedByEmail: string | null;
+    sharedAtMs: number | null;
+    items: Array<{ templateId: string }>;
+  }>,
+): Map<string, { sharedByEmail: string | null; sharedAtMs: number | null }> {
+  const grants = new Map<
+    string,
+    { sharedByEmail: string | null; sharedAtMs: number | null }
+  >();
+  for (const folder of sets) {
+    for (const item of folder.items) {
+      const existing = grants.get(item.templateId);
+      if (!existing || (folder.sharedAtMs ?? 0) >= (existing.sharedAtMs ?? 0)) {
+        grants.set(item.templateId, {
+          sharedByEmail: folder.sharedByEmail,
+          sharedAtMs: folder.sharedAtMs,
+        });
+      }
+    }
+  }
+  return grants;
+}
+
 export function uniqueLibraryName(
   base: string,
   existing: string[],

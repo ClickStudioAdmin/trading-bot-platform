@@ -26,6 +26,7 @@ export function CreateAccountForm({
   existingNames = [],
   next,
   embedded = false,
+  firstDesk = false,
   onCancel,
 }: {
   connections: ExchangeConnection[];
@@ -33,6 +34,7 @@ export function CreateAccountForm({
   existingNames?: string[];
   next?: string;
   embedded?: boolean;
+  firstDesk?: boolean;
   onCancel?: () => void;
 }) {
   const [mode, setMode] = useState<"paper" | "live">("paper");
@@ -187,14 +189,20 @@ export function CreateAccountForm({
               </label>
             ) : (
               <p className="text-sm text-ink-muted">
-                No connections saved yet.{" "}
-                <Link
-                  href="/account/exchanges"
-                  className="text-accent hover:text-accent-strong"
-                >
-                  Add a connection on Exchanges
-                </Link>{" "}
-                first, or bind later in Desk Settings.
+                {firstDesk ? (
+                  "No connections on this login yet. Choose Bind Later — you can add a key after this desk is created."
+                ) : (
+                  <>
+                    No connections saved yet.{" "}
+                    <Link
+                      href="/account/exchanges"
+                      className="text-accent hover:text-accent-strong"
+                    >
+                      Add a connection on Exchanges
+                    </Link>{" "}
+                    first, or bind later in Desk Settings.
+                  </>
+                )}
               </p>
             )
           ) : null}
@@ -206,7 +214,7 @@ export function CreateAccountForm({
         No real trades. Connected Exchange binds a key from this login (Bybit
         Demo or production). Mode and type are set at create and never change.
       </p>
-      {embedded ? (
+      {embedded && !firstDesk ? (
         <label className="flex items-start gap-2 text-sm text-ink">
           <input
             type="checkbox"
@@ -232,7 +240,7 @@ export function CreateAccountForm({
             onClick={onCancel}
             className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
           >
-            Cancel
+            {firstDesk ? "Back" : "Cancel"}
           </button>
         ) : null}
       </div>

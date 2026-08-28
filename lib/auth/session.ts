@@ -1,6 +1,5 @@
 import { cookies, headers } from "next/headers";
 import {
-  ensureDefaultPaperAccount,
   listTradingAccounts,
 } from "@/lib/accounts/store";
 import {
@@ -71,9 +70,7 @@ export async function getSessionContext(): Promise<SessionContext | null> {
     return null;
   }
   const accounts = await listTradingAccounts(member.id);
-  const fallback =
-    pickDefaultAccount(accounts) ??
-    (await ensureDefaultPaperAccount(member.id));
+  const fallback = pickDefaultAccount(accounts);
   if (!fallback) {
     return null;
   }
@@ -98,7 +95,8 @@ export async function createSession(userId: string): Promise<void> {
     path: "/",
     expires: new Date(expiresAtMs),
   });
-  const account = await ensureDefaultPaperAccount(userId);
+  const accounts = await listTradingAccounts(userId);
+  const account = pickDefaultAccount(accounts);
   if (account) {
     await setActiveAccountId(account.id);
   }

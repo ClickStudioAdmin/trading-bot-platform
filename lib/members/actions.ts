@@ -2,7 +2,6 @@
 
 import { requireAdmin } from "@/lib/admin/access";
 import { emailIsListedAdmin } from "@/lib/admin/emails";
-import { ensureDefaultPaperAccount } from "@/lib/accounts/store";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { getSessionMember } from "@/lib/auth/session";
 import { writeEventLog } from "@/lib/logs/write";
@@ -46,8 +45,6 @@ export async function createMember(formData: FormData) {
   if (insertError) {
     redirect(`/admin/members/new?error=${encodeURIComponent(insertError.message)}`);
   }
-
-  await ensureDefaultPaperAccount(userId);
 
   await writeEventLog({
     scope: "system",

@@ -2,7 +2,7 @@
 
 Shipped. **Not Phase 12** (scale-in). Not backup market data.
 
-Phase 11 is complete. See [phase-11.md](phase-11.md). This is a **login-scoped template library** that stamps idle bots onto a desk of the matching type. Migrations: `supabase/migrations/20260828100000_automation_templates.sql`, `supabase/migrations/20260828110000_automation_template_shares.sql` (apply on push to `develop`). Stored JSON is still called a `recipe` in code.
+Phase 11 is complete. See [phase-11.md](phase-11.md). This is a **login-scoped template library** that stamps idle bots onto a desk of the matching type. Migrations: `supabase/migrations/20260828100000_automation_templates.sql`, `supabase/migrations/20260828110000_automation_template_shares.sql`, `supabase/migrations/20260828120000_template_starter_pack.sql` (apply on push to `develop`). Stored JSON is still called a `recipe` in code.
 
 ## Purpose
 
@@ -69,9 +69,9 @@ Applying a folder walks the list and applies each template to a **chosen desk** 
 | --- | --- | --- |
 | User template / folder | Owning member | Owner applies to **their** desks. Other members cannot see it unless it is **shared** with them. Not listed on `/admin/templates`. |
 | Platform template / folder | Admin only | Every member can read and apply. Members cannot edit or delete. |
-| Shared template / folder | Owner (or admin) grants access by recipient email; stored as `to_user_id` | Recipient can apply to **their** desks. Read-only on Shared tabs. Cannot edit, delete, or re-share. |
+| Shared template / folder | Owner (or admin) grants access by recipient email; stored as `to_user_id` | Recipient can apply to **their** desks. Read-only on Shared tabs except **Import**, which copies into their library. Cannot edit, delete, or re-share. |
 
-Share is a grant, not a copy. The owner keeps the template. Deleting the template or folder drops the shares. Platform templates are already public — do not share them.
+Share is a grant, not a copy. The owner keeps the template. Recipients can **Import** a shared template or folder to copy it into their own library (name collisions get a ` (import)` suffix). Sharing a folder also lists its templates on Shared Templates. Deleting the template or folder drops the shares. Platform templates are already public — do not share them.
 
 ## Export and import
 
@@ -96,6 +96,7 @@ GitHub migrations when this work starts. Names are indicative.
 - `desk_type` `dca` \| `perps` \| `cash_and_carry`
 - `name` text
 - `description` text null
+- `starter_pack` boolean, platform only (user rows stay false)
 - `recipe` jsonb not null
 - `recipe_version` integer not null
 - `created_at` / `updated_at`
@@ -105,7 +106,7 @@ GitHub migrations when this work starts. Names are indicative.
 
 `automation_template_sets`
 
-- `id`, `user_id` (same null rule), `visibility`, `desk_type`, `name`, `description`, timestamps
+- `id`, `user_id` (same null rule), `visibility`, `desk_type`, `name`, `description`, `starter_pack` (platform only), timestamps
 - Same uniqueness as templates
 
 `automation_template_set_items`
@@ -156,7 +157,7 @@ Login library. Not desk-scoped. Account nav: Templates, with Settings, Exchanges
 - Tabs: **My Templates**, **My Folders**, **Shared Templates**, **Shared Folders**. Table with columns, search, desk-type filter, folder filter, click-to-sort, and row checkboxes. Bulk: **Add to folder** (templates), **Export**, **Delete**. **Edit** is name, description, and folders. **Share** is a separate action and modal (email grant). **Edit** folder uses **In Folder** / **Not in Folder** columns; Save writes membership. Apply is on Automations.
 - **Export all** / **Import** on the page title. Import is a modal: pick a JSON file, then choose templates and folders.
 - **Folders tab:** same table. **Add New Folder** opens a modal for name, desk type, and optional templates. Add templates now or later from Edit.
-- **Platform rows** do not appear on My Templates / My Folders. Members apply them from Automations. **Shared** tabs: **Remove** drops the grant, not the owner’s copy.
+- **Platform rows** do not appear on My Templates / My Folders. Members apply them from Automations. **Shared** tabs: **Import** copies the template (or the folder and its templates) into My Templates / My Folders. **Remove** drops the grant, not the owner’s copy. Templates inside a folder shared with you also appear on Shared Templates.
 - Empty states: no templates yet; point at Automations **Save as template**. No folders yet; use **Add New Folder** (templates optional).
 
 ### `/admin/templates` (admins only)
@@ -165,10 +166,10 @@ Admin nav next to Members / Logs. Members who are not admins get the usual admin
 
 **Templates** and **Folders** list **platform** rows only. No user templates, user folders, Scope filter, or owner column. Inbound **Shared Templates / Shared Folders** live on `/account/templates`, not here.
 
-- **Edit** to rename, description, delete, edit folder membership (platform templates only) on the **Folders** tab or from a template’s Edit dialog.
+- **Edit** to rename, description, **Include in Starter Pack**, delete, edit folder membership (platform templates only) on the **Folders** tab or from a template’s Edit dialog.
 - **Unpublish** removes the platform row. Members will no longer see it. User copies are unchanged.
 - **Add New Folder** opens a modal. Create a platform folder from platform templates of one desk type.
-- Add a new platform row with **Save as platform template** from a desk the admin owns.
+- Add a new platform row with **Save as platform template** from a desk the admin owns. That dialog and Edit both include **Include in Starter Pack**. **Add New Folder** on admin can set the same flag.
 - **Export all** downloads the platform catalog (templates and folders). Bulk **Export** downloads the selected platform templates (with the folders they sit in) or selected folders (with their templates). **Import** still creates user-owned copies for the signed-in admin.
 
 Admin does **not** rewrite a user’s `recipe` JSON in place. Support path: save a platform snapshot from Automations, then edit that snapshot. Prevents a silent change to what the member thinks they saved.
@@ -184,6 +185,7 @@ Admin does **not** rewrite a user’s `recipe` JSON in place. Support path: save
 | See another member’s user templates on `/account/templates` | No, unless shared | No, unless shared |
 | Share a user template/folder by email | Own rows | Own rows |
 | Apply my, platform, or shared-with-me template/folder to **my** desk | Yes | Yes |
+| Import a shared template or folder into my library | Yes | Yes |
 | Apply to someone else’s desk | No | No |
 | List platform rows | Apply from Automations | Yes (`/admin/templates`, service role) |
 

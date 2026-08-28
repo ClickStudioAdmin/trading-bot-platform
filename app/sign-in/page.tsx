@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { signIn } from "@/lib/auth/actions";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { deskHomePath } from "@/lib/accounts/model";
-import { getSessionContext } from "@/lib/auth/session";
-import { redirect } from "next/navigation";
+import { redirectSignedInHome } from "@/lib/auth/onboarding";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -15,10 +13,7 @@ export default async function SignInPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const session = await getSessionContext();
-  if (session) {
-    redirect(deskHomePath(session.account.deskType, session.account.id));
-  }
+  await redirectSignedInHome();
 
   const { error } = await searchParams;
 

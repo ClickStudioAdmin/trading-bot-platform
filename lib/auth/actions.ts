@@ -1,16 +1,22 @@
 "use server";
 
 import { emailIsListedAdmin } from "@/lib/admin/emails";
-import { createSession, clearSession, getSessionContext, getSessionMember } from "@/lib/auth/session";
+import { deskHomePath, pickDefaultAccount } from "@/lib/accounts/model";
+import { listTradingAccounts } from "@/lib/accounts/store";
+import { WELCOME_PATH } from "@/lib/auth/onboarding-path";
+import { createSession, clearSession, getSessionMember } from "@/lib/auth/session";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { memberDisplayName } from "@/lib/members/sync";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { deskHomePath } from "@/lib/accounts/model";
 import { redirect } from "next/navigation";
 
-async function redirectToDeskHome() {
-  const session = await getSessionContext();
-  redirect(session ? deskHomePath(session.account.deskType, session.account.id) : "/strategies");
+async function redirectAfterSignIn(userId: string) {
+  const accounts = await listTradingAccounts(userId);
+  if (accounts.length === 0) {
+    redirect(WELCOME_PATH);
+  }
+  const home = pickDefaultAccount(accounts);
+  redirect(home ? deskHomePath(home.deskType, home.id) : WELCOME_PATH);
 }
 
 export async function signIn(formData: FormData) {
@@ -73,7 +79,7 @@ export async function signIn(formData: FormData) {
       redirect(`/sign-in?error=${encodeURIComponent(error.message)}`);
     }
     await createSession(userId);
-    await redirectToDeskHome();
+    await redirectAfterSignIn(userId);
   }
 
   if (!existing) {
@@ -98,7 +104,7 @@ export async function signIn(formData: FormData) {
       redirect(`/sign-in?error=${encodeURIComponent(error.message)}`);
     }
     await createSession(userId);
-    await redirectToDeskHome();
+    await redirectAfterSignIn(userId);
   }
 
   if (!stored || !verifyPassword(password, stored)) {
@@ -106,7 +112,7 @@ export async function signIn(formData: FormData) {
   }
 
   await createSession(userId);
-  await redirectToDeskHome();
+  await redirectAfterSignIn(userId);
 }
 
 export async function signOut() {

@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
-import { deskHomePath } from "@/lib/accounts/model";
-import { getSessionContext } from "@/lib/auth/session";
-import { redirect } from "next/navigation";
+import { redirectSignedInHome } from "@/lib/auth/onboarding";
 
 export const metadata: Metadata = {
   title: "Desks",
@@ -11,10 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function StrategiesPage() {
-  const session = await getSessionContext();
-  if (session) {
-    redirect(deskHomePath(session.account.deskType, session.account.id));
-  }
+  await redirectSignedInHome();
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-8">

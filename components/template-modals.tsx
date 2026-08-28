@@ -25,6 +25,26 @@ const primaryBtn =
 const secondaryBtn =
   "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
 
+export function StarterPackCheckbox({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label className="mt-3 flex items-start gap-2 text-sm text-ink">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-0.5 size-4"
+      />
+      Include in Starter Pack
+    </label>
+  );
+}
+
 export function Modal({
   title,
   onClose,
@@ -121,6 +141,7 @@ export function SaveAsTemplateButton({
   const [folderIds, setFolderIds] = useState<Set<string>>(new Set());
   const [createFolder, setCreateFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [starterPack, setStarterPack] = useState(false);
 
   const folderGroups = saveFolderGroups(folders, kind, platform);
 
@@ -144,6 +165,7 @@ export function SaveAsTemplateButton({
     setFolderIds(new Set());
     setCreateFolder(false);
     setNewFolderName("");
+    setStarterPack(false);
     setResult(null);
     setOpen(true);
   }
@@ -162,6 +184,9 @@ export function SaveAsTemplateButton({
     }
     if (createFolder && newFolderName.trim()) {
       data.set("newFolderName", newFolderName.trim());
+    }
+    if (platform && starterPack) {
+      data.set("starterPack", "1");
     }
     const action =
       kind === "dca"
@@ -226,6 +251,12 @@ export function SaveAsTemplateButton({
               className={fieldClass}
             />
           </label>
+          {platform ? (
+            <StarterPackCheckbox
+              checked={starterPack}
+              onChange={setStarterPack}
+            />
+          ) : null}
           <div className="mt-3">
             <p className="text-xs text-ink-muted">Add to folder</p>
             {folderGroups.length === 0 ? (
