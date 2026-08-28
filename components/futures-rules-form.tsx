@@ -466,9 +466,18 @@ function RuleCard({
             }
           />
           {inUse ? (
-            <p className="text-xs text-ink-muted">
-              This rule has an open position. Close that row before removing it.
-            </p>
+            <span
+              className="inline-flex"
+              title="This rule has an open position. Close that row before removing it."
+            >
+              <button
+                type="button"
+                disabled
+                className="pointer-events-none shrink-0 rounded-control px-2 py-0.5 text-xs text-danger opacity-40"
+              >
+                Remove
+              </button>
+            </span>
           ) : (
             <button
               type="button"

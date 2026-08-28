@@ -438,9 +438,18 @@ function RuleRow({
             Remove
           </button>
         ) : (
-          <p className="text-xs text-ink-muted">
-            This set has an open position. Close that row before removing it.
-          </p>
+          <span
+            className="inline-flex"
+            title="This set has an open position. Close that row before removing it."
+          >
+            <button
+              type="button"
+              disabled
+              className="pointer-events-none shrink-0 rounded-control px-2 py-0.5 text-xs text-danger opacity-40"
+            >
+              Remove
+            </button>
+          </span>
         )}
       </div>
     </section>
