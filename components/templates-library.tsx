@@ -85,6 +85,10 @@ function folderLabel(folders: AutomationTemplateSet[]): string {
   return folders.map((folder) => folder.name).join(", ");
 }
 
+function sharedCountLabel(peers: { email: string }[]): string {
+  return peers.length === 0 ? "—" : String(peers.length);
+}
+
 function sharedLabel(
   peers: { email: string }[],
   sharedBy?: string | null,
@@ -273,11 +277,14 @@ export function TemplatesLibrary({
         );
       }
       if (sort.key === "shared") {
-        return compareText(
-          sharedLabel(a.sharedWith, a.sharedByEmail),
-          sharedLabel(b.sharedWith, b.sharedByEmail),
-          sort.dir,
-        );
+        if (a.sharedByEmail || b.sharedByEmail) {
+          return compareText(
+            sharedLabel(a.sharedWith, a.sharedByEmail),
+            sharedLabel(b.sharedWith, b.sharedByEmail),
+            sort.dir,
+          );
+        }
+        return compareNum(a.sharedWith.length, b.sharedWith.length, sort.dir);
       }
       return compareNum(a.updatedAtMs, b.updatedAtMs, sort.dir);
     });
@@ -325,11 +332,14 @@ export function TemplatesLibrary({
         return compareNum(a.items.length, b.items.length, sort.dir);
       }
       if (sort.key === "shared") {
-        return compareText(
-          sharedLabel(a.sharedWith, a.sharedByEmail),
-          sharedLabel(b.sharedWith, b.sharedByEmail),
-          sort.dir,
-        );
+        if (a.sharedByEmail || b.sharedByEmail) {
+          return compareText(
+            sharedLabel(a.sharedWith, a.sharedByEmail),
+            sharedLabel(b.sharedWith, b.sharedByEmail),
+            sort.dir,
+          );
+        }
+        return compareNum(a.sharedWith.length, b.sharedWith.length, sort.dir);
       }
       return compareNum(a.updatedAtMs, b.updatedAtMs, sort.dir);
     });
@@ -750,8 +760,8 @@ export function TemplatesLibrary({
                     {folderLabel(foldersHolding(row.id, knownFolders))}
                   </td>
                   {showSharedWith ? (
-                    <td className="px-4 py-3 text-ink-muted">
-                      {sharedLabel(row.sharedWith)}
+                    <td className="px-4 py-3 tabular-nums text-ink-muted">
+                      {sharedCountLabel(row.sharedWith)}
                     </td>
                   ) : null}
                   <td className="px-4 py-3 tabular-nums text-ink-muted">
@@ -878,8 +888,8 @@ export function TemplatesLibrary({
                         : row.items.map((item) => item.name).join(", ")}
                     </td>
                     {showSharedWith ? (
-                      <td className="px-4 py-3 text-ink-muted">
-                        {sharedLabel(row.sharedWith)}
+                      <td className="px-4 py-3 tabular-nums text-ink-muted">
+                        {sharedCountLabel(row.sharedWith)}
                       </td>
                     ) : null}
                     <td className="px-4 py-3 tabular-nums text-ink-muted">
@@ -1009,7 +1019,6 @@ export function TemplatesLibrary({
           peers={sharingTemplate.sharedWith}
           onClose={() => setSharingTemplateId(null)}
           onResult={(result) => {
-            flash(result);
             if (result.ok) {
               router.refresh();
             }
@@ -1024,7 +1033,6 @@ export function TemplatesLibrary({
           peers={sharingFolder.sharedWith}
           onClose={() => setSharingFolderId(null)}
           onResult={(result) => {
-            flash(result);
             if (result.ok) {
               router.refresh();
             }
@@ -1157,20 +1165,50 @@ function ImportModal({
     setSetIds(new Set(parsed.file.sets.map((row) => row.id)));
   }
 
+  const lockedTemplateIds = new Set(
+    (file?.sets ?? [])
+      .filter((row) => setIds.has(row.id))
+      .flatMap((row) => row.items),
+  );
+
   function toggle(id: string, kind: "template" | "folder") {
-    const update = (current: Set<string>) => {
+    if (!file) {
+      return;
+    }
+    if (kind === "template") {
+      if (lockedTemplateIds.has(id)) {
+        return;
+      }
+      setTemplateIds((current) => {
+        const next = new Set(current);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        return next;
+      });
+      return;
+    }
+    const folder = file.sets.find((row) => row.id === id);
+    const selecting = !setIds.has(id);
+    setSetIds((current) => {
       const next = new Set(current);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
+      if (selecting) {
         next.add(id);
+      } else {
+        next.delete(id);
       }
       return next;
-    };
-    if (kind === "template") {
-      setTemplateIds(update);
-    } else {
-      setSetIds(update);
+    });
+    if (selecting && folder) {
+      setTemplateIds((current) => {
+        const next = new Set(current);
+        for (const templateId of folder.items) {
+          next.add(templateId);
+        }
+        return next;
+      });
     }
   }
 
@@ -1194,7 +1232,8 @@ function ImportModal({
     <Modal title="Import" onClose={onClose} wide>
       <p className="mt-1 text-sm text-ink-muted">
         Upload a JSON library file. Untick anything you do not want to import.
-        Import creates copies in your library.
+        A selected folder keeps its templates ticked. Import creates copies in
+        your library.
       </p>
       <label className={`${secondaryBtn} mt-4 inline-flex cursor-pointer`}>
         Choose file
@@ -1225,6 +1264,7 @@ function ImportModal({
               detail: formatDeskType(row.deskType),
             }))}
             selected={templateIds}
+            locked={lockedTemplateIds}
             onToggle={(id) => toggle(id, "template")}
           />
           <ImportPickList
@@ -1262,12 +1302,14 @@ function ImportPickList({
   empty,
   rows,
   selected,
+  locked,
   onToggle,
 }: {
   title: string;
   empty: string;
   rows: { id: string; name: string; detail: string }[];
   selected: Set<string>;
+  locked?: Set<string>;
   onToggle: (id: string) => void;
 }) {
   return (
@@ -1279,22 +1321,32 @@ function ImportPickList({
         <p className="mt-2 text-sm text-ink-muted">{empty}</p>
       ) : (
         <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
-          {rows.map((row) => (
-            <li key={row.id}>
-              <label className="flex items-start gap-2 rounded-control px-1 py-1.5 text-sm text-ink hover:bg-surface-raised">
-                <input
-                  type="checkbox"
-                  checked={selected.has(row.id)}
-                  onChange={() => onToggle(row.id)}
-                  className="mt-0.5 size-4"
-                />
-                <span className="min-w-0">
-                  <span className="block truncate">{row.name}</span>
-                  <span className="text-xs text-ink-faint">{row.detail}</span>
-                </span>
-              </label>
-            </li>
-          ))}
+          {rows.map((row) => {
+            const isLocked = locked?.has(row.id) ?? false;
+            return (
+              <li key={row.id}>
+                <label
+                  className={`flex items-start gap-2 rounded-control px-1 py-1.5 text-sm text-ink ${
+                    isLocked
+                      ? "cursor-not-allowed text-ink-muted"
+                      : "hover:bg-surface-raised"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected.has(row.id)}
+                    disabled={isLocked}
+                    onChange={() => onToggle(row.id)}
+                    className="mt-0.5 size-4"
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate">{row.name}</span>
+                    <span className="text-xs text-ink-faint">{row.detail}</span>
+                  </span>
+                </label>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -1318,32 +1370,54 @@ function ShareModal({
 }) {
   const [email, setEmail] = useState("");
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   async function share() {
     setPending(true);
+    setError(null);
+    setMessage(null);
     const data = new FormData();
     data.set("email", email);
     if (kind === "template") {
       data.set("templateId", id);
-      onResult(await shareTemplateAction(data));
     } else {
       data.set("setId", id);
-      onResult(await shareSetAction(data));
+    }
+    const result =
+      kind === "template"
+        ? await shareTemplateAction(data)
+        : await shareSetAction(data);
+    setPending(false);
+    if (!result.ok) {
+      setError(result.error ?? "That did not work.");
+      return;
     }
     setEmail("");
-    setPending(false);
+    setMessage(result.notes?.join(" ") || "Shared.");
+    onResult(result);
   }
 
   async function revoke(userId: string) {
+    setError(null);
+    setMessage(null);
     const data = new FormData();
     data.set("toUserId", userId);
     if (kind === "template") {
       data.set("templateId", id);
-      onResult(await unshareTemplateAction(data));
     } else {
       data.set("setId", id);
-      onResult(await unshareSetAction(data));
     }
+    const result =
+      kind === "template"
+        ? await unshareTemplateAction(data)
+        : await unshareSetAction(data);
+    if (!result.ok) {
+      setError(result.error ?? "That did not work.");
+      return;
+    }
+    setMessage(result.notes?.join(" ") || "Stopped sharing.");
+    onResult(result);
   }
 
   return (
@@ -1359,7 +1433,10 @@ function ShareModal({
         <input
           type="email"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            setError(null);
+          }}
           placeholder="member@email"
           className="min-w-[12rem] flex-1 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
         />
@@ -1372,6 +1449,12 @@ function ShareModal({
           {pending ? "Sharing…" : "Share"}
         </button>
       </div>
+      {error ? (
+        <p className="mt-3 rounded-card border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
+      {message ? <p className="mt-3 text-sm text-success">{message}</p> : null}
       {peers.length > 0 ? (
         <ul className="mt-3 space-y-1">
           {peers.map((peer) => (
