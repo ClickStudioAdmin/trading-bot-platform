@@ -30,6 +30,7 @@ import {
 import {
   applyDcaVerb,
   flattenPlaybook,
+  logDcaEvent,
   moveStopToBreakeven,
   placeClip,
   syncDcaPlaybookExits,
@@ -270,6 +271,28 @@ export async function runDcaPlaybookTick(): Promise<{ acted: number }> {
       } else {
         playbook.shortIndicatorTrue = decision.nextIndicatorTrue;
       }
+      if (
+        decision.action.kind !== "none" &&
+        decision.action.kind !== "end_cycle"
+      ) {
+        await logDcaEvent({
+          playbook,
+          side,
+          positionId: open?.id ?? null,
+          event: "dca.decision",
+          message: dcaDecisionMessage(playbook.name, decision.action),
+          data: {
+            kind: decision.action.kind,
+            reason:
+              "reason" in decision.action ? decision.action.reason : null,
+            clipsFilled: leg.clipsFilled,
+            mark: prices.mark,
+            last: prices.last,
+            entryPrice: open?.entryPrice ?? null,
+            tpLimitResting,
+          },
+        });
+      }
       const result = await applyTickAction({
         playbook,
         mode: account.mode,
@@ -357,15 +380,13 @@ async function applyTickAction(input: {
       lastPrice: input.lastPrice,
     });
     if (!placed.ok) {
-      await writeEventLog({
+      await logDcaEvent({
+        playbook: input.playbook,
+        side: input.side,
         level: "warning",
-        scope: "trade",
         event: "engine.open_failed",
         message: placed.error,
-        userId: input.playbook.userId,
-        accountId: input.playbook.accountId,
-        strategy: FUTURES_STRATEGY_ID,
-        data: { playbookId: input.playbook.id, side: input.side },
+        data: { reason: "clip" },
       });
       return { acted: false };
     }
@@ -386,6 +407,14 @@ async function applyTickAction(input: {
         positionQty: liveQty,
       })
     ) {
+      await logDcaEvent({
+        playbook: input.playbook,
+        side: input.side,
+        positionId: liveOpens.find((row) => row.side === input.side)?.id ?? null,
+        event: "dca.decision",
+        message: `${input.playbook.name} cycle-end skipped. Position is still open.`,
+        data: { kind: "end_cycle", reason: "position_open", qty: liveQty },
+      });
       return { acted: false };
     }
     const flattened = await flattenPlaybook({
@@ -423,16 +452,14 @@ async function applyTickAction(input: {
         return { acted: false };
       }
     }
-    await writeEventLog({
-      scope: "trade",
+    await logDcaEvent({
+      playbook: input.playbook,
+      side: input.side,
       event: "dca.closed",
       message: dcaStartListens(input.playbook.startKind)
         ? `${input.playbook.name} position closed. Waiting for the next start.`
         : `${input.playbook.name} position closed. Playbook is idle.`,
-      userId: input.playbook.userId,
-      accountId: input.playbook.accountId,
-      strategy: FUTURES_STRATEGY_ID,
-      data: { playbookId: input.playbook.id, side: input.side },
+      data: { reason: "end_cycle" },
     });
     return { acted: true };
   }
@@ -445,19 +472,13 @@ async function applyTickAction(input: {
     side: input.side,
   });
   if (!closed.ok) {
-    await writeEventLog({
+    await logDcaEvent({
+      playbook: input.playbook,
+      side: input.side,
       level: "warning",
-      scope: "trade",
       event: "engine.open_failed",
       message: closed.error,
-      userId: input.playbook.userId,
-      accountId: input.playbook.accountId,
-      strategy: FUTURES_STRATEGY_ID,
-      data: {
-        playbookId: input.playbook.id,
-        side: input.side,
-        reason: input.action.reason,
-      },
+      data: { reason: input.action.reason },
     });
     return { acted: false };
   }
@@ -466,21 +487,46 @@ async function applyTickAction(input: {
     id: input.playbook.id,
     side: input.side,
   });
-  await writeEventLog({
-    scope: "trade",
+  await logDcaEvent({
+    playbook: input.playbook,
+    side: input.side,
     event: "dca.closed",
     message:
       input.action.reason === "take_profit"
         ? `${input.playbook.name} hit take profit.`
         : `${input.playbook.name} hit stop loss.`,
-    userId: input.playbook.userId,
-    accountId: input.playbook.accountId,
-    strategy: FUTURES_STRATEGY_ID,
-    data: {
-      playbookId: input.playbook.id,
-      side: input.side,
-      reason: input.action.reason,
-    },
+    data: { reason: input.action.reason },
   });
   return { acted: true };
+}
+
+function dcaDecisionMessage(
+  name: string,
+  action: { kind: string; reason?: string },
+): string {
+  if (action.kind === "clip") {
+    return `${name} adding an order.`;
+  }
+  if (action.kind === "arm") {
+    return `${name} start met. Placing the first order.`;
+  }
+  if (action.kind === "disarm") {
+    return `${name} stop-adding trigger met.`;
+  }
+  if (action.kind === "stop_adding") {
+    return `${name} hit the order cap.`;
+  }
+  if (action.kind === "breakeven") {
+    return `${name} moving stop to breakeven.`;
+  }
+  if (action.kind === "end_cycle") {
+    return `${name} cycle ended.`;
+  }
+  if (action.kind === "close" && action.reason === "take_profit") {
+    return `${name} take profit hit. Flattening.`;
+  }
+  if (action.kind === "close" && action.reason === "stop_loss") {
+    return `${name} stop loss hit. Flattening.`;
+  }
+  return `${name} ${action.kind}.`;
 }

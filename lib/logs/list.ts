@@ -19,7 +19,13 @@ export type EventLogRow = {
 
 export async function listEventLogs(
   filters: EventLogFilters,
-  options: { limit?: number; userId?: string; accountId?: string } = {},
+  options: {
+    limit?: number;
+    userId?: string;
+    accountId?: string;
+    scopes?: Array<"system" | "strategy" | "trade">;
+    since?: string;
+  } = {},
 ): Promise<EventLogRow[]> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -39,8 +45,21 @@ export async function listEventLogs(
     query = query.eq("user_id", options.userId);
   }
 
-  if (filters.scope === "system" || filters.scope === "strategy" || filters.scope === "trade") {
-    query = query.eq("scope", filters.scope);
+  const scopes =
+    options.scopes && options.scopes.length > 0
+      ? options.scopes
+      : filters.scope === "system" ||
+          filters.scope === "strategy" ||
+          filters.scope === "trade"
+        ? [filters.scope]
+        : [];
+  if (scopes.length === 1) {
+    query = query.eq("scope", scopes[0]);
+  } else if (scopes.length > 1) {
+    query = query.in("scope", scopes);
+  }
+  if (options.since) {
+    query = query.gte("created_at", options.since);
   }
   if (filters.level === "info" || filters.level === "warning" || filters.level === "error") {
     query = query.eq("level", filters.level);
@@ -116,23 +135,96 @@ export function positionIdFromLogData(
   return null;
 }
 
+export type PositionLogAnchor = {
+  id: string;
+  symbol?: string;
+  side?: string;
+  ruleId?: string | null;
+  ruleName?: string | null;
+  openedAtMs?: number;
+  closedAtMs?: number | null;
+};
+
+const POSITION_LOG_WINDOW_MS = 5_000;
+
+export function logBelongsToPosition(
+  log: EventLogRow,
+  position: PositionLogAnchor,
+): boolean {
+  const byId = positionIdFromLogData(log.data);
+  if (byId) {
+    return byId === position.id;
+  }
+  const symbol = stringLogField(log.data.symbol);
+  if (!symbol || !position.symbol || symbol !== position.symbol) {
+    return false;
+  }
+  const side = stringLogField(log.data.side);
+  if (side && position.side && side !== position.side) {
+    return false;
+  }
+  const playbookId = stringLogField(log.data.playbookId);
+  const ruleId = stringLogField(log.data.ruleId) ?? position.ruleId ?? null;
+  if (playbookId && position.ruleId && playbookId !== position.ruleId) {
+    return false;
+  }
+  const ruleName = stringLogField(log.data.ruleName);
+  if (ruleName && position.ruleName && ruleName !== position.ruleName) {
+    return false;
+  }
+  const linked =
+    Boolean(playbookId && position.ruleId && playbookId === position.ruleId) ||
+    Boolean(ruleId && position.ruleId && ruleId === position.ruleId) ||
+    Boolean(ruleName && position.ruleName && ruleName === position.ruleName);
+  if (!linked) {
+    return false;
+  }
+  return logInPositionWindow(log, position);
+}
+
 export function logsForPosition(
   logs: EventLogRow[],
-  positionId: string,
+  position: PositionLogAnchor | string,
 ): EventLogRow[] {
+  const anchor =
+    typeof position === "string" ? { id: position } : position;
   return logs
-    .filter((log) => positionIdFromLogData(log.data) === positionId)
+    .filter((log) => logBelongsToPosition(log, anchor))
     .sort(
       (a, b) => b.createdAt.localeCompare(a.createdAt) || b.id - a.id,
     );
 }
 
-export function attachPositionLogs<T extends { id: string }>(
+export function attachPositionLogs<T extends PositionLogAnchor>(
   rows: T[],
   logs: EventLogRow[],
 ): (T & { logs: EventLogRow[] })[] {
   return rows.map((row) => ({
     ...row,
-    logs: logsForPosition(logs, row.id),
+    logs: logsForPosition(logs, row),
   }));
+}
+
+function stringLogField(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function logInPositionWindow(
+  log: EventLogRow,
+  position: PositionLogAnchor,
+): boolean {
+  const at = new Date(log.createdAt).getTime();
+  if (!Number.isFinite(at)) {
+    return false;
+  }
+  const opened = position.openedAtMs ?? 0;
+  const start = opened > 0 ? opened - POSITION_LOG_WINDOW_MS : 0;
+  const closed = position.closedAtMs ?? 0;
+  const end =
+    closed > 0 ? closed + POSITION_LOG_WINDOW_MS : Date.now() + POSITION_LOG_WINDOW_MS;
+  return at >= start && at <= end;
 }

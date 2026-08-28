@@ -152,12 +152,30 @@ export async function runFuturesAutomationTick(): Promise<{ fired: number }> {
             ruleId: rule.id,
             ruleName: rule.name,
             symbol: rule.symbol,
+            side,
             action: rule.action,
+            positionId: openOnSide?.id ?? null,
           },
         });
         continue;
       }
       fired += 1;
+      await writeEventLog({
+        scope: "trade",
+        event: "engine.fired",
+        message: `Automation ${rule.name} fired on ${rule.symbol}.`,
+        userId: account.userId,
+        accountId,
+        strategy: FUTURES_STRATEGY_ID,
+        data: {
+          ruleId: rule.id,
+          ruleName: rule.name,
+          symbol: rule.symbol,
+          side,
+          action: rule.action,
+          positionId: result.positionId,
+        },
+      });
       await patchRule(supabase, rule.id, {
         condition_true: true,
         last_fired_at: new Date().toISOString(),
@@ -243,6 +261,23 @@ export async function fireWebhookAutomationEntries(input: {
     });
     if (result.ok) {
       fired += 1;
+      await writeEventLog({
+        scope: "trade",
+        event: "engine.fired",
+        message: `Signal fired ${rule.name} on ${rule.symbol}.`,
+        userId: input.userId,
+        accountId: input.accountId,
+        strategy: FUTURES_STRATEGY_ID,
+        data: {
+          ruleId: rule.id,
+          ruleName: rule.name,
+          symbol: rule.symbol,
+          side,
+          action: rule.action,
+          positionId: result.positionId,
+          webhookId: input.webhookId,
+        },
+      });
       await patchRule(supabase, rule.id, {
         last_fired_at: new Date().toISOString(),
       });
@@ -258,7 +293,10 @@ export async function fireWebhookAutomationEntries(input: {
         data: {
           ruleId: rule.id,
           ruleName: rule.name,
+          symbol: rule.symbol,
+          side,
           webhookId: input.webhookId,
+          positionId: openOnSide?.id ?? null,
         },
       });
     }
@@ -272,12 +310,14 @@ async function fireAutomationRule(input: {
   userId: string;
   mode: TradingAccountMode;
   positionId: string | null;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<
+  { ok: true; positionId: string | null } | { ok: false; error: string }
+> {
   const rule = input.rule;
   if (!rule.id) {
     return { ok: false, error: "Rule is missing an id." };
   }
-  return runFuturesCommand({
+  const result = await runFuturesCommand({
     actor: {
       userId: input.userId,
       accountId: input.accountId,
@@ -298,6 +338,10 @@ async function fireAutomationRule(input: {
       ruleName: rule.name,
     },
   });
+  if (!result.ok) {
+    return result;
+  }
+  return { ok: true, positionId: result.positionId ?? input.positionId };
 }
 
 async function patchRule(

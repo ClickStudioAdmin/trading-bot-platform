@@ -779,6 +779,8 @@ async function runPlace(
         limitPrice: limit.price,
         live: liveBook,
         workingId: working.id,
+        positionId: sameSide?.id ?? null,
+        side: decided.positionSide,
         ...origin,
       },
     });

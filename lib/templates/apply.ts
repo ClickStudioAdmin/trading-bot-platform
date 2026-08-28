@@ -23,7 +23,7 @@ import {
   uniqueAppliedName,
   type TemplateDeskType,
 } from "./recipe";
-import { loadSetById, loadTemplateById, type AutomationTemplate } from "./store";
+import { loadSetById, loadTemplateById, setIsSharedWith, templateIsSharedWith, type AutomationTemplate } from "./store";
 
 export type ApplyItemInput = {
   templateId: string;
@@ -51,13 +51,14 @@ async function ownedDesk(
   return desks.find((desk) => desk.id === accountId) ?? null;
 }
 
-function canReadTemplate(
+async function canReadTemplate(
   template: AutomationTemplate,
   userId: string,
-): boolean {
-  return (
-    template.visibility === "platform" || template.userId === userId
-  );
+): Promise<boolean> {
+  if (template.visibility === "platform" || template.userId === userId) {
+    return true;
+  }
+  return templateIsSharedWith(userId, template.id);
 }
 
 async function rejectDcaMaxOrder(
@@ -340,7 +341,7 @@ export async function applyTemplateToDesk(input: {
     };
   }
   const template = await loadTemplateById(input.templateId);
-  if (!template || !canReadTemplate(template, input.userId)) {
+  if (!template || !(await canReadTemplate(template, input.userId))) {
     return {
       templateId: input.templateId,
       name: "Template",
@@ -402,7 +403,9 @@ export async function applyTemplateSetToDesk(input: {
   const set = await loadSetById(input.setId);
   if (
     !set ||
-    (set.visibility !== "platform" && set.userId !== input.userId)
+    (set.visibility !== "platform" &&
+      set.userId !== input.userId &&
+      !(await setIsSharedWith(input.userId, set.id)))
   ) {
     return { ok: false, deskType: null, results: [], error: "That set was not found." };
   }

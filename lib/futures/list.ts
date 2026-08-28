@@ -150,16 +150,30 @@ export async function loadFuturesDesk(): Promise<{
       webhookNames: [],
     };
   }
-  const [rows, orders, logs, working, webhookNames] = await Promise.all([
+  const [rows, orders, working, webhookNames] = await Promise.all([
     loadFuturesPositions(),
     loadFuturesOrders(),
-    listEventLogs(
-      { scope: "trade", level: "", event: "" },
-      { accountId: session.account.id, limit: 400 },
-    ),
     loadOpenFuturesWorking(),
     listFuturesOrderWebhookNames(session.account.id),
   ]);
+  const oldestOpenMs = rows.reduce((oldest, row) => {
+    if (!(row.openedAtMs > 0)) {
+      return oldest;
+    }
+    return oldest === 0 ? row.openedAtMs : Math.min(oldest, row.openedAtMs);
+  }, 0);
+  const logs = await listEventLogs(
+    { scope: "", level: "", event: "" },
+    {
+      accountId: session.account.id,
+      limit: 2000,
+      scopes: ["trade", "strategy"],
+      since:
+        oldestOpenMs > 0
+          ? new Date(oldestOpenMs - 60_000).toISOString()
+          : undefined,
+    },
+  );
   const withOrders = attachOrders(rows, orders);
   const withLogs = attachPositionLogs(withOrders, logs);
   return {

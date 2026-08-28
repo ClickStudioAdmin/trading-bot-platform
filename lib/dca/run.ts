@@ -78,19 +78,44 @@ async function logDcaSyncFailed(input: {
   side: FuturesSide;
   error: string;
   reason: string;
+  positionId?: string | null;
 }): Promise<void> {
-  await writeEventLog({
+  await logDcaEvent({
+    playbook: input.playbook,
+    side: input.side,
+    positionId: input.positionId,
     level: "warning",
-    scope: "trade",
     event: "dca.sync_failed",
     message: input.error,
+    data: { reason: input.reason },
+  });
+}
+
+export async function logDcaEvent(input: {
+  playbook: DcaPlaybook;
+  side?: FuturesSide | null;
+  positionId?: string | null;
+  level?: "info" | "warning" | "error";
+  event: string;
+  message: string;
+  data?: Record<string, unknown>;
+}): Promise<void> {
+  await writeEventLog({
+    level: input.level,
+    scope: "trade",
+    event: input.event,
+    message: input.message,
     userId: input.playbook.userId,
     accountId: input.playbook.accountId,
     strategy: FUTURES_STRATEGY_ID,
     data: {
       playbookId: input.playbook.id,
-      side: input.side,
-      reason: input.reason,
+      ruleId: input.playbook.id,
+      ruleName: input.playbook.name,
+      symbol: input.playbook.symbol,
+      side: input.side ?? null,
+      positionId: input.positionId ?? null,
+      ...input.data,
     },
   });
 }
@@ -336,6 +361,7 @@ async function restExitLimit(input: {
         input.positionId,
       ),
       source: "engine",
+      ruleId: input.playbook.id,
       ruleName: input.playbook.name,
     },
   });
@@ -348,6 +374,21 @@ async function restExitLimit(input: {
     });
     return placed;
   }
+  await logDcaEvent({
+    playbook: input.playbook,
+    side: input.side,
+    positionId: input.positionId,
+    event: "dca.exit_rested",
+    message:
+      input.kind === "tp"
+        ? `Rested take-profit GTC on ${input.playbook.name}.`
+        : `Rested stop GTC on ${input.playbook.name}.`,
+    data: {
+      kind: input.kind,
+      qty: input.qty,
+      limitPrice: input.limitPrice,
+    },
+  });
   return { ok: true };
 }
 
@@ -483,6 +524,7 @@ async function syncDcaPlaybookGridUnlocked(input: {
           input.playbook.updatedAtMs,
         ),
         source: "engine",
+        ruleId: input.playbook.id,
         ruleName: input.playbook.name,
       },
     });
@@ -532,6 +574,7 @@ async function placeClip(input: {
         generation,
       ),
       source: "engine",
+      ruleId: input.playbook.id,
       ruleName: input.playbook.name,
       trailing: firstClip
         ? clipTrailing(input.playbook, input.side, input.lastPrice)
@@ -832,6 +875,7 @@ async function flattenSide(input: {
       positionId: open.id,
       orderType: "market",
       source: "engine",
+      ruleId: input.playbook.id,
       ruleName: input.playbook.name,
       idempotencyKey: dcaFlattenKey(input.playbook.id, input.side, open.id),
     },
@@ -952,6 +996,12 @@ export async function applyDcaVerb(input: {
     if (!changed) {
       return { ok: true, message: "Playbook is idle." };
     }
+    await logDcaEvent({
+      playbook: input.playbook,
+      event: "dca.disarmed",
+      message: `Stopped adding on ${input.playbook.name}. Position stays open.`,
+      data: { sides },
+    });
     return { ok: true, message: "Stopped adding. The position stays open." };
   }
 
@@ -990,6 +1040,12 @@ export async function applyDcaVerb(input: {
       }
       touchPlaybook(input.playbook);
     }
+    await logDcaEvent({
+      playbook: input.playbook,
+      event: "dca.closed",
+      message: `Closed ${input.playbook.name}.`,
+      data: { sides, reason: "close_playbook" },
+    });
     return { ok: true, message: "Playbook closed." };
   }
 
@@ -1114,19 +1170,16 @@ export async function applyDcaVerb(input: {
   if (placed === 0 && waiting === 0 && resumed === 0 && already > 0) {
     return { ok: true, message: "Playbook is already armed." };
   }
-  await writeEventLog({
-    scope: "strategy",
+  await logDcaEvent({
+    playbook,
     event: "dca.armed",
-    message: `Armed ${playbook.name}.`,
-    userId: playbook.userId,
-    accountId: playbook.accountId,
-    strategy: FUTURES_STRATEGY_ID,
-    data: {
-      playbookId: playbook.id,
-      symbol: playbook.symbol,
-      sides,
-      placed,
-    },
+    message:
+      placed > 0
+        ? `Armed ${playbook.name}. First order placed.`
+        : resumed > 0
+          ? `Resumed adding on ${playbook.name}.`
+          : `Armed ${playbook.name}. Waiting for the start trigger.`,
+    data: { sides, placed, resumed, waiting },
   });
   if (placed > 0) {
     return { ok: true, message: "Playbook armed. First order placed." };

@@ -10,6 +10,11 @@ import {
   type TemplateVisibility,
 } from "./recipe";
 
+export type TemplateSharePeer = {
+  userId: string;
+  email: string;
+};
+
 export type AutomationTemplate = {
   id: string;
   userId: string | null;
@@ -22,6 +27,9 @@ export type AutomationTemplate = {
   createdAtMs: number;
   updatedAtMs: number;
   ownerEmail: string | null;
+  sharedByEmail: string | null;
+  sharedAtMs: number | null;
+  sharedWith: TemplateSharePeer[];
 };
 
 export type AutomationTemplateSet = {
@@ -34,6 +42,9 @@ export type AutomationTemplateSet = {
   createdAtMs: number;
   updatedAtMs: number;
   ownerEmail: string | null;
+  sharedByEmail: string | null;
+  sharedAtMs: number | null;
+  sharedWith: TemplateSharePeer[];
   items: AutomationTemplateSetItem[];
 };
 
@@ -53,6 +64,7 @@ export type TemplateSummary = {
   deskType: TemplateDeskType;
   preview: string;
   ownerEmail: string | null;
+  sharedByEmail: string | null;
   updatedAtMs: number;
 };
 
@@ -112,6 +124,9 @@ function parseTemplateRow(
     createdAtMs: asTime(row.created_at),
     updatedAtMs: asTime(row.updated_at),
     ownerEmail,
+    sharedByEmail: null,
+    sharedAtMs: null,
+    sharedWith: [],
   };
 }
 
@@ -147,6 +162,7 @@ export function templateToSummary(row: AutomationTemplate): TemplateSummary {
     deskType: row.deskType,
     preview: recipePreview(row.recipe),
     ownerEmail: row.ownerEmail,
+    sharedByEmail: row.sharedByEmail,
     updatedAtMs: row.updatedAtMs,
   };
 }
@@ -176,7 +192,7 @@ export async function listVisibleTemplates(input: {
     supabase,
     data.map((row) => String((row as { user_id?: string }).user_id ?? "")),
   );
-  return data
+  const parsed = data
     .map((row) =>
       parseTemplateRow(
         row as Record<string, unknown>,
@@ -184,6 +200,7 @@ export async function listVisibleTemplates(input: {
       ),
     )
     .filter((row): row is AutomationTemplate => Boolean(row));
+  return attachOutboundTemplateShares(supabase, parsed);
 }
 
 export async function listAllTemplates(): Promise<AutomationTemplate[]> {
@@ -203,7 +220,7 @@ export async function listAllTemplates(): Promise<AutomationTemplate[]> {
     supabase,
     data.map((row) => String((row as { user_id?: string }).user_id ?? "")),
   );
-  return data
+  const parsed = data
     .map((row) =>
       parseTemplateRow(
         row as Record<string, unknown>,
@@ -211,6 +228,7 @@ export async function listAllTemplates(): Promise<AutomationTemplate[]> {
       ),
     )
     .filter((row): row is AutomationTemplate => Boolean(row));
+  return attachOutboundTemplateShares(supabase, parsed);
 }
 
 export async function loadTemplateById(
@@ -455,6 +473,9 @@ function parseSetRow(
     createdAtMs: asTime(row.created_at),
     updatedAtMs: asTime(row.updated_at),
     ownerEmail,
+    sharedByEmail: null,
+    sharedAtMs: null,
+    sharedWith: [],
     items,
   };
 }
@@ -489,7 +510,7 @@ export async function listVisibleSets(input: {
     data.map((row) => String((row as { id: string }).id)),
     emails,
   );
-  return data
+  const parsed = data
     .map((row) =>
       parseSetRow(
         row as Record<string, unknown>,
@@ -498,6 +519,7 @@ export async function listVisibleSets(input: {
       ),
     )
     .filter((row): row is AutomationTemplateSet => Boolean(row));
+  return attachOutboundSetShares(supabase, parsed);
 }
 
 export async function listAllSets(): Promise<AutomationTemplateSet[]> {
@@ -522,7 +544,7 @@ export async function listAllSets(): Promise<AutomationTemplateSet[]> {
     data.map((row) => String((row as { id: string }).id)),
     emails,
   );
-  return data
+  const parsed = data
     .map((row) =>
       parseSetRow(
         row as Record<string, unknown>,
@@ -531,6 +553,7 @@ export async function listAllSets(): Promise<AutomationTemplateSet[]> {
       ),
     )
     .filter((row): row is AutomationTemplateSet => Boolean(row));
+  return attachOutboundSetShares(supabase, parsed);
 }
 
 export async function loadSetById(
@@ -695,6 +718,380 @@ export async function deleteTemplateSet(id: string): Promise<
     .from("automation_template_sets")
     .delete()
     .eq("id", id);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+export function mergeById<T extends { id: string }>(...lists: T[][]): T[] {
+  const map = new Map<string, T>();
+  for (const list of lists) {
+    for (const row of list) {
+      if (!map.has(row.id)) {
+        map.set(row.id, row);
+      }
+    }
+  }
+  return [...map.values()];
+}
+
+export async function listApplyableTemplates(input: {
+  userId: string;
+  deskType?: TemplateDeskType | null;
+}): Promise<AutomationTemplate[]> {
+  return mergeById(
+    await listVisibleTemplates(input),
+    await listSharedTemplates(input),
+  );
+}
+
+export async function listApplyableSets(input: {
+  userId: string;
+  deskType?: TemplateDeskType | null;
+}): Promise<AutomationTemplateSet[]> {
+  return mergeById(
+    await listVisibleSets(input),
+    await listSharedSets(input),
+  );
+}
+
+export async function findMemberByEmail(email: string): Promise<{
+  userId: string;
+  email: string;
+  status: "active" | "disabled";
+} | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data } = await supabase
+    .from("members")
+    .select("user_id, email, status")
+    .eq("email", email.trim().toLowerCase())
+    .maybeSingle();
+  if (!data) {
+    return null;
+  }
+  return {
+    userId: String((data as { user_id: string }).user_id),
+    email: String((data as { email: string }).email),
+    status:
+      (data as { status?: string }).status === "disabled" ? "disabled" : "active",
+  };
+}
+
+async function attachOutboundTemplateShares(
+  supabase: SupabaseClient,
+  templates: AutomationTemplate[],
+): Promise<AutomationTemplate[]> {
+  const ids = templates.map((row) => row.id);
+  if (ids.length === 0) {
+    return templates;
+  }
+  const { data } = await supabase
+    .from("automation_template_shares")
+    .select("template_id, to_user_id")
+    .in("template_id", ids);
+  const emails = await memberEmails(
+    supabase,
+    (data ?? []).map((row) => String((row as { to_user_id: string }).to_user_id)),
+  );
+  const byTemplate = new Map<string, TemplateSharePeer[]>();
+  for (const row of data ?? []) {
+    const templateId = String((row as { template_id: string }).template_id);
+    const userId = String((row as { to_user_id: string }).to_user_id);
+    const list = byTemplate.get(templateId) ?? [];
+    list.push({ userId, email: emails.get(userId) ?? userId });
+    byTemplate.set(templateId, list);
+  }
+  return templates.map((row) => ({
+    ...row,
+    sharedWith: byTemplate.get(row.id) ?? [],
+  }));
+}
+
+async function attachOutboundSetShares(
+  supabase: SupabaseClient,
+  sets: AutomationTemplateSet[],
+): Promise<AutomationTemplateSet[]> {
+  const ids = sets.map((row) => row.id);
+  if (ids.length === 0) {
+    return sets;
+  }
+  const { data } = await supabase
+    .from("automation_template_set_shares")
+    .select("set_id, to_user_id")
+    .in("set_id", ids);
+  const emails = await memberEmails(
+    supabase,
+    (data ?? []).map((row) => String((row as { to_user_id: string }).to_user_id)),
+  );
+  const bySet = new Map<string, TemplateSharePeer[]>();
+  for (const row of data ?? []) {
+    const setId = String((row as { set_id: string }).set_id);
+    const userId = String((row as { to_user_id: string }).to_user_id);
+    const list = bySet.get(setId) ?? [];
+    list.push({ userId, email: emails.get(userId) ?? userId });
+    bySet.set(setId, list);
+  }
+  return sets.map((row) => ({
+    ...row,
+    sharedWith: bySet.get(row.id) ?? [],
+  }));
+}
+
+export async function listSharedTemplates(input: {
+  userId: string;
+  deskType?: TemplateDeskType | null;
+}): Promise<AutomationTemplate[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data: shares, error } = await supabase
+    .from("automation_template_shares")
+    .select("template_id, from_user_id, created_at")
+    .eq("to_user_id", input.userId);
+  if (error || !shares || shares.length === 0) {
+    return [];
+  }
+  const ids = shares.map((row) => String((row as { template_id: string }).template_id));
+  const { data } = await supabase.from("automation_templates").select("*").in("id", ids);
+  const emails = await memberEmails(
+    supabase,
+    [
+      ...shares.map((row) => String((row as { from_user_id: string }).from_user_id)),
+      ...(data ?? []).map((row) => String((row as { user_id?: string }).user_id ?? "")),
+    ],
+  );
+  const shareById = new Map(
+    shares.map((row) => [
+      String((row as { template_id: string }).template_id),
+      {
+        fromUserId: String((row as { from_user_id: string }).from_user_id),
+        createdAtMs: asTime((row as { created_at: string }).created_at),
+      },
+    ]),
+  );
+  return (data ?? [])
+    .map((row) => {
+      const parsed = parseTemplateRow(
+        row as Record<string, unknown>,
+        emails.get(String((row as { user_id?: string }).user_id ?? "")) ?? null,
+      );
+      if (!parsed) {
+        return null;
+      }
+      if (input.deskType && parsed.deskType !== input.deskType) {
+        return null;
+      }
+      const share = shareById.get(parsed.id);
+      return {
+        ...parsed,
+        sharedByEmail: emails.get(share?.fromUserId ?? "") ?? null,
+        sharedAtMs: share?.createdAtMs ?? null,
+      };
+    })
+    .filter((row): row is AutomationTemplate => Boolean(row));
+}
+
+export async function listSharedSets(input: {
+  userId: string;
+  deskType?: TemplateDeskType | null;
+}): Promise<AutomationTemplateSet[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data: shares, error } = await supabase
+    .from("automation_template_set_shares")
+    .select("set_id, from_user_id, created_at")
+    .eq("to_user_id", input.userId);
+  if (error || !shares || shares.length === 0) {
+    return [];
+  }
+  const ids = shares.map((row) => String((row as { set_id: string }).set_id));
+  const { data } = await supabase.from("automation_template_sets").select("*").in("id", ids);
+  const emails = await memberEmails(
+    supabase,
+    [
+      ...shares.map((row) => String((row as { from_user_id: string }).from_user_id)),
+      ...(data ?? []).map((row) => String((row as { user_id?: string }).user_id ?? "")),
+    ],
+  );
+  const items = await loadSetItems(supabase, ids, emails);
+  const shareById = new Map(
+    shares.map((row) => [
+      String((row as { set_id: string }).set_id),
+      {
+        fromUserId: String((row as { from_user_id: string }).from_user_id),
+        createdAtMs: asTime((row as { created_at: string }).created_at),
+      },
+    ]),
+  );
+  return (data ?? [])
+    .map((row) => {
+      const parsed = parseSetRow(
+        row as Record<string, unknown>,
+        items.get(String((row as { id: string }).id)) ?? [],
+        emails.get(String((row as { user_id?: string }).user_id ?? "")) ?? null,
+      );
+      if (!parsed) {
+        return null;
+      }
+      if (input.deskType && parsed.deskType !== input.deskType) {
+        return null;
+      }
+      const share = shareById.get(parsed.id);
+      return {
+        ...parsed,
+        sharedByEmail: emails.get(share?.fromUserId ?? "") ?? null,
+        sharedAtMs: share?.createdAtMs ?? null,
+      };
+    })
+    .filter((row): row is AutomationTemplateSet => Boolean(row));
+}
+
+export async function templateIsSharedWith(
+  userId: string,
+  templateId: string,
+): Promise<boolean> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return false;
+  }
+  const { data: direct } = await supabase
+    .from("automation_template_shares")
+    .select("id")
+    .eq("to_user_id", userId)
+    .eq("template_id", templateId)
+    .maybeSingle();
+  if (direct) {
+    return true;
+  }
+  const { data: setShares } = await supabase
+    .from("automation_template_set_shares")
+    .select("set_id")
+    .eq("to_user_id", userId);
+  const setIds = (setShares ?? []).map((row) =>
+    String((row as { set_id: string }).set_id),
+  );
+  if (setIds.length === 0) {
+    return false;
+  }
+  const { data: items } = await supabase
+    .from("automation_template_set_items")
+    .select("set_id")
+    .eq("template_id", templateId)
+    .in("set_id", setIds)
+    .limit(1);
+  return Boolean(items && items.length > 0);
+}
+
+export async function setIsSharedWith(
+  userId: string,
+  setId: string,
+): Promise<boolean> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return false;
+  }
+  const { data } = await supabase
+    .from("automation_template_set_shares")
+    .select("id")
+    .eq("to_user_id", userId)
+    .eq("set_id", setId)
+    .maybeSingle();
+  return Boolean(data);
+}
+
+export async function insertTemplateShare(input: {
+  templateId: string;
+  fromUserId: string;
+  toUserId: string;
+}): Promise<{ ok: true } | { ok: false; error: string; code?: "already_shared" }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase.from("automation_template_shares").insert({
+    template_id: input.templateId,
+    from_user_id: input.fromUserId,
+    to_user_id: input.toUserId,
+  });
+  if (error) {
+    if (isUniqueNameError(error)) {
+      return {
+        ok: false,
+        error: "Already shared with that member.",
+        code: "already_shared",
+      };
+    }
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+export async function insertSetShare(input: {
+  setId: string;
+  fromUserId: string;
+  toUserId: string;
+}): Promise<{ ok: true } | { ok: false; error: string; code?: "already_shared" }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase.from("automation_template_set_shares").insert({
+    set_id: input.setId,
+    from_user_id: input.fromUserId,
+    to_user_id: input.toUserId,
+  });
+  if (error) {
+    if (isUniqueNameError(error)) {
+      return {
+        ok: false,
+        error: "Already shared with that member.",
+        code: "already_shared",
+      };
+    }
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+export async function deleteTemplateShare(input: {
+  templateId: string;
+  toUserId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase
+    .from("automation_template_shares")
+    .delete()
+    .eq("template_id", input.templateId)
+    .eq("to_user_id", input.toUserId);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+export async function deleteSetShare(input: {
+  setId: string;
+  toUserId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase
+    .from("automation_template_set_shares")
+    .delete()
+    .eq("set_id", input.setId)
+    .eq("to_user_id", input.toUserId);
   if (error) {
     return { ok: false, error: error.message };
   }

@@ -18,6 +18,7 @@ export type FuturesPosition = {
   realizedUsdt: number;
   status: FuturesPositionStatus;
   source: FuturesTradeSource;
+  ruleId: string | null;
   ruleName: string | null;
   openedAtMs: number;
   closedAtMs: number | null;
@@ -219,6 +220,7 @@ export function parseFuturesPositionRow(
     realizedUsdt: Number(row.realized_usdt) || 0,
     status: row.status === "closed" ? "closed" : "open",
     source: parseFuturesTradeSource(row.source),
+    ruleId: String(row.rule_id ?? "").trim() || null,
     ruleName: String(row.rule_name ?? "").trim() || null,
     openedAtMs: Number.isFinite(opened) ? opened : 0,
     closedAtMs: Number.isFinite(closed) ? closed : null,

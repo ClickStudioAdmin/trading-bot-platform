@@ -29,6 +29,10 @@ assert.equal(
   "acc-1",
 );
 assert.ok(eventLogOptionsForScopes(["trade"]).includes("trade.opened"));
+assert.ok(eventLogOptionsForScopes(["trade"]).includes("dca.decision"));
+assert.ok(eventLogOptionsForScopes(["trade"]).includes("engine.fired"));
+assert.ok(eventLogOptionsForScopes(["strategy"]).includes("template.shared"));
+assert.ok(eventLogOptionsForScopes(["strategy"]).includes("template.imported"));
 assert.ok(
   eventLogOptionsForScopes(["system"]).includes("exchange.verify_failed"),
 );
@@ -87,5 +91,55 @@ const byPosition = attachPositionLogs(
 );
 assert.equal(byPosition[0]?.logs.length, 1);
 assert.equal(byPosition[1]?.logs.length, 0);
+
+const fallback = attachPositionLogs(
+  [
+    {
+      id: "pos-doge",
+      symbol: "DOGEUSDT",
+      side: "long",
+      ruleId: "pb-1",
+      ruleName: "DCA Test - SOL",
+      openedAtMs: Date.parse("2026-08-28T02:00:00.000Z"),
+      closedAtMs: Date.parse("2026-08-28T02:00:05.000Z"),
+    },
+  ],
+  [
+    {
+      ...sample(11, 7, "2026-08-28T02:00:01.000Z"),
+      event: "dca.decision",
+      data: {
+        playbookId: "pb-1",
+        ruleName: "DCA Test - SOL",
+        symbol: "DOGEUSDT",
+        side: "long",
+      },
+    },
+    {
+      ...sample(12, 7, "2026-08-28T03:00:00.000Z"),
+      event: "dca.decision",
+      data: {
+        playbookId: "pb-1",
+        ruleName: "DCA Test - SOL",
+        symbol: "DOGEUSDT",
+        side: "long",
+      },
+    },
+    {
+      ...sample(13, 7, "2026-08-28T02:00:02.000Z"),
+      event: "dca.decision",
+      data: {
+        playbookId: "other",
+        ruleName: "Other",
+        symbol: "DOGEUSDT",
+        side: "long",
+      },
+    },
+  ],
+);
+assert.deepEqual(
+  fallback[0]?.logs.map((row) => row.id),
+  [11],
+);
 
 console.log("event log list checks passed");

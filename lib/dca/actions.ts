@@ -122,6 +122,8 @@ async function saveDcaPlaybookWith(
     strategy: FUTURES_STRATEGY_ID,
     data: {
       playbookId: saved.playbook.id,
+      ruleId: saved.playbook.id,
+      ruleName: parsed.config.name,
       symbol: parsed.config.symbol,
       side: parsed.config.direction,
     },

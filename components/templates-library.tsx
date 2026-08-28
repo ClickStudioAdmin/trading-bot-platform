@@ -8,7 +8,13 @@ import {
   createTemplateSetAction,
   deleteTemplateAction,
   deleteTemplateSetAction,
+  exportTemplateLibraryAction,
+  importTemplateLibraryAction,
   publishTemplateCopyAction,
+  shareSetAction,
+  shareTemplateAction,
+  unshareSetAction,
+  unshareTemplateAction,
   updateTemplateMetaAction,
   updateTemplateSetAction,
   type TemplateActionResult,
@@ -35,18 +41,24 @@ type DeskOption = {
   deskType: TemplateDeskType;
 };
 
+type LibraryTab = "templates" | "sets" | "shared-templates" | "shared-sets";
+
 export function TemplatesLibrary({
   variant,
   templates,
   sets,
+  sharedTemplates = [],
+  sharedSets = [],
   desks,
 }: {
   variant: "account" | "admin";
   templates: AutomationTemplate[];
   sets: AutomationTemplateSet[];
+  sharedTemplates?: AutomationTemplate[];
+  sharedSets?: AutomationTemplateSet[];
   desks: DeskOption[];
 }) {
-  const [tab, setTab] = useState<"templates" | "sets">("templates");
+  const [tab, setTab] = useState<LibraryTab>("templates");
   const [deskFilter, setDeskFilter] = useState<"all" | TemplateDeskType>("all");
   const [scope, setScope] = useState<"all" | "platform" | "user">(
     variant === "admin" ? "all" : "all",
@@ -78,11 +90,23 @@ export function TemplatesLibrary({
     }
     return true;
   });
+  const filteredSharedTemplates = sharedTemplates.filter(
+    (row) => deskFilter === "all" || row.deskType === deskFilter,
+  );
+  const filteredSharedSets = sharedSets.filter(
+    (row) => deskFilter === "all" || row.deskType === deskFilter,
+  );
 
   function flash(result: TemplateActionResult) {
+    if (result.json && result.filename) {
+      downloadJson(result.json, result.filename);
+    }
     if (result.ok) {
       setError(null);
-      setMessage("Saved.");
+      setMessage(
+        result.notes?.join(" ") ||
+          (result.json ? "Downloaded." : "Saved."),
+      );
     } else {
       setMessage(null);
       setError(result.error ?? "That did not work.");
@@ -91,14 +115,27 @@ export function TemplatesLibrary({
 
   return (
     <div>
-      <nav className="mt-5 flex border-b border-line">
+      <nav className="mt-5 flex flex-wrap border-b border-line">
         <TabButton selected={tab === "templates"} onClick={() => setTab("templates")}>
           Templates
         </TabButton>
         <TabButton selected={tab === "sets"} onClick={() => setTab("sets")}>
           Sets
         </TabButton>
+        <TabButton
+          selected={tab === "shared-templates"}
+          onClick={() => setTab("shared-templates")}
+        >
+          Shared Templates
+        </TabButton>
+        <TabButton selected={tab === "shared-sets"} onClick={() => setTab("shared-sets")}>
+          Shared Sets
+        </TabButton>
       </nav>
+      <LibraryTransferBar
+        exportScope={variant === "admin" ? "all" : "own"}
+        onResult={flash}
+      />
       <div className="mt-4 flex flex-wrap gap-2">
         <select
           value={deskFilter}
@@ -112,7 +149,7 @@ export function TemplatesLibrary({
           <option value="perps">Perps</option>
           <option value="cash_and_carry">Cash and Carry</option>
         </select>
-        {variant === "admin" ? (
+        {variant === "admin" && (tab === "templates" || tab === "sets") ? (
           <select
             value={scope}
             onChange={(event) =>
@@ -169,7 +206,8 @@ export function TemplatesLibrary({
             />
           )}
         </div>
-      ) : (
+      ) : null}
+      {tab === "sets" ? (
         <div className="mt-6 space-y-3">
           {filteredSets.length === 0 ? (
             <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
@@ -188,7 +226,187 @@ export function TemplatesLibrary({
             ))
           )}
         </div>
-      )}
+      ) : null}
+      {tab === "shared-templates" ? (
+        <div className="mt-6 space-y-3">
+          {filteredSharedTemplates.length === 0 ? (
+            <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
+              Nothing shared with you yet. Another member can share a template
+              by entering your email.
+            </p>
+          ) : (
+            filteredSharedTemplates.map((row) => (
+              <TemplateCard
+                key={row.id}
+                template={row}
+                variant={variant}
+                desks={desks}
+                shared
+                onResult={flash}
+              />
+            ))
+          )}
+        </div>
+      ) : null}
+      {tab === "shared-sets" ? (
+        <div className="mt-6 space-y-3">
+          {filteredSharedSets.length === 0 ? (
+            <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
+              No shared sets yet.
+            </p>
+          ) : (
+            filteredSharedSets.map((row) => (
+              <SetCard
+                key={row.id}
+                set={row}
+                variant={variant}
+                templates={templates}
+                desks={desks}
+                shared
+                onResult={flash}
+              />
+            ))
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function downloadJson(json: string, filename: string) {
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function LibraryTransferBar({
+  exportScope,
+  onResult,
+}: {
+  exportScope: "own" | "all";
+  onResult: (result: TemplateActionResult) => void;
+}) {
+  async function onExport() {
+    const data = new FormData();
+    data.set("scope", exportScope);
+    onResult(await exportTemplateLibraryAction(data));
+  }
+
+  async function onImport(file: File | undefined) {
+    if (!file) {
+      return;
+    }
+    const text = await file.text();
+    const data = new FormData();
+    data.set("libraryJson", text);
+    onResult(await importTemplateLibraryAction(data));
+  }
+
+  return (
+    <div className="mt-4 flex flex-wrap items-center gap-2">
+      <button type="button" onClick={() => void onExport()} className={secondaryBtn}>
+        Export all
+      </button>
+      <label className={`${secondaryBtn} cursor-pointer`}>
+        Import all
+        <input
+          type="file"
+          accept="application/json,.json"
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            void onImport(file);
+          }}
+        />
+      </label>
+    </div>
+  );
+}
+
+function ShareControls({
+  kind,
+  id,
+  peers,
+  onResult,
+}: {
+  kind: "template" | "set";
+  id: string;
+  peers: { userId: string; email: string }[];
+  onResult: (result: TemplateActionResult) => void;
+}) {
+  const [email, setEmail] = useState("");
+
+  async function share() {
+    const data = new FormData();
+    data.set("email", email);
+    if (kind === "template") {
+      data.set("templateId", id);
+      onResult(await shareTemplateAction(data));
+    } else {
+      data.set("setId", id);
+      onResult(await shareSetAction(data));
+    }
+    setEmail("");
+  }
+
+  async function revoke(userId: string) {
+    const data = new FormData();
+    data.set("toUserId", userId);
+    if (kind === "template") {
+      data.set("templateId", id);
+      onResult(await unshareTemplateAction(data));
+    } else {
+      data.set("setId", id);
+      onResult(await unshareSetAction(data));
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-control border border-line bg-canvas px-3 py-2">
+      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        Share with other user
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <input
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="member@email"
+          className="min-w-[12rem] flex-1 rounded-control border border-line bg-surface px-3 py-1.5 text-sm text-ink focus:border-line-strong focus:outline-none"
+        />
+        <button
+          type="button"
+          disabled={!email.trim()}
+          onClick={() => void share()}
+          className={secondaryBtn}
+        >
+          Share
+        </button>
+      </div>
+      {peers.length > 0 ? (
+        <ul className="mt-2 space-y-1">
+          {peers.map((peer) => (
+            <li
+              key={peer.userId}
+              className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted"
+            >
+              <span>Shared with {peer.email}</span>
+              <button
+                type="button"
+                onClick={() => void revoke(peer.userId)}
+                className={dangerBtn}
+              >
+                Stop sharing
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
@@ -221,11 +439,13 @@ function TemplateCard({
   template,
   variant,
   desks,
+  shared = false,
   onResult,
 }: {
   template: AutomationTemplate;
   variant: "account" | "admin";
   desks: DeskOption[];
+  shared?: boolean;
   onResult: (result: TemplateActionResult) => void;
 }) {
   const [name, setName] = useState(template.name);
@@ -239,8 +459,10 @@ function TemplateCard({
   const [publishName, setPublishName] = useState(template.name);
   const matchingDesks = desks.filter((desk) => desk.deskType === template.deskType);
   const canEdit =
-    variant === "admin" || template.visibility === "user";
-  const platformReadOnly = variant === "account" && template.visibility === "platform";
+    !shared && (variant === "admin" || template.visibility === "user");
+  const platformReadOnly =
+    shared || (variant === "account" && template.visibility === "platform");
+  const canShare = !shared && template.visibility === "user";
 
   async function saveMeta() {
     const data = new FormData();
@@ -278,6 +500,12 @@ function TemplateCard({
     onResult(await publishTemplateCopyAction(data));
   }
 
+  async function removeShare() {
+    const data = new FormData();
+    data.set("templateId", template.id);
+    onResult(await unshareTemplateAction(data));
+  }
+
   return (
     <article className="rounded-card border border-line bg-surface p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -285,6 +513,12 @@ function TemplateCard({
           {formatDeskType(template.deskType)} ·{" "}
           {template.visibility === "platform" ? "Platform" : "User"}
           {template.ownerEmail ? ` · ${template.ownerEmail}` : ""}
+          {template.sharedByEmail
+            ? ` · Shared by ${template.sharedByEmail}`
+            : ""}
+          {template.sharedAtMs
+            ? ` · ${new Date(template.sharedAtMs).toISOString().slice(0, 10)}`
+            : ""}
         </p>
         <p className="text-xs text-ink-muted">{recipePreview(template.recipe)}</p>
       </div>
@@ -338,7 +572,7 @@ function TemplateCard({
           ) : null}
         </div>
       ) : null}
-      {variant === "admin" && template.visibility === "user" ? (
+      {variant === "admin" && !shared && template.visibility === "user" ? (
         <label className="mt-3 block text-xs text-ink-muted">
           Publish copy as
           <input
@@ -364,7 +598,7 @@ function TemplateCard({
             Apply
           </button>
         ) : null}
-        {variant === "admin" && template.visibility === "user" ? (
+        {variant === "admin" && !shared && template.visibility === "user" ? (
           <button type="button" onClick={() => void publish()} className={secondaryBtn}>
             Publish copy to platform
           </button>
@@ -374,7 +608,24 @@ function TemplateCard({
             Delete
           </button>
         ) : null}
+        {shared ? (
+          <button
+            type="button"
+            onClick={() => void removeShare()}
+            className={dangerBtn}
+          >
+            Remove
+          </button>
+        ) : null}
       </div>
+      {canShare ? (
+        <ShareControls
+          kind="template"
+          id={template.id}
+          peers={template.sharedWith}
+          onResult={onResult}
+        />
+      ) : null}
     </article>
   );
 }
@@ -384,12 +635,14 @@ function SetCard({
   variant,
   templates,
   desks,
+  shared = false,
   onResult,
 }: {
   set: AutomationTemplateSet;
   variant: "account" | "admin";
   templates: AutomationTemplate[];
   desks: DeskOption[];
+  shared?: boolean;
   onResult: (result: TemplateActionResult) => void;
 }) {
   const [name, setName] = useState(set.name);
@@ -408,8 +661,10 @@ function SetCard({
     desks.find((desk) => desk.deskType === set.deskType)?.id ?? "",
   );
   const matchingDesks = desks.filter((desk) => desk.deskType === set.deskType);
-  const platformReadOnly = variant === "account" && set.visibility === "platform";
-  const canEdit = variant === "admin" || set.visibility === "user";
+  const platformReadOnly =
+    shared || (variant === "account" && set.visibility === "platform");
+  const canEdit = !shared && (variant === "admin" || set.visibility === "user");
+  const canShare = !shared && set.visibility === "user";
 
   async function save() {
     const data = new FormData();
@@ -440,12 +695,22 @@ function SetCard({
     onResult(await applyTemplateSetAction(data));
   }
 
+  async function removeShare() {
+    const data = new FormData();
+    data.set("setId", set.id);
+    onResult(await unshareSetAction(data));
+  }
+
   return (
     <article className="rounded-card border border-line bg-surface p-4">
       <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
         {formatDeskType(set.deskType)} ·{" "}
         {set.visibility === "platform" ? "Platform" : "User"}
         {set.ownerEmail ? ` · ${set.ownerEmail}` : ""}
+        {set.sharedByEmail ? ` · Shared by ${set.sharedByEmail}` : ""}
+        {set.sharedAtMs
+          ? ` · ${new Date(set.sharedAtMs).toISOString().slice(0, 10)}`
+          : ""}
       </p>
       {platformReadOnly ? (
         <p className="mt-2 text-sm font-semibold text-ink">{set.name}</p>
@@ -531,7 +796,24 @@ function SetCard({
             Delete
           </button>
         ) : null}
+        {shared ? (
+          <button
+            type="button"
+            onClick={() => void removeShare()}
+            className={dangerBtn}
+          >
+            Remove
+          </button>
+        ) : null}
       </div>
+      {canShare ? (
+        <ShareControls
+          kind="set"
+          id={set.id}
+          peers={set.sharedWith}
+          onResult={onResult}
+        />
+      ) : null}
     </article>
   );
 }

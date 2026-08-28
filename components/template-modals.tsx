@@ -275,7 +275,10 @@ function ApplyTemplateButton({
   const [symbol, setSymbol] = useState("");
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<TemplateActionResult | null>(null);
-  const mine = templates.filter((row) => row.visibility === "user");
+  const mine = templates.filter(
+    (row) => row.visibility === "user" && !row.sharedByEmail,
+  );
+  const shared = templates.filter((row) => Boolean(row.sharedByEmail));
   const platform = templates.filter((row) => row.visibility === "platform");
 
   async function onApply(skip = false) {
@@ -316,6 +319,7 @@ function ApplyTemplateButton({
           <TemplatePicker
             platform={platform}
             mine={mine}
+            shared={shared}
             selectedId={selected?.id ?? ""}
             onSelect={(row) => {
               setSelected(row);
@@ -385,7 +389,8 @@ function ApplySetButton({
   const [symbols, setSymbols] = useState<Record<string, string>>({});
   const [skips, setSkips] = useState<Record<string, boolean>>({});
   const selected = sets.find((row) => row.id === setId) ?? null;
-  const mine = sets.filter((row) => row.visibility === "user");
+  const mine = sets.filter((row) => row.visibility === "user" && !row.sharedByEmail);
+  const shared = sets.filter((row) => Boolean(row.sharedByEmail));
   const platform = sets.filter((row) => row.visibility === "platform");
 
   async function onApply() {
@@ -447,6 +452,16 @@ function ApplySetButton({
                   {mine.map((row) => (
                     <option key={row.id} value={row.id}>
                       {row.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null}
+              {shared.length > 0 ? (
+                <optgroup label="Shared sets">
+                  {shared.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.name}
+                      {row.sharedByEmail ? ` · ${row.sharedByEmail}` : ""}
                     </option>
                   ))}
                 </optgroup>
@@ -538,11 +553,13 @@ function ApplySetButton({
 function TemplatePicker({
   platform,
   mine,
+  shared,
   selectedId,
   onSelect,
 }: {
   platform: TemplateSummary[];
   mine: TemplateSummary[];
+  shared: TemplateSummary[];
   selectedId: string;
   onSelect: (row: TemplateSummary) => void;
 }) {
@@ -555,6 +572,23 @@ function TemplatePicker({
           </p>
           <ul className="mt-1 space-y-1">
             {platform.map((row) => (
+              <PickerRow
+                key={row.id}
+                row={row}
+                selected={selectedId === row.id}
+                onSelect={onSelect}
+              />
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {shared.length > 0 ? (
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+            Shared
+          </p>
+          <ul className="mt-1 space-y-1">
+            {shared.map((row) => (
               <PickerRow
                 key={row.id}
                 row={row}
@@ -613,6 +647,7 @@ function PickerRow({
         <span className="block text-sm text-ink">{row.name}</span>
         <span className="block text-xs text-ink-muted">
           {row.preview}
+          {row.sharedByEmail ? ` · Shared by ${row.sharedByEmail}` : ""}
           {row.description ? ` · ${row.description}` : ""}
         </span>
       </button>

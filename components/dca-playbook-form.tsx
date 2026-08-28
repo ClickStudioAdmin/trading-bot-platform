@@ -355,9 +355,8 @@ export function DcaPlaybooksDesk({
   const [cloneMenu, setCloneMenu] = useState(0);
   const empty = cards.length === 0;
   const cloneSources = playbooks.filter((playbook) => playbook.id);
-  const addPlaybookClass = empty
-    ? "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-    : "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
+  const addPlaybookClass =
+    "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
 
   return (
     <div className="space-y-3">
@@ -830,14 +829,6 @@ export function DcaPlaybookForm({
           >
             Save
           </PendingSubmitButton>
-          <SaveAsTemplateButton
-            isAdmin={isAdmin}
-            defaultName={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
-            kind="dca"
-            buildForm={() =>
-              formRef.current ? new FormData(formRef.current) : new FormData()
-            }
-          />
           {playbook && showStopAdding ? (
               <span
                 className="inline-flex"
@@ -1497,7 +1488,7 @@ export function DcaPlaybookForm({
       </fieldset>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {running ? (
           <div>
             {ladderMaxError && !ladderOpen ? (
@@ -1809,6 +1800,16 @@ export function DcaPlaybookForm({
         </div>
       </fieldset>
       ) : null}
+      <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+        <SaveAsTemplateButton
+          isAdmin={isAdmin}
+          defaultName={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+          kind="dca"
+          buildForm={() =>
+            formRef.current ? new FormData(formRef.current) : new FormData()
+          }
+        />
+      </div>
     </form>
   );
 }

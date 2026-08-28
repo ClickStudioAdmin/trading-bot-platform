@@ -93,11 +93,7 @@ export function FuturesAutomationsDesk({
               defaultFuturesAutomationForm(current.length, defaultSymbol),
             ])
           }
-          className={
-            empty
-              ? "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-              : "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
-          }
+          className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
         >
           Add rule
         </button>

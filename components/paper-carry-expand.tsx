@@ -412,6 +412,7 @@ function logDetailRows(log: EventLogRow): MetricRow[] {
     if (
       key === "carryId" ||
       key === "positionId" ||
+      key === "playbookId" ||
       key === "ruleId" ||
       key === "workingId" ||
       key === "webhookId" ||
@@ -525,6 +526,12 @@ const LOG_FIELD_LABELS: Record<string, string> = {
   price: "Price",
   entryPrice: "Entry",
   positionId: "Position",
+  kind: "Decision",
+  clipsFilled: "Orders filled",
+  mark: "Mark",
+  last: "Last",
+  tpLimitResting: "TP GTC resting",
+  limitPrice: "Limit",
 };
 
 function labelFromKey(key: string): string {
@@ -550,7 +557,10 @@ function formatLogReason(reason: string): string {
     mark_apr: "Mark APR",
     take_profit: "Take profit",
     stop_loss: "Stop loss",
-    unwind: "Unwind",
+    end_cycle: "Cycle end",
+    close_playbook: "Close playbook",
+    position_open: "Position still open",
+    clip: "Add order",
   };
   return labels[reason] ?? reason;
 }
@@ -568,6 +578,15 @@ function formatLogEvent(event: string): string {
     "trade.order_failed": "Order write failed",
     "trade.futures": "Futures",
     "trade.futures_failed": "Futures failed",
+    "dca.armed": "Armed",
+    "dca.closed": "Playbook closed",
+    "dca.decision": "Decision",
+    "dca.disarmed": "Stopped adding",
+    "dca.exit_rested": "Exit rested",
+    "dca.saved": "Playbook saved",
+    "dca.deleted": "Playbook removed",
+    "dca.sync_failed": "Playbook sync failed",
+    "engine.fired": "Automation fired",
     "engine.open_failed": "Engine open failed",
     "engine.close_failed": "Engine close failed",
   };

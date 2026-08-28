@@ -10,8 +10,8 @@ import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionContext } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
 import {
-  listVisibleSets,
-  listVisibleTemplates,
+  listApplyableSets,
+  listApplyableTemplates,
   templateToSummary,
 } from "@/lib/templates/store";
 
@@ -35,13 +35,13 @@ export default async function CashAndCarryAutomationsPage({
   const reduceSaved = firstSearchValue(params.reduce) === "1";
   const error = firstSearchValue(params.error);
   const templates = session
-    ? await listVisibleTemplates({
+    ? await listApplyableTemplates({
         userId: session.member.id,
         deskType: "cash_and_carry",
       })
     : [];
   const sets = session
-    ? await listVisibleSets({
+    ? await listApplyableSets({
         userId: session.member.id,
         deskType: "cash_and_carry",
       })

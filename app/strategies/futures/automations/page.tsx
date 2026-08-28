@@ -26,8 +26,8 @@ import { deskHref } from "@/lib/accounts/model";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { redirect } from "next/navigation";
 import {
-  listVisibleSets,
-  listVisibleTemplates,
+  listApplyableSets,
+  listApplyableTemplates,
   templateToSummary,
 } from "@/lib/templates/store";
 
@@ -84,11 +84,11 @@ export default async function FuturesAutomationsPage({
     const saved = firstSearchValue(params.saved) === "1";
     const error = firstSearchValue(params.error);
     const notice = firstSearchValue(params.notice);
-    const templates = await listVisibleTemplates({
+    const templates = await listApplyableTemplates({
       userId: session.member.id,
       deskType: "dca",
     });
-    const sets = await listVisibleSets({
+    const sets = await listApplyableSets({
       userId: session.member.id,
       deskType: "dca",
     });
@@ -147,13 +147,13 @@ export default async function FuturesAutomationsPage({
   const saved = firstSearchValue(params.saved) === "1";
   const error = firstSearchValue(params.error);
   const templates = session
-    ? await listVisibleTemplates({
+    ? await listApplyableTemplates({
         userId: session.member.id,
         deskType: "perps",
       })
     : [];
   const sets = session
-    ? await listVisibleSets({
+    ? await listApplyableSets({
         userId: session.member.id,
         deskType: "perps",
       })

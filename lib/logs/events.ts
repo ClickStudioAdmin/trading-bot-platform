@@ -28,6 +28,21 @@ export const EVENT_LOG_OPTIONS = [
   { event: "trade.open_failed", scope: "trade" },
   { event: "trade.order_failed", scope: "trade" },
   { event: "trade.unwound", scope: "trade" },
+  { event: "dca.armed", scope: "trade" },
+  { event: "dca.closed", scope: "trade" },
+  { event: "dca.decision", scope: "trade" },
+  { event: "dca.disarmed", scope: "trade" },
+  { event: "dca.exit_rested", scope: "trade" },
+  { event: "dca.saved", scope: "strategy" },
+  { event: "dca.deleted", scope: "strategy" },
+  { event: "template.applied", scope: "strategy" },
+  { event: "template.deleted", scope: "strategy" },
+  { event: "template.imported", scope: "strategy" },
+  { event: "template.saved", scope: "strategy" },
+  { event: "template.shared", scope: "strategy" },
+  { event: "engine.fired", scope: "trade" },
+  { event: "trade.futures", scope: "trade" },
+  { event: "trade.futures_failed", scope: "trade" },
 ] as const;
 
 export function eventLogOptionsForScopes(

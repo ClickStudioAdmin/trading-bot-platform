@@ -110,14 +110,28 @@ export async function loadPaperDesk(scan: ScannedOpportunity[]): Promise<{
     return { signedIn: false, exchangeBook: false, open: [], closed: [] };
   }
 
-  const [rows, orders, logs] = await Promise.all([
+  const [rows, orders] = await Promise.all([
     listPaperCarries(),
     listPaperOrders(),
-    listEventLogs(
-      { scope: "trade", level: "", event: "" },
-      { accountId: session.account.id, limit: 400 },
-    ),
   ]);
+  const oldestOpenMs = rows.reduce((oldest, row) => {
+    if (!(row.openedAtMs > 0)) {
+      return oldest;
+    }
+    return oldest === 0 ? row.openedAtMs : Math.min(oldest, row.openedAtMs);
+  }, 0);
+  const logs = await listEventLogs(
+    { scope: "", level: "", event: "" },
+    {
+      accountId: session.account.id,
+      limit: 2000,
+      scopes: ["trade", "strategy"],
+      since:
+        oldestOpenMs > 0
+          ? new Date(oldestOpenMs - 60_000).toISOString()
+          : undefined,
+    },
+  );
   const open = attachLogs(
     attachOrders(
       markOpenCarries(

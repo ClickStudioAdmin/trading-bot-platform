@@ -34,7 +34,13 @@ export type FuturesCommandFlash =
   | "live-closed-and-cancelled";
 
 export type FuturesCommandResult =
-  | { ok: true; flash: FuturesCommandFlash; replayed?: boolean }
+  | {
+      ok: true;
+      flash: FuturesCommandFlash;
+      replayed?: boolean;
+      workingId?: string | null;
+      positionId?: string | null;
+    }
   | { ok: false; error: string };
 
 export type FuturesPlaceCommand = {

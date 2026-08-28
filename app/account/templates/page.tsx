@@ -3,7 +3,7 @@ import { PageHeading } from "@/components/page-heading";
 import { TemplatesLibrary } from "@/components/templates-library";
 import { getSessionMember } from "@/lib/auth/session";
 import { listTradingAccounts } from "@/lib/accounts/store";
-import { listVisibleSets, listVisibleTemplates } from "@/lib/templates/store";
+import { listSharedSets, listSharedTemplates, listVisibleSets, listVisibleTemplates } from "@/lib/templates/store";
 import type { TemplateDeskType } from "@/lib/templates/recipe";
 import { redirect } from "next/navigation";
 
@@ -17,9 +17,11 @@ export default async function AccountTemplatesPage() {
   if (!member) {
     redirect("/sign-in");
   }
-  const [templates, sets, accounts] = await Promise.all([
+  const [templates, sets, sharedTemplates, sharedSets, accounts] = await Promise.all([
     listVisibleTemplates({ userId: member.id }),
     listVisibleSets({ userId: member.id }),
+    listSharedTemplates({ userId: member.id }),
+    listSharedSets({ userId: member.id }),
     listTradingAccounts(member.id),
   ]);
   const desks = accounts
@@ -42,12 +44,15 @@ export default async function AccountTemplatesPage() {
       <PageHeading title="Templates" />
       <p className="-mt-4 text-sm text-ink-muted">
         Your recipes and platform recipes. Apply them to a matching desk as
-        idle or disabled automations.
+        idle or disabled automations. Export a JSON backup, import one, or
+        share a recipe with another member by email.
       </p>
       <TemplatesLibrary
         variant="account"
         templates={templates}
         sets={sets}
+        sharedTemplates={sharedTemplates}
+        sharedSets={sharedSets}
         desks={desks}
       />
     </div>
