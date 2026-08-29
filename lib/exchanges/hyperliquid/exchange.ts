@@ -31,7 +31,7 @@ export async function postHyperliquidAction(input: {
     isMainnet: hyperliquidIsMainnet(input.environmentId),
   });
   if ("error" in signature) {
-    return signature;
+    return { ok: false, error: signature.error };
   }
   let response: Response;
   try {
