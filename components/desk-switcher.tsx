@@ -133,7 +133,7 @@ export function DeskSwitcher({
             href="/account/sub-accounts"
             className="block rounded-control px-3 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
           >
-            Manage desks
+            Manage Desks
           </Link>
         </div>
       </details>

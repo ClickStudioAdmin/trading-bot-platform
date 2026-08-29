@@ -160,7 +160,7 @@ assert.equal(
 );
 assert.equal(
   deskHomePath("cash_and_carry"),
-  "/strategies/cash-and-carry",
+  "/strategies/cash-and-carry/positions",
 );
 assert.equal(deskHomePath("perps"), "/strategies/futures/positions");
 assert.equal(deskHomePath("perps_bots"), "/strategies/futures/positions");

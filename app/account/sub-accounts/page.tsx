@@ -17,7 +17,7 @@ import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Manage desks",
+  title: "Manage Desks",
   description: "Rename and delete desks.",
 };
 
@@ -39,7 +39,7 @@ export default async function ManageSubAccountsPage({
 
   return (
     <div>
-      <PageHeading title="Manage desks" />
+      <PageHeading title="Manage Desks" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
         Type and mode never change. Create a desk from the sidebar.
       </p>
