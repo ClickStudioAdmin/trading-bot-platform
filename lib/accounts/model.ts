@@ -469,6 +469,54 @@ export function formatDeleteBlockers(
   return parts.join(" · ");
 }
 
+export type OverviewAttention = {
+  label: string;
+  href: string;
+};
+
+export function overviewAttentionItems(input: {
+  accounts: readonly { id: string; name: string; mode: TradingAccountMode }[];
+  binds: readonly { connectionId: string; accountId: string }[];
+}): OverviewAttention[] {
+  const boundIds = new Set(input.binds.map((bind) => bind.accountId));
+  const unboundLive = input.accounts.filter(
+    (account) => account.mode === "live" && !boundIds.has(account.id),
+  );
+  const desksByKey = new Map<string, Set<string>>();
+  for (const bind of input.binds) {
+    const desks = desksByKey.get(bind.connectionId) ?? new Set<string>();
+    desks.add(bind.accountId);
+    desksByKey.set(bind.connectionId, desks);
+  }
+  const sharedKeys = [...desksByKey.values()].filter(
+    (desks) => desks.size > 1,
+  ).length;
+  const items: OverviewAttention[] = [];
+  if (unboundLive.length === 1) {
+    items.push({
+      label: `${unboundLive[0].name} is live with no key bound.`,
+      href: "/account/exchanges",
+    });
+  } else if (unboundLive.length > 1) {
+    items.push({
+      label: `${unboundLive.length} live desks have no key bound.`,
+      href: "/account/sub-accounts",
+    });
+  }
+  if (sharedKeys === 1) {
+    items.push({
+      label: "One exchange key is bound to more than one desk.",
+      href: "/account/exchanges",
+    });
+  } else if (sharedKeys > 1) {
+    items.push({
+      label: `${sharedKeys} exchange keys are bound to more than one desk.`,
+      href: "/account/exchanges",
+    });
+  }
+  return items;
+}
+
 export function formatAccountUsageStatus(input: {
   openCount: number;
   automationsRunning: boolean;

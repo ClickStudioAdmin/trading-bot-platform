@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { AccountDeleteControl } from "@/components/account-delete-control";
 import { AccountRenameControl } from "@/components/account-rename-control";
 import { PageHeading } from "@/components/page-heading";
 import {
+  deskHomePath,
   formatAccountMode,
   formatAccountUsageStatus,
   formatDeskType,
@@ -41,12 +43,7 @@ export default async function ManageSubAccountsPage({
     <div>
       <PageHeading title="Manage desks" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
-        Each desk is Paper Trading or Connected Exchange at create and never
-        changes. Type is also set at create. Create a desk from the sidebar.
-        You must keep at least one desk. Rename here or in Desk Settings.
-        Delete is blocked while the book has open positions or running
-        automations. Deleting a desk removes its paper history. Exchange keys
-        stay on this login.
+        Type and mode never change. Create a desk from the sidebar.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -60,10 +57,8 @@ export default async function ManageSubAccountsPage({
         <p className="mt-4 text-sm text-success">Desk renamed.</p>
       ) : null}
 
-      <section className="mt-6">
-        <h2 className="text-lg font-semibold tracking-tight">Desks</h2>
-        <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
-          <table className="w-full min-w-[56rem] text-left text-sm">
+      <section className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
+        <table className="w-full min-w-[56rem] text-left text-sm">
             <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
                 <th className="px-4 py-3 font-medium">Name</th>
@@ -95,7 +90,14 @@ export default async function ManageSubAccountsPage({
                     key={account.id}
                     className="border-b border-line last:border-b-0"
                   >
-                    <td className="px-4 py-3 align-top">{account.name}</td>
+                    <td className="px-4 py-3 align-top">
+                      <Link
+                        href={deskHomePath(account.deskType, account.id)}
+                        className="text-accent hover:text-accent-strong"
+                      >
+                        {account.name}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 align-top">
                       {formatDeskType(account.deskType)}
                     </td>
@@ -147,7 +149,6 @@ export default async function ManageSubAccountsPage({
               })}
             </tbody>
           </table>
-        </div>
       </section>
     </div>
   );

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { AccountSnapshotBody } from "@/components/account-snapshot";
 import { PageHeading } from "@/components/page-heading";
+import { overviewAttentionItems } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadAccountSnapshots } from "@/lib/exchanges/account-snapshot";
@@ -11,12 +11,15 @@ import {
   formatStrategyConnectionCaption,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
-import { listExchangeConnections } from "@/lib/exchanges/store";
+import {
+  listConnectionDeskBinds,
+  listExchangeConnections,
+} from "@/lib/exchanges/store";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Overview",
-  description: "Desk login and the books you trade.",
+  description: "Keys and desks on this login.",
 };
 
 export default async function AccountOverviewPage() {
@@ -27,19 +30,22 @@ export default async function AccountOverviewPage() {
   const accounts = await listTradingAccounts(session.member.id);
   const paperCount = accounts.filter((account) => account.mode === "paper").length;
   const liveCount = accounts.length - paperCount;
-  const connections = await listExchangeConnections(session.member.id);
+  const [connections, binds] = await Promise.all([
+    listExchangeConnections(session.member.id),
+    listConnectionDeskBinds(session.member.id),
+  ]);
   const snapshots = await loadAccountSnapshots(
     session.member.id,
     connections.map((row) => row.id),
   );
+  const attention = overviewAttentionItems({ accounts, binds });
 
   return (
     <div className="space-y-8">
       <div>
-        <PageHeading overline="Desk" title="Overview" />
+        <PageHeading title="Overview" />
         <p className="-mt-4 text-sm text-ink-muted">
-          Login and exchange keys for this account. Switch desks from the
-          sidebar.
+          Keys and desk count for this login.
         </p>
       </div>
 
@@ -50,66 +56,68 @@ export default async function AccountOverviewPage() {
           hint={`${paperCount} Paper Trading · ${liveCount} Connected Exchange`}
           href="/account/sub-accounts"
         />
-        <div className="rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">Login</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Email is the desk sign-in. Name is what the header shows.
-          </p>
-          <dl className="mt-4 space-y-2 text-sm">
-            <Row label="Name" value={session.member.name} />
-            <Row label="Email" value={session.member.email} />
-            <Row
-              label="Role"
-              value={session.member.role === "admin" ? "Admin" : "Member"}
-            />
-          </dl>
-          <Link
-            href="/account/settings"
-            className="mt-4 inline-block text-sm text-accent hover:text-accent-strong"
-          >
-            Edit profile
-          </Link>
-        </div>
-      </section>
-
-      <section className="rounded-card border border-line bg-surface p-5">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                Unified account
-              </h2>
-              <p className="mt-1 text-sm text-ink-muted">
-                Available, margin, and IM/MM on this login’s keys. Live desks
-                bind one of these.
-              </p>
-            </div>
-            <Link
-              href="/account/exchanges"
-              className="text-sm text-accent hover:text-accent-strong"
-            >
-              Exchanges
-            </Link>
-          </div>
-          {connections.length === 0 ? (
-            <p className="mt-4 text-sm text-ink-muted">
-              No keys on this login yet.
-            </p>
+        <div
+          className={`rounded-card border p-5 ${
+            attention.length > 0
+              ? "border-warning/40 bg-surface"
+              : "border-line bg-surface"
+          }`}
+        >
+          <h2 className="text-lg font-semibold tracking-tight">Attention</h2>
+          {attention.length === 0 ? (
+            <p className="mt-3 text-sm text-ink-muted">Nothing needs attention.</p>
           ) : (
-            <ul className="mt-4 divide-y divide-line">
-              {connections.map((row) => (
-                <li
-                  key={row.id}
-                  className="py-4 first:pt-0 last:pb-0"
-                >
-                  <ConnectionSnapshot
-                    row={row}
-                    snapshot={snapshots.get(row.id) ?? null}
-                  />
+            <ul className="mt-3 space-y-2 text-sm">
+              {attention.map((item) => (
+                <li key={item.label}>
+                  <Link
+                    href={item.href}
+                    className="text-warning hover:text-ink"
+                  >
+                    {item.label}
+                  </Link>
                 </li>
               ))}
             </ul>
           )}
-        </section>
+        </div>
+      </section>
+
+      <section className="rounded-card border border-line bg-surface p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Unified account
+            </h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              Available, margin, and IM/MM on this login’s keys. Live desks
+              bind one of these.
+            </p>
+          </div>
+          <Link
+            href="/account/exchanges"
+            className="text-sm text-accent hover:text-accent-strong"
+          >
+            Exchanges
+          </Link>
+        </div>
+        {connections.length === 0 ? (
+          <p className="mt-4 text-sm text-ink-muted">
+            No keys on this login yet.
+          </p>
+        ) : (
+          <ul className="mt-4 divide-y divide-line">
+            {connections.map((row) => (
+              <li key={row.id} className="py-4 first:pt-0 last:pb-0">
+                <ConnectionSnapshot
+                  row={row}
+                  snapshot={snapshots.get(row.id) ?? null}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
@@ -177,19 +185,3 @@ function StatCard({
     <div className="rounded-card border border-line bg-surface p-5">{body}</div>
   );
 }
-
-function Row({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <dt className="shrink-0 text-ink-muted">{label}</dt>
-      <dd className="truncate text-right">{value}</dd>
-    </div>
-  );
-}
-

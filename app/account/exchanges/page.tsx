@@ -57,12 +57,8 @@ export default async function AccountExchangesPage({
     <div>
       <PageHeading title="Exchanges" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
-        API keys belong to this login. Live desks bind one key at create or
-        in Desk Settings; paper desks do not use keys. Bybit is trade-only.
-        Hyperliquid uses an approved agent key (Demo is Testnet). The same
-        key on two desks shares venue margin. Replace key updates
-        credentials and keeps desks bound. You cannot remove a key while
-        any desk is using it.
+        Keys belong to this login. Live desks bind one. Paper does not use a
+        key.
       </p>
       {error || saved || renamed || replaced || removed ? (
         <div className="mb-6 space-y-3">

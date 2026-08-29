@@ -4,6 +4,7 @@ import {
   connectionRemoveBlockers,
   DEFAULT_ACCOUNT_NAME,
   formatAccountUsageStatus,
+  overviewAttentionItems,
   formatConnectionRemoveBlockers,
   formatDeleteBlockers,
   strategyDetachBlockers,
@@ -360,6 +361,67 @@ assert.equal(
 assert.equal(
   formatAccountUsageStatus({ openCount: 1, automationsRunning: false }),
   "1 Open position",
+);
+
+assert.deepEqual(
+  overviewAttentionItems({
+    accounts: [
+      { id: "p", name: "Paper", mode: "paper" },
+      { id: "a", name: "Live A", mode: "live" },
+    ],
+    binds: [],
+  }),
+  [{ label: "Live A is live with no key bound.", href: "/account/exchanges" }],
+);
+assert.deepEqual(
+  overviewAttentionItems({
+    accounts: [
+      { id: "a", name: "Live A", mode: "live" },
+      { id: "b", name: "Live B", mode: "live" },
+    ],
+    binds: [{ connectionId: "k1", accountId: "a" }],
+  }),
+  [{ label: "Live B is live with no key bound.", href: "/account/exchanges" }],
+);
+assert.deepEqual(
+  overviewAttentionItems({
+    accounts: [
+      { id: "a", name: "Live A", mode: "live" },
+      { id: "b", name: "Live B", mode: "live" },
+    ],
+    binds: [],
+  }),
+  [
+    {
+      label: "2 live desks have no key bound.",
+      href: "/account/sub-accounts",
+    },
+  ],
+);
+assert.deepEqual(
+  overviewAttentionItems({
+    accounts: [
+      { id: "a", name: "Live A", mode: "live" },
+      { id: "b", name: "Live B", mode: "live" },
+    ],
+    binds: [
+      { connectionId: "k1", accountId: "a" },
+      { connectionId: "k1", accountId: "b" },
+    ],
+  }),
+  [
+    {
+      label: "One exchange key is bound to more than one desk.",
+      href: "/account/exchanges",
+    },
+  ],
+);
+assert.deepEqual(
+  overviewAttentionItems({
+    accounts: [{ id: "a", name: "Live A", mode: "live" }],
+    binds: [{ connectionId: "k1", accountId: "a" }],
+  }),
+  [],
 );
 
 console.log("account model checks passed");
