@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CreateAccountForm } from "@/components/create-account-form";
+import { CreateDeskDetails } from "@/components/create-desk-details";
 import { PageHeading } from "@/components/page-heading";
 import {
   createDeskPath,
@@ -59,23 +60,27 @@ export default async function NewDeskPage({
           {error}
         </p>
       ) : null}
-      <CreateAccountForm
-        connections={connections}
-        sharedConnectionIds={sharedConnectionIds}
-        existingNames={accounts.map((account) => account.name)}
-        next={createDeskPath(typed.deskType)}
-        initialDeskType={typed.deskType}
-        lockType
-        hideTitle
-        showSwitchToDesk
-      />
-      <p className="mt-4 text-sm text-ink-muted">
-        Or{" "}
-        <Link href="/account/sub-accounts" className="text-accent">
-          manage existing desks
-        </Link>
-        .
-      </p>
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)]">
+        <div>
+          <CreateAccountForm
+            connections={connections}
+            sharedConnectionIds={sharedConnectionIds}
+            existingNames={accounts.map((account) => account.name)}
+            next={createDeskPath(typed.deskType)}
+            initialDeskType={typed.deskType}
+            lockType
+            hideTitle
+          />
+          <p className="mt-4 text-sm text-ink-muted">
+            Or{" "}
+            <Link href="/account/sub-accounts" className="text-accent">
+              manage existing desks
+            </Link>
+            .
+          </p>
+        </div>
+        <CreateDeskDetails deskType={typed.deskType} />
+      </div>
     </div>
   );
 }

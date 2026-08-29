@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { DeskTypeMark } from "@/components/desk-mark";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { createTradingAccount } from "@/lib/accounts/actions";
 import {
@@ -44,7 +44,6 @@ export function CreateAccountForm({
   initialDeskType,
   lockType = false,
   hideTitle = false,
-  showSwitchToDesk,
   onCancel,
 }: {
   connections: ExchangeConnection[];
@@ -56,7 +55,6 @@ export function CreateAccountForm({
   initialDeskType?: DeskType;
   lockType?: boolean;
   hideTitle?: boolean;
-  showSwitchToDesk?: boolean;
   onCancel?: () => void;
 }) {
   const [deskType, setDeskType] = useState<DeskType>(
@@ -90,7 +88,6 @@ export function CreateAccountForm({
         : (paperVenues[0]?.id ?? "bybit")
       : (selected?.venue ?? "bybit");
   const track = selected?.environment ?? "";
-  const pathname = usePathname();
   const warningKind =
     bindChoice === "existing"
       ? sharedKeyWarningKind({
@@ -98,24 +95,14 @@ export function CreateAccountForm({
           sharedConnectionIds,
         })
       : null;
-  const switchVisible = showSwitchToDesk ?? (embedded && !firstDesk);
   const nameCheck = validateNewDeskName(name, existingNames);
   const nameError =
     name.trim().length > 0 && !nameCheck.ok ? nameCheck.error : null;
 
-  function stampStayPath(event: FormEvent<HTMLFormElement>) {
-    const field = event.currentTarget.elements.namedItem("stayPath");
-    if (field instanceof HTMLInputElement) {
-      field.value = `${window.location.pathname}${window.location.search}`;
-    }
-  }
-
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     if (!nameCheck.ok) {
       event.preventDefault();
-      return;
     }
-    stampStayPath(event);
   }
 
   function resetBind() {
@@ -144,45 +131,25 @@ export function CreateAccountForm({
       className={
         embedded
           ? "mt-4 space-y-4"
-          : "mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
+          : hideTitle
+            ? "space-y-4 rounded-card border border-line bg-surface p-5"
+            : "mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
       }
     >
       {embedded || hideTitle ? null : (
         <h2 className="text-lg font-semibold tracking-tight">New desk</h2>
       )}
       {next ? <input type="hidden" name="next" value={next} /> : null}
-      {embedded ? (
-        <input type="hidden" name="stayPath" defaultValue={pathname} />
-      ) : null}
       <input type="hidden" name="venue" value={venue} />
       {track ? <input type="hidden" name="track" value={track} /> : null}
-      <label className="block text-xs text-ink-muted">
-        Name
-        <input
-          name="name"
-          required
-          maxLength={40}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          aria-invalid={nameError ? true : undefined}
-          aria-describedby={nameError ? "new-desk-name-error" : undefined}
-          className={
-            nameError
-              ? `${fieldClass} border-danger focus:border-danger`
-              : fieldClass
-          }
-        />
-        {nameError ? (
-          <p id="new-desk-name-error" className="mt-1 text-xs text-danger">
-            {nameError}
-          </p>
-        ) : null}
-      </label>
       {lockType ? (
         <div className="text-xs text-ink-muted">
           Type
           <input type="hidden" name="deskType" value={deskType} />
-          <p className="mt-1 text-sm text-ink">{formatDeskType(deskType)}</p>
+          <p className="mt-1 flex items-center gap-2 text-sm text-ink">
+            <DeskTypeMark deskType={deskType} />
+            {formatDeskType(deskType)}
+          </p>
         </div>
       ) : (
         <label className="block text-xs text-ink-muted">
@@ -209,6 +176,28 @@ export function CreateAccountForm({
           </select>
         </label>
       )}
+      <label className="block text-xs text-ink-muted">
+        Name
+        <input
+          name="name"
+          required
+          maxLength={40}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          aria-invalid={nameError ? true : undefined}
+          aria-describedby={nameError ? "new-desk-name-error" : undefined}
+          className={
+            nameError
+              ? `${fieldClass} border-danger focus:border-danger`
+              : fieldClass
+          }
+        />
+        {nameError ? (
+          <p id="new-desk-name-error" className="mt-1 text-xs text-danger">
+            {nameError}
+          </p>
+        ) : null}
+      </label>
       <label className="block text-xs text-ink-muted">
         Mode
         <select
@@ -313,18 +302,6 @@ export function CreateAccountForm({
         that exchange’s public marks and fills on the in-app ledger. Connected
         Exchange can bind a key from this login now, or later in Desk Settings.
       </p>
-      {switchVisible ? (
-        <label className="flex items-start gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
-            name="switchToDesk"
-            value="1"
-            defaultChecked
-            className="mt-0.5"
-          />
-          <span>Switch to New Desk</span>
-        </label>
-      ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <PendingSubmitButton
           pendingLabel="Creating…"

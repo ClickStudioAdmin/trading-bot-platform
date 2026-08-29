@@ -75,19 +75,6 @@ function accountReturnPath(
   return null;
 }
 
-function staysOnManagePage(
-  next: ReturnType<typeof accountReturnPath>,
-): next is typeof SUB_ACCOUNTS_PATH {
-  return next === SUB_ACCOUNTS_PATH;
-}
-
-function safeStayPath(raw: unknown): string | null {
-  const path = String(raw ?? "").trim();
-  if (!path.startsWith("/") || path.startsWith("//") || path.includes("://")) {
-    return null;
-  }
-  return path;
-}
 
 export async function rememberTradingAccount(accountId: string) {
   const user = await getSessionMember();
@@ -124,11 +111,8 @@ export async function createTradingAccount(formData: FormData) {
   if (!member) {
     redirect("/sign-in");
   }
-  const next = accountReturnPath(String(formData.get("next") ?? ""));
-  const fromWelcome = String(formData.get("next") ?? "") === WELCOME_PATH;
   const desks = await listTradingAccounts(member.id);
   const firstDesk = desks.length === 0;
-  const switchToNew = firstDesk || fromWelcome || formData.get("switchToDesk") === "1";
   const fail = (message: string): never =>
     redirect(createDeskErrorPath(formData, message, firstDesk));
   const named = validateNewDeskName(
@@ -213,23 +197,9 @@ export async function createTradingAccount(formData: FormData) {
       ...(connectionId ? { exchangeConnectionId: connectionId } : {}),
     },
   });
-  if (switchToNew) {
-    await setActiveAccountId(created.id);
-  }
+  await setActiveAccountId(created.id);
   refreshAccountChrome();
-  if (staysOnManagePage(next) && !firstDesk) {
-    redirect(`${SUB_ACCOUNTS_PATH}?created=1`);
-  }
-  if (switchToNew) {
-    redirect(deskHomePath(created.deskType, created.id));
-  }
-  const session = await getSessionContext();
-  redirect(
-    safeStayPath(formData.get("stayPath")) ??
-      (session
-        ? deskHomePath(session.account.deskType, session.account.id)
-        : deskHomePath(created.deskType, created.id)),
-  );
+  redirect(deskHomePath(created.deskType, created.id));
 }
 
 export async function deleteTradingAccount(formData: FormData) {
