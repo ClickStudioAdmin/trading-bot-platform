@@ -519,6 +519,7 @@ export function overviewAttentionItems(input: {
 
 export function formatAccountUsageStatus(input: {
   openCount: number;
+  workingCount?: number;
   automationsRunning: boolean;
   reduceOnly?: boolean;
 }): string {
@@ -529,6 +530,10 @@ export function formatAccountUsageStatus(input: {
         ? "1 Open position"
         : `${input.openCount} Open positions`,
     );
+  }
+  const working = input.workingCount ?? 0;
+  if (working > 0) {
+    parts.push(working === 1 ? "1 Open order" : `${working} Open orders`);
   }
   if (input.automationsRunning) {
     parts.push("Bots on");

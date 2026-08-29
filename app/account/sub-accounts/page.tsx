@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { AccountDeleteControl } from "@/components/account-delete-control";
 import { AccountRenameControl } from "@/components/account-rename-control";
 import { PageHeading } from "@/components/page-heading";
 import {
-  deskHomePath,
   formatAccountMode,
   formatAccountUsageStatus,
   formatDeskType,
@@ -77,6 +75,7 @@ export default async function ManageSubAccountsPage({
                 const current = account.id === session.account.id;
                 const usageStatus = formatAccountUsageStatus({
                   openCount: row?.openCount ?? 0,
+                  workingCount: row?.workingCount ?? 0,
                   automationsRunning: Boolean(row?.automationsRunning),
                   reduceOnly: Boolean(row?.reduceOnly),
                 });
@@ -90,14 +89,7 @@ export default async function ManageSubAccountsPage({
                     key={account.id}
                     className="border-b border-line last:border-b-0"
                   >
-                    <td className="px-4 py-3 align-top">
-                      <Link
-                        href={deskHomePath(account.deskType, account.id)}
-                        className="text-accent hover:text-accent-strong"
-                      >
-                        {account.name}
-                      </Link>
-                    </td>
+                    <td className="px-4 py-3 align-top">{account.name}</td>
                     <td className="px-4 py-3 align-top">
                       {formatDeskType(account.deskType)}
                     </td>

@@ -362,6 +362,22 @@ assert.equal(
   formatAccountUsageStatus({ openCount: 1, automationsRunning: false }),
   "1 Open position",
 );
+assert.equal(
+  formatAccountUsageStatus({
+    openCount: 1,
+    workingCount: 2,
+    automationsRunning: true,
+  }),
+  "1 Open position - 2 Open orders - Bots on",
+);
+assert.equal(
+  formatAccountUsageStatus({
+    openCount: 0,
+    workingCount: 1,
+    automationsRunning: false,
+  }),
+  "1 Open order",
+);
 
 assert.deepEqual(
   overviewAttentionItems({

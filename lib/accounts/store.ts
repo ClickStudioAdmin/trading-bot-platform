@@ -240,6 +240,7 @@ export type AccountUsage = {
   openCount: number;
   carryOpenCount: number;
   futuresOpenCount: number;
+  workingCount: number;
   automationsRunning: boolean;
   reduceOnly: boolean;
   strategyConnectionId: string | null;
@@ -257,6 +258,7 @@ export async function loadAccountUsage(
       openCount: 0,
       carryOpenCount: 0,
       futuresOpenCount: 0,
+      workingCount: 0,
       automationsRunning: false,
       reduceOnly: false,
       strategyConnectionId: null,
@@ -308,6 +310,7 @@ export async function loadAccountUsage(
   ]);
   const carryOpenCount = new Map<string, number>();
   const futuresOpenCount = new Map<string, number>();
+  const workingCount = new Map<string, number>();
   for (const row of openRows ?? []) {
     const id = String((row as { account_id: string }).account_id);
     carryOpenCount.set(id, (carryOpenCount.get(id) ?? 0) + 1);
@@ -318,7 +321,7 @@ export async function loadAccountUsage(
   }
   for (const row of futuresWorkingRows ?? []) {
     const id = String((row as { account_id: string }).account_id);
-    futuresOpenCount.set(id, (futuresOpenCount.get(id) ?? 0) + 1);
+    workingCount.set(id, (workingCount.get(id) ?? 0) + 1);
   }
   const reduceOnlyIds = new Set(
     settings
@@ -355,6 +358,7 @@ export async function loadAccountUsage(
   for (const account of accounts) {
     const carries = carryOpenCount.get(account.id) ?? 0;
     const futures = futuresOpenCount.get(account.id) ?? 0;
+    const working = workingCount.get(account.id) ?? 0;
     const opens = carries + futures;
     const automationsRunning = runningIds.has(account.id);
     const reduceOnly = reduceOnlyIds.has(account.id);
@@ -362,13 +366,14 @@ export async function loadAccountUsage(
       openCount: opens,
       carryOpenCount: carries,
       futuresOpenCount: futures,
+      workingCount: working,
       automationsRunning,
       reduceOnly,
       strategyConnectionId: connectionByAccount.get(account.id) ?? null,
       futuresConnectionId: futuresBinds.get(account.id) ?? null,
       blocks: accountDeleteBlockers({
         accountCount,
-        openCount: opens,
+        openCount: opens + working,
         automationsRunning,
         mode: account.mode,
       }),

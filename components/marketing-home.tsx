@@ -50,6 +50,9 @@ const STEPS = [
 export function MarketingHome({ appHref = null }: { appHref?: string | null }) {
   const primaryHref = appHref ?? "/sign-in";
   const primaryLabel = appHref ? "Go to App" : "Sign in";
+  const appLinkProps = appHref
+    ? { target: "_blank" as const, rel: "noreferrer" }
+    : {};
 
   return (
     <main>
@@ -70,6 +73,7 @@ export function MarketingHome({ appHref = null }: { appHref?: string | null }) {
             <Link
               href={primaryHref}
               className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+              {...appLinkProps}
             >
               {primaryLabel}
             </Link>
@@ -154,6 +158,7 @@ export function MarketingHome({ appHref = null }: { appHref?: string | null }) {
           <Link
             href={primaryHref}
             className="mt-6 inline-flex rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            {...appLinkProps}
           >
             {appHref ? "Go to App" : "Sign in to the desk"}
           </Link>

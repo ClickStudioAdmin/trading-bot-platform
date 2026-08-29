@@ -81,6 +81,9 @@ export function SiteFooter({ appHref = null }: { appHref?: string | null }) {
               <Link
                 href={appHref ?? "/sign-in"}
                 className="text-ink-muted hover:text-ink"
+                {...(appHref
+                  ? { target: "_blank" as const, rel: "noreferrer" }
+                  : {})}
               >
                 {appHref ? "Go to App" : "Sign in"}
               </Link>
