@@ -26,6 +26,21 @@ assert.equal(
   keyFingerprint({ apiKey: "ABCD1234", apiSecret: "nope" }, bybit.venue),
   "1234",
 );
+const hl = parseVenueId("hyperliquid");
+assert.equal(hl.ok, true);
+if (hl.ok) {
+  assert.equal(
+    keyFingerprint(
+      {
+        accountAddress: "0x1111111111111111111111111111111111111111",
+        agentKey:
+          "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+      },
+      hl.venue,
+    ),
+    "2266",
+  );
+}
 assert.equal(
   keyFingerprint({ apiKey: "abc", apiSecret: "nope" }, bybit.venue),
   null,

@@ -17,8 +17,11 @@ import {
 } from "./venues";
 
 assert.equal(VENUES.length, 2);
-assert.equal(enabledVenues().length, 1);
-assert.equal(enabledVenues()[0]?.id, "bybit");
+assert.equal(enabledVenues().length, 2);
+assert.deepEqual(
+  enabledVenues().map((row) => row.id),
+  ["bybit", "hyperliquid"],
+);
 assert.equal(getVenue("okx"), null);
 assert.equal(getVenue("bybit")?.label, "Bybit");
 assert.equal(getVenue("hyperliquid")?.label, "Hyperliquid");
@@ -50,11 +53,11 @@ assert.equal(hl.venue.quote, "USDC");
 assert.equal(hl.venue.symbolKind, "coin");
 assert.equal(hl.venue.datedCarry, false);
 assert.equal(hl.venue.dcaBoth, false);
-assert.equal(hl.venue.connectionsEnabled, false);
+assert.equal(hl.venue.connectionsEnabled, true);
 assert.equal(venueAllowsDeskType(hl.venue, "cash_and_carry"), false);
 assert.equal(venueAllowsDeskType(hl.venue, "dca"), true);
 assert.equal(venuesForDeskType("dca").some((row) => row.id === "hyperliquid"), true);
-assert.equal(parseConnectionVenueId("hyperliquid").ok, false);
+assert.equal(parseConnectionVenueId("hyperliquid").ok, true);
 assert.equal(parseConnectionVenueId("bybit").ok, true);
 
 assert.equal(parseVenueId("").ok, false);

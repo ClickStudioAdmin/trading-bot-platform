@@ -82,7 +82,7 @@ export const VENUES: readonly VenueDefinition[] = [
     id: "hyperliquid",
     label: "Hyperliquid",
     enabled: true,
-    connectionsEnabled: false,
+    connectionsEnabled: true,
     deskTypes: ["perps", "signal_follower", "dca"],
     positionMode: "one_way",
     quote: "USDC",
@@ -97,16 +97,16 @@ export const VENUES: readonly VenueDefinition[] = [
     nativeTpsl: "trigger orders",
     environments: [
       {
-        id: "live",
-        label: "Live",
-        aliases: ["mainnet"],
-        host: "https://api.hyperliquid.xyz",
-      },
-      {
         id: "testnet",
         label: "Demo (Hyperliquid Testnet)",
         aliases: ["demo"],
         host: "https://api.hyperliquid-testnet.xyz",
+      },
+      {
+        id: "live",
+        label: "Live",
+        aliases: ["mainnet"],
+        host: "https://api.hyperliquid.xyz",
       },
     ],
     credentialFields: [
@@ -118,6 +118,12 @@ export const VENUES: readonly VenueDefinition[] = [
 
 export function enabledVenues(): VenueDefinition[] {
   return VENUES.filter((venue) => venue.enabled && venue.connectionsEnabled);
+}
+
+export function connectionVenuesForDeskType(
+  deskType: VenueDeskType,
+): VenueDefinition[] {
+  return venuesForDeskType(deskType).filter((venue) => venue.connectionsEnabled);
 }
 
 export function getVenue(id: string): VenueDefinition | null {

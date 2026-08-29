@@ -4,9 +4,11 @@ import { PageHeading } from "@/components/page-heading";
 import { DeskSettingsForm } from "@/components/desk-settings-form";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
 import { ExchangeBindSelect } from "@/components/exchange-bind-select";
+import { ExchangeConnectForm } from "@/components/exchange-connect-form";
 import { savePaperSettings } from "@/lib/engine/actions";
 import { loadEngineSettings } from "@/lib/engine/settings";
-import { otherDeskNames, strategyDetachBlockers } from "@/lib/accounts/model";
+import { deskHref, otherDeskNames, strategyDetachBlockers } from "@/lib/accounts/model";
+import { exchangeCredentialsConfigured } from "@/lib/exchanges/encrypt";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
 import {
   connectionIdsBoundToOtherDesks,
@@ -18,6 +20,7 @@ import {
 } from "@/lib/exchanges/store";
 import {
   accountCanHoldConnections,
+  connectionVenuesForDeskType,
   connectionsForDeskBind,
 } from "@/lib/exchanges/venues";
 import { usableBookShareToInput } from "@/lib/opportunities/capacity";
@@ -115,6 +118,15 @@ export default async function CashAndCarrySettingsPage({
           Dynamic exits all use this number.
         </p>
       </DeskSettingsForm>
+      {live && exchangeCredentialsConfigured() ? (
+        <section className="mt-6 max-w-md rounded-card border border-line bg-surface p-5">
+          <ExchangeConnectForm
+            venues={connectionVenuesForDeskType(session.account.deskType)}
+            next={deskHref("/strategies/cash-and-carry/settings", session.account.id)}
+            compact
+          />
+        </section>
+      ) : null}
     </main>
   );
 }

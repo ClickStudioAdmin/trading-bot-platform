@@ -56,7 +56,9 @@ export default async function AccountExchangesPage({
       <PageHeading title="Exchanges" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
         API keys belong to this login. Live desks bind one key. Paper desks
-        do not use keys. The same key on two desks shares venue margin.
+        do not use keys. Bybit uses a trade-only key. Hyperliquid uses an
+        approved agent key (Demo is Testnet). The same key on two desks
+        shares venue margin.
       </p>
       {error || saved || replaced || removed ? (
         <div className="mb-6 space-y-3">

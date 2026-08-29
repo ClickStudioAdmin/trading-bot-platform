@@ -80,6 +80,7 @@ if (!withdrawBeatsReadOnly.ok) {
 }
 
 assert.equal(venueSupportsVerify("bybit"), true);
+assert.equal(venueSupportsVerify("hyperliquid"), true);
 assert.equal(venueSupportsVerify("okx"), false);
 
 assert.match(formatBybitVerifyReject(10003, "API key is invalid."), /Demo keys need Environment Demo/);

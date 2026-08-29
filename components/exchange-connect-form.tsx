@@ -10,22 +10,40 @@ const fieldClass =
 
 export function ExchangeConnectForm({
   venues,
+  next,
+  compact = false,
 }: {
   venues: VenueDefinition[];
+  next?: string;
+  compact?: boolean;
 }) {
   const [venueId, setVenueId] = useState(venues[0]?.id ?? "");
   const venue = venues.find((item) => item.id === venueId) ?? venues[0];
   if (!venue) {
     return null;
   }
+  const defaultEnvironment =
+    venue.id === "hyperliquid"
+      ? (venue.environments.find((item) => item.id === "testnet")?.id ??
+        venue.environments[0]?.id)
+      : venue.environments[0]?.id;
 
   return (
     <form
       action={saveExchangeConnection}
       autoComplete="off"
-      className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
+      className={
+        compact
+          ? "space-y-4"
+          : "mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
+      }
     >
-      <h2 className="text-lg font-semibold tracking-tight">Connect</h2>
+      {compact ? (
+        <h3 className="text-sm font-medium text-ink">Add a connection</h3>
+      ) : (
+        <h2 className="text-lg font-semibold tracking-tight">Connect</h2>
+      )}
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <label className="block text-xs text-ink-muted">
         Exchange
         <select
@@ -45,7 +63,7 @@ export function ExchangeConnectForm({
         Environment
         <select
           name="environment"
-          defaultValue={venue.environments[0]?.id}
+          defaultValue={defaultEnvironment}
           key={`${venue.id}-environment`}
           className={fieldClass}
         >
@@ -74,10 +92,9 @@ export function ExchangeConnectForm({
         <input name="label" maxLength={40} className={fieldClass} />
       </label>
       <p className="text-sm text-ink-muted">
-        Use a trade-only key with no withdrawal permission. We check that
-        with Bybit before saving. The secret is encrypted and is not shown
-        again. Live desks bind a key in Desk Settings. The same key on
-        two desks shares venue margin.
+        {venue.id === "hyperliquid"
+          ? "Paste the account address and an approved agent private key. We check the agent on that network before saving. Create the agent in Hyperliquid — this app does not generate keys. The secret is encrypted and is not shown again."
+          : "Use a trade-only key with no withdrawal permission. We check that with Bybit before saving. The secret is encrypted and is not shown again. Live desks bind a key in Desk Settings. The same key on two desks shares venue margin."}
       </p>
       <PendingSubmitButton
         pendingLabel="Verifying…"

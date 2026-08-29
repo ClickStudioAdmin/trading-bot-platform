@@ -1,4 +1,8 @@
 import {
+  agentAddressFromPrivateKey,
+  hyperliquidFingerprint,
+} from "@/lib/exchanges/hyperliquid/agent";
+import {
   getVenue,
   type VenueDefinition,
 } from "@/lib/exchanges/venues";
@@ -85,6 +89,10 @@ export function keyFingerprint(
   credentials: Record<string, string>,
   venue: VenueDefinition,
 ): string | null {
+  if (venue.id === "hyperliquid") {
+    const agent = agentAddressFromPrivateKey(credentials.agentKey ?? "");
+    return agent ? hyperliquidFingerprint(agent) : null;
+  }
   const field =
     venue.credentialFields.find((item) => !item.secret) ??
     venue.credentialFields[0];

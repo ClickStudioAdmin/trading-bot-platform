@@ -12,7 +12,7 @@ Create Perps, DCA, or TradingView Strategy desks whose **exchange is Hyperliquid
 
 ## Status
 
-Started 29 Aug 2026. Step 1 in progress: capabilities + desk columns. Stop after each step until Click says go. Do not start the adapter (step 2) until then.
+Started 29 Aug 2026. Step 1 is in repo. Exchanges now lists Hyperliquid (account + agent key, Testnet verify). Full signed adapter is still step 2.
 
 ## How this scales
 

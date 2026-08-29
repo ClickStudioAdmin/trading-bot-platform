@@ -5,18 +5,23 @@ import { PageHeading } from "@/components/page-heading";
 import { DeskSettingsForm } from "@/components/desk-settings-form";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
 import { ExchangeBindSelect } from "@/components/exchange-bind-select";
+import { ExchangeConnectForm } from "@/components/exchange-connect-form";
 import { strategyDetachBlockers, deskAllowsPerpsRecipes, deskHref, otherDeskNames } from "@/lib/accounts/model";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
 import {
   connectionIdsBoundToOtherDesks,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
-import { connectionsForDeskBind } from "@/lib/exchanges/venues";
+import { exchangeCredentialsConfigured } from "@/lib/exchanges/encrypt";
+import {
+  accountCanHoldConnections,
+  connectionVenuesForDeskType,
+  connectionsForDeskBind,
+} from "@/lib/exchanges/venues";
 import {
   listConnectionDeskBinds,
   listExchangeConnections,
 } from "@/lib/exchanges/store";
-import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import {
   detachFuturesConnection,
   saveFuturesSettings,
@@ -67,6 +72,8 @@ export default async function FuturesSettingsPage({
     }).length > 0;
   const saved = firstSearchValue(params.saved) === "1";
   const error = firstSearchValue(params.error);
+  const canSave = exchangeCredentialsConfigured();
+  const settingsHref = deskHref(FUTURES_PATHS.settings, session.account.id);
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -169,6 +176,15 @@ export default async function FuturesSettingsPage({
           </label>
         </div>
       </DeskSettingsForm>
+      {live && canSave ? (
+        <section className="mt-6 max-w-lg rounded-card border border-line bg-surface p-5">
+          <ExchangeConnectForm
+            venues={connectionVenuesForDeskType(session.account.deskType)}
+            next={settingsHref}
+            compact
+          />
+        </section>
+      ) : null}
     </main>
   );
 }
@@ -191,13 +207,14 @@ function ExchangeBindField({
       <div>
         <p className="text-sm text-ink">Exchange</p>
         <p className="mt-1 text-sm text-ink-muted">
-          No matching key on this login.{" "}
+          No matching key on this login yet. Add one below, or on{" "}
           <Link
             href="/account/exchanges"
             className="text-accent hover:text-accent-strong"
           >
             Exchanges
           </Link>
+          .
         </p>
       </div>
     );
