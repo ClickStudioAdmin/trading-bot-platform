@@ -159,20 +159,20 @@ function DeskTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-card border border-line bg-surface">
-      <table className="w-full min-w-[56rem] table-fixed text-left text-sm">
+      <table className="w-full min-w-[64rem] table-fixed text-left text-sm">
         <colgroup>
           <col className="w-[14rem]" />
-          <col className="w-[11rem]" />
-          <col className="w-[13rem]" />
+          <col className="w-[14rem]" />
+          <col className="w-[16rem]" />
           <col />
           <col className="w-[11rem]" />
         </colgroup>
         <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
           <tr>
-            <th className="px-4 py-3 font-medium">Name</th>
-            <th className="px-4 py-3 font-medium">Mode</th>
-            <th className="px-4 py-3 font-medium">Exchange</th>
-            <th className="px-4 py-3 font-medium">Details</th>
+            <th className="px-4 py-3 pr-8 font-medium">Name</th>
+            <th className="px-4 py-3 pr-8 font-medium">Mode</th>
+            <th className="px-4 py-3 pr-8 font-medium">Exchange</th>
+            <th className="px-4 py-3 pr-8 font-medium">Details</th>
             <th className="px-4 py-3 font-medium">Actions</th>
           </tr>
         </thead>
@@ -203,14 +203,14 @@ function DeskTable({
                   key={account.id}
                   className="border-b border-line last:border-b-0"
                 >
-                  <td className="px-4 py-3 align-top">{account.name}</td>
-                  <td className="px-4 py-3 align-top text-ink-muted">
+                  <td className="px-4 py-3 pr-8 align-top">{account.name}</td>
+                  <td className="px-4 py-3 pr-8 align-top text-ink-muted">
                     {formatAccountMode(account.mode)}
                   </td>
-                  <td className="px-4 py-3 align-top text-ink-muted">
+                  <td className="px-4 py-3 pr-8 align-top text-ink-muted">
                     {exchange ?? <span className="text-ink-faint">—</span>}
                   </td>
-                  <td className="px-4 py-3 align-top">
+                  <td className="px-4 py-3 pr-8 align-top">
                     {usageStatus ? (
                       <span className="text-ink-muted">{usageStatus}</span>
                     ) : (
