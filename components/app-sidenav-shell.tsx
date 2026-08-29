@@ -14,11 +14,7 @@ export async function AppSidenavShell({
   const desks = await listTradingAccounts(session.member.id);
   return (
     <div className="flex flex-1">
-      <AccountSidenav
-        bookName={session.account.name}
-        deskId={session.account.id}
-        desks={desks}
-      />
+      <AccountSidenav deskId={session.account.id} desks={desks} />
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );

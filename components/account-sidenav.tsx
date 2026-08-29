@@ -2,10 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ACCOUNT_BOOK_LINKS,
-  ACCOUNT_DESK_LINKS,
-} from "@/lib/site-links";
+import { ACCOUNT_DESK_LINKS } from "@/lib/site-links";
 import { rememberTradingAccount } from "@/lib/accounts/actions";
 import {
   deskHomePath,
@@ -13,39 +10,27 @@ import {
   formatDeskType,
   formatDeskVenueCaption,
   hrefPathname,
-  navLinksWithDesk,
   type TradingAccount,
 } from "@/lib/accounts/model";
 
 export function AccountSidenav({
-  bookName,
   deskId,
   desks,
 }: {
-  bookName: string;
   deskId: string;
   desks: TradingAccount[];
 }) {
   const pathname = usePathname();
-  const bookLinks = navLinksWithDesk(ACCOUNT_BOOK_LINKS, deskId);
 
   return (
-    <aside className="sticky top-14 z-10 h-[calc(100dvh-3.5rem)] w-56 shrink-0 overflow-y-auto border-r border-line bg-surface px-5 py-6">
-      <DeskList desks={desks} currentDeskId={deskId} />
+    <aside className="sticky top-14 z-10 flex h-[calc(100dvh-3.5rem)] w-56 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-5 py-6">
       <NavGroup
-        className="mt-6"
         label="Account"
         ariaLabel="Account"
         links={ACCOUNT_DESK_LINKS}
         pathname={pathname}
       />
-      <NavGroup
-        className="mt-6"
-        label={bookName}
-        ariaLabel={bookName}
-        links={bookLinks}
-        pathname={pathname}
-      />
+      <DeskList className="mt-auto pt-6" desks={desks} currentDeskId={deskId} />
     </aside>
   );
 }
@@ -53,12 +38,14 @@ export function AccountSidenav({
 function DeskList({
   desks,
   currentDeskId,
+  className,
 }: {
   desks: TradingAccount[];
   currentDeskId: string;
+  className?: string;
 }) {
   return (
-    <div>
+    <div className={className}>
       <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
         Desks
       </p>
