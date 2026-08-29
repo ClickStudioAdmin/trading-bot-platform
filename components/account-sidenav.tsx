@@ -23,7 +23,7 @@ export function AccountSidenav({
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-14 z-10 flex h-[calc(100dvh-3.5rem)] w-56 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-5 py-6">
+    <aside className="sticky top-0 z-20 flex h-dvh w-56 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-5 py-6">
       <NavGroup
         label="Account"
         ariaLabel="Account"

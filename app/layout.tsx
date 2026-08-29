@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
-import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
+import { AppFrame } from "@/components/app-frame";
 import { redirectIfNeedsFirstDesk } from "@/lib/auth/onboarding";
 import "./globals.css";
 
@@ -26,10 +25,8 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className={geist.className}>
-      <body className="flex min-h-dvh flex-col bg-canvas text-ink">
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">{children}</div>
-        <SiteFooter />
+      <body className="min-h-dvh bg-canvas text-ink">
+        <AppFrame>{children}</AppFrame>
       </body>
     </html>
   );
