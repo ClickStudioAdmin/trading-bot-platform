@@ -128,20 +128,27 @@ if (renamed.ok) {
 assert.equal(parseDeskNameChange("paper", ["Paper"], "DCA").ok, false);
 
 assert.equal(parseDeskType("perps"), "perps");
+assert.equal(parseDeskType("perps_bots"), "perps_bots");
 assert.equal(parseDeskType("signal_follower"), "signal_follower");
 assert.equal(parseDeskType("dca"), "dca");
 assert.equal(parseDeskType("cash_and_carry"), "cash_and_carry");
 assert.equal(parseDeskType("other"), "cash_and_carry");
 assert.equal(parseDeskTypeChoice("perps").ok, true);
+assert.equal(parseDeskTypeChoice("perps_bots").ok, true);
 assert.equal(parseDeskTypeChoice("dca").ok, true);
 assert.equal(parseDeskTypeChoice("").ok, false);
 assert.equal(formatDeskType("perps"), "Perps");
+assert.equal(formatDeskType("perps_bots"), "Perps bots");
 assert.equal(formatDeskType("signal_follower"), "TradingView Strategy");
 assert.equal(formatDeskType("dca"), "DCA");
 assert.equal(formatDeskType("cash_and_carry"), "Cash and Carry");
 assert.equal(
   formatDeskTypeChoice("perps"),
-  "Perps (buy / sell / close one USDT perpetual)",
+  "Perps (buy / sell / close from the ticket)",
+);
+assert.equal(
+  formatDeskTypeChoice("perps_bots"),
+  "Perps bots (price-cross automations own the orders)",
 );
 assert.equal(
   formatDeskTypeChoice("signal_follower"),
@@ -156,6 +163,7 @@ assert.equal(
   "/strategies/cash-and-carry",
 );
 assert.equal(deskHomePath("perps"), "/strategies/futures");
+assert.equal(deskHomePath("perps_bots"), "/strategies/futures");
 assert.equal(deskHomePath("signal_follower"), "/strategies/futures");
 assert.equal(deskHomePath("dca"), "/strategies/futures");
 assert.equal(
@@ -203,23 +211,32 @@ assert.equal(
 assert.equal(deskUsesCashAndCarry("cash_and_carry"), true);
 assert.equal(deskUsesCashAndCarry("perps"), false);
 assert.equal(deskUsesPerpsUi("perps"), true);
+assert.equal(deskUsesPerpsUi("perps_bots"), true);
 assert.equal(deskUsesPerpsUi("signal_follower"), true);
 assert.equal(deskUsesPerpsUi("dca"), true);
 assert.equal(deskUsesPerpsUi("cash_and_carry"), false);
 assert.equal(deskAllowsManualPerpTicket("perps"), true);
+assert.equal(deskAllowsManualPerpTicket("perps_bots"), false);
 assert.equal(deskAllowsManualPerpTicket("signal_follower"), false);
 assert.equal(deskAllowsManualPerpTicket("dca"), false);
 assert.equal(deskAllowsManualPerpTicket("cash_and_carry"), false);
-assert.equal(deskAllowsPerpsRecipes("perps"), true);
+assert.equal(deskAllowsPerpsRecipes("perps"), false);
+assert.equal(deskAllowsPerpsRecipes("perps_bots"), true);
 assert.equal(deskAllowsPerpsRecipes("dca"), false);
-assert.equal(deskAllowsSignalWebhooks("perps"), true);
+assert.equal(deskAllowsSignalWebhooks("perps"), false);
+assert.equal(deskAllowsSignalWebhooks("perps_bots"), false);
 assert.equal(deskAllowsSignalWebhooks("dca"), true);
 assert.equal(deskAllowsSignalWebhooks("signal_follower"), false);
 assert.equal(deskAllowsSignalWebhooks("cash_and_carry"), false);
-assert.equal(deskAllowsOrderWebhooks("perps"), true);
+assert.equal(deskAllowsOrderWebhooks("perps"), false);
+assert.equal(deskAllowsOrderWebhooks("perps_bots"), false);
 assert.equal(deskAllowsOrderWebhooks("signal_follower"), true);
 assert.equal(deskAllowsOrderWebhooks("dca"), false);
 assert.equal(deskManualBuySellBlockReason("perps"), null);
+assert.equal(
+  deskManualBuySellBlockReason("perps_bots"),
+  "This is a Perps bots desk. Automations own orders. Buy and Sell are not on this ticket.",
+);
 assert.equal(
   deskManualBuySellBlockReason("dca"),
   "This is a DCA desk. The bot owns orders. Buy and Sell are not on this ticket.",

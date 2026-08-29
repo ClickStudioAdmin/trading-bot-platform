@@ -6,7 +6,14 @@ import { DeskSettingsForm } from "@/components/desk-settings-form";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
 import { ExchangeBindSelect } from "@/components/exchange-bind-select";
 import { ExchangeConnectModal } from "@/components/exchange-connect-modal";
-import { strategyDetachBlockers, deskAllowsPerpsRecipes, deskHref, otherDeskNames } from "@/lib/accounts/model";
+import {
+  strategyDetachBlockers,
+  deskAllowsOrderWebhooks,
+  deskAllowsPerpsRecipes,
+  deskAllowsSignalWebhooks,
+  deskHref,
+  otherDeskNames,
+} from "@/lib/accounts/model";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
 import {
   connectionIdsBoundToOtherDesks,
@@ -85,14 +92,26 @@ export default async function FuturesSettingsPage({
       <PageHeading as="h2" title="Desk Settings" />
       <p className="-mt-4 text-sm text-ink-muted">
         Desk-wide knobs.{" "}
-        {deskAllowsPerpsRecipes(session.account.deskType)
-          ? "Automations stay on their own page."
-          : "The bot will live on Automations."}{" "}
-        TradingView URLs live on{" "}
-        <Link href={deskHref(FUTURES_PATHS.webhooks, session.account.id)} className="text-accent">
-          Webhooks
-        </Link>
-        . Bind a matching key from this login.
+        {deskAllowsPerpsRecipes(session.account.deskType) ? (
+          "Automations stay on their own page. TradingView alerts stay on a TradingView Strategy desk."
+        ) : deskAllowsOrderWebhooks(session.account.deskType) ||
+          deskAllowsSignalWebhooks(session.account.deskType) ? (
+          <>
+            {deskAllowsSignalWebhooks(session.account.deskType)
+              ? "Automations stay on their own page. Signal URLs live on "
+              : "TradingView URLs live on "}
+            <Link
+              href={deskHref(FUTURES_PATHS.webhooks, session.account.id)}
+              className="text-accent"
+            >
+              Webhooks
+            </Link>
+            .
+          </>
+        ) : (
+          "This desk is ticket only. No automations or webhooks."
+        )}{" "}
+        Bind a matching key from this login.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

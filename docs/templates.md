@@ -16,7 +16,7 @@ A live DCA bot still owns one contract (`unique (account_id, symbol)`). Template
 
 ## Current facts this plan sits on
 
-- Four desk types: `cash_and_carry`, `perps`, `signal_follower`, `dca`. Type is immutable.
+- Desk types: `cash_and_carry`, `perps` (ticket), `perps_bots` (Perps bots), `signal_follower`, `dca`. Type is immutable. Perps automation templates stay `desk_type = perps` and apply only to `perps_bots` desks.
 - Automations today: C&C `paper_rules`; Perps `futures_automation_rules`; DCA `dca_playbooks`; TV Strategy is webhook-only.
 - Live bot fields are **typed columns**, not JSON, on the live tables. The template library stores a `recipe` JSON snapshot. Clone today is a **client draft** (`dcaCloneIdleDraft`, `cloneFuturesAutomationForm`, `clonePaperLayerForm`) until Save.
 - Writes go through server actions and the service role. Never trust the browser for permissions.

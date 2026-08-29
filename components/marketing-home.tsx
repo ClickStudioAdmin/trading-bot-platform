@@ -16,7 +16,12 @@ const DESKS: {
   {
     id: "perps",
     deskType: "perps",
-    summary: "Buy, sell, and close one USDT perpetual from the desk ticket.",
+    summary: "Buy, sell, and close one perpetual from the desk ticket. No bots.",
+  },
+  {
+    id: "perps-bots",
+    deskType: "perps_bots",
+    summary: "Price-cross automations own the orders. No buy / sell ticket.",
   },
   {
     id: "tradingview-strategy",
@@ -35,7 +40,7 @@ const DESKS: {
 const STEPS = [
   {
     title: "Create a typed desk",
-    body: "Cash and Carry, Perps, TradingView Strategy, or DCA. Type is set at create and never changes.",
+    body: "Cash and Carry, Perps, Perps bots, TradingView Strategy, or DCA. Type is set at create and never changes.",
   },
   {
     title: "Paper or Connected Exchange",
@@ -92,7 +97,7 @@ export function MarketingHome({ appHref = null }: { appHref?: string | null }) {
           Desks
         </p>
         <h2 className="mt-3 text-2xl font-semibold tracking-tight">
-          Four types. One login.
+          Five types. One login.
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-ink-muted">
           Each desk locks its manager. Create as many as you need. Paper and

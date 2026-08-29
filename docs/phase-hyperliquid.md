@@ -43,7 +43,7 @@ Code registry (extend today’s `lib/exchanges/venues.ts`). Postgres stores `ven
 | Parameter | Bybit | Hyperliquid | Why it exists |
 | --- | --- | --- | --- |
 | `id` | `bybit` | `hyperliquid` | Connection + desk |
-| `deskTypes` | all four | `perps`, `dca`, `signal_follower` | Hide C&C |
+| `deskTypes` | all five | `perps`, `perps_bots`, `dca`, `signal_follower` | Hide C&C |
 | `positionMode` | `hedge` | `one_way` | Two sides vs one net row |
 | `quote` | USDT | USDC | Size labels |
 | `symbolKind` | `linear_usdt` (`BTCUSDT`) | `coin` (`BTC`) | Pickers, blotter, templates |

@@ -14,6 +14,8 @@ import {
   snapshotPaperRecipe,
   snapshotPerpsRecipe,
   uniqueAppliedName,
+  templateFitsDesk,
+  formatTemplateDeskType,
 } from "./recipe";
 
 const form = new FormData();
@@ -200,5 +202,10 @@ assert.equal(missingSizeParsed.ok, false);
 if (!missingSizeParsed.ok) {
   assert.equal(missingSizeParsed.error, "Enter an order size.");
 }
+
+assert.equal(templateFitsDesk("perps", "perps_bots"), true);
+assert.equal(templateFitsDesk("perps", "perps"), false);
+assert.equal(templateFitsDesk("dca", "dca"), true);
+assert.equal(formatTemplateDeskType("perps"), "Perps bots");
 
 console.log("templates recipe ok");

@@ -290,7 +290,7 @@ async function runDeskTick(input: {
     });
     return { userId, ...stats };
   }
-  if (deskType === "perps") {
+  if (deskType === "perps_bots") {
     await runFuturesAutomationTick({
       accountId: input.accountId,
       tickers,

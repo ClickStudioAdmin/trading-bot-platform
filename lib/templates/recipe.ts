@@ -1,3 +1,4 @@
+import { formatDeskType, type DeskType } from "@/lib/accounts/model";
 import {
   dcaAveragingKind,
   dcaIntervalParts,
@@ -19,6 +20,20 @@ export const RECIPE_NAME_MAX = 40;
 
 export const TEMPLATE_DESK_TYPES = ["dca", "perps", "cash_and_carry"] as const;
 export type TemplateDeskType = (typeof TEMPLATE_DESK_TYPES)[number];
+
+export function templateFitsDesk(
+  templateDeskType: TemplateDeskType,
+  deskType: DeskType,
+): boolean {
+  if (templateDeskType === "perps") {
+    return deskType === "perps_bots";
+  }
+  return deskType === templateDeskType;
+}
+
+export function formatTemplateDeskType(deskType: TemplateDeskType): string {
+  return deskType === "perps" ? "Perps bots" : formatDeskType(deskType);
+}
 export type TemplateVisibility = "user" | "platform";
 
 export const STALE_TEMPLATE_ERROR =

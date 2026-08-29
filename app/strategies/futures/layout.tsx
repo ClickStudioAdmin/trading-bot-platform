@@ -21,6 +21,8 @@ import { loadFuturesSettings } from "@/lib/futures/settings";
 import {
   FUTURES_PRIMARY_LINKS,
   FUTURES_SECONDARY_LINKS,
+  PERPS_BOTS_PRIMARY_LINKS,
+  PERPS_PRIMARY_LINKS,
   SIGNAL_FOLLOWER_PRIMARY_LINKS,
 } from "@/lib/site-links";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
@@ -44,6 +46,8 @@ export default async function FuturesLayout({
     (session ? getVenue(session.account.venue)?.label : null) ?? "Bybit";
   const signalFollower = deskType === "signal_follower";
   const dca = deskType === "dca";
+  const perpsBots = deskType === "perps_bots";
+  const manualPerps = deskType === "perps";
   const live = Boolean(session && accountCanHoldConnections(session.account.mode));
   const settings = session ? await loadFuturesSettings() : null;
   const rules = session
@@ -79,7 +83,11 @@ export default async function FuturesLayout({
   const deskId = session?.account.id ?? null;
   const primaryBase = signalFollower
     ? SIGNAL_FOLLOWER_PRIMARY_LINKS
-    : FUTURES_PRIMARY_LINKS;
+    : perpsBots
+      ? PERPS_BOTS_PRIMARY_LINKS
+      : manualPerps
+        ? PERPS_PRIMARY_LINKS
+        : FUTURES_PRIMARY_LINKS;
   const primaryLinks = deskId
     ? navLinksWithDesk(primaryBase, deskId)
     : primaryBase;
@@ -109,16 +117,18 @@ export default async function FuturesLayout({
               ? hyperliquid
                 ? "This desk owns orders and exits. One open side per coin. Both is not available. Arm from Automations or a Signal webhook."
                 : "This desk owns orders and exits. Arm from Automations or a Signal webhook. Close All & Cancel All Open Orders is the panic flatten. Change TP/SL on Automations."
-              : hyperliquid
-                ? "Buy, sell, or close one USDC perpetual. Market or limit. One open side per coin."
-                : "Buy, sell, or close one USDT linear perpetual. Market or limit. Long and short can both be open."
+              : perpsBots
+                ? "Automations own buy, sell, and close. No ticket. Close All still flattens."
+                : hyperliquid
+                  ? "Buy, sell, or close one USDC perpetual. Market or limit. One open side per coin. No bots on this desk."
+                  : "Buy, sell, or close one USDT linear perpetual. Market or limit. Long and short can both be open. No bots on this desk."
         }
         navLabel={formatDeskType(deskType)}
         primaryLinks={primaryLinks}
         secondaryLinks={secondaryLinks}
         automationsHref={automationsHref}
         automationsRunning={
-          signalFollower ? false : automationsRunning
+          signalFollower || manualPerps ? false : automationsRunning
         }
         reduceOnly={deskStatus.reduceOnly}
         connection={
@@ -153,7 +163,7 @@ export default async function FuturesLayout({
             Settings before{" "}
             {signalFollower
               ? "TradingView orders can place."
-              : dca
+              : dca || perpsBots
                 ? "the bot can place."
                 : "Buy, Sell, or Close can place orders."}
           </p>

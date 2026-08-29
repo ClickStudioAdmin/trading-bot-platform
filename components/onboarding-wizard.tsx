@@ -12,6 +12,7 @@ import type { ExchangeConnection } from "@/lib/exchanges/connections";
 const DESK_TYPES = [
   "cash_and_carry",
   "perps",
+  "perps_bots",
   "signal_follower",
   "dca",
 ] as const;

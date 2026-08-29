@@ -20,11 +20,11 @@ import {
   type TradingAccount,
 } from "@/lib/accounts/model";
 
-const DESK_TYPE_ORDER: DeskType[] = [
+const AUTOMATED_DESK_TYPES: DeskType[] = [
   "cash_and_carry",
-  "perps",
   "signal_follower",
   "dca",
+  "perps_bots",
 ];
 
 export function AccountSidenav({
@@ -52,37 +52,49 @@ export function AccountSidenav({
         links={ACCOUNT_DESK_LINKS}
         pathname={pathname}
       />
-      <DeskList
+      <DeskGroup
         className="mt-5"
+        label="Automated desks"
+        types={AUTOMATED_DESK_TYPES}
         desks={desks}
         currentDeskId={currentDeskId}
         createDeskType={createDeskType}
+      />
+      <ManualDeskGroup
+        className="mt-5"
+        desks={desks.filter((desk) => desk.deskType === "perps")}
+        currentDeskId={currentDeskId}
+        creating={createDeskType === "perps"}
       />
     </aside>
   );
 }
 
-function DeskList({
+function DeskGroup({
+  label,
+  types,
   desks,
   currentDeskId,
   createDeskType,
   className,
 }: {
+  label: string;
+  types: readonly DeskType[];
   desks: TradingAccount[];
   currentDeskId: string | null;
   createDeskType?: DeskType | null;
   className?: string;
 }) {
-  const groups = DESK_TYPE_ORDER.map((deskType) => ({
+  const groups = types.map((deskType) => ({
     deskType,
     desks: desks.filter((desk) => desk.deskType === deskType),
   }));
   return (
     <div className={className}>
       <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-        Desks
+        {label}
       </p>
-      <nav aria-label="Desks" className="mt-3 flex flex-col">
+      <nav aria-label={label} className="mt-3 flex flex-col">
         {groups.map((group) => {
           const creating = createDeskType === group.deskType;
           const empty = group.desks.length === 0;
@@ -111,33 +123,13 @@ function DeskList({
               )}
             </div>
             <div className="mt-1 flex flex-col gap-1">
-              {group.desks.map((desk) => {
-                const current = desk.id === currentDeskId;
-                const meta = `${formatDeskVenueCaption(desk)} · ${formatAccountMode(desk.mode)}`;
-                return (
-                  <Link
-                    key={desk.id}
-                    href={deskHomePath(desk.deskType, desk.id)}
-                    aria-current={current ? "true" : undefined}
-                    title={`${desk.name} · ${meta}`}
-                    onClick={() => {
-                      if (!current) {
-                        void rememberTradingAccount(desk.id);
-                      }
-                    }}
-                    className={`flex items-center gap-2 rounded-control px-3 py-2 ${
-                      current
-                        ? "bg-surface-raised text-ink"
-                        : "text-ink-faint hover:bg-surface-raised hover:text-ink"
-                    }`}
-                  >
-                    <DeskMark desk={desk} />
-                    <span className="min-w-0 truncate text-sm text-ink">
-                      {desk.name}
-                    </span>
-                  </Link>
-                );
-              })}
+              {group.desks.map((desk) => (
+                <DeskNavLink
+                  key={desk.id}
+                  desk={desk}
+                  current={desk.id === currentDeskId}
+                />
+              ))}
               {empty ? (
                 <Link
                   href={createDeskPath(group.deskType)}
@@ -160,6 +152,99 @@ function DeskList({
         })}
       </nav>
     </div>
+  );
+}
+
+function ManualDeskGroup({
+  desks,
+  currentDeskId,
+  creating,
+  className,
+}: {
+  desks: TradingAccount[];
+  currentDeskId: string | null;
+  creating: boolean;
+  className?: string;
+}) {
+  const empty = desks.length === 0;
+  return (
+    <div className={className}>
+      <div className="flex items-center gap-1">
+        <p className="min-w-0 flex-1 text-xs font-medium uppercase tracking-[0.16em] text-accent">
+          Manual trading desks
+        </p>
+        {empty ? null : (
+          <Link
+            href={createDeskPath("perps")}
+            aria-current={creating ? "true" : undefined}
+            aria-label="Create Perps desk"
+            title="Create Perps desk"
+            className={`flex size-6 shrink-0 items-center justify-center rounded-control text-base leading-none ${
+              creating
+                ? "bg-surface-raised text-ink"
+                : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+            }`}
+          >
+            +
+          </Link>
+        )}
+      </div>
+      <nav aria-label="Manual trading desks" className="mt-3 flex flex-col gap-1">
+        {desks.map((desk) => (
+          <DeskNavLink
+            key={desk.id}
+            desk={desk}
+            current={desk.id === currentDeskId}
+          />
+        ))}
+        {empty ? (
+          <Link
+            href={createDeskPath("perps")}
+            aria-current={creating ? "true" : undefined}
+            className={`flex items-center gap-1.5 rounded-control px-3 py-2 text-sm ${
+              creating
+                ? "bg-surface-raised text-ink"
+                : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+            }`}
+          >
+            <span aria-hidden className="text-base leading-none">
+              +
+            </span>
+            Create Desk
+          </Link>
+        ) : null}
+      </nav>
+    </div>
+  );
+}
+
+function DeskNavLink({
+  desk,
+  current,
+}: {
+  desk: TradingAccount;
+  current: boolean;
+}) {
+  const meta = `${formatDeskVenueCaption(desk)} · ${formatAccountMode(desk.mode)}`;
+  return (
+    <Link
+      href={deskHomePath(desk.deskType, desk.id)}
+      aria-current={current ? "true" : undefined}
+      title={`${desk.name} · ${meta}`}
+      onClick={() => {
+        if (!current) {
+          void rememberTradingAccount(desk.id);
+        }
+      }}
+      className={`flex items-center gap-2 rounded-control px-3 py-2 ${
+        current
+          ? "bg-surface-raised text-ink"
+          : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+      }`}
+    >
+      <DeskMark desk={desk} />
+      <span className="min-w-0 truncate text-sm text-ink">{desk.name}</span>
+    </Link>
   );
 }
 

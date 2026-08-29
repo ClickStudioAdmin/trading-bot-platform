@@ -4,7 +4,7 @@ import { PageHeading } from "@/components/page-heading";
 import { FuturesWebhooksDesk } from "@/components/futures-webhooks-desk";
 import { FuturesWebhookTest } from "@/components/futures-webhook-test";
 import { getSessionContext } from "@/lib/auth/session";
-import { deskAllowsOrderWebhooks, deskAllowsPerpsRecipes, deskAllowsSignalWebhooks, deskHref } from "@/lib/accounts/model";
+import { deskAllowsOrderWebhooks, deskAllowsPerpsRecipes, deskAllowsSignalWebhooks, deskHref, deskHomePath } from "@/lib/accounts/model";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
@@ -19,6 +19,7 @@ import { loadFuturesSettings } from "@/lib/futures/settings";
 import { firstSearchValue } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Futures webhooks",
@@ -36,6 +37,9 @@ export default async function FuturesWebhooksPage({
   const deskType = session?.account.deskType ?? "perps";
   const allowSignal = deskAllowsSignalWebhooks(deskType);
   const allowOrder = deskAllowsOrderWebhooks(deskType);
+  if (session && !allowSignal && !allowOrder) {
+    redirect(deskHomePath(session.account.deskType, session.account.id));
+  }
   const webhooks = session
     ? await listFuturesWebhooks({
         accountId: session.account.id,

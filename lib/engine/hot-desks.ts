@@ -16,7 +16,7 @@ export function deskKindsFromTypes(
     if (deskType === "cash_and_carry") {
       cashAndCarry = true;
     }
-    if (deskType === "perps" || deskType === "dca") {
+    if (deskType === "perps" || deskType === "perps_bots" || deskType === "dca") {
       linear = true;
     }
     if (cashAndCarry && linear) {

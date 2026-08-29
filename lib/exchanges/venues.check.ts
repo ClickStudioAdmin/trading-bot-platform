@@ -57,6 +57,8 @@ assert.equal(hl.venue.dcaBoth, false);
 assert.equal(hl.venue.connectionsEnabled, true);
 assert.equal(venueAllowsDeskType(hl.venue, "cash_and_carry"), false);
 assert.equal(venueAllowsDeskType(hl.venue, "dca"), true);
+assert.equal(venueAllowsDeskType(hl.venue, "perps_bots"), true);
+assert.equal(venueAllowsDeskType(bybit.venue, "perps_bots"), true);
 assert.equal(venuesForDeskType("dca").some((row) => row.id === "hyperliquid"), true);
 assert.equal(parseConnectionVenueId("hyperliquid").ok, true);
 assert.equal(parseConnectionVenueId("bybit").ok, true);

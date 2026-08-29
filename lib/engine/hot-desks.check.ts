@@ -10,6 +10,10 @@ assert.deepEqual(deskKindsFromTypes(["dca", "perps"]), {
   cashAndCarry: false,
   linear: true,
 });
+assert.deepEqual(deskKindsFromTypes(["perps_bots"]), {
+  cashAndCarry: false,
+  linear: true,
+});
 assert.deepEqual(deskKindsFromTypes(["cash_and_carry"]), {
   cashAndCarry: true,
   linear: false,

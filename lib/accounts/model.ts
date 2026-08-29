@@ -11,6 +11,7 @@ export type TradingAccountMode = "paper" | "live";
 export type DeskType =
   | "cash_and_carry"
   | "perps"
+  | "perps_bots"
   | "signal_follower"
   | "dca";
 
@@ -42,6 +43,7 @@ export function parseAccountMode(value: unknown): TradingAccountMode {
 export function parseDeskType(value: unknown): DeskType {
   if (
     value === "perps" ||
+    value === "perps_bots" ||
     value === "signal_follower" ||
     value === "dca"
   ) {
@@ -57,6 +59,7 @@ export function parseDeskTypeChoice(
   if (
     raw === "cash_and_carry" ||
     raw === "perps" ||
+    raw === "perps_bots" ||
     raw === "signal_follower" ||
     raw === "dca"
   ) {
@@ -69,6 +72,9 @@ export function formatDeskType(deskType: DeskType): string {
   if (deskType === "perps") {
     return "Perps";
   }
+  if (deskType === "perps_bots") {
+    return "Perps bots";
+  }
   if (deskType === "signal_follower") {
     return "TradingView Strategy";
   }
@@ -80,7 +86,10 @@ export function formatDeskType(deskType: DeskType): string {
 
 export function formatDeskTypeChoice(deskType: DeskType): string {
   if (deskType === "perps") {
-    return "Perps (buy / sell / close one USDT perpetual)";
+    return "Perps (buy / sell / close from the ticket)";
+  }
+  if (deskType === "perps_bots") {
+    return "Perps bots (price-cross automations own the orders)";
   }
   if (deskType === "signal_follower") {
     return "TradingView Strategy (alerts send buy / sell / close)";
@@ -211,15 +220,15 @@ export function deskAllowsManualPerpTicket(deskType: DeskType): boolean {
 }
 
 export function deskAllowsPerpsRecipes(deskType: DeskType): boolean {
-  return deskType === "perps";
+  return deskType === "perps_bots";
 }
 
 export function deskAllowsSignalWebhooks(deskType: DeskType): boolean {
-  return deskType === "perps" || deskType === "dca";
+  return deskType === "dca";
 }
 
 export function deskAllowsOrderWebhooks(deskType: DeskType): boolean {
-  return deskType === "perps" || deskType === "signal_follower";
+  return deskType === "signal_follower";
 }
 
 export function deskManualBuySellBlockReason(
@@ -227,6 +236,9 @@ export function deskManualBuySellBlockReason(
 ): string | null {
   if (deskAllowsManualPerpTicket(deskType)) {
     return null;
+  }
+  if (deskType === "perps_bots") {
+    return "This is a Perps bots desk. Automations own orders. Buy and Sell are not on this ticket.";
   }
   if (deskType === "dca") {
     return "This is a DCA desk. The bot owns orders. Buy and Sell are not on this ticket.";

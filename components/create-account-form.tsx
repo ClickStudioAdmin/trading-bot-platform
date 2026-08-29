@@ -30,6 +30,7 @@ const fieldClass =
 const DESK_TYPES: DeskType[] = [
   "cash_and_carry",
   "perps",
+  "perps_bots",
   "signal_follower",
   "dca",
 ];

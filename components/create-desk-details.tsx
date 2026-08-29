@@ -15,11 +15,19 @@ const DETAILS: Record<
     ],
   },
   perps: {
-    summary: "Trade one USDT perpetual at a time from the desk ticket.",
+    summary: "Manual ticket only. Buy, sell, and close one perpetual.",
     points: [
-      "Buy, sell, and close from the blotter.",
-      "Optional price-cross automations on this desk.",
+      "No automations or webhooks on this desk.",
       "Take profit, stop, and trailing stay on the position.",
+      "Close All still flattens the book.",
+    ],
+  },
+  perps_bots: {
+    summary: "Price-cross automations own the orders. No buy / sell ticket.",
+    points: [
+      "Bots Buy, Sell, or Close when last, mark, or index crosses a price.",
+      "TradingView alerts stay on a TradingView Strategy desk.",
+      "Close All still flattens the book.",
     ],
   },
   signal_follower: {

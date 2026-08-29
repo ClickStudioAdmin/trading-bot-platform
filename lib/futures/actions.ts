@@ -464,6 +464,12 @@ export async function createFuturesWebhookAction(formData: FormData) {
   }
   const kind = parseWebhookKind(formData.get("kind"));
   if (
+    !deskAllowsSignalWebhooks(session.account.deskType) &&
+    !deskAllowsOrderWebhooks(session.account.deskType)
+  ) {
+    webhookFail(session.account.id, "This desk does not use webhooks.");
+  }
+  if (
     kind.ok &&
     kind.kind === "signal" &&
     !deskAllowsSignalWebhooks(session.account.deskType)

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
 import { Modal, StarterPackCheckbox } from "@/components/template-modals";
-import { formatDeskType } from "@/lib/accounts/model";
+import { formatTemplateDeskType } from "@/lib/templates/recipe";
 import {
   createTemplateSetAction,
   deleteTemplateAction,
@@ -288,7 +288,7 @@ export function TemplatesLibrary({
         row.description ?? "",
         row.ownerEmail ?? "",
         row.sharedByEmail ?? "",
-        formatDeskType(row.deskType),
+        formatTemplateDeskType(row.deskType),
         folderLabel(held),
         sharedLabel(row.sharedWith, row.sharedByEmail),
         templateShowsStarterPack(row, knownFolders) ? "starter pack" : "",
@@ -354,7 +354,7 @@ export function TemplatesLibrary({
           row.description ?? "",
           row.ownerEmail ?? "",
           row.sharedByEmail ?? "",
-          formatDeskType(row.deskType),
+          formatTemplateDeskType(row.deskType),
           row.items.map((item) => item.name).join(" "),
           sharedLabel(row.sharedWith, row.sharedByEmail),
           row.starterPack ? "starter pack" : "",
@@ -665,7 +665,7 @@ export function TemplatesLibrary({
           >
             <option value="all">All desk types</option>
             <option value="dca">DCA</option>
-            <option value="perps">Perps</option>
+            <option value="perps">Perps bots</option>
             <option value="cash_and_carry">Cash and Carry</option>
           </select>
         </label>
@@ -801,7 +801,7 @@ export function TemplatesLibrary({
                   )}
                   <td className="px-4 py-3 font-medium text-ink">{row.name}</td>
                   <td className="px-4 py-3 text-ink-muted">
-                    {formatDeskType(row.deskType)}
+                    {formatTemplateDeskType(row.deskType)}
                   </td>
                   {showOwner ? (
                     <td className="px-4 py-3 text-ink-muted">
@@ -962,7 +962,7 @@ export function TemplatesLibrary({
                     )}
                     <td className="px-4 py-3 font-medium text-ink">{row.name}</td>
                     <td className="px-4 py-3 text-ink-muted">
-                      {formatDeskType(row.deskType)}
+                      {formatTemplateDeskType(row.deskType)}
                     </td>
                     {showOwner ? (
                       <td className="px-4 py-3 text-ink-muted">
@@ -1380,7 +1380,7 @@ function ImportModal({
             rows={file.templates.map((row) => ({
               id: row.id,
               name: row.name,
-              detail: formatDeskType(row.deskType),
+              detail: formatTemplateDeskType(row.deskType),
             }))}
             selected={templateIds}
             locked={lockedTemplateIds}
@@ -1392,7 +1392,7 @@ function ImportModal({
             rows={file.sets.map((row) => ({
               id: row.id,
               name: row.name,
-              detail: `${formatDeskType(row.deskType)} · ${row.items.length} template${row.items.length === 1 ? "" : "s"}`,
+              detail: `${formatTemplateDeskType(row.deskType)} · ${row.items.length} template${row.items.length === 1 ? "" : "s"}`,
             }))}
             selected={setIds}
             onToggle={(id) => toggle(id, "folder")}
@@ -2123,7 +2123,7 @@ function CreateFolderModal({
         >
           {(["dca", "perps", "cash_and_carry"] as const).map((type) => (
             <option key={type} value={type}>
-              {formatDeskType(type)}
+              {formatTemplateDeskType(type)}
             </option>
           ))}
         </select>

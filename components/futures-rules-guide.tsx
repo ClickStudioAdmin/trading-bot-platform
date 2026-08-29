@@ -10,8 +10,8 @@ export function FuturesRulesGuide({
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
         {exchangeBook
-          ? "Each bot watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on the bound book. Those are the same commands as a click on Positions. TradingView URLs live on Webhooks."
-          : "Each bot watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on this paper book. Nothing is sent to Bybit. TradingView URLs live on Webhooks."}
+          ? "Each bot watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on the bound book. There is no ticket on this desk. TradingView alerts stay on a TradingView Strategy desk."
+          : "Each bot watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on this paper book. Nothing is sent to Bybit. There is no ticket on this desk."}
       </p>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
@@ -20,15 +20,15 @@ export function FuturesRulesGuide({
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="When it fires"
-          detail="When can be a price cross or a named Signal webhook. A price bot fires on the first tick the condition is true, then waits until it is false again. A Signal bot fires when that webhook arms."
+          detail="A price bot fires on the first tick last, mark, or index crosses the level, then waits until the condition is false again."
         />
         <GuideItem
           term="When it is on"
-          detail="Active may Buy, Sell, and Close. Reduce only will not Buy or Sell, but still Closes. Disabled does neither. Book Reduce only (Desk Settings, or the Close All checkbox) makes every Active bot behave as Reduce only. Manual Buy, Sell, and Close always work."
+          detail="Active may Buy, Sell, and Close. Reduce only will not Buy or Sell, but still Closes. Disabled does neither. Book Reduce only (Desk Settings, or the Close All checkbox) makes every Active bot behave as Reduce only. Close All still flattens."
         />
         <GuideItem
           term="Same desk path"
-          detail="Fires call runFuturesCommand with an idempotency key. Live uses the Futures bind. Paper writes the ledger only. Risk caps, hedge long+short, and Market or Limit are the same as the ticket."
+          detail="Fires call runFuturesCommand with an idempotency key. Live uses the Futures bind. Paper writes the ledger only. Risk caps, hedge long+short, and Market or Limit are the same knobs as a Perps ticket desk."
         />
       </dl>
 

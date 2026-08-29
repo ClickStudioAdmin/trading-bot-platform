@@ -28,7 +28,7 @@ import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
 import { headers } from "next/headers";
 import { firstSearchValue } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
-import { deskHref } from "@/lib/accounts/model";
+import { deskAllowsPerpsRecipes, deskHref, deskHomePath } from "@/lib/accounts/model";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { redirect } from "next/navigation";
 import {
@@ -51,6 +51,13 @@ export default async function FuturesAutomationsPage({
   const session = await getSessionContext();
   if (session?.account.deskType === "signal_follower") {
     redirect(deskHref(FUTURES_PATHS.webhooks, session.account.id));
+  }
+  if (
+    session &&
+    session.account.deskType !== "dca" &&
+    !deskAllowsPerpsRecipes(session.account.deskType)
+  ) {
+    redirect(deskHomePath(session.account.deskType, session.account.id));
   }
   if (session?.account.deskType === "dca") {
     const playbooks = await listDcaPlaybooksForAccount(session.account.id);

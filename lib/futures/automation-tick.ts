@@ -16,7 +16,11 @@ import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { triggerPrice, tickerTriggerPrices } from "./tpsl";
-import { parseDeskType, type TradingAccountMode } from "@/lib/accounts/model";
+import {
+  deskAllowsPerpsRecipes,
+  parseDeskType,
+  type TradingAccountMode,
+} from "@/lib/accounts/model";
 import {
   parseStoredVenueEnvironment,
   parseStoredVenueId,
@@ -120,7 +124,7 @@ export async function runFuturesAutomationTick(input?: {
     if (rule.entrySource === "webhook") {
       continue;
     }
-    if (!account || !rule.id || account.deskType !== "perps") {
+    if (!account || !rule.id || !deskAllowsPerpsRecipes(account.deskType)) {
       continue;
     }
     let deskTickers = tickers;

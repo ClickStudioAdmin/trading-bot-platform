@@ -1,5 +1,6 @@
 import {
   deskAllowsOrderWebhooks,
+  deskAllowsPerpsRecipes,
   deskAllowsSignalWebhooks,
   parseAccountMode,
   parseDeskType,
@@ -86,12 +87,15 @@ export async function handleFuturesWebhook(input: {
   }
   const mode = parseAccountMode((account as { mode?: unknown }).mode);
   const deskType = parseDeskType((account as { desk_type?: unknown }).desk_type);
-  if (deskType === "cash_and_carry") {
+  if (
+    deskType === "cash_and_carry" ||
+    (!deskAllowsSignalWebhooks(deskType) && !deskAllowsOrderWebhooks(deskType))
+  ) {
     return {
       status: 400,
       body: {
         ok: false,
-        error: "This desk does not accept Futures webhooks.",
+        error: "This desk does not accept webhooks.",
       },
     };
   }
@@ -224,7 +228,11 @@ export async function handleFuturesWebhook(input: {
       };
     }
     let fired = 0;
-    if (parsed.parsed.verb === "arm" && found.id && deskType === "perps") {
+    if (
+      parsed.parsed.verb === "arm" &&
+      found.id &&
+      deskAllowsPerpsRecipes(deskType)
+    ) {
       const entries = await fireWebhookAutomationEntries({
         webhookId: found.id,
         accountId,

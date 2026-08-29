@@ -24,6 +24,7 @@ export type AdminOverview = {
     live: number;
     cashAndCarry: number;
     perps: number;
+    perpsBots: number;
     signalFollower: number;
     dca: number;
   };
@@ -52,6 +53,7 @@ const emptyOverview: AdminOverview = {
     live: 0,
     cashAndCarry: 0,
     perps: 0,
+    perpsBots: 0,
     signalFollower: 0,
     dca: 0,
   },
@@ -135,6 +137,7 @@ export async function loadAdminOverview(): Promise<AdminOverview> {
   let live = 0;
   let cashAndCarry = 0;
   let perps = 0;
+  let perpsBots = 0;
   let signalFollower = 0;
   let dca = 0;
   for (const row of deskRows) {
@@ -147,6 +150,9 @@ export async function loadAdminOverview(): Promise<AdminOverview> {
     }
     if (type === "perps") {
       perps += 1;
+      perpsIds.add(id);
+    } else if (type === "perps_bots") {
+      perpsBots += 1;
       perpsIds.add(id);
     } else if (type === "signal_follower") {
       signalFollower += 1;
@@ -209,6 +215,7 @@ export async function loadAdminOverview(): Promise<AdminOverview> {
       live,
       cashAndCarry,
       perps,
+      perpsBots,
       signalFollower,
       dca,
     },

@@ -1,5 +1,6 @@
 import { listTradingAccounts } from "@/lib/accounts/store";
 import type { TradingAccount } from "@/lib/accounts/model";
+import { deskAllowsPerpsRecipes } from "@/lib/accounts/model";
 import {
   dcaConfigMaxOrderError,
   dcaPlaybookConflict,
@@ -28,6 +29,7 @@ import {
   paperRecipeToLayer,
   perpsRecipeToRule,
   uniqueAppliedName,
+  templateFitsDesk,
   type TemplateDeskType,
 } from "./recipe";
 import { loadSetById, loadTemplateById, setIsSharedWith, templateIsSharedWith, type AutomationTemplate } from "./store";
@@ -206,6 +208,15 @@ async function applyPerpsTemplate(input: {
   desk: TradingAccount;
 }): Promise<ApplyItemResult> {
   const recipe = input.template.recipe;
+  if (!deskAllowsPerpsRecipes(input.desk.deskType)) {
+    return {
+      templateId: input.template.id,
+      name: input.template.name,
+      ok: false,
+      error: "Perps bot templates apply to a Perps bots desk.",
+      notes: [],
+    };
+  }
   if (recipe.kind !== "perps") {
     return {
       templateId: input.template.id,
@@ -410,7 +421,7 @@ export async function applyTemplateToDesk(input: {
       notes: [],
     };
   }
-  if (desk.deskType !== template.deskType) {
+  if (!templateFitsDesk(template.deskType, desk.deskType)) {
     return {
       templateId: template.id,
       name: template.name,
@@ -470,7 +481,7 @@ export async function applyTemplateSetToDesk(input: {
   ) {
     return { ok: false, deskType: null, results: [], error: "That folder was not found." };
   }
-  if (desk.deskType !== set.deskType) {
+  if (!templateFitsDesk(set.deskType, desk.deskType)) {
     return {
       ok: false,
       deskType: set.deskType,

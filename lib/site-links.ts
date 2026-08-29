@@ -54,6 +54,19 @@ export const FUTURES_PRIMARY_LINKS = [
   { href: "/strategies/futures/performance", label: "Performance" },
 ] as const;
 
+export const PERPS_PRIMARY_LINKS = [
+  { href: "/strategies/futures", label: "Overview", exact: true },
+  { href: "/strategies/futures/positions", label: "Positions" },
+  { href: "/strategies/futures/performance", label: "Performance" },
+] as const;
+
+export const PERPS_BOTS_PRIMARY_LINKS = [
+  { href: "/strategies/futures", label: "Overview", exact: true },
+  { href: "/strategies/futures/positions", label: "Positions" },
+  { href: "/strategies/futures/automations", label: "Automations (bots)" },
+  { href: "/strategies/futures/performance", label: "Performance" },
+] as const;
+
 export const SIGNAL_FOLLOWER_PRIMARY_LINKS = [
   { href: "/strategies/futures", label: "Overview", exact: true },
   { href: "/strategies/futures/positions", label: "Positions" },

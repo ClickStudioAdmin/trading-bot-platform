@@ -76,6 +76,10 @@ export default async function AdminOverviewPage() {
             />
             <Row label={formatDeskType("perps")} value={overview.desks.perps} />
             <Row
+              label={formatDeskType("perps_bots")}
+              value={overview.desks.perpsBots}
+            />
+            <Row
               label={formatDeskType("signal_follower")}
               value={overview.desks.signalFollower}
             />
@@ -216,10 +220,11 @@ export default async function AdminOverviewPage() {
 function deskTypeHint(desks: {
   cashAndCarry: number;
   perps: number;
+  perpsBots: number;
   signalFollower: number;
   dca: number;
 }): string {
-  return `${desks.cashAndCarry} ${formatDeskType("cash_and_carry")} · ${desks.perps} ${formatDeskType("perps")} · ${desks.signalFollower} ${formatDeskType("signal_follower")} · ${desks.dca} ${formatDeskType("dca")}`;
+  return `${desks.cashAndCarry} ${formatDeskType("cash_and_carry")} · ${desks.perps} ${formatDeskType("perps")} · ${desks.perpsBots} ${formatDeskType("perps_bots")} · ${desks.signalFollower} ${formatDeskType("signal_follower")} · ${desks.dca} ${formatDeskType("dca")}`;
 }
 
 function openPositionHint(positions: {
