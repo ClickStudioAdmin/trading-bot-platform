@@ -112,7 +112,7 @@ A member is an admin when `members.role` is `admin`, or the email is `click.stud
 
 ## Paper engine tick
 
-The tick is `runEngineCycle` in `lib/engine`: shared scan, then **per-desk leases**, then that desk only. Fly.io in **Sydney** (`tbp-engine-dev` / `tbp-engine`) loops about every 20 seconds. See [phase-fly.md](phase-fly.md).
+The tick is `runEngineCycle` in `lib/engine`: shared scan, then **hot desks first** (open books, armed DCA, active Perps), then other idle desks via **per-desk leases**. Fly.io in **Sydney** (`tbp-engine-dev` / `tbp-engine`) loops about every 20 seconds. See [phase-fly.md](phase-fly.md).
 
 `POST /api/engine/tick` on Sydney Vercel is a **fallback** (same leases, 50s budget). [`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) still POSTs every 5 minutes until Fly is healthy. Do not use Vercel Cron.
 

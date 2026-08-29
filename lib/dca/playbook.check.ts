@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 import {
+  dcaIndicatorStartLatches,
+  indicatorClosesForCross,
+} from "./indicators";
+import {
   dcaAveragingKind,
   dcaCapHit,
   dcaClipsFilledFromGrid,
@@ -829,6 +833,48 @@ assert.equal(
   decideDcaTick({
     ...base,
     status: "armed",
+    clipsFilled: 0,
+    startKind: "indicator",
+    indicatorKind: "rsi",
+    indicatorCompare: "cross_gte",
+    indicatorLevel: 30,
+    indicatorConditionTrue: true,
+    closes: [],
+  }).action.kind,
+  "arm",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "indicator",
+    indicatorKind: "rsi",
+    indicatorCompare: "cross_gte",
+    indicatorLevel: 30,
+    indicatorConditionTrue: false,
+    closes: [],
+  }).action.kind,
+  "none",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "indicator",
+    indicatorKind: "rsi",
+    indicatorCompare: "cross_gte",
+    indicatorLevel: 30,
+    indicatorConditionTrue: true,
+    closes: [],
+  }).nextIndicatorTrue,
+  true,
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
     lastPrice: 97,
   }).action.kind,
   "clip",
@@ -1573,5 +1619,10 @@ indicatorBadTf.set("indicatorCompare", "lte");
 indicatorBadTf.set("indicatorLevel", "30");
 const indicatorBadTfParsed = parseDcaPlaybookForm(indicatorBadTf);
 assert.equal(indicatorBadTfParsed.ok, false);
+
+assert.equal(dcaIndicatorStartLatches("rsi", "cross_gte"), true);
+assert.equal(dcaIndicatorStartLatches("rsi", "lte"), false);
+assert.equal(dcaIndicatorStartLatches("ema_cross", null), true);
+assert.deepEqual(indicatorClosesForCross([1, 2, 3, 4]), [1, 2, 3]);
 
 console.log("dca playbook checks passed");

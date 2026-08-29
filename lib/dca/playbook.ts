@@ -21,6 +21,8 @@ import {
 import { futuresPnlUsdt } from "@/lib/futures/math";
 import { dcaClipSizeAt, dcaDipPctAt, dcaLadderMaxOrderError, dcaPlannedExits, dcaSafetyPrices } from "./grid";
 import {
+  dcaIndicatorStartLatches,
+  indicatorClosesForCross,
   indicatorStartMet,
   parseDcaIndicatorCompare,
   parseDcaIndicatorTimeframe,
@@ -1087,22 +1089,44 @@ export function decideDcaTick(input: {
         input.disarmTrigger.price,
       ),
   );
-  const indicatorMet = Boolean(
+  const latchCross = dcaIndicatorStartLatches(
+    indicatorKind,
+    indicatorCompare,
+  );
+  const indicatorNow = Boolean(
     startKind === "indicator" &&
       indicatorKind &&
       closes &&
-      indicatorStartMet({
+      (indicatorStartMet({
         kind: indicatorKind,
         side: input.side,
         closes,
         compare: indicatorCompare,
         level: indicatorLevel,
         splitBySide: Boolean(input.splitIndicatorSides),
-      }),
+      }) ||
+        (latchCross &&
+          indicatorStartMet({
+            kind: indicatorKind,
+            side: input.side,
+            closes: indicatorClosesForCross(closes),
+            compare: indicatorCompare,
+            level: indicatorLevel,
+            splitBySide: Boolean(input.splitIndicatorSides),
+          }))),
   );
+  const indicatorDue =
+    indicatorNow ||
+    (startKind === "indicator" &&
+      latchCross &&
+      Boolean(input.indicatorConditionTrue) &&
+      input.clipsFilled === 0);
   const nextArmTrue = armMet;
   const nextDisarmTrue = disarmMet;
-  const nextIndicatorTrue = indicatorMet;
+  const nextIndicatorTrue =
+    startKind === "indicator" && latchCross
+      ? indicatorDue
+      : indicatorNow;
   const disarmEdge = disarmMet && !input.disarmConditionTrue;
 
   if (input.status === "idle") {
@@ -1222,7 +1246,7 @@ export function decideDcaTick(input: {
     const startReady =
       startKind === "immediate" ||
       (startKind === "price" && armMet) ||
-      (startKind === "indicator" && indicatorMet);
+      (startKind === "indicator" && indicatorDue);
     if (!input.reduceOnly && startReady) {
       return {
         action: { kind: "arm" },

@@ -1,4 +1,4 @@
-import type { TradingAccountMode } from "@/lib/accounts/model";
+import { parseDeskType, type TradingAccountMode } from "@/lib/accounts/model";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
 import { runFuturesCommand, deleteCommandReceipt } from "@/lib/futures/command";
 import {
@@ -58,6 +58,7 @@ import {
 import { dcaSyncFailedMessage } from "./log-copy";
 import { isUnchangedWorkingAmend } from "@/lib/futures/working";
 import {
+  listDcaPlaybooksForAccount,
   patchDcaLeg,
   resetDcaLeg,
   resetDcaPlaybook,
@@ -758,6 +759,46 @@ async function placeClip(input: {
       : (leg.firstFillPrice ?? input.lastPrice),
   });
   return { ok: true };
+}
+
+export async function syncDcaExitsAfterFill(input: {
+  accountId: string;
+  userId: string;
+  symbol: string;
+  side: FuturesSide;
+  lastPrice: number | null;
+}): Promise<void> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return;
+  }
+  const { data: account } = await supabase
+    .from("trading_accounts")
+    .select("mode, desk_type")
+    .eq("id", input.accountId)
+    .maybeSingle();
+  if (!account || parseDeskType((account as { desk_type?: unknown }).desk_type) !== "dca") {
+    return;
+  }
+  const mode = String((account as { mode: string }).mode) as TradingAccountMode;
+  const playbooks = await listDcaPlaybooksForAccount(input.accountId, supabase);
+  for (const playbook of playbooks) {
+    if (playbook.symbol !== input.symbol) {
+      continue;
+    }
+    if (!dcaEnabledSides(playbook.direction).includes(input.side)) {
+      continue;
+    }
+    if (!dcaLegIsRunning(dcaLegFor(playbook, input.side).status)) {
+      continue;
+    }
+    await syncDcaPlaybookExits({
+      playbook,
+      mode,
+      side: input.side,
+      lastPrice: input.lastPrice,
+    });
+  }
 }
 
 export async function syncDcaPlaybookExits(input: {

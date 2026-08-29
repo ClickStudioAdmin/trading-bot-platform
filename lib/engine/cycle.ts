@@ -2,8 +2,10 @@ import { parseDeskType } from "@/lib/accounts/model";
 import { runCashAndCarryDeskTick } from "@/lib/engine/cash-and-carry-tick";
 import {
   ENGINE_CLAIM_BATCH,
+  ENGINE_HOT_CLAIM_BATCH,
   ENGINE_LEASE_TTL_SECONDS,
 } from "@/lib/engine/lease";
+import { listHotEngineAccountIds } from "@/lib/engine/hot-desks";
 import {
   claimEngineDesks,
   engineWorkerId,
@@ -64,17 +66,29 @@ export async function runEngineCycle(
     desks: 0,
   };
   const users = new Set<string>();
+  const done = new Set<string>();
+  const hotIds = await listHotEngineAccountIds();
+  let wave = 0;
 
   while (maxMs === undefined || Date.now() - started < maxMs) {
+    const hotLeft = hotIds.filter((id) => !done.has(id));
+    const limit =
+      wave === 0
+        ? Math.max(batchSize, Math.min(hotLeft.length || batchSize, ENGINE_HOT_CLAIM_BATCH))
+        : batchSize;
     const claimed = await claimEngineDesks({
       workerId,
-      limit: batchSize,
+      limit,
       ttlSeconds: ENGINE_LEASE_TTL_SECONDS,
+      preferAccountIds: hotLeft,
+      excludeAccountIds: [...done],
     });
+    wave += 1;
     if (claimed.length === 0) {
       break;
     }
     for (const accountId of claimed) {
+      done.add(accountId);
       if (maxMs !== undefined && Date.now() - started >= maxMs) {
         await releaseEngineDesk({ accountId, workerId });
         continue;

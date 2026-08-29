@@ -50,6 +50,8 @@ export async function claimEngineDesks(input?: {
   workerId?: string;
   limit?: number;
   ttlSeconds?: number;
+  preferAccountIds?: readonly string[];
+  excludeAccountIds?: readonly string[];
 }): Promise<string[]> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -58,26 +60,44 @@ export async function claimEngineDesks(input?: {
   const workerId = input?.workerId ?? engineWorkerId();
   const limit = Math.max(1, Math.min(50, input?.limit ?? ENGINE_CLAIM_BATCH));
   const ttlSeconds = input?.ttlSeconds ?? ENGINE_LEASE_TTL_SECONDS;
+  const prefer = new Set(input?.preferAccountIds ?? []);
+  const exclude = new Set(input?.excludeAccountIds ?? []);
   await ensureLeaseRows(supabase);
   const nowIso = new Date().toISOString();
   const { data: free, error } = await supabase
     .from("engine_desk_leases")
-    .select("account_id")
+    .select("account_id, leased_until")
     .lt("leased_until", nowIso)
     .order("leased_until", { ascending: true })
     .order("account_id", { ascending: true })
-    .limit(limit);
+    .limit(Math.min(200, Math.max(limit * 8, 40)));
   if (error) {
     console.error("engine_desk_leases list", error.message);
     return [];
   }
+  const ranked = (free ?? [])
+    .map((row) => ({
+      accountId: String(row.account_id ?? ""),
+      leasedUntil: String(row.leased_until ?? ""),
+    }))
+    .filter((row) => row.accountId && !exclude.has(row.accountId))
+    .sort((a, b) => {
+      const aHot = prefer.has(a.accountId) ? 0 : 1;
+      const bHot = prefer.has(b.accountId) ? 0 : 1;
+      if (aHot !== bHot) {
+        return aHot - bHot;
+      }
+      if (a.leasedUntil !== b.leasedUntil) {
+        return a.leasedUntil.localeCompare(b.leasedUntil);
+      }
+      return a.accountId.localeCompare(b.accountId);
+    });
   const claimed: string[] = [];
   const until = leaseUntilIso(ttlSeconds);
   const updatedAt = new Date().toISOString();
-  for (const row of free ?? []) {
-    const accountId = String(row.account_id ?? "");
-    if (!accountId) {
-      continue;
+  for (const row of ranked) {
+    if (claimed.length >= limit) {
+      break;
     }
     const { data } = await supabase
       .from("engine_desk_leases")
@@ -86,11 +106,11 @@ export async function claimEngineDesks(input?: {
         leased_until: until,
         updated_at: updatedAt,
       })
-      .eq("account_id", accountId)
+      .eq("account_id", row.accountId)
       .lt("leased_until", nowIso)
       .select("account_id");
     if (data?.length) {
-      claimed.push(accountId);
+      claimed.push(row.accountId);
     }
   }
   return claimed;

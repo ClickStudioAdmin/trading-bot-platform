@@ -33,8 +33,27 @@ export type SessionContext = {
   account: TradingAccount;
 };
 
+async function requestCookies() {
+  try {
+    return await cookies();
+  } catch {
+    return null;
+  }
+}
+
+async function requestHeaders() {
+  try {
+    return await headers();
+  } catch {
+    return null;
+  }
+}
+
 export async function getSessionMember(): Promise<SessionMember | null> {
-  const store = await cookies();
+  const store = await requestCookies();
+  if (!store) {
+    return null;
+  }
   const token = store.get(SESSION_COOKIE)?.value;
   if (!token) {
     return null;
@@ -74,8 +93,12 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   if (!fallback) {
     return null;
   }
-  const store = await cookies();
-  const headerDesk = parseDeskQuery((await headers()).get(DESK_HEADER));
+  const store = await requestCookies();
+  const headerStore = await requestHeaders();
+  if (!store) {
+    return null;
+  }
+  const headerDesk = parseDeskQuery(headerStore?.get(DESK_HEADER) ?? null);
   const requested = headerDesk ?? store.get(ACCOUNT_COOKIE)?.value;
   const current =
     accounts.find((account) => account.id === requested) ?? fallback;

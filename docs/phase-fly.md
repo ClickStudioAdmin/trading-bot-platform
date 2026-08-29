@@ -113,6 +113,8 @@ Accepted 29 Aug 2026. Implementation started 29 Aug 2026.
 
 Shipped in repo: `engine_desk_leases` + claim RPCs (`20260829080000_engine_desk_leases.sql`), `runEngineCycle` / per-desk tick, in-memory lease tests, Fly configs (`fly.development.toml`, `fly.production.toml`), worker (`lib/engine/worker.ts`), GitHub **Deploy Engine**. Vercel tick and admin Tick call the same leased cycle (`maxMs` 50s). GitHub’s 5-minute POST stays as a leased fallback until Fly is healthy.
 
+Each Fly loop claims **hot desks first** (open futures rows, armed DCA playbooks, active Perps recipes), then idle books. Live market stop / take profit attach on the fill (`placeClip` and GTC reconcile). Indicator **cross** starts latch until the first order so a 5m bar is not missed. The worker loads desk binds without a browser session.
+
 ### What Click does first (development only)
 
 Leave production alone until this one is ticking. Do these in order.

@@ -402,6 +402,14 @@ async function applyWorkingFill(input: {
       }),
     },
   });
+  const { syncDcaExitsAfterFill } = await import("@/lib/dca/run");
+  await syncDcaExitsAfterFill({
+    accountId: input.row.accountId,
+    userId: input.row.userId,
+    symbol: input.row.symbol,
+    side: input.row.side,
+    lastPrice: input.fillPrice,
+  });
   return true;
 }
 

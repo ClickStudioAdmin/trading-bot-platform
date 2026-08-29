@@ -160,6 +160,23 @@ export function emaCrossBullish(closes: number[]): boolean | null {
   return fastNow > slowNow && fastPrev <= slowPrev;
 }
 
+export function dcaIndicatorStartLatches(
+  kind: DcaIndicatorKind | null | undefined,
+  compare: DcaIndicatorCompare | null | undefined,
+): boolean {
+  if (kind === "ema_cross" && (compare === null || compare === undefined)) {
+    return true;
+  }
+  return compare === "cross_gte" || compare === "cross_lte";
+}
+
+export function indicatorClosesForCross(closes: number[]): number[] {
+  if (closes.length > 2) {
+    return closes.slice(0, -1);
+  }
+  return closes;
+}
+
 export function indicatorStartMet(input: {
   kind: DcaIndicatorKind;
   side: FuturesSide;

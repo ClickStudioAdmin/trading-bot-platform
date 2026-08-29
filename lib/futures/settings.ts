@@ -60,10 +60,13 @@ export async function loadFuturesSettings(
   accountId?: string,
 ): Promise<FuturesSettings> {
   try {
-    const session = await getSessionContext();
     const supabase = createServiceClient();
-    const id = accountId ?? session?.account.id;
-    if (!supabase || !id || (!accountId && !session)) {
+    let id = accountId?.trim() || null;
+    if (!id) {
+      const session = await getSessionContext();
+      id = session?.account.id ?? null;
+    }
+    if (!supabase || !id) {
       return EMPTY_SETTINGS;
     }
     const row = await selectStrategySettings(supabase, {

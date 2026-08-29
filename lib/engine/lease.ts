@@ -1,6 +1,7 @@
 export const ENGINE_LEASE_TTL_SECONDS = 45;
 export const ENGINE_MUTATION_TTL_SECONDS = 20;
 export const ENGINE_CLAIM_BATCH = 4;
+export const ENGINE_HOT_CLAIM_BATCH = 24;
 export const ENGINE_VENUE_GAP_MS = 150;
 
 export type DeskLease = {
@@ -22,14 +23,26 @@ export function claimEngineDesksFromState(input: {
   nowMs: number;
   ttlMs: number;
   limit: number;
+  preferAccountIds?: readonly string[];
+  excludeAccountIds?: readonly string[];
 }): { leases: DeskLease[]; claimed: string[] } {
   const workerId = input.workerId.trim();
   const limit = Math.max(1, Math.min(50, Math.floor(input.limit)));
   const ttlMs = Math.max(5_000, Math.floor(input.ttlMs));
+  const prefer = new Set(input.preferAccountIds ?? []);
+  const exclude = new Set(input.excludeAccountIds ?? []);
   const next = input.leases.map((row) => ({ ...row }));
   const free = next
-    .filter((row) => row.leasedUntilMs < input.nowMs)
+    .filter(
+      (row) =>
+        row.leasedUntilMs < input.nowMs && !exclude.has(row.accountId),
+    )
     .sort((a, b) => {
+      const aHot = prefer.has(a.accountId) ? 0 : 1;
+      const bHot = prefer.has(b.accountId) ? 0 : 1;
+      if (aHot !== bHot) {
+        return aHot - bHot;
+      }
       if (a.leasedUntilMs !== b.leasedUntilMs) {
         return a.leasedUntilMs - b.leasedUntilMs;
       }
