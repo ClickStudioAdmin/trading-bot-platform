@@ -17,7 +17,6 @@ export const STRATEGY_LINKS = [
 
 export const CASH_AND_CARRY_PRIMARY_LINKS = [
   { href: "/strategies/cash-and-carry", label: "Overview", exact: true },
-  { href: "/strategies/cash-and-carry/opportunities", label: "Opportunities" },
   { href: "/strategies/cash-and-carry/positions", label: "Positions" },
   { href: "/strategies/cash-and-carry/automations", label: "Automations (bots)" },
   { href: "/strategies/cash-and-carry/performance", label: "Performance" },
@@ -26,6 +25,7 @@ export const CASH_AND_CARRY_PRIMARY_LINKS = [
 export const CASH_AND_CARRY_SECONDARY_LINKS = [
   { href: "/strategies/cash-and-carry/settings", label: "Desk Settings" },
   { href: "/strategies/cash-and-carry/activity", label: "Activity" },
+  { href: "/strategies/cash-and-carry/opportunities", label: "Opportunities" },
   { href: "/strategies/cash-and-carry/pairs", label: "Pairs" },
 ] as const;
 
@@ -47,7 +47,6 @@ export const ACCOUNT_DESK_LINKS = [
 ] as const;
 
 export const FUTURES_PRIMARY_LINKS = [
-  { href: "/strategies/futures", label: "Overview", exact: true },
   { href: "/strategies/futures/positions", label: "Positions" },
   { href: "/strategies/futures/automations", label: "Automations (bots)" },
   { href: "/strategies/futures/webhooks", label: "Webhooks" },
@@ -55,20 +54,17 @@ export const FUTURES_PRIMARY_LINKS = [
 ] as const;
 
 export const PERPS_PRIMARY_LINKS = [
-  { href: "/strategies/futures", label: "Overview", exact: true },
   { href: "/strategies/futures/positions", label: "Positions" },
   { href: "/strategies/futures/performance", label: "Performance" },
 ] as const;
 
 export const PERPS_BOTS_PRIMARY_LINKS = [
-  { href: "/strategies/futures", label: "Overview", exact: true },
   { href: "/strategies/futures/positions", label: "Positions" },
   { href: "/strategies/futures/automations", label: "Automations (bots)" },
   { href: "/strategies/futures/performance", label: "Performance" },
 ] as const;
 
 export const SIGNAL_FOLLOWER_PRIMARY_LINKS = [
-  { href: "/strategies/futures", label: "Overview", exact: true },
   { href: "/strategies/futures/positions", label: "Positions" },
   { href: "/strategies/futures/webhooks", label: "Webhooks" },
   { href: "/strategies/futures/performance", label: "Performance" },

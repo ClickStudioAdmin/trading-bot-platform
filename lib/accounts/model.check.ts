@@ -162,13 +162,13 @@ assert.equal(
   deskHomePath("cash_and_carry"),
   "/strategies/cash-and-carry",
 );
-assert.equal(deskHomePath("perps"), "/strategies/futures");
-assert.equal(deskHomePath("perps_bots"), "/strategies/futures");
-assert.equal(deskHomePath("signal_follower"), "/strategies/futures");
-assert.equal(deskHomePath("dca"), "/strategies/futures");
+assert.equal(deskHomePath("perps"), "/strategies/futures/positions");
+assert.equal(deskHomePath("perps_bots"), "/strategies/futures/positions");
+assert.equal(deskHomePath("signal_follower"), "/strategies/futures/positions");
+assert.equal(deskHomePath("dca"), "/strategies/futures/positions");
 assert.equal(
   deskHomePath("perps", "11111111-1111-4111-8111-111111111111"),
-  "/strategies/futures?desk=11111111-1111-4111-8111-111111111111",
+  "/strategies/futures/positions?desk=11111111-1111-4111-8111-111111111111",
 );
 assert.equal(
   parseDeskQuery("11111111-1111-4111-8111-111111111111"),
