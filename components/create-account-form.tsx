@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { createTradingAccount } from "@/lib/accounts/actions";
 import {
   formatAccountModeChoice,
+  formatDeskType,
   formatDeskTypeChoice,
   type DeskType,
   validateNewDeskName,
@@ -40,6 +41,10 @@ export function CreateAccountForm({
   next,
   embedded = false,
   firstDesk = false,
+  initialDeskType,
+  lockType = false,
+  hideTitle = false,
+  showSwitchToDesk,
   onCancel,
 }: {
   connections: ExchangeConnection[];
@@ -48,9 +53,15 @@ export function CreateAccountForm({
   next?: string;
   embedded?: boolean;
   firstDesk?: boolean;
+  initialDeskType?: DeskType;
+  lockType?: boolean;
+  hideTitle?: boolean;
+  showSwitchToDesk?: boolean;
   onCancel?: () => void;
 }) {
-  const [deskType, setDeskType] = useState<DeskType>("cash_and_carry");
+  const [deskType, setDeskType] = useState<DeskType>(
+    initialDeskType ?? "cash_and_carry",
+  );
   const [mode, setMode] = useState<"paper" | "live">("paper");
   const [bindChoice, setBindChoice] = useState<"later" | "existing">("later");
   const [connectionId, setConnectionId] = useState("");
@@ -87,6 +98,7 @@ export function CreateAccountForm({
           sharedConnectionIds,
         })
       : null;
+  const switchVisible = showSwitchToDesk ?? (embedded && !firstDesk);
   const nameCheck = validateNewDeskName(name, existingNames);
   const nameError =
     name.trim().length > 0 && !nameCheck.ok ? nameCheck.error : null;
@@ -111,6 +123,20 @@ export function CreateAccountForm({
     setConnectionId("");
   }
 
+  useEffect(() => {
+    if (!initialDeskType) {
+      return;
+    }
+    setDeskType(initialDeskType);
+    setConnectionId("");
+    setPaperVenue((current) => {
+      const allowed = venuesForDeskType(initialDeskType);
+      return allowed.some((row) => row.id === current)
+        ? current
+        : (allowed[0]?.id ?? "bybit");
+    });
+  }, [initialDeskType]);
+
   return (
     <form
       action={createTradingAccount}
@@ -121,7 +147,7 @@ export function CreateAccountForm({
           : "mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
       }
     >
-      {embedded ? null : (
+      {embedded || hideTitle ? null : (
         <h2 className="text-lg font-semibold tracking-tight">New desk</h2>
       )}
       {next ? <input type="hidden" name="next" value={next} /> : null}
@@ -152,29 +178,37 @@ export function CreateAccountForm({
           </p>
         ) : null}
       </label>
-      <label className="block text-xs text-ink-muted">
-        Type
-        <select
-          name="deskType"
-          value={deskType}
-          onChange={(event) => {
-            const nextType = event.target.value as DeskType;
-            setDeskType(nextType);
-            setConnectionId("");
-            const allowed = venuesForDeskType(nextType);
-            if (!allowed.some((row) => row.id === paperVenue)) {
-              setPaperVenue(allowed[0]?.id ?? "bybit");
-            }
-          }}
-          className={fieldClass}
-        >
-          {DESK_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {formatDeskTypeChoice(type)}
-            </option>
-          ))}
-        </select>
-      </label>
+      {lockType ? (
+        <div className="text-xs text-ink-muted">
+          Type
+          <input type="hidden" name="deskType" value={deskType} />
+          <p className="mt-1 text-sm text-ink">{formatDeskType(deskType)}</p>
+        </div>
+      ) : (
+        <label className="block text-xs text-ink-muted">
+          Type
+          <select
+            name="deskType"
+            value={deskType}
+            onChange={(event) => {
+              const nextType = event.target.value as DeskType;
+              setDeskType(nextType);
+              setConnectionId("");
+              const allowed = venuesForDeskType(nextType);
+              if (!allowed.some((row) => row.id === paperVenue)) {
+                setPaperVenue(allowed[0]?.id ?? "bybit");
+              }
+            }}
+            className={fieldClass}
+          >
+            {DESK_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {formatDeskTypeChoice(type)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <label className="block text-xs text-ink-muted">
         Mode
         <select
@@ -279,7 +313,7 @@ export function CreateAccountForm({
         that exchange’s public marks and fills on the in-app ledger. Connected
         Exchange can bind a key from this login now, or later in Desk Settings.
       </p>
-      {embedded && !firstDesk ? (
+      {switchVisible ? (
         <label className="flex items-start gap-2 text-sm text-ink">
           <input
             type="checkbox"

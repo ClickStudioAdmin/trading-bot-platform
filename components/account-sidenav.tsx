@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ACCOUNT_DESK_LINKS } from "@/lib/site-links";
 import { rememberTradingAccount } from "@/lib/accounts/actions";
 import {
+  createDeskPath,
   deskHomePath,
   formatAccountMode,
   formatDeskType,
@@ -24,9 +25,11 @@ const DESK_TYPE_ORDER: DeskType[] = [
 export function AccountSidenav({
   deskId,
   desks,
+  createDeskType = null,
 }: {
   deskId: string;
   desks: TradingAccount[];
+  createDeskType?: DeskType | null;
 }) {
   const pathname = usePathname();
 
@@ -38,7 +41,12 @@ export function AccountSidenav({
         links={ACCOUNT_DESK_LINKS}
         pathname={pathname}
       />
-      <DeskList className="mt-5" desks={desks} currentDeskId={deskId} />
+      <DeskList
+        className="mt-5"
+        desks={desks}
+        currentDeskId={deskId}
+        createDeskType={createDeskType}
+      />
     </aside>
   );
 }
@@ -46,23 +54,27 @@ export function AccountSidenav({
 function DeskList({
   desks,
   currentDeskId,
+  createDeskType,
   className,
 }: {
   desks: TradingAccount[];
   currentDeskId: string;
+  createDeskType?: DeskType | null;
   className?: string;
 }) {
   const groups = DESK_TYPE_ORDER.map((deskType) => ({
     deskType,
     desks: desks.filter((desk) => desk.deskType === deskType),
-  })).filter((group) => group.desks.length > 0);
+  }));
   return (
     <div className={className}>
       <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
         Desks
       </p>
       <nav aria-label="Desks" className="mt-3 flex flex-col">
-        {groups.map((group) => (
+        {groups.map((group) => {
+          const creating = createDeskType === group.deskType;
+          return (
           <div key={group.deskType} className="mt-3 first:mt-0">
             <p className="truncate px-3 text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
               {formatDeskType(group.deskType)}
@@ -97,9 +109,24 @@ function DeskList({
                   </Link>
                 );
               })}
+              <Link
+                href={createDeskPath(group.deskType)}
+                aria-current={creating ? "true" : undefined}
+                className={`flex items-center gap-1.5 rounded-control px-3 py-2 text-sm ${
+                  creating
+                    ? "bg-surface-raised text-ink"
+                    : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+                }`}
+              >
+                <span aria-hidden className="text-base leading-none">
+                  +
+                </span>
+                Create Desk
+              </Link>
             </div>
           </div>
-        ))}
+          );
+        })}
       </nav>
     </div>
   );

@@ -43,6 +43,15 @@ function createDeskErrorPath(
   if (firstDesk || next === WELCOME_PATH) {
     return `${WELCOME_PATH}?error=${encodeURIComponent(message)}`;
   }
+  if (next.startsWith("/account/desks/new")) {
+    const typed = String(formData.get("deskType") ?? "").trim();
+    const params = new URLSearchParams();
+    if (typed) {
+      params.set("type", typed);
+    }
+    params.set("error", message);
+    return `/account/desks/new?${params}`;
+  }
   return `${SUB_ACCOUNTS_PATH}?error=${encodeURIComponent(message)}`;
 }
 

@@ -186,6 +186,10 @@ export function navLinksWithDesk<T extends { href: string }>(
   }));
 }
 
+export function createDeskPath(deskType: DeskType): string {
+  return `/account/desks/new?type=${deskType}`;
+}
+
 export function deskHomePath(deskType: DeskType, accountId?: string): string {
   const base =
     deskType === "cash_and_carry"
