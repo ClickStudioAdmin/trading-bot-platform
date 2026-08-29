@@ -89,8 +89,8 @@ export function OpenStats({
             </ul>
           </>
         ) : (
-          <p className="mt-3 text-sm text-ink-muted">
-            {signedIn ? "No open exposure." : "Sign in to see exposure."}
+          <p className="mt-3 text-2xl font-semibold tracking-tight text-ink">
+            —
           </p>
         )}
       </div>
