@@ -36,7 +36,7 @@ export function AccountSidenav({
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 z-20 flex h-dvh w-56 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-5 py-6">
+    <aside className="sticky top-0 z-20 flex h-dvh w-80 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-5 py-6">
       <div className="mb-6">
         <SiteLogo />
       </div>
@@ -86,7 +86,7 @@ function DeskList({
             <div className="flex items-center gap-1 px-3">
               <p className="flex min-w-0 flex-1 items-center gap-2 text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
                 <DeskTypeMark deskType={group.deskType} />
-                <span className="min-w-0 truncate">{typeLabel}</span>
+                <span>{typeLabel}</span>
               </p>
               {empty ? null : (
                 <Link
