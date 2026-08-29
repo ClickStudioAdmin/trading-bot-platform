@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { DeskMark, DeskTypeMark } from "@/components/desk-mark";
 import { SiteLogo } from "@/components/site-logo";
 import { ACCOUNT_DESK_LINKS } from "@/lib/site-links";
@@ -9,6 +9,7 @@ import { rememberTradingAccount } from "@/lib/accounts/actions";
 import {
   createDeskPath,
   deskHomePath,
+  parseDeskTypeChoice,
   formatAccountMode,
   formatDeskType,
   formatDeskVenueCaption,
@@ -27,13 +28,17 @@ const DESK_TYPE_ORDER: DeskType[] = [
 export function AccountSidenav({
   deskId,
   desks,
-  createDeskType = null,
 }: {
   deskId: string;
   desks: TradingAccount[];
-  createDeskType?: DeskType | null;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const createType = parseDeskTypeChoice(searchParams.get("type"));
+  const createDeskType =
+    pathname === "/account/desks/new" && createType.ok
+      ? createType.deskType
+      : null;
 
   return (
     <aside className="sticky top-0 z-20 flex h-dvh w-72 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-4 py-6">

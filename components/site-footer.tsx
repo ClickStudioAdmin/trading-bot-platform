@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { SiteLogo } from "@/components/site-logo";
 import { formatDeskType, type DeskType } from "@/lib/accounts/model";
+import { ACCOUNT_DESK_LINKS, isAppChromePath } from "@/lib/site-links";
 
 const FOOTER_DESKS: { id: string; deskType: DeskType }[] = [
   { id: "cash-and-carry", deskType: "cash_and_carry" },
@@ -9,7 +13,9 @@ const FOOTER_DESKS: { id: string; deskType: DeskType }[] = [
   { id: "dca", deskType: "dca" },
 ];
 
-export function SiteFooter({ compact = false }: { compact?: boolean }) {
+export function SiteFooter({ appHref = null }: { appHref?: string | null }) {
+  const compact = isAppChromePath(usePathname());
+
   if (compact) {
     return (
       <footer className="mt-auto border-t border-line bg-surface">
@@ -25,7 +31,7 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
   return (
     <footer className="mt-auto border-t border-line bg-surface">
       <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="lg:col-span-2">
+        <div>
           <SiteLogo />
           <p className="mt-3 max-w-sm text-sm text-ink-muted">
             Your strategies. Your keys. One desk.
@@ -50,19 +56,46 @@ export function SiteFooter({ compact = false }: { compact?: boolean }) {
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.12em] text-ink-faint">
-            Desk
+            Product
           </p>
           <ul className="mt-3 space-y-2 text-sm">
+            <li>
+              <Link href="/" className="text-ink-muted hover:text-ink">
+                Home
+              </Link>
+            </li>
             <li>
               <Link href="/#how-it-works" className="text-ink-muted hover:text-ink">
                 How it works
               </Link>
             </li>
             <li>
-              <Link href="/sign-in" className="text-ink-muted hover:text-ink">
-                Sign in
+              <Link href="/#keys" className="text-ink-muted hover:text-ink">
+                Keys
               </Link>
             </li>
+            <li>
+              <Link
+                href={appHref ?? "/sign-in"}
+                className="text-ink-muted hover:text-ink"
+              >
+                {appHref ? "Go to App" : "Sign in"}
+              </Link>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.12em] text-ink-faint">
+            Account
+          </p>
+          <ul className="mt-3 space-y-2 text-sm">
+            {ACCOUNT_DESK_LINKS.map((link) => (
+              <li key={link.href}>
+                <Link href={link.href} className="text-ink-muted hover:text-ink">
+                  {link.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
       </div>

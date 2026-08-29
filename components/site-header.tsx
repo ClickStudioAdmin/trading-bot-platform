@@ -1,5 +1,5 @@
 import { AdminTickButton } from "@/components/admin-tick-button";
-import { SiteLogo } from "@/components/site-logo";
+import { HeaderBar } from "@/components/header-bar";
 import { HeaderAdminLink } from "@/components/site-nav";
 import { UserMenu } from "@/components/user-menu";
 import { listTradingAccounts } from "@/lib/accounts/store";
@@ -9,11 +9,7 @@ import { getSessionMember } from "@/lib/auth/session";
 import { memberDisplayName } from "@/lib/members/sync";
 import { connection } from "next/server";
 
-export async function SiteHeader({
-  hideLogo = false,
-}: {
-  hideLogo?: boolean;
-}) {
+export async function SiteHeader() {
   await connection();
   const user = await getSessionMember();
   const admin = user ? await getAdminUser() : null;
@@ -21,27 +17,16 @@ export async function SiteHeader({
   const autoTick = admin ? await loadAutoTickEnabled() : false;
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur-sm">
-      <div
-        className={`mx-auto flex max-w-7xl items-center gap-4 px-6 py-3 ${
-          hideLogo ? "justify-end" : "justify-between"
-        }`}
-      >
-        {hideLogo ? null : (
-          <div className="min-w-0">
-            <SiteLogo />
-          </div>
-        )}
-        <div className="flex shrink-0 items-center justify-end gap-2">
-          <UserMenu
-            name={user ? memberDisplayName(user.email, user.name) : null}
-          />
-          {admin && accounts.length > 0 ? <HeaderAdminLink /> : null}
-          {admin && accounts.length > 0 ? (
-            <AdminTickButton autoTick={autoTick} />
-          ) : null}
-        </div>
+    <HeaderBar>
+      <div className="flex shrink-0 items-center justify-end gap-2">
+        <UserMenu
+          name={user ? memberDisplayName(user.email, user.name) : null}
+        />
+        {admin && accounts.length > 0 ? <HeaderAdminLink /> : null}
+        {admin && accounts.length > 0 ? (
+          <AdminTickButton autoTick={autoTick} />
+        ) : null}
       </div>
-    </header>
+    </HeaderBar>
   );
 }

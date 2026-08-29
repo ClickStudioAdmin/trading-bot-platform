@@ -138,7 +138,7 @@ export function MarketingHome({ appHref = null }: { appHref?: string | null }) {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-16">
+      <section id="keys" className="mx-auto max-w-7xl px-6 py-16">
         <div className="rounded-card border border-line bg-surface p-6 sm:p-8">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
             Keys

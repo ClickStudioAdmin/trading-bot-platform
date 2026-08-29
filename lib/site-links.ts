@@ -2,6 +2,14 @@ export const SITE_LINKS = [
   { href: "/strategies", label: "Desks" },
 ] as const;
 
+export function isAppChromePath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/account") ||
+    pathname.startsWith("/strategies") ||
+    pathname.startsWith("/admin")
+  );
+}
+
 export const STRATEGY_LINKS = [
   { href: "/strategies/cash-and-carry", label: "Cash and Carry" },
   { href: "/strategies/futures", label: "Futures" },
