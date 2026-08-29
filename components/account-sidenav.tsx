@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { DeskMark } from "@/components/desk-mark";
 import { SiteLogo } from "@/components/site-logo";
 import { ACCOUNT_DESK_LINKS } from "@/lib/site-links";
 import { rememberTradingAccount } from "@/lib/accounts/actions";
@@ -98,17 +99,15 @@ function DeskList({
                         void rememberTradingAccount(desk.id);
                       }
                     }}
-                    className={`rounded-control px-3 py-2 ${
+                    className={`flex items-center gap-2 rounded-control px-3 py-2 ${
                       current
                         ? "bg-surface-raised text-ink"
                         : "text-ink-faint hover:bg-surface-raised hover:text-ink"
                     }`}
                   >
-                    <span className="block truncate text-sm text-ink">
+                    <DeskMark desk={desk} />
+                    <span className="min-w-0 truncate text-sm text-ink">
                       {desk.name}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[11px] text-ink-faint">
-                      {meta}
                     </span>
                   </Link>
                 );
