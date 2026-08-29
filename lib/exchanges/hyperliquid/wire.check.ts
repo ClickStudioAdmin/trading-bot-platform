@@ -5,6 +5,7 @@ import {
   hyperliquidCoin,
   orderAction,
   orderWire,
+  priceToWire,
 } from "./wire";
 
 assert.equal(hyperliquidCoin("BTC"), "BTC");
@@ -14,6 +15,10 @@ assert.equal(floatToWire(30000), "30000");
 assert.equal(floatToWire(0.1), "0.1");
 assert.equal(floatToWire(1.23000000), "1.23");
 assert.equal(floatToWire(-1), null);
+assert.equal(priceToWire(115370.37037, 5), "115370");
+assert.equal(priceToWire(1234.5678, 0), "1234.6");
+assert.equal(priceToWire(1.2345678, 0), "1.2346");
+assert.equal(priceToWire(-1, 5), null);
 
 const cloid = cloidFromIdempotency("alert-1");
 assert.equal(cloid?.startsWith("0x"), true);

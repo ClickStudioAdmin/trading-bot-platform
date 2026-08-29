@@ -11,6 +11,8 @@ export function hyperliquidCoin(symbol: string): string {
   return raw;
 }
 
+export const HYPERLIQUID_PERP_MAX_DECIMALS = 6;
+
 export function floatToWire(value: number): string | null {
   if (!Number.isFinite(value) || value < 0) {
     return null;
@@ -21,6 +23,30 @@ export function floatToWire(value: number): string | null {
   }
   const normalized = rounded.replace(/\.?0+$/, "");
   return normalized === "-0" || normalized === "" ? "0" : normalized;
+}
+
+/** Perp px: 5 sig figs, at most 6 − szDecimals places. Integers always ok; px > 100k is integer. */
+export function priceToWire(price: number, szDecimals: number): string | null {
+  if (!Number.isFinite(price) || !(price > 0)) {
+    return null;
+  }
+  if (price > 100_000) {
+    return String(Math.round(price));
+  }
+  const maxDecimals = Math.max(
+    0,
+    HYPERLIQUID_PERP_MAX_DECIMALS - Math.max(0, szDecimals),
+  );
+  const significant = Number(price.toPrecision(5));
+  if (!Number.isFinite(significant) || !(significant > 0)) {
+    return null;
+  }
+  const factor = 10 ** maxDecimals;
+  const stepped = Math.round(significant * factor) / factor;
+  if (!(stepped > 0)) {
+    return null;
+  }
+  return floatToWire(stepped) ?? stepped.toFixed(maxDecimals).replace(/\.?0+$/, "");
 }
 
 export function cloidFromIdempotency(key: string | undefined | null): string | null {

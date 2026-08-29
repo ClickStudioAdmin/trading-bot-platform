@@ -18,6 +18,7 @@ import {
   hyperliquidCoin,
   orderAction,
   orderWire,
+  priceToWire,
 } from "./wire";
 
 const MARKET_SLIPPAGE = 0.05;
@@ -37,13 +38,14 @@ async function aggressivePrice(input: {
   environmentId: string;
   symbol: string;
   isBuy: boolean;
+  szDecimals: number;
 }): Promise<string | null> {
   const mid = await loadHyperliquidMid(input.environmentId, input.symbol);
   if (mid === null) {
     return null;
   }
   const raw = input.isBuy ? mid * (1 + MARKET_SLIPPAGE) : mid * (1 - MARKET_SLIPPAGE);
-  return floatToWire(raw);
+  return priceToWire(raw, input.szDecimals);
 }
 
 function firstAckError(
@@ -88,6 +90,7 @@ export async function placeHyperliquidMarket(input: {
       environmentId: input.environmentId,
       symbol: input.symbol,
       isBuy,
+      szDecimals: asset.szDecimals,
     });
   } catch {
     return { ok: false, error: "Could not reach Hyperliquid." };
@@ -107,8 +110,12 @@ export async function placeHyperliquidMarket(input: {
       cloid,
     }),
   ];
-  const tp = input.tpsl?.takeProfit ? floatToWire(Number(input.tpsl.takeProfit)) : null;
-  const sl = input.tpsl?.stopLoss ? floatToWire(Number(input.tpsl.stopLoss)) : null;
+  const tp = input.tpsl?.takeProfit
+    ? priceToWire(Number(input.tpsl.takeProfit), asset.szDecimals)
+    : null;
+  const sl = input.tpsl?.stopLoss
+    ? priceToWire(Number(input.tpsl.stopLoss), asset.szDecimals)
+    : null;
   if (tp) {
     orders.push(
       orderWire({
@@ -182,7 +189,7 @@ export async function placeHyperliquidLimit(input: {
   }
   const qty = parseQty(input.qty);
   const size = qty === null ? null : sizeWire(qty, asset.szDecimals);
-  const price = floatToWire(Number(input.price));
+  const price = priceToWire(Number(input.price), asset.szDecimals);
   if (!size || !price) {
     return { ok: false, error: "Limit price or size is not valid." };
   }
@@ -242,9 +249,9 @@ export async function amendHyperliquidOrder(input: {
   const qty = input.qty ? parseQty(input.qty) : current?.sz ?? null;
   const size = qty === null ? null : sizeWire(qty, asset.szDecimals);
   const price = input.price
-    ? floatToWire(Number(input.price))
+    ? priceToWire(Number(input.price), asset.szDecimals)
     : current
-      ? floatToWire(current.limitPx)
+      ? priceToWire(current.limitPx, asset.szDecimals)
       : null;
   if (!size || !price) {
     return { ok: false, error: "Need a price and size to amend." };
@@ -428,8 +435,12 @@ export async function setHyperliquidTradingStop(input: {
   }
   const isBuy = row.size < 0;
   const orders = [];
-  const tp = input.takeProfit ? floatToWire(Number(input.takeProfit)) : null;
-  const sl = input.stopLoss ? floatToWire(Number(input.stopLoss)) : null;
+  const tp = input.takeProfit
+    ? priceToWire(Number(input.takeProfit), asset.szDecimals)
+    : null;
+  const sl = input.stopLoss
+    ? priceToWire(Number(input.stopLoss), asset.szDecimals)
+    : null;
   if (tp) {
     orders.push(
       orderWire({
