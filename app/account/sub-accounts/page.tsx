@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { AccountDeleteControl } from "@/components/account-delete-control";
 import { AccountRenameControl } from "@/components/account-rename-control";
-import { CreateAccountForm } from "@/components/create-account-form";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { switchTradingAccount } from "@/lib/accounts/actions";
@@ -15,18 +14,13 @@ import {
   pickDefaultAccount,
 } from "@/lib/accounts/model";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
-import { connectionIdsBoundToOtherDesks } from "@/lib/exchanges/connections";
-import {
-  listConnectionDeskBinds,
-  listExchangeConnections,
-} from "@/lib/exchanges/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Manage desks",
-  description: "Create and delete Paper Trading or Connected Exchange desks.",
+  description: "Rename, switch, and delete desks.",
 };
 
 const PATH = "/account/sub-accounts";
@@ -42,34 +36,26 @@ export default async function ManageSubAccountsPage({
   }
   const params = await searchParams;
   const error = firstSearchValue(params.error);
-  const created = firstSearchValue(params.created) === "1";
   const deleted = firstSearchValue(params.deleted) === "1";
   const renamed = firstSearchValue(params.renamed) === "1";
   const accounts = await listTradingAccounts(session.member.id);
   const usage = await loadAccountUsage(accounts);
-  const connections = await listExchangeConnections(session.member.id);
-  const sharedConnectionIds = connectionIdsBoundToOtherDesks(
-    await listConnectionDeskBinds(session.member.id),
-  );
 
   return (
     <div>
       <PageHeading title="Manage desks" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
         Each desk is Paper Trading or Connected Exchange at create and never
-        changes. Type is also set at create. Books stay separate. You must keep
-        at least one desk. You can rename a desk here or in Desk Settings.
-        Delete is blocked
-        while the book has open positions or running automations. Deleting a
-        desk removes its paper history. Exchange keys stay on this login.
+        changes. Type is also set at create. Create a desk from the sidebar.
+        You must keep at least one desk. Rename here or in Desk Settings.
+        Delete is blocked while the book has open positions or running
+        automations. Deleting a desk removes its paper history. Exchange keys
+        stay on this login.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
-      ) : null}
-      {created ? (
-        <p className="mt-4 text-sm text-success">Desk created.</p>
       ) : null}
       {deleted ? (
         <p className="mt-4 text-sm text-success">Desk deleted.</p>
@@ -190,13 +176,6 @@ export default async function ManageSubAccountsPage({
           </table>
         </div>
       </section>
-
-      <CreateAccountForm
-        connections={connections}
-        sharedConnectionIds={sharedConnectionIds}
-        existingNames={accounts.map((account) => account.name)}
-        next="/account/sub-accounts"
-      />
     </div>
   );
 }
