@@ -43,7 +43,7 @@ const primaryBtn =
 const secondaryBtn =
   "rounded-control border border-line px-3 py-1.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink";
 const dangerBtn =
-  "rounded-control px-3 py-1.5 text-xs text-danger hover:bg-danger/10";
+  "rounded-control border border-line px-3 py-1.5 text-xs text-danger hover:bg-danger/10";
 const actionLink =
   "text-xs font-medium text-accent hover:text-accent-strong";
 
@@ -880,7 +880,7 @@ export function TemplatesLibrary({
                                 }
                               });
                             }}
-                            className="text-xs font-medium text-danger hover:text-danger"
+                            className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
                           >
                             Remove
                           </button>
@@ -1041,7 +1041,7 @@ export function TemplatesLibrary({
                                   }
                                 });
                               }}
-                              className="text-xs font-medium text-danger hover:text-danger"
+                              className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
                             >
                               Remove
                             </button>
@@ -2043,7 +2043,7 @@ function MembershipColumn({
                 onClick={() => onAction(row.id)}
                 className={
                   action === "Remove"
-                    ? "shrink-0 text-xs font-medium text-danger hover:text-danger"
+                    ? "shrink-0 rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
                     : "shrink-0 text-xs font-medium text-success hover:text-success"
                 }
               >

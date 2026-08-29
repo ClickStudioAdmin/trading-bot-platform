@@ -276,7 +276,7 @@ export default function ThemePage() {
             </button>
             <button
               type="button"
-              className="rounded-control bg-danger/15 px-4 py-2 text-sm font-medium text-danger"
+              className="rounded-control border border-line bg-danger/15 px-4 py-2 text-sm font-medium text-danger"
             >
               Danger
             </button>

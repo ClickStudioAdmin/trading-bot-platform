@@ -90,7 +90,7 @@ export function AccountDeleteControl({
           }
           setOpen((current) => !current);
         }}
-        className="rounded-control px-3 py-1.5 text-sm text-danger hover:bg-danger/10"
+        className="rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10"
       >
         Delete
       </button>

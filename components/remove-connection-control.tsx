@@ -72,7 +72,7 @@ export function RemoveConnectionControl({
           }
           setOpen((current) => !current);
         }}
-        className="text-xs font-medium text-danger hover:text-danger"
+        className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
       >
         Remove
       </button>

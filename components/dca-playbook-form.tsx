@@ -91,7 +91,7 @@ const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface te
 const headerLongClass = `${headerBtnClass} bg-success text-canvas`;
 const headerShortClass = `${headerBtnClass} bg-danger text-ink`;
 const headerRemoveClass =
-  "shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
+  "shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
 
 function optional(value: number | null | undefined): string {
   return value == null ? "" : String(value);

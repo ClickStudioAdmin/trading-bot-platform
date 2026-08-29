@@ -533,7 +533,7 @@ function RuleCard({
               <button
                 type="button"
                 disabled
-                className="pointer-events-none shrink-0 rounded-control px-2 py-0.5 text-xs text-danger opacity-40"
+                className="pointer-events-none shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger opacity-40"
               >
                 Remove
               </button>
@@ -542,7 +542,7 @@ function RuleCard({
             <button
               type="button"
               onClick={onRemove}
-              className="shrink-0 rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
+              className="shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
             >
               Remove
             </button>
