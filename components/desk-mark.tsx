@@ -1,5 +1,9 @@
-import type { TradingAccount } from "@/lib/accounts/model";
-import { formatAccountMode, formatDeskVenueCaption } from "@/lib/accounts/model";
+import type { DeskType, TradingAccount } from "@/lib/accounts/model";
+import {
+  formatAccountMode,
+  formatDeskType,
+  formatDeskVenueCaption,
+} from "@/lib/accounts/model";
 
 export function DeskMark({ desk }: { desk: TradingAccount }) {
   const label =
@@ -18,6 +22,115 @@ export function DeskMark({ desk }: { desk: TradingAccount }) {
         <VenueIcon venue={desk.venue} />
       )}
     </span>
+  );
+}
+
+export function DeskTypeMark({ deskType }: { deskType: DeskType }) {
+  return (
+    <span
+      className="inline-flex size-4 shrink-0 items-center justify-center text-ink-faint"
+      title={formatDeskType(deskType)}
+      aria-hidden
+    >
+      {deskType === "cash_and_carry" ? (
+        <CarryIcon />
+      ) : deskType === "perps" ? (
+        <PerpsIcon />
+      ) : deskType === "signal_follower" ? (
+        <SignalIcon />
+      ) : (
+        <DcaIcon />
+      )}
+    </span>
+  );
+}
+
+function CarryIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="size-3.5" fill="none">
+      <path
+        d="M3 6.5h6M9 6.5 7 4.5M9 6.5 7 8.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13 9.5H7M7 9.5l2-2M7 9.5l2 2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PerpsIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="size-3.5" fill="none">
+      <path
+        d="M2.5 11.5 6 8l2.2 2.2L13.5 4.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10.5 4.5h3v3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function SignalIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="size-3.5" fill="none">
+      <path
+        d="M8 12.5v-3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <circle cx="8" cy="8" r="1.4" fill="currentColor" />
+      <path
+        d="M5.2 6.2a4 4 0 0 1 5.6 0M3.6 4.6a6.2 6.2 0 0 1 8.8 0"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function DcaIcon() {
+  return (
+    <svg viewBox="0 0 16 16" className="size-3.5" fill="none">
+      <path
+        d="M3.5 11.5h3v-6h6"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.5 11.5h9"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M8.5 8.5h3v-3"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

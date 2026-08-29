@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { DeskMark } from "@/components/desk-mark";
+import { DeskMark, DeskTypeMark } from "@/components/desk-mark";
 import { SiteLogo } from "@/components/site-logo";
 import { ACCOUNT_DESK_LINKS } from "@/lib/site-links";
 import { rememberTradingAccount } from "@/lib/accounts/actions";
@@ -81,8 +81,11 @@ function DeskList({
           const creating = createDeskType === group.deskType;
           return (
           <div key={group.deskType} className="mt-3 first:mt-0">
-            <p className="truncate px-3 text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
-              {formatDeskType(group.deskType)}
+            <p className="flex items-center gap-2 px-3 text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+              <DeskTypeMark deskType={group.deskType} />
+              <span className="min-w-0 truncate">
+                {formatDeskType(group.deskType)}
+              </span>
             </p>
             <div className="mt-1 flex flex-col gap-1">
               {group.desks.map((desk) => {
