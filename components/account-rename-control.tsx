@@ -85,7 +85,7 @@ export function AccountRenameControl({
           }
           setOpen((current) => !current);
         }}
-        className="rounded-control px-3 py-1.5 text-sm text-accent hover:bg-surface-raised"
+        className="text-xs font-medium text-accent hover:text-accent-strong"
       >
         Rename
       </button>

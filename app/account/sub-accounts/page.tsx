@@ -112,14 +112,14 @@ export default async function ManageSubAccountsPage({
                     {usageStatus ? ` · ${usageStatus}` : null}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3">
                   {current ? null : (
                     <form action={switchTradingAccount}>
                       <input type="hidden" name="accountId" value={account.id} />
                       <input type="hidden" name="next" value={PATH} />
                       <PendingSubmitButton
                         pendingLabel="Switching…"
-                        className="rounded-control px-3 py-1.5 text-sm text-accent hover:bg-surface-raised"
+                        className="text-xs font-medium text-accent hover:text-accent-strong"
                       >
                         Switch to desk
                       </PendingSubmitButton>
