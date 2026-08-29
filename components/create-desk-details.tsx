@@ -26,7 +26,8 @@ const DETAILS: Record<
     summary: "Price-cross automations own the orders. No buy / sell ticket.",
     points: [
       "Bots Buy, Sell, or Close when last, mark, or index crosses a price.",
-      "TradingView alerts stay on a TradingView Strategy desk.",
+      "A Signal webhook is a When trigger on the bot. Bind it on Automations.",
+      "TradingView strategy alerts that place orders stay on a TradingView Strategy desk.",
       "Close All still flattens the book.",
     ],
   },

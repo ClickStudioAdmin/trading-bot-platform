@@ -100,8 +100,8 @@ export function FuturesAutomationsDesk({
       <input type="hidden" name="deskVenue" value={venueId} />
       {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-          No bots yet. Add a bot to fire Buy, Sell, or Close when last,
-          mark, or index crosses a price.
+          No bots yet. Add a bot to fire Buy, Sell, or Close on a price
+          cross or a Signal webhook.
         </p>
       ) : (
         layers.map((layer, index) => (
@@ -413,9 +413,7 @@ function RuleCard({
             className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
           >
             <option value="price">Price cross</option>
-            {webhookEntry ? (
-              <option value="webhook">Signal webhook</option>
-            ) : null}
+            <option value="webhook">Signal webhook</option>
           </select>
         </label>
         {webhookEntry ? (

@@ -117,7 +117,7 @@ export async function handleFuturesWebhook(input: {
     parsed.parsed.kind === "order"
   ) {
     if (
-      deskType === "dca" &&
+      (deskType === "dca" || deskAllowsPerpsRecipes(deskType)) &&
       (parsed.parsed.action === "buy" || parsed.parsed.action === "sell")
     ) {
       parsed.parsed = {

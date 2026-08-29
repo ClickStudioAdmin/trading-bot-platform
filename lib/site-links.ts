@@ -60,6 +60,7 @@ export const PERPS_PRIMARY_LINKS = [
 export const PERPS_BOTS_PRIMARY_LINKS = [
   { href: "/strategies/futures/positions", label: "Positions" },
   { href: "/strategies/futures/automations", label: "Automations (bots)" },
+  { href: "/strategies/futures/webhooks", label: "Webhooks" },
   { href: "/strategies/futures/performance", label: "Performance" },
 ] as const;
 

@@ -227,7 +227,7 @@ assert.equal(deskAllowsPerpsRecipes("perps"), false);
 assert.equal(deskAllowsPerpsRecipes("perps_bots"), true);
 assert.equal(deskAllowsPerpsRecipes("dca"), false);
 assert.equal(deskAllowsSignalWebhooks("perps"), false);
-assert.equal(deskAllowsSignalWebhooks("perps_bots"), false);
+assert.equal(deskAllowsSignalWebhooks("perps_bots"), true);
 assert.equal(deskAllowsSignalWebhooks("dca"), true);
 assert.equal(deskAllowsSignalWebhooks("signal_follower"), false);
 assert.equal(deskAllowsSignalWebhooks("cash_and_carry"), false);

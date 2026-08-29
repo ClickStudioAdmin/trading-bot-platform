@@ -237,7 +237,7 @@ export function deskAllowsPerpsRecipes(deskType: DeskType): boolean {
 }
 
 export function deskAllowsSignalWebhooks(deskType: DeskType): boolean {
-  return deskType === "dca";
+  return deskType === "dca" || deskType === "perps_bots";
 }
 
 export function deskAllowsOrderWebhooks(deskType: DeskType): boolean {

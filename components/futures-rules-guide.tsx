@@ -10,8 +10,8 @@ export function FuturesRulesGuide({
       </h2>
       <p className="mt-2 text-sm text-ink-muted">
         {exchangeBook
-          ? "Each bot watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on the bound book. There is no ticket on this desk. TradingView alerts stay on a TradingView Strategy desk."
-          : "Each bot watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on this paper book. Nothing is sent to Bybit. There is no ticket on this desk."}
+          ? "Each bot watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on the bound book. When can also be a Signal webhook. There is no ticket on this desk. TradingView strategy alerts that place orders stay on a TradingView Strategy desk."
+          : "Each bot watches one USDT linear perpetual. About every few minutes the tick reads last, mark, and index, then may Buy, Sell, or Close on this paper book. When can also be a Signal webhook. Nothing is sent to Bybit. There is no ticket on this desk."}
       </p>
 
       <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
@@ -20,7 +20,7 @@ export function FuturesRulesGuide({
       <dl className="mt-3 space-y-3 text-sm">
         <GuideItem
           term="When it fires"
-          detail="A price bot fires on the first tick last, mark, or index crosses the level, then waits until the condition is false again."
+          detail="A price bot fires on the first tick last, mark, or index crosses the level, then waits until the condition is false again. A Signal webhook When fires when that named URL is armed — bind it on the bot after you create the webhook."
         />
         <GuideItem
           term="When it is on"

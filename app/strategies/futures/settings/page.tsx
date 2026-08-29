@@ -93,7 +93,17 @@ export default async function FuturesSettingsPage({
       <p className="-mt-4 text-sm text-ink-muted">
         Desk-wide knobs.{" "}
         {deskAllowsPerpsRecipes(session.account.deskType) ? (
-          "Automations stay on their own page. TradingView alerts stay on a TradingView Strategy desk."
+          <>
+            Automations stay on their own page. Signal URLs live on{" "}
+            <Link
+              href={deskHref(FUTURES_PATHS.webhooks, session.account.id)}
+              className="text-accent"
+            >
+              Webhooks
+            </Link>
+            . TradingView strategy alerts that place orders stay on a
+            TradingView Strategy desk.
+          </>
         ) : deskAllowsOrderWebhooks(session.account.deskType) ||
           deskAllowsSignalWebhooks(session.account.deskType) ? (
           <>

@@ -118,7 +118,7 @@ export default async function FuturesLayout({
                 ? "This desk owns orders and exits. One open side per coin. Both is not available. Arm from Automations or a Signal webhook."
                 : "This desk owns orders and exits. Arm from Automations or a Signal webhook. Close All & Cancel All Open Orders is the panic flatten. Change TP/SL on Automations."
               : perpsBots
-                ? "Automations own buy, sell, and close. No ticket. Close All still flattens."
+                ? "Automations own buy, sell, and close. Arm from Automations or a Signal webhook. No ticket. Close All still flattens."
                 : hyperliquid
                   ? "Buy, sell, or close one USDC perpetual. Market or limit. One open side per coin. No bots on this desk."
                   : "Buy, sell, or close one USDT linear perpetual. Market or limit. Long and short can both be open. No bots on this desk."
