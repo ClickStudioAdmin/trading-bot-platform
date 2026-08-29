@@ -19,6 +19,12 @@ import {
   signedTone,
 } from "@/lib/opportunities/format";
 import type { EventLogRow } from "@/lib/logs/list";
+import {
+  dcaDecisionKindLabel,
+  dcaEntryLabel,
+  dcaSyncFailedHeadline,
+  dcaSyncReasonLabel,
+} from "@/lib/dca/log-copy";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { closeOpenPaperCarry } from "@/lib/paper/actions";
 import { carryPnlPct, clipPnl } from "@/lib/paper/math";
@@ -381,19 +387,18 @@ export function PositionLogList({ logs }: { logs: EventLogRow[] }) {
               className="min-w-0 overflow-hidden rounded-card border border-line bg-surface-raised p-4"
             >
               <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                <h3 className="min-w-0 text-sm font-semibold tracking-tight">
-                  {formatLogEvent(log.event)}
+                <h3
+                  className={`min-w-0 text-sm font-semibold tracking-tight ${
+                    log.level === "info" ? "" : logLevelTone(log.level)
+                  }`}
+                >
+                  {formatLogHeadline(log)}
                 </h3>
                 <p className="shrink-0 text-xs text-ink-muted">
                   <LocalTime at={log.createdAt} />
                 </p>
               </header>
-              <p className="mt-0.5 break-words text-sm text-ink-muted">{log.message}</p>
-              <p className={`mt-0.5 break-words text-xs ${logLevelTone(log.level)}`}>
-                {[log.event, log.scope, log.strategy, log.level !== "info" ? log.level : null]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
+              <p className="mt-0.5 break-words text-sm text-ink">{log.message}</p>
               {rows.length > 0 ? <ValueList rows={rows} /> : null}
             </article>
           );
@@ -450,6 +455,9 @@ function formatLogDataField(
     if (/dte$/i.test(key)) {
       return { label, value: Number.isInteger(value) ? String(value) : value.toFixed(1) };
     }
+    if (key === "clipIndex" && Number.isInteger(value)) {
+      return { label: "Ladder", value: dcaEntryLabel(value) };
+    }
     return { label, value: String(value) };
   }
 
@@ -472,6 +480,15 @@ function formatLogDataField(
     }
     if (key === "reason" || key === "closeReason") {
       return { label, value: formatLogReason(value) };
+    }
+    if (key === "kind") {
+      const decision = dcaDecisionKindLabel(value);
+      if (decision) {
+        return { label, value: decision };
+      }
+    }
+    if (key === "clipIndex" && /^\d+$/.test(value)) {
+      return { label: "Ladder", value: dcaEntryLabel(Number(value)) };
     }
     if (key === "side") {
       if (value === "close") {
@@ -528,6 +545,8 @@ const LOG_FIELD_LABELS: Record<string, string> = {
   positionId: "Position",
   kind: "Decision",
   clipsFilled: "Orders filled",
+  maxClips: "Max orders",
+  clipIndex: "Ladder",
   mark: "Mark",
   last: "Last",
   tpLimitResting: "TP GTC resting",
@@ -562,7 +581,27 @@ function formatLogReason(reason: string): string {
     position_open: "Position still open",
     clip: "Add order",
   };
-  return labels[reason] ?? reason;
+  return labels[reason] ?? dcaSyncReasonLabel(reason) ?? reason;
+}
+
+function formatLogHeadline(log: EventLogRow): string {
+  if (log.event === "dca.sync_failed") {
+    const clipIndex =
+      typeof log.data.clipIndex === "number" && Number.isInteger(log.data.clipIndex)
+        ? log.data.clipIndex
+        : null;
+    const reason =
+      typeof log.data.reason === "string" ? log.data.reason : null;
+    return dcaSyncFailedHeadline({ reason, clipIndex });
+  }
+  if (log.event === "dca.decision") {
+    const kind = typeof log.data.kind === "string" ? log.data.kind : null;
+    const label = kind ? dcaDecisionKindLabel(kind) : null;
+    if (label) {
+      return label;
+    }
+  }
+  return formatLogEvent(log.event);
 }
 
 function formatLogEvent(event: string): string {

@@ -55,6 +55,7 @@ import {
   type DcaPlaybook,
   type DcaStatus,
 } from "./playbook";
+import { dcaSyncFailedMessage } from "./log-copy";
 import { isUnchangedWorkingAmend } from "@/lib/futures/working";
 import {
   patchDcaLeg,
@@ -92,6 +93,9 @@ async function logDcaSyncFailed(input: {
   error: string;
   reason: string;
   positionId?: string | null;
+  clipIndex?: number;
+  limitPrice?: number;
+  qty?: number;
 }): Promise<void> {
   await logDcaEvent({
     playbook: input.playbook,
@@ -99,8 +103,23 @@ async function logDcaSyncFailed(input: {
     positionId: input.positionId,
     level: "warning",
     event: "dca.sync_failed",
-    message: input.error,
-    data: { reason: input.reason },
+    message: dcaSyncFailedMessage({
+      error: input.error,
+      reason: input.reason,
+      clipIndex: input.clipIndex,
+      maxClips: input.playbook.maxClips,
+      limitPrice: input.limitPrice,
+      qty: input.qty,
+    }),
+    data: {
+      reason: input.reason,
+      ...(input.clipIndex !== undefined ? { clipIndex: input.clipIndex } : {}),
+      ...(input.playbook.maxClips !== null
+        ? { maxClips: input.playbook.maxClips }
+        : {}),
+      ...(input.limitPrice !== undefined ? { limitPrice: input.limitPrice } : {}),
+      ...(input.qty !== undefined ? { qty: input.qty } : {}),
+    },
   });
 }
 
@@ -408,8 +427,11 @@ async function restExitLimit(input: {
     await logDcaSyncFailed({
       playbook: input.playbook,
       side: input.side,
+      positionId: input.positionId,
       error: placed.error,
       reason: `rest_${input.kind}`,
+      limitPrice: input.limitPrice,
+      qty: input.qty,
     });
     return placed;
   }
@@ -433,8 +455,11 @@ async function restExitLimit(input: {
       await logDcaSyncFailed({
         playbook: input.playbook,
         side: input.side,
+        positionId: input.positionId,
         error: missing,
         reason: `rest_${input.kind}`,
+        limitPrice: input.limitPrice,
+        qty: input.qty,
       });
       return { ok: false, error: missing };
     }
@@ -563,8 +588,11 @@ async function syncDcaPlaybookGridUnlocked(input: {
       await logDcaSyncFailed({
         playbook: input.playbook,
         side: input.side,
+        positionId: open?.id ?? null,
         error: amended.error,
         reason: "amend_grid",
+        limitPrice: item.limitPrice,
+        qty: item.qty,
       });
     }
   }
@@ -630,8 +658,12 @@ async function syncDcaPlaybookGridUnlocked(input: {
       await logDcaSyncFailed({
         playbook: input.playbook,
         side: input.side,
+        positionId: open.id,
         error: rested.error,
         reason: "rest_grid",
+        clipIndex: item.clipIndex,
+        limitPrice: item.limitPrice,
+        qty: item.qty,
       });
       continue;
     }

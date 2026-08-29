@@ -28,6 +28,7 @@ import {
   decideDcaTick,
   type DcaPlaybook,
 } from "./playbook";
+import { dcaDecisionMessage } from "./log-copy";
 import {
   applyDcaVerb,
   flattenPlaybook,
@@ -290,12 +291,20 @@ export async function runDcaPlaybookTick(input?: {
           side,
           positionId: open?.id ?? null,
           event: "dca.decision",
-          message: dcaDecisionMessage(playbook.name, decision.action),
+          message: dcaDecisionMessage({
+            name: playbook.name,
+            kind: decision.action.kind,
+            reason:
+              "reason" in decision.action ? decision.action.reason : null,
+            clipsFilled: leg.clipsFilled,
+            maxClips: playbook.maxClips,
+          }),
           data: {
             kind: decision.action.kind,
             reason:
               "reason" in decision.action ? decision.action.reason : null,
             clipsFilled: leg.clipsFilled,
+            maxClips: playbook.maxClips,
             mark: prices.mark,
             last: prices.last,
             entryPrice: open?.entryPrice ?? null,
@@ -512,33 +521,3 @@ async function applyTickAction(input: {
   return { acted: true };
 }
 
-function dcaDecisionMessage(
-  name: string,
-  action: { kind: string; reason?: string },
-): string {
-  if (action.kind === "clip") {
-    return `${name} adding an order.`;
-  }
-  if (action.kind === "arm") {
-    return `${name} start met. Placing the first order.`;
-  }
-  if (action.kind === "disarm") {
-    return `${name} stop-adding trigger met.`;
-  }
-  if (action.kind === "stop_adding") {
-    return `${name} hit the order cap.`;
-  }
-  if (action.kind === "breakeven") {
-    return `${name} moving stop to breakeven.`;
-  }
-  if (action.kind === "end_cycle") {
-    return `${name} cycle ended.`;
-  }
-  if (action.kind === "close" && action.reason === "take_profit") {
-    return `${name} take profit hit. Flattening.`;
-  }
-  if (action.kind === "close" && action.reason === "stop_loss") {
-    return `${name} stop loss hit. Flattening.`;
-  }
-  return `${name} ${action.kind}.`;
-}
