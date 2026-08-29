@@ -32,7 +32,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
 
   const main = (
     <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-      <SiteHeader />
+      <SiteHeader hideLogo={showDeskSidebar} />
       <div className="flex flex-1 flex-col">{children}</div>
       <SiteFooter />
     </div>

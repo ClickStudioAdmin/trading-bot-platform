@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SiteLogo } from "@/components/site-logo";
 import { ACCOUNT_DESK_LINKS } from "@/lib/site-links";
 import { rememberTradingAccount } from "@/lib/accounts/actions";
 import {
@@ -35,6 +36,9 @@ export function AccountSidenav({
 
   return (
     <aside className="sticky top-0 z-20 flex h-dvh w-56 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-5 py-6">
+      <div className="mb-6">
+        <SiteLogo />
+      </div>
       <NavGroup
         label="Account"
         ariaLabel="Account"
