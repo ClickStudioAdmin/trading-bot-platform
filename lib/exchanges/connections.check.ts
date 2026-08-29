@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   formatConnectionSummary,
   formatDeskBindLabel,
+  formatDeskBindType,
   formatEnvironmentLabel,
   formatStrategyConnectionCaption,
   formatVenueLabel,
@@ -142,6 +143,8 @@ assert.equal(
   formatDeskBindLabel({ accountName: "Perps Live", strategy: "futures" }),
   "Perps Live · Futures",
 );
+assert.equal(formatDeskBindType("cash_and_carry"), "Cash and Carry");
+assert.equal(formatDeskBindType("futures"), "Futures");
 
 const row = parseExchangeConnectionRow({
   id: "conn-1",

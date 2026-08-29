@@ -76,7 +76,7 @@ export function ReplaceConnectionControl({
           }
           setOpen((current) => !current);
         }}
-        className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+        className="text-xs font-medium text-accent hover:text-accent-strong"
       >
         Replace key
       </button>

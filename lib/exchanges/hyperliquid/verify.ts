@@ -1,16 +1,10 @@
-import { getVenue } from "@/lib/exchanges/venues";
 import {
   agentAddressFromPrivateKey,
   normalizeAddress,
 } from "./agent";
+import { hyperliquidInfoUrl } from "./host";
 
-export function hyperliquidInfoUrl(environmentId: string): string | null {
-  const venue = getVenue("hyperliquid");
-  const environment = venue?.environments.find(
-    (item) => item.id === environmentId || item.aliases?.includes(environmentId),
-  );
-  return environment?.host ? `${environment.host}/info` : null;
-}
+export { hyperliquidInfoUrl } from "./host";
 
 export async function verifyHyperliquidCredentials(
   environmentId: string,

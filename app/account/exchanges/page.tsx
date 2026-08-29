@@ -10,7 +10,7 @@ import {
   formatConnectionRemoveBlockers,
 } from "@/lib/accounts/model";
 import {
-  formatDeskBindLabel,
+  formatDeskBindType,
   formatEnvironmentLabel,
   formatVenueLabel,
   type ExchangeConnection,
@@ -143,7 +143,8 @@ function ConnectionList({
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Exchange</th>
               <th className="px-4 py-3 font-medium">Bound desks</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
+              <th className="px-4 py-3 font-medium">Desk type</th>
+              <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -181,7 +182,6 @@ function ConnectionList({
                     {used.length > 0 ? (
                       <span className="flex flex-col gap-1">
                         {used.map((bind) => {
-                          const label = formatDeskBindLabel(bind);
                           const href =
                             bind.accountId === currentAccountId
                               ? bind.strategy === "futures"
@@ -194,14 +194,14 @@ function ConnectionList({
                               href={href}
                               className="text-accent hover:text-accent-strong"
                             >
-                              {label}
+                              {bind.accountName}
                             </Link>
                           ) : (
                             <span
                               key={`${bind.accountId}-${bind.strategy}`}
                               className="text-ink-muted"
                             >
-                              {label}
+                              {bind.accountName}
                             </span>
                           );
                         })}
@@ -210,8 +210,21 @@ function ConnectionList({
                       <span className="text-ink-faint">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 align-top text-right">
-                    <div className="flex flex-wrap justify-end gap-1">
+                  <td className="px-4 py-3 align-top">
+                    {used.length > 0 ? (
+                      <span className="flex flex-col gap-1 text-ink-muted">
+                        {used.map((bind) => (
+                          <span key={`${bind.accountId}-${bind.strategy}-type`}>
+                            {formatDeskBindType(bind.strategy)}
+                          </span>
+                        ))}
+                      </span>
+                    ) : (
+                      <span className="text-ink-faint">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    <div className="flex flex-wrap gap-3">
                       <RenameConnectionControl
                         connectionId={row.id}
                         label={row.label}

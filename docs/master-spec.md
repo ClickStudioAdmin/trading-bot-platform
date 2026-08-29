@@ -27,7 +27,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Fly.io **is accepted and parked** ([phase-fly.md](phase-fly.md)). Current work is Hyperliquid step 1 ([phase-hyperliquid.md](phase-hyperliquid.md)).
+Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Fly.io **is accepted and parked** ([phase-fly.md](phase-fly.md)). Current work is Hyperliquid step 2 ([phase-hyperliquid.md](phase-hyperliquid.md)).
 
 The locked sequence after Phase 11 is [roadmap.md](roadmap.md). Standing unordered notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
 

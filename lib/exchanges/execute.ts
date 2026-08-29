@@ -17,6 +17,17 @@ import {
   type BybitTpslAttach,
 } from "@/lib/exchanges/bybit/orders";
 import { loadPerpInstrument, qtyForPerp } from "@/lib/exchanges/bybit/perp";
+import { normalizeAddress } from "@/lib/exchanges/hyperliquid/agent";
+import {
+  amendHyperliquidOrder,
+  cancelHyperliquidOrder,
+  listHyperliquidPositionRisk,
+  placeHyperliquidLimit,
+  placeHyperliquidMarket,
+  readHyperliquidOrder,
+  readHyperliquidPosition,
+  setHyperliquidTradingStop,
+} from "@/lib/exchanges/hyperliquid/orders";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
 import { WORKING_AMEND_UNCHANGED } from "@/lib/futures/working";
 
@@ -34,6 +45,13 @@ function creds(connection: BoundConnectionSecrets) {
   return {
     apiKey: connection.credentials.apiKey,
     apiSecret: connection.credentials.apiSecret,
+  };
+}
+
+function hlCreds(connection: BoundConnectionSecrets) {
+  return {
+    accountAddress: normalizeAddress(connection.credentials.accountAddress) ?? "",
+    agentKey: connection.credentials.agentKey ?? "",
   };
 }
 
@@ -198,6 +216,34 @@ export async function placePerpMarketOnVenue(input: {
   tpsl?: BybitTpslAttach;
   orderLinkId?: string;
 }): Promise<{ ok: true; fill: PerpVenueFill } | { ok: false; error: string }> {
+  if (input.connection.venue === "hyperliquid") {
+    const hl = hlCreds(input.connection);
+    const placed = await placeHyperliquidMarket({
+      environmentId: input.connection.environment,
+      agentKey: hl.agentKey,
+      accountAddress: hl.accountAddress,
+      symbol: input.symbol,
+      side: input.side,
+      qty: input.qty,
+      reduceOnly: input.reduceOnly,
+      tpsl: input.tpsl,
+      orderLinkId: input.orderLinkId,
+    });
+    if (!placed.ok) {
+      return placed;
+    }
+    return {
+      ok: true,
+      fill: {
+        venue: input.connection.venue,
+        environment: input.connection.environment,
+        qty: placed.fill.qty,
+        orderId: placed.fill.orderId,
+        price: placed.fill.avgPrice,
+        side: input.side,
+      },
+    };
+  }
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot place futures orders yet." };
   }
@@ -260,6 +306,19 @@ export async function placePerpLimitOnVenue(input: {
   tpsl?: BybitTpslAttach;
   orderLinkId?: string;
 }): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
+  if (input.connection.venue === "hyperliquid") {
+    const hl = hlCreds(input.connection);
+    return placeHyperliquidLimit({
+      environmentId: input.connection.environment,
+      agentKey: hl.agentKey,
+      symbol: input.symbol,
+      side: input.side,
+      qty: input.qty,
+      price: input.price,
+      reduceOnly: input.reduceOnly,
+      orderLinkId: input.orderLinkId,
+    });
+  }
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot place futures orders yet." };
   }
@@ -296,6 +355,21 @@ export async function amendPerpOrderOnVenue(input: {
   qty?: string;
   price?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.connection.venue === "hyperliquid") {
+    if (!input.qty && !input.price) {
+      return { ok: false, error: WORKING_AMEND_UNCHANGED };
+    }
+    const hl = hlCreds(input.connection);
+    return amendHyperliquidOrder({
+      environmentId: input.connection.environment,
+      agentKey: hl.agentKey,
+      accountAddress: hl.accountAddress,
+      symbol: input.symbol,
+      orderId: input.orderId,
+      qty: input.qty,
+      price: input.price,
+    });
+  }
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot amend futures orders yet." };
   }
@@ -318,6 +392,14 @@ export async function readPerpOrderOnVenue(input: {
 }): Promise<
   { ok: true; order: BybitLinearOrderSnapshot } | { ok: false; error: string }
 > {
+  if (input.connection.venue === "hyperliquid") {
+    const hl = hlCreds(input.connection);
+    return readHyperliquidOrder({
+      environmentId: input.connection.environment,
+      accountAddress: hl.accountAddress,
+      orderId: input.orderId,
+    });
+  }
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot read futures orders yet." };
   }
@@ -333,6 +415,15 @@ export async function cancelPerpOrderOnVenue(input: {
   symbol: string;
   orderId: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.connection.venue === "hyperliquid") {
+    const hl = hlCreds(input.connection);
+    return cancelHyperliquidOrder({
+      environmentId: input.connection.environment,
+      agentKey: hl.agentKey,
+      symbol: input.symbol,
+      orderId: input.orderId,
+    });
+  }
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot cancel futures orders yet." };
   }
@@ -351,6 +442,14 @@ export async function readPerpPositionOnVenue(input: {
 }): Promise<
   { ok: true; position: BybitLinearPosition | null } | { ok: false; error: string }
 > {
+  if (input.connection.venue === "hyperliquid") {
+    const hl = hlCreds(input.connection);
+    return readHyperliquidPosition({
+      environmentId: input.connection.environment,
+      accountAddress: hl.accountAddress,
+      symbol: input.symbol,
+    });
+  }
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot read futures positions yet." };
   }
@@ -367,6 +466,13 @@ export async function listLinearPositionRisk(input: {
 }): Promise<
   { ok: true; positions: BybitLinearRisk[] } | { ok: false; error: string }
 > {
+  if (input.connection.venue === "hyperliquid") {
+    const hl = hlCreds(input.connection);
+    return listHyperliquidPositionRisk({
+      environmentId: input.connection.environment,
+      accountAddress: hl.accountAddress,
+    });
+  }
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot read futures positions yet." };
   }
@@ -394,6 +500,17 @@ export async function setPerpTradingStopOnVenue(input: {
   trailingStop?: string;
   activePrice?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.connection.venue === "hyperliquid") {
+    const hl = hlCreds(input.connection);
+    return setHyperliquidTradingStop({
+      environmentId: input.connection.environment,
+      agentKey: hl.agentKey,
+      accountAddress: hl.accountAddress,
+      symbol: input.symbol,
+      takeProfit: input.takeProfit,
+      stopLoss: input.stopLoss,
+    });
+  }
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot set TP/SL yet." };
   }

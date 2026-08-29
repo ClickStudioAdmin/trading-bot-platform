@@ -63,13 +63,17 @@ export function sharedKeyWarningKind(input: {
   return "pending";
 }
 
+export function formatDeskBindType(
+  strategy: "cash_and_carry" | "futures",
+): string {
+  return strategy === "futures" ? "Futures" : "Cash and Carry";
+}
+
 export function formatDeskBindLabel(input: {
   accountName: string;
   strategy: "cash_and_carry" | "futures";
 }): string {
-  const strategy =
-    input.strategy === "futures" ? "Futures" : "Cash and Carry";
-  return `${input.accountName} · ${strategy}`;
+  return `${input.accountName} · ${formatDeskBindType(input.strategy)}`;
 }
 
 export function parseConnectionLabel(
