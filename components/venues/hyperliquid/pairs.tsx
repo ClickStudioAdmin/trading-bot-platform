@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
 import { PageHeading } from "@/components/page-heading";
 import { PairFiltersForm } from "@/components/pair-filters";
 import { TokenIcon } from "@/components/token-icon";
-import {
-  loadUsdtLinearPerps,
-  type LinearPerp,
-} from "@/lib/exchanges/bybit/perp";
+import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import {
   applyPairFilters,
   pairFilterInputValues,
@@ -15,32 +11,26 @@ import {
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { deskHref } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
-import { HyperliquidFuturesPairs } from "@/components/venues/hyperliquid/pairs";
+import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
+import { loadHyperliquidLinearPerps } from "@/lib/venues/hyperliquid/market";
 
-export const metadata: Metadata = {
-  title: "Pairs",
-  description: "Bybit USDT linear perpetual list (public market data).",
-};
-
-export default async function FuturesPairsPage({
+export async function HyperliquidFuturesPairs({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await getSessionContext();
-  if (session?.account.venue === "hyperliquid") {
-    return <HyperliquidFuturesPairs searchParams={searchParams} />;
-  }
   const params = await searchParams;
+  const session = await getSessionContext();
   const filters = parsePairFilters(params);
+  const env = hyperliquidInfoEnvironment(session?.account.venueEnvironment);
   let pairs: LinearPerp[] = [];
   let error: string | null = null;
 
   try {
-    pairs = await loadUsdtLinearPerps();
+    pairs = await loadHyperliquidLinearPerps(env);
   } catch (cause) {
     pairs = [];
-    error = cause instanceof Error ? cause.message : "Bybit request failed";
+    error = cause instanceof Error ? cause.message : "Hyperliquid request failed";
   }
 
   const visible = applyPairFilters(pairs, filters, (pair) => ({
@@ -53,8 +43,8 @@ export default async function FuturesPairsPage({
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Pairs" />
       <p className="-mt-2 mb-6 text-sm text-ink-muted">
-        Every trading USDT linear perpetual this strategy can buy, sell, or
-        close. No API key. Dated futures are excluded.
+        Every trading Hyperliquid perpetual this desk can buy, sell, or close.
+        Coins settle in USDC. No agent key.
       </p>
       <PairFiltersForm
         clearHref={deskHref(FUTURES_PATHS.pairs, session?.account.id)}
@@ -83,7 +73,7 @@ export default async function FuturesPairsPage({
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
                   <tr>
-                    <th className="px-4 py-3 font-medium">Base</th>
+                    <th className="px-4 py-3 font-medium">Coin</th>
                     <th className="px-4 py-3 font-medium">Contract</th>
                     <th className="px-4 py-3 font-medium">Quote</th>
                   </tr>

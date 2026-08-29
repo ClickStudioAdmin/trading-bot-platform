@@ -20,6 +20,7 @@ import { deskAllowsManualPerpTicket, deskHref } from "@/lib/accounts/model";
 import { dcaHintsForOpen } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
+import { HyperliquidFuturesOverview } from "@/components/venues/hyperliquid/overview";
 
 export const metadata: Metadata = {
   title: "Futures",
@@ -31,8 +32,11 @@ export default async function FuturesOverviewPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const params = await searchParams;
   const session = await getSessionContext();
+  if (session?.account.venue === "hyperliquid") {
+    return <HyperliquidFuturesOverview searchParams={searchParams} />;
+  }
+  const params = await searchParams;
   if (session) {
     await reconcileOpenFuturesBooks({
       accountId: session.account.id,

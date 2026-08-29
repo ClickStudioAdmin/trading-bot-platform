@@ -18,17 +18,19 @@ export function FuturesOrderTicket({
   lastPrices = {},
   actions,
   includeStops = true,
+  defaultSymbol = "BTCUSDT",
 }: {
   options: LinearPerp[];
   lastPrices?: Record<string, number>;
   actions?: ReactNode;
   includeStops?: boolean;
+  defaultSymbol?: string;
 }) {
   const [symbol, setSymbol] = useState(
     () =>
-      options.find((row) => row.symbol === "BTCUSDT")?.symbol ??
+      options.find((row) => row.symbol === defaultSymbol)?.symbol ??
       options[0]?.symbol ??
-      "BTCUSDT",
+      defaultSymbol,
   );
   const [unit, setUnit] = useState<"qty" | "usdt">("qty");
   const [orderType, setOrderType] = useState<"market" | "limit">("market");

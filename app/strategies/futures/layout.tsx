@@ -14,7 +14,7 @@ import { getSessionContext } from "@/lib/auth/session";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { listExchangeConnections } from "@/lib/exchanges/store";
-import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import { accountCanHoldConnections, getVenue } from "@/lib/exchanges/venues";
 import { futuresDeskAutomationStatus } from "@/lib/futures/automation";
 import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
 import { loadFuturesSettings } from "@/lib/futures/settings";
@@ -39,6 +39,9 @@ export default async function FuturesLayout({
     await pinDeskSearchParam(session);
   }
   const deskType = session?.account.deskType ?? "perps";
+  const hyperliquid = session?.account.venue === "hyperliquid";
+  const venueLabel =
+    (session ? getVenue(session.account.venue)?.label : null) ?? "Bybit";
   const signalFollower = deskType === "signal_follower";
   const dca = deskType === "dca";
   const live = Boolean(session && accountCanHoldConnections(session.account.mode));
@@ -103,8 +106,12 @@ export default async function FuturesLayout({
           signalFollower
             ? "TradingView sends buy, sell, and close. This desk only protects: caps, reduce-only, Close All, and row TP/SL."
             : dca
-              ? "This desk owns orders and exits. Arm from Automations or a Signal webhook. Close All & Cancel All Open Orders is the panic flatten. Change TP/SL on Automations."
-              : "Buy, sell, or close one USDT linear perpetual. Market or limit. Long and short can both be open."
+              ? hyperliquid
+                ? "This desk owns orders and exits. One open side per coin. Both is not available. Arm from Automations or a Signal webhook."
+                : "This desk owns orders and exits. Arm from Automations or a Signal webhook. Close All & Cancel All Open Orders is the panic flatten. Change TP/SL on Automations."
+              : hyperliquid
+                ? "Buy, sell, or close one USDC perpetual. Market or limit. One open side per coin."
+                : "Buy, sell, or close one USDT linear perpetual. Market or limit. Long and short can both be open."
         }
         navLabel={formatDeskType(deskType)}
         primaryLinks={primaryLinks}
@@ -133,7 +140,7 @@ export default async function FuturesLayout({
                 }
             : {
                 name: formatAccountMode("paper"),
-                venue: "Bybit",
+                venue: venueLabel,
                 connected: true,
                 href: settingsHref,
               }

@@ -18,7 +18,6 @@ import {
   parseFuturesOrderType,
   parseFuturesQty,
   parseFuturesSizeUnit,
-  parseFuturesSymbol,
   parseFuturesTradeSource,
   type FuturesSide,
 } from "./model";
@@ -38,8 +37,12 @@ import {
   futuresOriginLog,
   withFuturesOrigin,
 } from "./source";
-import { fetchBybitTicker } from "@/lib/exchanges/bybit/client";
+import {
+  fetchBybitTicker,
+  type BybitTicker,
+} from "@/lib/exchanges/bybit/client";
 import { loadPerpInstrument, priceForPerp, qtyForPerp, qtyForPerpNotional } from "@/lib/exchanges/bybit/perp";
+import type { BybitInstrument } from "@/lib/exchanges/bybit/universe";
 import {
   cancelPerpOrderOnVenue,
   placePerpLimitOnVenue,
@@ -49,6 +52,16 @@ import {
 import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
 import { type BoundConnectionSecrets } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import { hyperliquidOppositeRow } from "@/lib/venues/hyperliquid/decide";
+import {
+  hyperliquidInfoEnvironment,
+  loadDeskVenueContext,
+} from "@/lib/venues/hyperliquid/desk";
+import {
+  loadHyperliquidInstrument,
+  loadHyperliquidTicker,
+} from "@/lib/venues/hyperliquid/market";
+import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -106,7 +119,35 @@ type CommandCtx = {
   supabase: SupabaseClient;
   key: string | null;
   liveBook: boolean;
+  venue: string;
+  venueEnvironment: string | null;
 };
+
+async function loadDeskMarket(
+  ctx: CommandCtx,
+  symbol: string,
+): Promise<
+  | { ok: true; instrument: BybitInstrument; ticker: BybitTicker | null }
+  | { ok: false; error: string }
+> {
+  if (ctx.venue === "hyperliquid") {
+    const env = hyperliquidInfoEnvironment(ctx.venueEnvironment);
+    const instrument = await loadHyperliquidInstrument(env, symbol);
+    if (!instrument) {
+      return fail("That coin is not a Hyperliquid perpetual.");
+    }
+    const ticker = await loadHyperliquidTicker(env, symbol);
+    return { ok: true, instrument, ticker };
+  }
+  const instrument = await loadPerpInstrument(symbol);
+  if (!instrument) {
+    return fail(
+      "That symbol is not a trading USDT linear perpetual on Bybit.",
+    );
+  }
+  const ticker = await fetchBybitTicker("linear", symbol);
+  return { ok: true, instrument, ticker };
+}
 
 function actorScope(actor: FuturesCommandActor) {
   return { accountId: actor.accountId, userId: actor.userId };
@@ -216,6 +257,7 @@ export async function runFuturesCommand(input: {
     return fail("Auth is not configured.");
   }
   const liveBook = accountCanHoldConnections(input.actor.mode);
+  const desk = await loadDeskVenueContext(input.actor.accountId);
   const replayed = await replayOrNull({
     supabase,
     accountId: input.actor.accountId,
@@ -231,6 +273,8 @@ export async function runFuturesCommand(input: {
     supabase,
     key: parsedKey.key,
     liveBook,
+    venue: desk.venue,
+    venueEnvironment: desk.venueEnvironment,
   };
 
   let outcome: CommandOutcome;
@@ -292,7 +336,7 @@ async function runPlace(
   if (!actionParsed.ok) {
     return fail(actionParsed.error);
   }
-  const symbolParsed = parseFuturesSymbol(command.symbol);
+  const symbolParsed = parseDeskFuturesSymbol(ctx.venue, command.symbol);
   if (!symbolParsed.ok) {
     return fail(symbolParsed.error);
   }
@@ -305,12 +349,22 @@ async function runPlace(
   const opens = await loadOpenFuturesOnSymbol(symbol, actorScope(actor));
   const wantedSide = actionParsed.action === "buy" ? "long" : "short";
   const flattenId = String(command.positionId ?? "").trim();
-  const flattenTargets =
+  let flattenTargets =
     actionParsed.action === "flatten"
       ? flattenId
         ? opens.filter((row) => row.id === flattenId)
         : []
       : [];
+  if (
+    ctx.venue === "hyperliquid" &&
+    actionParsed.action !== "flatten"
+  ) {
+    const opposite = hyperliquidOppositeRow(opens, wantedSide);
+    if (opposite) {
+      flattenTargets = [opposite];
+    }
+  }
+  const closingOpposite = flattenTargets.length > 0 && actionParsed.action !== "flatten";
   if (actionParsed.action === "flatten" && flattenTargets.length === 0) {
     return fail(
       flattenId
@@ -319,17 +373,33 @@ async function runPlace(
     );
   }
 
-  const instrument = await loadPerpInstrument(symbol);
-  if (!instrument) {
-    return fail(
-      "That symbol is not a trading USDT linear perpetual on Bybit.",
-    );
+  const market = await loadDeskMarket(ctx, symbol);
+  if (!market.ok) {
+    return market;
   }
-
-  const ticker = await fetchBybitTicker("linear", symbol);
+  const { instrument, ticker } = market;
   const mark = markFromTicker(ticker ?? {});
   if (mark === null) {
     return fail("Could not read a mark price for that contract.");
+  }
+
+  let flattenSize = command.size;
+  if (closingOpposite) {
+    const unitParsed = parseFuturesSizeUnit(command.sizeUnit);
+    if (!unitParsed.ok) {
+      return fail(unitParsed.error);
+    }
+    if (unitParsed.unit === "usdt" && String(command.size ?? "").trim() !== "") {
+      const notional = parseFuturesNotional(command.size);
+      if (!notional.ok) {
+        return fail(notional.error);
+      }
+      const sized = qtyForPerpNotional(notional.qty, mark, instrument);
+      if (!sized.ok) {
+        return fail(sized.error);
+      }
+      flattenSize = sized.text;
+    }
   }
 
   const live = () =>
@@ -339,7 +409,7 @@ async function runPlace(
       connectionId: settings.connectionId,
     });
 
-  if (actionParsed.action === "flatten") {
+  if (actionParsed.action === "flatten" || closingOpposite) {
     const connectionBound = await live();
     if (!connectionBound.ok) {
       return connectionBound;
@@ -369,7 +439,7 @@ async function runPlace(
         if (!priced.ok) {
           return fail(priced.error);
         }
-        const qtyParsed = parseCloseQty(command.size, row.qty);
+        const qtyParsed = parseCloseQty(flattenSize, row.qty);
         if (!qtyParsed.ok) {
           return fail(qtyParsed.error);
         }
@@ -480,7 +550,7 @@ async function runPlace(
           positionId: row.id,
         };
       }
-      const qtyParsed = parseCloseQty(command.size, row.qty);
+      const qtyParsed = parseCloseQty(flattenSize, row.qty);
       if (!qtyParsed.ok) {
         return fail(qtyParsed.error);
       }
@@ -1026,7 +1096,7 @@ async function runSetTpsl(
 ): Promise<CommandOutcome> {
   const { actor, supabase, liveBook } = ctx;
   const positionId = String(command.positionId ?? "").trim();
-  const symbolParsed = parseFuturesSymbol(command.symbol);
+  const symbolParsed = parseDeskFuturesSymbol(ctx.venue, command.symbol);
   if (!symbolParsed.ok) {
     return fail(symbolParsed.error);
   }
@@ -1036,12 +1106,11 @@ async function runSetTpsl(
   if (!row) {
     return fail("That position is no longer open.");
   }
-  const instrument = await loadPerpInstrument(symbol);
-  if (!instrument) {
-    return fail(
-      "That symbol is not a trading USDT linear perpetual on Bybit.",
-    );
+  const market = await loadDeskMarket(ctx, symbol);
+  if (!market.ok) {
+    return market;
   }
+  const { instrument, ticker } = market;
   let tpsl: FuturesTpsl;
   if (command.tpsl !== undefined) {
     tpsl = command.tpsl;
@@ -1052,7 +1121,6 @@ async function runSetTpsl(
     }
     tpsl = parsed.tpsl;
   }
-  const ticker = await fetchBybitTicker("linear", symbol);
   const mark = markFromTicker(ticker ?? {});
   if (tpslHasLevels(tpsl)) {
     const checked = validateTpslVsReference({
@@ -1150,7 +1218,7 @@ async function runSetTrailing(
 ): Promise<CommandOutcome> {
   const { actor, supabase, liveBook } = ctx;
   const positionId = String(command.positionId ?? "").trim();
-  const symbolParsed = parseFuturesSymbol(command.symbol);
+  const symbolParsed = parseDeskFuturesSymbol(ctx.venue, command.symbol);
   if (!symbolParsed.ok) {
     return fail(symbolParsed.error);
   }
@@ -1160,12 +1228,11 @@ async function runSetTrailing(
   if (!row) {
     return fail("That position is no longer open.");
   }
-  const instrument = await loadPerpInstrument(symbol);
-  if (!instrument) {
-    return fail(
-      "That symbol is not a trading USDT linear perpetual on Bybit.",
-    );
+  const market = await loadDeskMarket(ctx, symbol);
+  if (!market.ok) {
+    return market;
   }
+  const { instrument, ticker } = market;
   let trailing: FuturesTrailing | null;
   if (command.trailing !== undefined) {
     trailing = command.trailing;
@@ -1176,7 +1243,6 @@ async function runSetTrailing(
     }
     trailing = parsed.trailing;
   }
-  const ticker = await fetchBybitTicker("linear", symbol);
   const mark = markFromTicker(ticker ?? {});
   const last = Number(ticker?.lastPrice ?? "");
   const reference = last > 0 ? last : mark ?? row.entryPrice;
@@ -1339,12 +1405,11 @@ async function runAmendWorking(
   if (!limitParsed.ok) {
     return fail(limitParsed.error);
   }
-  const instrument = await loadPerpInstrument(row.symbol);
-  if (!instrument) {
-    return fail(
-      "That symbol is not a trading USDT linear perpetual on Bybit.",
-    );
+  const market = await loadDeskMarket(ctx, row.symbol);
+  if (!market.ok) {
+    return market;
   }
+  const { instrument } = market;
   const remainingSized = qtyForPerp(qtyParsed.qty, instrument);
   if (!remainingSized.ok) {
     return fail(remainingSized.error);

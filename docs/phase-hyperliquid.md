@@ -12,7 +12,7 @@ Create Perps, DCA, or TradingView Strategy desks whose **exchange is Hyperliquid
 
 ## Status
 
-Started 29 Aug 2026. Steps 1–2 are in repo. Exchanges already lists Hyperliquid (step 3 work landed early). Full Hyperliquid desk module is still step 4.
+Started 29 Aug 2026. Steps 1–3 are in repo. Step 4 (Hyperliquid desk module) is in repo 29 Aug 2026. Paper marks and full DCA/TV klines are still steps 5–6.
 
 ## How this scales
 
@@ -159,7 +159,7 @@ Stop after each step until Click says go. Do not start MEXC in this phase.
 | 1 | Capabilities + desk columns | Agent | Venue registry lists Bybit and Hyperliquid parameters (desk types, hedge vs one-way, quote, symbols, auth fields, Demo host). Migration adds immutable `venue` and `venue_environment` on `trading_accounts`. Existing desks are `bybit`. Create Desk: type and mode first (Bybit path). Exchange is not a separate picker — venue comes from the bound key when they choose Select Existing. Bind Later stays Bybit until a Hyperliquid key exists. Bind must match venue + environment. Checks pass. **In repo 29 Aug 2026.** Push `develop` to migrate. |
 | 2 | Adapter (Testnet first) | Agent | `lib/exchanges/hyperliquid/`: public meta, tickers, candles, user state; signed `/exchange` on Testnet; verify rejects master keys. Dispatcher only in `execute.ts`. No edits inside Bybit UI. **In repo 29 Aug 2026.** |
 | 3 | Exchanges | Agent | `/account/exchanges` is registry-driven. Hyperliquid fields: account address + agent key. Demo saves against Testnet, Live against mainnet. Fingerprint is agent last 4. Secret never returns to the browser. |
-| 4 | Hyperliquid desk module | Agent | Separate Perps / DCA / TV Strategy pages and commands. One-way blotter. No Both. Bybit pages untouched. Connected HL desk binds only a matching Demo or Live HL connection. Place / close / GTC / cancel / Close All through the HL adapter. |
+| 4 | Hyperliquid desk module | Agent | Separate Perps / DCA / TV Strategy pages and commands. One-way blotter. No Both. Bybit pages untouched. Connected HL desk binds only a matching Demo or Live HL connection. Place / close / GTC / cancel / Close All through the HL adapter. **In repo 29 Aug 2026.** |
 | 5 | Paper Hyperliquid | Agent | Paper HL desk uses the same HL module and HL public marks, in-app fills, no agent. Bybit paper still Bybit public. |
 | 6 | DCA + TradingView | Agent | HL DCA: indicator klines from HL, long or short only. TV Strategy webhook still hits TBP, orders go to the HL adapter. |
 | 7 | Desk test | Click | **Demo (Testnet):** Buy/Sell/Close, GTC, TP/SL, Cancel, Close All, DCA long, dummy TV. Then a small **Live** clip. Confirm a Bybit Perps desk still hedges and still uses `BTCUSDT`. |

@@ -101,6 +101,12 @@ export default async function FuturesAutomationsPage({
           Manual uses Save and Trigger Long or Short. Stop adding leaves the
           position. Close bot flattens it.
         </p>
+        {session.account.venue === "hyperliquid" ? (
+          <p className="mt-4 rounded-card border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
+            This Hyperliquid desk is one-way. Both is not available. DCA
+            long or short with Hyperliquid coins and klines is the next step.
+          </p>
+        ) : null}
         {error ? (
           <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}

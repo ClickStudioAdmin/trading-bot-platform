@@ -17,6 +17,7 @@ import {
   accountCanHoldConnections,
   connectionVenuesForDeskType,
   connectionsForDeskBind,
+  getVenue,
 } from "@/lib/exchanges/venues";
 import {
   listConnectionDeskBinds,
@@ -74,6 +75,10 @@ export default async function FuturesSettingsPage({
   const error = firstSearchValue(params.error);
   const canSave = exchangeCredentialsConfigured();
   const settingsHref = deskHref(FUTURES_PATHS.settings, session.account.id);
+  const deskVenue = getVenue(session.account.venue);
+  const bindVenues = deskVenue
+    ? [deskVenue]
+    : connectionVenuesForDeskType(session.account.deskType);
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -116,7 +121,7 @@ export default async function FuturesSettingsPage({
             detachBlocked={detachBlocked}
             sharedConnectionIds={sharedConnectionIds}
             canSave={canSave}
-            venues={connectionVenuesForDeskType(session.account.deskType)}
+            venues={bindVenues}
             next={settingsHref}
           />
         ) : (

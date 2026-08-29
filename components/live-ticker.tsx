@@ -22,12 +22,20 @@ const LiveTickerContext = createContext<LiveTickerMap | null>(null);
 
 export function LiveTickerScope({
   symbols,
+  venue,
+  environment,
   children,
 }: {
   symbols: readonly string[];
+  venue?: string;
+  environment?: string | null;
   children: ReactNode;
 }) {
   const key = [...new Set(symbols.filter(Boolean))].sort().join(",");
+  const query =
+    venue === "hyperliquid"
+      ? `${key}&env=${environment === "testnet" || environment === "demo" ? "testnet" : "live"}`
+      : key;
   const [tickers, setTickers] = useState<LiveTickerMap | null>(null);
 
   useEffect(() => {
@@ -42,7 +50,7 @@ export function LiveTickerScope({
         return;
       }
       try {
-        const res = await fetch(`/api/market/tickers?symbols=${key}`);
+        const res = await fetch(`/api/market/tickers?symbols=${query}`);
         if (!res.ok) {
           return;
         }
@@ -80,7 +88,7 @@ export function LiveTickerScope({
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", start);
     };
-  }, [key]);
+  }, [key, query]);
 
   return (
     <LiveTickerContext.Provider value={tickers}>

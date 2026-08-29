@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { FuturesFlash } from "@/components/futures-flash";
+import Link from "next/link";
+import { headers } from "next/headers";
 import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
 import {
@@ -9,48 +9,42 @@ import {
 import { FuturesWorkingOrders } from "@/components/futures-working";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { FuturesWebhookTest } from "@/components/futures-webhook-test";
+import { HyperliquidDeskFlash } from "@/components/venues/hyperliquid/desk-flash";
 import { getSessionContext } from "@/lib/auth/session";
-import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
-import {
-  baseCoinForPerpSymbol,
-  loadUsdtLinearPerps,
-} from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
-import { deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref } from "@/lib/accounts/model";
+import {
+  deskAllowsManualPerpTicket,
+  deskAllowsSignalWebhooks,
+  deskHref,
+} from "@/lib/accounts/model";
 import { dcaHintsForOpen } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
-import { FuturesWebhookTest } from "@/components/futures-webhook-test";
 import { submitFuturesTrade } from "@/lib/futures/actions";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
-import { headers } from "next/headers";
-import Link from "next/link";
 import { loadFuturesDesk } from "@/lib/futures/list";
 import { markFuturesOpen } from "@/lib/futures/mark";
 import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { loadFuturesVenueRisk } from "@/lib/futures/venue-risk-load";
 import { attachFuturesVenueRisk } from "@/lib/futures/venue-risk";
-import { firstSearchValue } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
-import { HyperliquidFuturesPositions } from "@/components/venues/hyperliquid/positions";
-
-export const metadata: Metadata = {
-  title: "Current Positions",
-  description: "Open USDT perpetual positions.",
-};
+import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
+import {
+  loadHyperliquidLinearPerps,
+  loadHyperliquidTickerMap,
+} from "@/lib/venues/hyperliquid/market";
+import { baseCoinForPerpSymbol } from "@/lib/exchanges/bybit/perp";
 
 const NEXT_PATH = FUTURES_PATHS.positions;
 
-export default async function FuturesPositionsPage({
+export async function HyperliquidFuturesPositions({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getSessionContext();
-  if (session?.account.venue === "hyperliquid") {
-    return <HyperliquidFuturesPositions searchParams={searchParams} />;
-  }
   const NEXT = deskHref(NEXT_PATH, session?.account.id);
   const params = await searchParams;
   if (session) {
@@ -72,15 +66,16 @@ export default async function FuturesPositionsPage({
   const live = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );
+  const env = hyperliquidInfoEnvironment(session?.account.venueEnvironment);
   const [tickers, pairs, venueRisk] = await Promise.all([
-    fetchBybitTickers("linear").catch(
+    loadHyperliquidTickerMap(env).catch(
       () =>
         new Map<
           string,
           { lastPrice?: string; bid1Price?: string; ask1Price?: string }
         >(),
     ),
-    loadUsdtLinearPerps().catch(() => []),
+    loadHyperliquidLinearPerps(env).catch(() => []),
     desk.exchangeBook && desk.open.length > 0
       ? loadFuturesVenueRisk()
       : Promise.resolve(new Map()),
@@ -118,61 +113,34 @@ export default async function FuturesPositionsPage({
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Current Positions" />
       <div className="space-y-6">
-        <FuturesFlash
-          opened={firstSearchValue(params.paper) === "opened"}
-          added={firstSearchValue(params.paper) === "added"}
-          closed={firstSearchValue(params.paper) === "closed"}
-          working={firstSearchValue(params.paper) === "working"}
-          cancelled={firstSearchValue(params.paper) === "cancelled"}
-          amended={firstSearchValue(params.paper) === "amended"}
-          liveOpened={firstSearchValue(params.paper) === "live-opened"}
-          liveAdded={firstSearchValue(params.paper) === "live-added"}
-          liveClosed={firstSearchValue(params.paper) === "live-closed"}
-          liveWorking={firstSearchValue(params.paper) === "live-working"}
-          liveAmended={firstSearchValue(params.paper) === "live-amended"}
-          tpsl={firstSearchValue(params.paper) === "tpsl"}
-          liveTpsl={firstSearchValue(params.paper) === "live-tpsl"}
-          trailing={firstSearchValue(params.paper) === "trailing"}
-          liveTrailing={firstSearchValue(params.paper) === "live-trailing"}
-          closedAll={firstSearchValue(params.paper) === "closed-all"}
-          liveClosedAll={firstSearchValue(params.paper) === "live-closed-all"}
-          cancelledAll={firstSearchValue(params.paper) === "cancelled-all"}
-          closedAndCancelled={
-            firstSearchValue(params.paper) === "closed-and-cancelled"
-          }
-          liveClosedAndCancelled={
-            firstSearchValue(params.paper) === "live-closed-and-cancelled"
-          }
-          webhookArm={firstSearchValue(params.paper) === "webhook-arm"}
-          playbookClosed={firstSearchValue(params.paper) === "playbook-closed"}
-          livePlaybookClosed={
-            firstSearchValue(params.paper) === "live-playbook-closed"
-          }
-          error={firstSearchValue(params.paperError)}
-        />
+        <HyperliquidDeskFlash params={params} includeWebhookArm />
 
-        <LiveTickerScope symbols={open.map((row) => row.symbol)}>
-        <FuturesOpenStats signedIn={desk.signedIn} open={open} />
-        <OpenFuturesTrades
-          signedIn={desk.signedIn}
-          open={open}
-          next={NEXT}
-          showHeading={false}
-          exchangeBook={desk.exchangeBook}
-          showCloseAll
-          workingCount={desk.working.length}
-          webhookNames={desk.webhookNames}
-          showDcaColumns={dca}
-          playbookOwnsOrders={dca}
-          dcaHints={dcaHints}
-          emptyMessage={
-            showTicket
-              ? undefined
-              : dca
-                ? "No open futures. The bot adds orders once it is armed."
-                : "No open futures. TradingView opens them through a webhook."
-          }
-        />
+        <LiveTickerScope
+          symbols={open.map((row) => row.symbol)}
+          venue="hyperliquid"
+          environment={session?.account.venueEnvironment}
+        >
+          <FuturesOpenStats signedIn={desk.signedIn} open={open} />
+          <OpenFuturesTrades
+            signedIn={desk.signedIn}
+            open={open}
+            next={NEXT}
+            showHeading={false}
+            exchangeBook={desk.exchangeBook}
+            showCloseAll
+            workingCount={desk.working.length}
+            webhookNames={desk.webhookNames}
+            showDcaColumns={dca}
+            playbookOwnsOrders={dca}
+            dcaHints={dcaHints}
+            emptyMessage={
+              showTicket
+                ? undefined
+                : dca
+                  ? "No open futures. The bot adds orders once it is armed."
+                  : "No open futures. TradingView opens them through a webhook."
+            }
+          />
         </LiveTickerScope>
 
         {showTicket ? (
@@ -181,15 +149,14 @@ export default async function FuturesPositionsPage({
               Place an order
             </h2>
             <p className="text-sm text-ink-muted">
-              USDT linear perpetual. Buy opens or adds a long. Sell opens or
-              adds a short. Both sides can be open on the same contract. Market
-              fills now. Limit rests until it matches — watch it under Open
-              orders. Optional TP/SL and trailing stop attach to that order.
-              Add or edit stops on an open row. Market or Limit close is on
-              each open row; both set qty (full row or a slice). Close All and
-              Close All & Cancel All Open Orders sit above the table. Cancel
-              All Open Orders sits above Open orders. Size is token quantity or
-              USDT value (mark for market, limit price for limit).
+              USDC perpetual. One open side per coin. Buy opens or adds a long,
+              or reduces a short. Sell opens or adds a short, or reduces a
+              long. Size above the open opposite side closes that row; open the
+              other side after it is flat. Market fills now. Limit rests until
+              it matches — watch it under Open orders. Optional TP/SL and
+              trailing stop attach to that order. Market or Limit close is on
+              each open row. Close All sits above the table. Size is coin
+              quantity or USDC value.
               {settings.reduceOnly
                 ? " Reduce only is on — Buy and Sell are blocked."
                 : ""}
@@ -200,6 +167,7 @@ export default async function FuturesPositionsPage({
                 <FuturesOrderTicket
                   options={pairs}
                   lastPrices={lastPrices}
+                  defaultSymbol="BTC"
                   actions={
                     <>
                       <PendingSubmitButton
@@ -231,7 +199,10 @@ export default async function FuturesPositionsPage({
                 ) : session ? (
                   <p className="mt-4 text-xs text-ink-muted">
                     Create a named webhook on{" "}
-                    <Link href={deskHref(FUTURES_PATHS.webhooks, session?.account.id)} className="text-accent">
+                    <Link
+                      href={deskHref(FUTURES_PATHS.webhooks, session.account.id)}
+                      className="text-accent"
+                    >
                       Webhooks
                     </Link>{" "}
                     to send a dummy TradingView call from this ticket.
@@ -240,8 +211,8 @@ export default async function FuturesPositionsPage({
               </form>
               {live && !settings.connectionId ? (
                 <p className="mt-3 text-xs text-warning">
-                  Bind an exchange in Desk Settings before these buttons place
-                  venue orders.
+                  Bind a Hyperliquid connection in Desk Settings before these
+                  buttons place venue orders.
                 </p>
               ) : null}
             </div>

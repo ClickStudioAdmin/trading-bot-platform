@@ -92,6 +92,13 @@ async function saveDcaPlaybookWith(
   if (!parsed.ok) {
     return deskActionError(parsed.error);
   }
+  if (session.account.venue === "hyperliquid") {
+    return deskActionError(
+      parsed.config.direction === "both"
+        ? "This Hyperliquid desk is one-way. Both is not available. DCA long or short ships in the next step."
+        : "DCA on Hyperliquid (long or short, coin symbols) ships in the next step.",
+    );
+  }
   const overMax = await rejectIfOverMaxOrder(parsed.config);
   if (overMax) {
     return deskActionError(overMax);
