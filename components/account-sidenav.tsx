@@ -10,8 +10,16 @@ import {
   formatDeskType,
   formatDeskVenueCaption,
   hrefPathname,
+  type DeskType,
   type TradingAccount,
 } from "@/lib/accounts/model";
+
+const DESK_TYPE_ORDER: DeskType[] = [
+  "cash_and_carry",
+  "perps",
+  "signal_follower",
+  "dca",
+];
 
 export function AccountSidenav({
   deskId,
@@ -30,7 +38,7 @@ export function AccountSidenav({
         links={ACCOUNT_DESK_LINKS}
         pathname={pathname}
       />
-      <DeskList desks={desks} currentDeskId={deskId} />
+      <DeskList className="mt-5" desks={desks} currentDeskId={deskId} />
     </aside>
   );
 }
@@ -38,43 +46,60 @@ export function AccountSidenav({
 function DeskList({
   desks,
   currentDeskId,
+  className,
 }: {
   desks: TradingAccount[];
   currentDeskId: string;
+  className?: string;
 }) {
+  const groups = DESK_TYPE_ORDER.map((deskType) => ({
+    deskType,
+    desks: desks.filter((desk) => desk.deskType === deskType),
+  })).filter((group) => group.desks.length > 0);
   return (
-    <div>
+    <div className={className}>
       <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
         Desks
       </p>
-      <nav aria-label="Desks" className="panel-scroll mt-3 flex max-h-64 flex-col gap-1">
-        {desks.map((desk) => {
-          const current = desk.id === currentDeskId;
-          const meta = `${formatDeskType(desk.deskType)} · ${formatDeskVenueCaption(desk)} · ${formatAccountMode(desk.mode)}`;
-          return (
-            <Link
-              key={desk.id}
-              href={deskHomePath(desk.deskType, desk.id)}
-              aria-current={current ? "true" : undefined}
-              title={`${desk.name} · ${meta}`}
-              onClick={() => {
-                if (!current) {
-                  void rememberTradingAccount(desk.id);
-                }
-              }}
-              className={`rounded-control px-3 py-2 ${
-                current
-                  ? "bg-surface-raised text-ink"
-                  : "text-ink-faint hover:bg-surface-raised hover:text-ink"
-              }`}
-            >
-              <span className="block truncate text-sm text-ink">{desk.name}</span>
-              <span className="mt-0.5 block truncate text-[11px] text-ink-faint">
-                {meta}
-              </span>
-            </Link>
-          );
-        })}
+      <nav aria-label="Desks" className="mt-3 flex flex-col">
+        {groups.map((group) => (
+          <div key={group.deskType} className="mt-3 first:mt-0">
+            <p className="truncate px-3 text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+              {formatDeskType(group.deskType)}
+            </p>
+            <div className="mt-1 flex flex-col gap-1">
+              {group.desks.map((desk) => {
+                const current = desk.id === currentDeskId;
+                const meta = `${formatDeskVenueCaption(desk)} · ${formatAccountMode(desk.mode)}`;
+                return (
+                  <Link
+                    key={desk.id}
+                    href={deskHomePath(desk.deskType, desk.id)}
+                    aria-current={current ? "true" : undefined}
+                    title={`${desk.name} · ${meta}`}
+                    onClick={() => {
+                      if (!current) {
+                        void rememberTradingAccount(desk.id);
+                      }
+                    }}
+                    className={`rounded-control px-3 py-2 ${
+                      current
+                        ? "bg-surface-raised text-ink"
+                        : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+                    }`}
+                  >
+                    <span className="block truncate text-sm text-ink">
+                      {desk.name}
+                    </span>
+                    <span className="mt-0.5 block truncate text-[11px] text-ink-faint">
+                      {meta}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
     </div>
   );
