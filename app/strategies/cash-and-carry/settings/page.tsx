@@ -4,7 +4,7 @@ import { PageHeading } from "@/components/page-heading";
 import { DeskSettingsForm } from "@/components/desk-settings-form";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
 import { ExchangeBindSelect } from "@/components/exchange-bind-select";
-import { ExchangeConnectForm } from "@/components/exchange-connect-form";
+import { ExchangeConnectModal } from "@/components/exchange-connect-modal";
 import { savePaperSettings } from "@/lib/engine/actions";
 import { loadEngineSettings } from "@/lib/engine/settings";
 import { deskHref, otherDeskNames, strategyDetachBlockers } from "@/lib/accounts/model";
@@ -68,6 +68,11 @@ export default async function CashAndCarrySettingsPage({
     }).length > 0;
   const saved = firstSearchValue(params.saved) === "1";
   const error = firstSearchValue(params.error);
+  const canSave = exchangeCredentialsConfigured();
+  const settingsHref = deskHref(
+    "/strategies/cash-and-carry/settings",
+    session.account.id,
+  );
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -101,6 +106,9 @@ export default async function CashAndCarrySettingsPage({
             selected={selected}
             detachBlocked={detachBlocked}
             sharedConnectionIds={sharedConnectionIds}
+            canSave={canSave}
+            venues={connectionVenuesForDeskType(session.account.deskType)}
+            next={settingsHref}
           />
         ) : null}
         <label className="block text-sm text-ink">
@@ -118,15 +126,6 @@ export default async function CashAndCarrySettingsPage({
           Dynamic exits all use this number.
         </p>
       </DeskSettingsForm>
-      {live && exchangeCredentialsConfigured() ? (
-        <section className="mt-6 max-w-md rounded-card border border-line bg-surface p-5">
-          <ExchangeConnectForm
-            venues={connectionVenuesForDeskType(session.account.deskType)}
-            next={deskHref("/strategies/cash-and-carry/settings", session.account.id)}
-            compact
-          />
-        </section>
-      ) : null}
     </main>
   );
 }
@@ -137,25 +136,42 @@ function ExchangeBindField({
   selected,
   detachBlocked,
   sharedConnectionIds,
+  canSave,
+  venues,
+  next,
 }: {
   connections: ExchangeConnection[];
   selectedId: string | null;
   selected: ExchangeConnection | null;
   detachBlocked: boolean;
   sharedConnectionIds: string[];
+  canSave: boolean;
+  venues: ReturnType<typeof connectionVenuesForDeskType>;
+  next: string;
 }) {
+  const addConnection = canSave ? (
+    <div className="mt-2">
+      <ExchangeConnectModal venues={venues} next={next} />
+    </div>
+  ) : null;
+
   if (connections.length === 0) {
     return (
       <div>
         <p className="text-sm text-ink">Exchange</p>
         <p className="mt-1 text-sm text-ink-muted">
-          No matching key on this login.{" "}
+          No matching key on this login.
+        </p>
+        {addConnection}
+        <p className="mt-2 text-sm text-ink-muted">
+          Keys also live on{" "}
           <Link
             href="/account/exchanges"
             className="text-accent hover:text-accent-strong"
           >
             Exchanges
           </Link>
+          .
         </p>
       </div>
     );
@@ -179,6 +195,7 @@ function ExchangeBindField({
           <StrategyDetachControl blocked={detachBlocked} />
         </div>
       ) : null}
+      {addConnection}
     </div>
   );
 }

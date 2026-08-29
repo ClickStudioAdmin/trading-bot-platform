@@ -96,6 +96,31 @@ export async function getExchangeConnectionForUser(input: {
   return parseExchangeConnectionRow(data as Record<string, unknown>);
 }
 
+export async function updateExchangeConnectionLabel(input: {
+  userId: string;
+  connectionId: string;
+  label: string | null;
+}): Promise<{ error: string | null }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { error: "Auth is not configured." };
+  }
+  const { data, error } = await supabase
+    .from("exchange_connections")
+    .update({ label: input.label })
+    .eq("id", input.connectionId)
+    .eq("user_id", input.userId)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    return { error: error.message };
+  }
+  if (!data?.id) {
+    return { error: "Could not rename that connection." };
+  }
+  return { error: null };
+}
+
 export async function updateExchangeConnectionCredentials(input: {
   userId: string;
   connectionId: string;

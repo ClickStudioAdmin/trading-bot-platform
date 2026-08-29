@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ExchangeConnectForm } from "@/components/exchange-connect-form";
 import { PageHeading } from "@/components/page-heading";
 import { RemoveConnectionControl } from "@/components/remove-connection-control";
+import { RenameConnectionControl } from "@/components/rename-connection-control";
 import { ReplaceConnectionControl } from "@/components/replace-connection-control";
 import {
   connectionRemoveBlockers,
@@ -42,6 +43,7 @@ export default async function AccountExchangesPage({
   const params = await searchParams;
   const error = firstSearchValue(params.error);
   const saved = firstSearchValue(params.saved) === "1";
+  const renamed = firstSearchValue(params.renamed) === "1";
   const replaced = firstSearchValue(params.replaced) === "1";
   const removed = firstSearchValue(params.removed) === "1";
   const [connections, binds] = await Promise.all([
@@ -60,7 +62,7 @@ export default async function AccountExchangesPage({
         approved agent key (Demo is Testnet). The same key on two desks
         shares venue margin.
       </p>
-      {error || saved || replaced || removed ? (
+      {error || saved || renamed || replaced || removed ? (
         <div className="mb-6 space-y-3">
           {error ? (
             <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -69,6 +71,9 @@ export default async function AccountExchangesPage({
           ) : null}
           {saved ? (
             <p className="text-sm text-success">Connection saved.</p>
+          ) : null}
+          {renamed ? (
+            <p className="text-sm text-success">Connection renamed.</p>
           ) : null}
           {replaced ? (
             <p className="text-sm text-success">
@@ -201,7 +206,11 @@ function ConnectionList({
                     )}
                   </td>
                   <td className="px-4 py-3 align-top text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <RenameConnectionControl
+                        connectionId={row.id}
+                        label={row.label}
+                      />
                       {canReplace &&
                       (getVenue(row.venue)?.credentialFields.length ?? 0) >
                         0 ? (

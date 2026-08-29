@@ -18,6 +18,7 @@ import {
   insertExchangeConnection,
   listConnectionDeskBinds,
   updateExchangeConnectionCredentials,
+  updateExchangeConnectionLabel,
 } from "@/lib/exchanges/store";
 import { verifyExchangeCredentials } from "@/lib/exchanges/verify";
 import {
@@ -48,6 +49,68 @@ function fail(message: string): never {
   finish("/account/exchanges", { error: message });
 }
 
+function readConnectForm(formData: FormData) {
+  const venue = parseConnectionVenueId(formData.get("venue"));
+  if (!venue.ok) {
+    return venue;
+  }
+  const environment = parseVenueEnvironment(
+    venue.venue,
+    formData.get("environment"),
+  );
+  if (!environment.ok) {
+    return environment;
+  }
+  const labeled = parseConnectionLabel(formData.get("label"));
+  if (!labeled.ok) {
+    return labeled;
+  }
+  const credentials: Record<string, string> = {};
+  for (const field of venue.venue.credentialFields) {
+    credentials[field.key] = String(formData.get(field.key) ?? "");
+  }
+  const parsed = parseVenueCredentials(venue.venue, credentials);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  const fingerprint = keyFingerprint(parsed.credentials, venue.venue);
+  if (!fingerprint) {
+    return {
+      ok: false as const,
+      error:
+        venue.venue.id === "hyperliquid"
+          ? "Agent private key is not a valid key."
+          : "API key is too short to save.",
+    };
+  }
+  return {
+    ok: true as const,
+    venue: venue.venue,
+    environment: environment.environment,
+    label: labeled.label,
+    credentials: parsed.credentials,
+    fingerprint,
+  };
+}
+
+export async function checkExchangeConnection(
+  formData: FormData,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getSessionContext();
+  if (!session) {
+    return { ok: false, error: "Sign in to check a connection." };
+  }
+  const parsed = readConnectForm(formData);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  return verifyExchangeCredentials({
+    venueId: parsed.venue.id,
+    environmentId: parsed.environment.id,
+    credentials: parsed.credentials,
+  });
+}
+
 export async function saveExchangeConnection(formData: FormData) {
   const session = await getSessionContext();
   if (!session) {
@@ -61,42 +124,16 @@ export async function saveExchangeConnection(formData: FormData) {
     return failTo("Exchange credentials key is not configured on this environment.");
   }
 
-  const venue = parseConnectionVenueId(formData.get("venue"));
-  if (!venue.ok) {
-    return failTo(venue.error);
-  }
-  const environment = parseVenueEnvironment(
-    venue.venue,
-    formData.get("environment"),
-  );
-  if (!environment.ok) {
-    return failTo(environment.error);
-  }
-  const labeled = parseConnectionLabel(formData.get("label"));
-  if (!labeled.ok) {
-    return failTo(labeled.error);
-  }
-  const credentials: Record<string, string> = {};
-  for (const field of venue.venue.credentialFields) {
-    credentials[field.key] = String(formData.get(field.key) ?? "");
-  }
-  const parsed = parseVenueCredentials(venue.venue, credentials);
+  const parsed = readConnectForm(formData);
   if (!parsed.ok) {
     return failTo(parsed.error);
   }
-  const fingerprint = keyFingerprint(parsed.credentials, venue.venue);
-  if (!fingerprint) {
-    return failTo(
-      venue.venue.id === "hyperliquid"
-        ? "Agent private key is not a valid key."
-        : "API key is too short to save.",
-    );
-  }
+  const { venue, environment, label, credentials, fingerprint } = parsed;
 
   const verified = await verifyExchangeCredentials({
-    venueId: venue.venue.id,
-    environmentId: environment.environment.id,
-    credentials: parsed.credentials,
+    venueId: venue.id,
+    environmentId: environment.id,
+    credentials,
   });
   if (!verified.ok) {
     await writeEventLog({
@@ -107,8 +144,8 @@ export async function saveExchangeConnection(formData: FormData) {
       userId: session.member.id,
       accountId: session.account.id,
       data: {
-        venue: venue.venue.id,
-        environment: environment.environment.id,
+        venue: venue.id,
+        environment: environment.id,
         fingerprint,
         reason: verified.error,
       },
@@ -118,16 +155,16 @@ export async function saveExchangeConnection(formData: FormData) {
 
   let packed;
   try {
-    packed = encryptCredentials(parsed.credentials);
+    packed = encryptCredentials(credentials);
   } catch {
     return failTo("Could not encrypt those credentials.");
   }
 
   const written = await insertExchangeConnection({
     userId: session.member.id,
-    venue: venue.venue.id,
-    environment: environment.environment.id,
-    label: labeled.label,
+    venue: venue.id,
+    environment: environment.id,
+    label,
     fingerprint,
     ciphertext: packed.ciphertext,
     nonce: packed.nonce,
@@ -142,8 +179,8 @@ export async function saveExchangeConnection(formData: FormData) {
       userId: session.member.id,
       accountId: session.account.id,
       data: {
-        venue: venue.venue.id,
-        environment: environment.environment.id,
+        venue: venue.id,
+        environment: environment.id,
         fingerprint,
       },
     });
@@ -153,12 +190,12 @@ export async function saveExchangeConnection(formData: FormData) {
   await writeEventLog({
     scope: "system",
     event: "exchange.saved",
-    message: `Connected ${venue.venue.label} ${environment.environment.label}`,
+    message: `Connected ${venue.label} ${environment.label}`,
     userId: session.member.id,
     accountId: session.account.id,
     data: {
-      venue: venue.venue.id,
-      environment: environment.environment.id,
+      venue: venue.id,
+      environment: environment.id,
       fingerprint,
     },
   });
@@ -169,6 +206,62 @@ export async function saveExchangeConnection(formData: FormData) {
   revalidatePath("/strategies/futures/settings");
   revalidatePath("/strategies/cash-and-carry/settings");
   finish(next, { saved: "1" });
+}
+
+export async function renameExchangeConnection(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const connectionId = String(formData.get("connectionId") ?? "").trim();
+  if (!connectionId) {
+    fail("Missing connection.");
+  }
+  const existing = await getExchangeConnectionForUser({
+    userId: session.member.id,
+    connectionId,
+  });
+  if (!existing) {
+    fail("Missing connection.");
+  }
+  const labeled = parseConnectionLabel(formData.get("label"));
+  if (!labeled.ok) {
+    fail(labeled.error);
+  }
+  const written = await updateExchangeConnectionLabel({
+    userId: session.member.id,
+    connectionId,
+    label: labeled.label,
+  });
+  if (written.error) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "exchange.rename_failed",
+      message: written.error,
+      userId: session.member.id,
+      accountId: session.account.id,
+      data: { connectionId },
+    });
+    fail(written.error);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "exchange.renamed",
+    message: labeled.label
+      ? `Renamed connection to ${labeled.label}`
+      : "Cleared connection label",
+    userId: session.member.id,
+    accountId: session.account.id,
+    data: { connectionId },
+  });
+  revalidatePath("/account/exchanges");
+  revalidatePath("/account");
+  revalidatePath("/account/book");
+  revalidatePath("/account/sub-accounts");
+  revalidatePath("/strategies/cash-and-carry/settings");
+  revalidatePath("/strategies/futures/settings");
+  redirect("/account/exchanges?renamed=1");
 }
 
 export async function replaceExchangeConnection(formData: FormData) {

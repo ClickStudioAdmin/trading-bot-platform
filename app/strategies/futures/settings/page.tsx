@@ -5,7 +5,7 @@ import { PageHeading } from "@/components/page-heading";
 import { DeskSettingsForm } from "@/components/desk-settings-form";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
 import { ExchangeBindSelect } from "@/components/exchange-bind-select";
-import { ExchangeConnectForm } from "@/components/exchange-connect-form";
+import { ExchangeConnectModal } from "@/components/exchange-connect-modal";
 import { strategyDetachBlockers, deskAllowsPerpsRecipes, deskHref, otherDeskNames } from "@/lib/accounts/model";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
 import {
@@ -115,6 +115,9 @@ export default async function FuturesSettingsPage({
             selected={selected}
             detachBlocked={detachBlocked}
             sharedConnectionIds={sharedConnectionIds}
+            canSave={canSave}
+            venues={connectionVenuesForDeskType(session.account.deskType)}
+            next={settingsHref}
           />
         ) : (
           <p className="text-sm text-ink-muted">
@@ -176,15 +179,6 @@ export default async function FuturesSettingsPage({
           </label>
         </div>
       </DeskSettingsForm>
-      {live && canSave ? (
-        <section className="mt-6 max-w-lg rounded-card border border-line bg-surface p-5">
-          <ExchangeConnectForm
-            venues={connectionVenuesForDeskType(session.account.deskType)}
-            next={settingsHref}
-            compact
-          />
-        </section>
-      ) : null}
     </main>
   );
 }
@@ -195,19 +189,35 @@ function ExchangeBindField({
   selected,
   detachBlocked,
   sharedConnectionIds,
+  canSave,
+  venues,
+  next,
 }: {
   connections: ExchangeConnection[];
   selectedId: string | null;
   selected: ExchangeConnection | null;
   detachBlocked: boolean;
   sharedConnectionIds: string[];
+  canSave: boolean;
+  venues: ReturnType<typeof connectionVenuesForDeskType>;
+  next: string;
 }) {
+  const addConnection = canSave ? (
+    <div className="mt-2">
+      <ExchangeConnectModal venues={venues} next={next} />
+    </div>
+  ) : null;
+
   if (connections.length === 0) {
     return (
       <div>
         <p className="text-sm text-ink">Exchange</p>
         <p className="mt-1 text-sm text-ink-muted">
-          No matching key on this login yet. Add one below, or on{" "}
+          No matching key on this login yet.
+        </p>
+        {addConnection}
+        <p className="mt-2 text-sm text-ink-muted">
+          Keys also live on{" "}
           <Link
             href="/account/exchanges"
             className="text-accent hover:text-accent-strong"
@@ -241,6 +251,7 @@ function ExchangeBindField({
           />
         </div>
       ) : null}
+      {addConnection}
     </div>
   );
 }
