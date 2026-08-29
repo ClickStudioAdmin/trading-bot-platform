@@ -79,14 +79,31 @@ function DeskList({
       <nav aria-label="Desks" className="mt-3 flex flex-col">
         {groups.map((group) => {
           const creating = createDeskType === group.deskType;
+          const empty = group.desks.length === 0;
+          const typeLabel = formatDeskType(group.deskType);
           return (
           <div key={group.deskType} className="mt-3 first:mt-0">
-            <p className="flex items-center gap-2 px-3 text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
-              <DeskTypeMark deskType={group.deskType} />
-              <span className="min-w-0 truncate">
-                {formatDeskType(group.deskType)}
-              </span>
-            </p>
+            <div className="flex items-center gap-1 px-3">
+              <p className="flex min-w-0 flex-1 items-center gap-2 text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+                <DeskTypeMark deskType={group.deskType} />
+                <span className="min-w-0 truncate">{typeLabel}</span>
+              </p>
+              {empty ? null : (
+                <Link
+                  href={createDeskPath(group.deskType)}
+                  aria-current={creating ? "true" : undefined}
+                  aria-label={`Create ${typeLabel} desk`}
+                  title={`Create ${typeLabel} desk`}
+                  className={`flex size-6 shrink-0 items-center justify-center rounded-control text-base leading-none ${
+                    creating
+                      ? "bg-surface-raised text-ink"
+                      : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+                  }`}
+                >
+                  +
+                </Link>
+              )}
+            </div>
             <div className="mt-1 flex flex-col gap-1">
               {group.desks.map((desk) => {
                 const current = desk.id === currentDeskId;
@@ -115,20 +132,22 @@ function DeskList({
                   </Link>
                 );
               })}
-              <Link
-                href={createDeskPath(group.deskType)}
-                aria-current={creating ? "true" : undefined}
-                className={`flex items-center gap-1.5 rounded-control px-3 py-2 text-sm ${
-                  creating
-                    ? "bg-surface-raised text-ink"
-                    : "text-ink-faint hover:bg-surface-raised hover:text-ink"
-                }`}
-              >
-                <span aria-hidden className="text-base leading-none">
-                  +
-                </span>
-                Create Desk
-              </Link>
+              {empty ? (
+                <Link
+                  href={createDeskPath(group.deskType)}
+                  aria-current={creating ? "true" : undefined}
+                  className={`flex items-center gap-1.5 rounded-control px-3 py-2 text-sm ${
+                    creating
+                      ? "bg-surface-raised text-ink"
+                      : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+                  }`}
+                >
+                  <span aria-hidden className="text-base leading-none">
+                    +
+                  </span>
+                  Create Desk
+                </Link>
+              ) : null}
             </div>
           </div>
           );
