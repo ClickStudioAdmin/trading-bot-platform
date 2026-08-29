@@ -60,7 +60,7 @@ export default async function NewDeskPage({
           {error}
         </p>
       ) : null}
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,28rem)_minmax(0,1fr)]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
         <div>
           <CreateAccountForm
             connections={connections}
