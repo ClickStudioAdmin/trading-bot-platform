@@ -5,6 +5,7 @@ import {
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
 import { decryptCredentials } from "@/lib/exchanges/encrypt";
+import { credentialsCompleteForVenue } from "@/lib/exchanges/venues";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 const LIST_COLUMNS =
@@ -186,8 +187,11 @@ export async function loadBoundConnectionSecrets(input: {
     return { ok: false, error: "Could not read those credentials." };
   }
   const credentials = decryptCredentials(ciphertext, nonce);
-  if (!credentials?.apiKey || !credentials.apiSecret) {
+  if (!credentials) {
     return { ok: false, error: "Could not decrypt those credentials." };
+  }
+  if (!credentialsCompleteForVenue(String(data.venue), credentials)) {
+    return { ok: false, error: "Those credentials do not match this exchange." };
   }
   return {
     ok: true,

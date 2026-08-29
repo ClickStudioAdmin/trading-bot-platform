@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   accountCanHoldConnections,
+  credentialsCompleteForVenue,
   connectionFitsDesk,
   connectionsForDeskBind,
   enabledVenues,
@@ -117,6 +118,21 @@ const hlCreds = parseVenueCredentials(hl.venue, {
 });
 assert.equal(hlCreds.ok, true);
 
+assert.equal(
+  credentialsCompleteForVenue("bybit", { apiKey: "a", apiSecret: "b" }),
+  true,
+);
+assert.equal(
+  credentialsCompleteForVenue("hyperliquid", {
+    accountAddress: "0xabc",
+    agentKey: "0xdef",
+  }),
+  true,
+);
+assert.equal(
+  credentialsCompleteForVenue("hyperliquid", { apiKey: "a", apiSecret: "b" }),
+  false,
+);
 assert.equal(accountCanHoldConnections("live"), true);
 assert.equal(accountCanHoldConnections("paper"), false);
 

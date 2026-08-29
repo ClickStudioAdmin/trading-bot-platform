@@ -230,6 +230,17 @@ export function accountCanHoldConnections(mode: string): boolean {
   return mode === "live";
 }
 
+export function credentialsCompleteForVenue(
+  venueId: string,
+  credentials: Record<string, string> | null,
+): boolean {
+  const venue = getVenue(venueId);
+  if (!venue || !credentials) {
+    return false;
+  }
+  return parseVenueCredentials(venue, credentials).ok;
+}
+
 export function connectionFitsDesk(input: {
   deskVenue: string;
   deskEnvironment: string | null;
