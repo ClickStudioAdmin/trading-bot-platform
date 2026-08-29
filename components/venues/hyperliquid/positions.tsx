@@ -115,34 +115,6 @@ export async function HyperliquidFuturesPositions({
       <div className="space-y-6">
         <HyperliquidDeskFlash params={params} includeWebhookArm />
 
-        <LiveTickerScope
-          symbols={open.map((row) => row.symbol)}
-          venue="hyperliquid"
-          environment={session?.account.venueEnvironment}
-        >
-          <FuturesOpenStats signedIn={desk.signedIn} open={open} />
-          <OpenFuturesTrades
-            signedIn={desk.signedIn}
-            open={open}
-            next={NEXT}
-            showHeading={false}
-            exchangeBook={desk.exchangeBook}
-            showCloseAll
-            workingCount={desk.working.length}
-            webhookNames={desk.webhookNames}
-            showDcaColumns={dca}
-            playbookOwnsOrders={dca}
-            dcaHints={dcaHints}
-            emptyMessage={
-              showTicket
-                ? undefined
-                : dca
-                  ? "No open futures. The bot adds orders once it is armed."
-                  : "No open futures. TradingView opens them through a webhook."
-            }
-          />
-        </LiveTickerScope>
-
         {showTicket ? (
           <section>
             <h2 className="text-xl font-semibold tracking-tight">
@@ -219,6 +191,34 @@ export async function HyperliquidFuturesPositions({
             </div>
           </section>
         ) : null}
+
+        <LiveTickerScope
+          symbols={open.map((row) => row.symbol)}
+          venue="hyperliquid"
+          environment={session?.account.venueEnvironment}
+        >
+          <FuturesOpenStats signedIn={desk.signedIn} open={open} />
+          <OpenFuturesTrades
+            signedIn={desk.signedIn}
+            open={open}
+            next={NEXT}
+            showHeading={false}
+            exchangeBook={desk.exchangeBook}
+            showCloseAll
+            workingCount={desk.working.length}
+            webhookNames={desk.webhookNames}
+            showDcaColumns={dca}
+            playbookOwnsOrders={dca}
+            dcaHints={dcaHints}
+            emptyMessage={
+              showTicket
+                ? undefined
+                : dca
+                  ? "No open futures. The bot adds orders once it is armed."
+                  : "No open futures. TradingView opens them through a webhook."
+            }
+          />
+        </LiveTickerScope>
 
         <FuturesWorkingOrders
           signedIn={desk.signedIn}

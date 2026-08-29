@@ -151,30 +151,6 @@ export default async function FuturesPositionsPage({
           error={firstSearchValue(params.paperError)}
         />
 
-        <LiveTickerScope symbols={open.map((row) => row.symbol)}>
-        <FuturesOpenStats signedIn={desk.signedIn} open={open} />
-        <OpenFuturesTrades
-          signedIn={desk.signedIn}
-          open={open}
-          next={NEXT}
-          showHeading={false}
-          exchangeBook={desk.exchangeBook}
-          showCloseAll
-          workingCount={desk.working.length}
-          webhookNames={desk.webhookNames}
-          showDcaColumns={dca}
-          playbookOwnsOrders={dca}
-          dcaHints={dcaHints}
-          emptyMessage={
-            showTicket
-              ? undefined
-              : dca
-                ? "No open futures. The bot adds orders once it is armed."
-                : "No open futures. TradingView opens them through a webhook."
-          }
-        />
-        </LiveTickerScope>
-
         {showTicket ? (
           <section>
             <h2 className="text-xl font-semibold tracking-tight">
@@ -247,6 +223,30 @@ export default async function FuturesPositionsPage({
             </div>
           </section>
         ) : null}
+
+        <LiveTickerScope symbols={open.map((row) => row.symbol)}>
+        <FuturesOpenStats signedIn={desk.signedIn} open={open} />
+        <OpenFuturesTrades
+          signedIn={desk.signedIn}
+          open={open}
+          next={NEXT}
+          showHeading={false}
+          exchangeBook={desk.exchangeBook}
+          showCloseAll
+          workingCount={desk.working.length}
+          webhookNames={desk.webhookNames}
+          showDcaColumns={dca}
+          playbookOwnsOrders={dca}
+          dcaHints={dcaHints}
+          emptyMessage={
+            showTicket
+              ? undefined
+              : dca
+                ? "No open futures. The bot adds orders once it is armed."
+                : "No open futures. TradingView opens them through a webhook."
+          }
+        />
+        </LiveTickerScope>
 
         <FuturesWorkingOrders
           signedIn={desk.signedIn}

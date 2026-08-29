@@ -219,7 +219,7 @@ export function CreateAccountForm({
       </label>
       {mode === "paper" && deskType !== "cash_and_carry" && paperVenues.length > 1 ? (
         <label className="block text-xs text-ink-muted">
-          Exchange
+          Market Data
           <select
             value={venue}
             onChange={(event) => setPaperVenue(event.target.value)}
@@ -300,7 +300,7 @@ export function CreateAccountForm({
       ) : null}
       <p className="text-sm text-ink-muted">
         Type and mode are set at create and never change. Paper Trading uses
-        that exchange’s public marks and fills on the in-app ledger. Connected
+        that market’s public marks and fills on the in-app ledger. Connected
         Exchange can bind a key from this login now, or later in Desk Settings.
       </p>
       <div className="flex flex-wrap items-center gap-2">
