@@ -27,7 +27,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Fly.io **structure is accepted and implementation is in progress** ([phase-fly.md](phase-fly.md)). Push `develop` to migrate `engine_desk_leases`. Create Fly apps in Sydney and set secrets before the deploy-engine workflow succeeds.
+Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Fly.io **is accepted and parked** ([phase-fly.md](phase-fly.md)). Next locked item is Hyperliquid when Click starts it.
 
 The locked sequence after Phase 11 is [roadmap.md](roadmap.md). Standing unordered notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
 

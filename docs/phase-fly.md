@@ -109,7 +109,7 @@ If those pass, adding machines and desks is capacity, not a redesign.
 
 ## Status
 
-Accepted 29 Aug 2026. Implementation started 29 Aug 2026.
+Accepted 29 Aug 2026. Implementation started 29 Aug 2026. Parked 29 Aug 2026 — Click left the engine as-is. Do not harden further until Click asks. Next locked item is Hyperliquid when Click starts it.
 
 Shipped in repo: `engine_desk_leases` + claim RPCs (`20260829080000_engine_desk_leases.sql`), `runEngineCycle` / per-desk tick, in-memory lease tests, Fly configs (`fly.development.toml`, `fly.production.toml`), worker (`lib/engine/worker.ts`), GitHub **Deploy Engine**. Vercel tick and admin Tick call the same leased cycle (`maxMs` 50s). The 5-minute GitHub POST is off (workflow_dispatch only). Header **Tick** is the Vercel fallback.
 
