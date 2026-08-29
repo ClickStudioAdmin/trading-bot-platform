@@ -98,7 +98,10 @@ function DeskGroup({
         {groups.map((group) => {
           const creating = createDeskType === group.deskType;
           const empty = group.desks.length === 0;
-          const typeLabel = formatDeskType(group.deskType);
+          const typeLabel =
+            group.deskType === "perps_bots"
+              ? "Perps"
+              : formatDeskType(group.deskType);
           return (
           <div key={group.deskType} className="mt-3 first:mt-0">
             <div className="flex items-center gap-1 px-3">
