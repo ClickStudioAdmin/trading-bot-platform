@@ -21,10 +21,10 @@ import {
 } from "@/lib/accounts/model";
 
 const AUTOMATED_DESK_TYPES: DeskType[] = [
+  "perps_bots",
+  "dca",
   "cash_and_carry",
   "signal_follower",
-  "dca",
-  "perps_bots",
 ];
 
 export function AccountSidenav({
