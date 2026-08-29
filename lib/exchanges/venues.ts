@@ -98,7 +98,7 @@ export const VENUES: readonly VenueDefinition[] = [
     environments: [
       {
         id: "testnet",
-        label: "Demo (Hyperliquid Testnet)",
+        label: "Hyperliquid Testnet (demo)",
         aliases: ["demo"],
         host: "https://api.hyperliquid-testnet.xyz",
       },

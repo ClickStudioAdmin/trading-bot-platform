@@ -51,7 +51,7 @@ assert.equal(parseAccountMode("other"), "paper");
 assert.equal(formatDeskVenueCaption({ venue: "bybit", venueEnvironment: null }), "Bybit");
 assert.equal(
   formatDeskVenueCaption({ venue: "hyperliquid", venueEnvironment: "testnet" }),
-  "Hyperliquid · Demo (Hyperliquid Testnet)",
+  "Hyperliquid Testnet (demo)",
 );
 assert.equal(formatAccountMode("paper"), "Paper Trading");
 assert.equal(formatAccountMode("live"), "Connected Exchange");

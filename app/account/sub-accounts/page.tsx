@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { AccountDeleteControl } from "@/components/account-delete-control";
 import { AccountRenameControl } from "@/components/account-rename-control";
 import { PageHeading } from "@/components/page-heading";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { switchTradingAccount } from "@/lib/accounts/actions";
 import {
   formatAccountMode,
   formatAccountUsageStatus,
@@ -20,10 +18,8 @@ import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Manage desks",
-  description: "Rename, switch, and delete desks.",
+  description: "Rename and delete desks.",
 };
-
-const PATH = "/account/sub-accounts";
 
 export default async function ManageSubAccountsPage({
   searchParams,
@@ -70,8 +66,8 @@ export default async function ManageSubAccountsPage({
           <table className="w-full min-w-[56rem] text-left text-sm">
             <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
-                <th className="px-4 py-3 font-medium">Desk type</th>
                 <th className="px-4 py-3 font-medium">Name</th>
+                <th className="px-4 py-3 font-medium">Desk type</th>
                 <th className="px-4 py-3 font-medium">Mode</th>
                 <th className="px-4 py-3 font-medium">Exchange</th>
                 <th className="px-4 py-3 font-medium">Details</th>
@@ -89,12 +85,7 @@ export default async function ManageSubAccountsPage({
                   automationsRunning: Boolean(row?.automationsRunning),
                   reduceOnly: Boolean(row?.reduceOnly),
                 });
-                const details = [
-                  current ? "Current" : null,
-                  usageStatus || null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ");
+                const details = usageStatus;
                 const remaining = accounts.filter(
                   (item) => item.id !== account.id,
                 );
@@ -104,43 +95,25 @@ export default async function ManageSubAccountsPage({
                     key={account.id}
                     className="border-b border-line last:border-b-0"
                   >
+                    <td className="px-4 py-3 align-top">{account.name}</td>
                     <td className="px-4 py-3 align-top">
                       {formatDeskType(account.deskType)}
                     </td>
-                    <td className="px-4 py-3 align-top">{account.name}</td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-4 py-3 align-top text-ink-muted">
                       {formatAccountMode(account.mode)}
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="px-4 py-3 align-top text-ink-muted">
                       {formatDeskVenueCaption(account)}
                     </td>
                     <td className="px-4 py-3 align-top">
                       {details ? (
-                        <span className={current ? "text-accent" : "text-ink-muted"}>
-                          {details}
-                        </span>
+                        <span className="text-ink-muted">{details}</span>
                       ) : (
                         <span className="text-ink-faint">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3 align-top">
                       <div className="flex flex-wrap items-center gap-3">
-                        {current ? null : (
-                          <form action={switchTradingAccount}>
-                            <input
-                              type="hidden"
-                              name="accountId"
-                              value={account.id}
-                            />
-                            <input type="hidden" name="next" value={PATH} />
-                            <PendingSubmitButton
-                              pendingLabel="Switching…"
-                              className="text-xs font-medium text-accent hover:text-accent-strong"
-                            >
-                              Switch to desk
-                            </PendingSubmitButton>
-                          </form>
-                        )}
                         <AccountRenameControl
                           accountId={account.id}
                           accountName={account.name}

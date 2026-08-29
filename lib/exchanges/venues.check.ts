@@ -87,7 +87,7 @@ const hlDemo = parseVenueEnvironment(hl.venue, "demo");
 assert.equal(hlDemo.ok, true);
 if (hlDemo.ok) {
   assert.equal(hlDemo.environment.id, "testnet");
-  assert.equal(hlDemo.environment.label, "Demo (Hyperliquid Testnet)");
+  assert.equal(hlDemo.environment.label, "Hyperliquid Testnet (demo)");
   assert.equal(
     hlDemo.environment.host,
     "https://api.hyperliquid-testnet.xyz",

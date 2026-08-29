@@ -407,6 +407,13 @@ export function formatDeskVenueCaption(input: {
   const envLabel = environment?.ok
     ? environment.environment.label
     : input.venueEnvironment;
+  if (
+    environment?.ok &&
+    input.venue === "hyperliquid" &&
+    environment.environment.id === "testnet"
+  ) {
+    return envLabel;
+  }
   return `${name} · ${envLabel}`;
 }
 

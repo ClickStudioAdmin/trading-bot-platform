@@ -81,7 +81,7 @@ Live desks also store immutable **`venue_environment`**: the Demo or Live track 
 | Demo | `live` | Bybit `demo` or HL `testnet` | Real venue test/demo matching. Must bind a matching connection. |
 | Live | `live` | `live` | Real venue production. Must bind a matching connection. |
 
-**Hyperliquid Demo = Testnet** (`https://api.hyperliquid-testnet.xyz`). Copy: **Demo (Hyperliquid Testnet)**. Default the Connected picker to Demo so a new HL desk does not land on mainnet by accident.
+**Hyperliquid Demo = Testnet** (`https://api.hyperliquid-testnet.xyz`). Copy: **Hyperliquid Testnet (demo)**. Default the Connected picker to Demo so a new HL desk does not land on mainnet by accident.
 
 Paper is still offered (TBP ledger, HL public prices). Demo is not Paper: Testnet orders are real for that network (faucet / test USDC).
 

@@ -62,7 +62,7 @@ assert.equal(formatEnvironmentLabel("bybit", "production"), "Live");
 assert.equal(formatEnvironmentLabel("bybit", "mainnet"), "Live");
 assert.equal(
   formatEnvironmentLabel("hyperliquid", "demo"),
-  "Demo (Hyperliquid Testnet)",
+  "Hyperliquid Testnet (demo)",
 );
 assert.equal(formatVenueLabel("hyperliquid"), "Hyperliquid");
 

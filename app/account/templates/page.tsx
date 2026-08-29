@@ -6,7 +6,7 @@ import { listSharedSets, listSharedTemplates, listVisibleSets, listVisibleTempla
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Templates",
+  title: "Bot Templates",
   description: "Your automation templates and folders.",
 };
 
@@ -30,7 +30,7 @@ export default async function AccountTemplatesPage({
   return (
     <TemplatesLibrary
       variant="account"
-      title="Templates"
+      title="Bot Templates"
       description="Your templates. Add a platform or personal template to a matching desk from Automations. Export a JSON backup, import one, or share a template or folder with another member by email."
       templates={templates}
       sets={sets}
