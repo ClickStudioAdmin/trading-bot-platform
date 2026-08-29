@@ -10,7 +10,6 @@ import {
   formatAccountUsageStatus,
   formatDeskExchangeCaption,
   formatDeskNavLabel,
-  formatDeskType,
   formatDeleteBlockers,
   otherDeskNames,
   pickDefaultAccount,
@@ -128,10 +127,10 @@ function DeskTypeSections({
           return (
             <div key={group.deskType}>
               {hideTypeHeading ? null : (
-                <p className="mb-3 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+                <h2 className="mb-4 flex items-center gap-2 text-2xl font-semibold tracking-tight">
                   <DeskTypeMark deskType={group.deskType} />
-                  <span>{typeLabel}</span>
-                </p>
+                  {typeLabel}
+                </h2>
               )}
               <DeskTable
                 accounts={group.rows}
@@ -160,11 +159,17 @@ function DeskTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-card border border-line bg-surface">
-      <table className="w-full min-w-[56rem] text-left text-sm">
+      <table className="w-full min-w-[56rem] table-fixed text-left text-sm">
+        <colgroup>
+          <col className="w-[14rem]" />
+          <col className="w-[11rem]" />
+          <col className="w-[13rem]" />
+          <col />
+          <col className="w-[11rem]" />
+        </colgroup>
         <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
           <tr>
             <th className="px-4 py-3 font-medium">Name</th>
-            <th className="px-4 py-3 font-medium">Desk type</th>
             <th className="px-4 py-3 font-medium">Mode</th>
             <th className="px-4 py-3 font-medium">Exchange</th>
             <th className="px-4 py-3 font-medium">Details</th>
@@ -199,9 +204,6 @@ function DeskTable({
                   className="border-b border-line last:border-b-0"
                 >
                   <td className="px-4 py-3 align-top">{account.name}</td>
-                  <td className="px-4 py-3 align-top">
-                    {formatDeskType(account.deskType)}
-                  </td>
                   <td className="px-4 py-3 align-top text-ink-muted">
                     {formatAccountMode(account.mode)}
                   </td>
