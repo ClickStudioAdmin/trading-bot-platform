@@ -6,23 +6,36 @@ import {
   ACCOUNT_BOOK_LINKS,
   ACCOUNT_DESK_LINKS,
 } from "@/lib/site-links";
-import { hrefPathname, navLinksWithDesk } from "@/lib/accounts/model";
+import { rememberTradingAccount } from "@/lib/accounts/actions";
+import {
+  deskHomePath,
+  formatAccountMode,
+  formatDeskType,
+  formatDeskVenueCaption,
+  hrefPathname,
+  navLinksWithDesk,
+  type TradingAccount,
+} from "@/lib/accounts/model";
 
 export function AccountSidenav({
   bookName,
   deskId,
+  desks,
 }: {
   bookName: string;
   deskId: string;
+  desks: TradingAccount[];
 }) {
   const pathname = usePathname();
   const bookLinks = navLinksWithDesk(ACCOUNT_BOOK_LINKS, deskId);
 
   return (
-    <aside className="w-56 shrink-0 border-r border-line bg-surface px-5 py-6">
+    <aside className="sticky top-14 z-10 h-[calc(100dvh-3.5rem)] w-56 shrink-0 overflow-y-auto border-r border-line bg-surface px-5 py-6">
+      <DeskList desks={desks} currentDeskId={deskId} />
       <NavGroup
-        label="Desk"
-        ariaLabel="Desk"
+        className="mt-6"
+        label="Account"
+        ariaLabel="Account"
         links={ACCOUNT_DESK_LINKS}
         pathname={pathname}
       />
@@ -34,6 +47,51 @@ export function AccountSidenav({
         pathname={pathname}
       />
     </aside>
+  );
+}
+
+function DeskList({
+  desks,
+  currentDeskId,
+}: {
+  desks: TradingAccount[];
+  currentDeskId: string;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
+        Desks
+      </p>
+      <nav aria-label="Desks" className="panel-scroll mt-3 flex max-h-64 flex-col gap-1">
+        {desks.map((desk) => {
+          const current = desk.id === currentDeskId;
+          const meta = `${formatDeskType(desk.deskType)} · ${formatDeskVenueCaption(desk)} · ${formatAccountMode(desk.mode)}`;
+          return (
+            <Link
+              key={desk.id}
+              href={deskHomePath(desk.deskType, desk.id)}
+              aria-current={current ? "true" : undefined}
+              title={`${desk.name} · ${meta}`}
+              onClick={() => {
+                if (!current) {
+                  void rememberTradingAccount(desk.id);
+                }
+              }}
+              className={`rounded-control px-3 py-2 ${
+                current
+                  ? "bg-surface-raised text-ink"
+                  : "text-ink-faint hover:bg-surface-raised hover:text-ink"
+              }`}
+            >
+              <span className="block truncate text-sm text-ink">{desk.name}</span>
+              <span className="mt-0.5 block truncate text-[11px] text-ink-faint">
+                {meta}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
   );
 }
 
