@@ -30,7 +30,7 @@ export function AccountSidenav({
         links={ACCOUNT_DESK_LINKS}
         pathname={pathname}
       />
-      <DeskList className="mt-auto pt-6" desks={desks} currentDeskId={deskId} />
+      <DeskList desks={desks} currentDeskId={deskId} />
     </aside>
   );
 }
@@ -38,14 +38,12 @@ export function AccountSidenav({
 function DeskList({
   desks,
   currentDeskId,
-  className,
 }: {
   desks: TradingAccount[];
   currentDeskId: string;
-  className?: string;
 }) {
   return (
-    <div className={className}>
+    <div>
       <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
         Desks
       </p>
