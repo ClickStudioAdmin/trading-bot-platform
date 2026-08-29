@@ -45,9 +45,16 @@ import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { loadDeskTicker, loadDeskTickerMap } from "@/lib/market/desk-tickers";
 import { loadDeskVenueContext } from "@/lib/venues/hyperliquid/desk";
-import { syncHyperliquidWorkingOrders } from "@/lib/venues/hyperliquid/working-sync";
+import {
+  syncHyperliquidVenuePositions,
+  syncHyperliquidWorkingOrders,
+} from "@/lib/venues/hyperliquid/working-sync";
 import { writeEventLog } from "@/lib/logs/write";
 import { hedgePositionIdx } from "./decide";
+import {
+  shouldFlattenLedgerToVenue,
+  workingReduceOnlyCovers,
+} from "./venue-flatten";
 import { markFromTicker } from "./math";
 import { selectStrategySettings } from "./settings";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -141,12 +148,19 @@ async function syncLiveHyperliquidWorking(
   if (!live) {
     return 0;
   }
-  return syncHyperliquidWorkingOrders({
+  const working = await syncHyperliquidWorkingOrders({
     supabase,
     accountId: input.accountId,
     userId: input.userId,
     connection: live,
   });
+  const positions = await syncHyperliquidVenuePositions({
+    supabase,
+    accountId: input.accountId,
+    userId: input.userId,
+    connection: live,
+  });
+  return working + positions;
 }
 
 export async function reconcileOpenFuturesWorkingOrders(
@@ -810,12 +824,10 @@ export async function reconcileOpenFuturesVenuePositions(
     string,
     BoundConnectionSecrets | null | undefined
   >();
+  const working = await loadOpenReduceOnlyWorking(supabase, input);
   let closed = 0;
   const now = Date.now();
   for (const row of rows) {
-    if (now - row.openedAtMs < VENUE_FLATTEN_MIN_AGE_MS) {
-      continue;
-    }
     const live = await connectionForAccount({
       supabase,
       accountId: row.accountId,
@@ -834,7 +846,20 @@ export async function reconcileOpenFuturesVenuePositions(
       continue;
     }
     const venueQty = venueQtyOnSide(venue.position, row.side);
-    if (venueQty + 1e-12 >= row.qty) {
+    if (
+      !shouldFlattenLedgerToVenue({
+        ledgerQty: row.qty,
+        venueQty,
+        openedAtMs: row.openedAtMs,
+        nowMs: now,
+        minAgeMs: VENUE_FLATTEN_MIN_AGE_MS,
+        hasWorkingReduceOnly: workingReduceOnlyCovers({
+          symbol: row.symbol,
+          side: row.side,
+          working,
+        }),
+      })
+    ) {
       continue;
     }
     const ticker =
@@ -908,6 +933,7 @@ export async function reconcileOpenFuturesStops(
     string,
     BoundConnectionSecrets | null | undefined
   >();
+  const working = await loadOpenReduceOnlyWorking(supabase, input);
   let closed = 0;
   for (const row of rows) {
     const applied = await reconcileOneStop({
@@ -915,6 +941,7 @@ export async function reconcileOpenFuturesStops(
       row,
       tickers,
       connections,
+      working,
     });
     if (applied) {
       closed += 1;
@@ -928,6 +955,7 @@ async function reconcileOneStop(input: {
   row: FuturesPosition;
   tickers: Map<string, BybitTicker>;
   connections: Map<string, BoundConnectionSecrets | null | undefined>;
+  working: FuturesWorkingOrder[];
 }): Promise<boolean> {
   const tpsl = tpslFromRow(input.row);
   const trailing = trailingFromRow(input.row);
@@ -982,7 +1010,7 @@ async function reconcileOneStop(input: {
     if (!venue.ok) {
       return false;
     }
-    const venueSize = venue.position?.size ?? 0;
+    const venueSize = venueQtyOnSide(venue.position, input.row.side);
     if (venueSize + 1e-12 >= input.row.qty) {
       return false;
     }
@@ -993,6 +1021,23 @@ async function reconcileOneStop(input: {
         : tpHit
           ? tpHit.kind
           : "venue";
+    if (
+      kind === "venue" &&
+      !shouldFlattenLedgerToVenue({
+        ledgerQty: input.row.qty,
+        venueQty: venueSize,
+        openedAtMs: input.row.openedAtMs,
+        nowMs: Date.now(),
+        minAgeMs: VENUE_FLATTEN_MIN_AGE_MS,
+        hasWorkingReduceOnly: workingReduceOnlyCovers({
+          symbol: input.row.symbol,
+          side: input.row.side,
+          working: input.working,
+        }),
+      })
+    ) {
+      return false;
+    }
     const fillPrice =
       slHit?.price ??
       (trail?.hit ? trail.fillPrice : null) ??
@@ -1164,6 +1209,30 @@ async function closeStopPosition(input: {
     },
   });
   return true;
+}
+
+async function loadOpenReduceOnlyWorking(
+  supabase: SupabaseClient,
+  input?: ReconcileBooksInput,
+): Promise<FuturesWorkingOrder[]> {
+  let query = supabase
+    .from("futures_working_orders")
+    .select("*")
+    .eq("status", "open")
+    .eq("reduce_only", true);
+  if (input?.accountId) {
+    query = query.eq("account_id", input.accountId);
+  }
+  if (input?.userId) {
+    query = query.eq("user_id", input.userId);
+  }
+  const { data, error } = await query;
+  if (error || !data) {
+    return [];
+  }
+  return data.map((row) =>
+    parseFuturesWorkingRow(row as Record<string, unknown>),
+  );
 }
 
 async function loadOpenOnSymbol(

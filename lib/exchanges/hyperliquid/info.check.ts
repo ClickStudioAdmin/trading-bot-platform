@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { parseHyperliquidOpenOrder, parseHyperliquidOrderStatus } from "./info";
+import {
+  parseHyperliquidOpenOrder,
+  parseHyperliquidOrderStatus,
+  parseHyperliquidUserState,
+} from "./info";
 
 const nested = parseHyperliquidOrderStatus({
   status: "order",
@@ -57,5 +61,28 @@ assert.equal(tpLimit?.triggerPx, 80000);
 
 assert.equal(parseHyperliquidOrderStatus({ status: "unknownOid" }), null);
 assert.equal(parseHyperliquidOrderStatus(null), null);
+
+const state = parseHyperliquidUserState({
+  marginSummary: { accountValue: "100", totalMarginUsed: "10" },
+  withdrawable: "90",
+  assetPositions: [
+    {
+      type: "oneWay",
+      position: {
+        coin: "BTC",
+        szi: "1.0",
+        entryPx: "50000",
+        leverage: { value: "20" },
+        liquidationPx: "40000",
+      },
+    },
+    { position: { coin: "ETH", szi: "0" } },
+  ],
+});
+assert.equal(state.positions.length, 1);
+assert.equal(state.positions[0]?.coin, "BTC");
+assert.equal(state.positions[0]?.size, 1);
+assert.equal(state.positions[0]?.entryPx, 50000);
+assert.equal(state.accountValue, 100);
 
 console.log("hyperliquid info checks passed");

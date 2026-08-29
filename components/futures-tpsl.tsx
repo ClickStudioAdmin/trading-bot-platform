@@ -564,10 +564,18 @@ function TpslPriceField({
   const [orderType, setOrderType] = useState<FuturesOrderType>("market");
   const orderName = name === "stopLoss" ? "slOrderType" : "tpOrderType";
   const limitName = name === "stopLoss" ? "slLimitPrice" : "tpLimitPrice";
+  const takeProfit = name === "takeProfit";
+  const triggerLabel =
+    orderType === "limit"
+      ? takeProfit
+        ? "Take profit trigger"
+        : "Stop loss trigger"
+      : label;
+  const limitLabel = takeProfit ? "Take profit limit" : "Stop loss limit";
   return (
     <div className="space-y-2">
       <label className="block text-xs text-ink-muted">
-        {label}
+        {triggerLabel}
         <span className="mt-1 flex gap-1">
           <GroupedNumberInput
             name={name}
@@ -582,16 +590,24 @@ function TpslPriceField({
             onChange={setOrderType}
           />
         </span>
+        {orderType === "market" ? (
+          <span className="mt-1 block text-[11px] text-ink-faint">
+            Closes at market when this price hits.
+          </span>
+        ) : null}
       </label>
       {orderType === "limit" ? (
         <label className="block text-xs text-ink-muted">
-          Limit
+          {limitLabel}
           <GroupedNumberInput
             name={limitName}
             allowDecimal
-            placeholder="Limit price"
+            placeholder="Same as trigger"
             className={`${TICKET_QTY} mt-1`}
           />
+          <span className="mt-1 block text-[11px] text-ink-faint">
+            Fires at the trigger. The close rests at this price.
+          </span>
         </label>
       ) : (
         <input type="hidden" name={limitName} value="" />
@@ -659,11 +675,19 @@ function TpslDialogRow({
   onPercentChange: (next: string) => void;
   onPercentPick: (pct: number) => void;
 }) {
+  const takeProfit = name === "takeProfit";
+  const triggerLabel =
+    orderType === "limit"
+      ? takeProfit
+        ? "TP trigger"
+        : "SL trigger"
+      : label;
+  const limitLabel = takeProfit ? "TP limit" : "SL limit";
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2">
         <label className="block text-sm text-ink">
-          {label}
+          {triggerLabel}
           <span className="mt-1 flex gap-1">
             <GroupedNumberInput
               name={name}
@@ -680,6 +704,11 @@ function TpslDialogRow({
               onChange={onOrderTypeChange}
             />
           </span>
+          {orderType === "market" ? (
+            <span className="mt-1 block text-xs text-ink-faint">
+              Closes at market when this price hits.
+            </span>
+          ) : null}
         </label>
         <p className="block text-sm text-ink">
           {resultLabel}
@@ -694,15 +723,18 @@ function TpslDialogRow({
       </div>
       {orderType === "limit" ? (
         <label className="block text-sm text-ink">
-          Limit
+          {limitLabel}
           <GroupedNumberInput
             name={limitName}
             value={limitValue}
             onChange={onLimitChange}
             allowDecimal
-            placeholder="Limit price"
+            placeholder="Same as trigger"
             className={`${INPUT_CLASS} mt-1`}
           />
+          <span className="mt-1 block text-xs text-ink-faint">
+            Fires at the trigger. The close rests at this price.
+          </span>
         </label>
       ) : (
         <input type="hidden" name={limitName} value="" />

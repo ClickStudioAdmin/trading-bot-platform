@@ -166,52 +166,80 @@ export async function loadHyperliquidCandles(input: {
     .filter((row): row is HyperliquidCandle => row !== null);
 }
 
+export function parseHyperliquidUserState(raw: unknown): HyperliquidUserState {
+  const body =
+    raw !== null && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as {
+          marginSummary?: { accountValue?: string; totalMarginUsed?: string };
+          withdrawable?: string;
+          assetPositions?: unknown;
+        })
+      : {};
+  const positions: HyperliquidPosition[] = [];
+  const rows = Array.isArray(body.assetPositions) ? body.assetPositions : [];
+  for (const row of rows) {
+    const parsed = parseHyperliquidAssetPosition(row);
+    if (parsed) {
+      positions.push(parsed);
+    }
+  }
+  return {
+    accountValue: asNumber(body.marginSummary?.accountValue),
+    withdrawable: asNumber(body.withdrawable),
+    totalMarginUsed: asNumber(body.marginSummary?.totalMarginUsed),
+    positions,
+  };
+}
+
+function parseHyperliquidAssetPosition(raw: unknown): HyperliquidPosition | null {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    return null;
+  }
+  const row = raw as {
+    coin?: unknown;
+    szi?: unknown;
+    size?: unknown;
+    entryPx?: unknown;
+    leverage?: { value?: string } | string;
+    liquidationPx?: unknown;
+    position?: {
+      coin?: unknown;
+      szi?: unknown;
+      size?: unknown;
+      entryPx?: unknown;
+      leverage?: { value?: string } | string;
+      liquidationPx?: unknown;
+    };
+  };
+  const pos = row.position ?? row;
+  const coin = String(pos.coin ?? "").trim();
+  const size = asNumber(pos.szi) ?? asNumber(pos.size) ?? 0;
+  if (!coin || size === 0) {
+    return null;
+  }
+  const leverageRaw = pos.leverage;
+  const leverage =
+    typeof leverageRaw === "object"
+      ? asNumber(leverageRaw?.value)
+      : asNumber(leverageRaw);
+  return {
+    coin,
+    size,
+    entryPx: asNumber(pos.entryPx),
+    leverage,
+    liqPx: asNumber(pos.liquidationPx),
+  };
+}
+
 export async function loadHyperliquidUserState(input: {
   environmentId: string;
   accountAddress: string;
 }): Promise<HyperliquidUserState> {
-  const raw = (await postInfo(input.environmentId, {
+  const raw = await postInfo(input.environmentId, {
     type: "clearinghouseState",
     user: input.accountAddress,
-  })) as {
-    marginSummary?: { accountValue?: string; totalMarginUsed?: string };
-    withdrawable?: string;
-    assetPositions?: Array<{
-      position?: {
-        coin?: string;
-        szi?: string;
-        entryPx?: string;
-        leverage?: { value?: string } | string;
-        liquidationPx?: string;
-      };
-    }>;
-  };
-  const positions: HyperliquidPosition[] = [];
-  for (const row of raw.assetPositions ?? []) {
-    const coin = String(row.position?.coin ?? "").trim();
-    const size = asNumber(row.position?.szi) ?? 0;
-    if (!coin || size === 0) {
-      continue;
-    }
-    const leverageRaw = row.position?.leverage;
-    const leverage =
-      typeof leverageRaw === "object"
-        ? asNumber(leverageRaw?.value)
-        : asNumber(leverageRaw);
-    positions.push({
-      coin,
-      size,
-      entryPx: asNumber(row.position?.entryPx),
-      leverage,
-      liqPx: asNumber(row.position?.liquidationPx),
-    });
-  }
-  return {
-    accountValue: asNumber(raw.marginSummary?.accountValue),
-    withdrawable: asNumber(raw.withdrawable),
-    totalMarginUsed: asNumber(raw.marginSummary?.totalMarginUsed),
-    positions,
-  };
+  });
+  return parseHyperliquidUserState(raw);
 }
 
 export type HyperliquidOpenOrder = {

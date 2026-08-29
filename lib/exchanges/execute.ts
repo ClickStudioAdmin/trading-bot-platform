@@ -30,6 +30,7 @@ import {
 } from "@/lib/exchanges/hyperliquid/orders";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
 import { WORKING_AMEND_UNCHANGED } from "@/lib/futures/working";
+import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
 
 export type VenueFill = {
   venue: string;
@@ -450,7 +451,7 @@ export async function readPerpPositionOnVenue(input: {
   if (input.connection.venue === "hyperliquid") {
     const hl = hlCreds(input.connection);
     return readHyperliquidPosition({
-      environmentId: input.connection.environment,
+      environmentId: hyperliquidInfoEnvironment(input.connection.environment),
       accountAddress: hl.accountAddress,
       symbol: input.symbol,
     });
@@ -474,7 +475,7 @@ export async function listLinearPositionRisk(input: {
   if (input.connection.venue === "hyperliquid") {
     const hl = hlCreds(input.connection);
     return listHyperliquidPositionRisk({
-      environmentId: input.connection.environment,
+      environmentId: hyperliquidInfoEnvironment(input.connection.environment),
       accountAddress: hl.accountAddress,
     });
   }
