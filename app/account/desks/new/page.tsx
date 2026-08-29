@@ -51,10 +51,6 @@ export default async function NewDeskPage({
         overline="Desks"
         title={`New ${formatDeskType(typed.deskType)} desk`}
       />
-      <p className="-mt-4 mb-6 text-sm text-ink-muted">
-        Type is set from the sidebar and never changes. Choose Paper Trading or
-        Connected Exchange, then name the desk.
-      </p>
       {error ? (
         <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
