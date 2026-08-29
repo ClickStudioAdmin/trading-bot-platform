@@ -34,7 +34,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
       <SiteHeader hideLogo={showDeskSidebar} />
       <div className="flex flex-1 flex-col">{children}</div>
-      <SiteFooter />
+      <SiteFooter compact={Boolean(session)} />
     </div>
   );
 
