@@ -30,9 +30,9 @@ Fly (Sydney)        One or more worker processes claiming desks
 ```
 
 ```
-1. Shared cycle     public scan / ticker snapshot (once per loop)
-2. Claim            take N idle desks (lease)
-3. Desk tick        that desk only: reconcile its book, its automations, its playbooks
+1. Shared cycle     public scan / ticker snapshot (once per loop, one machine)
+2. Claim            take N idle desks (SKIP LOCKED lease)
+3. Desk tick        that desk only; a few desks in parallel on one process
 4. Release          next loop
 ```
 
@@ -42,7 +42,7 @@ A desk is already `trading_accounts` (type-locked, one bind). Isolation is anoth
 
 `runDeskTick(accountId)` does only that desk’s work: C&C layers **or** Perps recipes **or** DCA playbooks, plus reconcile of **that** book’s working orders. No global `reconcileOpenFuturesBooks()`.
 
-Shared public work (C&C opportunity scan, linear tickers) stays **outside** the per-desk loop so 200 desks do not fetch the universe 200 times.
+Shared public work (C&C opportunity scan, linear tickers) stays **outside** the per-desk loop so 200 desks do not fetch the universe 200 times. A Postgres **scan lease** means only one Fly machine scans; the others read the last stored opportunities. Skip the C&C scan when no C&C desks exist. Skip linear tickers when no Perps or DCA desks exist. Skip indicator klines when that playbook is idle.
 
 ### 2. Coordinator = Postgres leases (no Redis)
 
@@ -111,9 +111,9 @@ If those pass, adding machines and desks is capacity, not a redesign.
 
 Accepted 29 Aug 2026. Implementation started 29 Aug 2026.
 
-Shipped in repo: `engine_desk_leases` + claim RPCs (`20260829080000_engine_desk_leases.sql`), `runEngineCycle` / per-desk tick, in-memory lease tests, Fly configs (`fly.development.toml`, `fly.production.toml`), worker (`lib/engine/worker.ts`), GitHub **Deploy Engine**. Vercel tick and admin Tick call the same leased cycle (`maxMs` 50s). GitHub’s 5-minute POST stays as a leased fallback until Fly is healthy.
+Shipped in repo: `engine_desk_leases` + claim RPCs (`20260829080000_engine_desk_leases.sql`), `runEngineCycle` / per-desk tick, in-memory lease tests, Fly configs (`fly.development.toml`, `fly.production.toml`), worker (`lib/engine/worker.ts`), GitHub **Deploy Engine**. Vercel tick and admin Tick call the same leased cycle (`maxMs` 50s). The 5-minute GitHub POST is off (workflow_dispatch only). Header **Tick** is the Vercel fallback.
 
-Each Fly loop claims **hot desks first** (open futures rows, armed DCA playbooks, active Perps recipes), then idle books. Live market stop / take profit attach on the fill (`placeClip` and GTC reconcile). Indicator **cross** starts latch until the first order so a 5m bar is not missed. The worker loads desk binds without a browser session.
+Each Fly loop claims **hot desks first** (open futures rows, armed DCA playbooks, active Perps recipes), then idle books, and ticks up to three claimed desks at once. Live market stop / take profit attach on the fill (`placeClip` and GTC reconcile). Indicator **cross** starts latch until the first order so a 5m bar is not missed. The worker loads desk binds without a browser session. Auto tick is off unless an admin turns it on.
 
 ### What Click does first (development only)
 
@@ -160,8 +160,8 @@ Re-run **Deploy Engine**. You want both green:
 **7. Check that it is actually looping**  
 In Fly, open **tbp-engine-dev** logs. You should see the worker start, then a cycle about every 20 seconds. In the app, `/admin/logs` should show engine tick lines. A live DCA desk on Demo should keep placing or amending without you sitting on Auto tick.
 
-**8. Leave the old 5-minute tick alone for now**  
-GitHub still POSTs the Vercel tick every five minutes. That is a safety net. Leases mean it should not double-place with Fly. After you trust the Fly logs, we can turn that schedule off.
+**8. Leave Auto tick off**  
+Fly is the clock. Use header **Tick** if you want a Vercel nudge. **Run workflow** on Paper Engine Tick is the manual fallback. Do not turn Auto tick on unless you are debugging.
 
 **Do not do yet**  
 Production Fly app, production secrets on the dev app, or merging to `main` for this. Same split as always: `develop` → dev database + this Fly app; `main` → production later.

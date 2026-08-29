@@ -37,7 +37,7 @@ You do not run Supabase or Vercel CLI. GitHub Actions applies migrations. Vercel
 - `develop` runs **Apply development migrations** against GitHub Environment `development` and the development Supabase project.
 - `main` runs **Apply production migrations** against GitHub Environment `production` and the production Supabase project.
 
-[`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) POSTs `/api/engine/tick` every 5 minutes, and on **Run workflow**. The development job always runs. The production job runs only from `main`. GitHub only fires `schedule` from the **default branch** — keep that as `develop` until you merge.
+[`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) is **Run workflow** only. Fly is the scheduler. The development job always runs. The production job runs only from `main`.
 
 Development secrets use separate names so a missing development secret fails the job instead of falling back to production.
 
@@ -114,9 +114,9 @@ A member is an admin when `members.role` is `admin`, or the email is `click.stud
 
 The tick is `runEngineCycle` in `lib/engine`: shared scan, then **hot desks first** (open books, armed DCA, active Perps), then other idle desks via **per-desk leases**. Fly.io in **Sydney** (`tbp-engine-dev` / `tbp-engine`) loops about every 20 seconds. See [phase-fly.md](phase-fly.md).
 
-`POST /api/engine/tick` on Sydney Vercel is a **fallback** (same leases, 50s budget). [`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) still POSTs every 5 minutes until Fly is healthy. Do not use Vercel Cron.
+`POST /api/engine/tick` on Sydney Vercel is a **manual fallback** (same leases, 50s budget). [`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) is **Run workflow** only. Do not use Vercel Cron.
 
-Admin header **Tick** runs the same cycle (`POST /api/engine/admin-tick`). Auto tick still POSTs that door every 5 seconds while an admin tab is visible.
+Admin header **Tick** runs the same cycle (`POST /api/engine/admin-tick`). Auto tick is **off** unless you turn it on in Admin Settings. It then POSTs that door every 5 seconds while an admin tab is visible.
 
 | Variable | Where | Value |
 | --- | --- | --- |

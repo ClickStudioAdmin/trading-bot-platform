@@ -2,20 +2,30 @@ import { parseDeskType } from "@/lib/accounts/model";
 import { runCashAndCarryDeskTick } from "@/lib/engine/cash-and-carry-tick";
 import {
   ENGINE_CLAIM_BATCH,
+  ENGINE_DESK_CONCURRENCY,
   ENGINE_HOT_CLAIM_BATCH,
   ENGINE_LEASE_TTL_SECONDS,
+  ENGINE_SCAN_TTL_SECONDS,
 } from "@/lib/engine/lease";
-import { listHotEngineAccountIds } from "@/lib/engine/hot-desks";
+import {
+  listEngineDeskKinds,
+  listHotEngineAccountIds,
+} from "@/lib/engine/hot-desks";
 import {
   claimEngineDesks,
   engineWorkerId,
   releaseEngineDesk,
   takeVenueSlot,
+  tryClaimEngineScan,
 } from "@/lib/engine/lease-store";
+import { mapPool } from "@/lib/engine/pool";
 import { runDcaPlaybookTick } from "@/lib/dca/tick";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
 import type { BybitTicker } from "@/lib/exchanges/bybit/client";
-import { persistOpportunities } from "@/lib/opportunities/persist";
+import {
+  loadStoredOpportunities,
+  persistOpportunities,
+} from "@/lib/opportunities/persist";
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import { runFuturesAutomationTick } from "@/lib/futures/automation-tick";
@@ -31,6 +41,8 @@ export type EngineCycleStats = {
   closed: number;
   clipped: number;
   desks: number;
+  scanned: boolean;
+  tickers: boolean;
 };
 
 export type EngineCycleOptions = {
@@ -51,11 +63,12 @@ export async function runEngineCycle(
   const started = Date.now();
   const maxMs = options?.maxMs;
 
-  const raw = await scanCarryOpportunities();
-  await persistOpportunities(raw);
-  const tickers = await fetchBybitTickers("linear").catch(
-    () => new Map<string, BybitTicker>(),
-  );
+  const kinds = await listEngineDeskKinds();
+  const shared = await loadSharedMarket({
+    workerId,
+    cashAndCarry: kinds.cashAndCarry,
+    linear: kinds.linear,
+  });
 
   const stats: EngineCycleStats = {
     users: 0,
@@ -64,6 +77,8 @@ export async function runEngineCycle(
     closed: 0,
     clipped: 0,
     desks: 0,
+    scanned: shared.scanned,
+    tickers: shared.tickersLoaded,
   };
   const users = new Set<string>();
   const done = new Set<string>();
@@ -87,17 +102,17 @@ export async function runEngineCycle(
     if (claimed.length === 0) {
       break;
     }
-    for (const accountId of claimed) {
+    await mapPool(claimed, ENGINE_DESK_CONCURRENCY, async (accountId) => {
       done.add(accountId);
       if (maxMs !== undefined && Date.now() - started >= maxMs) {
         await releaseEngineDesk({ accountId, workerId });
-        continue;
+        return;
       }
       try {
         const desk = await runDeskTick({
           accountId,
-          scan: raw,
-          tickers,
+          scan: shared.scan,
+          tickers: shared.tickers,
         });
         stats.opened += desk.opened;
         stats.added += desk.added;
@@ -120,7 +135,7 @@ export async function runEngineCycle(
       } finally {
         await releaseEngineDesk({ accountId, workerId });
       }
-    }
+    });
   }
 
   stats.users = users.size;
@@ -138,10 +153,50 @@ export async function runEngineCycle(
         closed: stats.closed,
         clipped: stats.clipped,
         workerId,
+        scanned: stats.scanned,
+        tickers: stats.tickers,
       },
     });
   }
   return stats;
+}
+
+async function loadSharedMarket(input: {
+  workerId: string;
+  cashAndCarry: boolean;
+  linear: boolean;
+}): Promise<{
+  scan: ScannedOpportunity[];
+  tickers: Map<string, BybitTicker>;
+  scanned: boolean;
+  tickersLoaded: boolean;
+}> {
+  let scan: ScannedOpportunity[] = [];
+  let scanned = false;
+  if (input.cashAndCarry) {
+    const won = await tryClaimEngineScan({
+      workerId: input.workerId,
+      ttlSeconds: ENGINE_SCAN_TTL_SECONDS,
+    });
+    if (won) {
+      scan = await scanCarryOpportunities();
+      await persistOpportunities(scan);
+      scanned = true;
+    } else {
+      scan = (await loadStoredOpportunities()).rows;
+    }
+  }
+  const tickers = input.linear
+    ? await fetchBybitTickers("linear").catch(
+        () => new Map<string, BybitTicker>(),
+      )
+    : new Map<string, BybitTicker>();
+  return {
+    scan,
+    tickers,
+    scanned,
+    tickersLoaded: input.linear,
+  };
 }
 
 async function runDeskTick(input: {

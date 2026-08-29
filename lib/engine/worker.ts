@@ -45,7 +45,7 @@ async function main(): Promise<void> {
         maxMs: Math.max(5_000, LOOP_MS - 2_000),
       });
       console.log(
-        `engine cycle desks=${stats.desks} opened=${stats.opened} closed=${stats.closed}`,
+        `engine cycle desks=${stats.desks} scanned=${stats.scanned ? 1 : 0} tickers=${stats.tickers ? 1 : 0} opened=${stats.opened} closed=${stats.closed}`,
       );
     } catch (cause) {
       console.error("engine loop failed", cause);

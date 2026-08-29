@@ -1,12 +1,16 @@
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   ENGINE_CLAIM_BATCH,
+  ENGINE_LEASE_ENSURE_MS,
   ENGINE_LEASE_TTL_SECONDS,
   ENGINE_MUTATION_TTL_SECONDS,
+  ENGINE_SCAN_KEY,
+  ENGINE_SCAN_TTL_SECONDS,
   ENGINE_VENUE_GAP_MS,
 } from "./lease";
 
 const EPOCH = "1970-01-01T00:00:00.000Z";
+let lastLeaseEnsureMs = 0;
 
 export function engineWorkerId(): string {
   const fromEnv = String(process.env.ENGINE_WORKER_ID ?? "").trim();
@@ -46,6 +50,79 @@ async function ensureLeaseRows(
   }
 }
 
+async function ensureLeaseRowsIfStale(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+): Promise<void> {
+  const now = Date.now();
+  if (lastLeaseEnsureMs > 0 && now - lastLeaseEnsureMs < ENGINE_LEASE_ENSURE_MS) {
+    return;
+  }
+  lastLeaseEnsureMs = now;
+  await ensureLeaseRows(supabase);
+}
+
+function asAccountIds(data: unknown): string[] {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+  return data
+    .map((row) => {
+      if (typeof row === "string") {
+        return row;
+      }
+      if (row && typeof row === "object" && "account_id" in row) {
+        return String((row as { account_id?: unknown }).account_id ?? "");
+      }
+      return "";
+    })
+    .filter(Boolean);
+}
+
+export async function tryClaimEngineScan(input?: {
+  workerId?: string;
+  scanKey?: string;
+  ttlSeconds?: number;
+}): Promise<boolean> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return true;
+  }
+  const workerId = input?.workerId ?? engineWorkerId();
+  const scanKey = (input?.scanKey ?? ENGINE_SCAN_KEY).trim() || ENGINE_SCAN_KEY;
+  const ttlSeconds = input?.ttlSeconds ?? ENGINE_SCAN_TTL_SECONDS;
+  const { data, error } = await supabase.rpc("engine_try_claim_scan", {
+    p: {
+      worker_id: workerId,
+      scan_key: scanKey,
+      ttl_seconds: ttlSeconds,
+    },
+  });
+  if (!error) {
+    return Boolean(data);
+  }
+  console.error("engine_try_claim_scan rpc", error.message);
+  await supabase.from("engine_scan_leases").upsert(
+    { scan_key: scanKey },
+    { onConflict: "scan_key", ignoreDuplicates: true },
+  );
+  const nowIso = new Date().toISOString();
+  const { data: row, error: tableError } = await supabase
+    .from("engine_scan_leases")
+    .update({
+      worker_id: workerId,
+      leased_until: leaseUntilIso(ttlSeconds),
+      updated_at: nowIso,
+    })
+    .eq("scan_key", scanKey)
+    .lt("leased_until", nowIso)
+    .select("scan_key");
+  if (tableError) {
+    console.error("engine_scan_leases claim", tableError.message);
+    return true;
+  }
+  return Boolean(row?.length);
+}
+
 export async function claimEngineDesks(input?: {
   workerId?: string;
   limit?: number;
@@ -60,19 +137,37 @@ export async function claimEngineDesks(input?: {
   const workerId = input?.workerId ?? engineWorkerId();
   const limit = Math.max(1, Math.min(50, input?.limit ?? ENGINE_CLAIM_BATCH));
   const ttlSeconds = input?.ttlSeconds ?? ENGINE_LEASE_TTL_SECONDS;
-  const prefer = new Set(input?.preferAccountIds ?? []);
-  const exclude = new Set(input?.excludeAccountIds ?? []);
-  await ensureLeaseRows(supabase);
+  const prefer = [...new Set(input?.preferAccountIds ?? [])].filter(Boolean);
+  const exclude = [...new Set(input?.excludeAccountIds ?? [])].filter(Boolean);
+  await ensureLeaseRowsIfStale(supabase);
+  if (prefer.length) {
+    await ensureLeaseRows(supabase, prefer);
+  }
+  const { data, error } = await supabase.rpc("engine_claim_ranked_desks", {
+    p: {
+      worker_id: workerId,
+      limit,
+      ttl_seconds: ttlSeconds,
+      prefer_account_ids: prefer,
+      exclude_account_ids: exclude,
+    },
+  });
+  if (!error) {
+    return asAccountIds(data);
+  }
+  console.error("engine_claim_ranked_desks rpc", error.message);
+  const preferSet = new Set(prefer);
+  const excludeSet = new Set(exclude);
   const nowIso = new Date().toISOString();
-  const { data: free, error } = await supabase
+  const { data: free, error: listError } = await supabase
     .from("engine_desk_leases")
     .select("account_id, leased_until")
     .lt("leased_until", nowIso)
     .order("leased_until", { ascending: true })
     .order("account_id", { ascending: true })
     .limit(Math.min(200, Math.max(limit * 8, 40)));
-  if (error) {
-    console.error("engine_desk_leases list", error.message);
+  if (listError) {
+    console.error("engine_desk_leases list", listError.message);
     return [];
   }
   const ranked = (free ?? [])
@@ -80,10 +175,10 @@ export async function claimEngineDesks(input?: {
       accountId: String(row.account_id ?? ""),
       leasedUntil: String(row.leased_until ?? ""),
     }))
-    .filter((row) => row.accountId && !exclude.has(row.accountId))
+    .filter((row) => row.accountId && !excludeSet.has(row.accountId))
     .sort((a, b) => {
-      const aHot = prefer.has(a.accountId) ? 0 : 1;
-      const bHot = prefer.has(b.accountId) ? 0 : 1;
+      const aHot = preferSet.has(a.accountId) ? 0 : 1;
+      const bHot = preferSet.has(b.accountId) ? 0 : 1;
       if (aHot !== bHot) {
         return aHot - bHot;
       }

@@ -31,6 +31,7 @@ import {
   dcaDipMet,
   dcaEnabledSides,
   dcaStartListens,
+  dcaNeedsIndicatorCloses,
   dcaLegIsRunning,
   dcaWebhookSignalApplies,
   dcaExitTpslNeedsVenueSync,
@@ -580,6 +581,36 @@ assert.equal(dcaStartListens("immediate"), false);
 assert.equal(dcaStartListens("price"), true);
 assert.equal(dcaStartListens("webhook"), true);
 assert.equal(dcaStartListens("indicator"), true);
+assert.equal(
+  dcaNeedsIndicatorCloses({
+    startKind: "indicator",
+    indicatorTimeframe: "5",
+    direction: "long",
+    long: { status: "idle" },
+    short: { status: "idle" },
+  }),
+  false,
+);
+assert.equal(
+  dcaNeedsIndicatorCloses({
+    startKind: "indicator",
+    indicatorTimeframe: "5",
+    direction: "long",
+    long: { status: "armed" },
+    short: { status: "idle" },
+  }),
+  true,
+);
+assert.equal(
+  dcaNeedsIndicatorCloses({
+    startKind: "price",
+    indicatorTimeframe: "5",
+    direction: "long",
+    long: { status: "armed" },
+    short: { status: "idle" },
+  }),
+  false,
+);
 assert.equal(dcaLegIsRunning("idle"), false);
 assert.equal(dcaLegIsRunning("armed"), true);
 assert.equal(dcaLegIsRunning("stop_adding"), true);

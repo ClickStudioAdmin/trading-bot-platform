@@ -23,6 +23,7 @@ import {
   dcaLegFor,
   dcaLegIsRunning,
   dcaLiveQtyBlocksCycleEnd,
+  dcaNeedsIndicatorCloses,
   dcaOpenExitLimits,
   dcaStartListens,
   decideDcaTick,
@@ -129,15 +130,13 @@ export async function runDcaPlaybookTick(input?: {
     const ticker = tickers.get(playbook.symbol) ?? {};
     const prices = tickerTriggerPrices(ticker);
     let closes: number[] | null = null;
-    if (
-      playbook.startKind === "indicator" &&
-      playbook.indicatorTimeframe
-    ) {
-      const key = `${playbook.symbol}:${playbook.indicatorTimeframe}`;
+    const indicatorTimeframe = playbook.indicatorTimeframe;
+    if (dcaNeedsIndicatorCloses(playbook) && indicatorTimeframe) {
+      const key = `${playbook.symbol}:${indicatorTimeframe}`;
       if (!klineCache.has(key)) {
         const fetched = await fetchBybitKlines({
           symbol: playbook.symbol,
-          interval: playbook.indicatorTimeframe,
+          interval: indicatorTimeframe,
         }).catch(() => []);
         klineCache.set(key, fetched);
       }
@@ -321,19 +320,6 @@ export async function runDcaPlaybookTick(input?: {
       });
       if (result.acted) {
         acted += 1;
-      }
-      if (decision.action.kind !== "none") {
-        await syncDcaPlaybookExits({
-          playbook,
-          mode: account.mode,
-          side,
-          lastPrice: prices.last,
-        });
-        await syncDcaPlaybookGrid({
-          playbook,
-          mode: account.mode,
-          side,
-        });
       }
     }
   }

@@ -42,9 +42,8 @@ export default async function AdminSettingsPage({
           <span>
             Auto tick
             <span className="mt-1 block text-xs text-ink-muted">
-              Run the engine every 5 seconds while an admin tab is open. Turn
-              this off to use only the header Tick button and the 5-minute
-              GitHub job.
+              Off by default. Fly is the clock. Turn this on only to nudge
+              Vercel every 5 seconds while an admin tab is open.
             </span>
           </span>
         </label>

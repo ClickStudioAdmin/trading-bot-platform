@@ -326,6 +326,23 @@ export function dcaStartListens(startKind: DcaStartKind): boolean {
   );
 }
 
+export function dcaNeedsIndicatorCloses(playbook: {
+  startKind: DcaStartKind;
+  indicatorTimeframe: DcaIndicatorTimeframe | null;
+  direction: DcaDirection;
+  long: Pick<DcaLegState, "status">;
+  short: Pick<DcaLegState, "status">;
+}): boolean {
+  if (playbook.startKind !== "indicator" || !playbook.indicatorTimeframe) {
+    return false;
+  }
+  return dcaEnabledSides(playbook.direction).some((side) =>
+    dcaLegIsRunning(
+      side === "long" ? playbook.long.status : playbook.short.status,
+    ),
+  );
+}
+
 export function dcaLegIsRunning(status: DcaStatus): boolean {
   return status === "armed" || status === "stop_adding";
 }

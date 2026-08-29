@@ -3,6 +3,16 @@ export const ENGINE_MUTATION_TTL_SECONDS = 20;
 export const ENGINE_CLAIM_BATCH = 4;
 export const ENGINE_HOT_CLAIM_BATCH = 24;
 export const ENGINE_VENUE_GAP_MS = 150;
+export const ENGINE_DESK_CONCURRENCY = 3;
+export const ENGINE_SCAN_KEY = "public_market";
+export const ENGINE_SCAN_TTL_SECONDS = 18;
+export const ENGINE_LEASE_ENSURE_MS = 10 * 60 * 1000;
+
+export type ScanLease = {
+  scanKey: string;
+  workerId: string | null;
+  leasedUntilMs: number;
+};
 
 export type DeskLease = {
   accountId: string;
@@ -103,4 +113,32 @@ export function releaseEngineDeskFromState(input: {
       leasedUntilMs: 0,
     };
   });
+}
+
+export function tryClaimEngineScanFromState(input: {
+  leases: readonly ScanLease[];
+  scanKey: string;
+  workerId: string;
+  nowMs: number;
+  ttlMs: number;
+}): { leases: ScanLease[]; ok: boolean } {
+  const scanKey = input.scanKey.trim() || "public_market";
+  const workerId = input.workerId.trim();
+  const ttlMs = Math.max(5_000, Math.floor(input.ttlMs));
+  const next = input.leases.map((row) => ({ ...row }));
+  let row = next.find((item) => item.scanKey === scanKey);
+  if (!row) {
+    row = {
+      scanKey,
+      workerId: null,
+      leasedUntilMs: 0,
+    };
+    next.push(row);
+  }
+  if (row.leasedUntilMs >= input.nowMs) {
+    return { leases: next, ok: false };
+  }
+  row.workerId = workerId;
+  row.leasedUntilMs = input.nowMs + ttlMs;
+  return { leases: next, ok: true };
 }

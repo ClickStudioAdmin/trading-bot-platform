@@ -1,4 +1,30 @@
+import { parseDeskType } from "@/lib/accounts/model";
 import { createServiceClient } from "@/lib/supabase/admin";
+
+export type EngineDeskKinds = {
+  cashAndCarry: boolean;
+  linear: boolean;
+};
+
+export function deskKindsFromTypes(
+  types: readonly (string | null | undefined)[],
+): EngineDeskKinds {
+  let cashAndCarry = false;
+  let linear = false;
+  for (const raw of types) {
+    const deskType = parseDeskType(raw);
+    if (deskType === "cash_and_carry") {
+      cashAndCarry = true;
+    }
+    if (deskType === "perps" || deskType === "dca") {
+      linear = true;
+    }
+    if (cashAndCarry && linear) {
+      break;
+    }
+  }
+  return { cashAndCarry, linear };
+}
 
 export function mergeHotAccountIds(
   ...groups: readonly (readonly (string | null | undefined)[])[]
@@ -43,6 +69,25 @@ export async function listHotEngineAccountIds(): Promise<string[]> {
     ),
     (automations.data ?? []).map((row) =>
       String((row as { account_id?: string }).account_id ?? ""),
+    ),
+  );
+}
+
+export async function listEngineDeskKinds(): Promise<EngineDeskKinds> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { cashAndCarry: false, linear: false };
+  }
+  const { data, error } = await supabase
+    .from("trading_accounts")
+    .select("desk_type");
+  if (error) {
+    console.error("engine desk kinds", error.message);
+    return { cashAndCarry: true, linear: true };
+  }
+  return deskKindsFromTypes(
+    (data ?? []).map((row) =>
+      String((row as { desk_type?: unknown }).desk_type ?? ""),
     ),
   );
 }

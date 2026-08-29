@@ -3,6 +3,7 @@ import {
   claimEngineDesksFromState,
   releaseEngineDeskFromState,
   tryClaimEngineDeskFromState,
+  tryClaimEngineScanFromState,
   type DeskLease,
 } from "./lease";
 
@@ -100,5 +101,30 @@ const afterRelease = claimEngineDesksFromState({
   limit: 1,
 });
 assert.deepEqual(afterRelease.claimed, ["desk-01"]);
+
+const scanA = tryClaimEngineScanFromState({
+  leases: [],
+  scanKey: "public_market",
+  workerId: "a",
+  nowMs: 1_000,
+  ttlMs: 18_000,
+});
+assert.equal(scanA.ok, true);
+const scanB = tryClaimEngineScanFromState({
+  leases: scanA.leases,
+  scanKey: "public_market",
+  workerId: "b",
+  nowMs: 1_000,
+  ttlMs: 18_000,
+});
+assert.equal(scanB.ok, false);
+const scanExpired = tryClaimEngineScanFromState({
+  leases: scanA.leases,
+  scanKey: "public_market",
+  workerId: "b",
+  nowMs: 20_000,
+  ttlMs: 18_000,
+});
+assert.equal(scanExpired.ok, true);
 
 console.log("engine lease checks passed");
