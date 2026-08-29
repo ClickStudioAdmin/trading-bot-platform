@@ -23,6 +23,14 @@ export function SiteFooter({ appHref = null }: { appHref?: string | null }) {
           <p className="text-xs text-ink-faint">
             Trading Bot Platform · Development
           </p>
+          <a
+            href="/"
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs text-accent hover:text-accent-strong"
+          >
+            Home (outside app)
+          </a>
         </div>
       </footer>
     );

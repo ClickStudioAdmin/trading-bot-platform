@@ -1,8 +1,14 @@
 import Link from "next/link";
 
-export function SiteLogo({ compact = false }: { compact?: boolean }) {
-  return (
-    <Link href="/" className="flex items-center gap-2.5 text-ink">
+export function SiteLogo({
+  compact = false,
+  linked = true,
+}: {
+  compact?: boolean;
+  linked?: boolean;
+}) {
+  const mark = (
+    <>
       <span className="inline-flex h-8 w-8 items-center justify-center rounded-control bg-accent-strong">
         <svg
           viewBox="0 0 20 20"
@@ -39,6 +45,16 @@ export function SiteLogo({ compact = false }: { compact?: boolean }) {
           </span>
         </span>
       )}
+    </>
+  );
+
+  if (!linked) {
+    return <div className="flex items-center gap-2.5 text-ink">{mark}</div>;
+  }
+
+  return (
+    <Link href="/" className="flex items-center gap-2.5 text-ink">
+      {mark}
     </Link>
   );
 }

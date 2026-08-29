@@ -43,7 +43,7 @@ export function AccountSidenav({
   return (
     <aside className="sticky top-0 z-20 flex h-dvh w-72 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-4 py-6">
       <div className="mb-6">
-        <SiteLogo />
+        <SiteLogo linked={false} />
       </div>
       <NavGroup
         label="Account"

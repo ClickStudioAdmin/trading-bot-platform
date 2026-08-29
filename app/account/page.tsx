@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { AccountSnapshotBody } from "@/components/account-snapshot";
-import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { switchTradingAccount } from "@/lib/accounts/actions";
@@ -43,29 +42,18 @@ export default async function AccountOverviewPage() {
       <div>
         <PageHeading overline="Desk" title="Overview" />
         <p className="-mt-4 text-sm text-ink-muted">
-          Login and books. Positions and automations live on the current
-          book. Exchange keys belong to this login.
+          Login and exchange keys for this account. Switch desks from the
+          sidebar.
         </p>
       </div>
 
-      <section>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <StatCard
-            label="Books"
-            value={String(accounts.length)}
-            hint={`${paperCount} Paper Trading · ${liveCount} Connected Exchange`}
-            href="/account/sub-accounts"
-          />
-          <StatCard
-            label="Current book"
-            value={current.name}
-            hint={formatAccountMode(current.mode)}
-            href="/account/book"
-          />
-        </div>
-      </section>
-
       <section className="grid gap-4 sm:grid-cols-2">
+        <StatCard
+          label="Desks"
+          value={String(accounts.length)}
+          hint={`${paperCount} Paper Trading · ${liveCount} Connected Exchange`}
+          href="/account/sub-accounts"
+        />
         <div className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">Login</h2>
           <p className="mt-1 text-sm text-ink-muted">
@@ -84,27 +72,6 @@ export default async function AccountOverviewPage() {
             className="mt-4 inline-block text-sm text-accent hover:text-accent-strong"
           >
             Edit profile
-          </Link>
-        </div>
-
-        <div className="rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">Current book</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Switch books from the header or the list below. Mode never changes.
-          </p>
-          <dl className="mt-4 space-y-2 text-sm">
-            <Row label="Name" value={current.name} />
-            <Row label="Mode" value={formatAccountMode(current.mode)} />
-            <Row
-              label="Created"
-              value={<LocalTime at={current.createdAtMs} mode="date" />}
-            />
-          </dl>
-          <Link
-            href="/account/book"
-            className="mt-4 inline-block text-sm text-accent hover:text-accent-strong"
-          >
-            Open book overview
           </Link>
         </div>
       </section>
