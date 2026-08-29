@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { CreateAccountForm } from "@/components/create-account-form";
 import { CreateDeskDetails } from "@/components/create-desk-details";
 import { PageHeading } from "@/components/page-heading";
@@ -57,24 +56,15 @@ export default async function NewDeskPage({
         </p>
       ) : null}
       <div className="grid items-start gap-6 lg:grid-cols-2">
-        <div>
-          <CreateAccountForm
-            connections={connections}
-            sharedConnectionIds={sharedConnectionIds}
-            existingNames={accounts.map((account) => account.name)}
-            next={createDeskPath(typed.deskType)}
-            initialDeskType={typed.deskType}
-            lockType
-            hideTitle
-          />
-          <p className="mt-4 text-sm text-ink-muted">
-            Or{" "}
-            <Link href="/account/sub-accounts" className="text-accent">
-              manage existing desks
-            </Link>
-            .
-          </p>
-        </div>
+        <CreateAccountForm
+          connections={connections}
+          sharedConnectionIds={sharedConnectionIds}
+          existingNames={accounts.map((account) => account.name)}
+          next={createDeskPath(typed.deskType)}
+          initialDeskType={typed.deskType}
+          lockType
+          hideTitle
+        />
         <CreateDeskDetails deskType={typed.deskType} />
       </div>
     </div>
