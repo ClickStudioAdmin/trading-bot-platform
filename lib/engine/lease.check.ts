@@ -5,6 +5,7 @@ import {
   tryClaimEngineDeskFromState,
   tryClaimEngineScanFromState,
   venueSlotWaitMs,
+  engineLoopMs,
   type DeskLease,
 } from "./lease";
 
@@ -131,5 +132,12 @@ assert.equal(scanExpired.ok, true);
 assert.equal(venueSlotWaitMs(1_200, 1_000), 200);
 assert.equal(venueSlotWaitMs(1_000, 1_000), 0);
 assert.equal(venueSlotWaitMs(8_000, 1_000), 0);
+
+assert.equal(engineLoopMs({ indicatorArmed: false }), 20_000);
+assert.equal(engineLoopMs({ indicatorArmed: true }), 8_000);
+assert.equal(
+  engineLoopMs({ indicatorArmed: true, idleMs: 20_000, indicatorMs: 8_000 }),
+  8_000,
+);
 
 console.log("engine lease checks passed");

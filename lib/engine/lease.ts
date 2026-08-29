@@ -8,6 +8,18 @@ export const ENGINE_DESK_CONCURRENCY = 3;
 export const ENGINE_SCAN_KEY = "public_market";
 export const ENGINE_SCAN_TTL_SECONDS = 18;
 export const ENGINE_LEASE_ENSURE_MS = 10 * 60 * 1000;
+export const ENGINE_LOOP_MS = 20_000;
+export const ENGINE_INDICATOR_LOOP_MS = 8_000;
+
+export function engineLoopMs(input: {
+  indicatorArmed: boolean;
+  idleMs?: number;
+  indicatorMs?: number;
+}): number {
+  const idle = Math.max(5_000, Math.floor(input.idleMs ?? ENGINE_LOOP_MS));
+  const fast = Math.max(5_000, Math.floor(input.indicatorMs ?? ENGINE_INDICATOR_LOOP_MS));
+  return input.indicatorArmed ? Math.min(idle, fast) : idle;
+}
 
 export function venueSlotWaitMs(slotStartMs: number, nowMs: number): number {
   const wait = slotStartMs - nowMs;

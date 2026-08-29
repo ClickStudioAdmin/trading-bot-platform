@@ -73,6 +73,24 @@ export async function listHotEngineAccountIds(): Promise<string[]> {
   );
 }
 
+export async function hasArmedIndicatorStarts(): Promise<boolean> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return false;
+  }
+  const { data, error } = await supabase
+    .from("dca_playbooks")
+    .select("id")
+    .eq("start_kind", "indicator")
+    .or("long_status.eq.armed,short_status.eq.armed")
+    .limit(1);
+  if (error) {
+    console.error("engine indicator starts", error.message);
+    return false;
+  }
+  return (data ?? []).length > 0;
+}
+
 export async function listEngineDeskKinds(): Promise<EngineDeskKinds> {
   const supabase = createServiceClient();
   if (!supabase) {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FuturesFlash } from "@/components/futures-flash";
+import { LiveTickerScope } from "@/components/live-ticker";
 import { OpenFuturesTrades } from "@/components/futures-blotter";
 import { FuturesWorkingOrders } from "@/components/futures-working";
 import { getSessionContext } from "@/lib/auth/session";
@@ -127,6 +128,7 @@ export default async function FuturesOverviewPage({
               : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
         }
       />
+      <LiveTickerScope symbols={open.map((row) => row.symbol)}>
       <OpenFuturesTrades
         signedIn={desk.signedIn}
         open={open}
@@ -166,6 +168,7 @@ export default async function FuturesOverviewPage({
           )
         }
       />
+      </LiveTickerScope>
 
       <p className="text-sm text-ink-faint">
         <Link href={href(FUTURES_PATHS.pairs)} className="text-accent">

@@ -26,6 +26,7 @@ import type { DcaOpenHint } from "@/lib/dca/playbook";
 import { dcaHintKey } from "@/lib/dca/playbook";
 import type { FuturesDeskPosition } from "@/lib/futures/list";
 import type { MarkedFutures } from "@/lib/futures/mark";
+import { useLiveMarkedOpen } from "@/components/live-ticker";
 import { formatLeverage } from "@/lib/futures/venue-risk";
 import type { FuturesOrder, FuturesTradeSource } from "@/lib/futures/model";
 import { formatFuturesOrigin, resolveOrderOrigin } from "@/lib/futures/source";
@@ -53,16 +54,17 @@ export function FuturesOpenStats({
   signedIn: boolean;
   open: MarkedFutures[];
 }) {
-  const notional = open.reduce((sum, row) => sum + row.notionalUsdt, 0);
-  const unrealized = open.every((row) => row.unrealizedUsdt === null)
+  const rows = useLiveMarkedOpen(open);
+  const notional = rows.reduce((sum, row) => sum + row.notionalUsdt, 0);
+  const unrealized = rows.every((row) => row.unrealizedUsdt === null)
     ? null
-    : open.reduce((sum, row) => sum + (row.unrealizedUsdt ?? 0), 0);
+    : rows.reduce((sum, row) => sum + (row.unrealizedUsdt ?? 0), 0);
   return (
     <OpenStats
       signedIn={signedIn}
       notional={notional}
       unrealized={unrealized}
-      exposure={futuresOpenExposure(open)}
+      exposure={futuresOpenExposure(rows)}
     />
   );
 }
@@ -97,6 +99,7 @@ export function OpenFuturesTrades({
   positionsHref?: string;
 }) {
   const { visible, setColumn } = useFuturesOpenColumns();
+  const rows = useLiveMarkedOpen(open);
   const colSpan = futuresOpenColumnCount(
     visible,
     showDcaColumns ? FUTURES_DCA_OPEN_COLUMN_COUNT : 0,
@@ -279,7 +282,7 @@ export function OpenFuturesTrades({
                   </>
                 }
               />
-            ) : open.length === 0 ? (
+            ) : rows.length === 0 ? (
               <EmptyRow
                 colSpan={colSpan}
                 message={
@@ -287,7 +290,7 @@ export function OpenFuturesTrades({
                 }
               />
             ) : (
-              open.map((trade) => (
+              rows.map((trade) => (
                 <OpenFuturesRows
                   key={trade.id}
                   trade={trade}

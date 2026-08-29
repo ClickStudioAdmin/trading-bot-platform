@@ -39,3 +39,42 @@ export function markFuturesOpen(
     };
   });
 }
+
+export type LiveTickerQuote = {
+  lastPrice?: string;
+  markPrice?: string;
+  bid1Price?: string;
+  ask1Price?: string;
+};
+
+export function applyLiveMarks(
+  rows: readonly MarkedFutures[],
+  tickers: ReadonlyMap<string, LiveTickerQuote> | null,
+): MarkedFutures[] {
+  if (!tickers || tickers.size === 0) {
+    return [...rows];
+  }
+  return rows.map((row) => {
+    const ticker = tickers.get(row.symbol);
+    if (!ticker) {
+      return row;
+    }
+    const mark = markFromTicker(ticker);
+    if (mark === null) {
+      return row;
+    }
+    const lastRaw = Number(ticker.lastPrice ?? "");
+    const last = lastRaw > 0 ? lastRaw : mark;
+    return {
+      ...row,
+      mark,
+      last,
+      unrealizedUsdt: futuresPnlUsdt({
+        side: row.side,
+        qty: row.qty,
+        entryPrice: row.entryPrice,
+        exitPrice: mark,
+      }),
+    };
+  });
+}

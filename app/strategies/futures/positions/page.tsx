@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FuturesFlash } from "@/components/futures-flash";
+import { LiveTickerScope } from "@/components/live-ticker";
 import { FuturesOrderTicket } from "@/components/futures-order-ticket";
 import {
   FuturesOpenStats,
@@ -146,6 +147,7 @@ export default async function FuturesPositionsPage({
           error={firstSearchValue(params.paperError)}
         />
 
+        <LiveTickerScope symbols={open.map((row) => row.symbol)}>
         <FuturesOpenStats signedIn={desk.signedIn} open={open} />
         <OpenFuturesTrades
           signedIn={desk.signedIn}
@@ -167,6 +169,7 @@ export default async function FuturesPositionsPage({
                 : "No open futures. TradingView opens them through a webhook."
           }
         />
+        </LiveTickerScope>
 
         {showTicket ? (
           <section>
