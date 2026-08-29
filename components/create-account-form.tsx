@@ -16,10 +16,7 @@ import {
   sharedKeyWarningKind,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
-import {
-  connectionsForDeskBind,
-  venuesForDeskType,
-} from "@/lib/exchanges/venues";
+import { getVenue, venueAllowsDeskType } from "@/lib/exchanges/venues";
 import { SharedKeyWarning } from "@/components/shared-key-warning";
 
 const fieldClass =
@@ -50,24 +47,24 @@ export function CreateAccountForm({
   onCancel?: () => void;
 }) {
   const [deskType, setDeskType] = useState<DeskType>("cash_and_carry");
-  const [venue, setVenue] = useState("bybit");
   const [mode, setMode] = useState<"paper" | "live">("paper");
-  const [track, setTrack] = useState<"testnet" | "live">("testnet");
   const [bindChoice, setBindChoice] = useState<"later" | "existing">("later");
   const [connectionId, setConnectionId] = useState("");
   const [name, setName] = useState("");
-  const venues = venuesForDeskType(deskType);
-  const hyperliquid = venue === "hyperliquid";
-  const connected = mode === "live";
-  const deskEnvironment = hyperliquid && connected ? track : null;
   const liveKeys = useMemo(
     () =>
-      connectionsForDeskBind(
-        connections.filter((row) => row.status === "active"),
-        { venue, venueEnvironment: deskEnvironment },
-      ),
-    [connections, deskEnvironment, venue],
+      connections.filter((row) => {
+        if (row.status !== "active") {
+          return false;
+        }
+        const venue = getVenue(row.venue);
+        return venue ? venueAllowsDeskType(venue, deskType) : false;
+      }),
+    [connections, deskType],
   );
+  const selected = liveKeys.find((row) => row.id === connectionId) ?? null;
+  const venue = selected?.venue ?? "bybit";
+  const track = selected?.environment ?? "";
   const pathname = usePathname();
   const warningKind =
     bindChoice === "existing"
@@ -117,6 +114,8 @@ export function CreateAccountForm({
       {embedded ? (
         <input type="hidden" name="stayPath" defaultValue={pathname} />
       ) : null}
+      <input type="hidden" name="venue" value={venue} />
+      {track ? <input type="hidden" name="track" value={track} /> : null}
       <label className="block text-xs text-ink-muted">
         Name
         <input
@@ -145,14 +144,8 @@ export function CreateAccountForm({
           name="deskType"
           value={deskType}
           onChange={(event) => {
-            const nextType = event.target.value as DeskType;
-            setDeskType(nextType);
-            const nextVenues = venuesForDeskType(nextType);
-            if (!nextVenues.some((item) => item.id === venue)) {
-              setVenue(nextVenues[0]?.id ?? "bybit");
-              setTrack("testnet");
-              resetBind();
-            }
+            setDeskType(event.target.value as DeskType);
+            setConnectionId("");
           }}
           className={fieldClass}
         >
@@ -181,47 +174,7 @@ export function CreateAccountForm({
           <option value="live">{formatAccountModeChoice("live")}</option>
         </select>
       </label>
-      {venues.length > 1 ? (
-        <label className="block text-xs text-ink-muted">
-          Exchange
-          <select
-            name="venue"
-            value={venue}
-            onChange={(event) => {
-              setVenue(event.target.value);
-              setTrack("testnet");
-              resetBind();
-            }}
-            className={fieldClass}
-          >
-            {venues.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : (
-        <input type="hidden" name="venue" value={venue} />
-      )}
-      {hyperliquid && connected ? (
-        <label className="block text-xs text-ink-muted">
-          Hyperliquid network
-          <select
-            name="track"
-            value={track}
-            onChange={(event) => {
-              setTrack(event.target.value === "live" ? "live" : "testnet");
-              resetBind();
-            }}
-            className={fieldClass}
-          >
-            <option value="testnet">Demo (Hyperliquid Testnet)</option>
-            <option value="live">Live</option>
-          </select>
-        </label>
-      ) : null}
-      {connected ? (
+      {mode === "live" ? (
         <div className="space-y-4">
           <label className="block text-xs text-ink-muted">
             Exchange Connection
@@ -266,22 +219,20 @@ export function CreateAccountForm({
               </label>
             ) : (
               <p className="text-sm text-ink-muted">
-                {hyperliquid
-                  ? "Hyperliquid keys come in the next step. Choose Bind Later."
-                  : firstDesk
-                    ? "No connections on this login yet. Choose Bind Later — you can add a key after this desk is created."
-                    : (
-                      <>
-                        No matching connections saved yet.{" "}
-                        <Link
-                          href="/account/exchanges"
-                          className="text-accent hover:text-accent-strong"
-                        >
-                          Add a connection on Exchanges
-                        </Link>{" "}
-                        first, or bind later in Desk Settings.
-                      </>
-                    )}
+                {firstDesk ? (
+                  "No connections on this login yet. Choose Bind Later — you can add a key after this desk is created."
+                ) : (
+                  <>
+                    No connections saved yet.{" "}
+                    <Link
+                      href="/account/exchanges"
+                      className="text-accent hover:text-accent-strong"
+                    >
+                      Add a connection on Exchanges
+                    </Link>{" "}
+                    first, or bind later in Desk Settings.
+                  </>
+                )}
               </p>
             )
           ) : null}
@@ -289,9 +240,9 @@ export function CreateAccountForm({
         </div>
       ) : null}
       <p className="text-sm text-ink-muted">
-        {hyperliquid
-          ? "Type, mode, and exchange are set at create and never change. Paper uses Hyperliquid public marks on the in-app ledger. Connected Demo is Testnet, not Paper. Agent keys are not on Exchanges yet — bind later."
-          : "Type, mode, and exchange are set at create and never change. Paper uses public marks and fills on the in-app ledger. Connected binds a Bybit Demo or Live key from this login."}
+        Type and mode are set at create and never change. Paper Trading uses
+        live market data and fills on the in-app ledger. Connected Exchange
+        can bind a key from this login now, or later in Desk Settings.
       </p>
       {embedded && !firstDesk ? (
         <label className="flex items-start gap-2 text-sm text-ink">
