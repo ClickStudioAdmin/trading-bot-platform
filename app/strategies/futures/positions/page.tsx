@@ -150,6 +150,8 @@ export default async function FuturesPositionsPage({
           error={firstSearchValue(params.paperError)}
         />
 
+        <LiveTickerScope symbols={open.map((row) => row.symbol)}>
+        <FuturesOpenStats signedIn={desk.signedIn} open={open} />
         {showTicket ? (
           <section>
             <h2 className="text-xl font-semibold tracking-tight">
@@ -224,8 +226,6 @@ export default async function FuturesPositionsPage({
         ) : null}
 
         <PageHeading as="h2" title="Current Positions" className="mb-0" />
-        <LiveTickerScope symbols={open.map((row) => row.symbol)}>
-        <FuturesOpenStats signedIn={desk.signedIn} open={open} />
         <OpenFuturesTrades
           signedIn={desk.signedIn}
           open={open}
