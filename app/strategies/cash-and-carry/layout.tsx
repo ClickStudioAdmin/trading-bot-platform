@@ -2,8 +2,8 @@ import { StrategySubnav } from "@/components/strategy-subnav";
 import {
   deskHomePath,
   deskUsesCashAndCarry,
-  formatAccountMode,
   formatDeskType,
+  formatDeskVenueCaption,
   navLinksWithDesk,
   pathWithDesk,
 } from "@/lib/accounts/model";
@@ -108,10 +108,13 @@ export default async function CashAndCarryLayout({
                       : settingsHref,
                 }
             : {
-                name: formatAccountMode("paper"),
-                venue: "Bybit",
+                name: session
+                  ? formatDeskVenueCaption(session.account)
+                  : "Bybit",
+                venue: null,
                 connected: true,
                 href: settingsHref,
+                overline: "Market Data",
               }
         }
       />

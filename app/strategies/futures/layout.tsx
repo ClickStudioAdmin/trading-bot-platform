@@ -2,8 +2,8 @@ import { StrategySubnav } from "@/components/strategy-subnav";
 import {
   deskHomePath,
   deskUsesPerpsUi,
-  formatAccountMode,
   formatDeskType,
+  formatDeskVenueCaption,
   navLinksWithDesk,
   pathWithDesk,
 } from "@/lib/accounts/model";
@@ -149,10 +149,13 @@ export default async function FuturesLayout({
                       : settingsHref,
                 }
             : {
-                name: formatAccountMode("paper"),
-                venue: venueLabel,
+                name: session
+                  ? formatDeskVenueCaption(session.account)
+                  : venueLabel,
+                venue: null,
                 connected: true,
                 href: settingsHref,
+                overline: "Market Data",
               }
         }
       />

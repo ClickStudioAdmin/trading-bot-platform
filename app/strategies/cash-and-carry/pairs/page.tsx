@@ -3,16 +3,23 @@ import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
 import { PairFiltersForm } from "@/components/pair-filters";
 import { TokenIcon } from "@/components/token-icon";
+import { PairPager } from "@/components/pair-pager";
 import { listCarryPairs } from "@/lib/exchanges/bybit/list-carry-pairs";
 import { CARRY_BASE_COINS, type CarryPair } from "@/lib/exchanges/bybit/universe";
 import { deskHref } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
+import { formatMarketCap, loadMarketCaps } from "@/lib/market/caps";
 import {
   applyPairFilters,
   pairFilterInputValues,
   pairFiltersAreActive,
   parsePairFilters,
 } from "@/lib/pairs/filter";
+import {
+  paginatePairRows,
+  pairPageHref,
+  sortByMarketCap,
+} from "@/lib/pairs/page";
 
 export const metadata: Metadata = {
   title: "Pairs",
@@ -45,6 +52,23 @@ export default async function CashAndCarryPairsPage({
     dte: pair.daysToExpiry,
   }));
   const active = pairFiltersAreActive(filters);
+  const caps = await loadMarketCaps();
+  const ranked = sortByMarketCap(
+    visible,
+    (pair) => caps.get(pair.baseCoin) ?? null,
+    (left, right) =>
+      left.daysToExpiry - right.daysToExpiry ||
+      left.futureSymbol.localeCompare(right.futureSymbol),
+  );
+  const list = paginatePairRows(ranked, params.page);
+  const deskId = session?.account.id;
+  const hrefFor = (page: number) =>
+    pairPageHref({
+      path: CLEAR,
+      deskId,
+      filters,
+      page,
+    });
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -87,10 +111,11 @@ export default async function CashAndCarryPairsPage({
                     <th className="px-4 py-3 font-medium">Future</th>
                     <th className="px-4 py-3 font-medium">Delivery</th>
                     <th className="px-4 py-3 font-medium">DTE</th>
+                    <th className="px-4 py-3 font-medium">Market cap</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((pair) => (
+                  {list.rows.map((pair) => (
                     <tr
                       key={`${pair.spotSymbol}-${pair.futureSymbol}`}
                       className="border-b border-line last:border-b-0"
@@ -113,12 +138,24 @@ export default async function CashAndCarryPairsPage({
                           ? pair.daysToExpiry.toFixed(1)
                           : "—"}
                       </td>
+                      <td className="px-4 py-3 tabular-nums text-ink-muted">
+                        {formatMarketCap(caps.get(pair.baseCoin) ?? null)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
+          <PairPager
+            page={list.page}
+            pageCount={list.pageCount}
+            total={list.total}
+            from={list.from}
+            to={list.to}
+            prevHref={hrefFor(list.page - 1)}
+            nextHref={hrefFor(list.page + 1)}
+          />
         </div>
       )}
     </main>

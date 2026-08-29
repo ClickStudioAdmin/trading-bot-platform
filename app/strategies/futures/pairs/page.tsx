@@ -6,12 +6,19 @@ import {
   loadUsdtLinearPerps,
   type LinearPerp,
 } from "@/lib/exchanges/bybit/perp";
+import { PairPager } from "@/components/pair-pager";
+import { formatMarketCap, loadMarketCaps } from "@/lib/market/caps";
 import {
   applyPairFilters,
   pairFilterInputValues,
   pairFiltersAreActive,
   parsePairFilters,
 } from "@/lib/pairs/filter";
+import {
+  paginatePairRows,
+  pairPageHref,
+  sortByMarketCap,
+} from "@/lib/pairs/page";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { deskHref } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
@@ -48,6 +55,23 @@ export default async function FuturesPairsPage({
     base: pair.baseCoin,
   }));
   const active = pairFiltersAreActive(filters);
+  const caps = await loadMarketCaps();
+  const ranked = sortByMarketCap(
+    visible,
+    (pair) => caps.get(pair.baseCoin) ?? null,
+    (left, right) =>
+      left.baseCoin.localeCompare(right.baseCoin) ||
+      left.symbol.localeCompare(right.symbol),
+  );
+  const list = paginatePairRows(ranked, params.page);
+  const deskId = session?.account.id;
+  const hrefFor = (page: number) =>
+    pairPageHref({
+      path: FUTURES_PATHS.pairs,
+      deskId,
+      filters,
+      page,
+    });
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -86,10 +110,11 @@ export default async function FuturesPairsPage({
                     <th className="px-4 py-3 font-medium">Base</th>
                     <th className="px-4 py-3 font-medium">Contract</th>
                     <th className="px-4 py-3 font-medium">Quote</th>
+                    <th className="px-4 py-3 font-medium">Market cap</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((pair) => (
+                  {list.rows.map((pair) => (
                     <tr
                       key={pair.symbol}
                       className="border-b border-line last:border-b-0"
@@ -104,12 +129,24 @@ export default async function FuturesPairsPage({
                       <td className="px-4 py-3 text-ink-muted">
                         {pair.quoteCoin}
                       </td>
+                      <td className="px-4 py-3 tabular-nums text-ink-muted">
+                        {formatMarketCap(caps.get(pair.baseCoin) ?? null)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
+          <PairPager
+            page={list.page}
+            pageCount={list.pageCount}
+            total={list.total}
+            from={list.from}
+            to={list.to}
+            prevHref={hrefFor(list.page - 1)}
+            nextHref={hrefFor(list.page + 1)}
+          />
         </div>
       )}
     </main>
