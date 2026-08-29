@@ -85,6 +85,7 @@ export async function HyperliquidFuturesOverview({
         baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
         webhookNames={desk.webhookNames}
         playbookOwnsOrders={dca}
+        exchangeName="Hyperliquid"
         emptyMessage={
           showTicket
             ? undefined

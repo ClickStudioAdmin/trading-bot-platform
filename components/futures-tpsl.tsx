@@ -589,7 +589,7 @@ function TpslPriceField({
           <GroupedNumberInput
             name={limitName}
             allowDecimal
-            placeholder="Trigger price"
+            placeholder="Limit price"
             className={`${TICKET_QTY} mt-1`}
           />
         </label>
@@ -700,7 +700,7 @@ function TpslDialogRow({
             value={limitValue}
             onChange={onLimitChange}
             allowDecimal
-            placeholder="Trigger price"
+            placeholder="Limit price"
             className={`${INPUT_CLASS} mt-1`}
           />
         </label>

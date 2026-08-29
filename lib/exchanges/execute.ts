@@ -316,6 +316,7 @@ export async function placePerpLimitOnVenue(input: {
       qty: input.qty,
       price: input.price,
       reduceOnly: input.reduceOnly,
+      tpsl: input.tpsl,
       orderLinkId: input.orderLinkId,
     });
   }
@@ -513,6 +514,10 @@ export async function setPerpTradingStopOnVenue(input: {
       symbol: input.symbol,
       takeProfit: input.takeProfit,
       stopLoss: input.stopLoss,
+      tpOrderType: input.tpOrderType,
+      slOrderType: input.slOrderType,
+      tpLimitPrice: input.tpLimitPrice,
+      slLimitPrice: input.slLimitPrice,
     });
   }
   if (input.connection.venue !== "bybit") {

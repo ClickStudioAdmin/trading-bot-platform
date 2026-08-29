@@ -55,6 +55,68 @@ function firstAckError(
   return failed?.error ?? null;
 }
 
+export function hyperliquidTpslWires(input: {
+  asset: number;
+  closeIsBuy: boolean;
+  size: string;
+  szDecimals: number;
+  tpsl?: BybitTpslAttach;
+}): ReturnType<typeof orderWire>[] {
+  const orders: ReturnType<typeof orderWire>[] = [];
+  if (!input.tpsl) {
+    return orders;
+  }
+  if (input.tpsl.takeProfit) {
+    const trigger = priceToWire(Number(input.tpsl.takeProfit), input.szDecimals);
+    const isLimit = input.tpsl.tpOrderType === "Limit";
+    const rest = priceToWire(
+      Number(input.tpsl.tpLimitPrice ?? input.tpsl.takeProfit),
+      input.szDecimals,
+    );
+    if (trigger && rest) {
+      orders.push(
+        orderWire({
+          asset: input.asset,
+          isBuy: input.closeIsBuy,
+          price: rest,
+          size: input.size,
+          reduceOnly: true,
+          trigger: {
+            isMarket: !isLimit,
+            triggerPx: trigger,
+            tpsl: "tp",
+          },
+        }),
+      );
+    }
+  }
+  if (input.tpsl.stopLoss) {
+    const trigger = priceToWire(Number(input.tpsl.stopLoss), input.szDecimals);
+    const isLimit = input.tpsl.slOrderType === "Limit";
+    const rest = priceToWire(
+      Number(input.tpsl.slLimitPrice ?? input.tpsl.stopLoss),
+      input.szDecimals,
+    );
+    if (trigger && rest) {
+      orders.push(
+        orderWire({
+          asset: input.asset,
+          isBuy: input.closeIsBuy,
+          price: rest,
+          size: input.size,
+          reduceOnly: true,
+          trigger: {
+            isMarket: !isLimit,
+            triggerPx: trigger,
+            tpsl: "sl",
+          },
+        }),
+      );
+    }
+  }
+  return orders;
+}
+
 export async function placeHyperliquidMarket(input: {
   environmentId: string;
   agentKey: string;
@@ -99,6 +161,13 @@ export async function placeHyperliquidMarket(input: {
     return { ok: false, error: "Could not read a Hyperliquid mark." };
   }
   const cloid = cloidFromIdempotency(input.orderLinkId);
+  const tpslOrders = hyperliquidTpslWires({
+    asset: asset.index,
+    closeIsBuy: !isBuy,
+    size,
+    szDecimals: asset.szDecimals,
+    tpsl: input.tpsl,
+  });
   const orders = [
     orderWire({
       asset: asset.index,
@@ -109,41 +178,12 @@ export async function placeHyperliquidMarket(input: {
       tif: "Ioc",
       cloid,
     }),
+    ...tpslOrders,
   ];
-  const tp = input.tpsl?.takeProfit
-    ? priceToWire(Number(input.tpsl.takeProfit), asset.szDecimals)
-    : null;
-  const sl = input.tpsl?.stopLoss
-    ? priceToWire(Number(input.tpsl.stopLoss), asset.szDecimals)
-    : null;
-  if (tp) {
-    orders.push(
-      orderWire({
-        asset: asset.index,
-        isBuy: !isBuy,
-        price: tp,
-        size,
-        reduceOnly: true,
-        trigger: { isMarket: true, triggerPx: tp, tpsl: "tp" },
-      }),
-    );
-  }
-  if (sl) {
-    orders.push(
-      orderWire({
-        asset: asset.index,
-        isBuy: !isBuy,
-        price: sl,
-        size,
-        reduceOnly: true,
-        trigger: { isMarket: true, triggerPx: sl, tpsl: "sl" },
-      }),
-    );
-  }
   const posted = await postHyperliquidAction({
     environmentId: input.environmentId,
     agentKey: input.agentKey,
-    action: orderAction(orders, tp || sl ? "normalTpsl" : "na"),
+    action: orderAction(orders, tpslOrders.length > 0 ? "normalTpsl" : "na"),
   });
   if (!posted.ok) {
     return posted;
@@ -194,20 +234,32 @@ export async function placeHyperliquidLimit(input: {
     return { ok: false, error: "Limit price or size is not valid." };
   }
   const cloid = cloidFromIdempotency(input.orderLinkId);
+  const isBuy = input.side === "Buy";
+  const tpslOrders = hyperliquidTpslWires({
+    asset: asset.index,
+    closeIsBuy: !isBuy,
+    size,
+    szDecimals: asset.szDecimals,
+    tpsl: input.tpsl,
+  });
   const posted = await postHyperliquidAction({
     environmentId: input.environmentId,
     agentKey: input.agentKey,
-    action: orderAction([
-      orderWire({
-        asset: asset.index,
-        isBuy: input.side === "Buy",
-        price,
-        size,
-        reduceOnly: input.reduceOnly,
-        tif: "Gtc",
-        cloid,
-      }),
-    ]),
+    action: orderAction(
+      [
+        orderWire({
+          asset: asset.index,
+          isBuy,
+          price,
+          size,
+          reduceOnly: input.reduceOnly,
+          tif: "Gtc",
+          cloid,
+        }),
+        ...tpslOrders,
+      ],
+      tpslOrders.length > 0 ? "normalTpsl" : "na",
+    ),
   });
   if (!posted.ok) {
     return posted;
@@ -415,6 +467,10 @@ export async function setHyperliquidTradingStop(input: {
   symbol: string;
   takeProfit: string;
   stopLoss: string;
+  tpOrderType?: "Market" | "Limit";
+  slOrderType?: "Market" | "Limit";
+  tpLimitPrice?: string;
+  slLimitPrice?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const asset = await findHyperliquidAsset(input.environmentId, input.symbol);
   if (!asset) {
@@ -434,37 +490,20 @@ export async function setHyperliquidTradingStop(input: {
     return { ok: false, error: "Position size is too small." };
   }
   const isBuy = row.size < 0;
-  const orders = [];
-  const tp = input.takeProfit
-    ? priceToWire(Number(input.takeProfit), asset.szDecimals)
-    : null;
-  const sl = input.stopLoss
-    ? priceToWire(Number(input.stopLoss), asset.szDecimals)
-    : null;
-  if (tp) {
-    orders.push(
-      orderWire({
-        asset: asset.index,
-        isBuy,
-        price: tp,
-        size,
-        reduceOnly: true,
-        trigger: { isMarket: true, triggerPx: tp, tpsl: "tp" },
-      }),
-    );
-  }
-  if (sl) {
-    orders.push(
-      orderWire({
-        asset: asset.index,
-        isBuy,
-        price: sl,
-        size,
-        reduceOnly: true,
-        trigger: { isMarket: true, triggerPx: sl, tpsl: "sl" },
-      }),
-    );
-  }
+  const orders = hyperliquidTpslWires({
+    asset: asset.index,
+    closeIsBuy: isBuy,
+    size,
+    szDecimals: asset.szDecimals,
+    tpsl: {
+      takeProfit: input.takeProfit,
+      stopLoss: input.stopLoss,
+      tpOrderType: input.tpOrderType,
+      slOrderType: input.slOrderType,
+      tpLimitPrice: input.tpLimitPrice,
+      slLimitPrice: input.slLimitPrice,
+    },
+  });
   if (orders.length === 0) {
     return { ok: false, error: "Enter a take profit or stop loss." };
   }

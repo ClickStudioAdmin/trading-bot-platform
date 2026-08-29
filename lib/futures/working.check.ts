@@ -201,6 +201,15 @@ assert.equal(closeLimit.reduceOnly, true);
 assert.equal(closeLimit.positionId, "p1");
 assert.equal(workingActionLabel(closeLimit.action, closeLimit.reduceOnly), "Close");
 assert.equal(workingTypeLabel(closeLimit), "Close");
+assert.equal(
+  workingTypeLabel({
+    reduceOnly: true,
+    idempotencyKey: null,
+    takeProfit: 80000,
+    stopLoss: null,
+  }),
+  "Take Profit",
+);
 assert.equal(workingSideLabel(closeLimit.action), "Sell");
 assert.equal(workingActionLabel("buy"), "Buy");
 assert.equal(

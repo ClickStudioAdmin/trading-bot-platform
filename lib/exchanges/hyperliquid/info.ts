@@ -214,52 +214,77 @@ export async function loadHyperliquidUserState(input: {
   };
 }
 
+export type HyperliquidOpenOrder = {
+  oid: number;
+  coin: string;
+  side: "B" | "A";
+  sz: number;
+  limitPx: number;
+  cloid: string | null;
+  reduceOnly: boolean;
+  isTrigger: boolean;
+  triggerPx: number | null;
+  tpsl: "tp" | "sl" | null;
+  orderType: string;
+};
+
+export function parseHyperliquidOpenOrder(
+  raw: unknown,
+): HyperliquidOpenOrder | null {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    return null;
+  }
+  const row = raw as {
+    oid?: unknown;
+    coin?: unknown;
+    side?: unknown;
+    sz?: unknown;
+    limitPx?: unknown;
+    cloid?: unknown;
+    reduceOnly?: unknown;
+    isTrigger?: unknown;
+    triggerPx?: unknown;
+    tpsl?: unknown;
+    orderType?: unknown;
+  };
+  const oid = asNumber(row.oid);
+  const coin = String(row.coin ?? "").trim();
+  const sz = asNumber(row.sz);
+  const triggerPx = asNumber(row.triggerPx);
+  const limitPx = asNumber(row.limitPx) ?? triggerPx;
+  if (oid === null || !coin || sz === null || limitPx === null) {
+    return null;
+  }
+  const tpslRaw = String(row.tpsl ?? "").trim().toLowerCase();
+  return {
+    oid,
+    coin,
+    side: row.side === "B" ? "B" : "A",
+    sz,
+    limitPx,
+    cloid: row.cloid ? String(row.cloid) : null,
+    reduceOnly: Boolean(row.reduceOnly) || Boolean(row.isTrigger),
+    isTrigger: Boolean(row.isTrigger) || tpslRaw === "tp" || tpslRaw === "sl",
+    triggerPx,
+    tpsl: tpslRaw === "tp" || tpslRaw === "sl" ? tpslRaw : null,
+    orderType: String(row.orderType ?? ""),
+  };
+}
+
 export async function loadHyperliquidOpenOrders(input: {
   environmentId: string;
   accountAddress: string;
-}): Promise<
-  Array<{
-    oid: number;
-    coin: string;
-    side: "B" | "A";
-    sz: number;
-    limitPx: number;
-    cloid: string | null;
-  }>
-> {
-  const raw = (await postInfo(input.environmentId, {
+}): Promise<HyperliquidOpenOrder[]> {
+  const raw = await postInfo(input.environmentId, {
     type: "frontendOpenOrders",
     user: input.accountAddress,
-  })) as Array<{
-    oid?: number;
-    coin?: string;
-    side?: string;
-    sz?: string;
-    limitPx?: string;
-    cloid?: string;
-  }>;
+  });
   if (!Array.isArray(raw)) {
     return [];
   }
   return raw
-    .map((row) => {
-      const oid = asNumber(row.oid);
-      const coin = String(row.coin ?? "").trim();
-      const sz = asNumber(row.sz);
-      const limitPx = asNumber(row.limitPx);
-      if (oid === null || !coin || sz === null || limitPx === null) {
-        return null;
-      }
-      return {
-        oid,
-        coin,
-        side: row.side === "B" ? ("B" as const) : ("A" as const),
-        sz,
-        limitPx,
-        cloid: row.cloid ? String(row.cloid) : null,
-      };
-    })
-    .filter((row): row is NonNullable<typeof row> => row !== null);
+    .map((row) => parseHyperliquidOpenOrder(row))
+    .filter((row): row is HyperliquidOpenOrder => row !== null);
 }
 
 export type HyperliquidOrderStatus = {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { hyperliquidTpslWires } from "./orders";
 import {
   cloidFromIdempotency,
   floatToWire,
@@ -35,5 +36,23 @@ const wire = orderWire({
 });
 assert.deepEqual(Object.keys(wire), ["a", "b", "p", "s", "r", "t"]);
 assert.deepEqual(orderAction([wire]).grouping, "na");
+
+const [tpLimit] = hyperliquidTpslWires({
+  asset: 3,
+  closeIsBuy: false,
+  size: "0.2",
+  szDecimals: 5,
+  tpsl: {
+    takeProfit: "80000",
+    tpOrderType: "Limit",
+    tpLimitPrice: "80100",
+  },
+});
+assert.ok(tpLimit && "trigger" in tpLimit.t);
+if (tpLimit && "trigger" in tpLimit.t) {
+  assert.equal(tpLimit.t.trigger.isMarket, false);
+  assert.equal(tpLimit.t.trigger.triggerPx, "80000");
+  assert.equal(tpLimit.p, "80100");
+}
 
 console.log("hyperliquid wire checks passed");

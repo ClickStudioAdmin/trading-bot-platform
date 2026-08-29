@@ -31,6 +31,7 @@ export function FuturesWorkingOrders({
   webhookNames = [],
   emptyMessage,
   playbookOwnsOrders = false,
+  exchangeName = "Bybit",
 }: {
   signedIn: boolean;
   working: FuturesWorkingOrder[];
@@ -40,6 +41,7 @@ export function FuturesWorkingOrders({
   webhookNames?: readonly string[];
   emptyMessage?: ReactNode;
   playbookOwnsOrders?: boolean;
+  exchangeName?: string;
 }) {
   const showOrderMeta = !playbookOwnsOrders;
   const colSpan = showOrderMeta ? 11 : 8;
@@ -53,10 +55,10 @@ export function FuturesWorkingOrders({
           <p className="text-sm text-ink-muted">
             {playbookOwnsOrders
               ? exchangeBook
-                ? "Working bot limits on Bybit. Fills appear on the position when they match. Stop adding or Close bot on Positions or Automations."
+                ? `Working bot limits on ${exchangeName}. Fills appear on the position when they match. Stop adding or Close bot on Positions or Automations.`
                 : "Working bot limits. They fill when mark crosses the limit. Stop adding or Close bot on Positions or Automations."
               : exchangeBook
-                ? "Working limits on Bybit. Fills appear on the position when they match. Edit remaining qty or limit. Cancel removes the rest."
+                ? `Working limits and take-profit / stop-loss triggers on ${exchangeName}. Fills appear on the position when they match. Edit remaining qty or limit. Cancel removes the rest.`
                 : "Working paper limits. They fill when mark crosses the limit. Edit remaining qty or limit. Cancel drops the rest."}
           </p>
         </div>

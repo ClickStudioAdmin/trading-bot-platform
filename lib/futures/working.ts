@@ -247,6 +247,8 @@ export function workingSideLabel(action: "buy" | "sell"): "Buy" | "Sell" {
 export function workingTypeLabel(row: {
   reduceOnly: boolean;
   idempotencyKey: string | null;
+  takeProfit?: number | null;
+  stopLoss?: number | null;
 }): string {
   const clipIndex = parseDcaClipIndex(row.idempotencyKey);
   if (clipIndex !== null) {
@@ -257,6 +259,12 @@ export function workingTypeLabel(row: {
     return "Take Profit";
   }
   if (exitKind === "sl") {
+    return "Stop Loss";
+  }
+  if (row.reduceOnly && row.takeProfit != null && row.stopLoss == null) {
+    return "Take Profit";
+  }
+  if (row.reduceOnly && row.stopLoss != null && row.takeProfit == null) {
     return "Stop Loss";
   }
   if (row.reduceOnly) {

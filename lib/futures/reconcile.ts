@@ -45,6 +45,7 @@ import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { loadDeskTicker, loadDeskTickerMap } from "@/lib/market/desk-tickers";
 import { loadDeskVenueContext } from "@/lib/venues/hyperliquid/desk";
+import { syncHyperliquidWorkingOrders } from "@/lib/venues/hyperliquid/working-sync";
 import { writeEventLog } from "@/lib/logs/write";
 import { hedgePositionIdx } from "./decide";
 import { markFromTicker } from "./math";
@@ -103,13 +104,49 @@ async function paperTickerForAccount(
 export async function reconcileOpenFuturesBooks(
   input?: ReconcileBooksInput,
 ): Promise<number> {
+  const synced = await syncLiveHyperliquidWorking(input);
   const filled = await reconcileOpenFuturesWorkingOrders(input);
   if (input?.workingId) {
-    return filled;
+    return synced + filled;
   }
   const closed = await reconcileOpenFuturesStops(input);
   const matched = await reconcileOpenFuturesVenuePositions(input);
-  return filled + closed + matched;
+  return synced + filled + closed + matched;
+}
+
+async function syncLiveHyperliquidWorking(
+  input?: ReconcileBooksInput,
+): Promise<number> {
+  if (!input?.accountId || !input.userId) {
+    return 0;
+  }
+  const desk = await loadDeskVenueContext(input.accountId);
+  if (desk.venue !== "hyperliquid") {
+    return 0;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return 0;
+  }
+  const connections = new Map<
+    string,
+    BoundConnectionSecrets | null | undefined
+  >();
+  const live = await connectionForAccount({
+    supabase,
+    accountId: input.accountId,
+    userId: input.userId,
+    connections,
+  });
+  if (!live) {
+    return 0;
+  }
+  return syncHyperliquidWorkingOrders({
+    supabase,
+    accountId: input.accountId,
+    userId: input.userId,
+    connection: live,
+  });
 }
 
 export async function reconcileOpenFuturesWorkingOrders(

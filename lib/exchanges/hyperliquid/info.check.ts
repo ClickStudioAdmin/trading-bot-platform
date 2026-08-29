@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parseHyperliquidOrderStatus } from "./info";
+import { parseHyperliquidOpenOrder, parseHyperliquidOrderStatus } from "./info";
 
 const nested = parseHyperliquidOrderStatus({
   status: "order",
@@ -37,6 +37,23 @@ const flat = parseHyperliquidOrderStatus({
 });
 assert.equal(flat?.oid, 3);
 assert.equal(flat?.filledSz, 1);
+
+const tpLimit = parseHyperliquidOpenOrder({
+  oid: 77,
+  coin: "BTC",
+  side: "A",
+  sz: "0.2",
+  limitPx: "80100",
+  triggerPx: "80000",
+  reduceOnly: true,
+  isTrigger: true,
+  tpsl: "tp",
+  orderType: "Take Profit Limit",
+});
+assert.equal(tpLimit?.oid, 77);
+assert.equal(tpLimit?.tpsl, "tp");
+assert.equal(tpLimit?.limitPx, 80100);
+assert.equal(tpLimit?.triggerPx, 80000);
 
 assert.equal(parseHyperliquidOrderStatus({ status: "unknownOid" }), null);
 assert.equal(parseHyperliquidOrderStatus(null), null);
