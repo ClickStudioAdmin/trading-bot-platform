@@ -7,5 +7,5 @@ assert.equal(pathSkipsOnboarding("/sign-in"), true);
 assert.equal(pathSkipsOnboarding("/api/tick"), true);
 assert.equal(pathSkipsOnboarding("/account"), false);
 assert.equal(pathSkipsOnboarding("/strategies"), false);
-assert.equal(pathSkipsOnboarding("/"), false);
+assert.equal(pathSkipsOnboarding("/"), true);
 assert.equal(pathSkipsOnboarding(""), false);

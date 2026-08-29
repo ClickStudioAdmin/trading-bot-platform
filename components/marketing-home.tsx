@@ -47,7 +47,10 @@ const STEPS = [
   },
 ];
 
-export function MarketingHome() {
+export function MarketingHome({ appHref = null }: { appHref?: string | null }) {
+  const primaryHref = appHref ?? "/sign-in";
+  const primaryLabel = appHref ? "Go to App" : "Sign in";
+
   return (
     <main>
       <section className="border-b border-line bg-surface">
@@ -65,10 +68,10 @@ export function MarketingHome() {
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
-              href="/sign-in"
+              href={primaryHref}
               className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
             >
-              Sign in
+              {primaryLabel}
             </Link>
             <Link
               href="#desks"
@@ -149,10 +152,10 @@ export function MarketingHome() {
             secrets never go to the browser.
           </p>
           <Link
-            href="/sign-in"
+            href={primaryHref}
             className="mt-6 inline-flex rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
-            Sign in to the desk
+            {appHref ? "Go to App" : "Sign in to the desk"}
           </Link>
         </div>
       </section>
