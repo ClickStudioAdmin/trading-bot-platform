@@ -5,6 +5,7 @@ import {
   paginatePairRows,
   pairPageHref,
   pairPageLabel,
+  rankLinearPerps,
   sortByMarketCap,
 } from "@/lib/pairs/page";
 
@@ -38,6 +39,36 @@ const ranked = sortByMarketCap(
 assert.deepEqual(
   ranked.map((row) => row.symbol),
   ["BTCUSDT", "ETHUSDT", "ETHUSDT-26SEP26", "AAAUSDT"],
+);
+assert.deepEqual(
+  rankLinearPerps(
+    [
+      {
+        symbol: "AAAUSDT",
+        baseCoin: "AAA",
+        quoteCoin: "USDT",
+        minQty: 1,
+        maxQty: 1,
+        maxMktQty: 1,
+        minNotional: 0,
+        minPrice: 0,
+        tickSize: 0.01,
+      },
+      {
+        symbol: "BTCUSDT",
+        baseCoin: "BTC",
+        quoteCoin: "USDT",
+        minQty: 1,
+        maxQty: 1,
+        maxMktQty: 1,
+        minNotional: 0,
+        minPrice: 0,
+        tickSize: 0.01,
+      },
+    ],
+    caps,
+  ).map((row) => row.symbol),
+  ["BTCUSDT", "AAAUSDT"],
 );
 
 const many = Array.from({ length: 51 }, (_, index) => index);

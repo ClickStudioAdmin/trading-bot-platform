@@ -1,4 +1,6 @@
 import { pathWithDesk, withQuery } from "@/lib/accounts/model";
+import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
+import { loadMarketCaps } from "@/lib/market/caps";
 import type { PairFilters } from "@/lib/pairs/filter";
 
 export const PAIRS_PAGE_SIZE = 50;
@@ -25,6 +27,28 @@ export function sortByMarketCap<T>(
     }
     return tieBreak(left, right);
   });
+}
+
+export function rankLinearPerps(
+  pairs: readonly LinearPerp[],
+  caps: ReadonlyMap<string, number>,
+): LinearPerp[] {
+  return sortByMarketCap(
+    pairs,
+    (pair) => caps.get(pair.baseCoin) ?? null,
+    (left, right) =>
+      left.baseCoin.localeCompare(right.baseCoin) ||
+      left.symbol.localeCompare(right.symbol),
+  );
+}
+
+export async function withMarketCapRank(
+  pairs: readonly LinearPerp[],
+): Promise<LinearPerp[]> {
+  if (pairs.length === 0) {
+    return [];
+  }
+  return rankLinearPerps(pairs, await loadMarketCaps());
 }
 
 export function paginatePairRows<T>(
