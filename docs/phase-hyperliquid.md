@@ -1,6 +1,6 @@
 # Hyperliquid venue
 
-Plan. **Roadmap 2** after Fly.io ([roadmap.md](roadmap.md)). **Not MEXC** (roadmap 16). Do not implement until Click starts this item.
+**Roadmap 2.** Started 29 Aug 2026. **Not MEXC** (roadmap 16). Fly.io is parked. Bybit desks stay Bybit.
 
 Bybit desks stay Bybit. Hyperliquid is a **second venue-locked desk**, not a flag inside the existing Perps/DCA pages. Internal **venue capabilities** say what each exchange can do. The next CEX (MEXC) is another capability row + adapter + page module — not another rewrite of Bybit.
 
@@ -12,7 +12,7 @@ Create Perps, DCA, or TradingView Strategy desks whose **exchange is Hyperliquid
 
 ## Status
 
-Plan only. Locked as roadmap 2. Do not implement until Fly.io (roadmap 1) is in place and Click says go. Do not start step 1 until then.
+Started 29 Aug 2026. Step 1 in progress: capabilities + desk columns. Stop after each step until Click says go. Do not start the adapter (step 2) until then.
 
 ## How this scales
 
@@ -156,7 +156,7 @@ Stop after each step until Click says go. Do not start MEXC in this phase.
 
 | # | Step | Who | Done when |
 | --- | --- | --- | --- |
-| 1 | Capabilities + desk columns | Agent | Venue registry lists Bybit and Hyperliquid parameters (desk types, hedge vs one-way, quote, symbols, auth fields, Demo host). Migration adds immutable `venue` and `venue_environment` on `trading_accounts`. Existing desks are `bybit`. Create Desk: type × exchange. Hyperliquid offers Paper / **Demo (Testnet)** / Live. Bybit create path unchanged. Bind must match venue + environment. Checks pass. |
+| 1 | Capabilities + desk columns | Agent | Venue registry lists Bybit and Hyperliquid parameters (desk types, hedge vs one-way, quote, symbols, auth fields, Demo host). Migration adds immutable `venue` and `venue_environment` on `trading_accounts`. Existing desks are `bybit`. Create Desk: type × exchange. Hyperliquid offers Paper / **Demo (Testnet)** / Live. Bybit create path unchanged. Bind must match venue + environment. Checks pass. **In repo 29 Aug 2026.** Push `develop` to migrate. |
 | 2 | Adapter (Testnet first) | Agent | `lib/exchanges/hyperliquid/`: public meta, tickers, candles, user state; signed `/exchange` on Testnet; verify rejects master keys. Dispatcher only in `execute.ts`. No edits inside Bybit UI. |
 | 3 | Exchanges | Agent | `/account/exchanges` is registry-driven. Hyperliquid fields: account address + agent key. Demo saves against Testnet, Live against mainnet. Fingerprint is agent last 4. Secret never returns to the browser. |
 | 4 | Hyperliquid desk module | Agent | Separate Perps / DCA / TV Strategy pages and commands. One-way blotter. No Both. Bybit pages untouched. Connected HL desk binds only a matching Demo or Live HL connection. Place / close / GTC / cancel / Close All through the HL adapter. |

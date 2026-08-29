@@ -23,6 +23,7 @@ import { verifyExchangeCredentials } from "@/lib/exchanges/verify";
 import {
   parseVenueCredentials,
   parseVenueEnvironment,
+  parseConnectionVenueId,
   parseVenueId,
 } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
@@ -43,7 +44,7 @@ export async function saveExchangeConnection(formData: FormData) {
     fail("Exchange credentials key is not configured on this environment.");
   }
 
-  const venue = parseVenueId(formData.get("venue"));
+  const venue = parseConnectionVenueId(formData.get("venue"));
   if (!venue.ok) {
     fail(venue.error);
   }

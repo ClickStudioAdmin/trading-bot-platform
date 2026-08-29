@@ -16,7 +16,10 @@ import {
   listConnectionDeskBinds,
   listExchangeConnections,
 } from "@/lib/exchanges/store";
-import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import {
+  accountCanHoldConnections,
+  connectionsForDeskBind,
+} from "@/lib/exchanges/venues";
 import { usableBookShareToInput } from "@/lib/opportunities/capacity";
 import { firstSearchValue } from "@/lib/paper/open";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -86,7 +89,11 @@ export default async function CashAndCarrySettingsPage({
       >
         {live ? (
           <ExchangeBindField
-            connections={connections}
+            connections={connectionsForDeskBind(
+              connections,
+              session.account,
+              settings.connectionId,
+            )}
             selectedId={settings.connectionId}
             selected={selected}
             detachBlocked={detachBlocked}
@@ -130,7 +137,7 @@ function ExchangeBindField({
       <div>
         <p className="text-sm text-ink">Exchange</p>
         <p className="mt-1 text-sm text-ink-muted">
-          Add a key on this login first.{" "}
+          No matching key on this login.{" "}
           <Link
             href="/account/exchanges"
             className="text-accent hover:text-accent-strong"

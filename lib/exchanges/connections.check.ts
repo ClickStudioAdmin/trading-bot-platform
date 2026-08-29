@@ -44,6 +44,11 @@ assert.equal(formatEnvironmentLabel("bybit", "demo"), "Demo");
 assert.equal(formatEnvironmentLabel("bybit", "live"), "Live");
 assert.equal(formatEnvironmentLabel("bybit", "production"), "Live");
 assert.equal(formatEnvironmentLabel("bybit", "mainnet"), "Live");
+assert.equal(
+  formatEnvironmentLabel("hyperliquid", "demo"),
+  "Demo (Hyperliquid Testnet)",
+);
+assert.equal(formatVenueLabel("hyperliquid"), "Hyperliquid");
 
 assert.equal(parseBoundConnectionId(""), null);
 assert.equal(parseBoundConnectionId("none"), null);

@@ -12,6 +12,11 @@ import {
 import { memberDisplayName } from "@/lib/members/sync";
 import { parseAutomationMode } from "@/lib/engine/decide";
 import { selectPaperEngineSettings } from "@/lib/engine/settings";
+import {
+  connectionFitsDesk,
+  parseStoredVenueEnvironment,
+} from "@/lib/exchanges/venues";
+import { listExchangeConnections } from "@/lib/exchanges/store";
 import { listFuturesConnectionIds } from "@/lib/futures/settings";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -105,6 +110,7 @@ export async function insertTradingAccount(
   name: string,
   mode: TradingAccountMode,
   deskType: DeskType,
+  options: { venue?: string; venueEnvironment?: string | null } = {},
 ): Promise<TradingAccount | null> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -117,6 +123,8 @@ export async function insertTradingAccount(
       name,
       mode,
       desk_type: deskType,
+      venue: options.venue ?? "bybit",
+      venue_environment: options.venueEnvironment ?? null,
     })
     .select("*")
     .single();
@@ -132,15 +140,75 @@ export async function insertTradingAccount(
   return account;
 }
 
+export async function applyDeskBindRules(input: {
+  userId: string;
+  account: {
+    id: string;
+    venue: string;
+    venueEnvironment: string | null;
+  };
+  connectionId: string;
+}): Promise<{ error: string | null }> {
+  const connections = await listExchangeConnections(input.userId);
+  const match = connections.find((item) => item.id === input.connectionId);
+  if (!match) {
+    return { error: "Pick an exchange key saved on this login." };
+  }
+  const fit = connectionFitsDesk({
+    deskVenue: input.account.venue,
+    deskEnvironment: input.account.venueEnvironment,
+    connectionVenue: match.venue,
+    connectionEnvironment: match.environment,
+  });
+  if (!fit.ok) {
+    return { error: fit.error };
+  }
+  if (input.account.venueEnvironment || match.status !== "active") {
+    return { error: null };
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { error: "Auth is not configured." };
+  }
+  const locked = parseStoredVenueEnvironment(
+    input.account.venue,
+    match.environment,
+  );
+  if (!locked) {
+    return { error: null };
+  }
+  const { error } = await supabase
+    .from("trading_accounts")
+    .update({ venue_environment: locked })
+    .eq("id", input.account.id)
+    .eq("user_id", input.userId)
+    .is("venue_environment", null);
+  return { error: error?.message ?? null };
+}
+
 export async function bindConnectionToDesk(input: {
   userId: string;
   accountId: string;
   deskType: DeskType;
   connectionId: string;
+  venue?: string;
+  venueEnvironment?: string | null;
 }): Promise<{ error: string | null }> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { error: "Auth is not configured." };
+  }
+  const bound = await applyDeskBindRules({
+    userId: input.userId,
+    account: {
+      id: input.accountId,
+      venue: input.venue ?? "bybit",
+      venueEnvironment: input.venueEnvironment ?? null,
+    },
+    connectionId: input.connectionId,
+  });
+  if (bound.error) {
+    return bound;
   }
   const now = new Date().toISOString();
   if (input.deskType === "cash_and_carry") {

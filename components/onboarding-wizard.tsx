@@ -70,8 +70,7 @@ export function OnboardingWizard({
             Create your first desk
           </h1>
           <p className="mt-3 text-sm text-ink-muted">
-            Name it, pick a type, and choose Paper Trading or Connected
-            Exchange.
+            Name it, pick a type and exchange, then Paper, Demo, or Live.
           </p>
           {error ? (
             <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

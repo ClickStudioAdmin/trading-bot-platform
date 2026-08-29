@@ -45,6 +45,7 @@ import {
   commitDeskRename,
   readDeskNameFromSettingsForm,
 } from "@/lib/accounts/actions";
+import { applyDeskBindRules } from "@/lib/accounts/store";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
@@ -283,6 +284,15 @@ export async function saveFuturesSettings(formData: FormData) {
         settingsFail(account.id, "Pick an exchange key saved on this login.");
       } else if (match.status !== "active" && match.id !== current.connectionId) {
         settingsFail(account.id, "That connection is not active.");
+      } else {
+        const bound = await applyDeskBindRules({
+          userId: user.id,
+          account,
+          connectionId,
+        });
+        if (bound.error) {
+          settingsFail(account.id, bound.error);
+        }
       }
     }
   }

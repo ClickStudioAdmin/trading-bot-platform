@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -8,6 +8,7 @@ import { createTradingAccount } from "@/lib/accounts/actions";
 import {
   formatAccountModeChoice,
   formatDeskTypeChoice,
+  type DeskType,
   validateNewDeskName,
 } from "@/lib/accounts/model";
 import {
@@ -15,10 +16,21 @@ import {
   sharedKeyWarningKind,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
+import {
+  connectionsForDeskBind,
+  venuesForDeskType,
+} from "@/lib/exchanges/venues";
 import { SharedKeyWarning } from "@/components/shared-key-warning";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+
+const DESK_TYPES: DeskType[] = [
+  "cash_and_carry",
+  "perps",
+  "signal_follower",
+  "dca",
+];
 
 export function CreateAccountForm({
   connections,
@@ -37,11 +49,29 @@ export function CreateAccountForm({
   firstDesk?: boolean;
   onCancel?: () => void;
 }) {
+  const [deskType, setDeskType] = useState<DeskType>("cash_and_carry");
+  const [venue, setVenue] = useState("bybit");
   const [mode, setMode] = useState<"paper" | "live">("paper");
+  const [track, setTrack] = useState<"paper" | "testnet" | "live">("testnet");
   const [bindChoice, setBindChoice] = useState<"later" | "existing">("later");
   const [connectionId, setConnectionId] = useState("");
   const [name, setName] = useState("");
-  const liveKeys = connections.filter((row) => row.status === "active");
+  const venues = venuesForDeskType(deskType);
+  const hyperliquid = venue === "hyperliquid";
+  const connected = hyperliquid ? track !== "paper" : mode === "live";
+  const deskEnvironment = hyperliquid
+    ? track === "paper"
+      ? null
+      : track
+    : null;
+  const liveKeys = useMemo(
+    () =>
+      connectionsForDeskBind(
+        connections.filter((row) => row.status === "active"),
+        { venue, venueEnvironment: deskEnvironment },
+      ),
+    [connections, deskEnvironment, venue],
+  );
   const pathname = usePathname();
   const warningKind =
     bindChoice === "existing"
@@ -67,6 +97,11 @@ export function CreateAccountForm({
       return;
     }
     stampStayPath(event);
+  }
+
+  function resetBind() {
+    setBindChoice("later");
+    setConnectionId("");
   }
 
   return (
@@ -112,39 +147,93 @@ export function CreateAccountForm({
         Type
         <select
           name="deskType"
-          defaultValue="cash_and_carry"
-          className={fieldClass}
-        >
-          <option value="cash_and_carry">
-            {formatDeskTypeChoice("cash_and_carry")}
-          </option>
-          <option value="perps">{formatDeskTypeChoice("perps")}</option>
-          <option value="signal_follower">
-            {formatDeskTypeChoice("signal_follower")}
-          </option>
-          <option value="dca">{formatDeskTypeChoice("dca")}</option>
-        </select>
-      </label>
-      <label className="block text-xs text-ink-muted">
-        Mode
-        <select
-          name="mode"
-          value={mode}
+          value={deskType}
           onChange={(event) => {
-            const nextMode = event.target.value === "live" ? "live" : "paper";
-            setMode(nextMode);
-            if (nextMode !== "live") {
-              setBindChoice("later");
-              setConnectionId("");
+            const nextType = event.target.value as DeskType;
+            setDeskType(nextType);
+            const nextVenues = venuesForDeskType(nextType);
+            if (!nextVenues.some((item) => item.id === venue)) {
+              setVenue(nextVenues[0]?.id ?? "bybit");
+              setTrack("testnet");
+              resetBind();
             }
           }}
           className={fieldClass}
         >
-          <option value="paper">{formatAccountModeChoice("paper")}</option>
-          <option value="live">{formatAccountModeChoice("live")}</option>
+          {DESK_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {formatDeskTypeChoice(type)}
+            </option>
+          ))}
         </select>
       </label>
-      {mode === "live" ? (
+      {venues.length > 1 ? (
+        <label className="block text-xs text-ink-muted">
+          Exchange
+          <select
+            name="venue"
+            value={venue}
+            onChange={(event) => {
+              const nextVenue = event.target.value;
+              setVenue(nextVenue);
+              if (nextVenue === "hyperliquid") {
+                setTrack("testnet");
+              } else {
+                setMode("paper");
+              }
+              resetBind();
+            }}
+            className={fieldClass}
+          >
+            {venues.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <input type="hidden" name="venue" value={venue} />
+      )}
+      {hyperliquid ? (
+        <label className="block text-xs text-ink-muted">
+          Track
+          <select
+            name="track"
+            value={track}
+            onChange={(event) => {
+              const nextTrack = event.target.value as typeof track;
+              setTrack(nextTrack);
+              resetBind();
+            }}
+            className={fieldClass}
+          >
+            <option value="paper">{formatAccountModeChoice("paper")}</option>
+            <option value="testnet">Demo (Hyperliquid Testnet)</option>
+            <option value="live">Live</option>
+          </select>
+        </label>
+      ) : (
+        <label className="block text-xs text-ink-muted">
+          Mode
+          <select
+            name="mode"
+            value={mode}
+            onChange={(event) => {
+              const nextMode = event.target.value === "live" ? "live" : "paper";
+              setMode(nextMode);
+              if (nextMode !== "live") {
+                resetBind();
+              }
+            }}
+            className={fieldClass}
+          >
+            <option value="paper">{formatAccountModeChoice("paper")}</option>
+            <option value="live">{formatAccountModeChoice("live")}</option>
+          </select>
+        </label>
+      )}
+      {connected ? (
         <div className="space-y-4">
           <label className="block text-xs text-ink-muted">
             Exchange Connection
@@ -189,20 +278,22 @@ export function CreateAccountForm({
               </label>
             ) : (
               <p className="text-sm text-ink-muted">
-                {firstDesk ? (
-                  "No connections on this login yet. Choose Bind Later — you can add a key after this desk is created."
-                ) : (
-                  <>
-                    No connections saved yet.{" "}
-                    <Link
-                      href="/account/exchanges"
-                      className="text-accent hover:text-accent-strong"
-                    >
-                      Add a connection on Exchanges
-                    </Link>{" "}
-                    first, or bind later in Desk Settings.
-                  </>
-                )}
+                {hyperliquid
+                  ? "Hyperliquid keys come in the next step. Choose Bind Later."
+                  : firstDesk
+                    ? "No connections on this login yet. Choose Bind Later — you can add a key after this desk is created."
+                    : (
+                      <>
+                        No matching connections saved yet.{" "}
+                        <Link
+                          href="/account/exchanges"
+                          className="text-accent hover:text-accent-strong"
+                        >
+                          Add a connection on Exchanges
+                        </Link>{" "}
+                        first, or bind later in Desk Settings.
+                      </>
+                    )}
               </p>
             )
           ) : null}
@@ -210,9 +301,9 @@ export function CreateAccountForm({
         </div>
       ) : null}
       <p className="text-sm text-ink-muted">
-        Paper Trading uses live market data and fills on the in-app ledger.
-        No real trades. Connected Exchange binds a key from this login (Bybit
-        Demo or production). Mode and type are set at create and never change.
+        Type and exchange are set at create and never change. Paper Trading
+        uses public marks and fills on the in-app ledger. Bybit Connected
+        binds a Demo or Live key. Hyperliquid Demo is Testnet, not Paper.
       </p>
       {embedded && !firstDesk ? (
         <label className="flex items-start gap-2 text-sm text-ink">

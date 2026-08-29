@@ -11,6 +11,7 @@ import {
   connectionIdsBoundToOtherDesks,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
+import { connectionsForDeskBind } from "@/lib/exchanges/venues";
 import {
   listConnectionDeskBinds,
   listExchangeConnections,
@@ -79,7 +80,7 @@ export default async function FuturesSettingsPage({
         <Link href={deskHref(FUTURES_PATHS.webhooks, session.account.id)} className="text-accent">
           Webhooks
         </Link>
-        . Bind the Bybit key this desk uses from this login.
+        . Bind a matching key from this login.
       </p>
       {error ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -98,7 +99,11 @@ export default async function FuturesSettingsPage({
       >
         {live ? (
           <ExchangeBindField
-            connections={connections}
+            connections={connectionsForDeskBind(
+              connections,
+              session.account,
+              settings.connectionId,
+            )}
             selectedId={settings.connectionId}
             selected={selected}
             detachBlocked={detachBlocked}
@@ -186,7 +191,7 @@ function ExchangeBindField({
       <div>
         <p className="text-sm text-ink">Exchange</p>
         <p className="mt-1 text-sm text-ink-muted">
-          Add a key on this login first.{" "}
+          No matching key on this login.{" "}
           <Link
             href="/account/exchanges"
             className="text-accent hover:text-accent-strong"

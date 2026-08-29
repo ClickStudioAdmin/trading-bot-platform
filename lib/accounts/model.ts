@@ -1,3 +1,12 @@
+import {
+  getVenue,
+  parseStoredVenueEnvironment,
+  parseStoredVenueId,
+  parseVenueEnvironment,
+  parseVenueId,
+  venueAllowsDeskType,
+} from "@/lib/exchanges/venues";
+
 export type TradingAccountMode = "paper" | "live";
 export type DeskType =
   | "cash_and_carry"
@@ -14,7 +23,16 @@ export type TradingAccount = {
   name: string;
   mode: TradingAccountMode;
   deskType: DeskType;
+  venue: string;
+  venueEnvironment: string | null;
   createdAtMs: number;
+};
+
+export type DeskCreateChoice = {
+  deskType: DeskType;
+  venue: string;
+  mode: TradingAccountMode;
+  venueEnvironment: string | null;
 };
 
 export function parseAccountMode(value: unknown): TradingAccountMode {
@@ -278,13 +296,78 @@ export function parseTradingAccountRow(
   row: Record<string, unknown>,
 ): TradingAccount {
   const created = new Date(String(row.created_at ?? "")).getTime();
+  const venue = parseStoredVenueId(row.venue);
   return {
     id: String(row.id),
     userId: String(row.user_id),
     name: String(row.name).trim(),
     mode: parseAccountMode(row.mode),
     deskType: parseDeskType(row.desk_type),
+    venue,
+    venueEnvironment: parseStoredVenueEnvironment(row.venue, row.venue_environment),
     createdAtMs: Number.isFinite(created) ? created : 0,
+  };
+}
+
+export function parseDeskCreateChoice(input: {
+  deskType: unknown;
+  venue: unknown;
+  mode: unknown;
+  track: unknown;
+}): { ok: true; value: DeskCreateChoice } | { ok: false; error: string } {
+  const typed = parseDeskTypeChoice(input.deskType);
+  if (!typed.ok) {
+    return typed;
+  }
+  const rawVenue = String(input.venue ?? "").trim();
+  const venue = parseVenueId(rawVenue || "bybit");
+  if (!venue.ok) {
+    return venue;
+  }
+  if (!venueAllowsDeskType(venue.venue, typed.deskType)) {
+    return {
+      ok: false,
+      error: `${venue.venue.label} cannot run ${formatDeskType(typed.deskType)}.`,
+    };
+  }
+  if (venue.venue.id === "hyperliquid") {
+    const track = String(input.track ?? "").trim() || "testnet";
+    if (track === "paper") {
+      return {
+        ok: true,
+        value: {
+          deskType: typed.deskType,
+          venue: venue.venue.id,
+          mode: "paper",
+          venueEnvironment: null,
+        },
+      };
+    }
+    const environment = parseVenueEnvironment(
+      venue.venue,
+      track === "live" ? "live" : "testnet",
+    );
+    if (!environment.ok) {
+      return environment;
+    }
+    return {
+      ok: true,
+      value: {
+        deskType: typed.deskType,
+        venue: venue.venue.id,
+        mode: "live",
+        venueEnvironment: environment.environment.id,
+      },
+    };
+  }
+  return {
+    ok: true,
+    value: {
+      deskType: typed.deskType,
+      venue: venue.venue.id,
+      mode: parseAccountMode(input.mode),
+      venueEnvironment: null,
+    },
   };
 }
 
@@ -300,6 +383,24 @@ export function pickSwitchAfterDelete(
 ): TradingAccount | null {
   const id = String(requestedId ?? "").trim();
   return remaining.find((account) => account.id === id) ?? pickDefaultAccount(remaining);
+}
+
+export function formatDeskVenueCaption(input: {
+  venue: string;
+  venueEnvironment: string | null;
+}): string {
+  const venue = getVenue(input.venue);
+  const name = venue?.label ?? input.venue;
+  if (!input.venueEnvironment) {
+    return name;
+  }
+  const environment = venue
+    ? parseVenueEnvironment(venue, input.venueEnvironment)
+    : null;
+  const envLabel = environment?.ok
+    ? environment.environment.label
+    : input.venueEnvironment;
+  return `${name} · ${envLabel}`;
 }
 
 export function formatAccountMode(mode: TradingAccountMode): string {

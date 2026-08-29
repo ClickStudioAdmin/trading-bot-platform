@@ -7,7 +7,7 @@ alwaysApply: true
 
 Read [docs/master-spec.md](docs/master-spec.md) and the current phase doc before changing code.
 
-Work only on the current phase. Phase 1 through Phase 11 are complete. See [docs/phase-11.md](docs/phase-11.md). Locked sequence: [docs/roadmap.md](docs/roadmap.md). Fly.io is accepted and parked ([docs/phase-fly.md](docs/phase-fly.md)). Do not start Hyperliquid until Click asks.
+Work only on the current phase. Phase 1 through Phase 11 are complete. See [docs/phase-11.md](docs/phase-11.md). Locked sequence: [docs/roadmap.md](docs/roadmap.md). Fly.io is accepted and parked ([docs/phase-fly.md](docs/phase-fly.md)). Hyperliquid is started ([docs/phase-hyperliquid.md](docs/phase-hyperliquid.md)). Stop after each Hyperliquid micro-step until Click says go. Do not start the adapter, MEXC, copy trading, or later items until Click asks.
 
 Feature work happens on `develop`. Merge to `main` only when the user is ready for production.
 

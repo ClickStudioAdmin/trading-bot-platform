@@ -8,7 +8,7 @@ import {
   type PaperLayerFormValues,
 } from "@/lib/engine/rules";
 import { loadPaperRules } from "@/lib/engine/load";
-import { loadAccountUsage } from "@/lib/accounts/store";
+import { applyDeskBindRules, loadAccountUsage } from "@/lib/accounts/store";
 import {
   deskPath,
   formatStrategyDetachBlockers,
@@ -276,6 +276,15 @@ export async function savePaperSettings(formData: FormData) {
         settingsFail(account.id, "Pick an exchange key saved on this login.");
       } else if (match.status !== "active" && match.id !== currentId) {
         settingsFail(account.id, "That connection is not active.");
+      } else {
+        const bound = await applyDeskBindRules({
+          userId: user.id,
+          account,
+          connectionId,
+        });
+        if (bound.error) {
+          settingsFail(account.id, bound.error);
+        }
       }
     }
   }

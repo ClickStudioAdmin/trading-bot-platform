@@ -9,6 +9,7 @@ import {
   strategyDetachBlockers,
   formatAccountMode,
   formatAccountModeChoice,
+  formatDeskVenueCaption,
   formatDeskType,
   formatDeskTypeChoice,
   deskHomePath,
@@ -34,6 +35,7 @@ import {
   parseDeskNameChange,
   DESK_NAME_TAKEN,
   parseAccountMode,
+  parseDeskCreateChoice,
   parseDeskType,
   parseDeskTypeChoice,
   parseTradingAccountRow,
@@ -46,6 +48,11 @@ assert.equal(DEFAULT_ACCOUNT_NAME, "Demo Account");
 assert.equal(parseAccountMode("live"), "live");
 assert.equal(parseAccountMode("paper"), "paper");
 assert.equal(parseAccountMode("other"), "paper");
+assert.equal(formatDeskVenueCaption({ venue: "bybit", venueEnvironment: null }), "Bybit");
+assert.equal(
+  formatDeskVenueCaption({ venue: "hyperliquid", venueEnvironment: "testnet" }),
+  "Hyperliquid · Demo (Hyperliquid Testnet)",
+);
 assert.equal(formatAccountMode("paper"), "Paper Trading");
 assert.equal(formatAccountMode("live"), "Connected Exchange");
 assert.equal(
@@ -208,15 +215,64 @@ const paper = parseTradingAccountRow({
   created_at: "2026-08-23T00:00:00.000Z",
 });
 assert.equal(paper.deskType, "cash_and_carry");
+assert.equal(paper.venue, "bybit");
+assert.equal(paper.venueEnvironment, null);
 const live = parseTradingAccountRow({
   id: "acc-2",
   user_id: "user-1",
   name: "Live",
   mode: "live",
   desk_type: "perps",
+  venue: "hyperliquid",
+  venue_environment: "demo",
   created_at: "2026-08-23T01:00:00.000Z",
 });
 assert.equal(live.deskType, "perps");
+assert.equal(live.venue, "hyperliquid");
+assert.equal(live.venueEnvironment, "testnet");
+
+const bybitCreate = parseDeskCreateChoice({
+  deskType: "perps",
+  venue: "bybit",
+  mode: "live",
+  track: "testnet",
+});
+assert.equal(bybitCreate.ok, true);
+if (bybitCreate.ok) {
+  assert.equal(bybitCreate.value.mode, "live");
+  assert.equal(bybitCreate.value.venueEnvironment, null);
+}
+const hlPaper = parseDeskCreateChoice({
+  deskType: "dca",
+  venue: "hyperliquid",
+  mode: "live",
+  track: "paper",
+});
+assert.equal(hlPaper.ok, true);
+if (hlPaper.ok) {
+  assert.equal(hlPaper.value.mode, "paper");
+  assert.equal(hlPaper.value.venueEnvironment, null);
+}
+const hlDemo = parseDeskCreateChoice({
+  deskType: "dca",
+  venue: "hyperliquid",
+  mode: "",
+  track: "",
+});
+assert.equal(hlDemo.ok, true);
+if (hlDemo.ok) {
+  assert.equal(hlDemo.value.mode, "live");
+  assert.equal(hlDemo.value.venueEnvironment, "testnet");
+}
+assert.equal(
+  parseDeskCreateChoice({
+    deskType: "cash_and_carry",
+    venue: "hyperliquid",
+    mode: "paper",
+    track: "paper",
+  }).ok,
+  false,
+);
 assert.equal(pickDefaultAccount([live, paper])?.id, "acc-1");
 assert.equal(pickDefaultAccount([live])?.id, "acc-2");
 assert.equal(pickDefaultAccount([]), null);

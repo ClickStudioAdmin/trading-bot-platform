@@ -9,6 +9,7 @@ import {
   formatAccountMode,
   formatAccountUsageStatus,
   formatDeskType,
+  formatDeskVenueCaption,
   formatDeleteBlockers,
   otherDeskNames,
   pickDefaultAccount,
@@ -106,6 +107,7 @@ export default async function ManageSubAccountsPage({
                   </p>
                   <p className="mt-1 text-xs text-ink-faint">
                     {formatDeskType(account.deskType)} ·{" "}
+                    {formatDeskVenueCaption(account)} ·{" "}
                     {formatAccountMode(account.mode)}
                     {usageStatus ? ` · ${usageStatus}` : null}
                   </p>

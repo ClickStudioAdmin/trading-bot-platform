@@ -13,7 +13,7 @@ Standing (unordered) desk-test and product notes: [click-list.md](click-list.md)
 | # | Item | Notes |
 | --- | --- | --- |
 | 1 | **Fly.io engine worker** | Accepted and parked 29 Aug 2026: [phase-fly.md](phase-fly.md). Per-desk Postgres leases; Fly Sydney; Vercel stays UI. |
-| 2 | **Second exchange: Hyperliquid** | Venue-locked desks, capabilities registry, adapter, UI module. Refine exchange rules and uniqueness (Bybit pages stay Bybit). Plan: [phase-hyperliquid.md](phase-hyperliquid.md). Starts after Fly.io so private calls can use the worker. |
+| 2 | **Second exchange: Hyperliquid** | Started 29 Aug 2026: [phase-hyperliquid.md](phase-hyperliquid.md). Venue-locked desks, capabilities registry, adapter, UI module. Bybit pages stay Bybit. |
 | 3 | **Copy trading** | Follow another account’s fills onto the member’s bound desk. Not a venue adapter. |
 | 4 | **Internal (and maybe external) webhooks; event-driven bot signals** | Trigger bots/trades from our own events as well as inbound webhooks. Example: DCA playbook reaches 5 opens → signal a Perps desk bot to open a hedge. This is the cross-desk hedge path; not a separate “hedged DCA” desk type unless Click adds one later. |
 | 5 | **Backup market data** | Consider failover when Bybit public klines fail (Binance/OKX public, then paid SLA if needed). Trading venue book stays truth for orders. |

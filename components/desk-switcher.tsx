@@ -9,6 +9,7 @@ import {
   deskHomePath,
   formatAccountMode,
   formatDeskType,
+  formatDeskVenueCaption,
   type TradingAccount,
 } from "@/lib/accounts/model";
 import type { ExchangeConnection } from "@/lib/exchanges/connections";
@@ -92,7 +93,7 @@ export function DeskSwitcher({
           </p>
           <div className="panel-scroll space-y-0.5">
             {desks.map((desk) => {
-              const meta = `${formatDeskType(desk.deskType)} · ${formatAccountMode(desk.mode)}`;
+              const meta = `${formatDeskType(desk.deskType)} · ${formatDeskVenueCaption(desk)} · ${formatAccountMode(desk.mode)}`;
               const currentDesk = desk.id === current.id;
               return (
                 <Link

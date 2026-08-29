@@ -8,8 +8,7 @@ import {
   renameTradingAccountRow,
 } from "@/lib/accounts/store";
 import {
-  parseAccountMode,
-  parseDeskTypeChoice,
+  parseDeskCreateChoice,
   pickSwitchAfterDelete,
   deskHomePath,
   validateNewDeskName,
@@ -19,6 +18,10 @@ import {
 } from "@/lib/accounts/model";
 import { parseBoundConnectionId } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
+import {
+  connectionFitsDesk,
+  parseStoredVenueEnvironment,
+} from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
 import { WELCOME_PATH } from "@/lib/auth/onboarding-path";
 import {
@@ -126,13 +129,19 @@ export async function createTradingAccount(formData: FormData) {
   if (!named.ok) {
     return fail(named.error);
   }
-  const typed = parseDeskTypeChoice(formData.get("deskType"));
-  if (!typed.ok) {
-    return fail(typed.error);
+  const createdChoice = parseDeskCreateChoice({
+    deskType: formData.get("deskType"),
+    venue: formData.get("venue"),
+    mode: formData.get("mode"),
+    track: formData.get("track"),
+  });
+  if (!createdChoice.ok) {
+    return fail(createdChoice.error);
   }
-  const mode = parseAccountMode(formData.get("mode"));
+  const choice = createdChoice.value;
   let connectionId: string | null = null;
-  if (mode === "live") {
+  let venueEnvironment = choice.venueEnvironment;
+  if (choice.mode === "live") {
     connectionId = parseBoundConnectionId(formData.get("exchangeConnectionId"));
     if (connectionId) {
       const connections = await listExchangeConnections(member.id);
@@ -140,13 +149,29 @@ export async function createTradingAccount(formData: FormData) {
       if (!match || match.status !== "active") {
         return fail("Pick an exchange key saved on this login.");
       }
+      const fit = connectionFitsDesk({
+        deskVenue: choice.venue,
+        deskEnvironment: venueEnvironment,
+        connectionVenue: match.venue,
+        connectionEnvironment: match.environment,
+      });
+      if (!fit.ok) {
+        return fail(fit.error);
+      }
+      if (!venueEnvironment) {
+        venueEnvironment = parseStoredVenueEnvironment(
+          choice.venue,
+          match.environment,
+        );
+      }
     }
   }
   const created = await insertTradingAccount(
     member.id,
     named.name,
-    mode,
-    typed.deskType,
+    choice.mode,
+    choice.deskType,
+    { venue: choice.venue, venueEnvironment },
   );
   if (!created) {
     return fail("Could not create that desk. The name may already be in use.");
@@ -155,8 +180,10 @@ export async function createTradingAccount(formData: FormData) {
     const bound = await bindConnectionToDesk({
       userId: member.id,
       accountId: created.id,
-      deskType: typed.deskType,
+      deskType: choice.deskType,
       connectionId,
+      venue: created.venue,
+      venueEnvironment: created.venueEnvironment,
     });
     if (bound.error) {
       return fail(bound.error);
@@ -165,13 +192,15 @@ export async function createTradingAccount(formData: FormData) {
   await writeEventLog({
     scope: "system",
     event: "account.created",
-    message: `Created ${mode} desk ${named.name}`,
+    message: `Created ${choice.mode} desk ${named.name}`,
     userId: member.id,
     accountId: created.id,
     data: {
-      mode,
+      mode: choice.mode,
       name: named.name,
-      deskType: typed.deskType,
+      deskType: choice.deskType,
+      venue: choice.venue,
+      venueEnvironment,
       ...(connectionId ? { exchangeConnectionId: connectionId } : {}),
     },
   });
