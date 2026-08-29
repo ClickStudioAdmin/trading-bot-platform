@@ -97,16 +97,16 @@ export const VENUES: readonly VenueDefinition[] = [
     nativeTpsl: "trigger orders",
     environments: [
       {
-        id: "testnet",
-        label: "Hyperliquid Testnet (demo)",
-        aliases: ["demo"],
-        host: "https://api.hyperliquid-testnet.xyz",
-      },
-      {
         id: "live",
         label: "Live",
         aliases: ["mainnet"],
         host: "https://api.hyperliquid.xyz",
+      },
+      {
+        id: "testnet",
+        label: "Hyperliquid Testnet (demo)",
+        aliases: ["demo"],
+        host: "https://api.hyperliquid-testnet.xyz",
       },
     ],
     credentialFields: [

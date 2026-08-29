@@ -392,6 +392,20 @@ export function pickSwitchAfterDelete(
   return remaining.find((account) => account.id === id) ?? pickDefaultAccount(remaining);
 }
 
+export function formatDeskExchangeCaption(
+  account: {
+    mode: TradingAccountMode;
+    venue: string;
+    venueEnvironment: string | null;
+  },
+  bound: boolean,
+): string | null {
+  if (account.mode === "live" && !bound) {
+    return null;
+  }
+  return formatDeskVenueCaption(account);
+}
+
 export function formatDeskVenueCaption(input: {
   venue: string;
   venueEnvironment: string | null;
@@ -475,7 +489,12 @@ export type OverviewAttention = {
 };
 
 export function overviewAttentionItems(input: {
-  accounts: readonly { id: string; name: string; mode: TradingAccountMode }[];
+  accounts: readonly {
+    id: string;
+    name: string;
+    mode: TradingAccountMode;
+    venue?: string;
+  }[];
   binds: readonly { connectionId: string; accountId: string }[];
 }): OverviewAttention[] {
   const boundIds = new Set(input.binds.map((bind) => bind.accountId));
@@ -493,8 +512,12 @@ export function overviewAttentionItems(input: {
   ).length;
   const items: OverviewAttention[] = [];
   if (unboundLive.length === 1) {
+    const desk = unboundLive[0];
+    const venue = getVenue(desk.venue ?? "")?.label ?? desk.venue;
     items.push({
-      label: `${unboundLive[0].name} is live with no key bound.`,
+      label: venue
+        ? `${desk.name} is a live ${venue} desk with no key bound.`
+        : `${desk.name} is live with no key bound.`,
       href: "/account/exchanges",
     });
   } else if (unboundLive.length > 1) {

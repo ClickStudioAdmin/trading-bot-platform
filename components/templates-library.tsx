@@ -45,7 +45,7 @@ const secondaryBtn =
 const dangerBtn =
   "rounded-control border border-line px-3 py-1.5 text-xs text-danger hover:bg-danger/10";
 const actionLink =
-  "text-xs font-medium text-accent hover:text-accent-strong";
+  "rounded-control border border-line px-2 py-0.5 text-xs font-medium text-accent hover:text-accent-strong";
 
 function tabForVariant(
   tab: LibraryTab,

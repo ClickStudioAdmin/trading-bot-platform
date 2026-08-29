@@ -10,6 +10,7 @@ import {
   strategyDetachBlockers,
   formatAccountMode,
   formatAccountModeChoice,
+  formatDeskExchangeCaption,
   formatDeskVenueCaption,
   formatDeskType,
   formatDeskTypeChoice,
@@ -50,6 +51,27 @@ assert.equal(parseAccountMode("live"), "live");
 assert.equal(parseAccountMode("paper"), "paper");
 assert.equal(parseAccountMode("other"), "paper");
 assert.equal(formatDeskVenueCaption({ venue: "bybit", venueEnvironment: null }), "Bybit");
+assert.equal(
+  formatDeskExchangeCaption(
+    { mode: "live", venue: "bybit", venueEnvironment: null },
+    false,
+  ),
+  null,
+);
+assert.equal(
+  formatDeskExchangeCaption(
+    { mode: "live", venue: "bybit", venueEnvironment: "demo" },
+    true,
+  ),
+  "Bybit · Demo",
+);
+assert.equal(
+  formatDeskExchangeCaption(
+    { mode: "paper", venue: "bybit", venueEnvironment: null },
+    false,
+  ),
+  "Bybit",
+);
 assert.equal(
   formatDeskVenueCaption({ venue: "hyperliquid", venueEnvironment: "testnet" }),
   "Hyperliquid Testnet (demo)",
@@ -383,21 +405,31 @@ assert.deepEqual(
   overviewAttentionItems({
     accounts: [
       { id: "p", name: "Paper", mode: "paper" },
-      { id: "a", name: "Live A", mode: "live" },
+      { id: "a", name: "Live A", mode: "live", venue: "bybit" },
     ],
     binds: [],
   }),
-  [{ label: "Live A is live with no key bound.", href: "/account/exchanges" }],
+  [
+    {
+      label: "Live A is a live Bybit desk with no key bound.",
+      href: "/account/exchanges",
+    },
+  ],
 );
 assert.deepEqual(
   overviewAttentionItems({
     accounts: [
-      { id: "a", name: "Live A", mode: "live" },
-      { id: "b", name: "Live B", mode: "live" },
+      { id: "a", name: "Live A", mode: "live", venue: "bybit" },
+      { id: "b", name: "Live B", mode: "live", venue: "hyperliquid" },
     ],
     binds: [{ connectionId: "k1", accountId: "a" }],
   }),
-  [{ label: "Live B is live with no key bound.", href: "/account/exchanges" }],
+  [
+    {
+      label: "Live B is a live Hyperliquid desk with no key bound.",
+      href: "/account/exchanges",
+    },
+  ],
 );
 assert.deepEqual(
   overviewAttentionItems({

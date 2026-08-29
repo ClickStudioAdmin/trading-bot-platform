@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { ExchangeConnectForm } from "@/components/exchange-connect-form";
 import { PageHeading } from "@/components/page-heading";
 import { RemoveConnectionControl } from "@/components/remove-connection-control";
@@ -99,7 +98,6 @@ export default async function AccountExchangesPage({
       <ConnectionList
         rows={connections}
         binds={binds}
-        currentAccountId={session.account.id}
         canReplace={canSave}
       />
       {canSave ? <ExchangeConnectForm venues={venues} /> : null}
@@ -110,12 +108,10 @@ export default async function AccountExchangesPage({
 function ConnectionList({
   rows,
   binds,
-  currentAccountId,
   canReplace,
 }: {
   rows: ExchangeConnection[];
   binds: ConnectionDeskBind[];
-  currentAccountId: string;
   canReplace: boolean;
 }) {
   if (rows.length === 0) {
@@ -172,31 +168,12 @@ function ConnectionList({
                   </td>
                   <td className="px-4 py-3 align-top">
                     {used.length > 0 ? (
-                      <span className="flex flex-col gap-1">
-                        {used.map((bind) => {
-                          const href =
-                            bind.accountId === currentAccountId
-                              ? bind.strategy === "futures"
-                                ? "/strategies/futures/settings"
-                                : "/strategies/cash-and-carry/settings"
-                              : null;
-                          return href ? (
-                            <Link
-                              key={`${bind.accountId}-${bind.strategy}`}
-                              href={href}
-                              className="text-accent hover:text-accent-strong"
-                            >
-                              {bind.accountName}
-                            </Link>
-                          ) : (
-                            <span
-                              key={`${bind.accountId}-${bind.strategy}`}
-                              className="text-ink-muted"
-                            >
-                              {bind.accountName}
-                            </span>
-                          );
-                        })}
+                      <span className="flex flex-col gap-1 text-ink-muted">
+                        {used.map((bind) => (
+                          <span key={`${bind.accountId}-${bind.strategy}`}>
+                            {bind.accountName}
+                          </span>
+                        ))}
                       </span>
                     ) : (
                       <span className="text-ink-faint">—</span>

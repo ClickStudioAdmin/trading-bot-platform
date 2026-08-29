@@ -7,8 +7,10 @@ import { SiteLogo } from "@/components/site-logo";
 import { ACCOUNT_DESK_LINKS } from "@/lib/site-links";
 import { rememberTradingAccount } from "@/lib/accounts/actions";
 import {
+  DESK_QUERY,
   createDeskPath,
   deskHomePath,
+  parseDeskQuery,
   parseDeskTypeChoice,
   formatAccountMode,
   formatDeskType,
@@ -26,10 +28,8 @@ const DESK_TYPE_ORDER: DeskType[] = [
 ];
 
 export function AccountSidenav({
-  deskId,
   desks,
 }: {
-  deskId: string;
   desks: TradingAccount[];
 }) {
   const pathname = usePathname();
@@ -39,6 +39,7 @@ export function AccountSidenav({
     pathname === "/account/desks/new" && createType.ok
       ? createType.deskType
       : null;
+  const currentDeskId = parseDeskQuery(searchParams.get(DESK_QUERY));
 
   return (
     <aside className="sticky top-0 z-20 flex h-dvh w-72 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-4 py-6">
@@ -54,7 +55,7 @@ export function AccountSidenav({
       <DeskList
         className="mt-5"
         desks={desks}
-        currentDeskId={deskId}
+        currentDeskId={currentDeskId}
         createDeskType={createDeskType}
       />
     </aside>
@@ -68,7 +69,7 @@ function DeskList({
   className,
 }: {
   desks: TradingAccount[];
-  currentDeskId: string;
+  currentDeskId: string | null;
   createDeskType?: DeskType | null;
   className?: string;
 }) {

@@ -243,30 +243,33 @@ export async function listConnectionDeskBinds(
   if (!supabase) {
     return [];
   }
-  const [{ data: accounts }, { data: carry }, { data: futures }] =
-    await Promise.all([
-      supabase
-        .from("trading_accounts")
-        .select("id, name")
-        .eq("user_id", userId),
-      supabase
-        .from("paper_engine_settings")
-        .select("account_id, exchange_connection_id")
-        .eq("user_id", userId)
-        .not("exchange_connection_id", "is", null),
-      supabase
-        .from("strategy_settings")
-        .select("account_id, exchange_connection_id")
-        .eq("user_id", userId)
-        .eq("strategy_id", "futures")
-        .not("exchange_connection_id", "is", null),
-    ]);
+  const { data: accounts } = await supabase
+    .from("trading_accounts")
+    .select("id, name")
+    .eq("user_id", userId);
   const names = new Map(
     (accounts ?? []).map((row) => [
       String((row as { id: string }).id),
       String((row as { name: string }).name).trim() || "Desk",
     ]),
   );
+  const accountIds = [...names.keys()];
+  if (accountIds.length === 0) {
+    return [];
+  }
+  const [{ data: carry }, { data: futures }] = await Promise.all([
+    supabase
+      .from("paper_engine_settings")
+      .select("account_id, exchange_connection_id")
+      .in("account_id", accountIds)
+      .not("exchange_connection_id", "is", null),
+    supabase
+      .from("strategy_settings")
+      .select("account_id, exchange_connection_id")
+      .in("account_id", accountIds)
+      .eq("strategy_id", "futures")
+      .not("exchange_connection_id", "is", null),
+  ]);
   const binds: ConnectionDeskBind[] = [];
   for (const row of carry ?? []) {
     const accountId = String((row as { account_id: string }).account_id);

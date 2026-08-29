@@ -27,7 +27,7 @@ export function AccountSidenavGate({
   return (
     <div className="flex min-h-dvh">
       <Suspense>
-        <AccountSidenav deskId={deskId} desks={desks} />
+        <AccountSidenav desks={desks} />
       </Suspense>
       {children}
     </div>

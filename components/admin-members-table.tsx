@@ -54,7 +54,7 @@ export function AdminMembersTable({
                 <td className="px-4 py-3">
                   <Link
                     href={`/admin/members/${row.id}`}
-                    className="text-accent hover:text-accent-strong"
+                    className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-accent hover:text-accent-strong"
                   >
                     Edit
                   </Link>

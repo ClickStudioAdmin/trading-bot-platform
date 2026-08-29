@@ -5,8 +5,8 @@ import { PageHeading } from "@/components/page-heading";
 import {
   formatAccountMode,
   formatAccountUsageStatus,
+  formatDeskExchangeCaption,
   formatDeskType,
-  formatDeskVenueCaption,
   formatDeleteBlockers,
   otherDeskNames,
   pickDefaultAccount,
@@ -80,6 +80,12 @@ export default async function ManageSubAccountsPage({
                   reduceOnly: Boolean(row?.reduceOnly),
                 });
                 const details = usageStatus;
+                const exchange = formatDeskExchangeCaption(
+                  account,
+                  Boolean(
+                    row?.futuresConnectionId ?? row?.strategyConnectionId,
+                  ),
+                );
                 const remaining = accounts.filter(
                   (item) => item.id !== account.id,
                 );
@@ -97,7 +103,9 @@ export default async function ManageSubAccountsPage({
                       {formatAccountMode(account.mode)}
                     </td>
                     <td className="px-4 py-3 align-top text-ink-muted">
-                      {formatDeskVenueCaption(account)}
+                      {exchange ?? (
+                        <span className="text-ink-faint">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 align-top">
                       {details ? (
