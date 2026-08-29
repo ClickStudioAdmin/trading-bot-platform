@@ -42,8 +42,8 @@ export const ACCOUNT_DESK_LINKS = [
   { href: "/account", label: "Overview", exact: true },
   { href: "/account/settings", label: "Settings", exact: true },
   { href: "/account/exchanges", label: "Exchanges", exact: true },
-  { href: "/account/templates", label: "Templates", exact: true },
   { href: "/account/sub-accounts", label: "Manage desks", exact: true },
+  { href: "/account/templates", label: "Templates", exact: true },
 ] as const;
 
 export const FUTURES_PRIMARY_LINKS = [

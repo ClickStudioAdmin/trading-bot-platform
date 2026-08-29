@@ -57,10 +57,12 @@ export default async function AccountExchangesPage({
     <div>
       <PageHeading title="Exchanges" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
-        API keys belong to this login. Live desks bind one key. Paper desks
-        do not use keys. Bybit uses a trade-only key. Hyperliquid uses an
-        approved agent key (Demo is Testnet). The same key on two desks
-        shares venue margin.
+        API keys belong to this login. Live desks bind one key at create or
+        in Desk Settings; paper desks do not use keys. Bybit is trade-only.
+        Hyperliquid uses an approved agent key (Demo is Testnet). The same
+        key on two desks shares venue margin. Replace key updates
+        credentials and keeps desks bound. You cannot remove a key while
+        any desk is using it.
       </p>
       {error || saved || renamed || replaced || removed ? (
         <div className="mb-6 space-y-3">
@@ -130,13 +132,7 @@ function ConnectionList({
 
   return (
     <section>
-      <h2 className="text-lg font-semibold tracking-tight">Connected</h2>
-      <p className="mt-2 text-sm text-ink-muted">
-        Live desks pick a key when you create them, or in Desk Settings.
-        Replace key re-saves the API credentials on this connection. Desks
-        stay bound. You cannot remove a key while any desk is using it.
-      </p>
-      <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
+      <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[42rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>

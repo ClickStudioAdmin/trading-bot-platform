@@ -3,9 +3,6 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { AccountSnapshotBody } from "@/components/account-snapshot";
 import { PageHeading } from "@/components/page-heading";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { switchTradingAccount } from "@/lib/accounts/actions";
-import { formatAccountMode } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadAccountSnapshots } from "@/lib/exchanges/account-snapshot";
@@ -28,7 +25,6 @@ export default async function AccountOverviewPage() {
     redirect("/sign-in");
   }
   const accounts = await listTradingAccounts(session.member.id);
-  const current = session.account;
   const paperCount = accounts.filter((account) => account.mode === "paper").length;
   const liveCount = accounts.length - paperCount;
   const connections = await listExchangeConnections(session.member.id);
@@ -114,53 +110,6 @@ export default async function AccountOverviewPage() {
             </ul>
           )}
         </section>
-
-      <section className="rounded-card border border-line bg-surface p-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="text-lg font-semibold tracking-tight">Books</h2>
-          <Link
-            href="/account/sub-accounts"
-            className="text-sm text-accent hover:text-accent-strong"
-          >
-            Manage sub-accounts
-          </Link>
-        </div>
-        <ul className="mt-4 divide-y divide-line">
-          {accounts.map((account) => {
-            const isCurrent = account.id === current.id;
-            return (
-              <li
-                key={account.id}
-                className="flex flex-wrap items-start justify-between gap-3 py-4 first:pt-0 last:pb-0"
-              >
-                <div>
-                  <p className="text-sm">
-                    {account.name}
-                    {isCurrent ? (
-                      <span className="ml-2 text-xs text-accent">Current</span>
-                    ) : null}
-                  </p>
-                  <p className="mt-1 text-xs text-ink-faint">
-                    {formatAccountMode(account.mode)}
-                  </p>
-                </div>
-                {isCurrent ? null : (
-                  <form action={switchTradingAccount}>
-                    <input type="hidden" name="accountId" value={account.id} />
-                    <input type="hidden" name="next" value="/account" />
-                    <PendingSubmitButton
-                      pendingLabel="Switching…"
-                      className="rounded-control px-3 py-1.5 text-sm text-accent hover:bg-surface-raised"
-                    >
-                      Switch to account
-                    </PendingSubmitButton>
-                  </form>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
     </div>
   );
 }
