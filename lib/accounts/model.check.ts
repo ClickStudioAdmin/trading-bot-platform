@@ -12,6 +12,7 @@ import {
   formatAccountModeChoice,
   formatDeskExchangeCaption,
   formatDeskVenueCaption,
+  formatDeskNavLabel,
   formatDeskType,
   formatDeskTypeChoice,
   deskHomePath,
@@ -139,6 +140,8 @@ assert.equal(parseDeskTypeChoice("dca").ok, true);
 assert.equal(parseDeskTypeChoice("").ok, false);
 assert.equal(formatDeskType("perps"), "Perps");
 assert.equal(formatDeskType("perps_bots"), "Perps bots");
+assert.equal(formatDeskNavLabel("perps_bots"), "Perps");
+assert.equal(formatDeskNavLabel("dca"), "DCA");
 assert.equal(formatDeskType("signal_follower"), "TradingView Strategy");
 assert.equal(formatDeskType("dca"), "DCA");
 assert.equal(formatDeskType("cash_and_carry"), "Cash and Carry");

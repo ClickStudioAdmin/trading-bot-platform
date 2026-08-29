@@ -68,6 +68,19 @@ export function parseDeskTypeChoice(
   return { ok: false, error: "Choose a desk type." };
 }
 
+export const AUTOMATED_DESK_TYPES: DeskType[] = [
+  "perps_bots",
+  "dca",
+  "cash_and_carry",
+  "signal_follower",
+];
+
+export const MANUAL_DESK_TYPES: DeskType[] = ["perps"];
+
+export function formatDeskNavLabel(deskType: DeskType): string {
+  return deskType === "perps_bots" ? "Perps" : formatDeskType(deskType);
+}
+
 export function formatDeskType(deskType: DeskType): string {
   if (deskType === "perps") {
     return "Perps";

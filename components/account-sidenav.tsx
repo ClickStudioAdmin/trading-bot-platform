@@ -12,20 +12,14 @@ import {
   deskHomePath,
   parseDeskQuery,
   parseDeskTypeChoice,
+  AUTOMATED_DESK_TYPES,
   formatAccountMode,
-  formatDeskType,
+  formatDeskNavLabel,
   formatDeskVenueCaption,
   hrefPathname,
   type DeskType,
   type TradingAccount,
 } from "@/lib/accounts/model";
-
-const AUTOMATED_DESK_TYPES: DeskType[] = [
-  "perps_bots",
-  "dca",
-  "cash_and_carry",
-  "signal_follower",
-];
 
 export function AccountSidenav({
   desks,
@@ -98,10 +92,7 @@ function DeskGroup({
         {groups.map((group) => {
           const creating = createDeskType === group.deskType;
           const empty = group.desks.length === 0;
-          const typeLabel =
-            group.deskType === "perps_bots"
-              ? "Perps"
-              : formatDeskType(group.deskType);
+          const typeLabel = formatDeskNavLabel(group.deskType);
           return (
           <div key={group.deskType} className="mt-3 first:mt-0">
             <div className="flex items-center gap-1 px-3">
