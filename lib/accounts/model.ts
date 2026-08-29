@@ -304,7 +304,10 @@ export function parseTradingAccountRow(
     mode: parseAccountMode(row.mode),
     deskType: parseDeskType(row.desk_type),
     venue,
-    venueEnvironment: parseStoredVenueEnvironment(row.venue, row.venue_environment),
+    venueEnvironment: parseStoredVenueEnvironment(
+      venue,
+      row.venue_environment,
+    ),
     createdAtMs: Number.isFinite(created) ? created : 0,
   };
 }
