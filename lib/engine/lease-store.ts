@@ -7,6 +7,7 @@ import {
   ENGINE_SCAN_KEY,
   ENGINE_SCAN_TTL_SECONDS,
   ENGINE_VENUE_GAP_MS,
+  venueSlotWaitMs,
 } from "./lease";
 
 const EPOCH = "1970-01-01T00:00:00.000Z";
@@ -321,6 +322,26 @@ export async function takeVenueSlot(connectionId: string | null): Promise<void> 
   if (!supabase) {
     return;
   }
+  const { data, error } = await supabase.rpc("engine_take_venue_slot", {
+    p: {
+      connection_id: connectionId,
+      gap_ms: ENGINE_VENUE_GAP_MS,
+    },
+  });
+  if (!error && data) {
+    const start = new Date(String(data)).getTime();
+    const wait = venueSlotWaitMs(
+      Number.isFinite(start) ? start : Date.now(),
+      Date.now(),
+    );
+    if (wait > 0) {
+      await sleep(wait);
+    }
+    return;
+  }
+  if (error) {
+    console.error("engine_take_venue_slot rpc", error.message);
+  }
   const now = Date.now();
   const { data: existing } = await supabase
     .from("engine_venue_gates")
@@ -342,13 +363,12 @@ export async function takeVenueSlot(connectionId: string | null): Promise<void> 
     ? new Date(String(row.next_allowed_at)).getTime()
     : now;
   const start = Math.max(now, Number.isFinite(current) ? current : now);
-  const next = start + ENGINE_VENUE_GAP_MS;
   await supabase
     .from("engine_venue_gates")
-    .update({ next_allowed_at: new Date(next).toISOString() })
+    .update({ next_allowed_at: new Date(start + ENGINE_VENUE_GAP_MS).toISOString() })
     .eq("connection_id", connectionId);
-  const wait = start - now;
-  if (wait > 0 && wait < 5_000) {
+  const wait = venueSlotWaitMs(start, now);
+  if (wait > 0) {
     await sleep(wait);
   }
 }

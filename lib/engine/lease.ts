@@ -3,10 +3,19 @@ export const ENGINE_MUTATION_TTL_SECONDS = 20;
 export const ENGINE_CLAIM_BATCH = 4;
 export const ENGINE_HOT_CLAIM_BATCH = 24;
 export const ENGINE_VENUE_GAP_MS = 150;
+export const ENGINE_VENUE_WAIT_CAP_MS = 5_000;
 export const ENGINE_DESK_CONCURRENCY = 3;
 export const ENGINE_SCAN_KEY = "public_market";
 export const ENGINE_SCAN_TTL_SECONDS = 18;
 export const ENGINE_LEASE_ENSURE_MS = 10 * 60 * 1000;
+
+export function venueSlotWaitMs(slotStartMs: number, nowMs: number): number {
+  const wait = slotStartMs - nowMs;
+  if (wait > 0 && wait < ENGINE_VENUE_WAIT_CAP_MS) {
+    return wait;
+  }
+  return 0;
+}
 
 export type ScanLease = {
   scanKey: string;

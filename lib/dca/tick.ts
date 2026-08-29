@@ -42,7 +42,6 @@ import {
 import {
   listDcaPlaybooks,
   listDcaPlaybooksForAccount,
-  loadDcaPlaybookById,
   patchDcaLeg,
   patchDcaPlaybook,
   resetDcaLeg,
@@ -119,10 +118,7 @@ export async function runDcaPlaybookTick(input?: {
   const klineCache = new Map<string, number[]>();
 
   let acted = 0;
-  for (const listed of playbooks) {
-    const playbook =
-      (await loadDcaPlaybookById(listed.id, listed.accountId, supabase)) ??
-      listed;
+  for (const playbook of playbooks) {
     const account = accounts.get(playbook.accountId);
     if (!account || account.deskType !== "dca") {
       continue;
@@ -142,16 +138,21 @@ export async function runDcaPlaybookTick(input?: {
       }
       closes = klineCache.get(key) ?? [];
     }
-    const working =
+    const [working, openWorking] = await Promise.all([
       playbook.dcaMode === "order"
-        ? await loadFuturesWorking(
+        ? loadFuturesWorking(
             {
               accountId: playbook.accountId,
               userId: playbook.userId,
             },
             ["open", "filled"],
           )
-        : [];
+        : Promise.resolve([]),
+      loadOpenFuturesWorking({
+        accountId: playbook.accountId,
+        userId: playbook.userId,
+      }),
+    ]);
     for (const side of dcaEnabledSides(playbook.direction)) {
       let leg = dcaLegFor(playbook, side);
       if (
@@ -211,10 +212,6 @@ export async function runDcaPlaybookTick(input?: {
         });
         open = liveOpens.find((row) => row.side === side);
       }
-      const openWorking = await loadOpenFuturesWorking({
-        accountId: playbook.accountId,
-        userId: playbook.userId,
-      });
       const tpLimitResting =
         dcaOpenExitLimits(openWorking, playbook.id, side, "tp").length > 0;
       const decision = decideDcaTick({

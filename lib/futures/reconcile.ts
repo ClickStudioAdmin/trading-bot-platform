@@ -55,11 +55,16 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function reconcileOpenFuturesBooks(input?: {
+export type ReconcileBooksInput = {
   accountId?: string;
   userId?: string;
   workingId?: string;
-}): Promise<number> {
+  tickers?: Map<string, BybitTicker>;
+};
+
+export async function reconcileOpenFuturesBooks(
+  input?: ReconcileBooksInput,
+): Promise<number> {
   const filled = await reconcileOpenFuturesWorkingOrders(input);
   if (input?.workingId) {
     return filled;
@@ -68,11 +73,9 @@ export async function reconcileOpenFuturesBooks(input?: {
   return filled + closed;
 }
 
-export async function reconcileOpenFuturesWorkingOrders(input?: {
-  accountId?: string;
-  userId?: string;
-  workingId?: string;
-}): Promise<number> {
+export async function reconcileOpenFuturesWorkingOrders(
+  input?: ReconcileBooksInput,
+): Promise<number> {
   const supabase = createServiceClient();
   if (!supabase) {
     return 0;
@@ -98,9 +101,11 @@ export async function reconcileOpenFuturesWorkingOrders(input?: {
   const rows = data.map((row) =>
     parseFuturesWorkingRow(row as Record<string, unknown>),
   );
-  const tickers = await fetchBybitTickers("linear").catch(
-    () => new Map<string, BybitTicker>(),
-  );
+  const tickers =
+    input?.tickers ??
+    (await fetchBybitTickers("linear").catch(
+      () => new Map<string, BybitTicker>(),
+    ));
   let filled = 0;
   const connections = new Map<
     string,
@@ -690,10 +695,9 @@ async function connectionForAccount(input: {
   return bound.connection;
 }
 
-export async function reconcileOpenFuturesStops(input?: {
-  accountId?: string;
-  userId?: string;
-}): Promise<number> {
+export async function reconcileOpenFuturesStops(
+  input?: ReconcileBooksInput,
+): Promise<number> {
   const supabase = createServiceClient();
   if (!supabase) {
     return 0;
@@ -722,9 +726,11 @@ export async function reconcileOpenFuturesStops(input?: {
   if (rows.length === 0) {
     return 0;
   }
-  const tickers = await fetchBybitTickers("linear").catch(
-    () => new Map<string, BybitTicker>(),
-  );
+  const tickers =
+    input?.tickers ??
+    (await fetchBybitTickers("linear").catch(
+      () => new Map<string, BybitTicker>(),
+    ));
   const connections = new Map<
     string,
     BoundConnectionSecrets | null | undefined

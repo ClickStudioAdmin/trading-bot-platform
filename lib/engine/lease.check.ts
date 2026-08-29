@@ -4,6 +4,7 @@ import {
   releaseEngineDeskFromState,
   tryClaimEngineDeskFromState,
   tryClaimEngineScanFromState,
+  venueSlotWaitMs,
   type DeskLease,
 } from "./lease";
 
@@ -126,5 +127,9 @@ const scanExpired = tryClaimEngineScanFromState({
   ttlMs: 18_000,
 });
 assert.equal(scanExpired.ok, true);
+
+assert.equal(venueSlotWaitMs(1_200, 1_000), 200);
+assert.equal(venueSlotWaitMs(1_000, 1_000), 0);
+assert.equal(venueSlotWaitMs(8_000, 1_000), 0);
 
 console.log("engine lease checks passed");

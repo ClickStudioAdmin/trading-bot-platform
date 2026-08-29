@@ -63,7 +63,10 @@ export async function runEngineCycle(
   const started = Date.now();
   const maxMs = options?.maxMs;
 
-  const kinds = await listEngineDeskKinds();
+  const [kinds, hotIds] = await Promise.all([
+    listEngineDeskKinds(),
+    listHotEngineAccountIds(),
+  ]);
   const shared = await loadSharedMarket({
     workerId,
     cashAndCarry: kinds.cashAndCarry,
@@ -82,7 +85,6 @@ export async function runEngineCycle(
   };
   const users = new Set<string>();
   const done = new Set<string>();
-  const hotIds = await listHotEngineAccountIds();
   let wave = 0;
 
   while (maxMs === undefined || Date.now() - started < maxMs) {
@@ -234,28 +236,33 @@ async function runDeskTick(input: {
   const deskType = parseDeskType(
     (account as { desk_type?: unknown }).desk_type,
   );
-  await takeVenueSlot(
-    await boundConnectionId({
-      accountId: input.accountId,
-      deskType,
-    }),
-  );
-  try {
-    await reconcileOpenFuturesBooks({
-      accountId: input.accountId,
-      userId,
-    });
-  } catch (cause) {
-    await writeEventLog({
-      level: "error",
-      scope: "strategy",
-      event: "trade.futures_working_failed",
-      message:
-        cause instanceof Error ? cause.message : "Working order tick failed",
-      userId,
-      accountId: input.accountId,
-      strategy: FUTURES_STRATEGY_ID,
-    });
+  if (mode === "live") {
+    await takeVenueSlot(
+      await boundConnectionId({
+        accountId: input.accountId,
+        deskType,
+      }),
+    );
+  }
+  if (deskType !== "cash_and_carry") {
+    try {
+      await reconcileOpenFuturesBooks({
+        accountId: input.accountId,
+        userId,
+        tickers: input.tickers,
+      });
+    } catch (cause) {
+      await writeEventLog({
+        level: "error",
+        scope: "strategy",
+        event: "trade.futures_working_failed",
+        message:
+          cause instanceof Error ? cause.message : "Working order tick failed",
+        userId,
+        accountId: input.accountId,
+        strategy: FUTURES_STRATEGY_ID,
+      });
+    }
   }
   if (deskType === "cash_and_carry") {
     const stats = await runCashAndCarryDeskTick({

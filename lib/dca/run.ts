@@ -1,5 +1,5 @@
 import { parseDeskType, type TradingAccountMode } from "@/lib/accounts/model";
-import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
+import { fetchBybitTicker } from "@/lib/exchanges/bybit/client";
 import { runFuturesCommand, deleteCommandReceipt } from "@/lib/futures/command";
 import {
   loadOpenFuturesOnSymbol,
@@ -181,12 +181,11 @@ function sidesForVerb(
 }
 
 async function lastPriceFor(symbol: string): Promise<number | null> {
-  const tickers = await fetchBybitTickers("linear").catch(() => null);
-  if (!tickers) {
+  const ticker = await fetchBybitTicker("linear", symbol).catch(() => null);
+  if (!ticker) {
     return null;
   }
-  const prices = tickerTriggerPrices(tickers.get(symbol) ?? {});
-  return prices.last;
+  return tickerTriggerPrices(ticker).last;
 }
 
 function clipTrailing(
