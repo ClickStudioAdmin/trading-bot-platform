@@ -72,6 +72,10 @@ import {
   readFormControl,
 } from "@/lib/templates/recipe";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
+import {
+  BYBIT_DCA_UI,
+  type DcaPlaybookUiPolicy,
+} from "@/lib/dca/ui-policy";
 
 const fieldClass =
   "mt-0.5 w-full rounded-control border border-line bg-surface-raised px-2 py-1.5 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -346,6 +350,7 @@ export function DcaPlaybooksDesk({
   accountId,
   templates = [],
   sets = [],
+  policy = BYBIT_DCA_UI,
 }: {
   playbooks: DcaPlaybook[];
   options: LinearPerp[];
@@ -358,6 +363,7 @@ export function DcaPlaybooksDesk({
   accountId?: string;
   templates?: TemplateSummary[];
   sets?: AutomationTemplateSet[];
+  policy?: DcaPlaybookUiPolicy;
 }) {
   const [cards, setCards] = useState<
     { key: string; playbook: DcaPlaybook | null; seed?: DcaPlaybook }[]
@@ -423,6 +429,7 @@ export function DcaPlaybooksDesk({
             webhooksHref={webhooksHref}
             isAdmin={isAdmin}
             folders={sets}
+            policy={policy}
             defaultName={
               card.playbook?.name ??
               card.seed?.name ??
@@ -530,6 +537,7 @@ export function DcaPlaybookForm({
   webhooksHref = FUTURES_PATHS.webhooks,
   isAdmin = false,
   folders = [],
+  policy = BYBIT_DCA_UI,
 }: {
   playbook: DcaPlaybook | null;
   seed?: DcaPlaybook | null;
@@ -544,11 +552,14 @@ export function DcaPlaybookForm({
   webhooksHref?: string;
   isAdmin?: boolean;
   folders?: AutomationTemplateSet[];
+  policy?: DcaPlaybookUiPolicy;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const source = playbook ?? seed;
   const [direction, setDirection] = useState(
-    source?.direction ?? "long",
+    source?.direction === "both" && !policy.includeBoth
+      ? "long"
+      : (source?.direction ?? "long"),
   );
   const [startKind, setStartKind] = useState<DcaStartKind>(
     source?.startKind ?? "immediate",
@@ -623,9 +634,9 @@ export function DcaPlaybookForm({
   });
   const defaultSymbol =
     source?.symbol ??
-    options.find((row) => row.symbol === "BTCUSDT")?.symbol ??
+    options.find((row) => row.symbol === policy.defaultSymbol)?.symbol ??
     options[0]?.symbol ??
-    "BTCUSDT";
+    policy.defaultSymbol;
   const [symbol, setSymbol] = useState(defaultSymbol);
   const [ladderTab, setLadderTab] = useState<"long" | "short">("long");
   const [ladderOpen, setLadderOpen] = useState(false);
@@ -782,6 +793,7 @@ export function DcaPlaybookForm({
       className="space-y-3 rounded-card border border-line bg-surface px-4 py-3"
     >
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
+      <input type="hidden" name="deskVenue" value={policy.venueId} />
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           {showSaveAndArm ||
@@ -963,7 +975,9 @@ export function DcaPlaybookForm({
             >
               <option value="long">Long</option>
               <option value="short">Short</option>
-              <option value="both">Both</option>
+              {policy.includeBoth ? (
+                <option value="both">Both</option>
+              ) : null}
             </select>
           </label>
           <label className={`${labelClass} sm:col-span-2`}>
@@ -1206,7 +1220,7 @@ export function DcaPlaybookForm({
                 }
                 className={fieldClass}
               >
-                <option value="usdt">USDT</option>
+                <option value="usdt">{policy.quoteLabel}</option>
                 <option value="qty">Token qty</option>
               </select>
             </label>

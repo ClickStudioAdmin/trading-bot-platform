@@ -40,6 +40,8 @@ export function FuturesAutomationsDesk({
   accountId,
   templates = [],
   sets = [],
+  venueId = "bybit",
+  quoteLabel = "USDT",
 }: {
   rules: FuturesAutomationFormValues[];
   options: LinearPerp[];
@@ -50,16 +52,19 @@ export function FuturesAutomationsDesk({
   accountId?: string;
   templates?: TemplateSummary[];
   sets?: AutomationTemplateSet[];
+  venueId?: string;
+  quoteLabel?: string;
 }) {
   const [layers, setLayers] = useState(rules);
   const [cloneMenu, setCloneMenu] = useState(0);
   const empty = layers.length === 0;
   const inUse = new Set(inUseRuleIds);
   const cloneSources = layers.filter((layer) => layer.id);
+  const preferredSymbol = venueId === "hyperliquid" ? "BTC" : "BTCUSDT";
   const defaultSymbol =
-    options.find((row) => row.symbol === "BTCUSDT")?.symbol ??
+    options.find((row) => row.symbol === preferredSymbol)?.symbol ??
     options[0]?.symbol ??
-    "BTCUSDT";
+    preferredSymbol;
 
   function appendApplied(items: AppliedDeskItem[]) {
     const nextRules = items
@@ -92,6 +97,7 @@ export function FuturesAutomationsDesk({
       className="space-y-4"
     >
       <input type="hidden" name="ruleCount" value={layers.length} />
+      <input type="hidden" name="deskVenue" value={venueId} />
       {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
           No bots yet. Add a bot to fire Buy, Sell, or Close when last,
@@ -110,6 +116,8 @@ export function FuturesAutomationsDesk({
             inUse={Boolean(layer.id && inUse.has(layer.id))}
             isAdmin={isAdmin}
             folders={sets}
+            quoteLabel={quoteLabel}
+            venueId={venueId}
             onRemove={() => {
               const next = layers.filter((item) => item.key !== layer.key);
               setLayers(next);
@@ -198,6 +206,8 @@ function RuleCard({
   isAdmin,
   onRemove,
   folders = [],
+  quoteLabel = "USDT",
+  venueId = "bybit",
 }: {
   index: number;
   layer: FuturesAutomationFormValues;
@@ -208,6 +218,8 @@ function RuleCard({
   isAdmin: boolean;
   onRemove: () => void;
   folders?: AutomationTemplateSet[];
+  quoteLabel?: string;
+  venueId?: string;
 }) {
   const prefix = `r${index}_`;
   const [mode, setMode] = useState(layer.mode);
@@ -352,7 +364,7 @@ function RuleCard({
                       setSize("");
                     }}
                   >
-                    USDT
+                    {quoteLabel}
                   </Toggle>
                 </span>
               </>
@@ -496,18 +508,21 @@ function RuleCard({
             kind="perps"
             folders={folders}
             buildForm={() =>
-              perpsFormToSnapshotSource({
-                ...layer,
-                mode,
-                formAction,
-                orderType,
-                sizeUnit,
-                size,
-                limitPrice,
-                triggerPrice,
-                symbol,
-                entrySource,
-              })
+              perpsFormToSnapshotSource(
+                {
+                  ...layer,
+                  mode,
+                  formAction,
+                  orderType,
+                  sizeUnit,
+                  size,
+                  limitPrice,
+                  triggerPrice,
+                  symbol,
+                  entrySource,
+                },
+                venueId,
+              )
             }
           />
           {inUse ? (

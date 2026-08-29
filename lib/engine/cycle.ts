@@ -22,6 +22,11 @@ import { mapPool } from "@/lib/engine/pool";
 import { runDcaPlaybookTick } from "@/lib/dca/tick";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
 import type { BybitTicker } from "@/lib/exchanges/bybit/client";
+import { loadDeskTickerMap } from "@/lib/market/desk-tickers";
+import {
+  parseStoredVenueEnvironment,
+  parseStoredVenueId,
+} from "@/lib/exchanges/venues";
 import {
   loadStoredOpportunities,
   persistOpportunities,
@@ -225,7 +230,7 @@ async function runDeskTick(input: {
   }
   const { data: account } = await supabase
     .from("trading_accounts")
-    .select("id, user_id, mode, desk_type")
+    .select("id, user_id, mode, desk_type, venue, venue_environment")
     .eq("id", input.accountId)
     .maybeSingle();
   if (!account) {
@@ -236,6 +241,17 @@ async function runDeskTick(input: {
   const deskType = parseDeskType(
     (account as { desk_type?: unknown }).desk_type,
   );
+  const venue = parseStoredVenueId((account as { venue?: unknown }).venue);
+  const venueEnvironment = parseStoredVenueEnvironment(
+    venue,
+    (account as { venue_environment?: unknown }).venue_environment,
+  );
+  const tickers =
+    venue === "hyperliquid"
+      ? ((await loadDeskTickerMap(venue, venueEnvironment).catch(
+          () => new Map(),
+        )) as Map<string, BybitTicker>)
+      : input.tickers;
   if (mode === "live") {
     await takeVenueSlot(
       await boundConnectionId({
@@ -249,7 +265,7 @@ async function runDeskTick(input: {
       await reconcileOpenFuturesBooks({
         accountId: input.accountId,
         userId,
-        tickers: input.tickers,
+        tickers,
       });
     } catch (cause) {
       await writeEventLog({
@@ -277,14 +293,14 @@ async function runDeskTick(input: {
   if (deskType === "perps") {
     await runFuturesAutomationTick({
       accountId: input.accountId,
-      tickers: input.tickers,
+      tickers,
     });
     return { ...empty, userId };
   }
   if (deskType === "dca") {
     await runDcaPlaybookTick({
       accountId: input.accountId,
-      tickers: input.tickers,
+      tickers,
     });
     return { ...empty, userId };
   }

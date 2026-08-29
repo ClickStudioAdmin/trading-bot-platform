@@ -195,6 +195,7 @@ export async function HyperliquidFuturesPositions({
                   <FuturesWebhookTest
                     webhooks={testWebhooks}
                     allowSignal={allowSignal}
+                    defaultSymbol="BTC"
                   />
                 ) : session ? (
                   <p className="mt-4 text-xs text-ink-muted">

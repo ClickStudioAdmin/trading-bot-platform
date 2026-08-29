@@ -1651,6 +1651,31 @@ indicatorBadTf.set("indicatorLevel", "30");
 const indicatorBadTfParsed = parseDcaPlaybookForm(indicatorBadTf);
 assert.equal(indicatorBadTfParsed.ok, false);
 
+const hlForm = new FormData();
+hlForm.set("deskVenue", "hyperliquid");
+hlForm.set("symbol", "BTC");
+hlForm.set("side", "long");
+hlForm.set("clipSize", "0.01");
+hlForm.set("sizeUnit", "qty");
+const hlParsed = parseDcaPlaybookForm(hlForm, "hyperliquid");
+assert.equal(hlParsed.ok, true);
+if (hlParsed.ok) {
+  assert.equal(hlParsed.config.symbol, "BTC");
+  assert.equal(hlParsed.config.direction, "long");
+}
+
+const hlBoth = new FormData();
+hlBoth.set("deskVenue", "hyperliquid");
+hlBoth.set("symbol", "ETH");
+hlBoth.set("direction", "both");
+hlBoth.set("clipSize", "100");
+hlBoth.set("sizeUnit", "usdt");
+const hlBothParsed = parseDcaPlaybookForm(hlBoth, "hyperliquid");
+assert.equal(hlBothParsed.ok, false);
+if (!hlBothParsed.ok) {
+  assert.match(hlBothParsed.error, /one-way/i);
+}
+
 assert.equal(dcaIndicatorStartLatches("rsi", "cross_gte"), true);
 assert.equal(dcaIndicatorStartLatches("rsi", "lte"), false);
 assert.equal(dcaIndicatorStartLatches("ema_cross", null), true);

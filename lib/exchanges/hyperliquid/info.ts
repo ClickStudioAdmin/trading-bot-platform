@@ -262,44 +262,73 @@ export async function loadHyperliquidOpenOrders(input: {
     .filter((row): row is NonNullable<typeof row> => row !== null);
 }
 
-export async function loadHyperliquidOrderStatus(input: {
-  environmentId: string;
-  accountAddress: string;
-  oid: number;
-}): Promise<{
+export type HyperliquidOrderStatus = {
   status: string;
   oid: number;
   sz: number;
   filledSz: number;
   avgPx: number | null;
-} | null> {
-  const raw = (await postInfo(input.environmentId, {
-    type: "orderStatus",
-    user: input.accountAddress,
-    oid: input.oid,
-  })) as {
-    status?: string;
+};
+
+export function parseHyperliquidOrderStatus(
+  raw: unknown,
+): HyperliquidOrderStatus | null {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    return null;
+  }
+  const row = raw as {
+    status?: unknown;
     order?: {
-      order?: {
-        oid?: number;
-        sz?: string;
-        origSz?: string;
-      };
-      status?: string;
+      status?: unknown;
+      order?: Record<string, unknown>;
+      oid?: unknown;
+      sz?: unknown;
+      origSz?: unknown;
+      avgPx?: unknown;
     };
   };
-  const order = raw.order?.order;
+  const wrapper = String(row.status ?? "").trim().toLowerCase();
+  if (wrapper === "unknownoid" || wrapper === "unknown") {
+    return null;
+  }
+  const nested = row.order?.order;
+  const order =
+    nested && typeof nested === "object"
+      ? nested
+      : row.order && typeof row.order === "object"
+        ? row.order
+        : null;
   const oid = asNumber(order?.oid);
   if (oid === null) {
     return null;
   }
   const orig = asNumber(order?.origSz) ?? asNumber(order?.sz) ?? 0;
   const remaining = asNumber(order?.sz) ?? 0;
+  const statusRaw = row.order?.status ?? (wrapper !== "order" ? row.status : "");
+  const status = String(statusRaw ?? "").trim() || "open";
+  const filledFromDiff = Math.max(0, orig - remaining);
+  const filled =
+    status.toLowerCase() === "filled" && filledFromDiff <= 1e-12 && orig > 0
+      ? orig
+      : filledFromDiff;
   return {
-    status: String(raw.order?.status ?? raw.status ?? ""),
+    status,
     oid,
     sz: orig,
-    filledSz: Math.max(0, orig - remaining),
-    avgPx: null,
+    filledSz: filled,
+    avgPx: asNumber(order?.avgPx),
   };
+}
+
+export async function loadHyperliquidOrderStatus(input: {
+  environmentId: string;
+  accountAddress: string;
+  oid: number;
+}): Promise<HyperliquidOrderStatus | null> {
+  const raw = await postInfo(input.environmentId, {
+    type: "orderStatus",
+    user: input.accountAddress,
+    oid: input.oid,
+  });
+  return parseHyperliquidOrderStatus(raw);
 }

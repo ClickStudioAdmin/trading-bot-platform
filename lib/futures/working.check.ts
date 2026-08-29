@@ -103,7 +103,10 @@ assert.equal(
 assert.equal(mapBybitOrderStatus("New"), "open");
 assert.equal(mapBybitOrderStatus("PartiallyFilled"), "open");
 assert.equal(mapBybitOrderStatus("Filled"), "filled");
+assert.equal(mapBybitOrderStatus("filled"), "filled");
 assert.equal(mapBybitOrderStatus("Cancelled"), "cancelled");
+assert.equal(mapBybitOrderStatus("canceled"), "cancelled");
+assert.equal(mapBybitOrderStatus("marginCanceled"), "cancelled");
 assert.equal(mapBybitOrderStatus("Rejected"), "rejected");
 
 const parsed = parseFuturesWorkingRow({

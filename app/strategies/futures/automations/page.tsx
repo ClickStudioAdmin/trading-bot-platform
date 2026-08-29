@@ -9,6 +9,12 @@ import { getSessionContext } from "@/lib/auth/session";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
+import { HYPERLIQUID_DCA_UI } from "@/lib/dca/ui-policy";
+import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
+import {
+  loadHyperliquidLinearPerps,
+  loadHyperliquidTickerMap,
+} from "@/lib/venues/hyperliquid/market";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { futuresRuleToForm } from "@/lib/futures/automation";
@@ -49,9 +55,15 @@ export default async function FuturesAutomationsPage({
   if (session?.account.deskType === "dca") {
     const playbooks = await listDcaPlaybooksForAccount(session.account.id);
     const settings = await loadFuturesSettings(session.account.id);
+    const hl = session.account.venue === "hyperliquid";
+    const env = hyperliquidInfoEnvironment(session.account.venueEnvironment);
     const [pairs, tickers] = await Promise.all([
-      loadUsdtLinearPerps().catch(() => []),
-      fetchBybitTickers("linear").catch(() => null),
+      hl
+        ? loadHyperliquidLinearPerps(env).catch(() => [])
+        : loadUsdtLinearPerps().catch(() => []),
+      hl
+        ? loadHyperliquidTickerMap(env).catch(() => null)
+        : fetchBybitTickers("linear").catch(() => null),
     ]);
     const lastPrices: Record<string, number> = {};
     if (tickers) {
@@ -101,10 +113,10 @@ export default async function FuturesAutomationsPage({
           Manual uses Save and Trigger Long or Short. Stop adding leaves the
           position. Close bot flattens it.
         </p>
-        {session.account.venue === "hyperliquid" ? (
+        {hl ? (
           <p className="mt-4 rounded-card border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
-            This Hyperliquid desk is one-way. Both is not available. DCA
-            long or short with Hyperliquid coins and klines is the next step.
+            This Hyperliquid desk is one-way. Long or short only. Indicators
+            use Hyperliquid candles. Size is coin or USDC.
           </p>
         ) : null}
         {error ? (
@@ -128,6 +140,7 @@ export default async function FuturesAutomationsPage({
             accountId={session.account.id}
             templates={templates.map(templateToSummary)}
             sets={sets}
+            policy={hl ? HYPERLIQUID_DCA_UI : undefined}
           />
         </div>
       </main>
@@ -146,7 +159,11 @@ export default async function FuturesAutomationsPage({
         })
       ).filter((row) => row.kind === "signal")
     : [];
-  const pairs = await loadUsdtLinearPerps().catch(() => []);
+  const hl = session?.account.venue === "hyperliquid";
+  const env = hyperliquidInfoEnvironment(session?.account.venueEnvironment);
+  const pairs = hl
+    ? await loadHyperliquidLinearPerps(env).catch(() => [])
+    : await loadUsdtLinearPerps().catch(() => []);
   const exchangeBook = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );
@@ -196,6 +213,8 @@ export default async function FuturesAutomationsPage({
           accountId={session.account.id}
           templates={templates.map(templateToSummary)}
           sets={sets}
+          venueId={hl ? "hyperliquid" : "bybit"}
+          quoteLabel={hl ? "USDC" : "USDT"}
         />
       ) : (
         <p className="text-sm text-ink-muted">

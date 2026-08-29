@@ -8,6 +8,9 @@ import {
 } from "@/lib/dca/playbook";
 import { lastPriceFor } from "@/lib/dca/run";
 import { saveDcaPlaybook, listDcaPlaybooksForAccount } from "@/lib/dca/store";
+import { parseHyperliquidSymbol } from "@/lib/venues/hyperliquid/symbol";
+import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
+import { loadHyperliquidLinearPerps } from "@/lib/venues/hyperliquid/market";
 import { paperLayerToRow, paperConfigToFormValues, parsePaperRulesRow, type PaperLayerFormValues } from "@/lib/engine/rules";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import {
@@ -71,15 +74,29 @@ async function canReadTemplate(
   return templateIsSharedWith(userId, template.id);
 }
 
+function remapTemplateSymbol(symbol: string, venue: string): string {
+  if (venue !== "hyperliquid") {
+    return symbol;
+  }
+  const parsed = parseHyperliquidSymbol(symbol);
+  return parsed.ok ? parsed.symbol : symbol;
+}
+
 async function rejectDcaMaxOrder(
   config: DcaPlaybookConfig,
+  desk: TradingAccount,
 ): Promise<string | null> {
-  const pairs = await loadUsdtLinearPerps().catch(() => []);
+  const pairs =
+    desk.venue === "hyperliquid"
+      ? await loadHyperliquidLinearPerps(
+          hyperliquidInfoEnvironment(desk.venueEnvironment),
+        ).catch(() => [])
+      : await loadUsdtLinearPerps().catch(() => []);
   const pair = pairs.find((row) => row.symbol === config.symbol);
   if (!pair) {
     return "That contract is not available.";
   }
-  const lastPrice = await lastPriceFor(config.symbol);
+  const lastPrice = await lastPriceFor(config.symbol, desk);
   return dcaConfigMaxOrderError({
     config,
     lastPrice,
@@ -95,6 +112,7 @@ async function applyDcaTemplate(input: {
   template: AutomationTemplate;
   symbol?: string;
   webhookId?: string | null;
+  desk: TradingAccount;
 }): Promise<ApplyItemResult> {
   const recipe = input.template.recipe;
   if (recipe.kind !== "dca") {
@@ -107,8 +125,9 @@ async function applyDcaTemplate(input: {
     };
   }
   const built = dcaRecipeToConfig(recipe, {
-    symbol: input.symbol,
+    symbol: remapTemplateSymbol(input.symbol ?? recipe.symbol, input.desk.venue),
     webhookId: input.webhookId,
+    venue: input.desk.venue,
   });
   if (!built.ok) {
     return {
@@ -141,7 +160,7 @@ async function applyDcaTemplate(input: {
       symbol: built.config.symbol,
     };
   }
-  const sizeError = await rejectDcaMaxOrder(built.config);
+  const sizeError = await rejectDcaMaxOrder(built.config, input.desk);
   if (sizeError) {
     return {
       templateId: input.template.id,
@@ -184,6 +203,7 @@ async function applyPerpsTemplate(input: {
   accountId: string;
   template: AutomationTemplate;
   webhookId?: string | null;
+  desk: TradingAccount;
 }): Promise<ApplyItemResult> {
   const recipe = input.template.recipe;
   if (recipe.kind !== "perps") {
@@ -199,6 +219,8 @@ async function applyPerpsTemplate(input: {
   const built = perpsRecipeToRule(recipe, {
     sortOrder: existing.length,
     webhookId: input.webhookId,
+    venue: input.desk.venue,
+    symbol: remapTemplateSymbol(recipe.symbol, input.desk.venue),
   });
   if (!built.ok) {
     return {
@@ -405,6 +427,7 @@ export async function applyTemplateToDesk(input: {
       template,
       symbol: input.symbol,
       webhookId: input.webhookId,
+      desk,
     });
   }
   if (template.deskType === "perps") {
@@ -413,6 +436,7 @@ export async function applyTemplateToDesk(input: {
       accountId: input.accountId,
       template,
       webhookId: input.webhookId,
+      desk,
     });
   }
   return applyPaperTemplate({

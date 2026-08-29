@@ -17,6 +17,11 @@ import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { triggerPrice, tickerTriggerPrices } from "./tpsl";
 import { parseDeskType, type TradingAccountMode } from "@/lib/accounts/model";
+import {
+  parseStoredVenueEnvironment,
+  parseStoredVenueId,
+} from "@/lib/exchanges/venues";
+import { loadDeskTickerMap } from "@/lib/market/desk-tickers";
 
 export async function runFuturesAutomationTick(input?: {
   accountId?: string;
@@ -52,7 +57,7 @@ export async function runFuturesAutomationTick(input?: {
   ] = await Promise.all([
     supabase
       .from("trading_accounts")
-      .select("id, user_id, mode, desk_type")
+      .select("id, user_id, mode, desk_type, venue, venue_environment")
       .in("id", uniqueAccountIds),
     supabase
       .from("strategy_settings")
@@ -66,30 +71,27 @@ export async function runFuturesAutomationTick(input?: {
       .in("account_id", uniqueAccountIds),
     input?.tickers
       ? Promise.resolve(input.tickers)
-      : fetchBybitTickers("linear").catch(() => null),
+      : fetchBybitTickers("linear").catch(() => new Map<string, BybitTicker>()),
   ]);
   const tickers = fetchedTickers;
 
-  if (!tickers) {
-    await writeEventLog({
-      level: "warning",
-      scope: "strategy",
-      event: "engine.open_failed",
-      message: "Futures automations skipped: could not read linear tickers.",
-      strategy: FUTURES_STRATEGY_ID,
-    });
-    return { fired: 0 };
-  }
-
   const accounts = new Map(
-    (accountRows ?? []).map((row) => [
-      String((row as { id: string }).id),
-      {
-        userId: String((row as { user_id: string }).user_id),
-        mode: String((row as { mode: string }).mode) as TradingAccountMode,
-        deskType: parseDeskType((row as { desk_type?: unknown }).desk_type),
-      },
-    ]),
+    (accountRows ?? []).map((row) => {
+      const venue = parseStoredVenueId((row as { venue?: unknown }).venue);
+      return [
+        String((row as { id: string }).id),
+        {
+          userId: String((row as { user_id: string }).user_id),
+          mode: String((row as { mode: string }).mode) as TradingAccountMode,
+          deskType: parseDeskType((row as { desk_type?: unknown }).desk_type),
+          venue,
+          venueEnvironment: parseStoredVenueEnvironment(
+            venue,
+            (row as { venue_environment?: unknown }).venue_environment,
+          ),
+        },
+      ] as const;
+    }),
   );
   const reduceOnly = new Set(
     (settingsRows ?? [])
@@ -106,18 +108,36 @@ export async function runFuturesAutomationTick(input?: {
     opensByAccount.set(row.accountId, list);
   }
 
+  const deskTickerCache = new Map<string, Map<string, BybitTicker>>();
   let fired = 0;
   for (const raw of ruleRows) {
-    const rule = parseFuturesAutomationRow(raw as Record<string, unknown>);
+    const accountId = String((raw as { account_id: string }).account_id);
+    const account = accounts.get(accountId);
+    const rule = parseFuturesAutomationRow(
+      raw as Record<string, unknown>,
+      account?.venue,
+    );
     if (rule.entrySource === "webhook") {
       continue;
     }
-    const accountId = String((raw as { account_id: string }).account_id);
-    const account = accounts.get(accountId);
     if (!account || !rule.id || account.deskType !== "perps") {
       continue;
     }
-    const ticker = tickers.get(rule.symbol);
+    let deskTickers = tickers;
+    if (account.venue === "hyperliquid" && !input?.tickers) {
+      const cacheKey = `${account.venue}:${account.venueEnvironment ?? ""}`;
+      if (!deskTickerCache.has(cacheKey)) {
+        deskTickerCache.set(
+          cacheKey,
+          (await loadDeskTickerMap(
+            account.venue,
+            account.venueEnvironment,
+          ).catch(() => new Map())) as Map<string, BybitTicker>,
+        );
+      }
+      deskTickers = deskTickerCache.get(cacheKey) ?? tickers;
+    }
+    const ticker = deskTickers.get(rule.symbol);
     if (!ticker) {
       continue;
     }

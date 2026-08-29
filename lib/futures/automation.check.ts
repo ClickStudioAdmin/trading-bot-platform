@@ -174,6 +174,24 @@ if (blank.ok) {
   assert.equal(blank.rules.length, 0);
 }
 
+const hlRule = new FormData();
+hlRule.set("deskVenue", "hyperliquid");
+hlRule.set("ruleCount", "1");
+hlRule.set("r0_name", "HL breakout");
+hlRule.set("r0_symbol", "BTC");
+hlRule.set("r0_action", "buy");
+hlRule.set("r0_orderType", "market");
+hlRule.set("r0_sizeUnit", "qty");
+hlRule.set("r0_size", "0.01");
+hlRule.set("r0_triggerBy", "last");
+hlRule.set("r0_triggerCompare", "gte");
+hlRule.set("r0_triggerPrice", "90000");
+const hlParsed = parseFuturesAutomationForm(hlRule, "hyperliquid");
+assert.equal(hlParsed.ok, true);
+if (hlParsed.ok) {
+  assert.equal(hlParsed.rules[0]?.symbol, "BTC");
+}
+
 assert.equal(defaultFuturesAutomationForm(0).formAction, "buy");
 
 const webhookRule = new FormData();

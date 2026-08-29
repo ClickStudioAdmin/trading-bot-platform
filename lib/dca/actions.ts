@@ -18,6 +18,8 @@ import {
   syncDcaPlaybookWorking,
 } from "@/lib/dca/run";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
+import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
+import { loadHyperliquidLinearPerps } from "@/lib/venues/hyperliquid/market";
 import {
   deleteDcaPlaybook,
   loadDcaPlaybookById,
@@ -64,13 +66,19 @@ export async function saveAndArmDcaPlaybookAction(
 
 async function rejectIfOverMaxOrder(
   config: DcaPlaybookConfig,
+  desk: { venue: string; venueEnvironment: string | null },
 ): Promise<string | null> {
-  const pairs = await loadUsdtLinearPerps().catch(() => []);
+  const pairs =
+    desk.venue === "hyperliquid"
+      ? await loadHyperliquidLinearPerps(
+          hyperliquidInfoEnvironment(desk.venueEnvironment),
+        ).catch(() => [])
+      : await loadUsdtLinearPerps().catch(() => []);
   const pair = pairs.find((row) => row.symbol === config.symbol);
   if (!pair) {
     return "That contract is not available.";
   }
-  const lastPrice = await lastPriceFor(config.symbol);
+  const lastPrice = await lastPriceFor(config.symbol, desk);
   return dcaConfigMaxOrderError({
     config,
     lastPrice,
@@ -88,18 +96,11 @@ async function saveDcaPlaybookWith(
   if (session.account.deskType !== "dca") {
     return deskActionError("This desk is not a DCA desk.");
   }
-  const parsed = parseDcaPlaybookForm(formData);
+  const parsed = parseDcaPlaybookForm(formData, session.account.venue);
   if (!parsed.ok) {
     return deskActionError(parsed.error);
   }
-  if (session.account.venue === "hyperliquid") {
-    return deskActionError(
-      parsed.config.direction === "both"
-        ? "This Hyperliquid desk is one-way. Both is not available. DCA long or short ships in the next step."
-        : "DCA on Hyperliquid (long or short, coin symbols) ships in the next step.",
-    );
-  }
-  const overMax = await rejectIfOverMaxOrder(parsed.config);
+  const overMax = await rejectIfOverMaxOrder(parsed.config, session.account);
   if (overMax) {
     return deskActionError(overMax);
   }
@@ -272,12 +273,15 @@ export async function runDcaPlaybookVerb(
     return deskActionError("Choose Arm, Disarm, or Close bot.");
   }
   const { verb, side } = parsedVerb;
-  const parsed = parseDcaPlaybookForm(formData);
+  const parsed = parseDcaPlaybookForm(formData, session.account.venue);
   if (!parsed.ok) {
     return deskActionError(parsed.error);
   }
   if (verb === "arm") {
-    const overMax = await rejectIfOverMaxOrder(parsed.config);
+    const overMax = await rejectIfOverMaxOrder(
+      parsed.config,
+      session.account,
+    );
     if (overMax) {
       return deskActionError(overMax);
     }

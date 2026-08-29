@@ -33,11 +33,7 @@ import {
   withFuturesOrigin,
 } from "./source";
 import { parseAccountMode } from "@/lib/accounts/model";
-import {
-  fetchBybitTicker,
-  fetchBybitTickers,
-  type BybitTicker,
-} from "@/lib/exchanges/bybit/client";
+import { fetchBybitTickers, type BybitTicker } from "@/lib/exchanges/bybit/client";
 import {
   amendPerpOrderOnVenue,
   cancelPerpOrderOnVenue,
@@ -47,13 +43,29 @@ import {
 } from "@/lib/exchanges/execute";
 import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import { loadDeskTicker, loadDeskTickerMap } from "@/lib/market/desk-tickers";
+import { loadDeskVenueContext } from "@/lib/venues/hyperliquid/desk";
 import { writeEventLog } from "@/lib/logs/write";
 import { hedgePositionIdx } from "./decide";
 import { markFromTicker } from "./math";
 import { selectStrategySettings } from "./settings";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
+import type { BybitLinearPosition } from "@/lib/exchanges/bybit/orders";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+const VENUE_FLATTEN_MIN_AGE_MS = 8_000;
+
+function venueQtyOnSide(
+  position: BybitLinearPosition | null,
+  side: FuturesPosition["side"],
+): number {
+  if (!position || !(position.size > 0)) {
+    return 0;
+  }
+  const venueSide = position.positionIdx === 2 ? "short" : "long";
+  return venueSide === side ? position.size : 0;
+}
 
 export type ReconcileBooksInput = {
   accountId?: string;
@@ -61,6 +73,32 @@ export type ReconcileBooksInput = {
   workingId?: string;
   tickers?: Map<string, BybitTicker>;
 };
+
+async function defaultReconcileTickers(
+  accountId?: string,
+): Promise<Map<string, BybitTicker>> {
+  if (!accountId) {
+    return fetchBybitTickers("linear").catch(
+      () => new Map<string, BybitTicker>(),
+    );
+  }
+  const desk = await loadDeskVenueContext(accountId);
+  return (await loadDeskTickerMap(desk.venue, desk.venueEnvironment).catch(
+    () => new Map(),
+  )) as Map<string, BybitTicker>;
+}
+
+async function paperTickerForAccount(
+  accountId: string,
+  symbol: string,
+): Promise<BybitTicker | null> {
+  const desk = await loadDeskVenueContext(accountId);
+  return (await loadDeskTicker(
+    desk.venue,
+    desk.venueEnvironment,
+    symbol,
+  ).catch(() => null)) as BybitTicker | null;
+}
 
 export async function reconcileOpenFuturesBooks(
   input?: ReconcileBooksInput,
@@ -70,7 +108,8 @@ export async function reconcileOpenFuturesBooks(
     return filled;
   }
   const closed = await reconcileOpenFuturesStops(input);
-  return filled + closed;
+  const matched = await reconcileOpenFuturesVenuePositions(input);
+  return filled + closed + matched;
 }
 
 export async function reconcileOpenFuturesWorkingOrders(
@@ -103,9 +142,7 @@ export async function reconcileOpenFuturesWorkingOrders(
   );
   const tickers =
     input?.tickers ??
-    (await fetchBybitTickers("linear").catch(
-      () => new Map<string, BybitTicker>(),
-    ));
+    (await defaultReconcileTickers(input?.accountId));
   let filled = 0;
   const connections = new Map<
     string,
@@ -149,7 +186,7 @@ async function reconcileOneWorkingOrder(input: {
   }
   const ticker =
     input.tickers.get(input.row.symbol) ??
-    (await fetchBybitTicker("linear", input.row.symbol).catch(() => null));
+    (await paperTickerForAccount(input.row.accountId, input.row.symbol));
   const mark = ticker ? markFromTicker(ticker) : null;
   if (
     mark === null ||
@@ -199,15 +236,25 @@ async function reconcileLiveWorking(input: {
     filledQty: input.row.filledQty,
     venueFilledQty: venueFilled,
   });
+  const impliedFill =
+    progress.delta <= 0 &&
+    venueStatus === "filled" &&
+    input.row.remainingQty > 0;
   let applied = false;
-  if (progress.delta > 0) {
+  if (progress.delta > 0 || impliedFill) {
+    const fillQty = impliedFill ? input.row.remainingQty : progress.delta;
     applied = await applyWorkingFill({
       supabase: input.supabase,
       row: input.row,
-      fillQty: progress.delta,
+      fillQty,
       fillPrice,
-      venueFilledQty: venueFilled,
-      nextStatus: venueStatus === "open" && !progress.done ? "open" : venueStatus,
+      venueFilledQty: impliedFill
+        ? input.row.filledQty + fillQty
+        : venueFilled,
+      nextStatus:
+        venueStatus === "open" && !progress.done && !impliedFill
+          ? "open"
+          : venueStatus,
       connection: input.connection,
     });
   } else if (venueStatus !== "open") {
@@ -695,6 +742,97 @@ async function connectionForAccount(input: {
   return bound.connection;
 }
 
+export async function reconcileOpenFuturesVenuePositions(
+  input?: ReconcileBooksInput,
+): Promise<number> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return 0;
+  }
+  let query = supabase
+    .from("futures_positions")
+    .select("*")
+    .eq("status", "open")
+    .order("opened_at", { ascending: true });
+  if (input?.accountId) {
+    query = query.eq("account_id", input.accountId);
+  }
+  if (input?.userId) {
+    query = query.eq("user_id", input.userId);
+  }
+  const { data, error } = await query;
+  if (error || !data || data.length === 0) {
+    return 0;
+  }
+  const rows = data.map((row) =>
+    parseFuturesPositionRow(row as Record<string, unknown>),
+  );
+  const tickers =
+    input?.tickers ?? (await defaultReconcileTickers(input?.accountId));
+  const connections = new Map<
+    string,
+    BoundConnectionSecrets | null | undefined
+  >();
+  let closed = 0;
+  const now = Date.now();
+  for (const row of rows) {
+    if (now - row.openedAtMs < VENUE_FLATTEN_MIN_AGE_MS) {
+      continue;
+    }
+    const live = await connectionForAccount({
+      supabase,
+      accountId: row.accountId,
+      userId: row.userId,
+      connections,
+    });
+    if (!live) {
+      continue;
+    }
+    const venue = await readPerpPositionOnVenue({
+      connection: live,
+      symbol: row.symbol,
+      positionIdx: hedgePositionIdx(row.side),
+    });
+    if (!venue.ok) {
+      continue;
+    }
+    const venueQty = venueQtyOnSide(venue.position, row.side);
+    if (venueQty + 1e-12 >= row.qty) {
+      continue;
+    }
+    const ticker =
+      tickers.get(row.symbol) ??
+      (await paperTickerForAccount(row.accountId, row.symbol));
+    const prices = tickerTriggerPrices(ticker ?? {});
+    const fillPrice = prices.mark ?? prices.last ?? row.entryPrice;
+    const applied = await closeStopPosition({
+      supabase,
+      row,
+      qty: row.qty - venueQty,
+      price: fillPrice,
+      venue: live.venue,
+      environment: live.environment,
+      kind: "venue",
+      remainingTpsl:
+        venueQty > 1e-12 ? tpslFromRow(row) : null,
+    });
+    if (!applied) {
+      continue;
+    }
+    if (venueQty <= 1e-12) {
+      await cancelReduceOnlyWorkingForPosition({
+        supabase,
+        accountId: row.accountId,
+        userId: row.userId,
+        positionId: row.id,
+        connection: live,
+      });
+    }
+    closed += 1;
+  }
+  return closed;
+}
+
 export async function reconcileOpenFuturesStops(
   input?: ReconcileBooksInput,
 ): Promise<number> {
@@ -728,9 +866,7 @@ export async function reconcileOpenFuturesStops(
   }
   const tickers =
     input?.tickers ??
-    (await fetchBybitTickers("linear").catch(
-      () => new Map<string, BybitTicker>(),
-    ));
+    (await defaultReconcileTickers(input?.accountId));
   const connections = new Map<
     string,
     BoundConnectionSecrets | null | undefined
@@ -763,7 +899,7 @@ async function reconcileOneStop(input: {
   }
   const ticker =
     input.tickers.get(input.row.symbol) ??
-    (await fetchBybitTicker("linear", input.row.symbol).catch(() => null));
+    (await paperTickerForAccount(input.row.accountId, input.row.symbol));
   const prices = tickerTriggerPrices(ticker ?? {});
   const live = await connectionForAccount({
     supabase: input.supabase,

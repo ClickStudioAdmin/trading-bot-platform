@@ -48,6 +48,7 @@ import {
   placePerpLimitOnVenue,
   placePerpMarketOnVenue,
   setPerpTradingStopOnVenue,
+  venueAlreadyFlatError,
 } from "@/lib/exchanges/execute";
 import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
 import { type BoundConnectionSecrets } from "@/lib/exchanges/store";
@@ -575,27 +576,32 @@ async function runPlace(
           orderLinkId: key ?? undefined,
         });
         if (!placed.ok) {
-          await writeEventLog({
-            level: "error",
-            scope: "trade",
-            event: "trade.futures_failed",
-            message: placed.error,
-            userId: actor.userId,
-            accountId: actor.accountId,
-            strategy: FUTURES_STRATEGY_ID,
-            data: { symbol, action: "flatten", positionId: row.id },
-          });
-          return fail(placed.error);
-        }
-        venue = placed.fill.venue;
-        environment = placed.fill.environment;
-        venueOrderId = placed.fill.orderId;
-        const filledQty = Number(placed.fill.qty);
-        if (filledQty > 0) {
-          qtyNumber = filledQty;
-        }
-        if (placed.fill.price != null && placed.fill.price > 0) {
-          fillPrice = placed.fill.price;
+          if (!venueAlreadyFlatError(placed.error)) {
+            await writeEventLog({
+              level: "error",
+              scope: "trade",
+              event: "trade.futures_failed",
+              message: placed.error,
+              userId: actor.userId,
+              accountId: actor.accountId,
+              strategy: FUTURES_STRATEGY_ID,
+              data: { symbol, action: "flatten", positionId: row.id },
+            });
+            return fail(placed.error);
+          }
+          venue = connection.venue;
+          environment = connection.environment;
+        } else {
+          venue = placed.fill.venue;
+          environment = placed.fill.environment;
+          venueOrderId = placed.fill.orderId;
+          const filledQty = Number(placed.fill.qty);
+          if (filledQty > 0) {
+            qtyNumber = filledQty;
+          }
+          if (placed.fill.price != null && placed.fill.price > 0) {
+            fillPrice = placed.fill.price;
+          }
         }
       }
       const written = await writeFuturesCloseSlice({

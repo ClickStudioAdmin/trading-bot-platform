@@ -9,6 +9,7 @@ import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { parseStoredVenueId } from "@/lib/exchanges/venues";
 import { fireWebhookAutomationEntries } from "./automation-tick";
 import { runFuturesCommand } from "./command";
 import { loadOpenFuturesOnSymbol } from "./list";
@@ -44,10 +45,6 @@ export async function handleFuturesWebhook(input: {
   if (!parsedJson.ok) {
     return { status: 400, body: { ok: false, error: parsedJson.error } };
   }
-  const parsed = parseFuturesWebhook(parsedJson.body);
-  if (!parsed.ok) {
-    return { status: 400, body: { ok: false, error: parsed.error } };
-  }
 
   const hash = hashWebhookToken(input.token);
   const found = await lookupWebhookByHash(supabase, hash);
@@ -61,6 +58,22 @@ export async function handleFuturesWebhook(input: {
   const accountId = found.accountId;
   const userId = found.userId;
   const ruleName = found.name;
+  const { data: account, error: accountError } = await supabase
+    .from("trading_accounts")
+    .select("id, user_id, mode, desk_type, venue")
+    .eq("id", accountId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (accountError || !account) {
+    return unauthorized();
+  }
+  const parsed = parseFuturesWebhook(
+    parsedJson.body,
+    parseStoredVenueId((account as { venue?: unknown }).venue),
+  );
+  if (!parsed.ok) {
+    return { status: 400, body: { ok: false, error: parsed.error } };
+  }
   if (found.kind === "order" && parsed.parsed.kind === "arm") {
     return {
       status: 400,
@@ -70,15 +83,6 @@ export async function handleFuturesWebhook(input: {
           "This webhook is a TradingView strategy. Send buy, sell, or close.",
       },
     };
-  }
-  const { data: account, error: accountError } = await supabase
-    .from("trading_accounts")
-    .select("id, user_id, mode, desk_type")
-    .eq("id", accountId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (accountError || !account) {
-    return unauthorized();
   }
   const mode = parseAccountMode((account as { mode?: unknown }).mode);
   const deskType = parseDeskType((account as { desk_type?: unknown }).desk_type);

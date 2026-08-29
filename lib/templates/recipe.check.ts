@@ -59,6 +59,17 @@ if (remapped.ok) {
   assert.equal(remapped.config.symbol, "SOLUSDT");
 }
 
+const hlBoth = dcaRecipeToConfig(snapshot, {
+  symbol: "ETH",
+  venue: "hyperliquid",
+});
+assert.equal(hlBoth.ok, true);
+if (hlBoth.ok) {
+  assert.equal(hlBoth.config.symbol, "ETH");
+  assert.equal(hlBoth.config.direction, "long");
+  assert.ok(hlBoth.notes.some((note) => /one-way/i.test(note)));
+}
+
 assert.equal(parseTemplateRecipe({ name: "x" }, "dca", 1).ok, false);
 assert.equal(parseTemplateRecipe(snapshot, "dca", 2).ok, false);
 assert.equal(parseTemplateRecipe(snapshot, "perps", 1).ok, false);

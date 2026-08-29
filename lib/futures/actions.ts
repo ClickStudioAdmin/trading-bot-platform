@@ -360,7 +360,7 @@ export async function saveFuturesAutomations(
     }
     redirect(deskPath(FUTURES_PATHS.automations, account.id));
   }
-  const parsed = parseFuturesAutomationForm(formData);
+  const parsed = parseFuturesAutomationForm(formData, account.venue);
   if (!parsed.ok) {
     return deskActionError(parsed.error);
   }

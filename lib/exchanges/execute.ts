@@ -386,6 +386,10 @@ export async function amendPerpOrderOnVenue(input: {
   });
 }
 
+export function venueAlreadyFlatError(error: string): boolean {
+  return error.toLowerCase().includes("reduce only order would increase");
+}
+
 export async function readPerpOrderOnVenue(input: {
   connection: BoundConnectionSecrets;
   orderId: string;

@@ -16,7 +16,11 @@ import {
   sharedKeyWarningKind,
   type ExchangeConnection,
 } from "@/lib/exchanges/connections";
-import { getVenue, venueAllowsDeskType } from "@/lib/exchanges/venues";
+import {
+  getVenue,
+  venueAllowsDeskType,
+  venuesForDeskType,
+} from "@/lib/exchanges/venues";
 import { SharedKeyWarning } from "@/components/shared-key-warning";
 
 const fieldClass =
@@ -50,6 +54,7 @@ export function CreateAccountForm({
   const [mode, setMode] = useState<"paper" | "live">("paper");
   const [bindChoice, setBindChoice] = useState<"later" | "existing">("later");
   const [connectionId, setConnectionId] = useState("");
+  const [paperVenue, setPaperVenue] = useState("bybit");
   const [name, setName] = useState("");
   const liveKeys = useMemo(
     () =>
@@ -62,8 +67,17 @@ export function CreateAccountForm({
       }),
     [connections, deskType],
   );
+  const paperVenues = useMemo(
+    () => venuesForDeskType(deskType),
+    [deskType],
+  );
   const selected = liveKeys.find((row) => row.id === connectionId) ?? null;
-  const venue = selected?.venue ?? "bybit";
+  const venue =
+    mode === "paper"
+      ? paperVenues.some((row) => row.id === paperVenue)
+        ? paperVenue
+        : (paperVenues[0]?.id ?? "bybit")
+      : (selected?.venue ?? "bybit");
   const track = selected?.environment ?? "";
   const pathname = usePathname();
   const warningKind =
@@ -144,8 +158,13 @@ export function CreateAccountForm({
           name="deskType"
           value={deskType}
           onChange={(event) => {
-            setDeskType(event.target.value as DeskType);
+            const nextType = event.target.value as DeskType;
+            setDeskType(nextType);
             setConnectionId("");
+            const allowed = venuesForDeskType(nextType);
+            if (!allowed.some((row) => row.id === paperVenue)) {
+              setPaperVenue(allowed[0]?.id ?? "bybit");
+            }
           }}
           className={fieldClass}
         >
@@ -174,6 +193,22 @@ export function CreateAccountForm({
           <option value="live">{formatAccountModeChoice("live")}</option>
         </select>
       </label>
+      {mode === "paper" && deskType !== "cash_and_carry" && paperVenues.length > 1 ? (
+        <label className="block text-xs text-ink-muted">
+          Exchange
+          <select
+            value={venue}
+            onChange={(event) => setPaperVenue(event.target.value)}
+            className={fieldClass}
+          >
+            {paperVenues.map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       {mode === "live" ? (
         <div className="space-y-4">
           <label className="block text-xs text-ink-muted">
@@ -241,8 +276,8 @@ export function CreateAccountForm({
       ) : null}
       <p className="text-sm text-ink-muted">
         Type and mode are set at create and never change. Paper Trading uses
-        live market data and fills on the in-app ledger. Connected Exchange
-        can bind a key from this login now, or later in Desk Settings.
+        that exchange’s public marks and fills on the in-app ledger. Connected
+        Exchange can bind a key from this login now, or later in Desk Settings.
       </p>
       {embedded && !firstDesk ? (
         <label className="flex items-start gap-2 text-sm text-ink">

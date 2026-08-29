@@ -11,6 +11,7 @@ import {
   type FuturesSide,
 } from "./model";
 import { FUTURES_IDEMPOTENCY_MAX } from "./command";
+import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 
 export const WEBHOOK_TOKEN_HEX = 64;
 export const WEBHOOK_RULE_NAME = "TradingView";
@@ -115,6 +116,7 @@ export function parseWebhookName(
 
 export function parseWebhookSymbol(
   raw: unknown,
+  venue = "bybit",
 ): { ok: true; symbol: string } | { ok: false; error: string } {
   let text = String(raw ?? "").trim().toUpperCase();
   const colon = text.lastIndexOf(":");
@@ -122,7 +124,7 @@ export function parseWebhookSymbol(
     text = text.slice(colon + 1).trim();
   }
   text = text.replace(/\.P$/i, "").replace(/PERP$/i, "");
-  return parseFuturesSymbol(text);
+  return parseDeskFuturesSymbol(venue, text);
 }
 
 export function webhookNameTakenAmong(
@@ -184,6 +186,7 @@ export function parseWebhookJson(
 
 export function parseFuturesWebhook(
   body: unknown,
+  venue = "bybit",
 ): { ok: true; parsed: ParsedWebhook } | { ok: false; error: string } {
   if (looksLikeVenueWebhookPayload(body)) {
     return { ok: false, error: "Rejecting a venue payload. Send desk JSON." };
@@ -221,7 +224,7 @@ export function parseFuturesWebhook(
     };
   }
 
-  const symbol = parseWebhookSymbol(row.symbol ?? row.ticker);
+  const symbol = parseWebhookSymbol(row.symbol ?? row.ticker, venue);
   if (!symbol.ok) {
     return symbol;
   }

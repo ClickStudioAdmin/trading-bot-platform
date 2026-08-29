@@ -1,9 +1,15 @@
 import { parseDeskType, type TradingAccountMode } from "@/lib/accounts/model";
 import {
-  fetchBybitKlines,
   fetchBybitTickers,
   type BybitTicker,
 } from "@/lib/exchanges/bybit/client";
+import { loadDeskIndicatorCloses } from "@/lib/market/desk-klines";
+import { loadDeskTickerMap } from "@/lib/market/desk-tickers";
+import {
+  parseStoredVenueEnvironment,
+  parseStoredVenueId,
+} from "@/lib/exchanges/venues";
+import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import {
   loadFuturesWorking,
   loadOpenFuturesOnSymbol,
@@ -12,7 +18,6 @@ import {
 import { parseFuturesPositionRow } from "@/lib/futures/model";
 import type { FuturesSide } from "@/lib/futures/model";
 import { tickerTriggerPrices } from "@/lib/futures/tpsl";
-import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
@@ -70,7 +75,7 @@ export async function runDcaPlaybookTick(input?: {
   ] = await Promise.all([
     supabase
       .from("trading_accounts")
-      .select("id, user_id, mode, desk_type")
+      .select("id, user_id, mode, desk_type, venue, venue_environment")
       .in("id", accountIds),
     supabase
       .from("strategy_settings")
@@ -84,28 +89,26 @@ export async function runDcaPlaybookTick(input?: {
       .in("account_id", accountIds),
     input?.tickers
       ? Promise.resolve(input.tickers)
-      : fetchBybitTickers("linear").catch(() => null),
+      : fetchBybitTickers("linear").catch(() => new Map<string, BybitTicker>()),
   ]);
   const tickers = fetchedTickers;
-  if (!tickers) {
-    await writeEventLog({
-      level: "warning",
-      scope: "strategy",
-      event: "engine.open_failed",
-      message: "DCA tick skipped: could not read linear tickers.",
-      strategy: FUTURES_STRATEGY_ID,
-    });
-    return { acted: 0 };
-  }
   const accounts = new Map(
-    (accountRows ?? []).map((row) => [
-      String((row as { id: string }).id),
-      {
-        userId: String((row as { user_id: string }).user_id),
-        mode: String((row as { mode: string }).mode) as TradingAccountMode,
-        deskType: parseDeskType((row as { desk_type?: unknown }).desk_type),
-      },
-    ]),
+    (accountRows ?? []).map((row) => {
+      const venue = parseStoredVenueId((row as { venue?: unknown }).venue);
+      return [
+        String((row as { id: string }).id),
+        {
+          userId: String((row as { user_id: string }).user_id),
+          mode: String((row as { mode: string }).mode) as TradingAccountMode,
+          deskType: parseDeskType((row as { desk_type?: unknown }).desk_type),
+          venue,
+          venueEnvironment: parseStoredVenueEnvironment(
+            venue,
+            (row as { venue_environment?: unknown }).venue_environment,
+          ),
+        },
+      ] as const;
+    }),
   );
   const reduceOnly = new Set(
     (settingsRows ?? [])
@@ -123,16 +126,25 @@ export async function runDcaPlaybookTick(input?: {
     if (!account || account.deskType !== "dca") {
       continue;
     }
-    const ticker = tickers.get(playbook.symbol) ?? {};
+    const deskTickers =
+      account.venue === "hyperliquid" && !input?.tickers
+        ? await loadDeskTickerMap(
+            account.venue,
+            account.venueEnvironment,
+          ).catch(() => tickers)
+        : tickers;
+    const ticker = deskTickers.get(playbook.symbol) ?? {};
     const prices = tickerTriggerPrices(ticker);
     let closes: number[] | null = null;
     const indicatorTimeframe = playbook.indicatorTimeframe;
     if (dcaNeedsIndicatorCloses(playbook) && indicatorTimeframe) {
-      const key = `${playbook.symbol}:${indicatorTimeframe}`;
+      const key = `${account.venue}:${playbook.symbol}:${indicatorTimeframe}`;
       if (!klineCache.has(key)) {
-        const fetched = await fetchBybitKlines({
+        const fetched = await loadDeskIndicatorCloses({
+          venue: account.venue,
+          venueEnvironment: account.venueEnvironment,
           symbol: playbook.symbol,
-          interval: indicatorTimeframe,
+          interval: indicatorTimeframe as DcaIndicatorTimeframe,
         }).catch(() => []);
         klineCache.set(key, fetched);
       }

@@ -146,15 +146,16 @@ export function mapBybitOrderStatus(status: string): FuturesWorkingStatus {
   if (value === "filled") {
     return "filled";
   }
+  if (value === "rejected" || value.includes("reject")) {
+    return "rejected";
+  }
   if (
     value === "cancelled" ||
     value === "canceled" ||
-    value === "rejected" ||
     value === "deactivated" ||
-    value === "partiallyfilledcanceled" ||
-    value === "partiallyfilledcancelled"
+    value.includes("cancel")
   ) {
-    return value === "rejected" ? "rejected" : "cancelled";
+    return "cancelled";
   }
   return "open";
 }

@@ -1,5 +1,6 @@
 import { parseDeskType, type TradingAccountMode } from "@/lib/accounts/model";
-import { fetchBybitTicker } from "@/lib/exchanges/bybit/client";
+import { loadDeskTicker } from "@/lib/market/desk-tickers";
+import { loadDeskVenueContext } from "@/lib/venues/hyperliquid/desk";
 import { runFuturesCommand, deleteCommandReceipt } from "@/lib/futures/command";
 import {
   loadOpenFuturesOnSymbol,
@@ -180,12 +181,27 @@ function sidesForVerb(
   return enabled.filter((item) => item === side);
 }
 
-async function lastPriceFor(symbol: string): Promise<number | null> {
-  const ticker = await fetchBybitTicker("linear", symbol).catch(() => null);
+export async function lastPriceFor(
+  symbol: string,
+  desk?: { venue?: string; venueEnvironment?: string | null },
+): Promise<number | null> {
+  const ticker = await loadDeskTicker(
+    desk?.venue ?? "bybit",
+    desk?.venueEnvironment ?? null,
+    symbol,
+  ).catch(() => null);
   if (!ticker) {
     return null;
   }
   return tickerTriggerPrices(ticker).last;
+}
+
+async function lastPriceForPlaybook(playbook: {
+  accountId: string;
+  symbol: string;
+}): Promise<number | null> {
+  const desk = await loadDeskVenueContext(playbook.accountId);
+  return lastPriceFor(playbook.symbol, desk);
 }
 
 function clipTrailing(
@@ -1221,7 +1237,7 @@ async function applyDcaVerbUnlocked(input: {
     return { ok: true, message: "Bot closed." };
   }
 
-  const lastPrice = await lastPriceFor(input.playbook.symbol);
+  const lastPrice = await lastPriceForPlaybook(input.playbook);
   const fromSignal = input.source === "webhook";
   const placeNow =
     Boolean(input.forcePlace) ||
@@ -1388,7 +1404,7 @@ export async function syncDcaPlaybookWorking(input: {
     run: async () => {
       const lastPrice =
         input.lastPrice === undefined
-          ? await lastPriceFor(input.playbook.symbol)
+          ? await lastPriceForPlaybook(input.playbook)
           : input.lastPrice;
       for (const side of ["long", "short"] as const) {
         const enabled = dcaEnabledSides(input.playbook.direction).includes(side);
@@ -1425,7 +1441,6 @@ export async function syncDcaPlaybookWorking(input: {
 }
 
 export {
-  lastPriceFor,
   placeClip,
   flattenSide as flattenPlaybook,
   moveStopToBreakeven,

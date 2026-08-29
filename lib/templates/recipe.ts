@@ -342,12 +342,13 @@ function asNullableNumber(value: unknown): number | null {
 
 export function dcaRecipeToConfig(
   recipe: DcaTemplateRecipe | Record<string, unknown>,
-  options: { symbol?: string; webhookId?: string | null },
+  options: { symbol?: string; webhookId?: string | null; venue?: string },
 ):
   | { ok: true; config: DcaPlaybookConfig; notes: string[] }
   | { ok: false; error: string } {
   const notes: string[] = [];
   const form = new FormData();
+  const venue = options.venue ?? "bybit";
   const startKind = String(recipe.startKind ?? "immediate");
   const webhookId = options.webhookId?.trim() || "";
   let appliedStart = startKind;
@@ -358,8 +359,15 @@ export function dcaRecipeToConfig(
     );
   }
   form.set("name", String(recipe.name ?? "DCA"));
+  form.set("deskVenue", venue);
   form.set("symbol", String(options.symbol ?? recipe.symbol ?? ""));
-  form.set("direction", String(recipe.direction ?? "long"));
+  const direction = String(recipe.direction ?? "long");
+  if (venue === "hyperliquid" && direction === "both") {
+    form.set("direction", "long");
+    notes.push("Hyperliquid is one-way. Applied as Long.");
+  } else {
+    form.set("direction", direction);
+  }
   form.set("startKind", appliedStart);
   if (appliedStart === "webhook") {
     form.set("webhookId", webhookId);
@@ -434,7 +442,7 @@ export function dcaRecipeToConfig(
   if (recipe.indicatorLevel != null) {
     form.set("indicatorLevel", String(recipe.indicatorLevel));
   }
-  const parsed = parseDcaPlaybookForm(form);
+  const parsed = parseDcaPlaybookForm(form, venue);
   if (!parsed.ok) {
     return parsed;
   }
@@ -443,12 +451,18 @@ export function dcaRecipeToConfig(
 
 export function perpsRecipeToRule(
   recipe: PerpsTemplateRecipe,
-  options: { sortOrder: number; webhookId?: string | null },
+  options: {
+    sortOrder: number;
+    webhookId?: string | null;
+    venue?: string;
+    symbol?: string;
+  },
 ):
   | { ok: true; rule: FuturesAutomationRule; notes: string[] }
   | { ok: false; error: string } {
   const notes: string[] = [];
   const form = new FormData();
+  const venue = options.venue ?? "bybit";
   const webhookId = options.webhookId?.trim() || "";
   let entrySource = recipe.entrySource;
   if (entrySource === "webhook" && !webhookId) {
@@ -457,10 +471,11 @@ export function perpsRecipeToRule(
       "Signal entry needs a webhook on this desk. Applied as a price rule.",
     );
   }
+  form.set("deskVenue", venue);
   form.set("ruleCount", "1");
   form.set("r0_name", recipe.name);
   form.set("r0_mode", "disabled");
-  form.set("r0_symbol", recipe.symbol);
+  form.set("r0_symbol", options.symbol ?? recipe.symbol);
   form.set("r0_action", recipe.formAction);
   form.set("r0_orderType", recipe.orderType);
   form.set("r0_sizeUnit", recipe.sizeUnit);
@@ -476,7 +491,7 @@ export function perpsRecipeToRule(
   if (recipe.skipIfOpen) {
     form.set("r0_skipIfOpen", "on");
   }
-  const parsed = parseFuturesAutomationForm(form);
+  const parsed = parseFuturesAutomationForm(form, venue);
   if (!parsed.ok) {
     return parsed;
   }
@@ -685,8 +700,10 @@ export function dcaFormToSnapshotSource(
 
 export function perpsFormToSnapshotSource(
   layer: FuturesAutomationFormValues,
+  venue = "bybit",
 ): FormData {
   const form = new FormData();
+  form.set("deskVenue", venue);
   form.set("ruleCount", "1");
   form.set("r0_name", layer.name);
   form.set("r0_mode", layer.mode);

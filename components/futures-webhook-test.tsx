@@ -16,6 +16,7 @@ export function FuturesWebhookTest({
   successNext,
   pairs = [],
   lastPrices = {},
+  defaultSymbol,
 }: {
   webhooks: Pick<FuturesWebhookRow, "id" | "name" | "kind">[];
   allowSignal?: boolean;
@@ -25,6 +26,7 @@ export function FuturesWebhookTest({
   successNext?: string;
   pairs?: LinearPerp[];
   lastPrices?: Record<string, number>;
+  defaultSymbol?: string;
 }) {
   const [webhookId, setWebhookId] = useState(webhooks[0]?.id ?? "");
   const selected = useMemo(
@@ -73,6 +75,7 @@ export function FuturesWebhookTest({
           options={pairs}
           lastPrices={lastPrices}
           includeStops={false}
+          defaultSymbol={defaultSymbol}
         />
       ) : null}
       <div className={standalone ? "mt-4 space-y-2" : "mt-4 space-y-2 border-t border-line pt-4"}>

@@ -10,13 +10,13 @@ import {
   parseFuturesQty,
   parseFuturesSide,
   parseFuturesSizeUnit,
-  parseFuturesSymbol,
   type FuturesAction,
   type FuturesOrderType,
   type FuturesSide,
   type FuturesTrigger,
 } from "./model";
 import { parseFuturesTrigger } from "./tpsl";
+import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 
 export type FuturesTriggerCompare = "gte" | "lte";
 export type FuturesAutomationEntry = "price" | "webhook";
@@ -258,7 +258,9 @@ function parseOptionalSize(
 
 export function parseFuturesAutomationForm(
   form: FormData,
+  venue = "bybit",
 ): { ok: true; rules: FuturesAutomationRule[] } | { ok: false; error: string } {
+  const deskVenue = String(form.get("deskVenue") ?? venue).trim() || "bybit";
   const count = Number(String(form.get("ruleCount") ?? "0"));
   if (!Number.isInteger(count) || count < 0 || count > 50) {
     return { ok: false, error: "Too many rules." };
@@ -267,6 +269,7 @@ export function parseFuturesAutomationForm(
   for (let index = 0; index < count; index += 1) {
     const prefix = `r${index}_`;
     const parsed = parseFuturesAutomationFields({
+      venue: deskVenue,
       id: form.get(`${prefix}id`),
       name: form.get(`${prefix}name`),
       mode: form.get(`${prefix}mode`),
@@ -293,6 +296,7 @@ export function parseFuturesAutomationForm(
 }
 
 export function parseFuturesAutomationFields(input: {
+  venue?: string;
   id?: unknown;
   name?: unknown;
   mode?: unknown;
@@ -318,7 +322,7 @@ export function parseFuturesAutomationFields(input: {
   if (name.length > 40) {
     return { ok: false, error: "Rule names must be 40 characters or fewer." };
   }
-  const symbol = parseFuturesSymbol(input.symbol);
+  const symbol = parseDeskFuturesSymbol(input.venue ?? "bybit", input.symbol);
   if (!symbol.ok) {
     return symbol;
   }
@@ -470,8 +474,9 @@ function emptyParsedRule(): FuturesAutomationRule {
 
 export function parseFuturesAutomationRow(
   row: Record<string, unknown>,
+  venue?: string,
 ): FuturesAutomationRule {
-  const parsed = parseFuturesAutomationFields({
+  const fields = {
     id: row.id,
     name: row.name,
     mode: row.mode,
@@ -491,8 +496,22 @@ export function parseFuturesAutomationRow(
     sortOrder: Number(row.sort_order) || 0,
     conditionTrue: row.condition_true,
     lastFiredAt: row.last_fired_at,
+  };
+  const preferred = parseFuturesAutomationFields({
+    ...fields,
+    venue: venue ?? "bybit",
   });
-  return parsed.ok ? parsed.rule : emptyParsedRule();
+  if (preferred.ok) {
+    return preferred.rule;
+  }
+  if (venue) {
+    return emptyParsedRule();
+  }
+  const hyperliquid = parseFuturesAutomationFields({
+    ...fields,
+    venue: "hyperliquid",
+  });
+  return hyperliquid.ok ? hyperliquid.rule : emptyParsedRule();
 }
 
 function formActionOf(

@@ -156,6 +156,14 @@ if (prefixed.ok) {
   assert.equal(prefixed.symbol, "ETHUSDT");
 }
 assert.equal(parseWebhookSymbol("BTCUSDTPERP").ok, true);
+assert.deepEqual(parseWebhookSymbol("BTC", "hyperliquid"), {
+  ok: true,
+  symbol: "BTC",
+});
+assert.deepEqual(parseWebhookSymbol("BYBIT:BTCUSDT.P", "hyperliquid"), {
+  ok: true,
+  symbol: "BTC",
+});
 
 const previousBypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
 delete process.env.VERCEL_AUTOMATION_BYPASS_SECRET;

@@ -8,6 +8,7 @@ import {
   type FuturesSide,
   type FuturesTrigger,
 } from "@/lib/futures/model";
+import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 import {
   parseFuturesTriggerCompare,
   triggerConditionMet,
@@ -540,9 +541,11 @@ function parseOptionalTrigger(
 
 export function parseDcaPlaybookForm(
   form: FormData,
+  venue = "bybit",
 ): { ok: true; config: DcaPlaybookConfig } | { ok: false; error: string } {
   const name = parseDcaPlaybookName(form.get("name"));
-  const symbol = parseFuturesSymbol(form.get("symbol"));
+  const deskVenue = String(form.get("deskVenue") ?? venue).trim() || "bybit";
+  const symbol = parseDeskFuturesSymbol(deskVenue, form.get("symbol"));
   const direction =
     parseDcaDirection(form.get("direction")) ??
     parseFuturesSide(form.get("side"));
@@ -589,7 +592,19 @@ export function parseDcaPlaybookForm(
     return symbol;
   }
   if (!direction) {
-    return { ok: false, error: "Choose long, short, or both." };
+    return {
+      ok: false,
+      error:
+        deskVenue === "hyperliquid"
+          ? "Choose long or short."
+          : "Choose long, short, or both.",
+    };
+  }
+  if (deskVenue === "hyperliquid" && direction === "both") {
+    return {
+      ok: false,
+      error: "This desk is one-way. Choose long or short.",
+    };
   }
   if (!sizeUnit.ok) {
     return sizeUnit;

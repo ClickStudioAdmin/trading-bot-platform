@@ -7,6 +7,11 @@ import { getSessionContext } from "@/lib/auth/session";
 import { deskAllowsOrderWebhooks, deskAllowsPerpsRecipes, deskAllowsSignalWebhooks, deskHref } from "@/lib/accounts/model";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
+import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
+import {
+  loadHyperliquidLinearPerps,
+  loadHyperliquidTickerMap,
+} from "@/lib/venues/hyperliquid/market";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
@@ -46,16 +51,28 @@ export default async function FuturesWebhooksPage({
   const live = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );
+  const hl = session?.account.venue === "hyperliquid";
+  const env = hyperliquidInfoEnvironment(session?.account.venueEnvironment);
   const [tickers, pairs] = session
     ? await Promise.all([
-        fetchBybitTickers("linear").catch(
-          () =>
-            new Map<
-              string,
-              { lastPrice?: string; bid1Price?: string; ask1Price?: string }
-            >(),
-        ),
-        loadUsdtLinearPerps().catch(() => []),
+        hl
+          ? loadHyperliquidTickerMap(env).catch(
+              () =>
+                new Map<
+                  string,
+                  { lastPrice?: string; bid1Price?: string; ask1Price?: string }
+                >(),
+            )
+          : fetchBybitTickers("linear").catch(
+              () =>
+                new Map<
+                  string,
+                  { lastPrice?: string; bid1Price?: string; ask1Price?: string }
+                >(),
+            ),
+        hl
+          ? loadHyperliquidLinearPerps(env).catch(() => [])
+          : loadUsdtLinearPerps().catch(() => []),
       ])
     : [new Map<string, { lastPrice?: string }>(), []];
   const lastPrices: Record<string, number> = {};
@@ -82,8 +99,9 @@ export default async function FuturesWebhooksPage({
             <span className="text-ink">TradingView strategy</span> means TV
             sends every buy, sell, and close.{" "}
             <span className="text-ink">Signal</span> is just the entry ping —
-            Automations When shows the webhook name. Send a dummy below. A fill
-            opens{" "}
+            Automations When shows the webhook name.
+            {hl ? " Strategy orders use the coin (BTC), not BTCUSDT." : ""} Send
+            a dummy below. A fill opens{" "}
             <Link href={href(FUTURES_PATHS.positions)} className="text-accent">
               Positions
             </Link>
@@ -101,7 +119,8 @@ export default async function FuturesWebhooksPage({
           </>
         ) : (
           <>
-            TradingView sends buy, sell, and close on this URL. Send a dummy
+            TradingView sends buy, sell, and close on this URL.
+            {hl ? " Use the coin symbol (BTC), not BTCUSDT." : ""} Send a dummy
             below. A fill opens{" "}
             <Link href={href(FUTURES_PATHS.positions)} className="text-accent">
               Positions
@@ -147,6 +166,7 @@ export default async function FuturesWebhooksPage({
                 successNext={href(FUTURES_PATHS.positions)}
                 pairs={pairs}
                 lastPrices={lastPrices}
+                defaultSymbol={hl ? "BTC" : undefined}
               />
               {live && !settings.connectionId ? (
                 <p className="mt-2 text-xs text-warning">
