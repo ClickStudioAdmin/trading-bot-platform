@@ -52,18 +52,14 @@ export function CreateAccountForm({
   const [deskType, setDeskType] = useState<DeskType>("cash_and_carry");
   const [venue, setVenue] = useState("bybit");
   const [mode, setMode] = useState<"paper" | "live">("paper");
-  const [track, setTrack] = useState<"paper" | "testnet" | "live">("testnet");
+  const [track, setTrack] = useState<"testnet" | "live">("testnet");
   const [bindChoice, setBindChoice] = useState<"later" | "existing">("later");
   const [connectionId, setConnectionId] = useState("");
   const [name, setName] = useState("");
   const venues = venuesForDeskType(deskType);
   const hyperliquid = venue === "hyperliquid";
-  const connected = hyperliquid ? track !== "paper" : mode === "live";
-  const deskEnvironment = hyperliquid
-    ? track === "paper"
-      ? null
-      : track
-    : null;
+  const connected = mode === "live";
+  const deskEnvironment = hyperliquid && connected ? track : null;
   const liveKeys = useMemo(
     () =>
       connectionsForDeskBind(
@@ -167,6 +163,24 @@ export function CreateAccountForm({
           ))}
         </select>
       </label>
+      <label className="block text-xs text-ink-muted">
+        Mode
+        <select
+          name="mode"
+          value={mode}
+          onChange={(event) => {
+            const nextMode = event.target.value === "live" ? "live" : "paper";
+            setMode(nextMode);
+            if (nextMode !== "live") {
+              resetBind();
+            }
+          }}
+          className={fieldClass}
+        >
+          <option value="paper">{formatAccountModeChoice("paper")}</option>
+          <option value="live">{formatAccountModeChoice("live")}</option>
+        </select>
+      </label>
       {venues.length > 1 ? (
         <label className="block text-xs text-ink-muted">
           Exchange
@@ -174,13 +188,8 @@ export function CreateAccountForm({
             name="venue"
             value={venue}
             onChange={(event) => {
-              const nextVenue = event.target.value;
-              setVenue(nextVenue);
-              if (nextVenue === "hyperliquid") {
-                setTrack("testnet");
-              } else {
-                setMode("paper");
-              }
+              setVenue(event.target.value);
+              setTrack("testnet");
               resetBind();
             }}
             className={fieldClass}
@@ -195,44 +204,23 @@ export function CreateAccountForm({
       ) : (
         <input type="hidden" name="venue" value={venue} />
       )}
-      {hyperliquid ? (
+      {hyperliquid && connected ? (
         <label className="block text-xs text-ink-muted">
-          Track
+          Hyperliquid network
           <select
             name="track"
             value={track}
             onChange={(event) => {
-              const nextTrack = event.target.value as typeof track;
-              setTrack(nextTrack);
+              setTrack(event.target.value === "live" ? "live" : "testnet");
               resetBind();
             }}
             className={fieldClass}
           >
-            <option value="paper">{formatAccountModeChoice("paper")}</option>
             <option value="testnet">Demo (Hyperliquid Testnet)</option>
             <option value="live">Live</option>
           </select>
         </label>
-      ) : (
-        <label className="block text-xs text-ink-muted">
-          Mode
-          <select
-            name="mode"
-            value={mode}
-            onChange={(event) => {
-              const nextMode = event.target.value === "live" ? "live" : "paper";
-              setMode(nextMode);
-              if (nextMode !== "live") {
-                resetBind();
-              }
-            }}
-            className={fieldClass}
-          >
-            <option value="paper">{formatAccountModeChoice("paper")}</option>
-            <option value="live">{formatAccountModeChoice("live")}</option>
-          </select>
-        </label>
-      )}
+      ) : null}
       {connected ? (
         <div className="space-y-4">
           <label className="block text-xs text-ink-muted">
@@ -301,9 +289,9 @@ export function CreateAccountForm({
         </div>
       ) : null}
       <p className="text-sm text-ink-muted">
-        Type and exchange are set at create and never change. Paper Trading
-        uses public marks and fills on the in-app ledger. Bybit Connected
-        binds a Demo or Live key. Hyperliquid Demo is Testnet, not Paper.
+        {hyperliquid
+          ? "Type, mode, and exchange are set at create and never change. Paper uses Hyperliquid public marks on the in-app ledger. Connected Demo is Testnet, not Paper. Agent keys are not on Exchanges yet — bind later."
+          : "Type, mode, and exchange are set at create and never change. Paper uses public marks and fills on the in-app ledger. Connected binds a Bybit Demo or Live key from this login."}
       </p>
       {embedded && !firstDesk ? (
         <label className="flex items-start gap-2 text-sm text-ink">

@@ -333,43 +333,43 @@ export function parseDeskCreateChoice(input: {
       error: `${venue.venue.label} cannot run ${formatDeskType(typed.deskType)}.`,
     };
   }
-  if (venue.venue.id === "hyperliquid") {
-    const track = String(input.track ?? "").trim() || "testnet";
-    if (track === "paper") {
-      return {
-        ok: true,
-        value: {
-          deskType: typed.deskType,
-          venue: venue.venue.id,
-          mode: "paper",
-          venueEnvironment: null,
-        },
-      };
-    }
-    const environment = parseVenueEnvironment(
-      venue.venue,
-      track === "live" ? "live" : "testnet",
-    );
-    if (!environment.ok) {
-      return environment;
-    }
+  const mode = parseAccountMode(input.mode);
+  if (venue.venue.id !== "hyperliquid") {
     return {
       ok: true,
       value: {
         deskType: typed.deskType,
         venue: venue.venue.id,
-        mode: "live",
-        venueEnvironment: environment.environment.id,
+        mode,
+        venueEnvironment: null,
       },
     };
+  }
+  if (mode === "paper") {
+    return {
+      ok: true,
+      value: {
+        deskType: typed.deskType,
+        venue: venue.venue.id,
+        mode,
+        venueEnvironment: null,
+      },
+    };
+  }
+  const environment = parseVenueEnvironment(
+    venue.venue,
+    String(input.track ?? "").trim() || "testnet",
+  );
+  if (!environment.ok) {
+    return environment;
   }
   return {
     ok: true,
     value: {
       deskType: typed.deskType,
       venue: venue.venue.id,
-      mode: parseAccountMode(input.mode),
-      venueEnvironment: null,
+      mode,
+      venueEnvironment: environment.environment.id,
     },
   };
 }

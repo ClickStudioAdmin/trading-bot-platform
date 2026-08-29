@@ -245,8 +245,8 @@ if (bybitCreate.ok) {
 const hlPaper = parseDeskCreateChoice({
   deskType: "dca",
   venue: "hyperliquid",
-  mode: "live",
-  track: "paper",
+  mode: "paper",
+  track: "live",
 });
 assert.equal(hlPaper.ok, true);
 if (hlPaper.ok) {
@@ -256,7 +256,7 @@ if (hlPaper.ok) {
 const hlDemo = parseDeskCreateChoice({
   deskType: "dca",
   venue: "hyperliquid",
-  mode: "",
+  mode: "live",
   track: "",
 });
 assert.equal(hlDemo.ok, true);
