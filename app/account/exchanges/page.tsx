@@ -137,9 +137,10 @@ function ConnectionList({
         stay bound. You cannot remove a key while any desk is using it.
       </p>
       <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
-        <table className="w-full min-w-[36rem] text-left text-sm">
+        <table className="w-full min-w-[42rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
             <tr>
+              <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Exchange</th>
               <th className="px-4 py-3 font-medium">Bound desks</th>
               <th className="px-4 py-3 text-right font-medium">Actions</th>
@@ -160,10 +161,14 @@ function ConnectionList({
                   className="border-b border-line last:border-b-0"
                 >
                   <td className="px-4 py-3 align-top">
-                    <p>{formatVenueLabel(row.venue)}</p>
                     {row.label ? (
-                      <p className="mt-1 text-xs text-ink-muted">{row.label}</p>
-                    ) : null}
+                      <p>{row.label}</p>
+                    ) : (
+                      <span className="text-ink-faint">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    <p>{formatVenueLabel(row.venue)}</p>
                     <p className="mt-1 text-xs text-ink-faint">
                       {formatEnvironmentLabel(row.venue, row.environment)}
                       {" · "}
