@@ -23,9 +23,9 @@ export const CASH_AND_CARRY_PRIMARY_LINKS = [
 
 export const CASH_AND_CARRY_SECONDARY_LINKS = [
   { href: "/strategies/cash-and-carry/settings", label: "Desk Settings" },
-  { href: "/strategies/cash-and-carry/activity", label: "Activity" },
   { href: "/strategies/cash-and-carry/opportunities", label: "Opportunities" },
   { href: "/strategies/cash-and-carry/pairs", label: "Pairs" },
+  { href: "/strategies/cash-and-carry/activity", label: "Activity" },
 ] as const;
 
 export const ADMIN_NAV_LINKS = [
@@ -71,8 +71,8 @@ export const SIGNAL_FOLLOWER_PRIMARY_LINKS = [
 
 export const FUTURES_SECONDARY_LINKS = [
   { href: "/strategies/futures/settings", label: "Desk Settings" },
-  { href: "/strategies/futures/activity", label: "Activity" },
   { href: "/strategies/futures/pairs", label: "Pairs" },
+  { href: "/strategies/futures/activity", label: "Activity" },
 ] as const;
 
 export const ACCOUNT_BOOK_LINKS = [
