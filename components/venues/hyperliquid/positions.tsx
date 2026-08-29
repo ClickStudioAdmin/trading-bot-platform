@@ -111,7 +111,6 @@ export async function HyperliquidFuturesPositions({
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Current Positions" />
       <div className="space-y-6">
         <HyperliquidDeskFlash params={params} includeWebhookArm />
 
@@ -192,6 +191,7 @@ export async function HyperliquidFuturesPositions({
           </section>
         ) : null}
 
+        <PageHeading as="h2" title="Current Positions" className="mb-0" />
         <LiveTickerScope
           symbols={open.map((row) => row.symbol)}
           venue="hyperliquid"

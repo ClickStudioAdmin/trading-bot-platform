@@ -116,7 +116,6 @@ export default async function FuturesPositionsPage({
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Current Positions" />
       <div className="space-y-6">
         <FuturesFlash
           opened={firstSearchValue(params.paper) === "opened"}
@@ -224,6 +223,7 @@ export default async function FuturesPositionsPage({
           </section>
         ) : null}
 
+        <PageHeading as="h2" title="Current Positions" className="mb-0" />
         <LiveTickerScope symbols={open.map((row) => row.symbol)}>
         <FuturesOpenStats signedIn={desk.signedIn} open={open} />
         <OpenFuturesTrades
