@@ -85,6 +85,24 @@ export async function listAllTradingAccounts(): Promise<TradingAccountOption[]> 
   }));
 }
 
+export async function loadTradingAccountById(
+  id: string,
+): Promise<TradingAccount | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("trading_accounts")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parseTradingAccountRow(data as Record<string, unknown>);
+}
+
 /** Legacy helper. New members create their first desk on `/welcome`. */
 export async function ensureDefaultPaperAccount(
   userId: string,

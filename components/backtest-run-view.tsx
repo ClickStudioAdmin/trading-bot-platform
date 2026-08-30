@@ -116,6 +116,76 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
   );
 }
 
+export function BacktestInlineChart({ run }: { run: BacktestRun }) {
+  const [candles, setCandles] = useState<CandleBar[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams({
+      venue: run.venue,
+      symbol: run.symbol,
+      interval: run.interval,
+      from: String(run.fromMs),
+      to: String(run.toMs),
+      limit: "1500",
+    });
+    if (run.venueEnvironment) {
+      params.set("env", run.venueEnvironment);
+    }
+    void fetch(`/api/market/candles?${params.toString()}`)
+      .then(async (response) => {
+        const body = (await response.json()) as {
+          candles?: CandleBar[];
+          error?: string;
+        };
+        if (!response.ok) {
+          throw new Error(body.error || "Could not read candles.");
+        }
+        return body.candles ?? [];
+      })
+      .then((rows) => {
+        if (!cancelled) {
+          setCandles(rows);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Could not read candles.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [run]);
+
+  if (loading) {
+    return <p className="text-sm text-ink-muted">Loading candles…</p>;
+  }
+  if (error) {
+    return <p className="text-sm text-danger">{error}</p>;
+  }
+  if (candles.length === 0) {
+    return <p className="text-sm text-ink-muted">No candles in that window.</p>;
+  }
+  return (
+    <DeskChart
+      candles={candles}
+      overlay={buildBacktestChartOverlay({
+        triggerPrice:
+          run.recipe.kind === "perps" ? Number(run.recipe.triggerPrice) : null,
+        orders: run.orders,
+      })}
+    />
+  );
+}
+
 export function BacktestChartButton({ run }: { run: BacktestRun }) {
   const [open, setOpen] = useState(false);
   const [candles, setCandles] = useState<CandleBar[]>([]);

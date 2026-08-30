@@ -15,8 +15,11 @@ export const BACKTEST_FEE_PRESETS = {
   },
 } as const;
 
-export const BACKTEST_MAX_WINDOW_DAYS = 365;
-export const BACKTEST_CANDLE_LIMIT = 1500;
+export const BACKTEST_MAX_WINDOW_DAYS = 1825;
+export const BACKTEST_CANDLE_LIMIT = 200_000;
+export const BACKTEST_INLINE_BAR_LIMIT = 1500;
+export const BACKTEST_VERCEL_BAR_LIMIT = 3000;
+export const BACKTEST_COMPARABLE_CAP = 8;
 export const DEFAULT_STARTING_USDT = 10_000;
 
 export type BacktestFeePreset = keyof typeof BACKTEST_FEE_PRESETS;
@@ -58,6 +61,7 @@ export type BacktestRun = {
   id: string;
   userId: string | null;
   templateId: string | null;
+  studyId: string | null;
   deskType: BacktestDeskType;
   venue: string;
   venueEnvironment: string | null;
@@ -75,6 +79,35 @@ export type BacktestRun = {
   error: string | null;
   createdAtMs: number;
   finishedAtMs: number | null;
+  parentRunId: string | null;
+  comparableSymbols: string[];
+};
+
+export type BacktestStudy = {
+  id: string;
+  userId: string;
+  accountId: string | null;
+  name: string;
+  deskType: BacktestDeskType;
+  venue: string;
+  venueEnvironment: string | null;
+  symbol: string;
+  fromMs: number;
+  toMs: number;
+  startingUsdt: number;
+  seedRecipe: BacktestRecipe;
+  scenarioCount: number;
+  status: BacktestStatus;
+  error: string | null;
+  createdAtMs: number;
+  finishedAtMs: number | null;
+};
+
+export type EquityPoint = {
+  atMs: number;
+  equityUsdt: number;
+  realizedUsdt: number;
+  label: string;
 };
 
 export function parseFeePreset(raw: unknown): BacktestFeePreset {
@@ -147,16 +180,75 @@ function utcDayStart(raw: unknown): number | null {
 }
 
 export function intervalMs(interval: DcaIndicatorTimeframe): number {
+  if (interval === "5") {
+    return 5 * 60 * 1000;
+  }
   if (interval === "15") {
     return 15 * 60 * 1000;
+  }
+  if (interval === "30") {
+    return 30 * 60 * 1000;
   }
   if (interval === "60") {
     return 60 * 60 * 1000;
   }
+  if (interval === "120") {
+    return 120 * 60 * 1000;
+  }
   if (interval === "240") {
     return 240 * 60 * 1000;
   }
+  if (interval === "360") {
+    return 360 * 60 * 1000;
+  }
+  if (interval === "720") {
+    return 720 * 60 * 1000;
+  }
   return 24 * 60 * 60 * 1000;
+}
+
+export function estimateBacktestBars(
+  fromMs: number,
+  toMs: number,
+  interval: DcaIndicatorTimeframe,
+): number {
+  if (!(toMs > fromMs)) {
+    return 0;
+  }
+  return Math.ceil((toMs - fromMs) / intervalMs(interval));
+}
+
+export function backtestShouldRunInline(
+  bars: number,
+  pairCount: number,
+): boolean {
+  return bars <= BACKTEST_INLINE_BAR_LIMIT && pairCount <= 4;
+}
+
+export function parseComparableSymbols(
+  raw: unknown,
+  primary: string,
+): string[] {
+  const parts = Array.isArray(raw)
+    ? raw.map((row) => String(row ?? ""))
+    : String(raw ?? "").split(/[\s,]+/);
+  const seen = new Set<string>();
+  const rows: string[] = [];
+  for (const part of parts) {
+    const symbol = part.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (symbol.length < 2 || symbol.length > 32) {
+      continue;
+    }
+    if (symbol === primary || seen.has(symbol)) {
+      continue;
+    }
+    seen.add(symbol);
+    rows.push(symbol);
+    if (rows.length >= BACKTEST_COMPARABLE_CAP) {
+      break;
+    }
+  }
+  return rows;
 }
 
 export function parseBacktestDateRange(

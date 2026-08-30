@@ -34,6 +34,7 @@ Fly (Sydney)        One or more worker processes claiming desks
 2. Claim            take N idle desks (SKIP LOCKED lease)
 3. Desk tick        that desk only; a few desks in parallel on one process
 4. Release          next loop
+5. Backtest         claim one queued `backtest_runs` row (long history / comparables)
 ```
 
 ### 1. Work unit = one desk

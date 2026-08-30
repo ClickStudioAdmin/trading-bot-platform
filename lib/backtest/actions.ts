@@ -3,7 +3,7 @@
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
 import { loadDeskCandles } from "@/lib/market/desk-klines";
-import { parseCandleInterval, parseCandleSymbol, parseCandleVenue } from "@/lib/market/candles";
+import { parseCandleInterval, parseCandleSymbol, parseCandleVenue, type CandleBar } from "@/lib/market/candles";
 import type { BacktestRecipe } from "./model";
 import { canBacktestDcaRecipe, replayDcaPlaybook } from "./replay-dca";
 import {
@@ -15,9 +15,11 @@ import {
 } from "@/lib/templates/store";
 import { revalidatePath } from "next/cache";
 import {
-  BACKTEST_CANDLE_LIMIT,
   BACKTEST_FEE_PRESETS,
+  backtestShouldRunInline,
+  estimateBacktestBars,
   parseBacktestDateRange,
+  parseComparableSymbols,
   parseFeePreset,
   parseStartingBalance,
 } from "./model";
@@ -28,22 +30,31 @@ import {
   countBacktestRunsForTemplate,
   deleteBacktestRun,
   insertBacktestRun,
+  insertBacktestStudy,
+  listBacktestRuns,
   loadBacktestRun,
   updateBacktestRun,
+  updateBacktestStudy,
 } from "./store";
+import { executeBacktestRun } from "./execute";
+import { expandStudyScenarios, STUDY_CANDLE_LIMIT } from "./study";
+import { loadStudySeed } from "./study-seeds";
 
 export type BacktestActionResult = {
   ok: boolean;
   error?: string;
   runId?: string;
+  studyId?: string;
+  scenarioCount?: number;
 };
 
-const SWEEP_CAP = 10;
-
-function revalidateBacktests() {
+function revalidateBacktests(extra?: string) {
   revalidatePath("/account/backtests");
   revalidatePath("/admin/backtests");
   revalidatePath("/account/templates");
+  if (extra) {
+    revalidatePath(extra);
+  }
 }
 
 async function requireMember() {
@@ -90,74 +101,6 @@ async function snapshotBacktestedTemplate(input: {
     recipe: input.recipe,
   });
   return created.ok ? created.template.id : null;
-}
-
-async function executeRun(runId: string): Promise<BacktestActionResult> {
-  const run = await loadBacktestRun(runId);
-  if (!run) {
-    return { ok: false, error: "That run was not found." };
-  }
-  await updateBacktestRun(runId, { status: "running" });
-  try {
-    const allowed =
-      run.recipe.kind === "dca"
-        ? canBacktestDcaRecipe(run.recipe)
-        : canBacktestPerpsRecipe(run.recipe);
-    if (!allowed.ok) {
-      await updateBacktestRun(runId, {
-        status: "failed",
-        error: allowed.error,
-        finished: true,
-      });
-      return { ok: false, error: allowed.error, runId };
-    }
-    const candles = await loadDeskCandles({
-      venue: run.venue,
-      venueEnvironment: run.venueEnvironment,
-      symbol: run.symbol,
-      interval: run.interval,
-      fromMs: run.fromMs,
-      toMs: run.toMs,
-      limit: BACKTEST_CANDLE_LIMIT,
-    });
-    if (candles.length < 8) {
-      await updateBacktestRun(runId, {
-        status: "failed",
-        error: "Not enough candles in that window.",
-        finished: true,
-      });
-      return { ok: false, error: "Not enough candles in that window.", runId };
-    }
-    const replayed =
-      run.recipe.kind === "dca"
-        ? replayDcaPlaybook({
-            bars: candles,
-            recipe: run.recipe,
-            feeRate: run.feeRate,
-            startingUsdt: run.startingUsdt,
-          })
-        : replayPerpsPriceCross({
-            bars: candles,
-            recipe: run.recipe,
-            feeRate: run.feeRate,
-            startingUsdt: run.startingUsdt,
-          });
-    await updateBacktestRun(runId, {
-      status: "done",
-      stats: replayed.stats,
-      orders: replayed.orders,
-      error: null,
-      finished: true,
-    });
-    return { ok: true, runId };
-  } catch {
-    await updateBacktestRun(runId, {
-      status: "failed",
-      error: "Replay failed.",
-      finished: true,
-    });
-    return { ok: false, error: "Replay failed.", runId };
-  }
 }
 
 async function canUseTemplate(
@@ -218,6 +161,13 @@ export async function queueTemplateBacktestAction(
   const symbol =
     parseCandleSymbol(formData.get("symbol") ?? template.recipe.symbol) ??
     template.recipe.symbol;
+  const comparables = parseComparableSymbols(
+    [
+      ...formData.getAll("comparable"),
+      String(formData.get("comparables") ?? ""),
+    ],
+    symbol,
+  );
   const feePreset = parseFeePreset(formData.get("feePreset"));
   const recipe = { ...template.recipe, symbol };
   const snapshotId = await snapshotBacktestedTemplate({
@@ -226,12 +176,13 @@ export async function queueTemplateBacktestAction(
     published: false,
     suffix: "backtest",
   });
+  const venueEnvironment =
+    String(formData.get("venueEnvironment") ?? "").trim() || null;
   const run = await insertBacktestRun({
     userId: auth.member.id,
     templateId: snapshotId,
     venue,
-    venueEnvironment:
-      String(formData.get("venueEnvironment") ?? "").trim() || null,
+    venueEnvironment,
     symbol,
     interval,
     fromMs: range.fromMs,
@@ -240,13 +191,44 @@ export async function queueTemplateBacktestAction(
     feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
     startingUsdt: balance.startingUsdt,
     recipe,
+    comparableSymbols: comparables,
   });
   if (!run) {
     return { ok: false, error: "Could not queue the backtest." };
   }
-  const result = await executeRun(run.id);
-  revalidateBacktests();
-  return result;
+  for (const comparable of comparables) {
+    const comparableRecipe = { ...template.recipe, symbol: comparable };
+    await insertBacktestRun({
+      userId: auth.member.id,
+      templateId: snapshotId,
+      parentRunId: run.id,
+      venue,
+      venueEnvironment,
+      symbol: comparable,
+      interval,
+      fromMs: range.fromMs,
+      toMs: range.toMs,
+      feePreset,
+      feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
+      startingUsdt: balance.startingUsdt,
+      recipe: comparableRecipe,
+    });
+  }
+  const bars = estimateBacktestBars(range.fromMs, range.toMs, interval);
+  const inline = backtestShouldRunInline(bars, 1 + comparables.length);
+  if (inline) {
+    const result = await executeBacktestRun(run.id);
+    const children = await listBacktestRuns({ parentRunId: run.id, limit: 20 });
+    for (const child of children) {
+      if (child.status === "queued") {
+        await executeBacktestRun(child.id);
+      }
+    }
+    revalidateBacktests(`/account/backtests/${run.id}`);
+    return result;
+  }
+  revalidateBacktests(`/account/backtests/${run.id}`);
+  return { ok: true, runId: run.id };
 }
 
 export async function publishBacktestAction(
@@ -303,13 +285,7 @@ export async function publishBacktestAction(
   return { ok: true, runId: copy.id };
 }
 
-export async function sweepPerpsBacktestFormAction(
-  formData: FormData,
-): Promise<void> {
-  await sweepPerpsBacktestAction(formData);
-}
-
-export async function sweepPerpsBacktestAction(
+export async function startBacktestStudyAction(
   formData: FormData,
 ): Promise<BacktestActionResult> {
   const auth = await requireMember();
@@ -317,31 +293,16 @@ export async function sweepPerpsBacktestAction(
     return auth;
   }
   if (!auth.isAdmin) {
-    return { ok: false, error: "Only admins can sweep." };
+    return { ok: false, error: "Only admins can run a study." };
   }
-  const template = await loadTemplateById(String(formData.get("templateId") ?? ""));
-  if (
-    !template ||
-    (template.recipe.kind !== "perps" && template.recipe.kind !== "dca")
-  ) {
-    return { ok: false, error: "Pick a Perps bots or DCA template." };
-  }
-  const allowed =
-    template.recipe.kind === "dca"
-      ? canBacktestDcaRecipe(template.recipe)
-      : canBacktestPerpsRecipe(template.recipe);
-  if (!allowed.ok) {
-    return allowed;
-  }
-  const venue = parseCandleVenue(formData.get("venue")) ?? "bybit";
-  const interval = parseCandleInterval(formData.get("interval"));
-  if (!interval) {
-    return { ok: false, error: "Pick a timeframe." };
+  const seed = await loadStudySeed(String(formData.get("seedKey") ?? ""));
+  if (!seed) {
+    return { ok: false, error: "Pick a desk bot to study." };
   }
   const range = parseBacktestDateRange(
     formData.get("fromDate"),
     formData.get("toDate"),
-    interval,
+    "D",
   );
   if (!range.ok) {
     return range;
@@ -350,52 +311,161 @@ export async function sweepPerpsBacktestAction(
   if (!balance.ok) {
     return balance;
   }
-  const feePreset = parseFeePreset(formData.get("feePreset"));
-  const symbols = String(formData.get("symbols") ?? "")
-    .split(/[\s,]+/)
-    .map((row) => parseCandleSymbol(row))
-    .filter((row): row is string => Boolean(row));
-  const unique = [...new Set(symbols)].slice(0, SWEEP_CAP);
-  if (unique.length === 0) {
-    return { ok: false, error: "Enter at least one contract." };
+  const expanded = expandStudyScenarios(
+    seed.recipe,
+    range.fromMs,
+    range.toMs,
+  );
+  if (expanded.scenarios.length === 0) {
+    return {
+      ok: false,
+      error:
+        "That window does not fit any study timeframe, or this bot cannot expand into scenarios.",
+    };
   }
-  const fromMs = range.fromMs;
-  const toMs = range.toMs;
-  let lastId: string | undefined;
-  for (const symbol of unique) {
-    const recipe = { ...template.recipe, symbol };
-    const templateId = await snapshotBacktestedTemplate({
-      userId: null,
-      recipe,
-      published: true,
-      suffix: symbol,
-    });
-    const run = await insertBacktestRun({
-      userId: auth.member.id,
-      templateId,
-      venue,
-      venueEnvironment:
-        String(formData.get("venueEnvironment") ?? "").trim() || null,
-      symbol,
-      interval,
-      fromMs,
-      toMs,
-      feePreset,
-      feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
-      startingUsdt: balance.startingUsdt,
-      recipe,
-    });
-    if (!run) {
-      continue;
+  const venue = parseCandleVenue(formData.get("venue")) ?? seed.venue;
+  const venueEnvironment =
+    String(formData.get("venueEnvironment") ?? "").trim() ||
+    seed.venueEnvironment;
+  const feePreset = parseFeePreset("vip0_taker");
+  const symbol = seed.recipe.symbol;
+  const studyName = `${seed.label} · ${new Date(range.fromMs).toISOString().slice(0, 10)}–${new Date(range.toMs).toISOString().slice(0, 10)}`;
+  const study = await insertBacktestStudy({
+    userId: auth.member.id,
+    accountId: seed.accountId,
+    name: studyName.slice(0, 120),
+    deskType: seed.deskType,
+    venue,
+    venueEnvironment,
+    symbol,
+    fromMs: range.fromMs,
+    toMs: range.toMs,
+    startingUsdt: balance.startingUsdt,
+    seedRecipe: seed.recipe,
+    scenarioCount: expanded.scenarios.length,
+  });
+  if (!study) {
+    return { ok: false, error: "Could not start that study." };
+  }
+  const candlesByInterval = new Map<string, CandleBar[]>();
+  let saved = 0;
+  try {
+    for (const scenario of expanded.scenarios) {
+      let candles = candlesByInterval.get(scenario.interval);
+      if (!candles) {
+        candles = await loadDeskCandles({
+          venue,
+          venueEnvironment,
+          symbol,
+          interval: scenario.interval,
+          fromMs: range.fromMs,
+          toMs: range.toMs,
+          limit: STUDY_CANDLE_LIMIT,
+        });
+        candlesByInterval.set(scenario.interval, candles);
+      }
+      if (candles.length < 8) {
+        await insertBacktestRun({
+          userId: auth.member.id,
+          templateId: null,
+          studyId: study.id,
+          venue,
+          venueEnvironment,
+          symbol,
+          interval: scenario.interval,
+          fromMs: range.fromMs,
+          toMs: range.toMs,
+          feePreset,
+          feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
+          startingUsdt: balance.startingUsdt,
+          recipe: scenario.recipe,
+          status: "failed",
+          error: "Not enough candles in that window.",
+          finished: true,
+        });
+        saved += 1;
+        continue;
+      }
+      const allowed =
+        scenario.recipe.kind === "dca"
+          ? canBacktestDcaRecipe(scenario.recipe)
+          : canBacktestPerpsRecipe(scenario.recipe);
+      if (!allowed.ok) {
+        await insertBacktestRun({
+          userId: auth.member.id,
+          templateId: null,
+          studyId: study.id,
+          venue,
+          venueEnvironment,
+          symbol,
+          interval: scenario.interval,
+          fromMs: range.fromMs,
+          toMs: range.toMs,
+          feePreset,
+          feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
+          startingUsdt: balance.startingUsdt,
+          recipe: scenario.recipe,
+          status: "failed",
+          error: allowed.error,
+          finished: true,
+        });
+        saved += 1;
+        continue;
+      }
+      const replayed =
+        scenario.recipe.kind === "dca"
+          ? replayDcaPlaybook({
+              bars: candles,
+              recipe: scenario.recipe,
+              feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
+              startingUsdt: balance.startingUsdt,
+            })
+          : replayPerpsPriceCross({
+              bars: candles,
+              recipe: scenario.recipe,
+              feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
+              startingUsdt: balance.startingUsdt,
+            });
+      await insertBacktestRun({
+        userId: auth.member.id,
+        templateId: null,
+        studyId: study.id,
+        venue,
+        venueEnvironment,
+        symbol,
+        interval: scenario.interval,
+        fromMs: range.fromMs,
+        toMs: range.toMs,
+        feePreset,
+        feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
+        startingUsdt: balance.startingUsdt,
+        recipe: scenario.recipe,
+        status: "done",
+        stats: replayed.stats,
+        orders: replayed.orders,
+        error: null,
+        finished: true,
+      });
+      saved += 1;
     }
-    await executeRun(run.id);
-    lastId = run.id;
+    await updateBacktestStudy(study.id, {
+      status: "done",
+      scenarioCount: saved,
+      error: null,
+      finished: true,
+    });
+    revalidateBacktests(`/admin/backtests/studies/${study.id}`);
+    return { ok: true, studyId: study.id, scenarioCount: saved };
+  } catch {
+    await updateBacktestStudy(study.id, {
+      status: "failed",
+      scenarioCount: saved,
+      error: "Study replay failed.",
+      finished: true,
+    });
+    revalidateBacktests(`/admin/backtests/studies/${study.id}`);
+    return { ok: false, error: "Study replay failed.", studyId: study.id };
   }
-  revalidateBacktests();
-  if (!lastId) {
-    return { ok: false, error: "Could not queue the sweep." };
-  }
-  return { ok: true, runId: lastId };
 }
 
 export async function deleteBacktestAction(

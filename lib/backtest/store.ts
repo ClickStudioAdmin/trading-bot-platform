@@ -3,6 +3,7 @@ import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { parseDcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { parseTemplateRecipe } from "@/lib/templates/recipe";
 import {
+  estimateBacktestBars,
   parseBacktestStatus,
   parseFeePreset,
   type BacktestDeskType,
@@ -11,6 +12,7 @@ import {
   type BacktestRun,
   type BacktestStats,
   type BacktestStatus,
+  type BacktestStudy,
   type SimulatedOrder,
 } from "./model";
 
@@ -113,6 +115,7 @@ export function parseBacktestRunRow(
     id: String(row.id),
     userId: row.user_id ? String(row.user_id) : null,
     templateId: row.template_id ? String(row.template_id) : null,
+    studyId: row.study_id ? String(row.study_id) : null,
     deskType,
     venue: String(row.venue ?? "bybit"),
     venueEnvironment: row.venue_environment
@@ -132,12 +135,24 @@ export function parseBacktestRunRow(
     error: row.error ? String(row.error) : null,
     createdAtMs: asTime(row.created_at),
     finishedAtMs: row.finished_at ? asTime(row.finished_at) : null,
+    parentRunId: row.parent_run_id ? String(row.parent_run_id) : null,
+    comparableSymbols: parseComparableSymbolList(row.comparable_symbols),
   };
+}
+
+function parseComparableSymbolList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw
+    .map((item) => String(item ?? "").trim().toUpperCase())
+    .filter((item) => item.length >= 2 && item.length <= 32);
 }
 
 export async function insertBacktestRun(input: {
   userId: string | null;
   templateId: string | null;
+  studyId?: string | null;
   venue: string;
   venueEnvironment: string | null;
   symbol: string;
@@ -148,6 +163,13 @@ export async function insertBacktestRun(input: {
   feeRate: number;
   startingUsdt: number;
   recipe: BacktestRecipe;
+  status?: BacktestStatus;
+  stats?: BacktestStats | null;
+  orders?: SimulatedOrder[];
+  error?: string | null;
+  finished?: boolean;
+  parentRunId?: string | null;
+  comparableSymbols?: string[];
 }): Promise<BacktestRun | null> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -158,6 +180,9 @@ export async function insertBacktestRun(input: {
     .insert({
       user_id: input.userId,
       template_id: input.templateId,
+      study_id: input.studyId ?? null,
+      parent_run_id: input.parentRunId ?? null,
+      comparable_symbols: input.comparableSymbols ?? [],
       desk_type: input.recipe.kind,
       venue: input.venue,
       venue_environment: input.venueEnvironment,
@@ -168,9 +193,12 @@ export async function insertBacktestRun(input: {
       fee_preset: input.feePreset,
       fee_rate: input.feeRate,
       starting_balance_usdt: input.startingUsdt,
-      status: "queued",
+      status: input.status ?? "queued",
       recipe: input.recipe,
-      orders: [],
+      stats: input.stats ?? null,
+      orders: input.orders ?? [],
+      error: input.error ?? null,
+      ...(input.finished ? { finished_at: new Date().toISOString() } : {}),
     })
     .select("*")
     .single();
@@ -234,6 +262,10 @@ export async function loadBacktestRun(id: string): Promise<BacktestRun | null> {
 export async function listBacktestRuns(input: {
   userId?: string | null;
   publishedOnly?: boolean;
+  standaloneOnly?: boolean;
+  primaryOnly?: boolean;
+  parentRunId?: string;
+  studyId?: string;
   limit?: number;
 }): Promise<BacktestRun[]> {
   const supabase = createServiceClient();
@@ -249,6 +281,16 @@ export async function listBacktestRuns(input: {
     query = query.is("user_id", null);
   } else if (input.userId) {
     query = query.or(`user_id.eq.${input.userId},user_id.is.null`);
+  }
+  if (input.studyId) {
+    query = query.eq("study_id", input.studyId);
+  } else if (input.standaloneOnly) {
+    query = query.is("study_id", null);
+  }
+  if (input.parentRunId) {
+    query = query.eq("parent_run_id", input.parentRunId);
+  } else if (input.primaryOnly) {
+    query = query.is("parent_run_id", null);
   }
   const { data, error } = await query;
   if (error || !data) {
@@ -328,4 +370,201 @@ export async function deleteBacktestRun(id: string): Promise<
     return { ok: false, error: error.message };
   }
   return { ok: true };
+}
+
+function parseBacktestStudyRow(
+  row: Record<string, unknown>,
+): BacktestStudy | null {
+  const status = parseBacktestStatus(row.status);
+  const deskType: BacktestDeskType =
+    row.desk_type === "dca" ? "dca" : "perps";
+  const seedRecipe = parseRecipe(row.seed_recipe, deskType);
+  if (!status || !seedRecipe) {
+    return null;
+  }
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    accountId: row.account_id ? String(row.account_id) : null,
+    name: String(row.name ?? seedRecipe.name),
+    deskType,
+    venue: String(row.venue ?? "bybit"),
+    venueEnvironment: row.venue_environment
+      ? String(row.venue_environment)
+      : null,
+    symbol: String(row.symbol ?? seedRecipe.symbol),
+    fromMs: Number(row.from_ms) || 0,
+    toMs: Number(row.to_ms) || 0,
+    startingUsdt: Number(row.starting_balance_usdt) || 0,
+    seedRecipe,
+    scenarioCount: Number(row.scenario_count) || 0,
+    status,
+    error: row.error ? String(row.error) : null,
+    createdAtMs: asTime(row.created_at),
+    finishedAtMs: row.finished_at ? asTime(row.finished_at) : null,
+  };
+}
+
+export async function insertBacktestStudy(input: {
+  userId: string;
+  accountId: string | null;
+  name: string;
+  deskType: BacktestDeskType;
+  venue: string;
+  venueEnvironment: string | null;
+  symbol: string;
+  fromMs: number;
+  toMs: number;
+  startingUsdt: number;
+  seedRecipe: BacktestRecipe;
+  scenarioCount: number;
+}): Promise<BacktestStudy | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("backtest_studies")
+    .insert({
+      user_id: input.userId,
+      account_id: input.accountId,
+      name: input.name,
+      desk_type: input.deskType,
+      venue: input.venue,
+      venue_environment: input.venueEnvironment,
+      symbol: input.symbol,
+      from_ms: input.fromMs,
+      to_ms: input.toMs,
+      starting_balance_usdt: input.startingUsdt,
+      seed_recipe: input.seedRecipe,
+      scenario_count: input.scenarioCount,
+      status: "running",
+    })
+    .select("*")
+    .single();
+  if (error || !data) {
+    return null;
+  }
+  return parseBacktestStudyRow(data as Record<string, unknown>);
+}
+
+export async function updateBacktestStudy(
+  id: string,
+  patch: {
+    status: BacktestStatus;
+    scenarioCount?: number;
+    error?: string | null;
+    finished?: boolean;
+  },
+): Promise<BacktestStudy | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("backtest_studies")
+    .update({
+      status: patch.status,
+      ...(patch.scenarioCount !== undefined
+        ? { scenario_count: patch.scenarioCount }
+        : {}),
+      ...(patch.error !== undefined ? { error: patch.error } : {}),
+      ...(patch.finished ? { finished_at: new Date().toISOString() } : {}),
+    })
+    .eq("id", id)
+    .select("*")
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parseBacktestStudyRow(data as Record<string, unknown>);
+}
+
+export async function loadBacktestStudy(
+  id: string,
+): Promise<BacktestStudy | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("backtest_studies")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parseBacktestStudyRow(data as Record<string, unknown>);
+}
+
+export async function listBacktestStudies(
+  limit = 80,
+): Promise<BacktestStudy[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("backtest_studies")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error || !data) {
+    return [];
+  }
+  return data
+    .map((row) => parseBacktestStudyRow(row as Record<string, unknown>))
+    .filter((row): row is BacktestStudy => Boolean(row));
+}
+
+export async function claimQueuedBacktestRun(input?: {
+  maxBars?: number;
+  staleMinutes?: number;
+}): Promise<BacktestRun | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase.rpc("backtest_claim_queued_run", {
+    p: {
+      stale_minutes: input?.staleMinutes ?? 15,
+      max_bars: input?.maxBars ?? 0,
+    },
+  });
+  if (!error && Array.isArray(data) && data[0]) {
+    return parseBacktestRunRow(data[0] as Record<string, unknown>);
+  }
+  const { data: queued } = await supabase
+    .from("backtest_runs")
+    .select("*")
+    .eq("status", "queued")
+    .order("created_at", { ascending: true })
+    .limit(20);
+  const rows = (queued ?? [])
+    .map((row) => parseBacktestRunRow(row as Record<string, unknown>))
+    .filter((row): row is BacktestRun => Boolean(row));
+  const chosen = rows.find((row) => {
+    if (!input?.maxBars || input.maxBars <= 0) {
+      return true;
+    }
+    return estimateBacktestBars(row.fromMs, row.toMs, row.interval) <= input.maxBars;
+  });
+  if (!chosen) {
+    return null;
+  }
+  const { data: claimed } = await supabase
+    .from("backtest_runs")
+    .update({
+      status: "running",
+      claimed_at: new Date().toISOString(),
+    })
+    .eq("id", chosen.id)
+    .eq("status", "queued")
+    .select("*")
+    .maybeSingle();
+  if (!claimed) {
+    return null;
+  }
+  return parseBacktestRunRow(claimed as Record<string, unknown>);
 }

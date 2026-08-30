@@ -79,6 +79,76 @@ function sortUniqueBars(bars: CandleBar[]): CandleBar[] {
   return [...byTime.values()].sort((a, b) => a.timeMs - b.timeMs);
 }
 
+export async function loadBacktestCandles(input: {
+  venue: string;
+  venueEnvironment: string | null;
+  symbol: string;
+  interval: DcaIndicatorTimeframe;
+  fromMs: number;
+  toMs: number;
+  limit: number;
+}): Promise<CandleBar[]> {
+  const limit = Math.min(200_000, Math.max(1, Math.floor(input.limit)));
+  const endTimeMs = input.toMs;
+  const startTimeMs = input.fromMs;
+
+  if (input.venue === "hyperliquid") {
+    const collected: CandleBar[] = [];
+    let cursorEnd = endTimeMs;
+    while (collected.length < limit && cursorEnd > startTimeMs) {
+      const chunk = await loadHyperliquidCandles({
+        environmentId: hyperliquidInfoEnvironment(input.venueEnvironment),
+        symbol: input.symbol,
+        interval: hyperliquidCandleInterval(input.interval),
+        startTimeMs,
+        endTimeMs: cursorEnd,
+      });
+      if (chunk.length === 0) {
+        break;
+      }
+      collected.push(...chunk);
+      const oldest = chunk[0]?.timeMs;
+      if (oldest == null || oldest >= cursorEnd) {
+        break;
+      }
+      if (chunk.length < 400) {
+        break;
+      }
+      cursorEnd = oldest - 1;
+    }
+    return sortUniqueBars(collected)
+      .filter((row) => row.timeMs >= startTimeMs && row.timeMs <= endTimeMs)
+      .slice(-limit);
+  }
+
+  const collected: CandleBar[] = [];
+  let cursorEnd = endTimeMs;
+  while (collected.length < limit && cursorEnd > startTimeMs) {
+    const chunk = await fetchBybitKlineBars({
+      symbol: input.symbol,
+      interval: input.interval,
+      limit: Math.min(1000, limit - collected.length + 8),
+      startMs: startTimeMs,
+      endMs: cursorEnd,
+    });
+    if (chunk.length === 0) {
+      break;
+    }
+    collected.push(...chunk);
+    const oldest = chunk[0]?.timeMs;
+    if (oldest == null || oldest >= cursorEnd) {
+      break;
+    }
+    cursorEnd = oldest - 1;
+    if (chunk.length < 2) {
+      break;
+    }
+  }
+  return sortUniqueBars(collected)
+    .filter((row) => row.timeMs >= startTimeMs && row.timeMs <= endTimeMs)
+    .slice(-limit);
+}
+
 export async function loadDeskCandles(input: {
   venue: string;
   venueEnvironment: string | null;

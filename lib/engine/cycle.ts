@@ -36,6 +36,7 @@ import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import { runFuturesAutomationTick } from "@/lib/futures/automation-tick";
 import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { writeEventLog } from "@/lib/logs/write";
+import { processOneQueuedBacktest } from "@/lib/backtest/execute";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 
@@ -146,6 +147,20 @@ export async function runEngineCycle(
   }
 
   stats.users = users.size;
+  if (maxMs === undefined || Date.now() - started < maxMs - 4_000) {
+    try {
+      await processOneQueuedBacktest();
+    } catch (cause) {
+      await writeEventLog({
+        level: "error",
+        scope: "system",
+        event: "engine.tick",
+        message:
+          cause instanceof Error ? cause.message : "Backtest worker failed",
+        data: { workerId },
+      });
+    }
+  }
   if (!options?.silent) {
     await writeEventLog({
       scope: "system",

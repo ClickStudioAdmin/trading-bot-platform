@@ -4,30 +4,21 @@ import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { toBacktestLibraryItem } from "@/components/backtest-dialog";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
-import {
-  ApplyBacktestButton,
-  BacktestChartButton,
-  BacktestOrdersTable,
-  BacktestStatsGrid,
-  PublishBacktestButton,
-  RemoveBacktestButton,
-} from "@/components/backtest-run-view";
-import { listTradingAccounts } from "@/lib/accounts/store";
-import { deskAllowsPerpsRecipes } from "@/lib/accounts/model";
+import { RemoveBacktestButton } from "@/components/backtest-run-view";
 import { getSessionMember } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
 import {
   canDeleteBacktestRun,
-  canReadBacktestRun,
   listBacktestRuns,
-  loadBacktestRun,
 } from "@/lib/backtest/store";
-import { BACKTEST_FEE_PRESETS } from "@/lib/backtest/model";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { firstSearchValue } from "@/lib/paper/open";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
+import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { listApplyableTemplates } from "@/lib/templates/store";
+import { loadHyperliquidLinearPerps } from "@/lib/venues/hyperliquid/market";
+import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
 
 export const metadata: Metadata = {
   title: "Backtests",
@@ -51,13 +42,23 @@ export default async function AccountBacktestsPage({
   }
   const params = await searchParams;
   const selectedId = firstSearchValue(params.run);
+  if (selectedId) {
+    redirect(`/account/backtests/${selectedId}`);
+  }
   const selectedTemplateId = firstSearchValue(params.template);
   const defaultVenue = firstSearchValue(params.venue);
   const defaultEnv = firstSearchValue(params.env);
-  const [runs, desks, templates] = await Promise.all([
-    listBacktestRuns({ userId: member.id }),
-    listTradingAccounts(member.id),
+  const [runs, templates, bybitPairs, hyperliquidPairs] = await Promise.all([
+    listBacktestRuns({
+      userId: member.id,
+      standaloneOnly: true,
+      primaryOnly: true,
+    }),
     listApplyableTemplates({ userId: member.id }),
+    loadUsdtLinearPerps().catch(() => []),
+    loadHyperliquidLinearPerps(
+      hyperliquidInfoEnvironment(defaultEnv),
+    ).catch(() => []),
   ]);
   const library = templates.flatMap((row) => {
     const item = toBacktestLibraryItem(row);
@@ -70,19 +71,7 @@ export default async function AccountBacktestsPage({
         : canBacktestPerpsRecipe(item.recipe);
     return allowed.ok ? [item] : [];
   });
-  const selected = selectedId ? await loadBacktestRun(selectedId) : null;
   const isAdmin = memberIsAdmin(member);
-  const run =
-    selected && canReadBacktestRun(selected, member.id, isAdmin)
-      ? selected
-      : null;
-  const applyDesks = desks
-    .filter((desk) =>
-      run?.deskType === "dca"
-        ? desk.deskType === "dca"
-        : deskAllowsPerpsRecipes(desk.deskType),
-    )
-    .map((desk) => ({ id: desk.id, name: desk.name }));
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -98,15 +87,17 @@ export default async function AccountBacktestsPage({
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-ink-muted">
-        Paper replay of a saved Perps bots or DCA template. Fill the form
-        below — start, end, and initial balance are required. Runs never
-        write the live blotter.
+        Paper replay of one saved template. The saved pair loads first; add
+        comparables from the list. Long history is queued for the worker.
+        Open a row for the full picture.
       </p>
       <BacktestQueueForm
         templates={library}
         selectedTemplateId={selectedTemplateId ?? ""}
         defaultVenue={defaultVenue ?? "bybit"}
         defaultVenueEnvironment={defaultEnv ?? null}
+        bybitPairs={bybitPairs}
+        hyperliquidPairs={hyperliquidPairs}
       />
       {runs.length === 0 ? (
         <p className="text-sm text-ink-muted">
@@ -121,8 +112,10 @@ export default async function AccountBacktestsPage({
                 <th className="py-2 pr-4 font-medium">Bot</th>
                 <th className="py-2 pr-4 font-medium">Type</th>
                 <th className="py-2 pr-4 font-medium">Contract</th>
+                <th className="py-2 pr-4 font-medium">Comparables</th>
                 <th className="py-2 pr-4 font-medium">Window</th>
                 <th className="py-2 pr-4 font-medium">Status</th>
+                <th className="py-2 pr-4 font-medium">Return</th>
                 <th className="py-2 pr-4 font-medium">Realized</th>
                 <th className="py-2 font-medium">
                   <span className="sr-only">Remove</span>
@@ -134,7 +127,7 @@ export default async function AccountBacktestsPage({
                 <tr key={row.id} className="border-t border-line">
                   <td className="py-2 pr-4">
                     <Link
-                      href={`/account/backtests?run=${row.id}`}
+                      href={`/account/backtests/${row.id}`}
                       className="text-accent hover:underline"
                     >
                       {row.recipe.name}
@@ -150,9 +143,19 @@ export default async function AccountBacktestsPage({
                   </td>
                   <td className="py-2 pr-4 tabular-nums">{row.symbol}</td>
                   <td className="py-2 pr-4 text-ink-muted">
+                    {row.comparableSymbols.length > 0
+                      ? `+${row.comparableSymbols.length}`
+                      : "—"}
+                  </td>
+                  <td className="py-2 pr-4 text-ink-muted">
                     {DCA_INDICATOR_TIMEFRAME_LABELS[row.interval]}
                   </td>
                   <td className="py-2 pr-4">{statusLabel(row.status)}</td>
+                  <td className="py-2 pr-4 tabular-nums">
+                    {row.stats?.returnPct == null
+                      ? "—"
+                      : `${(row.stats.returnPct * 100).toFixed(1)}%`}
+                  </td>
                   <td className="py-2 pr-4 tabular-nums">
                     {row.stats
                       ? row.stats.realizedUsdt.toLocaleString(undefined, {
@@ -178,50 +181,6 @@ export default async function AccountBacktestsPage({
           </table>
         </div>
       )}
-
-      {run ? (
-        <section className="mt-8 space-y-5">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-                Run
-              </p>
-              <h2 className="mt-2 text-xl font-semibold tracking-tight">
-                {run.recipe.name} · {run.symbol}
-              </h2>
-              <p className="mt-1 text-sm text-ink-muted">
-                {run.venue} · {DCA_INDICATOR_TIMEFRAME_LABELS[run.interval]} ·{" "}
-                {new Date(run.fromMs).toISOString().slice(0, 10)}–
-                {new Date(run.toMs).toISOString().slice(0, 10)} ·{" "}
-                start {run.startingUsdt.toLocaleString()} ·{" "}
-                {BACKTEST_FEE_PRESETS[run.feePreset].label}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {run.status === "done" ? <BacktestChartButton run={run} /> : null}
-              {run.status === "done" ? (
-                <ApplyBacktestButton
-                  templateId={run.templateId}
-                  desks={applyDesks}
-                />
-              ) : null}
-              {run.status === "done" && run.userId === member.id ? (
-                <PublishBacktestButton runId={run.id} canPublish />
-              ) : null}
-              <RemoveBacktestButton
-                runId={run.id}
-                canRemove={canDeleteBacktestRun(run, member.id, isAdmin)}
-              />
-            </div>
-          </div>
-          {run.error ? <p className="text-sm text-danger">{run.error}</p> : null}
-          <BacktestStatsGrid run={run} />
-          <div>
-            <h3 className="mb-2 text-sm font-semibold">Simulated orders</h3>
-            <BacktestOrdersTable run={run} />
-          </div>
-        </section>
-      ) : null}
     </main>
   );
 }

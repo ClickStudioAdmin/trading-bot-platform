@@ -2,30 +2,61 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { queueTemplateBacktestAction } from "@/lib/backtest/actions";
 import {
+  BACKTEST_COMPARABLE_CAP,
   BACKTEST_FEE_PRESETS,
   DEFAULT_STARTING_USDT,
+  backtestShouldRunInline,
   defaultBacktestDates,
+  estimateBacktestBars,
+  parseBacktestDateRange,
 } from "@/lib/backtest/model";
 import type { BacktestLibraryItem } from "@/components/backtest-dialog";
 import {
+  DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 
-const INTERVALS: DcaIndicatorTimeframe[] = ["15", "60", "240", "D"];
+function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
+  const needle = symbol.trim().toUpperCase();
+  if (!needle || options.some((row) => row.symbol === needle)) {
+    return options;
+  }
+  const base = needle.replace(/USDT$/, "").replace(/USDC$/, "") || needle;
+  return [
+    {
+      symbol: needle,
+      baseCoin: base,
+      quoteCoin: needle.endsWith("USDC") ? "USDC" : "USDT",
+      minQty: 0,
+      maxQty: 0,
+      maxMktQty: 0,
+      minNotional: 0,
+      minPrice: 0,
+      tickSize: 0,
+    },
+    ...options,
+  ];
+}
 
 export function BacktestQueueForm({
   templates,
   selectedTemplateId = "",
   defaultVenue = "bybit",
   defaultVenueEnvironment = null,
+  bybitPairs,
+  hyperliquidPairs,
 }: {
   templates: BacktestLibraryItem[];
   selectedTemplateId?: string;
   defaultVenue?: string;
   defaultVenueEnvironment?: string | null;
+  bybitPairs: LinearPerp[];
+  hyperliquidPairs: LinearPerp[];
 }) {
   const router = useRouter();
   const dates = defaultBacktestDates();
@@ -33,6 +64,13 @@ export function BacktestQueueForm({
     templates.find((row) => row.id === selectedTemplateId) ?? templates[0];
   const [templateId, setTemplateId] = useState(initial?.id ?? "");
   const [symbol, setSymbol] = useState(initial?.recipe.symbol ?? "");
+  const [comparables, setComparables] = useState<string[]>([]);
+  const [venue, setVenue] = useState(
+    defaultVenue === "hyperliquid" ? "hyperliquid" : "bybit",
+  );
+  const [fromDate, setFromDate] = useState(dates.from);
+  const [toDate, setToDate] = useState(dates.to);
+  const [interval, setInterval] = useState<DcaIndicatorTimeframe>("60");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,10 +78,28 @@ export function BacktestQueueForm({
     () => templates.find((row) => row.id === templateId) ?? null,
     [templateId, templates],
   );
+  const pairs = withSymbol(
+    venue === "hyperliquid" ? hyperliquidPairs : bybitPairs,
+    symbol,
+  );
+  const comparableOptions = pairs.filter((row) => row.symbol !== symbol);
+
+  const preview = useMemo(() => {
+    const range = parseBacktestDateRange(fromDate, toDate, interval);
+    if (!range.ok) {
+      return { bars: 0, inline: false, error: range.error };
+    }
+    const bars = estimateBacktestBars(range.fromMs, range.toMs, interval);
+    return {
+      bars,
+      inline: backtestShouldRunInline(bars, 1 + comparables.length),
+      error: null as string | null,
+    };
+  }, [comparables.length, fromDate, interval, toDate]);
 
   if (templates.length === 0) {
     return (
-      <section className="mb-8 max-w-xl rounded-card border border-line bg-surface p-5">
+      <section className="mb-8 max-w-2xl rounded-card border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold">New backtest</h2>
         <p className="mt-2 text-sm text-ink-muted">
           Save a Perps bots or DCA configuration as a template first, then
@@ -54,11 +110,11 @@ export function BacktestQueueForm({
   }
 
   return (
-    <section className="mb-8 max-w-xl rounded-card border border-line bg-surface p-5">
+    <section className="mb-8 max-w-2xl rounded-card border border-line bg-surface p-5">
       <h2 className="text-lg font-semibold">New backtest</h2>
       <p className="mt-1 text-sm text-ink-muted">
-        Paper replay on venue history. Start and end dates and an initial
-        balance are required. This does not touch the live blotter.
+        The saved template pair loads first. Add other pairs as comparables.
+        Long windows are queued for the engine worker.
       </p>
       <form
         className="mt-4 space-y-3"
@@ -68,12 +124,12 @@ export function BacktestQueueForm({
           const result = await queueTemplateBacktestAction(formData);
           setPending(false);
           if (!result.ok) {
-            setError(result.error ?? "Could not run that backtest.");
+            setError(result.error ?? "Could not queue that backtest.");
             return;
           }
           router.push(
             result.runId
-              ? `/account/backtests?run=${result.runId}`
+              ? `/account/backtests/${result.runId}`
               : "/account/backtests",
           );
           router.refresh();
@@ -90,13 +146,17 @@ export function BacktestQueueForm({
               setTemplateId(event.target.value);
               if (next) {
                 setSymbol(next.recipe.symbol);
+                setComparables((rows) =>
+                  rows.filter((row) => row !== next.recipe.symbol),
+                );
               }
             }}
             className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
           >
             {templates.map((row) => (
               <option key={row.id} value={row.id}>
-                {row.recipe.kind === "dca" ? "DCA" : "Perps"} · {row.name}
+                {row.recipe.kind === "dca" ? "DCA" : "Perps"} · {row.name} ·{" "}
+                {row.recipe.symbol}
               </option>
             ))}
           </select>
@@ -108,7 +168,8 @@ export function BacktestQueueForm({
               type="date"
               name="fromDate"
               required
-              defaultValue={dates.from}
+              value={fromDate}
+              onChange={(event) => setFromDate(event.target.value)}
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
             />
           </label>
@@ -118,7 +179,8 @@ export function BacktestQueueForm({
               type="date"
               name="toDate"
               required
-              defaultValue={dates.to}
+              value={toDate}
+              onChange={(event) => setToDate(event.target.value)}
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
             />
           </label>
@@ -138,10 +200,13 @@ export function BacktestQueueForm({
             Timeframe
             <select
               name="interval"
-              defaultValue="60"
+              value={interval}
+              onChange={(event) =>
+                setInterval(event.target.value as DcaIndicatorTimeframe)
+              }
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
             >
-              {INTERVALS.map((row) => (
+              {DCA_INDICATOR_TIMEFRAMES.map((row) => (
                 <option key={row} value={row}>
                   {DCA_INDICATOR_TIMEFRAME_LABELS[row]}
                 </option>
@@ -152,7 +217,8 @@ export function BacktestQueueForm({
             Venue
             <select
               name="venue"
-              defaultValue={defaultVenue === "hyperliquid" ? "hyperliquid" : "bybit"}
+              value={venue}
+              onChange={(event) => setVenue(event.target.value)}
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
             >
               <option value="bybit">Bybit</option>
@@ -160,16 +226,73 @@ export function BacktestQueueForm({
             </select>
           </label>
         </div>
-        <label className="block text-xs text-ink-muted">
-          Contract
-          <input
-            name="symbol"
-            required
-            value={symbol}
-            onChange={(event) => setSymbol(event.target.value)}
-            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
-          />
-        </label>
+        <div>
+          <p className="text-xs text-ink-muted">Primary pair</p>
+          <div className="mt-1">
+            <FuturesSymbolSelect
+              options={pairs}
+              value={symbol}
+              onChange={(next) => {
+                setSymbol(next);
+                setComparables((rows) => rows.filter((row) => row !== next));
+              }}
+              name="symbol"
+            />
+          </div>
+        </div>
+        <fieldset>
+          <legend className="text-xs text-ink-muted">
+            Comparables ({comparables.length}/{BACKTEST_COMPARABLE_CAP})
+          </legend>
+          <p className="mt-1 text-xs text-ink-faint">
+            Same bot and window on other pairs. Ranked next to the primary.
+          </p>
+          {comparables.map((row) => (
+            <input key={row} type="hidden" name="comparable" value={row} />
+          ))}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {comparables.map((row) => (
+              <button
+                key={row}
+                type="button"
+                onClick={() =>
+                  setComparables((current) =>
+                    current.filter((item) => item !== row),
+                  )
+                }
+                className="rounded-control border border-line bg-surface-raised px-2 py-1 text-xs text-ink hover:border-line-strong"
+              >
+                {row} ×
+              </button>
+            ))}
+          </div>
+          {comparables.length < BACKTEST_COMPARABLE_CAP ? (
+            <div className="mt-2 max-h-40 overflow-y-auto rounded-control border border-line bg-canvas px-2 py-2">
+              {comparableOptions.slice(0, 40).map((row) => {
+                const checked = comparables.includes(row.symbol);
+                return (
+                  <label
+                    key={row.symbol}
+                    className="flex items-center gap-2 py-0.5 text-sm text-ink"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => {
+                        setComparables((current) =>
+                          current.includes(row.symbol)
+                            ? current.filter((item) => item !== row.symbol)
+                            : [...current, row.symbol],
+                        );
+                      }}
+                    />
+                    {row.baseCoin}-{row.quoteCoin}
+                  </label>
+                );
+              })}
+            </div>
+          ) : null}
+        </fieldset>
         {selected ? (
           <p className="text-xs text-ink-muted">
             {selected.recipe.kind === "dca"
@@ -178,6 +301,20 @@ export function BacktestQueueForm({
             Fee: {BACKTEST_FEE_PRESETS.vip0_taker.label}.
           </p>
         ) : null}
+        {preview.error ? (
+          <p className="text-sm text-danger">{preview.error}</p>
+        ) : (
+          <p className="text-xs text-ink-muted">
+            About {preview.bars.toLocaleString()} bars
+            {comparables.length > 0
+              ? ` × ${1 + comparables.length} pairs`
+              : ""}
+            .{" "}
+            {preview.inline
+              ? "This will run now."
+              : "This will queue for the engine worker."}
+          </p>
+        )}
         {defaultVenueEnvironment ? (
           <input
             type="hidden"
@@ -189,10 +326,16 @@ export function BacktestQueueForm({
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || Boolean(preview.error)}
           className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
         >
-          {pending ? "Running…" : "Run backtest"}
+          {pending
+            ? preview.inline
+              ? "Running…"
+              : "Queuing…"
+            : preview.inline
+              ? "Run backtest"
+              : "Queue backtest"}
         </button>
       </form>
     </section>
