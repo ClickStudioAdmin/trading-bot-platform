@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { DeskChart } from "@/components/desk-chart";
 import { Modal } from "@/components/template-modals";
 import {
+  attachBacktestToTemplateAction,
   deleteBacktestAction,
   deleteBacktestStudyAction,
   publishBacktestAction,
+  saveBacktestAsTemplateAction,
 } from "@/lib/backtest/actions";
 import { applyTemplateAction } from "@/lib/templates/actions";
 import {
@@ -327,6 +329,90 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
         </Modal>
       ) : null}
     </>
+  );
+}
+
+export function AttachBacktestButton({
+  runId,
+  sourceName,
+}: {
+  runId: string;
+  sourceName: string | null;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <form
+      action={async (formData) => {
+        setPending(true);
+        setError(null);
+        const result = await attachBacktestToTemplateAction(formData);
+        setPending(false);
+        if (!result.ok) {
+          setError(result.error ?? "Could not attach that run.");
+          return;
+        }
+        router.refresh();
+      }}
+    >
+      <input type="hidden" name="runId" value={runId} />
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
+      >
+        {pending
+          ? "Attaching…"
+          : sourceName
+            ? `Attach results to ${sourceName}`
+            : "Attach results"}
+      </button>
+      {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
+    </form>
+  );
+}
+
+export function SaveBacktestAsTemplateButton({
+  runId,
+  defaultName,
+}: {
+  runId: string;
+  defaultName: string;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <form
+      className="flex flex-wrap items-center gap-2"
+      action={async (formData) => {
+        setPending(true);
+        setError(null);
+        const result = await saveBacktestAsTemplateAction(formData);
+        setPending(false);
+        if (!result.ok) {
+          setError(result.error ?? "Could not save that template.");
+          return;
+        }
+        router.refresh();
+      }}
+    >
+      <input type="hidden" name="runId" value={runId} />
+      <input
+        name="name"
+        defaultValue={defaultName}
+        className="w-40 rounded-control border border-line bg-canvas px-2 py-1.5 text-sm text-ink"
+      />
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
+      >
+        {pending ? "Saving…" : "Save as template"}
+      </button>
+      {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
+    </form>
   );
 }
 

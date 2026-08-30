@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { BacktestRecipeFields } from "@/components/backtest-recipe-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { queueTemplateBacktestAction } from "@/lib/backtest/actions";
+import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   BACKTEST_COMPARABLE_CAP,
   BACKTEST_FEE_PRESETS,
@@ -13,10 +15,8 @@ import {
   estimateBacktestBars,
   parseBacktestDateRange,
 } from "@/lib/backtest/model";
-import {
-  recipeParamRows,
-  type BacktestLibraryItem,
-} from "@/lib/backtest/library";
+import type { BacktestLibraryItem } from "@/lib/backtest/library";
+import { recipesMatchReplayFields } from "@/lib/templates/recipe";
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
@@ -49,20 +49,37 @@ function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
 export function BacktestQueueForm({
   templates,
   selectedTemplateId = "",
+  draftId = "",
+  draftRecipe = null,
+  draftSourceTemplateId = "",
   defaultVenue = "bybit",
   defaultVenueEnvironment = null,
 }: {
   templates: BacktestLibraryItem[];
   selectedTemplateId?: string;
+  draftId?: string;
+  draftRecipe?: BacktestRecipe | null;
+  draftSourceTemplateId?: string;
   defaultVenue?: string;
   defaultVenueEnvironment?: string | null;
 }) {
   const router = useRouter();
   const dates = defaultBacktestDates();
-  const initial =
-    templates.find((row) => row.id === selectedTemplateId) ?? templates[0];
-  const [templateId, setTemplateId] = useState(initial?.id ?? "");
-  const [symbol, setSymbol] = useState(initial?.recipe.symbol ?? "");
+  const initialTemplate =
+    templates.find((row) => row.id === selectedTemplateId) ??
+    (draftRecipe ? null : templates[0]);
+  const [templateId, setTemplateId] = useState(
+    draftRecipe ? draftSourceTemplateId : (initialTemplate?.id ?? ""),
+  );
+  const [recipe, setRecipe] = useState<BacktestRecipe | null>(
+    draftRecipe ?? initialTemplate?.recipe ?? null,
+  );
+  const [sourceTemplateId, setSourceTemplateId] = useState(
+    draftRecipe ? draftSourceTemplateId : (initialTemplate?.id ?? ""),
+  );
+  const [symbol, setSymbol] = useState(
+    draftRecipe?.symbol ?? initialTemplate?.recipe.symbol ?? "",
+  );
   const [comparables, setComparables] = useState<string[]>([]);
   const [venue, setVenue] = useState(
     defaultVenue === "hyperliquid" ? "hyperliquid" : "bybit",
@@ -102,9 +119,14 @@ export function BacktestQueueForm({
     };
   }, [defaultVenueEnvironment, venue]);
 
-  const selected = useMemo(
-    () => templates.find((row) => row.id === templateId) ?? null,
-    [templateId, templates],
+  const selectedTemplate = useMemo(
+    () => templates.find((row) => row.id === sourceTemplateId) ?? null,
+    [sourceTemplateId, templates],
+  );
+  const dirty = Boolean(
+    recipe &&
+      selectedTemplate &&
+      !recipesMatchReplayFields(recipe, selectedTemplate.recipe),
   );
   const pairs = withSymbol(
     venue === "hyperliquid" ? hyperliquidPairs : bybitPairs,
@@ -125,29 +147,16 @@ export function BacktestQueueForm({
     };
   }, [comparables.length, fromDate, interval, toDate]);
 
-  if (templates.length === 0) {
-    return (
-      <section className="mb-8 max-w-2xl rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold">New backtest</h2>
-        <p className="mt-2 text-sm text-ink-muted">
-          Save a Perps bots or DCA configuration as a template first, then
-          queue it here.
-        </p>
-      </section>
-    );
-  }
-
-  const params = selected ? recipeParamRows(selected.recipe) : [];
   const pairChanged =
-    selected != null &&
-    symbol.trim().toUpperCase() !== selected.recipe.symbol.trim().toUpperCase();
+    recipe != null &&
+    symbol.trim().toUpperCase() !== recipe.symbol.trim().toUpperCase();
 
   return (
     <section className="mb-8 rounded-card border border-line bg-surface p-5">
       <h2 className="text-lg font-semibold">New backtest</h2>
       <p className="mt-1 text-sm text-ink-muted">
-        The saved template pair loads first. Add other pairs as comparables.
-        Long windows are queued for the engine worker.
+        Load a bot from Automations or pick a template. Edit the replay
+        fields, then queue. Long windows go to the engine worker.
       </p>
       <div className="mt-4 grid items-start gap-6 lg:grid-cols-2">
       <form
@@ -169,16 +178,22 @@ export function BacktestQueueForm({
           router.refresh();
         }}
       >
+        {draftId ? <input type="hidden" name="draftId" value={draftId} /> : null}
+        <input type="hidden" name="sourceTemplateId" value={sourceTemplateId} />
+        {recipe ? (
+          <input type="hidden" name="recipe" value={JSON.stringify(recipe)} />
+        ) : null}
         <label className="block text-xs text-ink-muted">
           Template
           <select
             name="templateId"
-            required
             value={templateId}
             onChange={(event) => {
               const next = templates.find((row) => row.id === event.target.value);
               setTemplateId(event.target.value);
               if (next) {
+                setRecipe(next.recipe);
+                setSourceTemplateId(next.id);
                 setSymbol(next.recipe.symbol);
                 setComparables((rows) =>
                   rows.filter((row) => row !== next.recipe.symbol),
@@ -187,6 +202,9 @@ export function BacktestQueueForm({
             }}
             className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
           >
+            <option value="">
+              {recipe ? "Current bot (not a library template)" : "Pick a template"}
+            </option>
             {templates.map((row) => (
               <option key={row.id} value={row.id}>
                 {row.recipe.kind === "dca" ? "DCA" : "Perps"} · {row.name} ·{" "}
@@ -327,9 +345,9 @@ export function BacktestQueueForm({
             </div>
           ) : null}
         </fieldset>
-        {selected ? (
+        {recipe ? (
           <p className="text-xs text-ink-muted">
-            {selected.recipe.kind === "dca"
+            {recipe.kind === "dca"
               ? "DCA starts armed. Clips and percent exits decide on close."
               : "Entries fill at bar close. Stops use the adverse wick."}{" "}
             Fee: {BACKTEST_FEE_PRESETS.vip0_taker.label}.
@@ -360,7 +378,7 @@ export function BacktestQueueForm({
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         <button
           type="submit"
-          disabled={pending || Boolean(preview.error)}
+          disabled={pending || Boolean(preview.error) || !recipe}
           className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
         >
           {pending
@@ -372,34 +390,52 @@ export function BacktestQueueForm({
               : "Queue backtest"}
         </button>
       </form>
-      {selected ? (
+      {recipe ? (
         <aside className="rounded-card border border-line bg-canvas p-4">
-          <h3 className="text-sm font-semibold">Saved bot</h3>
-          <p className="mt-1 text-xs text-ink-muted">
-            These are the template rules this run will replay. The pair and
-            window on the left only change the market data.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold">Bot to replay</h3>
+              <p className="mt-1 text-xs text-ink-muted">
+                Change the replay fields here. Pair and window on the left
+                only change the market data.
+              </p>
+            </div>
+            {selectedTemplate ? (
+              <p
+                className={`rounded-control px-2 py-0.5 text-xs ${
+                  dirty
+                    ? "bg-warning/15 text-warning"
+                    : "bg-success/15 text-success"
+                }`}
+              >
+                {dirty
+                  ? "Edited — save will create a new template"
+                  : `Matches ${selectedTemplate.name}`}
+              </p>
+            ) : (
+              <p className="rounded-control bg-surface-raised px-2 py-0.5 text-xs text-ink-muted">
+                Not from a library template
+              </p>
+            )}
+          </div>
           {pairChanged ? (
             <p className="mt-2 text-xs text-warning">
-              Primary pair is {symbol}. The template was saved on{" "}
-              {selected.recipe.symbol}.
+              Primary pair is {symbol}. The bot was saved on {recipe.symbol}.
             </p>
           ) : null}
-          <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-            {params.map((row) => (
-              <div
-                key={row.label}
-                className="rounded-card border border-line bg-surface px-3 py-2"
-              >
-                <dt className="text-xs uppercase tracking-[0.16em] text-ink-muted">
-                  {row.label}
-                </dt>
-                <dd className="mt-1 text-sm font-medium">{row.value}</dd>
-              </div>
-            ))}
-          </dl>
+          <div className="mt-4">
+            <BacktestRecipeFields recipe={recipe} onChange={setRecipe} />
+          </div>
         </aside>
-      ) : null}
+      ) : (
+        <aside className="rounded-card border border-line bg-canvas p-4">
+          <h3 className="text-sm font-semibold">Bot to replay</h3>
+          <p className="mt-2 text-sm text-ink-muted">
+            Pick a template, or open Backtest from a Perps or DCA bot on
+            Automations.
+          </p>
+        </aside>
+      )}
       </div>
     </section>
   );

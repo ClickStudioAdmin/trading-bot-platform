@@ -174,6 +174,18 @@ export function recipesMatchForBacktest(
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+export function recipesMatchReplayFields(
+  current: TemplateRecipe,
+  saved: TemplateRecipe,
+): boolean {
+  if (current.kind !== saved.kind) {
+    return false;
+  }
+  const left = { ...current, name: "", symbol: "" };
+  const right = { ...saved, name: "", symbol: "" };
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe {
   return {
     kind: "dca",

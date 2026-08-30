@@ -123,6 +123,7 @@ const run: BacktestRun = {
   id: "run-1",
   userId: "user-1",
   templateId: null,
+  sourceTemplateId: null,
   studyId: null,
   deskType: "dca",
   venue: "bybit",

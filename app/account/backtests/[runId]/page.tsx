@@ -5,12 +5,15 @@ import { deskAllowsPerpsRecipes } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
+import { decideBacktestTemplateActions } from "@/lib/backtest/library";
+import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   canDeleteBacktestRun,
   canReadBacktestRun,
   listBacktestRuns,
   loadBacktestRun,
 } from "@/lib/backtest/store";
+import { loadTemplateById } from "@/lib/templates/store";
 
 export const metadata: Metadata = {
   title: "Backtest",
@@ -32,6 +35,38 @@ export default async function AccountBacktestDetailPage({
   if (!run || !canReadBacktestRun(run, member.id, isAdmin)) {
     notFound();
   }
+  if (run.status === "draft") {
+    const draftParams = new URLSearchParams({
+      draft: run.id,
+      venue: run.venue,
+    });
+    if (run.venueEnvironment) {
+      draftParams.set("env", run.venueEnvironment);
+    }
+    redirect(`/account/backtests?${draftParams.toString()}`);
+  }
+  const [source, linked] = await Promise.all([
+    run.sourceTemplateId ? loadTemplateById(run.sourceTemplateId) : null,
+    run.templateId ? loadTemplateById(run.templateId) : null,
+  ]);
+  const templateActions = decideBacktestTemplateActions({
+    status: run.status,
+    ownerUserId: run.userId,
+    memberId: member.id,
+    recipe: run.recipe,
+    source:
+      source &&
+      (source.recipe.kind === "dca" || source.recipe.kind === "perps")
+        ? {
+            id: source.id,
+            name: source.name,
+            recipe: source.recipe as BacktestRecipe,
+          }
+        : null,
+    linked: linked
+      ? { id: linked.id, name: linked.name, visibility: linked.visibility }
+      : null,
+  });
   const desks = await listTradingAccounts(member.id);
   const applyDesks = desks
     .filter((desk) =>
@@ -55,8 +90,13 @@ export default async function AccountBacktestDetailPage({
             : null
         }
         applyDesks={applyDesks}
+        applyTemplateId={templateActions.applyTemplateId}
         canPublish={run.userId === member.id}
         canRemove={canDeleteBacktestRun(run, member.id, isAdmin)}
+        canAttach={templateActions.canAttach}
+        canSaveAs={templateActions.canSaveAs}
+        sourceTemplateName={templateActions.sourceName}
+        linkedTemplateName={templateActions.linkedName}
         returnTo="/account/backtests"
         comparables={comparables}
         parentHref={

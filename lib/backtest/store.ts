@@ -115,6 +115,9 @@ export function parseBacktestRunRow(
     id: String(row.id),
     userId: row.user_id ? String(row.user_id) : null,
     templateId: row.template_id ? String(row.template_id) : null,
+    sourceTemplateId: row.source_template_id
+      ? String(row.source_template_id)
+      : null,
     studyId: row.study_id ? String(row.study_id) : null,
     deskType,
     venue: String(row.venue ?? "bybit"),
@@ -152,6 +155,7 @@ function parseComparableSymbolList(raw: unknown): string[] {
 export async function insertBacktestRun(input: {
   userId: string | null;
   templateId: string | null;
+  sourceTemplateId?: string | null;
   studyId?: string | null;
   venue: string;
   venueEnvironment: string | null;
@@ -180,6 +184,7 @@ export async function insertBacktestRun(input: {
     .insert({
       user_id: input.userId,
       template_id: input.templateId,
+      source_template_id: input.sourceTemplateId ?? null,
       study_id: input.studyId ?? null,
       parent_run_id: input.parentRunId ?? null,
       comparable_symbols: input.comparableSymbols ?? [],
@@ -243,6 +248,79 @@ export async function updateBacktestRun(
   return parseBacktestRunRow(data as Record<string, unknown>);
 }
 
+export async function promoteDraftBacktestRun(
+  id: string,
+  patch: {
+    templateId: string | null;
+    sourceTemplateId: string | null;
+    venue: string;
+    venueEnvironment: string | null;
+    symbol: string;
+    interval: DcaIndicatorTimeframe;
+    fromMs: number;
+    toMs: number;
+    feePreset: BacktestFeePreset;
+    feeRate: number;
+    startingUsdt: number;
+    recipe: BacktestRecipe;
+    comparableSymbols: string[];
+  },
+): Promise<BacktestRun | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("backtest_runs")
+    .update({
+      template_id: patch.templateId,
+      source_template_id: patch.sourceTemplateId,
+      desk_type: patch.recipe.kind,
+      venue: patch.venue,
+      venue_environment: patch.venueEnvironment,
+      symbol: patch.symbol,
+      interval: patch.interval,
+      from_ms: patch.fromMs,
+      to_ms: patch.toMs,
+      fee_preset: patch.feePreset,
+      fee_rate: patch.feeRate,
+      starting_balance_usdt: patch.startingUsdt,
+      recipe: patch.recipe,
+      comparable_symbols: patch.comparableSymbols,
+      status: "queued",
+      error: null,
+    })
+    .eq("id", id)
+    .eq("status", "draft")
+    .select("*")
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parseBacktestRunRow(data as Record<string, unknown>);
+}
+
+export async function linkBacktestRunTemplate(
+  id: string,
+  templateId: string,
+): Promise<BacktestRun | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("backtest_runs")
+    .update({ template_id: templateId })
+    .eq("id", id)
+    .eq("status", "done")
+    .select("*")
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parseBacktestRunRow(data as Record<string, unknown>);
+}
+
 export async function loadBacktestRun(id: string): Promise<BacktestRun | null> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -275,6 +353,7 @@ export async function listBacktestRuns(input: {
   let query = supabase
     .from("backtest_runs")
     .select("*")
+    .neq("status", "draft")
     .order("created_at", { ascending: false })
     .limit(input.limit ?? 80);
   if (input.publishedOnly) {
@@ -293,6 +372,7 @@ export async function listBacktestRuns(input: {
       const fallback = await supabase
         .from("backtest_runs")
         .select("*")
+        .neq("status", "draft")
         .order("created_at", { ascending: false })
         .limit(input.limit ?? 80);
       const parsed = (fallback.data ?? [])
@@ -339,6 +419,9 @@ function filterBacktestRuns(
     if (input.primaryOnly && row.parentRunId) {
       return false;
     }
+    if (row.status === "draft") {
+      return false;
+    }
     return true;
   });
 }
@@ -351,6 +434,7 @@ export async function listAllBacktestRuns(limit = 120): Promise<BacktestRun[]> {
   const { data, error } = await supabase
     .from("backtest_runs")
     .select("*")
+    .neq("status", "draft")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error || !data) {
@@ -358,7 +442,7 @@ export async function listAllBacktestRuns(limit = 120): Promise<BacktestRun[]> {
   }
   return data
     .map((row) => parseBacktestRunRow(row as Record<string, unknown>))
-    .filter((row): row is BacktestRun => Boolean(row));
+    .filter((row): row is BacktestRun => row != null && row.status !== "draft");
 }
 
 export function canReadBacktestRun(

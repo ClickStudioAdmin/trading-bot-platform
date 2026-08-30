@@ -26,6 +26,9 @@ export async function executeBacktestRun(
   if (!run) {
     return { ok: false, error: "That run was not found." };
   }
+  if (run.status === "draft") {
+    return { ok: false, error: "Queue this draft before it can run." };
+  }
   await updateBacktestRun(runId, { status: "running" });
   try {
     const allowed =

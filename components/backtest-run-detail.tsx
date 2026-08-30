@@ -2,11 +2,13 @@ import Link from "next/link";
 import { BacktestEquityPanel } from "@/components/backtest-equity";
 import {
   ApplyBacktestButton,
+  AttachBacktestButton,
   BacktestInlineChart,
   BacktestOrdersTable,
   BacktestStatsGrid,
   PublishBacktestButton,
   RemoveBacktestButton,
+  SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
 import { BACKTEST_FEE_PRESETS } from "@/lib/backtest/model";
 import type { BacktestRun } from "@/lib/backtest/model";
@@ -23,8 +25,13 @@ export function BacktestRunDetail({
   listHref,
   studyHref,
   applyDesks,
+  applyTemplateId = null,
   canPublish,
   canRemove,
+  canAttach = false,
+  canSaveAs = false,
+  sourceTemplateName = null,
+  linkedTemplateName = null,
   returnTo,
   comparables = [],
   parentHref,
@@ -33,8 +40,13 @@ export function BacktestRunDetail({
   listHref: string;
   studyHref?: string | null;
   applyDesks?: Array<{ id: string; name: string }>;
+  applyTemplateId?: string | null;
   canPublish: boolean;
   canRemove: boolean;
+  canAttach?: boolean;
+  canSaveAs?: boolean;
+  sourceTemplateName?: string | null;
+  linkedTemplateName?: string | null;
   returnTo: string;
   comparables?: BacktestRun[];
   parentHref?: string | null;
@@ -76,9 +88,26 @@ export function BacktestRunDetail({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {canAttach ? (
+            <AttachBacktestButton
+              runId={run.id}
+              sourceName={sourceTemplateName}
+            />
+          ) : null}
+          {canSaveAs ? (
+            <SaveBacktestAsTemplateButton
+              runId={run.id}
+              defaultName={run.recipe.name}
+            />
+          ) : null}
+          {linkedTemplateName ? (
+            <p className="text-xs text-ink-muted">
+              Attached to {linkedTemplateName}
+            </p>
+          ) : null}
           {run.status === "done" && applyDesks ? (
             <ApplyBacktestButton
-              templateId={run.templateId}
+              templateId={applyTemplateId}
               desks={applyDesks}
             />
           ) : null}

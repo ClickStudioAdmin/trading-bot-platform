@@ -24,6 +24,7 @@ export const DEFAULT_STARTING_USDT = 10_000;
 
 export type BacktestFeePreset = keyof typeof BACKTEST_FEE_PRESETS;
 export type BacktestStatus =
+  | "draft"
   | "queued"
   | "running"
   | "done"
@@ -61,6 +62,7 @@ export type BacktestRun = {
   id: string;
   userId: string | null;
   templateId: string | null;
+  sourceTemplateId: string | null;
   studyId: string | null;
   deskType: BacktestDeskType;
   venue: string;
@@ -121,6 +123,7 @@ export function parseWindowDays(raw: unknown): BacktestWindowDays {
 export function parseBacktestStatus(raw: unknown): BacktestStatus | null {
   const value = String(raw ?? "").trim();
   if (
+    value === "draft" ||
     value === "queued" ||
     value === "running" ||
     value === "done" ||

@@ -8,9 +8,11 @@ import { getSessionMember } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { toBacktestLibraryItem } from "@/lib/backtest/library";
 import { formatBacktestReturnPct } from "@/lib/backtest/model";
+import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   canDeleteBacktestRun,
   listBacktestRuns,
+  loadBacktestRun,
 } from "@/lib/backtest/store";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
@@ -44,8 +46,16 @@ export default async function AccountBacktestsPage({
     redirect(`/account/backtests/${selectedId}`);
   }
   const selectedTemplateId = firstSearchValue(params.template);
+  const draftId = firstSearchValue(params.draft);
   const defaultVenue = firstSearchValue(params.venue);
   const defaultEnv = firstSearchValue(params.env);
+  const draft = draftId ? await loadBacktestRun(draftId) : null;
+  const usableDraft =
+    draft &&
+    draft.status === "draft" &&
+    (draft.userId === member.id || memberIsAdmin(member))
+      ? draft
+      : null;
   let runs: Awaited<ReturnType<typeof listBacktestRuns>> = [];
   let templates: Awaited<ReturnType<typeof listApplyableTemplates>> = [];
   try {
@@ -88,20 +98,24 @@ export default async function AccountBacktestsPage({
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-ink-muted">
-        Paper replay of one saved template. The saved pair loads first; add
-        comparables from the list. Long history is queued for the worker.
-        Open a row for the full picture.
+        Paper replay of a bot from Automations or a library template. Edit
+        the replay fields, then queue. Long history goes to the worker. Open
+        a row for the full picture.
       </p>
       <BacktestQueueForm
         templates={library}
         selectedTemplateId={selectedTemplateId ?? ""}
-        defaultVenue={defaultVenue ?? "bybit"}
-        defaultVenueEnvironment={defaultEnv ?? null}
+        draftId={usableDraft?.id ?? ""}
+        draftRecipe={(usableDraft?.recipe as BacktestRecipe | undefined) ?? null}
+        draftSourceTemplateId={usableDraft?.sourceTemplateId ?? ""}
+        defaultVenue={defaultVenue ?? usableDraft?.venue ?? "bybit"}
+        defaultVenueEnvironment={
+          defaultEnv ?? usableDraft?.venueEnvironment ?? null
+        }
       />
       {runs.length === 0 ? (
         <p className="text-sm text-ink-muted">
-          No runs yet. Save a bot as a template, then complete the form
-          above.
+          No runs yet. Open Backtest from a bot, or pick a template above.
         </p>
       ) : (
         <div className="overflow-x-auto">

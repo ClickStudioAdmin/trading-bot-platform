@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
+import { seedBacktestDraftAction } from "@/lib/backtest/actions";
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import { recipesMatchForBacktest } from "@/lib/templates/recipe";
 
@@ -59,9 +61,11 @@ export function BacktestTemplateLink({
   venueId: string;
   venueEnvironment?: string | null;
 }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   if (!current) {
     return (
-      <DisabledBacktest title="Save this configuration as a template first." />
+      <DisabledBacktest title="Complete this bot before backtesting." />
     );
   }
   const allowed = canReplay(current);
@@ -69,26 +73,45 @@ export function BacktestTemplateLink({
     return <DisabledBacktest title={allowed.error} />;
   }
   const match = findBacktestableTemplate(current, templates);
-  if (!match) {
-    return (
-      <DisabledBacktest title="Save this configuration as a template first." />
-    );
-  }
-  const params = new URLSearchParams({
-    template: match.id,
-    venue: venueId,
-  });
-  if (venueEnvironment) {
-    params.set("env", venueEnvironment);
-  }
   return (
-    <a
-      href={`/account/backtests?${params.toString()}`}
-      target="_blank"
-      rel="noreferrer"
-      className="shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
-    >
-      Backtest
-    </a>
+    <span className="inline-flex flex-col items-end">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => {
+          const formData = new FormData();
+          formData.set("recipe", JSON.stringify(current));
+          formData.set("venue", venueId);
+          if (venueEnvironment) {
+            formData.set("venueEnvironment", venueEnvironment);
+          }
+          if (match) {
+            formData.set("sourceTemplateId", match.id);
+          }
+          setPending(true);
+          setError(null);
+          void seedBacktestDraftAction(formData).then((result) => {
+            setPending(false);
+            if (!result.ok || !result.runId) {
+              setError(result.error ?? "Could not open a backtest.");
+              return;
+            }
+            window.open(
+              `/account/backtests?draft=${result.runId}&venue=${encodeURIComponent(venueId)}${
+                venueEnvironment
+                  ? `&env=${encodeURIComponent(venueEnvironment)}`
+                  : ""
+              }`,
+              "_blank",
+              "noreferrer",
+            );
+          });
+        }}
+        className="shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-50"
+      >
+        {pending ? "Opening…" : "Backtest"}
+      </button>
+      {error ? <span className="mt-1 text-xs text-danger">{error}</span> : null}
+    </span>
   );
 }

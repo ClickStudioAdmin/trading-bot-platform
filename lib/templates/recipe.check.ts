@@ -13,6 +13,7 @@ import {
   snapshotDcaRecipe,
   snapshotPaperRecipe,
   recipesMatchForBacktest,
+  recipesMatchReplayFields,
   snapshotPerpsRecipe,
   uniqueAppliedName,
   templateFitsDesk,
@@ -102,6 +103,19 @@ assert.equal(perps.trailing, null);
 assert.equal(recipesMatchForBacktest(perps, { ...perps, name: "Other" }), true);
 assert.equal(
   recipesMatchForBacktest(perps, { ...perps, triggerPrice: "1" }),
+  false,
+);
+assert.equal(recipesMatchReplayFields(perps, { ...perps, name: "Other" }), true);
+assert.equal(
+  recipesMatchReplayFields(perps, { ...perps, symbol: "ETHUSDT" }),
+  true,
+);
+assert.equal(
+  recipesMatchReplayFields(perps, { ...perps, triggerPrice: "1" }),
+  false,
+);
+assert.equal(
+  recipesMatchForBacktest(perps, { ...perps, symbol: "ETHUSDT" }),
   false,
 );
 assert.equal("mode" in perps, false);

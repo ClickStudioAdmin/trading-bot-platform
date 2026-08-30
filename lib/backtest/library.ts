@@ -1,6 +1,13 @@
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
-import type { DcaTemplateRecipe } from "@/lib/templates/recipe";
+import {
+  parseTemplateRecipe,
+  recipesMatchReplayFields,
+  templateIsLibraryRow,
+  TEMPLATE_RECIPE_VERSION,
+  type DcaTemplateRecipe,
+  type TemplateVisibility,
+} from "@/lib/templates/recipe";
 
 export type BacktestLibraryItem = {
   id: string;
@@ -17,6 +24,68 @@ export function toBacktestLibraryItem(row: {
     return null;
   }
   return row as BacktestLibraryItem;
+}
+
+export function parseBacktestRecipeJson(raw: unknown): BacktestRecipe | null {
+  let value = raw;
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const kind = (value as { kind?: string }).kind;
+  if (kind !== "dca" && kind !== "perps") {
+    return null;
+  }
+  const parsed = parseTemplateRecipe(value, kind, TEMPLATE_RECIPE_VERSION);
+  if (!parsed.ok) {
+    return null;
+  }
+  if (parsed.recipe.kind !== "dca" && parsed.recipe.kind !== "perps") {
+    return null;
+  }
+  return parsed.recipe;
+}
+
+export function decideBacktestTemplateActions(input: {
+  status: string;
+  ownerUserId: string | null;
+  memberId: string;
+  recipe: BacktestRecipe;
+  source: { id: string; name: string; recipe: BacktestRecipe } | null;
+  linked: { id: string; name: string; visibility: string } | null;
+}): {
+  canAttach: boolean;
+  canSaveAs: boolean;
+  applyTemplateId: string | null;
+  linkedName: string | null;
+  sourceName: string | null;
+} {
+  const owns = input.ownerUserId === input.memberId;
+  const done = input.status === "done";
+  const linkedLibrary =
+    input.linked &&
+    templateIsLibraryRow(input.linked.visibility as TemplateVisibility)
+      ? input.linked
+      : null;
+  const sourceMatches = Boolean(
+    input.source &&
+      recipesMatchReplayFields(input.recipe, input.source.recipe),
+  );
+  const canAttach = Boolean(done && owns && sourceMatches && !linkedLibrary);
+  const canSaveAs = Boolean(done && owns && !canAttach && !linkedLibrary);
+  return {
+    canAttach,
+    canSaveAs,
+    applyTemplateId: linkedLibrary?.id ?? null,
+    linkedName: linkedLibrary?.name ?? null,
+    sourceName: input.source?.name ?? null,
+  };
 }
 
 function compareMark(compare: string): string {
