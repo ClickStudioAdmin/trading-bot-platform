@@ -100,6 +100,14 @@ const listed = listUsdtLinearPerps([
     contractType: "LinearPerpetual",
     deliveryTime: "0",
   },
+  {
+    symbol: "USDCUSDT",
+    status: "Trading",
+    baseCoin: "USDC",
+    quoteCoin: "USDT",
+    contractType: "LinearPerpetual",
+    deliveryTime: "0",
+  },
 ]);
 assert.deepEqual(
   listed.map((row) => row.symbol),

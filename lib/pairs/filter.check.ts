@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import {
   applyPairFilters,
+  isStableBaseCoin,
   parsePairFilters,
   pairFilterInputValues,
   pairFiltersAreActive,
   uniquePairBases,
 } from "./filter";
+
+assert.equal(isStableBaseCoin("USDC"), true);
+assert.equal(isStableBaseCoin("usde"), true);
+assert.equal(isStableBaseCoin("BTC"), false);
+assert.equal(isStableBaseCoin("1000PEPE"), false);
 
 assert.equal(parsePairFilters({ minDte: "1,000" }).minDte, 1000);
 

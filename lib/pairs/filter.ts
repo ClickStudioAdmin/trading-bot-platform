@@ -1,3 +1,25 @@
+const STABLE_BASE_COINS = new Set([
+  "USDT",
+  "USDC",
+  "USDE",
+  "USDS",
+  "USD1",
+  "DAI",
+  "FDUSD",
+  "TUSD",
+  "BUSD",
+  "USDD",
+  "PYUSD",
+  "USDG",
+  "USDP",
+  "GUSD",
+  "EURC",
+]);
+
+export function isStableBaseCoin(baseCoin: string): boolean {
+  return STABLE_BASE_COINS.has(baseCoin.trim().toUpperCase());
+}
+
 export type PairFilters = {
   q: string;
   base: string;

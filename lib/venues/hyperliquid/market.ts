@@ -1,3 +1,4 @@
+import { isStableBaseCoin } from "@/lib/pairs/filter";
 import type { BybitTicker } from "@/lib/exchanges/bybit/client";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import type { BybitInstrument } from "@/lib/exchanges/bybit/universe";
@@ -57,6 +58,7 @@ export async function loadHyperliquidLinearPerps(
   const pinned = ["BTC", "ETH", "SOL"];
   return assets
     .map(hyperliquidLinearPerp)
+    .filter((row) => !isStableBaseCoin(row.baseCoin))
     .sort((a, b) => {
       const rank = pinned.indexOf(a.baseCoin) - pinned.indexOf(b.baseCoin);
       if (pinned.includes(a.baseCoin) || pinned.includes(b.baseCoin)) {

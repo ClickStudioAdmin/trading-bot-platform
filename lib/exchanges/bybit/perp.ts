@@ -1,3 +1,4 @@
+import { isStableBaseCoin } from "@/lib/pairs/filter";
 import { fetchBybitInstruments } from "./client";
 import { floorToStep, parseStep, qtyFromNotionalUsdt, stepDecimals } from "./qty";
 import { formatPerpMinQty } from "./ticket-size";
@@ -156,6 +157,7 @@ export function listUsdtLinearPerps(
 ): LinearPerp[] {
   return instruments
     .filter(isUsdtLinearPerp)
+    .filter((row) => !isStableBaseCoin(row.baseCoin))
     .map((row) => {
       const step = lotStep(row, 0.001);
       const tickSize = parseStep(row.priceFilter?.tickSize, 0.01);
