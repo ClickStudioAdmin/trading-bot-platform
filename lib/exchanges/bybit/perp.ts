@@ -17,6 +17,17 @@ export type LinearPerp = {
   tickSize: number;
 };
 
+export function formatPerpPairLabel(
+  pair: Pick<LinearPerp, "baseCoin" | "quoteCoin" | "symbol">,
+): string {
+  const base = pair.baseCoin.trim().toUpperCase();
+  const quote = pair.quoteCoin.trim().toUpperCase();
+  if (base && quote) {
+    return `${base}-${quote}`;
+  }
+  return pair.symbol;
+}
+
 export function isUsdtLinearPerp(instrument: BybitInstrument): boolean {
   if (instrument.status !== "Trading") {
     return false;

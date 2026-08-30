@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TokenIcon } from "@/components/token-icon";
-import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
+import {
+  formatPerpPairLabel,
+  type LinearPerp,
+} from "@/lib/exchanges/bybit/perp";
 
 export function FuturesSymbolSelect({
   options,
@@ -39,10 +42,16 @@ export function FuturesSymbolSelect({
     if (!needle) {
       return options;
     }
-    return options.filter(
-      (row) =>
-        row.symbol.includes(needle) || row.baseCoin.toUpperCase().includes(needle),
-    );
+    return options.filter((row) => {
+      const label = formatPerpPairLabel(row);
+      return (
+        row.symbol.includes(needle) ||
+        row.baseCoin.toUpperCase().includes(needle) ||
+        row.quoteCoin.toUpperCase().includes(needle) ||
+        label.includes(needle) ||
+        label.replace("-", "").includes(needle)
+      );
+    });
   }, [options, query]);
 
   useEffect(() => {
@@ -114,7 +123,9 @@ export function FuturesSymbolSelect({
         {selected ? (
           <>
             <TokenIcon symbol={selected.baseCoin} size={18} />
-            <span className="min-w-0 truncate font-medium">{selected.symbol}</span>
+            <span className="min-w-0 truncate font-medium">
+              {formatPerpPairLabel(selected)}
+            </span>
           </>
         ) : (
           <span className="text-ink-muted">{placeholder}</span>
@@ -181,13 +192,8 @@ export function FuturesSymbolSelect({
                     >
                       <TokenIcon symbol={row.baseCoin} size={18} />
                       <span className="min-w-0 truncate font-medium text-ink">
-                        {row.symbol}
+                        {formatPerpPairLabel(row)}
                       </span>
-                      {row.baseCoin !== row.symbol.replace(/USDT$/, "") ? (
-                        <span className="ml-auto shrink-0 text-xs text-ink-faint">
-                          {row.baseCoin}
-                        </span>
-                      ) : null}
                     </button>
                   </li>
                 );

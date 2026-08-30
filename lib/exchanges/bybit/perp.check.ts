@@ -1,11 +1,37 @@
 import assert from "node:assert/strict";
 import {
+  formatPerpPairLabel,
   isUsdtLinearPerp,
   listUsdtLinearPerps,
   priceForPerp,
   qtyForPerp,
   qtyForPerpNotional,
 } from "./perp";
+
+assert.equal(
+  formatPerpPairLabel({
+    symbol: "BTCUSDT",
+    baseCoin: "BTC",
+    quoteCoin: "USDT",
+  }),
+  "BTC-USDT",
+);
+assert.equal(
+  formatPerpPairLabel({
+    symbol: "BTC",
+    baseCoin: "BTC",
+    quoteCoin: "USDC",
+  }),
+  "BTC-USDC",
+);
+assert.equal(
+  formatPerpPairLabel({
+    symbol: "1000PEPEUSDT",
+    baseCoin: "1000PEPE",
+    quoteCoin: "USDT",
+  }),
+  "1000PEPE-USDT",
+);
 
 assert.equal(
   isUsdtLinearPerp({
