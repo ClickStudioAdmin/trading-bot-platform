@@ -65,8 +65,37 @@ const replay = buildBacktestChartOverlay({
     },
   ],
 });
-assert.equal(replay.lines.length, 1);
-assert.equal(replay.markers[0]?.shape, "arrowDown");
+assert.equal(replay.lines.length, 2);
+assert.equal(replay.lines.some((row) => row.title === "Open short"), true);
+assert.equal(replay.markers[0]?.shape, "circle");
+assert.equal(replay.markers[0]?.text, "Open short");
+
+const closed = buildBacktestChartOverlay({
+  triggerPrice: null,
+  orders: [
+    {
+      atMs: 1_700_000_000_000,
+      action: "buy",
+      side: "long",
+      qty: 1,
+      price: 100,
+      feeUsdt: 0,
+      realizedUsdt: null,
+    },
+    {
+      atMs: 1_700_000_100_000,
+      action: "flatten",
+      side: "long",
+      qty: 1,
+      price: 110,
+      feeUsdt: 0,
+      realizedUsdt: 10,
+    },
+  ],
+});
+assert.equal(closed.lines.some((row) => row.title.startsWith("Open")), false);
+assert.equal(closed.markers[0]?.text, "Buy");
+assert.equal(closed.markers[1]?.text, "Close");
 
 const snapped = snapOverlayToCandles(
   {

@@ -1,6 +1,9 @@
 import type { FuturesOrder, FuturesPosition } from "@/lib/futures/model";
 import type { FuturesWorkingOrder } from "@/lib/futures/working";
-import type { SimulatedOrder } from "@/lib/backtest/model";
+import {
+  splitCompletedBacktestOrders,
+  type SimulatedOrder,
+} from "@/lib/backtest/model";
 import type { CandleBar } from "@/lib/market/candles";
 
 export const CHART_COLORS = {
@@ -149,16 +152,51 @@ export function buildBacktestChartOverlay(input: {
   if (trigger) {
     lines.push(trigger);
   }
+  const { open } = splitCompletedBacktestOrders(input.orders);
+  const openSet = new Set(open);
+  for (const side of ["long", "short"] as const) {
+    const rows = open.filter((row) => row.side === side);
+    if (rows.length === 0) {
+      continue;
+    }
+    const qty = rows.reduce((sum, row) => sum + row.qty, 0);
+    const entry =
+      qty > 0
+        ? rows.reduce((sum, row) => sum + row.price * row.qty, 0) / qty
+        : 0;
+    const item = line(
+      `open-${side}`,
+      entry,
+      side === "short" ? "Open short" : "Open long",
+      CHART_COLORS.entry,
+    );
+    if (item) {
+      lines.push(item);
+    }
+  }
   const markers: ChartMarker[] = input.orders
     .filter((row) => row.price > 0 && row.atMs > 0)
     .map((row) => {
+      const current = openSet.has(row);
       const buy = row.action === "buy";
       return {
         timeSec: markerTimeSec(row.atMs),
         position: buy ? "belowBar" : "aboveBar",
-        color: buy ? CHART_COLORS.buy : CHART_COLORS.sell,
-        shape: buy ? "arrowUp" : "arrowDown",
-        text: buy ? "Buy" : row.action === "flatten" ? "Close" : "Sell",
+        color: current
+          ? CHART_COLORS.entry
+          : buy
+            ? CHART_COLORS.buy
+            : CHART_COLORS.sell,
+        shape: current ? "circle" : buy ? "arrowUp" : "arrowDown",
+        text: current
+          ? row.side === "short"
+            ? "Open short"
+            : "Open long"
+          : buy
+            ? "Buy"
+            : row.action === "flatten"
+              ? "Close"
+              : "Sell",
       } satisfies ChartMarker;
     });
   return { lines, markers };
