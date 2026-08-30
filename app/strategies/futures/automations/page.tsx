@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
-import { toBacktestLibraryItem } from "@/components/backtest-dialog";
+import { toBacktestLibraryItem } from "@/lib/backtest/library";
 import { DcaPlaybooksDesk } from "@/components/dca-playbook-form";
 import { FuturesAutomationsDesk } from "@/components/futures-rules-form";
 import { FuturesRulesGuide } from "@/components/futures-rules-guide";

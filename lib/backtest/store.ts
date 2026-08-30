@@ -282,23 +282,65 @@ export async function listBacktestRuns(input: {
   } else if (input.userId) {
     query = query.or(`user_id.eq.${input.userId},user_id.is.null`);
   }
-  if (input.studyId) {
-    query = query.eq("study_id", input.studyId);
-  } else if (input.standaloneOnly) {
-    query = query.is("study_id", null);
-  }
-  if (input.parentRunId) {
-    query = query.eq("parent_run_id", input.parentRunId);
-  } else if (input.primaryOnly) {
-    query = query.is("parent_run_id", null);
-  }
   const { data, error } = await query;
-  if (error || !data) {
-    return [];
+  const rows = !error && data
+    ? data
+        .map((row) => parseBacktestRunRow(row as Record<string, unknown>))
+        .filter((row): row is BacktestRun => Boolean(row))
+    : [];
+  if (error || rows.length === 0) {
+    if (error && (input.standaloneOnly || input.primaryOnly || input.studyId || input.parentRunId)) {
+      const fallback = await supabase
+        .from("backtest_runs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(input.limit ?? 80);
+      const parsed = (fallback.data ?? [])
+        .map((row) => parseBacktestRunRow(row as Record<string, unknown>))
+        .filter((row): row is BacktestRun => Boolean(row));
+      return filterBacktestRuns(parsed, input);
+    }
   }
-  return data
-    .map((row) => parseBacktestRunRow(row as Record<string, unknown>))
-    .filter((row): row is BacktestRun => Boolean(row));
+  return filterBacktestRuns(rows, input);
+}
+
+function filterBacktestRuns(
+  rows: BacktestRun[],
+  input: {
+    userId?: string | null;
+    publishedOnly?: boolean;
+    standaloneOnly?: boolean;
+    primaryOnly?: boolean;
+    parentRunId?: string;
+    studyId?: string;
+  },
+): BacktestRun[] {
+  return rows.filter((row) => {
+    if (input.publishedOnly && row.userId != null) {
+      return false;
+    }
+    if (
+      input.userId &&
+      !input.publishedOnly &&
+      row.userId != null &&
+      row.userId !== input.userId
+    ) {
+      return false;
+    }
+    if (input.studyId && row.studyId !== input.studyId) {
+      return false;
+    }
+    if (input.standaloneOnly && row.studyId) {
+      return false;
+    }
+    if (input.parentRunId && row.parentRunId !== input.parentRunId) {
+      return false;
+    }
+    if (input.primaryOnly && row.parentRunId) {
+      return false;
+    }
+    return true;
+  });
 }
 
 export async function listAllBacktestRuns(limit = 120): Promise<BacktestRun[]> {

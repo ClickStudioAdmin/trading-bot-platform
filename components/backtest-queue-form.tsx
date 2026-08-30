@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { queueTemplateBacktestAction } from "@/lib/backtest/actions";
@@ -13,7 +13,7 @@ import {
   estimateBacktestBars,
   parseBacktestDateRange,
 } from "@/lib/backtest/model";
-import type { BacktestLibraryItem } from "@/components/backtest-dialog";
+import type { BacktestLibraryItem } from "@/lib/backtest/library";
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
@@ -48,15 +48,11 @@ export function BacktestQueueForm({
   selectedTemplateId = "",
   defaultVenue = "bybit",
   defaultVenueEnvironment = null,
-  bybitPairs,
-  hyperliquidPairs,
 }: {
   templates: BacktestLibraryItem[];
   selectedTemplateId?: string;
   defaultVenue?: string;
   defaultVenueEnvironment?: string | null;
-  bybitPairs: LinearPerp[];
-  hyperliquidPairs: LinearPerp[];
 }) {
   const router = useRouter();
   const dates = defaultBacktestDates();
@@ -73,6 +69,35 @@ export function BacktestQueueForm({
   const [interval, setInterval] = useState<DcaIndicatorTimeframe>("60");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bybitPairs, setBybitPairs] = useState<LinearPerp[]>([]);
+  const [hyperliquidPairs, setHyperliquidPairs] = useState<LinearPerp[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams({ venue });
+    if (defaultVenueEnvironment && venue === "hyperliquid") {
+      params.set("env", defaultVenueEnvironment);
+    }
+    void fetch(`/api/market/perps?${params.toString()}`)
+      .then(async (response) => {
+        const body = (await response.json()) as { pairs?: LinearPerp[] };
+        return body.pairs ?? [];
+      })
+      .then((rows) => {
+        if (cancelled) {
+          return;
+        }
+        if (venue === "hyperliquid") {
+          setHyperliquidPairs(rows);
+        } else {
+          setBybitPairs(rows);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [defaultVenueEnvironment, venue]);
 
   const selected = useMemo(
     () => templates.find((row) => row.id === templateId) ?? null,

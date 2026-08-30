@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
-import { toBacktestLibraryItem } from "@/components/backtest-dialog";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
 import { RemoveBacktestButton } from "@/components/backtest-run-view";
 import { getSessionMember } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
+import { toBacktestLibraryItem } from "@/lib/backtest/library";
 import {
   canDeleteBacktestRun,
   listBacktestRuns,
@@ -15,10 +15,7 @@ import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { firstSearchValue } from "@/lib/paper/open";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
-import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { listApplyableTemplates } from "@/lib/templates/store";
-import { loadHyperliquidLinearPerps } from "@/lib/venues/hyperliquid/market";
-import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
 
 export const metadata: Metadata = {
   title: "Backtests",
@@ -48,18 +45,21 @@ export default async function AccountBacktestsPage({
   const selectedTemplateId = firstSearchValue(params.template);
   const defaultVenue = firstSearchValue(params.venue);
   const defaultEnv = firstSearchValue(params.env);
-  const [runs, templates, bybitPairs, hyperliquidPairs] = await Promise.all([
-    listBacktestRuns({
-      userId: member.id,
-      standaloneOnly: true,
-      primaryOnly: true,
-    }),
-    listApplyableTemplates({ userId: member.id }),
-    loadUsdtLinearPerps().catch(() => []),
-    loadHyperliquidLinearPerps(
-      hyperliquidInfoEnvironment(defaultEnv),
-    ).catch(() => []),
-  ]);
+  let runs: Awaited<ReturnType<typeof listBacktestRuns>> = [];
+  let templates: Awaited<ReturnType<typeof listApplyableTemplates>> = [];
+  try {
+    [runs, templates] = await Promise.all([
+      listBacktestRuns({
+        userId: member.id,
+        standaloneOnly: true,
+        primaryOnly: true,
+      }),
+      listApplyableTemplates({ userId: member.id }),
+    ]);
+  } catch {
+    runs = [];
+    templates = [];
+  }
   const library = templates.flatMap((row) => {
     const item = toBacktestLibraryItem(row);
     if (!item) {
@@ -96,8 +96,6 @@ export default async function AccountBacktestsPage({
         selectedTemplateId={selectedTemplateId ?? ""}
         defaultVenue={defaultVenue ?? "bybit"}
         defaultVenueEnvironment={defaultEnv ?? null}
-        bybitPairs={bybitPairs}
-        hyperliquidPairs={hyperliquidPairs}
       />
       {runs.length === 0 ? (
         <p className="text-sm text-ink-muted">
@@ -143,7 +141,7 @@ export default async function AccountBacktestsPage({
                   </td>
                   <td className="py-2 pr-4 tabular-nums">{row.symbol}</td>
                   <td className="py-2 pr-4 text-ink-muted">
-                    {row.comparableSymbols.length > 0
+                    {(row.comparableSymbols ?? []).length > 0
                       ? `+${row.comparableSymbols.length}`
                       : "—"}
                   </td>

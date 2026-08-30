@@ -5,22 +5,13 @@ import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import { recipesMatchForBacktest } from "@/lib/templates/recipe";
 
-export type BacktestLibraryItem = {
-  id: string;
-  name: string;
-  recipe: BacktestRecipe;
-};
+import {
+  toBacktestLibraryItem,
+  type BacktestLibraryItem,
+} from "@/lib/backtest/library";
 
-export function toBacktestLibraryItem(row: {
-  id: string;
-  name: string;
-  recipe: { kind: string };
-}): BacktestLibraryItem | null {
-  if (row.recipe.kind !== "perps" && row.recipe.kind !== "dca") {
-    return null;
-  }
-  return row as BacktestLibraryItem;
-}
+export type { BacktestLibraryItem };
+export { toBacktestLibraryItem };
 
 function canReplay(recipe: BacktestRecipe) {
   return recipe.kind === "dca"
