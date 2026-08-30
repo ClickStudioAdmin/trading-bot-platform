@@ -1,13 +1,6 @@
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
-
-function formatParamNumber(value: number | string | null | undefined): string {
-  if (value == null || value === "") {
-    return "";
-  }
-  return formatGroupedNumberInput(String(value), true);
-}
 import {
   parseTemplateRecipe,
   recipesMatchReplayFields,
@@ -17,10 +10,26 @@ import {
   type TemplateVisibility,
 } from "@/lib/templates/recipe";
 
+function formatParamNumber(value: number | string | null | undefined): string {
+  if (value == null || value === "") {
+    return "";
+  }
+  return formatGroupedNumberInput(String(value), true);
+}
+
 export type BacktestLibraryItem = {
   id: string;
   name: string;
   recipe: BacktestRecipe;
+};
+
+export type BacktestDeskBot = {
+  id: string;
+  name: string;
+  deskName: string;
+  recipe: BacktestRecipe;
+  venue: string;
+  venueEnvironment: string | null;
 };
 
 export function toBacktestLibraryItem(row: {

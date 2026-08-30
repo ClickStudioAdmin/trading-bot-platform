@@ -22,6 +22,7 @@ import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { firstSearchValue } from "@/lib/paper/open";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
+import { listDeskBacktestBots } from "@/lib/backtest/desk-bots";
 import { listApplyableTemplates } from "@/lib/templates/store";
 
 export const metadata: Metadata = {
@@ -74,18 +75,21 @@ export default async function AccountBacktestsPage({
   const seed = seedSource ? backtestQueueSeedFromRun(seedSource) : null;
   let runs: Awaited<ReturnType<typeof listBacktestRuns>> = [];
   let templates: Awaited<ReturnType<typeof listApplyableTemplates>> = [];
+  let deskBots: Awaited<ReturnType<typeof listDeskBacktestBots>> = [];
   try {
-    [runs, templates] = await Promise.all([
+    [runs, templates, deskBots] = await Promise.all([
       listBacktestRuns({
         userId: member.id,
         standaloneOnly: true,
         primaryOnly: true,
       }),
       listApplyableTemplates({ userId: member.id }),
+      listDeskBacktestBots(member.id),
     ]);
   } catch {
     runs = [];
     templates = [];
+    deskBots = [];
   }
   const library = templates.flatMap((row) => {
     const item = toBacktestLibraryItem(row);
@@ -113,9 +117,9 @@ export default async function AccountBacktestsPage({
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-ink-muted">
-        Paper replay of a bot from Automations or a library template. Edit
-        the replay fields, then queue. Long history goes to the worker. Open
-        a row for the full picture.
+        Paper replay of a desk bot or a library template. Edit the replay
+        fields, then queue. Long history goes to the worker. Open a row for
+        the full picture.
       </p>
       {runs.length === 0 ? (
         <p className="mb-8 text-sm text-ink-muted">
@@ -200,6 +204,7 @@ export default async function AccountBacktestsPage({
       )}
       <BacktestQueueForm
         templates={library}
+        deskBots={deskBots}
         selectedTemplateId={
           selectedTemplateId || seed?.sourceTemplateId || ""
         }

@@ -31,6 +31,56 @@ function statusLabel(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function backtestStatusTone(status: BacktestRun["status"]): {
+  label: string;
+  tone: "success" | "warning" | "danger" | "faint";
+  pulse: boolean;
+} {
+  if (status === "queued") {
+    return { label: "Queued", tone: "warning", pulse: true };
+  }
+  if (status === "running") {
+    return { label: "Running", tone: "success", pulse: true };
+  }
+  if (status === "done") {
+    return { label: "Done", tone: "success", pulse: false };
+  }
+  if (status === "failed") {
+    return { label: "Failed", tone: "danger", pulse: false };
+  }
+  if (status === "cancelled") {
+    return { label: "Cancelled", tone: "faint", pulse: false };
+  }
+  return { label: statusLabel(status), tone: "faint", pulse: false };
+}
+
+function StatusDot({
+  tone,
+  pulse,
+}: {
+  tone: "success" | "warning" | "danger" | "faint";
+  pulse: boolean;
+}) {
+  const fill =
+    tone === "warning"
+      ? "bg-warning"
+      : tone === "danger"
+        ? "bg-danger"
+        : tone === "faint"
+          ? "bg-ink-faint"
+          : "bg-success";
+  return (
+    <span className="relative flex size-2.5 shrink-0" aria-hidden>
+      {pulse ? (
+        <span
+          className={`absolute inline-flex size-full animate-ping rounded-full opacity-60 ${fill}`}
+        />
+      ) : null}
+      <span className={`relative inline-flex size-2.5 rounded-full ${fill}`} />
+    </span>
+  );
+}
+
 export function BacktestRunDetail({
   run,
   listHref,
@@ -63,9 +113,10 @@ export function BacktestRunDetail({
   const params = recipeParamRows(run.recipe);
   const complete = run.status === "done";
   const pendingMessage = incompleteRunMessage(run);
+  const status = backtestStatusTone(run.status);
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
             Backtest
@@ -77,8 +128,7 @@ export function BacktestRunDetail({
             {run.symbol} · {run.venue} ·{" "}
             {DCA_INDICATOR_TIMEFRAME_LABELS[run.interval]} · start{" "}
             {run.startingUsdt.toLocaleString()} ·{" "}
-            {BACKTEST_FEE_PRESETS[run.feePreset].label} ·{" "}
-            {statusLabel(run.status)}
+            {BACKTEST_FEE_PRESETS[run.feePreset].label}
           </p>
           <div className="mt-3 flex flex-wrap gap-3 text-sm">
             <Link href={listHref} className="text-accent hover:underline">
@@ -97,7 +147,26 @@ export function BacktestRunDetail({
             ) : null}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="mt-6 flex flex-wrap items-start justify-end gap-2">
+          <div className="rounded-card border border-line bg-surface px-3 py-2">
+            <p className="whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+              Status
+            </p>
+            <div
+              className={`mt-1 flex items-center gap-2 text-sm ${
+                status.tone === "warning"
+                  ? "text-warning"
+                  : status.tone === "danger"
+                    ? "text-danger"
+                    : status.tone === "faint"
+                      ? "text-ink-muted"
+                      : "text-success"
+              }`}
+            >
+              <StatusDot tone={status.tone} pulse={status.pulse} />
+              {status.label}
+            </div>
+          </div>
           {canAttach ? (
             <AttachBacktestButton
               runId={run.id}

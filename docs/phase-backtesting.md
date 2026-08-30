@@ -15,7 +15,7 @@ Admin **studies** (grid sweeps from a desk bot) are parked. No `/admin/backtests
 ```
 User
   Automations → Backtest (new tab, saved or not) → draft recipe on /account/backtests
-      or pick a library template on that page
+      or pick a desk automation or library template on that page
       edit replay fields → queue → /account/backtests/[runId]
       then Attach to template (if unchanged) or Save as template
       or Re-run Parameters → same form, new run
@@ -38,7 +38,7 @@ Each run has its own **detail page**: parameters, stats, orders list, account-im
 | Fee | Named preset `vip0_taker` = **6 bps all-in** per fill. |
 | Rank | **Realized** USDT. |
 | Return | A run is one strategy, not the whole account. Header **APR** and **On capital used** use **max capital used** (peak qty × entry), not starting balance. On capital used is realized / peak. APR is (1 + that)^(1/years) − 1. Performance still shows starting / ending / account return on the paper start so the cash path is visible. Open mark stays in **Current trades**. Account-impact equity marks the open position on each candle (not a single end-point cliff). Not exchange-margin ROE. |
-| User queue | Recipe from a **desk Backtest** (draft) or a **library template**, or both. Required: a replayable recipe (not manual or webhook), start date, end date, initial balance, timeframe, venue. Loaded blocked fields show as invalid until the user picks a legal value. Replay fields are editable on the page. **Primary pair** preloads from the recipe; the user can pick another. Optional **comparables** (max 8). The run stores the recipe. No library row until Attach or Save as. |
+| User queue | Recipe from a **desk automation** (this page or Automations → Backtest), a **library template**, or a previous run (**Re-run Parameters**). Manual and webhook bots stay out of the desk list. Required: a replayable recipe, start date, end date, initial balance, timeframe, venue. Loaded blocked fields show as invalid until the user picks a legal value. Replay fields are editable on the page. **Primary pair** preloads from the recipe; the user can pick another. Optional **comparables** (max 8). The run stores the recipe. No library row until Attach or Save as. |
 | Detail | `/account/backtests/[runId]`. Parameters, stats, equity chart, inline chart, paged orders. **Re-run Parameters** loads that run’s recipe, window, balance, pair, timeframe, venue, and comparables into the list-page replay form (`?rerun=`). Queue still creates a **new** run. The Orders list and chart include **every** fill, including clips still open at the window end (action `open` in the table; Open markers + entry line on the chart). Header and Performance stay **realized only**. Open mark and side also sit in **Current trades** under Performance. Queued, running, failed, or cancelled runs keep Parameters and header dates; Performance, equity, chart, and trades show a waiting or failed message — not an empty chart or “no fills”. |
 | Desk Backtest | Click is always offered. Manual, webhook, or other blocked fields show the reason and do **not** open a draft. Price / indicator (DCA) or a price When (Perps) seeds a draft. If the form matches a library template, the draft remembers it as `source_template_id`. |
 | Attach / Save | After **done**: if they loaded a template and replay fields still match, **Attach results** to that template. Otherwise **Save as template** (new user template, run linked). Never auto-attach after an edit. Apply-to-desk stays idle; never arm from a run. |

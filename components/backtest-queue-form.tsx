@@ -20,8 +20,10 @@ import {
 } from "@/lib/backtest/model";
 import {
   canQueueUserBacktest,
+  type BacktestDeskBot,
   type BacktestLibraryItem,
 } from "@/lib/backtest/library";
+import { findBacktestableTemplate } from "@/components/backtest-dialog";
 import { recipesMatchReplayFields } from "@/lib/templates/recipe";
 import {
   DCA_INDICATOR_TIMEFRAMES,
@@ -81,6 +83,7 @@ export type BacktestQueueSeed = {
 
 export function BacktestQueueForm({
   templates,
+  deskBots = [],
   selectedTemplateId = "",
   draftId = "",
   seed = null,
@@ -89,6 +92,7 @@ export function BacktestQueueForm({
   defaultVenueEnvironment = null,
 }: {
   templates: BacktestLibraryItem[];
+  deskBots?: BacktestDeskBot[];
   selectedTemplateId?: string;
   draftId?: string;
   seed?: BacktestQueueSeed | null;
@@ -99,8 +103,7 @@ export function BacktestQueueForm({
   const router = useRouter();
   const dates = defaultBacktestDates();
   const initialTemplate =
-    templates.find((row) => row.id === selectedTemplateId) ??
-    (seed ? null : templates[0]);
+    templates.find((row) => row.id === selectedTemplateId) ?? null;
   const [templateId, setTemplateId] = useState(
     seed ? seed.sourceTemplateId : (initialTemplate?.id ?? ""),
   );
@@ -132,6 +135,10 @@ export function BacktestQueueForm({
       true,
     ),
   );
+  const [activeDraftId, setActiveDraftId] = useState(draftId);
+  const [venueEnvironment, setVenueEnvironment] = useState(
+    seed?.venueEnvironment ?? defaultVenueEnvironment,
+  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bybitPairs, setBybitPairs] = useState<LinearPerp[]>([]);
@@ -140,8 +147,8 @@ export function BacktestQueueForm({
   useEffect(() => {
     let cancelled = false;
     const params = new URLSearchParams({ venue });
-    if (defaultVenueEnvironment && venue === "hyperliquid") {
-      params.set("env", defaultVenueEnvironment);
+    if (venueEnvironment && venue === "hyperliquid") {
+      params.set("env", venueEnvironment);
     }
     void fetch(`/api/market/perps?${params.toString()}`)
       .then(async (response) => {
@@ -162,7 +169,7 @@ export function BacktestQueueForm({
     return () => {
       cancelled = true;
     };
-  }, [defaultVenueEnvironment, venue]);
+  }, [venue, venueEnvironment]);
 
   const selectedTemplate = useMemo(
     () => templates.find((row) => row.id === sourceTemplateId) ?? null,
@@ -208,7 +215,7 @@ export function BacktestQueueForm({
       <p className="mt-1 text-sm text-ink-muted">
         {loadedFromRun
           ? "Parameters loaded from the previous run. Tweak them and queue a new one."
-          : "Load a bot from Automations or pick a template. Edit the replay fields, then queue. Long windows go to the engine worker."}
+          : "Pick a desk bot or a library template. Edit the replay fields, then queue. Long windows go to the engine worker."}
       </p>
       <div className="mt-4 grid items-start gap-6 lg:grid-cols-2">
       <form
@@ -230,19 +237,48 @@ export function BacktestQueueForm({
           router.refresh();
         }}
       >
-        {draftId ? <input type="hidden" name="draftId" value={draftId} /> : null}
+        {activeDraftId ? (
+          <input type="hidden" name="draftId" value={activeDraftId} />
+        ) : null}
         <input type="hidden" name="sourceTemplateId" value={sourceTemplateId} />
         {recipe ? (
           <input type="hidden" name="recipe" value={JSON.stringify(recipe)} />
         ) : null}
         <label className="block text-xs text-ink-muted">
-          Template
-          <select
+          Bot
+          <input
+            type="hidden"
             name="templateId"
+            value={
+              templates.some((row) => row.id === templateId) ? templateId : ""
+            }
+          />
+          <select
             value={templateId}
             onChange={(event) => {
-              const next = templates.find((row) => row.id === event.target.value);
-              setTemplateId(event.target.value);
+              const value = event.target.value;
+              const desk = deskBots.find((row) => row.id === value);
+              const next = templates.find((row) => row.id === value);
+              setTemplateId(value);
+              if (desk) {
+                const match = findBacktestableTemplate(desk.recipe, templates);
+                setRecipe(desk.recipe);
+                setSourceTemplateId(match?.id ?? "");
+                setSymbol(desk.recipe.symbol);
+                setVenue(
+                  desk.venue === "hyperliquid" ? "hyperliquid" : "bybit",
+                );
+                setVenueEnvironment(desk.venueEnvironment);
+                const nextInterval = replayIntervalFromRecipe(desk.recipe);
+                if (nextInterval) {
+                  setInterval(nextInterval);
+                }
+                setComparables((rows) =>
+                  rows.filter((row) => row !== desk.recipe.symbol),
+                );
+                setActiveDraftId("");
+                return;
+              }
               if (next) {
                 setRecipe(next.recipe);
                 setSourceTemplateId(next.id);
@@ -254,19 +290,38 @@ export function BacktestQueueForm({
                 setComparables((rows) =>
                   rows.filter((row) => row !== next.recipe.symbol),
                 );
+                setActiveDraftId("");
               }
             }}
             className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
           >
             <option value="">
-              {recipe ? "Current bot (not a library template)" : "Pick a template"}
+              {loadedFromRun && recipe
+                ? "Loaded from previous run"
+                : recipe && !templateId
+                  ? "Loaded from Automations"
+                  : "Pick a desk bot or template"}
             </option>
-            {templates.map((row) => (
-              <option key={row.id} value={row.id}>
-                {row.recipe.kind === "dca" ? "DCA" : "Perps"} · {row.name} ·{" "}
-                {row.recipe.symbol}
-              </option>
-            ))}
+            {deskBots.length > 0 ? (
+              <optgroup label="Desk automations">
+                {deskBots.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.recipe.kind === "dca" ? "DCA" : "Perps"} · {row.name} ·{" "}
+                    {row.recipe.symbol} · {row.deskName}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+            {templates.length > 0 ? (
+              <optgroup label="Templates">
+                {templates.map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.recipe.kind === "dca" ? "DCA" : "Perps"} · {row.name} ·{" "}
+                    {row.recipe.symbol}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
           </select>
         </label>
         <div>
@@ -456,11 +511,11 @@ export function BacktestQueueForm({
               : "This will queue for the engine worker."}
           </p>
         )}
-        {defaultVenueEnvironment ? (
+        {venueEnvironment ? (
           <input
             type="hidden"
             name="venueEnvironment"
-            value={defaultVenueEnvironment}
+            value={venueEnvironment}
           />
         ) : null}
         <input type="hidden" name="feePreset" value="vip0_taker" />
