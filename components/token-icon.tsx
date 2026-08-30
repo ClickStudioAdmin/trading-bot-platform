@@ -1,15 +1,57 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { iconLookupKeys, iconUrlForSymbol } from "@/lib/market/icons";
 
-const ICON_SLUG: Record<string, string> = {
-  BTC: "btc",
-  ETH: "eth",
-  SOL: "sol",
-  DOGE: "doge",
-  XRP: "xrp",
-  MNT: "mnt",
-};
+type IconMap = Record<string, string>;
+
+let cached: IconMap | null = null;
+let inflight: Promise<void> | null = null;
+const listeners = new Set<() => void>();
+
+function subscribe(onStoreChange: () => void) {
+  listeners.add(onStoreChange);
+  void ensureIcons();
+  return () => {
+    listeners.delete(onStoreChange);
+  };
+}
+
+function emit() {
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
+async function ensureIcons() {
+  if (cached || inflight) {
+    return inflight;
+  }
+  inflight = fetch("/api/market/icons")
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Icons HTTP ${response.status}`);
+      }
+      const body = (await response.json()) as { icons?: IconMap };
+      cached = body.icons ?? {};
+    })
+    .catch(() => {
+      cached = cached ?? {};
+    })
+    .finally(() => {
+      inflight = null;
+      emit();
+    });
+  return inflight;
+}
+
+function useMarketIcons(): IconMap | null {
+  return useSyncExternalStore(
+    subscribe,
+    () => cached,
+    () => null,
+  );
+}
 
 export function TokenIcon({
   symbol,
@@ -18,18 +60,23 @@ export function TokenIcon({
   symbol: string;
   size?: number;
 }) {
+  const icons = useMarketIcons();
   const [failed, setFailed] = useState(false);
-  const iconSymbol = symbol.replace(/^(10000000|1000000|10000|1000)/, "") || symbol;
-  const slug = ICON_SLUG[iconSymbol] ?? iconSymbol.toLowerCase();
-  const src = `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${slug}.svg`;
+  const keys = iconLookupKeys(symbol);
+  const label = keys[keys.length - 1] ?? symbol;
+  const src = icons ? iconUrlForSymbol(icons, symbol) : null;
 
-  if (failed) {
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (!src || failed) {
     return (
       <span
         className="inline-flex shrink-0 items-center justify-center rounded-full bg-surface-raised text-[10px] font-semibold text-ink-muted"
         style={{ width: size, height: size }}
       >
-        {iconSymbol.slice(0, 1)}
+        {icons ? label.slice(0, 1) : ""}
       </span>
     );
   }

@@ -1,3 +1,5 @@
+import { marketIconsByBase } from "@/lib/market/icons";
+
 const COINGECKO_MARKETS =
   "https://api.coingecko.com/api/v3/coins/markets";
 const CACHE_MS = 15 * 60_000;
@@ -7,10 +9,16 @@ const PAGES = 2;
 type CoinGeckoMarket = {
   symbol?: unknown;
   market_cap?: unknown;
+  image?: unknown;
 };
 
-let cache: { at: number; caps: Map<string, number> } | null = null;
-let inflight: Promise<Map<string, number>> | null = null;
+type MarketSnapshot = {
+  caps: Map<string, number>;
+  icons: Map<string, string>;
+};
+
+let cache: { at: number; snapshot: MarketSnapshot } | null = null;
+let inflight: Promise<MarketSnapshot> | null = null;
 
 export function marketCapByBase(
   rows: readonly { symbol: string; market_cap: number }[],
@@ -45,27 +53,42 @@ export function formatMarketCap(value: number | null): string {
 }
 
 export async function loadMarketCaps(): Promise<Map<string, number>> {
+  return (await loadMarkets()).caps;
+}
+
+export async function loadMarketIcons(): Promise<Map<string, string>> {
+  return (await loadMarkets()).icons;
+}
+
+async function loadMarkets(): Promise<MarketSnapshot> {
   const now = Date.now();
   if (cache && now - cache.at < CACHE_MS) {
-    return cache.caps;
+    return cache.snapshot;
   }
   if (inflight) {
     return inflight;
   }
-  inflight = fetchMarketCaps()
-    .then((caps) => {
-      cache = { at: Date.now(), caps };
-      return caps;
+  inflight = fetchMarkets()
+    .then((snapshot) => {
+      cache = { at: Date.now(), snapshot };
+      return snapshot;
     })
-    .catch(() => cache?.caps ?? new Map<string, number>())
+    .catch(
+      () =>
+        cache?.snapshot ?? {
+          caps: new Map<string, number>(),
+          icons: new Map<string, string>(),
+        },
+    )
     .finally(() => {
       inflight = null;
     });
   return inflight;
 }
 
-async function fetchMarketCaps(): Promise<Map<string, number>> {
-  const rows: { symbol: string; market_cap: number }[] = [];
+async function fetchMarkets(): Promise<MarketSnapshot> {
+  const capRows: { symbol: string; market_cap: number }[] = [];
+  const iconRows: { symbol: string; image: string }[] = [];
   for (let page = 1; page <= PAGES; page += 1) {
     const url = new URL(COINGECKO_MARKETS);
     url.searchParams.set("vs_currency", "usd");
@@ -89,10 +112,17 @@ async function fetchMarketCaps(): Promise<Map<string, number>> {
     for (const row of body) {
       const symbol = String(row.symbol ?? "").trim();
       const marketCap = Number(row.market_cap);
+      const image = String(row.image ?? "").trim();
       if (symbol && Number.isFinite(marketCap) && marketCap > 0) {
-        rows.push({ symbol, market_cap: marketCap });
+        capRows.push({ symbol, market_cap: marketCap });
+      }
+      if (symbol && image) {
+        iconRows.push({ symbol, image });
       }
     }
   }
-  return marketCapByBase(rows);
+  return {
+    caps: marketCapByBase(capRows),
+    icons: marketIconsByBase(iconRows),
+  };
 }
