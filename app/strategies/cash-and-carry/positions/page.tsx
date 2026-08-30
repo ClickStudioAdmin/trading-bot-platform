@@ -57,6 +57,10 @@ export default async function CashAndCarryPositionsPage({
           next={next}
           showHeading={false}
           exchangeBook={desk.exchangeBook}
+          opportunitiesHref={deskHref(
+            "/strategies/cash-and-carry/opportunities",
+            session?.account.id,
+          )}
         />
       </div>
     </main>

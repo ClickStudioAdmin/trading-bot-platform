@@ -27,6 +27,7 @@ import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
 import { headers } from "next/headers";
 import { firstSearchValue } from "@/lib/paper/open";
+import { withMarketCapRank } from "@/lib/pairs/page";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { deskAllowsPerpsRecipes, deskHref, deskHomePath } from "@/lib/accounts/model";
 import { memberIsAdmin } from "@/lib/admin/access";
@@ -66,8 +67,8 @@ export default async function FuturesAutomationsPage({
     const env = hyperliquidInfoEnvironment(session.account.venueEnvironment);
     const [pairs, tickers] = await Promise.all([
       hl
-        ? loadHyperliquidLinearPerps(env).catch(() => [])
-        : loadUsdtLinearPerps().catch(() => []),
+        ? loadHyperliquidLinearPerps(env).catch(() => []).then(withMarketCapRank)
+        : loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank),
       hl
         ? loadHyperliquidTickerMap(env).catch(() => null)
         : fetchBybitTickers("linear").catch(() => null),
@@ -169,8 +170,8 @@ export default async function FuturesAutomationsPage({
   const hl = session?.account.venue === "hyperliquid";
   const env = hyperliquidInfoEnvironment(session?.account.venueEnvironment);
   const pairs = hl
-    ? await loadHyperliquidLinearPerps(env).catch(() => [])
-    : await loadUsdtLinearPerps().catch(() => []);
+    ? await loadHyperliquidLinearPerps(env).catch(() => []).then(withMarketCapRank)
+    : await loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank);
   const exchangeBook = Boolean(
     session && accountCanHoldConnections(session.account.mode),
   );

@@ -36,6 +36,7 @@ import {
   loadHyperliquidTickerMap,
 } from "@/lib/venues/hyperliquid/market";
 import { baseCoinForPerpSymbol } from "@/lib/exchanges/bybit/perp";
+import { withMarketCapRank } from "@/lib/pairs/page";
 
 const NEXT_PATH = FUTURES_PATHS.positions;
 
@@ -75,7 +76,7 @@ export async function HyperliquidFuturesPositions({
           { lastPrice?: string; bid1Price?: string; ask1Price?: string }
         >(),
     ),
-    loadHyperliquidLinearPerps(env).catch(() => []),
+    loadHyperliquidLinearPerps(env).catch(() => []).then(withMarketCapRank),
     desk.exchangeBook && desk.open.length > 0
       ? loadFuturesVenueRisk()
       : Promise.resolve(new Map()),

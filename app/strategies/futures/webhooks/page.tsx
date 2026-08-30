@@ -17,6 +17,7 @@ import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { firstSearchValue } from "@/lib/paper/open";
+import { withMarketCapRank } from "@/lib/pairs/page";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -75,8 +76,8 @@ export default async function FuturesWebhooksPage({
                 >(),
             ),
         hl
-          ? loadHyperliquidLinearPerps(env).catch(() => [])
-          : loadUsdtLinearPerps().catch(() => []),
+          ? loadHyperliquidLinearPerps(env).catch(() => []).then(withMarketCapRank)
+          : loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank),
       ])
     : [new Map<string, { lastPrice?: string }>(), []];
   const lastPrices: Record<string, number> = {};

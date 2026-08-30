@@ -32,6 +32,7 @@ import { loadFuturesSettings } from "@/lib/futures/settings";
 import { loadFuturesVenueRisk } from "@/lib/futures/venue-risk-load";
 import { attachFuturesVenueRisk } from "@/lib/futures/venue-risk";
 import { firstSearchValue } from "@/lib/paper/open";
+import { withMarketCapRank } from "@/lib/pairs/page";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { HyperliquidFuturesPositions } from "@/components/venues/hyperliquid/positions";
 
@@ -80,7 +81,7 @@ export default async function FuturesPositionsPage({
           { lastPrice?: string; bid1Price?: string; ask1Price?: string }
         >(),
     ),
-    loadUsdtLinearPerps().catch(() => []),
+    loadUsdtLinearPerps().catch(() => []).then(withMarketCapRank),
     desk.exchangeBook && desk.open.length > 0
       ? loadFuturesVenueRisk()
       : Promise.resolve(new Map()),

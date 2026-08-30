@@ -44,6 +44,7 @@ export function OpenPaperTrades({
   showHeading = true,
   exchangeBook = false,
   positionsHref = "/strategies/cash-and-carry/positions",
+  opportunitiesHref = "/strategies/cash-and-carry/opportunities",
 }: {
   signedIn: boolean;
   open: OpenCarryView[];
@@ -51,6 +52,7 @@ export function OpenPaperTrades({
   showHeading?: boolean;
   exchangeBook?: boolean;
   positionsHref?: string;
+  opportunitiesHref?: string;
 }) {
   const { visible, setColumn } = usePaperOpenColumns();
   const colSpan = paperOpenColumnCount(visible);
@@ -194,9 +196,15 @@ export function OpenPaperTrades({
               <EmptyRow
                 colSpan={colSpan}
                 message={
-                  exchangeBook
-                    ? "No open carries. Open one from Opportunities."
-                    : "No open paper carries. Open one from the book above."
+                  <>
+                    {exchangeBook
+                      ? "No open carries. Open one from "
+                      : "No open paper carries. Open one from "}
+                    <Link href={opportunitiesHref} className="text-accent">
+                      Opportunities
+                    </Link>
+                    .
+                  </>
                 }
               />
             ) : (
