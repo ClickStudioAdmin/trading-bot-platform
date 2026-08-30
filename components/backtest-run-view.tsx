@@ -15,6 +15,7 @@ import {
   chartIntervalForWindow,
   formatBacktestReturnPct,
   peakLockedNotionalUsdt,
+  realizedAprPct,
   realizedEndingUsdt,
   realizedReturnPct,
   returnOnCapitalUsedPct,
@@ -54,6 +55,12 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
   const realizedReturn = realizedReturnPct(stats);
   const peakUsed = peakLockedNotionalUsdt(run.orders);
   const usedPct = returnOnCapitalUsedPct(stats.realizedUsdt, peakUsed);
+  const apr = realizedAprPct(
+    stats.realizedUsdt,
+    peakUsed,
+    run.fromMs,
+    run.toMs,
+  );
   return (
     <BacktestPropertyList
       rows={[
@@ -87,6 +94,11 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
             peakUsed > 0
               ? `${money(stats.realizedUsdt)} on ${money(peakUsed)} peak position`
               : "No position was opened",
+        },
+        {
+          label: "APR",
+          value: formatBacktestReturnPct(apr),
+          hint: "On max capital used, compounded over the window",
         },
         {
           label: "Max capital used",
