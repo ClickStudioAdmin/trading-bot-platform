@@ -131,6 +131,44 @@ export function BacktestRunDetail({
         </p>
       ) : null}
 
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <section>
+          <h2 className="mb-2 text-lg font-semibold">Parameters</h2>
+          <dl>
+            {params.map((row) => (
+              <div
+                key={row.label}
+                className="flex items-baseline justify-between gap-3 border-t border-line py-1.5 first:border-t-0"
+              >
+                <dt className="text-xs text-ink-muted">{row.label}</dt>
+                <dd className="text-sm font-medium">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+        <section>
+          <h2 className="mb-2 text-lg font-semibold">Performance</h2>
+          <BacktestStatsGrid run={run} />
+        </section>
+      </div>
+
+      <section>
+        <h2 className="mb-2 text-lg font-semibold">Account impact</h2>
+        <BacktestEquityPanel run={run} />
+      </section>
+
+      {run.status === "done" ? (
+        <section>
+          <h2 className="mb-2 text-lg font-semibold">Chart</h2>
+          <BacktestInlineChart run={run} />
+        </section>
+      ) : null}
+
+      <section>
+        <h2 className="mb-2 text-lg font-semibold">Trades</h2>
+        <BacktestOrdersTable run={run} />
+      </section>
+
       {comparables.length > 0 ? (
         <section>
           <h2 className="mb-3 text-lg font-semibold">Comparables</h2>
@@ -196,44 +234,6 @@ export function BacktestRunDetail({
           </div>
         </section>
       ) : null}
-
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        <section>
-          <h2 className="mb-2 text-lg font-semibold">Parameters</h2>
-          <dl>
-            {params.map((row) => (
-              <div
-                key={row.label}
-                className="flex items-baseline justify-between gap-3 border-t border-line py-1.5 first:border-t-0"
-              >
-                <dt className="text-xs text-ink-muted">{row.label}</dt>
-                <dd className="text-sm font-medium">{row.value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-        <section>
-          <h2 className="mb-2 text-lg font-semibold">Performance</h2>
-          <BacktestStatsGrid run={run} />
-        </section>
-      </div>
-
-      <section>
-        <h2 className="mb-2 text-lg font-semibold">Account impact</h2>
-        <BacktestEquityPanel run={run} />
-      </section>
-
-      {run.status === "done" ? (
-        <section>
-          <h2 className="mb-2 text-lg font-semibold">Chart</h2>
-          <BacktestInlineChart run={run} />
-        </section>
-      ) : null}
-
-      <section>
-        <h2 className="mb-2 text-lg font-semibold">Trades</h2>
-        <BacktestOrdersTable run={run} />
-      </section>
     </div>
   );
 }
