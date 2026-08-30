@@ -38,6 +38,10 @@ import {
 } from "@/lib/paper/orders";
 import { LocalTime } from "@/components/local-time";
 import {
+  PAPER_OPEN_COLUMN_DEFAULTS,
+  type PaperOpenColumnVisibility,
+} from "@/lib/paper/columns";
+import {
   type MarkedPaperCarry,
   type PaperCarryRow,
 } from "@/lib/paper/rows";
@@ -55,10 +59,14 @@ export function OpenPaperCarryRows({
   trade,
   next,
   hideUnwind = false,
+  visible = PAPER_OPEN_COLUMN_DEFAULTS,
+  colSpan = 11,
 }: {
   trade: OpenCarryView;
   next: string;
   hideUnwind?: boolean;
+  visible?: PaperOpenColumnVisibility;
+  colSpan?: number;
 }) {
   const pnlPct =
     trade.unrealizedUsdt === null
@@ -67,7 +75,7 @@ export function OpenPaperCarryRows({
 
   return (
     <ExpandableTradeRows
-      colSpan={11}
+      colSpan={colSpan}
       details={
         <PositionDetailTabs
           orders={trade.orders}
@@ -103,31 +111,45 @@ export function OpenPaperCarryRows({
           }
         />
       </td>
-      <td className="px-4 py-3 tabular-nums text-ink-muted">
-        {trade.daysToExpiry === null ? "—" : trade.daysToExpiry.toFixed(1)}
-      </td>
-      <td className="px-4 py-3 tabular-nums text-ink-muted">
-        {formatUsd(trade.notionalUsdt)}
-      </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.entryBasis)}`}>
-        {formatPct(trade.entryBasis)}
-      </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.markBasis)}`}>
-        {formatPct(trade.markBasis)}
-      </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(trade.markApr)}`}>
-        {formatPct(trade.markApr)}
-      </td>
-      <td
-        className={`px-4 py-3 tabular-nums ${signedTone(trade.unrealizedUsdt)}`}
-      >
-        {trade.unrealizedUsdt === null
-          ? "—"
-          : formatSignedUsd(trade.unrealizedUsdt)}
-      </td>
-      <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
-        {formatPct(pnlPct)}
-      </td>
+      {visible.dte ? (
+        <td className="px-4 py-3 tabular-nums text-ink-muted">
+          {trade.daysToExpiry === null ? "—" : trade.daysToExpiry.toFixed(1)}
+        </td>
+      ) : null}
+      {visible.value ? (
+        <td className="px-4 py-3 tabular-nums text-ink-muted">
+          {formatUsd(trade.notionalUsdt)}
+        </td>
+      ) : null}
+      {visible.entry ? (
+        <td className={`px-4 py-3 tabular-nums ${signedTone(trade.entryBasis)}`}>
+          {formatPct(trade.entryBasis)}
+        </td>
+      ) : null}
+      {visible.mark ? (
+        <td className={`px-4 py-3 tabular-nums ${signedTone(trade.markBasis)}`}>
+          {formatPct(trade.markBasis)}
+        </td>
+      ) : null}
+      {visible.apr ? (
+        <td className={`px-4 py-3 tabular-nums ${signedTone(trade.markApr)}`}>
+          {formatPct(trade.markApr)}
+        </td>
+      ) : null}
+      {visible.unrealized ? (
+        <td
+          className={`px-4 py-3 tabular-nums ${signedTone(trade.unrealizedUsdt)}`}
+        >
+          {trade.unrealizedUsdt === null
+            ? "—"
+            : formatSignedUsd(trade.unrealizedUsdt)}
+        </td>
+      ) : null}
+      {visible.pnl ? (
+        <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
+          {formatPct(pnlPct)}
+        </td>
+      ) : null}
       <td className="px-4 py-3">
         <ClosePaperButton trade={trade} next={next} hideUnwind={hideUnwind} />
       </td>

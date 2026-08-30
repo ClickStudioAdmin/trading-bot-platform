@@ -1,11 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
 import {
+  PaperOpenColumnPicker,
+  usePaperOpenColumns,
+} from "@/components/paper-column-picker";
+import {
   ClosedPaperCarryRows,
   OpenPaperCarryRows,
 } from "@/components/paper-carry-expand";
-import { TokenIcon } from "@/components/token-icon";
 import { OpenStats } from "@/components/open-stats";
 import {
   formatPct,
@@ -15,6 +20,7 @@ import {
 } from "@/lib/opportunities/format";
 import type { EventLogRow } from "@/lib/logs/list";
 import type { PaperOrderRow } from "@/lib/paper/orders";
+import { paperOpenColumnCount } from "@/lib/paper/columns";
 import {
   openExposure,
   paperDeskStats,
@@ -46,6 +52,9 @@ export function OpenPaperTrades({
   exchangeBook?: boolean;
   positionsHref?: string;
 }) {
+  const { visible, setColumn } = usePaperOpenColumns();
+  const colSpan = paperOpenColumnCount(visible);
+
   return (
     <section>
       {showHeading ? (
@@ -67,6 +76,9 @@ export function OpenPaperTrades({
           </Link>
         </div>
       ) : null}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <PaperOpenColumnPicker visible={visible} setColumn={setColumn} />
+      </div>
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[60rem] text-left text-sm">
           <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
@@ -93,52 +105,66 @@ export function OpenPaperTrades({
                   hint="Manual is a desk click. Auto is a bot. The name is the bot that opened this row. Click the name on an open Auto row to see copied rules and edit that trade’s exits."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="DTE"
-                  hint="Days until this future expires."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Order Value"
-                  hint={
-                    exchangeBook
-                      ? "Open size in USDT. P&L scales with this amount."
-                      : "Paper size in USDT. P&L scales with this amount."
-                  }
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Entry basis"
-                  hint="Size-weighted average fill basis of the open clips. Connected Exchange: gross from fill prices. Paper: scan net (fill equals the scan)."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Mark basis"
-                  hint="Current scan for this pair, not mid or last. Connected Exchange: scan basis (gross), same unit as fill. Paper: net basis after assumed fees."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Net APR"
-                  hint="Scan net basis × 365 / DTE. After assumed fees and slip. Same figure as Opportunities — not computed from Entry or Mark fill. Used to rank pairs and for mark APR exits."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="Unrealized"
-                  hint="(entry − mark − 2 × assumed fees and slip) × value. Cost model is VIP0 taker on both legs plus 5 bp slip, counted once to open and once to close — not Bybit’s invoice. Connected Exchange: entry is fill, mark is scan. Paper: both are net."
-                />
-              </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="P&L %"
-                  hint="Unrealized ÷ value. Same assumed fee model as Unrealized. Not annualized."
-                />
-              </th>
+              {visible.dte ? (
+                <th className="px-4 py-3 font-medium">
+                  <ColumnHint
+                    label="DTE"
+                    hint="Days until this future expires."
+                  />
+                </th>
+              ) : null}
+              {visible.value ? (
+                <th className="px-4 py-3 font-medium">
+                  <ColumnHint
+                    label="Order Value"
+                    hint={
+                      exchangeBook
+                        ? "Open size in USDT. P&L scales with this amount."
+                        : "Paper size in USDT. P&L scales with this amount."
+                    }
+                  />
+                </th>
+              ) : null}
+              {visible.entry ? (
+                <th className="px-4 py-3 font-medium">
+                  <ColumnHint
+                    label="Entry basis"
+                    hint="Size-weighted average fill basis of the open clips. Connected Exchange: gross from fill prices. Paper: scan net (fill equals the scan)."
+                  />
+                </th>
+              ) : null}
+              {visible.mark ? (
+                <th className="px-4 py-3 font-medium">
+                  <ColumnHint
+                    label="Mark basis"
+                    hint="Current scan for this pair, not mid or last. Connected Exchange: scan basis (gross), same unit as fill. Paper: net basis after assumed fees."
+                  />
+                </th>
+              ) : null}
+              {visible.apr ? (
+                <th className="px-4 py-3 font-medium">
+                  <ColumnHint
+                    label="Net APR"
+                    hint="Scan net basis × 365 / DTE. After assumed fees and slip. Same figure as Opportunities — not computed from Entry or Mark fill. Used to rank pairs and for mark APR exits."
+                  />
+                </th>
+              ) : null}
+              {visible.unrealized ? (
+                <th className="px-4 py-3 font-medium">
+                  <ColumnHint
+                    label="Unrealized"
+                    hint="(entry − mark − 2 × assumed fees and slip) × value. Cost model is VIP0 taker on both legs plus 5 bp slip, counted once to open and once to close — not Bybit’s invoice. Connected Exchange: entry is fill, mark is scan. Paper: both are net."
+                  />
+                </th>
+              ) : null}
+              {visible.pnl ? (
+                <th className="px-4 py-3 font-medium">
+                  <ColumnHint
+                    label="P&L %"
+                    hint="Unrealized ÷ value. Same assumed fee model as Unrealized. Not annualized."
+                  />
+                </th>
+              ) : null}
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="Close By"
@@ -154,7 +180,7 @@ export function OpenPaperTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={11}
+                colSpan={colSpan}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -166,7 +192,7 @@ export function OpenPaperTrades({
               />
             ) : open.length === 0 ? (
               <EmptyRow
-                colSpan={11}
+                colSpan={colSpan}
                 message={
                   exchangeBook
                     ? "No open carries. Open one from Opportunities."
@@ -179,6 +205,8 @@ export function OpenPaperTrades({
                   key={trade.id}
                   trade={trade}
                   next={next}
+                  visible={visible}
+                  colSpan={colSpan}
                 />
               ))
             )}

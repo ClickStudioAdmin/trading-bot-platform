@@ -32,7 +32,6 @@ export default async function CashAndCarryPositionsPage({
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Current Positions" />
       <div className="space-y-6">
         {book.error ? (
           <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -51,6 +50,7 @@ export default async function CashAndCarryPositionsPage({
           error={firstSearchValue(params.paperError)}
         />
         <PaperOpenStats signedIn={desk.signedIn} open={desk.open} />
+        <PageHeading as="h2" title="Current Positions" className="mb-0" />
         <OpenPaperTrades
           signedIn={desk.signedIn}
           open={desk.open}
