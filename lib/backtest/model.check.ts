@@ -119,20 +119,15 @@ assert.equal(
 );
 const yearMs = 365.25 * 24 * 60 * 60 * 1000;
 const fromApr = Date.UTC(2025, 0, 1);
-const oneYearApr = realizedAprPct(
-  { startingUsdt: 1000, realizedUsdt: 100 },
-  fromApr,
-  fromApr + yearMs,
-);
+const oneYearApr = realizedAprPct(100, 1000, fromApr, fromApr + yearMs);
 assert.ok(oneYearApr != null && Math.abs(oneYearApr - 0.1) < 1e-6);
+const oneYearOnClip = realizedAprPct(100, 100, fromApr, fromApr + yearMs);
+assert.ok(oneYearOnClip != null && Math.abs(oneYearOnClip - 1) < 1e-6);
 assert.equal(
-  realizedAprPct(
-    { startingUsdt: 1000, realizedUsdt: 100 },
-    Date.UTC(2026, 0, 1),
-    Date.UTC(2026, 0, 1),
-  ),
+  realizedAprPct(100, 1000, Date.UTC(2026, 0, 1), Date.UTC(2026, 0, 1)),
   null,
 );
+assert.equal(realizedAprPct(100, 0, fromApr, fromApr + yearMs), null);
 
 const split = splitCompletedBacktestOrders([
   {

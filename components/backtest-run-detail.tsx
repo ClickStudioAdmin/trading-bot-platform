@@ -303,13 +303,13 @@ function signedMoney(value: number): string {
 
 function BacktestHeaderStats({ run }: { run: BacktestRun }) {
   const stats = run.stats;
+  const peakUsed = peakLockedNotionalUsdt(run.orders);
   const usedPct = stats
-    ? returnOnCapitalUsedPct(
-        stats.realizedUsdt,
-        peakLockedNotionalUsdt(run.orders),
-      )
+    ? returnOnCapitalUsedPct(stats.realizedUsdt, peakUsed)
     : null;
-  const apr = stats ? realizedAprPct(stats, run.fromMs, run.toMs) : null;
+  const apr = stats
+    ? realizedAprPct(stats.realizedUsdt, peakUsed, run.fromMs, run.toMs)
+    : null;
   const winRate =
     stats && Number.isFinite(stats.winRate)
       ? `${(stats.winRate * 100).toFixed(1)}%`
@@ -340,6 +340,7 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
         <KpiBlock
           label="APR"
           value={formatBacktestReturnPct(apr)}
+          hint="On max capital used"
           toneClass={signedTone(apr)}
         />
         <KpiBlock
