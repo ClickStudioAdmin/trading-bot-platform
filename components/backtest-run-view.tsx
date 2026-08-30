@@ -67,6 +67,9 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
           value: money(ending),
           hint: "Starting + realized. Open mark is in Current trades.",
         },
+        { label: "Trades", value: String(stats.trades) },
+        { label: "Win rate", value: pct(stats.winRate) },
+        { label: "Max drawdown", value: money(stats.maxDrawdownUsdt) },
         {
           label: "Account return",
           value: formatBacktestReturnPct(realizedReturn),
@@ -90,9 +93,6 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
           value: money(stats.realizedUsdt),
           hint: "Closed trades after fees",
         },
-        { label: "Trades", value: String(stats.trades) },
-        { label: "Win rate", value: pct(stats.winRate) },
-        { label: "Max drawdown", value: money(stats.maxDrawdownUsdt) },
         {
           label: "Profit factor",
           value:
