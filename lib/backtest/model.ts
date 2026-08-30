@@ -85,26 +85,6 @@ export type BacktestRun = {
   comparableSymbols: string[];
 };
 
-export type BacktestStudy = {
-  id: string;
-  userId: string;
-  accountId: string | null;
-  name: string;
-  deskType: BacktestDeskType;
-  venue: string;
-  venueEnvironment: string | null;
-  symbol: string;
-  fromMs: number;
-  toMs: number;
-  startingUsdt: number;
-  seedRecipe: BacktestRecipe;
-  scenarioCount: number;
-  status: BacktestStatus;
-  error: string | null;
-  createdAtMs: number;
-  finishedAtMs: number | null;
-};
-
 export type EquityPoint = {
   atMs: number;
   equityUsdt: number;

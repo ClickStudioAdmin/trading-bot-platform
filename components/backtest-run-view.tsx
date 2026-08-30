@@ -7,7 +7,6 @@ import { Modal } from "@/components/template-modals";
 import {
   attachBacktestToTemplateAction,
   deleteBacktestAction,
-  deleteBacktestStudyAction,
   publishBacktestAction,
   saveBacktestAsTemplateAction,
 } from "@/lib/backtest/actions";
@@ -55,80 +54,83 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
   const peakUsed = peakLockedNotionalUsdt(run.orders);
   const usedPct = returnOnCapitalUsedPct(pnl, peakUsed);
   return (
-    <dl className="grid gap-x-6 sm:grid-cols-2">
-      <Stat
-        label="Starting"
-        value={money(stats.startingUsdt)}
-        hint="Paper account at the window start"
-      />
-      <Stat
-        label="Ending"
-        value={money(stats.endingUsdt)}
-        hint="Starting + realized + unrealized"
-      />
-      <Stat
-        label="Account return"
-        value={formatBacktestReturnPct(stats.returnPct)}
-        hint={`${money(pnl)} on ${money(stats.startingUsdt)} starting`}
-      />
-      <Stat
-        label="On capital used"
-        value={formatBacktestReturnPct(usedPct)}
-        hint={
-          peakUsed > 0
-            ? `${money(pnl)} on ${money(peakUsed)} peak position`
-            : "No position was opened"
-        }
-      />
-      <Stat
-        label="Realized P&L"
-        value={money(stats.realizedUsdt)}
-        hint="Closed trades after fees"
-      />
-      <Stat
-        label="Unrealized"
-        value={money(stats.markUsdt)}
-        hint="Open mark versus entry"
-      />
-      <Stat label="Trades" value={String(stats.trades)} />
-      <Stat label="Win rate" value={pct(stats.winRate)} />
-      <Stat label="Max drawdown" value={money(stats.maxDrawdownUsdt)} />
-      <Stat
-        label="Profit factor"
-        value={
-          stats.profitFactor == null ? "—" : stats.profitFactor.toFixed(2)
-        }
-      />
-      <Stat label="Time in market" value={pct(stats.timeInMarket)} />
-      <Stat
-        label="Open"
-        value={
-          stats.openSide
+    <BacktestPropertyList
+      rows={[
+        {
+          label: "Starting",
+          value: money(stats.startingUsdt),
+          hint: "Paper account at the window start",
+        },
+        {
+          label: "Ending",
+          value: money(stats.endingUsdt),
+          hint: "Starting + realized + unrealized",
+        },
+        {
+          label: "Account return",
+          value: formatBacktestReturnPct(stats.returnPct),
+          hint: `${money(pnl)} on ${money(stats.startingUsdt)} starting`,
+        },
+        {
+          label: "On capital used",
+          value: formatBacktestReturnPct(usedPct),
+          hint:
+            peakUsed > 0
+              ? `${money(pnl)} on ${money(peakUsed)} peak position`
+              : "No position was opened",
+        },
+        {
+          label: "Realized P&L",
+          value: money(stats.realizedUsdt),
+          hint: "Closed trades after fees",
+        },
+        {
+          label: "Unrealized",
+          value: money(stats.markUsdt),
+          hint: "Open mark versus entry",
+        },
+        { label: "Trades", value: String(stats.trades) },
+        { label: "Win rate", value: pct(stats.winRate) },
+        { label: "Max drawdown", value: money(stats.maxDrawdownUsdt) },
+        {
+          label: "Profit factor",
+          value:
+            stats.profitFactor == null ? "—" : stats.profitFactor.toFixed(2),
+        },
+        { label: "Time in market", value: pct(stats.timeInMarket) },
+        {
+          label: "Open",
+          value: stats.openSide
             ? `${stats.openSide} ${stats.openQty.toFixed(4)}`
-            : "Flat"
-        }
-      />
-    </dl>
+            : "Flat",
+        },
+      ]}
+    />
   );
 }
 
-function Stat({
-  label,
-  value,
-  hint,
+export function BacktestPropertyList({
+  rows,
 }: {
-  label: string;
-  value: string;
-  hint?: string;
+  rows: Array<{ label: string; value: string; hint?: string }>;
 }) {
   return (
-    <div
-      className="flex items-baseline justify-between gap-3 border-t border-line py-1.5 first:border-t-0 sm:[&:nth-child(-n+2)]:border-t-0"
-      title={hint}
-    >
-      <dt className="text-xs text-ink-muted">{label}</dt>
-      <dd className="text-sm font-medium tabular-nums">{value}</dd>
-    </div>
+    <dl className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface">
+      {rows.map((row) => (
+        <div
+          key={row.label}
+          className="flex items-baseline justify-between gap-4 px-5 py-2.5"
+          title={row.hint}
+        >
+          <dt className="shrink-0 text-xs uppercase tracking-[0.12em] text-ink-muted">
+            {row.label}
+          </dt>
+          <dd className="min-w-0 text-right text-sm font-medium tabular-nums">
+            {row.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -632,50 +634,6 @@ export function RemoveBacktestButton({
         }
       >
         {pending ? "Removing…" : "Remove"}
-      </button>
-      {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
-    </form>
-  );
-}
-
-export function RemoveBacktestStudyButton({
-  studyId,
-  returnTo = "/admin/backtests",
-  compact = false,
-}: {
-  studyId: string;
-  returnTo?: string;
-  compact?: boolean;
-}) {
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  return (
-    <form
-      action={async (formData) => {
-        setPending(true);
-        setError(null);
-        const result = await deleteBacktestStudyAction(formData);
-        setPending(false);
-        if (!result.ok) {
-          setError(result.error ?? "Could not remove that study.");
-          return;
-        }
-        router.push(returnTo);
-        router.refresh();
-      }}
-    >
-      <input type="hidden" name="studyId" value={studyId} />
-      <button
-        type="submit"
-        disabled={pending}
-        className={
-          compact
-            ? "rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-50"
-            : "rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50"
-        }
-      >
-        {pending ? "Removing…" : compact ? "Remove" : "Remove study"}
       </button>
       {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>

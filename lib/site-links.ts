@@ -33,7 +33,6 @@ export const ADMIN_NAV_LINKS = [
   { href: "/admin/settings", label: "Settings" },
   { href: "/admin/members", label: "Members" },
   { href: "/admin/templates", label: "Templates" },
-  { href: "/admin/backtests", label: "Backtests" },
   { href: "/admin/logs", label: "Logs" },
   { href: "/admin/theme", label: "Theme" },
 ] as const;

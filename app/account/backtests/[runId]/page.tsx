@@ -84,11 +84,6 @@ export default async function AccountBacktestDetailPage({
       <BacktestRunDetail
         run={run}
         listHref="/account/backtests"
-        studyHref={
-          run.studyId && isAdmin
-            ? `/admin/backtests/studies/${run.studyId}`
-            : null
-        }
         applyDesks={applyDesks}
         applyTemplateId={templateActions.applyTemplateId}
         canPublish={run.userId === member.id}

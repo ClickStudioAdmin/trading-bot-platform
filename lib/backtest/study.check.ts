@@ -1,14 +1,7 @@
 import assert from "node:assert/strict";
 import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
 import { snapshotDcaRecipe } from "@/lib/templates/recipe";
-import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
-import {
-  buildEquityTimeline,
-  expandStudyScenarios,
-  recipeParamRows,
-  STUDY_MAX_SCENARIOS,
-  studyIntervalsForWindow,
-} from "./study";
+import { buildEquityTimeline, recipeParamRows } from "./study";
 import type { BacktestRun } from "./model";
 
 const form = new FormData();
@@ -34,90 +27,6 @@ assert.equal(
   preview.find((row) => row.label === "Direction")?.value,
   "Long",
 );
-
-const monthFrom = Date.UTC(2026, 6, 1);
-const monthTo = Date.UTC(2026, 6, 31, 23, 59, 59, 999);
-const intervals = studyIntervalsForWindow(monthFrom, monthTo);
-assert.ok(intervals.includes("60"));
-assert.ok(intervals.includes("240"));
-assert.ok(intervals.includes("D"));
-assert.equal(intervals.includes("15"), false);
-
-const expanded = expandStudyScenarios(seed, monthFrom, monthTo);
-assert.ok(expanded.scenarios.length > 0);
-assert.ok(expanded.scenarios.length <= STUDY_MAX_SCENARIOS);
-assert.ok(
-  expanded.scenarios.some((row) => row.recipe.kind === "dca" && row.recipe.startKind === "immediate"),
-);
-assert.ok(
-  expanded.scenarios.some((row) => row.recipe.kind === "dca" && row.recipe.startKind === "indicator"),
-);
-assert.equal(
-  expanded.scenarios.some((row) => row.recipe.kind === "dca" && row.recipe.startKind === "webhook"),
-  false,
-);
-const starts = new Set(
-  expanded.scenarios
-    .filter((row) => row.recipe.kind === "dca")
-    .map((row) =>
-      row.recipe.kind === "dca"
-        ? `${row.recipe.startKind}:${row.recipe.indicatorKind ?? ""}:${row.recipe.indicatorCompare ?? ""}`
-        : "",
-    ),
-);
-assert.ok(starts.has("immediate::"));
-assert.ok([...starts].some((row) => row.startsWith("indicator:rsi:")));
-
-const withPrice = snapshotDcaRecipe({
-  ...parsed.config,
-  startKind: "price",
-  armTrigger: { triggerBy: "last", compare: "gte", price: 100_000 },
-});
-const priced = expandStudyScenarios(withPrice, monthFrom, monthTo);
-assert.ok(
-  priced.scenarios.some(
-    (row) => row.recipe.kind === "dca" && row.recipe.startKind === "price",
-  ),
-);
-
-const perps: PerpsTemplateRecipe = {
-  kind: "perps",
-  name: "Perps seed",
-  symbol: "ETHUSDT",
-  formAction: "buy",
-  orderType: "market",
-  sizeUnit: "qty",
-  size: "1",
-  limitPrice: "",
-  entrySource: "price",
-  triggerBy: "last",
-  triggerCompare: "gte",
-  triggerPrice: "3000",
-  skipIfOpen: true,
-  tpsl: null,
-  trailing: null,
-};
-const perpsExpanded = expandStudyScenarios(perps, monthFrom, monthTo);
-assert.ok(perpsExpanded.scenarios.length > 0);
-assert.ok(
-  perpsExpanded.scenarios.every(
-    (row) => row.recipe.kind === "perps" && row.recipe.entrySource === "price",
-  ),
-);
-assert.ok(
-  perpsExpanded.scenarios.some(
-    (row) =>
-      row.recipe.kind === "perps" &&
-      row.recipe.tpsl != null &&
-      (row.recipe.tpsl.takeProfit ?? 0) > 3000,
-  ),
-);
-
-const flatten: PerpsTemplateRecipe = {
-  ...perps,
-  formAction: "close_long",
-};
-assert.equal(expandStudyScenarios(flatten, monthFrom, monthTo).scenarios.length, 0);
 
 const run: BacktestRun = {
   id: "run-1",

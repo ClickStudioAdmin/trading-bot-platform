@@ -12,7 +12,6 @@ import {
   type BacktestRun,
   type BacktestStats,
   type BacktestStatus,
-  type BacktestStudy,
   type SimulatedOrder,
 } from "./model";
 
@@ -426,25 +425,6 @@ function filterBacktestRuns(
   });
 }
 
-export async function listAllBacktestRuns(limit = 120): Promise<BacktestRun[]> {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return [];
-  }
-  const { data, error } = await supabase
-    .from("backtest_runs")
-    .select("*")
-    .neq("status", "draft")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  if (error || !data) {
-    return [];
-  }
-  return data
-    .map((row) => parseBacktestRunRow(row as Record<string, unknown>))
-    .filter((row): row is BacktestRun => row != null && row.status !== "draft");
-}
-
 export function canReadBacktestRun(
   run: BacktestRun,
   userId: string,
@@ -496,169 +476,6 @@ export async function deleteBacktestRun(id: string): Promise<
     return { ok: false, error: error.message };
   }
   return { ok: true };
-}
-
-export async function deleteBacktestStudy(id: string): Promise<
-  { ok: true } | { ok: false; error: string }
-> {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return { ok: false, error: "Database is not configured." };
-  }
-  const { error } = await supabase
-    .from("backtest_studies")
-    .delete()
-    .eq("id", id);
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-  return { ok: true };
-}
-
-function parseBacktestStudyRow(
-  row: Record<string, unknown>,
-): BacktestStudy | null {
-  const status = parseBacktestStatus(row.status);
-  const deskType: BacktestDeskType =
-    row.desk_type === "dca" ? "dca" : "perps";
-  const seedRecipe = parseRecipe(row.seed_recipe, deskType);
-  if (!status || !seedRecipe) {
-    return null;
-  }
-  return {
-    id: String(row.id),
-    userId: String(row.user_id),
-    accountId: row.account_id ? String(row.account_id) : null,
-    name: String(row.name ?? seedRecipe.name),
-    deskType,
-    venue: String(row.venue ?? "bybit"),
-    venueEnvironment: row.venue_environment
-      ? String(row.venue_environment)
-      : null,
-    symbol: String(row.symbol ?? seedRecipe.symbol),
-    fromMs: Number(row.from_ms) || 0,
-    toMs: Number(row.to_ms) || 0,
-    startingUsdt: Number(row.starting_balance_usdt) || 0,
-    seedRecipe,
-    scenarioCount: Number(row.scenario_count) || 0,
-    status,
-    error: row.error ? String(row.error) : null,
-    createdAtMs: asTime(row.created_at),
-    finishedAtMs: row.finished_at ? asTime(row.finished_at) : null,
-  };
-}
-
-export async function insertBacktestStudy(input: {
-  userId: string;
-  accountId: string | null;
-  name: string;
-  deskType: BacktestDeskType;
-  venue: string;
-  venueEnvironment: string | null;
-  symbol: string;
-  fromMs: number;
-  toMs: number;
-  startingUsdt: number;
-  seedRecipe: BacktestRecipe;
-  scenarioCount: number;
-}): Promise<BacktestStudy | null> {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return null;
-  }
-  const { data, error } = await supabase
-    .from("backtest_studies")
-    .insert({
-      user_id: input.userId,
-      account_id: input.accountId,
-      name: input.name,
-      desk_type: input.deskType,
-      venue: input.venue,
-      venue_environment: input.venueEnvironment,
-      symbol: input.symbol,
-      from_ms: input.fromMs,
-      to_ms: input.toMs,
-      starting_balance_usdt: input.startingUsdt,
-      seed_recipe: input.seedRecipe,
-      scenario_count: input.scenarioCount,
-      status: "running",
-    })
-    .select("*")
-    .single();
-  if (error || !data) {
-    return null;
-  }
-  return parseBacktestStudyRow(data as Record<string, unknown>);
-}
-
-export async function updateBacktestStudy(
-  id: string,
-  patch: {
-    status: BacktestStatus;
-    scenarioCount?: number;
-    error?: string | null;
-    finished?: boolean;
-  },
-): Promise<BacktestStudy | null> {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return null;
-  }
-  const { data, error } = await supabase
-    .from("backtest_studies")
-    .update({
-      status: patch.status,
-      ...(patch.scenarioCount !== undefined
-        ? { scenario_count: patch.scenarioCount }
-        : {}),
-      ...(patch.error !== undefined ? { error: patch.error } : {}),
-      ...(patch.finished ? { finished_at: new Date().toISOString() } : {}),
-    })
-    .eq("id", id)
-    .select("*")
-    .maybeSingle();
-  if (error || !data) {
-    return null;
-  }
-  return parseBacktestStudyRow(data as Record<string, unknown>);
-}
-
-export async function loadBacktestStudy(
-  id: string,
-): Promise<BacktestStudy | null> {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return null;
-  }
-  const { data, error } = await supabase
-    .from("backtest_studies")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  if (error || !data) {
-    return null;
-  }
-  return parseBacktestStudyRow(data as Record<string, unknown>);
-}
-
-export async function listBacktestStudies(
-  limit = 80,
-): Promise<BacktestStudy[]> {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return [];
-  }
-  const { data, error } = await supabase
-    .from("backtest_studies")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  if (error || !data) {
-    return [];
-  }
-  return data
-    .map((row) => parseBacktestStudyRow(row as Record<string, unknown>))
-    .filter((row): row is BacktestStudy => Boolean(row));
 }
 
 export async function claimQueuedBacktestRun(input?: {
