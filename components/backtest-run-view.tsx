@@ -14,7 +14,6 @@ import { applyTemplateAction } from "@/lib/templates/actions";
 import {
   chartIntervalForWindow,
   formatBacktestReturnPct,
-  openBacktestPositionLabel,
   peakLockedNotionalUsdt,
   realizedEndingUsdt,
   realizedReturnPct,
@@ -158,33 +157,20 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
   useEffect(() => {
     setPage(0);
   }, [run.id]);
-  const { completed, open } = splitCompletedBacktestOrders(run.orders);
-  const openLabel = openBacktestPositionLabel(open);
-  if (completed.length === 0) {
-    return (
-      <div className="space-y-2">
-        <p className="text-sm text-ink-muted">
-          {openLabel
-            ? "No completed positions in this window."
-            : "No simulated fills."}
-        </p>
-        {openLabel ? (
-          <p className="text-xs text-ink-muted">
-            Still open at the window end — see Current trades above.
-          </p>
-        ) : null}
-      </div>
-    );
+  const { open } = splitCompletedBacktestOrders(run.orders);
+  const openSet = new Set(open);
+  const fills = run.orders;
+  if (fills.length === 0) {
+    return <p className="text-sm text-ink-muted">No simulated fills.</p>;
   }
-  const pageCount = Math.max(1, Math.ceil(completed.length / TRADE_PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(fills.length / TRADE_PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
   const start = safePage * TRADE_PAGE_SIZE;
-  const rows = completed.slice(start, start + TRADE_PAGE_SIZE);
+  const rows = fills.slice(start, start + TRADE_PAGE_SIZE);
   const from = start + 1;
   const to = start + rows.length;
   return (
     <div>
-      <p className="mb-2 text-xs text-ink-muted">Completed positions only.</p>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="text-xs uppercase tracking-[0.16em] text-ink-muted">
@@ -199,32 +185,41 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, index) => (
-              <tr
-                key={`${row.atMs}-${start + index}`}
-                className="border-t border-line"
-              >
-                <td className="py-1.5 pr-3 text-ink-muted">
-                  {new Date(row.atMs).toLocaleString()}
-                </td>
-                <td className="py-1.5 pr-3">{row.action}</td>
-                <td className="py-1.5 pr-3">{row.side}</td>
-                <td className="py-1.5 pr-3 tabular-nums">{row.qty}</td>
-                <td className="py-1.5 pr-3 tabular-nums">{money(row.price)}</td>
-                <td className="py-1.5 pr-3 tabular-nums">
-                  {money(row.feeUsdt)}
-                </td>
-                <td className="py-1.5 tabular-nums">
-                  {row.realizedUsdt == null ? "—" : money(row.realizedUsdt)}
-                </td>
-              </tr>
-            ))}
+            {rows.map((row, index) => {
+              const current = openSet.has(row);
+              return (
+                <tr
+                  key={`${row.atMs}-${start + index}`}
+                  className="border-t border-line"
+                >
+                  <td className="py-1.5 pr-3 text-ink-muted">
+                    {new Date(row.atMs).toLocaleString()}
+                  </td>
+                  <td className="py-1.5 pr-3">
+                    {current ? "open" : row.action}
+                  </td>
+                  <td className="py-1.5 pr-3">{row.side}</td>
+                  <td className="py-1.5 pr-3 tabular-nums">{row.qty}</td>
+                  <td className="py-1.5 pr-3 tabular-nums">{money(row.price)}</td>
+                  <td className="py-1.5 pr-3 tabular-nums">
+                    {money(row.feeUsdt)}
+                  </td>
+                  <td className="py-1.5 tabular-nums">
+                    {current
+                      ? "—"
+                      : row.realizedUsdt == null
+                        ? "—"
+                        : money(row.realizedUsdt)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
         <p>
-          {from}–{to} of {completed.length}
+          {from}–{to} of {fills.length}
         </p>
         {pageCount > 1 ? (
           <div className="flex items-center gap-2">
