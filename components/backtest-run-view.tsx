@@ -2,6 +2,63 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
+const BACKTEST_REFRESH_MS = 5_000;
+
+export function BacktestRunRefresh({
+  active,
+}: {
+  active: boolean;
+}) {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!active) {
+      return;
+    }
+    let timer = 0;
+
+    function refresh() {
+      if (document.hidden) {
+        return;
+      }
+      router.refresh();
+    }
+
+    function stop() {
+      if (timer) {
+        window.clearInterval(timer);
+        timer = 0;
+      }
+    }
+
+    function start() {
+      stop();
+      if (document.hidden) {
+        return;
+      }
+      timer = window.setInterval(refresh, BACKTEST_REFRESH_MS);
+    }
+
+    function onVisibility() {
+      if (document.hidden) {
+        stop();
+        return;
+      }
+      refresh();
+      start();
+    }
+
+    start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [active, router]);
+
+  return null;
+}
 import { DeskChart } from "@/components/desk-chart";
 import { Modal } from "@/components/template-modals";
 import {

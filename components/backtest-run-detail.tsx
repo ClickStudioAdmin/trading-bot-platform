@@ -5,6 +5,7 @@ import {
   ApplyBacktestButton,
   AttachBacktestButton,
   BacktestCurrentTrades,
+  BacktestRunRefresh,
   BacktestInlineChart,
   BacktestOrdersTable,
   BacktestPropertyList,
@@ -134,6 +135,9 @@ export function BacktestRunDetail({
   const status = backtestStatusTone(run.status);
   return (
     <div className="space-y-6">
+      <BacktestRunRefresh
+        active={run.status === "queued" || run.status === "running"}
+      />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
@@ -371,7 +375,7 @@ function incompleteRunMessage(run: BacktestRun): string {
     return "Queued. Results will appear here when the replay finishes.";
   }
   if (run.status === "running") {
-    return "Still running. Refresh in a moment — results will fill in when this finishes.";
+    return "Still running. Results will fill in when this finishes.";
   }
   if (run.status === "failed") {
     return "No results — this run failed.";
