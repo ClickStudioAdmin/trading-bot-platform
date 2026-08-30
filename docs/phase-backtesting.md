@@ -32,7 +32,7 @@ Each run has its own **detail page**: parameters, stats, trade list, account-imp
 
 | Lock | Decision |
 | --- | --- |
-| Recipes | **Perps bots price-cross** and **DCA** (immediate / price / indicator start). Webhook-entry and webhook-start skipped. |
+| Recipes | **Perps bots price-cross** and **DCA price / indicator start**. User queue rejects **manual** and **webhook**. Studies still expand immediate. |
 | Perps bot exits | Same ticket set as manual: TP/SL (full/partial, last/mark/index, market/limit) plus trailing. Optional. Buy/sell only. Flatten rules stay flatten-only. |
 | Unpublished runs | **Owner only** (plus admin). |
 | Remove | Owner deletes their run. Admin can delete any, including published. Unused `backtested` snapshot is deleted with the last run that pointed at it. A linked **user** template is kept. Admin **Remove** on a study deletes the study and every scenario run (`study_id` cascade). |
@@ -41,12 +41,12 @@ Each run has its own **detail page**: parameters, stats, trade list, account-imp
 | Fee | Named preset `vip0_taker` = **6 bps all-in** per fill. |
 | Rank | **Realized** USDT. |
 | Return | **Account return** is (ending − starting) / starting. Ending is starting + realized + open mark. **On capital used** is that same dollar P&L over peak locked notional (qty × entry while open). Not exchange-margin ROE. |
-| User queue | Recipe from a **desk Backtest** (draft) or a **library template**, or both. Required: a replayable recipe, start date, end date, initial balance, timeframe, venue. Replay fields are editable on the page. **Primary pair** preloads from the recipe; the user can pick another. Optional **comparables** (max 8). The run stores the recipe. No library row until Attach or Save as. |
+| User queue | Recipe from a **desk Backtest** (draft) or a **library template**, or both. Required: a replayable recipe (not manual or webhook), start date, end date, initial balance, timeframe, venue. Loaded blocked fields show as invalid until the user picks a legal value. Replay fields are editable on the page. **Primary pair** preloads from the recipe; the user can pick another. Optional **comparables** (max 8). The run stores the recipe. No library row until Attach or Save as. |
 | Admin study | Seed from a **desk bot** (DCA playbook or Perps bots rule), not a template. Expands a **locked discrete grid**: entry starts × timeframes that fit the window × take-profit % × stop %. Cap **96** scenarios. Grouped as a `backtest_studies` row; child runs have `study_id`. |
 | Study grid (DCA) | Starts: immediate; price ≥/≤ when the seed has an arm price; RSI / MACD / EMA-cross × cross ≥ / cross ≤. Timeframes: 15m, 1h, 4h, Daily if the window is ≤ 1500 bars. TP: off / 4% / 8% / 12%. SL: off / 5% / 10%. Clip size, averaging, and contract stay on the seed. Webhook start is never generated. |
 | Study grid (Perps) | Buy/sell only. When ≥ / ≤ at the seed price. Same timeframes and TP/SL percents (converted to prices from the When). Flatten rules are skipped. |
 | Detail | `/account/backtests/[runId]` and `/admin/backtests/[runId]`. Parameters, stats, full trade list, equity timeline, inline chart. |
-| Desk Backtest | Always on when the current form can replay (not webhook). New tab seeds a **draft** run with that recipe. If the form matches a library template, the draft remembers it as `source_template_id`. |
+| Desk Backtest | Click is always offered. Manual, webhook, or other blocked fields show the reason and do **not** open a draft. Price / indicator (DCA) or a price When (Perps) seeds a draft. If the form matches a library template, the draft remembers it as `source_template_id`. |
 | Attach / Save | After **done**: if they loaded a template and replay fields still match, **Attach results** to that template. Otherwise **Save as template** (new user template, run linked). Never auto-attach after an edit. Apply-to-desk stays idle; never arm from a run. |
 | Window | Explicit start/end dates. Max **1825** days (5 years). Any indicator timeframe (5m through Daily). Rejected only if the range needs more than **200,000** bars. |
 | Worker | Short jobs (≤1500 bars and ≤4 pairs) run in the request. Longer jobs stay `queued`. The engine worker (Fly, or the 5-minute Vercel tick for modest jobs) claims one run at a time and pages candles. Stale `running` after 15 minutes is reclaimable. |
@@ -87,7 +87,7 @@ Admin studies live in `backtest_studies`. Candle fetch is once per timeframe; re
 
 - Perps replay uses `decideFuturesAutomationTick` on each bar close, then ticket exits on the same book.
 - DCA replay uses `decideDcaTick` (same clip / percent-exit / breakeven math as live).
-- Signal / webhook When or webhook-start: **rejected** at queue time.
+- Signal / webhook When, webhook-start, or **manual** start: **rejected** at user queue time. Studies may still replay immediate.
 - Venue truth: Bybit klines for Bybit, HL candles for HL.
 - Does not write `futures_orders` / paper carries.
 

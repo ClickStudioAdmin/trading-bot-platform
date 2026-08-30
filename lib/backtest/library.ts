@@ -52,6 +52,91 @@ export function parseBacktestRecipeJson(raw: unknown): BacktestRecipe | null {
   return parsed.recipe;
 }
 
+export type BacktestFieldIssue = {
+  field:
+    | "startKind"
+    | "armPrice"
+    | "clipSize"
+    | "entrySource"
+    | "formAction"
+    | "size"
+    | "triggerPrice";
+  message: string;
+};
+
+export function userBacktestFieldIssues(
+  recipe: BacktestRecipe,
+): BacktestFieldIssue[] {
+  if (recipe.kind === "dca") {
+    const issues: BacktestFieldIssue[] = [];
+    if (recipe.startKind === "webhook") {
+      issues.push({
+        field: "startKind",
+        message: "Webhook start cannot be replayed. Pick Price or Indicator.",
+      });
+    } else if (recipe.startKind === "immediate") {
+      issues.push({
+        field: "startKind",
+        message: "Manual start cannot be replayed. Pick Price or Indicator.",
+      });
+    }
+    if (
+      recipe.startKind === "price" &&
+      !(Number(recipe.armTrigger?.price) > 0)
+    ) {
+      issues.push({
+        field: "armPrice",
+        message: "Enter a start price.",
+      });
+    }
+    if (!(recipe.clipSize > 0)) {
+      issues.push({
+        field: "clipSize",
+        message: "Enter a clip size.",
+      });
+    }
+    return issues;
+  }
+  const issues: BacktestFieldIssue[] = [];
+  if (recipe.entrySource === "webhook") {
+    issues.push({
+      field: "entrySource",
+      message: "Webhook entry cannot be replayed. Use a price When.",
+    });
+  }
+  if (recipe.formAction === "close_long" || recipe.formAction === "close_short") {
+    issues.push({
+      field: "formAction",
+      message: "Flatten rules cannot be replayed. Pick Buy or Sell.",
+    });
+  }
+  const size = Number(String(recipe.size).replace(/,/g, "").trim());
+  if (!(size > 0)) {
+    issues.push({
+      field: "size",
+      message: "Enter a size.",
+    });
+  }
+  const trigger = Number(String(recipe.triggerPrice).replace(/,/g, "").trim());
+  if (recipe.entrySource !== "webhook" && !(trigger > 0)) {
+    issues.push({
+      field: "triggerPrice",
+      message: "Enter a When price.",
+    });
+  }
+  return issues;
+}
+
+export function canQueueUserBacktest(
+  recipe: BacktestRecipe,
+): { ok: true } | { ok: false; error: string } {
+  const issue = userBacktestFieldIssues(recipe)[0];
+  if (issue) {
+    return { ok: false, error: issue.message };
+  }
+  return { ok: true };
+}
+
 export function decideBacktestTemplateActions(input: {
   status: string;
   ownerUserId: string | null;

@@ -6,8 +6,8 @@ import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { seedBacktestDraftAction } from "@/lib/backtest/actions";
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import { recipesMatchForBacktest } from "@/lib/templates/recipe";
-
 import {
+  canQueueUserBacktest,
   toBacktestLibraryItem,
   type BacktestLibraryItem,
 } from "@/lib/backtest/library";
@@ -21,25 +21,11 @@ function canReplay(recipe: BacktestRecipe) {
     : canBacktestPerpsRecipe(recipe);
 }
 
-function DisabledBacktest({ title }: { title: string }) {
-  return (
-    <span className="inline-flex" title={title}>
-      <button
-        type="button"
-        disabled
-        className="pointer-events-none shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted opacity-40"
-      >
-        Backtest
-      </button>
-    </span>
-  );
-}
-
 export function findBacktestableTemplate(
   current: BacktestRecipe | null,
   templates: BacktestLibraryItem[],
 ): BacktestLibraryItem | null {
-  if (!current || !canReplay(current).ok) {
+  if (!current || !canQueueUserBacktest(current).ok) {
     return null;
   }
   return (
@@ -63,22 +49,22 @@ export function BacktestTemplateLink({
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (!current) {
-    return (
-      <DisabledBacktest title="Complete this bot before backtesting." />
-    );
-  }
-  const allowed = canReplay(current);
-  if (!allowed.ok) {
-    return <DisabledBacktest title={allowed.error} />;
-  }
-  const match = findBacktestableTemplate(current, templates);
   return (
     <span className="inline-flex flex-col items-end">
       <button
         type="button"
         disabled={pending}
         onClick={() => {
+          if (!current) {
+            setError("Complete this bot before backtesting.");
+            return;
+          }
+          const allowed = canQueueUserBacktest(current);
+          if (!allowed.ok) {
+            setError(allowed.error);
+            return;
+          }
+          const match = findBacktestableTemplate(current, templates);
           const formData = new FormData();
           formData.set("recipe", JSON.stringify(current));
           formData.set("venue", venueId);
@@ -111,7 +97,11 @@ export function BacktestTemplateLink({
       >
         {pending ? "Opening…" : "Backtest"}
       </button>
-      {error ? <span className="mt-1 text-xs text-danger">{error}</span> : null}
+      {error ? (
+        <span className="mt-1 max-w-56 text-right text-xs text-danger">
+          {error}
+        </span>
+      ) : null}
     </span>
   );
 }

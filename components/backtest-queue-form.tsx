@@ -15,7 +15,10 @@ import {
   estimateBacktestBars,
   parseBacktestDateRange,
 } from "@/lib/backtest/model";
-import type { BacktestLibraryItem } from "@/lib/backtest/library";
+import {
+  canQueueUserBacktest,
+  type BacktestLibraryItem,
+} from "@/lib/backtest/library";
 import { recipesMatchReplayFields } from "@/lib/templates/recipe";
 import {
   DCA_INDICATOR_TIMEFRAMES,
@@ -166,6 +169,9 @@ export function BacktestQueueForm({
   const pairChanged =
     recipe != null &&
     symbol.trim().toUpperCase() !== recipe.symbol.trim().toUpperCase();
+  const queueAllowed = recipe
+    ? canQueueUserBacktest(recipe)
+    : { ok: false as const, error: "Load a bot or pick a template to backtest." };
 
   return (
     <section className="mb-8 rounded-card border border-line bg-surface p-5">
@@ -406,10 +412,15 @@ export function BacktestQueueForm({
           />
         ) : null}
         <input type="hidden" name="feePreset" value="vip0_taker" />
+        {recipe && !queueAllowed.ok ? (
+          <p className="text-sm text-danger">{queueAllowed.error}</p>
+        ) : null}
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         <button
           type="submit"
-          disabled={pending || Boolean(preview.error) || !recipe}
+          disabled={
+            pending || Boolean(preview.error) || !queueAllowed.ok
+          }
           className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
         >
           {pending

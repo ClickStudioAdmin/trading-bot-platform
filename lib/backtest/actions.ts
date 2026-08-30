@@ -5,7 +5,7 @@ import { getSessionMember } from "@/lib/auth/session";
 import { loadDeskCandles } from "@/lib/market/desk-klines";
 import { parseCandleInterval, parseCandleSymbol, parseCandleVenue, type CandleBar } from "@/lib/market/candles";
 import type { BacktestRecipe } from "./model";
-import { parseBacktestRecipeJson } from "./library";
+import { canQueueUserBacktest, parseBacktestRecipeJson } from "./library";
 import { canBacktestDcaRecipe, replayDcaPlaybook } from "./replay-dca";
 import {
   deleteTemplate,
@@ -128,12 +128,6 @@ async function canUseTemplate(
   return templateIsSharedWith(userId, template.id);
 }
 
-function recipeAllowed(recipe: BacktestRecipe) {
-  return recipe.kind === "dca"
-    ? canBacktestDcaRecipe(recipe)
-    : canBacktestPerpsRecipe(recipe);
-}
-
 async function resolveSourceTemplateId(
   rawId: string,
   recipe: BacktestRecipe,
@@ -165,7 +159,7 @@ export async function seedBacktestDraftAction(
   if (!recipe) {
     return { ok: false, error: "Complete the bot before backtesting." };
   }
-  const allowed = recipeAllowed(recipe);
+  const allowed = canQueueUserBacktest(recipe);
   if (!allowed.ok) {
     return allowed;
   }
@@ -228,7 +222,7 @@ export async function queueTemplateBacktestAction(
   if (!recipe) {
     return { ok: false, error: "Load a bot or pick a template to backtest." };
   }
-  const allowed = recipeAllowed(recipe);
+  const allowed = canQueueUserBacktest(recipe);
   if (!allowed.ok) {
     return allowed;
   }

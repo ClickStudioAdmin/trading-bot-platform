@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import {
+  canQueueUserBacktest,
   decideBacktestTemplateActions,
   parseBacktestRecipeJson,
+  userBacktestFieldIssues,
 } from "./library";
-import { snapshotPerpsRecipe } from "@/lib/templates/recipe";
+import { snapshotDcaRecipe, snapshotPerpsRecipe } from "@/lib/templates/recipe";
+import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
 
 const perps = snapshotPerpsRecipe({
   name: "Buy dip",
@@ -97,5 +100,39 @@ const queued = decideBacktestTemplateActions({
 });
 assert.equal(queued.canAttach, false);
 assert.equal(queued.canSaveAs, false);
+
+assert.equal(canQueueUserBacktest(perps).ok, true);
+assert.equal(
+  canQueueUserBacktest({ ...perps, entrySource: "webhook" }).ok,
+  false,
+);
+
+const dcaForm = new FormData();
+dcaForm.set("name", "Grid");
+dcaForm.set("symbol", "BTCUSDT");
+dcaForm.set("direction", "long");
+dcaForm.set("startKind", "immediate");
+dcaForm.set("clipSize", "1");
+dcaForm.set("sizeUnit", "qty");
+const dcaParsed = parseDcaPlaybookForm(dcaForm);
+assert.equal(dcaParsed.ok, true);
+if (!dcaParsed.ok) {
+  throw new Error("expected dca parse");
+}
+const dca = snapshotDcaRecipe(dcaParsed.config);
+assert.equal(canQueueUserBacktest(dca).ok, false);
+assert.equal(
+  userBacktestFieldIssues(dca).some((row) => row.field === "startKind"),
+  true,
+);
+assert.equal(canQueueUserBacktest({ ...dca, startKind: "webhook" }).ok, false);
+assert.equal(
+  canQueueUserBacktest({
+    ...dca,
+    startKind: "price",
+    armTrigger: { triggerBy: "last", compare: "gte", price: 50000 },
+  }).ok,
+  true,
+);
 
 console.log("backtest library checks passed");
