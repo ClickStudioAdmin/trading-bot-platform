@@ -198,7 +198,7 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
                   className="border-t border-line"
                 >
                   <td className="py-1.5 pr-3 text-ink-muted">
-                    {new Date(row.atMs).toLocaleString()}
+                    {new Date(row.atMs).toLocaleString("en-AU")}
                   </td>
                   <td className="py-1.5 pr-3">
                     {current ? "open" : row.action}

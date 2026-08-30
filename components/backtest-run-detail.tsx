@@ -24,6 +24,7 @@ import {
 import { recipeParamRows } from "@/lib/backtest/study";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import { signedTone } from "@/lib/opportunities/format";
+import { formatAuDateUtc } from "@/lib/time/display";
 
 function statusLabel(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
@@ -283,7 +284,7 @@ function SectionPlaceholder({ message }: { message: string }) {
 }
 
 function formatWindowDate(ms: number): string {
-  return new Date(ms).toISOString().slice(0, 10);
+  return formatAuDateUtc(ms);
 }
 
 function signedMoney(value: number): string {

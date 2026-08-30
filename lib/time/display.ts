@@ -23,6 +23,11 @@ export function formatLocalDate(ms: number): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+export function formatAuDateUtc(ms: number): string {
+  const date = new Date(ms);
+  return `${pad(date.getUTCDate())}/${pad(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}`;
+}
+
 export function formatLocalDateTime(ms: number): string {
   const date = new Date(ms);
   return `${formatLocalDate(ms)} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;

@@ -33,9 +33,9 @@ function formatLabel(value: string): string {
   if (!date) {
     return "Pick a date";
   }
-  return date.toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
+  return date.toLocaleDateString("en-AU", {
+    day: "2-digit",
+    month: "2-digit",
     year: "numeric",
     timeZone: "UTC",
   });
