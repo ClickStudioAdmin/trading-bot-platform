@@ -293,10 +293,16 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
     stats && pnl != null
       ? returnOnCapitalUsedPct(pnl, peakLockedNotionalUsdt(run.orders))
       : null;
+  const winRate =
+    stats && Number.isFinite(stats.winRate)
+      ? `${(stats.winRate * 100).toFixed(1)}%`
+      : "—";
   return (
     <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <KpiCard label="Start" value={formatWindowDate(run.fromMs)} />
-      <KpiCard label="End" value={formatWindowDate(run.toMs)} />
+      <div className="grid grid-cols-2 gap-6 rounded-card border border-line bg-surface p-5">
+        <KpiBlock label="Start" value={formatWindowDate(run.fromMs)} />
+        <KpiBlock label="End" value={formatWindowDate(run.toMs)} />
+      </div>
       <div className="grid grid-cols-2 gap-6 rounded-card border border-line bg-surface p-5">
         <KpiBlock
           label="Account return"
@@ -310,12 +316,19 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
         />
       </div>
       <KpiCard
-        label="P&L"
-        value={pnl == null ? "—" : signedMoney(pnl)}
-        hint={
-          stats ? `Realized ${signedMoney(stats.realizedUsdt)}` : undefined
+        label="Realized P&L"
+        value={
+          stats ? signedMoney(stats.realizedUsdt) : "—"
         }
-        toneClass={signedTone(pnl)}
+        toneClass={signedTone(stats?.realizedUsdt ?? null)}
+      />
+      <KpiCard
+        label="Win rate"
+        value={winRate}
+        hint={stats ? `${stats.trades} trades` : undefined}
+        toneClass={
+          stats && stats.trades > 0 ? "text-ink" : signedTone(null)
+        }
       />
     </section>
   );
