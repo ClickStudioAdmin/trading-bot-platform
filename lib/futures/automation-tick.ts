@@ -373,6 +373,8 @@ async function fireAutomationRule(input: {
       source: "engine",
       ruleId: rule.id,
       ruleName: rule.name,
+      tpsl: rule.action === "flatten" ? null : rule.tpsl,
+      trailing: rule.action === "flatten" ? null : rule.trailing,
     },
   });
   if (!result.ok) {

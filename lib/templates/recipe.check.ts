@@ -92,8 +92,12 @@ const perps = snapshotPerpsRecipe({
   triggerCompare: "lte",
   triggerPrice: 50000,
   skipIfOpen: true,
+  tpsl: null,
+  trailing: null,
 });
 assert.equal(perps.kind, "perps");
+assert.equal(perps.tpsl, null);
+assert.equal(perps.trailing, null);
 assert.equal("mode" in perps, false);
 assert.equal("webhookId" in perps, false);
 assert.equal(recipeHasRuntimeKeys(perps), false);
@@ -105,6 +109,44 @@ if (perpsRule.ok) {
   assert.equal(perpsRule.rule.id, null);
   assert.equal(perpsRule.rule.sortOrder, 3);
   assert.equal(perpsRule.rule.triggerPrice, 50000);
+  assert.equal(perpsRule.rule.tpsl, null);
+}
+
+const perpsWithExits = snapshotPerpsRecipe({
+  name: "Buy with TP",
+  symbol: "BTCUSDT",
+  action: "buy",
+  closeSide: null,
+  orderType: "market",
+  sizeUnit: "qty",
+  size: 0.01,
+  limitPrice: null,
+  entrySource: "price",
+  triggerBy: "last",
+  triggerCompare: "lte",
+  triggerPrice: 50000,
+  skipIfOpen: true,
+  tpsl: {
+    takeProfit: 55000,
+    stopLoss: 48000,
+    tpTrigger: "last",
+    slTrigger: "mark",
+    mode: "full",
+    tpQty: null,
+    slQty: null,
+    tpOrderType: "market",
+    slOrderType: "market",
+    tpLimitPrice: null,
+    slLimitPrice: null,
+  },
+  trailing: { distance: 200, activePrice: null, peak: null },
+});
+const exitsRule = perpsRecipeToRule(perpsWithExits, { sortOrder: 0 });
+assert.equal(exitsRule.ok, true);
+if (exitsRule.ok) {
+  assert.equal(exitsRule.rule.tpsl?.takeProfit, 55000);
+  assert.equal(exitsRule.rule.tpsl?.stopLoss, 48000);
+  assert.equal(exitsRule.rule.trailing?.distance, 200);
 }
 
 const webhookPerps = snapshotPerpsRecipe({
@@ -121,6 +163,8 @@ const webhookPerps = snapshotPerpsRecipe({
   triggerCompare: "gte",
   triggerPrice: 1,
   skipIfOpen: true,
+  tpsl: null,
+  trailing: null,
 });
 const coerced = perpsRecipeToRule(webhookPerps, { sortOrder: 0 });
 assert.equal(coerced.ok, true);

@@ -141,6 +141,36 @@ if (buyParsed.ok) {
   assert.equal(buyParsed.rules[0]?.action, "buy");
   assert.equal(buyParsed.rules[0]?.triggerPrice, 90000);
   assert.equal(buyParsed.rules[0]?.skipIfOpen, true);
+  assert.equal(buyParsed.rules[0]?.tpsl, null);
+}
+
+const exits = new FormData();
+exits.set("ruleCount", "1");
+exits.set("r0_name", "Breakout TP");
+exits.set("r0_mode", "active");
+exits.set("r0_symbol", "BTCUSDT");
+exits.set("r0_action", "buy");
+exits.set("r0_orderType", "market");
+exits.set("r0_sizeUnit", "qty");
+exits.set("r0_size", "0.01");
+exits.set("r0_triggerBy", "last");
+exits.set("r0_triggerCompare", "gte");
+exits.set("r0_triggerPrice", "90000");
+exits.set("r0_tpsl", "on");
+exits.set("r0_takeProfit", "95000");
+exits.set("r0_stopLoss", "85000");
+exits.set("r0_tpTrigger", "last");
+exits.set("r0_slTrigger", "mark");
+exits.set("r0_tpslMode", "full");
+exits.set("r0_tpOrderType", "market");
+exits.set("r0_slOrderType", "market");
+const exitsParsed = parseFuturesAutomationForm(exits);
+assert.equal(exitsParsed.ok, true);
+if (exitsParsed.ok) {
+  assert.equal(exitsParsed.rules[0]?.tpsl?.takeProfit, 95000);
+  assert.equal(exitsParsed.rules[0]?.tpsl?.stopLoss, 85000);
+  assert.equal(exitsParsed.rules[0]?.tpsl?.tpTrigger, "last");
+  assert.equal(exitsParsed.rules[0]?.tpsl?.slTrigger, "mark");
 }
 
 const close = new FormData();

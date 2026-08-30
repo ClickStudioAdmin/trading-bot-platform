@@ -10,6 +10,7 @@ import { sweepPerpsBacktestFormAction } from "@/lib/backtest/actions";
 import { listAllBacktestRuns } from "@/lib/backtest/store";
 import { listAllTemplates } from "@/lib/templates/store";
 import { firstSearchValue } from "@/lib/paper/open";
+import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 
 export const metadata: Metadata = {
@@ -31,10 +32,14 @@ export default async function AdminBacktestsPage({
     listAllTemplates(),
     listAllBacktestRuns(200),
   ]);
-  const perps = templates.filter(
-    (row) =>
-      row.recipe.kind === "perps" && canBacktestPerpsRecipe(row.recipe).ok,
-  );
+  const sweepable = templates.filter((row) => {
+    if (row.recipe.kind === "dca") {
+      return canBacktestDcaRecipe(row.recipe).ok;
+    }
+    return (
+      row.recipe.kind === "perps" && canBacktestPerpsRecipe(row.recipe).ok
+    );
+  });
   const ranked = [...runs]
     .filter((row) => row.status === "done" && row.stats)
     .sort(
@@ -46,8 +51,8 @@ export default async function AdminBacktestsPage({
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading overline="Admin" title="Backtests" />
       <p className="mb-6 max-w-2xl text-sm text-ink-muted">
-        Bounded sweep: one Perps bots template across up to 10 contracts. Paper
-        klines only. Rank default is realized.
+        Bounded sweep: one Perps bots or DCA template across up to 10
+        contracts. Paper klines only. Rank default is realized.
       </p>
 
       <section className="mb-8 max-w-xl rounded-card border border-line bg-surface p-5">
@@ -60,8 +65,9 @@ export default async function AdminBacktestsPage({
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
               required
             >
-              {perps.map((row) => (
+              {sweepable.map((row) => (
                 <option key={row.id} value={row.id}>
+                  {row.recipe.kind === "dca" ? "DCA" : "Perps"} ·{" "}
                   {row.visibility} · {row.name}
                 </option>
               ))}

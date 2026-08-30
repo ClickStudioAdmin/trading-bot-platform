@@ -65,6 +65,7 @@ import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { perpEffectiveMaxQty, perpTicketSizeError } from "@/lib/exchanges/bybit/ticket-size";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import Link from "next/link";
+import { BacktestDcaButton } from "@/components/backtest-dialog";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
 import {
@@ -351,6 +352,7 @@ export function DcaPlaybooksDesk({
   templates = [],
   sets = [],
   policy = BYBIT_DCA_UI,
+  venueEnvironment = null,
 }: {
   playbooks: DcaPlaybook[];
   options: LinearPerp[];
@@ -364,6 +366,7 @@ export function DcaPlaybooksDesk({
   templates?: TemplateSummary[];
   sets?: AutomationTemplateSet[];
   policy?: DcaPlaybookUiPolicy;
+  venueEnvironment?: string | null;
 }) {
   const [cards, setCards] = useState<
     { key: string; playbook: DcaPlaybook | null; seed?: DcaPlaybook }[]
@@ -430,6 +433,7 @@ export function DcaPlaybooksDesk({
             isAdmin={isAdmin}
             folders={sets}
             policy={policy}
+            venueEnvironment={venueEnvironment}
             defaultName={
               card.playbook?.name ??
               card.seed?.name ??
@@ -538,6 +542,7 @@ export function DcaPlaybookForm({
   isAdmin = false,
   folders = [],
   policy = BYBIT_DCA_UI,
+  venueEnvironment = null,
 }: {
   playbook: DcaPlaybook | null;
   seed?: DcaPlaybook | null;
@@ -553,6 +558,7 @@ export function DcaPlaybookForm({
   isAdmin?: boolean;
   folders?: AutomationTemplateSet[];
   policy?: DcaPlaybookUiPolicy;
+  venueEnvironment?: string | null;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const source = playbook ?? seed;
@@ -732,6 +738,36 @@ export function DcaPlaybookForm({
       ? "short"
       : "long";
   const summary = summaryBySide[activeLadderSide];
+  function snapshotForm() {
+    return dcaFormToSnapshotSource(formRef.current, {
+      name:
+        readFormControl(formRef.current, "name") ||
+        source?.name ||
+        defaultName ||
+        DEFAULT_DCA_NAME,
+      symbol,
+      direction,
+      startKind,
+      averaging,
+      restGrid: averaging === "dip" && restGrid,
+      sizeUnit,
+      clipSize,
+      maxType: effectiveMaxType,
+      maxClips,
+      maxValue,
+      dipPct,
+      intervalUnit,
+      sizeMultiplier,
+      deviationMultiplier,
+      takeProfitPct,
+      takeProfitBasis,
+      takeProfitOrderType,
+      stopLossPct,
+      stopLossBasis,
+      indicatorKind,
+      indicatorCompare,
+    });
+  }
   const removeControl = playbook ? (
     running ? (
       <span
@@ -1589,41 +1625,20 @@ export function DcaPlaybookForm({
           </div>
         ) : null}
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          <BacktestDcaButton
+            saved={Boolean(playbook?.id)}
+            webhookStart={startKind === "webhook"}
+            venueId={policy.venueId}
+            venueEnvironment={venueEnvironment}
+            playbookId={playbook?.id ?? ""}
+            buildForm={snapshotForm}
+          />
           <SaveAsTemplateButton
             isAdmin={isAdmin}
             defaultName={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
             kind="dca"
             folders={folders}
-            buildForm={() =>
-              dcaFormToSnapshotSource(formRef.current, {
-                name:
-                  readFormControl(formRef.current, "name") ||
-                  source?.name ||
-                  defaultName ||
-                  DEFAULT_DCA_NAME,
-                symbol,
-                direction,
-                startKind,
-                averaging,
-                restGrid: averaging === "dip" && restGrid,
-                sizeUnit,
-                clipSize,
-                maxType: effectiveMaxType,
-                maxClips,
-                maxValue,
-                dipPct,
-                intervalUnit,
-                sizeMultiplier,
-                deviationMultiplier,
-                takeProfitPct,
-                takeProfitBasis,
-                takeProfitOrderType,
-                stopLossPct,
-                stopLossBasis,
-                indicatorKind,
-                indicatorCompare,
-              })
-            }
+            buildForm={snapshotForm}
           />
           {removeControl}
         </div>

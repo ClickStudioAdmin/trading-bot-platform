@@ -10,6 +10,7 @@ import type { PaperEngineLayer } from "@/lib/engine/decide";
 import { parsePaperRulesForm, type PaperLayerFormValues } from "@/lib/engine/rules";
 import {
   parseFuturesAutomationForm,
+  writeAutomationExitsToForm,
   type FuturesAutomationFormValues,
   type FuturesAutomationRule,
 } from "@/lib/futures/automation";
@@ -99,6 +100,8 @@ export type PerpsTemplateRecipe = {
   triggerCompare: FuturesAutomationFormValues["triggerCompare"];
   triggerPrice: string;
   skipIfOpen: boolean;
+  tpsl: FuturesAutomationFormValues["tpsl"];
+  trailing: FuturesAutomationFormValues["trailing"];
 };
 
 export type PaperTemplateRecipe = {
@@ -208,6 +211,8 @@ export function snapshotPerpsRecipe(
     | "triggerCompare"
     | "triggerPrice"
     | "skipIfOpen"
+    | "tpsl"
+    | "trailing"
   >,
 ): PerpsTemplateRecipe {
   const formAction =
@@ -232,6 +237,8 @@ export function snapshotPerpsRecipe(
     triggerCompare: rule.triggerCompare,
     triggerPrice: String(rule.triggerPrice),
     skipIfOpen: rule.skipIfOpen,
+    tpsl: rule.tpsl,
+    trailing: rule.trailing,
   };
 }
 
@@ -323,6 +330,8 @@ function parsePerpsTemplateRecipe(
     triggerCompare: row.triggerCompare === "lte" ? "lte" : "gte",
     triggerPrice: String(row.triggerPrice ?? ""),
     skipIfOpen: row.skipIfOpen !== false,
+    tpsl: (row.tpsl as PerpsTemplateRecipe["tpsl"]) ?? null,
+    trailing: (row.trailing as PerpsTemplateRecipe["trailing"]) ?? null,
   };
   const built = perpsRecipeToRule(recipe, { sortOrder: 0 });
   if (!built.ok) {
@@ -521,6 +530,7 @@ export function perpsRecipeToRule(
   if (recipe.skipIfOpen) {
     form.set("r0_skipIfOpen", "on");
   }
+  writeAutomationExitsToForm(form, "r0_", recipe.tpsl, recipe.trailing);
   const parsed = parseFuturesAutomationForm(form, venue);
   if (!parsed.ok) {
     return parsed;
@@ -751,6 +761,7 @@ export function perpsFormToSnapshotSource(
   if (layer.skipIfOpen) {
     form.set("r0_skipIfOpen", "on");
   }
+  writeAutomationExitsToForm(form, "r0_", layer.tpsl, layer.trailing);
   return form;
 }
 

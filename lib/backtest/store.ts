@@ -1,11 +1,13 @@
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { parseDcaIndicatorTimeframe } from "@/lib/dca/indicators";
-import { parseTemplateRecipe, type PerpsTemplateRecipe } from "@/lib/templates/recipe";
+import { parseTemplateRecipe } from "@/lib/templates/recipe";
 import {
   parseBacktestStatus,
   parseFeePreset,
+  type BacktestDeskType,
   type BacktestFeePreset,
+  type BacktestRecipe,
   type BacktestRun,
   type BacktestStats,
   type BacktestStatus,
@@ -76,9 +78,15 @@ function parseStats(raw: unknown): BacktestStats | null {
   };
 }
 
-function parseRecipe(raw: unknown): PerpsTemplateRecipe | null {
-  const parsed = parseTemplateRecipe(raw, "perps", 1);
-  if (!parsed.ok || parsed.recipe.kind !== "perps") {
+function parseRecipe(
+  raw: unknown,
+  deskType: BacktestDeskType,
+): BacktestRecipe | null {
+  const parsed = parseTemplateRecipe(raw, deskType, 1);
+  if (!parsed.ok) {
+    return null;
+  }
+  if (parsed.recipe.kind !== "perps" && parsed.recipe.kind !== "dca") {
     return null;
   }
   return parsed.recipe;
@@ -89,7 +97,9 @@ export function parseBacktestRunRow(
 ): BacktestRun | null {
   const status = parseBacktestStatus(row.status);
   const interval = parseDcaIndicatorTimeframe(row.interval);
-  const recipe = parseRecipe(row.recipe);
+  const deskType: BacktestDeskType =
+    row.desk_type === "dca" ? "dca" : "perps";
+  const recipe = parseRecipe(row.recipe, deskType);
   if (!status || !interval || !recipe) {
     return null;
   }
@@ -97,7 +107,7 @@ export function parseBacktestRunRow(
     id: String(row.id),
     userId: row.user_id ? String(row.user_id) : null,
     templateId: row.template_id ? String(row.template_id) : null,
-    deskType: "perps",
+    deskType,
     venue: String(row.venue ?? "bybit"),
     venueEnvironment: row.venue_environment
       ? String(row.venue_environment)
@@ -129,7 +139,7 @@ export async function insertBacktestRun(input: {
   toMs: number;
   feePreset: BacktestFeePreset;
   feeRate: number;
-  recipe: PerpsTemplateRecipe;
+  recipe: BacktestRecipe;
 }): Promise<BacktestRun | null> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -140,7 +150,7 @@ export async function insertBacktestRun(input: {
     .insert({
       user_id: input.userId,
       template_id: input.templateId,
-      desk_type: "perps",
+      desk_type: input.recipe.kind,
       venue: input.venue,
       venue_environment: input.venueEnvironment,
       symbol: input.symbol,

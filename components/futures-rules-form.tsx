@@ -26,6 +26,8 @@ import {
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
 import { BacktestBotButton } from "@/components/backtest-dialog";
+import { FuturesTpslFields } from "@/components/futures-tpsl";
+import { FuturesTrailingFields } from "@/components/futures-trailing";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
@@ -43,6 +45,7 @@ export function FuturesAutomationsDesk({
   sets = [],
   venueId = "bybit",
   quoteLabel = "USDT",
+  venueEnvironment = null,
 }: {
   rules: FuturesAutomationFormValues[];
   options: LinearPerp[];
@@ -55,6 +58,7 @@ export function FuturesAutomationsDesk({
   sets?: AutomationTemplateSet[];
   venueId?: string;
   quoteLabel?: string;
+  venueEnvironment?: string | null;
 }) {
   const [layers, setLayers] = useState(rules);
   const [cloneMenu, setCloneMenu] = useState(0);
@@ -118,6 +122,7 @@ export function FuturesAutomationsDesk({
             folders={sets}
             quoteLabel={quoteLabel}
             venueId={venueId}
+            venueEnvironment={venueEnvironment}
             onRemove={() => {
               const next = layers.filter((item) => item.key !== layer.key);
               setLayers(next);
@@ -208,6 +213,7 @@ function RuleCard({
   folders = [],
   quoteLabel = "USDT",
   venueId = "bybit",
+  venueEnvironment = null,
 }: {
   index: number;
   layer: FuturesAutomationFormValues;
@@ -220,6 +226,7 @@ function RuleCard({
   folders?: AutomationTemplateSet[];
   quoteLabel?: string;
   venueId?: string;
+  venueEnvironment?: string | null;
 }) {
   const prefix = `r${index}_`;
   const [mode, setMode] = useState(layer.mode);
@@ -481,6 +488,16 @@ function RuleCard({
         )}
       </div>
 
+      {!closing ? (
+        <>
+          <FuturesTpslFields namePrefix={prefix} defaultTpsl={layer.tpsl} />
+          <FuturesTrailingFields
+            namePrefix={prefix}
+            defaultTrailing={layer.trailing}
+          />
+        </>
+      ) : null}
+
       <div className="mt-3 flex items-end justify-between gap-3">
         {closing ? (
           <span />
@@ -506,6 +523,7 @@ function RuleCard({
             saved={Boolean(layer.id)}
             webhookEntry={webhookEntry}
             venueId={venueId}
+            venueEnvironment={venueEnvironment}
             layer={{
               ...layer,
               mode,

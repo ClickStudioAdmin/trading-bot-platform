@@ -1,6 +1,18 @@
 import { decideFuturesAutomationTick } from "@/lib/futures/automation";
 import { triggerConditionMet } from "@/lib/futures/automation";
 import type { FuturesAction, FuturesSide } from "@/lib/futures/model";
+import {
+  paperStopLossHit,
+  paperTakeProfitHit,
+  tpslHasLevels,
+  type FuturesTpsl,
+} from "@/lib/futures/tpsl";
+import {
+  armTrailingAt,
+  paperTrailingAdvance,
+  trailingHasStop,
+  type FuturesTrailing,
+} from "@/lib/futures/trailing";
 import type { CandleBar } from "@/lib/market/candles";
 import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
 import {
@@ -53,21 +65,39 @@ function sizeAtPrice(recipe: PerpsTemplateRecipe, price: number): number {
   return recipe.sizeUnit === "usdt" ? size / price : size;
 }
 
+type OpenSim = {
+  side: FuturesSide;
+  qty: number;
+  entry: number;
+  tpsl: FuturesTpsl | null;
+  trailing: FuturesTrailing | null;
+};
+
 function mergeSimPosition(
-  current: { side: FuturesSide; qty: number; entry: number } | null,
+  current: OpenSim | null,
   side: FuturesSide,
   qty: number,
   price: number,
-): { side: FuturesSide; qty: number; entry: number } {
+  tpsl: FuturesTpsl | null,
+  trailing: FuturesTrailing | null,
+): OpenSim {
   if (current && current.side === side) {
     const nextQty = current.qty + qty;
     return {
       side,
       qty: nextQty,
       entry: (current.entry * current.qty + price * qty) / nextQty,
+      tpsl: current.tpsl ?? tpsl,
+      trailing: current.trailing ?? trailing,
     };
   }
-  return { side, qty, entry: price };
+  return {
+    side,
+    qty,
+    entry: price,
+    tpsl,
+    trailing: trailing ? armTrailingAt(trailing, price) : null,
+  };
 }
 
 function feeUsdt(qty: number, price: number, feeRate: number): number {
@@ -97,7 +127,6 @@ export function replayPerpsPriceCross(input: {
     String(input.recipe.triggerPrice).replace(/,/g, "").trim(),
   );
   let wasTrue = false;
-  type OpenSim = { side: FuturesSide; qty: number; entry: number };
   let open: OpenSim | null = null;
   const orders: SimulatedOrder[] = [];
   let realized = 0;
@@ -109,6 +138,45 @@ export function replayPerpsPriceCross(input: {
   let maxDrawdown = 0;
   let barsIn = 0;
 
+  function flattenOpen(atMs: number, fill: number) {
+    if (!open) {
+      return;
+    }
+    const fee = feeUsdt(open.qty, fill, input.feeRate);
+    const pnl = unrealized(open.side, open.qty, open.entry, fill) - fee;
+    realized += pnl;
+    trades += 1;
+    if (pnl > 0) {
+      wins += 1;
+      grossWin += pnl;
+    } else {
+      grossLoss += Math.abs(pnl);
+    }
+    orders.push({
+      atMs,
+      action: "flatten",
+      side: open.side,
+      qty: open.qty,
+      price: fill,
+      feeUsdt: fee,
+      realizedUsdt: pnl,
+    });
+    open = null;
+  }
+
+  function markEquity(price: number) {
+    const mark = open
+      ? realized + unrealized(open.side, open.qty, open.entry, price)
+      : realized;
+    if (mark > peak) {
+      peak = mark;
+    }
+    const drawdown = peak - mark;
+    if (drawdown > maxDrawdown) {
+      maxDrawdown = drawdown;
+    }
+  }
+
   for (const bar of input.bars) {
     const price = bar.close;
     if (!(price > 0)) {
@@ -116,6 +184,46 @@ export function replayPerpsPriceCross(input: {
     }
     if (open) {
       barsIn += 1;
+      const adverse = open.side === "long" ? bar.low : bar.high;
+      const favorable = open.side === "long" ? bar.high : bar.low;
+      const quotes = {
+        last: adverse,
+        mark: adverse,
+        index: adverse,
+      };
+      if (open.tpsl && tpslHasLevels(open.tpsl)) {
+        const sl = paperStopLossHit({
+          side: open.side,
+          tpsl: open.tpsl,
+          ...quotes,
+        });
+        if (sl) {
+          flattenOpen(bar.timeMs, sl.price);
+        }
+      }
+      if (open?.trailing && trailingHasStop(open.trailing)) {
+        const trail = paperTrailingAdvance({
+          side: open.side,
+          trailing: open.trailing,
+          last: adverse,
+        });
+        open.trailing = { ...open.trailing, peak: trail.peak };
+        if (trail.hit && trail.fillPrice != null) {
+          flattenOpen(bar.timeMs, trail.fillPrice);
+        }
+      }
+      if (open?.tpsl && tpslHasLevels(open.tpsl)) {
+        const tp = paperTakeProfitHit({
+          side: open.side,
+          tpsl: open.tpsl,
+          last: favorable,
+          mark: favorable,
+          index: favorable,
+        });
+        if (tp) {
+          flattenOpen(bar.timeMs, tp.price);
+        }
+      }
     }
     const conditionMet = triggerConditionMet(
       price,
@@ -141,28 +249,7 @@ export function replayPerpsPriceCross(input: {
     wasTrue = decision.nextTrue;
     if (decision.fire) {
       if (action === "flatten" && open) {
-        const pnl =
-          unrealized(open.side, open.qty, open.entry, price) -
-          feeUsdt(open.qty, price, input.feeRate);
-        const fee = feeUsdt(open.qty, price, input.feeRate);
-        realized += pnl;
-        trades += 1;
-        if (pnl > 0) {
-          wins += 1;
-          grossWin += pnl;
-        } else {
-          grossLoss += Math.abs(pnl);
-        }
-        orders.push({
-          atMs: bar.timeMs,
-          action: "flatten",
-          side: open.side,
-          qty: open.qty,
-          price,
-          feeUsdt: fee,
-          realizedUsdt: pnl,
-        });
-        open = null;
+        flattenOpen(bar.timeMs, price);
       } else if (action === "buy" || action === "sell") {
         const side: FuturesSide = action === "sell" ? "short" : "long";
         const qty = sizeAtPrice(input.recipe, price);
@@ -178,20 +265,18 @@ export function replayPerpsPriceCross(input: {
             feeUsdt: fee,
             realizedUsdt: -fee,
           });
-          open = mergeSimPosition(open, side, qty, price);
+          open = mergeSimPosition(
+            open,
+            side,
+            qty,
+            price,
+            input.recipe.tpsl,
+            input.recipe.trailing,
+          );
         }
       }
     }
-    const mark = open
-      ? realized + unrealized(open.side, open.qty, open.entry, price)
-      : realized;
-    if (mark > peak) {
-      peak = mark;
-    }
-    const drawdown = peak - mark;
-    if (drawdown > maxDrawdown) {
-      maxDrawdown = drawdown;
-    }
+    markEquity(price);
   }
 
   const last = input.bars[input.bars.length - 1];

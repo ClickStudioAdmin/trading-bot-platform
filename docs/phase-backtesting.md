@@ -1,6 +1,6 @@
 # Backtesting
 
-**Roadmap 4, plan B.** In repo (Perps bots price-cross). Pairs with [phase-charts.md](phase-charts.md). Shared chart kit; **separate page** in the account dashboard.
+**Roadmap 4, plan B.** In repo (Perps bots price-cross **and** DCA). Pairs with [phase-charts.md](phase-charts.md). Shared chart kit; **separate page** in the account dashboard.
 
 ## Purpose
 
@@ -27,13 +27,16 @@ Account nav (with Bot Templates): **Backtests**. Admin: **Backtests** under `/ad
 
 | Lock | Decision |
 | --- | --- |
-| First recipe | **Perps bots price-cross only.** Webhook-entry skipped. DCA later. |
+| Recipes | **Perps bots price-cross** and **DCA** (immediate / price / indicator start). Webhook-entry and webhook-start skipped. |
+| Perps bot exits | Same ticket set as manual: TP/SL (full/partial, last/mark/index, market/limit) plus trailing. Optional. Buy/sell only. Flatten rules stay flatten-only. |
 | Unpublished runs | **Owner only** (plus admin). |
-| Bar fill | Decide on **bar close**, fill at **close**. Same `decideFuturesAutomationTick` as live. |
+| Bar fill (entries) | Decide on **bar close**, fill at **close**. |
+| Bar fill (exits) | Stop and trailing use the **adverse wick**. Take profit uses the **favorable wick** (Perps) or close (DCA percent exits). If stop and take profit both print on the same bar, **stop wins**. |
 | Fee | Named preset `vip0_taker` = **6 bps all-in** per fill. |
 | Rank | **Realized** USDT. |
-| Sweep | Admin: one template × up to **10** contracts. Runs inline (not Fly). |
+| Sweep | Admin: one template × up to **10** contracts. Runs inline (not Fly). Perps or DCA. |
 | Window | 30d default, 90d option. Timeframes 15m / 1h / 4h / D. |
+| DCA start | Replay treats legs as **armed** at the window start (Save and Arm). Immediate fires the first clip on the first close. |
 
 ## How it sits on templates
 
@@ -50,28 +53,28 @@ New table `backtest_runs`:
 
 - `id`, `user_id` (null on published copies)
 - `template_id` (the `backtested` snapshot)
-- `desk_type` + `venue` + `symbol` + window + timeframe
+- `desk_type` (`perps` \| `dca`) + `venue` + `symbol` + window + timeframe
 - `status`: `queued` \| `running` \| `done` \| `failed` \| `cancelled`
 - `fee_preset` / `fee_rate`
 - `stats` JSON, `orders` JSON (simulated only, source backtest)
 - Immutable after `done` (updates only while queued/running). A re-run creates a new row.
 
-Migration: `supabase/migrations/20260830120000_backtest_runs.sql`.
+Migrations: `supabase/migrations/20260830120000_backtest_runs.sql`, `supabase/migrations/20260830133000_bot_exits_and_dca_backtest.sql`.
 
 ## Engine rules
 
-- Replay uses `decideFuturesAutomationTick` on each bar close.
-- Signal / webhook When: **rejected** at queue time.
+- Perps replay uses `decideFuturesAutomationTick` on each bar close, then ticket exits on the same book.
+- DCA replay uses `decideDcaTick` (same clip / percent-exit / breakeven math as live).
+- Signal / webhook When or webhook-start: **rejected** at queue time.
 - Venue truth: Bybit klines for Bybit, HL candles for HL.
 - Does not write `futures_orders` / paper carries.
 
 ## Shared with charts (plan A)
 
-Same `<DeskChart>`, candle API, and overlay renderer. Backtest overlay source = `backtest_runs.orders` plus the When line.
+Same `<DeskChart>`, candle API, and overlay renderer. Backtest overlay source = `backtest_runs.orders` plus the When line (Perps only).
 
 ## Out of scope (still)
 
-- DCA replay.
 - TV Strategy / webhook-only recipes.
 - C&C, walk-forward, tick-level, Pine parity.
 - Unbounded cartesian knob sweeps (Fly job storm later).

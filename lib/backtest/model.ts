@@ -1,5 +1,11 @@
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
-import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
+import type {
+  DcaTemplateRecipe,
+  PerpsTemplateRecipe,
+} from "@/lib/templates/recipe";
+
+export type BacktestRecipe = PerpsTemplateRecipe | DcaTemplateRecipe;
+export type BacktestDeskType = "perps" | "dca";
 
 export const BACKTEST_FEE_PRESETS = {
   vip0_taker: {
@@ -45,7 +51,7 @@ export type BacktestRun = {
   id: string;
   userId: string | null;
   templateId: string | null;
-  deskType: "perps";
+  deskType: BacktestDeskType;
   venue: string;
   venueEnvironment: string | null;
   symbol: string;
@@ -55,7 +61,7 @@ export type BacktestRun = {
   feePreset: BacktestFeePreset;
   feeRate: number;
   status: BacktestStatus;
-  recipe: PerpsTemplateRecipe;
+  recipe: BacktestRecipe;
   stats: BacktestStats | null;
   orders: SimulatedOrder[];
   error: string | null;

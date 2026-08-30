@@ -44,15 +44,19 @@ export default async function AccountBacktestsPage({
     listBacktestRuns({ userId: member.id }),
     listTradingAccounts(member.id),
   ]);
-  const perpsDesks = desks
-    .filter((desk) => deskAllowsPerpsRecipes(desk.deskType))
-    .map((desk) => ({ id: desk.id, name: desk.name }));
   const selected = selectedId ? await loadBacktestRun(selectedId) : null;
   const isAdmin = memberIsAdmin(member);
   const run =
     selected && canReadBacktestRun(selected, member.id, isAdmin)
       ? selected
       : null;
+  const applyDesks = desks
+    .filter((desk) =>
+      run?.deskType === "dca"
+        ? desk.deskType === "dca"
+        : deskAllowsPerpsRecipes(desk.deskType),
+    )
+    .map((desk) => ({ id: desk.id, name: desk.name }));
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -68,12 +72,13 @@ export default async function AccountBacktestsPage({
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-ink-muted">
-        Paper replay of a saved Perps bots price-cross. Runs never write the
-        live blotter. Apply a backtested snapshot from a desk — it stays idle.
+        Paper replay of a saved Perps bots price-cross or DCA playbook. Runs
+        never write the live blotter. Apply a backtested snapshot from a desk
+        — it stays idle.
       </p>
       {runs.length === 0 ? (
         <p className="text-sm text-ink-muted">
-          No runs yet. Open a saved Perps bot on Automations and choose
+          No runs yet. Open a saved Perps bot or DCA on Automations and choose
           Backtest.
         </p>
       ) : (
@@ -82,6 +87,7 @@ export default async function AccountBacktestsPage({
             <thead className="text-xs uppercase tracking-[0.16em] text-ink-muted">
               <tr>
                 <th className="py-2 pr-4 font-medium">Bot</th>
+                <th className="py-2 pr-4 font-medium">Type</th>
                 <th className="py-2 pr-4 font-medium">Contract</th>
                 <th className="py-2 pr-4 font-medium">Window</th>
                 <th className="py-2 pr-4 font-medium">Status</th>
@@ -103,6 +109,9 @@ export default async function AccountBacktestsPage({
                         published
                       </span>
                     ) : null}
+                  </td>
+                  <td className="py-2 pr-4 text-ink-muted">
+                    {row.deskType === "dca" ? "DCA" : "Perps"}
                   </td>
                   <td className="py-2 pr-4 tabular-nums">{row.symbol}</td>
                   <td className="py-2 pr-4 text-ink-muted">
@@ -144,7 +153,7 @@ export default async function AccountBacktestsPage({
               {run.status === "done" ? (
                 <ApplyBacktestButton
                   templateId={run.templateId}
-                  desks={perpsDesks}
+                  desks={applyDesks}
                 />
               ) : null}
               {run.status === "done" && run.userId === member.id ? (

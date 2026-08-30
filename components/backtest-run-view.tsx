@@ -190,7 +190,10 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
               <DeskChart
                 candles={candles}
                 overlay={buildBacktestChartOverlay({
-                  triggerPrice: Number(run.recipe.triggerPrice),
+                  triggerPrice:
+                    run.recipe.kind === "perps"
+                      ? Number(run.recipe.triggerPrice)
+                      : null,
                   orders: run.orders,
                 })}
               />

@@ -15,7 +15,19 @@ import {
   type FuturesSide,
   type FuturesTrigger,
 } from "./model";
-import { parseFuturesTrigger } from "./tpsl";
+import {
+  parseFuturesTpslForm,
+  parseFuturesTrigger,
+  tpslFromRow,
+  tpslHasLevels,
+  type FuturesTpsl,
+} from "./tpsl";
+import {
+  parseFuturesTrailingForm,
+  trailingFromRow,
+  trailingHasStop,
+  type FuturesTrailing,
+} from "./trailing";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
 
 export type FuturesTriggerCompare = "gte" | "lte";
@@ -39,6 +51,8 @@ export type FuturesAutomationRule = {
   triggerCompare: FuturesTriggerCompare;
   triggerPrice: number;
   skipIfOpen: boolean;
+  tpsl: FuturesTpsl | null;
+  trailing: FuturesTrailing | null;
   conditionTrue: boolean;
   lastFiredAtMs: number | null;
 };
@@ -60,6 +74,8 @@ export type FuturesAutomationFormValues = {
   triggerCompare: FuturesTriggerCompare;
   triggerPrice: string;
   skipIfOpen: boolean;
+  tpsl: FuturesTpsl | null;
+  trailing: FuturesTrailing | null;
 };
 
 export function defaultFuturesAutomationForm(
@@ -83,6 +99,8 @@ export function defaultFuturesAutomationForm(
     triggerCompare: "gte",
     triggerPrice: "",
     skipIfOpen: true,
+    tpsl: null,
+    trailing: null,
   };
 }
 
@@ -290,9 +308,113 @@ export function parseFuturesAutomationForm(
     if (!parsed.ok) {
       return parsed;
     }
+    const exits = parseAutomationExits(form, prefix);
+    if (!exits.ok) {
+      return exits;
+    }
+    parsed.rule.tpsl =
+      parsed.rule.action === "flatten" ? null : exits.tpsl;
+    parsed.rule.trailing =
+      parsed.rule.action === "flatten" ? null : exits.trailing;
     rules.push(parsed.rule);
   }
   return { ok: true, rules };
+}
+
+const EXIT_FORM_KEYS = [
+  "tpsl",
+  "tpslMode",
+  "takeProfit",
+  "stopLoss",
+  "tpTrigger",
+  "slTrigger",
+  "tpQty",
+  "slQty",
+  "tpOrderType",
+  "slOrderType",
+  "tpLimitPrice",
+  "slLimitPrice",
+  "trailing",
+  "trailingStop",
+  "trailingActivation",
+  "trailingActive",
+] as const;
+
+export function slicePrefixedForm(form: FormData, prefix: string): FormData {
+  const next = new FormData();
+  for (const key of EXIT_FORM_KEYS) {
+    const value = form.get(`${prefix}${key}`);
+    if (value != null && value !== "") {
+      next.set(key, value);
+    }
+  }
+  if (form.get(`${prefix}tpsl`) === "on") {
+    next.set("tpsl", "on");
+  }
+  if (form.get(`${prefix}trailing`) === "on") {
+    next.set("trailing", "on");
+  }
+  return next;
+}
+
+function parseAutomationExits(
+  form: FormData,
+  prefix: string,
+):
+  | { ok: true; tpsl: FuturesTpsl | null; trailing: FuturesTrailing | null }
+  | { ok: false; error: string } {
+  const sliced = slicePrefixedForm(form, prefix);
+  const tpsl = parseFuturesTpslForm(sliced, undefined);
+  if (!tpsl.ok) {
+    return tpsl;
+  }
+  const trailing = parseFuturesTrailingForm(sliced, undefined);
+  if (!trailing.ok) {
+    return trailing;
+  }
+  return { ok: true, tpsl: tpsl.tpsl, trailing: trailing.trailing };
+}
+
+export function writeAutomationExitsToForm(
+  form: FormData,
+  prefix: string,
+  tpsl: FuturesTpsl | null,
+  trailing: FuturesTrailing | null,
+): void {
+  if (tpsl && tpslHasLevels(tpsl)) {
+    form.set(`${prefix}tpsl`, "on");
+    form.set(`${prefix}tpslMode`, tpsl.mode);
+    if (tpsl.takeProfit != null) {
+      form.set(`${prefix}takeProfit`, String(tpsl.takeProfit));
+    }
+    if (tpsl.stopLoss != null) {
+      form.set(`${prefix}stopLoss`, String(tpsl.stopLoss));
+    }
+    form.set(`${prefix}tpTrigger`, tpsl.tpTrigger);
+    form.set(`${prefix}slTrigger`, tpsl.slTrigger);
+    if (tpsl.tpQty != null) {
+      form.set(`${prefix}tpQty`, String(tpsl.tpQty));
+    }
+    if (tpsl.slQty != null) {
+      form.set(`${prefix}slQty`, String(tpsl.slQty));
+    }
+    form.set(`${prefix}tpOrderType`, tpsl.tpOrderType);
+    form.set(`${prefix}slOrderType`, tpsl.slOrderType);
+    if (tpsl.tpLimitPrice != null) {
+      form.set(`${prefix}tpLimitPrice`, String(tpsl.tpLimitPrice));
+    }
+    if (tpsl.slLimitPrice != null) {
+      form.set(`${prefix}slLimitPrice`, String(tpsl.slLimitPrice));
+    }
+  }
+  if (trailing && trailingHasStop(trailing)) {
+    form.set(`${prefix}trailing`, "on");
+    form.set(`${prefix}trailingStop`, String(trailing.distance));
+    if (trailing.activePrice != null) {
+      form.set(`${prefix}trailingActivation`, "on");
+      form.set(`${prefix}trailingActive`, String(trailing.activePrice));
+    }
+  }
 }
 
 export function parseFuturesAutomationFields(input: {
@@ -407,6 +529,8 @@ export function parseFuturesAutomationFields(input: {
       triggerCompare: compare.compare,
       triggerPrice: triggerPrice.price,
       skipIfOpen: parseSkipIfOpen(input.skipIfOpen),
+      tpsl: null,
+      trailing: null,
       conditionTrue: Boolean(input.conditionTrue),
       lastFiredAtMs: Number.isFinite(lastFired) ? lastFired : null,
     },
@@ -467,6 +591,8 @@ function emptyParsedRule(): FuturesAutomationRule {
     triggerCompare: "gte",
     triggerPrice: 1,
     skipIfOpen: true,
+    tpsl: null,
+    trailing: null,
     conditionTrue: false,
     lastFiredAtMs: null,
   };
@@ -502,6 +628,30 @@ export function parseFuturesAutomationRow(
     venue: venue ?? "bybit",
   });
   if (preferred.ok) {
+    const tpBy = parseFuturesTrigger(row.tp_trigger);
+    const slBy = parseFuturesTrigger(row.sl_trigger);
+    preferred.rule.tpsl = tpslFromRow({
+      takeProfit: Number(row.take_profit) > 0 ? Number(row.take_profit) : null,
+      stopLoss: Number(row.stop_loss) > 0 ? Number(row.stop_loss) : null,
+      tpTrigger: tpBy.ok ? tpBy.trigger : "last",
+      slTrigger: slBy.ok ? slBy.trigger : "last",
+      tpslMode: row.tpsl_mode === "partial" ? "partial" : "full",
+      tpQty: Number(row.tp_qty) > 0 ? Number(row.tp_qty) : null,
+      slQty: Number(row.sl_qty) > 0 ? Number(row.sl_qty) : null,
+      tpOrderType: row.tp_order_type === "limit" ? "limit" : "market",
+      slOrderType: row.sl_order_type === "limit" ? "limit" : "market",
+      tpLimitPrice:
+        Number(row.tp_limit_price) > 0 ? Number(row.tp_limit_price) : null,
+      slLimitPrice:
+        Number(row.sl_limit_price) > 0 ? Number(row.sl_limit_price) : null,
+    });
+    preferred.rule.trailing = trailingFromRow({
+      trailingStop:
+        Number(row.trailing_stop) > 0 ? Number(row.trailing_stop) : null,
+      trailingActive:
+        Number(row.trailing_active) > 0 ? Number(row.trailing_active) : null,
+      trailingPeak: null,
+    });
     return preferred.rule;
   }
   if (venue) {
@@ -544,6 +694,8 @@ export function futuresRuleToForm(
     triggerCompare: rule.triggerCompare,
     triggerPrice: String(rule.triggerPrice),
     skipIfOpen: rule.skipIfOpen,
+    tpsl: rule.tpsl,
+    trailing: rule.trailing,
   };
 }
 
@@ -572,6 +724,19 @@ export function futuresAutomationToRow(
     trigger_compare: rule.triggerCompare,
     trigger_price: rule.triggerPrice,
     skip_if_open: rule.skipIfOpen,
+    take_profit: rule.tpsl?.takeProfit ?? null,
+    stop_loss: rule.tpsl?.stopLoss ?? null,
+    tp_trigger: rule.tpsl?.tpTrigger ?? null,
+    sl_trigger: rule.tpsl?.slTrigger ?? null,
+    tpsl_mode: rule.tpsl?.mode ?? null,
+    tp_qty: rule.tpsl?.tpQty ?? null,
+    sl_qty: rule.tpsl?.slQty ?? null,
+    tp_order_type: rule.tpsl?.tpOrderType ?? null,
+    sl_order_type: rule.tpsl?.slOrderType ?? null,
+    tp_limit_price: rule.tpsl?.tpLimitPrice ?? null,
+    sl_limit_price: rule.tpsl?.slLimitPrice ?? null,
+    trailing_stop: rule.trailing?.distance ?? null,
+    trailing_active: rule.trailing?.activePrice ?? null,
     condition_true: false,
     updated_at: new Date().toISOString(),
   };

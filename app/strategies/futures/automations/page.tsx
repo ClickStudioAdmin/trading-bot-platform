@@ -149,6 +149,7 @@ export default async function FuturesAutomationsPage({
             templates={templates.map(templateToSummary)}
             sets={sets}
             policy={hl ? HYPERLIQUID_DCA_UI : undefined}
+            venueEnvironment={session.account.venueEnvironment}
           />
         </div>
       </main>
@@ -223,6 +224,7 @@ export default async function FuturesAutomationsPage({
           sets={sets}
           venueId={hl ? "hyperliquid" : "bybit"}
           quoteLabel={hl ? "USDC" : "USDT"}
+          venueEnvironment={session.account.venueEnvironment}
         />
       ) : (
         <p className="text-sm text-ink-muted">

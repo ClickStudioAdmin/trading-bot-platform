@@ -20,6 +20,8 @@ const base: PerpsTemplateRecipe = {
   triggerCompare: "gte",
   triggerPrice: "100",
   skipIfOpen: true,
+  tpsl: null,
+  trailing: null,
 };
 
 assert.equal(canBacktestPerpsRecipe(base).ok, true);
@@ -85,5 +87,63 @@ const both = replayPerpsPriceCross({
 });
 assert.equal(both.orders.length, 1);
 assert.equal(both.stats.openQty, 1);
+
+const withTp = replayPerpsPriceCross({
+  bars: [
+    { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
+    { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
+    { timeMs: 3_000, open: 101, high: 120, low: 100, close: 110 },
+  ],
+  recipe: {
+    ...base,
+    tpsl: {
+      takeProfit: 110,
+      stopLoss: null,
+      tpTrigger: "last",
+      slTrigger: "last",
+      mode: "full",
+      tpQty: null,
+      slQty: null,
+      tpOrderType: "market",
+      slOrderType: "market",
+      tpLimitPrice: null,
+      slLimitPrice: null,
+    },
+  },
+  feeRate: 0,
+});
+assert.equal(withTp.orders.length, 2);
+assert.equal(withTp.orders[0]?.action, "buy");
+assert.equal(withTp.orders[1]?.action, "flatten");
+assert.equal(withTp.orders[1]?.price, 110);
+assert.equal(withTp.stats.trades, 1);
+assert.equal(withTp.stats.openQty, 0);
+
+const withSl = replayPerpsPriceCross({
+  bars: [
+    { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
+    { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
+    { timeMs: 3_000, open: 101, high: 102, low: 90, close: 95 },
+  ],
+  recipe: {
+    ...base,
+    tpsl: {
+      takeProfit: null,
+      stopLoss: 95,
+      tpTrigger: "last",
+      slTrigger: "last",
+      mode: "full",
+      tpQty: null,
+      slQty: null,
+      tpOrderType: "market",
+      slOrderType: "market",
+      tpLimitPrice: null,
+      slLimitPrice: null,
+    },
+  },
+  feeRate: 0,
+});
+assert.equal(withSl.orders[1]?.action, "flatten");
+assert.equal(withSl.orders[1]?.price, 95);
 
 console.log("backtest replay checks passed");

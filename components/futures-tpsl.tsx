@@ -24,9 +24,34 @@ const TICKET_INPUT =
 const TICKET_QTY =
   "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
-export function FuturesTpslFields() {
-  const [enabled, setEnabled] = useState(false);
-  const [mode, setMode] = useState<FuturesTpslMode>("full");
+export function FuturesTpslFields({
+  namePrefix = "",
+  defaultTpsl = null,
+}: {
+  namePrefix?: string;
+  defaultTpsl?: {
+    takeProfit: number | null;
+    stopLoss: number | null;
+    tpTrigger?: FuturesTrigger;
+    slTrigger?: FuturesTrigger;
+    mode?: FuturesTpslMode;
+    tpQty?: number | null;
+    slQty?: number | null;
+    tpOrderType?: FuturesOrderType;
+    slOrderType?: FuturesOrderType;
+    tpLimitPrice?: number | null;
+    slLimitPrice?: number | null;
+  } | null;
+}) {
+  const [enabled, setEnabled] = useState(() =>
+    Boolean(
+      defaultTpsl &&
+        (defaultTpsl.takeProfit != null || defaultTpsl.stopLoss != null),
+    ),
+  );
+  const [mode, setMode] = useState<FuturesTpslMode>(
+    defaultTpsl?.mode === "partial" ? "partial" : "full",
+  );
   const partial = enabled && mode === "partial";
   return (
     <div className="space-y-3 border-t border-line-strong pt-4">
@@ -34,7 +59,7 @@ export function FuturesTpslFields() {
         <label className="flex items-center gap-2 text-sm text-ink">
           <input
             type="checkbox"
-            name="tpsl"
+            name={`${namePrefix}tpsl`}
             value="on"
             checked={enabled}
             onChange={(event) => setEnabled(event.target.checked)}
@@ -44,7 +69,7 @@ export function FuturesTpslFields() {
         </label>
         {enabled ? (
           <>
-            <input type="hidden" name="tpslMode" value={mode} />
+            <input type="hidden" name={`${namePrefix}tpslMode`} value={mode} />
             <ModeToggle mode={mode} onChange={setMode} />
           </>
         ) : null}
@@ -52,18 +77,32 @@ export function FuturesTpslFields() {
       {enabled ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <TpslPriceField
-            name="takeProfit"
-            triggerName="tpTrigger"
+            name={`${namePrefix}takeProfit`}
+            triggerName={`${namePrefix}tpTrigger`}
+            orderName={`${namePrefix}tpOrderType`}
+            limitName={`${namePrefix}tpLimitPrice`}
             label="Take profit"
-            qtyName={partial ? "tpQty" : undefined}
+            defaultPrice={defaultTpsl?.takeProfit}
+            defaultTrigger={defaultTpsl?.tpTrigger}
+            defaultOrderType={defaultTpsl?.tpOrderType}
+            defaultLimit={defaultTpsl?.tpLimitPrice}
+            qtyName={partial ? `${namePrefix}tpQty` : undefined}
             qtyAria={partial ? "Take profit qty" : undefined}
+            defaultQty={partial ? defaultTpsl?.tpQty : null}
           />
           <TpslPriceField
-            name="stopLoss"
-            triggerName="slTrigger"
+            name={`${namePrefix}stopLoss`}
+            triggerName={`${namePrefix}slTrigger`}
+            orderName={`${namePrefix}slOrderType`}
+            limitName={`${namePrefix}slLimitPrice`}
             label="Stop loss"
-            qtyName={partial ? "slQty" : undefined}
+            defaultPrice={defaultTpsl?.stopLoss}
+            defaultTrigger={defaultTpsl?.slTrigger}
+            defaultOrderType={defaultTpsl?.slOrderType}
+            defaultLimit={defaultTpsl?.slLimitPrice}
+            qtyName={partial ? `${namePrefix}slQty` : undefined}
             qtyAria={partial ? "Stop loss qty" : undefined}
+            defaultQty={partial ? defaultTpsl?.slQty : null}
           />
         </div>
       ) : null}
@@ -554,17 +593,35 @@ function TpslPriceField({
   label,
   qtyName,
   qtyAria,
+  orderName: orderNameProp,
+  limitName: limitNameProp,
+  defaultPrice,
+  defaultTrigger,
+  defaultOrderType,
+  defaultLimit,
+  defaultQty,
 }: {
   name: string;
   triggerName: string;
   label: string;
   qtyName?: string;
   qtyAria?: string;
+  orderName?: string;
+  limitName?: string;
+  defaultPrice?: number | null;
+  defaultTrigger?: FuturesTrigger;
+  defaultOrderType?: FuturesOrderType;
+  defaultLimit?: number | null;
+  defaultQty?: number | null;
 }) {
-  const [orderType, setOrderType] = useState<FuturesOrderType>("market");
-  const orderName = name === "stopLoss" ? "slOrderType" : "tpOrderType";
-  const limitName = name === "stopLoss" ? "slLimitPrice" : "tpLimitPrice";
-  const takeProfit = name === "takeProfit";
+  const [orderType, setOrderType] = useState<FuturesOrderType>(
+    defaultOrderType === "limit" ? "limit" : "market",
+  );
+  const orderName =
+    orderNameProp ?? (name.endsWith("stopLoss") ? "slOrderType" : "tpOrderType");
+  const limitName =
+    limitNameProp ?? (name.endsWith("stopLoss") ? "slLimitPrice" : "tpLimitPrice");
+  const takeProfit = name.endsWith("takeProfit");
   const triggerLabel =
     orderType === "limit"
       ? takeProfit
@@ -581,9 +638,15 @@ function TpslPriceField({
             name={name}
             allowDecimal
             placeholder="0.0"
+            defaultValue={
+              defaultPrice != null ? String(defaultPrice) : ""
+            }
             className={TICKET_INPUT}
           />
-          <TriggerSelect name={triggerName} defaultValue="last" />
+          <TriggerSelect
+            name={triggerName}
+            defaultValue={defaultTrigger ?? "last"}
+          />
           <OrderTypeSelect
             name={orderName}
             value={orderType}
@@ -603,6 +666,7 @@ function TpslPriceField({
             name={limitName}
             allowDecimal
             placeholder="Same as trigger"
+            defaultValue={defaultLimit != null ? String(defaultLimit) : ""}
             className={`${TICKET_QTY} mt-1`}
           />
           <span className="mt-1 block text-[11px] text-ink-faint">
@@ -620,6 +684,7 @@ function TpslPriceField({
             allowDecimal
             placeholder="0.0"
             ariaLabel={qtyAria}
+            defaultValue={defaultQty != null ? String(defaultQty) : ""}
             className={`${TICKET_QTY} mt-1`}
           />
         </label>

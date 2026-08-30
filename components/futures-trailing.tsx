@@ -14,15 +14,28 @@ const INPUT_CLASS =
 const TICKET_INPUT =
   "min-w-0 flex-1 rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
-export function FuturesTrailingFields() {
-  const [enabled, setEnabled] = useState(false);
-  const [activationOn, setActivationOn] = useState(false);
+export function FuturesTrailingFields({
+  namePrefix = "",
+  defaultTrailing = null,
+}: {
+  namePrefix?: string;
+  defaultTrailing?: {
+    distance: number;
+    activePrice: number | null;
+  } | null;
+}) {
+  const [enabled, setEnabled] = useState(() =>
+    Boolean(defaultTrailing && defaultTrailing.distance > 0),
+  );
+  const [activationOn, setActivationOn] = useState(
+    () => defaultTrailing?.activePrice != null,
+  );
   return (
     <div className="space-y-3 border-t border-line-strong pt-4">
       <label className="flex items-center gap-2 text-sm text-ink">
         <input
           type="checkbox"
-          name="trailing"
+          name={`${namePrefix}trailing`}
           value="on"
           checked={enabled}
           onChange={(event) => setEnabled(event.target.checked)}
@@ -35,9 +48,12 @@ export function FuturesTrailingFields() {
           <label className="block text-xs text-ink-muted">
             Retracement
             <GroupedNumberInput
-              name="trailingStop"
+              name={`${namePrefix}trailingStop`}
               allowDecimal
               placeholder="0.0"
+              defaultValue={
+                defaultTrailing ? String(defaultTrailing.distance) : ""
+              }
               className={`${TICKET_INPUT} mt-1 block w-full`}
             />
           </label>
@@ -45,7 +61,7 @@ export function FuturesTrailingFields() {
             <label className="flex items-center gap-2 text-xs text-ink-muted">
               <input
                 type="checkbox"
-                name="trailingActivation"
+                name={`${namePrefix}trailingActivation`}
                 value="on"
                 checked={activationOn}
                 onChange={(event) => setActivationOn(event.target.checked)}
@@ -55,10 +71,15 @@ export function FuturesTrailingFields() {
             </label>
             {activationOn ? (
               <GroupedNumberInput
-                name="trailingActive"
+                name={`${namePrefix}trailingActive`}
                 allowDecimal
                 placeholder="0.0"
                 ariaLabel="Activation price"
+                defaultValue={
+                  defaultTrailing?.activePrice != null
+                    ? String(defaultTrailing.activePrice)
+                    : ""
+                }
                 className={`${TICKET_INPUT} mt-1 block w-full`}
               />
             ) : (
