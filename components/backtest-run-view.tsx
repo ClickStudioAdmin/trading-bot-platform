@@ -213,7 +213,11 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
                     {new Date(row.atMs).toLocaleString("en-AU")}
                   </td>
                   <td className="py-1.5 pr-3">
-                    {current ? "open" : row.action}
+                    {current
+                      ? "open"
+                      : row.action === "flatten"
+                        ? "Close"
+                        : row.action}
                   </td>
                   <td className="py-1.5 pr-3">{row.side}</td>
                   <td className="py-1.5 pr-3 tabular-nums">{row.qty}</td>

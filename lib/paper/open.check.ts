@@ -9,6 +9,7 @@ import {
   pairKey,
   paperCarryInsertRow,
   parseNotionalUsdt,
+  parseTypedDecimalInput,
   safePaperReturnPath,
   sizeOpenNotional,
 } from "./open";
@@ -36,11 +37,21 @@ assert.equal(parseNotionalUsdt("10,000"), 10_000);
 assert.equal(formatNotionalInput("10000"), "10,000");
 assert.equal(formatNotionalInput("10,000"), "10,000");
 assert.equal(formatGroupedNumberInput("10000", true), "10,000");
+assert.equal(formatGroupedNumberInput("100999", true), "100,999");
 assert.equal(formatGroupedNumberInput("40000", true), "40,000");
 assert.equal(formatGroupedNumberInput("1234.5", true), "1,234.5");
 assert.equal(formatGroupedNumberInput("1,234.50", true), "1,234.50");
 assert.equal(formatGroupedNumberInput(".", true), "0.");
+assert.equal(formatGroupedNumberInput("1.", true), "1.");
 assert.equal(formatGroupedNumberInput("10.5", false), "105");
+assert.deepEqual(parseTypedDecimalInput("1."), { incomplete: true });
+assert.deepEqual(parseTypedDecimalInput("0."), { incomplete: true });
+assert.deepEqual(parseTypedDecimalInput(""), { incomplete: false, value: null });
+assert.deepEqual(parseTypedDecimalInput("1.5"), { incomplete: false, value: 1.5 });
+assert.deepEqual(parseTypedDecimalInput("1,234.5"), {
+  incomplete: false,
+  value: 1234.5,
+});
 assert.equal(parseNotionalUsdt("0"), null);
 assert.equal(parseNotionalUsdt("-1"), null);
 assert.equal(

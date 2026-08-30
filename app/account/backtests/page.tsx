@@ -8,12 +8,13 @@ import { getSessionMember } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { toBacktestLibraryItem } from "@/lib/backtest/library";
 import {
+  backtestQueueSeedFromRun,
   formatBacktestReturnPct,
   realizedReturnPct,
 } from "@/lib/backtest/model";
-import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   canDeleteBacktestRun,
+  canReadBacktestRun,
   listBacktestRuns,
   loadBacktestRun,
 } from "@/lib/backtest/store";
@@ -50,15 +51,27 @@ export default async function AccountBacktestsPage({
   }
   const selectedTemplateId = firstSearchValue(params.template);
   const draftId = firstSearchValue(params.draft);
+  const rerunId = firstSearchValue(params.rerun);
   const defaultVenue = firstSearchValue(params.venue);
   const defaultEnv = firstSearchValue(params.env);
+  const isAdmin = memberIsAdmin(member);
   const draft = draftId ? await loadBacktestRun(draftId) : null;
+  const rerun = rerunId ? await loadBacktestRun(rerunId) : null;
+  const usableRerun =
+    rerun &&
+    rerun.status !== "draft" &&
+    canReadBacktestRun(rerun, member.id, isAdmin)
+      ? rerun
+      : null;
   const usableDraft =
+    !usableRerun &&
     draft &&
     draft.status === "draft" &&
-    (draft.userId === member.id || memberIsAdmin(member))
+    (draft.userId === member.id || isAdmin)
       ? draft
       : null;
+  const seedSource = usableRerun ?? usableDraft;
+  const seed = seedSource ? backtestQueueSeedFromRun(seedSource) : null;
   let runs: Awaited<ReturnType<typeof listBacktestRuns>> = [];
   let templates: Awaited<ReturnType<typeof listApplyableTemplates>> = [];
   try {
@@ -85,7 +98,6 @@ export default async function AccountBacktestsPage({
         : canBacktestPerpsRecipe(item.recipe);
     return allowed.ok ? [item] : [];
   });
-  const isAdmin = memberIsAdmin(member);
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -107,13 +119,17 @@ export default async function AccountBacktestsPage({
       </p>
       <BacktestQueueForm
         templates={library}
-        selectedTemplateId={selectedTemplateId ?? ""}
+        selectedTemplateId={
+          selectedTemplateId || seed?.sourceTemplateId || ""
+        }
         draftId={usableDraft?.id ?? ""}
-        draftRecipe={(usableDraft?.recipe as BacktestRecipe | undefined) ?? null}
-        draftSourceTemplateId={usableDraft?.sourceTemplateId ?? ""}
-        defaultVenue={defaultVenue ?? usableDraft?.venue ?? "bybit"}
+        seed={seed}
+        loadedFromRun={Boolean(usableRerun)}
+        defaultVenue={
+          defaultVenue ?? seed?.venue ?? "bybit"
+        }
         defaultVenueEnvironment={
-          defaultEnv ?? usableDraft?.venueEnvironment ?? null
+          defaultEnv ?? seed?.venueEnvironment ?? null
         }
       />
       {runs.length === 0 ? (

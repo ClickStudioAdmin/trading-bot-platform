@@ -115,6 +115,36 @@ export function isoDateUtc(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
+export function backtestRerunHref(runId: string): string {
+  return `/account/backtests?rerun=${encodeURIComponent(runId)}#replay`;
+}
+
+export function backtestQueueSeedFromRun(run: BacktestRun): {
+  recipe: BacktestRecipe;
+  sourceTemplateId: string;
+  fromDate: string;
+  toDate: string;
+  startingUsdt: number;
+  interval: DcaIndicatorTimeframe;
+  symbol: string;
+  venue: string;
+  venueEnvironment: string | null;
+  comparables: string[];
+} {
+  return {
+    recipe: run.recipe,
+    sourceTemplateId: run.sourceTemplateId ?? "",
+    fromDate: isoDateUtc(run.fromMs),
+    toDate: isoDateUtc(run.toMs),
+    startingUsdt: run.startingUsdt,
+    interval: run.interval,
+    symbol: run.symbol,
+    venue: run.venue,
+    venueEnvironment: run.venueEnvironment,
+    comparables: [...(run.comparableSymbols ?? [])],
+  };
+}
+
 export function backtestWindowEndingToday(days: number): {
   from: string;
   to: string;

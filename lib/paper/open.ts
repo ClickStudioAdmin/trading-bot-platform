@@ -70,6 +70,23 @@ function groupThousands(digits: string): string {
   return whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+export function parseTypedDecimalInput(
+  raw: string,
+): { incomplete: true } | { incomplete: false; value: number | null } {
+  const text = raw.replace(/,/g, "").trim();
+  if (text === "") {
+    return { incomplete: false, value: null };
+  }
+  if (text.endsWith(".") || text === "-" || text === "-.") {
+    return { incomplete: true };
+  }
+  const value = Number(text);
+  if (!Number.isFinite(value)) {
+    return { incomplete: true };
+  }
+  return { incomplete: false, value };
+}
+
 export function parseNotionalUsdt(raw: string): number | null {
   const value = Number(raw.replace(/,/g, "").trim());
   if (!Number.isFinite(value) || value <= 0) {

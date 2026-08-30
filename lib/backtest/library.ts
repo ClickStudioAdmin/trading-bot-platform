@@ -1,5 +1,13 @@
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
+import { formatGroupedNumberInput } from "@/lib/paper/open";
+
+function formatParamNumber(value: number | string | null | undefined): string {
+  if (value == null || value === "") {
+    return "";
+  }
+  return formatGroupedNumberInput(String(value), true);
+}
 import {
   parseTemplateRecipe,
   recipesMatchReplayFields,
@@ -242,16 +250,19 @@ export function recipeParamRows(
               : "Long",
       },
       { label: "Start", value: dcaStartLabel(recipe) },
-      { label: "Clip", value: `${recipe.clipSize} ${recipe.sizeUnit}` },
+      {
+        label: "Clip",
+        value: `${formatParamNumber(recipe.clipSize)} ${recipe.sizeUnit}`,
+      },
       {
         label: "Size multiplier",
-        value: String(recipe.sizeMultiplier),
+        value: formatParamNumber(recipe.sizeMultiplier),
       },
       {
         label: "Averaging",
         value:
           recipe.dipPct != null
-            ? `${recipe.dipPct}% dip`
+            ? `${formatParamNumber(recipe.dipPct)}% dip`
             : recipe.intervalMinutes != null
               ? `${recipe.intervalMinutes}m`
               : recipe.dcaMode,
@@ -263,7 +274,9 @@ export function recipeParamRows(
       {
         label: "Take profit",
         value:
-          recipe.takeProfitPct == null ? "Off" : `${recipe.takeProfitPct}%`,
+          recipe.takeProfitPct == null
+            ? "Off"
+            : `${formatParamNumber(recipe.takeProfitPct)}%`,
       },
       {
         label: "Stop",
@@ -290,10 +303,13 @@ export function recipeParamRows(
               ? "Close short"
               : "Buy",
     },
-    { label: "Size", value: `${recipe.size} ${recipe.sizeUnit}` },
+    {
+      label: "Size",
+      value: `${formatParamNumber(recipe.size)} ${recipe.sizeUnit}`,
+    },
     {
       label: "When",
-      value: `${compareMark(recipe.triggerCompare)} ${recipe.triggerPrice}`,
+      value: `${compareMark(recipe.triggerCompare)} ${formatParamNumber(recipe.triggerPrice)}`,
     },
     {
       label: "Take profit",

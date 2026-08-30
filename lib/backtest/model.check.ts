@@ -8,6 +8,8 @@ import {
   parseBacktestDateRange,
   parseComparableSymbols,
   parseStartingBalance,
+  backtestQueueSeedFromRun,
+  backtestRerunHref,
   peakLockedNotionalUsdt,
   realizedAprPct,
   realizedEndingUsdt,
@@ -162,5 +164,47 @@ assert.equal(split.completed.length, 2);
 assert.equal(split.open.length, 1);
 assert.equal(split.open[0]?.qty, 0.5);
 assert.equal(openBacktestPositionLabel(split.open), "long 0.5000");
+
+assert.equal(
+  backtestRerunHref("run-abc"),
+  "/account/backtests?rerun=run-abc#replay",
+);
+const seeded = backtestQueueSeedFromRun({
+  id: "run-abc",
+  userId: "user-1",
+  templateId: null,
+  sourceTemplateId: "tmpl-1",
+  studyId: null,
+  deskType: "dca",
+  venue: "bybit",
+  venueEnvironment: null,
+  symbol: "ETHUSDT",
+  interval: "15",
+  fromMs: Date.UTC(2021, 0, 1),
+  toMs: Date.UTC(2026, 0, 1),
+  startingUsdt: 1000,
+  feePreset: "vip0_taker",
+  feeRate: 0.0006,
+  status: "done",
+  recipe: {
+    kind: "dca",
+    name: "RSI",
+    symbol: "BTCUSDT",
+  } as import("./model").BacktestRecipe,
+  stats: null,
+  orders: [],
+  error: null,
+  createdAtMs: 1,
+  finishedAtMs: 2,
+  parentRunId: null,
+  comparableSymbols: ["SOLUSDT"],
+});
+assert.equal(seeded.fromDate, "2021-01-01");
+assert.equal(seeded.toDate, "2026-01-01");
+assert.equal(seeded.startingUsdt, 1000);
+assert.equal(seeded.interval, "15");
+assert.equal(seeded.symbol, "ETHUSDT");
+assert.equal(seeded.sourceTemplateId, "tmpl-1");
+assert.deepEqual(seeded.comparables, ["SOLUSDT"]);
 
 console.log("backtest model checks passed");

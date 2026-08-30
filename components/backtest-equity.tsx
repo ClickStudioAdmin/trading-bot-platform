@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import type { BacktestRun } from "@/lib/backtest/model";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  chartIntervalForWindow,
+  type BacktestRun,
+} from "@/lib/backtest/model";
 import { buildEquityTimeline } from "@/lib/backtest/study";
+import type { CandleBar } from "@/lib/market/candles";
 
 const HEIGHT = 280;
 
@@ -29,7 +33,50 @@ function toSeriesPoints(
 
 export function BacktestEquityPanel({ run }: { run: BacktestRun }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const points = useMemo(() => buildEquityTimeline(run), [run]);
+  const [candles, setCandles] = useState<CandleBar[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const interval = chartIntervalForWindow(run.fromMs, run.toMs, run.interval);
+    const params = new URLSearchParams({
+      venue: run.venue,
+      symbol: run.symbol,
+      interval,
+      from: String(run.fromMs),
+      to: String(run.toMs),
+      limit: "1500",
+    });
+    if (run.venueEnvironment) {
+      params.set("env", run.venueEnvironment);
+    }
+    void fetch(`/api/market/candles?${params.toString()}`)
+      .then(async (response) => {
+        const body = (await response.json()) as {
+          candles?: CandleBar[];
+          error?: string;
+        };
+        if (!response.ok) {
+          throw new Error(body.error || "Could not read candles.");
+        }
+        return body.candles ?? [];
+      })
+      .then((rows) => {
+        if (!cancelled) {
+          setCandles(rows);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCandles([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [run]);
+  const points = useMemo(
+    () => buildEquityTimeline(run, candles),
+    [run, candles],
+  );
   const up = (points.at(-1)?.equityUsdt ?? 0) >= run.startingUsdt;
 
   useEffect(() => {

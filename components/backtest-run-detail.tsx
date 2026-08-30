@@ -14,6 +14,7 @@ import {
 } from "@/components/backtest-run-view";
 import {
   BACKTEST_FEE_PRESETS,
+  backtestRerunHref,
   formatBacktestReturnPct,
   peakLockedNotionalUsdt,
   realizedAprPct,
@@ -83,6 +84,12 @@ export function BacktestRunDetail({
             <Link href={listHref} className="text-accent hover:underline">
               All backtests
             </Link>
+            <Link
+              href={backtestRerunHref(run.id)}
+              className="text-accent hover:underline"
+            >
+              Re-run Parameters
+            </Link>
             {parentHref ? (
               <Link href={parentHref} className="text-accent hover:underline">
                 Primary pair
@@ -138,7 +145,15 @@ export function BacktestRunDetail({
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <section>
-          <h2 className="mb-3 text-lg font-semibold">Parameters</h2>
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-lg font-semibold">Parameters</h2>
+            <Link
+              href={backtestRerunHref(run.id)}
+              className="text-sm text-accent hover:underline"
+            >
+              Re-run Parameters
+            </Link>
+          </div>
           <BacktestPropertyList rows={params} />
         </section>
         <div className="space-y-6">
@@ -328,6 +343,12 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
           size="date"
         />
         <KpiBlock
+          label="Win rate"
+          value={winRate}
+          hint={stats ? `${stats.trades} trades` : undefined}
+          toneClass={stats && stats.trades > 0 ? "text-ink" : signedTone(null)}
+        />
+        <KpiBlock
           label="Realized P&L"
           value={stats ? signedMoney(stats.realizedUsdt) : "—"}
           toneClass={signedTone(stats?.realizedUsdt ?? null)}
@@ -342,12 +363,6 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
           value={formatBacktestReturnPct(apr)}
           hint="On max capital used"
           toneClass={signedTone(apr)}
-        />
-        <KpiBlock
-          label="Win rate"
-          value={winRate}
-          hint={stats ? `${stats.trades} trades` : undefined}
-          toneClass={stats && stats.trades > 0 ? "text-ink" : signedTone(null)}
         />
       </div>
     </section>

@@ -93,4 +93,39 @@ assert.equal(timeline[1]?.equityUsdt, 10_000);
 assert.equal(timeline[2]?.equityUsdt, 10_090);
 assert.ok((timeline.at(-1)?.equityUsdt ?? 0) >= 10_090);
 
+const openRun: BacktestRun = {
+  ...run,
+  toMs: 5_000,
+  stats: {
+    ...run.stats!,
+    trades: 0,
+    wins: 0,
+    realizedUsdt: 0,
+    openQty: 1,
+    openSide: "long",
+    markUsdt: -20,
+    endingUsdt: 9_980,
+    returnPct: -0.002,
+  },
+  orders: [
+    {
+      atMs: 2_000,
+      action: "buy",
+      side: "long",
+      qty: 1,
+      price: 100,
+      feeUsdt: 0,
+      realizedUsdt: 0,
+    },
+  ],
+};
+const marked = buildEquityTimeline(openRun, [
+  { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+  { timeMs: 3_000, open: 90, high: 90, low: 90, close: 90 },
+  { timeMs: 5_000, open: 80, high: 80, low: 80, close: 80 },
+]);
+assert.equal(marked[1]?.equityUsdt, 10_000);
+assert.equal(marked[2]?.equityUsdt, 9_990);
+assert.equal(marked[3]?.equityUsdt, 9_980);
+
 console.log("backtest study checks passed");

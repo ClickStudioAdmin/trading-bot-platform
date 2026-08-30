@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BacktestRecipeFields } from "@/components/backtest-recipe-fields";
 import { DatePicker } from "@/components/date-picker";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
+import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { queueTemplateBacktestAction } from "@/lib/backtest/actions";
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
@@ -28,6 +29,7 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
+import { formatGroupedNumberInput } from "@/lib/paper/open";
 
 function replayIntervalFromRecipe(
   recipe: BacktestRecipe | null,
@@ -64,20 +66,33 @@ function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
   ];
 }
 
+export type BacktestQueueSeed = {
+  recipe: BacktestRecipe;
+  sourceTemplateId: string;
+  fromDate: string;
+  toDate: string;
+  startingUsdt: number;
+  interval: DcaIndicatorTimeframe;
+  symbol: string;
+  venue: string;
+  venueEnvironment: string | null;
+  comparables: string[];
+};
+
 export function BacktestQueueForm({
   templates,
   selectedTemplateId = "",
   draftId = "",
-  draftRecipe = null,
-  draftSourceTemplateId = "",
+  seed = null,
+  loadedFromRun = false,
   defaultVenue = "bybit",
   defaultVenueEnvironment = null,
 }: {
   templates: BacktestLibraryItem[];
   selectedTemplateId?: string;
   draftId?: string;
-  draftRecipe?: BacktestRecipe | null;
-  draftSourceTemplateId?: string;
+  seed?: BacktestQueueSeed | null;
+  loadedFromRun?: boolean;
   defaultVenue?: string;
   defaultVenueEnvironment?: string | null;
 }) {
@@ -85,28 +100,37 @@ export function BacktestQueueForm({
   const dates = defaultBacktestDates();
   const initialTemplate =
     templates.find((row) => row.id === selectedTemplateId) ??
-    (draftRecipe ? null : templates[0]);
+    (seed ? null : templates[0]);
   const [templateId, setTemplateId] = useState(
-    draftRecipe ? draftSourceTemplateId : (initialTemplate?.id ?? ""),
+    seed ? seed.sourceTemplateId : (initialTemplate?.id ?? ""),
   );
   const [recipe, setRecipe] = useState<BacktestRecipe | null>(
-    draftRecipe ?? initialTemplate?.recipe ?? null,
+    seed?.recipe ?? initialTemplate?.recipe ?? null,
   );
   const [sourceTemplateId, setSourceTemplateId] = useState(
-    draftRecipe ? draftSourceTemplateId : (initialTemplate?.id ?? ""),
+    seed ? seed.sourceTemplateId : (initialTemplate?.id ?? ""),
   );
   const [symbol, setSymbol] = useState(
-    draftRecipe?.symbol ?? initialTemplate?.recipe.symbol ?? "",
+    seed?.symbol ?? initialTemplate?.recipe.symbol ?? "",
   );
-  const [comparables, setComparables] = useState<string[]>([]);
+  const [comparables, setComparables] = useState<string[]>(
+    seed?.comparables ?? [],
+  );
   const [venue, setVenue] = useState(
-    defaultVenue === "hyperliquid" ? "hyperliquid" : "bybit",
+    (seed?.venue ?? defaultVenue) === "hyperliquid" ? "hyperliquid" : "bybit",
   );
-  const [fromDate, setFromDate] = useState(dates.from);
-  const [toDate, setToDate] = useState(dates.to);
+  const [fromDate, setFromDate] = useState(seed?.fromDate ?? dates.from);
+  const [toDate, setToDate] = useState(seed?.toDate ?? dates.to);
   const [interval, setInterval] = useState<DcaIndicatorTimeframe>(
-    replayIntervalFromRecipe(draftRecipe ?? initialTemplate?.recipe ?? null) ??
+    seed?.interval ??
+      replayIntervalFromRecipe(seed?.recipe ?? initialTemplate?.recipe ?? null) ??
       "60",
+  );
+  const [startingBalance, setStartingBalance] = useState(() =>
+    formatGroupedNumberInput(
+      String(seed?.startingUsdt ?? DEFAULT_STARTING_USDT),
+      true,
+    ),
   );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -176,11 +200,15 @@ export function BacktestQueueForm({
     : { ok: false as const, error: "Load a bot or pick a template to backtest." };
 
   return (
-    <section className="mb-8 rounded-card border border-line bg-surface p-5">
+    <section
+      id="replay"
+      className="mb-8 rounded-card border border-line bg-surface p-5"
+    >
       <h2 className="text-lg font-semibold">New backtest</h2>
       <p className="mt-1 text-sm text-ink-muted">
-        Load a bot from Automations or pick a template. Edit the replay
-        fields, then queue. Long windows go to the engine worker.
+        {loadedFromRun
+          ? "Parameters loaded from the previous run. Tweak them and queue a new one."
+          : "Load a bot from Automations or pick a template. Edit the replay fields, then queue. Long windows go to the engine worker."}
       </p>
       <div className="mt-4 grid items-start gap-6 lg:grid-cols-2">
       <form
@@ -289,11 +317,11 @@ export function BacktestQueueForm({
         </div>
         <label className="block text-xs text-ink-muted">
           Initial account balance
-          <input
+          <GroupedNumberInput
             name="startingBalance"
-            required
-            inputMode="decimal"
-            defaultValue={String(DEFAULT_STARTING_USDT)}
+            value={startingBalance}
+            onChange={setStartingBalance}
+            allowDecimal
             className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
           />
         </label>
@@ -462,8 +490,9 @@ export function BacktestQueueForm({
             <div>
               <h3 className="text-sm font-semibold">Bot to replay</h3>
               <p className="mt-1 text-xs text-ink-muted">
-                Change the replay fields here. Pair, dates, and timeframe
-                on the left are the market window.
+                {loadedFromRun
+                  ? "These are the recipe fields from that run. Edit any of them before you queue."
+                  : "Change the replay fields here. Pair, dates, and timeframe on the left are the market window."}
               </p>
             </div>
             {selectedTemplate ? (
@@ -491,6 +520,9 @@ export function BacktestQueueForm({
           ) : null}
           <div className="mt-4">
             <BacktestRecipeFields
+              key={
+                sourceTemplateId || draftId || (loadedFromRun ? "rerun" : "current")
+              }
               recipe={recipe}
               onChange={(next) => {
                 if (next.kind === "dca" && next.startKind === "indicator") {

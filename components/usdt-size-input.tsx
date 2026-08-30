@@ -148,7 +148,10 @@ export function GroupedNumberInput({
   const [internal, setInternal] = useState(() =>
     formatGroupedNumberInput(defaultValue, allowDecimal),
   );
-  const display = value !== undefined ? value : internal;
+  const display = formatGroupedNumberInput(
+    value !== undefined ? value : internal,
+    allowDecimal,
+  );
 
   function apply(raw: string) {
     const next = formatGroupedNumberInput(raw, allowDecimal);

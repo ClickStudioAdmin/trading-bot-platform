@@ -1,11 +1,17 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   userBacktestFieldIssues,
   type BacktestFieldIssue,
 } from "@/lib/backtest/library";
 import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
+import {
+  formatGroupedNumberInput,
+  parseTypedDecimalInput,
+} from "@/lib/paper/open";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink";
@@ -26,13 +32,66 @@ function FieldNote({ message }: { message: string | null }) {
   return <span className="mt-1 block text-xs text-danger">{message}</span>;
 }
 
-function optionalNumber(raw: string): number | null {
-  const text = raw.trim();
-  if (text === "") {
-    return null;
+function displayCommitted(
+  value: number | null | undefined,
+  allowDecimal: boolean,
+): string {
+  if (value == null) {
+    return "";
   }
-  const value = Number(text);
-  return Number.isFinite(value) ? value : null;
+  return formatGroupedNumberInput(String(value), allowDecimal);
+}
+
+function RecipeNumberInput({
+  value,
+  onCommit,
+  allowDecimal = true,
+  emptyValue,
+  skipEmptyCommit = false,
+  className,
+}: {
+  value: number | null | undefined;
+  onCommit: (next: number | null) => void;
+  allowDecimal?: boolean;
+  emptyValue: number | null;
+  skipEmptyCommit?: boolean;
+  className: string;
+}) {
+  const [text, setText] = useState(() => displayCommitted(value, allowDecimal));
+  const lastSent = useRef(value);
+
+  useEffect(() => {
+    if (value === lastSent.current) {
+      return;
+    }
+    lastSent.current = value;
+    setText(displayCommitted(value, allowDecimal));
+  }, [allowDecimal, value]);
+
+  return (
+    <GroupedNumberInput
+      value={text}
+      allowDecimal={allowDecimal}
+      className={className}
+      onChange={(next) => {
+        setText(next);
+        const parsed = parseTypedDecimalInput(next);
+        if (parsed.incomplete) {
+          return;
+        }
+        if (parsed.value == null) {
+          if (skipEmptyCommit) {
+            return;
+          }
+          lastSent.current = emptyValue;
+          onCommit(emptyValue);
+          return;
+        }
+        lastSent.current = parsed.value;
+        onCommit(parsed.value);
+      }}
+    />
+  );
 }
 
 export function BacktestRecipeFields({
@@ -121,21 +180,21 @@ export function BacktestRecipeFields({
             </label>
             <label className={labelClass}>
               Price
-              <input
-                inputMode="decimal"
-                value={recipe.armTrigger?.price ?? ""}
-                onChange={(event) =>
+              <RecipeNumberInput
+                value={recipe.armTrigger?.price ?? null}
+                emptyValue={0}
+                className={
+                  issueFor(issues, "armPrice") ? invalidFieldClass : fieldClass
+                }
+                onCommit={(next) =>
                   onChange({
                     ...recipe,
                     armTrigger: {
                       triggerBy: recipe.armTrigger?.triggerBy ?? "last",
                       compare: recipe.armTrigger?.compare ?? "gte",
-                      price: Number(event.target.value) || 0,
+                      price: next ?? 0,
                     },
                   })
-                }
-                className={
-                  issueFor(issues, "armPrice") ? invalidFieldClass : fieldClass
                 }
               />
               <FieldNote message={issueFor(issues, "armPrice")} />
@@ -186,30 +245,27 @@ export function BacktestRecipeFields({
             </label>
             <label className={labelClass}>
               Level
-              <input
-                inputMode="decimal"
-                value={recipe.indicatorLevel ?? ""}
-                onChange={(event) =>
-                  onChange({
-                    ...recipe,
-                    indicatorLevel: optionalNumber(event.target.value),
-                  })
-                }
+              <RecipeNumberInput
+                value={recipe.indicatorLevel}
+                emptyValue={null}
                 className={fieldClass}
+                onCommit={(next) =>
+                  onChange({ ...recipe, indicatorLevel: next })
+                }
               />
             </label>
           </>
         ) : null}
         <label className={labelClass}>
           Clip
-          <input
-            inputMode="decimal"
+          <RecipeNumberInput
             value={recipe.clipSize}
-            onChange={(event) =>
-              onChange({ ...recipe, clipSize: Number(event.target.value) || 0 })
-            }
+            emptyValue={0}
             className={
               issueFor(issues, "clipSize") ? invalidFieldClass : fieldClass
+            }
+            onCommit={(next) =>
+              onChange({ ...recipe, clipSize: next ?? 0 })
             }
           />
           <FieldNote message={issueFor(issues, "clipSize")} />
@@ -232,83 +288,64 @@ export function BacktestRecipeFields({
         </label>
         <label className={labelClass}>
           Size multiplier
-          <input
-            inputMode="decimal"
+          <RecipeNumberInput
             value={recipe.sizeMultiplier}
-            onChange={(event) =>
-              onChange({
-                ...recipe,
-                sizeMultiplier: Number(event.target.value) || 1,
-              })
-            }
+            emptyValue={1}
             className={fieldClass}
+            onCommit={(next) =>
+              onChange({ ...recipe, sizeMultiplier: next ?? 1 })
+            }
           />
         </label>
         <label className={labelClass}>
           Dip %
-          <input
-            inputMode="decimal"
-            value={recipe.dipPct ?? ""}
-            onChange={(event) =>
-              onChange({ ...recipe, dipPct: optionalNumber(event.target.value) })
-            }
+          <RecipeNumberInput
+            value={recipe.dipPct}
+            emptyValue={null}
             className={fieldClass}
+            onCommit={(next) => onChange({ ...recipe, dipPct: next })}
           />
         </label>
         <label className={labelClass}>
           Max clips
-          <input
-            inputMode="numeric"
-            value={recipe.maxClips ?? ""}
-            onChange={(event) =>
+          <RecipeNumberInput
+            value={recipe.maxClips}
+            emptyValue={null}
+            allowDecimal={false}
+            className={fieldClass}
+            onCommit={(next) =>
               onChange({
                 ...recipe,
-                maxClips: optionalNumber(event.target.value),
+                maxClips: next == null ? null : Math.trunc(next),
               })
             }
-            className={fieldClass}
           />
         </label>
         <label className={labelClass}>
           Take profit %
-          <input
-            inputMode="decimal"
-            value={recipe.takeProfitPct ?? ""}
-            onChange={(event) =>
-              onChange({
-                ...recipe,
-                takeProfitPct: optionalNumber(event.target.value),
-              })
-            }
+          <RecipeNumberInput
+            value={recipe.takeProfitPct}
+            emptyValue={null}
             className={fieldClass}
+            onCommit={(next) => onChange({ ...recipe, takeProfitPct: next })}
           />
         </label>
         <label className={labelClass}>
           Stop %
-          <input
-            inputMode="decimal"
-            value={recipe.stopLossPct ?? ""}
-            onChange={(event) =>
-              onChange({
-                ...recipe,
-                stopLossPct: optionalNumber(event.target.value),
-              })
-            }
+          <RecipeNumberInput
+            value={recipe.stopLossPct}
+            emptyValue={null}
             className={fieldClass}
+            onCommit={(next) => onChange({ ...recipe, stopLossPct: next })}
           />
         </label>
         <label className={labelClass}>
           Trailing %
-          <input
-            inputMode="decimal"
-            value={recipe.trailingPct ?? ""}
-            onChange={(event) =>
-              onChange({
-                ...recipe,
-                trailingPct: optionalNumber(event.target.value),
-              })
-            }
+          <RecipeNumberInput
+            value={recipe.trailingPct}
+            emptyValue={null}
             className={fieldClass}
+            onCommit={(next) => onChange({ ...recipe, trailingPct: next })}
           />
         </label>
       </div>
@@ -369,10 +406,13 @@ export function BacktestRecipeFields({
       ) : null}
       <label className={labelClass}>
         Size
-        <input
-          value={recipe.size}
-          onChange={(event) => onChange({ ...recipe, size: event.target.value })}
+        <GroupedNumberInput
+          value={formatGroupedNumberInput(recipe.size, true)}
+          allowDecimal
           className={issueFor(issues, "size") ? invalidFieldClass : fieldClass}
+          onChange={(next) =>
+            onChange({ ...recipe, size: next.replace(/,/g, "") })
+          }
         />
         <FieldNote message={issueFor(issues, "size")} />
       </label>
@@ -412,13 +452,14 @@ export function BacktestRecipeFields({
       </label>
       <label className={labelClass}>
         Price
-        <input
-          value={recipe.triggerPrice}
-          onChange={(event) =>
-            onChange({ ...recipe, triggerPrice: event.target.value })
-          }
+        <GroupedNumberInput
+          value={formatGroupedNumberInput(recipe.triggerPrice, true)}
+          allowDecimal
           className={
             issueFor(issues, "triggerPrice") ? invalidFieldClass : fieldClass
+          }
+          onChange={(next) =>
+            onChange({ ...recipe, triggerPrice: next.replace(/,/g, "") })
           }
         />
         <FieldNote message={issueFor(issues, "triggerPrice")} />
@@ -427,57 +468,58 @@ export function BacktestRecipeFields({
       )}
       <label className={labelClass}>
         Take profit
-        <input
-          inputMode="decimal"
-          value={recipe.tpsl?.takeProfit ?? ""}
-          onChange={(event) =>
+        <RecipeNumberInput
+          value={recipe.tpsl?.takeProfit}
+          emptyValue={null}
+          className={fieldClass}
+          onCommit={(next) =>
             onChange({
               ...recipe,
               tpsl: {
                 ...(recipe.tpsl ?? emptyFuturesTpsl()),
-                takeProfit: optionalNumber(event.target.value),
+                takeProfit: next,
               },
             })
           }
-          className={fieldClass}
         />
       </label>
       <label className={labelClass}>
         Stop
-        <input
-          inputMode="decimal"
-          value={recipe.tpsl?.stopLoss ?? ""}
-          onChange={(event) =>
+        <RecipeNumberInput
+          value={recipe.tpsl?.stopLoss}
+          emptyValue={null}
+          className={fieldClass}
+          onCommit={(next) =>
             onChange({
               ...recipe,
               tpsl: {
                 ...(recipe.tpsl ?? emptyFuturesTpsl()),
-                stopLoss: optionalNumber(event.target.value),
+                stopLoss: next,
               },
             })
           }
-          className={fieldClass}
         />
       </label>
       <label className={labelClass}>
         Trailing
-        <input
-          inputMode="decimal"
-          value={recipe.trailing?.distance ?? ""}
-          onChange={(event) =>
+        <RecipeNumberInput
+          value={recipe.trailing?.distance}
+          emptyValue={null}
+          skipEmptyCommit
+          className={fieldClass}
+          onCommit={(next) => {
+            if (next == null) {
+              return;
+            }
             onChange({
               ...recipe,
-              trailing:
-                optionalNumber(event.target.value) == null
-                  ? recipe.trailing
-                  : {
-                      distance: optionalNumber(event.target.value) ?? 0,
-                      activePrice: recipe.trailing?.activePrice ?? null,
-                      peak: recipe.trailing?.peak ?? null,
-                    },
-            })
-          }
-          className={fieldClass}
+              trailing: {
+                distance: next,
+                activePrice: recipe.trailing?.activePrice ?? null,
+                peak: recipe.trailing?.peak ?? null,
+              },
+            });
+          }}
         />
       </label>
     </div>
