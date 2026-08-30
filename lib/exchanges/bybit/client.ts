@@ -125,23 +125,70 @@ export async function fetchBybitOrderbook(
   });
 }
 
+export type BybitKlineBar = {
+  timeMs: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+};
+
+function parseBybitKlineRow(row: string[]): BybitKlineBar | null {
+  const timeMs = Number(row[0]);
+  const open = Number(row[1]);
+  const high = Number(row[2]);
+  const low = Number(row[3]);
+  const close = Number(row[4]);
+  if (
+    !(timeMs > 0) ||
+    !(open > 0) ||
+    !(high > 0) ||
+    !(low > 0) ||
+    !(close > 0)
+  ) {
+    return null;
+  }
+  return { timeMs, open, high, low, close };
+}
+
+export async function fetchBybitKlineBars(input: {
+  symbol: string;
+  interval: "5" | "15" | "30" | "60" | "120" | "240" | "360" | "720" | "D";
+  limit?: number;
+  startMs?: number;
+  endMs?: number;
+}): Promise<BybitKlineBar[]> {
+  const params: Record<string, string> = {
+    category: "linear",
+    symbol: input.symbol,
+    interval: input.interval,
+    limit: String(Math.min(1000, input.limit ?? 80)),
+  };
+  if (input.startMs != null) {
+    params.start = String(input.startMs);
+  }
+  if (input.endMs != null) {
+    params.end = String(input.endMs);
+  }
+  const result = await bybitGet<{ list?: string[][] }>(
+    "/v5/market/kline",
+    params,
+  );
+  const bars: BybitKlineBar[] = [];
+  for (const row of [...(result.list ?? [])].reverse()) {
+    const parsed = parseBybitKlineRow(row);
+    if (parsed) {
+      bars.push(parsed);
+    }
+  }
+  return bars;
+}
+
 export async function fetchBybitKlines(input: {
   symbol: string;
   interval: "5" | "15" | "30" | "60" | "120" | "240" | "360" | "720" | "D";
   limit?: number;
 }): Promise<number[]> {
-  const result = await bybitGet<{ list?: string[][] }>("/v5/market/kline", {
-    category: "linear",
-    symbol: input.symbol,
-    interval: input.interval,
-    limit: String(input.limit ?? 80),
-  });
-  const closes: number[] = [];
-  for (const row of [...(result.list ?? [])].reverse()) {
-    const close = Number(row[4]);
-    if (close > 0 && Number.isFinite(close)) {
-      closes.push(close);
-    }
-  }
-  return closes;
+  const bars = await fetchBybitKlineBars(input);
+  return bars.map((row) => row.close);
 }

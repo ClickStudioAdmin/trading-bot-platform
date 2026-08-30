@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   isTemplateDeskType,
   parseTemplateRecipe,
+  parseTemplateVisibility,
   recipePreview,
   TEMPLATE_RECIPE_VERSION,
   type TemplateDeskType,
@@ -93,7 +94,7 @@ function nameTakenMessage(visibility: TemplateVisibility, kind: "template" | "se
 }
 
 function parseVisibility(value: unknown): TemplateVisibility {
-  return value === "platform" ? "platform" : "user";
+  return parseTemplateVisibility(value);
 }
 
 export function parseStarterPackFlag(
@@ -199,6 +200,7 @@ export async function listVisibleTemplates(input: {
   let query = supabase
     .from("automation_templates")
     .select("*")
+    .in("visibility", ["user", "platform"])
     .or(`visibility.eq.platform,user_id.eq.${input.userId}`)
     .order("visibility", { ascending: true })
     .order("name", { ascending: true });
@@ -296,10 +298,10 @@ export async function findNamedTemplate(input: {
     .select("*")
     .eq("visibility", input.visibility)
     .eq("desk_type", input.deskType);
-  if (input.visibility === "user") {
-    query = query.eq("user_id", input.userId);
-  } else {
+  if (input.visibility === "platform" || !input.userId) {
     query = query.is("user_id", null);
+  } else {
+    query = query.eq("user_id", input.userId);
   }
   const { data } = await query;
   const needle = input.name.trim().toLowerCase();
@@ -331,7 +333,11 @@ export async function insertTemplate(input: {
   const { data, error } = await supabase
     .from("automation_templates")
     .insert({
-      user_id: input.visibility === "platform" ? null : input.userId,
+      user_id:
+        input.visibility === "platform" ||
+        (input.visibility === "backtested" && !input.userId)
+          ? null
+          : input.userId,
       visibility: input.visibility,
       desk_type: input.deskType,
       name: input.name,

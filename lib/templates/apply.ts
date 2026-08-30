@@ -73,6 +73,9 @@ async function canReadTemplate(
   if (template.visibility === "platform" || template.userId === userId) {
     return true;
   }
+  if (template.visibility === "backtested" && template.userId === null) {
+    return true;
+  }
   return templateIsSharedWith(userId, template.id);
 }
 
@@ -431,30 +434,39 @@ export async function applyTemplateToDesk(input: {
       notes: [],
     };
   }
-  if (template.deskType === "dca") {
-    return applyDcaTemplate({
-      userId: input.userId,
-      accountId: input.accountId,
-      template,
-      symbol: input.symbol,
-      webhookId: input.webhookId,
-      desk,
-    });
+  const result =
+    template.deskType === "dca"
+      ? await applyDcaTemplate({
+          userId: input.userId,
+          accountId: input.accountId,
+          template,
+          symbol: input.symbol,
+          webhookId: input.webhookId,
+          desk,
+        })
+      : template.deskType === "perps"
+        ? await applyPerpsTemplate({
+            userId: input.userId,
+            accountId: input.accountId,
+            template,
+            webhookId: input.webhookId,
+            desk,
+          })
+        : await applyPaperTemplate({
+            userId: input.userId,
+            accountId: input.accountId,
+            template,
+          });
+  if (result.ok && template.visibility === "backtested") {
+    return {
+      ...result,
+      notes: [
+        ...result.notes,
+        "This was backtested. Enable on the desk yourself.",
+      ],
+    };
   }
-  if (template.deskType === "perps") {
-    return applyPerpsTemplate({
-      userId: input.userId,
-      accountId: input.accountId,
-      template,
-      webhookId: input.webhookId,
-      desk,
-    });
-  }
-  return applyPaperTemplate({
-    userId: input.userId,
-    accountId: input.accountId,
-    template,
-  });
+  return result;
 }
 
 export async function applyTemplateSetToDesk(input: {

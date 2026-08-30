@@ -8,6 +8,7 @@ import {
 } from "@/components/futures-blotter";
 import { FuturesWorkingOrders } from "@/components/futures-working";
 import { PageHeading } from "@/components/page-heading";
+import { PositionsChartButton } from "@/components/positions-chart-button";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { FuturesWebhookTest } from "@/components/futures-webhook-test";
 import { HyperliquidDeskFlash } from "@/components/venues/hyperliquid/desk-flash";
@@ -198,7 +199,30 @@ export async function HyperliquidFuturesPositions({
           </section>
         ) : null}
 
-        <PageHeading as="h2" title="Current Positions" className="mb-0" />
+        <PageHeading
+          as="h2"
+          title="Current Positions"
+          className="mb-0"
+          actions={
+            <PositionsChartButton
+              venue="hyperliquid"
+              venueEnvironment={env}
+              symbols={[
+                ...open.map((row) => row.symbol),
+                ...desk.working.map((row) => row.symbol),
+              ]}
+              defaultSymbol={open[0]?.symbol ?? "BTC"}
+              positions={open}
+              working={desk.working}
+              orders={open.flatMap((row) =>
+                row.orders.map((order) => ({
+                  ...order,
+                  symbol: row.symbol,
+                })),
+              )}
+            />
+          }
+        />
           <OpenFuturesTrades
             signedIn={desk.signedIn}
             open={open}

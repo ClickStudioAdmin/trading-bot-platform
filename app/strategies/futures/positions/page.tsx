@@ -35,6 +35,7 @@ import { firstSearchValue } from "@/lib/paper/open";
 import { withMarketCapRank } from "@/lib/pairs/page";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { HyperliquidFuturesPositions } from "@/components/venues/hyperliquid/positions";
+import { PositionsChartButton } from "@/components/positions-chart-button";
 
 export const metadata: Metadata = {
   title: "Current Positions",
@@ -226,7 +227,29 @@ export default async function FuturesPositionsPage({
           </section>
         ) : null}
 
-        <PageHeading as="h2" title="Current Positions" className="mb-0" />
+        <PageHeading
+          as="h2"
+          title="Current Positions"
+          className="mb-0"
+          actions={
+            <PositionsChartButton
+              venue="bybit"
+              symbols={[
+                ...open.map((row) => row.symbol),
+                ...desk.working.map((row) => row.symbol),
+              ]}
+              defaultSymbol={open[0]?.symbol ?? "BTCUSDT"}
+              positions={open}
+              working={desk.working}
+              orders={open.flatMap((row) =>
+                row.orders.map((order) => ({
+                  ...order,
+                  symbol: row.symbol,
+                })),
+              )}
+            />
+          }
+        />
         <OpenFuturesTrades
           signedIn={desk.signedIn}
           open={open}

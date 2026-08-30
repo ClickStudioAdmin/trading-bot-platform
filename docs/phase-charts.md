@@ -1,6 +1,6 @@
 # Charts (popup)
 
-**Roadmap 4, plan A.** Not started. Pairs with [phase-backtesting.md](phase-backtesting.md). Shared chart kit; different homes. Do not build until Click starts this item.
+**Roadmap 4, plan A.** Positions popup is **in repo**. Pairs with [phase-backtesting.md](phase-backtesting.md). Shared chart kit; different homes.
 
 ## Purpose
 
@@ -15,63 +15,58 @@ TradingView **alerts** stay webhooks. This is charts only.
 - Lightweight Charts (open source). Same component as Backtesting.
 - Candles from **our** venue klines (server). Not the public TradingView embed (cannot draw our book). Not TradingView cloud as truth.
 - Chart trading (place / amend from the pane) is out. Ticket and bots stay the source of truth.
+- **Default timeframe:** 1h. Title is contract + timeframe.
+- Positions only for the live popup. Automations / Pairs / Activity wait.
 
 ## Shared kit (this plan + backtesting)
 
-Build once, used in two places:
-
 | Piece | Live popup | Backtest page |
 | --- | --- | --- |
-| Candle API (`desk-klines`, longer history) | Venue + symbol + timeframe | Same, plus from/to window |
+| Candle API (`/api/market/candles`, `loadDeskCandles`) | Venue + symbol + timeframe | Same, plus from/to window |
 | `<DeskChart>` (Lightweight Charts) | Yes | Yes |
 | Overlay: working limits, TP/SL, trailing, entry | From **live** ledger | Off (sim book is the run) |
-| Overlay: fill markers | From **live** `futures_orders` / paper fills | From **run** simulated orders |
-| Overlay: bot trigger line | Optional, from the open automation | From the frozen recipe |
-| Timeframe control | Same DCA set first | Same |
+| Overlay: fill markers | From **live** `futures_orders` | From **run** simulated orders |
+| Overlay: bot trigger line | Not on Positions | From the frozen recipe |
+| Timeframe control | 15m / 1h / 4h / D | Same set on the queue form |
 
-Do not fetch candles from the browser. Do not call private exchange APIs from the browser.
+Do not fetch candles from the browser venue APIs. Do not call private exchange APIs from the browser. The popup reads our public candle route.
 
 ## Where the popup opens
 
-| Surface | Button | Chart shows |
-| --- | --- | --- |
-| **Positions** | Chart on the focused open row (and on the ticket symbol if no row) | Entry, working limits, TP/SL/trailing, recent fills |
-| **Automations** | Chart on that bot card | Candles + When price line (and indicator if the bot uses one) |
-| **Pairs** | Chart on a pair row | Candles only (v1) |
-| **Activity** | Chart on a fill | Jump to that time, mark that fill |
-| **Backtests** | Chart on a finished run | Simulated fills + equity optional later |
-
-C&C / basis charts stay parked until Perps popup is accepted.
-
-## TradingView products (unchanged)
-
-| Product | Fit |
+| Surface | Status |
 | --- | --- |
-| Embed widget | Reject. Cannot overlay our ledger. |
-| Lightweight Charts | **v1.** |
-| Advanced Charts (paid library) | Later only if Click takes a license. |
+| **Positions** (Bybit + Hyperliquid) | **Shipped.** Chart on Current Positions heading. Empty book still charts the default contract. |
+| **Automations** | Not wired. |
+| **Pairs** | Not wired. |
+| **Activity** | Not wired. |
+| **Backtests** | Chart on a finished run (plan B). |
 
-## Ship order (when this item starts)
+C&C / basis charts stay parked.
 
-1. Server OHLC API (Bybit + HL). Reuse `lib/market/desk-klines.ts`.
-2. Shared `<DeskChart>` + overlay types (`live` \| `backtest`).
-3. Popup shell (theme tokens, close, timeframe). No layout change around it.
-4. Wire **Positions** first. Empty book still shows candles.
-5. Live overlays: entry, working, TP/SL, fills.
-6. **Stop.** Click tries it. Easy to rip out (button + modal + API).
-7. If kept: Automations, then Pairs / Activity. Backtest page consumes the same chart (plan B).
+## Ship order
+
+1. Server OHLC API (Bybit + HL). Reuse `lib/market/desk-klines.ts`. **Done.**
+2. Shared `<DeskChart>` + overlay types. **Done.**
+3. Popup shell (theme tokens, close, timeframe). **Done.**
+4. Wire **Positions**. **Done.**
+5. Live overlays: entry, working, TP/SL, fills. **Done.**
+6. **Stop for live popup.** Automations / Pairs / Activity later if Click keeps the popup.
+7. Backtest page consumes the same chart (plan B). **Done.**
 
 ## Out of scope
 
-- Building now (Hyperliquid desk test is still current).
 - Changing Current Positions / ticket / stats card layout.
 - Chart as a permanent column or docked pane.
 - Chart trading.
 - C&C charts.
 - MEXC.
 
-## Open locks
+## Files that are easy to rip out
 
-1. Popup title: contract only, or contract + timeframe in the chrome?
-2. Default timeframe (15m / 1h / D)?
-3. After Positions, is Automations next or wait for Backtesting to reuse the chart?
+- `components/desk-chart.tsx`
+- `components/positions-chart-button.tsx`
+- `lib/charts/overlay.ts` (+ check)
+- `app/api/market/candles/route.ts`
+- `lib/market/candles.ts` (+ check)
+- Chart button on the two Positions headings
+- `lightweight-charts` in `package.json` (keep if Backtesting stays)

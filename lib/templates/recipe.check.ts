@@ -16,6 +16,8 @@ import {
   uniqueAppliedName,
   templateFitsDesk,
   formatTemplateDeskType,
+  parseTemplateVisibility,
+  templateIsLibraryRow,
 } from "./recipe";
 
 const form = new FormData();
@@ -207,5 +209,9 @@ assert.equal(templateFitsDesk("perps", "perps_bots"), true);
 assert.equal(templateFitsDesk("perps", "perps"), false);
 assert.equal(templateFitsDesk("dca", "dca"), true);
 assert.equal(formatTemplateDeskType("perps"), "Perps bots");
+assert.equal(parseTemplateVisibility("backtested"), "backtested");
+assert.equal(parseTemplateVisibility("platform"), "platform");
+assert.equal(templateIsLibraryRow("backtested"), false);
+assert.equal(templateIsLibraryRow("user"), true);
 
 console.log("templates recipe ok");

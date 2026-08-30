@@ -34,7 +34,22 @@ export function templateFitsDesk(
 export function formatTemplateDeskType(deskType: TemplateDeskType): string {
   return deskType === "perps" ? "Perps bots" : formatDeskType(deskType);
 }
-export type TemplateVisibility = "user" | "platform";
+export const TEMPLATE_VISIBILITIES = ["user", "platform", "backtested"] as const;
+export type TemplateVisibility = (typeof TEMPLATE_VISIBILITIES)[number];
+
+export function parseTemplateVisibility(value: unknown): TemplateVisibility {
+  if (value === "platform") {
+    return "platform";
+  }
+  if (value === "backtested") {
+    return "backtested";
+  }
+  return "user";
+}
+
+export function templateIsLibraryRow(visibility: TemplateVisibility): boolean {
+  return visibility === "user" || visibility === "platform";
+}
 
 export const STALE_TEMPLATE_ERROR =
   "This template is from an older app version. Re-save it from a bot.";

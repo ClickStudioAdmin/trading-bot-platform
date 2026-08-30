@@ -121,7 +121,7 @@ function canManageRow(
   userId: string,
   isAdmin: boolean,
 ): boolean {
-  if (visibility === "platform") {
+  if (visibility === "platform" || (visibility === "backtested" && !ownerId)) {
     return isAdmin;
   }
   return ownerId === userId || isAdmin;

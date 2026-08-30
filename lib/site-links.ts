@@ -33,6 +33,7 @@ export const ADMIN_NAV_LINKS = [
   { href: "/admin/settings", label: "Settings" },
   { href: "/admin/members", label: "Members" },
   { href: "/admin/templates", label: "Templates" },
+  { href: "/admin/backtests", label: "Backtests" },
   { href: "/admin/logs", label: "Logs" },
   { href: "/admin/theme", label: "Theme" },
 ] as const;
@@ -43,6 +44,7 @@ export const ACCOUNT_DESK_LINKS = [
   { href: "/account/exchanges", label: "Exchanges", exact: true },
   { href: "/account/sub-accounts", label: "Manage Desks", exact: true },
   { href: "/account/templates", label: "Bot Templates", exact: true },
+  { href: "/account/backtests", label: "Backtests", exact: true },
 ] as const;
 
 export const FUTURES_PRIMARY_LINKS = [

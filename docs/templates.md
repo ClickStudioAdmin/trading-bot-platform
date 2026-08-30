@@ -70,6 +70,7 @@ Applying a folder walks the list and applies each template to a **chosen desk** 
 | User template / folder | Owning member | Owner applies to **their** desks. Other members cannot see it unless it is **shared** with them. Not listed on `/admin/templates`. |
 | Platform template / folder | Admin only | Every member can read and apply. Members cannot edit or delete. |
 | Shared template / folder | Owner (or admin) grants access by recipient email; stored as `to_user_id` | Recipient can apply to **their** desks. Shared tabs are read-only except **Import** (copy into their library) and **Remove** (drop the grant). Cannot edit, delete, or re-share. |
+| **Backtested** template | Created by a backtest run (owner) or publish/sweep (admin) | Frozen recipe plus a `backtest_runs` row. Not listed on `/account/templates`. Open stats on `/account/backtests`. Apply stays idle. Published rows have `user_id` null. See [phase-backtesting.md](phase-backtesting.md). |
 
 Share is a grant, not a copy. The owner keeps the template. Recipients can **Import** a shared template or folder to copy it into their own library (name collisions get a ` (import)` suffix). Sharing a folder also lists its templates on Shared Templates. Recipients can **Remove** that grant; if the template is only visible because it sits in a shared folder, Remove also drops those folder grants. Deleting the template or folder drops the shares. Platform templates are already public — do not share them.
 
@@ -91,8 +92,8 @@ GitHub migrations when this work starts. Names are indicative.
 `automation_templates`
 
 - `id` uuid
-- `user_id` uuid null (null only when `visibility = platform`)
-- `visibility` `user` \| `platform`
+- `user_id` uuid null (null when `visibility = platform`, or published `backtested`)
+- `visibility` `user` \| `platform` \| `backtested`
 - `desk_type` `dca` \| `perps` \| `cash_and_carry`
 - `name` text
 - `description` text null
@@ -100,9 +101,11 @@ GitHub migrations when this work starts. Names are indicative.
 - `recipe` jsonb not null
 - `recipe_version` integer not null
 - `created_at` / `updated_at`
-- Check: platform ⇒ `user_id` is null; user ⇒ `user_id` is set
+- Check: platform ⇒ `user_id` is null; user ⇒ `user_id` is set; backtested allows owner or `user_id` null (published)
 - Partial unique: `(user_id, lower(name), desk_type)` where `visibility = user`
 - Partial unique: `(lower(name), desk_type)` where `visibility = platform`
+- Partial unique: `(user_id, lower(name), desk_type)` where `visibility = backtested` and `user_id` is set
+- Partial unique: `(lower(name), desk_type)` where `visibility = backtested` and `user_id` is null
 
 `automation_template_sets`
 

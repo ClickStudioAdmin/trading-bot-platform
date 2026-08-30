@@ -25,6 +25,7 @@ import {
 } from "@/lib/futures/automation";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
+import { BacktestBotButton } from "@/components/backtest-dialog";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
@@ -501,6 +502,23 @@ function RuleCard({
           </label>
         )}
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          <BacktestBotButton
+            saved={Boolean(layer.id)}
+            webhookEntry={webhookEntry}
+            venueId={venueId}
+            layer={{
+              ...layer,
+              mode,
+              formAction,
+              orderType,
+              sizeUnit,
+              size,
+              limitPrice,
+              triggerPrice,
+              symbol,
+              entrySource,
+            }}
+          />
           <SaveAsTemplateButton
             isAdmin={isAdmin}
             defaultName={layer.name}
