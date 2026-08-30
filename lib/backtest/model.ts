@@ -15,7 +15,6 @@ export const BACKTEST_FEE_PRESETS = {
   },
 } as const;
 
-export const BACKTEST_MAX_WINDOW_DAYS = 1825;
 export const BACKTEST_CANDLE_LIMIT = 200_000;
 export const BACKTEST_INLINE_BAR_LIMIT = 1500;
 export const BACKTEST_VERCEL_BAR_LIMIT = 3000;
@@ -30,8 +29,6 @@ export type BacktestStatus =
   | "done"
   | "failed"
   | "cancelled";
-export type BacktestWindowDays = 30 | 90;
-
 export type SimulatedOrder = {
   atMs: number;
   action: "buy" | "sell" | "flatten";
@@ -116,10 +113,6 @@ export function parseFeePreset(raw: unknown): BacktestFeePreset {
   return raw === "vip0_taker" ? "vip0_taker" : "vip0_taker";
 }
 
-export function parseWindowDays(raw: unknown): BacktestWindowDays {
-  return Number(raw) === 90 ? 90 : 30;
-}
-
 export function parseBacktestStatus(raw: unknown): BacktestStatus | null {
   const value = String(raw ?? "").trim();
   if (
@@ -139,10 +132,17 @@ export function isoDateUtc(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
-export function defaultBacktestDates(): { from: string; to: string } {
+export function backtestWindowEndingToday(days: number): {
+  from: string;
+  to: string;
+} {
   const toMs = Date.now();
-  const fromMs = toMs - 30 * 24 * 60 * 60 * 1000;
+  const fromMs = toMs - days * 24 * 60 * 60 * 1000;
   return { from: isoDateUtc(fromMs), to: isoDateUtc(toMs) };
+}
+
+export function defaultBacktestDates(): { from: string; to: string } {
+  return backtestWindowEndingToday(30);
 }
 
 export function parseStartingBalance(
@@ -267,13 +267,6 @@ export function parseBacktestDateRange(
   const toMs = toStart + 24 * 60 * 60 * 1000 - 1;
   if (!(toMs > fromMs)) {
     return { ok: false, error: "End date must be after the start date." };
-  }
-  const days = (toMs - fromMs) / (24 * 60 * 60 * 1000);
-  if (days > BACKTEST_MAX_WINDOW_DAYS) {
-    return {
-      ok: false,
-      error: `The window cannot be longer than ${BACKTEST_MAX_WINDOW_DAYS} days.`,
-    };
   }
   const bars = Math.ceil((toMs - fromMs) / intervalMs(interval));
   if (bars > BACKTEST_CANDLE_LIMIT) {

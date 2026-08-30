@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DatePicker } from "@/components/date-picker";
 import { startBacktestStudyAction } from "@/lib/backtest/actions";
 import {
   DEFAULT_STARTING_USDT,
@@ -82,28 +83,21 @@ export function BacktestStudyForm({ seeds }: { seeds: StudySeedOption[] }) {
         </select>
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-xs text-ink-muted">
-          Start date
-          <input
-            type="date"
-            name="fromDate"
-            required
-            value={fromDate}
-            onChange={(event) => setFromDate(event.target.value)}
-            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
-          />
-        </label>
-        <label className="block text-xs text-ink-muted">
-          End date
-          <input
-            type="date"
-            name="toDate"
-            required
-            value={toDate}
-            onChange={(event) => setToDate(event.target.value)}
-            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
-          />
-        </label>
+        <DatePicker
+          label="Start date"
+          name="fromDate"
+          value={fromDate}
+          max={toDate}
+          onChange={setFromDate}
+        />
+        <DatePicker
+          label="End date"
+          name="toDate"
+          value={toDate}
+          min={fromDate}
+          max={dates.to}
+          onChange={setToDate}
+        />
       </div>
       <label className="block text-xs text-ink-muted">
         Initial account balance

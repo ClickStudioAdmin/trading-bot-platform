@@ -39,6 +39,14 @@ assert.equal(
   parseBacktestDateRange("2020-01-01", "2026-01-01", "5").ok,
   false,
 );
+assert.equal(
+  parseBacktestDateRange("2016-01-01", "2026-01-01", "60").ok,
+  true,
+);
+assert.equal(
+  parseBacktestDateRange("2016-01-01", "2026-01-01", "5").ok,
+  false,
+);
 assert.equal(intervalMs("5"), 5 * 60 * 1000);
 assert.equal(intervalMs("120"), 120 * 60 * 1000);
 assert.equal(

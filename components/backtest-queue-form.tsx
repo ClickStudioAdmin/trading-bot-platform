@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BacktestRecipeFields } from "@/components/backtest-recipe-fields";
+import { DatePicker } from "@/components/date-picker";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { queueTemplateBacktestAction } from "@/lib/backtest/actions";
 import type { BacktestRecipe } from "@/lib/backtest/model";
@@ -11,6 +12,7 @@ import {
   BACKTEST_FEE_PRESETS,
   DEFAULT_STARTING_USDT,
   backtestShouldRunInline,
+  backtestWindowEndingToday,
   defaultBacktestDates,
   estimateBacktestBars,
   parseBacktestDateRange,
@@ -239,29 +241,51 @@ export function BacktestQueueForm({
             ))}
           </select>
         </label>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-xs text-ink-muted">
-            Start date
-            <input
-              type="date"
+        <div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <DatePicker
+              label="Start date"
               name="fromDate"
-              required
               value={fromDate}
-              onChange={(event) => setFromDate(event.target.value)}
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+              max={toDate}
+              onChange={setFromDate}
             />
-          </label>
-          <label className="block text-xs text-ink-muted">
-            End date
-            <input
-              type="date"
+            <DatePicker
+              label="End date"
               name="toDate"
-              required
               value={toDate}
-              onChange={(event) => setToDate(event.target.value)}
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+              min={fromDate}
+              max={dates.to}
+              onChange={setToDate}
             />
-          </label>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {(
+              [
+                { days: 30, label: "1 month" },
+                { days: 365, label: "1 year" },
+                { days: 1825, label: "5 years" },
+                { days: 3650, label: "10 years" },
+              ] as const
+            ).map((row) => (
+              <button
+                key={row.days}
+                type="button"
+                onClick={() => {
+                  const next = backtestWindowEndingToday(row.days);
+                  setFromDate(next.from);
+                  setToDate(next.to);
+                }}
+                className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:border-line-strong hover:text-ink"
+              >
+                {row.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-ink-faint">
+            Any range the venue has. A 5-minute tape that long will ask for a
+            higher timeframe or a shorter window.
+          </p>
         </div>
         <label className="block text-xs text-ink-muted">
           Initial account balance
