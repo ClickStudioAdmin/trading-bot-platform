@@ -9,6 +9,8 @@ import {
   parseComparableSymbols,
   parseStartingBalance,
   peakLockedNotionalUsdt,
+  realizedEndingUsdt,
+  realizedReturnPct,
   returnOnCapitalUsedPct,
   splitCompletedBacktestOrders,
   openBacktestPositionLabel,
@@ -106,6 +108,14 @@ assert.equal(
   220,
 );
 assert.equal(returnOnCapitalUsedPct(6.17, 100), 0.0617);
+assert.equal(
+  realizedEndingUsdt({ startingUsdt: 1000, realizedUsdt: 72.25 }),
+  1072.25,
+);
+assert.equal(
+  realizedReturnPct({ startingUsdt: 1000, realizedUsdt: 72.25 }),
+  0.07225,
+);
 
 const split = splitCompletedBacktestOrders([
   {

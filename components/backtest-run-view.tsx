@@ -12,11 +12,12 @@ import {
 } from "@/lib/backtest/actions";
 import { applyTemplateAction } from "@/lib/templates/actions";
 import {
-  accountPnlUsdt,
   chartIntervalForWindow,
   formatBacktestReturnPct,
   openBacktestPositionLabel,
   peakLockedNotionalUsdt,
+  realizedEndingUsdt,
+  realizedReturnPct,
   returnOnCapitalUsedPct,
   splitCompletedBacktestOrders,
   type BacktestRun,
@@ -50,9 +51,10 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
       </p>
     );
   }
-  const pnl = accountPnlUsdt(stats);
+  const ending = realizedEndingUsdt(stats);
+  const realizedReturn = realizedReturnPct(stats);
   const peakUsed = peakLockedNotionalUsdt(run.orders);
-  const usedPct = returnOnCapitalUsedPct(pnl, peakUsed);
+  const usedPct = returnOnCapitalUsedPct(stats.realizedUsdt, peakUsed);
   return (
     <BacktestPropertyList
       rows={[
@@ -63,20 +65,20 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
         },
         {
           label: "Ending",
-          value: money(stats.endingUsdt),
-          hint: "Starting + realized + unrealized",
+          value: money(ending),
+          hint: "Starting + realized. Open mark is in Current trades.",
         },
         {
           label: "Account return",
-          value: formatBacktestReturnPct(stats.returnPct),
-          hint: `${money(pnl)} on ${money(stats.startingUsdt)} starting`,
+          value: formatBacktestReturnPct(realizedReturn),
+          hint: `${money(stats.realizedUsdt)} on ${money(stats.startingUsdt)} starting`,
         },
         {
           label: "On capital used",
           value: formatBacktestReturnPct(usedPct),
           hint:
             peakUsed > 0
-              ? `${money(pnl)} on ${money(peakUsed)} peak position`
+              ? `${money(stats.realizedUsdt)} on ${money(peakUsed)} peak position`
               : "No position was opened",
         },
         {

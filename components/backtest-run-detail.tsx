@@ -14,9 +14,9 @@ import {
 } from "@/components/backtest-run-view";
 import {
   BACKTEST_FEE_PRESETS,
-  accountPnlUsdt,
   formatBacktestReturnPct,
   peakLockedNotionalUsdt,
+  realizedReturnPct,
   returnOnCapitalUsedPct,
   type BacktestRun,
 } from "@/lib/backtest/model";
@@ -206,7 +206,9 @@ export function BacktestRunDetail({
                     {run.stats?.trades ?? "—"}
                   </td>
                   <td className="py-2 pr-4 tabular-nums">
-                    {formatBacktestReturnPct(run.stats?.returnPct)}
+                    {formatBacktestReturnPct(
+                      run.stats ? realizedReturnPct(run.stats) : null,
+                    )}
                   </td>
                   <td className="py-2 tabular-nums">
                     {run.stats
@@ -232,7 +234,9 @@ export function BacktestRunDetail({
                       {row.stats?.trades ?? "—"}
                     </td>
                     <td className="py-2 pr-4 tabular-nums">
-                      {formatBacktestReturnPct(row.stats?.returnPct)}
+                      {formatBacktestReturnPct(
+                        row.stats ? realizedReturnPct(row.stats) : null,
+                      )}
                     </td>
                     <td className="py-2 tabular-nums">
                       {row.stats
@@ -297,67 +301,53 @@ function signedMoney(value: number): string {
 
 function BacktestHeaderStats({ run }: { run: BacktestRun }) {
   const stats = run.stats;
-  const pnl = stats ? accountPnlUsdt(stats) : null;
-  const usedPct =
-    stats && pnl != null
-      ? returnOnCapitalUsedPct(pnl, peakLockedNotionalUsdt(run.orders))
-      : null;
+  const realizedReturn = stats ? realizedReturnPct(stats) : null;
+  const usedPct = stats
+    ? returnOnCapitalUsedPct(
+        stats.realizedUsdt,
+        peakLockedNotionalUsdt(run.orders),
+      )
+    : null;
   const winRate =
     stats && Number.isFinite(stats.winRate)
       ? `${(stats.winRate * 100).toFixed(1)}%`
       : "—";
   return (
-    <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div className="grid grid-cols-2 gap-6 rounded-card border border-line bg-surface p-5">
-        <KpiBlock label="Start" value={formatWindowDate(run.fromMs)} />
-        <KpiBlock label="End" value={formatWindowDate(run.toMs)} />
-      </div>
-      <div className="grid grid-cols-2 gap-6 rounded-card border border-line bg-surface p-5">
+    <section className="rounded-card border border-line bg-surface px-5 py-5">
+      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-3 xl:grid-cols-6">
+        <KpiBlock
+          label="Start"
+          value={formatWindowDate(run.fromMs)}
+          size="date"
+        />
+        <KpiBlock
+          label="End"
+          value={formatWindowDate(run.toMs)}
+          size="date"
+        />
         <KpiBlock
           label="Account return"
-          value={formatBacktestReturnPct(stats?.returnPct)}
-          toneClass={signedTone(stats?.returnPct ?? null)}
+          value={formatBacktestReturnPct(realizedReturn)}
+          toneClass={signedTone(realizedReturn)}
         />
         <KpiBlock
           label="On capital used"
           value={formatBacktestReturnPct(usedPct)}
           toneClass={signedTone(usedPct)}
         />
+        <KpiBlock
+          label="Realized P&L"
+          value={stats ? signedMoney(stats.realizedUsdt) : "—"}
+          toneClass={signedTone(stats?.realizedUsdt ?? null)}
+        />
+        <KpiBlock
+          label="Win rate"
+          value={winRate}
+          hint={stats ? `${stats.trades} trades` : undefined}
+          toneClass={stats && stats.trades > 0 ? "text-ink" : signedTone(null)}
+        />
       </div>
-      <KpiCard
-        label="Realized P&L"
-        value={
-          stats ? signedMoney(stats.realizedUsdt) : "—"
-        }
-        toneClass={signedTone(stats?.realizedUsdt ?? null)}
-      />
-      <KpiCard
-        label="Win rate"
-        value={winRate}
-        hint={stats ? `${stats.trades} trades` : undefined}
-        toneClass={
-          stats && stats.trades > 0 ? "text-ink" : signedTone(null)
-        }
-      />
     </section>
-  );
-}
-
-function KpiCard({
-  label,
-  value,
-  hint,
-  toneClass,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  toneClass?: string;
-}) {
-  return (
-    <div className="rounded-card border border-line bg-surface p-5">
-      <KpiBlock label={label} value={value} hint={hint} toneClass={toneClass} />
-    </div>
   );
 }
 
@@ -366,23 +356,27 @@ function KpiBlock({
   value,
   hint,
   toneClass,
+  size = "metric",
 }: {
   label: string;
   value: string;
   hint?: string;
   toneClass?: string;
+  size?: "date" | "metric";
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
         {label}
       </p>
       <p
-        className={`mt-3 text-2xl font-semibold tracking-tight tabular-nums ${toneClass ?? "text-ink"}`}
+        className={`mt-2 font-semibold tracking-tight tabular-nums ${
+          size === "date" ? "text-lg" : "text-xl"
+        } ${toneClass ?? "text-ink"}`}
       >
         {value}
       </p>
-      {hint ? <p className="mt-2 text-xs text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
     </div>
   );
 }

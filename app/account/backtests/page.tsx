@@ -7,7 +7,10 @@ import { RemoveBacktestButton } from "@/components/backtest-run-view";
 import { getSessionMember } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { toBacktestLibraryItem } from "@/lib/backtest/library";
-import { formatBacktestReturnPct } from "@/lib/backtest/model";
+import {
+  formatBacktestReturnPct,
+  realizedReturnPct,
+} from "@/lib/backtest/model";
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   canDeleteBacktestRun,
@@ -165,7 +168,9 @@ export default async function AccountBacktestsPage({
                   </td>
                   <td className="py-2 pr-4">{statusLabel(row.status)}</td>
                   <td className="py-2 pr-4 tabular-nums">
-                    {formatBacktestReturnPct(row.stats?.returnPct)}
+                    {formatBacktestReturnPct(
+                      row.stats ? realizedReturnPct(row.stats) : null,
+                    )}
                   </td>
                   <td className="py-2 pr-4 tabular-nums">
                     {row.stats

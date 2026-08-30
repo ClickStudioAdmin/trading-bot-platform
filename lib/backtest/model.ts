@@ -344,6 +344,21 @@ export function accountPnlUsdt(stats: Pick<
   return stats.endingUsdt - stats.startingUsdt;
 }
 
+export function realizedEndingUsdt(
+  stats: Pick<BacktestStats, "startingUsdt" | "realizedUsdt">,
+): number {
+  return stats.startingUsdt + stats.realizedUsdt;
+}
+
+export function realizedReturnPct(
+  stats: Pick<BacktestStats, "startingUsdt" | "realizedUsdt">,
+): number | null {
+  if (!(stats.startingUsdt > 0) || !Number.isFinite(stats.realizedUsdt)) {
+    return null;
+  }
+  return stats.realizedUsdt / stats.startingUsdt;
+}
+
 export function peakLockedNotionalUsdt(orders: SimulatedOrder[]): number {
   const legs: Record<"long" | "short", { qty: number; entry: number }> = {
     long: { qty: 0, entry: 0 },
