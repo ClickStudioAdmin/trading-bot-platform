@@ -81,6 +81,11 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
               : "No position was opened",
         },
         {
+          label: "Max capital used",
+          value: peakUsed > 0 ? money(peakUsed) : "—",
+          hint: "Peak locked notional (qty × entry) while a position was open",
+        },
+        {
           label: "Realized P&L",
           value: money(stats.realizedUsdt),
           hint: "Closed trades after fees",

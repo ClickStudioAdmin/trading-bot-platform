@@ -9,6 +9,7 @@ import {
   parseComparableSymbols,
   parseStartingBalance,
   peakLockedNotionalUsdt,
+  realizedAprPct,
   realizedEndingUsdt,
   realizedReturnPct,
   returnOnCapitalUsedPct,
@@ -115,6 +116,22 @@ assert.equal(
 assert.equal(
   realizedReturnPct({ startingUsdt: 1000, realizedUsdt: 72.25 }),
   0.07225,
+);
+const yearMs = 365.25 * 24 * 60 * 60 * 1000;
+const fromApr = Date.UTC(2025, 0, 1);
+const oneYearApr = realizedAprPct(
+  { startingUsdt: 1000, realizedUsdt: 100 },
+  fromApr,
+  fromApr + yearMs,
+);
+assert.ok(oneYearApr != null && Math.abs(oneYearApr - 0.1) < 1e-6);
+assert.equal(
+  realizedAprPct(
+    { startingUsdt: 1000, realizedUsdt: 100 },
+    Date.UTC(2026, 0, 1),
+    Date.UTC(2026, 0, 1),
+  ),
+  null,
 );
 
 const split = splitCompletedBacktestOrders([

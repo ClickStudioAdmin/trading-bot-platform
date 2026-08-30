@@ -16,6 +16,7 @@ import {
   BACKTEST_FEE_PRESETS,
   formatBacktestReturnPct,
   peakLockedNotionalUsdt,
+  realizedAprPct,
   realizedReturnPct,
   returnOnCapitalUsedPct,
   type BacktestRun,
@@ -301,13 +302,13 @@ function signedMoney(value: number): string {
 
 function BacktestHeaderStats({ run }: { run: BacktestRun }) {
   const stats = run.stats;
-  const realizedReturn = stats ? realizedReturnPct(stats) : null;
   const usedPct = stats
     ? returnOnCapitalUsedPct(
         stats.realizedUsdt,
         peakLockedNotionalUsdt(run.orders),
       )
     : null;
+  const apr = stats ? realizedAprPct(stats, run.fromMs, run.toMs) : null;
   const winRate =
     stats && Number.isFinite(stats.winRate)
       ? `${(stats.winRate * 100).toFixed(1)}%`
@@ -326,19 +327,19 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
           size="date"
         />
         <KpiBlock
-          label="Account return"
-          value={formatBacktestReturnPct(realizedReturn)}
-          toneClass={signedTone(realizedReturn)}
+          label="Realized P&L"
+          value={stats ? signedMoney(stats.realizedUsdt) : "—"}
+          toneClass={signedTone(stats?.realizedUsdt ?? null)}
         />
         <KpiBlock
-          label="On capital used"
+          label="On Capital Used"
           value={formatBacktestReturnPct(usedPct)}
           toneClass={signedTone(usedPct)}
         />
         <KpiBlock
-          label="Realized P&L"
-          value={stats ? signedMoney(stats.realizedUsdt) : "—"}
-          toneClass={signedTone(stats?.realizedUsdt ?? null)}
+          label="APR"
+          value={formatBacktestReturnPct(apr)}
+          toneClass={signedTone(apr)}
         />
         <KpiBlock
           label="Win rate"

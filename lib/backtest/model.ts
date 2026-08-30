@@ -359,6 +359,21 @@ export function realizedReturnPct(
   return stats.realizedUsdt / stats.startingUsdt;
 }
 
+const MS_PER_YEAR = 365.25 * 24 * 60 * 60 * 1000;
+
+export function realizedAprPct(
+  stats: Pick<BacktestStats, "startingUsdt" | "realizedUsdt">,
+  fromMs: number,
+  toMs: number,
+): number | null {
+  const period = realizedReturnPct(stats);
+  const years = (toMs - fromMs) / MS_PER_YEAR;
+  if (period == null || !(years > 0) || period <= -1) {
+    return null;
+  }
+  return (1 + period) ** (1 / years) - 1;
+}
+
 export function peakLockedNotionalUsdt(orders: SimulatedOrder[]): number {
   const legs: Record<"long" | "short", { qty: number; entry: number }> = {
     long: { qty: 0, entry: 0 },
