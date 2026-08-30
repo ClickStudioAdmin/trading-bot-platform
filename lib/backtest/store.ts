@@ -447,6 +447,39 @@ export function canDeleteBacktestRun(
   return run.userId === userId;
 }
 
+export async function listLinkedBacktestRuns(
+  templateIds: string[],
+): Promise<Record<string, string>> {
+  const ids = [...new Set(templateIds.filter(Boolean))];
+  const linked: Record<string, string> = {};
+  if (ids.length === 0) {
+    return linked;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return linked;
+  }
+  const { data, error } = await supabase
+    .from("backtest_runs")
+    .select("id, template_id, created_at")
+    .in("template_id", ids)
+    .eq("status", "done")
+    .order("created_at", { ascending: false });
+  if (error || !data) {
+    return linked;
+  }
+  for (const row of data) {
+    const templateId = String(
+      (row as { template_id?: string }).template_id ?? "",
+    );
+    const runId = String((row as { id?: string }).id ?? "");
+    if (templateId && runId && !linked[templateId]) {
+      linked[templateId] = runId;
+    }
+  }
+  return linked;
+}
+
 export async function countBacktestRunsForTemplate(
   templateId: string,
 ): Promise<number> {

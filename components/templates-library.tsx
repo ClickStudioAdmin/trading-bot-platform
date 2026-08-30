@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
@@ -197,6 +198,7 @@ export function TemplatesLibrary({
   sets,
   sharedTemplates = [],
   sharedSets = [],
+  linkedBacktests = {},
   initialTab = "templates",
 }: {
   variant: "account" | "admin";
@@ -207,6 +209,7 @@ export function TemplatesLibrary({
   sets: AutomationTemplateSet[];
   sharedTemplates?: AutomationTemplate[];
   sharedSets?: AutomationTemplateSet[];
+  linkedBacktests?: Record<string, string>;
   initialTab?: LibraryTab;
 }) {
   const router = useRouter();
@@ -799,7 +802,16 @@ export function TemplatesLibrary({
                       />
                     </td>
                   )}
-                  <td className="px-4 py-3 font-medium text-ink">{row.name}</td>
+                  <td className="px-4 py-3 font-medium text-ink">
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      {row.name}
+                      {linkedBacktests[row.id] ? (
+                        <span className="rounded-control bg-success/15 px-1.5 py-0.5 text-[11px] font-medium text-success">
+                          Backtested
+                        </span>
+                      ) : null}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-ink-muted">
                     {formatTemplateDeskType(row.deskType)}
                   </td>
@@ -830,6 +842,14 @@ export function TemplatesLibrary({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-3">
+                      {linkedBacktests[row.id] ? (
+                        <Link
+                          href={`/account/backtests/${linkedBacktests[row.id]}`}
+                          className={actionLink}
+                        >
+                          Backtest
+                        </Link>
+                      ) : null}
                       {canEdit ? (
                         <button
                           type="button"
