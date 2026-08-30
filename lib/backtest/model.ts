@@ -373,6 +373,45 @@ export function peakLockedNotionalUsdt(orders: SimulatedOrder[]): number {
   return peak;
 }
 
+export function splitCompletedBacktestOrders(orders: SimulatedOrder[]): {
+  completed: SimulatedOrder[];
+  open: SimulatedOrder[];
+} {
+  const completed: SimulatedOrder[] = [];
+  const pending: Record<"long" | "short", SimulatedOrder[]> = {
+    long: [],
+    short: [],
+  };
+  for (const order of orders) {
+    if (order.action === "flatten") {
+      completed.push(...pending[order.side], order);
+      pending[order.side] = [];
+    } else {
+      pending[order.side].push(order);
+    }
+  }
+  return {
+    completed,
+    open: [...pending.long, ...pending.short],
+  };
+}
+
+export function openBacktestPositionLabel(orders: SimulatedOrder[]): string | null {
+  if (orders.length === 0) {
+    return null;
+  }
+  const sides = ["long", "short"] as const;
+  const parts = sides.flatMap((side) => {
+    const rows = orders.filter((row) => row.side === side);
+    if (rows.length === 0) {
+      return [];
+    }
+    const qty = rows.reduce((sum, row) => sum + row.qty, 0);
+    return [`${side} ${qty.toFixed(4)}`];
+  });
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 export function returnOnCapitalUsedPct(
   pnlUsdt: number,
   peakNotionalUsdt: number,

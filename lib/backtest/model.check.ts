@@ -9,6 +9,8 @@ import {
   parseStartingBalance,
   peakLockedNotionalUsdt,
   returnOnCapitalUsedPct,
+  splitCompletedBacktestOrders,
+  openBacktestPositionLabel,
 } from "./model";
 
 assert.equal(parseStartingBalance("").ok, false);
@@ -95,5 +97,39 @@ assert.equal(
   220,
 );
 assert.equal(returnOnCapitalUsedPct(6.17, 100), 0.0617);
+
+const split = splitCompletedBacktestOrders([
+  {
+    atMs: 1,
+    action: "buy",
+    side: "long",
+    qty: 1,
+    price: 100,
+    feeUsdt: 0,
+    realizedUsdt: 0,
+  },
+  {
+    atMs: 2,
+    action: "flatten",
+    side: "long",
+    qty: 1,
+    price: 110,
+    feeUsdt: 0,
+    realizedUsdt: 10,
+  },
+  {
+    atMs: 3,
+    action: "buy",
+    side: "long",
+    qty: 0.5,
+    price: 120,
+    feeUsdt: 0,
+    realizedUsdt: 0,
+  },
+]);
+assert.equal(split.completed.length, 2);
+assert.equal(split.open.length, 1);
+assert.equal(split.open[0]?.qty, 0.5);
+assert.equal(openBacktestPositionLabel(split.open), "long 0.5000");
 
 console.log("backtest model checks passed");
