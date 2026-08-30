@@ -55,7 +55,7 @@ See [roadmap.md](roadmap.md). DCA is Phase 11 (complete). Scale-in / position bu
 
 ## Out of scope
 
-- DCA / scale-in types (DCA shipped in Phase 11; scale-in is roadmap 6)
+- DCA / scale-in types (DCA shipped in Phase 11; scale-in is roadmap 7)
 - Richer if/then recipes
 - Playbook-level venue override
 - Hyperliquid / MEXC / XT

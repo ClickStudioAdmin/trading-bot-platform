@@ -1,6 +1,6 @@
 # Phase 11 — DCA desk type
 
-Complete. Phase 10 is complete. See [phase-10.md](phase-10.md). After Phase 11, see [roadmap.md](roadmap.md). Fly.io is next to build; scale-in / position builder is roadmap 6.
+Complete. Phase 10 is complete. See [phase-10.md](phase-10.md). After Phase 11, see [roadmap.md](roadmap.md). Fly.io is next to build; scale-in / position builder is roadmap 7.
 
 ## Purpose
 
