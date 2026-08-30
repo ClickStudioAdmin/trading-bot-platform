@@ -854,6 +854,54 @@ assert.equal(
 assert.equal(
   decideDcaTick({
     ...base,
+    side: "short",
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    splitIndicatorSides: true,
+    armTrigger: { triggerBy: "last", compare: "gte", price: 100 },
+  }).action.kind,
+  "none",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    side: "long",
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    splitIndicatorSides: true,
+    armTrigger: { triggerBy: "last", compare: "gte", price: 100 },
+  }).action.kind,
+  "arm",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    side: "long",
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    splitIndicatorSides: true,
+    armTrigger: { triggerBy: "last", compare: "lte", price: 100 },
+  }).action.kind,
+  "none",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    side: "short",
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    splitIndicatorSides: true,
+    armTrigger: { triggerBy: "last", compare: "lte", price: 100 },
+  }).action.kind,
+  "arm",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
     status: "armed",
     clipsFilled: 0,
     startKind: "webhook",

@@ -33,7 +33,7 @@ Each run has its own **detail page**: parameters, stats, trade list, account-imp
 | Recipes | **Perps bots price-cross** and **DCA** (immediate / price / indicator start). Webhook-entry and webhook-start skipped. |
 | Perps bot exits | Same ticket set as manual: TP/SL (full/partial, last/mark/index, market/limit) plus trailing. Optional. Buy/sell only. Flatten rules stay flatten-only. |
 | Unpublished runs | **Owner only** (plus admin). |
-| Remove | Owner deletes their run. Admin can delete any, including published. Unused `backtested` snapshot is deleted with the last run that pointed at it. |
+| Remove | Owner deletes their run. Admin can delete any, including published. Unused `backtested` snapshot is deleted with the last run that pointed at it. Admin **Remove** on a study deletes the study and every scenario run (`study_id` cascade). |
 | Bar fill (entries) | Decide on **bar close**, fill at **close**. |
 | Bar fill (exits) | Stop and trailing use the **adverse wick**. Take profit uses the **favorable wick** (Perps) or close (DCA percent exits). If stop and take profit both print on the same bar, **stop wins**. |
 | Fee | Named preset `vip0_taker` = **6 bps all-in** per fill. |
@@ -47,7 +47,7 @@ Each run has its own **detail page**: parameters, stats, trade list, account-imp
 | Window | Explicit start/end dates. Max **1825** days (5 years). Any indicator timeframe (5m through Daily). Rejected only if the range needs more than **200,000** bars. |
 | Worker | Short jobs (≤1500 bars and ≤4 pairs) run in the request. Longer jobs stay `queued`. The engine worker (Fly, or the 5-minute Vercel tick for modest jobs) claims one run at a time and pages candles. Stale `running` after 15 minutes is reclaimable. |
 | Balance | Required `starting_balance_usdt`. Replay skips an entry when notional + fee exceeds remaining cash (start + realized − locked notional). |
-| DCA start | Replay treats legs as **armed** at the window start (Save and Arm). Immediate fires the first clip on the first close. |
+| DCA start | Replay treats legs as **armed** at the window start (Save and Arm). Immediate fires the first clip on the first close. **Both** never starts long and short on the same print, and does not open the other side while one position is still on. Price ≥ is Long only; price ≤ is Short only. Immediate + Both takes Long first (Manual does not auto-hedge). |
 
 ## How it sits on templates
 

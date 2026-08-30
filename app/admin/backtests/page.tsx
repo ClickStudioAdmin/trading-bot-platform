@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
+import { RemoveBacktestStudyButton } from "@/components/backtest-run-view";
 import { BacktestStudyForm } from "@/components/backtest-study-form";
 import { requireAdmin } from "@/lib/admin/access";
 import { listAllBacktestRuns, listBacktestStudies } from "@/lib/backtest/store";
@@ -79,7 +80,10 @@ export default async function AdminBacktestsPage({
                   <th className="py-2 pr-4 font-medium">Type</th>
                   <th className="py-2 pr-4 font-medium">Contract</th>
                   <th className="py-2 pr-4 font-medium">Scenarios</th>
-                  <th className="py-2 font-medium">Status</th>
+                  <th className="py-2 pr-4 font-medium">Status</th>
+                  <th className="py-2 font-medium">
+                    <span className="sr-only">Remove</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -100,7 +104,13 @@ export default async function AdminBacktestsPage({
                     <td className="py-2 pr-4 tabular-nums">
                       {row.scenarioCount}
                     </td>
-                    <td className="py-2">{statusLabel(row.status)}</td>
+                    <td className="py-2 pr-4">{statusLabel(row.status)}</td>
+                    <td className="py-2">
+                      <RemoveBacktestStudyButton
+                        studyId={row.id}
+                        compact
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -56,4 +56,62 @@ assert.equal(closed.stats.trades, 1);
 assert.equal(closed.stats.openQty, 0);
 assert.ok((closed.stats.realizedUsdt ?? 0) > 0);
 
+function parseRecipe(direction: "long" | "short" | "both", extra?: FormData) {
+  const row = extra ?? new FormData();
+  row.set("name", `DCA ${direction}`);
+  row.set("symbol", "BTCUSDT");
+  row.set("direction", direction);
+  if (!row.has("startKind")) {
+    row.set("startKind", "immediate");
+  }
+  row.set("clipSize", "1");
+  row.set("sizeUnit", "qty");
+  const parsedRow = parseDcaPlaybookForm(row);
+  assert.equal(parsedRow.ok, true);
+  if (!parsedRow.ok) {
+    throw new Error("expected DCA parse");
+  }
+  return snapshotDcaRecipe(parsedRow.config);
+}
+
+const bothImmediate = replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 3_000, open: 100, high: 100, low: 100, close: 100 },
+  ],
+  recipe: parseRecipe("both"),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+const bothEntries = bothImmediate.orders.filter(
+  (row) => row.action === "buy" || row.action === "sell",
+);
+assert.equal(bothEntries.length, 1);
+assert.equal(bothEntries[0]?.side, "long");
+assert.equal(bothImmediate.stats.openSide, "long");
+assert.ok(!bothImmediate.orders.some((row) => row.side === "short"));
+
+const priceBoth = new FormData();
+priceBoth.set("startKind", "price");
+priceBoth.set("armTriggerBy", "last");
+priceBoth.set("armCompare", "gte");
+priceBoth.set("armPrice", "100");
+const bothPrice = replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
+  ],
+  recipe: parseRecipe("both", priceBoth),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(
+  bothPrice.orders.filter((row) => row.action === "buy" || row.action === "sell")
+    .length,
+  1,
+);
+assert.equal(bothPrice.orders[0]?.side, "long");
+assert.ok(!bothPrice.orders.some((row) => row.side === "short"));
+
 console.log("dca backtest replay checks passed");

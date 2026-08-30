@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DeskChart } from "@/components/desk-chart";
 import { Modal } from "@/components/template-modals";
-import { deleteBacktestAction, publishBacktestAction } from "@/lib/backtest/actions";
+import {
+  deleteBacktestAction,
+  deleteBacktestStudyAction,
+  publishBacktestAction,
+} from "@/lib/backtest/actions";
 import { applyTemplateAction } from "@/lib/templates/actions";
 import type { BacktestRun } from "@/lib/backtest/model";
 import { buildBacktestChartOverlay } from "@/lib/charts/overlay";
@@ -412,6 +416,50 @@ export function RemoveBacktestButton({
         }
       >
         {pending ? "Removing…" : "Remove"}
+      </button>
+      {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
+    </form>
+  );
+}
+
+export function RemoveBacktestStudyButton({
+  studyId,
+  returnTo = "/admin/backtests",
+  compact = false,
+}: {
+  studyId: string;
+  returnTo?: string;
+  compact?: boolean;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <form
+      action={async (formData) => {
+        setPending(true);
+        setError(null);
+        const result = await deleteBacktestStudyAction(formData);
+        setPending(false);
+        if (!result.ok) {
+          setError(result.error ?? "Could not remove that study.");
+          return;
+        }
+        router.push(returnTo);
+        router.refresh();
+      }}
+    >
+      <input type="hidden" name="studyId" value={studyId} />
+      <button
+        type="submit"
+        disabled={pending}
+        className={
+          compact
+            ? "rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-50"
+            : "rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50"
+        }
+      >
+        {pending ? "Removing…" : compact ? "Remove" : "Remove study"}
       </button>
       {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>

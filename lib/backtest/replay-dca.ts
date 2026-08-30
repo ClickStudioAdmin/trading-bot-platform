@@ -88,6 +88,7 @@ export function replayDcaPlaybook(input: {
   }
   const config = built.config;
   const sides = dcaEnabledSides(config.direction);
+  const splitSides = config.direction === "both";
   const legs: Record<FuturesSide, SimLeg> = {
     long: emptyLeg(),
     short: emptyLeg(),
@@ -271,7 +272,7 @@ export function replayDcaPlaybook(input: {
         indicatorCompare: config.indicatorCompare,
         indicatorLevel: config.indicatorLevel,
         indicatorConditionTrue: live.indicatorTrue,
-        splitIndicatorSides: config.direction === "both",
+        splitIndicatorSides: splitSides,
         closes: window,
         takeProfitOrderType: config.takeProfitOrderType,
         tpLimitResting: false,
@@ -283,6 +284,16 @@ export function replayDcaPlaybook(input: {
         disarmTrue: decision.nextDisarmTrue,
         indicatorTrue: decision.nextIndicatorTrue,
       };
+      const starting =
+        (decision.action.kind === "arm" || decision.action.kind === "clip") &&
+        live.clipsFilled === 0;
+      if (
+        starting &&
+        splitSides &&
+        legs[side === "long" ? "short" : "long"].qty > 0
+      ) {
+        continue;
+      }
       if (decision.action.kind === "arm" || decision.action.kind === "clip") {
         addClip(side, bar.timeMs, price);
       } else if (decision.action.kind === "close") {

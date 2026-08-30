@@ -29,10 +29,12 @@ import {
   canReadBacktestRun,
   countBacktestRunsForTemplate,
   deleteBacktestRun,
+  deleteBacktestStudy,
   insertBacktestRun,
   insertBacktestStudy,
   listBacktestRuns,
   loadBacktestRun,
+  loadBacktestStudy,
   updateBacktestRun,
   updateBacktestStudy,
 } from "./store";
@@ -495,5 +497,28 @@ export async function deleteBacktestAction(
   }
   revalidateBacktests();
   return { ok: true, runId: run.id };
+}
+
+export async function deleteBacktestStudyAction(
+  formData: FormData,
+): Promise<BacktestActionResult> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  if (!auth.isAdmin) {
+    return { ok: false, error: "Admin only." };
+  }
+  const studyId = String(formData.get("studyId") ?? "");
+  const study = await loadBacktestStudy(studyId);
+  if (!study) {
+    return { ok: false, error: "That study was not found." };
+  }
+  const deleted = await deleteBacktestStudy(study.id);
+  if (!deleted.ok) {
+    return deleted;
+  }
+  revalidateBacktests(`/admin/backtests/studies/${study.id}`);
+  return { ok: true, studyId: study.id };
 }
 

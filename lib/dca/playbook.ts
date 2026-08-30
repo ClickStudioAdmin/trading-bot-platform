@@ -1100,6 +1100,7 @@ export function decideDcaTick(input: {
   const indicatorCompare = input.indicatorCompare ?? null;
   const indicatorLevel = input.indicatorLevel ?? null;
   const closes = input.closes ?? null;
+  const splitBySide = Boolean(input.splitIndicatorSides);
   const armPrice = triggerPrice(input.armTrigger, input.triggerPrices);
   const armMet = Boolean(
     startKind === "price" &&
@@ -1109,7 +1110,11 @@ export function decideDcaTick(input: {
         armPrice,
         input.armTrigger.compare,
         input.armTrigger.price,
-      ),
+      ) &&
+      (!splitBySide ||
+        (input.side === "long"
+          ? input.armTrigger.compare === "gte"
+          : input.armTrigger.compare === "lte")),
   );
   const disarmPrice = triggerPrice(input.disarmTrigger, input.triggerPrices);
   const disarmMet = Boolean(
@@ -1135,7 +1140,7 @@ export function decideDcaTick(input: {
         closes,
         compare: indicatorCompare,
         level: indicatorLevel,
-        splitBySide: Boolean(input.splitIndicatorSides),
+        splitBySide,
       }) ||
         (latchCross &&
           indicatorStartMet({
@@ -1144,7 +1149,7 @@ export function decideDcaTick(input: {
             closes: indicatorClosesForCross(closes),
             compare: indicatorCompare,
             level: indicatorLevel,
-            splitBySide: Boolean(input.splitIndicatorSides),
+            splitBySide,
           }))),
   );
   const indicatorDue =

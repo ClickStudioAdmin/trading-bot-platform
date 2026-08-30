@@ -414,6 +414,23 @@ export async function deleteBacktestRun(id: string): Promise<
   return { ok: true };
 }
 
+export async function deleteBacktestStudy(id: string): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase
+    .from("backtest_studies")
+    .delete()
+    .eq("id", id);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
 function parseBacktestStudyRow(
   row: Record<string, unknown>,
 ): BacktestStudy | null {

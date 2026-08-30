@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
+import { RemoveBacktestStudyButton } from "@/components/backtest-run-view";
 import { requireAdmin } from "@/lib/admin/access";
 import { recipeParamRows } from "@/lib/backtest/study";
 import { listBacktestRuns, loadBacktestStudy } from "@/lib/backtest/store";
@@ -37,7 +38,11 @@ export default async function AdminBacktestStudyPage({
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading overline="Admin" title={study.name} />
+      <PageHeading
+        overline="Admin"
+        title={study.name}
+        actions={<RemoveBacktestStudyButton studyId={study.id} />}
+      />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
         {study.deskType === "dca" ? "DCA" : "Perps"} · {study.symbol} ·{" "}
         {new Date(study.fromMs).toISOString().slice(0, 10)}–
