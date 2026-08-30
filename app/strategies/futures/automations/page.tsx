@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
+import { toBacktestLibraryItem } from "@/components/backtest-dialog";
 import { DcaPlaybooksDesk } from "@/components/dca-playbook-form";
 import { FuturesAutomationsDesk } from "@/components/futures-rules-form";
 import { FuturesRulesGuide } from "@/components/futures-rules-guide";
@@ -150,6 +151,9 @@ export default async function FuturesAutomationsPage({
             sets={sets}
             policy={hl ? HYPERLIQUID_DCA_UI : undefined}
             venueEnvironment={session.account.venueEnvironment}
+            backtestLibrary={templates
+              .map(toBacktestLibraryItem)
+              .filter((row): row is NonNullable<typeof row> => Boolean(row))}
           />
         </div>
       </main>
@@ -225,6 +229,9 @@ export default async function FuturesAutomationsPage({
           venueId={hl ? "hyperliquid" : "bybit"}
           quoteLabel={hl ? "USDC" : "USDT"}
           venueEnvironment={session.account.venueEnvironment}
+          backtestLibrary={templates
+            .map(toBacktestLibraryItem)
+            .filter((row): row is NonNullable<typeof row> => Boolean(row))}
         />
       ) : (
         <p className="text-sm text-ink-muted">

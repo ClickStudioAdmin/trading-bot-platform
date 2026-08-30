@@ -77,6 +77,7 @@ export type TemplateActionResult = {
   applied?: AppliedDeskItem[];
   json?: string;
   filename?: string;
+  templateId?: string;
 };
 
 function revalidateTemplateSurfaces(accountId?: string, deskType?: TemplateDeskType) {
@@ -397,7 +398,7 @@ async function saveNamedRecipe(input: {
       if (!placed.ok) {
         return placed;
       }
-      return { ok: true };
+      return { ok: true, templateId: existing.id };
     }
   }
   const inserted = await insertTemplate({
@@ -436,7 +437,7 @@ async function saveNamedRecipe(input: {
   if (!placed.ok) {
     return placed;
   }
-  return { ok: true };
+  return { ok: true, templateId: inserted.template.id };
 }
 
 function metaFromForm(formData: FormData, isAdmin: boolean) {

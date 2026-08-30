@@ -46,6 +46,7 @@ const opened = replayPerpsPriceCross({
   bars,
   recipe: base,
   feeRate: 0.001,
+  startingUsdt: 10_000,
 });
 assert.equal(opened.orders.length, 1);
 assert.equal(opened.orders[0]?.action, "buy");
@@ -66,6 +67,7 @@ const closed = replayPerpsPriceCross({
   ],
   recipe: flatten,
   feeRate: 0,
+  startingUsdt: 10_000,
 });
 assert.equal(closed.orders.length, 0);
 assert.equal(closed.stats.trades, 0);
@@ -84,6 +86,7 @@ const both = replayPerpsPriceCross({
     skipIfOpen: true,
   },
   feeRate: 0,
+  startingUsdt: 10_000,
 });
 assert.equal(both.orders.length, 1);
 assert.equal(both.stats.openQty, 1);
@@ -111,6 +114,7 @@ const withTp = replayPerpsPriceCross({
     },
   },
   feeRate: 0,
+  startingUsdt: 10_000,
 });
 assert.equal(withTp.orders.length, 2);
 assert.equal(withTp.orders[0]?.action, "buy");
@@ -142,8 +146,22 @@ const withSl = replayPerpsPriceCross({
     },
   },
   feeRate: 0,
+  startingUsdt: 10_000,
 });
 assert.equal(withSl.orders[1]?.action, "flatten");
 assert.equal(withSl.orders[1]?.price, 95);
+
+const broke = replayPerpsPriceCross({
+  bars: [
+    { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
+    { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
+  ],
+  recipe: base,
+  feeRate: 0,
+  startingUsdt: 50,
+});
+assert.equal(broke.orders.length, 0);
+assert.equal(broke.stats.startingUsdt, 50);
+assert.equal(broke.stats.endingUsdt, 50);
 
 console.log("backtest replay checks passed");

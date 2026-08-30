@@ -4,11 +4,16 @@ import { PageHeading } from "@/components/page-heading";
 import {
   BacktestChartButton,
   BacktestStatsGrid,
+  RemoveBacktestButton,
 } from "@/components/backtest-run-view";
 import { requireAdmin } from "@/lib/admin/access";
 import { sweepPerpsBacktestFormAction } from "@/lib/backtest/actions";
 import { listAllBacktestRuns } from "@/lib/backtest/store";
 import { listAllTemplates } from "@/lib/templates/store";
+import {
+  DEFAULT_STARTING_USDT,
+  defaultBacktestDates,
+} from "@/lib/backtest/model";
 import { firstSearchValue } from "@/lib/paper/open";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
@@ -26,6 +31,7 @@ export default async function AdminBacktestsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   await requireAdmin();
+  const dates = defaultBacktestDates();
   const params = await searchParams;
   const selectedId = firstSearchValue(params.run);
   const [templates, runs] = await Promise.all([
@@ -82,7 +88,38 @@ export default async function AdminBacktestsPage({
               required
             />
           </label>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs text-ink-muted">
+              Start date
+              <input
+                type="date"
+                name="fromDate"
+                required
+                defaultValue={dates.from}
+                className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+              />
+            </label>
+            <label className="block text-xs text-ink-muted">
+              End date
+              <input
+                type="date"
+                name="toDate"
+                required
+                defaultValue={dates.to}
+                className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+              />
+            </label>
+          </div>
+          <label className="block text-xs text-ink-muted">
+            Initial account balance
+            <input
+              name="startingBalance"
+              required
+              defaultValue={String(DEFAULT_STARTING_USDT)}
+              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
+            />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs text-ink-muted">
               Venue
               <select
@@ -91,17 +128,6 @@ export default async function AdminBacktestsPage({
               >
                 <option value="bybit">Bybit</option>
                 <option value="hyperliquid">Hyperliquid</option>
-              </select>
-            </label>
-            <label className="block text-xs text-ink-muted">
-              Window
-              <select
-                name="windowDays"
-                defaultValue="30"
-                className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
-              >
-                <option value="30">30 days</option>
-                <option value="90">90 days</option>
               </select>
             </label>
             <label className="block text-xs text-ink-muted">
@@ -178,9 +204,16 @@ export default async function AdminBacktestsPage({
             <h2 className="text-xl font-semibold tracking-tight">
               {selected.recipe.name} · {selected.symbol}
             </h2>
-            {selected.status === "done" ? (
-              <BacktestChartButton run={selected} />
-            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              {selected.status === "done" ? (
+                <BacktestChartButton run={selected} />
+              ) : null}
+              <RemoveBacktestButton
+                runId={selected.id}
+                canRemove
+                returnTo="/admin/backtests"
+              />
+            </div>
           </div>
           <BacktestStatsGrid run={selected} />
         </section>

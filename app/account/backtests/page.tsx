@@ -2,21 +2,32 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
+import { toBacktestLibraryItem } from "@/components/backtest-dialog";
+import { BacktestQueueForm } from "@/components/backtest-queue-form";
 import {
   ApplyBacktestButton,
   BacktestChartButton,
   BacktestOrdersTable,
   BacktestStatsGrid,
   PublishBacktestButton,
+  RemoveBacktestButton,
 } from "@/components/backtest-run-view";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { deskAllowsPerpsRecipes } from "@/lib/accounts/model";
 import { getSessionMember } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
-import { listBacktestRuns, loadBacktestRun, canReadBacktestRun } from "@/lib/backtest/store";
+import {
+  canDeleteBacktestRun,
+  canReadBacktestRun,
+  listBacktestRuns,
+  loadBacktestRun,
+} from "@/lib/backtest/store";
 import { BACKTEST_FEE_PRESETS } from "@/lib/backtest/model";
+import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
+import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { firstSearchValue } from "@/lib/paper/open";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
+import { listApplyableTemplates } from "@/lib/templates/store";
 
 export const metadata: Metadata = {
   title: "Backtests",
@@ -40,10 +51,25 @@ export default async function AccountBacktestsPage({
   }
   const params = await searchParams;
   const selectedId = firstSearchValue(params.run);
-  const [runs, desks] = await Promise.all([
+  const selectedTemplateId = firstSearchValue(params.template);
+  const defaultVenue = firstSearchValue(params.venue);
+  const defaultEnv = firstSearchValue(params.env);
+  const [runs, desks, templates] = await Promise.all([
     listBacktestRuns({ userId: member.id }),
     listTradingAccounts(member.id),
+    listApplyableTemplates({ userId: member.id }),
   ]);
+  const library = templates.flatMap((row) => {
+    const item = toBacktestLibraryItem(row);
+    if (!item) {
+      return [];
+    }
+    const allowed =
+      item.recipe.kind === "dca"
+        ? canBacktestDcaRecipe(item.recipe)
+        : canBacktestPerpsRecipe(item.recipe);
+    return allowed.ok ? [item] : [];
+  });
   const selected = selectedId ? await loadBacktestRun(selectedId) : null;
   const isAdmin = memberIsAdmin(member);
   const run =
@@ -72,14 +98,20 @@ export default async function AccountBacktestsPage({
         }
       />
       <p className="mb-6 max-w-2xl text-sm text-ink-muted">
-        Paper replay of a saved Perps bots price-cross or DCA playbook. Runs
-        never write the live blotter. Apply a backtested snapshot from a desk
-        — it stays idle.
+        Paper replay of a saved Perps bots or DCA template. Fill the form
+        below — start, end, and initial balance are required. Runs never
+        write the live blotter.
       </p>
+      <BacktestQueueForm
+        templates={library}
+        selectedTemplateId={selectedTemplateId ?? ""}
+        defaultVenue={defaultVenue ?? "bybit"}
+        defaultVenueEnvironment={defaultEnv ?? null}
+      />
       {runs.length === 0 ? (
         <p className="text-sm text-ink-muted">
-          No runs yet. Open a saved Perps bot or DCA on Automations and choose
-          Backtest.
+          No runs yet. Save a bot as a template, then complete the form
+          above.
         </p>
       ) : (
         <div className="overflow-x-auto">
@@ -91,7 +123,10 @@ export default async function AccountBacktestsPage({
                 <th className="py-2 pr-4 font-medium">Contract</th>
                 <th className="py-2 pr-4 font-medium">Window</th>
                 <th className="py-2 pr-4 font-medium">Status</th>
-                <th className="py-2 font-medium">Realized</th>
+                <th className="py-2 pr-4 font-medium">Realized</th>
+                <th className="py-2 font-medium">
+                  <span className="sr-only">Remove</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -118,13 +153,24 @@ export default async function AccountBacktestsPage({
                     {DCA_INDICATOR_TIMEFRAME_LABELS[row.interval]}
                   </td>
                   <td className="py-2 pr-4">{statusLabel(row.status)}</td>
-                  <td className="py-2 tabular-nums">
+                  <td className="py-2 pr-4 tabular-nums">
                     {row.stats
                       ? row.stats.realizedUsdt.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })
                       : "—"}
+                  </td>
+                  <td className="py-2">
+                    <RemoveBacktestButton
+                      runId={row.id}
+                      canRemove={canDeleteBacktestRun(
+                        row,
+                        member.id,
+                        isAdmin,
+                      )}
+                      compact
+                    />
                   </td>
                 </tr>
               ))}
@@ -145,6 +191,9 @@ export default async function AccountBacktestsPage({
               </h2>
               <p className="mt-1 text-sm text-ink-muted">
                 {run.venue} · {DCA_INDICATOR_TIMEFRAME_LABELS[run.interval]} ·{" "}
+                {new Date(run.fromMs).toISOString().slice(0, 10)}–
+                {new Date(run.toMs).toISOString().slice(0, 10)} ·{" "}
+                start {run.startingUsdt.toLocaleString()} ·{" "}
                 {BACKTEST_FEE_PRESETS[run.feePreset].label}
               </p>
             </div>
@@ -159,6 +208,10 @@ export default async function AccountBacktestsPage({
               {run.status === "done" && run.userId === member.id ? (
                 <PublishBacktestButton runId={run.id} canPublish />
               ) : null}
+              <RemoveBacktestButton
+                runId={run.id}
+                canRemove={canDeleteBacktestRun(run, member.id, isAdmin)}
+              />
             </div>
           </div>
           {run.error ? <p className="text-sm text-danger">{run.error}</p> : null}

@@ -162,6 +162,18 @@ export function recipePreview(recipe: TemplateRecipe): string {
   return `${recipe.name} · ${recipe.symbol}`;
 }
 
+export function recipesMatchForBacktest(
+  current: TemplateRecipe,
+  saved: TemplateRecipe,
+): boolean {
+  if (current.kind !== saved.kind) {
+    return false;
+  }
+  const left = { ...current, name: "" };
+  const right = { ...saved, name: "" };
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe {
   return {
     kind: "dca",

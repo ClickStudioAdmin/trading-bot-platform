@@ -15,6 +15,7 @@ import {
 import type { CandleBar } from "@/lib/market/candles";
 import {
   emptyBacktestStats,
+  finishBacktestStats,
   type BacktestStats,
   type SimulatedOrder,
 } from "./model";
@@ -75,14 +76,15 @@ export function replayDcaPlaybook(input: {
   bars: CandleBar[];
   recipe: DcaTemplateRecipe;
   feeRate: number;
+  startingUsdt: number;
 }): { orders: SimulatedOrder[]; stats: BacktestStats } {
   const allowed = canBacktestDcaRecipe(input.recipe);
   if (!allowed.ok) {
-    return { orders: [], stats: emptyBacktestStats() };
+    return { orders: [], stats: emptyBacktestStats(input.startingUsdt) };
   }
   const built = dcaRecipeToConfig(input.recipe, { venue: "bybit" });
   if (!built.ok) {
-    return { orders: [], stats: emptyBacktestStats() };
+    return { orders: [], stats: emptyBacktestStats(input.startingUsdt) };
   }
   const config = built.config;
   const sides = dcaEnabledSides(config.direction);
@@ -96,7 +98,7 @@ export function replayDcaPlaybook(input: {
   let trades = 0;
   let grossWin = 0;
   let grossLoss = 0;
-  let peak = 0;
+  let peak = input.startingUsdt;
   let maxDrawdown = 0;
   let barsIn = 0;
   const closes: number[] = [];
@@ -147,6 +149,14 @@ export function replayDcaPlaybook(input: {
       return;
     }
     const fee = feeUsdt(qty, price, input.feeRate);
+    const locked = Object.values(legs).reduce(
+      (sum, row) => sum + row.qty * row.entry,
+      0,
+    );
+    const available = input.startingUsdt + realized - locked;
+    if (qty * price + fee > available) {
+      return;
+    }
     realized -= fee;
     const action = side === "short" ? "sell" : "buy";
     orders.push({
@@ -295,7 +305,7 @@ export function replayDcaPlaybook(input: {
     if (held) {
       barsIn += 1;
     }
-    let mark = realized;
+    let mark = input.startingUsdt + realized;
     for (const side of sides) {
       const leg = legs[side];
       if (leg.qty > 0) {
@@ -328,10 +338,9 @@ export function replayDcaPlaybook(input: {
 
   return {
     orders,
-    stats: {
+    stats: finishBacktestStats({
       trades,
       wins,
-      winRate: trades > 0 ? wins / trades : 0,
       realizedUsdt: realized,
       maxDrawdownUsdt: maxDrawdown,
       profitFactor: grossLoss > 0 ? grossWin / grossLoss : null,
@@ -339,6 +348,7 @@ export function replayDcaPlaybook(input: {
       openQty,
       openSide,
       markUsdt,
-    },
+      startingUsdt: input.startingUsdt,
+    }),
   };
 }

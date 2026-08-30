@@ -17,6 +17,7 @@ import type { CandleBar } from "@/lib/market/candles";
 import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
 import {
   emptyBacktestStats,
+  finishBacktestStats,
   type BacktestStats,
   type SimulatedOrder,
 } from "./model";
@@ -117,10 +118,11 @@ export function replayPerpsPriceCross(input: {
   bars: CandleBar[];
   recipe: PerpsTemplateRecipe;
   feeRate: number;
+  startingUsdt: number;
 }): { orders: SimulatedOrder[]; stats: BacktestStats } {
   const allowed = canBacktestPerpsRecipe(input.recipe);
   if (!allowed.ok) {
-    return { orders: [], stats: emptyBacktestStats() };
+    return { orders: [], stats: emptyBacktestStats(input.startingUsdt) };
   }
   const { action, closeSide } = recipeAction(input.recipe);
   const trigger = Number(
@@ -134,7 +136,7 @@ export function replayPerpsPriceCross(input: {
   let trades = 0;
   let grossWin = 0;
   let grossLoss = 0;
-  let peak = 0;
+  let peak = input.startingUsdt;
   let maxDrawdown = 0;
   let barsIn = 0;
 
@@ -165,9 +167,10 @@ export function replayPerpsPriceCross(input: {
   }
 
   function markEquity(price: number) {
-    const mark = open
-      ? realized + unrealized(open.side, open.qty, open.entry, price)
-      : realized;
+    const mark =
+      input.startingUsdt +
+      realized +
+      (open ? unrealized(open.side, open.qty, open.entry, price) : 0);
     if (mark > peak) {
       peak = mark;
     }
@@ -255,24 +258,28 @@ export function replayPerpsPriceCross(input: {
         const qty = sizeAtPrice(input.recipe, price);
         if (qty > 0) {
           const fee = feeUsdt(qty, price, input.feeRate);
-          realized -= fee;
-          orders.push({
-            atMs: bar.timeMs,
-            action,
-            side,
-            qty,
-            price,
-            feeUsdt: fee,
-            realizedUsdt: -fee,
-          });
-          open = mergeSimPosition(
-            open,
-            side,
-            qty,
-            price,
-            input.recipe.tpsl,
-            input.recipe.trailing,
-          );
+          const locked = open ? open.qty * open.entry : 0;
+          const available = input.startingUsdt + realized - locked;
+          if (qty * price + fee <= available) {
+            realized -= fee;
+            orders.push({
+              atMs: bar.timeMs,
+              action,
+              side,
+              qty,
+              price,
+              feeUsdt: fee,
+              realizedUsdt: -fee,
+            });
+            open = mergeSimPosition(
+              open,
+              side,
+              qty,
+              price,
+              input.recipe.tpsl,
+              input.recipe.trailing,
+            );
+          }
         }
       }
     }
@@ -286,10 +293,9 @@ export function replayPerpsPriceCross(input: {
 
   return {
     orders,
-    stats: {
+    stats: finishBacktestStats({
       trades,
       wins,
-      winRate: trades > 0 ? wins / trades : 0,
       realizedUsdt: realized,
       maxDrawdownUsdt: maxDrawdown,
       profitFactor: grossLoss > 0 ? grossWin / grossLoss : null,
@@ -298,6 +304,7 @@ export function replayPerpsPriceCross(input: {
       openQty: open?.qty ?? 0,
       openSide: open?.side ?? null,
       markUsdt,
-    },
+      startingUsdt: input.startingUsdt,
+    }),
   };
 }

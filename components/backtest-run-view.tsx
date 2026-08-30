@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { DeskChart } from "@/components/desk-chart";
 import { Modal } from "@/components/template-modals";
-import { publishBacktestAction } from "@/lib/backtest/actions";
+import { deleteBacktestAction, publishBacktestAction } from "@/lib/backtest/actions";
 import { applyTemplateAction } from "@/lib/templates/actions";
 import type { BacktestRun } from "@/lib/backtest/model";
 import { buildBacktestChartOverlay } from "@/lib/charts/overlay";
@@ -34,6 +35,12 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
   }
   return (
     <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Stat label="Starting" value={money(stats.startingUsdt)} />
+      <Stat label="Ending" value={money(stats.endingUsdt)} />
+      <Stat
+        label="Return"
+        value={stats.returnPct == null ? "—" : pct(stats.returnPct)}
+      />
       <Stat label="Realized" value={money(stats.realizedUsdt)} />
       <Stat label="Trades" value={String(stats.trades)} />
       <Stat label="Win rate" value={pct(stats.winRate)} />
@@ -286,6 +293,55 @@ export function PublishBacktestButton({
         className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
       >
         {pending ? "Publishing…" : "Publish"}
+      </button>
+      {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
+    </form>
+  );
+}
+
+export function RemoveBacktestButton({
+  runId,
+  canRemove,
+  returnTo = "/account/backtests",
+  compact = false,
+}: {
+  runId: string;
+  canRemove: boolean;
+  returnTo?: string;
+  compact?: boolean;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!canRemove) {
+    return null;
+  }
+  return (
+    <form
+      action={async (formData) => {
+        setPending(true);
+        setError(null);
+        const result = await deleteBacktestAction(formData);
+        setPending(false);
+        if (!result.ok) {
+          setError(result.error ?? "Could not remove that run.");
+          return;
+        }
+        router.push(returnTo);
+        router.refresh();
+      }}
+    >
+      <input type="hidden" name="runId" value={runId} />
+      <button
+        type="submit"
+        disabled={pending}
+        className={
+          compact
+            ? "rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-50"
+            : "rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50"
+        }
+      >
+        {pending ? "Removing…" : "Remove"}
       </button>
       {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>

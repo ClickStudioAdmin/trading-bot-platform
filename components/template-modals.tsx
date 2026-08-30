@@ -124,12 +124,14 @@ export function SaveAsTemplateButton({
   buildForm,
   kind,
   folders = [],
+  onSaved,
 }: {
   isAdmin: boolean;
   defaultName: string;
   buildForm: () => FormData;
   kind: TemplateDeskType;
   folders?: AutomationTemplateSet[];
+  onSaved?: (templateId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -199,6 +201,9 @@ export function SaveAsTemplateButton({
     setPending(false);
     if (next.ok) {
       setOpen(false);
+      if (next.templateId) {
+        onSaved?.(next.templateId);
+      }
     }
     if (next.code === "name_taken") {
       setReplace(true);

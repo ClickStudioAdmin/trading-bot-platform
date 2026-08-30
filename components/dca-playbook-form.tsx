@@ -49,6 +49,7 @@ import {
   dcaPlaybookStatusLabel,
   dcaStartListens,
   parseDcaExitBasis,
+  parseDcaPlaybookForm,
   type DcaAveragingKind,
   type DcaExitBasis,
   type DcaIntervalUnit,
@@ -65,12 +66,16 @@ import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { perpEffectiveMaxQty, perpTicketSizeError } from "@/lib/exchanges/bybit/ticket-size";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import Link from "next/link";
-import { BacktestDcaButton } from "@/components/backtest-dialog";
+import {
+  BacktestTemplateLink,
+  type BacktestLibraryItem,
+} from "@/components/backtest-dialog";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
 import {
   dcaFormToSnapshotSource,
   readFormControl,
+  snapshotDcaRecipe,
 } from "@/lib/templates/recipe";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 import {
@@ -353,6 +358,7 @@ export function DcaPlaybooksDesk({
   sets = [],
   policy = BYBIT_DCA_UI,
   venueEnvironment = null,
+  backtestLibrary = [],
 }: {
   playbooks: DcaPlaybook[];
   options: LinearPerp[];
@@ -367,7 +373,10 @@ export function DcaPlaybooksDesk({
   sets?: AutomationTemplateSet[];
   policy?: DcaPlaybookUiPolicy;
   venueEnvironment?: string | null;
+  backtestLibrary?: BacktestLibraryItem[];
 }) {
+  const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
+  const library = [...backtestLibrary, ...extraLibrary];
   const [cards, setCards] = useState<
     { key: string; playbook: DcaPlaybook | null; seed?: DcaPlaybook }[]
   >(() => playbooks.map((playbook) => ({ key: playbook.id, playbook })));
@@ -434,6 +443,13 @@ export function DcaPlaybooksDesk({
             folders={sets}
             policy={policy}
             venueEnvironment={venueEnvironment}
+            backtestLibrary={library}
+            onTemplateSaved={(item) =>
+              setExtraLibrary((current) => [
+                ...current.filter((row) => row.id !== item.id),
+                item,
+              ])
+            }
             defaultName={
               card.playbook?.name ??
               card.seed?.name ??
@@ -543,6 +559,8 @@ export function DcaPlaybookForm({
   folders = [],
   policy = BYBIT_DCA_UI,
   venueEnvironment = null,
+  backtestLibrary = [],
+  onTemplateSaved,
 }: {
   playbook: DcaPlaybook | null;
   seed?: DcaPlaybook | null;
@@ -559,6 +577,8 @@ export function DcaPlaybookForm({
   folders?: AutomationTemplateSet[];
   policy?: DcaPlaybookUiPolicy;
   venueEnvironment?: string | null;
+  backtestLibrary?: BacktestLibraryItem[];
+  onTemplateSaved?: (item: BacktestLibraryItem) => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const source = playbook ?? seed;
@@ -738,13 +758,9 @@ export function DcaPlaybookForm({
       ? "short"
       : "long";
   const summary = summaryBySide[activeLadderSide];
-  function snapshotForm() {
-    return dcaFormToSnapshotSource(formRef.current, {
-      name:
-        readFormControl(formRef.current, "name") ||
-        source?.name ||
-        defaultName ||
-        DEFAULT_DCA_NAME,
+  function snapshotOverlay() {
+    return {
+      name: source?.name || defaultName || DEFAULT_DCA_NAME,
       symbol,
       direction,
       startKind,
@@ -766,7 +782,22 @@ export function DcaPlaybookForm({
       stopLossBasis,
       indicatorKind,
       indicatorCompare,
+    };
+  }
+  function snapshotForm() {
+    return dcaFormToSnapshotSource(formRef.current, {
+      ...snapshotOverlay(),
+      name:
+        readFormControl(formRef.current, "name") ||
+        snapshotOverlay().name,
     });
+  }
+  function liveRecipe() {
+    const parsed = parseDcaPlaybookForm(
+      dcaFormToSnapshotSource(null, snapshotOverlay()),
+      policy.venueId,
+    );
+    return parsed.ok ? snapshotDcaRecipe(parsed.config) : null;
   }
   const removeControl = playbook ? (
     running ? (
@@ -1625,13 +1656,11 @@ export function DcaPlaybookForm({
           </div>
         ) : null}
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <BacktestDcaButton
-            saved={Boolean(playbook?.id)}
-            webhookStart={startKind === "webhook"}
+          <BacktestTemplateLink
+            current={liveRecipe()}
+            templates={backtestLibrary}
             venueId={policy.venueId}
             venueEnvironment={venueEnvironment}
-            playbookId={playbook?.id ?? ""}
-            buildForm={snapshotForm}
           />
           <SaveAsTemplateButton
             isAdmin={isAdmin}
@@ -1639,6 +1668,16 @@ export function DcaPlaybookForm({
             kind="dca"
             folders={folders}
             buildForm={snapshotForm}
+            onSaved={(templateId) => {
+              const recipe = liveRecipe();
+              if (recipe) {
+                onTemplateSaved?.({
+                  id: templateId,
+                  name: recipe.name,
+                  recipe,
+                });
+              }
+            }}
           />
           {removeControl}
         </div>

@@ -14,11 +14,12 @@ Never writes the live blotter. Never places venue orders. Never arms a desk from
 
 ```
 Automations
-    [Backtest]  →  run inline (queued → done)  →  /account/backtests
-                                                       │
-                                                       ├─ task list
-                                                       ├─ open a done run → stats + simulated orders + chart popup
-                                                       └─ freeze config as template visibility = backtested
+    Save as template  →  [Backtest] (only if this config is a library template)
+                                │
+                                └ new tab →  /account/backtests  form
+                                                 start / end / initial balance / timeframe / venue / contract
+                                                 │
+                                                 └ run → task list + stats
 ```
 
 Account nav (with Bot Templates): **Backtests**. Admin: **Backtests** under `/admin`.
@@ -30,12 +31,16 @@ Account nav (with Bot Templates): **Backtests**. Admin: **Backtests** under `/ad
 | Recipes | **Perps bots price-cross** and **DCA** (immediate / price / indicator start). Webhook-entry and webhook-start skipped. |
 | Perps bot exits | Same ticket set as manual: TP/SL (full/partial, last/mark/index, market/limit) plus trailing. Optional. Buy/sell only. Flatten rules stay flatten-only. |
 | Unpublished runs | **Owner only** (plus admin). |
+| Remove | Owner deletes their run. Admin can delete any, including published. Unused `backtested` snapshot is deleted with the last run that pointed at it. |
 | Bar fill (entries) | Decide on **bar close**, fill at **close**. |
 | Bar fill (exits) | Stop and trailing use the **adverse wick**. Take profit uses the **favorable wick** (Perps) or close (DCA percent exits). If stop and take profit both print on the same bar, **stop wins**. |
 | Fee | Named preset `vip0_taker` = **6 bps all-in** per fill. |
 | Rank | **Realized** USDT. |
-| Sweep | Admin: one template × up to **10** contracts. Runs inline (not Fly). Perps or DCA. |
-| Window | 30d default, 90d option. Timeframes 15m / 1h / 4h / D. |
+| Sweep | Admin: one template × up to **10** contracts. Same required dates and starting balance. |
+| Queue | **Only from `/account/backtests`.** Required: saved library template, start date, end date, initial balance. Timeframe, venue, and contract are required too. |
+| Desk Backtest | Link in a new tab. Shown only when the **current form matches a saved user/platform template**. Webhook recipes stay disabled. |
+| Window | Explicit start/end dates. Max **365** days. Rejected if the range needs more than **1500** bars at the chosen timeframe. |
+| Balance | Required `starting_balance_usdt`. Replay skips an entry when notional + fee exceeds remaining cash (start + realized − locked notional). |
 | DCA start | Replay treats legs as **armed** at the window start (Save and Arm). Immediate fires the first clip on the first close. |
 
 ## How it sits on templates
@@ -55,11 +60,12 @@ New table `backtest_runs`:
 - `template_id` (the `backtested` snapshot)
 - `desk_type` (`perps` \| `dca`) + `venue` + `symbol` + window + timeframe
 - `status`: `queued` \| `running` \| `done` \| `failed` \| `cancelled`
+- `starting_balance_usdt`
 - `fee_preset` / `fee_rate`
 - `stats` JSON, `orders` JSON (simulated only, source backtest)
 - Immutable after `done` (updates only while queued/running). A re-run creates a new row.
 
-Migrations: `supabase/migrations/20260830120000_backtest_runs.sql`, `supabase/migrations/20260830133000_bot_exits_and_dca_backtest.sql`.
+Migrations: `supabase/migrations/20260830120000_backtest_runs.sql`, `supabase/migrations/20260830133000_bot_exits_and_dca_backtest.sql`, `supabase/migrations/20260830140000_backtest_starting_balance.sql`.
 
 ## Engine rules
 

@@ -4,29 +4,29 @@ import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
 import { loadDeskCandles } from "@/lib/market/desk-klines";
 import { parseCandleInterval, parseCandleSymbol, parseCandleVenue } from "@/lib/market/candles";
-import {
-  snapshotDcaRecipe,
-  snapshotPerpsRecipe,
-  type PerpsTemplateRecipe,
-} from "@/lib/templates/recipe";
-import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
-import { parseFuturesAutomationForm } from "@/lib/futures/automation";
 import type { BacktestRecipe } from "./model";
 import { canBacktestDcaRecipe, replayDcaPlaybook } from "./replay-dca";
 import {
+  deleteTemplate,
   findNamedTemplate,
   insertTemplate,
   loadTemplateById,
+  templateIsSharedWith,
 } from "@/lib/templates/store";
 import { revalidatePath } from "next/cache";
 import {
+  BACKTEST_CANDLE_LIMIT,
   BACKTEST_FEE_PRESETS,
+  parseBacktestDateRange,
   parseFeePreset,
-  parseWindowDays,
+  parseStartingBalance,
 } from "./model";
 import { canBacktestPerpsRecipe, replayPerpsPriceCross } from "./replay";
 import {
+  canDeleteBacktestRun,
   canReadBacktestRun,
+  countBacktestRunsForTemplate,
+  deleteBacktestRun,
   insertBacktestRun,
   loadBacktestRun,
   updateBacktestRun,
@@ -56,20 +56,6 @@ async function requireMember() {
     member,
     isAdmin: memberIsAdmin(member),
   };
-}
-
-function recipeFromForm(formData: FormData):
-  | { ok: true; recipe: PerpsTemplateRecipe }
-  | { ok: false; error: string } {
-  const parsed = parseFuturesAutomationForm(formData);
-  if (!parsed.ok) {
-    return parsed;
-  }
-  const rule = parsed.rules[0];
-  if (!rule) {
-    return { ok: false, error: "Save this bot before backtesting." };
-  }
-  return { ok: true, recipe: snapshotPerpsRecipe(rule) };
 }
 
 function uniqueBacktestName(name: string, suffix: string): string {
@@ -132,7 +118,7 @@ async function executeRun(runId: string): Promise<BacktestActionResult> {
       interval: run.interval,
       fromMs: run.fromMs,
       toMs: run.toMs,
-      limit: 1500,
+      limit: BACKTEST_CANDLE_LIMIT,
     });
     if (candles.length < 8) {
       await updateBacktestRun(runId, {
@@ -148,11 +134,13 @@ async function executeRun(runId: string): Promise<BacktestActionResult> {
             bars: candles,
             recipe: run.recipe,
             feeRate: run.feeRate,
+            startingUsdt: run.startingUsdt,
           })
         : replayPerpsPriceCross({
             bars: candles,
             recipe: run.recipe,
             feeRate: run.feeRate,
+            startingUsdt: run.startingUsdt,
           });
     await updateBacktestRun(runId, {
       status: "done",
@@ -172,91 +160,67 @@ async function executeRun(runId: string): Promise<BacktestActionResult> {
   }
 }
 
-export async function queuePerpsBacktestAction(
-  formData: FormData,
-): Promise<BacktestActionResult> {
-  const auth = await requireMember();
-  if (!auth.ok) {
-    return auth;
+async function canUseTemplate(
+  template: { visibility: string; userId: string | null; id: string },
+  userId: string,
+  isAdmin: boolean,
+): Promise<boolean> {
+  if (isAdmin) {
+    return true;
   }
-  const recipeResult = recipeFromForm(formData);
-  if (!recipeResult.ok) {
-    return recipeResult;
+  if (template.visibility === "platform" || template.userId === userId) {
+    return true;
   }
-  const allowed = canBacktestPerpsRecipe(recipeResult.recipe);
-  if (!allowed.ok) {
-    return allowed;
+  if (template.visibility === "backtested" && template.userId === null) {
+    return true;
   }
-  const ruleId = String(formData.get("r0_id") ?? formData.get("ruleId") ?? "").trim();
-  if (!ruleId) {
-    return { ok: false, error: "Save this bot first, then Backtest." };
-  }
-  const venue = parseCandleVenue(formData.get("venue") ?? formData.get("deskVenue")) ?? "bybit";
-  const symbol =
-    parseCandleSymbol(formData.get("symbol") ?? recipeResult.recipe.symbol) ??
-    recipeResult.recipe.symbol;
-  const interval =
-    parseCandleInterval(formData.get("interval")) ?? "60";
-  const days = parseWindowDays(formData.get("windowDays"));
-  const feePreset = parseFeePreset(formData.get("feePreset"));
-  const toMs = Date.now();
-  const fromMs = toMs - days * 24 * 60 * 60 * 1000;
-  const templateId = await snapshotBacktestedTemplate({
-    userId: auth.member.id,
-    recipe: recipeResult.recipe,
-    published: false,
-    suffix: "backtest",
-  });
-  const run = await insertBacktestRun({
-    userId: auth.member.id,
-    templateId,
-    venue,
-    venueEnvironment: String(formData.get("venueEnvironment") ?? "").trim() || null,
-    symbol,
-    interval,
-    fromMs,
-    toMs,
-    feePreset,
-    feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
-    recipe: { ...recipeResult.recipe, symbol },
-  });
-  if (!run) {
-    return { ok: false, error: "Could not queue the backtest." };
-  }
-  const result = await executeRun(run.id);
-  revalidateBacktests();
-  return result;
+  return templateIsSharedWith(userId, template.id);
 }
 
-export async function queueDcaBacktestAction(
+export async function queueTemplateBacktestAction(
   formData: FormData,
 ): Promise<BacktestActionResult> {
   const auth = await requireMember();
   if (!auth.ok) {
     return auth;
   }
-  const playbookId = String(formData.get("playbookId") ?? "").trim();
-  if (!playbookId) {
-    return { ok: false, error: "Save this bot first, then Backtest." };
+  const template = await loadTemplateById(String(formData.get("templateId") ?? ""));
+  if (!template || !(await canUseTemplate(template, auth.member.id, auth.isAdmin))) {
+    return { ok: false, error: "Pick a saved template to backtest." };
   }
-  const parsed = parseDcaPlaybookForm(formData);
-  if (!parsed.ok) {
-    return parsed;
+  if (template.recipe.kind !== "perps" && template.recipe.kind !== "dca") {
+    return { ok: false, error: "Only Perps bots and DCA templates can be backtested." };
   }
-  const recipe = snapshotDcaRecipe(parsed.config);
-  const allowed = canBacktestDcaRecipe(recipe);
+  const allowed =
+    template.recipe.kind === "dca"
+      ? canBacktestDcaRecipe(template.recipe)
+      : canBacktestPerpsRecipe(template.recipe);
   if (!allowed.ok) {
     return allowed;
   }
-  const venue = parseCandleVenue(formData.get("venue") ?? formData.get("deskVenue")) ?? "bybit";
+  const interval = parseCandleInterval(formData.get("interval"));
+  if (!interval) {
+    return { ok: false, error: "Pick a timeframe." };
+  }
+  const range = parseBacktestDateRange(
+    formData.get("fromDate"),
+    formData.get("toDate"),
+    interval,
+  );
+  if (!range.ok) {
+    return range;
+  }
+  const balance = parseStartingBalance(formData.get("startingBalance"));
+  if (!balance.ok) {
+    return balance;
+  }
+  const venue = parseCandleVenue(formData.get("venue")) ?? "bybit";
   const symbol =
-    parseCandleSymbol(formData.get("symbol") ?? recipe.symbol) ?? recipe.symbol;
-  const interval = parseCandleInterval(formData.get("interval")) ?? "60";
-  const days = parseWindowDays(formData.get("windowDays"));
+    parseCandleSymbol(formData.get("symbol") ?? template.recipe.symbol) ??
+    template.recipe.symbol;
   const feePreset = parseFeePreset(formData.get("feePreset"));
-  const toMs = Date.now();
-  const fromMs = toMs - days * 24 * 60 * 60 * 1000;
-  const templateId = await snapshotBacktestedTemplate({
+  const recipe = { ...template.recipe, symbol };
+  const snapshotId = await snapshotBacktestedTemplate({
     userId: auth.member.id,
     recipe,
     published: false,
@@ -264,17 +228,18 @@ export async function queueDcaBacktestAction(
   });
   const run = await insertBacktestRun({
     userId: auth.member.id,
-    templateId,
+    templateId: snapshotId,
     venue,
     venueEnvironment:
       String(formData.get("venueEnvironment") ?? "").trim() || null,
     symbol,
     interval,
-    fromMs,
-    toMs,
+    fromMs: range.fromMs,
+    toMs: range.toMs,
     feePreset,
     feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
-    recipe: { ...recipe, symbol },
+    startingUsdt: balance.startingUsdt,
+    recipe,
   });
   if (!run) {
     return { ok: false, error: "Could not queue the backtest." };
@@ -321,6 +286,7 @@ export async function publishBacktestAction(
     toMs: run.toMs,
     feePreset: run.feePreset,
     feeRate: run.feeRate,
+    startingUsdt: run.startingUsdt,
     recipe: run.recipe,
   });
   if (!copy) {
@@ -368,8 +334,22 @@ export async function sweepPerpsBacktestAction(
     return allowed;
   }
   const venue = parseCandleVenue(formData.get("venue")) ?? "bybit";
-  const interval = parseCandleInterval(formData.get("interval")) ?? "60";
-  const days = parseWindowDays(formData.get("windowDays"));
+  const interval = parseCandleInterval(formData.get("interval"));
+  if (!interval) {
+    return { ok: false, error: "Pick a timeframe." };
+  }
+  const range = parseBacktestDateRange(
+    formData.get("fromDate"),
+    formData.get("toDate"),
+    interval,
+  );
+  if (!range.ok) {
+    return range;
+  }
+  const balance = parseStartingBalance(formData.get("startingBalance"));
+  if (!balance.ok) {
+    return balance;
+  }
   const feePreset = parseFeePreset(formData.get("feePreset"));
   const symbols = String(formData.get("symbols") ?? "")
     .split(/[\s,]+/)
@@ -379,8 +359,8 @@ export async function sweepPerpsBacktestAction(
   if (unique.length === 0) {
     return { ok: false, error: "Enter at least one contract." };
   }
-  const toMs = Date.now();
-  const fromMs = toMs - days * 24 * 60 * 60 * 1000;
+  const fromMs = range.fromMs;
+  const toMs = range.toMs;
   let lastId: string | undefined;
   for (const symbol of unique) {
     const recipe = { ...template.recipe, symbol };
@@ -402,6 +382,7 @@ export async function sweepPerpsBacktestAction(
       toMs,
       feePreset,
       feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
+      startingUsdt: balance.startingUsdt,
       recipe,
     });
     if (!run) {
@@ -415,5 +396,34 @@ export async function sweepPerpsBacktestAction(
     return { ok: false, error: "Could not queue the sweep." };
   }
   return { ok: true, runId: lastId };
+}
+
+export async function deleteBacktestAction(
+  formData: FormData,
+): Promise<BacktestActionResult> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  const run = await loadBacktestRun(String(formData.get("runId") ?? ""));
+  if (!run || !canDeleteBacktestRun(run, auth.member.id, auth.isAdmin)) {
+    return { ok: false, error: "That run was not found." };
+  }
+  const templateId = run.templateId;
+  const deleted = await deleteBacktestRun(run.id);
+  if (!deleted.ok) {
+    return deleted;
+  }
+  if (templateId) {
+    const leftover = await countBacktestRunsForTemplate(templateId);
+    if (leftover === 0) {
+      const template = await loadTemplateById(templateId);
+      if (template?.visibility === "backtested") {
+        await deleteTemplate(templateId);
+      }
+    }
+  }
+  revalidateBacktests();
+  return { ok: true, runId: run.id };
 }
 

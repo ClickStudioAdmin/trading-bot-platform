@@ -75,6 +75,12 @@ function parseStats(raw: unknown): BacktestStats | null {
     openSide:
       row.openSide === "short" || row.openSide === "long" ? row.openSide : null,
     markUsdt: Number(row.markUsdt) || 0,
+    startingUsdt: Number(row.startingUsdt) || 0,
+    endingUsdt: Number(row.endingUsdt) || 0,
+    returnPct:
+      row.returnPct == null || !Number.isFinite(Number(row.returnPct))
+        ? null
+        : Number(row.returnPct),
   };
 }
 
@@ -116,6 +122,7 @@ export function parseBacktestRunRow(
     interval,
     fromMs: Number(row.from_ms) || 0,
     toMs: Number(row.to_ms) || 0,
+    startingUsdt: Number(row.starting_balance_usdt) || 0,
     feePreset: parseFeePreset(row.fee_preset),
     feeRate: Number(row.fee_rate) || 0,
     status,
@@ -139,6 +146,7 @@ export async function insertBacktestRun(input: {
   toMs: number;
   feePreset: BacktestFeePreset;
   feeRate: number;
+  startingUsdt: number;
   recipe: BacktestRecipe;
 }): Promise<BacktestRun | null> {
   const supabase = createServiceClient();
@@ -159,6 +167,7 @@ export async function insertBacktestRun(input: {
       to_ms: input.toMs,
       fee_preset: input.feePreset,
       fee_rate: input.feeRate,
+      starting_balance_usdt: input.startingUsdt,
       status: "queued",
       recipe: input.recipe,
       orders: [],
@@ -277,4 +286,46 @@ export function canReadBacktestRun(
     return true;
   }
   return run.userId === userId || run.userId === null;
+}
+
+export function canDeleteBacktestRun(
+  run: Pick<BacktestRun, "userId">,
+  userId: string,
+  isAdmin: boolean,
+): boolean {
+  if (isAdmin) {
+    return true;
+  }
+  return run.userId === userId;
+}
+
+export async function countBacktestRunsForTemplate(
+  templateId: string,
+): Promise<number> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return 0;
+  }
+  const { count, error } = await supabase
+    .from("backtest_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("template_id", templateId);
+  if (error) {
+    return 0;
+  }
+  return count ?? 0;
+}
+
+export async function deleteBacktestRun(id: string): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase.from("backtest_runs").delete().eq("id", id);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }

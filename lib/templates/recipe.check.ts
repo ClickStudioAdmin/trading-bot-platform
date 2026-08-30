@@ -12,6 +12,7 @@ import {
   recipePreview,
   snapshotDcaRecipe,
   snapshotPaperRecipe,
+  recipesMatchForBacktest,
   snapshotPerpsRecipe,
   uniqueAppliedName,
   templateFitsDesk,
@@ -98,6 +99,11 @@ const perps = snapshotPerpsRecipe({
 assert.equal(perps.kind, "perps");
 assert.equal(perps.tpsl, null);
 assert.equal(perps.trailing, null);
+assert.equal(recipesMatchForBacktest(perps, { ...perps, name: "Other" }), true);
+assert.equal(
+  recipesMatchForBacktest(perps, { ...perps, triggerPrice: "1" }),
+  false,
+);
 assert.equal("mode" in perps, false);
 assert.equal("webhookId" in perps, false);
 assert.equal(recipeHasRuntimeKeys(perps), false);

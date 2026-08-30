@@ -25,7 +25,11 @@ import {
 } from "@/lib/futures/automation";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import type { FuturesWebhookRow } from "@/lib/futures/webhook-load";
-import { BacktestBotButton } from "@/components/backtest-dialog";
+import {
+  BacktestTemplateLink,
+  type BacktestLibraryItem,
+} from "@/components/backtest-dialog";
+import { snapshotPerpsRecipe } from "@/lib/templates/recipe";
 import { FuturesTpslFields } from "@/components/futures-tpsl";
 import { FuturesTrailingFields } from "@/components/futures-trailing";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
@@ -46,6 +50,7 @@ export function FuturesAutomationsDesk({
   venueId = "bybit",
   quoteLabel = "USDT",
   venueEnvironment = null,
+  backtestLibrary = [],
 }: {
   rules: FuturesAutomationFormValues[];
   options: LinearPerp[];
@@ -59,8 +64,11 @@ export function FuturesAutomationsDesk({
   venueId?: string;
   quoteLabel?: string;
   venueEnvironment?: string | null;
+  backtestLibrary?: BacktestLibraryItem[];
 }) {
   const [layers, setLayers] = useState(rules);
+  const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
+  const library = [...backtestLibrary, ...extraLibrary];
   const [cloneMenu, setCloneMenu] = useState(0);
   const empty = layers.length === 0;
   const inUse = new Set(inUseRuleIds);
@@ -123,6 +131,13 @@ export function FuturesAutomationsDesk({
             quoteLabel={quoteLabel}
             venueId={venueId}
             venueEnvironment={venueEnvironment}
+            backtestLibrary={library}
+            onTemplateSaved={(item) =>
+              setExtraLibrary((current) => [
+                ...current.filter((row) => row.id !== item.id),
+                item,
+              ])
+            }
             onRemove={() => {
               const next = layers.filter((item) => item.key !== layer.key);
               setLayers(next);
@@ -214,6 +229,8 @@ function RuleCard({
   quoteLabel = "USDT",
   venueId = "bybit",
   venueEnvironment = null,
+  backtestLibrary = [],
+  onTemplateSaved,
 }: {
   index: number;
   layer: FuturesAutomationFormValues;
@@ -227,6 +244,8 @@ function RuleCard({
   quoteLabel?: string;
   venueId?: string;
   venueEnvironment?: string | null;
+  backtestLibrary?: BacktestLibraryItem[];
+  onTemplateSaved?: (item: BacktestLibraryItem) => void;
 }) {
   const prefix = `r${index}_`;
   const [mode, setMode] = useState(layer.mode);
@@ -250,6 +269,35 @@ function RuleCard({
       : triggerWebhooks;
   const selected = options.find((row) => row.symbol === symbol);
   const baseCoin = selected?.baseCoin ?? "Token";
+  function liveRecipe() {
+    return snapshotPerpsRecipe({
+      name: layer.name,
+      symbol,
+      action:
+        formAction === "sell"
+          ? "sell"
+          : formAction === "close_long" || formAction === "close_short"
+            ? "flatten"
+            : "buy",
+      closeSide:
+        formAction === "close_short"
+          ? "short"
+          : formAction === "close_long"
+            ? "long"
+            : null,
+      orderType,
+      sizeUnit,
+      size: Number(size.replace(/,/g, "")) || null,
+      limitPrice: Number(limitPrice.replace(/,/g, "")) || null,
+      entrySource,
+      triggerBy: layer.triggerBy,
+      triggerCompare: layer.triggerCompare,
+      triggerPrice: Number(triggerPrice.replace(/,/g, "")) || 0,
+      skipIfOpen: layer.skipIfOpen,
+      tpsl: layer.tpsl,
+      trailing: layer.trailing,
+    });
+  }
 
   return (
     <section className="rounded-card border border-line bg-surface px-4 py-3">
@@ -519,23 +567,11 @@ function RuleCard({
           </label>
         )}
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          <BacktestBotButton
-            saved={Boolean(layer.id)}
-            webhookEntry={webhookEntry}
+          <BacktestTemplateLink
+            current={liveRecipe()}
+            templates={backtestLibrary}
             venueId={venueId}
             venueEnvironment={venueEnvironment}
-            layer={{
-              ...layer,
-              mode,
-              formAction,
-              orderType,
-              sizeUnit,
-              size,
-              limitPrice,
-              triggerPrice,
-              symbol,
-              entrySource,
-            }}
           />
           <SaveAsTemplateButton
             isAdmin={isAdmin}
@@ -558,6 +594,13 @@ function RuleCard({
                 },
                 venueId,
               )
+            }
+            onSaved={(templateId) =>
+              onTemplateSaved?.({
+                id: templateId,
+                name: layer.name,
+                recipe: liveRecipe(),
+              })
             }
           />
           {inUse ? (

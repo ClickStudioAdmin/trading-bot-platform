@@ -30,6 +30,7 @@ const opened = replayDcaPlaybook({
   ],
   recipe,
   feeRate: 0,
+  startingUsdt: 10_000,
 });
 assert.equal(opened.orders.length, 1);
 assert.equal(opened.orders[0]?.action, "buy");
@@ -45,6 +46,7 @@ const closed = replayDcaPlaybook({
   ],
   recipe,
   feeRate: 0,
+  startingUsdt: 10_000,
 });
 assert.equal(closed.orders.length, 2);
 assert.equal(closed.orders[0]?.action, "buy");
