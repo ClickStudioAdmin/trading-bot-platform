@@ -1,6 +1,7 @@
 import type { FuturesOrder, FuturesPosition } from "@/lib/futures/model";
 import type { FuturesWorkingOrder } from "@/lib/futures/working";
 import type { SimulatedOrder } from "@/lib/backtest/model";
+import type { CandleBar } from "@/lib/market/candles";
 
 export const CHART_COLORS = {
   entry: "#A78BFA",
@@ -161,4 +162,65 @@ export function buildBacktestChartOverlay(input: {
       } satisfies ChartMarker;
     });
   return { lines, markers };
+}
+
+function nearestCandleSec(times: number[], sec: number): number | null {
+  if (times.length === 0) {
+    return null;
+  }
+  const first = times[0];
+  const last = times[times.length - 1];
+  if (first == null || last == null || sec < first || sec > last) {
+    return null;
+  }
+  let lo = 0;
+  let hi = times.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    const value = times[mid] ?? 0;
+    if (value < sec) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  const right = times[lo] ?? last;
+  const left = times[Math.max(0, lo - 1)] ?? first;
+  return sec - left <= right - sec ? left : right;
+}
+
+export function snapOverlayToCandles(
+  overlay: ChartOverlay,
+  candles: CandleBar[],
+): ChartOverlay {
+  const times = candles
+    .map((row) => Math.floor(row.timeMs / 1000))
+    .filter((row) => row > 0)
+    .sort((a, b) => a - b);
+  const grouped = new Map<string, ChartMarker & { count: number }>();
+  for (const marker of overlay.markers) {
+    const timeSec = nearestCandleSec(times, marker.timeSec);
+    if (timeSec == null) {
+      continue;
+    }
+    const key = `${timeSec}:${marker.position}:${marker.text}`;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      grouped.set(key, { ...marker, timeSec, count: 1 });
+    }
+  }
+  const markers = [...grouped.values()]
+    .map((row) => ({
+      timeSec: row.timeSec,
+      position: row.position,
+      color: row.color,
+      shape: row.shape,
+      text: row.count > 1 ? `${row.text} ×${row.count}` : row.text,
+    }))
+    .sort(
+      (a, b) => a.timeSec - b.timeSec || a.position.localeCompare(b.position),
+    );
+  return { lines: overlay.lines, markers };
 }

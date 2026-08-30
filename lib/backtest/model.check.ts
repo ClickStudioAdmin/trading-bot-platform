@@ -4,6 +4,7 @@ import {
   estimateBacktestBars,
   formatBacktestReturnPct,
   intervalMs,
+  chartIntervalForWindow,
   parseBacktestDateRange,
   parseComparableSymbols,
   parseStartingBalance,
@@ -54,6 +55,14 @@ assert.equal(intervalMs("120"), 120 * 60 * 1000);
 assert.equal(
   estimateBacktestBars(Date.UTC(2026, 0, 1), Date.UTC(2026, 0, 2), "60"),
   24,
+);
+assert.equal(
+  chartIntervalForWindow(Date.UTC(2026, 6, 1), Date.UTC(2026, 6, 31), "15"),
+  "30",
+);
+assert.equal(
+  chartIntervalForWindow(Date.UTC(2026, 6, 1), Date.UTC(2026, 6, 31), "60"),
+  "60",
 );
 assert.equal(backtestShouldRunInline(800, 2), true);
 assert.equal(backtestShouldRunInline(2000, 1), false);

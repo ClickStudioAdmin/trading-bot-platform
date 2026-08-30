@@ -1,4 +1,7 @@
-import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
+import {
+  DCA_INDICATOR_TIMEFRAMES,
+  type DcaIndicatorTimeframe,
+} from "@/lib/dca/indicators";
 import type {
   DcaTemplateRecipe,
   PerpsTemplateRecipe,
@@ -219,6 +222,21 @@ export function estimateBacktestBars(
     return 0;
   }
   return Math.ceil((toMs - fromMs) / intervalMs(interval));
+}
+
+export function chartIntervalForWindow(
+  fromMs: number,
+  toMs: number,
+  preferred: DcaIndicatorTimeframe,
+): DcaIndicatorTimeframe {
+  const start = Math.max(0, DCA_INDICATOR_TIMEFRAMES.indexOf(preferred));
+  for (let i = start; i < DCA_INDICATOR_TIMEFRAMES.length; i += 1) {
+    const interval = DCA_INDICATOR_TIMEFRAMES[i];
+    if (estimateBacktestBars(fromMs, toMs, interval) <= 1500) {
+      return interval;
+    }
+  }
+  return "D";
 }
 
 export function backtestShouldRunInline(

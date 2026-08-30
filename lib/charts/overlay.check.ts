@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { buildBacktestChartOverlay, buildLiveChartOverlay } from "./overlay";
+import {
+  buildBacktestChartOverlay,
+  buildLiveChartOverlay,
+  snapOverlayToCandles,
+} from "./overlay";
 
 const live = buildLiveChartOverlay({
   symbol: "BTCUSDT",
@@ -63,5 +67,41 @@ const replay = buildBacktestChartOverlay({
 });
 assert.equal(replay.lines.length, 1);
 assert.equal(replay.markers[0]?.shape, "arrowDown");
+
+const snapped = snapOverlayToCandles(
+  {
+    lines: [],
+    markers: [
+      {
+        timeSec: 100,
+        position: "belowBar",
+        color: "#34D399",
+        shape: "arrowUp",
+        text: "Buy",
+      },
+      {
+        timeSec: 101,
+        position: "belowBar",
+        color: "#34D399",
+        shape: "arrowUp",
+        text: "Buy",
+      },
+      {
+        timeSec: 50,
+        position: "aboveBar",
+        color: "#F07167",
+        shape: "arrowDown",
+        text: "Close",
+      },
+    ],
+  },
+  [
+    { timeMs: 100_000, open: 1, high: 1, low: 1, close: 1 },
+    { timeMs: 200_000, open: 1, high: 1, low: 1, close: 1 },
+  ],
+);
+assert.equal(snapped.markers.length, 1);
+assert.equal(snapped.markers[0]?.text, "Buy ×2");
+assert.equal(snapped.markers[0]?.timeSec, 100);
 
 console.log("chart overlay checks passed");

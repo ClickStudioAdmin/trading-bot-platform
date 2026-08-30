@@ -14,6 +14,7 @@ import {
 import { applyTemplateAction } from "@/lib/templates/actions";
 import {
   accountPnlUsdt,
+  chartIntervalForWindow,
   formatBacktestReturnPct,
   openBacktestPositionLabel,
   peakLockedNotionalUsdt,
@@ -21,7 +22,10 @@ import {
   splitCompletedBacktestOrders,
   type BacktestRun,
 } from "@/lib/backtest/model";
-import { buildBacktestChartOverlay } from "@/lib/charts/overlay";
+import {
+  buildBacktestChartOverlay,
+  snapOverlayToCandles,
+} from "@/lib/charts/overlay";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import type { CandleBar } from "@/lib/market/candles";
 
@@ -128,7 +132,7 @@ function Stat({
   );
 }
 
-const TRADE_PAGE_SIZE = 25;
+const TRADE_PAGE_SIZE = 15;
 
 export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
   const [page, setPage] = useState(0);
@@ -247,10 +251,11 @@ export function BacktestInlineChart({ run }: { run: BacktestRun }) {
 
   useEffect(() => {
     let cancelled = false;
+    const interval = chartIntervalForWindow(run.fromMs, run.toMs, run.interval);
     const params = new URLSearchParams({
       venue: run.venue,
       symbol: run.symbol,
-      interval: run.interval,
+      interval,
       from: String(run.fromMs),
       to: String(run.toMs),
       limit: "1500",
@@ -301,11 +306,14 @@ export function BacktestInlineChart({ run }: { run: BacktestRun }) {
   return (
     <DeskChart
       candles={candles}
-      overlay={buildBacktestChartOverlay({
-        triggerPrice:
-          run.recipe.kind === "perps" ? Number(run.recipe.triggerPrice) : null,
-        orders: run.orders,
-      })}
+      overlay={snapOverlayToCandles(
+        buildBacktestChartOverlay({
+          triggerPrice:
+            run.recipe.kind === "perps" ? Number(run.recipe.triggerPrice) : null,
+          orders: run.orders,
+        }),
+        candles,
+      )}
     />
   );
 }
@@ -321,10 +329,11 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
       return;
     }
     let cancelled = false;
+    const interval = chartIntervalForWindow(run.fromMs, run.toMs, run.interval);
     const params = new URLSearchParams({
       venue: run.venue,
       symbol: run.symbol,
-      interval: run.interval,
+      interval,
       from: String(run.fromMs),
       to: String(run.toMs),
       limit: "1500",
@@ -390,13 +399,16 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
             <div className="mt-3">
               <DeskChart
                 candles={candles}
-                overlay={buildBacktestChartOverlay({
-                  triggerPrice:
-                    run.recipe.kind === "perps"
-                      ? Number(run.recipe.triggerPrice)
-                      : null,
-                  orders: run.orders,
-                })}
+                overlay={snapOverlayToCandles(
+                  buildBacktestChartOverlay({
+                    triggerPrice:
+                      run.recipe.kind === "perps"
+                        ? Number(run.recipe.triggerPrice)
+                        : null,
+                    orders: run.orders,
+                  }),
+                  candles,
+                )}
               />
             </div>
           )}
