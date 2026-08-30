@@ -193,7 +193,7 @@ export function BacktestRunDetail({
       </section>
 
       <section>
-        <h2 className="mb-2 text-lg font-semibold">Trades</h2>
+        <h2 className="mb-2 text-lg font-semibold">Orders</h2>
         {complete ? (
           <BacktestOrdersTable run={run} />
         ) : (

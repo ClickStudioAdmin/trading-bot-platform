@@ -117,27 +117,12 @@ export default async function AccountBacktestsPage({
         the replay fields, then queue. Long history goes to the worker. Open
         a row for the full picture.
       </p>
-      <BacktestQueueForm
-        templates={library}
-        selectedTemplateId={
-          selectedTemplateId || seed?.sourceTemplateId || ""
-        }
-        draftId={usableDraft?.id ?? ""}
-        seed={seed}
-        loadedFromRun={Boolean(usableRerun)}
-        defaultVenue={
-          defaultVenue ?? seed?.venue ?? "bybit"
-        }
-        defaultVenueEnvironment={
-          defaultEnv ?? seed?.venueEnvironment ?? null
-        }
-      />
       {runs.length === 0 ? (
-        <p className="text-sm text-ink-muted">
-          No runs yet. Open Backtest from a bot, or pick a template above.
+        <p className="mb-8 text-sm text-ink-muted">
+          No runs yet. Open Backtest from a bot, or pick a template below.
         </p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="mb-8 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="text-xs uppercase tracking-[0.16em] text-ink-muted">
               <tr>
@@ -213,6 +198,21 @@ export default async function AccountBacktestsPage({
           </table>
         </div>
       )}
+      <BacktestQueueForm
+        templates={library}
+        selectedTemplateId={
+          selectedTemplateId || seed?.sourceTemplateId || ""
+        }
+        draftId={usableDraft?.id ?? ""}
+        seed={seed}
+        loadedFromRun={Boolean(usableRerun)}
+        defaultVenue={
+          defaultVenue ?? seed?.venue ?? "bybit"
+        }
+        defaultVenueEnvironment={
+          defaultEnv ?? seed?.venueEnvironment ?? null
+        }
+      />
     </main>
   );
 }
