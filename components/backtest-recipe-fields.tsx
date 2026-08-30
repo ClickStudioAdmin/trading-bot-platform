@@ -2,10 +2,6 @@
 
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
-import {
-  DCA_INDICATOR_TIMEFRAMES,
-  DCA_INDICATOR_TIMEFRAME_LABELS,
-} from "@/lib/dca/indicators";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink";
@@ -138,26 +134,6 @@ export function BacktestRecipeFields({
                 <option value="rsi">RSI 14</option>
                 <option value="macd">MACD</option>
                 <option value="ema_cross">EMA 9/21</option>
-              </select>
-            </label>
-            <label className={labelClass}>
-              Timeframe
-              <select
-                value={recipe.indicatorTimeframe ?? "15"}
-                onChange={(event) =>
-                  onChange({
-                    ...recipe,
-                    indicatorTimeframe: event.target
-                      .value as NonNullable<typeof recipe.indicatorTimeframe>,
-                  })
-                }
-                className={fieldClass}
-              >
-                {DCA_INDICATOR_TIMEFRAMES.map((row) => (
-                  <option key={row} value={row}>
-                    {DCA_INDICATOR_TIMEFRAME_LABELS[row]}
-                  </option>
-                ))}
               </select>
             </label>
             <label className={labelClass}>

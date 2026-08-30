@@ -24,6 +24,19 @@ import {
 } from "@/lib/dca/indicators";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 
+function replayIntervalFromRecipe(
+  recipe: BacktestRecipe | null,
+): DcaIndicatorTimeframe | null {
+  if (
+    recipe?.kind === "dca" &&
+    recipe.startKind === "indicator" &&
+    recipe.indicatorTimeframe
+  ) {
+    return recipe.indicatorTimeframe;
+  }
+  return null;
+}
+
 function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
   const needle = symbol.trim().toUpperCase();
   if (!needle || options.some((row) => row.symbol === needle)) {
@@ -86,7 +99,10 @@ export function BacktestQueueForm({
   );
   const [fromDate, setFromDate] = useState(dates.from);
   const [toDate, setToDate] = useState(dates.to);
-  const [interval, setInterval] = useState<DcaIndicatorTimeframe>("60");
+  const [interval, setInterval] = useState<DcaIndicatorTimeframe>(
+    replayIntervalFromRecipe(draftRecipe ?? initialTemplate?.recipe ?? null) ??
+      "60",
+  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bybitPairs, setBybitPairs] = useState<LinearPerp[]>([]);
@@ -195,6 +211,10 @@ export function BacktestQueueForm({
                 setRecipe(next.recipe);
                 setSourceTemplateId(next.id);
                 setSymbol(next.recipe.symbol);
+                const nextInterval = replayIntervalFromRecipe(next.recipe);
+                if (nextInterval) {
+                  setInterval(nextInterval);
+                }
                 setComparables((rows) =>
                   rows.filter((row) => row !== next.recipe.symbol),
                 );
@@ -253,9 +273,15 @@ export function BacktestQueueForm({
             <select
               name="interval"
               value={interval}
-              onChange={(event) =>
-                setInterval(event.target.value as DcaIndicatorTimeframe)
-              }
+              onChange={(event) => {
+                const next = event.target.value as DcaIndicatorTimeframe;
+                setInterval(next);
+                setRecipe((current) =>
+                  current?.kind === "dca" && current.startKind === "indicator"
+                    ? { ...current, indicatorTimeframe: next }
+                    : current,
+                );
+              }}
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
             >
               {DCA_INDICATOR_TIMEFRAMES.map((row) => (
@@ -264,6 +290,11 @@ export function BacktestQueueForm({
                 </option>
               ))}
             </select>
+            {recipe?.kind === "dca" && recipe.startKind === "indicator" ? (
+              <span className="mt-1 block text-xs text-ink-faint">
+                Same bars as the indicator start.
+              </span>
+            ) : null}
           </label>
           <label className="block text-xs text-ink-muted">
             Venue
@@ -396,8 +427,8 @@ export function BacktestQueueForm({
             <div>
               <h3 className="text-sm font-semibold">Bot to replay</h3>
               <p className="mt-1 text-xs text-ink-muted">
-                Change the replay fields here. Pair and window on the left
-                only change the market data.
+                Change the replay fields here. Pair, dates, and timeframe
+                on the left are the market window.
               </p>
             </div>
             {selectedTemplate ? (
@@ -424,7 +455,16 @@ export function BacktestQueueForm({
             </p>
           ) : null}
           <div className="mt-4">
-            <BacktestRecipeFields recipe={recipe} onChange={setRecipe} />
+            <BacktestRecipeFields
+              recipe={recipe}
+              onChange={(next) => {
+                if (next.kind === "dca" && next.startKind === "indicator") {
+                  setRecipe({ ...next, indicatorTimeframe: interval });
+                  return;
+                }
+                setRecipe(next);
+              }}
+            />
           </div>
         </aside>
       ) : (
