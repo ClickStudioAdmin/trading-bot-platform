@@ -1,0 +1,103 @@
+name: Paper Engine Tick
+
+# Manual fallback only. Fly (`tbp-engine-dev` / `tbp-engine`) is the scheduler (~20s).
+# Leases stop a Fly worker and this run from double-placing.
+# Do not use Vercel Cron.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: paper-engine-tick-${{ github.job }}
+  cancel-in-progress: false
+
+jobs:
+  tick-development:
+    name: Tick development
+    runs-on: ubuntu-latest
+    environment: development
+    permissions:
+      contents: read
+    env:
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      ENGINE_TICK_URL: ${{ secrets.ENGINE_TICK_URL }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Check required secrets
+        run: |
+          missing=0
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not set on the development environment"
+            missing=1
+          fi
+          if [ -z "$ENGINE_TICK_URL" ]; then
+            echo "ENGINE_TICK_URL is not set on the development environment"
+            missing=1
+          fi
+          if [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            echo "VERCEL_AUTOMATION_BYPASS_SECRET is not set on the development environment"
+            echo "Vercel Preview is deployment-protected. Enable Protection Bypass for Automation and add that secret here."
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            echo "Add the missing development secrets, then re-run this workflow."
+            exit 1
+          fi
+
+      - name: POST engine tick
+        run: |
+          http_code=$(curl -sS -o /tmp/tick-body.json -w "%{http_code}" --max-time 120 \
+            -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -H "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+            "$ENGINE_TICK_URL")
+          echo "HTTP $http_code"
+          cat /tmp/tick-body.json
+          echo
+          if [ "$http_code" != "200" ]; then
+            echo "Development tick failed."
+            exit 1
+          fi
+
+  tick-production:
+    name: Tick production
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    env:
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      ENGINE_TICK_URL: ${{ secrets.ENGINE_TICK_URL }}
+    steps:
+      - name: Check required secrets
+        run: |
+          missing=0
+          if [ -z "$CRON_SECRET" ]; then
+            echo "CRON_SECRET is not set on the production environment"
+            missing=1
+          fi
+          if [ -z "$ENGINE_TICK_URL" ]; then
+            echo "ENGINE_TICK_URL is not set on the production environment"
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            echo "Add the missing production secrets, then re-run this workflow."
+            exit 1
+          fi
+
+      - name: POST engine tick
+        run: |
+          http_code=$(curl -sS -o /tmp/tick-body.json -w "%{http_code}" --max-time 120 \
+            -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            "$ENGINE_TICK_URL")
+          echo "HTTP $http_code"
+          cat /tmp/tick-body.json
+          echo
+          if [ "$http_code" != "200" ]; then
+            echo "Production tick failed."
+            exit 1
+          fi

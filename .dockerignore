@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+app
+components
+public
+docs
+supabase
+*.md
+.cursor
+.github
+.env*

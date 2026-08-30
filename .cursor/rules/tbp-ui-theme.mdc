@@ -1,0 +1,12 @@
+---
+description: Dark business-portal UI tokens
+alwaysApply: true
+---
+
+# UI theme
+
+Read [docs/ui-theme.md](docs/ui-theme.md). The visual guide is `/admin/theme`.
+
+Use Tailwind tokens from `app/globals.css`: `canvas`, `surface`, `surface-raised`, `line`, `line-strong`, `ink`, `ink-muted`, `ink-faint`, `accent`, `accent-strong`, `success`, `danger`, `warning`.
+
+Do not add new brand colours in components. Do not use a light theme unless a later phase asks for it.

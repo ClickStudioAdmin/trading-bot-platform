@@ -20,9 +20,9 @@ You will not run `supabase`, `vercel`, or `gh` commands. Migrations run in GitHu
 
 ## Current micro-step
 
-**3 of 9 — Migration + Actions workflow** (complete)
+**9 of 9 — Merge to `main`** (done)
 
-`system_health` and `.github/workflows/deploy-database.yml` are in the working tree. Stopped here. Next is micro-step 4: you create two new Supabase projects in the dashboard.
+`origin/main` includes PR #1 from `develop` (`7a2010d`). Phase 1 foundation is accepted. A theme reference page lives at `/theme` (`docs/ui-theme.md`). It is not the scanner.
 
 ## Micro-steps
 

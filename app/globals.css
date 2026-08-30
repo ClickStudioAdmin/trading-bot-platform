@@ -1,5 +1,24 @@
 @import "tailwindcss";
 
+@theme {
+  --color-canvas: #0b0e14;
+  --color-surface: #161b22;
+  --color-surface-raised: #1c222c;
+  --color-line: #2a313c;
+  --color-line-strong: #3a4352;
+  --color-ink: #f4f6f8;
+  --color-ink-muted: #9aa3b2;
+  --color-ink-faint: #6b7382;
+  --color-accent: #a78bfa;
+  --color-accent-strong: #8b6cf6;
+  --color-success: #34d399;
+  --color-danger: #f07167;
+  --color-warning: #f5b942;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --radius-card: 1rem;
+  --radius-control: 0.5rem;
+}
+
 html {
   height: 100%;
 }
@@ -8,5 +27,111 @@ body {
   min-height: 100%;
   min-height: 100dvh;
   margin: 0;
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+a[href],
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button,
+[type="submit"],
+summary,
+a[href].rounded-control {
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease,
+    opacity 120ms ease,
+    transform 80ms ease;
+}
+
+button:not(:disabled):active,
+[type="submit"]:not(:disabled):active,
+summary:active,
+a[href].rounded-control:active {
+  transform: scale(0.98);
+  opacity: 0.88;
+}
+
+button[aria-busy="true"],
+[type="submit"][aria-busy="true"] {
+  cursor: wait;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  [type="submit"],
+  summary,
+  a[href].rounded-control {
+    transition: none;
+  }
+
+  button:not(:disabled):active,
+  [type="submit"]:not(:disabled):active,
+  summary:active,
+  a[href].rounded-control:active {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.thin-scroll,
+.panel-scroll,
+.overflow-x-auto,
+.overflow-auto {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+.thin-scroll::-webkit-scrollbar,
+.panel-scroll::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-auto::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.thin-scroll::-webkit-scrollbar-button,
+.panel-scroll::-webkit-scrollbar-button,
+.overflow-x-auto::-webkit-scrollbar-button,
+.overflow-auto::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.thin-scroll::-webkit-scrollbar-track,
+.panel-scroll::-webkit-scrollbar-track,
+.overflow-x-auto::-webkit-scrollbar-track,
+.overflow-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thin-scroll::-webkit-scrollbar-thumb,
+.panel-scroll::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb,
+.overflow-auto::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+}
+
+.thin-scroll::-webkit-scrollbar-thumb:hover,
+.panel-scroll::-webkit-scrollbar-thumb:hover,
+.overflow-x-auto::-webkit-scrollbar-thumb:hover,
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: var(--color-ink-faint);
+}
+
+.panel-scroll {
+  max-height: min(28rem, 55dvh);
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.25rem;
 }

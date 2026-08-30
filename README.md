@@ -6,11 +6,11 @@ GitHub is the source of truth. The hosted database and Vercel deployment are not
 
 ## Current phase
 
-**Phase 1 — Foundation (pipeline proof)**
+**Phase 11 complete — DCA desk type**
 
-See [docs/phase-1.md](docs/phase-1.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
+See [docs/phase-11.md](docs/phase-11.md). Daily work is on `develop` against the **development** Supabase database and the Vercel **Development** / Preview environment. Merge to `main` for the **production** database and Vercel **Production**. See [docs/environments.md](docs/environments.md).
 
-This phase proves Cursor → GitHub → GitHub Actions → Supabase → Vercel. No trading features yet.
+Phase 1 through Phase 11 are complete. Locked sequence: [docs/roadmap.md](docs/roadmap.md). Fly.io worker is in progress ([docs/phase-fly.md](docs/phase-fly.md)). Standing list: [docs/click-list.md](docs/click-list.md). Automation templates: [docs/templates.md](docs/templates.md).
 
 ## Technology stack
 

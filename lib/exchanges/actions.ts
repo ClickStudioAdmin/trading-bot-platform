@@ -1,0 +1,441 @@
+"use server";
+
+import {
+  connectionRemoveBlockers,
+  formatConnectionRemoveBlockers,
+} from "@/lib/accounts/model";
+import {
+  keyFingerprint,
+  parseConnectionLabel,
+} from "@/lib/exchanges/connections";
+import {
+  exchangeCredentialsConfigured,
+  encryptCredentials,
+} from "@/lib/exchanges/encrypt";
+import {
+  deleteExchangeConnection,
+  getExchangeConnectionForUser,
+  insertExchangeConnection,
+  listConnectionDeskBinds,
+  updateExchangeConnectionCredentials,
+  updateExchangeConnectionLabel,
+} from "@/lib/exchanges/store";
+import { verifyExchangeCredentials } from "@/lib/exchanges/verify";
+import {
+  parseVenueCredentials,
+  parseVenueEnvironment,
+  parseConnectionVenueId,
+  parseVenueId,
+} from "@/lib/exchanges/venues";
+import { writeEventLog } from "@/lib/logs/write";
+import { withQuery } from "@/lib/accounts/model";
+import { getSessionContext } from "@/lib/auth/session";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+function safeReturnPath(raw: unknown): string {
+  const path = String(raw ?? "").trim();
+  if (!path.startsWith("/") || path.startsWith("//") || path.includes("://")) {
+    return "/account/exchanges";
+  }
+  return path;
+}
+
+function finish(path: string, extra: Record<string, string>): never {
+  redirect(withQuery(path, extra));
+}
+
+function fail(message: string): never {
+  finish("/account/exchanges", { error: message });
+}
+
+function readConnectForm(formData: FormData) {
+  const venue = parseConnectionVenueId(formData.get("venue"));
+  if (!venue.ok) {
+    return venue;
+  }
+  const environment = parseVenueEnvironment(
+    venue.venue,
+    formData.get("environment"),
+  );
+  if (!environment.ok) {
+    return environment;
+  }
+  const labeled = parseConnectionLabel(formData.get("label"));
+  if (!labeled.ok) {
+    return labeled;
+  }
+  const credentials: Record<string, string> = {};
+  for (const field of venue.venue.credentialFields) {
+    credentials[field.key] = String(formData.get(field.key) ?? "");
+  }
+  const parsed = parseVenueCredentials(venue.venue, credentials);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  const fingerprint = keyFingerprint(parsed.credentials, venue.venue);
+  if (!fingerprint) {
+    return {
+      ok: false as const,
+      error:
+        venue.venue.id === "hyperliquid"
+          ? "Agent private key is not a valid key."
+          : "API key is too short to save.",
+    };
+  }
+  return {
+    ok: true as const,
+    venue: venue.venue,
+    environment: environment.environment,
+    label: labeled.label,
+    credentials: parsed.credentials,
+    fingerprint,
+  };
+}
+
+export async function checkExchangeConnection(
+  formData: FormData,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getSessionContext();
+  if (!session) {
+    return { ok: false, error: "Sign in to check a connection." };
+  }
+  const parsed = readConnectForm(formData);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  return verifyExchangeCredentials({
+    venueId: parsed.venue.id,
+    environmentId: parsed.environment.id,
+    credentials: parsed.credentials,
+  });
+}
+
+export async function saveExchangeConnection(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const next = safeReturnPath(formData.get("next"));
+  function failTo(message: string): never {
+    finish(next, { error: message });
+  }
+  if (!exchangeCredentialsConfigured()) {
+    return failTo("Exchange credentials key is not configured on this environment.");
+  }
+
+  const parsed = readConnectForm(formData);
+  if (!parsed.ok) {
+    return failTo(parsed.error);
+  }
+  const { venue, environment, label, credentials, fingerprint } = parsed;
+
+  const verified = await verifyExchangeCredentials({
+    venueId: venue.id,
+    environmentId: environment.id,
+    credentials,
+  });
+  if (!verified.ok) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "exchange.verify_failed",
+      message: verified.error,
+      userId: session.member.id,
+      accountId: session.account.id,
+      data: {
+        venue: venue.id,
+        environment: environment.id,
+        fingerprint,
+        reason: verified.error,
+      },
+    });
+    return failTo(verified.error);
+  }
+
+  let packed;
+  try {
+    packed = encryptCredentials(credentials);
+  } catch {
+    return failTo("Could not encrypt those credentials.");
+  }
+
+  const written = await insertExchangeConnection({
+    userId: session.member.id,
+    venue: venue.id,
+    environment: environment.id,
+    label,
+    fingerprint,
+    ciphertext: packed.ciphertext,
+    nonce: packed.nonce,
+    verifiedAt: new Date().toISOString(),
+  });
+  if ("error" in written) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "exchange.save_failed",
+      message: written.error,
+      userId: session.member.id,
+      accountId: session.account.id,
+      data: {
+        venue: venue.id,
+        environment: environment.id,
+        fingerprint,
+      },
+    });
+    return failTo(written.error);
+  }
+
+  await writeEventLog({
+    scope: "system",
+    event: "exchange.saved",
+    message: `Connected ${venue.label} ${environment.label}`,
+    userId: session.member.id,
+    accountId: session.account.id,
+    data: {
+      venue: venue.id,
+      environment: environment.id,
+      fingerprint,
+    },
+  });
+  revalidatePath("/account/exchanges");
+  revalidatePath("/account");
+  revalidatePath("/account/book");
+  revalidatePath("/account/sub-accounts");
+  revalidatePath("/strategies/futures/settings");
+  revalidatePath("/strategies/cash-and-carry/settings");
+  finish(next, { saved: "1" });
+}
+
+export async function renameExchangeConnection(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const connectionId = String(formData.get("connectionId") ?? "").trim();
+  if (!connectionId) {
+    fail("Missing connection.");
+  }
+  const existing = await getExchangeConnectionForUser({
+    userId: session.member.id,
+    connectionId,
+  });
+  if (!existing) {
+    fail("Missing connection.");
+  }
+  const labeled = parseConnectionLabel(formData.get("label"));
+  if (!labeled.ok) {
+    fail(labeled.error);
+  }
+  const written = await updateExchangeConnectionLabel({
+    userId: session.member.id,
+    connectionId,
+    label: labeled.label,
+  });
+  if (written.error) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "exchange.rename_failed",
+      message: written.error,
+      userId: session.member.id,
+      accountId: session.account.id,
+      data: { connectionId },
+    });
+    fail(written.error);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "exchange.renamed",
+    message: labeled.label
+      ? `Renamed connection to ${labeled.label}`
+      : "Cleared connection label",
+    userId: session.member.id,
+    accountId: session.account.id,
+    data: { connectionId },
+  });
+  revalidatePath("/account/exchanges");
+  revalidatePath("/account");
+  revalidatePath("/account/book");
+  revalidatePath("/account/sub-accounts");
+  revalidatePath("/strategies/cash-and-carry/settings");
+  revalidatePath("/strategies/futures/settings");
+  redirect("/account/exchanges?renamed=1");
+}
+
+export async function replaceExchangeConnection(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  if (!exchangeCredentialsConfigured()) {
+    fail("Exchange credentials key is not configured on this environment.");
+  }
+
+  const connectionId = String(formData.get("connectionId") ?? "").trim();
+  if (!connectionId) {
+    fail("Missing connection.");
+  }
+  const existing = await getExchangeConnectionForUser({
+    userId: session.member.id,
+    connectionId,
+  });
+  if (!existing) {
+    fail("Missing connection.");
+  }
+
+  const venue = parseVenueId(existing.venue);
+  if (!venue.ok) {
+    fail(venue.error);
+  }
+  const environment = parseVenueEnvironment(
+    venue.venue,
+    existing.environment,
+  );
+  if (!environment.ok) {
+    fail(environment.error);
+  }
+  const credentials: Record<string, string> = {};
+  for (const field of venue.venue.credentialFields) {
+    credentials[field.key] = String(formData.get(field.key) ?? "");
+  }
+  const parsed = parseVenueCredentials(venue.venue, credentials);
+  if (!parsed.ok) {
+    fail(parsed.error);
+  }
+  const fingerprint = keyFingerprint(parsed.credentials, venue.venue);
+  if (!fingerprint) {
+    fail("API key is too short to save.");
+  }
+
+  const verified = await verifyExchangeCredentials({
+    venueId: venue.venue.id,
+    environmentId: environment.environment.id,
+    credentials: parsed.credentials,
+  });
+  if (!verified.ok) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "exchange.verify_failed",
+      message: verified.error,
+      userId: session.member.id,
+      accountId: session.account.id,
+      data: {
+        connectionId,
+        venue: venue.venue.id,
+        environment: existing.environment,
+        fingerprint,
+        reason: verified.error,
+      },
+    });
+    fail(verified.error);
+  }
+
+  let packed;
+  try {
+    packed = encryptCredentials(parsed.credentials);
+  } catch {
+    fail("Could not encrypt those credentials.");
+  }
+
+  const written = await updateExchangeConnectionCredentials({
+    userId: session.member.id,
+    connectionId,
+    fingerprint,
+    ciphertext: packed.ciphertext,
+    nonce: packed.nonce,
+    verifiedAt: new Date().toISOString(),
+  });
+  if (written.error) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "exchange.replace_failed",
+      message: written.error,
+      userId: session.member.id,
+      accountId: session.account.id,
+      data: {
+        connectionId,
+        venue: venue.venue.id,
+        environment: existing.environment,
+        fingerprint,
+      },
+    });
+    fail(written.error);
+  }
+
+  await writeEventLog({
+    scope: "system",
+    event: "exchange.replaced",
+    message: `Replaced ${venue.venue.label} key`,
+    userId: session.member.id,
+    accountId: session.account.id,
+    data: {
+      connectionId,
+      venue: venue.venue.id,
+      environment: existing.environment,
+      fingerprint,
+    },
+  });
+  revalidatePath("/account/exchanges");
+  revalidatePath("/account");
+  revalidatePath("/account/book");
+  revalidatePath("/account/sub-accounts");
+  revalidatePath("/strategies/cash-and-carry");
+  revalidatePath("/strategies/cash-and-carry/settings");
+  revalidatePath("/strategies/futures");
+  revalidatePath("/strategies/futures/settings");
+  redirect("/account/exchanges?replaced=1");
+}
+
+export async function removeExchangeConnection(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const connectionId = String(formData.get("connectionId") ?? "");
+  if (!connectionId) {
+    fail("Missing connection.");
+  }
+  const binds = await listConnectionDeskBinds(session.member.id);
+  const inUse = binds.some((bind) => bind.connectionId === connectionId);
+  const blocks = connectionRemoveBlockers({ inUse });
+  if (blocks.length > 0) {
+    fail(formatConnectionRemoveBlockers(blocks));
+  }
+  const written = await deleteExchangeConnection({
+    userId: session.member.id,
+    connectionId,
+  });
+  if (written.error) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "exchange.remove_failed",
+      message: written.error,
+      userId: session.member.id,
+      accountId: session.account.id,
+      data: { connectionId },
+    });
+    fail(written.error);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "exchange.removed",
+    message: "Removed an exchange connection",
+    userId: session.member.id,
+    accountId: session.account.id,
+    data: { connectionId },
+  });
+  revalidatePath("/account/exchanges");
+  revalidatePath("/account");
+  revalidatePath("/account/book");
+  revalidatePath("/account/sub-accounts");
+  revalidatePath("/strategies/cash-and-carry");
+  revalidatePath("/strategies/cash-and-carry/settings");
+  revalidatePath("/strategies/futures");
+  revalidatePath("/strategies/futures/settings");
+  redirect("/account/exchanges?removed=1");
+}

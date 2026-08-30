@@ -1,0 +1,112 @@
+name: Deploy Engine
+
+# develop → tbp-engine-dev (development Supabase only)
+# main    → tbp-engine (production Supabase only)
+# Create the Fly apps and set FLY_API_TOKEN plus Fly secrets before this job succeeds.
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: engine-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-development:
+    name: Deploy development engine
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: development
+    permissions:
+      contents: read
+    steps:
+      - name: Check Fly token
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "FLY_API_TOKEN is not set on the development environment."
+            echo "Create an org token in Fly (Tokens on the org, not Launch from GitHub)."
+            echo "Add it as FLY_API_TOKEN on GitHub Environment development."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Ensure development app exists
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_ORG: ${{ vars.FLY_ORG || 'tbp-154' }}
+        run: |
+          if flyctl status --app tbp-engine-dev >/dev/null 2>&1; then
+            echo "tbp-engine-dev already exists"
+            exit 0
+          fi
+          echo "creating tbp-engine-dev in org $FLY_ORG"
+          flyctl apps create tbp-engine-dev --org "$FLY_ORG" --yes
+
+      - name: Check Fly app secrets
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          payload="$(flyctl secrets list --app tbp-engine-dev --json)"
+          names="$(echo "$payload" | jq -r '
+            if type == "array" then
+              .[] | (.Name // .name // empty)
+            elif type == "object" then
+              (.Secrets // .secrets // [])[] | (.Name // .name // empty)
+            else empty
+            end
+          ')"
+          echo "Fly secret names:"
+          echo "$names"
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY EXCHANGE_CREDENTIALS_KEY; do
+            if ! echo "$names" | grep -qx "$name"; then
+              echo "tbp-engine-dev exists, but $name is not set on the Fly app."
+              echo "In Fly, open tbp-engine-dev → Secrets and add the three development values from Vercel Development."
+              echo "Then re-run this workflow. Do not use Launch from GitHub."
+              exit 1
+            fi
+          done
+
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --config fly.development.toml --remote-only
+
+  deploy-production:
+    name: Deploy production engine
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - name: Check Fly token
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -z "$FLY_API_TOKEN" ]; then
+            echo "FLY_API_TOKEN is not set on the production environment."
+            echo "Create tbp-engine in Sydney, then add the token."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --config fly.production.toml --remote-only

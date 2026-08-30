@@ -1,0 +1,216 @@
+export function PaperRulesGuide({
+  exchangeBook = false,
+}: {
+  exchangeBook?: boolean;
+}) {
+  return (
+    <section className="mt-10 rounded-card border border-line bg-surface px-5 py-5">
+      <h2 className="text-lg font-semibold tracking-tight">How bots work</h2>
+      <p className="mt-2 text-sm text-ink-muted">
+        {exchangeBook
+          ? "A bot is a saved card on this desk. About every few minutes the engine scans the book and may open, add to, or close carries on the bound exchange. Those are real market orders. Leave a field empty to turn that condition off."
+          : "A bot is a saved card on this desk. About every few minutes the engine scans the live book and may open, add to, or close your paper rows. Nothing is sent to Bybit. Leave a field empty to turn that condition off."}
+      </p>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        The loop
+      </h3>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="When it runs"
+          detail={
+            exchangeBook
+              ? "Each tick: scan the book, then for each of your bots decide whether to open, add size, or start an exit. Those decisions place market orders on the bound exchange. Rows already marked Closing keep clipping until they are flat."
+              : "Each tick: scan the book, then for each of your bots decide whether to open, add size, or start an exit. Rows already marked Closing keep clipping until they are flat."
+          }
+        />
+        <GuideItem
+          term="When it is on"
+          detail="Each bot has a mode. Active may open and exit. Reduce only will not open or add size, but still exits. Disabled does neither. Account Reduce only (shown when you have at least one bot) makes every Active bot behave as Reduce only. Manual Open, Close, and Unwind always work. Closing rows keep clipping until they are flat."
+        />
+        <GuideItem
+          term="What it can hold"
+          detail="Each bot may hold one pair unless you raise Max pairs. Extra clips on that same pair still count as one pair. Manual opens and other bots do not count toward this bot’s limit."
+        />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Bots
+      </h3>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="Name"
+          detail="The Source column on Positions shows Manual or Auto. Auto includes this bot name. Click that name on an open row to see the rules copied onto that trade, and to edit that trade’s exits."
+        />
+        <GuideItem
+          term="Mode"
+          detail="Active, Reduce only, or Disabled for this bot only. Account Reduce only overrides Active bots until you turn it off. It is hidden when you have no bots."
+        />
+        <GuideItem
+          term="Create New Bot"
+          detail="Adds another bot card. Each bot has its own name, entry filters, size caps, order types, and exits. Save to apply. A green pulse means a live row is using this bot — you cannot remove it until that row is flat."
+        />
+        <GuideItem
+          term="Clone existing bot"
+          detail="Copies a saved bot, names it with (copy), and leaves it unsaved until you Save Bots. Change filters or disable it first if you do not want two bots competing for the same pair."
+        />
+        <GuideItem
+          term="Two bots, one pair"
+          detail="If more than one bot matches the same pair, the engine uses the one with the higher Min APR. If those tie, it uses the bot listed first on this page."
+        />
+        <GuideItem
+          term="Saving later"
+          detail="A new save applies to new opens. An open row keeps the exits copied when it opened. Change that trade from the bot name in Source on Positions, not by hoping a later save will rewrite it."
+        />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Entry · Conditions (all must be true)
+      </h3>
+      <p className="mt-2 text-sm text-ink-muted">
+        A pair must pass every filled entry condition before this bot will
+        open it. Empty conditions are ignored.
+      </p>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="Min APR %"
+          detail="Live net APR on the book must be at least this. Same number as the Opportunities Net APR column — basis after fees and slip, annualized by DTE."
+        />
+        <GuideItem
+          term="Min DTE / Max DTE"
+          detail="Days until the dated future expires must sit in this range. Use Max DTE to skip very long tenors. Use Min DTE to skip contracts that are about to expire."
+        />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Entry · Position and Orders
+      </h3>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="Max Position Size"
+          detail="Cap on how much value this bot may hold in total. Dynamic fills toward the cap over time. Each clip is the smaller of usable book and leftover room. Fixed skips the open if Order size would go over the cap."
+        />
+        <GuideItem
+          term="Max pairs"
+          detail="Ceiling on how many different pairs this bot may hold at once. Empty or 1 means one pair. Dynamic still opens only the best pair first and adds to it. Adding size on the same pair is not a new pair."
+        />
+        <GuideItem
+          term="Order Type · Fixed"
+          detail="Opens Order size once, on a pair this bot does not already hold. It will not add later clips on that pair."
+        />
+        <GuideItem
+          term="Order Type · Dynamic (scale in)"
+          detail="Each tick may add one clip. If this bot holds a pair, the clip goes on the held pair with the highest net APR that still clears Min Order Size. If it holds none, it opens one row on the best matching pair. It will not open a second pair on the same tick, even if Max pairs is higher. Clip size is usable book, or leftover room under Max Position Size — whichever is smaller."
+        />
+        <GuideItem
+          term="Order size (USDT)"
+          detail="Fixed only. The paper size of that single open."
+        />
+        <GuideItem
+          term="Min usable book"
+          detail="Fixed only. The pair’s usable book must be at least this before Order size is used."
+        />
+        <GuideItem
+          term="Min Order Size"
+          detail="Dynamic only. Skip a clip if it would be smaller than this. The last leftover on an exit still closes remaining size so the row can finish. The last entry clip is skipped if leftover room is below this, so the cap may sit a little under Max Position Size."
+        />
+        <GuideItem
+          term="Usable book"
+          detail="Your Settings share of the top 5 book levels inside 5 bp of impact. Default is 25%. Manual Size, Dynamic clips, and Dynamic exits all use this."
+        />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Exit · When the engine closes
+      </h3>
+      <p className="mt-2 text-sm text-ink-muted">
+        These conditions apply only to rows this bot opened, and only on a
+        tick — not when you click Close. First match wins: DTE, then mark APR,
+        then take profit, then stop loss.
+      </p>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="DTE ≤"
+          detail="Start exiting when days to expiry fall to this number or below."
+        />
+        <GuideItem
+          term="APR % below"
+          detail="Start exiting when the live mark net APR is below this. That is the book’s current net APR, not your P&L %."
+        />
+        <GuideItem
+          term="Take profit %"
+          detail="Exit when all-in P&L reaches this percent of the size at entry. Enter 10 for +10% ($1,000 on a $10,000 entry). Fees to open and close are already in that P&L."
+        />
+        <GuideItem
+          term="Stop loss %"
+          detail="Exit when all-in P&L is at or below this loss. Enter 10 to stop at −10% (−$1,000 on a $10,000 entry). Type a positive number; the engine treats it as a loss."
+        />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Exit · How much closes
+      </h3>
+      <p className="mt-2 text-sm text-ink-muted">
+        Once an exit has started — from a rule or from you clicking Close —
+        only the exit order type decides how much comes off.
+      </p>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="Order Type · Fixed"
+          detail="Closes the whole remaining row in one go."
+        />
+        <GuideItem
+          term="Order Type · Dynamic (scale out)"
+          detail="Each tick closes up to the current usable book. The row shows Closing until it is flat. A leftover smaller than Min Order Size still finishes so the row can close."
+        />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Close and Unwind on Positions
+      </h3>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="Auto Close"
+          detail="You already chose to exit. DTE, APR, take profit, and stop loss are ignored. Only this bot’s exit order type is used: Fixed closes remaining size now, Dynamic clips once and marks Closing."
+        />
+        <GuideItem
+          term="Manual Close"
+          detail="Always closes the remaining size at the live scan."
+        />
+        <GuideItem
+          term="Unwind"
+          detail="Manual rows only. Clips to usable book and marks Closing. Later ticks finish the rest."
+        />
+      </dl>
+
+      <h3 className="mt-6 text-xs font-medium uppercase tracking-[0.12em] text-ink-muted">
+        Safety
+      </h3>
+      <dl className="mt-3 space-y-3 text-sm">
+        <GuideItem
+          term="No live mark"
+          detail="If the pair is missing from the current scan, the engine will not auto-close it. There is no honest exit price or usable book."
+        />
+        <GuideItem
+          term="Manual trades"
+          detail="Rows you opened by hand are not closed by these rules. Use Close or Unwind yourself."
+        />
+      </dl>
+    </section>
+  );
+}
+
+function GuideItem({
+  term,
+  detail,
+}: {
+  term: string;
+  detail: string;
+}) {
+  return (
+    <div>
+      <dt className="font-medium text-ink">{term}</dt>
+      <dd className="mt-0.5 text-ink-muted">{detail}</dd>
+    </div>
+  );
+}
