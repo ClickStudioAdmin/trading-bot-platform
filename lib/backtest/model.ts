@@ -471,6 +471,41 @@ export function openBacktestPositionLabel(orders: SimulatedOrder[]): string | nu
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 
+export type BacktestLinkHighlight = {
+  runId: string;
+  symbol: string;
+  interval: DcaIndicatorTimeframe;
+  fromMs: number;
+  toMs: number;
+  trades: number;
+  winRate: number;
+  realizedUsdt: number;
+  onCapitalUsedPct: number | null;
+  aprPct: number | null;
+};
+
+export function backtestLinkHighlight(
+  run: Pick<
+    BacktestRun,
+    "id" | "symbol" | "interval" | "fromMs" | "toMs" | "stats" | "orders"
+  >,
+): BacktestLinkHighlight {
+  const peak = peakLockedNotionalUsdt(run.orders);
+  const realized = run.stats?.realizedUsdt ?? 0;
+  return {
+    runId: run.id,
+    symbol: run.symbol,
+    interval: run.interval,
+    fromMs: run.fromMs,
+    toMs: run.toMs,
+    trades: run.stats?.trades ?? 0,
+    winRate: run.stats?.winRate ?? 0,
+    realizedUsdt: realized,
+    onCapitalUsedPct: returnOnCapitalUsedPct(realized, peak),
+    aprPct: realizedAprPct(realized, peak, run.fromMs, run.toMs),
+  };
+}
+
 export function returnOnCapitalUsedPct(
   pnlUsdt: number,
   peakNotionalUsdt: number,

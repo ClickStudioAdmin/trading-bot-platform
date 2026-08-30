@@ -3,10 +3,12 @@ import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { parseDcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { parseTemplateRecipe } from "@/lib/templates/recipe";
 import {
+  backtestLinkHighlight,
   estimateBacktestBars,
   parseBacktestStatus,
   parseFeePreset,
   type BacktestDeskType,
+  type BacktestLinkHighlight,
   type BacktestFeePreset,
   type BacktestRecipe,
   type BacktestRun,
@@ -449,9 +451,9 @@ export function canDeleteBacktestRun(
 
 export async function listLinkedBacktestRuns(
   templateIds: string[],
-): Promise<Record<string, string>> {
+): Promise<Record<string, BacktestLinkHighlight>> {
   const ids = [...new Set(templateIds.filter(Boolean))];
-  const linked: Record<string, string> = {};
+  const linked: Record<string, BacktestLinkHighlight> = {};
   if (ids.length === 0) {
     return linked;
   }
@@ -461,21 +463,19 @@ export async function listLinkedBacktestRuns(
   }
   const { data, error } = await supabase
     .from("backtest_runs")
-    .select("id, template_id, created_at")
+    .select("*")
     .in("template_id", ids)
     .eq("status", "done")
     .order("created_at", { ascending: false });
   if (error || !data) {
     return linked;
   }
-  for (const row of data) {
-    const templateId = String(
-      (row as { template_id?: string }).template_id ?? "",
-    );
-    const runId = String((row as { id?: string }).id ?? "");
-    if (templateId && runId && !linked[templateId]) {
-      linked[templateId] = runId;
+  for (const item of data) {
+    const run = parseBacktestRunRow(item as Record<string, unknown>);
+    if (!run?.templateId || linked[run.templateId]) {
+      continue;
     }
+    linked[run.templateId] = backtestLinkHighlight(run);
   }
   return linked;
 }

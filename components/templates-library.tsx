@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { BacktestHighlightHover } from "@/components/backtest-highlight-hover";
 import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
 import { Modal, StarterPackCheckbox } from "@/components/template-modals";
+import type { BacktestLinkHighlight } from "@/lib/backtest/model";
 import { formatTemplateDeskType } from "@/lib/templates/recipe";
 import {
   createTemplateSetAction,
@@ -209,7 +211,7 @@ export function TemplatesLibrary({
   sets: AutomationTemplateSet[];
   sharedTemplates?: AutomationTemplate[];
   sharedSets?: AutomationTemplateSet[];
-  linkedBacktests?: Record<string, string>;
+  linkedBacktests?: Record<string, BacktestLinkHighlight>;
   initialTab?: LibraryTab;
 }) {
   const router = useRouter();
@@ -474,6 +476,43 @@ export function TemplatesLibrary({
     if (result.ok) {
       setEditingTemplateId(null);
       setEditingFolderId(null);
+      router.refresh();
+    }
+  }
+
+  async function deleteTemplateRow(row: AutomationTemplate) {
+    if (!window.confirm(`Delete “${row.name}”? This cannot be undone.`)) {
+      return;
+    }
+    const data = new FormData();
+    data.set("templateId", row.id);
+    const result = await deleteTemplateAction(data);
+    flash(result);
+    if (result.ok) {
+      setSelected((current) => {
+        const next = new Set(current);
+        next.delete(row.id);
+        return next;
+      });
+      router.refresh();
+    }
+  }
+
+  async function deleteFolderRow(row: AutomationTemplateSet) {
+    if (!window.confirm(`Delete folder “${row.name}”? This cannot be undone.`)) {
+      return;
+    }
+    const data = new FormData();
+    data.set("setId", row.id);
+    const result = await deleteTemplateSetAction(data);
+    flash(result);
+    if (result.ok) {
+      setSelected((current) => {
+        const next = new Set(current);
+        next.delete(row.id);
+        return next;
+      });
+      router.refresh();
     }
   }
 
@@ -789,6 +828,7 @@ export function TemplatesLibrary({
               const canEdit =
                 !sharedTab &&
                 (variant === "admin" || row.visibility === "user");
+              const linkedRun = linkedBacktests[row.id];
               return (
                 <tr key={row.id} className="border-b border-line last:border-b-0">
                   {sharedTab ? null : (
@@ -805,10 +845,17 @@ export function TemplatesLibrary({
                   <td className="px-4 py-3 font-medium text-ink">
                     <span className="inline-flex flex-wrap items-center gap-2">
                       {row.name}
-                      {linkedBacktests[row.id] ? (
-                        <span className="rounded-control bg-success/15 px-1.5 py-0.5 text-[11px] font-medium text-success">
-                          Backtested
-                        </span>
+                      {linkedRun ? (
+                        <BacktestHighlightHover highlight={linkedRun}>
+                          <Link
+                            href={`/account/backtests/${linkedRun.runId}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="rounded-control bg-success/15 px-1.5 py-0.5 text-[11px] font-medium text-success hover:bg-success/25"
+                          >
+                            Backtested
+                          </Link>
+                        </BacktestHighlightHover>
                       ) : null}
                     </span>
                   </td>
@@ -842,14 +889,6 @@ export function TemplatesLibrary({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-3">
-                      {linkedBacktests[row.id] ? (
-                        <Link
-                          href={`/account/backtests/${linkedBacktests[row.id]}`}
-                          className={actionLink}
-                        >
-                          Backtest
-                        </Link>
-                      ) : null}
                       {canEdit ? (
                         <button
                           type="button"
@@ -866,6 +905,15 @@ export function TemplatesLibrary({
                           className={actionLink}
                         >
                           Share
+                        </button>
+                      ) : null}
+                      {canEdit ? (
+                        <button
+                          type="button"
+                          onClick={() => void deleteTemplateRow(row)}
+                          className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
+                        >
+                          Delete
                         </button>
                       ) : null}
                       {sharedTab ? (
@@ -1027,6 +1075,15 @@ export function TemplatesLibrary({
                             className={actionLink}
                           >
                             Share
+                          </button>
+                        ) : null}
+                        {canEdit ? (
+                          <button
+                            type="button"
+                            onClick={() => void deleteFolderRow(row)}
+                            className="rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10"
+                          >
+                            Delete
                           </button>
                         ) : null}
                         {sharedTab ? (

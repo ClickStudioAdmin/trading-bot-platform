@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  backtestLinkHighlight,
   backtestShouldRunInline,
   estimateBacktestBars,
   formatBacktestReturnPct,
@@ -111,6 +112,55 @@ assert.equal(
   220,
 );
 assert.equal(returnOnCapitalUsedPct(6.17, 100), 0.0617);
+const highlight = backtestLinkHighlight({
+  id: "run-1",
+  symbol: "ETHUSDT",
+  interval: "15",
+  fromMs: Date.UTC(2021, 0, 1),
+  toMs: Date.UTC(2026, 0, 1),
+  stats: {
+    trades: 10,
+    wins: 6,
+    winRate: 0.6,
+    realizedUsdt: 22,
+    maxDrawdownUsdt: 0,
+    profitFactor: 1,
+    timeInMarket: 0.1,
+    startingUsdt: 1000,
+    endingUsdt: 1022,
+    returnPct: 0.022,
+    openQty: 0,
+    openSide: null,
+    markUsdt: 0,
+  },
+  orders: [
+    {
+      atMs: 1,
+      action: "buy",
+      side: "long",
+      qty: 1,
+      price: 100,
+      feeUsdt: 0,
+      realizedUsdt: 0,
+    },
+    {
+      atMs: 2,
+      action: "flatten",
+      side: "long",
+      qty: 1,
+      price: 122,
+      feeUsdt: 0,
+      realizedUsdt: 22,
+    },
+  ],
+});
+assert.equal(highlight.runId, "run-1");
+assert.equal(highlight.symbol, "ETHUSDT");
+assert.equal(highlight.trades, 10);
+assert.equal(highlight.winRate, 0.6);
+assert.equal(highlight.realizedUsdt, 22);
+assert.equal(highlight.onCapitalUsedPct, 0.22);
+assert.ok(highlight.aprPct != null && highlight.aprPct > 0);
 assert.equal(
   realizedEndingUsdt({ startingUsdt: 1000, realizedUsdt: 72.25 }),
   1072.25,
