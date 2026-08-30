@@ -69,6 +69,11 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
         },
         { label: "Trades", value: String(stats.trades) },
         { label: "Win rate", value: pct(stats.winRate) },
+        {
+          label: "Realized P&L",
+          value: money(stats.realizedUsdt),
+          hint: "Closed trades after fees",
+        },
         { label: "Max drawdown", value: money(stats.maxDrawdownUsdt) },
         {
           label: "Account return",
@@ -87,11 +92,6 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
           label: "Max capital used",
           value: peakUsed > 0 ? money(peakUsed) : "—",
           hint: "Peak locked notional (qty × entry) while a position was open",
-        },
-        {
-          label: "Realized P&L",
-          value: money(stats.realizedUsdt),
-          hint: "Closed trades after fees",
         },
         {
           label: "Profit factor",
