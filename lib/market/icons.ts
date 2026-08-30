@@ -31,12 +31,12 @@ export function iconUrlForSymbol(
   icons: ReadonlyMap<string, string> | Record<string, string>,
   symbol: string,
 ): string | null {
-  const get =
+  const lookup =
     icons instanceof Map
       ? (key: string) => icons.get(key)
-      : (key: string) => icons[key];
+      : (key: string) => (icons as Record<string, string>)[key];
   for (const key of iconLookupKeys(symbol)) {
-    const url = get(key);
+    const url = lookup(key);
     if (url) {
       return url;
     }
