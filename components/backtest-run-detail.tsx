@@ -53,7 +53,7 @@ export function BacktestRunDetail({
 }) {
   const params = recipeParamRows(run.recipe);
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
@@ -197,50 +197,41 @@ export function BacktestRunDetail({
         </section>
       ) : null}
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Parameters</h2>
-        <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {params.map((row) => (
-            <div
-              key={row.label}
-              className="rounded-card border border-line bg-surface px-4 py-3"
-            >
-              <dt className="text-xs uppercase tracking-[0.16em] text-ink-muted">
-                {row.label}
-              </dt>
-              <dd className="mt-1 text-sm font-medium">{row.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <section>
+          <h2 className="mb-2 text-lg font-semibold">Parameters</h2>
+          <dl>
+            {params.map((row) => (
+              <div
+                key={row.label}
+                className="flex items-baseline justify-between gap-3 border-t border-line py-1.5 first:border-t-0"
+              >
+                <dt className="text-xs text-ink-muted">{row.label}</dt>
+                <dd className="text-sm font-medium">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+        <section>
+          <h2 className="mb-2 text-lg font-semibold">Performance</h2>
+          <BacktestStatsGrid run={run} />
+        </section>
+      </div>
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Performance</h2>
-        <p className="mb-3 text-sm text-ink-muted">
-          Account return is P&amp;L versus the starting balance. On capital
-          used is the same dollars versus the largest open position (qty ×
-          entry) during the run. Not exchange-margin ROE.
-        </p>
-        <BacktestStatsGrid run={run} />
-      </section>
-
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Account impact</h2>
-        <p className="mb-3 text-sm text-ink-muted">
-          Equity after each simulated fill, from the starting balance.
-        </p>
+        <h2 className="mb-2 text-lg font-semibold">Account impact</h2>
         <BacktestEquityPanel run={run} />
       </section>
 
       {run.status === "done" ? (
         <section>
-          <h2 className="mb-3 text-lg font-semibold">Chart</h2>
+          <h2 className="mb-2 text-lg font-semibold">Chart</h2>
           <BacktestInlineChart run={run} />
         </section>
       ) : null}
 
       <section>
-        <h2 className="mb-3 text-lg font-semibold">Trades</h2>
+        <h2 className="mb-2 text-lg font-semibold">Trades</h2>
         <BacktestOrdersTable run={run} />
       </section>
     </div>

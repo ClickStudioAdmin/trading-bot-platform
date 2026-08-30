@@ -49,7 +49,7 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
   const peakUsed = peakLockedNotionalUsdt(run.orders);
   const usedPct = returnOnCapitalUsedPct(pnl, peakUsed);
   return (
-    <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <dl className="grid gap-x-6 sm:grid-cols-2">
       <Stat
         label="Starting"
         value={money(stats.startingUsdt)}
@@ -116,52 +116,101 @@ function Stat({
   hint?: string;
 }) {
   return (
-    <div className="rounded-card border border-line bg-surface px-4 py-3">
-      <dt className="text-xs uppercase tracking-[0.16em] text-ink-muted">
-        {label}
-      </dt>
-      <dd className="mt-1 text-lg font-semibold tabular-nums">{value}</dd>
-      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
+    <div
+      className="flex items-baseline justify-between gap-3 border-t border-line py-1.5 first:border-t-0 sm:[&:nth-child(-n+2)]:border-t-0"
+      title={hint}
+    >
+      <dt className="text-xs text-ink-muted">{label}</dt>
+      <dd className="text-sm font-medium tabular-nums">{value}</dd>
     </div>
   );
 }
 
+const TRADE_PAGE_SIZE = 25;
+
 export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
+  const [page, setPage] = useState(0);
+  useEffect(() => {
+    setPage(0);
+  }, [run.id]);
   if (run.orders.length === 0) {
     return <p className="text-sm text-ink-muted">No simulated fills.</p>;
   }
+  const pageCount = Math.max(1, Math.ceil(run.orders.length / TRADE_PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const start = safePage * TRADE_PAGE_SIZE;
+  const rows = run.orders.slice(start, start + TRADE_PAGE_SIZE);
+  const from = start + 1;
+  const to = start + rows.length;
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm">
-        <thead className="text-xs uppercase tracking-[0.16em] text-ink-muted">
-          <tr>
-            <th className="py-2 pr-3 font-medium">Time</th>
-            <th className="py-2 pr-3 font-medium">Action</th>
-            <th className="py-2 pr-3 font-medium">Side</th>
-            <th className="py-2 pr-3 font-medium">Qty</th>
-            <th className="py-2 pr-3 font-medium">Price</th>
-            <th className="py-2 pr-3 font-medium">Fee</th>
-            <th className="py-2 font-medium">Realized</th>
-          </tr>
-        </thead>
-        <tbody>
-          {run.orders.map((row, index) => (
-            <tr key={`${row.atMs}-${index}`} className="border-t border-line">
-              <td className="py-2 pr-3 text-ink-muted">
-                {new Date(row.atMs).toLocaleString()}
-              </td>
-              <td className="py-2 pr-3">{row.action}</td>
-              <td className="py-2 pr-3">{row.side}</td>
-              <td className="py-2 pr-3 tabular-nums">{row.qty}</td>
-              <td className="py-2 pr-3 tabular-nums">{money(row.price)}</td>
-              <td className="py-2 pr-3 tabular-nums">{money(row.feeUsdt)}</td>
-              <td className="py-2 tabular-nums">
-                {row.realizedUsdt == null ? "—" : money(row.realizedUsdt)}
-              </td>
+    <div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="text-xs uppercase tracking-[0.16em] text-ink-muted">
+            <tr>
+              <th className="py-1.5 pr-3 font-medium">Time</th>
+              <th className="py-1.5 pr-3 font-medium">Action</th>
+              <th className="py-1.5 pr-3 font-medium">Side</th>
+              <th className="py-1.5 pr-3 font-medium">Qty</th>
+              <th className="py-1.5 pr-3 font-medium">Price</th>
+              <th className="py-1.5 pr-3 font-medium">Fee</th>
+              <th className="py-1.5 font-medium">Realized</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr
+                key={`${row.atMs}-${start + index}`}
+                className="border-t border-line"
+              >
+                <td className="py-1.5 pr-3 text-ink-muted">
+                  {new Date(row.atMs).toLocaleString()}
+                </td>
+                <td className="py-1.5 pr-3">{row.action}</td>
+                <td className="py-1.5 pr-3">{row.side}</td>
+                <td className="py-1.5 pr-3 tabular-nums">{row.qty}</td>
+                <td className="py-1.5 pr-3 tabular-nums">{money(row.price)}</td>
+                <td className="py-1.5 pr-3 tabular-nums">
+                  {money(row.feeUsdt)}
+                </td>
+                <td className="py-1.5 tabular-nums">
+                  {row.realizedUsdt == null ? "—" : money(row.realizedUsdt)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
+        <p>
+          {from}–{to} of {run.orders.length}
+        </p>
+        {pageCount > 1 ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={safePage === 0}
+              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              className="rounded-control border border-line px-2 py-1 text-ink hover:border-line-strong disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <p>
+              {safePage + 1} / {pageCount}
+            </p>
+            <button
+              type="button"
+              disabled={safePage >= pageCount - 1}
+              onClick={() =>
+                setPage((current) => Math.min(pageCount - 1, current + 1))
+              }
+              className="rounded-control border border-line px-2 py-1 text-ink hover:border-line-strong disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
