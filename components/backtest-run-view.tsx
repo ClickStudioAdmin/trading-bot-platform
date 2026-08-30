@@ -10,7 +10,13 @@ import {
   publishBacktestAction,
 } from "@/lib/backtest/actions";
 import { applyTemplateAction } from "@/lib/templates/actions";
-import type { BacktestRun } from "@/lib/backtest/model";
+import {
+  accountPnlUsdt,
+  formatBacktestReturnPct,
+  peakLockedNotionalUsdt,
+  returnOnCapitalUsedPct,
+  type BacktestRun,
+} from "@/lib/backtest/model";
 import { buildBacktestChartOverlay } from "@/lib/charts/overlay";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import type { CandleBar } from "@/lib/market/candles";
@@ -37,15 +43,45 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
       </p>
     );
   }
+  const pnl = accountPnlUsdt(stats);
+  const peakUsed = peakLockedNotionalUsdt(run.orders);
+  const usedPct = returnOnCapitalUsedPct(pnl, peakUsed);
   return (
     <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <Stat label="Starting" value={money(stats.startingUsdt)} />
-      <Stat label="Ending" value={money(stats.endingUsdt)} />
       <Stat
-        label="Return"
-        value={stats.returnPct == null ? "—" : pct(stats.returnPct)}
+        label="Starting"
+        value={money(stats.startingUsdt)}
+        hint="Paper account at the window start"
       />
-      <Stat label="Realized" value={money(stats.realizedUsdt)} />
+      <Stat
+        label="Ending"
+        value={money(stats.endingUsdt)}
+        hint="Starting + realized + unrealized"
+      />
+      <Stat
+        label="Account return"
+        value={formatBacktestReturnPct(stats.returnPct)}
+        hint={`${money(pnl)} on ${money(stats.startingUsdt)} starting`}
+      />
+      <Stat
+        label="On capital used"
+        value={formatBacktestReturnPct(usedPct)}
+        hint={
+          peakUsed > 0
+            ? `${money(pnl)} on ${money(peakUsed)} peak position`
+            : "No position was opened"
+        }
+      />
+      <Stat
+        label="Realized P&L"
+        value={money(stats.realizedUsdt)}
+        hint="Closed trades after fees"
+      />
+      <Stat
+        label="Unrealized"
+        value={money(stats.markUsdt)}
+        hint="Open mark versus entry"
+      />
       <Stat label="Trades" value={String(stats.trades)} />
       <Stat label="Win rate" value={pct(stats.winRate)} />
       <Stat label="Max drawdown" value={money(stats.maxDrawdownUsdt)} />
@@ -64,18 +100,26 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
             : "Flat"
         }
       />
-      <Stat label="Unrealized" value={money(stats.markUsdt)} />
     </dl>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   return (
     <div className="rounded-card border border-line bg-surface px-4 py-3">
       <dt className="text-xs uppercase tracking-[0.16em] text-ink-muted">
         {label}
       </dt>
       <dd className="mt-1 text-lg font-semibold tabular-nums">{value}</dd>
+      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
     </div>
   );
 }

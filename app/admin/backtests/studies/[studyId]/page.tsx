@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { RemoveBacktestStudyButton } from "@/components/backtest-run-view";
 import { requireAdmin } from "@/lib/admin/access";
+import { formatBacktestReturnPct } from "@/lib/backtest/model";
 import { recipeParamRows } from "@/lib/backtest/study";
 import { listBacktestRuns, loadBacktestStudy } from "@/lib/backtest/store";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
@@ -118,7 +119,7 @@ export default async function AdminBacktestStudyPage({
                     <td className="py-2 pr-4 tabular-nums">
                       {row.stats?.returnPct == null
                         ? "—"
-                        : `${(row.stats.returnPct * 100).toFixed(1)}%`}
+                        : formatBacktestReturnPct(row.stats.returnPct)}
                     </td>
                     <td className="py-2 tabular-nums">
                       {row.stats

@@ -333,3 +333,56 @@ export function finishBacktestStats(input: {
         : null,
   };
 }
+
+export function formatBacktestReturnPct(
+  returnPct: number | null | undefined,
+): string {
+  if (returnPct == null || !Number.isFinite(returnPct)) {
+    return "—";
+  }
+  return `${(returnPct * 100).toFixed(2)}%`;
+}
+
+export function accountPnlUsdt(stats: Pick<
+  BacktestStats,
+  "startingUsdt" | "endingUsdt"
+>): number {
+  return stats.endingUsdt - stats.startingUsdt;
+}
+
+export function peakLockedNotionalUsdt(orders: SimulatedOrder[]): number {
+  const legs: Record<"long" | "short", { qty: number; entry: number }> = {
+    long: { qty: 0, entry: 0 },
+    short: { qty: 0, entry: 0 },
+  };
+  let peak = 0;
+  for (const order of orders) {
+    const leg = legs[order.side];
+    if (order.action === "flatten") {
+      legs[order.side] = { qty: 0, entry: 0 };
+    } else {
+      const nextQty = leg.qty + order.qty;
+      const entry =
+        nextQty > 0
+          ? (leg.entry * leg.qty + order.price * order.qty) / nextQty
+          : order.price;
+      legs[order.side] = { qty: nextQty, entry };
+    }
+    const locked =
+      legs.long.qty * legs.long.entry + legs.short.qty * legs.short.entry;
+    if (locked > peak) {
+      peak = locked;
+    }
+  }
+  return peak;
+}
+
+export function returnOnCapitalUsedPct(
+  pnlUsdt: number,
+  peakNotionalUsdt: number,
+): number | null {
+  if (!(peakNotionalUsdt > 0) || !Number.isFinite(pnlUsdt)) {
+    return null;
+  }
+  return pnlUsdt / peakNotionalUsdt;
+}

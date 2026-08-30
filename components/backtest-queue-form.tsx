@@ -13,7 +13,10 @@ import {
   estimateBacktestBars,
   parseBacktestDateRange,
 } from "@/lib/backtest/model";
-import type { BacktestLibraryItem } from "@/lib/backtest/library";
+import {
+  recipeParamRows,
+  type BacktestLibraryItem,
+} from "@/lib/backtest/library";
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
@@ -134,15 +137,21 @@ export function BacktestQueueForm({
     );
   }
 
+  const params = selected ? recipeParamRows(selected.recipe) : [];
+  const pairChanged =
+    selected != null &&
+    symbol.trim().toUpperCase() !== selected.recipe.symbol.trim().toUpperCase();
+
   return (
-    <section className="mb-8 max-w-2xl rounded-card border border-line bg-surface p-5">
+    <section className="mb-8 rounded-card border border-line bg-surface p-5">
       <h2 className="text-lg font-semibold">New backtest</h2>
       <p className="mt-1 text-sm text-ink-muted">
         The saved template pair loads first. Add other pairs as comparables.
         Long windows are queued for the engine worker.
       </p>
+      <div className="mt-4 grid items-start gap-6 lg:grid-cols-2">
       <form
-        className="mt-4 space-y-3"
+        className="space-y-3"
         action={async (formData) => {
           setPending(true);
           setError(null);
@@ -363,6 +372,35 @@ export function BacktestQueueForm({
               : "Queue backtest"}
         </button>
       </form>
+      {selected ? (
+        <aside className="rounded-card border border-line bg-canvas p-4">
+          <h3 className="text-sm font-semibold">Saved bot</h3>
+          <p className="mt-1 text-xs text-ink-muted">
+            These are the template rules this run will replay. The pair and
+            window on the left only change the market data.
+          </p>
+          {pairChanged ? (
+            <p className="mt-2 text-xs text-warning">
+              Primary pair is {symbol}. The template was saved on{" "}
+              {selected.recipe.symbol}.
+            </p>
+          ) : null}
+          <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+            {params.map((row) => (
+              <div
+                key={row.label}
+                className="rounded-card border border-line bg-surface px-3 py-2"
+              >
+                <dt className="text-xs uppercase tracking-[0.16em] text-ink-muted">
+                  {row.label}
+                </dt>
+                <dd className="mt-1 text-sm font-medium">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </aside>
+      ) : null}
+      </div>
     </section>
   );
 }

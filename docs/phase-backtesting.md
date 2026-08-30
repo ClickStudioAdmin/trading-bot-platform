@@ -38,6 +38,7 @@ Each run has its own **detail page**: parameters, stats, trade list, account-imp
 | Bar fill (exits) | Stop and trailing use the **adverse wick**. Take profit uses the **favorable wick** (Perps) or close (DCA percent exits). If stop and take profit both print on the same bar, **stop wins**. |
 | Fee | Named preset `vip0_taker` = **6 bps all-in** per fill. |
 | Rank | **Realized** USDT. |
+| Return | **Account return** is (ending − starting) / starting. Ending is starting + realized + open mark. **On capital used** is that same dollar P&L over peak locked notional (qty × entry while open). Not exchange-margin ROE. |
 | User queue | **One predefined template.** Required: saved library template, start date, end date, initial balance, timeframe, venue. **Primary pair** preloads from the template; the user can pick another from the venue list. Optional **comparables** (max 8) queue the same bot/window on other pairs. |
 | Admin study | Seed from a **desk bot** (DCA playbook or Perps bots rule), not a template. Expands a **locked discrete grid**: entry starts × timeframes that fit the window × take-profit % × stop %. Cap **96** scenarios. Grouped as a `backtest_studies` row; child runs have `study_id`. |
 | Study grid (DCA) | Starts: immediate; price ≥/≤ when the seed has an arm price; RSI / MACD / EMA-cross × cross ≥ / cross ≤. Timeframes: 15m, 1h, 4h, Daily if the window is ≤ 1500 bars. TP: off / 4% / 8% / 12%. SL: off / 5% / 10%. Clip size, averaging, and contract stay on the seed. Webhook start is never generated. |

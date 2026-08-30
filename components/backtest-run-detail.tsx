@@ -10,6 +10,7 @@ import {
 } from "@/components/backtest-run-view";
 import { BACKTEST_FEE_PRESETS } from "@/lib/backtest/model";
 import type { BacktestRun } from "@/lib/backtest/model";
+import { formatBacktestReturnPct } from "@/lib/backtest/model";
 import { recipeParamRows } from "@/lib/backtest/study";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 
@@ -123,9 +124,7 @@ export function BacktestRunDetail({
                     {run.stats?.trades ?? "—"}
                   </td>
                   <td className="py-2 pr-4 tabular-nums">
-                    {run.stats?.returnPct == null
-                      ? "—"
-                      : `${(run.stats.returnPct * 100).toFixed(1)}%`}
+                    {formatBacktestReturnPct(run.stats?.returnPct)}
                   </td>
                   <td className="py-2 tabular-nums">
                     {run.stats
@@ -151,9 +150,7 @@ export function BacktestRunDetail({
                       {row.stats?.trades ?? "—"}
                     </td>
                     <td className="py-2 pr-4 tabular-nums">
-                      {row.stats?.returnPct == null
-                        ? "—"
-                        : `${(row.stats.returnPct * 100).toFixed(1)}%`}
+                      {formatBacktestReturnPct(row.stats?.returnPct)}
                     </td>
                     <td className="py-2 tabular-nums">
                       {row.stats
@@ -190,6 +187,11 @@ export function BacktestRunDetail({
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Performance</h2>
+        <p className="mb-3 text-sm text-ink-muted">
+          Account return is P&amp;L versus the starting balance. On capital
+          used is the same dollars versus the largest open position (qty ×
+          entry) during the run. Not exchange-margin ROE.
+        </p>
         <BacktestStatsGrid run={run} />
       </section>
 

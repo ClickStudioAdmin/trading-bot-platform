@@ -2,10 +2,13 @@ import assert from "node:assert/strict";
 import {
   backtestShouldRunInline,
   estimateBacktestBars,
+  formatBacktestReturnPct,
   intervalMs,
   parseBacktestDateRange,
   parseComparableSymbols,
   parseStartingBalance,
+  peakLockedNotionalUsdt,
+  returnOnCapitalUsedPct,
 } from "./model";
 
 assert.equal(parseStartingBalance("").ok, false);
@@ -48,5 +51,41 @@ assert.deepEqual(parseComparableSymbols("ETHUSDT, SOLUSDT, BTCUSDT", "BTCUSDT"),
   "ETHUSDT",
   "SOLUSDT",
 ]);
+
+assert.equal(formatBacktestReturnPct(0.000617), "0.06%");
+assert.equal(formatBacktestReturnPct(null), "—");
+assert.equal(
+  peakLockedNotionalUsdt([
+    {
+      atMs: 1,
+      action: "buy",
+      side: "long",
+      qty: 1,
+      price: 100,
+      feeUsdt: 0,
+      realizedUsdt: 0,
+    },
+    {
+      atMs: 2,
+      action: "buy",
+      side: "long",
+      qty: 1,
+      price: 120,
+      feeUsdt: 0,
+      realizedUsdt: 0,
+    },
+    {
+      atMs: 3,
+      action: "flatten",
+      side: "long",
+      qty: 2,
+      price: 130,
+      feeUsdt: 0,
+      realizedUsdt: 40,
+    },
+  ]),
+  220,
+);
+assert.equal(returnOnCapitalUsedPct(6.17, 100), 0.0617);
 
 console.log("backtest model checks passed");

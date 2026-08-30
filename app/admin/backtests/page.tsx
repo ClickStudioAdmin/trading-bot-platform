@@ -5,6 +5,7 @@ import { PageHeading } from "@/components/page-heading";
 import { RemoveBacktestStudyButton } from "@/components/backtest-run-view";
 import { BacktestStudyForm } from "@/components/backtest-study-form";
 import { requireAdmin } from "@/lib/admin/access";
+import { formatBacktestReturnPct } from "@/lib/backtest/model";
 import { listAllBacktestRuns, listBacktestStudies } from "@/lib/backtest/store";
 import { listStudySeedOptions } from "@/lib/backtest/study-seeds";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -151,9 +152,7 @@ export default async function AdminBacktestsPage({
                       {row.stats?.trades ?? 0}
                     </td>
                     <td className="py-2 pr-4 tabular-nums">
-                      {row.stats?.returnPct == null
-                        ? "—"
-                        : `${(row.stats.returnPct * 100).toFixed(1)}%`}
+                      {formatBacktestReturnPct(row.stats?.returnPct)}
                     </td>
                     <td className="py-2 tabular-nums">
                       {row.stats?.realizedUsdt.toLocaleString(undefined, {

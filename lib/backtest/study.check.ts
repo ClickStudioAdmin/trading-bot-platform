@@ -5,6 +5,7 @@ import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
 import {
   buildEquityTimeline,
   expandStudyScenarios,
+  recipeParamRows,
   STUDY_MAX_SCENARIOS,
   studyIntervalsForWindow,
 } from "./study";
@@ -24,6 +25,15 @@ if (!parsed.ok) {
   throw new Error("expected DCA parse");
 }
 const seed = snapshotDcaRecipe(parsed.config);
+const preview = recipeParamRows(seed);
+assert.equal(
+  preview.find((row) => row.label === "Start")?.value,
+  "Manual",
+);
+assert.equal(
+  preview.find((row) => row.label === "Direction")?.value,
+  "Long",
+);
 
 const monthFrom = Date.UTC(2026, 6, 1);
 const monthTo = Date.UTC(2026, 6, 31, 23, 59, 59, 999);
