@@ -147,57 +147,54 @@ export function BacktestRunDetail({
             ) : null}
           </div>
         </div>
-        <div className="mt-6 flex flex-wrap items-start justify-end gap-2">
-          <div className="rounded-card border border-line bg-surface px-3 py-2">
-            <p className="whitespace-nowrap text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
-              Status
-            </p>
-            <div
-              className={`mt-1 flex items-center gap-2 text-sm ${
-                status.tone === "warning"
-                  ? "text-warning"
-                  : status.tone === "danger"
-                    ? "text-danger"
-                    : status.tone === "faint"
-                      ? "text-ink-muted"
-                      : "text-success"
-              }`}
-            >
-              <StatusDot tone={status.tone} pulse={status.pulse} />
-              {status.label}
-            </div>
+        <div className="mt-6 flex flex-col items-end gap-2">
+          <div
+            className={`flex items-center gap-2 text-sm ${
+              status.tone === "warning"
+                ? "text-warning"
+                : status.tone === "danger"
+                  ? "text-danger"
+                  : status.tone === "faint"
+                    ? "text-ink-muted"
+                    : "text-success"
+            }`}
+          >
+            <StatusDot tone={status.tone} pulse={status.pulse} />
+            {status.label}
           </div>
-          {canAttach ? (
-            <AttachBacktestButton
+          <div className="flex items-center justify-end gap-2">
+            {canAttach ? (
+              <AttachBacktestButton
+                runId={run.id}
+                sourceName={sourceTemplateName}
+              />
+            ) : null}
+            {canSaveAs ? (
+              <SaveBacktestAsTemplateButton
+                runId={run.id}
+                defaultName={run.recipe.name}
+              />
+            ) : null}
+            {linkedTemplateName ? (
+              <p className="whitespace-nowrap text-xs text-ink-muted">
+                Attached to {linkedTemplateName}
+              </p>
+            ) : null}
+            {run.status === "done" && applyDesks ? (
+              <ApplyBacktestButton
+                templateId={applyTemplateId}
+                desks={applyDesks}
+              />
+            ) : null}
+            {run.status === "done" ? (
+              <PublishBacktestButton runId={run.id} canPublish={canPublish} />
+            ) : null}
+            <RemoveBacktestButton
               runId={run.id}
-              sourceName={sourceTemplateName}
+              canRemove={canRemove}
+              returnTo={returnTo}
             />
-          ) : null}
-          {canSaveAs ? (
-            <SaveBacktestAsTemplateButton
-              runId={run.id}
-              defaultName={run.recipe.name}
-            />
-          ) : null}
-          {linkedTemplateName ? (
-            <p className="text-xs text-ink-muted">
-              Attached to {linkedTemplateName}
-            </p>
-          ) : null}
-          {run.status === "done" && applyDesks ? (
-            <ApplyBacktestButton
-              templateId={applyTemplateId}
-              desks={applyDesks}
-            />
-          ) : null}
-          {run.status === "done" ? (
-            <PublishBacktestButton runId={run.id} canPublish={canPublish} />
-          ) : null}
-          <RemoveBacktestButton
-            runId={run.id}
-            canRemove={canRemove}
-            returnTo={returnTo}
-          />
+          </div>
         </div>
       </div>
 

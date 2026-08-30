@@ -499,7 +499,7 @@ export function SaveBacktestAsTemplateButton({
   const [error, setError] = useState<string | null>(null);
   return (
     <form
-      className="flex flex-wrap items-center gap-2"
+      className="flex items-center gap-2"
       action={async (formData) => {
         setPending(true);
         setError(null);
@@ -544,7 +544,7 @@ export function ApplyBacktestButton({
   }
   return (
     <form
-      className="flex flex-wrap items-center gap-2"
+      className="flex items-center gap-2"
       action={async (formData) => {
         setPending(true);
         setMessage(null);
