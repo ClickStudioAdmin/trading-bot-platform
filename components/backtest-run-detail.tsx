@@ -3,6 +3,7 @@ import { BacktestEquityPanel } from "@/components/backtest-equity";
 import {
   ApplyBacktestButton,
   AttachBacktestButton,
+  BacktestCurrentTrades,
   BacktestInlineChart,
   BacktestOrdersTable,
   BacktestPropertyList,
@@ -138,14 +139,22 @@ export function BacktestRunDetail({
           <h2 className="mb-3 text-lg font-semibold">Parameters</h2>
           <BacktestPropertyList rows={params} />
         </section>
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">Performance</h2>
+        <div className="space-y-6">
+          <section>
+            <h2 className="mb-3 text-lg font-semibold">Performance</h2>
+            {complete ? (
+              <BacktestStatsGrid run={run} />
+            ) : (
+              <SectionPlaceholder message={pendingMessage} />
+            )}
+          </section>
           {complete ? (
-            <BacktestStatsGrid run={run} />
-          ) : (
-            <SectionPlaceholder message={pendingMessage} />
-          )}
-        </section>
+            <section>
+              <h2 className="mb-3 text-lg font-semibold">Current trades</h2>
+              <BacktestCurrentTrades run={run} />
+            </section>
+          ) : null}
+        </div>
       </div>
 
       <section>

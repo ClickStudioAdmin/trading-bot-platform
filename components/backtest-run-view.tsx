@@ -84,11 +84,6 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
           value: money(stats.realizedUsdt),
           hint: "Closed trades after fees",
         },
-        {
-          label: "Unrealized",
-          value: money(stats.markUsdt),
-          hint: "Open mark versus entry",
-        },
         { label: "Trades", value: String(stats.trades) },
         { label: "Win rate", value: pct(stats.winRate) },
         { label: "Max drawdown", value: money(stats.maxDrawdownUsdt) },
@@ -98,11 +93,31 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
             stats.profitFactor == null ? "—" : stats.profitFactor.toFixed(2),
         },
         { label: "Time in market", value: pct(stats.timeInMarket) },
+      ]}
+    />
+  );
+}
+
+export function BacktestCurrentTrades({ run }: { run: BacktestRun }) {
+  const stats = run.stats;
+  if (!stats) {
+    return (
+      <p className="text-sm text-ink-muted">No open position on this run.</p>
+    );
+  }
+  return (
+    <BacktestPropertyList
+      rows={[
         {
           label: "Open",
           value: stats.openSide
             ? `${stats.openSide} ${stats.openQty.toFixed(4)}`
             : "Flat",
+        },
+        {
+          label: "Unrealized",
+          value: money(stats.markUsdt),
+          hint: "Open mark versus entry",
         },
       ]}
     />
@@ -153,8 +168,7 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
         </p>
         {openLabel ? (
           <p className="text-xs text-ink-muted">
-            Current trades (not included): {openLabel}. Still open at the
-            window end.
+            Still open at the window end — see Current trades above.
           </p>
         ) : null}
       </div>
@@ -168,13 +182,7 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
   const to = start + rows.length;
   return (
     <div>
-      {openLabel ? (
-        <p className="mb-2 text-xs text-ink-muted">
-          Completed positions only. Current trades (not included): {openLabel}.
-        </p>
-      ) : (
-        <p className="mb-2 text-xs text-ink-muted">Completed positions only.</p>
-      )}
+      <p className="mb-2 text-xs text-ink-muted">Completed positions only.</p>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="text-xs uppercase tracking-[0.16em] text-ink-muted">
