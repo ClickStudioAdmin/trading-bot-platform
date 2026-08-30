@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { BacktestEquityPanel } from "@/components/backtest-equity";
 import {
   ApplyBacktestButton,
@@ -52,6 +53,23 @@ function backtestStatusTone(status: BacktestRun["status"]): {
     return { label: "Cancelled", tone: "faint", pulse: false };
   }
   return { label: statusLabel(status), tone: "faint", pulse: false };
+}
+
+function ActionGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+        {label}
+      </p>
+      <div className="flex items-center gap-2">{children}</div>
+    </div>
+  );
 }
 
 function StatusDot({
@@ -162,32 +180,40 @@ export function BacktestRunDetail({
             <StatusDot tone={status.tone} pulse={status.pulse} />
             {status.label}
           </div>
-          <div className="flex items-center justify-end gap-2">
-            {canAttach ? (
-              <AttachBacktestButton
-                runId={run.id}
-                sourceName={sourceTemplateName}
-              />
+          <div className="flex items-end justify-end gap-4">
+            {canAttach || canSaveAs || linkedTemplateName ? (
+              <ActionGroup label="Library">
+                {canAttach ? (
+                  <AttachBacktestButton
+                    runId={run.id}
+                    sourceName={sourceTemplateName}
+                  />
+                ) : null}
+                {canSaveAs ? (
+                  <SaveBacktestAsTemplateButton
+                    runId={run.id}
+                    defaultName={run.recipe.name}
+                  />
+                ) : null}
+                {linkedTemplateName ? (
+                  <p className="whitespace-nowrap text-sm text-ink-muted">
+                    Saved · {linkedTemplateName}
+                  </p>
+                ) : null}
+              </ActionGroup>
             ) : null}
-            {canSaveAs ? (
-              <SaveBacktestAsTemplateButton
-                runId={run.id}
-                defaultName={run.recipe.name}
-              />
+            {complete && applyTemplateId && applyDesks && applyDesks.length > 0 ? (
+              <ActionGroup label="Desk">
+                <ApplyBacktestButton
+                  templateId={applyTemplateId}
+                  desks={applyDesks}
+                />
+              </ActionGroup>
             ) : null}
-            {linkedTemplateName ? (
-              <p className="whitespace-nowrap text-xs text-ink-muted">
-                Attached to {linkedTemplateName}
-              </p>
-            ) : null}
-            {run.status === "done" && applyDesks ? (
-              <ApplyBacktestButton
-                templateId={applyTemplateId}
-                desks={applyDesks}
-              />
-            ) : null}
-            {run.status === "done" ? (
-              <PublishBacktestButton runId={run.id} canPublish={canPublish} />
+            {complete && canPublish ? (
+              <ActionGroup label="Share">
+                <PublishBacktestButton runId={run.id} canPublish={canPublish} />
+              </ActionGroup>
             ) : null}
             <RemoveBacktestButton
               runId={run.id}

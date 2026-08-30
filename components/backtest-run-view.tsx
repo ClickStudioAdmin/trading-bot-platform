@@ -474,13 +474,14 @@ export function AttachBacktestButton({
       <button
         type="submit"
         disabled={pending}
+        title="Link this run to the library template you loaded. Recipe is unchanged."
         className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
       >
         {pending
-          ? "Attaching…"
+          ? "Saving…"
           : sourceName
-            ? `Attach results to ${sourceName}`
-            : "Attach results"}
+            ? `Save to ${sourceName}`
+            : "Save to library"}
       </button>
       {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>
@@ -516,14 +517,17 @@ export function SaveBacktestAsTemplateButton({
       <input
         name="name"
         defaultValue={defaultName}
+        aria-label="Library name"
+        placeholder="Library name"
         className="w-40 rounded-control border border-line bg-canvas px-2 py-1.5 text-sm text-ink"
       />
       <button
         type="submit"
         disabled={pending}
+        title="Create a private library template and link this run"
         className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
       >
-        {pending ? "Saving…" : "Save as template"}
+        {pending ? "Saving…" : "Save to library"}
       </button>
       {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>
@@ -560,6 +564,7 @@ export function ApplyBacktestButton({
       <input type="hidden" name="templateId" value={templateId} />
       <select
         name="accountId"
+        aria-label="Desk"
         className="rounded-control border border-line bg-canvas px-2 py-1.5 text-sm text-ink"
       >
         {desks.map((desk) => (
@@ -571,9 +576,10 @@ export function ApplyBacktestButton({
       <button
         type="submit"
         disabled={pending}
+        title="Copies the bot onto that desk idle. Does not arm."
         className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
       >
-        {pending ? "Applying…" : "Apply idle"}
+        {pending ? "Copying…" : "Add to desk"}
       </button>
       {message ? <p className="text-xs text-ink-muted">{message}</p> : null}
     </form>
@@ -608,9 +614,10 @@ export function PublishBacktestButton({
       <button
         type="submit"
         disabled={pending}
+        title="Shared platform copy of this run. Does not change your library or arm a desk."
         className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
       >
-        {pending ? "Publishing…" : "Publish"}
+        {pending ? "Publishing…" : "Publish snapshot"}
       </button>
       {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>
