@@ -28,7 +28,7 @@ export function DeskCopyShareCard({
   const modeLabel = account.mode === "live" ? "Live" : "Paper";
   const stamp = `${formatDeskType(account.deskType)} · ${formatDeskVenueCaption(account)} · ${modeLabel}`;
   return (
-    <section className="mt-8 max-w-lg space-y-4 rounded-card border border-line bg-surface p-5">
+    <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
         <h3 className="text-sm font-medium text-ink">Share this desk</h3>
         <p className="mt-1 text-xs text-ink-muted">
