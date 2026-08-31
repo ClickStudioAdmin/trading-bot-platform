@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
+import { LogoFileField } from "@/components/logo-file-field";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { saveTraderProfileAction } from "@/lib/copy/actions";
 import { loadTraderProfile } from "@/lib/copy/profile";
@@ -190,40 +191,12 @@ export default async function AccountSettingsPage({
           </label>
           <div>
             <p className="text-xs text-ink-muted">Logo</p>
-            <div className="mt-1 flex items-center gap-3">
-              {trader?.logoUrl ? (
-                // Public trader mark stored in Supabase Storage.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={trader.logoUrl}
-                  alt=""
-                  width={56}
-                  height={56}
-                  className="size-14 shrink-0 rounded-card border border-line object-cover"
-                />
-              ) : (
-                <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-card border border-line bg-canvas text-[11px] text-ink-faint">
-                  None
-                </span>
-              )}
-              <div className="min-w-0 flex-1">
-                <input
-                  type="file"
-                  name="logo"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="w-full text-sm text-ink file:mr-3 file:rounded-control file:border-0 file:bg-surface-raised file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-ink hover:file:bg-line"
-                />
-                <p className="mt-1 text-xs text-ink-faint">
-                  Optional. Square PNG, JPG, or WebP. 1 MB max.
-                </p>
-              </div>
-            </div>
-            {trader?.logoPath ? (
-              <label className="mt-2 flex items-center gap-2 text-xs text-ink-muted">
-                <input type="checkbox" name="removeLogo" className="mt-0.5" />
-                Remove logo
-              </label>
-            ) : null}
+            <LogoFileField
+              name="logo"
+              currentUrl={trader?.logoUrl ?? null}
+              removeName={trader?.logoPath ? "removeLogo" : undefined}
+              hint="Optional. Square PNG, JPG, or WebP. 1 MB max."
+            />
           </div>
           <label className="block text-xs text-ink-muted">
             Bio
