@@ -47,12 +47,14 @@ export function FuturesPositionBulkActions({
   openCount,
   workingCount,
   panicOnly = false,
+  copyDesk = false,
 }: {
   next: string;
   signedIn: boolean;
   openCount: number;
   workingCount: number;
   panicOnly?: boolean;
+  copyDesk?: boolean;
 }) {
   return (
     <div className="flex flex-wrap justify-end gap-2">
@@ -72,9 +74,11 @@ export function FuturesPositionBulkActions({
         openCount={openCount}
         workingCount={workingCount}
         extraBody={
-          panicOnly
-            ? " The bot stays armed unless you Close bot on the row or Automations, or turn on Reduce only."
-            : undefined
+          copyDesk
+            ? " This desk has no bot to idle. Copied limits cancel, then positions close at market."
+            : panicOnly
+              ? " The bot stays armed unless you Close bot on the row or Automations, or turn on Reduce only."
+              : undefined
         }
       />
     </div>

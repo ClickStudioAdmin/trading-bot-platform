@@ -84,6 +84,7 @@ export function OpenFuturesTrades({
   dcaHints = {},
   positionsHref = FUTURES_PATHS.positions,
   hideRowExits = false,
+  copyDesk = false,
 }: {
   signedIn: boolean;
   open: MarkedFutures[];
@@ -99,6 +100,7 @@ export function OpenFuturesTrades({
   dcaHints?: Readonly<Record<string, DcaOpenHint>>;
   positionsHref?: string;
   hideRowExits?: boolean;
+  copyDesk?: boolean;
 }) {
   const { visible: storedVisible, setColumn } = useFuturesOpenColumns();
   const visible = hideRowExits
@@ -144,6 +146,7 @@ export function OpenFuturesTrades({
             openCount={open.length}
             workingCount={workingCount}
             panicOnly={playbookOwnsOrders}
+            copyDesk={copyDesk}
           />
         ) : null}
       </div>
@@ -268,7 +271,9 @@ export function OpenFuturesTrades({
                 <ColumnHint
                   label="Close By"
                   hint={
-                    playbookOwnsOrders
+                    copyDesk
+                      ? "Close flattens this copied position at market. It does not idle a bot — this desk has no playbook. Copied limits stay until the parent cancels them or you cancel them."
+                      : playbookOwnsOrders
                       ? "Close bot flattens every side, cancels working bot orders, and sets the bot to idle. Same as Close bot on Automations."
                       : exchangeBook
                         ? "Market or Limit opens a qty dialog. Market fills on Bybit now. Limit rests a reduce-only close until last trades through it."
@@ -309,6 +314,7 @@ export function OpenFuturesTrades({
                   webhookNames={webhookNames}
                   showDcaColumns={showDcaColumns}
                   playbookOwnsOrders={playbookOwnsOrders}
+                  copyDesk={copyDesk}
                   dcaHint={
                     dcaHints[dcaHintKey(trade.symbol, trade.side)] ?? null
                   }
@@ -513,6 +519,7 @@ function OpenFuturesRows({
   webhookNames,
   showDcaColumns,
   playbookOwnsOrders,
+  copyDesk,
   dcaHint,
 }: {
   trade: MarkedFutures;
@@ -522,6 +529,7 @@ function OpenFuturesRows({
   webhookNames: readonly string[];
   showDcaColumns: boolean;
   playbookOwnsOrders: boolean;
+  copyDesk: boolean;
   dcaHint: DcaOpenHint | null;
 }) {
   const pnlPct =
@@ -682,6 +690,7 @@ function OpenFuturesRows({
           next={next}
           playbookOwnsOrders={playbookOwnsOrders}
           playbookId={dcaHint?.playbookId ?? null}
+          copyDesk={copyDesk}
         />
       </td>
     </ExpandableTradeRows>

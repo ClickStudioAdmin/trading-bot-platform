@@ -1,6 +1,6 @@
 import { AdminTickButton } from "@/components/admin-tick-button";
 import { HeaderBar } from "@/components/header-bar";
-import { HeaderAdminLink } from "@/components/site-nav";
+import { HeaderAdminLink, HeaderBrowseLinks } from "@/components/site-nav";
 import { UserMenu } from "@/components/user-menu";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { getAdminUser } from "@/lib/admin/access";
@@ -17,7 +17,7 @@ export async function SiteHeader() {
   const autoTick = admin ? await loadAutoTickEnabled() : false;
 
   return (
-    <HeaderBar>
+    <HeaderBar start={user ? <HeaderBrowseLinks /> : null}>
       <div className="flex shrink-0 items-center justify-end gap-2">
         <UserMenu
           name={user ? memberDisplayName(user.email, user.name) : null}

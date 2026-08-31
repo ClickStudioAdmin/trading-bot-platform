@@ -249,6 +249,7 @@ export async function HyperliquidFuturesPositions({
             showDcaColumns={dcaBlotter}
             playbookOwnsOrders={dcaBlotter}
             hideRowExits={copyDesk}
+            copyDesk={copyDesk}
             dcaHints={dcaHints}
             emptyMessage={
               showTicket

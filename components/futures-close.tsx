@@ -20,12 +20,17 @@ export function FuturesCloseActions({
   next,
   playbookOwnsOrders = false,
   playbookId = null,
+  copyDesk = false,
 }: {
   trade: MarkedFutures;
   next: string;
   playbookOwnsOrders?: boolean;
   playbookId?: string | null;
+  copyDesk?: boolean;
 }) {
+  if (copyDesk) {
+    return <CloseCopiedPositionButton trade={trade} next={next} />;
+  }
   if (playbookId) {
     return <CloseDcaPlaybookButton playbookId={playbookId} next={next} />;
   }
@@ -37,6 +42,39 @@ export function FuturesCloseActions({
       <FuturesCloseButton trade={trade} next={next} orderType="market" />
       <FuturesCloseButton trade={trade} next={next} orderType="limit" />
     </div>
+  );
+}
+
+function CloseCopiedPositionButton({
+  trade,
+  next,
+}: {
+  trade: MarkedFutures;
+  next: string;
+}) {
+  return (
+    <form action={submitFuturesTrade}>
+      <input type="hidden" name="next" value={next} />
+      <input type="hidden" name="symbol" value={trade.symbol} />
+      <input type="hidden" name="positionId" value={trade.id} />
+      <input type="hidden" name="action" value="close" />
+      <input type="hidden" name="orderType" value="market" />
+      <input type="hidden" name="sizeUnit" value="qty" />
+      <input type="hidden" name="size" value={String(trade.qty)} />
+      <span
+        className="inline-flex"
+        title="Flatten this copied position at market. Copied limits for this pair stay until the parent cancels them or you cancel them."
+      >
+        <PendingSubmitButton
+          pendingLabel="Closing…"
+          successKey={`close-copy-row-${trade.id}`}
+          className={ACTION_CLASS}
+          skipSizeGuard
+        >
+          Close
+        </PendingSubmitButton>
+      </span>
+    </form>
   );
 }
 

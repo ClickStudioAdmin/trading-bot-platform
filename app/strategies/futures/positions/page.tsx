@@ -274,6 +274,7 @@ export default async function FuturesPositionsPage({
           showDcaColumns={dcaBlotter}
           playbookOwnsOrders={dcaBlotter}
           hideRowExits={copyDesk}
+          copyDesk={copyDesk}
           dcaHints={dcaHints}
           emptyMessage={
             showTicket
