@@ -24,6 +24,7 @@ import {
   parseCopyMinActivityDays,
   parseCopyVisibility,
   copyInviteBlockCode,
+  copyOwnerFollowerLabel,
   copyListingAcceptsFollowers,
   copyShareCountsTowardCap,
   formatCopyInviteBlock,
@@ -538,6 +539,31 @@ assert.equal(
   formatCopyShareBlock("activity", 90),
   "This desk needs a first venue fill at least 90 days ago before it can be shared.",
 );
+assert.equal(
+  copyOwnerFollowerLabel({
+    visibility: "private",
+    invitedEmail: "Member@Email",
+    toUserId: "user-1",
+  }),
+  "member@email",
+);
+assert.equal(
+  copyOwnerFollowerLabel({
+    visibility: "public",
+    invitedEmail: "member@email",
+    toUserId: "user-1",
+  }),
+  "user-1",
+);
+assert.equal(
+  copyOwnerFollowerLabel({
+    visibility: null,
+    invitedEmail: "member@email",
+    toUserId: "user-1",
+  }),
+  "member@email",
+);
+
 assert.equal(evaluateCopyShare({ ...shareBase, alias: "" }).code, "no_alias");
 assert.equal(
   evaluateCopyShare({ ...shareBase, firstFillMs: null }).code,

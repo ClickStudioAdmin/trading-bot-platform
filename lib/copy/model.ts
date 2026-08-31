@@ -60,12 +60,27 @@ export type DeskCopyShare = {
   updatedAt: string;
 };
 
-/** Owner-facing follower row. Never include email or user id in the UI. */
+/** Owner-facing follower row. Private lists email; public lists user id. */
 export type DeskCopyFollowerView = {
   id: string;
   status: CopyShareStatus;
-  traderAlias: string | null;
+  invitedEmail: string;
+  toUserId: string;
 };
+
+export function copyOwnerFollowerLabel(input: {
+  visibility: CopyListingVisibility | null | undefined;
+  invitedEmail: string;
+  toUserId: string;
+}): string {
+  if (input.visibility !== "public") {
+    const email = input.invitedEmail.trim().toLowerCase();
+    if (email) {
+      return email;
+    }
+  }
+  return input.toUserId;
+}
 
 export type DeskCopyListing = {
   accountId: string;

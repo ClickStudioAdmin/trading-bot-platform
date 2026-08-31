@@ -62,32 +62,11 @@ export async function loadDeskCopyFollowerViews(
   parentAccountId: string,
 ): Promise<DeskCopyFollowerView[]> {
   const shares = await loadDeskCopyShares(parentAccountId);
-  if (shares.length === 0) {
-    return [];
-  }
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return shares.map((share) => ({
-      id: share.id,
-      status: share.status,
-      traderAlias: null,
-    }));
-  }
-  const toIds = [...new Set(shares.map((row) => row.toUserId))];
-  const { data: profiles } = await supabase
-    .from("trader_profiles")
-    .select("user_id, alias")
-    .in("user_id", toIds);
-  const aliasByUser = new Map(
-    (profiles ?? []).map((row) => [
-      String((row as { user_id: string }).user_id),
-      String((row as { alias?: string }).alias ?? "").trim() || null,
-    ]),
-  );
   return shares.map((share) => ({
     id: share.id,
     status: share.status,
-    traderAlias: aliasByUser.get(share.toUserId) ?? null,
+    invitedEmail: share.invitedEmail,
+    toUserId: share.toUserId,
   }));
 }
 

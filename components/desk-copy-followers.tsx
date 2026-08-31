@@ -5,6 +5,7 @@ import {
 } from "@/lib/copy/actions";
 import {
   COPY_FOLLOWING_UNAVAILABLE,
+  copyOwnerFollowerLabel,
   copyShareCountsTowardCap,
   type DeskCopyFollowerView,
   type DeskCopyListing,
@@ -12,10 +13,6 @@ import {
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
-
-function followerLabel(alias: string | null): string {
-  return alias ?? "Trader";
-}
 
 function shareStatusLabel(status: DeskCopyFollowerView["status"]): string {
   if (status === "invited") {
@@ -46,7 +43,7 @@ export function DeskCopyFollowersList({
       <div>
         <h3 className="text-sm font-medium text-ink">Followers</h3>
         <p className="mt-1 text-xs text-ink-muted">
-          Alias only. Email and login are never shown. {capLabel}.
+          Private invites show email. Public followers show user id. {capLabel}.
         </p>
       </div>
       {followers.length === 0 ? (
@@ -60,7 +57,11 @@ export function DeskCopyFollowersList({
             >
               <span className="min-w-0">
                 <span className="block truncate text-sm text-ink">
-                  {followerLabel(follower.traderAlias)}
+                  {copyOwnerFollowerLabel({
+                    visibility: listing?.visibility,
+                    invitedEmail: follower.invitedEmail,
+                    toUserId: follower.toUserId,
+                  })}
                 </span>
                 <span className="text-xs text-ink-faint">
                   {shareStatusLabel(follower.status)}
