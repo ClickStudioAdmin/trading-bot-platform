@@ -171,6 +171,7 @@ export function copyOwnerFollowerLabel(input: {
 
 export type DeskCopyListing = {
   accountId: string;
+  name: string;
   visibility: CopyListingVisibility;
   description: string;
   maxFollowers: number | null;
@@ -649,6 +650,108 @@ export function parseCopyVisibility(
   return { ok: false, error: "Choose private or public." };
 }
 
+export function parseCopyListingName(
+  value: unknown,
+): { ok: true; name: string } | { ok: false; error: string } {
+  const name = String(value ?? "").trim();
+  if (name.length < 1 || name.length > 40) {
+    return { ok: false, error: "Desk name must be 1 to 40 characters." };
+  }
+  return { ok: true, name };
+}
+
+export function parseCopyScalePercent(
+  value: unknown,
+): { ok: true; scale: number } | { ok: false; error: string } {
+  const raw = String(value ?? "").trim().replace(/,/g, "");
+  if (!raw) {
+    return { ok: true, scale: 0.1 };
+  }
+  const pct = Number(raw);
+  if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
+    return { ok: false, error: "Scale must be between 0 and 100 percent." };
+  }
+  return { ok: true, scale: pct / 100 };
+}
+
+export type CopyCreateBlock =
+  | "self"
+  | "already"
+  | "no_listing"
+  | "sharing_off"
+  | "private"
+  | "new_followers_off"
+  | "cap";
+
+export function formatCopyCreateBlock(code: CopyCreateBlock): string {
+  if (code === "self") {
+    return "You cannot copy your own desk.";
+  }
+  if (code === "already") {
+    return "You already have a copy of this desk.";
+  }
+  if (code === "no_listing") {
+    return "This desk is not shared.";
+  }
+  if (code === "sharing_off") {
+    return COPY_FOLLOWING_UNAVAILABLE;
+  }
+  if (code === "private") {
+    return "This desk is invite only.";
+  }
+  if (code === "new_followers_off") {
+    return "This desk is not taking new followers.";
+  }
+  return "This desk has no follower slots left.";
+}
+
+export function copyCreateBlockCode(input: {
+  parentUserId: string;
+  viewerUserId: string;
+  listing: {
+    sharingEnabled: boolean;
+    allowNewFollowers: boolean;
+    visibility: CopyListingVisibility;
+    maxFollowers: number | null;
+  } | null;
+  grantStatus: CopyShareStatus | null;
+  alreadyCopying: boolean;
+  followerCount: number;
+  ceiling?: number | null;
+}): CopyCreateBlock | null {
+  if (input.parentUserId === input.viewerUserId) {
+    return "self";
+  }
+  if (input.alreadyCopying) {
+    return "already";
+  }
+  if (!input.listing) {
+    return "no_listing";
+  }
+  if (!input.listing.sharingEnabled) {
+    return "sharing_off";
+  }
+  const granted =
+    input.grantStatus === "invited" || input.grantStatus === "active";
+  if (input.listing.visibility === "private" && !granted) {
+    return "private";
+  }
+  if (!input.listing.allowNewFollowers && !granted) {
+    return "new_followers_off";
+  }
+  if (
+    !granted &&
+    copyFollowerCapReached({
+      maxFollowers: input.listing.maxFollowers,
+      followerCount: input.followerCount,
+      ceiling: input.ceiling ?? null,
+    })
+  ) {
+    return "cap";
+  }
+  return null;
+}
+
 export function parseCopyDescription(
   value: unknown,
 ): { ok: true; description: string } | { ok: false; error: string } {
@@ -699,6 +802,7 @@ export function parseTraderProfileForm(input: {
 }
 
 export function deskCopyListingFieldErrors(input: {
+  name?: unknown;
   visibility: unknown;
   description: unknown;
   maxFollowers?: unknown;
@@ -707,11 +811,13 @@ export function deskCopyListingFieldErrors(input: {
   sharingEnabled?: unknown;
   allowNewFollowers?: unknown;
 }): {
+  name: string | null;
   visibility: string | null;
   description: string | null;
   maxFollowers: string | null;
   minBalanceUsdt: string | null;
 } {
+  const name = parseCopyListingName(input.name);
   const visibility = parseCopyVisibility(input.visibility);
   const description = parseCopyDescription(input.description);
   const maxFollowers = parseCopyMaxFollowers(input.maxFollowers);
@@ -720,6 +826,7 @@ export function deskCopyListingFieldErrors(input: {
     : maxFollowers;
   const minBalance = parseCopyMinBalanceUsdt(input.minBalanceUsdt);
   return {
+    name: name.ok ? null : name.error,
     visibility: visibility.ok ? null : visibility.error,
     description: description.ok ? null : description.error,
     maxFollowers: capped.ok ? null : capped.error,
@@ -728,6 +835,7 @@ export function deskCopyListingFieldErrors(input: {
 }
 
 export function parseDeskCopyListingForm(input: {
+  name?: unknown;
   visibility: unknown;
   description: unknown;
   maxFollowers?: unknown;
@@ -738,6 +846,7 @@ export function parseDeskCopyListingForm(input: {
 }):
   | {
       ok: true;
+      name: string;
       visibility: CopyListingVisibility;
       description: string;
       maxFollowers: number | null;
@@ -747,6 +856,9 @@ export function parseDeskCopyListingForm(input: {
     }
   | { ok: false; error: string } {
   const fields = deskCopyListingFieldErrors(input);
+  if (fields.name) {
+    return { ok: false, error: fields.name };
+  }
   if (fields.visibility) {
     return { ok: false, error: fields.visibility };
   }
@@ -759,11 +871,13 @@ export function parseDeskCopyListingForm(input: {
   if (fields.minBalanceUsdt) {
     return { ok: false, error: fields.minBalanceUsdt };
   }
+  const name = parseCopyListingName(input.name);
   const visibility = parseCopyVisibility(input.visibility);
   const description = parseCopyDescription(input.description);
   const maxFollowers = parseCopyMaxFollowers(input.maxFollowers);
   const minBalance = parseCopyMinBalanceUsdt(input.minBalanceUsdt);
   if (
+    !name.ok ||
     !visibility.ok ||
     !description.ok ||
     !maxFollowers.ok ||
@@ -780,6 +894,7 @@ export function parseDeskCopyListingForm(input: {
   }
   return {
     ok: true,
+    name: name.name,
     visibility: visibility.visibility,
     description: description.description,
     maxFollowers: capped.maxFollowers,

@@ -199,6 +199,52 @@ export async function inviteDeskCopyShare(input: {
   return { ok: true, share: parsed };
 }
 
+export async function activateDeskCopyShare(input: {
+  parentAccountId: string;
+  parentUserId: string;
+  toUserId: string;
+  invitedEmail: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const existing = (await loadDeskCopyShares(input.parentAccountId)).find(
+    (row) => row.toUserId === input.toUserId,
+  );
+  const now = new Date().toISOString();
+  if (existing) {
+    if (existing.status === "active") {
+      return { ok: true };
+    }
+    const { error } = await supabase
+      .from("desk_copy_shares")
+      .update({
+        invited_email: input.invitedEmail,
+        status: "active" satisfies CopyShareStatus,
+        updated_at: now,
+      })
+      .eq("id", existing.id);
+    if (error) {
+      return { ok: false, error: "Could not activate that copy grant." };
+    }
+    return { ok: true };
+  }
+  const { error } = await supabase.from("desk_copy_shares").insert({
+    parent_account_id: input.parentAccountId,
+    from_user_id: input.parentUserId,
+    to_user_id: input.toUserId,
+    invited_email: input.invitedEmail,
+    status: "active" satisfies CopyShareStatus,
+    created_at: now,
+    updated_at: now,
+  });
+  if (error) {
+    return { ok: false, error: "Could not record that you are following." };
+  }
+  return { ok: true };
+}
+
 export async function revokeDeskCopyShare(input: {
   shareId: string;
   parentAccountId: string;

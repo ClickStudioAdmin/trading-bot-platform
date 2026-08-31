@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import { deskLogoPublicUrl } from "./logo";
 import {
   parseCopyDescription,
+  parseCopyListingName,
   parseCopyMaxFollowers,
   parseCopyMinBalanceUsdt,
   parseCopyToggle,
@@ -18,6 +19,7 @@ function parseListingRow(
   const description = parseCopyDescription(row.description);
   const maxFollowers = parseCopyMaxFollowers(row.max_followers);
   const minBalance = parseCopyMinBalanceUsdt(row.min_balance_usdt);
+  const named = parseCopyListingName(row.name);
   if (
     !visibility.ok ||
     !description.ok ||
@@ -32,6 +34,7 @@ function parseListingRow(
     typeof row.updated_at === "string" ? row.updated_at : null;
   return {
     accountId: String(row.account_id),
+    name: named.ok ? named.name : "Desk",
     visibility: visibility.visibility,
     description: description.description,
     maxFollowers: maxFollowers.maxFollowers,
@@ -56,7 +59,7 @@ export async function loadDeskCopyListing(
   const { data, error } = await supabase
     .from("desk_copy_listings")
     .select(
-      "account_id, visibility, description, max_followers, min_balance_usdt, sharing_enabled, allow_new_followers, logo_path, updated_at",
+      "account_id, name, visibility, description, max_followers, min_balance_usdt, sharing_enabled, allow_new_followers, logo_path, updated_at",
     )
     .eq("account_id", accountId)
     .maybeSingle();
@@ -93,6 +96,7 @@ export async function loadFirstVenueFillMs(
 
 export async function saveDeskCopyListing(input: {
   accountId: string;
+  name: string;
   visibility: CopyListingVisibility;
   description: string;
   maxFollowers: number | null;
@@ -109,6 +113,7 @@ export async function saveDeskCopyListing(input: {
   const now = new Date().toISOString();
   const row = {
     account_id: input.accountId,
+    name: input.name,
     visibility: input.visibility,
     description: input.description,
     max_followers: input.maxFollowers,
@@ -122,6 +127,7 @@ export async function saveDeskCopyListing(input: {
     ? await supabase
         .from("desk_copy_listings")
         .update({
+          name: input.name,
           visibility: input.visibility,
           description: input.description,
           max_followers: input.maxFollowers,
@@ -159,6 +165,7 @@ export async function pauseCopyNewEntriesOnUnbind(input: {
   }
   const saved = await saveDeskCopyListing({
     accountId: listing.accountId,
+    name: listing.name,
     visibility: listing.visibility,
     description: listing.description,
     maxFollowers: listing.maxFollowers,

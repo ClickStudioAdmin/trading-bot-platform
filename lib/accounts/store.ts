@@ -128,7 +128,11 @@ export async function insertTradingAccount(
   name: string,
   mode: TradingAccountMode,
   deskType: DeskType,
-  options: { venue?: string; venueEnvironment?: string | null } = {},
+  options: {
+    venue?: string;
+    venueEnvironment?: string | null;
+    copyOfAccountId?: string | null;
+  } = {},
 ): Promise<TradingAccount | null> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -143,6 +147,7 @@ export async function insertTradingAccount(
       desk_type: deskType,
       venue: options.venue ?? "bybit",
       venue_environment: options.venueEnvironment ?? null,
+      copy_of_account_id: options.copyOfAccountId ?? null,
     })
     .select("*")
     .single();

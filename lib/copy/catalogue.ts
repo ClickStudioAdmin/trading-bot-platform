@@ -8,6 +8,7 @@ import { deskLogoPublicUrl, traderLogoPublicUrl } from "./logo";
 import {
   copyCatalogueIncludes,
   parseCopyDescription,
+  parseCopyListingName,
   parseCopyMaxFollowers,
   parseCopyShareStatus,
   parseCopyToggle,
@@ -49,6 +50,7 @@ export type CopyCatalogueCard = {
 
 type ListingRow = {
   accountId: string;
+  name: string;
   visibility: CopyListingVisibility;
   description: string;
   maxFollowers: number | null;
@@ -61,6 +63,7 @@ function parseListing(row: Record<string, unknown>): ListingRow | null {
   const visibility = parseCopyVisibility(row.visibility);
   const description = parseCopyDescription(row.description);
   const maxFollowers = parseCopyMaxFollowers(row.max_followers);
+  const named = parseCopyListingName(row.name);
   if (!visibility.ok || !description.ok || !maxFollowers.ok) {
     return null;
   }
@@ -69,6 +72,7 @@ function parseListing(row: Record<string, unknown>): ListingRow | null {
     typeof row.updated_at === "string" ? row.updated_at : null;
   return {
     accountId: String(row.account_id ?? "").trim(),
+    name: named.ok ? named.name : "",
     visibility: visibility.visibility,
     description: description.description,
     maxFollowers: maxFollowers.maxFollowers,
@@ -119,7 +123,7 @@ export async function loadCopyCatalogue(input: {
     supabase
       .from("desk_copy_listings")
       .select(
-        "account_id, visibility, description, max_followers, sharing_enabled, logo_path, created_at, updated_at",
+        "account_id, name, visibility, description, max_followers, sharing_enabled, logo_path, created_at, updated_at",
       ),
     supabase
       .from("desk_copy_shares")
@@ -246,7 +250,7 @@ export async function loadCopyCatalogue(input: {
     const stored: StoredDeskStats | undefined = stats.get(desk.id);
     const card: CopyCatalogueCard = {
       accountId: desk.id,
-      deskName: desk.name,
+      deskName: listing?.name || desk.name,
       deskType: parseDeskType(desk.deskType),
       venue: desk.venue,
       visibility: listing?.visibility ?? "private",

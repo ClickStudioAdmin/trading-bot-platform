@@ -8,7 +8,7 @@ Closest shipped analog: TradingView Strategy — same blotter as the job, **desk
 
 ## Status
 
-Started 31 Aug 2026. Steps 1–6 are in repo. Stop after each step until Click says go. Push `develop` to migrate.
+Started 31 Aug 2026. Steps 1–7 are in repo. Stop after each step until Click says go. Push `develop` to migrate.
 
 ## Purpose
 
@@ -48,14 +48,14 @@ Follower
   scale + guards → fills fan out
 ```
 
-Account nav **Copy desks** (`/account/copy`) is one catalogue: public listings plus the viewer’s open private invites. **Private** badge and a private-only filter. **Favorites** are desk bookmarks. **Subscribed** is desks the viewer is currently following (an active copy desk of that parent). Catalogue never shows email. Parent desks keep **Manage Copy Traders**. Sidebar shows a **Copy** badge on follower desks. Type grouping stays Automated vs Manual. Trader page lists desks the viewer may see. Create-copy stays step 7 (Copy button is visible and disabled).
+Account nav **Copy desks** (`/account/copy`) is one catalogue: public listings plus the viewer’s open private invites. **Private** badge and a private-only filter. **Favorites** are desk bookmarks. **Subscribed** is desks the viewer is currently following (an active copy desk of that parent). Catalogue never shows email. Parent desks keep **Manage Copy Traders**. Sidebar shows a **Copy** badge on follower desks. Type grouping stays Automated vs Manual. Trader page lists desks the viewer may see. Listing has a catalogue **Desk name**. Copy creates a desk stamped from the parent; follower picks Paper or Live and scale.
 
 ## Data shape
 
 - Login trader profile: alias (unique), optional bio, optional logo (PNG/JPG/WebP in Storage)
 - Persisted admin `copy_min_activity_days`, `copy_max_followers_default` (pre-fill; also the hard cap when the ceiling is empty), and `copy_max_followers_ceiling` (hard cap; empty uses the default)
 - `trading_accounts.copy_of_account_id` (immutable when set)
-- Listing: `private` \| `public`, required description, optional `max_followers`, optional `min_balance_usdt`, optional desk logo, `sharing_enabled`, `allow_new_followers`
+- Listing: required catalogue **name**, `private` \| `public`, required description, optional `max_followers`, optional `min_balance_usdt`, optional desk logo, `sharing_enabled`, `allow_new_followers`
 - `desk_copy_shares` (email / user, invited / active / revoked)
 - `desk_copy_favorites` (login bookmarks a parent desk)
 - `futures_desk_stats` (all-time + 30d snapshot, including max drawdown)
@@ -74,7 +74,7 @@ RLS: catalogue is public + sharing-on listings, or the viewer’s open private g
 | 4 | Profile + share | Agent | Unique alias. Private or public, required brief. Reject Paper, unbound, C&C, and desks younger than N. **In repo 31 Aug 2026.** |
 | 5 | Private grants | Agent | Email invite from **Manage Copy Traders**. Owner list shows email on private, user id on public. Revoke, unlist, and unbind pause new entries. **In repo 31 Aug 2026.** |
 | 6 | Catalogue + stats | Agent | One catalogue (public + my private invites). Private badge and filter. Favorites. Subscribed = currently following. Snapshotted desk stats including max drawdown. Trader page (desks visible to the viewer). Copy CTA disabled until step 7. **In repo 31 Aug 2026.** |
-| 7 | Create copy desk | Agent | Copy path stamps type/venue. Follower picks Paper or Live and scale. |
+| 7 | Create copy desk | Agent | Copy path stamps type/venue. Follower picks Paper or Live and scale. **In repo 31 Aug 2026.** |
 | 8 | Follower chrome | Agent | Leader strip. Caps, reduce-only, max daily loss. Pause / unfollow. Close All. |
 | 9 | Engine fan-out | Agent | Parent fill → scale → guards → `runFuturesCommand` or paper ledger. Idempotent. Checks for skip/double-place. |
 | 10 | Desk test | Click | Set N to 0. Private and public share. Copy from invite and catalogue. Paper follower of a Live parent. Small Live clip. Paper and unbound cannot share. Normal desks untouched. |

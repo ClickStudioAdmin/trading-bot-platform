@@ -117,6 +117,20 @@ export function DeskCopyShareCard({
               </span>
             </span>
           </label>
+          <label className="block text-sm text-ink">
+            Desk name
+            <input
+              type="text"
+              name="name"
+              required
+              maxLength={40}
+              defaultValue={listing?.name ?? account.name}
+              className={fieldClass}
+            />
+            <span className="mt-1 block text-xs text-ink-faint">
+              Shown on Copy desks cards next to your trader alias.
+            </span>
+          </label>
           <div>
             <p className="text-sm text-ink">Desk logo</p>
             <LogoFileField

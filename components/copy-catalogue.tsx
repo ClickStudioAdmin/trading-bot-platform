@@ -167,10 +167,16 @@ export function CopyCatalogueBoard({
                     )}
                   </span>
                   <span className="min-w-0">
+                    <span className="block text-[11px] uppercase tracking-wide text-ink-faint">
+                      Trader
+                    </span>
                     <span className="block truncate text-sm font-medium text-ink">
                       {card.traderAlias ?? "Trader"}
                     </span>
-                    <span className="block truncate text-xs text-ink-muted">
+                    <span className="mt-1 block text-[11px] uppercase tracking-wide text-ink-faint">
+                      Desk
+                    </span>
+                    <span className="block truncate text-sm text-ink">
                       {card.deskName}
                     </span>
                   </span>
@@ -246,14 +252,12 @@ export function CopyCatalogueBoard({
                   </dd>
                 </div>
               </dl>
-              <button
-                type="button"
-                disabled
-                title="Create copy desk is next"
-                className="mt-5 rounded-control border border-line px-4 py-2 text-sm text-ink-faint"
+              <Link
+                href={`/account/copy/desks/new?parent=${encodeURIComponent(card.accountId)}`}
+                className="mt-5 rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
               >
                 Copy
-              </button>
+              </Link>
             </li>
           ))}
         </ul>

@@ -1,9 +1,26 @@
 "use server";
 
-import { deskIsCopy, deskPath } from "@/lib/accounts/model";
-import { loadAccountUsage } from "@/lib/accounts/store";
-import { getSessionContext, getSessionMember } from "@/lib/auth/session";
-import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import {
+  deskHomePath,
+  deskIsCopy,
+  deskPath,
+  parseAccountMode,
+  validateNewDeskName,
+} from "@/lib/accounts/model";
+import {
+  bindConnectionToDesk,
+  insertTradingAccount,
+  listTradingAccounts,
+  loadAccountUsage,
+  loadTradingAccountById,
+} from "@/lib/accounts/store";
+import { getSessionContext, getSessionMember, setActiveAccountId } from "@/lib/auth/session";
+import {
+  accountCanHoldConnections,
+  connectionFitsDesk,
+} from "@/lib/exchanges/venues";
+import { parseBoundConnectionId } from "@/lib/exchanges/connections";
+import { listExchangeConnections } from "@/lib/exchanges/store";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
@@ -16,7 +33,10 @@ import {
   copySharingOffBlocked,
   evaluateCopyShare,
   formatCopyInviteBlock,
+  copyCreateBlockCode,
+  formatCopyCreateBlock,
   parseCopyInviteEmail,
+  parseCopyScalePercent,
   parseDeskCopyListingForm,
   parseTraderLogoUpload,
   parseTraderProfileForm,
@@ -35,8 +55,10 @@ import {
 import { loadTraderProfile, saveTraderProfile } from "./profile";
 import { loadCopyPlatformSettings } from "./settings";
 import { toggleDeskCopyFavorite } from "./favorites";
+import { saveDeskCopySettings } from "./follower-settings";
 import { findMemberByEmail } from "@/lib/templates/store";
 import {
+  activateDeskCopyShare,
   countOpenCopyShares,
   inviteDeskCopyShare,
   loadDeskCopyShares,
@@ -132,6 +154,7 @@ export async function saveDeskCopyListingAction(formData: FormData) {
   }
   const platform = await loadCopyPlatformSettings();
   const parsed = parseDeskCopyListingForm({
+    name: formData.get("name"),
     visibility: formData.get("visibility"),
     description: formData.get("description"),
     maxFollowers: formData.get("maxFollowers"),
@@ -143,6 +166,7 @@ export async function saveDeskCopyListingAction(formData: FormData) {
   if (!parsed.ok) {
     redirect(settingsHref({ error: parsed.error }));
   } else {
+    const name = parsed.name;
     const visibility = parsed.visibility;
     const description = parsed.description;
     const maxFollowers = parsed.maxFollowers;
@@ -211,6 +235,7 @@ export async function saveDeskCopyListingAction(formData: FormData) {
     }
     const saved = await saveDeskCopyListing({
       accountId: account.id,
+      name,
       visibility,
       description,
       maxFollowers,
@@ -374,4 +399,135 @@ export async function toggleDeskCopyFavoriteAction(formData: FormData) {
   revalidatePath("/account/copy");
   revalidatePath("/", "layout");
   redirect(next);
+}
+
+export async function createCopyDeskAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  const parentId = String(formData.get("parentAccountId") ?? "").trim();
+  const fail = (message: string): never =>
+    redirect(
+      `/account/copy/desks/new?parent=${encodeURIComponent(parentId)}&error=${encodeURIComponent(message)}`,
+    );
+  if (!parentId) {
+    redirect("/account/copy");
+  }
+  const parent = await loadTradingAccountById(parentId);
+  if (!parent) {
+    return fail("That desk was not found.");
+  }
+  const desks = await listTradingAccounts(member.id);
+  const alreadyCopying = desks.some((desk) => desk.copyOfAccountId === parent.id);
+  const [listing, shares, platform] = await Promise.all([
+    loadDeskCopyListing(parent.id),
+    loadDeskCopyShares(parent.id),
+    loadCopyPlatformSettings(),
+  ]);
+  const grant = shares.find((row) => row.toUserId === member.id) ?? null;
+  const block = copyCreateBlockCode({
+    parentUserId: parent.userId,
+    viewerUserId: member.id,
+    listing,
+    grantStatus: grant?.status ?? null,
+    alreadyCopying,
+    followerCount: countOpenCopyShares(shares),
+    ceiling: platform.maxFollowersCeiling,
+  });
+  if (block) {
+    return fail(formatCopyCreateBlock(block));
+  }
+  const named = validateNewDeskName(
+    formData.get("name"),
+    desks.map((desk) => desk.name),
+  );
+  if (!named.ok) {
+    return fail(named.error);
+  }
+  const scaled = parseCopyScalePercent(formData.get("scale"));
+  if (!scaled.ok) {
+    return fail(scaled.error);
+  }
+  const mode = parseAccountMode(formData.get("mode"));
+  let connectionId: string | null = null;
+  const venueEnvironment = mode === "live" ? parent.venueEnvironment : null;
+  if (mode === "live") {
+    connectionId = parseBoundConnectionId(formData.get("exchangeConnectionId"));
+    if (connectionId) {
+      const connections = await listExchangeConnections(member.id);
+      const match = connections.find((item) => item.id === connectionId);
+      if (!match || match.status !== "active") {
+        return fail("Pick an exchange key saved on this login.");
+      }
+      const fit = connectionFitsDesk({
+        deskVenue: parent.venue,
+        deskEnvironment: venueEnvironment,
+        connectionVenue: match.venue,
+        connectionEnvironment: match.environment,
+      });
+      if (!fit.ok) {
+        return fail(fit.error);
+      }
+    }
+  }
+  const created = await insertTradingAccount(
+    member.id,
+    named.name,
+    mode,
+    parent.deskType,
+    {
+      venue: parent.venue,
+      venueEnvironment,
+      copyOfAccountId: parent.id,
+    },
+  );
+  if (!created) {
+    return fail("Could not create that copy desk. The name may already be in use.");
+  }
+  const settings = await saveDeskCopySettings({
+    accountId: created.id,
+    scale: scaled.scale,
+  });
+  if (!settings.ok) {
+    return fail(settings.error);
+  }
+  const activated = await activateDeskCopyShare({
+    parentAccountId: parent.id,
+    parentUserId: parent.userId,
+    toUserId: member.id,
+    invitedEmail: member.email,
+  });
+  if (!activated.ok) {
+    return fail(activated.error);
+  }
+  if (connectionId) {
+    const bound = await bindConnectionToDesk({
+      userId: member.id,
+      accountId: created.id,
+      deskType: created.deskType,
+      connectionId,
+      venue: created.venue,
+      venueEnvironment: created.venueEnvironment,
+    });
+    if (bound.error) {
+      return fail(bound.error);
+    }
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "copy.desk_created",
+    message: `Created a copy of ${listing?.name ?? parent.name}`,
+    userId: member.id,
+    accountId: created.id,
+    data: {
+      parentAccountId: parent.id,
+      mode,
+      scale: scaled.scale,
+    },
+  });
+  await setActiveAccountId(created.id);
+  revalidatePath("/", "layout");
+  revalidatePath("/account/copy");
+  redirect(deskHomePath(created.deskType, created.id));
 }

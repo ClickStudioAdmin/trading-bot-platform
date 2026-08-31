@@ -51,6 +51,9 @@ assert.ok(
 assert.ok(
   eventLogOptionsForScopes(["system"]).includes("copy.favorite_toggled"),
 );
+assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("copy.desk_created"),
+);
 assert.equal(
   eventLogOptionsForScopes(["trade"]).includes("member.created"),
   false,

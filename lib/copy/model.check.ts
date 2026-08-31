@@ -27,6 +27,10 @@ import {
   copyOwnerFollowerLabel,
   copyOwnerFollowerSituation,
   copyCatalogueIncludes,
+  copyCreateBlockCode,
+  formatCopyCreateBlock,
+  parseCopyListingName,
+  parseCopyScalePercent,
   parseCopyCatalogueSort,
   parseCopyCatalogueTab,
   copyListingAcceptsFollowers,
@@ -344,11 +348,13 @@ assert.equal(
 );
 
 const listing = parseDeskCopyListingForm({
+  name: "ByBit Live",
   visibility: "public",
   description: "One-way BTC. Caps on.",
 });
 assert.equal(listing.ok, true);
 if (listing.ok) {
+  assert.equal(listing.name, "ByBit Live");
   assert.equal(listing.visibility, "public");
   assert.equal(listing.maxFollowers, null);
   assert.equal(listing.minBalanceUsdt, null);
@@ -429,6 +435,7 @@ assert.equal(
   "You cannot invite yourself.",
 );
 const liveShare = parseDeskCopyListingForm({
+  name: "Desk",
   visibility: "private",
   description: "Brief",
   sharingEnabled: "on",
@@ -440,6 +447,7 @@ if (liveShare.ok) {
   assert.equal(liveShare.allowNewFollowers, false);
 }
 const capped = parseDeskCopyListingForm({
+  name: "Desk",
   visibility: "private",
   description: "One-way BTC. Caps on.",
   maxFollowers: "25",
@@ -450,6 +458,7 @@ if (capped.ok) {
 }
 assert.equal(
   parseDeskCopyListingForm({
+    name: "Desk",
     visibility: "public",
     description: "Brief",
     maxFollowers: "0",
@@ -458,6 +467,7 @@ assert.equal(
 );
 assert.equal(
   parseDeskCopyListingForm({
+    name: "Desk",
     visibility: "public",
     description: "Brief",
     maxFollowers: "40",
@@ -466,6 +476,7 @@ assert.equal(
   false,
 );
 const ceilingEmpty = parseDeskCopyListingForm({
+  name: "Desk",
   visibility: "public",
   description: "Brief",
   maxFollowers: "",
@@ -476,6 +487,7 @@ if (ceilingEmpty.ok) {
   assert.equal(ceilingEmpty.maxFollowers, 20);
 }
 const gated = parseDeskCopyListingForm({
+  name: "Desk",
   visibility: "public",
   description: "Brief",
   minBalanceUsdt: "2500",
@@ -660,6 +672,40 @@ assert.equal(parseCopyCatalogueTab("favorites"), "favorites");
 assert.equal(parseCopyCatalogueTab("nope"), "all");
 assert.equal(parseCopyCatalogueSort(""), "roi");
 assert.equal(parseCopyCatalogueSort("newest"), "newest");
+
+assert.equal(parseCopyListingName("").ok, false);
+assert.equal(parseCopyListingName("ByBit Live").ok, true);
+const defaultScale = parseCopyScalePercent("");
+assert.equal(defaultScale.ok, true);
+if (defaultScale.ok) {
+  assert.equal(defaultScale.scale, 0.1);
+}
+const quarterScale = parseCopyScalePercent("25");
+assert.equal(quarterScale.ok, true);
+if (quarterScale.ok) {
+  assert.equal(quarterScale.scale, 0.25);
+}
+assert.equal(parseCopyScalePercent("0").ok, false);
+assert.equal(
+  copyCreateBlockCode({
+    parentUserId: "a",
+    viewerUserId: "a",
+    listing: {
+      sharingEnabled: true,
+      allowNewFollowers: true,
+      visibility: "public",
+      maxFollowers: null,
+    },
+    grantStatus: null,
+    alreadyCopying: false,
+    followerCount: 0,
+  }),
+  "self",
+);
+assert.equal(
+  formatCopyCreateBlock("already"),
+  "You already have a copy of this desk.",
+);
 
 assert.equal(evaluateCopyShare({ ...shareBase, alias: "" }).code, "no_alias");
 assert.equal(
