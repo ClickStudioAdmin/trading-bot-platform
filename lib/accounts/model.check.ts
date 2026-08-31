@@ -31,6 +31,7 @@ import {
   deskAllowsOrderWebhooks,
   deskAllowsPerpsRecipes,
   deskAllowsDcaPlaybooks,
+  deskShowsDcaBlotter,
   deskAllowsTemplateApply,
   deskAllowsBacktestFrom,
   deskIsCopy,
@@ -303,6 +304,15 @@ assert.equal(
   false,
 );
 assert.equal(deskAllowsDcaPlaybooks("dca"), true);
+assert.equal(
+  deskShowsDcaBlotter({
+    deskType: "dca",
+    copyOfAccountId: copyPerps.copyOfAccountId,
+  }),
+  true,
+);
+assert.equal(deskShowsDcaBlotter("dca"), true);
+assert.equal(deskShowsDcaBlotter(copyPerps), false);
 assert.equal(deskAllowsTemplateApply("perps_bots"), true);
 assert.equal(deskAllowsBacktestFrom("perps"), false);
 assert.equal(deskManualBuySellBlockReason(copyPerps), COPY_DESK_BLOCK);

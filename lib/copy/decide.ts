@@ -1,3 +1,4 @@
+import { parseDcaClipIndex, parseDcaExitLimitKind } from "@/lib/dca/playbook";
 import type { CopySizeMode, CopySizeSkip } from "./model";
 import { copySizedNotional } from "./model";
 
@@ -44,6 +45,164 @@ export function copyFillPlaceAction(
 
 export function copyFillIsEntry(action: CopyParentFill["action"]): boolean {
   return action === "buy" || action === "sell";
+}
+
+export type CopyCycleSkipReason = "mid_cycle" | "ladder_too_small";
+
+export function copyCycleKey(symbol: string, side: "long" | "short"): string {
+  return `${symbol}:${side}`;
+}
+
+export function copyWorkingLooksDca(key: string | null | undefined): boolean {
+  return parseDcaClipIndex(key) != null || parseDcaExitLimitKind(key) != null;
+}
+
+export function copyWorkingIdempotencyKey(parent: {
+  id: string;
+  idempotencyKey: string | null;
+}): string {
+  const key = parent.idempotencyKey?.trim() ?? "";
+  if (key && key.length <= 36 && copyWorkingLooksDca(key)) {
+    return key;
+  }
+  return parent.id.slice(0, 36);
+}
+
+export function copyCycleMidParent(input: {
+  parentHasPosition: boolean;
+  entryClipIndexes: readonly number[];
+  hasNewEntryFillAfterFollow: boolean;
+  parentHadEntryBeforeFollow?: boolean;
+}): boolean {
+  if (input.parentHadEntryBeforeFollow) {
+    return true;
+  }
+  if (
+    input.entryClipIndexes.length > 0 &&
+    Math.min(...input.entryClipIndexes) > 0
+  ) {
+    return true;
+  }
+  if (input.hasNewEntryFillAfterFollow) {
+    return false;
+  }
+  return input.parentHasPosition;
+}
+
+export function copyFollowerAlreadyJoined(input: {
+  hasFollowerPosition: boolean;
+  hasCopiedWorking: boolean;
+}): boolean {
+  return input.hasFollowerPosition || input.hasCopiedWorking;
+}
+
+export function decideCopyCycleSkip(input: {
+  parentIsDca: boolean;
+  alreadyJoined: boolean;
+  midParent: boolean;
+  live: boolean;
+  ladderClips: readonly { sizedUsdt: number; price: number }[];
+  minQty: number;
+  minNotionalUsdt: number;
+}): CopyCycleSkipReason | null {
+  if (!input.parentIsDca || input.alreadyJoined) {
+    return null;
+  }
+  if (input.midParent) {
+    return "mid_cycle";
+  }
+  if (input.live && input.ladderClips.length > 0) {
+    const fits = input.ladderClips.every((clip) =>
+      copyLiveLadderFitsVenue({
+        sizedUsdt: clip.sizedUsdt,
+        price: clip.price,
+        minQty: input.minQty,
+        minNotionalUsdt: input.minNotionalUsdt,
+      }),
+    );
+    if (!fits) {
+      return "ladder_too_small";
+    }
+  }
+  return null;
+}
+
+export function copyWorkingParentKeys(parent: {
+  id: string;
+  idempotencyKey: string | null;
+}): string[] {
+  const keys = [parent.id];
+  const clip = copyWorkingIdempotencyKey(parent);
+  if (clip !== parent.id) {
+    keys.push(clip);
+  }
+  return keys;
+}
+
+export function copiedWorkingMatchesParent(
+  copiedKey: string | null | undefined,
+  parent: { id: string; idempotencyKey: string | null },
+): boolean {
+  if (!copiedKey) {
+    return false;
+  }
+  return copyWorkingParentKeys(parent).includes(copiedKey);
+}
+
+export function copyCycleSkipToken(input: {
+  parentPositionId: string | null;
+  minClipIndex: number | null;
+}): string {
+  if (input.parentPositionId) {
+    return input.parentPositionId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 32);
+  }
+  if (input.minClipIndex != null) {
+    return `c${input.minClipIndex}`;
+  }
+  return "open";
+}
+
+export function copyLiveLadderFitsVenue(input: {
+  sizedUsdt: number;
+  price: number;
+  minQty: number;
+  minNotionalUsdt: number;
+}): boolean {
+  if (!(input.sizedUsdt > 0) || !(input.price > 0)) {
+    return false;
+  }
+  if (
+    input.minNotionalUsdt > 0 &&
+    input.sizedUsdt + 1e-8 < input.minNotionalUsdt
+  ) {
+    return false;
+  }
+  const qty = input.sizedUsdt / input.price;
+  if (input.minQty > 0 && qty + 1e-8 < input.minQty) {
+    return false;
+  }
+  return true;
+}
+
+export function copyCycleReceiptKey(
+  reason: CopyCycleSkipReason,
+  symbol: string,
+  side: string,
+  token: string,
+): string {
+  const raw = `${reason === "mid_cycle" ? "mid" : "sml"}-${symbol}-${side}-${token}`;
+  return raw.replace(/[^a-zA-Z0-9:_-]/g, "").slice(0, 80);
+}
+
+export function copyCycleSkipMessage(
+  reason: CopyCycleSkipReason,
+  symbol: string,
+  side: string,
+): string {
+  if (reason === "mid_cycle") {
+    return `Skipped ${symbol} ${side}. Parent is already in that trade. Waiting for the next cycle.`;
+  }
+  return `Skipped ${symbol} ${side}. This book is too small to copy the full ladder.`;
 }
 
 /** Prefer leftover available; a desk already in trades often reports 0. */

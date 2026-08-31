@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EventLogs } from "@/components/event-logs";
 import { PageHeading } from "@/components/page-heading";
+import { deskHref, deskIsCopy } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
 import { listEventLogs, parseEventLogFilters } from "@/lib/logs/list";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
@@ -18,6 +19,7 @@ export default async function FuturesActivityPage({
 }) {
   const params = await searchParams;
   const session = await getSessionContext();
+  const copyDesk = session ? deskIsCopy(session.account) : false;
   const filters = parseEventLogFilters(params);
   const rows = session
     ? (
@@ -28,11 +30,19 @@ export default async function FuturesActivityPage({
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading as="h2" title="Activity" />
+      {copyDesk ? (
+        <p className="mb-4 text-sm text-ink-muted">
+          Parent and copy events for this desk: followed, paused, resumed,
+          copied fills and limits, amends and cancels to match the parent, and
+          skipped trades (mid-cycle, book too small, paused, reduce-only,
+          adverse move, and the rest).
+        </p>
+      ) : null}
       {session ? (
         <EventLogs
           rows={rows}
           filters={filters}
-          clearHref={FUTURES_PATHS.activity}
+          clearHref={deskHref(FUTURES_PATHS.activity, session.account.id)}
           showUser={false}
           scopes={["strategy", "trade"]}
         />

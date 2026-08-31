@@ -7,6 +7,7 @@ import {
   qtyForPerp,
   qtyForCopyPaperNotional,
   qtyForCopyPaperQty,
+  perpVenueMinimums,
   qtyForPerpNotional,
 } from "./perp";
 
@@ -128,6 +129,21 @@ if (sized.ok) {
   assert.equal(sized.qty, 0.001);
   assert.equal(sized.text, "0.001");
 }
+
+assert.deepEqual(
+  perpVenueMinimums({
+    symbol: "BTCUSDT",
+    status: "Trading",
+    baseCoin: "BTC",
+    quoteCoin: "USDT",
+    lotSizeFilter: {
+      qtyStep: "0.001",
+      minOrderQty: "0.001",
+      minNotionalValue: "5",
+    },
+  }),
+  { minQty: 0.001, minNotionalUsdt: 5 },
+);
 
 const tooSmall = qtyForPerp(0.0004, {
   symbol: "BTCUSDT",

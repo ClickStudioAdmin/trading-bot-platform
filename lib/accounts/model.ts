@@ -270,6 +270,11 @@ export function deskAllowsDcaPlaybooks(desk: DeskCapabilityInput): boolean {
   return capabilityDeskType(desk) === "dca";
 }
 
+/** Copy of DCA uses the DCA blotter, not playbook edit. */
+export function deskShowsDcaBlotter(desk: DeskCapabilityInput): boolean {
+  return capabilityDeskType(desk) === "dca";
+}
+
 export function deskAllowsSignalWebhooks(desk: DeskCapabilityInput): boolean {
   if (deskIsCopy(desk)) {
     return false;

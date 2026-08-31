@@ -579,6 +579,15 @@ export async function createCopyDeskAction(formData: FormData) {
       maxAdverseMovePct: guards.maxAdverseMovePct,
     },
   });
+  await writeEventLog({
+    scope: "trade",
+    event: "copy.followed",
+    message: `Started copying ${listing?.name ?? parent.name}`,
+    userId: member.id,
+    accountId: created.id,
+    strategy: FUTURES_STRATEGY_ID,
+    data: { parentAccountId: parent.id },
+  });
   await setActiveAccountId(created.id);
   try {
     const { maybeFanOutAfterParentFill } = await import("./fan-out");
@@ -689,11 +698,15 @@ export async function pauseDeskCopyAction(formData: FormData) {
     return fail(saved.error);
   }
   await writeEventLog({
-    scope: "system",
+    scope: "trade",
     event: paused ? "copy.paused" : "copy.resumed",
-    message: paused ? "Paused copying" : "Resumed copying",
+    message: paused
+      ? "Paused copying from the parent desk"
+      : "Resumed copying from the parent desk",
     userId: session.member.id,
     accountId: account.id,
+    strategy: FUTURES_STRATEGY_ID,
+    data: { parentAccountId: account.copyOfAccountId },
   });
   revalidatePath("/", "layout");
   redirect(next);

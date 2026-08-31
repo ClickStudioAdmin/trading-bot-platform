@@ -31,6 +31,7 @@ export function FuturesWorkingOrders({
   webhookNames = [],
   emptyMessage,
   playbookOwnsOrders = false,
+  copyDesk = false,
   exchangeName = "Bybit",
 }: {
   signedIn: boolean;
@@ -41,6 +42,7 @@ export function FuturesWorkingOrders({
   webhookNames?: readonly string[];
   emptyMessage?: ReactNode;
   playbookOwnsOrders?: boolean;
+  copyDesk?: boolean;
   exchangeName?: string;
 }) {
   const showOrderMeta = !playbookOwnsOrders;
@@ -53,7 +55,11 @@ export function FuturesWorkingOrders({
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Open orders</h2>
           <p className="text-sm text-ink-muted">
-            {playbookOwnsOrders
+            {copyDesk && playbookOwnsOrders
+              ? exchangeBook
+                ? `Copied parent DCA limits on ${exchangeName}. Fills appear on the position when they match.`
+                : "Copied parent DCA limits. They fill when mark crosses the limit."
+              : playbookOwnsOrders
               ? exchangeBook
                 ? `Working bot limits on ${exchangeName}. Fills appear on the position when they match. Stop adding or Close bot on Positions or Automations.`
                 : "Working bot limits. They fill when mark crosses the limit. Stop adding or Close bot on Positions or Automations."

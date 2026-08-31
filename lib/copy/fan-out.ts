@@ -5,8 +5,12 @@ import {
   parseTradingAccountRow,
 } from "@/lib/accounts/model";
 import { loadTradingAccountById } from "@/lib/accounts/store";
+import { parseDcaClipIndex } from "@/lib/dca/playbook";
+import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
+import { dcaClipSizeAt } from "@/lib/dca/grid";
 import { takeVenueSlot } from "@/lib/engine/lease-store";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
+import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { loadDeskTickerMap } from "@/lib/market/desk-tickers";
 import { CLOSE_ALL_CONFIRM } from "@/lib/futures/close-all";
@@ -18,6 +22,8 @@ import { loadFuturesSettings, type FuturesSettings } from "@/lib/futures/setting
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
+import { loadHyperliquidLinearPerps } from "@/lib/venues/hyperliquid/market";
 import {
   loadCopyAvailableUsdt,
   loadCopyFollowerEquity,
@@ -27,13 +33,24 @@ import {
   COPY_FANOUT_MAX_FILLS,
   COPY_FANOUT_MAX_WORKING,
   COPY_RULE_NAME,
+  copiedWorkingMatchesParent,
   copyBreachIdempotencyKey,
+  copyCycleKey,
+  copyCycleMidParent,
+  copyCycleReceiptKey,
+  copyCycleSkipMessage,
+  copyCycleSkipToken,
+  copyFillIsEntry,
+  copyFollowerAlreadyJoined,
   copyParentFillNotional,
   copyParentFillPrice,
   copyParentWorkingNotional,
   copyUtcDayStartMs,
+  copyWorkingIdempotencyKey,
+  decideCopyCycleSkip,
   decideCopyFanOut,
   parentCopyBookUsdt,
+  type CopyCycleSkipReason,
   type CopyParentFill,
 } from "./decide";
 import { loadDeskCopySettings, saveDeskCopySettings } from "./follower-settings";
@@ -41,6 +58,7 @@ import { loadDeskCopyListing } from "./listings";
 import {
   copyMinBalanceMet,
   copyShareAllowsFanOut,
+  copySizedNotional,
   type DeskCopySettings,
 } from "./model";
 import { insertCopyReceipt, loadCopyReceiptFillIds } from "./receipts";
@@ -68,7 +86,9 @@ export async function fanOutCopyFills(input: {
   const sinceMs = Math.min(
     ...followers.map((row) => row.createdAtMs).filter((ms) => ms > 0),
   );
-  const [fills, parentWorking, shares, listing, parentSettings] =
+  const parentAccount = await loadTradingAccountById(input.parentAccountId);
+  const parentIsDca = parentAccount?.deskType === "dca";
+  const [fills, parentWorking, parentOpens, shares, listing, parentSettings] =
     await Promise.all([
       loadParentCopyFills(
         input.parentAccountId,
@@ -78,10 +98,26 @@ export async function fanOutCopyFills(input: {
         accountId: input.parentAccountId,
         userId: input.parentUserId,
       }),
+      loadFuturesPositions({
+        status: "open",
+        scope: {
+          accountId: input.parentAccountId,
+          userId: input.parentUserId,
+        },
+      }),
       loadDeskCopyShares(input.parentAccountId),
       loadDeskCopyListing(input.parentAccountId),
       loadFuturesSettings(input.parentAccountId),
     ]);
+  const [venueMins, parentPlaybooks] = parentIsDca
+    ? await Promise.all([
+        loadCopyVenueMins(
+          parentAccount?.venue ?? "bybit",
+          parentAccount?.venueEnvironment ?? null,
+        ),
+        listDcaPlaybooksForAccount(input.parentAccountId),
+      ])
+    : [new Map<string, { minQty: number; minNotionalUsdt: number }>(), []];
   const parentBook = parentSettings.connectionId
     ? await readParentCopyBook(input.parentUserId, parentSettings.connectionId)
     : { book: null, error: "Parent desk has no bound key." };
@@ -103,7 +139,11 @@ export async function fanOutCopyFills(input: {
       await fanOutToFollower({
         parentAccountId: input.parentAccountId,
         parentAvailable: parentBook.book,
+        parentIsDca,
         parentWorking,
+        parentOpens,
+        parentPlaybooks,
+        venueMins,
         fills,
         fillIds,
         follower,
@@ -239,7 +279,11 @@ async function loadParentCopyFills(
 async function fanOutToFollower(input: {
   parentAccountId: string;
   parentAvailable: number | null;
+  parentIsDca: boolean;
   parentWorking: FuturesWorkingOrder[];
+  parentOpens: Awaited<ReturnType<typeof loadFuturesPositions>>;
+  parentPlaybooks: Awaited<ReturnType<typeof listDcaPlaybooksForAccount>>;
+  venueMins: Map<string, { minQty: number; minNotionalUsdt: number }>;
   fills: CopyParentFill[];
   fillIds: string[];
   follower: CopyFollowerDesk;
@@ -254,7 +298,7 @@ async function fanOutToFollower(input: {
   const pending = input.fills
     .filter((row) => !receipts.has(row.id))
     .slice(0, COPY_FANOUT_MAX_FILLS);
-  const [copySettings, futuresSettings, available, equity, guards, opens] =
+  const [copySettings, futuresSettings, available, equity, guards, opens, copiedWorking] =
     await Promise.all([
       loadDeskCopySettings(input.follower.id),
       loadFuturesSettings(input.follower.id),
@@ -281,6 +325,10 @@ async function fanOutToFollower(input: {
           userId: input.follower.userId,
         },
       }),
+      loadOpenFuturesWorking({
+        accountId: input.follower.id,
+        userId: input.follower.userId,
+      }),
     ]);
   if (
     equity != null &&
@@ -305,10 +353,30 @@ async function fanOutToFollower(input: {
     await takeVenueSlot(futuresSettings.connectionId);
   }
 
+  const skippedCycles = await applyCopyCycleGates({
+    parentAccountId: input.parentAccountId,
+    parentAvailable: input.parentAvailable,
+    parentIsDca: input.parentIsDca,
+    parentWorking: input.parentWorking,
+    parentOpens: input.parentOpens,
+    parentPlaybooks: input.parentPlaybooks,
+    venueMins: input.venueMins,
+    fills: input.fills,
+    pending,
+    follower: input.follower,
+    copySettings,
+    available,
+    opens,
+    copiedWorking,
+    live,
+    tickers: input.tickers,
+  });
+
   await syncCopyWorkingOrders({
     parentAccountId: input.parentAccountId,
     parentAvailable: input.parentAvailable,
     parentWorking: input.parentWorking,
+    skippedCycles,
     follower: input.follower,
     shareActive: input.shareActive,
     minBalanceOk,
@@ -328,6 +396,9 @@ async function fanOutToFollower(input: {
   }
 
   for (const fill of pending) {
+    if (skippedCycles.has(copyCycleKey(fill.symbol, fill.side))) {
+      continue;
+    }
     const hasFollowerPosition = opens.some(
       (row) => row.symbol === fill.symbol && row.side === fill.side,
     );
@@ -401,13 +472,15 @@ async function fanOutToFollower(input: {
       await writeEventLog({
         scope: "trade",
         event: "copy.copy_skipped",
-        message: skipCopyReason(decision.reason),
+        message: skipCopyReason(decision.reason, fill.symbol, fill.side),
         userId: input.follower.userId,
         accountId: input.follower.id,
         strategy: FUTURES_STRATEGY_ID,
         data: {
+          parentAccountId: input.parentAccountId,
           parentFillId: fill.id,
           symbol: fill.symbol,
+          side: fill.side,
           reason: decision.reason,
         },
       });
@@ -441,11 +514,16 @@ async function fanOutToFollower(input: {
         level: "warning",
         scope: "trade",
         event: "copy.copy_skipped",
-        message: placed.error,
+        message: `Could not copy ${fill.symbol} ${fill.side}: ${placed.error}`,
         userId: input.follower.userId,
         accountId: input.follower.id,
         strategy: FUTURES_STRATEGY_ID,
-        data: { parentFillId: fill.id, symbol: fill.symbol },
+        data: {
+          parentAccountId: input.parentAccountId,
+          parentFillId: fill.id,
+          symbol: fill.symbol,
+          side: fill.side,
+        },
       });
       continue;
     }
@@ -464,13 +542,15 @@ async function fanOutToFollower(input: {
     await writeEventLog({
       scope: "trade",
       event: "copy.copied",
-      message: `Copied ${fill.symbol} ${decision.place}`,
+      message: `Copied ${fill.symbol} ${fill.side} ${decision.place} from the parent`,
       userId: input.follower.userId,
       accountId: input.follower.id,
       strategy: FUTURES_STRATEGY_ID,
       data: {
         parentAccountId: input.parentAccountId,
         parentFillId: fill.id,
+        symbol: fill.symbol,
+        side: fill.side,
         notionalUsdt,
         replayed: placed.replayed === true,
       },
@@ -482,6 +562,7 @@ async function syncCopyWorkingOrders(input: {
   parentAccountId: string;
   parentAvailable: number | null;
   parentWorking: FuturesWorkingOrder[];
+  skippedCycles: Set<string>;
   follower: CopyFollowerDesk;
   shareActive: boolean;
   minBalanceOk: boolean;
@@ -498,22 +579,23 @@ async function syncCopyWorkingOrders(input: {
     accountId: input.follower.id,
     userId: input.follower.userId,
   });
-  const parentIds = new Set(input.parentWorking.map((row) => row.id));
-  const byParentId = new Map(
-    copied
-      .filter(
-        (row) =>
-          row.ruleName === COPY_RULE_NAME &&
-          row.idempotencyKey &&
-          parentIds.has(row.idempotencyKey),
-      )
-      .map((row) => [row.idempotencyKey as string, row] as const),
+  const liveParent = input.parentWorking.filter(
+    (row) => !input.skippedCycles.has(copyCycleKey(row.symbol, row.side)),
   );
+  const findCopied = (parent: FuturesWorkingOrder) =>
+    copied.find(
+      (row) =>
+        row.ruleName === COPY_RULE_NAME &&
+        copiedWorkingMatchesParent(row.idempotencyKey, parent),
+    );
   for (const row of copied) {
     if (row.ruleName !== COPY_RULE_NAME || !row.idempotencyKey) {
       continue;
     }
-    if (parentIds.has(row.idempotencyKey)) {
+    const stillOnParent = liveParent.some((parent) =>
+      copiedWorkingMatchesParent(row.idempotencyKey, parent),
+    );
+    if (stillOnParent) {
       continue;
     }
     const cancelled = await runFuturesCommand({
@@ -529,22 +611,43 @@ async function syncCopyWorkingOrders(input: {
         level: "warning",
         scope: "trade",
         event: "copy.copy_skipped",
-        message: cancelled.error,
+        message: `Could not cancel copied ${row.symbol} limit to match the parent: ${cancelled.error}`,
         userId: input.follower.userId,
         accountId: input.follower.id,
         strategy: FUTURES_STRATEGY_ID,
-        data: { parentWorkingId: row.idempotencyKey, symbol: row.symbol },
+        data: {
+          parentAccountId: input.parentAccountId,
+          parentWorkingId: row.idempotencyKey,
+          symbol: row.symbol,
+        },
+      });
+      continue;
+    }
+    if (!cancelled.replayed) {
+      await writeEventLog({
+        scope: "trade",
+        event: "copy.limit_cancelled",
+        message: `Cancelled copied ${row.symbol} ${row.side} limit to match the parent`,
+        userId: input.follower.userId,
+        accountId: input.follower.id,
+        strategy: FUTURES_STRATEGY_ID,
+        data: {
+          parentAccountId: input.parentAccountId,
+          parentWorkingId: row.idempotencyKey,
+          symbol: row.symbol,
+          side: row.side,
+        },
       });
     }
   }
   if (
     !(input.parentAvailable != null && input.parentAvailable > 0) ||
-    input.parentWorking.length === 0
+    liveParent.length === 0
   ) {
     return;
   }
   const parentBook = input.parentAvailable;
-  for (const working of input.parentWorking.slice(0, COPY_FANOUT_MAX_WORKING)) {
+  for (const working of liveParent.slice(0, COPY_FANOUT_MAX_WORKING)) {
     const fill = workingAsCopyFill(working);
     if (!fill) {
       continue;
@@ -575,31 +678,13 @@ async function syncCopyWorkingOrders(input: {
       minBalanceOk: input.minBalanceOk,
     });
     if (decision.action === "skip") {
-      if (
-        decision.reason !== "no_size" &&
-        decision.reason !== "unbound" &&
-        decision.reason !== "min_balance"
-      ) {
-        await writeEventLog({
-          scope: "trade",
-          event: "copy.copy_skipped",
-          message: skipCopyReason(decision.reason),
-          userId: input.follower.userId,
-          accountId: input.follower.id,
-          strategy: FUTURES_STRATEGY_ID,
-          data: {
-            parentWorkingId: working.id,
-            symbol: fill.symbol,
-            reason: decision.reason,
-          },
-        });
-      }
       continue;
     }
     if (decision.action !== "place") {
       continue;
     }
-    const existing = byParentId.get(working.id);
+    const existing = findCopied(working);
+    const clipKey = copyWorkingIdempotencyKey(working);
     if (existing) {
       const targetQty = decision.notionalUsdt / working.limitPrice;
       const samePrice = sameWorkingNumber(existing.limitPrice, working.limitPrice);
@@ -627,11 +712,35 @@ async function syncCopyWorkingOrders(input: {
           level: "warning",
           scope: "trade",
           event: "copy.copy_skipped",
-          message: amended.error,
+          message: `Could not amend copied ${fill.symbol} limit to match the parent: ${amended.error}`,
           userId: input.follower.userId,
           accountId: input.follower.id,
           strategy: FUTURES_STRATEGY_ID,
-          data: { parentWorkingId: working.id, symbol: fill.symbol },
+          data: {
+            parentAccountId: input.parentAccountId,
+            parentWorkingId: working.id,
+            symbol: fill.symbol,
+            side: fill.side,
+          },
+        });
+        continue;
+      }
+      if (!amended.replayed) {
+        await writeEventLog({
+          scope: "trade",
+          event: "copy.limit_amended",
+          message: `Amended copied ${fill.symbol} ${fill.side} limit to match the parent`,
+          userId: input.follower.userId,
+          accountId: input.follower.id,
+          strategy: FUTURES_STRATEGY_ID,
+          data: {
+            parentAccountId: input.parentAccountId,
+            parentWorkingId: working.id,
+            symbol: fill.symbol,
+            side: fill.side,
+            notionalUsdt: decision.notionalUsdt,
+            limitPrice: working.limitPrice,
+          },
         });
       }
       continue;
@@ -639,8 +748,8 @@ async function syncCopyWorkingOrders(input: {
     const positionId = input.opens.find(
       (row) => row.symbol === fill.symbol && row.side === fill.side,
     )?.id;
-    let notionalUsdt = decision.notionalUsdt;
-    let placed = await runFuturesCommand({
+    const notionalUsdt = decision.notionalUsdt;
+    const placed = await runFuturesCommand({
       actor: {
         userId: input.follower.userId,
         accountId: input.follower.id,
@@ -655,7 +764,7 @@ async function syncCopyWorkingOrders(input: {
         positionId: decision.place === "close" ? positionId : undefined,
         size: String(notionalUsdt),
         sizeUnit: "usdt",
-        idempotencyKey: working.id,
+        idempotencyKey: clipKey,
         source: "engine",
         ruleName: COPY_RULE_NAME,
       },
@@ -665,30 +774,290 @@ async function syncCopyWorkingOrders(input: {
         level: "warning",
         scope: "trade",
         event: "copy.copy_skipped",
-        message: placed.error,
+        message: `Could not copy ${fill.symbol} ${fill.side} limit: ${placed.error}`,
         userId: input.follower.userId,
         accountId: input.follower.id,
         strategy: FUTURES_STRATEGY_ID,
-        data: { parentWorkingId: working.id, symbol: fill.symbol },
+        data: {
+          parentAccountId: input.parentAccountId,
+          parentWorkingId: working.id,
+          symbol: fill.symbol,
+          side: fill.side,
+        },
       });
       continue;
     }
-    await writeEventLog({
-      scope: "trade",
-      event: "copy.copied",
-      message: `Copied ${fill.symbol} limit`,
-      userId: input.follower.userId,
-      accountId: input.follower.id,
-      strategy: FUTURES_STRATEGY_ID,
-      data: {
-        parentAccountId: input.parentAccountId,
-        parentWorkingId: working.id,
-        notionalUsdt,
-        limitPrice: working.limitPrice,
-        replayed: placed.replayed === true,
-      },
-    });
+    if (!placed.replayed) {
+      await writeEventLog({
+        scope: "trade",
+        event: "copy.limit_copied",
+        message: `Copied ${fill.symbol} ${fill.side} limit from the parent`,
+        userId: input.follower.userId,
+        accountId: input.follower.id,
+        strategy: FUTURES_STRATEGY_ID,
+        data: {
+          parentAccountId: input.parentAccountId,
+          parentWorkingId: working.id,
+          symbol: fill.symbol,
+          side: fill.side,
+          notionalUsdt,
+          limitPrice: working.limitPrice,
+        },
+      });
+    }
   }
+}
+
+async function applyCopyCycleGates(input: {
+  parentAccountId: string;
+  parentAvailable: number | null;
+  parentIsDca: boolean;
+  parentWorking: FuturesWorkingOrder[];
+  parentOpens: Awaited<ReturnType<typeof loadFuturesPositions>>;
+  parentPlaybooks: Awaited<ReturnType<typeof listDcaPlaybooksForAccount>>;
+  venueMins: Map<string, { minQty: number; minNotionalUsdt: number }>;
+  fills: CopyParentFill[];
+  pending: CopyParentFill[];
+  follower: CopyFollowerDesk;
+  copySettings: DeskCopySettings;
+  available: number | null;
+  opens: Awaited<ReturnType<typeof loadFuturesPositions>>;
+  copiedWorking: FuturesWorkingOrder[];
+  live: boolean;
+  tickers: Map<string, { lastPrice?: string; bid1Price?: string; ask1Price?: string }>;
+}): Promise<Set<string>> {
+  const skipped = new Set<string>();
+  if (!input.parentIsDca) {
+    return skipped;
+  }
+  const keys = new Set<string>();
+  for (const row of input.parentOpens) {
+    keys.add(copyCycleKey(row.symbol, row.side));
+  }
+  for (const row of input.parentWorking) {
+    keys.add(copyCycleKey(row.symbol, row.side));
+  }
+  for (const row of input.pending) {
+    if (copyFillIsEntry(row.action)) {
+      keys.add(copyCycleKey(row.symbol, row.side));
+    }
+  }
+  for (const key of keys) {
+    const [symbol, side] = key.split(":") as [string, "long" | "short"];
+    const parentHasPosition = input.parentOpens.some(
+      (row) => row.symbol === symbol && row.side === side,
+    );
+    const parentPositionId =
+      input.parentOpens.find((row) => row.symbol === symbol && row.side === side)
+        ?.id ?? null;
+    const entryWorkings = input.parentWorking.filter(
+      (row) =>
+        row.symbol === symbol &&
+        row.side === side &&
+        !row.reduceOnly &&
+        parseDcaClipIndex(row.idempotencyKey) != null,
+    );
+    const entryClipIndexes = entryWorkings
+      .map((row) => parseDcaClipIndex(row.idempotencyKey))
+      .filter((index): index is number => index != null);
+    const hasNewEntryFillAfterFollow = input.pending.some(
+      (row) =>
+        row.symbol === symbol &&
+        row.side === side &&
+        copyFillIsEntry(row.action) &&
+        row.filledAtMs >= input.follower.createdAtMs,
+    );
+    const parentHadEntryBeforeFollow = input.fills.some(
+      (row) =>
+        row.symbol === symbol &&
+        row.side === side &&
+        copyFillIsEntry(row.action) &&
+        row.filledAtMs < input.follower.createdAtMs,
+    );
+    const alreadyJoined = copyFollowerAlreadyJoined({
+      hasFollowerPosition: input.opens.some(
+        (row) => row.symbol === symbol && row.side === side,
+      ),
+      hasCopiedWorking: input.copiedWorking.some(
+        (row) =>
+          row.ruleName === COPY_RULE_NAME &&
+          row.symbol === symbol &&
+          row.side === side,
+      ),
+    });
+    const parentBook = input.parentAvailable;
+    const ladderClips: { sizedUsdt: number; price: number }[] = [];
+    if (parentBook != null && parentBook > 0) {
+      const sources: { notionalUsdt: number; price: number | null }[] = [
+        ...entryWorkings.map((row) => ({
+          notionalUsdt: copyParentWorkingNotional({
+            remainingQty: row.remainingQty,
+            qty: row.qty,
+            filledQty: row.filledQty,
+            limitPrice: row.limitPrice,
+          }),
+          price: row.limitPrice,
+        })),
+        ...input.pending
+          .filter(
+            (row) =>
+              row.symbol === symbol &&
+              row.side === side &&
+              copyFillIsEntry(row.action),
+          )
+          .map((row) => ({
+            notionalUsdt: row.notionalUsdt,
+            price:
+              row.price ??
+              markFromTicker(input.tickers.get(symbol) ?? {}),
+          })),
+      ];
+      const playbook = input.parentPlaybooks.find((row) => row.symbol === symbol);
+      const mark = markFromTicker(input.tickers.get(symbol) ?? {});
+      const priceGuess =
+        entryWorkings[0]?.limitPrice ??
+        sources.find((row) => row.price != null && row.price > 0)?.price ??
+        mark;
+      if (playbook && priceGuess != null && priceGuess > 0) {
+        const clipCount = Math.min(playbook.maxClips ?? 8, 40);
+        for (let index = 0; index < clipCount; index += 1) {
+          const raw = dcaClipSizeAt(
+            index,
+            playbook.clipSize,
+            playbook.sizeMultiplier,
+          );
+          const notionalUsdt =
+            playbook.sizeUnit === "usdt" ? raw : raw * priceGuess;
+          sources.push({ notionalUsdt, price: priceGuess });
+        }
+      }
+      for (const source of sources) {
+        const price = source.price;
+        if (!(source.notionalUsdt > 0) || !(price != null && price > 0)) {
+          continue;
+        }
+        const sized = copySizedNotional({
+          parentFillUsdt: source.notionalUsdt,
+          parentBalanceUsdt: parentBook,
+          followerAvailableUsdt: input.available ?? 0,
+          sizeMode: input.copySettings.sizeMode,
+          sizePercent: input.copySettings.sizePercent,
+          sizeBookUsdt: input.copySettings.sizeBookUsdt,
+        });
+        if (sized.ok) {
+          ladderClips.push({ sizedUsdt: sized.notionalUsdt, price });
+        }
+      }
+    }
+    const mins = input.venueMins.get(symbol) ?? {
+      minQty: 0,
+      minNotionalUsdt: 0,
+    };
+    const reason = decideCopyCycleSkip({
+      parentIsDca: true,
+      alreadyJoined,
+      midParent: copyCycleMidParent({
+        parentHasPosition,
+        entryClipIndexes,
+        hasNewEntryFillAfterFollow,
+        parentHadEntryBeforeFollow,
+      }),
+      live: input.live,
+      ladderClips,
+      minQty: mins.minQty,
+      minNotionalUsdt: mins.minNotionalUsdt,
+    });
+    if (!reason) {
+      continue;
+    }
+    skipped.add(key);
+    await logCopyCycleSkipOnce({
+      follower: input.follower,
+      parentAccountId: input.parentAccountId,
+      reason,
+      symbol,
+      side,
+      token: copyCycleSkipToken({
+        parentPositionId,
+        minClipIndex:
+          entryClipIndexes.length > 0 ? Math.min(...entryClipIndexes) : null,
+      }),
+    });
+    for (const fill of input.pending) {
+      if (fill.symbol === symbol && fill.side === side) {
+        await insertCopyReceipt({
+          followerAccountId: input.follower.id,
+          parentFillId: fill.id,
+        });
+      }
+    }
+  }
+  return skipped;
+}
+
+async function logCopyCycleSkipOnce(input: {
+  follower: CopyFollowerDesk;
+  parentAccountId: string;
+  reason: CopyCycleSkipReason;
+  symbol: string;
+  side: "long" | "short";
+  token: string;
+}): Promise<void> {
+  const receiptId = copyCycleReceiptKey(
+    input.reason,
+    input.symbol,
+    input.side,
+    input.token,
+  );
+  const existing = await loadCopyReceiptFillIds({
+    followerAccountId: input.follower.id,
+    parentFillIds: [receiptId],
+  });
+  if (existing.has(receiptId)) {
+    return;
+  }
+  await insertCopyReceipt({
+    followerAccountId: input.follower.id,
+    parentFillId: receiptId,
+  });
+  await writeEventLog({
+    scope: "trade",
+    event: "copy.cycle_skipped",
+    message: copyCycleSkipMessage(input.reason, input.symbol, input.side),
+    userId: input.follower.userId,
+    accountId: input.follower.id,
+    strategy: FUTURES_STRATEGY_ID,
+    data: {
+      parentAccountId: input.parentAccountId,
+      symbol: input.symbol,
+      side: input.side,
+      reason: input.reason,
+    },
+  });
+}
+
+async function loadCopyVenueMins(
+  venue: string,
+  venueEnvironment: string | null,
+): Promise<Map<string, { minQty: number; minNotionalUsdt: number }>> {
+  const out = new Map<string, { minQty: number; minNotionalUsdt: number }>();
+  try {
+    const pairs =
+      venue === "hyperliquid"
+        ? await loadHyperliquidLinearPerps(
+            hyperliquidInfoEnvironment(venueEnvironment),
+          )
+        : await loadUsdtLinearPerps();
+    for (const row of pairs) {
+      out.set(row.symbol, {
+        minQty: row.minQty,
+        minNotionalUsdt: row.minNotional,
+      });
+    }
+  } catch {
+    return out;
+  }
+  return out;
 }
 
 function workingAsCopyFill(row: FuturesWorkingOrder): CopyParentFill | null {
@@ -750,35 +1119,41 @@ async function flattenAndPauseFollower(input: {
   });
 }
 
-function skipCopyReason(reason: string): string {
+function skipCopyReason(
+  reason: string,
+  symbol?: string,
+  side?: string,
+): string {
+  const target =
+    symbol && side ? `${symbol} ${side}` : symbol ? symbol : "this trade";
   if (reason === "paused") {
-    return "Copying is paused.";
+    return `Skipped ${target}. Copying is paused.`;
   }
   if (reason === "revoked") {
-    return "This follower is not an active share.";
+    return `Skipped ${target}. This follower is not an active share.`;
   }
   if (reason === "reduce_only") {
-    return "Reduce-only blocked a copied entry.";
+    return `Skipped ${target}. Reduce-only blocked a copied entry.`;
   }
   if (reason === "unbound") {
-    return "Live copy desk has no bound key.";
+    return `Skipped ${target}. Live copy desk has no bound key.`;
   }
   if (reason === "no_size") {
-    return "Could not size the copied fill.";
+    return `Skipped ${target}. Could not size the copied fill.`;
   }
   if (reason === "min_balance") {
-    return "Follower is below the listing min balance.";
+    return `Skipped ${target}. Follower is below the listing min balance.`;
   }
   if (reason === "no_position") {
-    return "No follower position to close.";
+    return `Skipped ${target}. No follower position to close.`;
   }
   if (reason === "before_follow") {
-    return "Parent fill was before this copy desk existed.";
+    return `Skipped ${target}. Parent fill was before this copy desk existed.`;
   }
   if (reason === "adverse_move") {
-    return "Skipped entry after an adverse move.";
+    return `Skipped ${target}. Mark moved against the parent fill.`;
   }
-  return `Skipped copied fill (${reason}).`;
+  return `Skipped ${target} (${reason}).`;
 }
 
 export async function maybeFanOutAfterParentFill(input: {

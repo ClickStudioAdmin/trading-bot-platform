@@ -63,6 +63,20 @@ function lotMaxMkt(instrument: BybitInstrument | undefined): number {
   return parseStep(instrument?.lotSizeFilter?.maxMktOrderQty, 0);
 }
 
+export function perpVenueMinimums(
+  instrument: BybitInstrument | undefined,
+): { minQty: number; minNotionalUsdt: number } {
+  const step = lotStep(instrument, 0.001);
+  return {
+    minQty: Math.max(lotMin(instrument, step), step),
+    minNotionalUsdt: parseStep(
+      instrument?.lotSizeFilter?.minNotionalValue ??
+        instrument?.lotSizeFilter?.minOrderAmt,
+      0,
+    ),
+  };
+}
+
 export function qtyForPerp(
   qty: number,
   instrument: BybitInstrument | undefined,

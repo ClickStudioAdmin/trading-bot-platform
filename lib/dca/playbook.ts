@@ -1939,6 +1939,61 @@ export function dcaOpenHint(input: {
   };
 }
 
+export function dcaHintsForCopyOpen(
+  playbooks: readonly DcaPlaybook[],
+  open: Array<{
+    symbol: string;
+    side: FuturesSide;
+    orders?: readonly { action: string }[];
+    entryPrice?: number | null;
+    mark?: number | null;
+  }>,
+  working?: readonly {
+    idempotencyKey?: string | null;
+    status?: string | null;
+  }[],
+): Record<string, DcaOpenHint> {
+  const hints: Record<string, DcaOpenHint> = {};
+  for (const row of open) {
+    const playbook = playbooks.find((item) => item.symbol === row.symbol);
+    if (!playbook) {
+      continue;
+    }
+    const filled = dcaFilledClipCount(row.orders) ?? 0;
+    const planned = dcaPlannedExits({
+      side: row.side,
+      entryPrice: row.entryPrice ?? null,
+      firstFillPrice: dcaLegFor(playbook, row.side).firstFillPrice,
+      mark: row.mark ?? null,
+      takeProfitPct: playbook.takeProfitPct,
+      stopLossPct: playbook.stopLossPct,
+      takeProfitBasis: playbook.takeProfitBasis,
+      stopLossBasis: playbook.stopLossBasis,
+      trailingPct: playbook.trailingPct,
+    });
+    const tpLimitResting = (working ?? []).some(
+      (item) =>
+        (!item.status || item.status === "open") &&
+        (isDcaExitLimitKey(item.idempotencyKey, playbook.id, row.side, "tp") ||
+          parseDcaExitLimitKind(item.idempotencyKey) === "tp"),
+    );
+    hints[dcaHintKey(row.symbol, row.side)] = {
+      playbookId: playbook.id,
+      orders: formatDcaOrdersProgress({
+        filled,
+        maxClips: playbook.maxClips,
+      }),
+      plannedTakeProfit: planned.takeProfit,
+      plannedStopLoss: planned.stopLoss,
+      plannedTrailing: planned.trailingStop,
+      takeProfitOrderType: playbook.takeProfitOrderType,
+      stopLossOrderType: "market",
+      tpLimitResting,
+    };
+  }
+  return hints;
+}
+
 export function dcaHintsForOpen(
   playbooks: readonly DcaPlaybook[],
   open: Array<{

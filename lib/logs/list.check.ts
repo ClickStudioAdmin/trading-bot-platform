@@ -55,6 +55,10 @@ assert.ok(
   eventLogOptionsForScopes(["system"]).includes("copy.desk_created"),
 );
 assert.ok(eventLogOptionsForScopes(["trade"]).includes("copy.copied"));
+assert.ok(eventLogOptionsForScopes(["trade"]).includes("copy.cycle_skipped"));
+assert.ok(eventLogOptionsForScopes(["trade"]).includes("copy.limit_copied"));
+assert.ok(eventLogOptionsForScopes(["trade"]).includes("copy.followed"));
+assert.ok(eventLogOptionsForScopes(["trade"]).includes("copy.resumed"));
 assert.ok(eventLogOptionsForScopes(["trade"]).includes("copy.breach_flattened"));
 assert.equal(
   eventLogOptionsForScopes(["trade"]).includes("member.created"),

@@ -35,6 +35,7 @@ import {
   dcaLegIsRunning,
   dcaWebhookSignalApplies,
   dcaExitTpslNeedsVenueSync,
+  dcaHintsForCopyOpen,
   dcaHintsForOpen,
   dcaIntervalMet,
   dcaIntervalParts,
@@ -1473,6 +1474,32 @@ assert.equal(
     [{ symbol: "BTCUSDT", side: "long" }],
   )["BTCUSDT:long"]?.orders,
   "2",
+);
+const copyHintPlaybook = parseDcaPlaybookRow({
+  id: "pb-copy",
+  user_id: "user-1",
+  account_id: "acc-parent",
+  name: "Parent DCA",
+  symbol: "BTCUSDT",
+  direction: "long",
+  clip_size: "0.01",
+  size_unit: "qty",
+  max_clips: 8,
+  long_status: "idle",
+});
+assert.ok(copyHintPlaybook);
+assert.equal(
+  dcaHintsForCopyOpen(
+    [copyHintPlaybook],
+    [
+      {
+        symbol: "BTCUSDT",
+        side: "long",
+        orders: [{ action: "buy" }, { action: "buy" }],
+      },
+    ],
+  )["BTCUSDT:long"]?.orders,
+  "2/8",
 );
 const capped = parseDcaPlaybookRow({
   id: "pb-1",

@@ -12,6 +12,17 @@ import {
   copyPaperEquityView,
   copyParentFillNotional,
   copyParentWorkingNotional,
+  copiedWorkingMatchesParent,
+  copyCycleKey,
+  copyCycleMidParent,
+  copyCycleReceiptKey,
+  copyCycleSkipMessage,
+  copyCycleSkipToken,
+  copyFollowerAlreadyJoined,
+  copyLiveLadderFitsVenue,
+  copyWorkingIdempotencyKey,
+  copyWorkingLooksDca,
+  decideCopyCycleSkip,
   formatCopyPaperStartingUsdt,
   copyParentFillPrice,
   copyUtcDayStartMs,
@@ -321,5 +332,152 @@ const key = copyBreachIdempotencyKey(
 );
 assert.equal(key.length <= 36, true);
 assert.match(key, /^cbr-/);
+
+assert.equal(copyCycleKey("BTCUSDT", "long"), "BTCUSDT:long");
+assert.equal(copyWorkingLooksDca("d11111111l2"), true);
+assert.equal(copyWorkingLooksDca("d11111111ltp"), true);
+assert.equal(copyWorkingLooksDca("11111111-1111-4111-8111-111111111111"), false);
+assert.equal(
+  copyWorkingIdempotencyKey({
+    id: "11111111-1111-4111-8111-111111111111",
+    idempotencyKey: "d11111111l2",
+  }),
+  "d11111111l2",
+);
+assert.equal(
+  copyCycleMidParent({
+    parentHasPosition: true,
+    entryClipIndexes: [0, 1],
+    hasNewEntryFillAfterFollow: true,
+  }),
+  false,
+);
+assert.equal(
+  copyCycleMidParent({
+    parentHasPosition: true,
+    entryClipIndexes: [4, 5],
+    hasNewEntryFillAfterFollow: false,
+  }),
+  true,
+);
+assert.equal(
+  copyCycleMidParent({
+    parentHasPosition: false,
+    entryClipIndexes: [0, 1, 2],
+    hasNewEntryFillAfterFollow: false,
+  }),
+  false,
+);
+assert.equal(
+  copyCycleMidParent({
+    parentHasPosition: true,
+    entryClipIndexes: [4, 5],
+    hasNewEntryFillAfterFollow: true,
+  }),
+  true,
+);
+assert.equal(
+  copyCycleMidParent({
+    parentHasPosition: true,
+    entryClipIndexes: [0, 1],
+    hasNewEntryFillAfterFollow: true,
+    parentHadEntryBeforeFollow: true,
+  }),
+  true,
+);
+assert.equal(
+  copyFollowerAlreadyJoined({
+    hasFollowerPosition: false,
+    hasCopiedWorking: true,
+  }),
+  true,
+);
+assert.equal(
+  decideCopyCycleSkip({
+    parentIsDca: true,
+    alreadyJoined: false,
+    midParent: true,
+    live: false,
+    ladderClips: [],
+    minQty: 0.001,
+    minNotionalUsdt: 5,
+  }),
+  "mid_cycle",
+);
+assert.equal(
+  decideCopyCycleSkip({
+    parentIsDca: true,
+    alreadyJoined: true,
+    midParent: true,
+    live: true,
+    ladderClips: [{ sizedUsdt: 1, price: 78_000 }],
+    minQty: 0.001,
+    minNotionalUsdt: 5,
+  }),
+  null,
+);
+assert.equal(
+  decideCopyCycleSkip({
+    parentIsDca: true,
+    alreadyJoined: false,
+    midParent: false,
+    live: true,
+    ladderClips: [
+      { sizedUsdt: 7.8, price: 78_000 },
+      { sizedUsdt: 80, price: 77_000 },
+    ],
+    minQty: 0.001,
+    minNotionalUsdt: 5,
+  }),
+  "ladder_too_small",
+);
+assert.equal(
+  decideCopyCycleSkip({
+    parentIsDca: false,
+    alreadyJoined: false,
+    midParent: true,
+    live: true,
+    ladderClips: [{ sizedUsdt: 1, price: 78_000 }],
+    minQty: 0.001,
+    minNotionalUsdt: 5,
+  }),
+  null,
+);
+assert.equal(
+  copiedWorkingMatchesParent("d11111111l2", {
+    id: "11111111-1111-4111-8111-111111111111",
+    idempotencyKey: "d11111111l2",
+  }),
+  true,
+);
+assert.equal(copyCycleSkipToken({ parentPositionId: null, minClipIndex: 4 }), "c4");
+assert.equal(
+  copyLiveLadderFitsVenue({
+    sizedUsdt: 7.8,
+    price: 78_000,
+    minQty: 0.001,
+    minNotionalUsdt: 5,
+  }),
+  false,
+);
+assert.equal(
+  copyLiveLadderFitsVenue({
+    sizedUsdt: 80,
+    price: 78_000,
+    minQty: 0.001,
+    minNotionalUsdt: 5,
+  }),
+  true,
+);
+assert.equal(
+  copyCycleSkipMessage("mid_cycle", "BTCUSDT", "long").includes("already"),
+  true,
+);
+assert.equal(
+  copyCycleReceiptKey("ladder_too_small", "BTCUSDT", "long", "abc").startsWith(
+    "sml-",
+  ),
+  true,
+);
 
 console.log("copy decide checks passed");

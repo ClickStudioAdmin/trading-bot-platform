@@ -16,8 +16,8 @@ import {
   loadUsdtLinearPerps,
 } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
-import { deskAllowsDcaPlaybooks, deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref, deskIsCopy } from "@/lib/accounts/model";
-import { dcaHintsForOpen } from "@/lib/dca/playbook";
+import { deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref, deskIsCopy, deskShowsDcaBlotter } from "@/lib/accounts/model";
+import { dcaHintsForCopyOpen, dcaHintsForOpen } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { FuturesWebhookTest } from "@/components/futures-webhook-test";
 import { submitFuturesTrade } from "@/lib/futures/actions";
@@ -108,17 +108,22 @@ export default async function FuturesPositionsPage({
   const allowSignal = session
     ? deskAllowsSignalWebhooks(session.account)
     : deskAllowsSignalWebhooks(deskType);
-  const dca = session
-    ? deskAllowsDcaPlaybooks(session.account)
-    : deskType === "dca";
-  const playbooks =
-    dca && session
-      ? await listDcaPlaybooksForAccount(session.account.id)
-      : [];
-  const dcaHints = dca
-    ? dcaHintsForOpen(playbooks, open, desk.working)
-    : undefined;
   const copyDesk = session ? deskIsCopy(session.account) : false;
+  const dcaBlotter = session
+    ? deskShowsDcaBlotter(session.account)
+    : deskType === "dca";
+  const playbookAccountId = copyDesk
+    ? session?.account.copyOfAccountId
+    : session?.account.id;
+  const playbooks =
+    dcaBlotter && playbookAccountId
+      ? await listDcaPlaybooksForAccount(playbookAccountId)
+      : [];
+  const dcaHints = dcaBlotter
+    ? copyDesk
+      ? dcaHintsForCopyOpen(playbooks, open, desk.working)
+      : dcaHintsForOpen(playbooks, open, desk.working)
+    : undefined;
   const testWebhooks = allowSignal
     ? webhooks
     : webhooks.filter((row) => row.kind !== "signal");
@@ -266,18 +271,20 @@ export default async function FuturesPositionsPage({
           showCloseAll
           workingCount={desk.working.length}
           webhookNames={desk.webhookNames}
-          showDcaColumns={dca}
-          playbookOwnsOrders={dca}
+          showDcaColumns={dcaBlotter}
+          playbookOwnsOrders={dcaBlotter}
           hideRowExits={copyDesk}
           dcaHints={dcaHints}
           emptyMessage={
             showTicket
               ? undefined
-              : copyDesk
-                ? "No open futures. Copied fills from the parent will appear here."
-                : dca
-                  ? "No open futures. The bot adds orders once it is armed."
-                  : "No open futures. TradingView opens them through a webhook."
+              : copyDesk && dcaBlotter
+                ? "No open futures. Copied parent DCA fills appear here."
+                : copyDesk
+                  ? "No open futures. Copied fills from the parent will appear here."
+                  : dcaBlotter
+                    ? "No open futures. The bot adds orders once it is armed."
+                    : "No open futures. TradingView opens them through a webhook."
           }
         />
         </LiveTickerScope>
@@ -289,15 +296,18 @@ export default async function FuturesPositionsPage({
           exchangeBook={desk.exchangeBook}
           baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
           webhookNames={desk.webhookNames}
-          playbookOwnsOrders={dca}
+          playbookOwnsOrders={dcaBlotter}
+          copyDesk={copyDesk}
           emptyMessage={
             showTicket
               ? undefined
-              : copyDesk
+              : copyDesk && dcaBlotter
                 ? "No working limits. Copied parent DCA limits appear here."
-                : dca
-                  ? "No working limits. Bot orders rest here when they are limits."
-                  : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
+                : copyDesk
+                  ? "No working limits. Copied parent limits appear here."
+                  : dcaBlotter
+                    ? "No working limits. Bot orders rest here when they are limits."
+                    : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
           }
         />
       </div>
