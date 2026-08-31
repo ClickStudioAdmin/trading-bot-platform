@@ -1,7 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   DEFAULT_COPY_MIN_ACTIVITY_DAYS,
-  parseCopyMaxFollowers,
+  parseCopyFollowerLimits,
   parseCopyMinActivityDays,
   type CopyPlatformSettings,
 } from "./model";
@@ -9,6 +9,7 @@ import {
 const EMPTY_SETTINGS: CopyPlatformSettings = {
   minActivityDays: DEFAULT_COPY_MIN_ACTIVITY_DAYS,
   maxFollowersDefault: null,
+  maxFollowersCeiling: null,
 };
 
 export async function loadCopyPlatformSettings(): Promise<CopyPlatformSettings> {
@@ -18,7 +19,9 @@ export async function loadCopyPlatformSettings(): Promise<CopyPlatformSettings> 
   }
   const { data, error } = await supabase
     .from("platform_settings")
-    .select("copy_min_activity_days, copy_max_followers_default")
+    .select(
+      "copy_min_activity_days, copy_max_followers_default, copy_max_followers_ceiling",
+    )
     .eq("id", "tbp")
     .maybeSingle();
   if (error || !data) {
@@ -27,12 +30,16 @@ export async function loadCopyPlatformSettings(): Promise<CopyPlatformSettings> 
   const days = parseCopyMinActivityDays(
     (data as { copy_min_activity_days?: unknown }).copy_min_activity_days,
   );
-  const cap = parseCopyMaxFollowers(
-    (data as { copy_max_followers_default?: unknown }).copy_max_followers_default,
-  );
+  const limits = parseCopyFollowerLimits({
+    defaultValue: (data as { copy_max_followers_default?: unknown })
+      .copy_max_followers_default,
+    ceiling: (data as { copy_max_followers_ceiling?: unknown })
+      .copy_max_followers_ceiling,
+  });
   return {
     minActivityDays: days.ok ? days.days : DEFAULT_COPY_MIN_ACTIVITY_DAYS,
-    maxFollowersDefault: cap.ok ? cap.maxFollowers : null,
+    maxFollowersDefault: limits.ok ? limits.maxFollowersDefault : null,
+    maxFollowersCeiling: limits.ok ? limits.maxFollowersCeiling : null,
   };
 }
 
@@ -44,14 +51,18 @@ export async function loadCopyMinActivityDays(): Promise<number> {
 export async function saveCopyPlatformSettings(input: {
   minActivityDays: number;
   maxFollowersDefault: number | null;
+  maxFollowersCeiling: number | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const days = parseCopyMinActivityDays(input.minActivityDays);
   if (!days.ok) {
     return days;
   }
-  const cap = parseCopyMaxFollowers(input.maxFollowersDefault);
-  if (!cap.ok) {
-    return cap;
+  const limits = parseCopyFollowerLimits({
+    defaultValue: input.maxFollowersDefault,
+    ceiling: input.maxFollowersCeiling,
+  });
+  if (!limits.ok) {
+    return limits;
   }
   const supabase = createServiceClient();
   if (!supabase) {
@@ -60,7 +71,8 @@ export async function saveCopyPlatformSettings(input: {
   const { error } = await supabase.from("platform_settings").upsert({
     id: "tbp",
     copy_min_activity_days: days.days,
-    copy_max_followers_default: cap.maxFollowers,
+    copy_max_followers_default: limits.maxFollowersDefault,
+    copy_max_followers_ceiling: limits.maxFollowersCeiling,
     updated_at: new Date().toISOString(),
   });
   if (error) {
@@ -76,5 +88,6 @@ export async function saveCopyMinActivityDays(
   return saveCopyPlatformSettings({
     minActivityDays: days,
     maxFollowersDefault: current.maxFollowersDefault,
+    maxFollowersCeiling: current.maxFollowersCeiling,
   });
 }

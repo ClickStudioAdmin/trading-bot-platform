@@ -9,8 +9,13 @@ import {
   formatCopyShareBlock,
   MS_PER_DAY,
   copyFollowerCapReached,
+  copyMinBalanceMet,
   parseCopyDescription,
+  copyMaxFollowersWithinCeiling,
+  effectiveCopyMaxFollowers,
+  parseCopyFollowerLimits,
   parseCopyMaxFollowers,
+  parseCopyMinBalanceUsdt,
   parseCopyMinActivityDays,
   parseCopyVisibility,
   parseDeskCopyListingForm,
@@ -64,6 +69,96 @@ assert.equal(
   copyFollowerCapReached({ maxFollowers: 10, followerCount: 10 }),
   true,
 );
+assert.equal(
+  copyFollowerCapReached({
+    maxFollowers: 40,
+    ceiling: 20,
+    followerCount: 20,
+  }),
+  true,
+);
+assert.equal(
+  copyFollowerCapReached({
+    maxFollowers: null,
+    ceiling: 20,
+    followerCount: 19,
+  }),
+  false,
+);
+assert.equal(
+  effectiveCopyMaxFollowers({ deskMax: 40, ceiling: 20 }),
+  20,
+);
+assert.equal(
+  effectiveCopyMaxFollowers({ deskMax: null, ceiling: 20 }),
+  20,
+);
+assert.equal(
+  effectiveCopyMaxFollowers({ deskMax: 10, ceiling: 20 }),
+  10,
+);
+assert.equal(copyMaxFollowersWithinCeiling(40, 20).ok, false);
+const stamped = copyMaxFollowersWithinCeiling(null, 20);
+assert.equal(stamped.ok, true);
+if (stamped.ok) {
+  assert.equal(stamped.maxFollowers, 20);
+}
+assert.equal(parseCopyFollowerLimits({ defaultValue: "20", ceiling: "20" }).ok, true);
+assert.equal(
+  parseCopyFollowerLimits({ defaultValue: "40", ceiling: "20" }).ok,
+  false,
+);
+
+assert.equal(parseCopyMinBalanceUsdt("").ok, true);
+assert.equal(parseCopyMinBalanceUsdt("0").ok, false);
+assert.equal(parseCopyMinBalanceUsdt("-1").ok, false);
+const floor = parseCopyMinBalanceUsdt("1,000.5");
+assert.equal(floor.ok, true);
+if (floor.ok) {
+  assert.equal(floor.minBalanceUsdt, 1000.5);
+}
+assert.equal(
+  copyMinBalanceMet({
+    minBalanceUsdt: 1000,
+    mode: "paper",
+    availableBalance: 10,
+  }).ok,
+  true,
+);
+assert.equal(
+  copyMinBalanceMet({
+    minBalanceUsdt: null,
+    mode: "live",
+    availableBalance: 10,
+  }).ok,
+  true,
+);
+assert.equal(
+  copyMinBalanceMet({
+    minBalanceUsdt: 1000,
+    mode: "live",
+    availableBalance: 1000,
+  }).ok,
+  true,
+);
+const unread = copyMinBalanceMet({
+  minBalanceUsdt: 1000,
+  mode: "live",
+  availableBalance: null,
+});
+assert.equal(unread.ok, false);
+if (!unread.ok) {
+  assert.equal(unread.code, "unread");
+}
+const short = copyMinBalanceMet({
+  minBalanceUsdt: 1000,
+  mode: "live",
+  availableBalance: 999,
+});
+assert.equal(short.ok, false);
+if (!short.ok) {
+  assert.equal(short.code, "below");
+}
 
 const now = Date.UTC(2026, 7, 31);
 const firstFill = now - 90 * MS_PER_DAY;
@@ -147,6 +242,7 @@ assert.equal(listing.ok, true);
 if (listing.ok) {
   assert.equal(listing.visibility, "public");
   assert.equal(listing.maxFollowers, null);
+  assert.equal(listing.minBalanceUsdt, null);
 }
 const capped = parseDeskCopyListingForm({
   visibility: "private",
@@ -165,6 +261,34 @@ assert.equal(
   }).ok,
   false,
 );
+assert.equal(
+  parseDeskCopyListingForm({
+    visibility: "public",
+    description: "Brief",
+    maxFollowers: "40",
+    ceiling: 20,
+  }).ok,
+  false,
+);
+const ceilingEmpty = parseDeskCopyListingForm({
+  visibility: "public",
+  description: "Brief",
+  maxFollowers: "",
+  ceiling: 20,
+});
+assert.equal(ceilingEmpty.ok, true);
+if (ceilingEmpty.ok) {
+  assert.equal(ceilingEmpty.maxFollowers, 20);
+}
+const gated = parseDeskCopyListingForm({
+  visibility: "public",
+  description: "Brief",
+  minBalanceUsdt: "2500",
+});
+assert.equal(gated.ok, true);
+if (gated.ok) {
+  assert.equal(gated.minBalanceUsdt, 2500);
+}
 
 const shareBase = {
   mode: "live" as const,

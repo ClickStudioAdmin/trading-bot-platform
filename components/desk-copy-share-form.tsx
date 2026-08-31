@@ -21,12 +21,14 @@ export function DeskCopyShareCard({
   block,
   needsAlias = false,
   maxFollowersDefault = null,
+  maxFollowersCeiling = null,
 }: {
   account: TradingAccount;
   listing: DeskCopyListing | null;
   block: string | null;
   needsAlias?: boolean;
   maxFollowersDefault?: number | null;
+  maxFollowersCeiling?: number | null;
 }) {
   const modeLabel = account.mode === "live" ? "Live" : "Paper";
   const stamp = `${formatDeskType(account.deskType)} · ${formatDeskVenueCaption(account)} · ${modeLabel}`;
@@ -96,9 +98,43 @@ export function DeskCopyShareCard({
               className={fieldClass}
             />
             <span className="mt-1 block text-xs text-ink-faint">
-              Caps how many desks can copy this one. Empty means no cap.
+              {maxFollowersCeiling == null
+                ? "Caps how many desks can copy this one. Empty means no cap."
+                : `Caps how many desks can copy this one. Platform maximum is ${maxFollowersCeiling}. Empty uses that maximum.`}
             </span>
           </label>
+          <div className="space-y-3 border-t border-line pt-4">
+            <p className="text-sm text-ink">Copier requirements</p>
+            <p className="text-xs text-ink-muted">
+              Checked when a Live copy desk is enabled or unpaused. Paper
+              followers skip this. Mode and leverage stay in the setup notes
+              until we can read them from the venue.
+            </p>
+            <label className="block text-sm text-ink">
+              Minimum account balance
+              <span className="relative mt-1 block">
+                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
+                  $
+                </span>
+                <GroupedNumberInput
+                  name="minBalanceUsdt"
+                  defaultValue={
+                    listing?.minBalanceUsdt == null
+                      ? ""
+                      : String(listing.minBalanceUsdt)
+                  }
+                  allowDecimal
+                  placeholder="No floor"
+                  ariaLabel="Minimum account balance"
+                  className="mt-0 w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+                />
+              </span>
+              <span className="mt-1 block text-xs text-ink-faint">
+                Live copiers need at least this much available. Empty means no
+                floor.
+              </span>
+            </label>
+          </div>
           <PendingSubmitButton
             pendingLabel="Saving…"
             successKey="save-desk-copy-share"

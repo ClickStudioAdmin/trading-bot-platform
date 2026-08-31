@@ -90,7 +90,7 @@ export default async function FuturesSettingsPage({
   const error = firstSearchValue(params.error);
   const copyDesk = deskIsCopy(session.account);
   const [trader, listing, firstFillMs, copySettings] = copyDesk
-    ? [null, null, null, { minActivityDays: 0, maxFollowersDefault: null }] as const
+    ? [null, null, null, { minActivityDays: 0, maxFollowersDefault: null, maxFollowersCeiling: null }] as const
     : await Promise.all([
         loadTraderProfile(session.member.id),
         loadDeskCopyListing(session.account.id),
@@ -260,6 +260,7 @@ export default async function FuturesSettingsPage({
             block={shareEval.block}
             needsAlias={shareEval.code === "no_alias"}
             maxFollowersDefault={copySettings.maxFollowersDefault}
+            maxFollowersCeiling={copySettings.maxFollowersCeiling}
           />
         )}
       </div>

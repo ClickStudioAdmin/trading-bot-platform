@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import {
   parseCopyDescription,
   parseCopyMaxFollowers,
+  parseCopyMinBalanceUsdt,
   parseCopyVisibility,
   type CopyListingVisibility,
   type DeskCopyListing,
@@ -13,7 +14,13 @@ function parseListingRow(
   const visibility = parseCopyVisibility(row.visibility);
   const description = parseCopyDescription(row.description);
   const maxFollowers = parseCopyMaxFollowers(row.max_followers);
-  if (!visibility.ok || !description.ok || !maxFollowers.ok) {
+  const minBalance = parseCopyMinBalanceUsdt(row.min_balance_usdt);
+  if (
+    !visibility.ok ||
+    !description.ok ||
+    !maxFollowers.ok ||
+    !minBalance.ok
+  ) {
     return null;
   }
   return {
@@ -21,6 +28,7 @@ function parseListingRow(
     visibility: visibility.visibility,
     description: description.description,
     maxFollowers: maxFollowers.maxFollowers,
+    minBalanceUsdt: minBalance.minBalanceUsdt,
   };
 }
 
@@ -33,7 +41,9 @@ export async function loadDeskCopyListing(
   }
   const { data, error } = await supabase
     .from("desk_copy_listings")
-    .select("account_id, visibility, description, max_followers")
+    .select(
+      "account_id, visibility, description, max_followers, min_balance_usdt",
+    )
     .eq("account_id", accountId)
     .maybeSingle();
   if (error || !data) {
@@ -72,6 +82,7 @@ export async function saveDeskCopyListing(input: {
   visibility: CopyListingVisibility;
   description: string;
   maxFollowers: number | null;
+  minBalanceUsdt: number | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -84,6 +95,7 @@ export async function saveDeskCopyListing(input: {
     visibility: input.visibility,
     description: input.description,
     max_followers: input.maxFollowers,
+    min_balance_usdt: input.minBalanceUsdt,
     updated_at: now,
   };
   const { error } = existing
@@ -93,6 +105,7 @@ export async function saveDeskCopyListing(input: {
           visibility: input.visibility,
           description: input.description,
           max_followers: input.maxFollowers,
+          min_balance_usdt: input.minBalanceUsdt,
           updated_at: now,
         })
         .eq("account_id", input.accountId)

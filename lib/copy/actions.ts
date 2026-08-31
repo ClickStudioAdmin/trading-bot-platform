@@ -19,7 +19,7 @@ import {
   saveDeskCopyListing,
 } from "./listings";
 import { loadTraderProfile, saveTraderProfile } from "./profile";
-import { loadCopyMinActivityDays } from "./settings";
+import { loadCopyPlatformSettings } from "./settings";
 
 const SETTINGS_PATH = "/account/settings";
 
@@ -80,10 +80,13 @@ export async function saveDeskCopyListingAction(formData: FormData) {
   if (deskIsCopy(account)) {
     redirect(settingsHref({ error: "A copy desk cannot be shared." }));
   }
+  const platform = await loadCopyPlatformSettings();
   const parsed = parseDeskCopyListingForm({
     visibility: formData.get("visibility"),
     description: formData.get("description"),
     maxFollowers: formData.get("maxFollowers"),
+    minBalanceUsdt: formData.get("minBalanceUsdt"),
+    ceiling: platform.maxFollowersCeiling,
   });
   if (!parsed.ok) {
     redirect(settingsHref({ error: parsed.error }));
@@ -91,14 +94,15 @@ export async function saveDeskCopyListingAction(formData: FormData) {
     const visibility = parsed.visibility;
     const description = parsed.description;
     const maxFollowers = parsed.maxFollowers;
-    const [profile, firstFillMs, minDays, settings, existing] =
+    const minBalanceUsdt = parsed.minBalanceUsdt;
+    const [profile, firstFillMs, settings, existing] =
       await Promise.all([
         loadTraderProfile(session.member.id),
         loadFirstVenueFillMs(account.id),
-        loadCopyMinActivityDays(),
         loadFuturesSettings(account.id),
         loadDeskCopyListing(account.id),
       ]);
+    const minDays = platform.minActivityDays;
     const share = evaluateCopyShare({
       mode: account.mode,
       deskType: account.deskType,
@@ -116,6 +120,7 @@ export async function saveDeskCopyListingAction(formData: FormData) {
       visibility,
       description,
       maxFollowers,
+      minBalanceUsdt,
     });
     if (!saved.ok) {
       redirect(settingsHref({ error: saved.error }));
@@ -129,6 +134,7 @@ export async function saveDeskCopyListingAction(formData: FormData) {
     data: {
       visibility,
       maxFollowers,
+      minBalanceUsdt,
       live: accountCanHoldConnections(account.mode),
     },
     });

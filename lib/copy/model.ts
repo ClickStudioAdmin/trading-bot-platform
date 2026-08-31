@@ -30,11 +30,15 @@ export type DeskCopyListing = {
   visibility: CopyListingVisibility;
   description: string;
   maxFollowers: number | null;
+  minBalanceUsdt: number | null;
 };
+
+export type CopyMinBalanceBlock = "below" | "unread";
 
 export type CopyPlatformSettings = {
   minActivityDays: number;
   maxFollowersDefault: number | null;
+  maxFollowersCeiling: number | null;
 };
 
 export function parseCopyMinActivityDays(
@@ -77,21 +81,164 @@ export function parseCopyMaxFollowers(
   return { ok: true, maxFollowers };
 }
 
+export function parseCopyFollowerLimits(input: {
+  defaultValue: unknown;
+  ceiling: unknown;
+}):
+  | {
+      ok: true;
+      maxFollowersDefault: number | null;
+      maxFollowersCeiling: number | null;
+    }
+  | { ok: false; error: string } {
+  const preset = parseCopyMaxFollowers(input.defaultValue);
+  if (!preset.ok) {
+    return {
+      ok: false,
+      error: "Default maximum copy traders must be 1 or more, or empty.",
+    };
+  }
+  const ceiling = parseCopyMaxFollowers(input.ceiling);
+  if (!ceiling.ok) {
+    return {
+      ok: false,
+      error: "Platform maximum copy traders must be 1 or more, or empty.",
+    };
+  }
+  if (
+    preset.maxFollowers != null &&
+    ceiling.maxFollowers != null &&
+    preset.maxFollowers > ceiling.maxFollowers
+  ) {
+    return {
+      ok: false,
+      error: "Default maximum copy traders cannot be above the platform maximum.",
+    };
+  }
+  return {
+    ok: true,
+    maxFollowersDefault: preset.maxFollowers,
+    maxFollowersCeiling: ceiling.maxFollowers,
+  };
+}
+
+export function effectiveCopyMaxFollowers(input: {
+  deskMax: number | null | undefined;
+  ceiling: number | null | undefined;
+}): number | null {
+  const desk =
+    input.deskMax != null &&
+    Number.isInteger(input.deskMax) &&
+    input.deskMax >= 1
+      ? input.deskMax
+      : null;
+  const cap =
+    input.ceiling != null &&
+    Number.isInteger(input.ceiling) &&
+    input.ceiling >= 1
+      ? input.ceiling
+      : null;
+  if (desk == null) {
+    return cap;
+  }
+  if (cap == null) {
+    return desk;
+  }
+  return Math.min(desk, cap);
+}
+
+export function copyMaxFollowersWithinCeiling(
+  maxFollowers: number | null,
+  ceiling: number | null | undefined,
+): { ok: true; maxFollowers: number | null } | { ok: false; error: string } {
+  if (ceiling == null || !Number.isInteger(ceiling) || ceiling < 1) {
+    return { ok: true, maxFollowers };
+  }
+  if (maxFollowers == null) {
+    return { ok: true, maxFollowers: ceiling };
+  }
+  if (maxFollowers > ceiling) {
+    return {
+      ok: false,
+      error: `Maximum copy traders cannot be more than ${ceiling}.`,
+    };
+  }
+  return { ok: true, maxFollowers };
+}
+
+export function parseCopyMinBalanceUsdt(
+  value: unknown,
+): { ok: true; minBalanceUsdt: number | null } | { ok: false; error: string } {
+  const raw = String(value ?? "").trim().replace(/,/g, "");
+  if (!raw) {
+    return { ok: true, minBalanceUsdt: null };
+  }
+  const minBalanceUsdt = Number(raw);
+  if (!Number.isFinite(minBalanceUsdt) || minBalanceUsdt <= 0) {
+    return {
+      ok: false,
+      error: "Minimum account balance must be more than zero, or empty.",
+    };
+  }
+  return { ok: true, minBalanceUsdt };
+}
+
+export function copyMinBalanceMet(input: {
+  minBalanceUsdt: number | null | undefined;
+  mode: TradingAccountMode;
+  availableBalance: number | null | undefined;
+}): { ok: true } | { ok: false; code: CopyMinBalanceBlock; error: string } {
+  if (
+    input.minBalanceUsdt == null ||
+    !Number.isFinite(input.minBalanceUsdt) ||
+    input.minBalanceUsdt <= 0
+  ) {
+    return { ok: true };
+  }
+  if (input.mode !== "live") {
+    return { ok: true };
+  }
+  if (
+    input.availableBalance == null ||
+    !Number.isFinite(input.availableBalance)
+  ) {
+    return {
+      ok: false,
+      code: "unread",
+      error:
+        "Could not read available balance on this Live desk. Bind a key and try again.",
+    };
+  }
+  if (input.availableBalance + 1e-8 < input.minBalanceUsdt) {
+    return {
+      ok: false,
+      code: "below",
+      error: `This desk needs at least ${input.minBalanceUsdt} available to copy.`,
+    };
+  }
+  return { ok: true };
+}
+
 export function copyFollowerCapReached(input: {
   maxFollowers: number | null | undefined;
   followerCount: number;
+  ceiling?: number | null;
 }): boolean {
+  const maxFollowers = effectiveCopyMaxFollowers({
+    deskMax: input.maxFollowers,
+    ceiling: input.ceiling,
+  });
   if (
-    input.maxFollowers == null ||
-    !Number.isInteger(input.maxFollowers) ||
-    input.maxFollowers < 1
+    maxFollowers == null ||
+    !Number.isInteger(maxFollowers) ||
+    maxFollowers < 1
   ) {
     return false;
   }
   if (!Number.isFinite(input.followerCount) || input.followerCount < 0) {
     return false;
   }
-  return input.followerCount >= input.maxFollowers;
+  return input.followerCount >= maxFollowers;
 }
 
 export function copyActivityFloorMet(input: {
@@ -221,18 +368,26 @@ export function deskCopyListingFieldErrors(input: {
   visibility: unknown;
   description: unknown;
   maxFollowers?: unknown;
+  minBalanceUsdt?: unknown;
+  ceiling?: number | null;
 }): {
   visibility: string | null;
   description: string | null;
   maxFollowers: string | null;
+  minBalanceUsdt: string | null;
 } {
   const visibility = parseCopyVisibility(input.visibility);
   const description = parseCopyDescription(input.description);
   const maxFollowers = parseCopyMaxFollowers(input.maxFollowers);
+  const capped = maxFollowers.ok
+    ? copyMaxFollowersWithinCeiling(maxFollowers.maxFollowers, input.ceiling)
+    : maxFollowers;
+  const minBalance = parseCopyMinBalanceUsdt(input.minBalanceUsdt);
   return {
     visibility: visibility.ok ? null : visibility.error,
     description: description.ok ? null : description.error,
-    maxFollowers: maxFollowers.ok ? null : maxFollowers.error,
+    maxFollowers: capped.ok ? null : capped.error,
+    minBalanceUsdt: minBalance.ok ? null : minBalance.error,
   };
 }
 
@@ -240,12 +395,15 @@ export function parseDeskCopyListingForm(input: {
   visibility: unknown;
   description: unknown;
   maxFollowers?: unknown;
+  minBalanceUsdt?: unknown;
+  ceiling?: number | null;
 }):
   | {
       ok: true;
       visibility: CopyListingVisibility;
       description: string;
       maxFollowers: number | null;
+      minBalanceUsdt: number | null;
     }
   | { ok: false; error: string } {
   const fields = deskCopyListingFieldErrors(input);
@@ -258,17 +416,34 @@ export function parseDeskCopyListingForm(input: {
   if (fields.maxFollowers) {
     return { ok: false, error: fields.maxFollowers };
   }
+  if (fields.minBalanceUsdt) {
+    return { ok: false, error: fields.minBalanceUsdt };
+  }
   const visibility = parseCopyVisibility(input.visibility);
   const description = parseCopyDescription(input.description);
   const maxFollowers = parseCopyMaxFollowers(input.maxFollowers);
-  if (!visibility.ok || !description.ok || !maxFollowers.ok) {
+  const minBalance = parseCopyMinBalanceUsdt(input.minBalanceUsdt);
+  if (
+    !visibility.ok ||
+    !description.ok ||
+    !maxFollowers.ok ||
+    !minBalance.ok
+  ) {
     return { ok: false, error: "Check the share fields." };
+  }
+  const capped = copyMaxFollowersWithinCeiling(
+    maxFollowers.maxFollowers,
+    input.ceiling,
+  );
+  if (!capped.ok) {
+    return capped;
   }
   return {
     ok: true,
     visibility: visibility.visibility,
     description: description.description,
-    maxFollowers: maxFollowers.maxFollowers,
+    maxFollowers: capped.maxFollowers,
+    minBalanceUsdt: minBalance.minBalanceUsdt,
   };
 }
 

@@ -24,7 +24,8 @@ A connected desk can be **shared**. Other members create a **copy desk** of the 
 | Who may share | **Live + bound** only. Paper never. Unbound Live never. C&C never in v1. Unbind unlists / pauses new entries. |
 | Activity floor | First **venue fill** on that desk at least **N days** ago. `copy_min_activity_days` on `/admin/settings` (persisted, default **90**, **0 allowed** for tests). Share and catalogue enforce N server-side. |
 | Alias | Login **trader profile**, unique, required before first share. Email never shown. |
-| Desk brief | Required to share. Owner-written setup notes (hedge vs one-way, etc.). Venue, type, and Live are stamped; they cannot fake those. |
+| Desk brief | Required to share. Owner-written setup notes (hedge vs one-way, leverage, etc.). Venue, type, and Live are stamped; they cannot fake those. |
+| Copier gates | Optional **min available balance** on the listing. Live copy desks are checked at enable / unpause. Paper skips. Mode and leverage stay in the brief until a venue adapter can read them. |
 | What copies | **Fills**, not recipes or GTC ladders. Wait until the parent fill, then place on the follower. |
 | Sizing | Follower scale (% or USDT ratio). **Caps always win.** |
 | Follower UI | Own blotter + leader strip (alias, trader stats, desk stats, brief). No ticket, Automations, playbooks, webhooks, templates apply, or backtest-from-this-desk. |
@@ -52,9 +53,9 @@ Account nav gains **Copy desks** (catalogue). Sidebar shows a **Copy** badge on 
 ## Data shape
 
 - Login trader profile: alias (unique), optional bio
-- Persisted admin `copy_min_activity_days` and `copy_max_followers_default` (empty = no cap on new shares)
+- Persisted admin `copy_min_activity_days`, `copy_max_followers_default` (pre-fill only), and `copy_max_followers_ceiling` (hard cap; empty = no platform cap)
 - `trading_accounts.copy_of_account_id` (immutable when set)
-- Listing: `private` \| `public`, required description, optional `max_followers`
+- Listing: `private` \| `public`, required description, optional `max_followers`, optional `min_balance_usdt`
 - `desk_copy_shares` (email / user, invited / active / revoked)
 - Follower settings: scale, pause, max daily loss (caps stay on `strategy_settings`)
 - `desk_copy_receipts` for idempotency

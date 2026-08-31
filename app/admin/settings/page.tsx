@@ -21,6 +21,8 @@ export default async function AdminSettingsPage({
   const error = firstSearchValue(params.error);
   const copyDaysError = error === "copy-days";
   const copyFollowersError = error === "copy-followers";
+  const copyFollowersCeilingError = error === "copy-followers-ceiling";
+  const copyFollowersRangeError = error === "copy-followers-range";
   const [autoTick, copySettings] = await Promise.all([
     loadAutoTickEnabled(),
     loadCopyPlatformSettings(),
@@ -42,8 +44,17 @@ export default async function AdminSettingsPage({
       ) : null}
       {copyFollowersError ? (
         <p className="mt-4 text-sm text-danger">
-          Default maximum copy traders must be 1 or more, or empty for no
-          cap.
+          Default maximum copy traders must be 1 or more, or empty.
+        </p>
+      ) : null}
+      {copyFollowersCeilingError ? (
+        <p className="mt-4 text-sm text-danger">
+          Platform maximum copy traders must be 1 or more, or empty.
+        </p>
+      ) : null}
+      {copyFollowersRangeError ? (
+        <p className="mt-4 text-sm text-danger">
+          Default maximum copy traders cannot be above the platform maximum.
         </p>
       ) : null}
       <form
@@ -78,8 +89,24 @@ export default async function AdminSettingsPage({
             className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
           />
           <span className="mt-1 block text-xs text-ink-muted">
-            Pre-fills Maximum copy traders on a new share. The desk can
-            change it. Empty means new shares start with no cap.
+            Pre-fills Maximum copy traders on a new share. Does not cap the
+            desk. Empty means new shares start with no number filled.
+          </span>
+        </label>
+        <label className="block text-sm text-ink">
+          Copy trading — platform maximum copy traders
+          <input
+            type="number"
+            name="copyMaxFollowersCeiling"
+            min={1}
+            step={1}
+            defaultValue={copySettings.maxFollowersCeiling ?? ""}
+            placeholder="No platform cap"
+            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+          />
+          <span className="mt-1 block text-xs text-ink-muted">
+            Hard cap. A desk cannot save a higher number. Empty uses the
+            desk value, or no cap if the desk is also empty.
           </span>
         </label>
         <label className="flex items-start gap-2 text-sm text-ink">

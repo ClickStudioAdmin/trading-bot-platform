@@ -3,7 +3,7 @@
 import { AUTO_TICK_COOKIE } from "@/lib/admin/settings";
 import { requireAdmin } from "@/lib/admin/access";
 import {
-  parseCopyMaxFollowers,
+  parseCopyFollowerLimits,
   parseCopyMinActivityDays,
 } from "@/lib/copy/model";
 import { saveCopyPlatformSettings } from "@/lib/copy/settings";
@@ -18,13 +18,23 @@ export async function saveAdminSettings(formData: FormData) {
   if (!days.ok) {
     redirect("/admin/settings?error=copy-days");
   }
-  const cap = parseCopyMaxFollowers(formData.get("copyMaxFollowersDefault"));
-  if (!cap.ok) {
+  const limits = parseCopyFollowerLimits({
+    defaultValue: formData.get("copyMaxFollowersDefault"),
+    ceiling: formData.get("copyMaxFollowersCeiling"),
+  });
+  if (!limits.ok) {
+    if (limits.error.includes("above")) {
+      redirect("/admin/settings?error=copy-followers-range");
+    }
+    if (limits.error.includes("Platform maximum")) {
+      redirect("/admin/settings?error=copy-followers-ceiling");
+    }
     redirect("/admin/settings?error=copy-followers");
   }
   const savedCopy = await saveCopyPlatformSettings({
     minActivityDays: days.days,
-    maxFollowersDefault: cap.maxFollowers,
+    maxFollowersDefault: limits.maxFollowersDefault,
+    maxFollowersCeiling: limits.maxFollowersCeiling,
   });
   if (!savedCopy.ok) {
     redirect("/admin/settings?error=copy-days");
