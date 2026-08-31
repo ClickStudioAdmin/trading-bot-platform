@@ -43,10 +43,13 @@ export function DeskCopyShareCard({
         <p className="mt-2 text-xs text-ink-faint">{stamp}</p>
       </div>
       {block ? (
-        <p className="text-sm text-ink-muted">
+        <p
+          role="note"
+          className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
+        >
           {block}{" "}
           {needsAlias ? (
-            <Link href="/account/settings" className="text-accent">
+            <Link href="/account/settings" className="font-medium text-ink underline underline-offset-2">
               Open Account Settings
             </Link>
           ) : null}
