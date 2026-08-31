@@ -49,6 +49,7 @@ import {
   copyListingAcceptsFollowers,
   copyShareAllowsFanOut,
   copyShareCountsTowardCap,
+  copyUnfollowKeepsInvite,
   formatCopyInviteBlock,
   parseCopyInviteEmail,
   parseCopyToggle,
@@ -405,6 +406,9 @@ assert.equal(copyShareAllowsFanOut("active"), true);
 assert.equal(copyShareAllowsFanOut("invited"), true);
 assert.equal(copyShareAllowsFanOut(null), true);
 assert.equal(copyShareAllowsFanOut("revoked"), false);
+assert.equal(copyUnfollowKeepsInvite("private"), true);
+assert.equal(copyUnfollowKeepsInvite(null), true);
+assert.equal(copyUnfollowKeepsInvite("public"), false);
 assert.equal(parseCopyInviteEmail("  Ada@Click.studio ").ok, true);
 assert.equal(parseCopyInviteEmail("not-an-email").ok, false);
 const listingForInvite = {

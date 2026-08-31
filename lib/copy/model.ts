@@ -520,6 +520,13 @@ export function copyShareAllowsFanOut(
   return status !== "revoked";
 }
 
+/** Unfollow keeps a private invite. Catalogue follows drop the share row. */
+export function copyUnfollowKeepsInvite(
+  visibility: CopyListingVisibility | null | undefined,
+): boolean {
+  return visibility !== "public";
+}
+
 export function parseCopyShareStatus(
   value: unknown,
 ): { ok: true; status: CopyShareStatus } | { ok: false; error: string } {

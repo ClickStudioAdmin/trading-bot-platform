@@ -14,6 +14,7 @@ export function CopyDeskGuardsFields({
   defaultMaxDrawdownPct,
   defaultMaxAdverseMovePct,
   paper = false,
+  showReduceOnly = true,
 }: {
   defaultSizeMode?: CopySizeMode;
   defaultPercent?: string;
@@ -23,13 +24,15 @@ export function CopyDeskGuardsFields({
   defaultMaxDrawdownPct?: string;
   defaultMaxAdverseMovePct?: string;
   paper?: boolean;
+  showReduceOnly?: boolean;
 }) {
   return (
     <div className="space-y-4">
       <div>
         <p className="text-sm text-ink">Guards</p>
         <p className="mt-1 text-xs text-ink-muted">
-          Sizing follows the parent fill. Reduce-only blocks new entries. Max
+          Sizing follows the parent fill.
+          {showReduceOnly ? " Reduce-only blocks new entries." : ""} Max
           daily loss and max drawdown flatten and pause. Max adverse move skips
           a late entry. Position caps are parked until we design them.
         </p>
@@ -40,20 +43,22 @@ export function CopyDeskGuardsFields({
         defaultBookUsdt={defaultBookUsdt}
         paper={paper}
       />
-      <label className="flex items-start gap-2 text-sm text-ink">
-        <input
-          type="checkbox"
-          name="reduceOnly"
-          defaultChecked={defaultReduceOnly}
-          className="mt-0.5"
-        />
-        <span>
-          Reduce only
-          <span className="mt-1 block text-xs text-ink-muted">
-            Blocks new copied entries. Close still works.
+      {showReduceOnly ? (
+        <label className="flex items-start gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            name="reduceOnly"
+            defaultChecked={defaultReduceOnly}
+            className="mt-0.5"
+          />
+          <span>
+            Reduce only
+            <span className="mt-1 block text-xs text-ink-muted">
+              Blocks new copied entries. Close still works.
+            </span>
           </span>
-        </span>
-      </label>
+        </label>
+      ) : null}
       <label className="block text-sm text-ink">
         Max daily loss
         <span className="relative mt-1 block">

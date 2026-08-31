@@ -69,8 +69,8 @@ import {
   countOpenCopyShares,
   inviteDeskCopyShare,
   loadDeskCopyShares,
+  releaseDeskCopyShareByFollower,
   revokeDeskCopyShare,
-  revokeDeskCopyShareByFollower,
 } from "./shares";
 
 const SETTINGS_PATH = "/account/settings";
@@ -459,9 +459,6 @@ export async function createCopyDeskAction(formData: FormData) {
   if (!guards.ok) {
     return fail(guards.error);
   }
-  const reduceOnly =
-    formData.get("reduceOnly") === "on" ||
-    formData.get("reduceOnly") === "true";
   const goToDesk =
     formData.get("goToDesk") === "on" || formData.get("goToDesk") === "true";
   const mode = parseAccountMode(formData.get("mode"));
@@ -552,7 +549,7 @@ export async function createCopyDeskAction(formData: FormData) {
         user_id: member.id,
         account_id: created.id,
         strategy_id: FUTURES_STRATEGY_ID,
-        reduce_only: reduceOnly,
+        reduce_only: false,
         max_notional_per_symbol: null,
         max_open_rows: null,
         ...(connectionId ? { exchange_connection_id: connectionId } : {}),
@@ -576,7 +573,7 @@ export async function createCopyDeskAction(formData: FormData) {
       sizeMode: sized.sizeMode,
       sizePercent: sized.sizePercent,
       sizeBookUsdt: sized.sizeBookUsdt,
-      reduceOnly,
+      reduceOnly: false,
       maxDailyLossUsdt: guards.maxDailyLossUsdt,
       maxDrawdownPct: guards.maxDrawdownPct,
       maxAdverseMovePct: guards.maxAdverseMovePct,
@@ -730,12 +727,12 @@ export async function unfollowDeskCopyAction(formData: FormData) {
     accountId: account.id,
     paused: true,
   });
-  const revoked = await revokeDeskCopyShareByFollower({
+  const released = await releaseDeskCopyShareByFollower({
     parentAccountId: account.copyOfAccountId,
     toUserId: session.member.id,
   });
-  if (!revoked.ok) {
-    return fail(revoked.error);
+  if (!released.ok) {
+    return fail(released.error);
   }
   const deleted = await deleteTradingAccountRow(session.member.id, account.id);
   if (deleted.error) {

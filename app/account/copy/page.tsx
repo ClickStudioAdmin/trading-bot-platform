@@ -58,7 +58,8 @@ export default async function AccountCopyCataloguePage({
       ) : null}
       {unfollowed ? (
         <p className="mb-4 text-sm text-success">
-          You unfollowed that desk. The copy desk was deleted.
+          You unfollowed that desk. The copy desk was deleted. A
+          private invite still lets you follow again.
         </p>
       ) : null}
       <CopyCatalogueBoard

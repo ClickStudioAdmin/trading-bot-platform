@@ -27,7 +27,7 @@ export function CopyDeskHeaderActions({
   function onUnfollow(event: FormEvent<HTMLFormElement>) {
     if (
       !window.confirm(
-        "Unfollow this desk? Your copy desk will be deleted.",
+        "Unfollow this desk? Your copy desk will be deleted. A private invite stays so you can follow again.",
       )
     ) {
       event.preventDefault();
