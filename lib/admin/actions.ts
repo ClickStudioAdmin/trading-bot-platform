@@ -2,8 +2,11 @@
 
 import { AUTO_TICK_COOKIE } from "@/lib/admin/settings";
 import { requireAdmin } from "@/lib/admin/access";
-import { parseCopyMinActivityDays } from "@/lib/copy/model";
-import { saveCopyMinActivityDays } from "@/lib/copy/settings";
+import {
+  parseCopyMaxFollowers,
+  parseCopyMinActivityDays,
+} from "@/lib/copy/model";
+import { saveCopyPlatformSettings } from "@/lib/copy/settings";
 import { SESSION_DAYS } from "@/lib/auth/token";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
@@ -15,8 +18,15 @@ export async function saveAdminSettings(formData: FormData) {
   if (!days.ok) {
     redirect("/admin/settings?error=copy-days");
   }
-  const savedDays = await saveCopyMinActivityDays(days.days);
-  if (!savedDays.ok) {
+  const cap = parseCopyMaxFollowers(formData.get("copyMaxFollowersDefault"));
+  if (!cap.ok) {
+    redirect("/admin/settings?error=copy-followers");
+  }
+  const savedCopy = await saveCopyPlatformSettings({
+    minActivityDays: days.days,
+    maxFollowersDefault: cap.maxFollowers,
+  });
+  if (!savedCopy.ok) {
     redirect("/admin/settings?error=copy-days");
   }
   const enabled = formData.get("autoTick") === "on";

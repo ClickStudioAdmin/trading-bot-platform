@@ -29,6 +29,12 @@ export type DeskCopyListing = {
   accountId: string;
   visibility: CopyListingVisibility;
   description: string;
+  maxFollowers: number | null;
+};
+
+export type CopyPlatformSettings = {
+  minActivityDays: number;
+  maxFollowersDefault: number | null;
 };
 
 export function parseCopyMinActivityDays(
@@ -46,6 +52,46 @@ export function parseCopyMinActivityDays(
     return { ok: false, error: "Minimum activity days must be zero or more." };
   }
   return { ok: true, days };
+}
+
+export function parseCopyMaxFollowers(
+  value: unknown,
+): { ok: true; maxFollowers: number | null } | { ok: false; error: string } {
+  const raw = String(value ?? "").trim().replace(/,/g, "");
+  if (!raw) {
+    return { ok: true, maxFollowers: null };
+  }
+  if (!/^\d+$/.test(raw)) {
+    return {
+      ok: false,
+      error: "Maximum copy traders must be a whole number.",
+    };
+  }
+  const maxFollowers = Number(raw);
+  if (!Number.isInteger(maxFollowers) || maxFollowers < 1) {
+    return {
+      ok: false,
+      error: "Maximum copy traders must be 1 or more, or empty for no cap.",
+    };
+  }
+  return { ok: true, maxFollowers };
+}
+
+export function copyFollowerCapReached(input: {
+  maxFollowers: number | null | undefined;
+  followerCount: number;
+}): boolean {
+  if (
+    input.maxFollowers == null ||
+    !Number.isInteger(input.maxFollowers) ||
+    input.maxFollowers < 1
+  ) {
+    return false;
+  }
+  if (!Number.isFinite(input.followerCount) || input.followerCount < 0) {
+    return false;
+  }
+  return input.followerCount >= input.maxFollowers;
 }
 
 export function copyActivityFloorMet(input: {
@@ -174,20 +220,33 @@ export function parseTraderProfileForm(input: {
 export function deskCopyListingFieldErrors(input: {
   visibility: unknown;
   description: unknown;
-}): { visibility: string | null; description: string | null } {
+  maxFollowers?: unknown;
+}): {
+  visibility: string | null;
+  description: string | null;
+  maxFollowers: string | null;
+} {
   const visibility = parseCopyVisibility(input.visibility);
   const description = parseCopyDescription(input.description);
+  const maxFollowers = parseCopyMaxFollowers(input.maxFollowers);
   return {
     visibility: visibility.ok ? null : visibility.error,
     description: description.ok ? null : description.error,
+    maxFollowers: maxFollowers.ok ? null : maxFollowers.error,
   };
 }
 
 export function parseDeskCopyListingForm(input: {
   visibility: unknown;
   description: unknown;
+  maxFollowers?: unknown;
 }):
-  | { ok: true; visibility: CopyListingVisibility; description: string }
+  | {
+      ok: true;
+      visibility: CopyListingVisibility;
+      description: string;
+      maxFollowers: number | null;
+    }
   | { ok: false; error: string } {
   const fields = deskCopyListingFieldErrors(input);
   if (fields.visibility) {
@@ -196,15 +255,20 @@ export function parseDeskCopyListingForm(input: {
   if (fields.description) {
     return { ok: false, error: fields.description };
   }
+  if (fields.maxFollowers) {
+    return { ok: false, error: fields.maxFollowers };
+  }
   const visibility = parseCopyVisibility(input.visibility);
   const description = parseCopyDescription(input.description);
-  if (!visibility.ok || !description.ok) {
+  const maxFollowers = parseCopyMaxFollowers(input.maxFollowers);
+  if (!visibility.ok || !description.ok || !maxFollowers.ok) {
     return { ok: false, error: "Check the share fields." };
   }
   return {
     ok: true,
     visibility: visibility.visibility,
     description: description.description,
+    maxFollowers: maxFollowers.maxFollowers,
   };
 }
 

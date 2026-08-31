@@ -83,12 +83,14 @@ export async function saveDeskCopyListingAction(formData: FormData) {
   const parsed = parseDeskCopyListingForm({
     visibility: formData.get("visibility"),
     description: formData.get("description"),
+    maxFollowers: formData.get("maxFollowers"),
   });
   if (!parsed.ok) {
     redirect(settingsHref({ error: parsed.error }));
   } else {
     const visibility = parsed.visibility;
     const description = parsed.description;
+    const maxFollowers = parsed.maxFollowers;
     const [profile, firstFillMs, minDays, settings, existing] =
       await Promise.all([
         loadTraderProfile(session.member.id),
@@ -113,6 +115,7 @@ export async function saveDeskCopyListingAction(formData: FormData) {
       accountId: account.id,
       visibility,
       description,
+      maxFollowers,
     });
     if (!saved.ok) {
       redirect(settingsHref({ error: saved.error }));
@@ -123,10 +126,11 @@ export async function saveDeskCopyListingAction(formData: FormData) {
       message: existing ? "Updated desk share listing" : "Shared a desk",
       userId: session.member.id,
       accountId: account.id,
-      data: {
-        visibility,
-        live: accountCanHoldConnections(account.mode),
-      },
+    data: {
+      visibility,
+      maxFollowers,
+      live: accountCanHoldConnections(account.mode),
+    },
     });
     revalidatePath("/", "layout");
     redirect(settingsHref({ saved: "share" }));

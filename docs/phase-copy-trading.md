@@ -52,9 +52,9 @@ Account nav gains **Copy desks** (catalogue). Sidebar shows a **Copy** badge on 
 ## Data shape
 
 - Login trader profile: alias (unique), optional bio
-- Persisted admin `copy_min_activity_days`
+- Persisted admin `copy_min_activity_days` and `copy_max_followers_default` (empty = no cap on new shares)
 - `trading_accounts.copy_of_account_id` (immutable when set)
-- Listing: `private` \| `public`, required description
+- Listing: `private` \| `public`, required description, optional `max_followers`
 - `desk_copy_shares` (email / user, invited / active / revoked)
 - Follower settings: scale, pause, max daily loss (caps stay on `strategy_settings`)
 - `desk_copy_receipts` for idempotency

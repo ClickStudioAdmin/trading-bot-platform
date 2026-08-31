@@ -19,7 +19,7 @@ import {
 import { evaluateCopyShare } from "@/lib/copy/model";
 import { loadDeskCopyListing, loadFirstVenueFillMs } from "@/lib/copy/listings";
 import { loadTraderProfile } from "@/lib/copy/profile";
-import { loadCopyMinActivityDays } from "@/lib/copy/settings";
+import { loadCopyPlatformSettings } from "@/lib/copy/settings";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
 import {
   connectionIdsBoundToOtherDesks,
@@ -89,13 +89,13 @@ export default async function FuturesSettingsPage({
   const shareSaved = savedFlag === "share";
   const error = firstSearchValue(params.error);
   const copyDesk = deskIsCopy(session.account);
-  const [trader, listing, firstFillMs, minDays] = copyDesk
-    ? [null, null, null, 0] as const
+  const [trader, listing, firstFillMs, copySettings] = copyDesk
+    ? [null, null, null, { minActivityDays: 0, maxFollowersDefault: null }] as const
     : await Promise.all([
         loadTraderProfile(session.member.id),
         loadDeskCopyListing(session.account.id),
         loadFirstVenueFillMs(session.account.id),
-        loadCopyMinActivityDays(),
+        loadCopyPlatformSettings(),
       ]);
   const shareEval = copyDesk
     ? { code: null, block: null }
@@ -106,7 +106,7 @@ export default async function FuturesSettingsPage({
         bound: Boolean(settings.connectionId),
         alias: trader?.alias ?? null,
         firstFillMs,
-        minDays,
+        minDays: copySettings.minActivityDays,
       });
   const canSave = exchangeCredentialsConfigured();
   const settingsHref = deskHref(FUTURES_PATHS.settings, session.account.id);
@@ -259,6 +259,7 @@ export default async function FuturesSettingsPage({
             listing={listing}
             block={shareEval.block}
             needsAlias={shareEval.code === "no_alias"}
+            maxFollowersDefault={copySettings.maxFollowersDefault}
           />
         )}
       </div>

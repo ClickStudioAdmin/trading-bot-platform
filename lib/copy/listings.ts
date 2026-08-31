@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   parseCopyDescription,
+  parseCopyMaxFollowers,
   parseCopyVisibility,
   type CopyListingVisibility,
   type DeskCopyListing,
@@ -11,13 +12,15 @@ function parseListingRow(
 ): DeskCopyListing | null {
   const visibility = parseCopyVisibility(row.visibility);
   const description = parseCopyDescription(row.description);
-  if (!visibility.ok || !description.ok) {
+  const maxFollowers = parseCopyMaxFollowers(row.max_followers);
+  if (!visibility.ok || !description.ok || !maxFollowers.ok) {
     return null;
   }
   return {
     accountId: String(row.account_id),
     visibility: visibility.visibility,
     description: description.description,
+    maxFollowers: maxFollowers.maxFollowers,
   };
 }
 
@@ -30,7 +33,7 @@ export async function loadDeskCopyListing(
   }
   const { data, error } = await supabase
     .from("desk_copy_listings")
-    .select("account_id, visibility, description")
+    .select("account_id, visibility, description, max_followers")
     .eq("account_id", accountId)
     .maybeSingle();
   if (error || !data) {
@@ -68,6 +71,7 @@ export async function saveDeskCopyListing(input: {
   accountId: string;
   visibility: CopyListingVisibility;
   description: string;
+  maxFollowers: number | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -79,6 +83,7 @@ export async function saveDeskCopyListing(input: {
     account_id: input.accountId,
     visibility: input.visibility,
     description: input.description,
+    max_followers: input.maxFollowers,
     updated_at: now,
   };
   const { error } = existing
@@ -87,6 +92,7 @@ export async function saveDeskCopyListing(input: {
         .update({
           visibility: input.visibility,
           description: input.description,
+          max_followers: input.maxFollowers,
           updated_at: now,
         })
         .eq("account_id", input.accountId)

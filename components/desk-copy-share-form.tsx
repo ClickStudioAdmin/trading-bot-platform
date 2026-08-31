@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   formatDeskType,
   formatDeskVenueCaption,
@@ -19,11 +20,13 @@ export function DeskCopyShareCard({
   listing,
   block,
   needsAlias = false,
+  maxFollowersDefault = null,
 }: {
   account: TradingAccount;
   listing: DeskCopyListing | null;
   block: string | null;
   needsAlias?: boolean;
+  maxFollowersDefault?: number | null;
 }) {
   const modeLabel = account.mode === "live" ? "Live" : "Paper";
   const stamp = `${formatDeskType(account.deskType)} · ${formatDeskVenueCaption(account)} · ${modeLabel}`;
@@ -74,6 +77,27 @@ export function DeskCopyShareCard({
               placeholder="Hedge vs one-way, size, anything a copier should know."
               className={fieldClass}
             />
+          </label>
+          <label className="block text-sm text-ink">
+            Maximum copy traders
+            <GroupedNumberInput
+              name="maxFollowers"
+              defaultValue={
+                listing
+                  ? listing.maxFollowers == null
+                    ? ""
+                    : String(listing.maxFollowers)
+                  : maxFollowersDefault == null
+                    ? ""
+                    : String(maxFollowersDefault)
+              }
+              placeholder="No cap"
+              ariaLabel="Maximum copy traders"
+              className={fieldClass}
+            />
+            <span className="mt-1 block text-xs text-ink-faint">
+              Caps how many desks can copy this one. Empty means no cap.
+            </span>
           </label>
           <PendingSubmitButton
             pendingLabel="Saving…"

@@ -8,7 +8,9 @@ import {
   evaluateCopyShare,
   formatCopyShareBlock,
   MS_PER_DAY,
+  copyFollowerCapReached,
   parseCopyDescription,
+  parseCopyMaxFollowers,
   parseCopyMinActivityDays,
   parseCopyVisibility,
   parseDeskCopyListingForm,
@@ -36,6 +38,32 @@ assert.equal(ninety.ok, true);
 if (ninety.ok) {
   assert.equal(ninety.days, 90);
 }
+
+assert.equal(parseCopyMaxFollowers("").ok, true);
+const unlimited = parseCopyMaxFollowers("   ");
+assert.equal(unlimited.ok, true);
+if (unlimited.ok) {
+  assert.equal(unlimited.maxFollowers, null);
+}
+assert.equal(parseCopyMaxFollowers("0").ok, false);
+assert.equal(parseCopyMaxFollowers("1.5").ok, false);
+const ten = parseCopyMaxFollowers("10");
+assert.equal(ten.ok, true);
+if (ten.ok) {
+  assert.equal(ten.maxFollowers, 10);
+}
+assert.equal(
+  copyFollowerCapReached({ maxFollowers: null, followerCount: 99 }),
+  false,
+);
+assert.equal(
+  copyFollowerCapReached({ maxFollowers: 10, followerCount: 9 }),
+  false,
+);
+assert.equal(
+  copyFollowerCapReached({ maxFollowers: 10, followerCount: 10 }),
+  true,
+);
 
 const now = Date.UTC(2026, 7, 31);
 const firstFill = now - 90 * MS_PER_DAY;
@@ -118,7 +146,25 @@ const listing = parseDeskCopyListingForm({
 assert.equal(listing.ok, true);
 if (listing.ok) {
   assert.equal(listing.visibility, "public");
+  assert.equal(listing.maxFollowers, null);
 }
+const capped = parseDeskCopyListingForm({
+  visibility: "private",
+  description: "One-way BTC. Caps on.",
+  maxFollowers: "25",
+});
+assert.equal(capped.ok, true);
+if (capped.ok) {
+  assert.equal(capped.maxFollowers, 25);
+}
+assert.equal(
+  parseDeskCopyListingForm({
+    visibility: "public",
+    description: "Brief",
+    maxFollowers: "0",
+  }).ok,
+  false,
+);
 
 const shareBase = {
   mode: "live" as const,
