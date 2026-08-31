@@ -7,6 +7,7 @@ import {
   copyDrawdownBreached,
   copyFillIsEntry,
   copyFillPlaceAction,
+  copyMinOrderRetryUsdt,
   copyOpenNotionalState,
   copyPaperEquity,
   copyPaperEquityView,
@@ -15,6 +16,7 @@ import {
   copyParentFillPrice,
   copyUtcDayStartMs,
   decideCopyFanOut,
+  parentCopyBookUsdt,
   type CopyParentFill,
 } from "./decide";
 
@@ -180,6 +182,38 @@ assert.equal(copyDrawdownBreached({
   peakUsdt: 10_000,
   maxDrawdownPct: 20,
 }), true);
+assert.equal(
+  parentCopyBookUsdt({ availableBalance: 80, marginBalance: 100 }),
+  80,
+);
+assert.equal(
+  parentCopyBookUsdt({ availableBalance: 0, marginBalance: 100 }),
+  100,
+);
+assert.equal(
+  parentCopyBookUsdt({ availableBalance: null, marginBalance: 100 }),
+  100,
+);
+assert.equal(
+  parentCopyBookUsdt({ availableBalance: 0, marginBalance: 0 }),
+  null,
+);
+assert.equal(
+  copyMinOrderRetryUsdt({
+    error: "Minimum order is $100.00 (0.001 BTC).",
+    sizedUsdt: 20,
+    followerAvailableUsdt: 10_000,
+  }),
+  100,
+);
+assert.equal(
+  copyMinOrderRetryUsdt({
+    error: "Minimum order is $100.00 (0.001 BTC).",
+    sizedUsdt: 20,
+    followerAvailableUsdt: 50,
+  }),
+  null,
+);
 assert.equal(copyParentFillPrice({ price: 50, qty: 2, notionalUsdt: 80 }), 50);
 assert.equal(copyParentFillPrice({ price: null, qty: 2, notionalUsdt: 80 }), 40);
 assert.equal(

@@ -513,6 +513,13 @@ export function copyShareCountsTowardCap(status: CopyShareStatus): boolean {
   return status === "invited" || status === "active";
 }
 
+/** A copy desk follows until the grant is revoked. Missing share still copies. */
+export function copyShareAllowsFanOut(
+  status: CopyShareStatus | null | undefined,
+): boolean {
+  return status !== "revoked";
+}
+
 export function parseCopyShareStatus(
   value: unknown,
 ): { ok: true; status: CopyShareStatus } | { ok: false; error: string } {

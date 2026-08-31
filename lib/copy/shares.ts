@@ -17,7 +17,7 @@ function parseShareRow(row: Record<string, unknown>): DeskCopyShare | null {
   const fromUserId = String(row.from_user_id ?? "").trim();
   const toUserId = String(row.to_user_id ?? "").trim();
   const invitedEmail = String(row.invited_email ?? "").trim().toLowerCase();
-  if (!id || !parentAccountId || !fromUserId || !toUserId || !invitedEmail) {
+  if (!id || !parentAccountId || !fromUserId || !toUserId) {
     return null;
   }
   return {

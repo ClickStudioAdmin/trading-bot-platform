@@ -39,6 +39,7 @@ export async function insertFuturesOrder(
     qty: input.qty,
     price: input.price,
     notional_usdt: input.notionalUsdt,
+    filled_at: new Date().toISOString(),
     source: parseFuturesTradeSource(input.source),
     venue: input.venue ?? null,
     environment: input.environment ?? null,

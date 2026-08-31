@@ -45,6 +45,42 @@ export function copyFillIsEntry(action: CopyParentFill["action"]): boolean {
   return action === "buy" || action === "sell";
 }
 
+/** Prefer leftover available; a desk already in trades often reports 0. */
+export function parentCopyBookUsdt(input: {
+  availableBalance: number | null;
+  marginBalance: number | null;
+}): number | null {
+  if (input.availableBalance != null && input.availableBalance > 0) {
+    return input.availableBalance;
+  }
+  if (input.marginBalance != null && input.marginBalance > 0) {
+    return input.marginBalance;
+  }
+  return null;
+}
+
+export function copyMinOrderRetryUsdt(input: {
+  error: string;
+  sizedUsdt: number;
+  followerAvailableUsdt: number;
+}): number | null {
+  const match = input.error.match(/Minimum order(?: value)? is \$([0-9,.]+)/i);
+  if (!match) {
+    return null;
+  }
+  const minUsdt = Number(match[1].replace(/,/g, ""));
+  if (!(minUsdt > 0) || !Number.isFinite(minUsdt)) {
+    return null;
+  }
+  if (minUsdt <= input.sizedUsdt + 1e-8) {
+    return null;
+  }
+  if (minUsdt > input.followerAvailableUsdt + 1e-8) {
+    return null;
+  }
+  return minUsdt;
+}
+
 export function copyParentFillNotional(input: {
   notionalUsdt: number | null;
   qty: number;

@@ -336,8 +336,17 @@ export async function runFuturesCommand(input: {
         accountId: input.actor.accountId,
         userId: input.actor.userId,
       });
-    } catch {
-      // Fan-out logs its own failures. Do not fail the parent fill.
+    } catch (cause) {
+      await writeEventLog({
+        level: "error",
+        scope: "trade",
+        event: "copy.fanout_failed",
+        message:
+          cause instanceof Error ? cause.message : "Copy fan-out failed",
+        userId: input.actor.userId,
+        accountId: input.actor.accountId,
+        strategy: FUTURES_STRATEGY_ID,
+      });
     }
   }
   return { ok: true, flash: outcome.flash };
