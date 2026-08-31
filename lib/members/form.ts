@@ -57,14 +57,20 @@ export function parseMemberForm(
   };
 }
 
-export function parseOwnProfile(
-  formData: FormData,
+export function parseOwnProfileName(
+  value: unknown,
 ): { ok: true; name: string } | { ok: false; error: string } {
-  const name = String(formData.get("name") ?? "").trim();
+  const name = String(value ?? "").trim();
   if (name.length < 1 || name.length > 80) {
     return { ok: false, error: "Enter a name up to 80 characters." };
   }
   return { ok: true, name };
+}
+
+export function parseOwnProfile(
+  formData: FormData,
+): { ok: true; name: string } | { ok: false; error: string } {
+  return parseOwnProfileName(formData.get("name"));
 }
 
 export function parseOwnPasswordChange(

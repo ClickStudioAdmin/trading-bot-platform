@@ -67,12 +67,16 @@ assert.equal(
 assert.equal(parseTraderAlias("").ok, false);
 assert.equal(parseTraderAlias("a").ok, false);
 assert.equal(parseTraderAlias("1click").ok, false);
-assert.equal(parseTraderAlias("click studio").ok, false);
 assert.equal(parseTraderAlias("click!").ok, false);
 const alias = parseTraderAlias(" Click_desk-1 ");
 assert.equal(alias.ok, true);
 if (alias.ok) {
   assert.equal(alias.alias, "Click_desk-1");
+}
+const spaced = parseTraderAlias("  Click   Studio  ");
+assert.equal(spaced.ok, true);
+if (spaced.ok) {
+  assert.equal(spaced.alias, "Click Studio");
 }
 assert.equal(parseTraderAlias("x".repeat(33)).ok, false);
 

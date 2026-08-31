@@ -185,7 +185,7 @@ export default async function AccountSettingsPage({
               className={fieldClass}
             />
             <span className="mt-1 block text-xs text-ink-faint">
-              2–32 characters. Letters, numbers, _ and -. Start with a letter.
+              2–32 characters. Letters, numbers, spaces, _ and -. Start with a letter.
             </span>
           </label>
           <label className="block text-xs text-ink-muted">

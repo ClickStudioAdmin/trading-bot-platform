@@ -71,7 +71,7 @@ export function copyActivityFloorMet(input: {
 export function parseTraderAlias(
   value: unknown,
 ): { ok: true; alias: string } | { ok: false; error: string } {
-  const alias = String(value ?? "").trim();
+  const alias = String(value ?? "").trim().replace(/\s+/g, " ");
   if (!alias) {
     return { ok: false, error: "Enter a trader alias." };
   }
@@ -84,11 +84,11 @@ export function parseTraderAlias(
       error: `Trader alias must be ${TRADER_ALIAS_MIN} to ${TRADER_ALIAS_MAX} characters.`,
     };
   }
-  if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(alias)) {
+  if (!/^[A-Za-z][A-Za-z0-9_ -]*$/.test(alias)) {
     return {
       ok: false,
       error:
-        "Use letters, numbers, underscore, or hyphen. Start with a letter.",
+        "Use letters, numbers, spaces, underscore, or hyphen. Start with a letter.",
     };
   }
   return { ok: true, alias };
@@ -138,21 +138,49 @@ export function parseCopyDescription(
   return { ok: true, description };
 }
 
+export function traderProfileFieldErrors(input: {
+  alias: unknown;
+  bio: unknown;
+}): { alias: string | null; bio: string | null } {
+  const alias = parseTraderAlias(input.alias);
+  const bio = parseTraderBio(input.bio);
+  return {
+    alias: alias.ok ? null : alias.error,
+    bio: bio.ok ? null : bio.error,
+  };
+}
+
 export function parseTraderProfileForm(input: {
   alias: unknown;
   bio: unknown;
 }):
   | { ok: true; alias: string; bio: string | null }
   | { ok: false; error: string } {
-  const alias = parseTraderAlias(input.alias);
-  if (!alias.ok) {
-    return alias;
+  const fields = traderProfileFieldErrors(input);
+  if (fields.alias) {
+    return { ok: false, error: fields.alias };
   }
+  if (fields.bio) {
+    return { ok: false, error: fields.bio };
+  }
+  const alias = parseTraderAlias(input.alias);
   const bio = parseTraderBio(input.bio);
-  if (!bio.ok) {
-    return bio;
+  if (!alias.ok || !bio.ok) {
+    return { ok: false, error: "Check the trader profile fields." };
   }
   return { ok: true, alias: alias.alias, bio: bio.bio };
+}
+
+export function deskCopyListingFieldErrors(input: {
+  visibility: unknown;
+  description: unknown;
+}): { visibility: string | null; description: string | null } {
+  const visibility = parseCopyVisibility(input.visibility);
+  const description = parseCopyDescription(input.description);
+  return {
+    visibility: visibility.ok ? null : visibility.error,
+    description: description.ok ? null : description.error,
+  };
 }
 
 export function parseDeskCopyListingForm(input: {
@@ -161,13 +189,17 @@ export function parseDeskCopyListingForm(input: {
 }):
   | { ok: true; visibility: CopyListingVisibility; description: string }
   | { ok: false; error: string } {
-  const visibility = parseCopyVisibility(input.visibility);
-  if (!visibility.ok) {
-    return visibility;
+  const fields = deskCopyListingFieldErrors(input);
+  if (fields.visibility) {
+    return { ok: false, error: fields.visibility };
   }
+  if (fields.description) {
+    return { ok: false, error: fields.description };
+  }
+  const visibility = parseCopyVisibility(input.visibility);
   const description = parseCopyDescription(input.description);
-  if (!description.ok) {
-    return description;
+  if (!visibility.ok || !description.ok) {
+    return { ok: false, error: "Check the share fields." };
   }
   return {
     ok: true,
