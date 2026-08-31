@@ -48,7 +48,7 @@ export function CopyFollowButton({
 
   if (following) {
     return (
-      <p className="rounded-control border border-line px-2.5 py-1 text-xs text-ink-muted">
+      <p className="rounded-control border border-line px-4 py-2 text-center text-sm text-ink-muted">
         Following
       </p>
     );

@@ -429,6 +429,7 @@ export type DeskStatItem = {
   label: string;
   value: string;
   toneClass?: string;
+  content?: ReactNode;
 };
 
 export function FuturesPerformanceStats({
@@ -482,6 +483,7 @@ export function FuturesPerformanceStats({
           label={item.label}
           value={item.value}
           toneClass={item.toneClass}
+          content={item.content}
           raised={embedded}
         />
       ))}
@@ -912,11 +914,13 @@ function StatCard({
   label,
   value,
   toneClass,
+  content,
   raised = false,
 }: {
   label: string;
   value: string;
   toneClass?: string;
+  content?: ReactNode;
   raised?: boolean;
 }) {
   return (
@@ -925,7 +929,16 @@ function StatCard({
         raised ? "bg-surface-raised" : "bg-surface"
       }`}
     >
-      <StatBlock label={label} value={value} toneClass={toneClass} />
+      {content ? (
+        <div>
+          <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+            {label}
+          </p>
+          <div className="mt-3">{content}</div>
+        </div>
+      ) : (
+        <StatBlock label={label} value={value} toneClass={toneClass} />
+      )}
     </div>
   );
 }
