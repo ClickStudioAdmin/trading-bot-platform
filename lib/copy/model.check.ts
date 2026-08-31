@@ -25,6 +25,7 @@ import {
   parseCopyVisibility,
   copyInviteBlockCode,
   copyOwnerFollowerLabel,
+  copyOwnerFollowerSituation,
   copyListingAcceptsFollowers,
   copyShareCountsTowardCap,
   formatCopyInviteBlock,
@@ -562,6 +563,62 @@ assert.equal(
     toUserId: "user-1",
   }),
   "member@email",
+);
+assert.deepEqual(
+  copyOwnerFollowerSituation({
+    status: "invited",
+    visibility: "private",
+    sharingEnabled: true,
+    invitedOn: "31/08/2026",
+    updatedOn: "31/08/2026",
+  }),
+  {
+    statusLabel: "Invited",
+    sourceLabel: "Private invite",
+    detail: "Waiting to create a copy desk · invited 31/08/2026",
+  },
+);
+assert.deepEqual(
+  copyOwnerFollowerSituation({
+    status: "invited",
+    visibility: "private",
+    sharingEnabled: false,
+    invitedOn: "31/08/2026",
+    updatedOn: "31/08/2026",
+  }),
+  {
+    statusLabel: "Invited",
+    sourceLabel: "Private invite",
+    detail: "Invite paused · desk unavailable · invited 31/08/2026",
+  },
+);
+assert.deepEqual(
+  copyOwnerFollowerSituation({
+    status: "active",
+    visibility: "public",
+    sharingEnabled: true,
+    invitedOn: "01/08/2026",
+    updatedOn: "31/08/2026",
+  }),
+  {
+    statusLabel: "Following",
+    sourceLabel: "Catalogue",
+    detail: "Copying this desk · since 01/08/2026",
+  },
+);
+assert.deepEqual(
+  copyOwnerFollowerSituation({
+    status: "revoked",
+    visibility: "private",
+    sharingEnabled: true,
+    invitedOn: "01/08/2026",
+    updatedOn: "31/08/2026",
+  }),
+  {
+    statusLabel: "Revoked",
+    sourceLabel: "Private invite",
+    detail: "Revoked 31/08/2026",
+  },
 );
 
 assert.equal(evaluateCopyShare({ ...shareBase, alias: "" }).code, "no_alias");

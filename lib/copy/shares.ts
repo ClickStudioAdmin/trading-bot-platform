@@ -67,6 +67,8 @@ export async function loadDeskCopyFollowerViews(
     status: share.status,
     invitedEmail: share.invitedEmail,
     toUserId: share.toUserId,
+    createdAt: share.createdAt,
+    updatedAt: share.updatedAt,
   }));
 }
 

@@ -66,7 +66,53 @@ export type DeskCopyFollowerView = {
   status: CopyShareStatus;
   invitedEmail: string;
   toUserId: string;
+  createdAt: string;
+  updatedAt: string;
 };
+
+export type CopyOwnerFollowerSituation = {
+  statusLabel: string;
+  sourceLabel: string;
+  detail: string;
+};
+
+export function copyOwnerFollowerSituation(input: {
+  status: CopyShareStatus;
+  visibility: CopyListingVisibility | null | undefined;
+  sharingEnabled: boolean;
+  invitedOn: string | null;
+  updatedOn: string | null;
+}): CopyOwnerFollowerSituation {
+  const sourceLabel =
+    input.visibility === "public" ? "Catalogue" : "Private invite";
+  if (input.status === "revoked") {
+    return {
+      statusLabel: "Revoked",
+      sourceLabel,
+      detail: input.updatedOn
+        ? `Revoked ${input.updatedOn}`
+        : "Invite revoked",
+    };
+  }
+  if (input.status === "active") {
+    const since = input.invitedOn ? ` · since ${input.invitedOn}` : "";
+    return {
+      statusLabel: "Following",
+      sourceLabel,
+      detail: input.sharingEnabled
+        ? `Copying this desk${since}`
+        : `Copy desk stays · parent unavailable${since}`,
+    };
+  }
+  const invited = input.invitedOn ? ` · invited ${input.invitedOn}` : "";
+  return {
+    statusLabel: "Invited",
+    sourceLabel,
+    detail: input.sharingEnabled
+      ? `Waiting to create a copy desk${invited}`
+      : `Invite paused · desk unavailable${invited}`,
+  };
+}
 
 export function copyOwnerFollowerLabel(input: {
   visibility: CopyListingVisibility | null | undefined;

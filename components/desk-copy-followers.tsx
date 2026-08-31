@@ -6,22 +6,29 @@ import {
 import {
   COPY_FOLLOWING_UNAVAILABLE,
   copyOwnerFollowerLabel,
+  copyOwnerFollowerSituation,
   copyShareCountsTowardCap,
   type DeskCopyFollowerView,
   type DeskCopyListing,
 } from "@/lib/copy/model";
+import { formatAuDateUtc, parseDisplayTime } from "@/lib/time/display";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 
-function shareStatusLabel(status: DeskCopyFollowerView["status"]): string {
-  if (status === "invited") {
-    return "Invited";
-  }
+function formatShareDay(value: string): string | null {
+  const ms = parseDisplayTime(value);
+  return ms == null ? null : formatAuDateUtc(ms);
+}
+
+function statusTone(status: DeskCopyFollowerView["status"]): string {
   if (status === "active") {
-    return "Following";
+    return "text-success";
   }
-  return "Revoked";
+  if (status === "revoked") {
+    return "text-ink-faint";
+  }
+  return "text-accent";
 }
 
 export function DeskCopyFollowersList({
@@ -50,37 +57,58 @@ export function DeskCopyFollowersList({
         <p className="text-sm text-ink-faint">No followers yet.</p>
       ) : (
         <ul className="space-y-2">
-          {followers.map((follower) => (
-            <li
-              key={follower.id}
-              className="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2"
-            >
-              <span className="min-w-0">
-                <span className="block truncate text-sm text-ink">
-                  {copyOwnerFollowerLabel({
-                    visibility: listing?.visibility,
-                    invitedEmail: follower.invitedEmail,
-                    toUserId: follower.toUserId,
-                  })}
+          {followers.map((follower) => {
+            const situation = copyOwnerFollowerSituation({
+              status: follower.status,
+              visibility: listing?.visibility,
+              sharingEnabled: listing?.sharingEnabled ?? false,
+              invitedOn: formatShareDay(follower.createdAt),
+              updatedOn: formatShareDay(follower.updatedAt),
+            });
+            return (
+              <li
+                key={follower.id}
+                className="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm text-ink">
+                    {copyOwnerFollowerLabel({
+                      visibility: listing?.visibility,
+                      invitedEmail: follower.invitedEmail,
+                      toUserId: follower.toUserId,
+                    })}
+                  </span>
                 </span>
-                <span className="text-xs text-ink-faint">
-                  {shareStatusLabel(follower.status)}
-                </span>
-              </span>
-              {follower.status === "revoked" ? null : (
-                <form action={revokeDeskCopyShareAction}>
-                  <input type="hidden" name="shareId" value={follower.id} />
-                  <PendingSubmitButton
-                    pendingLabel="Revoking…"
-                    successKey={`revoke-desk-copy-${follower.id}`}
-                    className="rounded-control border border-line px-3 py-1.5 text-xs text-danger hover:bg-danger/10"
+                <span className="min-w-0 flex-1">
+                  <span
+                    className={`block text-xs font-medium ${statusTone(follower.status)}`}
                   >
-                    Revoke
-                  </PendingSubmitButton>
-                </form>
-              )}
-            </li>
-          ))}
+                    {situation.statusLabel}
+                  </span>
+                  <span className="block text-xs text-ink-muted">
+                    {situation.sourceLabel}
+                  </span>
+                  <span className="block text-xs text-ink-faint">
+                    {situation.detail}
+                  </span>
+                </span>
+                {follower.status === "revoked" ? (
+                  <span className="w-[4.5rem] shrink-0" />
+                ) : (
+                  <form action={revokeDeskCopyShareAction} className="shrink-0">
+                    <input type="hidden" name="shareId" value={follower.id} />
+                    <PendingSubmitButton
+                      pendingLabel="Revoking…"
+                      successKey={`revoke-desk-copy-${follower.id}`}
+                      className="rounded-control border border-line px-3 py-1.5 text-xs text-danger hover:bg-danger/10"
+                    >
+                      Revoke
+                    </PendingSubmitButton>
+                  </form>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
