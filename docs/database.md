@@ -41,7 +41,7 @@ Current tables:
 | `desk_copy_favorites` | copy | Login bookmarks a parent desk. Unique `(user_id, account_id)`. Own-row select. Service-role writes. |
 | `futures_desk_stats` | copy | One snapshot per futures desk (shared or not; not C&C). All-time and 30d realized USDT / %, closed count, win count, max drawdown USDT / % from realized peak-to-trough. Written after a flatten and on catalogue backfill of missing rows. Authenticated select for own desk or a catalogue-visible desk. Service-role writes. |
 | `desk_copy_settings` | copy | Unused `scale` intensity (create writes `1`; column default 0.1). `size_mode` is `balance` (real available), `percent` (`size_percent` 0–100 of available), or `fixed` (`size_book_usdt` dummy book; engine pauses if available is below the book). Engine sizes parent fill × follower book / parent available. Pause (stops new copies), optional max daily loss / max open notional (flatten-on-breach is engine step 9). Only on a desk with `copy_of_account_id`. Desk caps and reduce-only still win. Unfollow revokes the grant and deletes the copy desk after it is flat, and not if it is the last desk. |
-| `desk_copy_receipts` | copy | Idempotency `(follower_account_id, parent_fill_id)`. |
+| `desk_copy_receipts` | copy | Idempotency `(follower_account_id, parent_fill_id)`. Engine writes after a copied fill or an intentional skip so the same parent fill cannot double-place. |
 
 Phase 4 rules migrations: `supabase/migrations/20260822160000_paper_rules.sql` then `supabase/migrations/20260822170000_paper_rule_layers.sql`.
 

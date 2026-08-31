@@ -8,7 +8,7 @@ Closest shipped analog: TradingView Strategy — same blotter as the job, **desk
 
 ## Status
 
-Started 31 Aug 2026. Steps 1–8 are in repo. Stop after each step until Click says go. Push `develop` to migrate.
+Started 31 Aug 2026. Steps 1–9 are in repo. Stop after each step until Click says go. Push `develop` to migrate. Next is step 10 (your desk test).
 
 ## Purpose
 
@@ -33,7 +33,7 @@ A connected desk can be **shared**. Other members create a **copy desk** of the 
 | Modes | Parent never Paper. Paper follower of a connected Live parent is allowed. Venue and environment must match. |
 | Types (v1) | `perps`, `perps_bots`, `signal_follower`, `dca`. |
 | Stats | **Snapshotted** on every futures desk (shared or not; not C&C). All-time and 30d realized P&L, win count, and max drawdown from realized peak-to-trough (close-time order). Catalogue reads the snapshot. Trader stats: unique followers, visible desk count, first shared. No rolled-up P&L across desks. No AUM, profit share, Sharpe, or views. |
-| Engine | Fly worker / tick. Idempotency `parent_fill_id + follower_account_id`. One desk lease. Browser never sees parent keys or recipes. |
+| Engine | Fly worker / tick. Parent desk tick after reconcile (and after bots on that desk). Fills only, market on the follower. Idempotency `desk_copy_receipts` plus command key = parent fill id. One desk lease. Browser never sees parent keys or recipes. Paper equity starts at 10,000 USDT plus realized and unrealized. |
 
 ## Product shape
 
@@ -76,7 +76,7 @@ RLS: catalogue is public + sharing-on listings, or the viewer’s open private g
 | 6 | Catalogue + stats | Agent | One catalogue (public + my private invites). Private badge and filter. Favorites. Subscribed = currently following. Snapshotted desk stats including max drawdown. Trader page (desks visible to the viewer). Copy CTA disabled until step 7. **In repo 31 Aug 2026.** |
 | 7 | Create copy desk | Agent | Copy path stamps type/venue. Follower picks Paper or Live and a sizing book. **In repo 31 Aug 2026.** |
 | 8 | Follower chrome | Agent | Leader strip. Caps, reduce-only, max daily loss. Pause / unfollow. Close All. **In repo 31 Aug 2026.** |
-| 9 | Engine fan-out | Agent | Parent fill → resolve follower book → size → guards → `runFuturesCommand` or paper ledger. Fixed book below available pauses. Idempotent. Checks for skip/double-place. |
+| 9 | Engine fan-out | Agent | Parent fill → resolve follower book → size → guards → `runFuturesCommand` or paper ledger. Fixed book below available pauses. Idempotent. Checks for skip/double-place. **In repo 31 Aug 2026.** |
 | 10 | Desk test | Click | Set N to 0. Private and public share. Copy from invite and catalogue. Paper follower of a Live parent. Small Live clip. Paper and unbound cannot share. Normal desks untouched. |
 
 ## Out of scope

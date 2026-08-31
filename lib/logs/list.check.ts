@@ -54,6 +54,8 @@ assert.ok(
 assert.ok(
   eventLogOptionsForScopes(["system"]).includes("copy.desk_created"),
 );
+assert.ok(eventLogOptionsForScopes(["trade"]).includes("copy.copied"));
+assert.ok(eventLogOptionsForScopes(["trade"]).includes("copy.breach_flattened"));
 assert.equal(
   eventLogOptionsForScopes(["trade"]).includes("member.created"),
   false,

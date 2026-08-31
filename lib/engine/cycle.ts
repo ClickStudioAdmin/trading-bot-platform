@@ -34,6 +34,7 @@ import {
 import { scanCarryOpportunities } from "@/lib/opportunities/scan";
 import type { ScannedOpportunity } from "@/lib/opportunities/scan";
 import { runFuturesAutomationTick } from "@/lib/futures/automation-tick";
+import { fanOutCopyFills } from "@/lib/copy/fan-out";
 import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { writeEventLog } from "@/lib/logs/write";
 import { processOneQueuedBacktest } from "@/lib/backtest/execute";
@@ -315,14 +316,31 @@ async function runDeskTick(input: {
       accountId: input.accountId,
       tickers,
     });
-    return { ...empty, userId };
-  }
-  if (deskType === "dca" && !copyDesk) {
+  } else if (deskType === "dca" && !copyDesk) {
     await runDcaPlaybookTick({
       accountId: input.accountId,
       tickers,
     });
-    return { ...empty, userId };
+  }
+  if (!copyDesk) {
+    try {
+      await fanOutCopyFills({
+        parentAccountId: input.accountId,
+        parentUserId: userId,
+        tickers,
+      });
+    } catch (cause) {
+      await writeEventLog({
+        level: "error",
+        scope: "trade",
+        event: "copy.fanout_failed",
+        message:
+          cause instanceof Error ? cause.message : "Copy fan-out failed",
+        userId,
+        accountId: input.accountId,
+        strategy: FUTURES_STRATEGY_ID,
+      });
+    }
   }
   return { ...empty, userId };
 }
