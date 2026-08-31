@@ -21,6 +21,8 @@ import {
   copyFollowerAlreadyJoined,
   copyFollowerCloseKey,
   copyShouldFlattenWithParent,
+  copyShouldSkipDuplicateEntry,
+  copyWorkingSkipReceiptKey,
   copyLiveLadderFitsVenue,
   copyWorkingIdempotencyKey,
   copyWorkingLooksDca,
@@ -219,6 +221,26 @@ assert.equal(
   false,
 );
 assert.match(copyFollowerCloseKey("11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"), /^cfl-/);
+assert.equal(
+  copyShouldSkipDuplicateEntry({
+    parentEntryCount: 2,
+    followerEntryCount: 2,
+  }),
+  true,
+);
+assert.equal(
+  copyShouldSkipDuplicateEntry({
+    parentEntryCount: 2,
+    followerEntryCount: 1,
+  }),
+  false,
+);
+assert.equal(
+  copyWorkingSkipReceiptKey("27513ab0-4d7b-4837-bc1e-40e44fccb950").startsWith(
+    "wsk-",
+  ),
+  true,
+);
 assert.deepEqual(
   decideCopyFanOut({
     ...base,

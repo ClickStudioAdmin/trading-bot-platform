@@ -406,6 +406,7 @@ async function applyWorkingFill(input: {
       trailing,
       source: input.row.source,
       ruleName: input.row.ruleName,
+      idempotencyKey: input.row.idempotencyKey,
     });
     if (!created.ok) {
       await writeEventLog({
@@ -434,6 +435,7 @@ async function applyWorkingFill(input: {
       trailing,
       source: input.row.source,
       ruleName: input.row.ruleName,
+      idempotencyKey: input.row.idempotencyKey,
     });
     if (added.error) {
       await writeEventLog({

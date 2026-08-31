@@ -67,7 +67,7 @@ export default async function CopyDeskPerformancePage({
     <>
       <p className="mb-3 text-sm">
         <Link href="/account/copy" className="text-accent">
-          Copy desks
+          Copy Desks
         </Link>
       </p>
       <CopyDeskDetailsHeader card={card}>

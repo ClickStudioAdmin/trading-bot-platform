@@ -44,6 +44,8 @@ import {
   copyFollowerAlreadyJoined,
   copyFollowerCloseKey,
   copyShouldFlattenWithParent,
+  copyShouldSkipDuplicateEntry,
+  copyWorkingSkipReceiptKey,
   copyParentFillNotional,
   copyParentFillPrice,
   copyParentWorkingNotional,
@@ -269,6 +271,7 @@ async function loadParentCopyFills(
         notionalUsdt: Number(row.notional_usdt) || null,
       }),
       filledAtMs: filledAt,
+      idempotencyKey: String(row.idempotency_key ?? "").trim() || null,
     });
   }
   return fills.sort(
@@ -399,6 +402,10 @@ async function fanOutToFollower(input: {
   });
 
   const parentBook = input.parentAvailable;
+  const followerCopy = await loadFollowerCopyEntries({
+    followerAccountId: input.follower.id,
+    opens,
+  });
   const pendingToCopy = pending.filter((fill) => {
     if (!skippedCycles.has(copyCycleKey(fill.symbol, fill.side))) {
       return true;
@@ -417,6 +424,32 @@ async function fanOutToFollower(input: {
     const hasFollowerPosition = opens.some(
       (row) => row.symbol === fill.symbol && row.side === fill.side,
     );
+    if (isEntry) {
+      const cycle = copyCycleKey(fill.symbol, fill.side);
+      const parentEntryCount = input.fills.filter(
+        (row) =>
+          row.symbol === fill.symbol &&
+          row.side === fill.side &&
+          copyFillIsEntry(row.action) &&
+          (row.filledAtMs < fill.filledAtMs || row.id === fill.id),
+      ).length;
+      const alreadyKeyed = [fill.id, fill.idempotencyKey].some(
+        (key) => key && followerCopy.keys.has(key),
+      );
+      if (
+        alreadyKeyed ||
+        copyShouldSkipDuplicateEntry({
+          parentEntryCount,
+          followerEntryCount: followerCopy.counts.get(cycle) ?? 0,
+        })
+      ) {
+        await insertCopyReceipt({
+          followerAccountId: input.follower.id,
+          parentFillId: fill.id,
+        });
+        continue;
+      }
+    }
     if (!isEntry && hasFollowerPosition) {
       const closed = await closeCopiedFollowerPosition({
         parentAccountId: input.parentAccountId,
@@ -571,6 +604,17 @@ async function fanOutToFollower(input: {
       },
     });
     opens.splice(0, opens.length, ...next);
+    if (isEntry) {
+      const cycle = copyCycleKey(fill.symbol, fill.side);
+      followerCopy.counts.set(
+        cycle,
+        (followerCopy.counts.get(cycle) ?? 0) + 1,
+      );
+      followerCopy.keys.add(fill.id);
+      if (fill.idempotencyKey) {
+        followerCopy.keys.add(fill.idempotencyKey);
+      }
+    }
     await writeEventLog({
       scope: "trade",
       event: "copy.copied",
@@ -802,20 +846,13 @@ async function syncCopyWorkingOrders(input: {
       },
     });
     if (!placed.ok) {
-      await writeEventLog({
-        level: "warning",
-        scope: "trade",
-        event: "copy.copy_skipped",
+      await logCopyWorkingSkipOnce({
+        follower: input.follower,
+        parentAccountId: input.parentAccountId,
+        parentWorkingId: working.id,
+        symbol: fill.symbol,
+        side: fill.side,
         message: `Could not copy ${fill.symbol} ${fill.side} limit: ${placed.error}`,
-        userId: input.follower.userId,
-        accountId: input.follower.id,
-        strategy: FUTURES_STRATEGY_ID,
-        data: {
-          parentAccountId: input.parentAccountId,
-          parentWorkingId: working.id,
-          symbol: fill.symbol,
-          side: fill.side,
-        },
       });
       continue;
     }
@@ -1028,6 +1065,85 @@ async function applyCopyCycleGates(input: {
     }
   }
   return skipped;
+}
+
+async function loadFollowerCopyEntries(input: {
+  followerAccountId: string;
+  opens: Awaited<ReturnType<typeof loadFuturesPositions>>;
+}): Promise<{ counts: Map<string, number>; keys: Set<string> }> {
+  const counts = new Map<string, number>();
+  const keys = new Set<string>();
+  const positionIds = input.opens.map((row) => row.id);
+  if (positionIds.length === 0) {
+    return { counts, keys };
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { counts, keys };
+  }
+  const { data, error } = await supabase
+    .from("futures_orders")
+    .select("action, idempotency_key, position_id")
+    .eq("account_id", input.followerAccountId)
+    .in("position_id", positionIds);
+  if (error || !data) {
+    return { counts, keys };
+  }
+  const cycleByPosition = new Map(
+    input.opens.map((row) => [row.id, copyCycleKey(row.symbol, row.side)] as const),
+  );
+  for (const row of data as Record<string, unknown>[]) {
+    const action = String(row.action ?? "");
+    if (action !== "buy" && action !== "sell") {
+      continue;
+    }
+    const cycle = cycleByPosition.get(String(row.position_id ?? ""));
+    if (cycle) {
+      counts.set(cycle, (counts.get(cycle) ?? 0) + 1);
+    }
+    const key = String(row.idempotency_key ?? "").trim();
+    if (key) {
+      keys.add(key);
+    }
+  }
+  return { counts, keys };
+}
+
+async function logCopyWorkingSkipOnce(input: {
+  follower: CopyFollowerDesk;
+  parentAccountId: string;
+  parentWorkingId: string;
+  symbol: string;
+  side: string;
+  message: string;
+}): Promise<void> {
+  const receiptId = copyWorkingSkipReceiptKey(input.parentWorkingId);
+  const existing = await loadCopyReceiptFillIds({
+    followerAccountId: input.follower.id,
+    parentFillIds: [receiptId],
+  });
+  if (existing.has(receiptId)) {
+    return;
+  }
+  await insertCopyReceipt({
+    followerAccountId: input.follower.id,
+    parentFillId: receiptId,
+  });
+  await writeEventLog({
+    level: "warning",
+    scope: "trade",
+    event: "copy.copy_skipped",
+    message: input.message,
+    userId: input.follower.userId,
+    accountId: input.follower.id,
+    strategy: FUTURES_STRATEGY_ID,
+    data: {
+      parentAccountId: input.parentAccountId,
+      parentWorkingId: input.parentWorkingId,
+      symbol: input.symbol,
+      side: input.side,
+    },
+  });
 }
 
 async function logCopyCycleSkipOnce(input: {
@@ -1365,7 +1481,7 @@ async function queryParentFillRows(
   }
   let query = supabase
     .from("futures_orders")
-    .select("id, action, qty, price, notional_usdt, filled_at, position_id")
+    .select("id, action, qty, price, notional_usdt, filled_at, position_id, idempotency_key")
     .eq("account_id", parentAccountId)
     .order("filled_at", { ascending: false })
     .limit(input.limit);

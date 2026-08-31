@@ -15,6 +15,7 @@ export type CopyParentFill = {
   notionalUsdt: number;
   price: number | null;
   filledAtMs: number;
+  idempotencyKey?: string | null;
 };
 
 export type CopyFanOutDecision =
@@ -110,6 +111,23 @@ export function copyShouldFlattenWithParent(input: {
     input.followerHasPosition &&
     !input.parentHasPosition &&
     !input.parentHasEntryWorking
+  );
+}
+
+export function copyShouldSkipDuplicateEntry(input: {
+  parentEntryCount: number;
+  followerEntryCount: number;
+}): boolean {
+  return (
+    input.parentEntryCount > 0 &&
+    input.followerEntryCount >= input.parentEntryCount
+  );
+}
+
+export function copyWorkingSkipReceiptKey(parentWorkingId: string): string {
+  return `wsk-${parentWorkingId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 32)}`.slice(
+    0,
+    80,
   );
 }
 
