@@ -96,6 +96,28 @@ export function copyFollowerAlreadyJoined(input: {
   return input.hasFollowerPosition || input.hasCopiedWorking;
 }
 
+/** Parent left the cycle. Follower still in it must flatten. */
+export function copyShouldFlattenWithParent(input: {
+  parentHasPosition: boolean;
+  parentHasEntryWorking: boolean;
+  followerHasPosition: boolean;
+}): boolean {
+  return (
+    input.followerHasPosition &&
+    !input.parentHasPosition &&
+    !input.parentHasEntryWorking
+  );
+}
+
+export function copyFollowerCloseKey(
+  followerAccountId: string,
+  positionId: string,
+): string {
+  const desk = followerAccountId.replace(/-/g, "").slice(0, 12);
+  const position = positionId.replace(/-/g, "").slice(0, 16);
+  return `cfl-${desk}-${position}`.slice(0, 36);
+}
+
 export function decideCopyCycleSkip(input: {
   parentIsDca: boolean;
   alreadyJoined: boolean;
@@ -380,13 +402,13 @@ export function decideCopyFanOut(input: {
   ) {
     return { action: "flatten-pause", reason: "drawdown" };
   }
-  if (input.paused) {
+  const isEntry = copyFillIsEntry(input.fill.action);
+  if (input.paused && isEntry) {
     return { action: "skip", reason: "paused" };
   }
   if (input.liveUnbound) {
     return { action: "skip", reason: "unbound" };
   }
-  const isEntry = copyFillIsEntry(input.fill.action);
   if (isEntry && input.reduceOnly) {
     return { action: "skip", reason: "reduce_only" };
   }

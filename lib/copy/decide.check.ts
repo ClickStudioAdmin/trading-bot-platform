@@ -19,6 +19,8 @@ import {
   copyCycleSkipMessage,
   copyCycleSkipToken,
   copyFollowerAlreadyJoined,
+  copyFollowerCloseKey,
+  copyShouldFlattenWithParent,
   copyLiveLadderFitsVenue,
   copyWorkingIdempotencyKey,
   copyWorkingLooksDca,
@@ -183,6 +185,40 @@ assert.deepEqual(
   }),
   { action: "place", place: "close", notionalUsdt: 1_000 },
 );
+assert.deepEqual(
+  decideCopyFanOut({
+    ...base,
+    paused: true,
+    fill: { ...fill, action: "flatten" },
+    hasFollowerPosition: true,
+  }),
+  { action: "place", place: "close", notionalUsdt: 1_000 },
+);
+assert.equal(
+  copyShouldFlattenWithParent({
+    parentHasPosition: false,
+    parentHasEntryWorking: false,
+    followerHasPosition: true,
+  }),
+  true,
+);
+assert.equal(
+  copyShouldFlattenWithParent({
+    parentHasPosition: true,
+    parentHasEntryWorking: false,
+    followerHasPosition: true,
+  }),
+  false,
+);
+assert.equal(
+  copyShouldFlattenWithParent({
+    parentHasPosition: false,
+    parentHasEntryWorking: true,
+    followerHasPosition: true,
+  }),
+  false,
+);
+assert.match(copyFollowerCloseKey("11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"), /^cfl-/);
 assert.deepEqual(
   decideCopyFanOut({
     ...base,

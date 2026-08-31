@@ -42,6 +42,8 @@ import {
   copyCycleSkipToken,
   copyFillIsEntry,
   copyFollowerAlreadyJoined,
+  copyFollowerCloseKey,
+  copyShouldFlattenWithParent,
   copyParentFillNotional,
   copyParentFillPrice,
   copyParentWorkingNotional,
@@ -390,18 +392,51 @@ async function fanOutToFollower(input: {
     liveUnbound,
   });
 
+  await flattenFollowerWhenParentFlat({
+    parentAccountId: input.parentAccountId,
+    parentOpens: input.parentOpens,
+    parentWorking: input.parentWorking,
+    follower: input.follower,
+    opens,
+    liveUnbound,
+  });
+
   const parentBook = input.parentAvailable;
-  if (pending.length === 0 || !(parentBook != null && parentBook > 0)) {
+  const pendingToCopy = pending.filter((fill) => {
+    if (!skippedCycles.has(copyCycleKey(fill.symbol, fill.side))) {
+      return true;
+    }
+    return !copyFillIsEntry(fill.action);
+  });
+  if (pendingToCopy.length === 0) {
     return;
   }
 
-  for (const fill of pending) {
-    if (skippedCycles.has(copyCycleKey(fill.symbol, fill.side))) {
+  for (const fill of pendingToCopy) {
+    const isEntry = copyFillIsEntry(fill.action);
+    if (isEntry && !(parentBook != null && parentBook > 0)) {
       continue;
     }
     const hasFollowerPosition = opens.some(
       (row) => row.symbol === fill.symbol && row.side === fill.side,
     );
+    if (!isEntry && hasFollowerPosition) {
+      const closed = await closeCopiedFollowerPosition({
+        parentAccountId: input.parentAccountId,
+        follower: input.follower,
+        opens,
+        symbol: fill.symbol,
+        side: fill.side,
+        parentFillId: fill.id,
+      });
+      if (closed) {
+        await insertCopyReceipt({
+          followerAccountId: input.follower.id,
+          parentFillId: fill.id,
+        });
+      }
+      continue;
+    }
     const decision = decideCopyFanOut({
       paused: copySettings.paused,
       shareActive: input.shareActive,
@@ -417,7 +452,7 @@ async function fanOutToFollower(input: {
       maxDrawdownPct: copySettings.maxDrawdownPct,
       markPrice: markFromTicker(input.tickers.get(fill.symbol) ?? {}),
       maxAdverseMovePct: copySettings.maxAdverseMovePct,
-      parentBalanceUsdt: parentBook,
+      parentBalanceUsdt: parentBook ?? 0,
       followerAvailableUsdt: available ?? 0,
       sizeMode: copySettings.sizeMode,
       sizePercent: copySettings.sizePercent,
@@ -984,7 +1019,11 @@ async function applyCopyCycleGates(input: {
       }),
     });
     for (const fill of input.pending) {
-      if (fill.symbol === symbol && fill.side === side) {
+      if (
+        fill.symbol === symbol &&
+        fill.side === side &&
+        copyFillIsEntry(fill.action)
+      ) {
         await insertCopyReceipt({
           followerAccountId: input.follower.id,
           parentFillId: fill.id,
@@ -1079,6 +1118,126 @@ function workingAsCopyFill(row: FuturesWorkingOrder): CopyParentFill | null {
     price: row.limitPrice,
     filledAtMs: Date.now(),
   };
+}
+
+async function flattenFollowerWhenParentFlat(input: {
+  parentAccountId: string;
+  parentOpens: Awaited<ReturnType<typeof loadFuturesPositions>>;
+  parentWorking: FuturesWorkingOrder[];
+  follower: CopyFollowerDesk;
+  opens: Awaited<ReturnType<typeof loadFuturesPositions>>;
+  liveUnbound: boolean;
+}): Promise<void> {
+  if (input.liveUnbound) {
+    return;
+  }
+  for (const open of [...input.opens]) {
+    const parentHasPosition = input.parentOpens.some(
+      (row) => row.symbol === open.symbol && row.side === open.side,
+    );
+    const parentHasEntryWorking = input.parentWorking.some(
+      (row) =>
+        row.symbol === open.symbol &&
+        row.side === open.side &&
+        !row.reduceOnly,
+    );
+    if (
+      !copyShouldFlattenWithParent({
+        parentHasPosition,
+        parentHasEntryWorking,
+        followerHasPosition: true,
+      })
+    ) {
+      continue;
+    }
+    await closeCopiedFollowerPosition({
+      parentAccountId: input.parentAccountId,
+      follower: input.follower,
+      opens: input.opens,
+      symbol: open.symbol,
+      side: open.side,
+    });
+  }
+}
+
+async function closeCopiedFollowerPosition(input: {
+  parentAccountId: string;
+  follower: CopyFollowerDesk;
+  opens: Awaited<ReturnType<typeof loadFuturesPositions>>;
+  symbol: string;
+  side: "long" | "short";
+  parentFillId?: string;
+}): Promise<boolean> {
+  const position = input.opens.find(
+    (row) => row.symbol === input.symbol && row.side === input.side,
+  );
+  if (!position) {
+    return true;
+  }
+  const closed = await runFuturesCommand({
+    actor: {
+      userId: input.follower.userId,
+      accountId: input.follower.id,
+      mode: input.follower.mode,
+    },
+    command: {
+      kind: "place",
+      action: "flatten",
+      symbol: input.symbol,
+      positionId: position.id,
+      orderType: "market",
+      idempotencyKey: input.parentFillId
+        ? input.parentFillId.slice(0, 36)
+        : copyFollowerCloseKey(input.follower.id, position.id),
+      source: "engine",
+      ruleName: COPY_RULE_NAME,
+    },
+  });
+  if (!closed.ok) {
+    await writeEventLog({
+      level: "warning",
+      scope: "trade",
+      event: "copy.copy_skipped",
+      message: `Could not close copied ${input.symbol} ${input.side} after the parent flattened: ${closed.error}`,
+      userId: input.follower.userId,
+      accountId: input.follower.id,
+      strategy: FUTURES_STRATEGY_ID,
+      data: {
+        parentAccountId: input.parentAccountId,
+        parentFillId: input.parentFillId,
+        symbol: input.symbol,
+        side: input.side,
+        positionId: position.id,
+      },
+    });
+    return false;
+  }
+  const next = await loadFuturesPositions({
+    status: "open",
+    scope: {
+      accountId: input.follower.id,
+      userId: input.follower.userId,
+    },
+  });
+  input.opens.splice(0, input.opens.length, ...next);
+  if (!closed.replayed) {
+    await writeEventLog({
+      scope: "trade",
+      event: "copy.copied",
+      message: `Closed ${input.symbol} ${input.side} because the parent flattened`,
+      userId: input.follower.userId,
+      accountId: input.follower.id,
+      strategy: FUTURES_STRATEGY_ID,
+      data: {
+        parentAccountId: input.parentAccountId,
+        parentFillId: input.parentFillId,
+        symbol: input.symbol,
+        side: input.side,
+        positionId: position.id,
+      },
+    });
+  }
+  return true;
 }
 
 async function flattenAndPauseFollower(input: {
