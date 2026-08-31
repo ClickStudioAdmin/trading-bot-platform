@@ -10,6 +10,7 @@ import {
 import { saveDeskCopyListingAction } from "@/lib/copy/actions";
 import {
   COPY_DESCRIPTION_MAX,
+  COPY_SHARE_OFF_OPEN_TRADES,
   type DeskCopyListing,
 } from "@/lib/copy/model";
 
@@ -23,6 +24,7 @@ export function DeskCopyShareCard({
   needsAlias = false,
   maxFollowersDefault = null,
   maxFollowersCeiling = null,
+  openTradeCount = 0,
 }: {
   account: TradingAccount;
   listing: DeskCopyListing | null;
@@ -30,9 +32,12 @@ export function DeskCopyShareCard({
   needsAlias?: boolean;
   maxFollowersDefault?: number | null;
   maxFollowersCeiling?: number | null;
+  openTradeCount?: number;
 }) {
   const modeLabel = account.mode === "live" ? "Live" : "Paper";
   const stamp = `${formatDeskType(account.deskType)} · ${formatDeskVenueCaption(account)} · ${modeLabel}`;
+  const sharingLockedOn =
+    Boolean(listing?.sharingEnabled) && openTradeCount > 0;
   return (
     <section className="space-y-4 rounded-card border border-line bg-surface p-5">
       <div>
@@ -57,21 +62,44 @@ export function DeskCopyShareCard({
         </p>
       ) : (
         <form action={saveDeskCopyListingAction} className="space-y-4">
-          <label className="flex items-start gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
-              name="sharingEnabled"
-              defaultChecked={listing?.sharingEnabled ?? false}
-              className="mt-0.5"
-            />
-            <span>
-              Enable sharing
-              <span className="mt-1 block text-xs text-ink-muted">
-                Off keeps these notes saved but hides the desk from invites
-                and the catalogue.
+          <div className="space-y-2">
+            <label className="flex items-start gap-2 text-sm text-ink">
+              {sharingLockedOn ? (
+                <>
+                  <input type="hidden" name="sharingEnabled" value="on" />
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    disabled
+                    className="mt-0.5"
+                  />
+                </>
+              ) : (
+                <input
+                  type="checkbox"
+                  name="sharingEnabled"
+                  defaultChecked={listing?.sharingEnabled ?? false}
+                  className="mt-0.5"
+                />
+              )}
+              <span>
+                Enable sharing
+                <span className="mt-1 block text-xs text-ink-muted">
+                  Off keeps these notes saved but hides the desk from invites
+                  and the catalogue. Followers then see that this desk is no
+                  longer available for following.
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
+            {sharingLockedOn ? (
+              <p
+                role="note"
+                className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
+              >
+                {COPY_SHARE_OFF_OPEN_TRADES}
+              </p>
+            ) : null}
+          </div>
           <label className="flex items-start gap-2 text-sm text-ink">
             <input
               type="checkbox"

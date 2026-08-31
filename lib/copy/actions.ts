@@ -1,6 +1,7 @@
 "use server";
 
 import { deskIsCopy, deskPath } from "@/lib/accounts/model";
+import { loadAccountUsage } from "@/lib/accounts/store";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { loadFuturesSettings } from "@/lib/futures/settings";
@@ -9,6 +10,9 @@ import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
+  COPY_SHARE_OFF_OPEN_TRADES,
+  copyLiveTradeCount,
+  copySharingOffBlocked,
   evaluateCopyShare,
   parseDeskCopyListingForm,
   parseTraderLogoUpload,
@@ -134,12 +138,13 @@ export async function saveDeskCopyListingAction(formData: FormData) {
     const minBalanceUsdt = parsed.minBalanceUsdt;
     const sharingEnabled = parsed.sharingEnabled;
     const allowNewFollowers = parsed.allowNewFollowers;
-    const [profile, firstFillMs, settings, existing] =
+    const [profile, firstFillMs, settings, existing, usage] =
       await Promise.all([
         loadTraderProfile(session.member.id),
         loadFirstVenueFillMs(account.id),
         loadFuturesSettings(account.id),
         loadDeskCopyListing(account.id),
+        loadAccountUsage([account]),
       ]);
     const minDays = platform.minActivityDays;
     const share = evaluateCopyShare({
@@ -153,6 +158,19 @@ export async function saveDeskCopyListingAction(formData: FormData) {
     });
     if (share.block) {
       redirect(settingsHref({ error: share.block }));
+    }
+    const used = usage.get(account.id);
+    if (
+      copySharingOffBlocked({
+        currentlyEnabled: existing?.sharingEnabled ?? false,
+        nextEnabled: sharingEnabled,
+        openTradeCount: copyLiveTradeCount({
+          openPositions: used?.futuresOpenCount,
+          workingOrders: used?.workingCount,
+        }),
+      })
+    ) {
+      redirect(settingsHref({ error: COPY_SHARE_OFF_OPEN_TRADES }));
     }
     const file = formData.get("deskLogo");
     const upload = parseTraderLogoUpload(

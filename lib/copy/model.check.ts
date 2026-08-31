@@ -11,7 +11,12 @@ import {
   copyFollowerCapReached,
   copyMinBalanceMet,
   parseCopyDescription,
+  COPY_FOLLOWING_UNAVAILABLE,
+  COPY_SHARE_OFF_OPEN_TRADES,
+  copyLiveTradeCount,
   copyMaxFollowersWithinCeiling,
+  copySharingOffBlocked,
+  effectiveCopyFollowersCeiling,
   effectiveCopyMaxFollowers,
   parseCopyFollowerLimits,
   parseCopyMaxFollowers,
@@ -111,6 +116,58 @@ assert.equal(parseCopyFollowerLimits({ defaultValue: "20", ceiling: "20" }).ok, 
 assert.equal(
   parseCopyFollowerLimits({ defaultValue: "40", ceiling: "20" }).ok,
   false,
+);
+const defaultIsCap = parseCopyFollowerLimits({
+  defaultValue: "20",
+  ceiling: "",
+});
+assert.equal(defaultIsCap.ok, true);
+if (defaultIsCap.ok) {
+  assert.equal(defaultIsCap.maxFollowersDefault, 20);
+  assert.equal(defaultIsCap.maxFollowersCeiling, 20);
+}
+assert.equal(
+  effectiveCopyFollowersCeiling({ defaultValue: 20, ceiling: null }),
+  20,
+);
+assert.equal(
+  effectiveCopyFollowersCeiling({ defaultValue: 20, ceiling: 50 }),
+  50,
+);
+assert.equal(copyMaxFollowersWithinCeiling(40, 20).ok, false);
+assert.equal(copyLiveTradeCount({ openPositions: 1, workingOrders: 0 }), 1);
+assert.equal(copyLiveTradeCount({ openPositions: 0, workingOrders: 2 }), 2);
+assert.equal(
+  copySharingOffBlocked({
+    currentlyEnabled: true,
+    nextEnabled: false,
+    openTradeCount: 1,
+  }),
+  true,
+);
+assert.equal(
+  copySharingOffBlocked({
+    currentlyEnabled: true,
+    nextEnabled: false,
+    openTradeCount: 0,
+  }),
+  false,
+);
+assert.equal(
+  copySharingOffBlocked({
+    currentlyEnabled: false,
+    nextEnabled: false,
+    openTradeCount: 3,
+  }),
+  false,
+);
+assert.equal(
+  COPY_SHARE_OFF_OPEN_TRADES.includes("live trades"),
+  true,
+);
+assert.equal(
+  COPY_FOLLOWING_UNAVAILABLE,
+  "This desk is no longer available for following.",
 );
 
 assert.equal(parseCopyMinBalanceUsdt("").ok, true);

@@ -9,6 +9,10 @@ export const COPY_DESCRIPTION_MAX = 2000;
 export const TRADER_ALIAS_TAKEN = "That trader alias is already taken.";
 export const TRADER_ALIAS_REQUIRED =
   "Set a trader alias in Account Settings before you share.";
+export const COPY_SHARE_OFF_OPEN_TRADES =
+  "Close all live trades on this desk before you turn sharing off.";
+export const COPY_FOLLOWING_UNAVAILABLE =
+  "This desk is no longer available for following.";
 export const TRADER_LOGO_BUCKET = "trader-logos";
 export const DESK_LOGO_BUCKET = "desk-logos";
 export const TRADER_LOGO_MAX_BYTES = 1_048_576;
@@ -135,8 +139,33 @@ export function parseCopyFollowerLimits(input: {
   return {
     ok: true,
     maxFollowersDefault: preset.maxFollowers,
-    maxFollowersCeiling: ceiling.maxFollowers,
+    maxFollowersCeiling: effectiveCopyFollowersCeiling({
+      defaultValue: preset.maxFollowers,
+      ceiling: ceiling.maxFollowers,
+    }),
   };
+}
+
+export function effectiveCopyFollowersCeiling(input: {
+  defaultValue: number | null | undefined;
+  ceiling: number | null | undefined;
+}): number | null {
+  const cap =
+    input.ceiling != null &&
+    Number.isInteger(input.ceiling) &&
+    input.ceiling >= 1
+      ? input.ceiling
+      : null;
+  if (cap != null) {
+    return cap;
+  }
+  const preset =
+    input.defaultValue != null &&
+    Number.isInteger(input.defaultValue) &&
+    input.defaultValue >= 1
+      ? input.defaultValue
+      : null;
+  return preset;
 }
 
 export function effectiveCopyMaxFollowers(input: {
@@ -333,6 +362,34 @@ export function copyListingAcceptsFollowers(input: {
   allowNewFollowers?: boolean | null;
 }): boolean {
   return Boolean(input.sharingEnabled) && input.allowNewFollowers !== false;
+}
+
+export function copySharingOffBlocked(input: {
+  currentlyEnabled: boolean;
+  nextEnabled: boolean;
+  openTradeCount: number;
+}): boolean {
+  return (
+    input.currentlyEnabled &&
+    !input.nextEnabled &&
+    Number.isFinite(input.openTradeCount) &&
+    input.openTradeCount > 0
+  );
+}
+
+export function copyLiveTradeCount(input: {
+  openPositions?: number | null;
+  workingOrders?: number | null;
+}): number {
+  const opens =
+    input.openPositions != null && Number.isFinite(input.openPositions)
+      ? Math.max(0, input.openPositions)
+      : 0;
+  const working =
+    input.workingOrders != null && Number.isFinite(input.workingOrders)
+      ? Math.max(0, input.workingOrders)
+      : 0;
+  return opens + working;
 }
 
 export function parseTraderLogoPath(

@@ -261,6 +261,9 @@ export default async function FuturesSettingsPage({
             needsAlias={shareEval.code === "no_alias"}
             maxFollowersDefault={copySettings.maxFollowersDefault}
             maxFollowersCeiling={copySettings.maxFollowersCeiling}
+            openTradeCount={
+              (usage?.futuresOpenCount ?? 0) + (usage?.workingCount ?? 0)
+            }
           />
         )}
       </div>

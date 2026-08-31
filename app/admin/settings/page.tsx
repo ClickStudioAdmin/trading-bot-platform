@@ -89,8 +89,8 @@ export default async function AdminSettingsPage({
             className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
           />
           <span className="mt-1 block text-xs text-ink-muted">
-            Pre-fills Maximum copy traders on a new share. Does not cap the
-            desk. Empty means new shares start with no number filled.
+            Pre-fills Maximum copy traders on a new share. If the platform
+            maximum is empty, this number is also the hard cap.
           </span>
         </label>
         <label className="block text-sm text-ink">
@@ -101,12 +101,12 @@ export default async function AdminSettingsPage({
             min={1}
             step={1}
             defaultValue={copySettings.maxFollowersCeiling ?? ""}
-            placeholder="No platform cap"
+            placeholder="Same as default"
             className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
           />
           <span className="mt-1 block text-xs text-ink-muted">
             Hard cap. A desk cannot save a higher number. Empty uses the
-            desk value, or no cap if the desk is also empty.
+            default as the cap, or no cap if both are empty.
           </span>
         </label>
         <label className="flex items-start gap-2 text-sm text-ink">
