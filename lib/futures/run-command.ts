@@ -326,6 +326,20 @@ export async function runFuturesCommand(input: {
     });
   }
   revalidateFutures(input.command.kind);
+  if (
+    outcome.ok &&
+    (input.command.kind === "place" || input.command.kind === "close-all")
+  ) {
+    try {
+      const { maybeFanOutAfterParentFill } = await import("@/lib/copy/fan-out");
+      await maybeFanOutAfterParentFill({
+        accountId: input.actor.accountId,
+        userId: input.actor.userId,
+      });
+    } catch {
+      // Fan-out logs its own failures. Do not fail the parent fill.
+    }
+  }
   return { ok: true, flash: outcome.flash };
 }
 

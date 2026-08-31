@@ -1,11 +1,14 @@
 import {
+  deskIsCopy,
   parseAccountMode,
   parseDeskQuery,
   parseTradingAccountRow,
 } from "@/lib/accounts/model";
+import { loadTradingAccountById } from "@/lib/accounts/store";
 import { takeVenueSlot } from "@/lib/engine/lease-store";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
+import { loadDeskTickerMap } from "@/lib/market/desk-tickers";
 import { CLOSE_ALL_CONFIRM } from "@/lib/futures/close-all";
 import { runFuturesCommand } from "@/lib/futures/command";
 import { loadFuturesPositions } from "@/lib/futures/list";
@@ -48,8 +51,14 @@ export async function fanOutCopyFills(input: {
   if (followers.length === 0) {
     return;
   }
+  const sinceMs = Math.min(
+    ...followers.map((row) => row.createdAtMs).filter((ms) => ms > 0),
+  );
   const [fills, shares, listing, parentSettings] = await Promise.all([
-    loadParentCopyFills(input.parentAccountId),
+    loadParentCopyFills(
+      input.parentAccountId,
+      Number.isFinite(sinceMs) ? sinceMs : 0,
+    ),
     loadDeskCopyShares(input.parentAccountId),
     loadDeskCopyListing(input.parentAccountId),
     loadFuturesSettings(input.parentAccountId),
@@ -61,6 +70,18 @@ export async function fanOutCopyFills(input: {
     ? await readLiveAvailable(input.parentUserId, parentSettings.connectionId)
     : null;
   if (!(parentAvailable != null && parentAvailable > 0)) {
+    await writeEventLog({
+      level: "warning",
+      scope: "trade",
+      event: "copy.fanout_failed",
+      message:
+        parentAvailable == null
+          ? "Could not read the parent available balance. Copy did not run."
+          : "Parent available is 0. Copy did not run.",
+      userId: input.parentUserId,
+      accountId: input.parentAccountId,
+      strategy: FUTURES_STRATEGY_ID,
+    });
     return;
   }
   const fillIds = fills.map((row) => row.id);
@@ -128,17 +149,22 @@ async function listCopyFollowerDesks(
 
 async function loadParentCopyFills(
   parentAccountId: string,
+  sinceMs: number,
 ): Promise<CopyParentFill[]> {
   const supabase = createServiceClient();
   if (!supabase) {
     return [];
   }
-  const { data: orders, error } = await supabase
+  let query = supabase
     .from("futures_orders")
     .select("id, action, qty, price, notional_usdt, filled_at, position_id")
     .eq("account_id", parentAccountId)
-    .order("filled_at", { ascending: true })
-    .limit(150);
+    .order("filled_at", { ascending: false })
+    .limit(200);
+  if (sinceMs > 0) {
+    query = query.gte("filled_at", new Date(sinceMs).toISOString());
+  }
+  const { data: orders, error } = await query;
   if (error || !orders || orders.length === 0) {
     return [];
   }
@@ -194,7 +220,7 @@ async function loadParentCopyFills(
       filledAtMs: filledAt,
     });
   }
-  return fills;
+  return fills.reverse();
 }
 
 async function fanOutToFollower(input: {
@@ -329,25 +355,29 @@ async function fanOutToFollower(input: {
       continue;
     }
     if (decision.action === "skip") {
-      await insertCopyReceipt({
-        followerAccountId: input.follower.id,
-        parentFillId: fill.id,
-      });
-      if (decision.reason === "adverse_move") {
-        await writeEventLog({
-          scope: "trade",
-          event: "copy.copy_skipped",
-          message: "Skipped entry after an adverse move",
-          userId: input.follower.userId,
-          accountId: input.follower.id,
-          strategy: FUTURES_STRATEGY_ID,
-          data: {
-            parentFillId: fill.id,
-            symbol: fill.symbol,
-            reason: decision.reason,
-          },
+      const retryable =
+        decision.reason === "no_size" ||
+        decision.reason === "unbound" ||
+        decision.reason === "min_balance";
+      if (!retryable) {
+        await insertCopyReceipt({
+          followerAccountId: input.follower.id,
+          parentFillId: fill.id,
         });
       }
+      await writeEventLog({
+        scope: "trade",
+        event: "copy.copy_skipped",
+        message: skipCopyReason(decision.reason),
+        userId: input.follower.userId,
+        accountId: input.follower.id,
+        strategy: FUTURES_STRATEGY_ID,
+        data: {
+          parentFillId: fill.id,
+          symbol: fill.symbol,
+          reason: decision.reason,
+        },
+      });
       continue;
     }
     const positionId = opens.find(
@@ -449,6 +479,56 @@ async function flattenAndPauseFollower(input: {
     accountId: input.follower.id,
     strategy: FUTURES_STRATEGY_ID,
     data: { reason: input.reason, parentFillId: input.parentFillId },
+  });
+}
+
+function skipCopyReason(reason: string): string {
+  if (reason === "paused") {
+    return "Copying is paused.";
+  }
+  if (reason === "revoked") {
+    return "This follower is not an active share.";
+  }
+  if (reason === "reduce_only") {
+    return "Reduce-only blocked a copied entry.";
+  }
+  if (reason === "unbound") {
+    return "Live copy desk has no bound key.";
+  }
+  if (reason === "no_size") {
+    return "Could not size the copied fill.";
+  }
+  if (reason === "min_balance") {
+    return "Follower is below the listing min balance.";
+  }
+  if (reason === "no_position") {
+    return "No follower position to close.";
+  }
+  if (reason === "before_follow") {
+    return "Parent fill was before this copy desk existed.";
+  }
+  if (reason === "adverse_move") {
+    return "Skipped entry after an adverse move.";
+  }
+  return `Skipped copied fill (${reason}).`;
+}
+
+export async function maybeFanOutAfterParentFill(input: {
+  accountId: string;
+  userId: string;
+}): Promise<void> {
+  const account = await loadTradingAccountById(input.accountId);
+  if (!account || deskIsCopy(account)) {
+    return;
+  }
+  const tickers = await loadDeskTickerMap(
+    account.venue,
+    account.venueEnvironment,
+  );
+  await fanOutCopyFills({
+    parentAccountId: account.id,
+    parentUserId: input.userId,
+    tickers,
   });
 }
 
