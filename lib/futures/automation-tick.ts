@@ -18,6 +18,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import { triggerPrice, tickerTriggerPrices } from "./tpsl";
 import {
   deskAllowsPerpsRecipes,
+  parseDeskQuery,
   parseDeskType,
   type TradingAccountMode,
 } from "@/lib/accounts/model";
@@ -61,7 +62,7 @@ export async function runFuturesAutomationTick(input?: {
   ] = await Promise.all([
     supabase
       .from("trading_accounts")
-      .select("id, user_id, mode, desk_type, venue, venue_environment")
+      .select("id, user_id, mode, desk_type, venue, venue_environment, copy_of_account_id")
       .in("id", uniqueAccountIds),
     supabase
       .from("strategy_settings")
@@ -88,6 +89,9 @@ export async function runFuturesAutomationTick(input?: {
           userId: String((row as { user_id: string }).user_id),
           mode: String((row as { mode: string }).mode) as TradingAccountMode,
           deskType: parseDeskType((row as { desk_type?: unknown }).desk_type),
+          copyOfAccountId: parseDeskQuery(
+            (row as { copy_of_account_id?: unknown }).copy_of_account_id,
+          ),
           venue,
           venueEnvironment: parseStoredVenueEnvironment(
             venue,
@@ -124,7 +128,7 @@ export async function runFuturesAutomationTick(input?: {
     if (rule.entrySource === "webhook") {
       continue;
     }
-    if (!account || !rule.id || !deskAllowsPerpsRecipes(account.deskType)) {
+    if (!account || !rule.id || !deskAllowsPerpsRecipes(account)) {
       continue;
     }
     let deskTickers = tickers;

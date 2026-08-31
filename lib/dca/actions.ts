@@ -26,7 +26,7 @@ import {
   saveDcaPlaybook,
 } from "@/lib/dca/store";
 import { writeEventLog } from "@/lib/logs/write";
-import { withQuery } from "@/lib/accounts/model";
+import { deskAllowsDcaPlaybooks, withQuery } from "@/lib/accounts/model";
 import { safeFuturesReturnPath } from "@/lib/futures/path";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -93,7 +93,7 @@ async function saveDcaPlaybookWith(
   formData: FormData,
 ): Promise<DcaDeskActionResult> {
   const session = await requirePerpsUiSession();
-  if (session.account.deskType !== "dca") {
+  if (!deskAllowsDcaPlaybooks(session.account)) {
     return deskActionError("This desk is not a DCA desk.");
   }
   const parsed = parseDcaPlaybookForm(formData, session.account.venue);
@@ -162,7 +162,7 @@ export async function deleteDcaPlaybookAction(
   formData: FormData,
 ): Promise<DcaDeskActionResult> {
   const session = await requirePerpsUiSession();
-  if (session.account.deskType !== "dca") {
+  if (!deskAllowsDcaPlaybooks(session.account)) {
     return deskActionError("This desk is not a DCA desk.");
   }
   const id = parseDcaPlaybookId(formData.get("playbookId"));
@@ -226,7 +226,7 @@ export async function runDcaClosePlaybookAction(
 export async function closeDcaPlaybookFromRow(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
   const session = await requirePerpsUiSession();
-  if (session.account.deskType !== "dca") {
+  if (!deskAllowsDcaPlaybooks(session.account)) {
     redirect(withQuery(next, { paperError: "This desk is not a DCA desk." }));
   }
   const id = parseDcaPlaybookId(formData.get("playbookId"));
@@ -263,7 +263,7 @@ export async function runDcaPlaybookVerb(
   formData: FormData,
 ): Promise<DcaDeskActionResult> {
   const session = await requirePerpsUiSession();
-  if (session.account.deskType !== "dca") {
+  if (!deskAllowsDcaPlaybooks(session.account)) {
     return deskActionError("This desk is not a DCA desk.");
   }
   const parsedVerb =

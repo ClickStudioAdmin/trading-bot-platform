@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { BacktestRunDetail } from "@/components/backtest-run-detail";
-import { deskAllowsPerpsRecipes } from "@/lib/accounts/model";
+import { deskAllowsPerpsRecipes, deskIsCopy } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
@@ -70,9 +70,11 @@ export default async function AccountBacktestDetailPage({
   const desks = await listTradingAccounts(member.id);
   const applyDesks = desks
     .filter((desk) =>
-      run.deskType === "dca"
-        ? desk.deskType === "dca"
-        : deskAllowsPerpsRecipes(desk.deskType),
+      deskIsCopy(desk)
+        ? false
+        : run.deskType === "dca"
+          ? desk.deskType === "dca"
+          : deskAllowsPerpsRecipes(desk),
     )
     .map((desk) => ({ id: desk.id, name: desk.name }));
   const comparables = run.parentRunId

@@ -26,8 +26,16 @@ export type TradingAccount = {
   deskType: DeskType;
   venue: string;
   venueEnvironment: string | null;
+  copyOfAccountId: string | null;
   createdAtMs: number;
 };
+
+export type DeskCapabilityInput =
+  | DeskType
+  | { deskType: DeskType; copyOfAccountId?: string | null };
+
+export const COPY_DESK_BLOCK =
+  "This is a copy desk. The parent owns orders. This desk only protects.";
 
 export type DeskCreateChoice = {
   deskType: DeskType;
@@ -228,28 +236,87 @@ export function deskUsesPerpsUi(deskType: DeskType): boolean {
   return deskType !== "cash_and_carry";
 }
 
-export function deskAllowsManualPerpTicket(deskType: DeskType): boolean {
-  return deskType === "perps";
+function capabilityDeskType(desk: DeskCapabilityInput): DeskType {
+  return typeof desk === "string" ? desk : desk.deskType;
 }
 
-export function deskAllowsPerpsRecipes(deskType: DeskType): boolean {
-  return deskType === "perps_bots";
+export function deskIsCopy(
+  desk: { copyOfAccountId?: string | null } | DeskCapabilityInput | null | undefined,
+): boolean {
+  if (desk == null || typeof desk === "string") {
+    return false;
+  }
+  return Boolean(desk.copyOfAccountId);
 }
 
-export function deskAllowsSignalWebhooks(deskType: DeskType): boolean {
+export function deskAllowsManualPerpTicket(desk: DeskCapabilityInput): boolean {
+  if (deskIsCopy(desk)) {
+    return false;
+  }
+  return capabilityDeskType(desk) === "perps";
+}
+
+export function deskAllowsPerpsRecipes(desk: DeskCapabilityInput): boolean {
+  if (deskIsCopy(desk)) {
+    return false;
+  }
+  return capabilityDeskType(desk) === "perps_bots";
+}
+
+export function deskAllowsDcaPlaybooks(desk: DeskCapabilityInput): boolean {
+  if (deskIsCopy(desk)) {
+    return false;
+  }
+  return capabilityDeskType(desk) === "dca";
+}
+
+export function deskAllowsSignalWebhooks(desk: DeskCapabilityInput): boolean {
+  if (deskIsCopy(desk)) {
+    return false;
+  }
+  const deskType = capabilityDeskType(desk);
   return deskType === "dca" || deskType === "perps_bots";
 }
 
-export function deskAllowsOrderWebhooks(deskType: DeskType): boolean {
-  return deskType === "signal_follower";
+export function deskAllowsOrderWebhooks(desk: DeskCapabilityInput): boolean {
+  if (deskIsCopy(desk)) {
+    return false;
+  }
+  return capabilityDeskType(desk) === "signal_follower";
+}
+
+export function deskAllowsTemplateApply(desk: DeskCapabilityInput): boolean {
+  if (deskIsCopy(desk)) {
+    return false;
+  }
+  const deskType = capabilityDeskType(desk);
+  return (
+    deskType === "dca" ||
+    deskType === "perps_bots" ||
+    deskType === "cash_and_carry"
+  );
+}
+
+export function deskAllowsBacktestFrom(desk: DeskCapabilityInput): boolean {
+  return deskAllowsDcaPlaybooks(desk) || deskAllowsPerpsRecipes(desk);
+}
+
+export function formatDeskCopyBadge(
+  desk: { copyOfAccountId?: string | null } | null | undefined,
+): string | null {
+  return deskIsCopy(desk) ? "Copy" : null;
 }
 
 export function deskManualBuySellBlockReason(
-  deskType: DeskType,
+  desk: DeskCapabilityInput,
 ): string | null {
-  if (deskAllowsManualPerpTicket(deskType)) {
+  if (deskAllowsManualPerpTicket(desk)) {
     return null;
   }
+  if (deskIsCopy(desk)) {
+    return COPY_DESK_BLOCK;
+  }
+  const deskType = capabilityDeskType(desk);
   if (deskType === "perps_bots") {
     return "This is a Perps bots desk. Automations own orders. Buy and Sell are not on this ticket.";
   }
@@ -337,6 +404,7 @@ export function parseTradingAccountRow(
       venue,
       row.venue_environment,
     ),
+    copyOfAccountId: parseDeskQuery(row.copy_of_account_id),
     createdAtMs: Number.isFinite(created) ? created : 0,
   };
 }

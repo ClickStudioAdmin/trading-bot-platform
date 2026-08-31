@@ -1,6 +1,7 @@
 import { StrategySubnav } from "@/components/strategy-subnav";
 import {
   deskHomePath,
+  deskIsCopy,
   deskUsesPerpsUi,
   formatDeskType,
   formatDeskVenueCaption,
@@ -19,6 +20,7 @@ import { futuresDeskAutomationStatus } from "@/lib/futures/automation";
 import { loadFuturesAutomationRules } from "@/lib/futures/automation-load";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import {
+  COPY_PRIMARY_LINKS,
   FUTURES_PRIMARY_LINKS,
   FUTURES_SECONDARY_LINKS,
   PERPS_BOTS_PRIMARY_LINKS,
@@ -41,13 +43,14 @@ export default async function FuturesLayout({
     await pinDeskSearchParam(session);
   }
   const deskType = session?.account.deskType ?? "perps";
+  const copyDesk = session ? deskIsCopy(session.account) : false;
   const hyperliquid = session?.account.venue === "hyperliquid";
   const venueLabel =
     (session ? getVenue(session.account.venue)?.label : null) ?? "Bybit";
-  const signalFollower = deskType === "signal_follower";
-  const dca = deskType === "dca";
-  const perpsBots = deskType === "perps_bots";
-  const manualPerps = deskType === "perps";
+  const signalFollower = deskType === "signal_follower" && !copyDesk;
+  const dca = deskType === "dca" && !copyDesk;
+  const perpsBots = deskType === "perps_bots" && !copyDesk;
+  const manualPerps = deskType === "perps" && !copyDesk;
   const live = Boolean(session && accountCanHoldConnections(session.account.mode));
   const settings = session ? await loadFuturesSettings() : null;
   const rules = session
@@ -81,13 +84,15 @@ export default async function FuturesLayout({
     ? playbooks.some((playbook) => dcaPlaybookIsRunning(playbook))
     : deskStatus.automationsRunning;
   const deskId = session?.account.id ?? null;
-  const primaryBase = signalFollower
-    ? SIGNAL_FOLLOWER_PRIMARY_LINKS
-    : perpsBots
-      ? PERPS_BOTS_PRIMARY_LINKS
-      : manualPerps
-        ? PERPS_PRIMARY_LINKS
-        : FUTURES_PRIMARY_LINKS;
+  const primaryBase = copyDesk
+    ? COPY_PRIMARY_LINKS
+    : signalFollower
+      ? SIGNAL_FOLLOWER_PRIMARY_LINKS
+      : perpsBots
+        ? PERPS_BOTS_PRIMARY_LINKS
+        : manualPerps
+          ? PERPS_PRIMARY_LINKS
+          : FUTURES_PRIMARY_LINKS;
   const primaryLinks = deskId
     ? navLinksWithDesk(primaryBase, deskId)
     : primaryBase;
@@ -109,9 +114,17 @@ export default async function FuturesLayout({
     <div>
       <StrategySubnav
         title={session?.account.name ?? formatDeskType(deskType)}
-        typeLabel={session ? formatDeskType(deskType) : undefined}
+        typeLabel={
+          session
+            ? copyDesk
+              ? `${formatDeskType(deskType)} · Copy`
+              : formatDeskType(deskType)
+            : undefined
+        }
         description={
-          signalFollower
+          copyDesk
+            ? "This desk copies another trader. Caps, reduce-only, and Close All still protect. No ticket, bots, or webhooks."
+            : signalFollower
             ? "TradingView sends buy, sell, and close. This desk only protects: caps, reduce-only, Close All, and row TP/SL."
             : dca
               ? hyperliquid
@@ -128,7 +141,7 @@ export default async function FuturesLayout({
         secondaryLinks={secondaryLinks}
         automationsHref={automationsHref}
         automationsRunning={
-          signalFollower || manualPerps ? false : automationsRunning
+          copyDesk || signalFollower || manualPerps ? false : automationsRunning
         }
         reduceOnly={deskStatus.reduceOnly}
         connection={
@@ -164,11 +177,13 @@ export default async function FuturesLayout({
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
             This is a Connected Exchange desk. Bind an exchange in Desk
             Settings before{" "}
-            {signalFollower
-              ? "TradingView orders can place."
-              : dca || perpsBots
-                ? "the bot can place."
-                : "Buy, Sell, or Close can place orders."}
+            {copyDesk
+              ? "copied fills can place."
+              : signalFollower
+                ? "TradingView orders can place."
+                : dca || perpsBots
+                  ? "the bot can place."
+                  : "Buy, Sell, or Close can place orders."}
           </p>
         </div>
       ) : null}

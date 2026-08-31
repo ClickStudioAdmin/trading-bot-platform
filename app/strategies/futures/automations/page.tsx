@@ -30,7 +30,7 @@ import { headers } from "next/headers";
 import { firstSearchValue } from "@/lib/paper/open";
 import { withMarketCapRank } from "@/lib/pairs/page";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
-import { deskAllowsPerpsRecipes, deskHref, deskHomePath } from "@/lib/accounts/model";
+import { deskAllowsDcaPlaybooks, deskAllowsPerpsRecipes, deskHref, deskHomePath } from "@/lib/accounts/model";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { redirect } from "next/navigation";
 import {
@@ -56,12 +56,12 @@ export default async function FuturesAutomationsPage({
   }
   if (
     session &&
-    session.account.deskType !== "dca" &&
-    !deskAllowsPerpsRecipes(session.account.deskType)
+    !deskAllowsDcaPlaybooks(session.account) &&
+    !deskAllowsPerpsRecipes(session.account)
   ) {
     redirect(deskHomePath(session.account.deskType, session.account.id));
   }
-  if (session?.account.deskType === "dca") {
+  if (session && deskAllowsDcaPlaybooks(session.account)) {
     const playbooks = await listDcaPlaybooksForAccount(session.account.id);
     const settings = await loadFuturesSettings(session.account.id);
     const hl = session.account.venue === "hyperliquid";

@@ -1,4 +1,9 @@
-import { parseDeskType, type TradingAccountMode } from "@/lib/accounts/model";
+import {
+  deskAllowsDcaPlaybooks,
+  parseDeskQuery,
+  parseDeskType,
+  type TradingAccountMode,
+} from "@/lib/accounts/model";
 import {
   fetchBybitTickers,
   type BybitTicker,
@@ -75,7 +80,7 @@ export async function runDcaPlaybookTick(input?: {
   ] = await Promise.all([
     supabase
       .from("trading_accounts")
-      .select("id, user_id, mode, desk_type, venue, venue_environment")
+      .select("id, user_id, mode, desk_type, venue, venue_environment, copy_of_account_id")
       .in("id", accountIds),
     supabase
       .from("strategy_settings")
@@ -101,6 +106,9 @@ export async function runDcaPlaybookTick(input?: {
           userId: String((row as { user_id: string }).user_id),
           mode: String((row as { mode: string }).mode) as TradingAccountMode,
           deskType: parseDeskType((row as { desk_type?: unknown }).desk_type),
+          copyOfAccountId: parseDeskQuery(
+            (row as { copy_of_account_id?: unknown }).copy_of_account_id,
+          ),
           venue,
           venueEnvironment: parseStoredVenueEnvironment(
             venue,
@@ -123,7 +131,7 @@ export async function runDcaPlaybookTick(input?: {
   let acted = 0;
   for (const playbook of playbooks) {
     const account = accounts.get(playbook.accountId);
-    if (!account || account.deskType !== "dca") {
+    if (!account || !deskAllowsDcaPlaybooks(account)) {
       continue;
     }
     const deskTickers =

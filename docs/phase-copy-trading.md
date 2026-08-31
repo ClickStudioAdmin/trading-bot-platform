@@ -8,7 +8,7 @@ Closest shipped analog: TradingView Strategy — same blotter as the job, **desk
 
 ## Status
 
-Started 31 Aug 2026. Steps 1–2 are in repo. Stop after each step until Click says go. Push `develop` to migrate.
+Started 31 Aug 2026. Steps 1–3 are in repo. Stop after each step until Click says go. Push `develop` to migrate.
 
 ## Purpose
 
@@ -67,7 +67,7 @@ RLS: catalogue is public listings + alias + computed stats. Followers never sele
 | --- | --- | --- | --- |
 | 1 | Docs | Agent | This file is the phase. Master spec and roadmap 3 point here. **In repo 31 Aug 2026.** |
 | 2 | Schema + admin knob | Agent | Migration + persisted `copy_min_activity_days` (default 90, min 0) on `/admin/settings`. Checks for the activity floor. **In repo 31 Aug 2026.** Push `develop` to migrate. |
-| 3 | Follower desk flag | Agent | `copy_of` immutable. Helpers hide ticket, Automations, webhooks, templates apply, backtest-from-desk. Sidebar **Copy** badge. |
+| 3 | Follower desk flag | Agent | `copy_of` immutable. Helpers hide ticket, Automations, webhooks, templates apply, backtest-from-desk. Sidebar **Copy** badge. **In repo 31 Aug 2026.** |
 | 4 | Profile + share | Agent | Unique alias. Private or public, required brief. Reject Paper, unbound, C&C, and desks younger than N. |
 | 5 | Private grants | Agent | Email invite. Revoke, unlist, and unbind pause new entries. |
 | 6 | Catalogue + stats | Agent | Public catalogue, filters, computed desk and trader stats, trader page (public desks only). |

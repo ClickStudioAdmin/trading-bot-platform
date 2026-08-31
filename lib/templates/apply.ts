@@ -1,6 +1,6 @@
 import { listTradingAccounts } from "@/lib/accounts/store";
 import type { TradingAccount } from "@/lib/accounts/model";
-import { deskAllowsPerpsRecipes } from "@/lib/accounts/model";
+import { deskAllowsPerpsRecipes, deskAllowsTemplateApply } from "@/lib/accounts/model";
 import {
   dcaConfigMaxOrderError,
   dcaPlaybookConflict,
@@ -211,7 +211,7 @@ async function applyPerpsTemplate(input: {
   desk: TradingAccount;
 }): Promise<ApplyItemResult> {
   const recipe = input.template.recipe;
-  if (!deskAllowsPerpsRecipes(input.desk.deskType)) {
+  if (!deskAllowsPerpsRecipes(input.desk)) {
     return {
       templateId: input.template.id,
       name: input.template.name,
@@ -424,7 +424,7 @@ export async function applyTemplateToDesk(input: {
       notes: [],
     };
   }
-  if (!templateFitsDesk(template.deskType, desk.deskType)) {
+  if (!deskAllowsTemplateApply(desk) || !templateFitsDesk(template.deskType, desk.deskType)) {
     return {
       templateId: template.id,
       name: template.name,
@@ -493,7 +493,7 @@ export async function applyTemplateSetToDesk(input: {
   ) {
     return { ok: false, deskType: null, results: [], error: "That folder was not found." };
   }
-  if (!templateFitsDesk(set.deskType, desk.deskType)) {
+  if (!deskAllowsTemplateApply(desk) || !templateFitsDesk(set.deskType, desk.deskType)) {
     return {
       ok: false,
       deskType: set.deskType,

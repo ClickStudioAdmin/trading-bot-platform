@@ -14,6 +14,7 @@ import {
   parseDeskTypeChoice,
   AUTOMATED_DESK_TYPES,
   formatAccountMode,
+  formatDeskCopyBadge,
   formatDeskNavLabel,
   formatDeskVenueCaption,
   hrefPathname,
@@ -238,6 +239,11 @@ function DeskNavLink({
     >
       <DeskMark desk={desk} />
       <span className="min-w-0 truncate text-sm text-ink">{desk.name}</span>
+      {formatDeskCopyBadge(desk) ? (
+        <span className="shrink-0 rounded-control bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
+          Copy
+        </span>
+      ) : null}
     </Link>
   );
 }

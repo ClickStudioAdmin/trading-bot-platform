@@ -1,3 +1,4 @@
+import { deskAllowsBacktestFrom } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { canQueueUserBacktest, type BacktestDeskBot } from "@/lib/backtest/library";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
@@ -13,6 +14,9 @@ export async function listDeskBacktestBots(
   const desks = await listTradingAccounts(userId);
   const rows: BacktestDeskBot[] = [];
   for (const desk of desks) {
+    if (!deskAllowsBacktestFrom(desk)) {
+      continue;
+    }
     if (desk.deskType === "dca") {
       const playbooks = await listDcaPlaybooksForAccount(desk.id);
       for (const playbook of playbooks) {

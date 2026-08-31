@@ -71,6 +71,8 @@ export const SIGNAL_FOLLOWER_PRIMARY_LINKS = [
   { href: "/strategies/futures/performance", label: "Performance" },
 ] as const;
 
+export const COPY_PRIMARY_LINKS = PERPS_PRIMARY_LINKS;
+
 export const FUTURES_SECONDARY_LINKS = [
   { href: "/strategies/futures/settings", label: "Desk Settings" },
   { href: "/strategies/futures/pairs", label: "Pairs" },

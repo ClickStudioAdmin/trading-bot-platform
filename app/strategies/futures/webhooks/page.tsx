@@ -36,8 +36,12 @@ export default async function FuturesWebhooksPage({
   const session = await getSessionContext();
   const href = (path: string) => deskHref(path, session?.account.id);
   const deskType = session?.account.deskType ?? "perps";
-  const allowSignal = deskAllowsSignalWebhooks(deskType);
-  const allowOrder = deskAllowsOrderWebhooks(deskType);
+  const allowSignal = session
+    ? deskAllowsSignalWebhooks(session.account)
+    : deskAllowsSignalWebhooks(deskType);
+  const allowOrder = session
+    ? deskAllowsOrderWebhooks(session.account)
+    : deskAllowsOrderWebhooks(deskType);
   if (session && !allowSignal && !allowOrder) {
     redirect(deskHomePath(session.account.deskType, session.account.id));
   }
@@ -112,7 +116,9 @@ export default async function FuturesWebhooksPage({
             </Link>
             .
           </>
-        ) : deskAllowsPerpsRecipes(deskType) ? (
+        ) : (session
+            ? deskAllowsPerpsRecipes(session.account)
+            : deskAllowsPerpsRecipes(deskType)) ? (
           <>
             Signal webhooks are a When trigger. Bind the name on Automations.
             Arm (or buy / sell) fires that bot. The bot owns size and side.
@@ -175,7 +181,11 @@ export default async function FuturesWebhooksPage({
               <FuturesWebhookTest
                 webhooks={testWebhooks}
                 allowSignal={allowSignal}
-                signalFiresRecipes={deskAllowsPerpsRecipes(deskType)}
+                signalFiresRecipes={
+                  session
+                    ? deskAllowsPerpsRecipes(session.account)
+                    : deskAllowsPerpsRecipes(deskType)
+                }
                 standalone
                 next={href(FUTURES_PATHS.webhooks)}
                 successNext={href(FUTURES_PATHS.positions)}

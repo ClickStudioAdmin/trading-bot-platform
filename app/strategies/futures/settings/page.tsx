@@ -92,7 +92,7 @@ export default async function FuturesSettingsPage({
       <PageHeading as="h2" title="Desk Settings" />
       <p className="-mt-4 text-sm text-ink-muted">
         Desk-wide knobs.{" "}
-        {deskAllowsPerpsRecipes(session.account.deskType) ? (
+        {deskAllowsPerpsRecipes(session.account) ? (
           <>
             Automations stay on their own page. Signal URLs live on{" "}
             <Link
@@ -104,10 +104,10 @@ export default async function FuturesSettingsPage({
             . TradingView strategy alerts that place orders stay on a
             TradingView Strategy desk.
           </>
-        ) : deskAllowsOrderWebhooks(session.account.deskType) ||
-          deskAllowsSignalWebhooks(session.account.deskType) ? (
+        ) : deskAllowsOrderWebhooks(session.account) ||
+          deskAllowsSignalWebhooks(session.account) ? (
           <>
-            {deskAllowsSignalWebhooks(session.account.deskType)
+            {deskAllowsSignalWebhooks(session.account)
               ? "Automations stay on their own page. Signal URLs live on "
               : "TradingView URLs live on "}
             <Link
@@ -119,7 +119,9 @@ export default async function FuturesSettingsPage({
             .
           </>
         ) : (
-          "This desk is ticket only. No automations or webhooks."
+          session.account.copyOfAccountId
+            ? "This is a copy desk. Caps, reduce-only, and Close All still apply. No ticket, bots, or webhooks."
+            : "This desk is ticket only. No automations or webhooks."
         )}{" "}
         Bind a matching key from this login.
       </p>

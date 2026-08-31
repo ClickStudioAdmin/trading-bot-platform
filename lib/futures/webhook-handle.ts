@@ -3,6 +3,7 @@ import {
   deskAllowsPerpsRecipes,
   deskAllowsSignalWebhooks,
   parseAccountMode,
+  parseDeskQuery,
   parseDeskType,
 } from "@/lib/accounts/model";
 import { applyDcaVerb } from "@/lib/dca/run";
@@ -61,7 +62,7 @@ export async function handleFuturesWebhook(input: {
   const ruleName = found.name;
   const { data: account, error: accountError } = await supabase
     .from("trading_accounts")
-    .select("id, user_id, mode, desk_type, venue")
+    .select("id, user_id, mode, desk_type, venue, copy_of_account_id")
     .eq("id", accountId)
     .eq("user_id", userId)
     .maybeSingle();
@@ -87,9 +88,15 @@ export async function handleFuturesWebhook(input: {
   }
   const mode = parseAccountMode((account as { mode?: unknown }).mode);
   const deskType = parseDeskType((account as { desk_type?: unknown }).desk_type);
+  const desk = {
+    deskType,
+    copyOfAccountId: parseDeskQuery(
+      (account as { copy_of_account_id?: unknown }).copy_of_account_id,
+    ),
+  };
   if (
     deskType === "cash_and_carry" ||
-    (!deskAllowsSignalWebhooks(deskType) && !deskAllowsOrderWebhooks(deskType))
+    (!deskAllowsSignalWebhooks(desk) && !deskAllowsOrderWebhooks(desk))
   ) {
     return {
       status: 400,
@@ -100,7 +107,7 @@ export async function handleFuturesWebhook(input: {
     };
   }
   if (
-    !deskAllowsSignalWebhooks(deskType) &&
+    !deskAllowsSignalWebhooks(desk) &&
     (found.kind === "signal" || parsed.parsed.kind === "arm")
   ) {
     return {
@@ -117,7 +124,7 @@ export async function handleFuturesWebhook(input: {
     parsed.parsed.kind === "order"
   ) {
     if (
-      (deskType === "dca" || deskAllowsPerpsRecipes(deskType)) &&
+      (deskType === "dca" || deskAllowsPerpsRecipes(desk)) &&
       (parsed.parsed.action === "buy" || parsed.parsed.action === "sell")
     ) {
       parsed.parsed = {
@@ -137,7 +144,7 @@ export async function handleFuturesWebhook(input: {
     }
   }
   if (
-    !deskAllowsOrderWebhooks(deskType) &&
+    !deskAllowsOrderWebhooks(desk) &&
     (found.kind === "order" || parsed.parsed.kind === "order")
   ) {
     return {
@@ -231,7 +238,7 @@ export async function handleFuturesWebhook(input: {
     if (
       parsed.parsed.verb === "arm" &&
       found.id &&
-      deskAllowsPerpsRecipes(deskType)
+      deskAllowsPerpsRecipes(desk)
     ) {
       const entries = await fireWebhookAutomationEntries({
         webhookId: found.id,

@@ -15,6 +15,7 @@ import { HyperliquidDeskFlash } from "@/components/venues/hyperliquid/desk-flash
 import { getSessionContext } from "@/lib/auth/session";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import {
+  deskAllowsDcaPlaybooks,
   deskAllowsManualPerpTicket,
   deskAllowsSignalWebhooks,
   deskHref,
@@ -97,9 +98,15 @@ export async function HyperliquidFuturesPositions({
     }
   }
   const deskType = session?.account.deskType ?? "perps";
-  const showTicket = deskAllowsManualPerpTicket(deskType);
-  const allowSignal = deskAllowsSignalWebhooks(deskType);
-  const dca = deskType === "dca";
+  const showTicket = session
+    ? deskAllowsManualPerpTicket(session.account)
+    : deskAllowsManualPerpTicket(deskType);
+  const allowSignal = session
+    ? deskAllowsSignalWebhooks(session.account)
+    : deskAllowsSignalWebhooks(deskType);
+  const dca = session
+    ? deskAllowsDcaPlaybooks(session.account)
+    : deskType === "dca";
   const playbooks =
     dca && session
       ? await listDcaPlaybooksForAccount(session.account.id)

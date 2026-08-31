@@ -30,7 +30,12 @@ import {
   deskAllowsSignalWebhooks,
   deskAllowsOrderWebhooks,
   deskAllowsPerpsRecipes,
+  deskAllowsDcaPlaybooks,
+  deskAllowsTemplateApply,
+  deskAllowsBacktestFrom,
+  deskIsCopy,
   deskManualBuySellBlockReason,
+  COPY_DESK_BLOCK,
   parseAccountName,
   deskNameTaken,
   validateNewDeskName,
@@ -248,6 +253,59 @@ assert.equal(
   deskManualBuySellBlockReason("signal_follower"),
   "This is a TradingView Strategy desk. Buy and Sell come from a webhook.",
 );
+const copyPerps = {
+  deskType: "perps" as const,
+  copyOfAccountId: "11111111-1111-4111-8111-111111111111",
+};
+assert.equal(deskIsCopy(copyPerps), true);
+assert.equal(deskIsCopy({ deskType: "perps", copyOfAccountId: null }), false);
+assert.equal(deskAllowsManualPerpTicket(copyPerps), false);
+assert.equal(
+  deskAllowsPerpsRecipes({
+    deskType: "perps_bots",
+    copyOfAccountId: copyPerps.copyOfAccountId,
+  }),
+  false,
+);
+assert.equal(
+  deskAllowsDcaPlaybooks({
+    deskType: "dca",
+    copyOfAccountId: copyPerps.copyOfAccountId,
+  }),
+  false,
+);
+assert.equal(
+  deskAllowsSignalWebhooks({
+    deskType: "dca",
+    copyOfAccountId: copyPerps.copyOfAccountId,
+  }),
+  false,
+);
+assert.equal(
+  deskAllowsOrderWebhooks({
+    deskType: "signal_follower",
+    copyOfAccountId: copyPerps.copyOfAccountId,
+  }),
+  false,
+);
+assert.equal(
+  deskAllowsTemplateApply({
+    deskType: "dca",
+    copyOfAccountId: copyPerps.copyOfAccountId,
+  }),
+  false,
+);
+assert.equal(
+  deskAllowsBacktestFrom({
+    deskType: "dca",
+    copyOfAccountId: copyPerps.copyOfAccountId,
+  }),
+  false,
+);
+assert.equal(deskAllowsDcaPlaybooks("dca"), true);
+assert.equal(deskAllowsTemplateApply("perps_bots"), true);
+assert.equal(deskAllowsBacktestFrom("perps"), false);
+assert.equal(deskManualBuySellBlockReason(copyPerps), COPY_DESK_BLOCK);
 
 const paper = parseTradingAccountRow({
   id: "acc-1",
@@ -260,6 +318,7 @@ const paper = parseTradingAccountRow({
 assert.equal(paper.deskType, "cash_and_carry");
 assert.equal(paper.venue, "bybit");
 assert.equal(paper.venueEnvironment, null);
+assert.equal(paper.copyOfAccountId, null);
 const live = parseTradingAccountRow({
   id: "acc-2",
   user_id: "user-1",
@@ -273,6 +332,18 @@ const live = parseTradingAccountRow({
 assert.equal(live.deskType, "perps");
 assert.equal(live.venue, "hyperliquid");
 assert.equal(live.venueEnvironment, "testnet");
+assert.equal(live.copyOfAccountId, null);
+const copied = parseTradingAccountRow({
+  id: "acc-3",
+  user_id: "user-2",
+  name: "Follow",
+  mode: "paper",
+  desk_type: "perps",
+  copy_of_account_id: "11111111-1111-4111-8111-111111111111",
+  created_at: "2026-08-31T00:00:00.000Z",
+});
+assert.equal(copied.copyOfAccountId, "11111111-1111-4111-8111-111111111111");
+assert.equal(deskAllowsManualPerpTicket(copied), false);
 
 const bybitCreate = parseDeskCreateChoice({
   deskType: "perps",

@@ -16,7 +16,7 @@ import {
   loadUsdtLinearPerps,
 } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
-import { deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref } from "@/lib/accounts/model";
+import { deskAllowsDcaPlaybooks, deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref } from "@/lib/accounts/model";
 import { dcaHintsForOpen } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { FuturesWebhookTest } from "@/components/futures-webhook-test";
@@ -102,9 +102,15 @@ export default async function FuturesPositionsPage({
     }
   }
   const deskType = session?.account.deskType ?? "perps";
-  const showTicket = deskAllowsManualPerpTicket(deskType);
-  const allowSignal = deskAllowsSignalWebhooks(deskType);
-  const dca = deskType === "dca";
+  const showTicket = session
+    ? deskAllowsManualPerpTicket(session.account)
+    : deskAllowsManualPerpTicket(deskType);
+  const allowSignal = session
+    ? deskAllowsSignalWebhooks(session.account)
+    : deskAllowsSignalWebhooks(deskType);
+  const dca = session
+    ? deskAllowsDcaPlaybooks(session.account)
+    : deskType === "dca";
   const playbooks =
     dca && session
       ? await listDcaPlaybooksForAccount(session.account.id)

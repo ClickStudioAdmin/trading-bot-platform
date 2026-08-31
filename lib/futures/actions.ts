@@ -72,13 +72,13 @@ export async function submitFuturesTrade(formData: FormData) {
   const { member, account } = session;
   const parsed = parseFuturesAction(formData.get("action"));
   if (
-    !deskAllowsManualPerpTicket(account.deskType) &&
+    !deskAllowsManualPerpTicket(account) &&
     parsed.ok &&
     (parsed.action === "buy" || parsed.action === "sell")
   ) {
     fail(
       next,
-      deskManualBuySellBlockReason(account.deskType) ??
+      deskManualBuySellBlockReason(account) ??
         "This desk does not take Buy or Sell from the ticket.",
     );
   }
@@ -354,7 +354,7 @@ export async function saveFuturesAutomations(
 ): Promise<SaveFuturesAutomationsResult> {
   const session = await requirePerpsUiSession();
   const { member: user, account } = session;
-  if (!deskAllowsPerpsRecipes(account.deskType)) {
+  if (!deskAllowsPerpsRecipes(account)) {
     if (account.deskType === "signal_follower") {
       redirect(deskPath(FUTURES_PATHS.webhooks, account.id));
     }
@@ -464,22 +464,22 @@ export async function createFuturesWebhookAction(formData: FormData) {
   }
   const kind = parseWebhookKind(formData.get("kind"));
   if (
-    !deskAllowsSignalWebhooks(session.account.deskType) &&
-    !deskAllowsOrderWebhooks(session.account.deskType)
+    !deskAllowsSignalWebhooks(session.account) &&
+    !deskAllowsOrderWebhooks(session.account)
   ) {
     webhookFail(session.account.id, "This desk does not use webhooks.");
   }
   if (
     kind.ok &&
     kind.kind === "signal" &&
-    !deskAllowsSignalWebhooks(session.account.deskType)
+    !deskAllowsSignalWebhooks(session.account)
   ) {
     webhookFail(session.account.id, "This desk only uses TradingView strategy webhooks.");
   }
   if (
     kind.ok &&
     kind.kind === "order" &&
-    !deskAllowsOrderWebhooks(session.account.deskType)
+    !deskAllowsOrderWebhooks(session.account)
   ) {
     webhookFail(session.account.id, "This desk only uses Signal webhooks to arm the bot.");
   }

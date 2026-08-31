@@ -1,4 +1,4 @@
-import { parseDeskType } from "@/lib/accounts/model";
+import { deskIsCopy, parseDeskQuery, parseDeskType } from "@/lib/accounts/model";
 import { runCashAndCarryDeskTick } from "@/lib/engine/cash-and-carry-tick";
 import {
   ENGINE_CLAIM_BATCH,
@@ -245,7 +245,7 @@ async function runDeskTick(input: {
   }
   const { data: account } = await supabase
     .from("trading_accounts")
-    .select("id, user_id, mode, desk_type, venue, venue_environment")
+    .select("id, user_id, mode, desk_type, venue, venue_environment, copy_of_account_id")
     .eq("id", input.accountId)
     .maybeSingle();
   if (!account) {
@@ -256,6 +256,11 @@ async function runDeskTick(input: {
   const deskType = parseDeskType(
     (account as { desk_type?: unknown }).desk_type,
   );
+  const copyDesk = deskIsCopy({
+    copyOfAccountId: parseDeskQuery(
+      (account as { copy_of_account_id?: unknown }).copy_of_account_id,
+    ),
+  });
   const venue = parseStoredVenueId((account as { venue?: unknown }).venue);
   const venueEnvironment = parseStoredVenueEnvironment(
     venue,
@@ -305,14 +310,14 @@ async function runDeskTick(input: {
     });
     return { userId, ...stats };
   }
-  if (deskType === "perps_bots") {
+  if (deskType === "perps_bots" && !copyDesk) {
     await runFuturesAutomationTick({
       accountId: input.accountId,
       tickers,
     });
     return { ...empty, userId };
   }
-  if (deskType === "dca") {
+  if (deskType === "dca" && !copyDesk) {
     await runDcaPlaybookTick({
       accountId: input.accountId,
       tickers,
