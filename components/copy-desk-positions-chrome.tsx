@@ -22,7 +22,6 @@ export async function CopyDeskPositionsChrome({
     <CopyLeaderStrip
       leader={leader}
       paused={settings.paused}
-      deskId={deskId}
       next={next}
     />
   );

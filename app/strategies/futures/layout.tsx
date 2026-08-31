@@ -98,7 +98,9 @@ export default async function FuturesLayout({
     : primaryBase;
   const secondaryBase = copyDesk
     ? FUTURES_SECONDARY_LINKS.filter(
-        (link) => link.href !== FUTURES_PATHS.shared,
+        (link) =>
+          link.href !== FUTURES_PATHS.shared &&
+          link.href !== FUTURES_PATHS.pairs,
       )
     : FUTURES_SECONDARY_LINKS;
   const secondaryLinks = deskId
@@ -128,7 +130,7 @@ export default async function FuturesLayout({
         }
         description={
           copyDesk
-            ? "This desk copies another trader. Caps, reduce-only, copy guards, and Close All still protect. Pause or unfollow in Desk Settings. No ticket, bots, or webhooks."
+            ? "This desk copies another trader. Sizing, reduce-only, max daily loss, and Close All still protect. Pause or unfollow in Desk Settings. No ticket, bots, or webhooks."
             : signalFollower
             ? "TradingView sends buy, sell, and close. This desk only protects: caps, reduce-only, Close All, and row TP/SL."
             : dca

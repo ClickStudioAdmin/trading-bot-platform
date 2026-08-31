@@ -2,8 +2,14 @@ import Link from "next/link";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { toggleDeskCopyFavoriteAction } from "@/lib/copy/actions";
 import { copyCatalogueHref } from "@/lib/copy/catalogue-href";
+import { CopyFollowButton } from "@/components/copy-follow-modal";
 import type { CopyCatalogueCard } from "@/lib/copy/catalogue";
-import type { CopyCatalogueSort, CopyCatalogueTab } from "@/lib/copy/model";
+import type { ExchangeConnection } from "@/lib/exchanges/connections";
+import {
+  copyDeskPagePath,
+  type CopyCatalogueSort,
+  type CopyCatalogueTab,
+} from "@/lib/copy/model";
 import { formatDeskType } from "@/lib/accounts/model";
 import { formatPct, formatSignedUsd } from "@/lib/opportunities/format";
 
@@ -42,6 +48,8 @@ export function CopyCatalogueBoard({
   query,
   sort,
   next,
+  connections,
+  openParentId = "",
   showFilters = true,
 }: {
   cards: CopyCatalogueCard[];
@@ -50,6 +58,8 @@ export function CopyCatalogueBoard({
   query: string;
   sort: CopyCatalogueSort;
   next: string;
+  connections: ExchangeConnection[];
+  openParentId?: string;
   showFilters?: boolean;
 }) {
   const tabs: { id: CopyCatalogueTab; label: string }[] = [
@@ -173,12 +183,6 @@ export function CopyCatalogueBoard({
                     <span className="block truncate text-sm font-medium text-ink">
                       {card.traderAlias ?? "Trader"}
                     </span>
-                    <span className="mt-1 block text-[11px] uppercase tracking-wide text-ink-faint">
-                      Desk
-                    </span>
-                    <span className="block truncate text-sm text-ink">
-                      {card.deskName}
-                    </span>
                   </span>
                 </Link>
                 <form action={toggleDeskCopyFavoriteAction}>
@@ -198,66 +202,84 @@ export function CopyCatalogueBoard({
                   </PendingSubmitButton>
                 </form>
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                {card.visibility === "private" ? (
-                  <span className="rounded-control border border-accent/40 px-2 py-0.5 text-xs text-accent">
-                    Private
-                  </span>
-                ) : (
-                  <span className="rounded-control border border-line px-2 py-0.5 text-xs text-ink-faint">
-                    Public
-                  </span>
-                )}
-                <span className="text-xs text-ink-faint">
-                  {formatDeskType(card.deskType)} · {card.venue}
-                </span>
-              </div>
-              <p
-                className={`mt-4 text-2xl font-semibold tabular-nums ${
-                  !card.stats30d || card.stats30d.closedCount === 0
-                    ? "text-ink"
-                    : card.stats30d.realizedUsdt < 0
-                      ? "text-danger"
-                      : "text-success"
-                }`}
-              >
-                {roiLabel(card)}
-              </p>
-              <p className="text-xs text-ink-faint">ROI [30d]</p>
-              <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <dt className="text-ink-faint">Drawdown [30d]</dt>
-                  <dd className="mt-1 tabular-nums text-ink">
-                    {drawdownLabel(card)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-ink-faint">Win rate [30d]</dt>
-                  <dd className="mt-1 tabular-nums text-ink">
-                    {winRateLabel(card)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-ink-faint">Following</dt>
-                  <dd className="mt-1 tabular-nums text-ink">
-                    {card.maxFollowers == null
-                      ? String(card.followerCount)
-                      : `${card.followerCount} / ${card.maxFollowers}`}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-ink-faint">Invited</dt>
-                  <dd className="mt-1 tabular-nums text-ink">
-                    {card.invitedCount}
-                  </dd>
-                </div>
-              </dl>
               <Link
-                href={`/account/copy/desks/new?parent=${encodeURIComponent(card.accountId)}`}
-                className="mt-5 rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
+                href={copyDeskPagePath(card.accountId)}
+                className="group mt-2 block min-w-0"
               >
-                Copy
+                <span className="block text-[11px] uppercase tracking-wide text-ink-faint">
+                  Desk
+                </span>
+                <span className="block truncate text-sm text-ink group-hover:text-accent">
+                  {card.deskName}
+                </span>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {card.visibility === "private" ? (
+                    <span className="rounded-control border border-accent/40 px-2 py-0.5 text-xs text-accent">
+                      Private
+                    </span>
+                  ) : (
+                    <span className="rounded-control border border-line px-2 py-0.5 text-xs text-ink-faint">
+                      Public
+                    </span>
+                  )}
+                  <span className="text-xs text-ink-faint">
+                    {formatDeskType(card.deskType)} · {card.venue}
+                  </span>
+                </div>
+                <p
+                  className={`mt-4 text-2xl font-semibold tabular-nums ${
+                    !card.stats30d || card.stats30d.closedCount === 0
+                      ? "text-ink"
+                      : card.stats30d.realizedUsdt < 0
+                        ? "text-danger"
+                        : "text-success"
+                  }`}
+                >
+                  {roiLabel(card)}
+                </p>
+                <p className="text-xs text-ink-faint">ROI [30d]</p>
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <dt className="text-ink-faint">Drawdown [30d]</dt>
+                    <dd className="mt-1 tabular-nums text-ink">
+                      {drawdownLabel(card)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Win rate [30d]</dt>
+                    <dd className="mt-1 tabular-nums text-ink">
+                      {winRateLabel(card)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Following</dt>
+                    <dd className="mt-1 tabular-nums text-ink">
+                      {card.maxFollowers == null
+                        ? String(card.followerCount)
+                        : `${card.followerCount} / ${card.maxFollowers}`}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-faint">Invited</dt>
+                    <dd className="mt-1 tabular-nums text-ink">
+                      {card.invitedCount}
+                    </dd>
+                  </div>
+                </dl>
               </Link>
+              <div className="mt-5">
+                <CopyFollowButton
+                  parentAccountId={card.accountId}
+                  deskName={card.deskName}
+                  deskType={card.deskType}
+                  venue={card.venue}
+                  venueEnvironment={card.venueEnvironment}
+                  connections={connections}
+                  following={card.following}
+                  defaultOpen={openParentId === card.accountId}
+                  className="w-full rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
+                />
+              </div>
             </li>
           ))}
         </ul>

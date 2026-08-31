@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { PageHeading } from "@/components/page-heading";
-import { CopyFollowerGuardsCard } from "@/components/copy-follower-guards";
+import { CopyDeskGuardsFields } from "@/components/copy-desk-guards-fields";
+import { CopyUnfollowCard } from "@/components/copy-follower-guards";
 import { DeskCopyShareCard } from "@/components/desk-copy-share-form";
 import { DeskSettingsForm } from "@/components/desk-settings-form";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
@@ -168,7 +169,7 @@ export default async function FuturesSettingsPage({
           </>
         ) : (
           session.account.copyOfAccountId
-            ? "This is a copy desk. Caps, reduce-only, copy guards, and Close All still apply. Pause or unfollow here. No ticket, bots, or webhooks."
+            ? "This is a copy desk. Bind, sizing, reduce-only, max daily loss, and Close All live in one place. Pause or unfollow here. No ticket, bots, or webhooks."
             : "This desk is ticket only. No automations or webhooks."
         )}{" "}
         Bind a matching key from this login.
@@ -187,13 +188,20 @@ export default async function FuturesSettingsPage({
       {shareSaved ? (
         <p className="mt-4 text-sm text-success">Share settings saved.</p>
       ) : null}
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
+      <div
+        className={
+          copyDesk
+            ? "mt-6 max-w-lg"
+            : "mt-6 grid items-start gap-6 lg:grid-cols-2"
+        }
+      >
+        <div className="space-y-4 rounded-card border border-line bg-surface p-5">
         <DeskSettingsForm
           action={saveFuturesSettings}
           defaultName={session.account.name}
           otherNames={otherDeskNames(desks, session.account.id)}
           successKey="save-futures-settings"
-          className="space-y-4 rounded-card border border-line bg-surface p-5"
+          className="space-y-4"
         >
           {live ? (
             <ExchangeBindField
@@ -215,73 +223,103 @@ export default async function FuturesSettingsPage({
               This is a Paper Trading book. Orders stay on the in-app ledger.
             </p>
           )}
-          <label className="flex items-start gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
-              name="reduceOnly"
-              defaultChecked={settings.reduceOnly}
-              className="mt-0.5"
+          {copyDesk && followerSettings ? (
+            <CopyDeskGuardsFields
+              defaultSizeMode={followerSettings.sizeMode}
+              defaultPercent={
+                followerSettings.sizePercent == null
+                  ? ""
+                  : String(followerSettings.sizePercent)
+              }
+              defaultBookUsdt={
+                followerSettings.sizeBookUsdt == null
+                  ? ""
+                  : String(followerSettings.sizeBookUsdt)
+              }
+              defaultReduceOnly={settings.reduceOnly}
+              defaultMaxDailyLossUsdt={
+                followerSettings.maxDailyLossUsdt == null
+                  ? ""
+                  : String(followerSettings.maxDailyLossUsdt)
+              }
+              defaultMaxDrawdownPct={
+                followerSettings.maxDrawdownPct == null
+                  ? ""
+                  : String(followerSettings.maxDrawdownPct)
+              }
+              defaultMaxAdverseMovePct={
+                followerSettings.maxAdverseMovePct == null
+                  ? ""
+                  : String(followerSettings.maxAdverseMovePct)
+              }
             />
-            <span>
-              Reduce only
-              <span className="mt-1 block text-xs text-ink-muted">
-                {copyDesk
-                  ? "Blocks new copied entries. Close still works."
-                  : "Blocks Buy and Sell. Close still works."}
-              </span>
-            </span>
-          </label>
-          <div className="space-y-3 border-t border-line pt-4">
-            <p className="text-sm text-ink">Risk caps</p>
-            <p className="text-xs text-ink-muted">
-              Empty means no cap.{" "}
-              {copyDesk
-                ? "New copied entries reject if they would breach."
-                : "Buy and Sell reject if they would breach."}{" "}
-              Close is never blocked.
-            </p>
-            <label className="block text-sm text-ink">
-              Max value per symbol
-              <span className="relative mt-1 block">
-                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-                  $
-                </span>
-                <GroupedNumberInput
-                  name="maxValuePerSymbol"
-                  defaultValue={
-                    settings.maxValuePerSymbol === null
-                      ? ""
-                      : String(settings.maxValuePerSymbol)
-                  }
-                  allowDecimal
-                  placeholder="No cap"
-                  ariaLabel="Max value per symbol"
-                  className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+          ) : (
+            <>
+              <label className="flex items-start gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  name="reduceOnly"
+                  defaultChecked={settings.reduceOnly}
+                  className="mt-0.5"
                 />
-              </span>
-            </label>
-            <label className="block text-sm text-ink">
-              Max open positions
-              <GroupedNumberInput
-                name="maxOpenPositions"
-                defaultValue={
-                  settings.maxOpenPositions === null
-                    ? ""
-                    : String(settings.maxOpenPositions)
-                }
-                placeholder="No cap"
-                className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
-              />
-            </label>
-          </div>
+                <span>
+                  Reduce only
+                  <span className="mt-1 block text-xs text-ink-muted">
+                    Blocks Buy and Sell. Close still works.
+                  </span>
+                </span>
+              </label>
+              <div className="space-y-3 border-t border-line pt-4">
+                <p className="text-sm text-ink">Risk caps</p>
+                <p className="text-xs text-ink-muted">
+                  Empty means no cap. Buy and Sell reject if they would breach.
+                  Close is never blocked.
+                </p>
+                <label className="block text-sm text-ink">
+                  Max value per symbol
+                  <span className="relative mt-1 block">
+                    <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
+                      $
+                    </span>
+                    <GroupedNumberInput
+                      name="maxValuePerSymbol"
+                      defaultValue={
+                        settings.maxValuePerSymbol === null
+                          ? ""
+                          : String(settings.maxValuePerSymbol)
+                      }
+                      allowDecimal
+                      placeholder="No cap"
+                      ariaLabel="Max value per symbol"
+                      className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+                    />
+                  </span>
+                </label>
+                <label className="block text-sm text-ink">
+                  Max open positions
+                  <GroupedNumberInput
+                    name="maxOpenPositions"
+                    defaultValue={
+                      settings.maxOpenPositions === null
+                        ? ""
+                        : String(settings.maxOpenPositions)
+                    }
+                    placeholder="No cap"
+                    className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+                  />
+                </label>
+              </div>
+            </>
+          )}
         </DeskSettingsForm>
-        {copyDesk && followerSettings ? (
-          <CopyFollowerGuardsCard
-            settings={followerSettings}
+        {copyDesk ? (
+          <CopyUnfollowCard
             canUnfollow={unfollowBlock == null}
             unfollowBlock={unfollowBlock}
           />
-        ) : copyDesk ? null : (
+        ) : null}
+        </div>
+        {copyDesk ? null : (
           <DeskCopyShareCard
             account={session.account}
             listing={listing}

@@ -50,11 +50,13 @@ export function Modal({
   onClose,
   children,
   wide = false,
+  size,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  size?: "md" | "lg" | "xl";
 }) {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -77,7 +79,13 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative max-h-[90vh] w-full overflow-y-auto rounded-card border border-line bg-surface-raised p-5 ${wide ? "max-w-2xl" : "max-w-lg"}`}
+        className={`relative max-h-[90vh] w-full overflow-y-auto rounded-card border border-line bg-surface-raised p-5 ${
+          size === "xl"
+            ? "max-w-3xl"
+            : size === "lg" || wide
+              ? "max-w-2xl"
+              : "max-w-lg"
+        }`}
         onClick={(event) => event.stopPropagation()}
       >
         <PanelCloseButton onClick={onClose} />

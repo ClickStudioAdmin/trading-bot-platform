@@ -9,16 +9,22 @@ import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { CLOSE_ALL_CONFIRM } from "@/lib/futures/close-all";
 import { runFuturesCommand } from "@/lib/futures/command";
 import { loadFuturesPositions } from "@/lib/futures/list";
+import { markFromTicker } from "@/lib/futures/math";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { loadCopyAvailableUsdt, loadCopyGuardSnapshot } from "./balance";
+import {
+  loadCopyAvailableUsdt,
+  loadCopyFollowerEquity,
+  loadCopyGuardSnapshot,
+} from "./balance";
 import {
   COPY_FANOUT_MAX_FILLS,
   COPY_RULE_NAME,
   copyBreachIdempotencyKey,
   copyParentFillNotional,
+  copyParentFillPrice,
   copyUtcDayStartMs,
   decideCopyFanOut,
   type CopyParentFill,
@@ -180,6 +186,11 @@ async function loadParentCopyFills(
       symbol: position.symbol,
       side: position.side,
       notionalUsdt,
+      price: copyParentFillPrice({
+        price: Number(row.price) || null,
+        qty: Number(row.qty) || 0,
+        notionalUsdt: Number(row.notional_usdt) || null,
+      }),
       filledAtMs: filledAt,
     });
   }
@@ -206,11 +217,17 @@ async function fanOutToFollower(input: {
   if (pending.length === 0) {
     return;
   }
-  const [copySettings, futuresSettings, available, guards, opens] =
+  const [copySettings, futuresSettings, available, equity, guards, opens] =
     await Promise.all([
       loadDeskCopySettings(input.follower.id),
       loadFuturesSettings(input.follower.id),
       loadCopyAvailableUsdt({
+        userId: input.follower.userId,
+        accountId: input.follower.id,
+        mode: input.follower.mode,
+        tickers: input.tickers,
+      }),
+      loadCopyFollowerEquity({
         userId: input.follower.userId,
         accountId: input.follower.id,
         mode: input.follower.mode,
@@ -228,6 +245,18 @@ async function fanOutToFollower(input: {
         },
       }),
     ]);
+  if (
+    equity != null &&
+    equity > 0 &&
+    (copySettings.equityPeakUsdt == null ||
+      equity > copySettings.equityPeakUsdt)
+  ) {
+    await saveDeskCopySettings({
+      accountId: input.follower.id,
+      equityPeakUsdt: equity,
+    });
+    copySettings.equityPeakUsdt = equity;
+  }
   const live = accountCanHoldConnections(input.follower.mode);
   const liveUnbound = live && !futuresSettings.connectionId;
   const minBalanceOk = copyMinBalanceMet({
@@ -253,8 +282,11 @@ async function fanOutToFollower(input: {
       hasFollowerPosition,
       todayRealizedUsdt: guards.todayRealizedUsdt,
       maxDailyLossUsdt: copySettings.maxDailyLossUsdt,
-      openNotionalUsdt: guards.openNotionalUsdt,
-      maxOpenNotionalUsdt: copySettings.maxOpenNotionalUsdt,
+      followerEquityUsdt: equity,
+      equityPeakUsdt: copySettings.equityPeakUsdt,
+      maxDrawdownPct: copySettings.maxDrawdownPct,
+      markPrice: markFromTicker(input.tickers.get(fill.symbol) ?? {}),
+      maxAdverseMovePct: copySettings.maxAdverseMovePct,
       parentBalanceUsdt: input.parentAvailable,
       followerAvailableUsdt: available ?? 0,
       sizeMode: copySettings.sizeMode,
@@ -301,6 +333,21 @@ async function fanOutToFollower(input: {
         followerAccountId: input.follower.id,
         parentFillId: fill.id,
       });
+      if (decision.reason === "adverse_move") {
+        await writeEventLog({
+          scope: "trade",
+          event: "copy.copy_skipped",
+          message: "Skipped entry after an adverse move",
+          userId: input.follower.userId,
+          accountId: input.follower.id,
+          strategy: FUTURES_STRATEGY_ID,
+          data: {
+            parentFillId: fill.id,
+            symbol: fill.symbol,
+            reason: decision.reason,
+          },
+        });
+      }
       continue;
     }
     const positionId = opens.find(
@@ -350,7 +397,6 @@ async function fanOutToFollower(input: {
       },
     });
     opens.splice(0, opens.length, ...next);
-    guards.openNotionalUsdt = next.reduce((sum, row) => sum + row.notionalUsdt, 0);
     await writeEventLog({
       scope: "trade",
       event: "copy.copied",
@@ -370,7 +416,7 @@ async function fanOutToFollower(input: {
 
 async function flattenAndPauseFollower(input: {
   follower: CopyFollowerDesk;
-  reason: "daily_loss" | "open_notional";
+  reason: "daily_loss" | "drawdown";
   parentFillId: string;
 }): Promise<void> {
   const dayStart = copyUtcDayStartMs(Date.now());
@@ -396,9 +442,9 @@ async function flattenAndPauseFollower(input: {
     scope: "trade",
     event: "copy.breach_flattened",
     message:
-      input.reason === "daily_loss"
-        ? "Flattened and paused after max daily loss"
-        : "Flattened and paused after max open notional",
+      input.reason === "drawdown"
+        ? "Flattened and paused after max drawdown"
+        : "Flattened and paused after max daily loss",
     userId: input.follower.userId,
     accountId: input.follower.id,
     strategy: FUTURES_STRATEGY_ID,

@@ -34,6 +34,7 @@ import {
   deskAllowsOrderWebhooks,
   deskAllowsPerpsRecipes,
   deskAllowsSignalWebhooks,
+  deskIsCopy,
   deskManualBuySellBlockReason,
   deskPath,
   formatStrategyDetachBlockers,
@@ -47,8 +48,13 @@ import {
   readDeskNameFromSettingsForm,
 } from "@/lib/accounts/actions";
 import { applyDeskBindRules, loadAccountUsage } from "@/lib/accounts/store";
+import { saveDeskCopySettings } from "@/lib/copy/follower-settings";
 import { pauseCopyNewEntriesOnUnbind } from "@/lib/copy/listings";
-import { copyLiveTradeCount } from "@/lib/copy/model";
+import {
+  copyLiveTradeCount,
+  parseCopyFollowerGuardsForm,
+  parseCopySizeForm,
+} from "@/lib/copy/model";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
@@ -260,17 +266,22 @@ export async function saveFuturesSettings(formData: FormData) {
   const reduceOnly =
     formData.get("reduceOnly") === "on" ||
     formData.get("reduceOnly") === "true";
-  const maxValue = parseOptionalPositive(
-    formData.get("maxValuePerSymbol") ?? formData.get("maxNotionalPerSymbol"),
-    "Max value per symbol",
-  );
+  const copyDesk = deskIsCopy(account);
+  const maxValue = copyDesk
+    ? { ok: true as const, value: null }
+    : parseOptionalPositive(
+        formData.get("maxValuePerSymbol") ?? formData.get("maxNotionalPerSymbol"),
+        "Max value per symbol",
+      );
   if (!maxValue.ok) {
     settingsFail(account.id, maxValue.error);
   }
-  const maxRows = parseOptionalPositiveInt(
-    formData.get("maxOpenPositions") ?? formData.get("maxOpenRows"),
-    "Max open positions",
-  );
+  const maxRows = copyDesk
+    ? { ok: true as const, value: null }
+    : parseOptionalPositiveInt(
+        formData.get("maxOpenPositions") ?? formData.get("maxOpenRows"),
+        "Max open positions",
+      );
   if (!maxRows.ok) {
     settingsFail(account.id, maxRows.error);
   }
@@ -329,6 +340,39 @@ export async function saveFuturesSettings(formData: FormData) {
   });
   if (error) {
     settingsFail(account.id, error.message);
+  }
+
+  if (copyDesk) {
+    const parsed = parseCopyFollowerGuardsForm({
+      maxDailyLossUsdt: formData.get("maxDailyLossUsdt"),
+      maxDrawdownPct: formData.get("maxDrawdownPct"),
+      maxAdverseMovePct: formData.get("maxAdverseMovePct"),
+      paused: false,
+    });
+    if (!parsed.ok) {
+      settingsFail(account.id, parsed.error);
+    }
+    const sized = parseCopySizeForm({
+      sizeMode: formData.get("sizeMode"),
+      sizePercent: formData.get("sizePercent"),
+      sizeBookUsdt: formData.get("sizeBookUsdt"),
+    });
+    if (!sized.ok) {
+      settingsFail(account.id, sized.error);
+    }
+    const copySaved = await saveDeskCopySettings({
+      accountId: account.id,
+      maxDailyLossUsdt: parsed.maxDailyLossUsdt,
+      maxDrawdownPct: parsed.maxDrawdownPct,
+      maxAdverseMovePct: parsed.maxAdverseMovePct,
+      maxOpenNotionalUsdt: null,
+      sizeMode: sized.sizeMode,
+      sizePercent: sized.sizePercent,
+      sizeBookUsdt: sized.sizeBookUsdt,
+    });
+    if (!copySaved.ok) {
+      settingsFail(account.id, copySaved.error);
+    }
   }
 
   if (unboundCopyParent) {

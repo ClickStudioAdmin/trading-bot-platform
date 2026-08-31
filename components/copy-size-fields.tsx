@@ -24,7 +24,6 @@ export function CopySizeFields({
         <p className="mt-1 text-xs text-ink-muted">
           Same formula every time: parent fill × (your book / their available).
           A $10,000 fill on a $100,000 book is 10% of whatever book you pick.
-          Caps on this desk still win.
         </p>
       </div>
       <label className="block text-sm text-ink">

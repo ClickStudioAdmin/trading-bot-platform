@@ -11,6 +11,7 @@ export type CopyParentFill = {
   symbol: string;
   side: "long" | "short";
   notionalUsdt: number;
+  price: number | null;
   filledAtMs: number;
 };
 
@@ -18,7 +19,7 @@ export type CopyFanOutDecision =
   | { action: "place"; place: "buy" | "sell" | "close"; notionalUsdt: number }
   | { action: "skip"; reason: CopyFanOutSkip }
   | { action: "pause"; reason: "fixed_book" }
-  | { action: "flatten-pause"; reason: "daily_loss" | "open_notional" };
+  | { action: "flatten-pause"; reason: "daily_loss" | "drawdown" };
 
 export type CopyFanOutSkip =
   | "paused"
@@ -28,8 +29,8 @@ export type CopyFanOutSkip =
   | "no_size"
   | "min_balance"
   | "no_position"
-  | "over_notional"
-  | "before_follow";
+  | "before_follow"
+  | "adverse_move";
 
 export function copyFillPlaceAction(
   action: CopyParentFill["action"],
@@ -68,6 +69,70 @@ export function copyDailyLossBreached(
   return todayRealizedUsdt < 0 && -todayRealizedUsdt + 1e-8 >= maxDailyLossUsdt;
 }
 
+export function copyDrawdownBreached(input: {
+  equityUsdt: number | null;
+  peakUsdt: number | null;
+  maxDrawdownPct: number | null;
+}): boolean {
+  if (input.maxDrawdownPct == null || !(input.maxDrawdownPct > 0)) {
+    return false;
+  }
+  if (
+    input.equityUsdt == null ||
+    input.peakUsdt == null ||
+    !Number.isFinite(input.equityUsdt) ||
+    !(input.peakUsdt > 0)
+  ) {
+    return false;
+  }
+  return (
+    (input.peakUsdt - input.equityUsdt) / input.peakUsdt + 1e-8 >=
+    input.maxDrawdownPct / 100
+  );
+}
+
+export function copyParentFillPrice(input: {
+  price: number | null;
+  qty: number;
+  notionalUsdt: number | null;
+}): number | null {
+  if (input.price != null && input.price > 0) {
+    return input.price;
+  }
+  if (input.qty > 0 && input.notionalUsdt != null && input.notionalUsdt > 0) {
+    return input.notionalUsdt / input.qty;
+  }
+  return null;
+}
+
+/** Skip an entry when mark has moved against the copy by more than X% of parent price. */
+export function copyAdverseMoveSkip(input: {
+  action: CopyParentFill["action"];
+  parentPrice: number | null;
+  markPrice: number | null;
+  maxAdverseMovePct: number | null;
+}): boolean {
+  if (!copyFillIsEntry(input.action)) {
+    return false;
+  }
+  if (input.maxAdverseMovePct == null || !(input.maxAdverseMovePct > 0)) {
+    return false;
+  }
+  if (
+    input.parentPrice == null ||
+    input.markPrice == null ||
+    !(input.parentPrice > 0) ||
+    !(input.markPrice > 0)
+  ) {
+    return false;
+  }
+  const limit = input.maxAdverseMovePct / 100;
+  if (input.action === "buy") {
+    return input.markPrice > input.parentPrice * (1 + limit) + 1e-8;
+  }
+  return input.markPrice < input.parentPrice * (1 - limit) - 1e-8;
+}
+
 export function copyOpenNotionalState(input: {
   openNotionalUsdt: number;
   incomingUsdt: number;
@@ -95,8 +160,11 @@ export function decideCopyFanOut(input: {
   hasFollowerPosition: boolean;
   todayRealizedUsdt: number;
   maxDailyLossUsdt: number | null;
-  openNotionalUsdt: number;
-  maxOpenNotionalUsdt: number | null;
+  followerEquityUsdt: number | null;
+  equityPeakUsdt: number | null;
+  maxDrawdownPct: number | null;
+  markPrice: number | null;
+  maxAdverseMovePct: number | null;
   parentBalanceUsdt: number;
   followerAvailableUsdt: number;
   sizeMode: CopySizeMode;
@@ -113,13 +181,14 @@ export function decideCopyFanOut(input: {
   if (copyDailyLossBreached(input.todayRealizedUsdt, input.maxDailyLossUsdt)) {
     return { action: "flatten-pause", reason: "daily_loss" };
   }
-  const alreadyOpen = copyOpenNotionalState({
-    openNotionalUsdt: input.openNotionalUsdt,
-    incomingUsdt: 0,
-    maxOpenNotionalUsdt: input.maxOpenNotionalUsdt,
-  });
-  if (alreadyOpen === "flatten") {
-    return { action: "flatten-pause", reason: "open_notional" };
+  if (
+    copyDrawdownBreached({
+      equityUsdt: input.followerEquityUsdt,
+      peakUsdt: input.equityPeakUsdt,
+      maxDrawdownPct: input.maxDrawdownPct,
+    })
+  ) {
+    return { action: "flatten-pause", reason: "drawdown" };
   }
   if (input.paused) {
     return { action: "skip", reason: "paused" };
@@ -133,6 +202,16 @@ export function decideCopyFanOut(input: {
   }
   if (isEntry && !input.minBalanceOk) {
     return { action: "skip", reason: "min_balance" };
+  }
+  if (
+    copyAdverseMoveSkip({
+      action: input.fill.action,
+      parentPrice: input.fill.price,
+      markPrice: input.markPrice,
+      maxAdverseMovePct: input.maxAdverseMovePct,
+    })
+  ) {
+    return { action: "skip", reason: "adverse_move" };
   }
   if (!isEntry && !input.hasFollowerPosition) {
     return { action: "skip", reason: "no_position" };
@@ -151,19 +230,6 @@ export function decideCopyFanOut(input: {
       return { action: "pause", reason: "fixed_book" };
     }
     return { action: "skip", reason: "no_size" };
-  }
-  if (isEntry) {
-    const room = copyOpenNotionalState({
-      openNotionalUsdt: input.openNotionalUsdt,
-      incomingUsdt: sized.notionalUsdt,
-      maxOpenNotionalUsdt: input.maxOpenNotionalUsdt,
-    });
-    if (room === "flatten") {
-      return { action: "flatten-pause", reason: "open_notional" };
-    }
-    if (room === "skip") {
-      return { action: "skip", reason: "over_notional" };
-    }
   }
   return {
     action: "place",

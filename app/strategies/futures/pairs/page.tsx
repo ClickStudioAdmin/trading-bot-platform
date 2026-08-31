@@ -20,9 +20,10 @@ import {
   sortByMarketCap,
 } from "@/lib/pairs/page";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
-import { deskHref } from "@/lib/accounts/model";
+import { deskHref, deskIsCopy } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
 import { HyperliquidFuturesPairs } from "@/components/venues/hyperliquid/pairs";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Pairs",
@@ -35,6 +36,9 @@ export default async function FuturesPairsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const session = await getSessionContext();
+  if (session && deskIsCopy(session.account)) {
+    redirect(deskHref(FUTURES_PATHS.positions, session.account.id));
+  }
   if (session?.account.venue === "hyperliquid") {
     return <HyperliquidFuturesPairs searchParams={searchParams} />;
   }

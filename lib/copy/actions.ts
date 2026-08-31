@@ -25,7 +25,9 @@ import { parseBoundConnectionId } from "@/lib/exchanges/connections";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { writeEventLog } from "@/lib/logs/write";
-import { FUTURES_PATHS } from "@/lib/strategies/registry";
+import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
+import { createServiceClient } from "@/lib/supabase/admin";
+import { deskActionError, deskActionOk } from "@/lib/ui/desk-action";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -414,12 +416,9 @@ export async function createCopyDeskAction(formData: FormData) {
     redirect("/sign-in");
   }
   const parentId = String(formData.get("parentAccountId") ?? "").trim();
-  const fail = (message: string): never =>
-    redirect(
-      `/account/copy/desks/new?parent=${encodeURIComponent(parentId)}&error=${encodeURIComponent(message)}`,
-    );
+  const fail = (message: string) => deskActionError(message);
   if (!parentId) {
-    redirect("/account/copy");
+    return fail("Pick a desk to copy.");
   }
   const parent = await loadTradingAccountById(parentId);
   if (!parent) {
@@ -452,6 +451,20 @@ export async function createCopyDeskAction(formData: FormData) {
   if (!named.ok) {
     return fail(named.error);
   }
+  const guards = parseCopyFollowerGuardsForm({
+    maxDailyLossUsdt: formData.get("maxDailyLossUsdt"),
+    maxDrawdownPct: formData.get("maxDrawdownPct"),
+    maxAdverseMovePct: formData.get("maxAdverseMovePct"),
+    paused: false,
+  });
+  if (!guards.ok) {
+    return fail(guards.error);
+  }
+  const reduceOnly =
+    formData.get("reduceOnly") === "on" ||
+    formData.get("reduceOnly") === "true";
+  const goToDesk =
+    formData.get("goToDesk") === "on" || formData.get("goToDesk") === "true";
   const mode = parseAccountMode(formData.get("mode"));
   let connectionId: string | null = null;
   const venueEnvironment = mode === "live" ? parent.venueEnvironment : null;
@@ -502,6 +515,11 @@ export async function createCopyDeskAction(formData: FormData) {
     sizeMode: sized.sizeMode,
     sizePercent: sized.sizePercent,
     sizeBookUsdt: sized.sizeBookUsdt,
+    paused: false,
+    maxDailyLossUsdt: guards.maxDailyLossUsdt,
+    maxDrawdownPct: guards.maxDrawdownPct,
+    maxAdverseMovePct: guards.maxAdverseMovePct,
+    maxOpenNotionalUsdt: null,
   });
   if (!settings.ok) {
     return fail(settings.error);
@@ -528,6 +546,25 @@ export async function createCopyDeskAction(formData: FormData) {
       return fail(bound.error);
     }
   }
+  const supabase = createServiceClient();
+  if (supabase) {
+    const { error: bookError } = await supabase.from("strategy_settings").upsert(
+      {
+        user_id: member.id,
+        account_id: created.id,
+        strategy_id: FUTURES_STRATEGY_ID,
+        reduce_only: reduceOnly,
+        max_notional_per_symbol: null,
+        max_open_rows: null,
+        ...(connectionId ? { exchange_connection_id: connectionId } : {}),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "account_id,strategy_id" },
+    );
+    if (bookError) {
+      return fail(bookError.message);
+    }
+  }
   await writeEventLog({
     scope: "system",
     event: "copy.desk_created",
@@ -540,12 +577,19 @@ export async function createCopyDeskAction(formData: FormData) {
       sizeMode: sized.sizeMode,
       sizePercent: sized.sizePercent,
       sizeBookUsdt: sized.sizeBookUsdt,
+      reduceOnly,
+      maxDailyLossUsdt: guards.maxDailyLossUsdt,
+      maxDrawdownPct: guards.maxDrawdownPct,
+      maxAdverseMovePct: guards.maxAdverseMovePct,
     },
   });
   await setActiveAccountId(created.id);
   revalidatePath("/", "layout");
   revalidatePath("/account/copy");
-  redirect(deskHomePath(created.deskType, created.id));
+  return deskActionOk(
+    "You are following this desk.",
+    goToDesk ? { href: deskHomePath(created.deskType, created.id) } : undefined,
+  );
 }
 
 function copySettingsHref(
@@ -568,8 +612,9 @@ export async function saveDeskCopyFollowerSettingsAction(formData: FormData) {
   }
   const parsed = parseCopyFollowerGuardsForm({
     maxDailyLossUsdt: formData.get("maxDailyLossUsdt"),
-    maxOpenNotionalUsdt: formData.get("maxOpenNotionalUsdt"),
-    paused: formData.get("paused"),
+    maxDrawdownPct: formData.get("maxDrawdownPct"),
+    maxAdverseMovePct: formData.get("maxAdverseMovePct"),
+    paused: false,
   });
   if (!parsed.ok) {
     return fail(parsed.error);
@@ -584,9 +629,10 @@ export async function saveDeskCopyFollowerSettingsAction(formData: FormData) {
   }
   const saved = await saveDeskCopySettings({
     accountId: account.id,
-    paused: parsed.paused,
     maxDailyLossUsdt: parsed.maxDailyLossUsdt,
-    maxOpenNotionalUsdt: parsed.maxOpenNotionalUsdt,
+    maxDrawdownPct: parsed.maxDrawdownPct,
+    maxAdverseMovePct: parsed.maxAdverseMovePct,
+    maxOpenNotionalUsdt: null,
     sizeMode: sized.sizeMode,
     sizePercent: sized.sizePercent,
     sizeBookUsdt: sized.sizeBookUsdt,
@@ -597,16 +643,16 @@ export async function saveDeskCopyFollowerSettingsAction(formData: FormData) {
   await writeEventLog({
     scope: "system",
     event: "copy.follower_settings_saved",
-    message: parsed.paused ? "Paused copy desk" : "Saved copy desk guards",
+    message: "Saved copy desk guards",
     userId: session.member.id,
     accountId: account.id,
     data: {
-      paused: parsed.paused,
       sizeMode: sized.sizeMode,
       sizePercent: sized.sizePercent,
       sizeBookUsdt: sized.sizeBookUsdt,
       maxDailyLossUsdt: parsed.maxDailyLossUsdt,
-      maxOpenNotionalUsdt: parsed.maxOpenNotionalUsdt,
+      maxDrawdownPct: parsed.maxDrawdownPct,
+      maxAdverseMovePct: parsed.maxAdverseMovePct,
     },
   });
   revalidatePath("/", "layout");
@@ -632,6 +678,7 @@ export async function pauseDeskCopyAction(formData: FormData) {
   const saved = await saveDeskCopySettings({
     accountId: account.id,
     paused,
+    ...(paused ? {} : { resetEquityPeak: true }),
   });
   if (!saved.ok) {
     return fail(saved.error);

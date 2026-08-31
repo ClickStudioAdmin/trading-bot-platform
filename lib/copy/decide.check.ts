@@ -1,13 +1,16 @@
 import assert from "node:assert/strict";
 import {
   COPY_PAPER_STARTING_USDT,
+  copyAdverseMoveSkip,
   copyBreachIdempotencyKey,
   copyDailyLossBreached,
+  copyDrawdownBreached,
   copyFillIsEntry,
   copyFillPlaceAction,
   copyOpenNotionalState,
   copyPaperEquity,
   copyParentFillNotional,
+  copyParentFillPrice,
   copyUtcDayStartMs,
   decideCopyFanOut,
   type CopyParentFill,
@@ -19,6 +22,7 @@ const fill: CopyParentFill = {
   symbol: "BTCUSDT",
   side: "long",
   notionalUsdt: 10_000,
+  price: 100,
   filledAtMs: 1_700_000_000_000,
 };
 
@@ -32,8 +36,11 @@ const base = {
   hasFollowerPosition: false,
   todayRealizedUsdt: 0,
   maxDailyLossUsdt: null as number | null,
-  openNotionalUsdt: 0,
-  maxOpenNotionalUsdt: null as number | null,
+  followerEquityUsdt: 10_000 as number | null,
+  equityPeakUsdt: 10_000 as number | null,
+  maxDrawdownPct: null as number | null,
+  markPrice: 100 as number | null,
+  maxAdverseMovePct: null as number | null,
   parentBalanceUsdt: 100_000,
   followerAvailableUsdt: 10_000,
   sizeMode: "balance" as const,
@@ -144,21 +151,116 @@ assert.deepEqual(
   }),
   { action: "flatten-pause", reason: "daily_loss" },
 );
-assert.deepEqual(
-  decideCopyFanOut({
-    ...base,
-    openNotionalUsdt: 5_000,
-    maxOpenNotionalUsdt: 5_000,
+assert.equal(copyDrawdownBreached({
+  equityUsdt: 8_000,
+  peakUsdt: 10_000,
+  maxDrawdownPct: 20,
+}), true);
+assert.equal(copyDrawdownBreached({
+  equityUsdt: 8_100,
+  peakUsdt: 10_000,
+  maxDrawdownPct: 20,
+}), false);
+assert.equal(copyDrawdownBreached({
+  equityUsdt: 8_000,
+  peakUsdt: 10_000,
+  maxDrawdownPct: null,
+}), false);
+assert.equal(copyDrawdownBreached({
+  equityUsdt: 0,
+  peakUsdt: 10_000,
+  maxDrawdownPct: 20,
+}), true);
+assert.equal(copyParentFillPrice({ price: 50, qty: 2, notionalUsdt: 80 }), 50);
+assert.equal(copyParentFillPrice({ price: null, qty: 2, notionalUsdt: 80 }), 40);
+assert.equal(
+  copyAdverseMoveSkip({
+    action: "buy",
+    parentPrice: 100,
+    markPrice: 103,
+    maxAdverseMovePct: 2,
   }),
-  { action: "flatten-pause", reason: "open_notional" },
+  true,
+);
+assert.equal(
+  copyAdverseMoveSkip({
+    action: "buy",
+    parentPrice: 100,
+    markPrice: 101,
+    maxAdverseMovePct: 2,
+  }),
+  false,
+);
+assert.equal(
+  copyAdverseMoveSkip({
+    action: "buy",
+    parentPrice: 100,
+    markPrice: 90,
+    maxAdverseMovePct: 2,
+  }),
+  false,
+);
+assert.equal(
+  copyAdverseMoveSkip({
+    action: "sell",
+    parentPrice: 100,
+    markPrice: 97,
+    maxAdverseMovePct: 2,
+  }),
+  true,
+);
+assert.equal(
+  copyAdverseMoveSkip({
+    action: "flatten",
+    parentPrice: 100,
+    markPrice: 130,
+    maxAdverseMovePct: 2,
+  }),
+  false,
 );
 assert.deepEqual(
   decideCopyFanOut({
     ...base,
-    openNotionalUsdt: 900,
-    maxOpenNotionalUsdt: 1_500,
+    followerEquityUsdt: 7_500,
+    equityPeakUsdt: 10_000,
+    maxDrawdownPct: 20,
   }),
-  { action: "skip", reason: "over_notional" },
+  { action: "flatten-pause", reason: "drawdown" },
+);
+assert.deepEqual(
+  decideCopyFanOut({
+    ...base,
+    markPrice: 104,
+    maxAdverseMovePct: 3,
+  }),
+  { action: "skip", reason: "adverse_move" },
+);
+assert.deepEqual(
+  decideCopyFanOut({
+    ...base,
+    fill: { ...fill, action: "flatten" },
+    hasFollowerPosition: true,
+    markPrice: 130,
+    maxAdverseMovePct: 1,
+  }),
+  { action: "place", place: "close", notionalUsdt: 1_000 },
+);
+assert.deepEqual(
+  decideCopyFanOut({
+    ...base,
+    markPrice: null,
+    maxAdverseMovePct: 1,
+  }),
+  { action: "place", place: "buy", notionalUsdt: 1_000 },
+);
+assert.deepEqual(
+  decideCopyFanOut({
+    ...base,
+    followerEquityUsdt: 5_000,
+    equityPeakUsdt: null,
+    maxDrawdownPct: 10,
+  }),
+  { action: "place", place: "buy", notionalUsdt: 1_000 },
 );
 assert.deepEqual(
   decideCopyFanOut({

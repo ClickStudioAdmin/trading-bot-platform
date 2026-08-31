@@ -13,11 +13,19 @@ const EMPTY_SETTINGS = {
   paused: false,
   maxDailyLossUsdt: null,
   maxOpenNotionalUsdt: null,
+  maxDrawdownPct: null,
+  maxAdverseMovePct: null,
+  equityPeakUsdt: null,
 };
 
 function asPositiveOrNull(value: unknown): number | null {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function asPercentOrNull(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 && parsed <= 100 ? parsed : null;
 }
 
 function parseSettingsRow(
@@ -40,6 +48,9 @@ function parseSettingsRow(
     paused: row.paused === true,
     maxDailyLossUsdt: asPositiveOrNull(row.max_daily_loss_usdt),
     maxOpenNotionalUsdt: asPositiveOrNull(row.max_open_notional_usdt),
+    maxDrawdownPct: asPercentOrNull(row.max_drawdown_pct),
+    maxAdverseMovePct: asPercentOrNull(row.max_adverse_move_pct),
+    equityPeakUsdt: asPositiveOrNull(row.equity_peak_usdt),
   };
 }
 
@@ -53,7 +64,7 @@ export async function loadDeskCopySettings(
   const { data, error } = await supabase
     .from("desk_copy_settings")
     .select(
-      "account_id, scale, size_mode, size_percent, size_book_usdt, paused, max_daily_loss_usdt, max_open_notional_usdt",
+      "account_id, scale, size_mode, size_percent, size_book_usdt, paused, max_daily_loss_usdt, max_open_notional_usdt, max_drawdown_pct, max_adverse_move_pct, equity_peak_usdt",
     )
     .eq("account_id", accountId)
     .maybeSingle();
@@ -72,6 +83,10 @@ export async function saveDeskCopySettings(input: {
   paused?: boolean;
   maxDailyLossUsdt?: number | null;
   maxOpenNotionalUsdt?: number | null;
+  maxDrawdownPct?: number | null;
+  maxAdverseMovePct?: number | null;
+  equityPeakUsdt?: number | null;
+  resetEquityPeak?: boolean;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -106,6 +121,19 @@ export async function saveDeskCopySettings(input: {
         input.maxOpenNotionalUsdt === undefined
           ? current.maxOpenNotionalUsdt
           : input.maxOpenNotionalUsdt,
+      max_drawdown_pct:
+        input.maxDrawdownPct === undefined
+          ? current.maxDrawdownPct
+          : input.maxDrawdownPct,
+      max_adverse_move_pct:
+        input.maxAdverseMovePct === undefined
+          ? current.maxAdverseMovePct
+          : input.maxAdverseMovePct,
+      equity_peak_usdt: input.resetEquityPeak
+        ? null
+        : input.equityPeakUsdt === undefined
+          ? current.equityPeakUsdt
+          : input.equityPeakUsdt,
       updated_at: now,
     },
     { onConflict: "account_id" },

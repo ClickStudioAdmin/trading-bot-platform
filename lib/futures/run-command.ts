@@ -32,6 +32,7 @@ import {
   armFuturesReduceOnly,
   loadFuturesSettings,
 } from "./settings";
+import { COPY_RULE_NAME } from "@/lib/copy/decide";
 import { checkFuturesRiskCaps } from "./risk";
 import {
   futuresOriginLog,
@@ -768,7 +769,10 @@ async function runPlace(
 
   const working = await loadOpenFuturesWorking(actorScope(actor));
   const risk = checkFuturesRiskCaps({
-    caps: settings,
+    caps:
+      ruleName === COPY_RULE_NAME
+        ? { maxValuePerSymbol: null, maxOpenPositions: null }
+        : settings,
     symbol,
     side: decided.positionSide,
     orderValue: qtyNumber * sizePrice,

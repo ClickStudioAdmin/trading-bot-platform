@@ -8,6 +8,7 @@ import {
   parseCopyCatalogueTab,
 } from "@/lib/copy/model";
 import { getSessionMember } from "@/lib/auth/session";
+import { listExchangeConnections } from "@/lib/exchanges/store";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
@@ -39,6 +40,8 @@ export default async function AccountCopyCataloguePage({
     query,
     sort,
   });
+  const connections = await listExchangeConnections(member.id);
+  const openParentId = firstSearchValue(params.copy) ?? "";
   const next = copyCatalogueHref({ tab, privateOnly, query, sort });
 
   return (
@@ -47,7 +50,6 @@ export default async function AccountCopyCataloguePage({
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
         Public listings plus private invites sent to you. Star a desk to keep
         it on Favorites. Subscribed is desks you are currently following.
-        Copy is next.
       </p>
       {error ? (
         <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -66,6 +68,8 @@ export default async function AccountCopyCataloguePage({
         query={query}
         sort={sort}
         next={next}
+        connections={connections}
+        openParentId={openParentId}
       />
     </>
   );

@@ -7,6 +7,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import { deskLogoPublicUrl, traderLogoPublicUrl } from "./logo";
 import {
   copyCatalogueIncludes,
+  copyDeskPageVisible,
   parseCopyDescription,
   parseCopyListingName,
   parseCopyMaxFollowers,
@@ -33,6 +34,7 @@ export type CopyCatalogueCard = {
   deskName: string;
   deskType: DeskType;
   venue: string;
+  venueEnvironment: string | null;
   visibility: CopyListingVisibility;
   description: string;
   maxFollowers: number | null;
@@ -253,6 +255,7 @@ export async function loadCopyCatalogue(input: {
       deskName: listing?.name || desk.name,
       deskType: parseDeskType(desk.deskType),
       venue: desk.venue,
+      venueEnvironment: desk.venueEnvironment,
       visibility: listing?.visibility ?? "private",
       description: listing?.description ?? "",
       maxFollowers: listing?.maxFollowers ?? null,
@@ -303,4 +306,125 @@ export async function loadTraderCatalogueDesks(input: {
     }
   }
   return [...byId.values()];
+}
+
+export async function loadCopyCatalogueDesk(input: {
+  viewerUserId: string;
+  accountId: string;
+}): Promise<CopyCatalogueCard | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const accountId = input.accountId.trim();
+  if (!accountId) {
+    return null;
+  }
+  const [
+    { data: listingRow },
+    { data: shareRow },
+    { data: followingRow },
+    { data: deskRow },
+    stats,
+    favoriteIds,
+    { count: followerCount },
+    { count: invitedCount },
+  ] = await Promise.all([
+    supabase
+      .from("desk_copy_listings")
+      .select(
+        "account_id, name, visibility, description, max_followers, sharing_enabled, logo_path, created_at, updated_at",
+      )
+      .eq("account_id", accountId)
+      .maybeSingle(),
+    supabase
+      .from("desk_copy_shares")
+      .select("status")
+      .eq("parent_account_id", accountId)
+      .eq("to_user_id", input.viewerUserId)
+      .in("status", ["invited", "active"])
+      .maybeSingle(),
+    supabase
+      .from("trading_accounts")
+      .select("id")
+      .eq("user_id", input.viewerUserId)
+      .eq("copy_of_account_id", accountId)
+      .maybeSingle(),
+    supabase.from("trading_accounts").select("*").eq("id", accountId).maybeSingle(),
+    loadFuturesDeskStats([accountId]),
+    loadFavoriteDeskIds(input.viewerUserId),
+    supabase
+      .from("trading_accounts")
+      .select("id", { count: "exact", head: true })
+      .eq("copy_of_account_id", accountId),
+    supabase
+      .from("desk_copy_shares")
+      .select("id", { count: "exact", head: true })
+      .eq("parent_account_id", accountId)
+      .in("status", ["invited", "active"]),
+  ]);
+  const listing = listingRow
+    ? parseListing(listingRow as Record<string, unknown>)
+    : null;
+  if (!listing) {
+    return null;
+  }
+  const grant = parseCopyShareStatus(
+    (shareRow as { status?: string } | null)?.status,
+  );
+  const following = Boolean(followingRow);
+  if (
+    !copyDeskPageVisible({
+      sharingEnabled: listing.sharingEnabled,
+      visibility: listing.visibility,
+      grantStatus: grant.ok ? grant.status : null,
+      following,
+    })
+  ) {
+    return null;
+  }
+  const desk = deskRow
+    ? parseTradingAccountRow(deskRow as Record<string, unknown>)
+    : null;
+  if (!desk) {
+    return null;
+  }
+  const { data: profileRow } = await supabase
+    .from("trader_profiles")
+    .select("user_id, alias, logo_path, updated_at")
+    .eq("user_id", desk.userId)
+    .maybeSingle();
+  const alias = parseTraderAlias(
+    (profileRow as { alias?: string } | null)?.alias,
+  );
+  const logo = parseTraderLogoPath(
+    (profileRow as { logo_path?: string } | null)?.logo_path,
+  );
+  const profileUpdated = String(
+    (profileRow as { updated_at?: string } | null)?.updated_at ?? "",
+  );
+  const stored: StoredDeskStats | undefined = stats.get(desk.id);
+  return {
+    accountId: desk.id,
+    deskName: listing.name || desk.name,
+    deskType: parseDeskType(desk.deskType),
+    venue: desk.venue,
+    venueEnvironment: desk.venueEnvironment,
+    visibility: listing.visibility,
+    description: listing.description,
+    maxFollowers: listing.maxFollowers,
+    followerCount: followerCount ?? 0,
+    invitedCount: invitedCount ?? 0,
+    traderUserId: desk.userId,
+    traderAlias: alias.ok ? alias.alias : null,
+    traderLogoUrl: traderLogoPublicUrl(
+      logo.ok ? logo.path : null,
+      profileUpdated,
+    ),
+    deskLogoUrl: listing.logoUrl,
+    favorite: favoriteIds.has(desk.id),
+    following,
+    stats30d: stored?.last30d ?? null,
+    createdAt: listing.createdAt || new Date(desk.createdAtMs).toISOString(),
+  };
 }

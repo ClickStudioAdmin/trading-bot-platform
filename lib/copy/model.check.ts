@@ -18,6 +18,7 @@ import {
   copyUnfollowBlockCode,
   formatCopyUnfollowBlock,
   parseCopyFollowerGuardsForm,
+  parseCopyOptionalPct,
   parseCopyOptionalUsdt,
   copyLiveTradeCount,
   copyMaxFollowersWithinCeiling,
@@ -33,6 +34,8 @@ import {
   copyOwnerFollowerLabel,
   copyOwnerFollowerSituation,
   copyCatalogueIncludes,
+  copyDeskPagePath,
+  copyDeskPageVisible,
   copyCreateBlockCode,
   formatCopyCreateBlock,
   parseCopyListingName,
@@ -678,6 +681,37 @@ assert.equal(
   }),
   true,
 );
+assert.equal(
+  copyDeskPageVisible({
+    sharingEnabled: false,
+    visibility: "public",
+    grantStatus: null,
+    following: true,
+  }),
+  true,
+);
+assert.equal(
+  copyDeskPageVisible({
+    sharingEnabled: false,
+    visibility: "public",
+    grantStatus: null,
+    following: false,
+  }),
+  false,
+);
+assert.equal(
+  copyDeskPagePath("abc"),
+  "/account/copy/desks/abc",
+);
+assert.equal(
+  copyDeskPageVisible({
+    sharingEnabled: true,
+    visibility: "private",
+    grantStatus: "invited",
+    following: false,
+  }),
+  true,
+);
 assert.equal(parseCopyCatalogueTab("favorites"), "favorites");
 assert.equal(parseCopyCatalogueTab("nope"), "all");
 assert.equal(parseCopyCatalogueSort(""), "roi");
@@ -848,16 +882,28 @@ assert.deepEqual(parseCopyOptionalUsdt("", "Max daily loss"), {
   value: null,
 });
 assert.equal(parseCopyOptionalUsdt("0", "Max daily loss").ok, false);
+assert.deepEqual(parseCopyOptionalPct("", "Max drawdown"), {
+  ok: true,
+  value: null,
+});
+assert.equal(parseCopyOptionalPct("0", "Max drawdown").ok, false);
+assert.equal(parseCopyOptionalPct("101", "Max drawdown").ok, false);
+assert.deepEqual(parseCopyOptionalPct("20", "Max drawdown"), {
+  ok: true,
+  value: 20,
+});
 const guards = parseCopyFollowerGuardsForm({
   maxDailyLossUsdt: "250",
-  maxOpenNotionalUsdt: "",
+  maxDrawdownPct: "15",
+  maxAdverseMovePct: "2.5",
   paused: "on",
 });
 assert.equal(guards.ok, true);
 if (guards.ok) {
   assert.equal(guards.paused, true);
   assert.equal(guards.maxDailyLossUsdt, 250);
-  assert.equal(guards.maxOpenNotionalUsdt, null);
+  assert.equal(guards.maxDrawdownPct, 15);
+  assert.equal(guards.maxAdverseMovePct, 2.5);
 }
 assert.equal(copyUnfollowBlockCode({ liveTradeCount: 1, deskCount: 3 }), "open");
 assert.equal(copyUnfollowBlockCode({ liveTradeCount: 0, deskCount: 1 }), "last");

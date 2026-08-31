@@ -140,6 +140,19 @@ export function copyCatalogueIncludes(input: {
   return input.grantStatus === "invited" || input.grantStatus === "active";
 }
 
+export function copyDeskPageVisible(input: {
+  sharingEnabled: boolean;
+  visibility: CopyListingVisibility;
+  grantStatus: CopyShareStatus | null;
+  following: boolean;
+}): boolean {
+  return input.following || copyCatalogueIncludes(input);
+}
+
+export function copyDeskPagePath(accountId: string): string {
+  return `/account/copy/desks/${encodeURIComponent(accountId)}`;
+}
+
 export function parseCopyCatalogueTab(value: unknown): CopyCatalogueTab {
   const raw = String(value ?? "").trim();
   if (raw === "favorites" || raw === "subscribed") {
@@ -816,7 +829,28 @@ export type DeskCopySettings = {
   paused: boolean;
   maxDailyLossUsdt: number | null;
   maxOpenNotionalUsdt: number | null;
+  maxDrawdownPct: number | null;
+  maxAdverseMovePct: number | null;
+  equityPeakUsdt: number | null;
 };
+
+export function parseCopyOptionalPct(
+  value: unknown,
+  label: string,
+): { ok: true; value: number | null } | { ok: false; error: string } {
+  const raw = String(value ?? "").trim().replace(/,/g, "");
+  if (!raw) {
+    return { ok: true, value: null };
+  }
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 100) {
+    return {
+      ok: false,
+      error: `${label} must be more than 0 and at most 100, or empty.`,
+    };
+  }
+  return { ok: true, value: parsed };
+}
 
 export function parseCopyOptionalUsdt(
   value: unknown,
@@ -835,32 +869,42 @@ export function parseCopyOptionalUsdt(
 
 export function parseCopyFollowerGuardsForm(input: {
   maxDailyLossUsdt: unknown;
-  maxOpenNotionalUsdt: unknown;
+  maxDrawdownPct?: unknown;
+  maxAdverseMovePct?: unknown;
   paused: unknown;
 }):
   | {
       ok: true;
       paused: boolean;
       maxDailyLossUsdt: number | null;
-      maxOpenNotionalUsdt: number | null;
+      maxDrawdownPct: number | null;
+      maxAdverseMovePct: number | null;
     }
   | { ok: false; error: string } {
   const daily = parseCopyOptionalUsdt(input.maxDailyLossUsdt, "Max daily loss");
   if (!daily.ok) {
     return daily;
   }
-  const open = parseCopyOptionalUsdt(
-    input.maxOpenNotionalUsdt,
-    "Max open notional",
+  const drawdown = parseCopyOptionalPct(
+    input.maxDrawdownPct,
+    "Max drawdown",
   );
-  if (!open.ok) {
-    return open;
+  if (!drawdown.ok) {
+    return drawdown;
+  }
+  const adverse = parseCopyOptionalPct(
+    input.maxAdverseMovePct,
+    "Max adverse move",
+  );
+  if (!adverse.ok) {
+    return adverse;
   }
   return {
     ok: true,
     paused: parseCopyToggle(input.paused),
     maxDailyLossUsdt: daily.value,
-    maxOpenNotionalUsdt: open.value,
+    maxDrawdownPct: drawdown.value,
+    maxAdverseMovePct: adverse.value,
   };
 }
 

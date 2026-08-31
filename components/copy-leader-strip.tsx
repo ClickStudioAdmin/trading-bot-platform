@@ -3,9 +3,8 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { pauseDeskCopyAction } from "@/lib/copy/actions";
 import type { CopyLeaderStripData } from "@/lib/copy/leader";
 import { COPY_FOLLOWING_UNAVAILABLE } from "@/lib/copy/model";
-import { deskHref, formatDeskType } from "@/lib/accounts/model";
+import { formatDeskType } from "@/lib/accounts/model";
 import { formatPct, formatSignedUsd } from "@/lib/opportunities/format";
-import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
 function roiLabel(stats: CopyLeaderStripData["stats30d"]): string {
   if (!stats || stats.closedCount === 0) {
@@ -37,15 +36,12 @@ function winRateLabel(stats: CopyLeaderStripData["stats30d"]): string {
 export function CopyLeaderStrip({
   leader,
   paused,
-  deskId,
   next,
 }: {
   leader: CopyLeaderStripData | null;
   paused: boolean;
-  deskId: string;
   next: string;
 }) {
-  const settingsHref = deskHref(FUTURES_PATHS.settings, deskId);
   const traderHref = leader?.traderAlias
     ? `/account/copy/traders/${encodeURIComponent(leader.traderAlias)}`
     : "/account/copy";
@@ -110,12 +106,6 @@ export function CopyLeaderStrip({
               {paused ? "Resume copying" : "Pause copying"}
             </PendingSubmitButton>
           </form>
-          <Link
-            href={settingsHref}
-            className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-          >
-            Guards
-          </Link>
         </div>
       </div>
       {paused ? (

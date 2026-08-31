@@ -2,6 +2,7 @@ export type DeskActionResult = {
   ok: boolean;
   error?: string;
   notice?: string;
+  href?: string;
 };
 
 export function deskActionError(error: string): DeskActionResult {
