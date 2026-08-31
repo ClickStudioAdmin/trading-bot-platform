@@ -78,7 +78,6 @@ export default async function FuturesLayout({
           accountId: session.account.id,
           venue: session.account.venue,
           venueEnvironment: session.account.venueEnvironment,
-          startingUsdt: copyDesk ? undefined : 0,
         })
       : null;
   const playbooks =
