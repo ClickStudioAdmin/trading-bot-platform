@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ChartScreenshotButton,
-  downloadChartScreenshot,
-} from "@/components/desk-chart";
+import { ChartScreenshotControls } from "@/components/desk-chart";
 import {
   backtestActivityBounds,
   chartIntervalForWindow,
@@ -218,15 +215,9 @@ export function BacktestEquityPanel({ run }: { run: BacktestRun }) {
       </div>
       <div className="relative w-full" style={{ height: HEIGHT }}>
         <div ref={hostRef} className="h-full w-full" />
-        <ChartScreenshotButton
-          onClick={() => {
-            if (chartRef.current) {
-              downloadChartScreenshot(
-                chartRef.current,
-                `${run.symbol}-equity.png`,
-              );
-            }
-          }}
+        <ChartScreenshotControls
+          getChart={() => chartRef.current}
+          filename={`${run.symbol}-equity.png`}
         />
       </div>
     </div>

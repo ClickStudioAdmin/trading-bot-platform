@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CandleBar } from "@/lib/market/candles";
 import type { ChartOverlay } from "@/lib/charts/overlay";
 
@@ -11,55 +11,107 @@ type ChartHandle = {
   ) => HTMLCanvasElement;
 };
 
+function captureChartPng(chart: ChartHandle): Promise<Blob> {
+  const canvas = chart.takeScreenshot(true, true);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+        return;
+      }
+      reject(new Error("Could not capture the chart."));
+    }, "image/png");
+  });
+}
+
 export function downloadChartScreenshot(
   chart: ChartHandle,
   filename: string,
 ) {
-  const canvas = chart.takeScreenshot(true, true);
-  canvas.toBlob((blob) => {
-    if (!blob) {
-      return;
-    }
+  void captureChartPng(chart).then((blob) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
     link.download = filename;
     link.click();
     URL.revokeObjectURL(url);
-  }, "image/png");
+  });
 }
 
-export function ChartScreenshotButton({
-  onClick,
+export async function copyChartScreenshot(chart: ChartHandle): Promise<boolean> {
+  if (!navigator.clipboard?.write) {
+    return false;
+  }
+  try {
+    const blob = captureChartPng(chart);
+    await navigator.clipboard.write([
+      new ClipboardItem({ "image/png": blob }),
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const SHOT_BUTTON =
+  "rounded-control border border-line bg-surface/90 px-2 py-1 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink";
+
+export function ChartScreenshotControls({
+  getChart,
+  filename,
 }: {
-  onClick: () => void;
+  getChart: () => ChartHandle | null;
+  filename: string;
 }) {
-  return (
-    <button
-      type="button"
-      title="Screenshot"
-      aria-label="Screenshot chart"
-      onClick={onClick}
-      className="absolute top-2 right-2 z-10 rounded-control border border-line bg-surface/90 px-2 py-1 text-ink-muted hover:bg-surface-raised hover:text-ink"
-    >
-      <CameraIcon />
-    </button>
-  );
-}
+  const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
-function CameraIcon() {
+  useEffect(() => {
+    if (!copied && !copyFailed) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setCopied(false);
+      setCopyFailed(false);
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [copied, copyFailed]);
+
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="size-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      aria-hidden
-    >
-      <path d="M4 8.5h2.2l1.3-2h9l1.3 2H20A1.5 1.5 0 0 1 21.5 10v7A1.5 1.5 0 0 1 20 18.5H4A1.5 1.5 0 0 1 2.5 17v-7A1.5 1.5 0 0 1 4 8.5Z" />
-      <circle cx="12" cy="13.25" r="3.1" />
-    </svg>
+    <div className="absolute top-2 right-2 z-10 flex gap-1">
+      <button
+        type="button"
+        title="Copy screenshot"
+        aria-label="Copy screenshot"
+        className={SHOT_BUTTON}
+        onClick={() => {
+          const chart = getChart();
+          if (!chart) {
+            return;
+          }
+          void copyChartScreenshot(chart).then((ok) => {
+            setCopied(ok);
+            setCopyFailed(!ok);
+          });
+        }}
+      >
+        {copied ? "Copied" : copyFailed ? "Can't copy" : "Copy"}
+      </button>
+      <button
+        type="button"
+        title="Download screenshot"
+        aria-label="Download screenshot"
+        className={SHOT_BUTTON}
+        onClick={() => {
+          const chart = getChart();
+          if (chart) {
+            downloadChartScreenshot(chart, filename);
+          }
+        }}
+      >
+        Save
+      </button>
+    </div>
   );
 }
 
@@ -185,12 +237,9 @@ export function DeskChart({
   return (
     <div className="relative w-full" style={{ height }}>
       <div ref={hostRef} className="h-full w-full" />
-      <ChartScreenshotButton
-        onClick={() => {
-          if (chartRef.current) {
-            downloadChartScreenshot(chartRef.current, screenshotName);
-          }
-        }}
+      <ChartScreenshotControls
+        getChart={() => chartRef.current}
+        filename={screenshotName}
       />
     </div>
   );
