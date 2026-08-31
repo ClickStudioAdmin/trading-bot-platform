@@ -21,7 +21,7 @@ User
       or Re-run Parameters → same form, new run
 ```
 
-Account nav (with Bot Templates): **Backtests**.
+Site header **Backtesting Tool** (`/account/backtests`).
 
 Each run has its own **detail page**: parameters, stats, orders list, account-impact timeline, and an inline chart. Lists only link there. Old `?run=` URLs redirect.
 

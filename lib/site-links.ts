@@ -4,6 +4,7 @@ export const SITE_LINKS = [
 
 export const HEADER_LINKS = [
   { href: "/account/copy", label: "Copy Desks" },
+  { href: "/account/backtests", label: "Backtesting Tool" },
 ] as const;
 
 export function isAppChromePath(pathname: string): boolean {
@@ -47,7 +48,6 @@ export const ACCOUNT_DESK_LINKS = [
   { href: "/account/exchanges", label: "Exchanges", exact: true },
   { href: "/account/sub-accounts", label: "Manage Desks", exact: true },
   { href: "/account/templates", label: "Bot Templates", exact: true },
-  { href: "/account/backtests", label: "Backtests", exact: true },
 ] as const;
 
 export const FUTURES_PRIMARY_LINKS = [

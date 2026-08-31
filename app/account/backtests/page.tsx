@@ -20,13 +20,14 @@ import {
 } from "@/lib/backtest/store";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
+import { signedTone } from "@/lib/opportunities/format";
 import { firstSearchValue } from "@/lib/paper/open";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import { listDeskBacktestBots } from "@/lib/backtest/desk-bots";
 import { listApplyableTemplates } from "@/lib/templates/store";
 
 export const metadata: Metadata = {
-  title: "Backtests",
+  title: "Backtesting Tool",
   description: "Queued and finished paper replays.",
 };
 
@@ -106,7 +107,7 @@ export default async function AccountBacktestsPage({
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <PageHeading
-        title="Backtests"
+        title="Backtesting Tool"
         actions={
           <Link
             href="/account/templates"
@@ -126,78 +127,90 @@ export default async function AccountBacktestsPage({
           No runs yet. Open Backtest from a bot, or pick a template below.
         </p>
       ) : (
-        <div className="mb-8 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase tracking-[0.16em] text-ink-muted">
+        <div className="mb-8 overflow-x-auto rounded-card border border-line bg-surface">
+          <table className="w-full min-w-max text-left text-sm">
+            <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
               <tr>
-                <th className="py-2 pr-4 font-medium">Bot</th>
-                <th className="py-2 pr-4 font-medium">Type</th>
-                <th className="py-2 pr-4 font-medium">Contract</th>
-                <th className="py-2 pr-4 font-medium">Comparables</th>
-                <th className="py-2 pr-4 font-medium">Window</th>
-                <th className="py-2 pr-4 font-medium">Status</th>
-                <th className="py-2 pr-4 font-medium">Return</th>
-                <th className="py-2 pr-4 font-medium">Realized</th>
-                <th className="py-2 font-medium">
+                <th className="px-4 py-3 font-medium">Bot</th>
+                <th className="px-4 py-3 font-medium">Type</th>
+                <th className="px-4 py-3 font-medium">Contract</th>
+                <th className="px-4 py-3 font-medium">Comparables</th>
+                <th className="px-4 py-3 font-medium">Window</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Return</th>
+                <th className="px-4 py-3 font-medium">Realized</th>
+                <th className="px-4 py-3 font-medium">
                   <span className="sr-only">Remove</span>
                 </th>
               </tr>
             </thead>
             <tbody>
-              {runs.map((row) => (
-                <tr key={row.id} className="border-t border-line">
-                  <td className="py-2 pr-4">
-                    <Link
-                      href={`/account/backtests/${row.id}`}
-                      className="text-accent hover:underline"
+              {runs.map((row) => {
+                const ret = row.stats ? realizedReturnPct(row.stats) : null;
+                return (
+                  <tr
+                    key={row.id}
+                    className="border-b border-line last:border-b-0"
+                  >
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/account/backtests/${row.id}`}
+                        className="text-accent hover:underline"
+                      >
+                        {row.recipe.name}
+                      </Link>
+                      {row.userId == null ? (
+                        <span className="ml-2 text-xs text-ink-faint">
+                          published
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3 text-ink-muted">
+                      {row.deskType === "dca" ? "DCA" : "Perps"}
+                    </td>
+                    <td className="px-4 py-3 font-medium tabular-nums">
+                      {row.symbol}
+                    </td>
+                    <td className="px-4 py-3 text-ink-muted">
+                      {(row.comparableSymbols ?? []).length > 0
+                        ? `+${row.comparableSymbols.length}`
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-ink-muted">
+                      {DCA_INDICATOR_TIMEFRAME_LABELS[row.interval]}
+                    </td>
+                    <td className="px-4 py-3">{statusLabel(row.status)}</td>
+                    <td className={`px-4 py-3 tabular-nums ${signedTone(ret)}`}>
+                      {formatBacktestReturnPct(ret)}
+                    </td>
+                    <td
+                      className={`px-4 py-3 tabular-nums ${
+                        row.stats
+                          ? signedTone(row.stats.realizedUsdt)
+                          : "text-ink-faint"
+                      }`}
                     >
-                      {row.recipe.name}
-                    </Link>
-                    {row.userId == null ? (
-                      <span className="ml-2 text-xs text-ink-faint">
-                        published
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="py-2 pr-4 text-ink-muted">
-                    {row.deskType === "dca" ? "DCA" : "Perps"}
-                  </td>
-                  <td className="py-2 pr-4 tabular-nums">{row.symbol}</td>
-                  <td className="py-2 pr-4 text-ink-muted">
-                    {(row.comparableSymbols ?? []).length > 0
-                      ? `+${row.comparableSymbols.length}`
-                      : "—"}
-                  </td>
-                  <td className="py-2 pr-4 text-ink-muted">
-                    {DCA_INDICATOR_TIMEFRAME_LABELS[row.interval]}
-                  </td>
-                  <td className="py-2 pr-4">{statusLabel(row.status)}</td>
-                  <td className="py-2 pr-4 tabular-nums">
-                    {formatBacktestReturnPct(
-                      row.stats ? realizedReturnPct(row.stats) : null,
-                    )}
-                  </td>
-                  <td className="py-2 pr-4 tabular-nums">
-                    {row.stats
-                      ? row.stats.realizedUsdt.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
-                      : "—"}
-                  </td>
-                  <td className="py-2">
-                    <RemoveBacktestButton
-                      runId={row.id}
-                      canRemove={canDeleteBacktestRun(
-                        row,
-                        member.id,
-                        isAdmin,
-                      )}
-                      compact
-                    />
-                  </td>
-                </tr>
-              ))}
+                      {row.stats
+                        ? row.stats.realizedUsdt.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <RemoveBacktestButton
+                        runId={row.id}
+                        canRemove={canDeleteBacktestRun(
+                          row,
+                          member.id,
+                          isAdmin,
+                        )}
+                        compact
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

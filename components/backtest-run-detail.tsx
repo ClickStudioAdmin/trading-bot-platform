@@ -300,30 +300,42 @@ export function BacktestRunDetail({
       {complete && comparables.length > 0 ? (
         <section>
           <h2 className="mb-3 text-lg font-semibold">Comparables</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase tracking-[0.16em] text-ink-muted">
+          <div className="overflow-x-auto rounded-card border border-line bg-surface">
+            <table className="w-full min-w-max text-left text-sm">
+              <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
                 <tr>
-                  <th className="py-2 pr-4 font-medium">Pair</th>
-                  <th className="py-2 pr-4 font-medium">Status</th>
-                  <th className="py-2 pr-4 font-medium">Trades</th>
-                  <th className="py-2 pr-4 font-medium">Return</th>
-                  <th className="py-2 font-medium">Realized</th>
+                  <th className="px-4 py-3 font-medium">Pair</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Trades</th>
+                  <th className="px-4 py-3 font-medium">Return</th>
+                  <th className="px-4 py-3 font-medium">Realized</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-t border-line">
-                  <td className="py-2 pr-4 tabular-nums">{run.symbol}</td>
-                  <td className="py-2 pr-4">{statusLabel(run.status)}</td>
-                  <td className="py-2 pr-4 tabular-nums">
+                <tr className="border-b border-line">
+                  <td className="px-4 py-3 font-medium tabular-nums">
+                    {run.symbol}
+                  </td>
+                  <td className="px-4 py-3">{statusLabel(run.status)}</td>
+                  <td className="px-4 py-3 tabular-nums">
                     {run.stats?.trades ?? "—"}
                   </td>
-                  <td className="py-2 pr-4 tabular-nums">
+                  <td
+                    className={`px-4 py-3 tabular-nums ${signedTone(
+                      run.stats ? realizedReturnPct(run.stats) : null,
+                    )}`}
+                  >
                     {formatBacktestReturnPct(
                       run.stats ? realizedReturnPct(run.stats) : null,
                     )}
                   </td>
-                  <td className="py-2 tabular-nums">
+                  <td
+                    className={`px-4 py-3 tabular-nums ${
+                      run.stats
+                        ? signedTone(run.stats.realizedUsdt)
+                        : "text-ink-faint"
+                    }`}
+                  >
                     {run.stats
                       ? run.stats.realizedUsdt.toLocaleString(undefined, {
                           minimumFractionDigits: 2,
@@ -333,25 +345,35 @@ export function BacktestRunDetail({
                   </td>
                 </tr>
                 {comparables.map((row) => (
-                  <tr key={row.id} className="border-t border-line">
-                    <td className="py-2 pr-4">
+                  <tr key={row.id} className="border-b border-line last:border-b-0">
+                    <td className="px-4 py-3">
                       <Link
                         href={`${listHref}/${row.id}`}
-                        className="tabular-nums text-accent hover:underline"
+                        className="font-medium tabular-nums text-accent hover:underline"
                       >
                         {row.symbol}
                       </Link>
                     </td>
-                    <td className="py-2 pr-4">{statusLabel(row.status)}</td>
-                    <td className="py-2 pr-4 tabular-nums">
+                    <td className="px-4 py-3">{statusLabel(row.status)}</td>
+                    <td className="px-4 py-3 tabular-nums">
                       {row.stats?.trades ?? "—"}
                     </td>
-                    <td className="py-2 pr-4 tabular-nums">
+                    <td
+                      className={`px-4 py-3 tabular-nums ${signedTone(
+                        row.stats ? realizedReturnPct(row.stats) : null,
+                      )}`}
+                    >
                       {formatBacktestReturnPct(
                         row.stats ? realizedReturnPct(row.stats) : null,
                       )}
                     </td>
-                    <td className="py-2 tabular-nums">
+                    <td
+                      className={`px-4 py-3 tabular-nums ${
+                        row.stats
+                          ? signedTone(row.stats.realizedUsdt)
+                          : "text-ink-faint"
+                      }`}
+                    >
                       {row.stats
                         ? row.stats.realizedUsdt.toLocaleString(undefined, {
                             minimumFractionDigits: 2,

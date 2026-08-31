@@ -85,6 +85,7 @@ import {
 } from "@/lib/charts/overlay";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import type { CandleBar } from "@/lib/market/candles";
+import { formatQty, signedTone } from "@/lib/opportunities/format";
 
 function money(value: number): string {
   const abs = Math.abs(value);
@@ -235,7 +236,11 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
   const openSet = new Set(open);
   const fills = run.orders;
   if (fills.length === 0) {
-    return <p className="text-sm text-ink-muted">No simulated fills.</p>;
+    return (
+      <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
+        No simulated fills.
+      </p>
+    );
   }
   const pageCount = Math.max(1, Math.ceil(fills.length / TRADE_PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
@@ -245,49 +250,55 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
   const to = start + rows.length;
   return (
     <div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="text-xs uppercase tracking-[0.16em] text-ink-muted">
+      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+        <table className="w-full min-w-max text-left text-sm">
+          <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
             <tr>
-              <th className="py-1.5 pr-3 font-medium">Time</th>
-              <th className="py-1.5 pr-3 font-medium">Action</th>
-              <th className="py-1.5 pr-3 font-medium">Side</th>
-              <th className="py-1.5 pr-3 font-medium">Qty</th>
-              <th className="py-1.5 pr-3 font-medium">Price</th>
-              <th className="py-1.5 pr-3 font-medium">Fee</th>
-              <th className="py-1.5 font-medium">Realized</th>
+              <th className="px-4 py-3 font-medium">Time</th>
+              <th className="px-4 py-3 font-medium">Action</th>
+              <th className="px-4 py-3 font-medium">Side</th>
+              <th className="px-4 py-3 font-medium">Qty</th>
+              <th className="px-4 py-3 font-medium">Price</th>
+              <th className="px-4 py-3 font-medium">Fee</th>
+              <th className="px-4 py-3 font-medium">Realized</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row, index) => {
               const current = openSet.has(row);
+              const realized = current ? null : row.realizedUsdt;
               return (
                 <tr
                   key={`${row.atMs}-${start + index}`}
-                  className="border-t border-line"
+                  className="border-b border-line last:border-b-0"
                 >
-                  <td className="py-1.5 pr-3 text-ink-muted">
+                  <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
                     {new Date(row.atMs).toLocaleString("en-AU")}
                   </td>
-                  <td className="py-1.5 pr-3">
+                  <td className="px-4 py-3">
                     {current
-                      ? "open"
+                      ? "Open"
                       : row.action === "flatten"
                         ? "Close"
-                        : row.action}
+                        : row.action === "buy"
+                          ? "Buy"
+                          : row.action === "sell"
+                            ? "Sell"
+                            : row.action}
                   </td>
-                  <td className="py-1.5 pr-3">{row.side}</td>
-                  <td className="py-1.5 pr-3 tabular-nums">{row.qty}</td>
-                  <td className="py-1.5 pr-3 tabular-nums">{money(row.price)}</td>
-                  <td className="py-1.5 pr-3 tabular-nums">
+                  <td className="px-4 py-3 capitalize">{row.side}</td>
+                  <td
+                    className="px-4 py-3 tabular-nums"
+                    title={String(row.qty)}
+                  >
+                    {formatQty(row.qty)}
+                  </td>
+                  <td className="px-4 py-3 tabular-nums">{money(row.price)}</td>
+                  <td className="px-4 py-3 tabular-nums">
                     {money(row.feeUsdt)}
                   </td>
-                  <td className="py-1.5 tabular-nums">
-                    {current
-                      ? "—"
-                      : row.realizedUsdt == null
-                        ? "—"
-                        : money(row.realizedUsdt)}
+                  <td className={`px-4 py-3 tabular-nums ${signedTone(realized)}`}>
+                    {realized == null ? "—" : money(realized)}
                   </td>
                 </tr>
               );
