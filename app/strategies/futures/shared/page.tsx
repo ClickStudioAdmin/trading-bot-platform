@@ -14,7 +14,7 @@ import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Shared Desks",
+  title: "Manage Copy Traders",
   description: "Manage followers and private invites for this desk.",
 };
 
@@ -41,7 +41,7 @@ export default async function FuturesSharedDesksPage({
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
-      <PageHeading as="h2" title="Shared Desks" />
+      <PageHeading as="h2" title="Manage Copy Traders" />
       <p className="-mt-4 text-sm text-ink-muted">
         Followers of this desk. Invite privately here. Visibility, logos, and
         caps stay on{" "}

@@ -74,7 +74,7 @@ export const SIGNAL_FOLLOWER_PRIMARY_LINKS = [
 export const COPY_PRIMARY_LINKS = PERPS_PRIMARY_LINKS;
 
 export const FUTURES_SECONDARY_LINKS = [
-  { href: "/strategies/futures/shared", label: "Shared Desks" },
+  { href: "/strategies/futures/shared", label: "Manage Copy Traders" },
   { href: "/strategies/futures/settings", label: "Desk Settings" },
   { href: "/strategies/futures/pairs", label: "Pairs" },
   { href: "/strategies/futures/activity", label: "Activity" },

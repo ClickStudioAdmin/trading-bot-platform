@@ -144,7 +144,7 @@ export function DeskCopyShareCard({
                 href={deskHref(FUTURES_PATHS.shared, account.id)}
                 className="text-accent"
               >
-                Shared Desks
+                Manage Copy Traders
               </Link>
               .
             </span>
