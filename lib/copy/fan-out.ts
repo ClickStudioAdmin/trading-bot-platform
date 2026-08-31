@@ -111,15 +111,15 @@ export async function fanOutCopyFills(input: {
       loadDeskCopyListing(input.parentAccountId),
       loadFuturesSettings(input.parentAccountId),
     ]);
-  const [venueMins, parentPlaybooks] = parentIsDca
-    ? await Promise.all([
-        loadCopyVenueMins(
-          parentAccount?.venue ?? "bybit",
-          parentAccount?.venueEnvironment ?? null,
-        ),
-        listDcaPlaybooksForAccount(input.parentAccountId),
-      ])
-    : [new Map<string, { minQty: number; minNotionalUsdt: number }>(), []];
+  const [venueMins, parentPlaybooks] = await Promise.all([
+    loadCopyVenueMins(
+      parentAccount?.venue ?? "bybit",
+      parentAccount?.venueEnvironment ?? null,
+    ),
+    parentIsDca
+      ? listDcaPlaybooksForAccount(input.parentAccountId)
+      : Promise.resolve([]),
+  ]);
   const parentBook = parentSettings.connectionId
     ? await readParentCopyBook(input.parentUserId, parentSettings.connectionId)
     : { book: null, error: "Parent desk has no bound key." };
@@ -141,7 +141,6 @@ export async function fanOutCopyFills(input: {
       await fanOutToFollower({
         parentAccountId: input.parentAccountId,
         parentAvailable: parentBook.book,
-        parentIsDca,
         parentWorking,
         parentOpens,
         parentPlaybooks,
@@ -281,7 +280,6 @@ async function loadParentCopyFills(
 async function fanOutToFollower(input: {
   parentAccountId: string;
   parentAvailable: number | null;
-  parentIsDca: boolean;
   parentWorking: FuturesWorkingOrder[];
   parentOpens: Awaited<ReturnType<typeof loadFuturesPositions>>;
   parentPlaybooks: Awaited<ReturnType<typeof listDcaPlaybooksForAccount>>;
@@ -358,7 +356,6 @@ async function fanOutToFollower(input: {
   const skippedCycles = await applyCopyCycleGates({
     parentAccountId: input.parentAccountId,
     parentAvailable: input.parentAvailable,
-    parentIsDca: input.parentIsDca,
     parentWorking: input.parentWorking,
     parentOpens: input.parentOpens,
     parentPlaybooks: input.parentPlaybooks,
@@ -846,7 +843,6 @@ async function syncCopyWorkingOrders(input: {
 async function applyCopyCycleGates(input: {
   parentAccountId: string;
   parentAvailable: number | null;
-  parentIsDca: boolean;
   parentWorking: FuturesWorkingOrder[];
   parentOpens: Awaited<ReturnType<typeof loadFuturesPositions>>;
   parentPlaybooks: Awaited<ReturnType<typeof listDcaPlaybooksForAccount>>;
@@ -862,9 +858,6 @@ async function applyCopyCycleGates(input: {
   tickers: Map<string, { lastPrice?: string; bid1Price?: string; ask1Price?: string }>;
 }): Promise<Set<string>> {
   const skipped = new Set<string>();
-  if (!input.parentIsDca) {
-    return skipped;
-  }
   const keys = new Set<string>();
   for (const row of input.parentOpens) {
     keys.add(copyCycleKey(row.symbol, row.side));
@@ -882,15 +875,13 @@ async function applyCopyCycleGates(input: {
     const parentHasPosition = input.parentOpens.some(
       (row) => row.symbol === symbol && row.side === side,
     );
-    const parentPositionId =
-      input.parentOpens.find((row) => row.symbol === symbol && row.side === side)
-        ?.id ?? null;
+    const parentOpen = input.parentOpens.find(
+      (row) => row.symbol === symbol && row.side === side,
+    );
+    const parentPositionId = parentOpen?.id ?? null;
     const entryWorkings = input.parentWorking.filter(
       (row) =>
-        row.symbol === symbol &&
-        row.side === side &&
-        !row.reduceOnly &&
-        parseDcaClipIndex(row.idempotencyKey) != null,
+        row.symbol === symbol && row.side === side && !row.reduceOnly,
     );
     const entryClipIndexes = entryWorkings
       .map((row) => parseDcaClipIndex(row.idempotencyKey))
@@ -917,7 +908,8 @@ async function applyCopyCycleGates(input: {
         (row) =>
           row.ruleName === COPY_RULE_NAME &&
           row.symbol === symbol &&
-          row.side === side,
+          row.side === side &&
+          !row.reduceOnly,
       ),
     });
     const parentBook = input.parentAvailable;
@@ -989,13 +981,17 @@ async function applyCopyCycleGates(input: {
       minNotionalUsdt: 0,
     };
     const reason = decideCopyCycleSkip({
-      parentIsDca: true,
       alreadyJoined,
       midParent: copyCycleMidParent({
         parentHasPosition,
         entryClipIndexes,
         hasNewEntryFillAfterFollow,
         parentHadEntryBeforeFollow,
+        parentPositionOpenedBeforeFollow: Boolean(
+          parentOpen &&
+            parentOpen.openedAtMs > 0 &&
+            parentOpen.openedAtMs < input.follower.createdAtMs,
+        ),
       }),
       live: input.live,
       ladderClips,

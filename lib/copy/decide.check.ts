@@ -422,6 +422,24 @@ assert.equal(
   true,
 );
 assert.equal(
+  copyCycleMidParent({
+    parentHasPosition: true,
+    entryClipIndexes: [],
+    hasNewEntryFillAfterFollow: true,
+    parentPositionOpenedBeforeFollow: true,
+  }),
+  true,
+);
+assert.equal(
+  copyCycleMidParent({
+    parentHasPosition: true,
+    entryClipIndexes: [],
+    hasNewEntryFillAfterFollow: true,
+    parentPositionOpenedBeforeFollow: false,
+  }),
+  false,
+);
+assert.equal(
   copyFollowerAlreadyJoined({
     hasFollowerPosition: false,
     hasCopiedWorking: true,
@@ -430,7 +448,6 @@ assert.equal(
 );
 assert.equal(
   decideCopyCycleSkip({
-    parentIsDca: true,
     alreadyJoined: false,
     midParent: true,
     live: false,
@@ -442,7 +459,6 @@ assert.equal(
 );
 assert.equal(
   decideCopyCycleSkip({
-    parentIsDca: true,
     alreadyJoined: true,
     midParent: true,
     live: true,
@@ -454,7 +470,6 @@ assert.equal(
 );
 assert.equal(
   decideCopyCycleSkip({
-    parentIsDca: true,
     alreadyJoined: false,
     midParent: false,
     live: true,
@@ -469,7 +484,6 @@ assert.equal(
 );
 assert.equal(
   decideCopyCycleSkip({
-    parentIsDca: false,
     alreadyJoined: false,
     midParent: true,
     live: true,
@@ -477,7 +491,7 @@ assert.equal(
     minQty: 0.001,
     minNotionalUsdt: 5,
   }),
-  null,
+  "mid_cycle",
 );
 assert.equal(
   copiedWorkingMatchesParent("d11111111l2", {

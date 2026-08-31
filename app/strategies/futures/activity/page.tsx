@@ -34,8 +34,8 @@ export default async function FuturesActivityPage({
         <p className="mb-4 text-sm text-ink-muted">
           Parent and copy events for this desk: followed, paused, resumed,
           copied fills and limits, amends and cancels to match the parent, and
-          skipped trades (mid-cycle, book too small, paused, reduce-only,
-          adverse move, and the rest).
+          skipped trades (parent already in that trade, book too small, paused,
+          reduce-only, adverse move, and the rest).
         </p>
       ) : null}
       {session ? (

@@ -244,16 +244,50 @@ assert.deepEqual(
 );
 assert.deepEqual(
   sortFuturesWorkingRows([
-    { idempotencyKey: "d11111111l2", createdAtMs: 2, ruleName: "DCA Test - ETH" },
-    { idempotencyKey: "d22222222l1", createdAtMs: 1, ruleName: "DCA Test" },
-    { idempotencyKey: "d11111111l1", createdAtMs: 1, ruleName: "DCA Test - ETH" },
-    { idempotencyKey: "d22222222l2", createdAtMs: 2, ruleName: "DCA Test" },
+    { idempotencyKey: "d11111111l2", createdAtMs: 2, ruleName: "DCA Test - ETH", symbol: "ETHUSDT" },
+    { idempotencyKey: "d22222222l1", createdAtMs: 1, ruleName: "DCA Test", symbol: "BTCUSDT" },
+    { idempotencyKey: "d11111111l1", createdAtMs: 1, ruleName: "DCA Test - ETH", symbol: "ETHUSDT" },
+    { idempotencyKey: "d22222222l2", createdAtMs: 2, ruleName: "DCA Test", symbol: "BTCUSDT" },
   ]).map((row) => row.ruleName + " " + row.idempotencyKey),
   [
     "DCA Test d22222222l1",
     "DCA Test d22222222l2",
     "DCA Test - ETH d11111111l1",
     "DCA Test - ETH d11111111l2",
+  ],
+);
+assert.deepEqual(
+  sortFuturesWorkingRows([
+    {
+      idempotencyKey: "d11111111l1",
+      createdAtMs: 1,
+      ruleName: "Copy",
+      symbol: "ETHUSDT",
+    },
+    {
+      idempotencyKey: "d22222222l2",
+      createdAtMs: 4,
+      ruleName: "Copy",
+      symbol: "BTCUSDT",
+    },
+    {
+      idempotencyKey: "d22222222l1",
+      createdAtMs: 2,
+      ruleName: "Copy",
+      symbol: "BTCUSDT",
+    },
+    {
+      idempotencyKey: "d11111111l2",
+      createdAtMs: 3,
+      ruleName: "Copy",
+      symbol: "ETHUSDT",
+    },
+  ]).map((row) => row.symbol + " " + row.idempotencyKey),
+  [
+    "BTCUSDT d22222222l1",
+    "BTCUSDT d22222222l2",
+    "ETHUSDT d11111111l1",
+    "ETHUSDT d11111111l2",
   ],
 );
 

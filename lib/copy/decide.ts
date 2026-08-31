@@ -73,8 +73,12 @@ export function copyCycleMidParent(input: {
   entryClipIndexes: readonly number[];
   hasNewEntryFillAfterFollow: boolean;
   parentHadEntryBeforeFollow?: boolean;
+  parentPositionOpenedBeforeFollow?: boolean;
 }): boolean {
-  if (input.parentHadEntryBeforeFollow) {
+  if (
+    input.parentHadEntryBeforeFollow ||
+    input.parentPositionOpenedBeforeFollow
+  ) {
     return true;
   }
   if (
@@ -119,7 +123,6 @@ export function copyFollowerCloseKey(
 }
 
 export function decideCopyCycleSkip(input: {
-  parentIsDca: boolean;
   alreadyJoined: boolean;
   midParent: boolean;
   live: boolean;
@@ -127,7 +130,7 @@ export function decideCopyCycleSkip(input: {
   minQty: number;
   minNotionalUsdt: number;
 }): CopyCycleSkipReason | null {
-  if (!input.parentIsDca || input.alreadyJoined) {
+  if (input.alreadyJoined) {
     return null;
   }
   if (input.midParent) {

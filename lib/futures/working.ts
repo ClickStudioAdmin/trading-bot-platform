@@ -303,10 +303,17 @@ function workingSourceSortKey(row: {
 export function sortFuturesWorkingRows<T extends {
   idempotencyKey: string | null;
   createdAtMs: number;
+  symbol?: string;
   source?: string;
   ruleName?: string | null;
 }>(rows: readonly T[]): T[] {
   return [...rows].sort((left, right) => {
+    const symbolCmp = String(left.symbol ?? "").localeCompare(
+      String(right.symbol ?? ""),
+    );
+    if (symbolCmp !== 0) {
+      return symbolCmp;
+    }
     const sourceCmp = workingSourceSortKey(left).localeCompare(
       workingSourceSortKey(right),
     );
