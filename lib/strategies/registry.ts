@@ -11,6 +11,7 @@ export const FUTURES_PATHS = {
   automations: "/strategies/futures/automations",
   webhooks: "/strategies/futures/webhooks",
   performance: "/strategies/futures/performance",
+  shared: "/strategies/futures/shared",
   activity: "/strategies/futures/activity",
   pairs: "/strategies/futures/pairs",
   settings: "/strategies/futures/settings",

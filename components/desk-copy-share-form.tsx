@@ -3,23 +3,18 @@ import { LogoFileField } from "@/components/logo-file-field";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
+  deskHref,
   formatDeskType,
   formatDeskVenueCaption,
   type TradingAccount,
 } from "@/lib/accounts/model";
-import {
-  inviteDeskCopyShareAction,
-  revokeDeskCopyShareAction,
-  saveDeskCopyListingAction,
-} from "@/lib/copy/actions";
+import { saveDeskCopyListingAction } from "@/lib/copy/actions";
 import {
   COPY_DESCRIPTION_MAX,
-  COPY_FOLLOWING_UNAVAILABLE,
   COPY_SHARE_OFF_OPEN_TRADES,
-  copyShareCountsTowardCap,
   type DeskCopyListing,
-  type DeskCopyShare,
 } from "@/lib/copy/model";
+import { FUTURES_PATHS } from "@/lib/strategies/registry";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -32,7 +27,6 @@ export function DeskCopyShareCard({
   maxFollowersDefault = null,
   maxFollowersCeiling = null,
   openTradeCount = 0,
-  shares = [],
 }: {
   account: TradingAccount;
   listing: DeskCopyListing | null;
@@ -41,7 +35,6 @@ export function DeskCopyShareCard({
   maxFollowersDefault?: number | null;
   maxFollowersCeiling?: number | null;
   openTradeCount?: number;
-  shares?: DeskCopyShare[];
 }) {
   const modeLabel = account.mode === "live" ? "Live" : "Paper";
   const stamp = `${formatDeskType(account.deskType)} · ${formatDeskVenueCaption(account)} · ${modeLabel}`;
@@ -146,7 +139,14 @@ export function DeskCopyShareCard({
               <option value="public">Public — catalogue</option>
             </select>
             <span className="mt-1 block text-xs text-ink-faint">
-              Private stays off the catalogue. Invite members by email below.
+              Private stays off the catalogue. Invite members from{" "}
+              <Link
+                href={deskHref(FUTURES_PATHS.shared, account.id)}
+                className="text-accent"
+              >
+                Shared Desks
+              </Link>
+              .
             </span>
           </label>
           <label className="block text-sm text-ink">
@@ -226,114 +226,6 @@ export function DeskCopyShareCard({
           </PendingSubmitButton>
         </form>
       )}
-      {listing ? (
-        <CopyInvitePanel
-          listing={listing}
-          shares={shares}
-          canInvite={!block}
-        />
-      ) : null}
     </section>
-  );
-}
-
-function CopyInvitePanel({
-  listing,
-  shares,
-  canInvite,
-}: {
-  listing: DeskCopyListing;
-  shares: DeskCopyShare[];
-  canInvite: boolean;
-}) {
-  const openCount = shares.filter((row) =>
-    copyShareCountsTowardCap(row.status),
-  ).length;
-  const capLabel =
-    listing.maxFollowers == null
-      ? `${openCount} invited`
-      : `${openCount} of ${listing.maxFollowers} invited`;
-  const inviteReady =
-    canInvite && listing.sharingEnabled && listing.allowNewFollowers;
-  return (
-    <div className="space-y-3 border-t border-line pt-4">
-      <div>
-        <p className="text-sm text-ink">Private invites</p>
-        <p className="mt-1 text-xs text-ink-muted">
-          Email must already have a login. No email is sent. {capLabel}.
-        </p>
-      </div>
-      {!listing.sharingEnabled ? (
-        <p
-          role="note"
-          className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
-        >
-          {COPY_FOLLOWING_UNAVAILABLE} New invites are paused.
-        </p>
-      ) : null}
-      {inviteReady ? (
-        <form action={inviteDeskCopyShareAction} className="space-y-3">
-          <label className="block text-sm text-ink">
-            Invite email
-            <input
-              type="email"
-              name="email"
-              required
-              autoComplete="off"
-              placeholder="member@email"
-              className={fieldClass}
-            />
-          </label>
-          <PendingSubmitButton
-            pendingLabel="Inviting…"
-            successKey="invite-desk-copy"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-          >
-            Send invite
-          </PendingSubmitButton>
-        </form>
-      ) : listing.sharingEnabled && !listing.allowNewFollowers ? (
-        <p className="text-xs text-ink-muted">
-          New followers are off. Existing invites stay until you revoke them.
-        </p>
-      ) : null}
-      {shares.length === 0 ? (
-        <p className="text-xs text-ink-faint">No invites yet.</p>
-      ) : (
-        <ul className="space-y-2">
-          {shares.map((share) => (
-            <li
-              key={share.id}
-              className="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2"
-            >
-              <span className="min-w-0">
-                <span className="block truncate text-sm text-ink">
-                  {share.invitedEmail}
-                </span>
-                <span className="text-xs text-ink-faint">
-                  {share.status === "invited"
-                    ? "Invited"
-                    : share.status === "active"
-                      ? "Following"
-                      : "Revoked"}
-                </span>
-              </span>
-              {share.status === "revoked" ? null : (
-                <form action={revokeDeskCopyShareAction}>
-                  <input type="hidden" name="shareId" value={share.id} />
-                  <PendingSubmitButton
-                    pendingLabel="Revoking…"
-                    successKey={`revoke-desk-copy-${share.id}`}
-                    className="rounded-control border border-line px-3 py-1.5 text-xs text-danger hover:bg-danger/10"
-                  >
-                    Revoke
-                  </PendingSubmitButton>
-                </form>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   );
 }

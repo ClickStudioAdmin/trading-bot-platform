@@ -60,6 +60,13 @@ export type DeskCopyShare = {
   updatedAt: string;
 };
 
+/** Owner-facing follower row. Never include email or user id in the UI. */
+export type DeskCopyFollowerView = {
+  id: string;
+  status: CopyShareStatus;
+  traderAlias: string | null;
+};
+
 export type DeskCopyListing = {
   accountId: string;
   visibility: CopyListingVisibility;

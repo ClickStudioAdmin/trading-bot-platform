@@ -247,21 +247,25 @@ export async function inviteDeskCopyShareAction(formData: FormData) {
     redirect("/sign-in");
   }
   const account = session.account;
-  const settingsHref = (extra: Record<string, string>) =>
-    deskPath(FUTURES_PATHS.settings, account.id, extra);
+  const sharedHref = (extra: Record<string, string>) =>
+    deskPath(FUTURES_PATHS.shared, account.id, extra);
   if (deskIsCopy(account)) {
-    redirect(settingsHref({ error: "A copy desk cannot be shared." }));
+    redirect(
+      deskPath(FUTURES_PATHS.settings, account.id, {
+        error: "A copy desk cannot be shared.",
+      }),
+    );
   }
   const email = parseCopyInviteEmail(formData.get("email"));
   if (!email.ok) {
-    redirect(settingsHref({ error: email.error }));
+    redirect(sharedHref({ error: email.error }));
   }
   const member = await findMemberByEmail(email.email);
   if (!member) {
-    redirect(settingsHref({ error: "No member with that email." }));
+    redirect(sharedHref({ error: "No member with that email." }));
   }
   if (member.status === "disabled") {
-    redirect(settingsHref({ error: "That member is disabled." }));
+    redirect(sharedHref({ error: "That member is disabled." }));
   }
   const [listing, shares, platform] = await Promise.all([
     loadDeskCopyListing(account.id),
@@ -276,7 +280,7 @@ export async function inviteDeskCopyShareAction(formData: FormData) {
     toUserId: member.userId,
   });
   if (block) {
-    redirect(settingsHref({ error: formatCopyInviteBlock(block) }));
+    redirect(sharedHref({ error: formatCopyInviteBlock(block) }));
   }
   const invited = await inviteDeskCopyShare({
     parentAccountId: account.id,
@@ -285,7 +289,7 @@ export async function inviteDeskCopyShareAction(formData: FormData) {
     invitedEmail: member.email,
   });
   if (!invited.ok) {
-    redirect(settingsHref({ error: invited.error }));
+    redirect(sharedHref({ error: invited.error }));
   }
   await writeEventLog({
     scope: "system",
@@ -296,7 +300,7 @@ export async function inviteDeskCopyShareAction(formData: FormData) {
     data: { toUserId: member.userId },
   });
   revalidatePath("/", "layout");
-  redirect(settingsHref({ saved: "invite" }));
+  redirect(sharedHref({ saved: "invite" }));
 }
 
 export async function revokeDeskCopyShareAction(formData: FormData) {
@@ -305,11 +309,11 @@ export async function revokeDeskCopyShareAction(formData: FormData) {
     redirect("/sign-in");
   }
   const account = session.account;
-  const settingsHref = (extra: Record<string, string>) =>
-    deskPath(FUTURES_PATHS.settings, account.id, extra);
+  const sharedHref = (extra: Record<string, string>) =>
+    deskPath(FUTURES_PATHS.shared, account.id, extra);
   const shareId = String(formData.get("shareId") ?? "").trim();
   if (!shareId) {
-    redirect(settingsHref({ error: "That invite was not found." }));
+    redirect(sharedHref({ error: "That invite was not found." }));
   }
   const revoked = await revokeDeskCopyShare({
     shareId,
@@ -317,7 +321,7 @@ export async function revokeDeskCopyShareAction(formData: FormData) {
     fromUserId: session.member.id,
   });
   if (!revoked.ok) {
-    redirect(settingsHref({ error: revoked.error }));
+    redirect(sharedHref({ error: revoked.error }));
   }
   await writeEventLog({
     scope: "system",
@@ -328,5 +332,5 @@ export async function revokeDeskCopyShareAction(formData: FormData) {
     data: { shareId },
   });
   revalidatePath("/", "layout");
-  redirect(settingsHref({ saved: "revoke" }));
+  redirect(sharedHref({ saved: "revoke" }));
 }

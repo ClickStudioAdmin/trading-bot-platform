@@ -48,7 +48,7 @@ Follower
   scale + guards → fills fan out
 ```
 
-Account nav gains **Copy desks** (catalogue). Sidebar shows a **Copy** badge on follower desks. Type grouping stays Automated vs Manual.
+Account nav gains **Copy desks** (catalogue). Parent desks get a **Shared Desks** tab (follower list + private email invite; alias only, never email). Sidebar shows a **Copy** badge on follower desks. Type grouping stays Automated vs Manual.
 
 ## Data shape
 
@@ -70,7 +70,7 @@ RLS: catalogue is public listings + alias + computed stats. Followers never sele
 | 2 | Schema + admin knob | Agent | Migration + persisted `copy_min_activity_days` (default 90, min 0) on `/admin/settings`. Checks for the activity floor. **In repo 31 Aug 2026.** Push `develop` to migrate. |
 | 3 | Follower desk flag | Agent | `copy_of` immutable. Helpers hide ticket, Automations, webhooks, templates apply, backtest-from-desk. Sidebar **Copy** badge. **In repo 31 Aug 2026.** |
 | 4 | Profile + share | Agent | Unique alias. Private or public, required brief. Reject Paper, unbound, C&C, and desks younger than N. **In repo 31 Aug 2026.** |
-| 5 | Private grants | Agent | Email invite. Revoke, unlist, and unbind pause new entries. **In repo 31 Aug 2026.** |
+| 5 | Private grants | Agent | Email invite from **Shared Desks**. Follower list shows trader alias only (never email). Revoke, unlist, and unbind pause new entries. **In repo 31 Aug 2026.** |
 | 6 | Catalogue + stats | Agent | Public catalogue, filters, computed desk and trader stats, trader page (public desks only). |
 | 7 | Create copy desk | Agent | Copy path stamps type/venue. Follower picks Paper or Live and scale. |
 | 8 | Follower chrome | Agent | Leader strip. Caps, reduce-only, max daily loss. Pause / unfollow. Close All. |
