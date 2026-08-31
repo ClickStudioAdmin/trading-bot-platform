@@ -58,20 +58,23 @@ export default async function CopyDeskPerformancePage({
   const traderHref = card.traderAlias
     ? `/account/copy/traders/${encodeURIComponent(card.traderAlias)}`
     : "/account/copy";
-  const empty30d = !card.stats30d || card.stats30d.closedCount === 0;
-  const roi = empty30d
-    ? "—"
-    : card.stats30d.realizedPct == null
-      ? formatSignedUsd(card.stats30d.realizedUsdt)
-      : formatPct(card.stats30d.realizedPct);
-  const drawdown = empty30d
-    ? "—"
-    : card.stats30d.maxDrawdownPct == null
-      ? formatSignedUsd(card.stats30d.maxDrawdownUsdt)
-      : formatPct(card.stats30d.maxDrawdownPct);
-  const winRate = empty30d
-    ? "—"
-    : `${Math.round((card.stats30d.winCount / card.stats30d.closedCount) * 100)}%`;
+  const stats = card.stats30d;
+  const roi =
+    !stats || stats.closedCount === 0
+      ? "—"
+      : stats.realizedPct == null
+        ? formatSignedUsd(stats.realizedUsdt)
+        : formatPct(stats.realizedPct);
+  const drawdown =
+    !stats || stats.closedCount === 0
+      ? "—"
+      : stats.maxDrawdownPct == null
+        ? formatSignedUsd(stats.maxDrawdownUsdt)
+        : formatPct(stats.maxDrawdownPct);
+  const winRate =
+    !stats || stats.closedCount === 0
+      ? "—"
+      : `${Math.round((stats.winCount / stats.closedCount) * 100)}%`;
   const followers =
     card.maxFollowers == null
       ? String(card.followerCount)
@@ -149,11 +152,12 @@ export default async function CopyDeskPerformancePage({
             {
               label: "ROI [30d]",
               value: roi,
-              toneClass: empty30d
-                ? undefined
-                : card.stats30d.realizedUsdt < 0
-                  ? "text-danger"
-                  : "text-success",
+              toneClass:
+                !stats || stats.closedCount === 0
+                  ? undefined
+                  : stats.realizedUsdt < 0
+                    ? "text-danger"
+                    : "text-success",
             },
             { label: "Drawdown [30d]", value: drawdown },
             { label: "Win rate [30d]", value: winRate },
