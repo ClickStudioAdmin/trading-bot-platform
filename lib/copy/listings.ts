@@ -1,9 +1,12 @@
 import { createServiceClient } from "@/lib/supabase/admin";
+import { deskLogoPublicUrl } from "./logo";
 import {
   parseCopyDescription,
   parseCopyMaxFollowers,
   parseCopyMinBalanceUsdt,
+  parseCopyToggle,
   parseCopyVisibility,
+  parseTraderLogoPath,
   type CopyListingVisibility,
   type DeskCopyListing,
 } from "./model";
@@ -23,12 +26,23 @@ function parseListingRow(
   ) {
     return null;
   }
+  const logo = parseTraderLogoPath(row.logo_path);
+  const logoPath = logo.ok ? logo.path : null;
+  const updatedAt =
+    typeof row.updated_at === "string" ? row.updated_at : null;
   return {
     accountId: String(row.account_id),
     visibility: visibility.visibility,
     description: description.description,
     maxFollowers: maxFollowers.maxFollowers,
     minBalanceUsdt: minBalance.minBalanceUsdt,
+    sharingEnabled: parseCopyToggle(row.sharing_enabled),
+    allowNewFollowers:
+      row.allow_new_followers === undefined
+        ? true
+        : parseCopyToggle(row.allow_new_followers),
+    logoPath,
+    logoUrl: deskLogoPublicUrl(logoPath, updatedAt),
   };
 }
 
@@ -42,7 +56,7 @@ export async function loadDeskCopyListing(
   const { data, error } = await supabase
     .from("desk_copy_listings")
     .select(
-      "account_id, visibility, description, max_followers, min_balance_usdt",
+      "account_id, visibility, description, max_followers, min_balance_usdt, sharing_enabled, allow_new_followers, logo_path, updated_at",
     )
     .eq("account_id", accountId)
     .maybeSingle();
@@ -83,6 +97,9 @@ export async function saveDeskCopyListing(input: {
   description: string;
   maxFollowers: number | null;
   minBalanceUsdt: number | null;
+  sharingEnabled: boolean;
+  allowNewFollowers: boolean;
+  logoPath: string | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -96,6 +113,9 @@ export async function saveDeskCopyListing(input: {
     description: input.description,
     max_followers: input.maxFollowers,
     min_balance_usdt: input.minBalanceUsdt,
+    sharing_enabled: input.sharingEnabled,
+    allow_new_followers: input.allowNewFollowers,
+    logo_path: input.logoPath,
     updated_at: now,
   };
   const { error } = existing
@@ -106,6 +126,9 @@ export async function saveDeskCopyListing(input: {
           description: input.description,
           max_followers: input.maxFollowers,
           min_balance_usdt: input.minBalanceUsdt,
+          sharing_enabled: input.sharingEnabled,
+          allow_new_followers: input.allowNewFollowers,
+          logo_path: input.logoPath,
           updated_at: now,
         })
         .eq("account_id", input.accountId)

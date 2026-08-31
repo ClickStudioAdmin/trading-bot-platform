@@ -20,7 +20,7 @@ A connected desk can be **shared**. Other members create a **copy desk** of the 
 | --- | --- |
 | Not a desk type | Do **not** add `copy_trade`. Follower `desk_type` and `venue` are **stamped from the parent**. |
 | Not Paper/Live mode | `mode` stays Paper vs Live. Copy is an immutable `copy_of_account_id` plus a Create Desk path. |
-| Share | **Private** (email grant) or **public** (catalogue). Not a second login on the parent. |
+| Share | **Private** (email grant) or **public** (catalogue). Not a second login on the parent. Owner must tick **Enable sharing**. **Allow new followers** can close the door without unlisting current copiers. |
 | Who may share | **Live + bound** only. Paper never. Unbound Live never. C&C never in v1. Unbind unlists / pauses new entries. |
 | Activity floor | First **venue fill** on that desk at least **N days** ago. `copy_min_activity_days` on `/admin/settings` (persisted, default **90**, **0 allowed** for tests). Share and catalogue enforce N server-side. |
 | Alias | Login **trader profile**, unique, required before first share. Optional logo. Email never shown. |
@@ -55,7 +55,7 @@ Account nav gains **Copy desks** (catalogue). Sidebar shows a **Copy** badge on 
 - Login trader profile: alias (unique), optional bio, optional logo (PNG/JPG/WebP in Storage)
 - Persisted admin `copy_min_activity_days`, `copy_max_followers_default` (pre-fill only), and `copy_max_followers_ceiling` (hard cap; empty = no platform cap)
 - `trading_accounts.copy_of_account_id` (immutable when set)
-- Listing: `private` \| `public`, required description, optional `max_followers`, optional `min_balance_usdt`
+- Listing: `private` \| `public`, required description, optional `max_followers`, optional `min_balance_usdt`, optional desk logo, `sharing_enabled`, `allow_new_followers`
 - `desk_copy_shares` (email / user, invited / active / revoked)
 - Follower settings: scale, pause, max daily loss (caps stay on `strategy_settings`)
 - `desk_copy_receipts` for idempotency

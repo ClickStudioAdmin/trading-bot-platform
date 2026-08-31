@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
+  DESK_LOGO_BUCKET,
   parseTraderLogoPath,
   TRADER_LOGO_BUCKET,
   TRADER_LOGO_TYPES,
@@ -14,7 +15,8 @@ function mimeForExt(ext: string): string | null {
   return null;
 }
 
-export function traderLogoPublicUrl(
+function ownedLogoPublicUrl(
+  bucket: string,
   path: string | null | undefined,
   updatedAt?: string | null,
 ): string | null {
@@ -26,9 +28,7 @@ export function traderLogoPublicUrl(
   if (!supabase) {
     return null;
   }
-  const { data } = supabase.storage
-    .from(TRADER_LOGO_BUCKET)
-    .getPublicUrl(parsed.path);
+  const { data } = supabase.storage.from(bucket).getPublicUrl(parsed.path);
   const url = data.publicUrl?.trim();
   if (!url) {
     return null;
@@ -40,11 +40,13 @@ export function traderLogoPublicUrl(
   return url.includes("?") ? `${url}&t=${stamp}` : `${url}?t=${stamp}`;
 }
 
-export async function uploadTraderLogo(input: {
-  userId: string;
+async function uploadOwnedLogo(input: {
+  bucket: string;
+  ownerId: string;
   file: File;
   ext: string;
   previousPath: string | null;
+  error: string;
 }): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
   const mime = mimeForExt(input.ext);
   if (!mime) {
@@ -54,27 +56,25 @@ export async function uploadTraderLogo(input: {
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
-  const path = `${input.userId}/logo.${input.ext}`;
+  const path = `${input.ownerId}/logo.${input.ext}`;
   const bytes = Buffer.from(await input.file.arrayBuffer());
-  const { error } = await supabase.storage
-    .from(TRADER_LOGO_BUCKET)
-    .upload(path, bytes, {
-      contentType: mime,
-      upsert: true,
-    });
+  const { error } = await supabase.storage.from(input.bucket).upload(path, bytes, {
+    contentType: mime,
+    upsert: true,
+  });
   if (error) {
-    return { ok: false, error: "Could not save the trader logo." };
+    return { ok: false, error: input.error };
   }
   if (input.previousPath && input.previousPath !== path) {
-    await supabase.storage
-      .from(TRADER_LOGO_BUCKET)
-      .remove([input.previousPath]);
+    await supabase.storage.from(input.bucket).remove([input.previousPath]);
   }
   return { ok: true, path };
 }
 
-export async function removeTraderLogo(
+async function removeOwnedLogo(
+  bucket: string,
   path: string | null,
+  error: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const parsed = parseTraderLogoPath(path);
   if (!parsed.ok || !parsed.path) {
@@ -84,11 +84,77 @@ export async function removeTraderLogo(
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
-  const { error } = await supabase.storage
-    .from(TRADER_LOGO_BUCKET)
+  const { error: removed } = await supabase.storage
+    .from(bucket)
     .remove([parsed.path]);
-  if (error) {
-    return { ok: false, error: "Could not remove the trader logo." };
+  if (removed) {
+    return { ok: false, error };
   }
   return { ok: true };
+}
+
+export function traderLogoPublicUrl(
+  path: string | null | undefined,
+  updatedAt?: string | null,
+): string | null {
+  return ownedLogoPublicUrl(TRADER_LOGO_BUCKET, path, updatedAt);
+}
+
+export async function uploadTraderLogo(input: {
+  userId: string;
+  file: File;
+  ext: string;
+  previousPath: string | null;
+}): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  return uploadOwnedLogo({
+    bucket: TRADER_LOGO_BUCKET,
+    ownerId: input.userId,
+    file: input.file,
+    ext: input.ext,
+    previousPath: input.previousPath,
+    error: "Could not save the trader logo.",
+  });
+}
+
+export async function removeTraderLogo(
+  path: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  return removeOwnedLogo(
+    TRADER_LOGO_BUCKET,
+    path,
+    "Could not remove the trader logo.",
+  );
+}
+
+export function deskLogoPublicUrl(
+  path: string | null | undefined,
+  updatedAt?: string | null,
+): string | null {
+  return ownedLogoPublicUrl(DESK_LOGO_BUCKET, path, updatedAt);
+}
+
+export async function uploadDeskLogo(input: {
+  accountId: string;
+  file: File;
+  ext: string;
+  previousPath: string | null;
+}): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  return uploadOwnedLogo({
+    bucket: DESK_LOGO_BUCKET,
+    ownerId: input.accountId,
+    file: input.file,
+    ext: input.ext,
+    previousPath: input.previousPath,
+    error: "Could not save the desk logo.",
+  });
+}
+
+export async function removeDeskLogo(
+  path: string | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  return removeOwnedLogo(
+    DESK_LOGO_BUCKET,
+    path,
+    "Could not remove the desk logo.",
+  );
 }

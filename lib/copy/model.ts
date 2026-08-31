@@ -10,6 +10,7 @@ export const TRADER_ALIAS_TAKEN = "That trader alias is already taken.";
 export const TRADER_ALIAS_REQUIRED =
   "Set a trader alias in Account Settings before you share.";
 export const TRADER_LOGO_BUCKET = "trader-logos";
+export const DESK_LOGO_BUCKET = "desk-logos";
 export const TRADER_LOGO_MAX_BYTES = 1_048_576;
 export const TRADER_LOGO_TYPES = {
   "image/png": "png",
@@ -43,6 +44,10 @@ export type DeskCopyListing = {
   description: string;
   maxFollowers: number | null;
   minBalanceUsdt: number | null;
+  sharingEnabled: boolean;
+  allowNewFollowers: boolean;
+  logoPath: string | null;
+  logoUrl: string | null;
 };
 
 export type CopyMinBalanceBlock = "below" | "unread";
@@ -315,6 +320,21 @@ export function parseTraderBio(
   return { ok: true, bio };
 }
 
+export function parseCopyToggle(value: unknown): boolean {
+  if (value === true || value === 1) {
+    return true;
+  }
+  const raw = String(value ?? "").trim().toLowerCase();
+  return raw === "on" || raw === "true" || raw === "1";
+}
+
+export function copyListingAcceptsFollowers(input: {
+  sharingEnabled?: boolean | null;
+  allowNewFollowers?: boolean | null;
+}): boolean {
+  return Boolean(input.sharingEnabled) && input.allowNewFollowers !== false;
+}
+
 export function parseTraderLogoPath(
   value: unknown,
 ): { ok: true; path: string | null } | { ok: false; error: string } {
@@ -425,6 +445,8 @@ export function deskCopyListingFieldErrors(input: {
   maxFollowers?: unknown;
   minBalanceUsdt?: unknown;
   ceiling?: number | null;
+  sharingEnabled?: unknown;
+  allowNewFollowers?: unknown;
 }): {
   visibility: string | null;
   description: string | null;
@@ -452,6 +474,8 @@ export function parseDeskCopyListingForm(input: {
   maxFollowers?: unknown;
   minBalanceUsdt?: unknown;
   ceiling?: number | null;
+  sharingEnabled?: unknown;
+  allowNewFollowers?: unknown;
 }):
   | {
       ok: true;
@@ -459,6 +483,8 @@ export function parseDeskCopyListingForm(input: {
       description: string;
       maxFollowers: number | null;
       minBalanceUsdt: number | null;
+      sharingEnabled: boolean;
+      allowNewFollowers: boolean;
     }
   | { ok: false; error: string } {
   const fields = deskCopyListingFieldErrors(input);
@@ -499,6 +525,11 @@ export function parseDeskCopyListingForm(input: {
     description: description.description,
     maxFollowers: capped.maxFollowers,
     minBalanceUsdt: minBalance.minBalanceUsdt,
+    sharingEnabled: parseCopyToggle(input.sharingEnabled),
+    allowNewFollowers:
+      input.allowNewFollowers === undefined
+        ? true
+        : parseCopyToggle(input.allowNewFollowers),
   };
 }
 

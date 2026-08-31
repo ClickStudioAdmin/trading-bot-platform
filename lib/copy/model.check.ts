@@ -18,6 +18,8 @@ import {
   parseCopyMinBalanceUsdt,
   parseCopyMinActivityDays,
   parseCopyVisibility,
+  copyListingAcceptsFollowers,
+  parseCopyToggle,
   parseDeskCopyListingForm,
   parseTraderLogoPath,
   parseTraderLogoUpload,
@@ -284,6 +286,42 @@ if (listing.ok) {
   assert.equal(listing.visibility, "public");
   assert.equal(listing.maxFollowers, null);
   assert.equal(listing.minBalanceUsdt, null);
+  assert.equal(listing.sharingEnabled, false);
+  assert.equal(listing.allowNewFollowers, true);
+}
+assert.equal(parseCopyToggle("on"), true);
+assert.equal(parseCopyToggle(null), false);
+assert.equal(
+  copyListingAcceptsFollowers({
+    sharingEnabled: true,
+    allowNewFollowers: true,
+  }),
+  true,
+);
+assert.equal(
+  copyListingAcceptsFollowers({
+    sharingEnabled: true,
+    allowNewFollowers: false,
+  }),
+  false,
+);
+assert.equal(
+  copyListingAcceptsFollowers({
+    sharingEnabled: false,
+    allowNewFollowers: true,
+  }),
+  false,
+);
+const liveShare = parseDeskCopyListingForm({
+  visibility: "private",
+  description: "Brief",
+  sharingEnabled: "on",
+  allowNewFollowers: "",
+});
+assert.equal(liveShare.ok, true);
+if (liveShare.ok) {
+  assert.equal(liveShare.sharingEnabled, true);
+  assert.equal(liveShare.allowNewFollowers, false);
 }
 const capped = parseDeskCopyListingForm({
   visibility: "private",

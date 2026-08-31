@@ -19,7 +19,12 @@ import {
   loadFirstVenueFillMs,
   saveDeskCopyListing,
 } from "./listings";
-import { removeTraderLogo, uploadTraderLogo } from "./logo";
+import {
+  removeDeskLogo,
+  removeTraderLogo,
+  uploadDeskLogo,
+  uploadTraderLogo,
+} from "./logo";
 import { loadTraderProfile, saveTraderProfile } from "./profile";
 import { loadCopyPlatformSettings } from "./settings";
 
@@ -117,6 +122,8 @@ export async function saveDeskCopyListingAction(formData: FormData) {
     maxFollowers: formData.get("maxFollowers"),
     minBalanceUsdt: formData.get("minBalanceUsdt"),
     ceiling: platform.maxFollowersCeiling,
+    sharingEnabled: formData.get("sharingEnabled"),
+    allowNewFollowers: formData.get("allowNewFollowers"),
   });
   if (!parsed.ok) {
     redirect(settingsHref({ error: parsed.error }));
@@ -125,6 +132,8 @@ export async function saveDeskCopyListingAction(formData: FormData) {
     const description = parsed.description;
     const maxFollowers = parsed.maxFollowers;
     const minBalanceUsdt = parsed.minBalanceUsdt;
+    const sharingEnabled = parsed.sharingEnabled;
+    const allowNewFollowers = parsed.allowNewFollowers;
     const [profile, firstFillMs, settings, existing] =
       await Promise.all([
         loadTraderProfile(session.member.id),
@@ -145,12 +154,41 @@ export async function saveDeskCopyListingAction(formData: FormData) {
     if (share.block) {
       redirect(settingsHref({ error: share.block }));
     }
+    const file = formData.get("deskLogo");
+    const upload = parseTraderLogoUpload(
+      file instanceof File ? file : null,
+    );
+    if (!upload.ok) {
+      redirect(settingsHref({ error: upload.error }));
+    }
+    let logoPath = existing?.logoPath ?? null;
+    if (upload.ext && file instanceof File) {
+      const stored = await uploadDeskLogo({
+        accountId: account.id,
+        file,
+        ext: upload.ext,
+        previousPath: logoPath,
+      });
+      if (!stored.ok) {
+        redirect(settingsHref({ error: stored.error }));
+      }
+      logoPath = stored.path;
+    } else if (formData.get("removeDeskLogo") === "on" && logoPath) {
+      const removed = await removeDeskLogo(logoPath);
+      if (!removed.ok) {
+        redirect(settingsHref({ error: removed.error }));
+      }
+      logoPath = null;
+    }
     const saved = await saveDeskCopyListing({
       accountId: account.id,
       visibility,
       description,
       maxFollowers,
       minBalanceUsdt,
+      sharingEnabled,
+      allowNewFollowers,
+      logoPath,
     });
     if (!saved.ok) {
       redirect(settingsHref({ error: saved.error }));
@@ -165,6 +203,8 @@ export async function saveDeskCopyListingAction(formData: FormData) {
       visibility,
       maxFollowers,
       minBalanceUsdt,
+      sharingEnabled,
+      allowNewFollowers,
       live: accountCanHoldConnections(account.mode),
     },
     });
