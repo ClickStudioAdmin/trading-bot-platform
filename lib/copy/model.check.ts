@@ -23,7 +23,11 @@ import {
   parseCopyMinBalanceUsdt,
   parseCopyMinActivityDays,
   parseCopyVisibility,
+  copyInviteBlockCode,
   copyListingAcceptsFollowers,
+  copyShareCountsTowardCap,
+  formatCopyInviteBlock,
+  parseCopyInviteEmail,
   parseCopyToggle,
   parseDeskCopyListingForm,
   parseTraderLogoPath,
@@ -368,6 +372,56 @@ assert.equal(
     allowNewFollowers: true,
   }),
   false,
+);
+assert.equal(copyShareCountsTowardCap("invited"), true);
+assert.equal(copyShareCountsTowardCap("active"), true);
+assert.equal(copyShareCountsTowardCap("revoked"), false);
+assert.equal(parseCopyInviteEmail("  Ada@Click.studio ").ok, true);
+assert.equal(parseCopyInviteEmail("not-an-email").ok, false);
+const listingForInvite = {
+  sharingEnabled: true,
+  allowNewFollowers: true,
+  maxFollowers: 2,
+};
+assert.equal(
+  copyInviteBlockCode({
+    listing: listingForInvite,
+    followerCount: 1,
+    fromUserId: "a",
+    toUserId: "b",
+  }),
+  null,
+);
+assert.equal(
+  copyInviteBlockCode({
+    listing: listingForInvite,
+    followerCount: 2,
+    fromUserId: "a",
+    toUserId: "b",
+  }),
+  "cap",
+);
+assert.equal(
+  copyInviteBlockCode({
+    listing: listingForInvite,
+    followerCount: 0,
+    fromUserId: "a",
+    toUserId: "a",
+  }),
+  "self",
+);
+assert.equal(
+  copyInviteBlockCode({
+    listing: { ...listingForInvite, sharingEnabled: false },
+    followerCount: 0,
+    fromUserId: "a",
+    toUserId: "b",
+  }),
+  "sharing_off",
+);
+assert.equal(
+  formatCopyInviteBlock("self"),
+  "You cannot invite yourself.",
 );
 const liveShare = parseDeskCopyListingForm({
   visibility: "private",

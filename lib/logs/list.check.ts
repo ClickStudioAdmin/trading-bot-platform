@@ -42,6 +42,12 @@ assert.ok(
 assert.ok(
   eventLogOptionsForScopes(["system"]).includes("copy.listing_saved"),
 );
+assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("copy.invite_sent"),
+);
+assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("copy.invite_revoked"),
+);
 assert.equal(
   eventLogOptionsForScopes(["trade"]).includes("member.created"),
   false,

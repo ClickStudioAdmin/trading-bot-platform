@@ -39,13 +39,16 @@ import {
   formatStrategyDetachBlockers,
   strategyDetachBlockers,
   withQuery,
+  type TradingAccount,
 } from "@/lib/accounts/model";
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
 import {
   commitDeskRename,
   readDeskNameFromSettingsForm,
 } from "@/lib/accounts/actions";
-import { applyDeskBindRules } from "@/lib/accounts/store";
+import { applyDeskBindRules, loadAccountUsage } from "@/lib/accounts/store";
+import { pauseCopyNewEntriesOnUnbind } from "@/lib/copy/listings";
+import { copyLiveTradeCount } from "@/lib/copy/model";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
@@ -64,6 +67,17 @@ function settingsFail(accountId: string, message: string): never {
 
 function webhookFail(accountId: string, message: string): never {
   redirect(deskPath(FUTURES_PATHS.webhooks, accountId, { error: message }));
+}
+
+async function pauseCopyParentOnUnbind(account: TradingAccount) {
+  const usage = (await loadAccountUsage([account])).get(account.id);
+  await pauseCopyNewEntriesOnUnbind({
+    accountId: account.id,
+    openTradeCount: copyLiveTradeCount({
+      openPositions: usage?.futuresOpenCount,
+      workingOrders: usage?.workingCount,
+    }),
+  });
 }
 
 export async function submitFuturesTrade(formData: FormData) {
@@ -263,6 +277,7 @@ export async function saveFuturesSettings(formData: FormData) {
 
   let connectionId: string | null = null;
   const bindSubmitted = formData.has("exchangeConnectionId");
+  let unboundCopyParent = false;
   if (accountCanHoldConnections(account.mode) && bindSubmitted) {
     const nextId = String(formData.get("exchangeConnectionId") ?? "").trim();
     connectionId = nextId === "" || nextId === "none" ? null : nextId;
@@ -276,6 +291,9 @@ export async function saveFuturesSettings(formData: FormData) {
       if (detach.length > 0) {
         settingsFail(account.id, formatStrategyDetachBlockers(detach));
       }
+    }
+    if (current.connectionId && !connectionId) {
+      unboundCopyParent = true;
     }
     if (connectionId) {
       const connections = await listExchangeConnections(user.id);
@@ -311,6 +329,10 @@ export async function saveFuturesSettings(formData: FormData) {
   });
   if (error) {
     settingsFail(account.id, error.message);
+  }
+
+  if (unboundCopyParent) {
+    await pauseCopyParentOnUnbind(account);
   }
 
   if (nameChange.changed) {
@@ -441,6 +463,7 @@ export async function detachFuturesConnection() {
   if (error) {
     settingsFail(account.id, error.message);
   }
+  await pauseCopyParentOnUnbind(account);
   await writeEventLog({
     scope: "strategy",
     event: "settings.saved",

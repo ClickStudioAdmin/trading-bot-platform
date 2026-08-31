@@ -26,6 +26,13 @@ const TRADER_LOGO_PATH =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/logo\.(png|jpg|webp)$/i;
 
 export type CopyListingVisibility = "private" | "public";
+export type CopyShareStatus = "invited" | "active" | "revoked";
+export type CopyInviteBlock =
+  | "no_listing"
+  | "sharing_off"
+  | "new_followers_off"
+  | "self"
+  | "cap";
 export type CopyShareBlockCode =
   | "copy_desk"
   | "cash_and_carry"
@@ -40,6 +47,17 @@ export type TraderProfile = {
   bio: string | null;
   logoPath: string | null;
   logoUrl: string | null;
+};
+
+export type DeskCopyShare = {
+  id: string;
+  parentAccountId: string;
+  fromUserId: string;
+  toUserId: string;
+  invitedEmail: string;
+  status: CopyShareStatus;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type DeskCopyListing = {
@@ -362,6 +380,81 @@ export function copyListingAcceptsFollowers(input: {
   allowNewFollowers?: boolean | null;
 }): boolean {
   return Boolean(input.sharingEnabled) && input.allowNewFollowers !== false;
+}
+
+export function copyShareCountsTowardCap(status: CopyShareStatus): boolean {
+  return status === "invited" || status === "active";
+}
+
+export function parseCopyShareStatus(
+  value: unknown,
+): { ok: true; status: CopyShareStatus } | { ok: false; error: string } {
+  const status = String(value ?? "").trim();
+  if (status === "invited" || status === "active" || status === "revoked") {
+    return { ok: true, status };
+  }
+  return { ok: false, error: "Copy share status is invalid." };
+}
+
+export function parseCopyInviteEmail(
+  value: unknown,
+): { ok: true; email: string } | { ok: false; error: string } {
+  const email = String(value ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 160) {
+    return { ok: false, error: "Enter a valid email." };
+  }
+  return { ok: true, email };
+}
+
+export function copyInviteBlockCode(input: {
+  listing: {
+    sharingEnabled: boolean;
+    allowNewFollowers: boolean;
+    maxFollowers: number | null;
+  } | null;
+  ceiling?: number | null;
+  followerCount: number;
+  fromUserId: string;
+  toUserId: string;
+}): CopyInviteBlock | null {
+  if (!input.listing) {
+    return "no_listing";
+  }
+  if (!input.listing.sharingEnabled) {
+    return "sharing_off";
+  }
+  if (!input.listing.allowNewFollowers) {
+    return "new_followers_off";
+  }
+  if (input.fromUserId === input.toUserId) {
+    return "self";
+  }
+  if (
+    copyFollowerCapReached({
+      maxFollowers: input.listing.maxFollowers,
+      ceiling: input.ceiling,
+      followerCount: input.followerCount,
+    })
+  ) {
+    return "cap";
+  }
+  return null;
+}
+
+export function formatCopyInviteBlock(code: CopyInviteBlock): string {
+  if (code === "no_listing") {
+    return "Save the share settings before you invite.";
+  }
+  if (code === "sharing_off") {
+    return "Turn sharing on before you invite.";
+  }
+  if (code === "new_followers_off") {
+    return "New followers are not allowed on this desk.";
+  }
+  if (code === "self") {
+    return "You cannot invite yourself.";
+  }
+  return "This desk is at its maximum copy traders.";
 }
 
 export function copySharingOffBlocked(input: {

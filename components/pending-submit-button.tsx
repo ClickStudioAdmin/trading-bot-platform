@@ -65,6 +65,8 @@ function queryLooksSuccessful() {
     params.get("saved") === "trader" ||
     params.get("saved") === "password" ||
     params.get("saved") === "share" ||
+    params.get("saved") === "invite" ||
+    params.get("saved") === "revoke" ||
     params.get("reduce") === "1" ||
     params.get("removed") === "1" ||
     params.get("replaced") === "1" ||

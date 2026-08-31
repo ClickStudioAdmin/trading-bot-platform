@@ -141,3 +141,34 @@ export async function saveDeskCopyListing(input: {
   }
   return { ok: true };
 }
+
+export async function pauseCopyNewEntriesOnUnbind(input: {
+  accountId: string;
+  openTradeCount: number;
+}): Promise<{ paused: boolean; unlisted: boolean }> {
+  const listing = await loadDeskCopyListing(input.accountId);
+  if (!listing) {
+    return { paused: false, unlisted: false };
+  }
+  const unlisted =
+    listing.sharingEnabled &&
+    (!Number.isFinite(input.openTradeCount) || input.openTradeCount <= 0);
+  const paused = listing.allowNewFollowers;
+  if (!paused && !unlisted) {
+    return { paused: false, unlisted: false };
+  }
+  const saved = await saveDeskCopyListing({
+    accountId: listing.accountId,
+    visibility: listing.visibility,
+    description: listing.description,
+    maxFollowers: listing.maxFollowers,
+    minBalanceUsdt: listing.minBalanceUsdt,
+    sharingEnabled: unlisted ? false : listing.sharingEnabled,
+    allowNewFollowers: false,
+    logoPath: listing.logoPath,
+  });
+  if (!saved.ok) {
+    return { paused: false, unlisted: false };
+  }
+  return { paused, unlisted };
+}

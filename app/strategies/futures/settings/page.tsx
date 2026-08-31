@@ -18,6 +18,7 @@ import {
 } from "@/lib/accounts/model";
 import { evaluateCopyShare } from "@/lib/copy/model";
 import { loadDeskCopyListing, loadFirstVenueFillMs } from "@/lib/copy/listings";
+import { loadDeskCopyShares } from "@/lib/copy/shares";
 import { loadTraderProfile } from "@/lib/copy/profile";
 import { loadCopyPlatformSettings } from "@/lib/copy/settings";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
@@ -87,15 +88,18 @@ export default async function FuturesSettingsPage({
   const savedFlag = firstSearchValue(params.saved);
   const saved = savedFlag === "1";
   const shareSaved = savedFlag === "share";
+  const inviteSaved = savedFlag === "invite";
+  const revokeSaved = savedFlag === "revoke";
   const error = firstSearchValue(params.error);
   const copyDesk = deskIsCopy(session.account);
-  const [trader, listing, firstFillMs, copySettings] = copyDesk
-    ? [null, null, null, { minActivityDays: 0, maxFollowersDefault: null, maxFollowersCeiling: null }] as const
+  const [trader, listing, firstFillMs, copySettings, shares] = copyDesk
+    ? [null, null, null, { minActivityDays: 0, maxFollowersDefault: null, maxFollowersCeiling: null }, []] as const
     : await Promise.all([
         loadTraderProfile(session.member.id),
         loadDeskCopyListing(session.account.id),
         loadFirstVenueFillMs(session.account.id),
         loadCopyPlatformSettings(),
+        loadDeskCopyShares(session.account.id),
       ]);
   const shareEval = copyDesk
     ? { code: null, block: null }
@@ -163,6 +167,12 @@ export default async function FuturesSettingsPage({
       ) : null}
       {shareSaved ? (
         <p className="mt-4 text-sm text-success">Share settings saved.</p>
+      ) : null}
+      {inviteSaved ? (
+        <p className="mt-4 text-sm text-success">Invite sent.</p>
+      ) : null}
+      {revokeSaved ? (
+        <p className="mt-4 text-sm text-success">Invite revoked.</p>
       ) : null}
       <div
         className={
@@ -264,6 +274,7 @@ export default async function FuturesSettingsPage({
             openTradeCount={
               (usage?.futuresOpenCount ?? 0) + (usage?.workingCount ?? 0)
             }
+            shares={[...shares]}
           />
         )}
       </div>

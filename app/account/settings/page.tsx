@@ -6,9 +6,11 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { saveTraderProfileAction } from "@/lib/copy/actions";
 import { loadTraderProfile } from "@/lib/copy/profile";
 import {
+  COPY_FOLLOWING_UNAVAILABLE,
   TRADER_ALIAS_MAX,
   TRADER_BIO_MAX,
 } from "@/lib/copy/model";
+import { loadInboundCopyInvites } from "@/lib/copy/shares";
 import { changeOwnPassword, updateOwnProfile } from "@/lib/members/actions";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionMember } from "@/lib/auth/session";
@@ -40,6 +42,8 @@ export default async function AccountSettingsPage({
       : "profile";
   const trader =
     tab === "profile" ? await loadTraderProfile(member.id) : null;
+  const invites =
+    tab === "profile" ? await loadInboundCopyInvites(member.id) : [];
 
   return (
     <div>
@@ -219,6 +223,35 @@ export default async function AccountSettingsPage({
             Save trader profile
           </PendingSubmitButton>
         </form>
+        {invites.length > 0 ? (
+          <section className="mt-6 space-y-3 rounded-card border border-line bg-surface p-5">
+            <div>
+              <p className="text-sm text-ink">Copy invites</p>
+              <p className="mt-1 text-xs text-ink-muted">
+                Private grants to follow another desk. Creating a copy desk is
+                next.
+              </p>
+            </div>
+            <ul className="space-y-2">
+              {invites.map((row) => (
+                <li
+                  key={row.share.id}
+                  className="rounded-control border border-line px-3 py-2"
+                >
+                  <p className="text-sm text-ink">
+                    {row.traderAlias ?? "Trader"} · {row.parentName}
+                  </p>
+                  <p className="mt-1 text-xs text-ink-faint">
+                    {row.share.status === "active" ? "Following" : "Invited"}
+                    {row.sharingEnabled
+                      ? ""
+                      : ` · ${COPY_FOLLOWING_UNAVAILABLE}`}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         </>
       )}
     </div>
