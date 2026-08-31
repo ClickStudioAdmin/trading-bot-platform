@@ -40,40 +40,68 @@ export async function CopyDeskHeader({
 
   return (
     <div className="min-w-0">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-raised text-sm text-ink-muted">
-          {leader?.traderLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={leader.traderLogoUrl}
-              alt=""
-              className="size-full object-cover"
-            />
-          ) : (
-            (leader?.traderAlias ?? "T").slice(0, 1).toUpperCase()
-          )}
-        </span>
-        <div className="min-w-0 flex-1">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-start gap-6">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-control border border-line bg-surface-raised text-sm text-ink-muted">
+              {leader?.deskLogoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={leader.deskLogoUrl}
+                  alt=""
+                  className="size-full object-cover"
+                />
+              ) : (
+                (leader?.deskName ?? "D").slice(0, 1).toUpperCase()
+              )}
+            </span>
+            <div className="min-w-0">
+              {leader ? (
+                <>
+                  <p className="text-[11px] uppercase tracking-wide text-ink-faint">
+                    Desk
+                  </p>
+                  <h1 className="truncate text-xl font-semibold tracking-tight text-ink">
+                    {leader.deskName}
+                  </h1>
+                  <p className="truncate text-sm text-ink-muted">
+                    {formatDeskType(leader.deskType)} · {leader.venueLabel}
+                  </p>
+                </>
+              ) : (
+                <h1 className="text-xl font-semibold tracking-tight text-ink">
+                  Parent desk unavailable
+                </h1>
+              )}
+            </div>
+          </div>
           {leader ? (
-            <>
-              <h1 className="truncate text-xl font-semibold tracking-tight text-ink">
-                <Link href={traderHref} className="hover:text-accent">
-                  {leader.traderAlias ?? "Trader"}
-                </Link>
-              </h1>
-              <p className="truncate text-sm text-ink-muted">
-                {leader.deskName}
-                <span className="text-ink-faint">
-                  {" "}
-                  · {formatDeskType(leader.deskType)} · {leader.venueLabel}
+            <Link
+              href={traderHref}
+              className="flex min-w-0 items-start gap-3 hover:text-accent"
+            >
+              <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-raised text-sm text-ink-muted">
+                {leader.traderLogoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={leader.traderLogoUrl}
+                    alt=""
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  (leader.traderAlias ?? "T").slice(0, 1).toUpperCase()
+                )}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[11px] uppercase tracking-wide text-ink-faint">
+                  Trader
                 </span>
-              </p>
-            </>
-          ) : (
-            <h1 className="text-xl font-semibold tracking-tight text-ink">
-              Parent desk unavailable
-            </h1>
-          )}
+                <span className="block truncate text-xl font-semibold tracking-tight text-ink">
+                  {leader.traderAlias ?? "Trader"}
+                </span>
+              </span>
+            </Link>
+          ) : null}
         </div>
         <CopyDeskHeaderActions
           paused={settings.paused}

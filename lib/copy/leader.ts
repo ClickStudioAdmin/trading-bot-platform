@@ -17,6 +17,7 @@ export type CopyLeaderStripData = {
   followingAvailable: boolean;
   traderAlias: string | null;
   traderLogoUrl: string | null;
+  deskLogoUrl: string | null;
   uniqueFollowers: number;
   visibleDeskCount: number;
   firstSharedLabel: string | null;
@@ -47,7 +48,8 @@ export async function loadCopyLeaderStrip(
     brief: listing?.description ?? "",
     followingAvailable: listing?.sharingEnabled === true,
     traderAlias: profile?.alias ?? null,
-    traderLogoUrl: profile?.logoUrl ?? listing?.logoUrl ?? null,
+    traderLogoUrl: profile?.logoUrl ?? null,
+    deskLogoUrl: listing?.logoUrl ?? null,
     uniqueFollowers: traderMeta.uniqueFollowers,
     visibleDeskCount: traderMeta.visibleDeskCount,
     firstSharedLabel: traderMeta.firstSharedLabel,

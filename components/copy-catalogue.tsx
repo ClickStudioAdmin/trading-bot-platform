@@ -11,6 +11,7 @@ import {
   type CopyCatalogueTab,
 } from "@/lib/copy/model";
 import { formatDeskType } from "@/lib/accounts/model";
+import { getVenue } from "@/lib/exchanges/venues";
 import { formatPct, formatSignedUsd } from "@/lib/opportunities/format";
 
 function roiLabel(card: CopyCatalogueCard): string {
@@ -170,43 +171,38 @@ export function CopyCatalogueBoard({
               className="flex flex-col rounded-card border border-line bg-surface p-5"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <Link
-                    href={
-                      card.traderAlias
-                        ? `/account/copy/traders/${encodeURIComponent(card.traderAlias)}`
-                        : "/account/copy"
-                    }
-                    className="flex min-w-0 items-center gap-3"
-                  >
-                    <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-raised text-sm text-ink-muted">
-                      {card.traderLogoUrl || card.deskLogoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={card.traderLogoUrl ?? card.deskLogoUrl ?? ""}
-                          alt=""
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        (card.traderAlias ?? "T").slice(0, 1).toUpperCase()
-                      )}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-[11px] uppercase tracking-wide text-ink-faint">
-                        Trader
-                      </span>
-                      <span className="block truncate text-sm font-medium text-ink">
-                        {card.traderAlias ?? "Trader"}
-                      </span>
-                    </span>
-                  </Link>
-                  <div className="mt-2 min-w-0">
-                    <span className="block text-[11px] uppercase tracking-wide text-ink-faint">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-control border border-line bg-surface-raised text-sm text-ink-muted">
+                    {card.deskLogoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={card.deskLogoUrl}
+                        alt=""
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      card.deskName.slice(0, 1).toUpperCase()
+                    )}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] uppercase tracking-wide text-ink-faint">
                       Desk
-                    </span>
-                    <span className="block truncate text-sm text-ink">
+                    </p>
+                    <p className="truncate text-sm font-medium text-ink">
                       {card.deskName}
-                    </span>
+                    </p>
+                    <p className="mt-1 truncate text-xs text-ink-muted">
+                      {card.traderAlias ? (
+                        <Link
+                          href={`/account/copy/traders/${encodeURIComponent(card.traderAlias)}`}
+                          className="hover:text-accent"
+                        >
+                          {card.traderAlias}
+                        </Link>
+                      ) : (
+                        "Trader"
+                      )}
+                    </p>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-start gap-1">
@@ -262,7 +258,8 @@ export function CopyCatalogueBoard({
                     </span>
                   )}
                   <span className="text-xs text-ink-faint">
-                    {formatDeskType(card.deskType)} · {card.venue}
+                    {formatDeskType(card.deskType)} ·{" "}
+                    {getVenue(card.venue)?.label ?? card.venue}
                   </span>
                 </div>
                 <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
@@ -294,23 +291,21 @@ export function CopyCatalogueBoard({
                   </div>
                 </dl>
               </div>
-              <div className="mt-5 flex flex-wrap items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <CopyFollowButton
-                    parentAccountId={card.accountId}
-                    deskName={card.deskName}
-                    deskType={card.deskType}
-                    venue={card.venue}
-                    venueEnvironment={card.venueEnvironment}
-                    connections={connections}
-                    following={card.following}
-                    defaultOpen={openParentId === card.accountId}
-                    className="w-full rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
-                  />
-                </div>
+              <div className="mt-5">
+                <CopyFollowButton
+                  parentAccountId={card.accountId}
+                  deskName={card.deskName}
+                  deskType={card.deskType}
+                  venue={card.venue}
+                  venueEnvironment={card.venueEnvironment}
+                  connections={connections}
+                  following={card.following}
+                  defaultOpen={openParentId === card.accountId}
+                  className="w-full rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
+                />
                 <Link
                   href={copyDeskPagePath(card.accountId)}
-                  className="shrink-0 text-sm text-accent hover:text-accent-strong"
+                  className="mt-2 block text-center text-sm text-accent hover:text-accent-strong"
                 >
                   View details
                 </Link>
