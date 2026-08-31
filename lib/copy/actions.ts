@@ -41,6 +41,7 @@ import {
   formatCopyCreateBlock,
   formatCopyUnfollowBlock,
   parseCopyFollowerGuardsForm,
+  parseCopySizeForm,
   parseCopyInviteEmail,
   parseDeskCopyListingForm,
   parseTraderLogoUpload,
@@ -454,6 +455,14 @@ export async function createCopyDeskAction(formData: FormData) {
   const mode = parseAccountMode(formData.get("mode"));
   let connectionId: string | null = null;
   const venueEnvironment = mode === "live" ? parent.venueEnvironment : null;
+  const sized = parseCopySizeForm({
+    sizeMode: formData.get("sizeMode"),
+    sizePercent: formData.get("sizePercent"),
+    sizeBookUsdt: formData.get("sizeBookUsdt"),
+  });
+  if (!sized.ok) {
+    return fail(sized.error);
+  }
   if (mode === "live") {
     connectionId = parseBoundConnectionId(formData.get("exchangeConnectionId"));
     if (connectionId) {
@@ -490,6 +499,9 @@ export async function createCopyDeskAction(formData: FormData) {
   const settings = await saveDeskCopySettings({
     accountId: created.id,
     scale: 1,
+    sizeMode: sized.sizeMode,
+    sizePercent: sized.sizePercent,
+    sizeBookUsdt: sized.sizeBookUsdt,
   });
   if (!settings.ok) {
     return fail(settings.error);
@@ -525,7 +537,9 @@ export async function createCopyDeskAction(formData: FormData) {
     data: {
       parentAccountId: parent.id,
       mode,
-      scale: 1,
+      sizeMode: sized.sizeMode,
+      sizePercent: sized.sizePercent,
+      sizeBookUsdt: sized.sizeBookUsdt,
     },
   });
   await setActiveAccountId(created.id);
@@ -560,11 +574,22 @@ export async function saveDeskCopyFollowerSettingsAction(formData: FormData) {
   if (!parsed.ok) {
     return fail(parsed.error);
   }
+  const sized = parseCopySizeForm({
+    sizeMode: formData.get("sizeMode"),
+    sizePercent: formData.get("sizePercent"),
+    sizeBookUsdt: formData.get("sizeBookUsdt"),
+  });
+  if (!sized.ok) {
+    return fail(sized.error);
+  }
   const saved = await saveDeskCopySettings({
     accountId: account.id,
     paused: parsed.paused,
     maxDailyLossUsdt: parsed.maxDailyLossUsdt,
     maxOpenNotionalUsdt: parsed.maxOpenNotionalUsdt,
+    sizeMode: sized.sizeMode,
+    sizePercent: sized.sizePercent,
+    sizeBookUsdt: sized.sizeBookUsdt,
   });
   if (!saved.ok) {
     return fail(saved.error);
@@ -577,6 +602,9 @@ export async function saveDeskCopyFollowerSettingsAction(formData: FormData) {
     accountId: account.id,
     data: {
       paused: parsed.paused,
+      sizeMode: sized.sizeMode,
+      sizePercent: sized.sizePercent,
+      sizeBookUsdt: sized.sizeBookUsdt,
       maxDailyLossUsdt: parsed.maxDailyLossUsdt,
       maxOpenNotionalUsdt: parsed.maxOpenNotionalUsdt,
     },

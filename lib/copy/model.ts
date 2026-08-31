@@ -679,7 +679,7 @@ export function parseCopyScalePercent(
   return { ok: true, scale: pct / 100 };
 }
 
-/** Parent fill × (follower balance / parent balance). Null means skip. */
+/** Parent fill × (follower book / parent balance). Null means skip. */
 export function copyBalanceScaledNotional(input: {
   parentFillUsdt: number;
   parentBalanceUsdt: number;
@@ -697,9 +697,122 @@ export function copyBalanceScaledNotional(input: {
   );
 }
 
+export type CopySizeMode = "balance" | "percent" | "fixed";
+export type CopySizeSkip = "skip" | "pause";
+
+export function parseCopySizeMode(value: unknown): CopySizeMode {
+  const raw = String(value ?? "").trim();
+  if (raw === "percent" || raw === "fixed") {
+    return raw;
+  }
+  return "balance";
+}
+
+export function parseCopySizeForm(input: {
+  sizeMode: unknown;
+  sizePercent: unknown;
+  sizeBookUsdt: unknown;
+}):
+  | {
+      ok: true;
+      sizeMode: CopySizeMode;
+      sizePercent: number | null;
+      sizeBookUsdt: number | null;
+    }
+  | { ok: false; error: string } {
+  const sizeMode = parseCopySizeMode(input.sizeMode);
+  if (sizeMode === "balance") {
+    return { ok: true, sizeMode, sizePercent: null, sizeBookUsdt: null };
+  }
+  if (sizeMode === "percent") {
+    const raw = String(input.sizePercent ?? "").trim().replace(/,/g, "");
+    const sizePercent = Number(raw);
+    if (!raw || !Number.isFinite(sizePercent) || sizePercent <= 0 || sizePercent > 100) {
+      return {
+        ok: false,
+        error: "Percent of account must be more than 0 and at most 100.",
+      };
+    }
+    return { ok: true, sizeMode, sizePercent, sizeBookUsdt: null };
+  }
+  const book = parseCopyOptionalUsdt(input.sizeBookUsdt, "Fixed book");
+  if (!book.ok) {
+    return book;
+  }
+  if (book.value == null) {
+    return { ok: false, error: "Fixed book must be more than zero." };
+  }
+  return { ok: true, sizeMode, sizePercent: null, sizeBookUsdt: book.value };
+}
+
+/** Resolve the follower book used in the balance-ratio formula. */
+export function resolveCopyFollowerBook(input: {
+  sizeMode: CopySizeMode;
+  availableUsdt: number;
+  sizePercent: number | null;
+  sizeBookUsdt: number | null;
+}): { ok: true; bookUsdt: number } | { ok: false; code: CopySizeSkip } {
+  if (!(input.availableUsdt > 0)) {
+    return { ok: false, code: "skip" };
+  }
+  if (input.sizeMode === "percent") {
+    const pct =
+      input.sizePercent != null && input.sizePercent > 0 && input.sizePercent <= 100
+        ? input.sizePercent
+        : 0;
+    const bookUsdt = input.availableUsdt * (pct / 100);
+    if (!(bookUsdt > 0)) {
+      return { ok: false, code: "skip" };
+    }
+    return { ok: true, bookUsdt };
+  }
+  if (input.sizeMode === "fixed") {
+    const bookUsdt = input.sizeBookUsdt;
+    if (!(bookUsdt != null && bookUsdt > 0)) {
+      return { ok: false, code: "skip" };
+    }
+    if (input.availableUsdt < bookUsdt) {
+      return { ok: false, code: "pause" };
+    }
+    return { ok: true, bookUsdt };
+  }
+  return { ok: true, bookUsdt: input.availableUsdt };
+}
+
+export function copySizedNotional(input: {
+  parentFillUsdt: number;
+  parentBalanceUsdt: number;
+  followerAvailableUsdt: number;
+  sizeMode: CopySizeMode;
+  sizePercent: number | null;
+  sizeBookUsdt: number | null;
+}): { ok: true; notionalUsdt: number } | { ok: false; code: CopySizeSkip } {
+  const book = resolveCopyFollowerBook({
+    sizeMode: input.sizeMode,
+    availableUsdt: input.followerAvailableUsdt,
+    sizePercent: input.sizePercent,
+    sizeBookUsdt: input.sizeBookUsdt,
+  });
+  if (!book.ok) {
+    return book;
+  }
+  const notionalUsdt = copyBalanceScaledNotional({
+    parentFillUsdt: input.parentFillUsdt,
+    parentBalanceUsdt: input.parentBalanceUsdt,
+    followerBalanceUsdt: book.bookUsdt,
+  });
+  if (notionalUsdt == null) {
+    return { ok: false, code: "skip" };
+  }
+  return { ok: true, notionalUsdt };
+}
+
 export type DeskCopySettings = {
   accountId: string;
   scale: number;
+  sizeMode: CopySizeMode;
+  sizePercent: number | null;
+  sizeBookUsdt: number | null;
   paused: boolean;
   maxDailyLossUsdt: number | null;
   maxOpenNotionalUsdt: number | null;

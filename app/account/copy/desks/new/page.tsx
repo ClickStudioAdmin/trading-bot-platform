@@ -68,8 +68,8 @@ export default async function CreateCopyDeskPage({
       </p>
       <PageHeading as="h1" title="Create copy desk" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
-        Type and venue are stamped from {deskName}. You pick Paper or Live.
-        Size follows account balances. Recipes and keys stay on the parent.
+        Type and venue are stamped from {deskName}. You pick Paper or Live
+        and how to size copies. Recipes and keys stay on the parent.
       </p>
       {error ? (
         <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

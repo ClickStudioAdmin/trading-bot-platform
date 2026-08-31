@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { createCopyDeskAction } from "@/lib/copy/actions";
+import { CopySizeFields } from "@/components/copy-size-fields";
 import { formatAccountModeChoice } from "@/lib/accounts/model";
 import { formatConnectionSummary, type ExchangeConnection } from "@/lib/exchanges/connections";
 
@@ -36,12 +37,7 @@ export function CreateCopyDeskForm({
           className={fieldClass}
         />
       </label>
-      <p className="text-sm text-ink-muted">
-        Size matches the parent’s fill as a share of their balance, applied to
-        yours. A $10,000 fill on a $100,000 book becomes $1,000 on a $10,000
-        book. Caps on this desk still win. Balances are read when the fill
-        copies.
-      </p>
+      <CopySizeFields />
       <label className="block text-sm text-ink">
         Mode
         <select

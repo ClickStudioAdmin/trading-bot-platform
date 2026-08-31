@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CopySizeFields } from "@/components/copy-size-fields";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
@@ -35,11 +36,19 @@ export function CopyFollowerGuardsCard({
         <div>
           <p className="text-sm text-ink">Copy guards</p>
           <p className="mt-1 text-xs text-ink-muted">
-            Size follows account balances when a parent fill copies. Empty
-            means no extra cap. Desk risk caps and reduce-only still win.
-            Flatten on breach starts with the copy engine.
+            Empty caps mean no extra cap. Desk risk caps and reduce-only
+            still win. Flatten on breach starts with the copy engine.
           </p>
         </div>
+        <CopySizeFields
+          defaultMode={settings.sizeMode}
+          defaultPercent={
+            settings.sizePercent == null ? "" : String(settings.sizePercent)
+          }
+          defaultBookUsdt={
+            settings.sizeBookUsdt == null ? "" : String(settings.sizeBookUsdt)
+          }
+        />
         <label className="flex items-start gap-2 text-sm text-ink">
           <input
             type="checkbox"

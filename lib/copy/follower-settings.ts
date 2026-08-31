@@ -1,12 +1,19 @@
 import { createServiceClient } from "@/lib/supabase/admin";
-import type { DeskCopySettings } from "./model";
+import {
+  parseCopySizeMode,
+  type CopySizeMode,
+  type DeskCopySettings,
+} from "./model";
 
 const EMPTY_SETTINGS = {
   scale: 1,
+  sizeMode: "balance" as CopySizeMode,
+  sizePercent: null,
+  sizeBookUsdt: null,
   paused: false,
   maxDailyLossUsdt: null,
   maxOpenNotionalUsdt: null,
-} as const;
+};
 
 function asPositiveOrNull(value: unknown): number | null {
   const parsed = Number(value);
@@ -21,9 +28,15 @@ function parseSettingsRow(
     return { accountId, ...EMPTY_SETTINGS };
   }
   const scale = Number(row.scale);
+  const sizeMode = parseCopySizeMode(row.size_mode);
   return {
     accountId,
     scale: Number.isFinite(scale) && scale > 0 && scale <= 1 ? scale : 1,
+    sizeMode,
+    sizePercent:
+      sizeMode === "percent" ? asPositiveOrNull(row.size_percent) : null,
+    sizeBookUsdt:
+      sizeMode === "fixed" ? asPositiveOrNull(row.size_book_usdt) : null,
     paused: row.paused === true,
     maxDailyLossUsdt: asPositiveOrNull(row.max_daily_loss_usdt),
     maxOpenNotionalUsdt: asPositiveOrNull(row.max_open_notional_usdt),
@@ -40,7 +53,7 @@ export async function loadDeskCopySettings(
   const { data, error } = await supabase
     .from("desk_copy_settings")
     .select(
-      "account_id, scale, paused, max_daily_loss_usdt, max_open_notional_usdt",
+      "account_id, scale, size_mode, size_percent, size_book_usdt, paused, max_daily_loss_usdt, max_open_notional_usdt",
     )
     .eq("account_id", accountId)
     .maybeSingle();
@@ -53,6 +66,9 @@ export async function loadDeskCopySettings(
 export async function saveDeskCopySettings(input: {
   accountId: string;
   scale?: number;
+  sizeMode?: CopySizeMode;
+  sizePercent?: number | null;
+  sizeBookUsdt?: number | null;
   paused?: boolean;
   maxDailyLossUsdt?: number | null;
   maxOpenNotionalUsdt?: number | null;
@@ -62,11 +78,25 @@ export async function saveDeskCopySettings(input: {
     return { ok: false, error: "Database is not configured." };
   }
   const current = await loadDeskCopySettings(input.accountId);
+  const sizeMode = input.sizeMode ?? current.sizeMode;
   const now = new Date().toISOString();
   const { error } = await supabase.from("desk_copy_settings").upsert(
     {
       account_id: input.accountId,
       scale: input.scale ?? current.scale,
+      size_mode: sizeMode,
+      size_percent:
+        sizeMode === "percent"
+          ? (input.sizePercent === undefined
+              ? current.sizePercent
+              : input.sizePercent)
+          : null,
+      size_book_usdt:
+        sizeMode === "fixed"
+          ? (input.sizeBookUsdt === undefined
+              ? current.sizeBookUsdt
+              : input.sizeBookUsdt)
+          : null,
       paused: input.paused ?? current.paused,
       max_daily_loss_usdt:
         input.maxDailyLossUsdt === undefined

@@ -37,7 +37,10 @@ import {
   formatCopyCreateBlock,
   parseCopyListingName,
   copyBalanceScaledNotional,
+  copySizedNotional,
   parseCopyScalePercent,
+  parseCopySizeForm,
+  resolveCopyFollowerBook,
   parseCopyCatalogueSort,
   parseCopyCatalogueTab,
   copyListingAcceptsFollowers,
@@ -733,6 +736,113 @@ if (quarterScale.ok) {
   assert.equal(quarterScale.scale, 0.25);
 }
 assert.equal(parseCopyScalePercent("0").ok, false);
+const balanceSize = parseCopySizeForm({
+  sizeMode: "balance",
+  sizePercent: "20",
+  sizeBookUsdt: "5000",
+});
+assert.equal(balanceSize.ok, true);
+if (balanceSize.ok) {
+  assert.equal(balanceSize.sizeMode, "balance");
+  assert.equal(balanceSize.sizePercent, null);
+  assert.equal(balanceSize.sizeBookUsdt, null);
+}
+const percentSize = parseCopySizeForm({
+  sizeMode: "percent",
+  sizePercent: "20",
+  sizeBookUsdt: "",
+});
+assert.equal(percentSize.ok, true);
+if (percentSize.ok) {
+  assert.equal(percentSize.sizeMode, "percent");
+  assert.equal(percentSize.sizePercent, 20);
+}
+assert.equal(
+  parseCopySizeForm({
+    sizeMode: "percent",
+    sizePercent: "",
+    sizeBookUsdt: "",
+  }).ok,
+  false,
+);
+const fixedSize = parseCopySizeForm({
+  sizeMode: "fixed",
+  sizePercent: "",
+  sizeBookUsdt: "5000",
+});
+assert.equal(fixedSize.ok, true);
+if (fixedSize.ok) {
+  assert.equal(fixedSize.sizeBookUsdt, 5000);
+}
+assert.deepEqual(
+  resolveCopyFollowerBook({
+    sizeMode: "balance",
+    availableUsdt: 10_000,
+    sizePercent: null,
+    sizeBookUsdt: null,
+  }),
+  { ok: true, bookUsdt: 10_000 },
+);
+assert.deepEqual(
+  resolveCopyFollowerBook({
+    sizeMode: "percent",
+    availableUsdt: 10_000,
+    sizePercent: 20,
+    sizeBookUsdt: null,
+  }),
+  { ok: true, bookUsdt: 2_000 },
+);
+assert.deepEqual(
+  resolveCopyFollowerBook({
+    sizeMode: "fixed",
+    availableUsdt: 10_000,
+    sizePercent: null,
+    sizeBookUsdt: 5_000,
+  }),
+  { ok: true, bookUsdt: 5_000 },
+);
+assert.deepEqual(
+  resolveCopyFollowerBook({
+    sizeMode: "fixed",
+    availableUsdt: 4_999,
+    sizePercent: null,
+    sizeBookUsdt: 5_000,
+  }),
+  { ok: false, code: "pause" },
+);
+assert.deepEqual(
+  copySizedNotional({
+    parentFillUsdt: 10_000,
+    parentBalanceUsdt: 100_000,
+    followerAvailableUsdt: 10_000,
+    sizeMode: "balance",
+    sizePercent: null,
+    sizeBookUsdt: null,
+  }),
+  { ok: true, notionalUsdt: 1_000 },
+);
+assert.deepEqual(
+  copySizedNotional({
+    parentFillUsdt: 10_000,
+    parentBalanceUsdt: 100_000,
+    followerAvailableUsdt: 10_000,
+    sizeMode: "percent",
+    sizePercent: 20,
+    sizeBookUsdt: null,
+  }),
+  { ok: true, notionalUsdt: 200 },
+);
+assert.deepEqual(
+  copySizedNotional({
+    parentFillUsdt: 10_000,
+    parentBalanceUsdt: 100_000,
+    followerAvailableUsdt: 10_000,
+    sizeMode: "fixed",
+    sizePercent: null,
+    sizeBookUsdt: 5_000,
+  }),
+  { ok: true, notionalUsdt: 500 },
+);
 assert.deepEqual(parseCopyOptionalUsdt("", "Max daily loss"), {
   ok: true,
   value: null,
