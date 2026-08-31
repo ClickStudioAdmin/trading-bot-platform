@@ -35,8 +35,8 @@ Current tables:
 | `engine_desk_leases` | Fly | Per-desk worker lease (`worker_id`, `leased_until`). Service-role RPCs `claim_engine_desks`, `try_claim_engine_desk`, `release_engine_desk`. RLS on, no anon policies. |
 | `engine_venue_gates` | Fly | Per-connection Bybit spacing (`take_engine_venue_slot`). |
 | `platform_settings` | copy | Singleton `tbp` row. `copy_min_activity_days` (default 90, min 0) is the share activity floor. Authenticated select. Service-role writes. |
-| `trader_profiles` | copy | Login alias (unique, case-insensitive) and optional bio. Required before a desk can be shared. RLS: own row, or public-listing owner, or private-grant recipient. |
-| `desk_copy_listings` | copy | One listing per shared desk: `private` or `public`, required setup description. Live + bound + not a copy + not C&C (enforced in trigger). Public rows are the catalogue. |
+| `trader_profiles` | copy | Login alias (unique, case-insensitive) and optional bio. Required before a desk can be shared. Saved from Account Settings. RLS: own row, or public-listing owner, or private-grant recipient. |
+| `desk_copy_listings` | copy | One listing per shared desk: `private` or `public`, required setup description. Saved from Desk Settings. Live + not a copy + not C&C (trigger). Bound, alias, and first venue fill ≥ N days are enforced in the share action. Public rows are the catalogue. |
 | `desk_copy_shares` | copy | Private email grants. Unique `(parent_account_id, to_user_id)`. Status `invited` / `active` / `revoked`. |
 | `desk_copy_settings` | copy | Follower scale (0–1 of parent notional), pause, optional max daily loss / max open notional. Only on a desk with `copy_of_account_id`. |
 | `desk_copy_receipts` | copy | Idempotency `(follower_account_id, parent_fill_id)`. |

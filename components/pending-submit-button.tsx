@@ -62,7 +62,9 @@ function queryLooksSuccessful() {
     paper === "exits" ||
     params.get("saved") === "1" ||
     params.get("saved") === "profile" ||
+    params.get("saved") === "trader" ||
     params.get("saved") === "password" ||
+    params.get("saved") === "share" ||
     params.get("reduce") === "1" ||
     params.get("removed") === "1" ||
     params.get("replaced") === "1" ||

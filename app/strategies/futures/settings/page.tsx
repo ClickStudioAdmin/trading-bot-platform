@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { PageHeading } from "@/components/page-heading";
+import { DeskCopyShareCard } from "@/components/desk-copy-share-form";
 import { DeskSettingsForm } from "@/components/desk-settings-form";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
 import { ExchangeBindSelect } from "@/components/exchange-bind-select";
@@ -12,8 +13,13 @@ import {
   deskAllowsPerpsRecipes,
   deskAllowsSignalWebhooks,
   deskHref,
+  deskIsCopy,
   otherDeskNames,
 } from "@/lib/accounts/model";
+import { evaluateCopyShare } from "@/lib/copy/model";
+import { loadDeskCopyListing, loadFirstVenueFillMs } from "@/lib/copy/listings";
+import { loadTraderProfile } from "@/lib/copy/profile";
+import { loadCopyMinActivityDays } from "@/lib/copy/settings";
 import { listTradingAccounts, loadAccountUsage } from "@/lib/accounts/store";
 import {
   connectionIdsBoundToOtherDesks,
@@ -78,8 +84,30 @@ export default async function FuturesSettingsPage({
       openCount: usage?.futuresOpenCount ?? 0,
       automationsRunning: false,
     }).length > 0;
-  const saved = firstSearchValue(params.saved) === "1";
+  const savedFlag = firstSearchValue(params.saved);
+  const saved = savedFlag === "1";
+  const shareSaved = savedFlag === "share";
   const error = firstSearchValue(params.error);
+  const copyDesk = deskIsCopy(session.account);
+  const [trader, listing, firstFillMs, minDays] = copyDesk
+    ? [null, null, null, 0] as const
+    : await Promise.all([
+        loadTraderProfile(session.member.id),
+        loadDeskCopyListing(session.account.id),
+        loadFirstVenueFillMs(session.account.id),
+        loadCopyMinActivityDays(),
+      ]);
+  const shareEval = copyDesk
+    ? { code: null, block: null }
+    : evaluateCopyShare({
+        mode: session.account.mode,
+        deskType: session.account.deskType,
+        copyOfAccountId: session.account.copyOfAccountId,
+        bound: Boolean(settings.connectionId),
+        alias: trader?.alias ?? null,
+        firstFillMs,
+        minDays,
+      });
   const canSave = exchangeCredentialsConfigured();
   const settingsHref = deskHref(FUTURES_PATHS.settings, session.account.id);
   const deskVenue = getVenue(session.account.venue);
@@ -132,6 +160,9 @@ export default async function FuturesSettingsPage({
       ) : null}
       {saved ? (
         <p className="mt-4 text-sm text-success">Settings saved.</p>
+      ) : null}
+      {shareSaved ? (
+        <p className="mt-4 text-sm text-success">Share settings saved.</p>
       ) : null}
       <DeskSettingsForm
         action={saveFuturesSettings}
@@ -215,6 +246,14 @@ export default async function FuturesSettingsPage({
           </label>
         </div>
       </DeskSettingsForm>
+      {copyDesk ? null : (
+        <DeskCopyShareCard
+          account={session.account}
+          listing={listing}
+          block={shareEval.block}
+          needsAlias={shareEval.code === "no_alias"}
+        />
+      )}
     </main>
   );
 }

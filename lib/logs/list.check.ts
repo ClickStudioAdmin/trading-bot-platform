@@ -36,6 +36,12 @@ assert.ok(eventLogOptionsForScopes(["strategy"]).includes("template.imported"));
 assert.ok(
   eventLogOptionsForScopes(["system"]).includes("exchange.verify_failed"),
 );
+assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("copy.profile_saved"),
+);
+assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("copy.listing_saved"),
+);
 assert.equal(
   eventLogOptionsForScopes(["trade"]).includes("member.created"),
   false,
