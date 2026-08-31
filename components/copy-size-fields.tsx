@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import { formatCopyPaperStartingUsdt } from "@/lib/copy/decide";
 import type { CopySizeMode } from "@/lib/copy/model";
 
 const fieldClass =
@@ -11,10 +12,12 @@ export function CopySizeFields({
   defaultMode = "balance",
   defaultPercent = "",
   defaultBookUsdt = "",
+  paper = false,
 }: {
   defaultMode?: CopySizeMode;
   defaultPercent?: string;
   defaultBookUsdt?: string;
+  paper?: boolean;
 }) {
   const [sizeMode, setSizeMode] = useState<CopySizeMode>(defaultMode);
   return (
@@ -43,8 +46,9 @@ export function CopySizeFields({
       </label>
       {sizeMode === "balance" ? (
         <p className="text-xs text-ink-muted">
-          Your book is available USDT when the fill copies. Live reads the
-          bound key. Paper uses the in-app ledger.
+          {paper
+            ? `Paper starts at ${formatCopyPaperStartingUsdt()}. Your book is that plus realized and unrealized P&L.`
+            : "Your book is available USDT on the bound key when the fill copies."}
         </p>
       ) : null}
       {sizeMode === "percent" ? (
@@ -64,8 +68,9 @@ export function CopySizeFields({
             </span>
           </span>
           <span className="mt-1 block text-xs text-ink-muted">
-            20% of a $10,000 account is a $2,000 book. That $10,000 parent
-            fill becomes $200.
+            {paper
+              ? `20% of the ${formatCopyPaperStartingUsdt()} paper start is a $2,000 book before P&L. That $10,000 parent fill becomes $200.`
+              : "20% of a $10,000 account is a $2,000 book. That $10,000 parent fill becomes $200."}
           </span>
         </label>
       ) : null}
@@ -87,8 +92,11 @@ export function CopySizeFields({
           </span>
           <span className="mt-1 block text-xs text-ink-muted">
             Treat this amount as your book. A $5,000 book turns that $10,000
-            parent fill into $500. New copies pause if available drops below
-            this amount.
+            parent fill into $500. New copies pause if{" "}
+            {paper ? "paper equity" : "available"} drops below this amount
+            {paper
+              ? `. Paper starts at ${formatCopyPaperStartingUsdt()}.`
+              : "."}
           </span>
         </label>
       ) : null}

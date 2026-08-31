@@ -1,9 +1,16 @@
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
+import { loadDeskTicker } from "@/lib/market/desk-tickers";
 import { loadFuturesSettings } from "@/lib/futures/settings";
 import { loadFuturesPositions } from "@/lib/futures/list";
 import { futuresPnlUsdt, markFromTicker } from "@/lib/futures/math";
-import { copyPaperEquity, copyUtcDayStartMs } from "./decide";
+import type { FuturesPosition } from "@/lib/futures/model";
+import {
+  copyPaperEquity,
+  copyPaperEquityView,
+  copyUtcDayStartMs,
+  type CopyPaperEquityView,
+} from "./decide";
 
 export async function loadCopyAvailableUsdt(input: {
   userId: string;
@@ -95,6 +102,60 @@ export async function loadCopyFollowerEquity(input: {
   }
   const equity = available + unrealized;
   return Number.isFinite(equity) ? equity : null;
+}
+
+export async function loadCopyPaperEquityView(input: {
+  userId: string;
+  accountId: string;
+  venue: string;
+  venueEnvironment: string | null;
+}): Promise<CopyPaperEquityView> {
+  const positions = await loadFuturesPositions({
+    scope: { accountId: input.accountId, userId: input.userId },
+  });
+  let realizedUsdt = 0;
+  const open: FuturesPosition[] = [];
+  for (const row of positions) {
+    realizedUsdt += row.realizedUsdt;
+    if (row.status === "open") {
+      open.push(row);
+    }
+  }
+  const tickers = new Map<
+    string,
+    { lastPrice?: string; bid1Price?: string; ask1Price?: string }
+  >();
+  const symbols = [...new Set(open.map((row) => row.symbol))];
+  await Promise.all(
+    symbols.map(async (symbol) => {
+      try {
+        const quote = await loadDeskTicker(
+          input.venue,
+          input.venueEnvironment,
+          symbol,
+        );
+        if (quote) {
+          tickers.set(symbol, quote);
+        }
+      } catch {
+        return;
+      }
+    }),
+  );
+  let unrealizedUsdt = 0;
+  for (const row of open) {
+    const mark = markFromTicker(tickers.get(row.symbol) ?? {});
+    if (mark == null) {
+      continue;
+    }
+    unrealizedUsdt += futuresPnlUsdt({
+      side: row.side,
+      qty: row.qty,
+      entryPrice: row.entryPrice,
+      exitPrice: mark,
+    });
+  }
+  return copyPaperEquityView({ realizedUsdt, unrealizedUsdt });
 }
 
 export async function loadCopyGuardSnapshot(input: {

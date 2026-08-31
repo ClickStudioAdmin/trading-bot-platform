@@ -12,6 +12,7 @@ import {
   formatDeskVenueCaption,
 } from "@/lib/accounts/model";
 import { createCopyDeskAction } from "@/lib/copy/actions";
+import { formatCopyPaperStartingUsdt } from "@/lib/copy/decide";
 import {
   formatConnectionSummary,
   type ExchangeConnection,
@@ -46,7 +47,11 @@ export function CopyFollowButton({
   const [open, setOpen] = useState(defaultOpen);
 
   if (following) {
-    return <p className="text-sm text-ink-muted">Following</p>;
+    return (
+      <p className="rounded-control border border-line px-2.5 py-1 text-xs text-ink-muted">
+        Following
+      </p>
+    );
   }
 
   return (
@@ -143,7 +148,7 @@ function CopyFollowModal({
         >
           <input type="hidden" name="parentAccountId" value={parentAccountId} />
           <DeskFormFlash />
-          <div className="grid items-start gap-6 md:grid-cols-2">
+          <div className="grid items-start gap-6 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]">
             <div className="space-y-4">
               <p className="text-xs text-ink-faint">{stamp}</p>
               <label className="block text-sm text-ink">
@@ -195,12 +200,13 @@ function CopyFollowModal({
                 )
               ) : (
                 <p className="text-sm text-ink-muted">
-                  Paper copies stay on the in-app ledger. Venue is stamped from
+                  Paper starts at {formatCopyPaperStartingUsdt()}. Copies size
+                  from that plus realized and unrealized. Venue is stamped from
                   the parent.
                 </p>
               )}
             </div>
-            <CopyDeskGuardsFields />
+            <CopyDeskGuardsFields paper={mode === "paper"} />
           </div>
           <div className="space-y-3 border-t border-line pt-4">
             <PendingSubmitButton

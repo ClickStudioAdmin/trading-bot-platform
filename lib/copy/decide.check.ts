@@ -9,7 +9,9 @@ import {
   copyFillPlaceAction,
   copyOpenNotionalState,
   copyPaperEquity,
+  copyPaperEquityView,
   copyParentFillNotional,
+  formatCopyPaperStartingUsdt,
   copyParentFillPrice,
   copyUtcDayStartMs,
   decideCopyFanOut,
@@ -92,6 +94,13 @@ assert.equal(
 );
 assert.equal(copyPaperEquity({ realizedUsdt: -200, unrealizedUsdt: 50 }), 9_850);
 assert.equal(COPY_PAPER_STARTING_USDT, 10_000);
+assert.deepEqual(copyPaperEquityView({ realizedUsdt: -200, unrealizedUsdt: 50 }), {
+  startingUsdt: 10_000,
+  realizedUsdt: -200,
+  unrealizedUsdt: 50,
+  equityUsdt: 9_850,
+});
+assert.equal(formatCopyPaperStartingUsdt(), "$10,000");
 
 assert.deepEqual(decideCopyFanOut(base), {
   action: "place",

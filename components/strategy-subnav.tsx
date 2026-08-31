@@ -4,7 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { AccountSnapshotHover } from "@/components/account-snapshot";
+import { CopyPaperEquityHover } from "@/components/copy-paper-equity";
+import type { CopyPaperEquityView } from "@/lib/copy/decide";
 import type { AccountSnapshotView } from "@/lib/exchanges/account-view";
+import { formatSnapshotMoney } from "@/lib/exchanges/account-view";
 import {
   CASH_AND_CARRY_PRIMARY_LINKS,
   CASH_AND_CARRY_SECONDARY_LINKS,
@@ -21,6 +24,8 @@ export function StrategySubnav({
   automationsRunning = false,
   reduceOnly = false,
   connection,
+  paperBook,
+  identity,
 }: {
   title?: string;
   typeLabel?: string;
@@ -39,6 +44,8 @@ export function StrategySubnav({
     href?: string;
     snapshot?: AccountSnapshotView | null;
   } | null;
+  paperBook?: CopyPaperEquityView | null;
+  identity?: ReactNode;
 }) {
   const pathname = usePathname();
   const status = reduceOnly
@@ -68,19 +75,40 @@ export function StrategySubnav({
               Desks
             </Link>
           </p>
-          <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h1 className="min-w-0 text-2xl font-semibold tracking-tight">
-              {title}
-            </h1>
-            {typeLabel ? (
-              <p className="text-sm font-medium text-ink-muted">{typeLabel}</p>
-            ) : null}
-          </div>
-          <p className="mt-1 text-sm text-ink-muted">{description}</p>
+          {identity ? (
+            <div className="mt-2">{identity}</div>
+          ) : (
+            <>
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <h1 className="min-w-0 text-2xl font-semibold tracking-tight">
+                  {title}
+                </h1>
+                {typeLabel ? (
+                  <p className="text-sm font-medium text-ink-muted">
+                    {typeLabel}
+                  </p>
+                ) : null}
+                {paperBook ? (
+                  <PaperEquityChip
+                    book={paperBook}
+                    href={connection?.href}
+                  />
+                ) : null}
+              </div>
+              {description ? (
+                <p className="mt-1 text-sm text-ink-muted">{description}</p>
+              ) : null}
+            </>
+          )}
+          {identity && paperBook ? (
+            <div className="mt-3">
+              <PaperEquityChip book={paperBook} href={connection?.href} />
+            </div>
+          ) : null}
         </div>
-        {connection || status ? (
+        {(connection && !paperBook) || status ? (
           <div className="mt-6 flex shrink-0 items-start justify-end gap-2">
-            {connection ? (
+            {connection && !paperBook ? (
               <AccountSnapshotHover
                 snapshot={
                   connection.connected ? connection.snapshot ?? null : null
@@ -149,6 +177,36 @@ export function StrategySubnav({
         </div>
       </nav>
     </div>
+  );
+}
+
+function PaperEquityChip({
+  book,
+  href,
+}: {
+  book: CopyPaperEquityView;
+  href?: string;
+}) {
+  const body = (
+    <span className="inline-flex items-baseline gap-2 rounded-control border border-line bg-surface px-2.5 py-1">
+      <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+        Paper equity
+      </span>
+      <span className="text-sm tabular-nums text-ink">
+        {formatSnapshotMoney(book.equityUsdt)}
+      </span>
+    </span>
+  );
+  return (
+    <CopyPaperEquityHover book={book}>
+      {href ? (
+        <Link href={href} className="hover:border-line-strong">
+          {body}
+        </Link>
+      ) : (
+        body
+      )}
+    </CopyPaperEquityHover>
   );
 }
 

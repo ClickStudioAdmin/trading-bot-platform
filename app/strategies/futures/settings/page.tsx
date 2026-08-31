@@ -3,7 +3,6 @@ import Link from "next/link";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { PageHeading } from "@/components/page-heading";
 import { CopyDeskGuardsFields } from "@/components/copy-desk-guards-fields";
-import { CopyUnfollowCard } from "@/components/copy-follower-guards";
 import { DeskCopyShareCard } from "@/components/desk-copy-share-form";
 import { DeskSettingsForm } from "@/components/desk-settings-form";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
@@ -18,12 +17,9 @@ import {
   deskIsCopy,
   otherDeskNames,
 } from "@/lib/accounts/model";
+import { formatCopyPaperStartingUsdt } from "@/lib/copy/decide";
 import { loadDeskCopySettings } from "@/lib/copy/follower-settings";
-import {
-  copyLiveTradeCount,
-  copyUnfollowBlockCode,
-  evaluateCopyShare,
-} from "@/lib/copy/model";
+import { evaluateCopyShare } from "@/lib/copy/model";
 import { loadDeskCopyListing, loadFirstVenueFillMs } from "@/lib/copy/listings";
 import { loadTraderProfile } from "@/lib/copy/profile";
 import { loadCopyPlatformSettings } from "@/lib/copy/settings";
@@ -101,15 +97,6 @@ export default async function FuturesSettingsPage({
   const followerSettings = copyDesk
     ? await loadDeskCopySettings(session.account.id)
     : null;
-  const unfollowBlock = copyDesk
-    ? copyUnfollowBlockCode({
-        liveTradeCount: copyLiveTradeCount({
-          openPositions: usage?.futuresOpenCount,
-          workingOrders: usage?.workingCount,
-        }),
-        deskCount: desks.length,
-      })
-    : null;
   const [trader, listing, firstFillMs, copySettings] = copyDesk
     ? [null, null, null, { minActivityDays: 0, maxFollowersDefault: null, maxFollowersCeiling: null }] as const
     : await Promise.all([
@@ -169,7 +156,7 @@ export default async function FuturesSettingsPage({
           </>
         ) : (
           session.account.copyOfAccountId
-            ? "This is a copy desk. Bind, sizing, reduce-only, max daily loss, and Close All live in one place. Pause or unfollow here. No ticket, bots, or webhooks."
+            ? "This is a copy desk. Bind, sizing, reduce-only, max daily loss, and Close All live in one place. Pause or unfollow in the header. No ticket, bots, or webhooks."
             : "This desk is ticket only. No automations or webhooks."
         )}{" "}
         Bind a matching key from this login.
@@ -191,7 +178,7 @@ export default async function FuturesSettingsPage({
       <div
         className={
           copyDesk
-            ? "mt-6 max-w-lg"
+            ? "mt-6"
             : "mt-6 grid items-start gap-6 lg:grid-cols-2"
         }
       >
@@ -202,27 +189,34 @@ export default async function FuturesSettingsPage({
           otherNames={otherDeskNames(desks, session.account.id)}
           successKey="save-futures-settings"
           className="space-y-4"
+          split={Boolean(copyDesk && followerSettings)}
+          leading={
+            copyDesk && followerSettings ? (
+              live ? (
+                <ExchangeBindField
+                  connections={connectionsForDeskBind(
+                    connections,
+                    session.account,
+                    settings.connectionId,
+                  )}
+                  selectedId={settings.connectionId}
+                  selected={selected}
+                  detachBlocked={detachBlocked}
+                  sharedConnectionIds={sharedConnectionIds}
+                  canSave={canSave}
+                  venues={bindVenues}
+                  next={settingsHref}
+                />
+              ) : (
+                <p className="text-sm text-ink-muted">
+                  This is a Paper Trading book. Orders stay on the in-app
+                  ledger. Paper starts at {formatCopyPaperStartingUsdt()}.
+                  Account balance is that plus realized and unrealized.
+                </p>
+              )
+            ) : undefined
+          }
         >
-          {live ? (
-            <ExchangeBindField
-              connections={connectionsForDeskBind(
-                connections,
-                session.account,
-                settings.connectionId,
-              )}
-              selectedId={settings.connectionId}
-              selected={selected}
-              detachBlocked={detachBlocked}
-              sharedConnectionIds={sharedConnectionIds}
-              canSave={canSave}
-              venues={bindVenues}
-              next={settingsHref}
-            />
-          ) : (
-            <p className="text-sm text-ink-muted">
-              This is a Paper Trading book. Orders stay on the in-app ledger.
-            </p>
-          )}
           {copyDesk && followerSettings ? (
             <CopyDeskGuardsFields
               defaultSizeMode={followerSettings.sizeMode}
@@ -252,9 +246,31 @@ export default async function FuturesSettingsPage({
                   ? ""
                   : String(followerSettings.maxAdverseMovePct)
               }
+              paper={!live}
             />
           ) : (
             <>
+              {live ? (
+                <ExchangeBindField
+                  connections={connectionsForDeskBind(
+                    connections,
+                    session.account,
+                    settings.connectionId,
+                  )}
+                  selectedId={settings.connectionId}
+                  selected={selected}
+                  detachBlocked={detachBlocked}
+                  sharedConnectionIds={sharedConnectionIds}
+                  canSave={canSave}
+                  venues={bindVenues}
+                  next={settingsHref}
+                />
+              ) : (
+                <p className="text-sm text-ink-muted">
+                  This is a Paper Trading book. Orders stay on the in-app
+                  ledger.
+                </p>
+              )}
               <label className="flex items-start gap-2 text-sm text-ink">
                 <input
                   type="checkbox"
@@ -312,12 +328,6 @@ export default async function FuturesSettingsPage({
             </>
           )}
         </DeskSettingsForm>
-        {copyDesk ? (
-          <CopyUnfollowCard
-            canUnfollow={unfollowBlock == null}
-            unfollowBlock={unfollowBlock}
-          />
-        ) : null}
         </div>
         {copyDesk ? null : (
           <DeskCopyShareCard

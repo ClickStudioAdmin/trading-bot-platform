@@ -17,7 +17,6 @@ import {
 } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { deskAllowsDcaPlaybooks, deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref, deskIsCopy } from "@/lib/accounts/model";
-import { CopyDeskPositionsChrome } from "@/components/copy-desk-positions-chrome";
 import { dcaHintsForOpen } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { FuturesWebhookTest } from "@/components/futures-webhook-test";
@@ -161,13 +160,6 @@ export default async function FuturesPositionsPage({
         />
 
         <LiveTickerScope symbols={open.map((row) => row.symbol)}>
-        {copyDesk && session ? (
-          <CopyDeskPositionsChrome
-            copyOfAccountId={session.account.copyOfAccountId}
-            deskId={session.account.id}
-            next={NEXT}
-          />
-        ) : null}
         <FuturesOpenStats signedIn={desk.signedIn} open={open} />
         {showTicket ? (
           <section>

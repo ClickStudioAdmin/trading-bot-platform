@@ -33,6 +33,20 @@ function drawdownLabel(card: CopyCatalogueCard): string {
   return formatPct(card.stats30d.maxDrawdownPct);
 }
 
+function StarIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" className="size-4" aria-hidden>
+      <path
+        d="M8 1.6 9.76 5.17l3.94.57-2.85 2.78.67 3.92L8 10.6l-3.52 1.84.67-3.92-2.85-2.78 3.94-.57L8 1.6Z"
+        fill={filled ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function winRateLabel(card: CopyCatalogueCard): string {
   const stats = card.stats30d;
   if (!stats || stats.closedCount === 0) {
@@ -194,22 +208,27 @@ export function CopyCatalogueBoard({
                   />
                   <input type="hidden" name="next" value={next} />
                   <PendingSubmitButton
-                    pendingLabel="…"
+                    pendingLabel="Starring"
                     successKey={`fav-${card.accountId}`}
-                    className="rounded-control px-2 py-1 text-xs text-ink-muted hover:text-accent"
+                    title={card.favorite ? "Remove star" : "Star this desk"}
+                    className={`rounded-control p-1.5 ${
+                      card.favorite
+                        ? "text-accent hover:text-accent-strong"
+                        : "text-ink-muted hover:text-accent"
+                    }`}
                   >
-                    {card.favorite ? "Starred" : "Star"}
+                    <StarIcon filled={card.favorite} />
+                    <span className="sr-only">
+                      {card.favorite ? "Remove star" : "Star this desk"}
+                    </span>
                   </PendingSubmitButton>
                 </form>
               </div>
-              <Link
-                href={copyDeskPagePath(card.accountId)}
-                className="group mt-2 block min-w-0"
-              >
+              <div className="mt-2 min-w-0">
                 <span className="block text-[11px] uppercase tracking-wide text-ink-faint">
                   Desk
                 </span>
-                <span className="block truncate text-sm text-ink group-hover:text-accent">
+                <span className="block truncate text-sm text-ink">
                   {card.deskName}
                 </span>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -266,19 +285,27 @@ export function CopyCatalogueBoard({
                     </dd>
                   </div>
                 </dl>
-              </Link>
-              <div className="mt-5">
-                <CopyFollowButton
-                  parentAccountId={card.accountId}
-                  deskName={card.deskName}
-                  deskType={card.deskType}
-                  venue={card.venue}
-                  venueEnvironment={card.venueEnvironment}
-                  connections={connections}
-                  following={card.following}
-                  defaultOpen={openParentId === card.accountId}
-                  className="w-full rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
-                />
+              </div>
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <CopyFollowButton
+                    parentAccountId={card.accountId}
+                    deskName={card.deskName}
+                    deskType={card.deskType}
+                    venue={card.venue}
+                    venueEnvironment={card.venueEnvironment}
+                    connections={connections}
+                    following={card.following}
+                    defaultOpen={openParentId === card.accountId}
+                    className="w-full rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
+                  />
+                </div>
+                <Link
+                  href={copyDeskPagePath(card.accountId)}
+                  className="shrink-0 text-sm text-accent hover:text-accent-strong"
+                >
+                  View details
+                </Link>
               </div>
             </li>
           ))}

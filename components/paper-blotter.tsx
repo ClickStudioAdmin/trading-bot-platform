@@ -344,12 +344,12 @@ export function PaperPerformanceStats({
   return (
     <section>
       <SectionHead
-        title="Strategy statistics"
+        title="Desk Statistics"
         subtitle={
           signedIn ? undefined : "Sign in to see your paper desk numbers."
         }
       />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           label="Realized P&L"
           value={
@@ -361,16 +361,14 @@ export function PaperPerformanceStats({
           }
           toneClass={signedTone(signedIn ? stats.realizedUsdt : null)}
         />
-        <div className="grid grid-cols-2 gap-6 rounded-card border border-line bg-surface p-5">
-          <StatBlock
-            label="Completed Trades"
-            value={signedIn ? String(stats.closedCount) : "—"}
-          />
-          <StatBlock
-            label="Win Rate"
-            value={signedIn ? winRate : "—"}
-          />
-        </div>
+        <StatCard
+          label="Completed trades"
+          value={signedIn ? String(stats.closedCount) : "—"}
+        />
+        <StatCard
+          label="Win rate"
+          value={signedIn ? winRate : "—"}
+        />
       </div>
     </section>
   );

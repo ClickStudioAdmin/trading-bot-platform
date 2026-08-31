@@ -2,6 +2,7 @@
 
 import { CopySizeFields } from "@/components/copy-size-fields";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import { formatCopyPaperStartingUsdt } from "@/lib/copy/decide";
 import type { CopySizeMode } from "@/lib/copy/model";
 
 export function CopyDeskGuardsFields({
@@ -12,6 +13,7 @@ export function CopyDeskGuardsFields({
   defaultMaxDailyLossUsdt,
   defaultMaxDrawdownPct,
   defaultMaxAdverseMovePct,
+  paper = false,
 }: {
   defaultSizeMode?: CopySizeMode;
   defaultPercent?: string;
@@ -20,6 +22,7 @@ export function CopyDeskGuardsFields({
   defaultMaxDailyLossUsdt?: string;
   defaultMaxDrawdownPct?: string;
   defaultMaxAdverseMovePct?: string;
+  paper?: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -35,6 +38,7 @@ export function CopyDeskGuardsFields({
         defaultMode={defaultSizeMode}
         defaultPercent={defaultPercent}
         defaultBookUsdt={defaultBookUsdt}
+        paper={paper}
       />
       <label className="flex items-start gap-2 text-sm text-ink">
         <input
@@ -83,7 +87,11 @@ export function CopyDeskGuardsFields({
         </span>
         <span className="mt-1 block text-xs text-ink-muted">
           From the peak since you followed or last resumed. Uses this desk’s
-          equity (available plus unrealized). Breach flattens and pauses.
+          equity
+          {paper
+            ? ` (starts at ${formatCopyPaperStartingUsdt()}, plus realized and unrealized)`
+            : " (available plus unrealized)"}
+          . Breach flattens and pauses.
         </span>
       </label>
       <label className="block text-sm text-ink">

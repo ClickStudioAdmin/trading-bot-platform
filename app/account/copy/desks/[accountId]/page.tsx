@@ -58,12 +58,24 @@ export default async function CopyDeskPerformancePage({
   const traderHref = card.traderAlias
     ? `/account/copy/traders/${encodeURIComponent(card.traderAlias)}`
     : "/account/copy";
-  const roi =
-    !card.stats30d || card.stats30d.closedCount === 0
-      ? "—"
-      : card.stats30d.realizedPct == null
-        ? formatSignedUsd(card.stats30d.realizedUsdt)
-        : formatPct(card.stats30d.realizedPct);
+  const empty30d = !card.stats30d || card.stats30d.closedCount === 0;
+  const roi = empty30d
+    ? "—"
+    : card.stats30d.realizedPct == null
+      ? formatSignedUsd(card.stats30d.realizedUsdt)
+      : formatPct(card.stats30d.realizedPct);
+  const drawdown = empty30d
+    ? "—"
+    : card.stats30d.maxDrawdownPct == null
+      ? formatSignedUsd(card.stats30d.maxDrawdownUsdt)
+      : formatPct(card.stats30d.maxDrawdownPct);
+  const winRate = empty30d
+    ? "—"
+    : `${Math.round((card.stats30d.winCount / card.stats30d.closedCount) * 100)}%`;
+  const followers =
+    card.maxFollowers == null
+      ? String(card.followerCount)
+      : `${card.followerCount} / ${card.maxFollowers}`;
 
   return (
     <>
@@ -73,102 +85,82 @@ export default async function CopyDeskPerformancePage({
         </Link>
       </p>
       <section className="mb-8 rounded-card border border-line bg-surface p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-4">
-            <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-raised text-lg text-ink-muted">
-              {card.traderLogoUrl ? (
+        <div className="flex items-start gap-4">
+          <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-raised text-lg text-ink-muted">
+            {card.traderLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={card.traderLogoUrl}
+                alt=""
+                className="size-full object-cover"
+              />
+            ) : (
+              (card.traderAlias ?? "T").slice(0, 1).toUpperCase()
+            )}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              {card.deskLogoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={card.traderLogoUrl}
+                  src={card.deskLogoUrl}
                   alt=""
-                  className="size-full object-cover"
+                  className="size-8 shrink-0 rounded-control border border-line object-cover"
                 />
-              ) : (
-                (card.traderAlias ?? "T").slice(0, 1).toUpperCase()
-              )}
-            </span>
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wide text-ink-faint">
-                Trader
-              </p>
-              <Link
-                href={traderHref}
-                className="block truncate text-sm font-medium text-ink hover:text-accent"
-              >
+              ) : null}
+              <h1 className="min-w-0 truncate text-2xl font-semibold tracking-tight text-ink">
+                {card.deskName}
+              </h1>
+              <CopyFollowButton
+                parentAccountId={card.accountId}
+                deskName={card.deskName}
+                deskType={card.deskType}
+                venue={card.venue}
+                venueEnvironment={card.venueEnvironment}
+                connections={connections}
+                following={card.following}
+                className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
+              />
+            </div>
+            <p className="mt-1 text-sm text-ink-muted">
+              <Link href={traderHref} className="text-ink hover:text-accent">
                 {card.traderAlias ?? "Trader"}
               </Link>
-              <p className="mt-2 text-[11px] uppercase tracking-wide text-ink-faint">
-                Desk
-              </p>
-              <div className="mt-1 flex min-w-0 items-center gap-2">
-                {card.deskLogoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={card.deskLogoUrl}
-                    alt=""
-                    className="size-8 shrink-0 rounded-control border border-line object-cover"
-                  />
-                ) : null}
-                <h1 className="truncate text-2xl font-semibold tracking-tight text-ink">
-                  {card.deskName}
-                </h1>
-              </div>
-              <p className="mt-2 text-sm text-ink-muted">
+              <span className="text-ink-faint">
+                {" · "}
                 {card.visibility === "private" ? "Private" : "Public"}
                 {" · "}
                 {formatDeskType(card.deskType)} · {card.venue}
+              </span>
+            </p>
+            {card.description ? (
+              <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm text-ink-muted">
+                {card.description}
               </p>
-            </div>
+            ) : null}
           </div>
-          <CopyFollowButton
-            parentAccountId={card.accountId}
-            deskName={card.deskName}
-            deskType={card.deskType}
-            venue={card.venue}
-            venueEnvironment={card.venueEnvironment}
-            connections={connections}
-            following={card.following}
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-          />
         </div>
-        {card.description ? (
-          <p className="mt-4 whitespace-pre-wrap text-sm text-ink-muted">
-            {card.description}
-          </p>
-        ) : null}
-        <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div>
-            <dt className="text-xs text-ink-faint">ROI [30d]</dt>
-            <dd
-              className={`mt-1 text-sm font-semibold tabular-nums ${
-                !card.stats30d || card.stats30d.closedCount === 0
-                  ? "text-ink"
-                  : card.stats30d.realizedUsdt < 0
-                    ? "text-danger"
-                    : "text-success"
-              }`}
-            >
-              {roi}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-ink-faint">Following</dt>
-            <dd className="mt-1 text-sm tabular-nums text-ink">
-              {card.maxFollowers == null
-                ? String(card.followerCount)
-                : `${card.followerCount} / ${card.maxFollowers}`}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-ink-faint">Invited</dt>
-            <dd className="mt-1 text-sm tabular-nums text-ink">
-              {card.invitedCount}
-            </dd>
-          </div>
-        </dl>
       </section>
       <div className="space-y-6">
-        <FuturesPerformanceStats signedIn closed={closed} />
+        <FuturesPerformanceStats
+          signedIn
+          closed={closed}
+          extras={[
+            {
+              label: "ROI [30d]",
+              value: roi,
+              toneClass: empty30d
+                ? undefined
+                : card.stats30d.realizedUsdt < 0
+                  ? "text-danger"
+                  : "text-success",
+            },
+            { label: "Drawdown [30d]", value: drawdown },
+            { label: "Win rate [30d]", value: winRate },
+            { label: "Followers", value: followers },
+            { label: "Invited", value: String(card.invitedCount) },
+          ]}
+        />
         <ClosedFuturesTrades signedIn closed={closed} webhookNames={[]} />
       </div>
     </>

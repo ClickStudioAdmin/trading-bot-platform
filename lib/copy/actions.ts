@@ -32,7 +32,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   COPY_SHARE_OFF_OPEN_TRADES,
-  COPY_UNFOLLOW_CONFIRM,
   copyInviteBlockCode,
   copyLiveTradeCount,
   copySharingOffBlocked,
@@ -700,13 +699,19 @@ export async function unfollowDeskCopyAction(formData: FormData) {
     redirect("/sign-in");
   }
   const account = session.account;
+  const rawNext = String(formData.get("next") ?? "").trim();
+  const next = rawNext.startsWith("/strategies/futures")
+    ? rawNext
+    : deskPath(FUTURES_PATHS.positions, account.id);
   const fail = (message: string): never =>
-    redirect(copySettingsHref(account.id, { error: message }));
+    redirect(
+      `${next}${next.includes("?") ? "&" : "?"}paperError=${encodeURIComponent(message)}`,
+    );
   if (!deskIsCopy(account) || !account.copyOfAccountId) {
     return fail("This is not a copy desk.");
   }
-  if (String(formData.get("confirm") ?? "").trim() !== COPY_UNFOLLOW_CONFIRM) {
-    return fail(`Type ${COPY_UNFOLLOW_CONFIRM} to confirm.`);
+  if (String(formData.get("confirm") ?? "").trim() !== "1") {
+    return fail("Confirm unfollow to delete this copy desk.");
   }
   const desks = await listTradingAccounts(session.member.id);
   const usage = await loadAccountUsage([account]);

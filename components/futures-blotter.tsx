@@ -425,49 +425,68 @@ export function ClosedFuturesTrades({
   );
 }
 
+export type DeskStatItem = {
+  label: string;
+  value: string;
+  toneClass?: string;
+};
+
 export function FuturesPerformanceStats({
   signedIn,
   closed,
+  extras,
 }: {
   signedIn: boolean;
   closed: FuturesDeskPosition[];
+  extras?: DeskStatItem[];
 }) {
   const stats = futuresClosedStats(closed);
   const winRate =
     stats.closedCount === 0
       ? "—"
       : `${Math.round((stats.greenCount / stats.closedCount) * 100)}%`;
+  const items: DeskStatItem[] = [
+    ...(extras ?? []),
+    {
+      label: "Realized P&L",
+      value: signedIn
+        ? stats.realizedPct === null
+          ? formatSignedUsd(stats.realizedUsdt)
+          : `${formatSignedUsd(stats.realizedUsdt)} (${formatPct(stats.realizedPct)})`
+        : "—",
+      toneClass: signedTone(signedIn ? stats.realizedUsdt : null),
+    },
+    {
+      label: "Completed trades",
+      value: signedIn ? String(stats.closedCount) : "—",
+    },
+    {
+      label: "Win rate",
+      value: signedIn ? winRate : "—",
+    },
+  ];
+  const columns =
+    items.length >= 6
+      ? "sm:grid-cols-2 xl:grid-cols-4"
+      : "sm:grid-cols-3";
 
   return (
     <section>
       <SectionHead
-        title="Strategy statistics"
+        title="Desk Statistics"
         subtitle={
           signedIn ? undefined : "Sign in to see this book’s realized numbers."
         }
       />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <StatCard
-          label="Realized P&L"
-          value={
-            signedIn
-              ? stats.realizedPct === null
-                ? formatSignedUsd(stats.realizedUsdt)
-                : `${formatSignedUsd(stats.realizedUsdt)} (${formatPct(stats.realizedPct)})`
-              : "—"
-          }
-          toneClass={signedTone(signedIn ? stats.realizedUsdt : null)}
-        />
-        <div className="grid grid-cols-2 gap-6 rounded-card border border-line bg-surface p-5">
-          <StatBlock
-            label="Completed Trades"
-            value={signedIn ? String(stats.closedCount) : "—"}
+      <div className={`grid gap-4 ${columns}`}>
+        {items.map((item) => (
+          <StatCard
+            key={item.label}
+            label={item.label}
+            value={item.value}
+            toneClass={item.toneClass}
           />
-          <StatBlock
-            label="Win Rate"
-            value={signedIn ? winRate : "—"}
-          />
-        </div>
+        ))}
       </div>
     </section>
   );

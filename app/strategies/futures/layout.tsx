@@ -13,6 +13,8 @@ import { dcaPlaybookIsRunning } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
+import { CopyDeskHeader } from "@/components/copy-desk-header";
+import { loadCopyPaperEquityView } from "@/lib/copy/balance";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections, getVenue } from "@/lib/exchanges/venues";
@@ -69,6 +71,15 @@ export default async function FuturesLayout({
           bound.id,
         )
       : null;
+  const paperBook =
+    copyDesk && !live && session
+      ? await loadCopyPaperEquityView({
+          userId: session.member.id,
+          accountId: session.account.id,
+          venue: session.account.venue,
+          venueEnvironment: session.account.venueEnvironment,
+        })
+      : null;
   const playbooks =
     dca && session
       ? await listDcaPlaybooksForAccount(session.account.id)
@@ -122,15 +133,23 @@ export default async function FuturesLayout({
       <StrategySubnav
         title={session?.account.name ?? formatDeskType(deskType)}
         typeLabel={
-          session
-            ? copyDesk
-              ? `${formatDeskType(deskType)} · Copy`
-              : formatDeskType(deskType)
-            : undefined
+          session && !copyDesk ? formatDeskType(deskType) : undefined
+        }
+        identity={
+          copyDesk && session ? (
+            <CopyDeskHeader
+              account={session.account}
+              next={
+                deskId
+                  ? pathWithDesk(FUTURES_PATHS.positions, deskId)
+                  : FUTURES_PATHS.positions
+              }
+            />
+          ) : undefined
         }
         description={
           copyDesk
-            ? "This desk copies another trader. Sizing, reduce-only, max daily loss, and Close All still protect. Pause or unfollow in Desk Settings. No ticket, bots, or webhooks."
+            ? ""
             : signalFollower
             ? "TradingView sends buy, sell, and close. This desk only protects: caps, reduce-only, Close All, and row TP/SL."
             : dca
@@ -151,6 +170,7 @@ export default async function FuturesLayout({
           copyDesk || signalFollower || manualPerps ? false : automationsRunning
         }
         reduceOnly={deskStatus.reduceOnly}
+        paperBook={paperBook}
         connection={
           live
             ? bound

@@ -17,7 +17,6 @@ export const COPY_UNFOLLOW_OPEN_TRADES =
   "Close all live trades on this desk before you unfollow.";
 export const COPY_UNFOLLOW_LAST_DESK =
   "Create another desk before you unfollow. You can pause copying instead.";
-export const COPY_UNFOLLOW_CONFIRM = "UNFOLLOW";
 export const TRADER_LOGO_BUCKET = "trader-logos";
 export const DESK_LOGO_BUCKET = "desk-logos";
 export const TRADER_LOGO_MAX_BYTES = 1_048_576;

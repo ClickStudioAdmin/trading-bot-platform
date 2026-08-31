@@ -102,6 +102,44 @@ export function DeskCopyShareCard({
               </p>
             ) : null}
           </div>
+          <label className="block text-sm text-ink">
+            Desk name
+            <input
+              type="text"
+              name="name"
+              required
+              maxLength={40}
+              defaultValue={listing?.name ?? account.name}
+              className={fieldClass}
+            />
+            <span className="mt-1 block text-xs text-ink-faint">
+              Shown on Copy desks cards next to your trader alias.
+            </span>
+          </label>
+          <label className="block text-sm text-ink">
+            Setup description
+            <textarea
+              name="description"
+              required
+              minLength={1}
+              maxLength={COPY_DESCRIPTION_MAX}
+              rows={4}
+              defaultValue={listing?.description ?? ""}
+              placeholder="Hedge vs one-way, size, anything a copier should know."
+              className={fieldClass}
+            />
+          </label>
+          <div>
+            <p className="text-sm text-ink">Desk logo</p>
+            <LogoFileField
+              name="deskLogo"
+              currentUrl={listing?.logoUrl ?? null}
+              removeName={listing?.logoPath ? "removeDeskLogo" : undefined}
+              removeLabel="Remove desk logo"
+              hint="Optional. This desk's icon, separate from your trader logo. Square PNG, JPG, or WebP. 1 MB max."
+              emptyTone="raised"
+            />
+          </div>
           <label className="flex items-start gap-2 text-sm text-ink">
             <input
               type="checkbox"
@@ -117,31 +155,6 @@ export function DeskCopyShareCard({
               </span>
             </span>
           </label>
-          <label className="block text-sm text-ink">
-            Desk name
-            <input
-              type="text"
-              name="name"
-              required
-              maxLength={40}
-              defaultValue={listing?.name ?? account.name}
-              className={fieldClass}
-            />
-            <span className="mt-1 block text-xs text-ink-faint">
-              Shown on Copy desks cards next to your trader alias.
-            </span>
-          </label>
-          <div>
-            <p className="text-sm text-ink">Desk logo</p>
-            <LogoFileField
-              name="deskLogo"
-              currentUrl={listing?.logoUrl ?? null}
-              removeName={listing?.logoPath ? "removeDeskLogo" : undefined}
-              removeLabel="Remove desk logo"
-              hint="Optional. This desk's icon, separate from your trader logo. Square PNG, JPG, or WebP. 1 MB max."
-              emptyTone="raised"
-            />
-          </div>
           <label className="block text-sm text-ink">
             Visibility
             <select
@@ -162,19 +175,6 @@ export function DeskCopyShareCard({
               </Link>
               .
             </span>
-          </label>
-          <label className="block text-sm text-ink">
-            Setup description
-            <textarea
-              name="description"
-              required
-              minLength={1}
-              maxLength={COPY_DESCRIPTION_MAX}
-              rows={4}
-              defaultValue={listing?.description ?? ""}
-              placeholder="Hedge vs one-way, size, anything a copier should know."
-              className={fieldClass}
-            />
           </label>
           <label className="block text-sm text-ink">
             Maximum copy traders

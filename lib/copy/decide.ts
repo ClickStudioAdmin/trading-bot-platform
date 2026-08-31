@@ -250,6 +250,33 @@ export function copyPaperEquity(input: {
   );
 }
 
+export type CopyPaperEquityView = {
+  startingUsdt: number;
+  realizedUsdt: number;
+  unrealizedUsdt: number;
+  equityUsdt: number;
+};
+
+export function copyPaperEquityView(input: {
+  startingUsdt?: number;
+  realizedUsdt: number;
+  unrealizedUsdt: number;
+}): CopyPaperEquityView {
+  const startingUsdt = input.startingUsdt ?? COPY_PAPER_STARTING_USDT;
+  return {
+    startingUsdt,
+    realizedUsdt: input.realizedUsdt,
+    unrealizedUsdt: input.unrealizedUsdt,
+    equityUsdt: copyPaperEquity({ ...input, startingUsdt }),
+  };
+}
+
+export function formatCopyPaperStartingUsdt(
+  value = COPY_PAPER_STARTING_USDT,
+): string {
+  return `$${value.toLocaleString("en-US")}`;
+}
+
 export function copyUtcDayStartMs(nowMs: number): number {
   const date = new Date(nowMs);
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());

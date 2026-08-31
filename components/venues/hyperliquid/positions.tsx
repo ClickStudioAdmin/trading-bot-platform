@@ -21,7 +21,6 @@ import {
   deskHref,
   deskIsCopy,
 } from "@/lib/accounts/model";
-import { CopyDeskPositionsChrome } from "@/components/copy-desk-positions-chrome";
 import { dcaHintsForOpen } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { submitFuturesTrade } from "@/lib/futures/actions";
@@ -131,13 +130,6 @@ export async function HyperliquidFuturesPositions({
           venue="hyperliquid"
           environment={session?.account.venueEnvironment}
         >
-        {copyDesk && session ? (
-          <CopyDeskPositionsChrome
-            copyOfAccountId={session.account.copyOfAccountId}
-            deskId={session.account.id}
-            next={NEXT}
-          />
-        ) : null}
         <FuturesOpenStats signedIn={desk.signedIn} open={open} />
         {showTicket ? (
           <section>
