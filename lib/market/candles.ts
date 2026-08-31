@@ -55,6 +55,31 @@ export function parseCandleLimit(raw: unknown, fallback = 200): number {
   return Math.min(1500, Math.max(1, Math.floor(value)));
 }
 
+export function clipCandlesToWindow(
+  candles: CandleBar[],
+  fromMs: number,
+  toMs: number,
+): CandleBar[] {
+  if (candles.length === 0 || !(toMs >= fromMs)) {
+    return candles;
+  }
+  let start = 0;
+  while (start < candles.length && candles[start].timeMs < fromMs) {
+    start += 1;
+  }
+  if (start > 0) {
+    start -= 1;
+  }
+  let end = candles.length - 1;
+  while (end > start && candles[end].timeMs > toMs) {
+    end -= 1;
+  }
+  if (end < candles.length - 1) {
+    end += 1;
+  }
+  return candles.slice(start, end + 1);
+}
+
 export function isValidCandleBar(row: CandleBar): boolean {
   return (
     row.timeMs > 0 &&

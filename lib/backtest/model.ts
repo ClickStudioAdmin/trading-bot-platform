@@ -234,6 +234,31 @@ export function estimateBacktestBars(
   return Math.ceil((toMs - fromMs) / intervalMs(interval));
 }
 
+export function backtestActivityBounds(input: {
+  fromMs: number;
+  toMs: number;
+  orders: ReadonlyArray<{ atMs: number }>;
+}): { fromMs: number; toMs: number } {
+  if (input.orders.length === 0) {
+    return { fromMs: input.fromMs, toMs: input.toMs };
+  }
+  let first = input.orders[0].atMs;
+  let last = first;
+  for (const order of input.orders) {
+    if (order.atMs < first) {
+      first = order.atMs;
+    }
+    if (order.atMs > last) {
+      last = order.atMs;
+    }
+  }
+  const fromMs = Math.max(input.fromMs, first);
+  const toMs = Math.min(input.toMs, last);
+  return toMs > fromMs
+    ? { fromMs, toMs }
+    : { fromMs: input.fromMs, toMs: input.toMs };
+}
+
 export function chartIntervalForWindow(
   fromMs: number,
   toMs: number,

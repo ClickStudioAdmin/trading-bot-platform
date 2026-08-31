@@ -52,7 +52,7 @@ export function buildEquityTimeline(
     let index = 0;
     const points: EquityPoint[] = [
       {
-        atMs: run.fromMs,
+        atMs: candles[0]?.timeMs ?? run.fromMs,
         equityUsdt: run.startingUsdt,
         realizedUsdt: 0,
         label: "Start",

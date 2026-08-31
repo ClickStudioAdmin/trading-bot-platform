@@ -53,7 +53,10 @@ export function FuturesWorkingOrders({
       <FuturesDeskRefresh />
       <div className="mb-3 flex items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight">Open orders</h2>
+          <h2 className="text-xl font-semibold tracking-tight">
+            Open orders{" "}
+            <span className="font-normal text-ink-muted">({rows.length})</span>
+          </h2>
           <p className="text-sm text-ink-muted">
             {copyDesk && playbookOwnsOrders
               ? exchangeBook

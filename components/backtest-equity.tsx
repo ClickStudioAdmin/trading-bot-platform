@@ -2,11 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ChartScreenshotButton,
+  downloadChartScreenshot,
+} from "@/components/desk-chart";
+import {
+  backtestActivityBounds,
   chartIntervalForWindow,
   type BacktestRun,
 } from "@/lib/backtest/model";
 import { buildEquityTimeline } from "@/lib/backtest/study";
-import type { CandleBar } from "@/lib/market/candles";
+import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 
 const HEIGHT = 280;
 
@@ -31,8 +36,18 @@ function toSeriesPoints(
   });
 }
 
+type ChartHandle = {
+  takeScreenshot: (
+    addTopLayer?: boolean,
+    includeCrosshair?: boolean,
+  ) => HTMLCanvasElement;
+  applyOptions: (options: { width: number }) => void;
+  remove: () => void;
+};
+
 export function BacktestEquityPanel({ run }: { run: BacktestRun }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const chartRef = useRef<ChartHandle | null>(null);
   const [candles, setCandles] = useState<CandleBar[]>([]);
   useEffect(() => {
     let cancelled = false;
@@ -61,7 +76,8 @@ export function BacktestEquityPanel({ run }: { run: BacktestRun }) {
       })
       .then((rows) => {
         if (!cancelled) {
-          setCandles(rows);
+          const bounds = backtestActivityBounds(run);
+          setCandles(clipCandlesToWindow(rows, bounds.fromMs, bounds.toMs));
         }
       })
       .catch(() => {
@@ -113,6 +129,9 @@ export function BacktestEquityPanel({ run }: { run: BacktestRun }) {
           borderColor: "#2A313C",
           timeVisible: true,
           secondsVisible: false,
+          rightOffset: 0,
+          fixLeftEdge: true,
+          fixRightEdge: true,
         },
         crosshair: {
           mode: charts.CrosshairMode.Normal,
@@ -152,6 +171,7 @@ export function BacktestEquityPanel({ run }: { run: BacktestRun }) {
         lineStyle: charts.LineStyle.Dashed,
         axisLabelVisible: true,
       });
+      chartRef.current = chart;
       chart.timeScale().fitContent();
       const observer = new ResizeObserver(() => {
         if (hostRef.current) {
@@ -161,6 +181,7 @@ export function BacktestEquityPanel({ run }: { run: BacktestRun }) {
       observer.observe(host);
       cleanup = () => {
         observer.disconnect();
+        chartRef.current = null;
         chart.remove();
       };
     });
@@ -195,7 +216,19 @@ export function BacktestEquityPanel({ run }: { run: BacktestRun }) {
           {change >= 0 ? "+" : "−"}${money(Math.abs(change))} · ${money(end)}
         </p>
       </div>
-      <div ref={hostRef} className="w-full" style={{ height: HEIGHT }} />
+      <div className="relative w-full" style={{ height: HEIGHT }}>
+        <div ref={hostRef} className="h-full w-full" />
+        <ChartScreenshotButton
+          onClick={() => {
+            if (chartRef.current) {
+              downloadChartScreenshot(
+                chartRef.current,
+                `${run.symbol}-equity.png`,
+              );
+            }
+          }}
+        />
+      </div>
     </div>
   );
 }

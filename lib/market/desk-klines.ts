@@ -174,7 +174,9 @@ export async function loadDeskCandles(input: {
       startTimeMs,
       endTimeMs,
     });
-    return sortUniqueBars(candles).slice(-limit);
+    return sortUniqueBars(candles)
+      .filter((row) => row.timeMs >= startTimeMs && row.timeMs <= endTimeMs)
+      .slice(-limit);
   }
 
   const collected: CandleBar[] = [];
@@ -200,5 +202,7 @@ export async function loadDeskCandles(input: {
       break;
     }
   }
-  return sortUniqueBars(collected).slice(-limit);
+  return sortUniqueBars(collected)
+    .filter((row) => row.timeMs >= startTimeMs && row.timeMs <= endTimeMs)
+    .slice(-limit);
 }

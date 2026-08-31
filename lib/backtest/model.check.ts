@@ -5,6 +5,7 @@ import {
   estimateBacktestBars,
   formatBacktestReturnPct,
   intervalMs,
+  backtestActivityBounds,
   chartIntervalForWindow,
   parseBacktestDateRange,
   parseComparableSymbols,
@@ -69,6 +70,22 @@ assert.equal(
 assert.equal(
   chartIntervalForWindow(Date.UTC(2026, 6, 1), Date.UTC(2026, 6, 31), "60"),
   "60",
+);
+assert.deepEqual(
+  backtestActivityBounds({
+    fromMs: 1_000,
+    toMs: 10_000,
+    orders: [{ atMs: 4_000 }, { atMs: 7_000 }, { atMs: 5_000 }],
+  }),
+  { fromMs: 4_000, toMs: 7_000 },
+);
+assert.deepEqual(
+  backtestActivityBounds({
+    fromMs: 1_000,
+    toMs: 10_000,
+    orders: [],
+  }),
+  { fromMs: 1_000, toMs: 10_000 },
 );
 assert.equal(backtestShouldRunInline(800, 2), true);
 assert.equal(backtestShouldRunInline(2000, 1), false);

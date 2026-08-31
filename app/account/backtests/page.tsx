@@ -131,7 +131,7 @@ export default async function AccountBacktestsPage({
           <table className="w-full min-w-max text-left text-sm">
             <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
               <tr>
-                <th className="px-4 py-3 font-medium">Bot</th>
+                <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Contract</th>
                 <th className="px-4 py-3 font-medium">Comparables</th>

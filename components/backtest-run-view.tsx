@@ -69,6 +69,7 @@ import {
 } from "@/lib/backtest/actions";
 import { applyTemplateAction } from "@/lib/templates/actions";
 import {
+  backtestActivityBounds,
   chartIntervalForWindow,
   formatBacktestReturnPct,
   peakLockedNotionalUsdt,
@@ -84,8 +85,16 @@ import {
   snapOverlayToCandles,
 } from "@/lib/charts/overlay";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
-import type { CandleBar } from "@/lib/market/candles";
+import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 import { formatQty, signedTone } from "@/lib/opportunities/format";
+
+function candlesForBacktestChart(
+  candles: CandleBar[],
+  run: BacktestRun,
+): CandleBar[] {
+  const bounds = backtestActivityBounds(run);
+  return clipCandlesToWindow(candles, bounds.fromMs, bounds.toMs);
+}
 
 function money(value: number): string {
   const abs = Math.abs(value);
@@ -372,7 +381,7 @@ export function BacktestInlineChart({ run }: { run: BacktestRun }) {
       })
       .then((rows) => {
         if (!cancelled) {
-          setCandles(rows);
+          setCandles(candlesForBacktestChart(rows, run));
         }
       })
       .catch((err: unknown) => {
@@ -402,6 +411,7 @@ export function BacktestInlineChart({ run }: { run: BacktestRun }) {
   return (
     <DeskChart
       candles={candles}
+      screenshotName={`${run.symbol}-backtest.png`}
       overlay={snapOverlayToCandles(
         buildBacktestChartOverlay({
           triggerPrice:
@@ -450,7 +460,7 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
       })
       .then((rows) => {
         if (!cancelled) {
-          setCandles(rows);
+          setCandles(candlesForBacktestChart(rows, run));
         }
       })
       .catch((err: unknown) => {
@@ -495,6 +505,7 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
             <div className="mt-3">
               <DeskChart
                 candles={candles}
+                screenshotName={`${run.symbol}-backtest.png`}
                 overlay={snapOverlayToCandles(
                   buildBacktestChartOverlay({
                     triggerPrice:
