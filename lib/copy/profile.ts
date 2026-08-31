@@ -1,7 +1,9 @@
 import { createServiceClient } from "@/lib/supabase/admin";
+import { traderLogoPublicUrl } from "./logo";
 import {
   parseTraderAlias,
   parseTraderBio,
+  parseTraderLogoPath,
   TRADER_ALIAS_TAKEN,
   type TraderProfile,
 } from "./model";
@@ -17,10 +19,16 @@ function parseProfileRow(
   if (!bio.ok) {
     return null;
   }
+  const logo = parseTraderLogoPath(row.logo_path);
+  const logoPath = logo.ok ? logo.path : null;
+  const updatedAt =
+    typeof row.updated_at === "string" ? row.updated_at : null;
   return {
     userId: String(row.user_id),
     alias: alias.alias,
     bio: bio.bio,
+    logoPath,
+    logoUrl: traderLogoPublicUrl(logoPath, updatedAt),
   };
 }
 
@@ -33,7 +41,7 @@ export async function loadTraderProfile(
   }
   const { data, error } = await supabase
     .from("trader_profiles")
-    .select("user_id, alias, bio")
+    .select("user_id, alias, bio, logo_path, updated_at")
     .eq("user_id", userId)
     .maybeSingle();
   if (error || !data) {
@@ -46,6 +54,7 @@ export async function saveTraderProfile(input: {
   userId: string;
   alias: string;
   bio: string | null;
+  logoPath: string | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -57,6 +66,7 @@ export async function saveTraderProfile(input: {
     user_id: input.userId,
     alias: input.alias,
     bio: input.bio,
+    logo_path: input.logoPath,
     updated_at: now,
   };
   const { error } = existing

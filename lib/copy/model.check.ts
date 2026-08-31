@@ -19,6 +19,8 @@ import {
   parseCopyMinActivityDays,
   parseCopyVisibility,
   parseDeskCopyListingForm,
+  parseTraderLogoPath,
+  parseTraderLogoUpload,
   parseTraderAlias,
   parseTraderBio,
   parseTraderProfileForm,
@@ -233,6 +235,45 @@ if (profile.ok) {
   assert.equal(profile.bio, null);
 }
 assert.equal(parseTraderProfileForm({ alias: "1bad", bio: "" }).ok, false);
+
+assert.equal(parseTraderLogoPath("").ok, true);
+assert.equal(parseTraderLogoPath("not-a-path").ok, false);
+const logoPath = parseTraderLogoPath(
+  "11111111-1111-1111-1111-111111111111/logo.png",
+);
+assert.equal(logoPath.ok, true);
+if (logoPath.ok) {
+  assert.equal(
+    logoPath.path,
+    "11111111-1111-1111-1111-111111111111/logo.png",
+  );
+}
+assert.equal(parseTraderLogoUpload(null).ok, true);
+assert.equal(parseTraderLogoUpload({ name: "", type: "", size: 0 }).ok, true);
+assert.equal(
+  parseTraderLogoUpload({
+    name: "mark.png",
+    type: "image/png",
+    size: 1200,
+  }).ok,
+  true,
+);
+assert.equal(
+  parseTraderLogoUpload({
+    name: "mark.gif",
+    type: "image/gif",
+    size: 1200,
+  }).ok,
+  false,
+);
+assert.equal(
+  parseTraderLogoUpload({
+    name: "mark.png",
+    type: "image/png",
+    size: 2_000_000,
+  }).ok,
+  false,
+);
 
 const listing = parseDeskCopyListingForm({
   visibility: "public",

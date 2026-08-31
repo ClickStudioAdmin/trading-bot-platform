@@ -9,6 +9,16 @@ export const COPY_DESCRIPTION_MAX = 2000;
 export const TRADER_ALIAS_TAKEN = "That trader alias is already taken.";
 export const TRADER_ALIAS_REQUIRED =
   "Set a trader alias in Account Settings before you share.";
+export const TRADER_LOGO_BUCKET = "trader-logos";
+export const TRADER_LOGO_MAX_BYTES = 1_048_576;
+export const TRADER_LOGO_TYPES = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+} as const;
+
+const TRADER_LOGO_PATH =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/logo\.(png|jpg|webp)$/i;
 
 export type CopyListingVisibility = "private" | "public";
 export type CopyShareBlockCode =
@@ -23,6 +33,8 @@ export type TraderProfile = {
   userId: string;
   alias: string;
   bio: string | null;
+  logoPath: string | null;
+  logoUrl: string | null;
 };
 
 export type DeskCopyListing = {
@@ -301,6 +313,49 @@ export function parseTraderBio(
     };
   }
   return { ok: true, bio };
+}
+
+export function parseTraderLogoPath(
+  value: unknown,
+): { ok: true; path: string | null } | { ok: false; error: string } {
+  if (value == null) {
+    return { ok: true, path: null };
+  }
+  const path = String(value).trim();
+  if (!path) {
+    return { ok: true, path: null };
+  }
+  if (!TRADER_LOGO_PATH.test(path)) {
+    return { ok: false, error: "Trader logo path is invalid." };
+  }
+  return { ok: true, path };
+}
+
+export function parseTraderLogoUpload(value: {
+  name?: unknown;
+  type?: unknown;
+  size?: unknown;
+} | null): { ok: true; ext: string | null } | { ok: false; error: string } {
+  if (value == null) {
+    return { ok: true, ext: null };
+  }
+  const name = String(value.name ?? "").trim();
+  const type = String(value.type ?? "").trim().toLowerCase();
+  const size = Number(value.size ?? 0);
+  if (!name && (!Number.isFinite(size) || size <= 0)) {
+    return { ok: true, ext: null };
+  }
+  if (!Number.isFinite(size) || size <= 0) {
+    return { ok: true, ext: null };
+  }
+  if (size > TRADER_LOGO_MAX_BYTES) {
+    return { ok: false, error: "Trader logo must be 1 MB or smaller." };
+  }
+  const ext = TRADER_LOGO_TYPES[type as keyof typeof TRADER_LOGO_TYPES];
+  if (!ext) {
+    return { ok: false, error: "Use a PNG, JPG, or WebP image." };
+  }
+  return { ok: true, ext };
 }
 
 export function parseCopyVisibility(

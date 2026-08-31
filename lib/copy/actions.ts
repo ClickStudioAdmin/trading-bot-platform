@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import {
   evaluateCopyShare,
   parseDeskCopyListingForm,
+  parseTraderLogoUpload,
   parseTraderProfileForm,
 } from "./model";
 import {
@@ -18,6 +19,7 @@ import {
   loadFirstVenueFillMs,
   saveDeskCopyListing,
 } from "./listings";
+import { removeTraderLogo, uploadTraderLogo } from "./logo";
 import { loadTraderProfile, saveTraderProfile } from "./profile";
 import { loadCopyPlatformSettings } from "./settings";
 
@@ -50,10 +52,38 @@ export async function saveTraderProfileAction(formData: FormData) {
   if (!parsed.ok) {
     redirect(traderSettingsPath({ error: parsed.error }));
   }
+  const existing = await loadTraderProfile(member.id);
+  const file = formData.get("logo");
+  const upload = parseTraderLogoUpload(
+    file instanceof File ? file : null,
+  );
+  if (!upload.ok) {
+    redirect(traderSettingsPath({ error: upload.error }));
+  }
+  let logoPath = existing?.logoPath ?? null;
+  if (upload.ext && file instanceof File) {
+    const stored = await uploadTraderLogo({
+      userId: member.id,
+      file,
+      ext: upload.ext,
+      previousPath: logoPath,
+    });
+    if (!stored.ok) {
+      redirect(traderSettingsPath({ error: stored.error }));
+    }
+    logoPath = stored.path;
+  } else if (formData.get("removeLogo") === "on" && logoPath) {
+    const removed = await removeTraderLogo(logoPath);
+    if (!removed.ok) {
+      redirect(traderSettingsPath({ error: removed.error }));
+    }
+    logoPath = null;
+  }
   const saved = await saveTraderProfile({
     userId: member.id,
     alias: parsed.alias,
     bio: parsed.bio,
+    logoPath,
   });
   if (!saved.ok) {
     redirect(traderSettingsPath({ error: saved.error }));

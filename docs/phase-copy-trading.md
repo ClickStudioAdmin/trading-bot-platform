@@ -23,7 +23,7 @@ A connected desk can be **shared**. Other members create a **copy desk** of the 
 | Share | **Private** (email grant) or **public** (catalogue). Not a second login on the parent. |
 | Who may share | **Live + bound** only. Paper never. Unbound Live never. C&C never in v1. Unbind unlists / pauses new entries. |
 | Activity floor | First **venue fill** on that desk at least **N days** ago. `copy_min_activity_days` on `/admin/settings` (persisted, default **90**, **0 allowed** for tests). Share and catalogue enforce N server-side. |
-| Alias | Login **trader profile**, unique, required before first share. Email never shown. |
+| Alias | Login **trader profile**, unique, required before first share. Optional logo. Email never shown. |
 | Desk brief | Required to share. Owner-written setup notes (hedge vs one-way, leverage, etc.). Venue, type, and Live are stamped; they cannot fake those. |
 | Copier gates | Optional **min available balance** on the listing. Live copy desks are checked at enable / unpause. Paper skips. Mode and leverage stay in the brief until a venue adapter can read them. |
 | What copies | **Fills**, not recipes or GTC ladders. Wait until the parent fill, then place on the follower. |
@@ -52,7 +52,7 @@ Account nav gains **Copy desks** (catalogue). Sidebar shows a **Copy** badge on 
 
 ## Data shape
 
-- Login trader profile: alias (unique), optional bio
+- Login trader profile: alias (unique), optional bio, optional logo (PNG/JPG/WebP in Storage)
 - Persisted admin `copy_min_activity_days`, `copy_max_followers_default` (pre-fill only), and `copy_max_followers_ceiling` (hard cap; empty = no platform cap)
 - `trading_accounts.copy_of_account_id` (immutable when set)
 - Listing: `private` \| `public`, required description, optional `max_followers`, optional `min_balance_usdt`
