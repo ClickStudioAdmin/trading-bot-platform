@@ -114,6 +114,47 @@ export function copyOwnerFollowerSituation(input: {
   };
 }
 
+export type CopyCatalogueTab = "all" | "favorites" | "subscribed";
+export type CopyCatalogueSort =
+  | "roi"
+  | "drawdown"
+  | "followers"
+  | "newest";
+
+export function copyCatalogueIncludes(input: {
+  sharingEnabled: boolean;
+  visibility: CopyListingVisibility;
+  grantStatus: CopyShareStatus | null;
+}): boolean {
+  if (!input.sharingEnabled) {
+    return false;
+  }
+  if (input.visibility === "public") {
+    return true;
+  }
+  return input.grantStatus === "invited" || input.grantStatus === "active";
+}
+
+export function parseCopyCatalogueTab(value: unknown): CopyCatalogueTab {
+  const raw = String(value ?? "").trim();
+  if (raw === "favorites" || raw === "subscribed") {
+    return raw;
+  }
+  return "all";
+}
+
+export function parseCopyCatalogueSort(value: unknown): CopyCatalogueSort {
+  const raw = String(value ?? "").trim();
+  if (
+    raw === "drawdown" ||
+    raw === "followers" ||
+    raw === "newest"
+  ) {
+    return raw;
+  }
+  return "roi";
+}
+
 export function copyOwnerFollowerLabel(input: {
   visibility: CopyListingVisibility | null | undefined;
   invitedEmail: string;

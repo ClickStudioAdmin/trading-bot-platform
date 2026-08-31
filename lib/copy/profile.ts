@@ -50,6 +50,28 @@ export async function loadTraderProfile(
   return parseProfileRow(data as Record<string, unknown>);
 }
 
+export async function loadTraderProfileByAlias(
+  alias: string,
+): Promise<TraderProfile | null> {
+  const parsed = parseTraderAlias(alias);
+  if (!parsed.ok) {
+    return null;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("trader_profiles")
+    .select("user_id, alias, bio, logo_path, updated_at")
+    .ilike("alias", parsed.alias)
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return parseProfileRow(data as Record<string, unknown>);
+}
+
 export async function saveTraderProfile(input: {
   userId: string;
   alias: string;

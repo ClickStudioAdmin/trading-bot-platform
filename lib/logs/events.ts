@@ -3,6 +3,7 @@ export const EVENT_LOG_OPTIONS = [
   { event: "copy.listing_saved", scope: "system" },
   { event: "copy.invite_revoked", scope: "system" },
   { event: "copy.invite_sent", scope: "system" },
+  { event: "copy.favorite_toggled", scope: "system" },
   { event: "copy.profile_saved", scope: "system" },
   { event: "account.deleted", scope: "system" },
   { event: "account.renamed", scope: "system" },

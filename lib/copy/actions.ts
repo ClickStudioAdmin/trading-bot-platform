@@ -34,6 +34,7 @@ import {
 } from "./logo";
 import { loadTraderProfile, saveTraderProfile } from "./profile";
 import { loadCopyPlatformSettings } from "./settings";
+import { toggleDeskCopyFavorite } from "./favorites";
 import { findMemberByEmail } from "@/lib/templates/store";
 import {
   countOpenCopyShares,
@@ -333,4 +334,44 @@ export async function revokeDeskCopyShareAction(formData: FormData) {
   });
   revalidatePath("/", "layout");
   redirect(sharedHref({ saved: "revoke" }));
+}
+
+function safeCopyCataloguePath(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  if (raw.startsWith("/account/copy")) {
+    return raw;
+  }
+  return "/account/copy";
+}
+
+export async function toggleDeskCopyFavoriteAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  const accountId = String(formData.get("accountId") ?? "").trim();
+  const next = safeCopyCataloguePath(formData.get("next"));
+  if (!accountId) {
+    redirect(next);
+  }
+  const favorite = String(formData.get("favorite") ?? "") === "1";
+  const saved = await toggleDeskCopyFavorite({
+    userId: member.id,
+    accountId,
+    favorite,
+  });
+  if (!saved.ok) {
+    redirect(`${next}${next.includes("?") ? "&" : "?"}error=${encodeURIComponent(saved.error)}`);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "copy.favorite_toggled",
+    message: favorite ? "Starred a copy desk" : "Unstarred a copy desk",
+    userId: member.id,
+    accountId,
+    data: { favorite },
+  });
+  revalidatePath("/account/copy");
+  revalidatePath("/", "layout");
+  redirect(next);
 }

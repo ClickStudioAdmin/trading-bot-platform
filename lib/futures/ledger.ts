@@ -272,6 +272,12 @@ export async function writeFuturesFlatten(input: {
     ruleName: input.ruleName ?? null,
   });
   if (!order.error) {
+    try {
+      const { refreshFuturesDeskStats } = await import("@/lib/copy/desk-stats");
+      await refreshFuturesDeskStats(input.row.accountId);
+    } catch {
+      // Snapshot must not block the flatten.
+    }
     await logFuturesFill({
       event: "trade.closed",
       message: `Closed ${input.row.symbol} ${input.row.side}`,

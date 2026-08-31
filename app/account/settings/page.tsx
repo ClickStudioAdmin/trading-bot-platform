@@ -228,8 +228,11 @@ export default async function AccountSettingsPage({
             <div>
               <p className="text-sm text-ink">Copy invites</p>
               <p className="mt-1 text-xs text-ink-muted">
-                Private grants to follow another desk. Creating a copy desk is
-                next.
+                Private grants to follow another desk. They also appear on{" "}
+                <Link href="/account/copy" className="text-accent">
+                  Copy desks
+                </Link>
+                . Creating a copy desk is next.
               </p>
             </div>
             <ul className="space-y-2">

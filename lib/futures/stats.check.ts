@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import type { FuturesOrder, FuturesPosition } from "./model";
 import {
+  deskStatsSnapshot,
+  deskWindowStats,
   flattenExitPrice,
   futuresClosedStats,
   futuresDaysHeld,
@@ -70,6 +72,28 @@ assert.deepEqual(exposure, [
   { baseCoin: "BTC", notionalUsdt: 70, share: 0.7 },
   { baseCoin: "ETH", notionalUsdt: 30, share: 0.3 },
 ]);
+
+const drawdown = deskWindowStats([
+  { closedAtMs: 1, realizedUsdt: 50, notionalUsdt: 100 },
+  { closedAtMs: 2, realizedUsdt: -30, notionalUsdt: 100 },
+  { closedAtMs: 3, realizedUsdt: 10, notionalUsdt: 100 },
+]);
+assert.equal(drawdown.closedCount, 3);
+assert.equal(drawdown.winCount, 2);
+assert.equal(drawdown.realizedUsdt, 30);
+assert.equal(drawdown.maxDrawdownUsdt, 30);
+assert.equal(drawdown.maxDrawdownPct, 30 / 50);
+
+const windowed = deskStatsSnapshot(
+  [
+    { closedAtMs: 1, realizedUsdt: 20, notionalUsdt: 100 },
+    { closedAtMs: 86_400_000 * 40, realizedUsdt: 5, notionalUsdt: 50 },
+  ],
+  86_400_000 * 45,
+);
+assert.equal(windowed.allTime.closedCount, 2);
+assert.equal(windowed.last30d.closedCount, 1);
+assert.equal(windowed.last30d.realizedUsdt, 5);
 
 assert.equal(flattenExitPrice([]), null);
 assert.equal(

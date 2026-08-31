@@ -26,6 +26,9 @@ import {
   copyInviteBlockCode,
   copyOwnerFollowerLabel,
   copyOwnerFollowerSituation,
+  copyCatalogueIncludes,
+  parseCopyCatalogueSort,
+  parseCopyCatalogueTab,
   copyListingAcceptsFollowers,
   copyShareCountsTowardCap,
   formatCopyInviteBlock,
@@ -620,6 +623,43 @@ assert.deepEqual(
     detail: "Revoked 31/08/2026",
   },
 );
+
+assert.equal(
+  copyCatalogueIncludes({
+    sharingEnabled: true,
+    visibility: "public",
+    grantStatus: null,
+  }),
+  true,
+);
+assert.equal(
+  copyCatalogueIncludes({
+    sharingEnabled: false,
+    visibility: "public",
+    grantStatus: null,
+  }),
+  false,
+);
+assert.equal(
+  copyCatalogueIncludes({
+    sharingEnabled: true,
+    visibility: "private",
+    grantStatus: null,
+  }),
+  false,
+);
+assert.equal(
+  copyCatalogueIncludes({
+    sharingEnabled: true,
+    visibility: "private",
+    grantStatus: "invited",
+  }),
+  true,
+);
+assert.equal(parseCopyCatalogueTab("favorites"), "favorites");
+assert.equal(parseCopyCatalogueTab("nope"), "all");
+assert.equal(parseCopyCatalogueSort(""), "roi");
+assert.equal(parseCopyCatalogueSort("newest"), "newest");
 
 assert.equal(evaluateCopyShare({ ...shareBase, alias: "" }).code, "no_alias");
 assert.equal(

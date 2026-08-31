@@ -8,7 +8,7 @@ Closest shipped analog: TradingView Strategy — same blotter as the job, **desk
 
 ## Status
 
-Started 31 Aug 2026. Steps 1–5 are in repo. Stop after each step until Click says go. Push `develop` to migrate.
+Started 31 Aug 2026. Steps 1–6 are in repo. Stop after each step until Click says go. Push `develop` to migrate.
 
 ## Purpose
 
@@ -32,7 +32,7 @@ A connected desk can be **shared**. Other members create a **copy desk** of the 
 | Guards | Existing reduce-only and caps. New max daily loss / max open notional: breach flattens and pauses. Close All. Pause / unfollow. No row TP/SL in v1. |
 | Modes | Parent never Paper. Paper follower of a connected Live parent is allowed. Venue and environment must match. |
 | Types (v1) | `perps`, `perps_bots`, `signal_follower`, `dca`. |
-| Stats | Computed only. Desk stats from the parent ledger. Trader stats: unique followers, public desk count, first shared. No rolled-up P&L across desks. |
+| Stats | **Snapshotted** on every futures desk (shared or not; not C&C). All-time and 30d realized P&L, win count, and max drawdown from realized peak-to-trough (close-time order). Catalogue reads the snapshot. Trader stats: unique followers, visible desk count, first shared. No rolled-up P&L across desks. No AUM, profit share, Sharpe, or views. |
 | Engine | Fly worker / tick. Idempotency `parent_fill_id + follower_account_id`. One desk lease. Browser never sees parent keys or recipes. |
 
 ## Product shape
@@ -48,7 +48,7 @@ Follower
   scale + guards → fills fan out
 ```
 
-Account nav gains **Copy desks** (catalogue). Parent desks get a **Manage Copy Traders** tab (follower list + private email invite). Private lists show email; public lists show user id. Sidebar shows a **Copy** badge on follower desks. Type grouping stays Automated vs Manual.
+Account nav **Copy desks** (`/account/copy`) is one catalogue: public listings plus the viewer’s open private invites. **Private** badge and a private-only filter. **Favorites** are desk bookmarks. **Subscribed** is desks the viewer is currently following (an active copy desk of that parent). Catalogue never shows email. Parent desks keep **Manage Copy Traders**. Sidebar shows a **Copy** badge on follower desks. Type grouping stays Automated vs Manual. Trader page lists desks the viewer may see. Create-copy stays step 7 (Copy button is visible and disabled).
 
 ## Data shape
 
@@ -57,10 +57,12 @@ Account nav gains **Copy desks** (catalogue). Parent desks get a **Manage Copy T
 - `trading_accounts.copy_of_account_id` (immutable when set)
 - Listing: `private` \| `public`, required description, optional `max_followers`, optional `min_balance_usdt`, optional desk logo, `sharing_enabled`, `allow_new_followers`
 - `desk_copy_shares` (email / user, invited / active / revoked)
+- `desk_copy_favorites` (login bookmarks a parent desk)
+- `futures_desk_stats` (all-time + 30d snapshot, including max drawdown)
 - Follower settings: scale, pause, max daily loss (caps stay on `strategy_settings`)
 - `desk_copy_receipts` for idempotency
 
-RLS: catalogue is public listings + alias + computed stats. Followers never select parent ledgers. Service role for the engine.
+RLS: catalogue is public + sharing-on listings, or the viewer’s open private grant, plus alias and that desk’s stats snapshot. Followers never select parent ledgers. Service role for the engine.
 
 ## Current micro-step
 
@@ -71,7 +73,7 @@ RLS: catalogue is public listings + alias + computed stats. Followers never sele
 | 3 | Follower desk flag | Agent | `copy_of` immutable. Helpers hide ticket, Automations, webhooks, templates apply, backtest-from-desk. Sidebar **Copy** badge. **In repo 31 Aug 2026.** |
 | 4 | Profile + share | Agent | Unique alias. Private or public, required brief. Reject Paper, unbound, C&C, and desks younger than N. **In repo 31 Aug 2026.** |
 | 5 | Private grants | Agent | Email invite from **Manage Copy Traders**. Owner list shows email on private, user id on public. Revoke, unlist, and unbind pause new entries. **In repo 31 Aug 2026.** |
-| 6 | Catalogue + stats | Agent | Public catalogue, filters, computed desk and trader stats, trader page (public desks only). |
+| 6 | Catalogue + stats | Agent | One catalogue (public + my private invites). Private badge and filter. Favorites. Subscribed = currently following. Snapshotted desk stats including max drawdown. Trader page (desks visible to the viewer). Copy CTA disabled until step 7. **In repo 31 Aug 2026.** |
 | 7 | Create copy desk | Agent | Copy path stamps type/venue. Follower picks Paper or Live and scale. |
 | 8 | Follower chrome | Agent | Leader strip. Caps, reduce-only, max daily loss. Pause / unfollow. Close All. |
 | 9 | Engine fan-out | Agent | Parent fill → scale → guards → `runFuturesCommand` or paper ledger. Idempotent. Checks for skip/double-place. |
