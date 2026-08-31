@@ -235,7 +235,10 @@ export function DeskChart({
   }
 
   return (
-    <div className="relative w-full" style={{ height }}>
+    <div
+      className="relative w-full overflow-hidden rounded-card border border-line bg-canvas"
+      style={{ height }}
+    >
       <div ref={hostRef} className="h-full w-full" />
       <ChartScreenshotControls
         getChart={() => chartRef.current}

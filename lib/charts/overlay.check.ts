@@ -65,8 +65,8 @@ const replay = buildBacktestChartOverlay({
     },
   ],
 });
-assert.equal(replay.lines.length, 2);
-assert.equal(replay.lines.some((row) => row.title === "Open short"), true);
+assert.equal(replay.lines.length, 1);
+assert.equal(replay.lines.some((row) => row.title === "When"), true);
 assert.equal(replay.markers[0]?.shape, "circle");
 assert.equal(replay.markers[0]?.text, "Open short");
 

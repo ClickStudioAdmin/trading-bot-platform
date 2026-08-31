@@ -85,7 +85,7 @@ Migrations: `supabase/migrations/20260830120000_backtest_runs.sql`, `supabase/mi
 
 ## Shared with charts (plan A)
 
-Same `<DeskChart>`, candle API, and overlay renderer. Backtest overlay source = `backtest_runs.orders` plus the When line (Perps only). Every fill is on the chart and in Orders. Completed fills stay Buy/Close arrows. Still-open clips use **Open long/short** markers and an entry line. Header and Performance stay realized only.
+Same `<DeskChart>`, candle API, and overlay renderer. Backtest overlay source = `backtest_runs.orders` plus the When line (Perps only). Every fill is on the chart and in Orders. Completed fills stay Buy/Close arrows. Still-open clips use **Open long/short** markers only — no axis Open label. Header and Performance stay realized only.
 
 ## Out of scope (still)
 
