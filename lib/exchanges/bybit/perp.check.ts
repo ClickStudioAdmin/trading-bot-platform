@@ -5,6 +5,8 @@ import {
   listUsdtLinearPerps,
   priceForPerp,
   qtyForPerp,
+  qtyForCopyPaperNotional,
+  qtyForCopyPaperQty,
   qtyForPerpNotional,
 } from "./perp";
 
@@ -183,6 +185,17 @@ const notionalTooSmall = qtyForPerpNotional(1, 50_000, {
   },
 });
 assert.equal(notionalTooSmall.ok, false);
+
+const paperCopy = qtyForCopyPaperNotional(7.8, 78_000);
+assert.equal(paperCopy.ok, true);
+if (paperCopy.ok) {
+  assert.equal(paperCopy.qty, 0.0001);
+}
+const paperCopyQty = qtyForCopyPaperQty(0.0002);
+assert.equal(paperCopyQty.ok, true);
+if (paperCopyQty.ok) {
+  assert.equal(paperCopyQty.qty, 0.0002);
+}
 
 const priced = priceForPerp(80123.456, {
   symbol: "BTCUSDT",

@@ -28,7 +28,6 @@ import {
   COPY_FANOUT_MAX_WORKING,
   COPY_RULE_NAME,
   copyBreachIdempotencyKey,
-  copyMinOrderRetryUsdt,
   copyParentFillNotional,
   copyParentFillPrice,
   copyParentWorkingNotional,
@@ -438,35 +437,6 @@ async function fanOutToFollower(input: {
       },
     });
     if (!placed.ok) {
-      const minUsdt = copyMinOrderRetryUsdt({
-        error: placed.error,
-        sizedUsdt: notionalUsdt,
-        followerAvailableUsdt: available ?? 0,
-      });
-      if (minUsdt != null) {
-        notionalUsdt = minUsdt;
-        placed = await runFuturesCommand({
-          actor: {
-            userId: input.follower.userId,
-            accountId: input.follower.id,
-            mode: input.follower.mode,
-          },
-          command: {
-            kind: "place",
-            action: decision.place,
-            symbol: fill.symbol,
-            orderType: "market",
-            positionId: decision.place === "close" ? positionId : undefined,
-            size: String(notionalUsdt),
-            sizeUnit: "usdt",
-            idempotencyKey: fill.id,
-            source: "engine",
-            ruleName: COPY_RULE_NAME,
-          },
-        });
-      }
-    }
-    if (!placed.ok) {
       await writeEventLog({
         level: "warning",
         scope: "trade",
@@ -690,36 +660,6 @@ async function syncCopyWorkingOrders(input: {
         ruleName: COPY_RULE_NAME,
       },
     });
-    if (!placed.ok) {
-      const minUsdt = copyMinOrderRetryUsdt({
-        error: placed.error,
-        sizedUsdt: notionalUsdt,
-        followerAvailableUsdt: input.available ?? 0,
-      });
-      if (minUsdt != null) {
-        notionalUsdt = minUsdt;
-        placed = await runFuturesCommand({
-          actor: {
-            userId: input.follower.userId,
-            accountId: input.follower.id,
-            mode: input.follower.mode,
-          },
-          command: {
-            kind: "place",
-            action: decision.place,
-            symbol: fill.symbol,
-            orderType: "limit",
-            limitPrice: String(working.limitPrice),
-            positionId: decision.place === "close" ? positionId : undefined,
-            size: String(notionalUsdt),
-            sizeUnit: "usdt",
-            idempotencyKey: working.id,
-            source: "engine",
-            ruleName: COPY_RULE_NAME,
-          },
-        });
-      }
-    }
     if (!placed.ok) {
       await writeEventLog({
         level: "warning",

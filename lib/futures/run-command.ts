@@ -42,7 +42,14 @@ import {
   fetchBybitTicker,
   type BybitTicker,
 } from "@/lib/exchanges/bybit/client";
-import { loadPerpInstrument, priceForPerp, qtyForPerp, qtyForPerpNotional } from "@/lib/exchanges/bybit/perp";
+import {
+  loadPerpInstrument,
+  priceForPerp,
+  qtyForCopyPaperNotional,
+  qtyForCopyPaperQty,
+  qtyForPerp,
+  qtyForPerpNotional,
+} from "@/lib/exchanges/bybit/perp";
 import type { BybitInstrument } from "@/lib/exchanges/bybit/universe";
 import {
   cancelPerpOrderOnVenue,
@@ -733,18 +740,23 @@ async function runPlace(
   }
   const sizePrice = limit?.price ?? mark;
   let sized: { ok: true; qty: number; text: string } | { ok: false; error: string };
+  const paperCopy = !liveBook && ruleName === COPY_RULE_NAME;
   if (unitParsed.unit === "usdt") {
     const notional = parseFuturesNotional(command.size);
     if (!notional.ok) {
       return fail(notional.error);
     }
-    sized = qtyForPerpNotional(notional.qty, sizePrice, instrument);
+    sized = paperCopy
+      ? qtyForCopyPaperNotional(notional.qty, sizePrice)
+      : qtyForPerpNotional(notional.qty, sizePrice, instrument);
   } else {
     const qtyParsed = parseFuturesQty(command.size);
     if (!qtyParsed.ok) {
       return fail(qtyParsed.error);
     }
-    sized = qtyForPerp(qtyParsed.qty, instrument);
+    sized = paperCopy
+      ? qtyForCopyPaperQty(qtyParsed.qty)
+      : qtyForPerp(qtyParsed.qty, instrument);
   }
   if (!sized.ok) {
     return fail(sized.error);
@@ -1446,7 +1458,10 @@ async function runAmendWorking(
     return market;
   }
   const { instrument } = market;
-  const remainingSized = qtyForPerp(qtyParsed.qty, instrument);
+  const paperCopyAmend = !liveBook && row.ruleName === COPY_RULE_NAME;
+  const remainingSized = paperCopyAmend
+    ? qtyForCopyPaperQty(qtyParsed.qty)
+    : qtyForPerp(qtyParsed.qty, instrument);
   if (!remainingSized.ok) {
     return fail(remainingSized.error);
   }
@@ -1454,7 +1469,9 @@ async function runAmendWorking(
   if (!priced.ok) {
     return fail(priced.error);
   }
-  const totalSized = qtyForPerp(row.filledQty + remainingSized.qty, instrument);
+  const totalSized = paperCopyAmend
+    ? qtyForCopyPaperQty(row.filledQty + remainingSized.qty)
+    : qtyForPerp(row.filledQty + remainingSized.qty, instrument);
   if (!totalSized.ok) {
     return fail(totalSized.error);
   }

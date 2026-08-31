@@ -7,7 +7,6 @@ import {
   copyDrawdownBreached,
   copyFillIsEntry,
   copyFillPlaceAction,
-  copyMinOrderRetryUsdt,
   copyOpenNotionalState,
   copyPaperEquity,
   copyPaperEquityView,
@@ -215,22 +214,6 @@ assert.equal(
 );
 assert.equal(
   parentCopyBookUsdt({ availableBalance: 0, marginBalance: 0 }),
-  null,
-);
-assert.equal(
-  copyMinOrderRetryUsdt({
-    error: "Minimum order is $100.00 (0.001 BTC).",
-    sizedUsdt: 20,
-    followerAvailableUsdt: 10_000,
-  }),
-  100,
-);
-assert.equal(
-  copyMinOrderRetryUsdt({
-    error: "Minimum order is $100.00 (0.001 BTC).",
-    sizedUsdt: 20,
-    followerAvailableUsdt: 50,
-  }),
   null,
 );
 assert.equal(copyParentFillPrice({ price: 50, qty: 2, notionalUsdt: 80 }), 50);

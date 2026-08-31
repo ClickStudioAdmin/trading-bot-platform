@@ -91,6 +91,35 @@ export function qtyForPerp(
   };
 }
 
+/** Paper copy may size below venue min so a 1/10 book still shows the parent ladder. */
+export const COPY_PAPER_QTY_STEP = 0.000001;
+
+export function qtyForCopyPaperNotional(
+  notionalUsdt: number,
+  price: number,
+): { ok: true; qty: number; text: string } | { ok: false; error: string } {
+  return qtyFromNotionalUsdt({
+    notionalUsdt,
+    price,
+    step: COPY_PAPER_QTY_STEP,
+    minQty: COPY_PAPER_QTY_STEP,
+  });
+}
+
+export function qtyForCopyPaperQty(
+  qty: number,
+): { ok: true; qty: number; text: string } | { ok: false; error: string } {
+  const floored = floorToStep(qty, COPY_PAPER_QTY_STEP);
+  if (!(floored > 0)) {
+    return { ok: false, error: "That size is too small to copy on paper." };
+  }
+  return {
+    ok: true,
+    qty: floored,
+    text: floored.toFixed(stepDecimals(COPY_PAPER_QTY_STEP)),
+  };
+}
+
 export function qtyForPerpNotional(
   notionalUsdt: number,
   price: number,

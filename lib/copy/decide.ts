@@ -60,28 +60,6 @@ export function parentCopyBookUsdt(input: {
   return null;
 }
 
-export function copyMinOrderRetryUsdt(input: {
-  error: string;
-  sizedUsdt: number;
-  followerAvailableUsdt: number;
-}): number | null {
-  const match = input.error.match(/Minimum order(?: value)? is \$([0-9,.]+)/i);
-  if (!match) {
-    return null;
-  }
-  const minUsdt = Number(match[1].replace(/,/g, ""));
-  if (!(minUsdt > 0) || !Number.isFinite(minUsdt)) {
-    return null;
-  }
-  if (minUsdt <= input.sizedUsdt + 1e-8) {
-    return null;
-  }
-  if (minUsdt > input.followerAvailableUsdt + 1e-8) {
-    return null;
-  }
-  return minUsdt;
-}
-
 export function copyParentWorkingNotional(input: {
   remainingQty: number;
   qty: number;
