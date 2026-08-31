@@ -12,6 +12,7 @@ import {
   copyPaperEquity,
   copyPaperEquityView,
   copyParentFillNotional,
+  copyParentWorkingNotional,
   formatCopyPaperStartingUsdt,
   copyParentFillPrice,
   copyUtcDayStartMs,
@@ -58,6 +59,24 @@ assert.equal(copyFillPlaceAction("sell"), "sell");
 assert.equal(copyFillPlaceAction("flatten"), "close");
 assert.equal(copyFillIsEntry("buy"), true);
 assert.equal(copyFillIsEntry("flatten"), false);
+assert.equal(
+  copyParentWorkingNotional({
+    remainingQty: 0.01,
+    qty: 0.01,
+    filledQty: 0,
+    limitPrice: 100_000,
+  }),
+  1_000,
+);
+assert.equal(
+  copyParentWorkingNotional({
+    remainingQty: 0,
+    qty: 0.02,
+    filledQty: 0.01,
+    limitPrice: 100,
+  }),
+  1,
+);
 assert.equal(
   copyParentFillNotional({ notionalUsdt: 250, qty: 1, price: 100 }),
   250,

@@ -328,7 +328,10 @@ export async function runFuturesCommand(input: {
   revalidateFutures(input.command.kind);
   if (
     outcome.ok &&
-    (input.command.kind === "place" || input.command.kind === "close-all")
+    (input.command.kind === "place" ||
+      input.command.kind === "close-all" ||
+      input.command.kind === "cancel-working" ||
+      input.command.kind === "amend-working")
   ) {
     try {
       const { maybeFanOutAfterParentFill } = await import("@/lib/copy/fan-out");

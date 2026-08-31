@@ -3,6 +3,7 @@ import { copySizedNotional } from "./model";
 
 export const COPY_RULE_NAME = "Copy";
 export const COPY_FANOUT_MAX_FILLS = 8;
+export const COPY_FANOUT_MAX_WORKING = 40;
 export const COPY_PAPER_STARTING_USDT = 10_000;
 
 export type CopyParentFill = {
@@ -79,6 +80,22 @@ export function copyMinOrderRetryUsdt(input: {
     return null;
   }
   return minUsdt;
+}
+
+export function copyParentWorkingNotional(input: {
+  remainingQty: number;
+  qty: number;
+  filledQty: number;
+  limitPrice: number;
+}): number {
+  const remaining =
+    input.remainingQty > 0
+      ? input.remainingQty
+      : input.qty - Math.max(0, input.filledQty);
+  if (!(remaining > 0) || !(input.limitPrice > 0)) {
+    return 0;
+  }
+  return remaining * input.limitPrice;
 }
 
 export function copyParentFillNotional(input: {

@@ -580,6 +580,15 @@ export async function createCopyDeskAction(formData: FormData) {
     },
   });
   await setActiveAccountId(created.id);
+  try {
+    const { maybeFanOutAfterParentFill } = await import("./fan-out");
+    await maybeFanOutAfterParentFill({
+      accountId: parent.id,
+      userId: parent.userId,
+    });
+  } catch {
+    // Fan-out logs its own failures. The copy desk still exists.
+  }
   revalidatePath("/", "layout");
   revalidatePath("/account/copy");
   return deskActionOk(

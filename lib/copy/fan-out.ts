@@ -11,9 +11,10 @@ import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { loadDeskTickerMap } from "@/lib/market/desk-tickers";
 import { CLOSE_ALL_CONFIRM } from "@/lib/futures/close-all";
 import { runFuturesCommand } from "@/lib/futures/command";
-import { loadFuturesPositions } from "@/lib/futures/list";
+import { loadFuturesPositions, loadOpenFuturesWorking } from "@/lib/futures/list";
 import { markFromTicker } from "@/lib/futures/math";
-import { loadFuturesSettings } from "@/lib/futures/settings";
+import { sameWorkingNumber, type FuturesWorkingOrder } from "@/lib/futures/working";
+import { loadFuturesSettings, type FuturesSettings } from "@/lib/futures/settings";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -24,11 +25,13 @@ import {
 } from "./balance";
 import {
   COPY_FANOUT_MAX_FILLS,
+  COPY_FANOUT_MAX_WORKING,
   COPY_RULE_NAME,
   copyBreachIdempotencyKey,
   copyMinOrderRetryUsdt,
   copyParentFillNotional,
   copyParentFillPrice,
+  copyParentWorkingNotional,
   copyUtcDayStartMs,
   decideCopyFanOut,
   parentCopyBookUsdt,
@@ -36,7 +39,11 @@ import {
 } from "./decide";
 import { loadDeskCopySettings, saveDeskCopySettings } from "./follower-settings";
 import { loadDeskCopyListing } from "./listings";
-import { copyMinBalanceMet, copyShareAllowsFanOut } from "./model";
+import {
+  copyMinBalanceMet,
+  copyShareAllowsFanOut,
+  type DeskCopySettings,
+} from "./model";
 import { insertCopyReceipt, loadCopyReceiptFillIds } from "./receipts";
 import { loadDeskCopyShares } from "./shares";
 
@@ -62,35 +69,32 @@ export async function fanOutCopyFills(input: {
   const sinceMs = Math.min(
     ...followers.map((row) => row.createdAtMs).filter((ms) => ms > 0),
   );
-  const [fills, shares, listing, parentSettings] = await Promise.all([
-    loadParentCopyFills(
-      input.parentAccountId,
-      Number.isFinite(sinceMs) ? sinceMs : 0,
-    ),
-    loadDeskCopyShares(input.parentAccountId),
-    loadDeskCopyListing(input.parentAccountId),
-    loadFuturesSettings(input.parentAccountId),
-  ]);
-  if (fills.length === 0) {
-    if (input.afterParentFill) {
-      await logFanOutHalt({
-        userId: input.parentUserId,
+  const [fills, parentWorking, shares, listing, parentSettings] =
+    await Promise.all([
+      loadParentCopyFills(
+        input.parentAccountId,
+        Number.isFinite(sinceMs) ? sinceMs : 0,
+      ),
+      loadOpenFuturesWorking({
         accountId: input.parentAccountId,
-        message: "No parent fills since follow. Copy did not run.",
-      });
-    }
-    return;
-  }
+        userId: input.parentUserId,
+      }),
+      loadDeskCopyShares(input.parentAccountId),
+      loadDeskCopyListing(input.parentAccountId),
+      loadFuturesSettings(input.parentAccountId),
+    ]);
   const parentBook = parentSettings.connectionId
     ? await readParentCopyBook(input.parentUserId, parentSettings.connectionId)
     : { book: null, error: "Parent desk has no bound key." };
-  if (!(parentBook.book != null && parentBook.book > 0)) {
+  if (
+    !(parentBook.book != null && parentBook.book > 0) &&
+    (fills.length > 0 || parentWorking.length > 0)
+  ) {
     await logFanOutHalt({
       userId: input.parentUserId,
       accountId: input.parentAccountId,
       message: parentBook.error ?? "Could not read the parent book. Copy did not run.",
     });
-    return;
   }
   const fillIds = fills.map((row) => row.id);
   const shareByUser = new Map(shares.map((row) => [row.toUserId, row] as const));
@@ -100,6 +104,7 @@ export async function fanOutCopyFills(input: {
       await fanOutToFollower({
         parentAccountId: input.parentAccountId,
         parentAvailable: parentBook.book,
+        parentWorking,
         fills,
         fillIds,
         follower,
@@ -234,7 +239,8 @@ async function loadParentCopyFills(
 
 async function fanOutToFollower(input: {
   parentAccountId: string;
-  parentAvailable: number;
+  parentAvailable: number | null;
+  parentWorking: FuturesWorkingOrder[];
   fills: CopyParentFill[];
   fillIds: string[];
   follower: CopyFollowerDesk;
@@ -249,9 +255,6 @@ async function fanOutToFollower(input: {
   const pending = input.fills
     .filter((row) => !receipts.has(row.id))
     .slice(0, COPY_FANOUT_MAX_FILLS);
-  if (pending.length === 0) {
-    return;
-  }
   const [copySettings, futuresSettings, available, equity, guards, opens] =
     await Promise.all([
       loadDeskCopySettings(input.follower.id),
@@ -303,6 +306,28 @@ async function fanOutToFollower(input: {
     await takeVenueSlot(futuresSettings.connectionId);
   }
 
+  await syncCopyWorkingOrders({
+    parentAccountId: input.parentAccountId,
+    parentAvailable: input.parentAvailable,
+    parentWorking: input.parentWorking,
+    follower: input.follower,
+    shareActive: input.shareActive,
+    minBalanceOk,
+    copySettings,
+    futuresSettings,
+    available,
+    equity,
+    guards,
+    opens,
+    tickers: input.tickers,
+    liveUnbound,
+  });
+
+  const parentBook = input.parentAvailable;
+  if (pending.length === 0 || !(parentBook != null && parentBook > 0)) {
+    return;
+  }
+
   for (const fill of pending) {
     const hasFollowerPosition = opens.some(
       (row) => row.symbol === fill.symbol && row.side === fill.side,
@@ -322,7 +347,7 @@ async function fanOutToFollower(input: {
       maxDrawdownPct: copySettings.maxDrawdownPct,
       markPrice: markFromTicker(input.tickers.get(fill.symbol) ?? {}),
       maxAdverseMovePct: copySettings.maxAdverseMovePct,
-      parentBalanceUsdt: input.parentAvailable,
+      parentBalanceUsdt: parentBook,
       followerAvailableUsdt: available ?? 0,
       sizeMode: copySettings.sizeMode,
       sizePercent: copySettings.sizePercent,
@@ -481,6 +506,270 @@ async function fanOutToFollower(input: {
       },
     });
   }
+}
+
+async function syncCopyWorkingOrders(input: {
+  parentAccountId: string;
+  parentAvailable: number | null;
+  parentWorking: FuturesWorkingOrder[];
+  follower: CopyFollowerDesk;
+  shareActive: boolean;
+  minBalanceOk: boolean;
+  copySettings: DeskCopySettings;
+  futuresSettings: FuturesSettings;
+  available: number | null;
+  equity: number | null;
+  guards: { todayRealizedUsdt: number };
+  opens: Awaited<ReturnType<typeof loadFuturesPositions>>;
+  tickers: Map<string, { lastPrice?: string; bid1Price?: string; ask1Price?: string }>;
+  liveUnbound: boolean;
+}): Promise<void> {
+  const copied = await loadOpenFuturesWorking({
+    accountId: input.follower.id,
+    userId: input.follower.userId,
+  });
+  const parentIds = new Set(input.parentWorking.map((row) => row.id));
+  const byParentId = new Map(
+    copied
+      .filter(
+        (row) =>
+          row.ruleName === COPY_RULE_NAME &&
+          row.idempotencyKey &&
+          parentIds.has(row.idempotencyKey),
+      )
+      .map((row) => [row.idempotencyKey as string, row] as const),
+  );
+  for (const row of copied) {
+    if (row.ruleName !== COPY_RULE_NAME || !row.idempotencyKey) {
+      continue;
+    }
+    if (parentIds.has(row.idempotencyKey)) {
+      continue;
+    }
+    const cancelled = await runFuturesCommand({
+      actor: {
+        userId: input.follower.userId,
+        accountId: input.follower.id,
+        mode: input.follower.mode,
+      },
+      command: { kind: "cancel-working", workingId: row.id },
+    });
+    if (!cancelled.ok) {
+      await writeEventLog({
+        level: "warning",
+        scope: "trade",
+        event: "copy.copy_skipped",
+        message: cancelled.error,
+        userId: input.follower.userId,
+        accountId: input.follower.id,
+        strategy: FUTURES_STRATEGY_ID,
+        data: { parentWorkingId: row.idempotencyKey, symbol: row.symbol },
+      });
+    }
+  }
+  if (
+    !(input.parentAvailable != null && input.parentAvailable > 0) ||
+    input.parentWorking.length === 0
+  ) {
+    return;
+  }
+  const parentBook = input.parentAvailable;
+  for (const working of input.parentWorking.slice(0, COPY_FANOUT_MAX_WORKING)) {
+    const fill = workingAsCopyFill(working);
+    if (!fill) {
+      continue;
+    }
+    const hasFollowerPosition = input.opens.some(
+      (row) => row.symbol === fill.symbol && row.side === fill.side,
+    );
+    const decision = decideCopyFanOut({
+      paused: input.copySettings.paused,
+      shareActive: input.shareActive,
+      reduceOnly: input.futuresSettings.reduceOnly,
+      liveUnbound: input.liveUnbound,
+      fill,
+      followerCreatedAtMs: 0,
+      hasFollowerPosition,
+      todayRealizedUsdt: input.guards.todayRealizedUsdt,
+      maxDailyLossUsdt: input.copySettings.maxDailyLossUsdt,
+      followerEquityUsdt: input.equity,
+      equityPeakUsdt: input.copySettings.equityPeakUsdt,
+      maxDrawdownPct: input.copySettings.maxDrawdownPct,
+      markPrice: markFromTicker(input.tickers.get(fill.symbol) ?? {}),
+      maxAdverseMovePct: null,
+      parentBalanceUsdt: parentBook,
+      followerAvailableUsdt: input.available ?? 0,
+      sizeMode: input.copySettings.sizeMode,
+      sizePercent: input.copySettings.sizePercent,
+      sizeBookUsdt: input.copySettings.sizeBookUsdt,
+      minBalanceOk: input.minBalanceOk,
+    });
+    if (decision.action === "skip") {
+      if (
+        decision.reason !== "no_size" &&
+        decision.reason !== "unbound" &&
+        decision.reason !== "min_balance"
+      ) {
+        await writeEventLog({
+          scope: "trade",
+          event: "copy.copy_skipped",
+          message: skipCopyReason(decision.reason),
+          userId: input.follower.userId,
+          accountId: input.follower.id,
+          strategy: FUTURES_STRATEGY_ID,
+          data: {
+            parentWorkingId: working.id,
+            symbol: fill.symbol,
+            reason: decision.reason,
+          },
+        });
+      }
+      continue;
+    }
+    if (decision.action !== "place") {
+      continue;
+    }
+    const existing = byParentId.get(working.id);
+    if (existing) {
+      const targetQty = decision.notionalUsdt / working.limitPrice;
+      const samePrice = sameWorkingNumber(existing.limitPrice, working.limitPrice);
+      const sameValue =
+        Math.abs(existing.remainingQty * existing.limitPrice - decision.notionalUsdt) <=
+        decision.notionalUsdt * 0.05 + 1;
+      if (samePrice && sameValue) {
+        continue;
+      }
+      const amended = await runFuturesCommand({
+        actor: {
+          userId: input.follower.userId,
+          accountId: input.follower.id,
+          mode: input.follower.mode,
+        },
+        command: {
+          kind: "amend-working",
+          workingId: existing.id,
+          qty: String(targetQty),
+          limitPrice: String(working.limitPrice),
+        },
+      });
+      if (!amended.ok) {
+        await writeEventLog({
+          level: "warning",
+          scope: "trade",
+          event: "copy.copy_skipped",
+          message: amended.error,
+          userId: input.follower.userId,
+          accountId: input.follower.id,
+          strategy: FUTURES_STRATEGY_ID,
+          data: { parentWorkingId: working.id, symbol: fill.symbol },
+        });
+      }
+      continue;
+    }
+    const positionId = input.opens.find(
+      (row) => row.symbol === fill.symbol && row.side === fill.side,
+    )?.id;
+    let notionalUsdt = decision.notionalUsdt;
+    let placed = await runFuturesCommand({
+      actor: {
+        userId: input.follower.userId,
+        accountId: input.follower.id,
+        mode: input.follower.mode,
+      },
+      command: {
+        kind: "place",
+        action: decision.place,
+        symbol: fill.symbol,
+        orderType: "limit",
+        limitPrice: String(working.limitPrice),
+        positionId: decision.place === "close" ? positionId : undefined,
+        size: String(notionalUsdt),
+        sizeUnit: "usdt",
+        idempotencyKey: working.id,
+        source: "engine",
+        ruleName: COPY_RULE_NAME,
+      },
+    });
+    if (!placed.ok) {
+      const minUsdt = copyMinOrderRetryUsdt({
+        error: placed.error,
+        sizedUsdt: notionalUsdt,
+        followerAvailableUsdt: input.available ?? 0,
+      });
+      if (minUsdt != null) {
+        notionalUsdt = minUsdt;
+        placed = await runFuturesCommand({
+          actor: {
+            userId: input.follower.userId,
+            accountId: input.follower.id,
+            mode: input.follower.mode,
+          },
+          command: {
+            kind: "place",
+            action: decision.place,
+            symbol: fill.symbol,
+            orderType: "limit",
+            limitPrice: String(working.limitPrice),
+            positionId: decision.place === "close" ? positionId : undefined,
+            size: String(notionalUsdt),
+            sizeUnit: "usdt",
+            idempotencyKey: working.id,
+            source: "engine",
+            ruleName: COPY_RULE_NAME,
+          },
+        });
+      }
+    }
+    if (!placed.ok) {
+      await writeEventLog({
+        level: "warning",
+        scope: "trade",
+        event: "copy.copy_skipped",
+        message: placed.error,
+        userId: input.follower.userId,
+        accountId: input.follower.id,
+        strategy: FUTURES_STRATEGY_ID,
+        data: { parentWorkingId: working.id, symbol: fill.symbol },
+      });
+      continue;
+    }
+    await writeEventLog({
+      scope: "trade",
+      event: "copy.copied",
+      message: `Copied ${fill.symbol} limit`,
+      userId: input.follower.userId,
+      accountId: input.follower.id,
+      strategy: FUTURES_STRATEGY_ID,
+      data: {
+        parentAccountId: input.parentAccountId,
+        parentWorkingId: working.id,
+        notionalUsdt,
+        limitPrice: working.limitPrice,
+        replayed: placed.replayed === true,
+      },
+    });
+  }
+}
+
+function workingAsCopyFill(row: FuturesWorkingOrder): CopyParentFill | null {
+  const notionalUsdt = copyParentWorkingNotional({
+    remainingQty: row.remainingQty,
+    qty: row.qty,
+    filledQty: row.filledQty,
+    limitPrice: row.limitPrice,
+  });
+  if (!(notionalUsdt > 0) || !row.symbol) {
+    return null;
+  }
+  return {
+    id: row.id,
+    action: row.reduceOnly ? "flatten" : row.action,
+    symbol: row.symbol,
+    side: row.side,
+    notionalUsdt,
+    price: row.limitPrice,
+    filledAtMs: Date.now(),
+  };
 }
 
 async function flattenAndPauseFollower(input: {

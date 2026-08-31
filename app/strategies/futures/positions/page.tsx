@@ -294,7 +294,7 @@ export default async function FuturesPositionsPage({
             showTicket
               ? undefined
               : copyDesk
-                ? "No working limits. Copied parent fills that rest as limits will appear here."
+                ? "No working limits. Copied parent DCA limits appear here."
                 : dca
                   ? "No working limits. Bot orders rest here when they are limits."
                   : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
