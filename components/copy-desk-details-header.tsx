@@ -57,7 +57,7 @@ export function CopyDeskDetailsHeader({
             </div>
           </div>
         </div>
-        <div className="min-w-0 border-t border-line pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
+        <div className="min-w-0">
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint">
             Trader
           </p>
@@ -89,7 +89,7 @@ export function CopyDeskDetailsHeader({
         </div>
       </div>
       {children ? (
-        <div className="mt-6 border-t border-line pt-6">{children}</div>
+        <div className="mt-6">{children}</div>
       ) : null}
     </section>
   );
