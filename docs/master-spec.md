@@ -29,7 +29,7 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Fly.io **is accepted and parked** ([phase-fly.md](phase-fly.md)). Hyperliquid steps 1–6 are in repo ([phase-hyperliquid.md](phase-hyperliquid.md)). Desk roles (Perps vs Perps bots) are in repo ([phase-desk-roles.md](phase-desk-roles.md)). Next Hyperliquid item is Click’s desk test (step 7).
 
-**Copy trading is started** (roadmap 3): [phase-copy-trading.md](phase-copy-trading.md). Step 1 (docs) is in repo. Stop after each copy-trading micro-step until Click says go. Do not add copy tables until step 2.
+**Copy trading is started** (roadmap 3): [phase-copy-trading.md](phase-copy-trading.md). Steps 1–2 are in repo. Stop after each copy-trading micro-step until Click says go. Next is step 3 (follower desk flag). Push `develop` to migrate.
 
 The locked sequence after Phase 11 is [roadmap.md](roadmap.md). Standing unordered notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
 

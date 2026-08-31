@@ -8,7 +8,7 @@ Closest shipped analog: TradingView Strategy — same blotter as the job, **desk
 
 ## Status
 
-Started 31 Aug 2026. Step 1 (docs) is in repo. Stop after each step until Click says go.
+Started 31 Aug 2026. Steps 1–2 are in repo. Stop after each step until Click says go. Push `develop` to migrate.
 
 ## Purpose
 
@@ -49,7 +49,7 @@ Follower
 
 Account nav gains **Copy desks** (catalogue). Sidebar shows a **Copy** badge on follower desks. Type grouping stays Automated vs Manual.
 
-## Data shape (step 2 — do not add until that step)
+## Data shape
 
 - Login trader profile: alias (unique), optional bio
 - Persisted admin `copy_min_activity_days`
@@ -66,7 +66,7 @@ RLS: catalogue is public listings + alias + computed stats. Followers never sele
 | # | Step | Who | Done when |
 | --- | --- | --- | --- |
 | 1 | Docs | Agent | This file is the phase. Master spec and roadmap 3 point here. **In repo 31 Aug 2026.** |
-| 2 | Schema + admin knob | Agent | Migration + persisted `copy_min_activity_days` (default 90, min 0) on `/admin/settings`. Checks for the activity floor. Push `develop` to migrate. |
+| 2 | Schema + admin knob | Agent | Migration + persisted `copy_min_activity_days` (default 90, min 0) on `/admin/settings`. Checks for the activity floor. **In repo 31 Aug 2026.** Push `develop` to migrate. |
 | 3 | Follower desk flag | Agent | `copy_of` immutable. Helpers hide ticket, Automations, webhooks, templates apply, backtest-from-desk. Sidebar **Copy** badge. |
 | 4 | Profile + share | Agent | Unique alias. Private or public, required brief. Reject Paper, unbound, C&C, and desks younger than N. |
 | 5 | Private grants | Agent | Email invite. Revoke, unlist, and unbind pause new entries. |

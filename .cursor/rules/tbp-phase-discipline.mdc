@@ -13,7 +13,7 @@ Feature work happens on `develop`. Merge to `main` only when the user is ready f
 
 Phase 11 is the first managing playbook. Type `dca` on the desk. Same `futures_*` ledger and `runFuturesCommand`. The app owns orders and exits. Signals only arm. Stacked playbooks, one per contract and side. The engine worker claims **one desk at a time** (Postgres leases). Do not call private exchange APIs from the browser. Paper accounts still use the in-app ledger.
 
-Do not create later-phase tables or speculative architecture. Copy trading tables wait for [docs/phase-copy-trading.md](docs/phase-copy-trading.md) step 2. Do not start scale-in, MEXC, or onboarding wizard refine until Click starts that roadmap item. Standing unordered notes: [docs/click-list.md](docs/click-list.md). Hyperliquid is roadmap 2 ([docs/phase-hyperliquid.md](docs/phase-hyperliquid.md)). Copy trading is roadmap 3. Scale-in / position builder is roadmap 7. See [docs/phase-onboarding.md](docs/phase-onboarding.md) (roadmap 9).
+Do not create later-phase tables or speculative architecture. Copy trading is [docs/phase-copy-trading.md](docs/phase-copy-trading.md); stop after each micro-step. Do not start scale-in, MEXC, or onboarding wizard refine until Click starts that roadmap item. Standing unordered notes: [docs/click-list.md](docs/click-list.md). Hyperliquid is roadmap 2 ([docs/phase-hyperliquid.md](docs/phase-hyperliquid.md)). Copy trading is roadmap 3. Scale-in / position builder is roadmap 7. See [docs/phase-onboarding.md](docs/phase-onboarding.md) (roadmap 9).
 
 Keep dependencies minimal. Prefer the simplest solution that satisfies the current phase.
 
