@@ -30,6 +30,7 @@ import {
   copyCreateBlockCode,
   formatCopyCreateBlock,
   parseCopyListingName,
+  copyBalanceScaledNotional,
   parseCopyScalePercent,
   parseCopyCatalogueSort,
   parseCopyCatalogueTab,
@@ -678,8 +679,48 @@ assert.equal(parseCopyListingName("ByBit Live").ok, true);
 const defaultScale = parseCopyScalePercent("");
 assert.equal(defaultScale.ok, true);
 if (defaultScale.ok) {
-  assert.equal(defaultScale.scale, 0.1);
+  assert.equal(defaultScale.scale, 1);
 }
+assert.equal(
+  copyBalanceScaledNotional({
+    parentFillUsdt: 10_000,
+    parentBalanceUsdt: 100_000,
+    followerBalanceUsdt: 10_000,
+  }),
+  1_000,
+);
+assert.equal(
+  copyBalanceScaledNotional({
+    parentFillUsdt: 10_000,
+    parentBalanceUsdt: 100_000,
+    followerBalanceUsdt: 100_000,
+  }),
+  10_000,
+);
+assert.equal(
+  copyBalanceScaledNotional({
+    parentFillUsdt: 10_000,
+    parentBalanceUsdt: 0,
+    followerBalanceUsdt: 10_000,
+  }),
+  null,
+);
+assert.equal(
+  copyBalanceScaledNotional({
+    parentFillUsdt: 0,
+    parentBalanceUsdt: 100_000,
+    followerBalanceUsdt: 10_000,
+  }),
+  null,
+);
+assert.equal(
+  copyBalanceScaledNotional({
+    parentFillUsdt: 10_000,
+    parentBalanceUsdt: 100_000,
+    followerBalanceUsdt: 0,
+  }),
+  null,
+);
 const quarterScale = parseCopyScalePercent("25");
 assert.equal(quarterScale.ok, true);
 if (quarterScale.ok) {

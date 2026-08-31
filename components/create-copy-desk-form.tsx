@@ -36,24 +36,12 @@ export function CreateCopyDeskForm({
           className={fieldClass}
         />
       </label>
-      <label className="block text-sm text-ink">
-        Scale
-        <span className="relative mt-1 block">
-          <input
-            type="text"
-            name="scale"
-            inputMode="decimal"
-            defaultValue="10"
-            className="w-full rounded-control border border-line bg-surface-raised py-2 pr-10 pl-3 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
-          />
-          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-ink-muted">
-            %
-          </span>
-        </span>
-        <span className="mt-1 block text-xs text-ink-faint">
-          Percent of the parent fill notional. Caps on this desk still win.
-        </span>
-      </label>
+      <p className="text-sm text-ink-muted">
+        Size matches the parent’s fill as a share of their balance, applied to
+        yours. A $10,000 fill on a $100,000 book becomes $1,000 on a $10,000
+        book. Caps on this desk still win. Balances are read when the fill
+        copies.
+      </p>
       <label className="block text-sm text-ink">
         Mode
         <select

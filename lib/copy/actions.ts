@@ -36,7 +36,6 @@ import {
   copyCreateBlockCode,
   formatCopyCreateBlock,
   parseCopyInviteEmail,
-  parseCopyScalePercent,
   parseDeskCopyListingForm,
   parseTraderLogoUpload,
   parseTraderProfileForm,
@@ -445,10 +444,6 @@ export async function createCopyDeskAction(formData: FormData) {
   if (!named.ok) {
     return fail(named.error);
   }
-  const scaled = parseCopyScalePercent(formData.get("scale"));
-  if (!scaled.ok) {
-    return fail(scaled.error);
-  }
   const mode = parseAccountMode(formData.get("mode"));
   let connectionId: string | null = null;
   const venueEnvironment = mode === "live" ? parent.venueEnvironment : null;
@@ -487,7 +482,7 @@ export async function createCopyDeskAction(formData: FormData) {
   }
   const settings = await saveDeskCopySettings({
     accountId: created.id,
-    scale: scaled.scale,
+    scale: 1,
   });
   if (!settings.ok) {
     return fail(settings.error);
@@ -523,7 +518,7 @@ export async function createCopyDeskAction(formData: FormData) {
     data: {
       parentAccountId: parent.id,
       mode,
-      scale: scaled.scale,
+      scale: 1,
     },
   });
   await setActiveAccountId(created.id);

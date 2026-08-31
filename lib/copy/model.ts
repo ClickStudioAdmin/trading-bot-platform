@@ -665,13 +665,31 @@ export function parseCopyScalePercent(
 ): { ok: true; scale: number } | { ok: false; error: string } {
   const raw = String(value ?? "").trim().replace(/,/g, "");
   if (!raw) {
-    return { ok: true, scale: 0.1 };
+    return { ok: true, scale: 1 };
   }
   const pct = Number(raw);
   if (!Number.isFinite(pct) || pct <= 0 || pct > 100) {
     return { ok: false, error: "Scale must be between 0 and 100 percent." };
   }
   return { ok: true, scale: pct / 100 };
+}
+
+/** Parent fill × (follower balance / parent balance). Null means skip. */
+export function copyBalanceScaledNotional(input: {
+  parentFillUsdt: number;
+  parentBalanceUsdt: number;
+  followerBalanceUsdt: number;
+}): number | null {
+  if (
+    !(input.parentFillUsdt > 0) ||
+    !(input.parentBalanceUsdt > 0) ||
+    !(input.followerBalanceUsdt > 0)
+  ) {
+    return null;
+  }
+  return (
+    input.parentFillUsdt * (input.followerBalanceUsdt / input.parentBalanceUsdt)
+  );
 }
 
 export type CopyCreateBlock =
