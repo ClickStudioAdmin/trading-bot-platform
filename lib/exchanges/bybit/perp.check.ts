@@ -7,6 +7,7 @@ import {
   qtyForPerp,
   qtyForCopyPaperNotional,
   qtyForCopyPaperQty,
+  qtyForCloseQty,
   perpVenueMinimums,
   qtyForPerpNotional,
 } from "./perp";
@@ -211,6 +212,40 @@ const paperCopyQty = qtyForCopyPaperQty(0.0002);
 assert.equal(paperCopyQty.ok, true);
 if (paperCopyQty.ok) {
   assert.equal(paperCopyQty.qty, 0.0002);
+}
+
+const ethLot = {
+  symbol: "ETHUSDT",
+  status: "Trading",
+  baseCoin: "ETH",
+  quoteCoin: "USDT",
+  lotSizeFilter: {
+    qtyStep: "0.01",
+    minOrderQty: "0.01",
+    minNotionalValue: "5",
+  },
+} as const;
+const liveDust = qtyForCloseQty(0.003, ethLot, false);
+assert.equal(liveDust.ok, false);
+const paperEthClose = qtyForCloseQty(0.003, ethLot, true);
+assert.equal(paperEthClose.ok, true);
+if (paperEthClose.ok) {
+  assert.equal(paperEthClose.qty, 0.003);
+}
+const paperDogeClose = qtyForCloseQty(0.144, {
+  symbol: "DOGEUSDT",
+  status: "Trading",
+  baseCoin: "DOGE",
+  quoteCoin: "USDT",
+  lotSizeFilter: {
+    qtyStep: "1",
+    minOrderQty: "1",
+    minNotionalValue: "5",
+  },
+}, true);
+assert.equal(paperDogeClose.ok, true);
+if (paperDogeClose.ok) {
+  assert.equal(paperDogeClose.qty, 0.144);
 }
 
 const priced = priceForPerp(80123.456, {

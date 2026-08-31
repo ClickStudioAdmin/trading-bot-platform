@@ -134,6 +134,22 @@ export function qtyForCopyPaperQty(
   };
 }
 
+/** Paper flatten may be below venue min — copy entries are allowed to be. Live keeps the lot. */
+export function qtyForCloseQty(
+  qty: number,
+  instrument: BybitInstrument | undefined,
+  paper: boolean,
+): { ok: true; qty: number; text: string } | { ok: false; error: string } {
+  if (paper) {
+    const sized = qtyForCopyPaperQty(qty);
+    if (!sized.ok) {
+      return { ok: false, error: "That close size is too small." };
+    }
+    return sized;
+  }
+  return qtyForPerp(qty, instrument);
+}
+
 export function qtyForPerpNotional(
   notionalUsdt: number,
   price: number,

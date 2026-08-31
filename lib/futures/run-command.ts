@@ -45,6 +45,7 @@ import {
 import {
   loadPerpInstrument,
   priceForPerp,
+  qtyForCloseQty,
   qtyForCopyPaperNotional,
   qtyForCopyPaperQty,
   qtyForPerp,
@@ -478,7 +479,7 @@ async function runPlace(
         if (!qtyParsed.ok) {
           return fail(qtyParsed.error);
         }
-        const sized = qtyForPerp(qtyParsed.qty, instrument);
+        const sized = qtyForCloseQty(qtyParsed.qty, instrument, !liveBook);
         if (!sized.ok) {
           return fail(sized.error);
         }
@@ -589,7 +590,7 @@ async function runPlace(
       if (!qtyParsed.ok) {
         return fail(qtyParsed.error);
       }
-      const sized = qtyForPerp(qtyParsed.qty, instrument);
+      const sized = qtyForCloseQty(qtyParsed.qty, instrument, !liveBook);
       if (!sized.ok) {
         return fail(sized.error);
       }
