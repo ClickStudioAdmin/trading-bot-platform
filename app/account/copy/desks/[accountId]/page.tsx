@@ -4,12 +4,15 @@ import {
   ClosedFuturesTrades,
   FuturesPerformanceStats,
 } from "@/components/futures-blotter";
-import { CopyFollowButton } from "@/components/copy-follow-modal";
+import { CopyDeskDetailsHeader } from "@/components/copy-desk-details-header";
 import { loadCopyCatalogueDesk } from "@/lib/copy/catalogue";
 import { loadCopyDeskPublicClosed } from "@/lib/copy/desk-performance";
-import { formatDeskType } from "@/lib/accounts/model";
+import { loadCopyLeaderStrip } from "@/lib/copy/leader";
+import { loadDeskCopyListing } from "@/lib/copy/listings";
+import { loadTraderProfile } from "@/lib/copy/profile";
 import { getSessionMember } from "@/lib/auth/session";
 import { listExchangeConnections } from "@/lib/exchanges/store";
+import { deskWindowStats } from "@/lib/futures/stats";
 import { formatPct, formatSignedUsd } from "@/lib/opportunities/format";
 import { notFound, redirect } from "next/navigation";
 
@@ -51,30 +54,15 @@ export default async function CopyDeskPerformancePage({
   if (!card) {
     notFound();
   }
-  const [closed, connections] = await Promise.all([
+  const [closed, connections, trader, leader, listing] = await Promise.all([
     loadCopyDeskPublicClosed(card.accountId),
     listExchangeConnections(member.id),
+    loadTraderProfile(card.traderUserId),
+    loadCopyLeaderStrip(card.accountId),
+    loadDeskCopyListing(card.accountId),
   ]);
-  const traderHref = card.traderAlias
-    ? `/account/copy/traders/${encodeURIComponent(card.traderAlias)}`
-    : "/account/copy";
-  const stats = card.stats30d;
-  const roi =
-    !stats || stats.closedCount === 0
-      ? "—"
-      : stats.realizedPct == null
-        ? formatSignedUsd(stats.realizedUsdt)
-        : formatPct(stats.realizedPct);
-  const drawdown =
-    !stats || stats.closedCount === 0
-      ? "—"
-      : stats.maxDrawdownPct == null
-        ? formatSignedUsd(stats.maxDrawdownUsdt)
-        : formatPct(stats.maxDrawdownPct);
-  const winRate =
-    !stats || stats.closedCount === 0
-      ? "—"
-      : `${Math.round((stats.winCount / stats.closedCount) * 100)}%`;
+  const allTime = deskWindowStats(closed);
+  const empty = allTime.closedCount === 0;
   const followers =
     card.maxFollowers == null
       ? String(card.followerCount)
@@ -87,86 +75,63 @@ export default async function CopyDeskPerformancePage({
           Copy desks
         </Link>
       </p>
-      <section className="mb-8 rounded-card border border-line bg-surface p-5">
-        <div className="flex items-start gap-4">
-          <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-raised text-lg text-ink-muted">
-            {card.traderLogoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={card.traderLogoUrl}
-                alt=""
-                className="size-full object-cover"
-              />
-            ) : (
-              (card.traderAlias ?? "T").slice(0, 1).toUpperCase()
-            )}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              {card.deskLogoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={card.deskLogoUrl}
-                  alt=""
-                  className="size-8 shrink-0 rounded-control border border-line object-cover"
-                />
-              ) : null}
-              <h1 className="min-w-0 truncate text-2xl font-semibold tracking-tight text-ink">
-                {card.deskName}
-              </h1>
-              <CopyFollowButton
-                parentAccountId={card.accountId}
-                deskName={card.deskName}
-                deskType={card.deskType}
-                venue={card.venue}
-                venueEnvironment={card.venueEnvironment}
-                connections={connections}
-                following={card.following}
-                className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
-              />
-            </div>
-            <p className="mt-1 text-sm text-ink-muted">
-              <Link href={traderHref} className="text-ink hover:text-accent">
-                {card.traderAlias ?? "Trader"}
-              </Link>
-              <span className="text-ink-faint">
-                {" · "}
-                {card.visibility === "private" ? "Private" : "Public"}
-                {" · "}
-                {formatDeskType(card.deskType)} · {card.venue}
-              </span>
-            </p>
-            {card.description ? (
-              <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm text-ink-muted">
-                {card.description}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </section>
-      <div className="space-y-6">
+      <CopyDeskDetailsHeader
+        card={card}
+        listing={listing}
+        trader={trader}
+        leader={leader}
+        connections={connections}
+      >
         <FuturesPerformanceStats
           signedIn
           closed={closed}
-          extras={[
+          embedded
+          items={[
             {
-              label: "ROI [30d]",
-              value: roi,
+              label: "Completed trades",
+              value: String(allTime.closedCount),
+            },
+            {
+              label: "Win rate",
+              value: empty
+                ? "—"
+                : `${Math.round((allTime.winCount / allTime.closedCount) * 100)}%`,
+            },
+            {
+              label: "Realized P&L",
+              value: empty ? "—" : formatSignedUsd(allTime.realizedUsdt),
+              toneClass: empty
+                ? undefined
+                : allTime.realizedUsdt < 0
+                  ? "text-danger"
+                  : "text-success",
+            },
+            {
+              label: "ROI",
+              value: empty || allTime.realizedPct == null
+                ? "—"
+                : formatPct(allTime.realizedPct),
               toneClass:
-                !stats || stats.closedCount === 0
+                empty || allTime.realizedUsdt === 0
                   ? undefined
-                  : stats.realizedUsdt < 0
+                  : allTime.realizedUsdt < 0
                     ? "text-danger"
                     : "text-success",
             },
-            { label: "Drawdown [30d]", value: drawdown },
-            { label: "Win rate [30d]", value: winRate },
             { label: "Followers", value: followers },
             { label: "Invited", value: String(card.invitedCount) },
+            {
+              label: "Max drawdown",
+              value: empty
+                ? "—"
+                : allTime.maxDrawdownPct == null
+                  ? formatSignedUsd(allTime.maxDrawdownUsdt)
+                  : formatPct(allTime.maxDrawdownPct),
+            },
           ]}
         />
-        <ClosedFuturesTrades signedIn closed={closed} webhookNames={[]} />
-      </div>
+      </CopyDeskDetailsHeader>
+      <ClosedFuturesTrades signedIn closed={closed} webhookNames={[]} />
     </>
   );
 }

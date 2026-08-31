@@ -435,17 +435,21 @@ export function FuturesPerformanceStats({
   signedIn,
   closed,
   extras,
+  items: itemsOverride,
+  embedded = false,
 }: {
   signedIn: boolean;
   closed: FuturesDeskPosition[];
   extras?: DeskStatItem[];
+  items?: DeskStatItem[];
+  embedded?: boolean;
 }) {
   const stats = futuresClosedStats(closed);
   const winRate =
     stats.closedCount === 0
       ? "—"
       : `${Math.round((stats.greenCount / stats.closedCount) * 100)}%`;
-  const items: DeskStatItem[] = [
+  const items: DeskStatItem[] = itemsOverride ?? [
     ...(extras ?? []),
     {
       label: "Realized P&L",
@@ -470,6 +474,22 @@ export function FuturesPerformanceStats({
       ? "sm:grid-cols-2 xl:grid-cols-4"
       : "sm:grid-cols-3";
 
+  const grid = (
+    <div className={`grid gap-4 ${columns}`}>
+      {items.map((item) => (
+        <StatCard
+          key={item.label}
+          label={item.label}
+          value={item.value}
+          toneClass={item.toneClass}
+          raised={embedded}
+        />
+      ))}
+    </div>
+  );
+  if (embedded) {
+    return grid;
+  }
   return (
     <section>
       <SectionHead
@@ -478,16 +498,7 @@ export function FuturesPerformanceStats({
           signedIn ? undefined : "Sign in to see this book’s realized numbers."
         }
       />
-      <div className={`grid gap-4 ${columns}`}>
-        {items.map((item) => (
-          <StatCard
-            key={item.label}
-            label={item.label}
-            value={item.value}
-            toneClass={item.toneClass}
-          />
-        ))}
-      </div>
+      {grid}
     </section>
   );
 }
@@ -901,13 +912,19 @@ function StatCard({
   label,
   value,
   toneClass,
+  raised = false,
 }: {
   label: string;
   value: string;
   toneClass?: string;
+  raised?: boolean;
 }) {
   return (
-    <div className="rounded-card border border-line bg-surface p-5">
+    <div
+      className={`rounded-card border border-line p-5 ${
+        raised ? "bg-surface-raised" : "bg-surface"
+      }`}
+    >
       <StatBlock label={label} value={value} toneClass={toneClass} />
     </div>
   );

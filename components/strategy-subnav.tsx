@@ -7,7 +7,6 @@ import { AccountSnapshotHover } from "@/components/account-snapshot";
 import { CopyPaperEquityHover } from "@/components/copy-paper-equity";
 import type { CopyPaperEquityView } from "@/lib/copy/decide";
 import type { AccountSnapshotView } from "@/lib/exchanges/account-view";
-import { formatSnapshotMoney } from "@/lib/exchanges/account-view";
 import {
   CASH_AND_CARRY_PRIMARY_LINKS,
   CASH_AND_CARRY_SECONDARY_LINKS,
@@ -88,57 +87,20 @@ export function StrategySubnav({
                     {typeLabel}
                   </p>
                 ) : null}
-                {paperBook ? (
-                  <PaperEquityChip
-                    book={paperBook}
-                    href={connection?.href}
-                  />
-                ) : null}
               </div>
               {description ? (
                 <p className="mt-1 text-sm text-ink-muted">{description}</p>
               ) : null}
             </>
           )}
-          {identity && paperBook ? (
-            <div className="mt-3">
-              <PaperEquityChip book={paperBook} href={connection?.href} />
-            </div>
-          ) : null}
         </div>
-        {(connection && !paperBook) || status ? (
+        {connection || status ? (
           <div className="mt-6 flex shrink-0 items-start justify-end gap-2">
-            {connection && !paperBook ? (
-              <AccountSnapshotHover
-                snapshot={
-                  connection.connected ? connection.snapshot ?? null : null
-                }
-              >
-                <HeaderMeta
-                  overline={connection.overline ?? "Exchange Connection"}
-                  href={connection.href}
-                >
-                  <span
-                    className={`flex items-center gap-2 text-sm ${
-                      connection.connected ? "text-ink" : "text-warning"
-                    }`}
-                  >
-                    <StatusDot
-                      tone={connection.connected ? "success" : "warning"}
-                      pulse={false}
-                    />
-                    <span className="max-w-[14rem] truncate">
-                      {connection.name}
-                      {connection.venue ? (
-                        <span className="text-ink-muted">
-                          {" "}
-                          ({connection.venue})
-                        </span>
-                      ) : null}
-                    </span>
-                  </span>
-                </HeaderMeta>
-              </AccountSnapshotHover>
+            {connection ? (
+              <MarketDataChip
+                connection={connection}
+                paperBook={paperBook ?? null}
+              />
             ) : null}
             {status ? (
               <HeaderMeta overline="Automations" href={status.href}>
@@ -180,33 +142,54 @@ export function StrategySubnav({
   );
 }
 
-function PaperEquityChip({
-  book,
-  href,
+function MarketDataChip({
+  connection,
+  paperBook,
 }: {
-  book: CopyPaperEquityView;
-  href?: string;
+  connection: {
+    name: string;
+    venue: string | null;
+    connected: boolean;
+    overline?: string;
+    href?: string;
+    snapshot?: AccountSnapshotView | null;
+  };
+  paperBook: CopyPaperEquityView | null;
 }) {
-  const body = (
-    <span className="inline-flex items-baseline gap-2 rounded-control border border-line bg-surface px-2.5 py-1">
-      <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
-        Paper equity
+  const chip = (
+    <HeaderMeta
+      overline={connection.overline ?? "Exchange Connection"}
+      href={connection.href}
+    >
+      <span
+        className={`flex items-center gap-2 text-sm ${
+          connection.connected ? "text-ink" : "text-warning"
+        }`}
+      >
+        <StatusDot
+          tone={connection.connected ? "success" : "warning"}
+          pulse={false}
+        />
+        <span className="max-w-[14rem] truncate">
+          {connection.name}
+          {connection.venue ? (
+            <span className="text-ink-muted"> ({connection.venue})</span>
+          ) : null}
+        </span>
       </span>
-      <span className="text-sm tabular-nums text-ink">
-        {formatSnapshotMoney(book.equityUsdt)}
-      </span>
-    </span>
+    </HeaderMeta>
   );
+  if (paperBook) {
+    return (
+      <CopyPaperEquityHover book={paperBook}>{chip}</CopyPaperEquityHover>
+    );
+  }
   return (
-    <CopyPaperEquityHover book={book}>
-      {href ? (
-        <Link href={href} className="hover:border-line-strong">
-          {body}
-        </Link>
-      ) : (
-        body
-      )}
-    </CopyPaperEquityHover>
+    <AccountSnapshotHover
+      snapshot={connection.connected ? connection.snapshot ?? null : null}
+    >
+      {chip}
+    </AccountSnapshotHover>
   );
 }
 

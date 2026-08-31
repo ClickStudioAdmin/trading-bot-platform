@@ -170,68 +170,88 @@ export function CopyCatalogueBoard({
               className="flex flex-col rounded-card border border-line bg-surface p-5"
             >
               <div className="flex items-start justify-between gap-3">
-                <Link
-                  href={
-                    card.traderAlias
-                      ? `/account/copy/traders/${encodeURIComponent(card.traderAlias)}`
-                      : "/account/copy"
-                  }
-                  className="flex min-w-0 items-center gap-3"
-                >
-                  <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-raised text-sm text-ink-muted">
-                    {card.traderLogoUrl || card.deskLogoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={card.traderLogoUrl ?? card.deskLogoUrl ?? ""}
-                        alt=""
-                        className="size-full object-cover"
-                      />
-                    ) : (
-                      (card.traderAlias ?? "T").slice(0, 1).toUpperCase()
-                    )}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[11px] uppercase tracking-wide text-ink-faint">
-                      Trader
-                    </span>
-                    <span className="block truncate text-sm font-medium text-ink">
-                      {card.traderAlias ?? "Trader"}
-                    </span>
-                  </span>
-                </Link>
-                <form action={toggleDeskCopyFavoriteAction}>
-                  <input type="hidden" name="accountId" value={card.accountId} />
-                  <input
-                    type="hidden"
-                    name="favorite"
-                    value={card.favorite ? "0" : "1"}
-                  />
-                  <input type="hidden" name="next" value={next} />
-                  <PendingSubmitButton
-                    pendingLabel="Starring"
-                    successKey={`fav-${card.accountId}`}
-                    title={card.favorite ? "Remove star" : "Star this desk"}
-                    className={`rounded-control p-1.5 ${
-                      card.favorite
-                        ? "text-accent hover:text-accent-strong"
-                        : "text-ink-muted hover:text-accent"
-                    }`}
+                <div className="min-w-0 flex-1">
+                  <Link
+                    href={
+                      card.traderAlias
+                        ? `/account/copy/traders/${encodeURIComponent(card.traderAlias)}`
+                        : "/account/copy"
+                    }
+                    className="flex min-w-0 items-center gap-3"
                   >
-                    <StarIcon filled={card.favorite} />
-                    <span className="sr-only">
-                      {card.favorite ? "Remove star" : "Star this desk"}
+                    <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface-raised text-sm text-ink-muted">
+                      {card.traderLogoUrl || card.deskLogoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={card.traderLogoUrl ?? card.deskLogoUrl ?? ""}
+                          alt=""
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        (card.traderAlias ?? "T").slice(0, 1).toUpperCase()
+                      )}
                     </span>
-                  </PendingSubmitButton>
-                </form>
+                    <span className="min-w-0">
+                      <span className="block text-[11px] uppercase tracking-wide text-ink-faint">
+                        Trader
+                      </span>
+                      <span className="block truncate text-sm font-medium text-ink">
+                        {card.traderAlias ?? "Trader"}
+                      </span>
+                    </span>
+                  </Link>
+                  <div className="mt-2 min-w-0">
+                    <span className="block text-[11px] uppercase tracking-wide text-ink-faint">
+                      Desk
+                    </span>
+                    <span className="block truncate text-sm text-ink">
+                      {card.deskName}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-start gap-1">
+                  <div className="pt-0.5 text-right">
+                    <p
+                      className={`text-2xl font-semibold tabular-nums leading-none ${
+                        !card.stats30d || card.stats30d.closedCount === 0
+                          ? "text-ink"
+                          : card.stats30d.realizedUsdt < 0
+                            ? "text-danger"
+                            : "text-success"
+                      }`}
+                    >
+                      {roiLabel(card)}
+                    </p>
+                    <p className="mt-1 text-xs text-ink-faint">ROI [30d]</p>
+                  </div>
+                  <form action={toggleDeskCopyFavoriteAction}>
+                    <input type="hidden" name="accountId" value={card.accountId} />
+                    <input
+                      type="hidden"
+                      name="favorite"
+                      value={card.favorite ? "0" : "1"}
+                    />
+                    <input type="hidden" name="next" value={next} />
+                    <PendingSubmitButton
+                      pendingLabel="Starring"
+                      successKey={`fav-${card.accountId}`}
+                      title={card.favorite ? "Remove star" : "Star this desk"}
+                      className={`rounded-control p-1.5 ${
+                        card.favorite
+                          ? "text-accent hover:text-accent-strong"
+                          : "text-ink-muted hover:text-accent"
+                      }`}
+                    >
+                      <StarIcon filled={card.favorite} />
+                      <span className="sr-only">
+                        {card.favorite ? "Remove star" : "Star this desk"}
+                      </span>
+                    </PendingSubmitButton>
+                  </form>
+                </div>
               </div>
-              <div className="mt-2 min-w-0">
-                <span className="block text-[11px] uppercase tracking-wide text-ink-faint">
-                  Desk
-                </span>
-                <span className="block truncate text-sm text-ink">
-                  {card.deskName}
-                </span>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="mt-3 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
                   {card.visibility === "private" ? (
                     <span className="rounded-control border border-accent/40 px-2 py-0.5 text-xs text-accent">
                       Private
@@ -245,18 +265,6 @@ export function CopyCatalogueBoard({
                     {formatDeskType(card.deskType)} · {card.venue}
                   </span>
                 </div>
-                <p
-                  className={`mt-4 text-2xl font-semibold tabular-nums ${
-                    !card.stats30d || card.stats30d.closedCount === 0
-                      ? "text-ink"
-                      : card.stats30d.realizedUsdt < 0
-                        ? "text-danger"
-                        : "text-success"
-                  }`}
-                >
-                  {roiLabel(card)}
-                </p>
-                <p className="text-xs text-ink-faint">ROI [30d]</p>
                 <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
                   <div>
                     <dt className="text-ink-faint">Drawdown [30d]</dt>
