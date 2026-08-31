@@ -83,6 +83,7 @@ export function OpenFuturesTrades({
   playbookOwnsOrders = false,
   dcaHints = {},
   positionsHref = FUTURES_PATHS.positions,
+  hideRowExits = false,
 }: {
   signedIn: boolean;
   open: MarkedFutures[];
@@ -97,8 +98,12 @@ export function OpenFuturesTrades({
   playbookOwnsOrders?: boolean;
   dcaHints?: Readonly<Record<string, DcaOpenHint>>;
   positionsHref?: string;
+  hideRowExits?: boolean;
 }) {
-  const { visible, setColumn } = useFuturesOpenColumns();
+  const { visible: storedVisible, setColumn } = useFuturesOpenColumns();
+  const visible = hideRowExits
+    ? { ...storedVisible, tpsl: false, trailing: false }
+    : storedVisible;
   const rows = useLiveMarkedOpen(open);
   const colSpan = futuresOpenColumnCount(
     visible,
@@ -127,7 +132,11 @@ export function OpenFuturesTrades({
         </div>
       ) : null}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <FuturesOpenColumnPicker visible={visible} setColumn={setColumn} />
+        <FuturesOpenColumnPicker
+          visible={visible}
+          setColumn={setColumn}
+          hiddenColumns={hideRowExits ? ["tpsl", "trailing"] : []}
+        />
         {showCloseAll ? (
           <FuturesPositionBulkActions
             next={next}

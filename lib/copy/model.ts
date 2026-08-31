@@ -13,6 +13,11 @@ export const COPY_SHARE_OFF_OPEN_TRADES =
   "Close all live trades on this desk before you turn sharing off.";
 export const COPY_FOLLOWING_UNAVAILABLE =
   "This desk is no longer available for following.";
+export const COPY_UNFOLLOW_OPEN_TRADES =
+  "Close all live trades on this desk before you unfollow.";
+export const COPY_UNFOLLOW_LAST_DESK =
+  "Create another desk before you unfollow. You can pause copying instead.";
+export const COPY_UNFOLLOW_CONFIRM = "UNFOLLOW";
 export const TRADER_LOGO_BUCKET = "trader-logos";
 export const DESK_LOGO_BUCKET = "desk-logos";
 export const TRADER_LOGO_MAX_BYTES = 1_048_576;
@@ -690,6 +695,82 @@ export function copyBalanceScaledNotional(input: {
   return (
     input.parentFillUsdt * (input.followerBalanceUsdt / input.parentBalanceUsdt)
   );
+}
+
+export type DeskCopySettings = {
+  accountId: string;
+  scale: number;
+  paused: boolean;
+  maxDailyLossUsdt: number | null;
+  maxOpenNotionalUsdt: number | null;
+};
+
+export function parseCopyOptionalUsdt(
+  value: unknown,
+  label: string,
+): { ok: true; value: number | null } | { ok: false; error: string } {
+  const raw = String(value ?? "").trim().replace(/,/g, "");
+  if (!raw) {
+    return { ok: true, value: null };
+  }
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return { ok: false, error: `${label} must be more than zero, or empty.` };
+  }
+  return { ok: true, value: parsed };
+}
+
+export function parseCopyFollowerGuardsForm(input: {
+  maxDailyLossUsdt: unknown;
+  maxOpenNotionalUsdt: unknown;
+  paused: unknown;
+}):
+  | {
+      ok: true;
+      paused: boolean;
+      maxDailyLossUsdt: number | null;
+      maxOpenNotionalUsdt: number | null;
+    }
+  | { ok: false; error: string } {
+  const daily = parseCopyOptionalUsdt(input.maxDailyLossUsdt, "Max daily loss");
+  if (!daily.ok) {
+    return daily;
+  }
+  const open = parseCopyOptionalUsdt(
+    input.maxOpenNotionalUsdt,
+    "Max open notional",
+  );
+  if (!open.ok) {
+    return open;
+  }
+  return {
+    ok: true,
+    paused: parseCopyToggle(input.paused),
+    maxDailyLossUsdt: daily.value,
+    maxOpenNotionalUsdt: open.value,
+  };
+}
+
+export type CopyUnfollowBlock = "open" | "last";
+
+export function copyUnfollowBlockCode(input: {
+  liveTradeCount: number;
+  deskCount: number;
+}): CopyUnfollowBlock | null {
+  if (input.liveTradeCount > 0) {
+    return "open";
+  }
+  if (input.deskCount <= 1) {
+    return "last";
+  }
+  return null;
+}
+
+export function formatCopyUnfollowBlock(code: CopyUnfollowBlock): string {
+  if (code === "open") {
+    return COPY_UNFOLLOW_OPEN_TRADES;
+  }
+  return COPY_UNFOLLOW_LAST_DESK;
 }
 
 export type CopyCreateBlock =

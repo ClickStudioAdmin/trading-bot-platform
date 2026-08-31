@@ -5,10 +5,12 @@ import {
   deskIsCopy,
   deskPath,
   parseAccountMode,
+  pickSwitchAfterDelete,
   validateNewDeskName,
 } from "@/lib/accounts/model";
 import {
   bindConnectionToDesk,
+  deleteTradingAccountRow,
   insertTradingAccount,
   listTradingAccounts,
   loadAccountUsage,
@@ -28,13 +30,17 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   COPY_SHARE_OFF_OPEN_TRADES,
+  COPY_UNFOLLOW_CONFIRM,
   copyInviteBlockCode,
   copyLiveTradeCount,
   copySharingOffBlocked,
   evaluateCopyShare,
   formatCopyInviteBlock,
   copyCreateBlockCode,
+  copyUnfollowBlockCode,
   formatCopyCreateBlock,
+  formatCopyUnfollowBlock,
+  parseCopyFollowerGuardsForm,
   parseCopyInviteEmail,
   parseDeskCopyListingForm,
   parseTraderLogoUpload,
@@ -62,6 +68,7 @@ import {
   inviteDeskCopyShare,
   loadDeskCopyShares,
   revokeDeskCopyShare,
+  revokeDeskCopyShareByFollower,
 } from "./shares";
 
 const SETTINGS_PATH = "/account/settings";
@@ -525,4 +532,151 @@ export async function createCopyDeskAction(formData: FormData) {
   revalidatePath("/", "layout");
   revalidatePath("/account/copy");
   redirect(deskHomePath(created.deskType, created.id));
+}
+
+function copySettingsHref(
+  accountId: string,
+  extra: Record<string, string>,
+): string {
+  return deskPath(FUTURES_PATHS.settings, accountId, extra);
+}
+
+export async function saveDeskCopyFollowerSettingsAction(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const account = session.account;
+  const fail = (message: string): never =>
+    redirect(copySettingsHref(account.id, { error: message }));
+  if (!deskIsCopy(account) || !account.copyOfAccountId) {
+    return fail("This is not a copy desk.");
+  }
+  const parsed = parseCopyFollowerGuardsForm({
+    maxDailyLossUsdt: formData.get("maxDailyLossUsdt"),
+    maxOpenNotionalUsdt: formData.get("maxOpenNotionalUsdt"),
+    paused: formData.get("paused"),
+  });
+  if (!parsed.ok) {
+    return fail(parsed.error);
+  }
+  const saved = await saveDeskCopySettings({
+    accountId: account.id,
+    paused: parsed.paused,
+    maxDailyLossUsdt: parsed.maxDailyLossUsdt,
+    maxOpenNotionalUsdt: parsed.maxOpenNotionalUsdt,
+  });
+  if (!saved.ok) {
+    return fail(saved.error);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "copy.follower_settings_saved",
+    message: parsed.paused ? "Paused copy desk" : "Saved copy desk guards",
+    userId: session.member.id,
+    accountId: account.id,
+    data: {
+      paused: parsed.paused,
+      maxDailyLossUsdt: parsed.maxDailyLossUsdt,
+      maxOpenNotionalUsdt: parsed.maxOpenNotionalUsdt,
+    },
+  });
+  revalidatePath("/", "layout");
+  redirect(copySettingsHref(account.id, { saved: "copy" }));
+}
+
+export async function pauseDeskCopyAction(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const account = session.account;
+  const rawNext = String(formData.get("next") ?? "").trim();
+  const next = rawNext.startsWith("/strategies/futures")
+    ? rawNext
+    : deskPath(FUTURES_PATHS.positions, account.id);
+  const fail = (message: string): never =>
+    redirect(`${next}${next.includes("?") ? "&" : "?"}paperError=${encodeURIComponent(message)}`);
+  if (!deskIsCopy(account)) {
+    return fail("This is not a copy desk.");
+  }
+  const paused = String(formData.get("paused") ?? "") === "1";
+  const saved = await saveDeskCopySettings({
+    accountId: account.id,
+    paused,
+  });
+  if (!saved.ok) {
+    return fail(saved.error);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: paused ? "copy.paused" : "copy.resumed",
+    message: paused ? "Paused copying" : "Resumed copying",
+    userId: session.member.id,
+    accountId: account.id,
+  });
+  revalidatePath("/", "layout");
+  redirect(next);
+}
+
+export async function unfollowDeskCopyAction(formData: FormData) {
+  const session = await getSessionContext();
+  if (!session) {
+    redirect("/sign-in");
+  }
+  const account = session.account;
+  const fail = (message: string): never =>
+    redirect(copySettingsHref(account.id, { error: message }));
+  if (!deskIsCopy(account) || !account.copyOfAccountId) {
+    return fail("This is not a copy desk.");
+  }
+  if (String(formData.get("confirm") ?? "").trim() !== COPY_UNFOLLOW_CONFIRM) {
+    return fail(`Type ${COPY_UNFOLLOW_CONFIRM} to confirm.`);
+  }
+  const desks = await listTradingAccounts(session.member.id);
+  const usage = await loadAccountUsage([account]);
+  const row = usage.get(account.id);
+  const block = copyUnfollowBlockCode({
+    liveTradeCount: copyLiveTradeCount({
+      openPositions: row?.futuresOpenCount,
+      workingOrders: row?.workingCount,
+    }),
+    deskCount: desks.length,
+  });
+  if (block) {
+    return fail(formatCopyUnfollowBlock(block));
+  }
+  await saveDeskCopySettings({
+    accountId: account.id,
+    paused: true,
+  });
+  const revoked = await revokeDeskCopyShareByFollower({
+    parentAccountId: account.copyOfAccountId,
+    toUserId: session.member.id,
+  });
+  if (!revoked.ok) {
+    return fail(revoked.error);
+  }
+  const deleted = await deleteTradingAccountRow(session.member.id, account.id);
+  if (deleted.error) {
+    return fail(deleted.error);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "copy.unfollowed",
+    message: "Unfollowed a copy desk",
+    userId: session.member.id,
+    data: {
+      accountId: account.id,
+      parentAccountId: account.copyOfAccountId,
+    },
+  });
+  const remaining = await listTradingAccounts(session.member.id);
+  const nextDesk = pickSwitchAfterDelete(remaining, null);
+  if (nextDesk) {
+    await setActiveAccountId(nextDesk.id);
+  }
+  revalidatePath("/", "layout");
+  revalidatePath("/account/copy");
+  redirect("/account/copy?unfollowed=1");
 }

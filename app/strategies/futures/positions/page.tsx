@@ -16,7 +16,8 @@ import {
   loadUsdtLinearPerps,
 } from "@/lib/exchanges/bybit/perp";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
-import { deskAllowsDcaPlaybooks, deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref } from "@/lib/accounts/model";
+import { deskAllowsDcaPlaybooks, deskAllowsManualPerpTicket, deskAllowsSignalWebhooks, deskHref, deskIsCopy } from "@/lib/accounts/model";
+import { CopyDeskPositionsChrome } from "@/components/copy-desk-positions-chrome";
 import { dcaHintsForOpen } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { FuturesWebhookTest } from "@/components/futures-webhook-test";
@@ -118,6 +119,7 @@ export default async function FuturesPositionsPage({
   const dcaHints = dca
     ? dcaHintsForOpen(playbooks, open, desk.working)
     : undefined;
+  const copyDesk = session ? deskIsCopy(session.account) : false;
   const testWebhooks = allowSignal
     ? webhooks
     : webhooks.filter((row) => row.kind !== "signal");
@@ -159,6 +161,13 @@ export default async function FuturesPositionsPage({
         />
 
         <LiveTickerScope symbols={open.map((row) => row.symbol)}>
+        {copyDesk && session ? (
+          <CopyDeskPositionsChrome
+            copyOfAccountId={session.account.copyOfAccountId}
+            deskId={session.account.id}
+            next={NEXT}
+          />
+        ) : null}
         <FuturesOpenStats signedIn={desk.signedIn} open={open} />
         {showTicket ? (
           <section>
@@ -267,13 +276,16 @@ export default async function FuturesPositionsPage({
           webhookNames={desk.webhookNames}
           showDcaColumns={dca}
           playbookOwnsOrders={dca}
+          hideRowExits={copyDesk}
           dcaHints={dcaHints}
           emptyMessage={
             showTicket
               ? undefined
-              : dca
-                ? "No open futures. The bot adds orders once it is armed."
-                : "No open futures. TradingView opens them through a webhook."
+              : copyDesk
+                ? "No open futures. Copied fills from the parent will appear here."
+                : dca
+                  ? "No open futures. The bot adds orders once it is armed."
+                  : "No open futures. TradingView opens them through a webhook."
           }
         />
         </LiveTickerScope>
@@ -289,9 +301,11 @@ export default async function FuturesPositionsPage({
           emptyMessage={
             showTicket
               ? undefined
-              : dca
-                ? "No working limits. Bot orders rest here when they are limits."
-                : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
+              : copyDesk
+                ? "No working limits. Copied parent fills that rest as limits will appear here."
+                : dca
+                  ? "No working limits. Bot orders rest here when they are limits."
+                  : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
           }
         />
       </div>

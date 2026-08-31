@@ -31,6 +31,7 @@ export default async function AccountCopyCataloguePage({
   const query = firstSearchValue(params.q) ?? "";
   const privateOnly = firstSearchValue(params.private) === "1";
   const error = firstSearchValue(params.error);
+  const unfollowed = firstSearchValue(params.unfollowed) === "1";
   const cards = await loadCopyCatalogue({
     viewerUserId: member.id,
     tab,
@@ -51,6 +52,11 @@ export default async function AccountCopyCataloguePage({
       {error ? (
         <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
+        </p>
+      ) : null}
+      {unfollowed ? (
+        <p className="mb-4 text-sm text-success">
+          You unfollowed that desk. The copy desk was deleted.
         </p>
       ) : null}
       <CopyCatalogueBoard

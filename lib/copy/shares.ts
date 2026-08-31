@@ -271,3 +271,32 @@ export async function revokeDeskCopyShare(input: {
   }
   return { ok: true };
 }
+
+export async function revokeDeskCopyShareByFollower(input: {
+  parentAccountId: string;
+  toUserId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("desk_copy_shares")
+    .update({
+      status: "revoked" satisfies CopyShareStatus,
+      updated_at: now,
+    })
+    .eq("parent_account_id", input.parentAccountId)
+    .eq("to_user_id", input.toUserId)
+    .in("status", ["invited", "active"])
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    return { ok: false, error: "Could not unfollow that desk." };
+  }
+  if (!data) {
+    return { ok: true };
+  }
+  return { ok: true };
+}

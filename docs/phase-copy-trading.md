@@ -8,7 +8,7 @@ Closest shipped analog: TradingView Strategy — same blotter as the job, **desk
 
 ## Status
 
-Started 31 Aug 2026. Steps 1–7 are in repo. Stop after each step until Click says go. Push `develop` to migrate.
+Started 31 Aug 2026. Steps 1–8 are in repo. Stop after each step until Click says go. Push `develop` to migrate.
 
 ## Purpose
 
@@ -59,7 +59,7 @@ Account nav **Copy desks** (`/account/copy`) is one catalogue: public listings p
 - `desk_copy_shares` (email / user, invited / active / revoked)
 - `desk_copy_favorites` (login bookmarks a parent desk)
 - `futures_desk_stats` (all-time + 30d snapshot, including max drawdown)
-- Follower settings: unused `scale` (create writes `1`), pause, max daily loss (caps stay on `strategy_settings`)
+- Follower settings: unused `scale` (create writes `1`), pause, max daily loss / max open notional (caps stay on `strategy_settings`). Unfollow revokes the grant and deletes the copy desk when it is flat and not the last desk.
 - `desk_copy_receipts` for idempotency
 
 RLS: catalogue is public + sharing-on listings, or the viewer’s open private grant, plus alias and that desk’s stats snapshot. Followers never select parent ledgers. Service role for the engine.
@@ -75,7 +75,7 @@ RLS: catalogue is public + sharing-on listings, or the viewer’s open private g
 | 5 | Private grants | Agent | Email invite from **Manage Copy Traders**. Owner list shows email on private, user id on public. Revoke, unlist, and unbind pause new entries. **In repo 31 Aug 2026.** |
 | 6 | Catalogue + stats | Agent | One catalogue (public + my private invites). Private badge and filter. Favorites. Subscribed = currently following. Snapshotted desk stats including max drawdown. Trader page (desks visible to the viewer). Copy CTA disabled until step 7. **In repo 31 Aug 2026.** |
 | 7 | Create copy desk | Agent | Copy path stamps type/venue. Follower picks Paper or Live. Size follows the balance ratio at fill time. **In repo 31 Aug 2026.** |
-| 8 | Follower chrome | Agent | Leader strip. Caps, reduce-only, max daily loss. Pause / unfollow. Close All. |
+| 8 | Follower chrome | Agent | Leader strip. Caps, reduce-only, max daily loss. Pause / unfollow. Close All. **In repo 31 Aug 2026.** |
 | 9 | Engine fan-out | Agent | Parent fill → balance-ratio size → guards → `runFuturesCommand` or paper ledger. Idempotent. Checks for skip/double-place. |
 | 10 | Desk test | Click | Set N to 0. Private and public share. Copy from invite and catalogue. Paper follower of a Live parent. Small Live clip. Paper and unbound cannot share. Normal desks untouched. |
 

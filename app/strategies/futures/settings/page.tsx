@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { PageHeading } from "@/components/page-heading";
+import { CopyFollowerGuardsCard } from "@/components/copy-follower-guards";
 import { DeskCopyShareCard } from "@/components/desk-copy-share-form";
 import { DeskSettingsForm } from "@/components/desk-settings-form";
 import { StrategyDetachControl } from "@/components/strategy-detach-control";
@@ -16,7 +17,12 @@ import {
   deskIsCopy,
   otherDeskNames,
 } from "@/lib/accounts/model";
-import { evaluateCopyShare } from "@/lib/copy/model";
+import { loadDeskCopySettings } from "@/lib/copy/follower-settings";
+import {
+  copyLiveTradeCount,
+  copyUnfollowBlockCode,
+  evaluateCopyShare,
+} from "@/lib/copy/model";
 import { loadDeskCopyListing, loadFirstVenueFillMs } from "@/lib/copy/listings";
 import { loadTraderProfile } from "@/lib/copy/profile";
 import { loadCopyPlatformSettings } from "@/lib/copy/settings";
@@ -75,9 +81,10 @@ export default async function FuturesSettingsPage({
     : [];
   const selected =
     connections.find((row) => row.id === settings.connectionId) ?? null;
-  const usage = live
-    ? (await loadAccountUsage([session.account])).get(session.account.id)
-    : null;
+  const usage =
+    live || deskIsCopy(session.account)
+      ? (await loadAccountUsage([session.account])).get(session.account.id)
+      : null;
   const detachBlocked =
     Boolean(selected) &&
     strategyDetachBlockers({
@@ -87,8 +94,21 @@ export default async function FuturesSettingsPage({
   const savedFlag = firstSearchValue(params.saved);
   const saved = savedFlag === "1";
   const shareSaved = savedFlag === "share";
+  const copySaved = savedFlag === "copy";
   const error = firstSearchValue(params.error);
   const copyDesk = deskIsCopy(session.account);
+  const followerSettings = copyDesk
+    ? await loadDeskCopySettings(session.account.id)
+    : null;
+  const unfollowBlock = copyDesk
+    ? copyUnfollowBlockCode({
+        liveTradeCount: copyLiveTradeCount({
+          openPositions: usage?.futuresOpenCount,
+          workingOrders: usage?.workingCount,
+        }),
+        deskCount: desks.length,
+      })
+    : null;
   const [trader, listing, firstFillMs, copySettings] = copyDesk
     ? [null, null, null, { minActivityDays: 0, maxFollowersDefault: null, maxFollowersCeiling: null }] as const
     : await Promise.all([
@@ -148,7 +168,7 @@ export default async function FuturesSettingsPage({
           </>
         ) : (
           session.account.copyOfAccountId
-            ? "This is a copy desk. Caps, reduce-only, and Close All still apply. No ticket, bots, or webhooks."
+            ? "This is a copy desk. Caps, reduce-only, copy guards, and Close All still apply. Pause or unfollow here. No ticket, bots, or webhooks."
             : "This desk is ticket only. No automations or webhooks."
         )}{" "}
         Bind a matching key from this login.
@@ -161,16 +181,13 @@ export default async function FuturesSettingsPage({
       {saved ? (
         <p className="mt-4 text-sm text-success">Settings saved.</p>
       ) : null}
+      {copySaved ? (
+        <p className="mt-4 text-sm text-success">Copy guards saved.</p>
+      ) : null}
       {shareSaved ? (
         <p className="mt-4 text-sm text-success">Share settings saved.</p>
       ) : null}
-      <div
-        className={
-          copyDesk
-            ? "mt-6 max-w-lg"
-            : "mt-6 grid items-start gap-6 lg:grid-cols-2"
-        }
-      >
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
         <DeskSettingsForm
           action={saveFuturesSettings}
           defaultName={session.account.name}
@@ -208,14 +225,19 @@ export default async function FuturesSettingsPage({
             <span>
               Reduce only
               <span className="mt-1 block text-xs text-ink-muted">
-                Blocks Buy and Sell. Close still works.
+                {copyDesk
+                  ? "Blocks new copied entries. Close still works."
+                  : "Blocks Buy and Sell. Close still works."}
               </span>
             </span>
           </label>
           <div className="space-y-3 border-t border-line pt-4">
             <p className="text-sm text-ink">Risk caps</p>
             <p className="text-xs text-ink-muted">
-              Empty means no cap. Buy and Sell reject if they would breach.
+              Empty means no cap.{" "}
+              {copyDesk
+                ? "New copied entries reject if they would breach."
+                : "Buy and Sell reject if they would breach."}{" "}
               Close is never blocked.
             </p>
             <label className="block text-sm text-ink">
@@ -253,7 +275,13 @@ export default async function FuturesSettingsPage({
             </label>
           </div>
         </DeskSettingsForm>
-        {copyDesk ? null : (
+        {copyDesk && followerSettings ? (
+          <CopyFollowerGuardsCard
+            settings={followerSettings}
+            canUnfollow={unfollowBlock == null}
+            unfollowBlock={unfollowBlock}
+          />
+        ) : copyDesk ? null : (
           <DeskCopyShareCard
             account={session.account}
             listing={listing}

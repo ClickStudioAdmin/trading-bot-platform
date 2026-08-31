@@ -19,7 +19,9 @@ import {
   deskAllowsManualPerpTicket,
   deskAllowsSignalWebhooks,
   deskHref,
+  deskIsCopy,
 } from "@/lib/accounts/model";
+import { CopyDeskPositionsChrome } from "@/components/copy-desk-positions-chrome";
 import { dcaHintsForOpen } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { submitFuturesTrade } from "@/lib/futures/actions";
@@ -114,6 +116,7 @@ export async function HyperliquidFuturesPositions({
   const dcaHints = dca
     ? dcaHintsForOpen(playbooks, open, desk.working)
     : undefined;
+  const copyDesk = session ? deskIsCopy(session.account) : false;
   const testWebhooks = allowSignal
     ? webhooks
     : webhooks.filter((row) => row.kind !== "signal");
@@ -128,6 +131,13 @@ export async function HyperliquidFuturesPositions({
           venue="hyperliquid"
           environment={session?.account.venueEnvironment}
         >
+        {copyDesk && session ? (
+          <CopyDeskPositionsChrome
+            copyOfAccountId={session.account.copyOfAccountId}
+            deskId={session.account.id}
+            next={NEXT}
+          />
+        ) : null}
         <FuturesOpenStats signedIn={desk.signedIn} open={open} />
         {showTicket ? (
           <section>
@@ -241,13 +251,16 @@ export async function HyperliquidFuturesPositions({
             webhookNames={desk.webhookNames}
             showDcaColumns={dca}
             playbookOwnsOrders={dca}
+            hideRowExits={copyDesk}
             dcaHints={dcaHints}
             emptyMessage={
               showTicket
                 ? undefined
-                : dca
-                  ? "No open futures. The bot adds orders once it is armed."
-                  : "No open futures. TradingView opens them through a webhook."
+                : copyDesk
+                  ? "No open futures. Copied fills from the parent will appear here."
+                  : dca
+                    ? "No open futures. The bot adds orders once it is armed."
+                    : "No open futures. TradingView opens them through a webhook."
             }
           />
         </LiveTickerScope>
@@ -259,15 +272,17 @@ export async function HyperliquidFuturesPositions({
           exchangeBook={desk.exchangeBook}
           baseCoinFor={(symbol) => baseCoinForPerpSymbol(symbol, pairs)}
           webhookNames={desk.webhookNames}
-          playbookOwnsOrders={dca}
-          exchangeName="Hyperliquid"
-          emptyMessage={
-            showTicket
-              ? undefined
-              : dca
-                ? "No working limits. Bot orders rest here when they are limits."
-                : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
-          }
+            playbookOwnsOrders={dca}
+            exchangeName="Hyperliquid"
+            emptyMessage={
+              showTicket
+                ? undefined
+                : copyDesk
+                  ? "No working limits. Copied parent fills that rest as limits will appear here."
+                  : dca
+                    ? "No working limits. Bot orders rest here when they are limits."
+                    : "No working limits. TradingView limit orders rest here. Limit close on an open row also appears here."
+            }
         />
       </div>
     </main>

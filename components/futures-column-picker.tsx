@@ -57,9 +57,11 @@ export function useFuturesOpenColumns() {
 export function FuturesOpenColumnPicker({
   visible,
   setColumn,
+  hiddenColumns = [],
 }: {
   visible: FuturesOpenColumnVisibility;
   setColumn: (id: FuturesOpenOptionalColumn, on: boolean) => void;
+  hiddenColumns?: readonly FuturesOpenOptionalColumn[];
 }) {
   const rootRef = useRef<HTMLDetailsElement>(null);
 
@@ -100,7 +102,9 @@ export function FuturesOpenColumnPicker({
         <p className="px-2 pt-1 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
           Show columns
         </p>
-        {FUTURES_OPEN_OPTIONAL_COLUMNS.map((id) => (
+        {FUTURES_OPEN_OPTIONAL_COLUMNS.filter(
+          (id) => !hiddenColumns.includes(id),
+        ).map((id) => (
           <label
             key={id}
             className="flex cursor-pointer items-center gap-2 rounded-control px-2 py-1.5 text-sm text-ink hover:bg-surface-raised"

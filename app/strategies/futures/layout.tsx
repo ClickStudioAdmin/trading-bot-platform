@@ -128,7 +128,7 @@ export default async function FuturesLayout({
         }
         description={
           copyDesk
-            ? "This desk copies another trader. Caps, reduce-only, and Close All still protect. No ticket, bots, or webhooks."
+            ? "This desk copies another trader. Caps, reduce-only, copy guards, and Close All still protect. Pause or unfollow in Desk Settings. No ticket, bots, or webhooks."
             : signalFollower
             ? "TradingView sends buy, sell, and close. This desk only protects: caps, reduce-only, Close All, and row TP/SL."
             : dca

@@ -13,6 +13,12 @@ import {
   parseCopyDescription,
   COPY_FOLLOWING_UNAVAILABLE,
   COPY_SHARE_OFF_OPEN_TRADES,
+  COPY_UNFOLLOW_LAST_DESK,
+  COPY_UNFOLLOW_OPEN_TRADES,
+  copyUnfollowBlockCode,
+  formatCopyUnfollowBlock,
+  parseCopyFollowerGuardsForm,
+  parseCopyOptionalUsdt,
   copyLiveTradeCount,
   copyMaxFollowersWithinCeiling,
   copySharingOffBlocked,
@@ -727,6 +733,27 @@ if (quarterScale.ok) {
   assert.equal(quarterScale.scale, 0.25);
 }
 assert.equal(parseCopyScalePercent("0").ok, false);
+assert.deepEqual(parseCopyOptionalUsdt("", "Max daily loss"), {
+  ok: true,
+  value: null,
+});
+assert.equal(parseCopyOptionalUsdt("0", "Max daily loss").ok, false);
+const guards = parseCopyFollowerGuardsForm({
+  maxDailyLossUsdt: "250",
+  maxOpenNotionalUsdt: "",
+  paused: "on",
+});
+assert.equal(guards.ok, true);
+if (guards.ok) {
+  assert.equal(guards.paused, true);
+  assert.equal(guards.maxDailyLossUsdt, 250);
+  assert.equal(guards.maxOpenNotionalUsdt, null);
+}
+assert.equal(copyUnfollowBlockCode({ liveTradeCount: 1, deskCount: 3 }), "open");
+assert.equal(copyUnfollowBlockCode({ liveTradeCount: 0, deskCount: 1 }), "last");
+assert.equal(copyUnfollowBlockCode({ liveTradeCount: 0, deskCount: 2 }), null);
+assert.equal(formatCopyUnfollowBlock("open"), COPY_UNFOLLOW_OPEN_TRADES);
+assert.equal(formatCopyUnfollowBlock("last"), COPY_UNFOLLOW_LAST_DESK);
 assert.equal(
   copyCreateBlockCode({
     parentUserId: "a",
