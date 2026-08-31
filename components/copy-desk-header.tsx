@@ -41,8 +41,8 @@ export async function CopyDeskHeader({
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-1 flex-wrap items-start gap-6">
-          <div className="flex min-w-0 items-start gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-start gap-6 sm:gap-16">
+          <div className="flex min-w-0 items-start gap-3 sm:min-w-[16rem]">
             <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-control border border-line bg-surface-raised text-sm text-ink-muted">
               {leader?.deskLogoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -98,6 +98,9 @@ export async function CopyDeskHeader({
                 </span>
                 <span className="block truncate text-xl font-semibold tracking-tight text-ink">
                   {leader.traderAlias ?? "Trader"}
+                </span>
+                <span className="mt-1 block text-sm text-ink-muted">
+                  View trader
                 </span>
               </span>
             </Link>
