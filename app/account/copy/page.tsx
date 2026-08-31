@@ -13,7 +13,7 @@ import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Copy desks",
+  title: "Copy Desks",
   description: "Public shared desks and your private invites.",
 };
 
@@ -46,7 +46,7 @@ export default async function AccountCopyCataloguePage({
 
   return (
     <>
-      <PageHeading as="h1" title="Copy desks" />
+      <PageHeading as="h1" title="Copy Desks" />
       <p className="-mt-4 mb-6 text-sm text-ink-muted">
         Public listings plus private invites sent to you. Star a desk to keep
         it on Favorites. Subscribed is desks you are currently following.

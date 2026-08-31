@@ -269,7 +269,7 @@ function NavGroup({
       >
         {label}
       </p>
-      <nav aria-label={ariaLabel} className="mt-3 flex flex-col gap-1">
+      <nav aria-label={ariaLabel} className="mt-2 flex flex-col gap-0.5">
         {links.map((link) => {
           const linkPath = hrefPathname(link.href);
           const active = link.exact
@@ -279,7 +279,7 @@ function NavGroup({
             <Link
               key={link.href}
               href={link.href}
-              className={`rounded-control px-3 py-2 text-sm ${
+              className={`rounded-control px-3 py-1.5 text-sm ${
                 active
                   ? "bg-surface-raised text-ink"
                   : "text-ink-faint hover:bg-surface-raised hover:text-ink"
