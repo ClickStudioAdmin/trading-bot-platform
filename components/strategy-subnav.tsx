@@ -159,7 +159,11 @@ function MarketDataChip({
   const chip = (
     <HeaderMeta
       overline={connection.overline ?? "Exchange Connection"}
-      href={connection.href}
+      href={
+        paperBook || connection.snapshot
+          ? undefined
+          : connection.href
+      }
     >
       <span
         className={`flex items-center gap-2 text-sm ${

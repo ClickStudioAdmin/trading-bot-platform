@@ -18,7 +18,7 @@ export function CopyPaperEquityHover({
   return (
     <>
       <span
-        className="cursor-help"
+        className="block cursor-help"
         onMouseEnter={(event) =>
           setBox(event.currentTarget.getBoundingClientRect())
         }
@@ -48,12 +48,14 @@ export function CopyPaperEquityHover({
 export function CopyPaperEquityBody({ book }: { book: CopyPaperEquityView }) {
   return (
     <dl className="space-y-1">
-      <div className="flex justify-between gap-3">
-        <dt className="text-ink-muted">Started at</dt>
-        <dd className="tabular-nums text-ink">
-          {formatCopyPaperStartingUsdt(book.startingUsdt)}
-        </dd>
-      </div>
+      {book.startingUsdt > 0 ? (
+        <div className="flex justify-between gap-3">
+          <dt className="text-ink-muted">Started at</dt>
+          <dd className="tabular-nums text-ink">
+            {formatCopyPaperStartingUsdt(book.startingUsdt)}
+          </dd>
+        </div>
+      ) : null}
       <div className="flex justify-between gap-3">
         <dt className="text-ink-muted">Realized</dt>
         <dd className="tabular-nums text-ink">

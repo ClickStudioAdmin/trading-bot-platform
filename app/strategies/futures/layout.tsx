@@ -72,12 +72,13 @@ export default async function FuturesLayout({
         )
       : null;
   const paperBook =
-    copyDesk && !live && session
+    !live && session
       ? await loadCopyPaperEquityView({
           userId: session.member.id,
           accountId: session.account.id,
           venue: session.account.venue,
           venueEnvironment: session.account.venueEnvironment,
+          startingUsdt: copyDesk ? undefined : 0,
         })
       : null;
   const playbooks =
@@ -194,7 +195,6 @@ export default async function FuturesLayout({
                   : venueLabel,
                 venue: null,
                 connected: true,
-                href: settingsHref,
                 overline: "Market Data",
               }
         }

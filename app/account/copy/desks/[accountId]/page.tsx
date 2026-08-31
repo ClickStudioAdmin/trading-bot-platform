@@ -7,11 +7,7 @@ import {
 import { CopyDeskDetailsHeader } from "@/components/copy-desk-details-header";
 import { loadCopyCatalogueDesk } from "@/lib/copy/catalogue";
 import { loadCopyDeskPublicClosed } from "@/lib/copy/desk-performance";
-import { loadCopyLeaderStrip } from "@/lib/copy/leader";
-import { loadDeskCopyListing } from "@/lib/copy/listings";
-import { loadTraderProfile } from "@/lib/copy/profile";
 import { getSessionMember } from "@/lib/auth/session";
-import { listExchangeConnections } from "@/lib/exchanges/store";
 import { deskWindowStats } from "@/lib/futures/stats";
 import { formatPct, formatSignedUsd } from "@/lib/opportunities/format";
 import { notFound, redirect } from "next/navigation";
@@ -54,13 +50,7 @@ export default async function CopyDeskPerformancePage({
   if (!card) {
     notFound();
   }
-  const [closed, connections, trader, leader, listing] = await Promise.all([
-    loadCopyDeskPublicClosed(card.accountId),
-    listExchangeConnections(member.id),
-    loadTraderProfile(card.traderUserId),
-    loadCopyLeaderStrip(card.accountId),
-    loadDeskCopyListing(card.accountId),
-  ]);
+  const closed = await loadCopyDeskPublicClosed(card.accountId);
   const allTime = deskWindowStats(closed);
   const empty = allTime.closedCount === 0;
   const followers =
@@ -75,13 +65,7 @@ export default async function CopyDeskPerformancePage({
           Copy desks
         </Link>
       </p>
-      <CopyDeskDetailsHeader
-        card={card}
-        listing={listing}
-        trader={trader}
-        leader={leader}
-        connections={connections}
-      >
+      <CopyDeskDetailsHeader card={card}>
         <FuturesPerformanceStats
           signedIn
           closed={closed}

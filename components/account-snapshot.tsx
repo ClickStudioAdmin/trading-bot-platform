@@ -25,7 +25,7 @@ export function AccountSnapshotHover({
   return (
     <>
       <span
-        className="cursor-help"
+        className="block cursor-help"
         onMouseEnter={(event) =>
           setBox(event.currentTarget.getBoundingClientRect())
         }

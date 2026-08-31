@@ -109,6 +109,7 @@ export async function loadCopyPaperEquityView(input: {
   accountId: string;
   venue: string;
   venueEnvironment: string | null;
+  startingUsdt?: number;
 }): Promise<CopyPaperEquityView> {
   const positions = await loadFuturesPositions({
     scope: { accountId: input.accountId, userId: input.userId },
@@ -155,7 +156,11 @@ export async function loadCopyPaperEquityView(input: {
       exitPrice: mark,
     });
   }
-  return copyPaperEquityView({ realizedUsdt, unrealizedUsdt });
+  return copyPaperEquityView({
+    realizedUsdt,
+    unrealizedUsdt,
+    startingUsdt: input.startingUsdt,
+  });
 }
 
 export async function loadCopyGuardSnapshot(input: {
