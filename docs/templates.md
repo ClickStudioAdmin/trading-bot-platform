@@ -231,5 +231,5 @@ Stop after acceptance. Do not start Fly.io, Hyperliquid, scale-in, or backup kli
 - Scale-in / position builder (roadmap 7)
 - Starter Pack delivery to new members and CTA on new desk (roadmap 9; [phase-onboarding.md](phase-onboarding.md))
 - Hyperliquid / MEXC ([phase-hyperliquid.md](phase-hyperliquid.md))
-- Copy trading; Hedged DCA
+- Copy trading (roadmap 3; [phase-copy-trading.md](phase-copy-trading.md)); Hedged DCA
 - Backtesting and `backtested` templates (roadmap 4; [phase-backtesting.md](phase-backtesting.md))

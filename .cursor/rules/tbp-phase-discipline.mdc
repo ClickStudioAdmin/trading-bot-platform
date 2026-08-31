@@ -7,13 +7,13 @@ alwaysApply: true
 
 Read [docs/master-spec.md](docs/master-spec.md) and the current phase doc before changing code.
 
-Work only on the current phase. Phase 1 through Phase 11 are complete. See [docs/phase-11.md](docs/phase-11.md). Locked sequence: [docs/roadmap.md](docs/roadmap.md). Fly.io is accepted and parked ([docs/phase-fly.md](docs/phase-fly.md)). Hyperliquid is started ([docs/phase-hyperliquid.md](docs/phase-hyperliquid.md)). Stop after each Hyperliquid micro-step until Click says go. Do not start the adapter, MEXC, copy trading, or later items until Click asks.
+Work only on the current phase. Phase 1 through Phase 11 are complete. See [docs/phase-11.md](docs/phase-11.md). Locked sequence: [docs/roadmap.md](docs/roadmap.md). Fly.io is accepted and parked ([docs/phase-fly.md](docs/phase-fly.md)). Hyperliquid is started ([docs/phase-hyperliquid.md](docs/phase-hyperliquid.md)). Copy trading is started ([docs/phase-copy-trading.md](docs/phase-copy-trading.md)). Stop after each Hyperliquid or copy-trading micro-step until Click says go. Do not start MEXC, scale-in, or later items until Click asks.
 
 Feature work happens on `develop`. Merge to `main` only when the user is ready for production.
 
 Phase 11 is the first managing playbook. Type `dca` on the desk. Same `futures_*` ledger and `runFuturesCommand`. The app owns orders and exits. Signals only arm. Stacked playbooks, one per contract and side. The engine worker claims **one desk at a time** (Postgres leases). Do not call private exchange APIs from the browser. Paper accounts still use the in-app ledger.
 
-Do not create later-phase tables or speculative architecture. Do not start Hyperliquid, copy trading, scale-in, MEXC, or onboarding wizard refine until Click starts that roadmap item. Standing unordered notes: [docs/click-list.md](docs/click-list.md). Hyperliquid is roadmap 2 ([docs/phase-hyperliquid.md](docs/phase-hyperliquid.md)). Scale-in / position builder is roadmap 6. See [docs/phase-onboarding.md](docs/phase-onboarding.md) (roadmap 9).
+Do not create later-phase tables or speculative architecture. Copy trading tables wait for [docs/phase-copy-trading.md](docs/phase-copy-trading.md) step 2. Do not start scale-in, MEXC, or onboarding wizard refine until Click starts that roadmap item. Standing unordered notes: [docs/click-list.md](docs/click-list.md). Hyperliquid is roadmap 2 ([docs/phase-hyperliquid.md](docs/phase-hyperliquid.md)). Copy trading is roadmap 3. Scale-in / position builder is roadmap 7. See [docs/phase-onboarding.md](docs/phase-onboarding.md) (roadmap 9).
 
 Keep dependencies minimal. Prefer the simplest solution that satisfies the current phase.
 

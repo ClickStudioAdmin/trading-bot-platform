@@ -58,4 +58,4 @@ Phase accepted. Do not start Fly.io or scale-in until Click asks. Sequence: [roa
 - Fly.io (roadmap 1; not this phase)
 - Calling private exchange APIs from the browser
 - Paper auto-switch ([phase-auto-switch.md](phase-auto-switch.md))
-- Later items on [roadmap.md](roadmap.md) (copy trading, event-driven signals, onboarding refine, backtesting, backup data, other exchanges)
+- Later items on [roadmap.md](roadmap.md). Copy trading is started: [phase-copy-trading.md](phase-copy-trading.md).

@@ -172,7 +172,7 @@ Stop after each step until Click says go. Do not start MEXC in this phase.
 - HIP-3
 - Subaccount fake hedge
 - Generating/approving agents in TBP
-- Copy trading, event-driven signals, backtesting, Starter Pack CTA ([roadmap.md](roadmap.md))
+- Copy trading ([phase-copy-trading.md](phase-copy-trading.md)), event-driven signals, Starter Pack CTA ([roadmap.md](roadmap.md))
 - `if (hyperliquid)` inside Bybit components
 - Fly.io in this pass (roadmap 1 first); private APIs from the browser
 - Scale-in / position builder (roadmap 6)
