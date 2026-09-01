@@ -285,6 +285,13 @@ export async function saveFuturesSettings(formData: FormData) {
   if (!maxRows.ok) {
     settingsFail(account.id, maxRows.error);
   }
+  const paperDesk = !accountCanHoldConnections(account.mode);
+  const paperLeverage = paperDesk
+    ? parseOptionalPositive(formData.get("paperLeverage"), "Paper leverage")
+    : { ok: true as const, value: null };
+  if (!paperLeverage.ok) {
+    settingsFail(account.id, paperLeverage.error);
+  }
 
   let connectionId: string | null = null;
   const bindSubmitted = formData.has("exchangeConnectionId");
@@ -333,6 +340,7 @@ export async function saveFuturesSettings(formData: FormData) {
     reduce_only: reduceOnly,
     max_notional_per_symbol: maxValue.value,
     max_open_rows: maxRows.value,
+    ...(paperDesk ? { paper_leverage: paperLeverage.value } : {}),
     ...(accountCanHoldConnections(account.mode) && bindSubmitted
       ? { exchange_connection_id: connectionId }
       : {}),

@@ -208,11 +208,14 @@ export default async function FuturesSettingsPage({
                   next={settingsHref}
                 />
               ) : (
+                <div className="space-y-4">
                 <p className="text-sm text-ink-muted">
                   This is a Paper Trading book. Orders stay on the in-app
                   ledger. Paper starts at {formatCopyPaperStartingUsdt()}.
                   Account balance is that plus realized and unrealized.
                 </p>
+                <PaperLeverageField defaultValue={settings.paperLeverage} />
+                </div>
               )
             ) : undefined
           }
@@ -270,6 +273,11 @@ export default async function FuturesSettingsPage({
                   This is a Paper Trading book. Orders stay on the in-app
                   ledger.
                 </p>
+              )}
+              {live ? null : (
+                <PaperLeverageField
+                  defaultValue={settings.paperLeverage}
+                />
               )}
               <label className="flex items-start gap-2 text-sm text-ink">
                 <input
@@ -344,6 +352,32 @@ export default async function FuturesSettingsPage({
         )}
       </div>
     </main>
+  );
+}
+
+function PaperLeverageField({
+  defaultValue,
+}: {
+  defaultValue: number | null;
+}) {
+  return (
+    <label className="block text-sm text-ink">
+      Paper leverage
+      <span className="mt-1 block text-xs text-ink-muted">
+        Used for ROE on Performance (P&L ÷ (notional ÷ this)). Empty
+        leaves ROE as —. Does not change size or place venue orders.
+        Applies to new trades and as a fallback for older paper closes
+        on this desk.
+      </span>
+      <GroupedNumberInput
+        name="paperLeverage"
+        defaultValue={defaultValue === null ? "" : String(defaultValue)}
+        allowDecimal
+        placeholder="—"
+        ariaLabel="Paper leverage"
+        className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
+      />
+    </label>
   );
 }
 

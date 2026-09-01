@@ -3,10 +3,13 @@ import type { FuturesOrder, FuturesPosition } from "./model";
 import {
   deskStatsSnapshot,
   deskWindowStats,
+  effectiveLeverage,
   flattenExitPrice,
   futuresClosedStats,
   futuresDaysHeld,
   futuresOpenExposure,
+  positionMarginUsdt,
+  roePct,
 } from "./stats";
 
 function closed(partial: Partial<FuturesPosition> & { realizedUsdt: number; notionalUsdt: number }): FuturesPosition {
@@ -20,6 +23,7 @@ function closed(partial: Partial<FuturesPosition> & { realizedUsdt: number; noti
     entryPrice: 100,
     notionalUsdt: partial.notionalUsdt,
     realizedUsdt: partial.realizedUsdt,
+    leverage: partial.leverage ?? null,
     status: "closed",
     source: "manual",
     ruleId: null,
@@ -50,6 +54,16 @@ assert.equal(empty.closedCount, 0);
 assert.equal(empty.greenCount, 0);
 assert.equal(empty.realizedUsdt, 0);
 assert.equal(empty.realizedPct, null);
+assert.equal(empty.onNotionalPct, null);
+assert.equal(empty.roePct, null);
+assert.equal(empty.roeTradeCount, 0);
+
+assert.equal(positionMarginUsdt(1_000, 10), 100);
+assert.equal(positionMarginUsdt(1_000, null), null);
+assert.equal(roePct(20, 100), 0.2);
+assert.equal(roePct(20, null), null);
+assert.equal(effectiveLeverage(null, 10), 10);
+assert.equal(effectiveLeverage(5, 10), 5);
 
 const mixed = futuresClosedStats([
   closed({ id: "1", realizedUsdt: 20, notionalUsdt: 100 }),
@@ -59,6 +73,33 @@ assert.equal(mixed.closedCount, 2);
 assert.equal(mixed.greenCount, 1);
 assert.equal(mixed.realizedUsdt, 15);
 assert.equal(mixed.realizedPct, 0.075);
+assert.equal(mixed.onNotionalPct, 0.075);
+assert.equal(mixed.roePct, null);
+assert.equal(mixed.roeTradeCount, 0);
+
+const geared = futuresClosedStats([
+  closed({ id: "1", realizedUsdt: 20, notionalUsdt: 100, leverage: 10 }),
+  closed({ id: "2", realizedUsdt: -5, notionalUsdt: 100, leverage: 10 }),
+]);
+assert.equal(geared.onNotionalPct, 0.075);
+assert.equal(geared.roePct, 0.75);
+assert.equal(geared.roeTradeCount, 2);
+
+const partialRoe = futuresClosedStats([
+  closed({ id: "1", realizedUsdt: 20, notionalUsdt: 100, leverage: 10 }),
+  closed({ id: "2", realizedUsdt: -5, notionalUsdt: 100 }),
+]);
+assert.equal(partialRoe.realizedUsdt, 15);
+assert.equal(partialRoe.onNotionalPct, 0.075);
+assert.equal(partialRoe.roePct, 2);
+assert.equal(partialRoe.roeTradeCount, 1);
+
+const paperFallback = futuresClosedStats(
+  [closed({ id: "1", realizedUsdt: 20, notionalUsdt: 200 })],
+  10,
+);
+assert.equal(paperFallback.roePct, 1);
+assert.equal(paperFallback.roeTradeCount, 1);
 
 assert.equal(futuresDaysHeld(0, 86_400_000), null);
 assert.equal(futuresDaysHeld(0, null), null);

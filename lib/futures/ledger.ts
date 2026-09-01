@@ -80,6 +80,7 @@ export async function writeFuturesOpen(input: {
   source?: FuturesTradeSource;
   ruleId?: string | null;
   ruleName?: string | null;
+  leverage?: number | null;
 }): Promise<{ ok: true; positionId: string } | { ok: false; error: string }> {
   const source = parseFuturesTradeSource(input.source);
   const { data, error } = await input.supabase
@@ -99,6 +100,7 @@ export async function writeFuturesOpen(input: {
       rule_name: input.ruleName ?? null,
       venue: input.venue ?? null,
       environment: input.environment ?? null,
+      leverage: input.leverage ?? null,
       ...tpslColumns(input.tpsl),
       ...trailingColumns(input.trailing),
     })
@@ -159,6 +161,7 @@ export async function writeFuturesAdd(input: {
   idempotencyKey?: string | null;
   source?: FuturesTradeSource;
   ruleName?: string | null;
+  leverage?: number | null;
 }): Promise<{ error: string | null }> {
   if (input.row.status !== "open") {
     return { error: "Can only add size to an open position." };
@@ -178,6 +181,7 @@ export async function writeFuturesAdd(input: {
       notional_usdt: futuresNotionalUsdt(qty, entryPrice),
       venue: input.venue ?? input.row.venue,
       environment: input.environment ?? input.row.environment,
+      ...(input.leverage != null ? { leverage: input.leverage } : {}),
       ...(input.tpsl ? tpslColumns(input.tpsl) : {}),
       ...(input.trailing ? trailingColumns(input.trailing) : {}),
     })
@@ -232,6 +236,7 @@ export async function writeFuturesFlatten(input: {
   idempotencyKey?: string | null;
   source?: FuturesTradeSource;
   ruleName?: string | null;
+  leverage?: number | null;
 }): Promise<{ error: string | null }> {
   if (input.row.status !== "open") {
     return { error: "That position is already closed." };
@@ -250,6 +255,7 @@ export async function writeFuturesFlatten(input: {
       status: "closed",
       closed_at: new Date().toISOString(),
       realized_usdt: realized,
+      ...(input.leverage != null ? { leverage: input.leverage } : {}),
     })
     .eq("id", input.row.id)
     .eq("account_id", input.row.accountId)
@@ -311,6 +317,7 @@ export async function writeFuturesCloseSlice(input: {
   idempotencyKey?: string | null;
   source?: FuturesTradeSource;
   ruleName?: string | null;
+  leverage?: number | null;
 }): Promise<{ error: string | null; remaining: number }> {
   if (input.row.status !== "open") {
     return { error: "That position is already closed.", remaining: 0 };
@@ -332,6 +339,7 @@ export async function writeFuturesCloseSlice(input: {
       idempotencyKey: input.idempotencyKey,
       source: input.source,
       ruleName: input.ruleName ?? null,
+      leverage: input.leverage,
     });
     return { error: flattened.error, remaining: 0 };
   }
@@ -349,6 +357,7 @@ export async function writeFuturesCloseSlice(input: {
       qty: remaining,
       notional_usdt: futuresNotionalUsdt(remaining, input.row.entryPrice),
       realized_usdt: realized,
+      ...(input.leverage != null ? { leverage: input.leverage } : {}),
       ...tpslColumns(input.remainingTpsl ?? null),
     })
     .eq("id", input.row.id)

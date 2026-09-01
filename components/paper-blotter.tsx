@@ -349,17 +349,27 @@ export function PaperPerformanceStats({
           signedIn ? undefined : "Sign in to see your paper desk numbers."
         }
       />
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           label="Realized P&L"
+          value={signedIn ? formatSignedUsd(stats.realizedUsdt) : "—"}
+          toneClass={signedTone(signedIn ? stats.realizedUsdt : null)}
+          hint="Closed-carry dollars. Cash-and-carry has no isolated margin."
+        />
+        <StatCard
+          label="On notional"
           value={
-            signedIn
-              ? stats.realizedPct === null
-                ? formatSignedUsd(stats.realizedUsdt)
-                : `${formatSignedUsd(stats.realizedUsdt)} (${formatPct(stats.realizedPct)})`
+            signedIn && stats.realizedPct != null
+              ? formatPct(stats.realizedPct)
               : "—"
           }
           toneClass={signedTone(signedIn ? stats.realizedUsdt : null)}
+          hint="Realized P&L ÷ sum of closed carry value."
+        />
+        <StatCard
+          label="ROE"
+          value="—"
+          hint="Cash-and-carry has no initial-margin ROE. On notional is the return on this book."
         />
         <StatCard
           label="Completed trades"
@@ -429,14 +439,21 @@ function StatCard({
   label,
   value,
   toneClass,
+  hint,
 }: {
   label: string;
   value: string;
   toneClass?: string;
+  hint?: string;
 }) {
   return (
     <div className="rounded-card border border-line bg-surface p-5">
-      <StatBlock label={label} value={value} toneClass={toneClass} />
+      <StatBlock
+        label={label}
+        value={value}
+        toneClass={toneClass}
+        hint={hint}
+      />
     </div>
   );
 }
@@ -445,15 +462,17 @@ function StatBlock({
   label,
   value,
   toneClass,
+  hint,
 }: {
   label: string;
   value: string;
   toneClass?: string;
+  hint?: string;
 }) {
   return (
     <div>
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-        {label}
+        {hint ? <ColumnHint label={label} hint={hint} /> : label}
       </p>
       <p
         className={`mt-3 text-2xl font-semibold tracking-tight ${toneClass ?? "text-ink"}`}

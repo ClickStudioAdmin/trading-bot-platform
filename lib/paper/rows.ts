@@ -66,6 +66,7 @@ export type PaperDeskStats = {
   unrealizedUsdt: number | null;
   realizedUsdt: number;
   realizedPct: number | null;
+  roePct: number | null;
   closedCount: number;
   greenCount: number;
 };
@@ -231,6 +232,7 @@ export function paperDeskStats(
       closedNotionalUsdt > 0
         ? carryPnlPct(realizedUsdt, closedNotionalUsdt)
         : null,
+    roePct: null,
     closedCount: closed.length,
     greenCount: closed.filter((row) => (row.realizedUsdt ?? 0) > 0).length,
   };

@@ -1,5 +1,38 @@
 import type { FuturesOrder, FuturesPosition } from "./model";
 
+export function effectiveLeverage(
+  stamped: number | null | undefined,
+  fallback: number | null | undefined,
+): number | null {
+  if (stamped != null && stamped > 0 && Number.isFinite(stamped)) {
+    return stamped;
+  }
+  if (fallback != null && fallback > 0 && Number.isFinite(fallback)) {
+    return fallback;
+  }
+  return null;
+}
+
+export function positionMarginUsdt(
+  notionalUsdt: number,
+  leverage: number | null,
+): number | null {
+  if (!(notionalUsdt > 0) || leverage == null || !(leverage > 0)) {
+    return null;
+  }
+  return notionalUsdt / leverage;
+}
+
+export function roePct(
+  realizedUsdt: number,
+  marginUsdt: number | null,
+): number | null {
+  if (marginUsdt == null || !(marginUsdt > 0) || !Number.isFinite(realizedUsdt)) {
+    return null;
+  }
+  return realizedUsdt / marginUsdt;
+}
+
 export function futuresDaysHeld(
   openedAtMs: number,
   closedAtMs: number | null,
@@ -83,12 +116,32 @@ export function deskStatsSnapshot(
   };
 }
 
-export function futuresClosedStats(closed: FuturesPosition[]) {
+export function futuresClosedStats(
+  closed: FuturesPosition[],
+  fallbackLeverage: number | null = null,
+) {
   const realizedUsdt = closed.reduce((sum, row) => sum + row.realizedUsdt, 0);
   const notionalUsdt = closed.reduce((sum, row) => sum + row.notionalUsdt, 0);
+  let roeRealizedUsdt = 0;
+  let marginUsdt = 0;
+  let roeTradeCount = 0;
+  for (const row of closed) {
+    const leverage = effectiveLeverage(row.leverage, fallbackLeverage);
+    const margin = positionMarginUsdt(row.notionalUsdt, leverage);
+    if (margin == null) {
+      continue;
+    }
+    roeRealizedUsdt += row.realizedUsdt;
+    marginUsdt += margin;
+    roeTradeCount += 1;
+  }
+  const onNotionalPct = notionalUsdt > 0 ? realizedUsdt / notionalUsdt : null;
   return {
     realizedUsdt,
-    realizedPct: notionalUsdt > 0 ? realizedUsdt / notionalUsdt : null,
+    realizedPct: onNotionalPct,
+    onNotionalPct,
+    roePct: roePct(roeRealizedUsdt, marginUsdt > 0 ? marginUsdt : null),
+    roeTradeCount,
     closedCount: closed.length,
     greenCount: closed.filter((row) => row.realizedUsdt > 0).length,
   };

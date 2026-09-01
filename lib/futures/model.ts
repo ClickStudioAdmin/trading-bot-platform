@@ -16,6 +16,7 @@ export type FuturesPosition = {
   entryPrice: number;
   notionalUsdt: number;
   realizedUsdt: number;
+  leverage: number | null;
   status: FuturesPositionStatus;
   source: FuturesTradeSource;
   ruleId: string | null;
@@ -218,6 +219,7 @@ export function parseFuturesPositionRow(
     entryPrice: Number(row.entry_price) || 0,
     notionalUsdt: Number(row.notional_usdt) || 0,
     realizedUsdt: Number(row.realized_usdt) || 0,
+    leverage: asPositiveNumber(row.leverage),
     status: row.status === "closed" ? "closed" : "open",
     source: parseFuturesTradeSource(row.source),
     ruleId: String(row.rule_id ?? "").trim() || null,

@@ -4,17 +4,20 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FuturesRiskCaps } from "./risk";
 
-const SETTINGS_COLUMNS =
+const SETTINGS_COLUMNS_BASE =
   "account_id, strategy_id, user_id, exchange_connection_id, reduce_only, max_notional_per_symbol, max_open_rows";
+const SETTINGS_COLUMNS = `${SETTINGS_COLUMNS_BASE}, paper_leverage`;
 
 export type FuturesSettings = {
   connectionId: string | null;
   reduceOnly: boolean;
+  paperLeverage: number | null;
 } & FuturesRiskCaps;
 
 const EMPTY_SETTINGS: FuturesSettings = {
   connectionId: null,
   reduceOnly: false,
+  paperLeverage: null,
   maxValuePerSymbol: null,
   maxOpenPositions: null,
 };
@@ -30,6 +33,7 @@ function parseSettingsRow(row: Record<string, unknown>): FuturesSettings {
   return {
     connectionId: connectionId || null,
     reduceOnly: Boolean(row.reduce_only),
+    paperLeverage: asPositiveOrNull(row.paper_leverage),
     maxValuePerSymbol: asPositiveOrNull(row.max_notional_per_symbol),
     maxOpenPositions:
       maxOpenPositions !== null && Number.isInteger(maxOpenPositions)
@@ -42,18 +46,44 @@ export async function selectStrategySettings(
   supabase: SupabaseClient,
   filter: { accountId: string; strategyId?: string },
 ): Promise<Record<string, unknown> | null> {
+  const row = await selectSettingsColumns(supabase, filter, SETTINGS_COLUMNS);
+  if (row.ok) {
+    return row.data;
+  }
+  if (!row.retry) {
+    return null;
+  }
+  const fallback = await selectSettingsColumns(
+    supabase,
+    filter,
+    SETTINGS_COLUMNS_BASE,
+  );
+  return fallback.ok ? fallback.data : null;
+}
+
+async function selectSettingsColumns(
+  supabase: SupabaseClient,
+  filter: { accountId: string; strategyId?: string },
+  columns: string,
+): Promise<
+  | { ok: true; data: Record<string, unknown> }
+  | { ok: false; retry: boolean }
+> {
   let query = supabase
     .from("strategy_settings")
-    .select(SETTINGS_COLUMNS)
+    .select(columns)
     .eq("account_id", filter.accountId);
   if (filter.strategyId) {
     query = query.eq("strategy_id", filter.strategyId);
   }
   const { data, error } = await query.maybeSingle();
-  if (error || !data) {
-    return null;
+  if (error) {
+    return { ok: false, retry: /paper_leverage/i.test(error.message) };
   }
-  return data as Record<string, unknown>;
+  if (!data) {
+    return { ok: false, retry: false };
+  }
+  return { ok: true, data: data as unknown as Record<string, unknown> };
 }
 
 export async function loadFuturesSettings(

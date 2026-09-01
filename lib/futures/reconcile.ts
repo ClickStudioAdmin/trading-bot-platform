@@ -57,6 +57,7 @@ import {
 } from "./venue-flatten";
 import { markFromTicker } from "./math";
 import { selectStrategySettings } from "./settings";
+import { resolveWriteLeverage } from "./venue-risk-load";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { BoundConnectionSecrets } from "@/lib/exchanges/store";
 import type { BybitLinearPosition } from "@/lib/exchanges/bybit/orders";
@@ -390,6 +391,13 @@ async function applyWorkingFill(input: {
   let positionId = sameSide?.id ?? input.row.positionId;
   const tpsl = tpslFromRow(input.row);
   const trailing = armTrailingAt(trailingFromRow(input.row), input.fillPrice);
+  const leverage = await resolveWriteLeverage({
+    connection: input.connection,
+    accountId: input.row.accountId,
+    symbol: input.row.symbol,
+    side: input.row.side,
+    current: sameSide?.leverage ?? null,
+  });
   if (!sameSide) {
     const created = await writeFuturesOpen({
       supabase: input.supabase,
@@ -407,6 +415,7 @@ async function applyWorkingFill(input: {
       source: input.row.source,
       ruleName: input.row.ruleName,
       idempotencyKey: input.row.idempotencyKey,
+      leverage,
     });
     if (!created.ok) {
       await writeEventLog({
@@ -436,6 +445,7 @@ async function applyWorkingFill(input: {
       source: input.row.source,
       ruleName: input.row.ruleName,
       idempotencyKey: input.row.idempotencyKey,
+      leverage,
     });
     if (added.error) {
       await writeEventLog({
@@ -558,6 +568,13 @@ async function applyReduceOnlyWorkingFill(input: {
     venueOrderId: input.row.venueOrderId,
     source: input.row.source,
     ruleName: input.row.ruleName,
+    leverage: await resolveWriteLeverage({
+      connection: input.connection,
+      accountId: input.row.accountId,
+      symbol: input.row.symbol,
+      side: target.side,
+      current: target.leverage,
+    }),
   });
   if (closed.error) {
     await writeEventLog({
@@ -1156,6 +1173,13 @@ async function closeStopPosition(input: {
     remainingTpsl: input.remainingTpsl,
     source: input.row.source,
     ruleName: input.row.ruleName,
+    leverage: await resolveWriteLeverage({
+      connection: null,
+      accountId: input.row.accountId,
+      symbol: input.row.symbol,
+      side: input.row.side,
+      current: input.row.leverage,
+    }),
   });
   if (written.error) {
     await writeEventLog({

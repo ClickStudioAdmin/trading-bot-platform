@@ -435,6 +435,7 @@ export type DeskStatItem = {
   label: string;
   value: string;
   toneClass?: string;
+  hint?: string;
   content?: ReactNode;
 };
 
@@ -444,28 +445,48 @@ export function FuturesPerformanceStats({
   extras,
   items: itemsOverride,
   embedded = false,
+  fallbackLeverage = null,
 }: {
   signedIn: boolean;
   closed: FuturesDeskPosition[];
   extras?: DeskStatItem[];
   items?: DeskStatItem[];
   embedded?: boolean;
+  fallbackLeverage?: number | null;
 }) {
-  const stats = futuresClosedStats(closed);
+  const stats = futuresClosedStats(closed, fallbackLeverage);
   const winRate =
     stats.closedCount === 0
       ? "—"
       : `${Math.round((stats.greenCount / stats.closedCount) * 100)}%`;
+  const roeHint =
+    signedIn &&
+    stats.roeTradeCount > 0 &&
+    stats.roeTradeCount < stats.closedCount
+      ? `P&L vs initial margin (notional ÷ leverage). ROE on ${stats.roeTradeCount} of ${stats.closedCount} trades — the rest have no stored leverage.`
+      : "P&L vs initial margin (notional ÷ leverage). Exchange-style ROE.";
   const items: DeskStatItem[] = itemsOverride ?? [
     ...(extras ?? []),
     {
       label: "Realized P&L",
-      value: signedIn
-        ? stats.realizedPct === null
-          ? formatSignedUsd(stats.realizedUsdt)
-          : `${formatSignedUsd(stats.realizedUsdt)} (${formatPct(stats.realizedPct)})`
-        : "—",
+      value: signedIn ? formatSignedUsd(stats.realizedUsdt) : "—",
       toneClass: signedTone(signedIn ? stats.realizedUsdt : null),
+      hint: "Closed-trade dollars. Leverage does not change this amount.",
+    },
+    {
+      label: "On notional",
+      value:
+        signedIn && stats.onNotionalPct != null
+          ? formatPct(stats.onNotionalPct)
+          : "—",
+      toneClass: signedTone(signedIn ? stats.realizedUsdt : null),
+      hint: "Realized P&L ÷ sum of closed position value (qty × entry).",
+    },
+    {
+      label: "ROE",
+      value: signedIn && stats.roePct != null ? formatPct(stats.roePct) : "—",
+      toneClass: signedTone(signedIn ? stats.roePct : null),
+      hint: roeHint,
     },
     {
       label: "Completed trades",
@@ -479,7 +500,9 @@ export function FuturesPerformanceStats({
   const columns =
     items.length >= 6
       ? "sm:grid-cols-2 xl:grid-cols-4"
-      : "sm:grid-cols-3";
+      : items.length >= 5
+        ? "sm:grid-cols-2 xl:grid-cols-5"
+        : "sm:grid-cols-3";
 
   const grid = (
     <div className={`grid gap-4 ${columns}`}>
@@ -489,6 +512,7 @@ export function FuturesPerformanceStats({
           label={item.label}
           value={item.value}
           toneClass={item.toneClass}
+          hint={item.hint}
           content={item.content}
           raised={embedded}
         />
@@ -923,12 +947,14 @@ function StatCard({
   label,
   value,
   toneClass,
+  hint,
   content,
   raised = false,
 }: {
   label: string;
   value: string;
   toneClass?: string;
+  hint?: string;
   content?: ReactNode;
   raised?: boolean;
 }) {
@@ -941,12 +967,17 @@ function StatCard({
       {content ? (
         <div>
           <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-            {label}
+            {hint ? <ColumnHint label={label} hint={hint} /> : label}
           </p>
           <div className="mt-3">{content}</div>
         </div>
       ) : (
-        <StatBlock label={label} value={value} toneClass={toneClass} />
+        <StatBlock
+          label={label}
+          value={value}
+          toneClass={toneClass}
+          hint={hint}
+        />
       )}
     </div>
   );
@@ -956,15 +987,17 @@ function StatBlock({
   label,
   value,
   toneClass,
+  hint,
 }: {
   label: string;
   value: string;
   toneClass?: string;
+  hint?: string;
 }) {
   return (
     <div>
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-        {label}
+        {hint ? <ColumnHint label={label} hint={hint} /> : label}
       </p>
       <p
         className={`mt-3 text-2xl font-semibold tracking-tight ${toneClass ?? "text-ink"}`}

@@ -32,6 +32,7 @@ import {
   armFuturesReduceOnly,
   loadFuturesSettings,
 } from "./settings";
+import { resolveWriteLeverage } from "./venue-risk-load";
 import { COPY_RULE_NAME } from "@/lib/copy/decide";
 import { checkFuturesRiskCaps } from "./risk";
 import {
@@ -639,6 +640,13 @@ async function runPlace(
           }
         }
       }
+      const leverage = await resolveWriteLeverage({
+        connection,
+        accountId: actor.accountId,
+        symbol,
+        side: row.side,
+        current: row.leverage,
+      });
       const written = await writeFuturesCloseSlice({
         supabase,
         row,
@@ -651,6 +659,7 @@ async function runPlace(
         idempotencyKey: key,
         source,
         ruleName,
+        leverage,
       });
       if (written.error) {
         await writeEventLog({
@@ -948,6 +957,7 @@ async function runPlace(
   let venue: string | null = null;
   let environment: string | null = null;
   let venueOrderId: string | null = null;
+  let connection: BoundConnectionSecrets | null = null;
 
   if (liveBook) {
     const connectionBound = await live();
@@ -959,7 +969,7 @@ async function runPlace(
         "Bind an exchange in Desk Settings before trading.",
       );
     }
-    const connection = connectionBound.connection;
+    connection = connectionBound.connection;
     const placed = await placePerpMarketOnVenue({
       connection,
       symbol,
@@ -1002,6 +1012,14 @@ async function runPlace(
     }
   }
 
+  const leverage = await resolveWriteLeverage({
+    connection,
+    accountId: actor.accountId,
+    symbol,
+    side: decided.positionSide,
+    current: sameSide?.leverage ?? null,
+  });
+
   let written: { error: string | null };
   let flash: FuturesCommandFlash = liveBook ? "live-opened" : "opened";
   let positionId = sameSide?.id ?? null;
@@ -1023,6 +1041,7 @@ async function runPlace(
       source,
       ruleId,
       ruleName,
+      leverage,
     });
     if (!created.ok) {
       written = { error: created.error };
@@ -1044,6 +1063,7 @@ async function runPlace(
       idempotencyKey: key,
       source,
       ruleName,
+      leverage,
     });
     flash = liveBook ? "live-added" : "added";
   } else {

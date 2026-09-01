@@ -64,7 +64,13 @@ export default async function FuturesPositionsPage({
   const desk = await loadFuturesDesk();
   const settings = session
     ? await loadFuturesSettings(session.account.id)
-    : { reduceOnly: false, connectionId: null };
+    : {
+        reduceOnly: false,
+        connectionId: null,
+        paperLeverage: null,
+        maxValuePerSymbol: null,
+        maxOpenPositions: null,
+      };
   const webhooks = session
     ? await listFuturesWebhooks({
         accountId: session.account.id,
