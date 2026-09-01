@@ -21,6 +21,7 @@ import {
 import type { EventLogRow } from "@/lib/logs/list";
 import type { PaperOrderRow } from "@/lib/paper/orders";
 import { paperOpenColumnCount } from "@/lib/paper/columns";
+import { formatTradingDaysNote } from "@/lib/futures/stats";
 import {
   openExposure,
   paperDeskStats,
@@ -353,6 +354,7 @@ export function PaperPerformanceStats({
         <StatCard
           label="Completed Trades"
           value={signedIn ? String(stats.closedCount) : "—"}
+          note={signedIn ? formatTradingDaysNote(stats.tradingDays) : undefined}
         />
         <StatCard
           label="Win Rate"

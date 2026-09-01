@@ -6,6 +6,7 @@ import {
   type PaperCarryAutomation,
   type TradeSource,
 } from "@/lib/paper/automation";
+import { closedTradingDays } from "@/lib/futures/stats";
 import {
   carryPnlPct,
   carryPnlUsdt,
@@ -66,6 +67,7 @@ export type PaperDeskStats = {
   unrealizedUsdt: number | null;
   realizedUsdt: number;
   realizedPct: number | null;
+  tradingDays: number | null;
   closedCount: number;
   greenCount: number;
 };
@@ -231,6 +233,7 @@ export function paperDeskStats(
       closedNotionalUsdt > 0
         ? carryPnlPct(realizedUsdt, closedNotionalUsdt)
         : null,
+    tradingDays: closedTradingDays(closed),
     closedCount: closed.length,
     greenCount: closed.filter((row) => (row.realizedUsdt ?? 0) > 0).length,
   };

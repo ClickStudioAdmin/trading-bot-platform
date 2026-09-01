@@ -33,6 +33,7 @@ import { formatFuturesOrigin, resolveOrderOrigin } from "@/lib/futures/source";
 import {
   effectiveLeverage,
   flattenExitPrice,
+  formatTradingDaysNote,
   futuresClosedStats,
   futuresDaysHeld,
   futuresOpenExposure,
@@ -483,6 +484,7 @@ export function FuturesPerformanceStats({
     {
       label: "Completed Trades",
       value: signedIn ? String(stats.closedCount) : "—",
+      note: signedIn ? formatTradingDaysNote(stats.tradingDays) : undefined,
     },
     {
       label: "Win Rate",
@@ -511,13 +513,22 @@ export function FuturesPerformanceStats({
       hint: roeHint,
       note: "Based on margin requirement",
     },
+    {
+      label: "APR",
+      value: signedIn && stats.aprPct != null ? formatPct(stats.aprPct) : "—",
+      toneClass: signedTone(signedIn ? stats.aprPct : null),
+      hint: "Compound annualization of ROE over the calendar span of this book (first close to last close). Short windows inflate APR.",
+      note: "Annualized ROE",
+    },
   ];
   const columns =
-    items.length >= 6
+    items.length >= 7
       ? "sm:grid-cols-2 xl:grid-cols-4"
-      : items.length >= 5
-        ? "sm:grid-cols-2 xl:grid-cols-5"
-        : "sm:grid-cols-3";
+      : items.length === 6
+        ? "sm:grid-cols-2 xl:grid-cols-3"
+        : items.length >= 5
+          ? "sm:grid-cols-2 xl:grid-cols-5"
+          : "sm:grid-cols-3";
 
   const grid = (
     <div className={`grid gap-4 ${columns}`}>

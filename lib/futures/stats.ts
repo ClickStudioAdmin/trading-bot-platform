@@ -43,6 +43,70 @@ export function futuresDaysHeld(
   return (closedAtMs - openedAtMs) / 86_400_000;
 }
 
+const MS_PER_DAY = 86_400_000;
+const DAYS_PER_YEAR = 365.25;
+
+function utcDayStartMs(atMs: number): number {
+  const date = new Date(atMs);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
+
+export function inclusiveUtcDays(
+  fromMs: number,
+  toMs: number,
+): number | null {
+  if (!(fromMs > 0) || !(toMs > 0) || toMs < fromMs) {
+    return null;
+  }
+  return (utcDayStartMs(toMs) - utcDayStartMs(fromMs)) / MS_PER_DAY + 1;
+}
+
+export function closedTradingDays(
+  closed: readonly { closedAtMs: number | null }[],
+): number | null {
+  let first: number | null = null;
+  let last: number | null = null;
+  for (const row of closed) {
+    const at = row.closedAtMs;
+    if (at == null || !(at > 0)) {
+      continue;
+    }
+    if (first == null || at < first) {
+      first = at;
+    }
+    if (last == null || at > last) {
+      last = at;
+    }
+  }
+  if (first == null || last == null) {
+    return null;
+  }
+  return inclusiveUtcDays(first, last);
+}
+
+export function annualizeReturnPct(
+  periodReturn: number | null,
+  days: number | null,
+): number | null {
+  if (
+    periodReturn == null ||
+    days == null ||
+    !(days > 0) ||
+    !Number.isFinite(periodReturn) ||
+    periodReturn <= -1
+  ) {
+    return null;
+  }
+  return (1 + periodReturn) ** (DAYS_PER_YEAR / days) - 1;
+}
+
+export function formatTradingDaysNote(days: number | null): string | undefined {
+  if (days == null || !(days > 0)) {
+    return undefined;
+  }
+  return days === 1 ? "1 day trading" : `${days} days trading`;
+}
+
 export const DESK_STATS_WINDOW_MS = 30 * 86_400_000;
 
 export type DeskCloseForStats = {
@@ -136,12 +200,16 @@ export function futuresClosedStats(
     roeTradeCount += 1;
   }
   const onNotionalPct = notionalUsdt > 0 ? realizedUsdt / notionalUsdt : null;
+  const roe = roePct(roeRealizedUsdt, marginUsdt > 0 ? marginUsdt : null);
+  const tradingDays = closedTradingDays(closed);
   return {
     realizedUsdt,
     realizedPct: onNotionalPct,
     onNotionalPct,
-    roePct: roePct(roeRealizedUsdt, marginUsdt > 0 ? marginUsdt : null),
+    roePct: roe,
     roeTradeCount,
+    tradingDays,
+    aprPct: annualizeReturnPct(roe, tradingDays),
     closedCount: closed.length,
     greenCount: closed.filter((row) => row.realizedUsdt > 0).length,
   };
