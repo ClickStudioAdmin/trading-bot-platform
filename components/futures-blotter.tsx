@@ -488,7 +488,7 @@ function drawdownCard(input: {
       value: giveback,
       hint,
       content: (
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           <div>
             <p
               className={`text-2xl font-semibold tracking-tight tabular-nums ${signedTone(-input.givebackUsdt)}`}
