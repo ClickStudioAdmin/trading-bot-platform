@@ -30,6 +30,7 @@ import {
   dcaLadderLevels,
   dcaLadderLossRange,
   dcaLadderProfitRange,
+  dcaClipFromBudget,
   dcaInitialMarginUsdt,
   dcaMaxDropCoveredPct,
   dcaRequiredUsdt,
@@ -44,7 +45,6 @@ import {
   dcaIntervalParts,
   dcaLegFor,
   dcaLegIsRunning,
-  dcaMaxTypeFromCaps,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
   dcaStartListens,
@@ -53,7 +53,6 @@ import {
   type DcaAveragingKind,
   type DcaExitBasis,
   type DcaIntervalUnit,
-  type DcaMaxType,
   type DcaPlaybook,
   type DcaStartKind,
 } from "@/lib/dca/playbook";
@@ -106,6 +105,11 @@ function optional(value: number | null | undefined): string {
 function asNumber(text: string): number | null {
   const value = Number(text.replace(/,/g, "").trim());
   return value > 0 && Number.isFinite(value) ? value : null;
+}
+
+function formatDerivedClip(value: number, unit: "qty" | "usdt"): string {
+  const places = unit === "usdt" ? 4 : 8;
+  return value.toFixed(places).replace(/\.?0+$/, "");
 }
 
 function SizeGuardNote({ message }: { message: string | null }) {
@@ -179,7 +183,6 @@ function dcaSummaryPreview(input: {
   dipPct: string;
   maxClips: string;
   maxValue: string;
-  effectiveMaxType: DcaMaxType;
   takeProfitPct: string;
   takeProfitBasis: DcaExitBasis;
   stopLossPct: string;
@@ -196,7 +199,7 @@ function dcaSummaryPreview(input: {
     input.lastPrice !== null && input.lastPrice > 0 ? input.lastPrice : 100;
   const priceFromLast = input.lastPrice !== null && input.lastPrice > 0;
   const clips =
-    input.effectiveMaxType === "orders"
+    orderCap !== null
       ? orderCap
       : valueCap !== null && size !== null
         ? dcaClipsUntilMaxValue({
@@ -602,9 +605,6 @@ export function DcaPlaybookForm({
   const [sizeUnit, setSizeUnit] = useState(source?.sizeUnit ?? "usdt");
   const [maxClips, setMaxClips] = useState(optional(source?.maxClips));
   const [maxValue, setMaxValue] = useState(optional(source?.maxValue));
-  const [maxType, setMaxType] = useState<DcaMaxType>(() =>
-    dcaMaxTypeFromCaps(source?.maxClips ?? null, source?.maxValue ?? null),
-  );
   const [dipPct, setDipPct] = useState(optional(source?.dipPct));
   const intervalParts = dcaIntervalParts(source?.intervalMinutes ?? null);
   const [intervalUnit, setIntervalUnit] = useState<DcaIntervalUnit>(
@@ -683,25 +683,33 @@ export function DcaPlaybookForm({
   const showArmButton =
     dcaStartListens(startKind) && Boolean(playbook) && running;
   const selectedPair = options.find((row) => row.symbol === symbol);
+  const derivedClip = dcaClipFromBudget({
+    maxValue: asNumber(maxValue),
+    maxClips: asNumber(maxClips),
+    sizeMultiplier: asNumber(sizeMultiplier) ?? 1,
+    sizeUnit,
+    mark: lastPrice,
+  });
+  const budgetSizesClip = derivedClip != null;
+  const clipForSave = budgetSizesClip
+    ? formatDerivedClip(derivedClip, sizeUnit)
+    : clipSize;
   const sizeError = perpTicketSizeError({
-    size: clipSize,
+    size: clipForSave,
     unit: sizeUnit,
     minQty: selectedPair?.minQty ?? 0,
     minNotional: selectedPair?.minNotional ?? 0,
     lastPrice,
     baseCoin: selectedPair?.baseCoin ?? "Token",
   });
-  const effectiveMaxType: DcaMaxType = restGrid ? "orders" : maxType;
   const ladderMaxError = dcaConfigMaxOrderError({
     config: {
       direction,
       dcaMode: averaging !== "interval" && restGrid ? "order" : "position",
-      clipSize: asNumber(clipSize) ?? 0,
+      clipSize: asNumber(clipForSave) ?? 0,
       sizeUnit,
-      maxClips:
-        effectiveMaxType === "orders" ? asNumber(maxClips) : null,
-      maxValue:
-        effectiveMaxType === "value" ? asNumber(maxValue) : null,
+      maxClips: asNumber(maxClips),
+      maxValue: asNumber(maxValue),
       dipPct: averaging === "dip" ? asNumber(dipPct) : null,
       sizeMultiplier: asNumber(sizeMultiplier) ?? 1,
       deviationMultiplier: asNumber(deviationMultiplier) ?? 1,
@@ -712,20 +720,19 @@ export function DcaPlaybookForm({
     baseCoin: selectedPair?.baseCoin ?? "Token",
   });
   const saveError =
-    asNumber(clipSize) === null ? sizeError : (sizeError ?? ladderMaxError);
+    asNumber(clipForSave) === null ? sizeError : (sizeError ?? ladderMaxError);
   const restGridEffective = averaging !== "interval" && restGrid;
   const summaryBySide = useMemo(() => {
     const input = {
       lastPrice,
       averaging,
-      clipSize,
+      clipSize: clipForSave,
       sizeUnit,
       sizeMultiplier,
       deviationMultiplier,
       dipPct,
       maxClips,
       maxValue,
-      effectiveMaxType,
       takeProfitPct,
       takeProfitBasis,
       stopLossPct,
@@ -738,7 +745,7 @@ export function DcaPlaybookForm({
     };
   }, [
     averaging,
-    clipSize,
+    clipForSave,
     deviationMultiplier,
     dipPct,
     lastPrice,
@@ -750,7 +757,6 @@ export function DcaPlaybookForm({
     stopLossPct,
     takeProfitBasis,
     takeProfitPct,
-    effectiveMaxType,
     leverage,
   ]);
   const showLadderTabs = direction === "both";
@@ -769,8 +775,7 @@ export function DcaPlaybookForm({
       averaging,
       restGrid: averaging === "dip" && restGrid,
       sizeUnit,
-      clipSize,
-      maxType: effectiveMaxType,
+      clipSize: clipForSave,
       maxClips,
       maxValue,
       dipPct,
@@ -1276,6 +1281,39 @@ export function DcaPlaybookForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <fieldset className={sectionClass}>
           <p className={sectionTitleClass}>
+            Maximum Exposure
+          </p>
+          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+            <label className={labelClass}>
+              Max orders
+              <GroupedNumberInput
+                name="maxClips"
+                value={maxClips}
+                onChange={setMaxClips}
+                className={fieldClass}
+                placeholder="No cap"
+              />
+            </label>
+            <label className={labelClass}>
+              Max value ({policy.quoteLabel})
+              <GroupedNumberInput
+                name="maxValue"
+                value={maxValue}
+                onChange={setMaxValue}
+                allowDecimal
+                className={fieldClass}
+                placeholder="No cap"
+              />
+            </label>
+          </div>
+          {restGrid ? (
+            <p className="text-xs text-ink-muted">
+              Remaining GTC limits use max orders.
+            </p>
+          ) : null}
+        </fieldset>
+        <fieldset className={sectionClass}>
+          <p className={sectionTitleClass}>
             Initial Order Size
           </p>
           <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
@@ -1295,81 +1333,45 @@ export function DcaPlaybookForm({
             </label>
             <label className={labelClass}>
               Order size
-              <GroupedNumberInput
-                name="clipSize"
-                value={clipSize}
-                onChange={setClipSize}
-                allowDecimal
-                className={`mt-0.5 w-full rounded-control border bg-surface-raised px-2 py-1.5 text-sm text-ink focus:outline-none ${
-                  sizeError
-                    ? "border-danger focus:border-danger"
-                    : "border-line focus:border-line-strong"
-                }`}
-              />
+              {budgetSizesClip ? (
+                <>
+                  <input type="hidden" name="clipSize" value={clipForSave} />
+                  <GroupedNumberInput
+                    value={clipForSave}
+                    onChange={() => undefined}
+                    allowDecimal
+                    className={`${fieldClass} cursor-default text-ink-muted`}
+                    ariaLabel="Calculated order size"
+                  />
+                </>
+              ) : (
+                <GroupedNumberInput
+                  name="clipSize"
+                  value={clipSize}
+                  onChange={setClipSize}
+                  allowDecimal
+                  className={`mt-0.5 w-full rounded-control border bg-surface-raised px-2 py-1.5 text-sm text-ink focus:outline-none ${
+                    sizeError
+                      ? "border-danger focus:border-danger"
+                      : "border-line focus:border-line-strong"
+                  }`}
+                />
+              )}
               {sizeError ? (
                 <p className="mt-1 text-xs text-danger">{sizeError}</p>
+              ) : budgetSizesClip ? (
+                <p className="mt-1 text-xs text-ink-muted">
+                  Calculated from max value and max orders
+                </p>
+              ) : asNumber(maxValue) != null && asNumber(maxClips) != null ? (
+                <p className="mt-1 text-xs text-ink-muted">
+                  {sizeUnit === "qty"
+                    ? "Need a last price to calculate qty from max value."
+                    : null}
+                </p>
               ) : null}
             </label>
           </div>
-        </fieldset>
-        <fieldset className={sectionClass}>
-          <p className={sectionTitleClass}>
-            Maximum Exposure
-          </p>
-          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-            <label className={labelClass}>
-              Maximum type
-              <select
-                name="maxType"
-                value={effectiveMaxType}
-                onChange={(event) =>
-                  setMaxType(
-                    event.target.value === "value" ? "value" : "orders",
-                  )
-                }
-                className={fieldClass}
-              >
-                <option value="orders">Orders</option>
-                <option value="value" disabled={restGrid}>
-                  Value
-                </option>
-              </select>
-            </label>
-            {effectiveMaxType === "orders" ? (
-              <label className={labelClass}>
-                Max orders
-                <GroupedNumberInput
-                  name="maxClips"
-                  value={maxClips}
-                  onChange={setMaxClips}
-                  className={fieldClass}
-                  placeholder="No cap"
-                />
-              </label>
-            ) : (
-              <label className={labelClass}>
-                Max position value (USDT)
-                <GroupedNumberInput
-                  name="maxValue"
-                  value={maxValue}
-                  onChange={setMaxValue}
-                  allowDecimal
-                  className={fieldClass}
-                  placeholder="No cap"
-                />
-              </label>
-            )}
-          </div>
-          {effectiveMaxType === "orders" ? (
-            <input type="hidden" name="maxValue" value="" />
-          ) : (
-            <input type="hidden" name="maxClips" value="" />
-          )}
-          {restGrid ? (
-            <p className="text-xs text-ink-muted">
-              Remaining GTC limits use max orders.
-            </p>
-          ) : null}
         </fieldset>
       </div>
 
@@ -1444,11 +1446,7 @@ export function DcaPlaybookForm({
                   value="1"
                   checked={restGrid}
                   onChange={(event) => {
-                    const on = event.target.checked;
-                    setRestGrid(on);
-                    if (on) {
-                      setMaxType("orders");
-                    }
+                    setRestGrid(event.target.checked);
                   }}
                   className="mt-0.5"
                 />
@@ -1883,7 +1881,7 @@ export function DcaPlaybookForm({
               </thead>
               <tbody>
                 {summary.levels.map((row) => {
-                  const size = asNumber(clipSize) ?? 0;
+                  const size = asNumber(clipForSave) ?? 0;
                   const sizeMult = asNumber(sizeMultiplier) ?? 1;
                   const qty = dcaClipQtyAt(
                     row.index - 1,

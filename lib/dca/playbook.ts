@@ -20,7 +20,14 @@ import {
   type FuturesTpsl,
 } from "@/lib/futures/tpsl";
 import { futuresPnlUsdt } from "@/lib/futures/math";
-import { dcaClipSizeAt, dcaDipPctAt, dcaLadderMaxOrderError, dcaPlannedExits, dcaSafetyPrices } from "./grid";
+import {
+  dcaClipFromBudget,
+  dcaClipSizeAt,
+  dcaDipPctAt,
+  dcaLadderMaxOrderError,
+  dcaPlannedExits,
+  dcaSafetyPrices,
+} from "./grid";
 import {
   dcaIndicatorStartLatches,
   indicatorClosesForCross,
@@ -562,7 +569,9 @@ export function parseDcaPlaybookForm(
   const clipSize = parseFuturesQty(form.get("clipSize"));
   const maxClips = parseOptionalPositiveInt(form.get("maxClips"));
   const maxValue = parseOptionalPositive(form.get("maxValue"));
-  const maxType = parseDcaMaxType(form.get("maxType"));
+  const typedMaxType = form.get("maxType");
+  const hasMaxType =
+    typedMaxType != null && String(typedMaxType).trim() !== "";
   const dipPct =
     averaging === "interval"
       ? { ok: true as const, value: null }
@@ -609,17 +618,38 @@ export function parseDcaPlaybookForm(
   if (!sizeUnit.ok) {
     return sizeUnit;
   }
-  if (!clipSize.ok) {
-    return { ok: false, error: "Enter an order size." };
-  }
   if (!maxClips.ok) {
     return maxClips;
   }
   if (!maxValue.ok) {
     return maxValue;
   }
-  const clipsCap = maxType === "orders" ? maxClips.value : null;
-  const valueCap = maxType === "value" ? maxValue.value : null;
+  let clipsCap = maxClips.value;
+  let valueCap = maxValue.value;
+  if (hasMaxType) {
+    const maxType = parseDcaMaxType(typedMaxType);
+    clipsCap = maxType === "orders" ? maxClips.value : null;
+    valueCap = maxType === "value" ? maxValue.value : null;
+  }
+  const derivedClip =
+    clipsCap != null && valueCap != null && sizeUnit.unit === "usdt"
+      ? dcaClipFromBudget({
+          maxValue: valueCap,
+          maxClips: clipsCap,
+          sizeMultiplier: sizeMultiplier.ok ? sizeMultiplier.value : 1,
+          sizeUnit: "usdt",
+        })
+      : null;
+  const clipQty = derivedClip ?? (clipSize.ok ? clipSize.qty : null);
+  if (clipQty == null || !(clipQty > 0)) {
+    return {
+      ok: false,
+      error:
+        clipsCap != null && valueCap != null && sizeUnit.unit === "qty"
+          ? "Enter an order size, or use USDT size so the first order can be calculated."
+          : "Enter an order size.",
+    };
+  }
   if (!dipPct.ok) {
     return dipPct;
   }
@@ -737,7 +767,7 @@ export function parseDcaPlaybookForm(
       startKind,
       webhookId,
       dcaMode,
-      clipSize: clipSize.qty,
+      clipSize: clipQty,
       sizeUnit: sizeUnit.unit,
       maxClips: clipsCap,
       maxValue: valueCap,

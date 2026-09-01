@@ -17,6 +17,48 @@ export function dcaClipSizeAt(
   return clipSize * sizeMultiplier ** clipIndex;
 }
 
+export function dcaGeometricSizeSum(
+  clips: number,
+  sizeMultiplier: number,
+): number | null {
+  if (!(clips > 0) || !Number.isFinite(clips) || !(sizeMultiplier > 0)) {
+    return null;
+  }
+  const count = Math.floor(clips);
+  if (sizeMultiplier === 1) {
+    return count;
+  }
+  return (sizeMultiplier ** count - 1) / (sizeMultiplier - 1);
+}
+
+export function dcaClipFromBudget(input: {
+  maxValue: number | null;
+  maxClips: number | null;
+  sizeMultiplier: number;
+  sizeUnit: "qty" | "usdt";
+  mark?: number | null;
+}): number | null {
+  if (
+    input.maxValue == null ||
+    !(input.maxValue > 0) ||
+    input.maxClips == null ||
+    !(input.maxClips > 0)
+  ) {
+    return null;
+  }
+  const sum = dcaGeometricSizeSum(input.maxClips, input.sizeMultiplier);
+  if (sum == null || !(sum > 0)) {
+    return null;
+  }
+  if (input.sizeUnit === "usdt") {
+    return input.maxValue / sum;
+  }
+  if (input.mark == null || !(input.mark > 0)) {
+    return null;
+  }
+  return input.maxValue / (sum * input.mark);
+}
+
 export function dcaClipQtyAt(
   clipIndex: number,
   clipSize: number,

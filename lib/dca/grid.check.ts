@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
   dcaBreakevenPrice,
+  dcaClipFromBudget,
   dcaClipQtyAt,
   dcaClipSizeAt,
+  dcaGeometricSizeSum,
   dcaDipPctAt,
   dcaClipsUntilMaxValue,
   dcaFirstOrderOverMaxQty,
@@ -40,6 +42,45 @@ assert.equal(dcaClipSizeAt(1, 10, 2), 20);
 assert.equal(dcaClipSizeAt(2, 10, 2), 40);
 assert.equal(dcaClipQtyAt(0, 10, 2, "qty", 100), 10);
 assert.equal(dcaClipQtyAt(1, 100, 2, "usdt", 50), 4);
+assert.equal(dcaGeometricSizeSum(3, 2), 7);
+assert.equal(dcaGeometricSizeSum(3, 1), 3);
+assert.equal(
+  dcaClipFromBudget({
+    maxValue: 700,
+    maxClips: 3,
+    sizeMultiplier: 2,
+    sizeUnit: "usdt",
+  }),
+  100,
+);
+assert.equal(
+  dcaClipFromBudget({
+    maxValue: 300,
+    maxClips: 3,
+    sizeMultiplier: 1,
+    sizeUnit: "usdt",
+  }),
+  100,
+);
+assert.equal(
+  dcaClipFromBudget({
+    maxValue: 700,
+    maxClips: 3,
+    sizeMultiplier: 2,
+    sizeUnit: "qty",
+    mark: 50,
+  }),
+  100 / 50,
+);
+assert.equal(
+  dcaClipFromBudget({
+    maxValue: 700,
+    maxClips: null,
+    sizeMultiplier: 2,
+    sizeUnit: "usdt",
+  }),
+  null,
+);
 assert.equal(
   dcaFirstOrderOverMaxQty({
     side: "long",

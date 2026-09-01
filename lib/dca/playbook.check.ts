@@ -1338,6 +1338,21 @@ if (valueOnlyParsed.ok) {
   assert.equal(valueOnlyParsed.config.maxValue, 50000);
 }
 
+const bothCaps = new FormData();
+bothCaps.set("symbol", "BTCUSDT");
+bothCaps.set("side", "long");
+bothCaps.set("sizeUnit", "usdt");
+bothCaps.set("maxClips", "3");
+bothCaps.set("maxValue", "700");
+bothCaps.set("sizeMultiplier", "2");
+const bothCapsParsed = parseDcaPlaybookForm(bothCaps);
+assert.equal(bothCapsParsed.ok, true);
+if (bothCapsParsed.ok) {
+  assert.equal(bothCapsParsed.config.maxClips, 3);
+  assert.equal(bothCapsParsed.config.maxValue, 700);
+  assert.equal(bothCapsParsed.config.clipSize, 100);
+}
+
 const row = parseDcaPlaybookRow({
   id: "pb-1",
   user_id: "user-1",

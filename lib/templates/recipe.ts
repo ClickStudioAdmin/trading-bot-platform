@@ -2,7 +2,6 @@ import { formatDeskType, type DeskType } from "@/lib/accounts/model";
 import {
   dcaAveragingKind,
   dcaIntervalParts,
-  dcaMaxTypeFromCaps,
   parseDcaPlaybookForm,
   type DcaPlaybookConfig,
 } from "@/lib/dca/playbook";
@@ -448,7 +447,11 @@ export function dcaRecipeToConfig(
   form.set("clipSize", String(recipe.clipSize ?? ""));
   const maxClips = asNullableNumber(recipe.maxClips);
   const maxValue = asNullableNumber(recipe.maxValue);
-  form.set("maxType", dcaMaxTypeFromCaps(maxClips, maxValue));
+  if (maxClips != null && maxValue == null) {
+    form.set("maxType", "orders");
+  } else if (maxClips == null && maxValue != null) {
+    form.set("maxType", "value");
+  }
   if (maxClips != null) {
     form.set("maxClips", String(maxClips));
   }
