@@ -1419,7 +1419,7 @@ export function DcaPlaybookForm({
                 <p className="mt-1 text-xs text-danger">{sizeError}</p>
               ) : budgetSizesClip ? (
                 <p className="mt-1 text-xs text-ink-muted">
-                  Calculated from max value and max orders
+                  Calculated from max value and max orders at the start of each cycle
                 </p>
               ) : valueCapUsdt != null && asNumber(maxClips) != null ? (
                 <p className="mt-1 text-xs text-ink-muted">
