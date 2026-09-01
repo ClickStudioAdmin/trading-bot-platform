@@ -25,7 +25,7 @@ User
 
 Site header **Backtesting Tool** (`/account/backtests`).
 
-Each run has its own **detail page**: parameters, stats, orders list, account-impact timeline, and an inline chart. Lists only link there. Old `?run=` URLs redirect.
+Each run has its own **detail page**: parameters, stats, orders list, account-impact timeline, and an inline chart. The list shows name, type, contract, comparables, window, days, win rate, return, ROE, realized, then status and Remove. Lists only link to the detail page. Old `?run=` URLs redirect.
 
 ## Locked for this slice
 
