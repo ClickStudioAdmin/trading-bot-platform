@@ -1,8 +1,22 @@
 export function formatPct(value: number | null): string {
-  if (value === null) {
+  if (value === null || !Number.isFinite(value)) {
     return "—";
   }
-  return `${(value * 100).toFixed(2)}%`;
+  const points = value * 100;
+  if (!Number.isFinite(points)) {
+    return "—";
+  }
+  return `${points.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}%`;
+}
+
+export function formatCount(value: number): string {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+  return Math.round(value).toLocaleString("en-US");
 }
 
 export function formatUsd(value: number): string {

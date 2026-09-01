@@ -32,8 +32,8 @@ import type { FuturesOrder, FuturesTradeSource } from "@/lib/futures/model";
 import { formatFuturesOrigin, resolveOrderOrigin } from "@/lib/futures/source";
 import {
   effectiveLeverage,
+  deskWindowStats,
   flattenExitPrice,
-  formatTradingDaysNote,
   futuresClosedStats,
   futuresDaysHeld,
   futuresOpenExposure,
@@ -41,6 +41,7 @@ import {
   roePct,
 } from "@/lib/futures/stats";
 import {
+  formatCount,
   formatPct,
   formatPrice,
   formatQty,
@@ -469,6 +470,7 @@ export function FuturesPerformanceStats({
   fallbackLeverage?: number | null;
 }) {
   const stats = futuresClosedStats(closed, fallbackLeverage);
+  const drawdown = deskWindowStats(closed);
   const winRate =
     stats.closedCount === 0
       ? "—"
@@ -482,13 +484,31 @@ export function FuturesPerformanceStats({
   const items: DeskStatItem[] = itemsOverride ?? [
     ...(extras ?? []),
     {
+      label: "Days Trading",
+      value:
+        signedIn && stats.tradingDays != null
+          ? formatCount(stats.tradingDays)
+          : "—",
+      hint: "Inclusive UTC days from the first closed trade to the last closed trade.",
+    },
+    {
       label: "Completed Trades",
-      value: signedIn ? String(stats.closedCount) : "—",
-      note: signedIn ? formatTradingDaysNote(stats.tradingDays) : undefined,
+      value: signedIn ? formatCount(stats.closedCount) : "—",
     },
     {
       label: "Win Rate",
       value: signedIn ? winRate : "—",
+    },
+    {
+      label: "Max Drawdown",
+      value: !signedIn
+        ? "—"
+        : stats.closedCount === 0
+          ? "—"
+          : drawdown.maxDrawdownPct == null
+            ? formatSignedUsd(drawdown.maxDrawdownUsdt)
+            : formatPct(drawdown.maxDrawdownPct),
+      hint: "Peak-to-trough of realized P&L, in close-time order.",
     },
     {
       label: "Realized Profit",

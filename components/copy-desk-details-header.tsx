@@ -3,6 +3,7 @@ import Link from "next/link";
 import { formatDeskType } from "@/lib/accounts/model";
 import type { CopyCatalogueCard } from "@/lib/copy/catalogue";
 import { getVenue } from "@/lib/exchanges/venues";
+import { formatCount } from "@/lib/opportunities/format";
 
 export function CopyDeskDetailsHeader({
   card,
@@ -17,11 +18,15 @@ export function CopyDeskDetailsHeader({
     ? `/account/copy/traders/${encodeURIComponent(card.traderAlias)}`
     : "/account/copy";
   const venueLabel = getVenue(card.venue)?.label ?? card.venue;
+  const followers =
+    card.maxFollowers == null
+      ? formatCount(card.followerCount)
+      : `${formatCount(card.followerCount)} / ${formatCount(card.maxFollowers)}`;
 
   return (
     <section className="mb-8 rounded-card border border-line bg-surface p-5">
       <div className="flex items-start justify-between gap-4">
-        <div className="grid min-w-0 flex-1 gap-6 lg:grid-cols-2 lg:gap-8">
+        <div className="grid min-w-0 flex-1 gap-6 md:grid-cols-2 xl:grid-cols-3 xl:gap-8">
           <div className="min-w-0">
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint">
               Desk
@@ -59,6 +64,14 @@ export function CopyDeskDetailsHeader({
                 </div>
               </div>
             </div>
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint">
+              Followers
+            </p>
+            <p className="mt-3 text-2xl font-semibold tracking-tight text-ink">
+              {followers}
+            </p>
           </div>
           <div className="min-w-0">
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint">
