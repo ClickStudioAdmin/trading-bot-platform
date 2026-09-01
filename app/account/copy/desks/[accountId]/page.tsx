@@ -10,8 +10,16 @@ import { loadCopyCatalogueDesk } from "@/lib/copy/catalogue";
 import { loadCopyDeskPublicClosed } from "@/lib/copy/desk-performance";
 import { getSessionMember } from "@/lib/auth/session";
 import { listExchangeConnections } from "@/lib/exchanges/store";
-import { deskWindowStats } from "@/lib/futures/stats";
-import { formatPct, formatSignedUsd } from "@/lib/opportunities/format";
+import {
+  deskWindowStats,
+  formatTradingDaysNote,
+  futuresClosedStats,
+} from "@/lib/futures/stats";
+import {
+  formatPct,
+  formatSignedUsd,
+  signedTone,
+} from "@/lib/opportunities/format";
 import { notFound, redirect } from "next/navigation";
 
 export async function generateMetadata({
@@ -57,11 +65,16 @@ export default async function CopyDeskPerformancePage({
     listExchangeConnections(member.id),
   ]);
   const allTime = deskWindowStats(closed);
-  const empty = allTime.closedCount === 0;
+  const stats = futuresClosedStats(closed);
+  const empty = stats.closedCount === 0;
   const followers =
     card.maxFollowers == null
       ? String(card.followerCount)
       : `${card.followerCount} / ${card.maxFollowers}`;
+  const roeHint =
+    stats.roeTradeCount > 0 && stats.roeTradeCount < stats.closedCount
+      ? `P&L vs initial margin (notional ÷ leverage). ROE on ${stats.roeTradeCount} of ${stats.closedCount} trades — the rest have no stored leverage.`
+      : "P&L vs initial margin (notional ÷ leverage). Exchange-style ROE.";
 
   return (
     <>
@@ -70,45 +83,68 @@ export default async function CopyDeskPerformancePage({
           Copy Desks
         </Link>
       </p>
-      <CopyDeskDetailsHeader card={card}>
+      <CopyDeskDetailsHeader
+        card={card}
+        action={
+          <CopyFollowButton
+            parentAccountId={card.accountId}
+            deskName={card.deskName}
+            deskType={card.deskType}
+            venue={card.venue}
+            venueEnvironment={card.venueEnvironment}
+            connections={connections}
+            following={card.following}
+            className="whitespace-nowrap rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
+          />
+        }
+      >
         <FuturesPerformanceStats
           signedIn
           closed={closed}
           embedded
           items={[
             {
-              label: "Completed trades",
-              value: String(allTime.closedCount),
+              label: "Completed Trades",
+              value: String(stats.closedCount),
+              note: formatTradingDaysNote(stats.tradingDays),
             },
             {
-              label: "Win rate",
+              label: "Win Rate",
               value: empty
                 ? "—"
-                : `${Math.round((allTime.winCount / allTime.closedCount) * 100)}%`,
+                : `${Math.round((stats.greenCount / stats.closedCount) * 100)}%`,
             },
             {
               label: "Realized P&L",
-              value: empty ? "—" : formatSignedUsd(allTime.realizedUsdt),
-              toneClass: empty
-                ? undefined
-                : allTime.realizedUsdt < 0
-                  ? "text-danger"
-                  : "text-success",
+              value: empty ? "—" : formatSignedUsd(stats.realizedUsdt),
+              toneClass: signedTone(empty ? null : stats.realizedUsdt),
+              hint: "Closed-trade dollars. Leverage does not change this amount.",
             },
             {
-              label: "ROI",
-              value: empty || allTime.realizedPct == null
-                ? "—"
-                : formatPct(allTime.realizedPct),
-              toneClass:
-                empty || allTime.realizedUsdt === 0
-                  ? undefined
-                  : allTime.realizedUsdt < 0
-                    ? "text-danger"
-                    : "text-success",
+              label: "P&L",
+              value:
+                empty || stats.onNotionalPct == null
+                  ? "—"
+                  : formatPct(stats.onNotionalPct),
+              toneClass: signedTone(empty ? null : stats.realizedUsdt),
+              hint: "Realized profit ÷ sum of closed position value (qty × entry).",
+              note: "Based on position value",
+            },
+            {
+              label: "ROE",
+              value: empty || stats.roePct == null ? "—" : formatPct(stats.roePct),
+              toneClass: signedTone(empty ? null : stats.roePct),
+              hint: roeHint,
+              note: "Based on margin requirement",
+            },
+            {
+              label: "APR",
+              value: empty || stats.aprPct == null ? "—" : formatPct(stats.aprPct),
+              toneClass: signedTone(empty ? null : stats.aprPct),
+              hint: "Compound annualization of ROE over the calendar span of this book (first close to last close). Short windows inflate APR.",
+              note: "Annualized ROE",
             },
             { label: "Followers", value: followers },
-            { label: "Invited", value: String(card.invitedCount) },
             {
               label: "Max drawdown",
               value: empty
@@ -116,22 +152,6 @@ export default async function CopyDeskPerformancePage({
                 : allTime.maxDrawdownPct == null
                   ? formatSignedUsd(allTime.maxDrawdownUsdt)
                   : formatPct(allTime.maxDrawdownPct),
-            },
-            {
-              label: "Copy",
-              value: card.following ? "Following" : "Copy",
-              content: (
-                <CopyFollowButton
-                  parentAccountId={card.accountId}
-                  deskName={card.deskName}
-                  deskType={card.deskType}
-                  venue={card.venue}
-                  venueEnvironment={card.venueEnvironment}
-                  connections={connections}
-                  following={card.following}
-                  className="w-full rounded-control bg-accent-strong px-4 py-2 text-center text-sm font-medium text-ink"
-                />
-              ),
             },
           ]}
         />
