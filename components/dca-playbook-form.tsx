@@ -702,20 +702,22 @@ export function DcaPlaybookForm({
   });
   const valueCapUsdt =
     maxValueKind === "percent" ? resolvedMaxValue : asNumber(maxValue);
+  const budgetSizesClip =
+    valueCapUsdt != null && asNumber(maxClips) != null;
+  const sizeUnitForClip = budgetSizesClip ? "usdt" : sizeUnit;
   const derivedClip = dcaClipFromBudget({
     maxValue: valueCapUsdt,
     maxClips: asNumber(maxClips),
     sizeMultiplier: asNumber(sizeMultiplier) ?? 1,
-    sizeUnit,
+    sizeUnit: sizeUnitForClip,
     mark: lastPrice,
   });
-  const budgetSizesClip = derivedClip != null;
-  const clipForSave = budgetSizesClip
-    ? formatDerivedClip(derivedClip, sizeUnit)
+  const clipForSave = derivedClip != null
+    ? formatDerivedClip(derivedClip, sizeUnitForClip)
     : clipSize;
   const sizeError = perpTicketSizeError({
     size: clipForSave,
-    unit: sizeUnit,
+    unit: sizeUnitForClip,
     minQty: selectedPair?.minQty ?? 0,
     minNotional: selectedPair?.minNotional ?? 0,
     lastPrice,
@@ -726,7 +728,7 @@ export function DcaPlaybookForm({
       direction,
       dcaMode: averaging !== "interval" && restGrid ? "order" : "position",
       clipSize: asNumber(clipForSave) ?? 0,
-      sizeUnit,
+      sizeUnit: sizeUnitForClip,
       maxClips: asNumber(maxClips),
       maxValue: asNumber(maxValue),
       maxValueKind,
@@ -748,7 +750,7 @@ export function DcaPlaybookForm({
       lastPrice,
       averaging,
       clipSize: clipForSave,
-      sizeUnit,
+      sizeUnit: sizeUnitForClip,
       sizeMultiplier,
       deviationMultiplier,
       dipPct,
@@ -775,6 +777,7 @@ export function DcaPlaybookForm({
     valueCapUsdt,
     sizeMultiplier,
     sizeUnit,
+    sizeUnitForClip,
     stopLossBasis,
     stopLossPct,
     takeProfitBasis,
@@ -796,7 +799,7 @@ export function DcaPlaybookForm({
       startKind,
       averaging,
       restGrid: averaging === "dip" && restGrid,
-      sizeUnit,
+      sizeUnit: sizeUnitForClip,
       clipSize: clipForSave,
       maxClips,
       maxValue,
@@ -1364,34 +1367,41 @@ export function DcaPlaybookForm({
                 : "Recalculates from account balance at the start of each cycle."}
             </p>
           ) : null}
-          {restGrid ? (
-            <p className="text-xs text-ink-muted">
-              Remaining GTC limits use max orders.
-            </p>
-          ) : null}
         </fieldset>
         <fieldset className={sectionClass}>
           <p className={sectionTitleClass}>
             Initial Order Size
           </p>
-          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+          <div
+            className={
+              budgetSizesClip
+                ? "grid gap-x-3 gap-y-2"
+                : "grid gap-x-3 gap-y-2 sm:grid-cols-2"
+            }
+          >
+            {budgetSizesClip ? (
+              <input type="hidden" name="sizeUnit" value="usdt" />
+            ) : (
+              <label className={labelClass}>
+                Size unit
+                <select
+                  name="sizeUnit"
+                  value={sizeUnit}
+                  onChange={(event) =>
+                    setSizeUnit(event.target.value as "qty" | "usdt")
+                  }
+                  className={fieldClass}
+                >
+                  <option value="usdt">{policy.quoteLabel}</option>
+                  <option value="qty">Token qty</option>
+                </select>
+              </label>
+            )}
             <label className={labelClass}>
-              Size unit
-              <select
-                name="sizeUnit"
-                value={sizeUnit}
-                onChange={(event) =>
-                  setSizeUnit(event.target.value as "qty" | "usdt")
-                }
-                className={fieldClass}
-              >
-                <option value="usdt">{policy.quoteLabel}</option>
-                <option value="qty">Token qty</option>
-              </select>
-            </label>
-            <label className={labelClass}>
-              Order size
-              {budgetSizesClip ? (
+              {budgetSizesClip
+                ? `Order size (${policy.quoteLabel})`
+                : "Order size"}
+              {derivedClip != null ? (
                 <>
                   <input type="hidden" name="clipSize" value={clipForSave} />
                   <GroupedNumberInput
@@ -1417,17 +1427,15 @@ export function DcaPlaybookForm({
               )}
               {sizeError ? (
                 <p className="mt-1 text-xs text-danger">{sizeError}</p>
-              ) : budgetSizesClip ? (
+              ) : derivedClip != null ? (
                 <p className="mt-1 text-xs text-ink-muted">
                   Calculated from max value and max orders at the start of each cycle
                 </p>
-              ) : valueCapUsdt != null && asNumber(maxClips) != null ? (
+              ) : budgetSizesClip ? (
                 <p className="mt-1 text-xs text-ink-muted">
                   {maxValueKind === "percent" && accountBookUsdt == null
                     ? "Need an account balance to calculate from %."
-                    : sizeUnit === "qty"
-                      ? "Need a last price to calculate qty from max value."
-                      : null}
+                    : null}
                 </p>
               ) : null}
             </label>
@@ -1811,7 +1819,7 @@ export function DcaPlaybookForm({
             }
             hint={
               summary.required === null
-                ? sizeUnit === "qty"
+                ? sizeUnitForClip === "qty"
                   ? "Use USDT size to estimate"
                   : null
                 : [
@@ -1912,7 +1920,7 @@ export function DcaPlaybookForm({
                   <th className="px-3 py-2 font-medium">Price</th>
                   <th className="px-3 py-2 font-medium">Deviation</th>
                   <th className="px-3 py-2 font-medium">
-                    {sizeUnit === "qty" ? "Qty" : "Size"}
+                    {sizeUnitForClip === "qty" ? "Qty" : "Size"}
                   </th>
                   <th className="px-3 py-2 font-medium">Order value</th>
                   <th className="px-3 py-2 font-medium">Total value</th>
@@ -1947,7 +1955,7 @@ export function DcaPlaybookForm({
                     row.index - 1,
                     size,
                     sizeMult,
-                    sizeUnit,
+                    sizeUnitForClip,
                     row.price,
                   );
                   const cap = perpEffectiveMaxQty({
