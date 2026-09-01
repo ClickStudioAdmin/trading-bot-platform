@@ -62,6 +62,7 @@ import {
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
+  type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import type { FuturesOrderType, FuturesSide } from "@/lib/futures/model";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
@@ -612,11 +613,24 @@ export function DcaPlaybookForm({
   );
   const [sizeUnit, setSizeUnit] = useState(source?.sizeUnit ?? "usdt");
   const [maxClips, setMaxClips] = useState(optional(source?.maxClips));
-  const [maxValueKind, setMaxValueKind] = useState<DcaMaxValueKind>(
-    source?.maxValueKind ?? "usdt",
+  const [maxValueMode, setMaxValueMode] = useState<"none" | DcaMaxValueKind>(
+    source?.maxValue != null
+      ? (source.maxValueKind ?? "usdt")
+      : "none",
   );
-  const [maxValue, setMaxValue] = useState(optional(source?.maxValue));
+  const maxValueKind: DcaMaxValueKind =
+    maxValueMode === "percent" ? "percent" : "usdt";
+  const [maxValue, setMaxValue] = useState(
+    source?.maxValue != null ? optional(source.maxValue) : "",
+  );
+  const [maxValueSettled, setMaxValueSettled] = useState(
+    source?.maxValue != null ? optional(source.maxValue) : "",
+  );
   const accountBookUsdt = bookUsdt ?? availableUsdt;
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMaxValueSettled(maxValue), 600);
+    return () => window.clearTimeout(timer);
+  }, [maxValue]);
   const [dipPct, setDipPct] = useState(optional(source?.dipPct));
   const intervalParts = dcaIntervalParts(source?.intervalMinutes ?? null);
   const [intervalUnit, setIntervalUnit] = useState<DcaIntervalUnit>(
@@ -644,6 +658,13 @@ export function DcaPlaybookForm({
     useState<FuturesOrderType>(source?.takeProfitOrderType ?? "market");
   const [indicatorKind, setIndicatorKind] = useState(
     source?.indicatorKind ?? "rsi",
+  );
+  const [indicatorTimeframe, setIndicatorTimeframe] = useState(
+    source?.indicatorTimeframe ?? "15",
+  );
+  const [indicatorLevel, setIndicatorLevel] = useState(
+    optional(source?.indicatorLevel) ||
+      ((source?.indicatorKind ?? "rsi") === "rsi" ? "30" : ""),
   );
   const [indicatorCompare, setIndicatorCompare] = useState(() => {
     const kind = source?.indicatorKind ?? "rsi";
@@ -701,7 +722,11 @@ export function DcaPlaybookForm({
     bookUsdt: accountBookUsdt,
   });
   const valueCapUsdt =
-    maxValueKind === "percent" ? resolvedMaxValue : asNumber(maxValue);
+    maxValueMode === "none"
+      ? null
+      : maxValueKind === "percent"
+        ? resolvedMaxValue
+        : asNumber(maxValue);
   const budgetSizesClip =
     valueCapUsdt != null && asNumber(maxClips) != null;
   const sizeUnitForClip = budgetSizesClip ? "usdt" : sizeUnit;
@@ -715,7 +740,7 @@ export function DcaPlaybookForm({
   const clipForSave = derivedClip != null
     ? formatDerivedClip(derivedClip, sizeUnitForClip)
     : clipSize;
-  const sizeError = perpTicketSizeError({
+  const sizeErrorLive = perpTicketSizeError({
     size: clipForSave,
     unit: sizeUnitForClip,
     minQty: selectedPair?.minQty ?? 0,
@@ -723,14 +748,17 @@ export function DcaPlaybookForm({
     lastPrice,
     baseCoin: selectedPair?.baseCoin ?? "Token",
   });
-  const ladderMaxError = dcaConfigMaxOrderError({
+  const sizeCheckReady =
+    maxValueMode !== "percent" || maxValue === maxValueSettled;
+  const sizeError = sizeCheckReady ? sizeErrorLive : null;
+  const ladderMaxErrorLive = dcaConfigMaxOrderError({
     config: {
       direction,
       dcaMode: averaging !== "interval" && restGrid ? "order" : "position",
       clipSize: asNumber(clipForSave) ?? 0,
       sizeUnit: sizeUnitForClip,
       maxClips: asNumber(maxClips),
-      maxValue: asNumber(maxValue),
+      maxValue: maxValueMode === "none" ? null : asNumber(maxValue),
       maxValueKind,
       dipPct: averaging === "dip" ? asNumber(dipPct) : null,
       sizeMultiplier: asNumber(sizeMultiplier) ?? 1,
@@ -742,8 +770,14 @@ export function DcaPlaybookForm({
     baseCoin: selectedPair?.baseCoin ?? "Token",
     bookUsdt: accountBookUsdt,
   });
+  const ladderMaxError = sizeCheckReady ? ladderMaxErrorLive : null;
+  const maxValueMissing =
+    maxValueMode !== "none" && asNumber(maxValue) == null
+      ? "Enter a max value."
+      : null;
   const saveError =
-    asNumber(clipForSave) === null ? sizeError : (sizeError ?? ladderMaxError);
+    maxValueMissing ??
+    (asNumber(clipForSave) === null ? sizeError : (sizeError ?? ladderMaxError));
   const restGridEffective = averaging !== "interval" && restGrid;
   const summaryBySide = useMemo(() => {
     const input = {
@@ -802,8 +836,8 @@ export function DcaPlaybookForm({
       sizeUnit: sizeUnitForClip,
       clipSize: clipForSave,
       maxClips,
-      maxValue,
-      maxValueKind,
+      maxValue: maxValueMode === "none" ? "" : maxValue,
+      maxValueKind: maxValueMode,
       dipPct,
       intervalUnit,
       sizeMultiplier,
@@ -814,7 +848,9 @@ export function DcaPlaybookForm({
       stopLossPct,
       stopLossBasis,
       indicatorKind,
+      indicatorTimeframe,
       indicatorCompare,
+      indicatorLevel,
     };
   }
   function snapshotForm() {
@@ -826,11 +862,15 @@ export function DcaPlaybookForm({
     });
   }
   function liveRecipe() {
-    const parsed = parseDcaPlaybookForm(
-      dcaFormToSnapshotSource(null, snapshotOverlay()),
-      policy.venueId,
-    );
+    const parsed = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
     return parsed.ok ? snapshotDcaRecipe(parsed.config) : null;
+  }
+  function recipeForBacktest() {
+    const parsed = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
+    if (!parsed.ok) {
+      return parsed;
+    }
+    return { ok: true as const, recipe: snapshotDcaRecipe(parsed.config) };
   }
   const removeControl = playbook ? (
     running ? (
@@ -1178,7 +1218,12 @@ export function DcaPlaybookForm({
                 Timeframe
                 <select
                   name="indicatorTimeframe"
-                  defaultValue={source?.indicatorTimeframe ?? "15"}
+                  value={indicatorTimeframe}
+                  onChange={(event) =>
+                    setIndicatorTimeframe(
+                      event.target.value as DcaIndicatorTimeframe,
+                    )
+                  }
                   className={fieldClass}
                 >
                   {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
@@ -1239,10 +1284,8 @@ export function DcaPlaybookForm({
                   {indicatorKind === "ema_cross" ? "Level (price)" : "Level"}
                   <GroupedNumberInput
                     name="indicatorLevel"
-                    defaultValue={
-                      optional(source?.indicatorLevel) ||
-                      (indicatorKind === "rsi" ? "30" : "")
-                    }
+                    value={indicatorLevel}
+                    onChange={setIndicatorLevel}
                     allowDecimal
                     className={fieldClass}
                   />
@@ -1309,7 +1352,13 @@ export function DcaPlaybookForm({
           <p className={sectionTitleClass}>
             Maximum Exposure
           </p>
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1fr)] gap-x-3 gap-y-2">
+          <div
+            className={
+              maxValueMode === "none"
+                ? "grid grid-cols-2 gap-x-3 gap-y-2"
+                : "grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1fr)] gap-x-3 gap-y-2"
+            }
+          >
             <label className={`min-w-0 ${labelClass}`}>
               Max orders
               <GroupedNumberInput
@@ -1324,12 +1373,18 @@ export function DcaPlaybookForm({
               Max value
               <select
                 name="maxValueKind"
-                value={maxValueKind}
+                value={maxValueMode}
                 onChange={(event) => {
-                  const next = parseDcaMaxValueKind(event.target.value);
-                  setMaxValueKind(next);
+                  const next = event.target.value;
+                  if (next === "none") {
+                    setMaxValueMode("none");
+                    setMaxValue("");
+                    return;
+                  }
+                  const kind = parseDcaMaxValueKind(next);
+                  setMaxValueMode(kind);
                   const amount = asNumber(maxValue);
-                  if (next === "percent" && amount != null && amount > 100) {
+                  if (kind === "percent" && amount != null && amount > 100) {
                     setMaxValue("");
                   }
                 }}
@@ -1337,30 +1392,36 @@ export function DcaPlaybookForm({
               >
                 <option value="usdt">Fixed {policy.quoteLabel}</option>
                 <option value="percent">% of account</option>
+                <option value="none">No max value</option>
               </select>
             </label>
-            <label className={`min-w-0 ${labelClass}`}>
-              {maxValueKind === "percent" ? "Percent" : policy.quoteLabel}
-              <GroupedNumberInput
-                name="maxValue"
-                value={maxValue}
-                onChange={setMaxValue}
-                allowDecimal
-                className={fieldClass}
-                placeholder={
-                  maxValueKind === "percent" ? "e.g. 20" : "No cap"
-                }
-              />
-              {accountBookUsdt != null ? (
-                <input
-                  type="hidden"
-                  name="accountBookUsdt"
-                  value={String(accountBookUsdt)}
+            {maxValueMode !== "none" ? (
+              <label className={`min-w-0 ${labelClass}`}>
+                {maxValueMode === "percent" ? "Percent" : policy.quoteLabel}
+                <GroupedNumberInput
+                  name="maxValue"
+                  value={maxValue}
+                  onChange={setMaxValue}
+                  allowDecimal
+                  className={fieldClass}
+                  placeholder={
+                    maxValueMode === "percent" ? "e.g. 20" : "e.g. 700"
+                  }
                 />
-              ) : null}
-            </label>
+                {maxValueMissing ? (
+                  <p className="mt-1 text-xs text-danger">{maxValueMissing}</p>
+                ) : null}
+              </label>
+            ) : null}
           </div>
-          {maxValueKind === "percent" ? (
+          {accountBookUsdt != null ? (
+            <input
+              type="hidden"
+              name="accountBookUsdt"
+              value={String(accountBookUsdt)}
+            />
+          ) : null}
+          {maxValueMode === "percent" ? (
             <p className="text-xs text-ink-muted">
               {resolvedMaxValue != null && accountBookUsdt != null
                 ? `${asNumber(maxValue)}% of ${formatUsdAmount(accountBookUsdt)} = ${formatUsdAmount(resolvedMaxValue)}. Recalculates at the start of each cycle.`
@@ -1731,6 +1792,7 @@ export function DcaPlaybookForm({
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
           <BacktestTemplateLink
             current={liveRecipe()}
+            getRecipe={recipeForBacktest}
             templates={backtestLibrary}
             venueId={policy.venueId}
             venueEnvironment={venueEnvironment}

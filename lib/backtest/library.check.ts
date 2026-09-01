@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import {
   canQueueUserBacktest,
   decideBacktestTemplateActions,
+  findMatchingBacktestDeskBot,
+  findMatchingBacktestTemplate,
   parseBacktestRecipeJson,
   userBacktestFieldIssues,
 } from "./library";
@@ -41,7 +43,9 @@ const matching = decideBacktestTemplateActions({
 });
 assert.equal(matching.canAttach, true);
 assert.equal(matching.canSaveAs, false);
+assert.equal(matching.canSaveAsPlatform, false);
 assert.equal(matching.sourceName, "Dip buyer");
+assert.equal(matching.matchingTemplateName, "Dip buyer");
 assert.equal(matching.applyTemplateId, null);
 
 const edited = decideBacktestTemplateActions({
@@ -65,6 +69,57 @@ const unsaved = decideBacktestTemplateActions({
 });
 assert.equal(unsaved.canAttach, false);
 assert.equal(unsaved.canSaveAs, true);
+
+const matchedOther = decideBacktestTemplateActions({
+  status: "done",
+  ownerUserId: "user-1",
+  memberId: "user-1",
+  recipe: { ...perps, triggerPrice: "1" },
+  source,
+  linked: null,
+  matchingTemplate: {
+    id: "tmpl-2",
+    name: "Other dip",
+    visibility: "user",
+  },
+});
+assert.equal(matchedOther.canAttach, true);
+assert.equal(matchedOther.canSaveAs, false);
+assert.equal(matchedOther.matchingTemplateId, "tmpl-2");
+assert.equal(matchedOther.matchingTemplateName, "Other dip");
+
+const adminView = decideBacktestTemplateActions({
+  status: "done",
+  ownerUserId: "user-1",
+  memberId: "admin-1",
+  isAdmin: true,
+  recipe: perps,
+  source: null,
+  linked: null,
+  matchingTemplate: null,
+  matchingDeskBot: { name: "Live dip", deskName: "Paper" },
+});
+assert.equal(adminView.canAttach, false);
+assert.equal(adminView.canSaveAs, false);
+assert.equal(adminView.canSaveAsPlatform, true);
+assert.equal(adminView.matchingDeskLabel, "Paper · Live dip");
+
+const alreadyPlatform = decideBacktestTemplateActions({
+  status: "done",
+  ownerUserId: "user-1",
+  memberId: "admin-1",
+  isAdmin: true,
+  recipe: perps,
+  source: null,
+  linked: null,
+  matchingTemplate: {
+    id: "plat-1",
+    name: "Starter dip",
+    visibility: "platform",
+  },
+});
+assert.equal(alreadyPlatform.canSaveAsPlatform, false);
+assert.equal(alreadyPlatform.canAttach, false);
 
 const attached = decideBacktestTemplateActions({
   status: "done",
@@ -100,6 +155,31 @@ const queued = decideBacktestTemplateActions({
 });
 assert.equal(queued.canAttach, false);
 assert.equal(queued.canSaveAs, false);
+
+assert.equal(
+  findMatchingBacktestTemplate(
+    { ...perps, symbol: "ETHUSDT" },
+    [
+      { id: "tmpl-1", name: "Dip buyer", recipe: perps },
+      { id: "tmpl-2", name: "Other", recipe: { ...perps, triggerPrice: "1" } },
+    ],
+    "tmpl-2",
+  )?.id,
+  "tmpl-1",
+);
+assert.equal(
+  findMatchingBacktestDeskBot(perps, [
+    {
+      id: "dca:1",
+      name: "Desk dip",
+      deskName: "Paper",
+      recipe: perps,
+      venue: "bybit",
+      venueEnvironment: null,
+    },
+  ])?.deskName,
+  "Paper",
+);
 
 assert.equal(canQueueUserBacktest(perps).ok, true);
 assert.equal(

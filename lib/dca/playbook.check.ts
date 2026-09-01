@@ -61,6 +61,7 @@ import {
   dcaResolvedMaxValueUsdt,
   dcaTickValueCapUsdt,
   dcaCycleClipSize,
+  dcaCopyEstimateClipSize,
   type DcaPlaybook,
 } from "./playbook";
 import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
@@ -1408,6 +1409,34 @@ assert.equal(
   }).clipSize,
   2000 / 7,
 );
+assert.equal(
+  dcaCopyEstimateClipSize({
+    maxValueKind: "percent",
+    maxValue: 20,
+    maxClips: 3,
+    clipSize: 50,
+    sizeMultiplier: 2,
+    sizeUnit: "usdt",
+    long: { clipsFilled: 0, cycleMaxValue: null },
+    short: { clipsFilled: 0, cycleMaxValue: null },
+    bookUsdt: 10_000,
+  }),
+  2000 / 7,
+);
+assert.equal(
+  dcaCopyEstimateClipSize({
+    maxValueKind: "percent",
+    maxValue: 20,
+    maxClips: 3,
+    clipSize: 50,
+    sizeMultiplier: 2,
+    sizeUnit: "usdt",
+    long: { clipsFilled: 2, cycleMaxValue: 2_000 },
+    short: { clipsFilled: 0, cycleMaxValue: null },
+    bookUsdt: 20_000,
+  }),
+  50,
+);
 
 const percentCaps = new FormData();
 percentCaps.set("symbol", "BTCUSDT");
@@ -1437,6 +1466,44 @@ const percentTooHighParsed = parseDcaPlaybookForm(percentTooHigh);
 assert.equal(percentTooHighParsed.ok, false);
 if (!percentTooHighParsed.ok) {
   assert.equal(percentTooHighParsed.error, "Percent must be 100 or less.");
+}
+
+const noneCap = new FormData();
+noneCap.set("symbol", "BTCUSDT");
+noneCap.set("side", "long");
+noneCap.set("clipSize", "50");
+noneCap.set("sizeUnit", "usdt");
+noneCap.set("maxValueKind", "none");
+noneCap.set("maxValue", "700");
+const noneCapParsed = parseDcaPlaybookForm(noneCap);
+assert.equal(noneCapParsed.ok, true);
+if (noneCapParsed.ok) {
+  assert.equal(noneCapParsed.config.maxValue, null);
+  assert.equal(noneCapParsed.config.maxValueKind, "usdt");
+}
+
+const missingFixed = new FormData();
+missingFixed.set("symbol", "BTCUSDT");
+missingFixed.set("side", "long");
+missingFixed.set("clipSize", "50");
+missingFixed.set("sizeUnit", "usdt");
+missingFixed.set("maxValueKind", "usdt");
+const missingFixedParsed = parseDcaPlaybookForm(missingFixed);
+assert.equal(missingFixedParsed.ok, false);
+if (!missingFixedParsed.ok) {
+  assert.equal(missingFixedParsed.error, "Enter a max value.");
+}
+
+const missingPercent = new FormData();
+missingPercent.set("symbol", "BTCUSDT");
+missingPercent.set("side", "long");
+missingPercent.set("clipSize", "50");
+missingPercent.set("sizeUnit", "usdt");
+missingPercent.set("maxValueKind", "percent");
+const missingPercentParsed = parseDcaPlaybookForm(missingPercent);
+assert.equal(missingPercentParsed.ok, false);
+if (!missingPercentParsed.ok) {
+  assert.equal(missingPercentParsed.error, "Enter a max value.");
 }
 
 const row = parseDcaPlaybookRow({

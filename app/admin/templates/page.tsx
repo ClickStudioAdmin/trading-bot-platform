@@ -30,7 +30,7 @@ export default async function AdminTemplatesPage({
       variant="admin"
       overline="Admin"
       title="Templates"
-      description="Platform templates and folders are visible to every member. Edit, unpublish, or export this catalog here. Add a platform row with Save as platform template from Automations. Member libraries stay on Account / Templates."
+      description="Platform templates and folders are visible to every member. Edit, unpublish, or export this catalog here. Add a platform row with Save as platform template from Automations or a finished backtest. Member libraries stay on Account / Templates."
       templates={templates}
       sets={sets}
       initialTab={parseLibraryTab(params.tab)}

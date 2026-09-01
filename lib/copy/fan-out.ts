@@ -5,7 +5,7 @@ import {
   parseTradingAccountRow,
 } from "@/lib/accounts/model";
 import { loadTradingAccountById } from "@/lib/accounts/store";
-import { parseDcaClipIndex } from "@/lib/dca/playbook";
+import { dcaCopyEstimateClipSize, parseDcaClipIndex } from "@/lib/dca/playbook";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { dcaClipSizeAt } from "@/lib/dca/grid";
 import { takeVenueSlot } from "@/lib/engine/lease-store";
@@ -984,10 +984,22 @@ async function applyCopyCycleGates(input: {
         mark;
       if (playbook && priceGuess != null && priceGuess > 0) {
         const clipCount = Math.min(playbook.maxClips ?? 8, 40);
+        const clipSize = dcaCopyEstimateClipSize({
+          maxValueKind: playbook.maxValueKind,
+          maxValue: playbook.maxValue,
+          maxClips: playbook.maxClips,
+          clipSize: playbook.clipSize,
+          sizeMultiplier: playbook.sizeMultiplier,
+          sizeUnit: playbook.sizeUnit,
+          long: playbook.long,
+          short: playbook.short,
+          bookUsdt: parentBook,
+          mark: priceGuess,
+        });
         for (let index = 0; index < clipCount; index += 1) {
           const raw = dcaClipSizeAt(
             index,
-            playbook.clipSize,
+            clipSize,
             playbook.sizeMultiplier,
           );
           const notionalUsdt =

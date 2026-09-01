@@ -42,6 +42,15 @@ assert.equal(snapshot.kind, "dca");
 assert.equal(snapshot.symbol, "ETHUSDT");
 assert.equal(snapshot.startKind, "webhook");
 assert.equal(snapshot.maxValueKind, "usdt");
+const oldRecipe = parseTemplateRecipe(
+  { ...snapshot, maxValueKind: undefined },
+  "dca",
+  1,
+);
+assert.equal(oldRecipe.ok, true);
+if (oldRecipe.ok && oldRecipe.recipe.kind === "dca") {
+  assert.equal(oldRecipe.recipe.maxValueKind, "usdt");
+}
 assert.equal("webhookId" in snapshot, false);
 assert.equal(recipeHasRuntimeKeys(snapshot), false);
 

@@ -65,6 +65,7 @@ import {
   attachBacktestToTemplateAction,
   deleteBacktestAction,
   publishBacktestAction,
+  saveBacktestAsPlatformTemplateAction,
   saveBacktestAsTemplateAction,
 } from "@/lib/backtest/actions";
 import { applyTemplateAction } from "@/lib/templates/actions";
@@ -507,12 +508,47 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
   );
 }
 
+export function BacktestOriginBadges({
+  templateName,
+  deskLabel,
+  edited = false,
+}: {
+  templateName: string | null;
+  deskLabel: string | null;
+  edited?: boolean;
+}) {
+  if (!templateName && !deskLabel && !edited) {
+    return null;
+  }
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {templateName ? (
+        <p className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
+          Template · {templateName}
+        </p>
+      ) : null}
+      {deskLabel ? (
+        <p className="rounded-control bg-accent/15 px-2 py-0.5 text-xs text-accent">
+          Desk · {deskLabel}
+        </p>
+      ) : null}
+      {edited && !templateName && !deskLabel ? (
+        <p className="rounded-control bg-warning/15 px-2 py-0.5 text-xs text-warning">
+          Edited
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function AttachBacktestButton({
   runId,
   sourceName,
+  templateId = "",
 }: {
   runId: string;
   sourceName: string | null;
+  templateId?: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -532,17 +568,20 @@ export function AttachBacktestButton({
       }}
     >
       <input type="hidden" name="runId" value={runId} />
+      {templateId ? (
+        <input type="hidden" name="templateId" value={templateId} />
+      ) : null}
       <button
         type="submit"
         disabled={pending}
-        title="Link this run to the library template you loaded. Recipe is unchanged."
+        title="Link this run to the matching library template. Recipe is unchanged."
         className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
       >
         {pending
-          ? "Saving…"
+          ? "Attaching…"
           : sourceName
-            ? `Save to ${sourceName}`
-            : "Save to library"}
+            ? `Attach to ${sourceName}`
+            : "Attach"}
       </button>
       {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>
@@ -585,10 +624,56 @@ export function SaveBacktestAsTemplateButton({
       <button
         type="submit"
         disabled={pending}
-        title="Create a private library template and link this run"
+        title="Create a private library template and attach this run"
         className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
       >
-        {pending ? "Saving…" : "Save to library"}
+        {pending ? "Saving…" : "Save as template"}
+      </button>
+      {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
+    </form>
+  );
+}
+
+export function SaveBacktestAsPlatformButton({
+  runId,
+  defaultName,
+}: {
+  runId: string;
+  defaultName: string;
+}) {
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <form
+      className="flex items-center gap-2"
+      action={async (formData) => {
+        setPending(true);
+        setError(null);
+        const result = await saveBacktestAsPlatformTemplateAction(formData);
+        setPending(false);
+        if (!result.ok) {
+          setError(result.error ?? "Could not save that platform template.");
+          return;
+        }
+        router.refresh();
+      }}
+    >
+      <input type="hidden" name="runId" value={runId} />
+      <input
+        name="name"
+        defaultValue={defaultName}
+        aria-label="Platform template name"
+        placeholder="Platform name"
+        className="w-40 rounded-control border border-line bg-canvas px-2 py-1.5 text-sm text-ink"
+      />
+      <button
+        type="submit"
+        disabled={pending}
+        title="Create an applyable platform template from this run. Does not attach the run or arm a desk."
+        className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
+      >
+        {pending ? "Saving…" : "Save as platform template"}
       </button>
       {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>

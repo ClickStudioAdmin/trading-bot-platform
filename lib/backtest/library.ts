@@ -21,6 +21,7 @@ export type BacktestLibraryItem = {
   id: string;
   name: string;
   recipe: BacktestRecipe;
+  visibility?: string;
 };
 
 export type BacktestDeskBot = {
@@ -36,11 +37,46 @@ export function toBacktestLibraryItem(row: {
   id: string;
   name: string;
   recipe: { kind: string };
+  visibility?: string;
 }): BacktestLibraryItem | null {
   if (row.recipe.kind !== "perps" && row.recipe.kind !== "dca") {
     return null;
   }
   return row as BacktestLibraryItem;
+}
+
+export function findMatchingBacktestTemplate(
+  recipe: BacktestRecipe,
+  templates: BacktestLibraryItem[],
+  preferredId?: string | null,
+): BacktestLibraryItem | null {
+  const preferred = preferredId
+    ? (templates.find((row) => row.id === preferredId) ?? null)
+    : null;
+  if (preferred && recipesMatchReplayFields(recipe, preferred.recipe)) {
+    return preferred;
+  }
+  return (
+    templates.find((row) => recipesMatchReplayFields(recipe, row.recipe)) ??
+    null
+  );
+}
+
+export function findMatchingBacktestDeskBot(
+  recipe: BacktestRecipe,
+  deskBots: BacktestDeskBot[],
+): BacktestDeskBot | null {
+  return (
+    deskBots.find((row) => recipesMatchReplayFields(recipe, row.recipe)) ??
+    null
+  );
+}
+
+export function formatBacktestDeskMatch(bot: {
+  name: string;
+  deskName: string;
+}): string {
+  return `${bot.deskName} · ${bot.name}`;
 }
 
 export function parseBacktestRecipeJson(raw: unknown): BacktestRecipe | null {
@@ -106,7 +142,12 @@ export function userBacktestFieldIssues(
         message: "Enter a start price.",
       });
     }
-    if (!(recipe.clipSize > 0)) {
+    const hasBudget =
+      recipe.maxValue != null &&
+      recipe.maxValue > 0 &&
+      recipe.maxClips != null &&
+      recipe.maxClips > 0;
+    if (!(recipe.clipSize > 0) && !hasBudget) {
       issues.push({
         field: "clipSize",
         message: "Enter a clip size.",
@@ -158,15 +199,31 @@ export function decideBacktestTemplateActions(input: {
   status: string;
   ownerUserId: string | null;
   memberId: string;
+  isAdmin?: boolean;
   recipe: BacktestRecipe;
-  source: { id: string; name: string; recipe: BacktestRecipe } | null;
+  source: {
+    id: string;
+    name: string;
+    recipe: BacktestRecipe;
+    visibility?: string;
+  } | null;
   linked: { id: string; name: string; visibility: string } | null;
+  matchingTemplate?: {
+    id: string;
+    name: string;
+    visibility?: string;
+  } | null;
+  matchingDeskBot?: { name: string; deskName: string } | null;
 }): {
   canAttach: boolean;
   canSaveAs: boolean;
+  canSaveAsPlatform: boolean;
   applyTemplateId: string | null;
   linkedName: string | null;
   sourceName: string | null;
+  matchingTemplateId: string | null;
+  matchingTemplateName: string | null;
+  matchingDeskLabel: string | null;
 } {
   const owns = input.ownerUserId === input.memberId;
   const done = input.status === "done";
@@ -175,18 +232,34 @@ export function decideBacktestTemplateActions(input: {
     templateIsLibraryRow(input.linked.visibility as TemplateVisibility)
       ? input.linked
       : null;
-  const sourceMatches = Boolean(
+  const sourceMatch =
     input.source &&
-      recipesMatchReplayFields(input.recipe, input.source.recipe),
+    recipesMatchReplayFields(input.recipe, input.source.recipe)
+      ? input.source
+      : null;
+  const match =
+    input.matchingTemplate !== undefined
+      ? input.matchingTemplate
+      : sourceMatch;
+  const canAttach = Boolean(done && owns && match && !linkedLibrary);
+  const canSaveAs = Boolean(done && owns && !match && !linkedLibrary);
+  const matchIsPlatform = match?.visibility === "platform";
+  const linkedIsPlatform = input.linked?.visibility === "platform";
+  const canSaveAsPlatform = Boolean(
+    done && input.isAdmin && !matchIsPlatform && !linkedIsPlatform,
   );
-  const canAttach = Boolean(done && owns && sourceMatches && !linkedLibrary);
-  const canSaveAs = Boolean(done && owns && !canAttach && !linkedLibrary);
   return {
     canAttach,
     canSaveAs,
+    canSaveAsPlatform,
     applyTemplateId: linkedLibrary?.id ?? null,
     linkedName: linkedLibrary?.name ?? null,
     sourceName: input.source?.name ?? null,
+    matchingTemplateId: match?.id ?? null,
+    matchingTemplateName: match?.name ?? null,
+    matchingDeskLabel: input.matchingDeskBot
+      ? formatBacktestDeskMatch(input.matchingDeskBot)
+      : null,
   };
 }
 
@@ -279,6 +352,15 @@ export function recipeParamRows(
       {
         label: "Max clips",
         value: recipe.maxClips == null ? "—" : String(recipe.maxClips),
+      },
+      {
+        label: "Max value",
+        value:
+          recipe.maxValue == null
+            ? "—"
+            : recipe.maxValueKind === "percent"
+              ? `${formatParamNumber(recipe.maxValue)}% of account`
+              : `${formatParamNumber(recipe.maxValue)} USDT`,
       },
       {
         label: "Take profit",

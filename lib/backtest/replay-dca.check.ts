@@ -19,6 +19,16 @@ if (!parsed.ok) {
 const recipe = snapshotDcaRecipe(parsed.config);
 assert.equal(canBacktestDcaRecipe(recipe).ok, true);
 assert.equal(
+  canBacktestDcaRecipe({
+    ...recipe,
+    clipSize: 0,
+    maxClips: 3,
+    maxValue: 20,
+    maxValueKind: "percent",
+  }).ok,
+  true,
+);
+assert.equal(
   canBacktestDcaRecipe({ ...recipe, startKind: "webhook" }).ok,
   false,
 );

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BacktestRecipeFields } from "@/components/backtest-recipe-fields";
+import { BacktestOriginBadges } from "@/components/backtest-run-view";
 import { DatePicker } from "@/components/date-picker";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -21,11 +22,13 @@ import {
 } from "@/lib/backtest/model";
 import {
   canQueueUserBacktest,
+  findMatchingBacktestDeskBot,
+  findMatchingBacktestTemplate,
+  formatBacktestDeskMatch,
   type BacktestDeskBot,
   type BacktestLibraryItem,
 } from "@/lib/backtest/library";
 import { findBacktestableTemplate } from "@/components/backtest-dialog";
-import { recipesMatchReplayFields } from "@/lib/templates/recipe";
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
@@ -149,6 +152,7 @@ export function BacktestQueueForm({
   );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recipeFieldIssues, setRecipeFieldIssues] = useState<string[]>([]);
   const [bybitPairs, setBybitPairs] = useState<LinearPerp[]>([]);
   const [hyperliquidPairs, setHyperliquidPairs] = useState<LinearPerp[]>([]);
 
@@ -179,14 +183,22 @@ export function BacktestQueueForm({
     };
   }, [venue, venueEnvironment]);
 
-  const selectedTemplate = useMemo(
-    () => templates.find((row) => row.id === sourceTemplateId) ?? null,
-    [sourceTemplateId, templates],
+  const matchingTemplate = useMemo(
+    () =>
+      recipe
+        ? findMatchingBacktestTemplate(recipe, templates, sourceTemplateId)
+        : null,
+    [recipe, sourceTemplateId, templates],
   );
-  const dirty = Boolean(
+  const matchingDeskBot = useMemo(
+    () => (recipe ? findMatchingBacktestDeskBot(recipe, deskBots) : null),
+    [deskBots, recipe],
+  );
+  const editedAway = Boolean(
     recipe &&
-      selectedTemplate &&
-      !recipesMatchReplayFields(recipe, selectedTemplate.recipe),
+      (sourceTemplateId || templateId || loadedFromRun) &&
+      !matchingTemplate &&
+      !matchingDeskBot,
   );
   const pairs = withSymbol(
     venue === "hyperliquid" ? hyperliquidPairs : bybitPairs,
@@ -545,11 +557,19 @@ export function BacktestQueueForm({
         {recipe && !queueAllowed.ok ? (
           <p className="text-sm text-danger">{queueAllowed.error}</p>
         ) : null}
+        {recipeFieldIssues.map((issue) => (
+          <p key={issue} className="text-sm text-danger">
+            {issue}
+          </p>
+        ))}
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         <button
           type="submit"
           disabled={
-            pending || Boolean(preview.error) || !queueAllowed.ok
+            pending ||
+            Boolean(preview.error) ||
+            !queueAllowed.ok ||
+            recipeFieldIssues.length > 0
           }
           className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
         >
@@ -573,23 +593,15 @@ export function BacktestQueueForm({
                   : "Change the replay fields here. Pair, dates, and timeframe on the left are the market window."}
               </p>
             </div>
-            {selectedTemplate ? (
-              <p
-                className={`rounded-control px-2 py-0.5 text-xs ${
-                  dirty
-                    ? "bg-warning/15 text-warning"
-                    : "bg-success/15 text-success"
-                }`}
-              >
-                {dirty
-                  ? "Edited — save will create a new template"
-                  : `Matches ${selectedTemplate.name}`}
-              </p>
-            ) : (
-              <p className="rounded-control bg-surface-raised px-2 py-0.5 text-xs text-ink-muted">
-                Not from a library template
-              </p>
-            )}
+            <BacktestOriginBadges
+              templateName={matchingTemplate?.name ?? null}
+              deskLabel={
+                matchingDeskBot
+                  ? formatBacktestDeskMatch(matchingDeskBot)
+                  : null
+              }
+              edited={editedAway}
+            />
           </div>
           {pairChanged ? (
             <p className="mt-2 text-xs text-warning">
@@ -602,6 +614,7 @@ export function BacktestQueueForm({
                 sourceTemplateId || draftId || (loadedFromRun ? "rerun" : "current")
               }
               recipe={recipe}
+              onIssuesChange={setRecipeFieldIssues}
               onChange={(next) => {
                 if (next.kind === "dca" && next.startKind === "indicator") {
                   setRecipe({ ...next, indicatorTimeframe: interval });

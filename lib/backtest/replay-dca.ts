@@ -33,7 +33,13 @@ export function canBacktestDcaRecipe(
       error: "Webhook-start DCA cannot be backtested. Use price, indicator, or immediate.",
     };
   }
-  if (!(recipe.clipSize > 0)) {
+  const hasClip = recipe.clipSize > 0;
+  const hasBudget =
+    recipe.maxValue != null &&
+    recipe.maxValue > 0 &&
+    recipe.maxClips != null &&
+    recipe.maxClips > 0;
+  if (!hasClip && !hasBudget) {
     return { ok: false, error: "This DCA bot needs a clip size." };
   }
   return { ok: true };

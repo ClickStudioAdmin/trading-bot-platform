@@ -5,7 +5,13 @@ import { deskAllowsPerpsRecipes, deskIsCopy } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
-import { decideBacktestTemplateActions } from "@/lib/backtest/library";
+import { listDeskBacktestBots } from "@/lib/backtest/desk-bots";
+import {
+  decideBacktestTemplateActions,
+  findMatchingBacktestDeskBot,
+  findMatchingBacktestTemplate,
+  toBacktestLibraryItem,
+} from "@/lib/backtest/library";
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   canDeleteBacktestRun,
@@ -13,7 +19,10 @@ import {
   listBacktestRuns,
   loadBacktestRun,
 } from "@/lib/backtest/store";
-import { loadTemplateById } from "@/lib/templates/store";
+import {
+  listApplyableTemplates,
+  loadTemplateById,
+} from "@/lib/templates/store";
 
 export const metadata: Metadata = {
   title: "Backtest",
@@ -45,14 +54,28 @@ export default async function AccountBacktestDetailPage({
     }
     redirect(`/account/backtests?${draftParams.toString()}`);
   }
-  const [source, linked] = await Promise.all([
+  const ownerId = run.userId ?? member.id;
+  const [source, linked, templates, deskBots] = await Promise.all([
     run.sourceTemplateId ? loadTemplateById(run.sourceTemplateId) : null,
     run.templateId ? loadTemplateById(run.templateId) : null,
+    listApplyableTemplates({ userId: ownerId }),
+    run.userId ? listDeskBacktestBots(run.userId) : Promise.resolve([]),
   ]);
+  const library = templates.flatMap((row) => {
+    const item = toBacktestLibraryItem(row);
+    return item ? [{ ...item, visibility: row.visibility }] : [];
+  });
+  const matchingTemplate = findMatchingBacktestTemplate(
+    run.recipe,
+    library,
+    run.sourceTemplateId,
+  );
+  const matchingDeskBot = findMatchingBacktestDeskBot(run.recipe, deskBots);
   const templateActions = decideBacktestTemplateActions({
     status: run.status,
     ownerUserId: run.userId,
     memberId: member.id,
+    isAdmin,
     recipe: run.recipe,
     source:
       source &&
@@ -66,6 +89,14 @@ export default async function AccountBacktestDetailPage({
     linked: linked
       ? { id: linked.id, name: linked.name, visibility: linked.visibility }
       : null,
+    matchingTemplate: matchingTemplate
+      ? {
+          id: matchingTemplate.id,
+          name: matchingTemplate.name,
+          visibility: matchingTemplate.visibility,
+        }
+      : null,
+    matchingDeskBot,
   });
   const desks = await listTradingAccounts(member.id);
   const applyDesks = desks
@@ -92,7 +123,11 @@ export default async function AccountBacktestDetailPage({
         canRemove={canDeleteBacktestRun(run, member.id, isAdmin)}
         canAttach={templateActions.canAttach}
         canSaveAs={templateActions.canSaveAs}
+        canSaveAsPlatform={templateActions.canSaveAsPlatform}
         sourceTemplateName={templateActions.sourceName}
+        attachTemplateId={templateActions.matchingTemplateId}
+        matchingTemplateName={templateActions.matchingTemplateName}
+        matchingDeskLabel={templateActions.matchingDeskLabel}
         linkedTemplateName={templateActions.linkedName}
         returnTo="/account/backtests"
         comparables={comparables}

@@ -10,8 +10,10 @@ import {
   BacktestOrdersTable,
   BacktestPropertyList,
   BacktestStatsGrid,
+  BacktestOriginBadges,
   PublishBacktestButton,
   RemoveBacktestButton,
+  SaveBacktestAsPlatformButton,
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
 import { ColumnHint } from "@/components/column-hint";
@@ -118,7 +120,11 @@ export function BacktestRunDetail({
   canRemove,
   canAttach = false,
   canSaveAs = false,
+  canSaveAsPlatform = false,
   sourceTemplateName = null,
+  attachTemplateId = null,
+  matchingTemplateName = null,
+  matchingDeskLabel = null,
   linkedTemplateName = null,
   returnTo,
   comparables = [],
@@ -132,7 +138,11 @@ export function BacktestRunDetail({
   canRemove: boolean;
   canAttach?: boolean;
   canSaveAs?: boolean;
+  canSaveAsPlatform?: boolean;
   sourceTemplateName?: string | null;
+  attachTemplateId?: string | null;
+  matchingTemplateName?: string | null;
+  matchingDeskLabel?: string | null;
   linkedTemplateName?: string | null;
   returnTo: string;
   comparables?: BacktestRun[];
@@ -161,6 +171,14 @@ export function BacktestRunDetail({
             {run.startingUsdt.toLocaleString()} · {run.leverage}× ·{" "}
             {BACKTEST_FEE_PRESETS[run.feePreset].label}
           </p>
+          {matchingTemplateName || matchingDeskLabel ? (
+            <div className="mt-3">
+              <BacktestOriginBadges
+                templateName={matchingTemplateName}
+                deskLabel={matchingDeskLabel}
+              />
+            </div>
+          ) : null}
           <div className="mt-3 flex flex-wrap gap-3 text-sm">
             <Link href={listHref} className="text-accent hover:underline">
               All backtests
@@ -199,7 +217,8 @@ export function BacktestRunDetail({
                 {canAttach ? (
                   <AttachBacktestButton
                     runId={run.id}
-                    sourceName={sourceTemplateName}
+                    sourceName={matchingTemplateName ?? sourceTemplateName}
+                    templateId={attachTemplateId ?? ""}
                   />
                 ) : null}
                 {canSaveAs ? (
@@ -220,6 +239,14 @@ export function BacktestRunDetail({
                 <ApplyBacktestButton
                   templateId={applyTemplateId}
                   desks={applyDesks}
+                />
+              </ActionGroup>
+            ) : null}
+            {canSaveAsPlatform ? (
+              <ActionGroup label="Platform">
+                <SaveBacktestAsPlatformButton
+                  runId={run.id}
+                  defaultName={run.recipe.name}
                 />
               </ActionGroup>
             ) : null}

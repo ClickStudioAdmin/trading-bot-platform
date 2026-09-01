@@ -462,7 +462,11 @@ export function dcaRecipeToConfig(
   }
   form.set(
     "maxValueKind",
-    recipe.maxValueKind === "percent" ? "percent" : "usdt",
+    maxValue == null
+      ? "none"
+      : recipe.maxValueKind === "percent"
+        ? "percent"
+        : "usdt",
   );
   if (recipe.dipPct != null) {
     form.set("dipPct", String(recipe.dipPct));

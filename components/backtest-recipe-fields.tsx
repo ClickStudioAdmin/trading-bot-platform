@@ -97,10 +97,29 @@ function RecipeNumberInput({
 export function BacktestRecipeFields({
   recipe,
   onChange,
+  onIssuesChange,
 }: {
   recipe: BacktestRecipe;
   onChange: (next: BacktestRecipe) => void;
+  onIssuesChange?: (issues: string[]) => void;
 }) {
+  const [maxValueMode, setMaxValueMode] = useState<"none" | "usdt" | "percent">(
+    () =>
+      recipe.kind === "dca" && recipe.maxValue != null
+        ? recipe.maxValueKind === "percent"
+          ? "percent"
+          : "usdt"
+        : "none",
+  );
+  const maxValueIssue =
+    recipe.kind === "dca" &&
+    maxValueMode !== "none" &&
+    !(Number(recipe.maxValue) > 0)
+      ? "Enter a max value."
+      : null;
+  useEffect(() => {
+    onIssuesChange?.(maxValueIssue ? [maxValueIssue] : []);
+  }, [maxValueIssue, onIssuesChange]);
   const issues = userBacktestFieldIssues(recipe);
   if (recipe.kind === "dca") {
     const startBlocked =
@@ -256,6 +275,10 @@ export function BacktestRecipeFields({
             </label>
           </>
         ) : null}
+        {recipe.maxValue != null &&
+        recipe.maxValue > 0 &&
+        recipe.maxClips != null &&
+        recipe.maxClips > 0 ? null : (
         <label className={labelClass}>
           Clip
           <RecipeNumberInput
@@ -270,6 +293,7 @@ export function BacktestRecipeFields({
           />
           <FieldNote message={issueFor(issues, "clipSize")} />
         </label>
+        )}
         <label className={labelClass}>
           Size unit
           <select
@@ -321,6 +345,44 @@ export function BacktestRecipeFields({
             }
           />
         </label>
+        <label className={labelClass}>
+          Max value
+          <select
+            value={maxValueMode}
+            onChange={(event) => {
+              const next = event.target.value;
+              if (next === "none") {
+                setMaxValueMode("none");
+                onChange({
+                  ...recipe,
+                  maxValue: null,
+                  maxValueKind: "usdt",
+                });
+                return;
+              }
+              const kind = next === "percent" ? "percent" : "usdt";
+              setMaxValueMode(kind);
+              onChange({ ...recipe, maxValueKind: kind });
+            }}
+            className={fieldClass}
+          >
+            <option value="usdt">Fixed USDT</option>
+            <option value="percent">% of account</option>
+            <option value="none">No max value</option>
+          </select>
+        </label>
+        {maxValueMode !== "none" ? (
+          <label className={labelClass}>
+            {maxValueMode === "percent" ? "Percent" : "Amount"}
+            <RecipeNumberInput
+              value={recipe.maxValue}
+              emptyValue={null}
+              className={maxValueIssue ? invalidFieldClass : fieldClass}
+              onCommit={(next) => onChange({ ...recipe, maxValue: next })}
+            />
+            <FieldNote message={maxValueIssue} />
+          </label>
+        ) : null}
         <label className={labelClass}>
           Take profit %
           <RecipeNumberInput

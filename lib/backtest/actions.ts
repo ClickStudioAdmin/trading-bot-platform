@@ -395,10 +395,14 @@ export async function attachBacktestToTemplateAction(
   if (run.status !== "done" || run.userId !== auth.member.id) {
     return { ok: false, error: "Attach a finished run you own." };
   }
-  if (!run.sourceTemplateId) {
-    return { ok: false, error: "This run was not loaded from a template." };
+  const templateId =
+    String(formData.get("templateId") ?? "").trim() ||
+    run.sourceTemplateId ||
+    "";
+  if (!templateId) {
+    return { ok: false, error: "No matching template to attach." };
   }
-  const source = await loadTemplateById(run.sourceTemplateId);
+  const source = await loadTemplateById(templateId);
   if (
     !source ||
     (source.recipe.kind !== "dca" && source.recipe.kind !== "perps") ||
@@ -470,6 +474,47 @@ export async function saveBacktestAsTemplateAction(
     return { ok: false, error: "Saved the template but could not link this run." };
   }
   revalidateBacktests(`/account/backtests/${run.id}`);
+  return { ok: true, runId: run.id };
+}
+
+export async function saveBacktestAsPlatformTemplateAction(
+  formData: FormData,
+): Promise<BacktestActionResult> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  if (!auth.isAdmin) {
+    return { ok: false, error: "Only an admin can save a platform template." };
+  }
+  const run = await loadBacktestRun(String(formData.get("runId") ?? ""));
+  if (!run || !canReadBacktestRun(run, auth.member.id, auth.isAdmin)) {
+    return { ok: false, error: "That run was not found." };
+  }
+  if (run.status !== "done") {
+    return { ok: false, error: "Save a finished run." };
+  }
+  const requested = String(formData.get("name") ?? "").trim() || run.recipe.name;
+  const names = [requested, uniqueBacktestName(requested, run.symbol)];
+  let created: Awaited<ReturnType<typeof insertTemplate>> | null = null;
+  for (const name of names) {
+    created = await insertTemplate({
+      userId: null,
+      visibility: "platform",
+      deskType: run.recipe.kind,
+      name,
+      description: "Saved from a backtest. Enable on the desk yourself.",
+      recipe: run.recipe,
+    });
+    if (created.ok || created.code !== "name_taken") {
+      break;
+    }
+  }
+  if (!created || !created.ok) {
+    return { ok: false, error: created?.error ?? "Could not save that template." };
+  }
+  revalidateBacktests(`/account/backtests/${run.id}`);
+  revalidatePath("/admin/templates");
   return { ok: true, runId: run.id };
 }
 

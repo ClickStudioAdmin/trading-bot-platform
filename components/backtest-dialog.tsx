@@ -38,11 +38,15 @@ export function findBacktestableTemplate(
 
 export function BacktestTemplateLink({
   current,
+  getRecipe,
   templates,
   venueId,
   venueEnvironment = null,
 }: {
-  current: BacktestRecipe | null;
+  current?: BacktestRecipe | null;
+  getRecipe?: () =>
+    | { ok: true; recipe: BacktestRecipe }
+    | { ok: false; error: string };
   templates: BacktestLibraryItem[];
   venueId: string;
   venueEnvironment?: string | null;
@@ -55,18 +59,26 @@ export function BacktestTemplateLink({
         type="button"
         disabled={pending}
         onClick={() => {
-          if (!current) {
-            setError("Complete this bot before backtesting.");
+          const loaded = getRecipe?.() ??
+            (current
+              ? { ok: true as const, recipe: current }
+              : {
+                  ok: false as const,
+                  error: "Complete this bot before backtesting.",
+                });
+          if (!loaded.ok) {
+            setError(loaded.error);
             return;
           }
-          const allowed = canQueueUserBacktest(current);
+          const recipe = loaded.recipe;
+          const allowed = canQueueUserBacktest(recipe);
           if (!allowed.ok) {
             setError(allowed.error);
             return;
           }
-          const match = findBacktestableTemplate(current, templates);
+          const match = findBacktestableTemplate(recipe, templates);
           const formData = new FormData();
-          formData.set("recipe", JSON.stringify(current));
+          formData.set("recipe", JSON.stringify(recipe));
           formData.set("venue", venueId);
           if (venueEnvironment) {
             formData.set("venueEnvironment", venueEnvironment);

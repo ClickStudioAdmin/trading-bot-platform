@@ -31,6 +31,10 @@ assert.equal(
   preview.find((row) => row.label === "Direction")?.value,
   "Long",
 );
+assert.equal(
+  preview.find((row) => row.label === "Max value")?.value,
+  "—",
+);
 
 const run: BacktestRun = {
   id: "run-1",

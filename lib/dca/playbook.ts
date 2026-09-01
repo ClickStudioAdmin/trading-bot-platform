@@ -336,6 +336,38 @@ export function dcaCycleClipSize(input: {
   };
 }
 
+export function dcaCopyEstimateClipSize(input: {
+  maxValueKind: DcaMaxValueKind;
+  maxValue: number | null;
+  maxClips: number | null;
+  clipSize: number;
+  sizeMultiplier: number;
+  sizeUnit: "qty" | "usdt";
+  long: Pick<DcaLegState, "clipsFilled" | "cycleMaxValue">;
+  short: Pick<DcaLegState, "clipsFilled" | "cycleMaxValue">;
+  bookUsdt: number | null;
+  mark?: number | null;
+}): number {
+  const inCycle = [input.long, input.short].some(
+    (leg) =>
+      leg.clipsFilled > 0 ||
+      (leg.cycleMaxValue != null && leg.cycleMaxValue > 0),
+  );
+  if (!inCycle && input.maxValueKind === "percent") {
+    return dcaCycleClipSize({
+      kind: input.maxValueKind,
+      maxValue: input.maxValue,
+      maxClips: input.maxClips,
+      clipSize: input.clipSize,
+      sizeMultiplier: input.sizeMultiplier,
+      sizeUnit: input.sizeUnit,
+      bookUsdt: input.bookUsdt,
+      mark: input.mark,
+    }).clipSize;
+  }
+  return input.clipSize;
+}
+
 export function dcaMaxTypeFromCaps(
   maxClips: number | null,
   maxValue: number | null,
@@ -650,7 +682,17 @@ export function parseDcaPlaybookForm(
   const clipSize = parseFuturesQty(form.get("clipSize"));
   const maxClips = parseOptionalPositiveInt(form.get("maxClips"));
   const maxValue = parseOptionalPositive(form.get("maxValue"));
-  const maxValueKind = parseDcaMaxValueKind(form.get("maxValueKind"));
+  const maxValueKindRaw = String(form.get("maxValueKind") ?? "").trim();
+  const explicitMaxValueKind =
+    maxValueKindRaw === "none" ||
+    maxValueKindRaw === "usdt" ||
+    maxValueKindRaw === "percent"
+      ? maxValueKindRaw
+      : null;
+  const maxValueKind =
+    explicitMaxValueKind === "percent"
+      ? "percent"
+      : parseDcaMaxValueKind(maxValueKindRaw);
   const bookUsdt = parseOptionalPositive(form.get("accountBookUsdt"));
   const typedMaxType = form.get("maxType");
   const hasMaxType =
@@ -716,6 +758,13 @@ export function parseDcaPlaybookForm(
     const maxType = parseDcaMaxType(typedMaxType);
     clipsCap = maxType === "orders" ? maxClips.value : null;
     valueCap = maxType === "value" ? maxValue.value : null;
+  } else if (explicitMaxValueKind === "none") {
+    valueCap = null;
+  } else if (
+    (explicitMaxValueKind === "usdt" || explicitMaxValueKind === "percent") &&
+    valueCap == null
+  ) {
+    return { ok: false, error: "Enter a max value." };
   }
   if (maxValueKind === "percent" && valueCap != null && valueCap > 100) {
     return { ok: false, error: "Percent must be 100 or less." };
