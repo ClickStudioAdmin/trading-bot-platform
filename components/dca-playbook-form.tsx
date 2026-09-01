@@ -30,7 +30,7 @@ import {
   dcaLadderLevels,
   dcaLadderLossRange,
   dcaLadderProfitRange,
-  dcaLastClipDeviationPct,
+  dcaInitialMarginUsdt,
   dcaMaxDropCoveredPct,
   dcaRequiredUsdt,
   type DcaLadderLevel,
@@ -158,8 +158,8 @@ function PercentInput({
 
 type DcaSummaryPreview = {
   covered: number | null;
-  lastDev: number | null;
   required: number | null;
+  initialMargin: number | null;
   levels: DcaLadderLevel[];
   priceFromLast: boolean;
   profitRange: { min: number; max: number } | null;
@@ -184,6 +184,7 @@ function dcaSummaryPreview(input: {
   takeProfitBasis: DcaExitBasis;
   stopLossPct: string;
   stopLossBasis: DcaExitBasis;
+  leverage: number | null;
 }): DcaSummaryPreview {
   const orderCap = asNumber(input.maxClips);
   const valueCap = asNumber(input.maxValue);
@@ -210,12 +211,6 @@ function dcaSummaryPreview(input: {
           })
         : null;
   const covered = dcaMaxDropCoveredPct({
-    side: input.side,
-    maxClips: clips,
-    dipPct: dip,
-    deviationMultiplier: devMult,
-  });
-  const lastDev = dcaLastClipDeviationPct({
     side: input.side,
     maxClips: clips,
     dipPct: dip,
@@ -257,8 +252,8 @@ function dcaSummaryPreview(input: {
         });
   return {
     covered,
-    lastDev,
     required,
+    initialMargin: dcaInitialMarginUsdt(required, input.leverage),
     levels,
     priceFromLast,
     profitRange: dcaLadderProfitRange(levels),
@@ -349,6 +344,7 @@ export function DcaPlaybooksDesk({
   options,
   signalWebhooks,
   availableUsdt = null,
+  leverage = null,
   lastPrices = {},
   reduceOnly = false,
   webhooksHref = FUTURES_PATHS.webhooks,
@@ -364,6 +360,7 @@ export function DcaPlaybooksDesk({
   options: LinearPerp[];
   signalWebhooks: DcaSignalWebhookOption[];
   availableUsdt?: number | null;
+  leverage?: number | null;
   lastPrices?: Record<string, number>;
   reduceOnly?: boolean;
   webhooksHref?: string;
@@ -437,6 +434,7 @@ export function DcaPlaybooksDesk({
             options={options}
             signalWebhooks={signalWebhooks}
             availableUsdt={availableUsdt}
+            leverage={leverage}
             lastPrices={lastPrices}
             webhooksHref={webhooksHref}
             isAdmin={isAdmin}
@@ -549,6 +547,7 @@ export function DcaPlaybookForm({
   options,
   signalWebhooks,
   availableUsdt = null,
+  leverage = null,
   lastPrices = {},
   reduceOnly = false,
   defaultName,
@@ -567,6 +566,7 @@ export function DcaPlaybookForm({
   options: LinearPerp[];
   signalWebhooks: DcaSignalWebhookOption[];
   availableUsdt?: number | null;
+  leverage?: number | null;
   lastPrices?: Record<string, number>;
   reduceOnly?: boolean;
   defaultName?: string;
@@ -730,6 +730,7 @@ export function DcaPlaybookForm({
       takeProfitBasis,
       stopLossPct,
       stopLossBasis,
+      leverage,
     };
     return {
       long: dcaSummaryPreview({ ...input, side: "long" }),
@@ -750,6 +751,7 @@ export function DcaPlaybookForm({
     takeProfitBasis,
     takeProfitPct,
     effectiveMaxType,
+    leverage,
   ]);
   const showLadderTabs = direction === "both";
   const activeLadderSide: FuturesSide = showLadderTabs
@@ -1732,35 +1734,22 @@ export function DcaPlaybookForm({
         >
         <div className="flex flex-wrap">
           <SummaryStat
-            label="Covered"
+            label="Covered Range"
             value={
               summary.covered === null ? "—" : `${trimPct(summary.covered)}%`
             }
             hint={
               summary.covered === null
                 ? "Set max orders and price deviation %"
-                : null
+                : "First fill to last clip"
             }
           />
           <SummaryStat
-            label="Last order"
-            value={
-              summary.lastDev === null ? "—" : `${trimPct(summary.lastDev)}%`
-            }
-          />
-          <SummaryStat
-            label="Required"
+            label="Max Exposure"
             value={
               summary.required === null
                 ? "—"
                 : formatUsdAmount(summary.required)
-            }
-            valueClass={
-              availableUsdt !== null &&
-              summary.required !== null &&
-              summary.required > availableUsdt
-                ? "text-warning"
-                : "text-ink"
             }
             hint={
               summary.required === null
@@ -1768,9 +1757,37 @@ export function DcaPlaybookForm({
                   ? "Use USDT size to estimate"
                   : null
                 : [
+                    "Full ladder notional",
+                    showLadderTabs ? "This side only" : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+            }
+          />
+          <SummaryStat
+            label="Initial Margin"
+            value={
+              summary.initialMargin === null
+                ? "—"
+                : formatUsdAmount(summary.initialMargin)
+            }
+            valueClass={
+              availableUsdt !== null &&
+              summary.initialMargin !== null &&
+              summary.initialMargin > availableUsdt
+                ? "text-warning"
+                : "text-ink"
+            }
+            hint={
+              summary.initialMargin === null
+                ? leverage == null || !(leverage > 0)
+                  ? "Max exposure ÷ leverage. Set leverage to estimate."
+                  : null
+                : [
+                    `Max exposure ÷ ${leverage}×`,
                     availableUsdt !== null
-                      ? summary.required > availableUsdt
-                        ? `Available ${formatUsdAmount(availableUsdt)} — less than the full grid`
+                      ? summary.initialMargin > availableUsdt
+                        ? `Available ${formatUsdAmount(availableUsdt)} — less than this margin`
                         : `Available ${formatUsdAmount(availableUsdt)}`
                       : null,
                     showLadderTabs ? "This side only" : null,

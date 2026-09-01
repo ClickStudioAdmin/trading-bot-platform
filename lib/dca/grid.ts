@@ -1,5 +1,6 @@
 import type { FuturesSide } from "@/lib/futures/model";
 import { futuresPnlUsdt } from "@/lib/futures/math";
+import { positionMarginUsdt } from "@/lib/futures/stats";
 import {
   formatPerpMinQty,
   perpEffectiveMaxQty,
@@ -435,6 +436,16 @@ export function dcaRequiredUsdt(input: {
     return null;
   }
   return totalQtyOrUsdt * input.mark;
+}
+
+export function dcaInitialMarginUsdt(
+  exposureUsdt: number | null,
+  leverage: number | null,
+): number | null {
+  if (exposureUsdt == null || !(exposureUsdt > 0)) {
+    return null;
+  }
+  return positionMarginUsdt(exposureUsdt, leverage);
 }
 
 export function dcaPlannedOrderCount(input: {

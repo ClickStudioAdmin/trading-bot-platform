@@ -10,6 +10,7 @@ import {
   dcaLadderLossRange,
   dcaLadderMaxOrderError,
   dcaLadderProfitRange,
+  dcaInitialMarginUsdt,
   dcaLastClipDeviationPct,
   dcaMaxDropCoveredPct,
   dcaPlannedExits,
@@ -232,6 +233,9 @@ assert.equal(
   }),
   100,
 );
+assert.equal(dcaInitialMarginUsdt(3_177.25, 10), 317.725);
+assert.equal(dcaInitialMarginUsdt(3_177.25, null), null);
+assert.equal(dcaInitialMarginUsdt(null, 10), null);
 
 const ladder = dcaLadderLevels({
   side: "long",

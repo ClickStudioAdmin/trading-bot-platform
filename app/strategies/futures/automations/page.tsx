@@ -92,6 +92,11 @@ export default async function FuturesAutomationsPage({
       .filter((row) => row.kind === "signal")
       .map((row) => ({ id: row.id, name: row.name }));
     let availableUsdt: number | null = null;
+    let leverage: number | null = accountCanHoldConnections(
+      session.account.mode,
+    )
+      ? null
+      : (settings.paperLeverage ?? null);
     if (accountCanHoldConnections(session.account.mode) && settings.connectionId) {
       const connections = await listExchangeConnections(session.member.id);
       const bound = connections.find((row) => row.id === settings.connectionId);
@@ -99,6 +104,7 @@ export default async function FuturesAutomationsPage({
         const snapshot = await loadAccountSnapshot(session.member.id, bound.id);
         if (snapshot.ok) {
           availableUsdt = snapshot.snapshot.availableBalance;
+          leverage = snapshot.snapshot.leverage;
         }
       }
     }
@@ -142,6 +148,7 @@ export default async function FuturesAutomationsPage({
             options={pairs}
             signalWebhooks={signalWebhooks}
             availableUsdt={availableUsdt}
+            leverage={leverage}
             lastPrices={lastPrices}
             reduceOnly={Boolean(settings.reduceOnly)}
             webhooksHref={deskHref(FUTURES_PATHS.webhooks, session.account.id)}
