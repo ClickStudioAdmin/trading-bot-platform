@@ -174,6 +174,26 @@ export function recipesMatchForBacktest(
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+export function findMatchingLibraryTemplate(
+  recipe: TemplateRecipe | null | undefined,
+  templates: readonly {
+    name: string;
+    recipe: TemplateRecipe;
+    visibility?: string;
+  }[],
+  visibility: TemplateVisibility,
+): { name: string } | null {
+  if (!recipe) {
+    return null;
+  }
+  const match = templates.find(
+    (row) =>
+      row.visibility === visibility &&
+      recipesMatchForBacktest(recipe, row.recipe),
+  );
+  return match ? { name: match.name } : null;
+}
+
 export function recipesMatchReplayFields(
   current: TemplateRecipe,
   saved: TemplateRecipe,

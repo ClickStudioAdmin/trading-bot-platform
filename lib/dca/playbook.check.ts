@@ -1546,6 +1546,19 @@ assert.equal(cloned.armConditionTrue, false);
 assert.equal(dcaPlaybookIsRunning(cloned), false);
 assert.equal(dcaPlaybookHasOpenCycle(row), true);
 assert.equal(dcaPlaybookHasOpenCycle(cloned), false);
+assert.equal(dcaPlaybookHasOpenCycle(row, []), false);
+assert.equal(
+  dcaPlaybookHasOpenCycle(row, [
+    { symbol: row.symbol, side: "long", qty: 1 },
+  ]),
+  true,
+);
+assert.equal(
+  dcaPlaybookHasOpenCycle(row, [
+    { symbol: "ETHUSDT", side: "long", qty: 1 },
+  ]),
+  false,
+);
 assert.equal(
   dcaPlaybookHasOpenCycle({
     direction: "long",

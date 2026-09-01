@@ -12,6 +12,7 @@ import {
   recipePreview,
   snapshotDcaRecipe,
   snapshotPaperRecipe,
+  findMatchingLibraryTemplate,
   recipesMatchForBacktest,
   recipesMatchReplayFields,
   snapshotPerpsRecipe,
@@ -111,6 +112,34 @@ assert.equal(perps.kind, "perps");
 assert.equal(perps.tpsl, null);
 assert.equal(perps.trailing, null);
 assert.equal(recipesMatchForBacktest(perps, { ...perps, name: "Other" }), true);
+assert.equal(
+  findMatchingLibraryTemplate(
+    perps,
+    [
+      { name: "Library Perps", recipe: { ...perps, name: "Library Perps" }, visibility: "user" },
+      { name: "Platform Perps", recipe: { ...perps, name: "Platform Perps" }, visibility: "platform" },
+    ],
+    "user",
+  )?.name,
+  "Library Perps",
+);
+assert.equal(
+  findMatchingLibraryTemplate(
+    perps,
+    [
+      { name: "Library Perps", recipe: { ...perps, name: "Library Perps" }, visibility: "user" },
+      { name: "Platform Perps", recipe: { ...perps, name: "Platform Perps" }, visibility: "platform" },
+    ],
+    "platform",
+  )?.name,
+  "Platform Perps",
+);
+assert.equal(
+  findMatchingLibraryTemplate(perps, [
+    { name: "Other", recipe: { ...perps, triggerPrice: "1" }, visibility: "user" },
+  ], "user"),
+  null,
+);
 assert.equal(
   recipesMatchForBacktest(perps, { ...perps, triggerPrice: "1" }),
   false,

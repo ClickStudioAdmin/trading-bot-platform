@@ -100,6 +100,7 @@ export default async function FuturesAutomationsPage({
     )
       ? null
       : (settings.paperLeverage ?? null);
+    const openPositions = await loadFuturesPositions({ status: "open" });
     if (accountCanHoldConnections(session.account.mode) && settings.connectionId) {
       const connections = await listExchangeConnections(session.member.id);
       const bound = connections.find((row) => row.id === settings.connectionId);
@@ -173,6 +174,11 @@ export default async function FuturesAutomationsPage({
             backtestLibrary={templates
               .map(toBacktestLibraryItem)
               .filter((row): row is NonNullable<typeof row> => Boolean(row))}
+            openPositions={openPositions.map((row) => ({
+              symbol: row.symbol,
+              side: row.side,
+              qty: row.qty,
+            }))}
           />
         </div>
       </main>

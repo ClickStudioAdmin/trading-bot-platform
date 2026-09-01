@@ -70,6 +70,7 @@ export default async function CashAndCarryAutomationsPage({
           accountId={session.account.id}
           templates={templates.map(templateToSummary)}
           sets={sets}
+          recipeLibrary={templates}
         />
       ) : (
         <p className="text-sm text-ink-muted">

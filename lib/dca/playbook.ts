@@ -485,12 +485,33 @@ export function dcaPlaybookIsRunning(
   return dcaLegIsRunning(playbook.long.status) || dcaLegIsRunning(playbook.short.status);
 }
 
+export type DcaCycleOpen = {
+  symbol: string;
+  side: FuturesSide;
+  qty: number;
+};
+
 export function dcaPlaybookHasOpenCycle(
-  playbook: Pick<DcaPlaybook, "direction" | "long" | "short">,
+  playbook: Pick<DcaPlaybook, "direction" | "long" | "short"> & {
+    symbol?: string;
+  },
+  opens?: readonly DcaCycleOpen[],
 ): boolean {
   return dcaEnabledSides(playbook.direction).some((side) => {
     const leg = side === "long" ? playbook.long : playbook.short;
-    return leg.clipsFilled > 0 || leg.firstFillPrice != null;
+    const hasFills = leg.clipsFilled > 0 || leg.firstFillPrice != null;
+    if (!hasFills) {
+      return false;
+    }
+    if (opens === undefined) {
+      return true;
+    }
+    return opens.some(
+      (row) =>
+        row.qty > 0 &&
+        row.side === side &&
+        (playbook.symbol == null || row.symbol === playbook.symbol),
+    );
   });
 }
 

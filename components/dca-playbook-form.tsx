@@ -54,6 +54,7 @@ import {
   parseDcaPlaybookForm,
   dcaResolvedMaxValueUsdt,
   type DcaAveragingKind,
+  type DcaCycleOpen,
   type DcaExitBasis,
   type DcaIntervalUnit,
   type DcaMaxValueKind,
@@ -381,6 +382,7 @@ export function DcaPlaybooksDesk({
   policy = BYBIT_DCA_UI,
   venueEnvironment = null,
   backtestLibrary = [],
+  openPositions = [],
 }: {
   playbooks: DcaPlaybook[];
   options: LinearPerp[];
@@ -398,6 +400,7 @@ export function DcaPlaybooksDesk({
   policy?: DcaPlaybookUiPolicy;
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
+  openPositions?: DcaCycleOpen[];
 }) {
   const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
   const library = [...backtestLibrary, ...extraLibrary];
@@ -470,6 +473,7 @@ export function DcaPlaybooksDesk({
             policy={policy}
             venueEnvironment={venueEnvironment}
             backtestLibrary={library}
+            openPositions={openPositions}
             onTemplateSaved={(item) =>
               setExtraLibrary((current) => [
                 ...current.filter((row) => row.id !== item.id),
@@ -588,6 +592,7 @@ export function DcaPlaybookForm({
   policy = BYBIT_DCA_UI,
   venueEnvironment = null,
   backtestLibrary = [],
+  openPositions = [],
   onTemplateSaved,
 }: {
   playbook: DcaPlaybook | null;
@@ -608,6 +613,7 @@ export function DcaPlaybookForm({
   policy?: DcaPlaybookUiPolicy;
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
+  openPositions?: DcaCycleOpen[];
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -720,16 +726,29 @@ export function DcaPlaybookForm({
   const ladderPanelId = useId();
   const lastPrice = lastPrices[symbol] ?? null;
   const running = Boolean(playbook && dcaPlaybookIsRunning(playbook));
-  const cycleLocked = Boolean(playbook && dcaPlaybookHasOpenCycle(playbook));
+  const cycleLocked = Boolean(
+    playbook && dcaPlaybookHasOpenCycle(playbook, openPositions),
+  );
   const liveLegs = playbook
     ? dcaEnabledSides(playbook.direction).map((side) =>
         dcaLegFor(playbook, side),
       )
     : [];
   const showStopAdding = liveLegs.some((leg) => leg.status === "armed");
-  const showClosePlaybook = liveLegs.some(
-    (leg) => leg.clipsFilled > 0 || leg.status === "stop_adding",
+  const hasOpenPosition = Boolean(
+    playbook &&
+      dcaEnabledSides(playbook.direction).some((side) =>
+        openPositions.some(
+          (row) =>
+            row.symbol === playbook.symbol &&
+            row.side === side &&
+            row.qty > 0,
+        ),
+      ),
   );
+  const showClosePlaybook =
+    hasOpenPosition ||
+    liveLegs.some((leg) => leg.status === "stop_adding");
   const showManualTriggers = startKind === "immediate";
   const showSaveAndArm = dcaStartListens(startKind) && !running;
   const showArmButton =
@@ -1830,14 +1849,17 @@ export function DcaPlaybookForm({
             defaultName={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
             kind="dca"
             folders={folders}
+            library={backtestLibrary}
+            currentRecipe={liveRecipe()}
             buildForm={snapshotForm}
-            onSaved={(templateId) => {
+            onSaved={(saved) => {
               const recipe = liveRecipe();
               if (recipe) {
                 onTemplateSaved?.({
-                  id: templateId,
-                  name: recipe.name,
+                  id: saved.id,
+                  name: saved.name,
                   recipe,
+                  visibility: saved.visibility,
                 });
               }
             }}

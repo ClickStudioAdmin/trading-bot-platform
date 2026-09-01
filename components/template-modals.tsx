@@ -15,7 +15,12 @@ import type {
   AutomationTemplateSet,
   TemplateSummary,
 } from "@/lib/templates/store";
-import type { TemplateDeskType } from "@/lib/templates/recipe";
+import {
+  findMatchingLibraryTemplate,
+  type TemplateDeskType,
+  type TemplateRecipe,
+  type TemplateVisibility,
+} from "@/lib/templates/recipe";
 import { formatDeskType } from "@/lib/accounts/model";
 
 const fieldClass =
@@ -132,6 +137,8 @@ export function SaveAsTemplateButton({
   buildForm,
   kind,
   folders = [],
+  library = [],
+  currentRecipe = null,
   onSaved,
 }: {
   isAdmin: boolean;
@@ -139,8 +146,28 @@ export function SaveAsTemplateButton({
   buildForm: () => FormData;
   kind: TemplateDeskType;
   folders?: AutomationTemplateSet[];
-  onSaved?: (templateId: string) => void;
+  library?: readonly {
+    name: string;
+    recipe: TemplateRecipe;
+    visibility?: string;
+  }[];
+  currentRecipe?: TemplateRecipe | null;
+  onSaved?: (saved: {
+    id: string;
+    name: string;
+    visibility: TemplateVisibility;
+  }) => void;
 }) {
+  const savedUser = findMatchingLibraryTemplate(
+    currentRecipe,
+    library,
+    "user",
+  );
+  const savedPlatform = findMatchingLibraryTemplate(
+    currentRecipe,
+    library,
+    "platform",
+  );
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<TemplateActionResult | null>(null);
@@ -210,7 +237,11 @@ export function SaveAsTemplateButton({
     if (next.ok) {
       setOpen(false);
       if (next.templateId) {
-        onSaved?.(next.templateId);
+        onSaved?.({
+          id: next.templateId,
+          name,
+          visibility: platform ? "platform" : "user",
+        });
       }
     }
     if (next.code === "name_taken") {
@@ -225,7 +256,9 @@ export function SaveAsTemplateButton({
         onClick={() => resetAndOpen(false)}
         className="shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
       >
-        Save as template
+        {savedUser
+          ? `Saved template: ${savedUser.name}`
+          : "Save as template"}
       </button>
       {isAdmin ? (
         <button
@@ -233,7 +266,9 @@ export function SaveAsTemplateButton({
           onClick={() => resetAndOpen(true)}
           className="shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink"
         >
-          Save as platform template
+          {savedPlatform
+            ? `Saved platform template: ${savedPlatform.name}`
+            : "Save as platform template"}
         </button>
       ) : null}
       {open ? (

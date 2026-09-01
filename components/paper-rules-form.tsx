@@ -26,7 +26,12 @@ import {
 } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
-import { paperFormToSnapshotSource } from "@/lib/templates/recipe";
+import {
+  paperFormToSnapshotSource,
+  snapshotPaperRecipe,
+  type TemplateRecipe,
+} from "@/lib/templates/recipe";
+import { parsePaperRulesForm } from "@/lib/engine/rules";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
 import type { AutomationTemplateSet, TemplateSummary } from "@/lib/templates/store";
 
@@ -38,6 +43,7 @@ export function AutomationsDesk({
   accountId,
   templates = [],
   sets = [],
+  recipeLibrary = [],
 }: {
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
@@ -46,6 +52,11 @@ export function AutomationsDesk({
   accountId?: string;
   templates?: TemplateSummary[];
   sets?: AutomationTemplateSet[];
+  recipeLibrary?: readonly {
+    name: string;
+    recipe: TemplateRecipe;
+    visibility?: string;
+  }[];
 }) {
   const [hasSets, setHasSets] = useState(values.layers.length > 0);
   const [accountReduceOnly, setAccountReduceOnly] = useState(reduceOnly);
@@ -98,6 +109,7 @@ export function AutomationsDesk({
         accountId={accountId}
         templates={templates}
         sets={sets}
+        recipeLibrary={recipeLibrary}
       />
     </div>
   );
@@ -112,6 +124,7 @@ export function PaperRulesForm({
   accountId,
   templates = [],
   sets = [],
+  recipeLibrary = [],
 }: {
   values: PaperRulesFormValues;
   inUseRuleIds: number[];
@@ -121,6 +134,11 @@ export function PaperRulesForm({
   accountId?: string;
   templates?: TemplateSummary[];
   sets?: AutomationTemplateSet[];
+  recipeLibrary?: readonly {
+    name: string;
+    recipe: TemplateRecipe;
+    visibility?: string;
+  }[];
 }) {
   const [layers, setLayers] = useState(values.layers);
   const [cloneMenu, setCloneMenu] = useState(0);
@@ -209,6 +227,7 @@ export function PaperRulesForm({
               isAdmin={isAdmin}
               onRemove={() => removeLayer(layer.key, layer.id)}
               folders={sets}
+              recipeLibrary={recipeLibrary}
             />
           );
         })
@@ -298,6 +317,7 @@ function RuleRow({
   isAdmin,
   onRemove,
   folders = [],
+  recipeLibrary = [],
 }: {
   index: number;
   layer: PaperLayerFormValues;
@@ -307,6 +327,11 @@ function RuleRow({
   isAdmin: boolean;
   onRemove: () => void;
   folders?: AutomationTemplateSet[];
+  recipeLibrary?: readonly {
+    name: string;
+    recipe: TemplateRecipe;
+    visibility?: string;
+  }[];
 }) {
   const prefix = `r${index}_`;
   const [sizeType, setSizeType] = useState(layer.sizeType);
@@ -482,6 +507,20 @@ function RuleRow({
           defaultName={layer.name}
           kind="cash_and_carry"
           folders={folders}
+          library={recipeLibrary}
+          currentRecipe={(() => {
+            const parsed = parsePaperRulesForm(
+              paperFormToSnapshotSource({
+                ...layer,
+                mode,
+                sizeType,
+                exitSizeType,
+              }),
+            );
+            return parsed.ok && parsed.config.layers[0]
+              ? snapshotPaperRecipe(parsed.config.layers[0])
+              : null;
+          })()}
           buildForm={() =>
             paperFormToSnapshotSource({
               ...layer,

@@ -578,6 +578,8 @@ function RuleCard({
             defaultName={layer.name}
             kind="perps"
             folders={folders}
+            library={backtestLibrary}
+            currentRecipe={liveRecipe()}
             buildForm={() =>
               perpsFormToSnapshotSource(
                 {
@@ -595,11 +597,12 @@ function RuleCard({
                 venueId,
               )
             }
-            onSaved={(templateId) =>
+            onSaved={(saved) =>
               onTemplateSaved?.({
-                id: templateId,
-                name: layer.name,
+                id: saved.id,
+                name: saved.name,
                 recipe: liveRecipe(),
+                visibility: saved.visibility,
               })
             }
           />

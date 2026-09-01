@@ -13,6 +13,7 @@ import {
   type DcaPlaybook,
   type DcaPlaybookConfig,
 } from "@/lib/dca/playbook";
+import { loadOpenFuturesOnSymbol } from "@/lib/futures/list";
 import {
   applyDcaVerb,
   lastPriceFor,
@@ -106,7 +107,15 @@ async function saveDcaPlaybookWith(
   const existing = playbookId
     ? await loadDcaPlaybookById(playbookId, session.account.id)
     : null;
-  const cycleLocked = Boolean(existing && dcaPlaybookHasOpenCycle(existing));
+  const opens = existing
+    ? await loadOpenFuturesOnSymbol(existing.symbol, {
+        accountId: session.account.id,
+        userId: session.member.id,
+      })
+    : [];
+  const cycleLocked = Boolean(
+    existing && dcaPlaybookHasOpenCycle(existing, opens),
+  );
   const config =
     existing && cycleLocked
       ? dcaWithLockedCycleConfig(parsed.config, existing)

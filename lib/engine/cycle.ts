@@ -89,8 +89,6 @@ export async function runEngineCycle(
     }
   }
 
-  await drainQueuedBacktest(BACKTEST_VERCEL_BAR_LIMIT);
-
   const [kinds, hotIds] = await Promise.all([
     listEngineDeskKinds(),
     listHotEngineAccountIds(),
