@@ -29,6 +29,7 @@ import {
 import {
   canDeleteBacktestRun,
   canReadBacktestRun,
+  claimBacktestRunById,
   countBacktestRunsForTemplate,
   deleteBacktestRun,
   insertBacktestRun,
@@ -324,6 +325,43 @@ export async function queueTemplateBacktestAction(
   }
   revalidateBacktests(`/account/backtests/${run.id}`);
   return { ok: true, runId: run.id };
+}
+
+export async function nudgeBacktestRunAction(
+  runId: string,
+): Promise<BacktestActionResult> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  const run = await loadBacktestRun(runId);
+  if (!run || !canReadBacktestRun(run, auth.member.id, auth.isAdmin)) {
+    return { ok: false, error: "That run was not found." };
+  }
+  if (
+    run.status === "done" ||
+    run.status === "failed" ||
+    run.status === "cancelled" ||
+    run.status === "draft"
+  ) {
+    return { ok: true, runId: run.id };
+  }
+  if (run.status === "running") {
+    return { ok: true, runId: run.id };
+  }
+  const claimed = await claimBacktestRunById(run.id);
+  if (!claimed) {
+    return { ok: true, runId: run.id };
+  }
+  const result = await executeBacktestRun(claimed.id);
+  const children = await listBacktestRuns({ parentRunId: claimed.id, limit: 20 });
+  for (const child of children) {
+    if (child.status === "queued") {
+      await executeBacktestRun(child.id);
+    }
+  }
+  revalidateBacktests(`/account/backtests/${run.id}`);
+  return result;
 }
 
 export async function publishBacktestAction(

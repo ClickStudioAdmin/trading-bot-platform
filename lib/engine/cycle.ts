@@ -38,6 +38,7 @@ import { fanOutCopyFills } from "@/lib/copy/fan-out";
 import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { writeEventLog } from "@/lib/logs/write";
 import { processOneQueuedBacktest } from "@/lib/backtest/execute";
+import { BACKTEST_VERCEL_BAR_LIMIT } from "@/lib/backtest/model";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 
@@ -69,6 +70,26 @@ export async function runEngineCycle(
   const batchSize = options?.batchSize ?? ENGINE_CLAIM_BATCH;
   const started = Date.now();
   const maxMs = options?.maxMs;
+  const flyWorker = process.env.TBP_ENGINE_WORKER === "1";
+
+  async function drainQueuedBacktest(maxBars?: number) {
+    try {
+      await processOneQueuedBacktest(
+        maxBars === undefined ? undefined : { maxBars },
+      );
+    } catch (cause) {
+      await writeEventLog({
+        level: "error",
+        scope: "system",
+        event: "engine.tick",
+        message:
+          cause instanceof Error ? cause.message : "Backtest worker failed",
+        data: { workerId },
+      });
+    }
+  }
+
+  await drainQueuedBacktest(BACKTEST_VERCEL_BAR_LIMIT);
 
   const [kinds, hotIds] = await Promise.all([
     listEngineDeskKinds(),
@@ -148,20 +169,12 @@ export async function runEngineCycle(
   }
 
   stats.users = users.size;
-  if (maxMs === undefined || Date.now() - started < maxMs - 4_000) {
-    try {
-      await processOneQueuedBacktest();
-    } catch (cause) {
-      await writeEventLog({
-        level: "error",
-        scope: "system",
-        event: "engine.tick",
-        message:
-          cause instanceof Error ? cause.message : "Backtest worker failed",
-        data: { workerId },
-      });
-    }
+  if (maxMs === undefined || Date.now() - started < maxMs) {
+    await drainQueuedBacktest(
+      flyWorker ? undefined : BACKTEST_VERCEL_BAR_LIMIT,
+    );
   }
+
   if (!options?.silent) {
     await writeEventLog({
       scope: "system",

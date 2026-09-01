@@ -156,6 +156,7 @@ export function BacktestRunDetail({
     <div className="space-y-6">
       <BacktestRunRefresh
         active={run.status === "queued" || run.status === "running"}
+        runId={run.id}
       />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -270,8 +271,8 @@ export function BacktestRunDetail({
       {run.status === "queued" || run.status === "running" ? (
         <p className="rounded-card border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
           {run.status === "queued"
-            ? "Queued. The engine worker will pick this up and work through the history."
-            : "Running. Refresh in a moment."}
+            ? "Queued. Starting this run now."
+            : "Running. This page refreshes until it finishes."}
         </p>
       ) : null}
 

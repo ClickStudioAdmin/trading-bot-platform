@@ -24,7 +24,7 @@ export const BACKTEST_FEE_PRESETS = {
 } as const;
 
 export const BACKTEST_CANDLE_LIMIT = 200_000;
-export const BACKTEST_INLINE_BAR_LIMIT = 1500;
+export const BACKTEST_INLINE_BAR_LIMIT = 3000;
 export const BACKTEST_VERCEL_BAR_LIMIT = 3000;
 export const BACKTEST_COMPARABLE_CAP = 8;
 export const DEFAULT_STARTING_USDT = 10_000;

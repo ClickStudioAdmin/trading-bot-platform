@@ -3,7 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
-import { RemoveBacktestButton } from "@/components/backtest-run-view";
+import {
+  BacktestRunRefresh,
+  RemoveBacktestButton,
+} from "@/components/backtest-run-view";
 import { getSessionMember } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { toBacktestLibraryItem } from "@/lib/backtest/library";
@@ -110,8 +113,15 @@ export default async function AccountBacktestsPage({
     return allowed.ok ? [item] : [];
   });
 
+  const pendingRun =
+    runs.find((row) => row.status === "queued") ??
+    runs.find((row) => row.status === "running");
+
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
+      {pendingRun ? (
+        <BacktestRunRefresh active runId={pendingRun.id} />
+      ) : null}
       <PageHeading
         title="Backtesting Tool"
         actions={

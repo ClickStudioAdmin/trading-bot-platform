@@ -543,6 +543,29 @@ export async function deleteBacktestRun(id: string): Promise<
   return { ok: true };
 }
 
+export async function claimBacktestRunById(
+  id: string,
+): Promise<BacktestRun | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data } = await supabase
+    .from("backtest_runs")
+    .update({
+      status: "running",
+      claimed_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("status", "queued")
+    .select("*")
+    .maybeSingle();
+  if (!data) {
+    return null;
+  }
+  return parseBacktestRunRow(data as Record<string, unknown>);
+}
+
 export async function claimQueuedBacktestRun(input?: {
   maxBars?: number;
   staleMinutes?: number;

@@ -29,6 +29,8 @@ export const metadata: Metadata = {
   description: "Parameters, trades, account impact, and chart for one run.",
 };
 
+export const maxDuration = 60;
+
 export default async function AccountBacktestDetailPage({
   params,
 }: {

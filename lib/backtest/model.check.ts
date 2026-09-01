@@ -105,7 +105,9 @@ assert.deepEqual(
   { fromMs: 1_000, toMs: 10_000 },
 );
 assert.equal(backtestShouldRunInline(800, 2), true);
-assert.equal(backtestShouldRunInline(2000, 1), false);
+assert.equal(backtestShouldRunInline(2000, 1), true);
+assert.equal(backtestShouldRunInline(4000, 1), false);
+assert.equal(backtestShouldRunInline(800, 5), false);
 assert.deepEqual(parseComparableSymbols("ETHUSDT, SOLUSDT, BTCUSDT", "BTCUSDT"), [
   "ETHUSDT",
   "SOLUSDT",

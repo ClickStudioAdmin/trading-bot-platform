@@ -1,16 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { nudgeBacktestRunAction } from "@/lib/backtest/actions";
 
 const BACKTEST_REFRESH_MS = 5_000;
 
 export function BacktestRunRefresh({
   active,
+  runId,
 }: {
   active: boolean;
+  runId: string;
 }) {
   const router = useRouter();
+  const nudgedFor = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!active || nudgedFor.current === runId) {
+      return;
+    }
+    nudgedFor.current = runId;
+    void nudgeBacktestRunAction(runId).finally(() => {
+      router.refresh();
+    });
+  }, [active, runId, router]);
 
   useEffect(() => {
     if (!active) {
