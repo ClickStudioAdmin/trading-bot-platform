@@ -116,4 +116,27 @@ export function buildEquityTimeline(
   return points;
 }
 
+export function maxDrawdownFromEquity(
+  points: readonly Pick<EquityPoint, "equityUsdt">[],
+): { maxDrawdownUsdt: number; maxDrawdownPct: number | null } {
+  let peak = Number.NEGATIVE_INFINITY;
+  let maxDrawdownUsdt = 0;
+  for (const point of points) {
+    if (point.equityUsdt > peak) {
+      peak = point.equityUsdt;
+    }
+    const drawdown = peak - point.equityUsdt;
+    if (drawdown > maxDrawdownUsdt) {
+      maxDrawdownUsdt = drawdown;
+    }
+  }
+  if (!Number.isFinite(peak) || !(peak > 0)) {
+    return { maxDrawdownUsdt: 0, maxDrawdownPct: null };
+  }
+  return {
+    maxDrawdownUsdt,
+    maxDrawdownPct: maxDrawdownUsdt / peak,
+  };
+}
+
 export { recipeParamRows } from "./library";

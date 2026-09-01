@@ -77,7 +77,12 @@ export default async function CopyDeskPerformancePage({
           />
         }
       >
-        <FuturesPerformanceStats signedIn closed={closed} embedded />
+        <FuturesPerformanceStats
+          signedIn
+          closed={closed}
+          embedded
+          exchangeBook
+        />
       </CopyDeskDetailsHeader>
       <ClosedFuturesTrades signedIn closed={closed} webhookNames={[]} />
     </>

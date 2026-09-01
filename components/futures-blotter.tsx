@@ -23,6 +23,7 @@ import {
   type FuturesOpenColumnVisibility,
 } from "@/lib/futures/columns";
 import type { DcaOpenHint } from "@/lib/dca/playbook";
+import { COPY_PAPER_STARTING_USDT } from "@/lib/copy/decide";
 import { dcaHintKey } from "@/lib/dca/playbook";
 import type { FuturesDeskPosition } from "@/lib/futures/list";
 import type { MarkedFutures } from "@/lib/futures/mark";
@@ -32,9 +33,11 @@ import type { FuturesOrder, FuturesTradeSource } from "@/lib/futures/model";
 import { formatFuturesOrigin, resolveOrderOrigin } from "@/lib/futures/source";
 import {
   effectiveLeverage,
+  bookEquityDrawdown,
   deskWindowStats,
   flattenExitPrice,
   futuresClosedStats,
+  maxRealizedLossUsdt,
   futuresDaysHeld,
   futuresOpenExposure,
   positionMarginUsdt,
@@ -454,6 +457,74 @@ export type DeskStatItem = {
   content?: ReactNode;
 };
 
+const LIVE_DRAWDOWN_HINT =
+  "Closed-book dollars. Giveback is peak-to-trough of cumulative realized. Max realized loss is the largest losing trade. Not venue wallet equity, and not other desks on a shared key.";
+const PAPER_DRAWDOWN_HINT =
+  "Peak-to-trough of this paper book (start + realized closes). Percent is versus that peak.";
+
+function drawdownCard(input: {
+  signedIn: boolean;
+  exchangeBook: boolean;
+  empty: boolean;
+  givebackUsdt: number;
+  worstCloseUsdt: number | null;
+  paper: { maxDrawdownUsdt: number; maxDrawdownPct: number | null };
+}): DeskStatItem {
+  const hint = input.exchangeBook ? LIVE_DRAWDOWN_HINT : PAPER_DRAWDOWN_HINT;
+  if (!input.signedIn || input.empty) {
+    return { label: "Max Drawdown", value: "—", hint };
+  }
+  if (input.exchangeBook) {
+    const giveback =
+      input.givebackUsdt > 0
+        ? formatSignedUsd(-input.givebackUsdt)
+        : formatSignedUsd(0);
+    const worst =
+      input.worstCloseUsdt == null
+        ? "—"
+        : formatSignedUsd(input.worstCloseUsdt);
+    return {
+      label: "Max Drawdown",
+      value: giveback,
+      hint,
+      content: (
+        <div className="space-y-3">
+          <div>
+            <p
+              className={`text-2xl font-semibold tracking-tight tabular-nums ${signedTone(-input.givebackUsdt)}`}
+            >
+              {giveback}
+            </p>
+            <p className="mt-1 text-xs text-ink-faint">Realized giveback</p>
+          </div>
+          <div>
+            <p
+              className={`text-2xl font-semibold tracking-tight tabular-nums ${signedTone(input.worstCloseUsdt)}`}
+            >
+              {worst}
+            </p>
+            <p className="mt-1 text-xs text-ink-faint">Max realized loss</p>
+          </div>
+        </div>
+      ),
+    };
+  }
+  const dip = input.paper.maxDrawdownUsdt;
+  const pct = input.paper.maxDrawdownPct;
+  return {
+    label: "Max Drawdown",
+    value:
+      pct == null
+        ? dip > 0
+          ? formatSignedUsd(-dip)
+          : formatSignedUsd(0)
+        : formatPct(pct),
+    toneClass: signedTone(dip > 0 ? -dip : 0),
+    hint,
+    note: dip > 0 ? formatSignedUsd(-dip) : undefined,
+  };
+}
+
 export function FuturesPerformanceStats({
   signedIn,
   closed,
@@ -461,6 +532,9 @@ export function FuturesPerformanceStats({
   items: itemsOverride,
   embedded = false,
   fallbackLeverage = null,
+  exchangeBook = false,
+  paperStartingUsdt = COPY_PAPER_STARTING_USDT,
+  openUnrealizedUsdt = null,
 }: {
   signedIn: boolean;
   closed: FuturesDeskPosition[];
@@ -468,6 +542,9 @@ export function FuturesPerformanceStats({
   items?: DeskStatItem[];
   embedded?: boolean;
   fallbackLeverage?: number | null;
+  exchangeBook?: boolean;
+  paperStartingUsdt?: number;
+  openUnrealizedUsdt?: number | null;
 }) {
   const stats = futuresClosedStats(closed, fallbackLeverage);
   const drawdown = deskWindowStats(closed);
@@ -499,17 +576,18 @@ export function FuturesPerformanceStats({
       label: "Win Rate",
       value: signedIn ? winRate : "—",
     },
-    {
-      label: "Max Drawdown",
-      value: !signedIn
-        ? "—"
-        : stats.closedCount === 0
-          ? "—"
-          : drawdown.maxDrawdownPct == null
-            ? formatSignedUsd(drawdown.maxDrawdownUsdt)
-            : formatPct(drawdown.maxDrawdownPct),
-      hint: "Peak-to-trough of realized P&L, in close-time order.",
-    },
+    drawdownCard({
+      signedIn,
+      exchangeBook,
+      empty: stats.closedCount === 0,
+      givebackUsdt: drawdown.maxDrawdownUsdt,
+      worstCloseUsdt: maxRealizedLossUsdt(closed),
+      paper: bookEquityDrawdown({
+        startingUsdt: paperStartingUsdt,
+        closed,
+        openUnrealizedUsdt,
+      }),
+    }),
     {
       label: "Realized Profit",
       value: signedIn ? formatSignedUsd(stats.realizedUsdt) : "—",

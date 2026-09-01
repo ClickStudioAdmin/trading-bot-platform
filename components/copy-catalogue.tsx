@@ -41,10 +41,19 @@ function drawdownLabel(card: CopyCatalogueCard): string {
   if (!has30dBook(card) || !card.stats30d) {
     return "—";
   }
-  if (card.stats30d.maxDrawdownPct == null) {
-    return formatSignedUsd(card.stats30d.maxDrawdownUsdt);
+  const dip = card.stats30d.maxDrawdownUsdt;
+  return dip > 0 ? formatSignedUsd(-dip) : formatSignedUsd(0);
+}
+
+function drawdownTone(card: CopyCatalogueCard): string {
+  if (!has30dBook(card) || !card.stats30d) {
+    return signedTone(null);
   }
-  return formatPct(card.stats30d.maxDrawdownPct);
+  return signedTone(
+    card.stats30d.maxDrawdownUsdt > 0
+      ? -card.stats30d.maxDrawdownUsdt
+      : 0,
+  );
 }
 
 function StarIcon({ filled }: { filled: boolean }) {
@@ -303,7 +312,9 @@ export function CopyCatalogueBoard({
                   </div>
                   <div>
                     <dt className="text-sm text-ink-faint">Drawdown [30d]</dt>
-                    <dd className="mt-1 text-lg font-semibold tabular-nums text-ink">
+                    <dd
+                      className={`mt-1 text-lg font-semibold tabular-nums ${drawdownTone(card)}`}
+                    >
                       {drawdownLabel(card)}
                     </dd>
                   </div>

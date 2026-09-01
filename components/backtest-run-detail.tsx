@@ -18,7 +18,6 @@ import { ColumnHint } from "@/components/column-hint";
 import {
   BACKTEST_FEE_PRESETS,
   backtestAprPct,
-  backtestDrawdownPct,
   backtestOnNotionalPct,
   backtestRerunHref,
   backtestRoePct,
@@ -27,11 +26,16 @@ import {
   realizedReturnPct,
   type BacktestRun,
 } from "@/lib/backtest/model";
-import { recipeParamRows } from "@/lib/backtest/study";
+import {
+  buildEquityTimeline,
+  maxDrawdownFromEquity,
+  recipeParamRows,
+} from "@/lib/backtest/study";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import {
   formatCount,
   formatPct,
+  formatSignedUsd,
   signedTone,
 } from "@/lib/opportunities/format";
 
@@ -447,7 +451,9 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
         run.toMs,
       )
     : null;
-  const drawdownPct = stats ? backtestDrawdownPct(stats) : null;
+  const equityDd = stats
+    ? maxDrawdownFromEquity(buildEquityTimeline(run))
+    : null;
   const winRate =
     stats && stats.trades > 0
       ? `${Math.round(stats.winRate * 100)}%`
@@ -468,13 +474,21 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
         <StatCard
           label="Max Drawdown"
           value={
-            empty
+            empty || equityDd == null || equityDd.maxDrawdownPct == null
               ? "—"
-              : drawdownPct == null
-                ? signedMoney(stats.maxDrawdownUsdt)
-                : formatPct(drawdownPct)
+              : formatPct(equityDd.maxDrawdownPct)
           }
-          hint="Peak-to-trough of marked equity versus starting balance."
+          toneClass={
+            empty || !equityDd || !(equityDd.maxDrawdownUsdt > 0)
+              ? undefined
+              : signedTone(-equityDd.maxDrawdownUsdt)
+          }
+          hint="Peak-to-trough of marked equity. Percent is versus that peak."
+          note={
+            empty || !equityDd || !(equityDd.maxDrawdownUsdt > 0)
+              ? undefined
+              : formatSignedUsd(-equityDd.maxDrawdownUsdt)
+          }
         />
         <StatCard
           label="Realized Profit"

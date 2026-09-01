@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { parseDcaPlaybookForm } from "@/lib/dca/playbook";
 import { snapshotDcaRecipe } from "@/lib/templates/recipe";
-import { buildEquityTimeline, recipeParamRows } from "./study";
+import {
+  buildEquityTimeline,
+  maxDrawdownFromEquity,
+  recipeParamRows,
+} from "./study";
 import type { BacktestRun } from "./model";
 
 const form = new FormData();
@@ -128,5 +132,8 @@ const marked = buildEquityTimeline(openRun, [
 assert.equal(marked[1]?.equityUsdt, 10_000);
 assert.equal(marked[2]?.equityUsdt, 9_990);
 assert.equal(marked[3]?.equityUsdt, 9_980);
+const markedDd = maxDrawdownFromEquity(marked);
+assert.equal(markedDd.maxDrawdownUsdt, 20);
+assert.equal(markedDd.maxDrawdownPct, 20 / 10_000);
 
 console.log("backtest study checks passed");

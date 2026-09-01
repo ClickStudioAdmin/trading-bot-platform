@@ -3,8 +3,10 @@ import type { FuturesOrder, FuturesPosition } from "./model";
 import {
   annualizeReturnPct,
   closedTradingDays,
+  bookEquityDrawdown,
   deskStatsSnapshot,
   deskWindowStats,
+  maxRealizedLossUsdt,
   effectiveLeverage,
   flattenExitPrice,
   formatTradingDaysNote,
@@ -177,6 +179,26 @@ assert.equal(drawdown.winCount, 2);
 assert.equal(drawdown.realizedUsdt, 30);
 assert.equal(drawdown.maxDrawdownUsdt, 30);
 assert.equal(drawdown.maxDrawdownPct, 30 / 50);
+
+assert.equal(
+  maxRealizedLossUsdt([
+    { realizedUsdt: 20 },
+    { realizedUsdt: -8 },
+    { realizedUsdt: -3 },
+  ]),
+  -8,
+);
+assert.equal(maxRealizedLossUsdt([{ realizedUsdt: 5 }]), null);
+
+const paperDd = bookEquityDrawdown({
+  startingUsdt: 10_000,
+  closed: [
+    { closedAtMs: 1, realizedUsdt: 20 },
+    { closedAtMs: 2, realizedUsdt: -30 },
+  ],
+});
+assert.equal(paperDd.maxDrawdownUsdt, 30);
+assert.equal(paperDd.maxDrawdownPct, 30 / 10_020);
 
 const windowed = deskStatsSnapshot(
   [

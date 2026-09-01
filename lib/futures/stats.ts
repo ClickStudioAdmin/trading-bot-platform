@@ -129,6 +129,64 @@ export type DeskStatsSnapshot = {
   last30d: DeskWindowStats;
 };
 
+export function maxRealizedLossUsdt(
+  closed: readonly { realizedUsdt: number }[],
+): number | null {
+  let worst: number | null = null;
+  for (const row of closed) {
+    if (
+      Number.isFinite(row.realizedUsdt) &&
+      row.realizedUsdt < 0 &&
+      (worst == null || row.realizedUsdt < worst)
+    ) {
+      worst = row.realizedUsdt;
+    }
+  }
+  return worst;
+}
+
+export function bookEquityDrawdown(input: {
+  startingUsdt: number;
+  closed: readonly { closedAtMs: number | null; realizedUsdt: number }[];
+  openUnrealizedUsdt?: number | null;
+}): { maxDrawdownUsdt: number; maxDrawdownPct: number | null } {
+  const starting = input.startingUsdt;
+  if (!(starting > 0) || !Number.isFinite(starting)) {
+    return { maxDrawdownUsdt: 0, maxDrawdownPct: null };
+  }
+  const rows = input.closed
+    .filter((row) => row.closedAtMs != null && row.closedAtMs > 0)
+    .slice()
+    .sort((a, b) => (a.closedAtMs ?? 0) - (b.closedAtMs ?? 0));
+  let equity = starting;
+  let peak = starting;
+  let maxDrawdownUsdt = 0;
+  function consider(next: number) {
+    if (next > peak) {
+      peak = next;
+    }
+    const drawdown = peak - next;
+    if (drawdown > maxDrawdownUsdt) {
+      maxDrawdownUsdt = drawdown;
+    }
+  }
+  consider(starting);
+  for (const row of rows) {
+    equity += row.realizedUsdt;
+    consider(equity);
+  }
+  if (
+    input.openUnrealizedUsdt != null &&
+    Number.isFinite(input.openUnrealizedUsdt)
+  ) {
+    consider(equity + input.openUnrealizedUsdt);
+  }
+  return {
+    maxDrawdownUsdt,
+    maxDrawdownPct: peak > 0 ? maxDrawdownUsdt / peak : null,
+  };
+}
+
 export function deskWindowStats(
   closed: readonly DeskCloseForStats[],
 ): DeskWindowStats {
