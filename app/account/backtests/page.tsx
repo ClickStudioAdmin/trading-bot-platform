@@ -15,7 +15,6 @@ import {
   backtestRoePct,
   backtestWindowDays,
   formatBacktestReturnPct,
-  realizedReturnPct,
 } from "@/lib/backtest/model";
 import { formatCount } from "@/lib/opportunities/format";
 import {
@@ -28,7 +27,6 @@ import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
 import { signedTone } from "@/lib/opportunities/format";
 import { firstSearchValue } from "@/lib/paper/open";
-import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import { listDeskBacktestBots } from "@/lib/backtest/desk-bots";
 import {
   listApplyableSets,
@@ -154,21 +152,16 @@ export default async function AccountBacktestsPage({
                 <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Contract</th>
                 <th className="px-4 py-3 font-medium">Comparables</th>
-                <th className="px-4 py-3 font-medium">Window</th>
                 <th className="px-4 py-3 font-medium">Days</th>
                 <th className="px-4 py-3 font-medium">Win Rate</th>
-                <th className="px-4 py-3 font-medium">Return</th>
                 <th className="px-4 py-3 font-medium">ROE</th>
                 <th className="px-4 py-3 font-medium">Realized</th>
                 <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">
-                  <span className="sr-only">Remove</span>
-                </th>
+                <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {runs.map((row) => {
-                const ret = row.stats ? realizedReturnPct(row.stats) : null;
                 const days = backtestWindowDays(row.fromMs, row.toMs);
                 const winRate =
                   row.stats && row.stats.trades > 0
@@ -210,16 +203,10 @@ export default async function AccountBacktestsPage({
                         ? `+${row.comparableSymbols.length}`
                         : "—"}
                     </td>
-                    <td className="px-4 py-3 text-ink-muted">
-                      {DCA_INDICATOR_TIMEFRAME_LABELS[row.interval]}
-                    </td>
                     <td className="px-4 py-3 tabular-nums text-ink-muted">
                       {days != null ? formatCount(days) : "—"}
                     </td>
                     <td className="px-4 py-3 tabular-nums">{winRate}</td>
-                    <td className={`px-4 py-3 tabular-nums ${signedTone(ret)}`}>
-                      {formatBacktestReturnPct(ret)}
-                    </td>
                     <td className={`px-4 py-3 tabular-nums ${signedTone(roe)}`}>
                       {formatBacktestReturnPct(roe)}
                     </td>
