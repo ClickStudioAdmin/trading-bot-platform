@@ -296,18 +296,12 @@ export function ClosedPaperTrades({
                   hint="Realized ÷ position value. Same assumed fee model as Realized."
                 />
               </th>
-              <th className="px-4 py-3 font-medium">
-                <ColumnHint
-                  label="ROE"
-                  hint="Cash-and-carry has no isolated margin. ROE stays —."
-                />
-              </th>
             </tr>
           </thead>
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={10}
+                colSpan={9}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -319,7 +313,7 @@ export function ClosedPaperTrades({
               />
             ) : closed.length === 0 ? (
               <EmptyRow
-                colSpan={10}
+                colSpan={9}
                 message="No closed paper carries yet."
               />
             ) : (
@@ -355,7 +349,7 @@ export function PaperPerformanceStats({
           signedIn ? undefined : "Sign in to see your paper desk numbers."
         }
       />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Completed Trades"
           value={signedIn ? String(stats.closedCount) : "—"}
@@ -368,7 +362,7 @@ export function PaperPerformanceStats({
           label="Realized Profit"
           value={signedIn ? formatSignedUsd(stats.realizedUsdt) : "—"}
           toneClass={signedTone(signedIn ? stats.realizedUsdt : null)}
-          hint="Closed-carry dollars. Cash-and-carry has no isolated margin."
+          hint="Closed-carry dollars."
         />
         <StatCard
           label="P&L"
@@ -380,12 +374,6 @@ export function PaperPerformanceStats({
           toneClass={signedTone(signedIn ? stats.realizedUsdt : null)}
           hint="Realized profit ÷ sum of closed carry value."
           note="Based on position value"
-        />
-        <StatCard
-          label="ROE"
-          value="—"
-          hint="Cash-and-carry has no initial-margin ROE. P&L is the return on this book."
-          note="Based on margin requirement"
         />
       </div>
     </section>

@@ -96,7 +96,6 @@ assert.equal(stats.openNotionalUsdt, 10_000);
 assert.equal(stats.unrealizedUsdt, 1210);
 assert.equal(stats.realizedUsdt, 100);
 assert.equal(stats.realizedPct, 0.01);
-assert.equal(stats.roePct, null);
 assert.equal(stats.closedCount, 1);
 assert.equal(stats.greenCount, 1);
 const closedA = {
