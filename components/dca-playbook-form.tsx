@@ -1306,8 +1306,8 @@ export function DcaPlaybookForm({
           <p className={sectionTitleClass}>
             Maximum Exposure
           </p>
-          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-            <label className={labelClass}>
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1fr)] gap-x-3 gap-y-2">
+            <label className={`min-w-0 ${labelClass}`}>
               Max orders
               <GroupedNumberInput
                 name="maxClips"
@@ -1317,7 +1317,7 @@ export function DcaPlaybookForm({
                 placeholder="No cap"
               />
             </label>
-            <label className={labelClass}>
+            <label className={`min-w-0 ${labelClass}`}>
               Max value
               <select
                 name="maxValueKind"
@@ -1335,12 +1335,15 @@ export function DcaPlaybookForm({
                 <option value="usdt">Fixed {policy.quoteLabel}</option>
                 <option value="percent">% of account</option>
               </select>
+            </label>
+            <label className={`min-w-0 ${labelClass}`}>
+              {maxValueKind === "percent" ? "Percent" : policy.quoteLabel}
               <GroupedNumberInput
                 name="maxValue"
                 value={maxValue}
                 onChange={setMaxValue}
                 allowDecimal
-                className={`${fieldClass} mt-1.5`}
+                className={fieldClass}
                 placeholder={
                   maxValueKind === "percent" ? "e.g. 20" : "No cap"
                 }
@@ -1352,15 +1355,15 @@ export function DcaPlaybookForm({
                   value={String(accountBookUsdt)}
                 />
               ) : null}
-              {maxValueKind === "percent" ? (
-                <p className="mt-1 text-xs text-ink-muted">
-                  {resolvedMaxValue != null && accountBookUsdt != null
-                    ? `${asNumber(maxValue)}% of ${formatUsdAmount(accountBookUsdt)} = ${formatUsdAmount(resolvedMaxValue)}. Recalculates at the start of each cycle.`
-                    : "Recalculates from account balance at the start of each cycle."}
-                </p>
-              ) : null}
             </label>
           </div>
+          {maxValueKind === "percent" ? (
+            <p className="text-xs text-ink-muted">
+              {resolvedMaxValue != null && accountBookUsdt != null
+                ? `${asNumber(maxValue)}% of ${formatUsdAmount(accountBookUsdt)} = ${formatUsdAmount(resolvedMaxValue)}. Recalculates at the start of each cycle.`
+                : "Recalculates from account balance at the start of each cycle."}
+            </p>
+          ) : null}
           {restGrid ? (
             <p className="text-xs text-ink-muted">
               Remaining GTC limits use max orders.
