@@ -1684,6 +1684,11 @@ export function DcaPlaybookForm({
               <option value="first_entry">First fill</option>
             </select>
           </label>
+        </div>
+        <p className={sectionTitleClass}>
+          Move Breakeven
+        </p>
+        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
           <label className={labelClass}>
             Move stop to breakeven at %
             <PercentInput
