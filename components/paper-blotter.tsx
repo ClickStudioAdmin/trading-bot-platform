@@ -293,7 +293,13 @@ export function ClosedPaperTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="P&L %"
-                  hint="Realized ÷ value. Same assumed fee model as Realized."
+                  hint="Realized ÷ position value. Same assumed fee model as Realized."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="ROE"
+                  hint="Cash-and-carry has no isolated margin. ROE stays —."
                 />
               </th>
             </tr>
@@ -301,7 +307,7 @@ export function ClosedPaperTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={9}
+                colSpan={10}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -313,7 +319,7 @@ export function ClosedPaperTrades({
               />
             ) : closed.length === 0 ? (
               <EmptyRow
-                colSpan={9}
+                colSpan={10}
                 message="No closed paper carries yet."
               />
             ) : (

@@ -31,10 +31,13 @@ import { formatLeverage } from "@/lib/futures/venue-risk";
 import type { FuturesOrder, FuturesTradeSource } from "@/lib/futures/model";
 import { formatFuturesOrigin, resolveOrderOrigin } from "@/lib/futures/source";
 import {
+  effectiveLeverage,
   flattenExitPrice,
   futuresClosedStats,
   futuresDaysHeld,
   futuresOpenExposure,
+  positionMarginUsdt,
+  roePct,
 } from "@/lib/futures/stats";
 import {
   formatPct,
@@ -332,10 +335,12 @@ export function ClosedFuturesTrades({
   signedIn,
   closed,
   webhookNames = [],
+  fallbackLeverage = null,
 }: {
   signedIn: boolean;
   closed: FuturesDeskPosition[];
   webhookNames?: readonly string[];
+  fallbackLeverage?: number | null;
 }) {
   return (
     <section>
@@ -395,7 +400,13 @@ export function ClosedFuturesTrades({
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
                   label="P&L %"
-                  hint="Realized ÷ value. Same figure as Realized."
+                  hint="Realized ÷ position value (qty × entry)."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="ROE"
+                  hint="Realized ÷ initial margin (position value ÷ leverage). — if this row has no leverage."
                 />
               </th>
             </tr>
@@ -403,7 +414,7 @@ export function ClosedFuturesTrades({
           <tbody>
             {!signedIn ? (
               <EmptyRow
-                colSpan={9}
+                colSpan={10}
                 message={
                   <>
                     <Link href="/sign-in" className="text-accent">
@@ -414,13 +425,14 @@ export function ClosedFuturesTrades({
                 }
               />
             ) : closed.length === 0 ? (
-              <EmptyRow colSpan={9} message="No closed futures yet." />
+              <EmptyRow colSpan={10} message="No closed futures yet." />
             ) : (
               closed.map((trade) => (
                 <ClosedFuturesRows
                   key={trade.id}
                   trade={trade}
                   webhookNames={webhookNames}
+                  fallbackLeverage={fallbackLeverage}
                 />
               ))
             )}
@@ -728,19 +740,28 @@ function OpenFuturesRows({
 function ClosedFuturesRows({
   trade,
   webhookNames,
+  fallbackLeverage,
 }: {
   trade: FuturesDeskPosition;
   webhookNames: readonly string[];
+  fallbackLeverage: number | null;
 }) {
   const pnlPct =
     trade.notionalUsdt > 0 ? trade.realizedUsdt / trade.notionalUsdt : null;
+  const roe = roePct(
+    trade.realizedUsdt,
+    positionMarginUsdt(
+      trade.notionalUsdt,
+      effectiveLeverage(trade.leverage, fallbackLeverage),
+    ),
+  );
   const held = futuresDaysHeld(trade.openedAtMs, trade.closedAtMs);
   const exit = flattenExitPrice(trade.orders);
   const baseCoin = trade.symbol.replace(/USDT$/, "");
 
   return (
     <ExpandableTradeRows
-      colSpan={9}
+      colSpan={10}
       details={
         <TradeDetailTabs
           orders={
@@ -798,6 +819,9 @@ function ClosedFuturesRows({
       </td>
       <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
         {formatPct(pnlPct)}
+      </td>
+      <td className={`px-4 py-3 tabular-nums ${signedTone(roe)}`}>
+        {formatPct(roe)}
       </td>
     </ExpandableTradeRows>
   );

@@ -165,7 +165,7 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
 
   return (
     <ExpandableTradeRows
-      colSpan={9}
+      colSpan={10}
       details={
         <PositionDetailTabs
           orders={trade.orders}
@@ -220,6 +220,7 @@ export function ClosedPaperCarryRows({ trade }: { trade: ClosedCarryView }) {
       <td className={`px-4 py-3 tabular-nums ${signedTone(pnlPct)}`}>
         {formatPct(pnlPct)}
       </td>
+      <td className="px-4 py-3 tabular-nums text-ink-faint">—</td>
     </ExpandableTradeRows>
   );
 }

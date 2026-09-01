@@ -28,6 +28,9 @@ export default async function FuturesPerformancePage() {
         signedIn={desk.signedIn}
         closed={desk.closed}
         webhookNames={desk.webhookNames}
+        fallbackLeverage={
+          desk.exchangeBook ? null : (settings?.paperLeverage ?? null)
+        }
       />
     </main>
   );
