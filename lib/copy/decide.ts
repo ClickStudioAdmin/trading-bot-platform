@@ -488,12 +488,14 @@ export type CopyPaperEquityView = {
   realizedUsdt: number;
   unrealizedUsdt: number;
   equityUsdt: number;
+  leverage: number | null;
 };
 
 export function copyPaperEquityView(input: {
   startingUsdt?: number;
   realizedUsdt: number;
   unrealizedUsdt: number;
+  leverage?: number | null;
 }): CopyPaperEquityView {
   const startingUsdt = input.startingUsdt ?? COPY_PAPER_STARTING_USDT;
   return {
@@ -501,6 +503,10 @@ export function copyPaperEquityView(input: {
     realizedUsdt: input.realizedUsdt,
     unrealizedUsdt: input.unrealizedUsdt,
     equityUsdt: copyPaperEquity({ ...input, startingUsdt }),
+    leverage:
+      input.leverage != null && input.leverage > 0 && Number.isFinite(input.leverage)
+        ? input.leverage
+        : null,
   };
 }
 

@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { AccountSnapshotView } from "@/lib/exchanges/account-view";
 import {
-  formatMarginModeLabel,
+  formatMarginModeWithLeverage,
   formatSnapshotMoney,
   marginRateTone,
 } from "@/lib/exchanges/account-view";
@@ -65,7 +65,9 @@ export function AccountSnapshotBody({
     <dl className="space-y-1">
       <div className="flex justify-between gap-3">
         <dt className="text-ink-muted">Margin</dt>
-        <dd className="text-ink">{formatMarginModeLabel(row.marginMode)}</dd>
+        <dd className="text-ink">
+          {formatMarginModeWithLeverage(row.marginMode, row.leverage)}
+        </dd>
       </div>
       <div className="flex justify-between gap-3">
         <dt className="text-ink-muted">Available</dt>

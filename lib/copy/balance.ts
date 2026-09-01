@@ -156,10 +156,12 @@ export async function loadCopyPaperEquityView(input: {
       exitPrice: mark,
     });
   }
+  const settings = await loadFuturesSettings(input.accountId);
   return copyPaperEquityView({
     realizedUsdt,
     unrealizedUsdt,
     startingUsdt: input.startingUsdt,
+    leverage: settings.paperLeverage,
   });
 }
 

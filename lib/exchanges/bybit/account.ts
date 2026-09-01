@@ -4,8 +4,10 @@ import type { VenueAccountSnapshot, VenueMarginMode } from "@/lib/exchanges/acco
 export type { VenueAccountSnapshot, VenueMarginMode } from "@/lib/exchanges/account-view";
 export {
   formatMarginModeLabel,
+  formatMarginModeWithLeverage,
   formatSnapshotMoney,
   marginRateTone,
+  pickDisplayLeverage,
 } from "@/lib/exchanges/account-view";
 
 type WalletResult = {
@@ -63,6 +65,7 @@ export function snapshotFromBybit(input: {
   const isolated = marginMode === "isolated";
   return {
     marginMode,
+    leverage: null,
     initialMarginRate: isolated
       ? null
       : parseBybitAccountRate(row.accountIMRate),

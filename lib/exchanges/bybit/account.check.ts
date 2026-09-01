@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import {
   formatMarginModeLabel,
+  formatMarginModeWithLeverage,
   formatSnapshotMoney,
   marginRateTone,
   parseBybitAccountMoney,
   parseBybitAccountRate,
   parseBybitMarginMode,
+  pickDisplayLeverage,
   snapshotFromBybit,
 } from "./account";
 
@@ -14,6 +16,11 @@ assert.equal(parseBybitMarginMode("ISOLATED_MARGIN"), "isolated");
 assert.equal(parseBybitMarginMode("PORTFOLIO_MARGIN"), "portfolio");
 assert.equal(parseBybitMarginMode("nope"), null);
 assert.equal(formatMarginModeLabel("cross"), "Cross");
+assert.equal(formatMarginModeWithLeverage("cross", 10), "Cross 10×");
+assert.equal(formatMarginModeWithLeverage("isolated", null), "Isolated");
+assert.equal(pickDisplayLeverage([10, 10, 10]), 10);
+assert.equal(pickDisplayLeverage([10, 5]), null);
+assert.equal(pickDisplayLeverage([null, 0]), null);
 
 assert.equal(parseBybitAccountMoney("145811.7337"), 145811.7337);
 assert.equal(parseBybitAccountMoney("0"), 0);
@@ -43,6 +50,7 @@ const parsed = snapshotFromBybit({
   info: { marginMode: "REGULAR_MARGIN" },
 });
 assert.equal(parsed?.marginMode, "cross");
+assert.equal(parsed?.leverage, null);
 assert.equal(parsed?.initialMarginRate, 0.055);
 assert.equal(parsed?.maintenanceMarginRate, 0.002);
 assert.equal(parsed?.marginBalance, 145811.7337);

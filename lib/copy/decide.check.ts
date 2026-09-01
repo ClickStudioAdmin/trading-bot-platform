@@ -134,7 +134,13 @@ assert.deepEqual(copyPaperEquityView({ realizedUsdt: -200, unrealizedUsdt: 50 })
   realizedUsdt: -200,
   unrealizedUsdt: 50,
   equityUsdt: 9_850,
+  leverage: null,
 });
+assert.equal(
+  copyPaperEquityView({ realizedUsdt: 0, unrealizedUsdt: 0, leverage: 10 })
+    .leverage,
+  10,
+);
 assert.equal(formatCopyPaperStartingUsdt(), "$10,000");
 
 assert.deepEqual(decideCopyFanOut(base), {

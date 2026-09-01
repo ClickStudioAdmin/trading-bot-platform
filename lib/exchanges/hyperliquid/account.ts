@@ -1,4 +1,7 @@
-import type { VenueAccountSnapshot } from "@/lib/exchanges/account-view";
+import {
+  pickDisplayLeverage,
+  type VenueAccountSnapshot,
+} from "@/lib/exchanges/account-view";
 import { loadHyperliquidUserState } from "./info";
 
 export async function hyperliquidReadAccountSnapshot(input: {
@@ -20,6 +23,9 @@ export async function hyperliquidReadAccountSnapshot(input: {
       ok: true,
       snapshot: {
         marginMode: "cross",
+        leverage: pickDisplayLeverage(
+          state.positions.map((row) => row.leverage),
+        ),
         initialMarginRate: rate,
         maintenanceMarginRate: null,
         marginBalance: value,

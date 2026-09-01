@@ -4,7 +4,10 @@ import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { CopyPaperEquityView } from "@/lib/copy/decide";
 import { formatCopyPaperStartingUsdt } from "@/lib/copy/decide";
-import { formatSnapshotMoney } from "@/lib/exchanges/account-view";
+import {
+  formatMarginModeWithLeverage,
+  formatSnapshotMoney,
+} from "@/lib/exchanges/account-view";
 
 export function CopyPaperEquityHover({
   book,
@@ -48,6 +51,12 @@ export function CopyPaperEquityHover({
 export function CopyPaperEquityBody({ book }: { book: CopyPaperEquityView }) {
   return (
     <dl className="space-y-1">
+      <div className="flex justify-between gap-3">
+        <dt className="text-ink-muted">Margin</dt>
+        <dd className="text-ink">
+          {formatMarginModeWithLeverage("cross", book.leverage)}
+        </dd>
+      </div>
       {book.startingUsdt > 0 ? (
         <div className="flex justify-between gap-3">
           <dt className="text-ink-muted">Started at</dt>

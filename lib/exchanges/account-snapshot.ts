@@ -1,8 +1,9 @@
 import { cache } from "react";
+import { listLinearPositionRisk } from "./execute";
 import { bybitReadAccountSnapshot } from "./bybit/account";
 import { normalizeAddress } from "./hyperliquid/agent";
 import { hyperliquidReadAccountSnapshot } from "./hyperliquid/account";
-import type { AccountSnapshotView } from "./account-view";
+import { pickDisplayLeverage, type AccountSnapshotView } from "./account-view";
 import { loadBoundConnectionSecrets } from "./store";
 
 export type { AccountSnapshotView } from "./account-view";
@@ -54,7 +55,16 @@ export const loadAccountSnapshot = cache(async (
   if (!read.ok) {
     return { ok: false, error: "Could not read the unified account." };
   }
-  return { ok: true, snapshot: read.snapshot };
+  const listed = await listLinearPositionRisk({
+    connection: bound.connection,
+  });
+  const leverage = listed.ok
+    ? pickDisplayLeverage(listed.positions.map((row) => row.leverage))
+    : null;
+  return {
+    ok: true,
+    snapshot: { ...read.snapshot, leverage },
+  };
 });
 
 export async function loadAccountSnapshots(
