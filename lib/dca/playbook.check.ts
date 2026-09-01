@@ -41,7 +41,9 @@ import {
   dcaIntervalParts,
   dcaOpenHint,
   dcaPlaybookConflict,
+  dcaPlaybookHasOpenCycle,
   dcaPlaybookIsRunning,
+  dcaWithLockedCycleConfig,
   dcaCloneIdleDraft,
   dcaCopyName,
   dcaPnlPct,
@@ -1542,6 +1544,51 @@ assert.equal(cloned.maxValueKind, "usdt");
 assert.equal(cloned.long.cycleMaxValue, null);
 assert.equal(cloned.armConditionTrue, false);
 assert.equal(dcaPlaybookIsRunning(cloned), false);
+assert.equal(dcaPlaybookHasOpenCycle(row), true);
+assert.equal(dcaPlaybookHasOpenCycle(cloned), false);
+assert.equal(
+  dcaPlaybookHasOpenCycle({
+    direction: "long",
+    long: {
+      status: "armed",
+      clipsFilled: 0,
+      lastClipPrice: null,
+      lastClipAtMs: null,
+      firstFillPrice: null,
+      breakevenDone: false,
+      cycleMaxValue: null,
+    },
+    short: {
+      status: "idle",
+      clipsFilled: 0,
+      lastClipPrice: null,
+      lastClipAtMs: null,
+      firstFillPrice: null,
+      breakevenDone: false,
+      cycleMaxValue: null,
+    },
+  }),
+  false,
+);
+if (row) {
+  const locked = dcaWithLockedCycleConfig(
+    {
+      ...row,
+      symbol: "ETHUSDT",
+      clipSize: 99,
+      takeProfitPct: 4,
+      stopLossPct: 2,
+      trailingPct: 1,
+    },
+    row,
+  );
+  assert.equal(locked.symbol, row.symbol);
+  assert.equal(locked.clipSize, row.clipSize);
+  assert.equal(locked.takeProfitPct, 4);
+  assert.equal(locked.stopLossPct, 2);
+  assert.equal(locked.trailingPct, 1);
+  assert.equal(locked.name, row.name);
+}
 assert.equal(
   dcaPlaybookIsRunning({
     long: {

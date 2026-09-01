@@ -45,6 +45,7 @@ import {
   dcaIntervalParts,
   dcaLegFor,
   dcaLegIsRunning,
+  dcaPlaybookHasOpenCycle,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
   dcaStartListens,
@@ -114,6 +115,23 @@ function asNumber(text: string): number | null {
 function formatDerivedClip(value: number, unit: "qty" | "usdt"): string {
   const places = unit === "usdt" ? 4 : 8;
   return value.toFixed(places).replace(/\.?0+$/, "");
+}
+
+function CycleLock({
+  locked,
+  children,
+}: {
+  locked: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      inert={locked ? true : undefined}
+      className={locked ? "opacity-60" : undefined}
+    >
+      {children}
+    </div>
+  );
 }
 
 function SizeGuardNote({ message }: { message: string | null }) {
@@ -702,6 +720,7 @@ export function DcaPlaybookForm({
   const ladderPanelId = useId();
   const lastPrice = lastPrices[symbol] ?? null;
   const running = Boolean(playbook && dcaPlaybookIsRunning(playbook));
+  const cycleLocked = Boolean(playbook && dcaPlaybookHasOpenCycle(playbook));
   const liveLegs = playbook
     ? dcaEnabledSides(playbook.direction).map((side) =>
         dcaLegFor(playbook, side),
@@ -778,6 +797,7 @@ export function DcaPlaybookForm({
   const saveError =
     maxValueMissing ??
     (asNumber(clipForSave) === null ? sizeError : (sizeError ?? ladderMaxError));
+  const saveBlocked = cycleLocked ? null : saveError;
   const restGridEffective = averaging !== "interval" && restGrid;
   const summaryBySide = useMemo(() => {
     const input = {
@@ -925,7 +945,7 @@ export function DcaPlaybookForm({
           | HTMLElement
           | null;
         const skip = submitter?.dataset.skipSizeGuard === "1";
-        if (saveError && !skip) {
+        if (saveBlocked && !skip) {
           return false;
         }
         return true;
@@ -948,8 +968,8 @@ export function DcaPlaybookForm({
               deskAction="save-arm"
               pendingLabel="Arming…"
               className={headerLongClass}
-              disabled={Boolean(saveError)}
-              title={saveError ?? undefined}
+              disabled={Boolean(saveBlocked)}
+              title={saveBlocked ?? undefined}
             >
               Save and Arm
             </PendingSubmitButton>
@@ -981,7 +1001,7 @@ export function DcaPlaybookForm({
                   ? "Set Direction to include this side"
                   : sideRunning
                     ? `${item.side === "long" ? "Long" : "Short"} is already running`
-                    : saveError;
+                    : saveBlocked;
                 const blocked = Boolean(blockedReason);
                 return blocked ? (
                   <button
@@ -1012,8 +1032,8 @@ export function DcaPlaybookForm({
                   deskAction="arm"
                   pendingLabel="Arming…"
                   className={headerSecondaryClass}
-                  disabled={Boolean(saveError)}
-                  title={saveError ?? undefined}
+                  disabled={Boolean(saveBlocked)}
+                  title={saveBlocked ?? undefined}
                 >
                   Arm
                 </PendingSubmitButton>
@@ -1024,7 +1044,7 @@ export function DcaPlaybookForm({
         <DcaStatusLight playbook={playbook ?? null} reduceOnly={reduceOnly} />
       </div>
       <DeskFormFlash />
-      {saveError ? <SizeGuardNote message={saveError} /> : null}
+      {saveBlocked ? <SizeGuardNote message={saveBlocked} /> : null}
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. New orders stay blocked until you turn it off in
@@ -1047,8 +1067,8 @@ export function DcaPlaybookForm({
             pendingLabel="Saving…"
             deskAction="default"
             className={headerPrimaryClass}
-            disabled={Boolean(saveError)}
-            title={saveError ?? undefined}
+            disabled={Boolean(saveBlocked)}
+            title={saveBlocked ?? undefined}
           >
             Save
           </PendingSubmitButton>
@@ -1084,7 +1104,14 @@ export function DcaPlaybookForm({
             ) : null}
         </div>
       </div>
+      {cycleLocked ? (
+        <p className="text-xs text-ink-muted">
+          A position is open. Cycle settings are locked. Take profit and stops
+          still save and update the resting orders.
+        </p>
+      ) : null}
 
+      <CycleLock locked={cycleLocked}>
       <fieldset className={sectionClass}>
         <p className={sectionTitleClass}>
           Pair and Trigger
@@ -1639,6 +1666,7 @@ export function DcaPlaybookForm({
           {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         </fieldset>
       </div>
+      </CycleLock>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <fieldset className={sectionClass}>

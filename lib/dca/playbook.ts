@@ -485,6 +485,44 @@ export function dcaPlaybookIsRunning(
   return dcaLegIsRunning(playbook.long.status) || dcaLegIsRunning(playbook.short.status);
 }
 
+export function dcaPlaybookHasOpenCycle(
+  playbook: Pick<DcaPlaybook, "direction" | "long" | "short">,
+): boolean {
+  return dcaEnabledSides(playbook.direction).some((side) => {
+    const leg = side === "long" ? playbook.long : playbook.short;
+    return leg.clipsFilled > 0 || leg.firstFillPrice != null;
+  });
+}
+
+export function dcaWithLockedCycleConfig(
+  next: DcaPlaybookConfig,
+  current: DcaPlaybookConfig,
+): DcaPlaybookConfig {
+  return {
+    ...next,
+    symbol: current.symbol,
+    direction: current.direction,
+    startKind: current.startKind,
+    webhookId: current.webhookId,
+    dcaMode: current.dcaMode,
+    clipSize: current.clipSize,
+    sizeUnit: current.sizeUnit,
+    maxClips: current.maxClips,
+    maxValue: current.maxValue,
+    maxValueKind: current.maxValueKind,
+    dipPct: current.dipPct,
+    intervalMinutes: current.intervalMinutes,
+    sizeMultiplier: current.sizeMultiplier,
+    deviationMultiplier: current.deviationMultiplier,
+    armTrigger: current.armTrigger,
+    disarmTrigger: current.disarmTrigger,
+    indicatorKind: current.indicatorKind,
+    indicatorTimeframe: current.indicatorTimeframe,
+    indicatorCompare: current.indicatorCompare,
+    indicatorLevel: current.indicatorLevel,
+  };
+}
+
 export function dcaLegFor(
   playbook: DcaPlaybook,
   side: FuturesSide,

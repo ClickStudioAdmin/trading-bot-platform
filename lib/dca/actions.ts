@@ -3,8 +3,10 @@
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
 import {
   dcaConfigMaxOrderError,
+  dcaPlaybookHasOpenCycle,
   dcaPlaybookIsRunning,
   dcaStartListens,
+  dcaWithLockedCycleConfig,
   parseDcaPlaybookForm,
   parseDcaPlaybookId,
   parseDcaSaveIntent,
@@ -100,9 +102,20 @@ async function saveDcaPlaybookWith(
   if (!parsed.ok) {
     return deskActionError(parsed.error);
   }
-  const overMax = await rejectIfOverMaxOrder(parsed.config, session.account);
-  if (overMax) {
-    return deskActionError(overMax);
+  const playbookId = parseDcaPlaybookId(formData.get("playbookId"));
+  const existing = playbookId
+    ? await loadDcaPlaybookById(playbookId, session.account.id)
+    : null;
+  const cycleLocked = Boolean(existing && dcaPlaybookHasOpenCycle(existing));
+  const config =
+    existing && cycleLocked
+      ? dcaWithLockedCycleConfig(parsed.config, existing)
+      : parsed.config;
+  if (!cycleLocked) {
+    const overMax = await rejectIfOverMaxOrder(config, session.account);
+    if (overMax) {
+      return deskActionError(overMax);
+    }
   }
   const supabase = createServiceClient();
   if (!supabase) {
@@ -112,8 +125,8 @@ async function saveDcaPlaybookWith(
     supabase,
     userId: session.member.id,
     accountId: session.account.id,
-    config: parsed.config,
-    id: parseDcaPlaybookId(formData.get("playbookId")),
+    config,
+    id: playbookId,
   });
   if (!saved.ok) {
     return deskActionError(saved.error);
@@ -127,9 +140,9 @@ async function saveDcaPlaybookWith(
     strategy: FUTURES_STRATEGY_ID,
     data: {
       playbookId: saved.playbook.id,
-      ruleName: parsed.config.name,
-      symbol: parsed.config.symbol,
-      side: parsed.config.direction,
+      ruleName: config.name,
+      symbol: config.symbol,
+      side: config.direction,
     },
   });
   await syncRunningPlaybookWorking({
