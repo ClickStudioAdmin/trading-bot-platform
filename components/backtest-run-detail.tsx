@@ -9,7 +9,6 @@ import {
   BacktestOrdersTable,
   BacktestPropertyList,
   BacktestStatsGrid,
-  PublishBacktestButton,
   RemoveBacktestButton,
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
@@ -116,7 +115,6 @@ function BacktestMatchCard({
   attachTemplateId,
   applyTemplateId,
   applyDesks,
-  canPublish,
   canRemove,
   isAdmin,
   folders,
@@ -140,7 +138,6 @@ function BacktestMatchCard({
   attachTemplateId: string | null;
   applyTemplateId: string | null;
   applyDesks?: Array<{ id: string; name: string }>;
-  canPublish: boolean;
   canRemove: boolean;
   isAdmin: boolean;
   folders: AutomationTemplateSet[];
@@ -157,7 +154,6 @@ function BacktestMatchCard({
   const hasPrimary = canAttach || canSaveAs || Boolean(linkedTemplateName);
   const hasSecondary =
     Boolean(applyTemplateId && applyDesks && applyDesks.length > 0) ||
-    canPublish ||
     canRemove ||
     (canSaveAsPlatform && !canSaveAs);
   return (
@@ -222,9 +218,6 @@ function BacktestMatchCard({
               desks={applyDesks}
             />
           ) : null}
-          {canPublish ? (
-            <PublishBacktestButton runId={runId} canPublish={canPublish} />
-          ) : null}
           {canSaveAsPlatform && !canSaveAs ? (
             <SaveBacktestAsTemplateButton
               runId={runId}
@@ -254,7 +247,6 @@ export function BacktestRunDetail({
   listHref,
   applyDesks,
   applyTemplateId = null,
-  canPublish,
   canRemove,
   canAttach = false,
   canSaveAs = false,
@@ -274,7 +266,6 @@ export function BacktestRunDetail({
   listHref: string;
   applyDesks?: Array<{ id: string; name: string }>;
   applyTemplateId?: string | null;
-  canPublish: boolean;
   canRemove: boolean;
   canAttach?: boolean;
   canSaveAs?: boolean;
@@ -346,7 +337,6 @@ export function BacktestRunDetail({
           attachTemplateId={attachTemplateId}
           applyTemplateId={applyTemplateId}
           applyDesks={applyDesks}
-          canPublish={complete && canPublish}
           canRemove={canRemove}
           isAdmin={isAdmin}
           folders={folders}

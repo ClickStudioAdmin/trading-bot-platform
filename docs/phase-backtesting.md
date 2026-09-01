@@ -4,7 +4,7 @@
 
 ## Purpose
 
-A member queues a bot config as a **backtest task**. The server replays it on venue history (paper math only). The run owns the recipe. A library template is optional: attach after a matching run, or save as a new template. Publish still copies a finished run as a `backtested` platform template.
+A member queues a bot config as a **backtest task**. The server replays it on venue history (paper math only). The run owns the recipe. A library template is optional: attach after a matching run, or save as a new template. Publishing a public snapshot is parked; leftover `user_id` null copies may still exist.
 
 Never writes the live blotter. Never places venue orders. Never arms a desk from a run.
 
@@ -19,13 +19,13 @@ User
       edit replay fields → queue → /account/backtests/[runId]
       then the match card: Attach if the recipe matches a library template,
       or Save as template (modal; creates and attaches)
-      Admin: platform save lives in that modal. Publish snapshot stays separate.
+      Admin: platform save lives in that modal.
       or Re-run Parameters → same form, new run
 ```
 
 Site header **Backtesting Tool** (`/account/backtests`).
 
-Each run has its own **detail page**: parameters, stats, orders list, account-impact timeline, and an inline chart. The list shows name, type, contract, comparables, window, days, win rate, return, ROE, realized, then status and Remove. Lists only link to the detail page. Old `?run=` URLs redirect.
+Each run has its own **detail page**: parameters, stats, orders list, account-impact timeline, and an inline chart. The list shows name, type, contract, comparables, days, win rate, ROE, realized, status, and Actions. Lists only link to the detail page. Old `?run=` URLs redirect.
 
 ## Locked for this slice
 
@@ -33,8 +33,8 @@ Each run has its own **detail page**: parameters, stats, orders list, account-im
 | --- | --- |
 | Recipes | **Perps bots price-cross** and **DCA price / indicator start**. User queue rejects **manual** and **webhook**. |
 | Perps bot exits | Same ticket set as manual: TP/SL (full/partial, last/mark/index, market/limit) plus trailing. Optional. Buy/sell only. Flatten rules stay flatten-only. |
-| Unpublished runs | **Owner only** (plus admin). |
-| Remove | Owner deletes their run. Admin can delete any, including published. Unused `backtested` snapshot is deleted with the last run that pointed at it. A linked **user** template is kept. |
+| Unpublished runs | **Owner only** (plus admin). Leftover published copies (`user_id` null) stay readable. New publishes are parked. |
+| Remove | Owner deletes their run. Admin can delete any, including leftover published copies. Unused `backtested` snapshot is deleted with the last run that pointed at it. A linked **user** template is kept. |
 | Bar fill (entries) | Decide on **bar close**, fill at **close**. |
 | Bar fill (exits) | Stop and trailing use the **adverse wick**. Take profit uses the **favorable wick** (Perps) or close (DCA percent exits). If stop and take profit both print on the same bar, **stop wins**. |
 | Fee | Named preset `vip0_taker` = **6 bps all-in** per fill. |
@@ -43,7 +43,7 @@ Each run has its own **detail page**: parameters, stats, orders list, account-im
 | User queue | Recipe from a **desk automation** (this page or Automations → Backtest), a **library template** (grouped by folder), or a previous run (**Re-run Parameters**). Manual and webhook bots stay out of the desk list. Required: a replayable recipe, start date, end date, initial balance, leverage, timeframe, venue. Loaded blocked fields show as invalid until the user picks a legal value. Replay fields are editable on the page. **Primary pair** preloads from the recipe; the user can pick another. Optional **comparables** (max 8). The run stores the recipe. No library row until Attach or Save as. |
 | Detail | `/account/backtests/[runId]`. Parameters, stats, equity chart, inline chart, paged orders. **Re-run Parameters** loads that run’s recipe, window, balance, pair, timeframe, venue, and comparables into the list-page replay form (`?rerun=`). Queue still creates a **new** run. The Orders list and chart include **every** fill, including clips still open at the window end (action `open` in the table; Open markers + entry line on the chart). Header and Performance stay **realized only**. Open mark and side also sit in **Current trades** under Performance. Queued, running, failed, or cancelled runs keep Parameters and header dates; Performance, equity, chart, and trades show a waiting or failed message — not an empty chart or “no fills”. While queued or running, the detail page starts the run if it is still queued, then refreshes until the status is terminal. |
 | Desk Backtest | Click is always offered. Manual, webhook, or other blocked fields show the reason and do **not** open a draft. Price / indicator (DCA) or a price When (Perps) seeds a draft. If the form matches a library template, the draft remembers it as `source_template_id`. |
-| Attach / Save | After **done**, the results page uses one top-right **match card**: **Template** (`Matches {name}` or `No matching template`) and **Desk** (`Matches {desk} · {bot}` or `No matching desk bot`, info only). **Bot to replay** still uses the two badges. Primary on the card: if any library template matches, **Attach to {name}** links the run (not only the loaded `source_template_id`). If already linked, **Attached**. If none match, **Save as template** opens a modal (name, folders; admin can save as a platform catalog row instead, including Starter Pack). User save creates and links the run. Never auto-attach after an edit. A linked user template on `/account/templates` shows a **Backtested** badge: hover shows window, win rate, realized P&L, P&L on starting balance, ROE, and APR; click opens the run in a new tab. Secondary on the card: **Add to desk** copies idle onto a chosen desk (never arm from a run); **Publish snapshot** copies a platform `backtested` row (`user_id` null); **Remove**. Queued / running / failed still show the match rows and hide save/attach. |
+| Attach / Save | After **done**, the results page uses one top-right **match card**: **Template** (`Matches {name}` or `No matching template`) and **Desk** (`Matches {desk} · {bot}` or `No matching desk bot`, info only). **Bot to replay** still uses the two badges. Primary on the card: if any library template matches, **Attach to {name}** links the run (not only the loaded `source_template_id`). If already linked, **Attached**. If none match, **Save as template** opens a modal (name, folders; admin can save as a platform catalog row instead, including Starter Pack). User save creates and links the run. Never auto-attach after an edit. A linked user template on `/account/templates` shows a **Backtested** badge: hover shows window, win rate, realized P&L, P&L on starting balance, ROE, and APR; click opens the run in a new tab. Secondary on the card: **Add to desk** copies idle onto a chosen desk (never arm from a run); **Remove**. Public snapshot publish is parked. Queued / running / failed still show the match rows and hide save/attach. |
 | Window | Explicit start/end dates. No day cap — 10 years is allowed. Any indicator timeframe (5m through Daily). Rejected only if the range needs more than **200,000** bars. |
 | Worker | Short jobs (≤3000 bars and ≤4 pairs) run in the request. Longer jobs stay `queued`. The engine cycle always ticks desks first. If time remains, it then claims one queued run (Fly: any length; Vercel: ≤3000). Opening a queued run also claims and executes that row so a busy desk wave cannot stall the queue. Stale `running` after 15 minutes is reclaimable. |
 | Balance | Required `starting_balance_usdt` and **leverage** (default **1**, stored on `backtest_runs`). Replay skips an entry when **margin** (notional ÷ leverage) + fee exceeds remaining cash (start + realized − locked margin). Old runs without leverage read as 1×. DCA **% of account** max value uses that same cash book (start + realized) at the **start of each cycle**. |
@@ -57,13 +57,13 @@ Add a third visibility: **`backtested`**.
 | --- | --- | --- | --- |
 | What it is | Config to stamp on a desk | Same, admin-owned | Config **plus** a completed run |
 | Apply to a desk | Idle / disabled, as today | Same | Same. Copy: “This was backtested. Enable on the desk yourself.” |
-| Who sees it | Owner (+ shares) | Every member | Owner’s runs on `/account/backtests`. **Publish** copies to `user_id` null. |
+| Who sees it | Owner (+ shares) | Every member | Owner’s runs on `/account/backtests`. Public snapshot publish is parked. |
 | Recipe | Unchanged parsers | Unchanged | Same recipe JSON. Fills live on `backtest_runs`, not in `recipe`. |
 
 New table `backtest_runs`:
 
-- `id`, `user_id` (null on published copies)
-- `template_id` (library or published snapshot after Attach / Save / Publish; null on a fresh queue)
+- `id`, `user_id` (null on leftover published copies)
+- `template_id` (library row after Attach / Save; null on a fresh queue)
 - `source_template_id` (library row they loaded from, if any)
 - `desk_type` (`perps` \| `dca`) + `venue` + `symbol` + window + timeframe
 - `status`: `draft` \| `queued` \| `running` \| `done` \| `failed` \| `cancelled`

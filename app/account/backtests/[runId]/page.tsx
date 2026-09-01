@@ -123,7 +123,6 @@ export default async function AccountBacktestDetailPage({
         listHref="/account/backtests"
         applyDesks={applyDesks}
         applyTemplateId={templateActions.applyTemplateId}
-        canPublish={run.userId === member.id}
         canRemove={canDeleteBacktestRun(run, member.id, isAdmin)}
         canAttach={templateActions.canAttach}
         canSaveAs={templateActions.canSaveAs}

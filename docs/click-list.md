@@ -10,3 +10,4 @@ Not a phase. Not ordered. Not a gate before Fly.io or anything else. Work these 
 6. Refine **backtesting flow** (queue, worker drain, replay fields, run detail, save/attach). See [phase-backtesting.md](phase-backtesting.md). Added 30 Aug 2026; restated 1 Sep 2026.
 7. Refine **charts and locations** (where charts sit, which page owns them). See [phase-charts.md](phase-charts.md). Added 30 Aug 2026.
 8. Further **copy trade** testing (share, catalogue, paper and live follow, fan-out, guards). See [phase-copy-trading.md](phase-copy-trading.md) step 10. Added 1 Sep 2026.
+9. Consider making **templates public** later (member-visible catalog, not the old backtest Publish snapshot). Publish snapshot was removed 2 Sep 2026.

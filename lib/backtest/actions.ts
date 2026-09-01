@@ -8,7 +8,6 @@ import { canQueueUserBacktest, parseBacktestRecipeJson } from "./library";
 import { placeSavedTemplate } from "@/lib/templates/actions";
 import {
   deleteTemplate,
-  findNamedTemplate,
   insertTemplate,
   loadTemplateById,
   templateIsSharedWith,
@@ -72,34 +71,6 @@ function uniqueBacktestName(name: string, suffix: string): string {
   const base = name.trim() || "Backtest";
   const label = `${base} · ${suffix}`.slice(0, 80);
   return label;
-}
-
-async function snapshotBacktestedTemplate(input: {
-  userId: string | null;
-  recipe: BacktestRecipe;
-  published: boolean;
-  suffix: string;
-}): Promise<string | null> {
-  const name = uniqueBacktestName(input.recipe.name, input.suffix);
-  const deskType = input.recipe.kind;
-  const existing = await findNamedTemplate({
-    visibility: "backtested",
-    userId: input.published ? null : input.userId,
-    deskType,
-    name,
-  });
-  if (existing) {
-    return existing.id;
-  }
-  const created = await insertTemplate({
-    userId: input.published ? null : input.userId,
-    visibility: "backtested",
-    deskType,
-    name,
-    description: "Frozen backtest snapshot. Apply stays idle.",
-    recipe: input.recipe,
-  });
-  return created.ok ? created.template.id : null;
 }
 
 async function canUseTemplate(
@@ -363,61 +334,6 @@ export async function nudgeBacktestRunAction(
   }
   revalidateBacktests(`/account/backtests/${run.id}`);
   return result;
-}
-
-export async function publishBacktestAction(
-  formData: FormData,
-): Promise<BacktestActionResult> {
-  const auth = await requireMember();
-  if (!auth.ok) {
-    return auth;
-  }
-  const run = await loadBacktestRun(String(formData.get("runId") ?? ""));
-  if (!run || !canReadBacktestRun(run, auth.member.id, auth.isAdmin)) {
-    return { ok: false, error: "That run was not found." };
-  }
-  if (run.status !== "done") {
-    return { ok: false, error: "Publish a finished run." };
-  }
-  if (!auth.isAdmin && run.userId !== auth.member.id) {
-    return { ok: false, error: "Only the owner can publish this run." };
-  }
-  const templateId = await snapshotBacktestedTemplate({
-    userId: null,
-    recipe: run.recipe,
-    published: true,
-    suffix: run.symbol,
-  });
-  if (!templateId) {
-    return { ok: false, error: "Could not publish that snapshot." };
-  }
-  const copy = await insertBacktestRun({
-    userId: null,
-    templateId,
-    venue: run.venue,
-    venueEnvironment: run.venueEnvironment,
-    symbol: run.symbol,
-    interval: run.interval,
-    fromMs: run.fromMs,
-    toMs: run.toMs,
-    feePreset: run.feePreset,
-    feeRate: run.feeRate,
-    startingUsdt: run.startingUsdt,
-    leverage: run.leverage,
-    recipe: run.recipe,
-  });
-  if (!copy) {
-    return { ok: false, error: "Could not copy the run." };
-  }
-  await updateBacktestRun(copy.id, {
-    status: "done",
-    stats: run.stats,
-    orders: run.orders,
-    error: null,
-    finished: true,
-  });
-  revalidateBacktests();
-  return { ok: true, runId: copy.id };
 }
 
 export async function attachBacktestToTemplateAction(

@@ -84,7 +84,6 @@ import type { TemplateDeskType } from "@/lib/templates/recipe";
 import {
   attachBacktestToTemplateAction,
   deleteBacktestAction,
-  publishBacktestAction,
   saveBacktestAsPlatformTemplateAction,
   saveBacktestAsTemplateAction,
 } from "@/lib/backtest/actions";
@@ -897,44 +896,6 @@ export function ApplyBacktestButton({
         {pending ? "Copying…" : "Add to desk"}
       </button>
       {message ? <p className="text-xs text-ink-muted">{message}</p> : null}
-    </form>
-  );
-}
-
-export function PublishBacktestButton({
-  runId,
-  canPublish,
-}: {
-  runId: string;
-  canPublish: boolean;
-}) {
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  if (!canPublish) {
-    return null;
-  }
-  return (
-    <form
-      action={async (formData) => {
-        setPending(true);
-        setError(null);
-        const result = await publishBacktestAction(formData);
-        setPending(false);
-        if (!result.ok) {
-          setError(result.error ?? "Could not publish.");
-        }
-      }}
-    >
-      <input type="hidden" name="runId" value={runId} />
-      <button
-        type="submit"
-        disabled={pending}
-        title="Shared platform copy of this run. Does not change your library or arm a desk."
-        className="w-full rounded-control border border-line px-3 py-2 text-sm text-ink hover:border-line-strong disabled:opacity-50"
-      >
-        {pending ? "Publishing…" : "Publish snapshot"}
-      </button>
-      {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>
   );
 }
