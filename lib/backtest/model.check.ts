@@ -194,7 +194,7 @@ assert.equal(highlight.symbol, "ETHUSDT");
 assert.equal(highlight.trades, 10);
 assert.equal(highlight.winRate, 0.6);
 assert.equal(highlight.realizedUsdt, 22);
-assert.equal(highlight.onNotionalPct, 0.22);
+assert.equal(highlight.returnPct, 0.022);
 assert.equal(highlight.roePct, 0.22);
 assert.ok(highlight.aprPct != null && highlight.aprPct > 0);
 const closedClip = [
@@ -220,10 +220,17 @@ const closedClip = [
 assert.equal(completedBacktestNotionalUsdt(closedClip), 100);
 assert.equal(backtestOnNotionalPct(22, closedClip), 0.22);
 assert.equal(backtestRoePct(22, closedClip, 10), 2.2);
-assert.ok(
-  backtestAprPct(22, closedClip, 10, Date.UTC(2025, 0, 1), Date.UTC(2026, 0, 1)) !=
-    null,
+assert.equal(
+  backtestAprPct(100, 0, Date.UTC(2025, 0, 1), Date.UTC(2026, 0, 1)),
+  null,
 );
+const accountApr = backtestAprPct(
+  100,
+  1000,
+  Date.UTC(2025, 0, 1),
+  Date.UTC(2026, 0, 1),
+);
+assert.ok(accountApr != null && accountApr > 0 && accountApr < 0.1);
 assert.equal(
   realizedEndingUsdt({ startingUsdt: 1000, realizedUsdt: 72.25 }),
   1072.25,

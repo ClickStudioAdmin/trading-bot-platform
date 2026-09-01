@@ -18,7 +18,6 @@ import { ColumnHint } from "@/components/column-hint";
 import {
   BACKTEST_FEE_PRESETS,
   backtestAprPct,
-  backtestOnNotionalPct,
   backtestRerunHref,
   backtestRoePct,
   backtestWindowDays,
@@ -436,17 +435,14 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
   const stats = run.stats;
   const empty = !stats || stats.trades === 0;
   const tradingDays = backtestWindowDays(run.fromMs, run.toMs);
-  const onNotional = stats
-    ? backtestOnNotionalPct(stats.realizedUsdt, run.orders)
-    : null;
+  const onBook = stats ? realizedReturnPct(stats) : null;
   const roe = stats
     ? backtestRoePct(stats.realizedUsdt, run.orders, run.leverage)
     : null;
   const apr = stats
     ? backtestAprPct(
         stats.realizedUsdt,
-        run.orders,
-        run.leverage,
+        stats.startingUsdt,
         run.fromMs,
         run.toMs,
       )
@@ -498,24 +494,24 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
         />
         <StatCard
           label="P&L"
-          value={empty || onNotional == null ? "—" : formatPct(onNotional)}
+          value={empty || onBook == null ? "—" : formatPct(onBook)}
           toneClass={signedTone(empty ? null : stats.realizedUsdt)}
-          hint="Realized profit ÷ sum of closed position value (qty × entry)."
-          note="Based on position value"
+          hint="Realized profit ÷ starting balance."
+          note="Based on starting balance"
         />
         <StatCard
           label="ROE"
           value={empty || roe == null ? "—" : formatPct(roe)}
           toneClass={signedTone(empty ? null : roe)}
-          hint="P&L vs initial margin (position value ÷ leverage)."
+          hint="Realized profit ÷ initial margin (position value ÷ leverage)."
           note="Based on margin requirement"
         />
         <StatCard
           label="APR"
           value={empty || apr == null ? "—" : formatPct(apr)}
           toneClass={signedTone(empty ? null : apr)}
-          hint="Compound annualization of ROE over the replay window. Short windows inflate APR."
-          note="Annualized ROE"
+          hint="Compound annualization of account return over the replay window. Short windows inflate APR."
+          note="Annualized account return"
         />
       </div>
     </section>

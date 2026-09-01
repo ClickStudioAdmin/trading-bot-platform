@@ -551,13 +551,12 @@ export function backtestWindowDays(fromMs: number, toMs: number): number | null 
 
 export function backtestAprPct(
   realizedUsdt: number,
-  orders: SimulatedOrder[],
-  leverage: number,
+  startingUsdt: number,
   fromMs: number,
   toMs: number,
 ): number | null {
   return annualizeReturnPct(
-    backtestRoePct(realizedUsdt, orders, leverage),
+    realizedReturnPct({ startingUsdt, realizedUsdt }),
     backtestWindowDays(fromMs, toMs),
   );
 }
@@ -620,7 +619,7 @@ export type BacktestLinkHighlight = {
   trades: number;
   winRate: number;
   realizedUsdt: number;
-  onNotionalPct: number | null;
+  returnPct: number | null;
   roePct: number | null;
   aprPct: number | null;
 };
@@ -639,6 +638,7 @@ export function backtestLinkHighlight(
   >,
 ): BacktestLinkHighlight {
   const realized = run.stats?.realizedUsdt ?? 0;
+  const startingUsdt = run.stats?.startingUsdt ?? 0;
   const leverage = normalizeBacktestLeverage(run.leverage);
   return {
     runId: run.id,
@@ -649,12 +649,11 @@ export function backtestLinkHighlight(
     trades: run.stats?.trades ?? 0,
     winRate: run.stats?.winRate ?? 0,
     realizedUsdt: realized,
-    onNotionalPct: backtestOnNotionalPct(realized, run.orders),
+    returnPct: realizedReturnPct({ startingUsdt, realizedUsdt: realized }),
     roePct: backtestRoePct(realized, run.orders, leverage),
     aprPct: backtestAprPct(
       realized,
-      run.orders,
-      leverage,
+      startingUsdt,
       run.fromMs,
       run.toMs,
     ),

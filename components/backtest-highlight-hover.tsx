@@ -79,8 +79,8 @@ function BacktestHighlightBody({
       />
       <HighlightRow
         label="P&L"
-        value={formatBacktestReturnPct(highlight.onNotionalPct)}
-        toneClass={signedTone(highlight.onNotionalPct)}
+        value={formatBacktestReturnPct(highlight.returnPct)}
+        toneClass={signedTone(highlight.returnPct)}
       />
       <HighlightRow
         label="ROE"
