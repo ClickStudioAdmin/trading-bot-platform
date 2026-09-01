@@ -351,33 +351,35 @@ export function PaperPerformanceStats({
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
-          label="Realized P&L"
+          label="Completed Trades"
+          value={signedIn ? String(stats.closedCount) : "—"}
+        />
+        <StatCard
+          label="Win Rate"
+          value={signedIn ? winRate : "—"}
+        />
+        <StatCard
+          label="Realized Profit"
           value={signedIn ? formatSignedUsd(stats.realizedUsdt) : "—"}
           toneClass={signedTone(signedIn ? stats.realizedUsdt : null)}
           hint="Closed-carry dollars. Cash-and-carry has no isolated margin."
         />
         <StatCard
-          label="On notional"
+          label="P&L"
           value={
             signedIn && stats.realizedPct != null
               ? formatPct(stats.realizedPct)
               : "—"
           }
           toneClass={signedTone(signedIn ? stats.realizedUsdt : null)}
-          hint="Realized P&L ÷ sum of closed carry value."
+          hint="Realized profit ÷ sum of closed carry value."
+          note="Based on position value"
         />
         <StatCard
           label="ROE"
           value="—"
-          hint="Cash-and-carry has no initial-margin ROE. On notional is the return on this book."
-        />
-        <StatCard
-          label="Completed trades"
-          value={signedIn ? String(stats.closedCount) : "—"}
-        />
-        <StatCard
-          label="Win rate"
-          value={signedIn ? winRate : "—"}
+          hint="Cash-and-carry has no initial-margin ROE. P&L is the return on this book."
+          note="Based on margin requirement"
         />
       </div>
     </section>
@@ -440,11 +442,13 @@ function StatCard({
   value,
   toneClass,
   hint,
+  note,
 }: {
   label: string;
   value: string;
   toneClass?: string;
   hint?: string;
+  note?: string;
 }) {
   return (
     <div className="rounded-card border border-line bg-surface p-5">
@@ -453,6 +457,7 @@ function StatCard({
         value={value}
         toneClass={toneClass}
         hint={hint}
+        note={note}
       />
     </div>
   );
@@ -463,11 +468,13 @@ function StatBlock({
   value,
   toneClass,
   hint,
+  note,
 }: {
   label: string;
   value: string;
   toneClass?: string;
   hint?: string;
+  note?: string;
 }) {
   return (
     <div>
@@ -479,6 +486,7 @@ function StatBlock({
       >
         {value}
       </p>
+      {note ? <p className="mt-2 text-xs text-ink-faint">{note}</p> : null}
     </div>
   );
 }

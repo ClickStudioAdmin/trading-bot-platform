@@ -436,6 +436,7 @@ export type DeskStatItem = {
   value: string;
   toneClass?: string;
   hint?: string;
+  note?: string;
   content?: ReactNode;
 };
 
@@ -468,33 +469,35 @@ export function FuturesPerformanceStats({
   const items: DeskStatItem[] = itemsOverride ?? [
     ...(extras ?? []),
     {
-      label: "Realized P&L",
+      label: "Completed Trades",
+      value: signedIn ? String(stats.closedCount) : "—",
+    },
+    {
+      label: "Win Rate",
+      value: signedIn ? winRate : "—",
+    },
+    {
+      label: "Realized Profit",
       value: signedIn ? formatSignedUsd(stats.realizedUsdt) : "—",
       toneClass: signedTone(signedIn ? stats.realizedUsdt : null),
       hint: "Closed-trade dollars. Leverage does not change this amount.",
     },
     {
-      label: "On notional",
+      label: "P&L",
       value:
         signedIn && stats.onNotionalPct != null
           ? formatPct(stats.onNotionalPct)
           : "—",
       toneClass: signedTone(signedIn ? stats.realizedUsdt : null),
-      hint: "Realized P&L ÷ sum of closed position value (qty × entry).",
+      hint: "Realized profit ÷ sum of closed position value (qty × entry).",
+      note: "Based on position value",
     },
     {
       label: "ROE",
       value: signedIn && stats.roePct != null ? formatPct(stats.roePct) : "—",
       toneClass: signedTone(signedIn ? stats.roePct : null),
       hint: roeHint,
-    },
-    {
-      label: "Completed trades",
-      value: signedIn ? String(stats.closedCount) : "—",
-    },
-    {
-      label: "Win rate",
-      value: signedIn ? winRate : "—",
+      note: "Based on margin requirement",
     },
   ];
   const columns =
@@ -513,6 +516,7 @@ export function FuturesPerformanceStats({
           value={item.value}
           toneClass={item.toneClass}
           hint={item.hint}
+          note={item.note}
           content={item.content}
           raised={embedded}
         />
@@ -948,6 +952,7 @@ function StatCard({
   value,
   toneClass,
   hint,
+  note,
   content,
   raised = false,
 }: {
@@ -955,6 +960,7 @@ function StatCard({
   value: string;
   toneClass?: string;
   hint?: string;
+  note?: string;
   content?: ReactNode;
   raised?: boolean;
 }) {
@@ -970,6 +976,9 @@ function StatCard({
             {hint ? <ColumnHint label={label} hint={hint} /> : label}
           </p>
           <div className="mt-3">{content}</div>
+          {note ? (
+            <p className="mt-2 text-xs text-ink-faint">{note}</p>
+          ) : null}
         </div>
       ) : (
         <StatBlock
@@ -977,6 +986,7 @@ function StatCard({
           value={value}
           toneClass={toneClass}
           hint={hint}
+          note={note}
         />
       )}
     </div>
@@ -988,11 +998,13 @@ function StatBlock({
   value,
   toneClass,
   hint,
+  note,
 }: {
   label: string;
   value: string;
   toneClass?: string;
   hint?: string;
+  note?: string;
 }) {
   return (
     <div>
@@ -1004,6 +1016,7 @@ function StatBlock({
       >
         {value}
       </p>
+      {note ? <p className="mt-2 text-xs text-ink-faint">{note}</p> : null}
     </div>
   );
 }
