@@ -5,6 +5,7 @@ import { getSessionMember } from "@/lib/auth/session";
 import { parseCandleInterval, parseCandleSymbol, parseCandleVenue } from "@/lib/market/candles";
 import type { BacktestRecipe } from "./model";
 import { canQueueUserBacktest, parseBacktestRecipeJson } from "./library";
+import { placeSavedTemplate } from "@/lib/templates/actions";
 import {
   deleteTemplate,
   findNamedTemplate,
@@ -511,7 +512,23 @@ export async function saveBacktestAsTemplateAction(
   if (!linked) {
     return { ok: false, error: "Saved the template but could not link this run." };
   }
+  const placed = await placeSavedTemplate({
+    templateId: created.template.id,
+    userId: auth.member.id,
+    isAdmin: auth.isAdmin,
+    visibility: "user",
+    deskType: run.recipe.kind,
+    folderIds: formData
+      .getAll("folderId")
+      .map((value) => String(value).trim())
+      .filter(Boolean),
+    newFolderName: String(formData.get("newFolderName") ?? "").trim() || null,
+  });
+  if (!placed.ok) {
+    return { ok: false, error: placed.error };
+  }
   revalidateBacktests(`/account/backtests/${run.id}`);
+  revalidatePath("/account/templates");
   return { ok: true, runId: run.id };
 }
 
@@ -534,6 +551,7 @@ export async function saveBacktestAsPlatformTemplateAction(
   }
   const requested = String(formData.get("name") ?? "").trim() || run.recipe.name;
   const names = [requested, uniqueBacktestName(requested, run.symbol)];
+  const starterPack = formData.get("starterPack") === "1";
   let created: Awaited<ReturnType<typeof insertTemplate>> | null = null;
   for (const name of names) {
     created = await insertTemplate({
@@ -543,6 +561,7 @@ export async function saveBacktestAsPlatformTemplateAction(
       name,
       description: "Saved from a backtest. Enable on the desk yourself.",
       recipe: run.recipe,
+      starterPack,
     });
     if (created.ok || created.code !== "name_taken") {
       break;
@@ -551,8 +570,24 @@ export async function saveBacktestAsPlatformTemplateAction(
   if (!created || !created.ok) {
     return { ok: false, error: created?.error ?? "Could not save that template." };
   }
+  const placed = await placeSavedTemplate({
+    templateId: created.template.id,
+    userId: auth.member.id,
+    isAdmin: true,
+    visibility: "platform",
+    deskType: run.recipe.kind,
+    folderIds: formData
+      .getAll("folderId")
+      .map((value) => String(value).trim())
+      .filter(Boolean),
+    newFolderName: String(formData.get("newFolderName") ?? "").trim() || null,
+  });
+  if (!placed.ok) {
+    return { ok: false, error: placed.error };
+  }
   revalidateBacktests(`/account/backtests/${run.id}`);
   revalidatePath("/admin/templates");
+  revalidatePath("/account/templates");
   return { ok: true, runId: run.id };
 }
 

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { BacktestEquityPanel } from "@/components/backtest-equity";
 import {
   ApplyBacktestButton,
@@ -10,13 +9,12 @@ import {
   BacktestOrdersTable,
   BacktestPropertyList,
   BacktestStatsGrid,
-  BacktestOriginBadges,
   PublishBacktestButton,
   RemoveBacktestButton,
-  SaveBacktestAsPlatformButton,
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
 import { ColumnHint } from "@/components/column-hint";
+import type { AutomationTemplateSet } from "@/lib/templates/store";
 import {
   BACKTEST_FEE_PRESETS,
   backtestAprPct,
@@ -67,23 +65,6 @@ function backtestStatusTone(status: BacktestRun["status"]): {
   return { label: statusLabel(status), tone: "faint", pulse: false };
 }
 
-function ActionGroup({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-end gap-1">
-      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
-        {label}
-      </p>
-      <div className="flex items-center gap-2">{children}</div>
-    </div>
-  );
-}
-
 function StatusDot({
   tone,
   pulse,
@@ -111,6 +92,163 @@ function StatusDot({
   );
 }
 
+function MatchRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 text-sm">
+      <dt className="shrink-0 text-ink-muted">{label}</dt>
+      <dd className="text-right text-ink">{value}</dd>
+    </div>
+  );
+}
+
+function BacktestMatchCard({
+  runId,
+  defaultName,
+  deskType,
+  status,
+  matchingTemplateName,
+  matchingDeskLabel,
+  linkedTemplateName,
+  canAttach,
+  canSaveAs,
+  canSaveAsPlatform,
+  sourceTemplateName,
+  attachTemplateId,
+  applyTemplateId,
+  applyDesks,
+  canPublish,
+  canRemove,
+  isAdmin,
+  folders,
+  returnTo,
+}: {
+  runId: string;
+  defaultName: string;
+  deskType: BacktestRun["deskType"];
+  status: {
+    label: string;
+    tone: "success" | "warning" | "danger" | "faint";
+    pulse: boolean;
+  };
+  matchingTemplateName: string | null;
+  matchingDeskLabel: string | null;
+  linkedTemplateName: string | null;
+  canAttach: boolean;
+  canSaveAs: boolean;
+  canSaveAsPlatform: boolean;
+  sourceTemplateName: string | null;
+  attachTemplateId: string | null;
+  applyTemplateId: string | null;
+  applyDesks?: Array<{ id: string; name: string }>;
+  canPublish: boolean;
+  canRemove: boolean;
+  isAdmin: boolean;
+  folders: AutomationTemplateSet[];
+  returnTo: string;
+}) {
+  const statusClass =
+    status.tone === "warning"
+      ? "text-warning"
+      : status.tone === "danger"
+        ? "text-danger"
+        : status.tone === "faint"
+          ? "text-ink-muted"
+          : "text-success";
+  const hasPrimary = canAttach || canSaveAs || Boolean(linkedTemplateName);
+  const hasSecondary =
+    Boolean(applyTemplateId && applyDesks && applyDesks.length > 0) ||
+    canPublish ||
+    canRemove ||
+    (canSaveAsPlatform && !canSaveAs);
+  return (
+    <aside className="w-full max-w-sm rounded-card border border-line bg-surface p-5">
+      <dl className="space-y-2">
+        <div className={`flex items-center justify-between gap-3 text-sm ${statusClass}`}>
+          <dt className="text-ink-muted">Status</dt>
+          <dd className="flex items-center gap-2">
+            <StatusDot tone={status.tone} pulse={status.pulse} />
+            {status.label}
+          </dd>
+        </div>
+        <MatchRow
+          label="Template"
+          value={
+            matchingTemplateName
+              ? `Matches ${matchingTemplateName}`
+              : "No matching template"
+          }
+        />
+        <MatchRow
+          label="Desk"
+          value={
+            matchingDeskLabel
+              ? `Matches ${matchingDeskLabel}`
+              : "No matching desk bot"
+          }
+        />
+      </dl>
+      {hasPrimary ? (
+        <div className="mt-4 space-y-2">
+          {canAttach ? (
+            <AttachBacktestButton
+              runId={runId}
+              sourceName={matchingTemplateName ?? sourceTemplateName}
+              templateId={attachTemplateId ?? ""}
+            />
+          ) : null}
+          {linkedTemplateName ? (
+            <p className="rounded-control bg-success/15 px-3 py-1.5 text-center text-sm text-success">
+              Attached
+            </p>
+          ) : null}
+          {canSaveAs ? (
+            <SaveBacktestAsTemplateButton
+              runId={runId}
+              defaultName={defaultName}
+              deskType={deskType}
+              folders={folders}
+              isAdmin={isAdmin}
+              canSaveAs={canSaveAs}
+              canSaveAsPlatform={canSaveAsPlatform}
+            />
+          ) : null}
+        </div>
+      ) : null}
+      {hasSecondary ? (
+        <div className={`${hasPrimary ? "mt-4 border-t border-line pt-4" : "mt-4"} space-y-2`}>
+          {applyTemplateId && applyDesks && applyDesks.length > 0 ? (
+            <ApplyBacktestButton
+              templateId={applyTemplateId}
+              desks={applyDesks}
+            />
+          ) : null}
+          {canPublish ? (
+            <PublishBacktestButton runId={runId} canPublish={canPublish} />
+          ) : null}
+          {canSaveAsPlatform && !canSaveAs ? (
+            <SaveBacktestAsTemplateButton
+              runId={runId}
+              defaultName={defaultName}
+              deskType={deskType}
+              folders={folders}
+              isAdmin={isAdmin}
+              canSaveAs={false}
+              canSaveAsPlatform
+              variant="secondary"
+            />
+          ) : null}
+          <RemoveBacktestButton
+            runId={runId}
+            canRemove={canRemove}
+            returnTo={returnTo}
+            stacked
+          />
+        </div>
+      ) : null}
+    </aside>
+  );
+}
+
 export function BacktestRunDetail({
   run,
   listHref,
@@ -126,6 +264,8 @@ export function BacktestRunDetail({
   matchingTemplateName = null,
   matchingDeskLabel = null,
   linkedTemplateName = null,
+  isAdmin = false,
+  folders = [],
   returnTo,
   comparables = [],
   parentHref,
@@ -144,6 +284,8 @@ export function BacktestRunDetail({
   matchingTemplateName?: string | null;
   matchingDeskLabel?: string | null;
   linkedTemplateName?: string | null;
+  isAdmin?: boolean;
+  folders?: AutomationTemplateSet[];
   returnTo: string;
   comparables?: BacktestRun[];
   parentHref?: string | null;
@@ -158,8 +300,8 @@ export function BacktestRunDetail({
         active={run.status === "queued" || run.status === "running"}
         runId={run.id}
       />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-6">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
             Backtest
           </p>
@@ -172,14 +314,6 @@ export function BacktestRunDetail({
             {run.startingUsdt.toLocaleString()} · {run.leverage}× ·{" "}
             {BACKTEST_FEE_PRESETS[run.feePreset].label}
           </p>
-          {matchingTemplateName || matchingDeskLabel ? (
-            <div className="mt-3">
-              <BacktestOriginBadges
-                templateName={matchingTemplateName}
-                deskLabel={matchingDeskLabel}
-              />
-            </div>
-          ) : null}
           <div className="mt-3 flex flex-wrap gap-3 text-sm">
             <Link href={listHref} className="text-accent hover:underline">
               All backtests
@@ -197,72 +331,27 @@ export function BacktestRunDetail({
             ) : null}
           </div>
         </div>
-        <div className="mt-6 flex flex-col items-end gap-2">
-          <div
-            className={`flex items-center gap-2 text-sm ${
-              status.tone === "warning"
-                ? "text-warning"
-                : status.tone === "danger"
-                  ? "text-danger"
-                  : status.tone === "faint"
-                    ? "text-ink-muted"
-                    : "text-success"
-            }`}
-          >
-            <StatusDot tone={status.tone} pulse={status.pulse} />
-            {status.label}
-          </div>
-          <div className="flex items-end justify-end gap-4">
-            {canAttach || canSaveAs || linkedTemplateName ? (
-              <ActionGroup label="Library">
-                {canAttach ? (
-                  <AttachBacktestButton
-                    runId={run.id}
-                    sourceName={matchingTemplateName ?? sourceTemplateName}
-                    templateId={attachTemplateId ?? ""}
-                  />
-                ) : null}
-                {canSaveAs ? (
-                  <SaveBacktestAsTemplateButton
-                    runId={run.id}
-                    defaultName={run.recipe.name}
-                  />
-                ) : null}
-                {linkedTemplateName ? (
-                  <p className="whitespace-nowrap text-sm text-ink-muted">
-                    Saved · {linkedTemplateName}
-                  </p>
-                ) : null}
-              </ActionGroup>
-            ) : null}
-            {complete && applyTemplateId && applyDesks && applyDesks.length > 0 ? (
-              <ActionGroup label="Desk">
-                <ApplyBacktestButton
-                  templateId={applyTemplateId}
-                  desks={applyDesks}
-                />
-              </ActionGroup>
-            ) : null}
-            {canSaveAsPlatform ? (
-              <ActionGroup label="Platform">
-                <SaveBacktestAsPlatformButton
-                  runId={run.id}
-                  defaultName={run.recipe.name}
-                />
-              </ActionGroup>
-            ) : null}
-            {complete && canPublish ? (
-              <ActionGroup label="Share">
-                <PublishBacktestButton runId={run.id} canPublish={canPublish} />
-              </ActionGroup>
-            ) : null}
-            <RemoveBacktestButton
-              runId={run.id}
-              canRemove={canRemove}
-              returnTo={returnTo}
-            />
-          </div>
-        </div>
+        <BacktestMatchCard
+          runId={run.id}
+          defaultName={run.recipe.name}
+          deskType={run.deskType}
+          status={status}
+          matchingTemplateName={matchingTemplateName}
+          matchingDeskLabel={matchingDeskLabel}
+          linkedTemplateName={linkedTemplateName}
+          canAttach={canAttach}
+          canSaveAs={canSaveAs}
+          canSaveAsPlatform={canSaveAsPlatform}
+          sourceTemplateName={sourceTemplateName}
+          attachTemplateId={attachTemplateId}
+          applyTemplateId={applyTemplateId}
+          applyDesks={applyDesks}
+          canPublish={complete && canPublish}
+          canRemove={canRemove}
+          isAdmin={isAdmin}
+          folders={folders}
+          returnTo={returnTo}
+        />
       </div>
 
       <BacktestHeaderStats run={run} />

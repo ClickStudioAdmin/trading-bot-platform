@@ -20,6 +20,7 @@ import {
   loadBacktestRun,
 } from "@/lib/backtest/store";
 import {
+  listApplyableSets,
   listApplyableTemplates,
   loadTemplateById,
 } from "@/lib/templates/store";
@@ -57,11 +58,12 @@ export default async function AccountBacktestDetailPage({
     redirect(`/account/backtests?${draftParams.toString()}`);
   }
   const ownerId = run.userId ?? member.id;
-  const [source, linked, templates, deskBots] = await Promise.all([
+  const [source, linked, templates, deskBots, folders] = await Promise.all([
     run.sourceTemplateId ? loadTemplateById(run.sourceTemplateId) : null,
     run.templateId ? loadTemplateById(run.templateId) : null,
     listApplyableTemplates({ userId: ownerId }),
     run.userId ? listDeskBacktestBots(run.userId) : Promise.resolve([]),
+    listApplyableSets({ userId: ownerId }),
   ]);
   const library = templates.flatMap((row) => {
     const item = toBacktestLibraryItem(row);
@@ -131,6 +133,8 @@ export default async function AccountBacktestDetailPage({
         matchingTemplateName={templateActions.matchingTemplateName}
         matchingDeskLabel={templateActions.matchingDeskLabel}
         linkedTemplateName={templateActions.linkedName}
+        isAdmin={isAdmin}
+        folders={folders}
         returnTo="/account/backtests"
         comparables={comparables}
         parentHref={

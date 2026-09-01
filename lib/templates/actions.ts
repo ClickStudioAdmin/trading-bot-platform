@@ -273,7 +273,7 @@ async function addTemplateToExistingFolder(input: {
   return appendTemplateToSet({ setId: input.setId, templateId: input.templateId });
 }
 
-async function placeSavedTemplate(input: {
+export async function placeSavedTemplate(input: {
   templateId: string;
   userId: string;
   isAdmin: boolean;
@@ -282,6 +282,23 @@ async function placeSavedTemplate(input: {
   folderIds: string[];
   newFolderName: string | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const member = await getSessionMember();
+  if (!member) {
+    return { ok: false, error: "Sign in to continue." };
+  }
+  const isAdmin = memberIsAdmin(member);
+  input = {
+    ...input,
+    userId: member.id,
+    isAdmin,
+  };
+  if (input.newFolderName) {
+    const folderName = parseFolderName(input.newFolderName);
+    if (!folderName.ok) {
+      return folderName;
+    }
+    input = { ...input, newFolderName: folderName.name };
+  }
   for (const folderId of input.folderIds) {
     const added = await addTemplateToExistingFolder({
       setId: folderId,

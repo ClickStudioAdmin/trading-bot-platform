@@ -400,7 +400,7 @@ export function SaveAsTemplateButton({
   );
 }
 
-function saveFolderGroups(
+export function saveFolderGroups(
   folders: AutomationTemplateSet[],
   kind: TemplateDeskType,
   asPlatform: boolean,

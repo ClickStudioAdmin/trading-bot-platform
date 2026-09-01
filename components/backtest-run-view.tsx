@@ -74,7 +74,13 @@ export function BacktestRunRefresh({
   return null;
 }
 import { DeskChart } from "@/components/desk-chart";
-import { Modal } from "@/components/template-modals";
+import {
+  Modal,
+  StarterPackCheckbox,
+  saveFolderGroups,
+} from "@/components/template-modals";
+import type { AutomationTemplateSet } from "@/lib/templates/store";
+import type { TemplateDeskType } from "@/lib/templates/recipe";
 import {
   attachBacktestToTemplateAction,
   deleteBacktestAction,
@@ -589,7 +595,7 @@ export function AttachBacktestButton({
         type="submit"
         disabled={pending}
         title="Link this run to the matching library template. Recipe is unchanged."
-        className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
+        className="w-full rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
       >
         {pending
           ? "Attaching…"
@@ -602,95 +608,244 @@ export function AttachBacktestButton({
   );
 }
 
+const saveFieldClass =
+  "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+const savePrimaryBtn =
+  "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
+const saveSecondaryBtn =
+  "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
+
 export function SaveBacktestAsTemplateButton({
   runId,
   defaultName,
+  deskType,
+  folders = [],
+  isAdmin = false,
+  canSaveAs,
+  canSaveAsPlatform,
+  variant = "primary",
 }: {
   runId: string;
   defaultName: string;
+  deskType: TemplateDeskType;
+  folders?: AutomationTemplateSet[];
+  isAdmin?: boolean;
+  canSaveAs: boolean;
+  canSaveAsPlatform: boolean;
+  variant?: "primary" | "secondary";
 }) {
   const router = useRouter();
+  const platformOnly = !canSaveAs && canSaveAsPlatform;
+  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  return (
-    <form
-      className="flex items-center gap-2"
-      action={async (formData) => {
-        setPending(true);
-        setError(null);
-        const result = await saveBacktestAsTemplateAction(formData);
-        setPending(false);
-        if (!result.ok) {
-          setError(result.error ?? "Could not save that template.");
-          return;
-        }
-        router.refresh();
-      }}
-    >
-      <input type="hidden" name="runId" value={runId} />
-      <input
-        name="name"
-        defaultValue={defaultName}
-        aria-label="Library name"
-        placeholder="Library name"
-        className="w-40 rounded-control border border-line bg-canvas px-2 py-1.5 text-sm text-ink"
-      />
-      <button
-        type="submit"
-        disabled={pending}
-        title="Create a private library template and attach this run"
-        className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
-      >
-        {pending ? "Saving…" : "Save as template"}
-      </button>
-      {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
-    </form>
-  );
-}
+  const [name, setName] = useState(defaultName);
+  const [platform, setPlatform] = useState(platformOnly);
+  const [folderIds, setFolderIds] = useState<Set<string>>(new Set());
+  const [createFolder, setCreateFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [starterPack, setStarterPack] = useState(false);
+  const folderGroups = saveFolderGroups(folders, deskType, platform);
 
-export function SaveBacktestAsPlatformButton({
-  runId,
-  defaultName,
-}: {
-  runId: string;
-  defaultName: string;
-}) {
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  if (!canSaveAs && !canSaveAsPlatform) {
+    return null;
+  }
+
+  function toggleFolder(id: string) {
+    setFolderIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function resetAndOpen() {
+    setName(defaultName);
+    setPlatform(platformOnly);
+    setFolderIds(new Set());
+    setCreateFolder(false);
+    setNewFolderName("");
+    setStarterPack(false);
+    setError(null);
+    setOpen(true);
+  }
+
+  async function onSave() {
+    setPending(true);
+    setError(null);
+    const data = new FormData();
+    data.set("runId", runId);
+    data.set("name", name.trim() || defaultName);
+    for (const id of folderIds) {
+      data.append("folderId", id);
+    }
+    if (createFolder && newFolderName.trim()) {
+      data.set("newFolderName", newFolderName.trim());
+    }
+    if (platform && starterPack) {
+      data.set("starterPack", "1");
+    }
+    const result = platform
+      ? await saveBacktestAsPlatformTemplateAction(data)
+      : await saveBacktestAsTemplateAction(data);
+    setPending(false);
+    if (!result.ok) {
+      setError(result.error ?? "Could not save that template.");
+      return;
+    }
+    setOpen(false);
+    router.refresh();
+  }
+
   return (
-    <form
-      className="flex items-center gap-2"
-      action={async (formData) => {
-        setPending(true);
-        setError(null);
-        const result = await saveBacktestAsPlatformTemplateAction(formData);
-        setPending(false);
-        if (!result.ok) {
-          setError(result.error ?? "Could not save that platform template.");
-          return;
-        }
-        router.refresh();
-      }}
-    >
-      <input type="hidden" name="runId" value={runId} />
-      <input
-        name="name"
-        defaultValue={defaultName}
-        aria-label="Platform template name"
-        placeholder="Platform name"
-        className="w-40 rounded-control border border-line bg-canvas px-2 py-1.5 text-sm text-ink"
-      />
+    <>
       <button
-        type="submit"
-        disabled={pending}
-        title="Create an applyable platform template from this run. Does not attach the run or arm a desk."
-        className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
+        type="button"
+        onClick={resetAndOpen}
+        title={
+          platformOnly
+            ? "Create an applyable platform template from this run. Does not attach the run or arm a desk."
+            : "Create a private library template and attach this run"
+        }
+        className={
+          variant === "secondary"
+            ? "w-full rounded-control border border-line px-3 py-2 text-sm text-ink hover:border-line-strong"
+            : "w-full rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent"
+        }
       >
-        {pending ? "Saving…" : "Save as platform template"}
+        {platformOnly ? "Save as platform template" : "Save as template"}
       </button>
-      {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
-    </form>
+      {open ? (
+        <Modal
+          title={platform ? "Save as platform template" : "Save as template"}
+          onClose={() => setOpen(false)}
+        >
+          <p className="mt-1 text-sm text-ink-muted">
+            {platform
+              ? "Visible to every member. Does not attach this run or arm a desk."
+              : "Saved to your template library and attached to this run. Apply it later on any matching desk."}
+          </p>
+          <label className="mt-4 block text-xs text-ink-muted">
+            Name
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              maxLength={80}
+              className={saveFieldClass}
+            />
+          </label>
+          {isAdmin && canSaveAsPlatform && canSaveAs ? (
+            <label className="mt-3 flex items-start gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={platform}
+                onChange={(event) => {
+                  setPlatform(event.target.checked);
+                  setFolderIds(new Set());
+                  setCreateFolder(false);
+                  setNewFolderName("");
+                  setStarterPack(false);
+                }}
+                className="mt-0.5 size-4"
+              />
+              Save as platform template
+            </label>
+          ) : null}
+          {platform ? (
+            <StarterPackCheckbox
+              checked={starterPack}
+              onChange={setStarterPack}
+            />
+          ) : null}
+          <div className="mt-3">
+            <p className="text-xs text-ink-muted">Add to folder</p>
+            {folderGroups.length === 0 ? (
+              <p className="mt-1 text-sm text-ink-faint">
+                {platform
+                  ? "None yet. Create one below."
+                  : "None yet. Create one below or on My Folders."}
+              </p>
+            ) : (
+              <div className="mt-1 space-y-3">
+                {folderGroups.map((group) => (
+                  <div key={group.label}>
+                    {folderGroups.length > 1 ? (
+                      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+                        {group.label}
+                      </p>
+                    ) : null}
+                    <ul className="mt-1 space-y-1 rounded-control border border-line bg-canvas px-3 py-2">
+                      {group.rows.map((row) => (
+                        <li key={row.id}>
+                          <label className="flex items-start gap-2 text-sm text-ink">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 size-4"
+                              checked={folderIds.has(row.id)}
+                              onChange={() => toggleFolder(row.id)}
+                            />
+                            <span>
+                              <span className="block font-medium">{row.name}</span>
+                              <span className="block text-xs text-ink-muted">
+                                {row.items.length === 0
+                                  ? "Empty folder"
+                                  : `${row.items.length} template${row.items.length === 1 ? "" : "s"}`}
+                              </span>
+                            </span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <label className="mt-3 flex items-start gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={createFolder}
+              onChange={(event) => setCreateFolder(event.target.checked)}
+              className="mt-1 size-4"
+            />
+            {platform ? "Create a new platform folder" : "Create a new folder"}
+          </label>
+          {createFolder ? (
+            <label className="mt-2 block text-xs text-ink-muted">
+              Folder name
+              <input
+                value={newFolderName}
+                onChange={(event) => setNewFolderName(event.target.value)}
+                maxLength={80}
+                className={saveFieldClass}
+              />
+            </label>
+          ) : null}
+          {error ? <p className="mt-3 text-sm text-danger">{error}</p> : null}
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className={saveSecondaryBtn}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void onSave()}
+              disabled={pending || (createFolder && !newFolderName.trim())}
+              className={savePrimaryBtn}
+            >
+              {pending ? "Saving…" : "Save template"}
+            </button>
+          </div>
+        </Modal>
+      ) : null}
+    </>
   );
 }
 
@@ -708,7 +863,7 @@ export function ApplyBacktestButton({
   }
   return (
     <form
-      className="flex items-center gap-2"
+      className="space-y-2"
       action={async (formData) => {
         setPending(true);
         setMessage(null);
@@ -725,7 +880,7 @@ export function ApplyBacktestButton({
       <select
         name="accountId"
         aria-label="Desk"
-        className="rounded-control border border-line bg-canvas px-2 py-1.5 text-sm text-ink"
+        className="w-full rounded-control border border-line bg-canvas px-2 py-1.5 text-sm text-ink"
       >
         {desks.map((desk) => (
           <option key={desk.id} value={desk.id}>
@@ -737,7 +892,7 @@ export function ApplyBacktestButton({
         type="submit"
         disabled={pending}
         title="Copies the bot onto that desk idle. Does not arm."
-        className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
+        className="w-full rounded-control border border-line px-3 py-2 text-sm text-ink hover:border-line-strong disabled:opacity-50"
       >
         {pending ? "Copying…" : "Add to desk"}
       </button>
@@ -775,7 +930,7 @@ export function PublishBacktestButton({
         type="submit"
         disabled={pending}
         title="Shared platform copy of this run. Does not change your library or arm a desk."
-        className="rounded-control border border-line px-3 py-1.5 text-sm text-ink hover:border-line-strong disabled:opacity-50"
+        className="w-full rounded-control border border-line px-3 py-2 text-sm text-ink hover:border-line-strong disabled:opacity-50"
       >
         {pending ? "Publishing…" : "Publish snapshot"}
       </button>
@@ -789,11 +944,13 @@ export function RemoveBacktestButton({
   canRemove,
   returnTo = "/account/backtests",
   compact = false,
+  stacked = false,
 }: {
   runId: string;
   canRemove: boolean;
   returnTo?: string;
   compact?: boolean;
+  stacked?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -821,9 +978,11 @@ export function RemoveBacktestButton({
         type="submit"
         disabled={pending}
         className={
-          compact
-            ? "rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-50"
-            : "rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50"
+          stacked
+            ? "w-full rounded-control px-0 py-1 text-left text-sm text-danger hover:underline disabled:opacity-50"
+            : compact
+              ? "rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-50"
+              : "rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50"
         }
       >
         {pending ? "Removing…" : "Remove"}
