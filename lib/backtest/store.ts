@@ -6,6 +6,7 @@ import {
   backtestLinkHighlight,
   estimateBacktestBars,
   parseBacktestStatus,
+  normalizeBacktestLeverage,
   parseFeePreset,
   type BacktestDeskType,
   type BacktestLinkHighlight,
@@ -130,6 +131,7 @@ export function parseBacktestRunRow(
     fromMs: Number(row.from_ms) || 0,
     toMs: Number(row.to_ms) || 0,
     startingUsdt: Number(row.starting_balance_usdt) || 0,
+    leverage: normalizeBacktestLeverage(row.leverage),
     feePreset: parseFeePreset(row.fee_preset),
     feeRate: Number(row.fee_rate) || 0,
     status,
@@ -167,6 +169,7 @@ export async function insertBacktestRun(input: {
   feePreset: BacktestFeePreset;
   feeRate: number;
   startingUsdt: number;
+  leverage?: number;
   recipe: BacktestRecipe;
   status?: BacktestStatus;
   stats?: BacktestStats | null;
@@ -180,38 +183,48 @@ export async function insertBacktestRun(input: {
   if (!supabase) {
     return null;
   }
-  const { data, error } = await supabase
-    .from("backtest_runs")
-    .insert({
-      user_id: input.userId,
-      template_id: input.templateId,
-      source_template_id: input.sourceTemplateId ?? null,
-      study_id: input.studyId ?? null,
-      parent_run_id: input.parentRunId ?? null,
-      comparable_symbols: input.comparableSymbols ?? [],
-      desk_type: input.recipe.kind,
-      venue: input.venue,
-      venue_environment: input.venueEnvironment,
-      symbol: input.symbol,
-      interval: input.interval,
-      from_ms: input.fromMs,
-      to_ms: input.toMs,
-      fee_preset: input.feePreset,
-      fee_rate: input.feeRate,
-      starting_balance_usdt: input.startingUsdt,
-      status: input.status ?? "queued",
-      recipe: input.recipe,
-      stats: input.stats ?? null,
-      orders: input.orders ?? [],
-      error: input.error ?? null,
-      ...(input.finished ? { finished_at: new Date().toISOString() } : {}),
-    })
-    .select("*")
-    .single();
-  if (error || !data) {
+  const columns = {
+    user_id: input.userId,
+    template_id: input.templateId,
+    source_template_id: input.sourceTemplateId ?? null,
+    study_id: input.studyId ?? null,
+    parent_run_id: input.parentRunId ?? null,
+    comparable_symbols: input.comparableSymbols ?? [],
+    desk_type: input.recipe.kind,
+    venue: input.venue,
+    venue_environment: input.venueEnvironment,
+    symbol: input.symbol,
+    interval: input.interval,
+    from_ms: input.fromMs,
+    to_ms: input.toMs,
+    fee_preset: input.feePreset,
+    fee_rate: input.feeRate,
+    starting_balance_usdt: input.startingUsdt,
+    leverage: normalizeBacktestLeverage(input.leverage),
+    status: input.status ?? "queued",
+    recipe: input.recipe,
+    stats: input.stats ?? null,
+    orders: input.orders ?? [],
+    error: input.error ?? null,
+    ...(input.finished ? { finished_at: new Date().toISOString() } : {}),
+  };
+  const first = await supabase.from("backtest_runs").insert(columns).select("*").single();
+  if (!first.error && first.data) {
+    return parseBacktestRunRow(first.data as Record<string, unknown>);
+  }
+  if (!first.error || !/leverage/i.test(first.error.message)) {
     return null;
   }
-  return parseBacktestRunRow(data as Record<string, unknown>);
+  const { leverage: _leverage, ...withoutLeverage } = columns;
+  const retry = await supabase
+    .from("backtest_runs")
+    .insert(withoutLeverage)
+    .select("*")
+    .single();
+  if (retry.error || !retry.data) {
+    return null;
+  }
+  return parseBacktestRunRow(retry.data as Record<string, unknown>);
 }
 
 export async function updateBacktestRun(
@@ -263,6 +276,7 @@ export async function promoteDraftBacktestRun(
     feePreset: BacktestFeePreset;
     feeRate: number;
     startingUsdt: number;
+    leverage: number;
     recipe: BacktestRecipe;
     comparableSymbols: string[];
   },
@@ -271,26 +285,44 @@ export async function promoteDraftBacktestRun(
   if (!supabase) {
     return null;
   }
+  const columns = {
+    template_id: patch.templateId,
+    source_template_id: patch.sourceTemplateId,
+    desk_type: patch.recipe.kind,
+    venue: patch.venue,
+    venue_environment: patch.venueEnvironment,
+    symbol: patch.symbol,
+    interval: patch.interval,
+    from_ms: patch.fromMs,
+    to_ms: patch.toMs,
+    fee_preset: patch.feePreset,
+    fee_rate: patch.feeRate,
+    starting_balance_usdt: patch.startingUsdt,
+    leverage: normalizeBacktestLeverage(patch.leverage),
+    recipe: patch.recipe,
+    comparable_symbols: patch.comparableSymbols,
+    status: "queued",
+    error: null,
+  };
+  const first = await supabase
+    .from("backtest_runs")
+    .update(columns)
+    .eq("id", id)
+    .eq("status", "draft")
+    .select("*")
+    .maybeSingle();
+  if (!first.error && first.data) {
+    return parseBacktestRunRow(first.data as Record<string, unknown>);
+  }
+  if (!first.error || !/leverage/i.test(first.error.message)) {
+    return first.data
+      ? parseBacktestRunRow(first.data as Record<string, unknown>)
+      : null;
+  }
+  const { leverage: _leverage, ...withoutLeverage } = columns;
   const { data, error } = await supabase
     .from("backtest_runs")
-    .update({
-      template_id: patch.templateId,
-      source_template_id: patch.sourceTemplateId,
-      desk_type: patch.recipe.kind,
-      venue: patch.venue,
-      venue_environment: patch.venueEnvironment,
-      symbol: patch.symbol,
-      interval: patch.interval,
-      from_ms: patch.fromMs,
-      to_ms: patch.toMs,
-      fee_preset: patch.feePreset,
-      fee_rate: patch.feeRate,
-      starting_balance_usdt: patch.startingUsdt,
-      recipe: patch.recipe,
-      comparable_symbols: patch.comparableSymbols,
-      status: "queued",
-      error: null,
-    })
+    .update(withoutLeverage)
     .eq("id", id)
     .eq("status", "draft")
     .select("*")

@@ -78,9 +78,14 @@ function BacktestHighlightBody({
         toneClass={signedTone(highlight.realizedUsdt)}
       />
       <HighlightRow
-        label="On capital used"
-        value={formatBacktestReturnPct(highlight.onCapitalUsedPct)}
-        toneClass={signedTone(highlight.onCapitalUsedPct)}
+        label="P&L"
+        value={formatBacktestReturnPct(highlight.onNotionalPct)}
+        toneClass={signedTone(highlight.onNotionalPct)}
+      />
+      <HighlightRow
+        label="ROE"
+        value={formatBacktestReturnPct(highlight.roePct)}
+        toneClass={signedTone(highlight.roePct)}
       />
       <HighlightRow
         label="APR"

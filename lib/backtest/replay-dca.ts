@@ -14,8 +14,10 @@ import {
 } from "@/lib/futures/trailing";
 import type { CandleBar } from "@/lib/market/candles";
 import {
+  backtestMarginUsdt,
   emptyBacktestStats,
   finishBacktestStats,
+  normalizeBacktestLeverage,
   type BacktestStats,
   type SimulatedOrder,
 } from "./model";
@@ -77,6 +79,7 @@ export function replayDcaPlaybook(input: {
   recipe: DcaTemplateRecipe;
   feeRate: number;
   startingUsdt: number;
+  leverage?: number;
 }): { orders: SimulatedOrder[]; stats: BacktestStats } {
   const allowed = canBacktestDcaRecipe(input.recipe);
   if (!allowed.ok) {
@@ -150,12 +153,13 @@ export function replayDcaPlaybook(input: {
       return;
     }
     const fee = feeUsdt(qty, price, input.feeRate);
+    const leverage = normalizeBacktestLeverage(input.leverage);
     const locked = Object.values(legs).reduce(
-      (sum, row) => sum + row.qty * row.entry,
+      (sum, row) => sum + backtestMarginUsdt(row.qty * row.entry, leverage),
       0,
     );
     const available = input.startingUsdt + realized - locked;
-    if (qty * price + fee > available) {
+    if (backtestMarginUsdt(qty * price, leverage) + fee > available) {
       return;
     }
     realized -= fee;

@@ -70,13 +70,12 @@ import {
 import { applyTemplateAction } from "@/lib/templates/actions";
 import {
   backtestActivityBounds,
+  backtestMarginUsdt,
   chartIntervalForWindow,
   formatBacktestReturnPct,
   peakLockedNotionalUsdt,
-  realizedAprPct,
   realizedEndingUsdt,
   realizedReturnPct,
-  returnOnCapitalUsedPct,
   splitCompletedBacktestOrders,
   type BacktestRun,
 } from "@/lib/backtest/model";
@@ -121,13 +120,7 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
   const ending = realizedEndingUsdt(stats);
   const realizedReturn = realizedReturnPct(stats);
   const peakUsed = peakLockedNotionalUsdt(run.orders);
-  const usedPct = returnOnCapitalUsedPct(stats.realizedUsdt, peakUsed);
-  const apr = realizedAprPct(
-    stats.realizedUsdt,
-    peakUsed,
-    run.fromMs,
-    run.toMs,
-  );
+  const peakMargin = backtestMarginUsdt(peakUsed, run.leverage);
   return (
     <BacktestPropertyList
       rows={[
@@ -141,36 +134,25 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
           value: money(ending),
           hint: "Starting + realized. Open mark is in Current trades.",
         },
-        { label: "Trades", value: String(stats.trades) },
-        { label: "Win rate", value: pct(stats.winRate) },
-        {
-          label: "Realized P&L",
-          value: money(stats.realizedUsdt),
-          hint: "Closed trades after fees",
-        },
-        { label: "Max drawdown", value: money(stats.maxDrawdownUsdt) },
         {
           label: "Account return",
           value: formatBacktestReturnPct(realizedReturn),
           hint: `${money(stats.realizedUsdt)} on ${money(stats.startingUsdt)} starting`,
         },
         {
-          label: "On capital used",
-          value: formatBacktestReturnPct(usedPct),
-          hint:
-            peakUsed > 0
-              ? `${money(stats.realizedUsdt)} on ${money(peakUsed)} peak position`
-              : "No position was opened",
-        },
-        {
-          label: "APR",
-          value: formatBacktestReturnPct(apr),
-          hint: "On max capital used, compounded over the window",
+          label: "Leverage",
+          value: `${run.leverage}×`,
+          hint: "Replay cash and ROE use this. Margin = position value ÷ leverage.",
         },
         {
           label: "Max capital used",
           value: peakUsed > 0 ? money(peakUsed) : "—",
           hint: "Peak locked notional (qty × entry) while a position was open",
+        },
+        {
+          label: "Max margin used",
+          value: peakUsed > 0 ? money(peakMargin) : "—",
+          hint: "Peak position value ÷ leverage",
         },
         {
           label: "Profit factor",

@@ -164,4 +164,16 @@ assert.equal(broke.orders.length, 0);
 assert.equal(broke.stats.startingUsdt, 50);
 assert.equal(broke.stats.endingUsdt, 50);
 
+const geared = replayPerpsPriceCross({
+  bars: [
+    { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
+    { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
+  ],
+  recipe: base,
+  feeRate: 0,
+  startingUsdt: 50,
+  leverage: 10,
+});
+assert.ok(geared.orders.length > 0);
+
 console.log("backtest replay checks passed");

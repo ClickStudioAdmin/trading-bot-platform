@@ -14,20 +14,26 @@ import {
   RemoveBacktestButton,
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
+import { ColumnHint } from "@/components/column-hint";
 import {
   BACKTEST_FEE_PRESETS,
+  backtestAprPct,
+  backtestDrawdownPct,
+  backtestOnNotionalPct,
   backtestRerunHref,
+  backtestRoePct,
+  backtestWindowDays,
   formatBacktestReturnPct,
-  peakLockedNotionalUsdt,
-  realizedAprPct,
   realizedReturnPct,
-  returnOnCapitalUsedPct,
   type BacktestRun,
 } from "@/lib/backtest/model";
 import { recipeParamRows } from "@/lib/backtest/study";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
-import { signedTone } from "@/lib/opportunities/format";
-import { formatAuDateUtc } from "@/lib/time/display";
+import {
+  formatCount,
+  formatPct,
+  signedTone,
+} from "@/lib/opportunities/format";
 
 function statusLabel(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
@@ -149,7 +155,7 @@ export function BacktestRunDetail({
           <p className="mt-2 text-sm text-ink-muted">
             {run.symbol} · {run.venue} ·{" "}
             {DCA_INDICATOR_TIMEFRAME_LABELS[run.interval]} · start{" "}
-            {run.startingUsdt.toLocaleString()} ·{" "}
+            {run.startingUsdt.toLocaleString()} · {run.leverage}× ·{" "}
             {BACKTEST_FEE_PRESETS[run.feePreset].label}
           </p>
           <div className="mt-3 flex flex-wrap gap-3 text-sm">
@@ -307,7 +313,7 @@ export function BacktestRunDetail({
                   <th className="px-4 py-3 font-medium">Pair</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Trades</th>
-                  <th className="px-4 py-3 font-medium">Return</th>
+                  <th className="px-4 py-3 font-medium">Account return</th>
                   <th className="px-4 py-3 font-medium">Realized</th>
                 </tr>
               </thead>
@@ -416,10 +422,6 @@ function SectionPlaceholder({ message }: { message: string }) {
   );
 }
 
-function formatWindowDate(ms: number): string {
-  return formatAuDateUtc(ms);
-}
-
 function signedMoney(value: number): string {
   const text = Math.abs(value).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -436,83 +438,108 @@ function signedMoney(value: number): string {
 
 function BacktestHeaderStats({ run }: { run: BacktestRun }) {
   const stats = run.stats;
-  const peakUsed = peakLockedNotionalUsdt(run.orders);
-  const usedPct = stats
-    ? returnOnCapitalUsedPct(stats.realizedUsdt, peakUsed)
+  const empty = !stats || stats.trades === 0;
+  const tradingDays = backtestWindowDays(run.fromMs, run.toMs);
+  const onNotional = stats
+    ? backtestOnNotionalPct(stats.realizedUsdt, run.orders)
+    : null;
+  const roe = stats
+    ? backtestRoePct(stats.realizedUsdt, run.orders, run.leverage)
     : null;
   const apr = stats
-    ? realizedAprPct(stats.realizedUsdt, peakUsed, run.fromMs, run.toMs)
+    ? backtestAprPct(
+        stats.realizedUsdt,
+        run.orders,
+        run.leverage,
+        run.fromMs,
+        run.toMs,
+      )
     : null;
+  const drawdownPct = stats ? backtestDrawdownPct(stats) : null;
   const winRate =
-    stats && Number.isFinite(stats.winRate)
-      ? `${(stats.winRate * 100).toFixed(1)}%`
+    stats && stats.trades > 0
+      ? `${Math.round(stats.winRate * 100)}%`
       : "—";
   return (
-    <section className="rounded-card border border-line bg-surface px-5 py-5">
-      <div className="grid gap-x-6 gap-y-5 sm:grid-cols-3 xl:grid-cols-6">
-        <KpiBlock
-          label="Start"
-          value={formatWindowDate(run.fromMs)}
-          size="date"
+    <section>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Days Trading"
+          value={tradingDays != null ? formatCount(tradingDays) : "—"}
+          hint="Inclusive UTC days of the replay window (start to end)."
         />
-        <KpiBlock
-          label="End"
-          value={formatWindowDate(run.toMs)}
-          size="date"
+        <StatCard
+          label="Completed Trades"
+          value={stats ? formatCount(stats.trades) : "—"}
         />
-        <KpiBlock
-          label="Win rate"
-          value={winRate}
-          hint={stats ? `${stats.trades} trades` : undefined}
-          toneClass={stats && stats.trades > 0 ? "text-ink" : signedTone(null)}
+        <StatCard label="Win Rate" value={winRate} />
+        <StatCard
+          label="Max Drawdown"
+          value={
+            empty
+              ? "—"
+              : drawdownPct == null
+                ? signedMoney(stats.maxDrawdownUsdt)
+                : formatPct(drawdownPct)
+          }
+          hint="Peak-to-trough of marked equity versus starting balance."
         />
-        <KpiBlock
-          label="Realized P&L"
+        <StatCard
+          label="Realized Profit"
           value={stats ? signedMoney(stats.realizedUsdt) : "—"}
           toneClass={signedTone(stats?.realizedUsdt ?? null)}
+          hint="Closed-trade dollars after fees. Leverage does not change this amount."
         />
-        <KpiBlock
-          label="On Capital Used"
-          value={formatBacktestReturnPct(usedPct)}
-          toneClass={signedTone(usedPct)}
+        <StatCard
+          label="P&L"
+          value={empty || onNotional == null ? "—" : formatPct(onNotional)}
+          toneClass={signedTone(empty ? null : stats.realizedUsdt)}
+          hint="Realized profit ÷ sum of closed position value (qty × entry)."
+          note="Based on position value"
         />
-        <KpiBlock
+        <StatCard
+          label="ROE"
+          value={empty || roe == null ? "—" : formatPct(roe)}
+          toneClass={signedTone(empty ? null : roe)}
+          hint="P&L vs initial margin (position value ÷ leverage)."
+          note="Based on margin requirement"
+        />
+        <StatCard
           label="APR"
-          value={formatBacktestReturnPct(apr)}
-          hint="On max capital used"
-          toneClass={signedTone(apr)}
+          value={empty || apr == null ? "—" : formatPct(apr)}
+          toneClass={signedTone(empty ? null : apr)}
+          hint="Compound annualization of ROE over the replay window. Short windows inflate APR."
+          note="Annualized ROE"
         />
       </div>
     </section>
   );
 }
 
-function KpiBlock({
+function StatCard({
   label,
   value,
   hint,
+  note,
   toneClass,
-  size = "metric",
 }: {
   label: string;
   value: string;
   hint?: string;
+  note?: string;
   toneClass?: string;
-  size?: "date" | "metric";
 }) {
   return (
-    <div className="min-w-0">
+    <div className="rounded-card border border-line bg-surface p-5">
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-        {label}
+        {hint ? <ColumnHint label={label} hint={hint} /> : label}
       </p>
       <p
-        className={`mt-2 font-semibold tracking-tight tabular-nums ${
-          size === "date" ? "text-lg" : "text-xl"
-        } ${toneClass ?? "text-ink"}`}
+        className={`mt-3 text-2xl font-semibold tracking-tight tabular-nums ${toneClass ?? "text-ink"}`}
       >
         {value}
       </p>
-      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
+      {note ? <p className="mt-2 text-xs text-ink-faint">{note}</p> : null}
     </div>
   );
 }

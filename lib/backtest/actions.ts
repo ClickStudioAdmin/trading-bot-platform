@@ -23,6 +23,7 @@ import {
   parseBacktestDateRange,
   parseComparableSymbols,
   parseFeePreset,
+  parseBacktestLeverage,
   parseStartingBalance,
 } from "./model";
 import {
@@ -230,6 +231,10 @@ export async function queueTemplateBacktestAction(
   if (!balance.ok) {
     return balance;
   }
+  const leverage = parseBacktestLeverage(formData.get("leverage"));
+  if (!leverage.ok) {
+    return leverage;
+  }
   const venue = parseCandleVenue(formData.get("venue")) ?? "bybit";
   const symbol =
     parseCandleSymbol(formData.get("symbol") ?? recipe.symbol) ?? recipe.symbol;
@@ -271,6 +276,7 @@ export async function queueTemplateBacktestAction(
     feePreset,
     feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
     startingUsdt: balance.startingUsdt,
+    leverage: leverage.leverage,
     recipe: queuedRecipe,
     comparableSymbols: comparables,
   };
@@ -299,6 +305,7 @@ export async function queueTemplateBacktestAction(
       feePreset,
       feeRate: BACKTEST_FEE_PRESETS[feePreset].rate,
       startingUsdt: balance.startingUsdt,
+      leverage: leverage.leverage,
       recipe: comparableRecipe,
     });
   }
@@ -357,6 +364,7 @@ export async function publishBacktestAction(
     feePreset: run.feePreset,
     feeRate: run.feeRate,
     startingUsdt: run.startingUsdt,
+    leverage: run.leverage,
     recipe: run.recipe,
   });
   if (!copy) {

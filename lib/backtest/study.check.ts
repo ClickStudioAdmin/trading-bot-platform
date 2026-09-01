@@ -42,6 +42,7 @@ const run: BacktestRun = {
   fromMs: 1_000,
   toMs: 4_000,
   startingUsdt: 10_000,
+  leverage: 1,
   feePreset: "vip0_taker",
   feeRate: 0,
   status: "done",

@@ -1,4 +1,9 @@
 import {
+  annualizeReturnPct,
+  inclusiveUtcDays,
+} from "@/lib/futures/stats";
+import { formatPct } from "@/lib/opportunities/format";
+import {
   DCA_INDICATOR_TIMEFRAMES,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
@@ -23,6 +28,8 @@ export const BACKTEST_INLINE_BAR_LIMIT = 1500;
 export const BACKTEST_VERCEL_BAR_LIMIT = 3000;
 export const BACKTEST_COMPARABLE_CAP = 8;
 export const DEFAULT_STARTING_USDT = 10_000;
+export const DEFAULT_LEVERAGE = 1;
+export const MAX_BACKTEST_LEVERAGE = 125;
 
 export type BacktestFeePreset = keyof typeof BACKTEST_FEE_PRESETS;
 export type BacktestStatus =
@@ -72,6 +79,7 @@ export type BacktestRun = {
   fromMs: number;
   toMs: number;
   startingUsdt: number;
+  leverage: number;
   feePreset: BacktestFeePreset;
   feeRate: number;
   status: BacktestStatus;
@@ -125,6 +133,7 @@ export function backtestQueueSeedFromRun(run: BacktestRun): {
   fromDate: string;
   toDate: string;
   startingUsdt: number;
+  leverage: number;
   interval: DcaIndicatorTimeframe;
   symbol: string;
   venue: string;
@@ -137,6 +146,7 @@ export function backtestQueueSeedFromRun(run: BacktestRun): {
     fromDate: isoDateUtc(run.fromMs),
     toDate: isoDateUtc(run.toMs),
     startingUsdt: run.startingUsdt,
+    leverage: normalizeBacktestLeverage(run.leverage),
     interval: run.interval,
     symbol: run.symbol,
     venue: run.venue,
@@ -169,6 +179,41 @@ export function parseStartingBalance(
     return { ok: false, error: "Initial balance must be 10,000,000 or less." };
   }
   return { ok: true, startingUsdt: value };
+}
+
+export function normalizeBacktestLeverage(raw: unknown): number {
+  const value = Number(raw);
+  if (value > 0 && Number.isFinite(value)) {
+    return value;
+  }
+  return DEFAULT_LEVERAGE;
+}
+
+export function parseBacktestLeverage(
+  raw: unknown,
+): { ok: true; leverage: number } | { ok: false; error: string } {
+  const text = String(raw ?? "").replace(/,/g, "").trim();
+  if (!text) {
+    return { ok: true, leverage: DEFAULT_LEVERAGE };
+  }
+  const value = Number(text);
+  if (!(value > 0) || !Number.isFinite(value)) {
+    return { ok: false, error: "Enter leverage greater than 0." };
+  }
+  if (value > MAX_BACKTEST_LEVERAGE) {
+    return {
+      ok: false,
+      error: `Leverage must be ${MAX_BACKTEST_LEVERAGE} or less.`,
+    };
+  }
+  return { ok: true, leverage: value };
+}
+
+export function backtestMarginUsdt(
+  notionalUsdt: number,
+  leverage: number,
+): number {
+  return notionalUsdt / normalizeBacktestLeverage(leverage);
 }
 
 function utcDayStart(raw: unknown): number | null {
@@ -386,10 +431,7 @@ export function finishBacktestStats(input: {
 export function formatBacktestReturnPct(
   returnPct: number | null | undefined,
 ): string {
-  if (returnPct == null || !Number.isFinite(returnPct)) {
-    return "—";
-  }
-  return `${(returnPct * 100).toFixed(2)}%`;
+  return formatPct(returnPct == null ? null : returnPct);
 }
 
 export function accountPnlUsdt(stats: Pick<
@@ -457,6 +499,79 @@ export function peakLockedNotionalUsdt(orders: SimulatedOrder[]): number {
   return peak;
 }
 
+export function completedBacktestNotionalUsdt(
+  orders: SimulatedOrder[],
+): number {
+  const legs: Record<"long" | "short", { qty: number; entry: number }> = {
+    long: { qty: 0, entry: 0 },
+    short: { qty: 0, entry: 0 },
+  };
+  let sum = 0;
+  for (const order of orders) {
+    const leg = legs[order.side];
+    if (order.action === "flatten") {
+      sum += leg.qty * leg.entry;
+      legs[order.side] = { qty: 0, entry: 0 };
+    } else {
+      const nextQty = leg.qty + order.qty;
+      const entry =
+        nextQty > 0
+          ? (leg.entry * leg.qty + order.price * order.qty) / nextQty
+          : order.price;
+      legs[order.side] = { qty: nextQty, entry };
+    }
+  }
+  return sum;
+}
+
+export function backtestOnNotionalPct(
+  realizedUsdt: number,
+  orders: SimulatedOrder[],
+): number | null {
+  return returnOnCapitalUsedPct(
+    realizedUsdt,
+    completedBacktestNotionalUsdt(orders),
+  );
+}
+
+export function backtestRoePct(
+  realizedUsdt: number,
+  orders: SimulatedOrder[],
+  leverage: number,
+): number | null {
+  return returnOnCapitalUsedPct(
+    realizedUsdt,
+    backtestMarginUsdt(completedBacktestNotionalUsdt(orders), leverage),
+  );
+}
+
+export function backtestWindowDays(fromMs: number, toMs: number): number | null {
+  return inclusiveUtcDays(fromMs, toMs);
+}
+
+export function backtestAprPct(
+  realizedUsdt: number,
+  orders: SimulatedOrder[],
+  leverage: number,
+  fromMs: number,
+  toMs: number,
+): number | null {
+  return annualizeReturnPct(
+    backtestRoePct(realizedUsdt, orders, leverage),
+    backtestWindowDays(fromMs, toMs),
+  );
+}
+
+export function backtestDrawdownPct(stats: Pick<
+  BacktestStats,
+  "startingUsdt" | "maxDrawdownUsdt"
+>): number | null {
+  if (!(stats.startingUsdt > 0) || !Number.isFinite(stats.maxDrawdownUsdt)) {
+    return null;
+  }
+  return stats.maxDrawdownUsdt / stats.startingUsdt;
+}
+
 export function splitCompletedBacktestOrders(orders: SimulatedOrder[]): {
   completed: SimulatedOrder[];
   open: SimulatedOrder[];
@@ -505,18 +620,26 @@ export type BacktestLinkHighlight = {
   trades: number;
   winRate: number;
   realizedUsdt: number;
-  onCapitalUsedPct: number | null;
+  onNotionalPct: number | null;
+  roePct: number | null;
   aprPct: number | null;
 };
 
 export function backtestLinkHighlight(
   run: Pick<
     BacktestRun,
-    "id" | "symbol" | "interval" | "fromMs" | "toMs" | "stats" | "orders"
+    | "id"
+    | "symbol"
+    | "interval"
+    | "fromMs"
+    | "toMs"
+    | "stats"
+    | "orders"
+    | "leverage"
   >,
 ): BacktestLinkHighlight {
-  const peak = peakLockedNotionalUsdt(run.orders);
   const realized = run.stats?.realizedUsdt ?? 0;
+  const leverage = normalizeBacktestLeverage(run.leverage);
   return {
     runId: run.id,
     symbol: run.symbol,
@@ -526,8 +649,15 @@ export function backtestLinkHighlight(
     trades: run.stats?.trades ?? 0,
     winRate: run.stats?.winRate ?? 0,
     realizedUsdt: realized,
-    onCapitalUsedPct: returnOnCapitalUsedPct(realized, peak),
-    aprPct: realizedAprPct(realized, peak, run.fromMs, run.toMs),
+    onNotionalPct: backtestOnNotionalPct(realized, run.orders),
+    roePct: backtestRoePct(realized, run.orders, leverage),
+    aprPct: backtestAprPct(
+      realized,
+      run.orders,
+      leverage,
+      run.fromMs,
+      run.toMs,
+    ),
   };
 }
 

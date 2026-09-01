@@ -69,12 +69,14 @@ export async function executeBacktestRun(
             recipe: run.recipe,
             feeRate: run.feeRate,
             startingUsdt: run.startingUsdt,
+            leverage: run.leverage,
           })
         : replayPerpsPriceCross({
             bars: candles,
             recipe: run.recipe,
             feeRate: run.feeRate,
             startingUsdt: run.startingUsdt,
+            leverage: run.leverage,
           });
     await updateBacktestRun(runId, {
       status: "done",

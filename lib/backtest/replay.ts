@@ -16,8 +16,10 @@ import {
 import type { CandleBar } from "@/lib/market/candles";
 import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
 import {
+  backtestMarginUsdt,
   emptyBacktestStats,
   finishBacktestStats,
+  normalizeBacktestLeverage,
   type BacktestStats,
   type SimulatedOrder,
 } from "./model";
@@ -119,6 +121,7 @@ export function replayPerpsPriceCross(input: {
   recipe: PerpsTemplateRecipe;
   feeRate: number;
   startingUsdt: number;
+  leverage?: number;
 }): { orders: SimulatedOrder[]; stats: BacktestStats } {
   const allowed = canBacktestPerpsRecipe(input.recipe);
   if (!allowed.ok) {
@@ -258,9 +261,12 @@ export function replayPerpsPriceCross(input: {
         const qty = sizeAtPrice(input.recipe, price);
         if (qty > 0) {
           const fee = feeUsdt(qty, price, input.feeRate);
-          const locked = open ? open.qty * open.entry : 0;
+          const leverage = normalizeBacktestLeverage(input.leverage);
+          const locked = open
+            ? backtestMarginUsdt(open.qty * open.entry, leverage)
+            : 0;
           const available = input.startingUsdt + realized - locked;
-          if (qty * price + fee <= available) {
+          if (backtestMarginUsdt(qty * price, leverage) + fee <= available) {
             realized -= fee;
             orders.push({
               atMs: bar.timeMs,

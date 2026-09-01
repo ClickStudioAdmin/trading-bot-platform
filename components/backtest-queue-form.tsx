@@ -11,6 +11,7 @@ import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   BACKTEST_COMPARABLE_CAP,
   BACKTEST_FEE_PRESETS,
+  DEFAULT_LEVERAGE,
   DEFAULT_STARTING_USDT,
   backtestShouldRunInline,
   backtestWindowEndingToday,
@@ -74,6 +75,7 @@ export type BacktestQueueSeed = {
   fromDate: string;
   toDate: string;
   startingUsdt: number;
+  leverage: number;
   interval: DcaIndicatorTimeframe;
   symbol: string;
   venue: string;
@@ -132,6 +134,12 @@ export function BacktestQueueForm({
   const [startingBalance, setStartingBalance] = useState(() =>
     formatGroupedNumberInput(
       String(seed?.startingUsdt ?? DEFAULT_STARTING_USDT),
+      true,
+    ),
+  );
+  const [leverage, setLeverage] = useState(() =>
+    formatGroupedNumberInput(
+      String(seed?.leverage ?? DEFAULT_LEVERAGE),
       true,
     ),
   );
@@ -370,16 +378,31 @@ export function BacktestQueueForm({
             higher timeframe or a shorter window.
           </p>
         </div>
-        <label className="block text-xs text-ink-muted">
-          Initial account balance
-          <GroupedNumberInput
-            name="startingBalance"
-            value={startingBalance}
-            onChange={setStartingBalance}
-            allowDecimal
-            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
-          />
-        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-xs text-ink-muted">
+            Initial account balance
+            <GroupedNumberInput
+              name="startingBalance"
+              value={startingBalance}
+              onChange={setStartingBalance}
+              allowDecimal
+              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
+            />
+          </label>
+          <label className="block text-xs text-ink-muted">
+            Leverage
+            <GroupedNumberInput
+              name="leverage"
+              value={leverage}
+              onChange={setLeverage}
+              allowDecimal
+              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
+            />
+            <span className="mt-1 block text-xs text-ink-faint">
+              Cash gates on margin (position value ÷ this). Empty is 1×.
+            </span>
+          </label>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-xs text-ink-muted">
             Timeframe

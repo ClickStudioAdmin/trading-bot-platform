@@ -9,8 +9,13 @@ import {
   chartIntervalForWindow,
   parseBacktestDateRange,
   parseComparableSymbols,
+  parseBacktestLeverage,
   parseStartingBalance,
+  backtestAprPct,
+  backtestOnNotionalPct,
   backtestQueueSeedFromRun,
+  backtestRoePct,
+  completedBacktestNotionalUsdt,
   backtestRerunHref,
   peakLockedNotionalUsdt,
   realizedAprPct,
@@ -24,6 +29,18 @@ import {
 assert.equal(parseStartingBalance("").ok, false);
 assert.equal(parseStartingBalance("0").ok, false);
 assert.equal(parseStartingBalance("10000").ok, true);
+const leverageEmpty = parseBacktestLeverage("");
+assert.equal(leverageEmpty.ok, true);
+if (leverageEmpty.ok) {
+  assert.equal(leverageEmpty.leverage, 1);
+}
+const leverageTen = parseBacktestLeverage("10");
+assert.equal(leverageTen.ok, true);
+if (leverageTen.ok) {
+  assert.equal(leverageTen.leverage, 10);
+}
+assert.equal(parseBacktestLeverage("0").ok, false);
+assert.equal(parseBacktestLeverage("200").ok, false);
 if (parseStartingBalance("10,000").ok) {
   assert.equal(parseStartingBalance("10,000").ok, true);
 }
@@ -135,6 +152,7 @@ const highlight = backtestLinkHighlight({
   interval: "15",
   fromMs: Date.UTC(2021, 0, 1),
   toMs: Date.UTC(2026, 0, 1),
+  leverage: 1,
   stats: {
     trades: 10,
     wins: 6,
@@ -176,8 +194,36 @@ assert.equal(highlight.symbol, "ETHUSDT");
 assert.equal(highlight.trades, 10);
 assert.equal(highlight.winRate, 0.6);
 assert.equal(highlight.realizedUsdt, 22);
-assert.equal(highlight.onCapitalUsedPct, 0.22);
+assert.equal(highlight.onNotionalPct, 0.22);
+assert.equal(highlight.roePct, 0.22);
 assert.ok(highlight.aprPct != null && highlight.aprPct > 0);
+const closedClip = [
+  {
+    atMs: 1,
+    action: "buy" as const,
+    side: "long" as const,
+    qty: 1,
+    price: 100,
+    feeUsdt: 0,
+    realizedUsdt: 0,
+  },
+  {
+    atMs: 2,
+    action: "flatten" as const,
+    side: "long" as const,
+    qty: 1,
+    price: 122,
+    feeUsdt: 0,
+    realizedUsdt: 22,
+  },
+];
+assert.equal(completedBacktestNotionalUsdt(closedClip), 100);
+assert.equal(backtestOnNotionalPct(22, closedClip), 0.22);
+assert.equal(backtestRoePct(22, closedClip, 10), 2.2);
+assert.ok(
+  backtestAprPct(22, closedClip, 10, Date.UTC(2025, 0, 1), Date.UTC(2026, 0, 1)) !=
+    null,
+);
 assert.equal(
   realizedEndingUsdt({ startingUsdt: 1000, realizedUsdt: 72.25 }),
   1072.25,
@@ -250,6 +296,7 @@ const seeded = backtestQueueSeedFromRun({
   fromMs: Date.UTC(2021, 0, 1),
   toMs: Date.UTC(2026, 0, 1),
   startingUsdt: 1000,
+  leverage: 5,
   feePreset: "vip0_taker",
   feeRate: 0.0006,
   status: "done",
@@ -269,6 +316,7 @@ const seeded = backtestQueueSeedFromRun({
 assert.equal(seeded.fromDate, "2021-01-01");
 assert.equal(seeded.toDate, "2026-01-01");
 assert.equal(seeded.startingUsdt, 1000);
+assert.equal(seeded.leverage, 5);
 assert.equal(seeded.interval, "15");
 assert.equal(seeded.symbol, "ETHUSDT");
 assert.equal(seeded.sourceTemplateId, "tmpl-1");
