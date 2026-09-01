@@ -24,7 +24,10 @@ import { signedTone } from "@/lib/opportunities/format";
 import { firstSearchValue } from "@/lib/paper/open";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import { listDeskBacktestBots } from "@/lib/backtest/desk-bots";
-import { listApplyableTemplates } from "@/lib/templates/store";
+import {
+  listApplyableSets,
+  listApplyableTemplates,
+} from "@/lib/templates/store";
 
 export const metadata: Metadata = {
   title: "Backtesting Tool",
@@ -76,20 +79,23 @@ export default async function AccountBacktestsPage({
   const seed = seedSource ? backtestQueueSeedFromRun(seedSource) : null;
   let runs: Awaited<ReturnType<typeof listBacktestRuns>> = [];
   let templates: Awaited<ReturnType<typeof listApplyableTemplates>> = [];
+  let folders: Awaited<ReturnType<typeof listApplyableSets>> = [];
   let deskBots: Awaited<ReturnType<typeof listDeskBacktestBots>> = [];
   try {
-    [runs, templates, deskBots] = await Promise.all([
+    [runs, templates, folders, deskBots] = await Promise.all([
       listBacktestRuns({
         userId: member.id,
         standaloneOnly: true,
         primaryOnly: true,
       }),
       listApplyableTemplates({ userId: member.id }),
+      listApplyableSets({ userId: member.id }),
       listDeskBacktestBots(member.id),
     ]);
   } catch {
     runs = [];
     templates = [];
+    folders = [];
     deskBots = [];
   }
   const library = templates.flatMap((row) => {
@@ -217,6 +223,7 @@ export default async function AccountBacktestsPage({
       )}
       <BacktestQueueForm
         templates={library}
+        folders={folders}
         deskBots={deskBots}
         selectedTemplateId={
           selectedTemplateId || seed?.sourceTemplateId || ""

@@ -79,6 +79,89 @@ export function formatBacktestDeskMatch(bot: {
   return `${bot.deskName} · ${bot.name}`;
 }
 
+export type BacktestLibraryFolder = {
+  id: string;
+  name: string;
+  visibility?: string;
+  sharedByEmail?: string | null;
+  items: Array<{ templateId: string; sortOrder?: number }>;
+};
+
+export type BacktestLibraryGroup = {
+  id: string;
+  label: string;
+  items: BacktestLibraryItem[];
+};
+
+export function groupBacktestLibrary(
+  templates: BacktestLibraryItem[],
+  folders: BacktestLibraryFolder[],
+): BacktestLibraryGroup[] {
+  const byId = new Map(templates.map((row) => [row.id, row]));
+  const filed = new Set<string>();
+  const nameCounts = new Map<string, number>();
+  for (const folder of folders) {
+    nameCounts.set(folder.name, (nameCounts.get(folder.name) ?? 0) + 1);
+  }
+  const groups: BacktestLibraryGroup[] = [];
+  const sorted = [...folders].sort((left, right) => {
+    const rank =
+      backtestFolderRank(left) - backtestFolderRank(right);
+    if (rank !== 0) {
+      return rank;
+    }
+    return left.name.localeCompare(right.name);
+  });
+  for (const folder of sorted) {
+    const items = [...folder.items]
+      .sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0))
+      .flatMap((item) => {
+        const row = byId.get(item.templateId);
+        return row ? [row] : [];
+      })
+      .filter((row, index, rows) => rows.findIndex((item) => item.id === row.id) === index);
+    if (items.length === 0) {
+      continue;
+    }
+    for (const row of items) {
+      filed.add(row.id);
+    }
+    groups.push({
+      id: folder.id,
+      label: backtestFolderLabel(folder, (nameCounts.get(folder.name) ?? 1) > 1),
+      items,
+    });
+  }
+  const loose = templates.filter((row) => !filed.has(row.id));
+  if (loose.length > 0) {
+    groups.push({ id: "no-folder", label: "No folder", items: loose });
+  }
+  return groups;
+}
+
+function backtestFolderRank(folder: BacktestLibraryFolder): number {
+  if (folder.visibility === "platform") {
+    return 0;
+  }
+  if (folder.sharedByEmail) {
+    return 1;
+  }
+  return 2;
+}
+
+function backtestFolderLabel(
+  folder: BacktestLibraryFolder,
+  nameClash: boolean,
+): string {
+  if (folder.visibility === "platform" && nameClash) {
+    return `Platform · ${folder.name}`;
+  }
+  if (folder.sharedByEmail && nameClash) {
+    return `${folder.name} · shared`;
+  }
+  return folder.name;
+}
+
 export function parseBacktestRecipeJson(raw: unknown): BacktestRecipe | null {
   let value = raw;
   if (typeof value === "string") {

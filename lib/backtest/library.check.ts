@@ -4,6 +4,7 @@ import {
   decideBacktestTemplateActions,
   findMatchingBacktestDeskBot,
   findMatchingBacktestTemplate,
+  groupBacktestLibrary,
   parseBacktestRecipeJson,
   userBacktestFieldIssues,
 } from "./library";
@@ -179,6 +180,42 @@ assert.equal(
     },
   ])?.deskName,
   "Paper",
+);
+
+const grouped = groupBacktestLibrary(
+  [
+    { id: "tmpl-1", name: "Dip buyer", recipe: perps },
+    { id: "tmpl-2", name: "Loose", recipe: { ...perps, triggerPrice: "1" } },
+    { id: "tmpl-3", name: "Skip me", recipe: { ...perps, triggerPrice: "2" } },
+  ],
+  [
+    {
+      id: "set-btc",
+      name: "BTC-USDT",
+      visibility: "user",
+      items: [
+        { templateId: "tmpl-1", sortOrder: 1 },
+        { templateId: "missing", sortOrder: 0 },
+      ],
+    },
+    {
+      id: "set-empty",
+      name: "Empty",
+      visibility: "user",
+      items: [{ templateId: "missing" }],
+    },
+  ],
+);
+assert.equal(grouped.length, 2);
+assert.equal(grouped[0]?.label, "BTC-USDT");
+assert.deepEqual(
+  grouped[0]?.items.map((row) => row.id),
+  ["tmpl-1"],
+);
+assert.equal(grouped[1]?.label, "No folder");
+assert.deepEqual(
+  grouped[1]?.items.map((row) => row.id),
+  ["tmpl-2", "tmpl-3"],
 );
 
 assert.equal(canQueueUserBacktest(perps).ok, true);

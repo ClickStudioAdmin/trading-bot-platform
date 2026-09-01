@@ -25,7 +25,9 @@ import {
   findMatchingBacktestDeskBot,
   findMatchingBacktestTemplate,
   formatBacktestDeskMatch,
+  groupBacktestLibrary,
   type BacktestDeskBot,
+  type BacktestLibraryFolder,
   type BacktestLibraryItem,
 } from "@/lib/backtest/library";
 import { findBacktestableTemplate } from "@/components/backtest-dialog";
@@ -88,6 +90,7 @@ export type BacktestQueueSeed = {
 
 export function BacktestQueueForm({
   templates,
+  folders = [],
   deskBots = [],
   selectedTemplateId = "",
   draftId = "",
@@ -97,6 +100,7 @@ export function BacktestQueueForm({
   defaultVenueEnvironment = null,
 }: {
   templates: BacktestLibraryItem[];
+  folders?: BacktestLibraryFolder[];
   deskBots?: BacktestDeskBot[];
   selectedTemplateId?: string;
   draftId?: string;
@@ -193,6 +197,10 @@ export function BacktestQueueForm({
   const matchingDeskBot = useMemo(
     () => (recipe ? findMatchingBacktestDeskBot(recipe, deskBots) : null),
     [deskBots, recipe],
+  );
+  const templateGroups = useMemo(
+    () => groupBacktestLibrary(templates, folders),
+    [folders, templates],
   );
   const editedAway = Boolean(
     recipe &&
@@ -332,16 +340,16 @@ export function BacktestQueueForm({
                 ))}
               </optgroup>
             ) : null}
-            {templates.length > 0 ? (
-              <optgroup label="Templates">
-                {templates.map((row) => (
-                  <option key={row.id} value={row.id}>
+            {templateGroups.map((group) => (
+              <optgroup key={group.id} label={group.label}>
+                {group.items.map((row) => (
+                  <option key={`${group.id}:${row.id}`} value={row.id}>
                     {row.recipe.kind === "dca" ? "DCA" : "Perps"} · {row.name} ·{" "}
                     {row.recipe.symbol}
                   </option>
                 ))}
               </optgroup>
-            ) : null}
+            ))}
           </select>
         </label>
         <div>
