@@ -5,7 +5,9 @@ import { toBacktestLibraryItem } from "@/lib/backtest/library";
 import { DcaPlaybooksDesk } from "@/components/dca-playbook-form";
 import { FuturesAutomationsDesk } from "@/components/futures-rules-form";
 import { FuturesRulesGuide } from "@/components/futures-rules-guide";
+import { dcaPaperBookUsdt } from "@/lib/dca/book";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
+import { loadFuturesPositions } from "@/lib/futures/list";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
@@ -92,6 +94,7 @@ export default async function FuturesAutomationsPage({
       .filter((row) => row.kind === "signal")
       .map((row) => ({ id: row.id, name: row.name }));
     let availableUsdt: number | null = null;
+    let bookUsdt: number | null = null;
     let leverage: number | null = accountCanHoldConnections(
       session.account.mode,
     )
@@ -104,9 +107,17 @@ export default async function FuturesAutomationsPage({
         const snapshot = await loadAccountSnapshot(session.member.id, bound.id);
         if (snapshot.ok) {
           availableUsdt = snapshot.snapshot.availableBalance;
+          bookUsdt = availableUsdt;
           leverage = snapshot.snapshot.leverage;
         }
       }
+    } else if (!accountCanHoldConnections(session.account.mode)) {
+      const positions = await loadFuturesPositions();
+      const realized = positions.reduce(
+        (sum, row) => sum + row.realizedUsdt,
+        0,
+      );
+      bookUsdt = dcaPaperBookUsdt(realized);
     }
     const saved = firstSearchValue(params.saved) === "1";
     const error = firstSearchValue(params.error);
@@ -148,6 +159,7 @@ export default async function FuturesAutomationsPage({
             options={pairs}
             signalWebhooks={signalWebhooks}
             availableUsdt={availableUsdt}
+            bookUsdt={bookUsdt}
             leverage={leverage}
             lastPrices={lastPrices}
             reduceOnly={Boolean(settings.reduceOnly)}

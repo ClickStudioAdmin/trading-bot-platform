@@ -45,6 +45,7 @@ export type DcaStartKind = "immediate" | "price" | "webhook" | "indicator";
 export type DcaMode = "position" | "order";
 export type DcaExitBasis = "average" | "first_entry";
 export type DcaMaxType = "orders" | "value";
+export type DcaMaxValueKind = "usdt" | "percent";
 
 export type DcaPriceTrigger = {
   triggerBy: FuturesTrigger;
@@ -59,6 +60,7 @@ export type DcaLegState = {
   lastClipAtMs: number | null;
   firstFillPrice: number | null;
   breakevenDone: boolean;
+  cycleMaxValue: number | null;
 };
 
 export type DcaPlaybookConfig = {
@@ -72,6 +74,7 @@ export type DcaPlaybookConfig = {
   sizeUnit: "qty" | "usdt";
   maxClips: number | null;
   maxValue: number | null;
+  maxValueKind: DcaMaxValueKind;
   dipPct: number | null;
   intervalMinutes: number | null;
   sizeMultiplier: number;
@@ -117,6 +120,7 @@ export const IDLE_DCA_LEG: DcaLegState = {
   lastClipAtMs: null,
   firstFillPrice: null,
   breakevenDone: false,
+  cycleMaxValue: null,
 };
 
 export type DcaTickAction =
@@ -261,6 +265,77 @@ export function parseDcaMaxType(value: unknown): DcaMaxType {
   return value === "value" ? "value" : "orders";
 }
 
+export function parseDcaMaxValueKind(value: unknown): DcaMaxValueKind {
+  return value === "percent" ? "percent" : "usdt";
+}
+
+export function dcaResolvedMaxValueUsdt(input: {
+  kind: DcaMaxValueKind;
+  maxValue: number | null;
+  bookUsdt: number | null;
+}): number | null {
+  if (input.maxValue == null || !(input.maxValue > 0)) {
+    return null;
+  }
+  if (input.kind !== "percent") {
+    return input.maxValue;
+  }
+  if (input.bookUsdt == null || !(input.bookUsdt > 0)) {
+    return null;
+  }
+  return input.bookUsdt * (input.maxValue / 100);
+}
+
+export function dcaTickValueCapUsdt(input: {
+  kind: DcaMaxValueKind;
+  maxValue: number | null;
+  cycleMaxValue: number | null;
+  bookUsdt?: number | null;
+}): number | null {
+  if (input.maxValue == null || !(input.maxValue > 0)) {
+    return null;
+  }
+  if (input.kind !== "percent") {
+    return input.maxValue;
+  }
+  if (input.cycleMaxValue != null && input.cycleMaxValue > 0) {
+    return input.cycleMaxValue;
+  }
+  return dcaResolvedMaxValueUsdt({
+    kind: "percent",
+    maxValue: input.maxValue,
+    bookUsdt: input.bookUsdt ?? null,
+  });
+}
+
+export function dcaCycleClipSize(input: {
+  kind: DcaMaxValueKind;
+  maxValue: number | null;
+  maxClips: number | null;
+  clipSize: number;
+  sizeMultiplier: number;
+  sizeUnit: "qty" | "usdt";
+  bookUsdt: number | null;
+  mark?: number | null;
+}): { clipSize: number; cycleMaxValue: number | null } {
+  const cycleMaxValue = dcaResolvedMaxValueUsdt({
+    kind: input.kind,
+    maxValue: input.maxValue,
+    bookUsdt: input.bookUsdt,
+  });
+  const derived = dcaClipFromBudget({
+    maxValue: cycleMaxValue,
+    maxClips: input.maxClips,
+    sizeMultiplier: input.sizeMultiplier,
+    sizeUnit: input.sizeUnit,
+    mark: input.mark,
+  });
+  return {
+    clipSize: derived ?? input.clipSize,
+    cycleMaxValue,
+  };
+}
+
 export function dcaMaxTypeFromCaps(
   maxClips: number | null,
   maxValue: number | null,
@@ -290,6 +365,7 @@ export function dcaConfigMaxOrderError(input: {
     | "sizeUnit"
     | "maxClips"
     | "maxValue"
+    | "maxValueKind"
     | "dipPct"
     | "sizeMultiplier"
     | "deviationMultiplier"
@@ -298,6 +374,7 @@ export function dcaConfigMaxOrderError(input: {
   maxQty: number;
   maxMktQty: number;
   baseCoin: string;
+  bookUsdt?: number | null;
 }): string | null {
   const { config } = input;
   if (!(config.clipSize > 0)) {
@@ -314,7 +391,11 @@ export function dcaConfigMaxOrderError(input: {
     restGrid: config.dcaMode === "order",
     entryPrice: input.lastPrice && input.lastPrice > 0 ? input.lastPrice : 1,
     maxClips: config.maxClips,
-    maxValue: config.maxValue,
+    maxValue: dcaResolvedMaxValueUsdt({
+      kind: config.maxValueKind,
+      maxValue: config.maxValue,
+      bookUsdt: input.bookUsdt ?? null,
+    }),
     dipPct: config.dipPct,
     clipSize: config.clipSize,
     sizeUnit: config.sizeUnit,
@@ -569,6 +650,8 @@ export function parseDcaPlaybookForm(
   const clipSize = parseFuturesQty(form.get("clipSize"));
   const maxClips = parseOptionalPositiveInt(form.get("maxClips"));
   const maxValue = parseOptionalPositive(form.get("maxValue"));
+  const maxValueKind = parseDcaMaxValueKind(form.get("maxValueKind"));
+  const bookUsdt = parseOptionalPositive(form.get("accountBookUsdt"));
   const typedMaxType = form.get("maxType");
   const hasMaxType =
     typedMaxType != null && String(typedMaxType).trim() !== "";
@@ -624,6 +707,9 @@ export function parseDcaPlaybookForm(
   if (!maxValue.ok) {
     return maxValue;
   }
+  if (!bookUsdt.ok) {
+    return bookUsdt;
+  }
   let clipsCap = maxClips.value;
   let valueCap = maxValue.value;
   if (hasMaxType) {
@@ -631,10 +717,18 @@ export function parseDcaPlaybookForm(
     clipsCap = maxType === "orders" ? maxClips.value : null;
     valueCap = maxType === "value" ? maxValue.value : null;
   }
+  if (maxValueKind === "percent" && valueCap != null && valueCap > 100) {
+    return { ok: false, error: "Percent must be 100 or less." };
+  }
+  const resolvedValue = dcaResolvedMaxValueUsdt({
+    kind: maxValueKind,
+    maxValue: valueCap,
+    bookUsdt: bookUsdt.value,
+  });
   const derivedClip =
-    clipsCap != null && valueCap != null && sizeUnit.unit === "usdt"
+    clipsCap != null && resolvedValue != null && sizeUnit.unit === "usdt"
       ? dcaClipFromBudget({
-          maxValue: valueCap,
+          maxValue: resolvedValue,
           maxClips: clipsCap,
           sizeMultiplier: sizeMultiplier.ok ? sizeMultiplier.value : 1,
           sizeUnit: "usdt",
@@ -771,6 +865,7 @@ export function parseDcaPlaybookForm(
       sizeUnit: sizeUnit.unit,
       maxClips: clipsCap,
       maxValue: valueCap,
+      maxValueKind,
       dipPct: dipPct.value,
       intervalMinutes: intervalMinutes.value,
       sizeMultiplier: sizeMultiplier.value,
@@ -812,6 +907,7 @@ function parseLeg(
     lastClipAtMs: Number.isFinite(lastClipAt) ? lastClipAt : null,
     firstFillPrice: asPositiveOrNull(row[`${prefix}_first_fill_price`]),
     breakevenDone: Boolean(row[`${prefix}_breakeven_done`]),
+    cycleMaxValue: asPositiveOrNull(row[`${prefix}_cycle_max_value`]),
   };
 }
 
@@ -863,6 +959,7 @@ export function parseDcaPlaybookRow(
     sizeUnit: sizeUnit.unit,
     maxClips: asPositiveIntOrNull(row.max_clips),
     maxValue: asPositiveOrNull(row.max_value),
+    maxValueKind: parseDcaMaxValueKind(row.max_value_kind),
     dipPct: asPositiveOrNull(row.dip_pct),
     intervalMinutes: asPositiveIntOrNull(row.interval_minutes),
     sizeMultiplier: asPositiveOrNull(row.size_multiplier) ?? 1,

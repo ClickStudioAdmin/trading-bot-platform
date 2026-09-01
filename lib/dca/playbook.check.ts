@@ -56,7 +56,11 @@ import {
   parseDcaSaveIntent,
   parseDcaPlaybookRow,
   parseDcaStatus,
+  parseDcaMaxValueKind,
   dcaMaxTypeFromCaps,
+  dcaResolvedMaxValueUsdt,
+  dcaTickValueCapUsdt,
+  dcaCycleClipSize,
   type DcaPlaybook,
 } from "./playbook";
 import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
@@ -547,6 +551,7 @@ assert.equal(
       sizeUnit: "qty",
       maxClips: 5,
       maxValue: null,
+      maxValueKind: "usdt",
       dipPct: null,
       sizeMultiplier: 2,
       deviationMultiplier: 1,
@@ -567,6 +572,7 @@ assert.equal(
       sizeUnit: "usdt",
       maxClips: 20,
       maxValue: null,
+      maxValueKind: "usdt",
       dipPct: null,
       sizeMultiplier: 2,
       deviationMultiplier: 1,
@@ -1350,7 +1356,87 @@ assert.equal(bothCapsParsed.ok, true);
 if (bothCapsParsed.ok) {
   assert.equal(bothCapsParsed.config.maxClips, 3);
   assert.equal(bothCapsParsed.config.maxValue, 700);
+  assert.equal(bothCapsParsed.config.maxValueKind, "usdt");
   assert.equal(bothCapsParsed.config.clipSize, 100);
+}
+
+assert.equal(parseDcaMaxValueKind("percent"), "percent");
+assert.equal(parseDcaMaxValueKind("usdt"), "usdt");
+assert.equal(parseDcaMaxValueKind(""), "usdt");
+assert.equal(
+  dcaResolvedMaxValueUsdt({
+    kind: "usdt",
+    maxValue: 700,
+    bookUsdt: 10_000,
+  }),
+  700,
+);
+assert.equal(
+  dcaResolvedMaxValueUsdt({
+    kind: "percent",
+    maxValue: 20,
+    bookUsdt: 10_000,
+  }),
+  2_000,
+);
+assert.equal(
+  dcaResolvedMaxValueUsdt({
+    kind: "percent",
+    maxValue: 20,
+    bookUsdt: null,
+  }),
+  null,
+);
+assert.equal(
+  dcaTickValueCapUsdt({
+    kind: "percent",
+    maxValue: 20,
+    cycleMaxValue: 2_400,
+    bookUsdt: 20_000,
+  }),
+  2_400,
+);
+assert.equal(
+  dcaCycleClipSize({
+    kind: "percent",
+    maxValue: 20,
+    maxClips: 3,
+    clipSize: 50,
+    sizeMultiplier: 2,
+    sizeUnit: "usdt",
+    bookUsdt: 10_000,
+  }).clipSize,
+  2000 / 7,
+);
+
+const percentCaps = new FormData();
+percentCaps.set("symbol", "BTCUSDT");
+percentCaps.set("side", "long");
+percentCaps.set("sizeUnit", "usdt");
+percentCaps.set("maxClips", "3");
+percentCaps.set("maxValue", "20");
+percentCaps.set("maxValueKind", "percent");
+percentCaps.set("accountBookUsdt", "10000");
+percentCaps.set("sizeMultiplier", "2");
+const percentCapsParsed = parseDcaPlaybookForm(percentCaps);
+assert.equal(percentCapsParsed.ok, true);
+if (percentCapsParsed.ok) {
+  assert.equal(percentCapsParsed.config.maxValue, 20);
+  assert.equal(percentCapsParsed.config.maxValueKind, "percent");
+  assert.equal(percentCapsParsed.config.clipSize, 2000 / 7);
+}
+
+const percentTooHigh = new FormData();
+percentTooHigh.set("symbol", "BTCUSDT");
+percentTooHigh.set("side", "long");
+percentTooHigh.set("sizeUnit", "usdt");
+percentTooHigh.set("clipSize", "50");
+percentTooHigh.set("maxValue", "150");
+percentTooHigh.set("maxValueKind", "percent");
+const percentTooHighParsed = parseDcaPlaybookForm(percentTooHigh);
+assert.equal(percentTooHighParsed.ok, false);
+if (!percentTooHighParsed.ok) {
+  assert.equal(percentTooHighParsed.error, "Percent must be 100 or less.");
 }
 
 const row = parseDcaPlaybookRow({
@@ -1373,6 +1459,8 @@ assert.equal(row?.direction, "long");
 assert.equal(row?.long.clipsFilled, 2);
 assert.equal(row?.long.status, "armed");
 assert.equal(row?.long.firstFillPrice, 101);
+assert.equal(row?.maxValueKind, "usdt");
+assert.equal(row?.long.cycleMaxValue, null);
 assert.ok(row);
 assert.equal(dcaPlaybookIsRunning(row), true);
 const cloned = dcaCloneIdleDraft(row);
@@ -1383,6 +1471,8 @@ assert.equal(cloned.clipSize, row.clipSize);
 assert.equal(cloned.long.status, "idle");
 assert.equal(cloned.short.status, "idle");
 assert.equal(cloned.long.clipsFilled, 0);
+assert.equal(cloned.maxValueKind, "usdt");
+assert.equal(cloned.long.cycleMaxValue, null);
 assert.equal(cloned.armConditionTrue, false);
 assert.equal(dcaPlaybookIsRunning(cloned), false);
 assert.equal(
@@ -1394,6 +1484,7 @@ assert.equal(
       lastClipAtMs: null,
       firstFillPrice: null,
       breakevenDone: false,
+      cycleMaxValue: null,
     },
     short: {
       status: "idle",
@@ -1402,6 +1493,7 @@ assert.equal(
       lastClipAtMs: null,
       firstFillPrice: null,
       breakevenDone: false,
+      cycleMaxValue: null,
     },
   }),
   false,

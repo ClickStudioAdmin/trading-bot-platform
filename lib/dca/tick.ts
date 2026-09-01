@@ -37,6 +37,7 @@ import {
   dcaOpenExitLimits,
   dcaStartListens,
   decideDcaTick,
+  dcaTickValueCapUsdt,
   type DcaPlaybook,
 } from "./playbook";
 import { dcaDecisionMessage } from "./log-copy";
@@ -251,7 +252,11 @@ export async function runDcaPlaybookTick(input?: {
         deviationMultiplier: playbook.deviationMultiplier,
         clipsFilled: leg.clipsFilled,
         maxClips: playbook.maxClips,
-        maxValue: playbook.maxValue,
+        maxValue: dcaTickValueCapUsdt({
+          kind: playbook.maxValueKind,
+          maxValue: playbook.maxValue,
+          cycleMaxValue: leg.cycleMaxValue,
+        }),
         positionQty: open?.qty ?? null,
         entryPrice: open?.entryPrice ?? null,
         takeProfitPct: playbook.takeProfitPct,
@@ -461,6 +466,7 @@ async function applyTickAction(input: {
           lastClipAtMs: null,
           firstFillPrice: null,
           breakevenDone: false,
+          cycleMaxValue: null,
         },
       });
       if (!patched.ok) {

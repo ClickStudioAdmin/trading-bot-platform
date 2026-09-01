@@ -22,6 +22,7 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     size_unit: config.sizeUnit,
     max_clips: config.maxClips,
     max_value: config.maxValue,
+    max_value_kind: config.maxValueKind,
     dip_pct: config.dipPct,
     interval_minutes: config.intervalMinutes,
     size_multiplier: config.sizeMultiplier,
@@ -86,6 +87,9 @@ function legColumns(
   }
   if (patch.breakevenDone !== undefined) {
     row[`${prefix}_breakeven_done`] = patch.breakevenDone;
+  }
+  if (patch.cycleMaxValue !== undefined) {
+    row[`${prefix}_cycle_max_value`] = patch.cycleMaxValue;
   }
   return row;
 }
@@ -304,6 +308,27 @@ export async function patchDcaPlaybook(input: {
   return { ok: true };
 }
 
+export async function stampDcaCycleStart(input: {
+  supabase: SupabaseClient;
+  id: string;
+  side: FuturesSide;
+  clipSize: number;
+  cycleMaxValue: number | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const row: Record<string, unknown> = {
+    clip_size: input.clipSize,
+    [`${input.side}_cycle_max_value`]: input.cycleMaxValue,
+  };
+  const { error } = await input.supabase
+    .from("dca_playbooks")
+    .update(row)
+    .eq("id", input.id);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
 export async function patchDcaLeg(input: {
   supabase: SupabaseClient;
   id: string;
@@ -333,6 +358,7 @@ export async function resetDcaLeg(input: {
       lastClipAtMs: null,
       firstFillPrice: null,
       breakevenDone: false,
+      cycleMaxValue: null,
     },
   });
 }
@@ -356,6 +382,7 @@ export async function resetDcaPlaybook(input: {
         lastClipAtMs: null,
         firstFillPrice: null,
         breakevenDone: false,
+        cycleMaxValue: null,
       },
       short: {
         status: "idle",
@@ -364,6 +391,7 @@ export async function resetDcaPlaybook(input: {
         lastClipAtMs: null,
         firstFillPrice: null,
         breakevenDone: false,
+        cycleMaxValue: null,
       },
     },
   });

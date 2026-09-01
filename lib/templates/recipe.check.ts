@@ -41,6 +41,7 @@ const snapshot = snapshotDcaRecipe(parsed.config);
 assert.equal(snapshot.kind, "dca");
 assert.equal(snapshot.symbol, "ETHUSDT");
 assert.equal(snapshot.startKind, "webhook");
+assert.equal(snapshot.maxValueKind, "usdt");
 assert.equal("webhookId" in snapshot, false);
 assert.equal(recipeHasRuntimeKeys(snapshot), false);
 

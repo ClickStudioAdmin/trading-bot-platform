@@ -49,10 +49,13 @@ import {
   dcaPlaybookStatusLabel,
   dcaStartListens,
   parseDcaExitBasis,
+  parseDcaMaxValueKind,
   parseDcaPlaybookForm,
+  dcaResolvedMaxValueUsdt,
   type DcaAveragingKind,
   type DcaExitBasis,
   type DcaIntervalUnit,
+  type DcaMaxValueKind,
   type DcaPlaybook,
   type DcaStartKind,
 } from "@/lib/dca/playbook";
@@ -347,6 +350,7 @@ export function DcaPlaybooksDesk({
   options,
   signalWebhooks,
   availableUsdt = null,
+  bookUsdt = null,
   leverage = null,
   lastPrices = {},
   reduceOnly = false,
@@ -363,6 +367,7 @@ export function DcaPlaybooksDesk({
   options: LinearPerp[];
   signalWebhooks: DcaSignalWebhookOption[];
   availableUsdt?: number | null;
+  bookUsdt?: number | null;
   leverage?: number | null;
   lastPrices?: Record<string, number>;
   reduceOnly?: boolean;
@@ -437,6 +442,7 @@ export function DcaPlaybooksDesk({
             options={options}
             signalWebhooks={signalWebhooks}
             availableUsdt={availableUsdt}
+            bookUsdt={bookUsdt}
             leverage={leverage}
             lastPrices={lastPrices}
             webhooksHref={webhooksHref}
@@ -550,6 +556,7 @@ export function DcaPlaybookForm({
   options,
   signalWebhooks,
   availableUsdt = null,
+  bookUsdt = null,
   leverage = null,
   lastPrices = {},
   reduceOnly = false,
@@ -569,6 +576,7 @@ export function DcaPlaybookForm({
   options: LinearPerp[];
   signalWebhooks: DcaSignalWebhookOption[];
   availableUsdt?: number | null;
+  bookUsdt?: number | null;
   leverage?: number | null;
   lastPrices?: Record<string, number>;
   reduceOnly?: boolean;
@@ -604,7 +612,11 @@ export function DcaPlaybookForm({
   );
   const [sizeUnit, setSizeUnit] = useState(source?.sizeUnit ?? "usdt");
   const [maxClips, setMaxClips] = useState(optional(source?.maxClips));
+  const [maxValueKind, setMaxValueKind] = useState<DcaMaxValueKind>(
+    source?.maxValueKind ?? "usdt",
+  );
   const [maxValue, setMaxValue] = useState(optional(source?.maxValue));
+  const accountBookUsdt = bookUsdt ?? availableUsdt;
   const [dipPct, setDipPct] = useState(optional(source?.dipPct));
   const intervalParts = dcaIntervalParts(source?.intervalMinutes ?? null);
   const [intervalUnit, setIntervalUnit] = useState<DcaIntervalUnit>(
@@ -683,8 +695,15 @@ export function DcaPlaybookForm({
   const showArmButton =
     dcaStartListens(startKind) && Boolean(playbook) && running;
   const selectedPair = options.find((row) => row.symbol === symbol);
-  const derivedClip = dcaClipFromBudget({
+  const resolvedMaxValue = dcaResolvedMaxValueUsdt({
+    kind: maxValueKind,
     maxValue: asNumber(maxValue),
+    bookUsdt: accountBookUsdt,
+  });
+  const valueCapUsdt =
+    maxValueKind === "percent" ? resolvedMaxValue : asNumber(maxValue);
+  const derivedClip = dcaClipFromBudget({
+    maxValue: valueCapUsdt,
     maxClips: asNumber(maxClips),
     sizeMultiplier: asNumber(sizeMultiplier) ?? 1,
     sizeUnit,
@@ -710,6 +729,7 @@ export function DcaPlaybookForm({
       sizeUnit,
       maxClips: asNumber(maxClips),
       maxValue: asNumber(maxValue),
+      maxValueKind,
       dipPct: averaging === "dip" ? asNumber(dipPct) : null,
       sizeMultiplier: asNumber(sizeMultiplier) ?? 1,
       deviationMultiplier: asNumber(deviationMultiplier) ?? 1,
@@ -718,6 +738,7 @@ export function DcaPlaybookForm({
     maxQty: selectedPair?.maxQty ?? 0,
     maxMktQty: selectedPair?.maxMktQty ?? 0,
     baseCoin: selectedPair?.baseCoin ?? "Token",
+    bookUsdt: accountBookUsdt,
   });
   const saveError =
     asNumber(clipForSave) === null ? sizeError : (sizeError ?? ladderMaxError);
@@ -732,7 +753,7 @@ export function DcaPlaybookForm({
       deviationMultiplier,
       dipPct,
       maxClips,
-      maxValue,
+      maxValue: valueCapUsdt == null ? "" : String(valueCapUsdt),
       takeProfitPct,
       takeProfitBasis,
       stopLossPct,
@@ -751,6 +772,7 @@ export function DcaPlaybookForm({
     lastPrice,
     maxClips,
     maxValue,
+    valueCapUsdt,
     sizeMultiplier,
     sizeUnit,
     stopLossBasis,
@@ -778,6 +800,7 @@ export function DcaPlaybookForm({
       clipSize: clipForSave,
       maxClips,
       maxValue,
+      maxValueKind,
       dipPct,
       intervalUnit,
       sizeMultiplier,
@@ -1295,15 +1318,47 @@ export function DcaPlaybookForm({
               />
             </label>
             <label className={labelClass}>
-              Max value ({policy.quoteLabel})
+              Max value
+              <select
+                name="maxValueKind"
+                value={maxValueKind}
+                onChange={(event) => {
+                  const next = parseDcaMaxValueKind(event.target.value);
+                  setMaxValueKind(next);
+                  const amount = asNumber(maxValue);
+                  if (next === "percent" && amount != null && amount > 100) {
+                    setMaxValue("");
+                  }
+                }}
+                className={fieldClass}
+              >
+                <option value="usdt">Fixed {policy.quoteLabel}</option>
+                <option value="percent">% of account</option>
+              </select>
               <GroupedNumberInput
                 name="maxValue"
                 value={maxValue}
                 onChange={setMaxValue}
                 allowDecimal
-                className={fieldClass}
-                placeholder="No cap"
+                className={`${fieldClass} mt-1.5`}
+                placeholder={
+                  maxValueKind === "percent" ? "e.g. 20" : "No cap"
+                }
               />
+              {accountBookUsdt != null ? (
+                <input
+                  type="hidden"
+                  name="accountBookUsdt"
+                  value={String(accountBookUsdt)}
+                />
+              ) : null}
+              {maxValueKind === "percent" ? (
+                <p className="mt-1 text-xs text-ink-muted">
+                  {resolvedMaxValue != null && accountBookUsdt != null
+                    ? `${asNumber(maxValue)}% of ${formatUsdAmount(accountBookUsdt)} = ${formatUsdAmount(resolvedMaxValue)}. Recalculates at the start of each cycle.`
+                    : "Recalculates from account balance at the start of each cycle."}
+                </p>
+              ) : null}
             </label>
           </div>
           {restGrid ? (
@@ -1363,11 +1418,13 @@ export function DcaPlaybookForm({
                 <p className="mt-1 text-xs text-ink-muted">
                   Calculated from max value and max orders
                 </p>
-              ) : asNumber(maxValue) != null && asNumber(maxClips) != null ? (
+              ) : valueCapUsdt != null && asNumber(maxClips) != null ? (
                 <p className="mt-1 text-xs text-ink-muted">
-                  {sizeUnit === "qty"
-                    ? "Need a last price to calculate qty from max value."
-                    : null}
+                  {maxValueKind === "percent" && accountBookUsdt == null
+                    ? "Need an account balance to calculate from %."
+                    : sizeUnit === "qty"
+                      ? "Need a last price to calculate qty from max value."
+                      : null}
                 </p>
               ) : null}
             </label>

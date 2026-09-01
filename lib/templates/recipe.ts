@@ -65,6 +65,7 @@ export type DcaTemplateRecipe = {
   sizeUnit: DcaPlaybookConfig["sizeUnit"];
   maxClips: number | null;
   maxValue: number | null;
+  maxValueKind: DcaPlaybookConfig["maxValueKind"];
   dipPct: number | null;
   intervalMinutes: number | null;
   sizeMultiplier: number;
@@ -197,6 +198,7 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     sizeUnit: config.sizeUnit,
     maxClips: config.maxClips,
     maxValue: config.maxValue,
+    maxValueKind: config.maxValueKind,
     dipPct: config.dipPct,
     intervalMinutes: config.intervalMinutes,
     sizeMultiplier: config.sizeMultiplier,
@@ -458,6 +460,10 @@ export function dcaRecipeToConfig(
   if (maxValue != null) {
     form.set("maxValue", String(maxValue));
   }
+  form.set(
+    "maxValueKind",
+    recipe.maxValueKind === "percent" ? "percent" : "usdt",
+  );
   if (recipe.dipPct != null) {
     form.set("dipPct", String(recipe.dipPct));
   }
@@ -670,6 +676,7 @@ export type DcaSnapshotOverlay = {
   maxType?: string;
   maxClips?: string;
   maxValue?: string;
+  maxValueKind?: string;
   dipPct?: string;
   intervalUnit?: string;
   intervalValue?: string;

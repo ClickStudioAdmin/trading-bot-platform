@@ -35,6 +35,7 @@ import {
   dcaClipAction,
   dcaClipCycleKey,
   dcaClipRestKey,
+  dcaCycleClipSize,
   capDcaSafetySync,
   DCA_LIVE_GRID_OPS_PER_SYNC,
   dcaCycleEnded,
@@ -63,7 +64,9 @@ import {
   patchDcaLeg,
   resetDcaLeg,
   resetDcaPlaybook,
+  stampDcaCycleStart,
 } from "./store";
+import { loadDcaBookUsdt } from "./book";
 
 export type DcaVerb = "arm" | "disarm" | "close-playbook";
 
@@ -705,12 +708,64 @@ async function placeClip(input: {
   lastPrice: number;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const leg = dcaLegFor(input.playbook, input.side);
+  const firstClip = leg.clipsFilled === 0;
+  let clipSize = input.playbook.clipSize;
+  if (firstClip && input.playbook.maxValueKind === "percent") {
+    const book = await loadDcaBookUsdt({
+      userId: input.playbook.userId,
+      accountId: input.playbook.accountId,
+      mode: input.mode,
+    });
+    if (input.playbook.maxValue != null && (book == null || !(book > 0))) {
+      return {
+        ok: false,
+        error:
+          "Account balance is unavailable, so % max value cannot size this cycle.",
+      };
+    }
+    const sized = dcaCycleClipSize({
+      kind: input.playbook.maxValueKind,
+      maxValue: input.playbook.maxValue,
+      maxClips: input.playbook.maxClips,
+      clipSize: input.playbook.clipSize,
+      sizeMultiplier: input.playbook.sizeMultiplier,
+      sizeUnit: input.playbook.sizeUnit,
+      bookUsdt: book,
+      mark: input.lastPrice,
+    });
+    clipSize = sized.clipSize;
+    const supabase = createServiceClient();
+    if (!supabase) {
+      return { ok: false, error: "Auth is not configured." };
+    }
+    const stamped = await stampDcaCycleStart({
+      supabase,
+      id: input.playbook.id,
+      side: input.side,
+      clipSize,
+      cycleMaxValue: sized.cycleMaxValue,
+    });
+    if (!stamped.ok) {
+      return stamped;
+    }
+    input.playbook.clipSize = clipSize;
+    if (input.side === "long") {
+      input.playbook.long = {
+        ...input.playbook.long,
+        cycleMaxValue: sized.cycleMaxValue,
+      };
+    } else {
+      input.playbook.short = {
+        ...input.playbook.short,
+        cycleMaxValue: sized.cycleMaxValue,
+      };
+    }
+  }
   const size = dcaClipSizeAt(
     leg.clipsFilled,
-    input.playbook.clipSize,
+    clipSize,
     input.playbook.sizeMultiplier,
   );
-  const firstClip = leg.clipsFilled === 0;
   const generation =
     firstClip
       ? input.playbook.updatedAtMs

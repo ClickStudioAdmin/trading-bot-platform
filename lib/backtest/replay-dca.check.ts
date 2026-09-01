@@ -114,4 +114,36 @@ assert.equal(
 assert.equal(bothPrice.orders[0]?.side, "long");
 assert.ok(!bothPrice.orders.some((row) => row.side === "short"));
 
+const percentForm = new FormData();
+percentForm.set("name", "Compound");
+percentForm.set("symbol", "BTCUSDT");
+percentForm.set("direction", "long");
+percentForm.set("startKind", "immediate");
+percentForm.set("maxClips", "1");
+percentForm.set("maxValue", "20");
+percentForm.set("maxValueKind", "percent");
+percentForm.set("accountBookUsdt", "10000");
+percentForm.set("sizeUnit", "usdt");
+percentForm.set("takeProfitPct", "10");
+percentForm.set("sizeMultiplier", "1");
+const percentParsed = parseDcaPlaybookForm(percentForm);
+assert.equal(percentParsed.ok, true);
+if (!percentParsed.ok) {
+  throw new Error("expected percent DCA parse");
+}
+const compounded = replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 110, high: 110, low: 110, close: 110 },
+    { timeMs: 3_000, open: 110, high: 110, low: 110, close: 110 },
+  ],
+  recipe: snapshotDcaRecipe(percentParsed.config),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+const buys = compounded.orders.filter((row) => row.action === "buy");
+assert.equal(buys.length, 2);
+assert.equal(buys[0]?.qty, 20);
+assert.ok(Math.abs((buys[1]?.qty ?? 0) - 2040 / 110) < 1e-8);
+
 console.log("dca backtest replay checks passed");

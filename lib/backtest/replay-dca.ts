@@ -1,6 +1,8 @@
 import {
   decideDcaTick,
+  dcaCycleClipSize,
   dcaEnabledSides,
+  dcaTickValueCapUsdt,
   IDLE_DCA_LEG,
   type DcaLegState,
 } from "@/lib/dca/playbook";
@@ -58,6 +60,7 @@ type SimLeg = DcaLegState & {
   armTrue: boolean;
   disarmTrue: boolean;
   indicatorTrue: boolean;
+  cycleClipSize: number | null;
 };
 
 function emptyLeg(): SimLeg {
@@ -71,6 +74,7 @@ function emptyLeg(): SimLeg {
     armTrue: false,
     disarmTrue: false,
     indicatorTrue: false,
+    cycleClipSize: null,
   };
 }
 
@@ -142,9 +146,25 @@ export function replayDcaPlaybook(input: {
 
   function addClip(side: FuturesSide, atMs: number, price: number) {
     const leg = legs[side];
+    const firstClip = leg.clipsFilled === 0;
+    const sized = firstClip
+      ? dcaCycleClipSize({
+          kind: config.maxValueKind,
+          maxValue: config.maxValue,
+          maxClips: config.maxClips,
+          clipSize: config.clipSize,
+          sizeMultiplier: config.sizeMultiplier,
+          sizeUnit: config.sizeUnit,
+          bookUsdt: input.startingUsdt + realized,
+          mark: price,
+        })
+      : {
+          clipSize: leg.cycleClipSize ?? config.clipSize,
+          cycleMaxValue: leg.cycleMaxValue,
+        };
     const qty = dcaClipQtyAt(
       leg.clipsFilled,
-      config.clipSize,
+      sized.clipSize,
       config.sizeMultiplier,
       config.sizeUnit,
       price,
@@ -200,6 +220,8 @@ export function replayDcaPlaybook(input: {
       lastClipPrice: price,
       lastClipAtMs: atMs,
       firstFillPrice: leg.firstFillPrice ?? price,
+      cycleMaxValue: sized.cycleMaxValue,
+      cycleClipSize: sized.clipSize,
       qty: nextQty,
       entry,
       trailing,
@@ -259,7 +281,12 @@ export function replayDcaPlaybook(input: {
         deviationMultiplier: config.deviationMultiplier,
         clipsFilled: live.clipsFilled,
         maxClips: config.maxClips,
-        maxValue: config.maxValue,
+        maxValue: dcaTickValueCapUsdt({
+          kind: config.maxValueKind,
+          maxValue: config.maxValue,
+          cycleMaxValue: live.cycleMaxValue,
+          bookUsdt: input.startingUsdt + realized,
+        }),
         positionQty: live.qty > 0 ? live.qty : null,
         entryPrice: live.qty > 0 ? live.entry : null,
         takeProfitPct: config.takeProfitPct,
