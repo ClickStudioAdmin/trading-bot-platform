@@ -280,11 +280,11 @@ export function CopyCatalogueBoard({
                     {getVenue(card.venue)?.label ?? card.venue}
                   </span>
                 </div>
-                <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4">
                   <div>
-                    <dt className="text-ink-faint">Realized [30d]</dt>
+                    <dt className="text-sm text-ink-faint">Realized [30d]</dt>
                     <dd
-                      className={`mt-1 tabular-nums ${
+                      className={`mt-1 text-lg font-semibold tabular-nums ${
                         signedTone(
                           has30dBook(card)
                             ? (card.stats30d?.realizedUsdt ?? null)
@@ -296,20 +296,20 @@ export function CopyCatalogueBoard({
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-ink-faint">Win rate [30d]</dt>
-                    <dd className="mt-1 tabular-nums text-ink">
+                    <dt className="text-sm text-ink-faint">Win rate [30d]</dt>
+                    <dd className="mt-1 text-lg font-semibold tabular-nums text-ink">
                       {winRateLabel(card)}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-ink-faint">Drawdown [30d]</dt>
-                    <dd className="mt-1 tabular-nums text-ink">
+                    <dt className="text-sm text-ink-faint">Drawdown [30d]</dt>
+                    <dd className="mt-1 text-lg font-semibold tabular-nums text-ink">
                       {drawdownLabel(card)}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-ink-faint">Followers</dt>
-                    <dd className="mt-1 tabular-nums text-ink">
+                    <dt className="text-sm text-ink-faint">Followers</dt>
+                    <dd className="mt-1 text-lg font-semibold tabular-nums text-ink">
                       {followersLabel(card)}
                     </dd>
                   </div>
