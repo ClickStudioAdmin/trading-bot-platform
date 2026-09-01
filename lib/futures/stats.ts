@@ -238,6 +238,73 @@ export function deskStatsSnapshot(
   };
 }
 
+export function positionCapitalUsdt(
+  notionalUsdt: number,
+  leverage: number | null,
+): number {
+  return positionMarginUsdt(notionalUsdt, leverage) ?? notionalUsdt;
+}
+
+export function peakConcurrentCapitalUsdt(
+  rows: readonly {
+    openedAtMs: number;
+    closedAtMs: number | null;
+    notionalUsdt: number;
+    leverage?: number | null;
+  }[],
+  fallbackLeverage: number | null = null,
+  nowMs = Date.now(),
+): number {
+  const events: { atMs: number; delta: number }[] = [];
+  for (const row of rows) {
+    if (!(row.openedAtMs > 0) || !(row.notionalUsdt > 0)) {
+      continue;
+    }
+    const used = positionCapitalUsdt(
+      row.notionalUsdt,
+      effectiveLeverage(row.leverage, fallbackLeverage),
+    );
+    if (!(used > 0)) {
+      continue;
+    }
+    const closeAt =
+      row.closedAtMs != null && row.closedAtMs > row.openedAtMs
+        ? row.closedAtMs
+        : row.closedAtMs == null
+          ? Math.max(nowMs, row.openedAtMs + 1)
+          : row.openedAtMs + 1;
+    events.push({ atMs: row.openedAtMs, delta: used });
+    events.push({ atMs: closeAt, delta: -used });
+  }
+  events.sort((a, b) => a.atMs - b.atMs || a.delta - b.delta);
+  let current = 0;
+  let peak = 0;
+  for (const event of events) {
+    current += event.delta;
+    if (current > peak) {
+      peak = current;
+    }
+  }
+  return peak;
+}
+
+export function deskPnlPct(input: {
+  realizedUsdt: number;
+  startingUsdt?: number | null;
+  capitalUsedUsdt: number;
+}): number | null {
+  if (!Number.isFinite(input.realizedUsdt)) {
+    return null;
+  }
+  if (input.startingUsdt != null && input.startingUsdt > 0) {
+    return input.realizedUsdt / input.startingUsdt;
+  }
+  if (input.capitalUsedUsdt > 0) {
+    return input.realizedUsdt / input.capitalUsedUsdt;
+  }
+  return null;
+}
+
 export function futuresClosedStats(
   closed: FuturesPosition[],
   fallbackLeverage: number | null = null,

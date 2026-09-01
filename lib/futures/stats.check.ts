@@ -7,6 +7,8 @@ import {
   deskStatsSnapshot,
   deskWindowStats,
   maxRealizedLossUsdt,
+  deskPnlPct,
+  peakConcurrentCapitalUsdt,
   effectiveLeverage,
   flattenExitPrice,
   formatTradingDaysNote,
@@ -34,7 +36,7 @@ function closed(partial: Partial<FuturesPosition> & { realizedUsdt: number; noti
     source: "manual",
     ruleId: null,
     ruleName: null,
-    openedAtMs: 1,
+    openedAtMs: partial.openedAtMs ?? 1,
     closedAtMs: partial.closedAtMs ?? 2,
     venue: null,
     environment: null,
@@ -210,6 +212,59 @@ const windowed = deskStatsSnapshot(
 assert.equal(windowed.allTime.closedCount, 2);
 assert.equal(windowed.last30d.closedCount, 1);
 assert.equal(windowed.last30d.realizedUsdt, 5);
+
+assert.equal(
+  peakConcurrentCapitalUsdt([
+    closed({
+      realizedUsdt: 20,
+      notionalUsdt: 100,
+      leverage: 10,
+      openedAtMs: 1,
+      closedAtMs: 2,
+    }),
+    closed({
+      realizedUsdt: -5,
+      notionalUsdt: 100,
+      leverage: 10,
+      openedAtMs: 3,
+      closedAtMs: 4,
+    }),
+  ]),
+  10,
+);
+assert.equal(
+  peakConcurrentCapitalUsdt([
+    closed({
+      realizedUsdt: 20,
+      notionalUsdt: 100,
+      leverage: 10,
+      openedAtMs: 1,
+      closedAtMs: 5,
+    }),
+    closed({
+      realizedUsdt: -5,
+      notionalUsdt: 100,
+      leverage: 10,
+      openedAtMs: 2,
+      closedAtMs: 4,
+    }),
+  ]),
+  20,
+);
+assert.equal(
+  peakConcurrentCapitalUsdt([
+    closed({
+      realizedUsdt: 20,
+      notionalUsdt: 100,
+      openedAtMs: 1,
+      closedAtMs: 2,
+    }),
+  ]),
+  100,
+);
+assert.equal(deskPnlPct({ realizedUsdt: 50, startingUsdt: 10_000, capitalUsedUsdt: 200 }), 0.005);
+assert.equal(deskPnlPct({ realizedUsdt: 50, startingUsdt: null, capitalUsedUsdt: 200 }), 0.25);
+assert.equal(deskPnlPct({ realizedUsdt: 50, capitalUsedUsdt: 0 }), null);
 
 assert.equal(flattenExitPrice([]), null);
 assert.equal(

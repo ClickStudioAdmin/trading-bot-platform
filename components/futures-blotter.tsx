@@ -33,11 +33,14 @@ import type { FuturesOrder, FuturesTradeSource } from "@/lib/futures/model";
 import { formatFuturesOrigin, resolveOrderOrigin } from "@/lib/futures/source";
 import {
   effectiveLeverage,
+  annualizeReturnPct,
   bookEquityDrawdown,
+  deskPnlPct,
   deskWindowStats,
   flattenExitPrice,
   futuresClosedStats,
   maxRealizedLossUsdt,
+  peakConcurrentCapitalUsdt,
   futuresDaysHeld,
   futuresOpenExposure,
   positionMarginUsdt,
@@ -535,6 +538,7 @@ export function FuturesPerformanceStats({
   exchangeBook = false,
   paperStartingUsdt = COPY_PAPER_STARTING_USDT,
   openUnrealizedUsdt = null,
+  open = [],
 }: {
   signedIn: boolean;
   closed: FuturesDeskPosition[];
@@ -545,9 +549,19 @@ export function FuturesPerformanceStats({
   exchangeBook?: boolean;
   paperStartingUsdt?: number;
   openUnrealizedUsdt?: number | null;
+  open?: FuturesDeskPosition[];
 }) {
   const stats = futuresClosedStats(closed, fallbackLeverage);
   const drawdown = deskWindowStats(closed);
+  const pnlPct = deskPnlPct({
+    realizedUsdt: stats.realizedUsdt,
+    startingUsdt: exchangeBook ? null : paperStartingUsdt,
+    capitalUsedUsdt: peakConcurrentCapitalUsdt(
+      [...closed, ...open],
+      fallbackLeverage,
+    ),
+  });
+  const aprPct = annualizeReturnPct(pnlPct, stats.tradingDays);
   const winRate =
     stats.closedCount === 0
       ? "—"
@@ -596,13 +610,12 @@ export function FuturesPerformanceStats({
     },
     {
       label: "P&L",
-      value:
-        signedIn && stats.onNotionalPct != null
-          ? formatPct(stats.onNotionalPct)
-          : "—",
+      value: signedIn && pnlPct != null ? formatPct(pnlPct) : "—",
       toneClass: signedTone(signedIn ? stats.realizedUsdt : null),
-      hint: "Realized profit ÷ sum of closed position value (qty × entry).",
-      note: "Based on position value",
+      hint: exchangeBook
+        ? "Realized profit ÷ peak margin posted at once (position value ÷ leverage, or position value if leverage is unknown)."
+        : "Realized profit ÷ paper starting balance.",
+      note: exchangeBook ? "Based on capital used" : "Based on starting balance",
     },
     {
       label: "ROE",
@@ -613,10 +626,10 @@ export function FuturesPerformanceStats({
     },
     {
       label: "APR",
-      value: signedIn && stats.aprPct != null ? formatPct(stats.aprPct) : "—",
-      toneClass: signedTone(signedIn ? stats.aprPct : null),
-      hint: "Compound annualization of ROE over the calendar span of this book (first close to last close). Short windows inflate APR.",
-      note: "Annualized ROE",
+      value: signedIn && aprPct != null ? formatPct(aprPct) : "—",
+      toneClass: signedTone(signedIn ? aprPct : null),
+      hint: "Compound annualization of P&L over the calendar span of this book (first close to last close). Short windows inflate APR.",
+      note: "Annualized P&L",
     },
   ];
   const columns =

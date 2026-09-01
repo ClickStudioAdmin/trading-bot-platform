@@ -20,6 +20,7 @@ export default async function FuturesPerformancePage() {
       <FuturesPerformanceStats
         signedIn={desk.signedIn}
         closed={desk.closed}
+        open={desk.open}
         exchangeBook={desk.exchangeBook}
         fallbackLeverage={
           desk.exchangeBook ? null : (settings?.paperLeverage ?? null)
