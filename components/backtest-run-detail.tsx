@@ -247,15 +247,7 @@ export function BacktestRunDetail({
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <section>
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="text-lg font-semibold">Parameters</h2>
-            <Link
-              href={backtestRerunHref(run.id)}
-              className="text-sm text-accent hover:underline"
-            >
-              Re-run Parameters
-            </Link>
-          </div>
+          <h2 className="mb-3 text-lg font-semibold">Parameters</h2>
           <BacktestPropertyList rows={params} />
         </section>
         <div className="space-y-6">
