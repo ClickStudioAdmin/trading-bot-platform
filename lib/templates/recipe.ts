@@ -206,6 +206,20 @@ export function recipesMatchReplayFields(
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+export function dcaFormMatchesPlaybook(
+  saved: DcaPlaybookConfig,
+  next: DcaPlaybookConfig | null,
+): boolean {
+  if (!next) {
+    return false;
+  }
+  return (
+    saved.webhookId === next.webhookId &&
+    JSON.stringify(snapshotDcaRecipe(saved)) ===
+      JSON.stringify(snapshotDcaRecipe(next))
+  );
+}
+
 export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe {
   return {
     kind: "dca",

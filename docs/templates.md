@@ -148,10 +148,10 @@ Tokens from [ui-theme.md](ui-theme.md).
 
 ### Automations (desk)
 
-- Header: **Create New Bot**, **Add from Template**. One picker is a single folder tree: **Platform**, **Shared**, and **My templates** as top-level folders. Named folders and loose templates nest under that scope. Tick a folder or individual templates, then apply to **this** desk. DCA apply uses each template’s saved contract.
+- Header: **Create New Bot**, **Create New Bot from Template**. One picker is a single folder tree: **Platform**, **Shared**, and **My templates** as top-level folders. Named folders and loose templates nest under that scope. Tick a folder or individual templates, then apply to **this** desk. DCA apply uses each template’s saved contract.
 - Save Bots, Arm, Close bot, and Reduce only stay on the page. They do not reload or jump the scroll.
 - Each bot card: **Save as template**. Name, description, **Add to folder** as a checkbox list of **your** folders (this desk type). **Save as platform template** lists **platform folders** only. Tick one or more, and/or **Create a new folder**.
-- TradingView Strategy desk: no Add from Template. Webhook tokens are not templates.
+- TradingView Strategy desk: no Create New Bot from Template. Webhook tokens are not templates.
 
 ### `/account/templates` (every member)
 

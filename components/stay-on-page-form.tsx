@@ -93,12 +93,22 @@ export const StayOnPageForm = forwardRef<
     actions?: Record<string, (data: FormData) => Promise<DeskActionResult>>;
     onResult?: (result: DeskActionResult) => void;
     guard?: (event: FormEvent<HTMLFormElement>) => boolean;
+    onInput?: (event: FormEvent<HTMLFormElement>) => void;
     className?: string;
     noValidate?: boolean;
     children: ReactNode;
   }
 >(function StayOnPageForm(
-  { action, actions, onResult, guard, className, noValidate = false, children },
+  {
+    action,
+    actions,
+    onResult,
+    guard,
+    onInput,
+    className,
+    noValidate = false,
+    children,
+  },
   ref,
 ) {
   const [pending, setPending] = useState(false);
@@ -153,6 +163,7 @@ export const StayOnPageForm = forwardRef<
     <form
       ref={ref}
       noValidate={noValidate}
+      onInput={onInput}
       onSubmit={(event) => void onSubmit(event)}
       className={className}
     >

@@ -540,10 +540,10 @@ function ApplyFromLibraryButton({
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className={secondaryBtn}>
-        Add from Template
+        Create New Bot from Template
       </button>
       {open ? (
-        <Modal title="Add from Template" onClose={() => setOpen(false)} wide>
+        <Modal title="Create New Bot from Template" onClose={() => setOpen(false)} wide>
           <p className="mt-1 text-sm text-ink-muted">
             Tick a folder or individual templates. Creates idle or disabled
             bots on this desk. Nothing is armed.

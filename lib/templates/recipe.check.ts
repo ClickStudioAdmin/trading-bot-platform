@@ -10,6 +10,7 @@ import {
   perpsRecipeToRule,
   recipeHasRuntimeKeys,
   recipePreview,
+  dcaFormMatchesPlaybook,
   snapshotDcaRecipe,
   snapshotPaperRecipe,
   findMatchingLibraryTemplate,
@@ -39,6 +40,11 @@ if (!parsed.ok) {
 }
 
 const snapshot = snapshotDcaRecipe(parsed.config);
+assert.equal(dcaFormMatchesPlaybook(parsed.config, parsed.config), true);
+assert.equal(
+  dcaFormMatchesPlaybook(parsed.config, { ...parsed.config, clipSize: 99 }),
+  false,
+);
 assert.equal(snapshot.kind, "dca");
 assert.equal(snapshot.symbol, "ETHUSDT");
 assert.equal(snapshot.startKind, "webhook");

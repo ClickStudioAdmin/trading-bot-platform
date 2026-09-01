@@ -78,6 +78,7 @@ import {
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
 import {
+  dcaFormMatchesPlaybook,
   dcaFormToSnapshotSource,
   readFormControl,
   snapshotDcaRecipe,
@@ -721,6 +722,10 @@ export function DcaPlaybookForm({
     options[0]?.symbol ??
     policy.defaultSymbol;
   const [symbol, setSymbol] = useState(defaultSymbol);
+  const [formTick, setFormTick] = useState(0);
+  useEffect(() => {
+    setFormTick(1);
+  }, []);
   const [ladderTab, setLadderTab] = useState<"long" | "short">("long");
   const [ladderOpen, setLadderOpen] = useState(false);
   const ladderPanelId = useId();
@@ -734,7 +739,6 @@ export function DcaPlaybookForm({
         dcaLegFor(playbook, side),
       )
     : [];
-  const showStopAdding = liveLegs.some((leg) => leg.status === "armed");
   const hasOpenPosition = Boolean(
     playbook &&
       dcaEnabledSides(playbook.direction).some((side) =>
@@ -746,6 +750,9 @@ export function DcaPlaybookForm({
         ),
       ),
   );
+  const armed = liveLegs.some((leg) => leg.status === "armed");
+  const showStopAdding = hasOpenPosition && armed;
+  const showDisarm = Boolean(playbook) && armed && !hasOpenPosition;
   const showClosePlaybook =
     hasOpenPosition ||
     liveLegs.some((leg) => leg.status === "stop_adding");
@@ -904,6 +911,12 @@ export function DcaPlaybookForm({
     const parsed = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
     return parsed.ok ? snapshotDcaRecipe(parsed.config) : null;
   }
+  const parsedLive = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
+  const liveConfig = parsedLive.ok ? parsedLive.config : null;
+  const dirty =
+    !playbook ||
+    (formTick > 0 && !dcaFormMatchesPlaybook(playbook, liveConfig));
+  const showSave = dirty;
   function recipeForBacktest() {
     const parsed = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
     if (!parsed.ok) {
@@ -959,11 +972,16 @@ export function DcaPlaybookForm({
         delete: deleteDcaPlaybookAction,
       }}
       onResult={(result) => onResult?.(result as DcaDeskActionResult)}
+      onInput={() => setFormTick((tick) => tick + 1)}
       guard={(event) => {
         const submitter = (event.nativeEvent as SubmitEvent).submitter as
           | HTMLElement
           | null;
         const skip = submitter?.dataset.skipSizeGuard === "1";
+        const action = submitter?.dataset.deskAction || "default";
+        if (action === "default" && playbook && !dirty) {
+          return false;
+        }
         if (saveBlocked && !skip) {
           return false;
         }
@@ -977,7 +995,7 @@ export function DcaPlaybookForm({
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
           {showSaveAndArm ||
           showManualTriggers ||
-          (playbook && showArmButton && !showStopAdding) ? (
+          (playbook && showArmButton && !armed) ? (
             <p className="shrink-0 text-xs text-ink-muted">
               Initial Order Triggers
             </p>
@@ -1046,7 +1064,7 @@ export function DcaPlaybookForm({
             : null}
           {playbook ? (
             <>
-              {showArmButton && !showStopAdding ? (
+              {showArmButton && !armed ? (
                 <PendingSubmitButton
                   deskAction="arm"
                   pendingLabel="Arming…"
@@ -1082,15 +1100,17 @@ export function DcaPlaybookForm({
           />
         </label>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <PendingSubmitButton
-            pendingLabel="Saving…"
-            deskAction="default"
-            className={headerPrimaryClass}
-            disabled={Boolean(saveBlocked)}
-            title={saveBlocked ?? undefined}
-          >
-            Save
-          </PendingSubmitButton>
+          {showSave ? (
+            <PendingSubmitButton
+              pendingLabel="Saving…"
+              deskAction="default"
+              className={headerPrimaryClass}
+              disabled={Boolean(saveBlocked)}
+              title={saveBlocked ?? undefined}
+            >
+              Save
+            </PendingSubmitButton>
+          ) : null}
           {playbook && showStopAdding ? (
               <span
                 className="inline-flex"
@@ -1103,6 +1123,21 @@ export function DcaPlaybookForm({
                   skipSizeGuard
                 >
                   Stop adding
+                </PendingSubmitButton>
+              </span>
+            ) : null}
+          {showDisarm ? (
+              <span
+                className="inline-flex"
+                title="Stop listening for new entries"
+              >
+                <PendingSubmitButton
+                  deskAction="disarm"
+                  pendingLabel="Disarming…"
+                  className={headerPrimaryClass}
+                  skipSizeGuard
+                >
+                  Disarm
                 </PendingSubmitButton>
               </span>
             ) : null}

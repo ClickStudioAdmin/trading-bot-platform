@@ -1214,7 +1214,12 @@ async function applyDcaVerbUnlocked(input: {
   }
 
   if (input.verb === "disarm") {
+    const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
+      accountId: input.playbook.accountId,
+      userId: input.playbook.userId,
+    });
     let changed = false;
+    let leftOpen = false;
     for (const side of sides) {
       const leg = dcaLegFor(input.playbook, side);
       if (leg.status === "idle") {
@@ -1225,14 +1230,24 @@ async function applyDcaVerbUnlocked(input: {
         mode: input.mode,
         side,
       });
-      const patched = await patchDcaLeg({
-        supabase,
-        id: input.playbook.id,
-        side,
-        patch: { status: "stop_adding" },
-      });
+      const openQty = opens.find((row) => row.side === side)?.qty ?? 0;
+      const patched = openQty > 0
+        ? await patchDcaLeg({
+            supabase,
+            id: input.playbook.id,
+            side,
+            patch: { status: "stop_adding" },
+          })
+        : await resetDcaLeg({
+            supabase,
+            id: input.playbook.id,
+            side,
+          });
       if (!patched.ok) {
         return patched;
+      }
+      if (openQty > 0) {
+        leftOpen = true;
       }
       changed = true;
     }
@@ -1242,10 +1257,17 @@ async function applyDcaVerbUnlocked(input: {
     await logDcaEvent({
       playbook: input.playbook,
       event: "dca.disarmed",
-      message: `Stopped adding on ${input.playbook.name}. Position stays open.`,
-      data: { sides },
+      message: leftOpen
+        ? `Stopped adding on ${input.playbook.name}. Position stays open.`
+        : `Disarmed ${input.playbook.name}.`,
+      data: { sides, leftOpen },
     });
-    return { ok: true, message: "Stopped adding. The position stays open." };
+    return {
+      ok: true,
+      message: leftOpen
+        ? "Stopped adding. The position stays open."
+        : "Bot disarmed.",
+    };
   }
 
   if (input.verb === "close-playbook") {
