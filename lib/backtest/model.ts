@@ -35,6 +35,13 @@ export const BACKTEST_VERCEL_BAR_LIMIT = 3000;
 export const BACKTEST_COMPARABLE_CAP = 8;
 export const DEFAULT_STARTING_USDT = 10_000;
 export const DEFAULT_LEVERAGE = 10;
+export const DEFAULT_BACKTEST_WINDOW_DAYS = 365;
+export const BACKTEST_WINDOW_PRESETS = [
+  { days: 30, label: "1 month" },
+  { days: 365, label: "1 year" },
+  { days: 1825, label: "5 years" },
+  { days: 3650, label: "10 years" },
+] as const;
 export const MAX_BACKTEST_LEVERAGE = 125;
 
 export type BacktestFeePreset = keyof typeof BACKTEST_FEE_PRESETS;
@@ -223,7 +230,20 @@ export function backtestWindowEndingToday(days: number): {
 }
 
 export function defaultBacktestDates(): { from: string; to: string } {
-  return backtestWindowEndingToday(30);
+  return backtestWindowEndingToday(DEFAULT_BACKTEST_WINDOW_DAYS);
+}
+
+export function matchingBacktestWindowDays(
+  from: string,
+  to: string,
+): number | null {
+  for (const row of BACKTEST_WINDOW_PRESETS) {
+    const window = backtestWindowEndingToday(row.days);
+    if (window.from === from && window.to === to) {
+      return row.days;
+    }
+  }
+  return null;
 }
 
 export function parseStartingBalance(

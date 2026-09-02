@@ -22,6 +22,7 @@ import { revalidatePath } from "next/cache";
 import {
   BACKTEST_CANDLE_LIMIT,
   BACKTEST_FEE_PRESETS,
+  DEFAULT_LEVERAGE,
   DEFAULT_STARTING_USDT,
   backtestShouldRunInline,
   backtestTapeInterval,
@@ -163,6 +164,7 @@ export async function seedBacktestDraftAction(
     feePreset: "vip0_taker",
     feeRate: BACKTEST_FEE_PRESETS.vip0_taker.rate,
     startingUsdt: DEFAULT_STARTING_USDT,
+    leverage: DEFAULT_LEVERAGE,
     recipe,
     status: "draft",
   });

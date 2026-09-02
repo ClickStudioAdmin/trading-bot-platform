@@ -863,6 +863,9 @@ export function DcaPlaybookForm({
           (asNumber(maxValue) as number) > 100
         ? "Percent must be 100 or less."
         : null;
+  const saveError =
+    maxValueMissing ??
+    (asNumber(clipForSave) === null ? sizeError : (sizeError ?? ladderMaxError));
   const saveBlocked = cycleLocked ? null : saveError;
   const restGridEffective = averaging !== "interval" && restGrid;
   const summaryBySide = useMemo(() => {

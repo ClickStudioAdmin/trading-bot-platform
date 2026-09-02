@@ -14,6 +14,9 @@ import {
   parseComparableSymbols,
   parseBacktestLeverage,
   parseStartingBalance,
+  defaultBacktestDates,
+  backtestWindowEndingToday,
+  matchingBacktestWindowDays,
   backtestAprPct,
   backtestDrawdownCard,
   backtestOnNotionalPct,
@@ -32,6 +35,18 @@ import {
   splitCompletedBacktestOrders,
   openBacktestPositionLabel,
 } from "./model";
+
+const defaultDates = defaultBacktestDates();
+assert.deepEqual(defaultDates, backtestWindowEndingToday(365));
+assert.equal(matchingBacktestWindowDays(defaultDates.from, defaultDates.to), 365);
+assert.equal(
+  matchingBacktestWindowDays(
+    backtestWindowEndingToday(30).from,
+    backtestWindowEndingToday(30).to,
+  ),
+  30,
+);
+assert.equal(matchingBacktestWindowDays("2020-01-01", defaultDates.to), null);
 
 assert.equal(parseStartingBalance("").ok, false);
 assert.equal(parseStartingBalance("0").ok, false);

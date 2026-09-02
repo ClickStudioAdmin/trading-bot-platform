@@ -300,15 +300,16 @@ assert.equal(
   ),
   null,
 );
-assert.equal(
-  parseBacktestRecipeJson(
-    JSON.stringify({
-      ...dca,
-      maxValue: 100,
-      maxValueKind: "margin",
-    }),
-  )?.maxValueKind,
-  "margin",
+const marginRecipe = parseBacktestRecipeJson(
+  JSON.stringify({
+    ...dca,
+    maxValue: 100,
+    maxValueKind: "margin",
+  }),
 );
+assert.equal(marginRecipe?.kind, "dca");
+if (marginRecipe?.kind === "dca") {
+  assert.equal(marginRecipe.maxValueKind, "margin");
+}
 
 console.log("backtest library checks passed");

@@ -13,6 +13,7 @@ import {
   BACKTEST_COMPARABLE_CAP,
   BACKTEST_FEE_PRESETS,
   BACKTEST_LONG_TAPE_BARS,
+  BACKTEST_WINDOW_PRESETS,
   DEFAULT_LEVERAGE,
   DEFAULT_STARTING_USDT,
   backtestShouldRunInline,
@@ -20,6 +21,7 @@ import {
   backtestWindowEndingToday,
   defaultBacktestDates,
   estimateBacktestBars,
+  matchingBacktestWindowDays,
   parseBacktestDates,
 } from "@/lib/backtest/model";
 import {
@@ -353,27 +355,28 @@ export function BacktestQueueForm({
             />
           </div>
           <div className="mt-2 flex flex-wrap gap-2">
-            {(
-              [
-                { days: 30, label: "1 month" },
-                { days: 365, label: "1 year" },
-                { days: 1825, label: "5 years" },
-                { days: 3650, label: "10 years" },
-              ] as const
-            ).map((row) => (
-              <button
-                key={row.days}
-                type="button"
-                onClick={() => {
-                  const next = backtestWindowEndingToday(row.days);
-                  setFromDate(next.from);
-                  setToDate(next.to);
-                }}
-                className="rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:border-line-strong hover:text-ink"
-              >
-                {row.label}
-              </button>
-            ))}
+            {BACKTEST_WINDOW_PRESETS.map((row) => {
+              const selected =
+                matchingBacktestWindowDays(fromDate, toDate) === row.days;
+              return (
+                <button
+                  key={row.days}
+                  type="button"
+                  onClick={() => {
+                    const next = backtestWindowEndingToday(row.days);
+                    setFromDate(next.from);
+                    setToDate(next.to);
+                  }}
+                  className={
+                    selected
+                      ? "rounded-control border border-success bg-success/15 px-2 py-1 text-xs text-success"
+                      : "rounded-control border border-line px-2 py-1 text-xs text-ink-muted hover:border-line-strong hover:text-ink"
+                  }
+                >
+                  {row.label}
+                </button>
+              );
+            })}
           </div>
           <p className="mt-2 text-xs text-ink-faint">
             Any range the venue has. Long tapes queue to the engine worker.
