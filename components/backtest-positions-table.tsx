@@ -28,8 +28,8 @@ import {
   signedTone,
 } from "@/lib/opportunities/format";
 
-const OPEN_COL_SPAN_DCA = 16;
-const OPEN_COL_SPAN = 15;
+const OPEN_COL_SPAN_DCA = 15;
+const OPEN_COL_SPAN = 14;
 const CLOSED_COL_SPAN = 10;
 
 export function BacktestPositionsTable({ run }: { run: BacktestRun }) {
@@ -181,12 +181,6 @@ function OpenBacktestPositions({
                 <ColumnHint
                   label="Trailing"
                   hint="Retracement from the recipe. Faint is the bot distance."
-                />
-              </th>
-              <th className="w-[9.5rem] px-2 py-3 font-medium">
-                <ColumnHint
-                  label="Close By"
-                  hint="Replay is read-only. Close a live bot from the desk."
                 />
               </th>
             </tr>
@@ -436,7 +430,6 @@ function OpenBacktestRows({
           <span className="text-ink-faint">—</span>
         )}
       </td>
-      <td className="px-2 py-3 whitespace-nowrap text-ink-faint">—</td>
     </ExpandableTradeRows>
   );
 }

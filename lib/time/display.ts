@@ -20,7 +20,7 @@ export function formatUtcDateTime(ms: number): string {
 
 export function formatLocalDate(ms: number): string {
   const date = new Date(ms);
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 }
 
 export function formatAuDateUtc(ms: number): string {

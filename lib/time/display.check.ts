@@ -14,14 +14,14 @@ assert.equal(parseDisplayTime(""), null);
 assert.equal(formatUtcDateTime(noonUtc), "2026-08-24 23:50:26 UTC");
 assert.equal(formatAuDateUtc(Date.UTC(2021, 7, 31)), "31/08/2021");
 assert.equal(formatAuDateUtc(Date.UTC(2026, 7, 30)), "30/08/2026");
-assert.match(formatLocalTime(noonUtc, "date"), /^\d{4}-\d{2}-\d{2}$/);
+assert.match(formatLocalTime(noonUtc, "date"), /^\d{2}\/\d{2}\/\d{4}$/);
 assert.match(
   formatLocalTime(noonUtc, "datetime"),
-  /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/,
+  /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/,
 );
 assert.match(
   formatLocalTime(noonUtc, "datetime-short"),
-  /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/,
+  /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/,
 );
 
 console.log("time display checks passed");

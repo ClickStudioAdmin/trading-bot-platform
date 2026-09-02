@@ -63,6 +63,11 @@ export function groupBacktestOrdersIntoCycles(
   }
   flush("long", null);
   flush("short", null);
+  closed.sort(
+    (left, right) =>
+      (right.closedAtMs ?? 0) - (left.closedAtMs ?? 0) ||
+      right.openedAtMs - left.openedAtMs,
+  );
   return { open, closed };
 }
 

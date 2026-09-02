@@ -52,6 +52,16 @@ const fills: SimulatedOrder[] = [
     reason: "entry",
     clipIndex: 1,
   },
+  {
+    atMs: 5_000,
+    action: "flatten",
+    side: "short",
+    qty: 1,
+    price: 40,
+    feeUsdt: 0,
+    realizedUsdt: 10,
+    reason: "take_profit",
+  },
 ];
 
 const recipe: BacktestRecipe = {
@@ -92,23 +102,23 @@ const recipe: BacktestRecipe = {
 };
 
 const grouped = groupBacktestOrdersIntoCycles(fills);
-assert.equal(grouped.closed.length, 1);
-assert.equal(grouped.open.length, 1);
-assert.equal(grouped.closed[0]?.clipCount, 2);
-assert.equal(grouped.closed[0]?.entryPrice, (100 + 180) / 3);
-assert.equal(grouped.closed[0]?.exitReason, "take_profit");
-assert.equal(grouped.open[0]?.side, "short");
-assert.equal(grouped.open[0]?.status, "open");
+assert.equal(grouped.closed.length, 2);
+assert.equal(grouped.open.length, 0);
+assert.equal(grouped.closed[0]?.side, "short");
+assert.equal(grouped.closed[0]?.closedAtMs, 5_000);
+assert.equal(grouped.closed[1]?.clipCount, 2);
+assert.equal(grouped.closed[1]?.entryPrice, (100 + 180) / 3);
+assert.equal(grouped.closed[1]?.exitReason, "take_profit");
 assert.equal(backtestFillMarkerText(fills[0]!, false), "Entry");
 assert.equal(backtestFillMarkerText(fills[1]!, false), "Add 2");
 assert.equal(backtestFillMarkerText(fills[2]!, false), "TP");
 assert.equal(backtestFillMarkerText(fills[3]!, true), "Open short");
 
-const exits = plannedExitsForBacktestCycle(recipe, grouped.closed[0]!);
-assert.ok(exits.takeProfit != null && exits.takeProfit > grouped.closed[0]!.entryPrice);
-assert.ok(exits.stopLoss != null && exits.stopLoss < grouped.closed[0]!.entryPrice);
+const exits = plannedExitsForBacktestCycle(recipe, grouped.closed[1]!);
+assert.ok(exits.takeProfit != null && exits.takeProfit > grouped.closed[1]!.entryPrice);
+assert.ok(exits.stopLoss != null && exits.stopLoss < grouped.closed[1]!.entryPrice);
 
-const levels = backtestChartLevels(recipe, fills);
+const levels = backtestChartLevels(recipe, fills.slice(0, 4));
 assert.equal(levels?.side, "short");
 assert.equal(levels?.entry, 50);
 assert.equal(backtestOpenMarkPrice({
