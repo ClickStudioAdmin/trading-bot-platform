@@ -50,11 +50,27 @@ export function buildEquityTimeline(
     const legs = emptyLegs();
     let realized = 0;
     let index = 0;
+    const firstBar = candles[0];
+    while (
+      index < run.orders.length &&
+      (run.orders[index]?.atMs ?? 0) < firstBar.timeMs
+    ) {
+      const order = run.orders[index];
+      if (order) {
+        realized = applyFill(legs, realized, order);
+      }
+      index += 1;
+    }
     const points: EquityPoint[] = [
       {
-        atMs: candles[0]?.timeMs ?? run.fromMs,
-        equityUsdt: run.startingUsdt,
-        realizedUsdt: 0,
+        atMs: firstBar.timeMs,
+        equityUsdt: markedEquity(
+          run.startingUsdt,
+          realized,
+          legs,
+          firstBar.open,
+        ),
+        realizedUsdt: realized,
         label: "Start",
       },
     ];

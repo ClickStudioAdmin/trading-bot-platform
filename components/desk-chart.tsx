@@ -191,6 +191,7 @@ export function DeskChart({
   screenshotName = "chart.png",
   rightOffset = 0,
   toolbar,
+  status = null,
 }: {
   candles: CandleBar[];
   overlay: ChartOverlay;
@@ -198,6 +199,7 @@ export function DeskChart({
   screenshotName?: string;
   rightOffset?: number;
   toolbar?: ReactNode;
+  status?: string | null;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartHandle | null>(null);
@@ -207,7 +209,7 @@ export function DeskChart({
 
   useEffect(() => {
     const host = hostRef.current;
-    if (!host) {
+    if (!host || candles.length === 0) {
       return;
     }
     let disposed = false;
@@ -232,8 +234,6 @@ export function DeskChart({
           borderColor: "#2A313C",
           timeVisible: true,
           rightOffset,
-          fixLeftEdge: true,
-          fixRightEdge: rightOffset === 0,
         },
         ...CHART_SCALE_OPTIONS,
         crosshair: { mode: charts.CrosshairMode.Normal },
@@ -304,17 +304,6 @@ export function DeskChart({
     };
   }, [candles, overlay, plotHeight, rightOffset]);
 
-  if (candles.length === 0) {
-    return (
-      <div
-        className="flex items-center justify-center rounded-card border border-line bg-canvas text-sm text-ink-muted"
-        style={{ height }}
-      >
-        No candles for this window.
-      </div>
-    );
-  }
-
   return (
     <div
       className="flex w-full flex-col overflow-hidden rounded-card border border-line bg-canvas"
@@ -327,14 +316,21 @@ export function DeskChart({
           filename={screenshotName}
         />
       </div>
-      <div
-        ref={hostRef}
-        className="min-h-0 w-full flex-1"
-        onContextMenu={(event) => {
-          event.preventDefault();
-          setMenu({ x: event.clientX, y: event.clientY });
-        }}
-      />
+      <div className="relative min-h-0 w-full flex-1">
+        <div
+          ref={hostRef}
+          className="h-full w-full"
+          onContextMenu={(event) => {
+            event.preventDefault();
+            setMenu({ x: event.clientX, y: event.clientY });
+          }}
+        />
+        {candles.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center px-4 text-sm text-ink-muted">
+            {status ?? "No candles for this window."}
+          </div>
+        ) : null}
+      </div>
       <ChartContextMenu
         menu={menu}
         onClose={() => setMenu(null)}

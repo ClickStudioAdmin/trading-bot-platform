@@ -202,21 +202,23 @@ export function PositionsChartButton({
                   </div>
                 </div>
                 <div className="mt-4">
-                  {loading ? (
-                    <p className="text-sm text-ink-muted">Loading candles…</p>
-                  ) : error ? (
-                    <p className="text-sm text-danger">{error}</p>
-                  ) : (
-                    <DeskChart
-                      candles={candles}
-                      overlay={buildLiveChartOverlay({
-                        symbol,
-                        positions,
-                        working,
-                        orders,
-                      })}
-                    />
-                  )}
+                  <DeskChart
+                    candles={candles}
+                    status={
+                      candles.length === 0
+                        ? (error ??
+                          (loading
+                            ? "Loading candles…"
+                            : "No candles for this window."))
+                        : null
+                    }
+                    overlay={buildLiveChartOverlay({
+                      symbol,
+                      positions,
+                      working,
+                      orders,
+                    })}
+                  />
                 </div>
               </div>
             </div>,

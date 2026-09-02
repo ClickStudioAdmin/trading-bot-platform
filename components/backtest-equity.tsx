@@ -147,8 +147,6 @@ export function BacktestEquityPanel({
           timeVisible: true,
           secondsVisible: false,
           rightOffset: 0,
-          fixLeftEdge: true,
-          fixRightEdge: false,
         },
         ...CHART_SCALE_OPTIONS,
         crosshair: {
@@ -212,22 +210,17 @@ export function BacktestEquityPanel({
     };
   }, [points, run.startingUsdt, up]);
 
-  if (points.length === 0) {
-    return (
-      <p className="text-sm text-ink-muted">No account timeline yet.</p>
-    );
-  }
-
   const start = points[0]?.equityUsdt ?? run.startingUsdt;
   const end = points.at(-1)?.equityUsdt ?? start;
   const change = end - start;
+  const empty = points.length === 0;
 
   return (
     <div className="overflow-hidden rounded-card border border-line bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <p className="text-xs text-ink-muted">
-            Equity · start ${money(start)}
+            {empty ? "Equity" : `Equity · start $${money(start)}`}
           </p>
           <BacktestChartIntervalBar
             run={run}
@@ -235,19 +228,21 @@ export function BacktestEquityPanel({
             onChange={onIntervalChange}
           />
         </div>
-        <div className="flex items-center gap-3">
-          <p
-            className={`text-sm font-medium tabular-nums ${
-              change >= 0 ? "text-success" : "text-danger"
-            }`}
-          >
-            {change >= 0 ? "+" : "−"}${money(Math.abs(change))} · ${money(end)}
-          </p>
-          <ChartScreenshotControls
-            getChart={() => chartRef.current}
-            filename={`${run.symbol}-equity.png`}
-          />
-        </div>
+        {empty ? null : (
+          <div className="flex items-center gap-3">
+            <p
+              className={`text-sm font-medium tabular-nums ${
+                change >= 0 ? "text-success" : "text-danger"
+              }`}
+            >
+              {change >= 0 ? "+" : "−"}${money(Math.abs(change))} · ${money(end)}
+            </p>
+            <ChartScreenshotControls
+              getChart={() => chartRef.current}
+              filename={`${run.symbol}-equity.png`}
+            />
+          </div>
+        )}
       </div>
       <div className="relative w-full" style={{ height: HEIGHT }}>
         <div

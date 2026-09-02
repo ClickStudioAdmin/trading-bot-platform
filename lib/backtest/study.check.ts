@@ -140,4 +140,12 @@ const markedDd = maxDrawdownFromEquity(marked);
 assert.equal(markedDd.maxDrawdownUsdt, 20);
 assert.equal(markedDd.maxDrawdownPct, 20 / 10_000);
 
+const clipped = buildEquityTimeline(openRun, [
+  { timeMs: 3_000, open: 90, high: 90, low: 90, close: 90 },
+  { timeMs: 5_000, open: 80, high: 80, low: 80, close: 80 },
+]);
+assert.equal(clipped[0]?.equityUsdt, 9_990);
+assert.equal(clipped[1]?.equityUsdt, 9_990);
+assert.equal(clipped[2]?.equityUsdt, 9_980);
+
 console.log("backtest study checks passed");

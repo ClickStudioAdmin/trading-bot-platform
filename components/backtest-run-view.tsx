@@ -426,20 +426,17 @@ export function BacktestInlineChart({
     };
   }, [run, interval]);
 
-  if (loading) {
-    return <p className="text-sm text-ink-muted">Loading candles…</p>;
-  }
-  if (error) {
-    return <p className="text-sm text-danger">{error}</p>;
-  }
-  if (candles.length === 0) {
-    return <p className="text-sm text-ink-muted">No candles in that window.</p>;
-  }
   return (
     <DeskChart
       candles={candles}
       rightOffset={8}
       screenshotName={`${run.symbol}-backtest.png`}
+      status={
+        candles.length === 0
+          ? (error ??
+            (loading ? "Loading candles…" : "No candles in that window."))
+          : null
+      }
       toolbar={
         <BacktestChartIntervalBar
           run={run}
@@ -537,36 +534,38 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
           onClose={() => setOpen(false)}
           wide
         >
-          {loading ? (
-            <p className="mt-3 text-sm text-ink-muted">Loading candles…</p>
-          ) : error ? (
-            <p className="mt-3 text-sm text-danger">{error}</p>
-          ) : (
-            <div className="mt-3">
-              <DeskChart
-                candles={candles}
-                rightOffset={8}
-                screenshotName={`${run.symbol}-backtest.png`}
-                toolbar={
-                  <BacktestChartIntervalBar
-                    run={run}
-                    interval={interval}
-                    onChange={setInterval}
-                  />
-                }
-                overlay={snapOverlayToCandles(
-                  buildBacktestChartOverlay({
-                    triggerPrice:
-                      run.recipe.kind === "perps"
-                        ? Number(run.recipe.triggerPrice)
-                        : null,
-                    orders: run.orders,
-                  }),
-                  candles,
-                )}
-              />
-            </div>
-          )}
+          <div className="mt-3">
+            <DeskChart
+              candles={candles}
+              rightOffset={8}
+              screenshotName={`${run.symbol}-backtest.png`}
+              status={
+                candles.length === 0
+                  ? (error ??
+                    (loading
+                      ? "Loading candles…"
+                      : "No candles in that window."))
+                  : null
+              }
+              toolbar={
+                <BacktestChartIntervalBar
+                  run={run}
+                  interval={interval}
+                  onChange={setInterval}
+                />
+              }
+              overlay={snapOverlayToCandles(
+                buildBacktestChartOverlay({
+                  triggerPrice:
+                    run.recipe.kind === "perps"
+                      ? Number(run.recipe.triggerPrice)
+                      : null,
+                  orders: run.orders,
+                }),
+                candles,
+              )}
+            />
+          </div>
         </Modal>
       ) : null}
     </>
