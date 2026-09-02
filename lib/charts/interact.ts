@@ -63,11 +63,16 @@ export function attachRightAxisWheel(
 ): () => void {
   function onWheel(event: WheelEvent) {
     const chart = getChart();
-    if (!chart || event.deltaY === 0) {
+    if (!chart) {
       return;
     }
     const axisWidth = chart.priceScale("right").width();
     if (!isOverRightPriceScale(host, axisWidth, event.clientX)) {
+      return;
+    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (event.deltaY === 0) {
       return;
     }
     const range = chart.priceScale("right").getVisibleRange();
@@ -81,12 +86,12 @@ export function attachRightAxisWheel(
     if (!next) {
       return;
     }
-    event.preventDefault();
     chart.priceScale("right").setAutoScale(false);
     chart.priceScale("right").setVisibleRange(next);
   }
-  host.addEventListener("wheel", onWheel, { passive: false });
-  return () => host.removeEventListener("wheel", onWheel);
+  host.addEventListener("wheel", onWheel, { passive: false, capture: true });
+  return () =>
+    host.removeEventListener("wheel", onWheel, { capture: true });
 }
 
 export const CHART_SCALE_OPTIONS = {
