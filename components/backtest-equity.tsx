@@ -219,9 +219,6 @@ export function BacktestEquityPanel({
     <div className="overflow-hidden rounded-card border border-line bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <p className="text-xs text-ink-muted">
-            {empty ? "Equity" : `Equity · start $${money(start)}`}
-          </p>
           <BacktestChartIntervalBar
             run={run}
             interval={interval}
