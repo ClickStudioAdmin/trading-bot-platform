@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { CandleBar } from "@/lib/market/candles";
 import type { ChartOverlay } from "@/lib/charts/overlay";
 
@@ -171,7 +171,7 @@ export function ChartScreenshotControls({
   );
 }
 
-const CHART_TOOLBAR_H = 32;
+const CHART_TOOLBAR_H = 36;
 
 export function DeskChart({
   candles,
@@ -179,12 +179,14 @@ export function DeskChart({
   height = 420,
   screenshotName = "chart.png",
   rightOffset = 0,
+  toolbar,
 }: {
   candles: CandleBar[];
   overlay: ChartOverlay;
   height?: number;
   screenshotName?: string;
   rightOffset?: number;
+  toolbar?: ReactNode;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartHandle | null>(null);
@@ -300,7 +302,8 @@ export function DeskChart({
       className="flex w-full flex-col overflow-hidden rounded-card border border-line bg-canvas"
       style={{ height }}
     >
-      <div className="flex h-8 shrink-0 items-center justify-end border-b border-line px-1.5">
+      <div className="flex min-h-9 shrink-0 items-center justify-between gap-2 border-b border-line px-1.5 py-1">
+        <div className="min-w-0">{toolbar}</div>
         <ChartScreenshotControls
           getChart={() => chartRef.current}
           filename={screenshotName}

@@ -420,6 +420,14 @@ export function backtestActivityBounds(input: {
     : { fromMs: input.fromMs, toMs: input.toMs + padMs };
 }
 
+export const BACKTEST_CHART_INTERVALS: readonly DcaIndicatorTimeframe[] = [
+  "15",
+  "60",
+  "240",
+  "D",
+];
+export const BACKTEST_CHART_BAR_LIMIT = 1500;
+
 export function chartIntervalForWindow(
   fromMs: number,
   toMs: number,
@@ -428,11 +436,41 @@ export function chartIntervalForWindow(
   const start = Math.max(0, DCA_INDICATOR_TIMEFRAMES.indexOf(preferred));
   for (let i = start; i < DCA_INDICATOR_TIMEFRAMES.length; i += 1) {
     const interval = DCA_INDICATOR_TIMEFRAMES[i];
-    if (estimateBacktestBars(fromMs, toMs, interval) <= 1500) {
+    if (estimateBacktestBars(fromMs, toMs, interval) <= BACKTEST_CHART_BAR_LIMIT) {
       return interval;
     }
   }
   return "D";
+}
+
+export function backtestChartIntervalChoices(
+  preferred: DcaIndicatorTimeframe,
+): DcaIndicatorTimeframe[] {
+  const extra = new Set<DcaIndicatorTimeframe>([
+    ...BACKTEST_CHART_INTERVALS,
+    preferred,
+  ]);
+  return DCA_INDICATOR_TIMEFRAMES.filter((row) => extra.has(row));
+}
+
+export function backtestChartIntervalFits(
+  fromMs: number,
+  toMs: number,
+  interval: DcaIndicatorTimeframe,
+): boolean {
+  return estimateBacktestBars(fromMs, toMs, interval) <= BACKTEST_CHART_BAR_LIMIT;
+}
+
+export function backtestChartFetchBounds(
+  run: Pick<BacktestRun, "fromMs" | "toMs" | "orders">,
+  interval: DcaIndicatorTimeframe,
+): { fromMs: number; toMs: number } {
+  return backtestActivityBounds({
+    fromMs: run.fromMs,
+    toMs: run.toMs,
+    orders: run.orders,
+    padMs: backtestChartTrailMs(interval),
+  });
 }
 
 export function backtestShouldRunInline(

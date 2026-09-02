@@ -1,12 +1,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { BacktestEquityPanel } from "@/components/backtest-equity";
 import {
   ApplyBacktestButton,
   AttachBacktestButton,
   BacktestCurrentTrades,
   BacktestRunRefresh,
-  BacktestInlineChart,
   BacktestOrdersTable,
   BacktestPropertyList,
   BacktestStatsGrid,
@@ -15,6 +13,7 @@ import {
 } from "@/components/backtest-run-view";
 import { ColumnHint } from "@/components/column-hint";
 import { BacktestRunsTable } from "@/components/backtest-runs-table";
+import { BacktestStudyCharts } from "@/components/backtest-study-charts";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
 import {
   BACKTEST_FEE_PRESETS,
@@ -366,23 +365,20 @@ export function BacktestRunDetail({
         </div>
       </div>
 
-      <section>
-        <h2 className="mb-2 text-lg font-semibold">Account impact</h2>
-        {complete ? (
-          <BacktestEquityPanel run={run} />
-        ) : (
-          <SectionPlaceholder message={pendingMessage} />
-        )}
-      </section>
-
-      <section>
-        <h2 className="mb-2 text-lg font-semibold">Chart</h2>
-        {complete ? (
-          <BacktestInlineChart run={run} />
-        ) : (
-          <SectionPlaceholder message={pendingMessage} />
-        )}
-      </section>
+      {complete ? (
+        <BacktestStudyCharts run={run} />
+      ) : (
+        <>
+          <section>
+            <h2 className="mb-2 text-lg font-semibold">Account impact</h2>
+            <SectionPlaceholder message={pendingMessage} />
+          </section>
+          <section>
+            <h2 className="mb-2 text-lg font-semibold">Chart</h2>
+            <SectionPlaceholder message={pendingMessage} />
+          </section>
+        </>
+      )}
 
       <section>
         <h2 className="mb-2 text-lg font-semibold">Orders</h2>

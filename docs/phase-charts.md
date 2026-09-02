@@ -27,7 +27,7 @@ TradingView **alerts** stay webhooks. This is charts only.
 | Overlay: working limits, TP/SL, trailing, entry | From **live** ledger | Off (sim book is the run) |
 | Overlay: fill markers | From **live** `futures_orders` | From **run** simulated orders |
 | Overlay: bot trigger line | Not on Positions | From the frozen recipe |
-| Timeframe control | 15m / 1h / 4h / D | Same set on the queue form |
+| Timeframe control | 15m / 1h / 4h / D | Same set on the finished-run charts, plus the run’s own TF. Display only. |
 
 Do not fetch candles from the browser venue APIs. Do not call private exchange APIs from the browser. The popup reads our public candle route.
 

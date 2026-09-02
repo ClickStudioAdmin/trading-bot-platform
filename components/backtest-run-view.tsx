@@ -89,8 +89,7 @@ import {
   saveBacktestAsTemplateAction,
 } from "@/lib/backtest/actions";
 import {
-  backtestActivityBounds,
-  backtestChartTrailMs,
+  backtestChartFetchBounds,
   backtestFillReasonLabel,
   backtestMarginUsdt,
   chartIntervalForWindow,
@@ -105,30 +104,30 @@ import {
   buildBacktestChartOverlay,
   snapOverlayToCandles,
 } from "@/lib/charts/overlay";
-import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
+import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
+import {
+  DCA_INDICATOR_TIMEFRAME_LABELS,
+  type DcaIndicatorTimeframe,
+} from "@/lib/dca/indicators";
 import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 import { formatQty, signedTone } from "@/lib/opportunities/format";
 
-function backtestChartWindow(run: BacktestRun) {
-  const interval = chartIntervalForWindow(run.fromMs, run.toMs, run.interval);
-  const padMs = backtestChartTrailMs(interval);
+function backtestChartWindow(
+  run: BacktestRun,
+  interval: DcaIndicatorTimeframe,
+) {
   return {
     interval,
-    padMs,
-    bounds: backtestActivityBounds({
-      fromMs: run.fromMs,
-      toMs: run.toMs,
-      orders: run.orders,
-      padMs,
-    }),
+    bounds: backtestChartFetchBounds(run, interval),
   };
 }
 
 function candlesForBacktestChart(
   candles: CandleBar[],
   run: BacktestRun,
+  interval: DcaIndicatorTimeframe,
 ): CandleBar[] {
-  const { bounds } = backtestChartWindow(run);
+  const { bounds } = backtestChartWindow(run, interval);
   return clipCandlesToWindow(candles, bounds.fromMs, bounds.toMs);
 }
 
@@ -372,14 +371,24 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
   );
 }
 
-export function BacktestInlineChart({ run }: { run: BacktestRun }) {
+export function BacktestInlineChart({
+  run,
+  interval,
+  onIntervalChange,
+}: {
+  run: BacktestRun;
+  interval: DcaIndicatorTimeframe;
+  onIntervalChange: (value: DcaIndicatorTimeframe) => void;
+}) {
   const [candles, setCandles] = useState<CandleBar[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    const { interval, bounds } = backtestChartWindow(run);
+    setLoading(true);
+    setError(null);
+    const { bounds } = backtestChartWindow(run, interval);
     const params = new URLSearchParams({
       venue: run.venue,
       symbol: run.symbol,
@@ -404,7 +413,7 @@ export function BacktestInlineChart({ run }: { run: BacktestRun }) {
       })
       .then((rows) => {
         if (!cancelled) {
-          setCandles(candlesForBacktestChart(rows, run));
+          setCandles(candlesForBacktestChart(rows, run, interval));
         }
       })
       .catch((err: unknown) => {
@@ -420,7 +429,7 @@ export function BacktestInlineChart({ run }: { run: BacktestRun }) {
     return () => {
       cancelled = true;
     };
-  }, [run]);
+  }, [run, interval]);
 
   if (loading) {
     return <p className="text-sm text-ink-muted">Loading candles…</p>;
@@ -436,6 +445,13 @@ export function BacktestInlineChart({ run }: { run: BacktestRun }) {
       candles={candles}
       rightOffset={8}
       screenshotName={`${run.symbol}-backtest.png`}
+      toolbar={
+        <BacktestChartIntervalBar
+          run={run}
+          interval={interval}
+          onChange={onIntervalChange}
+        />
+      }
       overlay={snapOverlayToCandles(
         buildBacktestChartOverlay({
           triggerPrice:
@@ -450,6 +466,9 @@ export function BacktestInlineChart({ run }: { run: BacktestRun }) {
 
 export function BacktestChartButton({ run }: { run: BacktestRun }) {
   const [open, setOpen] = useState(false);
+  const [interval, setInterval] = useState(() =>
+    chartIntervalForWindow(run.fromMs, run.toMs, run.interval),
+  );
   const [candles, setCandles] = useState<CandleBar[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -459,7 +478,9 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
       return;
     }
     let cancelled = false;
-    const { interval, bounds } = backtestChartWindow(run);
+    setLoading(true);
+    setError(null);
+    const { bounds } = backtestChartWindow(run, interval);
     const params = new URLSearchParams({
       venue: run.venue,
       symbol: run.symbol,
@@ -484,7 +505,7 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
       })
       .then((rows) => {
         if (!cancelled) {
-          setCandles(candlesForBacktestChart(rows, run));
+          setCandles(candlesForBacktestChart(rows, run, interval));
         }
       })
       .catch((err: unknown) => {
@@ -500,7 +521,7 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
     return () => {
       cancelled = true;
     };
-  }, [open, run]);
+  }, [open, run, interval]);
 
   return (
     <>
@@ -517,7 +538,7 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
       </button>
       {open ? (
         <Modal
-          title={`${run.symbol} · ${DCA_INDICATOR_TIMEFRAME_LABELS[run.interval]}`}
+          title={`${run.symbol} · ${DCA_INDICATOR_TIMEFRAME_LABELS[interval]}`}
           onClose={() => setOpen(false)}
           wide
         >
@@ -531,6 +552,13 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
                 candles={candles}
                 rightOffset={8}
                 screenshotName={`${run.symbol}-backtest.png`}
+                toolbar={
+                  <BacktestChartIntervalBar
+                    run={run}
+                    interval={interval}
+                    onChange={setInterval}
+                  />
+                }
                 overlay={snapOverlayToCandles(
                   buildBacktestChartOverlay({
                     triggerPrice:

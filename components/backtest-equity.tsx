@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
 import { ChartScreenshotControls } from "@/components/desk-chart";
 import {
   backtestActivityBounds,
-  chartIntervalForWindow,
   type BacktestRun,
 } from "@/lib/backtest/model";
 import { buildEquityTimeline } from "@/lib/backtest/study";
+import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 
 const HEIGHT = 280;
@@ -42,13 +43,20 @@ type ChartHandle = {
   remove: () => void;
 };
 
-export function BacktestEquityPanel({ run }: { run: BacktestRun }) {
+export function BacktestEquityPanel({
+  run,
+  interval,
+  onIntervalChange,
+}: {
+  run: BacktestRun;
+  interval: DcaIndicatorTimeframe;
+  onIntervalChange: (value: DcaIndicatorTimeframe) => void;
+}) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartHandle | null>(null);
   const [candles, setCandles] = useState<CandleBar[]>([]);
   useEffect(() => {
     let cancelled = false;
-    const interval = chartIntervalForWindow(run.fromMs, run.toMs, run.interval);
     const params = new URLSearchParams({
       venue: run.venue,
       symbol: run.symbol,
@@ -85,7 +93,7 @@ export function BacktestEquityPanel({ run }: { run: BacktestRun }) {
     return () => {
       cancelled = true;
     };
-  }, [run]);
+  }, [run, interval]);
   const points = useMemo(
     () => buildEquityTimeline(run, candles),
     [run, candles],
@@ -202,9 +210,16 @@ export function BacktestEquityPanel({ run }: { run: BacktestRun }) {
   return (
     <div className="overflow-hidden rounded-card border border-line bg-surface">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2">
-        <p className="text-xs text-ink-muted">
-          Equity · start ${money(start)}
-        </p>
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <p className="text-xs text-ink-muted">
+            Equity · start ${money(start)}
+          </p>
+          <BacktestChartIntervalBar
+            run={run}
+            interval={interval}
+            onChange={onIntervalChange}
+          />
+        </div>
         <div className="flex items-center gap-3">
           <p
             className={`text-sm font-medium tabular-nums ${

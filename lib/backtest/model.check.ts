@@ -6,6 +6,8 @@ import {
   formatBacktestReturnPct,
   intervalMs,
   backtestActivityBounds,
+  backtestChartIntervalChoices,
+  backtestChartIntervalFits,
   chartIntervalForWindow,
   parseBacktestDateRange,
   parseComparableSymbols,
@@ -92,6 +94,35 @@ assert.equal(
 assert.equal(
   chartIntervalForWindow(Date.UTC(2026, 6, 1), Date.UTC(2026, 6, 31), "60"),
   "60",
+);
+assert.deepEqual(backtestChartIntervalChoices("5"), [
+  "5",
+  "15",
+  "60",
+  "240",
+  "D",
+]);
+assert.deepEqual(backtestChartIntervalChoices("60"), [
+  "15",
+  "60",
+  "240",
+  "D",
+]);
+assert.equal(
+  backtestChartIntervalFits(
+    Date.UTC(2026, 0, 1),
+    Date.UTC(2026, 0, 2),
+    "5",
+  ),
+  true,
+);
+assert.equal(
+  backtestChartIntervalFits(
+    Date.UTC(2020, 0, 1),
+    Date.UTC(2026, 0, 1),
+    "15",
+  ),
+  false,
 );
 assert.deepEqual(
   backtestActivityBounds({
