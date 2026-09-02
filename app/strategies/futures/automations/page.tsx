@@ -89,7 +89,7 @@ export default async function FuturesAutomationsPage({
       await listFuturesWebhooks({
         accountId: session.account.id,
         origin: futuresWebhookOrigin(await headers()),
-      })
+      }).catch(() => [])
     )
       .filter((row) => row.kind === "signal")
       .map((row) => ({ id: row.id, name: row.name }));
@@ -100,12 +100,17 @@ export default async function FuturesAutomationsPage({
     )
       ? null
       : (settings.paperLeverage ?? null);
-    const openPositions = await loadFuturesPositions({ status: "open" });
+    const openPositions = await loadFuturesPositions({
+      status: "open",
+    }).catch(() => []);
     if (accountCanHoldConnections(session.account.mode) && settings.connectionId) {
       const connections = await listExchangeConnections(session.member.id);
       const bound = connections.find((row) => row.id === settings.connectionId);
       if (bound) {
-        const snapshot = await loadAccountSnapshot(session.member.id, bound.id);
+        const snapshot = await loadAccountSnapshot(
+          session.member.id,
+          bound.id,
+        ).catch(() => ({ ok: false as const, error: "snapshot" }));
         if (snapshot.ok) {
           availableUsdt = snapshot.snapshot.availableBalance;
           bookUsdt = availableUsdt;
@@ -126,11 +131,11 @@ export default async function FuturesAutomationsPage({
     const templates = await listApplyableTemplates({
       userId: session.member.id,
       deskType: "dca",
-    });
+    }).catch(() => []);
     const sets = await listApplyableSets({
       userId: session.member.id,
       deskType: "dca",
-    });
+    }).catch(() => []);
     return (
       <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
         <PageHeading as="h2" title="Automations (bots)" />

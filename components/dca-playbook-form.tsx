@@ -156,10 +156,14 @@ function CycleLock({
   locked: boolean;
   children: React.ReactNode;
 }) {
-  if (!locked) {
-    return children;
-  }
-  return <div className="opacity-80">{children}</div>;
+  return (
+    <fieldset
+      disabled={locked}
+      className={`min-w-0 border-0 p-0 ${locked ? "opacity-80" : ""}`}
+    >
+      {children}
+    </fieldset>
+  );
 }
 
 function SizeGuardNote({ message }: { message: string | null }) {
@@ -943,7 +947,12 @@ export function DcaPlaybookForm({
     const parsed = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
     return parsed.ok ? snapshotDcaRecipe(parsed.config) : null;
   }
-  const parsedLive = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
+  let parsedLive: ReturnType<typeof parseDcaPlaybookForm>;
+  try {
+    parsedLive = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
+  } catch {
+    parsedLive = { ok: false, error: "Could not read the form." };
+  }
   const liveConfig = parsedLive.ok ? parsedLive.config : null;
   const dirty =
     !playbook ||
@@ -1006,7 +1015,6 @@ export function DcaPlaybookForm({
         delete: deleteDcaPlaybookAction,
       }}
       onResult={(result) => onResult?.(result as DcaDeskActionResult)}
-      onInput={() => setFormTick((tick) => tick + 1)}
       onChange={() => setFormTick((tick) => tick + 1)}
       guard={(event) => {
         const submitter = (event.nativeEvent as SubmitEvent).submitter as
@@ -1127,6 +1135,7 @@ export function DcaPlaybookForm({
             name="name"
             defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
             maxLength={40}
+            onChange={() => setFormTick((tick) => tick + 1)}
             className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
           />
         </label>
