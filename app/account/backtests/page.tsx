@@ -3,29 +3,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { BacktestQueueForm } from "@/components/backtest-queue-form";
-import {
-  BacktestRunRefresh,
-  RemoveBacktestButton,
-} from "@/components/backtest-run-view";
+import { BacktestRunRefresh } from "@/components/backtest-run-view";
+import { BacktestRunsTable } from "@/components/backtest-runs-table";
 import { getSessionMember } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { toBacktestLibraryItem } from "@/lib/backtest/library";
+import { backtestQueueSeedFromRun } from "@/lib/backtest/model";
 import {
-  backtestQueueSeedFromRun,
-  backtestRoePct,
-  backtestWindowDays,
-  formatBacktestReturnPct,
-} from "@/lib/backtest/model";
-import { formatCount } from "@/lib/opportunities/format";
-import {
-  canDeleteBacktestRun,
   canReadBacktestRun,
   listBacktestRuns,
   loadBacktestRun,
 } from "@/lib/backtest/store";
 import { canBacktestDcaRecipe } from "@/lib/backtest/replay-dca";
 import { canBacktestPerpsRecipe } from "@/lib/backtest/replay";
-import { signedTone } from "@/lib/opportunities/format";
 import { firstSearchValue } from "@/lib/paper/open";
 import { listDeskBacktestBots } from "@/lib/backtest/desk-bots";
 import {
@@ -39,10 +29,6 @@ export const metadata: Metadata = {
 };
 
 export const maxDuration = 60;
-
-function statusLabel(status: string): string {
-  return status.charAt(0).toUpperCase() + status.slice(1);
-}
 
 export default async function AccountBacktestsPage({
   searchParams,
@@ -144,103 +130,12 @@ export default async function AccountBacktestsPage({
           No runs yet. Open Backtest from a bot, or pick a template below.
         </p>
       ) : (
-        <div className="mb-8 overflow-x-auto rounded-card border border-line bg-surface">
-          <table className="w-full min-w-max text-left text-sm">
-            <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
-              <tr>
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Type</th>
-                <th className="px-4 py-3 font-medium">Contract</th>
-                <th className="px-4 py-3 font-medium">Comparables</th>
-                <th className="px-4 py-3 font-medium">Days</th>
-                <th className="px-4 py-3 font-medium">Win Rate</th>
-                <th className="px-4 py-3 font-medium">ROE</th>
-                <th className="px-4 py-3 font-medium">Realized</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {runs.map((row) => {
-                const days = backtestWindowDays(row.fromMs, row.toMs);
-                const winRate =
-                  row.stats && row.stats.trades > 0
-                    ? `${Math.round(row.stats.winRate * 100)}%`
-                    : "—";
-                const roe = row.stats
-                  ? backtestRoePct(
-                      row.stats.realizedUsdt,
-                      row.orders,
-                      row.leverage,
-                    )
-                  : null;
-                return (
-                  <tr
-                    key={row.id}
-                    className="border-b border-line last:border-b-0"
-                  >
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/account/backtests/${row.id}`}
-                        className="text-accent hover:underline"
-                      >
-                        {row.recipe.name}
-                      </Link>
-                      {row.userId == null ? (
-                        <span className="ml-2 text-xs text-ink-faint">
-                          published
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-3 text-ink-muted">
-                      {row.deskType === "dca" ? "DCA" : "Perps"}
-                    </td>
-                    <td className="px-4 py-3 font-medium tabular-nums">
-                      {row.symbol}
-                    </td>
-                    <td className="px-4 py-3 text-ink-muted">
-                      {(row.comparableSymbols ?? []).length > 0
-                        ? `+${row.comparableSymbols.length}`
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 tabular-nums text-ink-muted">
-                      {days != null ? formatCount(days) : "—"}
-                    </td>
-                    <td className="px-4 py-3 tabular-nums">{winRate}</td>
-                    <td className={`px-4 py-3 tabular-nums ${signedTone(roe)}`}>
-                      {formatBacktestReturnPct(roe)}
-                    </td>
-                    <td
-                      className={`px-4 py-3 tabular-nums ${
-                        row.stats
-                          ? signedTone(row.stats.realizedUsdt)
-                          : "text-ink-faint"
-                      }`}
-                    >
-                      {row.stats
-                        ? row.stats.realizedUsdt.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3">{statusLabel(row.status)}</td>
-                    <td className="px-4 py-3">
-                      <RemoveBacktestButton
-                        runId={row.id}
-                        canRemove={canDeleteBacktestRun(
-                          row,
-                          member.id,
-                          isAdmin,
-                        )}
-                        compact
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="mb-8">
+          <BacktestRunsTable
+            runs={runs}
+            memberId={member.id}
+            isAdmin={isAdmin}
+          />
         </div>
       )}
       <BacktestQueueForm

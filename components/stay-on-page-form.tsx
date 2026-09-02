@@ -96,6 +96,7 @@ export const StayOnPageForm = forwardRef<
     onInput?: (event: FormEvent<HTMLFormElement>) => void;
     className?: string;
     noValidate?: boolean;
+    id?: string;
     children: ReactNode;
   }
 >(function StayOnPageForm(
@@ -107,6 +108,7 @@ export const StayOnPageForm = forwardRef<
     onInput,
     className,
     noValidate = false,
+    id,
     children,
   },
   ref,
@@ -162,6 +164,7 @@ export const StayOnPageForm = forwardRef<
   return (
     <form
       ref={ref}
+      id={id}
       noValidate={noValidate}
       onInput={onInput}
       onSubmit={(event) => void onSubmit(event)}

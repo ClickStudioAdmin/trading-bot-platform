@@ -59,7 +59,7 @@ export default async function CopyDeskPerformancePage({
     <>
       <p className="mb-3 text-sm">
         <Link href="/account/copy" className="text-accent">
-          Copy Desks
+          Copy Trading
         </Link>
       </p>
       <CopyDeskDetailsHeader

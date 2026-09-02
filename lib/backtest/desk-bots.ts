@@ -27,6 +27,7 @@ export async function listDeskBacktestBots(
         rows.push({
           id: `dca:${playbook.id}`,
           name: recipe.name,
+          deskId: desk.id,
           deskName: desk.name,
           recipe,
           venue: desk.venue,
@@ -47,6 +48,7 @@ export async function listDeskBacktestBots(
         rows.push({
           id: `perps:${rule.id}`,
           name: recipe.name,
+          deskId: desk.id,
           deskName: desk.name,
           recipe,
           venue: desk.venue,

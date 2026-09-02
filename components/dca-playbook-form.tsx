@@ -960,6 +960,7 @@ export function DcaPlaybookForm({
 
   return (
     <StayOnPageForm
+      id={playbook ? `bot-${playbook.id}` : undefined}
       ref={formRef}
       action={saveDcaPlaybookAction}
       actions={{
@@ -987,7 +988,7 @@ export function DcaPlaybookForm({
         }
         return true;
       }}
-      className="space-y-3 rounded-card border border-line bg-surface px-4 py-3"
+      className="scroll-mt-24 space-y-3 rounded-card border border-line bg-surface px-4 py-3"
     >
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <input type="hidden" name="deskVenue" value={policy.venueId} />

@@ -35,7 +35,7 @@ export default async function AccountTemplatesPage({
     <TemplatesLibrary
       variant="account"
       title="Bot Templates"
-      description="Your templates. Add a platform or personal template to a matching desk from Automations. Hover a Backtested badge for run highlights; click opens the run in a new tab."
+      description="Your templates. Add a platform or personal template to a matching desk from Automations. Backtests opens the attached run in a new tab; hover for highlights."
       templates={templates}
       sets={sets}
       sharedTemplates={sharedTemplates}

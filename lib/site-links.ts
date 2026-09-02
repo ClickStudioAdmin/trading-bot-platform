@@ -3,7 +3,7 @@ export const SITE_LINKS = [
 ] as const;
 
 export const HEADER_LINKS = [
-  { href: "/account/copy", label: "Copy Desks" },
+  { href: "/account/copy", label: "Copy Trading" },
   { href: "/account/backtests", label: "Backtesting Tool" },
 ] as const;
 

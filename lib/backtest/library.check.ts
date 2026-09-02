@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   canQueueUserBacktest,
   decideBacktestTemplateActions,
+  deskBotAutomationsHref,
   findMatchingBacktestDeskBot,
   findMatchingBacktestTemplate,
   groupBacktestLibrary,
@@ -189,6 +190,7 @@ assert.equal(
     {
       id: "dca:1",
       name: "Desk dip",
+      deskId: "desk-1",
       deskName: "Paper",
       recipe: perps,
       venue: "bybit",
@@ -204,6 +206,7 @@ assert.equal(
       {
         id: "dca:1",
         name: "Desk dip",
+        deskId: "desk-1",
         deskName: "Paper",
         recipe: perps,
         venue: "bybit",
@@ -212,6 +215,10 @@ assert.equal(
     ],
   ),
   null,
+);
+assert.equal(
+  deskBotAutomationsHref({ id: "dca:pb-1", deskId: "desk-1" }),
+  "/strategies/futures/automations?desk=desk-1#bot-pb-1",
 );
 
 const grouped = groupBacktestLibrary(

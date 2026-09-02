@@ -8,11 +8,12 @@ import { getSessionMember } from "@/lib/auth/session";
 import { listDeskBacktestBots } from "@/lib/backtest/desk-bots";
 import {
   decideBacktestTemplateActions,
+  deskBotAutomationsHref,
   findMatchingBacktestDeskBot,
   findMatchingBacktestTemplate,
   toBacktestLibraryItem,
 } from "@/lib/backtest/library";
-import type { BacktestRecipe } from "@/lib/backtest/model";
+import type { BacktestRecipe, BacktestRun } from "@/lib/backtest/model";
 import {
   canDeleteBacktestRun,
   canReadBacktestRun,
@@ -112,9 +113,7 @@ export default async function AccountBacktestDetailPage({
           : deskAllowsPerpsRecipes(desk),
     )
     .map((desk) => ({ id: desk.id, name: desk.name }));
-  const comparables = run.parentRunId
-    ? []
-    : await listBacktestRuns({ parentRunId: run.id, limit: 20 });
+  const comparableFamily = await loadComparableFamily(run, member.id, isAdmin);
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -130,15 +129,43 @@ export default async function AccountBacktestDetailPage({
         attachTemplateId={templateActions.matchingTemplateId}
         matchingTemplateName={templateActions.matchingTemplateName}
         matchingDeskLabel={templateActions.matchingDeskLabel}
+        matchingDeskHref={
+          matchingDeskBot ? deskBotAutomationsHref(matchingDeskBot) : null
+        }
         linkedTemplateName={templateActions.linkedName}
         isAdmin={isAdmin}
+        memberId={member.id}
         folders={folders}
         returnTo="/account/backtests"
-        comparables={comparables}
-        parentHref={
-          run.parentRunId ? `/account/backtests/${run.parentRunId}` : null
-        }
+        comparablePrimary={comparableFamily?.primary ?? null}
+        comparables={comparableFamily?.children ?? []}
       />
     </main>
   );
+}
+
+async function loadComparableFamily(
+  run: BacktestRun,
+  userId: string,
+  isAdmin: boolean,
+): Promise<{ primary: BacktestRun; children: BacktestRun[] } | null> {
+  if (run.parentRunId) {
+    const parent = await loadBacktestRun(run.parentRunId);
+    if (!parent || !canReadBacktestRun(parent, userId, isAdmin)) {
+      return null;
+    }
+    const children = await listBacktestRuns({
+      parentRunId: parent.id,
+      limit: 20,
+    });
+    return { primary: parent, children };
+  }
+  const children = await listBacktestRuns({
+    parentRunId: run.id,
+    limit: 20,
+  });
+  if (children.length === 0) {
+    return null;
+  }
+  return { primary: run, children };
 }

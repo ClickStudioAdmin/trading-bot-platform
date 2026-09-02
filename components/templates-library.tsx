@@ -66,12 +66,17 @@ function tabForVariant(
 type SortKey =
   | "name"
   | "deskType"
+  | "contract"
   | "owner"
   | "folder"
   | "shared"
   | "updated"
   | "items"
   | "starter";
+
+function templateContract(row: { recipe: AutomationTemplate["recipe"] }): string {
+  return row.recipe.kind === "cash_and_carry" ? "" : row.recipe.symbol;
+}
 
 type SortState = { key: SortKey; dir: "asc" | "desc" };
 
@@ -294,6 +299,7 @@ export function TemplatesLibrary({
         row.ownerEmail ?? "",
         row.sharedByEmail ?? "",
         formatTemplateDeskType(row.deskType),
+        templateContract(row),
         folderLabel(held),
         sharedLabel(row.sharedWith, row.sharedByEmail),
         templateShowsStarterPack(row, knownFolders) ? "starter pack" : "",
@@ -308,6 +314,9 @@ export function TemplatesLibrary({
       }
       if (sort.key === "deskType") {
         return compareText(a.deskType, b.deskType, sort.dir);
+      }
+      if (sort.key === "contract") {
+        return compareText(templateContract(a), templateContract(b), sort.dir);
       }
       if (sort.key === "owner") {
         return compareText(a.ownerEmail ?? "", b.ownerEmail ?? "", sort.dir);
@@ -442,7 +451,7 @@ export function TemplatesLibrary({
   const bulkFolders = foldersForAll(selectedTemplates, sets, variant);
   const showStarterPack = variant === "admin";
   const tableColumns =
-    5 +
+    7 +
     (sharedTab ? 0 : 1) +
     (showOwner ? 1 : 0) +
     (showSharedWith ? 1 : 0) +
@@ -804,6 +813,8 @@ export function TemplatesLibrary({
               )}
               <SortTh label="Name" k="name" sort={sort} onSort={onSort} />
               <SortTh label="Desk Type" k="deskType" sort={sort} onSort={onSort} />
+              <SortTh label="Contract" k="contract" sort={sort} onSort={onSort} />
+              <th className="px-4 py-3 font-medium">Backtests</th>
               {showOwner ? (
                 <SortTh
                   label={sharedTab ? "Shared by" : "Owner"}
@@ -843,24 +854,29 @@ export function TemplatesLibrary({
                     </td>
                   )}
                   <td className="px-4 py-3 font-medium text-ink">
-                    <span className="inline-flex flex-wrap items-center gap-2">
-                      {row.name}
-                      {linkedRun ? (
-                        <BacktestHighlightHover highlight={linkedRun}>
-                          <Link
-                            href={`/account/backtests/${linkedRun.runId}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="rounded-control bg-success/15 px-1.5 py-0.5 text-[11px] font-medium text-success hover:bg-success/25"
-                          >
-                            Backtested
-                          </Link>
-                        </BacktestHighlightHover>
-                      ) : null}
-                    </span>
+                    {row.name}
                   </td>
                   <td className="px-4 py-3 text-ink-muted">
                     {formatTemplateDeskType(row.deskType)}
+                  </td>
+                  <td className="px-4 py-3 font-medium tabular-nums">
+                    {templateContract(row) || "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {linkedRun ? (
+                      <BacktestHighlightHover highlight={linkedRun}>
+                        <Link
+                          href={`/account/backtests/${linkedRun.runId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-accent hover:underline"
+                        >
+                          Open
+                        </Link>
+                      </BacktestHighlightHover>
+                    ) : (
+                      <span className="text-ink-faint">—</span>
+                    )}
                   </td>
                   {showOwner ? (
                     <td className="px-4 py-3 text-ink-muted">

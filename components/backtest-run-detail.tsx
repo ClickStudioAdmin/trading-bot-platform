@@ -14,6 +14,7 @@ import {
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
 import { ColumnHint } from "@/components/column-hint";
+import { BacktestRunsTable } from "@/components/backtest-runs-table";
 import type { AutomationTemplateSet } from "@/lib/templates/store";
 import {
   BACKTEST_FEE_PRESETS,
@@ -116,6 +117,7 @@ function BacktestMatchCard({
   deskType,
   matchingTemplateName,
   matchingDeskLabel,
+  matchingDeskHref,
   linkedTemplateName,
   canAttach,
   canSaveAs,
@@ -131,6 +133,7 @@ function BacktestMatchCard({
   deskType: BacktestRun["deskType"];
   matchingTemplateName: string | null;
   matchingDeskLabel: string | null;
+  matchingDeskHref: string | null;
   linkedTemplateName: string | null;
   canAttach: boolean;
   canSaveAs: boolean;
@@ -159,7 +162,7 @@ function BacktestMatchCard({
           />
         ) : linkedTemplateName ? (
           <p className="rounded-control bg-success/15 px-3 py-1.5 text-center text-sm text-success">
-            Attached
+            Results Attached
           </p>
         ) : null}
         {canSaveAs ? (
@@ -194,7 +197,16 @@ function BacktestMatchCard({
         ) : (
           <p className="text-sm text-ink-faint">No matching desk bot</p>
         )}
-        {applyDesks && applyDesks.length > 0 ? (
+        {matchingDeskHref ? (
+          <Link
+            href={matchingDeskHref}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-accent hover:underline"
+          >
+            Go to Bot
+          </Link>
+        ) : applyDesks && applyDesks.length > 0 ? (
           <ApplyBacktestButton
             runId={runId}
             defaultName={defaultName}
@@ -218,12 +230,14 @@ export function BacktestRunDetail({
   attachTemplateId = null,
   matchingTemplateName = null,
   matchingDeskLabel = null,
+  matchingDeskHref = null,
   linkedTemplateName = null,
   isAdmin = false,
+  memberId,
   folders = [],
   returnTo,
   comparables = [],
-  parentHref,
+  comparablePrimary = null,
 }: {
   run: BacktestRun;
   listHref: string;
@@ -236,12 +250,14 @@ export function BacktestRunDetail({
   attachTemplateId?: string | null;
   matchingTemplateName?: string | null;
   matchingDeskLabel?: string | null;
+  matchingDeskHref?: string | null;
   linkedTemplateName?: string | null;
   isAdmin?: boolean;
+  memberId: string;
   folders?: AutomationTemplateSet[];
   returnTo: string;
   comparables?: BacktestRun[];
-  parentHref?: string | null;
+  comparablePrimary?: BacktestRun | null;
 }) {
   const params = recipeParamRows(run.recipe);
   const complete = run.status === "done";
@@ -287,11 +303,6 @@ export function BacktestRunDetail({
             <Link href={listHref} className="text-accent hover:underline">
               All backtests
             </Link>
-            {parentHref ? (
-              <Link href={parentHref} className="text-accent hover:underline">
-                Primary pair
-              </Link>
-            ) : null}
             <RemoveBacktestButton
               runId={run.id}
               canRemove={canRemove}
@@ -306,6 +317,7 @@ export function BacktestRunDetail({
           deskType={run.deskType}
           matchingTemplateName={matchingTemplateName}
           matchingDeskLabel={matchingDeskLabel}
+          matchingDeskHref={matchingDeskHref}
           linkedTemplateName={linkedTemplateName}
           canAttach={canAttach}
           canSaveAs={canSaveAs}
@@ -337,7 +349,7 @@ export function BacktestRunDetail({
               href={backtestRerunHref(run.id)}
               className="text-sm text-accent hover:underline"
             >
-              Load parameters into new backtest
+              Load into new backtest
             </Link>
           </div>
           <BacktestPropertyList rows={params} />
@@ -387,95 +399,20 @@ export function BacktestRunDetail({
         )}
       </section>
 
-      {complete && comparables.length > 0 ? (
+      {comparablePrimary && comparables.length > 0 ? (
         <section>
           <h2 className="mb-3 text-lg font-semibold">Comparables</h2>
-          <div className="overflow-x-auto rounded-card border border-line bg-surface">
-            <table className="w-full min-w-max text-left text-sm">
-              <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint [&_th]:whitespace-nowrap">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Pair</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Trades</th>
-                  <th className="px-4 py-3 font-medium">Account return</th>
-                  <th className="px-4 py-3 font-medium">Realized</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-line">
-                  <td className="px-4 py-3 font-medium tabular-nums">
-                    {run.symbol}
-                  </td>
-                  <td className="px-4 py-3">{statusLabel(run.status)}</td>
-                  <td className="px-4 py-3 tabular-nums">
-                    {run.stats?.trades ?? "—"}
-                  </td>
-                  <td
-                    className={`px-4 py-3 tabular-nums ${signedTone(
-                      run.stats ? realizedReturnPct(run.stats) : null,
-                    )}`}
-                  >
-                    {formatBacktestReturnPct(
-                      run.stats ? realizedReturnPct(run.stats) : null,
-                    )}
-                  </td>
-                  <td
-                    className={`px-4 py-3 tabular-nums ${
-                      run.stats
-                        ? signedTone(run.stats.realizedUsdt)
-                        : "text-ink-faint"
-                    }`}
-                  >
-                    {run.stats
-                      ? run.stats.realizedUsdt.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })
-                      : "—"}
-                  </td>
-                </tr>
-                {comparables.map((row) => (
-                  <tr key={row.id} className="border-b border-line last:border-b-0">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`${listHref}/${row.id}`}
-                        className="font-medium tabular-nums text-accent hover:underline"
-                      >
-                        {row.symbol}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">{statusLabel(row.status)}</td>
-                    <td className="px-4 py-3 tabular-nums">
-                      {row.stats?.trades ?? "—"}
-                    </td>
-                    <td
-                      className={`px-4 py-3 tabular-nums ${signedTone(
-                        row.stats ? realizedReturnPct(row.stats) : null,
-                      )}`}
-                    >
-                      {formatBacktestReturnPct(
-                        row.stats ? realizedReturnPct(row.stats) : null,
-                      )}
-                    </td>
-                    <td
-                      className={`px-4 py-3 tabular-nums ${
-                        row.stats
-                          ? signedTone(row.stats.realizedUsdt)
-                          : "text-ink-faint"
-                      }`}
-                    >
-                      {row.stats
-                        ? row.stats.realizedUsdt.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <BacktestRunsTable
+            runs={[
+              comparablePrimary,
+              ...comparables.filter((row) => row.id !== comparablePrimary.id),
+            ]}
+            memberId={memberId}
+            isAdmin={isAdmin}
+            currentRunId={run.id}
+            primaryRunId={comparablePrimary.id}
+            returnTo={`${listHref}/${run.id}`}
+          />
         </section>
       ) : null}
     </div>

@@ -748,20 +748,22 @@ export function SaveBacktestAsTemplateButton({
             />
           </label>
           {isAdmin && canSaveAsPlatform && canSaveAs ? (
-            <label className="mt-3 flex items-start gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                checked={platform}
+            <label className="mt-3 block text-xs text-ink-muted">
+              Save to
+              <select
+                value={platform ? "platform" : "library"}
                 onChange={(event) => {
-                  setPlatform(event.target.checked);
+                  setPlatform(event.target.value === "platform");
                   setFolderIds(new Set());
                   setCreateFolder(false);
                   setNewFolderName("");
                   setStarterPack(false);
                 }}
-                className="mt-0.5 size-4"
-              />
-              Save as platform template
+                className={saveFieldClass}
+              >
+                <option value="library">Your library</option>
+                <option value="platform">Platform catalog</option>
+              </select>
             </label>
           ) : null}
           {platform ? (
@@ -1008,7 +1010,7 @@ export function RemoveBacktestButton({
           inline
             ? "text-sm text-danger hover:underline disabled:opacity-50"
             : compact
-              ? "rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-50"
+              ? "rounded-control border border-line px-2 py-0.5 text-xs font-medium text-danger hover:bg-danger/10 disabled:opacity-50"
               : "rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50"
         }
       >

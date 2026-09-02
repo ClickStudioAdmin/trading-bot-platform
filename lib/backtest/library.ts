@@ -1,6 +1,8 @@
+import { deskPath } from "@/lib/accounts/model";
 import type { BacktestRecipe } from "@/lib/backtest/model";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
+import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import {
   parseTemplateRecipe,
   recipesMatchReplayFields,
@@ -27,6 +29,7 @@ export type BacktestLibraryItem = {
 export type BacktestDeskBot = {
   id: string;
   name: string;
+  deskId: string;
   deskName: string;
   recipe: BacktestRecipe;
   venue: string;
@@ -77,6 +80,15 @@ export function formatBacktestDeskMatch(bot: {
   deskName: string;
 }): string {
   return `${bot.deskName} · ${bot.name}`;
+}
+
+export function deskBotAutomationsHref(bot: {
+  id: string;
+  deskId: string;
+}): string {
+  const sep = bot.id.indexOf(":");
+  const botId = sep >= 0 ? bot.id.slice(sep + 1) : bot.id;
+  return `${deskPath(FUTURES_PATHS.automations, bot.deskId)}#bot-${botId}`;
 }
 
 export type BacktestLibraryFolder = {
