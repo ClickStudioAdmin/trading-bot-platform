@@ -178,19 +178,17 @@ function BacktestMatchCard({
           }
         />
         {canAttach || linkedTemplateName ? (
-          <div className="flex justify-end">
-            {canAttach ? (
-              <AttachBacktestButton
-                runId={runId}
-                sourceName={matchingTemplateName ?? sourceTemplateName}
-                templateId={attachTemplateId ?? ""}
-              />
-            ) : (
-              <p className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
-                Attached
-              </p>
-            )}
-          </div>
+          canAttach ? (
+            <AttachBacktestButton
+              runId={runId}
+              sourceName={matchingTemplateName ?? sourceTemplateName}
+              templateId={attachTemplateId ?? ""}
+            />
+          ) : (
+            <p className="rounded-control bg-success/15 px-3 py-1.5 text-center text-sm text-success">
+              Attached
+            </p>
+          )
         ) : null}
         <MatchRow
           label="Desk"
@@ -596,6 +594,11 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
               ? undefined
               : formatSignedUsd(-equityDd.maxDrawdownUsdt)
           }
+          noteTone={
+            empty || !equityDd || !(equityDd.maxDrawdownUsdt > 0)
+              ? undefined
+              : signedTone(-equityDd.maxDrawdownUsdt)
+          }
         />
         <StatCard
           label="Realized Profit"
@@ -635,12 +638,14 @@ function StatCard({
   hint,
   note,
   toneClass,
+  noteTone,
 }: {
   label: string;
   value: string;
   hint?: string;
   note?: string;
   toneClass?: string;
+  noteTone?: string;
 }) {
   return (
     <div className="rounded-card border border-line bg-surface p-5">
@@ -652,7 +657,9 @@ function StatCard({
       >
         {value}
       </p>
-      {note ? <p className="mt-2 text-xs text-ink-faint">{note}</p> : null}
+      {note ? (
+        <p className={`mt-2 text-xs ${noteTone ?? "text-ink-muted"}`}>{note}</p>
+      ) : null}
     </div>
   );
 }

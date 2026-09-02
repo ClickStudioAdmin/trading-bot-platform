@@ -612,13 +612,9 @@ export function AttachBacktestButton({
         type="submit"
         disabled={pending}
         title="Link this run to the matching library template. Recipe is unchanged."
-        className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success hover:bg-success/25 disabled:opacity-50"
+        className="w-full rounded-control border border-line px-3 py-2 text-sm text-ink hover:border-line-strong disabled:opacity-50"
       >
-        {pending
-          ? "Attaching…"
-          : sourceName
-            ? `Attach to ${sourceName}`
-            : "Attach"}
+        {pending ? "Attaching…" : "Attach to template"}
       </button>
       {error ? <p className="mt-2 text-xs text-danger">{error}</p> : null}
     </form>
