@@ -462,6 +462,11 @@ function ClosedBacktestRows({
           <span className="min-w-0">
             <span className="flex items-center gap-2 font-medium">
               <span>{baseCoin}</span>
+              {cycle.exitReason === "liquidation" ? (
+                <span className="rounded-control bg-danger/15 px-1.5 py-0.5 text-[11px] font-medium text-danger">
+                  Liq
+                </span>
+              ) : null}
             </span>
             <span
               className="mt-0.5 block text-xs text-ink-faint"

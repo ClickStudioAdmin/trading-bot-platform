@@ -811,10 +811,10 @@ export function backtestDrawdownPct(stats: Pick<
 }
 
 /** Header Max Drawdown: stored marked-equity dip, not a fill-only rebuild. */
-export function backtestDrawdownCard(stats: Pick<
-  BacktestStats,
-  "trades" | "startingUsdt" | "maxDrawdownUsdt"
->): { value: string; toneClass: string; note?: string } {
+export function backtestDrawdownCard(
+  stats: Pick<BacktestStats, "trades" | "startingUsdt" | "maxDrawdownUsdt">,
+  extra?: { liquidated?: boolean },
+): { value: string; toneClass: string; note?: string } {
   if (!(stats.trades > 0)) {
     return { value: "—", toneClass: "text-ink" };
   }
@@ -822,6 +822,13 @@ export function backtestDrawdownCard(stats: Pick<
     ? stats.maxDrawdownUsdt
     : 0;
   const visible = Math.round(dip) > 0;
+  if (extra?.liquidated && visible) {
+    return {
+      value: formatPct(1),
+      toneClass: signedTone(-dip),
+      note: formatSignedUsd(-dip),
+    };
+  }
   const pct = backtestDrawdownPct({
     startingUsdt: stats.startingUsdt,
     maxDrawdownUsdt: visible ? dip : 0,

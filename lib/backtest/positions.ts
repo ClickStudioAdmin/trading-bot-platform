@@ -199,18 +199,21 @@ export function backtestChartLevels(
   entry: number | null;
   takeProfit: number | null;
   stopLoss: number | null;
+  liquidation: number | null;
   side: "long" | "short";
 } | null {
   const grouped = groupBacktestOrdersIntoCycles(orders);
-  const cycle = grouped.open[0] ?? grouped.closed[grouped.closed.length - 1];
+  const cycle = grouped.open[0] ?? grouped.closed[0];
   if (!cycle) {
     return null;
   }
+  const liquidated = cycle.exitReason === "liquidation";
   const planned = plannedExitsForBacktestCycle(recipe, cycle);
   return {
     entry: cycle.entryPrice,
-    takeProfit: planned.takeProfit,
-    stopLoss: planned.stopLoss,
+    takeProfit: liquidated ? null : planned.takeProfit,
+    stopLoss: liquidated ? null : planned.stopLoss,
+    liquidation: liquidated ? cycle.exitPrice : null,
     side: cycle.side,
   };
 }

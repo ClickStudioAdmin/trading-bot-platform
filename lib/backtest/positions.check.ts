@@ -128,6 +128,17 @@ assert.ok(exits.stopLoss != null && exits.stopLoss < grouped.closed[1]!.entryPri
 const levels = backtestChartLevels(recipe, fills.slice(0, 4));
 assert.equal(levels?.side, "short");
 assert.equal(levels?.entry, 50);
+assert.equal(levels?.liquidation, null);
+const newest = backtestChartLevels(recipe, fills);
+assert.equal(newest?.side, "short");
+assert.equal(newest?.entry, 50);
+const liqLevels = backtestChartLevels(recipe, [
+  fills[0]!,
+  fills[1]!,
+  { ...fills[2]!, reason: "liquidation", price: 80, realizedUsdt: -60 },
+]);
+assert.equal(liqLevels?.liquidation, 80);
+assert.equal(liqLevels?.takeProfit, null);
 assert.equal(backtestOpenMarkPrice({
   side: "long",
   entryPrice: 100,

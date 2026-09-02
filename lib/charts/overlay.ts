@@ -4,7 +4,10 @@ import {
   splitCompletedBacktestOrders,
   type SimulatedOrder,
 } from "@/lib/backtest/model";
-import { backtestFillMarkerText } from "@/lib/backtest/positions";
+import {
+  backtestFillMarkerText,
+  groupBacktestOrdersIntoCycles,
+} from "@/lib/backtest/positions";
 import type { CandleBar } from "@/lib/market/candles";
 
 export const CHART_COLORS = {
@@ -146,6 +149,7 @@ export function buildBacktestChartOverlay(input: {
     entry: number | null;
     takeProfit: number | null;
     stopLoss: number | null;
+    liquidation?: number | null;
     side?: "long" | "short";
   } | null;
 }): ChartOverlay {
@@ -179,16 +183,31 @@ export function buildBacktestChartOverlay(input: {
       "Stop loss",
       CHART_COLORS.stopLoss,
     );
-    for (const item of [entry, takeProfit, stopLoss]) {
+    const liquidation = line(
+      "liq",
+      levels.liquidation ?? null,
+      "Liquidation",
+      CHART_COLORS.stopLoss,
+    );
+    for (const item of [entry, takeProfit, stopLoss, liquidation]) {
       if (item) {
         lines.push(item);
       }
     }
   }
+  const grouped = groupBacktestOrdersIntoCycles(input.orders);
+  const focus = grouped.open[0] ?? grouped.closed[0] ?? null;
+  const focusOrders = new Set(focus?.orders ?? []);
   const { open } = splitCompletedBacktestOrders(input.orders);
   const openSet = new Set(open);
   const markers: ChartMarker[] = input.orders
     .filter((row) => row.price > 0 && row.atMs > 0)
+    .filter(
+      (row) =>
+        focusOrders.size === 0 ||
+        focusOrders.has(row) ||
+        row.action === "flatten",
+    )
     .map((row) => {
       const current = openSet.has(row);
       const buy = row.action === "buy";
@@ -222,8 +241,11 @@ function nearestCandleSec(times: number[], sec: number): number | null {
   }
   const first = times[0];
   const last = times[times.length - 1];
-  if (first == null || last == null || sec < first || sec > last) {
+  if (first == null || last == null || sec < first) {
     return null;
+  }
+  if (sec > last) {
+    return last;
   }
   let lo = 0;
   let hi = times.length - 1;

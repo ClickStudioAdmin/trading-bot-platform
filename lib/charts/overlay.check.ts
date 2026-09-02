@@ -125,6 +125,79 @@ const liqOverlay = buildBacktestChartOverlay({
 assert.equal(liqOverlay.markers[1]?.text, "Liq");
 assert.equal(liqOverlay.markers[1]?.color, CHART_COLORS.stopLoss);
 
+const olderEntry = {
+  atMs: 1_700_000_000_000,
+  action: "buy" as const,
+  side: "long" as const,
+  qty: 1,
+  price: 100,
+  feeUsdt: 0,
+  realizedUsdt: -1,
+  reason: "entry" as const,
+  clipIndex: 1,
+};
+const olderTp = {
+  atMs: 1_700_000_050_000,
+  action: "flatten" as const,
+  side: "long" as const,
+  qty: 1,
+  price: 110,
+  feeUsdt: 0,
+  realizedUsdt: 10,
+  reason: "take_profit" as const,
+};
+const lateEntry = {
+  atMs: 1_700_000_200_000,
+  action: "buy" as const,
+  side: "long" as const,
+  qty: 1,
+  price: 100,
+  feeUsdt: 0,
+  realizedUsdt: -1,
+  reason: "entry" as const,
+  clipIndex: 1,
+};
+const lateAdd = {
+  atMs: 1_700_000_250_000,
+  action: "buy" as const,
+  side: "long" as const,
+  qty: 1,
+  price: 90,
+  feeUsdt: 0,
+  realizedUsdt: -1,
+  reason: "clip" as const,
+  clipIndex: 2,
+};
+const lateLiq = {
+  atMs: 1_700_000_300_000,
+  action: "flatten" as const,
+  side: "long" as const,
+  qty: 2,
+  price: 80,
+  feeUsdt: 0,
+  realizedUsdt: -30,
+  reason: "liquidation" as const,
+};
+const focused = buildBacktestChartOverlay({
+  triggerPrice: null,
+  orders: [olderEntry, olderTp, lateEntry, lateAdd, lateLiq],
+  levels: {
+    entry: 95,
+    takeProfit: null,
+    stopLoss: null,
+    liquidation: 80,
+    side: "long",
+  },
+});
+assert.deepEqual(
+  focused.markers.map((row) => row.text),
+  ["TP", "Entry", "Add 2", "Liq"],
+);
+assert.equal(
+  focused.lines.some((row) => row.title === "Liquidation"),
+  true,
+);
+
 const leveled = buildBacktestChartOverlay({
   triggerPrice: null,
   orders: [],
@@ -173,6 +246,13 @@ const snapped = snapOverlayToCandles(
         shape: "arrowDown",
         text: "Close",
       },
+      {
+        timeSec: 250,
+        position: "aboveBar",
+        color: "#F07167",
+        shape: "arrowDown",
+        text: "Liq",
+      },
     ],
   },
   [
@@ -180,8 +260,10 @@ const snapped = snapOverlayToCandles(
     { timeMs: 200_000, open: 1, high: 1, low: 1, close: 1 },
   ],
 );
-assert.equal(snapped.markers.length, 1);
+assert.equal(snapped.markers.length, 2);
 assert.equal(snapped.markers[0]?.text, "Buy ×2");
 assert.equal(snapped.markers[0]?.timeSec, 100);
+assert.equal(snapped.markers[1]?.text, "Liq");
+assert.equal(snapped.markers[1]?.timeSec, 200);
 
 console.log("chart overlay checks passed");

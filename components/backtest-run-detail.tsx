@@ -20,6 +20,7 @@ import {
   backtestDrawdownCard,
   backtestRerunHref,
   backtestRoePct,
+  backtestRunWasLiquidated,
   backtestRunTitle,
   backtestWindowDays,
   formatBacktestReturnPct,
@@ -466,8 +467,9 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
         run.toMs,
       )
     : null;
+  const liquidated = backtestRunWasLiquidated(run.orders);
   const drawdown = stats
-    ? backtestDrawdownCard(stats)
+    ? backtestDrawdownCard(stats, { liquidated })
     : { value: "—", toneClass: "text-ink" };
   const winRate =
     stats && stats.trades > 0
@@ -490,7 +492,11 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
           label="Max Drawdown"
           value={drawdown.value}
           toneClass={drawdown.toneClass}
-          hint="Peak-to-trough of marked equity versus that peak, plus the dollar dip. Same book as paper Performance."
+          hint={
+            liquidated
+              ? "Marked equity went to $0. Percent is of the peak (a wipe is 100%). Dollar note is the dip from that peak."
+              : "Peak-to-trough of marked equity versus that peak, plus the dollar dip. Same book as paper Performance."
+          }
           note={drawdown.note}
         />
         <StatCard

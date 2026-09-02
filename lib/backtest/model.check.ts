@@ -418,6 +418,16 @@ const markedDd = backtestDrawdownCard({
 assert.equal(markedDd.value, "0.80%");
 assert.equal(markedDd.toneClass, "text-danger");
 assert.equal(markedDd.note, "−$80");
+const wipedDd = backtestDrawdownCard(
+  {
+    trades: 13,
+    startingUsdt: 10_000,
+    maxDrawdownUsdt: 17_631,
+  },
+  { liquidated: true },
+);
+assert.equal(wipedDd.value, "100.00%");
+assert.equal(wipedDd.note, "−$17,631");
 assert.equal(
   backtestDrawdownCard({
     trades: 0,
