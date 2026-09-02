@@ -8,7 +8,9 @@ import {
 } from "@/components/chart-context-menu";
 import {
   attachRightAxisWheel,
+  CHART_EDGE_PAD,
   CHART_SCALE_OPTIONS,
+  padLogicalRange,
   resetChartView,
   resetPriceScale,
   type ChartViewApi,
@@ -260,7 +262,7 @@ export function DeskChart({
   overlay,
   height = 420,
   screenshotName = "chart.png",
-  rightOffset = 0,
+  rightOffset = 12,
   toolbar,
   status = null,
   visibleRange = null,
@@ -277,6 +279,7 @@ export function DeskChart({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartHandle | null>(null);
   const viewRef = useRef<ChartViewApi | null>(null);
+  const padEdgesRef = useRef<(() => void) | null>(null);
   const [menu, setMenu] = useState<ChartContextMenuState>(null);
   const [expanded, setExpanded] = useState(false);
   const [viewportH, setViewportH] = useState(0);
@@ -330,7 +333,10 @@ export function DeskChart({
           vertLines: { color: "#2A313C" },
           horzLines: { color: "#2A313C" },
         },
-        rightPriceScale: { borderColor: "#2A313C" },
+        rightPriceScale: {
+          borderColor: "#2A313C",
+          scaleMargins: { top: 0.16, bottom: 0.14 },
+        },
         timeScale: {
           borderColor: "#2A313C",
           timeVisible: true,
@@ -350,6 +356,8 @@ export function DeskChart({
         borderDownColor: "#F07167",
         wickUpColor: "#34D399",
         wickDownColor: "#F07167",
+        lastValueVisible: overlay.lines.length === 0,
+        priceLineVisible: overlay.lines.length === 0,
       });
       series.setData(
         candles.map((row) => ({
@@ -382,6 +390,16 @@ export function DeskChart({
           })),
         );
       }
+      function padTimeEdges() {
+        const padded = padLogicalRange(
+          chart.timeScale().getVisibleLogicalRange(),
+          CHART_EDGE_PAD.left,
+          CHART_EDGE_PAD.right,
+        );
+        if (padded) {
+          chart.timeScale().setVisibleLogicalRange(padded);
+        }
+      }
       if (
         visibleRange &&
         visibleRange.toSec >= visibleRange.fromSec
@@ -397,6 +415,11 @@ export function DeskChart({
       } else {
         chart.timeScale().fitContent();
       }
+      padTimeEdges();
+      if (!chart.timeScale().getVisibleLogicalRange()) {
+        requestAnimationFrame(padTimeEdges);
+      }
+      padEdgesRef.current = padTimeEdges;
       const detachWheel = attachRightAxisWheel(host, () => viewRef.current);
       const observer = new ResizeObserver(() => {
         if (hostRef.current) {
@@ -410,6 +433,7 @@ export function DeskChart({
       cleanup = () => {
         detachWheel();
         observer.disconnect();
+        padEdgesRef.current = null;
         chartRef.current = null;
         viewRef.current = null;
         chart.remove();
@@ -476,6 +500,7 @@ export function DeskChart({
         onResetChart={() => {
           if (viewRef.current) {
             resetChartView(viewRef.current);
+            padEdgesRef.current?.();
           }
         }}
         onResetPrice={() => {

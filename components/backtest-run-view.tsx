@@ -552,7 +552,7 @@ export function BacktestInlineChart({
   return (
     <DeskChart
       candles={candles}
-      rightOffset={8}
+      rightOffset={16}
       screenshotName={`${run.symbol}-backtest.png`}
       visibleRange={visibleRange}
       status={
@@ -652,7 +652,7 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
           <div className="mt-3">
             <DeskChart
               candles={candles}
-              rightOffset={8}
+              rightOffset={16}
               screenshotName={`${run.symbol}-backtest.png`}
               status={
                 candles.length === 0

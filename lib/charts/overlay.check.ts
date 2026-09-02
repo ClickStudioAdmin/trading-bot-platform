@@ -224,7 +224,7 @@ const focusRange = candleRangeForFocus(
 assert.equal(focusRange?.fromSec, 2_000);
 assert.equal(focusRange?.toSec, 4_000);
 assert.equal(
-  focused.lines.some((row) => row.title === "Liquidation"),
+  focused.lines.some((row) => row.title === "Liq"),
   true,
 );
 
@@ -243,11 +243,11 @@ assert.equal(
   true,
 );
 assert.equal(
-  leveled.lines.some((row) => row.title === "Take profit"),
+  leveled.lines.some((row) => row.title === "TP"),
   true,
 );
 assert.equal(
-  leveled.lines.some((row) => row.title === "Stop loss"),
+  leveled.lines.some((row) => row.title === "SL"),
   true,
 );
 

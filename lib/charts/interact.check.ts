@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   isOverRightPriceScale,
+  padLogicalRange,
   wheelZoomFactor,
   zoomPriceRange,
 } from "./interact";
@@ -31,5 +32,10 @@ const host = {
 } as HTMLElement;
 assert.equal(isOverRightPriceScale(host, 60, 370), true);
 assert.equal(isOverRightPriceScale(host, 60, 300), false);
+
+const padded = padLogicalRange({ from: 10, to: 20 }, 8, 12);
+assert.deepEqual(padded, { from: 2, to: 32 });
+assert.equal(padLogicalRange(null), null);
+assert.equal(padLogicalRange({ from: 5, to: 5 }), null);
 
 console.log("chart interact checks passed");

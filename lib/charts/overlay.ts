@@ -155,7 +155,7 @@ export function candleRangeForFocus(
   candles: CandleBar[],
   fromMs: number,
   toMs: number,
-  padBars = 4,
+  padBars = 8,
 ): { fromSec: number; toSec: number } | null {
   if (candles.length === 0) {
     return null;
@@ -181,6 +181,12 @@ export function candleRangeForFocus(
   }
   start = Math.max(0, start - padBars);
   end = Math.min(times.length - 1, end + padBars);
+  const minSpan = 20;
+  if (times.length > minSpan && end - start < minSpan) {
+    const extra = Math.ceil((minSpan - (end - start)) / 2);
+    start = Math.max(0, start - extra);
+    end = Math.min(times.length - 1, end + extra);
+  }
   if (end < start) {
     end = start;
   }
@@ -226,19 +232,19 @@ export function buildBacktestChartOverlay(input: {
     const takeProfit = line(
       "tp",
       levels.takeProfit,
-      "Take profit",
+      "TP",
       CHART_COLORS.takeProfit,
     );
     const stopLoss = line(
       "sl",
       levels.stopLoss,
-      "Stop loss",
+      "SL",
       CHART_COLORS.stopLoss,
     );
     const liquidation = line(
       "liq",
       levels.liquidation ?? null,
-      "Liquidation",
+      "Liq",
       CHART_COLORS.stopLoss,
     );
     for (const item of [entry, takeProfit, stopLoss, liquidation]) {

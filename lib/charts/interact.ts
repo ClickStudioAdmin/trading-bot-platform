@@ -1,5 +1,21 @@
 export type PriceRange = { from: number; to: number };
 
+export const CHART_EDGE_PAD = { left: 8, right: 12 } as const;
+
+export function padLogicalRange(
+  range: { from: number; to: number } | null,
+  left = CHART_EDGE_PAD.left,
+  right = CHART_EDGE_PAD.right,
+): { from: number; to: number } | null {
+  if (!range || !(range.to > range.from) || !(left >= 0) || !(right >= 0)) {
+    return null;
+  }
+  return {
+    from: range.from - left,
+    to: range.to + right,
+  };
+}
+
 export type ChartViewApi = {
   timeScale: () => { fitContent: () => void };
   priceScale: (id: string) => {
