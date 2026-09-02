@@ -2,7 +2,18 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
+import {
+  ChartContextMenu,
+  type ChartContextMenuState,
+} from "@/components/chart-context-menu";
 import { ChartScreenshotControls } from "@/components/desk-chart";
+import {
+  attachRightAxisWheel,
+  CHART_SCALE_OPTIONS,
+  resetChartView,
+  resetPriceScale,
+  type ChartViewApi,
+} from "@/lib/charts/interact";
 import {
   backtestActivityBounds,
   type BacktestRun,
@@ -41,7 +52,7 @@ type ChartHandle = {
   ) => HTMLCanvasElement;
   applyOptions: (options: { width: number }) => void;
   remove: () => void;
-};
+} & ChartViewApi;
 
 export function BacktestEquityPanel({
   run,
@@ -54,6 +65,7 @@ export function BacktestEquityPanel({
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartHandle | null>(null);
+  const [menu, setMenu] = useState<ChartContextMenuState>(null);
   const [candles, setCandles] = useState<CandleBar[]>([]);
   useEffect(() => {
     let cancelled = false;
@@ -136,8 +148,9 @@ export function BacktestEquityPanel({
           secondsVisible: false,
           rightOffset: 0,
           fixLeftEdge: true,
-          fixRightEdge: true,
+          fixRightEdge: false,
         },
+        ...CHART_SCALE_OPTIONS,
         crosshair: {
           mode: charts.CrosshairMode.Normal,
           vertLine: { color: "#3A4352", labelBackgroundColor: "#1C222C" },
@@ -178,6 +191,7 @@ export function BacktestEquityPanel({
       });
       chartRef.current = chart;
       chart.timeScale().fitContent();
+      const detachWheel = attachRightAxisWheel(host, () => chartRef.current);
       const observer = new ResizeObserver(() => {
         if (hostRef.current) {
           chart.applyOptions({ width: hostRef.current.clientWidth });
@@ -185,6 +199,7 @@ export function BacktestEquityPanel({
       });
       observer.observe(host);
       cleanup = () => {
+        detachWheel();
         observer.disconnect();
         chartRef.current = null;
         chart.remove();
@@ -235,7 +250,28 @@ export function BacktestEquityPanel({
         </div>
       </div>
       <div className="relative w-full" style={{ height: HEIGHT }}>
-        <div ref={hostRef} className="h-full w-full" />
+        <div
+          ref={hostRef}
+          className="h-full w-full"
+          onContextMenu={(event) => {
+            event.preventDefault();
+            setMenu({ x: event.clientX, y: event.clientY });
+          }}
+        />
+        <ChartContextMenu
+          menu={menu}
+          onClose={() => setMenu(null)}
+          onResetChart={() => {
+            if (chartRef.current) {
+              resetChartView(chartRef.current);
+            }
+          }}
+          onResetPrice={() => {
+            if (chartRef.current) {
+              resetPriceScale(chartRef.current);
+            }
+          }}
+        />
       </div>
     </div>
   );

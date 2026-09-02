@@ -1,8 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { CandleBar } from "@/lib/market/candles";
+import {
+  ChartContextMenu,
+  type ChartContextMenuState,
+} from "@/components/chart-context-menu";
+import {
+  attachRightAxisWheel,
+  CHART_SCALE_OPTIONS,
+  resetChartView,
+  resetPriceScale,
+  type ChartViewApi,
+} from "@/lib/charts/interact";
 import type { ChartOverlay } from "@/lib/charts/overlay";
+import type { CandleBar } from "@/lib/market/candles";
 
 type ChartHandle = {
   takeScreenshot: (
@@ -190,6 +201,8 @@ export function DeskChart({
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartHandle | null>(null);
+  const viewRef = useRef<ChartViewApi | null>(null);
+  const [menu, setMenu] = useState<ChartContextMenuState>(null);
   const plotHeight = height - CHART_TOOLBAR_H;
 
   useEffect(() => {
@@ -222,11 +235,13 @@ export function DeskChart({
           fixLeftEdge: true,
           fixRightEdge: rightOffset === 0,
         },
+        ...CHART_SCALE_OPTIONS,
         crosshair: { mode: charts.CrosshairMode.Normal },
         width: host.clientWidth,
         height: plotHeight,
       });
       chartRef.current = chart;
+      viewRef.current = chart;
       const series = chart.addSeries(charts.CandlestickSeries, {
         upColor: "#34D399",
         downColor: "#F07167",
@@ -267,6 +282,7 @@ export function DeskChart({
         );
       }
       chart.timeScale().fitContent();
+      const detachWheel = attachRightAxisWheel(host, () => viewRef.current);
       const observer = new ResizeObserver(() => {
         if (hostRef.current) {
           chart.applyOptions({ width: hostRef.current.clientWidth });
@@ -274,8 +290,10 @@ export function DeskChart({
       });
       observer.observe(host);
       cleanup = () => {
+        detachWheel();
         observer.disconnect();
         chartRef.current = null;
+        viewRef.current = null;
         chart.remove();
       };
     });
@@ -309,7 +327,28 @@ export function DeskChart({
           filename={screenshotName}
         />
       </div>
-      <div ref={hostRef} className="min-h-0 w-full flex-1" />
+      <div
+        ref={hostRef}
+        className="min-h-0 w-full flex-1"
+        onContextMenu={(event) => {
+          event.preventDefault();
+          setMenu({ x: event.clientX, y: event.clientY });
+        }}
+      />
+      <ChartContextMenu
+        menu={menu}
+        onClose={() => setMenu(null)}
+        onResetChart={() => {
+          if (viewRef.current) {
+            resetChartView(viewRef.current);
+          }
+        }}
+        onResetPrice={() => {
+          if (viewRef.current) {
+            resetPriceScale(viewRef.current);
+          }
+        }}
+      />
     </div>
   );
 }
