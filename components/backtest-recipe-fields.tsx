@@ -9,6 +9,11 @@ import {
 } from "@/lib/backtest/library";
 import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
 import {
+  DCA_INDICATOR_TIMEFRAMES,
+  DCA_INDICATOR_TIMEFRAME_LABELS,
+  type DcaIndicatorTimeframe,
+} from "@/lib/dca/indicators";
+import {
   formatGroupedNumberInput,
   parseTypedDecimalInput,
 } from "@/lib/paper/open";
@@ -240,6 +245,26 @@ export function BacktestRecipeFields({
                 <option value="rsi">RSI 14</option>
                 <option value="macd">MACD</option>
                 <option value="ema_cross">EMA 9/21</option>
+              </select>
+            </label>
+            <label className={labelClass}>
+              Timeframe
+              <select
+                value={recipe.indicatorTimeframe ?? "15"}
+                onChange={(event) =>
+                  onChange({
+                    ...recipe,
+                    indicatorTimeframe: event.target
+                      .value as DcaIndicatorTimeframe,
+                  })
+                }
+                className={fieldClass}
+              >
+                {DCA_INDICATOR_TIMEFRAMES.map((row) => (
+                  <option key={row} value={row}>
+                    {DCA_INDICATOR_TIMEFRAME_LABELS[row]}
+                  </option>
+                ))}
               </select>
             </label>
             <label className={labelClass}>

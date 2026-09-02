@@ -214,10 +214,7 @@ export async function queueTemplateBacktestAction(
   const venue = parseCandleVenue(formData.get("venue")) ?? "bybit";
   const symbol =
     parseCandleSymbol(formData.get("symbol") ?? recipe.symbol) ?? recipe.symbol;
-  const queuedRecipe =
-    recipe.kind === "dca" && recipe.startKind === "indicator"
-      ? { ...recipe, symbol, indicatorTimeframe: interval }
-      : { ...recipe, symbol };
+  const queuedRecipe = { ...recipe, symbol };
   const comparables = parseComparableSymbols(
     [
       ...formData.getAll("comparable"),

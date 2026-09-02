@@ -430,13 +430,7 @@ export function BacktestQueueForm({
               name="interval"
               value={interval}
               onChange={(event) => {
-                const next = event.target.value as DcaIndicatorTimeframe;
-                setInterval(next);
-                setRecipe((current) =>
-                  current?.kind === "dca" && current.startKind === "indicator"
-                    ? { ...current, indicatorTimeframe: next }
-                    : current,
-                );
+                setInterval(event.target.value as DcaIndicatorTimeframe);
               }}
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
             >
@@ -448,7 +442,7 @@ export function BacktestQueueForm({
             </select>
             {recipe?.kind === "dca" && recipe.startKind === "indicator" ? (
               <span className="mt-1 block text-xs text-ink-faint">
-                Same bars as the indicator start.
+                Market window. The bot’s indicator timeframe is on the right.
               </span>
             ) : null}
           </label>
@@ -624,11 +618,16 @@ export function BacktestQueueForm({
               recipe={recipe}
               onIssuesChange={setRecipeFieldIssues}
               onChange={(next) => {
-                if (next.kind === "dca" && next.startKind === "indicator") {
-                  setRecipe({ ...next, indicatorTimeframe: interval });
-                  return;
-                }
+                const prevTf =
+                  recipe?.kind === "dca" ? recipe.indicatorTimeframe : null;
+                const nextTf =
+                  next.kind === "dca" && next.startKind === "indicator"
+                    ? next.indicatorTimeframe
+                    : null;
                 setRecipe(next);
+                if (nextTf && nextTf !== prevTf) {
+                  setInterval(nextTf);
+                }
               }}
             />
           </div>
