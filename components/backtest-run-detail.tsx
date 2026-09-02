@@ -102,7 +102,7 @@ function MatchPanel({
 }) {
   return (
     <aside className="min-w-[14rem] flex-1 rounded-card border border-line bg-surface p-5">
-      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+      <p className="text-xs font-medium text-ink-faint">
         {title}
       </p>
       <div className="mt-3 space-y-2">{children}</div>
@@ -147,7 +147,7 @@ function BacktestMatchCard({
 }) {
   return (
     <div className="flex w-full max-w-xl flex-wrap gap-3">
-      <MatchPanel title="Template">
+      <MatchPanel title="Template Bot Matching">
         {matchingTemplateName ? (
           <p className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
             Template · {matchingTemplateName}
@@ -189,8 +189,14 @@ function BacktestMatchCard({
             variant="secondary"
           />
         ) : null}
+        <RemoveBacktestButton
+          runId={runId}
+          canRemove={canRemove}
+          returnTo={returnTo}
+          stacked
+        />
       </MatchPanel>
-      <MatchPanel title="Desk">
+      <MatchPanel title="Desk Bot Matching">
         {matchingDeskLabel ? (
           <p className="rounded-control bg-accent/15 px-2 py-0.5 text-xs text-accent">
             Desk · {matchingDeskLabel}
@@ -205,12 +211,6 @@ function BacktestMatchCard({
             desks={applyDesks}
           />
         ) : null}
-        <RemoveBacktestButton
-          runId={runId}
-          canRemove={canRemove}
-          returnTo={returnTo}
-          stacked
-        />
       </MatchPanel>
     </div>
   );

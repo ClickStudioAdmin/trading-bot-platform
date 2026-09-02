@@ -612,7 +612,7 @@ export function AttachBacktestButton({
         type="submit"
         disabled={pending}
         title="Link this run to the matching library template. Recipe is unchanged."
-        className="w-full rounded-control border border-line px-3 py-2 text-sm text-ink hover:border-line-strong disabled:opacity-50"
+        className="w-full rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
       >
         {pending ? "Attaching…" : "Attach to template"}
       </button>
@@ -724,11 +724,7 @@ export function SaveBacktestAsTemplateButton({
             ? "Create an applyable platform template from this run. Does not attach the run or arm a desk."
             : "Create a private library template and attach this run"
         }
-        className={
-          variant === "secondary"
-            ? "w-full rounded-control border border-line px-3 py-2 text-sm text-ink hover:border-line-strong"
-            : "w-full rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent"
-        }
+        className="w-full rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent"
       >
         {platformOnly ? "Save as platform template" : "Save as template"}
       </button>
@@ -908,7 +904,7 @@ export function ApplyBacktestButton({
         type="button"
         onClick={resetAndOpen}
         title="Copies the bot onto that desk idle. Does not arm."
-        className="w-full rounded-control border border-line px-3 py-2 text-sm text-ink hover:border-line-strong"
+        className="w-full rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent"
       >
         Add to desk
       </button>
