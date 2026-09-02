@@ -82,6 +82,28 @@ if (remapped.ok) {
   assert.equal(remapped.config.symbol, "SOLUSDT");
 }
 
+const oldBothRsi = dcaRecipeToConfig(
+  {
+    ...snapshot,
+    startKind: "indicator",
+    indicatorKind: "rsi",
+    indicatorTimeframe: "15",
+    indicatorCompare: "cross_lte",
+    indicatorLevel: 30,
+    shortIndicatorKind: null,
+    shortIndicatorTimeframe: null,
+    shortIndicatorCompare: null,
+    shortIndicatorLevel: null,
+  },
+  {},
+);
+assert.equal(oldBothRsi.ok, true);
+if (oldBothRsi.ok) {
+  assert.equal(oldBothRsi.config.indicatorLevel, 30);
+  assert.equal(oldBothRsi.config.shortIndicatorLevel, 70);
+  assert.equal(oldBothRsi.config.shortIndicatorCompare, "cross_gte");
+}
+
 const hlBoth = dcaRecipeToConfig(snapshot, {
   symbol: "ETH",
   venue: "hyperliquid",

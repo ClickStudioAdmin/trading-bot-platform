@@ -1,11 +1,14 @@
 import {
   decideDcaTick,
+  dcaArmTriggerForSide,
   dcaCycleClipSize,
   dcaEnabledSides,
+  dcaIndicatorStartForSide,
   dcaTickValueCapUsdt,
   IDLE_DCA_LEG,
   type DcaLegState,
 } from "@/lib/dca/playbook";
+import { resampleClosesForTimeframe } from "@/lib/dca/indicators";
 import { dcaClipQtyAt, dcaTrailingDistance } from "@/lib/dca/grid";
 import { dcaRecipeToConfig, type DcaTemplateRecipe } from "@/lib/templates/recipe";
 import type { FuturesSide } from "@/lib/futures/model";
@@ -23,6 +26,7 @@ import {
   type BacktestFillReason,
   type BacktestStats,
   type SimulatedOrder,
+  backtestTapeInterval,
 } from "./model";
 
 export function canBacktestDcaRecipe(
@@ -276,6 +280,7 @@ export function replayDcaPlaybook(input: {
         }
       }
       const live = legs[side];
+      const indicatorStart = dcaIndicatorStartForSide(config, side);
       const decision = decideDcaTick({
         status: live.status,
         side,
@@ -307,16 +312,25 @@ export function replayDcaPlaybook(input: {
         stopLossBasis: config.stopLossBasis,
         breakevenActivationPct: config.breakevenActivationPct,
         breakevenDone: live.breakevenDone,
-        armTrigger: config.armTrigger,
+        armTrigger: dcaArmTriggerForSide(config, side),
         armConditionTrue: live.armTrue,
         disarmTrigger: config.disarmTrigger,
         disarmConditionTrue: live.disarmTrue,
-        indicatorKind: config.indicatorKind,
-        indicatorCompare: config.indicatorCompare,
-        indicatorLevel: config.indicatorLevel,
+        indicatorKind: indicatorStart?.kind ?? null,
+        indicatorCompare: indicatorStart?.compare ?? null,
+        indicatorLevel: indicatorStart?.level ?? null,
         indicatorConditionTrue: live.indicatorTrue,
-        splitIndicatorSides: splitSides,
-        closes: window,
+        splitIndicatorSides:
+          splitSides &&
+          !config.shortIndicatorKind &&
+          !config.shortArmTrigger,
+        closes: indicatorStart
+          ? resampleClosesForTimeframe(
+              window,
+              backtestTapeInterval(input.recipe, 1, 2),
+              indicatorStart.timeframe,
+            )
+          : window,
         takeProfitOrderType: config.takeProfitOrderType,
         tpLimitResting: false,
         triggerPrices,

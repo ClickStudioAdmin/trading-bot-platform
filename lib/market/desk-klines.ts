@@ -5,6 +5,7 @@ import {
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { loadHyperliquidCandles } from "@/lib/exchanges/hyperliquid/info";
 import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
+import { BACKTEST_CANDLE_LIMIT } from "@/lib/backtest/model";
 import type { CandleBar } from "@/lib/market/candles";
 
 const INTERVAL_MS: Record<DcaIndicatorTimeframe, number> = {
@@ -88,7 +89,10 @@ export async function loadBacktestCandles(input: {
   toMs: number;
   limit: number;
 }): Promise<CandleBar[]> {
-  const limit = Math.min(200_000, Math.max(1, Math.floor(input.limit)));
+  const limit = Math.min(
+    BACKTEST_CANDLE_LIMIT,
+    Math.max(1, Math.floor(input.limit)),
+  );
   const endTimeMs = input.toMs;
   const startTimeMs = input.fromMs;
 

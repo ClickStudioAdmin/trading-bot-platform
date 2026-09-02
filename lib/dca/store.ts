@@ -40,6 +40,9 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     arm_trigger_by: config.armTrigger?.triggerBy ?? null,
     arm_compare: config.armTrigger?.compare ?? null,
     arm_price: config.armTrigger?.price ?? null,
+    short_arm_trigger_by: config.shortArmTrigger?.triggerBy ?? null,
+    short_arm_compare: config.shortArmTrigger?.compare ?? null,
+    short_arm_price: config.shortArmTrigger?.price ?? null,
     disarm_trigger_by: config.disarmTrigger?.triggerBy ?? null,
     disarm_compare: config.disarmTrigger?.compare ?? null,
     disarm_price: config.disarmTrigger?.price ?? null,
@@ -47,6 +50,10 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     indicator_timeframe: config.indicatorTimeframe,
     indicator_compare: config.indicatorCompare,
     indicator_level: config.indicatorLevel,
+    short_indicator_kind: config.shortIndicatorKind ?? null,
+    short_indicator_timeframe: config.shortIndicatorTimeframe ?? null,
+    short_indicator_compare: config.shortIndicatorCompare ?? null,
+    short_indicator_level: config.shortIndicatorLevel ?? null,
   };
 }
 

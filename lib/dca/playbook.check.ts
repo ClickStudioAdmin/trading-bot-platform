@@ -1914,6 +1914,42 @@ if (rsiCrossParsed.ok) {
   assert.equal(rsiCrossParsed.config.indicatorCompare, "cross_lte");
 }
 
+const bothRsiForm = new FormData();
+bothRsiForm.set("symbol", "BTCUSDT");
+bothRsiForm.set("direction", "both");
+bothRsiForm.set("clipSize", "0.01");
+bothRsiForm.set("sizeUnit", "qty");
+bothRsiForm.set("startKind", "indicator");
+bothRsiForm.set("indicatorKind", "rsi");
+bothRsiForm.set("indicatorTimeframe", "15");
+bothRsiForm.set("indicatorCompare", "cross_lte");
+bothRsiForm.set("indicatorLevel", "30");
+bothRsiForm.set("shortIndicatorKind", "rsi");
+bothRsiForm.set("shortIndicatorTimeframe", "15");
+bothRsiForm.set("shortIndicatorCompare", "cross_gte");
+bothRsiForm.set("shortIndicatorLevel", "70");
+const bothRsiParsed = parseDcaPlaybookForm(bothRsiForm);
+assert.equal(bothRsiParsed.ok, true);
+if (bothRsiParsed.ok) {
+  assert.equal(bothRsiParsed.config.indicatorLevel, 30);
+  assert.equal(bothRsiParsed.config.shortIndicatorLevel, 70);
+  assert.equal(bothRsiParsed.config.indicatorCompare, "cross_lte");
+  assert.equal(bothRsiParsed.config.shortIndicatorCompare, "cross_gte");
+}
+
+const bothRsiMissing = new FormData();
+bothRsiMissing.set("symbol", "BTCUSDT");
+bothRsiMissing.set("direction", "both");
+bothRsiMissing.set("clipSize", "0.01");
+bothRsiMissing.set("sizeUnit", "qty");
+bothRsiMissing.set("startKind", "indicator");
+bothRsiMissing.set("indicatorKind", "rsi");
+bothRsiMissing.set("indicatorTimeframe", "15");
+bothRsiMissing.set("indicatorCompare", "cross_lte");
+bothRsiMissing.set("indicatorLevel", "30");
+const bothRsiMissingParsed = parseDcaPlaybookForm(bothRsiMissing);
+assert.equal(bothRsiMissingParsed.ok, false);
+
 const macdCrossForm = new FormData();
 macdCrossForm.set("symbol", "BTCUSDT");
 macdCrossForm.set("side", "long");

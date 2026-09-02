@@ -2,7 +2,7 @@
 
 import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
-import { parseCandleInterval, parseCandleSymbol, parseCandleVenue } from "@/lib/market/candles";
+import { parseCandleSymbol, parseCandleVenue } from "@/lib/market/candles";
 import type { BacktestRecipe } from "./model";
 import { canQueueUserBacktest, parseBacktestRecipeJson } from "./library";
 import { placeSavedTemplate } from "@/lib/templates/actions";
@@ -16,13 +16,15 @@ import { applyRecipeToDesk, automationsPathForDeskType } from "@/lib/templates/a
 import { parseTemplateName, recipesMatchReplayFields } from "@/lib/templates/recipe";
 import { revalidatePath } from "next/cache";
 import {
+  BACKTEST_CANDLE_LIMIT,
   BACKTEST_FEE_PRESETS,
   DEFAULT_STARTING_USDT,
   backtestShouldRunInline,
+  backtestTapeInterval,
   comparableBacktestName,
   defaultBacktestDates,
   estimateBacktestBars,
-  parseBacktestDateRange,
+  parseBacktestDates,
   parseComparableSymbols,
   parseFeePreset,
   parseBacktestLeverage,
@@ -129,10 +131,11 @@ export async function seedBacktestDraftAction(
     return allowed;
   }
   const dates = defaultBacktestDates();
-  const range = parseBacktestDateRange(dates.from, dates.to, "60");
+  const range = parseBacktestDates(dates.from, dates.to);
   if (!range.ok) {
     return range;
   }
+  const interval = backtestTapeInterval(recipe, range.fromMs, range.toMs);
   const venue = parseCandleVenue(formData.get("venue")) ?? "bybit";
   const venueEnvironment =
     String(formData.get("venueEnvironment") ?? "").trim() || null;
@@ -149,7 +152,7 @@ export async function seedBacktestDraftAction(
     venue,
     venueEnvironment,
     symbol: recipe.symbol,
-    interval: "60",
+    interval,
     fromMs: range.fromMs,
     toMs: range.toMs,
     feePreset: "vip0_taker",
@@ -191,17 +194,23 @@ export async function queueTemplateBacktestAction(
   if (!allowed.ok) {
     return allowed;
   }
-  const interval = parseCandleInterval(formData.get("interval"));
-  if (!interval) {
-    return { ok: false, error: "Pick a timeframe." };
-  }
-  const range = parseBacktestDateRange(
+  const range = parseBacktestDates(
     formData.get("fromDate"),
     formData.get("toDate"),
-    interval,
   );
   if (!range.ok) {
     return range;
+  }
+  const interval = backtestTapeInterval(recipe, range.fromMs, range.toMs);
+  if (
+    estimateBacktestBars(range.fromMs, range.toMs, interval) >
+    BACKTEST_CANDLE_LIMIT
+  ) {
+    return {
+      ok: false,
+      error:
+        "That window is too long for this timeframe. Use a shorter range or a higher timeframe.",
+    };
   }
   const balance = parseStartingBalance(formData.get("startingBalance"));
   if (!balance.ok) {

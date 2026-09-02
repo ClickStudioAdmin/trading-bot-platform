@@ -9,6 +9,7 @@ import {
 } from "@/lib/opportunities/format";
 import {
   DCA_INDICATOR_TIMEFRAMES,
+  finerDcaIndicatorTimeframe,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import type {
@@ -27,7 +28,8 @@ export const BACKTEST_FEE_PRESETS = {
   },
 } as const;
 
-export const BACKTEST_CANDLE_LIMIT = 200_000;
+export const BACKTEST_CANDLE_LIMIT = 2_500_000;
+export const BACKTEST_LONG_TAPE_BARS = 20_000;
 export const BACKTEST_INLINE_BAR_LIMIT = 3000;
 export const BACKTEST_VERCEL_BAR_LIMIT = 3000;
 export const BACKTEST_COMPARABLE_CAP = 8;
@@ -335,6 +337,32 @@ export function estimateBacktestBars(
   return Math.ceil((toMs - fromMs) / intervalMs(interval));
 }
 
+export function backtestTapeInterval(
+  recipe: BacktestRecipe | null,
+  fromMs: number,
+  toMs: number,
+): DcaIndicatorTimeframe {
+  if (recipe?.kind === "dca" && recipe.startKind === "indicator") {
+    const primary = recipe.indicatorTimeframe;
+    const short = recipe.shortIndicatorTimeframe;
+    if (primary && short) {
+      return finerDcaIndicatorTimeframe(primary, short);
+    }
+    if (primary) {
+      return primary;
+    }
+    if (short) {
+      return short;
+    }
+  }
+  for (const interval of DCA_INDICATOR_TIMEFRAMES) {
+    if (estimateBacktestBars(fromMs, toMs, interval) <= BACKTEST_CANDLE_LIMIT) {
+      return interval;
+    }
+  }
+  return "D";
+}
+
 export const BACKTEST_CHART_TRAIL_BARS = 8;
 
 export function backtestChartTrailMs(interval: DcaIndicatorTimeframe): number {
@@ -454,10 +482,9 @@ export function parseComparableSymbols(
   return rows;
 }
 
-export function parseBacktestDateRange(
+export function parseBacktestDates(
   fromRaw: unknown,
   toRaw: unknown,
-  interval: DcaIndicatorTimeframe,
 ): { ok: true; fromMs: number; toMs: number } | { ok: false; error: string } {
   const fromMs = utcDayStart(fromRaw);
   const toStart = utcDayStart(toRaw);
@@ -468,7 +495,19 @@ export function parseBacktestDateRange(
   if (!(toMs > fromMs)) {
     return { ok: false, error: "End date must be after the start date." };
   }
-  const bars = Math.ceil((toMs - fromMs) / intervalMs(interval));
+  return { ok: true, fromMs, toMs };
+}
+
+export function parseBacktestDateRange(
+  fromRaw: unknown,
+  toRaw: unknown,
+  interval: DcaIndicatorTimeframe,
+): { ok: true; fromMs: number; toMs: number } | { ok: false; error: string } {
+  const range = parseBacktestDates(fromRaw, toRaw);
+  if (!range.ok) {
+    return range;
+  }
+  const bars = estimateBacktestBars(range.fromMs, range.toMs, interval);
   if (bars > BACKTEST_CANDLE_LIMIT) {
     return {
       ok: false,
@@ -476,7 +515,7 @@ export function parseBacktestDateRange(
         "That window is too long for this timeframe. Use a shorter range or a higher timeframe.",
     };
   }
-  return { ok: true, fromMs, toMs };
+  return range;
 }
 
 export function emptyBacktestStats(startingUsdt = 0): BacktestStats {

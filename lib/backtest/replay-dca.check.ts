@@ -110,6 +110,9 @@ priceBoth.set("startKind", "price");
 priceBoth.set("armTriggerBy", "last");
 priceBoth.set("armCompare", "gte");
 priceBoth.set("armPrice", "100");
+priceBoth.set("shortArmTriggerBy", "last");
+priceBoth.set("shortArmCompare", "lte");
+priceBoth.set("shortArmPrice", "90");
 const bothPrice = replayDcaPlaybook({
   bars: [
     { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
@@ -132,7 +135,11 @@ rsiBothForm.set("startKind", "indicator");
 rsiBothForm.set("indicatorKind", "rsi");
 rsiBothForm.set("indicatorTimeframe", "15");
 rsiBothForm.set("indicatorCompare", "cross_lte");
-rsiBothForm.set("indicatorLevel", "50");
+rsiBothForm.set("indicatorLevel", "30");
+rsiBothForm.set("shortIndicatorKind", "rsi");
+rsiBothForm.set("shortIndicatorTimeframe", "15");
+rsiBothForm.set("shortIndicatorCompare", "cross_gte");
+rsiBothForm.set("shortIndicatorLevel", "70");
 const rsiDumpCloses = [...Array(19).fill(100), 1];
 const rsiBoth = replayDcaPlaybook({
   bars: rsiDumpCloses.map((close, index) => ({

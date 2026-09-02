@@ -11,12 +11,14 @@ import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
-  indicatorBothSidesHint,
   indicatorCompareForDirection,
+  oppositeRsiCompare,
+  oppositeRsiLevel,
   parseDcaIndicatorCompare,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import type { DcaTemplateRecipe } from "@/lib/templates/recipe";
 import {
   formatGroupedNumberInput,
   parseTypedDecimalInput,
@@ -32,6 +34,32 @@ function issueFor(
   field: BacktestFieldIssue["field"],
 ): string | null {
   return issues.find((row) => row.field === field)?.message ?? null;
+}
+
+function seedBothStarts(recipe: DcaTemplateRecipe): Partial<DcaTemplateRecipe> {
+  const kind = recipe.indicatorKind ?? "rsi";
+  const compare = recipe.indicatorCompare ?? null;
+  const next: Partial<DcaTemplateRecipe> = {};
+  if (recipe.startKind === "price" && recipe.armTrigger && !recipe.shortArmTrigger) {
+    next.shortArmTrigger = {
+      triggerBy: recipe.armTrigger.triggerBy,
+      compare: recipe.armTrigger.compare === "gte" ? "lte" : "gte",
+      price: recipe.armTrigger.price,
+    };
+  }
+  if (recipe.startKind === "indicator" && !recipe.shortIndicatorKind) {
+    next.shortIndicatorKind = kind;
+    next.shortIndicatorTimeframe = recipe.indicatorTimeframe ?? "15";
+    next.shortIndicatorCompare =
+      kind === "rsi"
+        ? parseDcaIndicatorCompare(
+            oppositeRsiCompare(compare ?? "cross_lte"),
+          )
+        : compare;
+    next.shortIndicatorLevel =
+      kind === "rsi" ? oppositeRsiLevel(recipe.indicatorLevel) : recipe.indicatorLevel;
+  }
+  return next;
 }
 
 function FieldNote({ message }: { message: string | null }) {
@@ -103,6 +131,183 @@ function RecipeNumberInput({
   );
 }
 
+function BacktestPriceStartFields({
+  compare,
+  price,
+  priceIssue,
+  onCompare,
+  onPrice,
+}: {
+  compare: "gte" | "lte";
+  price: number | null;
+  priceIssue: string | null;
+  onCompare: (compare: "gte" | "lte") => void;
+  onPrice: (price: number | null) => void;
+}) {
+  return (
+    <>
+      <label className={labelClass}>
+        When
+        <select
+          value={compare}
+          onChange={(event) =>
+            onCompare(event.target.value === "lte" ? "lte" : "gte")
+          }
+          className={fieldClass}
+        >
+          <option value="gte">Price ≥</option>
+          <option value="lte">Price ≤</option>
+        </select>
+      </label>
+      <label className={labelClass}>
+        Price
+        <RecipeNumberInput
+          value={price}
+          emptyValue={0}
+          className={priceIssue ? invalidFieldClass : fieldClass}
+          onCommit={onPrice}
+        />
+        <FieldNote message={priceIssue} />
+      </label>
+    </>
+  );
+}
+
+function BacktestIndicatorStartFields({
+  side,
+  kind,
+  timeframe,
+  compare,
+  level,
+  onChange,
+}: {
+  side: "long" | "short";
+  kind: DcaIndicatorKind;
+  timeframe: DcaIndicatorTimeframe;
+  compare: DcaTemplateRecipe["indicatorCompare"];
+  level: number | null | undefined;
+  onChange: (patch: {
+    indicatorKind: DcaIndicatorKind;
+    indicatorTimeframe?: DcaIndicatorTimeframe;
+    indicatorCompare: DcaTemplateRecipe["indicatorCompare"];
+    indicatorLevel?: number | null;
+  }) => void;
+}) {
+  return (
+    <>
+      <label className={labelClass}>
+        Indicator
+        <select
+          value={kind}
+          onChange={(event) => {
+            const indicatorKind = event.target.value as DcaIndicatorKind;
+            const nextCompare = indicatorCompareForDirection(
+              side,
+              indicatorKind,
+              "",
+            );
+            onChange({
+              indicatorKind,
+              indicatorCompare:
+                nextCompare === "pair"
+                  ? null
+                  : parseDcaIndicatorCompare(nextCompare),
+            });
+          }}
+          className={fieldClass}
+        >
+          <option value="rsi">RSI 14</option>
+          <option value="macd">MACD</option>
+          <option value="ema_cross">EMA 9/21</option>
+        </select>
+      </label>
+      <label className={labelClass}>
+        Timeframe
+        <select
+          value={timeframe}
+          onChange={(event) =>
+            onChange({
+              indicatorKind: kind,
+              indicatorTimeframe: event.target.value as DcaIndicatorTimeframe,
+              indicatorCompare: compare ?? null,
+              indicatorLevel: level ?? null,
+            })
+          }
+          className={fieldClass}
+        >
+          {DCA_INDICATOR_TIMEFRAMES.map((row) => (
+            <option key={row} value={row}>
+              {DCA_INDICATOR_TIMEFRAME_LABELS[row]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={labelClass}>
+        When
+        <select
+          value={indicatorCompareForDirection(
+            side,
+            kind,
+            kind === "ema_cross" && compare == null ? "pair" : (compare ?? ""),
+          )}
+          onChange={(event) => {
+            const next = event.target.value;
+            onChange({
+              indicatorKind: kind,
+              indicatorCompare:
+                next === "pair" ? null : parseDcaIndicatorCompare(next),
+              indicatorLevel: level ?? null,
+            });
+          }}
+          className={fieldClass}
+        >
+          {kind === "rsi" && side === "long" ? (
+            <>
+              <option value="cross_lte">Crosses below</option>
+              <option value="lte">At or below</option>
+            </>
+          ) : null}
+          {kind === "rsi" && side === "short" ? (
+            <>
+              <option value="cross_gte">Crosses above</option>
+              <option value="gte">At or above</option>
+            </>
+          ) : null}
+          {kind === "macd" ? (
+            <>
+              <option value="cross_gte">Crosses zero</option>
+              <option value="gte">Histogram sign</option>
+            </>
+          ) : null}
+          {kind === "ema_cross" ? (
+            <>
+              <option value="pair">EMA 9/21 cross</option>
+              <option value="cross_gte">EMA 21 crosses</option>
+            </>
+          ) : null}
+        </select>
+      </label>
+      {kind === "rsi" || (kind === "ema_cross" && compare != null) ? (
+        <label className={labelClass}>
+          {kind === "ema_cross" ? "Level (price)" : "Level"}
+          <RecipeNumberInput
+            value={level}
+            emptyValue={null}
+            className={fieldClass}
+            onCommit={(next) =>
+              onChange({
+                indicatorKind: kind,
+                indicatorCompare: compare ?? null,
+                indicatorLevel: next,
+              })
+            }
+          />
+        </label>
+      ) : null}
+    </>
+  );
+}
+
 export function BacktestRecipeFields({
   recipe,
   onChange,
@@ -129,6 +334,16 @@ export function BacktestRecipeFields({
   useEffect(() => {
     onIssuesChange?.(maxValueIssue ? [maxValueIssue] : []);
   }, [maxValueIssue, onIssuesChange]);
+  useEffect(() => {
+    if (recipe.kind !== "dca" || recipe.direction !== "both") {
+      return;
+    }
+    const seeded = seedBothStarts(recipe);
+    if (Object.keys(seeded).length === 0) {
+      return;
+    }
+    onChange({ ...recipe, ...seeded });
+  }, [onChange, recipe]);
   const issues = userBacktestFieldIssues(recipe);
   if (recipe.kind === "dca") {
     const startBlocked =
@@ -152,6 +367,14 @@ export function BacktestRecipeFields({
             onChange={(event) => {
               const direction = event.target
                 .value as typeof recipe.direction;
+              if (direction === "both") {
+                onChange({
+                  ...recipe,
+                  direction,
+                  ...seedBothStarts(recipe),
+                });
+                return;
+              }
               const kind = recipe.indicatorKind ?? "rsi";
               const nextCompare = indicatorCompareForDirection(
                 direction,
@@ -182,12 +405,14 @@ export function BacktestRecipeFields({
           Start
           <select
             value={startBlocked ? "" : recipe.startKind}
-            onChange={(event) =>
+            onChange={(event) => {
+              const startKind = event.target.value as "price" | "indicator";
+              const next = { ...recipe, startKind };
               onChange({
-                ...recipe,
-                startKind: event.target.value as "price" | "indicator",
-              })
-            }
+                ...next,
+                ...(recipe.direction === "both" ? seedBothStarts(next) : {}),
+              });
+            }}
             className={
               issueFor(issues, "startKind") ? invalidFieldClass : fieldClass
             }
@@ -200,184 +425,167 @@ export function BacktestRecipeFields({
           </select>
           <FieldNote message={issueFor(issues, "startKind")} />
         </label>
-        {recipe.startKind === "price" ? (
+        {recipe.startKind === "price" && recipe.direction === "both" ? (
           <>
-            <label className={labelClass}>
-              When
-              <select
-                value={recipe.armTrigger?.compare ?? "gte"}
-                onChange={(event) =>
-                  onChange({
-                    ...recipe,
-                    armTrigger: {
-                      triggerBy: recipe.armTrigger?.triggerBy ?? "last",
-                      compare: event.target.value === "lte" ? "lte" : "gte",
-                      price: recipe.armTrigger?.price ?? 0,
-                    },
-                  })
-                }
-                className={fieldClass}
-              >
-                <option value="gte">Price ≥</option>
-                <option value="lte">Price ≤</option>
-              </select>
-            </label>
-            <label className={labelClass}>
-              Price
-              <RecipeNumberInput
-                value={recipe.armTrigger?.price ?? null}
-                emptyValue={0}
-                className={
-                  issueFor(issues, "armPrice") ? invalidFieldClass : fieldClass
-                }
-                onCommit={(next) =>
-                  onChange({
-                    ...recipe,
-                    armTrigger: {
-                      triggerBy: recipe.armTrigger?.triggerBy ?? "last",
-                      compare: recipe.armTrigger?.compare ?? "gte",
-                      price: next ?? 0,
-                    },
-                  })
-                }
-              />
-              <FieldNote message={issueFor(issues, "armPrice")} />
-            </label>
+            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
+              Long start
+            </p>
+            <BacktestPriceStartFields
+              compare={recipe.armTrigger?.compare ?? "gte"}
+              price={recipe.armTrigger?.price ?? null}
+              priceIssue={issueFor(issues, "armPrice")}
+              onCompare={(compare) =>
+                onChange({
+                  ...recipe,
+                  armTrigger: {
+                    triggerBy: recipe.armTrigger?.triggerBy ?? "last",
+                    compare,
+                    price: recipe.armTrigger?.price ?? 0,
+                  },
+                })
+              }
+              onPrice={(price) =>
+                onChange({
+                  ...recipe,
+                  armTrigger: {
+                    triggerBy: recipe.armTrigger?.triggerBy ?? "last",
+                    compare: recipe.armTrigger?.compare ?? "gte",
+                    price: price ?? 0,
+                  },
+                })
+              }
+            />
+            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
+              Short start
+            </p>
+            <BacktestPriceStartFields
+              compare={
+                recipe.shortArmTrigger?.compare ??
+                (recipe.armTrigger?.compare === "gte" ? "lte" : "gte")
+              }
+              price={
+                recipe.shortArmTrigger?.price ??
+                recipe.armTrigger?.price ??
+                null
+              }
+              priceIssue={issueFor(issues, "shortArmPrice")}
+              onCompare={(compare) =>
+                onChange({
+                  ...recipe,
+                  shortArmTrigger: {
+                    triggerBy:
+                      recipe.shortArmTrigger?.triggerBy ??
+                      recipe.armTrigger?.triggerBy ??
+                      "last",
+                    compare,
+                    price: recipe.shortArmTrigger?.price ?? 0,
+                  },
+                })
+              }
+              onPrice={(price) =>
+                onChange({
+                  ...recipe,
+                  shortArmTrigger: {
+                    triggerBy:
+                      recipe.shortArmTrigger?.triggerBy ??
+                      recipe.armTrigger?.triggerBy ??
+                      "last",
+                    compare: recipe.shortArmTrigger?.compare ?? "lte",
+                    price: price ?? 0,
+                  },
+                })
+              }
+            />
           </>
         ) : null}
-        {recipe.startKind === "indicator" ? (
+        {recipe.startKind === "price" && recipe.direction !== "both" ? (
+          <BacktestPriceStartFields
+            compare={recipe.armTrigger?.compare ?? "gte"}
+            price={recipe.armTrigger?.price ?? null}
+            priceIssue={issueFor(issues, "armPrice")}
+            onCompare={(compare) =>
+              onChange({
+                ...recipe,
+                armTrigger: {
+                  triggerBy: recipe.armTrigger?.triggerBy ?? "last",
+                  compare,
+                  price: recipe.armTrigger?.price ?? 0,
+                },
+              })
+            }
+            onPrice={(price) =>
+              onChange({
+                ...recipe,
+                armTrigger: {
+                  triggerBy: recipe.armTrigger?.triggerBy ?? "last",
+                  compare: recipe.armTrigger?.compare ?? "gte",
+                  price: price ?? 0,
+                },
+              })
+            }
+          />
+        ) : null}
+        {recipe.startKind === "indicator" && recipe.direction === "both" ? (
           <>
-            <label className={labelClass}>
-              Indicator
-              <select
-                value={recipe.indicatorKind ?? "rsi"}
-                onChange={(event) => {
-                  const indicatorKind = event.target
-                    .value as DcaIndicatorKind;
-                  const nextCompare = indicatorCompareForDirection(
-                    recipe.direction,
-                    indicatorKind,
-                    "",
-                  );
-                  onChange({
-                    ...recipe,
-                    indicatorKind,
-                    indicatorCompare:
-                      nextCompare === "pair"
-                        ? null
-                        : parseDcaIndicatorCompare(nextCompare),
-                  });
-                }}
-                className={fieldClass}
-              >
-                <option value="rsi">RSI 14</option>
-                <option value="macd">MACD</option>
-                <option value="ema_cross">EMA 9/21</option>
-              </select>
-            </label>
-            <label className={labelClass}>
-              Timeframe
-              <select
-                value={recipe.indicatorTimeframe ?? "15"}
-                onChange={(event) =>
-                  onChange({
-                    ...recipe,
-                    indicatorTimeframe: event.target
-                      .value as DcaIndicatorTimeframe,
-                  })
-                }
-                className={fieldClass}
-              >
-                {DCA_INDICATOR_TIMEFRAMES.map((row) => (
-                  <option key={row} value={row}>
-                    {DCA_INDICATOR_TIMEFRAME_LABELS[row]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={labelClass}>
-              When
-              <select
-                value={indicatorCompareForDirection(
-                  recipe.direction,
-                  recipe.indicatorKind ?? "rsi",
-                  recipe.indicatorKind === "ema_cross" &&
-                    recipe.indicatorCompare == null
-                    ? "pair"
-                    : (recipe.indicatorCompare ?? ""),
-                )}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  onChange({
-                    ...recipe,
-                    indicatorCompare:
-                      next === "pair" ? null : parseDcaIndicatorCompare(next),
-                  });
-                }}
-                className={fieldClass}
-              >
-                {(recipe.indicatorKind ?? "rsi") === "rsi" &&
-                recipe.direction === "both" ? (
-                  <>
-                    <option value="cross_lte">Crosses the level</option>
-                    <option value="lte">At the level</option>
-                  </>
-                ) : null}
-                {(recipe.indicatorKind ?? "rsi") === "rsi" &&
-                recipe.direction === "long" ? (
-                  <>
-                    <option value="cross_lte">Crosses below</option>
-                    <option value="lte">At or below</option>
-                  </>
-                ) : null}
-                {(recipe.indicatorKind ?? "rsi") === "rsi" &&
-                recipe.direction === "short" ? (
-                  <>
-                    <option value="cross_gte">Crosses above</option>
-                    <option value="gte">At or above</option>
-                  </>
-                ) : null}
-                {recipe.indicatorKind === "macd" ? (
-                  <>
-                    <option value="cross_gte">Crosses zero</option>
-                    <option value="gte">Histogram sign</option>
-                  </>
-                ) : null}
-                {recipe.indicatorKind === "ema_cross" ? (
-                  <>
-                    <option value="pair">EMA 9/21 cross</option>
-                    <option value="cross_gte">EMA 21 crosses</option>
-                  </>
-                ) : null}
-              </select>
-            </label>
-            {(recipe.indicatorKind ?? "rsi") === "rsi" ||
-            (recipe.indicatorKind === "ema_cross" &&
-              recipe.indicatorCompare != null) ? (
-            <label className={labelClass}>
-              {recipe.indicatorKind === "ema_cross" ? "Level (price)" : "Level"}
-              <RecipeNumberInput
-                value={recipe.indicatorLevel}
-                emptyValue={null}
-                className={fieldClass}
-                onCommit={(next) =>
-                  onChange({ ...recipe, indicatorLevel: next })
-                }
-              />
-            </label>
-            ) : null}
-            {recipe.direction === "both" ? (
-              <p className="text-xs text-ink-muted sm:col-span-2">
-                {indicatorBothSidesHint(
-                  recipe.indicatorKind ?? "rsi",
-                  recipe.indicatorKind === "ema_cross" &&
-                    recipe.indicatorCompare == null
-                    ? "pair"
-                    : (recipe.indicatorCompare ?? ""),
-                )}
-              </p>
-            ) : null}
+            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
+              Long start
+            </p>
+            <BacktestIndicatorStartFields
+              side="long"
+              kind={recipe.indicatorKind ?? "rsi"}
+              timeframe={recipe.indicatorTimeframe ?? "15"}
+              compare={recipe.indicatorCompare}
+              level={recipe.indicatorLevel}
+              onChange={(patch) => onChange({ ...recipe, ...patch })}
+            />
+            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
+              Short start
+            </p>
+            <BacktestIndicatorStartFields
+              side="short"
+              kind={recipe.shortIndicatorKind ?? recipe.indicatorKind ?? "rsi"}
+              timeframe={
+                recipe.shortIndicatorTimeframe ??
+                recipe.indicatorTimeframe ??
+                "15"
+              }
+              compare={
+                recipe.shortIndicatorCompare ??
+                (recipe.indicatorKind === "rsi"
+                  ? parseDcaIndicatorCompare(
+                      oppositeRsiCompare(
+                        recipe.indicatorCompare ?? "cross_lte",
+                      ),
+                    )
+                  : recipe.indicatorCompare)
+              }
+              level={
+                recipe.shortIndicatorLevel ??
+                (recipe.indicatorKind === "rsi"
+                  ? oppositeRsiLevel(recipe.indicatorLevel)
+                  : recipe.indicatorLevel)
+              }
+              onChange={(patch) =>
+                onChange({
+                  ...recipe,
+                  shortIndicatorKind: patch.indicatorKind,
+                  shortIndicatorTimeframe: patch.indicatorTimeframe,
+                  shortIndicatorCompare: patch.indicatorCompare,
+                  shortIndicatorLevel: patch.indicatorLevel,
+                })
+              }
+            />
           </>
+        ) : null}
+        {recipe.startKind === "indicator" && recipe.direction !== "both" ? (
+          <BacktestIndicatorStartFields
+            side={recipe.direction === "short" ? "short" : "long"}
+            kind={recipe.indicatorKind ?? "rsi"}
+            timeframe={recipe.indicatorTimeframe ?? "15"}
+            compare={recipe.indicatorCompare}
+            level={recipe.indicatorLevel}
+            onChange={(patch) => onChange({ ...recipe, ...patch })}
+          />
         ) : null}
         {recipe.maxValue != null &&
         recipe.maxValue > 0 &&
@@ -426,7 +634,7 @@ export function BacktestRecipeFields({
           />
         </label>
         <label className={labelClass}>
-          Dip %
+          Deviation
           <RecipeNumberInput
             value={recipe.dipPct}
             emptyValue={null}

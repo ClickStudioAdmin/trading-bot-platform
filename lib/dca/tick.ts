@@ -26,10 +26,13 @@ import { tickerTriggerPrices } from "@/lib/futures/tpsl";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
+  dcaArmTriggerForSide,
   dcaClipsFilledFromGrid,
   dcaCycleEnded,
   dcaEnabledSides,
   dcaGridClipCounts,
+  dcaIndicatorStartForSide,
+  dcaIndicatorTimeframes,
   dcaLegFor,
   dcaLegIsRunning,
   dcaLiveQtyBlocksCycleEnd,
@@ -144,20 +147,21 @@ export async function runDcaPlaybookTick(input?: {
         : tickers;
     const ticker = deskTickers.get(playbook.symbol) ?? {};
     const prices = tickerTriggerPrices(ticker);
-    let closes: number[] | null = null;
-    const indicatorTimeframe = playbook.indicatorTimeframe;
-    if (dcaNeedsIndicatorCloses(playbook) && indicatorTimeframe) {
-      const key = `${account.venue}:${playbook.symbol}:${indicatorTimeframe}`;
-      if (!klineCache.has(key)) {
-        const fetched = await loadDeskIndicatorCloses({
-          venue: account.venue,
-          venueEnvironment: account.venueEnvironment,
-          symbol: playbook.symbol,
-          interval: indicatorTimeframe as DcaIndicatorTimeframe,
-        }).catch(() => []);
-        klineCache.set(key, fetched);
+    const closesByTimeframe = new Map<DcaIndicatorTimeframe, number[]>();
+    if (dcaNeedsIndicatorCloses(playbook)) {
+      for (const indicatorTimeframe of dcaIndicatorTimeframes(playbook)) {
+        const key = `${account.venue}:${playbook.symbol}:${indicatorTimeframe}`;
+        if (!klineCache.has(key)) {
+          const fetched = await loadDeskIndicatorCloses({
+            venue: account.venue,
+            venueEnvironment: account.venueEnvironment,
+            symbol: playbook.symbol,
+            interval: indicatorTimeframe,
+          }).catch(() => []);
+          klineCache.set(key, fetched);
+        }
+        closesByTimeframe.set(indicatorTimeframe, klineCache.get(key) ?? []);
       }
-      closes = klineCache.get(key) ?? [];
     }
     const [working, openWorking] = await Promise.all([
       playbook.dcaMode === "order"
@@ -235,6 +239,7 @@ export async function runDcaPlaybookTick(input?: {
       }
       const tpLimitResting =
         dcaOpenExitLimits(openWorking, playbook.id, side, "tp").length > 0;
+      const indicatorStart = dcaIndicatorStartForSide(playbook, side);
       const decision = decideDcaTick({
         status: leg.status,
         side,
@@ -267,19 +272,24 @@ export async function runDcaPlaybookTick(input?: {
         tpLimitResting,
         breakevenActivationPct: playbook.breakevenActivationPct,
         breakevenDone: leg.breakevenDone,
-        armTrigger: playbook.armTrigger,
+        armTrigger: dcaArmTriggerForSide(playbook, side),
         armConditionTrue: playbook.armConditionTrue,
         disarmTrigger: playbook.disarmTrigger,
         disarmConditionTrue: playbook.disarmConditionTrue,
-        indicatorKind: playbook.indicatorKind,
-        indicatorCompare: playbook.indicatorCompare,
-        indicatorLevel: playbook.indicatorLevel,
-        splitIndicatorSides: playbook.direction === "both",
+        indicatorKind: indicatorStart?.kind ?? null,
+        indicatorCompare: indicatorStart?.compare ?? null,
+        indicatorLevel: indicatorStart?.level ?? null,
+        splitIndicatorSides:
+          playbook.direction === "both" &&
+          !playbook.shortIndicatorKind &&
+          !playbook.shortArmTrigger,
         indicatorConditionTrue:
           side === "long"
             ? playbook.longIndicatorTrue
             : playbook.shortIndicatorTrue,
-        closes,
+        closes: indicatorStart
+          ? (closesByTimeframe.get(indicatorStart.timeframe) ?? [])
+          : null,
         triggerPrices: prices,
       });
       const flags = await patchDcaPlaybook({

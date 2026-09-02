@@ -48,8 +48,83 @@ export function parseDcaIndicatorCompare(
   return null;
 }
 
+const DCA_INDICATOR_TIMEFRAME_MINUTES: Record<DcaIndicatorTimeframe, number> = {
+  "5": 5,
+  "15": 15,
+  "30": 30,
+  "60": 60,
+  "120": 120,
+  "240": 240,
+  "360": 360,
+  "720": 720,
+  D: 1440,
+};
+
+export function finerDcaIndicatorTimeframe(
+  left: DcaIndicatorTimeframe,
+  right: DcaIndicatorTimeframe,
+): DcaIndicatorTimeframe {
+  const leftRank = DCA_INDICATOR_TIMEFRAMES.indexOf(left);
+  const rightRank = DCA_INDICATOR_TIMEFRAMES.indexOf(right);
+  if (leftRank < 0) {
+    return right;
+  }
+  if (rightRank < 0 || leftRank <= rightRank) {
+    return left;
+  }
+  return right;
+}
+
+export function resampleClosesForTimeframe(
+  closes: number[],
+  from: DcaIndicatorTimeframe,
+  to: DcaIndicatorTimeframe,
+): number[] {
+  if (from === to || closes.length === 0) {
+    return closes;
+  }
+  const step = Math.round(
+    DCA_INDICATOR_TIMEFRAME_MINUTES[to] / DCA_INDICATOR_TIMEFRAME_MINUTES[from],
+  );
+  if (!(step > 1)) {
+    return closes;
+  }
+  const out: number[] = [];
+  for (let i = step - 1; i < closes.length; i += step) {
+    out.push(closes[i] ?? 0);
+  }
+  return out;
+}
+
+export function oppositeRsiCompare(compare: string): string {
+  if (compare === "cross_lte") {
+    return "cross_gte";
+  }
+  if (compare === "lte") {
+    return "gte";
+  }
+  if (compare === "cross_gte") {
+    return "cross_lte";
+  }
+  if (compare === "gte") {
+    return "lte";
+  }
+  return compare;
+}
+
+export function oppositeRsiLevel(level: number | null | undefined): number {
+  if (level == null || !Number.isFinite(level) || level <= 0) {
+    return 70;
+  }
+  const flipped = 100 - level;
+  if (!(flipped > 0) || flipped >= 100) {
+    return 70;
+  }
+  return flipped;
+}
+
 export function indicatorCompareForDirection(
-  direction: "long" | "short" | "both",
+  direction: "long" | "short",
   kind: DcaIndicatorKind,
   compare: string,
 ): string {

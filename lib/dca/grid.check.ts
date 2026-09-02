@@ -33,6 +33,8 @@ import {
   indicatorBothSidesHint,
   indicatorCompareForDirection,
   indicatorStartMet,
+  oppositeRsiCompare,
+  oppositeRsiLevel,
   macdHistogram,
   parseDcaIndicatorCompare,
   parseDcaIndicatorTimeframe,
@@ -503,9 +505,15 @@ assert.equal(parseDcaIndicatorTimeframe("240"), "240");
 assert.equal(parseDcaIndicatorTimeframe("W"), null);
 assert.equal(parseDcaIndicatorCompare("cross_lte"), "cross_lte");
 assert.equal(
-  indicatorCompareForDirection("both", "rsi", "cross_gte"),
+  indicatorCompareForDirection("long", "rsi", "cross_gte"),
   "cross_lte",
 );
+assert.equal(
+  indicatorCompareForDirection("short", "rsi", "cross_lte"),
+  "cross_gte",
+);
+assert.equal(oppositeRsiCompare("cross_lte"), "cross_gte");
+assert.equal(oppositeRsiLevel(30), 70);
 assert.equal(
   indicatorBothSidesHint("rsi", "cross_lte"),
   "Triggers Long when RSI crosses below the level. Triggers Short when RSI crosses above the level.",

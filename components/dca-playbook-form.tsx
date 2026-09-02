@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { ColumnHint } from "@/components/column-hint";
 import { FuturesDeskRefresh } from "@/components/futures-desk-refresh";
-import { PanelCloseButton } from "@/components/panel-close-button";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
@@ -64,8 +62,10 @@ import {
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
-  indicatorBothSidesHint,
   indicatorCompareForDirection,
+  oppositeRsiCompare,
+  oppositeRsiLevel,
+  type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import type { FuturesOrderType, FuturesSide } from "@/lib/futures/model";
@@ -109,6 +109,34 @@ const headerRemoveClass =
 
 function optional(value: number | null | undefined): string {
   return value == null ? "" : String(value);
+}
+
+function initialIndicatorCompare(
+  kind: DcaIndicatorKind,
+  stored: string | null | undefined,
+  side: "long" | "short",
+): string {
+  if (kind === "rsi") {
+    return stored ?? (side === "short" ? "cross_gte" : "cross_lte");
+  }
+  if (kind === "macd") {
+    if (stored === "cross_gte" || stored === "cross_lte") {
+      return "cross_gte";
+    }
+    if (stored === "gte") {
+      return "gte";
+    }
+    return "cross_gte";
+  }
+  if (stored === "cross_gte" || stored === "cross_lte") {
+    return stored;
+  }
+  return "pair";
+}
+
+function seedOppositeRsiLevel(level: string): string {
+  const n = Number(level);
+  return String(oppositeRsiLevel(Number.isFinite(n) && n > 0 ? n : null));
 }
 
 function asNumber(text: string): number | null {
@@ -679,7 +707,7 @@ export function DcaPlaybookForm({
   );
   const [takeProfitOrderType, setTakeProfitOrderType] =
     useState<FuturesOrderType>(source?.takeProfitOrderType ?? "market");
-  const [indicatorKind, setIndicatorKind] = useState(
+  const [indicatorKind, setIndicatorKind] = useState<DcaIndicatorKind>(
     source?.indicatorKind ?? "rsi",
   );
   const [indicatorTimeframe, setIndicatorTimeframe] = useState(
@@ -689,31 +717,43 @@ export function DcaPlaybookForm({
     optional(source?.indicatorLevel) ||
       ((source?.indicatorKind ?? "rsi") === "rsi" ? "30" : ""),
   );
-  const [indicatorCompare, setIndicatorCompare] = useState(() => {
-    const kind = source?.indicatorKind ?? "rsi";
-    if (kind === "rsi") {
-      return source?.indicatorCompare ?? "cross_lte";
+  const [indicatorCompare, setIndicatorCompare] = useState(() =>
+    initialIndicatorCompare(
+      source?.indicatorKind ?? "rsi",
+      source?.indicatorCompare,
+      "long",
+    ),
+  );
+  const [shortIndicatorKind, setShortIndicatorKind] = useState<DcaIndicatorKind>(
+    source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi",
+  );
+  const [shortIndicatorTimeframe, setShortIndicatorTimeframe] = useState(
+    source?.shortIndicatorTimeframe ?? source?.indicatorTimeframe ?? "15",
+  );
+  const [shortIndicatorLevel, setShortIndicatorLevel] = useState(() => {
+    if (source?.shortIndicatorLevel != null) {
+      return optional(source.shortIndicatorLevel);
     }
-    if (kind === "macd") {
-      if (
-        source?.indicatorCompare === "cross_gte" ||
-        source?.indicatorCompare === "cross_lte"
-      ) {
-        return "cross_gte";
-      }
-      if (source?.indicatorKind === "macd") {
-        return "gte";
-      }
-      return "cross_gte";
+    const kind = source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi";
+    if (kind !== "rsi") {
+      return optional(source?.indicatorLevel);
     }
-    if (
-      source?.indicatorCompare === "cross_gte" ||
-      source?.indicatorCompare === "cross_lte"
-    ) {
-      return source.indicatorCompare;
-    }
-    return "pair";
+    return source?.indicatorLevel != null
+      ? String(oppositeRsiLevel(source.indicatorLevel))
+      : "70";
   });
+  const [shortIndicatorCompare, setShortIndicatorCompare] = useState(() =>
+    initialIndicatorCompare(
+      source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi",
+      source?.shortIndicatorCompare ??
+        (source?.shortIndicatorKind
+          ? source.shortIndicatorCompare
+          : source?.indicatorKind === "rsi" || !source?.indicatorKind
+            ? oppositeRsiCompare(source?.indicatorCompare ?? "cross_lte")
+            : source?.indicatorCompare),
+      "short",
+    ),
+  );
   const defaultSymbol =
     source?.symbol ??
     options.find((row) => row.symbol === policy.defaultSymbol)?.symbol ??
@@ -893,6 +933,10 @@ export function DcaPlaybookForm({
       indicatorTimeframe,
       indicatorCompare,
       indicatorLevel,
+      shortIndicatorKind,
+      shortIndicatorTimeframe,
+      shortIndicatorCompare,
+      shortIndicatorLevel,
     };
   }
   function snapshotForm() {
@@ -1181,10 +1225,41 @@ export function DcaPlaybookForm({
               value={direction}
               onChange={(event) => {
                 const next = event.target.value as typeof direction;
+                if (next === "both" && direction !== "both") {
+                  if (direction === "short") {
+                    setShortIndicatorKind(indicatorKind);
+                    setShortIndicatorTimeframe(indicatorTimeframe);
+                    setShortIndicatorCompare(indicatorCompare);
+                    setShortIndicatorLevel(indicatorLevel);
+                    if (indicatorKind === "rsi") {
+                      setIndicatorCompare(oppositeRsiCompare(indicatorCompare));
+                      setIndicatorLevel(seedOppositeRsiLevel(indicatorLevel));
+                    }
+                  } else {
+                    setShortIndicatorKind(indicatorKind);
+                    setShortIndicatorTimeframe(indicatorTimeframe);
+                    setShortIndicatorCompare(
+                      indicatorKind === "rsi"
+                        ? oppositeRsiCompare(indicatorCompare)
+                        : indicatorCompare,
+                    );
+                    setShortIndicatorLevel(
+                      indicatorKind === "rsi"
+                        ? seedOppositeRsiLevel(indicatorLevel)
+                        : indicatorLevel,
+                    );
+                  }
+                } else if (direction === "both" && next === "short") {
+                  setIndicatorKind(shortIndicatorKind);
+                  setIndicatorTimeframe(shortIndicatorTimeframe);
+                  setIndicatorCompare(shortIndicatorCompare);
+                  setIndicatorLevel(shortIndicatorLevel);
+                } else if (next === "long" || next === "short") {
+                  setIndicatorCompare((current) =>
+                    indicatorCompareForDirection(next, indicatorKind, current),
+                  );
+                }
                 setDirection(next);
-                setIndicatorCompare((current) =>
-                  indicatorCompareForDirection(next, indicatorKind, current),
-                );
               }}
               className={fieldClass}
             >
@@ -1225,7 +1300,45 @@ export function DcaPlaybookForm({
           Initial Order Trigger Parameters
         </p>
         <div className={rowClass}>
-          {startKind === "price" ? (
+          {startKind === "price" && direction === "both" ? (
+            <div className="space-y-3 sm:col-span-2 lg:col-span-4">
+              <div className="space-y-2">
+                <p className={sectionTitleClass}>Long start</p>
+                <div className={rowClass}>
+                  <TriggerFields
+                    prefix="arm"
+                    triggerBy={source?.armTrigger?.triggerBy ?? "last"}
+                    compare={source?.armTrigger?.compare ?? "gte"}
+                    price={optional(source?.armTrigger?.price)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className={sectionTitleClass}>Short start</p>
+                <div className={rowClass}>
+                  <TriggerFields
+                    prefix="shortArm"
+                    triggerBy={
+                      source?.shortArmTrigger?.triggerBy ??
+                      source?.armTrigger?.triggerBy ??
+                      "last"
+                    }
+                    compare={
+                      source?.shortArmTrigger?.compare ??
+                      ((source?.armTrigger?.compare ?? "gte") === "gte"
+                        ? "lte"
+                        : "gte")
+                    }
+                    price={optional(
+                      source?.shortArmTrigger?.price ??
+                        source?.armTrigger?.price,
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {startKind === "price" && direction !== "both" ? (
             <TriggerFields
               prefix="arm"
               triggerBy={source?.armTrigger?.triggerBy ?? "last"}
@@ -1265,158 +1378,57 @@ export function DcaPlaybookForm({
               </p>
             )
           ) : null}
-          {startKind === "indicator" ? (
-            <>
-              <label className={labelClass}>
-                Indicator
-                <select
-                  name="indicatorKind"
-                  value={indicatorKind}
-                  onChange={(event) => {
-                    const next = event.target.value as
-                      | "rsi"
-                      | "macd"
-                      | "ema_cross";
-                    setIndicatorKind(next);
-                    setIndicatorCompare(
-                      indicatorCompareForDirection(direction, next, ""),
-                    );
-                  }}
-                  className={fieldClass}
-                >
-                  <option value="rsi">RSI 14</option>
-                  <option value="macd">MACD histogram</option>
-                  <option value="ema_cross">EMA 9/21 cross</option>
-                </select>
-              </label>
-              <label className={labelClass}>
-                Timeframe
-                <select
-                  name="indicatorTimeframe"
-                  value={indicatorTimeframe}
-                  onChange={(event) =>
-                    setIndicatorTimeframe(
-                      event.target.value as DcaIndicatorTimeframe,
-                    )
-                  }
-                  className={fieldClass}
-                >
-                  {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
-                    <option key={interval} value={interval}>
-                      {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className={labelClass}>
-                When
-                <select
-                  name="indicatorCompare"
-                  value={indicatorCompareForDirection(
-                    direction,
-                    indicatorKind,
-                    indicatorCompare,
-                  )}
-                  onChange={(event) => setIndicatorCompare(event.target.value)}
-                  className={fieldClass}
-                >
-                  {indicatorKind === "rsi" && direction === "both" ? (
-                    <>
-                      <option value="cross_lte">Crosses the level</option>
-                      <option value="lte">At the level</option>
-                    </>
-                  ) : null}
-                  {indicatorKind === "rsi" && direction === "long" ? (
-                    <>
-                      <option value="cross_lte">Crosses below</option>
-                      <option value="lte">At or below</option>
-                    </>
-                  ) : null}
-                  {indicatorKind === "rsi" && direction === "short" ? (
-                    <>
-                      <option value="cross_gte">Crosses above</option>
-                      <option value="gte">At or above</option>
-                    </>
-                  ) : null}
-                  {indicatorKind === "macd" ? (
-                    <>
-                      <option value="cross_gte">Crosses zero</option>
-                      <option value="gte">Histogram sign</option>
-                    </>
-                  ) : null}
-                  {indicatorKind === "ema_cross" ? (
-                    <>
-                      <option value="pair">EMA 9/21 cross</option>
-                      <option value="cross_gte">EMA 21 crosses</option>
-                    </>
-                  ) : null}
-                </select>
-              </label>
-              {indicatorKind === "rsi" ||
-              (indicatorKind === "ema_cross" &&
-                indicatorCompare !== "pair") ? (
-                <label className={labelClass}>
-                  {indicatorKind === "ema_cross" ? "Level (price)" : "Level"}
-                  <GroupedNumberInput
-                    name="indicatorLevel"
-                    value={indicatorLevel}
-                    onChange={setIndicatorLevel}
-                    allowDecimal
-                    className={fieldClass}
-                  />
-                </label>
-              ) : null}
-              {direction === "both" ? (
-                <p className="text-xs text-ink-muted sm:col-span-2 lg:col-span-4">
-                  {indicatorBothSidesHint(indicatorKind, indicatorCompare)}{" "}
-                  <IndicatorBothDetails
+          {startKind === "indicator" && direction === "both" ? (
+            <div className="space-y-3 sm:col-span-2 lg:col-span-4">
+              <div className="space-y-2">
+                <p className={sectionTitleClass}>Long start</p>
+                <div className={rowClass}>
+                  <IndicatorStartFields
+                    side="long"
+                    prefix="indicator"
                     kind={indicatorKind}
+                    timeframe={indicatorTimeframe}
                     compare={indicatorCompare}
+                    level={indicatorLevel}
+                    onKindChange={setIndicatorKind}
+                    onTimeframeChange={setIndicatorTimeframe}
+                    onCompareChange={setIndicatorCompare}
+                    onLevelChange={setIndicatorLevel}
                   />
-                </p>
-              ) : (
-                <>
-                  {indicatorKind === "macd" ? (
-                    <p className="self-end text-xs text-ink-muted sm:col-span-2">
-                      {direction === "long"
-                        ? indicatorCompare === "gte"
-                          ? "Triggers Long while the histogram is positive."
-                          : "Triggers Long when the histogram crosses above zero."
-                        : indicatorCompare === "gte"
-                          ? "Triggers Short while the histogram is negative."
-                          : "Triggers Short when the histogram crosses below zero."}
-                    </p>
-                  ) : null}
-                  {indicatorKind === "ema_cross" &&
-                  indicatorCompare === "pair" ? (
-                    <p className="self-end text-xs text-ink-muted sm:col-span-2">
-                      {direction === "long"
-                        ? "Triggers Long when EMA 9 crosses above EMA 21."
-                        : "Triggers Short when EMA 9 crosses below EMA 21."}
-                    </p>
-                  ) : null}
-                  {indicatorKind === "ema_cross" &&
-                  indicatorCompare !== "pair" ? (
-                    <p className="text-xs text-ink-muted sm:col-span-2">
-                      {direction === "long"
-                        ? "Triggers Long when EMA 21 crosses above the price level."
-                        : "Triggers Short when EMA 21 crosses below the price level."}
-                    </p>
-                  ) : null}
-                  {indicatorKind === "rsi" ? (
-                    <p className="text-xs text-ink-muted sm:col-span-2">
-                      {direction === "long"
-                        ? indicatorCompare.startsWith("cross")
-                          ? "Triggers Long when RSI crosses below the level."
-                          : "Triggers Long while RSI is at or below the level."
-                        : indicatorCompare.startsWith("cross")
-                          ? "Triggers Short when RSI crosses above the level."
-                          : "Triggers Short while RSI is at or above the level."}
-                    </p>
-                  ) : null}
-                </>
-              )}
-            </>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className={sectionTitleClass}>Short start</p>
+                <div className={rowClass}>
+                  <IndicatorStartFields
+                    side="short"
+                    prefix="shortIndicator"
+                    kind={shortIndicatorKind}
+                    timeframe={shortIndicatorTimeframe}
+                    compare={shortIndicatorCompare}
+                    level={shortIndicatorLevel}
+                    onKindChange={setShortIndicatorKind}
+                    onTimeframeChange={setShortIndicatorTimeframe}
+                    onCompareChange={setShortIndicatorCompare}
+                    onLevelChange={setShortIndicatorLevel}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {startKind === "indicator" && direction !== "both" ? (
+            <IndicatorStartFields
+              side={direction === "short" ? "short" : "long"}
+              prefix="indicator"
+              kind={indicatorKind}
+              timeframe={indicatorTimeframe}
+              compare={indicatorCompare}
+              level={indicatorLevel}
+              onKindChange={setIndicatorKind}
+              onTimeframeChange={setIndicatorTimeframe}
+              onCompareChange={setIndicatorCompare}
+              onLevelChange={setIndicatorLevel}
+            />
           ) : null}
         </div>
       </fieldset>
@@ -2205,180 +2217,147 @@ export function DcaPlaybookForm({
   );
 }
 
-const bothDetailsRows: {
-  id: string;
-  setting: string;
-  long: string;
-  short: string;
-}[] = [
-  {
-    id: "macd-cross",
-    setting: "MACD · Crosses zero",
-    long: "Histogram crosses above 0",
-    short: "Histogram crosses below 0",
-  },
-  {
-    id: "macd-sign",
-    setting: "MACD · Histogram sign",
-    long: "Histogram is positive",
-    short: "Histogram is negative",
-  },
-  {
-    id: "ema-pair",
-    setting: "EMA · 9/21 cross",
-    long: "EMA 9 crosses above EMA 21",
-    short: "EMA 9 crosses below EMA 21",
-  },
-  {
-    id: "ema-price",
-    setting: "EMA · 21 crosses",
-    long: "EMA 21 crosses above the price",
-    short: "EMA 21 crosses below the price",
-  },
-  {
-    id: "rsi-cross",
-    setting: "RSI · Crosses the level",
-    long: "RSI crosses below the level",
-    short: "RSI crosses above the level",
-  },
-  {
-    id: "rsi-at",
-    setting: "RSI · At the level",
-    long: "RSI is at or below the level",
-    short: "RSI is at or above the level",
-  },
-];
-
-function indicatorBothDetailsRowId(
-  kind: "rsi" | "macd" | "ema_cross",
-  compare: string,
-): string {
-  if (kind === "macd") {
-    return compare === "gte" ? "macd-sign" : "macd-cross";
-  }
-  if (kind === "ema_cross") {
-    return compare === "pair" ? "ema-pair" : "ema-price";
-  }
-  return compare === "lte" || compare === "gte" ? "rsi-at" : "rsi-cross";
-}
-
-function IndicatorBothDetails({
+function IndicatorStartFields({
+  side,
+  prefix,
   kind,
+  timeframe,
   compare,
+  level,
+  onKindChange,
+  onTimeframeChange,
+  onCompareChange,
+  onLevelChange,
 }: {
-  kind: "rsi" | "macd" | "ema_cross";
+  side: "long" | "short";
+  prefix: "indicator" | "shortIndicator";
+  kind: DcaIndicatorKind;
+  timeframe: DcaIndicatorTimeframe;
   compare: string;
+  level: string;
+  onKindChange: (next: DcaIndicatorKind) => void;
+  onTimeframeChange: (next: DcaIndicatorTimeframe) => void;
+  onCompareChange: (next: string) => void;
+  onLevelChange: (next: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [box, setBox] = useState<DOMRect | null>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const currentId = indicatorBothDetailsRowId(kind, compare);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    };
-    const onPointer = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        buttonRef.current?.contains(target) ||
-        panelRef.current?.contains(target)
-      ) {
-        return;
-      }
-      setOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onPointer);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onPointer);
-    };
-  }, [open]);
-
   return (
     <>
-      <button
-        ref={buttonRef}
-        type="button"
-        className="text-accent hover:text-accent-strong"
-        aria-expanded={open}
-        onClick={() => {
-          const next = !open;
-          setOpen(next);
-          setBox(
-            next
-              ? (buttonRef.current?.getBoundingClientRect() ?? null)
-              : null,
-          );
-        }}
-      >
-        Show more details
-      </button>
-      {open && box && typeof document !== "undefined"
-        ? createPortal(
-            <div
-              ref={panelRef}
-              role="dialog"
-              aria-label="When Direction is Both"
-              className="fixed z-50 w-[min(36rem,calc(100vw-1.5rem))] overflow-hidden rounded-card border border-line bg-surface-raised text-xs text-ink shadow-none"
-              style={{
-                top: box.bottom + 8,
-                left: Math.max(
-                  12,
-                  Math.min(box.left, window.innerWidth - 36 * 16 - 12),
-                ),
-              }}
-            >
-              <p className="border-b border-line py-2 pr-9 pl-3 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-                When Direction is Both
-              </p>
-              <PanelCloseButton
-                onClick={() => {
-                  setOpen(false);
-                  setBox(null);
-                }}
-              />
-              <table className="w-full text-left">
-                <thead className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-                  <tr className="border-b border-line">
-                    <th className="px-3 py-2 font-medium">Setting</th>
-                    <th className="px-3 py-2 font-medium text-success">Long</th>
-                    <th className="px-3 py-2 font-medium text-danger">Short</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bothDetailsRows.map((row) => {
-                    const current = row.id === currentId;
-                    return (
-                      <tr
-                        key={row.id}
-                        className={
-                          current
-                            ? "bg-accent/10 text-ink"
-                            : "text-ink-muted"
-                        }
-                      >
-                        <td className="px-3 py-2 font-medium text-ink">
-                          {row.setting}
-                        </td>
-                        <td className="px-3 py-2 text-ink">{row.long}</td>
-                        <td className="px-3 py-2 text-ink">{row.short}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>,
-            document.body,
-          )
-        : null}
+      <label className={labelClass}>
+        Indicator
+        <select
+          name={`${prefix}Kind`}
+          value={kind}
+          onChange={(event) => {
+            const next = event.target.value as DcaIndicatorKind;
+            onKindChange(next);
+            onCompareChange(indicatorCompareForDirection(side, next, ""));
+          }}
+          className={fieldClass}
+        >
+          <option value="rsi">RSI 14</option>
+          <option value="macd">MACD histogram</option>
+          <option value="ema_cross">EMA 9/21 cross</option>
+        </select>
+      </label>
+      <label className={labelClass}>
+        Timeframe
+        <select
+          name={`${prefix}Timeframe`}
+          value={timeframe}
+          onChange={(event) =>
+            onTimeframeChange(event.target.value as DcaIndicatorTimeframe)
+          }
+          className={fieldClass}
+        >
+          {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
+            <option key={interval} value={interval}>
+              {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={labelClass}>
+        When
+        <select
+          name={`${prefix}Compare`}
+          value={indicatorCompareForDirection(side, kind, compare)}
+          onChange={(event) => onCompareChange(event.target.value)}
+          className={fieldClass}
+        >
+          {kind === "rsi" && side === "long" ? (
+            <>
+              <option value="cross_lte">Crosses below</option>
+              <option value="lte">At or below</option>
+            </>
+          ) : null}
+          {kind === "rsi" && side === "short" ? (
+            <>
+              <option value="cross_gte">Crosses above</option>
+              <option value="gte">At or above</option>
+            </>
+          ) : null}
+          {kind === "macd" ? (
+            <>
+              <option value="cross_gte">Crosses zero</option>
+              <option value="gte">Histogram sign</option>
+            </>
+          ) : null}
+          {kind === "ema_cross" ? (
+            <>
+              <option value="pair">EMA 9/21 cross</option>
+              <option value="cross_gte">EMA 21 crosses</option>
+            </>
+          ) : null}
+        </select>
+      </label>
+      {kind === "rsi" || (kind === "ema_cross" && compare !== "pair") ? (
+        <label className={labelClass}>
+          {kind === "ema_cross" ? "Level (price)" : "Level"}
+          <GroupedNumberInput
+            name={`${prefix}Level`}
+            value={level}
+            onChange={onLevelChange}
+            allowDecimal
+            className={fieldClass}
+          />
+        </label>
+      ) : null}
+      {kind === "macd" ? (
+        <p className="self-end text-xs text-ink-muted sm:col-span-2">
+          {side === "long"
+            ? compare === "gte"
+              ? "Triggers Long while the histogram is positive."
+              : "Triggers Long when the histogram crosses above zero."
+            : compare === "gte"
+              ? "Triggers Short while the histogram is negative."
+              : "Triggers Short when the histogram crosses below zero."}
+        </p>
+      ) : null}
+      {kind === "ema_cross" && compare === "pair" ? (
+        <p className="self-end text-xs text-ink-muted sm:col-span-2">
+          {side === "long"
+            ? "Triggers Long when EMA 9 crosses above EMA 21."
+            : "Triggers Short when EMA 9 crosses below EMA 21."}
+        </p>
+      ) : null}
+      {kind === "ema_cross" && compare !== "pair" ? (
+        <p className="text-xs text-ink-muted sm:col-span-2">
+          {side === "long"
+            ? "Triggers Long when EMA 21 crosses above the price level."
+            : "Triggers Short when EMA 21 crosses below the price level."}
+        </p>
+      ) : null}
+      {kind === "rsi" ? (
+        <p className="text-xs text-ink-muted sm:col-span-2">
+          {side === "long"
+            ? compare.startsWith("cross")
+              ? "Triggers Long when RSI crosses below the level."
+              : "Triggers Long while RSI is at or below the level."
+            : compare.startsWith("cross")
+              ? "Triggers Short when RSI crosses above the level."
+              : "Triggers Short while RSI is at or above the level."}
+        </p>
+      ) : null}
     </>
   );
 }
@@ -2389,7 +2368,7 @@ function TriggerFields({
   compare,
   price,
 }: {
-  prefix: "arm" | "disarm";
+  prefix: "arm" | "disarm" | "shortArm";
   triggerBy: string;
   compare: string;
   price: string;

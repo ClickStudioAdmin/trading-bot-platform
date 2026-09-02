@@ -204,6 +204,7 @@ export type BacktestFieldIssue = {
   field:
     | "startKind"
     | "armPrice"
+    | "shortArmPrice"
     | "clipSize"
     | "entrySource"
     | "formAction"
@@ -234,7 +235,20 @@ export function userBacktestFieldIssues(
     ) {
       issues.push({
         field: "armPrice",
-        message: "Enter a start price.",
+        message:
+          recipe.direction === "both"
+            ? "Enter a Long start price."
+            : "Enter a start price.",
+      });
+    }
+    if (
+      recipe.startKind === "price" &&
+      recipe.direction === "both" &&
+      !(Number(recipe.shortArmTrigger?.price) > 0)
+    ) {
+      issues.push({
+        field: "shortArmPrice",
+        message: "Enter a Short start price.",
       });
     }
     const hasBudget =
@@ -364,6 +378,39 @@ function compareMark(compare: string): string {
   return compare;
 }
 
+function dcaIndicatorSideLabel(input: {
+  kind: DcaTemplateRecipe["indicatorKind"];
+  compare: DcaTemplateRecipe["indicatorCompare"];
+  level: number | null | undefined;
+  timeframe: DcaTemplateRecipe["indicatorTimeframe"];
+}): string {
+  const kind =
+    input.kind === "ema_cross"
+      ? "EMA"
+      : input.kind === "macd"
+        ? "MACD"
+        : input.kind === "rsi"
+          ? "RSI"
+          : "Indicator";
+  const when =
+    input.compare === "cross_lte"
+      ? "crosses below"
+      : input.compare === "cross_gte"
+        ? "crosses above"
+        : input.compare === "lte"
+          ? "at or below"
+          : input.compare === "gte"
+            ? "at or above"
+            : input.compare === "pair"
+              ? "9/21 cross"
+              : (input.compare ?? "");
+  const level = input.level != null ? ` ${input.level}` : "";
+  const timeframe = input.timeframe
+    ? ` · ${DCA_INDICATOR_TIMEFRAME_LABELS[input.timeframe] ?? input.timeframe}`
+    : "";
+  return `${kind} ${when}${level}${timeframe}`.trim();
+}
+
 function dcaStartLabel(recipe: DcaTemplateRecipe): string {
   if (recipe.startKind === "immediate") {
     return "Manual";
@@ -372,35 +419,28 @@ function dcaStartLabel(recipe: DcaTemplateRecipe): string {
     return "Signal";
   }
   if (recipe.startKind === "price" && recipe.armTrigger) {
-    return `Price ${compareMark(recipe.armTrigger.compare)} ${recipe.armTrigger.price}`;
+    const long = `Price ${compareMark(recipe.armTrigger.compare)} ${recipe.armTrigger.price}`;
+    if (recipe.direction === "both" && recipe.shortArmTrigger) {
+      return `${long} / Price ${compareMark(recipe.shortArmTrigger.compare)} ${recipe.shortArmTrigger.price}`;
+    }
+    return long;
   }
   if (recipe.startKind === "indicator") {
-    const kind =
-      recipe.indicatorKind === "ema_cross"
-        ? "EMA"
-        : recipe.indicatorKind === "macd"
-          ? "MACD"
-          : recipe.indicatorKind === "rsi"
-            ? "RSI"
-            : "Indicator";
-    const when =
-      recipe.indicatorCompare === "cross_lte"
-        ? "crosses below"
-        : recipe.indicatorCompare === "cross_gte"
-          ? "crosses above"
-          : recipe.indicatorCompare === "lte"
-            ? "at or below"
-            : recipe.indicatorCompare === "gte"
-              ? "at or above"
-              : recipe.indicatorCompare === "pair"
-                ? "9/21 cross"
-                : (recipe.indicatorCompare ?? "");
-    const level =
-      recipe.indicatorLevel != null ? ` ${recipe.indicatorLevel}` : "";
-    const timeframe = recipe.indicatorTimeframe
-      ? ` · ${DCA_INDICATOR_TIMEFRAME_LABELS[recipe.indicatorTimeframe] ?? recipe.indicatorTimeframe}`
-      : "";
-    return `${kind} ${when}${level}${timeframe}`.trim();
+    const long = dcaIndicatorSideLabel({
+      kind: recipe.indicatorKind,
+      compare: recipe.indicatorCompare,
+      level: recipe.indicatorLevel,
+      timeframe: recipe.indicatorTimeframe,
+    });
+    if (recipe.direction === "both" && recipe.shortIndicatorKind) {
+      return `${long} / ${dcaIndicatorSideLabel({
+        kind: recipe.shortIndicatorKind,
+        compare: recipe.shortIndicatorCompare ?? null,
+        level: recipe.shortIndicatorLevel,
+        timeframe: recipe.shortIndicatorTimeframe ?? null,
+      })}`;
+    }
+    return long;
   }
   return recipe.startKind;
 }

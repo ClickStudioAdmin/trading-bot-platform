@@ -12,13 +12,15 @@ import type { BacktestRecipe } from "@/lib/backtest/model";
 import {
   BACKTEST_COMPARABLE_CAP,
   BACKTEST_FEE_PRESETS,
+  BACKTEST_LONG_TAPE_BARS,
   DEFAULT_LEVERAGE,
   DEFAULT_STARTING_USDT,
   backtestShouldRunInline,
+  backtestTapeInterval,
   backtestWindowEndingToday,
   defaultBacktestDates,
   estimateBacktestBars,
-  parseBacktestDateRange,
+  parseBacktestDates,
 } from "@/lib/backtest/model";
 import {
   canQueueUserBacktest,
@@ -32,25 +34,11 @@ import {
 } from "@/lib/backtest/library";
 import { findBacktestableTemplate } from "@/components/backtest-dialog";
 import {
-  DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
-
-function replayIntervalFromRecipe(
-  recipe: BacktestRecipe | null,
-): DcaIndicatorTimeframe | null {
-  if (
-    recipe?.kind === "dca" &&
-    recipe.startKind === "indicator" &&
-    recipe.indicatorTimeframe
-  ) {
-    return recipe.indicatorTimeframe;
-  }
-  return null;
-}
 
 function withSymbol(options: LinearPerp[], symbol: string): LinearPerp[] {
   const needle = symbol.trim().toUpperCase();
@@ -133,11 +121,6 @@ export function BacktestQueueForm({
   );
   const [fromDate, setFromDate] = useState(seed?.fromDate ?? dates.from);
   const [toDate, setToDate] = useState(seed?.toDate ?? dates.to);
-  const [interval, setInterval] = useState<DcaIndicatorTimeframe>(
-    seed?.interval ??
-      replayIntervalFromRecipe(seed?.recipe ?? initialTemplate?.recipe ?? null) ??
-      "60",
-  );
   const [startingBalance, setStartingBalance] = useState(() =>
     formatGroupedNumberInput(
       String(seed?.startingUsdt ?? DEFAULT_STARTING_USDT),
@@ -215,17 +198,24 @@ export function BacktestQueueForm({
   const comparableOptions = pairs.filter((row) => row.symbol !== symbol);
 
   const preview = useMemo(() => {
-    const range = parseBacktestDateRange(fromDate, toDate, interval);
+    const range = parseBacktestDates(fromDate, toDate);
     if (!range.ok) {
-      return { bars: 0, inline: false, error: range.error };
+      return {
+        bars: 0,
+        inline: false,
+        interval: backtestTapeInterval(recipe, 0, 0),
+        error: range.error,
+      };
     }
+    const interval = backtestTapeInterval(recipe, range.fromMs, range.toMs);
     const bars = estimateBacktestBars(range.fromMs, range.toMs, interval);
     return {
       bars,
+      interval,
       inline: backtestShouldRunInline(bars, 1 + comparables.length),
       error: null as string | null,
     };
-  }, [comparables.length, fromDate, interval, toDate]);
+  }, [comparables.length, fromDate, recipe, toDate]);
 
   const pairChanged =
     recipe != null &&
@@ -297,10 +287,6 @@ export function BacktestQueueForm({
                   desk.venue === "hyperliquid" ? "hyperliquid" : "bybit",
                 );
                 setVenueEnvironment(desk.venueEnvironment);
-                const nextInterval = replayIntervalFromRecipe(desk.recipe);
-                if (nextInterval) {
-                  setInterval(nextInterval);
-                }
                 setComparables((rows) =>
                   rows.filter((row) => row !== desk.recipe.symbol),
                 );
@@ -311,10 +297,6 @@ export function BacktestQueueForm({
                 setRecipe(next.recipe);
                 setSourceTemplateId(next.id);
                 setSymbol(next.recipe.symbol);
-                const nextInterval = replayIntervalFromRecipe(next.recipe);
-                if (nextInterval) {
-                  setInterval(nextInterval);
-                }
                 setComparables((rows) =>
                   rows.filter((row) => row !== next.recipe.symbol),
                 );
@@ -394,8 +376,7 @@ export function BacktestQueueForm({
             ))}
           </div>
           <p className="mt-2 text-xs text-ink-faint">
-            Any range the venue has. A 5-minute tape that long will ask for a
-            higher timeframe or a shorter window.
+            Any range the venue has. Long tapes queue to the engine worker.
           </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -423,42 +404,18 @@ export function BacktestQueueForm({
             </span>
           </label>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-xs text-ink-muted">
-            Timeframe
-            <select
-              name="interval"
-              value={interval}
-              onChange={(event) => {
-                setInterval(event.target.value as DcaIndicatorTimeframe);
-              }}
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
-            >
-              {DCA_INDICATOR_TIMEFRAMES.map((row) => (
-                <option key={row} value={row}>
-                  {DCA_INDICATOR_TIMEFRAME_LABELS[row]}
-                </option>
-              ))}
-            </select>
-            {recipe?.kind === "dca" && recipe.startKind === "indicator" ? (
-              <span className="mt-1 block text-xs text-ink-faint">
-                Market window. The bot’s indicator timeframe is on the right.
-              </span>
-            ) : null}
-          </label>
-          <label className="block text-xs text-ink-muted">
-            Venue
-            <select
-              name="venue"
-              value={venue}
-              onChange={(event) => setVenue(event.target.value)}
-              className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
-            >
-              <option value="bybit">Bybit</option>
-              <option value="hyperliquid">Hyperliquid</option>
-            </select>
-          </label>
-        </div>
+        <label className="block text-xs text-ink-muted">
+          Venue
+          <select
+            name="venue"
+            value={venue}
+            onChange={(event) => setVenue(event.target.value)}
+            className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+          >
+            <option value="bybit">Bybit</option>
+            <option value="hyperliquid">Hyperliquid</option>
+          </select>
+        </label>
         <div>
           <p className="text-xs text-ink-muted">Primary pair</p>
           <div className="mt-1">
@@ -538,14 +495,20 @@ export function BacktestQueueForm({
           <p className="text-sm text-danger">{preview.error}</p>
         ) : (
           <p className="text-xs text-ink-muted">
-            About {preview.bars.toLocaleString()} bars
+            Replay tape {DCA_INDICATOR_TIMEFRAME_LABELS[preview.interval]}
+            {recipe?.kind === "dca" && recipe.startKind === "indicator"
+              ? " · bot indicator"
+              : " · from this window"}
+            . About {preview.bars.toLocaleString()} bars
             {comparables.length > 0
               ? ` × ${1 + comparables.length} pairs`
               : ""}
             .{" "}
             {preview.inline
               ? "This will run now."
-              : "This will queue for the engine worker."}
+              : preview.bars >= BACKTEST_LONG_TAPE_BARS
+                ? "This will take a while and queue for the engine worker."
+                : "This will queue for the engine worker."}
           </p>
         )}
         {venueEnvironment ? (
@@ -592,7 +555,7 @@ export function BacktestQueueForm({
               <p className="mt-1 text-xs text-ink-muted">
                 {loadedFromRun
                   ? "These are the recipe fields from that run. Edit any of them before you queue."
-                  : "Change the replay fields here. Pair, dates, and timeframe on the left are the market window."}
+                  : "Change the replay fields here. Pair and dates on the left are the market window. The replay tape follows the bot."}
               </p>
             </div>
             <BacktestOriginBadges
@@ -617,18 +580,7 @@ export function BacktestQueueForm({
               }
               recipe={recipe}
               onIssuesChange={setRecipeFieldIssues}
-              onChange={(next) => {
-                const prevTf =
-                  recipe?.kind === "dca" ? recipe.indicatorTimeframe : null;
-                const nextTf =
-                  next.kind === "dca" && next.startKind === "indicator"
-                    ? next.indicatorTimeframe
-                    : null;
-                setRecipe(next);
-                if (nextTf && nextTf !== prevTf) {
-                  setInterval(nextTf);
-                }
-              }}
+              onChange={setRecipe}
             />
           </div>
         </aside>

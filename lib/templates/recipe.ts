@@ -1,5 +1,9 @@
 import { formatDeskType, type DeskType } from "@/lib/accounts/model";
 import {
+  oppositeRsiCompare,
+  oppositeRsiLevel,
+} from "@/lib/dca/indicators";
+import {
   dcaAveragingKind,
   dcaIntervalParts,
   parseDcaPlaybookForm,
@@ -80,10 +84,15 @@ export type DcaTemplateRecipe = {
   trailingTriggerPct: number | null;
   trailingPct: number | null;
   armTrigger: DcaPlaybookConfig["armTrigger"];
+  shortArmTrigger?: DcaPlaybookConfig["shortArmTrigger"];
   indicatorKind: DcaPlaybookConfig["indicatorKind"];
   indicatorTimeframe: DcaPlaybookConfig["indicatorTimeframe"];
   indicatorCompare: DcaPlaybookConfig["indicatorCompare"];
   indicatorLevel: number | null;
+  shortIndicatorKind?: DcaPlaybookConfig["shortIndicatorKind"];
+  shortIndicatorTimeframe?: DcaPlaybookConfig["shortIndicatorTimeframe"];
+  shortIndicatorCompare?: DcaPlaybookConfig["shortIndicatorCompare"];
+  shortIndicatorLevel?: number | null;
 };
 
 export type PerpsTemplateRecipe = {
@@ -247,10 +256,15 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     trailingTriggerPct: config.trailingTriggerPct,
     trailingPct: config.trailingPct,
     armTrigger: config.armTrigger,
+    shortArmTrigger: config.shortArmTrigger ?? null,
     indicatorKind: config.indicatorKind,
     indicatorTimeframe: config.indicatorTimeframe,
     indicatorCompare: config.indicatorCompare,
     indicatorLevel: config.indicatorLevel,
+    shortIndicatorKind: config.shortIndicatorKind ?? null,
+    shortIndicatorTimeframe: config.shortIndicatorTimeframe ?? null,
+    shortIndicatorCompare: config.shortIndicatorCompare ?? null,
+    shortIndicatorLevel: config.shortIndicatorLevel ?? null,
   };
 }
 
@@ -540,6 +554,20 @@ export function dcaRecipeToConfig(
     form.set("armCompare", arm.compare);
     form.set("armPrice", String(arm.price));
   }
+  const shortArm =
+    recipe.shortArmTrigger ??
+    (direction === "both" && appliedStart === "price" && arm
+      ? {
+          triggerBy: arm.triggerBy,
+          compare: arm.compare === "gte" ? "lte" : "gte",
+          price: arm.price,
+        }
+      : undefined);
+  if (shortArm) {
+    form.set("shortArmTriggerBy", shortArm.triggerBy);
+    form.set("shortArmCompare", shortArm.compare);
+    form.set("shortArmPrice", String(shortArm.price));
+  }
   if (recipe.indicatorKind) {
     form.set("indicatorKind", String(recipe.indicatorKind));
   }
@@ -551,6 +579,41 @@ export function dcaRecipeToConfig(
   }
   if (recipe.indicatorLevel != null) {
     form.set("indicatorLevel", String(recipe.indicatorLevel));
+  }
+  const shortKind =
+    recipe.shortIndicatorKind ??
+    (direction === "both" && appliedStart === "indicator"
+      ? recipe.indicatorKind
+      : null);
+  if (shortKind) {
+    form.set("shortIndicatorKind", String(shortKind));
+  }
+  if (
+    recipe.shortIndicatorTimeframe ??
+    (shortKind ? recipe.indicatorTimeframe : null)
+  ) {
+    form.set(
+      "shortIndicatorTimeframe",
+      String(recipe.shortIndicatorTimeframe ?? recipe.indicatorTimeframe),
+    );
+  }
+  const shortCompare =
+    recipe.shortIndicatorCompare ??
+    (shortKind && recipe.indicatorKind === "rsi"
+      ? oppositeRsiCompare(String(recipe.indicatorCompare ?? "cross_lte"))
+      : recipe.shortIndicatorKind
+        ? recipe.shortIndicatorCompare
+        : recipe.indicatorCompare);
+  if (shortCompare) {
+    form.set("shortIndicatorCompare", String(shortCompare));
+  }
+  const shortLevel =
+    recipe.shortIndicatorLevel ??
+    (shortKind && recipe.indicatorKind === "rsi"
+      ? oppositeRsiLevel(recipe.indicatorLevel)
+      : recipe.indicatorLevel);
+  if (shortLevel != null) {
+    form.set("shortIndicatorLevel", String(shortLevel));
   }
   const parsed = parseDcaPlaybookForm(form, venue);
   if (!parsed.ok) {
@@ -730,9 +793,16 @@ export type DcaSnapshotOverlay = {
   indicatorTimeframe?: string;
   indicatorCompare?: string;
   indicatorLevel?: string;
+  shortIndicatorKind?: string;
+  shortIndicatorTimeframe?: string;
+  shortIndicatorCompare?: string;
+  shortIndicatorLevel?: string;
   armTriggerBy?: string;
   armCompare?: string;
   armPrice?: string;
+  shortArmTriggerBy?: string;
+  shortArmCompare?: string;
+  shortArmPrice?: string;
   trailingTriggerPct?: string;
   trailingPct?: string;
   breakevenActivationPct?: string;

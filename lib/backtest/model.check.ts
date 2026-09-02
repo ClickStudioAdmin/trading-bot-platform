@@ -10,6 +10,7 @@ import {
   backtestChartIntervalFits,
   chartIntervalForWindow,
   parseBacktestDateRange,
+  backtestTapeInterval,
   parseComparableSymbols,
   parseBacktestLeverage,
   parseStartingBalance,
@@ -70,7 +71,7 @@ assert.equal(
 );
 assert.equal(
   parseBacktestDateRange("2020-01-01", "2026-01-01", "5").ok,
-  false,
+  true,
 );
 assert.equal(
   parseBacktestDateRange("2016-01-01", "2026-01-01", "60").ok,
@@ -78,7 +79,47 @@ assert.equal(
 );
 assert.equal(
   parseBacktestDateRange("2016-01-01", "2026-01-01", "5").ok,
+  true,
+);
+assert.equal(
+  parseBacktestDateRange("1970-01-01", "2026-01-01", "5").ok,
   false,
+);
+assert.equal(
+  backtestTapeInterval(
+    {
+      kind: "dca",
+      startKind: "indicator",
+      indicatorTimeframe: "5",
+    } as never,
+    Date.UTC(2016, 0, 1),
+    Date.UTC(2026, 0, 1),
+  ),
+  "5",
+);
+assert.equal(
+  backtestTapeInterval(
+    {
+      kind: "dca",
+      startKind: "indicator",
+      indicatorTimeframe: "15",
+      shortIndicatorTimeframe: "5",
+    } as never,
+    Date.UTC(2016, 0, 1),
+    Date.UTC(2026, 0, 1),
+  ),
+  "5",
+);
+assert.equal(
+  backtestTapeInterval(
+    {
+      kind: "dca",
+      startKind: "price",
+    } as never,
+    Date.UTC(2026, 7, 1),
+    Date.UTC(2026, 8, 1),
+  ),
+  "5",
 );
 assert.equal(intervalMs("5"), 5 * 60 * 1000);
 assert.equal(intervalMs("120"), 120 * 60 * 1000);
