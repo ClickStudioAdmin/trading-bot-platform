@@ -220,6 +220,57 @@ const marginBuys = marginReplay.orders.filter((row) => row.action === "buy");
 assert.equal(marginBuys.length, 1);
 assert.equal(marginBuys[0]?.qty, 1_000);
 
+const liqForm = new FormData();
+liqForm.set("name", "Liq");
+liqForm.set("symbol", "BTCUSDT");
+liqForm.set("direction", "long");
+liqForm.set("startKind", "immediate");
+liqForm.set("clipSize", "10");
+liqForm.set("sizeUnit", "qty");
+liqForm.set("sizeMultiplier", "1");
+const liqParsed = parseDcaPlaybookForm(liqForm);
+assert.equal(liqParsed.ok, true);
+if (!liqParsed.ok) {
+  throw new Error("expected liq DCA parse");
+}
+const liqReplay = replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 100, low: 89, close: 92 },
+    { timeMs: 3_000, open: 110, high: 121, low: 110, close: 120 },
+  ],
+  recipe: snapshotDcaRecipe(liqParsed.config),
+  feeRate: 0,
+  startingUsdt: 100,
+  leverage: 10,
+});
+const liqFlat = liqReplay.orders.find((row) => row.action === "flatten");
+assert.equal(liqFlat?.reason, "liquidation");
+assert.equal(liqFlat?.price, 90);
+assert.ok(Math.abs(liqReplay.stats.endingUsdt) < 1e-8);
+assert.equal(liqReplay.stats.openSide, null);
+assert.equal(
+  liqReplay.orders.some((row) => row.reason === "take_profit"),
+  false,
+);
+
+const slSaves = replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 100, low: 89, close: 92 },
+  ],
+  recipe: snapshotDcaRecipe({
+    ...liqParsed.config,
+    stopLossPct: 5,
+  }),
+  feeRate: 0,
+  startingUsdt: 100,
+  leverage: 10,
+});
+const slFlat = slSaves.orders.find((row) => row.action === "flatten");
+assert.equal(slFlat?.reason, "stop");
+assert.equal(slFlat?.price, 95);
+
 const stopForm = new FormData();
 stopForm.set("name", "Stop wick");
 stopForm.set("symbol", "BTCUSDT");

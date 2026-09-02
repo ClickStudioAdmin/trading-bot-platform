@@ -177,4 +177,25 @@ const geared = replayPerpsPriceCross({
 });
 assert.ok(geared.orders.length > 0);
 
+const wiped = replayPerpsPriceCross({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 100, low: 89, close: 92 },
+    { timeMs: 3_000, open: 110, high: 110, low: 110, close: 110 },
+  ],
+  recipe: { ...base, size: "10" },
+  feeRate: 0,
+  startingUsdt: 100,
+  leverage: 10,
+});
+const wipeFlat = wiped.orders.find((row) => row.action === "flatten");
+assert.equal(wipeFlat?.reason, "liquidation");
+assert.equal(wipeFlat?.price, 90);
+assert.ok(Math.abs(wiped.stats.endingUsdt) < 1e-8);
+assert.equal(wiped.stats.openSide, null);
+assert.equal(
+  wiped.orders.some((row) => row.atMs === 3_000),
+  false,
+);
+
 console.log("backtest replay checks passed");

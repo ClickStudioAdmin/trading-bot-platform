@@ -75,12 +75,16 @@ export function buildEquityTimeline(
       },
     ];
     for (const bar of candles) {
+      let liquidatedBar = false;
       while (
         index < run.orders.length &&
         (run.orders[index]?.atMs ?? 0) <= bar.timeMs
       ) {
         const order = run.orders[index];
         if (order) {
+          if (order.reason === "liquidation") {
+            liquidatedBar = true;
+          }
           realized = applyFill(legs, realized, order);
         }
         index += 1;
@@ -89,8 +93,11 @@ export function buildEquityTimeline(
         atMs: bar.timeMs,
         equityUsdt: markedEquity(run.startingUsdt, realized, legs, bar.close),
         realizedUsdt: realized,
-        label:
-          legs.long.qty > 0 || legs.short.qty > 0 ? "Mark" : "Equity",
+        label: liquidatedBar
+          ? "Liquidated"
+          : legs.long.qty > 0 || legs.short.qty > 0
+            ? "Mark"
+            : "Equity",
       });
     }
     return points;
@@ -112,7 +119,10 @@ export function buildEquityTimeline(
       atMs: order.atMs,
       equityUsdt: markedEquity(run.startingUsdt, realized, legs, order.price),
       realizedUsdt: realized,
-      label: `${order.action} ${order.side}`,
+      label:
+        order.reason === "liquidation"
+          ? "Liquidated"
+          : `${order.action} ${order.side}`,
     });
   }
   const ending = run.stats?.endingUsdt;

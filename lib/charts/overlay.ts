@@ -203,7 +203,9 @@ export function buildBacktestChartOverlay(input: {
           : flatten
             ? row.reason === "take_profit"
               ? CHART_COLORS.takeProfit
-              : CHART_COLORS.sell
+              : row.reason === "liquidation"
+                ? CHART_COLORS.stopLoss
+                : CHART_COLORS.sell
             : buy
               ? CHART_COLORS.buy
               : CHART_COLORS.sell,

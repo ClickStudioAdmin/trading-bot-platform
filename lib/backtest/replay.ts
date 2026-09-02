@@ -16,9 +16,11 @@ import {
 import type { CandleBar } from "@/lib/market/candles";
 import type { PerpsTemplateRecipe } from "@/lib/templates/recipe";
 import {
+  backtestLiquidationPrice,
   backtestMarginUsdt,
   emptyBacktestStats,
   finishBacktestStats,
+  firstAdverseFill,
   normalizeBacktestLeverage,
   type BacktestFillReason,
   type BacktestStats,
@@ -143,6 +145,7 @@ export function replayPerpsPriceCross(input: {
   let peak = input.startingUsdt;
   let maxDrawdown = 0;
   let barsIn = 0;
+  let liquidated = false;
 
   function flattenOpen(atMs: number, fill: number, reason: BacktestFillReason) {
     if (!open) {
@@ -171,6 +174,11 @@ export function replayPerpsPriceCross(input: {
     open = null;
   }
 
+  function wipeOpen(atMs: number, fill: number) {
+    flattenOpen(atMs, fill, "liquidation");
+    liquidated = true;
+  }
+
   function markEquity(price: number) {
     const mark =
       input.startingUsdt +
@@ -190,6 +198,10 @@ export function replayPerpsPriceCross(input: {
     if (!(price > 0)) {
       continue;
     }
+    if (liquidated) {
+      markEquity(0);
+      continue;
+    }
     if (open) {
       barsIn += 1;
       const adverse = open.side === "long" ? bar.low : bar.high;
@@ -199,14 +211,30 @@ export function replayPerpsPriceCross(input: {
         mark: adverse,
         index: adverse,
       };
-      if (open.tpsl && tpslHasLevels(open.tpsl)) {
-        const sl = paperStopLossHit({
-          side: open.side,
-          tpsl: open.tpsl,
-          ...quotes,
-        });
-        if (sl) {
-          flattenOpen(bar.timeMs, sl.price, "stop");
+      const sl =
+        open.tpsl && tpslHasLevels(open.tpsl)
+          ? paperStopLossHit({
+              side: open.side,
+              tpsl: open.tpsl,
+              ...quotes,
+            })
+          : null;
+      const liq = backtestLiquidationPrice({
+        side: open.side,
+        entry: open.entry,
+        qty: open.qty,
+        cashUsdt: input.startingUsdt + realized,
+        feeRate: input.feeRate,
+      });
+      const firstHit = firstAdverseFill(open.side, adverse, [
+        sl ? { price: sl.price, reason: "stop" } : null,
+        liq != null ? { price: liq, reason: "liquidation" } : null,
+      ]);
+      if (firstHit) {
+        if (firstHit.reason === "liquidation") {
+          wipeOpen(bar.timeMs, firstHit.price);
+        } else {
+          flattenOpen(bar.timeMs, firstHit.price, firstHit.reason);
         }
       }
       if (open?.trailing && trailingHasStop(open.trailing)) {
@@ -232,6 +260,10 @@ export function replayPerpsPriceCross(input: {
           flattenOpen(bar.timeMs, tp.price, "take_profit");
         }
       }
+    }
+    if (liquidated) {
+      markEquity(0);
+      continue;
     }
     const conditionMet = triggerConditionMet(
       price,

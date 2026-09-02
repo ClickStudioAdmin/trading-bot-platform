@@ -181,6 +181,9 @@ export function backtestFillLogMessage(row: SimulatedOrder): string {
     if (row.reason === "trailing") {
       return `Trailing stop filled at ${row.price}.`;
     }
+    if (row.reason === "liquidation") {
+      return `Account liquidated at ${row.price}. Replay stopped.`;
+    }
     return `Position closed at ${row.price}.`;
   }
   const index = row.clipIndex ?? 1;
@@ -232,6 +235,9 @@ export function backtestFillMarkerText(
     }
     if (row.reason === "trailing") {
       return "Trail";
+    }
+    if (row.reason === "liquidation") {
+      return "Liq";
     }
     return "Close";
   }

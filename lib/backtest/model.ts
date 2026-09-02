@@ -59,6 +59,7 @@ export const BACKTEST_FILL_REASONS = [
   "stop",
   "trailing",
   "close",
+  "liquidation",
 ] as const;
 export type BacktestFillReason = (typeof BACKTEST_FILL_REASONS)[number];
 
@@ -554,6 +555,83 @@ export function emptyBacktestStats(startingUsdt = 0): BacktestStats {
     endingUsdt: startingUsdt,
     returnPct: null,
   };
+}
+
+export type BacktestOutcome = "profit" | "loss" | "liquidated";
+
+export function backtestRunWasLiquidated(
+  orders: Array<Pick<SimulatedOrder, "reason">>,
+): boolean {
+  return orders.some((row) => row.reason === "liquidation");
+}
+
+export function backtestRunOutcome(input: {
+  orders: Array<Pick<SimulatedOrder, "reason">>;
+  realizedUsdt: number;
+}): BacktestOutcome {
+  if (backtestRunWasLiquidated(input.orders)) {
+    return "liquidated";
+  }
+  return input.realizedUsdt > 0 ? "profit" : "loss";
+}
+
+export function backtestOutcomeLabel(outcome: BacktestOutcome): string {
+  if (outcome === "liquidated") {
+    return "Account Liquidated";
+  }
+  return outcome === "profit" ? "Profit" : "Loss";
+}
+
+export function backtestLiquidationPrice(input: {
+  side: "long" | "short";
+  entry: number;
+  qty: number;
+  cashUsdt: number;
+  feeRate?: number;
+}): number | null {
+  if (!(input.qty > 0) || !(input.entry > 0)) {
+    return null;
+  }
+  const rate =
+    input.feeRate != null && input.feeRate > 0 && Number.isFinite(input.feeRate)
+      ? input.feeRate
+      : 0;
+  if (input.side === "long") {
+    const denom = input.qty * (1 - rate);
+    if (!(denom > 0)) {
+      return null;
+    }
+    const price = (input.entry * input.qty - input.cashUsdt) / denom;
+    return price > 0 && Number.isFinite(price) ? price : null;
+  }
+  const denom = input.qty * (1 + rate);
+  if (!(denom > 0)) {
+    return null;
+  }
+  const price = (input.cashUsdt + input.entry * input.qty) / denom;
+  return price > 0 && Number.isFinite(price) ? price : null;
+}
+
+export function firstAdverseFill(
+  side: "long" | "short",
+  adverse: number,
+  candidates: Array<{ price: number; reason: BacktestFillReason } | null>,
+): { price: number; reason: BacktestFillReason } | null {
+  const hit = candidates.filter(
+    (row): row is { price: number; reason: BacktestFillReason } =>
+      row != null &&
+      row.price > 0 &&
+      (side === "long" ? adverse <= row.price : adverse >= row.price),
+  );
+  if (hit.length === 0) {
+    return null;
+  }
+  return hit.reduce((best, row) => {
+    if (side === "long") {
+      return row.price > best.price ? row : best;
+    }
+    return row.price < best.price ? row : best;
+  });
 }
 
 export function finishBacktestStats(input: {

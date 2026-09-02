@@ -24,9 +24,11 @@ import {
 } from "@/lib/futures/trailing";
 import type { CandleBar } from "@/lib/market/candles";
 import {
+  backtestLiquidationPrice,
   backtestMarginUsdt,
   emptyBacktestStats,
   finishBacktestStats,
+  firstAdverseFill,
   normalizeBacktestLeverage,
   type BacktestFillReason,
   type BacktestStats,
@@ -125,6 +127,7 @@ export function replayDcaPlaybook(input: {
   let peak = input.startingUsdt;
   let maxDrawdown = 0;
   let barsIn = 0;
+  let liquidated = false;
   const closes: number[] = [];
 
   function flatten(
@@ -160,6 +163,46 @@ export function replayDcaPlaybook(input: {
       reason,
     });
     legs[side] = rearm ? emptyLeg() : { ...emptyLeg(), status: "idle" };
+  }
+
+  function cashUsdt() {
+    return input.startingUsdt + realized;
+  }
+
+  function wipeAccount(
+    atMs: number,
+    triggerSide: FuturesSide,
+    fill: number,
+    mark: number,
+  ) {
+    for (const side of sides) {
+      const leg = legs[side];
+      if (!(leg.qty > 0)) {
+        continue;
+      }
+      const price = side === triggerSide ? fill : mark;
+      flatten(side, atMs, price, false, "liquidation");
+    }
+    liquidated = true;
+  }
+
+  function adverseExit(
+    side: FuturesSide,
+    adverse: number,
+    extra: Array<{ price: number; reason: BacktestFillReason } | null>,
+  ): { price: number; reason: BacktestFillReason } | null {
+    const leg = legs[side];
+    const liq = backtestLiquidationPrice({
+      side,
+      entry: leg.entry,
+      qty: leg.qty,
+      cashUsdt: cashUsdt(),
+      feeRate: input.feeRate,
+    });
+    return firstAdverseFill(side, adverse, [
+      ...extra,
+      liq != null ? { price: liq, reason: "liquidation" } : null,
+    ]);
   }
 
   function addClip(side: FuturesSide, atMs: number, price: number) {
@@ -335,22 +378,52 @@ export function replayDcaPlaybook(input: {
     if (!(price > 0)) {
       continue;
     }
+    if (liquidated) {
+      if (0 < peak) {
+        const drawdown = peak;
+        if (drawdown > maxDrawdown) {
+          maxDrawdown = drawdown;
+        }
+      }
+      continue;
+    }
     closes.push(price);
     const window = closes.slice(-80);
     const triggerPrices = { last: price, mark: price, index: price };
     let held = false;
     for (const side of sides) {
+      if (liquidated) {
+        break;
+      }
       const leg = legs[side];
       if (leg.qty > 0) {
         held = true;
         const adverse = side === "long" ? bar.low : bar.high;
-        if (leg.slPrice != null) {
-          const hit =
-            side === "long" ? adverse <= leg.slPrice : adverse >= leg.slPrice;
-          if (hit) {
-            flatten(side, bar.timeMs, leg.slPrice, true, "stop");
-            continue;
+        const plannedStop =
+          config.stopLossPct != null && config.stopLossPct > 0
+            ? dcaPlannedExits({
+                side,
+                entryPrice: leg.entry,
+                firstFillPrice: leg.firstFillPrice,
+                mark: price,
+                takeProfitPct: config.takeProfitPct,
+                stopLossPct: config.stopLossPct,
+                takeProfitBasis: config.takeProfitBasis,
+                stopLossBasis: config.stopLossBasis,
+                trailingPct: config.trailingPct,
+              }).stopLoss
+            : null;
+        const firstHit = adverseExit(side, adverse, [
+          leg.slPrice != null ? { price: leg.slPrice, reason: "stop" } : null,
+          plannedStop != null ? { price: plannedStop, reason: "stop" } : null,
+        ]);
+        if (firstHit) {
+          if (firstHit.reason === "liquidation") {
+            wipeAccount(bar.timeMs, side, firstHit.price, price);
+          } else {
+            flatten(side, bar.timeMs, firstHit.price, true, firstHit.reason);
           }
+          continue;
         }
         if (leg.trailing) {
           const trail = paperTrailingAdvance({
@@ -364,30 +437,18 @@ export function replayDcaPlaybook(input: {
             continue;
           }
         }
-        if (config.stopLossPct != null && config.stopLossPct > 0) {
-          const planned = dcaPlannedExits({
-            side,
-            entryPrice: leg.entry,
-            firstFillPrice: leg.firstFillPrice,
-            mark: price,
-            takeProfitPct: config.takeProfitPct,
-            stopLossPct: config.stopLossPct,
-            takeProfitBasis: config.takeProfitBasis,
-            stopLossBasis: config.stopLossBasis,
-            trailingPct: config.trailingPct,
-          });
-          if (planned.stopLoss != null) {
-            const hit =
-              side === "long"
-                ? adverse <= planned.stopLoss
-                : adverse >= planned.stopLoss;
-            if (hit) {
-              flatten(side, bar.timeMs, planned.stopLoss, true, "stop");
-              continue;
-            }
+        fillRestingGrid(side, bar);
+        if (liquidated) {
+          continue;
+        }
+        const afterGrid = legs[side];
+        if (afterGrid.qty > 0) {
+          const gridLiq = adverseExit(side, adverse, []);
+          if (gridLiq?.reason === "liquidation") {
+            wipeAccount(bar.timeMs, side, gridLiq.price, price);
+            continue;
           }
         }
-        fillRestingGrid(side, bar);
         if (fillLimitTakeProfit(side, bar)) {
           continue;
         }

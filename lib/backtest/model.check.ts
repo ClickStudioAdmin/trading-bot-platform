@@ -14,6 +14,11 @@ import {
   parseComparableSymbols,
   parseBacktestLeverage,
   parseStartingBalance,
+  parseBacktestFillReason,
+  backtestLiquidationPrice,
+  backtestOutcomeLabel,
+  backtestRunOutcome,
+  firstAdverseFill,
   defaultBacktestDates,
   backtestWindowEndingToday,
   matchingBacktestWindowDays,
@@ -47,6 +52,70 @@ assert.equal(
   30,
 );
 assert.equal(matchingBacktestWindowDays("2020-01-01", defaultDates.to), null);
+
+assert.equal(parseBacktestFillReason("liquidation"), "liquidation");
+assert.equal(
+  backtestLiquidationPrice({
+    side: "long",
+    entry: 100,
+    qty: 10,
+    cashUsdt: 100,
+  }),
+  90,
+);
+assert.equal(
+  backtestLiquidationPrice({
+    side: "short",
+    entry: 100,
+    qty: 10,
+    cashUsdt: 100,
+  }),
+  110,
+);
+assert.equal(
+  backtestLiquidationPrice({
+    side: "long",
+    entry: 100,
+    qty: 1,
+    cashUsdt: 10_000,
+  }),
+  null,
+);
+assert.deepEqual(
+  firstAdverseFill("long", 89, [
+    { price: 95, reason: "stop" },
+    { price: 90, reason: "liquidation" },
+  ]),
+  { price: 95, reason: "stop" },
+);
+assert.deepEqual(
+  firstAdverseFill("long", 89, [{ price: 90, reason: "liquidation" }]),
+  { price: 90, reason: "liquidation" },
+);
+assert.equal(backtestOutcomeLabel("profit"), "Profit");
+assert.equal(backtestOutcomeLabel("loss"), "Loss");
+assert.equal(backtestOutcomeLabel("liquidated"), "Account Liquidated");
+assert.equal(
+  backtestRunOutcome({
+    orders: [{ reason: "take_profit" }],
+    realizedUsdt: 20,
+  }),
+  "profit",
+);
+assert.equal(
+  backtestRunOutcome({
+    orders: [{ reason: "stop" }],
+    realizedUsdt: -20,
+  }),
+  "loss",
+);
+assert.equal(
+  backtestRunOutcome({
+    orders: [{ reason: "liquidation" }],
+    realizedUsdt: -100,
+  }),
+  "liquidated",
+);
 
 assert.equal(parseStartingBalance("").ok, false);
 assert.equal(parseStartingBalance("0").ok, false);

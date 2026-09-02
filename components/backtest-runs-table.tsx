@@ -4,6 +4,7 @@ import {
   backtestAprPct,
   backtestRoePct,
   backtestRunTitle,
+  backtestRunWasLiquidated,
   backtestWindowDays,
   formatBacktestReturnPct,
   type BacktestRun,
@@ -103,6 +104,11 @@ function BacktestRunRow({
           {isPrimary ? (
             <span className="rounded-control bg-accent/15 px-1.5 py-0.5 text-[11px] font-medium text-accent">
               Primary Pair
+            </span>
+          ) : null}
+          {backtestRunWasLiquidated(row.orders) ? (
+            <span className="rounded-control bg-danger/15 px-1.5 py-0.5 text-[11px] font-medium text-danger">
+              Liq
             </span>
           ) : null}
           {row.userId == null ? (

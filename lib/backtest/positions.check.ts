@@ -112,6 +112,13 @@ assert.equal(grouped.closed[1]?.exitReason, "take_profit");
 assert.equal(backtestFillMarkerText(fills[0]!, false), "Entry");
 assert.equal(backtestFillMarkerText(fills[1]!, false), "Add 2");
 assert.equal(backtestFillMarkerText(fills[2]!, false), "TP");
+assert.equal(
+  backtestFillMarkerText(
+    { ...fills[2]!, reason: "liquidation" },
+    false,
+  ),
+  "Liq",
+);
 assert.equal(backtestFillMarkerText(fills[3]!, true), "Open short");
 
 const exits = plannedExitsForBacktestCycle(recipe, grouped.closed[1]!);

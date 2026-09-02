@@ -611,7 +611,7 @@ function BacktestLogList({ cycle }: { cycle: BacktestPositionCycle }) {
 
 function orderCardTitle(order: SimulatedOrder): string {
   if (order.action === "flatten") {
-    return "Close";
+    return order.reason === "liquidation" ? "Liquidation" : "Close";
   }
   return order.action === "sell" ? "Sell" : "Buy";
 }

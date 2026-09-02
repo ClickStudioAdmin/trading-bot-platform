@@ -403,7 +403,9 @@ export function BacktestQueueForm({
               className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm tabular-nums text-ink"
             />
             <span className="mt-1 block text-xs text-ink-faint">
-              Cash gates on margin (position value ÷ this). Empty is 1×.
+              Cash gates on margin (position value ÷ this). Empty is 1×. If
+              marked equity hits $0, the account liquidates and the replay
+              stops.
             </span>
           </label>
         </div>

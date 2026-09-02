@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  CHART_COLORS,
   buildBacktestChartOverlay,
   buildLiveChartOverlay,
   snapOverlayToCandles,
@@ -96,6 +97,33 @@ const closed = buildBacktestChartOverlay({
 assert.equal(closed.lines.some((row) => row.title.startsWith("Open")), false);
 assert.equal(closed.markers[0]?.text, "Entry");
 assert.equal(closed.markers[1]?.text, "Close");
+
+const liqOverlay = buildBacktestChartOverlay({
+  triggerPrice: null,
+  orders: [
+    {
+      atMs: 1_700_000_000_000,
+      action: "buy",
+      side: "long",
+      qty: 1,
+      price: 100,
+      feeUsdt: 0,
+      realizedUsdt: null,
+    },
+    {
+      atMs: 1_700_000_100_000,
+      action: "flatten",
+      side: "long",
+      qty: 1,
+      price: 90,
+      feeUsdt: 0,
+      realizedUsdt: -10,
+      reason: "liquidation",
+    },
+  ],
+});
+assert.equal(liqOverlay.markers[1]?.text, "Liq");
+assert.equal(liqOverlay.markers[1]?.color, CHART_COLORS.stopLoss);
 
 const leveled = buildBacktestChartOverlay({
   triggerPrice: null,

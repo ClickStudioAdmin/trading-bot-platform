@@ -91,6 +91,8 @@ import {
 import {
   backtestChartFetchBounds,
   backtestMarginUsdt,
+  backtestOutcomeLabel,
+  backtestRunOutcome,
   chartIntervalForWindow,
   formatBacktestReturnPct,
   peakLockedNotionalUsdt,
@@ -158,9 +160,25 @@ export function BacktestStatsGrid({ run }: { run: BacktestRun }) {
   const realizedReturn = realizedReturnPct(stats);
   const peakUsed = peakLockedNotionalUsdt(run.orders);
   const peakMargin = backtestMarginUsdt(peakUsed, run.leverage);
+  const outcome = backtestRunOutcome({
+    orders: run.orders,
+    realizedUsdt: stats.realizedUsdt,
+  });
   return (
     <BacktestPropertyList
       rows={[
+        {
+          label: "Outcome",
+          value: backtestOutcomeLabel(outcome),
+          hint:
+            outcome === "liquidated"
+              ? "Marked equity hit $0. Open positions flattened and the replay stopped."
+              : "Sign of realized P&L on the starting balance.",
+          toneClass:
+            outcome === "profit"
+              ? "text-success"
+              : "text-danger",
+        },
         {
           label: "Starting",
           value: money(stats.startingUsdt),
@@ -231,7 +249,12 @@ export function BacktestCurrentTrades({ run }: { run: BacktestRun }) {
 export function BacktestPropertyList({
   rows,
 }: {
-  rows: Array<{ label: string; value: string; hint?: string }>;
+  rows: Array<{
+    label: string;
+    value: string;
+    hint?: string;
+    toneClass?: string;
+  }>;
 }) {
   return (
     <dl className="divide-y divide-line overflow-hidden rounded-card border border-line bg-surface">
@@ -244,7 +267,11 @@ export function BacktestPropertyList({
           <dt className="shrink-0 text-xs uppercase tracking-[0.12em] text-ink-muted">
             {row.label}
           </dt>
-          <dd className="min-w-0 text-right text-sm font-medium tabular-nums">
+          <dd
+            className={`min-w-0 text-right text-sm font-medium tabular-nums ${
+              row.toneClass ?? ""
+            }`}
+          >
             {row.value}
           </dd>
         </div>
