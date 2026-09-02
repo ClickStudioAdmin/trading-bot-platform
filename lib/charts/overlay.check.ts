@@ -266,4 +266,34 @@ assert.equal(snapped.markers[0]?.timeSec, 100);
 assert.equal(snapped.markers[1]?.text, "Liq");
 assert.equal(snapped.markers[1]?.timeSec, 200);
 
+const afternoon = snapOverlayToCandles(
+  {
+    lines: [],
+    markers: [
+      {
+        timeSec: 86_400 + 50_000,
+        position: "aboveBar",
+        color: "#34D399",
+        shape: "arrowDown",
+        text: "TP",
+      },
+      {
+        timeSec: 172_800 + 3_600,
+        position: "belowBar",
+        color: "#F07167",
+        shape: "arrowDown",
+        text: "Entry",
+      },
+    ],
+  },
+  [
+    { timeMs: 86_400_000, open: 1, high: 1, low: 1, close: 1 },
+    { timeMs: 172_800_000, open: 1, high: 1, low: 1, close: 1 },
+  ],
+);
+assert.equal(afternoon.markers[0]?.text, "TP");
+assert.equal(afternoon.markers[0]?.timeSec, 86_400);
+assert.equal(afternoon.markers[1]?.text, "Entry");
+assert.equal(afternoon.markers[1]?.timeSec, 172_800);
+
 console.log("chart overlay checks passed");

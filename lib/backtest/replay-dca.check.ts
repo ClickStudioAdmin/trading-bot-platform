@@ -69,6 +69,30 @@ assert.equal(closed.stats.trades, 1);
 assert.equal(closed.stats.openQty, 0);
 assert.ok((closed.stats.realizedUsdt ?? 0) > 0);
 
+const sameBarExit = replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 111, high: 111, low: 111, close: 111 },
+    { timeMs: 3_000, open: 111, high: 111, low: 111, close: 111 },
+  ],
+  recipe,
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+const sameBarFlat = sameBarExit.orders.find((row) => row.action === "flatten");
+const sameBarEntries = sameBarExit.orders.filter(
+  (row) => row.reason === "entry",
+);
+assert.equal(sameBarFlat?.atMs, 2_000);
+assert.equal(
+  sameBarEntries.some((row) => row.atMs === sameBarFlat?.atMs),
+  false,
+);
+assert.equal(
+  sameBarEntries.some((row) => row.atMs === 3_000 && row.side === "long"),
+  true,
+);
+
 function parseRecipe(direction: "long" | "short" | "both", extra?: FormData) {
   const row = extra ?? new FormData();
   row.set("name", `DCA ${direction}`);
@@ -129,6 +153,42 @@ assert.equal(
 );
 assert.equal(bothPrice.orders[0]?.side, "long");
 assert.ok(!bothPrice.orders.some((row) => row.side === "short"));
+
+const bothFlipForm = new FormData();
+bothFlipForm.set("startKind", "price");
+bothFlipForm.set("takeProfitPct", "10");
+bothFlipForm.set("armTriggerBy", "last");
+bothFlipForm.set("armCompare", "gte");
+bothFlipForm.set("armPrice", "100");
+bothFlipForm.set("shortArmTriggerBy", "last");
+bothFlipForm.set("shortArmCompare", "lte");
+bothFlipForm.set("shortArmPrice", "90");
+const bothFlip = replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 111, high: 111, low: 111, close: 111 },
+    { timeMs: 3_000, open: 90, high: 90, low: 90, close: 90 },
+  ],
+  recipe: parseRecipe("both", bothFlipForm),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+const bothFlipFlat = bothFlip.orders.find((row) => row.action === "flatten");
+assert.equal(bothFlipFlat?.atMs, 2_000);
+assert.equal(bothFlipFlat?.side, "long");
+assert.equal(
+  bothFlip.orders.some(
+    (row) => row.reason === "entry" && row.atMs === bothFlipFlat?.atMs,
+  ),
+  false,
+);
+assert.equal(
+  bothFlip.orders.some(
+    (row) =>
+      row.reason === "entry" && row.side === "short" && row.atMs === 3_000,
+  ),
+  true,
+);
 
 const rsiBothForm = new FormData();
 rsiBothForm.set("startKind", "indicator");

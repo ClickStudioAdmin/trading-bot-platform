@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
-import { FuturesSourceCell } from "@/components/futures-source";
 import { TpslPair } from "@/components/futures-tpsl";
 import { LocalTime } from "@/components/local-time";
 import { TokenIcon } from "@/components/token-icon";
@@ -28,9 +27,9 @@ import {
   signedTone,
 } from "@/lib/opportunities/format";
 
-const OPEN_COL_SPAN_DCA = 15;
-const OPEN_COL_SPAN = 14;
-const CLOSED_COL_SPAN = 10;
+const OPEN_COL_SPAN_DCA = 14;
+const OPEN_COL_SPAN = 13;
+const CLOSED_COL_SPAN = 11;
 
 export function BacktestPositionsTable({ run }: { run: BacktestRun }) {
   const grouped = groupBacktestOrdersIntoCycles(run.orders);
@@ -105,12 +104,6 @@ function OpenBacktestPositions({
               </th>
               <th className="px-3 py-3 font-medium">
                 <ColumnHint label="Contract" hint="USDT linear perpetual." />
-              </th>
-              <th className="px-3 py-3 font-medium">
-                <ColumnHint
-                  label="Source"
-                  hint="Backtest fills are Auto. The name is the recipe on this run."
-                />
               </th>
               <th className="px-3 py-3 font-medium">
                 <ColumnHint
@@ -246,8 +239,14 @@ function ClosedBacktestPositions({
               </th>
               <th className="px-4 py-3 font-medium">
                 <ColumnHint
-                  label="Source"
-                  hint="Backtest fills are Auto. The name is the recipe on this run."
+                  label="Side"
+                  hint="Long or short. Direction Both can close both."
+                />
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <ColumnHint
+                  label="Value"
+                  hint="Qty × entry. P&L % and ROE use this amount."
                 />
               </th>
               <th className="px-4 py-3 font-medium">
@@ -359,9 +358,6 @@ function OpenBacktestRows({
             </span>
           </span>
         </span>
-      </td>
-      <td className="min-w-0 px-3 py-3">
-        <FuturesSourceCell source="engine" ruleName={recipeName} />
       </td>
       <td
         className={`min-w-0 px-3 py-3 capitalize ${
@@ -478,8 +474,15 @@ function ClosedBacktestRows({
           </span>
         </span>
       </td>
-      <td className="px-4 py-3">
-        <FuturesSourceCell source="engine" ruleName={recipeName} />
+      <td
+        className={`px-4 py-3 capitalize ${
+          cycle.side === "short" ? "text-danger" : "text-success"
+        }`}
+      >
+        {cycle.side}
+      </td>
+      <td className="px-4 py-3 tabular-nums text-ink-muted">
+        {formatUsd(cycle.notionalUsdt)}
       </td>
       <td className="px-4 py-3 text-ink-muted">
         {cycle.closedAtMs ? (

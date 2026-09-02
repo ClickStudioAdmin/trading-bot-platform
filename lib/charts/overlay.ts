@@ -235,7 +235,8 @@ export function buildBacktestChartOverlay(input: {
   return { lines, markers };
 }
 
-function nearestCandleSec(times: number[], sec: number): number | null {
+/** Bar open that contains `sec`. Nearest midnight pulled afternoon fills onto the next day. */
+function containingCandleSec(times: number[], sec: number): number | null {
   if (times.length === 0) {
     return null;
   }
@@ -244,23 +245,21 @@ function nearestCandleSec(times: number[], sec: number): number | null {
   if (first == null || last == null || sec < first) {
     return null;
   }
-  if (sec > last) {
+  if (sec >= last) {
     return last;
   }
   let lo = 0;
   let hi = times.length - 1;
   while (lo < hi) {
-    const mid = (lo + hi) >> 1;
+    const mid = (lo + hi + 1) >> 1;
     const value = times[mid] ?? 0;
-    if (value < sec) {
-      lo = mid + 1;
+    if (value <= sec) {
+      lo = mid;
     } else {
-      hi = mid;
+      hi = mid - 1;
     }
   }
-  const right = times[lo] ?? last;
-  const left = times[Math.max(0, lo - 1)] ?? first;
-  return sec - left <= right - sec ? left : right;
+  return times[lo] ?? last;
 }
 
 export function snapOverlayToCandles(
@@ -273,7 +272,7 @@ export function snapOverlayToCandles(
     .sort((a, b) => a - b);
   const grouped = new Map<string, ChartMarker & { count: number }>();
   for (const marker of overlay.markers) {
-    const timeSec = nearestCandleSec(times, marker.timeSec);
+    const timeSec = containingCandleSec(times, marker.timeSec);
     if (timeSec == null) {
       continue;
     }

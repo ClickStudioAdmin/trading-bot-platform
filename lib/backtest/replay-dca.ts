@@ -391,6 +391,7 @@ export function replayDcaPlaybook(input: {
     const window = closes.slice(-80);
     const triggerPrices = { last: price, mark: price, index: price };
     let held = false;
+    let closedThisBar = false;
     for (const side of sides) {
       if (liquidated) {
         break;
@@ -423,6 +424,7 @@ export function replayDcaPlaybook(input: {
           } else {
             flatten(side, bar.timeMs, firstHit.price, true, firstHit.reason);
           }
+          closedThisBar = true;
           continue;
         }
         if (leg.trailing) {
@@ -434,6 +436,7 @@ export function replayDcaPlaybook(input: {
           legs[side] = { ...leg, trailing: { ...leg.trailing, peak: trail.peak } };
           if (trail.hit && trail.fillPrice != null) {
             flatten(side, bar.timeMs, trail.fillPrice, true, "trailing");
+            closedThisBar = true;
             continue;
           }
         }
@@ -450,6 +453,7 @@ export function replayDcaPlaybook(input: {
           }
         }
         if (fillLimitTakeProfit(side, bar)) {
+          closedThisBar = true;
           continue;
         }
       }
@@ -522,8 +526,8 @@ export function replayDcaPlaybook(input: {
         live.clipsFilled === 0;
       if (
         starting &&
-        splitSides &&
-        legs[side === "long" ? "short" : "long"].qty > 0
+        (closedThisBar ||
+          (splitSides && legs[side === "long" ? "short" : "long"].qty > 0))
       ) {
         continue;
       }
@@ -537,6 +541,7 @@ export function replayDcaPlaybook(input: {
           true,
           decision.action.reason === "stop_loss" ? "stop" : "take_profit",
         );
+        closedThisBar = true;
       } else if (decision.action.kind === "disarm") {
         if (legs[side].qty > 0) {
           legs[side] = { ...legs[side], status: "stop_adding" };
@@ -545,6 +550,7 @@ export function replayDcaPlaybook(input: {
         }
       } else if (decision.action.kind === "end_cycle") {
         flatten(side, bar.timeMs, price, true, "close");
+        closedThisBar = true;
       } else if (decision.action.kind === "stop_adding") {
         legs[side] = { ...legs[side], status: "stop_adding" };
       } else if (decision.action.kind === "breakeven") {
