@@ -44,6 +44,8 @@ const opened = replayDcaPlaybook({
 });
 assert.equal(opened.orders.length, 1);
 assert.equal(opened.orders[0]?.action, "buy");
+assert.equal(opened.orders[0]?.reason, "entry");
+assert.equal(opened.orders[0]?.clipIndex, 1);
 assert.equal(opened.orders[0]?.price, 100);
 assert.equal(opened.stats.openSide, "long");
 assert.equal(opened.stats.openQty, 1);
@@ -61,6 +63,7 @@ const closed = replayDcaPlaybook({
 assert.equal(closed.orders.length, 2);
 assert.equal(closed.orders[0]?.action, "buy");
 assert.equal(closed.orders[1]?.action, "flatten");
+assert.equal(closed.orders[1]?.reason, "take_profit");
 assert.equal(closed.orders[1]?.price, 111);
 assert.equal(closed.stats.trades, 1);
 assert.equal(closed.stats.openQty, 0);

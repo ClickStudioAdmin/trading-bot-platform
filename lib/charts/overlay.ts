@@ -1,6 +1,7 @@
 import type { FuturesOrder, FuturesPosition } from "@/lib/futures/model";
 import type { FuturesWorkingOrder } from "@/lib/futures/working";
 import {
+  backtestFillChartLabel,
   splitCompletedBacktestOrders,
   type SimulatedOrder,
 } from "@/lib/backtest/model";
@@ -30,6 +31,7 @@ export type ChartMarker = {
   color: string;
   shape: "arrowUp" | "arrowDown" | "circle";
   text: string;
+  clipIndex?: number;
 };
 
 export type ChartOverlay = {
@@ -159,24 +161,24 @@ export function buildBacktestChartOverlay(input: {
     .map((row) => {
       const current = openSet.has(row);
       const buy = row.action === "buy";
+      const reason = row.reason;
       return {
         timeSec: markerTimeSec(row.atMs),
         position: buy ? "belowBar" : "aboveBar",
         color: current
           ? CHART_COLORS.entry
-          : buy
-            ? CHART_COLORS.buy
-            : CHART_COLORS.sell,
+          : reason === "take_profit"
+            ? CHART_COLORS.takeProfit
+            : reason === "stop"
+              ? CHART_COLORS.stopLoss
+              : reason === "trailing"
+                ? CHART_COLORS.trailing
+                : buy
+                  ? CHART_COLORS.buy
+                  : CHART_COLORS.sell,
         shape: current ? "circle" : buy ? "arrowUp" : "arrowDown",
-        text: current
-          ? row.side === "short"
-            ? "Open short"
-            : "Open long"
-          : buy
-            ? "Buy"
-            : row.action === "flatten"
-              ? "Close"
-              : "Sell",
+        text: backtestFillChartLabel(row, current),
+        clipIndex: current ? undefined : row.clipIndex,
       } satisfies ChartMarker;
     });
   return { lines, markers };
@@ -207,6 +209,28 @@ function nearestCandleSec(times: number[], sec: number): number | null {
   return sec - left <= right - sec ? left : right;
 }
 
+export function formatClipIndexes(values: readonly number[]): string {
+  const nums = [...new Set(values.filter((n) => n > 0))].sort((a, b) => a - b);
+  if (nums.length === 0) {
+    return "";
+  }
+  const parts: string[] = [];
+  let from = nums[0] ?? 0;
+  let to = from;
+  for (let i = 1; i < nums.length; i += 1) {
+    const n = nums[i] ?? 0;
+    if (n === to + 1) {
+      to = n;
+      continue;
+    }
+    parts.push(from === to ? `${from}` : `${from}–${to}`);
+    from = n;
+    to = n;
+  }
+  parts.push(from === to ? `${from}` : `${from}–${to}`);
+  return parts.join(", ");
+}
+
 export function snapOverlayToCandles(
   overlay: ChartOverlay,
   candles: CandleBar[],
@@ -215,18 +239,32 @@ export function snapOverlayToCandles(
     .map((row) => Math.floor(row.timeMs / 1000))
     .filter((row) => row > 0)
     .sort((a, b) => a - b);
-  const grouped = new Map<string, ChartMarker & { count: number }>();
+  const grouped = new Map<
+    string,
+    ChartMarker & { count: number; clips: number[] }
+  >();
   for (const marker of overlay.markers) {
     const timeSec = nearestCandleSec(times, marker.timeSec);
     if (timeSec == null) {
       continue;
     }
-    const key = `${timeSec}:${marker.position}:${marker.text}`;
+    const clip = marker.clipIndex != null;
+    const key = clip
+      ? `${timeSec}:${marker.position}:clip`
+      : `${timeSec}:${marker.position}:${marker.text}`;
     const existing = grouped.get(key);
     if (existing) {
       existing.count += 1;
+      if (marker.clipIndex != null) {
+        existing.clips.push(marker.clipIndex);
+      }
     } else {
-      grouped.set(key, { ...marker, timeSec, count: 1 });
+      grouped.set(key, {
+        ...marker,
+        timeSec,
+        count: 1,
+        clips: marker.clipIndex != null ? [marker.clipIndex] : [],
+      });
     }
   }
   const markers = [...grouped.values()]
@@ -235,7 +273,12 @@ export function snapOverlayToCandles(
       position: row.position,
       color: row.color,
       shape: row.shape,
-      text: row.count > 1 ? `${row.text} ×${row.count}` : row.text,
+      text:
+        row.clips.length > 0
+          ? formatClipIndexes(row.clips)
+          : row.count > 1
+            ? `${row.text} ×${row.count}`
+            : row.text,
     }))
     .sort(
       (a, b) => a.timeSec - b.timeSec || a.position.localeCompare(b.position),

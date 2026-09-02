@@ -20,6 +20,7 @@ import {
   emptyBacktestStats,
   finishBacktestStats,
   normalizeBacktestLeverage,
+  type BacktestFillReason,
   type BacktestStats,
   type SimulatedOrder,
 } from "./model";
@@ -143,7 +144,7 @@ export function replayPerpsPriceCross(input: {
   let maxDrawdown = 0;
   let barsIn = 0;
 
-  function flattenOpen(atMs: number, fill: number) {
+  function flattenOpen(atMs: number, fill: number, reason: BacktestFillReason) {
     if (!open) {
       return;
     }
@@ -165,6 +166,7 @@ export function replayPerpsPriceCross(input: {
       price: fill,
       feeUsdt: fee,
       realizedUsdt: pnl,
+      reason,
     });
     open = null;
   }
@@ -204,7 +206,7 @@ export function replayPerpsPriceCross(input: {
           ...quotes,
         });
         if (sl) {
-          flattenOpen(bar.timeMs, sl.price);
+          flattenOpen(bar.timeMs, sl.price, "stop");
         }
       }
       if (open?.trailing && trailingHasStop(open.trailing)) {
@@ -215,7 +217,7 @@ export function replayPerpsPriceCross(input: {
         });
         open.trailing = { ...open.trailing, peak: trail.peak };
         if (trail.hit && trail.fillPrice != null) {
-          flattenOpen(bar.timeMs, trail.fillPrice);
+          flattenOpen(bar.timeMs, trail.fillPrice, "trailing");
         }
       }
       if (open?.tpsl && tpslHasLevels(open.tpsl)) {
@@ -227,7 +229,7 @@ export function replayPerpsPriceCross(input: {
           index: favorable,
         });
         if (tp) {
-          flattenOpen(bar.timeMs, tp.price);
+          flattenOpen(bar.timeMs, tp.price, "take_profit");
         }
       }
     }
@@ -255,7 +257,7 @@ export function replayPerpsPriceCross(input: {
     wasTrue = decision.nextTrue;
     if (decision.fire) {
       if (action === "flatten" && open) {
-        flattenOpen(bar.timeMs, price);
+        flattenOpen(bar.timeMs, price, "close");
       } else if (action === "buy" || action === "sell") {
         const side: FuturesSide = action === "sell" ? "short" : "long";
         const qty = sizeAtPrice(input.recipe, price);
@@ -276,6 +278,7 @@ export function replayPerpsPriceCross(input: {
               price,
               feeUsdt: fee,
               realizedUsdt: -fee,
+              reason: "entry",
             });
             open = mergeSimPosition(
               open,

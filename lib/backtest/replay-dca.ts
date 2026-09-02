@@ -20,6 +20,7 @@ import {
   emptyBacktestStats,
   finishBacktestStats,
   normalizeBacktestLeverage,
+  type BacktestFillReason,
   type BacktestStats,
   type SimulatedOrder,
 } from "./model";
@@ -122,6 +123,7 @@ export function replayDcaPlaybook(input: {
     atMs: number,
     fill: number,
     rearm: boolean,
+    reason: BacktestFillReason,
   ) {
     const leg = legs[side];
     if (!(leg.qty > 0)) {
@@ -146,6 +148,7 @@ export function replayDcaPlaybook(input: {
       price: fill,
       feeUsdt: fee,
       realizedUsdt: pnl,
+      reason,
     });
     legs[side] = rearm ? emptyLeg() : { ...emptyLeg(), status: "idle" };
   }
@@ -190,6 +193,7 @@ export function replayDcaPlaybook(input: {
     }
     realized -= fee;
     const action = side === "short" ? "sell" : "buy";
+    const clipIndex = leg.clipsFilled + 1;
     orders.push({
       atMs,
       action,
@@ -198,6 +202,8 @@ export function replayDcaPlaybook(input: {
       price,
       feeUsdt: fee,
       realizedUsdt: -fee,
+      reason: firstClip ? "entry" : "clip",
+      clipIndex,
     });
     const nextQty = leg.qty + qty;
     const entry =
@@ -252,7 +258,7 @@ export function replayDcaPlaybook(input: {
           const hit =
             side === "long" ? adverse <= leg.slPrice : adverse >= leg.slPrice;
           if (hit) {
-            flatten(side, bar.timeMs, leg.slPrice, true);
+            flatten(side, bar.timeMs, leg.slPrice, true, "stop");
             continue;
           }
         }
@@ -264,7 +270,7 @@ export function replayDcaPlaybook(input: {
           });
           legs[side] = { ...leg, trailing: { ...leg.trailing, peak: trail.peak } };
           if (trail.hit && trail.fillPrice != null) {
-            flatten(side, bar.timeMs, trail.fillPrice, true);
+            flatten(side, bar.timeMs, trail.fillPrice, true, "trailing");
             continue;
           }
         }
@@ -334,11 +340,17 @@ export function replayDcaPlaybook(input: {
       if (decision.action.kind === "arm" || decision.action.kind === "clip") {
         addClip(side, bar.timeMs, price);
       } else if (decision.action.kind === "close") {
-        flatten(side, bar.timeMs, price, true);
+        flatten(
+          side,
+          bar.timeMs,
+          price,
+          true,
+          decision.action.reason === "stop_loss" ? "stop" : "take_profit",
+        );
       } else if (decision.action.kind === "disarm") {
-        flatten(side, bar.timeMs, price, false);
+        flatten(side, bar.timeMs, price, false, "close");
       } else if (decision.action.kind === "end_cycle") {
-        flatten(side, bar.timeMs, price, true);
+        flatten(side, bar.timeMs, price, true, "close");
       } else if (decision.action.kind === "stop_adding") {
         legs[side] = { ...legs[side], status: "stop_adding" };
       } else if (decision.action.kind === "breakeven") {

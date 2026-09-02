@@ -14,6 +14,7 @@ import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { formatStrategyConnectionCaption } from "@/lib/exchanges/connections";
 import { CopyDeskHeader } from "@/components/copy-desk-header";
+import { HashScroll } from "@/components/hash-scroll";
 import { loadCopyPaperEquityView } from "@/lib/copy/balance";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { listExchangeConnections } from "@/lib/exchanges/store";
@@ -213,6 +214,7 @@ export default async function FuturesLayout({
           </p>
         </div>
       ) : null}
+      <HashScroll />
       {children}
     </div>
   );

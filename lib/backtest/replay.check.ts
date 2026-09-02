@@ -119,6 +119,7 @@ const withTp = replayPerpsPriceCross({
 assert.equal(withTp.orders.length, 2);
 assert.equal(withTp.orders[0]?.action, "buy");
 assert.equal(withTp.orders[1]?.action, "flatten");
+assert.equal(withTp.orders[1]?.reason, "take_profit");
 assert.equal(withTp.orders[1]?.price, 110);
 assert.equal(withTp.stats.trades, 1);
 assert.equal(withTp.stats.openQty, 0);

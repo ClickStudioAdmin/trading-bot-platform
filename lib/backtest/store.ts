@@ -6,6 +6,8 @@ import {
   backtestLinkHighlight,
   estimateBacktestBars,
   parseBacktestStatus,
+  parseBacktestClipIndex,
+  parseBacktestFillReason,
   normalizeBacktestLeverage,
   parseFeePreset,
   type BacktestDeskType,
@@ -54,6 +56,8 @@ function parseSimulatedOrders(raw: unknown): SimulatedOrder[] {
       feeUsdt: Number(row.feeUsdt) || 0,
       realizedUsdt:
         row.realizedUsdt == null ? null : Number(row.realizedUsdt),
+      reason: parseBacktestFillReason(row.reason),
+      clipIndex: parseBacktestClipIndex(row.clipIndex),
     });
   }
   return rows;

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   buildBacktestChartOverlay,
   buildLiveChartOverlay,
+  formatClipIndexes,
   snapOverlayToCandles,
 } from "./overlay";
 
@@ -68,7 +69,7 @@ const replay = buildBacktestChartOverlay({
 assert.equal(replay.lines.length, 1);
 assert.equal(replay.lines.some((row) => row.title === "When"), true);
 assert.equal(replay.markers[0]?.shape, "circle");
-assert.equal(replay.markers[0]?.text, "Open short");
+assert.equal(replay.markers[0]?.text, "Open");
 
 const closed = buildBacktestChartOverlay({
   triggerPrice: null,
@@ -81,6 +82,8 @@ const closed = buildBacktestChartOverlay({
       price: 100,
       feeUsdt: 0,
       realizedUsdt: null,
+      reason: "entry",
+      clipIndex: 1,
     },
     {
       atMs: 1_700_000_100_000,
@@ -90,12 +93,13 @@ const closed = buildBacktestChartOverlay({
       price: 110,
       feeUsdt: 0,
       realizedUsdt: 10,
+      reason: "take_profit",
     },
   ],
 });
 assert.equal(closed.lines.some((row) => row.title.startsWith("Open")), false);
-assert.equal(closed.markers[0]?.text, "Buy");
-assert.equal(closed.markers[1]?.text, "Close");
+assert.equal(closed.markers[0]?.text, "1");
+assert.equal(closed.markers[1]?.text, "TP");
 
 const snapped = snapOverlayToCandles(
   {
@@ -132,5 +136,40 @@ const snapped = snapOverlayToCandles(
 assert.equal(snapped.markers.length, 1);
 assert.equal(snapped.markers[0]?.text, "Buy ×2");
 assert.equal(snapped.markers[0]?.timeSec, 100);
+
+assert.equal(formatClipIndexes([3, 1, 2, 5]), "1–3, 5");
+const snappedClips = snapOverlayToCandles(
+  {
+    lines: [],
+    markers: [
+      {
+        timeSec: 100,
+        position: "belowBar",
+        color: "#34D399",
+        shape: "arrowUp",
+        text: "1",
+        clipIndex: 1,
+      },
+      {
+        timeSec: 100,
+        position: "belowBar",
+        color: "#34D399",
+        shape: "arrowUp",
+        text: "2",
+        clipIndex: 2,
+      },
+      {
+        timeSec: 100,
+        position: "belowBar",
+        color: "#34D399",
+        shape: "arrowUp",
+        text: "3",
+        clipIndex: 3,
+      },
+    ],
+  },
+  [{ timeMs: 100_000, open: 1, high: 1, low: 1, close: 1 }],
+);
+assert.equal(snappedClips.markers[0]?.text, "1–3");
 
 console.log("chart overlay checks passed");
