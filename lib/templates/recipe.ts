@@ -554,15 +554,18 @@ export function dcaRecipeToConfig(
     form.set("armCompare", arm.compare);
     form.set("armPrice", String(arm.price));
   }
+  const shortArmStored = recipe.shortArmTrigger as
+    | DcaPlaybookConfig["shortArmTrigger"]
+    | undefined;
   const shortArm =
-    recipe.shortArmTrigger ??
+    shortArmStored ??
     (direction === "both" && appliedStart === "price" && arm
       ? {
           triggerBy: arm.triggerBy,
           compare: arm.compare === "gte" ? "lte" : "gte",
           price: arm.price,
         }
-      : undefined);
+      : null);
   if (shortArm) {
     form.set("shortArmTriggerBy", shortArm.triggerBy);
     form.set("shortArmCompare", shortArm.compare);
@@ -608,10 +611,10 @@ export function dcaRecipeToConfig(
     form.set("shortIndicatorCompare", String(shortCompare));
   }
   const shortLevel =
-    recipe.shortIndicatorLevel ??
+    asNullableNumber(recipe.shortIndicatorLevel) ??
     (shortKind && recipe.indicatorKind === "rsi"
-      ? oppositeRsiLevel(recipe.indicatorLevel)
-      : recipe.indicatorLevel);
+      ? oppositeRsiLevel(asNullableNumber(recipe.indicatorLevel))
+      : asNullableNumber(recipe.indicatorLevel));
   if (shortLevel != null) {
     form.set("shortIndicatorLevel", String(shortLevel));
   }
