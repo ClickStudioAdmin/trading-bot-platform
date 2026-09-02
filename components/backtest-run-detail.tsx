@@ -103,7 +103,7 @@ function MatchPanel({
 }) {
   return (
     <aside className="min-w-[14rem] flex-1 rounded-card border border-line bg-surface p-5">
-      <p className="text-xs font-medium text-ink-faint">
+      <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
         {title}
       </p>
       <div className="mt-3 space-y-2">{children}</div>
