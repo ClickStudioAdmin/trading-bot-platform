@@ -127,6 +127,32 @@ assert.equal(
 assert.equal(bothPrice.orders[0]?.side, "long");
 assert.ok(!bothPrice.orders.some((row) => row.side === "short"));
 
+const rsiBothForm = new FormData();
+rsiBothForm.set("startKind", "indicator");
+rsiBothForm.set("indicatorKind", "rsi");
+rsiBothForm.set("indicatorTimeframe", "15");
+rsiBothForm.set("indicatorCompare", "cross_lte");
+rsiBothForm.set("indicatorLevel", "50");
+const rsiDumpCloses = [...Array(19).fill(100), 1];
+const rsiBoth = replayDcaPlaybook({
+  bars: rsiDumpCloses.map((close, index) => ({
+    timeMs: (index + 1) * 60_000,
+    open: close,
+    high: close,
+    low: close,
+    close,
+  })),
+  recipe: parseRecipe("both", rsiBothForm),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+const rsiBothStarts = rsiBoth.orders.filter(
+  (row) => row.action === "buy" || row.action === "sell",
+);
+assert.equal(rsiBothStarts.length, 1);
+assert.equal(rsiBothStarts[0]?.side, "long");
+assert.ok(!rsiBoth.orders.some((row) => row.side === "short"));
+
 const percentForm = new FormData();
 percentForm.set("name", "Compound");
 percentForm.set("symbol", "BTCUSDT");

@@ -25,7 +25,7 @@ User
 
 Site header **Backtesting Tool** (`/account/backtests`). Two tabs: **New Backtest** (queue form) and **Saved Backtests** (`?tab=saved`, the run list). **Load into new backtest**, drafts, and template links open the New tab. **All backtests** on a run opens Saved.
 
-Each run has its own **detail page**: parameters, stats, orders list, account-impact timeline, and an inline chart. The Saved list shows name, type, contract, backtests (new tab), comps, days, win rate, ROE, APR, status, and Actions. Name opens the detail page in this tab. Old `?run=` URLs redirect.
+Each run has its own **detail page**: parameters, stats, orders list, account-impact timeline, and an inline chart. The Saved list shows name, type, contract, comps, days, win rate, ROE, APR, status, and Actions. Name opens the detail page in this tab. Old `?run=` URLs redirect.
 
 ## Locked for this slice
 
@@ -47,7 +47,7 @@ Each run has its own **detail page**: parameters, stats, orders list, account-im
 | Window | Explicit start/end dates. No day cap — 10 years is allowed. Any indicator timeframe (5m through Daily). Rejected only if the range needs more than **200,000** bars. |
 | Worker | Short jobs (≤3000 bars and ≤4 pairs) run in the request. Longer jobs stay `queued`. The engine cycle always ticks desks first. If time remains, it then claims one queued run (Fly: any length; Vercel: ≤3000). Opening a queued run also claims and executes that row so a busy desk wave cannot stall the queue. Stale `running` after 15 minutes is reclaimable. |
 | Balance | Required `starting_balance_usdt` and **leverage** (form default **10**, stored on `backtest_runs`). Replay skips an entry when **margin** (notional ÷ leverage) + fee exceeds remaining cash (start + realized − locked margin). Empty field and old runs without leverage read as 1×. DCA **% of account** max value uses that same cash book (start + realized) at the **start of each cycle**. |
-| DCA start | Replay treats legs as **armed** at the window start (Save and Arm). Immediate fires the first clip on the first close. **Both** never starts long and short on the same print, and does not open the other side while one position is still on. Price ≥ is Long only; price ≤ is Short only. Immediate + Both takes Long first (Manual does not auto-hedge). |
+| DCA start | Replay treats legs as **armed** at the window start (Save and Arm). Immediate fires the first clip on the first close. **Both** never starts long and short on the same print, and does not open the other side while one position is still on. Price ≥ is Long only; price ≤ is Short only. Immediate + Both takes Long first (Manual does not auto-hedge). Indicator **Both** is adaptive like the desk: RSI cross below → Long, cross above → Short. The replay form uses the same When labels and hint. |
 
 ## How it sits on templates
 

@@ -30,6 +30,8 @@ import {
   crossedLevel,
   emaCrossBullish,
   emaValues,
+  indicatorBothSidesHint,
+  indicatorCompareForDirection,
   indicatorStartMet,
   macdHistogram,
   parseDcaIndicatorCompare,
@@ -500,6 +502,14 @@ assert.equal(parseDcaIndicatorTimeframe("D"), "D");
 assert.equal(parseDcaIndicatorTimeframe("240"), "240");
 assert.equal(parseDcaIndicatorTimeframe("W"), null);
 assert.equal(parseDcaIndicatorCompare("cross_lte"), "cross_lte");
+assert.equal(
+  indicatorCompareForDirection("both", "rsi", "cross_gte"),
+  "cross_lte",
+);
+assert.equal(
+  indicatorBothSidesHint("rsi", "cross_lte"),
+  "Triggers Long when RSI crosses below the level. Triggers Short when RSI crosses above the level.",
+);
 assert.equal(parseDcaIndicatorCompare("pair"), null);
 assert.equal(crossedLevel(40, 25, 30, "down"), true);
 assert.equal(crossedLevel(25, 20, 30, "down"), false);

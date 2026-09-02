@@ -11,6 +11,10 @@ import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
+  indicatorBothSidesHint,
+  indicatorCompareForDirection,
+  parseDcaIndicatorCompare,
+  type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import {
@@ -145,12 +149,28 @@ export function BacktestRecipeFields({
           Direction
           <select
             value={recipe.direction}
-            onChange={(event) =>
+            onChange={(event) => {
+              const direction = event.target
+                .value as typeof recipe.direction;
+              const kind = recipe.indicatorKind ?? "rsi";
+              const nextCompare = indicatorCompareForDirection(
+                direction,
+                kind,
+                recipe.indicatorKind === "ema_cross" &&
+                  recipe.indicatorCompare == null
+                  ? "pair"
+                  : (recipe.indicatorCompare ?? ""),
+              );
               onChange({
                 ...recipe,
-                direction: event.target.value as typeof recipe.direction,
-              })
-            }
+                direction,
+                indicatorCompare:
+                  nextCompare === "pair"
+                    ? null
+                    : (parseDcaIndicatorCompare(nextCompare) ??
+                      recipe.indicatorCompare),
+              });
+            }}
             className={fieldClass}
           >
             <option value="long">Long</option>
@@ -231,15 +251,23 @@ export function BacktestRecipeFields({
               Indicator
               <select
                 value={recipe.indicatorKind ?? "rsi"}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const indicatorKind = event.target
+                    .value as DcaIndicatorKind;
+                  const nextCompare = indicatorCompareForDirection(
+                    recipe.direction,
+                    indicatorKind,
+                    "",
+                  );
                   onChange({
                     ...recipe,
-                    indicatorKind: event.target.value as
-                      | "rsi"
-                      | "macd"
-                      | "ema_cross",
-                  })
-                }
+                    indicatorKind,
+                    indicatorCompare:
+                      nextCompare === "pair"
+                        ? null
+                        : parseDcaIndicatorCompare(nextCompare),
+                  });
+                }}
                 className={fieldClass}
               >
                 <option value="rsi">RSI 14</option>
@@ -268,27 +296,66 @@ export function BacktestRecipeFields({
               </select>
             </label>
             <label className={labelClass}>
-              Compare
+              When
               <select
-                value={recipe.indicatorCompare ?? "lte"}
-                onChange={(event) =>
+                value={indicatorCompareForDirection(
+                  recipe.direction,
+                  recipe.indicatorKind ?? "rsi",
+                  recipe.indicatorKind === "ema_cross" &&
+                    recipe.indicatorCompare == null
+                    ? "pair"
+                    : (recipe.indicatorCompare ?? ""),
+                )}
+                onChange={(event) => {
+                  const next = event.target.value;
                   onChange({
                     ...recipe,
-                    indicatorCompare: event.target
-                      .value as NonNullable<typeof recipe.indicatorCompare>,
-                  })
-                }
+                    indicatorCompare:
+                      next === "pair" ? null : parseDcaIndicatorCompare(next),
+                  });
+                }}
                 className={fieldClass}
               >
-                <option value="lte">At or below</option>
-                <option value="gte">At or above</option>
-                <option value="cross_lte">Crosses below</option>
-                <option value="cross_gte">Crosses above</option>
-                <option value="pair">9/21 cross</option>
+                {(recipe.indicatorKind ?? "rsi") === "rsi" &&
+                recipe.direction === "both" ? (
+                  <>
+                    <option value="cross_lte">Crosses the level</option>
+                    <option value="lte">At the level</option>
+                  </>
+                ) : null}
+                {(recipe.indicatorKind ?? "rsi") === "rsi" &&
+                recipe.direction === "long" ? (
+                  <>
+                    <option value="cross_lte">Crosses below</option>
+                    <option value="lte">At or below</option>
+                  </>
+                ) : null}
+                {(recipe.indicatorKind ?? "rsi") === "rsi" &&
+                recipe.direction === "short" ? (
+                  <>
+                    <option value="cross_gte">Crosses above</option>
+                    <option value="gte">At or above</option>
+                  </>
+                ) : null}
+                {recipe.indicatorKind === "macd" ? (
+                  <>
+                    <option value="cross_gte">Crosses zero</option>
+                    <option value="gte">Histogram sign</option>
+                  </>
+                ) : null}
+                {recipe.indicatorKind === "ema_cross" ? (
+                  <>
+                    <option value="pair">EMA 9/21 cross</option>
+                    <option value="cross_gte">EMA 21 crosses</option>
+                  </>
+                ) : null}
               </select>
             </label>
+            {(recipe.indicatorKind ?? "rsi") === "rsi" ||
+            (recipe.indicatorKind === "ema_cross" &&
+              recipe.indicatorCompare != null) ? (
             <label className={labelClass}>
-              Level
+              {recipe.indicatorKind === "ema_cross" ? "Level (price)" : "Level"}
               <RecipeNumberInput
                 value={recipe.indicatorLevel}
                 emptyValue={null}
@@ -298,6 +365,18 @@ export function BacktestRecipeFields({
                 }
               />
             </label>
+            ) : null}
+            {recipe.direction === "both" ? (
+              <p className="text-xs text-ink-muted sm:col-span-2">
+                {indicatorBothSidesHint(
+                  recipe.indicatorKind ?? "rsi",
+                  recipe.indicatorKind === "ema_cross" &&
+                    recipe.indicatorCompare == null
+                    ? "pair"
+                    : (recipe.indicatorCompare ?? ""),
+                )}
+              </p>
+            ) : null}
           </>
         ) : null}
         {recipe.maxValue != null &&

@@ -36,7 +36,6 @@ export function BacktestRunsTable({
             <th className="px-4 py-3 font-medium">Name</th>
             <th className="px-4 py-3 font-medium">Type</th>
             <th className="px-4 py-3 font-medium">Contract</th>
-            <th className="px-4 py-3 font-medium">Backtests</th>
             <th className="px-4 py-3 font-medium">Comps</th>
             <th className="px-4 py-3 font-medium">Days</th>
             <th className="px-4 py-3 font-medium">Win Rate</th>
@@ -115,16 +114,6 @@ function BacktestRunRow({
         {row.deskType === "dca" ? "DCA" : "Perps"}
       </td>
       <td className="px-4 py-3 font-medium tabular-nums">{row.symbol}</td>
-      <td className="px-4 py-3">
-        <Link
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          className="text-accent hover:underline"
-        >
-          Open
-        </Link>
-      </td>
       <td className="px-4 py-3 text-ink-muted">
         {(row.comparableSymbols ?? []).length > 0
           ? `+${row.comparableSymbols.length}`

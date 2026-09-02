@@ -64,6 +64,8 @@ import {
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
+  indicatorBothSidesHint,
+  indicatorCompareForDirection,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import type { FuturesOrderType, FuturesSide } from "@/lib/futures/model";
@@ -2201,46 +2203,6 @@ export function DcaPlaybookForm({
       ) : null}
     </StayOnPageForm>
   );
-}
-
-function indicatorCompareForDirection(
-  direction: "long" | "short" | "both",
-  kind: "rsi" | "macd" | "ema_cross",
-  compare: string,
-): string {
-  if (kind === "macd") {
-    return compare === "gte" ? "gte" : "cross_gte";
-  }
-  if (kind === "ema_cross") {
-    return compare === "pair" || compare === "" ? "pair" : "cross_gte";
-  }
-  const isCross = compare.startsWith("cross") || compare === "";
-  if (direction === "short") {
-    return isCross ? "cross_gte" : "gte";
-  }
-  return isCross ? "cross_lte" : "lte";
-}
-
-function indicatorBothSidesHint(
-  kind: "rsi" | "macd" | "ema_cross",
-  compare: string,
-): string {
-  if (kind === "macd") {
-    if (compare === "gte") {
-      return "Triggers Long while the histogram is positive. Triggers Short while it is negative.";
-    }
-    return "Triggers Long when the histogram crosses above zero. Triggers Short when it crosses below zero.";
-  }
-  if (kind === "ema_cross") {
-    if (compare === "pair") {
-      return "Triggers Long when EMA 9 crosses above EMA 21. Triggers Short when EMA 9 crosses below EMA 21.";
-    }
-    return "Triggers Long when EMA 21 crosses above the price level. Triggers Short when EMA 21 crosses below the price level.";
-  }
-  if (compare === "lte" || compare === "gte") {
-    return "Triggers Long while RSI is at or below the level. Triggers Short while RSI is at or above the level.";
-  }
-  return "Triggers Long when RSI crosses below the level. Triggers Short when RSI crosses above the level.";
 }
 
 const bothDetailsRows: {
