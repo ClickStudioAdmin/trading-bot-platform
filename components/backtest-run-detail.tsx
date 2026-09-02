@@ -19,6 +19,7 @@ import type { AutomationTemplateSet } from "@/lib/templates/store";
 import {
   BACKTEST_FEE_PRESETS,
   backtestAprPct,
+  backtestDrawdownCard,
   backtestRerunHref,
   backtestRoePct,
   backtestRunTitle,
@@ -27,16 +28,11 @@ import {
   realizedReturnPct,
   type BacktestRun,
 } from "@/lib/backtest/model";
-import {
-  buildEquityTimeline,
-  maxDrawdownFromEquity,
-  recipeParamRows,
-} from "@/lib/backtest/study";
+import { recipeParamRows } from "@/lib/backtest/study";
 import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import {
   formatCount,
   formatPct,
-  formatSignedUsd,
   signedTone,
 } from "@/lib/opportunities/format";
 
@@ -470,9 +466,9 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
         run.toMs,
       )
     : null;
-  const equityDd = stats
-    ? maxDrawdownFromEquity(buildEquityTimeline(run))
-    : null;
+  const drawdown = stats
+    ? backtestDrawdownCard(stats)
+    : { value: "—", toneClass: "text-ink" };
   const winRate =
     stats && stats.trades > 0
       ? `${Math.round(stats.winRate * 100)}%`
@@ -492,22 +488,10 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
         <StatCard label="Win Rate" value={winRate} />
         <StatCard
           label="Max Drawdown"
-          value={
-            empty || equityDd == null || equityDd.maxDrawdownPct == null
-              ? "—"
-              : formatPct(equityDd.maxDrawdownPct)
-          }
-          toneClass={
-            empty || !equityDd || !(equityDd.maxDrawdownUsdt > 0)
-              ? undefined
-              : signedTone(-equityDd.maxDrawdownUsdt)
-          }
-          hint="Peak-to-trough of marked equity. Percent is versus that peak."
-          note={
-            empty || !equityDd || !(equityDd.maxDrawdownUsdt > 0)
-              ? undefined
-              : formatSignedUsd(-equityDd.maxDrawdownUsdt)
-          }
+          value={drawdown.value}
+          toneClass={drawdown.toneClass}
+          hint="Peak-to-trough of marked equity versus that peak, plus the dollar dip. Same book as paper Performance."
+          note={drawdown.note}
         />
         <StatCard
           label="Realized Profit"

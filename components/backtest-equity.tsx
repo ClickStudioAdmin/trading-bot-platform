@@ -201,24 +201,26 @@ export function BacktestEquityPanel({ run }: { run: BacktestRun }) {
 
   return (
     <div className="overflow-hidden rounded-card border border-line bg-surface">
-      <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line px-4 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-2">
         <p className="text-xs text-ink-muted">
           Equity · start ${money(start)}
         </p>
-        <p
-          className={`text-sm font-medium tabular-nums ${
-            change >= 0 ? "text-success" : "text-danger"
-          }`}
-        >
-          {change >= 0 ? "+" : "−"}${money(Math.abs(change))} · ${money(end)}
-        </p>
+        <div className="flex items-center gap-3">
+          <p
+            className={`text-sm font-medium tabular-nums ${
+              change >= 0 ? "text-success" : "text-danger"
+            }`}
+          >
+            {change >= 0 ? "+" : "−"}${money(Math.abs(change))} · ${money(end)}
+          </p>
+          <ChartScreenshotControls
+            getChart={() => chartRef.current}
+            filename={`${run.symbol}-equity.png`}
+          />
+        </div>
       </div>
       <div className="relative w-full" style={{ height: HEIGHT }}>
         <div ref={hostRef} className="h-full w-full" />
-        <ChartScreenshotControls
-          getChart={() => chartRef.current}
-          filename={`${run.symbol}-equity.png`}
-        />
       </div>
     </div>
   );

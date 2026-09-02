@@ -2,7 +2,11 @@ import {
   annualizeReturnPct,
   inclusiveUtcDays,
 } from "@/lib/futures/stats";
-import { formatPct } from "@/lib/opportunities/format";
+import {
+  formatPct,
+  formatSignedUsd,
+  signedTone,
+} from "@/lib/opportunities/format";
 import {
   DCA_INDICATOR_TIMEFRAMES,
   type DcaIndicatorTimeframe,
@@ -600,6 +604,29 @@ export function backtestDrawdownPct(stats: Pick<
     return null;
   }
   return stats.maxDrawdownUsdt / stats.startingUsdt;
+}
+
+/** Header Max Drawdown: stored marked-equity dip, not a fill-only rebuild. */
+export function backtestDrawdownCard(stats: Pick<
+  BacktestStats,
+  "trades" | "startingUsdt" | "maxDrawdownUsdt"
+>): { value: string; toneClass: string; note?: string } {
+  if (!(stats.trades > 0)) {
+    return { value: "—", toneClass: "text-ink" };
+  }
+  const dip = Number.isFinite(stats.maxDrawdownUsdt)
+    ? stats.maxDrawdownUsdt
+    : 0;
+  const visible = Math.round(dip) > 0;
+  const pct = backtestDrawdownPct({
+    startingUsdt: stats.startingUsdt,
+    maxDrawdownUsdt: visible ? dip : 0,
+  });
+  return {
+    value: pct == null ? "—" : formatPct(pct),
+    toneClass: signedTone(visible ? -dip : 0),
+    note: visible ? formatSignedUsd(-dip) : undefined,
+  };
 }
 
 export function splitCompletedBacktestOrders(orders: SimulatedOrder[]): {

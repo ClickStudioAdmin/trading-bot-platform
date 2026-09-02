@@ -54,14 +54,66 @@ export async function copyChartScreenshot(chart: ChartHandle): Promise<boolean> 
 }
 
 const SHOT_BUTTON =
-  "rounded-control border border-line bg-surface/90 px-2 py-1 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink";
+  "inline-flex size-7 items-center justify-center rounded-control text-ink-muted hover:bg-surface-raised hover:text-ink";
+
+function CopyImageIcon() {
+  return (
+    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
+      <rect
+        x="6.25"
+        y="6.25"
+        width="8"
+        height="8"
+        rx="1.4"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M11.5 6.1V4.7A1.2 1.2 0 0 0 10.3 3.5H4.7A1.2 1.2 0 0 0 3.5 4.7v5.6A1.2 1.2 0 0 0 4.7 11.5H6.1"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CameraIcon() {
+  return (
+    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
+      <path
+        d="M3.6 6.6h1.85l1.1-1.55h4.9L12.55 6.6H14.4A1.6 1.6 0 0 1 16 8.2v5.2a1.6 1.6 0 0 1-1.6 1.6H3.6A1.6 1.6 0 0 1 2 13.4V8.2a1.6 1.6 0 0 1 1.6-1.6Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <circle cx="9" cy="10.7" r="2.15" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
+      <path
+        d="M4.5 9.2 7.4 12l6.1-6.4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 export function ChartScreenshotControls({
   getChart,
   filename,
+  className,
 }: {
   getChart: () => ChartHandle | null;
   filename: string;
+  className?: string;
 }) {
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
@@ -78,12 +130,16 @@ export function ChartScreenshotControls({
   }, [copied, copyFailed]);
 
   return (
-    <div className="absolute top-2 right-2 z-10 flex gap-1">
+    <div className={`flex items-center gap-0.5 ${className ?? ""}`.trim()}>
       <button
         type="button"
-        title="Copy screenshot"
-        aria-label="Copy screenshot"
-        className={SHOT_BUTTON}
+        title={
+          copied ? "Copied" : copyFailed ? "Could not copy" : "Copy snapshot"
+        }
+        aria-label={
+          copied ? "Copied" : copyFailed ? "Could not copy" : "Copy snapshot"
+        }
+        className={`${SHOT_BUTTON} ${copied ? "text-success" : copyFailed ? "text-danger" : ""}`}
         onClick={() => {
           const chart = getChart();
           if (!chart) {
@@ -95,12 +151,12 @@ export function ChartScreenshotControls({
           });
         }}
       >
-        {copied ? "Copied" : copyFailed ? "Can't copy" : "Copy"}
+        {copied ? <CheckIcon /> : <CopyImageIcon />}
       </button>
       <button
         type="button"
-        title="Download screenshot"
-        aria-label="Download screenshot"
+        title="Save snapshot"
+        aria-label="Save snapshot"
         className={SHOT_BUTTON}
         onClick={() => {
           const chart = getChart();
@@ -109,11 +165,13 @@ export function ChartScreenshotControls({
           }
         }}
       >
-        Save
+        <CameraIcon />
       </button>
     </div>
   );
 }
+
+const CHART_TOOLBAR_H = 32;
 
 export function DeskChart({
   candles,
@@ -130,6 +188,7 @@ export function DeskChart({
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartHandle | null>(null);
+  const plotHeight = height - CHART_TOOLBAR_H;
 
   useEffect(() => {
     const host = hostRef.current;
@@ -163,7 +222,7 @@ export function DeskChart({
         },
         crosshair: { mode: charts.CrosshairMode.Normal },
         width: host.clientWidth,
-        height,
+        height: plotHeight,
       });
       chartRef.current = chart;
       const series = chart.addSeries(charts.CandlestickSeries, {
@@ -223,7 +282,7 @@ export function DeskChart({
       disposed = true;
       cleanup();
     };
-  }, [candles, overlay, height, rightOffset]);
+  }, [candles, overlay, plotHeight, rightOffset]);
 
   if (candles.length === 0) {
     return (
@@ -238,14 +297,16 @@ export function DeskChart({
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-card border border-line bg-canvas"
+      className="flex w-full flex-col overflow-hidden rounded-card border border-line bg-canvas"
       style={{ height }}
     >
-      <div ref={hostRef} className="h-full w-full" />
-      <ChartScreenshotControls
-        getChart={() => chartRef.current}
-        filename={screenshotName}
-      />
+      <div className="flex h-8 shrink-0 items-center justify-end border-b border-line px-1.5">
+        <ChartScreenshotControls
+          getChart={() => chartRef.current}
+          filename={screenshotName}
+        />
+      </div>
+      <div ref={hostRef} className="min-h-0 w-full flex-1" />
     </div>
   );
 }

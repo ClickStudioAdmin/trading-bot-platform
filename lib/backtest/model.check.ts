@@ -12,6 +12,7 @@ import {
   parseBacktestLeverage,
   parseStartingBalance,
   backtestAprPct,
+  backtestDrawdownCard,
   backtestOnNotionalPct,
   backtestQueueSeedFromRun,
   backtestRoePct,
@@ -244,6 +245,30 @@ const accountApr = backtestAprPct(
   Date.UTC(2026, 0, 1),
 );
 assert.ok(accountApr != null && accountApr > 0 && accountApr < 0.1);
+const zeroDd = backtestDrawdownCard({
+  trades: 1,
+  startingUsdt: 10_000,
+  maxDrawdownUsdt: 0.4,
+});
+assert.equal(zeroDd.value, "0.00%");
+assert.equal(zeroDd.toneClass, "text-ink-faint");
+assert.equal(zeroDd.note, undefined);
+const markedDd = backtestDrawdownCard({
+  trades: 1,
+  startingUsdt: 10_000,
+  maxDrawdownUsdt: 80,
+});
+assert.equal(markedDd.value, "0.80%");
+assert.equal(markedDd.toneClass, "text-danger");
+assert.equal(markedDd.note, "−$80");
+assert.equal(
+  backtestDrawdownCard({
+    trades: 0,
+    startingUsdt: 10_000,
+    maxDrawdownUsdt: 0,
+  }).value,
+  "—",
+);
 assert.equal(
   realizedEndingUsdt({ startingUsdt: 1000, realizedUsdt: 72.25 }),
   1072.25,
