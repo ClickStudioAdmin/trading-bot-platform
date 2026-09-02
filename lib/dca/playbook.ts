@@ -45,7 +45,7 @@ export type DcaStartKind = "immediate" | "price" | "webhook" | "indicator";
 export type DcaMode = "position" | "order";
 export type DcaExitBasis = "average" | "first_entry";
 export type DcaMaxType = "orders" | "value";
-export type DcaMaxValueKind = "usdt" | "percent";
+export type DcaMaxValueKind = "usdt" | "percent" | "margin";
 
 export type DcaPriceTrigger = {
   triggerBy: FuturesTrigger;
@@ -271,24 +271,39 @@ export function parseDcaMaxType(value: unknown): DcaMaxType {
 }
 
 export function parseDcaMaxValueKind(value: unknown): DcaMaxValueKind {
-  return value === "percent" ? "percent" : "usdt";
+  if (value === "percent" || value === "margin") {
+    return value;
+  }
+  return "usdt";
+}
+
+export function dcaMaxValueUsesBook(kind: DcaMaxValueKind): boolean {
+  return kind === "percent" || kind === "margin";
 }
 
 export function dcaResolvedMaxValueUsdt(input: {
   kind: DcaMaxValueKind;
   maxValue: number | null;
   bookUsdt: number | null;
+  leverage?: number | null;
 }): number | null {
   if (input.maxValue == null || !(input.maxValue > 0)) {
     return null;
   }
-  if (input.kind !== "percent") {
+  if (input.kind === "usdt") {
     return input.maxValue;
   }
   if (input.bookUsdt == null || !(input.bookUsdt > 0)) {
     return null;
   }
-  return input.bookUsdt * (input.maxValue / 100);
+  const fraction = input.maxValue / 100;
+  if (input.kind === "margin") {
+    if (input.leverage == null || !(input.leverage > 0)) {
+      return null;
+    }
+    return input.bookUsdt * input.leverage * fraction;
+  }
+  return input.bookUsdt * fraction;
 }
 
 export function dcaTickValueCapUsdt(input: {
@@ -296,20 +311,22 @@ export function dcaTickValueCapUsdt(input: {
   maxValue: number | null;
   cycleMaxValue: number | null;
   bookUsdt?: number | null;
+  leverage?: number | null;
 }): number | null {
   if (input.maxValue == null || !(input.maxValue > 0)) {
     return null;
   }
-  if (input.kind !== "percent") {
+  if (!dcaMaxValueUsesBook(input.kind)) {
     return input.maxValue;
   }
   if (input.cycleMaxValue != null && input.cycleMaxValue > 0) {
     return input.cycleMaxValue;
   }
   return dcaResolvedMaxValueUsdt({
-    kind: "percent",
+    kind: input.kind,
     maxValue: input.maxValue,
     bookUsdt: input.bookUsdt ?? null,
+    leverage: input.leverage ?? null,
   });
 }
 
@@ -321,12 +338,14 @@ export function dcaCycleClipSize(input: {
   sizeMultiplier: number;
   sizeUnit: "qty" | "usdt";
   bookUsdt: number | null;
+  leverage?: number | null;
   mark?: number | null;
 }): { clipSize: number; cycleMaxValue: number | null } {
   const cycleMaxValue = dcaResolvedMaxValueUsdt({
     kind: input.kind,
     maxValue: input.maxValue,
     bookUsdt: input.bookUsdt,
+    leverage: input.leverage ?? null,
   });
   const derived = dcaClipFromBudget({
     maxValue: cycleMaxValue,
@@ -351,6 +370,7 @@ export function dcaCopyEstimateClipSize(input: {
   long: Pick<DcaLegState, "clipsFilled" | "cycleMaxValue">;
   short: Pick<DcaLegState, "clipsFilled" | "cycleMaxValue">;
   bookUsdt: number | null;
+  leverage?: number | null;
   mark?: number | null;
 }): number {
   const inCycle = [input.long, input.short].some(
@@ -358,7 +378,7 @@ export function dcaCopyEstimateClipSize(input: {
       leg.clipsFilled > 0 ||
       (leg.cycleMaxValue != null && leg.cycleMaxValue > 0),
   );
-  if (!inCycle && input.maxValueKind === "percent") {
+  if (!inCycle && dcaMaxValueUsesBook(input.maxValueKind)) {
     return dcaCycleClipSize({
       kind: input.maxValueKind,
       maxValue: input.maxValue,
@@ -367,6 +387,7 @@ export function dcaCopyEstimateClipSize(input: {
       sizeMultiplier: input.sizeMultiplier,
       sizeUnit: input.sizeUnit,
       bookUsdt: input.bookUsdt,
+      leverage: input.leverage ?? null,
       mark: input.mark,
     }).clipSize;
   }
@@ -409,6 +430,7 @@ export function dcaConfigMaxOrderError(input: {
   maxMktQty: number;
   baseCoin: string;
   bookUsdt?: number | null;
+  leverage?: number | null;
 }): string | null {
   const { config } = input;
   if (!(config.clipSize > 0)) {
@@ -429,6 +451,7 @@ export function dcaConfigMaxOrderError(input: {
       kind: config.maxValueKind,
       maxValue: config.maxValue,
       bookUsdt: input.bookUsdt ?? null,
+      leverage: input.leverage ?? null,
     }),
     dipPct: config.dipPct,
     clipSize: config.clipSize,
@@ -934,14 +957,16 @@ export function parseDcaPlaybookForm(
   const explicitMaxValueKind =
     maxValueKindRaw === "none" ||
     maxValueKindRaw === "usdt" ||
-    maxValueKindRaw === "percent"
+    maxValueKindRaw === "percent" ||
+    maxValueKindRaw === "margin"
       ? maxValueKindRaw
       : null;
   const maxValueKind =
-    explicitMaxValueKind === "percent"
-      ? "percent"
+    explicitMaxValueKind === "percent" || explicitMaxValueKind === "margin"
+      ? explicitMaxValueKind
       : parseDcaMaxValueKind(maxValueKindRaw);
   const bookUsdt = parseOptionalPositive(form.get("accountBookUsdt"));
+  const leverage = parseOptionalPositive(form.get("accountLeverage"));
   const typedMaxType = form.get("maxType");
   const hasMaxType =
     typedMaxType != null && String(typedMaxType).trim() !== "";
@@ -1000,6 +1025,9 @@ export function parseDcaPlaybookForm(
   if (!bookUsdt.ok) {
     return bookUsdt;
   }
+  if (!leverage.ok) {
+    return leverage;
+  }
   let clipsCap = maxClips.value;
   let valueCap = maxValue.value;
   if (hasMaxType) {
@@ -1009,18 +1037,25 @@ export function parseDcaPlaybookForm(
   } else if (explicitMaxValueKind === "none") {
     valueCap = null;
   } else if (
-    (explicitMaxValueKind === "usdt" || explicitMaxValueKind === "percent") &&
+    (explicitMaxValueKind === "usdt" ||
+      explicitMaxValueKind === "percent" ||
+      explicitMaxValueKind === "margin") &&
     valueCap == null
   ) {
     return { ok: false, error: "Enter a max value." };
   }
-  if (maxValueKind === "percent" && valueCap != null && valueCap > 10_000) {
-    return { ok: false, error: "Percent of account must be 10,000 or less." };
+  if (
+    dcaMaxValueUsesBook(maxValueKind) &&
+    valueCap != null &&
+    valueCap > 100
+  ) {
+    return { ok: false, error: "Percent must be 100 or less." };
   }
   const resolvedValue = dcaResolvedMaxValueUsdt({
     kind: maxValueKind,
     maxValue: valueCap,
     bookUsdt: bookUsdt.value,
+    leverage: leverage.value,
   });
   const derivedClip =
     clipsCap != null && resolvedValue != null && sizeUnit.unit === "usdt"

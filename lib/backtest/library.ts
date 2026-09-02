@@ -498,7 +498,9 @@ export function recipeParamRows(
             ? "—"
             : recipe.maxValueKind === "percent"
               ? `${formatParamNumber(recipe.maxValue)}% of account`
-              : `${formatParamNumber(recipe.maxValue)} USDT`,
+              : recipe.maxValueKind === "margin"
+                ? `${formatParamNumber(recipe.maxValue)}% of available margin`
+                : `${formatParamNumber(recipe.maxValue)} USDT`,
       },
       {
         label: "Take profit",

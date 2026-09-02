@@ -512,8 +512,8 @@ export function dcaRecipeToConfig(
     "maxValueKind",
     maxValue == null
       ? "none"
-      : recipe.maxValueKind === "percent"
-        ? "percent"
+      : recipe.maxValueKind === "percent" || recipe.maxValueKind === "margin"
+        ? recipe.maxValueKind
         : "usdt",
   );
   if (recipe.dipPct != null) {

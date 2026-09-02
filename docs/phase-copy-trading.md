@@ -83,7 +83,7 @@ RLS: catalogue is public + sharing-on listings, or the viewer’s open private g
 
 - New `copy_trade` desk type, or `mode = copy`
 - Cash and Carry copy
-- Copying recipes or bots (limits and fills copy; the parent playbook does not). A parent **% of account** max value compounds on the parent; followers copy the resulting fill and limit sizes. Cycle-skip estimates use the parent’s current book when the parent is idle, and the stamped clip once a cycle has started.
+- Copying recipes or bots (limits and fills copy; the parent playbook does not). A parent **% of account** or **% of available margin** max value compounds on the parent; followers copy the resulting fill and limit sizes. Cycle-skip estimates use the parent’s current book when the parent is idle, and the stamped clip once a cycle has started.
 - Row-level follower TP/SL
 - Payouts / affiliate take-rate
 - Membership gates on who may list (roadmap 8)

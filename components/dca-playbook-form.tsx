@@ -50,6 +50,7 @@ import {
   parseDcaExitBasis,
   parseDcaMaxValueKind,
   parseDcaPlaybookForm,
+  dcaMaxValueUsesBook,
   dcaResolvedMaxValueUsdt,
   type DcaAveragingKind,
   type DcaCycleOpen,
@@ -678,7 +679,7 @@ export function DcaPlaybookForm({
       : "none",
   );
   const maxValueKind: DcaMaxValueKind =
-    maxValueMode === "percent" ? "percent" : "usdt";
+    maxValueMode === "none" ? "usdt" : maxValueMode;
   const [maxValue, setMaxValue] = useState(
     source?.maxValue != null ? optional(source.maxValue) : "",
   );
@@ -801,11 +802,12 @@ export function DcaPlaybookForm({
     kind: maxValueKind,
     maxValue: asNumber(maxValue),
     bookUsdt: accountBookUsdt,
+    leverage,
   });
   const valueCapUsdt =
     maxValueMode === "none"
       ? null
-      : maxValueKind === "percent"
+      : dcaMaxValueUsesBook(maxValueKind)
         ? resolvedMaxValue
         : asNumber(maxValue);
   const budgetSizesClip =
@@ -830,7 +832,7 @@ export function DcaPlaybookForm({
     baseCoin: selectedPair?.baseCoin ?? "Token",
   });
   const sizeCheckReady =
-    maxValueMode !== "percent" || maxValue === maxValueSettled;
+    !dcaMaxValueUsesBook(maxValueKind) || maxValue === maxValueSettled;
   const sizeError = sizeCheckReady ? sizeErrorLive : null;
   const ladderMaxErrorLive = dcaConfigMaxOrderError({
     config: {
@@ -850,15 +852,17 @@ export function DcaPlaybookForm({
     maxMktQty: selectedPair?.maxMktQty ?? 0,
     baseCoin: selectedPair?.baseCoin ?? "Token",
     bookUsdt: accountBookUsdt,
+    leverage,
   });
   const ladderMaxError = sizeCheckReady ? ladderMaxErrorLive : null;
   const maxValueMissing =
     maxValueMode !== "none" && asNumber(maxValue) == null
       ? "Enter a max value."
-      : null;
-  const saveError =
-    maxValueMissing ??
-    (asNumber(clipForSave) === null ? sizeError : (sizeError ?? ladderMaxError));
+      : dcaMaxValueUsesBook(maxValueKind) &&
+          asNumber(maxValue) != null &&
+          (asNumber(maxValue) as number) > 100
+        ? "Percent must be 100 or less."
+        : null;
   const saveBlocked = cycleLocked ? null : saveError;
   const restGridEffective = averaging !== "interval" && restGrid;
   const summaryBySide = useMemo(() => {
@@ -1477,7 +1481,11 @@ export function DcaPlaybookForm({
                   const kind = parseDcaMaxValueKind(next);
                   setMaxValueMode(kind);
                   const amount = asNumber(maxValue);
-                  if (kind === "percent" && amount != null && amount > 100) {
+                  if (
+                    dcaMaxValueUsesBook(kind) &&
+                    amount != null &&
+                    amount > 100
+                  ) {
                     setMaxValue("");
                   }
                 }}
@@ -1485,12 +1493,15 @@ export function DcaPlaybookForm({
               >
                 <option value="usdt">Fixed {policy.quoteLabel}</option>
                 <option value="percent">% of account</option>
+                <option value="margin">% of available margin</option>
                 <option value="none">No max value</option>
               </select>
             </label>
             {maxValueMode !== "none" ? (
               <label className={`min-w-0 ${labelClass}`}>
-                {maxValueMode === "percent" ? "Percent" : policy.quoteLabel}
+                {dcaMaxValueUsesBook(maxValueKind)
+                  ? "Percent"
+                  : policy.quoteLabel}
                 <GroupedNumberInput
                   name="maxValue"
                   value={maxValue}
@@ -1498,7 +1509,7 @@ export function DcaPlaybookForm({
                   allowDecimal
                   className={fieldClass}
                   placeholder={
-                    maxValueMode === "percent" ? "e.g. 20" : "e.g. 700"
+                    dcaMaxValueUsesBook(maxValueKind) ? "e.g. 20" : "e.g. 700"
                   }
                 />
                 {maxValueMissing ? (
@@ -1514,11 +1525,30 @@ export function DcaPlaybookForm({
               value={String(accountBookUsdt)}
             />
           ) : null}
+          {leverage != null && leverage > 0 ? (
+            <input
+              type="hidden"
+              name="accountLeverage"
+              value={String(leverage)}
+            />
+          ) : null}
           {maxValueMode === "percent" ? (
             <p className="text-xs text-ink-muted">
               {resolvedMaxValue != null && accountBookUsdt != null
                 ? `${asNumber(maxValue)}% of ${formatUsdAmount(accountBookUsdt)} = ${formatUsdAmount(resolvedMaxValue)}. Recalculates at the start of each cycle.`
-                : "Recalculates from account balance at the start of each cycle."}
+                : "Recalculates from account balance at the start of each cycle. 100% is the cap."}
+            </p>
+          ) : null}
+          {maxValueMode === "margin" ? (
+            <p className="text-xs text-ink-muted">
+              {resolvedMaxValue != null &&
+              accountBookUsdt != null &&
+              leverage != null &&
+              leverage > 0
+                ? `${asNumber(maxValue)}% of ${formatUsdAmount(accountBookUsdt)} available × ${leverage}× = ${formatUsdAmount(resolvedMaxValue)}. Recalculates at the start of each cycle.`
+                : leverage == null || !(leverage > 0)
+                  ? "100% is full buying power (available × leverage). Set leverage to calculate."
+                  : "100% is full buying power (available × leverage). Recalculates at the start of each cycle."}
             </p>
           ) : null}
         </fieldset>
@@ -1586,9 +1616,13 @@ export function DcaPlaybookForm({
                 </p>
               ) : budgetSizesClip ? (
                 <p className="mt-1 text-xs text-ink-muted">
-                  {maxValueKind === "percent" && accountBookUsdt == null
+                  {dcaMaxValueUsesBook(maxValueKind) &&
+                  accountBookUsdt == null
                     ? "Need an account balance to calculate from %."
-                    : null}
+                    : maxValueKind === "margin" &&
+                        (leverage == null || !(leverage > 0))
+                      ? "Set leverage to calculate % of available margin."
+                      : null}
                 </p>
               ) : null}
             </label>

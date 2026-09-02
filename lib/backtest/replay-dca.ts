@@ -165,6 +165,7 @@ export function replayDcaPlaybook(input: {
   function addClip(side: FuturesSide, atMs: number, price: number) {
     const leg = legs[side];
     const firstClip = leg.clipsFilled === 0;
+    const leverage = normalizeBacktestLeverage(input.leverage);
     const sized = firstClip
       ? dcaCycleClipSize({
           kind: config.maxValueKind,
@@ -174,6 +175,7 @@ export function replayDcaPlaybook(input: {
           sizeMultiplier: config.sizeMultiplier,
           sizeUnit: config.sizeUnit,
           bookUsdt: input.startingUsdt + realized,
+          leverage,
           mark: price,
         })
       : {
@@ -191,7 +193,6 @@ export function replayDcaPlaybook(input: {
       return;
     }
     const fee = feeUsdt(qty, price, input.feeRate);
-    const leverage = normalizeBacktestLeverage(input.leverage);
     const locked = Object.values(legs).reduce(
       (sum, row) => sum + backtestMarginUsdt(row.qty * row.entry, leverage),
       0,
@@ -415,6 +416,7 @@ export function replayDcaPlaybook(input: {
           maxValue: config.maxValue,
           cycleMaxValue: live.cycleMaxValue,
           bookUsdt: input.startingUsdt + realized,
+          leverage: normalizeBacktestLeverage(input.leverage),
         }),
         positionQty: live.qty > 0 ? live.qty : null,
         entryPrice: live.qty > 0 ? live.entry : null,

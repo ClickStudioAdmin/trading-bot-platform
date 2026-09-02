@@ -317,11 +317,13 @@ export function BacktestRecipeFields({
   onChange: (next: BacktestRecipe) => void;
   onIssuesChange?: (issues: string[]) => void;
 }) {
-  const [maxValueMode, setMaxValueMode] = useState<"none" | "usdt" | "percent">(
+  const [maxValueMode, setMaxValueMode] = useState<
+    "none" | "usdt" | "percent" | "margin"
+  >(
     () =>
       recipe.kind === "dca" && recipe.maxValue != null
-        ? recipe.maxValueKind === "percent"
-          ? "percent"
+        ? recipe.maxValueKind === "percent" || recipe.maxValueKind === "margin"
+          ? recipe.maxValueKind
           : "usdt"
         : "none",
   );
@@ -330,7 +332,11 @@ export function BacktestRecipeFields({
     maxValueMode !== "none" &&
     !(Number(recipe.maxValue) > 0)
       ? "Enter a max value."
-      : null;
+      : recipe.kind === "dca" &&
+          (maxValueMode === "percent" || maxValueMode === "margin") &&
+          Number(recipe.maxValue) > 100
+        ? "Percent must be 100 or less."
+        : null;
   useEffect(() => {
     onIssuesChange?.(maxValueIssue ? [maxValueIssue] : []);
   }, [maxValueIssue, onIssuesChange]);
@@ -672,7 +678,8 @@ export function BacktestRecipeFields({
                 });
                 return;
               }
-              const kind = next === "percent" ? "percent" : "usdt";
+              const kind =
+                next === "percent" || next === "margin" ? next : "usdt";
               setMaxValueMode(kind);
               onChange({ ...recipe, maxValueKind: kind });
             }}
@@ -680,12 +687,15 @@ export function BacktestRecipeFields({
           >
             <option value="usdt">Fixed USDT</option>
             <option value="percent">% of account</option>
+            <option value="margin">% of available margin</option>
             <option value="none">No max value</option>
           </select>
         </label>
         {maxValueMode !== "none" ? (
           <label className={labelClass}>
-            {maxValueMode === "percent" ? "Percent" : "Amount"}
+            {maxValueMode === "percent" || maxValueMode === "margin"
+              ? "Percent"
+              : "Amount"}
             <RecipeNumberInput
               value={recipe.maxValue}
               emptyValue={null}

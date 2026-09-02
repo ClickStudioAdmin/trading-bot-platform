@@ -192,6 +192,34 @@ assert.equal(buys.length, 2);
 assert.equal(buys[0]?.qty, 20);
 assert.ok(Math.abs((buys[1]?.qty ?? 0) - 2040 / 110) < 1e-8);
 
+const marginForm = new FormData();
+marginForm.set("name", "Margin cap");
+marginForm.set("symbol", "BTCUSDT");
+marginForm.set("direction", "long");
+marginForm.set("startKind", "immediate");
+marginForm.set("maxClips", "1");
+marginForm.set("maxValue", "100");
+marginForm.set("maxValueKind", "margin");
+marginForm.set("accountBookUsdt", "10000");
+marginForm.set("accountLeverage", "10");
+marginForm.set("sizeUnit", "usdt");
+marginForm.set("sizeMultiplier", "1");
+const marginParsed = parseDcaPlaybookForm(marginForm);
+assert.equal(marginParsed.ok, true);
+if (!marginParsed.ok) {
+  throw new Error("expected margin DCA parse");
+}
+const marginReplay = replayDcaPlaybook({
+  bars: [{ timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 }],
+  recipe: snapshotDcaRecipe(marginParsed.config),
+  feeRate: 0,
+  startingUsdt: 10_000,
+  leverage: 10,
+});
+const marginBuys = marginReplay.orders.filter((row) => row.action === "buy");
+assert.equal(marginBuys.length, 1);
+assert.equal(marginBuys[0]?.qty, 1_000);
+
 const stopForm = new FormData();
 stopForm.set("name", "Stop wick");
 stopForm.set("symbol", "BTCUSDT");

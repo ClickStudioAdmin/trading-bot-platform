@@ -1365,6 +1365,7 @@ if (bothCapsParsed.ok) {
 }
 
 assert.equal(parseDcaMaxValueKind("percent"), "percent");
+assert.equal(parseDcaMaxValueKind("margin"), "margin");
 assert.equal(parseDcaMaxValueKind("usdt"), "usdt");
 assert.equal(parseDcaMaxValueKind(""), "usdt");
 assert.equal(
@@ -1388,6 +1389,33 @@ assert.equal(
     kind: "percent",
     maxValue: 20,
     bookUsdt: null,
+  }),
+  null,
+);
+assert.equal(
+  dcaResolvedMaxValueUsdt({
+    kind: "margin",
+    maxValue: 20,
+    bookUsdt: 10_000,
+    leverage: 10,
+  }),
+  20_000,
+);
+assert.equal(
+  dcaResolvedMaxValueUsdt({
+    kind: "margin",
+    maxValue: 100,
+    bookUsdt: 10_000,
+    leverage: 10,
+  }),
+  100_000,
+);
+assert.equal(
+  dcaResolvedMaxValueUsdt({
+    kind: "margin",
+    maxValue: 20,
+    bookUsdt: 10_000,
+    leverage: null,
   }),
   null,
 );
@@ -1440,6 +1468,34 @@ assert.equal(
   }),
   50,
 );
+assert.equal(
+  dcaCycleClipSize({
+    kind: "margin",
+    maxValue: 20,
+    maxClips: 3,
+    clipSize: 50,
+    sizeMultiplier: 2,
+    sizeUnit: "usdt",
+    bookUsdt: 10_000,
+    leverage: 10,
+  }).clipSize,
+  20_000 / 7,
+);
+assert.equal(
+  dcaCopyEstimateClipSize({
+    maxValueKind: "margin",
+    maxValue: 20,
+    maxClips: 3,
+    clipSize: 50,
+    sizeMultiplier: 2,
+    sizeUnit: "usdt",
+    long: { clipsFilled: 0, cycleMaxValue: null },
+    short: { clipsFilled: 0, cycleMaxValue: null },
+    bookUsdt: 10_000,
+    leverage: 10,
+  }),
+  20_000 / 7,
+);
 
 const percentCaps = new FormData();
 percentCaps.set("symbol", "BTCUSDT");
@@ -1458,6 +1514,38 @@ if (percentCapsParsed.ok) {
   assert.equal(percentCapsParsed.config.clipSize, 2000 / 7);
 }
 
+const percentAtCap = new FormData();
+percentAtCap.set("symbol", "BTCUSDT");
+percentAtCap.set("side", "long");
+percentAtCap.set("sizeUnit", "usdt");
+percentAtCap.set("clipSize", "50");
+percentAtCap.set("maxValue", "100");
+percentAtCap.set("maxValueKind", "percent");
+const percentAtCapParsed = parseDcaPlaybookForm(percentAtCap);
+assert.equal(percentAtCapParsed.ok, true);
+if (percentAtCapParsed.ok) {
+  assert.equal(percentAtCapParsed.config.maxValue, 100);
+  assert.equal(percentAtCapParsed.config.maxValueKind, "percent");
+}
+
+const marginCaps = new FormData();
+marginCaps.set("symbol", "BTCUSDT");
+marginCaps.set("side", "long");
+marginCaps.set("sizeUnit", "usdt");
+marginCaps.set("maxClips", "3");
+marginCaps.set("maxValue", "20");
+marginCaps.set("maxValueKind", "margin");
+marginCaps.set("accountBookUsdt", "10000");
+marginCaps.set("accountLeverage", "10");
+marginCaps.set("sizeMultiplier", "2");
+const marginCapsParsed = parseDcaPlaybookForm(marginCaps);
+assert.equal(marginCapsParsed.ok, true);
+if (marginCapsParsed.ok) {
+  assert.equal(marginCapsParsed.config.maxValue, 20);
+  assert.equal(marginCapsParsed.config.maxValueKind, "margin");
+  assert.equal(marginCapsParsed.config.clipSize, 20_000 / 7);
+}
+
 const percentOverBook = new FormData();
 percentOverBook.set("symbol", "BTCUSDT");
 percentOverBook.set("side", "long");
@@ -1466,10 +1554,22 @@ percentOverBook.set("clipSize", "50");
 percentOverBook.set("maxValue", "200");
 percentOverBook.set("maxValueKind", "percent");
 const percentOverBookParsed = parseDcaPlaybookForm(percentOverBook);
-assert.equal(percentOverBookParsed.ok, true);
-if (percentOverBookParsed.ok) {
-  assert.equal(percentOverBookParsed.config.maxValue, 200);
-  assert.equal(percentOverBookParsed.config.maxValueKind, "percent");
+assert.equal(percentOverBookParsed.ok, false);
+if (!percentOverBookParsed.ok) {
+  assert.equal(percentOverBookParsed.error, "Percent must be 100 or less.");
+}
+
+const marginTooHigh = new FormData();
+marginTooHigh.set("symbol", "BTCUSDT");
+marginTooHigh.set("side", "long");
+marginTooHigh.set("sizeUnit", "usdt");
+marginTooHigh.set("clipSize", "50");
+marginTooHigh.set("maxValue", "150");
+marginTooHigh.set("maxValueKind", "margin");
+const marginTooHighParsed = parseDcaPlaybookForm(marginTooHigh);
+assert.equal(marginTooHighParsed.ok, false);
+if (!marginTooHighParsed.ok) {
+  assert.equal(marginTooHighParsed.error, "Percent must be 100 or less.");
 }
 
 const percentTooHigh = new FormData();
@@ -1477,15 +1577,12 @@ percentTooHigh.set("symbol", "BTCUSDT");
 percentTooHigh.set("side", "long");
 percentTooHigh.set("sizeUnit", "usdt");
 percentTooHigh.set("clipSize", "50");
-percentTooHigh.set("maxValue", "10001");
+percentTooHigh.set("maxValue", "150");
 percentTooHigh.set("maxValueKind", "percent");
 const percentTooHighParsed = parseDcaPlaybookForm(percentTooHigh);
 assert.equal(percentTooHighParsed.ok, false);
 if (!percentTooHighParsed.ok) {
-  assert.equal(
-    percentTooHighParsed.error,
-    "Percent of account must be 10,000 or less.",
-  );
+  assert.equal(percentTooHighParsed.error, "Percent must be 100 or less.");
 }
 
 const noneCap = new FormData();
@@ -1524,6 +1621,18 @@ const missingPercentParsed = parseDcaPlaybookForm(missingPercent);
 assert.equal(missingPercentParsed.ok, false);
 if (!missingPercentParsed.ok) {
   assert.equal(missingPercentParsed.error, "Enter a max value.");
+}
+
+const missingMargin = new FormData();
+missingMargin.set("symbol", "BTCUSDT");
+missingMargin.set("side", "long");
+missingMargin.set("clipSize", "50");
+missingMargin.set("sizeUnit", "usdt");
+missingMargin.set("maxValueKind", "margin");
+const missingMarginParsed = parseDcaPlaybookForm(missingMargin);
+assert.equal(missingMarginParsed.ok, false);
+if (!missingMarginParsed.ok) {
+  assert.equal(missingMarginParsed.error, "Enter a max value.");
 }
 
 const row = parseDcaPlaybookRow({

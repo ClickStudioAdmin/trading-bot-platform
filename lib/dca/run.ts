@@ -36,6 +36,7 @@ import {
   dcaClipCycleKey,
   dcaClipRestKey,
   dcaCycleClipSize,
+  dcaMaxValueUsesBook,
   capDcaSafetySync,
   DCA_LIVE_GRID_OPS_PER_SYNC,
   dcaCycleEnded,
@@ -66,7 +67,7 @@ import {
   resetDcaPlaybook,
   stampDcaCycleStart,
 } from "./store";
-import { loadDcaBookUsdt } from "./book";
+import { loadDcaBookUsdt, loadDcaSizingLeverage } from "./book";
 
 export type DcaVerb = "arm" | "disarm" | "close-playbook";
 
@@ -710,17 +711,38 @@ async function placeClip(input: {
   const leg = dcaLegFor(input.playbook, input.side);
   const firstClip = leg.clipsFilled === 0;
   let clipSize = input.playbook.clipSize;
-  if (firstClip && input.playbook.maxValueKind === "percent") {
+  if (firstClip && dcaMaxValueUsesBook(input.playbook.maxValueKind)) {
     const book = await loadDcaBookUsdt({
       userId: input.playbook.userId,
       accountId: input.playbook.accountId,
       mode: input.mode,
     });
+    const leverage =
+      input.playbook.maxValueKind === "margin"
+        ? await loadDcaSizingLeverage({
+            userId: input.playbook.userId,
+            accountId: input.playbook.accountId,
+            mode: input.mode,
+            symbol: input.playbook.symbol,
+            side: input.side,
+          })
+        : null;
     if (input.playbook.maxValue != null && (book == null || !(book > 0))) {
       return {
         ok: false,
         error:
           "Account balance is unavailable, so % max value cannot size this cycle.",
+      };
+    }
+    if (
+      input.playbook.maxValueKind === "margin" &&
+      input.playbook.maxValue != null &&
+      (leverage == null || !(leverage > 0))
+    ) {
+      return {
+        ok: false,
+        error:
+          "Leverage is unavailable, so % of available margin cannot size this cycle.",
       };
     }
     const sized = dcaCycleClipSize({
@@ -731,6 +753,7 @@ async function placeClip(input: {
       sizeMultiplier: input.playbook.sizeMultiplier,
       sizeUnit: input.playbook.sizeUnit,
       bookUsdt: book,
+      leverage,
       mark: input.lastPrice,
     });
     clipSize = sized.clipSize;
