@@ -390,9 +390,6 @@ export function dcaEnabledSides(direction: DcaDirection): FuturesSide[] {
   return [direction];
 }
 
-export const DCA_LAST_PRICE_MAX_CHECK =
-  "Last price is unavailable, so order size cannot be checked against the exchange maximum.";
-
 export function dcaConfigMaxOrderError(input: {
   config: Pick<
     DcaPlaybookConfig,
@@ -418,7 +415,7 @@ export function dcaConfigMaxOrderError(input: {
     return null;
   }
   if (config.sizeUnit === "usdt" && !(input.lastPrice && input.lastPrice > 0)) {
-    return DCA_LAST_PRICE_MAX_CHECK;
+    return null;
   }
   if (!(input.maxQty > 0) && !(input.maxMktQty > 0)) {
     return null;
@@ -589,9 +586,10 @@ export function dcaPlaybookHasOpenCycle(
   return dcaEnabledSides(playbook.direction).some((side) =>
     opens.some(
       (row) =>
-        row.qty > 0 &&
+        Number(row.qty) > 0 &&
         row.side === side &&
-        (playbook.symbol == null || row.symbol === playbook.symbol),
+        Boolean(playbook.symbol) &&
+        row.symbol === playbook.symbol,
     ),
   );
 }

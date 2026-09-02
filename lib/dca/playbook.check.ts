@@ -585,7 +585,7 @@ assert.equal(
     maxMktQty: 119,
     baseCoin: "BTC",
   }),
-  "Last price is unavailable, so order size cannot be checked against the exchange maximum.",
+  null,
 );
 assert.equal(dcaStartListens("immediate"), false);
 assert.equal(dcaStartListens("price"), true);
@@ -1547,6 +1547,12 @@ assert.equal(dcaPlaybookIsRunning(cloned), false);
 assert.equal(dcaPlaybookHasOpenCycle(row), false);
 assert.equal(dcaPlaybookHasOpenCycle(cloned), false);
 assert.equal(dcaPlaybookHasOpenCycle(row, []), false);
+assert.equal(
+  dcaPlaybookHasOpenCycle({ ...row, symbol: "" }, [
+    { symbol: "", side: "long", qty: 1 },
+  ]),
+  false,
+);
 assert.equal(
   dcaPlaybookHasOpenCycle(row, [
     { symbol: row.symbol, side: "long", qty: 1 },

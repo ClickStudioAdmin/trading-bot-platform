@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ColumnHint } from "@/components/column-hint";
-import { FuturesDeskRefresh } from "@/components/futures-desk-refresh";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
@@ -44,6 +43,7 @@ import {
   dcaIntervalParts,
   dcaLegFor,
   dcaLegIsRunning,
+  dcaPlaybookHasOpenCycle,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
   dcaStartListens,
@@ -156,9 +156,10 @@ function CycleLock({
   locked: boolean;
   children: React.ReactNode;
 }) {
-  return (
-    <div className={locked ? "opacity-80" : undefined}>{children}</div>
-  );
+  if (!locked) {
+    return children;
+  }
+  return <div className="opacity-80">{children}</div>;
 }
 
 function SizeGuardNote({ message }: { message: string | null }) {
@@ -470,7 +471,6 @@ export function DcaPlaybooksDesk({
 
   return (
     <div className="space-y-3">
-      <FuturesDeskRefresh />
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. New orders stay blocked until you turn it off in
@@ -775,15 +775,7 @@ export function DcaPlaybookForm({
       )
     : [];
   const hasOpenPosition = Boolean(
-    playbook &&
-      dcaEnabledSides(playbook.direction).some((side) =>
-        openPositions.some(
-          (row) =>
-            row.symbol === playbook.symbol &&
-            row.side === side &&
-            row.qty > 0,
-        ),
-      ),
+    playbook?.id && dcaPlaybookHasOpenCycle(playbook, openPositions),
   );
   const cycleLocked = hasOpenPosition;
   const armed = liveLegs.some((leg) => leg.status === "armed");
@@ -1002,6 +994,7 @@ export function DcaPlaybookForm({
     <StayOnPageForm
       id={playbook ? `bot-${playbook.id}` : undefined}
       ref={formRef}
+      noValidate
       action={saveDcaPlaybookAction}
       actions={{
         "save-arm": saveAndArmDcaPlaybookAction,
