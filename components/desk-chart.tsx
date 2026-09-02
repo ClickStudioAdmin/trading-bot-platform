@@ -8,9 +8,9 @@ import {
 } from "@/components/chart-context-menu";
 import {
   attachRightAxisWheel,
-  CHART_EDGE_PAD,
   CHART_SCALE_OPTIONS,
-  padLogicalRange,
+  focusedLogicalRange,
+  fullLogicalRange,
   resetChartView,
   resetPriceScale,
   type ChartViewApi,
@@ -266,6 +266,7 @@ export function DeskChart({
   toolbar,
   status = null,
   visibleRange = null,
+  viewKey = 0,
 }: {
   candles: CandleBar[];
   overlay: ChartOverlay;
@@ -275,6 +276,7 @@ export function DeskChart({
   toolbar?: ReactNode;
   status?: string | null;
   visibleRange?: { fromSec: number; toSec: number } | null;
+  viewKey?: number;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartHandle | null>(null);
@@ -390,36 +392,24 @@ export function DeskChart({
           })),
         );
       }
-      function padTimeEdges() {
-        const padded = padLogicalRange(
-          chart.timeScale().getVisibleLogicalRange(),
-          CHART_EDGE_PAD.left,
-          CHART_EDGE_PAD.right,
-        );
-        if (padded) {
-          chart.timeScale().setVisibleLogicalRange(padded);
+      const times = candles.map((row) => Math.floor(row.timeMs / 1000));
+      function applyView() {
+        const logical =
+          visibleRange && visibleRange.toSec >= visibleRange.fromSec
+            ? focusedLogicalRange(
+                times,
+                visibleRange.fromSec,
+                visibleRange.toSec,
+              )
+            : fullLogicalRange(candles.length);
+        if (logical) {
+          chart.timeScale().setVisibleLogicalRange(logical);
+          return;
         }
-      }
-      if (
-        visibleRange &&
-        visibleRange.toSec >= visibleRange.fromSec
-      ) {
-        try {
-          chart.timeScale().setVisibleRange({
-            from: visibleRange.fromSec as never,
-            to: visibleRange.toSec as never,
-          });
-        } catch {
-          chart.timeScale().fitContent();
-        }
-      } else {
         chart.timeScale().fitContent();
       }
-      padTimeEdges();
-      if (!chart.timeScale().getVisibleLogicalRange()) {
-        requestAnimationFrame(padTimeEdges);
-      }
-      padEdgesRef.current = padTimeEdges;
+      applyView();
+      padEdgesRef.current = applyView;
       const detachWheel = attachRightAxisWheel(host, () => viewRef.current);
       const observer = new ResizeObserver(() => {
         if (hostRef.current) {
@@ -444,7 +434,7 @@ export function DeskChart({
       disposed = true;
       cleanup();
     };
-  }, [candles, overlay, plotHeight, rightOffset, visibleRange]);
+  }, [candles, overlay, plotHeight, rightOffset, visibleRange, viewKey]);
 
   const frame = (
     <div
@@ -455,9 +445,11 @@ export function DeskChart({
       }
       style={expanded ? undefined : { height }}
     >
-      <div className="flex min-h-9 shrink-0 items-center justify-between gap-2 border-b border-line px-1.5 py-1">
-        <div className="min-w-0">{toolbar}</div>
-        <div className="flex items-center gap-0.5">
+      <div className="relative flex min-h-9 shrink-0 items-center border-b border-line px-1.5 py-1">
+        <div className="pointer-events-none absolute inset-x-12 inset-y-0 flex items-center justify-center">
+          <div className="pointer-events-auto min-w-0">{toolbar}</div>
+        </div>
+        <div className="relative z-10 ml-auto flex items-center gap-0.5">
           <button
             type="button"
             title={expanded ? "Exit full screen" : "Full screen"}

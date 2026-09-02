@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import {
+  focusedLogicalRange,
+  fullLogicalRange,
   isOverRightPriceScale,
   padLogicalRange,
   wheelZoomFactor,
@@ -37,5 +39,10 @@ const padded = padLogicalRange({ from: 10, to: 20 }, 8, 12);
 assert.deepEqual(padded, { from: 2, to: 32 });
 assert.equal(padLogicalRange(null), null);
 assert.equal(padLogicalRange({ from: 5, to: 5 }), null);
+assert.deepEqual(fullLogicalRange(100), { from: -8, to: 111 });
+assert.deepEqual(focusedLogicalRange([100, 200, 300, 400], 200, 300), {
+  from: -7,
+  to: 14,
+});
 
 console.log("chart interact checks passed");

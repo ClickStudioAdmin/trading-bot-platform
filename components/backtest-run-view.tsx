@@ -420,10 +420,12 @@ function BacktestTradeStepper({
   cycles,
   focusCycleId,
   onFocusCycleId,
+  onShowAll,
 }: {
   cycles: ReturnType<typeof listBacktestCycles>;
   focusCycleId: string | null;
   onFocusCycleId: (id: string | null) => void;
+  onShowAll: () => void;
 }) {
   if (cycles.length === 0) {
     return null;
@@ -482,8 +484,7 @@ function BacktestTradeStepper({
       <button
         type="button"
         className={step}
-        disabled={focusCycleId == null}
-        onClick={() => onFocusCycleId(null)}
+        onClick={onShowAll}
       >
         All
       </button>
@@ -507,6 +508,15 @@ export function BacktestInlineChart({
   const [candles, setCandles] = useState<CandleBar[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewKey, setViewKey] = useState(0);
+  const hadFocus = useRef(focusCycleId != null);
+
+  useEffect(() => {
+    if (hadFocus.current && focusCycleId == null) {
+      setViewKey((current) => current + 1);
+    }
+    hadFocus.current = focusCycleId != null;
+  }, [focusCycleId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -546,8 +556,7 @@ export function BacktestInlineChart({
   const span = focused ? backtestCycleSpanMs(focused) : null;
   const visibleRange =
     span != null ? candleRangeForFocus(candles, span.fromMs, span.toMs) : null;
-  const includeAdds =
-    focusCycleId == null && backtestChartIncludeAdds(interval);
+  const includeAdds = focusCycleId == null;
 
   return (
     <DeskChart
@@ -555,6 +564,7 @@ export function BacktestInlineChart({
       rightOffset={16}
       screenshotName={`${run.symbol}-backtest.png`}
       visibleRange={visibleRange}
+      viewKey={viewKey}
       status={
         candles.length === 0
           ? (error ??
@@ -573,6 +583,13 @@ export function BacktestInlineChart({
               cycles={cycles}
               focusCycleId={focusCycleId}
               onFocusCycleId={onFocusCycleId}
+              onShowAll={() => {
+                if (focusCycleId == null) {
+                  setViewKey((current) => current + 1);
+                  return;
+                }
+                onFocusCycleId(null);
+              }}
             />
           ) : null}
         </div>

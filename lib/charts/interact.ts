@@ -16,6 +16,48 @@ export function padLogicalRange(
   };
 }
 
+export function fullLogicalRange(
+  barCount: number,
+  left = CHART_EDGE_PAD.left,
+  right = CHART_EDGE_PAD.right,
+): { from: number; to: number } | null {
+  if (!(barCount > 0)) {
+    return null;
+  }
+  return {
+    from: -left,
+    to: barCount - 1 + right,
+  };
+}
+
+export function focusedLogicalRange(
+  times: number[],
+  fromSec: number,
+  toSec: number,
+  left = CHART_EDGE_PAD.left,
+  right = CHART_EDGE_PAD.right,
+): { from: number; to: number } | null {
+  if (times.length === 0) {
+    return null;
+  }
+  let start = 0;
+  let end = 0;
+  for (let i = 0; i < times.length; i += 1) {
+    const time = times[i] ?? 0;
+    if (time <= fromSec) {
+      start = i;
+    }
+    if (time <= toSec) {
+      end = i;
+    }
+  }
+  const hi = Math.max(end, start + 1);
+  return {
+    from: start - left,
+    to: hi + right,
+  };
+}
+
 export type ChartViewApi = {
   timeScale: () => { fitContent: () => void };
   priceScale: (id: string) => {
