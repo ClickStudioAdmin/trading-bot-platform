@@ -31,6 +31,7 @@ import {
   uniqueAppliedName,
   templateFitsDesk,
   type TemplateDeskType,
+  type TemplateRecipe,
 } from "./recipe";
 import { loadSetById, loadTemplateById, setIsSharedWith, templateIsSharedWith, type AutomationTemplate } from "./store";
 
@@ -424,6 +425,84 @@ export async function applyTemplateToDesk(input: {
       notes: [],
     };
   }
+  return applyLoadedTemplate({
+    userId: input.userId,
+    accountId: input.accountId,
+    desk,
+    template,
+    symbol: input.symbol,
+    webhookId: input.webhookId,
+  });
+}
+
+export async function applyRecipeToDesk(input: {
+  userId: string;
+  accountId: string;
+  recipe: TemplateRecipe;
+  name: string;
+}): Promise<ApplyItemResult> {
+  const desk = await ownedDesk(input.userId, input.accountId);
+  if (!desk) {
+    return {
+      templateId: "recipe",
+      name: input.name,
+      ok: false,
+      error: "That desk was not found.",
+      code: "forbidden",
+      notes: [],
+    };
+  }
+  const deskType =
+    input.recipe.kind === "dca"
+      ? "dca"
+      : input.recipe.kind === "perps"
+        ? "perps"
+        : "cash_and_carry";
+  const template: AutomationTemplate = {
+    id: "recipe",
+    userId: input.userId,
+    visibility: "user",
+    deskType,
+    name: input.name,
+    description: null,
+    recipe: { ...input.recipe, name: input.name } as TemplateRecipe,
+    recipeVersion: 1,
+    createdAtMs: 0,
+    updatedAtMs: 0,
+    ownerEmail: null,
+    sharedByEmail: null,
+    sharedAtMs: null,
+    sharedDirectly: false,
+    sharedWith: [],
+    starterPack: false,
+  };
+  const result = await applyLoadedTemplate({
+    userId: input.userId,
+    accountId: input.accountId,
+    desk,
+    template,
+  });
+  if (result.ok) {
+    return {
+      ...result,
+      notes: [
+        ...result.notes,
+        "Copied idle. Enable on the desk yourself.",
+      ],
+    };
+  }
+  return result;
+}
+
+async function applyLoadedTemplate(input: {
+  userId: string;
+  accountId: string;
+  desk: TradingAccount;
+  template: AutomationTemplate;
+  symbol?: string;
+  webhookId?: string | null;
+}): Promise<ApplyItemResult> {
+  const { template, desk } = input;
   if (!deskAllowsTemplateApply(desk) || !templateFitsDesk(template.deskType, desk.deskType)) {
     return {
       templateId: template.id,

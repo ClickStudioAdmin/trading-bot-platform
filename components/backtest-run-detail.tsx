@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { BacktestEquityPanel } from "@/components/backtest-equity";
 import {
   ApplyBacktestButton,
@@ -91,11 +92,11 @@ function StatusDot({
   );
 }
 
-function MatchRow({ label, value }: { label: string; value: string }) {
+function MatchRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-3 text-sm">
-      <dt className="shrink-0 text-ink-muted">{label}</dt>
-      <dd className="text-right text-ink">{value}</dd>
+      <dt className="shrink-0 pt-0.5 text-ink-muted">{label}</dt>
+      <dd className="text-right">{value}</dd>
     </div>
   );
 }
@@ -113,7 +114,6 @@ function BacktestMatchCard({
   canSaveAsPlatform,
   sourceTemplateName,
   attachTemplateId,
-  applyTemplateId,
   applyDesks,
   canRemove,
   isAdmin,
@@ -136,7 +136,6 @@ function BacktestMatchCard({
   canSaveAsPlatform: boolean;
   sourceTemplateName: string | null;
   attachTemplateId: string | null;
-  applyTemplateId: string | null;
   applyDesks?: Array<{ id: string; name: string }>;
   canRemove: boolean;
   isAdmin: boolean;
@@ -151,11 +150,11 @@ function BacktestMatchCard({
         : status.tone === "faint"
           ? "text-ink-muted"
           : "text-success";
-  const hasPrimary = canAttach || canSaveAs || Boolean(linkedTemplateName);
+  const hasLibraryAction = canSaveAs || (canSaveAsPlatform && !canSaveAs);
   const hasSecondary =
-    Boolean(applyTemplateId && applyDesks && applyDesks.length > 0) ||
+    Boolean(applyDesks && applyDesks.length > 0) ||
     canRemove ||
-    (canSaveAsPlatform && !canSaveAs);
+    hasLibraryAction;
   return (
     <aside className="w-full max-w-sm rounded-card border border-line bg-surface p-5">
       <dl className="space-y-2">
@@ -169,34 +168,45 @@ function BacktestMatchCard({
         <MatchRow
           label="Template"
           value={
-            matchingTemplateName
-              ? `Matches ${matchingTemplateName}`
-              : "No matching template"
+            matchingTemplateName ? (
+              <span className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
+                Template · {matchingTemplateName}
+              </span>
+            ) : (
+              <span className="text-ink-faint">No matching template</span>
+            )
           }
         />
+        {canAttach || linkedTemplateName ? (
+          <div className="flex justify-end">
+            {canAttach ? (
+              <AttachBacktestButton
+                runId={runId}
+                sourceName={matchingTemplateName ?? sourceTemplateName}
+                templateId={attachTemplateId ?? ""}
+              />
+            ) : (
+              <p className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
+                Attached
+              </p>
+            )}
+          </div>
+        ) : null}
         <MatchRow
           label="Desk"
           value={
-            matchingDeskLabel
-              ? `Matches ${matchingDeskLabel}`
-              : "No matching desk bot"
+            matchingDeskLabel ? (
+              <span className="rounded-control bg-accent/15 px-2 py-0.5 text-xs text-accent">
+                Desk · {matchingDeskLabel}
+              </span>
+            ) : (
+              <span className="text-ink-faint">No matching desk bot</span>
+            )
           }
         />
       </dl>
-      {hasPrimary ? (
-        <div className="mt-4 space-y-2">
-          {canAttach ? (
-            <AttachBacktestButton
-              runId={runId}
-              sourceName={matchingTemplateName ?? sourceTemplateName}
-              templateId={attachTemplateId ?? ""}
-            />
-          ) : null}
-          {linkedTemplateName ? (
-            <p className="rounded-control bg-success/15 px-3 py-1.5 text-center text-sm text-success">
-              Attached
-            </p>
-          ) : null}
+      {hasSecondary ? (
+        <div className="mt-4 space-y-2 border-t border-line pt-4">
           {canSaveAs ? (
             <SaveBacktestAsTemplateButton
               runId={runId}
@@ -208,13 +218,10 @@ function BacktestMatchCard({
               canSaveAsPlatform={canSaveAsPlatform}
             />
           ) : null}
-        </div>
-      ) : null}
-      {hasSecondary ? (
-        <div className={`${hasPrimary ? "mt-4 border-t border-line pt-4" : "mt-4"} space-y-2`}>
-          {applyTemplateId && applyDesks && applyDesks.length > 0 ? (
+          {applyDesks && applyDesks.length > 0 ? (
             <ApplyBacktestButton
-              templateId={applyTemplateId}
+              runId={runId}
+              defaultName={defaultName}
               desks={applyDesks}
             />
           ) : null}
@@ -246,7 +253,6 @@ export function BacktestRunDetail({
   run,
   listHref,
   applyDesks,
-  applyTemplateId = null,
   canRemove,
   canAttach = false,
   canSaveAs = false,
@@ -265,7 +271,6 @@ export function BacktestRunDetail({
   run: BacktestRun;
   listHref: string;
   applyDesks?: Array<{ id: string; name: string }>;
-  applyTemplateId?: string | null;
   canRemove: boolean;
   canAttach?: boolean;
   canSaveAs?: boolean;
@@ -335,7 +340,6 @@ export function BacktestRunDetail({
           canSaveAsPlatform={canSaveAsPlatform}
           sourceTemplateName={sourceTemplateName}
           attachTemplateId={attachTemplateId}
-          applyTemplateId={applyTemplateId}
           applyDesks={applyDesks}
           canRemove={canRemove}
           isAdmin={isAdmin}

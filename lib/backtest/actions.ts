@@ -12,7 +12,8 @@ import {
   loadTemplateById,
   templateIsSharedWith,
 } from "@/lib/templates/store";
-import { recipesMatchReplayFields } from "@/lib/templates/recipe";
+import { applyRecipeToDesk, automationsPathForDeskType } from "@/lib/templates/apply";
+import { parseTemplateName, recipesMatchReplayFields } from "@/lib/templates/recipe";
 import { revalidatePath } from "next/cache";
 import {
   BACKTEST_FEE_PRESETS,
@@ -45,6 +46,7 @@ export type BacktestActionResult = {
   ok: boolean;
   error?: string;
   runId?: string;
+  notes?: string[];
 };
 
 function revalidateBacktests(extra?: string) {
@@ -334,6 +336,44 @@ export async function nudgeBacktestRunAction(
   }
   revalidateBacktests(`/account/backtests/${run.id}`);
   return result;
+}
+
+export async function applyBacktestToDeskAction(
+  formData: FormData,
+): Promise<BacktestActionResult> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  const run = await loadBacktestRun(String(formData.get("runId") ?? ""));
+  if (!run || !canReadBacktestRun(run, auth.member.id, auth.isAdmin)) {
+    return { ok: false, error: "That run was not found." };
+  }
+  const named = parseTemplateName(
+    String(formData.get("name") ?? "").trim() || run.recipe.name,
+  );
+  if (!named.ok) {
+    return { ok: false, error: named.error };
+  }
+  const accountId = String(formData.get("accountId") ?? "").trim();
+  if (!accountId) {
+    return { ok: false, error: "Choose a desk." };
+  }
+  const result = await applyRecipeToDesk({
+    userId: auth.member.id,
+    accountId,
+    recipe: run.recipe,
+    name: named.name,
+  });
+  if (!result.ok) {
+    return { ok: false, error: result.error ?? "Could not add that bot." };
+  }
+  revalidatePath(automationsPathForDeskType(run.deskType));
+  return {
+    ok: true,
+    runId: run.id,
+    notes: result.notes,
+  };
 }
 
 export async function attachBacktestToTemplateAction(

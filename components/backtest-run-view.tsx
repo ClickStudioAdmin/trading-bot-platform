@@ -82,14 +82,15 @@ import {
 import type { AutomationTemplateSet } from "@/lib/templates/store";
 import type { TemplateDeskType } from "@/lib/templates/recipe";
 import {
+  applyBacktestToDeskAction,
   attachBacktestToTemplateAction,
   deleteBacktestAction,
   saveBacktestAsPlatformTemplateAction,
   saveBacktestAsTemplateAction,
 } from "@/lib/backtest/actions";
-import { applyTemplateAction } from "@/lib/templates/actions";
 import {
   backtestActivityBounds,
+  backtestChartTrailMs,
   backtestMarginUsdt,
   chartIntervalForWindow,
   formatBacktestReturnPct,
@@ -107,11 +108,26 @@ import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
 import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 import { formatQty, signedTone } from "@/lib/opportunities/format";
 
+function backtestChartWindow(run: BacktestRun) {
+  const interval = chartIntervalForWindow(run.fromMs, run.toMs, run.interval);
+  const padMs = backtestChartTrailMs(interval);
+  return {
+    interval,
+    padMs,
+    bounds: backtestActivityBounds({
+      fromMs: run.fromMs,
+      toMs: run.toMs,
+      orders: run.orders,
+      padMs,
+    }),
+  };
+}
+
 function candlesForBacktestChart(
   candles: CandleBar[],
   run: BacktestRun,
 ): CandleBar[] {
-  const bounds = backtestActivityBounds(run);
+  const { bounds } = backtestChartWindow(run);
   return clipCandlesToWindow(candles, bounds.fromMs, bounds.toMs);
 }
 
@@ -358,13 +374,13 @@ export function BacktestInlineChart({ run }: { run: BacktestRun }) {
 
   useEffect(() => {
     let cancelled = false;
-    const interval = chartIntervalForWindow(run.fromMs, run.toMs, run.interval);
+    const { interval, bounds } = backtestChartWindow(run);
     const params = new URLSearchParams({
       venue: run.venue,
       symbol: run.symbol,
       interval,
       from: String(run.fromMs),
-      to: String(run.toMs),
+      to: String(bounds.toMs),
       limit: "1500",
     });
     if (run.venueEnvironment) {
@@ -413,6 +429,7 @@ export function BacktestInlineChart({ run }: { run: BacktestRun }) {
   return (
     <DeskChart
       candles={candles}
+      rightOffset={8}
       screenshotName={`${run.symbol}-backtest.png`}
       overlay={snapOverlayToCandles(
         buildBacktestChartOverlay({
@@ -437,13 +454,13 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
       return;
     }
     let cancelled = false;
-    const interval = chartIntervalForWindow(run.fromMs, run.toMs, run.interval);
+    const { interval, bounds } = backtestChartWindow(run);
     const params = new URLSearchParams({
       venue: run.venue,
       symbol: run.symbol,
       interval,
       from: String(run.fromMs),
-      to: String(run.toMs),
+      to: String(bounds.toMs),
       limit: "1500",
     });
     if (run.venueEnvironment) {
@@ -507,6 +524,7 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
             <div className="mt-3">
               <DeskChart
                 candles={candles}
+                rightOffset={8}
                 screenshotName={`${run.symbol}-backtest.png`}
                 overlay={snapOverlayToCandles(
                   buildBacktestChartOverlay({
@@ -594,7 +612,7 @@ export function AttachBacktestButton({
         type="submit"
         disabled={pending}
         title="Link this run to the matching library template. Recipe is unchanged."
-        className="w-full rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink hover:bg-accent disabled:opacity-50"
+        className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success hover:bg-success/25 disabled:opacity-50"
       >
         {pending
           ? "Attaching…"
@@ -849,54 +867,109 @@ export function SaveBacktestAsTemplateButton({
 }
 
 export function ApplyBacktestButton({
-  templateId,
+  runId,
+  defaultName,
   desks,
 }: {
-  templateId: string | null;
+  runId: string;
+  defaultName: string;
   desks: Array<{ id: string; name: string }>;
 }) {
+  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  if (!templateId || desks.length === 0) {
+  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState(defaultName);
+  if (desks.length === 0) {
     return null;
   }
+
+  function resetAndOpen() {
+    setName(defaultName);
+    setMessage(null);
+    setError(null);
+    setOpen(true);
+  }
+
+  async function onAdd(formData: FormData) {
+    setPending(true);
+    setMessage(null);
+    setError(null);
+    formData.set("runId", runId);
+    formData.set("name", name.trim() || defaultName);
+    const result = await applyBacktestToDeskAction(formData);
+    setPending(false);
+    if (!result.ok) {
+      setError(result.error ?? "Could not add that bot.");
+      return;
+    }
+    setMessage(result.notes?.[0] ?? "Copied idle on that desk.");
+  }
+
   return (
-    <form
-      className="space-y-2"
-      action={async (formData) => {
-        setPending(true);
-        setMessage(null);
-        const result = await applyTemplateAction(formData);
-        setPending(false);
-        setMessage(
-          result.ok
-            ? (result.notes?.[0] ?? "Applied idle on that desk.")
-            : (result.error ?? "Could not apply."),
-        );
-      }}
-    >
-      <input type="hidden" name="templateId" value={templateId} />
-      <select
-        name="accountId"
-        aria-label="Desk"
-        className="w-full rounded-control border border-line bg-canvas px-2 py-1.5 text-sm text-ink"
-      >
-        {desks.map((desk) => (
-          <option key={desk.id} value={desk.id}>
-            {desk.name}
-          </option>
-        ))}
-      </select>
+    <>
       <button
-        type="submit"
-        disabled={pending}
+        type="button"
+        onClick={resetAndOpen}
         title="Copies the bot onto that desk idle. Does not arm."
-        className="w-full rounded-control border border-line px-3 py-2 text-sm text-ink hover:border-line-strong disabled:opacity-50"
+        className="w-full rounded-control border border-line px-3 py-2 text-sm text-ink hover:border-line-strong"
       >
-        {pending ? "Copying…" : "Add to desk"}
+        Add to desk
       </button>
-      {message ? <p className="text-xs text-ink-muted">{message}</p> : null}
-    </form>
+      {open ? (
+        <Modal title="Add to desk" onClose={() => setOpen(false)}>
+          <p className="mt-1 text-sm text-ink-muted">
+            Copies this recipe onto the desk idle. Does not arm.
+          </p>
+          <form
+            className="mt-4 space-y-3"
+            action={(formData) => void onAdd(formData)}
+          >
+            <label className="block text-xs text-ink-muted">
+              Desk
+              <select
+                name="accountId"
+                aria-label="Desk"
+                className={saveFieldClass}
+              >
+                {desks.map((desk) => (
+                  <option key={desk.id} value={desk.id}>
+                    {desk.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-xs text-ink-muted">
+              Bot name
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                maxLength={80}
+                className={saveFieldClass}
+              />
+            </label>
+            {error ? <p className="text-sm text-danger">{error}</p> : null}
+            {message ? <p className="text-sm text-success">{message}</p> : null}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className={saveSecondaryBtn}
+              >
+                {message ? "Close" : "Cancel"}
+              </button>
+              <button
+                type="submit"
+                disabled={pending || !name.trim()}
+                className={savePrimaryBtn}
+              >
+                {pending ? "Copying…" : "Add to desk"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+    </>
   );
 }
 

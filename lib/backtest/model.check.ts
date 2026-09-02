@@ -104,6 +104,15 @@ assert.deepEqual(
   }),
   { fromMs: 1_000, toMs: 10_000 },
 );
+assert.deepEqual(
+  backtestActivityBounds({
+    fromMs: 1_000,
+    toMs: 10_000,
+    orders: [{ atMs: 4_000 }, { atMs: 7_000 }],
+    padMs: 2_000,
+  }),
+  { fromMs: 4_000, toMs: 9_000 },
+);
 assert.equal(backtestShouldRunInline(800, 2), true);
 assert.equal(backtestShouldRunInline(2000, 1), true);
 assert.equal(backtestShouldRunInline(4000, 1), false);

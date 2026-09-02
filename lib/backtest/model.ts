@@ -279,13 +279,21 @@ export function estimateBacktestBars(
   return Math.ceil((toMs - fromMs) / intervalMs(interval));
 }
 
+export const BACKTEST_CHART_TRAIL_BARS = 8;
+
+export function backtestChartTrailMs(interval: DcaIndicatorTimeframe): number {
+  return intervalMs(interval) * BACKTEST_CHART_TRAIL_BARS;
+}
+
 export function backtestActivityBounds(input: {
   fromMs: number;
   toMs: number;
   orders: ReadonlyArray<{ atMs: number }>;
+  padMs?: number;
 }): { fromMs: number; toMs: number } {
+  const padMs = Math.max(0, input.padMs ?? 0);
   if (input.orders.length === 0) {
-    return { fromMs: input.fromMs, toMs: input.toMs };
+    return { fromMs: input.fromMs, toMs: input.toMs + padMs };
   }
   let first = input.orders[0].atMs;
   let last = first;
@@ -298,10 +306,10 @@ export function backtestActivityBounds(input: {
     }
   }
   const fromMs = Math.max(input.fromMs, first);
-  const toMs = Math.min(input.toMs, last);
+  const toMs = Math.min(input.toMs, last) + padMs;
   return toMs > fromMs
     ? { fromMs, toMs }
-    : { fromMs: input.fromMs, toMs: input.toMs };
+    : { fromMs: input.fromMs, toMs: input.toMs + padMs };
 }
 
 export function chartIntervalForWindow(

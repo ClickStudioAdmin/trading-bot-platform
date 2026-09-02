@@ -120,11 +120,13 @@ export function DeskChart({
   overlay,
   height = 420,
   screenshotName = "chart.png",
+  rightOffset = 0,
 }: {
   candles: CandleBar[];
   overlay: ChartOverlay;
   height?: number;
   screenshotName?: string;
+  rightOffset?: number;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartHandle | null>(null);
@@ -155,9 +157,9 @@ export function DeskChart({
         timeScale: {
           borderColor: "#2A313C",
           timeVisible: true,
-          rightOffset: 0,
+          rightOffset,
           fixLeftEdge: true,
-          fixRightEdge: true,
+          fixRightEdge: rightOffset === 0,
         },
         crosshair: { mode: charts.CrosshairMode.Normal },
         width: host.clientWidth,
@@ -221,7 +223,7 @@ export function DeskChart({
       disposed = true;
       cleanup();
     };
-  }, [candles, overlay, height]);
+  }, [candles, overlay, height, rightOffset]);
 
   if (candles.length === 0) {
     return (
