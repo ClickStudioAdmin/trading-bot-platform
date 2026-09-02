@@ -4,6 +4,7 @@ import {
   backtestFillMarkerText,
   backtestOpenMarkPrice,
   groupBacktestOrdersIntoCycles,
+  listBacktestCycles,
   plannedExitsForBacktestCycle,
 } from "./positions";
 import type { BacktestRecipe, SimulatedOrder } from "./model";
@@ -125,18 +126,25 @@ const exits = plannedExitsForBacktestCycle(recipe, grouped.closed[1]!);
 assert.ok(exits.takeProfit != null && exits.takeProfit > grouped.closed[1]!.entryPrice);
 assert.ok(exits.stopLoss != null && exits.stopLoss < grouped.closed[1]!.entryPrice);
 
-const levels = backtestChartLevels(recipe, fills.slice(0, 4));
+assert.equal(backtestChartLevels(recipe, fills), null);
+const inspect = listBacktestCycles(fills);
+assert.equal(inspect[0]?.side, "long");
+assert.equal(inspect[1]?.side, "short");
+const shortId = inspect.find((row) => row.side === "short")?.id;
+const levels = backtestChartLevels(recipe, fills, shortId);
 assert.equal(levels?.side, "short");
 assert.equal(levels?.entry, 50);
 assert.equal(levels?.liquidation, null);
-const newest = backtestChartLevels(recipe, fills);
+const newest = backtestChartLevels(recipe, fills, shortId);
 assert.equal(newest?.side, "short");
 assert.equal(newest?.entry, 50);
-const liqLevels = backtestChartLevels(recipe, [
+const liqFills = [
   fills[0]!,
   fills[1]!,
-  { ...fills[2]!, reason: "liquidation", price: 80, realizedUsdt: -60 },
-]);
+  { ...fills[2]!, reason: "liquidation" as const, price: 80, realizedUsdt: -60 },
+];
+const liqId = listBacktestCycles(liqFills)[0]?.id;
+const liqLevels = backtestChartLevels(recipe, liqFills, liqId);
 assert.equal(liqLevels?.liquidation, 80);
 assert.equal(liqLevels?.takeProfit, null);
 assert.equal(backtestOpenMarkPrice({

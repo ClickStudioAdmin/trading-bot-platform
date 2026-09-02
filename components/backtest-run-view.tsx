@@ -102,12 +102,19 @@ import {
   type BacktestRun,
 } from "@/lib/backtest/model";
 import { loadBacktestDisplayCandles } from "@/lib/charts/load-backtest-candles";
-import { backtestChartLevels } from "@/lib/backtest/positions";
 import {
+  backtestChartLevels,
+  backtestCycleSpanMs,
+  listBacktestCycles,
+} from "@/lib/backtest/positions";
+import {
+  backtestChartIncludeAdds,
   buildBacktestChartOverlay,
+  candleRangeForFocus,
   snapOverlayToCandles,
 } from "@/lib/charts/overlay";
 import { BacktestChartIntervalBar } from "@/components/backtest-chart-interval";
+import { formatLocalDate } from "@/lib/time/display";
 import {
   DCA_INDICATOR_TIMEFRAME_LABELS,
   type DcaIndicatorTimeframe,
@@ -395,23 +402,107 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
   );
 }
 
-function backtestOverlayForRun(run: BacktestRun) {
+function backtestOverlayForRun(
+  run: BacktestRun,
+  extra?: { focusCycleId?: string | null; includeAdds?: boolean },
+) {
   return buildBacktestChartOverlay({
     triggerPrice:
       run.recipe.kind === "perps" ? Number(run.recipe.triggerPrice) : null,
     orders: run.orders,
-    levels: backtestChartLevels(run.recipe, run.orders),
+    focusCycleId: extra?.focusCycleId,
+    includeAdds: extra?.includeAdds,
+    levels: backtestChartLevels(run.recipe, run.orders, extra?.focusCycleId),
   });
+}
+
+function BacktestTradeStepper({
+  cycles,
+  focusCycleId,
+  onFocusCycleId,
+}: {
+  cycles: ReturnType<typeof listBacktestCycles>;
+  focusCycleId: string | null;
+  onFocusCycleId: (id: string | null) => void;
+}) {
+  if (cycles.length === 0) {
+    return null;
+  }
+  const index = focusCycleId
+    ? cycles.findIndex((row) => row.id === focusCycleId)
+    : -1;
+  const current = index >= 0 ? cycles[index] : null;
+  const step =
+    "rounded-control border border-line px-2 py-1 text-xs text-ink hover:border-line-strong disabled:opacity-40";
+  return (
+    <div
+      className="flex flex-wrap items-center gap-1"
+      role="group"
+      aria-label="Trades on chart"
+    >
+      <button
+        type="button"
+        className={step}
+        disabled={index === 0}
+        onClick={() => {
+          if (index < 0) {
+            onFocusCycleId(cycles[cycles.length - 1]!.id);
+            return;
+          }
+          if (index > 0) {
+            onFocusCycleId(cycles[index - 1]!.id);
+          }
+        }}
+      >
+        Prev
+      </button>
+      <span className="min-w-0 px-1 text-xs text-ink-muted">
+        {current
+          ? `${index + 1} / ${cycles.length} · ${
+              current.side === "short" ? "Short" : "Long"
+            } · ${formatLocalDate(current.openedAtMs)}`
+          : `All ${cycles.length} trades`}
+      </span>
+      <button
+        type="button"
+        className={step}
+        disabled={index === cycles.length - 1}
+        onClick={() => {
+          if (index < 0) {
+            onFocusCycleId(cycles[0]!.id);
+            return;
+          }
+          if (index < cycles.length - 1) {
+            onFocusCycleId(cycles[index + 1]!.id);
+          }
+        }}
+      >
+        Next
+      </button>
+      <button
+        type="button"
+        className={step}
+        disabled={focusCycleId == null}
+        onClick={() => onFocusCycleId(null)}
+      >
+        All
+      </button>
+    </div>
+  );
 }
 
 export function BacktestInlineChart({
   run,
   interval,
   onIntervalChange,
+  focusCycleId = null,
+  onFocusCycleId,
 }: {
   run: BacktestRun;
   interval: DcaIndicatorTimeframe;
   onIntervalChange: (value: DcaIndicatorTimeframe) => void;
+  focusCycleId?: string | null;
+  onFocusCycleId?: (id: string | null) => void;
 }) {
   const [candles, setCandles] = useState<CandleBar[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -450,11 +541,20 @@ export function BacktestInlineChart({
     };
   }, [run, interval]);
 
+  const cycles = listBacktestCycles(run.orders);
+  const focused = cycles.find((row) => row.id === focusCycleId) ?? null;
+  const span = focused ? backtestCycleSpanMs(focused) : null;
+  const visibleRange =
+    span != null ? candleRangeForFocus(candles, span.fromMs, span.toMs) : null;
+  const includeAdds =
+    focusCycleId == null && backtestChartIncludeAdds(interval);
+
   return (
     <DeskChart
       candles={candles}
       rightOffset={8}
       screenshotName={`${run.symbol}-backtest.png`}
+      visibleRange={visibleRange}
       status={
         candles.length === 0
           ? (error ??
@@ -462,13 +562,25 @@ export function BacktestInlineChart({
           : null
       }
       toolbar={
-        <BacktestChartIntervalBar
-          run={run}
-          interval={interval}
-          onChange={onIntervalChange}
-        />
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <BacktestChartIntervalBar
+            run={run}
+            interval={interval}
+            onChange={onIntervalChange}
+          />
+          {onFocusCycleId ? (
+            <BacktestTradeStepper
+              cycles={cycles}
+              focusCycleId={focusCycleId}
+              onFocusCycleId={onFocusCycleId}
+            />
+          ) : null}
+        </div>
       }
-      overlay={snapOverlayToCandles(backtestOverlayForRun(run), candles)}
+      overlay={snapOverlayToCandles(
+        backtestOverlayForRun(run, { focusCycleId, includeAdds }),
+        candles,
+      )}
     />
   );
 }
@@ -558,7 +670,9 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
                 />
               }
               overlay={snapOverlayToCandles(
-                backtestOverlayForRun(run),
+                backtestOverlayForRun(run, {
+                  includeAdds: backtestChartIncludeAdds(interval),
+                }),
                 candles,
               )}
             />

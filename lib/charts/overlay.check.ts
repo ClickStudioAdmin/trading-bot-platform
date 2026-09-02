@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import {
   CHART_COLORS,
+  backtestChartIncludeAdds,
   buildBacktestChartOverlay,
   buildLiveChartOverlay,
+  candleRangeForFocus,
   snapOverlayToCandles,
 } from "./overlay";
+import { listBacktestCycles } from "@/lib/backtest/positions";
 
 const live = buildLiveChartOverlay({
   symbol: "BTCUSDT",
@@ -178,9 +181,20 @@ const lateLiq = {
   realizedUsdt: -30,
   reason: "liquidation" as const,
 };
+const historyOrders = [olderEntry, olderTp, lateEntry, lateAdd, lateLiq];
+const history = buildBacktestChartOverlay({
+  triggerPrice: null,
+  orders: historyOrders,
+});
+assert.deepEqual(
+  history.markers.map((row) => row.text),
+  ["Entry", "TP", "Entry", "Liq"],
+);
+const latestId = listBacktestCycles(historyOrders).at(-1)?.id;
 const focused = buildBacktestChartOverlay({
   triggerPrice: null,
-  orders: [olderEntry, olderTp, lateEntry, lateAdd, lateLiq],
+  orders: historyOrders,
+  focusCycleId: latestId,
   levels: {
     entry: 95,
     takeProfit: null,
@@ -191,8 +205,24 @@ const focused = buildBacktestChartOverlay({
 });
 assert.deepEqual(
   focused.markers.map((row) => row.text),
-  ["TP", "Entry", "Add 2", "Liq"],
+  ["Entry", "TP", "Entry", "Add 2", "Liq"],
 );
+assert.equal(backtestChartIncludeAdds("15"), true);
+assert.equal(backtestChartIncludeAdds("D"), false);
+const focusRange = candleRangeForFocus(
+  [
+    { timeMs: 1_000_000, open: 1, high: 1, low: 1, close: 1 },
+    { timeMs: 2_000_000, open: 1, high: 1, low: 1, close: 1 },
+    { timeMs: 3_000_000, open: 1, high: 1, low: 1, close: 1 },
+    { timeMs: 4_000_000, open: 1, high: 1, low: 1, close: 1 },
+    { timeMs: 5_000_000, open: 1, high: 1, low: 1, close: 1 },
+  ],
+  3_000_000,
+  3_200_000,
+  1,
+);
+assert.equal(focusRange?.fromSec, 2_000);
+assert.equal(focusRange?.toSec, 4_000);
 assert.equal(
   focused.lines.some((row) => row.title === "Liquidation"),
   true,

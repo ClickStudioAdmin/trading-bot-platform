@@ -9,7 +9,6 @@ import {
   RemoveBacktestButton,
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
-import { BacktestPositionsTable } from "@/components/backtest-positions-table";
 import { ColumnHint } from "@/components/column-hint";
 import { BacktestRunsTable } from "@/components/backtest-runs-table";
 import { BacktestStudyCharts } from "@/components/backtest-study-charts";
@@ -382,16 +381,11 @@ export function BacktestRunDetail({
             <h2 className="mb-2 text-lg font-semibold">Chart</h2>
             <SectionPlaceholder message={pendingMessage} />
           </section>
+          <section>
+            <h2 className="mb-2 text-lg font-semibold">Open Positions</h2>
+            <SectionPlaceholder message={pendingMessage} />
+          </section>
         </>
-      )}
-
-      {complete ? (
-        <BacktestPositionsTable run={run} />
-      ) : (
-        <section>
-          <h2 className="mb-2 text-lg font-semibold">Open Positions</h2>
-          <SectionPlaceholder message={pendingMessage} />
-        </section>
       )}
 
       {comparablePrimary && comparables.length > 0 ? (

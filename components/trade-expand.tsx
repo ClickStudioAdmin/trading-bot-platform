@@ -6,17 +6,27 @@ export function ExpandableTradeRows({
   colSpan,
   details,
   children,
+  selected = false,
+  onSelect,
 }: {
   colSpan: number;
   details: ReactNode;
   children: ReactNode;
+  selected?: boolean;
+  onSelect?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
 
   return (
     <>
-      <tr className="border-b border-line last:border-b-0">
+      <tr
+        className={`border-b border-line last:border-b-0 ${
+          selected ? "bg-accent/10" : ""
+        } ${onSelect ? "cursor-pointer" : ""}`}
+        aria-current={selected ? "true" : undefined}
+        onClick={onSelect}
+      >
         <td className="w-10 px-2 py-3">
           <button
             type="button"
@@ -24,7 +34,10 @@ export function ExpandableTradeRows({
             aria-expanded={open}
             aria-controls={open ? panelId : undefined}
             aria-label={open ? "Hide position details" : "Show position details"}
-            onClick={() => setOpen((current) => !current)}
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpen((current) => !current);
+            }}
           >
             <ChevronIcon className={open ? "rotate-90" : undefined} />
           </button>

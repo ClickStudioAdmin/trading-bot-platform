@@ -192,6 +192,7 @@ export function DeskChart({
   rightOffset = 0,
   toolbar,
   status = null,
+  visibleRange = null,
 }: {
   candles: CandleBar[];
   overlay: ChartOverlay;
@@ -200,6 +201,7 @@ export function DeskChart({
   rightOffset?: number;
   toolbar?: ReactNode;
   status?: string | null;
+  visibleRange?: { fromSec: number; toSec: number } | null;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartHandle | null>(null);
@@ -281,7 +283,21 @@ export function DeskChart({
           })),
         );
       }
-      chart.timeScale().fitContent();
+      if (
+        visibleRange &&
+        visibleRange.toSec >= visibleRange.fromSec
+      ) {
+        try {
+          chart.timeScale().setVisibleRange({
+            from: visibleRange.fromSec as never,
+            to: visibleRange.toSec as never,
+          });
+        } catch {
+          chart.timeScale().fitContent();
+        }
+      } else {
+        chart.timeScale().fitContent();
+      }
       const detachWheel = attachRightAxisWheel(host, () => viewRef.current);
       const observer = new ResizeObserver(() => {
         if (hostRef.current) {
@@ -302,7 +318,7 @@ export function DeskChart({
       disposed = true;
       cleanup();
     };
-  }, [candles, overlay, plotHeight, rightOffset]);
+  }, [candles, overlay, plotHeight, rightOffset, visibleRange]);
 
   return (
     <div

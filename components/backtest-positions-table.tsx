@@ -31,7 +31,15 @@ const OPEN_COL_SPAN_DCA = 14;
 const OPEN_COL_SPAN = 13;
 const CLOSED_COL_SPAN = 11;
 
-export function BacktestPositionsTable({ run }: { run: BacktestRun }) {
+export function BacktestPositionsTable({
+  run,
+  focusCycleId = null,
+  onFocusCycleId,
+}: {
+  run: BacktestRun;
+  focusCycleId?: string | null;
+  onFocusCycleId?: (id: string | null) => void;
+}) {
   const grouped = groupBacktestOrdersIntoCycles(run.orders);
   const dca = run.recipe.kind === "dca" || run.deskType === "dca";
   const maxClips = run.recipe.kind === "dca" ? run.recipe.maxClips : null;
@@ -48,6 +56,16 @@ export function BacktestPositionsTable({ run }: { run: BacktestRun }) {
   const unrealized =
     grouped.open.length === 1 && run.stats ? run.stats.markUsdt : null;
 
+  function selectCycle(id: string) {
+    const next = focusCycleId === id ? null : id;
+    onFocusCycleId?.(next);
+    if (next) {
+      document
+        .getElementById("backtest-price-chart")
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
   return (
     <div className="space-y-8">
       <OpenBacktestPositions
@@ -58,11 +76,15 @@ export function BacktestPositionsTable({ run }: { run: BacktestRun }) {
         recipeName={recipeName}
         mark={mark}
         unrealized={unrealized}
+        focusCycleId={focusCycleId}
+        onSelectCycle={onFocusCycleId ? selectCycle : undefined}
       />
       <ClosedBacktestPositions
         run={run}
         cycles={grouped.closed}
         recipeName={recipeName}
+        focusCycleId={focusCycleId}
+        onSelectCycle={onFocusCycleId ? selectCycle : undefined}
       />
     </div>
   );
@@ -76,6 +98,8 @@ function OpenBacktestPositions({
   recipeName,
   mark,
   unrealized,
+  focusCycleId,
+  onSelectCycle,
 }: {
   run: BacktestRun;
   cycles: BacktestPositionCycle[];
@@ -84,13 +108,15 @@ function OpenBacktestPositions({
   recipeName: string;
   mark: number | null;
   unrealized: number | null;
+  focusCycleId: string | null;
+  onSelectCycle?: (id: string) => void;
 }) {
   const colSpan = dca ? OPEN_COL_SPAN_DCA : OPEN_COL_SPAN;
   return (
     <section>
       <SectionHead
         title="Open Positions"
-        subtitle="Still open at the end of the replay. Expand for fills and synthesized logs."
+        subtitle="Still open at the end of the replay. Click a row to pin it on the chart."
       />
       <div className="min-w-0 overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-max text-left text-sm">
@@ -196,6 +222,10 @@ function OpenBacktestPositions({
                   colSpan={colSpan}
                   mark={mark}
                   unrealized={unrealized}
+                  selected={focusCycleId === cycle.id}
+                  onSelect={
+                    onSelectCycle ? () => onSelectCycle(cycle.id) : undefined
+                  }
                 />
               ))
             )}
@@ -210,16 +240,20 @@ function ClosedBacktestPositions({
   run,
   cycles,
   recipeName,
+  focusCycleId,
+  onSelectCycle,
 }: {
   run: BacktestRun;
   cycles: BacktestPositionCycle[];
   recipeName: string;
+  focusCycleId: string | null;
+  onSelectCycle?: (id: string) => void;
 }) {
   return (
     <section>
       <SectionHead
         title="Past Positions"
-        subtitle="Closed futures. Realized is mark-to-market at close."
+        subtitle="Closed futures. Click a row to pin that trade on the chart."
       />
       <div className="overflow-x-auto rounded-card border border-line bg-surface">
         <table className="w-full min-w-[52rem] text-left text-sm">
@@ -306,6 +340,10 @@ function ClosedBacktestPositions({
                   run={run}
                   cycle={cycle}
                   recipeName={recipeName}
+                  selected={focusCycleId === cycle.id}
+                  onSelect={
+                    onSelectCycle ? () => onSelectCycle(cycle.id) : undefined
+                  }
                 />
               ))
             )}
@@ -325,6 +363,8 @@ function OpenBacktestRows({
   colSpan,
   mark,
   unrealized,
+  selected,
+  onSelect,
 }: {
   run: BacktestRun;
   cycle: BacktestPositionCycle;
@@ -334,6 +374,8 @@ function OpenBacktestRows({
   colSpan: number;
   mark: number | null;
   unrealized: number | null;
+  selected: boolean;
+  onSelect?: () => void;
 }) {
   const planned = plannedExitsForBacktestCycle(run.recipe, cycle);
   const pnlPct =
@@ -344,6 +386,8 @@ function OpenBacktestRows({
   return (
     <ExpandableTradeRows
       colSpan={colSpan}
+      selected={selected}
+      onSelect={onSelect}
       details={<BacktestCycleDetails cycle={cycle} recipeName={recipeName} />}
     >
       <td className="min-w-0 px-3 py-3">
@@ -352,6 +396,11 @@ function OpenBacktestRows({
           <span className="min-w-0">
             <span className="flex items-center gap-2 font-medium">
               <span>{baseCoin}</span>
+              {selected ? (
+                <span className="rounded-control bg-accent/15 px-1.5 py-0.5 text-[11px] font-medium text-accent">
+                  On chart
+                </span>
+              ) : null}
             </span>
             <span className="mt-0.5 block truncate text-xs text-ink-faint">
               {run.symbol}
@@ -434,10 +483,14 @@ function ClosedBacktestRows({
   run,
   cycle,
   recipeName,
+  selected,
+  onSelect,
 }: {
   run: BacktestRun;
   cycle: BacktestPositionCycle;
   recipeName: string;
+  selected: boolean;
+  onSelect?: () => void;
 }) {
   const pnlPct =
     cycle.notionalUsdt > 0 ? cycle.realizedUsdt / cycle.notionalUsdt : null;
@@ -450,6 +503,8 @@ function ClosedBacktestRows({
   return (
     <ExpandableTradeRows
       colSpan={CLOSED_COL_SPAN}
+      selected={selected}
+      onSelect={onSelect}
       details={<BacktestCycleDetails cycle={cycle} recipeName={recipeName} />}
     >
       <td className="min-w-0 px-4 py-3">
@@ -458,6 +513,11 @@ function ClosedBacktestRows({
           <span className="min-w-0">
             <span className="flex items-center gap-2 font-medium">
               <span>{baseCoin}</span>
+              {selected ? (
+                <span className="rounded-control bg-accent/15 px-1.5 py-0.5 text-[11px] font-medium text-accent">
+                  On chart
+                </span>
+              ) : null}
               {cycle.exitReason === "liquidation" ? (
                 <span className="rounded-control bg-danger/15 px-1.5 py-0.5 text-[11px] font-medium text-danger">
                   Liq

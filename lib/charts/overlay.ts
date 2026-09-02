@@ -4,10 +4,13 @@ import {
   splitCompletedBacktestOrders,
   type SimulatedOrder,
 } from "@/lib/backtest/model";
+import { intervalMs } from "@/lib/backtest/model";
 import {
   backtestFillMarkerText,
-  groupBacktestOrdersIntoCycles,
+  isBacktestLadderAdd,
+  listBacktestCycles,
 } from "@/lib/backtest/positions";
+import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import type { CandleBar } from "@/lib/market/candles";
 
 export const CHART_COLORS = {
@@ -142,9 +145,58 @@ export function buildLiveChartOverlay(input: {
   return { lines, markers };
 }
 
+export function backtestChartIncludeAdds(
+  interval: DcaIndicatorTimeframe,
+): boolean {
+  return intervalMs(interval) <= 60 * 60 * 1000;
+}
+
+export function candleRangeForFocus(
+  candles: CandleBar[],
+  fromMs: number,
+  toMs: number,
+  padBars = 4,
+): { fromSec: number; toSec: number } | null {
+  if (candles.length === 0) {
+    return null;
+  }
+  const times = candles
+    .map((row) => Math.floor(row.timeMs / 1000))
+    .filter((row) => row > 0);
+  if (times.length === 0) {
+    return null;
+  }
+  const fromSec = Math.floor(fromMs / 1000);
+  const toSec = Math.floor(Math.max(toMs, fromMs) / 1000);
+  let start = 0;
+  let end = 0;
+  for (let i = 0; i < times.length; i += 1) {
+    const time = times[i] ?? 0;
+    if (time <= fromSec) {
+      start = i;
+    }
+    if (time <= toSec) {
+      end = i;
+    }
+  }
+  start = Math.max(0, start - padBars);
+  end = Math.min(times.length - 1, end + padBars);
+  if (end < start) {
+    end = start;
+  }
+  const from = times[start];
+  const to = times[end];
+  if (from == null || to == null) {
+    return null;
+  }
+  return { fromSec: from, toSec: to };
+}
+
 export function buildBacktestChartOverlay(input: {
   triggerPrice: number | null;
   orders: SimulatedOrder[];
+  focusCycleId?: string | null;
+  includeAdds?: boolean;
   levels?: {
     entry: number | null;
     takeProfit: number | null;
@@ -195,19 +247,28 @@ export function buildBacktestChartOverlay(input: {
       }
     }
   }
-  const grouped = groupBacktestOrdersIntoCycles(input.orders);
-  const focus = grouped.open[0] ?? grouped.closed[0] ?? null;
-  const focusOrders = new Set(focus?.orders ?? []);
+  const cycles = listBacktestCycles(input.orders);
+  const orderCycle = new Map<SimulatedOrder, string>();
+  for (const cycle of cycles) {
+    for (const order of cycle.orders) {
+      orderCycle.set(order, cycle.id);
+    }
+  }
   const { open } = splitCompletedBacktestOrders(input.orders);
   const openSet = new Set(open);
+  const includeAdds = input.includeAdds === true;
+  const focusCycleId = input.focusCycleId ?? null;
   const markers: ChartMarker[] = input.orders
     .filter((row) => row.price > 0 && row.atMs > 0)
-    .filter(
-      (row) =>
-        focusOrders.size === 0 ||
-        focusOrders.has(row) ||
-        row.action === "flatten",
-    )
+    .filter((row) => {
+      if (!isBacktestLadderAdd(row)) {
+        return true;
+      }
+      if (includeAdds) {
+        return true;
+      }
+      return focusCycleId != null && orderCycle.get(row) === focusCycleId;
+    })
     .map((row) => {
       const current = openSet.has(row);
       const buy = row.action === "buy";

@@ -71,6 +71,34 @@ export function groupBacktestOrdersIntoCycles(
   return { open, closed };
 }
 
+export function listBacktestCycles(
+  orders: SimulatedOrder[],
+): BacktestPositionCycle[] {
+  const grouped = groupBacktestOrdersIntoCycles(orders);
+  return [...grouped.open, ...grouped.closed].sort(
+    (left, right) =>
+      left.openedAtMs - right.openedAtMs || left.id.localeCompare(right.id),
+  );
+}
+
+export function isBacktestLadderAdd(row: SimulatedOrder): boolean {
+  return row.action !== "flatten" && (row.clipIndex ?? 1) > 1;
+}
+
+export function backtestCycleSpanMs(cycle: BacktestPositionCycle): {
+  fromMs: number;
+  toMs: number;
+} {
+  const last = cycle.orders.reduce(
+    (max, row) => Math.max(max, row.atMs),
+    cycle.openedAtMs,
+  );
+  return {
+    fromMs: cycle.openedAtMs,
+    toMs: cycle.closedAtMs ?? last,
+  };
+}
+
 function cycleFromFills(
   id: string,
   fills: SimulatedOrder[],
@@ -195,6 +223,7 @@ export function backtestFillLogMessage(row: SimulatedOrder): string {
 export function backtestChartLevels(
   recipe: BacktestRecipe,
   orders: SimulatedOrder[],
+  focusCycleId?: string | null,
 ): {
   entry: number | null;
   takeProfit: number | null;
@@ -202,8 +231,10 @@ export function backtestChartLevels(
   liquidation: number | null;
   side: "long" | "short";
 } | null {
-  const grouped = groupBacktestOrdersIntoCycles(orders);
-  const cycle = grouped.open[0] ?? grouped.closed[0];
+  if (!focusCycleId) {
+    return null;
+  }
+  const cycle = listBacktestCycles(orders).find((row) => row.id === focusCycleId);
   if (!cycle) {
     return null;
   }
