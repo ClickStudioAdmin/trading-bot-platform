@@ -171,18 +171,16 @@ function BacktestMatchCard({
             defaultName={defaultName}
             deskType={deskType}
             folders={folders}
-            isAdmin={isAdmin}
-            canSaveAs={canSaveAs}
-            canSaveAsPlatform={canSaveAsPlatform}
+            canSaveAs
+            canSaveAsPlatform={false}
           />
         ) : null}
-        {canSaveAsPlatform && !canSaveAs ? (
+        {canSaveAsPlatform ? (
           <SaveBacktestAsTemplateButton
             runId={runId}
             defaultName={defaultName}
             deskType={deskType}
             folders={folders}
-            isAdmin={isAdmin}
             canSaveAs={false}
             canSaveAsPlatform
             variant="secondary"
@@ -191,7 +189,7 @@ function BacktestMatchCard({
       </MatchPanel>
       <MatchPanel title="Desk Bot Matching">
         {matchingDeskLabel ? (
-          <p className="rounded-control bg-accent/15 px-2 py-0.5 text-xs text-accent">
+          <p className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
             Desk · {matchingDeskLabel}
           </p>
         ) : (
@@ -409,7 +407,6 @@ export function BacktestRunDetail({
             ]}
             memberId={memberId}
             isAdmin={isAdmin}
-            currentRunId={run.id}
             primaryRunId={comparablePrimary.id}
             returnTo={`${listHref}/${run.id}`}
           />

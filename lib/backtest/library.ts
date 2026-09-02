@@ -338,11 +338,7 @@ export function decideBacktestTemplateActions(input: {
       : sourceMatch;
   const canAttach = Boolean(done && owns && match && !linkedLibrary);
   const canSaveAs = Boolean(done && owns && !match && !linkedLibrary);
-  const matchIsPlatform = match?.visibility === "platform";
-  const linkedIsPlatform = input.linked?.visibility === "platform";
-  const canSaveAsPlatform = Boolean(
-    done && input.isAdmin && !matchIsPlatform && !linkedIsPlatform,
-  );
+  const canSaveAsPlatform = Boolean(done && input.isAdmin);
   return {
     canAttach,
     canSaveAs,

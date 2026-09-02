@@ -19,14 +19,12 @@ export function BacktestRunsTable({
   runs,
   memberId,
   isAdmin,
-  currentRunId,
   primaryRunId,
   returnTo = "/account/backtests",
 }: {
   runs: BacktestRun[];
   memberId: string;
   isAdmin: boolean;
-  currentRunId?: string;
   primaryRunId?: string;
   returnTo?: string;
 }) {
@@ -55,7 +53,6 @@ export function BacktestRunsTable({
               row={row}
               memberId={memberId}
               isAdmin={isAdmin}
-              isCurrent={row.id === currentRunId}
               isPrimary={row.id === primaryRunId}
               returnTo={returnTo}
             />
@@ -70,14 +67,12 @@ function BacktestRunRow({
   row,
   memberId,
   isAdmin,
-  isCurrent,
   isPrimary,
   returnTo,
 }: {
   row: BacktestRun;
   memberId: string;
   isAdmin: boolean;
-  isCurrent: boolean;
   isPrimary: boolean;
   returnTo: string;
 }) {
@@ -103,13 +98,9 @@ function BacktestRunRow({
     <tr className="border-b border-line last:border-b-0">
       <td className="px-4 py-3">
         <span className="inline-flex flex-wrap items-center gap-2">
-          {isCurrent ? (
-            <span className="font-medium">{title}</span>
-          ) : (
-            <Link href={href} className="text-accent hover:underline">
-              {title}
-            </Link>
-          )}
+          <Link href={href} className="text-accent hover:underline">
+            {title}
+          </Link>
           {isPrimary ? (
             <span className="rounded-control bg-accent/15 px-1.5 py-0.5 text-[11px] font-medium text-accent">
               Primary Pair

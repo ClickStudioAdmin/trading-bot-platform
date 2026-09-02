@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BacktestHighlightHover } from "@/components/backtest-highlight-hover";
-import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
 import { Modal, StarterPackCheckbox } from "@/components/template-modals";
 import type { BacktestLinkHighlight } from "@/lib/backtest/model";
@@ -70,7 +69,6 @@ type SortKey =
   | "owner"
   | "folder"
   | "shared"
-  | "updated"
   | "items"
   | "starter";
 
@@ -225,7 +223,7 @@ export function TemplatesLibrary({
   const [deskFilter, setDeskFilter] = useState<"all" | TemplateDeskType>("all");
   const [folderFilter, setFolderFilter] = useState("all");
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortState>({ key: "updated", dir: "desc" });
+  const [sort, setSort] = useState<SortState>({ key: "name", dir: "asc" });
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -451,7 +449,7 @@ export function TemplatesLibrary({
   const bulkFolders = foldersForAll(selectedTemplates, sets, variant);
   const showStarterPack = variant === "admin";
   const tableColumns =
-    7 +
+    6 +
     (sharedTab ? 0 : 1) +
     (showOwner ? 1 : 0) +
     (showSharedWith ? 1 : 0) +
@@ -476,7 +474,7 @@ export function TemplatesLibrary({
     setSort((current) =>
       current.key === key
         ? { key, dir: current.dir === "asc" ? "desc" : "asc" }
-        : { key, dir: key === "updated" ? "desc" : "asc" },
+        : { key, dir: "asc" },
     );
   }
 
@@ -812,6 +810,7 @@ export function TemplatesLibrary({
                 </th>
               )}
               <SortTh label="Name" k="name" sort={sort} onSort={onSort} />
+              <SortTh label="Folder" k="folder" sort={sort} onSort={onSort} />
               <SortTh label="Desk Type" k="deskType" sort={sort} onSort={onSort} />
               <SortTh label="Contract" k="contract" sort={sort} onSort={onSort} />
               <th className="px-4 py-3 font-medium">Backtests</th>
@@ -823,14 +822,12 @@ export function TemplatesLibrary({
                   onSort={onSort}
                 />
               ) : null}
-              <SortTh label="Folder" k="folder" sort={sort} onSort={onSort} />
               {showSharedWith ? (
                 <SortTh label="Shared with" k="shared" sort={sort} onSort={onSort} />
               ) : null}
               {showStarterPack ? (
                 <SortTh label="Starter Pack" k="starter" sort={sort} onSort={onSort} />
               ) : null}
-              <SortTh label="Updated" k="updated" sort={sort} onSort={onSort} />
               <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
@@ -855,6 +852,9 @@ export function TemplatesLibrary({
                   )}
                   <td className="px-4 py-3 font-medium text-ink">
                     {row.name}
+                  </td>
+                  <td className="px-4 py-3 text-ink-muted">
+                    {folderLabel(foldersHolding(row.id, knownFolders))}
                   </td>
                   <td className="px-4 py-3 text-ink-muted">
                     {formatTemplateDeskType(row.deskType)}
@@ -885,9 +885,6 @@ export function TemplatesLibrary({
                         : (row.ownerEmail ?? "—")}
                     </td>
                   ) : null}
-                  <td className="px-4 py-3 text-ink-muted">
-                    {folderLabel(foldersHolding(row.id, knownFolders))}
-                  </td>
                   {showSharedWith ? (
                     <td className="px-4 py-3 tabular-nums text-ink-muted">
                       {sharedCountLabel(row.sharedWith)}
@@ -900,9 +897,6 @@ export function TemplatesLibrary({
                       />
                     </td>
                   ) : null}
-                  <td className="px-4 py-3 tabular-nums text-ink-muted">
-                    <LocalTime at={row.updatedAtMs} mode="date" />
-                  </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-3">
                       {canEdit ? (
@@ -1022,7 +1016,6 @@ export function TemplatesLibrary({
                 {showStarterPack ? (
                   <SortTh label="Starter Pack" k="starter" sort={sort} onSort={onSort} />
                 ) : null}
-                <SortTh label="Updated" k="updated" sort={sort} onSort={onSort} />
                 <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
@@ -1070,9 +1063,6 @@ export function TemplatesLibrary({
                         <StarterPackMark on={row.starterPack} />
                       </td>
                     ) : null}
-                    <td className="px-4 py-3 tabular-nums text-ink-muted">
-                      <LocalTime at={row.updatedAtMs} mode="date" />
-                    </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-3">
                         {canEdit ? (

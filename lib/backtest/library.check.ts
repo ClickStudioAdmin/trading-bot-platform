@@ -131,7 +131,7 @@ const alreadyPlatform = decideBacktestTemplateActions({
     visibility: "platform",
   },
 });
-assert.equal(alreadyPlatform.canSaveAsPlatform, false);
+assert.equal(alreadyPlatform.canSaveAsPlatform, true);
 assert.equal(alreadyPlatform.canAttach, false);
 
 const attached = decideBacktestTemplateActions({

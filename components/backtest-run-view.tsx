@@ -565,7 +565,7 @@ export function BacktestOriginBadges({
         </p>
       ) : null}
       {deskLabel ? (
-        <p className="rounded-control bg-accent/15 px-2 py-0.5 text-xs text-accent">
+        <p className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
           Desk · {deskLabel}
         </p>
       ) : null}
@@ -633,7 +633,6 @@ export function SaveBacktestAsTemplateButton({
   defaultName,
   deskType,
   folders = [],
-  isAdmin = false,
   canSaveAs,
   canSaveAsPlatform,
   variant = "primary",
@@ -642,7 +641,6 @@ export function SaveBacktestAsTemplateButton({
   defaultName: string;
   deskType: TemplateDeskType;
   folders?: AutomationTemplateSet[];
-  isAdmin?: boolean;
   canSaveAs: boolean;
   canSaveAsPlatform: boolean;
   variant?: "primary" | "secondary";
@@ -747,25 +745,6 @@ export function SaveBacktestAsTemplateButton({
               className={saveFieldClass}
             />
           </label>
-          {isAdmin && canSaveAsPlatform && canSaveAs ? (
-            <label className="mt-3 block text-xs text-ink-muted">
-              Save to
-              <select
-                value={platform ? "platform" : "library"}
-                onChange={(event) => {
-                  setPlatform(event.target.value === "platform");
-                  setFolderIds(new Set());
-                  setCreateFolder(false);
-                  setNewFolderName("");
-                  setStarterPack(false);
-                }}
-                className={saveFieldClass}
-              >
-                <option value="library">Your library</option>
-                <option value="platform">Platform catalog</option>
-              </select>
-            </label>
-          ) : null}
           {platform ? (
             <StarterPackCheckbox
               checked={starterPack}
