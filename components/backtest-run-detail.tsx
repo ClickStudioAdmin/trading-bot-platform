@@ -20,6 +20,7 @@ import {
   backtestAprPct,
   backtestRerunHref,
   backtestRoePct,
+  backtestRunTitle,
   backtestWindowDays,
   formatBacktestReturnPct,
   realizedReturnPct,
@@ -300,7 +301,7 @@ export function BacktestRunDetail({
             Backtest
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            {run.recipe.name}
+            {backtestRunTitle(run)}
           </h1>
           <p className="mt-2 text-sm text-ink-muted">
             {run.symbol} · {run.venue} ·{" "}
@@ -327,7 +328,7 @@ export function BacktestRunDetail({
         </div>
         <BacktestMatchCard
           runId={run.id}
-          defaultName={run.recipe.name}
+          defaultName={backtestRunTitle(run)}
           deskType={run.deskType}
           status={status}
           matchingTemplateName={matchingTemplateName}

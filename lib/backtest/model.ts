@@ -123,6 +123,29 @@ export function isoDateUtc(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
+export function comparableBacktestName(name: string, symbol: string): string {
+  const base = name.trim() || "Backtest";
+  const pair = symbol.trim();
+  if (!pair) {
+    return base.slice(0, 80);
+  }
+  if (base.toLowerCase().includes(pair.toLowerCase())) {
+    return base.slice(0, 80);
+  }
+  return `${base} · ${pair}`.slice(0, 80);
+}
+
+export function backtestRunTitle(run: {
+  recipe: { name: string };
+  symbol: string;
+  parentRunId: string | null;
+}): string {
+  if (!run.parentRunId) {
+    return run.recipe.name.trim() || "Backtest";
+  }
+  return comparableBacktestName(run.recipe.name, run.symbol);
+}
+
 export function backtestRerunHref(runId: string): string {
   return `/account/backtests?rerun=${encodeURIComponent(runId)}#replay`;
 }

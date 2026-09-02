@@ -42,11 +42,22 @@ const matching = decideBacktestTemplateActions({
   source,
   linked: null,
 });
-assert.equal(matching.canAttach, true);
-assert.equal(matching.canSaveAs, false);
-assert.equal(matching.canSaveAsPlatform, false);
+assert.equal(matching.canAttach, false);
+assert.equal(matching.canSaveAs, true);
 assert.equal(matching.sourceName, "Dip buyer");
-assert.equal(matching.matchingTemplateName, "Dip buyer");
+assert.equal(matching.matchingTemplateName, null);
+
+const matchingSamePair = decideBacktestTemplateActions({
+  status: "done",
+  ownerUserId: "user-1",
+  memberId: "user-1",
+  recipe: perps,
+  source,
+  linked: null,
+});
+assert.equal(matchingSamePair.canAttach, true);
+assert.equal(matchingSamePair.canSaveAs, false);
+assert.equal(matchingSamePair.matchingTemplateName, "Dip buyer");
 assert.equal(matching.applyTemplateId, null);
 
 const edited = decideBacktestTemplateActions({
@@ -163,10 +174,15 @@ assert.equal(
     [
       { id: "tmpl-1", name: "Dip buyer", recipe: perps },
       { id: "tmpl-2", name: "Other", recipe: { ...perps, triggerPrice: "1" } },
+      {
+        id: "tmpl-eth",
+        name: "ETH dip",
+        recipe: { ...perps, symbol: "ETHUSDT" },
+      },
     ],
-    "tmpl-2",
+    "tmpl-1",
   )?.id,
-  "tmpl-1",
+  "tmpl-eth",
 );
 assert.equal(
   findMatchingBacktestDeskBot(perps, [
@@ -180,6 +196,22 @@ assert.equal(
     },
   ])?.deskName,
   "Paper",
+);
+assert.equal(
+  findMatchingBacktestDeskBot(
+    { ...perps, symbol: "ETHUSDT" },
+    [
+      {
+        id: "dca:1",
+        name: "Desk dip",
+        deskName: "Paper",
+        recipe: perps,
+        venue: "bybit",
+        venueEnvironment: null,
+      },
+    ],
+  ),
+  null,
 );
 
 const grouped = groupBacktestLibrary(

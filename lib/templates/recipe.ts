@@ -201,8 +201,8 @@ export function recipesMatchReplayFields(
   if (current.kind !== saved.kind) {
     return false;
   }
-  const left = { ...current, name: "", symbol: "" };
-  const right = { ...saved, name: "", symbol: "" };
+  const left = { ...current, name: "" };
+  const right = { ...saved, name: "" };
   return JSON.stringify(left) === JSON.stringify(right);
 }
 

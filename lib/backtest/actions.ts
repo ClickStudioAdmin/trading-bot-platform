@@ -19,6 +19,7 @@ import {
   BACKTEST_FEE_PRESETS,
   DEFAULT_STARTING_USDT,
   backtestShouldRunInline,
+  comparableBacktestName,
   defaultBacktestDates,
   estimateBacktestBars,
   parseBacktestDateRange,
@@ -265,11 +266,15 @@ export async function queueTemplateBacktestAction(
     return { ok: false, error: "Could not queue the backtest." };
   }
   for (const comparable of comparables) {
-    const comparableRecipe = { ...queuedRecipe, symbol: comparable };
+    const comparableRecipe = {
+      ...queuedRecipe,
+      symbol: comparable,
+      name: comparableBacktestName(queuedRecipe.name, comparable),
+    };
     await insertBacktestRun({
       userId: auth.member.id,
       templateId: null,
-      sourceTemplateId,
+      sourceTemplateId: null,
       parentRunId: run.id,
       venue,
       venueEnvironment,

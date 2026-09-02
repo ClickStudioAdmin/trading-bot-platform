@@ -153,7 +153,7 @@ assert.equal(
 assert.equal(recipesMatchReplayFields(perps, { ...perps, name: "Other" }), true);
 assert.equal(
   recipesMatchReplayFields(perps, { ...perps, symbol: "ETHUSDT" }),
-  true,
+  false,
 );
 assert.equal(
   recipesMatchReplayFields(perps, { ...perps, triggerPrice: "1" }),

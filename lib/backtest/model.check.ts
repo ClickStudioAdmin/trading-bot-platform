@@ -15,6 +15,8 @@ import {
   backtestOnNotionalPct,
   backtestQueueSeedFromRun,
   backtestRoePct,
+  backtestRunTitle,
+  comparableBacktestName,
   completedBacktestNotionalUsdt,
   backtestRerunHref,
   peakLockedNotionalUsdt,
@@ -339,5 +341,24 @@ assert.equal(seeded.interval, "15");
 assert.equal(seeded.symbol, "ETHUSDT");
 assert.equal(seeded.sourceTemplateId, "tmpl-1");
 assert.deepEqual(seeded.comparables, ["SOLUSDT"]);
+
+assert.equal(comparableBacktestName("DCA Test - SOL", "XRPUSDT"), "DCA Test - SOL · XRPUSDT");
+assert.equal(comparableBacktestName("DCA Test - XRPUSDT", "XRPUSDT"), "DCA Test - XRPUSDT");
+assert.equal(
+  backtestRunTitle({
+    recipe: { name: "DCA Test - SOL" },
+    symbol: "XRPUSDT",
+    parentRunId: "parent-1",
+  }),
+  "DCA Test - SOL · XRPUSDT",
+);
+assert.equal(
+  backtestRunTitle({
+    recipe: { name: "DCA Test - SOL" },
+    symbol: "SOLUSDT",
+    parentRunId: null,
+  }),
+  "DCA Test - SOL",
+);
 
 console.log("backtest model checks passed");
