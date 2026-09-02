@@ -290,5 +290,15 @@ assert.equal(
   }).ok,
   true,
 );
+assert.equal(
+  parseBacktestRecipeJson(
+    JSON.stringify({
+      ...dca,
+      maxValue: 200,
+      maxValueKind: "percent",
+    }),
+  )?.maxValue,
+  200,
+);
 
 console.log("backtest library checks passed");

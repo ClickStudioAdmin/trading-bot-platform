@@ -174,30 +174,37 @@ function backtestFolderLabel(
   return folder.name;
 }
 
-export function parseBacktestRecipeJson(raw: unknown): BacktestRecipe | null {
+export function readBacktestRecipeJson(
+  raw: unknown,
+): { ok: true; recipe: BacktestRecipe } | { ok: false; error: string } {
   let value = raw;
   if (typeof value === "string") {
     try {
       value = JSON.parse(value) as unknown;
     } catch {
-      return null;
+      return { ok: false, error: "Load a bot or pick a template to backtest." };
     }
   }
   if (!value || typeof value !== "object") {
-    return null;
+    return { ok: false, error: "Load a bot or pick a template to backtest." };
   }
   const kind = (value as { kind?: string }).kind;
   if (kind !== "dca" && kind !== "perps") {
-    return null;
+    return { ok: false, error: "Load a bot or pick a template to backtest." };
   }
   const parsed = parseTemplateRecipe(value, kind, TEMPLATE_RECIPE_VERSION);
   if (!parsed.ok) {
-    return null;
+    return parsed;
   }
   if (parsed.recipe.kind !== "dca" && parsed.recipe.kind !== "perps") {
-    return null;
+    return { ok: false, error: "Load a bot or pick a template to backtest." };
   }
-  return parsed.recipe;
+  return { ok: true, recipe: parsed.recipe };
+}
+
+export function parseBacktestRecipeJson(raw: unknown): BacktestRecipe | null {
+  const parsed = readBacktestRecipeJson(raw);
+  return parsed.ok ? parsed.recipe : null;
 }
 
 export type BacktestFieldIssue = {

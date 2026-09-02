@@ -1458,17 +1458,34 @@ if (percentCapsParsed.ok) {
   assert.equal(percentCapsParsed.config.clipSize, 2000 / 7);
 }
 
+const percentOverBook = new FormData();
+percentOverBook.set("symbol", "BTCUSDT");
+percentOverBook.set("side", "long");
+percentOverBook.set("sizeUnit", "usdt");
+percentOverBook.set("clipSize", "50");
+percentOverBook.set("maxValue", "200");
+percentOverBook.set("maxValueKind", "percent");
+const percentOverBookParsed = parseDcaPlaybookForm(percentOverBook);
+assert.equal(percentOverBookParsed.ok, true);
+if (percentOverBookParsed.ok) {
+  assert.equal(percentOverBookParsed.config.maxValue, 200);
+  assert.equal(percentOverBookParsed.config.maxValueKind, "percent");
+}
+
 const percentTooHigh = new FormData();
 percentTooHigh.set("symbol", "BTCUSDT");
 percentTooHigh.set("side", "long");
 percentTooHigh.set("sizeUnit", "usdt");
 percentTooHigh.set("clipSize", "50");
-percentTooHigh.set("maxValue", "150");
+percentTooHigh.set("maxValue", "10001");
 percentTooHigh.set("maxValueKind", "percent");
 const percentTooHighParsed = parseDcaPlaybookForm(percentTooHigh);
 assert.equal(percentTooHighParsed.ok, false);
 if (!percentTooHighParsed.ok) {
-  assert.equal(percentTooHighParsed.error, "Percent must be 100 or less.");
+  assert.equal(
+    percentTooHighParsed.error,
+    "Percent of account must be 10,000 or less.",
+  );
 }
 
 const noneCap = new FormData();

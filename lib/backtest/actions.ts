@@ -4,7 +4,11 @@ import { memberIsAdmin } from "@/lib/admin/access";
 import { getSessionMember } from "@/lib/auth/session";
 import { parseCandleSymbol, parseCandleVenue } from "@/lib/market/candles";
 import type { BacktestRecipe } from "./model";
-import { canQueueUserBacktest, parseBacktestRecipeJson } from "./library";
+import {
+  canQueueUserBacktest,
+  parseBacktestRecipeJson,
+  readBacktestRecipeJson,
+} from "./library";
 import { placeSavedTemplate } from "@/lib/templates/actions";
 import {
   deleteTemplate,
@@ -122,10 +126,11 @@ export async function seedBacktestDraftAction(
   if (!auth.ok) {
     return auth;
   }
-  const recipe = parseBacktestRecipeJson(formData.get("recipe"));
-  if (!recipe) {
-    return { ok: false, error: "Complete the bot before backtesting." };
+  const loaded = readBacktestRecipeJson(formData.get("recipe"));
+  if (!loaded.ok) {
+    return loaded;
   }
+  const recipe = loaded.recipe;
   const allowed = canQueueUserBacktest(recipe);
   if (!allowed.ok) {
     return allowed;
@@ -175,7 +180,8 @@ export async function queueTemplateBacktestAction(
   if (!auth.ok) {
     return auth;
   }
-  let recipe = parseBacktestRecipeJson(formData.get("recipe"));
+  const loaded = readBacktestRecipeJson(formData.get("recipe"));
+  let recipe = loaded.ok ? loaded.recipe : null;
   const pickedTemplateId = String(formData.get("templateId") ?? "").trim();
   if (!recipe && pickedTemplateId) {
     const template = await loadTemplateById(pickedTemplateId);
@@ -188,7 +194,12 @@ export async function queueTemplateBacktestAction(
     }
   }
   if (!recipe) {
-    return { ok: false, error: "Load a bot or pick a template to backtest." };
+    return {
+      ok: false,
+      error: loaded.ok
+        ? "Load a bot or pick a template to backtest."
+        : loaded.error,
+    };
   }
   const allowed = canQueueUserBacktest(recipe);
   if (!allowed.ok) {

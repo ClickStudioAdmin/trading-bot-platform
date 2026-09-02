@@ -1014,8 +1014,8 @@ export function parseDcaPlaybookForm(
   ) {
     return { ok: false, error: "Enter a max value." };
   }
-  if (maxValueKind === "percent" && valueCap != null && valueCap > 100) {
-    return { ok: false, error: "Percent must be 100 or less." };
+  if (maxValueKind === "percent" && valueCap != null && valueCap > 10_000) {
+    return { ok: false, error: "Percent of account must be 10,000 or less." };
   }
   const resolvedValue = dcaResolvedMaxValueUsdt({
     kind: maxValueKind,
