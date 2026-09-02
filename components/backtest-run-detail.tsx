@@ -327,7 +327,18 @@ export function BacktestRunDetail({
 
       {run.error ? <p className="text-sm text-danger">{run.error}</p> : null}
       {run.status === "queued" || run.status === "running" ? (
-        <p className="rounded-card border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
+        <p
+          role="status"
+          className={`flex items-center gap-2 rounded-control border px-3 py-2 text-sm ${
+            run.status === "queued"
+              ? "border-warning/30 bg-warning/10 text-warning"
+              : "border-success/30 bg-success/10 text-success"
+          }`}
+        >
+          <StatusDot
+            tone={run.status === "queued" ? "warning" : "success"}
+            pulse
+          />
           {run.status === "queued"
             ? "Queued. Starting this run now."
             : "Running. This page refreshes until it finishes."}
