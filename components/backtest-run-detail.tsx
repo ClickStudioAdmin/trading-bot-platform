@@ -93,12 +93,20 @@ function StatusDot({
   );
 }
 
-function MatchRow({ label, value }: { label: string; value: ReactNode }) {
+function MatchPanel({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex items-start justify-between gap-3 text-sm">
-      <dt className="shrink-0 pt-0.5 text-ink-muted">{label}</dt>
-      <dd className="text-right">{value}</dd>
-    </div>
+    <aside className="min-w-[14rem] flex-1 rounded-card border border-line bg-surface p-5">
+      <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-ink-faint">
+        {title}
+      </p>
+      <div className="mt-3 space-y-2">{children}</div>
+    </aside>
   );
 }
 
@@ -106,7 +114,6 @@ function BacktestMatchCard({
   runId,
   defaultName,
   deskType,
-  status,
   matchingTemplateName,
   matchingDeskLabel,
   linkedTemplateName,
@@ -124,11 +131,6 @@ function BacktestMatchCard({
   runId: string;
   defaultName: string;
   deskType: BacktestRun["deskType"];
-  status: {
-    label: string;
-    tone: "success" | "warning" | "danger" | "faint";
-    pulse: boolean;
-  };
   matchingTemplateName: string | null;
   matchingDeskLabel: string | null;
   linkedTemplateName: string | null;
@@ -143,108 +145,74 @@ function BacktestMatchCard({
   folders: AutomationTemplateSet[];
   returnTo: string;
 }) {
-  const statusClass =
-    status.tone === "warning"
-      ? "text-warning"
-      : status.tone === "danger"
-        ? "text-danger"
-        : status.tone === "faint"
-          ? "text-ink-muted"
-          : "text-success";
-  const hasLibraryAction = canSaveAs || (canSaveAsPlatform && !canSaveAs);
-  const hasSecondary =
-    Boolean(applyDesks && applyDesks.length > 0) ||
-    canRemove ||
-    hasLibraryAction;
   return (
-    <aside className="w-full max-w-sm rounded-card border border-line bg-surface p-5">
-      <dl className="space-y-2">
-        <div className={`flex items-center justify-between gap-3 text-sm ${statusClass}`}>
-          <dt className="text-ink-muted">Status</dt>
-          <dd className="flex items-center gap-2">
-            <StatusDot tone={status.tone} pulse={status.pulse} />
-            {status.label}
-          </dd>
-        </div>
-        <MatchRow
-          label="Template"
-          value={
-            matchingTemplateName ? (
-              <span className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
-                Template · {matchingTemplateName}
-              </span>
-            ) : (
-              <span className="text-ink-faint">No matching template</span>
-            )
-          }
-        />
-        {canAttach || linkedTemplateName ? (
-          canAttach ? (
-            <AttachBacktestButton
-              runId={runId}
-              sourceName={matchingTemplateName ?? sourceTemplateName}
-              templateId={attachTemplateId ?? ""}
-            />
-          ) : (
-            <p className="rounded-control bg-success/15 px-3 py-1.5 text-center text-sm text-success">
-              Attached
-            </p>
-          )
-        ) : null}
-        <MatchRow
-          label="Desk"
-          value={
-            matchingDeskLabel ? (
-              <span className="rounded-control bg-accent/15 px-2 py-0.5 text-xs text-accent">
-                Desk · {matchingDeskLabel}
-              </span>
-            ) : (
-              <span className="text-ink-faint">No matching desk bot</span>
-            )
-          }
-        />
-      </dl>
-      {hasSecondary ? (
-        <div className="mt-4 space-y-2 border-t border-line pt-4">
-          {canSaveAs ? (
-            <SaveBacktestAsTemplateButton
-              runId={runId}
-              defaultName={defaultName}
-              deskType={deskType}
-              folders={folders}
-              isAdmin={isAdmin}
-              canSaveAs={canSaveAs}
-              canSaveAsPlatform={canSaveAsPlatform}
-            />
-          ) : null}
-          {applyDesks && applyDesks.length > 0 ? (
-            <ApplyBacktestButton
-              runId={runId}
-              defaultName={defaultName}
-              desks={applyDesks}
-            />
-          ) : null}
-          {canSaveAsPlatform && !canSaveAs ? (
-            <SaveBacktestAsTemplateButton
-              runId={runId}
-              defaultName={defaultName}
-              deskType={deskType}
-              folders={folders}
-              isAdmin={isAdmin}
-              canSaveAs={false}
-              canSaveAsPlatform
-              variant="secondary"
-            />
-          ) : null}
-          <RemoveBacktestButton
+    <div className="flex w-full max-w-xl flex-wrap gap-3">
+      <MatchPanel title="Template">
+        {matchingTemplateName ? (
+          <p className="rounded-control bg-success/15 px-2 py-0.5 text-xs text-success">
+            Template · {matchingTemplateName}
+          </p>
+        ) : (
+          <p className="text-sm text-ink-faint">No matching template</p>
+        )}
+        {canAttach ? (
+          <AttachBacktestButton
             runId={runId}
-            canRemove={canRemove}
-            returnTo={returnTo}
-            stacked
+            sourceName={matchingTemplateName ?? sourceTemplateName}
+            templateId={attachTemplateId ?? ""}
           />
-        </div>
-      ) : null}
-    </aside>
+        ) : linkedTemplateName ? (
+          <p className="rounded-control bg-success/15 px-3 py-1.5 text-center text-sm text-success">
+            Attached
+          </p>
+        ) : null}
+        {canSaveAs ? (
+          <SaveBacktestAsTemplateButton
+            runId={runId}
+            defaultName={defaultName}
+            deskType={deskType}
+            folders={folders}
+            isAdmin={isAdmin}
+            canSaveAs={canSaveAs}
+            canSaveAsPlatform={canSaveAsPlatform}
+          />
+        ) : null}
+        {canSaveAsPlatform && !canSaveAs ? (
+          <SaveBacktestAsTemplateButton
+            runId={runId}
+            defaultName={defaultName}
+            deskType={deskType}
+            folders={folders}
+            isAdmin={isAdmin}
+            canSaveAs={false}
+            canSaveAsPlatform
+            variant="secondary"
+          />
+        ) : null}
+      </MatchPanel>
+      <MatchPanel title="Desk">
+        {matchingDeskLabel ? (
+          <p className="rounded-control bg-accent/15 px-2 py-0.5 text-xs text-accent">
+            Desk · {matchingDeskLabel}
+          </p>
+        ) : (
+          <p className="text-sm text-ink-faint">No matching desk bot</p>
+        )}
+        {applyDesks && applyDesks.length > 0 ? (
+          <ApplyBacktestButton
+            runId={runId}
+            defaultName={defaultName}
+            desks={applyDesks}
+          />
+        ) : null}
+        <RemoveBacktestButton
+          runId={runId}
+          canRemove={canRemove}
+          returnTo={returnTo}
+          stacked
+        />
+      </MatchPanel>
+    </div>
   );
 }
 
@@ -300,9 +268,25 @@ export function BacktestRunDetail({
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
             Backtest
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            {backtestRunTitle(run)}
-          </h1>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h1 className="text-3xl font-semibold tracking-tight">
+              {backtestRunTitle(run)}
+            </h1>
+            <div
+              className={`flex items-center gap-2 text-sm ${
+                status.tone === "warning"
+                  ? "text-warning"
+                  : status.tone === "danger"
+                    ? "text-danger"
+                    : status.tone === "faint"
+                      ? "text-ink-muted"
+                      : "text-success"
+              }`}
+            >
+              <StatusDot tone={status.tone} pulse={status.pulse} />
+              {status.label}
+            </div>
+          </div>
           <p className="mt-2 text-sm text-ink-muted">
             {run.symbol} · {run.venue} ·{" "}
             {DCA_INDICATOR_TIMEFRAME_LABELS[run.interval]} · start{" "}
@@ -312,12 +296,6 @@ export function BacktestRunDetail({
           <div className="mt-3 flex flex-wrap gap-3 text-sm">
             <Link href={listHref} className="text-accent hover:underline">
               All backtests
-            </Link>
-            <Link
-              href={backtestRerunHref(run.id)}
-              className="text-accent hover:underline"
-            >
-              Re-run Parameters
             </Link>
             {parentHref ? (
               <Link href={parentHref} className="text-accent hover:underline">
@@ -330,7 +308,6 @@ export function BacktestRunDetail({
           runId={run.id}
           defaultName={backtestRunTitle(run)}
           deskType={run.deskType}
-          status={status}
           matchingTemplateName={matchingTemplateName}
           matchingDeskLabel={matchingDeskLabel}
           linkedTemplateName={linkedTemplateName}
@@ -360,7 +337,15 @@ export function BacktestRunDetail({
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <section>
-          <h2 className="mb-3 text-lg font-semibold">Parameters</h2>
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-lg font-semibold">Parameters</h2>
+            <Link
+              href={backtestRerunHref(run.id)}
+              className="text-sm text-accent hover:underline"
+            >
+              Load parameters into new backtest
+            </Link>
+          </div>
           <BacktestPropertyList rows={params} />
         </section>
         <div className="space-y-6">
@@ -595,11 +580,6 @@ function BacktestHeaderStats({ run }: { run: BacktestRun }) {
               ? undefined
               : formatSignedUsd(-equityDd.maxDrawdownUsdt)
           }
-          noteTone={
-            empty || !equityDd || !(equityDd.maxDrawdownUsdt > 0)
-              ? undefined
-              : signedTone(-equityDd.maxDrawdownUsdt)
-          }
         />
         <StatCard
           label="Realized Profit"
@@ -639,14 +619,12 @@ function StatCard({
   hint,
   note,
   toneClass,
-  noteTone,
 }: {
   label: string;
   value: string;
   hint?: string;
   note?: string;
   toneClass?: string;
-  noteTone?: string;
 }) {
   return (
     <div className="rounded-card border border-line bg-surface p-5">
@@ -658,9 +636,7 @@ function StatCard({
       >
         {value}
       </p>
-      {note ? (
-        <p className={`mt-2 text-xs ${noteTone ?? "text-ink-muted"}`}>{note}</p>
-      ) : null}
+      {note ? <p className="mt-2 text-xs text-ink-faint">{note}</p> : null}
     </div>
   );
 }
