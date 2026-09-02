@@ -22,7 +22,7 @@ TradingView **alerts** stay webhooks. This is charts only.
 
 | Piece | Live popup | Backtest page |
 | --- | --- | --- |
-| Candle API (`/api/market/candles`, `loadDeskCandles`) | Venue + symbol + timeframe | Same, plus from/to window |
+| Candle API (`/api/market/candles`, `loadDeskCandles` / ranged `loadBacktestCandles`) | Venue + symbol + timeframe (last 1,500) | Same, plus from/to window (full activity, paged) |
 | `<DeskChart>` (Lightweight Charts) | Yes | Yes |
 | Overlay: working limits, TP/SL, trailing, entry | From **live** ledger | Off (sim book is the run) |
 | Overlay: fill markers | From **live** `futures_orders` | From **run** simulated orders |

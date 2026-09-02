@@ -7,6 +7,8 @@ import {
   parseCandleSymbol,
   parseCandleVenue,
   parseOptionalMs,
+  parseRangedCandleLimit,
+  mergeCandleBars,
 } from "./candles";
 
 assert.equal(parseCandleVenue("bybit"), "bybit");
@@ -22,6 +24,18 @@ assert.equal(parseOptionalMs("1000"), 1000);
 assert.equal(parseOptionalMs(""), null);
 assert.equal(parseCandleLimit("200"), 200);
 assert.equal(parseCandleLimit("99999"), 1500);
+assert.equal(parseRangedCandleLimit("200"), 200);
+assert.equal(parseRangedCandleLimit("99999"), 20_000);
+assert.deepEqual(
+  mergeCandleBars([
+    [
+      { timeMs: 3_000, open: 1, high: 1, low: 1, close: 1 },
+      { timeMs: 1_000, open: 1, high: 1, low: 1, close: 1 },
+    ],
+    [{ timeMs: 2_000, open: 1, high: 1, low: 1, close: 1 }],
+  ]).map((row) => row.timeMs),
+  [1_000, 2_000, 3_000],
+);
 assert.equal(
   isValidCandleBar({
     timeMs: 1,

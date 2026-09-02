@@ -15,11 +15,12 @@ import {
   type ChartViewApi,
 } from "@/lib/charts/interact";
 import {
-  backtestActivityBounds,
+  backtestChartFetchBounds,
   type BacktestRun,
 } from "@/lib/backtest/model";
 import { buildEquityTimeline } from "@/lib/backtest/study";
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
+import { loadBacktestDisplayCandles } from "@/lib/charts/load-backtest-candles";
 import { clipCandlesToWindow, type CandleBar } from "@/lib/market/candles";
 
 const HEIGHT = 280;
@@ -69,31 +70,17 @@ export function BacktestEquityPanel({
   const [candles, setCandles] = useState<CandleBar[]>([]);
   useEffect(() => {
     let cancelled = false;
-    const params = new URLSearchParams({
+    const bounds = backtestChartFetchBounds(run, interval);
+    void loadBacktestDisplayCandles({
       venue: run.venue,
+      venueEnvironment: run.venueEnvironment,
       symbol: run.symbol,
       interval,
-      from: String(run.fromMs),
-      to: String(run.toMs),
-      limit: "1500",
-    });
-    if (run.venueEnvironment) {
-      params.set("env", run.venueEnvironment);
-    }
-    void fetch(`/api/market/candles?${params.toString()}`)
-      .then(async (response) => {
-        const body = (await response.json()) as {
-          candles?: CandleBar[];
-          error?: string;
-        };
-        if (!response.ok) {
-          throw new Error(body.error || "Could not read candles.");
-        }
-        return body.candles ?? [];
-      })
+      fromMs: bounds.fromMs,
+      toMs: bounds.toMs,
+    })
       .then((rows) => {
         if (!cancelled) {
-          const bounds = backtestActivityBounds(run);
           setCandles(clipCandlesToWindow(rows, bounds.fromMs, bounds.toMs));
         }
       })

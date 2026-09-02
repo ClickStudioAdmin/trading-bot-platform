@@ -47,12 +47,39 @@ export function parseOptionalMs(raw: unknown): number | null {
   return Number.isFinite(ms) && ms > 0 ? Math.floor(ms) : null;
 }
 
+export const DESK_CANDLE_LIMIT = 1500;
+export const RANGED_CANDLE_LIMIT = 20_000;
+export const BACKTEST_CHART_FETCH_LIMIT = 80_000;
+
 export function parseCandleLimit(raw: unknown, fallback = 200): number {
   const value = Number(raw);
   if (!Number.isFinite(value)) {
     return fallback;
   }
-  return Math.min(1500, Math.max(1, Math.floor(value)));
+  return Math.min(DESK_CANDLE_LIMIT, Math.max(1, Math.floor(value)));
+}
+
+export function parseRangedCandleLimit(
+  raw: unknown,
+  fallback = RANGED_CANDLE_LIMIT,
+): number {
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.min(RANGED_CANDLE_LIMIT, Math.max(1, Math.floor(value)));
+}
+
+export function mergeCandleBars(pages: CandleBar[][]): CandleBar[] {
+  const byTime = new Map<number, CandleBar>();
+  for (const page of pages) {
+    for (const row of page) {
+      if (row.timeMs > 0 && row.close > 0) {
+        byTime.set(row.timeMs, row);
+      }
+    }
+  }
+  return [...byTime.values()].sort((a, b) => a.timeMs - b.timeMs);
 }
 
 export function clipCandlesToWindow(

@@ -32,7 +32,7 @@ export const BACKTEST_INLINE_BAR_LIMIT = 3000;
 export const BACKTEST_VERCEL_BAR_LIMIT = 3000;
 export const BACKTEST_COMPARABLE_CAP = 8;
 export const DEFAULT_STARTING_USDT = 10_000;
-export const DEFAULT_LEVERAGE = 1;
+export const DEFAULT_LEVERAGE = 10;
 export const MAX_BACKTEST_LEVERAGE = 125;
 
 export type BacktestFeePreset = keyof typeof BACKTEST_FEE_PRESETS;
@@ -242,7 +242,7 @@ export function normalizeBacktestLeverage(raw: unknown): number {
   if (value > 0 && Number.isFinite(value)) {
     return value;
   }
-  return DEFAULT_LEVERAGE;
+  return 1;
 }
 
 export function parseBacktestLeverage(
@@ -250,7 +250,7 @@ export function parseBacktestLeverage(
 ): { ok: true; leverage: number } | { ok: false; error: string } {
   const text = String(raw ?? "").replace(/,/g, "").trim();
   if (!text) {
-    return { ok: true, leverage: DEFAULT_LEVERAGE };
+    return { ok: true, leverage: 1 };
   }
   const value = Number(text);
   if (!(value > 0) || !Number.isFinite(value)) {
@@ -361,7 +361,7 @@ export function backtestActivityBounds(input: {
       last = order.atMs;
     }
   }
-  const fromMs = Math.max(input.fromMs, first);
+  const fromMs = Math.max(input.fromMs, first - padMs);
   const toMs = Math.min(input.toMs, last) + padMs;
   return toMs > fromMs
     ? { fromMs, toMs }
