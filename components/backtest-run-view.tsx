@@ -970,13 +970,13 @@ export function RemoveBacktestButton({
   canRemove,
   returnTo = "/account/backtests",
   compact = false,
-  stacked = false,
+  inline = false,
 }: {
   runId: string;
   canRemove: boolean;
   returnTo?: string;
   compact?: boolean;
-  stacked?: boolean;
+  inline?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -986,6 +986,7 @@ export function RemoveBacktestButton({
   }
   return (
     <form
+      className={inline ? "inline" : undefined}
       action={async (formData) => {
         setPending(true);
         setError(null);
@@ -1004,8 +1005,8 @@ export function RemoveBacktestButton({
         type="submit"
         disabled={pending}
         className={
-          stacked
-            ? "w-full rounded-control px-0 py-1 text-left text-sm text-danger hover:underline disabled:opacity-50"
+          inline
+            ? "text-sm text-danger hover:underline disabled:opacity-50"
             : compact
               ? "rounded-control px-2 py-0.5 text-xs text-danger hover:bg-danger/10 disabled:opacity-50"
               : "rounded-control border border-line px-3 py-1.5 text-sm text-danger hover:bg-danger/10 disabled:opacity-50"

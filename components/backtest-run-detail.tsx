@@ -123,10 +123,8 @@ function BacktestMatchCard({
   sourceTemplateName,
   attachTemplateId,
   applyDesks,
-  canRemove,
   isAdmin,
   folders,
-  returnTo,
 }: {
   runId: string;
   defaultName: string;
@@ -140,10 +138,8 @@ function BacktestMatchCard({
   sourceTemplateName: string | null;
   attachTemplateId: string | null;
   applyDesks?: Array<{ id: string; name: string }>;
-  canRemove: boolean;
   isAdmin: boolean;
   folders: AutomationTemplateSet[];
-  returnTo: string;
 }) {
   return (
     <div className="flex w-full max-w-xl flex-wrap gap-3">
@@ -189,12 +185,6 @@ function BacktestMatchCard({
             variant="secondary"
           />
         ) : null}
-        <RemoveBacktestButton
-          runId={runId}
-          canRemove={canRemove}
-          returnTo={returnTo}
-          stacked
-        />
       </MatchPanel>
       <MatchPanel title="Desk Bot Matching">
         {matchingDeskLabel ? (
@@ -293,7 +283,7 @@ export function BacktestRunDetail({
             {run.startingUsdt.toLocaleString()} · {run.leverage}× ·{" "}
             {BACKTEST_FEE_PRESETS[run.feePreset].label}
           </p>
-          <div className="mt-3 flex flex-wrap gap-3 text-sm">
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
             <Link href={listHref} className="text-accent hover:underline">
               All backtests
             </Link>
@@ -302,6 +292,12 @@ export function BacktestRunDetail({
                 Primary pair
               </Link>
             ) : null}
+            <RemoveBacktestButton
+              runId={run.id}
+              canRemove={canRemove}
+              returnTo={returnTo}
+              inline
+            />
           </div>
         </div>
         <BacktestMatchCard
@@ -317,10 +313,8 @@ export function BacktestRunDetail({
           sourceTemplateName={sourceTemplateName}
           attachTemplateId={attachTemplateId}
           applyDesks={applyDesks}
-          canRemove={canRemove}
           isAdmin={isAdmin}
           folders={folders}
-          returnTo={returnTo}
         />
       </div>
 
