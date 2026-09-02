@@ -94,6 +94,7 @@ export const StayOnPageForm = forwardRef<
     onResult?: (result: DeskActionResult) => void;
     guard?: (event: FormEvent<HTMLFormElement>) => boolean;
     onInput?: (event: FormEvent<HTMLFormElement>) => void;
+    onChange?: (event: FormEvent<HTMLFormElement>) => void;
     className?: string;
     noValidate?: boolean;
     id?: string;
@@ -106,6 +107,7 @@ export const StayOnPageForm = forwardRef<
     onResult,
     guard,
     onInput,
+    onChange,
     className,
     noValidate = false,
     id,
@@ -167,6 +169,7 @@ export const StayOnPageForm = forwardRef<
       id={id}
       noValidate={noValidate}
       onInput={onInput}
+      onChange={onChange}
       onSubmit={(event) => void onSubmit(event)}
       className={className}
     >

@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ColumnHint } from "@/components/column-hint";
+import { FuturesDeskRefresh } from "@/components/futures-desk-refresh";
 import { PanelCloseButton } from "@/components/panel-close-button";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -45,7 +46,6 @@ import {
   dcaIntervalParts,
   dcaLegFor,
   dcaLegIsRunning,
-  dcaPlaybookHasOpenCycle,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
   dcaStartListens,
@@ -127,12 +127,7 @@ function CycleLock({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      inert={locked ? true : undefined}
-      className={locked ? "opacity-60" : undefined}
-    >
-      {children}
-    </div>
+    <div className={locked ? "opacity-80" : undefined}>{children}</div>
   );
 }
 
@@ -445,6 +440,7 @@ export function DcaPlaybooksDesk({
 
   return (
     <div className="space-y-3">
+      <FuturesDeskRefresh />
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. New orders stay blocked until you turn it off in
@@ -731,9 +727,6 @@ export function DcaPlaybookForm({
   const ladderPanelId = useId();
   const lastPrice = lastPrices[symbol] ?? null;
   const running = Boolean(playbook && dcaPlaybookIsRunning(playbook));
-  const cycleLocked = Boolean(
-    playbook && dcaPlaybookHasOpenCycle(playbook, openPositions),
-  );
   const liveLegs = playbook
     ? dcaEnabledSides(playbook.direction).map((side) =>
         dcaLegFor(playbook, side),
@@ -750,6 +743,7 @@ export function DcaPlaybookForm({
         ),
       ),
   );
+  const cycleLocked = hasOpenPosition;
   const armed = liveLegs.some((leg) => leg.status === "armed");
   const showStopAdding = hasOpenPosition && armed;
   const showDisarm = Boolean(playbook) && armed && !hasOpenPosition;
@@ -974,15 +968,12 @@ export function DcaPlaybookForm({
       }}
       onResult={(result) => onResult?.(result as DcaDeskActionResult)}
       onInput={() => setFormTick((tick) => tick + 1)}
+      onChange={() => setFormTick((tick) => tick + 1)}
       guard={(event) => {
         const submitter = (event.nativeEvent as SubmitEvent).submitter as
           | HTMLElement
           | null;
         const skip = submitter?.dataset.skipSizeGuard === "1";
-        const action = submitter?.dataset.deskAction || "default";
-        if (action === "default" && playbook && !dirty) {
-          return false;
-        }
         if (saveBlocked && !skip) {
           return false;
         }
@@ -1160,9 +1151,9 @@ export function DcaPlaybookForm({
         </div>
       </div>
       {cycleLocked ? (
-        <p className="text-xs text-ink-muted">
-          A position is open. Cycle settings are locked. Take profit and stops
-          still save and update the resting orders.
+        <p className="text-xs text-warning">
+          A position is open. Cycle settings will not save until that side is
+          flat. Take profit and stops still save.
         </p>
       ) : null}
 
@@ -1547,13 +1538,12 @@ export function DcaPlaybookForm({
               {derivedClip != null ? (
                 <>
                   <input type="hidden" name="clipSize" value={clipForSave} />
-                  <GroupedNumberInput
-                    value={clipForSave}
-                    onChange={() => undefined}
-                    allowDecimal
+                  <p
                     className={`${fieldClass} cursor-default text-ink-muted`}
-                    ariaLabel="Calculated order size"
-                  />
+                    aria-label="Calculated order size"
+                  >
+                    {clipForSave}
+                  </p>
                 </>
               ) : (
                 <GroupedNumberInput

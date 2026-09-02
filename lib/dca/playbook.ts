@@ -495,24 +495,16 @@ export function dcaPlaybookHasOpenCycle(
   playbook: Pick<DcaPlaybook, "direction" | "long" | "short"> & {
     symbol?: string;
   },
-  opens?: readonly DcaCycleOpen[],
+  opens: readonly DcaCycleOpen[] = [],
 ): boolean {
-  return dcaEnabledSides(playbook.direction).some((side) => {
-    const leg = side === "long" ? playbook.long : playbook.short;
-    const hasFills = leg.clipsFilled > 0 || leg.firstFillPrice != null;
-    if (!hasFills) {
-      return false;
-    }
-    if (opens === undefined) {
-      return true;
-    }
-    return opens.some(
+  return dcaEnabledSides(playbook.direction).some((side) =>
+    opens.some(
       (row) =>
         row.qty > 0 &&
         row.side === side &&
         (playbook.symbol == null || row.symbol === playbook.symbol),
-    );
-  });
+    ),
+  );
 }
 
 export function dcaWithLockedCycleConfig(

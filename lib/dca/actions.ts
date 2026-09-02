@@ -158,6 +158,7 @@ async function saveDcaPlaybookWith(
     playbook: saved.playbook,
     mode: session.account.mode,
   });
+  revalidatePath(FUTURES_PATHS.automations);
   if (dcaPlaybookIsRunning(saved.playbook)) {
     revalidatePath(FUTURES_PATHS.positions);
   }
@@ -177,7 +178,13 @@ async function saveDcaPlaybookWith(
       saved.playbook;
     return { ok: true, notice: armed.message, playbook };
   }
-  return { ok: true, notice: "Bot saved.", playbook: saved.playbook };
+  return {
+    ok: true,
+    notice: cycleLocked
+      ? "Saved take profit and stops. Cycle settings stay locked while a position is open."
+      : "Bot saved.",
+    playbook: saved.playbook,
+  };
 }
 
 export async function deleteDcaPlaybookAction(
@@ -312,12 +319,29 @@ export async function runDcaPlaybookVerb(
   if (!supabase) {
     return deskActionError("Auth is not configured.");
   }
+  const playbookId = parseDcaPlaybookId(formData.get("playbookId"));
+  const existing = playbookId
+    ? await loadDcaPlaybookById(playbookId, session.account.id)
+    : null;
+  const opens = existing
+    ? await loadOpenFuturesOnSymbol(existing.symbol, {
+        accountId: session.account.id,
+        userId: session.member.id,
+      })
+    : [];
+  const cycleLocked = Boolean(
+    existing && dcaPlaybookHasOpenCycle(existing, opens),
+  );
+  const config =
+    existing && cycleLocked
+      ? dcaWithLockedCycleConfig(parsed.config, existing)
+      : parsed.config;
   const saved = await saveDcaPlaybook({
     supabase,
     userId: session.member.id,
     accountId: session.account.id,
-    config: parsed.config,
-    id: parseDcaPlaybookId(formData.get("playbookId")),
+    config,
+    id: playbookId,
   });
   if (!saved.ok) {
     return deskActionError(saved.error);

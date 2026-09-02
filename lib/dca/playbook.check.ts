@@ -1544,7 +1544,7 @@ assert.equal(cloned.maxValueKind, "usdt");
 assert.equal(cloned.long.cycleMaxValue, null);
 assert.equal(cloned.armConditionTrue, false);
 assert.equal(dcaPlaybookIsRunning(cloned), false);
-assert.equal(dcaPlaybookHasOpenCycle(row), true);
+assert.equal(dcaPlaybookHasOpenCycle(row), false);
 assert.equal(dcaPlaybookHasOpenCycle(cloned), false);
 assert.equal(dcaPlaybookHasOpenCycle(row, []), false);
 assert.equal(
