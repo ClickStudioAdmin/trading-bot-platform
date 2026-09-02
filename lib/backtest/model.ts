@@ -78,62 +78,6 @@ export function parseBacktestClipIndex(value: unknown): number | undefined {
   return Number.isInteger(clipIndex) && clipIndex > 0 ? clipIndex : undefined;
 }
 
-export function backtestFillChartLabel(
-  order: Pick<SimulatedOrder, "action" | "side" | "reason" | "clipIndex">,
-  current: boolean,
-): string {
-  if (current) {
-    return "Open";
-  }
-  if (order.reason === "take_profit") {
-    return "TP";
-  }
-  if (order.reason === "stop") {
-    return "SL";
-  }
-  if (order.reason === "trailing") {
-    return "Trail";
-  }
-  if (order.clipIndex != null) {
-    return String(order.clipIndex);
-  }
-  if (order.action === "flatten") {
-    return "Close";
-  }
-  return order.action === "buy" ? "Buy" : "Sell";
-}
-
-export function backtestFillReasonLabel(
-  order: Pick<SimulatedOrder, "action" | "reason" | "clipIndex">,
-  current: boolean,
-): string {
-  if (current) {
-    return "Open";
-  }
-  if (order.reason === "take_profit") {
-    return "Take profit";
-  }
-  if (order.reason === "stop") {
-    return "Stop";
-  }
-  if (order.reason === "trailing") {
-    return "Trailing";
-  }
-  if (order.clipIndex != null) {
-    return `Clip ${order.clipIndex}`;
-  }
-  if (order.reason === "entry") {
-    return "Entry";
-  }
-  if (order.reason === "clip") {
-    return "Clip";
-  }
-  if (order.action === "flatten") {
-    return "Close";
-  }
-  return "Entry";
-}
-
 export type BacktestStats = {
   trades: number;
   wins: number;

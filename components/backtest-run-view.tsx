@@ -90,7 +90,6 @@ import {
 } from "@/lib/backtest/actions";
 import {
   backtestChartFetchBounds,
-  backtestFillReasonLabel,
   backtestMarginUsdt,
   chartIntervalForWindow,
   formatBacktestReturnPct,
@@ -283,7 +282,6 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
             <tr>
               <th className="px-4 py-3 font-medium">Time</th>
               <th className="px-4 py-3 font-medium">Action</th>
-              <th className="px-4 py-3 font-medium">Reason</th>
               <th className="px-4 py-3 font-medium">Side</th>
               <th className="px-4 py-3 font-medium">Qty</th>
               <th className="px-4 py-3 font-medium">Price</th>
@@ -313,9 +311,6 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
                           : row.action === "sell"
                             ? "Sell"
                             : row.action}
-                  </td>
-                  <td className="px-4 py-3">
-                    {backtestFillReasonLabel(row, current)}
                   </td>
                   <td className="px-4 py-3 capitalize">{row.side}</td>
                   <td

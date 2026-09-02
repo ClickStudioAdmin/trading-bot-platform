@@ -15,8 +15,6 @@ import {
   parseStartingBalance,
   backtestAprPct,
   backtestDrawdownCard,
-  backtestFillChartLabel,
-  backtestFillReasonLabel,
   backtestOnNotionalPct,
   backtestQueueSeedFromRun,
   backtestRoePct,
@@ -278,34 +276,6 @@ const accountApr = backtestAprPct(
   Date.UTC(2026, 0, 1),
 );
 assert.ok(accountApr != null && accountApr > 0 && accountApr < 0.1);
-assert.equal(
-  backtestFillChartLabel(
-    { action: "buy", side: "long", reason: "clip", clipIndex: 3 },
-    false,
-  ),
-  "3",
-);
-assert.equal(
-  backtestFillChartLabel(
-    { action: "flatten", side: "long", reason: "take_profit" },
-    false,
-  ),
-  "TP",
-);
-assert.equal(
-  backtestFillReasonLabel(
-    { action: "buy", reason: "clip", clipIndex: 3 },
-    false,
-  ),
-  "Clip 3",
-);
-assert.equal(
-  backtestFillReasonLabel(
-    { action: "flatten", reason: "take_profit" },
-    false,
-  ),
-  "Take profit",
-);
 const zeroDd = backtestDrawdownCard({
   trades: 1,
   startingUsdt: 10_000,
