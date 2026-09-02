@@ -572,27 +572,27 @@ export function BacktestInlineChart({
           : null
       }
       toolbar={
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <BacktestChartIntervalBar
-            run={run}
-            interval={interval}
-            onChange={onIntervalChange}
+        <BacktestChartIntervalBar
+          run={run}
+          interval={interval}
+          onChange={onIntervalChange}
+        />
+      }
+      toolbarCenter={
+        onFocusCycleId ? (
+          <BacktestTradeStepper
+            cycles={cycles}
+            focusCycleId={focusCycleId}
+            onFocusCycleId={onFocusCycleId}
+            onShowAll={() => {
+              if (focusCycleId == null) {
+                setViewKey((current) => current + 1);
+                return;
+              }
+              onFocusCycleId(null);
+            }}
           />
-          {onFocusCycleId ? (
-            <BacktestTradeStepper
-              cycles={cycles}
-              focusCycleId={focusCycleId}
-              onFocusCycleId={onFocusCycleId}
-              onShowAll={() => {
-                if (focusCycleId == null) {
-                  setViewKey((current) => current + 1);
-                  return;
-                }
-                onFocusCycleId(null);
-              }}
-            />
-          ) : null}
-        </div>
+        ) : null
       }
       overlay={snapOverlayToCandles(
         backtestOverlayForRun(run, { focusCycleId, includeAdds }),

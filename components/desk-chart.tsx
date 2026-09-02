@@ -264,6 +264,7 @@ export function DeskChart({
   screenshotName = "chart.png",
   rightOffset = 12,
   toolbar,
+  toolbarCenter,
   status = null,
   visibleRange = null,
   viewKey = 0,
@@ -274,6 +275,7 @@ export function DeskChart({
   screenshotName?: string;
   rightOffset?: number;
   toolbar?: ReactNode;
+  toolbarCenter?: ReactNode;
   status?: string | null;
   visibleRange?: { fromSec: number; toSec: number } | null;
   viewKey?: number;
@@ -445,11 +447,10 @@ export function DeskChart({
       }
       style={expanded ? undefined : { height }}
     >
-      <div className="relative flex min-h-9 shrink-0 items-center border-b border-line px-1.5 py-1">
-        <div className="pointer-events-none absolute inset-x-12 inset-y-0 flex items-center justify-center">
-          <div className="pointer-events-auto min-w-0">{toolbar}</div>
-        </div>
-        <div className="relative z-10 ml-auto flex items-center gap-0.5">
+      <div className="grid min-h-9 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-line px-1.5 py-1">
+        <div className="min-w-0">{toolbar}</div>
+        <div className="flex min-w-0 justify-center">{toolbarCenter}</div>
+        <div className="flex items-center gap-0.5">
           <button
             type="button"
             title={expanded ? "Exit full screen" : "Full screen"}
