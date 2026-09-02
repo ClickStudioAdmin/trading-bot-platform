@@ -13,7 +13,11 @@ import {
   findMatchingBacktestTemplate,
   toBacktestLibraryItem,
 } from "@/lib/backtest/library";
-import type { BacktestRecipe, BacktestRun } from "@/lib/backtest/model";
+import {
+  backtestSavedListHref,
+  type BacktestRecipe,
+  type BacktestRun,
+} from "@/lib/backtest/model";
 import {
   canDeleteBacktestRun,
   canReadBacktestRun,
@@ -119,7 +123,7 @@ export default async function AccountBacktestDetailPage({
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
       <BacktestRunDetail
         run={run}
-        listHref="/account/backtests"
+        listHref={backtestSavedListHref()}
         applyDesks={applyDesks}
         canRemove={canDeleteBacktestRun(run, member.id, isAdmin)}
         canAttach={templateActions.canAttach}
@@ -136,7 +140,7 @@ export default async function AccountBacktestDetailPage({
         isAdmin={isAdmin}
         memberId={member.id}
         folders={folders}
-        returnTo="/account/backtests"
+        returnTo={backtestSavedListHref()}
         comparablePrimary={comparableFamily?.primary ?? null}
         comparables={comparableFamily?.children ?? []}
       />

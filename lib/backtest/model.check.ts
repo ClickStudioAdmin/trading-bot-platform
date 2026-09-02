@@ -22,6 +22,7 @@ import {
   comparableBacktestName,
   completedBacktestNotionalUsdt,
   backtestRerunHref,
+  backtestSavedListHref,
   peakLockedNotionalUsdt,
   realizedAprPct,
   realizedEndingUsdt,
@@ -358,6 +359,7 @@ assert.equal(
   backtestRerunHref("run-abc"),
   "/account/backtests?rerun=run-abc#replay",
 );
+assert.equal(backtestSavedListHref(), "/account/backtests?tab=saved");
 const seeded = backtestQueueSeedFromRun({
   id: "run-abc",
   userId: "user-1",

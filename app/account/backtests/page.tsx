@@ -8,7 +8,10 @@ import { BacktestRunsTable } from "@/components/backtest-runs-table";
 import { getSessionMember } from "@/lib/auth/session";
 import { memberIsAdmin } from "@/lib/admin/access";
 import { toBacktestLibraryItem } from "@/lib/backtest/library";
-import { backtestQueueSeedFromRun } from "@/lib/backtest/model";
+import {
+  backtestQueueSeedFromRun,
+  backtestSavedListHref,
+} from "@/lib/backtest/model";
 import {
   canReadBacktestRun,
   listBacktestRuns,
@@ -103,6 +106,9 @@ export default async function AccountBacktestsPage({
   const pendingRun =
     runs.find((row) => row.status === "queued") ??
     runs.find((row) => row.status === "running");
+  const wantsForm = Boolean(selectedTemplateId || draftId || rerunId);
+  const tab =
+    !wantsForm && firstSearchValue(params.tab) === "saved" ? "saved" : "new";
 
   return (
     <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
@@ -125,36 +131,76 @@ export default async function AccountBacktestsPage({
         fields, then queue. Long history goes to the worker. Open a row for
         the full picture.
       </p>
-      {runs.length === 0 ? (
-        <p className="mb-8 text-sm text-ink-muted">
-          No runs yet. Open Backtest from a bot, or pick a template below.
-        </p>
-      ) : (
-        <div className="mb-8">
+      <nav
+        aria-label="Backtesting"
+        className="mb-6 flex border-b border-line"
+      >
+        <TabLink href="/account/backtests" selected={tab === "new"}>
+          New Backtest
+        </TabLink>
+        <TabLink href={backtestSavedListHref()} selected={tab === "saved"}>
+          Saved Backtests
+        </TabLink>
+      </nav>
+      {tab === "saved" ? (
+        runs.length === 0 ? (
+          <p className="text-sm text-ink-muted">
+            No runs yet. Queue one from{" "}
+            <Link href="/account/backtests" className="text-accent hover:underline">
+              New Backtest
+            </Link>
+            .
+          </p>
+        ) : (
           <BacktestRunsTable
             runs={runs}
             memberId={member.id}
             isAdmin={isAdmin}
+            returnTo={backtestSavedListHref()}
           />
-        </div>
+        )
+      ) : (
+        <BacktestQueueForm
+          templates={library}
+          folders={folders}
+          deskBots={deskBots}
+          selectedTemplateId={
+            selectedTemplateId || seed?.sourceTemplateId || ""
+          }
+          draftId={usableDraft?.id ?? ""}
+          seed={seed}
+          loadedFromRun={Boolean(usableRerun)}
+          defaultVenue={
+            defaultVenue ?? seed?.venue ?? "bybit"
+          }
+          defaultVenueEnvironment={
+            defaultEnv ?? seed?.venueEnvironment ?? null
+          }
+        />
       )}
-      <BacktestQueueForm
-        templates={library}
-        folders={folders}
-        deskBots={deskBots}
-        selectedTemplateId={
-          selectedTemplateId || seed?.sourceTemplateId || ""
-        }
-        draftId={usableDraft?.id ?? ""}
-        seed={seed}
-        loadedFromRun={Boolean(usableRerun)}
-        defaultVenue={
-          defaultVenue ?? seed?.venue ?? "bybit"
-        }
-        defaultVenueEnvironment={
-          defaultEnv ?? seed?.venueEnvironment ?? null
-        }
-      />
     </main>
+  );
+}
+
+function TabLink({
+  href,
+  selected,
+  children,
+}: {
+  href: string;
+  selected: boolean;
+  children: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+        selected
+          ? "border-accent text-ink"
+          : "border-transparent text-ink-muted hover:text-ink"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }

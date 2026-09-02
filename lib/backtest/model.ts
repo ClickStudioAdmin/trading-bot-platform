@@ -179,6 +179,10 @@ export function backtestRerunHref(runId: string): string {
   return `/account/backtests?rerun=${encodeURIComponent(runId)}#replay`;
 }
 
+export function backtestSavedListHref(): string {
+  return "/account/backtests?tab=saved";
+}
+
 export function backtestQueueSeedFromRun(run: BacktestRun): {
   recipe: BacktestRecipe;
   sourceTemplateId: string;
