@@ -3,14 +3,13 @@ import type { ReactNode } from "react";
 import {
   ApplyBacktestButton,
   AttachBacktestButton,
-  BacktestCurrentTrades,
   BacktestRunRefresh,
-  BacktestOrdersTable,
   BacktestPropertyList,
   BacktestStatsGrid,
   RemoveBacktestButton,
   SaveBacktestAsTemplateButton,
 } from "@/components/backtest-run-view";
+import { BacktestPositionsTable } from "@/components/backtest-positions-table";
 import { ColumnHint } from "@/components/column-hint";
 import { BacktestRunsTable } from "@/components/backtest-runs-table";
 import { BacktestStudyCharts } from "@/components/backtest-study-charts";
@@ -367,12 +366,6 @@ export function BacktestRunDetail({
               <SectionPlaceholder message={pendingMessage} />
             )}
           </section>
-          {complete ? (
-            <section>
-              <h2 className="mb-3 text-lg font-semibold">Current trades</h2>
-              <BacktestCurrentTrades run={run} />
-            </section>
-          ) : null}
         </div>
       </div>
 
@@ -391,14 +384,14 @@ export function BacktestRunDetail({
         </>
       )}
 
-      <section>
-        <h2 className="mb-2 text-lg font-semibold">Orders</h2>
-        {complete ? (
-          <BacktestOrdersTable run={run} />
-        ) : (
+      {complete ? (
+        <BacktestPositionsTable run={run} />
+      ) : (
+        <section>
+          <h2 className="mb-2 text-lg font-semibold">Open Positions</h2>
           <SectionPlaceholder message={pendingMessage} />
-        )}
-      </section>
+        </section>
+      )}
 
       {comparablePrimary && comparables.length > 0 ? (
         <section>

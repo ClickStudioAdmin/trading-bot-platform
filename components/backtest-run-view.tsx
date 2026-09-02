@@ -100,6 +100,7 @@ import {
   type BacktestRun,
 } from "@/lib/backtest/model";
 import { loadBacktestDisplayCandles } from "@/lib/charts/load-backtest-candles";
+import { backtestChartLevels } from "@/lib/backtest/positions";
 import {
   buildBacktestChartOverlay,
   snapOverlayToCandles,
@@ -367,6 +368,15 @@ export function BacktestOrdersTable({ run }: { run: BacktestRun }) {
   );
 }
 
+function backtestOverlayForRun(run: BacktestRun) {
+  return buildBacktestChartOverlay({
+    triggerPrice:
+      run.recipe.kind === "perps" ? Number(run.recipe.triggerPrice) : null,
+    orders: run.orders,
+    levels: backtestChartLevels(run.recipe, run.orders),
+  });
+}
+
 export function BacktestInlineChart({
   run,
   interval,
@@ -431,14 +441,7 @@ export function BacktestInlineChart({
           onChange={onIntervalChange}
         />
       }
-      overlay={snapOverlayToCandles(
-        buildBacktestChartOverlay({
-          triggerPrice:
-            run.recipe.kind === "perps" ? Number(run.recipe.triggerPrice) : null,
-          orders: run.orders,
-        }),
-        candles,
-      )}
+      overlay={snapOverlayToCandles(backtestOverlayForRun(run), candles)}
     />
   );
 }
@@ -528,13 +531,7 @@ export function BacktestChartButton({ run }: { run: BacktestRun }) {
                 />
               }
               overlay={snapOverlayToCandles(
-                buildBacktestChartOverlay({
-                  triggerPrice:
-                    run.recipe.kind === "perps"
-                      ? Number(run.recipe.triggerPrice)
-                      : null,
-                  orders: run.orders,
-                }),
+                backtestOverlayForRun(run),
                 candles,
               )}
             />

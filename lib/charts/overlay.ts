@@ -4,6 +4,7 @@ import {
   splitCompletedBacktestOrders,
   type SimulatedOrder,
 } from "@/lib/backtest/model";
+import { backtestFillMarkerText } from "@/lib/backtest/positions";
 import type { CandleBar } from "@/lib/market/candles";
 
 export const CHART_COLORS = {
@@ -141,6 +142,12 @@ export function buildLiveChartOverlay(input: {
 export function buildBacktestChartOverlay(input: {
   triggerPrice: number | null;
   orders: SimulatedOrder[];
+  levels?: {
+    entry: number | null;
+    takeProfit: number | null;
+    stopLoss: number | null;
+    side?: "long" | "short";
+  } | null;
 }): ChartOverlay {
   const lines: ChartPriceLine[] = [];
   const trigger = line(
@@ -152,6 +159,32 @@ export function buildBacktestChartOverlay(input: {
   if (trigger) {
     lines.push(trigger);
   }
+  const levels = input.levels;
+  if (levels) {
+    const entry = line(
+      "entry",
+      levels.entry,
+      levels.side === "short" ? "Entry short" : "Entry long",
+      CHART_COLORS.entry,
+    );
+    const takeProfit = line(
+      "tp",
+      levels.takeProfit,
+      "Take profit",
+      CHART_COLORS.takeProfit,
+    );
+    const stopLoss = line(
+      "sl",
+      levels.stopLoss,
+      "Stop loss",
+      CHART_COLORS.stopLoss,
+    );
+    for (const item of [entry, takeProfit, stopLoss]) {
+      if (item) {
+        lines.push(item);
+      }
+    }
+  }
   const { open } = splitCompletedBacktestOrders(input.orders);
   const openSet = new Set(open);
   const markers: ChartMarker[] = input.orders
@@ -159,24 +192,23 @@ export function buildBacktestChartOverlay(input: {
     .map((row) => {
       const current = openSet.has(row);
       const buy = row.action === "buy";
+      const flatten = row.action === "flatten";
       return {
         timeSec: markerTimeSec(row.atMs),
-        position: buy ? "belowBar" : "aboveBar",
+        position: buy || (flatten && row.side === "short")
+          ? "belowBar"
+          : "aboveBar",
         color: current
           ? CHART_COLORS.entry
-          : buy
-            ? CHART_COLORS.buy
-            : CHART_COLORS.sell,
+          : flatten
+            ? row.reason === "take_profit"
+              ? CHART_COLORS.takeProfit
+              : CHART_COLORS.sell
+            : buy
+              ? CHART_COLORS.buy
+              : CHART_COLORS.sell,
         shape: current ? "circle" : buy ? "arrowUp" : "arrowDown",
-        text: current
-          ? row.side === "short"
-            ? "Open short"
-            : "Open long"
-          : buy
-            ? "Buy"
-            : row.action === "flatten"
-              ? "Close"
-              : "Sell",
+        text: backtestFillMarkerText(row, current),
       } satisfies ChartMarker;
     });
   return { lines, markers };

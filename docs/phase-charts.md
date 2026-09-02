@@ -24,8 +24,8 @@ TradingView **alerts** stay webhooks. This is charts only.
 | --- | --- | --- |
 | Candle API (`/api/market/candles`, `loadDeskCandles` / ranged `loadBacktestCandles`) | Venue + symbol + timeframe (last 1,500) | Same, plus from/to window (full activity, paged) |
 | `<DeskChart>` (Lightweight Charts) | Yes | Yes |
-| Overlay: working limits, TP/SL, trailing, entry | From **live** ledger | Off (sim book is the run) |
-| Overlay: fill markers | From **live** `futures_orders` | From **run** simulated orders |
+| Overlay: working limits, TP/SL, trailing, entry | From **live** ledger | Planned entry / TP / SL from the open cycle (or last closed) |
+| Overlay: fill markers | From **live** `futures_orders` | From **run** simulated orders (Entry / Add / TP / SL / Close) |
 | Overlay: bot trigger line | Not on Positions | From the frozen recipe |
 | Timeframe control | 15m / 1h / 4h / D | Same set on the finished-run charts, plus the run’s own TF. Display only. |
 

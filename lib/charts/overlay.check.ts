@@ -94,8 +94,31 @@ const closed = buildBacktestChartOverlay({
   ],
 });
 assert.equal(closed.lines.some((row) => row.title.startsWith("Open")), false);
-assert.equal(closed.markers[0]?.text, "Buy");
+assert.equal(closed.markers[0]?.text, "Entry");
 assert.equal(closed.markers[1]?.text, "Close");
+
+const leveled = buildBacktestChartOverlay({
+  triggerPrice: null,
+  orders: [],
+  levels: {
+    entry: 100,
+    takeProfit: 110,
+    stopLoss: 95,
+    side: "long",
+  },
+});
+assert.equal(
+  leveled.lines.some((row) => row.title === "Entry long"),
+  true,
+);
+assert.equal(
+  leveled.lines.some((row) => row.title === "Take profit"),
+  true,
+);
+assert.equal(
+  leveled.lines.some((row) => row.title === "Stop loss"),
+  true,
+);
 
 const snapped = snapOverlayToCandles(
   {

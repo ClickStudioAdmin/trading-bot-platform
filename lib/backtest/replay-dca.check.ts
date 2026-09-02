@@ -192,4 +192,31 @@ assert.equal(buys.length, 2);
 assert.equal(buys[0]?.qty, 20);
 assert.ok(Math.abs((buys[1]?.qty ?? 0) - 2040 / 110) < 1e-8);
 
+const stopForm = new FormData();
+stopForm.set("name", "Stop wick");
+stopForm.set("symbol", "BTCUSDT");
+stopForm.set("direction", "long");
+stopForm.set("startKind", "immediate");
+stopForm.set("clipSize", "1");
+stopForm.set("sizeUnit", "qty");
+stopForm.set("takeProfitPct", "10");
+stopForm.set("stopLossPct", "5");
+const stopParsed = parseDcaPlaybookForm(stopForm);
+assert.equal(stopParsed.ok, true);
+if (!stopParsed.ok) {
+  throw new Error("expected stop DCA parse");
+}
+const stopped = replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 111, low: 94, close: 111 },
+  ],
+  recipe: snapshotDcaRecipe(stopParsed.config),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(stopped.orders[1]?.action, "flatten");
+assert.equal(stopped.orders[1]?.reason, "stop");
+assert.equal(stopped.orders[1]?.price, 95);
+
 console.log("dca backtest replay checks passed");

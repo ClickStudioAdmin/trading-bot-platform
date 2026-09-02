@@ -9,7 +9,7 @@ import {
   type DcaLegState,
 } from "@/lib/dca/playbook";
 import { resampleClosesForTimeframe } from "@/lib/dca/indicators";
-import { dcaClipQtyAt, dcaTrailingDistance } from "@/lib/dca/grid";
+import { dcaClipQtyAt, dcaPlannedExits, dcaTrailingDistance } from "@/lib/dca/grid";
 import { dcaRecipeToConfig, type DcaTemplateRecipe } from "@/lib/templates/recipe";
 import type { FuturesSide } from "@/lib/futures/model";
 import {
@@ -278,6 +278,29 @@ export function replayDcaPlaybook(input: {
             continue;
           }
         }
+        if (config.stopLossPct != null && config.stopLossPct > 0) {
+          const planned = dcaPlannedExits({
+            side,
+            entryPrice: leg.entry,
+            firstFillPrice: leg.firstFillPrice,
+            mark: price,
+            takeProfitPct: config.takeProfitPct,
+            stopLossPct: config.stopLossPct,
+            takeProfitBasis: config.takeProfitBasis,
+            stopLossBasis: config.stopLossBasis,
+            trailingPct: config.trailingPct,
+          });
+          if (planned.stopLoss != null) {
+            const hit =
+              side === "long"
+                ? adverse <= planned.stopLoss
+                : adverse >= planned.stopLoss;
+            if (hit) {
+              flatten(side, bar.timeMs, planned.stopLoss, true, "stop");
+              continue;
+            }
+          }
+        }
       }
       const live = legs[side];
       const indicatorStart = dcaIndicatorStartForSide(config, side);
@@ -362,7 +385,11 @@ export function replayDcaPlaybook(input: {
           decision.action.reason === "stop_loss" ? "stop" : "take_profit",
         );
       } else if (decision.action.kind === "disarm") {
-        flatten(side, bar.timeMs, price, false, "close");
+        if (legs[side].qty > 0) {
+          legs[side] = { ...legs[side], status: "stop_adding" };
+        } else {
+          legs[side] = { ...emptyLeg(), status: "idle" };
+        }
       } else if (decision.action.kind === "end_cycle") {
         flatten(side, bar.timeMs, price, true, "close");
       } else if (decision.action.kind === "stop_adding") {
