@@ -471,7 +471,7 @@ export function recipeParamRows(
       },
       { label: "Start", value: dcaStartLabel(recipe) },
       {
-        label: "Clip",
+        label: "Initial Order Size",
         value: `${formatParamNumber(recipe.clipSize)} ${recipe.sizeUnit}`,
       },
       {

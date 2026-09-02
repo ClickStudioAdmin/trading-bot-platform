@@ -35,6 +35,10 @@ assert.equal(
   preview.find((row) => row.label === "Max value")?.value,
   "—",
 );
+assert.equal(
+  preview.find((row) => row.label === "Initial Order Size")?.value,
+  "1 qty",
+);
 
 const run: BacktestRun = {
   id: "run-1",

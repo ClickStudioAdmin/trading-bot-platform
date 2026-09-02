@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   ChartContextMenu,
   type ChartContextMenuState,
@@ -83,6 +84,76 @@ function CopyImageIcon() {
         d="M11.5 6.1V4.7A1.2 1.2 0 0 0 10.3 3.5H4.7A1.2 1.2 0 0 0 3.5 4.7v5.6A1.2 1.2 0 0 0 4.7 11.5H6.1"
         stroke="currentColor"
         strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ExpandIcon() {
+  return (
+    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
+      <path
+        d="M3.5 7.25V3.5H7.25"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14.5 7.25V3.5H10.75"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.5 10.75V14.5H7.25"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14.5 10.75V14.5H10.75"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CollapseIcon() {
+  return (
+    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
+      <path
+        d="M7.25 3.5V7.25H3.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10.75 3.5V7.25H14.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7.25 14.5V10.75H3.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10.75 14.5V10.75H14.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
@@ -207,7 +278,35 @@ export function DeskChart({
   const chartRef = useRef<ChartHandle | null>(null);
   const viewRef = useRef<ChartViewApi | null>(null);
   const [menu, setMenu] = useState<ChartContextMenuState>(null);
-  const plotHeight = height - CHART_TOOLBAR_H;
+  const [expanded, setExpanded] = useState(false);
+  const [viewportH, setViewportH] = useState(0);
+  const frameHeight =
+    expanded && viewportH > CHART_TOOLBAR_H ? viewportH : height;
+  const plotHeight = frameHeight - CHART_TOOLBAR_H;
+
+  useEffect(() => {
+    if (!expanded) {
+      return;
+    }
+    function sync() {
+      setViewportH(window.innerHeight);
+    }
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setExpanded(false);
+      }
+    }
+    sync();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("resize", sync);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("resize", sync);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [expanded]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -301,7 +400,10 @@ export function DeskChart({
       const detachWheel = attachRightAxisWheel(host, () => viewRef.current);
       const observer = new ResizeObserver(() => {
         if (hostRef.current) {
-          chart.applyOptions({ width: hostRef.current.clientWidth });
+          chart.applyOptions({
+            width: hostRef.current.clientWidth,
+            height: hostRef.current.clientHeight,
+          });
         }
       });
       observer.observe(host);
@@ -320,17 +422,38 @@ export function DeskChart({
     };
   }, [candles, overlay, plotHeight, rightOffset, visibleRange]);
 
-  return (
+  const frame = (
     <div
-      className="flex w-full flex-col overflow-hidden rounded-card border border-line bg-canvas"
-      style={{ height }}
+      className={
+        expanded
+          ? "fixed inset-0 z-50 flex h-dvh w-full flex-col bg-canvas"
+          : "flex w-full flex-col overflow-hidden rounded-card border border-line bg-canvas"
+      }
+      style={expanded ? undefined : { height }}
     >
       <div className="flex min-h-9 shrink-0 items-center justify-between gap-2 border-b border-line px-1.5 py-1">
         <div className="min-w-0">{toolbar}</div>
-        <ChartScreenshotControls
-          getChart={() => chartRef.current}
-          filename={screenshotName}
-        />
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            title={expanded ? "Exit full screen" : "Full screen"}
+            aria-label={expanded ? "Exit full screen" : "Full screen"}
+            aria-pressed={expanded}
+            className={SHOT_BUTTON}
+            onClick={() => {
+              if (!expanded) {
+                setViewportH(window.innerHeight);
+              }
+              setExpanded((current) => !current);
+            }}
+          >
+            {expanded ? <CollapseIcon /> : <ExpandIcon />}
+          </button>
+          <ChartScreenshotControls
+            getChart={() => chartRef.current}
+            filename={screenshotName}
+          />
+        </div>
       </div>
       <div className="relative min-h-0 w-full flex-1">
         <div
@@ -363,4 +486,14 @@ export function DeskChart({
       />
     </div>
   );
+
+  if (expanded && typeof document !== "undefined") {
+    return (
+      <>
+        <div className="w-full" style={{ height }} aria-hidden />
+        {createPortal(frame, document.body)}
+      </>
+    );
+  }
+  return frame;
 }
