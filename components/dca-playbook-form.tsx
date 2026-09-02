@@ -161,7 +161,7 @@ function CycleLock({
   }
   return (
     <div
-      inert=""
+      inert
       className="pointer-events-none opacity-40"
       aria-disabled
     >
