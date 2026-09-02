@@ -9,7 +9,12 @@ import {
   type DcaLegState,
 } from "@/lib/dca/playbook";
 import { resampleClosesForTimeframe } from "@/lib/dca/indicators";
-import { dcaClipQtyAt, dcaPlannedExits, dcaTrailingDistance } from "@/lib/dca/grid";
+import {
+  dcaClipQtyAt,
+  dcaPlannedExits,
+  dcaSafetyPrices,
+  dcaTrailingDistance,
+} from "@/lib/dca/grid";
 import { dcaRecipeToConfig, type DcaTemplateRecipe } from "@/lib/templates/recipe";
 import type { FuturesSide } from "@/lib/futures/model";
 import {
@@ -244,6 +249,86 @@ export function replayDcaPlaybook(input: {
     };
   }
 
+  function nextRestingGridPrice(side: FuturesSide): number | null {
+    const leg = legs[side];
+    if (
+      config.dcaMode !== "order" ||
+      leg.status !== "armed" ||
+      !(leg.qty > 0) ||
+      !(leg.entry > 0) ||
+      config.maxClips == null ||
+      config.maxClips < 2 ||
+      config.dipPct == null ||
+      !(config.dipPct > 0) ||
+      leg.clipsFilled >= config.maxClips
+    ) {
+      return null;
+    }
+    const prices = dcaSafetyPrices({
+      side,
+      entryPrice: leg.entry,
+      maxClips: config.maxClips,
+      dipPct: config.dipPct,
+      deviationMultiplier: config.deviationMultiplier,
+    });
+    const limit = prices[leg.clipsFilled - 1];
+    return limit != null && limit > 0 ? limit : null;
+  }
+
+  function fillRestingGrid(side: FuturesSide, bar: CandleBar) {
+    const adverse = side === "long" ? bar.low : bar.high;
+    while (true) {
+      const limit = nextRestingGridPrice(side);
+      if (limit == null) {
+        return;
+      }
+      const hit =
+        side === "long" ? adverse <= limit : adverse >= limit;
+      if (!hit) {
+        return;
+      }
+      const before = legs[side].clipsFilled;
+      addClip(side, bar.timeMs, limit);
+      if (legs[side].clipsFilled === before) {
+        return;
+      }
+    }
+  }
+
+  function fillLimitTakeProfit(side: FuturesSide, bar: CandleBar): boolean {
+    if (config.takeProfitOrderType !== "limit") {
+      return false;
+    }
+    const live = legs[side];
+    if (!(live.qty > 0)) {
+      return false;
+    }
+    const planned = dcaPlannedExits({
+      side,
+      entryPrice: live.entry,
+      firstFillPrice: live.firstFillPrice,
+      mark: live.entry,
+      takeProfitPct: config.takeProfitPct,
+      stopLossPct: config.stopLossPct,
+      takeProfitBasis: config.takeProfitBasis,
+      stopLossBasis: config.stopLossBasis,
+      trailingPct: config.trailingPct,
+    });
+    if (planned.takeProfit == null) {
+      return false;
+    }
+    const favorable = side === "long" ? bar.high : bar.low;
+    const hit =
+      side === "long"
+        ? favorable >= planned.takeProfit
+        : favorable <= planned.takeProfit;
+    if (!hit) {
+      return false;
+    }
+    flatten(side, bar.timeMs, planned.takeProfit, true, "take_profit");
+    return true;
+  }
+
   for (const bar of input.bars) {
     const price = bar.close;
     if (!(price > 0)) {
@@ -301,6 +386,10 @@ export function replayDcaPlaybook(input: {
             }
           }
         }
+        fillRestingGrid(side, bar);
+        if (fillLimitTakeProfit(side, bar)) {
+          continue;
+        }
       }
       const live = legs[side];
       const indicatorStart = dcaIndicatorStartForSide(config, side);
@@ -355,7 +444,8 @@ export function replayDcaPlaybook(input: {
             )
           : window,
         takeProfitOrderType: config.takeProfitOrderType,
-        tpLimitResting: false,
+        tpLimitResting:
+          config.takeProfitOrderType === "limit" && live.qty > 0,
         triggerPrices,
       });
       legs[side] = {

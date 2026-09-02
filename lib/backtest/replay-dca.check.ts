@@ -219,4 +219,116 @@ assert.equal(stopped.orders[1]?.action, "flatten");
 assert.equal(stopped.orders[1]?.reason, "stop");
 assert.equal(stopped.orders[1]?.price, 95);
 
+const gridForm = new FormData();
+gridForm.set("name", "Rest grid");
+gridForm.set("symbol", "BTCUSDT");
+gridForm.set("direction", "long");
+gridForm.set("startKind", "immediate");
+gridForm.set("clipSize", "1");
+gridForm.set("sizeUnit", "qty");
+gridForm.set("maxClips", "3");
+gridForm.set("dipPct", "10");
+gridForm.set("restGrid", "1");
+gridForm.set("sizeMultiplier", "1");
+gridForm.set("deviationMultiplier", "1");
+const gridParsed = parseDcaPlaybookForm(gridForm);
+assert.equal(gridParsed.ok, true);
+if (!gridParsed.ok) {
+  throw new Error("expected grid DCA parse");
+}
+assert.equal(gridParsed.config.dcaMode, "order");
+const gridRecipe = snapshotDcaRecipe(gridParsed.config);
+const sameBarLow = replayDcaPlaybook({
+  bars: [{ timeMs: 1_000, open: 100, high: 100, low: 90, close: 100 }],
+  recipe: gridRecipe,
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(sameBarLow.orders.length, 1);
+assert.equal(sameBarLow.orders[0]?.reason, "entry");
+const gridFilled = replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 100, low: 89, close: 100 },
+  ],
+  recipe: gridRecipe,
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(gridFilled.orders.length, 2);
+assert.equal(gridFilled.orders[1]?.reason, "clip");
+assert.equal(gridFilled.orders[1]?.price, 90);
+assert.equal(gridFilled.orders[1]?.clipIndex, 2);
+assert.equal(gridFilled.stats.openQty, 2);
+
+const limitTpForm = new FormData();
+limitTpForm.set("name", "Limit TP");
+limitTpForm.set("symbol", "BTCUSDT");
+limitTpForm.set("direction", "long");
+limitTpForm.set("startKind", "immediate");
+limitTpForm.set("clipSize", "1");
+limitTpForm.set("sizeUnit", "qty");
+limitTpForm.set("takeProfitPct", "10");
+limitTpForm.set("takeProfitOrderType", "limit");
+const limitTpParsed = parseDcaPlaybookForm(limitTpForm);
+assert.equal(limitTpParsed.ok, true);
+if (!limitTpParsed.ok) {
+  throw new Error("expected limit TP parse");
+}
+const limitTpRecipe = snapshotDcaRecipe(limitTpParsed.config);
+const entryBarWick = replayDcaPlaybook({
+  bars: [{ timeMs: 1_000, open: 100, high: 111, low: 100, close: 100 }],
+  recipe: limitTpRecipe,
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(entryBarWick.orders.length, 1);
+assert.equal(entryBarWick.stats.openSide, "long");
+const limitTpHit = replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 111, low: 100, close: 105 },
+  ],
+  recipe: limitTpRecipe,
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(limitTpHit.orders[1]?.action, "flatten");
+assert.equal(limitTpHit.orders[1]?.reason, "take_profit");
+assert.ok(Math.abs((limitTpHit.orders[1]?.price ?? 0) - 110) < 1e-8);
+
+const gridTpForm = new FormData();
+gridTpForm.set("name", "Grid limit TP");
+gridTpForm.set("symbol", "XRPUSDT");
+gridTpForm.set("direction", "long");
+gridTpForm.set("startKind", "immediate");
+gridTpForm.set("clipSize", "1");
+gridTpForm.set("sizeUnit", "qty");
+gridTpForm.set("maxClips", "3");
+gridTpForm.set("dipPct", "1");
+gridTpForm.set("restGrid", "1");
+gridTpForm.set("sizeMultiplier", "1");
+gridTpForm.set("deviationMultiplier", "1");
+gridTpForm.set("takeProfitPct", "1.4");
+gridTpForm.set("takeProfitOrderType", "limit");
+const gridTpParsed = parseDcaPlaybookForm(gridTpForm);
+assert.equal(gridTpParsed.ok, true);
+if (!gridTpParsed.ok) {
+  throw new Error("expected grid TP parse");
+}
+const gridTp = replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 101.5, low: 98.9, close: 100 },
+  ],
+  recipe: snapshotDcaRecipe(gridTpParsed.config),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(gridTp.orders.length, 3);
+assert.equal(gridTp.orders[1]?.reason, "clip");
+assert.equal(gridTp.orders[1]?.price, 99);
+assert.equal(gridTp.orders[2]?.reason, "take_profit");
+assert.ok(Math.abs((gridTp.orders[2]?.price ?? 0) - 99.5 * 1.014) < 1e-8);
+
 console.log("dca backtest replay checks passed");

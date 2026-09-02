@@ -35,8 +35,8 @@ Each run has its own **detail page**: parameters, stats, desk-style open / past 
 | Perps bot exits | Same ticket set as manual: TP/SL (full/partial, last/mark/index, market/limit) plus trailing. Optional. Buy/sell only. Flatten rules stay flatten-only. |
 | Unpublished runs | **Owner only** (plus admin). Leftover published copies (`user_id` null) stay readable. New publishes are parked. |
 | Remove | Owner deletes their run. Admin can delete any, including leftover published copies. Unused `backtested` snapshot is deleted with the last run that pointed at it. A linked **user** template is kept. |
-| Bar fill (entries) | Decide on **bar close**, fill at **close**. |
-| Bar fill (exits) | Stop and trailing use the **adverse wick** (Perps ticket stops and DCA **percent** SL). Take profit uses the **favorable wick** (Perps) or **close** (DCA percent TP). If stop and take profit both print on the same bar, **stop wins**. |
+| Bar fill (entries) | First clip: decide on **bar close**, fill at **close**. Rest-grid adds (`Remaining orders as GTC limit`): fill at the **limit** when the **adverse wick** reaches it. Same-bar path is adverse-first (adds, then TP). The entry bar does not fill the new ladder or a new TP limit — those rest after the close, like live. |
+| Bar fill (exits) | Stop and trailing use the **adverse wick** (Perps ticket stops and DCA **percent** SL). Take profit: **limit** uses the **favorable wick** at the limit (Perps and DCA); DCA **market** percent TP still uses **close**. If stop and take profit both print on the same bar, **stop wins**. |
 | Fee | Named preset `vip0_taker` = **6 bps all-in** per fill. |
 | Rank | **Realized** USDT. |
 | Return | A run is one strategy, not the whole account. Header tiles match desk Performance: days in the replay window, completed trades, win rate, max drawdown (peak-to-trough of marked equity versus that peak, plus the $ dip), realized profit, **P&L** (realized ÷ starting balance — same as account return), **ROE** (realized ÷ closed position value ÷ leverage), and **APR** (compound annualization of that account return over the window). Starting / ending / account return stay in the Performance list. Desk P&L stays on position value; live books have no starting balance. Open mark stays in **Current trades**. Account-impact equity marks the open position on each candle (not a single end-point cliff). |
@@ -81,7 +81,7 @@ Migrations: `supabase/migrations/20260830120000_backtest_runs.sql`, `supabase/mi
 ## Engine rules
 
 - Perps replay uses `decideFuturesAutomationTick` on each bar close, then ticket exits on the same book.
-- DCA replay uses `decideDcaTick` (same clip / percent-exit / breakeven math as live). Percent **stop** also fires on the adverse wick at the planned SL (same-bar stop wins versus percent TP on close). Disarm with qty still on the book becomes `stop_adding`, not a flatten.
+- DCA replay uses `decideDcaTick` (same clip / percent-exit / breakeven math as live). Percent **stop** also fires on the adverse wick at the planned SL (same-bar stop wins versus percent TP on close). Rest-grid bots fill GTC adds at `dcaSafetyPrices` (repriced from the current average after each add, same as live). Limit TP rests after the first fill and closes at the limit on the favorable wick. Disarm with qty still on the book becomes `stop_adding`, not a flatten.
 - Signal / webhook When, webhook-start, or **manual** start: **rejected** at user queue time.
 - Venue truth: Bybit klines for Bybit, HL candles for HL.
 - Does not write `futures_orders` / paper carries.
@@ -90,7 +90,7 @@ Migrations: `supabase/migrations/20260830120000_backtest_runs.sql`, `supabase/mi
 
 Same `<DeskChart>`, candle API, and overlay renderer. Backtest overlay source = `backtest_runs.orders` plus planned entry / TP / SL lines (from the open cycle, or the last closed cycle) and the When line (Perps only). Every fill is on the chart. Completed fills use Entry / Add / TP / SL / Trail / Close. Still-open clips use **Open long/short** (circle). Header and Performance stay realized only.
 
-Replay still does **not** rest a GTC DCA grid, rest a limit TP, or persist trailing peak across clips. Indicator start uses an 80-bar warmup window. Position logs are synthesized from fills — replay does not write `event_logs` or `futures_*`.
+Replay still does **not** persist trailing peak across clips. Indicator start uses an 80-bar warmup window. Last / mark / index on price starts all read the bar close. Position logs are synthesized from fills — replay does not write `event_logs` or `futures_*`.
 
 ## Out of scope (still)
 
