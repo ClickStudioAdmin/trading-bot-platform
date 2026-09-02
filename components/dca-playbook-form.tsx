@@ -156,13 +156,17 @@ function CycleLock({
   locked: boolean;
   children: React.ReactNode;
 }) {
+  if (!locked) {
+    return children;
+  }
   return (
-    <fieldset
-      disabled={locked}
-      className={`min-w-0 border-0 p-0 ${locked ? "opacity-80" : ""}`}
+    <div
+      inert=""
+      className="pointer-events-none opacity-40"
+      aria-disabled
     >
       {children}
-    </fieldset>
+    </div>
   );
 }
 
@@ -1200,8 +1204,8 @@ export function DcaPlaybookForm({
       </div>
       {cycleLocked ? (
         <p className="text-xs text-warning">
-          A position is open. Cycle settings will not save until that side is
-          flat. Take profit and stops still save.
+          A position is open. Cycle settings are locked. Take profit and stops
+          still save.
         </p>
       ) : null}
 

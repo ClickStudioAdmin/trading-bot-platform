@@ -44,6 +44,7 @@ import {
   dcaPlaybookHasOpenCycle,
   dcaPlaybookIsRunning,
   dcaWithLockedCycleConfig,
+  resolveDcaSaveConfig,
   dcaCloneIdleDraft,
   dcaCopyName,
   dcaPnlPct,
@@ -1607,6 +1608,25 @@ if (row) {
   assert.equal(locked.stopLossPct, 2);
   assert.equal(locked.trailingPct, 1);
   assert.equal(locked.name, row.name);
+  const exitOnly = new FormData();
+  exitOnly.set("name", row.name);
+  exitOnly.set("takeProfitPct", "4");
+  exitOnly.set("stopLossPct", "2");
+  exitOnly.set("takeProfitBasis", "first_entry");
+  const fromMissingCycle = parseDcaPlaybookForm(exitOnly);
+  assert.equal(fromMissingCycle.ok, false);
+  const restored = resolveDcaSaveConfig(exitOnly, "bybit", row, [
+    { symbol: row.symbol, side: "long", qty: 1 },
+  ]);
+  assert.equal(restored.ok, true);
+  if (restored.ok) {
+    assert.equal(restored.cycleLocked, true);
+    assert.equal(restored.config.symbol, row.symbol);
+    assert.equal(restored.config.clipSize, row.clipSize);
+    assert.equal(restored.config.takeProfitPct, 4);
+    assert.equal(restored.config.stopLossPct, 2);
+    assert.equal(restored.config.takeProfitBasis, "first_entry");
+  }
 }
 assert.equal(
   dcaPlaybookIsRunning({

@@ -3,12 +3,10 @@
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
 import {
   dcaConfigMaxOrderError,
-  dcaPlaybookHasOpenCycle,
   dcaPlaybookIsRunning,
   dcaStartListens,
-  dcaWithLockedCycleConfig,
-  parseDcaPlaybookForm,
   parseDcaPlaybookId,
+  resolveDcaSaveConfig,
   parseDcaSaveIntent,
   type DcaPlaybook,
   type DcaPlaybookConfig,
@@ -99,10 +97,6 @@ async function saveDcaPlaybookWith(
   if (!deskAllowsDcaPlaybooks(session.account)) {
     return deskActionError("This desk is not a DCA desk.");
   }
-  const parsed = parseDcaPlaybookForm(formData, session.account.venue);
-  if (!parsed.ok) {
-    return deskActionError(parsed.error);
-  }
   const playbookId = parseDcaPlaybookId(formData.get("playbookId"));
   const existing = playbookId
     ? await loadDcaPlaybookById(playbookId, session.account.id)
@@ -113,13 +107,16 @@ async function saveDcaPlaybookWith(
         userId: session.member.id,
       })
     : [];
-  const cycleLocked = Boolean(
-    existing && dcaPlaybookHasOpenCycle(existing, opens),
+  const parsed = resolveDcaSaveConfig(
+    formData,
+    session.account.venue,
+    existing,
+    opens,
   );
-  const config =
-    existing && cycleLocked
-      ? dcaWithLockedCycleConfig(parsed.config, existing)
-      : parsed.config;
+  if (!parsed.ok) {
+    return deskActionError(parsed.error);
+  }
+  const { config, cycleLocked } = parsed;
   if (!cycleLocked) {
     const overMax = await rejectIfOverMaxOrder(config, session.account);
     if (overMax) {
@@ -163,7 +160,7 @@ async function saveDcaPlaybookWith(
     revalidatePath(FUTURES_PATHS.positions);
   }
   const intent = parseDcaSaveIntent(intentRaw);
-  if (intent === "arm" && dcaStartListens(parsed.config.startKind)) {
+  if (intent === "arm" && dcaStartListens(config.startKind)) {
     const armed = await applyDcaVerb({
       playbook: saved.playbook,
       mode: session.account.mode,
@@ -302,23 +299,6 @@ export async function runDcaPlaybookVerb(
     return deskActionError("Choose Arm, Disarm, or Close bot.");
   }
   const { verb, side } = parsedVerb;
-  const parsed = parseDcaPlaybookForm(formData, session.account.venue);
-  if (!parsed.ok) {
-    return deskActionError(parsed.error);
-  }
-  if (verb === "arm") {
-    const overMax = await rejectIfOverMaxOrder(
-      parsed.config,
-      session.account,
-    );
-    if (overMax) {
-      return deskActionError(overMax);
-    }
-  }
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return deskActionError("Auth is not configured.");
-  }
   const playbookId = parseDcaPlaybookId(formData.get("playbookId"));
   const existing = playbookId
     ? await loadDcaPlaybookById(playbookId, session.account.id)
@@ -329,13 +309,26 @@ export async function runDcaPlaybookVerb(
         userId: session.member.id,
       })
     : [];
-  const cycleLocked = Boolean(
-    existing && dcaPlaybookHasOpenCycle(existing, opens),
+  const parsed = resolveDcaSaveConfig(
+    formData,
+    session.account.venue,
+    existing,
+    opens,
   );
-  const config =
-    existing && cycleLocked
-      ? dcaWithLockedCycleConfig(parsed.config, existing)
-      : parsed.config;
+  if (!parsed.ok) {
+    return deskActionError(parsed.error);
+  }
+  const { config, cycleLocked } = parsed;
+  if (verb === "arm" && !cycleLocked) {
+    const overMax = await rejectIfOverMaxOrder(config, session.account);
+    if (overMax) {
+      return deskActionError(overMax);
+    }
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return deskActionError("Auth is not configured.");
+  }
   const saved = await saveDcaPlaybook({
     supabase,
     userId: session.member.id,

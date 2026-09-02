@@ -594,6 +594,111 @@ export function dcaPlaybookHasOpenCycle(
   );
 }
 
+export function writeDcaCycleFormFields(
+  form: FormData,
+  current: DcaPlaybookConfig,
+): void {
+  form.set("symbol", current.symbol);
+  form.set("direction", current.direction);
+  form.set("startKind", current.startKind);
+  if (current.webhookId) {
+    form.set("webhookId", current.webhookId);
+  }
+  const averaging = dcaAveragingKind(current);
+  form.set("averaging", averaging);
+  if (current.dcaMode === "order") {
+    form.set("restGrid", "1");
+  } else {
+    form.delete("restGrid");
+  }
+  form.set("sizeUnit", current.sizeUnit);
+  form.set("clipSize", String(current.clipSize));
+  if (current.maxClips != null) {
+    form.set("maxClips", String(current.maxClips));
+  } else {
+    form.delete("maxClips");
+  }
+  if (current.maxValue != null) {
+    form.set("maxValue", String(current.maxValue));
+    form.set("maxValueKind", current.maxValueKind);
+  } else {
+    form.set("maxValueKind", "none");
+    form.delete("maxValue");
+  }
+  if (current.dipPct != null) {
+    form.set("dipPct", String(current.dipPct));
+  } else {
+    form.delete("dipPct");
+  }
+  const interval = dcaIntervalParts(current.intervalMinutes);
+  form.set("intervalUnit", interval.unit);
+  form.set("intervalValue", interval.value);
+  form.set("sizeMultiplier", String(current.sizeMultiplier));
+  form.set("deviationMultiplier", String(current.deviationMultiplier));
+  if (current.armTrigger) {
+    form.set("armTriggerBy", current.armTrigger.triggerBy);
+    form.set("armCompare", current.armTrigger.compare);
+    form.set("armPrice", String(current.armTrigger.price));
+  }
+  if (current.shortArmTrigger) {
+    form.set("shortArmTriggerBy", current.shortArmTrigger.triggerBy);
+    form.set("shortArmCompare", current.shortArmTrigger.compare);
+    form.set("shortArmPrice", String(current.shortArmTrigger.price));
+  }
+  if (current.indicatorKind) {
+    form.set("indicatorKind", current.indicatorKind);
+  }
+  if (current.indicatorTimeframe) {
+    form.set("indicatorTimeframe", current.indicatorTimeframe);
+  }
+  if (current.indicatorCompare) {
+    form.set("indicatorCompare", current.indicatorCompare);
+  }
+  if (current.indicatorLevel != null) {
+    form.set("indicatorLevel", String(current.indicatorLevel));
+  }
+  if (current.shortIndicatorKind) {
+    form.set("shortIndicatorKind", current.shortIndicatorKind);
+  }
+  if (current.shortIndicatorTimeframe) {
+    form.set("shortIndicatorTimeframe", current.shortIndicatorTimeframe);
+  }
+  if (current.shortIndicatorCompare) {
+    form.set("shortIndicatorCompare", current.shortIndicatorCompare);
+  }
+  if (current.shortIndicatorLevel != null) {
+    form.set("shortIndicatorLevel", String(current.shortIndicatorLevel));
+  }
+}
+
+export function resolveDcaSaveConfig(
+  form: FormData,
+  venue: string,
+  existing: DcaPlaybook | null,
+  opens: readonly DcaCycleOpen[],
+):
+  | { ok: true; config: DcaPlaybookConfig; cycleLocked: boolean }
+  | { ok: false; error: string; cycleLocked: boolean } {
+  const cycleLocked = Boolean(
+    existing && dcaPlaybookHasOpenCycle(existing, opens),
+  );
+  if (existing && cycleLocked) {
+    writeDcaCycleFormFields(form, existing);
+  }
+  const parsed = parseDcaPlaybookForm(form, venue);
+  if (!parsed.ok) {
+    return { ok: false, error: parsed.error, cycleLocked };
+  }
+  return {
+    ok: true,
+    cycleLocked,
+    config:
+      existing && cycleLocked
+        ? dcaWithLockedCycleConfig(parsed.config, existing)
+        : parsed.config,
+  };
+}
+
 export function dcaWithLockedCycleConfig(
   next: DcaPlaybookConfig,
   current: DcaPlaybookConfig,
