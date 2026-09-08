@@ -70,62 +70,91 @@ export function dcaIndicatorUsesPeriod(kind: DcaIndicatorKind): boolean {
   return kind === "ema" || kind === "sma";
 }
 
+export function dcaIndicatorHasLevel(
+  level: string | number | null | undefined,
+): boolean {
+  if (level == null || level === "") {
+    return false;
+  }
+  const n = typeof level === "number" ? level : Number(String(level).replace(/,/g, ""));
+  return Number.isFinite(n) && n > 0;
+}
+
+export function dcaIndicatorIsLegacyEmaPrice(
+  kind: DcaIndicatorKind,
+  compare: string | null | undefined,
+  level?: string | number | null,
+): boolean {
+  if (kind !== "ema_cross") {
+    return false;
+  }
+  if (compare === "legacy") {
+    return true;
+  }
+  return (
+    (compare === "cross_gte" || compare === "cross_lte") &&
+    dcaIndicatorHasLevel(level)
+  );
+}
+
 export function dcaIndicatorShowsLevel(
   kind: DcaIndicatorKind,
   compare: string | null | undefined,
+  level?: string | number | null,
 ): boolean {
   if (kind === "rsi") {
     return true;
   }
-  return (
-    kind === "ema_cross" &&
-    compare != null &&
-    compare !== "" &&
-    compare !== "pair"
-  );
+  return dcaIndicatorIsLegacyEmaPrice(kind, compare, level);
 }
 
 export function dcaIndicatorWhenOptions(
   kind: DcaIndicatorKind,
-  side: "long" | "short",
+  _side: "long" | "short",
   includeLegacyEmaPrice: boolean,
 ): { value: string; label: string }[] {
-  if (kind === "rsi" && side === "long") {
+  if (kind === "rsi") {
     return [
       { value: "cross_lte", label: "Crosses below" },
       { value: "lte", label: "At or below" },
-    ];
-  }
-  if (kind === "rsi") {
-    return [
       { value: "cross_gte", label: "Crosses above" },
       { value: "gte", label: "At or above" },
     ];
   }
   if (kind === "macd") {
-    return side === "long"
-      ? [
-          { value: "cross_gte", label: "Histogram crosses above zero" },
-          { value: "gte", label: "Histogram is positive" },
-        ]
-      : [
-          { value: "cross_gte", label: "Histogram crosses below zero" },
-          { value: "gte", label: "Histogram is negative" },
-        ];
+    return [
+      { value: "cross_gte", label: "Histogram crosses above zero" },
+      { value: "cross_lte", label: "Histogram crosses below zero" },
+      { value: "gte", label: "Histogram is positive" },
+      { value: "lte", label: "Histogram is negative" },
+    ];
   }
   if (kind === "ema" || kind === "sma") {
-    return side === "long"
-      ? [{ value: "cross_gte", label: "Price crosses up through" }]
-      : [{ value: "cross_lte", label: "Price crosses down through" }];
+    return [
+      { value: "cross_gte", label: "Price crosses up through" },
+      { value: "cross_lte", label: "Price crosses down through" },
+    ];
   }
-  const pair = {
-    value: "pair",
-    label: side === "long" ? "9 crosses above 21" : "9 crosses below 21",
-  };
-  if (!includeLegacyEmaPrice) {
-    return [pair];
+  const options = [
+    { value: "cross_gte", label: "9 crosses above 21" },
+    { value: "cross_lte", label: "9 crosses below 21" },
+  ];
+  if (includeLegacyEmaPrice) {
+    options.push({ value: "legacy", label: "EMA 21 crosses" });
   }
-  return [pair, { value: "cross_gte", label: "EMA 21 crosses" }];
+  return options;
+}
+
+export function dcaIndicatorWhenValue(
+  kind: DcaIndicatorKind,
+  side: "long" | "short",
+  compare: string | null | undefined,
+  level?: string | number | null,
+): string {
+  if (dcaIndicatorIsLegacyEmaPrice(kind, compare, level)) {
+    return "legacy";
+  }
+  return indicatorCompareForDirection(side, kind, compare ?? "");
 }
 
 export function formatDcaIndicatorStartLabel(input: {
@@ -141,33 +170,39 @@ export function formatDcaIndicatorStartLabel(input: {
     : "";
   if (input.kind === "macd") {
     const when =
-      input.compare === "gte"
-        ? input.side === "short"
-          ? "histogram is negative"
-          : "histogram is positive"
-        : input.side === "short"
-          ? "histogram crosses below zero"
-          : "histogram crosses above zero";
+      input.compare === "lte"
+        ? "histogram is negative"
+        : input.compare === "gte"
+          ? "histogram is positive"
+          : input.compare === "cross_lte"
+            ? "histogram crosses below zero"
+            : "histogram crosses above zero";
     return `MACD ${when}${timeframe}`;
   }
   if (input.kind === "ema" || input.kind === "sma") {
     const name = input.kind === "sma" ? "SMA" : "EMA";
     const period = input.period ?? DEFAULT_DCA_MA_PERIOD;
     const when =
-      input.compare === "cross_lte" ||
-      (input.compare !== "cross_gte" && input.side === "short")
+      input.compare === "cross_lte"
         ? "Price crosses down through"
         : "Price crosses up through";
     return `${when} ${name} ${period}${timeframe}`;
   }
   if (input.kind === "ema_cross") {
-    if (input.compare === "pair" || input.compare == null || input.compare === "") {
-      const when =
-        input.side === "short" ? "9 crosses below 21" : "9 crosses above 21";
-      return `EMA ${when}${timeframe}`;
+    if (dcaIndicatorIsLegacyEmaPrice(input.kind, input.compare, input.level)) {
+      const level = input.level != null ? ` ${input.level}` : "";
+      return `EMA 21 crosses${level}${timeframe}`;
     }
-    const level = input.level != null ? ` ${input.level}` : "";
-    return `EMA 21 crosses${level}${timeframe}`;
+    if (
+      input.compare === "cross_lte" ||
+      ((input.compare === "pair" ||
+        input.compare == null ||
+        input.compare === "") &&
+        input.side === "short")
+    ) {
+      return `EMA 9 crosses below 21${timeframe}`;
+    }
+    return `EMA 9 crosses above 21${timeframe}`;
   }
   if (input.kind === "rsi") {
     const when =
@@ -261,51 +296,75 @@ export function oppositeRsiLevel(level: number | null | undefined): number {
   return flipped;
 }
 
+export function oppositeIndicatorCompare(
+  kind: DcaIndicatorKind,
+  compare: string | null | undefined,
+): string {
+  if (kind === "rsi") {
+    return oppositeRsiCompare(compare ?? "cross_lte");
+  }
+  if (kind === "macd") {
+    if (compare === "gte") {
+      return "lte";
+    }
+    if (compare === "lte") {
+      return "gte";
+    }
+    if (compare === "cross_lte") {
+      return "cross_gte";
+    }
+    return "cross_lte";
+  }
+  return compare === "cross_lte" ? "cross_gte" : "cross_lte";
+}
+
 export function indicatorCompareForDirection(
   direction: "long" | "short",
   kind: DcaIndicatorKind,
   compare: string,
 ): string {
   if (kind === "macd") {
-    return compare === "gte" ? "gte" : "cross_gte";
+    if (
+      compare === "gte" ||
+      compare === "lte" ||
+      compare === "cross_gte" ||
+      compare === "cross_lte"
+    ) {
+      return compare;
+    }
+    return direction === "short" ? "cross_lte" : "cross_gte";
   }
   if (kind === "ema" || kind === "sma") {
+    if (compare === "cross_gte" || compare === "cross_lte") {
+      return compare;
+    }
     return direction === "short" ? "cross_lte" : "cross_gte";
   }
   if (kind === "ema_cross") {
-    return compare === "pair" || compare === "" ? "pair" : "cross_gte";
+    if (compare === "legacy") {
+      return "legacy";
+    }
+    if (compare === "cross_gte" || compare === "cross_lte") {
+      return compare;
+    }
+    return direction === "short" ? "cross_lte" : "cross_gte";
   }
-  const isCross = compare.startsWith("cross") || compare === "";
-  if (direction === "short") {
-    return isCross ? "cross_gte" : "gte";
+  if (
+    compare === "gte" ||
+    compare === "lte" ||
+    compare === "cross_gte" ||
+    compare === "cross_lte"
+  ) {
+    return compare;
   }
-  return isCross ? "cross_lte" : "lte";
+  return direction === "short" ? "cross_gte" : "cross_lte";
 }
 
 export function indicatorBothSidesHint(
-  kind: DcaIndicatorKind,
-  compare: string,
+  _kind: DcaIndicatorKind,
+  _compare: string,
 ): string {
-  if (kind === "macd") {
-    if (compare === "gte") {
-      return "Triggers Long while the histogram is positive. Triggers Short while it is negative.";
-    }
-    return "Triggers Long when the histogram crosses above zero. Triggers Short when it crosses below zero.";
-  }
-  if (kind === "ema" || kind === "sma") {
-    const name = kind === "sma" ? "SMA" : "EMA";
-    return `Triggers Long when price crosses up through the ${name}. Triggers Short when price crosses down through the ${name}.`;
-  }
-  if (kind === "ema_cross") {
-    if (compare === "pair" || compare === "") {
-      return "Triggers Long when EMA 9 crosses above EMA 21. Triggers Short when EMA 9 crosses below EMA 21.";
-    }
-    return "Triggers Long when EMA 21 crosses above the price level. Triggers Short when EMA 21 crosses below the price level.";
-  }
-  if (compare === "lte" || compare === "gte") {
-    return "Triggers Long while RSI is at or below the level. Triggers Short while RSI is at or above the level.";
-  }
-  return "Triggers Long when RSI crosses below the level. Triggers Short when RSI crosses above the level.";
+  return "Each side uses the When you set on that card.";
 }
 
 export function crossedLevel(
@@ -490,13 +549,14 @@ export function indicatorStartMet(input: {
       input.kind === "sma"
         ? smaValues(input.closes, period)
         : emaValues(input.closes, period);
-    const direction = split
-      ? input.side === "long"
-        ? "up"
-        : "down"
-      : input.compare === "cross_lte"
-        ? "down"
-        : "up";
+    const direction =
+      split && input.compare == null
+        ? input.side === "long"
+          ? "up"
+          : "down"
+        : input.compare === "cross_lte"
+          ? "down"
+          : "up";
     return priceCrossedAverage(input.closes, averages, direction);
   }
   if (input.kind === "rsi") {
@@ -535,35 +595,55 @@ export function indicatorStartMet(input: {
       if (!pair) {
         return false;
       }
-      return input.side === "long"
-        ? crossedLevel(pair.prev, pair.now, 0, "up")
-        : crossedLevel(pair.prev, pair.now, 0, "down");
+      const direction = split
+        ? input.side === "long"
+          ? "up"
+          : "down"
+        : input.compare === "cross_lte"
+          ? "down"
+          : "up";
+      return crossedLevel(pair.prev, pair.now, 0, direction);
     }
     const hist = macdHistogram(input.closes);
     if (hist === null) {
       return false;
     }
-    return input.side === "long" ? hist > 0 : hist < 0;
-  }
-  if (cross) {
-    if (input.level === null) {
-      return false;
+    if (split) {
+      return input.side === "long" ? hist > 0 : hist < 0;
     }
-    const pair = lastTwoEma(input.closes, 21);
-    if (!pair) {
-      return false;
+    return input.compare === "lte" ? hist < 0 : hist > 0;
+  }
+  if (input.kind === "ema_cross") {
+    if (input.level != null && cross) {
+      const pair = lastTwoEma(input.closes, 21);
+      if (!pair) {
+        return false;
+      }
+      return crossedLevel(
+        pair.prev,
+        pair.now,
+        input.level,
+        input.compare === "cross_lte"
+          ? "down"
+          : input.compare === "cross_gte"
+            ? "up"
+            : input.side === "long"
+              ? "up"
+              : "down",
+      );
     }
-    return crossedLevel(
-      pair.prev,
-      pair.now,
-      input.level,
-      input.side === "long" ? "up" : "down",
-    );
+    if (input.compare === "cross_gte") {
+      return emaCrossBullish(input.closes) === true;
+    }
+    if (input.compare === "cross_lte") {
+      return emaCrossBearish(input.closes);
+    }
+    if (input.side === "long") {
+      return emaCrossBullish(input.closes) === true;
+    }
+    return emaCrossBearish(input.closes);
   }
-  if (input.side === "long") {
-    return emaCrossBullish(input.closes) === true;
-  }
-  return emaCrossBearish(input.closes);
+  return false;
 }
 
 function emaCrossBearish(closes: number[]): boolean {

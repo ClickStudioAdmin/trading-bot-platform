@@ -2118,6 +2118,21 @@ if (macdCrossParsed.ok) {
   assert.equal(macdCrossParsed.config.indicatorLevel, null);
 }
 
+const macdBelowForm = new FormData();
+macdBelowForm.set("symbol", "BTCUSDT");
+macdBelowForm.set("side", "long");
+macdBelowForm.set("clipSize", "0.01");
+macdBelowForm.set("sizeUnit", "qty");
+macdBelowForm.set("startKind", "indicator");
+macdBelowForm.set("indicatorKind", "macd");
+macdBelowForm.set("indicatorTimeframe", "60");
+macdBelowForm.set("indicatorCompare", "cross_lte");
+const macdBelowParsed = parseDcaPlaybookForm(macdBelowForm);
+assert.equal(macdBelowParsed.ok, true);
+if (macdBelowParsed.ok) {
+  assert.equal(macdBelowParsed.config.indicatorCompare, "cross_lte");
+}
+
 const emaLevelForm = new FormData();
 emaLevelForm.set("symbol", "BTCUSDT");
 emaLevelForm.set("side", "long");
@@ -2153,6 +2168,23 @@ if (emaPriceParsed.ok) {
   assert.equal(emaPriceParsed.config.indicatorCompare, "cross_gte");
   assert.equal(emaPriceParsed.config.indicatorPeriod, 21);
   assert.equal(emaPriceParsed.config.indicatorLevel, null);
+}
+
+const emaPairDirForm = new FormData();
+emaPairDirForm.set("symbol", "BTCUSDT");
+emaPairDirForm.set("side", "short");
+emaPairDirForm.set("clipSize", "0.01");
+emaPairDirForm.set("sizeUnit", "qty");
+emaPairDirForm.set("startKind", "indicator");
+emaPairDirForm.set("indicatorKind", "ema_cross");
+emaPairDirForm.set("indicatorTimeframe", "15");
+emaPairDirForm.set("indicatorCompare", "cross_gte");
+const emaPairDirParsed = parseDcaPlaybookForm(emaPairDirForm);
+assert.equal(emaPairDirParsed.ok, true);
+if (emaPairDirParsed.ok) {
+  assert.equal(emaPairDirParsed.config.indicatorKind, "ema_cross");
+  assert.equal(emaPairDirParsed.config.indicatorCompare, "cross_gte");
+  assert.equal(emaPairDirParsed.config.indicatorLevel, null);
 }
 
 const smaShortForm = new FormData();

@@ -1303,7 +1303,7 @@ function parseIndicatorStartFields(
       start: {
         kind,
         timeframe,
-        compare: cmp === "cross_gte" || cmp === "cross_lte" ? "cross_gte" : "gte",
+        compare: cmp,
         level: null,
         period: null,
       },
@@ -1329,17 +1329,36 @@ function parseIndicatorStartFields(
       start: { kind, timeframe, compare: null, level: null, period: null },
     };
   }
+  if (compareRaw === "legacy") {
+    const level = parseOptionalPositive(form.get(names.level));
+    if (!level.ok || level.value === null) {
+      return { ok: false, error: `Enter an ${prefix}EMA price level.` };
+    }
+    return {
+      ok: true,
+      start: {
+        kind,
+        timeframe,
+        compare: "cross_gte",
+        level: level.value,
+        period: null,
+      },
+    };
+  }
   const cmp = parseDcaIndicatorCompare(compareRaw);
   if (cmp !== "cross_gte" && cmp !== "cross_lte") {
     return { ok: false, error: `Choose when ${prefix}EMA should fire.` };
   }
   const level = parseOptionalPositive(form.get(names.level));
-  if (!level.ok || level.value === null) {
-    return { ok: false, error: `Enter an ${prefix}EMA price level.` };
+  if (level.ok && level.value != null) {
+    return {
+      ok: true,
+      start: { kind, timeframe, compare: cmp, level: level.value, period: null },
+    };
   }
   return {
     ok: true,
-    start: { kind, timeframe, compare: cmp, level: level.value, period: null },
+    start: { kind, timeframe, compare: cmp, level: null, period: null },
   };
 }
 

@@ -67,7 +67,9 @@ import {
   dcaIndicatorShowsLevel,
   dcaIndicatorUsesPeriod,
   dcaIndicatorWhenOptions,
+  dcaIndicatorWhenValue,
   indicatorCompareForDirection,
+  oppositeIndicatorCompare,
   oppositeRsiCompare,
   oppositeRsiLevel,
   type DcaIndicatorKind,
@@ -125,21 +127,15 @@ function initialIndicatorCompare(
     return stored ?? (side === "short" ? "cross_gte" : "cross_lte");
   }
   if (kind === "macd") {
-    if (stored === "cross_gte" || stored === "cross_lte") {
-      return "cross_gte";
-    }
-    if (stored === "gte") {
-      return "gte";
-    }
-    return "cross_gte";
+    return indicatorCompareForDirection(side, kind, stored ?? "");
   }
-  if (kind === "ema" || kind === "sma") {
+  if (kind === "ema" || kind === "sma" || kind === "ema_cross") {
     return indicatorCompareForDirection(side, kind, stored ?? "");
   }
   if (stored === "cross_gte" || stored === "cross_lte") {
     return stored;
   }
-  return "pair";
+  return indicatorCompareForDirection(side, kind, stored ?? "");
 }
 
 function seedOppositeRsiLevel(level: string): string {
@@ -1270,13 +1266,10 @@ export function DcaPlaybookForm({
                     setShortIndicatorKind(indicatorKind);
                     setShortIndicatorTimeframe(indicatorTimeframe);
                     setShortIndicatorCompare(
-                      indicatorKind === "rsi"
-                        ? oppositeRsiCompare(indicatorCompare)
-                        : indicatorCompareForDirection(
-                            "short",
-                            indicatorKind,
-                            indicatorCompare,
-                          ),
+                      oppositeIndicatorCompare(
+                        indicatorKind,
+                        indicatorCompare,
+                      ),
                     );
                     setShortIndicatorLevel(
                       indicatorKind === "rsi"
@@ -1291,10 +1284,6 @@ export function DcaPlaybookForm({
                   setIndicatorCompare(shortIndicatorCompare);
                   setIndicatorLevel(shortIndicatorLevel);
                   setIndicatorPeriod(shortIndicatorPeriod);
-                } else if (next === "long" || next === "short") {
-                  setIndicatorCompare((current) =>
-                    indicatorCompareForDirection(next, indicatorKind, current),
-                  );
                 }
                 setDirection(next);
               }}
@@ -2317,7 +2306,7 @@ function IndicatorStartFields({
   onLevelChange: (next: string) => void;
   onPeriodChange: (next: string) => void;
 }) {
-  const includeLegacyEmaPrice = dcaIndicatorShowsLevel(kind, compare);
+  const includeLegacyEmaPrice = dcaIndicatorShowsLevel(kind, compare, level);
   const whenOptions = dcaIndicatorWhenOptions(
     kind,
     side,
@@ -2368,8 +2357,14 @@ function IndicatorStartFields({
         When
         <select
           name={`${prefix}Compare`}
-          value={indicatorCompareForDirection(side, kind, compare)}
-          onChange={(event) => onCompareChange(event.target.value)}
+          value={dcaIndicatorWhenValue(kind, side, compare, level)}
+          onChange={(event) => {
+            const next = event.target.value;
+            onCompareChange(next);
+            if (kind === "ema_cross" && next !== "legacy") {
+              onLevelChange("");
+            }
+          }}
           className={fieldClass}
         >
           {whenOptions.map((option) => (
@@ -2390,7 +2385,7 @@ function IndicatorStartFields({
           />
         </label>
       ) : null}
-      {dcaIndicatorShowsLevel(kind, compare) ? (
+      {dcaIndicatorShowsLevel(kind, compare, level) ? (
         <label className={labelClass}>
           {kind === "ema_cross" ? "Level (price)" : "Level"}
           <GroupedNumberInput
@@ -2404,45 +2399,52 @@ function IndicatorStartFields({
       ) : null}
       {kind === "macd" ? (
         <p className="self-end text-xs text-ink-muted sm:col-span-2">
-          {side === "long"
-            ? compare === "gte"
-              ? "Triggers Long while the histogram is positive."
-              : "Triggers Long when the histogram crosses above zero."
+          {side === "short" ? "Triggers Short" : "Triggers Long"}
+          {compare === "lte"
+            ? " while the histogram is negative."
             : compare === "gte"
-              ? "Triggers Short while the histogram is negative."
-              : "Triggers Short when the histogram crosses below zero."}
+              ? " while the histogram is positive."
+              : compare === "cross_lte"
+                ? " when the histogram crosses below zero."
+                : " when the histogram crosses above zero."}
         </p>
       ) : null}
       {kind === "ema" || kind === "sma" ? (
         <p className="self-end text-xs text-ink-muted sm:col-span-2">
-          {side === "long"
-            ? `Triggers Long when price crosses up through the ${kind === "sma" ? "SMA" : "EMA"}.`
-            : `Triggers Short when price crosses down through the ${kind === "sma" ? "SMA" : "EMA"}.`}
+          {side === "short" ? "Triggers Short" : "Triggers Long"}
+          {compare === "cross_lte"
+            ? ` when price crosses down through the ${kind === "sma" ? "SMA" : "EMA"}.`
+            : ` when price crosses up through the ${kind === "sma" ? "SMA" : "EMA"}.`}
         </p>
       ) : null}
-      {kind === "ema_cross" && compare === "pair" ? (
+      {kind === "ema_cross" &&
+      !dcaIndicatorShowsLevel(kind, compare, level) ? (
         <p className="self-end text-xs text-ink-muted sm:col-span-2">
-          {side === "long"
-            ? "Triggers Long when EMA 9 crosses above EMA 21."
-            : "Triggers Short when EMA 9 crosses below EMA 21."}
+          {side === "short" ? "Triggers Short" : "Triggers Long"}
+          {compare === "cross_lte"
+            ? " when EMA 9 crosses below EMA 21."
+            : " when EMA 9 crosses above EMA 21."}
         </p>
       ) : null}
-      {kind === "ema_cross" && compare !== "pair" ? (
+      {kind === "ema_cross" &&
+      dcaIndicatorShowsLevel(kind, compare, level) ? (
         <p className="text-xs text-ink-muted sm:col-span-2">
-          {side === "long"
-            ? "Triggers Long when EMA 21 crosses above the price level."
-            : "Triggers Short when EMA 21 crosses below the price level."}
+          {side === "short" ? "Triggers Short" : "Triggers Long"}
+          {compare === "cross_lte"
+            ? " when EMA 21 crosses below the price level."
+            : " when EMA 21 crosses above the price level."}
         </p>
       ) : null}
       {kind === "rsi" ? (
         <p className="text-xs text-ink-muted sm:col-span-2">
-          {side === "long"
-            ? compare.startsWith("cross")
-              ? "Triggers Long when RSI crosses below the level."
-              : "Triggers Long while RSI is at or below the level."
-            : compare.startsWith("cross")
-              ? "Triggers Short when RSI crosses above the level."
-              : "Triggers Short while RSI is at or above the level."}
+          {side === "short" ? "Triggers Short" : "Triggers Long"}
+          {compare === "gte"
+            ? " while RSI is at or above the level."
+            : compare === "lte"
+              ? " while RSI is at or below the level."
+              : compare === "cross_gte"
+                ? " when RSI crosses above the level."
+                : " when RSI crosses below the level."}
         </p>
       ) : null}
     </>

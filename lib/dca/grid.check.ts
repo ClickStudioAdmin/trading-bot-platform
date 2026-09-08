@@ -511,17 +511,18 @@ assert.equal(parseDcaIndicatorTimeframe("W"), null);
 assert.equal(parseDcaIndicatorCompare("cross_lte"), "cross_lte");
 assert.equal(
   indicatorCompareForDirection("long", "rsi", "cross_gte"),
-  "cross_lte",
+  "cross_gte",
 );
 assert.equal(
   indicatorCompareForDirection("short", "rsi", "cross_lte"),
-  "cross_gte",
+  "cross_lte",
 );
+assert.equal(indicatorCompareForDirection("long", "rsi", ""), "cross_lte");
 assert.equal(oppositeRsiCompare("cross_lte"), "cross_gte");
 assert.equal(oppositeRsiLevel(30), 70);
 assert.equal(
   indicatorBothSidesHint("rsi", "cross_lte"),
-  "Triggers Long when RSI crosses below the level. Triggers Short when RSI crosses above the level.",
+  "Each side uses the When you set on that card.",
 );
 assert.equal(parseDcaIndicatorCompare("pair"), null);
 assert.equal(crossedLevel(40, 25, 30, "down"), true);
@@ -568,7 +569,7 @@ assert.equal(
     compare: "cross_lte",
     level: 105,
   }),
-  true,
+  false,
 );
 assert.equal(
   indicatorStartMet({
@@ -653,8 +654,40 @@ assert.equal(
   true,
 );
 assert.equal(
-  dcaIndicatorWhenOptions("macd", "short", false)[0]?.label,
-  "Histogram crosses below zero",
+  indicatorStartMet({
+    kind: "rsi",
+    side: "long",
+    closes: rsiDump,
+    compare: "cross_gte",
+    level: 50,
+  }),
+  false,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "ema",
+    side: "short",
+    closes: maCloses,
+    compare: "cross_gte",
+    level: null,
+    period: 21,
+  }),
+  true,
+);
+assert.ok(
+  dcaIndicatorWhenOptions("macd", "short", false).some(
+    (row) => row.value === "cross_gte",
+  ),
+);
+assert.ok(
+  dcaIndicatorWhenOptions("macd", "short", false).some(
+    (row) => row.value === "cross_lte",
+  ),
+);
+assert.ok(
+  dcaIndicatorWhenOptions("rsi", "long", false).some(
+    (row) => row.value === "cross_gte",
+  ),
 );
 assert.equal(
   dcaIndicatorWhenOptions("ema_cross", "long", false)[0]?.label,
@@ -676,6 +709,15 @@ assert.equal(
     compare: "cross_gte",
     timeframe: "60",
     side: "short",
+  }),
+  "MACD histogram crosses above zero · 1h",
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "macd",
+    compare: "cross_lte",
+    timeframe: "60",
+    side: "long",
   }),
   "MACD histogram crosses below zero · 1h",
 );

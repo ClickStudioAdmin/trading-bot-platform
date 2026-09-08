@@ -15,7 +15,9 @@ import {
   dcaIndicatorShowsLevel,
   dcaIndicatorUsesPeriod,
   dcaIndicatorWhenOptions,
+  dcaIndicatorWhenValue,
   indicatorCompareForDirection,
+  oppositeIndicatorCompare,
   oppositeRsiCompare,
   oppositeRsiLevel,
   parseDcaIndicatorCompare,
@@ -54,22 +56,14 @@ function seedBothStarts(recipe: DcaTemplateRecipe): Partial<DcaTemplateRecipe> {
   if (recipe.startKind === "indicator" && !recipe.shortIndicatorKind) {
     next.shortIndicatorKind = kind;
     next.shortIndicatorTimeframe = recipe.indicatorTimeframe ?? "15";
-    next.shortIndicatorCompare =
-      kind === "rsi"
-        ? parseDcaIndicatorCompare(
-            oppositeRsiCompare(compare ?? "cross_lte"),
-          )
-        : compare;
+    next.shortIndicatorCompare = parseDcaIndicatorCompare(
+      oppositeIndicatorCompare(kind, compare ?? ""),
+    );
     next.shortIndicatorLevel =
       kind === "rsi" ? oppositeRsiLevel(recipe.indicatorLevel) : recipe.indicatorLevel;
     next.shortIndicatorPeriod = dcaIndicatorUsesPeriod(kind)
       ? (recipe.indicatorPeriod ?? DEFAULT_DCA_MA_PERIOD)
       : recipe.indicatorPeriod;
-    if (dcaIndicatorUsesPeriod(kind)) {
-      next.shortIndicatorCompare = parseDcaIndicatorCompare(
-        indicatorCompareForDirection("short", kind, ""),
-      );
-    }
   }
   return next;
 }
@@ -208,7 +202,7 @@ function BacktestIndicatorStartFields({
     indicatorPeriod?: number | null;
   }) => void;
 }) {
-  const includeLegacyEmaPrice = dcaIndicatorShowsLevel(kind, compare);
+  const includeLegacyEmaPrice = dcaIndicatorShowsLevel(kind, compare, level);
   const whenOptions = dcaIndicatorWhenOptions(
     kind,
     side,
@@ -272,18 +266,22 @@ function BacktestIndicatorStartFields({
       <label className={labelClass}>
         When
         <select
-          value={indicatorCompareForDirection(
-            side,
-            kind,
-            kind === "ema_cross" && compare == null ? "pair" : (compare ?? ""),
-          )}
+          value={dcaIndicatorWhenValue(kind, side, compare, level)}
           onChange={(event) => {
             const next = event.target.value;
+            if (next === "legacy") {
+              onChange({
+                indicatorKind: kind,
+                indicatorCompare: "cross_gte",
+                indicatorLevel: level ?? null,
+                indicatorPeriod: period ?? null,
+              });
+              return;
+            }
             onChange({
               indicatorKind: kind,
-              indicatorCompare:
-                next === "pair" ? null : parseDcaIndicatorCompare(next),
-              indicatorLevel: level ?? null,
+              indicatorCompare: parseDcaIndicatorCompare(next),
+              indicatorLevel: kind === "ema_cross" ? null : (level ?? null),
               indicatorPeriod: period ?? null,
             });
           }}
@@ -314,7 +312,7 @@ function BacktestIndicatorStartFields({
           />
         </label>
       ) : null}
-      {dcaIndicatorShowsLevel(kind, compare) ? (
+      {dcaIndicatorShowsLevel(kind, compare, level) ? (
         <label className={labelClass}>
           {kind === "ema_cross" ? "Level (price)" : "Level"}
           <RecipeNumberInput
@@ -409,23 +407,9 @@ export function BacktestRecipeFields({
                 });
                 return;
               }
-              const kind = recipe.indicatorKind ?? "rsi";
-              const nextCompare = indicatorCompareForDirection(
-                direction,
-                kind,
-                recipe.indicatorKind === "ema_cross" &&
-                  recipe.indicatorCompare == null
-                  ? "pair"
-                  : (recipe.indicatorCompare ?? ""),
-              );
               onChange({
                 ...recipe,
                 direction,
-                indicatorCompare:
-                  nextCompare === "pair"
-                    ? null
-                    : (parseDcaIndicatorCompare(nextCompare) ??
-                      recipe.indicatorCompare),
               });
             }}
             className={fieldClass}
