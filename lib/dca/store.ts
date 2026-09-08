@@ -50,10 +50,12 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     indicator_timeframe: config.indicatorTimeframe,
     indicator_compare: config.indicatorCompare,
     indicator_level: config.indicatorLevel,
+    indicator_period: config.indicatorPeriod,
     short_indicator_kind: config.shortIndicatorKind ?? null,
     short_indicator_timeframe: config.shortIndicatorTimeframe ?? null,
     short_indicator_compare: config.shortIndicatorCompare ?? null,
     short_indicator_level: config.shortIndicatorLevel ?? null,
+    short_indicator_period: config.shortIndicatorPeriod ?? null,
   };
 }
 

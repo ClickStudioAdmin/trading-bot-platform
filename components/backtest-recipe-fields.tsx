@@ -11,6 +11,10 @@ import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
+  DEFAULT_DCA_MA_PERIOD,
+  dcaIndicatorShowsLevel,
+  dcaIndicatorUsesPeriod,
+  dcaIndicatorWhenOptions,
   indicatorCompareForDirection,
   oppositeRsiCompare,
   oppositeRsiLevel,
@@ -58,6 +62,14 @@ function seedBothStarts(recipe: DcaTemplateRecipe): Partial<DcaTemplateRecipe> {
         : compare;
     next.shortIndicatorLevel =
       kind === "rsi" ? oppositeRsiLevel(recipe.indicatorLevel) : recipe.indicatorLevel;
+    next.shortIndicatorPeriod = dcaIndicatorUsesPeriod(kind)
+      ? (recipe.indicatorPeriod ?? DEFAULT_DCA_MA_PERIOD)
+      : recipe.indicatorPeriod;
+    if (dcaIndicatorUsesPeriod(kind)) {
+      next.shortIndicatorCompare = parseDcaIndicatorCompare(
+        indicatorCompareForDirection("short", kind, ""),
+      );
+    }
   }
   return next;
 }
@@ -179,6 +191,7 @@ function BacktestIndicatorStartFields({
   timeframe,
   compare,
   level,
+  period,
   onChange,
 }: {
   side: "long" | "short";
@@ -186,13 +199,21 @@ function BacktestIndicatorStartFields({
   timeframe: DcaIndicatorTimeframe;
   compare: DcaTemplateRecipe["indicatorCompare"];
   level: number | null | undefined;
+  period: number | null | undefined;
   onChange: (patch: {
     indicatorKind: DcaIndicatorKind;
     indicatorTimeframe?: DcaIndicatorTimeframe;
     indicatorCompare: DcaTemplateRecipe["indicatorCompare"];
     indicatorLevel?: number | null;
+    indicatorPeriod?: number | null;
   }) => void;
 }) {
+  const includeLegacyEmaPrice = dcaIndicatorShowsLevel(kind, compare);
+  const whenOptions = dcaIndicatorWhenOptions(
+    kind,
+    side,
+    includeLegacyEmaPrice,
+  );
   return (
     <>
       <label className={labelClass}>
@@ -212,6 +233,9 @@ function BacktestIndicatorStartFields({
                 nextCompare === "pair"
                   ? null
                   : parseDcaIndicatorCompare(nextCompare),
+              indicatorPeriod: dcaIndicatorUsesPeriod(indicatorKind)
+                ? (period ?? DEFAULT_DCA_MA_PERIOD)
+                : null,
             });
           }}
           className={fieldClass}
@@ -219,6 +243,8 @@ function BacktestIndicatorStartFields({
           <option value="rsi">RSI 14</option>
           <option value="macd">MACD</option>
           <option value="ema_cross">EMA 9/21</option>
+          <option value="ema">EMA</option>
+          <option value="sma">SMA</option>
         </select>
       </label>
       <label className={labelClass}>
@@ -231,6 +257,7 @@ function BacktestIndicatorStartFields({
               indicatorTimeframe: event.target.value as DcaIndicatorTimeframe,
               indicatorCompare: compare ?? null,
               indicatorLevel: level ?? null,
+              indicatorPeriod: period ?? null,
             })
           }
           className={fieldClass}
@@ -257,37 +284,37 @@ function BacktestIndicatorStartFields({
               indicatorCompare:
                 next === "pair" ? null : parseDcaIndicatorCompare(next),
               indicatorLevel: level ?? null,
+              indicatorPeriod: period ?? null,
             });
           }}
           className={fieldClass}
         >
-          {kind === "rsi" && side === "long" ? (
-            <>
-              <option value="cross_lte">Crosses below</option>
-              <option value="lte">At or below</option>
-            </>
-          ) : null}
-          {kind === "rsi" && side === "short" ? (
-            <>
-              <option value="cross_gte">Crosses above</option>
-              <option value="gte">At or above</option>
-            </>
-          ) : null}
-          {kind === "macd" ? (
-            <>
-              <option value="cross_gte">Crosses zero</option>
-              <option value="gte">Histogram sign</option>
-            </>
-          ) : null}
-          {kind === "ema_cross" ? (
-            <>
-              <option value="pair">EMA 9/21 cross</option>
-              <option value="cross_gte">EMA 21 crosses</option>
-            </>
-          ) : null}
+          {whenOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </label>
-      {kind === "rsi" || (kind === "ema_cross" && compare != null) ? (
+      {dcaIndicatorUsesPeriod(kind) ? (
+        <label className={labelClass}>
+          Period
+          <RecipeNumberInput
+            value={period}
+            emptyValue={DEFAULT_DCA_MA_PERIOD}
+            allowDecimal={false}
+            className={fieldClass}
+            onCommit={(next) =>
+              onChange({
+                indicatorKind: kind,
+                indicatorCompare: compare ?? null,
+                indicatorPeriod: next ?? DEFAULT_DCA_MA_PERIOD,
+              })
+            }
+          />
+        </label>
+      ) : null}
+      {dcaIndicatorShowsLevel(kind, compare) ? (
         <label className={labelClass}>
           {kind === "ema_cross" ? "Level (price)" : "Level"}
           <RecipeNumberInput
@@ -299,6 +326,7 @@ function BacktestIndicatorStartFields({
                 indicatorKind: kind,
                 indicatorCompare: compare ?? null,
                 indicatorLevel: next,
+                indicatorPeriod: period ?? null,
               })
             }
           />
@@ -542,6 +570,7 @@ export function BacktestRecipeFields({
               timeframe={recipe.indicatorTimeframe ?? "15"}
               compare={recipe.indicatorCompare}
               level={recipe.indicatorLevel}
+              period={recipe.indicatorPeriod}
               onChange={(patch) => onChange({ ...recipe, ...patch })}
             />
             <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
@@ -571,6 +600,9 @@ export function BacktestRecipeFields({
                   ? oppositeRsiLevel(recipe.indicatorLevel)
                   : recipe.indicatorLevel)
               }
+              period={
+                recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod
+              }
               onChange={(patch) =>
                 onChange({
                   ...recipe,
@@ -578,6 +610,7 @@ export function BacktestRecipeFields({
                   shortIndicatorTimeframe: patch.indicatorTimeframe,
                   shortIndicatorCompare: patch.indicatorCompare,
                   shortIndicatorLevel: patch.indicatorLevel,
+                  shortIndicatorPeriod: patch.indicatorPeriod,
                 })
               }
             />
@@ -590,6 +623,7 @@ export function BacktestRecipeFields({
             timeframe={recipe.indicatorTimeframe ?? "15"}
             compare={recipe.indicatorCompare}
             level={recipe.indicatorLevel}
+            period={recipe.indicatorPeriod}
             onChange={(patch) => onChange({ ...recipe, ...patch })}
           />
         ) : null}

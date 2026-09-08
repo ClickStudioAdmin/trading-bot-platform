@@ -498,6 +498,7 @@ export function replayDcaPlaybook(input: {
         indicatorKind: indicatorStart?.kind ?? null,
         indicatorCompare: indicatorStart?.compare ?? null,
         indicatorLevel: indicatorStart?.level ?? null,
+        indicatorPeriod: indicatorStart?.period ?? null,
         indicatorConditionTrue: live.indicatorTrue,
         splitIndicatorSides:
           splitSides &&

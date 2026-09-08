@@ -1,6 +1,6 @@
 import { deskPath } from "@/lib/accounts/model";
 import type { BacktestRecipe } from "@/lib/backtest/model";
-import { DCA_INDICATOR_TIMEFRAME_LABELS } from "@/lib/dca/indicators";
+import { formatDcaIndicatorStartLabel } from "@/lib/dca/indicators";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
 import {
@@ -389,33 +389,18 @@ function dcaIndicatorSideLabel(input: {
   kind: DcaTemplateRecipe["indicatorKind"];
   compare: DcaTemplateRecipe["indicatorCompare"];
   level: number | null | undefined;
+  period?: number | null;
   timeframe: DcaTemplateRecipe["indicatorTimeframe"];
+  side: "long" | "short";
 }): string {
-  const kind =
-    input.kind === "ema_cross"
-      ? "EMA"
-      : input.kind === "macd"
-        ? "MACD"
-        : input.kind === "rsi"
-          ? "RSI"
-          : "Indicator";
-  const when =
-    input.compare === "cross_lte"
-      ? "crosses below"
-      : input.compare === "cross_gte"
-        ? "crosses above"
-        : input.compare === "lte"
-          ? "at or below"
-          : input.compare === "gte"
-            ? "at or above"
-            : input.compare === "pair"
-              ? "9/21 cross"
-              : (input.compare ?? "");
-  const level = input.level != null ? ` ${input.level}` : "";
-  const timeframe = input.timeframe
-    ? ` · ${DCA_INDICATOR_TIMEFRAME_LABELS[input.timeframe] ?? input.timeframe}`
-    : "";
-  return `${kind} ${when}${level}${timeframe}`.trim();
+  return formatDcaIndicatorStartLabel({
+    kind: input.kind,
+    compare: input.compare,
+    level: input.level,
+    period: input.period,
+    timeframe: input.timeframe,
+    side: input.side,
+  });
 }
 
 function dcaStartLabel(recipe: DcaTemplateRecipe): string {
@@ -437,14 +422,18 @@ function dcaStartLabel(recipe: DcaTemplateRecipe): string {
       kind: recipe.indicatorKind,
       compare: recipe.indicatorCompare,
       level: recipe.indicatorLevel,
+      period: recipe.indicatorPeriod,
       timeframe: recipe.indicatorTimeframe,
+      side: recipe.direction === "short" ? "short" : "long",
     });
     if (recipe.direction === "both" && recipe.shortIndicatorKind) {
       return `${long} / ${dcaIndicatorSideLabel({
         kind: recipe.shortIndicatorKind,
         compare: recipe.shortIndicatorCompare ?? null,
         level: recipe.shortIndicatorLevel,
+        period: recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod,
         timeframe: recipe.shortIndicatorTimeframe ?? null,
+        side: "short",
       })}`;
     }
     return long;

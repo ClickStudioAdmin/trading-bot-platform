@@ -1,7 +1,10 @@
 import type { FuturesSide } from "@/lib/futures/model";
 
-export type DcaIndicatorKind = "rsi" | "macd" | "ema_cross";
+export type DcaIndicatorKind = "rsi" | "macd" | "ema_cross" | "ema" | "sma";
 export type DcaIndicatorCompare = "gte" | "lte" | "cross_gte" | "cross_lte";
+export const DEFAULT_DCA_MA_PERIOD = 21;
+export const DCA_INDICATOR_PERIOD_MIN = 2;
+export const DCA_INDICATOR_PERIOD_MAX = 400;
 export const DCA_INDICATOR_TIMEFRAMES = [
   "5",
   "15",
@@ -46,6 +49,141 @@ export function parseDcaIndicatorCompare(
     return raw;
   }
   return null;
+}
+
+export function parseDcaIndicatorPeriod(value: unknown): number | null {
+  if (value == null || String(value).trim() === "") {
+    return null;
+  }
+  const period = Math.trunc(Number(value));
+  if (
+    !Number.isFinite(period) ||
+    period < DCA_INDICATOR_PERIOD_MIN ||
+    period > DCA_INDICATOR_PERIOD_MAX
+  ) {
+    return null;
+  }
+  return period;
+}
+
+export function dcaIndicatorUsesPeriod(kind: DcaIndicatorKind): boolean {
+  return kind === "ema" || kind === "sma";
+}
+
+export function dcaIndicatorShowsLevel(
+  kind: DcaIndicatorKind,
+  compare: string | null | undefined,
+): boolean {
+  if (kind === "rsi") {
+    return true;
+  }
+  return (
+    kind === "ema_cross" &&
+    compare != null &&
+    compare !== "" &&
+    compare !== "pair"
+  );
+}
+
+export function dcaIndicatorWhenOptions(
+  kind: DcaIndicatorKind,
+  side: "long" | "short",
+  includeLegacyEmaPrice: boolean,
+): { value: string; label: string }[] {
+  if (kind === "rsi" && side === "long") {
+    return [
+      { value: "cross_lte", label: "Crosses below" },
+      { value: "lte", label: "At or below" },
+    ];
+  }
+  if (kind === "rsi") {
+    return [
+      { value: "cross_gte", label: "Crosses above" },
+      { value: "gte", label: "At or above" },
+    ];
+  }
+  if (kind === "macd") {
+    return side === "long"
+      ? [
+          { value: "cross_gte", label: "Histogram crosses above zero" },
+          { value: "gte", label: "Histogram is positive" },
+        ]
+      : [
+          { value: "cross_gte", label: "Histogram crosses below zero" },
+          { value: "gte", label: "Histogram is negative" },
+        ];
+  }
+  if (kind === "ema" || kind === "sma") {
+    return side === "long"
+      ? [{ value: "cross_gte", label: "Price crosses up through" }]
+      : [{ value: "cross_lte", label: "Price crosses down through" }];
+  }
+  const pair = {
+    value: "pair",
+    label: side === "long" ? "9 crosses above 21" : "9 crosses below 21",
+  };
+  if (!includeLegacyEmaPrice) {
+    return [pair];
+  }
+  return [pair, { value: "cross_gte", label: "EMA 21 crosses" }];
+}
+
+export function formatDcaIndicatorStartLabel(input: {
+  kind: DcaIndicatorKind | null | undefined;
+  compare: string | null | undefined;
+  level?: number | null;
+  period?: number | null;
+  timeframe?: DcaIndicatorTimeframe | null;
+  side: "long" | "short";
+}): string {
+  const timeframe = input.timeframe
+    ? ` · ${DCA_INDICATOR_TIMEFRAME_LABELS[input.timeframe] ?? input.timeframe}`
+    : "";
+  if (input.kind === "macd") {
+    const when =
+      input.compare === "gte"
+        ? input.side === "short"
+          ? "histogram is negative"
+          : "histogram is positive"
+        : input.side === "short"
+          ? "histogram crosses below zero"
+          : "histogram crosses above zero";
+    return `MACD ${when}${timeframe}`;
+  }
+  if (input.kind === "ema" || input.kind === "sma") {
+    const name = input.kind === "sma" ? "SMA" : "EMA";
+    const period = input.period ?? DEFAULT_DCA_MA_PERIOD;
+    const when =
+      input.compare === "cross_lte" ||
+      (input.compare !== "cross_gte" && input.side === "short")
+        ? "Price crosses down through"
+        : "Price crosses up through";
+    return `${when} ${name} ${period}${timeframe}`;
+  }
+  if (input.kind === "ema_cross") {
+    if (input.compare === "pair" || input.compare == null || input.compare === "") {
+      const when =
+        input.side === "short" ? "9 crosses below 21" : "9 crosses above 21";
+      return `EMA ${when}${timeframe}`;
+    }
+    const level = input.level != null ? ` ${input.level}` : "";
+    return `EMA 21 crosses${level}${timeframe}`;
+  }
+  if (input.kind === "rsi") {
+    const when =
+      input.compare === "cross_lte"
+        ? "crosses below"
+        : input.compare === "cross_gte"
+          ? "crosses above"
+          : input.compare === "lte"
+            ? "at or below"
+            : input.compare === "gte"
+              ? "at or above"
+              : (input.compare ?? "");
+    const level = input.level != null ? ` ${input.level}` : "";
+    return `RSI ${when}${level}${timeframe}`.trim();
+  }
+  return `Indicator${timeframe}`.trim();
 }
 
 const DCA_INDICATOR_TIMEFRAME_MINUTES: Record<DcaIndicatorTimeframe, number> = {
@@ -131,6 +269,9 @@ export function indicatorCompareForDirection(
   if (kind === "macd") {
     return compare === "gte" ? "gte" : "cross_gte";
   }
+  if (kind === "ema" || kind === "sma") {
+    return direction === "short" ? "cross_lte" : "cross_gte";
+  }
   if (kind === "ema_cross") {
     return compare === "pair" || compare === "" ? "pair" : "cross_gte";
   }
@@ -151,8 +292,12 @@ export function indicatorBothSidesHint(
     }
     return "Triggers Long when the histogram crosses above zero. Triggers Short when it crosses below zero.";
   }
+  if (kind === "ema" || kind === "sma") {
+    const name = kind === "sma" ? "SMA" : "EMA";
+    return `Triggers Long when price crosses up through the ${name}. Triggers Short when price crosses down through the ${name}.`;
+  }
   if (kind === "ema_cross") {
-    if (compare === "pair") {
+    if (compare === "pair" || compare === "") {
       return "Triggers Long when EMA 9 crosses above EMA 21. Triggers Short when EMA 9 crosses below EMA 21.";
     }
     return "Triggers Long when EMA 21 crosses above the price level. Triggers Short when EMA 21 crosses below the price level.";
@@ -189,6 +334,42 @@ export function emaValues(closes: number[], period: number): number[] {
     out.push(ema);
   }
   return out;
+}
+
+export function smaValues(closes: number[], period: number): number[] {
+  if (period < 1 || closes.length < period) {
+    return [];
+  }
+  const out: number[] = [];
+  let sum = 0;
+  for (let i = 0; i < closes.length; i += 1) {
+    sum += closes[i] ?? 0;
+    if (i >= period) {
+      sum -= closes[i - period] ?? 0;
+    }
+    if (i >= period - 1) {
+      out.push(sum / period);
+    }
+  }
+  return out;
+}
+
+export function priceCrossedAverage(
+  closes: number[],
+  averages: number[],
+  direction: "up" | "down",
+): boolean {
+  if (closes.length < 2 || averages.length < 2) {
+    return false;
+  }
+  const closePrev = closes[closes.length - 2] ?? 0;
+  const closeNow = closes[closes.length - 1] ?? 0;
+  const avgPrev = averages[averages.length - 2] ?? 0;
+  const avgNow = averages[averages.length - 1] ?? 0;
+  if (direction === "up") {
+    return closePrev < avgPrev && closeNow >= avgNow;
+  }
+  return closePrev > avgPrev && closeNow <= avgNow;
 }
 
 export function rsiValue(closes: number[], period = 14): number | null {
@@ -298,10 +479,26 @@ export function indicatorStartMet(input: {
   closes: number[];
   compare: DcaIndicatorCompare | null;
   level: number | null;
+  period?: number | null;
   splitBySide?: boolean;
 }): boolean {
   const split = Boolean(input.splitBySide);
   const cross = input.compare === "cross_gte" || input.compare === "cross_lte";
+  if (input.kind === "ema" || input.kind === "sma") {
+    const period = input.period ?? DEFAULT_DCA_MA_PERIOD;
+    const averages =
+      input.kind === "sma"
+        ? smaValues(input.closes, period)
+        : emaValues(input.closes, period);
+    const direction = split
+      ? input.side === "long"
+        ? "up"
+        : "down"
+      : input.compare === "cross_lte"
+        ? "down"
+        : "up";
+    return priceCrossedAverage(input.closes, averages, direction);
+  }
   if (input.kind === "rsi") {
     if (input.level === null || !input.compare) {
       return false;

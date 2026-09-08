@@ -89,10 +89,12 @@ export type DcaTemplateRecipe = {
   indicatorTimeframe: DcaPlaybookConfig["indicatorTimeframe"];
   indicatorCompare: DcaPlaybookConfig["indicatorCompare"];
   indicatorLevel: number | null;
+  indicatorPeriod?: number | null;
   shortIndicatorKind?: DcaPlaybookConfig["shortIndicatorKind"];
   shortIndicatorTimeframe?: DcaPlaybookConfig["shortIndicatorTimeframe"];
   shortIndicatorCompare?: DcaPlaybookConfig["shortIndicatorCompare"];
   shortIndicatorLevel?: number | null;
+  shortIndicatorPeriod?: number | null;
 };
 
 export type PerpsTemplateRecipe = {
@@ -261,10 +263,12 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     indicatorTimeframe: config.indicatorTimeframe,
     indicatorCompare: config.indicatorCompare,
     indicatorLevel: config.indicatorLevel,
+    indicatorPeriod: config.indicatorPeriod,
     shortIndicatorKind: config.shortIndicatorKind ?? null,
     shortIndicatorTimeframe: config.shortIndicatorTimeframe ?? null,
     shortIndicatorCompare: config.shortIndicatorCompare ?? null,
     shortIndicatorLevel: config.shortIndicatorLevel ?? null,
+    shortIndicatorPeriod: config.shortIndicatorPeriod ?? null,
   };
 }
 
@@ -583,6 +587,9 @@ export function dcaRecipeToConfig(
   if (recipe.indicatorLevel != null) {
     form.set("indicatorLevel", String(recipe.indicatorLevel));
   }
+  if (recipe.indicatorPeriod != null) {
+    form.set("indicatorPeriod", String(recipe.indicatorPeriod));
+  }
   const shortKind =
     recipe.shortIndicatorKind ??
     (direction === "both" && appliedStart === "indicator"
@@ -617,6 +624,12 @@ export function dcaRecipeToConfig(
       : asNullableNumber(recipe.indicatorLevel));
   if (shortLevel != null) {
     form.set("shortIndicatorLevel", String(shortLevel));
+  }
+  const shortPeriod =
+    recipe.shortIndicatorPeriod ??
+    (shortKind ? recipe.indicatorPeriod : null);
+  if (shortPeriod != null) {
+    form.set("shortIndicatorPeriod", String(shortPeriod));
   }
   const parsed = parseDcaPlaybookForm(form, venue);
   if (!parsed.ok) {
@@ -796,10 +809,12 @@ export type DcaSnapshotOverlay = {
   indicatorTimeframe?: string;
   indicatorCompare?: string;
   indicatorLevel?: string;
+  indicatorPeriod?: string;
   shortIndicatorKind?: string;
   shortIndicatorTimeframe?: string;
   shortIndicatorCompare?: string;
   shortIndicatorLevel?: string;
+  shortIndicatorPeriod?: string;
   armTriggerBy?: string;
   armCompare?: string;
   armPrice?: string;

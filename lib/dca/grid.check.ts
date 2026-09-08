@@ -28,8 +28,10 @@ import {
 } from "./grid";
 import {
   crossedLevel,
+  dcaIndicatorWhenOptions,
   emaCrossBullish,
   emaValues,
+  formatDcaIndicatorStartLabel,
   indicatorBothSidesHint,
   indicatorCompareForDirection,
   indicatorStartMet,
@@ -37,8 +39,11 @@ import {
   oppositeRsiLevel,
   macdHistogram,
   parseDcaIndicatorCompare,
+  parseDcaIndicatorPeriod,
   parseDcaIndicatorTimeframe,
+  priceCrossedAverage,
   rsiValue,
+  smaValues,
 } from "./indicators";
 
 assert.equal(dcaClipSizeAt(0, 10, 2), 10);
@@ -596,6 +601,92 @@ assert.equal(
     splitBySide: true,
   }),
   true,
+);
+
+const maCloses = [...Array(25).fill(100), 50, 150];
+assert.equal(smaValues([1, 2, 3, 4], 2).at(-1), 3.5);
+assert.equal(parseDcaIndicatorPeriod("21"), 21);
+assert.equal(parseDcaIndicatorPeriod("1"), null);
+assert.equal(
+  indicatorCompareForDirection("long", "ema", ""),
+  "cross_gte",
+);
+assert.equal(
+  indicatorCompareForDirection("short", "sma", ""),
+  "cross_lte",
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "ema",
+    side: "long",
+    closes: maCloses,
+    compare: "cross_gte",
+    level: null,
+    period: 21,
+  }),
+  true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "ema",
+    side: "short",
+    closes: maCloses,
+    compare: "cross_lte",
+    level: null,
+    period: 21,
+  }),
+  false,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "sma",
+    side: "long",
+    closes: maCloses,
+    compare: "cross_gte",
+    level: null,
+    period: 21,
+  }),
+  true,
+);
+assert.equal(
+  priceCrossedAverage([100, 90], [95, 95], "down"),
+  true,
+);
+assert.equal(
+  dcaIndicatorWhenOptions("macd", "short", false)[0]?.label,
+  "Histogram crosses below zero",
+);
+assert.equal(
+  dcaIndicatorWhenOptions("ema_cross", "long", false)[0]?.label,
+  "9 crosses above 21",
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "ema",
+    compare: "cross_gte",
+    period: 21,
+    timeframe: "15",
+    side: "long",
+  }),
+  "Price crosses up through EMA 21 · 15m",
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "macd",
+    compare: "cross_gte",
+    timeframe: "60",
+    side: "short",
+  }),
+  "MACD histogram crosses below zero · 1h",
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "ema_cross",
+    compare: null,
+    timeframe: "15",
+    side: "long",
+  }),
+  "EMA 9 crosses above 21 · 15m",
 );
 
 console.log("dca grid checks passed");

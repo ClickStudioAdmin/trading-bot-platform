@@ -32,7 +32,9 @@ import {
   dcaIndicatorStartLatches,
   indicatorClosesForCross,
   indicatorStartMet,
+  dcaIndicatorUsesPeriod,
   parseDcaIndicatorCompare,
+  parseDcaIndicatorPeriod,
   parseDcaIndicatorTimeframe,
   type DcaIndicatorCompare,
   type DcaIndicatorKind,
@@ -96,10 +98,12 @@ export type DcaPlaybookConfig = {
   indicatorTimeframe: DcaIndicatorTimeframe | null;
   indicatorCompare: DcaIndicatorCompare | null;
   indicatorLevel: number | null;
+  indicatorPeriod: number | null;
   shortIndicatorKind?: DcaIndicatorKind | null;
   shortIndicatorTimeframe?: DcaIndicatorTimeframe | null;
   shortIndicatorCompare?: DcaIndicatorCompare | null;
   shortIndicatorLevel?: number | null;
+  shortIndicatorPeriod?: number | null;
 };
 
 export type DcaPlaybook = DcaPlaybookConfig & {
@@ -477,13 +481,20 @@ export type DcaIndicatorStart = {
   timeframe: DcaIndicatorTimeframe;
   compare: DcaIndicatorCompare | null;
   level: number | null;
+  period: number | null;
 };
 
 export function parseDcaIndicatorKind(
   value: unknown,
 ): DcaIndicatorKind | null {
   const raw = String(value ?? "").trim();
-  return raw === "rsi" || raw === "macd" || raw === "ema_cross" ? raw : null;
+  return raw === "rsi" ||
+    raw === "macd" ||
+    raw === "ema_cross" ||
+    raw === "ema" ||
+    raw === "sma"
+    ? raw
+    : null;
 }
 
 export function dcaIndicatorStartForSide(
@@ -493,10 +504,12 @@ export function dcaIndicatorStartForSide(
     | "indicatorTimeframe"
     | "indicatorCompare"
     | "indicatorLevel"
+    | "indicatorPeriod"
     | "shortIndicatorKind"
     | "shortIndicatorTimeframe"
     | "shortIndicatorCompare"
     | "shortIndicatorLevel"
+    | "shortIndicatorPeriod"
   >,
   side: FuturesSide,
 ): DcaIndicatorStart | null {
@@ -522,6 +535,10 @@ export function dcaIndicatorStartForSide(
       side === "short" && playbook.shortIndicatorKind
         ? (playbook.shortIndicatorLevel ?? null)
         : playbook.indicatorLevel,
+    period:
+      side === "short" && playbook.shortIndicatorKind
+        ? (playbook.shortIndicatorPeriod ?? null)
+        : playbook.indicatorPeriod,
   };
 }
 
@@ -680,6 +697,9 @@ export function writeDcaCycleFormFields(
   if (current.indicatorLevel != null) {
     form.set("indicatorLevel", String(current.indicatorLevel));
   }
+  if (current.indicatorPeriod != null) {
+    form.set("indicatorPeriod", String(current.indicatorPeriod));
+  }
   if (current.shortIndicatorKind) {
     form.set("shortIndicatorKind", current.shortIndicatorKind);
   }
@@ -691,6 +711,9 @@ export function writeDcaCycleFormFields(
   }
   if (current.shortIndicatorLevel != null) {
     form.set("shortIndicatorLevel", String(current.shortIndicatorLevel));
+  }
+  if (current.shortIndicatorPeriod != null) {
+    form.set("shortIndicatorPeriod", String(current.shortIndicatorPeriod));
   }
 }
 
@@ -749,10 +772,12 @@ export function dcaWithLockedCycleConfig(
     indicatorTimeframe: current.indicatorTimeframe,
     indicatorCompare: current.indicatorCompare,
     indicatorLevel: current.indicatorLevel,
+    indicatorPeriod: current.indicatorPeriod,
     shortIndicatorKind: current.shortIndicatorKind,
     shortIndicatorTimeframe: current.shortIndicatorTimeframe,
     shortIndicatorCompare: current.shortIndicatorCompare,
     shortIndicatorLevel: current.shortIndicatorLevel,
+    shortIndicatorPeriod: current.shortIndicatorPeriod,
   };
 }
 
@@ -1157,6 +1182,7 @@ export function parseDcaPlaybookForm(
       timeframe: "indicatorTimeframe",
       compare: "indicatorCompare",
       level: "indicatorLevel",
+      period: "indicatorPeriod",
     },
     startKind === "indicator",
     direction === "both" ? "Long" : "",
@@ -1171,6 +1197,7 @@ export function parseDcaPlaybookForm(
       timeframe: "shortIndicatorTimeframe",
       compare: "shortIndicatorCompare",
       level: "shortIndicatorLevel",
+      period: "shortIndicatorPeriod",
     },
     startKind === "indicator" && direction === "both",
     "Short",
@@ -1213,10 +1240,12 @@ export function parseDcaPlaybookForm(
       indicatorTimeframe: longIndicator.start?.timeframe ?? null,
       indicatorCompare: longIndicator.start?.compare ?? null,
       indicatorLevel: longIndicator.start?.level ?? null,
+      indicatorPeriod: longIndicator.start?.period ?? null,
       shortIndicatorKind: shortIndicator.start?.kind ?? null,
       shortIndicatorTimeframe: shortIndicator.start?.timeframe ?? null,
       shortIndicatorCompare: shortIndicator.start?.compare ?? null,
       shortIndicatorLevel: shortIndicator.start?.level ?? null,
+      shortIndicatorPeriod: shortIndicator.start?.period ?? null,
     },
   };
 }
@@ -1228,6 +1257,7 @@ function parseIndicatorStartFields(
     timeframe: string;
     compare: string;
     level: string;
+    period: string;
   },
   enabled: boolean,
   label: string,
@@ -1240,7 +1270,7 @@ function parseIndicatorStartFields(
   const prefix = label ? `${label} ` : "";
   const kind = parseDcaIndicatorKind(form.get(names.kind));
   if (!kind) {
-    return { ok: false, error: `Choose ${prefix}RSI, MACD, or EMA cross.` };
+    return { ok: false, error: `Choose ${prefix}RSI, MACD, EMA, or SMA.` };
   }
   const timeframe = parseDcaIndicatorTimeframe(
     form.get(names.timeframe) ?? "15",
@@ -1260,7 +1290,7 @@ function parseIndicatorStartFields(
     }
     return {
       ok: true,
-      start: { kind, timeframe, compare: cmp, level: level.value },
+      start: { kind, timeframe, compare: cmp, level: level.value, period: null },
     };
   }
   if (kind === "macd") {
@@ -1275,13 +1305,28 @@ function parseIndicatorStartFields(
         timeframe,
         compare: cmp === "cross_gte" || cmp === "cross_lte" ? "cross_gte" : "gte",
         level: null,
+        period: null,
       },
+    };
+  }
+  if (dcaIndicatorUsesPeriod(kind)) {
+    const cmp = parseDcaIndicatorCompare(compareRaw || "cross_gte");
+    if (cmp !== "cross_gte" && cmp !== "cross_lte") {
+      return { ok: false, error: `Choose when ${prefix}price should cross.` };
+    }
+    const period = parseDcaIndicatorPeriod(form.get(names.period));
+    if (period == null) {
+      return { ok: false, error: `Enter a ${prefix}period.` };
+    }
+    return {
+      ok: true,
+      start: { kind, timeframe, compare: cmp, level: null, period },
     };
   }
   if (compareRaw === "pair" || compareRaw === "") {
     return {
       ok: true,
-      start: { kind, timeframe, compare: null, level: null },
+      start: { kind, timeframe, compare: null, level: null, period: null },
     };
   }
   const cmp = parseDcaIndicatorCompare(compareRaw);
@@ -1294,7 +1339,7 @@ function parseIndicatorStartFields(
   }
   return {
     ok: true,
-    start: { kind, timeframe, compare: cmp, level: level.value },
+    start: { kind, timeframe, compare: cmp, level: level.value, period: null },
   };
 }
 
@@ -1401,6 +1446,7 @@ export function parseDcaPlaybookRow(
     indicatorTimeframe,
     indicatorCompare,
     indicatorLevel: asPositiveOrNull(row.indicator_level),
+    indicatorPeriod: parseDcaIndicatorPeriod(row.indicator_period),
     shortIndicatorKind,
     shortIndicatorTimeframe: parseDcaIndicatorTimeframe(
       row.short_indicator_timeframe,
@@ -1409,6 +1455,7 @@ export function parseDcaPlaybookRow(
       row.short_indicator_compare,
     ),
     shortIndicatorLevel: asPositiveOrNull(row.short_indicator_level),
+    shortIndicatorPeriod: parseDcaIndicatorPeriod(row.short_indicator_period),
     updatedAtMs: (() => {
       const ms = new Date(String(row.updated_at ?? "")).getTime();
       return Number.isFinite(ms) ? ms : 0;
@@ -1623,6 +1670,7 @@ export function decideDcaTick(input: {
   indicatorKind?: DcaIndicatorKind | null;
   indicatorCompare?: DcaIndicatorCompare | null;
   indicatorLevel?: number | null;
+  indicatorPeriod?: number | null;
   indicatorConditionTrue?: boolean;
   splitIndicatorSides?: boolean;
   closes?: number[] | null;
@@ -1642,6 +1690,7 @@ export function decideDcaTick(input: {
   const indicatorKind = input.indicatorKind ?? null;
   const indicatorCompare = input.indicatorCompare ?? null;
   const indicatorLevel = input.indicatorLevel ?? null;
+  const indicatorPeriod = input.indicatorPeriod ?? null;
   const closes = input.closes ?? null;
   const splitBySide = Boolean(input.splitIndicatorSides);
   const armPrice = triggerPrice(input.armTrigger, input.triggerPrices);
@@ -1683,6 +1732,7 @@ export function decideDcaTick(input: {
         closes,
         compare: indicatorCompare,
         level: indicatorLevel,
+        period: indicatorPeriod,
         splitBySide,
       }) ||
         (latchCross &&
@@ -1692,6 +1742,7 @@ export function decideDcaTick(input: {
             closes: indicatorClosesForCross(closes),
             compare: indicatorCompare,
             level: indicatorLevel,
+            period: indicatorPeriod,
             splitBySide,
           }))),
   );

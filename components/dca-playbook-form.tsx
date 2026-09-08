@@ -63,6 +63,10 @@ import {
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
+  DEFAULT_DCA_MA_PERIOD,
+  dcaIndicatorShowsLevel,
+  dcaIndicatorUsesPeriod,
+  dcaIndicatorWhenOptions,
   indicatorCompareForDirection,
   oppositeRsiCompare,
   oppositeRsiLevel,
@@ -128,6 +132,9 @@ function initialIndicatorCompare(
       return "gte";
     }
     return "cross_gte";
+  }
+  if (kind === "ema" || kind === "sma") {
+    return indicatorCompareForDirection(side, kind, stored ?? "");
   }
   if (stored === "cross_gte" || stored === "cross_lte") {
     return stored;
@@ -726,6 +733,9 @@ export function DcaPlaybookForm({
     optional(source?.indicatorLevel) ||
       ((source?.indicatorKind ?? "rsi") === "rsi" ? "30" : ""),
   );
+  const [indicatorPeriod, setIndicatorPeriod] = useState(
+    optional(source?.indicatorPeriod) || String(DEFAULT_DCA_MA_PERIOD),
+  );
   const [indicatorCompare, setIndicatorCompare] = useState(() =>
     initialIndicatorCompare(
       source?.indicatorKind ?? "rsi",
@@ -751,6 +761,11 @@ export function DcaPlaybookForm({
       ? String(oppositeRsiLevel(source.indicatorLevel))
       : "70";
   });
+  const [shortIndicatorPeriod, setShortIndicatorPeriod] = useState(
+    optional(source?.shortIndicatorPeriod) ||
+      optional(source?.indicatorPeriod) ||
+      String(DEFAULT_DCA_MA_PERIOD),
+  );
   const [shortIndicatorCompare, setShortIndicatorCompare] = useState(() =>
     initialIndicatorCompare(
       source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi",
@@ -940,10 +955,12 @@ export function DcaPlaybookForm({
       indicatorTimeframe,
       indicatorCompare,
       indicatorLevel,
+      indicatorPeriod,
       shortIndicatorKind,
       shortIndicatorTimeframe,
       shortIndicatorCompare,
       shortIndicatorLevel,
+      shortIndicatorPeriod,
     };
   }
   function snapshotForm() {
@@ -1244,6 +1261,7 @@ export function DcaPlaybookForm({
                     setShortIndicatorTimeframe(indicatorTimeframe);
                     setShortIndicatorCompare(indicatorCompare);
                     setShortIndicatorLevel(indicatorLevel);
+                    setShortIndicatorPeriod(indicatorPeriod);
                     if (indicatorKind === "rsi") {
                       setIndicatorCompare(oppositeRsiCompare(indicatorCompare));
                       setIndicatorLevel(seedOppositeRsiLevel(indicatorLevel));
@@ -1254,19 +1272,25 @@ export function DcaPlaybookForm({
                     setShortIndicatorCompare(
                       indicatorKind === "rsi"
                         ? oppositeRsiCompare(indicatorCompare)
-                        : indicatorCompare,
+                        : indicatorCompareForDirection(
+                            "short",
+                            indicatorKind,
+                            indicatorCompare,
+                          ),
                     );
                     setShortIndicatorLevel(
                       indicatorKind === "rsi"
                         ? seedOppositeRsiLevel(indicatorLevel)
                         : indicatorLevel,
                     );
+                    setShortIndicatorPeriod(indicatorPeriod);
                   }
                 } else if (direction === "both" && next === "short") {
                   setIndicatorKind(shortIndicatorKind);
                   setIndicatorTimeframe(shortIndicatorTimeframe);
                   setIndicatorCompare(shortIndicatorCompare);
                   setIndicatorLevel(shortIndicatorLevel);
+                  setIndicatorPeriod(shortIndicatorPeriod);
                 } else if (next === "long" || next === "short") {
                   setIndicatorCompare((current) =>
                     indicatorCompareForDirection(next, indicatorKind, current),
@@ -1403,10 +1427,12 @@ export function DcaPlaybookForm({
                     timeframe={indicatorTimeframe}
                     compare={indicatorCompare}
                     level={indicatorLevel}
+                    period={indicatorPeriod}
                     onKindChange={setIndicatorKind}
                     onTimeframeChange={setIndicatorTimeframe}
                     onCompareChange={setIndicatorCompare}
                     onLevelChange={setIndicatorLevel}
+                    onPeriodChange={setIndicatorPeriod}
                   />
                 </div>
               </div>
@@ -1420,10 +1446,12 @@ export function DcaPlaybookForm({
                     timeframe={shortIndicatorTimeframe}
                     compare={shortIndicatorCompare}
                     level={shortIndicatorLevel}
+                    period={shortIndicatorPeriod}
                     onKindChange={setShortIndicatorKind}
                     onTimeframeChange={setShortIndicatorTimeframe}
                     onCompareChange={setShortIndicatorCompare}
                     onLevelChange={setShortIndicatorLevel}
+                    onPeriodChange={setShortIndicatorPeriod}
                   />
                 </div>
               </div>
@@ -1437,10 +1465,12 @@ export function DcaPlaybookForm({
               timeframe={indicatorTimeframe}
               compare={indicatorCompare}
               level={indicatorLevel}
+              period={indicatorPeriod}
               onKindChange={setIndicatorKind}
               onTimeframeChange={setIndicatorTimeframe}
               onCompareChange={setIndicatorCompare}
               onLevelChange={setIndicatorLevel}
+              onPeriodChange={setIndicatorPeriod}
             />
           ) : null}
         </div>
@@ -2267,10 +2297,12 @@ function IndicatorStartFields({
   timeframe,
   compare,
   level,
+  period,
   onKindChange,
   onTimeframeChange,
   onCompareChange,
   onLevelChange,
+  onPeriodChange,
 }: {
   side: "long" | "short";
   prefix: "indicator" | "shortIndicator";
@@ -2278,11 +2310,19 @@ function IndicatorStartFields({
   timeframe: DcaIndicatorTimeframe;
   compare: string;
   level: string;
+  period: string;
   onKindChange: (next: DcaIndicatorKind) => void;
   onTimeframeChange: (next: DcaIndicatorTimeframe) => void;
   onCompareChange: (next: string) => void;
   onLevelChange: (next: string) => void;
+  onPeriodChange: (next: string) => void;
 }) {
+  const includeLegacyEmaPrice = dcaIndicatorShowsLevel(kind, compare);
+  const whenOptions = dcaIndicatorWhenOptions(
+    kind,
+    side,
+    includeLegacyEmaPrice,
+  );
   return (
     <>
       <label className={labelClass}>
@@ -2294,12 +2334,17 @@ function IndicatorStartFields({
             const next = event.target.value as DcaIndicatorKind;
             onKindChange(next);
             onCompareChange(indicatorCompareForDirection(side, next, ""));
+            if (dcaIndicatorUsesPeriod(next) && !period) {
+              onPeriodChange(String(DEFAULT_DCA_MA_PERIOD));
+            }
           }}
           className={fieldClass}
         >
           <option value="rsi">RSI 14</option>
           <option value="macd">MACD histogram</option>
-          <option value="ema_cross">EMA 9/21 cross</option>
+          <option value="ema_cross">EMA 9/21</option>
+          <option value="ema">EMA</option>
+          <option value="sma">SMA</option>
         </select>
       </label>
       <label className={labelClass}>
@@ -2327,33 +2372,25 @@ function IndicatorStartFields({
           onChange={(event) => onCompareChange(event.target.value)}
           className={fieldClass}
         >
-          {kind === "rsi" && side === "long" ? (
-            <>
-              <option value="cross_lte">Crosses below</option>
-              <option value="lte">At or below</option>
-            </>
-          ) : null}
-          {kind === "rsi" && side === "short" ? (
-            <>
-              <option value="cross_gte">Crosses above</option>
-              <option value="gte">At or above</option>
-            </>
-          ) : null}
-          {kind === "macd" ? (
-            <>
-              <option value="cross_gte">Crosses zero</option>
-              <option value="gte">Histogram sign</option>
-            </>
-          ) : null}
-          {kind === "ema_cross" ? (
-            <>
-              <option value="pair">EMA 9/21 cross</option>
-              <option value="cross_gte">EMA 21 crosses</option>
-            </>
-          ) : null}
+          {whenOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
       </label>
-      {kind === "rsi" || (kind === "ema_cross" && compare !== "pair") ? (
+      {dcaIndicatorUsesPeriod(kind) ? (
+        <label className={labelClass}>
+          Period
+          <GroupedNumberInput
+            name={`${prefix}Period`}
+            value={period}
+            onChange={onPeriodChange}
+            className={fieldClass}
+          />
+        </label>
+      ) : null}
+      {dcaIndicatorShowsLevel(kind, compare) ? (
         <label className={labelClass}>
           {kind === "ema_cross" ? "Level (price)" : "Level"}
           <GroupedNumberInput
@@ -2374,6 +2411,13 @@ function IndicatorStartFields({
             : compare === "gte"
               ? "Triggers Short while the histogram is negative."
               : "Triggers Short when the histogram crosses below zero."}
+        </p>
+      ) : null}
+      {kind === "ema" || kind === "sma" ? (
+        <p className="self-end text-xs text-ink-muted sm:col-span-2">
+          {side === "long"
+            ? `Triggers Long when price crosses up through the ${kind === "sma" ? "SMA" : "EMA"}.`
+            : `Triggers Short when price crosses down through the ${kind === "sma" ? "SMA" : "EMA"}.`}
         </p>
       ) : null}
       {kind === "ema_cross" && compare === "pair" ? (

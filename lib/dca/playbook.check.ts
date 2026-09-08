@@ -2133,7 +2133,56 @@ assert.equal(emaLevelParsed.ok, true);
 if (emaLevelParsed.ok) {
   assert.equal(emaLevelParsed.config.indicatorCompare, "cross_gte");
   assert.equal(emaLevelParsed.config.indicatorLevel, 80000);
+  assert.equal(emaLevelParsed.config.indicatorPeriod, null);
 }
+
+const emaPriceForm = new FormData();
+emaPriceForm.set("symbol", "BTCUSDT");
+emaPriceForm.set("side", "long");
+emaPriceForm.set("clipSize", "0.01");
+emaPriceForm.set("sizeUnit", "qty");
+emaPriceForm.set("startKind", "indicator");
+emaPriceForm.set("indicatorKind", "ema");
+emaPriceForm.set("indicatorTimeframe", "15");
+emaPriceForm.set("indicatorCompare", "cross_gte");
+emaPriceForm.set("indicatorPeriod", "21");
+const emaPriceParsed = parseDcaPlaybookForm(emaPriceForm);
+assert.equal(emaPriceParsed.ok, true);
+if (emaPriceParsed.ok) {
+  assert.equal(emaPriceParsed.config.indicatorKind, "ema");
+  assert.equal(emaPriceParsed.config.indicatorCompare, "cross_gte");
+  assert.equal(emaPriceParsed.config.indicatorPeriod, 21);
+  assert.equal(emaPriceParsed.config.indicatorLevel, null);
+}
+
+const smaShortForm = new FormData();
+smaShortForm.set("symbol", "BTCUSDT");
+smaShortForm.set("side", "short");
+smaShortForm.set("clipSize", "0.01");
+smaShortForm.set("sizeUnit", "qty");
+smaShortForm.set("startKind", "indicator");
+smaShortForm.set("indicatorKind", "sma");
+smaShortForm.set("indicatorTimeframe", "60");
+smaShortForm.set("indicatorCompare", "cross_lte");
+smaShortForm.set("indicatorPeriod", "50");
+const smaShortParsed = parseDcaPlaybookForm(smaShortForm);
+assert.equal(smaShortParsed.ok, true);
+if (smaShortParsed.ok) {
+  assert.equal(smaShortParsed.config.indicatorKind, "sma");
+  assert.equal(smaShortParsed.config.indicatorPeriod, 50);
+}
+
+const emaMissingPeriod = new FormData();
+emaMissingPeriod.set("symbol", "BTCUSDT");
+emaMissingPeriod.set("side", "long");
+emaMissingPeriod.set("clipSize", "0.01");
+emaMissingPeriod.set("sizeUnit", "qty");
+emaMissingPeriod.set("startKind", "indicator");
+emaMissingPeriod.set("indicatorKind", "ema");
+emaMissingPeriod.set("indicatorTimeframe", "15");
+emaMissingPeriod.set("indicatorCompare", "cross_gte");
+const emaMissingPeriodParsed = parseDcaPlaybookForm(emaMissingPeriod);
+assert.equal(emaMissingPeriodParsed.ok, false);
 
 const indicatorBadTf = new FormData();
 indicatorBadTf.set("symbol", "BTCUSDT");
