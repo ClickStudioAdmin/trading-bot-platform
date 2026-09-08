@@ -895,9 +895,32 @@ assert.equal(
     timeframe: "15",
     side: "short",
   }),
-  "Above top BB · 15m",
+  "Above top BB 20 · 15m",
 );
-assert.equal(dcaIndicatorUsesPeriod("bb"), false);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "rsi",
+    compare: "cross_lte",
+    level: 30,
+    period: 14,
+    timeframe: "15",
+    side: "long",
+  }),
+  "RSI 14 crosses below 30 · 15m",
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "rsi",
+    compare: "gte",
+    level: 70,
+    period: 7,
+    timeframe: "60",
+    side: "short",
+  }),
+  "RSI 7 at or above 70 · 1h",
+);
+assert.equal(dcaIndicatorUsesPeriod("bb"), true);
+assert.equal(dcaIndicatorUsesPeriod("rsi"), true);
 assert.equal(dcaIndicatorUsesPeriod("ema"), true);
 
 console.log("dca grid checks passed");

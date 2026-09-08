@@ -295,12 +295,12 @@ function BacktestIndicatorStartFields({
         }}
         className={fieldClass}
       >
-        <option value="rsi">RSI 14</option>
-        <option value="macd">MACD</option>
-        <option value="ema_cross">EMA Cross</option>
-        <option value="sma_cross">SMA Cross</option>
-        <option value="ema">EMA</option>
+        <option value="rsi">RSI</option>
         <option value="sma">SMA</option>
+        <option value="ema">EMA</option>
+        <option value="sma_cross">SMA Cross</option>
+        <option value="ema_cross">EMA Cross</option>
+        <option value="macd">MACD</option>
         <option value="bb">Bollinger Bands</option>
       </select>
     </label>

@@ -2415,21 +2415,26 @@ function IndicatorStartFields({
             onSlowPeriodChange(String(defaultDcaIndicatorSlowPeriod(next)));
           } else {
             onSlowPeriodChange("");
-            if (dcaIndicatorUsesPeriod(next) && !dcaIndicatorUsesPeriod(kind)) {
-              onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
-            } else if (dcaIndicatorUsesPeriod(next) && !period) {
-              onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+            if (dcaIndicatorUsesPeriod(next)) {
+              const current = Number(String(period).replace(/,/g, ""));
+              const keepCustom =
+                dcaIndicatorUsesPeriod(kind) &&
+                Number.isFinite(current) &&
+                current !== defaultDcaIndicatorPeriod(kind);
+              if (!keepCustom) {
+                onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+              }
             }
           }
         }}
         className={fieldClass}
       >
-        <option value="rsi">RSI 14</option>
-        <option value="macd">MACD histogram</option>
-        <option value="ema_cross">EMA Cross</option>
-        <option value="sma_cross">SMA Cross</option>
-        <option value="ema">EMA</option>
+        <option value="rsi">RSI</option>
         <option value="sma">SMA</option>
+        <option value="ema">EMA</option>
+        <option value="sma_cross">SMA Cross</option>
+        <option value="ema_cross">EMA Cross</option>
+        <option value="macd">MACD histogram</option>
         <option value="bb">Bollinger Bands</option>
       </select>
     </label>

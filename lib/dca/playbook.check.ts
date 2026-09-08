@@ -2064,6 +2064,24 @@ const rsiCrossParsed = parseDcaPlaybookForm(rsiCrossForm);
 assert.equal(rsiCrossParsed.ok, true);
 if (rsiCrossParsed.ok) {
   assert.equal(rsiCrossParsed.config.indicatorCompare, "cross_lte");
+  assert.equal(rsiCrossParsed.config.indicatorPeriod, 14);
+}
+
+const rsiPeriodForm = new FormData();
+rsiPeriodForm.set("symbol", "BTCUSDT");
+rsiPeriodForm.set("side", "long");
+rsiPeriodForm.set("clipSize", "0.01");
+rsiPeriodForm.set("sizeUnit", "qty");
+rsiPeriodForm.set("startKind", "indicator");
+rsiPeriodForm.set("indicatorKind", "rsi");
+rsiPeriodForm.set("indicatorTimeframe", "15");
+rsiPeriodForm.set("indicatorCompare", "cross_lte");
+rsiPeriodForm.set("indicatorLevel", "30");
+rsiPeriodForm.set("indicatorPeriod", "7");
+const rsiPeriodParsed = parseDcaPlaybookForm(rsiPeriodForm);
+assert.equal(rsiPeriodParsed.ok, true);
+if (rsiPeriodParsed.ok) {
+  assert.equal(rsiPeriodParsed.config.indicatorPeriod, 7);
 }
 
 const bothRsiForm = new FormData();
@@ -2258,6 +2276,22 @@ if (bbParsed.ok) {
   assert.equal(bbParsed.config.indicatorKind, "bb");
   assert.equal(bbParsed.config.indicatorCompare, "lte");
   assert.equal(bbParsed.config.indicatorPeriod, 20);
+}
+
+const bbPeriodForm = new FormData();
+bbPeriodForm.set("symbol", "BTCUSDT");
+bbPeriodForm.set("side", "long");
+bbPeriodForm.set("clipSize", "0.01");
+bbPeriodForm.set("sizeUnit", "qty");
+bbPeriodForm.set("startKind", "indicator");
+bbPeriodForm.set("indicatorKind", "bb");
+bbPeriodForm.set("indicatorTimeframe", "15");
+bbPeriodForm.set("indicatorCompare", "gte");
+bbPeriodForm.set("indicatorPeriod", "50");
+const bbPeriodParsed = parseDcaPlaybookForm(bbPeriodForm);
+assert.equal(bbPeriodParsed.ok, true);
+if (bbPeriodParsed.ok) {
+  assert.equal(bbPeriodParsed.config.indicatorPeriod, 50);
 }
 
 const emaMissingPeriod = new FormData();

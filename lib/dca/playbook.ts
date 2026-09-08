@@ -30,6 +30,7 @@ import {
 } from "./grid";
 import {
   DEFAULT_DCA_BB_PERIOD,
+  DEFAULT_DCA_RSI_PERIOD,
   DEFAULT_DCA_CROSS_FAST_PERIOD,
   DEFAULT_DCA_CROSS_SLOW_PERIOD,
   dcaIndicatorStartLatches,
@@ -1335,7 +1336,9 @@ function parseIndicatorStartFields(
         timeframe,
         compare: cmp,
         level: level.value,
-        period: null,
+        period:
+          parseDcaIndicatorPeriod(form.get(names.period)) ??
+          DEFAULT_DCA_RSI_PERIOD,
         slowPeriod: null,
       },
     };

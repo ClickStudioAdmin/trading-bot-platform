@@ -13,6 +13,7 @@ export const DEFAULT_DCA_MA_PERIOD = 21;
 export const DEFAULT_DCA_CROSS_FAST_PERIOD = 9;
 export const DEFAULT_DCA_CROSS_SLOW_PERIOD = 21;
 export const DEFAULT_DCA_BB_PERIOD = 20;
+export const DEFAULT_DCA_RSI_PERIOD = 14;
 export const DCA_BB_STDDEV = 2;
 export const DCA_INDICATOR_PERIOD_MIN = 2;
 export const DCA_INDICATOR_PERIOD_MAX = 400;
@@ -78,7 +79,7 @@ export function parseDcaIndicatorPeriod(value: unknown): number | null {
 }
 
 export function dcaIndicatorUsesPeriod(kind: DcaIndicatorKind): boolean {
-  return kind === "ema" || kind === "sma";
+  return kind === "ema" || kind === "sma" || kind === "rsi" || kind === "bb";
 }
 
 export function dcaIndicatorUsesPairPeriods(kind: DcaIndicatorKind): boolean {
@@ -88,6 +89,9 @@ export function dcaIndicatorUsesPairPeriods(kind: DcaIndicatorKind): boolean {
 export function defaultDcaIndicatorPeriod(kind: DcaIndicatorKind): number {
   if (kind === "bb") {
     return DEFAULT_DCA_BB_PERIOD;
+  }
+  if (kind === "rsi") {
+    return DEFAULT_DCA_RSI_PERIOD;
   }
   if (dcaIndicatorUsesPairPeriods(kind)) {
     return DEFAULT_DCA_CROSS_FAST_PERIOD;
@@ -250,9 +254,10 @@ export function formatDcaIndicatorStartLabel(input: {
     return `MACD ${when}${timeframe}`;
   }
   if (input.kind === "bb") {
+    const period = input.period ?? DEFAULT_DCA_BB_PERIOD;
     const when =
       input.compare === "lte" ? "Below bottom BB" : "Above top BB";
-    return `${when}${timeframe}`;
+    return `${when} ${period}${timeframe}`;
   }
   if (input.kind === "ema" || input.kind === "sma") {
     const name = input.kind === "sma" ? "SMA" : "EMA";
@@ -292,8 +297,9 @@ export function formatDcaIndicatorStartLabel(input: {
             : input.compare === "gte"
               ? "at or above"
               : (input.compare ?? "");
+    const period = input.period ?? DEFAULT_DCA_RSI_PERIOD;
     const level = input.level != null ? ` ${input.level}` : "";
-    return `RSI ${when}${level}${timeframe}`.trim();
+    return `RSI ${period} ${when}${level}${timeframe}`.trim();
   }
   return `Indicator${timeframe}`.trim();
 }
@@ -685,8 +691,12 @@ export function indicatorStartMet(input: {
     if (input.level === null || !input.compare) {
       return false;
     }
+    const period = input.period ?? DEFAULT_DCA_RSI_PERIOD;
     if (cross) {
-      const pair = lastTwoOf(rsiValue, input.closes);
+      const pair = lastTwoOf(
+        (closes) => rsiValue(closes, period),
+        input.closes,
+      );
       if (!pair) {
         return false;
       }
@@ -699,7 +709,7 @@ export function indicatorStartMet(input: {
           : "down";
       return crossedLevel(pair.prev, pair.now, input.level, direction);
     }
-    const rsi = rsiValue(input.closes);
+    const rsi = rsiValue(input.closes, period);
     if (rsi === null) {
       return false;
     }
