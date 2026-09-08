@@ -13,8 +13,6 @@ import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   deleteDcaPlaybookAction,
   runDcaArmAction,
-  runDcaArmLongAction,
-  runDcaArmShortAction,
   runDcaClosePlaybookAction,
   runDcaDisarmAction,
   saveAndArmDcaPlaybookAction,
@@ -42,7 +40,6 @@ import {
   dcaEnabledSides,
   dcaIntervalParts,
   dcaLegFor,
-  dcaLegIsRunning,
   dcaPlaybookHasOpenCycle,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
@@ -62,6 +59,8 @@ import {
 } from "@/lib/dca/playbook";
 import {
   DCA_INDICATOR_KIND_OPTIONS,
+  DCA_TREND_KIND_OPTIONS,
+  DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
   defaultDcaIndicatorLevel,
@@ -115,7 +114,6 @@ const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
 const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
 const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`;
 const headerLongClass = `${headerBtnClass} bg-success text-canvas`;
-const headerShortClass = `${headerBtnClass} bg-danger text-ink`;
 const headerRemoveClass =
   "shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
 
@@ -674,7 +672,7 @@ export function DcaPlaybookForm({
       : (source?.direction ?? "long"),
   );
   const [startKind, setStartKind] = useState<DcaStartKind>(
-    source?.startKind ?? "immediate",
+    source?.startKind ?? "indicator",
   );
   const [averaging, setAveraging] = useState<DcaAveragingKind>(() =>
     source ? dcaAveragingKind(source) : "dip",
@@ -731,7 +729,8 @@ export function DcaPlaybookForm({
   const [takeProfitOrderType, setTakeProfitOrderType] =
     useState<FuturesOrderType>(source?.takeProfitOrderType ?? "market");
   const [indicatorKind, setIndicatorKind] = useState<DcaIndicatorKind>(
-    source?.indicatorKind ?? "rsi",
+    source?.indicatorKind ??
+      (source?.startKind === "trend" ? "supertrend" : "rsi"),
   );
   const [indicatorTimeframe, setIndicatorTimeframe] = useState(
     source?.indicatorTimeframe ?? "15",
@@ -742,13 +741,22 @@ export function DcaPlaybookForm({
   );
   const [indicatorPeriod, setIndicatorPeriod] = useState(
     optional(source?.indicatorPeriod) ||
-      String(defaultDcaIndicatorPeriod(source?.indicatorKind ?? "rsi")),
+      String(
+        defaultDcaIndicatorPeriod(
+          source?.indicatorKind ??
+            (source?.startKind === "trend" ? "supertrend" : "rsi"),
+        ),
+      ),
   );
   const [indicatorSlowPeriod, setIndicatorSlowPeriod] = useState(
     optional(source?.indicatorSlowPeriod) ||
       String(
         defaultDcaIndicatorSlowPeriod(source?.indicatorKind ?? "rsi") ?? "",
       ),
+  );
+  const [indicatorMultiplier, setIndicatorMultiplier] = useState(
+    optional(source?.indicatorMultiplier) ||
+      String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
   );
   const [indicatorCompare, setIndicatorCompare] = useState(() =>
     initialIndicatorCompare(
@@ -796,6 +804,11 @@ export function DcaPlaybookForm({
         ) ?? "",
       ),
   );
+  const [shortIndicatorMultiplier, setShortIndicatorMultiplier] = useState(
+    optional(source?.shortIndicatorMultiplier) ||
+      optional(source?.indicatorMultiplier) ||
+      String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
+  );
   const [shortIndicatorCompare, setShortIndicatorCompare] = useState(() =>
     initialIndicatorCompare(
       source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi",
@@ -838,7 +851,7 @@ export function DcaPlaybookForm({
   const showClosePlaybook =
     hasOpenPosition ||
     liveLegs.some((leg) => leg.status === "stop_adding");
-  const showManualTriggers = startKind === "immediate";
+  const showLegacyManualStart = source?.startKind === "immediate";
   const showSaveAndArm = dcaStartListens(startKind) && !running;
   const showArmButton =
     dcaStartListens(startKind) && Boolean(playbook) && running;
@@ -987,12 +1000,14 @@ export function DcaPlaybookForm({
       indicatorLevel,
       indicatorPeriod,
       indicatorSlowPeriod,
+      indicatorMultiplier,
       shortIndicatorKind,
       shortIndicatorTimeframe,
       shortIndicatorCompare,
       shortIndicatorLevel,
       shortIndicatorPeriod,
       shortIndicatorSlowPeriod,
+      shortIndicatorMultiplier,
     };
   }
   function snapshotForm() {
@@ -1067,8 +1082,6 @@ export function DcaPlaybookForm({
       action={saveDcaPlaybookAction}
       actions={{
         "save-arm": saveAndArmDcaPlaybookAction,
-        "arm-long": runDcaArmLongAction,
-        "arm-short": runDcaArmShortAction,
         arm: runDcaArmAction,
         disarm: runDcaDisarmAction,
         close: runDcaClosePlaybookAction,
@@ -1092,9 +1105,7 @@ export function DcaPlaybookForm({
       <input type="hidden" name="deskVenue" value={policy.venueId} />
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
-          {showSaveAndArm ||
-          showManualTriggers ||
-          (playbook && showArmButton && !armed) ? (
+          {showSaveAndArm || (playbook && showArmButton && !armed) ? (
             <p className="shrink-0 text-xs text-ink-muted">
               Initial Order Triggers
             </p>
@@ -1110,57 +1121,6 @@ export function DcaPlaybookForm({
               Save and Arm
             </PendingSubmitButton>
           ) : null}
-          {showManualTriggers
-            ? (
-                [
-                  {
-                    side: "long" as const,
-                    deskAction: "arm-long",
-                    label: "Save and Trigger Long",
-                    className: headerLongClass,
-                  },
-                  {
-                    side: "short" as const,
-                    deskAction: "arm-short",
-                    label: "Save and Trigger Short",
-                    className: headerShortClass,
-                  },
-                ] as const
-              ).map((item) => {
-                const onDirection = dcaEnabledSides(direction).includes(
-                  item.side,
-                );
-                const sideRunning = playbook
-                  ? dcaLegIsRunning(dcaLegFor(playbook, item.side).status)
-                  : false;
-                const blockedReason = !onDirection
-                  ? "Set Direction to include this side"
-                  : sideRunning
-                    ? `${item.side === "long" ? "Long" : "Short"} is already running`
-                    : saveBlocked;
-                const blocked = Boolean(blockedReason);
-                return blocked ? (
-                  <button
-                    key={item.side}
-                    type="button"
-                    disabled
-                    title={blockedReason ?? undefined}
-                    className={`${item.className} opacity-40`}
-                  >
-                    {item.label}
-                  </button>
-                ) : (
-                  <PendingSubmitButton
-                    key={item.side}
-                    deskAction={item.deskAction}
-                    pendingLabel="Triggering…"
-                    className={item.className}
-                  >
-                    {item.label}
-                  </PendingSubmitButton>
-                );
-              })
-            : null}
           {playbook ? (
             <>
               {showArmButton && !armed ? (
@@ -1295,6 +1255,7 @@ export function DcaPlaybookForm({
                     setShortIndicatorLevel(indicatorLevel);
                     setShortIndicatorPeriod(indicatorPeriod);
                     setShortIndicatorSlowPeriod(indicatorSlowPeriod);
+                    setShortIndicatorMultiplier(indicatorMultiplier);
                     if (indicatorKind === "rsi") {
                       setIndicatorCompare(oppositeRsiCompare(indicatorCompare));
                       setIndicatorLevel(seedOppositeRsiLevel(indicatorLevel));
@@ -1315,6 +1276,7 @@ export function DcaPlaybookForm({
                     );
                     setShortIndicatorPeriod(indicatorPeriod);
                     setShortIndicatorSlowPeriod(indicatorSlowPeriod);
+                    setShortIndicatorMultiplier(indicatorMultiplier);
                   }
                 } else if (direction === "both" && next === "short") {
                   setIndicatorKind(shortIndicatorKind);
@@ -1323,6 +1285,7 @@ export function DcaPlaybookForm({
                   setIndicatorLevel(shortIndicatorLevel);
                   setIndicatorPeriod(shortIndicatorPeriod);
                   setIndicatorSlowPeriod(shortIndicatorSlowPeriod);
+                  setIndicatorMultiplier(shortIndicatorMultiplier);
                 }
                 setDirection(next);
               }}
@@ -1340,18 +1303,70 @@ export function DcaPlaybookForm({
             <select
               name="startKind"
               value={startKind}
-              onChange={(event) =>
-                setStartKind(event.target.value as DcaStartKind)
-              }
+              onChange={(event) => {
+                const next = event.target.value as DcaStartKind;
+                if (next === "trend") {
+                  setIndicatorKind("supertrend");
+                  setIndicatorPeriod(
+                    String(defaultDcaIndicatorPeriod("supertrend")),
+                  );
+                  setIndicatorMultiplier(
+                    String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
+                  );
+                  setIndicatorCompare(
+                    indicatorCompareForDirection("long", "supertrend", ""),
+                  );
+                  setIndicatorLevel("");
+                  setShortIndicatorKind("supertrend");
+                  setShortIndicatorPeriod(
+                    String(defaultDcaIndicatorPeriod("supertrend")),
+                  );
+                  setShortIndicatorMultiplier(
+                    String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
+                  );
+                  setShortIndicatorCompare(
+                    indicatorCompareForDirection("short", "supertrend", ""),
+                  );
+                  setShortIndicatorLevel("");
+                } else if (
+                  (startKind === "trend" || startKind === "immediate") &&
+                  next === "indicator"
+                ) {
+                  setIndicatorKind("rsi");
+                  setIndicatorPeriod(String(defaultDcaIndicatorPeriod("rsi")));
+                  setIndicatorCompare(
+                    indicatorCompareForDirection("long", "rsi", ""),
+                  );
+                  setIndicatorLevel("30");
+                  setShortIndicatorKind("rsi");
+                  setShortIndicatorPeriod(
+                    String(defaultDcaIndicatorPeriod("rsi")),
+                  );
+                  setShortIndicatorCompare(
+                    indicatorCompareForDirection("short", "rsi", ""),
+                  );
+                  setShortIndicatorLevel("70");
+                }
+                setStartKind(next);
+              }}
               className={fieldClass}
             >
-              <option value="immediate">Manual</option>
+              {showLegacyManualStart ? (
+                <option value="immediate">Manual (retired)</option>
+              ) : null}
               <option value="indicator">Indicator</option>
+              <option value="trend">Trend</option>
               <option value="price">Price Cross</option>
               <option value="webhook">Signal Webhook</option>
             </select>
           </label>
         </div>
+        {startKind === "immediate" ? (
+          <p className="text-xs text-ink-muted">
+            Manual start is retired. Pick Indicator, Trend, Price Cross, or
+            Signal, then Save and Arm.
+          </p>
+        ) : null}
         {direction === "both" ? (
           <p className="text-xs text-ink-muted">
             Long and Short are independent positions and never flatten each other
@@ -1505,6 +1520,64 @@ export function DcaPlaybookForm({
               onLevelChange={setIndicatorLevel}
               onPeriodChange={setIndicatorPeriod}
               onSlowPeriodChange={setIndicatorSlowPeriod}
+            />
+          ) : null}
+          {startKind === "trend" && direction === "both" ? (
+            <div className="space-y-3 sm:col-span-2 lg:col-span-4">
+              <div className="space-y-2">
+                <p className={sectionTitleClass}>Long start</p>
+                <div className={rowClass}>
+                  <TrendStartFields
+                    side="long"
+                    prefix="indicator"
+                    kind={indicatorKind}
+                    timeframe={indicatorTimeframe}
+                    compare={indicatorCompare}
+                    period={indicatorPeriod}
+                    multiplier={indicatorMultiplier}
+                    onKindChange={setIndicatorKind}
+                    onTimeframeChange={setIndicatorTimeframe}
+                    onCompareChange={setIndicatorCompare}
+                    onPeriodChange={setIndicatorPeriod}
+                    onMultiplierChange={setIndicatorMultiplier}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className={sectionTitleClass}>Short start</p>
+                <div className={rowClass}>
+                  <TrendStartFields
+                    side="short"
+                    prefix="shortIndicator"
+                    kind={shortIndicatorKind}
+                    timeframe={shortIndicatorTimeframe}
+                    compare={shortIndicatorCompare}
+                    period={shortIndicatorPeriod}
+                    multiplier={shortIndicatorMultiplier}
+                    onKindChange={setShortIndicatorKind}
+                    onTimeframeChange={setShortIndicatorTimeframe}
+                    onCompareChange={setShortIndicatorCompare}
+                    onPeriodChange={setShortIndicatorPeriod}
+                    onMultiplierChange={setShortIndicatorMultiplier}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
+          {startKind === "trend" && direction !== "both" ? (
+            <TrendStartFields
+              side={direction === "short" ? "short" : "long"}
+              prefix="indicator"
+              kind={indicatorKind}
+              timeframe={indicatorTimeframe}
+              compare={indicatorCompare}
+              period={indicatorPeriod}
+              multiplier={indicatorMultiplier}
+              onKindChange={setIndicatorKind}
+              onTimeframeChange={setIndicatorTimeframe}
+              onCompareChange={setIndicatorCompare}
+              onPeriodChange={setIndicatorPeriod}
+              onMultiplierChange={setIndicatorMultiplier}
             />
           ) : null}
         </div>
@@ -2593,6 +2666,123 @@ function IndicatorStartFields({
         </p>
       ) : null}
     </>
+  );
+}
+
+function TrendStartFields({
+  side,
+  prefix,
+  kind,
+  timeframe,
+  compare,
+  period,
+  multiplier,
+  onKindChange,
+  onTimeframeChange,
+  onCompareChange,
+  onPeriodChange,
+  onMultiplierChange,
+}: {
+  side: "long" | "short";
+  prefix: "indicator" | "shortIndicator";
+  kind: DcaIndicatorKind;
+  timeframe: DcaIndicatorTimeframe;
+  compare: string;
+  period: string;
+  multiplier: string;
+  onKindChange: (next: DcaIndicatorKind) => void;
+  onTimeframeChange: (next: DcaIndicatorTimeframe) => void;
+  onCompareChange: (next: string) => void;
+  onPeriodChange: (next: string) => void;
+  onMultiplierChange: (next: string) => void;
+}) {
+  const trendKind = kind === "supertrend" ? kind : "supertrend";
+  const whenOptions = dcaIndicatorWhenOptions(trendKind, side, false);
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5 lg:col-span-4">
+      <label className={labelClass}>
+        Trend
+        <select
+          name={`${prefix}Kind`}
+          value={trendKind}
+          onChange={(event) => {
+            const next = event.target.value as DcaIndicatorKind;
+            onKindChange(next);
+            onCompareChange(indicatorCompareForDirection(side, next, ""));
+            onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+            onMultiplierChange(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
+          }}
+          className={fieldClass}
+        >
+          {DCA_TREND_KIND_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={labelClass}>
+        Period
+        <GroupedNumberInput
+          name={`${prefix}Period`}
+          value={period}
+          onChange={onPeriodChange}
+          className={fieldClass}
+        />
+      </label>
+      <label className={labelClass}>
+        Multiplier
+        <GroupedNumberInput
+          name={`${prefix}Multiplier`}
+          value={multiplier}
+          onChange={onMultiplierChange}
+          allowDecimal
+          className={fieldClass}
+        />
+      </label>
+      <label className={labelClass}>
+        Timeframe
+        <select
+          name={`${prefix}Timeframe`}
+          value={timeframe}
+          onChange={(event) =>
+            onTimeframeChange(event.target.value as DcaIndicatorTimeframe)
+          }
+          className={fieldClass}
+        >
+          {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
+            <option key={interval} value={interval}>
+              {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={labelClass}>
+        When
+        <select
+          name={`${prefix}Compare`}
+          value={dcaIndicatorWhenValue(trendKind, side, compare)}
+          onChange={(event) => onCompareChange(event.target.value)}
+          className={fieldClass}
+        >
+          {whenOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="col-span-full text-xs text-ink-muted">
+        {side === "short" ? "Triggers Short" : "Triggers Long"}
+        {compare === "cross_lte"
+          ? " when Supertrend turns bearish."
+          : compare === "lte"
+            ? " while Supertrend is bearish."
+            : compare === "gte"
+              ? " while Supertrend is bullish."
+              : " when Supertrend turns bullish."}
+      </p>
+    </div>
   );
 }
 

@@ -141,9 +141,8 @@ export default async function FuturesAutomationsPage({
         <PageHeading as="h2" title="Automations (bots)" />
         <p className="-mt-4 text-sm text-ink-muted">
           Add a bot per contract. The app owns orders and exits. Save
-          and Arm to listen, then price, indicator, or a bound Signal.
-          Manual uses Save and Trigger Long or Short. Stop adding leaves the
-          position. Close bot flattens it.
+          and Arm to listen, then price, indicator, Trend, or a bound
+          Signal. Stop adding leaves the position. Close bot flattens it.
         </p>
         {hl ? (
           <p className="mt-4 rounded-card border border-line bg-surface px-4 py-3 text-sm text-ink-muted">

@@ -363,7 +363,10 @@ export function backtestTapeInterval(
   fromMs: number,
   toMs: number,
 ): DcaIndicatorTimeframe {
-  if (recipe?.kind === "dca" && recipe.startKind === "indicator") {
+  if (
+    recipe?.kind === "dca" &&
+    (recipe.startKind === "indicator" || recipe.startKind === "trend")
+  ) {
     const primary = recipe.indicatorTimeframe;
     const short = recipe.shortIndicatorTimeframe;
     if (primary && short) {

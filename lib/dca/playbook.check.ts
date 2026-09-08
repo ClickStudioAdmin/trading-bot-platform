@@ -592,6 +592,7 @@ assert.equal(dcaStartListens("immediate"), false);
 assert.equal(dcaStartListens("price"), true);
 assert.equal(dcaStartListens("webhook"), true);
 assert.equal(dcaStartListens("indicator"), true);
+assert.equal(dcaStartListens("trend"), true);
 assert.equal(
   dcaNeedsIndicatorCloses({
     startKind: "indicator",
@@ -621,6 +622,16 @@ assert.equal(
     short: { status: "idle" },
   }),
   false,
+);
+assert.equal(
+  dcaNeedsIndicatorCloses({
+    startKind: "trend",
+    indicatorTimeframe: "15",
+    direction: "long",
+    long: { status: "armed" },
+    short: { status: "idle" },
+  }),
+  true,
 );
 assert.equal(dcaLegIsRunning("idle"), false);
 assert.equal(dcaLegIsRunning("armed"), true);
@@ -960,6 +971,20 @@ assert.equal(
     closes: [],
   }).nextIndicatorTrue,
   true,
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "trend",
+    indicatorKind: "supertrend",
+    indicatorCompare: "cross_gte",
+    indicatorConditionTrue: true,
+    closes: [],
+    bars: [],
+  }).action.kind,
+  "arm",
 );
 assert.equal(
   decideDcaTick({
@@ -2351,6 +2376,88 @@ indicatorBadTf.set("indicatorLevel", "30");
 const indicatorBadTfParsed = parseDcaPlaybookForm(indicatorBadTf);
 assert.equal(indicatorBadTfParsed.ok, false);
 
+const trendForm = new FormData();
+trendForm.set("symbol", "BTCUSDT");
+trendForm.set("side", "long");
+trendForm.set("clipSize", "0.01");
+trendForm.set("sizeUnit", "qty");
+trendForm.set("startKind", "trend");
+trendForm.set("indicatorTimeframe", "15");
+trendForm.set("indicatorCompare", "cross_gte");
+const trendParsed = parseDcaPlaybookForm(trendForm);
+assert.equal(trendParsed.ok, true);
+if (trendParsed.ok) {
+  assert.equal(trendParsed.config.startKind, "trend");
+  assert.equal(trendParsed.config.indicatorKind, "supertrend");
+  assert.equal(trendParsed.config.indicatorPeriod, 10);
+  assert.equal(trendParsed.config.indicatorMultiplier, 3);
+  assert.equal(trendParsed.config.indicatorCompare, "cross_gte");
+}
+
+const trendCustom = new FormData();
+trendCustom.set("symbol", "BTCUSDT");
+trendCustom.set("side", "short");
+trendCustom.set("clipSize", "0.01");
+trendCustom.set("sizeUnit", "qty");
+trendCustom.set("startKind", "trend");
+trendCustom.set("indicatorKind", "supertrend");
+trendCustom.set("indicatorTimeframe", "60");
+trendCustom.set("indicatorCompare", "lte");
+trendCustom.set("indicatorPeriod", "14");
+trendCustom.set("indicatorMultiplier", "2");
+const trendCustomParsed = parseDcaPlaybookForm(trendCustom);
+assert.equal(trendCustomParsed.ok, true);
+if (trendCustomParsed.ok) {
+  assert.equal(trendCustomParsed.config.indicatorPeriod, 14);
+  assert.equal(trendCustomParsed.config.indicatorMultiplier, 2);
+  assert.equal(trendCustomParsed.config.indicatorCompare, "lte");
+}
+
+const bothTrend = new FormData();
+bothTrend.set("symbol", "BTCUSDT");
+bothTrend.set("direction", "both");
+bothTrend.set("clipSize", "100");
+bothTrend.set("sizeUnit", "usdt");
+bothTrend.set("startKind", "trend");
+bothTrend.set("indicatorTimeframe", "15");
+bothTrend.set("indicatorCompare", "cross_gte");
+bothTrend.set("shortIndicatorTimeframe", "15");
+bothTrend.set("shortIndicatorCompare", "cross_lte");
+const bothTrendParsed = parseDcaPlaybookForm(bothTrend);
+assert.equal(bothTrendParsed.ok, true);
+if (bothTrendParsed.ok) {
+  assert.equal(bothTrendParsed.config.indicatorKind, "supertrend");
+  assert.equal(bothTrendParsed.config.shortIndicatorKind, "supertrend");
+  assert.equal(bothTrendParsed.config.indicatorMultiplier, 3);
+  assert.equal(bothTrendParsed.config.shortIndicatorMultiplier, 3);
+  assert.equal(bothTrendParsed.config.shortIndicatorCompare, "cross_lte");
+}
+
+const trendOnIndicator = new FormData();
+trendOnIndicator.set("symbol", "BTCUSDT");
+trendOnIndicator.set("side", "long");
+trendOnIndicator.set("clipSize", "0.01");
+trendOnIndicator.set("sizeUnit", "qty");
+trendOnIndicator.set("startKind", "indicator");
+trendOnIndicator.set("indicatorKind", "supertrend");
+trendOnIndicator.set("indicatorTimeframe", "15");
+trendOnIndicator.set("indicatorCompare", "cross_gte");
+const trendOnIndicatorParsed = parseDcaPlaybookForm(trendOnIndicator);
+assert.equal(trendOnIndicatorParsed.ok, false);
+
+const rsiOnTrend = new FormData();
+rsiOnTrend.set("symbol", "BTCUSDT");
+rsiOnTrend.set("side", "long");
+rsiOnTrend.set("clipSize", "0.01");
+rsiOnTrend.set("sizeUnit", "qty");
+rsiOnTrend.set("startKind", "trend");
+rsiOnTrend.set("indicatorKind", "rsi");
+rsiOnTrend.set("indicatorTimeframe", "15");
+rsiOnTrend.set("indicatorCompare", "cross_lte");
+rsiOnTrend.set("indicatorLevel", "30");
+const rsiOnTrendParsed = parseDcaPlaybookForm(rsiOnTrend);
+assert.equal(rsiOnTrendParsed.ok, false);
+
 const hlForm = new FormData();
 hlForm.set("deskVenue", "hyperliquid");
 hlForm.set("symbol", "BTC");
@@ -2377,6 +2484,7 @@ if (!hlBothParsed.ok) {
 }
 
 assert.equal(dcaIndicatorStartLatches("rsi", "cross_gte"), true);
+assert.equal(dcaIndicatorStartLatches("supertrend", "cross_gte"), true);
 assert.equal(dcaIndicatorStartLatches("rsi", "lte"), false);
 assert.equal(dcaIndicatorStartLatches("ema_cross", null), true);
 assert.equal(dcaIndicatorStartLatches("sma_cross", null), true);

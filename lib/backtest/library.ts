@@ -228,12 +228,12 @@ export function userBacktestFieldIssues(
     if (recipe.startKind === "webhook") {
       issues.push({
         field: "startKind",
-        message: "Webhook start cannot be replayed. Pick Price or Indicator.",
+        message: "Webhook start cannot be replayed. Pick Price, Indicator, or Trend.",
       });
     } else if (recipe.startKind === "immediate") {
       issues.push({
         field: "startKind",
-        message: "Manual start cannot be replayed. Pick Price or Indicator.",
+        message: "Manual start cannot be replayed. Pick Price, Indicator, or Trend.",
       });
     }
     if (
@@ -391,6 +391,7 @@ function dcaIndicatorSideLabel(input: {
   level: number | null | undefined;
   period?: number | null;
   slowPeriod?: number | null;
+  multiplier?: number | null;
   timeframe: DcaTemplateRecipe["indicatorTimeframe"];
   side: "long" | "short";
 }): string {
@@ -400,6 +401,7 @@ function dcaIndicatorSideLabel(input: {
     level: input.level,
     period: input.period,
     slowPeriod: input.slowPeriod,
+    multiplier: input.multiplier,
     timeframe: input.timeframe,
     side: input.side,
   });
@@ -419,13 +421,14 @@ function dcaStartLabel(recipe: DcaTemplateRecipe): string {
     }
     return long;
   }
-  if (recipe.startKind === "indicator") {
+  if (recipe.startKind === "indicator" || recipe.startKind === "trend") {
     const long = dcaIndicatorSideLabel({
       kind: recipe.indicatorKind,
       compare: recipe.indicatorCompare,
       level: recipe.indicatorLevel,
       period: recipe.indicatorPeriod,
       slowPeriod: recipe.indicatorSlowPeriod,
+      multiplier: recipe.indicatorMultiplier,
       timeframe: recipe.indicatorTimeframe,
       side: recipe.direction === "short" ? "short" : "long",
     });
@@ -437,6 +440,8 @@ function dcaStartLabel(recipe: DcaTemplateRecipe): string {
         period: recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod,
         slowPeriod:
           recipe.shortIndicatorSlowPeriod ?? recipe.indicatorSlowPeriod,
+        multiplier:
+          recipe.shortIndicatorMultiplier ?? recipe.indicatorMultiplier,
         timeframe: recipe.shortIndicatorTimeframe ?? null,
         side: "short",
       })}`;

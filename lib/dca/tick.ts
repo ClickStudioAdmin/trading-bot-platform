@@ -8,7 +8,8 @@ import {
   fetchBybitTickers,
   type BybitTicker,
 } from "@/lib/exchanges/bybit/client";
-import { loadDeskIndicatorCloses } from "@/lib/market/desk-klines";
+import { loadDeskIndicatorBars } from "@/lib/market/desk-klines";
+import type { CandleBar } from "@/lib/market/candles";
 import { loadDeskTickerMap } from "@/lib/market/desk-tickers";
 import {
   parseStoredVenueEnvironment,
@@ -130,7 +131,7 @@ export async function runDcaPlaybookTick(input?: {
   const opens = (openRows ?? []).map((row) =>
     parseFuturesPositionRow(row as Record<string, unknown>),
   );
-  const klineCache = new Map<string, number[]>();
+  const klineCache = new Map<string, CandleBar[]>();
 
   let acted = 0;
   for (const playbook of playbooks) {
@@ -147,12 +148,12 @@ export async function runDcaPlaybookTick(input?: {
         : tickers;
     const ticker = deskTickers.get(playbook.symbol) ?? {};
     const prices = tickerTriggerPrices(ticker);
-    const closesByTimeframe = new Map<DcaIndicatorTimeframe, number[]>();
+    const barsByTimeframe = new Map<DcaIndicatorTimeframe, CandleBar[]>();
     if (dcaNeedsIndicatorCloses(playbook)) {
       for (const indicatorTimeframe of dcaIndicatorTimeframes(playbook)) {
         const key = `${account.venue}:${playbook.symbol}:${indicatorTimeframe}`;
         if (!klineCache.has(key)) {
-          const fetched = await loadDeskIndicatorCloses({
+          const fetched = await loadDeskIndicatorBars({
             venue: account.venue,
             venueEnvironment: account.venueEnvironment,
             symbol: playbook.symbol,
@@ -160,7 +161,7 @@ export async function runDcaPlaybookTick(input?: {
           }).catch(() => []);
           klineCache.set(key, fetched);
         }
-        closesByTimeframe.set(indicatorTimeframe, klineCache.get(key) ?? []);
+        barsByTimeframe.set(indicatorTimeframe, klineCache.get(key) ?? []);
       }
     }
     const [working, openWorking] = await Promise.all([
@@ -281,6 +282,7 @@ export async function runDcaPlaybookTick(input?: {
         indicatorLevel: indicatorStart?.level ?? null,
         indicatorPeriod: indicatorStart?.period ?? null,
         indicatorSlowPeriod: indicatorStart?.slowPeriod ?? null,
+        indicatorMultiplier: indicatorStart?.multiplier ?? null,
         splitIndicatorSides:
           playbook.direction === "both" &&
           !playbook.shortIndicatorKind &&
@@ -290,7 +292,12 @@ export async function runDcaPlaybookTick(input?: {
             ? playbook.longIndicatorTrue
             : playbook.shortIndicatorTrue,
         closes: indicatorStart
-          ? (closesByTimeframe.get(indicatorStart.timeframe) ?? [])
+          ? (barsByTimeframe.get(indicatorStart.timeframe) ?? []).map(
+              (row) => row.close,
+            )
+          : null,
+        bars: indicatorStart
+          ? (barsByTimeframe.get(indicatorStart.timeframe) ?? [])
           : null,
         triggerPrices: prices,
       });

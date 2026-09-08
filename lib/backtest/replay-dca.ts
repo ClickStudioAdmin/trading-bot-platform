@@ -8,7 +8,10 @@ import {
   IDLE_DCA_LEG,
   type DcaLegState,
 } from "@/lib/dca/playbook";
-import { resampleClosesForTimeframe } from "@/lib/dca/indicators";
+import {
+  resampleBarsForTimeframe,
+  resampleClosesForTimeframe,
+} from "@/lib/dca/indicators";
 import {
   dcaClipQtyAt,
   dcaPlannedExits,
@@ -42,7 +45,7 @@ export function canBacktestDcaRecipe(
   if (recipe.startKind === "webhook") {
     return {
       ok: false,
-      error: "Webhook-start DCA cannot be backtested. Use price, indicator, or immediate.",
+      error: "Webhook-start DCA cannot be backtested. Use price, indicator, or trend.",
     };
   }
   const hasClip = recipe.clipSize > 0;
@@ -129,6 +132,7 @@ export function replayDcaPlaybook(input: {
   let barsIn = 0;
   let liquidated = false;
   const closes: number[] = [];
+  const ohlc: Array<{ high: number; low: number; close: number }> = [];
 
   function flatten(
     side: FuturesSide,
@@ -388,7 +392,9 @@ export function replayDcaPlaybook(input: {
       continue;
     }
     closes.push(price);
+    ohlc.push({ high: bar.high, low: bar.low, close: bar.close });
     const window = closes.slice(-80);
+    const barWindow = ohlc.slice(-80);
     const triggerPrices = { last: price, mark: price, index: price };
     let held = false;
     let closedThisBar = false;
@@ -500,6 +506,7 @@ export function replayDcaPlaybook(input: {
         indicatorLevel: indicatorStart?.level ?? null,
         indicatorPeriod: indicatorStart?.period ?? null,
         indicatorSlowPeriod: indicatorStart?.slowPeriod ?? null,
+        indicatorMultiplier: indicatorStart?.multiplier ?? null,
         indicatorConditionTrue: live.indicatorTrue,
         splitIndicatorSides:
           splitSides &&
@@ -512,6 +519,13 @@ export function replayDcaPlaybook(input: {
               indicatorStart.timeframe,
             )
           : window,
+        bars: indicatorStart
+          ? resampleBarsForTimeframe(
+              barWindow,
+              backtestTapeInterval(input.recipe, 1, 2),
+              indicatorStart.timeframe,
+            )
+          : barWindow,
         takeProfitOrderType: config.takeProfitOrderType,
         tpLimitResting:
           config.takeProfitOrderType === "limit" && live.qty > 0,

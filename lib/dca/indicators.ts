@@ -7,13 +7,19 @@ export type DcaIndicatorKind =
   | "ema"
   | "sma"
   | "sma_cross"
-  | "bb";
+  | "bb"
+  | "supertrend";
 export type DcaIndicatorCompare = "gte" | "lte" | "cross_gte" | "cross_lte";
+export type SupertrendBar = { high: number; low: number; close: number };
 export const DEFAULT_DCA_MA_PERIOD = 21;
 export const DEFAULT_DCA_CROSS_FAST_PERIOD = 9;
 export const DEFAULT_DCA_CROSS_SLOW_PERIOD = 21;
 export const DEFAULT_DCA_BB_PERIOD = 20;
 export const DEFAULT_DCA_RSI_PERIOD = 14;
+export const DEFAULT_DCA_SUPERTREND_PERIOD = 10;
+export const DEFAULT_DCA_SUPERTREND_MULTIPLIER = 3;
+export const DCA_SUPERTREND_MULTIPLIER_MIN = 0.5;
+export const DCA_SUPERTREND_MULTIPLIER_MAX = 20;
 export const DCA_BB_STDDEV = 2;
 export const DCA_INDICATOR_PERIOD_MIN = 2;
 export const DCA_INDICATOR_PERIOD_MAX = 400;
@@ -78,6 +84,21 @@ export function parseDcaIndicatorPeriod(value: unknown): number | null {
   return period;
 }
 
+export function parseDcaIndicatorMultiplier(value: unknown): number | null {
+  if (value == null || String(value).trim() === "") {
+    return null;
+  }
+  const multiplier = Number(String(value).replace(/,/g, ""));
+  if (
+    !Number.isFinite(multiplier) ||
+    multiplier < DCA_SUPERTREND_MULTIPLIER_MIN ||
+    multiplier > DCA_SUPERTREND_MULTIPLIER_MAX
+  ) {
+    return null;
+  }
+  return multiplier;
+}
+
 export const DCA_INDICATOR_KIND_OPTIONS: {
   value: DcaIndicatorKind;
   label: string;
@@ -90,6 +111,11 @@ export const DCA_INDICATOR_KIND_OPTIONS: {
   { value: "ema_cross", label: "EMA Cross" },
   { value: "bb", label: "Price vs BB" },
 ];
+
+export const DCA_TREND_KIND_OPTIONS: {
+  value: DcaIndicatorKind;
+  label: string;
+}[] = [{ value: "supertrend", label: "Supertrend" }];
 
 export function dcaIndicatorUsesPeriod(kind: DcaIndicatorKind): boolean {
   return kind === "ema" || kind === "sma" || kind === "rsi" || kind === "bb";
@@ -105,6 +131,9 @@ export function defaultDcaIndicatorPeriod(kind: DcaIndicatorKind): number {
   }
   if (kind === "rsi") {
     return DEFAULT_DCA_RSI_PERIOD;
+  }
+  if (kind === "supertrend") {
+    return DEFAULT_DCA_SUPERTREND_PERIOD;
   }
   if (dcaIndicatorUsesPairPeriods(kind)) {
     return DEFAULT_DCA_CROSS_FAST_PERIOD;
@@ -221,6 +250,14 @@ export function dcaIndicatorWhenOptions(
       { value: "lte", label: "Price is below bottom" },
     ];
   }
+  if (kind === "supertrend") {
+    return [
+      { value: "cross_gte", label: "Turns bullish" },
+      { value: "cross_lte", label: "Turns bearish" },
+      { value: "gte", label: "Is bullish" },
+      { value: "lte", label: "Is bearish" },
+    ];
+  }
   if (kind === "ema_cross" || kind === "sma_cross") {
     const options = [
       { value: "cross_gte", label: "Crosses above" },
@@ -252,6 +289,7 @@ export function formatDcaIndicatorStartLabel(input: {
   level?: number | null;
   period?: number | null;
   slowPeriod?: number | null;
+  multiplier?: number | null;
   timeframe?: DcaIndicatorTimeframe | null;
   side: "long" | "short";
 }): string {
@@ -269,6 +307,19 @@ export function formatDcaIndicatorStartLabel(input: {
             ? `histogram crosses below ${level}`
             : `histogram crosses above ${level}`;
     return `MACD ${when}${timeframe}`;
+  }
+  if (input.kind === "supertrend") {
+    const period = input.period ?? DEFAULT_DCA_SUPERTREND_PERIOD;
+    const multiplier = input.multiplier ?? DEFAULT_DCA_SUPERTREND_MULTIPLIER;
+    const when =
+      input.compare === "cross_lte"
+        ? "turns bearish"
+        : input.compare === "lte"
+          ? "is bearish"
+          : input.compare === "gte"
+            ? "is bullish"
+            : "turns bullish";
+    return `Supertrend ${period} × ${multiplier} ${when}${timeframe}`;
   }
   if (input.kind === "bb") {
     const period = input.period ?? DEFAULT_DCA_BB_PERIOD;
@@ -379,6 +430,37 @@ export function resampleClosesForTimeframe(
   return out;
 }
 
+export function resampleBarsForTimeframe(
+  bars: SupertrendBar[],
+  from: DcaIndicatorTimeframe,
+  to: DcaIndicatorTimeframe,
+): SupertrendBar[] {
+  if (from === to || bars.length === 0) {
+    return bars;
+  }
+  const step = Math.round(
+    DCA_INDICATOR_TIMEFRAME_MINUTES[to] / DCA_INDICATOR_TIMEFRAME_MINUTES[from],
+  );
+  if (!(step > 1)) {
+    return bars;
+  }
+  const out: SupertrendBar[] = [];
+  for (let i = 0; i + step <= bars.length; i += step) {
+    const window = bars.slice(i, i + step);
+    const first = window[0];
+    const last = window[window.length - 1];
+    if (!first || !last) {
+      continue;
+    }
+    out.push({
+      high: Math.max(...window.map((row) => row.high)),
+      low: Math.min(...window.map((row) => row.low)),
+      close: last.close,
+    });
+  }
+  return out;
+}
+
 export function oppositeRsiCompare(compare: string): string {
   if (compare === "cross_lte") {
     return "cross_gte";
@@ -413,7 +495,13 @@ export function oppositeIndicatorCompare(
   if (kind === "rsi") {
     return oppositeRsiCompare(compare ?? "cross_lte");
   }
-  if (kind === "macd" || kind === "bb" || kind === "ema" || kind === "sma") {
+  if (
+    kind === "macd" ||
+    kind === "bb" ||
+    kind === "ema" ||
+    kind === "sma" ||
+    kind === "supertrend"
+  ) {
     if (compare === "gte") {
       return "lte";
     }
@@ -444,7 +532,7 @@ export function indicatorCompareForDirection(
     }
     return direction === "short" ? "cross_lte" : "cross_gte";
   }
-  if (kind === "ema" || kind === "sma") {
+  if (kind === "ema" || kind === "sma" || kind === "supertrend") {
     if (
       compare === "gte" ||
       compare === "lte" ||
@@ -562,6 +650,91 @@ export function bollingerBands(
     }, 0) / period;
   const band = Math.sqrt(variance) * stddev;
   return { mid, upper: mid + band, lower: mid - band };
+}
+
+export function atrValues(bars: SupertrendBar[], period: number): (number | null)[] {
+  if (period < 1 || bars.length < period) {
+    return [];
+  }
+  const tr: number[] = [];
+  for (let i = 0; i < bars.length; i += 1) {
+    const high = bars[i]?.high ?? 0;
+    const low = bars[i]?.low ?? 0;
+    if (i === 0) {
+      tr.push(Math.max(0, high - low));
+      continue;
+    }
+    const prevClose = bars[i - 1]?.close ?? 0;
+    tr.push(
+      Math.max(
+        high - low,
+        Math.abs(high - prevClose),
+        Math.abs(low - prevClose),
+      ),
+    );
+  }
+  const out: (number | null)[] = Array(bars.length).fill(null);
+  let sum = 0;
+  for (let i = 0; i < period; i += 1) {
+    sum += tr[i] ?? 0;
+  }
+  let atr = sum / period;
+  out[period - 1] = atr;
+  for (let i = period; i < bars.length; i += 1) {
+    atr = (atr * (period - 1) + (tr[i] ?? 0)) / period;
+    out[i] = atr;
+  }
+  return out;
+}
+
+export function supertrendDirections(
+  bars: SupertrendBar[],
+  period: number,
+  multiplier: number,
+): Array<1 | -1> | null {
+  const atr = atrValues(bars, period);
+  if (atr.length === 0) {
+    return null;
+  }
+  const dirs: Array<1 | -1> = [];
+  let up = 0;
+  let dn = 0;
+  let dir: 1 | -1 = 1;
+  let started = false;
+  for (let i = 0; i < bars.length; i += 1) {
+    const a = atr[i];
+    const bar = bars[i];
+    if (a == null || bar == null) {
+      continue;
+    }
+    const hl2 = (bar.high + bar.low) / 2;
+    let nextUp = hl2 - multiplier * a;
+    let nextDn = hl2 + multiplier * a;
+    if (!started) {
+      up = nextUp;
+      dn = nextDn;
+      dir = bar.close >= hl2 ? 1 : -1;
+      started = true;
+      dirs.push(dir);
+      continue;
+    }
+    const prevClose = bars[i - 1]?.close ?? bar.close;
+    if (prevClose > up) {
+      nextUp = Math.max(nextUp, up);
+    }
+    if (prevClose < dn) {
+      nextDn = Math.min(nextDn, dn);
+    }
+    if (dir === -1 && bar.close > dn) {
+      dir = 1;
+    } else if (dir === 1 && bar.close < up) {
+      dir = -1;
+    }
+    up = nextUp;
+    dn = nextDn;
+    dirs.push(dir);
+  }
+  return dirs.length > 0 ? dirs : null;
 }
 
 export function priceCrossedAverage(
@@ -682,6 +855,13 @@ export function indicatorClosesForCross(closes: number[]): number[] {
   return closes;
 }
 
+export function indicatorBarsForCross<T>(bars: T[]): T[] {
+  if (bars.length > 2) {
+    return bars.slice(0, -1);
+  }
+  return bars;
+}
+
 export function indicatorStartMet(input: {
   kind: DcaIndicatorKind;
   side: FuturesSide;
@@ -690,10 +870,32 @@ export function indicatorStartMet(input: {
   level: number | null;
   period?: number | null;
   slowPeriod?: number | null;
+  multiplier?: number | null;
+  bars?: SupertrendBar[] | null;
   splitBySide?: boolean;
 }): boolean {
   const split = Boolean(input.splitBySide);
   const cross = input.compare === "cross_gte" || input.compare === "cross_lte";
+  if (input.kind === "supertrend") {
+    const dirs = supertrendDirections(
+      input.bars ?? [],
+      input.period ?? DEFAULT_DCA_SUPERTREND_PERIOD,
+      input.multiplier ?? DEFAULT_DCA_SUPERTREND_MULTIPLIER,
+    );
+    if (!dirs || dirs.length === 0) {
+      return false;
+    }
+    const now = dirs[dirs.length - 1];
+    const bullish = split ? input.side === "long" : input.compare === "gte" || input.compare === "cross_gte";
+    if (cross) {
+      if (dirs.length < 2) {
+        return false;
+      }
+      const prev = dirs[dirs.length - 2];
+      return bullish ? prev === -1 && now === 1 : prev === 1 && now === -1;
+    }
+    return bullish ? now === 1 : now === -1;
+  }
   if (input.kind === "bb") {
     const period = input.period ?? DEFAULT_DCA_BB_PERIOD;
     const bands = bollingerBands(input.closes, period);

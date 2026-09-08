@@ -81,7 +81,7 @@ export async function hasArmedIndicatorStarts(): Promise<boolean> {
   const { data, error } = await supabase
     .from("dca_playbooks")
     .select("id")
-    .eq("start_kind", "indicator")
+    .in("start_kind", ["indicator", "trend"])
     .or("long_status.eq.armed,short_status.eq.armed")
     .limit(1);
   if (error) {

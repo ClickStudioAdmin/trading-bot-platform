@@ -91,12 +91,14 @@ export type DcaTemplateRecipe = {
   indicatorLevel: number | null;
   indicatorPeriod?: number | null;
   indicatorSlowPeriod?: number | null;
+  indicatorMultiplier?: number | null;
   shortIndicatorKind?: DcaPlaybookConfig["shortIndicatorKind"];
   shortIndicatorTimeframe?: DcaPlaybookConfig["shortIndicatorTimeframe"];
   shortIndicatorCompare?: DcaPlaybookConfig["shortIndicatorCompare"];
   shortIndicatorLevel?: number | null;
   shortIndicatorPeriod?: number | null;
   shortIndicatorSlowPeriod?: number | null;
+  shortIndicatorMultiplier?: number | null;
 };
 
 export type PerpsTemplateRecipe = {
@@ -267,12 +269,14 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     indicatorLevel: config.indicatorLevel,
     indicatorPeriod: config.indicatorPeriod,
     indicatorSlowPeriod: config.indicatorSlowPeriod,
+    indicatorMultiplier: config.indicatorMultiplier,
     shortIndicatorKind: config.shortIndicatorKind ?? null,
     shortIndicatorTimeframe: config.shortIndicatorTimeframe ?? null,
     shortIndicatorCompare: config.shortIndicatorCompare ?? null,
     shortIndicatorLevel: config.shortIndicatorLevel ?? null,
     shortIndicatorPeriod: config.shortIndicatorPeriod ?? null,
     shortIndicatorSlowPeriod: config.shortIndicatorSlowPeriod ?? null,
+    shortIndicatorMultiplier: config.shortIndicatorMultiplier ?? null,
   };
 }
 
@@ -469,13 +473,13 @@ export function dcaRecipeToConfig(
   const notes: string[] = [];
   const form = new FormData();
   const venue = options.venue ?? "bybit";
-  const startKind = String(recipe.startKind ?? "immediate");
+  const startKind = String(recipe.startKind ?? "indicator");
   const webhookId = options.webhookId?.trim() || "";
   let appliedStart = startKind;
   if (startKind === "webhook" && !webhookId) {
-    appliedStart = "immediate";
+    appliedStart = "indicator";
     notes.push(
-      "Signal start needs a webhook on this desk. Applied as Manual.",
+      "Signal start needs a webhook on this desk. Applied as Indicator.",
     );
   }
   form.set("name", String(recipe.name ?? "DCA"));
@@ -597,9 +601,28 @@ export function dcaRecipeToConfig(
   if (recipe.indicatorSlowPeriod != null) {
     form.set("indicatorSlowPeriod", String(recipe.indicatorSlowPeriod));
   }
+  if (recipe.indicatorMultiplier != null) {
+    form.set("indicatorMultiplier", String(recipe.indicatorMultiplier));
+  }
+  if (appliedStart === "indicator" && !form.get("indicatorKind")) {
+    form.set("indicatorKind", "rsi");
+    form.set("indicatorTimeframe", String(form.get("indicatorTimeframe") || "15"));
+    form.set("indicatorCompare", String(form.get("indicatorCompare") || "cross_lte"));
+    form.set("indicatorLevel", String(form.get("indicatorLevel") || "30"));
+    if (direction === "both" && !form.get("shortIndicatorKind")) {
+      form.set("shortIndicatorKind", "rsi");
+      form.set(
+        "shortIndicatorTimeframe",
+        String(form.get("shortIndicatorTimeframe") || "15"),
+      );
+      form.set("shortIndicatorCompare", "cross_gte");
+      form.set("shortIndicatorLevel", "70");
+    }
+  }
   const shortKind =
     recipe.shortIndicatorKind ??
-    (direction === "both" && appliedStart === "indicator"
+    (direction === "both" &&
+    (appliedStart === "indicator" || appliedStart === "trend")
       ? recipe.indicatorKind
       : null);
   if (shortKind) {
@@ -643,6 +666,12 @@ export function dcaRecipeToConfig(
     (shortKind ? recipe.indicatorSlowPeriod : null);
   if (shortSlowPeriod != null) {
     form.set("shortIndicatorSlowPeriod", String(shortSlowPeriod));
+  }
+  const shortMultiplier =
+    recipe.shortIndicatorMultiplier ??
+    (shortKind ? recipe.indicatorMultiplier : null);
+  if (shortMultiplier != null) {
+    form.set("shortIndicatorMultiplier", String(shortMultiplier));
   }
   const parsed = parseDcaPlaybookForm(form, venue);
   if (!parsed.ok) {
@@ -824,12 +853,14 @@ export type DcaSnapshotOverlay = {
   indicatorLevel?: string;
   indicatorPeriod?: string;
   indicatorSlowPeriod?: string;
+  indicatorMultiplier?: string;
   shortIndicatorKind?: string;
   shortIndicatorTimeframe?: string;
   shortIndicatorCompare?: string;
   shortIndicatorLevel?: string;
   shortIndicatorPeriod?: string;
   shortIndicatorSlowPeriod?: string;
+  shortIndicatorMultiplier?: string;
   armTriggerBy?: string;
   armCompare?: string;
   armPrice?: string;

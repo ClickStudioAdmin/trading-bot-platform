@@ -501,7 +501,8 @@ export function BacktestQueueForm({
         ) : (
           <p className="text-xs text-ink-muted">
             Replay tape {DCA_INDICATOR_TIMEFRAME_LABELS[preview.interval]}
-            {recipe?.kind === "dca" && recipe.startKind === "indicator"
+            {recipe?.kind === "dca" &&
+            (recipe.startKind === "indicator" || recipe.startKind === "trend")
               ? " · bot indicator"
               : " · from this window"}
             . About {preview.bars.toLocaleString()} bars

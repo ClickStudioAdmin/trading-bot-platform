@@ -31,14 +31,19 @@ import {
 import {
   DEFAULT_DCA_BB_PERIOD,
   DEFAULT_DCA_RSI_PERIOD,
+  DEFAULT_DCA_SUPERTREND_MULTIPLIER,
+  DEFAULT_DCA_SUPERTREND_PERIOD,
   DEFAULT_DCA_CROSS_FAST_PERIOD,
   DEFAULT_DCA_CROSS_SLOW_PERIOD,
   dcaIndicatorStartLatches,
+  indicatorBarsForCross,
   indicatorClosesForCross,
   indicatorStartMet,
   parseDcaIndicatorCompare,
+  parseDcaIndicatorMultiplier,
   parseDcaIndicatorPeriod,
   parseDcaIndicatorTimeframe,
+  type SupertrendBar,
   type DcaIndicatorCompare,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
@@ -46,7 +51,7 @@ import {
 
 export type DcaStatus = "idle" | "armed" | "stop_adding";
 export type DcaDirection = "long" | "short" | "both";
-export type DcaStartKind = "immediate" | "price" | "webhook" | "indicator";
+export type DcaStartKind = "immediate" | "price" | "webhook" | "indicator" | "trend";
 export type DcaMode = "position" | "order";
 export type DcaExitBasis = "average" | "first_entry";
 export type DcaMaxType = "orders" | "value";
@@ -103,12 +108,14 @@ export type DcaPlaybookConfig = {
   indicatorLevel: number | null;
   indicatorPeriod: number | null;
   indicatorSlowPeriod: number | null;
+  indicatorMultiplier?: number | null;
   shortIndicatorKind?: DcaIndicatorKind | null;
   shortIndicatorTimeframe?: DcaIndicatorTimeframe | null;
   shortIndicatorCompare?: DcaIndicatorCompare | null;
   shortIndicatorLevel?: number | null;
   shortIndicatorPeriod?: number | null;
   shortIndicatorSlowPeriod?: number | null;
+  shortIndicatorMultiplier?: number | null;
 };
 
 export type DcaPlaybook = DcaPlaybookConfig & {
@@ -172,7 +179,8 @@ export function parseDcaStartKind(value: unknown): DcaStartKind {
   if (
     value === "price" ||
     value === "webhook" ||
-    value === "indicator"
+    value === "indicator" ||
+    value === "trend"
   ) {
     return value;
   }
@@ -477,6 +485,7 @@ export function dcaStartListens(startKind: DcaStartKind): boolean {
   return (
     startKind === "price" ||
     startKind === "indicator" ||
+    startKind === "trend" ||
     startKind === "webhook"
   );
 }
@@ -488,6 +497,7 @@ export type DcaIndicatorStart = {
   level: number | null;
   period: number | null;
   slowPeriod: number | null;
+  multiplier?: number | null;
 };
 
 export function parseDcaIndicatorKind(
@@ -500,7 +510,8 @@ export function parseDcaIndicatorKind(
     raw === "ema" ||
     raw === "sma" ||
     raw === "sma_cross" ||
-    raw === "bb"
+    raw === "bb" ||
+    raw === "supertrend"
     ? raw
     : null;
 }
@@ -514,12 +525,14 @@ export function dcaIndicatorStartForSide(
     | "indicatorLevel"
     | "indicatorPeriod"
     | "indicatorSlowPeriod"
+    | "indicatorMultiplier"
     | "shortIndicatorKind"
     | "shortIndicatorTimeframe"
     | "shortIndicatorCompare"
     | "shortIndicatorLevel"
     | "shortIndicatorPeriod"
     | "shortIndicatorSlowPeriod"
+    | "shortIndicatorMultiplier"
   >,
   side: FuturesSide,
 ): DcaIndicatorStart | null {
@@ -553,6 +566,10 @@ export function dcaIndicatorStartForSide(
       side === "short" && playbook.shortIndicatorKind
         ? (playbook.shortIndicatorSlowPeriod ?? null)
         : playbook.indicatorSlowPeriod,
+    multiplier:
+      side === "short" && playbook.shortIndicatorKind
+        ? (playbook.shortIndicatorMultiplier ?? null)
+        : playbook.indicatorMultiplier,
   };
 }
 
@@ -571,7 +588,7 @@ export function dcaIndicatorTimeframes(playbook: {
   indicatorTimeframe: DcaIndicatorTimeframe | null;
   shortIndicatorTimeframe?: DcaIndicatorTimeframe | null;
 }): DcaIndicatorTimeframe[] {
-  if (playbook.startKind !== "indicator") {
+  if (playbook.startKind !== "indicator" && playbook.startKind !== "trend") {
     return [];
   }
   const rows: DcaIndicatorTimeframe[] = [];
@@ -717,6 +734,9 @@ export function writeDcaCycleFormFields(
   if (current.indicatorSlowPeriod != null) {
     form.set("indicatorSlowPeriod", String(current.indicatorSlowPeriod));
   }
+  if (current.indicatorMultiplier != null) {
+    form.set("indicatorMultiplier", String(current.indicatorMultiplier));
+  }
   if (current.shortIndicatorKind) {
     form.set("shortIndicatorKind", current.shortIndicatorKind);
   }
@@ -734,6 +754,9 @@ export function writeDcaCycleFormFields(
   }
   if (current.shortIndicatorSlowPeriod != null) {
     form.set("shortIndicatorSlowPeriod", String(current.shortIndicatorSlowPeriod));
+  }
+  if (current.shortIndicatorMultiplier != null) {
+    form.set("shortIndicatorMultiplier", String(current.shortIndicatorMultiplier));
   }
 }
 
@@ -794,12 +817,14 @@ export function dcaWithLockedCycleConfig(
     indicatorLevel: current.indicatorLevel,
     indicatorPeriod: current.indicatorPeriod,
     indicatorSlowPeriod: current.indicatorSlowPeriod,
+    indicatorMultiplier: current.indicatorMultiplier,
     shortIndicatorKind: current.shortIndicatorKind,
     shortIndicatorTimeframe: current.shortIndicatorTimeframe,
     shortIndicatorCompare: current.shortIndicatorCompare,
     shortIndicatorLevel: current.shortIndicatorLevel,
     shortIndicatorPeriod: current.shortIndicatorPeriod,
     shortIndicatorSlowPeriod: current.shortIndicatorSlowPeriod,
+    shortIndicatorMultiplier: current.shortIndicatorMultiplier,
   };
 }
 
@@ -1220,9 +1245,11 @@ export function parseDcaPlaybookForm(
       level: "indicatorLevel",
       period: "indicatorPeriod",
       slowPeriod: "indicatorSlowPeriod",
+      multiplier: "indicatorMultiplier",
     },
-    startKind === "indicator",
+    startKind === "indicator" || startKind === "trend",
     direction === "both" ? "Long" : "",
+    startKind === "trend" ? "trend" : "indicator",
   );
   if (!longIndicator.ok) {
     return longIndicator;
@@ -1236,9 +1263,11 @@ export function parseDcaPlaybookForm(
       level: "shortIndicatorLevel",
       period: "shortIndicatorPeriod",
       slowPeriod: "shortIndicatorSlowPeriod",
+      multiplier: "shortIndicatorMultiplier",
     },
-    startKind === "indicator" && direction === "both",
+    (startKind === "indicator" || startKind === "trend") && direction === "both",
     "Short",
+    startKind === "trend" ? "trend" : "indicator",
   );
   if (!shortIndicator.ok) {
     return shortIndicator;
@@ -1280,12 +1309,14 @@ export function parseDcaPlaybookForm(
       indicatorLevel: longIndicator.start?.level ?? null,
       indicatorPeriod: longIndicator.start?.period ?? null,
       indicatorSlowPeriod: longIndicator.start?.slowPeriod ?? null,
+      indicatorMultiplier: longIndicator.start?.multiplier ?? null,
       shortIndicatorKind: shortIndicator.start?.kind ?? null,
       shortIndicatorTimeframe: shortIndicator.start?.timeframe ?? null,
       shortIndicatorCompare: shortIndicator.start?.compare ?? null,
       shortIndicatorLevel: shortIndicator.start?.level ?? null,
       shortIndicatorPeriod: shortIndicator.start?.period ?? null,
       shortIndicatorSlowPeriod: shortIndicator.start?.slowPeriod ?? null,
+      shortIndicatorMultiplier: shortIndicator.start?.multiplier ?? null,
     },
   };
 }
@@ -1299,9 +1330,11 @@ function parseIndicatorStartFields(
     level: string;
     period: string;
     slowPeriod: string;
+    multiplier: string;
   },
   enabled: boolean,
   label: string,
+  family: "indicator" | "trend" = "indicator",
 ):
   | { ok: true; start: DcaIndicatorStart | null }
   | { ok: false; error: string } {
@@ -1309,9 +1342,21 @@ function parseIndicatorStartFields(
     return { ok: true, start: null };
   }
   const prefix = label ? `${label} ` : "";
-  const kind = parseDcaIndicatorKind(form.get(names.kind));
+  const kind = parseDcaIndicatorKind(form.get(names.kind) ?? (family === "trend" ? "supertrend" : ""));
   if (!kind) {
-    return { ok: false, error: `Choose ${prefix}RSI, MACD, EMA, SMA, or BB.` };
+    return {
+      ok: false,
+      error:
+        family === "trend"
+          ? `Choose a ${prefix}trend.`
+          : `Choose ${prefix}RSI, MACD, EMA, SMA, or BB.`,
+    };
+  }
+  if (family === "trend" && kind !== "supertrend") {
+    return { ok: false, error: `Choose ${prefix}Supertrend.` };
+  }
+  if (family === "indicator" && kind === "supertrend") {
+    return { ok: false, error: `Supertrend is a Trend start, not an Indicator.` };
   }
   const timeframe = parseDcaIndicatorTimeframe(
     form.get(names.timeframe) ?? "15",
@@ -1361,6 +1406,33 @@ function parseIndicatorStartFields(
         level: level.value ?? 0,
         period: null,
         slowPeriod: null,
+      },
+    };
+  }
+  if (kind === "supertrend") {
+    const cmp = parseDcaIndicatorCompare(compareRaw || "cross_gte");
+    if (
+      cmp !== "gte" &&
+      cmp !== "lte" &&
+      cmp !== "cross_gte" &&
+      cmp !== "cross_lte"
+    ) {
+      return { ok: false, error: `Choose when ${prefix}Supertrend should fire.` };
+    }
+    return {
+      ok: true,
+      start: {
+        kind,
+        timeframe,
+        compare: cmp,
+        level: null,
+        period:
+          parseDcaIndicatorPeriod(form.get(names.period)) ??
+          DEFAULT_DCA_SUPERTREND_PERIOD,
+        slowPeriod: null,
+        multiplier:
+          parseDcaIndicatorMultiplier(form.get(names.multiplier)) ??
+          DEFAULT_DCA_SUPERTREND_MULTIPLIER,
       },
     };
   }
@@ -1597,6 +1669,7 @@ export function parseDcaPlaybookRow(
     indicatorLevel: indicatorLevelFromRow(indicatorKind, row.indicator_level),
     indicatorPeriod: parseDcaIndicatorPeriod(row.indicator_period),
     indicatorSlowPeriod: parseDcaIndicatorPeriod(row.indicator_slow_period),
+    indicatorMultiplier: parseDcaIndicatorMultiplier(row.indicator_multiplier),
     shortIndicatorKind,
     shortIndicatorTimeframe: parseDcaIndicatorTimeframe(
       row.short_indicator_timeframe,
@@ -1611,6 +1684,9 @@ export function parseDcaPlaybookRow(
     shortIndicatorPeriod: parseDcaIndicatorPeriod(row.short_indicator_period),
     shortIndicatorSlowPeriod: parseDcaIndicatorPeriod(
       row.short_indicator_slow_period,
+    ),
+    shortIndicatorMultiplier: parseDcaIndicatorMultiplier(
+      row.short_indicator_multiplier,
     ),
     updatedAtMs: (() => {
       const ms = new Date(String(row.updated_at ?? "")).getTime();
@@ -1846,9 +1922,11 @@ export function decideDcaTick(input: {
   indicatorLevel?: number | null;
   indicatorPeriod?: number | null;
   indicatorSlowPeriod?: number | null;
+  indicatorMultiplier?: number | null;
   indicatorConditionTrue?: boolean;
   splitIndicatorSides?: boolean;
   closes?: number[] | null;
+  bars?: SupertrendBar[] | null;
   takeProfitOrderType?: FuturesOrderType;
   tpLimitResting?: boolean;
   triggerPrices: { last: number | null; mark: number | null; index: number | null };
@@ -1867,7 +1945,10 @@ export function decideDcaTick(input: {
   const indicatorLevel = input.indicatorLevel ?? null;
   const indicatorPeriod = input.indicatorPeriod ?? null;
   const indicatorSlowPeriod = input.indicatorSlowPeriod ?? null;
+  const indicatorMultiplier = input.indicatorMultiplier ?? null;
   const closes = input.closes ?? null;
+  const bars = input.bars ?? null;
+  const usesSeriesStart = startKind === "indicator" || startKind === "trend";
   const splitBySide = Boolean(input.splitIndicatorSides);
   const armPrice = triggerPrice(input.armTrigger, input.triggerPrices);
   const armMet = Boolean(
@@ -1899,41 +1980,45 @@ export function decideDcaTick(input: {
     indicatorCompare,
   );
   const indicatorNow = Boolean(
-    startKind === "indicator" &&
+    usesSeriesStart &&
       indicatorKind &&
-      closes &&
+      (closes || bars) &&
       (indicatorStartMet({
         kind: indicatorKind,
         side: input.side,
-        closes,
+        closes: closes ?? [],
+        bars,
         compare: indicatorCompare,
         level: indicatorLevel,
         period: indicatorPeriod,
         slowPeriod: indicatorSlowPeriod,
+        multiplier: indicatorMultiplier,
         splitBySide,
       }) ||
         (latchCross &&
           indicatorStartMet({
             kind: indicatorKind,
             side: input.side,
-            closes: indicatorClosesForCross(closes),
+            closes: indicatorClosesForCross(closes ?? []),
+            bars: bars ? indicatorBarsForCross(bars) : null,
             compare: indicatorCompare,
             level: indicatorLevel,
             period: indicatorPeriod,
             slowPeriod: indicatorSlowPeriod,
+            multiplier: indicatorMultiplier,
             splitBySide,
           }))),
   );
   const indicatorDue =
     indicatorNow ||
-    (startKind === "indicator" &&
+    (usesSeriesStart &&
       latchCross &&
       Boolean(input.indicatorConditionTrue) &&
       input.clipsFilled === 0);
   const nextArmTrue = armMet;
   const nextDisarmTrue = disarmMet;
   const nextIndicatorTrue =
-    startKind === "indicator" && latchCross
+    usesSeriesStart && latchCross
       ? indicatorDue
       : indicatorNow;
   const disarmEdge = disarmMet && !input.disarmConditionTrue;
@@ -2055,7 +2140,7 @@ export function decideDcaTick(input: {
     const startReady =
       startKind === "immediate" ||
       (startKind === "price" && armMet) ||
-      (startKind === "indicator" && indicatorDue);
+      ((startKind === "indicator" || startKind === "trend") && indicatorDue);
     if (!input.reduceOnly && startReady) {
       return {
         action: { kind: "arm" },
@@ -2177,8 +2262,10 @@ export function formatDcaNextAdd(input: {
     if (input.startKind === "webhook") {
       return "Waiting for signal";
     }
-    if (input.startKind === "indicator") {
-      return "Waiting for indicator";
+    if (input.startKind === "indicator" || input.startKind === "trend") {
+      return input.startKind === "trend"
+        ? "Waiting for trend"
+        : "Waiting for indicator";
     }
     if (input.startKind === "price") {
       return "Waiting for price";

@@ -70,7 +70,8 @@ if (roundTrip.ok && roundTrip.recipe.kind === "dca") {
 const applied = dcaRecipeToConfig(snapshot, {});
 assert.equal(applied.ok, true);
 if (applied.ok) {
-  assert.equal(applied.config.startKind, "immediate");
+  assert.equal(applied.config.startKind, "indicator");
+  assert.equal(applied.config.indicatorKind, "rsi");
   assert.equal(applied.config.webhookId, null);
   assert.equal(applied.config.symbol, "ETHUSDT");
   assert.ok(applied.notes[0]?.includes("Signal"));

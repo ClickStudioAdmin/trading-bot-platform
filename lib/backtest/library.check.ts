@@ -291,6 +291,18 @@ assert.equal(
   true,
 );
 assert.equal(
+  canQueueUserBacktest({
+    ...dca,
+    startKind: "trend",
+    indicatorKind: "supertrend",
+    indicatorTimeframe: "15",
+    indicatorCompare: "cross_gte",
+    indicatorPeriod: 10,
+    indicatorMultiplier: 3,
+  }).ok,
+  true,
+);
+assert.equal(
   parseBacktestRecipeJson(
     JSON.stringify({
       ...dca,

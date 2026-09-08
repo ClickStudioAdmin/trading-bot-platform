@@ -197,7 +197,7 @@ Admin does **not** rewrite a user’s `recipe` JSON in place. Support path: save
 
 Each type has a documented allow-list of keys matching today’s parse functions. Apply maps JSON → `FormData` or the existing `parseDcaPlaybookForm` / Perps / paper parsers, then the same insert as Save. Force Perps/C&C `mode` to disabled after parse.
 
-- **dca:** fields from `parseDcaPlaybookForm` (not leg runtime). `startKind`, symbol, direction, clip, averaging, TP/SL, indicator, not `webhookId`.
+- **dca:** fields from `parseDcaPlaybookForm` (not leg runtime). `startKind`, symbol, direction, clip, averaging, TP/SL, indicator / Trend, not `webhookId`.
 - **perps:** fields from the automation form (symbol, action, trigger, size). Not `webhookId`, not `conditionTrue`, not source `mode`.
 - **cash_and_carry:** fields from a paper layer (name, pair filters, sizes, exits). Not `enabled` on `paper_engine_settings`, not source `mode`.
 

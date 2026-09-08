@@ -10,6 +10,9 @@ import {
 import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
 import {
   DCA_INDICATOR_KIND_OPTIONS,
+  DCA_TREND_KIND_OPTIONS,
+  DEFAULT_DCA_SUPERTREND_MULTIPLIER,
+  DEFAULT_DCA_SUPERTREND_PERIOD,
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
   defaultDcaIndicatorLevel,
@@ -58,7 +61,10 @@ function seedBothStarts(recipe: DcaTemplateRecipe): Partial<DcaTemplateRecipe> {
       price: recipe.armTrigger.price,
     };
   }
-  if (recipe.startKind === "indicator" && !recipe.shortIndicatorKind) {
+  if (
+    (recipe.startKind === "indicator" || recipe.startKind === "trend") &&
+    !recipe.shortIndicatorKind
+  ) {
     next.shortIndicatorKind = kind;
     next.shortIndicatorTimeframe = recipe.indicatorTimeframe ?? "15";
     next.shortIndicatorCompare = parseDcaIndicatorCompare(
@@ -73,6 +79,10 @@ function seedBothStarts(recipe: DcaTemplateRecipe): Partial<DcaTemplateRecipe> {
     next.shortIndicatorSlowPeriod = dcaIndicatorUsesPairPeriods(kind)
       ? (recipe.indicatorSlowPeriod ?? defaultDcaIndicatorSlowPeriod(kind))
       : recipe.indicatorSlowPeriod;
+    next.shortIndicatorMultiplier =
+      kind === "supertrend"
+        ? (recipe.indicatorMultiplier ?? DEFAULT_DCA_SUPERTREND_MULTIPLIER)
+        : recipe.indicatorMultiplier;
   }
   return next;
 }
@@ -437,6 +447,113 @@ function BacktestIndicatorStartFields({
   );
 }
 
+function BacktestTrendStartFields({
+  side,
+  timeframe,
+  compare,
+  period,
+  multiplier,
+  onChange,
+}: {
+  side: "long" | "short";
+  timeframe: DcaIndicatorTimeframe;
+  compare: DcaTemplateRecipe["indicatorCompare"];
+  period: number | null | undefined;
+  multiplier: number | null | undefined;
+  onChange: (patch: Partial<DcaTemplateRecipe>) => void;
+}) {
+  const whenOptions = dcaIndicatorWhenOptions("supertrend", side, false);
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5">
+      <label className={labelClass}>
+        Trend
+        <select
+          value="supertrend"
+          onChange={() => undefined}
+          className={fieldClass}
+        >
+          {DCA_TREND_KIND_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={labelClass}>
+        Period
+        <RecipeNumberInput
+          value={period}
+          emptyValue={DEFAULT_DCA_SUPERTREND_PERIOD}
+          allowDecimal={false}
+          className={fieldClass}
+          onCommit={(next) =>
+            onChange({
+              indicatorKind: "supertrend",
+              indicatorPeriod: next ?? DEFAULT_DCA_SUPERTREND_PERIOD,
+              indicatorMultiplier:
+                multiplier ?? DEFAULT_DCA_SUPERTREND_MULTIPLIER,
+            })
+          }
+        />
+      </label>
+      <label className={labelClass}>
+        Multiplier
+        <RecipeNumberInput
+          value={multiplier}
+          emptyValue={DEFAULT_DCA_SUPERTREND_MULTIPLIER}
+          className={fieldClass}
+          onCommit={(next) =>
+            onChange({
+              indicatorKind: "supertrend",
+              indicatorPeriod: period ?? DEFAULT_DCA_SUPERTREND_PERIOD,
+              indicatorMultiplier:
+                next ?? DEFAULT_DCA_SUPERTREND_MULTIPLIER,
+            })
+          }
+        />
+      </label>
+      <label className={labelClass}>
+        Timeframe
+        <select
+          value={timeframe}
+          onChange={(event) =>
+            onChange({
+              indicatorKind: "supertrend",
+              indicatorTimeframe: event.target.value as DcaIndicatorTimeframe,
+            })
+          }
+          className={fieldClass}
+        >
+          {DCA_INDICATOR_TIMEFRAMES.map((row) => (
+            <option key={row} value={row}>
+              {DCA_INDICATOR_TIMEFRAME_LABELS[row]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className={labelClass}>
+        When
+        <select
+          value={dcaIndicatorWhenValue("supertrend", side, compare)}
+          onChange={(event) =>
+            onChange({
+              indicatorKind: "supertrend",
+              indicatorCompare: parseDcaIndicatorCompare(event.target.value),
+            })
+          }
+          className={fieldClass}
+        >
+          {whenOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
 export function BacktestRecipeFields({
   recipe,
   onChange,
@@ -527,8 +644,23 @@ export function BacktestRecipeFields({
           <select
             value={startBlocked ? "" : recipe.startKind}
             onChange={(event) => {
-              const startKind = event.target.value as "price" | "indicator";
-              const next = { ...recipe, startKind };
+              const startKind = event.target.value as
+                | "price"
+                | "indicator"
+                | "trend";
+              const next = {
+                ...recipe,
+                startKind,
+                ...(startKind === "trend"
+                  ? {
+                      indicatorKind: "supertrend" as const,
+                      indicatorPeriod: DEFAULT_DCA_SUPERTREND_PERIOD,
+                      indicatorMultiplier: DEFAULT_DCA_SUPERTREND_MULTIPLIER,
+                      indicatorCompare: "cross_gte" as const,
+                      indicatorLevel: null,
+                    }
+                  : {}),
+              };
               onChange({
                 ...next,
                 ...(recipe.direction === "both" ? seedBothStarts(next) : {}),
@@ -543,6 +675,7 @@ export function BacktestRecipeFields({
             ) : null}
             <option value="price">Price</option>
             <option value="indicator">Indicator</option>
+            <option value="trend">Trend</option>
           </select>
           <FieldNote message={issueFor(issues, "startKind")} />
         </label>
@@ -718,6 +851,63 @@ export function BacktestRecipeFields({
             period={recipe.indicatorPeriod}
             slowPeriod={recipe.indicatorSlowPeriod}
             onChange={(patch) => onChange({ ...recipe, ...patch })}
+          />
+        ) : null}
+        {recipe.startKind === "trend" && recipe.direction === "both" ? (
+          <>
+            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
+              Long start
+            </p>
+            <BacktestTrendStartFields
+              side="long"
+              timeframe={recipe.indicatorTimeframe ?? "15"}
+              compare={recipe.indicatorCompare}
+              period={recipe.indicatorPeriod}
+              multiplier={recipe.indicatorMultiplier}
+              onChange={(patch) => onChange({ ...recipe, ...patch })}
+            />
+            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
+              Short start
+            </p>
+            <BacktestTrendStartFields
+              side="short"
+              timeframe={
+                recipe.shortIndicatorTimeframe ??
+                recipe.indicatorTimeframe ??
+                "15"
+              }
+              compare={
+                recipe.shortIndicatorCompare ?? recipe.indicatorCompare
+              }
+              period={
+                recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod
+              }
+              multiplier={
+                recipe.shortIndicatorMultiplier ?? recipe.indicatorMultiplier
+              }
+              onChange={(patch) =>
+                onChange({
+                  ...recipe,
+                  shortIndicatorKind: "supertrend",
+                  shortIndicatorTimeframe: patch.indicatorTimeframe,
+                  shortIndicatorCompare: patch.indicatorCompare,
+                  shortIndicatorPeriod: patch.indicatorPeriod,
+                  shortIndicatorMultiplier: patch.indicatorMultiplier,
+                })
+              }
+            />
+          </>
+        ) : null}
+        {recipe.startKind === "trend" && recipe.direction !== "both" ? (
+          <BacktestTrendStartFields
+            side={recipe.direction === "short" ? "short" : "long"}
+            timeframe={recipe.indicatorTimeframe ?? "15"}
+            compare={recipe.indicatorCompare}
+            period={recipe.indicatorPeriod}
+            multiplier={recipe.indicatorMultiplier}
+            onChange={(patch) =>
+              onChange({ ...recipe, indicatorKind: "supertrend", ...patch })
+            }
           />
         ) : null}
         {recipe.maxValue != null &&

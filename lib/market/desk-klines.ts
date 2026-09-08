@@ -1,7 +1,4 @@
-import {
-  fetchBybitKlineBars,
-  fetchBybitKlines,
-} from "@/lib/exchanges/bybit/client";
+import { fetchBybitKlineBars } from "@/lib/exchanges/bybit/client";
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { loadHyperliquidCandles } from "@/lib/exchanges/hyperliquid/info";
 import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
@@ -38,15 +35,15 @@ export function hyperliquidCandleInterval(
   return HL_INTERVAL[timeframe];
 }
 
-export async function loadDeskIndicatorCloses(input: {
+export async function loadDeskIndicatorBars(input: {
   venue: string;
   venueEnvironment: string | null;
   symbol: string;
   interval: DcaIndicatorTimeframe;
   limit?: number;
-}): Promise<number[]> {
+}): Promise<CandleBar[]> {
+  const limit = input.limit ?? 80;
   if (input.venue === "hyperliquid") {
-    const limit = input.limit ?? 80;
     const endTimeMs = Date.now();
     const startTimeMs = endTimeMs - INTERVAL_MS[input.interval] * limit;
     const candles = await loadHyperliquidCandles({
@@ -57,15 +54,25 @@ export async function loadDeskIndicatorCloses(input: {
       endTimeMs,
     });
     return candles
-      .filter((row) => row.close > 0)
-      .map((row) => row.close)
+      .filter((row) => row.close > 0 && row.high > 0 && row.low > 0)
       .slice(-limit);
   }
-  return fetchBybitKlines({
+  return fetchBybitKlineBars({
     symbol: input.symbol,
     interval: input.interval,
-    limit: input.limit,
+    limit,
   });
+}
+
+export async function loadDeskIndicatorCloses(input: {
+  venue: string;
+  venueEnvironment: string | null;
+  symbol: string;
+  interval: DcaIndicatorTimeframe;
+  limit?: number;
+}): Promise<number[]> {
+  const bars = await loadDeskIndicatorBars(input);
+  return bars.map((row) => row.close);
 }
 
 export const DESK_CANDLE_MAX = 1500;

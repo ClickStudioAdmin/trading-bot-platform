@@ -30,6 +30,7 @@ import {
   bollingerBands,
   crossedLevel,
   DCA_INDICATOR_KIND_OPTIONS,
+  DCA_TREND_KIND_OPTIONS,
   dcaIndicatorShowsLevel,
   dcaIndicatorUsesPeriod,
   dcaIndicatorWhenOptions,
@@ -48,6 +49,8 @@ import {
   priceCrossedAverage,
   rsiValue,
   smaValues,
+  supertrendDirections,
+  type SupertrendBar,
 } from "./indicators";
 
 assert.equal(dcaClipSizeAt(0, 10, 2), 10);
@@ -1036,5 +1039,144 @@ assert.equal(
 assert.equal(dcaIndicatorUsesPeriod("bb"), true);
 assert.equal(dcaIndicatorUsesPeriod("rsi"), true);
 assert.equal(dcaIndicatorUsesPeriod("ema"), true);
+assert.deepEqual(
+  dcaIndicatorWhenOptions("supertrend", "long", false).map((row) => row.label),
+  ["Turns bullish", "Turns bearish", "Is bullish", "Is bearish"],
+);
+assert.deepEqual(
+  DCA_TREND_KIND_OPTIONS.map((row) => row.label),
+  ["Supertrend"],
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "supertrend",
+    compare: "cross_gte",
+    period: 10,
+    multiplier: 3,
+    timeframe: "15",
+    side: "long",
+  }),
+  "Supertrend 10 × 3 turns bullish · 15m",
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "supertrend",
+    compare: "lte",
+    period: 14,
+    multiplier: 2,
+    timeframe: "60",
+    side: "short",
+  }),
+  "Supertrend 14 × 2 is bearish · 1h",
+);
+
+function trendBars(
+  start: number,
+  step: number,
+  count: number,
+  bias: "bull" | "bear",
+): SupertrendBar[] {
+  const bars: SupertrendBar[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const close = start + step * i;
+    bars.push(
+      bias === "bull"
+        ? { high: close + 0.1, low: close - 2, close }
+        : { high: close + 2, low: close - 0.1, close },
+    );
+  }
+  return bars;
+}
+
+function lastDir(bars: SupertrendBar[]): 1 | -1 | undefined {
+  const dirs = supertrendDirections(bars, 10, 3);
+  return dirs?.[dirs.length - 1];
+}
+
+const uptrend = trendBars(100, 1, 40, "bull");
+assert.equal(lastDir(uptrend), 1);
+assert.equal(
+  indicatorStartMet({
+    kind: "supertrend",
+    side: "long",
+    closes: [],
+    bars: uptrend,
+    compare: "gte",
+    level: null,
+    period: 10,
+    multiplier: 3,
+  }),
+  true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "supertrend",
+    side: "short",
+    closes: [],
+    bars: uptrend,
+    compare: "lte",
+    level: null,
+    period: 10,
+    multiplier: 3,
+  }),
+  false,
+);
+
+const downtrend = trendBars(200, -1, 40, "bear");
+assert.equal(lastDir(downtrend), -1);
+assert.equal(
+  indicatorStartMet({
+    kind: "supertrend",
+    side: "short",
+    closes: [],
+    bars: downtrend,
+    compare: "lte",
+    level: null,
+    period: 10,
+    multiplier: 3,
+  }),
+  true,
+);
+
+const flipBars = [
+  ...trendBars(200, -2, 30, "bear"),
+  ...trendBars(80, 6, 20, "bull"),
+];
+const flipDirs = supertrendDirections(flipBars, 10, 3);
+assert.ok(flipDirs);
+const flipAt = flipDirs.findIndex(
+  (dir, index) => index > 0 && flipDirs[index - 1] === -1 && dir === 1,
+);
+assert.ok(flipAt > 0);
+const flipPrefix = flipBars.slice(
+  0,
+  flipBars.length - flipDirs.length + flipAt + 1,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "supertrend",
+    side: "long",
+    closes: [],
+    bars: flipPrefix,
+    compare: "cross_gte",
+    level: null,
+    period: 10,
+    multiplier: 3,
+  }),
+  true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "supertrend",
+    side: "long",
+    closes: [],
+    bars: flipPrefix,
+    compare: "cross_lte",
+    level: null,
+    period: 10,
+    multiplier: 3,
+  }),
+  false,
+);
 
 console.log("dca grid checks passed");
