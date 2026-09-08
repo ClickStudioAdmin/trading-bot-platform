@@ -64,6 +64,18 @@ export async function loadDeskIndicatorBars(input: {
   });
 }
 
+export function closedLiveIndicatorBars(
+  bars: CandleBar[],
+  interval: DcaIndicatorTimeframe,
+  nowMs = Date.now(),
+): CandleBar[] {
+  const last = bars[bars.length - 1];
+  if (!last || last.timeMs + INTERVAL_MS[interval] <= nowMs) {
+    return bars;
+  }
+  return bars.slice(0, -1);
+}
+
 export async function loadDeskIndicatorCloses(input: {
   venue: string;
   venueEnvironment: string | null;

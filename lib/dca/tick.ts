@@ -8,7 +8,10 @@ import {
   fetchBybitTickers,
   type BybitTicker,
 } from "@/lib/exchanges/bybit/client";
-import { loadDeskIndicatorBars } from "@/lib/market/desk-klines";
+import {
+  closedLiveIndicatorBars,
+  loadDeskIndicatorBars,
+} from "@/lib/market/desk-klines";
 import type { CandleBar } from "@/lib/market/candles";
 import { loadDeskTickerMap } from "@/lib/market/desk-tickers";
 import {
@@ -153,12 +156,24 @@ export async function runDcaPlaybookTick(input?: {
       for (const indicatorTimeframe of dcaIndicatorTimeframes(playbook)) {
         const key = `${account.venue}:${playbook.symbol}:${indicatorTimeframe}`;
         if (!klineCache.has(key)) {
+          const supertrend =
+            playbook.indicatorKind === "supertrend" ||
+            playbook.shortIndicatorKind === "supertrend";
           const fetched = await loadDeskIndicatorBars({
             venue: account.venue,
             venueEnvironment: account.venueEnvironment,
             symbol: playbook.symbol,
             interval: indicatorTimeframe,
-          }).catch(() => []);
+            limit: supertrend ? 500 : 80,
+          }).catch((error: unknown) => {
+            console.error(
+              "engine indicator bars",
+              playbook.symbol,
+              indicatorTimeframe,
+              error instanceof Error ? error.message : error,
+            );
+            return [];
+          });
           klineCache.set(key, fetched);
         }
         barsByTimeframe.set(indicatorTimeframe, klineCache.get(key) ?? []);
@@ -292,12 +307,16 @@ export async function runDcaPlaybookTick(input?: {
             ? playbook.longIndicatorTrue
             : playbook.shortIndicatorTrue,
         closes: indicatorStart
-          ? (barsByTimeframe.get(indicatorStart.timeframe) ?? []).map(
-              (row) => row.close,
-            )
+          ? closedLiveIndicatorBars(
+              barsByTimeframe.get(indicatorStart.timeframe) ?? [],
+              indicatorStart.timeframe,
+            ).map((row) => row.close)
           : null,
         bars: indicatorStart
-          ? (barsByTimeframe.get(indicatorStart.timeframe) ?? [])
+          ? closedLiveIndicatorBars(
+              barsByTimeframe.get(indicatorStart.timeframe) ?? [],
+              indicatorStart.timeframe,
+            )
           : null,
         triggerPrices: prices,
       });

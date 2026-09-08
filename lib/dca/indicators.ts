@@ -697,9 +697,10 @@ export function supertrendDirections(
     return null;
   }
   const dirs: Array<1 | -1> = [];
-  let up = 0;
-  let dn = 0;
-  let dir: 1 | -1 = 1;
+  let lower = 0;
+  let upper = 0;
+  let line = 0;
+  let dir: 1 | -1 = -1;
   let started = false;
   for (let i = 0; i < bars.length; i += 1) {
     const a = atr[i];
@@ -708,30 +709,33 @@ export function supertrendDirections(
       continue;
     }
     const hl2 = (bar.high + bar.low) / 2;
-    let nextUp = hl2 - multiplier * a;
-    let nextDn = hl2 + multiplier * a;
+    let nextLower = hl2 - multiplier * a;
+    let nextUpper = hl2 + multiplier * a;
     if (!started) {
-      up = nextUp;
-      dn = nextDn;
-      dir = bar.close >= hl2 ? 1 : -1;
+      lower = nextLower;
+      upper = nextUpper;
+      dir = -1;
+      line = upper;
       started = true;
       dirs.push(dir);
       continue;
     }
     const prevClose = bars[i - 1]?.close ?? bar.close;
-    if (prevClose > up) {
-      nextUp = Math.max(nextUp, up);
+    const prevLower = lower;
+    const prevUpper = upper;
+    const prevLine = line;
+    nextLower =
+      nextLower > prevLower || prevClose < prevLower ? nextLower : prevLower;
+    nextUpper =
+      nextUpper < prevUpper || prevClose > prevUpper ? nextUpper : prevUpper;
+    if (prevLine === prevUpper) {
+      dir = bar.close > nextUpper ? 1 : -1;
+    } else {
+      dir = bar.close < nextLower ? -1 : 1;
     }
-    if (prevClose < dn) {
-      nextDn = Math.min(nextDn, dn);
-    }
-    if (dir === -1 && bar.close > dn) {
-      dir = 1;
-    } else if (dir === 1 && bar.close < up) {
-      dir = -1;
-    }
-    up = nextUp;
-    dn = nextDn;
+    lower = nextLower;
+    upper = nextUpper;
+    line = dir === 1 ? lower : upper;
     dirs.push(dir);
   }
   return dirs.length > 0 ? dirs : null;
