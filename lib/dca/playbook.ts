@@ -1365,8 +1365,13 @@ function parseIndicatorStartFields(
     };
   }
   if (kind === "bb") {
-    const cmp = parseDcaIndicatorCompare(compareRaw || "lte");
-    if (cmp !== "gte" && cmp !== "lte") {
+    const cmp = parseDcaIndicatorCompare(compareRaw || "cross_lte");
+    if (
+      cmp !== "gte" &&
+      cmp !== "lte" &&
+      cmp !== "cross_gte" &&
+      cmp !== "cross_lte"
+    ) {
       return { ok: false, error: `Choose when ${prefix}Bollinger Bands should fire.` };
     }
     return {

@@ -200,8 +200,10 @@ export function dcaIndicatorWhenOptions(
   }
   if (kind === "bb") {
     return [
-      { value: "gte", label: "Above top BB" },
-      { value: "lte", label: "Below bottom BB" },
+      { value: "cross_gte", label: "Price crosses above top" },
+      { value: "cross_lte", label: "Price crosses below bottom" },
+      { value: "gte", label: "Price is above top" },
+      { value: "lte", label: "Price is below bottom" },
     ];
   }
   if (kind === "ema_cross" || kind === "sma_cross") {
@@ -256,7 +258,13 @@ export function formatDcaIndicatorStartLabel(input: {
   if (input.kind === "bb") {
     const period = input.period ?? DEFAULT_DCA_BB_PERIOD;
     const when =
-      input.compare === "lte" ? "Below bottom BB" : "Above top BB";
+      input.compare === "cross_lte"
+        ? "Price crosses below bottom BB"
+        : input.compare === "cross_gte"
+          ? "Price crosses above top BB"
+          : input.compare === "lte"
+            ? "Price is below bottom BB"
+            : "Price is above top BB";
     return `${when} ${period}${timeframe}`;
   }
   if (input.kind === "ema" || input.kind === "sma") {
@@ -399,7 +407,16 @@ export function oppositeIndicatorCompare(
     return "cross_lte";
   }
   if (kind === "bb") {
-    return compare === "gte" ? "lte" : "gte";
+    if (compare === "gte") {
+      return "lte";
+    }
+    if (compare === "lte") {
+      return "gte";
+    }
+    if (compare === "cross_lte") {
+      return "cross_gte";
+    }
+    return "cross_lte";
   }
   return compare === "cross_lte" ? "cross_gte" : "cross_lte";
 }
@@ -427,10 +444,15 @@ export function indicatorCompareForDirection(
     return direction === "short" ? "cross_lte" : "cross_gte";
   }
   if (kind === "bb") {
-    if (compare === "gte" || compare === "lte") {
+    if (
+      compare === "gte" ||
+      compare === "lte" ||
+      compare === "cross_gte" ||
+      compare === "cross_lte"
+    ) {
       return compare;
     }
-    return direction === "short" ? "gte" : "lte";
+    return direction === "short" ? "cross_gte" : "cross_lte";
   }
   if (kind === "ema_cross") {
     if (compare === "legacy") {
@@ -655,10 +677,8 @@ export function indicatorStartMet(input: {
   const split = Boolean(input.splitBySide);
   const cross = input.compare === "cross_gte" || input.compare === "cross_lte";
   if (input.kind === "bb") {
-    const bands = bollingerBands(
-      input.closes,
-      input.period ?? DEFAULT_DCA_BB_PERIOD,
-    );
+    const period = input.period ?? DEFAULT_DCA_BB_PERIOD;
+    const bands = bollingerBands(input.closes, period);
     if (!bands) {
       return false;
     }
@@ -668,7 +688,17 @@ export function indicatorStartMet(input: {
     }
     const below = split
       ? input.side === "long"
-      : input.compare === "lte";
+      : input.compare === "lte" || input.compare === "cross_lte";
+    if (cross) {
+      const prevBands = bollingerBands(input.closes.slice(0, -1), period);
+      const prevPrice = input.closes[input.closes.length - 2];
+      if (!prevBands || prevPrice == null) {
+        return false;
+      }
+      return below
+        ? prevPrice >= prevBands.lower && price < bands.lower
+        : prevPrice <= prevBands.upper && price > bands.upper;
+    }
     return below ? price < bands.lower : price > bands.upper;
   }
   if (input.kind === "ema" || input.kind === "sma") {

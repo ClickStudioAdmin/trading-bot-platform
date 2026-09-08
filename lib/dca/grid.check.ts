@@ -882,10 +882,14 @@ assert.equal(
   }),
   true,
 );
-assert.ok(
-  dcaIndicatorWhenOptions("bb", "long", false).some(
-    (row) => row.label === "Above top BB",
-  ),
+assert.deepEqual(
+  dcaIndicatorWhenOptions("bb", "long", false).map((row) => row.label),
+  [
+    "Price crosses above top",
+    "Price crosses below bottom",
+    "Price is above top",
+    "Price is below bottom",
+  ],
 );
 assert.equal(
   formatDcaIndicatorStartLabel({
@@ -895,7 +899,52 @@ assert.equal(
     timeframe: "15",
     side: "short",
   }),
-  "Above top BB 20 · 15m",
+  "Price is above top BB 20 · 15m",
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "bb",
+    compare: "cross_lte",
+    period: 20,
+    timeframe: "15",
+    side: "long",
+  }),
+  "Price crosses below bottom BB 20 · 15m",
+);
+const bbCrossUp = [...Array(20).fill(100), 200];
+const bbCrossDown = [...Array(20).fill(100), 50];
+assert.equal(
+  indicatorStartMet({
+    kind: "bb",
+    side: "short",
+    closes: bbCrossUp,
+    compare: "cross_gte",
+    level: null,
+    period: 20,
+  }),
+  true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "bb",
+    side: "long",
+    closes: bbCrossDown,
+    compare: "cross_lte",
+    level: null,
+    period: 20,
+  }),
+  true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "bb",
+    side: "short",
+    closes: [...Array(20).fill(200)],
+    compare: "cross_gte",
+    level: null,
+    period: 20,
+  }),
+  false,
 );
 assert.equal(
   formatDcaIndicatorStartLabel({

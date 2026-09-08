@@ -2294,6 +2294,22 @@ if (bbPeriodParsed.ok) {
   assert.equal(bbPeriodParsed.config.indicatorPeriod, 50);
 }
 
+const bbCrossForm = new FormData();
+bbCrossForm.set("symbol", "BTCUSDT");
+bbCrossForm.set("side", "short");
+bbCrossForm.set("clipSize", "0.01");
+bbCrossForm.set("sizeUnit", "qty");
+bbCrossForm.set("startKind", "indicator");
+bbCrossForm.set("indicatorKind", "bb");
+bbCrossForm.set("indicatorTimeframe", "15");
+bbCrossForm.set("indicatorCompare", "cross_gte");
+bbCrossForm.set("indicatorPeriod", "20");
+const bbCrossParsed = parseDcaPlaybookForm(bbCrossForm);
+assert.equal(bbCrossParsed.ok, true);
+if (bbCrossParsed.ok) {
+  assert.equal(bbCrossParsed.config.indicatorCompare, "cross_gte");
+}
+
 const emaMissingPeriod = new FormData();
 emaMissingPeriod.set("symbol", "BTCUSDT");
 emaMissingPeriod.set("side", "long");

@@ -2571,9 +2571,13 @@ function IndicatorStartFields({
       {kind === "bb" ? (
         <p className="self-end text-xs text-ink-muted sm:col-span-2">
           {side === "short" ? "Triggers Short" : "Triggers Long"}
-          {compare === "lte"
-            ? " when price is below the bottom Bollinger Band."
-            : " when price is above the top Bollinger Band."}
+          {compare === "cross_lte"
+            ? " when price crosses below the bottom Bollinger Band."
+            : compare === "cross_gte"
+              ? " when price crosses above the top Bollinger Band."
+              : compare === "lte"
+                ? " when price is below the bottom Bollinger Band."
+                : " when price is above the top Bollinger Band."}
         </p>
       ) : null}
       {kind === "ema_cross" &&
