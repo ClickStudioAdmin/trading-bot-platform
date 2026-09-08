@@ -1378,6 +1378,7 @@ export function DcaPlaybookForm({
                     triggerBy={source?.armTrigger?.triggerBy ?? "last"}
                     compare={source?.armTrigger?.compare ?? "gte"}
                     price={optional(source?.armTrigger?.price)}
+                    quoteLabel={policy.quoteLabel}
                   />
                 </div>
               </div>
@@ -1401,6 +1402,7 @@ export function DcaPlaybookForm({
                       source?.shortArmTrigger?.price ??
                         source?.armTrigger?.price,
                     )}
+                    quoteLabel={policy.quoteLabel}
                   />
                 </div>
               </div>
@@ -1412,6 +1414,7 @@ export function DcaPlaybookForm({
               triggerBy={source?.armTrigger?.triggerBy ?? "last"}
               compare={source?.armTrigger?.compare ?? "gte"}
               price={optional(source?.armTrigger?.price)}
+              quoteLabel={policy.quoteLabel}
             />
           ) : null}
           {startKind === "webhook" ? (
@@ -2778,11 +2781,13 @@ function TriggerFields({
   triggerBy,
   compare,
   price,
+  quoteLabel,
 }: {
   prefix: "arm" | "disarm" | "shortArm";
   triggerBy: string;
   compare: string;
   price: string;
+  quoteLabel: string;
 }) {
   return (
     <>
@@ -2810,7 +2815,7 @@ function TriggerFields({
         </select>
       </label>
       <label className={labelClass}>
-        Level
+        Level ({quoteLabel})
         <GroupedNumberInput
           name={`${prefix}Price`}
           defaultValue={price}
