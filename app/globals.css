@@ -24,12 +24,6 @@ html {
   color-scheme: dark;
 }
 
-select,
-select option {
-  background-color: var(--color-canvas);
-  color: var(--color-ink);
-}
-
 body {
   min-height: 100%;
   min-height: 100dvh;

@@ -38,7 +38,7 @@ Desk chrome (header, footer, strategy nav, strategy pages, `/account`, `/admin`)
 
 Primary: `bg-accent-strong` / `text-ink`. Secondary: surface + `border-line`. Ghost: ink-muted, no fill. Danger: `danger` text or fill for destructive only.
 
-`html` sets `color-scheme: dark` so native `<select>` lists, scrollbars, and date popups use the dark OS picker. Without that, Windows Chrome/Edge opens those lists white.
+`html` sets `color-scheme: dark` so native `<select>` lists use the dark OS picker (not a white flash). Do not force `select` to `canvas` — fields sit on canvas cards and use `surface-raised`.
 
 ## Motion
 
