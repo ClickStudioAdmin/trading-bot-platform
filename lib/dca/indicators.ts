@@ -196,6 +196,8 @@ export function dcaIndicatorWhenOptions(
     return [
       { value: "cross_gte", label: "Price crosses above" },
       { value: "cross_lte", label: "Price crosses below" },
+      { value: "gte", label: "Price is above" },
+      { value: "lte", label: "Price is below" },
     ];
   }
   if (kind === "bb") {
@@ -273,7 +275,11 @@ export function formatDcaIndicatorStartLabel(input: {
     const when =
       input.compare === "cross_lte"
         ? "Price crosses below"
-        : "Price crosses above";
+        : input.compare === "lte"
+          ? "Price is below"
+          : input.compare === "gte"
+            ? "Price is above"
+            : "Price crosses above";
     return `${when} ${name} ${period}${timeframe}`;
   }
   if (input.kind === "ema_cross" || input.kind === "sma_cross") {
@@ -394,19 +400,7 @@ export function oppositeIndicatorCompare(
   if (kind === "rsi") {
     return oppositeRsiCompare(compare ?? "cross_lte");
   }
-  if (kind === "macd") {
-    if (compare === "gte") {
-      return "lte";
-    }
-    if (compare === "lte") {
-      return "gte";
-    }
-    if (compare === "cross_lte") {
-      return "cross_gte";
-    }
-    return "cross_lte";
-  }
-  if (kind === "bb") {
+  if (kind === "macd" || kind === "bb" || kind === "ema" || kind === "sma") {
     if (compare === "gte") {
       return "lte";
     }
@@ -437,7 +431,18 @@ export function indicatorCompareForDirection(
     }
     return direction === "short" ? "cross_lte" : "cross_gte";
   }
-  if (kind === "ema" || kind === "sma" || kind === "sma_cross") {
+  if (kind === "ema" || kind === "sma") {
+    if (
+      compare === "gte" ||
+      compare === "lte" ||
+      compare === "cross_gte" ||
+      compare === "cross_lte"
+    ) {
+      return compare;
+    }
+    return direction === "short" ? "cross_lte" : "cross_gte";
+  }
+  if (kind === "sma_cross") {
     if (compare === "cross_gte" || compare === "cross_lte") {
       return compare;
     }
@@ -707,6 +712,17 @@ export function indicatorStartMet(input: {
       input.kind === "sma"
         ? smaValues(input.closes, period)
         : emaValues(input.closes, period);
+    const price = input.closes[input.closes.length - 1];
+    const average = averages[averages.length - 1];
+    if (price == null || average == null) {
+      return false;
+    }
+    if (!cross && (input.compare === "gte" || input.compare === "lte")) {
+      const below = split
+        ? input.side === "long"
+        : input.compare === "lte";
+      return below ? price < average : price > average;
+    }
     const direction =
       split && input.compare == null
         ? input.side === "long"

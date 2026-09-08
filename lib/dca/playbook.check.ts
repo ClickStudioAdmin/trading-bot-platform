@@ -2205,6 +2205,22 @@ if (emaPriceParsed.ok) {
   assert.equal(emaPriceParsed.config.indicatorLevel, null);
 }
 
+const emaSitForm = new FormData();
+emaSitForm.set("symbol", "BTCUSDT");
+emaSitForm.set("side", "long");
+emaSitForm.set("clipSize", "0.01");
+emaSitForm.set("sizeUnit", "qty");
+emaSitForm.set("startKind", "indicator");
+emaSitForm.set("indicatorKind", "ema");
+emaSitForm.set("indicatorTimeframe", "15");
+emaSitForm.set("indicatorCompare", "gte");
+emaSitForm.set("indicatorPeriod", "21");
+const emaSitParsed = parseDcaPlaybookForm(emaSitForm);
+assert.equal(emaSitParsed.ok, true);
+if (emaSitParsed.ok) {
+  assert.equal(emaSitParsed.config.indicatorCompare, "gte");
+}
+
 const emaPairDirForm = new FormData();
 emaPairDirForm.set("symbol", "BTCUSDT");
 emaPairDirForm.set("side", "short");

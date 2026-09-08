@@ -692,6 +692,39 @@ assert.equal(
   true,
 );
 assert.equal(
+  indicatorStartMet({
+    kind: "ema",
+    side: "long",
+    closes: maCloses,
+    compare: "gte",
+    level: null,
+    period: 21,
+  }),
+  true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "sma",
+    side: "short",
+    closes: [...Array(25).fill(100), 50],
+    compare: "lte",
+    level: null,
+    period: 21,
+  }),
+  true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "ema",
+    side: "long",
+    closes: [...Array(25).fill(100), 50],
+    compare: "gte",
+    level: null,
+    period: 21,
+  }),
+  false,
+);
+assert.equal(
   priceCrossedAverage([100, 90], [95, 95], "down"),
   true,
 );
@@ -772,6 +805,15 @@ assert.equal(
   dcaIndicatorWhenOptions("sma", "short", false)[1]?.label,
   "Price crosses below",
 );
+assert.deepEqual(
+  dcaIndicatorWhenOptions("ema", "long", false).map((row) => row.label),
+  [
+    "Price crosses above",
+    "Price crosses below",
+    "Price is above",
+    "Price is below",
+  ],
+);
 assert.equal(
   formatDcaIndicatorStartLabel({
     kind: "ema",
@@ -781,6 +823,16 @@ assert.equal(
     side: "long",
   }),
   "Price crosses above EMA 21 · 15m",
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "sma",
+    compare: "lte",
+    period: 50,
+    timeframe: "60",
+    side: "short",
+  }),
+  "Price is below SMA 50 · 1h",
 );
 assert.equal(
   formatDcaIndicatorStartLabel({

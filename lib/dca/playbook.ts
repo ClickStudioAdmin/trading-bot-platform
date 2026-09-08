@@ -1388,8 +1388,13 @@ function parseIndicatorStartFields(
   }
   if (kind === "ema" || kind === "sma") {
     const cmp = parseDcaIndicatorCompare(compareRaw || "cross_gte");
-    if (cmp !== "cross_gte" && cmp !== "cross_lte") {
-      return { ok: false, error: `Choose when ${prefix}price should cross.` };
+    if (
+      cmp !== "cross_gte" &&
+      cmp !== "cross_lte" &&
+      cmp !== "gte" &&
+      cmp !== "lte"
+    ) {
+      return { ok: false, error: `Choose when ${prefix}price should fire.` };
     }
     const period = parseDcaIndicatorPeriod(form.get(names.period));
     if (period == null) {

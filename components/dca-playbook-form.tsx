@@ -2430,11 +2430,11 @@ function IndicatorStartFields({
         className={fieldClass}
       >
         <option value="rsi">RSI</option>
+        <option value="macd">MACD histogram</option>
         <option value="sma">SMA</option>
         <option value="ema">EMA</option>
         <option value="sma_cross">SMA Cross</option>
         <option value="ema_cross">EMA Cross</option>
-        <option value="macd">MACD histogram</option>
         <option value="bb">Bollinger Bands</option>
       </select>
     </label>
@@ -2565,7 +2565,11 @@ function IndicatorStartFields({
           {side === "short" ? "Triggers Short" : "Triggers Long"}
           {compare === "cross_lte"
             ? ` when price crosses below the ${kind === "sma" ? "SMA" : "EMA"}.`
-            : ` when price crosses above the ${kind === "sma" ? "SMA" : "EMA"}.`}
+            : compare === "lte"
+              ? ` when price is below the ${kind === "sma" ? "SMA" : "EMA"}.`
+              : compare === "gte"
+                ? ` when price is above the ${kind === "sma" ? "SMA" : "EMA"}.`
+                : ` when price crosses above the ${kind === "sma" ? "SMA" : "EMA"}.`}
         </p>
       ) : null}
       {kind === "bb" ? (
