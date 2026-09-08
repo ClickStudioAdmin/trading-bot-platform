@@ -2389,104 +2389,125 @@ function IndicatorStartFields({
       </select>
     </label>
   );
-  return (
+  const indicatorField = (
+    <label className={labelClass}>
+      Indicator
+      <select
+        name={`${prefix}Kind`}
+        value={kind}
+        onChange={(event) => {
+          const next = event.target.value as DcaIndicatorKind;
+          onKindChange(next);
+          onCompareChange(indicatorCompareForDirection(side, next, ""));
+          if (next === "rsi") {
+            onLevelChange("30");
+          } else if (next === "macd") {
+            onLevelChange("0");
+          } else if (
+            kind === "rsi" ||
+            kind === "macd" ||
+            dcaIndicatorIsLegacyEmaPrice(kind, compare, level)
+          ) {
+            onLevelChange("");
+          }
+          if (dcaIndicatorUsesPairPeriods(next)) {
+            onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+            onSlowPeriodChange(String(defaultDcaIndicatorSlowPeriod(next)));
+          } else {
+            onSlowPeriodChange("");
+            if (dcaIndicatorUsesPeriod(next) && !dcaIndicatorUsesPeriod(kind)) {
+              onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+            } else if (dcaIndicatorUsesPeriod(next) && !period) {
+              onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+            }
+          }
+        }}
+        className={fieldClass}
+      >
+        <option value="rsi">RSI 14</option>
+        <option value="macd">MACD histogram</option>
+        <option value="ema_cross">EMA Cross</option>
+        <option value="sma_cross">SMA Cross</option>
+        <option value="ema">EMA</option>
+        <option value="sma">SMA</option>
+        <option value="bb">Bollinger Bands</option>
+      </select>
+    </label>
+  );
+  const timeframeField = (
+    <label className={labelClass}>
+      Timeframe
+      <select
+        name={`${prefix}Timeframe`}
+        value={timeframe}
+        onChange={(event) =>
+          onTimeframeChange(event.target.value as DcaIndicatorTimeframe)
+        }
+        className={fieldClass}
+      >
+        {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
+          <option key={interval} value={interval}>
+            {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  const pairFields = (
     <>
       <label className={labelClass}>
-        Indicator
-        <select
-          name={`${prefix}Kind`}
-          value={kind}
-          onChange={(event) => {
-            const next = event.target.value as DcaIndicatorKind;
-            onKindChange(next);
-            onCompareChange(indicatorCompareForDirection(side, next, ""));
-            if (next === "rsi") {
-              onLevelChange("30");
-            } else if (next === "macd") {
-              onLevelChange("0");
-            } else if (
-              kind === "rsi" ||
-              kind === "macd" ||
-              dcaIndicatorIsLegacyEmaPrice(kind, compare, level)
-            ) {
-              onLevelChange("");
-            }
-            if (dcaIndicatorUsesPairPeriods(next)) {
-              onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
-              onSlowPeriodChange(String(defaultDcaIndicatorSlowPeriod(next)));
-            } else {
-              onSlowPeriodChange("");
-              if (dcaIndicatorUsesPeriod(next) && !dcaIndicatorUsesPeriod(kind)) {
-                onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
-              } else if (dcaIndicatorUsesPeriod(next) && !period) {
-                onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
-              }
-            }
-          }}
+        Fast
+        <GroupedNumberInput
+          name={`${prefix}Period`}
+          value={period}
+          onChange={onPeriodChange}
           className={fieldClass}
-        >
-          <option value="rsi">RSI 14</option>
-          <option value="macd">MACD histogram</option>
-          <option value="ema_cross">EMA Cross</option>
-          <option value="sma_cross">SMA Cross</option>
-          <option value="ema">EMA</option>
-          <option value="sma">SMA</option>
-          <option value="bb">Bollinger Bands</option>
-        </select>
+        />
       </label>
+      {whenField}
       <label className={labelClass}>
-        Timeframe
-        <select
-          name={`${prefix}Timeframe`}
-          value={timeframe}
-          onChange={(event) =>
-            onTimeframeChange(event.target.value as DcaIndicatorTimeframe)
-          }
+        Slow
+        <GroupedNumberInput
+          name={`${prefix}SlowPeriod`}
+          value={slowPeriod}
+          onChange={onSlowPeriodChange}
           className={fieldClass}
-        >
-          {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
-            <option key={interval} value={interval}>
-              {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
-            </option>
-          ))}
-        </select>
+        />
       </label>
+    </>
+  );
+  return (
+    <>
       {showPairPeriods ? (
-        <div className="grid grid-cols-3 gap-x-3 sm:col-span-2 lg:col-span-4">
-          <label className={labelClass}>
-            Fast
-            <GroupedNumberInput
-              name={`${prefix}Period`}
-              value={period}
-              onChange={onPeriodChange}
-              className={fieldClass}
-            />
-          </label>
-          {whenField}
-          <label className={labelClass}>
-            Slow
-            <GroupedNumberInput
-              name={`${prefix}SlowPeriod`}
-              value={slowPeriod}
-              onChange={onSlowPeriodChange}
-              className={fieldClass}
-            />
-          </label>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5 lg:col-span-4">
+          {indicatorField}
+          {timeframeField}
+          {pairFields}
+          <p className="col-span-full text-xs text-ink-muted">
+            {side === "short" ? "Triggers Short" : "Triggers Long"}
+            {compare === "cross_lte"
+              ? ` when the fast ${kind === "sma_cross" ? "SMA" : "EMA"} crosses below the slow.`
+              : ` when the fast ${kind === "sma_cross" ? "SMA" : "EMA"} crosses above the slow.`}
+          </p>
         </div>
       ) : (
-        whenField
+        <>
+          {indicatorField}
+          {dcaIndicatorUsesPeriod(kind) ? (
+            <label className={labelClass}>
+              Period
+              <GroupedNumberInput
+                name={`${prefix}Period`}
+                value={period}
+                onChange={onPeriodChange}
+                className={fieldClass}
+              />
+            </label>
+          ) : null}
+          {timeframeField}
+          {whenField}
+        </>
       )}
-      {dcaIndicatorUsesPeriod(kind) ? (
-        <label className={labelClass}>
-          Period
-          <GroupedNumberInput
-            name={`${prefix}Period`}
-            value={period}
-            onChange={onPeriodChange}
-            className={fieldClass}
-          />
-        </label>
-      ) : null}
       {dcaIndicatorShowsLevel(kind, compare, level) ? (
         <label className={labelClass}>
           {kind === "ema_cross" ? "Level (price)" : "Level"}
@@ -2526,15 +2547,6 @@ function IndicatorStartFields({
           {compare === "lte"
             ? " when price is below the bottom Bollinger Band."
             : " when price is above the top Bollinger Band."}
-        </p>
-      ) : null}
-      {dcaIndicatorUsesPairPeriods(kind) &&
-      !dcaIndicatorShowsLevel(kind, compare, level) ? (
-        <p className="self-end text-xs text-ink-muted sm:col-span-2">
-          {side === "short" ? "Triggers Short" : "Triggers Long"}
-          {compare === "cross_lte"
-            ? ` when the fast ${kind === "sma_cross" ? "SMA" : "EMA"} crosses below the slow.`
-            : ` when the fast ${kind === "sma_cross" ? "SMA" : "EMA"} crosses above the slow.`}
         </p>
       ) : null}
       {kind === "ema_cross" &&

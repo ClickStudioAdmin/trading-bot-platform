@@ -30,6 +30,7 @@ import {
   bollingerBands,
   crossedLevel,
   dcaIndicatorShowsLevel,
+  dcaIndicatorUsesPeriod,
   dcaIndicatorWhenOptions,
   emaCrossBullish,
   emaValues,
@@ -764,6 +765,14 @@ assert.equal(
   "Crosses below",
 );
 assert.equal(
+  dcaIndicatorWhenOptions("ema", "long", false)[0]?.label,
+  "Price crosses above",
+);
+assert.equal(
+  dcaIndicatorWhenOptions("sma", "short", false)[1]?.label,
+  "Price crosses below",
+);
+assert.equal(
   formatDcaIndicatorStartLabel({
     kind: "ema",
     compare: "cross_gte",
@@ -886,7 +895,9 @@ assert.equal(
     timeframe: "15",
     side: "short",
   }),
-  "Above top BB 20 · 15m",
+  "Above top BB · 15m",
 );
+assert.equal(dcaIndicatorUsesPeriod("bb"), false);
+assert.equal(dcaIndicatorUsesPeriod("ema"), true);
 
 console.log("dca grid checks passed");

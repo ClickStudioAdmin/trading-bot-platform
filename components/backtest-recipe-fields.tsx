@@ -266,129 +266,144 @@ function BacktestIndicatorStartFields({
       </select>
     </label>
   );
-  return (
+  const indicatorField = (
+    <label className={labelClass}>
+      Indicator
+      <select
+        value={kind}
+        onChange={(event) => {
+          const indicatorKind = event.target.value as DcaIndicatorKind;
+          const nextCompare = indicatorCompareForDirection(
+            side,
+            indicatorKind,
+            "",
+          );
+          onChange({
+            indicatorKind,
+            indicatorCompare:
+              nextCompare === "pair"
+                ? null
+                : parseDcaIndicatorCompare(nextCompare),
+            indicatorLevel: defaultDcaIndicatorLevel(indicatorKind),
+            indicatorPeriod:
+              dcaIndicatorUsesPeriod(indicatorKind) ||
+              dcaIndicatorUsesPairPeriods(indicatorKind)
+                ? defaultDcaIndicatorPeriod(indicatorKind)
+                : null,
+            indicatorSlowPeriod: defaultDcaIndicatorSlowPeriod(indicatorKind),
+          });
+        }}
+        className={fieldClass}
+      >
+        <option value="rsi">RSI 14</option>
+        <option value="macd">MACD</option>
+        <option value="ema_cross">EMA Cross</option>
+        <option value="sma_cross">SMA Cross</option>
+        <option value="ema">EMA</option>
+        <option value="sma">SMA</option>
+        <option value="bb">Bollinger Bands</option>
+      </select>
+    </label>
+  );
+  const timeframeField = (
+    <label className={labelClass}>
+      Timeframe
+      <select
+        value={timeframe}
+        onChange={(event) =>
+          onChange({
+            indicatorKind: kind,
+            indicatorTimeframe: event.target.value as DcaIndicatorTimeframe,
+            indicatorCompare: compare ?? null,
+            indicatorLevel: level ?? null,
+            indicatorPeriod: period ?? null,
+            indicatorSlowPeriod: slowPeriod ?? null,
+          })
+        }
+        className={fieldClass}
+      >
+        {DCA_INDICATOR_TIMEFRAMES.map((row) => (
+          <option key={row} value={row}>
+            {DCA_INDICATOR_TIMEFRAME_LABELS[row]}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  const pairFields = (
     <>
       <label className={labelClass}>
-        Indicator
-        <select
-          value={kind}
-          onChange={(event) => {
-            const indicatorKind = event.target.value as DcaIndicatorKind;
-            const nextCompare = indicatorCompareForDirection(
-              side,
-              indicatorKind,
-              "",
-            );
-            onChange({
-              indicatorKind,
-              indicatorCompare:
-                nextCompare === "pair"
-                  ? null
-                  : parseDcaIndicatorCompare(nextCompare),
-              indicatorLevel: defaultDcaIndicatorLevel(indicatorKind),
-              indicatorPeriod:
-                dcaIndicatorUsesPeriod(indicatorKind) ||
-                dcaIndicatorUsesPairPeriods(indicatorKind)
-                  ? defaultDcaIndicatorPeriod(indicatorKind)
-                  : null,
-              indicatorSlowPeriod: defaultDcaIndicatorSlowPeriod(indicatorKind),
-            });
-          }}
+        Fast
+        <RecipeNumberInput
+          value={period}
+          emptyValue={defaultDcaIndicatorPeriod(kind)}
+          allowDecimal={false}
           className={fieldClass}
-        >
-          <option value="rsi">RSI 14</option>
-          <option value="macd">MACD</option>
-          <option value="ema_cross">EMA Cross</option>
-          <option value="sma_cross">SMA Cross</option>
-          <option value="ema">EMA</option>
-          <option value="sma">SMA</option>
-          <option value="bb">Bollinger Bands</option>
-        </select>
-      </label>
-      <label className={labelClass}>
-        Timeframe
-        <select
-          value={timeframe}
-          onChange={(event) =>
+          onCommit={(next) =>
             onChange({
               indicatorKind: kind,
-              indicatorTimeframe: event.target.value as DcaIndicatorTimeframe,
               indicatorCompare: compare ?? null,
-              indicatorLevel: level ?? null,
-              indicatorPeriod: period ?? null,
-              indicatorSlowPeriod: slowPeriod ?? null,
+              indicatorPeriod: next ?? defaultDcaIndicatorPeriod(kind),
+              indicatorSlowPeriod: slowPeriod ?? defaultDcaIndicatorSlowPeriod(kind),
             })
           }
-          className={fieldClass}
-        >
-          {DCA_INDICATOR_TIMEFRAMES.map((row) => (
-            <option key={row} value={row}>
-              {DCA_INDICATOR_TIMEFRAME_LABELS[row]}
-            </option>
-          ))}
-        </select>
+        />
       </label>
+      {whenField}
+      <label className={labelClass}>
+        Slow
+        <RecipeNumberInput
+          value={slowPeriod}
+          emptyValue={defaultDcaIndicatorSlowPeriod(kind)}
+          allowDecimal={false}
+          className={fieldClass}
+          onCommit={(next) =>
+            onChange({
+              indicatorKind: kind,
+              indicatorCompare: compare ?? null,
+              indicatorPeriod: period ?? defaultDcaIndicatorPeriod(kind),
+              indicatorSlowPeriod:
+                next ?? defaultDcaIndicatorSlowPeriod(kind),
+            })
+          }
+        />
+      </label>
+    </>
+  );
+  return (
+    <>
       {showPairPeriods ? (
-        <div className="grid grid-cols-3 gap-x-3 sm:col-span-2">
-          <label className={labelClass}>
-            Fast
-            <RecipeNumberInput
-              value={period}
-              emptyValue={defaultDcaIndicatorPeriod(kind)}
-              allowDecimal={false}
-              className={fieldClass}
-              onCommit={(next) =>
-                onChange({
-                  indicatorKind: kind,
-                  indicatorCompare: compare ?? null,
-                  indicatorPeriod: next ?? defaultDcaIndicatorPeriod(kind),
-                  indicatorSlowPeriod: slowPeriod ?? defaultDcaIndicatorSlowPeriod(kind),
-                })
-              }
-            />
-          </label>
-          {whenField}
-          <label className={labelClass}>
-            Slow
-            <RecipeNumberInput
-              value={slowPeriod}
-              emptyValue={defaultDcaIndicatorSlowPeriod(kind)}
-              allowDecimal={false}
-              className={fieldClass}
-              onCommit={(next) =>
-                onChange({
-                  indicatorKind: kind,
-                  indicatorCompare: compare ?? null,
-                  indicatorPeriod: period ?? defaultDcaIndicatorPeriod(kind),
-                  indicatorSlowPeriod:
-                    next ?? defaultDcaIndicatorSlowPeriod(kind),
-                })
-              }
-            />
-          </label>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5">
+          {indicatorField}
+          {timeframeField}
+          {pairFields}
         </div>
       ) : (
-        whenField
+        <>
+          {indicatorField}
+          {dcaIndicatorUsesPeriod(kind) ? (
+            <label className={labelClass}>
+              Period
+              <RecipeNumberInput
+                value={period}
+                emptyValue={defaultDcaIndicatorPeriod(kind)}
+                allowDecimal={false}
+                className={fieldClass}
+                onCommit={(next) =>
+                  onChange({
+                    indicatorKind: kind,
+                    indicatorCompare: compare ?? null,
+                    indicatorPeriod: next ?? defaultDcaIndicatorPeriod(kind),
+                    indicatorSlowPeriod: null,
+                  })
+                }
+              />
+            </label>
+          ) : null}
+          {timeframeField}
+          {whenField}
+        </>
       )}
-      {dcaIndicatorUsesPeriod(kind) ? (
-        <label className={labelClass}>
-          Period
-          <RecipeNumberInput
-            value={period}
-            emptyValue={defaultDcaIndicatorPeriod(kind)}
-            allowDecimal={false}
-            className={fieldClass}
-            onCommit={(next) =>
-              onChange({
-                indicatorKind: kind,
-                indicatorCompare: compare ?? null,
-                indicatorPeriod: next ?? defaultDcaIndicatorPeriod(kind),
-                indicatorSlowPeriod: null,
-              })
-            }
-          />
-        </label>
-      ) : null}
       {dcaIndicatorShowsLevel(kind, compare, level) ? (
         <label className={labelClass}>
           {kind === "ema_cross" ? "Level (price)" : "Level"}

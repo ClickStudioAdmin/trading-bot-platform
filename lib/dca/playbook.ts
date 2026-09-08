@@ -29,6 +29,7 @@ import {
   dcaSafetyPrices,
 } from "./grid";
 import {
+  DEFAULT_DCA_BB_PERIOD,
   DEFAULT_DCA_CROSS_FAST_PERIOD,
   DEFAULT_DCA_CROSS_SLOW_PERIOD,
   dcaIndicatorStartLatches,
@@ -1365,10 +1366,6 @@ function parseIndicatorStartFields(
     if (cmp !== "gte" && cmp !== "lte") {
       return { ok: false, error: `Choose when ${prefix}Bollinger Bands should fire.` };
     }
-    const period = parseDcaIndicatorPeriod(form.get(names.period));
-    if (period == null) {
-      return { ok: false, error: `Enter a ${prefix}period.` };
-    }
     return {
       ok: true,
       start: {
@@ -1376,7 +1373,7 @@ function parseIndicatorStartFields(
         timeframe,
         compare: cmp,
         level: null,
-        period,
+        period: parseDcaIndicatorPeriod(form.get(names.period)) ?? DEFAULT_DCA_BB_PERIOD,
         slowPeriod: null,
       },
     };

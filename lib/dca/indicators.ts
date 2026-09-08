@@ -78,7 +78,7 @@ export function parseDcaIndicatorPeriod(value: unknown): number | null {
 }
 
 export function dcaIndicatorUsesPeriod(kind: DcaIndicatorKind): boolean {
-  return kind === "ema" || kind === "sma" || kind === "bb";
+  return kind === "ema" || kind === "sma";
 }
 
 export function dcaIndicatorUsesPairPeriods(kind: DcaIndicatorKind): boolean {
@@ -190,8 +190,8 @@ export function dcaIndicatorWhenOptions(
   }
   if (kind === "ema" || kind === "sma") {
     return [
-      { value: "cross_gte", label: "Crosses above" },
-      { value: "cross_lte", label: "Crosses below" },
+      { value: "cross_gte", label: "Price crosses above" },
+      { value: "cross_lte", label: "Price crosses below" },
     ];
   }
   if (kind === "bb") {
@@ -250,10 +250,9 @@ export function formatDcaIndicatorStartLabel(input: {
     return `MACD ${when}${timeframe}`;
   }
   if (input.kind === "bb") {
-    const period = input.period ?? DEFAULT_DCA_BB_PERIOD;
     const when =
       input.compare === "lte" ? "Below bottom BB" : "Above top BB";
-    return `${when} ${period}${timeframe}`;
+    return `${when}${timeframe}`;
   }
   if (input.kind === "ema" || input.kind === "sma") {
     const name = input.kind === "sma" ? "SMA" : "EMA";

@@ -2252,7 +2252,6 @@ bbForm.set("startKind", "indicator");
 bbForm.set("indicatorKind", "bb");
 bbForm.set("indicatorTimeframe", "15");
 bbForm.set("indicatorCompare", "lte");
-bbForm.set("indicatorPeriod", "20");
 const bbParsed = parseDcaPlaybookForm(bbForm);
 assert.equal(bbParsed.ok, true);
 if (bbParsed.ok) {
