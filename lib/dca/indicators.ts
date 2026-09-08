@@ -78,6 +78,19 @@ export function parseDcaIndicatorPeriod(value: unknown): number | null {
   return period;
 }
 
+export const DCA_INDICATOR_KIND_OPTIONS: {
+  value: DcaIndicatorKind;
+  label: string;
+}[] = [
+  { value: "rsi", label: "RSI" },
+  { value: "macd", label: "MACD" },
+  { value: "sma", label: "Price vs SMA" },
+  { value: "ema", label: "Price vs EMA" },
+  { value: "sma_cross", label: "SMA Cross" },
+  { value: "ema_cross", label: "EMA Cross" },
+  { value: "bb", label: "Price vs BB" },
+];
+
 export function dcaIndicatorUsesPeriod(kind: DcaIndicatorKind): boolean {
   return kind === "ema" || kind === "sma" || kind === "rsi" || kind === "bb";
 }

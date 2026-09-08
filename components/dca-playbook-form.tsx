@@ -61,6 +61,7 @@ import {
   type DcaStartKind,
 } from "@/lib/dca/playbook";
 import {
+  DCA_INDICATOR_KIND_OPTIONS,
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
   defaultDcaIndicatorLevel,
@@ -2429,13 +2430,11 @@ function IndicatorStartFields({
         }}
         className={fieldClass}
       >
-        <option value="rsi">RSI</option>
-        <option value="macd">MACD histogram</option>
-        <option value="sma">SMA</option>
-        <option value="ema">EMA</option>
-        <option value="sma_cross">SMA Cross</option>
-        <option value="ema_cross">EMA Cross</option>
-        <option value="bb">Bollinger Bands</option>
+        {DCA_INDICATOR_KIND_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
       </select>
     </label>
   );

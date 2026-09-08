@@ -29,6 +29,7 @@ import {
 import {
   bollingerBands,
   crossedLevel,
+  DCA_INDICATOR_KIND_OPTIONS,
   dcaIndicatorShowsLevel,
   dcaIndicatorUsesPeriod,
   dcaIndicatorWhenOptions,
@@ -796,6 +797,18 @@ assert.equal(
 assert.equal(
   dcaIndicatorWhenOptions("sma_cross", "short", false)[1]?.label,
   "Crosses below",
+);
+assert.deepEqual(
+  DCA_INDICATOR_KIND_OPTIONS.map((row) => row.label),
+  [
+    "RSI",
+    "MACD",
+    "Price vs SMA",
+    "Price vs EMA",
+    "SMA Cross",
+    "EMA Cross",
+    "Price vs BB",
+  ],
 );
 assert.equal(
   dcaIndicatorWhenOptions("ema", "long", false)[0]?.label,
