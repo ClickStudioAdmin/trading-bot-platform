@@ -370,6 +370,45 @@ function BacktestIndicatorStartFields({
       </label>
     </>
   );
+  const periodField = dcaIndicatorUsesPeriod(kind) ? (
+    <label className={labelClass}>
+      Period
+      <RecipeNumberInput
+        value={period}
+        emptyValue={defaultDcaIndicatorPeriod(kind)}
+        allowDecimal={false}
+        className={fieldClass}
+        onCommit={(next) =>
+          onChange({
+            indicatorKind: kind,
+            indicatorCompare: compare ?? null,
+            indicatorPeriod: next ?? defaultDcaIndicatorPeriod(kind),
+            indicatorSlowPeriod: null,
+          })
+        }
+      />
+    </label>
+  ) : null;
+  const levelField = dcaIndicatorShowsLevel(kind, compare, level) ? (
+    <label className={labelClass}>
+      {kind === "ema_cross" ? "Level (price)" : "Level"}
+      <RecipeNumberInput
+        value={level}
+        emptyValue={kind === "macd" ? 0 : null}
+        allowNegative={kind === "macd"}
+        className={fieldClass}
+        onCommit={(next) =>
+          onChange({
+            indicatorKind: kind,
+            indicatorCompare: compare ?? null,
+            indicatorLevel: next ?? (kind === "macd" ? 0 : null),
+            indicatorPeriod: period ?? null,
+            indicatorSlowPeriod: slowPeriod ?? null,
+          })
+        }
+      />
+    </label>
+  ) : null;
   return (
     <>
       {showPairPeriods ? (
@@ -378,52 +417,23 @@ function BacktestIndicatorStartFields({
           {timeframeField}
           {pairFields}
         </div>
+      ) : kind === "rsi" ? (
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5">
+          {indicatorField}
+          {periodField}
+          {timeframeField}
+          {whenField}
+          {levelField}
+        </div>
       ) : (
         <>
           {indicatorField}
-          {dcaIndicatorUsesPeriod(kind) ? (
-            <label className={labelClass}>
-              Period
-              <RecipeNumberInput
-                value={period}
-                emptyValue={defaultDcaIndicatorPeriod(kind)}
-                allowDecimal={false}
-                className={fieldClass}
-                onCommit={(next) =>
-                  onChange({
-                    indicatorKind: kind,
-                    indicatorCompare: compare ?? null,
-                    indicatorPeriod: next ?? defaultDcaIndicatorPeriod(kind),
-                    indicatorSlowPeriod: null,
-                  })
-                }
-              />
-            </label>
-          ) : null}
+          {periodField}
           {timeframeField}
           {whenField}
+          {levelField}
         </>
       )}
-      {dcaIndicatorShowsLevel(kind, compare, level) ? (
-        <label className={labelClass}>
-          {kind === "ema_cross" ? "Level (price)" : "Level"}
-          <RecipeNumberInput
-            value={level}
-            emptyValue={kind === "macd" ? 0 : null}
-            allowNegative={kind === "macd"}
-            className={fieldClass}
-            onCommit={(next) =>
-              onChange({
-                indicatorKind: kind,
-                indicatorCompare: compare ?? null,
-                indicatorLevel: next ?? (kind === "macd" ? 0 : null),
-                indicatorPeriod: period ?? null,
-                indicatorSlowPeriod: slowPeriod ?? null,
-              })
-            }
-          />
-        </label>
-      ) : null}
     </>
   );
 }

@@ -2481,6 +2481,32 @@ function IndicatorStartFields({
       </label>
     </>
   );
+  const periodField = dcaIndicatorUsesPeriod(kind) ? (
+    <label className={labelClass}>
+      Period
+      <GroupedNumberInput
+        name={`${prefix}Period`}
+        value={period}
+        onChange={onPeriodChange}
+        className={fieldClass}
+      />
+    </label>
+  ) : null;
+  const levelField = dcaIndicatorShowsLevel(kind, compare, level) ? (
+    <label className={labelClass}>
+      {kind === "ema_cross" ? "Level (price)" : "Level"}
+      <GroupedNumberInput
+        name={`${prefix}Level`}
+        value={level}
+        onChange={onLevelChange}
+        allowDecimal
+        allowNegative={kind === "macd"}
+        className={fieldClass}
+      />
+    </label>
+  ) : null;
+  const sideHint =
+    side === "short" ? "Triggers Short" : "Triggers Long";
   return (
     <>
       {showPairPeriods ? (
@@ -2489,43 +2515,39 @@ function IndicatorStartFields({
           {timeframeField}
           {pairFields}
           <p className="col-span-full text-xs text-ink-muted">
-            {side === "short" ? "Triggers Short" : "Triggers Long"}
+            {sideHint}
             {compare === "cross_lte"
               ? ` when the fast ${kind === "sma_cross" ? "SMA" : "EMA"} crosses below the slow.`
               : ` when the fast ${kind === "sma_cross" ? "SMA" : "EMA"} crosses above the slow.`}
           </p>
         </div>
+      ) : kind === "rsi" ? (
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5 lg:col-span-4">
+          {indicatorField}
+          {periodField}
+          {timeframeField}
+          {whenField}
+          {levelField}
+          <p className="col-span-full text-xs text-ink-muted">
+            {sideHint}
+            {compare === "gte"
+              ? " while RSI is at or above the level."
+              : compare === "lte"
+                ? " while RSI is at or below the level."
+                : compare === "cross_gte"
+                  ? " when RSI crosses above the level."
+                  : " when RSI crosses below the level."}
+          </p>
+        </div>
       ) : (
         <>
           {indicatorField}
-          {dcaIndicatorUsesPeriod(kind) ? (
-            <label className={labelClass}>
-              Period
-              <GroupedNumberInput
-                name={`${prefix}Period`}
-                value={period}
-                onChange={onPeriodChange}
-                className={fieldClass}
-              />
-            </label>
-          ) : null}
+          {periodField}
           {timeframeField}
           {whenField}
+          {levelField}
         </>
       )}
-      {dcaIndicatorShowsLevel(kind, compare, level) ? (
-        <label className={labelClass}>
-          {kind === "ema_cross" ? "Level (price)" : "Level"}
-          <GroupedNumberInput
-            name={`${prefix}Level`}
-            value={level}
-            onChange={onLevelChange}
-            allowDecimal
-            allowNegative={kind === "macd"}
-            className={fieldClass}
-          />
-        </label>
-      ) : null}
       {kind === "macd" ? (
         <p className="self-end text-xs text-ink-muted sm:col-span-2">
           {side === "short" ? "Triggers Short" : "Triggers Long"}
@@ -2561,18 +2583,6 @@ function IndicatorStartFields({
           {compare === "cross_lte"
             ? " when EMA 21 crosses below the price level."
             : " when EMA 21 crosses above the price level."}
-        </p>
-      ) : null}
-      {kind === "rsi" ? (
-        <p className="text-xs text-ink-muted sm:col-span-2">
-          {side === "short" ? "Triggers Short" : "Triggers Long"}
-          {compare === "gte"
-            ? " while RSI is at or above the level."
-            : compare === "lte"
-              ? " while RSI is at or below the level."
-              : compare === "cross_gte"
-                ? " when RSI crosses above the level."
-                : " when RSI crosses below the level."}
         </p>
       ) : null}
     </>
