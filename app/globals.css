@@ -21,6 +21,13 @@
 
 html {
   height: 100%;
+  color-scheme: dark;
+}
+
+select,
+select option {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
 }
 
 body {

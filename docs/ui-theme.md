@@ -38,6 +38,8 @@ Desk chrome (header, footer, strategy nav, strategy pages, `/account`, `/admin`)
 
 Primary: `bg-accent-strong` / `text-ink`. Secondary: surface + `border-line`. Ghost: ink-muted, no fill. Danger: `danger` text or fill for destructive only.
 
+`html` sets `color-scheme: dark` so native `<select>` lists, scrollbars, and date popups use the dark OS picker. Without that, Windows Chrome/Edge opens those lists white.
+
 ## Motion
 
 Short press on buttons (`scale` + opacity). Server-action submits swap the label for a spinner, then a success check for 1.5s. No decorative animation.

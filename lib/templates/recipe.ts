@@ -481,6 +481,9 @@ export function dcaRecipeToConfig(
     notes.push(
       "Signal start needs a webhook on this desk. Applied as Indicator.",
     );
+  } else if (startKind === "immediate") {
+    appliedStart = "indicator";
+    notes.push("Manual start is retired. Applied as Indicator.");
   }
   form.set("name", String(recipe.name ?? "DCA"));
   form.set("deskVenue", venue);

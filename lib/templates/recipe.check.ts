@@ -77,6 +77,14 @@ if (applied.ok) {
   assert.ok(applied.notes[0]?.includes("Signal"));
 }
 
+const appliedManual = dcaRecipeToConfig({ ...snapshot, startKind: "immediate" }, {});
+assert.equal(appliedManual.ok, true);
+if (appliedManual.ok) {
+  assert.equal(appliedManual.config.startKind, "indicator");
+  assert.equal(appliedManual.config.indicatorKind, "rsi");
+  assert.ok(appliedManual.notes[0]?.includes("Manual"));
+}
+
 const remapped = dcaRecipeToConfig(snapshot, { symbol: "SOLUSDT" });
 assert.equal(remapped.ok, true);
 if (remapped.ok) {

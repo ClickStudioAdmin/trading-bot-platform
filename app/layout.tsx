@@ -24,7 +24,7 @@ export default async function RootLayout({
   await redirectIfNeedsFirstDesk();
 
   return (
-    <html lang="en" className={geist.className}>
+    <html lang="en" className={geist.className} style={{ colorScheme: "dark" }}>
       <body className="min-h-dvh bg-canvas text-ink">
         <AppFrame>{children}</AppFrame>
       </body>

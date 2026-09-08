@@ -672,7 +672,9 @@ export function DcaPlaybookForm({
       : (source?.direction ?? "long"),
   );
   const [startKind, setStartKind] = useState<DcaStartKind>(
-    source?.startKind ?? "indicator",
+    source?.startKind && source.startKind !== "immediate"
+      ? source.startKind
+      : "indicator",
   );
   const [averaging, setAveraging] = useState<DcaAveragingKind>(() =>
     source ? dcaAveragingKind(source) : "dip",
@@ -851,7 +853,6 @@ export function DcaPlaybookForm({
   const showClosePlaybook =
     hasOpenPosition ||
     liveLegs.some((leg) => leg.status === "stop_adding");
-  const showLegacyManualStart = source?.startKind === "immediate";
   const showSaveAndArm = dcaStartListens(startKind) && !running;
   const showArmButton =
     dcaStartListens(startKind) && Boolean(playbook) && running;
@@ -1328,10 +1329,7 @@ export function DcaPlaybookForm({
                     indicatorCompareForDirection("short", "supertrend", ""),
                   );
                   setShortIndicatorLevel("");
-                } else if (
-                  (startKind === "trend" || startKind === "immediate") &&
-                  next === "indicator"
-                ) {
+                } else if (startKind === "trend" && next === "indicator") {
                   setIndicatorKind("rsi");
                   setIndicatorPeriod(String(defaultDcaIndicatorPeriod("rsi")));
                   setIndicatorCompare(
@@ -1351,9 +1349,6 @@ export function DcaPlaybookForm({
               }}
               className={fieldClass}
             >
-              {showLegacyManualStart ? (
-                <option value="immediate">Manual (retired)</option>
-              ) : null}
               <option value="indicator">Indicator</option>
               <option value="trend">Trend</option>
               <option value="price">Price Cross</option>
@@ -1361,12 +1356,6 @@ export function DcaPlaybookForm({
             </select>
           </label>
         </div>
-        {startKind === "immediate" ? (
-          <p className="text-xs text-ink-muted">
-            Manual start is retired. Pick Indicator, Trend, Price Cross, or
-            Signal, then Save and Arm.
-          </p>
-        ) : null}
         {direction === "both" ? (
           <p className="text-xs text-ink-muted">
             Long and Short are independent positions and never flatten each other
@@ -1374,7 +1363,6 @@ export function DcaPlaybookForm({
         ) : null}
       </fieldset>
 
-      {startKind !== "immediate" ? (
       <fieldset className={sectionClass}>
         <p className={sectionTitleClass}>
           Initial Order Trigger Parameters
@@ -1582,7 +1570,6 @@ export function DcaPlaybookForm({
           ) : null}
         </div>
       </fieldset>
-      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <fieldset className={sectionClass}>
