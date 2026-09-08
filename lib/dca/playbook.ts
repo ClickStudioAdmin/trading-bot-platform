@@ -29,10 +29,11 @@ import {
   dcaSafetyPrices,
 } from "./grid";
 import {
+  DEFAULT_DCA_CROSS_FAST_PERIOD,
+  DEFAULT_DCA_CROSS_SLOW_PERIOD,
   dcaIndicatorStartLatches,
   indicatorClosesForCross,
   indicatorStartMet,
-  dcaIndicatorUsesPeriod,
   parseDcaIndicatorCompare,
   parseDcaIndicatorPeriod,
   parseDcaIndicatorTimeframe,
@@ -99,11 +100,13 @@ export type DcaPlaybookConfig = {
   indicatorCompare: DcaIndicatorCompare | null;
   indicatorLevel: number | null;
   indicatorPeriod: number | null;
+  indicatorSlowPeriod: number | null;
   shortIndicatorKind?: DcaIndicatorKind | null;
   shortIndicatorTimeframe?: DcaIndicatorTimeframe | null;
   shortIndicatorCompare?: DcaIndicatorCompare | null;
   shortIndicatorLevel?: number | null;
   shortIndicatorPeriod?: number | null;
+  shortIndicatorSlowPeriod?: number | null;
 };
 
 export type DcaPlaybook = DcaPlaybookConfig & {
@@ -482,6 +485,7 @@ export type DcaIndicatorStart = {
   compare: DcaIndicatorCompare | null;
   level: number | null;
   period: number | null;
+  slowPeriod: number | null;
 };
 
 export function parseDcaIndicatorKind(
@@ -492,7 +496,9 @@ export function parseDcaIndicatorKind(
     raw === "macd" ||
     raw === "ema_cross" ||
     raw === "ema" ||
-    raw === "sma"
+    raw === "sma" ||
+    raw === "sma_cross" ||
+    raw === "bb"
     ? raw
     : null;
 }
@@ -505,11 +511,13 @@ export function dcaIndicatorStartForSide(
     | "indicatorCompare"
     | "indicatorLevel"
     | "indicatorPeriod"
+    | "indicatorSlowPeriod"
     | "shortIndicatorKind"
     | "shortIndicatorTimeframe"
     | "shortIndicatorCompare"
     | "shortIndicatorLevel"
     | "shortIndicatorPeriod"
+    | "shortIndicatorSlowPeriod"
   >,
   side: FuturesSide,
 ): DcaIndicatorStart | null {
@@ -539,6 +547,10 @@ export function dcaIndicatorStartForSide(
       side === "short" && playbook.shortIndicatorKind
         ? (playbook.shortIndicatorPeriod ?? null)
         : playbook.indicatorPeriod,
+    slowPeriod:
+      side === "short" && playbook.shortIndicatorKind
+        ? (playbook.shortIndicatorSlowPeriod ?? null)
+        : playbook.indicatorSlowPeriod,
   };
 }
 
@@ -700,6 +712,9 @@ export function writeDcaCycleFormFields(
   if (current.indicatorPeriod != null) {
     form.set("indicatorPeriod", String(current.indicatorPeriod));
   }
+  if (current.indicatorSlowPeriod != null) {
+    form.set("indicatorSlowPeriod", String(current.indicatorSlowPeriod));
+  }
   if (current.shortIndicatorKind) {
     form.set("shortIndicatorKind", current.shortIndicatorKind);
   }
@@ -714,6 +729,9 @@ export function writeDcaCycleFormFields(
   }
   if (current.shortIndicatorPeriod != null) {
     form.set("shortIndicatorPeriod", String(current.shortIndicatorPeriod));
+  }
+  if (current.shortIndicatorSlowPeriod != null) {
+    form.set("shortIndicatorSlowPeriod", String(current.shortIndicatorSlowPeriod));
   }
 }
 
@@ -773,11 +791,13 @@ export function dcaWithLockedCycleConfig(
     indicatorCompare: current.indicatorCompare,
     indicatorLevel: current.indicatorLevel,
     indicatorPeriod: current.indicatorPeriod,
+    indicatorSlowPeriod: current.indicatorSlowPeriod,
     shortIndicatorKind: current.shortIndicatorKind,
     shortIndicatorTimeframe: current.shortIndicatorTimeframe,
     shortIndicatorCompare: current.shortIndicatorCompare,
     shortIndicatorLevel: current.shortIndicatorLevel,
     shortIndicatorPeriod: current.shortIndicatorPeriod,
+    shortIndicatorSlowPeriod: current.shortIndicatorSlowPeriod,
   };
 }
 
@@ -827,6 +847,20 @@ export function parseOptionalNonNegative(
   const value = Number(text);
   if (!(value >= 0) || !Number.isFinite(value)) {
     return { ok: false, error: "Enter zero or a positive number, or leave empty." };
+  }
+  return { ok: true, value };
+}
+
+export function parseOptionalFinite(
+  raw: unknown,
+): { ok: true; value: number | null } | { ok: false; error: string } {
+  const text = String(raw ?? "").replace(/,/g, "").trim();
+  if (text === "" || text === "-" || text === "-.") {
+    return { ok: true, value: null };
+  }
+  const value = Number(text);
+  if (!Number.isFinite(value)) {
+    return { ok: false, error: "Enter a number, or leave empty." };
   }
   return { ok: true, value };
 }
@@ -1183,6 +1217,7 @@ export function parseDcaPlaybookForm(
       compare: "indicatorCompare",
       level: "indicatorLevel",
       period: "indicatorPeriod",
+      slowPeriod: "indicatorSlowPeriod",
     },
     startKind === "indicator",
     direction === "both" ? "Long" : "",
@@ -1198,6 +1233,7 @@ export function parseDcaPlaybookForm(
       compare: "shortIndicatorCompare",
       level: "shortIndicatorLevel",
       period: "shortIndicatorPeriod",
+      slowPeriod: "shortIndicatorSlowPeriod",
     },
     startKind === "indicator" && direction === "both",
     "Short",
@@ -1241,11 +1277,13 @@ export function parseDcaPlaybookForm(
       indicatorCompare: longIndicator.start?.compare ?? null,
       indicatorLevel: longIndicator.start?.level ?? null,
       indicatorPeriod: longIndicator.start?.period ?? null,
+      indicatorSlowPeriod: longIndicator.start?.slowPeriod ?? null,
       shortIndicatorKind: shortIndicator.start?.kind ?? null,
       shortIndicatorTimeframe: shortIndicator.start?.timeframe ?? null,
       shortIndicatorCompare: shortIndicator.start?.compare ?? null,
       shortIndicatorLevel: shortIndicator.start?.level ?? null,
       shortIndicatorPeriod: shortIndicator.start?.period ?? null,
+      shortIndicatorSlowPeriod: shortIndicator.start?.slowPeriod ?? null,
     },
   };
 }
@@ -1258,6 +1296,7 @@ function parseIndicatorStartFields(
     compare: string;
     level: string;
     period: string;
+    slowPeriod: string;
   },
   enabled: boolean,
   label: string,
@@ -1270,7 +1309,7 @@ function parseIndicatorStartFields(
   const prefix = label ? `${label} ` : "";
   const kind = parseDcaIndicatorKind(form.get(names.kind));
   if (!kind) {
-    return { ok: false, error: `Choose ${prefix}RSI, MACD, EMA, or SMA.` };
+    return { ok: false, error: `Choose ${prefix}RSI, MACD, EMA, SMA, or BB.` };
   }
   const timeframe = parseDcaIndicatorTimeframe(
     form.get(names.timeframe) ?? "15",
@@ -1290,13 +1329,45 @@ function parseIndicatorStartFields(
     }
     return {
       ok: true,
-      start: { kind, timeframe, compare: cmp, level: level.value, period: null },
+      start: {
+        kind,
+        timeframe,
+        compare: cmp,
+        level: level.value,
+        period: null,
+        slowPeriod: null,
+      },
     };
   }
   if (kind === "macd") {
     const cmp = parseDcaIndicatorCompare(compareRaw || "cross_gte");
     if (!cmp) {
       return { ok: false, error: `Choose when ${prefix}MACD should fire.` };
+    }
+    const level = parseOptionalFinite(form.get(names.level));
+    if (!level.ok) {
+      return { ok: false, error: `Enter a ${prefix}MACD level.` };
+    }
+    return {
+      ok: true,
+      start: {
+        kind,
+        timeframe,
+        compare: cmp,
+        level: level.value ?? 0,
+        period: null,
+        slowPeriod: null,
+      },
+    };
+  }
+  if (kind === "bb") {
+    const cmp = parseDcaIndicatorCompare(compareRaw || "lte");
+    if (cmp !== "gte" && cmp !== "lte") {
+      return { ok: false, error: `Choose when ${prefix}Bollinger Bands should fire.` };
+    }
+    const period = parseDcaIndicatorPeriod(form.get(names.period));
+    if (period == null) {
+      return { ok: false, error: `Enter a ${prefix}period.` };
     }
     return {
       ok: true,
@@ -1305,11 +1376,12 @@ function parseIndicatorStartFields(
         timeframe,
         compare: cmp,
         level: null,
-        period: null,
+        period,
+        slowPeriod: null,
       },
     };
   }
-  if (dcaIndicatorUsesPeriod(kind)) {
+  if (kind === "ema" || kind === "sma") {
     const cmp = parseDcaIndicatorCompare(compareRaw || "cross_gte");
     if (cmp !== "cross_gte" && cmp !== "cross_lte") {
       return { ok: false, error: `Choose when ${prefix}price should cross.` };
@@ -1320,46 +1392,94 @@ function parseIndicatorStartFields(
     }
     return {
       ok: true,
-      start: { kind, timeframe, compare: cmp, level: null, period },
+      start: {
+        kind,
+        timeframe,
+        compare: cmp,
+        level: null,
+        period,
+        slowPeriod: null,
+      },
     };
   }
-  if (compareRaw === "pair" || compareRaw === "") {
-    return {
-      ok: true,
-      start: { kind, timeframe, compare: null, level: null, period: null },
-    };
-  }
-  if (compareRaw === "legacy") {
-    const level = parseOptionalPositive(form.get(names.level));
-    if (!level.ok || level.value === null) {
-      return { ok: false, error: `Enter an ${prefix}EMA price level.` };
+  if (kind === "ema_cross" || kind === "sma_cross") {
+    if (kind === "ema_cross" && compareRaw === "legacy") {
+      const level = parseOptionalPositive(form.get(names.level));
+      if (!level.ok || level.value === null) {
+        return { ok: false, error: `Enter an ${prefix}EMA price level.` };
+      }
+      return {
+        ok: true,
+        start: {
+          kind,
+          timeframe,
+          compare: "cross_gte",
+          level: level.value,
+          period: null,
+          slowPeriod: null,
+        },
+      };
+    }
+    const typedLevel = parseOptionalPositive(form.get(names.level));
+    if (kind === "ema_cross" && typedLevel.ok && typedLevel.value != null) {
+      const cmp = parseDcaIndicatorCompare(compareRaw || "cross_gte");
+      if (cmp !== "cross_gte" && cmp !== "cross_lte") {
+        return { ok: false, error: `Choose when ${prefix}EMA should fire.` };
+      }
+      return {
+        ok: true,
+        start: {
+          kind,
+          timeframe,
+          compare: cmp,
+          level: typedLevel.value,
+          period: null,
+          slowPeriod: null,
+        },
+      };
+    }
+    if (compareRaw === "pair" || compareRaw === "") {
+      return {
+        ok: true,
+        start: {
+          kind,
+          timeframe,
+          compare: null,
+          level: null,
+          period: null,
+          slowPeriod: null,
+        },
+      };
+    }
+    const cmp = parseDcaIndicatorCompare(compareRaw);
+    if (cmp !== "cross_gte" && cmp !== "cross_lte") {
+      return { ok: false, error: `Choose when ${prefix}the averages should cross.` };
+    }
+    const fast =
+      parseDcaIndicatorPeriod(form.get(names.period)) ??
+      DEFAULT_DCA_CROSS_FAST_PERIOD;
+    const slow =
+      parseDcaIndicatorPeriod(form.get(names.slowPeriod)) ??
+      DEFAULT_DCA_CROSS_SLOW_PERIOD;
+    if (fast === slow) {
+      return {
+        ok: false,
+        error: `Enter two different ${prefix}periods.`,
+      };
     }
     return {
       ok: true,
       start: {
         kind,
         timeframe,
-        compare: "cross_gte",
-        level: level.value,
-        period: null,
+        compare: cmp,
+        level: null,
+        period: fast,
+        slowPeriod: slow,
       },
     };
   }
-  const cmp = parseDcaIndicatorCompare(compareRaw);
-  if (cmp !== "cross_gte" && cmp !== "cross_lte") {
-    return { ok: false, error: `Choose when ${prefix}EMA should fire.` };
-  }
-  const level = parseOptionalPositive(form.get(names.level));
-  if (level.ok && level.value != null) {
-    return {
-      ok: true,
-      start: { kind, timeframe, compare: cmp, level: level.value, period: null },
-    };
-  }
-  return {
-    ok: true,
-    start: { kind, timeframe, compare: cmp, level: null, period: null },
-  };
+  return { ok: false, error: `Choose ${prefix}RSI, MACD, EMA, SMA, or BB.` };
 }
 
 function parseLeg(
@@ -1464,8 +1584,9 @@ export function parseDcaPlaybookRow(
     indicatorKind,
     indicatorTimeframe,
     indicatorCompare,
-    indicatorLevel: asPositiveOrNull(row.indicator_level),
+    indicatorLevel: indicatorLevelFromRow(indicatorKind, row.indicator_level),
     indicatorPeriod: parseDcaIndicatorPeriod(row.indicator_period),
+    indicatorSlowPeriod: parseDcaIndicatorPeriod(row.indicator_slow_period),
     shortIndicatorKind,
     shortIndicatorTimeframe: parseDcaIndicatorTimeframe(
       row.short_indicator_timeframe,
@@ -1473,8 +1594,14 @@ export function parseDcaPlaybookRow(
     shortIndicatorCompare: parseDcaIndicatorCompare(
       row.short_indicator_compare,
     ),
-    shortIndicatorLevel: asPositiveOrNull(row.short_indicator_level),
+    shortIndicatorLevel: indicatorLevelFromRow(
+      shortIndicatorKind,
+      row.short_indicator_level,
+    ),
     shortIndicatorPeriod: parseDcaIndicatorPeriod(row.short_indicator_period),
+    shortIndicatorSlowPeriod: parseDcaIndicatorPeriod(
+      row.short_indicator_slow_period,
+    ),
     updatedAtMs: (() => {
       const ms = new Date(String(row.updated_at ?? "")).getTime();
       return Number.isFinite(ms) ? ms : 0;
@@ -1491,6 +1618,24 @@ export function parseDcaPlaybookRow(
 function asPositiveOrNull(raw: unknown): number | null {
   const value = Number(raw);
   return value > 0 && Number.isFinite(value) ? value : null;
+}
+
+function asFiniteNumberOrNull(raw: unknown): number | null {
+  if (raw == null || raw === "") {
+    return null;
+  }
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+function indicatorLevelFromRow(
+  kind: DcaIndicatorKind | null,
+  raw: unknown,
+): number | null {
+  if (kind === "macd") {
+    return asFiniteNumberOrNull(raw);
+  }
+  return asPositiveOrNull(raw);
 }
 
 function asPositiveIntOrNull(raw: unknown): number | null {
@@ -1690,6 +1835,7 @@ export function decideDcaTick(input: {
   indicatorCompare?: DcaIndicatorCompare | null;
   indicatorLevel?: number | null;
   indicatorPeriod?: number | null;
+  indicatorSlowPeriod?: number | null;
   indicatorConditionTrue?: boolean;
   splitIndicatorSides?: boolean;
   closes?: number[] | null;
@@ -1710,6 +1856,7 @@ export function decideDcaTick(input: {
   const indicatorCompare = input.indicatorCompare ?? null;
   const indicatorLevel = input.indicatorLevel ?? null;
   const indicatorPeriod = input.indicatorPeriod ?? null;
+  const indicatorSlowPeriod = input.indicatorSlowPeriod ?? null;
   const closes = input.closes ?? null;
   const splitBySide = Boolean(input.splitIndicatorSides);
   const armPrice = triggerPrice(input.armTrigger, input.triggerPrices);
@@ -1752,6 +1899,7 @@ export function decideDcaTick(input: {
         compare: indicatorCompare,
         level: indicatorLevel,
         period: indicatorPeriod,
+        slowPeriod: indicatorSlowPeriod,
         splitBySide,
       }) ||
         (latchCross &&
@@ -1762,6 +1910,7 @@ export function decideDcaTick(input: {
             compare: indicatorCompare,
             level: indicatorLevel,
             period: indicatorPeriod,
+            slowPeriod: indicatorSlowPeriod,
             splitBySide,
           }))),
   );

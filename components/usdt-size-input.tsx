@@ -131,6 +131,7 @@ export function GroupedNumberInput({
   value,
   onChange,
   allowDecimal = false,
+  allowNegative = false,
   placeholder,
   className = DEFAULT_GROUPED_CLASS,
   ariaLabel,
@@ -141,20 +142,22 @@ export function GroupedNumberInput({
   value?: string;
   onChange?: (next: string) => void;
   allowDecimal?: boolean;
+  allowNegative?: boolean;
   placeholder?: string;
   className?: string;
   ariaLabel?: string;
 }) {
   const [internal, setInternal] = useState(() =>
-    formatGroupedNumberInput(defaultValue, allowDecimal),
+    formatGroupedNumberInput(defaultValue, allowDecimal, allowNegative),
   );
   const display = formatGroupedNumberInput(
     value !== undefined ? value : internal,
     allowDecimal,
+    allowNegative,
   );
 
   function apply(raw: string) {
-    const next = formatGroupedNumberInput(raw, allowDecimal);
+    const next = formatGroupedNumberInput(raw, allowDecimal, allowNegative);
     if (value === undefined) {
       setInternal(next);
     }
@@ -166,7 +169,9 @@ export function GroupedNumberInput({
       id={id}
       name={name}
       type="text"
-      inputMode={allowDecimal ? "decimal" : "numeric"}
+      inputMode={
+        allowNegative ? "text" : allowDecimal ? "decimal" : "numeric"
+      }
       autoComplete="off"
       spellCheck={false}
       aria-label={ariaLabel}

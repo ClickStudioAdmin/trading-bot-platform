@@ -1,8 +1,19 @@
 import type { FuturesSide } from "@/lib/futures/model";
 
-export type DcaIndicatorKind = "rsi" | "macd" | "ema_cross" | "ema" | "sma";
+export type DcaIndicatorKind =
+  | "rsi"
+  | "macd"
+  | "ema_cross"
+  | "ema"
+  | "sma"
+  | "sma_cross"
+  | "bb";
 export type DcaIndicatorCompare = "gte" | "lte" | "cross_gte" | "cross_lte";
 export const DEFAULT_DCA_MA_PERIOD = 21;
+export const DEFAULT_DCA_CROSS_FAST_PERIOD = 9;
+export const DEFAULT_DCA_CROSS_SLOW_PERIOD = 21;
+export const DEFAULT_DCA_BB_PERIOD = 20;
+export const DCA_BB_STDDEV = 2;
 export const DCA_INDICATOR_PERIOD_MIN = 2;
 export const DCA_INDICATOR_PERIOD_MAX = 400;
 export const DCA_INDICATOR_TIMEFRAMES = [
@@ -67,7 +78,39 @@ export function parseDcaIndicatorPeriod(value: unknown): number | null {
 }
 
 export function dcaIndicatorUsesPeriod(kind: DcaIndicatorKind): boolean {
-  return kind === "ema" || kind === "sma";
+  return kind === "ema" || kind === "sma" || kind === "bb";
+}
+
+export function dcaIndicatorUsesPairPeriods(kind: DcaIndicatorKind): boolean {
+  return kind === "ema_cross" || kind === "sma_cross";
+}
+
+export function defaultDcaIndicatorPeriod(kind: DcaIndicatorKind): number {
+  if (kind === "bb") {
+    return DEFAULT_DCA_BB_PERIOD;
+  }
+  if (dcaIndicatorUsesPairPeriods(kind)) {
+    return DEFAULT_DCA_CROSS_FAST_PERIOD;
+  }
+  return DEFAULT_DCA_MA_PERIOD;
+}
+
+export function defaultDcaIndicatorSlowPeriod(
+  kind: DcaIndicatorKind,
+): number | null {
+  return dcaIndicatorUsesPairPeriods(kind)
+    ? DEFAULT_DCA_CROSS_SLOW_PERIOD
+    : null;
+}
+
+export function dcaPairCrossPeriods(
+  period: number | null | undefined,
+  slowPeriod: number | null | undefined,
+): { fast: number; slow: number } {
+  return {
+    fast: period ?? DEFAULT_DCA_CROSS_FAST_PERIOD,
+    slow: slowPeriod ?? DEFAULT_DCA_CROSS_SLOW_PERIOD,
+  };
 }
 
 export function dcaIndicatorHasLevel(
@@ -102,10 +145,26 @@ export function dcaIndicatorShowsLevel(
   compare: string | null | undefined,
   level?: string | number | null,
 ): boolean {
-  if (kind === "rsi") {
+  if (kind === "rsi" || kind === "macd") {
     return true;
   }
   return dcaIndicatorIsLegacyEmaPrice(kind, compare, level);
+}
+
+export function defaultDcaIndicatorLevel(
+  kind: DcaIndicatorKind,
+): number | null {
+  if (kind === "rsi") {
+    return 30;
+  }
+  if (kind === "macd") {
+    return 0;
+  }
+  return null;
+}
+
+export function macdHistogramLevel(level: number | null | undefined): number {
+  return level == null || !Number.isFinite(level) ? 0 : level;
 }
 
 export function dcaIndicatorWhenOptions(
@@ -123,26 +182,35 @@ export function dcaIndicatorWhenOptions(
   }
   if (kind === "macd") {
     return [
-      { value: "cross_gte", label: "Histogram crosses above zero" },
-      { value: "cross_lte", label: "Histogram crosses below zero" },
-      { value: "gte", label: "Histogram is positive" },
-      { value: "lte", label: "Histogram is negative" },
+      { value: "cross_gte", label: "Crosses above" },
+      { value: "cross_lte", label: "Crosses below" },
+      { value: "gte", label: "Is above" },
+      { value: "lte", label: "Is below" },
     ];
   }
   if (kind === "ema" || kind === "sma") {
     return [
-      { value: "cross_gte", label: "Price crosses up through" },
-      { value: "cross_lte", label: "Price crosses down through" },
+      { value: "cross_gte", label: "Crosses above" },
+      { value: "cross_lte", label: "Crosses below" },
     ];
   }
-  const options = [
-    { value: "cross_gte", label: "9 crosses above 21" },
-    { value: "cross_lte", label: "9 crosses below 21" },
-  ];
-  if (includeLegacyEmaPrice) {
-    options.push({ value: "legacy", label: "EMA 21 crosses" });
+  if (kind === "bb") {
+    return [
+      { value: "gte", label: "Above top BB" },
+      { value: "lte", label: "Below bottom BB" },
+    ];
   }
-  return options;
+  if (kind === "ema_cross" || kind === "sma_cross") {
+    const options = [
+      { value: "cross_gte", label: "Crosses above" },
+      { value: "cross_lte", label: "Crosses below" },
+    ];
+    if (kind === "ema_cross" && includeLegacyEmaPrice) {
+      options.push({ value: "legacy", label: "EMA 21 crosses" });
+    }
+    return options;
+  }
+  return [];
 }
 
 export function dcaIndicatorWhenValue(
@@ -162,6 +230,7 @@ export function formatDcaIndicatorStartLabel(input: {
   compare: string | null | undefined;
   level?: number | null;
   period?: number | null;
+  slowPeriod?: number | null;
   timeframe?: DcaIndicatorTimeframe | null;
   side: "long" | "short";
 }): string {
@@ -169,30 +238,39 @@ export function formatDcaIndicatorStartLabel(input: {
     ? ` · ${DCA_INDICATOR_TIMEFRAME_LABELS[input.timeframe] ?? input.timeframe}`
     : "";
   if (input.kind === "macd") {
+    const level = macdHistogramLevel(input.level);
     const when =
       input.compare === "lte"
-        ? "histogram is negative"
+        ? `histogram is below ${level}`
         : input.compare === "gte"
-          ? "histogram is positive"
+          ? `histogram is above ${level}`
           : input.compare === "cross_lte"
-            ? "histogram crosses below zero"
-            : "histogram crosses above zero";
+            ? `histogram crosses below ${level}`
+            : `histogram crosses above ${level}`;
     return `MACD ${when}${timeframe}`;
+  }
+  if (input.kind === "bb") {
+    const period = input.period ?? DEFAULT_DCA_BB_PERIOD;
+    const when =
+      input.compare === "lte" ? "Below bottom BB" : "Above top BB";
+    return `${when} ${period}${timeframe}`;
   }
   if (input.kind === "ema" || input.kind === "sma") {
     const name = input.kind === "sma" ? "SMA" : "EMA";
     const period = input.period ?? DEFAULT_DCA_MA_PERIOD;
     const when =
       input.compare === "cross_lte"
-        ? "Price crosses down through"
-        : "Price crosses up through";
+        ? "Price crosses below"
+        : "Price crosses above";
     return `${when} ${name} ${period}${timeframe}`;
   }
-  if (input.kind === "ema_cross") {
+  if (input.kind === "ema_cross" || input.kind === "sma_cross") {
+    const name = input.kind === "sma_cross" ? "SMA" : "EMA";
     if (dcaIndicatorIsLegacyEmaPrice(input.kind, input.compare, input.level)) {
       const level = input.level != null ? ` ${input.level}` : "";
       return `EMA 21 crosses${level}${timeframe}`;
     }
+    const { fast, slow } = dcaPairCrossPeriods(input.period, input.slowPeriod);
     if (
       input.compare === "cross_lte" ||
       ((input.compare === "pair" ||
@@ -200,9 +278,9 @@ export function formatDcaIndicatorStartLabel(input: {
         input.compare === "") &&
         input.side === "short")
     ) {
-      return `EMA 9 crosses below 21${timeframe}`;
+      return `${name} ${fast} crosses below ${slow}${timeframe}`;
     }
-    return `EMA 9 crosses above 21${timeframe}`;
+    return `${name} ${fast} crosses above ${slow}${timeframe}`;
   }
   if (input.kind === "rsi") {
     const when =
@@ -315,6 +393,9 @@ export function oppositeIndicatorCompare(
     }
     return "cross_lte";
   }
+  if (kind === "bb") {
+    return compare === "gte" ? "lte" : "gte";
+  }
   return compare === "cross_lte" ? "cross_gte" : "cross_lte";
 }
 
@@ -334,11 +415,17 @@ export function indicatorCompareForDirection(
     }
     return direction === "short" ? "cross_lte" : "cross_gte";
   }
-  if (kind === "ema" || kind === "sma") {
+  if (kind === "ema" || kind === "sma" || kind === "sma_cross") {
     if (compare === "cross_gte" || compare === "cross_lte") {
       return compare;
     }
     return direction === "short" ? "cross_lte" : "cross_gte";
+  }
+  if (kind === "bb") {
+    if (compare === "gte" || compare === "lte") {
+      return compare;
+    }
+    return direction === "short" ? "gte" : "lte";
   }
   if (kind === "ema_cross") {
     if (compare === "legacy") {
@@ -411,6 +498,25 @@ export function smaValues(closes: number[], period: number): number[] {
     }
   }
   return out;
+}
+
+export function bollingerBands(
+  closes: number[],
+  period: number,
+  stddev = DCA_BB_STDDEV,
+): { mid: number; upper: number; lower: number } | null {
+  if (period < 2 || closes.length < period) {
+    return null;
+  }
+  const window = closes.slice(-period);
+  const mid = window.reduce((sum, value) => sum + (value ?? 0), 0) / period;
+  const variance =
+    window.reduce((sum, value) => {
+      const delta = (value ?? 0) - mid;
+      return sum + delta * delta;
+    }, 0) / period;
+  const band = Math.sqrt(variance) * stddev;
+  return { mid, upper: mid + band, lower: mid - band };
 }
 
 export function priceCrossedAverage(
@@ -503,23 +609,22 @@ function lastTwoEma(
 }
 
 export function emaCrossBullish(closes: number[]): boolean | null {
-  const fast = emaValues(closes, 9);
-  const slow = emaValues(closes, 21);
+  const fast = emaValues(closes, DEFAULT_DCA_CROSS_FAST_PERIOD);
+  const slow = emaValues(closes, DEFAULT_DCA_CROSS_SLOW_PERIOD);
   if (fast.length < 2 || slow.length < 2) {
     return null;
   }
-  const fastNow = fast[fast.length - 1];
-  const slowNow = slow[slow.length - 1];
-  const fastPrev = fast[fast.length - 2];
-  const slowPrev = slow[slow.length - 2];
-  return fastNow > slowNow && fastPrev <= slowPrev;
+  return maPairCrossed(fast, slow, "up");
 }
 
 export function dcaIndicatorStartLatches(
   kind: DcaIndicatorKind | null | undefined,
   compare: DcaIndicatorCompare | null | undefined,
 ): boolean {
-  if (kind === "ema_cross" && (compare === null || compare === undefined)) {
+  if (
+    (kind === "ema_cross" || kind === "sma_cross") &&
+    (compare === null || compare === undefined)
+  ) {
     return true;
   }
   return compare === "cross_gte" || compare === "cross_lte";
@@ -539,10 +644,28 @@ export function indicatorStartMet(input: {
   compare: DcaIndicatorCompare | null;
   level: number | null;
   period?: number | null;
+  slowPeriod?: number | null;
   splitBySide?: boolean;
 }): boolean {
   const split = Boolean(input.splitBySide);
   const cross = input.compare === "cross_gte" || input.compare === "cross_lte";
+  if (input.kind === "bb") {
+    const bands = bollingerBands(
+      input.closes,
+      input.period ?? DEFAULT_DCA_BB_PERIOD,
+    );
+    if (!bands) {
+      return false;
+    }
+    const price = input.closes[input.closes.length - 1];
+    if (price == null) {
+      return false;
+    }
+    const below = split
+      ? input.side === "long"
+      : input.compare === "lte";
+    return below ? price < bands.lower : price > bands.upper;
+  }
   if (input.kind === "ema" || input.kind === "sma") {
     const period = input.period ?? DEFAULT_DCA_MA_PERIOD;
     const averages =
@@ -590,6 +713,7 @@ export function indicatorStartMet(input: {
     return rsi <= input.level;
   }
   if (input.kind === "macd") {
+    const level = macdHistogramLevel(input.level);
     if (cross) {
       const pair = lastTwoOf(macdHistogram, input.closes);
       if (!pair) {
@@ -602,19 +726,19 @@ export function indicatorStartMet(input: {
         : input.compare === "cross_lte"
           ? "down"
           : "up";
-      return crossedLevel(pair.prev, pair.now, 0, direction);
+      return crossedLevel(pair.prev, pair.now, level, direction);
     }
     const hist = macdHistogram(input.closes);
     if (hist === null) {
       return false;
     }
     if (split) {
-      return input.side === "long" ? hist > 0 : hist < 0;
+      return input.side === "long" ? hist > level : hist < level;
     }
-    return input.compare === "lte" ? hist < 0 : hist > 0;
+    return input.compare === "lte" ? hist < level : hist > level;
   }
-  if (input.kind === "ema_cross") {
-    if (input.level != null && cross) {
+  if (input.kind === "ema_cross" || input.kind === "sma_cross") {
+    if (input.kind === "ema_cross" && input.level != null && cross) {
       const pair = lastTwoEma(input.closes, 21);
       if (!pair) {
         return false;
@@ -632,23 +756,30 @@ export function indicatorStartMet(input: {
               : "down",
       );
     }
-    if (input.compare === "cross_gte") {
-      return emaCrossBullish(input.closes) === true;
-    }
-    if (input.compare === "cross_lte") {
-      return emaCrossBearish(input.closes);
-    }
-    if (input.side === "long") {
-      return emaCrossBullish(input.closes) === true;
-    }
-    return emaCrossBearish(input.closes);
+    const { fast, slow } = dcaPairCrossPeriods(input.period, input.slowPeriod);
+    const series = input.kind === "sma_cross" ? smaValues : emaValues;
+    const direction =
+      split && input.compare == null
+        ? input.side === "long"
+          ? "up"
+          : "down"
+        : input.compare === "cross_lte"
+          ? "down"
+          : "up";
+    return maPairCrossed(
+      series(input.closes, fast),
+      series(input.closes, slow),
+      direction,
+    );
   }
   return false;
 }
 
-function emaCrossBearish(closes: number[]): boolean {
-  const fast = emaValues(closes, 9);
-  const slow = emaValues(closes, 21);
+export function maPairCrossed(
+  fast: number[],
+  slow: number[],
+  direction: "up" | "down",
+): boolean {
   if (fast.length < 2 || slow.length < 2) {
     return false;
   }
@@ -656,5 +787,8 @@ function emaCrossBearish(closes: number[]): boolean {
   const slowNow = slow[slow.length - 1];
   const fastPrev = fast[fast.length - 2];
   const slowPrev = slow[slow.length - 2];
+  if (direction === "up") {
+    return fastNow > slowNow && fastPrev <= slowPrev;
+  }
   return fastNow < slowNow && fastPrev >= slowPrev;
 }

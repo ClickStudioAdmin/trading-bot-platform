@@ -280,6 +280,7 @@ export async function runDcaPlaybookTick(input?: {
         indicatorCompare: indicatorStart?.compare ?? null,
         indicatorLevel: indicatorStart?.level ?? null,
         indicatorPeriod: indicatorStart?.period ?? null,
+        indicatorSlowPeriod: indicatorStart?.slowPeriod ?? null,
         splitIndicatorSides:
           playbook.direction === "both" &&
           !playbook.shortIndicatorKind &&

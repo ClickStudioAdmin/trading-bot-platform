@@ -90,11 +90,13 @@ export type DcaTemplateRecipe = {
   indicatorCompare: DcaPlaybookConfig["indicatorCompare"];
   indicatorLevel: number | null;
   indicatorPeriod?: number | null;
+  indicatorSlowPeriod?: number | null;
   shortIndicatorKind?: DcaPlaybookConfig["shortIndicatorKind"];
   shortIndicatorTimeframe?: DcaPlaybookConfig["shortIndicatorTimeframe"];
   shortIndicatorCompare?: DcaPlaybookConfig["shortIndicatorCompare"];
   shortIndicatorLevel?: number | null;
   shortIndicatorPeriod?: number | null;
+  shortIndicatorSlowPeriod?: number | null;
 };
 
 export type PerpsTemplateRecipe = {
@@ -264,11 +266,13 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     indicatorCompare: config.indicatorCompare,
     indicatorLevel: config.indicatorLevel,
     indicatorPeriod: config.indicatorPeriod,
+    indicatorSlowPeriod: config.indicatorSlowPeriod,
     shortIndicatorKind: config.shortIndicatorKind ?? null,
     shortIndicatorTimeframe: config.shortIndicatorTimeframe ?? null,
     shortIndicatorCompare: config.shortIndicatorCompare ?? null,
     shortIndicatorLevel: config.shortIndicatorLevel ?? null,
     shortIndicatorPeriod: config.shortIndicatorPeriod ?? null,
+    shortIndicatorSlowPeriod: config.shortIndicatorSlowPeriod ?? null,
   };
 }
 
@@ -590,6 +594,9 @@ export function dcaRecipeToConfig(
   if (recipe.indicatorPeriod != null) {
     form.set("indicatorPeriod", String(recipe.indicatorPeriod));
   }
+  if (recipe.indicatorSlowPeriod != null) {
+    form.set("indicatorSlowPeriod", String(recipe.indicatorSlowPeriod));
+  }
   const shortKind =
     recipe.shortIndicatorKind ??
     (direction === "both" && appliedStart === "indicator"
@@ -630,6 +637,12 @@ export function dcaRecipeToConfig(
     (shortKind ? recipe.indicatorPeriod : null);
   if (shortPeriod != null) {
     form.set("shortIndicatorPeriod", String(shortPeriod));
+  }
+  const shortSlowPeriod =
+    recipe.shortIndicatorSlowPeriod ??
+    (shortKind ? recipe.indicatorSlowPeriod : null);
+  if (shortSlowPeriod != null) {
+    form.set("shortIndicatorSlowPeriod", String(shortSlowPeriod));
   }
   const parsed = parseDcaPlaybookForm(form, venue);
   if (!parsed.ok) {
@@ -810,11 +823,13 @@ export type DcaSnapshotOverlay = {
   indicatorCompare?: string;
   indicatorLevel?: string;
   indicatorPeriod?: string;
+  indicatorSlowPeriod?: string;
   shortIndicatorKind?: string;
   shortIndicatorTimeframe?: string;
   shortIndicatorCompare?: string;
   shortIndicatorLevel?: string;
   shortIndicatorPeriod?: string;
+  shortIndicatorSlowPeriod?: string;
   armTriggerBy?: string;
   armCompare?: string;
   armPrice?: string;

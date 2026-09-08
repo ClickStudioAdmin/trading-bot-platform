@@ -390,6 +390,7 @@ function dcaIndicatorSideLabel(input: {
   compare: DcaTemplateRecipe["indicatorCompare"];
   level: number | null | undefined;
   period?: number | null;
+  slowPeriod?: number | null;
   timeframe: DcaTemplateRecipe["indicatorTimeframe"];
   side: "long" | "short";
 }): string {
@@ -398,6 +399,7 @@ function dcaIndicatorSideLabel(input: {
     compare: input.compare,
     level: input.level,
     period: input.period,
+    slowPeriod: input.slowPeriod,
     timeframe: input.timeframe,
     side: input.side,
   });
@@ -423,6 +425,7 @@ function dcaStartLabel(recipe: DcaTemplateRecipe): string {
       compare: recipe.indicatorCompare,
       level: recipe.indicatorLevel,
       period: recipe.indicatorPeriod,
+      slowPeriod: recipe.indicatorSlowPeriod,
       timeframe: recipe.indicatorTimeframe,
       side: recipe.direction === "short" ? "short" : "long",
     });
@@ -432,6 +435,8 @@ function dcaStartLabel(recipe: DcaTemplateRecipe): string {
         compare: recipe.shortIndicatorCompare ?? null,
         level: recipe.shortIndicatorLevel,
         period: recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod,
+        slowPeriod:
+          recipe.shortIndicatorSlowPeriod ?? recipe.indicatorSlowPeriod,
         timeframe: recipe.shortIndicatorTimeframe ?? null,
         side: "short",
       })}`;

@@ -2115,7 +2115,7 @@ const macdCrossParsed = parseDcaPlaybookForm(macdCrossForm);
 assert.equal(macdCrossParsed.ok, true);
 if (macdCrossParsed.ok) {
   assert.equal(macdCrossParsed.config.indicatorCompare, "cross_gte");
-  assert.equal(macdCrossParsed.config.indicatorLevel, null);
+  assert.equal(macdCrossParsed.config.indicatorLevel, 0);
 }
 
 const macdBelowForm = new FormData();
@@ -2131,6 +2131,23 @@ const macdBelowParsed = parseDcaPlaybookForm(macdBelowForm);
 assert.equal(macdBelowParsed.ok, true);
 if (macdBelowParsed.ok) {
   assert.equal(macdBelowParsed.config.indicatorCompare, "cross_lte");
+  assert.equal(macdBelowParsed.config.indicatorLevel, 0);
+}
+
+const macdLevelForm = new FormData();
+macdLevelForm.set("symbol", "BTCUSDT");
+macdLevelForm.set("side", "long");
+macdLevelForm.set("clipSize", "0.01");
+macdLevelForm.set("sizeUnit", "qty");
+macdLevelForm.set("startKind", "indicator");
+macdLevelForm.set("indicatorKind", "macd");
+macdLevelForm.set("indicatorTimeframe", "60");
+macdLevelForm.set("indicatorCompare", "cross_gte");
+macdLevelForm.set("indicatorLevel", "-0.2");
+const macdLevelParsed = parseDcaPlaybookForm(macdLevelForm);
+assert.equal(macdLevelParsed.ok, true);
+if (macdLevelParsed.ok) {
+  assert.equal(macdLevelParsed.config.indicatorLevel, -0.2);
 }
 
 const emaLevelForm = new FormData();
@@ -2185,6 +2202,28 @@ if (emaPairDirParsed.ok) {
   assert.equal(emaPairDirParsed.config.indicatorKind, "ema_cross");
   assert.equal(emaPairDirParsed.config.indicatorCompare, "cross_gte");
   assert.equal(emaPairDirParsed.config.indicatorLevel, null);
+  assert.equal(emaPairDirParsed.config.indicatorPeriod, 9);
+  assert.equal(emaPairDirParsed.config.indicatorSlowPeriod, 21);
+}
+
+const smaCrossForm = new FormData();
+smaCrossForm.set("symbol", "BTCUSDT");
+smaCrossForm.set("side", "long");
+smaCrossForm.set("clipSize", "0.01");
+smaCrossForm.set("sizeUnit", "qty");
+smaCrossForm.set("startKind", "indicator");
+smaCrossForm.set("indicatorKind", "sma_cross");
+smaCrossForm.set("indicatorTimeframe", "15");
+smaCrossForm.set("indicatorCompare", "cross_lte");
+smaCrossForm.set("indicatorPeriod", "10");
+smaCrossForm.set("indicatorSlowPeriod", "50");
+const smaCrossParsed = parseDcaPlaybookForm(smaCrossForm);
+assert.equal(smaCrossParsed.ok, true);
+if (smaCrossParsed.ok) {
+  assert.equal(smaCrossParsed.config.indicatorKind, "sma_cross");
+  assert.equal(smaCrossParsed.config.indicatorCompare, "cross_lte");
+  assert.equal(smaCrossParsed.config.indicatorPeriod, 10);
+  assert.equal(smaCrossParsed.config.indicatorSlowPeriod, 50);
 }
 
 const smaShortForm = new FormData();
@@ -2202,6 +2241,24 @@ assert.equal(smaShortParsed.ok, true);
 if (smaShortParsed.ok) {
   assert.equal(smaShortParsed.config.indicatorKind, "sma");
   assert.equal(smaShortParsed.config.indicatorPeriod, 50);
+}
+
+const bbForm = new FormData();
+bbForm.set("symbol", "BTCUSDT");
+bbForm.set("side", "long");
+bbForm.set("clipSize", "0.01");
+bbForm.set("sizeUnit", "qty");
+bbForm.set("startKind", "indicator");
+bbForm.set("indicatorKind", "bb");
+bbForm.set("indicatorTimeframe", "15");
+bbForm.set("indicatorCompare", "lte");
+bbForm.set("indicatorPeriod", "20");
+const bbParsed = parseDcaPlaybookForm(bbForm);
+assert.equal(bbParsed.ok, true);
+if (bbParsed.ok) {
+  assert.equal(bbParsed.config.indicatorKind, "bb");
+  assert.equal(bbParsed.config.indicatorCompare, "lte");
+  assert.equal(bbParsed.config.indicatorPeriod, 20);
 }
 
 const emaMissingPeriod = new FormData();
@@ -2257,6 +2314,7 @@ if (!hlBothParsed.ok) {
 assert.equal(dcaIndicatorStartLatches("rsi", "cross_gte"), true);
 assert.equal(dcaIndicatorStartLatches("rsi", "lte"), false);
 assert.equal(dcaIndicatorStartLatches("ema_cross", null), true);
+assert.equal(dcaIndicatorStartLatches("sma_cross", null), true);
 assert.deepEqual(indicatorClosesForCross([1, 2, 3, 4]), [1, 2, 3]);
 
 console.log("dca playbook checks passed");

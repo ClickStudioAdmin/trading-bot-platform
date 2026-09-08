@@ -34,6 +34,24 @@ export function formatNotionalInput(raw: string): string {
 export function formatGroupedNumberInput(
   raw: string,
   allowDecimal = false,
+  allowNegative = false,
+): string {
+  const trimmed = raw.replace(/,/g, "").trim();
+  if (allowNegative && (trimmed === "-" || trimmed === "-.")) {
+    return trimmed === "-." ? "-0." : "-";
+  }
+  const negative = allowNegative && trimmed.startsWith("-");
+  const unsigned = negative ? raw.replace("-", "") : raw;
+  const formatted = formatGroupedNumberInputUnsigned(unsigned, allowDecimal);
+  if (formatted === "" && !negative) {
+    return "";
+  }
+  return negative ? `-${formatted}` : formatted;
+}
+
+function formatGroupedNumberInputUnsigned(
+  raw: string,
+  allowDecimal: boolean,
 ): string {
   if (!allowDecimal) {
     const digits = raw.replace(/\D/g, "");

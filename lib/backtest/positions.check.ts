@@ -97,11 +97,13 @@ const recipe: BacktestRecipe = {
   indicatorCompare: null,
   indicatorLevel: null,
   indicatorPeriod: null,
+  indicatorSlowPeriod: null,
   shortIndicatorKind: null,
   shortIndicatorTimeframe: null,
   shortIndicatorCompare: null,
   shortIndicatorLevel: null,
   shortIndicatorPeriod: null,
+  shortIndicatorSlowPeriod: null,
 };
 
 const grouped = groupBacktestOrdersIntoCycles(fills);

@@ -27,7 +27,9 @@ import {
   dcaTighterTrailingDistance,
 } from "./grid";
 import {
+  bollingerBands,
   crossedLevel,
+  dcaIndicatorShowsLevel,
   dcaIndicatorWhenOptions,
   emaCrossBullish,
   emaValues,
@@ -490,6 +492,45 @@ assert.equal(
 );
 const hist = macdHistogram(rising);
 assert.ok(hist === null || Number.isFinite(hist));
+const macdCloses = [...Array(40).fill(100), ...Array(12).fill(120)];
+const macdHist = macdHistogram(macdCloses);
+assert.ok(macdHist != null && Number.isFinite(macdHist));
+assert.equal(
+  indicatorStartMet({
+    kind: "macd",
+    side: "long",
+    closes: macdCloses,
+    compare: "gte",
+    level: null,
+  }),
+  indicatorStartMet({
+    kind: "macd",
+    side: "long",
+    closes: macdCloses,
+    compare: "gte",
+    level: 0,
+  }),
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "macd",
+    side: "long",
+    closes: macdCloses,
+    compare: "gte",
+    level: (macdHist as number) - 0.01,
+  }),
+  true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "macd",
+    side: "long",
+    closes: macdCloses,
+    compare: "gte",
+    level: (macdHist as number) + 0.01,
+  }),
+  false,
+);
 assert.ok(
   emaCrossBullish([
     10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
@@ -674,6 +715,24 @@ assert.equal(
   }),
   true,
 );
+assert.equal(
+  indicatorStartMet({
+    kind: "ema_cross",
+    side: "long",
+    closes: maCloses,
+    compare: "cross_gte",
+    level: null,
+    period: 9,
+    slowPeriod: 21,
+  }),
+  indicatorStartMet({
+    kind: "ema_cross",
+    side: "long",
+    closes: maCloses,
+    compare: "cross_gte",
+    level: null,
+  }),
+);
 assert.ok(
   dcaIndicatorWhenOptions("macd", "short", false).some(
     (row) => row.value === "cross_gte",
@@ -684,6 +743,13 @@ assert.ok(
     (row) => row.value === "cross_lte",
   ),
 );
+assert.equal(
+  dcaIndicatorWhenOptions("macd", "long", false).find(
+    (row) => row.value === "cross_gte",
+  )?.label,
+  "Crosses above",
+);
+assert.equal(dcaIndicatorShowsLevel("macd", "cross_gte", null), true);
 assert.ok(
   dcaIndicatorWhenOptions("rsi", "long", false).some(
     (row) => row.value === "cross_gte",
@@ -691,7 +757,11 @@ assert.ok(
 );
 assert.equal(
   dcaIndicatorWhenOptions("ema_cross", "long", false)[0]?.label,
-  "9 crosses above 21",
+  "Crosses above",
+);
+assert.equal(
+  dcaIndicatorWhenOptions("sma_cross", "short", false)[1]?.label,
+  "Crosses below",
 );
 assert.equal(
   formatDcaIndicatorStartLabel({
@@ -701,7 +771,7 @@ assert.equal(
     timeframe: "15",
     side: "long",
   }),
-  "Price crosses up through EMA 21 · 15m",
+  "Price crosses above EMA 21 · 15m",
 );
 assert.equal(
   formatDcaIndicatorStartLabel({
@@ -710,7 +780,7 @@ assert.equal(
     timeframe: "60",
     side: "short",
   }),
-  "MACD histogram crosses above zero · 1h",
+  "MACD histogram crosses above 0 · 1h",
 );
 assert.equal(
   formatDcaIndicatorStartLabel({
@@ -719,7 +789,17 @@ assert.equal(
     timeframe: "60",
     side: "long",
   }),
-  "MACD histogram crosses below zero · 1h",
+  "MACD histogram crosses below 0 · 1h",
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "macd",
+    compare: "gte",
+    level: 0.2,
+    timeframe: "60",
+    side: "long",
+  }),
+  "MACD histogram is above 0.2 · 1h",
 );
 assert.equal(
   formatDcaIndicatorStartLabel({
@@ -729,6 +809,84 @@ assert.equal(
     side: "long",
   }),
   "EMA 9 crosses above 21 · 15m",
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "ema_cross",
+    compare: "cross_gte",
+    period: 8,
+    slowPeriod: 21,
+    timeframe: "60",
+    side: "long",
+  }),
+  "EMA 8 crosses above 21 · 1h",
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "sma_cross",
+    compare: "cross_lte",
+    period: 10,
+    slowPeriod: 50,
+    timeframe: "15",
+    side: "short",
+  }),
+  "SMA 10 crosses below 50 · 15m",
+);
+
+const bbFlat = Array(20).fill(100);
+const bbBands = bollingerBands(bbFlat, 20);
+assert.ok(bbBands);
+assert.equal(bbBands?.upper, 100);
+assert.equal(bbBands?.lower, 100);
+const bbSpikeUp = [...Array(19).fill(100), 200];
+assert.equal(
+  indicatorStartMet({
+    kind: "bb",
+    side: "short",
+    closes: bbSpikeUp,
+    compare: "gte",
+    level: null,
+    period: 20,
+  }),
+  true,
+);
+assert.equal(
+  indicatorStartMet({
+    kind: "bb",
+    side: "long",
+    closes: bbSpikeUp,
+    compare: "lte",
+    level: null,
+    period: 20,
+  }),
+  false,
+);
+const bbSpikeDown = [...Array(19).fill(100), 50];
+assert.equal(
+  indicatorStartMet({
+    kind: "bb",
+    side: "long",
+    closes: bbSpikeDown,
+    compare: "lte",
+    level: null,
+    period: 20,
+  }),
+  true,
+);
+assert.ok(
+  dcaIndicatorWhenOptions("bb", "long", false).some(
+    (row) => row.label === "Above top BB",
+  ),
+);
+assert.equal(
+  formatDcaIndicatorStartLabel({
+    kind: "bb",
+    compare: "gte",
+    period: 20,
+    timeframe: "15",
+    side: "short",
+  }),
+  "Above top BB 20 · 15m",
 );
 
 console.log("dca grid checks passed");

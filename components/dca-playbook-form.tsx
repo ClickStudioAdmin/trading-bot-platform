@@ -63,8 +63,12 @@ import {
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
-  DEFAULT_DCA_MA_PERIOD,
+  defaultDcaIndicatorLevel,
+  defaultDcaIndicatorPeriod,
+  defaultDcaIndicatorSlowPeriod,
+  dcaIndicatorIsLegacyEmaPrice,
   dcaIndicatorShowsLevel,
+  dcaIndicatorUsesPairPeriods,
   dcaIndicatorUsesPeriod,
   dcaIndicatorWhenOptions,
   dcaIndicatorWhenValue,
@@ -129,7 +133,13 @@ function initialIndicatorCompare(
   if (kind === "macd") {
     return indicatorCompareForDirection(side, kind, stored ?? "");
   }
-  if (kind === "ema" || kind === "sma" || kind === "ema_cross") {
+  if (
+    kind === "ema" ||
+    kind === "sma" ||
+    kind === "ema_cross" ||
+    kind === "sma_cross" ||
+    kind === "bb"
+  ) {
     return indicatorCompareForDirection(side, kind, stored ?? "");
   }
   if (stored === "cross_gte" || stored === "cross_lte") {
@@ -727,10 +737,17 @@ export function DcaPlaybookForm({
   );
   const [indicatorLevel, setIndicatorLevel] = useState(
     optional(source?.indicatorLevel) ||
-      ((source?.indicatorKind ?? "rsi") === "rsi" ? "30" : ""),
+      String(defaultDcaIndicatorLevel(source?.indicatorKind ?? "rsi") ?? ""),
   );
   const [indicatorPeriod, setIndicatorPeriod] = useState(
-    optional(source?.indicatorPeriod) || String(DEFAULT_DCA_MA_PERIOD),
+    optional(source?.indicatorPeriod) ||
+      String(defaultDcaIndicatorPeriod(source?.indicatorKind ?? "rsi")),
+  );
+  const [indicatorSlowPeriod, setIndicatorSlowPeriod] = useState(
+    optional(source?.indicatorSlowPeriod) ||
+      String(
+        defaultDcaIndicatorSlowPeriod(source?.indicatorKind ?? "rsi") ?? "",
+      ),
   );
   const [indicatorCompare, setIndicatorCompare] = useState(() =>
     initialIndicatorCompare(
@@ -751,7 +768,10 @@ export function DcaPlaybookForm({
     }
     const kind = source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi";
     if (kind !== "rsi") {
-      return optional(source?.indicatorLevel);
+      return (
+        optional(source?.indicatorLevel) ||
+        String(defaultDcaIndicatorLevel(kind) ?? "")
+      );
     }
     return source?.indicatorLevel != null
       ? String(oppositeRsiLevel(source.indicatorLevel))
@@ -760,7 +780,20 @@ export function DcaPlaybookForm({
   const [shortIndicatorPeriod, setShortIndicatorPeriod] = useState(
     optional(source?.shortIndicatorPeriod) ||
       optional(source?.indicatorPeriod) ||
-      String(DEFAULT_DCA_MA_PERIOD),
+      String(
+        defaultDcaIndicatorPeriod(
+          source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi",
+        ),
+      ),
+  );
+  const [shortIndicatorSlowPeriod, setShortIndicatorSlowPeriod] = useState(
+    optional(source?.shortIndicatorSlowPeriod) ||
+      optional(source?.indicatorSlowPeriod) ||
+      String(
+        defaultDcaIndicatorSlowPeriod(
+          source?.shortIndicatorKind ?? source?.indicatorKind ?? "rsi",
+        ) ?? "",
+      ),
   );
   const [shortIndicatorCompare, setShortIndicatorCompare] = useState(() =>
     initialIndicatorCompare(
@@ -952,11 +985,13 @@ export function DcaPlaybookForm({
       indicatorCompare,
       indicatorLevel,
       indicatorPeriod,
+      indicatorSlowPeriod,
       shortIndicatorKind,
       shortIndicatorTimeframe,
       shortIndicatorCompare,
       shortIndicatorLevel,
       shortIndicatorPeriod,
+      shortIndicatorSlowPeriod,
     };
   }
   function snapshotForm() {
@@ -1258,6 +1293,7 @@ export function DcaPlaybookForm({
                     setShortIndicatorCompare(indicatorCompare);
                     setShortIndicatorLevel(indicatorLevel);
                     setShortIndicatorPeriod(indicatorPeriod);
+                    setShortIndicatorSlowPeriod(indicatorSlowPeriod);
                     if (indicatorKind === "rsi") {
                       setIndicatorCompare(oppositeRsiCompare(indicatorCompare));
                       setIndicatorLevel(seedOppositeRsiLevel(indicatorLevel));
@@ -1277,6 +1313,7 @@ export function DcaPlaybookForm({
                         : indicatorLevel,
                     );
                     setShortIndicatorPeriod(indicatorPeriod);
+                    setShortIndicatorSlowPeriod(indicatorSlowPeriod);
                   }
                 } else if (direction === "both" && next === "short") {
                   setIndicatorKind(shortIndicatorKind);
@@ -1284,6 +1321,7 @@ export function DcaPlaybookForm({
                   setIndicatorCompare(shortIndicatorCompare);
                   setIndicatorLevel(shortIndicatorLevel);
                   setIndicatorPeriod(shortIndicatorPeriod);
+                  setIndicatorSlowPeriod(shortIndicatorSlowPeriod);
                 }
                 setDirection(next);
               }}
@@ -1417,11 +1455,13 @@ export function DcaPlaybookForm({
                     compare={indicatorCompare}
                     level={indicatorLevel}
                     period={indicatorPeriod}
+                    slowPeriod={indicatorSlowPeriod}
                     onKindChange={setIndicatorKind}
                     onTimeframeChange={setIndicatorTimeframe}
                     onCompareChange={setIndicatorCompare}
                     onLevelChange={setIndicatorLevel}
                     onPeriodChange={setIndicatorPeriod}
+                    onSlowPeriodChange={setIndicatorSlowPeriod}
                   />
                 </div>
               </div>
@@ -1436,11 +1476,13 @@ export function DcaPlaybookForm({
                     compare={shortIndicatorCompare}
                     level={shortIndicatorLevel}
                     period={shortIndicatorPeriod}
+                    slowPeriod={shortIndicatorSlowPeriod}
                     onKindChange={setShortIndicatorKind}
                     onTimeframeChange={setShortIndicatorTimeframe}
                     onCompareChange={setShortIndicatorCompare}
                     onLevelChange={setShortIndicatorLevel}
                     onPeriodChange={setShortIndicatorPeriod}
+                    onSlowPeriodChange={setShortIndicatorSlowPeriod}
                   />
                 </div>
               </div>
@@ -1455,11 +1497,13 @@ export function DcaPlaybookForm({
               compare={indicatorCompare}
               level={indicatorLevel}
               period={indicatorPeriod}
+              slowPeriod={indicatorSlowPeriod}
               onKindChange={setIndicatorKind}
               onTimeframeChange={setIndicatorTimeframe}
               onCompareChange={setIndicatorCompare}
               onLevelChange={setIndicatorLevel}
               onPeriodChange={setIndicatorPeriod}
+              onSlowPeriodChange={setIndicatorSlowPeriod}
             />
           ) : null}
         </div>
@@ -2287,11 +2331,13 @@ function IndicatorStartFields({
   compare,
   level,
   period,
+  slowPeriod,
   onKindChange,
   onTimeframeChange,
   onCompareChange,
   onLevelChange,
   onPeriodChange,
+  onSlowPeriodChange,
 }: {
   side: "long" | "short";
   prefix: "indicator" | "shortIndicator";
@@ -2300,17 +2346,48 @@ function IndicatorStartFields({
   compare: string;
   level: string;
   period: string;
+  slowPeriod: string;
   onKindChange: (next: DcaIndicatorKind) => void;
   onTimeframeChange: (next: DcaIndicatorTimeframe) => void;
   onCompareChange: (next: string) => void;
   onLevelChange: (next: string) => void;
   onPeriodChange: (next: string) => void;
+  onSlowPeriodChange: (next: string) => void;
 }) {
-  const includeLegacyEmaPrice = dcaIndicatorShowsLevel(kind, compare, level);
+  const includeLegacyEmaPrice = dcaIndicatorIsLegacyEmaPrice(
+    kind,
+    compare,
+    level,
+  );
   const whenOptions = dcaIndicatorWhenOptions(
     kind,
     side,
     includeLegacyEmaPrice,
+  );
+  const showPairPeriods =
+    dcaIndicatorUsesPairPeriods(kind) && !includeLegacyEmaPrice;
+  const whenField = (
+    <label className={labelClass}>
+      When
+      <select
+        name={`${prefix}Compare`}
+        value={dcaIndicatorWhenValue(kind, side, compare, level)}
+        onChange={(event) => {
+          const next = event.target.value;
+          onCompareChange(next);
+          if (kind === "ema_cross" && next !== "legacy") {
+            onLevelChange("");
+          }
+        }}
+        className={fieldClass}
+      >
+        {whenOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
   return (
     <>
@@ -2323,17 +2400,38 @@ function IndicatorStartFields({
             const next = event.target.value as DcaIndicatorKind;
             onKindChange(next);
             onCompareChange(indicatorCompareForDirection(side, next, ""));
-            if (dcaIndicatorUsesPeriod(next) && !period) {
-              onPeriodChange(String(DEFAULT_DCA_MA_PERIOD));
+            if (next === "rsi") {
+              onLevelChange("30");
+            } else if (next === "macd") {
+              onLevelChange("0");
+            } else if (
+              kind === "rsi" ||
+              kind === "macd" ||
+              dcaIndicatorIsLegacyEmaPrice(kind, compare, level)
+            ) {
+              onLevelChange("");
+            }
+            if (dcaIndicatorUsesPairPeriods(next)) {
+              onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+              onSlowPeriodChange(String(defaultDcaIndicatorSlowPeriod(next)));
+            } else {
+              onSlowPeriodChange("");
+              if (dcaIndicatorUsesPeriod(next) && !dcaIndicatorUsesPeriod(kind)) {
+                onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+              } else if (dcaIndicatorUsesPeriod(next) && !period) {
+                onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
+              }
             }
           }}
           className={fieldClass}
         >
           <option value="rsi">RSI 14</option>
           <option value="macd">MACD histogram</option>
-          <option value="ema_cross">EMA 9/21</option>
+          <option value="ema_cross">EMA Cross</option>
+          <option value="sma_cross">SMA Cross</option>
           <option value="ema">EMA</option>
           <option value="sma">SMA</option>
+          <option value="bb">Bollinger Bands</option>
         </select>
       </label>
       <label className={labelClass}>
@@ -2353,27 +2451,31 @@ function IndicatorStartFields({
           ))}
         </select>
       </label>
-      <label className={labelClass}>
-        When
-        <select
-          name={`${prefix}Compare`}
-          value={dcaIndicatorWhenValue(kind, side, compare, level)}
-          onChange={(event) => {
-            const next = event.target.value;
-            onCompareChange(next);
-            if (kind === "ema_cross" && next !== "legacy") {
-              onLevelChange("");
-            }
-          }}
-          className={fieldClass}
-        >
-          {whenOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      {showPairPeriods ? (
+        <div className="grid grid-cols-3 gap-x-3 sm:col-span-2 lg:col-span-4">
+          <label className={labelClass}>
+            Fast
+            <GroupedNumberInput
+              name={`${prefix}Period`}
+              value={period}
+              onChange={onPeriodChange}
+              className={fieldClass}
+            />
+          </label>
+          {whenField}
+          <label className={labelClass}>
+            Slow
+            <GroupedNumberInput
+              name={`${prefix}SlowPeriod`}
+              value={slowPeriod}
+              onChange={onSlowPeriodChange}
+              className={fieldClass}
+            />
+          </label>
+        </div>
+      ) : (
+        whenField
+      )}
       {dcaIndicatorUsesPeriod(kind) ? (
         <label className={labelClass}>
           Period
@@ -2393,6 +2495,7 @@ function IndicatorStartFields({
             value={level}
             onChange={onLevelChange}
             allowDecimal
+            allowNegative={kind === "macd"}
             className={fieldClass}
           />
         </label>
@@ -2401,29 +2504,37 @@ function IndicatorStartFields({
         <p className="self-end text-xs text-ink-muted sm:col-span-2">
           {side === "short" ? "Triggers Short" : "Triggers Long"}
           {compare === "lte"
-            ? " while the histogram is negative."
+            ? " while the histogram is below the level."
             : compare === "gte"
-              ? " while the histogram is positive."
+              ? " while the histogram is above the level."
               : compare === "cross_lte"
-                ? " when the histogram crosses below zero."
-                : " when the histogram crosses above zero."}
+                ? " when the histogram crosses below the level."
+                : " when the histogram crosses above the level."}
         </p>
       ) : null}
       {kind === "ema" || kind === "sma" ? (
         <p className="self-end text-xs text-ink-muted sm:col-span-2">
           {side === "short" ? "Triggers Short" : "Triggers Long"}
           {compare === "cross_lte"
-            ? ` when price crosses down through the ${kind === "sma" ? "SMA" : "EMA"}.`
-            : ` when price crosses up through the ${kind === "sma" ? "SMA" : "EMA"}.`}
+            ? ` when price crosses below the ${kind === "sma" ? "SMA" : "EMA"}.`
+            : ` when price crosses above the ${kind === "sma" ? "SMA" : "EMA"}.`}
         </p>
       ) : null}
-      {kind === "ema_cross" &&
+      {kind === "bb" ? (
+        <p className="self-end text-xs text-ink-muted sm:col-span-2">
+          {side === "short" ? "Triggers Short" : "Triggers Long"}
+          {compare === "lte"
+            ? " when price is below the bottom Bollinger Band."
+            : " when price is above the top Bollinger Band."}
+        </p>
+      ) : null}
+      {dcaIndicatorUsesPairPeriods(kind) &&
       !dcaIndicatorShowsLevel(kind, compare, level) ? (
         <p className="self-end text-xs text-ink-muted sm:col-span-2">
           {side === "short" ? "Triggers Short" : "Triggers Long"}
           {compare === "cross_lte"
-            ? " when EMA 9 crosses below EMA 21."
-            : " when EMA 9 crosses above EMA 21."}
+            ? ` when the fast ${kind === "sma_cross" ? "SMA" : "EMA"} crosses below the slow.`
+            : ` when the fast ${kind === "sma_cross" ? "SMA" : "EMA"} crosses above the slow.`}
         </p>
       ) : null}
       {kind === "ema_cross" &&

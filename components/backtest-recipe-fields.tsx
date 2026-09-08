@@ -11,8 +11,12 @@ import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
-  DEFAULT_DCA_MA_PERIOD,
+  defaultDcaIndicatorLevel,
+  defaultDcaIndicatorPeriod,
+  defaultDcaIndicatorSlowPeriod,
+  dcaIndicatorIsLegacyEmaPrice,
   dcaIndicatorShowsLevel,
+  dcaIndicatorUsesPairPeriods,
   dcaIndicatorUsesPeriod,
   dcaIndicatorWhenOptions,
   dcaIndicatorWhenValue,
@@ -61,9 +65,13 @@ function seedBothStarts(recipe: DcaTemplateRecipe): Partial<DcaTemplateRecipe> {
     );
     next.shortIndicatorLevel =
       kind === "rsi" ? oppositeRsiLevel(recipe.indicatorLevel) : recipe.indicatorLevel;
-    next.shortIndicatorPeriod = dcaIndicatorUsesPeriod(kind)
-      ? (recipe.indicatorPeriod ?? DEFAULT_DCA_MA_PERIOD)
-      : recipe.indicatorPeriod;
+    next.shortIndicatorPeriod =
+      dcaIndicatorUsesPeriod(kind) || dcaIndicatorUsesPairPeriods(kind)
+        ? (recipe.indicatorPeriod ?? defaultDcaIndicatorPeriod(kind))
+        : recipe.indicatorPeriod;
+    next.shortIndicatorSlowPeriod = dcaIndicatorUsesPairPeriods(kind)
+      ? (recipe.indicatorSlowPeriod ?? defaultDcaIndicatorSlowPeriod(kind))
+      : recipe.indicatorSlowPeriod;
   }
   return next;
 }
@@ -78,17 +86,19 @@ function FieldNote({ message }: { message: string | null }) {
 function displayCommitted(
   value: number | null | undefined,
   allowDecimal: boolean,
+  allowNegative = false,
 ): string {
   if (value == null) {
     return "";
   }
-  return formatGroupedNumberInput(String(value), allowDecimal);
+  return formatGroupedNumberInput(String(value), allowDecimal, allowNegative);
 }
 
 function RecipeNumberInput({
   value,
   onCommit,
   allowDecimal = true,
+  allowNegative = false,
   emptyValue,
   skipEmptyCommit = false,
   className,
@@ -96,11 +106,14 @@ function RecipeNumberInput({
   value: number | null | undefined;
   onCommit: (next: number | null) => void;
   allowDecimal?: boolean;
+  allowNegative?: boolean;
   emptyValue: number | null;
   skipEmptyCommit?: boolean;
   className: string;
 }) {
-  const [text, setText] = useState(() => displayCommitted(value, allowDecimal));
+  const [text, setText] = useState(() =>
+    displayCommitted(value, allowDecimal, allowNegative),
+  );
   const lastSent = useRef(value);
 
   useEffect(() => {
@@ -108,13 +121,14 @@ function RecipeNumberInput({
       return;
     }
     lastSent.current = value;
-    setText(displayCommitted(value, allowDecimal));
-  }, [allowDecimal, value]);
+    setText(displayCommitted(value, allowDecimal, allowNegative));
+  }, [allowDecimal, allowNegative, value]);
 
   return (
     <GroupedNumberInput
       value={text}
       allowDecimal={allowDecimal}
+      allowNegative={allowNegative}
       className={className}
       onChange={(next) => {
         setText(next);
@@ -186,6 +200,7 @@ function BacktestIndicatorStartFields({
   compare,
   level,
   period,
+  slowPeriod,
   onChange,
 }: {
   side: "long" | "short";
@@ -194,19 +209,62 @@ function BacktestIndicatorStartFields({
   compare: DcaTemplateRecipe["indicatorCompare"];
   level: number | null | undefined;
   period: number | null | undefined;
+  slowPeriod: number | null | undefined;
   onChange: (patch: {
     indicatorKind: DcaIndicatorKind;
     indicatorTimeframe?: DcaIndicatorTimeframe;
     indicatorCompare: DcaTemplateRecipe["indicatorCompare"];
     indicatorLevel?: number | null;
     indicatorPeriod?: number | null;
+    indicatorSlowPeriod?: number | null;
   }) => void;
 }) {
-  const includeLegacyEmaPrice = dcaIndicatorShowsLevel(kind, compare, level);
+  const includeLegacyEmaPrice = dcaIndicatorIsLegacyEmaPrice(
+    kind,
+    compare,
+    level,
+  );
   const whenOptions = dcaIndicatorWhenOptions(
     kind,
     side,
     includeLegacyEmaPrice,
+  );
+  const showPairPeriods =
+    dcaIndicatorUsesPairPeriods(kind) && !includeLegacyEmaPrice;
+  const whenField = (
+    <label className={labelClass}>
+      When
+      <select
+        value={dcaIndicatorWhenValue(kind, side, compare, level)}
+        onChange={(event) => {
+          const next = event.target.value;
+          if (next === "legacy") {
+            onChange({
+              indicatorKind: kind,
+              indicatorCompare: "cross_gte",
+              indicatorLevel: level ?? null,
+              indicatorPeriod: period ?? null,
+              indicatorSlowPeriod: null,
+            });
+            return;
+          }
+          onChange({
+            indicatorKind: kind,
+            indicatorCompare: parseDcaIndicatorCompare(next),
+            indicatorLevel: kind === "ema_cross" ? null : (level ?? null),
+            indicatorPeriod: period ?? null,
+            indicatorSlowPeriod: slowPeriod ?? null,
+          });
+        }}
+        className={fieldClass}
+      >
+        {whenOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
   return (
     <>
@@ -227,18 +285,24 @@ function BacktestIndicatorStartFields({
                 nextCompare === "pair"
                   ? null
                   : parseDcaIndicatorCompare(nextCompare),
-              indicatorPeriod: dcaIndicatorUsesPeriod(indicatorKind)
-                ? (period ?? DEFAULT_DCA_MA_PERIOD)
-                : null,
+              indicatorLevel: defaultDcaIndicatorLevel(indicatorKind),
+              indicatorPeriod:
+                dcaIndicatorUsesPeriod(indicatorKind) ||
+                dcaIndicatorUsesPairPeriods(indicatorKind)
+                  ? defaultDcaIndicatorPeriod(indicatorKind)
+                  : null,
+              indicatorSlowPeriod: defaultDcaIndicatorSlowPeriod(indicatorKind),
             });
           }}
           className={fieldClass}
         >
           <option value="rsi">RSI 14</option>
           <option value="macd">MACD</option>
-          <option value="ema_cross">EMA 9/21</option>
+          <option value="ema_cross">EMA Cross</option>
+          <option value="sma_cross">SMA Cross</option>
           <option value="ema">EMA</option>
           <option value="sma">SMA</option>
+          <option value="bb">Bollinger Bands</option>
         </select>
       </label>
       <label className={labelClass}>
@@ -252,6 +316,7 @@ function BacktestIndicatorStartFields({
               indicatorCompare: compare ?? null,
               indicatorLevel: level ?? null,
               indicatorPeriod: period ?? null,
+              indicatorSlowPeriod: slowPeriod ?? null,
             })
           }
           className={fieldClass}
@@ -263,50 +328,62 @@ function BacktestIndicatorStartFields({
           ))}
         </select>
       </label>
-      <label className={labelClass}>
-        When
-        <select
-          value={dcaIndicatorWhenValue(kind, side, compare, level)}
-          onChange={(event) => {
-            const next = event.target.value;
-            if (next === "legacy") {
-              onChange({
-                indicatorKind: kind,
-                indicatorCompare: "cross_gte",
-                indicatorLevel: level ?? null,
-                indicatorPeriod: period ?? null,
-              });
-              return;
-            }
-            onChange({
-              indicatorKind: kind,
-              indicatorCompare: parseDcaIndicatorCompare(next),
-              indicatorLevel: kind === "ema_cross" ? null : (level ?? null),
-              indicatorPeriod: period ?? null,
-            });
-          }}
-          className={fieldClass}
-        >
-          {whenOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      {showPairPeriods ? (
+        <div className="grid grid-cols-3 gap-x-3 sm:col-span-2">
+          <label className={labelClass}>
+            Fast
+            <RecipeNumberInput
+              value={period}
+              emptyValue={defaultDcaIndicatorPeriod(kind)}
+              allowDecimal={false}
+              className={fieldClass}
+              onCommit={(next) =>
+                onChange({
+                  indicatorKind: kind,
+                  indicatorCompare: compare ?? null,
+                  indicatorPeriod: next ?? defaultDcaIndicatorPeriod(kind),
+                  indicatorSlowPeriod: slowPeriod ?? defaultDcaIndicatorSlowPeriod(kind),
+                })
+              }
+            />
+          </label>
+          {whenField}
+          <label className={labelClass}>
+            Slow
+            <RecipeNumberInput
+              value={slowPeriod}
+              emptyValue={defaultDcaIndicatorSlowPeriod(kind)}
+              allowDecimal={false}
+              className={fieldClass}
+              onCommit={(next) =>
+                onChange({
+                  indicatorKind: kind,
+                  indicatorCompare: compare ?? null,
+                  indicatorPeriod: period ?? defaultDcaIndicatorPeriod(kind),
+                  indicatorSlowPeriod:
+                    next ?? defaultDcaIndicatorSlowPeriod(kind),
+                })
+              }
+            />
+          </label>
+        </div>
+      ) : (
+        whenField
+      )}
       {dcaIndicatorUsesPeriod(kind) ? (
         <label className={labelClass}>
           Period
           <RecipeNumberInput
             value={period}
-            emptyValue={DEFAULT_DCA_MA_PERIOD}
+            emptyValue={defaultDcaIndicatorPeriod(kind)}
             allowDecimal={false}
             className={fieldClass}
             onCommit={(next) =>
               onChange({
                 indicatorKind: kind,
                 indicatorCompare: compare ?? null,
-                indicatorPeriod: next ?? DEFAULT_DCA_MA_PERIOD,
+                indicatorPeriod: next ?? defaultDcaIndicatorPeriod(kind),
+                indicatorSlowPeriod: null,
               })
             }
           />
@@ -317,14 +394,16 @@ function BacktestIndicatorStartFields({
           {kind === "ema_cross" ? "Level (price)" : "Level"}
           <RecipeNumberInput
             value={level}
-            emptyValue={null}
+            emptyValue={kind === "macd" ? 0 : null}
+            allowNegative={kind === "macd"}
             className={fieldClass}
             onCommit={(next) =>
               onChange({
                 indicatorKind: kind,
                 indicatorCompare: compare ?? null,
-                indicatorLevel: next,
+                indicatorLevel: next ?? (kind === "macd" ? 0 : null),
                 indicatorPeriod: period ?? null,
+                indicatorSlowPeriod: slowPeriod ?? null,
               })
             }
           />
@@ -555,6 +634,7 @@ export function BacktestRecipeFields({
               compare={recipe.indicatorCompare}
               level={recipe.indicatorLevel}
               period={recipe.indicatorPeriod}
+              slowPeriod={recipe.indicatorSlowPeriod}
               onChange={(patch) => onChange({ ...recipe, ...patch })}
             />
             <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
@@ -587,6 +667,9 @@ export function BacktestRecipeFields({
               period={
                 recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod
               }
+              slowPeriod={
+                recipe.shortIndicatorSlowPeriod ?? recipe.indicatorSlowPeriod
+              }
               onChange={(patch) =>
                 onChange({
                   ...recipe,
@@ -595,6 +678,7 @@ export function BacktestRecipeFields({
                   shortIndicatorCompare: patch.indicatorCompare,
                   shortIndicatorLevel: patch.indicatorLevel,
                   shortIndicatorPeriod: patch.indicatorPeriod,
+                  shortIndicatorSlowPeriod: patch.indicatorSlowPeriod,
                 })
               }
             />
@@ -608,6 +692,7 @@ export function BacktestRecipeFields({
             compare={recipe.indicatorCompare}
             level={recipe.indicatorLevel}
             period={recipe.indicatorPeriod}
+            slowPeriod={recipe.indicatorSlowPeriod}
             onChange={(patch) => onChange({ ...recipe, ...patch })}
           />
         ) : null}
