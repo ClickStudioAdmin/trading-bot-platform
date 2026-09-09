@@ -562,26 +562,25 @@ export function DeskChart({
         <div className="min-w-0">{toolbar}</div>
         <div className="flex min-w-0 justify-center">{toolbarCenter}</div>
         <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            title={expanded ? "Exit browser fill" : "Fill browser"}
-            aria-label={expanded ? "Exit browser fill" : "Fill browser"}
-            aria-pressed={expanded}
-            className={SHOT_BUTTON}
-            onClick={() => {
-              if (expanded) {
-                if (monitorFullscreenElement() === frameRef.current) {
-                  void exitMonitorFullscreen();
+          {monitorFull ? null : (
+            <button
+              type="button"
+              title={expanded ? "Exit browser fill" : "Fill browser"}
+              aria-label={expanded ? "Exit browser fill" : "Fill browser"}
+              aria-pressed={expanded}
+              className={SHOT_BUTTON}
+              onClick={() => {
+                if (expanded) {
+                  setExpanded(false);
+                  return;
                 }
-                setExpanded(false);
-                return;
-              }
-              setViewportH(window.innerHeight);
-              setExpanded(true);
-            }}
-          >
-            {expanded ? <CollapseIcon /> : <ExpandIcon />}
-          </button>
+                setViewportH(window.innerHeight);
+                setExpanded(true);
+              }}
+            >
+              {expanded ? <CollapseIcon /> : <ExpandIcon />}
+            </button>
+          )}
           <button
             type="button"
             title={monitorFull ? "Exit full screen" : "Full screen"}

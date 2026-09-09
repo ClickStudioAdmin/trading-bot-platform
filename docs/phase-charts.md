@@ -23,7 +23,7 @@ TradingView **alerts** stay webhooks. This is charts only.
 | Piece | Live popup | Backtest page |
 | --- | --- | --- |
 | Candle API (`/api/market/candles`, `loadDeskCandles` / ranged `loadBacktestCandles`) | Venue + symbol + timeframe (last 1,500) | Same, plus from/to window (full activity, paged) |
-| `<DeskChart>` (Lightweight Charts) | Yes. Toolbar: Fill browser + Full screen (monitor). | Yes. Same two expand controls. |
+| `<DeskChart>` (Lightweight Charts) | Yes. Toolbar: Fill browser + Full screen (monitor). Monitor mode shows only Exit full screen. | Yes. Same two expand controls. |
 | Overlay: working limits, TP/SL, trailing, entry | From **live** ledger | Planned entry / TP / SL / Liq from the **pinned** cycle only |
 | Overlay: fill markers | From **live** `futures_orders` | From **run** simulated orders (Entry / Add / TP / SL / Close) |
 | Overlay: bot trigger line | Not on Positions | From the frozen recipe |
