@@ -40,7 +40,7 @@ Primary: `bg-accent-strong` / `text-ink`. Secondary: surface + `border-line`. Gh
 
 `html` sets `color-scheme: dark` so native `<select>` lists use the dark OS picker (not a white flash). Do not force `select` to `canvas` — fields sit on canvas cards and use `surface-raised`.
 
-**Bot form (draft)** is the **Bot form** tab on this page (`/admin/theme?tab=bot`). Proposed standard for every desk (Off, not a checkbox that hides exits; same section order). The draft shows every status light and every desk/bot action so chrome can be reviewed at once. Local mock only. Do not apply to live Perps / DCA / backtest forms until Click signs it. The **Theme** tab keeps the colour, type, and control reference.
+**Bot form (draft)** is the **Bot form** tab on this page (`/admin/theme?tab=bot`). Proposed standard for every desk (Off, not a checkbox that hides exits; same section order). Bot chrome is Name on the left and one **Status and Actions** column on the right (mode, lights, lifecycle buttons). Local mock only. Do not apply to live Perps / DCA / backtest forms until Click signs it. The **Theme** tab keeps the colour, type, and control reference.
 
 ## Motion
 

@@ -282,21 +282,70 @@ export function ThemeBotFormDraft() {
 
       <div className="divide-y divide-line rounded-card border border-line bg-canvas px-5">
         <Group title="Bot">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
-            <p className="shrink-0 text-xs text-ink-muted">
-              Initial Order Triggers
-            </p>
-            <button type="button" className={headerLongClass}>
-              Save and Arm
-            </button>
-            <button type="button" className={headerSecondaryClass}>
-              Arm
-            </button>
+        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-2">
+          <Field label="Name">
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className={fieldClass}
+            />
+          </Field>
+          <div>
+            <p className={labelClass}>Status and Actions</p>
+            <div className="mt-1 space-y-3">
+            <div className="flex items-center gap-2">
+              <select className={`${fieldClass} mt-0 min-w-0 flex-1`} defaultValue="active">
+                <option value="active">Active</option>
+                <option value="active_ro">Active (Reduce only)</option>
+                <option value="reduce_only">Reduce only</option>
+                <option value="disabled">Disabled</option>
+              </select>
+              <StatusLight fill="bg-success" inUse />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={headerLongClass}>
+                Save and Arm
+              </button>
+              <button type="button" className={headerSecondaryClass}>
+                Arm
+              </button>
+              <button type="button" className={headerPrimaryClass}>
+                Save
+              </button>
+              <button
+                type="button"
+                className={headerPrimaryClass}
+                title="Stop adding any new orders (also cancels any existing entry limit orders)"
+              >
+                Stop adding
+              </button>
+              <button
+                type="button"
+                className={headerPrimaryClass}
+                title="Stop listening for new entries"
+              >
+                Disarm
+              </button>
+              <button
+                type="button"
+                className={headerPrimaryClass}
+                title="Close all positions and place the bot in idle mode (no new entries)"
+              >
+                Close bot
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+              <StatusLight fill="bg-ink-faint" label="Idle" />
+              <StatusLight fill="bg-success" label="Armed / Active" />
+              <StatusLight fill="bg-warning" label="Stop adding" />
+              <StatusLight fill="bg-warning" label="Reduce only" />
+              <StatusLight fill="bg-ink-faint" label="Disabled" />
+              <StatusLight fill="bg-success" label="In use" inUse />
+            </div>
+            </div>
           </div>
-          <StatusLight fill="bg-success" inUse />
         </div>
-        <div className="space-y-2">
+        <div className="mt-4 space-y-2">
           <DraftCallout tone="danger">
             Could not save. Sample error flash.
           </DraftCallout>
@@ -312,60 +361,6 @@ export function ThemeBotFormDraft() {
             A position is open. Cycle settings are locked. Take profit and
             stops still save.
           </p>
-        </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <Field label="Name" className="min-w-0 flex-1">
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className={fieldClass}
-            />
-          </Field>
-          <Field label="Mode">
-            <span className="mt-1 flex items-center gap-2">
-              <select className={`${fieldClass} w-52`} defaultValue="active">
-                <option value="active">Active</option>
-                <option value="active_ro">Active (Reduce only)</option>
-                <option value="reduce_only">Reduce only</option>
-                <option value="disabled">Disabled</option>
-              </select>
-              <StatusLight fill="bg-success" inUse />
-            </span>
-          </Field>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <button type="button" className={headerPrimaryClass}>
-              Save
-            </button>
-            <button
-              type="button"
-              className={headerPrimaryClass}
-              title="Stop adding any new orders (also cancels any existing entry limit orders)"
-            >
-              Stop adding
-            </button>
-            <button
-              type="button"
-              className={headerPrimaryClass}
-              title="Stop listening for new entries"
-            >
-              Disarm
-            </button>
-            <button
-              type="button"
-              className={headerPrimaryClass}
-              title="Close all positions and place the bot in idle mode (no new entries)"
-            >
-              Close bot
-            </button>
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
-          <StatusLight fill="bg-ink-faint" label="Idle" />
-          <StatusLight fill="bg-success" label="Armed / Active" />
-          <StatusLight fill="bg-warning" label="Stop adding" />
-          <StatusLight fill="bg-warning" label="Reduce only" />
-          <StatusLight fill="bg-ink-faint" label="Disabled" />
-          <StatusLight fill="bg-success" label="In use" inUse />
         </div>
         </Group>
 
