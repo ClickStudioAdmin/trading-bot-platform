@@ -15,9 +15,10 @@ import type { CandleBar } from "@/lib/market/candles";
 
 export const CHART_COLORS = {
   entry: "#A78BFA",
-  takeProfit: "#34D399",
-  stopLoss: "#F07167",
+  takeProfit: "#A78BFA",
+  stopLoss: "#F5B942",
   trailing: "#F5B942",
+  liquidation: "#F07167",
   limit: "#9AA3B2",
   buy: "#34D399",
   sell: "#F07167",
@@ -95,7 +96,7 @@ export function buildLiveChartOverlay(input: {
         `${row.id}-entry`,
         row.entryPrice,
         row.side === "short" ? "Entry short" : "Entry long",
-        CHART_COLORS.entry,
+        row.side === "short" ? CHART_COLORS.sell : CHART_COLORS.buy,
       ),
       line(`${row.id}-tp`, row.takeProfit, "Take profit", CHART_COLORS.takeProfit),
       line(`${row.id}-sl`, row.stopLoss, "Stop loss", CHART_COLORS.stopLoss),
@@ -227,7 +228,7 @@ export function buildBacktestChartOverlay(input: {
       "entry",
       levels.entry,
       levels.side === "short" ? "Entry short" : "Entry long",
-      CHART_COLORS.entry,
+      levels.side === "short" ? CHART_COLORS.sell : CHART_COLORS.buy,
     );
     const takeProfit = line(
       "tp",
@@ -245,7 +246,7 @@ export function buildBacktestChartOverlay(input: {
       "liq",
       levels.liquidation ?? null,
       "Liq",
-      CHART_COLORS.stopLoss,
+      CHART_COLORS.liquidation,
     );
     for (const item of [entry, takeProfit, stopLoss, liquidation]) {
       if (item) {
@@ -291,9 +292,13 @@ export function buildBacktestChartOverlay(input: {
           : flatten
             ? row.reason === "take_profit"
               ? CHART_COLORS.takeProfit
-              : row.reason === "liquidation"
+              : row.reason === "stop"
                 ? CHART_COLORS.stopLoss
-                : CHART_COLORS.sell
+                : row.reason === "trailing"
+                  ? CHART_COLORS.trailing
+                  : row.reason === "liquidation"
+                    ? CHART_COLORS.liquidation
+                    : CHART_COLORS.sell
             : buy
               ? CHART_COLORS.buy
               : CHART_COLORS.sell,

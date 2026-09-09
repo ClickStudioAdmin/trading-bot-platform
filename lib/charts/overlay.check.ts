@@ -52,6 +52,14 @@ const live = buildLiveChartOverlay({
 });
 
 assert.equal(live.lines.length, 5);
+assert.equal(
+  live.lines.find((row) => row.title === "Take profit")?.color,
+  CHART_COLORS.takeProfit,
+);
+assert.equal(
+  live.lines.find((row) => row.title === "Stop loss")?.color,
+  CHART_COLORS.stopLoss,
+);
 assert.equal(live.markers.length, 1);
 assert.equal(live.markers[0]?.shape, "arrowUp");
 
@@ -157,6 +165,56 @@ const closed = buildBacktestChartOverlay({
 assert.equal(closed.lines.some((row) => row.title.startsWith("Open")), false);
 assert.equal(closed.markers[0]?.text, "Entry long");
 assert.equal(closed.markers[1]?.text, "Close long");
+assert.notEqual(CHART_COLORS.takeProfit, CHART_COLORS.buy);
+assert.notEqual(CHART_COLORS.stopLoss, CHART_COLORS.sell);
+
+const exits = buildBacktestChartOverlay({
+  triggerPrice: null,
+  orders: [
+    {
+      atMs: 1_700_000_000_000,
+      action: "buy",
+      side: "long",
+      qty: 1,
+      price: 100,
+      feeUsdt: 0,
+      realizedUsdt: null,
+    },
+    {
+      atMs: 1_700_000_050_000,
+      action: "flatten",
+      side: "long",
+      qty: 1,
+      price: 110,
+      feeUsdt: 0,
+      realizedUsdt: 10,
+      reason: "take_profit",
+    },
+    {
+      atMs: 1_700_000_100_000,
+      action: "sell",
+      side: "short",
+      qty: 1,
+      price: 80,
+      feeUsdt: 0,
+      realizedUsdt: null,
+    },
+    {
+      atMs: 1_700_000_150_000,
+      action: "flatten",
+      side: "short",
+      qty: 1,
+      price: 90,
+      feeUsdt: 0,
+      realizedUsdt: -10,
+      reason: "stop",
+    },
+  ],
+});
+assert.equal(exits.markers[1]?.text, "TP long");
+assert.equal(exits.markers[1]?.color, CHART_COLORS.takeProfit);
+assert.equal(exits.markers[3]?.text, "SL short");
+assert.equal(exits.markers[3]?.color, CHART_COLORS.stopLoss);
 
 const liqOverlay = buildBacktestChartOverlay({
   triggerPrice: null,
@@ -183,7 +241,7 @@ const liqOverlay = buildBacktestChartOverlay({
   ],
 });
 assert.equal(liqOverlay.markers[1]?.text, "Liq long");
-assert.equal(liqOverlay.markers[1]?.color, CHART_COLORS.stopLoss);
+assert.equal(liqOverlay.markers[1]?.color, CHART_COLORS.liquidation);
 
 const olderEntry = {
   atMs: 1_700_000_000_000,
@@ -300,12 +358,16 @@ assert.equal(
   true,
 );
 assert.equal(
-  leveled.lines.some((row) => row.title === "TP"),
-  true,
+  leveled.lines.find((row) => row.title === "Entry long")?.color,
+  CHART_COLORS.buy,
 );
 assert.equal(
-  leveled.lines.some((row) => row.title === "SL"),
-  true,
+  leveled.lines.find((row) => row.title === "TP")?.color,
+  CHART_COLORS.takeProfit,
+);
+assert.equal(
+  leveled.lines.find((row) => row.title === "SL")?.color,
+  CHART_COLORS.stopLoss,
 );
 
 const snapped = snapOverlayToCandles(
