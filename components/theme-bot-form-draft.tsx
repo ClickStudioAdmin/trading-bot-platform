@@ -43,6 +43,24 @@ const headerRemoveClass =
 const deskBtnClass =
   "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
 
+type DeskKind = "perps" | "dca";
+
+const PERPS_STATUS_OPTIONS = [
+  { value: "active", label: "Active", fill: "bg-success" },
+  { value: "reduce_only", label: "Reduce only", fill: "bg-warning" },
+  { value: "disabled", label: "Disabled", fill: "bg-ink-faint" },
+] as const;
+
+const DCA_STATUS_OPTIONS = [
+  { value: "idle", label: "Idle", fill: "bg-ink-faint" },
+  { value: "armed", label: "Armed", fill: "bg-success" },
+  { value: "stop_adding", label: "Stop adding", fill: "bg-warning" },
+] as const;
+
+function statusOptionsFor(desk: DeskKind) {
+  return desk === "perps" ? PERPS_STATUS_OPTIONS : DCA_STATUS_OPTIONS;
+}
+
 function StatusLight({
   fill,
   label,
@@ -234,16 +252,12 @@ export function ThemeBotFormDraft() {
   const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(null);
   const [skipIfOpen, setSkipIfOpen] = useState(true);
   const [restGrid, setRestGrid] = useState(true);
-  const [status, setStatus] = useState<"active" | "stop_adding" | "disabled">(
-    "active",
-  );
+  const [desk, setDesk] = useState<DeskKind>("perps");
+  const [status, setStatus] = useState("active");
   const closing = action === "close_long" || action === "close_short";
-  const statusFill =
-    status === "active"
-      ? "bg-success"
-      : status === "stop_adding"
-        ? "bg-warning"
-        : "bg-ink-faint";
+  const statusOptions = statusOptionsFor(desk);
+  const selectedStatus =
+    statusOptions.find((option) => option.value === status) ?? statusOptions[0];
   const startKindForFields =
     startKind === "trend" ? "supertrend" : indicatorKind;
   const whenOptions = dcaIndicatorWhenOptions(startKindForFields, "long", false);
@@ -258,9 +272,10 @@ export function ThemeBotFormDraft() {
   return (
     <div className="space-y-3">
       <p className="text-sm text-ink-muted">
-        Draft standard for every desk. Local only — nothing saves. Status is
-        one dropdown on every bot. Actions are one-shot (Save, Close bot,
-        footer). Other chrome sits in Reference.
+        Draft standard for every desk. Local only — nothing saves. Same
+        chrome on every bot: Actions are one-shot, Status is a dropdown.
+        Each desk keeps its own statuses. Switch the sample desk to see
+        both.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -281,6 +296,36 @@ export function ThemeBotFormDraft() {
 
       <div className="divide-y divide-line rounded-card border border-line bg-canvas px-5">
         <Group title="Bot">
+        <div className="mb-4 flex flex-wrap gap-1">
+          <button
+            type="button"
+            className={`rounded-control px-3 py-1.5 text-xs ${
+              desk === "perps"
+                ? "bg-surface-raised font-medium text-ink"
+                : "text-ink-muted hover:text-ink"
+            }`}
+            onClick={() => {
+              setDesk("perps");
+              setStatus("active");
+            }}
+          >
+            Perps
+          </button>
+          <button
+            type="button"
+            className={`rounded-control px-3 py-1.5 text-xs ${
+              desk === "dca"
+                ? "bg-surface-raised font-medium text-ink"
+                : "text-ink-muted hover:text-ink"
+            }`}
+            onClick={() => {
+              setDesk("dca");
+              setStatus("armed");
+            }}
+          >
+            DCA
+          </button>
+        </div>
         <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_auto_16rem]">
           <Field label="Name">
             <input
@@ -309,22 +354,22 @@ export function ThemeBotFormDraft() {
             <div className="mt-1 flex items-center gap-2">
               <select
                 className={`${fieldClass} mt-0 min-w-0 flex-1`}
-                value={status}
-                onChange={(event) =>
-                  setStatus(
-                    event.target.value as "active" | "stop_adding" | "disabled",
-                  )
-                }
+                value={selectedStatus.value}
+                onChange={(event) => setStatus(event.target.value)}
                 aria-label="Status"
               >
-                <option value="active">Active</option>
-                <option value="stop_adding">Stop adding</option>
-                <option value="disabled">Disabled</option>
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
-              <StatusLight fill={statusFill} />
+              <StatusLight fill={selectedStatus.fill} />
             </div>
             <p className="mt-1.5 text-[11px] text-ink-faint">
-              Active listens. Stop adding holds the row. Disabled is idle.
+              {desk === "perps"
+                ? "Active may open. Reduce only will not open or add. Disabled does neither."
+                : "Armed listens. Stop adding holds the ladder. Idle is off."}
             </p>
           </div>
         </div>
@@ -597,6 +642,7 @@ export function ThemeBotFormDraft() {
           </Group>
         )}
 
+        {desk === "dca" ? (
         <Group
           title="Strategy extras"
           hint="DCA / scale-in only. Not on the Perps baseline."
@@ -649,6 +695,7 @@ export function ThemeBotFormDraft() {
             Remaining orders placed as GTC limit (instead of market)
           </label>
         </Group>
+        ) : null}
 
         {!closing ? (
           <>
@@ -810,41 +857,37 @@ function ThemeBotFormReference() {
       </div>
 
       <div className="space-y-2">
-        <p className={labelClass}>Status lights</p>
+        <p className={labelClass}>Perps statuses</p>
+        <p className="text-xs text-ink-faint">
+          Own list. Do not mix with DCA.
+        </p>
         <div className="flex flex-wrap gap-x-4 gap-y-2">
           <StatusLight fill="bg-success" label="Active" />
-          <StatusLight fill="bg-warning" label="Stop adding" />
+          <StatusLight fill="bg-warning" label="Reduce only" />
           <StatusLight fill="bg-ink-faint" label="Disabled" />
           <StatusLight fill="bg-success" label="In use (open position)" inUse />
         </div>
       </div>
 
       <div className="space-y-2">
-        <p className={labelClass}>Status mapping</p>
+        <p className={labelClass}>DCA statuses</p>
         <p className="text-xs text-ink-faint">
-          Same three statuses on Perps and DCA. Today&apos;s buttons map onto
-          the dropdown. They are not extra actions.
+          Own list. Stop adding is not Reduce only. Today&apos;s Arm / Disarm
+          / Stop adding buttons become this dropdown.
         </p>
-        <ul className="list-disc space-y-1 pl-5 text-sm text-ink-muted">
-          <li>
-            <span className="text-ink">Active</span> — Perps Active. DCA Armed
-            / Arm / Save and Arm.
-          </li>
-          <li>
-            <span className="text-ink">Stop adding</span> — Perps Reduce only.
-            DCA Stop adding. No new entries. Exits still run.
-          </li>
-          <li>
-            <span className="text-ink">Disabled</span> — Perps Disabled. DCA
-            Idle / Disarm.
-          </li>
-        </ul>
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          <StatusLight fill="bg-ink-faint" label="Idle" />
+          <StatusLight fill="bg-success" label="Armed" />
+          <StatusLight fill="bg-warning" label="Stop adding" />
+          <StatusLight fill="bg-success" label="In use (open position)" inUse />
+        </div>
       </div>
 
       <div className="space-y-2">
-        <p className={labelClass}>Current DCA buttons (not on the standard)</p>
+        <p className={labelClass}>Current DCA buttons (replaced by the dropdown)</p>
         <p className="text-xs text-ink-faint">
-          These are the verbs Mode replaces. Keep them here so we can compare.
+          Same UX as Perps Mode: pick a status, do not use a second set of
+          lifecycle buttons.
         </p>
         <div className="flex flex-wrap gap-2">
           <button type="button" className={headerLongClass}>
