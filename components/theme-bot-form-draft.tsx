@@ -52,9 +52,9 @@ const PERPS_STATUS_OPTIONS = [
 ] as const;
 
 const DCA_STATUS_OPTIONS = [
-  { value: "idle", label: "Idle", fill: "bg-ink-faint" },
-  { value: "armed", label: "Armed", fill: "bg-success" },
+  { value: "active", label: "Active", fill: "bg-success" },
   { value: "stop_adding", label: "Stop adding", fill: "bg-warning" },
+  { value: "disabled", label: "Disabled", fill: "bg-ink-faint" },
 ] as const;
 
 function statusOptionsFor(desk: DeskKind) {
@@ -320,7 +320,7 @@ export function ThemeBotFormDraft() {
             }`}
             onClick={() => {
               setDesk("dca");
-              setStatus("armed");
+              setStatus("active");
             }}
           >
             DCA
@@ -369,7 +369,7 @@ export function ThemeBotFormDraft() {
             <p className="mt-1.5 text-[11px] text-ink-faint">
               {desk === "perps"
                 ? "Active may open. Reduce only will not open or add. Disabled does neither."
-                : "Armed listens. Stop adding holds the ladder. Idle is off."}
+                : "Active listens. Stop adding holds the ladder. Disabled is off."}
             </p>
           </div>
         </div>
@@ -873,12 +873,12 @@ function ThemeBotFormReference() {
         <p className={labelClass}>DCA statuses</p>
         <p className="text-xs text-ink-faint">
           Own list. Stop adding is not Reduce only. Today&apos;s Arm / Disarm
-          / Stop adding buttons become this dropdown.
+          / Idle become this dropdown.
         </p>
         <div className="flex flex-wrap gap-x-4 gap-y-2">
-          <StatusLight fill="bg-ink-faint" label="Idle" />
-          <StatusLight fill="bg-success" label="Armed" />
+          <StatusLight fill="bg-success" label="Active" />
           <StatusLight fill="bg-warning" label="Stop adding" />
+          <StatusLight fill="bg-ink-faint" label="Disabled" />
           <StatusLight fill="bg-success" label="In use (open position)" inUse />
         </div>
       </div>
