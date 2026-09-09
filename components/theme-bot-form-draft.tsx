@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { ChevronIcon, TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
@@ -284,6 +284,49 @@ export function ThemeBotFormDraft() {
   const [restGrid, setRestGrid] = useState(true);
   const [desk, setDesk] = useState<DeskKind>("perps");
   const [status, setStatus] = useState("active");
+  const skipDeskDirty = useRef(false);
+  const savedDraft = useRef<string | null>(null);
+  const [saveTick, setSaveTick] = useState(0);
+  const draftValue = {
+    name,
+    symbol,
+    action,
+    startKind,
+    priceSource,
+    priceWhen,
+    priceLevel,
+    indicatorKind,
+    timeframe,
+    when,
+    period,
+    slowPeriod,
+    level,
+    multiplier,
+    confirm,
+    size,
+    sizeUnit,
+    tpMethod,
+    tpValue,
+    tpOrderType,
+    trailMethod,
+    trailValue,
+    trailTrigger,
+    slMethod,
+    slValue,
+    slOrderType,
+    breakevenAt,
+    breakevenOffset,
+    exitIf,
+    skipIfOpen,
+    restGrid,
+    status,
+  };
+  const draftKey = JSON.stringify(draftValue);
+  if (savedDraft.current === null) {
+    savedDraft.current = draftKey;
+  }
+  const dirty = draftKey !== savedDraft.current;
+  void saveTick;
   const closing = action === "close_long" || action === "close_short";
   const statusOptions = statusOptionsFor(desk);
   const selectedStatus =
@@ -299,13 +342,31 @@ export function ThemeBotFormDraft() {
     dcaIndicatorShowsLevel(indicatorKind, when, level);
   const showStartParams = startKind !== "webhook" && !closing;
 
+  useEffect(() => {
+    if (skipDeskDirty.current) {
+      savedDraft.current = draftKey;
+      skipDeskDirty.current = false;
+      setSaveTick((tick) => tick + 1);
+    }
+  }, [desk, draftKey]);
+
+  function switchDesk(next: DeskKind) {
+    skipDeskDirty.current = true;
+    setDesk(next);
+    setStatus("active");
+  }
+
+  function saveDraft() {
+    savedDraft.current = draftKey;
+    setSaveTick((tick) => tick + 1);
+  }
+
   return (
     <div className="space-y-3">
       <p className="text-sm text-ink-muted">
-        Draft standard for every desk. Local only — nothing saves. Same
-        chrome on every bot: Actions are one-shot, Status is a dropdown.
-        Disabled closes that bot’s positions. Switch the sample desk to
-        see each status list.
+        Draft standard for every desk. Local only — nothing saves. Save
+        appears at the top when this bot is dirty. Status + Save applies
+        the selected mode. Switch the sample desk to see each status list.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -334,10 +395,7 @@ export function ThemeBotFormDraft() {
                 ? "bg-surface-raised font-medium text-ink"
                 : "text-ink-muted hover:text-ink"
             }`}
-            onClick={() => {
-              setDesk("perps");
-              setStatus("active");
-            }}
+            onClick={() => switchDesk("perps")}
           >
             Perps
           </button>
@@ -348,10 +406,7 @@ export function ThemeBotFormDraft() {
                 ? "bg-surface-raised font-medium text-ink"
                 : "text-ink-muted hover:text-ink"
             }`}
-            onClick={() => {
-              setDesk("dca");
-              setStatus("active");
-            }}
+            onClick={() => switchDesk("dca")}
           >
             DCA
           </button>
@@ -359,8 +414,22 @@ export function ThemeBotFormDraft() {
       </div>
 
       <div className="divide-y divide-line rounded-card border border-line bg-canvas px-5">
+        {dirty ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <p className="text-sm text-warning">
+              You have unsaved changes on this bot
+            </p>
+            <button
+              type="button"
+              className={headerPrimaryClass}
+              onClick={saveDraft}
+            >
+              Save
+            </button>
+          </div>
+        ) : null}
         <Group title="Bot">
-        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_auto_16rem]">
+        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
           <Field label="Name">
             <input
               value={name}
@@ -368,14 +437,6 @@ export function ThemeBotFormDraft() {
               className={fieldClass}
             />
           </Field>
-          <div>
-            <p className={labelClass}>Actions</p>
-            <div className="mt-1 flex flex-wrap gap-2">
-              <button type="button" className={headerPrimaryClass}>
-                Save
-              </button>
-            </div>
-          </div>
           <div>
             <p className={labelClass}>Status</p>
             <div className="mt-1 flex items-center gap-2">
