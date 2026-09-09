@@ -26,13 +26,33 @@ import {
 } from "@/lib/dca/indicators";
 
 const fieldClass =
-  "mt-0.5 w-full rounded-control border border-line bg-surface-raised px-2 py-1.5 text-sm text-ink focus:border-line-strong focus:outline-none";
+  "mt-1 w-full rounded-control border border-line-strong bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
 const labelClass = "block text-xs text-ink-muted";
-const sectionClass =
-  "space-y-2 rounded-card border border-line bg-canvas px-3 py-2";
 const sectionTitleClass =
-  "text-[11px] uppercase tracking-[0.08em] text-ink-faint";
-const rowClass = "grid gap-x-3 gap-y-2 sm:grid-cols-2";
+  "text-xs font-semibold uppercase tracking-[0.1em] text-ink";
+const subTitleClass =
+  "text-xs font-medium uppercase tracking-[0.08em] text-ink";
+const rowClass = "grid gap-x-3 gap-y-3 sm:grid-cols-2";
+
+function Group({
+  title,
+  hint,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3 border-t border-line pt-5">
+      <div>
+        <h3 className={sectionTitleClass}>{title}</h3>
+        {hint ? <p className="mt-1 text-xs text-ink-faint">{hint}</p> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
 
 const EXIT_METHODS = [
   { value: "", label: "Off" },
@@ -149,7 +169,8 @@ export function ThemeBotFormDraft() {
         hides the section. Checkboxes are flags only.
       </p>
 
-      <div className="space-y-3 rounded-card border border-line bg-surface p-4">
+      <div className="space-y-0 rounded-card border border-line bg-canvas p-5">
+        <section className="space-y-3 pb-5">
         <div className={rowClass}>
           <Field label="Name">
             <input
@@ -166,9 +187,9 @@ export function ThemeBotFormDraft() {
             </select>
           </Field>
         </div>
+        </section>
 
-        <fieldset className={sectionClass}>
-          <p className={sectionTitleClass}>Pair and start</p>
+        <Group title="Pair and start">
           <div className={rowClass}>
             <Field label="Contract">
               <select
@@ -370,11 +391,10 @@ export function ThemeBotFormDraft() {
               labelClass={labelClass}
             />
           ) : null}
-        </fieldset>
+        </Group>
 
         {!closing ? (
-          <fieldset className={sectionClass}>
-            <p className={sectionTitleClass}>Size</p>
+          <Group title="Size">
             <div className={rowClass}>
               <Field label="Size">
                 <GroupedNumberInput
@@ -397,10 +417,9 @@ export function ThemeBotFormDraft() {
                 </select>
               </Field>
             </div>
-          </fieldset>
+          </Group>
         ) : (
-          <fieldset className={sectionClass}>
-            <p className={sectionTitleClass}>Size</p>
+          <Group title="Size">
             <Field label="Qty to close" hint="Empty closes the whole row.">
               <GroupedNumberInput
                 value={size}
@@ -410,17 +429,13 @@ export function ThemeBotFormDraft() {
                 className={fieldClass}
               />
             </Field>
-          </fieldset>
+          </Group>
         )}
 
-        <fieldset className={`${sectionClass} border-dashed opacity-80`}>
-          <p className={sectionTitleClass}>
-            Strategy extras — DCA / scale-in only
-          </p>
-          <p className="text-xs text-ink-faint">
-            Not on the Perps baseline. Sits under Size when the desk has a
-            ladder.
-          </p>
+        <Group
+          title="Strategy extras"
+          hint="DCA / scale-in only. Not on the Perps baseline."
+        >
           <div className={rowClass}>
             <Field label="Additional orders">
               <select disabled className={fieldClass} defaultValue="dip">
@@ -437,13 +452,12 @@ export function ThemeBotFormDraft() {
               />
             </Field>
           </div>
-        </fieldset>
+        </Group>
 
         {!closing ? (
           <>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <fieldset className={sectionClass}>
-                <p className={sectionTitleClass}>Take profit</p>
+            <div className="grid gap-x-8 gap-y-0 sm:grid-cols-2">
+              <Group title="Take profit">
                 <ExitMethodFields
                   method={tpMethod}
                   onMethod={setTpMethod}
@@ -452,8 +466,8 @@ export function ThemeBotFormDraft() {
                   orderType={tpOrderType}
                   onOrderType={setTpOrderType}
                 />
-                <div className="space-y-2 border-t border-line pt-3">
-                  <p className={sectionTitleClass}>Trailing stop</p>
+                <div className="space-y-3 border-t border-line pt-5">
+                  <h4 className={subTitleClass}>Trailing stop</h4>
                   <Field label="Method">
                     <select
                       value={trailMethod}
@@ -502,10 +516,9 @@ export function ThemeBotFormDraft() {
                     </div>
                   ) : null}
                 </div>
-              </fieldset>
+              </Group>
 
-              <fieldset className={sectionClass}>
-                <p className={sectionTitleClass}>Stop loss</p>
+              <Group title="Stop loss">
                 <ExitMethodFields
                   method={slMethod}
                   onMethod={setSlMethod}
@@ -514,8 +527,8 @@ export function ThemeBotFormDraft() {
                   orderType={slOrderType}
                   onOrderType={setSlOrderType}
                 />
-                <div className="space-y-2 border-t border-line pt-3">
-                  <p className={sectionTitleClass}>Move breakeven</p>
+                <div className="space-y-3 border-t border-line pt-5">
+                  <h4 className={subTitleClass}>Move breakeven</h4>
                   <div className={rowClass}>
                     <Field label="Move stop to breakeven at %">
                       <OffNumber
@@ -531,7 +544,7 @@ export function ThemeBotFormDraft() {
                     </Field>
                   </div>
                 </div>
-                <div className="space-y-2 border-t border-line pt-3">
+                <div className="space-y-3 border-t border-line pt-5">
                   <DcaFilterBlock
                     label="Exit-if"
                     prefix="themeExitIf"
@@ -542,10 +555,10 @@ export function ThemeBotFormDraft() {
                     labelClass={labelClass}
                   />
                 </div>
-              </fieldset>
+              </Group>
             </div>
 
-            <label className="flex items-start gap-2 text-sm text-ink">
+            <label className="flex items-start gap-2 border-t border-line pt-5 text-sm text-ink">
               <input
                 type="checkbox"
                 checked={skipIfOpen}
