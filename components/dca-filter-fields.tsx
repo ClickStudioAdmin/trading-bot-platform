@@ -5,6 +5,7 @@ import {
   DCA_FILTER_KIND_OPTIONS,
   dcaFilterSpecForKind,
   dcaFilterWhenOptions,
+  dcaFilterWhenValue,
   parseDcaFilterKind,
   type DcaFilterKind,
   type DcaFilterSpec,
@@ -12,8 +13,6 @@ import {
 import {
   DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
-  dcaIndicatorWhenValue,
-  type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import type { FuturesSide } from "@/lib/futures/model";
@@ -103,17 +102,7 @@ function DcaFilterParamFields({
   labelClass: string;
 }) {
   const whenOptions = dcaFilterWhenOptions(spec.kind, side);
-  const whenValue =
-    spec.kind === "atr_band"
-      ? spec.compare === "lte" || spec.compare === "cross_lte"
-        ? "lte"
-        : "gte"
-      : dcaIndicatorWhenValue(
-          spec.kind as DcaIndicatorKind,
-          side,
-          spec.compare,
-          spec.level,
-        );
+  const whenValue = dcaFilterWhenValue(spec.compare);
   const showLevel = spec.kind === "rsi";
   const showMultiplier = spec.kind === "supertrend" || spec.kind === "atr_band";
   return (

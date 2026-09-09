@@ -6,8 +6,12 @@ import {
   dcaFilterMet,
   dcaFilterSpecForKind,
   dcaFilterSummaryLine,
+  dcaFilterWhenOptions,
   parseDcaFilterForm,
   parseDcaFilterKind,
+  parseDcaFilterSpec,
+  sitDcaFilterCompare,
+  type DcaFilterKind,
   type DcaFilterSpec,
 } from "./filters";
 
@@ -22,6 +26,33 @@ assert.equal(
   "Confirm: Price vs EMA · 4h",
 );
 assert.equal(dcaFilterSummaryLine("Confirm", null), null);
+assert.equal(sitDcaFilterCompare("cross_gte"), "gte");
+assert.equal(sitDcaFilterCompare("cross_lte"), "lte");
+assert.equal(
+  parseDcaFilterSpec({
+    kind: "supertrend",
+    timeframe: "240",
+    compare: "cross_gte",
+    level: null,
+    period: 10,
+    multiplier: 3,
+  })?.compare,
+  "gte",
+);
+for (const kind of [
+  "ema",
+  "sma",
+  "rsi",
+  "bb",
+  "atr_band",
+  "supertrend",
+] as const satisfies readonly DcaFilterKind[]) {
+  const values = dcaFilterWhenOptions(kind).map((row) => row.value);
+  assert.equal(values.includes("cross_gte"), false);
+  assert.equal(values.includes("cross_lte"), false);
+  assert.ok(values.includes("gte"));
+  assert.ok(values.includes("lte"));
+}
 assert.equal(parseDcaFilterKind(""), null);
 assert.equal(parseDcaFilterKind("macd"), null);
 assert.equal(parseDcaFilterKind("ema"), "ema");

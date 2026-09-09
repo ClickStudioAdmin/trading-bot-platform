@@ -6,7 +6,6 @@ import {
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DEFAULT_DCA_SUPERTREND_PERIOD,
   DCA_INDICATOR_TIMEFRAME_LABELS,
-  dcaIndicatorWhenOptions,
   emaValues,
   indicatorStartMet,
   lastAtrValue,
@@ -15,7 +14,6 @@ import {
   parseDcaIndicatorPeriod,
   parseDcaIndicatorTimeframe,
   type DcaIndicatorCompare,
-  type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
   type SupertrendBar,
 } from "./indicators";
@@ -76,10 +74,16 @@ export function defaultDcaFilterPeriod(kind: DcaFilterKind): number {
   return DEFAULT_DCA_MA_PERIOD;
 }
 
+export function sitDcaFilterCompare(
+  compare: DcaIndicatorCompare | null | undefined,
+): "gte" | "lte" {
+  return compare === "lte" || compare === "cross_lte" ? "lte" : "gte";
+}
+
 export function defaultDcaFilterCompare(
   kind: DcaFilterKind,
   side: FuturesSide,
-): DcaIndicatorCompare {
+): "gte" | "lte" {
   if (kind === "rsi") {
     return side === "short" ? "gte" : "lte";
   }
@@ -135,9 +139,10 @@ export function parseDcaFilterSpec(input: {
   if (!kind || !timeframe) {
     return null;
   }
-  const compare =
+  const compare = sitDcaFilterCompare(
     parseDcaIndicatorCompare(input.compare) ??
-    defaultDcaFilterCompare(kind, "long");
+      defaultDcaFilterCompare(kind, "long"),
+  );
   const period = parseDcaIndicatorPeriod(input.period);
   const multiplier = parseDcaIndicatorMultiplier(input.multiplier);
   const levelRaw =
@@ -294,14 +299,41 @@ export function seriesForFilter(
   };
 }
 
-export function dcaFilterWhenOptions(kind: DcaFilterKind, side: FuturesSide) {
+export function dcaFilterWhenOptions(kind: DcaFilterKind, _side?: FuturesSide) {
+  if (kind === "rsi") {
+    return [
+      { value: "lte", label: "At or below" },
+      { value: "gte", label: "At or above" },
+    ];
+  }
+  if (kind === "bb") {
+    return [
+      { value: "gte", label: "Price is above top" },
+      { value: "lte", label: "Price is below bottom" },
+    ];
+  }
+  if (kind === "supertrend") {
+    return [
+      { value: "gte", label: "Is bullish" },
+      { value: "lte", label: "Is bearish" },
+    ];
+  }
   if (kind === "atr_band") {
     return [
       { value: "gte", label: "Price is above upper band" },
       { value: "lte", label: "Price is below lower band" },
     ];
   }
-  return dcaIndicatorWhenOptions(kind as DcaIndicatorKind, side, false);
+  return [
+    { value: "gte", label: "Price is above" },
+    { value: "lte", label: "Price is below" },
+  ];
+}
+
+export function dcaFilterWhenValue(
+  compare: DcaIndicatorCompare | null | undefined,
+): "gte" | "lte" {
+  return sitDcaFilterCompare(compare);
 }
 
 export function dcaFilterLabel(spec: DcaFilterSpec | null | undefined): string {

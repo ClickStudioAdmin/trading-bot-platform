@@ -24,7 +24,7 @@ Columns: `spacing_kind`, `atr_period`, `atr_spacing_mult`, `take_profit_kind`, `
 
 ## Wave 2 — Confirm
 
-One optional AND filter under each side’s start. Default **Off**. Pick a kind and the same When / period / timeframe widgets as Start appear. On Both, Long and Short are separate sections (start + Confirm). Cycle-lock Confirm with Start. Not stacked AND filters.
+One optional AND filter under each side’s start. Default **Off**. Period / timeframe match Start. When is sit-only (is above / is bullish / at or below) — not crosses or turns. Those stay on the initial trigger. On Both, Long and Short are separate sections (start + Confirm). Cycle-lock Confirm with Start. Not stacked AND filters.
 
 Catalog: **Price vs EMA**, **Price vs SMA**, **RSI**, **Price vs BB**, **ATR band**, **Supertrend**. No MACD, no MA-cross, no ADX, no Market Structure.
 
@@ -36,7 +36,7 @@ Summary: one muted line when on (`Confirm: Price vs EMA · 4h`).
 
 ## Wave 2b — Exit-if
 
-Same Off pattern on Stop loss. Own kind + When, **not** the inverse of Confirm. Editable while a position is open (like TP/SL). One Exit-if per side on Both.
+Same Off pattern on Stop loss. Own kind + sit-only When, **not** the inverse of Confirm. Editable while a position is open (like TP/SL). One Exit-if per side on Both.
 
 When open, market flatten that side. Order in `decideDcaTick`: **% SL first, then Exit-if, then TP**. Replay wick SL / liq still win if they hit first that bar. Indicator Exit-if is **close-based**.
 
