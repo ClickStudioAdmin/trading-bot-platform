@@ -73,6 +73,72 @@ export function dcaClipQtyAt(
   return sizeUnit === "qty" ? size : size / price;
 }
 
+export type DcaSpacingKind = "percent" | "atr";
+export type DcaTakeProfitKind = "percent" | "atr";
+export const DEFAULT_DCA_ATR_PERIOD = 14;
+export const DEFAULT_DCA_ATR_SPACING_MULT = 1;
+export const DEFAULT_DCA_TAKE_PROFIT_ATR_MULT = 2;
+export const DCA_ATR_MULT_MIN = 0.1;
+export const DCA_ATR_MULT_MAX = 50;
+
+export function parseDcaSpacingKind(value: unknown): DcaSpacingKind {
+  return value === "atr" ? "atr" : "percent";
+}
+
+export function parseDcaTakeProfitKind(value: unknown): DcaTakeProfitKind {
+  return value === "atr" ? "atr" : "percent";
+}
+
+export function parseDcaAtrMult(value: unknown): number | null {
+  if (value == null || String(value).trim() === "") {
+    return null;
+  }
+  const mult = Number(String(value).replace(/,/g, "").trim());
+  if (
+    !Number.isFinite(mult) ||
+    mult < DCA_ATR_MULT_MIN ||
+    mult > DCA_ATR_MULT_MAX
+  ) {
+    return null;
+  }
+  return mult;
+}
+
+export function parseDcaAtrPeriod(value: unknown): number | null {
+  if (value == null || String(value).trim() === "") {
+    return null;
+  }
+  const period = Math.trunc(Number(String(value).replace(/,/g, "").trim()));
+  if (!Number.isFinite(period) || period < 2 || period > 400) {
+    return null;
+  }
+  return period;
+}
+
+export function dcaAtrDistanceLabel(input: {
+  atr: number | null;
+  multiple: number | null;
+  lastPrice?: number | null;
+}): string | null {
+  if (input.multiple == null || !(input.multiple > 0)) {
+    return null;
+  }
+  const multText =
+    Number.isInteger(input.multiple)
+      ? String(input.multiple)
+      : String(Number(input.multiple.toFixed(4)));
+  if (input.atr != null && input.atr > 0) {
+    const usdt = input.atr * input.multiple;
+    const usdtText = usdt.toFixed(2);
+    if (input.lastPrice != null && input.lastPrice > 0) {
+      const pct = (usdt / input.lastPrice) * 100;
+      return `${multText} ATR · ${usdtText} · ${pct.toFixed(2)}%`;
+    }
+    return `${multText} ATR · ${usdtText}`;
+  }
+  return `${multText} ATR`;
+}
+
 export function dcaDipPctAt(
   addIndex: number,
   dipPct: number,
@@ -82,6 +148,23 @@ export function dcaDipPctAt(
     return 0;
   }
   return dipPct * deviationMultiplier ** addIndex;
+}
+
+export function dcaAtrStep(
+  addIndex: number,
+  atr: number,
+  atrSpacingMult: number,
+  deviationMultiplier: number,
+): number {
+  if (
+    !(atr > 0) ||
+    !(atrSpacingMult > 0) ||
+    !(deviationMultiplier > 0) ||
+    addIndex < 0
+  ) {
+    return 0;
+  }
+  return atr * atrSpacingMult * deviationMultiplier ** addIndex;
 }
 
 export function dcaSafetyPrices(input: {
@@ -108,6 +191,76 @@ export function dcaSafetyPrices(input: {
     prices.push(previous);
   }
   return prices;
+}
+
+export function dcaAtrSafetyPrices(input: {
+  side: FuturesSide;
+  entryPrice: number;
+  maxClips: number;
+  atr: number;
+  atrSpacingMult: number;
+  deviationMultiplier: number;
+}): number[] {
+  if (
+    !(input.entryPrice > 0) ||
+    input.maxClips < 2 ||
+    !(input.atr > 0) ||
+    !(input.atrSpacingMult > 0)
+  ) {
+    return [];
+  }
+  const prices: number[] = [];
+  let previous = input.entryPrice;
+  for (let add = 0; add < input.maxClips - 1; add += 1) {
+    const step = dcaAtrStep(
+      add,
+      input.atr,
+      input.atrSpacingMult,
+      input.deviationMultiplier,
+    );
+    previous =
+      input.side === "long" ? previous - step : previous + step;
+    if (!(previous > 0)) {
+      break;
+    }
+    prices.push(previous);
+  }
+  return prices;
+}
+
+export function dcaResolvedSafetyPrices(input: {
+  side: FuturesSide;
+  entryPrice: number;
+  maxClips: number;
+  spacingKind?: DcaSpacingKind | null;
+  dipPct: number | null;
+  atr?: number | null;
+  atrSpacingMult?: number | null;
+  deviationMultiplier: number;
+}): number[] {
+  if (input.spacingKind === "atr") {
+    if (input.atr == null || input.atrSpacingMult == null) {
+      return [];
+    }
+    return dcaAtrSafetyPrices({
+      side: input.side,
+      entryPrice: input.entryPrice,
+      maxClips: input.maxClips,
+      atr: input.atr,
+      atrSpacingMult: input.atrSpacingMult,
+      deviationMultiplier: input.deviationMultiplier,
+    });
+  }
+  if (input.dipPct == null) {
+    return [];
+  }
+  return dcaSafetyPrices({
+    side: input.side,
+    entryPrice: input.entryPrice,
+    maxClips: input.maxClips,
+    dipPct: input.dipPct,
+    deviationMultiplier: input.deviationMultiplier,
+  });
 }
 
 export function dcaMaxDropCoveredPct(input: {
@@ -167,15 +320,31 @@ export function dcaTakeProfitPrice(input: {
   averagePrice: number;
   takeProfitPct: number | null;
   takeProfitBasis: "average" | "first_entry";
+  takeProfitKind?: DcaTakeProfitKind | null;
+  atr?: number | null;
+  takeProfitAtrMult?: number | null;
 }): number | null {
   if (!(input.firstPrice > 0) || !(input.averagePrice > 0)) {
     return null;
   }
+  const basis =
+    input.takeProfitBasis === "first_entry"
+      ? input.firstPrice
+      : input.averagePrice;
+  if (input.takeProfitKind === "atr") {
+    if (
+      input.atr == null ||
+      !(input.atr > 0) ||
+      input.takeProfitAtrMult == null ||
+      !(input.takeProfitAtrMult > 0)
+    ) {
+      return null;
+    }
+    return input.side === "long"
+      ? basis + input.atr * input.takeProfitAtrMult
+      : basis - input.atr * input.takeProfitAtrMult;
+  }
   if (input.takeProfitPct !== null && input.takeProfitPct > 0) {
-    const basis =
-      input.takeProfitBasis === "first_entry"
-        ? input.firstPrice
-        : input.averagePrice;
     return input.side === "long"
       ? basis * (1 + input.takeProfitPct / 100)
       : basis * (1 - input.takeProfitPct / 100);
@@ -190,6 +359,9 @@ export function dcaLadderProfitUsdt(input: {
   averagePrice: number;
   takeProfitPct: number | null;
   takeProfitBasis: "average" | "first_entry";
+  takeProfitKind?: DcaTakeProfitKind | null;
+  atr?: number | null;
+  takeProfitAtrMult?: number | null;
 }): number {
   const exit = dcaTakeProfitPrice(input);
   if (exit === null || !(input.qty > 0) || !(input.averagePrice > 0)) {
@@ -243,6 +415,9 @@ export function dcaPlannedExits(input: {
   takeProfitBasis: "average" | "first_entry";
   stopLossBasis: "average" | "first_entry";
   trailingPct: number | null;
+  takeProfitKind?: DcaTakeProfitKind | null;
+  atr?: number | null;
+  takeProfitAtrMult?: number | null;
 }): {
   takeProfit: number | null;
   stopLoss: number | null;
@@ -250,16 +425,26 @@ export function dcaPlannedExits(input: {
 } {
   const entry = input.entryPrice;
   const first = input.firstFillPrice ?? entry;
-  const takeProfit =
-    input.takeProfitPct !== null &&
+  const takeProfitKind = input.takeProfitKind ?? "percent";
+  const takeProfitReady =
     first !== null &&
-    entry !== null
+    entry !== null &&
+    (takeProfitKind === "atr"
+      ? input.atr != null &&
+        input.atr > 0 &&
+        input.takeProfitAtrMult != null &&
+        input.takeProfitAtrMult > 0
+      : input.takeProfitPct !== null);
+  const takeProfit = takeProfitReady
       ? dcaTakeProfitPrice({
           side: input.side,
-          firstPrice: first,
-          averagePrice: entry,
+          firstPrice: first as number,
+          averagePrice: entry as number,
           takeProfitPct: input.takeProfitPct,
           takeProfitBasis: input.takeProfitBasis,
+          takeProfitKind,
+          atr: input.atr,
+          takeProfitAtrMult: input.takeProfitAtrMult,
         })
       : null;
   const stopLoss =
@@ -333,18 +518,24 @@ function dcaLadderOrderPrices(input: {
   count: number;
   dipPct: number | null;
   deviationMultiplier: number;
+  spacingKind?: DcaSpacingKind | null;
+  atr?: number | null;
+  atrSpacingMult?: number | null;
 }): number[] {
   if (!(input.entryPrice > 0) || input.count < 1) {
     return [];
   }
   const first = input.entryPrice;
   const addPrices =
-    input.dipPct !== null && input.dipPct > 0 && input.count >= 2
-      ? dcaSafetyPrices({
+    input.count >= 2
+      ? dcaResolvedSafetyPrices({
           side: input.side,
           entryPrice: first,
           maxClips: input.count,
+          spacingKind: input.spacingKind,
           dipPct: input.dipPct,
+          atr: input.atr,
+          atrSpacingMult: input.atrSpacingMult,
           deviationMultiplier: input.deviationMultiplier,
         })
       : [];
@@ -368,6 +559,11 @@ export function dcaLadderLevels(input: {
   takeProfitBasis?: "average" | "first_entry";
   stopLossPct?: number | null;
   stopLossBasis?: "average" | "first_entry";
+  spacingKind?: DcaSpacingKind | null;
+  atr?: number | null;
+  atrSpacingMult?: number | null;
+  takeProfitKind?: DcaTakeProfitKind | null;
+  takeProfitAtrMult?: number | null;
 }): DcaLadderLevel[] {
   const count = Math.min(input.maxClips ?? 0, DCA_LADDER_PREVIEW_MAX);
   if (
@@ -385,6 +581,9 @@ export function dcaLadderLevels(input: {
     count,
     dipPct: input.dipPct,
     deviationMultiplier: input.deviationMultiplier,
+    spacingKind: input.spacingKind,
+    atr: input.atr,
+    atrSpacingMult: input.atrSpacingMult,
   });
   const rows: DcaLadderLevel[] = [];
   let totalQty = 0;
@@ -418,6 +617,9 @@ export function dcaLadderLevels(input: {
         averagePrice,
         takeProfitPct: input.takeProfitPct ?? null,
         takeProfitBasis: input.takeProfitBasis ?? "average",
+        takeProfitKind: input.takeProfitKind,
+        atr: input.atr,
+        takeProfitAtrMult: input.takeProfitAtrMult,
       }),
       lossUsdt: dcaLadderLossUsdt({
         side: input.side,

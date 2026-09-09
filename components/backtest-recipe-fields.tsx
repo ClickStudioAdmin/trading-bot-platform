@@ -957,6 +957,31 @@ export function BacktestRecipeFields({
           />
         </label>
         <label className={labelClass}>
+          Spacing
+          <select
+            value={recipe.spacingKind ?? "percent"}
+            onChange={(event) =>
+              onChange({
+                ...recipe,
+                spacingKind: event.target.value === "atr" ? "atr" : "percent",
+                atrPeriod:
+                  event.target.value === "atr"
+                    ? (recipe.atrPeriod ?? 14)
+                    : recipe.atrPeriod,
+                atrSpacingMult:
+                  event.target.value === "atr"
+                    ? (recipe.atrSpacingMult ?? 1)
+                    : recipe.atrSpacingMult,
+              })
+            }
+            className={fieldClass}
+          >
+            <option value="percent">%</option>
+            <option value="atr">ATR</option>
+          </select>
+        </label>
+        {(recipe.spacingKind ?? "percent") === "percent" ? (
+        <label className={labelClass}>
           Deviation
           <RecipeNumberInput
             value={recipe.dipPct}
@@ -965,6 +990,36 @@ export function BacktestRecipeFields({
             onCommit={(next) => onChange({ ...recipe, dipPct: next })}
           />
         </label>
+        ) : (
+        <>
+        <label className={labelClass}>
+          ATR period
+          <RecipeNumberInput
+            value={recipe.atrPeriod}
+            emptyValue={14}
+            allowDecimal={false}
+            className={fieldClass}
+            onCommit={(next) =>
+              onChange({
+                ...recipe,
+                atrPeriod: next == null ? 14 : Math.trunc(next),
+              })
+            }
+          />
+        </label>
+        <label className={labelClass}>
+          ATR spacing
+          <RecipeNumberInput
+            value={recipe.atrSpacingMult}
+            emptyValue={1}
+            className={fieldClass}
+            onCommit={(next) =>
+              onChange({ ...recipe, atrSpacingMult: next ?? 1 })
+            }
+          />
+        </label>
+        </>
+        )}
         <label className={labelClass}>
           Max clips
           <RecipeNumberInput
@@ -1023,6 +1078,32 @@ export function BacktestRecipeFields({
           </label>
         ) : null}
         <label className={labelClass}>
+          Take profit
+          <select
+            value={recipe.takeProfitKind ?? "percent"}
+            onChange={(event) =>
+              onChange({
+                ...recipe,
+                takeProfitKind:
+                  event.target.value === "atr" ? "atr" : "percent",
+                atrPeriod:
+                  event.target.value === "atr"
+                    ? (recipe.atrPeriod ?? 14)
+                    : recipe.atrPeriod,
+                takeProfitAtrMult:
+                  event.target.value === "atr"
+                    ? (recipe.takeProfitAtrMult ?? 2)
+                    : recipe.takeProfitAtrMult,
+              })
+            }
+            className={fieldClass}
+          >
+            <option value="percent">%</option>
+            <option value="atr">ATR × multiplier</option>
+          </select>
+        </label>
+        {(recipe.takeProfitKind ?? "percent") === "percent" ? (
+        <label className={labelClass}>
           Take profit %
           <RecipeNumberInput
             value={recipe.takeProfitPct}
@@ -1031,6 +1112,19 @@ export function BacktestRecipeFields({
             onCommit={(next) => onChange({ ...recipe, takeProfitPct: next })}
           />
         </label>
+        ) : (
+        <label className={labelClass}>
+          TP ATR multiple
+          <RecipeNumberInput
+            value={recipe.takeProfitAtrMult}
+            emptyValue={2}
+            className={fieldClass}
+            onCommit={(next) =>
+              onChange({ ...recipe, takeProfitAtrMult: next ?? 2 })
+            }
+          />
+        </label>
+        )}
         <label className={labelClass}>
           Stop %
           <RecipeNumberInput

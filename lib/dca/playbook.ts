@@ -21,12 +21,19 @@ import {
 } from "@/lib/futures/tpsl";
 import { futuresPnlUsdt } from "@/lib/futures/math";
 import {
+  dcaAtrStep,
   dcaClipFromBudget,
   dcaClipSizeAt,
   dcaDipPctAt,
   dcaLadderMaxOrderError,
   dcaPlannedExits,
-  dcaSafetyPrices,
+  dcaResolvedSafetyPrices,
+  parseDcaAtrMult,
+  parseDcaAtrPeriod,
+  parseDcaSpacingKind,
+  parseDcaTakeProfitKind,
+  type DcaSpacingKind,
+  type DcaTakeProfitKind,
 } from "./grid";
 import {
   DEFAULT_DCA_BB_PERIOD,
@@ -89,6 +96,11 @@ export type DcaPlaybookConfig = {
   intervalMinutes: number | null;
   sizeMultiplier: number;
   deviationMultiplier: number;
+  spacingKind?: DcaSpacingKind;
+  atrPeriod?: number | null;
+  atrSpacingMult?: number | null;
+  takeProfitKind?: DcaTakeProfitKind;
+  takeProfitAtrMult?: number | null;
   takeProfitPct: number | null;
   stopLossPct: number | null;
   takeProfitBasis: DcaExitBasis;
@@ -621,6 +633,64 @@ export function dcaNeedsIndicatorCloses(playbook: {
   );
 }
 
+export function dcaAtrTimeframe(playbook: {
+  indicatorTimeframe?: DcaIndicatorTimeframe | null;
+  shortIndicatorTimeframe?: DcaIndicatorTimeframe | null;
+}): DcaIndicatorTimeframe {
+  return (
+    playbook.indicatorTimeframe ??
+    playbook.shortIndicatorTimeframe ??
+    "15"
+  );
+}
+
+export function dcaNeedsAtrBars(playbook: {
+  spacingKind?: DcaSpacingKind | null;
+  takeProfitKind?: DcaTakeProfitKind | null;
+}): boolean {
+  return playbook.spacingKind === "atr" || playbook.takeProfitKind === "atr";
+}
+
+export function dcaTickBarTimeframes(playbook: {
+  startKind: DcaStartKind;
+  indicatorTimeframe: DcaIndicatorTimeframe | null;
+  shortIndicatorTimeframe?: DcaIndicatorTimeframe | null;
+  spacingKind?: DcaSpacingKind | null;
+  takeProfitKind?: DcaTakeProfitKind | null;
+}): DcaIndicatorTimeframe[] {
+  const rows = dcaIndicatorTimeframes(playbook);
+  if (dcaNeedsAtrBars(playbook)) {
+    const timeframe = dcaAtrTimeframe(playbook);
+    if (!rows.includes(timeframe)) {
+      rows.push(timeframe);
+    }
+  }
+  return rows;
+}
+
+export function dcaNeedsTickBars(playbook: {
+  startKind: DcaStartKind;
+  indicatorTimeframe: DcaIndicatorTimeframe | null;
+  shortIndicatorTimeframe?: DcaIndicatorTimeframe | null;
+  direction: DcaDirection;
+  long: Pick<DcaLegState, "status">;
+  short: Pick<DcaLegState, "status">;
+  spacingKind?: DcaSpacingKind | null;
+  takeProfitKind?: DcaTakeProfitKind | null;
+}): boolean {
+  if (dcaNeedsIndicatorCloses(playbook)) {
+    return true;
+  }
+  if (!dcaNeedsAtrBars(playbook)) {
+    return false;
+  }
+  return dcaEnabledSides(playbook.direction).some((side) =>
+    dcaLegIsRunning(
+      side === "long" ? playbook.long.status : playbook.short.status,
+    ),
+  );
+}
+
 export function dcaLegIsRunning(status: DcaStatus): boolean {
   return status === "armed" || status === "stop_adding";
 }
@@ -700,6 +770,15 @@ export function writeDcaCycleFormFields(
     form.set("dipPct", String(current.dipPct));
   } else {
     form.delete("dipPct");
+  }
+  form.set("spacingKind", current.spacingKind ?? "percent");
+  if ((current.spacingKind ?? "percent") === "atr") {
+    if (current.atrPeriod != null) {
+      form.set("atrPeriod", String(current.atrPeriod));
+    }
+    if (current.atrSpacingMult != null) {
+      form.set("atrSpacingMult", String(current.atrSpacingMult));
+    }
   }
   const interval = dcaIntervalParts(current.intervalMinutes);
   form.set("intervalUnit", interval.unit);
@@ -808,6 +887,15 @@ export function dcaWithLockedCycleConfig(
     intervalMinutes: current.intervalMinutes,
     sizeMultiplier: current.sizeMultiplier,
     deviationMultiplier: current.deviationMultiplier,
+    spacingKind: current.spacingKind ?? "percent",
+    atrPeriod:
+      (current.spacingKind ?? "percent") === "atr"
+        ? current.atrPeriod ?? null
+        : next.atrPeriod,
+    atrSpacingMult:
+      (current.spacingKind ?? "percent") === "atr"
+        ? current.atrSpacingMult ?? null
+        : next.atrSpacingMult,
     armTrigger: current.armTrigger,
     shortArmTrigger: current.shortArmTrigger,
     disarmTrigger: current.disarmTrigger,
@@ -1056,8 +1144,21 @@ export function parseDcaPlaybookForm(
   const typedMaxType = form.get("maxType");
   const hasMaxType =
     typedMaxType != null && String(typedMaxType).trim() !== "";
-  const dipPct =
+  const spacingKind =
     averaging === "interval"
+      ? "percent"
+      : parseDcaSpacingKind(form.get("spacingKind"));
+  const takeProfitKind = parseDcaTakeProfitKind(form.get("takeProfitKind"));
+  const needsAtr = spacingKind === "atr" || takeProfitKind === "atr";
+  const atrPeriod = parseDcaAtrPeriod(form.get("atrPeriod"));
+  const atrSpacingMult =
+    spacingKind === "atr" ? parseDcaAtrMult(form.get("atrSpacingMult")) : null;
+  const takeProfitAtrMult =
+    takeProfitKind === "atr"
+      ? parseDcaAtrMult(form.get("takeProfitAtrMult"))
+      : null;
+  const dipPct =
+    averaging === "interval" || spacingKind === "atr"
       ? { ok: true as const, value: null }
       : parseOptionalPositive(form.get("dipPct"));
   const intervalMinutes = parseIntervalMinutesFromForm(form, averaging);
@@ -1066,7 +1167,10 @@ export function parseDcaPlaybookForm(
     form.get("deviationMultiplier"),
     1,
   );
-  const takeProfitPct = parseOptionalPositive(form.get("takeProfitPct"));
+  const takeProfitPct =
+    takeProfitKind === "atr"
+      ? { ok: true as const, value: null }
+      : parseOptionalPositive(form.get("takeProfitPct"));
   const stopLossPct = parseOptionalPositive(form.get("stopLossPct"));
   const breakevenActivationPct = parseOptionalPositive(
     form.get("breakevenActivationPct"),
@@ -1171,8 +1275,24 @@ export function parseDcaPlaybookForm(
   if (averaging === "interval" && intervalMinutes.value === null) {
     return { ok: false, error: "Enter how often to add an order." };
   }
-  if (restGrid && dipPct.value === null) {
+  if (restGrid && spacingKind === "percent" && dipPct.value === null) {
     return { ok: false, error: "Enter a price deviation % for the grid." };
+  }
+  if (spacingKind === "atr") {
+    if (atrPeriod == null) {
+      return { ok: false, error: "Enter an ATR period." };
+    }
+    if (atrSpacingMult == null) {
+      return { ok: false, error: "Enter an ATR spacing multiple." };
+    }
+  }
+  if (takeProfitKind === "atr") {
+    if (atrPeriod == null) {
+      return { ok: false, error: "Enter an ATR period." };
+    }
+    if (takeProfitAtrMult == null) {
+      return { ok: false, error: "Enter a take profit ATR multiple." };
+    }
   }
   if (restGrid && (clipsCap === null || clipsCap < 2)) {
     return { ok: false, error: "Enter max orders for the grid." };
@@ -1290,6 +1410,11 @@ export function parseDcaPlaybookForm(
       intervalMinutes: intervalMinutes.value,
       sizeMultiplier: sizeMultiplier.value,
       deviationMultiplier: deviationMultiplier.value,
+      spacingKind,
+      atrPeriod: needsAtr ? atrPeriod : null,
+      atrSpacingMult,
+      takeProfitKind,
+      takeProfitAtrMult,
       takeProfitPct: takeProfitPct.value,
       stopLossPct: stopLossPct.value,
       takeProfitBasis: parseDcaExitBasis(form.get("takeProfitBasis")),
@@ -1633,6 +1758,11 @@ export function parseDcaPlaybookRow(
     intervalMinutes: asPositiveIntOrNull(row.interval_minutes),
     sizeMultiplier: asPositiveOrNull(row.size_multiplier) ?? 1,
     deviationMultiplier: asPositiveOrNull(row.deviation_multiplier) ?? 1,
+    spacingKind: parseDcaSpacingKind(row.spacing_kind),
+    atrPeriod: parseDcaAtrPeriod(row.atr_period),
+    atrSpacingMult: parseDcaAtrMult(row.atr_spacing_mult),
+    takeProfitKind: parseDcaTakeProfitKind(row.take_profit_kind),
+    takeProfitAtrMult: parseDcaAtrMult(row.take_profit_atr_mult),
     takeProfitPct: asPositiveOrNull(row.take_profit_pct),
     stopLossPct: asPositiveOrNull(row.stop_loss_pct),
     takeProfitBasis: parseDcaExitBasis(row.take_profit_basis),
@@ -1781,6 +1911,34 @@ export function dcaDipMet(input: {
     return input.lastPrice <= input.lastClipPrice * (1 - input.dipPct / 100);
   }
   return input.lastPrice >= input.lastClipPrice * (1 + input.dipPct / 100);
+}
+
+export function dcaAtrAddMet(input: {
+  side: FuturesSide;
+  lastPrice: number;
+  lastClipPrice: number;
+  atr: number;
+  atrSpacingMult: number;
+  addIndex: number;
+  deviationMultiplier: number;
+}): boolean {
+  const step = dcaAtrStep(
+    input.addIndex,
+    input.atr,
+    input.atrSpacingMult,
+    input.deviationMultiplier,
+  );
+  if (
+    !(step > 0) ||
+    !(input.lastPrice > 0) ||
+    !(input.lastClipPrice > 0)
+  ) {
+    return false;
+  }
+  if (input.side === "long") {
+    return input.lastPrice <= input.lastClipPrice - step;
+  }
+  return input.lastPrice >= input.lastClipPrice + step;
 }
 
 export function dcaIntervalMet(input: {
@@ -1964,11 +2122,16 @@ export function decideDcaTick(input: {
   dipPct: number | null;
   intervalMinutes: number | null;
   deviationMultiplier?: number;
+  spacingKind?: DcaSpacingKind | null;
+  atr?: number | null;
+  atrSpacingMult?: number | null;
   clipsFilled: number;
   maxClips: number | null;
   maxValue: number | null;
   positionQty: number | null;
   entryPrice: number | null;
+  takeProfitKind?: DcaTakeProfitKind | null;
+  takeProfitAtrMult?: number | null;
   takeProfitPct: number | null;
   stopLossPct: number | null;
   takeProfitBasis?: DcaExitBasis;
@@ -2094,6 +2257,44 @@ export function decideDcaTick(input: {
       : null;
   const slPnl = pnlVs(slBasis);
   const tpPnl = pnlVs(tpBasis);
+  const takeProfitKind = input.takeProfitKind ?? "percent";
+  const takeProfitHit =
+    takeProfitKind === "atr"
+      ? (() => {
+          const first = firstFillPrice ?? input.entryPrice;
+          const average = input.entryPrice;
+          if (
+            first == null ||
+            average == null ||
+            input.mark == null ||
+            !(input.mark > 0)
+          ) {
+            return false;
+          }
+          const tpPrice = dcaPlannedExits({
+            side: input.side,
+            entryPrice: average,
+            firstFillPrice: first,
+            mark: input.mark,
+            takeProfitPct: null,
+            stopLossPct: null,
+            takeProfitBasis,
+            stopLossBasis,
+            trailingPct: null,
+            takeProfitKind: "atr",
+            atr: input.atr,
+            takeProfitAtrMult: input.takeProfitAtrMult,
+          }).takeProfit;
+          if (tpPrice == null) {
+            return false;
+          }
+          return input.side === "long"
+            ? input.mark >= tpPrice
+            : input.mark <= tpPrice;
+        })()
+      : tpPnl !== null &&
+        input.takeProfitPct !== null &&
+        tpPnl >= input.takeProfitPct;
   if (
     slPnl !== null &&
     input.stopLossPct !== null &&
@@ -2106,11 +2307,7 @@ export function decideDcaTick(input: {
       nextIndicatorTrue,
     };
   }
-  if (
-    tpPnl !== null &&
-    input.takeProfitPct !== null &&
-    tpPnl >= input.takeProfitPct
-  ) {
+  if (takeProfitHit) {
     const waitForLimit =
       (input.takeProfitOrderType ?? "market") === "limit" &&
       Boolean(input.tpLimitResting);
@@ -2229,8 +2426,9 @@ export function decideDcaTick(input: {
     };
   }
 
+  const spacingKind = input.spacingKind ?? "percent";
   const nextDip =
-    input.dipPct === null
+    spacingKind === "atr" || input.dipPct === null
       ? null
       : dcaDipPctAt(
           Math.max(0, input.clipsFilled - 1),
@@ -2238,16 +2436,30 @@ export function decideDcaTick(input: {
           deviationMultiplier,
         );
   const dip =
-    nextDip !== null &&
-    input.lastPrice !== null &&
-    input.lastClipPrice !== null
-      ? dcaDipMet({
+    spacingKind === "atr"
+      ? input.lastPrice !== null &&
+        input.lastClipPrice !== null &&
+        input.atr != null &&
+        input.atrSpacingMult != null &&
+        dcaAtrAddMet({
           side: input.side,
           lastPrice: input.lastPrice,
           lastClipPrice: input.lastClipPrice,
-          dipPct: nextDip,
+          atr: input.atr,
+          atrSpacingMult: input.atrSpacingMult,
+          addIndex: Math.max(0, input.clipsFilled - 1),
+          deviationMultiplier,
         })
-      : false;
+      : nextDip !== null &&
+          input.lastPrice !== null &&
+          input.lastClipPrice !== null
+        ? dcaDipMet({
+            side: input.side,
+            lastPrice: input.lastPrice,
+            lastClipPrice: input.lastClipPrice,
+            dipPct: nextDip,
+          })
+        : false;
   const interval = dcaIntervalMet({
     nowMs: input.nowMs,
     lastClipAtMs: input.lastClipAtMs,
@@ -2291,6 +2503,8 @@ export function formatDcaNextAdd(input: {
   dcaMode?: DcaMode;
   clipsFilled?: number;
   dipPct: number | null;
+  spacingKind?: DcaSpacingKind | null;
+  atrSpacingMult?: number | null;
   intervalMinutes: number | null;
   lastClipAtMs: number | null;
   nowMs: number;
@@ -2319,7 +2533,9 @@ export function formatDcaNextAdd(input: {
     return "Grid";
   }
   const parts: string[] = [];
-  if (input.dipPct !== null) {
+  if (input.spacingKind === "atr" && input.atrSpacingMult != null) {
+    parts.push(`${trimNumber(input.atrSpacingMult)} ATR`);
+  } else if (input.dipPct !== null) {
     parts.push(`${trimNumber(input.dipPct)}%`);
   }
   if (input.intervalMinutes !== null) {
@@ -2630,6 +2846,9 @@ export function planDcaSafetySync(input: {
   dcaMode: DcaMode;
   maxClips: number | null;
   dipPct: number | null;
+  spacingKind?: DcaSpacingKind | null;
+  atr?: number | null;
+  atrSpacingMult?: number | null;
   deviationMultiplier: number;
   clipSize: number;
   sizeMultiplier: number;
@@ -2660,14 +2879,20 @@ export function planDcaSafetySync(input: {
     }
     filledIndices.add(index);
   }
+  const spacingKind = input.spacingKind ?? "percent";
   const restGrid =
     input.status === "armed" &&
     input.dcaMode === "order" &&
     input.maxClips !== null &&
     input.maxClips >= 2 &&
-    input.dipPct !== null &&
     input.entryPrice !== null &&
-    input.entryPrice > 0;
+    input.entryPrice > 0 &&
+    (spacingKind === "atr"
+      ? input.atr != null &&
+        input.atr > 0 &&
+        input.atrSpacingMult != null &&
+        input.atrSpacingMult > 0
+      : input.dipPct !== null);
   if (!restGrid) {
     return {
       cancelIds: matchingOpen.map((row) => row.id),
@@ -2675,11 +2900,14 @@ export function planDcaSafetySync(input: {
       rest: [],
     };
   }
-  const prices = dcaSafetyPrices({
+  const prices = dcaResolvedSafetyPrices({
     side: input.side,
     entryPrice: input.entryPrice as number,
     maxClips: input.maxClips as number,
-    dipPct: input.dipPct as number,
+    spacingKind,
+    dipPct: input.dipPct,
+    atr: input.atr,
+    atrSpacingMult: input.atrSpacingMult,
     deviationMultiplier: input.deviationMultiplier,
   });
   const planned = new Map<number, { qty: number; limitPrice: number }>();
@@ -2815,6 +3043,8 @@ export function dcaOpenHint(input: {
     takeProfitBasis: input.playbook.takeProfitBasis,
     stopLossBasis: input.playbook.stopLossBasis,
     trailingPct: input.playbook.trailingPct,
+    takeProfitKind: input.playbook.takeProfitKind,
+    takeProfitAtrMult: input.playbook.takeProfitAtrMult,
   });
   const tpLimitResting = (input.working ?? []).some(
     (row) =>
@@ -2872,6 +3102,8 @@ export function dcaHintsForCopyOpen(
       takeProfitBasis: playbook.takeProfitBasis,
       stopLossBasis: playbook.stopLossBasis,
       trailingPct: playbook.trailingPct,
+      takeProfitKind: playbook.takeProfitKind,
+      takeProfitAtrMult: playbook.takeProfitAtrMult,
     });
     const tpLimitResting = (working ?? []).some(
       (item) =>

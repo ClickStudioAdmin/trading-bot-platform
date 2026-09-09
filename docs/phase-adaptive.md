@@ -1,26 +1,47 @@
-# Adaptive DCA — parked
+# Adaptive DCA
 
-Not started. Not a roadmap item until Click says go. Trend **start** (Supertrend) is built now on the Phase 11 playbook. This file is the later **filter and exit** layer only.
+Wave 1 (ATR spacing + ATR take profit) is in progress on the existing Phase 11 playbook. Same `dca_playbooks` row, same `decideDcaTick` for live and replay. Not a new engine or desk type.
 
 ## Status
 
-Parked. Do not implement filters or adaptive exits until Click says go on wave 1.
+Wave 1 started 9 Sep 2026. Stop after this wave. Do not implement confirming filters, Exit-if flatten, cooldown, or max cycles/day until Click says go.
 
-## Filters and exits (later)
+`%` stays the default. Legacy bots are unchanged until someone picks ATR.
 
-Reuse the same Trend definitions already on the start door. Do not invent a second Supertrend.
+## Wave 1 — ATR spacing + ATR take profit
+
+Additional orders: Spacing `%` | `ATR`. Geometric ATR step is `atr * atr_spacing_mult * deviationMultiplier^addIndex` from the previous clip (absolute ATR distance, not % of price). Rest-grid converts that distance to a limit at rest time and reprices after each add.
+
+Take profit: Method `%` | `ATR × multiplier` from the same basis (average / first fill). `%` TP is still PnL %. ATR TP compares mark to the ATR price. Trailing stays `%`.
+
+ATR uses public klines already loaded for indicators. No `atr_timeframe` column. Use the playbook indicator/trend timeframe, else `15`. Defaults: ATR period **14**, spacing multiple **1**, TP ATR multiple **2**.
+
+Cycle lock: spacing / ATR add fields lock while a position is open. TP kind and TP ATR multiple still save.
+
+Columns: `spacing_kind`, `atr_period`, `atr_spacing_mult`, `take_profit_kind`, `take_profit_atr_mult`. Push `develop` so GitHub Actions migrates the development database (`20260909090000_dca_atr_spacing_tp.sql`).
+
+## Later waves (parked)
+
+| Wave | What | Notes |
+| --- | --- | --- |
+| **2** | Optional AND confirming filters | HTF EMA, RSI, BB, ATR band. Per side on Both. Sit beside Start; do not replace Dual Both. |
+| **2b** | Separate Exit-if flatten | Own filters on Stop loss. Market flatten of that side. First hit wins versus % SL / TP / Liq. Not the inverse of entry filters. |
+| **3** | Cooldown + max cycles/day | After flatten. Caps flip-flop on Dual Both. |
+
+Reuse Trend definitions already on the start door. Do not invent a second Supertrend.
 
 | Tool | Role | Notes |
 | --- | --- | --- |
-| **Supertrend** | Filter and/or exit | ATR trail. Filter: only start or add while bullish/bearish. Exit: flatten or stop adding on a flip against the position. Start already exists as Initial Order Trigger **Trend**. |
-| **ADX** | Filter only | Strength, not direction. Example: allow the start (RSI, Price vs EMA, Supertrend flip, Price Cross) only when ADX is strong, or only fade BB when ADX is weak. Not a start. |
-| **Market Structure** | Filter and later start | Swing highs/lows, BOS / flip. Not on the Trend start door until Click locks a swing rule (e.g. N-bar pivot). Then it can join Supertrend on that door **and** sit here as a filter. |
-
-Wave 1, when Click says go: pick one filter (likely Supertrend sit or ADX strength) on adds, not a full exit suite.
+| **Supertrend** | Filter and/or exit later | Start already exists as Initial Order Trigger **Trend**. |
+| **ADX** | Filter only later | Strength, not direction. Not a start. |
+| **Market Structure** | Filter and later start | Not on the Trend start door until Click locks a swing rule. |
 
 ## Out of scope until Click asks
 
 - Combining two starts with AND
 - Market Structure start
 - ADX as a start (+DI / −DI cross)
-- Changing the add ladder from the filter (adaptive size)
+- Changing the add ladder from a filter (adaptive size)
+- Per-rung ATR / size table
+- ATR trailing
+- Scale-in, MEXC, or a second strategy runtime

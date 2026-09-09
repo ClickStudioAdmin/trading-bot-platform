@@ -5,7 +5,7 @@ import {
   loadDeskIndicatorBars,
 } from "@/lib/market/desk-klines";
 import type { CandleBar } from "@/lib/market/candles";
-import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
+import { lastAtrValue, type DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { loadDeskVenueContext } from "@/lib/venues/hyperliquid/desk";
 import { runFuturesCommand, deleteCommandReceipt } from "@/lib/futures/command";
 import {
@@ -50,8 +50,10 @@ import {
   dcaExitLimitRestKey,
   dcaExitTpslNeedsVenueSync,
   dcaFlattenKey,
+  dcaAtrTimeframe,
   dcaIndicatorStartForSide,
   dcaIndicatorTimeframes,
+  dcaNeedsAtrBars,
   dcaLegFor,
   dcaLegIsRunning,
   dcaOpenExitLimits,
@@ -221,6 +223,39 @@ async function lastPriceForPlaybook(playbook: {
 }): Promise<number | null> {
   const desk = await loadDeskVenueContext(playbook.accountId);
   return lastPriceFor(playbook.symbol, desk);
+}
+
+async function atrForPlaybook(
+  playbook: DcaPlaybook,
+  known?: number | null,
+): Promise<number | null> {
+  if (known != null && known > 0) {
+    return known;
+  }
+  if (!dcaNeedsAtrBars(playbook) || playbook.atrPeriod == null) {
+    return null;
+  }
+  const timeframe = dcaAtrTimeframe(playbook);
+  const desk = await loadDeskVenueContext(playbook.accountId);
+  const fetched = await loadDeskIndicatorBars({
+    venue: desk.venue,
+    venueEnvironment: desk.venueEnvironment,
+    symbol: playbook.symbol,
+    interval: timeframe,
+    limit: 500,
+  }).catch((error: unknown) => {
+    console.error(
+      "dca atr bars",
+      playbook.symbol,
+      timeframe,
+      error instanceof Error ? error.message : error,
+    );
+    return [];
+  });
+  return lastAtrValue(
+    closedLiveIndicatorBars(fetched, timeframe),
+    playbook.atrPeriod,
+  );
 }
 
 async function loadPlaybookStartBars(
@@ -592,6 +627,7 @@ export async function syncDcaPlaybookGrid(input: {
   side: FuturesSide;
   entryPrice?: number | null;
   status?: DcaStatus;
+  atr?: number | null;
 }): Promise<void> {
   const lockKey = `${input.playbook.id}:${input.side}`;
   const previous = gridSyncLocks.get(lockKey) ?? Promise.resolve();
@@ -615,6 +651,7 @@ async function syncDcaPlaybookGridUnlocked(input: {
   side: FuturesSide;
   entryPrice?: number | null;
   status?: DcaStatus;
+  atr?: number | null;
 }): Promise<void> {
   const enabled = dcaEnabledSides(input.playbook.direction).includes(
     input.side,
@@ -632,6 +669,7 @@ async function syncDcaPlaybookGridUnlocked(input: {
     },
     ["open", "filled"],
   );
+  const atr = await atrForPlaybook(input.playbook, input.atr);
   const rawPlan = planDcaSafetySync({
     playbookId: input.playbook.id,
     side: input.side,
@@ -639,6 +677,9 @@ async function syncDcaPlaybookGridUnlocked(input: {
     dcaMode: input.playbook.dcaMode,
     maxClips: input.playbook.maxClips,
     dipPct: input.playbook.dipPct,
+    spacingKind: input.playbook.spacingKind,
+    atr,
+    atrSpacingMult: input.playbook.atrSpacingMult,
     deviationMultiplier: input.playbook.deviationMultiplier,
     clipSize: input.playbook.clipSize,
     sizeMultiplier: input.playbook.sizeMultiplier,
@@ -983,6 +1024,7 @@ export async function syncDcaPlaybookExits(input: {
   mode: TradingAccountMode;
   side: FuturesSide;
   lastPrice: number | null;
+  atr?: number | null;
 }): Promise<void> {
   const lockKey = `${input.playbook.id}:${input.side}:exit`;
   const previous = exitSyncLocks.get(lockKey) ?? Promise.resolve();
@@ -1005,6 +1047,7 @@ async function syncDcaPlaybookExitsUnlocked(input: {
   mode: TradingAccountMode;
   side: FuturesSide;
   lastPrice: number | null;
+  atr?: number | null;
 }): Promise<void> {
   const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
     accountId: input.playbook.accountId,
@@ -1015,6 +1058,7 @@ async function syncDcaPlaybookExitsUnlocked(input: {
     return;
   }
   const leg = dcaLegFor(input.playbook, input.side);
+  const atr = await atrForPlaybook(input.playbook, input.atr);
   const planned = dcaPlannedExits({
     side: input.side,
     entryPrice: open.entryPrice,
@@ -1025,6 +1069,9 @@ async function syncDcaPlaybookExitsUnlocked(input: {
     takeProfitBasis: input.playbook.takeProfitBasis,
     stopLossBasis: input.playbook.stopLossBasis,
     trailingPct: input.playbook.trailingPct,
+    takeProfitKind: input.playbook.takeProfitKind,
+    atr,
+    takeProfitAtrMult: input.playbook.takeProfitAtrMult,
   });
   const current = tpslFromRow(open) ?? emptyFuturesTpsl();
   const rawStop = leg.breakevenDone

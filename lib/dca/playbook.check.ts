@@ -28,7 +28,10 @@ import {
   capDcaSafetySync,
   DCA_LIVE_GRID_OPS_PER_SYNC,
   formatDcaEntryType,
+  dcaAtrAddMet,
+  dcaAtrTimeframe,
   dcaDipMet,
+  dcaNeedsAtrBars,
   dcaEnabledSides,
   dcaStartListens,
   dcaNeedsIndicatorCloses,
@@ -1164,6 +1167,8 @@ if (parsed.ok) {
   assert.equal(parsed.config.sizeMultiplier, 1);
   assert.equal(parsed.config.takeProfitOrderType, "market");
   assert.equal(parsed.config.stopLossOrderType, "market");
+  assert.equal(parsed.config.spacingKind, "percent");
+  assert.equal(parsed.config.takeProfitKind, "percent");
 }
 
 const tpLimitForm = new FormData();
@@ -2542,5 +2547,177 @@ assert.deepEqual(parseDcaPlaybookVerb("close-position"), {
   verb: "close-position",
   side: null,
 });
+
+assert.equal(dcaAtrTimeframe({}), "15");
+assert.equal(dcaAtrTimeframe({ indicatorTimeframe: "60" }), "60");
+assert.equal(dcaNeedsAtrBars({ spacingKind: "percent" }), false);
+assert.equal(dcaNeedsAtrBars({ takeProfitKind: "atr" }), true);
+assert.equal(
+  dcaAtrAddMet({
+    side: "long",
+    lastPrice: 98,
+    lastClipPrice: 100,
+    atr: 2,
+    atrSpacingMult: 1,
+    addIndex: 0,
+    deviationMultiplier: 1,
+  }),
+  true,
+);
+assert.equal(
+  dcaAtrAddMet({
+    side: "long",
+    lastPrice: 99,
+    lastClipPrice: 100,
+    atr: 2,
+    atrSpacingMult: 1,
+    addIndex: 0,
+    deviationMultiplier: 1,
+  }),
+  false,
+);
+
+const atrGridForm = new FormData();
+atrGridForm.set("symbol", "BTCUSDT");
+atrGridForm.set("side", "long");
+atrGridForm.set("clipSize", "0.01");
+atrGridForm.set("sizeUnit", "qty");
+atrGridForm.set("averaging", "dip");
+atrGridForm.set("spacingKind", "atr");
+atrGridForm.set("atrPeriod", "14");
+atrGridForm.set("atrSpacingMult", "1");
+atrGridForm.set("restGrid", "1");
+atrGridForm.set("maxClips", "5");
+const atrGridParsed = parseDcaPlaybookForm(atrGridForm);
+assert.equal(atrGridParsed.ok, true);
+if (atrGridParsed.ok) {
+  assert.equal(atrGridParsed.config.spacingKind, "atr");
+  assert.equal(atrGridParsed.config.dipPct, null);
+  assert.equal(atrGridParsed.config.atrPeriod, 14);
+  assert.equal(atrGridParsed.config.atrSpacingMult, 1);
+  assert.equal(atrGridParsed.config.dcaMode, "order");
+}
+
+const atrTpForm = new FormData();
+atrTpForm.set("symbol", "BTCUSDT");
+atrTpForm.set("side", "long");
+atrTpForm.set("clipSize", "0.01");
+atrTpForm.set("sizeUnit", "qty");
+atrTpForm.set("takeProfitKind", "atr");
+atrTpForm.set("takeProfitAtrMult", "2");
+atrTpForm.set("atrPeriod", "14");
+const atrTpParsed = parseDcaPlaybookForm(atrTpForm);
+assert.equal(atrTpParsed.ok, true);
+if (atrTpParsed.ok) {
+  assert.equal(atrTpParsed.config.takeProfitKind, "atr");
+  assert.equal(atrTpParsed.config.takeProfitPct, null);
+  assert.equal(atrTpParsed.config.takeProfitAtrMult, 2);
+}
+
+const atrGridMissing = new FormData();
+atrGridMissing.set("symbol", "BTCUSDT");
+atrGridMissing.set("side", "long");
+atrGridMissing.set("clipSize", "0.01");
+atrGridMissing.set("sizeUnit", "qty");
+atrGridMissing.set("averaging", "dip");
+atrGridMissing.set("spacingKind", "atr");
+atrGridMissing.set("restGrid", "1");
+atrGridMissing.set("maxClips", "5");
+assert.equal(parseDcaPlaybookForm(atrGridMissing).ok, false);
+
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 1,
+    lastPrice: 98,
+    lastClipPrice: 100,
+    dipPct: null,
+    spacingKind: "atr",
+    atr: 2,
+    atrSpacingMult: 1,
+    takeProfitPct: null,
+  }).action.kind,
+  "clip",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 1,
+    lastPrice: 99,
+    lastClipPrice: 100,
+    mark: 99,
+    dipPct: null,
+    spacingKind: "atr",
+    atr: 2,
+    atrSpacingMult: 1,
+    takeProfitPct: null,
+  }).action.kind,
+  "none",
+);
+assert.deepEqual(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 1,
+    lastPrice: 104,
+    mark: 104,
+    entryPrice: 100,
+    firstFillPrice: 100,
+    takeProfitPct: null,
+    takeProfitKind: "atr",
+    takeProfitAtrMult: 2,
+    atr: 2,
+  }).action,
+  { kind: "close", reason: "take_profit" },
+);
+assert.deepEqual(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 1,
+    lastPrice: 110,
+    mark: 110,
+    entryPrice: 100,
+    takeProfitPct: 10,
+  }).action,
+  { kind: "close", reason: "take_profit" },
+);
+
+const atrSync = planDcaSafetySync({
+  playbookId: safetyId,
+  side: "long",
+  status: "armed",
+  dcaMode: "order",
+  maxClips: 3,
+  dipPct: null,
+  spacingKind: "atr",
+  atr: 2,
+  atrSpacingMult: 1,
+  deviationMultiplier: 1,
+  clipSize: 0.01,
+  sizeMultiplier: 1,
+  sizeUnit: "qty",
+  entryPrice: 100,
+  working: [],
+});
+assert.equal(atrSync.rest.length, 2);
+assert.equal(atrSync.rest[0]?.limitPrice, 98);
+assert.equal(atrSync.rest[1]?.limitPrice, 96);
+
+assert.equal(
+  formatDcaNextAdd({
+    status: "armed",
+    clipsFilled: 1,
+    dipPct: null,
+    spacingKind: "atr",
+    atrSpacingMult: 1,
+    intervalMinutes: null,
+    lastClipAtMs: 1,
+    nowMs: 2,
+  }),
+  "1 ATR",
+);
 
 console.log("dca playbook checks passed");

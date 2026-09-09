@@ -17,6 +17,9 @@ import {
   dcaMaxDropCoveredPct,
   dcaPlannedExits,
   dcaRequiredUsdt,
+  dcaAtrSafetyPrices,
+  dcaAtrStep,
+  dcaResolvedSafetyPrices,
   dcaSafetyPrices,
   dcaStopLossPrice,
   dcaTakeProfitPrice,
@@ -1178,5 +1181,111 @@ assert.equal(
   }),
   false,
 );
+
+assert.equal(dcaAtrStep(0, 10, 1, 1), 10);
+assert.equal(dcaAtrStep(1, 10, 1, 2), 20);
+assert.deepEqual(
+  dcaAtrSafetyPrices({
+    side: "long",
+    entryPrice: 100,
+    maxClips: 3,
+    atr: 2,
+    atrSpacingMult: 1,
+    deviationMultiplier: 1,
+  }),
+  [98, 96],
+);
+assert.deepEqual(
+  dcaAtrSafetyPrices({
+    side: "short",
+    entryPrice: 100,
+    maxClips: 3,
+    atr: 2,
+    atrSpacingMult: 1,
+    deviationMultiplier: 1.5,
+  }),
+    [102, 105],
+);
+assert.deepEqual(
+  dcaResolvedSafetyPrices({
+    side: "long",
+    entryPrice: 100,
+    maxClips: 3,
+    spacingKind: "atr",
+    dipPct: null,
+    atr: 2,
+    atrSpacingMult: 1,
+    deviationMultiplier: 1,
+  }),
+  [98, 96],
+);
+assert.equal(
+  dcaTakeProfitPrice({
+    side: "long",
+    firstPrice: 100,
+    averagePrice: 98,
+    takeProfitPct: 2,
+    takeProfitBasis: "average",
+    takeProfitKind: "atr",
+    atr: 4,
+    takeProfitAtrMult: 2,
+  }),
+  106,
+);
+assert.equal(
+  dcaTakeProfitPrice({
+    side: "short",
+    firstPrice: 100,
+    averagePrice: 102,
+    takeProfitPct: 2,
+    takeProfitBasis: "first_entry",
+    takeProfitKind: "atr",
+    atr: 3,
+    takeProfitAtrMult: 2,
+  }),
+  94,
+);
+assert.equal(
+  dcaTakeProfitPrice({
+    side: "long",
+    firstPrice: 100,
+    averagePrice: 98,
+    takeProfitPct: 2,
+    takeProfitBasis: "average",
+  })?.toFixed(2),
+  "99.96",
+);
+assert.equal(
+  dcaPlannedExits({
+    side: "long",
+    entryPrice: 100,
+    firstFillPrice: 100,
+    mark: 100,
+    takeProfitPct: null,
+    stopLossPct: null,
+    takeProfitBasis: "average",
+    stopLossBasis: "average",
+    trailingPct: null,
+    takeProfitKind: "atr",
+    atr: 5,
+    takeProfitAtrMult: 2,
+  }).takeProfit,
+  110,
+);
+const atrLadder = dcaLadderLevels({
+  side: "long",
+  entryPrice: 100,
+  maxClips: 3,
+  dipPct: null,
+  clipSize: 10,
+  sizeUnit: "usdt",
+  sizeMultiplier: 1,
+  deviationMultiplier: 1,
+  spacingKind: "atr",
+  atr: 2,
+  atrSpacingMult: 1,
+});
+assert.equal(atrLadder[1]?.price, 98);
+assert.equal(atrLadder[2]?.price, 96);
 
 console.log("dca grid checks passed");

@@ -28,9 +28,17 @@ import {
   dcaLadderProfitRange,
   dcaClipFromBudget,
   dcaInitialMarginUsdt,
+  dcaAtrDistanceLabel,
   dcaMaxDropCoveredPct,
   dcaRequiredUsdt,
+  DEFAULT_DCA_ATR_PERIOD,
+  DEFAULT_DCA_ATR_SPACING_MULT,
+  DEFAULT_DCA_TAKE_PROFIT_ATR_MULT,
+  parseDcaSpacingKind,
+  parseDcaTakeProfitKind,
   type DcaLadderLevel,
+  type DcaSpacingKind,
+  type DcaTakeProfitKind,
 } from "@/lib/dca/grid";
 import {
   DEFAULT_DCA_NAME,
@@ -241,6 +249,8 @@ type DcaSummaryPreview = {
   lossRange: { min: number; max: number } | null;
   profitFromTp: boolean;
   lossFromSl: boolean;
+  spacingHint: string | null;
+  tpHint: string | null;
 };
 
 function dcaSummaryPreview(input: {
@@ -252,9 +262,13 @@ function dcaSummaryPreview(input: {
   sizeMultiplier: string;
   deviationMultiplier: string;
   dipPct: string;
+  spacingKind: DcaSpacingKind;
+  atrSpacingMult: string;
   maxClips: string;
   maxValue: string;
   takeProfitPct: string;
+  takeProfitKind: DcaTakeProfitKind;
+  takeProfitAtrMult: string;
   takeProfitBasis: DcaExitBasis;
   stopLossPct: string;
   stopLossBasis: DcaExitBasis;
@@ -262,7 +276,14 @@ function dcaSummaryPreview(input: {
 }): DcaSummaryPreview {
   const orderCap = asNumber(input.maxClips);
   const valueCap = asNumber(input.maxValue);
-  const dip = input.averaging === "dip" ? asNumber(input.dipPct) : null;
+  const dip =
+    input.averaging === "dip" && input.spacingKind !== "atr"
+      ? asNumber(input.dipPct)
+      : null;
+  const spacingKind =
+    input.averaging === "dip" ? input.spacingKind : "percent";
+  const atrSpacingMult = asNumber(input.atrSpacingMult);
+  const tpKind = input.takeProfitKind;
   const size = asNumber(input.clipSize);
   const sizeMult = asNumber(input.sizeMultiplier) ?? 1;
   const devMult = asNumber(input.deviationMultiplier) ?? 1;
@@ -290,7 +311,24 @@ function dcaSummaryPreview(input: {
     dipPct: dip,
     deviationMultiplier: devMult,
   });
-  const tpPct = asNumber(input.takeProfitPct);
+  const tpPct = tpKind === "atr" ? null : asNumber(input.takeProfitPct);
+  const tpAtrMult = tpKind === "atr" ? asNumber(input.takeProfitAtrMult) : null;
+  const spacingHint =
+    spacingKind === "atr"
+      ? dcaAtrDistanceLabel({
+          atr: null,
+          multiple: atrSpacingMult,
+          lastPrice: input.lastPrice,
+        })
+      : null;
+  const tpHint =
+    tpKind === "atr"
+      ? dcaAtrDistanceLabel({
+          atr: null,
+          multiple: tpAtrMult,
+          lastPrice: input.lastPrice,
+        })
+      : null;
   const slPct = asNumber(input.stopLossPct);
   const levels = dcaLadderLevels({
     side: input.side,
@@ -301,7 +339,11 @@ function dcaSummaryPreview(input: {
     sizeUnit: input.sizeUnit,
     sizeMultiplier: sizeMult,
     deviationMultiplier: devMult,
+    spacingKind,
+    atrSpacingMult,
     takeProfitPct: tpPct,
+    takeProfitKind: tpKind,
+    takeProfitAtrMult: tpAtrMult,
     takeProfitBasis: input.takeProfitBasis,
     stopLossPct: slPct,
     stopLossBasis: input.stopLossBasis,
@@ -332,8 +374,10 @@ function dcaSummaryPreview(input: {
     priceFromLast,
     profitRange: dcaLadderProfitRange(levels),
     lossRange: dcaLadderLossRange(levels),
-    profitFromTp: tpPct !== null,
+    profitFromTp: tpPct !== null || tpAtrMult !== null,
     lossFromSl: slPct !== null,
+    spacingHint,
+    tpHint,
   };
 }
 
@@ -706,6 +750,22 @@ export function DcaPlaybookForm({
     return () => window.clearTimeout(timer);
   }, [maxValue]);
   const [dipPct, setDipPct] = useState(optional(source?.dipPct));
+  const [spacingKind, setSpacingKind] = useState<DcaSpacingKind>(
+    source?.spacingKind ?? "percent",
+  );
+  const [atrPeriod, setAtrPeriod] = useState(
+    optional(source?.atrPeriod) || String(DEFAULT_DCA_ATR_PERIOD),
+  );
+  const [atrSpacingMult, setAtrSpacingMult] = useState(
+    optional(source?.atrSpacingMult) || String(DEFAULT_DCA_ATR_SPACING_MULT),
+  );
+  const [takeProfitKind, setTakeProfitKind] = useState<DcaTakeProfitKind>(
+    source?.takeProfitKind ?? "percent",
+  );
+  const [takeProfitAtrMult, setTakeProfitAtrMult] = useState(
+    optional(source?.takeProfitAtrMult) ||
+      String(DEFAULT_DCA_TAKE_PROFIT_ATR_MULT),
+  );
   const intervalParts = dcaIntervalParts(source?.intervalMinutes ?? null);
   const [intervalUnit, setIntervalUnit] = useState<DcaIntervalUnit>(
     intervalParts.unit,
@@ -936,9 +996,13 @@ export function DcaPlaybookForm({
       sizeMultiplier,
       deviationMultiplier,
       dipPct,
+      spacingKind,
+      atrSpacingMult,
       maxClips,
       maxValue: valueCapUsdt == null ? "" : String(valueCapUsdt),
       takeProfitPct,
+      takeProfitKind,
+      takeProfitAtrMult,
       takeProfitBasis,
       stopLossPct,
       stopLossBasis,
@@ -953,6 +1017,8 @@ export function DcaPlaybookForm({
     clipForSave,
     deviationMultiplier,
     dipPct,
+    spacingKind,
+    atrSpacingMult,
     lastPrice,
     maxClips,
     maxValue,
@@ -963,6 +1029,8 @@ export function DcaPlaybookForm({
     stopLossBasis,
     stopLossPct,
     takeProfitBasis,
+    takeProfitKind,
+    takeProfitAtrMult,
     takeProfitPct,
     leverage,
   ]);
@@ -990,6 +1058,11 @@ export function DcaPlaybookForm({
       intervalUnit,
       sizeMultiplier,
       deviationMultiplier,
+      spacingKind,
+      atrPeriod,
+      atrSpacingMult,
+      takeProfitKind,
+      takeProfitAtrMult,
       takeProfitPct,
       takeProfitBasis,
       takeProfitOrderType,
@@ -1782,6 +1855,24 @@ export function DcaPlaybookForm({
             </label>
             {averaging === "dip" ? (
               <label className={labelClass}>
+                Spacing
+                <select
+                  name="spacingKind"
+                  value={spacingKind}
+                  onChange={(event) =>
+                    setSpacingKind(parseDcaSpacingKind(event.target.value))
+                  }
+                  className={fieldClass}
+                >
+                  <option value="percent">%</option>
+                  <option value="atr">ATR</option>
+                </select>
+              </label>
+            ) : (
+              <input type="hidden" name="spacingKind" value="percent" />
+            )}
+            {averaging === "dip" && spacingKind === "percent" ? (
+              <label className={labelClass}>
                 Price deviation %
                 <PercentInput
                   name="dipPct"
@@ -1791,6 +1882,31 @@ export function DcaPlaybookForm({
                   ariaLabel="Price deviation percent"
                 />
               </label>
+            ) : null}
+            {averaging === "dip" && spacingKind === "atr" ? (
+              <>
+                <label className={labelClass}>
+                  ATR period
+                  <GroupedNumberInput
+                    name="atrPeriod"
+                    value={atrPeriod}
+                    onChange={setAtrPeriod}
+                    className={fieldClass}
+                    ariaLabel="ATR period"
+                  />
+                </label>
+                <label className={labelClass}>
+                  ATR spacing
+                  <GroupedNumberInput
+                    name="atrSpacingMult"
+                    value={atrSpacingMult}
+                    onChange={setAtrSpacingMult}
+                    allowDecimal
+                    className={fieldClass}
+                    ariaLabel="ATR spacing multiple"
+                  />
+                </label>
+              </>
             ) : null}
             {averaging === "interval" ? (
               <div>
@@ -1902,6 +2018,21 @@ export function DcaPlaybookForm({
           <p className={sectionTitleClass}>Take profit</p>
           <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
           <label className={labelClass}>
+            Method
+            <select
+              name="takeProfitKind"
+              value={takeProfitKind}
+              onChange={(event) =>
+                setTakeProfitKind(parseDcaTakeProfitKind(event.target.value))
+              }
+              className={fieldClass}
+            >
+              <option value="percent">%</option>
+              <option value="atr">ATR × multiplier</option>
+            </select>
+          </label>
+          {takeProfitKind === "percent" ? (
+          <label className={labelClass}>
             Take profit target
             <PercentInput
               name="takeProfitPct"
@@ -1911,6 +2042,34 @@ export function DcaPlaybookForm({
               ariaLabel="Take profit target percent"
             />
           </label>
+          ) : (
+          <label className={labelClass}>
+            ATR multiple
+            <GroupedNumberInput
+              name="takeProfitAtrMult"
+              value={takeProfitAtrMult}
+              onChange={setTakeProfitAtrMult}
+              allowDecimal
+              className={fieldClass}
+              ariaLabel="Take profit ATR multiple"
+            />
+          </label>
+          )}
+          {takeProfitKind === "atr" &&
+          !(averaging === "dip" && spacingKind === "atr") ? (
+            <label className={labelClass}>
+              ATR period
+              <GroupedNumberInput
+                name="atrPeriod"
+                value={atrPeriod}
+                onChange={setAtrPeriod}
+                className={fieldClass}
+                ariaLabel="ATR period"
+              />
+            </label>
+          ) : takeProfitKind === "atr" ? (
+            <input type="hidden" name="atrPeriod" value={atrPeriod} />
+          ) : null}
           <label className={labelClass}>
             Take profit type
             <select
@@ -2132,9 +2291,11 @@ export function DcaPlaybookForm({
               summary.covered === null ? "—" : `${trimPct(summary.covered)}%`
             }
             hint={
-              summary.covered === null
-                ? "Set max orders and price deviation %"
-                : "First fill to last clip"
+              summary.spacingHint
+                ? `First add ${summary.spacingHint} from last clip`
+                : summary.covered === null
+                  ? "Set max orders and price deviation %"
+                  : "First fill to last clip"
             }
           />
           <SummaryStat
@@ -2366,7 +2527,9 @@ export function DcaPlaybookForm({
                 ? " This ladder is one side. Long and short add independently."
                 : ""}
               {summary.profitFromTp
-                ? " Profit is take profit from that average."
+                ? summary.tpHint
+                  ? ` Profit is ${summary.tpHint} from that average.`
+                  : " Profit is take profit from that average."
                 : " No take profit — profit is unlimited."}
               {summary.lossFromSl
                 ? " Loss is stop loss from that average."
@@ -2377,7 +2540,11 @@ export function DcaPlaybookForm({
           <p className="mt-3 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
             Enter order size and max orders to preview price and value at each
             level.
-            {averaging === "dip" ? " Price deviation % sets later prices." : ""}
+            {averaging === "dip"
+              ? spacingKind === "atr"
+                ? " ATR spacing sets later prices from last clip."
+                : " Price deviation % sets later prices."
+              : ""}
           </p>
         )}
         </div>

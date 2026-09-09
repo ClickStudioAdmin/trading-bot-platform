@@ -74,6 +74,11 @@ export type DcaTemplateRecipe = {
   intervalMinutes: number | null;
   sizeMultiplier: number;
   deviationMultiplier: number;
+  spacingKind?: DcaPlaybookConfig["spacingKind"];
+  atrPeriod?: number | null;
+  atrSpacingMult?: number | null;
+  takeProfitKind?: DcaPlaybookConfig["takeProfitKind"];
+  takeProfitAtrMult?: number | null;
   takeProfitPct: number | null;
   stopLossPct: number | null;
   takeProfitBasis: DcaPlaybookConfig["takeProfitBasis"];
@@ -252,6 +257,11 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     intervalMinutes: config.intervalMinutes,
     sizeMultiplier: config.sizeMultiplier,
     deviationMultiplier: config.deviationMultiplier,
+    spacingKind: config.spacingKind ?? "percent",
+    atrPeriod: config.atrPeriod ?? null,
+    atrSpacingMult: config.atrSpacingMult ?? null,
+    takeProfitKind: config.takeProfitKind ?? "percent",
+    takeProfitAtrMult: config.takeProfitAtrMult ?? null,
     takeProfitPct: config.takeProfitPct,
     stopLossPct: config.stopLossPct,
     takeProfitBasis: config.takeProfitBasis,
@@ -533,6 +543,17 @@ export function dcaRecipeToConfig(
   );
   if (recipe.dipPct != null) {
     form.set("dipPct", String(recipe.dipPct));
+  }
+  form.set("spacingKind", String(recipe.spacingKind ?? "percent"));
+  if (recipe.atrPeriod != null) {
+    form.set("atrPeriod", String(recipe.atrPeriod));
+  }
+  if (recipe.atrSpacingMult != null) {
+    form.set("atrSpacingMult", String(recipe.atrSpacingMult));
+  }
+  form.set("takeProfitKind", String(recipe.takeProfitKind ?? "percent"));
+  if (recipe.takeProfitAtrMult != null) {
+    form.set("takeProfitAtrMult", String(recipe.takeProfitAtrMult));
   }
   const interval = dcaIntervalParts(asNullableNumber(recipe.intervalMinutes));
   form.set("intervalUnit", interval.unit);
@@ -844,6 +865,11 @@ export type DcaSnapshotOverlay = {
   intervalValue?: string;
   sizeMultiplier?: string;
   deviationMultiplier?: string;
+  spacingKind?: string;
+  atrPeriod?: string;
+  atrSpacingMult?: string;
+  takeProfitKind?: string;
+  takeProfitAtrMult?: string;
   takeProfitPct?: string;
   takeProfitBasis?: string;
   takeProfitOrderType?: string;

@@ -18,7 +18,10 @@ import {
   parseStoredVenueEnvironment,
   parseStoredVenueId,
 } from "@/lib/exchanges/venues";
-import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
+import {
+  lastAtrValue,
+  type DcaIndicatorTimeframe,
+} from "@/lib/dca/indicators";
 import {
   loadFuturesWorking,
   loadOpenFuturesOnSymbol,
@@ -36,11 +39,13 @@ import {
   dcaEnabledSides,
   dcaGridClipCounts,
   dcaIndicatorStartForSide,
-  dcaIndicatorTimeframes,
+  dcaAtrTimeframe,
   dcaLegFor,
   dcaLegIsRunning,
   dcaLiveQtyBlocksCycleEnd,
-  dcaNeedsIndicatorCloses,
+  dcaNeedsAtrBars,
+  dcaNeedsTickBars,
+  dcaTickBarTimeframes,
   dcaOpenExitLimits,
   dcaStartListens,
   decideDcaTick,
@@ -153,8 +158,8 @@ export async function runDcaPlaybookTick(input?: {
     const ticker = deskTickers.get(playbook.symbol) ?? {};
     const prices = tickerTriggerPrices(ticker);
     const barsByTimeframe = new Map<DcaIndicatorTimeframe, CandleBar[]>();
-    if (dcaNeedsIndicatorCloses(playbook)) {
-      for (const indicatorTimeframe of dcaIndicatorTimeframes(playbook)) {
+    if (dcaNeedsTickBars(playbook)) {
+      for (const indicatorTimeframe of dcaTickBarTimeframes(playbook)) {
         const key = `${account.venue}:${playbook.symbol}:${indicatorTimeframe}`;
         if (!klineCache.has(key)) {
           const supertrend =
@@ -165,7 +170,7 @@ export async function runDcaPlaybookTick(input?: {
             venueEnvironment: account.venueEnvironment,
             symbol: playbook.symbol,
             interval: indicatorTimeframe,
-            limit: supertrend ? 500 : 80,
+            limit: supertrend || dcaNeedsAtrBars(playbook) ? 500 : 80,
           }).catch((error: unknown) => {
             console.error(
               "engine indicator bars",
@@ -180,6 +185,17 @@ export async function runDcaPlaybookTick(input?: {
         barsByTimeframe.set(indicatorTimeframe, klineCache.get(key) ?? []);
       }
     }
+    const atrTimeframe = dcaAtrTimeframe(playbook);
+    const atr =
+      dcaNeedsAtrBars(playbook) && playbook.atrPeriod != null
+        ? lastAtrValue(
+            closedLiveIndicatorBars(
+              barsByTimeframe.get(atrTimeframe) ?? [],
+              atrTimeframe,
+            ),
+            playbook.atrPeriod,
+          )
+        : null;
     const [working, openWorking] = await Promise.all([
       playbook.dcaMode === "order"
         ? loadFuturesWorking(
@@ -237,11 +253,13 @@ export async function runDcaPlaybookTick(input?: {
         mode: account.mode,
         side,
         lastPrice: prices.last,
+        atr,
       });
       await syncDcaPlaybookGrid({
         playbook,
         mode: account.mode,
         side,
+        atr,
       });
       if (
         dcaLegIsRunning(leg.status) &&
@@ -272,6 +290,9 @@ export async function runDcaPlaybookTick(input?: {
         dipPct: playbook.dipPct,
         intervalMinutes: playbook.intervalMinutes,
         deviationMultiplier: playbook.deviationMultiplier,
+        spacingKind: playbook.spacingKind,
+        atr,
+        atrSpacingMult: playbook.atrSpacingMult,
         clipsFilled: leg.clipsFilled,
         maxClips: playbook.maxClips,
         maxValue: dcaTickValueCapUsdt({
@@ -281,6 +302,8 @@ export async function runDcaPlaybookTick(input?: {
         }),
         positionQty: open?.qty ?? null,
         entryPrice: open?.entryPrice ?? null,
+        takeProfitKind: playbook.takeProfitKind,
+        takeProfitAtrMult: playbook.takeProfitAtrMult,
         takeProfitPct: playbook.takeProfitPct,
         stopLossPct: playbook.stopLossPct,
         takeProfitBasis: playbook.takeProfitBasis,

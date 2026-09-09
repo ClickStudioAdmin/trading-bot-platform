@@ -480,11 +480,15 @@ export function recipeParamRows(
       {
         label: "Averaging",
         value:
-          recipe.dipPct != null
-            ? `${formatParamNumber(recipe.dipPct)}% dip`
-            : recipe.intervalMinutes != null
-              ? `${recipe.intervalMinutes}m`
-              : recipe.dcaMode,
+          recipe.spacingKind === "atr" && recipe.atrSpacingMult != null
+            ? `${formatParamNumber(recipe.atrSpacingMult)} ATR${
+                recipe.atrPeriod != null ? ` ${recipe.atrPeriod}` : ""
+              }`
+            : recipe.dipPct != null
+              ? `${formatParamNumber(recipe.dipPct)}% dip`
+              : recipe.intervalMinutes != null
+                ? `${recipe.intervalMinutes}m`
+                : recipe.dcaMode,
       },
       {
         label: "Max clips",
@@ -504,9 +508,11 @@ export function recipeParamRows(
       {
         label: "Take profit",
         value:
-          recipe.takeProfitPct == null
-            ? "Off"
-            : `${formatParamNumber(recipe.takeProfitPct)}%`,
+          recipe.takeProfitKind === "atr" && recipe.takeProfitAtrMult != null
+            ? `${formatParamNumber(recipe.takeProfitAtrMult)} ATR`
+            : recipe.takeProfitPct == null
+              ? "Off"
+              : `${formatParamNumber(recipe.takeProfitPct)}%`,
       },
       {
         label: "Stop",

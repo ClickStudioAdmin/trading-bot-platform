@@ -1,6 +1,7 @@
 import {
   decideDcaTick,
   dcaArmTriggerForSide,
+  dcaAtrTimeframe,
   dcaCycleClipSize,
   dcaEnabledSides,
   dcaIndicatorStartForSide,
@@ -9,13 +10,14 @@ import {
   type DcaLegState,
 } from "@/lib/dca/playbook";
 import {
+  lastAtrValue,
   resampleBarsForTimeframe,
   resampleClosesForTimeframe,
 } from "@/lib/dca/indicators";
 import {
   dcaClipQtyAt,
   dcaPlannedExits,
-  dcaSafetyPrices,
+  dcaResolvedSafetyPrices,
   dcaTrailingDistance,
 } from "@/lib/dca/grid";
 import { dcaRecipeToConfig, type DcaTemplateRecipe } from "@/lib/templates/recipe";
@@ -114,7 +116,10 @@ export function replayDcaPlaybook(input: {
   if (!built.ok) {
     return { orders: [], stats: emptyBacktestStats(input.startingUsdt) };
   }
-  const config = built.config;
+  const config = {
+    ...built.config,
+    startKind: input.recipe.startKind,
+  };
   const sides = dcaEnabledSides(config.direction);
   const splitSides = config.direction === "both";
   const legs: Record<FuturesSide, SimLeg> = {
@@ -297,6 +302,25 @@ export function replayDcaPlaybook(input: {
     };
   }
 
+  function currentAtr(): number | null {
+    if (
+      (config.spacingKind ?? "percent") !== "atr" &&
+      (config.takeProfitKind ?? "percent") !== "atr"
+    ) {
+      return null;
+    }
+    if (config.atrPeriod == null) {
+      return null;
+    }
+    const tape = backtestTapeInterval(input.recipe, 1, 2);
+    const atrBars = resampleBarsForTimeframe(
+      ohlc,
+      tape,
+      dcaAtrTimeframe(config),
+    );
+    return lastAtrValue(atrBars, config.atrPeriod);
+  }
+
   function nextRestingGridPrice(side: FuturesSide): number | null {
     const leg = legs[side];
     if (
@@ -306,17 +330,18 @@ export function replayDcaPlaybook(input: {
       !(leg.entry > 0) ||
       config.maxClips == null ||
       config.maxClips < 2 ||
-      config.dipPct == null ||
-      !(config.dipPct > 0) ||
       leg.clipsFilled >= config.maxClips
     ) {
       return null;
     }
-    const prices = dcaSafetyPrices({
+    const prices = dcaResolvedSafetyPrices({
       side,
       entryPrice: leg.entry,
       maxClips: config.maxClips,
+      spacingKind: config.spacingKind,
       dipPct: config.dipPct,
+      atr: currentAtr(),
+      atrSpacingMult: config.atrSpacingMult,
       deviationMultiplier: config.deviationMultiplier,
     });
     const limit = prices[leg.clipsFilled - 1];
@@ -361,6 +386,9 @@ export function replayDcaPlaybook(input: {
       takeProfitBasis: config.takeProfitBasis,
       stopLossBasis: config.stopLossBasis,
       trailingPct: config.trailingPct,
+      takeProfitKind: config.takeProfitKind,
+      atr: currentAtr(),
+      takeProfitAtrMult: config.takeProfitAtrMult,
     });
     if (planned.takeProfit == null) {
       return false;
@@ -418,6 +446,9 @@ export function replayDcaPlaybook(input: {
                 takeProfitBasis: config.takeProfitBasis,
                 stopLossBasis: config.stopLossBasis,
                 trailingPct: config.trailingPct,
+                takeProfitKind: config.takeProfitKind,
+                atr: currentAtr(),
+                takeProfitAtrMult: config.takeProfitAtrMult,
               }).stopLoss
             : null;
         const firstHit = adverseExit(side, adverse, [
@@ -480,6 +511,9 @@ export function replayDcaPlaybook(input: {
         dipPct: config.dipPct,
         intervalMinutes: config.intervalMinutes,
         deviationMultiplier: config.deviationMultiplier,
+        spacingKind: config.spacingKind,
+        atr: currentAtr(),
+        atrSpacingMult: config.atrSpacingMult,
         clipsFilled: live.clipsFilled,
         maxClips: config.maxClips,
         maxValue: dcaTickValueCapUsdt({
@@ -491,6 +525,8 @@ export function replayDcaPlaybook(input: {
         }),
         positionQty: live.qty > 0 ? live.qty : null,
         entryPrice: live.qty > 0 ? live.entry : null,
+        takeProfitKind: config.takeProfitKind,
+        takeProfitAtrMult: config.takeProfitAtrMult,
         takeProfitPct: config.takeProfitPct,
         stopLossPct: config.stopLossPct,
         takeProfitBasis: config.takeProfitBasis,

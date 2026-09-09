@@ -470,4 +470,39 @@ assert.equal(gridTp.orders[1]?.price, 99);
 assert.equal(gridTp.orders[2]?.reason, "take_profit");
 assert.ok(Math.abs((gridTp.orders[2]?.price ?? 0) - 99.5 * 1.014) < 1e-8);
 
+const atrTpReplayForm = new FormData();
+atrTpReplayForm.set("name", "ATR TP");
+atrTpReplayForm.set("symbol", "BTCUSDT");
+atrTpReplayForm.set("direction", "long");
+atrTpReplayForm.set("startKind", "immediate");
+atrTpReplayForm.set("clipSize", "1");
+atrTpReplayForm.set("sizeUnit", "qty");
+atrTpReplayForm.set("takeProfitKind", "atr");
+atrTpReplayForm.set("takeProfitAtrMult", "2");
+atrTpReplayForm.set("atrPeriod", "14");
+const atrTpReplayParsed = parseDcaPlaybookForm(atrTpReplayForm);
+assert.equal(atrTpReplayParsed.ok, true);
+if (!atrTpReplayParsed.ok) {
+  throw new Error("expected ATR TP parse");
+}
+const atrWarmup = Array.from({ length: 48 }, (_, index) => ({
+  timeMs: (index + 1) * 1_000,
+  open: 100,
+  high: 101,
+  low: 99,
+  close: 100,
+}));
+const atrClosed = replayDcaPlaybook({
+  bars: [
+    ...atrWarmup,
+    { timeMs: 49_000, open: 104, high: 104, low: 104, close: 104 },
+  ],
+  recipe: snapshotDcaRecipe(atrTpReplayParsed.config),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(atrClosed.orders[0]?.reason, "entry");
+assert.equal(atrClosed.orders.at(-1)?.reason, "take_profit");
+assert.ok((atrClosed.orders.at(-1)?.price ?? 0) >= 104);
+
 console.log("dca backtest replay checks passed");

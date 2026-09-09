@@ -652,6 +652,15 @@ export function bollingerBands(
   return { mid, upper: mid + band, lower: mid - band };
 }
 
+export function lastAtrValue(
+  bars: SupertrendBar[],
+  period: number,
+): number | null {
+  const rows = atrValues(bars, period);
+  const last = rows[rows.length - 1];
+  return last != null && last > 0 ? last : null;
+}
+
 export function atrValues(bars: SupertrendBar[], period: number): (number | null)[] {
   if (period < 1 || bars.length < period) {
     return [];
