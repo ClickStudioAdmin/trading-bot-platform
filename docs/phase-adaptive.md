@@ -24,7 +24,7 @@ Columns: `spacing_kind`, `atr_period`, `atr_spacing_mult`, `take_profit_kind`, `
 
 ## Wave 2 — Confirm
 
-One optional AND filter under Initial Order Trigger. Default **Off**. Pick a kind and the same When / period / timeframe widgets as Start appear. v1 is one confirm per side (Long confirm / Short confirm on Both). Cycle-lock Confirm with Start. Not stacked AND filters.
+One optional AND filter under each side’s start. Default **Off**. Pick a kind and the same When / period / timeframe widgets as Start appear. On Both, Long and Short are separate sections (start + Confirm). Cycle-lock Confirm with Start. Not stacked AND filters.
 
 Catalog: **Price vs EMA**, **Price vs SMA**, **RSI**, **Price vs BB**, **ATR band**, **Supertrend**. No MACD, no MA-cross, no ADX, no Market Structure.
 

@@ -1567,9 +1567,9 @@ export function DcaPlaybookForm({
         </p>
         <div className={rowClass}>
           {startKind === "price" && direction === "both" ? (
-            <div className="space-y-3 sm:col-span-2 lg:col-span-4">
+            <div className="space-y-4 sm:col-span-2 lg:col-span-4">
               <div className="space-y-2">
-                <p className={sectionTitleClass}>Long start</p>
+                <p className={sectionTitleClass}>Long</p>
                 <div className={rowClass}>
                   <TriggerFields
                     prefix="arm"
@@ -1579,9 +1579,19 @@ export function DcaPlaybookForm({
                     quoteLabel={policy.quoteLabel}
                   />
                 </div>
+                <DcaFilterBlock
+                  label="Confirm"
+                  prefix="confirm"
+                  side="long"
+                  spec={confirm}
+                  onChange={setConfirm}
+                  named
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
               </div>
-              <div className="space-y-2">
-                <p className={sectionTitleClass}>Short start</p>
+              <div className="space-y-2 border-t border-line pt-3">
+                <p className={sectionTitleClass}>Short</p>
                 <div className={rowClass}>
                   <TriggerFields
                     prefix="shortArm"
@@ -1603,17 +1613,39 @@ export function DcaPlaybookForm({
                     quoteLabel={policy.quoteLabel}
                   />
                 </div>
+                <DcaFilterBlock
+                  label="Confirm"
+                  prefix="shortConfirm"
+                  side="short"
+                  spec={shortConfirm}
+                  onChange={setShortConfirm}
+                  named
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
               </div>
             </div>
           ) : null}
           {startKind === "price" && direction !== "both" ? (
-            <TriggerFields
-              prefix="arm"
-              triggerBy={source?.armTrigger?.triggerBy ?? "last"}
-              compare={source?.armTrigger?.compare ?? "gte"}
-              price={optional(source?.armTrigger?.price)}
-              quoteLabel={policy.quoteLabel}
-            />
+            <>
+              <TriggerFields
+                prefix="arm"
+                triggerBy={source?.armTrigger?.triggerBy ?? "last"}
+                compare={source?.armTrigger?.compare ?? "gte"}
+                price={optional(source?.armTrigger?.price)}
+                quoteLabel={policy.quoteLabel}
+              />
+              <DcaFilterBlock
+                label="Confirm"
+                prefix="confirm"
+                side={direction === "short" ? "short" : "long"}
+                spec={confirm}
+                onChange={setConfirm}
+                named
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            </>
           ) : null}
           {startKind === "webhook" ? (
             signalWebhooks.length > 0 ? (
@@ -1647,10 +1679,52 @@ export function DcaPlaybookForm({
               </p>
             )
           ) : null}
-          {startKind === "indicator" && direction === "both" ? (
-            <div className="space-y-3 sm:col-span-2 lg:col-span-4">
+          {startKind === "webhook" && direction === "both" ? (
+            <div className="space-y-4 sm:col-span-2 lg:col-span-4">
               <div className="space-y-2">
-                <p className={sectionTitleClass}>Long start</p>
+                <p className={sectionTitleClass}>Long</p>
+                <DcaFilterBlock
+                  label="Confirm"
+                  prefix="confirm"
+                  side="long"
+                  spec={confirm}
+                  onChange={setConfirm}
+                  named
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
+              </div>
+              <div className="space-y-2 border-t border-line pt-3">
+                <p className={sectionTitleClass}>Short</p>
+                <DcaFilterBlock
+                  label="Confirm"
+                  prefix="shortConfirm"
+                  side="short"
+                  spec={shortConfirm}
+                  onChange={setShortConfirm}
+                  named
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
+              </div>
+            </div>
+          ) : null}
+          {startKind === "webhook" && direction !== "both" ? (
+            <DcaFilterBlock
+              label="Confirm"
+              prefix="confirm"
+              side={direction === "short" ? "short" : "long"}
+              spec={confirm}
+              onChange={setConfirm}
+              named
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+          ) : null}
+          {startKind === "indicator" && direction === "both" ? (
+            <div className="space-y-4 sm:col-span-2 lg:col-span-4">
+              <div className="space-y-2">
+                <p className={sectionTitleClass}>Long</p>
                 <div className={rowClass}>
                   <IndicatorStartFields
                     side="long"
@@ -1669,9 +1743,19 @@ export function DcaPlaybookForm({
                     onSlowPeriodChange={setIndicatorSlowPeriod}
                   />
                 </div>
+                <DcaFilterBlock
+                  label="Confirm"
+                  prefix="confirm"
+                  side="long"
+                  spec={confirm}
+                  onChange={setConfirm}
+                  named
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
               </div>
-              <div className="space-y-2">
-                <p className={sectionTitleClass}>Short start</p>
+              <div className="space-y-2 border-t border-line pt-3">
+                <p className={sectionTitleClass}>Short</p>
                 <div className={rowClass}>
                   <IndicatorStartFields
                     side="short"
@@ -1690,31 +1774,53 @@ export function DcaPlaybookForm({
                     onSlowPeriodChange={setShortIndicatorSlowPeriod}
                   />
                 </div>
+                <DcaFilterBlock
+                  label="Confirm"
+                  prefix="shortConfirm"
+                  side="short"
+                  spec={shortConfirm}
+                  onChange={setShortConfirm}
+                  named
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
               </div>
             </div>
           ) : null}
           {startKind === "indicator" && direction !== "both" ? (
-            <IndicatorStartFields
-              side={direction === "short" ? "short" : "long"}
-              prefix="indicator"
-              kind={indicatorKind}
-              timeframe={indicatorTimeframe}
-              compare={indicatorCompare}
-              level={indicatorLevel}
-              period={indicatorPeriod}
-              slowPeriod={indicatorSlowPeriod}
-              onKindChange={setIndicatorKind}
-              onTimeframeChange={setIndicatorTimeframe}
-              onCompareChange={setIndicatorCompare}
-              onLevelChange={setIndicatorLevel}
-              onPeriodChange={setIndicatorPeriod}
-              onSlowPeriodChange={setIndicatorSlowPeriod}
-            />
+            <>
+              <IndicatorStartFields
+                side={direction === "short" ? "short" : "long"}
+                prefix="indicator"
+                kind={indicatorKind}
+                timeframe={indicatorTimeframe}
+                compare={indicatorCompare}
+                level={indicatorLevel}
+                period={indicatorPeriod}
+                slowPeriod={indicatorSlowPeriod}
+                onKindChange={setIndicatorKind}
+                onTimeframeChange={setIndicatorTimeframe}
+                onCompareChange={setIndicatorCompare}
+                onLevelChange={setIndicatorLevel}
+                onPeriodChange={setIndicatorPeriod}
+                onSlowPeriodChange={setIndicatorSlowPeriod}
+              />
+              <DcaFilterBlock
+                label="Confirm"
+                prefix="confirm"
+                side={direction === "short" ? "short" : "long"}
+                spec={confirm}
+                onChange={setConfirm}
+                named
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            </>
           ) : null}
           {startKind === "trend" && direction === "both" ? (
-            <div className="space-y-3 sm:col-span-2 lg:col-span-4">
+            <div className="space-y-4 sm:col-span-2 lg:col-span-4">
               <div className="space-y-2">
-                <p className={sectionTitleClass}>Long start</p>
+                <p className={sectionTitleClass}>Long</p>
                 <div className={rowClass}>
                   <TrendStartFields
                     side="long"
@@ -1731,9 +1837,19 @@ export function DcaPlaybookForm({
                     onMultiplierChange={setIndicatorMultiplier}
                   />
                 </div>
+                <DcaFilterBlock
+                  label="Confirm"
+                  prefix="confirm"
+                  side="long"
+                  spec={confirm}
+                  onChange={setConfirm}
+                  named
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
               </div>
-              <div className="space-y-2">
-                <p className={sectionTitleClass}>Short start</p>
+              <div className="space-y-2 border-t border-line pt-3">
+                <p className={sectionTitleClass}>Short</p>
                 <div className={rowClass}>
                   <TrendStartFields
                     side="short"
@@ -1750,60 +1866,47 @@ export function DcaPlaybookForm({
                     onMultiplierChange={setShortIndicatorMultiplier}
                   />
                 </div>
+                <DcaFilterBlock
+                  label="Confirm"
+                  prefix="shortConfirm"
+                  side="short"
+                  spec={shortConfirm}
+                  onChange={setShortConfirm}
+                  named
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
               </div>
             </div>
           ) : null}
           {startKind === "trend" && direction !== "both" ? (
-            <TrendStartFields
-              side={direction === "short" ? "short" : "long"}
-              prefix="indicator"
-              kind={indicatorKind}
-              timeframe={indicatorTimeframe}
-              compare={indicatorCompare}
-              period={indicatorPeriod}
-              multiplier={indicatorMultiplier}
-              onKindChange={setIndicatorKind}
-              onTimeframeChange={setIndicatorTimeframe}
-              onCompareChange={setIndicatorCompare}
-              onPeriodChange={setIndicatorPeriod}
-              onMultiplierChange={setIndicatorMultiplier}
-            />
-          ) : null}
-          {direction === "both" ? (
             <>
+              <TrendStartFields
+                side={direction === "short" ? "short" : "long"}
+                prefix="indicator"
+                kind={indicatorKind}
+                timeframe={indicatorTimeframe}
+                compare={indicatorCompare}
+                period={indicatorPeriod}
+                multiplier={indicatorMultiplier}
+                onKindChange={setIndicatorKind}
+                onTimeframeChange={setIndicatorTimeframe}
+                onCompareChange={setIndicatorCompare}
+                onPeriodChange={setIndicatorPeriod}
+                onMultiplierChange={setIndicatorMultiplier}
+              />
               <DcaFilterBlock
-                label="Long confirm"
+                label="Confirm"
                 prefix="confirm"
-                side="long"
+                side={direction === "short" ? "short" : "long"}
                 spec={confirm}
                 onChange={setConfirm}
                 named
                 fieldClass={fieldClass}
                 labelClass={labelClass}
               />
-              <DcaFilterBlock
-                label="Short confirm"
-                prefix="shortConfirm"
-                side="short"
-                spec={shortConfirm}
-                onChange={setShortConfirm}
-                named
-                fieldClass={fieldClass}
-                labelClass={labelClass}
-              />
             </>
-          ) : (
-            <DcaFilterBlock
-              label="Confirm"
-              prefix="confirm"
-              side={direction === "short" ? "short" : "long"}
-              spec={confirm}
-              onChange={setConfirm}
-              named
-              fieldClass={fieldClass}
-              labelClass={labelClass}
-            />
-          )}
+          ) : null}
         </div>
       </fieldset>
 
@@ -2334,6 +2437,29 @@ export function DcaPlaybookForm({
             />
           </label>
         </div>
+        <p className={sectionTitleClass}>
+          Move Breakeven
+        </p>
+        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+          <label className={labelClass}>
+            Move stop to breakeven at %
+            <PercentInput
+              name="breakevenActivationPct"
+              defaultValue={optional(source?.breakevenActivationPct)}
+              placeholder="Off"
+              ariaLabel="Move stop to breakeven at percent"
+            />
+          </label>
+          <label className={labelClass}>
+            Breakeven offset %
+            <PercentInput
+              name="breakevenOffsetPct"
+              defaultValue={optional(source?.breakevenOffsetPct)}
+              placeholder="0"
+              ariaLabel="Breakeven offset percent"
+            />
+          </label>
+        </div>
         {direction === "both" ? (
           <div className="space-y-3">
             <DcaFilterBlock
@@ -2369,29 +2495,6 @@ export function DcaPlaybookForm({
             labelClass={labelClass}
           />
         )}
-        <p className={sectionTitleClass}>
-          Move Breakeven
-        </p>
-        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
-          <label className={labelClass}>
-            Move stop to breakeven at %
-            <PercentInput
-              name="breakevenActivationPct"
-              defaultValue={optional(source?.breakevenActivationPct)}
-              placeholder="Off"
-              ariaLabel="Move stop to breakeven at percent"
-            />
-          </label>
-          <label className={labelClass}>
-            Breakeven offset %
-            <PercentInput
-              name="breakevenOffsetPct"
-              defaultValue={optional(source?.breakevenOffsetPct)}
-              placeholder="0"
-              ariaLabel="Breakeven offset percent"
-            />
-          </label>
-        </div>
       </fieldset>
       </div>
 

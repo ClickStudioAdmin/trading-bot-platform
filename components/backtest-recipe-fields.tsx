@@ -681,10 +681,106 @@ export function BacktestRecipeFields({
           <FieldNote message={issueFor(issues, "startKind")} />
         </label>
         {recipe.startKind === "price" && recipe.direction === "both" ? (
+          <div className="space-y-4 sm:col-span-2">
+            <div className="space-y-2">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+                Long
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <BacktestPriceStartFields
+                  compare={recipe.armTrigger?.compare ?? "gte"}
+                  price={recipe.armTrigger?.price ?? null}
+                  priceIssue={issueFor(issues, "armPrice")}
+                  onCompare={(compare) =>
+                    onChange({
+                      ...recipe,
+                      armTrigger: {
+                        triggerBy: recipe.armTrigger?.triggerBy ?? "last",
+                        compare,
+                        price: recipe.armTrigger?.price ?? 0,
+                      },
+                    })
+                  }
+                  onPrice={(price) =>
+                    onChange({
+                      ...recipe,
+                      armTrigger: {
+                        triggerBy: recipe.armTrigger?.triggerBy ?? "last",
+                        compare: recipe.armTrigger?.compare ?? "gte",
+                        price: price ?? 0,
+                      },
+                    })
+                  }
+                />
+              </div>
+              <DcaFilterBlock
+                label="Confirm"
+                prefix="confirm"
+                side="long"
+                spec={recipe.confirm ?? null}
+                onChange={(next) => onChange({ ...recipe, confirm: next })}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            </div>
+            <div className="space-y-2 border-t border-line pt-3">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+                Short
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <BacktestPriceStartFields
+                  compare={
+                    recipe.shortArmTrigger?.compare ??
+                    (recipe.armTrigger?.compare === "gte" ? "lte" : "gte")
+                  }
+                  price={
+                    recipe.shortArmTrigger?.price ??
+                    recipe.armTrigger?.price ??
+                    null
+                  }
+                  priceIssue={issueFor(issues, "shortArmPrice")}
+                  onCompare={(compare) =>
+                    onChange({
+                      ...recipe,
+                      shortArmTrigger: {
+                        triggerBy:
+                          recipe.shortArmTrigger?.triggerBy ??
+                          recipe.armTrigger?.triggerBy ??
+                          "last",
+                        compare,
+                        price: recipe.shortArmTrigger?.price ?? 0,
+                      },
+                    })
+                  }
+                  onPrice={(price) =>
+                    onChange({
+                      ...recipe,
+                      shortArmTrigger: {
+                        triggerBy:
+                          recipe.shortArmTrigger?.triggerBy ??
+                          recipe.armTrigger?.triggerBy ??
+                          "last",
+                        compare: recipe.shortArmTrigger?.compare ?? "lte",
+                        price: price ?? 0,
+                      },
+                    })
+                  }
+                />
+              </div>
+              <DcaFilterBlock
+                label="Confirm"
+                prefix="shortConfirm"
+                side="short"
+                spec={recipe.shortConfirm ?? null}
+                onChange={(next) => onChange({ ...recipe, shortConfirm: next })}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            </div>
+          </div>
+        ) : null}
+        {recipe.startKind === "price" && recipe.direction !== "both" ? (
           <>
-            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
-              Long start
-            </p>
             <BacktestPriceStartFields
               compare={recipe.armTrigger?.compare ?? "gte"}
               price={recipe.armTrigger?.price ?? null}
@@ -710,83 +806,105 @@ export function BacktestRecipeFields({
                 })
               }
             />
-            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
-              Short start
-            </p>
-            <BacktestPriceStartFields
-              compare={
-                recipe.shortArmTrigger?.compare ??
-                (recipe.armTrigger?.compare === "gte" ? "lte" : "gte")
-              }
-              price={
-                recipe.shortArmTrigger?.price ??
-                recipe.armTrigger?.price ??
-                null
-              }
-              priceIssue={issueFor(issues, "shortArmPrice")}
-              onCompare={(compare) =>
-                onChange({
-                  ...recipe,
-                  shortArmTrigger: {
-                    triggerBy:
-                      recipe.shortArmTrigger?.triggerBy ??
-                      recipe.armTrigger?.triggerBy ??
-                      "last",
-                    compare,
-                    price: recipe.shortArmTrigger?.price ?? 0,
-                  },
-                })
-              }
-              onPrice={(price) =>
-                onChange({
-                  ...recipe,
-                  shortArmTrigger: {
-                    triggerBy:
-                      recipe.shortArmTrigger?.triggerBy ??
-                      recipe.armTrigger?.triggerBy ??
-                      "last",
-                    compare: recipe.shortArmTrigger?.compare ?? "lte",
-                    price: price ?? 0,
-                  },
-                })
-              }
+            <DcaFilterBlock
+              label="Confirm"
+              prefix="confirm"
+              side={recipe.direction === "short" ? "short" : "long"}
+              spec={recipe.confirm ?? null}
+              onChange={(next) => onChange({ ...recipe, confirm: next })}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
             />
           </>
         ) : null}
-        {recipe.startKind === "price" && recipe.direction !== "both" ? (
-          <BacktestPriceStartFields
-            compare={recipe.armTrigger?.compare ?? "gte"}
-            price={recipe.armTrigger?.price ?? null}
-            priceIssue={issueFor(issues, "armPrice")}
-            onCompare={(compare) =>
-              onChange({
-                ...recipe,
-                armTrigger: {
-                  triggerBy: recipe.armTrigger?.triggerBy ?? "last",
-                  compare,
-                  price: recipe.armTrigger?.price ?? 0,
-                },
-              })
-            }
-            onPrice={(price) =>
-              onChange({
-                ...recipe,
-                armTrigger: {
-                  triggerBy: recipe.armTrigger?.triggerBy ?? "last",
-                  compare: recipe.armTrigger?.compare ?? "gte",
-                  price: price ?? 0,
-                },
-              })
-            }
-          />
-        ) : null}
         {recipe.startKind === "indicator" && recipe.direction === "both" ? (
+          <div className="space-y-4 sm:col-span-2">
+            <div className="space-y-2">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+                Long
+              </p>
+              <BacktestIndicatorStartFields
+                side="long"
+                kind={recipe.indicatorKind ?? "rsi"}
+                timeframe={recipe.indicatorTimeframe ?? "15"}
+                compare={recipe.indicatorCompare}
+                level={recipe.indicatorLevel}
+                period={recipe.indicatorPeriod}
+                slowPeriod={recipe.indicatorSlowPeriod}
+                onChange={(patch) => onChange({ ...recipe, ...patch })}
+              />
+              <DcaFilterBlock
+                label="Confirm"
+                prefix="confirm"
+                side="long"
+                spec={recipe.confirm ?? null}
+                onChange={(next) => onChange({ ...recipe, confirm: next })}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            </div>
+            <div className="space-y-2 border-t border-line pt-3">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+                Short
+              </p>
+              <BacktestIndicatorStartFields
+                side="short"
+                kind={recipe.shortIndicatorKind ?? recipe.indicatorKind ?? "rsi"}
+                timeframe={
+                  recipe.shortIndicatorTimeframe ??
+                  recipe.indicatorTimeframe ??
+                  "15"
+                }
+                compare={
+                  recipe.shortIndicatorCompare ??
+                  (recipe.indicatorKind === "rsi"
+                    ? parseDcaIndicatorCompare(
+                        oppositeRsiCompare(
+                          recipe.indicatorCompare ?? "cross_lte",
+                        ),
+                      )
+                    : recipe.indicatorCompare)
+                }
+                level={
+                  recipe.shortIndicatorLevel ??
+                  (recipe.indicatorKind === "rsi"
+                    ? oppositeRsiLevel(recipe.indicatorLevel)
+                    : recipe.indicatorLevel)
+                }
+                period={
+                  recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod
+                }
+                slowPeriod={
+                  recipe.shortIndicatorSlowPeriod ?? recipe.indicatorSlowPeriod
+                }
+                onChange={(patch) =>
+                  onChange({
+                    ...recipe,
+                    shortIndicatorKind: patch.indicatorKind,
+                    shortIndicatorTimeframe: patch.indicatorTimeframe,
+                    shortIndicatorCompare: patch.indicatorCompare,
+                    shortIndicatorLevel: patch.indicatorLevel,
+                    shortIndicatorPeriod: patch.indicatorPeriod,
+                    shortIndicatorSlowPeriod: patch.indicatorSlowPeriod,
+                  })
+                }
+              />
+              <DcaFilterBlock
+                label="Confirm"
+                prefix="shortConfirm"
+                side="short"
+                spec={recipe.shortConfirm ?? null}
+                onChange={(next) => onChange({ ...recipe, shortConfirm: next })}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            </div>
+          </div>
+        ) : null}
+        {recipe.startKind === "indicator" && recipe.direction !== "both" ? (
           <>
-            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
-              Long start
-            </p>
             <BacktestIndicatorStartFields
-              side="long"
+              side={recipe.direction === "short" ? "short" : "long"}
               kind={recipe.indicatorKind ?? "rsi"}
               timeframe={recipe.indicatorTimeframe ?? "15"}
               compare={recipe.indicatorCompare}
@@ -795,154 +913,107 @@ export function BacktestRecipeFields({
               slowPeriod={recipe.indicatorSlowPeriod}
               onChange={(patch) => onChange({ ...recipe, ...patch })}
             />
-            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
-              Short start
-            </p>
-            <BacktestIndicatorStartFields
-              side="short"
-              kind={recipe.shortIndicatorKind ?? recipe.indicatorKind ?? "rsi"}
-              timeframe={
-                recipe.shortIndicatorTimeframe ??
-                recipe.indicatorTimeframe ??
-                "15"
-              }
-              compare={
-                recipe.shortIndicatorCompare ??
-                (recipe.indicatorKind === "rsi"
-                  ? parseDcaIndicatorCompare(
-                      oppositeRsiCompare(
-                        recipe.indicatorCompare ?? "cross_lte",
-                      ),
-                    )
-                  : recipe.indicatorCompare)
-              }
-              level={
-                recipe.shortIndicatorLevel ??
-                (recipe.indicatorKind === "rsi"
-                  ? oppositeRsiLevel(recipe.indicatorLevel)
-                  : recipe.indicatorLevel)
-              }
-              period={
-                recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod
-              }
-              slowPeriod={
-                recipe.shortIndicatorSlowPeriod ?? recipe.indicatorSlowPeriod
-              }
-              onChange={(patch) =>
-                onChange({
-                  ...recipe,
-                  shortIndicatorKind: patch.indicatorKind,
-                  shortIndicatorTimeframe: patch.indicatorTimeframe,
-                  shortIndicatorCompare: patch.indicatorCompare,
-                  shortIndicatorLevel: patch.indicatorLevel,
-                  shortIndicatorPeriod: patch.indicatorPeriod,
-                  shortIndicatorSlowPeriod: patch.indicatorSlowPeriod,
-                })
-              }
-            />
-          </>
-        ) : null}
-        {recipe.startKind === "indicator" && recipe.direction !== "both" ? (
-          <BacktestIndicatorStartFields
-            side={recipe.direction === "short" ? "short" : "long"}
-            kind={recipe.indicatorKind ?? "rsi"}
-            timeframe={recipe.indicatorTimeframe ?? "15"}
-            compare={recipe.indicatorCompare}
-            level={recipe.indicatorLevel}
-            period={recipe.indicatorPeriod}
-            slowPeriod={recipe.indicatorSlowPeriod}
-            onChange={(patch) => onChange({ ...recipe, ...patch })}
-          />
-        ) : null}
-        {recipe.startKind === "trend" && recipe.direction === "both" ? (
-          <>
-            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
-              Long start
-            </p>
-            <BacktestTrendStartFields
-              side="long"
-              timeframe={recipe.indicatorTimeframe ?? "15"}
-              compare={recipe.indicatorCompare}
-              period={recipe.indicatorPeriod}
-              multiplier={recipe.indicatorMultiplier}
-              onChange={(patch) => onChange({ ...recipe, ...patch })}
-            />
-            <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint sm:col-span-2">
-              Short start
-            </p>
-            <BacktestTrendStartFields
-              side="short"
-              timeframe={
-                recipe.shortIndicatorTimeframe ??
-                recipe.indicatorTimeframe ??
-                "15"
-              }
-              compare={
-                recipe.shortIndicatorCompare ?? recipe.indicatorCompare
-              }
-              period={
-                recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod
-              }
-              multiplier={
-                recipe.shortIndicatorMultiplier ?? recipe.indicatorMultiplier
-              }
-              onChange={(patch) =>
-                onChange({
-                  ...recipe,
-                  shortIndicatorKind: "supertrend",
-                  shortIndicatorTimeframe: patch.indicatorTimeframe,
-                  shortIndicatorCompare: patch.indicatorCompare,
-                  shortIndicatorPeriod: patch.indicatorPeriod,
-                  shortIndicatorMultiplier: patch.indicatorMultiplier,
-                })
-              }
-            />
-          </>
-        ) : null}
-        {recipe.startKind === "trend" && recipe.direction !== "both" ? (
-          <BacktestTrendStartFields
-            side={recipe.direction === "short" ? "short" : "long"}
-            timeframe={recipe.indicatorTimeframe ?? "15"}
-            compare={recipe.indicatorCompare}
-            period={recipe.indicatorPeriod}
-            multiplier={recipe.indicatorMultiplier}
-            onChange={(patch) =>
-              onChange({ ...recipe, indicatorKind: "supertrend", ...patch })
-            }
-          />
-        ) : null}
-        {recipe.direction === "both" ? (
-          <>
             <DcaFilterBlock
-              label="Long confirm"
+              label="Confirm"
               prefix="confirm"
-              side="long"
+              side={recipe.direction === "short" ? "short" : "long"}
               spec={recipe.confirm ?? null}
               onChange={(next) => onChange({ ...recipe, confirm: next })}
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
+          </>
+        ) : null}
+        {recipe.startKind === "trend" && recipe.direction === "both" ? (
+          <div className="space-y-4 sm:col-span-2">
+            <div className="space-y-2">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+                Long
+              </p>
+              <BacktestTrendStartFields
+                side="long"
+                timeframe={recipe.indicatorTimeframe ?? "15"}
+                compare={recipe.indicatorCompare}
+                period={recipe.indicatorPeriod}
+                multiplier={recipe.indicatorMultiplier}
+                onChange={(patch) => onChange({ ...recipe, ...patch })}
+              />
+              <DcaFilterBlock
+                label="Confirm"
+                prefix="confirm"
+                side="long"
+                spec={recipe.confirm ?? null}
+                onChange={(next) => onChange({ ...recipe, confirm: next })}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            </div>
+            <div className="space-y-2 border-t border-line pt-3">
+              <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+                Short
+              </p>
+              <BacktestTrendStartFields
+                side="short"
+                timeframe={
+                  recipe.shortIndicatorTimeframe ??
+                  recipe.indicatorTimeframe ??
+                  "15"
+                }
+                compare={
+                  recipe.shortIndicatorCompare ?? recipe.indicatorCompare
+                }
+                period={
+                  recipe.shortIndicatorPeriod ?? recipe.indicatorPeriod
+                }
+                multiplier={
+                  recipe.shortIndicatorMultiplier ?? recipe.indicatorMultiplier
+                }
+                onChange={(patch) =>
+                  onChange({
+                    ...recipe,
+                    shortIndicatorKind: "supertrend",
+                    shortIndicatorTimeframe: patch.indicatorTimeframe,
+                    shortIndicatorCompare: patch.indicatorCompare,
+                    shortIndicatorPeriod: patch.indicatorPeriod,
+                    shortIndicatorMultiplier: patch.indicatorMultiplier,
+                  })
+                }
+              />
+              <DcaFilterBlock
+                label="Confirm"
+                prefix="shortConfirm"
+                side="short"
+                spec={recipe.shortConfirm ?? null}
+                onChange={(next) => onChange({ ...recipe, shortConfirm: next })}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            </div>
+          </div>
+        ) : null}
+        {recipe.startKind === "trend" && recipe.direction !== "both" ? (
+          <>
+            <BacktestTrendStartFields
+              side={recipe.direction === "short" ? "short" : "long"}
+              timeframe={recipe.indicatorTimeframe ?? "15"}
+              compare={recipe.indicatorCompare}
+              period={recipe.indicatorPeriod}
+              multiplier={recipe.indicatorMultiplier}
+              onChange={(patch) =>
+                onChange({ ...recipe, indicatorKind: "supertrend", ...patch })
+              }
+            />
             <DcaFilterBlock
-              label="Short confirm"
-              prefix="shortConfirm"
-              side="short"
-              spec={recipe.shortConfirm ?? null}
-              onChange={(next) => onChange({ ...recipe, shortConfirm: next })}
+              label="Confirm"
+              prefix="confirm"
+              side={recipe.direction === "short" ? "short" : "long"}
+              spec={recipe.confirm ?? null}
+              onChange={(next) => onChange({ ...recipe, confirm: next })}
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
           </>
-        ) : (
-          <DcaFilterBlock
-            label="Confirm"
-            prefix="confirm"
-            side={recipe.direction === "short" ? "short" : "long"}
-            spec={recipe.confirm ?? null}
-            onChange={(next) => onChange({ ...recipe, confirm: next })}
-            fieldClass={fieldClass}
-            labelClass={labelClass}
-          />
-        )}
+        ) : null}
         {recipe.maxValue != null &&
         recipe.maxValue > 0 &&
         recipe.maxClips != null &&
