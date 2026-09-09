@@ -2153,19 +2153,7 @@ export function DcaPlaybookForm({
             />
           </label>
           ) : (
-          <label className={labelClass}>
-            ATR multiple
-            <GroupedNumberInput
-              name="takeProfitAtrMult"
-              value={takeProfitAtrMult}
-              onChange={setTakeProfitAtrMult}
-              allowDecimal
-              className={fieldClass}
-              ariaLabel="Take profit ATR multiple"
-            />
-          </label>
-          )}
-          {takeProfitKind === "atr" ? (
+          <>
             <CycleLock
               locked={
                 cycleLocked && averaging === "dip" && spacingKind === "atr"
@@ -2191,7 +2179,19 @@ export function DcaPlaybookForm({
                 ) : null}
               </label>
             </CycleLock>
-          ) : null}
+            <label className={labelClass}>
+              ATR multiple
+              <GroupedNumberInput
+                name="takeProfitAtrMult"
+                value={takeProfitAtrMult}
+                onChange={setTakeProfitAtrMult}
+                allowDecimal
+                className={fieldClass}
+                ariaLabel="Take profit ATR multiple"
+              />
+            </label>
+          </>
+          )}
         </div>
         <label className="flex items-start gap-2 py-2 text-xs text-ink">
           <input
