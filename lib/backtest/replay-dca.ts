@@ -10,11 +10,12 @@ import {
   type DcaLegState,
 } from "@/lib/dca/playbook";
 import {
-  lastAtrValue,
+  atrAtEachTapeBar,
   resampleBarsForTimeframe,
   resampleClosesForTimeframe,
 } from "@/lib/dca/indicators";
 import {
+  DEFAULT_DCA_ATR_PERIOD,
   dcaClipQtyAt,
   dcaPlannedExits,
   dcaResolvedSafetyPrices,
@@ -138,6 +139,23 @@ export function replayDcaPlaybook(input: {
   let liquidated = false;
   const closes: number[] = [];
   const ohlc: Array<{ high: number; low: number; close: number }> = [];
+  const needsAtr =
+    (config.spacingKind ?? "percent") === "atr" ||
+    (config.takeProfitKind ?? "percent") === "atr";
+  const firstBar = input.bars[0];
+  const lastBar = input.bars[input.bars.length - 1];
+  const tape =
+    firstBar && lastBar
+      ? backtestTapeInterval(input.recipe, firstBar.timeMs, lastBar.timeMs)
+      : dcaAtrTimeframe(config);
+  const atrByBar = needsAtr
+    ? atrAtEachTapeBar(
+        input.bars,
+        tape,
+        dcaAtrTimeframe(config),
+        config.atrPeriod ?? DEFAULT_DCA_ATR_PERIOD,
+      )
+    : null;
 
   function flatten(
     side: FuturesSide,
@@ -303,22 +321,10 @@ export function replayDcaPlaybook(input: {
   }
 
   function currentAtr(): number | null {
-    if (
-      (config.spacingKind ?? "percent") !== "atr" &&
-      (config.takeProfitKind ?? "percent") !== "atr"
-    ) {
+    if (atrByBar == null || ohlc.length === 0) {
       return null;
     }
-    if (config.atrPeriod == null) {
-      return null;
-    }
-    const tape = backtestTapeInterval(input.recipe, 1, 2);
-    const atrBars = resampleBarsForTimeframe(
-      ohlc,
-      tape,
-      dcaAtrTimeframe(config),
-    );
-    return lastAtrValue(atrBars, config.atrPeriod);
+    return atrByBar[ohlc.length - 1] ?? null;
   }
 
   function nextRestingGridPrice(side: FuturesSide): number | null {

@@ -461,6 +461,40 @@ export function resampleBarsForTimeframe(
   return out;
 }
 
+export function atrAtEachTapeBar(
+  bars: SupertrendBar[],
+  tape: DcaIndicatorTimeframe,
+  atrTimeframe: DcaIndicatorTimeframe,
+  period: number,
+): (number | null)[] {
+  if (period < 1 || bars.length === 0) {
+    return bars.map(() => null);
+  }
+  const resampled = resampleBarsForTimeframe(bars, tape, atrTimeframe);
+  const series = atrValues(resampled, period);
+  if (resampled.length === bars.length) {
+    return bars.map((_, index) => {
+      const value = series[index];
+      return value != null && value > 0 ? value : null;
+    });
+  }
+  const step = Math.round(
+    DCA_INDICATOR_TIMEFRAME_MINUTES[atrTimeframe] /
+      DCA_INDICATOR_TIMEFRAME_MINUTES[tape],
+  );
+  if (!(step > 1)) {
+    return bars.map((_, index) => {
+      const value = series[index];
+      return value != null && value > 0 ? value : null;
+    });
+  }
+  return bars.map((_, index) => {
+    const completed = Math.floor((index + 1) / step);
+    const value = series[completed - 1];
+    return value != null && value > 0 ? value : null;
+  });
+}
+
 export function oppositeRsiCompare(compare: string): string {
   if (compare === "cross_lte") {
     return "cross_gte";

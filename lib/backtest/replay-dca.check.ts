@@ -505,4 +505,21 @@ assert.equal(atrClosed.orders[0]?.reason, "entry");
 assert.equal(atrClosed.orders.at(-1)?.reason, "take_profit");
 assert.ok((atrClosed.orders.at(-1)?.price ?? 0) >= 104);
 
+const atrLongTape = Array.from({ length: 2500 }, (_, index) => ({
+  timeMs: (index + 1) * 60_000,
+  open: 100,
+  high: 101,
+  low: 99,
+  close: 100,
+}));
+const atrLongStarted = Date.now();
+const atrLong = replayDcaPlaybook({
+  bars: atrLongTape,
+  recipe: snapshotDcaRecipe(atrTpReplayParsed.config),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.ok(Date.now() - atrLongStarted < 2000);
+assert.equal(atrLong.orders[0]?.reason, "entry");
+
 console.log("dca backtest replay checks passed");

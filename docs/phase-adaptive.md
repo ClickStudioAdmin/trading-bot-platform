@@ -14,7 +14,7 @@ Additional orders: Spacing `%` | `ATR`. Geometric ATR step is `atr * atr_spacing
 
 Take profit: Method `%` | `ATR × multiplier` from the same basis (average / first fill). `%` TP is still PnL %. ATR TP compares mark to the ATR price. Trailing stays `%`.
 
-ATR uses public klines already loaded for indicators. No `atr_timeframe` column. Use the playbook indicator/trend timeframe, else `15`. Defaults: ATR period **14**, spacing multiple **1**, TP ATR multiple **2**. Desk Summary reads last **closed** ATR on that timeframe so covered range, add prices, and ATR take profit show USDT and % — not a frozen table.
+ATR uses public klines already loaded for indicators. No `atr_timeframe` column. Use the playbook indicator/trend timeframe, else `15`. Defaults: ATR period **14**, spacing multiple **1**, TP ATR multiple **2**. Desk Summary reads last **closed** ATR on that timeframe so covered range, add prices, and ATR take profit show USDT and % — not a frozen table. Backtest precomputes that ATR series once per tape; it must not rebuild ATR on every bar. Backtest precomputes that ATR series once per tape; it must not rebuild ATR on every bar.
 
 Cycle lock: spacing / ATR add fields lock while a position is open. TP kind and TP ATR multiple still save.
 
