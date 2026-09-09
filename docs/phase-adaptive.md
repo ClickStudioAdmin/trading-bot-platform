@@ -22,6 +22,8 @@ Columns: `spacing_kind`, `atr_period`, `atr_spacing_mult`, `take_profit_kind`, `
 
 ## Later waves (parked)
 
+Dual Both leftover overlap is this path (confirm the start, then Exit-if the old side). Not an in-playbook natural hedge or opposite-aware clip. Click locked that 9 Sep 2026. Do not start until Click says go.
+
 | Wave | What | Notes |
 | --- | --- | --- |
 | **2** | Optional AND confirming filters | HTF EMA, RSI, BB, ATR band. Per side on Both. Sit beside Start; do not replace Dual Both. |
