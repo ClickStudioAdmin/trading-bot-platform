@@ -234,8 +234,6 @@ export function ThemeBotFormDraft() {
   const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(null);
   const [skipIfOpen, setSkipIfOpen] = useState(true);
   const [restGrid, setRestGrid] = useState(true);
-  const [ladderOpen, setLadderOpen] = useState(true);
-  const [ladderTab, setLadderTab] = useState<"long" | "short">("long");
   const closing = action === "close_long" || action === "close_short";
   const startKindForFields =
     startKind === "trend" ? "supertrend" : indicatorKind;
@@ -749,58 +747,19 @@ export function ThemeBotFormDraft() {
           </>
         ) : null}
 
-        <section className="space-y-3 py-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
-              aria-expanded={ladderOpen}
-              onClick={() => setLadderOpen((open) => !open)}
-            >
-              {ladderOpen ? "Hide Summary" : "Show Summary"}
-              <ChevronIcon className={ladderOpen ? "rotate-90" : undefined} />
-            </button>
-            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-              <button type="button" className={headerGhostClass}>
-                Backtest
-              </button>
-              <button type="button" className={headerGhostClass}>
-                Save as template
-              </button>
-              <button type="button" className={headerGhostClass}>
-                Save as platform template
-              </button>
-              <button type="button" className={headerRemoveClass}>
-                Remove
-              </button>
-            </div>
-          </div>
-          {ladderOpen ? (
-            <div className="space-y-3">
-              <p className={sectionTitleClass}>Summary</p>
-              <p className="text-xs text-ink-muted">
-                Summary is based on the current asset price and the parameters
-                configured above
-              </p>
-              <div className="flex flex-wrap">
-                <DraftStat
-                  label="Covered Range"
-                  value="4.2%"
-                  hint="First fill to last clip"
-                />
-                <DraftStat
-                  label="Max Exposure"
-                  value="$1,200"
-                  hint="Full ladder notional"
-                />
-                <DraftStat
-                  label="Initial Margin"
-                  value="$120"
-                  hint="Max exposure ÷ 10×"
-                />
-              </div>
-            </div>
-          ) : null}
+        <section className="flex flex-wrap items-center justify-end gap-2 py-5">
+          <button type="button" className={headerGhostClass}>
+            Backtest
+          </button>
+          <button type="button" className={headerGhostClass}>
+            Save as template
+          </button>
+          <button type="button" className={headerGhostClass}>
+            Save as platform template
+          </button>
+          <button type="button" className={headerRemoveClass}>
+            Remove
+          </button>
         </section>
       </div>
 
@@ -903,31 +862,61 @@ function ThemeBotFormReference() {
         </p>
       </div>
 
-      <div className="space-y-2">
-        <p className={labelClass}>Both-side summary tabs</p>
+      <div className="space-y-3">
+        <p className={labelClass}>DCA summary / ladder</p>
         <p className="text-xs text-ink-faint">
-          Only when Direction is Both. The sample bot is Buy, so it has one
-          summary.
+          DCA only. Not on the Perps baseline. Show / Hide when the bot is
+          running. Long / Short tabs only when Direction is Both.
         </p>
-        <div
-          role="tablist"
-          aria-label="Ladder side"
-          className="flex gap-1 border-b border-line"
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
         >
-          <TabButton
-            selected={true}
-            panelId="theme-ref-ladder"
-            onClick={() => undefined}
+          Hide Summary
+          <ChevronIcon className="rotate-90" />
+        </button>
+        <div className="flex items-end justify-between gap-3 border-b border-line">
+          <div
+            role="tablist"
+            aria-label="Ladder side"
+            className="flex gap-1"
           >
-            Long ladder
-          </TabButton>
-          <TabButton
-            selected={false}
-            panelId="theme-ref-ladder"
-            onClick={() => undefined}
-          >
-            Short ladder
-          </TabButton>
+            <TabButton
+              selected={true}
+              panelId="theme-ref-ladder"
+              onClick={() => undefined}
+            >
+              Long ladder
+            </TabButton>
+            <TabButton
+              selected={false}
+              panelId="theme-ref-ladder"
+              onClick={() => undefined}
+            >
+              Short ladder
+            </TabButton>
+          </div>
+          <p className="pb-2 text-right text-xs text-ink-muted">
+            Summary is based on the current asset price and the parameters
+            configured above
+          </p>
+        </div>
+        <div id="theme-ref-ladder" role="tabpanel" className="flex flex-wrap">
+          <DraftStat
+            label="Covered Range"
+            value="4.2%"
+            hint="First fill to last clip"
+          />
+          <DraftStat
+            label="Max Exposure"
+            value="$1,200"
+            hint="Full ladder notional · This side only"
+          />
+          <DraftStat
+            label="Initial Margin"
+            value="$120"
+            hint="Max exposure ÷ 10×"
+          />
         </div>
       </div>
     </div>
