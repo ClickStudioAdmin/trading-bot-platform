@@ -48,6 +48,7 @@ import {
   dcaCloneIdleDraft,
   dcaCopyName,
   dcaPnlPct,
+  dcaSeriesStartEval,
   decideDcaTick,
   DEFAULT_DCA_NAME,
   formatDcaNextAdd,
@@ -2489,5 +2490,47 @@ assert.equal(dcaIndicatorStartLatches("rsi", "lte"), false);
 assert.equal(dcaIndicatorStartLatches("ema_cross", null), true);
 assert.equal(dcaIndicatorStartLatches("sma_cross", null), true);
 assert.deepEqual(indicatorClosesForCross([1, 2, 3, 4]), [1, 2, 3]);
+
+const sitTrendBars = Array.from({ length: 40 }, (_, i) => ({
+  high: 100 + i + 0.4,
+  low: 100 + i - 0.4,
+  close: 100 + i,
+}));
+assert.equal(
+  dcaSeriesStartEval({
+    startKind: "trend",
+    side: "long",
+    indicatorKind: "supertrend",
+    indicatorCompare: "gte",
+    clipsFilled: 0,
+    bars: sitTrendBars,
+    closes: sitTrendBars.map((row) => row.close),
+  }).due,
+  true,
+);
+assert.equal(
+  dcaSeriesStartEval({
+    startKind: "trend",
+    side: "short",
+    indicatorKind: "supertrend",
+    indicatorCompare: "lte",
+    clipsFilled: 0,
+    bars: sitTrendBars,
+    closes: sitTrendBars.map((row) => row.close),
+  }).due,
+  false,
+);
+assert.equal(
+  dcaSeriesStartEval({
+    startKind: "trend",
+    side: "long",
+    indicatorKind: "supertrend",
+    indicatorCompare: "cross_gte",
+    clipsFilled: 0,
+    bars: sitTrendBars,
+    closes: sitTrendBars.map((row) => row.close),
+  }).due,
+  false,
+);
 
 console.log("dca playbook checks passed");

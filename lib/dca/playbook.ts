@@ -1887,6 +1887,68 @@ export function dcaLiveQtyBlocksCycleEnd(
   );
 }
 
+export function dcaSeriesStartEval(input: {
+  startKind?: DcaStartKind | null;
+  side: FuturesSide;
+  indicatorKind?: DcaIndicatorKind | null;
+  indicatorCompare?: DcaIndicatorCompare | null;
+  indicatorLevel?: number | null;
+  indicatorPeriod?: number | null;
+  indicatorSlowPeriod?: number | null;
+  indicatorMultiplier?: number | null;
+  splitIndicatorSides?: boolean;
+  indicatorConditionTrue?: boolean;
+  clipsFilled: number;
+  closes?: number[] | null;
+  bars?: SupertrendBar[] | null;
+}): { now: boolean; due: boolean } {
+  const startKind = input.startKind ?? "immediate";
+  const usesSeriesStart = startKind === "indicator" || startKind === "trend";
+  const indicatorKind = input.indicatorKind ?? null;
+  const indicatorCompare = input.indicatorCompare ?? null;
+  const splitBySide = Boolean(input.splitIndicatorSides);
+  const closes = input.closes ?? null;
+  const bars = input.bars ?? null;
+  const latchCross = dcaIndicatorStartLatches(indicatorKind, indicatorCompare);
+  const now = Boolean(
+    usesSeriesStart &&
+      indicatorKind &&
+      (closes || bars) &&
+      (indicatorStartMet({
+        kind: indicatorKind,
+        side: input.side,
+        closes: closes ?? [],
+        bars,
+        compare: indicatorCompare,
+        level: input.indicatorLevel ?? null,
+        period: input.indicatorPeriod ?? null,
+        slowPeriod: input.indicatorSlowPeriod ?? null,
+        multiplier: input.indicatorMultiplier ?? null,
+        splitBySide,
+      }) ||
+        (latchCross &&
+          indicatorStartMet({
+            kind: indicatorKind,
+            side: input.side,
+            closes: indicatorClosesForCross(closes ?? []),
+            bars: bars ? indicatorBarsForCross(bars) : null,
+            compare: indicatorCompare,
+            level: input.indicatorLevel ?? null,
+            period: input.indicatorPeriod ?? null,
+            slowPeriod: input.indicatorSlowPeriod ?? null,
+            multiplier: input.indicatorMultiplier ?? null,
+            splitBySide,
+          }))),
+  );
+  const due =
+    now ||
+    (usesSeriesStart &&
+      latchCross &&
+      Boolean(input.indicatorConditionTrue) &&
+      input.clipsFilled === 0);
+  return { now, due };
+}
+
 export function decideDcaTick(input: {
   status: DcaStatus;
   side: FuturesSide;
@@ -1950,6 +2012,21 @@ export function decideDcaTick(input: {
   const bars = input.bars ?? null;
   const usesSeriesStart = startKind === "indicator" || startKind === "trend";
   const splitBySide = Boolean(input.splitIndicatorSides);
+  const seriesStart = dcaSeriesStartEval({
+    startKind,
+    side: input.side,
+    indicatorKind,
+    indicatorCompare,
+    indicatorLevel,
+    indicatorPeriod,
+    indicatorSlowPeriod,
+    indicatorMultiplier,
+    splitIndicatorSides: splitBySide,
+    indicatorConditionTrue: input.indicatorConditionTrue,
+    clipsFilled: input.clipsFilled,
+    closes,
+    bars,
+  });
   const armPrice = triggerPrice(input.armTrigger, input.triggerPrices);
   const armMet = Boolean(
     startKind === "price" &&
@@ -1979,42 +2056,8 @@ export function decideDcaTick(input: {
     indicatorKind,
     indicatorCompare,
   );
-  const indicatorNow = Boolean(
-    usesSeriesStart &&
-      indicatorKind &&
-      (closes || bars) &&
-      (indicatorStartMet({
-        kind: indicatorKind,
-        side: input.side,
-        closes: closes ?? [],
-        bars,
-        compare: indicatorCompare,
-        level: indicatorLevel,
-        period: indicatorPeriod,
-        slowPeriod: indicatorSlowPeriod,
-        multiplier: indicatorMultiplier,
-        splitBySide,
-      }) ||
-        (latchCross &&
-          indicatorStartMet({
-            kind: indicatorKind,
-            side: input.side,
-            closes: indicatorClosesForCross(closes ?? []),
-            bars: bars ? indicatorBarsForCross(bars) : null,
-            compare: indicatorCompare,
-            level: indicatorLevel,
-            period: indicatorPeriod,
-            slowPeriod: indicatorSlowPeriod,
-            multiplier: indicatorMultiplier,
-            splitBySide,
-          }))),
-  );
-  const indicatorDue =
-    indicatorNow ||
-    (usesSeriesStart &&
-      latchCross &&
-      Boolean(input.indicatorConditionTrue) &&
-      input.clipsFilled === 0);
+  const indicatorNow = seriesStart.now;
+  const indicatorDue = seriesStart.due;
   const nextArmTrue = armMet;
   const nextDisarmTrue = disarmMet;
   const nextIndicatorTrue =

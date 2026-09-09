@@ -408,6 +408,16 @@ async function applyTickAction(input: {
       side: input.side,
       forcePlace: true,
     });
+    if (!armed.ok) {
+      await logDcaEvent({
+        playbook: input.playbook,
+        side: input.side,
+        level: "warning",
+        event: "engine.open_failed",
+        message: armed.error,
+        data: { reason: "arm" },
+      });
+    }
     return { acted: armed.ok };
   }
   if (input.action.kind === "disarm") {

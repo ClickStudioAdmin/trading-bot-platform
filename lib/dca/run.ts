@@ -1,5 +1,11 @@
 import { parseDeskType, type TradingAccountMode } from "@/lib/accounts/model";
 import { loadDeskTicker } from "@/lib/market/desk-tickers";
+import {
+  closedLiveIndicatorBars,
+  loadDeskIndicatorBars,
+} from "@/lib/market/desk-klines";
+import type { CandleBar } from "@/lib/market/candles";
+import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import { loadDeskVenueContext } from "@/lib/venues/hyperliquid/desk";
 import { runFuturesCommand, deleteCommandReceipt } from "@/lib/futures/command";
 import {
@@ -44,9 +50,12 @@ import {
   dcaExitLimitRestKey,
   dcaExitTpslNeedsVenueSync,
   dcaFlattenKey,
+  dcaIndicatorStartForSide,
+  dcaIndicatorTimeframes,
   dcaLegFor,
   dcaLegIsRunning,
   dcaOpenExitLimits,
+  dcaSeriesStartEval,
   dcaWebhookSignalApplies,
   IDLE_DCA_LEG,
   isDcaClipKey,
@@ -206,6 +215,75 @@ async function lastPriceForPlaybook(playbook: {
 }): Promise<number | null> {
   const desk = await loadDeskVenueContext(playbook.accountId);
   return lastPriceFor(playbook.symbol, desk);
+}
+
+async function loadPlaybookStartBars(
+  playbook: DcaPlaybook,
+): Promise<Map<DcaIndicatorTimeframe, CandleBar[]>> {
+  const barsByTimeframe = new Map<DcaIndicatorTimeframe, CandleBar[]>();
+  const timeframes = dcaIndicatorTimeframes(playbook);
+  if (timeframes.length === 0) {
+    return barsByTimeframe;
+  }
+  const desk = await loadDeskVenueContext(playbook.accountId);
+  const supertrend =
+    playbook.indicatorKind === "supertrend" ||
+    playbook.shortIndicatorKind === "supertrend";
+  for (const timeframe of timeframes) {
+    const fetched = await loadDeskIndicatorBars({
+      venue: desk.venue,
+      venueEnvironment: desk.venueEnvironment,
+      symbol: playbook.symbol,
+      interval: timeframe,
+      limit: supertrend ? 500 : 80,
+    }).catch((error: unknown) => {
+      console.error(
+        "dca start bars",
+        playbook.symbol,
+        timeframe,
+        error instanceof Error ? error.message : error,
+      );
+      return [];
+    });
+    barsByTimeframe.set(
+      timeframe,
+      closedLiveIndicatorBars(fetched, timeframe),
+    );
+  }
+  return barsByTimeframe;
+}
+
+function seriesStartDueForSide(
+  playbook: DcaPlaybook,
+  side: FuturesSide,
+  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
+): boolean {
+  const start = dcaIndicatorStartForSide(playbook, side);
+  if (!start) {
+    return false;
+  }
+  const bars = barsByTimeframe.get(start.timeframe) ?? [];
+  return dcaSeriesStartEval({
+    startKind: playbook.startKind,
+    side,
+    indicatorKind: start.kind,
+    indicatorCompare: start.compare,
+    indicatorLevel: start.level,
+    indicatorPeriod: start.period,
+    indicatorSlowPeriod: start.slowPeriod,
+    indicatorMultiplier: start.multiplier,
+    splitIndicatorSides:
+      playbook.direction === "both" &&
+      !playbook.shortIndicatorKind &&
+      !playbook.shortArmTrigger,
+    indicatorConditionTrue:
+      side === "long"
+        ? playbook.longIndicatorTrue
+        : playbook.shortIndicatorTrue,
+    clipsFilled: dcaLegFor(playbook, side).clipsFilled,
+    closes: bars.map((row) => row.close),
+    bars,
+  }).due;
 }
 
 function clipTrailing(
@@ -1339,6 +1417,25 @@ async function applyDcaVerbUnlocked(input: {
 
   const lastPrice = await lastPriceForPlaybook(input.playbook);
   const fromSignal = input.source === "webhook";
+  const startBars = await loadPlaybookStartBars(input.playbook);
+  const seriesBarsLoaded = [...startBars.values()].some(
+    (rows) => rows.length > 0,
+  );
+  if (
+    !input.forcePlace &&
+    (input.playbook.startKind === "indicator" ||
+      input.playbook.startKind === "trend") &&
+    dcaIndicatorTimeframes(input.playbook).length > 0 &&
+    !seriesBarsLoaded
+  ) {
+    return {
+      ok: false,
+      error:
+        input.playbook.startKind === "trend"
+          ? "Could not read Supertrend candles. The first order was not placed."
+          : "Could not read indicator candles. The first order was not placed.",
+    };
+  }
   const placeNow =
     Boolean(input.forcePlace) ||
     input.playbook.startKind === "immediate" ||
@@ -1408,7 +1505,10 @@ async function applyDcaVerbUnlocked(input: {
       resumed += 1;
       continue;
     }
-    if (!placeNow) {
+    if (
+      !placeNow &&
+      !seriesStartDueForSide(playbook, side, startBars)
+    ) {
       const patched = await patchDcaLeg({
         supabase,
         id: playbook.id,
