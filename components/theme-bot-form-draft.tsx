@@ -30,8 +30,6 @@ const fieldClass =
 const labelClass = "block text-xs text-ink-muted";
 const sectionTitleClass =
   "text-xs font-semibold uppercase tracking-[0.1em] text-ink";
-const subTitleClass =
-  "text-xs font-medium uppercase tracking-[0.08em] text-ink";
 const rowClass = "grid gap-x-3 gap-y-3 sm:grid-cols-2";
 
 function Group({
@@ -44,7 +42,7 @@ function Group({
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 border-t border-line pt-5">
+    <section className="space-y-3 py-5">
       <div>
         <h3 className={sectionTitleClass}>{title}</h3>
         {hint ? <p className="mt-1 text-xs text-ink-faint">{hint}</p> : null}
@@ -169,8 +167,8 @@ export function ThemeBotFormDraft() {
         hides the section. Checkboxes are flags only.
       </p>
 
-      <div className="space-y-0 rounded-card border border-line bg-canvas p-5">
-        <section className="space-y-3 pb-5">
+      <div className="divide-y divide-line rounded-card border border-line bg-canvas px-5">
+        <Group title="Bot">
         <div className={rowClass}>
           <Field label="Name">
             <input
@@ -187,7 +185,7 @@ export function ThemeBotFormDraft() {
             </select>
           </Field>
         </div>
-        </section>
+        </Group>
 
         <Group title="Pair and start">
           <div className={rowClass}>
@@ -380,9 +378,12 @@ export function ThemeBotFormDraft() {
             </div>
           ) : null}
 
-          {!closing ? (
+        </Group>
+
+        {!closing ? (
+          <Group title="Confirm" hint={DCA_CONFIRM_FIELD_LABEL}>
             <DcaFilterBlock
-              label={DCA_CONFIRM_FIELD_LABEL}
+              label="Filter"
               prefix="themeConfirm"
               side="long"
               spec={confirm}
@@ -390,8 +391,8 @@ export function ThemeBotFormDraft() {
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
-          ) : null}
-        </Group>
+          </Group>
+        ) : null}
 
         {!closing ? (
           <Group title="Size">
@@ -456,122 +457,117 @@ export function ThemeBotFormDraft() {
 
         {!closing ? (
           <>
-            <div className="grid gap-x-8 gap-y-0 sm:grid-cols-2">
-              <Group title="Take profit">
-                <ExitMethodFields
-                  method={tpMethod}
-                  onMethod={setTpMethod}
-                  value={tpValue}
-                  onValue={setTpValue}
-                  orderType={tpOrderType}
-                  onOrderType={setTpOrderType}
-                />
-                <div className="space-y-3 border-t border-line pt-5">
-                  <h4 className={subTitleClass}>Trailing stop</h4>
-                  <Field label="Method">
-                    <select
-                      value={trailMethod}
-                      onChange={(event) =>
-                        setTrailMethod(event.target.value as TrailMethod)
-                      }
-                      className={fieldClass}
-                    >
-                      {TRAIL_METHODS.map((option) => (
-                        <option key={option.value || "off"} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  {trailMethod === "distance" ? (
-                    <div className={rowClass}>
-                      <Field label="Retracement">
-                        <OffNumber value={trailValue} onChange={setTrailValue} />
-                      </Field>
-                      <Field
-                        label="Activation price"
-                        hint="Empty is Off."
-                      >
-                        <OffNumber
-                          value={trailTrigger}
-                          onChange={setTrailTrigger}
-                        />
-                      </Field>
-                    </div>
-                  ) : null}
-                  {trailMethod === "percent" ? (
-                    <div className={rowClass}>
-                      <Field
-                        label="Trigger %"
-                        hint="Trail starts after price moves this %."
-                      >
-                        <OffNumber
-                          value={trailTrigger}
-                          onChange={setTrailTrigger}
-                        />
-                      </Field>
-                      <Field label="Trailing %">
-                        <OffNumber value={trailValue} onChange={setTrailValue} />
-                      </Field>
-                    </div>
-                  ) : null}
-                </div>
-              </Group>
-
-              <Group title="Stop loss">
-                <ExitMethodFields
-                  method={slMethod}
-                  onMethod={setSlMethod}
-                  value={slValue}
-                  onValue={setSlValue}
-                  orderType={slOrderType}
-                  onOrderType={setSlOrderType}
-                />
-                <div className="space-y-3 border-t border-line pt-5">
-                  <h4 className={subTitleClass}>Move breakeven</h4>
-                  <div className={rowClass}>
-                    <Field label="Move stop to breakeven at %">
-                      <OffNumber
-                        value={breakevenAt}
-                        onChange={setBreakevenAt}
-                      />
-                    </Field>
-                    <Field label="Breakeven offset %">
-                      <OffNumber
-                        value={breakevenOffset}
-                        onChange={setBreakevenOffset}
-                      />
-                    </Field>
-                  </div>
-                </div>
-                <div className="space-y-3 border-t border-line pt-5">
-                  <DcaFilterBlock
-                    label="Exit-if"
-                    prefix="themeExitIf"
-                    side="long"
-                    spec={exitIf}
-                    onChange={setExitIf}
-                    fieldClass={fieldClass}
-                    labelClass={labelClass}
-                  />
-                </div>
-              </Group>
-            </div>
-
-            <label className="flex items-start gap-2 border-t border-line pt-5 text-sm text-ink">
-              <input
-                type="checkbox"
-                checked={skipIfOpen}
-                onChange={(event) => setSkipIfOpen(event.target.checked)}
-                className="mt-0.5 size-4 accent-accent"
+            <Group title="Take profit">
+              <ExitMethodFields
+                method={tpMethod}
+                onMethod={setTpMethod}
+                value={tpValue}
+                onValue={setTpValue}
+                orderType={tpOrderType}
+                onOrderType={setTpOrderType}
               />
-              <span>
-                Skip if this side is already open
-                <span className="mt-1 block text-xs text-ink-muted">
-                  Flag only. Off means a new fire can add to the same row.
+            </Group>
+
+            <Group title="Trailing stop">
+              <Field label="Method">
+                <select
+                  value={trailMethod}
+                  onChange={(event) =>
+                    setTrailMethod(event.target.value as TrailMethod)
+                  }
+                  className={fieldClass}
+                >
+                  {TRAIL_METHODS.map((option) => (
+                    <option key={option.value || "off"} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {trailMethod === "distance" ? (
+                <div className={rowClass}>
+                  <Field label="Retracement">
+                    <OffNumber value={trailValue} onChange={setTrailValue} />
+                  </Field>
+                  <Field label="Activation price" hint="Empty is Off.">
+                    <OffNumber
+                      value={trailTrigger}
+                      onChange={setTrailTrigger}
+                    />
+                  </Field>
+                </div>
+              ) : null}
+              {trailMethod === "percent" ? (
+                <div className={rowClass}>
+                  <Field
+                    label="Trigger %"
+                    hint="Trail starts after price moves this %."
+                  >
+                    <OffNumber
+                      value={trailTrigger}
+                      onChange={setTrailTrigger}
+                    />
+                  </Field>
+                  <Field label="Trailing %">
+                    <OffNumber value={trailValue} onChange={setTrailValue} />
+                  </Field>
+                </div>
+              ) : null}
+            </Group>
+
+            <Group title="Stop loss">
+              <ExitMethodFields
+                method={slMethod}
+                onMethod={setSlMethod}
+                value={slValue}
+                onValue={setSlValue}
+                orderType={slOrderType}
+                onOrderType={setSlOrderType}
+              />
+            </Group>
+
+            <Group title="Move breakeven">
+              <div className={rowClass}>
+                <Field label="Move stop to breakeven at %">
+                  <OffNumber value={breakevenAt} onChange={setBreakevenAt} />
+                </Field>
+                <Field label="Breakeven offset %">
+                  <OffNumber
+                    value={breakevenOffset}
+                    onChange={setBreakevenOffset}
+                  />
+                </Field>
+              </div>
+            </Group>
+
+            <Group title="Exit-if">
+              <DcaFilterBlock
+                label="Filter"
+                prefix="themeExitIf"
+                side="long"
+                spec={exitIf}
+                onChange={setExitIf}
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            </Group>
+
+            <section className="py-5">
+              <label className="flex items-start gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  checked={skipIfOpen}
+                  onChange={(event) => setSkipIfOpen(event.target.checked)}
+                  className="mt-0.5 size-4 accent-accent"
+                />
+                <span>
+                  Skip if this side is already open
+                  <span className="mt-1 block text-xs text-ink-muted">
+                    Flag only. Off means a new fire can add to the same row.
+                  </span>
                 </span>
-              </span>
-            </label>
+              </label>
+            </section>
           </>
         ) : null}
       </div>
