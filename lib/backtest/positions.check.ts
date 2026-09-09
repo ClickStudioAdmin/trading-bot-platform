@@ -116,8 +116,8 @@ assert.equal(grouped.closed[0]?.closedAtMs, 5_000);
 assert.equal(grouped.closed[1]?.clipCount, 2);
 assert.equal(grouped.closed[1]?.entryPrice, (100 + 180) / 3);
 assert.equal(grouped.closed[1]?.exitReason, "take_profit");
-assert.equal(backtestFillMarkerText(fills[0]!, false), "Entry");
-assert.equal(backtestFillMarkerText(fills[1]!, false), "Add 2");
+assert.equal(backtestFillMarkerText(fills[0]!, false), "Entry long");
+assert.equal(backtestFillMarkerText(fills[1]!, false), "Add 2 long");
 assert.equal(backtestFillMarkerText(fills[2]!, false), "TP long");
 assert.equal(
   backtestFillMarkerText({ ...fills[2]!, side: "short" }, false),
@@ -128,7 +128,7 @@ assert.equal(
     { ...fills[2]!, reason: "liquidation" },
     false,
   ),
-  "Liq",
+  "Liq long",
 );
 assert.equal(backtestFillMarkerText(fills[1]!, true), "Add 2 long");
 assert.equal(backtestFillMarkerText(fills[3]!, true), "Open short");

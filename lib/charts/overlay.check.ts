@@ -155,8 +155,8 @@ const closed = buildBacktestChartOverlay({
   ],
 });
 assert.equal(closed.lines.some((row) => row.title.startsWith("Open")), false);
-assert.equal(closed.markers[0]?.text, "Entry");
-assert.equal(closed.markers[1]?.text, "Close");
+assert.equal(closed.markers[0]?.text, "Entry long");
+assert.equal(closed.markers[1]?.text, "Close long");
 
 const liqOverlay = buildBacktestChartOverlay({
   triggerPrice: null,
@@ -182,7 +182,7 @@ const liqOverlay = buildBacktestChartOverlay({
     },
   ],
 });
-assert.equal(liqOverlay.markers[1]?.text, "Liq");
+assert.equal(liqOverlay.markers[1]?.text, "Liq long");
 assert.equal(liqOverlay.markers[1]?.color, CHART_COLORS.stopLoss);
 
 const olderEntry = {
@@ -245,7 +245,7 @@ const history = buildBacktestChartOverlay({
 });
 assert.deepEqual(
   history.markers.map((row) => row.text),
-  ["Entry", "TP long", "Entry", "Liq"],
+  ["Entry long", "TP long", "Entry long", "Liq long"],
 );
 const latestId = listBacktestCycles(historyOrders).at(-1)?.id;
 const focused = buildBacktestChartOverlay({
@@ -262,7 +262,7 @@ const focused = buildBacktestChartOverlay({
 });
 assert.deepEqual(
   focused.markers.map((row) => row.text),
-  ["Entry", "TP long", "Entry", "Add 2", "Liq"],
+  ["Entry long", "TP long", "Entry long", "Add 2 long", "Liq long"],
 );
 assert.equal(backtestChartIncludeAdds("15"), true);
 assert.equal(backtestChartIncludeAdds("D"), false);

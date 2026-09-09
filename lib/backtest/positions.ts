@@ -312,9 +312,9 @@ export function backtestFillMarkerText(
   row: SimulatedOrder,
   stillOpen: boolean,
 ): string {
+  const side = row.side === "short" ? "short" : "long";
   if (stillOpen) {
     const index = row.clipIndex ?? 1;
-    const side = row.side === "short" ? "short" : "long";
     if (index > 1) {
       return `Add ${index} ${side}`;
     }
@@ -322,22 +322,22 @@ export function backtestFillMarkerText(
   }
   if (row.action === "flatten") {
     if (row.reason === "take_profit") {
-      return row.side === "short" ? "TP short" : "TP long";
+      return `TP ${side}`;
     }
     if (row.reason === "stop") {
-      return "SL";
+      return `SL ${side}`;
     }
     if (row.reason === "trailing") {
-      return "Trail";
+      return `Trail ${side}`;
     }
     if (row.reason === "liquidation") {
-      return "Liq";
+      return `Liq ${side}`;
     }
-    return "Close";
+    return `Close ${side}`;
   }
   const index = row.clipIndex ?? (row.reason === "clip" ? 2 : 1);
   if (index > 1) {
-    return `Add ${index}`;
+    return `Add ${index} ${side}`;
   }
-  return "Entry";
+  return `Entry ${side}`;
 }
