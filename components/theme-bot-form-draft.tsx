@@ -43,7 +43,7 @@ const headerRemoveClass =
 const deskBtnClass =
   "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
 
-type DeskKind = "perps" | "dca";
+type DeskKind = "perps" | "dca" | "cnc";
 
 const PERPS_STATUS_OPTIONS = [
   {
@@ -87,8 +87,35 @@ const DCA_STATUS_OPTIONS = [
   },
 ] as const;
 
+const CNC_STATUS_OPTIONS = [
+  {
+    value: "active",
+    label: "Active",
+    fill: "bg-success",
+    note: "Save turns this bot on. It may open and add carries. Existing rows stay.",
+  },
+  {
+    value: "reduce_only",
+    label: "Reduce only",
+    fill: "bg-warning",
+    note: "Save stops new opens and adds. Exits still run. Existing carries stay.",
+  },
+  {
+    value: "disabled",
+    label: "Disabled",
+    fill: "bg-ink-faint",
+    note: "Save closes every carry this bot owns and turns it off.",
+  },
+] as const;
+
 function statusOptionsFor(desk: DeskKind) {
-  return desk === "perps" ? PERPS_STATUS_OPTIONS : DCA_STATUS_OPTIONS;
+  if (desk === "dca") {
+    return DCA_STATUS_OPTIONS;
+  }
+  if (desk === "cnc") {
+    return CNC_STATUS_OPTIONS;
+  }
+  return PERPS_STATUS_OPTIONS;
 }
 
 function StatusLight({
@@ -222,6 +249,23 @@ function OptionalSection({
   );
 }
 
+function CarryFieldGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="rounded-card border border-line bg-surface px-4 py-3">
+      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
+        {title}
+      </p>
+      <div className={`${rowClass} mt-2`}>{children}</div>
+    </div>
+  );
+}
+
 function Group({
   title,
   hint,
@@ -330,6 +374,26 @@ export function ThemeBotFormDraft() {
   const [slOn, setSlOn] = useState(false);
   const [breakevenOn, setBreakevenOn] = useState(false);
   const [exitIfOn, setExitIfOn] = useState(false);
+  const [minApr, setMinApr] = useState("");
+  const [minDte, setMinDte] = useState("");
+  const [maxDte, setMaxDte] = useState("");
+  const [maxOpenNotional, setMaxOpenNotional] = useState("");
+  const [maxOpenCount, setMaxOpenCount] = useState("1");
+  const [carrySizeType, setCarrySizeType] = useState<"dynamic" | "fixed">(
+    "dynamic",
+  );
+  const [orderSizeUsdt, setOrderSizeUsdt] = useState("10000");
+  const [minCapacity, setMinCapacity] = useState("");
+  const [minOrderSize, setMinOrderSize] = useState("");
+  const [closeMaxDte, setCloseMaxDte] = useState("");
+  const [closeMinApr, setCloseMinApr] = useState("");
+  const [exitSizeType, setExitSizeType] = useState<"dynamic" | "fixed">(
+    "dynamic",
+  );
+  const [carryTpOn, setCarryTpOn] = useState(false);
+  const [carrySlOn, setCarrySlOn] = useState(false);
+  const [carryTp, setCarryTp] = useState("");
+  const [carrySl, setCarrySl] = useState("");
   const [size, setSize] = useState("100");
   const [sizeUnit, setSizeUnit] = useState<"qty" | "usdt">("usdt");
   const [tpMethod, setTpMethod] = useState<ExitMethod>("percent");
@@ -391,6 +455,22 @@ export function ThemeBotFormDraft() {
     skipIfOpen,
     restGrid,
     direction,
+    minApr,
+    minDte,
+    maxDte,
+    maxOpenNotional,
+    maxOpenCount,
+    carrySizeType,
+    orderSizeUsdt,
+    minCapacity,
+    minOrderSize,
+    closeMaxDte,
+    closeMinApr,
+    exitSizeType,
+    carryTpOn,
+    carrySlOn,
+    carryTp,
+    carrySl,
     status,
   };
   const draftKey = JSON.stringify(draftValue);
@@ -485,6 +565,17 @@ export function ThemeBotFormDraft() {
           >
             DCA
           </button>
+          <button
+            type="button"
+            className={`rounded-control px-3 py-1.5 text-xs ${
+              desk === "cnc"
+                ? "bg-surface-raised font-medium text-ink"
+                : "text-ink-muted hover:text-ink"
+            }`}
+            onClick={() => switchDesk("cnc")}
+          >
+            C&C
+          </button>
         </div>
       </div>
 
@@ -542,6 +633,8 @@ export function ThemeBotFormDraft() {
         </div>
         </Group>
 
+        {desk !== "cnc" ? (
+        <>
         <Group title={desk === "dca" ? "Pair and Trigger" : undefined}>
           <div className={rowClass}>
             <Field label="Contract">
@@ -1092,11 +1185,139 @@ export function ThemeBotFormDraft() {
             ) : null}
           </>
         ) : null}
+        </>
+        ) : (
+          <>
+            <Group title="Entry">
+              <CarryFieldGroup title="Conditions (all must be true)">
+                <Field label="Min APR %">
+                  <OffNumber value={minApr} onChange={setMinApr} />
+                </Field>
+                <Field label="Min DTE">
+                  <OffNumber value={minDte} onChange={setMinDte} allowDecimal={false} />
+                </Field>
+                <Field label="Max DTE">
+                  <OffNumber value={maxDte} onChange={setMaxDte} allowDecimal={false} />
+                </Field>
+              </CarryFieldGroup>
+              <CarryFieldGroup title="Position and Orders">
+                <Field label="Max Position Size">
+                  <OffNumber
+                    value={maxOpenNotional}
+                    onChange={setMaxOpenNotional}
+                  />
+                </Field>
+                <Field label="Max pairs">
+                  <GroupedNumberInput
+                    value={maxOpenCount}
+                    onChange={setMaxOpenCount}
+                    className={fieldClass}
+                  />
+                </Field>
+                <Field label="Order Type">
+                  <select
+                    value={carrySizeType}
+                    onChange={(event) =>
+                      setCarrySizeType(
+                        event.target.value === "fixed" ? "fixed" : "dynamic",
+                      )
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="dynamic">Dynamic (scale in)</option>
+                    <option value="fixed">Fixed</option>
+                  </select>
+                </Field>
+                {carrySizeType === "fixed" ? (
+                  <>
+                    <Field label="Order size (USDT)">
+                      <GroupedNumberInput
+                        value={orderSizeUsdt}
+                        onChange={setOrderSizeUsdt}
+                        allowDecimal
+                        className={fieldClass}
+                      />
+                    </Field>
+                    <Field label="Min usable book">
+                      <OffNumber
+                        value={minCapacity}
+                        onChange={setMinCapacity}
+                      />
+                    </Field>
+                  </>
+                ) : null}
+                {carrySizeType === "dynamic" || exitSizeType === "dynamic" ? (
+                  <Field label="Min Order Size">
+                    <OffNumber
+                      value={minOrderSize}
+                      onChange={setMinOrderSize}
+                    />
+                  </Field>
+                ) : null}
+              </CarryFieldGroup>
+            </Group>
+
+            <Group title="Exit">
+              <CarryFieldGroup title="Conditions (any can be true)">
+                <Field label="DTE ≤">
+                  <OffNumber
+                    value={closeMaxDte}
+                    onChange={setCloseMaxDte}
+                    allowDecimal={false}
+                  />
+                </Field>
+                <Field label="APR % below">
+                  <OffNumber value={closeMinApr} onChange={setCloseMinApr} />
+                </Field>
+              </CarryFieldGroup>
+              <CarryFieldGroup title="Position and Orders">
+                <Field label="Order Type">
+                  <select
+                    value={exitSizeType}
+                    onChange={(event) =>
+                      setExitSizeType(
+                        event.target.value === "fixed" ? "fixed" : "dynamic",
+                      )
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="dynamic">Dynamic (scale out)</option>
+                    <option value="fixed">Fixed (entire position)</option>
+                  </select>
+                </Field>
+              </CarryFieldGroup>
+              <OptionalSection
+                title="Take profit"
+                enabled={carryTpOn}
+                onEnabled={setCarryTpOn}
+              >
+                <div className={rowClass}>
+                  <Field label="Take profit %">
+                    <OffNumber value={carryTp} onChange={setCarryTp} />
+                  </Field>
+                </div>
+              </OptionalSection>
+              <OptionalSection
+                title="Stop loss"
+                enabled={carrySlOn}
+                onEnabled={setCarrySlOn}
+              >
+                <div className={rowClass}>
+                  <Field label="Stop loss %">
+                    <OffNumber value={carrySl} onChange={setCarrySl} />
+                  </Field>
+                </div>
+              </OptionalSection>
+            </Group>
+          </>
+        )}
 
         <section className="flex flex-wrap items-center justify-end gap-2 py-5">
+          {desk !== "cnc" ? (
           <button type="button" className={headerGhostClass}>
             Backtest
           </button>
+          ) : null}
           <button type="button" className={headerGhostClass}>
             Save as template
           </button>
@@ -1137,6 +1358,19 @@ function ThemeBotFormReference() {
         <p className={labelClass}>Perps statuses</p>
         <p className="text-xs text-ink-faint">
           Own list. Do not mix with DCA.
+        </p>
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          <StatusLight fill="bg-success" label="Active" />
+          <StatusLight fill="bg-warning" label="Reduce only" />
+          <StatusLight fill="bg-ink-faint" label="Disabled" />
+          <StatusLight fill="bg-success" label="In use (open position)" inUse />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className={labelClass}>C&C statuses</p>
+        <p className="text-xs text-ink-faint">
+          Same three as Perps. Reduce only is not DCA Stop adding.
         </p>
         <div className="flex flex-wrap gap-x-4 gap-y-2">
           <StatusLight fill="bg-success" label="Active" />
