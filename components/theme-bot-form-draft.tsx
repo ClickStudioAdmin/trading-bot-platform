@@ -31,6 +31,8 @@ import {
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line-strong bg-surface-raised px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
+const fieldInvalidClass =
+  "mt-1 w-full rounded-control border border-danger bg-surface-raised px-3 py-2 text-sm text-ink focus:border-danger focus:outline-none";
 const labelClass = "block text-xs text-ink-muted";
 const sectionTitleClass =
   "text-xs font-semibold uppercase tracking-[0.1em] text-ink";
@@ -251,20 +253,17 @@ function EnableCheck({ checked }: { checked: boolean }) {
   );
 }
 
-function HintTip({ text }: { text: string }) {
-  return (
-    <ColumnHint
-      label={
-        <span
-          className="inline-flex size-3.5 items-center justify-center rounded-full border border-line-strong text-[9px] font-semibold leading-none text-ink-faint"
-          aria-label="More information"
-        >
-          i
-        </span>
-      }
-      hint={text}
-    />
-  );
+function HintLabel({
+  text,
+  hint,
+  className,
+}: {
+  text: string;
+  hint?: string;
+  className?: string;
+}) {
+  const label = className ? <span className={className}>{text}</span> : text;
+  return hint ? <ColumnHint label={label} hint={hint} /> : label;
 }
 
 function OptionalSection({
@@ -272,30 +271,34 @@ function OptionalSection({
   hint,
   enabled,
   onEnabled,
+  error,
   children,
 }: {
   title: string;
   hint?: string;
   enabled: boolean;
   onEnabled: (next: boolean) => void;
+  error?: string;
   children: ReactNode;
 }) {
   return (
     <section className="space-y-3 py-5">
-      <div className="flex items-center gap-2">
-        <label className="flex cursor-pointer items-center gap-3">
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(event) => onEnabled(event.target.checked)}
-            className="sr-only"
-          />
-          <EnableCheck checked={enabled} />
-          <span className={sectionTitleClass}>{title}</span>
-        </label>
-        {hint ? <HintTip text={hint} /> : null}
-      </div>
-      {enabled ? children : null}
+      <label className="flex cursor-pointer items-center gap-3">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(event) => onEnabled(event.target.checked)}
+          className="sr-only"
+        />
+        <EnableCheck checked={enabled} />
+        <HintLabel text={title} hint={hint} className={sectionTitleClass} />
+      </label>
+      {enabled ? (
+        <>
+          {error ? <p className="text-xs text-danger">{error}</p> : null}
+          {children}
+        </>
+      ) : null}
     </section>
   );
 }
@@ -311,11 +314,10 @@ function Group({
 }) {
   return (
     <section className="space-y-3 py-5">
-      {title || hint ? (
-        <div className="flex items-center gap-1.5">
-          {title ? <h3 className={sectionTitleClass}>{title}</h3> : null}
-          {hint ? <HintTip text={hint} /> : null}
-        </div>
+      {title ? (
+        <h3 className={sectionTitleClass}>
+          <HintLabel text={title} hint={hint} />
+        </h3>
       ) : null}
       {children}
     </section>
@@ -344,20 +346,20 @@ function Field({
   label,
   hint,
   className,
+  error,
   children,
 }: {
   label: string;
   hint?: string;
   className?: string;
+  error?: string;
   children: ReactNode;
 }) {
   return (
     <label className={`${labelClass} ${className ?? ""}`}>
-      <span className="inline-flex items-center gap-1">
-        {label}
-        {hint ? <HintTip text={hint} /> : null}
-      </span>
+      <HintLabel text={label} hint={hint} />
       {children}
+      {error ? <span className="mt-1 block text-xs text-danger">{error}</span> : null}
     </label>
   );
 }
@@ -392,22 +394,45 @@ function OrderTypePill({
   );
 }
 
+function filled(raw: string): boolean {
+  return raw.trim() !== "";
+}
+
+function dcaFilterComplete(spec: DcaFilterSpec | null): boolean {
+  if (!spec) {
+    return false;
+  }
+  if (spec.kind === "rsi") {
+    if (spec.level == null) {
+      return false;
+    }
+    if (spec.compare === "between") {
+      return spec.levelTo != null && spec.level < spec.levelTo;
+    }
+  }
+  return true;
+}
+
 function OffNumber({
   value,
   onChange,
   allowDecimal = true,
+  required = false,
+  invalid = false,
 }: {
   value: string;
   onChange: (next: string) => void;
   allowDecimal?: boolean;
+  required?: boolean;
+  invalid?: boolean;
 }) {
   return (
     <GroupedNumberInput
       value={value}
       onChange={onChange}
       allowDecimal={allowDecimal}
-      placeholder="Off"
-      className={fieldClass}
+      placeholder={required ? "" : "Off"}
+      className={invalid ? fieldInvalidClass : fieldClass}
     />
   );
 }
@@ -478,6 +503,7 @@ export function ThemeBotFormDraft() {
   const skipDeskDirty = useRef(false);
   const savedDraft = useRef<string | null>(null);
   const [saveTick, setSaveTick] = useState(0);
+  const [saveAttempted, setSaveAttempted] = useState(false);
   const draftValue = {
     name,
     symbol,
@@ -555,6 +581,30 @@ export function ThemeBotFormDraft() {
     startKind === "indicator" &&
     dcaIndicatorShowsLevel(indicatorKind, when, level);
   const showStartParams = startKind !== "webhook" && !closing;
+  const requireTp = desk !== "cnc" && !closing && tpOn;
+  const requireSl = desk !== "cnc" && !closing && slOn;
+  const requireTrail = desk !== "cnc" && !closing && trailOn;
+  const trailKind = trailMethod || "percent";
+  const requireTrailTrigger = requireTrail && trailKind === "percent";
+  const requireBreakeven = desk === "dca" && !closing && breakevenOn;
+  const requireCarryTp = desk === "cnc" && carryTpOn;
+  const requireCarrySl = desk === "cnc" && carrySlOn;
+  const requireConfirm = desk === "dca" && !closing && confirmOn;
+  const requireExitIf = desk === "dca" && !closing && exitIfOn;
+  const missing = {
+    tpValue: requireTp && !filled(tpValue),
+    slValue: requireSl && !filled(slValue),
+    trailValue: requireTrail && !filled(trailValue),
+    trailTrigger: requireTrailTrigger && !filled(trailTrigger),
+    breakevenAt: requireBreakeven && !filled(breakevenAt),
+    breakevenOffset: requireBreakeven && !filled(breakevenOffset),
+    carryTp: requireCarryTp && !filled(carryTp),
+    carrySl: requireCarrySl && !filled(carrySl),
+    confirm: requireConfirm && !dcaFilterComplete(confirm),
+    exitIf: requireExitIf && !dcaFilterComplete(exitIf),
+  };
+  const hasMissing = Object.values(missing).some(Boolean);
+  const showFieldErrors = saveAttempted && hasMissing;
 
   useEffect(() => {
     if (skipDeskDirty.current) {
@@ -566,6 +616,7 @@ export function ThemeBotFormDraft() {
 
   function switchDesk(next: DeskKind) {
     skipDeskDirty.current = true;
+    setSaveAttempted(false);
     setDesk(next);
     setStatus("active");
     if (next === "perps" && (startKind === "indicator" || startKind === "trend")) {
@@ -574,7 +625,12 @@ export function ThemeBotFormDraft() {
   }
 
   function saveDraft() {
+    if (hasMissing) {
+      setSaveAttempted(true);
+      return;
+    }
     savedDraft.current = draftKey;
+    setSaveAttempted(false);
     setSaveTick((tick) => tick + 1);
   }
 
@@ -644,9 +700,16 @@ export function ThemeBotFormDraft() {
       <div className="divide-y divide-line rounded-card border border-line bg-canvas px-5">
         {dirty ? (
           <div className="flex flex-wrap items-center justify-between gap-3 py-4">
-            <p className="text-sm text-warning">
-              You have unsaved changes on this bot
-            </p>
+            <div>
+              <p className="text-sm text-warning">
+                You have unsaved changes on this bot
+              </p>
+              {saveAttempted && hasMissing ? (
+                <p className="mt-1 text-sm text-danger">
+                  Fill required fields in enabled sections before saving.
+                </p>
+              ) : null}
+            </div>
             <button
               type="button"
               className={headerPrimaryClass}
@@ -666,9 +729,8 @@ export function ThemeBotFormDraft() {
             />
           </Field>
           <div>
-            <p className={`${labelClass} inline-flex items-center gap-1`}>
-              Status
-              <HintTip text={selectedStatus.note} />
+            <p className={labelClass}>
+              <HintLabel text="Status" hint={selectedStatus.note} />
             </p>
             <div className="mt-1 flex items-center gap-2">
               <select
@@ -951,6 +1013,11 @@ export function ThemeBotFormDraft() {
             title="Secondary Condition"
             hint="Must be true for the entry trigger to execute."
             enabled={confirmOn}
+            error={
+              showFieldErrors && missing.confirm
+                ? "Enter the required filter values."
+                : undefined
+            }
             onEnabled={(next) => {
               setConfirmOn(next);
               setConfirm(next ? (confirm ?? dcaFilterSpecForKind("rsi", "long")) : null);
@@ -1089,6 +1156,7 @@ export function ThemeBotFormDraft() {
                 onValue={setTpValue}
                 orderType={tpOrderType}
                 onOrderType={setTpOrderType}
+                invalid={showFieldErrors && missing.tpValue}
               />
             </OptionalSection>
 
@@ -1120,8 +1188,20 @@ export function ThemeBotFormDraft() {
                 </Field>
                 {(trailMethod || "percent") === "distance" ? (
                   <>
-                    <Field label="Retracement">
-                      <OffNumber value={trailValue} onChange={setTrailValue} />
+                    <Field
+                      label="Retracement"
+                      error={
+                        showFieldErrors && missing.trailValue
+                          ? "Required"
+                          : undefined
+                      }
+                    >
+                      <OffNumber
+                        value={trailValue}
+                        onChange={setTrailValue}
+                        required
+                        invalid={showFieldErrors && missing.trailValue}
+                      />
                     </Field>
                     <Field label="Activation price" hint="Empty is Off.">
                       <OffNumber
@@ -1136,14 +1216,33 @@ export function ThemeBotFormDraft() {
                     <Field
                       label="Trigger %"
                       hint="Trail starts after price moves this %."
+                      error={
+                        showFieldErrors && missing.trailTrigger
+                          ? "Required"
+                          : undefined
+                      }
                     >
                       <OffNumber
                         value={trailTrigger}
                         onChange={setTrailTrigger}
+                        required
+                        invalid={showFieldErrors && missing.trailTrigger}
                       />
                     </Field>
-                    <Field label="Trailing %">
-                      <OffNumber value={trailValue} onChange={setTrailValue} />
+                    <Field
+                      label="Trailing %"
+                      error={
+                        showFieldErrors && missing.trailValue
+                          ? "Required"
+                          : undefined
+                      }
+                    >
+                      <OffNumber
+                        value={trailValue}
+                        onChange={setTrailValue}
+                        required
+                        invalid={showFieldErrors && missing.trailValue}
+                      />
                     </Field>
                   </>
                 ) : null}
@@ -1167,6 +1266,7 @@ export function ThemeBotFormDraft() {
                 onValue={setSlValue}
                 orderType={slOrderType}
                 onOrderType={setSlOrderType}
+                invalid={showFieldErrors && missing.slValue}
               />
             </OptionalSection>
 
@@ -1177,13 +1277,34 @@ export function ThemeBotFormDraft() {
               onEnabled={setBreakevenOn}
             >
               <div className={rowClass}>
-                <Field label="Move stop to breakeven at %">
-                  <OffNumber value={breakevenAt} onChange={setBreakevenAt} />
+                <Field
+                  label="Move stop to breakeven at %"
+                  error={
+                    showFieldErrors && missing.breakevenAt
+                      ? "Required"
+                      : undefined
+                  }
+                >
+                  <OffNumber
+                    value={breakevenAt}
+                    onChange={setBreakevenAt}
+                    required
+                    invalid={showFieldErrors && missing.breakevenAt}
+                  />
                 </Field>
-                <Field label="Breakeven offset %">
+                <Field
+                  label="Breakeven offset %"
+                  error={
+                    showFieldErrors && missing.breakevenOffset
+                      ? "Required"
+                      : undefined
+                  }
+                >
                   <OffNumber
                     value={breakevenOffset}
                     onChange={setBreakevenOffset}
+                    required
+                    invalid={showFieldErrors && missing.breakevenOffset}
                   />
                 </Field>
               </div>
@@ -1194,6 +1315,11 @@ export function ThemeBotFormDraft() {
             <OptionalSection
               title="Exit-if"
               enabled={exitIfOn}
+              error={
+                showFieldErrors && missing.exitIf
+                  ? "Enter the required filter values."
+                  : undefined
+              }
               onEnabled={(next) => {
                 setExitIfOn(next);
                 setExitIf(next ? (exitIf ?? dcaFilterSpecForKind("rsi", "long")) : null);
@@ -1222,10 +1348,10 @@ export function ThemeBotFormDraft() {
                   onChange={(event) => setSkipIfOpen(event.target.checked)}
                   className="mt-0.5 size-4 accent-accent"
                 />
-                <span className="inline-flex items-center gap-1.5">
-                  Skip if this side is already open
-                  <HintTip text="Off means each new cross or trigger can add size to the same row." />
-                </span>
+                <HintLabel
+                  text="Skip if this side is already open"
+                  hint="Off means each new cross or trigger can add size to the same row."
+                />
               </label>
             </section>
             ) : null}
@@ -1352,8 +1478,18 @@ export function ThemeBotFormDraft() {
               onEnabled={setCarryTpOn}
             >
               <div className={rowClass}>
-                <Field label="Take profit %">
-                  <OffNumber value={carryTp} onChange={setCarryTp} />
+                <Field
+                  label="Take profit %"
+                  error={
+                    showFieldErrors && missing.carryTp ? "Required" : undefined
+                  }
+                >
+                  <OffNumber
+                    value={carryTp}
+                    onChange={setCarryTp}
+                    required
+                    invalid={showFieldErrors && missing.carryTp}
+                  />
                 </Field>
               </div>
             </OptionalSection>
@@ -1364,8 +1500,18 @@ export function ThemeBotFormDraft() {
               onEnabled={setCarrySlOn}
             >
               <div className={rowClass}>
-                <Field label="Stop loss %">
-                  <OffNumber value={carrySl} onChange={setCarrySl} />
+                <Field
+                  label="Stop loss %"
+                  error={
+                    showFieldErrors && missing.carrySl ? "Required" : undefined
+                  }
+                >
+                  <OffNumber
+                    value={carrySl}
+                    onChange={setCarrySl}
+                    required
+                    invalid={showFieldErrors && missing.carrySl}
+                  />
                 </Field>
               </div>
             </OptionalSection>
@@ -1592,6 +1738,7 @@ function ExitMethodFields({
   onValue,
   orderType,
   onOrderType,
+  invalid = false,
 }: {
   method: ExitMethod;
   onMethod: (next: ExitMethod) => void;
@@ -1599,13 +1746,50 @@ function ExitMethodFields({
   onValue: (next: string) => void;
   orderType: string;
   onOrderType: (next: string) => void;
+  invalid?: boolean;
 }) {
+  const valueField =
+    method === "price" ? (
+      <Field label="Price" error={invalid ? "Required" : undefined}>
+        <OffNumber
+          value={value}
+          onChange={onValue}
+          required
+          invalid={invalid}
+        />
+      </Field>
+    ) : method === "percent" ? (
+      <Field label="Target %" error={invalid ? "Required" : undefined}>
+        <OffNumber
+          value={value}
+          onChange={onValue}
+          required
+          invalid={invalid}
+        />
+      </Field>
+    ) : method === "atr" ? (
+      <Field label="ATR multiple" error={invalid ? "Required" : undefined}>
+        <OffNumber
+          value={value}
+          onChange={onValue}
+          required
+          invalid={invalid}
+        />
+      </Field>
+    ) : null;
+
   return (
     <div className={rowClass}>
       <Field label="Method">
         <select
           value={method}
-          onChange={(event) => onMethod(event.target.value as ExitMethod)}
+          onChange={(event) => {
+            const next = event.target.value as ExitMethod;
+            onMethod(next);
+            if (next === "atr" && !filled(value)) {
+              onValue("2");
+            }
+          }}
           className={fieldClass}
         >
           {EXIT_METHODS.filter((option) => option.value).map((option) => (
@@ -1615,21 +1799,7 @@ function ExitMethodFields({
           ))}
         </select>
       </Field>
-      {method === "price" ? (
-        <Field label="Price">
-          <OffNumber value={value} onChange={onValue} />
-        </Field>
-      ) : null}
-      {method === "percent" ? (
-        <Field label="Target %">
-          <OffNumber value={value} onChange={onValue} />
-        </Field>
-      ) : null}
-      {method === "atr" ? (
-        <Field label="ATR multiple">
-          <OffNumber value={value || "2"} onChange={onValue} />
-        </Field>
-      ) : null}
+      {valueField}
       {method !== "price" ? (
         <Field label="Basis">
           <select className={fieldClass} defaultValue="first_entry">
