@@ -2784,14 +2784,7 @@ function IndicatorStartFields({
           } else {
             onSlowPeriodChange("");
             if (dcaIndicatorUsesPeriod(next)) {
-              const current = Number(String(period).replace(/,/g, ""));
-              const keepCustom =
-                dcaIndicatorUsesPeriod(kind) &&
-                Number.isFinite(current) &&
-                current !== defaultDcaIndicatorPeriod(kind);
-              if (!keepCustom) {
-                onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
-              }
+              onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
             }
           }
         }}
