@@ -398,6 +398,18 @@ export async function listBacktestRuns(input: {
   } else if (input.userId) {
     query = query.or(`user_id.eq.${input.userId},user_id.is.null`);
   }
+  if (input.standaloneOnly) {
+    query = query.is("study_id", null);
+  }
+  if (input.primaryOnly) {
+    query = query.is("parent_run_id", null);
+  }
+  if (input.parentRunId) {
+    query = query.eq("parent_run_id", input.parentRunId);
+  }
+  if (input.studyId) {
+    query = query.eq("study_id", input.studyId);
+  }
   const { data, error } = await query;
   const rows = !error && data
     ? data

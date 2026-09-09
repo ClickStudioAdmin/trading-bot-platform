@@ -32,6 +32,8 @@ import {
   completedBacktestNotionalUsdt,
   backtestRerunHref,
   backtestSavedListHref,
+  paginateBacktestList,
+  parseBacktestListPage,
   parseBacktestRunIds,
   peakLockedNotionalUsdt,
   realizedAprPct,
@@ -496,6 +498,20 @@ assert.equal(
   "/account/backtests?rerun=run-abc#replay",
 );
 assert.equal(backtestSavedListHref(), "/account/backtests?tab=saved");
+assert.equal(backtestSavedListHref(1), "/account/backtests?tab=saved");
+assert.equal(backtestSavedListHref(2), "/account/backtests?tab=saved&page=2");
+assert.equal(parseBacktestListPage("2"), 2);
+assert.equal(parseBacktestListPage("0"), 1);
+assert.equal(parseBacktestListPage("nope"), 1);
+assert.deepEqual(paginateBacktestList(["a", "b", "c"], 2, 2), {
+  rows: ["c"],
+  page: 2,
+  pageCount: 2,
+  total: 3,
+  from: 3,
+  to: 3,
+});
+assert.equal(paginateBacktestList(["a"], 9, 25).page, 1);
 assert.deepEqual(parseBacktestRunIds([" a ", "a", "", "b"]), ["a", "b"]);
 const bulkForm = new FormData();
 bulkForm.append("runId", "run-1");

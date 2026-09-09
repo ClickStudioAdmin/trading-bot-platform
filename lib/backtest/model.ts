@@ -189,8 +189,45 @@ export function backtestRerunHref(runId: string): string {
   return `/account/backtests?rerun=${encodeURIComponent(runId)}#replay`;
 }
 
-export function backtestSavedListHref(): string {
-  return "/account/backtests?tab=saved";
+export const BACKTEST_SAVED_PAGE_SIZE = 25;
+
+export function parseBacktestListPage(raw: unknown): number {
+  const page = Math.trunc(Number(String(raw ?? "").trim()));
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+export function backtestSavedListHref(page = 1): string {
+  if (page <= 1) {
+    return "/account/backtests?tab=saved";
+  }
+  return `/account/backtests?tab=saved&page=${page}`;
+}
+
+export function paginateBacktestList<T>(
+  rows: readonly T[],
+  page: number,
+  pageSize = BACKTEST_SAVED_PAGE_SIZE,
+): {
+  rows: T[];
+  page: number;
+  pageCount: number;
+  total: number;
+  from: number;
+  to: number;
+} {
+  const total = rows.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), pageCount);
+  const start = (safePage - 1) * pageSize;
+  const slice = rows.slice(start, start + pageSize);
+  return {
+    rows: slice,
+    page: safePage,
+    pageCount,
+    total,
+    from: total === 0 ? 0 : start + 1,
+    to: start + slice.length,
+  };
 }
 
 export function canDeleteBacktestRun(
