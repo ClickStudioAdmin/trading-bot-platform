@@ -10,6 +10,10 @@ import {
   type DcaLegState,
 } from "@/lib/dca/playbook";
 import {
+  dcaFilterForSide,
+  seriesForFilter,
+} from "@/lib/dca/filters";
+import {
   atrAtEachTapeBar,
   resampleBarsForTimeframe,
   resampleClosesForTimeframe,
@@ -503,6 +507,21 @@ export function replayDcaPlaybook(input: {
       }
       const live = legs[side];
       const indicatorStart = dcaIndicatorStartForSide(config, side);
+      const confirm = dcaFilterForSide(config, side, "confirm");
+      const exitIf = dcaFilterForSide(config, side, "exitIf");
+      const tapeInterval = backtestTapeInterval(input.recipe, 1, 2);
+      const confirmSeries = seriesForFilter(
+        confirm,
+        confirm
+          ? resampleBarsForTimeframe(barWindow, tapeInterval, confirm.timeframe)
+          : null,
+      );
+      const exitIfSeries = seriesForFilter(
+        exitIf,
+        exitIf
+          ? resampleBarsForTimeframe(barWindow, tapeInterval, exitIf.timeframe)
+          : null,
+      );
       const decision = decideDcaTick({
         status: live.status,
         side,
@@ -558,17 +577,23 @@ export function replayDcaPlaybook(input: {
         closes: indicatorStart
           ? resampleClosesForTimeframe(
               window,
-              backtestTapeInterval(input.recipe, 1, 2),
+              tapeInterval,
               indicatorStart.timeframe,
             )
           : window,
         bars: indicatorStart
           ? resampleBarsForTimeframe(
               barWindow,
-              backtestTapeInterval(input.recipe, 1, 2),
+              tapeInterval,
               indicatorStart.timeframe,
             )
           : barWindow,
+        confirm,
+        confirmCloses: confirmSeries.closes,
+        confirmBars: confirmSeries.bars,
+        exitIf,
+        exitIfCloses: exitIfSeries.closes,
+        exitIfBars: exitIfSeries.bars,
         takeProfitOrderType: config.takeProfitOrderType,
         tpLimitResting:
           config.takeProfitOrderType === "limit" && live.qty > 0,
@@ -597,7 +622,11 @@ export function replayDcaPlaybook(input: {
           bar.timeMs,
           price,
           true,
-          decision.action.reason === "stop_loss" ? "stop" : "take_profit",
+          decision.action.reason === "stop_loss"
+            ? "stop"
+            : decision.action.reason === "exit_if"
+              ? "exit_if"
+              : "take_profit",
         );
         closedThisBar = true;
       } else if (decision.action.kind === "disarm") {

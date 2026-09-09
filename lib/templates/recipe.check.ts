@@ -49,6 +49,8 @@ assert.equal(snapshot.kind, "dca");
 assert.equal(snapshot.symbol, "ETHUSDT");
 assert.equal(snapshot.startKind, "webhook");
 assert.equal(snapshot.maxValueKind, "usdt");
+assert.equal(snapshot.confirm, null);
+assert.equal(snapshot.exitIf, null);
 const oldRecipe = parseTemplateRecipe(
   { ...snapshot, maxValueKind: undefined },
   "dca",
@@ -83,6 +85,34 @@ if (appliedManual.ok) {
   assert.equal(appliedManual.config.startKind, "indicator");
   assert.equal(appliedManual.config.indicatorKind, "rsi");
   assert.ok(appliedManual.notes[0]?.includes("Manual"));
+}
+
+const confirmSnap = snapshotDcaRecipe({
+  ...parsed.config,
+  confirm: {
+    kind: "ema",
+    timeframe: "240",
+    compare: "gte",
+    level: null,
+    period: 21,
+    multiplier: null,
+  },
+  exitIf: {
+    kind: "rsi",
+    timeframe: "15",
+    compare: "gte",
+    level: 70,
+    period: 14,
+    multiplier: null,
+  },
+});
+assert.equal(confirmSnap.confirm?.kind, "ema");
+assert.equal(confirmSnap.exitIf?.kind, "rsi");
+const confirmApplied = dcaRecipeToConfig(confirmSnap, {});
+assert.equal(confirmApplied.ok, true);
+if (confirmApplied.ok) {
+  assert.equal(confirmApplied.config.confirm?.kind, "ema");
+  assert.equal(confirmApplied.config.exitIf?.level, 70);
 }
 
 const remapped = dcaRecipeToConfig(snapshot, { symbol: "SOLUSDT" });

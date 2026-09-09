@@ -1,5 +1,6 @@
 import { deskPath } from "@/lib/accounts/model";
 import type { BacktestRecipe } from "@/lib/backtest/model";
+import { dcaFilterLabel } from "@/lib/dca/filters";
 import { formatDcaIndicatorStartLabel } from "@/lib/dca/indicators";
 import { formatGroupedNumberInput } from "@/lib/paper/open";
 import { FUTURES_PATHS } from "@/lib/strategies/registry";
@@ -470,6 +471,13 @@ export function recipeParamRows(
       },
       { label: "Start", value: dcaStartLabel(recipe) },
       {
+        label: "Confirm",
+        value:
+          recipe.direction === "both" && recipe.shortConfirm
+            ? `${dcaFilterLabel(recipe.confirm)} / ${dcaFilterLabel(recipe.shortConfirm)}`
+            : dcaFilterLabel(recipe.confirm),
+      },
+      {
         label: "Initial Order Size",
         value: `${formatParamNumber(recipe.clipSize)} ${recipe.sizeUnit}`,
       },
@@ -517,6 +525,13 @@ export function recipeParamRows(
       {
         label: "Stop",
         value: recipe.stopLossPct == null ? "Off" : `${recipe.stopLossPct}%`,
+      },
+      {
+        label: "Exit-if",
+        value:
+          recipe.direction === "both" && recipe.shortExitIf
+            ? `${dcaFilterLabel(recipe.exitIf)} / ${dcaFilterLabel(recipe.shortExitIf)}`
+            : dcaFilterLabel(recipe.exitIf),
       },
       {
         label: "Trailing",

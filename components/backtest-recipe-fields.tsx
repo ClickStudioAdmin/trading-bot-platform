@@ -32,6 +32,7 @@ import {
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import type { DcaTemplateRecipe } from "@/lib/templates/recipe";
 import {
   formatGroupedNumberInput,
@@ -910,6 +911,38 @@ export function BacktestRecipeFields({
             }
           />
         ) : null}
+        {recipe.direction === "both" ? (
+          <>
+            <DcaFilterBlock
+              label="Long confirm"
+              prefix="confirm"
+              side="long"
+              spec={recipe.confirm ?? null}
+              onChange={(next) => onChange({ ...recipe, confirm: next })}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+            <DcaFilterBlock
+              label="Short confirm"
+              prefix="shortConfirm"
+              side="short"
+              spec={recipe.shortConfirm ?? null}
+              onChange={(next) => onChange({ ...recipe, shortConfirm: next })}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+          </>
+        ) : (
+          <DcaFilterBlock
+            label="Confirm"
+            prefix="confirm"
+            side={recipe.direction === "short" ? "short" : "long"}
+            spec={recipe.confirm ?? null}
+            onChange={(next) => onChange({ ...recipe, confirm: next })}
+            fieldClass={fieldClass}
+            labelClass={labelClass}
+          />
+        )}
         {recipe.maxValue != null &&
         recipe.maxValue > 0 &&
         recipe.maxClips != null &&
@@ -1153,6 +1186,38 @@ export function BacktestRecipeFields({
             onCommit={(next) => onChange({ ...recipe, stopLossPct: next })}
           />
         </label>
+        {recipe.direction === "both" ? (
+          <>
+            <DcaFilterBlock
+              label="Long Exit-if"
+              prefix="exitIf"
+              side="long"
+              spec={recipe.exitIf ?? null}
+              onChange={(next) => onChange({ ...recipe, exitIf: next })}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+            <DcaFilterBlock
+              label="Short Exit-if"
+              prefix="shortExitIf"
+              side="short"
+              spec={recipe.shortExitIf ?? null}
+              onChange={(next) => onChange({ ...recipe, shortExitIf: next })}
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+          </>
+        ) : (
+          <DcaFilterBlock
+            label="Exit-if"
+            prefix="exitIf"
+            side={recipe.direction === "short" ? "short" : "long"}
+            spec={recipe.exitIf ?? null}
+            onChange={(next) => onChange({ ...recipe, exitIf: next })}
+            fieldClass={fieldClass}
+            labelClass={labelClass}
+          />
+        )}
         <label className={labelClass}>
           Trailing %
           <RecipeNumberInput

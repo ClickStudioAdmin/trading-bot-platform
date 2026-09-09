@@ -55,6 +55,17 @@ import {
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "./indicators";
+import {
+  dcaFilterForSide,
+  dcaFilterMet,
+  dcaFilterTimeframes,
+  filterFromRow,
+  parseDcaFilterForm,
+  writeDcaFilterFormFields,
+  type DcaFilterSpec,
+} from "./filters";
+
+export type { DcaFilterSpec } from "./filters";
 
 export type DcaStatus = "idle" | "armed" | "stop_adding";
 export type DcaDirection = "long" | "short" | "both";
@@ -128,6 +139,10 @@ export type DcaPlaybookConfig = {
   shortIndicatorPeriod?: number | null;
   shortIndicatorSlowPeriod?: number | null;
   shortIndicatorMultiplier?: number | null;
+  confirm?: DcaFilterSpec | null;
+  shortConfirm?: DcaFilterSpec | null;
+  exitIf?: DcaFilterSpec | null;
+  shortExitIf?: DcaFilterSpec | null;
 };
 
 export type DcaPlaybook = DcaPlaybookConfig & {
@@ -161,7 +176,7 @@ export type DcaTickAction =
   | { kind: "arm" }
   | { kind: "disarm" }
   | { kind: "clip" }
-  | { kind: "close"; reason: "take_profit" | "stop_loss" }
+  | { kind: "close"; reason: "take_profit" | "stop_loss" | "exit_if" }
   | { kind: "stop_adding" }
   | { kind: "end_cycle" }
   | { kind: "breakeven" };
@@ -599,16 +614,24 @@ export function dcaIndicatorTimeframes(playbook: {
   startKind: DcaStartKind;
   indicatorTimeframe: DcaIndicatorTimeframe | null;
   shortIndicatorTimeframe?: DcaIndicatorTimeframe | null;
+  confirm?: DcaFilterSpec | null;
+  shortConfirm?: DcaFilterSpec | null;
+  exitIf?: DcaFilterSpec | null;
+  shortExitIf?: DcaFilterSpec | null;
 }): DcaIndicatorTimeframe[] {
-  if (playbook.startKind !== "indicator" && playbook.startKind !== "trend") {
-    return [];
-  }
   const rows: DcaIndicatorTimeframe[] = [];
-  for (const row of [
-    playbook.indicatorTimeframe,
-    playbook.shortIndicatorTimeframe ?? null,
-  ]) {
-    if (row && !rows.includes(row)) {
+  if (playbook.startKind === "indicator" || playbook.startKind === "trend") {
+    for (const row of [
+      playbook.indicatorTimeframe,
+      playbook.shortIndicatorTimeframe ?? null,
+    ]) {
+      if (row && !rows.includes(row)) {
+        rows.push(row);
+      }
+    }
+  }
+  for (const row of dcaFilterTimeframes(playbook)) {
+    if (!rows.includes(row)) {
       rows.push(row);
     }
   }
@@ -619,6 +642,10 @@ export function dcaNeedsIndicatorCloses(playbook: {
   startKind: DcaStartKind;
   indicatorTimeframe: DcaIndicatorTimeframe | null;
   shortIndicatorTimeframe?: DcaIndicatorTimeframe | null;
+  confirm?: DcaFilterSpec | null;
+  shortConfirm?: DcaFilterSpec | null;
+  exitIf?: DcaFilterSpec | null;
+  shortExitIf?: DcaFilterSpec | null;
   direction: DcaDirection;
   long: Pick<DcaLegState, "status">;
   short: Pick<DcaLegState, "status">;
@@ -657,6 +684,10 @@ export function dcaTickBarTimeframes(playbook: {
   shortIndicatorTimeframe?: DcaIndicatorTimeframe | null;
   spacingKind?: DcaSpacingKind | null;
   takeProfitKind?: DcaTakeProfitKind | null;
+  confirm?: DcaFilterSpec | null;
+  shortConfirm?: DcaFilterSpec | null;
+  exitIf?: DcaFilterSpec | null;
+  shortExitIf?: DcaFilterSpec | null;
 }): DcaIndicatorTimeframe[] {
   const rows = dcaIndicatorTimeframes(playbook);
   if (dcaNeedsAtrBars(playbook)) {
@@ -837,6 +868,8 @@ export function writeDcaCycleFormFields(
   if (current.shortIndicatorMultiplier != null) {
     form.set("shortIndicatorMultiplier", String(current.shortIndicatorMultiplier));
   }
+  writeDcaFilterFormFields(form, "confirm", current.confirm);
+  writeDcaFilterFormFields(form, "shortConfirm", current.shortConfirm);
 }
 
 export function resolveDcaSaveConfig(
@@ -913,6 +946,8 @@ export function dcaWithLockedCycleConfig(
     shortIndicatorPeriod: current.shortIndicatorPeriod,
     shortIndicatorSlowPeriod: current.shortIndicatorSlowPeriod,
     shortIndicatorMultiplier: current.shortIndicatorMultiplier,
+    confirm: current.confirm ?? null,
+    shortConfirm: current.shortConfirm ?? null,
   };
 }
 
@@ -1392,6 +1427,32 @@ export function parseDcaPlaybookForm(
   if (!shortIndicator.ok) {
     return shortIndicator;
   }
+  const confirm = parseDcaFilterForm(form, "confirm", false, "Confirm");
+  if (!confirm.ok) {
+    return confirm;
+  }
+  const shortConfirm = parseDcaFilterForm(
+    form,
+    "shortConfirm",
+    false,
+    "Short confirm",
+  );
+  if (!shortConfirm.ok) {
+    return shortConfirm;
+  }
+  const exitIf = parseDcaFilterForm(form, "exitIf", false, "Exit-if");
+  if (!exitIf.ok) {
+    return exitIf;
+  }
+  const shortExitIf = parseDcaFilterForm(
+    form,
+    "shortExitIf",
+    false,
+    "Short Exit-if",
+  );
+  if (!shortExitIf.ok) {
+    return shortExitIf;
+  }
   return {
     ok: true,
     config: {
@@ -1442,6 +1503,10 @@ export function parseDcaPlaybookForm(
       shortIndicatorPeriod: shortIndicator.start?.period ?? null,
       shortIndicatorSlowPeriod: shortIndicator.start?.slowPeriod ?? null,
       shortIndicatorMultiplier: shortIndicator.start?.multiplier ?? null,
+      confirm: confirm.spec,
+      shortConfirm: direction === "both" ? shortConfirm.spec : null,
+      exitIf: exitIf.spec,
+      shortExitIf: direction === "both" ? shortExitIf.spec : null,
     },
   };
 }
@@ -1818,6 +1883,10 @@ export function parseDcaPlaybookRow(
     shortIndicatorMultiplier: parseDcaIndicatorMultiplier(
       row.short_indicator_multiplier,
     ),
+    confirm: filterFromRow(row, "confirm"),
+    shortConfirm: filterFromRow(row, "short_confirm"),
+    exitIf: filterFromRow(row, "exit_if"),
+    shortExitIf: filterFromRow(row, "short_exit_if"),
     updatedAtMs: (() => {
       const ms = new Date(String(row.updated_at ?? "")).getTime();
       return Number.isFinite(ms) ? ms : 0;
@@ -2152,6 +2221,12 @@ export function decideDcaTick(input: {
   splitIndicatorSides?: boolean;
   closes?: number[] | null;
   bars?: SupertrendBar[] | null;
+  confirm?: DcaFilterSpec | null;
+  confirmCloses?: number[] | null;
+  confirmBars?: SupertrendBar[] | null;
+  exitIf?: DcaFilterSpec | null;
+  exitIfCloses?: number[] | null;
+  exitIfBars?: SupertrendBar[] | null;
   takeProfitOrderType?: FuturesOrderType;
   tpLimitResting?: boolean;
   triggerPrices: { last: number | null; mark: number | null; index: number | null };
@@ -2219,6 +2294,20 @@ export function decideDcaTick(input: {
     indicatorKind,
     indicatorCompare,
   );
+  const confirmMet = dcaFilterMet({
+    spec: input.confirm,
+    side: input.side,
+    closes: input.confirmCloses,
+    bars: input.confirmBars,
+  });
+  const exitIfMet =
+    Boolean(input.exitIf) &&
+    dcaFilterMet({
+      spec: input.exitIf,
+      side: input.side,
+      closes: input.exitIfCloses,
+      bars: input.exitIfBars,
+    });
   const indicatorNow = seriesStart.now;
   const indicatorDue = seriesStart.due;
   const nextArmTrue = armMet;
@@ -2307,6 +2396,18 @@ export function decideDcaTick(input: {
       nextIndicatorTrue,
     };
   }
+  if (
+    exitIfMet &&
+    input.positionQty !== null &&
+    input.positionQty > 0
+  ) {
+    return {
+      action: { kind: "close", reason: "exit_if" },
+      nextArmTrue,
+      nextDisarmTrue,
+      nextIndicatorTrue,
+    };
+  }
   if (takeProfitHit) {
     const waitForLimit =
       (input.takeProfitOrderType ?? "market") === "limit" &&
@@ -2381,7 +2482,7 @@ export function decideDcaTick(input: {
       startKind === "immediate" ||
       (startKind === "price" && armMet) ||
       ((startKind === "indicator" || startKind === "trend") && indicatorDue);
-    if (!input.reduceOnly && startReady) {
+    if (!input.reduceOnly && startReady && confirmMet) {
       return {
         action: { kind: "arm" },
         nextArmTrue,

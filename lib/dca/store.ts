@@ -1,3 +1,4 @@
+import { filterColumns } from "./filters";
 import {
   dcaPlaybookConflict,
   dcaPlaybookIsRunning,
@@ -65,6 +66,10 @@ function configColumns(config: DcaPlaybookConfig): Record<string, unknown> {
     short_indicator_period: config.shortIndicatorPeriod ?? null,
     short_indicator_slow_period: config.shortIndicatorSlowPeriod ?? null,
     short_indicator_multiplier: config.shortIndicatorMultiplier ?? null,
+    ...filterColumns("confirm", config.confirm),
+    ...filterColumns("short_confirm", config.shortConfirm),
+    ...filterColumns("exit_if", config.exitIf),
+    ...filterColumns("short_exit_if", config.shortExitIf),
   };
 }
 

@@ -175,6 +175,9 @@ export function dcaDecisionMessage(input: {
   if (input.kind === "close" && input.reason === "stop_loss") {
     return `${name} stop loss hit. Flattening.`;
   }
+  if (input.kind === "close" && input.reason === "exit_if") {
+    return `${name} Exit-if hit. Flattening.`;
+  }
   return `${name} ${input.kind}.`;
 }
 

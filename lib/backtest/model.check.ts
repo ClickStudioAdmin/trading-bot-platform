@@ -57,6 +57,7 @@ assert.equal(
 assert.equal(matchingBacktestWindowDays("2020-01-01", defaultDates.to), null);
 
 assert.equal(parseBacktestFillReason("liquidation"), "liquidation");
+assert.equal(parseBacktestFillReason("exit_if"), "exit_if");
 assert.equal(
   backtestLiquidationPrice({
     side: "long",

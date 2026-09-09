@@ -52,6 +52,11 @@ import {
   dcaTickValueCapUsdt,
   type DcaPlaybook,
 } from "./playbook";
+import {
+  dcaFilterForSide,
+  dcaPlaybookFilterNeedsWideBars,
+  seriesForFilter,
+} from "./filters";
 import { dcaDecisionMessage } from "./log-copy";
 import {
   applyDcaVerb,
@@ -170,7 +175,12 @@ export async function runDcaPlaybookTick(input?: {
             venueEnvironment: account.venueEnvironment,
             symbol: playbook.symbol,
             interval: indicatorTimeframe,
-            limit: supertrend || dcaNeedsAtrBars(playbook) ? 500 : 80,
+            limit:
+              supertrend ||
+              dcaNeedsAtrBars(playbook) ||
+              dcaPlaybookFilterNeedsWideBars(playbook)
+                ? 500
+                : 80,
           }).catch((error: unknown) => {
             console.error(
               "engine indicator bars",
@@ -275,6 +285,26 @@ export async function runDcaPlaybookTick(input?: {
       const tpLimitResting =
         dcaOpenExitLimits(openWorking, playbook.id, side, "tp").length > 0;
       const indicatorStart = dcaIndicatorStartForSide(playbook, side);
+      const confirm = dcaFilterForSide(playbook, side, "confirm");
+      const exitIf = dcaFilterForSide(playbook, side, "exitIf");
+      const confirmSeries = seriesForFilter(
+        confirm,
+        confirm
+          ? closedLiveIndicatorBars(
+              barsByTimeframe.get(confirm.timeframe) ?? [],
+              confirm.timeframe,
+            )
+          : null,
+      );
+      const exitIfSeries = seriesForFilter(
+        exitIf,
+        exitIf
+          ? closedLiveIndicatorBars(
+              barsByTimeframe.get(exitIf.timeframe) ?? [],
+              exitIf.timeframe,
+            )
+          : null,
+      );
       const decision = decideDcaTick({
         status: leg.status,
         side,
@@ -342,6 +372,12 @@ export async function runDcaPlaybookTick(input?: {
               indicatorStart.timeframe,
             )
           : null,
+        confirm,
+        confirmCloses: confirmSeries.closes,
+        confirmBars: confirmSeries.bars,
+        exitIf,
+        exitIfCloses: exitIfSeries.closes,
+        exitIfBars: exitIfSeries.bars,
         triggerPrices: prices,
       });
       const flags = await patchDcaPlaybook({
@@ -575,7 +611,9 @@ async function applyTickAction(input: {
     message:
       input.action.reason === "take_profit"
         ? `${input.playbook.name} hit take profit.`
-        : `${input.playbook.name} hit stop loss.`,
+        : input.action.reason === "exit_if"
+          ? `${input.playbook.name} Exit-if hit.`
+          : `${input.playbook.name} hit stop loss.`,
     data: { reason: input.action.reason },
   });
   return { acted: true };

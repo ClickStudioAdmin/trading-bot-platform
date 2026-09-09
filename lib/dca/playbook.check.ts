@@ -2720,4 +2720,148 @@ assert.equal(
   "1 ATR",
 );
 
+const rsiRising = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+const rsiConfirmLow = {
+  kind: "rsi" as const,
+  timeframe: "15" as const,
+  compare: "lte" as const,
+  level: 30,
+  period: 14,
+  multiplier: null,
+};
+const rsiConfirmHigh = {
+  ...rsiConfirmLow,
+  compare: "gte" as const,
+  level: 70,
+};
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    armTrigger: { triggerBy: "last", compare: "gte", price: 100 },
+    confirm: rsiConfirmLow,
+    confirmCloses: rsiRising,
+  }).action.kind,
+  "none",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    armTrigger: { triggerBy: "last", compare: "gte", price: 100 },
+    confirm: rsiConfirmHigh,
+    confirmCloses: rsiRising,
+  }).action.kind,
+  "arm",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    armTrigger: { triggerBy: "last", compare: "gte", price: 100 },
+    confirm: rsiConfirmLow,
+    confirmCloses: [],
+    confirmBars: [],
+  }).action.kind,
+  "none",
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    armTrigger: { triggerBy: "last", compare: "gte", price: 100 },
+  }).action.kind,
+  "arm",
+);
+assert.deepEqual(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 1,
+    positionQty: 1,
+    entryPrice: 100,
+    mark: 100,
+    stopLossPct: 5,
+    takeProfitPct: 50,
+    exitIf: rsiConfirmHigh,
+    exitIfCloses: rsiRising,
+  }).action,
+  { kind: "close", reason: "exit_if" },
+);
+assert.deepEqual(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 1,
+    positionQty: 1,
+    entryPrice: 100,
+    mark: 90,
+    stopLossPct: 5,
+    takeProfitPct: 50,
+    exitIf: rsiConfirmHigh,
+    exitIfCloses: rsiRising,
+  }).action,
+  { kind: "close", reason: "stop_loss" },
+);
+assert.deepEqual(
+  decideDcaTick({
+    ...base,
+    status: "armed",
+    clipsFilled: 1,
+    positionQty: 1,
+    entryPrice: 100,
+    mark: 160,
+    stopLossPct: 5,
+    takeProfitPct: 10,
+    exitIf: rsiConfirmHigh,
+    exitIfCloses: rsiRising,
+  }).action,
+  { kind: "close", reason: "exit_if" },
+);
+assert.equal(
+  decideDcaTick({
+    ...base,
+    side: "short",
+    status: "armed",
+    clipsFilled: 0,
+    startKind: "price",
+    splitIndicatorSides: true,
+    armTrigger: { triggerBy: "last", compare: "lte", price: 100 },
+    lastPrice: 100,
+    confirm: { ...rsiConfirmLow, compare: "lte", level: 30 },
+    confirmCloses: rsiRising,
+  }).action.kind,
+  "none",
+);
+if (row) {
+  const emaConfirm = {
+    kind: "ema" as const,
+    timeframe: "240" as const,
+    compare: "gte" as const,
+    level: null,
+    period: 21,
+    multiplier: null,
+  };
+  const lockedFilters = dcaWithLockedCycleConfig(
+    {
+      ...row,
+      confirm: rsiConfirmHigh,
+      exitIf: rsiConfirmHigh,
+      stopLossPct: 9,
+    },
+    { ...row, confirm: emaConfirm, exitIf: null },
+  );
+  assert.equal(lockedFilters.confirm?.kind, "ema");
+  assert.equal(lockedFilters.exitIf?.kind, "rsi");
+  assert.equal(lockedFilters.stopLossPct, 9);
+}
+
 console.log("dca playbook checks passed");

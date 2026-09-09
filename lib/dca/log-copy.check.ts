@@ -53,4 +53,13 @@ assert.equal(
   "DCA Test - ETH hit the order cap (15 orders).",
 );
 
+assert.equal(
+  dcaDecisionMessage({
+    name: "DCA Test - SOL",
+    kind: "close",
+    reason: "exit_if",
+  }),
+  "DCA Test - SOL Exit-if hit. Flattening.",
+);
+
 console.log("dca log-copy checks passed");

@@ -70,6 +70,7 @@ import {
   type DcaPlaybook,
   type DcaStatus,
 } from "./playbook";
+import { dcaFilterForSide, dcaFilterMet, dcaPlaybookFilterNeedsWideBars } from "./filters";
 import { dcaSyncFailedMessage } from "./log-copy";
 import { isUnchangedWorkingAmend } from "@/lib/futures/working";
 import {
@@ -270,13 +271,14 @@ async function loadPlaybookStartBars(
   const supertrend =
     playbook.indicatorKind === "supertrend" ||
     playbook.shortIndicatorKind === "supertrend";
+  const wide = supertrend || dcaPlaybookFilterNeedsWideBars(playbook);
   for (const timeframe of timeframes) {
     const fetched = await loadDeskIndicatorBars({
       venue: desk.venue,
       venueEnvironment: desk.venueEnvironment,
       symbol: playbook.symbol,
       interval: timeframe,
-      limit: supertrend ? 500 : 80,
+      limit: wide ? 500 : 80,
     }).catch((error: unknown) => {
       console.error(
         "dca start bars",
@@ -325,6 +327,24 @@ function seriesStartDueForSide(
     closes: bars.map((row) => row.close),
     bars,
   }).due;
+}
+
+function confirmMetForSide(
+  playbook: DcaPlaybook,
+  side: FuturesSide,
+  barsByTimeframe: Map<DcaIndicatorTimeframe, CandleBar[]>,
+): boolean {
+  const confirm = dcaFilterForSide(playbook, side, "confirm");
+  if (!confirm) {
+    return true;
+  }
+  const bars = barsByTimeframe.get(confirm.timeframe) ?? [];
+  return dcaFilterMet({
+    spec: confirm,
+    side,
+    closes: bars.map((row) => row.close),
+    bars,
+  });
 }
 
 function clipTrailing(
@@ -1628,6 +1648,19 @@ async function applyDcaVerbUnlocked(input: {
       !placeNow &&
       !seriesStartDueForSide(playbook, side, startBars)
     ) {
+      const patched = await patchDcaLeg({
+        supabase,
+        id: playbook.id,
+        side,
+        patch: { status: "armed" },
+      });
+      if (!patched.ok) {
+        return patched;
+      }
+      waiting += 1;
+      continue;
+    }
+    if (!input.forcePlace && !confirmMetForSide(playbook, side, startBars)) {
       const patched = await patchDcaLeg({
         supabase,
         id: playbook.id,

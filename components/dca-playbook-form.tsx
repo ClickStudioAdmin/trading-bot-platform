@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ColumnHint } from "@/components/column-hint";
+import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
@@ -92,6 +93,10 @@ import {
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import {
+  dcaFilterSummaryLine,
+  type DcaFilterSpec,
+} from "@/lib/dca/filters";
 import { closedLiveIndicatorBars } from "@/lib/market/desk-klines";
 import type { CandleBar } from "@/lib/market/candles";
 import type { FuturesOrderType, FuturesSide } from "@/lib/futures/model";
@@ -902,6 +907,18 @@ export function DcaPlaybookForm({
       "short",
     ),
   );
+  const [confirm, setConfirm] = useState<DcaFilterSpec | null>(
+    source?.confirm ?? null,
+  );
+  const [shortConfirm, setShortConfirm] = useState<DcaFilterSpec | null>(
+    source?.shortConfirm ?? null,
+  );
+  const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(
+    source?.exitIf ?? null,
+  );
+  const [shortExitIf, setShortExitIf] = useState<DcaFilterSpec | null>(
+    source?.shortExitIf ?? null,
+  );
   const defaultSymbol =
     source?.symbol ??
     options.find((row) => row.symbol === policy.defaultSymbol)?.symbol ??
@@ -1137,6 +1154,18 @@ export function DcaPlaybookForm({
       ? "short"
       : "long";
   const summary = summaryBySide[activeLadderSide];
+  const confirmSummary = dcaFilterSummaryLine(
+    "Confirm",
+    confirm,
+    shortConfirm,
+    direction === "both",
+  );
+  const exitIfSummary = dcaFilterSummaryLine(
+    "Exit-if",
+    exitIf,
+    shortExitIf,
+    direction === "both",
+  );
   function snapshotOverlay() {
     return {
       name: source?.name || defaultName || DEFAULT_DCA_NAME,
@@ -1740,6 +1769,41 @@ export function DcaPlaybookForm({
               onMultiplierChange={setIndicatorMultiplier}
             />
           ) : null}
+          {direction === "both" ? (
+            <>
+              <DcaFilterBlock
+                label="Long confirm"
+                prefix="confirm"
+                side="long"
+                spec={confirm}
+                onChange={setConfirm}
+                named
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+              <DcaFilterBlock
+                label="Short confirm"
+                prefix="shortConfirm"
+                side="short"
+                spec={shortConfirm}
+                onChange={setShortConfirm}
+                named
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            </>
+          ) : (
+            <DcaFilterBlock
+              label="Confirm"
+              prefix="confirm"
+              side={direction === "short" ? "short" : "long"}
+              spec={confirm}
+              onChange={setConfirm}
+              named
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+          )}
         </div>
       </fieldset>
 
@@ -2270,6 +2334,41 @@ export function DcaPlaybookForm({
             />
           </label>
         </div>
+        {direction === "both" ? (
+          <div className="space-y-3">
+            <DcaFilterBlock
+              label="Long Exit-if"
+              prefix="exitIf"
+              side="long"
+              spec={exitIf}
+              onChange={setExitIf}
+              named
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+            <DcaFilterBlock
+              label="Short Exit-if"
+              prefix="shortExitIf"
+              side="short"
+              spec={shortExitIf}
+              onChange={setShortExitIf}
+              named
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+          </div>
+        ) : (
+          <DcaFilterBlock
+            label="Exit-if"
+            prefix="exitIf"
+            side={direction === "short" ? "short" : "long"}
+            spec={exitIf}
+            onChange={setExitIf}
+            named
+            fieldClass={fieldClass}
+            labelClass={labelClass}
+          />
+        )}
         <p className={sectionTitleClass}>
           Move Breakeven
         </p>
@@ -2349,6 +2448,12 @@ export function DcaPlaybookForm({
         <p className={sectionTitleClass}>
           Summary
         </p>
+        {confirmSummary ? (
+          <p className="text-xs text-ink-muted">{confirmSummary}</p>
+        ) : null}
+        {exitIfSummary ? (
+          <p className="text-xs text-ink-muted">{exitIfSummary}</p>
+        ) : null}
         {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         <div
           className={

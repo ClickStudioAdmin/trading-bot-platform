@@ -1,5 +1,9 @@
 import { formatDeskType, type DeskType } from "@/lib/accounts/model";
 import {
+  writeDcaFilterFormFields,
+  type DcaFilterSpec,
+} from "@/lib/dca/filters";
+import {
   oppositeRsiCompare,
   oppositeRsiLevel,
 } from "@/lib/dca/indicators";
@@ -104,6 +108,10 @@ export type DcaTemplateRecipe = {
   shortIndicatorPeriod?: number | null;
   shortIndicatorSlowPeriod?: number | null;
   shortIndicatorMultiplier?: number | null;
+  confirm?: DcaFilterSpec | null;
+  shortConfirm?: DcaFilterSpec | null;
+  exitIf?: DcaFilterSpec | null;
+  shortExitIf?: DcaFilterSpec | null;
 };
 
 export type PerpsTemplateRecipe = {
@@ -287,6 +295,10 @@ export function snapshotDcaRecipe(config: DcaPlaybookConfig): DcaTemplateRecipe 
     shortIndicatorPeriod: config.shortIndicatorPeriod ?? null,
     shortIndicatorSlowPeriod: config.shortIndicatorSlowPeriod ?? null,
     shortIndicatorMultiplier: config.shortIndicatorMultiplier ?? null,
+    confirm: config.confirm ?? null,
+    shortConfirm: config.shortConfirm ?? null,
+    exitIf: config.exitIf ?? null,
+    shortExitIf: config.shortExitIf ?? null,
   };
 }
 
@@ -697,6 +709,10 @@ export function dcaRecipeToConfig(
   if (shortMultiplier != null) {
     form.set("shortIndicatorMultiplier", String(shortMultiplier));
   }
+  writeDcaFilterFormFields(form, "confirm", recipe.confirm);
+  writeDcaFilterFormFields(form, "shortConfirm", recipe.shortConfirm);
+  writeDcaFilterFormFields(form, "exitIf", recipe.exitIf);
+  writeDcaFilterFormFields(form, "shortExitIf", recipe.shortExitIf);
   const parsed = parseDcaPlaybookForm(form, venue);
   if (!parsed.ok) {
     return parsed;

@@ -36,4 +36,4 @@ Keep the docs; do not schedule unless Click adds them.
 - **Paper auto-switch** — [phase-auto-switch.md](phase-auto-switch.md)
 - **Hedged DCA as its own managing playbook** — cross-desk hedge is roadmap 5 unless Click wants a dedicated type
 - **XT** — named in older out-of-scope lists; falls under roadmap 16 if ever chosen
-- **Adaptive DCA filters and exits** — [phase-adaptive.md](phase-adaptive.md). Wave 1 is ATR spacing + ATR take profit on the existing playbook. Trend start (Supertrend) is already on the playbook. Do not implement filters, Exit-if, or cooldown until Click says go on the next wave.
+- **Adaptive DCA filters and exits** — [phase-adaptive.md](phase-adaptive.md). Wave 1 (ATR spacing + ATR take profit) is on the playbook. Wave 2 + 2b (Confirm + Exit-if) are in progress. Stop after those waves. Wave 3 cooldown stays parked.

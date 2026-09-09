@@ -130,6 +130,17 @@ assert.equal(
   ),
   "Liq long",
 );
+assert.equal(
+  backtestFillMarkerText({ ...fills[2]!, reason: "exit_if" }, false),
+  "Exit-if long",
+);
+assert.equal(
+  backtestFillMarkerText(
+    { ...fills[2]!, reason: "exit_if", side: "short" },
+    false,
+  ),
+  "Exit-if short",
+);
 assert.equal(backtestFillMarkerText(fills[1]!, true), "Add 2 long");
 assert.equal(backtestFillMarkerText(fills[3]!, true), "Open short");
 

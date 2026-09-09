@@ -327,6 +327,9 @@ export function backtestFillMarkerText(
     if (row.reason === "stop") {
       return `SL ${side}`;
     }
+    if (row.reason === "exit_if") {
+      return `Exit-if ${side}`;
+    }
     if (row.reason === "trailing") {
       return `Trail ${side}`;
     }

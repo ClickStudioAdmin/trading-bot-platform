@@ -57,6 +57,7 @@ export const BACKTEST_FILL_REASONS = [
   "clip",
   "take_profit",
   "stop",
+  "exit_if",
   "trailing",
   "close",
   "liquidation",

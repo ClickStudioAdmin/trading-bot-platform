@@ -559,4 +559,101 @@ const atrLong = replayDcaPlaybook({
 assert.ok(Date.now() - atrLongStarted < 2000);
 assert.equal(atrLong.orders[0]?.reason, "entry");
 
+const confirmBlockForm = new FormData();
+confirmBlockForm.set("name", "Confirm block");
+confirmBlockForm.set("symbol", "BTCUSDT");
+confirmBlockForm.set("direction", "long");
+confirmBlockForm.set("startKind", "immediate");
+confirmBlockForm.set("clipSize", "1");
+confirmBlockForm.set("sizeUnit", "qty");
+confirmBlockForm.set("confirmKind", "rsi");
+confirmBlockForm.set("confirmTimeframe", "5");
+confirmBlockForm.set("confirmCompare", "lte");
+confirmBlockForm.set("confirmLevel", "30");
+confirmBlockForm.set("confirmPeriod", "14");
+const confirmBlockParsed = parseDcaPlaybookForm(confirmBlockForm);
+assert.equal(confirmBlockParsed.ok, true);
+if (!confirmBlockParsed.ok) {
+  throw new Error("expected confirm parse");
+}
+const risingReplay = Array.from({ length: 20 }, (_, index) => {
+  const price = 100 + index;
+  return {
+    timeMs: (index + 1) * 1_000,
+    open: price,
+    high: price,
+    low: price,
+    close: price,
+  };
+});
+const confirmBlocked = replayDcaPlaybook({
+  bars: risingReplay,
+  recipe: snapshotDcaRecipe(confirmBlockParsed.config),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(confirmBlocked.orders.length, 0);
+
+const exitIfForm = new FormData();
+exitIfForm.set("name", "Exit-if");
+exitIfForm.set("symbol", "BTCUSDT");
+exitIfForm.set("direction", "long");
+exitIfForm.set("startKind", "immediate");
+exitIfForm.set("clipSize", "1");
+exitIfForm.set("sizeUnit", "qty");
+exitIfForm.set("exitIfKind", "rsi");
+exitIfForm.set("exitIfTimeframe", "5");
+exitIfForm.set("exitIfCompare", "gte");
+exitIfForm.set("exitIfLevel", "70");
+exitIfForm.set("exitIfPeriod", "14");
+const exitIfParsed = parseDcaPlaybookForm(exitIfForm);
+assert.equal(exitIfParsed.ok, true);
+if (!exitIfParsed.ok) {
+  throw new Error("expected Exit-if parse");
+}
+const exitIfReplay = replayDcaPlaybook({
+  bars: risingReplay,
+  recipe: snapshotDcaRecipe(exitIfParsed.config),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(exitIfReplay.orders[0]?.reason, "entry");
+const exitIfFill = exitIfReplay.orders.find((row) => row.reason === "exit_if");
+assert.ok(exitIfFill);
+assert.ok((exitIfFill.atMs ?? 0) > (exitIfReplay.orders[0]?.atMs ?? 0));
+
+const bothConfirmForm = new FormData();
+bothConfirmForm.set("name", "Both confirm");
+bothConfirmForm.set("symbol", "BTCUSDT");
+bothConfirmForm.set("direction", "both");
+bothConfirmForm.set("startKind", "immediate");
+bothConfirmForm.set("clipSize", "1");
+bothConfirmForm.set("sizeUnit", "qty");
+bothConfirmForm.set("confirmKind", "rsi");
+bothConfirmForm.set("confirmTimeframe", "5");
+bothConfirmForm.set("confirmCompare", "gte");
+bothConfirmForm.set("confirmLevel", "70");
+bothConfirmForm.set("confirmPeriod", "14");
+bothConfirmForm.set("shortConfirmKind", "rsi");
+bothConfirmForm.set("shortConfirmTimeframe", "5");
+bothConfirmForm.set("shortConfirmCompare", "lte");
+bothConfirmForm.set("shortConfirmLevel", "30");
+bothConfirmForm.set("shortConfirmPeriod", "14");
+const bothConfirmParsed = parseDcaPlaybookForm(bothConfirmForm);
+assert.equal(bothConfirmParsed.ok, true);
+if (!bothConfirmParsed.ok) {
+  throw new Error("expected Dual confirm parse");
+}
+const bothConfirmReplay = replayDcaPlaybook({
+  bars: risingReplay,
+  recipe: snapshotDcaRecipe(bothConfirmParsed.config),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(
+  bothConfirmReplay.orders.filter((row) => row.reason === "entry").length,
+  1,
+);
+assert.equal(bothConfirmReplay.orders[0]?.side, "long");
+
 console.log("dca backtest replay checks passed");
