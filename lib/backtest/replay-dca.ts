@@ -432,6 +432,7 @@ export function replayDcaPlaybook(input: {
     const triggerPrices = { last: price, mark: price, index: price };
     let held = false;
     let closedThisBar = false;
+    let startedThisBar = false;
     for (const side of sides) {
       if (liquidated) {
         break;
@@ -582,15 +583,14 @@ export function replayDcaPlaybook(input: {
       const starting =
         (decision.action.kind === "arm" || decision.action.kind === "clip") &&
         live.clipsFilled === 0;
-      if (
-        starting &&
-        (closedThisBar ||
-          (splitSides && legs[side === "long" ? "short" : "long"].qty > 0))
-      ) {
+      if (starting && (closedThisBar || startedThisBar)) {
         continue;
       }
       if (decision.action.kind === "arm" || decision.action.kind === "clip") {
         addClip(side, bar.timeMs, price);
+        if (starting) {
+          startedThisBar = true;
+        }
       } else if (decision.action.kind === "close") {
         flatten(
           side,

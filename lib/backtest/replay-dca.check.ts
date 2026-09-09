@@ -124,10 +124,17 @@ const bothImmediate = replayDcaPlaybook({
 const bothEntries = bothImmediate.orders.filter(
   (row) => row.action === "buy" || row.action === "sell",
 );
-assert.equal(bothEntries.length, 1);
+assert.equal(bothEntries.length, 2);
 assert.equal(bothEntries[0]?.side, "long");
-assert.equal(bothImmediate.stats.openSide, "long");
-assert.ok(!bothImmediate.orders.some((row) => row.side === "short"));
+assert.equal(bothEntries[0]?.atMs, 1_000);
+assert.equal(bothEntries[1]?.side, "short");
+assert.equal(bothEntries[1]?.atMs, 2_000);
+assert.ok(
+  bothImmediate.orders.some((row) => row.side === "long" && row.qty > 0),
+);
+assert.ok(
+  bothImmediate.orders.some((row) => row.side === "short" && row.qty > 0),
+);
 
 const priceBoth = new FormData();
 priceBoth.set("startKind", "price");
@@ -153,6 +160,36 @@ assert.equal(
 );
 assert.equal(bothPrice.orders[0]?.side, "long");
 assert.ok(!bothPrice.orders.some((row) => row.side === "short"));
+
+const bothOverlapForm = new FormData();
+bothOverlapForm.set("startKind", "price");
+bothOverlapForm.set("armTriggerBy", "last");
+bothOverlapForm.set("armCompare", "gte");
+bothOverlapForm.set("armPrice", "100");
+bothOverlapForm.set("shortArmTriggerBy", "last");
+bothOverlapForm.set("shortArmCompare", "lte");
+bothOverlapForm.set("shortArmPrice", "101");
+const bothOverlap = replayDcaPlaybook({
+  bars: [
+    { timeMs: 1_000, open: 100, high: 100, low: 100, close: 100 },
+    { timeMs: 2_000, open: 100, high: 100, low: 100, close: 100 },
+  ],
+  recipe: parseRecipe("both", bothOverlapForm),
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+const bothOverlapEntries = bothOverlap.orders.filter(
+  (row) => row.reason === "entry",
+);
+assert.equal(bothOverlapEntries.length, 2);
+assert.equal(bothOverlapEntries[0]?.side, "long");
+assert.equal(bothOverlapEntries[0]?.atMs, 1_000);
+assert.equal(bothOverlapEntries[1]?.side, "short");
+assert.equal(bothOverlapEntries[1]?.atMs, 2_000);
+assert.equal(
+  bothOverlap.orders.some((row) => row.action === "flatten"),
+  false,
+);
 
 const bothFlipForm = new FormData();
 bothFlipForm.set("startKind", "price");
