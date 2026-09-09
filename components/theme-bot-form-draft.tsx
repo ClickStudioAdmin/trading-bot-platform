@@ -251,14 +251,9 @@ export function ThemeBotFormDraft() {
   return (
     <div className="space-y-3">
       <p className="text-sm text-ink-muted">
-        Draft standard for every desk. Local only — nothing saves. Every
-        status and action is shown here for review, including ones that only
-        appear in some live states.
-      </p>
-
-      <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
-        No bots yet. Add a bot to own orders and exits on one contract. Leave
-        this empty if you are not ready to arm.
+        Draft standard for every desk. Local only — nothing saves. The card
+        below is one armed bot as it would look live. Other states sit in
+        Reference at the bottom.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -272,9 +267,6 @@ export function ThemeBotFormDraft() {
           <option value="">Clone existing bot</option>
           <option value="sample">Sample bot</option>
         </select>
-        <p className="text-sm text-success" role="status">
-          Saved.
-        </p>
         <button type="button" className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink">
           Save Bots
         </button>
@@ -296,28 +288,14 @@ export function ThemeBotFormDraft() {
             <div className="flex items-center gap-2">
               <select className={`${fieldClass} mt-0 min-w-0 flex-1`} defaultValue="active">
                 <option value="active">Active</option>
-                <option value="active_ro">Active (Reduce only)</option>
                 <option value="reduce_only">Reduce only</option>
                 <option value="disabled">Disabled</option>
               </select>
-              <StatusLight fill="bg-success" inUse />
+              <StatusLight fill="bg-success" />
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" className={headerLongClass}>
-                Save and Arm
-              </button>
-              <button type="button" className={headerSecondaryClass}>
-                Arm
-              </button>
               <button type="button" className={headerPrimaryClass}>
                 Save
-              </button>
-              <button
-                type="button"
-                className={headerPrimaryClass}
-                title="Stop adding any new orders (also cancels any existing entry limit orders)"
-              >
-                Stop adding
               </button>
               <button
                 type="button"
@@ -326,41 +304,9 @@ export function ThemeBotFormDraft() {
               >
                 Disarm
               </button>
-              <button
-                type="button"
-                className={headerPrimaryClass}
-                title="Close all positions and place the bot in idle mode (no new entries)"
-              >
-                Close bot
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1.5">
-              <StatusLight fill="bg-ink-faint" label="Idle" />
-              <StatusLight fill="bg-success" label="Armed / Active" />
-              <StatusLight fill="bg-warning" label="Stop adding" />
-              <StatusLight fill="bg-warning" label="Reduce only" />
-              <StatusLight fill="bg-ink-faint" label="Disabled" />
-              <StatusLight fill="bg-success" label="In use" inUse />
             </div>
             </div>
           </div>
-        </div>
-        <div className="mt-4 space-y-2">
-          <DraftCallout tone="danger">
-            Could not save. Sample error flash.
-          </DraftCallout>
-          <DraftCallout tone="warning">
-            Size is above the desk max. Save is blocked so this bot is not
-            lost.
-          </DraftCallout>
-          <DraftCallout tone="warning">
-            Reduce only is on. New orders stay blocked until you turn it off
-            in Desk Settings. Take profit and stop still run.
-          </DraftCallout>
-          <p className="text-xs text-warning">
-            A position is open. Cycle settings are locked. Take profit and
-            stops still save.
-          </p>
         </div>
         </Group>
 
@@ -803,7 +749,7 @@ export function ThemeBotFormDraft() {
           </>
         ) : null}
 
-        <Group title="Actions and summary">
+        <section className="space-y-3 py-5">
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -827,53 +773,16 @@ export function ThemeBotFormDraft() {
               <button type="button" className={headerRemoveClass}>
                 Remove
               </button>
-              <span
-                className="inline-flex"
-                title="Stop adding or close before removing."
-              >
-                <button
-                  type="button"
-                  disabled
-                  className={`${headerRemoveClass} pointer-events-none opacity-40`}
-                >
-                  Remove
-                </button>
-              </span>
             </div>
           </div>
           {ladderOpen ? (
             <div className="space-y-3">
-              <div className="flex items-end justify-between gap-3 border-b border-line">
-                <div
-                  role="tablist"
-                  aria-label="Ladder side"
-                  className="flex gap-1"
-                >
-                  <TabButton
-                    selected={ladderTab === "long"}
-                    panelId="theme-ladder-panel"
-                    onClick={() => setLadderTab("long")}
-                  >
-                    Long ladder
-                  </TabButton>
-                  <TabButton
-                    selected={ladderTab === "short"}
-                    panelId="theme-ladder-panel"
-                    onClick={() => setLadderTab("short")}
-                  >
-                    Short ladder
-                  </TabButton>
-                </div>
-                <p className="pb-2 text-right text-xs text-ink-muted">
-                  Summary is based on the current asset price and the
-                  parameters configured above
-                </p>
-              </div>
-              <div
-                id="theme-ladder-panel"
-                role="tabpanel"
-                className="flex flex-wrap"
-              >
+              <p className={sectionTitleClass}>Summary</p>
+              <p className="text-xs text-ink-muted">
+                Summary is based on the current asset price and the parameters
+                configured above
+              </p>
+              <div className="flex flex-wrap">
                 <DraftStat
                   label="Covered Range"
                   value="4.2%"
@@ -882,7 +791,7 @@ export function ThemeBotFormDraft() {
                 <DraftStat
                   label="Max Exposure"
                   value="$1,200"
-                  hint="Full ladder notional · This side only"
+                  hint="Full ladder notional"
                 />
                 <DraftStat
                   label="Initial Margin"
@@ -892,7 +801,134 @@ export function ThemeBotFormDraft() {
               </div>
             </div>
           ) : null}
-        </Group>
+        </section>
+      </div>
+
+      <ThemeBotFormReference />
+    </div>
+  );
+}
+
+function ThemeBotFormReference() {
+  return (
+    <div className="space-y-5 rounded-card border border-line bg-surface px-5 py-5">
+      <div>
+        <h3 className={sectionTitleClass}>Reference</h3>
+        <p className="mt-1 text-sm text-ink-muted">
+          States and chrome that are not on the sample bot above. Nothing
+          here is live.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <p className={labelClass}>Empty desk</p>
+        <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
+          No bots yet. Add a bot to own orders and exits on one contract. Leave
+          this empty if you are not ready to arm.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <p className={labelClass}>Status lights</p>
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          <StatusLight fill="bg-ink-faint" label="Idle" />
+          <StatusLight fill="bg-success" label="Armed / Active" />
+          <StatusLight fill="bg-warning" label="Stop adding" />
+          <StatusLight fill="bg-warning" label="Reduce only" />
+          <StatusLight fill="bg-ink-faint" label="Disabled" />
+          <StatusLight fill="bg-success" label="In use" inUse />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className={labelClass}>Lifecycle buttons</p>
+        <p className="text-xs text-ink-faint">
+          Sample bot is armed with no open position, so it only shows Save and
+          Disarm. These appear in other states.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={headerLongClass}>
+            Save and Arm
+          </button>
+          <button type="button" className={headerSecondaryClass}>
+            Arm
+          </button>
+          <button
+            type="button"
+            className={headerPrimaryClass}
+            title="Stop adding any new orders (also cancels any existing entry limit orders)"
+          >
+            Stop adding
+          </button>
+          <button
+            type="button"
+            className={headerPrimaryClass}
+            title="Close all positions and place the bot in idle mode (no new entries)"
+          >
+            Close bot
+          </button>
+          <span
+            className="inline-flex"
+            title="Stop adding or close before removing."
+          >
+            <button
+              type="button"
+              disabled
+              className={`${headerRemoveClass} pointer-events-none opacity-40`}
+            >
+              Remove
+            </button>
+          </span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <p className={labelClass}>Flashes and locks</p>
+        <p className="text-sm text-success" role="status">
+          Saved.
+        </p>
+        <DraftCallout tone="danger">
+          Could not save. Sample error flash.
+        </DraftCallout>
+        <DraftCallout tone="warning">
+          Size is above the desk max. Save is blocked so this bot is not lost.
+        </DraftCallout>
+        <DraftCallout tone="warning">
+          Reduce only is on. New orders stay blocked until you turn it off in
+          Desk Settings. Take profit and stop still run.
+        </DraftCallout>
+        <p className="text-xs text-warning">
+          A position is open. Cycle settings are locked. Take profit and stops
+          still save.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <p className={labelClass}>Both-side summary tabs</p>
+        <p className="text-xs text-ink-faint">
+          Only when Direction is Both. The sample bot is Buy, so it has one
+          summary.
+        </p>
+        <div
+          role="tablist"
+          aria-label="Ladder side"
+          className="flex gap-1 border-b border-line"
+        >
+          <TabButton
+            selected={true}
+            panelId="theme-ref-ladder"
+            onClick={() => undefined}
+          >
+            Long ladder
+          </TabButton>
+          <TabButton
+            selected={false}
+            panelId="theme-ref-ladder"
+            onClick={() => undefined}
+          >
+            Short ladder
+          </TabButton>
+        </div>
       </div>
     </div>
   );
