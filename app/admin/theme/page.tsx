@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
 import { ThemeBotFormDraft } from "@/components/theme-bot-form-draft";
@@ -40,7 +41,14 @@ const swatchClass: Record<(typeof colours)[number]["name"], string> = {
   warning: "bg-warning",
 };
 
-export default function ThemePage() {
+export default async function ThemePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const raw = params.tab;
+  const tab = (Array.isArray(raw) ? raw[0] : raw) === "bot" ? "bot" : "theme";
   return (
     <div className="space-y-12">
       <div className="overflow-hidden rounded-card border border-line bg-surface">
@@ -63,6 +71,32 @@ export default function ThemePage() {
 
       <div className="space-y-12">
         <PageHeading overline="Reference" title="Portal theme" />
+        <nav
+          aria-label="Theme reference"
+          className="flex border-b border-line"
+        >
+          <TabLink href="/admin/theme" selected={tab === "theme"}>
+            Theme
+          </TabLink>
+          <TabLink href="/admin/theme?tab=bot" selected={tab === "bot"}>
+            Bot form
+          </TabLink>
+        </nav>
+        {tab === "bot" ? (
+          <section>
+            <h2 className="text-xl font-semibold tracking-tight">
+              Bot form (draft)
+            </h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              Proposed standard chrome for Perps, DCA, and later scale-in.
+              Review here before any live desk form changes.
+            </p>
+            <div className="mt-5">
+              <ThemeBotFormDraft />
+            </div>
+          </section>
+        ) : (
+          <>
         <section>
           <h2 className="text-xl font-semibold tracking-tight">Colour</h2>
           <p className="mt-1 text-sm text-ink-muted">
@@ -315,17 +349,6 @@ export default function ThemePage() {
           </div>
         </section>
 
-        <section>
-          <h2 className="text-xl font-semibold tracking-tight">Bot form (draft)</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Proposed standard chrome for Perps, DCA, and later scale-in. Review
-            here before any live desk form changes.
-          </p>
-          <div className="mt-5">
-            <ThemeBotFormDraft />
-          </div>
-        </section>
-
         <section className="grid gap-4 lg:grid-cols-3">
           <div className="rounded-card border border-line bg-surface p-4">
             <p className="text-xs uppercase tracking-[0.12em] text-ink-faint">
@@ -390,8 +413,33 @@ export default function ThemePage() {
         <p className="text-xs text-ink-faint">
           Sample figures are for theme review only. Source: docs/ui-theme.md
         </p>
+          </>
+        )}
       </div>
     </div>
+  );
+}
+
+function TabLink({
+  href,
+  selected,
+  children,
+}: {
+  href: string;
+  selected: boolean;
+  children: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+        selected
+          ? "border-accent text-ink"
+          : "border-transparent text-ink-muted hover:text-ink"
+      }`}
+    >
+      {children}
+    </Link>
   );
 }
 
