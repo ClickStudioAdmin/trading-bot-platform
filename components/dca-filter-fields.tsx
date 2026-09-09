@@ -37,6 +37,7 @@ export function DcaFilterBlock({
   onChange,
   named = false,
   dense = false,
+  allowOff = true,
   fieldClass,
   labelClass,
 }: {
@@ -47,6 +48,7 @@ export function DcaFilterBlock({
   onChange: (next: DcaFilterSpec | null) => void;
   named?: boolean;
   dense?: boolean;
+  allowOff?: boolean;
   fieldClass: string;
   labelClass: string;
 }) {
@@ -62,7 +64,7 @@ export function DcaFilterBlock({
         }}
         className={fieldClass}
       >
-        <option value="">Off</option>
+        {allowOff ? <option value="">Off</option> : null}
         {DCA_FILTER_KIND_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

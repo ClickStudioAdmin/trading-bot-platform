@@ -5,7 +5,7 @@ import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { ChevronIcon, TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
-  DCA_CONFIRM_FIELD_LABEL,
+  dcaFilterSpecForKind,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
 import {
@@ -166,6 +166,62 @@ function DraftStat({
   );
 }
 
+function EnableCheck({ checked }: { checked: boolean }) {
+  return (
+    <span
+      className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-[5px] border ${
+        checked
+          ? "border-accent bg-accent text-canvas"
+          : "border-line-strong bg-surface-raised"
+      }`}
+      aria-hidden
+    >
+      {checked ? (
+        <svg viewBox="0 0 12 12" className="size-3 fill-none stroke-current stroke-[1.8]">
+          <path d="M2 6.2 4.6 9 10 3" />
+        </svg>
+      ) : null}
+    </span>
+  );
+}
+
+function OptionalSection({
+  title,
+  hint,
+  enabled,
+  onEnabled,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  enabled: boolean;
+  onEnabled: (next: boolean) => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3 py-5">
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(event) => onEnabled(event.target.checked)}
+          className="sr-only"
+        />
+        <EnableCheck checked={enabled} />
+        <span>
+          <span className={sectionTitleClass}>{title}</span>
+          {hint ? (
+            <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-ink-faint">
+              {hint}
+            </span>
+          ) : null}
+        </span>
+      </label>
+      {enabled ? children : null}
+    </section>
+  );
+}
+
 function Group({
   title,
   hint,
@@ -267,7 +323,13 @@ export function ThemeBotFormDraft() {
   const [multiplier, setMultiplier] = useState(
     String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
   );
+  const [confirmOn, setConfirmOn] = useState(false);
   const [confirm, setConfirm] = useState<DcaFilterSpec | null>(null);
+  const [tpOn, setTpOn] = useState(true);
+  const [trailOn, setTrailOn] = useState(false);
+  const [slOn, setSlOn] = useState(false);
+  const [breakevenOn, setBreakevenOn] = useState(false);
+  const [exitIfOn, setExitIfOn] = useState(false);
   const [size, setSize] = useState("100");
   const [sizeUnit, setSizeUnit] = useState<"qty" | "usdt">("usdt");
   const [tpMethod, setTpMethod] = useState<ExitMethod>("percent");
@@ -305,7 +367,13 @@ export function ThemeBotFormDraft() {
     slowPeriod,
     level,
     multiplier,
+    confirmOn,
     confirm,
+    tpOn,
+    trailOn,
+    slOn,
+    breakevenOn,
+    exitIfOn,
     size,
     sizeUnit,
     tpMethod,
@@ -737,18 +805,27 @@ export function ThemeBotFormDraft() {
         </Group>
 
         {desk === "dca" && !closing ? (
-          <Group title="Initial Order Trigger Parameters">
+          <OptionalSection
+            title="Secondary Condition"
+            hint="Must be true for the entry trigger to execute."
+            enabled={confirmOn}
+            onEnabled={(next) => {
+              setConfirmOn(next);
+              setConfirm(next ? (confirm ?? dcaFilterSpecForKind("rsi", "long")) : null);
+            }}
+          >
             <DcaFilterBlock
-              label={DCA_CONFIRM_FIELD_LABEL}
+              label="Kind"
               prefix="themeConfirm"
               side="long"
               spec={confirm}
               onChange={setConfirm}
               dense
+              allowOff={false}
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
-          </Group>
+          </OptionalSection>
         ) : null}
 
         {!closing ? (
@@ -853,35 +930,53 @@ export function ThemeBotFormDraft() {
 
         {!closing ? (
           <>
-            <Group title="Take profit">
+            <OptionalSection
+              title="Take profit"
+              enabled={tpOn}
+              onEnabled={(next) => {
+                setTpOn(next);
+                if (next && !tpMethod) {
+                  setTpMethod("percent");
+                }
+              }}
+            >
               <ExitMethodFields
-                method={tpMethod}
+                method={tpMethod || "percent"}
                 onMethod={setTpMethod}
                 value={tpValue}
                 onValue={setTpValue}
                 orderType={tpOrderType}
                 onOrderType={setTpOrderType}
               />
-            </Group>
+            </OptionalSection>
 
-            <Group title="Trailing stop">
+            <OptionalSection
+              title="Trailing stop"
+              enabled={trailOn}
+              onEnabled={(next) => {
+                setTrailOn(next);
+                if (next && !trailMethod) {
+                  setTrailMethod("percent");
+                }
+              }}
+            >
               <div className={rowClass}>
                 <Field label="Method">
                   <select
-                    value={trailMethod}
+                    value={trailMethod || "percent"}
                     onChange={(event) =>
                       setTrailMethod(event.target.value as TrailMethod)
                     }
                     className={fieldClass}
                   >
-                    {TRAIL_METHODS.map((option) => (
-                      <option key={option.value || "off"} value={option.value}>
+                    {TRAIL_METHODS.filter((option) => option.value).map((option) => (
+                      <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
                     ))}
                   </select>
                 </Field>
-                {trailMethod === "distance" ? (
+                {(trailMethod || "percent") === "distance" ? (
                   <>
                     <Field label="Retracement">
                       <OffNumber value={trailValue} onChange={setTrailValue} />
@@ -894,7 +989,7 @@ export function ThemeBotFormDraft() {
                     </Field>
                   </>
                 ) : null}
-                {trailMethod === "percent" ? (
+                {(trailMethod || "percent") === "percent" ? (
                   <>
                     <Field
                       label="Trigger %"
@@ -911,21 +1006,34 @@ export function ThemeBotFormDraft() {
                   </>
                 ) : null}
               </div>
-            </Group>
+            </OptionalSection>
 
-            <Group title="Stop loss">
+            <OptionalSection
+              title="Stop loss"
+              enabled={slOn}
+              onEnabled={(next) => {
+                setSlOn(next);
+                if (next && !slMethod) {
+                  setSlMethod("percent");
+                }
+              }}
+            >
               <ExitMethodFields
-                method={slMethod}
+                method={slMethod || "percent"}
                 onMethod={setSlMethod}
                 value={slValue}
                 onValue={setSlValue}
                 orderType={slOrderType}
                 onOrderType={setSlOrderType}
               />
-            </Group>
+            </OptionalSection>
 
             {desk === "dca" ? (
-            <Group title="Move Breakeven">
+            <OptionalSection
+              title="Move Breakeven"
+              enabled={breakevenOn}
+              onEnabled={setBreakevenOn}
+            >
               <div className={rowClass}>
                 <Field label="Move stop to breakeven at %">
                   <OffNumber value={breakevenAt} onChange={setBreakevenAt} />
@@ -937,22 +1045,30 @@ export function ThemeBotFormDraft() {
                   />
                 </Field>
               </div>
-            </Group>
+            </OptionalSection>
             ) : null}
 
             {desk === "dca" ? (
-            <Group title="Exit-if">
+            <OptionalSection
+              title="Exit-if"
+              enabled={exitIfOn}
+              onEnabled={(next) => {
+                setExitIfOn(next);
+                setExitIf(next ? (exitIf ?? dcaFilterSpecForKind("rsi", "long")) : null);
+              }}
+            >
               <DcaFilterBlock
-                label="Exit-if"
+                label="Kind"
                 prefix="themeExitIf"
                 side="long"
                 spec={exitIf}
                 onChange={setExitIf}
                 dense
+                allowOff={false}
                 fieldClass={fieldClass}
                 labelClass={labelClass}
               />
-            </Group>
+            </OptionalSection>
             ) : null}
 
             {desk === "perps" ? (
@@ -1199,8 +1315,8 @@ function ExitMethodFields({
             onChange={(event) => onMethod(event.target.value as ExitMethod)}
             className={fieldClass}
           >
-            {EXIT_METHODS.map((option) => (
-              <option key={option.value || "off"} value={option.value}>
+            {EXIT_METHODS.filter((option) => option.value).map((option) => (
+              <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
