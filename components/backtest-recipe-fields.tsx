@@ -33,6 +33,7 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
+import { DCA_CONFIRM_FIELD_LABEL } from "@/lib/dca/filters";
 import type { DcaTemplateRecipe } from "@/lib/templates/recipe";
 import {
   formatGroupedNumberInput,
@@ -714,7 +715,7 @@ export function BacktestRecipeFields({
                 />
               </div>
               <DcaFilterBlock
-                label="Confirm"
+                label={DCA_CONFIRM_FIELD_LABEL}
                 prefix="confirm"
                 side="long"
                 spec={recipe.confirm ?? null}
@@ -768,7 +769,7 @@ export function BacktestRecipeFields({
                 />
               </div>
               <DcaFilterBlock
-                label="Confirm"
+                label={DCA_CONFIRM_FIELD_LABEL}
                 prefix="shortConfirm"
                 side="short"
                 spec={recipe.shortConfirm ?? null}
@@ -807,7 +808,7 @@ export function BacktestRecipeFields({
               }
             />
             <DcaFilterBlock
-              label="Confirm"
+              label={DCA_CONFIRM_FIELD_LABEL}
               prefix="confirm"
               side={recipe.direction === "short" ? "short" : "long"}
               spec={recipe.confirm ?? null}
@@ -834,7 +835,7 @@ export function BacktestRecipeFields({
                 onChange={(patch) => onChange({ ...recipe, ...patch })}
               />
               <DcaFilterBlock
-                label="Confirm"
+                label={DCA_CONFIRM_FIELD_LABEL}
                 prefix="confirm"
                 side="long"
                 spec={recipe.confirm ?? null}
@@ -890,7 +891,7 @@ export function BacktestRecipeFields({
                 }
               />
               <DcaFilterBlock
-                label="Confirm"
+                label={DCA_CONFIRM_FIELD_LABEL}
                 prefix="shortConfirm"
                 side="short"
                 spec={recipe.shortConfirm ?? null}
@@ -914,7 +915,7 @@ export function BacktestRecipeFields({
               onChange={(patch) => onChange({ ...recipe, ...patch })}
             />
             <DcaFilterBlock
-              label="Confirm"
+              label={DCA_CONFIRM_FIELD_LABEL}
               prefix="confirm"
               side={recipe.direction === "short" ? "short" : "long"}
               spec={recipe.confirm ?? null}
@@ -939,7 +940,7 @@ export function BacktestRecipeFields({
                 onChange={(patch) => onChange({ ...recipe, ...patch })}
               />
               <DcaFilterBlock
-                label="Confirm"
+                label={DCA_CONFIRM_FIELD_LABEL}
                 prefix="confirm"
                 side="long"
                 spec={recipe.confirm ?? null}
@@ -980,7 +981,7 @@ export function BacktestRecipeFields({
                 }
               />
               <DcaFilterBlock
-                label="Confirm"
+                label={DCA_CONFIRM_FIELD_LABEL}
                 prefix="shortConfirm"
                 side="short"
                 spec={recipe.shortConfirm ?? null}
@@ -1004,7 +1005,7 @@ export function BacktestRecipeFields({
               }
             />
             <DcaFilterBlock
-              label="Confirm"
+              label={DCA_CONFIRM_FIELD_LABEL}
               prefix="confirm"
               side={recipe.direction === "short" ? "short" : "long"}
               spec={recipe.confirm ?? null}

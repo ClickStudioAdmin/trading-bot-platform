@@ -53,6 +53,9 @@ export const DCA_FILTER_KIND_OPTIONS: {
 
 export const DEFAULT_DCA_ATR_BAND_MULT = 2;
 
+export const DCA_CONFIRM_FIELD_LABEL =
+  "Secondary Condition (must be true for the entry trigger to execute)";
+
 export function parseDcaFilterKind(value: unknown): DcaFilterKind | null {
   const raw = String(value ?? "").trim();
   return (DCA_FILTER_KINDS as readonly string[]).includes(raw)

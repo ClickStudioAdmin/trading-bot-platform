@@ -94,6 +94,7 @@ import {
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import {
+  DCA_CONFIRM_FIELD_LABEL,
   dcaFilterSummaryLine,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
@@ -1580,7 +1581,7 @@ export function DcaPlaybookForm({
                   />
                 </div>
                 <DcaFilterBlock
-                  label="Confirm"
+                  label={DCA_CONFIRM_FIELD_LABEL}
                   prefix="confirm"
                   side="long"
                   spec={confirm}
@@ -1614,7 +1615,7 @@ export function DcaPlaybookForm({
                   />
                 </div>
                 <DcaFilterBlock
-                  label="Confirm"
+                  label={DCA_CONFIRM_FIELD_LABEL}
                   prefix="shortConfirm"
                   side="short"
                   spec={shortConfirm}
@@ -1636,7 +1637,7 @@ export function DcaPlaybookForm({
                 quoteLabel={policy.quoteLabel}
               />
               <DcaFilterBlock
-                label="Confirm"
+                label={DCA_CONFIRM_FIELD_LABEL}
                 prefix="confirm"
                 side={direction === "short" ? "short" : "long"}
                 spec={confirm}
@@ -1684,7 +1685,7 @@ export function DcaPlaybookForm({
               <div className="space-y-2">
                 <p className={sectionTitleClass}>Long</p>
                 <DcaFilterBlock
-                  label="Confirm"
+                  label={DCA_CONFIRM_FIELD_LABEL}
                   prefix="confirm"
                   side="long"
                   spec={confirm}
@@ -1697,7 +1698,7 @@ export function DcaPlaybookForm({
               <div className="space-y-2 border-t border-line pt-3">
                 <p className={sectionTitleClass}>Short</p>
                 <DcaFilterBlock
-                  label="Confirm"
+                  label={DCA_CONFIRM_FIELD_LABEL}
                   prefix="shortConfirm"
                   side="short"
                   spec={shortConfirm}
@@ -1711,7 +1712,7 @@ export function DcaPlaybookForm({
           ) : null}
           {startKind === "webhook" && direction !== "both" ? (
             <DcaFilterBlock
-              label="Confirm"
+              label={DCA_CONFIRM_FIELD_LABEL}
               prefix="confirm"
               side={direction === "short" ? "short" : "long"}
               spec={confirm}
@@ -1744,7 +1745,7 @@ export function DcaPlaybookForm({
                   />
                 </div>
                 <DcaFilterBlock
-                  label="Confirm"
+                  label={DCA_CONFIRM_FIELD_LABEL}
                   prefix="confirm"
                   side="long"
                   spec={confirm}
@@ -1775,7 +1776,7 @@ export function DcaPlaybookForm({
                   />
                 </div>
                 <DcaFilterBlock
-                  label="Confirm"
+                  label={DCA_CONFIRM_FIELD_LABEL}
                   prefix="shortConfirm"
                   side="short"
                   spec={shortConfirm}
@@ -1806,7 +1807,7 @@ export function DcaPlaybookForm({
                 onSlowPeriodChange={setIndicatorSlowPeriod}
               />
               <DcaFilterBlock
-                label="Confirm"
+                label={DCA_CONFIRM_FIELD_LABEL}
                 prefix="confirm"
                 side={direction === "short" ? "short" : "long"}
                 spec={confirm}
@@ -1838,7 +1839,7 @@ export function DcaPlaybookForm({
                   />
                 </div>
                 <DcaFilterBlock
-                  label="Confirm"
+                  label={DCA_CONFIRM_FIELD_LABEL}
                   prefix="confirm"
                   side="long"
                   spec={confirm}
@@ -1867,7 +1868,7 @@ export function DcaPlaybookForm({
                   />
                 </div>
                 <DcaFilterBlock
-                  label="Confirm"
+                  label={DCA_CONFIRM_FIELD_LABEL}
                   prefix="shortConfirm"
                   side="short"
                   spec={shortConfirm}
@@ -1896,7 +1897,7 @@ export function DcaPlaybookForm({
                 onMultiplierChange={setIndicatorMultiplier}
               />
               <DcaFilterBlock
-                label="Confirm"
+                label={DCA_CONFIRM_FIELD_LABEL}
                 prefix="confirm"
                 side={direction === "short" ? "short" : "long"}
                 spec={confirm}
