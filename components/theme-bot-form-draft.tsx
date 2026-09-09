@@ -272,7 +272,7 @@ export function ThemeBotFormDraft() {
 
       <div className="divide-y divide-line rounded-card border border-line bg-canvas px-5">
         <Group title="Bot">
-        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_16rem_auto]">
+        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_auto_16rem]">
           <Field label="Name">
             <input
               value={name}
@@ -280,6 +280,21 @@ export function ThemeBotFormDraft() {
               className={fieldClass}
             />
           </Field>
+          <div>
+            <p className={labelClass}>Actions</p>
+            <div className="mt-1 flex flex-wrap gap-2">
+              <button type="button" className={headerPrimaryClass}>
+                Save
+              </button>
+              <button
+                type="button"
+                className={headerPrimaryClass}
+                title="Close all positions. Status stays as you set it."
+              >
+                Close bot
+              </button>
+            </div>
+          </div>
           <div>
             <p className={labelClass}>Status</p>
             <div className="mt-1 flex items-center gap-2">
@@ -297,21 +312,6 @@ export function ThemeBotFormDraft() {
             <p className="mt-1.5 text-[11px] text-ink-faint">
               Active listens. Reduce only stops new adds. Disabled is idle.
             </p>
-          </div>
-          <div>
-            <p className={labelClass}>Actions</p>
-            <div className="mt-1 flex flex-wrap gap-2">
-              <button type="button" className={headerPrimaryClass}>
-                Save
-              </button>
-              <button
-                type="button"
-                className={headerPrimaryClass}
-                title="Close all positions. Status stays as you set it."
-              >
-                Close bot
-              </button>
-            </div>
           </div>
         </div>
         </Group>
