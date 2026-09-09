@@ -36,6 +36,7 @@ export function DcaFilterBlock({
   spec,
   onChange,
   named = false,
+  dense = false,
   fieldClass,
   labelClass,
 }: {
@@ -45,41 +46,56 @@ export function DcaFilterBlock({
   spec: DcaFilterSpec | null;
   onChange: (next: DcaFilterSpec | null) => void;
   named?: boolean;
+  dense?: boolean;
   fieldClass: string;
   labelClass: string;
 }) {
+  const kindField = (
+    <label className={labelClass}>
+      {label}
+      <select
+        name={named ? `${prefix}Kind` : undefined}
+        value={spec?.kind ?? ""}
+        onChange={(event) => {
+          const kind = parseDcaFilterKind(event.target.value);
+          onChange(kind ? nextFilterSpec(spec, kind, side) : null);
+        }}
+        className={fieldClass}
+      >
+        <option value="">Off</option>
+        {DCA_FILTER_KIND_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  const params = spec ? (
+    <DcaFilterParamFields
+      prefix={prefix}
+      side={side}
+      spec={spec}
+      onChange={onChange}
+      named={named}
+      fieldClass={fieldClass}
+      labelClass={labelClass}
+      bare={dense}
+      whenClass={dense ? "lg:col-span-2" : "col-span-2"}
+    />
+  ) : null;
+  if (dense) {
+    return (
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-4">
+        {kindField}
+        {params}
+      </div>
+    );
+  }
   return (
     <div className="col-span-full space-y-2">
-      <label className={labelClass}>
-        {label}
-        <select
-          name={named ? `${prefix}Kind` : undefined}
-          value={spec?.kind ?? ""}
-          onChange={(event) => {
-            const kind = parseDcaFilterKind(event.target.value);
-            onChange(kind ? nextFilterSpec(spec, kind, side) : null);
-          }}
-          className={fieldClass}
-        >
-          <option value="">Off</option>
-          {DCA_FILTER_KIND_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      {spec ? (
-        <DcaFilterParamFields
-          prefix={prefix}
-          side={side}
-          spec={spec}
-          onChange={onChange}
-          named={named}
-          fieldClass={fieldClass}
-          labelClass={labelClass}
-        />
-      ) : null}
+      {kindField}
+      {params}
     </div>
   );
 }
@@ -92,6 +108,8 @@ function DcaFilterParamFields({
   named,
   fieldClass,
   labelClass,
+  bare = false,
+  whenClass = "col-span-2",
 }: {
   prefix: string;
   side: FuturesSide;
@@ -100,14 +118,16 @@ function DcaFilterParamFields({
   named: boolean;
   fieldClass: string;
   labelClass: string;
+  bare?: boolean;
+  whenClass?: string;
 }) {
   const whenOptions = dcaFilterWhenOptions(spec.kind, side);
   const whenValue = dcaFilterWhenValue(spec.compare);
   const showLevel = spec.kind === "rsi" && spec.compare !== "between";
   const showLevelRange = spec.kind === "rsi" && spec.compare === "between";
   const showMultiplier = spec.kind === "supertrend" || spec.kind === "atr_band";
-  return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+  const fields = (
+    <>
       <label className={labelClass}>
         Period
         <GroupedNumberInput
@@ -164,7 +184,7 @@ function DcaFilterParamFields({
           ))}
         </select>
       </label>
-      <label className={`${labelClass} col-span-2`}>
+      <label className={`${labelClass} ${whenClass}`}>
         When
         <select
           name={named ? `${prefix}Compare` : undefined}
@@ -248,6 +268,12 @@ function DcaFilterParamFields({
           </label>
         </>
       ) : null}
-    </div>
+    </>
+  );
+  if (bare) {
+    return fields;
+  }
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2">{fields}</div>
   );
 }

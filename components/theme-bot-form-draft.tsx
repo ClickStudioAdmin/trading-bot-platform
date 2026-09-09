@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
+import { ChevronIcon, TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   DCA_CONFIRM_FIELD_LABEL,
@@ -30,7 +31,92 @@ const fieldClass =
 const labelClass = "block text-xs text-ink-muted";
 const sectionTitleClass =
   "text-xs font-semibold uppercase tracking-[0.1em] text-ink";
-const rowClass = "grid gap-x-3 gap-y-3 sm:grid-cols-2";
+const rowClass = "grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-4";
+const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
+const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
+const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`;
+const headerLongClass = `${headerBtnClass} bg-success text-canvas`;
+const headerGhostClass =
+  "shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink";
+const headerRemoveClass =
+  "shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
+const deskBtnClass =
+  "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
+
+function StatusLight({
+  fill,
+  label,
+  inUse = false,
+}: {
+  fill: string;
+  label?: string;
+  inUse?: boolean;
+}) {
+  const title = label
+    ? inUse
+      ? `${label} · in use by an open position`
+      : label
+    : inUse
+      ? "In use by an open position"
+      : "Status";
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-ink-muted">
+      <span
+        className="relative flex size-3.5 shrink-0"
+        title={title}
+        aria-label={title}
+      >
+        {inUse ? (
+          <span
+            className={`absolute inline-flex size-full animate-ping rounded-full opacity-60 ${fill}`}
+          />
+        ) : null}
+        <span className={`relative inline-flex size-3.5 rounded-full ${fill}`} />
+      </span>
+      {label}
+    </span>
+  );
+}
+
+function DraftCallout({
+  tone,
+  children,
+}: {
+  tone: "warning" | "danger" | "success";
+  children: ReactNode;
+}) {
+  const toneClass =
+    tone === "warning"
+      ? "border-warning/30 bg-warning/10 text-warning"
+      : tone === "danger"
+        ? "border-danger/30 bg-danger/10 text-danger"
+        : "border-success/30 bg-success/10 text-success";
+  return (
+    <p className={`rounded-card border px-4 py-3 text-sm ${toneClass}`}>
+      {children}
+    </p>
+  );
+}
+
+function DraftStat({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="min-w-0 flex-1 basis-36 text-center">
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
+        {label}
+      </p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">{value}</p>
+      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
+    </div>
+  );
+}
 
 function Group({
   title,
@@ -147,6 +233,9 @@ export function ThemeBotFormDraft() {
   const [breakevenOffset, setBreakevenOffset] = useState("0");
   const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(null);
   const [skipIfOpen, setSkipIfOpen] = useState(true);
+  const [restGrid, setRestGrid] = useState(true);
+  const [ladderOpen, setLadderOpen] = useState(true);
+  const [ladderTab, setLadderTab] = useState<"long" | "short">("long");
   const closing = action === "close_long" || action === "close_short";
   const startKindForFields =
     startKind === "trend" ? "supertrend" : indicatorKind;
@@ -162,15 +251,70 @@ export function ThemeBotFormDraft() {
   return (
     <div className="space-y-3">
       <p className="text-sm text-ink-muted">
-        Draft standard for every desk. Local only — nothing saves. Optional
-        features use <span className="text-ink">Off</span>, not a checkbox that
-        hides the section. Checkboxes are flags only.
+        Draft standard for every desk. Local only — nothing saves. Every
+        status and action is shown here for review, including ones that only
+        appear in some live states.
       </p>
+
+      <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
+        No bots yet. Add a bot to own orders and exits on one contract. Leave
+        this empty if you are not ready to arm.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className={deskBtnClass}>
+          Create New Bot
+        </button>
+        <button type="button" className={deskBtnClass}>
+          Create New Bot from Template
+        </button>
+        <select aria-label="Clone existing bot" className={deskBtnClass} defaultValue="">
+          <option value="">Clone existing bot</option>
+          <option value="sample">Sample bot</option>
+        </select>
+        <p className="text-sm text-success" role="status">
+          Saved.
+        </p>
+        <button type="button" className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink">
+          Save Bots
+        </button>
+      </div>
 
       <div className="divide-y divide-line rounded-card border border-line bg-canvas px-5">
         <Group title="Bot">
-        <div className={rowClass}>
-          <Field label="Name">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
+            <p className="shrink-0 text-xs text-ink-muted">
+              Initial Order Triggers
+            </p>
+            <button type="button" className={headerLongClass}>
+              Save and Arm
+            </button>
+            <button type="button" className={headerSecondaryClass}>
+              Arm
+            </button>
+          </div>
+          <StatusLight fill="bg-success" inUse />
+        </div>
+        <div className="space-y-2">
+          <DraftCallout tone="danger">
+            Could not save. Sample error flash.
+          </DraftCallout>
+          <DraftCallout tone="warning">
+            Size is above the desk max. Save is blocked so this bot is not
+            lost.
+          </DraftCallout>
+          <DraftCallout tone="warning">
+            Reduce only is on. New orders stay blocked until you turn it off
+            in Desk Settings. Take profit and stop still run.
+          </DraftCallout>
+          <p className="text-xs text-warning">
+            A position is open. Cycle settings are locked. Take profit and
+            stops still save.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          <Field label="Name" className="min-w-0 flex-1">
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -178,12 +322,50 @@ export function ThemeBotFormDraft() {
             />
           </Field>
           <Field label="Mode">
-            <select disabled className={fieldClass} defaultValue="active">
-              <option value="active">Active</option>
-              <option value="reduce_only">Reduce only</option>
-              <option value="disabled">Disabled</option>
-            </select>
+            <span className="mt-1 flex items-center gap-2">
+              <select className={`${fieldClass} w-52`} defaultValue="active">
+                <option value="active">Active</option>
+                <option value="active_ro">Active (Reduce only)</option>
+                <option value="reduce_only">Reduce only</option>
+                <option value="disabled">Disabled</option>
+              </select>
+              <StatusLight fill="bg-success" inUse />
+            </span>
           </Field>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <button type="button" className={headerPrimaryClass}>
+              Save
+            </button>
+            <button
+              type="button"
+              className={headerPrimaryClass}
+              title="Stop adding any new orders (also cancels any existing entry limit orders)"
+            >
+              Stop adding
+            </button>
+            <button
+              type="button"
+              className={headerPrimaryClass}
+              title="Stop listening for new entries"
+            >
+              Disarm
+            </button>
+            <button
+              type="button"
+              className={headerPrimaryClass}
+              title="Close all positions and place the bot in idle mode (no new entries)"
+            >
+              Close bot
+            </button>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+          <StatusLight fill="bg-ink-faint" label="Idle" />
+          <StatusLight fill="bg-success" label="Armed / Active" />
+          <StatusLight fill="bg-warning" label="Stop adding" />
+          <StatusLight fill="bg-warning" label="Reduce only" />
+          <StatusLight fill="bg-ink-faint" label="Disabled" />
+          <StatusLight fill="bg-success" label="In use" inUse />
         </div>
         </Group>
 
@@ -212,6 +394,22 @@ export function ThemeBotFormDraft() {
                 <option value="close_short">Close short</option>
               </select>
             </Field>
+            <Field label="Order">
+              <span className="mt-1 flex w-fit rounded-control border border-line bg-surface p-0.5">
+                <button
+                  type="button"
+                  className="rounded-control bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink"
+                >
+                  Market
+                </button>
+                <button
+                  type="button"
+                  className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:text-ink"
+                >
+                  Limit
+                </button>
+              </span>
+            </Field>
             <Field label="Start">
               <select
                 value={startKind}
@@ -237,12 +435,14 @@ export function ThemeBotFormDraft() {
           </div>
 
           {startKind === "webhook" && !closing ? (
-            <Field label="Webhook">
-              <select className={fieldClass} defaultValue="">
-                <option value="">Pick a Signal webhook</option>
-                <option value="sample">Sample signal</option>
-              </select>
-            </Field>
+            <div className={rowClass}>
+              <Field label="Webhook" className="lg:col-span-2">
+                <select className={fieldClass} defaultValue="">
+                  <option value="">Pick a Signal webhook</option>
+                  <option value="sample">Sample signal</option>
+                </select>
+              </Field>
+            </div>
           ) : null}
 
           {startKind === "price" && !closing ? (
@@ -352,7 +552,7 @@ export function ThemeBotFormDraft() {
                   ))}
                 </select>
               </Field>
-              <Field label="When" className="sm:col-span-2">
+              <Field label="When" className="lg:col-span-2">
                 <select
                   value={when}
                   onChange={(event) => setWhen(event.target.value)}
@@ -388,6 +588,7 @@ export function ThemeBotFormDraft() {
               side="long"
               spec={confirm}
               onChange={setConfirm}
+              dense
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
@@ -421,15 +622,17 @@ export function ThemeBotFormDraft() {
           </Group>
         ) : (
           <Group title="Size">
-            <Field label="Qty to close" hint="Empty closes the whole row.">
-              <GroupedNumberInput
-                value={size}
-                onChange={setSize}
-                allowDecimal
-                placeholder="All"
-                className={fieldClass}
-              />
-            </Field>
+            <div className={rowClass}>
+              <Field label="Qty to close" hint="Empty closes the whole row.">
+                <GroupedNumberInput
+                  value={size}
+                  onChange={setSize}
+                  allowDecimal
+                  placeholder="All"
+                  className={fieldClass}
+                />
+              </Field>
+            </div>
           </Group>
         )}
 
@@ -437,9 +640,23 @@ export function ThemeBotFormDraft() {
           title="Strategy extras"
           hint="DCA / scale-in only. Not on the Perps baseline."
         >
+          <div className="mb-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
+            >
+              Equal orders
+            </button>
+            <button
+              type="button"
+              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
+            >
+              Martingale
+            </button>
+          </div>
           <div className={rowClass}>
             <Field label="Additional orders">
-              <select disabled className={fieldClass} defaultValue="dip">
+              <select className={fieldClass} defaultValue="dip">
                 <option value="dip">Price deviation</option>
                 <option value="interval">Interval</option>
               </select>
@@ -452,7 +669,24 @@ export function ThemeBotFormDraft() {
                 className={fieldClass}
               />
             </Field>
+            <Field label="Price deviation multiplier">
+              <GroupedNumberInput
+                value="1"
+                onChange={() => undefined}
+                allowDecimal
+                className={fieldClass}
+              />
+            </Field>
           </div>
+          <label className="mt-2 flex items-start gap-2 text-xs text-ink">
+            <input
+              type="checkbox"
+              checked={restGrid}
+              onChange={(event) => setRestGrid(event.target.checked)}
+              className="mt-0.5 size-4 accent-accent"
+            />
+            Remaining orders placed as GTC limit (instead of market)
+          </label>
         </Group>
 
         {!closing ? (
@@ -469,50 +703,52 @@ export function ThemeBotFormDraft() {
             </Group>
 
             <Group title="Trailing stop">
-              <Field label="Method">
-                <select
-                  value={trailMethod}
-                  onChange={(event) =>
-                    setTrailMethod(event.target.value as TrailMethod)
-                  }
-                  className={fieldClass}
-                >
-                  {TRAIL_METHODS.map((option) => (
-                    <option key={option.value || "off"} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              {trailMethod === "distance" ? (
-                <div className={rowClass}>
-                  <Field label="Retracement">
-                    <OffNumber value={trailValue} onChange={setTrailValue} />
-                  </Field>
-                  <Field label="Activation price" hint="Empty is Off.">
-                    <OffNumber
-                      value={trailTrigger}
-                      onChange={setTrailTrigger}
-                    />
-                  </Field>
-                </div>
-              ) : null}
-              {trailMethod === "percent" ? (
-                <div className={rowClass}>
-                  <Field
-                    label="Trigger %"
-                    hint="Trail starts after price moves this %."
+              <div className={rowClass}>
+                <Field label="Method">
+                  <select
+                    value={trailMethod}
+                    onChange={(event) =>
+                      setTrailMethod(event.target.value as TrailMethod)
+                    }
+                    className={fieldClass}
                   >
-                    <OffNumber
-                      value={trailTrigger}
-                      onChange={setTrailTrigger}
-                    />
-                  </Field>
-                  <Field label="Trailing %">
-                    <OffNumber value={trailValue} onChange={setTrailValue} />
-                  </Field>
-                </div>
-              ) : null}
+                    {TRAIL_METHODS.map((option) => (
+                      <option key={option.value || "off"} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                {trailMethod === "distance" ? (
+                  <>
+                    <Field label="Retracement">
+                      <OffNumber value={trailValue} onChange={setTrailValue} />
+                    </Field>
+                    <Field label="Activation price" hint="Empty is Off.">
+                      <OffNumber
+                        value={trailTrigger}
+                        onChange={setTrailTrigger}
+                      />
+                    </Field>
+                  </>
+                ) : null}
+                {trailMethod === "percent" ? (
+                  <>
+                    <Field
+                      label="Trigger %"
+                      hint="Trail starts after price moves this %."
+                    >
+                      <OffNumber
+                        value={trailTrigger}
+                        onChange={setTrailTrigger}
+                      />
+                    </Field>
+                    <Field label="Trailing %">
+                      <OffNumber value={trailValue} onChange={setTrailValue} />
+                    </Field>
+                  </>
+                ) : null}
+              </div>
             </Group>
 
             <Group title="Stop loss">
@@ -547,6 +783,7 @@ export function ThemeBotFormDraft() {
                 side="long"
                 spec={exitIf}
                 onChange={setExitIf}
+                dense
                 fieldClass={fieldClass}
                 labelClass={labelClass}
               />
@@ -570,6 +807,97 @@ export function ThemeBotFormDraft() {
             </section>
           </>
         ) : null}
+
+        <Group title="Actions and summary">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
+              aria-expanded={ladderOpen}
+              onClick={() => setLadderOpen((open) => !open)}
+            >
+              {ladderOpen ? "Hide Summary" : "Show Summary"}
+              <ChevronIcon className={ladderOpen ? "rotate-90" : undefined} />
+            </button>
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+              <button type="button" className={headerGhostClass}>
+                Backtest
+              </button>
+              <button type="button" className={headerGhostClass}>
+                Save as template
+              </button>
+              <button type="button" className={headerGhostClass}>
+                Save as platform template
+              </button>
+              <button type="button" className={headerRemoveClass}>
+                Remove
+              </button>
+              <span
+                className="inline-flex"
+                title="Stop adding or close before removing."
+              >
+                <button
+                  type="button"
+                  disabled
+                  className={`${headerRemoveClass} pointer-events-none opacity-40`}
+                >
+                  Remove
+                </button>
+              </span>
+            </div>
+          </div>
+          {ladderOpen ? (
+            <div className="space-y-3">
+              <div className="flex items-end justify-between gap-3 border-b border-line">
+                <div
+                  role="tablist"
+                  aria-label="Ladder side"
+                  className="flex gap-1"
+                >
+                  <TabButton
+                    selected={ladderTab === "long"}
+                    panelId="theme-ladder-panel"
+                    onClick={() => setLadderTab("long")}
+                  >
+                    Long ladder
+                  </TabButton>
+                  <TabButton
+                    selected={ladderTab === "short"}
+                    panelId="theme-ladder-panel"
+                    onClick={() => setLadderTab("short")}
+                  >
+                    Short ladder
+                  </TabButton>
+                </div>
+                <p className="pb-2 text-right text-xs text-ink-muted">
+                  Summary is based on the current asset price and the
+                  parameters configured above
+                </p>
+              </div>
+              <div
+                id="theme-ladder-panel"
+                role="tabpanel"
+                className="flex flex-wrap"
+              >
+                <DraftStat
+                  label="Covered Range"
+                  value="4.2%"
+                  hint="First fill to last clip"
+                />
+                <DraftStat
+                  label="Max Exposure"
+                  value="$1,200"
+                  hint="Full ladder notional · This side only"
+                />
+                <DraftStat
+                  label="Initial Margin"
+                  value="$120"
+                  hint="Max exposure ÷ 10×"
+                />
+              </div>
+            </div>
+          ) : null}
+        </Group>
       </div>
     </div>
   );
