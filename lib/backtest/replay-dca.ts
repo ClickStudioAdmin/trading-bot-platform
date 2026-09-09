@@ -666,6 +666,7 @@ export function replayDcaPlaybook(input: {
       openQty,
       openSide,
       markUsdt,
+      lastPrice: last?.close ?? null,
       startingUsdt: input.startingUsdt,
     }),
   };

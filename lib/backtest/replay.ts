@@ -345,6 +345,7 @@ export function replayPerpsPriceCross(input: {
       openQty: open?.qty ?? 0,
       openSide: open?.side ?? null,
       markUsdt,
+      lastPrice: last?.close ?? null,
       startingUsdt: input.startingUsdt,
     }),
   };

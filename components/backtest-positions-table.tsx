@@ -10,7 +10,8 @@ import type { BacktestRun, SimulatedOrder } from "@/lib/backtest/model";
 import {
   backtestCycleLogLines,
   backtestCycleOrdersLabel,
-  backtestOpenMarkPrice,
+  backtestCycleUnrealizedUsdt,
+  backtestReplayMarkPrice,
   groupBacktestOrdersIntoCycles,
   plannedExitsForBacktestCycle,
   type BacktestPositionCycle,
@@ -44,17 +45,13 @@ export function BacktestPositionsTable({
   const dca = run.recipe.kind === "dca" || run.deskType === "dca";
   const maxClips = run.recipe.kind === "dca" ? run.recipe.maxClips : null;
   const recipeName = run.recipe.name.trim() || "Backtest";
-  const mark =
-    grouped.open.length === 1 && run.stats
-      ? backtestOpenMarkPrice({
-          side: grouped.open[0]!.side,
-          entryPrice: grouped.open[0]!.entryPrice,
-          qty: grouped.open[0]!.qty,
-          unrealizedUsdt: run.stats.markUsdt,
-        })
-      : null;
-  const unrealized =
-    grouped.open.length === 1 && run.stats ? run.stats.markUsdt : null;
+  const mark = run.stats
+    ? backtestReplayMarkPrice({
+        opens: grouped.open,
+        markUsdt: run.stats.markUsdt,
+        lastPrice: run.stats.lastPrice,
+      })
+    : null;
 
   function selectCycle(id: string) {
     const next = focusCycleId === id ? null : id;
@@ -75,7 +72,6 @@ export function BacktestPositionsTable({
         maxClips={maxClips}
         recipeName={recipeName}
         mark={mark}
-        unrealized={unrealized}
         focusCycleId={focusCycleId}
         onSelectCycle={onFocusCycleId ? selectCycle : undefined}
       />
@@ -97,7 +93,6 @@ function OpenBacktestPositions({
   maxClips,
   recipeName,
   mark,
-  unrealized,
   focusCycleId,
   onSelectCycle,
 }: {
@@ -107,7 +102,6 @@ function OpenBacktestPositions({
   maxClips: number | null;
   recipeName: string;
   mark: number | null;
-  unrealized: number | null;
   focusCycleId: string | null;
   onSelectCycle?: (id: string) => void;
 }) {
@@ -221,7 +215,6 @@ function OpenBacktestPositions({
                   recipeName={recipeName}
                   colSpan={colSpan}
                   mark={mark}
-                  unrealized={unrealized}
                   selected={focusCycleId === cycle.id}
                   onSelect={
                     onSelectCycle ? () => onSelectCycle(cycle.id) : undefined
@@ -362,7 +355,6 @@ function OpenBacktestRows({
   recipeName,
   colSpan,
   mark,
-  unrealized,
   selected,
   onSelect,
 }: {
@@ -373,11 +365,11 @@ function OpenBacktestRows({
   recipeName: string;
   colSpan: number;
   mark: number | null;
-  unrealized: number | null;
   selected: boolean;
   onSelect?: () => void;
 }) {
   const planned = plannedExitsForBacktestCycle(run.recipe, cycle);
+  const unrealized = backtestCycleUnrealizedUsdt(cycle, mark);
   const pnlPct =
     unrealized != null && cycle.notionalUsdt > 0
       ? unrealized / cycle.notionalUsdt

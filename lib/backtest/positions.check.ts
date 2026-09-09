@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import {
   backtestChartLevels,
   backtestFillMarkerText,
+  backtestCycleUnrealizedUsdt,
   backtestOpenMarkPrice,
+  backtestReplayMarkPrice,
   groupBacktestOrdersIntoCycles,
   listBacktestCycles,
   plannedExitsForBacktestCycle,
@@ -157,5 +159,63 @@ assert.equal(backtestOpenMarkPrice({
   qty: 2,
   unrealizedUsdt: 10,
 }), 105);
+assert.equal(
+  backtestReplayMarkPrice({
+    lastPrice: 90_000,
+    markUsdt: 0,
+    opens: [
+      { side: "long", qty: 0.02, entryPrice: 80_000 },
+      { side: "short", qty: 0.1, entryPrice: 30_000 },
+    ],
+  }),
+  90_000,
+);
+assert.equal(
+  backtestReplayMarkPrice({
+    markUsdt: 10,
+    opens: [
+      { side: "long", qty: 2, entryPrice: 100 },
+      { side: "short", qty: 1, entryPrice: 100 },
+    ],
+  }),
+  110,
+);
+assert.equal(
+  backtestCycleUnrealizedUsdt(
+    { side: "long", qty: 2, entryPrice: 100 },
+    110,
+  ),
+  20,
+);
+assert.equal(
+  backtestCycleUnrealizedUsdt(
+    { side: "short", qty: 1, entryPrice: 100 },
+    110,
+  ),
+  -10,
+);
+
+const bothOpens = [
+  { side: "long" as const, qty: 0.018, entryPrice: 85_082.36 },
+  { side: "short" as const, qty: 0.112, entryPrice: 33_045.77 },
+];
+const bothMarkUsdt =
+  (backtestCycleUnrealizedUsdt(bothOpens[0]!, 85_000) ?? 0) +
+  (backtestCycleUnrealizedUsdt(bothOpens[1]!, 85_000) ?? 0);
+const recovered = backtestReplayMarkPrice({
+  markUsdt: bothMarkUsdt,
+  opens: bothOpens,
+});
+assert.ok(recovered != null && Math.abs(recovered - 85_000) < 1e-6);
+assert.equal(
+  backtestReplayMarkPrice({
+    markUsdt: 0,
+    opens: [
+      { side: "long", qty: 1, entryPrice: 100 },
+      { side: "short", qty: 1, entryPrice: 100 },
+    ],
+  }),
+  null,
+);
 
 console.log("backtest positions checks passed");

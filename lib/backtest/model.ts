@@ -99,6 +99,7 @@ export type BacktestStats = {
   openQty: number;
   openSide: "long" | "short" | null;
   markUsdt: number;
+  lastPrice?: number | null;
   startingUsdt: number;
   endingUsdt: number;
   returnPct: number | null;
@@ -624,6 +625,7 @@ export function emptyBacktestStats(startingUsdt = 0): BacktestStats {
     openQty: 0,
     openSide: null,
     markUsdt: 0,
+    lastPrice: null,
     startingUsdt,
     endingUsdt: startingUsdt,
     returnPct: null,
@@ -717,6 +719,7 @@ export function finishBacktestStats(input: {
   openQty: number;
   openSide: "long" | "short" | null;
   markUsdt: number;
+  lastPrice?: number | null;
   startingUsdt: number;
 }): BacktestStats {
   const endingUsdt = input.startingUsdt + input.realizedUsdt + input.markUsdt;
@@ -731,6 +734,8 @@ export function finishBacktestStats(input: {
     openQty: input.openQty,
     openSide: input.openSide,
     markUsdt: input.markUsdt,
+    lastPrice:
+      input.lastPrice != null && input.lastPrice > 0 ? input.lastPrice : null,
     startingUsdt: input.startingUsdt,
     endingUsdt,
     returnPct:

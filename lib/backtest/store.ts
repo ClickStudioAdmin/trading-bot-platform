@@ -83,6 +83,10 @@ function parseStats(raw: unknown): BacktestStats | null {
     openSide:
       row.openSide === "short" || row.openSide === "long" ? row.openSide : null,
     markUsdt: Number(row.markUsdt) || 0,
+    lastPrice:
+      row.lastPrice == null || !Number.isFinite(Number(row.lastPrice))
+        ? null
+        : Number(row.lastPrice),
     startingUsdt: Number(row.startingUsdt) || 0,
     endingUsdt: Number(row.endingUsdt) || 0,
     returnPct:

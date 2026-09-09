@@ -1,5 +1,6 @@
 import { dcaPlannedExits } from "@/lib/dca/grid";
 import { formatDcaOrdersProgress } from "@/lib/dca/playbook";
+import { futuresPnlUsdt } from "@/lib/futures/math";
 import type { FuturesSide } from "@/lib/futures/model";
 import type {
   BacktestFillReason,
@@ -187,6 +188,64 @@ export function backtestOpenMarkPrice(input: {
       ? input.entryPrice + input.unrealizedUsdt / input.qty
       : input.entryPrice - input.unrealizedUsdt / input.qty;
   return mark > 0 ? mark : null;
+}
+
+export function backtestReplayMarkPrice(input: {
+  opens: ReadonlyArray<Pick<BacktestPositionCycle, "side" | "qty" | "entryPrice">>;
+  markUsdt: number;
+  lastPrice?: number | null;
+}): number | null {
+  if (input.lastPrice != null && input.lastPrice > 0) {
+    return input.lastPrice;
+  }
+  const opens = input.opens.filter(
+    (row) => row.qty > 0 && row.entryPrice > 0,
+  );
+  if (opens.length === 0) {
+    return null;
+  }
+  if (opens.length === 1) {
+    return backtestOpenMarkPrice({
+      side: opens[0]!.side,
+      entryPrice: opens[0]!.entryPrice,
+      qty: opens[0]!.qty,
+      unrealizedUsdt: input.markUsdt,
+    });
+  }
+  let longQty = 0;
+  let shortQty = 0;
+  let longNotional = 0;
+  let shortNotional = 0;
+  for (const row of opens) {
+    if (row.side === "long") {
+      longQty += row.qty;
+      longNotional += row.qty * row.entryPrice;
+    } else {
+      shortQty += row.qty;
+      shortNotional += row.qty * row.entryPrice;
+    }
+  }
+  const netQty = longQty - shortQty;
+  if (!(Math.abs(netQty) > 1e-12)) {
+    return null;
+  }
+  const mark = (input.markUsdt - shortNotional + longNotional) / netQty;
+  return mark > 0 && Number.isFinite(mark) ? mark : null;
+}
+
+export function backtestCycleUnrealizedUsdt(
+  cycle: Pick<BacktestPositionCycle, "side" | "qty" | "entryPrice">,
+  mark: number | null,
+): number | null {
+  if (mark == null || !(mark > 0) || !(cycle.qty > 0) || !(cycle.entryPrice > 0)) {
+    return null;
+  }
+  return futuresPnlUsdt({
+    side: cycle.side,
+    qty: cycle.qty,
+    entryPrice: cycle.entryPrice,
+    exitPrice: mark,
+  });
 }
 
 export function backtestCycleLogLines(
