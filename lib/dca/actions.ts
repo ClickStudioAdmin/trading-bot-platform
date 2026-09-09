@@ -12,6 +12,7 @@ import {
   type DcaPlaybookConfig,
 } from "@/lib/dca/playbook";
 import { loadOpenFuturesOnSymbol } from "@/lib/futures/list";
+import { parseFuturesSide } from "@/lib/futures/model";
 import {
   applyDcaVerb,
   lastPriceFor,
@@ -249,14 +250,15 @@ export async function runDcaClosePlaybookAction(
   return runDcaPlaybookVerb("close-playbook", formData);
 }
 
-export async function closeDcaPlaybookFromRow(formData: FormData) {
+export async function closeDcaPositionFromRow(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
   const session = await requirePerpsUiSession();
   if (!deskAllowsDcaPlaybooks(session.account)) {
     redirect(withQuery(next, { paperError: "This desk is not a DCA desk." }));
   }
   const id = parseDcaPlaybookId(formData.get("playbookId"));
-  if (!id) {
+  const side = parseFuturesSide(formData.get("side"));
+  if (!id || !side) {
     redirect(withQuery(next, { paperError: "That bot was not found." }));
   }
   const playbook = await loadDcaPlaybookById(id, session.account.id);
@@ -266,7 +268,8 @@ export async function closeDcaPlaybookFromRow(formData: FormData) {
   const result = await applyDcaVerb({
     playbook,
     mode: session.account.mode,
-    verb: "close-playbook",
+    verb: "close-position",
+    side,
   });
   if (!result.ok) {
     redirect(withQuery(next, { paperError: result.error }));
@@ -278,8 +281,8 @@ export async function closeDcaPlaybookFromRow(formData: FormData) {
     withQuery(next, {
       paper:
         session.account.mode === "live"
-          ? "live-playbook-closed"
-          : "playbook-closed",
+          ? "live-position-closed"
+          : "position-closed",
     }),
   );
 }

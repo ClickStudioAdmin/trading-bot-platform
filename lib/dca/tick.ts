@@ -51,6 +51,7 @@ import { dcaDecisionMessage } from "./log-copy";
 import {
   applyDcaVerb,
   flattenPlaybook,
+  keepListeningAfterFlatten,
   logDcaEvent,
   moveStopToBreakeven,
   placeClip,
@@ -502,33 +503,12 @@ async function applyTickAction(input: {
     if (!flattened.ok) {
       return { acted: false };
     }
-    if (dcaStartListens(input.playbook.startKind)) {
-      const patched = await patchDcaLeg({
-        supabase,
-        id: input.playbook.id,
-        side: input.side,
-        patch: {
-          status: "armed",
-          clipsFilled: 0,
-          lastClipPrice: null,
-          lastClipAtMs: null,
-          firstFillPrice: null,
-          breakevenDone: false,
-          cycleMaxValue: null,
-        },
-      });
-      if (!patched.ok) {
-        return { acted: false };
-      }
-    } else {
-      const reset = await resetDcaLeg({
-        supabase,
-        id: input.playbook.id,
-        side: input.side,
-      });
-      if (!reset.ok) {
-        return { acted: false };
-      }
+    const kept = await keepListeningAfterFlatten({
+      playbook: input.playbook,
+      side: input.side,
+    });
+    if (!kept.ok) {
+      return { acted: false };
     }
     await logDcaEvent({
       playbook: input.playbook,

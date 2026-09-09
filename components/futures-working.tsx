@@ -64,8 +64,8 @@ export function FuturesWorkingOrders({
                 : "Copied parent DCA limits. They fill when mark crosses the limit."
               : playbookOwnsOrders
               ? exchangeBook
-                ? `Working bot limits on ${exchangeName}. Fills appear on the position when they match. Stop adding or Close bot on Positions or Automations.`
-                : "Working bot limits. They fill when mark crosses the limit. Stop adding or Close bot on Positions or Automations."
+                ? `Working bot limits on ${exchangeName}. Fills appear on the position when they match. Stop adding on Automations, or Close on the position.`
+                : "Working bot limits. They fill when mark crosses the limit. Stop adding on Automations, or Close on the position."
               : exchangeBook
                 ? `Working limits and take-profit / stop-loss triggers on ${exchangeName}. Fills appear on the position when they match. Edit remaining qty or limit. Cancel removes the rest.`
                 : "Working paper limits. They fill when mark crosses the limit. Edit remaining qty or limit. Cancel drops the rest."}

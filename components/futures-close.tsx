@@ -4,7 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
-import { closeDcaPlaybookFromRow } from "@/lib/dca/actions";
+import { closeDcaPositionFromRow } from "@/lib/dca/actions";
 import { submitFuturesTrade } from "@/lib/futures/actions";
 import type { MarkedFutures } from "@/lib/futures/mark";
 import { formatPrice } from "@/lib/opportunities/format";
@@ -32,7 +32,13 @@ export function FuturesCloseActions({
     return <CloseCopiedPositionButton trade={trade} next={next} />;
   }
   if (playbookId) {
-    return <CloseDcaPlaybookButton playbookId={playbookId} next={next} />;
+    return (
+      <CloseDcaPositionButton
+        playbookId={playbookId}
+        side={trade.side}
+        next={next}
+      />
+    );
   }
   if (playbookOwnsOrders) {
     return null;
@@ -78,28 +84,31 @@ function CloseCopiedPositionButton({
   );
 }
 
-function CloseDcaPlaybookButton({
+function CloseDcaPositionButton({
   playbookId,
+  side,
   next,
 }: {
   playbookId: string;
+  side: MarkedFutures["side"];
   next: string;
 }) {
   return (
-    <form action={closeDcaPlaybookFromRow}>
+    <form action={closeDcaPositionFromRow}>
       <input type="hidden" name="next" value={next} />
       <input type="hidden" name="playbookId" value={playbookId} />
+      <input type="hidden" name="side" value={side} />
       <span
         className="inline-flex"
-        title="Close all positions and place the bot in idle mode (no new entries)"
+        title="Close this position and its bot orders. The bot stays armed."
       >
         <PendingSubmitButton
           pendingLabel="Closing…"
-          successKey={`close-dca-playbook-row-${playbookId}`}
+          successKey={`close-dca-position-row-${playbookId}-${side}`}
           className={ACTION_CLASS}
           skipSizeGuard
         >
-          Close bot
+          Close
         </PendingSubmitButton>
       </span>
     </form>

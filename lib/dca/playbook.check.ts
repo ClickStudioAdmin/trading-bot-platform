@@ -69,6 +69,7 @@ import {
   type DcaPlaybook,
 } from "./playbook";
 import { emptyFuturesTpsl } from "@/lib/futures/tpsl";
+import { parseDcaPlaybookVerb } from "./run";
 
 assert.equal(parseDcaStatus("armed"), "armed");
 assert.equal(parseDcaStatus("stop_adding"), "stop_adding");
@@ -2532,5 +2533,14 @@ assert.equal(
   }).due,
   false,
 );
+
+assert.deepEqual(parseDcaPlaybookVerb("close-playbook"), {
+  verb: "close-playbook",
+  side: null,
+});
+assert.deepEqual(parseDcaPlaybookVerb("close-position"), {
+  verb: "close-position",
+  side: null,
+});
 
 console.log("dca playbook checks passed");

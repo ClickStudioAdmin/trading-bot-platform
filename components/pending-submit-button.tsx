@@ -74,6 +74,8 @@ function queryLooksSuccessful() {
     paper === "webhook-arm" ||
     paper === "playbook-closed" ||
     paper === "live-playbook-closed" ||
+    paper === "position-closed" ||
+    paper === "live-position-closed" ||
     params.get("created") === "1"
   );
 }

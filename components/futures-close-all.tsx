@@ -77,7 +77,7 @@ export function FuturesPositionBulkActions({
           copyDesk
             ? " This desk has no bot to idle. Copied limits cancel, then positions close at market."
             : panicOnly
-              ? " The bot stays armed unless you Close bot on the row or Automations, or turn on Reduce only."
+              ? " The bot stays armed unless you Close bot on Automations, or turn on Reduce only."
               : undefined
         }
       />

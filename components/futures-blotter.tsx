@@ -285,7 +285,7 @@ export function OpenFuturesTrades({
                     copyDesk
                       ? "Close flattens this copied position at market. It does not idle a bot — this desk has no playbook. Copied limits stay until the parent cancels them or you cancel them."
                       : playbookOwnsOrders
-                      ? "Close bot flattens every side, cancels working bot orders, and sets the bot to idle. Same as Close bot on Automations."
+                      ? "Close flattens this side and cancels its bot orders. The bot stays armed. Idle the bot with Close bot on Automations."
                       : exchangeBook
                         ? "Market or Limit opens a qty dialog. Market fills on Bybit now. Limit rests a reduce-only close until last trades through it."
                         : "Market or Limit opens a qty dialog. Market fills now. Limit rests a reduce-only close until mark trades through it."

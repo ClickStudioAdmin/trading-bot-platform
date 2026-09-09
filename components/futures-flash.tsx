@@ -22,6 +22,8 @@ export function FuturesFlash({
   webhookArm,
   playbookClosed,
   livePlaybookClosed,
+  positionClosed,
+  livePositionClosed,
   error,
 }: {
   opened: boolean;
@@ -47,6 +49,8 @@ export function FuturesFlash({
   webhookArm?: boolean;
   playbookClosed?: boolean;
   livePlaybookClosed?: boolean;
+  positionClosed?: boolean;
+  livePositionClosed?: boolean;
   error?: string;
 }) {
   if (error) {
@@ -82,6 +86,14 @@ export function FuturesFlash({
       <p className="text-sm text-success">
         Bot closed on the connected exchange. Positions flattened and the
         bot is idle.
+      </p>
+    );
+  }
+  if (livePositionClosed) {
+    return (
+      <p className="text-sm text-success">
+        Position closed on the connected exchange. Bot orders cancelled.
+        The bot is still armed.
       </p>
     );
   }
@@ -145,6 +157,13 @@ export function FuturesFlash({
     return (
       <p className="text-sm text-success">
         Bot closed. Positions flattened and the bot is idle.
+      </p>
+    );
+  }
+  if (positionClosed) {
+    return (
+      <p className="text-sm text-success">
+        Position closed. Bot orders cancelled. The bot is still armed.
       </p>
     );
   }

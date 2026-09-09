@@ -56,6 +56,7 @@ import {
   dcaLegIsRunning,
   dcaOpenExitLimits,
   dcaSeriesStartEval,
+  dcaStartListens,
   dcaWebhookSignalApplies,
   IDLE_DCA_LEG,
   isDcaClipKey,
@@ -78,7 +79,7 @@ import {
 } from "./store";
 import { loadDcaBookUsdt, loadDcaSizingLeverage } from "./book";
 
-export type DcaVerb = "arm" | "disarm" | "close-playbook";
+export type DcaVerb = "arm" | "disarm" | "close-playbook" | "close-position";
 
 const gridSyncLocks = new Map<string, Promise<void>>();
 const exitSyncLocks = new Map<string, Promise<void>>();
@@ -177,7 +178,12 @@ export function parseDcaPlaybookVerb(value: unknown): {
   if (raw === "arm-short") {
     return { verb: "arm", side: "short" };
   }
-  if (raw === "arm" || raw === "disarm" || raw === "close-playbook") {
+  if (
+    raw === "arm" ||
+    raw === "disarm" ||
+    raw === "close-playbook" ||
+    raw === "close-position"
+  ) {
     return { verb: raw, side: null };
   }
   return null;
@@ -1227,6 +1233,37 @@ async function flattenSide(input: {
   return result.ok ? { ok: true } : result;
 }
 
+export async function keepListeningAfterFlatten(input: {
+  playbook: DcaPlaybook;
+  side: FuturesSide;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Auth is not configured." };
+  }
+  if (dcaStartListens(input.playbook.startKind)) {
+    return patchDcaLeg({
+      supabase,
+      id: input.playbook.id,
+      side: input.side,
+      patch: {
+        status: "armed",
+        clipsFilled: 0,
+        lastClipPrice: null,
+        lastClipAtMs: null,
+        firstFillPrice: null,
+        breakevenDone: false,
+        cycleMaxValue: null,
+      },
+    });
+  }
+  return resetDcaLeg({
+    supabase,
+    id: input.playbook.id,
+    side: input.side,
+  });
+}
+
 async function moveStopToBreakeven(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
@@ -1413,6 +1450,41 @@ async function applyDcaVerbUnlocked(input: {
       data: { sides, reason: "close_playbook" },
     });
     return { ok: true, message: "Bot closed." };
+  }
+
+  if (input.verb === "close-position") {
+    for (const side of sides) {
+      const closed = await flattenSide({
+        playbook: input.playbook,
+        mode: input.mode,
+        side,
+      });
+      if (!closed.ok) {
+        return closed;
+      }
+      const kept = await keepListeningAfterFlatten({
+        playbook: input.playbook,
+        side,
+      });
+      if (!kept.ok) {
+        return kept;
+      }
+      touchPlaybook(input.playbook);
+    }
+    await logDcaEvent({
+      playbook: input.playbook,
+      event: "dca.closed",
+      message: dcaStartListens(input.playbook.startKind)
+        ? `${input.playbook.name} position closed. Waiting for the next start.`
+        : `Closed ${input.playbook.name}.`,
+      data: { sides, reason: "close_position" },
+    });
+    return {
+      ok: true,
+      message: dcaStartListens(input.playbook.startKind)
+        ? "Position closed. Bot is still armed."
+        : "Position closed.",
+    };
   }
 
   const lastPrice = await lastPriceForPlaybook(input.playbook);
