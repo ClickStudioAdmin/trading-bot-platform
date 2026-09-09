@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeading } from "@/components/page-heading";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
+import { ThemeBotFormDraft } from "@/components/theme-bot-form-draft";
 
 export const metadata: Metadata = {
   title: "Theme",
@@ -311,6 +312,17 @@ export default function ThemePage() {
               placeholder="Find a pair, order, or account"
               className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
             />
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold tracking-tight">Bot form (draft)</h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            Proposed standard chrome for Perps, DCA, and later scale-in. Review
+            here before any live desk form changes.
+          </p>
+          <div className="mt-5">
+            <ThemeBotFormDraft />
           </div>
         </section>
 
