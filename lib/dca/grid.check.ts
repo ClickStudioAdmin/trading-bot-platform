@@ -17,8 +17,10 @@ import {
   dcaMaxDropCoveredPct,
   dcaPlannedExits,
   dcaRequiredUsdt,
+  dcaAtrDistanceLabel,
   dcaAtrSafetyPrices,
   dcaAtrStep,
+  dcaCoveredRangePct,
   dcaResolvedSafetyPrices,
   dcaSafetyPrices,
   dcaStopLossPrice,
@@ -1287,5 +1289,42 @@ const atrLadder = dcaLadderLevels({
 });
 assert.equal(atrLadder[1]?.price, 98);
 assert.equal(atrLadder[2]?.price, 96);
+assert.equal(dcaCoveredRangePct("long", 100, 96), 4);
+assert.equal(dcaCoveredRangePct("short", 100, 105), 5);
+assert.equal(
+  dcaAtrDistanceLabel({ atr: 400, multiple: 1, lastPrice: 80_000 }),
+  "1 ATR · 400.00 · 0.50%",
+);
+const atrWait = dcaLadderLevels({
+  side: "long",
+  entryPrice: 100,
+  maxClips: 5,
+  dipPct: null,
+  clipSize: 10,
+  sizeUnit: "usdt",
+  sizeMultiplier: 1,
+  deviationMultiplier: 1,
+  spacingKind: "atr",
+  atr: null,
+  atrSpacingMult: 1,
+});
+assert.equal(atrWait.length, 1);
+assert.equal(atrWait[0]?.price, 100);
+assert.equal(
+  dcaClipsUntilMaxValue({
+    side: "long",
+    entryPrice: 100,
+    maxValue: 25,
+    dipPct: null,
+    clipSize: 10,
+    sizeUnit: "usdt",
+    sizeMultiplier: 1,
+    deviationMultiplier: 1,
+    spacingKind: "atr",
+    atr: 10,
+    atrSpacingMult: 1,
+  }),
+  3,
+);
 
 console.log("dca grid checks passed");

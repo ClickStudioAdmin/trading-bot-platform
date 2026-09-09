@@ -29,11 +29,13 @@ import {
   dcaClipFromBudget,
   dcaInitialMarginUsdt,
   dcaAtrDistanceLabel,
+  dcaCoveredRangePct,
   dcaMaxDropCoveredPct,
   dcaRequiredUsdt,
   DEFAULT_DCA_ATR_PERIOD,
   DEFAULT_DCA_ATR_SPACING_MULT,
   DEFAULT_DCA_TAKE_PROFIT_ATR_MULT,
+  parseDcaAtrPeriod,
   parseDcaSpacingKind,
   parseDcaTakeProfitKind,
   type DcaLadderLevel,
@@ -51,6 +53,7 @@ import {
   dcaPlaybookHasOpenCycle,
   dcaPlaybookIsRunning,
   dcaPlaybookStatusLabel,
+  dcaAtrTimeframe,
   dcaStartListens,
   parseDcaExitBasis,
   parseDcaMaxValueKind,
@@ -81,12 +84,16 @@ import {
   dcaIndicatorWhenOptions,
   dcaIndicatorWhenValue,
   indicatorCompareForDirection,
+  lastAtrValue,
+  parseDcaIndicatorTimeframe,
   oppositeIndicatorCompare,
   oppositeRsiCompare,
   oppositeRsiLevel,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
+import { closedLiveIndicatorBars } from "@/lib/market/desk-klines";
+import type { CandleBar } from "@/lib/market/candles";
 import type { FuturesOrderType, FuturesSide } from "@/lib/futures/model";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import { perpEffectiveMaxQty, perpTicketSizeError } from "@/lib/exchanges/bybit/ticket-size";
@@ -263,6 +270,7 @@ function dcaSummaryPreview(input: {
   deviationMultiplier: string;
   dipPct: string;
   spacingKind: DcaSpacingKind;
+  atr: number | null;
   atrSpacingMult: string;
   maxClips: string;
   maxValue: string;
@@ -282,6 +290,7 @@ function dcaSummaryPreview(input: {
       : null;
   const spacingKind =
     input.averaging === "dip" ? input.spacingKind : "percent";
+  const atr = input.atr != null && input.atr > 0 ? input.atr : null;
   const atrSpacingMult = asNumber(input.atrSpacingMult);
   const tpKind = input.takeProfitKind;
   const size = asNumber(input.clipSize);
@@ -303,20 +312,17 @@ function dcaSummaryPreview(input: {
             sizeUnit: input.sizeUnit,
             sizeMultiplier: sizeMult,
             deviationMultiplier: devMult,
+            spacingKind,
+            atr,
+            atrSpacingMult,
           })
         : null;
-  const covered = dcaMaxDropCoveredPct({
-    side: input.side,
-    maxClips: clips,
-    dipPct: dip,
-    deviationMultiplier: devMult,
-  });
   const tpPct = tpKind === "atr" ? null : asNumber(input.takeProfitPct);
   const tpAtrMult = tpKind === "atr" ? asNumber(input.takeProfitAtrMult) : null;
   const spacingHint =
     spacingKind === "atr"
       ? dcaAtrDistanceLabel({
-          atr: null,
+          atr,
           multiple: atrSpacingMult,
           lastPrice: input.lastPrice,
         })
@@ -324,7 +330,7 @@ function dcaSummaryPreview(input: {
   const tpHint =
     tpKind === "atr"
       ? dcaAtrDistanceLabel({
-          atr: null,
+          atr,
           multiple: tpAtrMult,
           lastPrice: input.lastPrice,
         })
@@ -340,6 +346,7 @@ function dcaSummaryPreview(input: {
     sizeMultiplier: sizeMult,
     deviationMultiplier: devMult,
     spacingKind,
+    atr,
     atrSpacingMult,
     takeProfitPct: tpPct,
     takeProfitKind: tpKind,
@@ -348,6 +355,18 @@ function dcaSummaryPreview(input: {
     stopLossPct: slPct,
     stopLossBasis: input.stopLossBasis,
   });
+  const lastLevel = levels[levels.length - 1];
+  const covered =
+    spacingKind === "atr"
+      ? levels.length >= 2 && lastLevel
+        ? dcaCoveredRangePct(input.side, levels[0]!.price, lastLevel.price)
+        : null
+      : dcaMaxDropCoveredPct({
+          side: input.side,
+          maxClips: clips,
+          dipPct: dip,
+          deviationMultiplier: devMult,
+        });
   const requiredFromLadder = levels[levels.length - 1]?.totalUsdt ?? null;
   const required =
     input.sizeUnit === "usdt" || priceFromLast
@@ -987,6 +1006,81 @@ export function DcaPlaybookForm({
     (asNumber(clipForSave) === null ? sizeError : (sizeError ?? ladderMaxError));
   const saveBlocked = cycleLocked ? null : saveError;
   const restGridEffective = averaging !== "interval" && restGrid;
+  const needsAtr =
+    (averaging === "dip" && spacingKind === "atr") ||
+    takeProfitKind === "atr";
+  const atrPeriodNum = parseDcaAtrPeriod(atrPeriod) ?? DEFAULT_DCA_ATR_PERIOD;
+  const atrTimeframe = dcaAtrTimeframe({
+    indicatorTimeframe: parseDcaIndicatorTimeframe(indicatorTimeframe),
+    shortIndicatorTimeframe: parseDcaIndicatorTimeframe(
+      shortIndicatorTimeframe,
+    ),
+  });
+  const [atrBars, setAtrBars] = useState<CandleBar[] | null>(null);
+  const [atrFetch, setAtrFetch] = useState<"off" | "loading" | "ready" | "error">(
+    "off",
+  );
+  useEffect(() => {
+    if (!needsAtr || !symbol) {
+      setAtrBars(null);
+      setAtrFetch("off");
+      return;
+    }
+    let cancelled = false;
+    const params = new URLSearchParams({
+      venue: policy.venueId,
+      symbol,
+      interval: atrTimeframe,
+      limit: String(Math.min(500, Math.max(200, atrPeriodNum + 40))),
+    });
+    if (policy.venueId === "hyperliquid" && venueEnvironment) {
+      params.set("env", venueEnvironment);
+    }
+    setAtrBars(null);
+    setAtrFetch("loading");
+    void fetch(`/api/market/candles?${params.toString()}`)
+      .then(async (response) => {
+        const body = (await response.json()) as {
+          candles?: CandleBar[];
+          error?: string;
+        };
+        if (!cancelled && !response.ok) {
+          throw new Error(body.error || "Could not read candles.");
+        }
+        return body.candles ?? [];
+      })
+      .then((rows) => {
+        if (!cancelled) {
+          setAtrBars(rows);
+          setAtrFetch("ready");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAtrBars(null);
+          setAtrFetch("error");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    needsAtr,
+    symbol,
+    atrTimeframe,
+    atrPeriodNum,
+    policy.venueId,
+    venueEnvironment,
+  ]);
+  const liveAtr = useMemo(() => {
+    if (!needsAtr || atrBars == null) {
+      return null;
+    }
+    return lastAtrValue(
+      closedLiveIndicatorBars(atrBars, atrTimeframe),
+      atrPeriodNum,
+    );
+  }, [needsAtr, atrBars, atrTimeframe, atrPeriodNum]);
   const summaryBySide = useMemo(() => {
     const input = {
       lastPrice,
@@ -997,6 +1091,7 @@ export function DcaPlaybookForm({
       deviationMultiplier,
       dipPct,
       spacingKind,
+      atr: liveAtr,
       atrSpacingMult,
       maxClips,
       maxValue: valueCapUsdt == null ? "" : String(valueCapUsdt),
@@ -1018,6 +1113,7 @@ export function DcaPlaybookForm({
     deviationMultiplier,
     dipPct,
     spacingKind,
+    liveAtr,
     atrSpacingMult,
     lastPrice,
     maxClips,
@@ -2291,8 +2387,14 @@ export function DcaPlaybookForm({
               summary.covered === null ? "—" : `${trimPct(summary.covered)}%`
             }
             hint={
-              summary.spacingHint
-                ? `First add ${summary.spacingHint} from last clip`
+              averaging === "dip" && spacingKind === "atr"
+                ? atrFetch === "loading"
+                  ? "Reading last ATR…"
+                  : atrFetch === "error"
+                    ? "Could not read last ATR"
+                    : summary.spacingHint
+                      ? `First add ${summary.spacingHint} from last clip`
+                      : "First add 1 ATR from last clip"
                 : summary.covered === null
                   ? "Set max orders and price deviation %"
                   : "First fill to last clip"
@@ -2355,14 +2457,16 @@ export function DcaPlaybookForm({
             value={
               summary.levels.length === 0
                 ? "—"
-                : summary.profitFromTp
-                  ? summary.profitRange === null
-                    ? "—"
-                    : formatProfitRange(
-                        summary.profitRange.min,
-                        summary.profitRange.max,
-                      )
-                  : "∞"
+                : takeProfitKind === "atr" && liveAtr == null
+                  ? "—"
+                  : summary.profitFromTp
+                    ? summary.profitRange === null
+                      ? "—"
+                      : formatProfitRange(
+                          summary.profitRange.min,
+                          summary.profitRange.max,
+                        )
+                    : "∞"
             }
             valueClass={
               summary.levels.length === 0 ? "text-ink" : "text-success"
@@ -2370,9 +2474,13 @@ export function DcaPlaybookForm({
             hint={
               summary.levels.length === 0
                 ? "Enter order size and max orders"
-                : summary.profitFromTp
-                  ? "Does not consider trailing or breakeven stops"
-                  : "No take profit — unlimited"
+                : takeProfitKind === "atr" && liveAtr == null
+                  ? atrFetch === "error"
+                    ? "Could not read last ATR"
+                    : "Reading last ATR…"
+                  : summary.profitFromTp
+                    ? "Does not consider trailing or breakeven stops"
+                    : "No take profit — unlimited"
             }
           />
           <SummaryStat
@@ -2491,13 +2599,17 @@ export function DcaPlaybookForm({
                     </td>
                     <td
                       className={`px-3 py-2 tabular-nums ${
-                        !summary.profitFromTp || row.profitUsdt > 0
-                          ? "text-success"
-                          : "text-ink-muted"
+                        takeProfitKind === "atr" && liveAtr == null
+                          ? "text-ink-muted"
+                          : !summary.profitFromTp || row.profitUsdt > 0
+                            ? "text-success"
+                            : "text-ink-muted"
                       }`}
                     >
                       {summary.profitFromTp
-                        ? formatUsdAmount(row.profitUsdt)
+                        ? takeProfitKind === "atr" && liveAtr == null
+                          ? "—"
+                          : formatUsdAmount(row.profitUsdt)
                         : "∞"}
                     </td>
                     <td
@@ -2520,6 +2632,19 @@ export function DcaPlaybookForm({
               {summary.priceFromLast
                 ? `Prices from last on ${symbol}.`
                 : "Prices indexed from 100 until last is available."}
+              {needsAtr
+                ? atrFetch === "loading"
+                  ? ` Reading last ATR on ${DCA_INDICATOR_TIMEFRAME_LABELS[atrTimeframe]}.`
+                  : atrFetch === "error"
+                    ? ` Could not read last ATR on ${DCA_INDICATOR_TIMEFRAME_LABELS[atrTimeframe]}.`
+                    : liveAtr != null
+                      ? ` Last ATR ${formatAtrPreview(liveAtr)} on ${DCA_INDICATOR_TIMEFRAME_LABELS[atrTimeframe]} (closed).${
+                          averaging === "dip" && spacingKind === "atr"
+                            ? " Ladder prices recast when ATR changes."
+                            : ""
+                        }`
+                      : ` Waiting for last ATR on ${DCA_INDICATOR_TIMEFRAME_LABELS[atrTimeframe]}.`
+                : ""}
               {averaging === "interval"
                 ? " Interval adds use the same last as an estimate."
                 : ""}
@@ -3015,6 +3140,16 @@ function formatGroupedNumber(value: number): string {
     minimumFractionDigits: decimals,
     maximumFractionDigits: 2,
   });
+}
+
+function formatAtrPreview(atr: number): string {
+  if (atr >= 100) {
+    return atr.toFixed(1);
+  }
+  if (atr >= 1) {
+    return atr.toFixed(2);
+  }
+  return atr.toFixed(4).replace(/\.?0+$/, "");
 }
 
 function formatUsdAmount(value: number): string {

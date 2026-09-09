@@ -263,6 +263,20 @@ export function dcaResolvedSafetyPrices(input: {
   });
 }
 
+export function dcaCoveredRangePct(
+  side: FuturesSide,
+  firstPrice: number,
+  lastPrice: number,
+): number | null {
+  if (!(firstPrice > 0) || !(lastPrice > 0)) {
+    return null;
+  }
+  if (side === "long") {
+    return ((firstPrice - lastPrice) / firstPrice) * 100;
+  }
+  return ((lastPrice - firstPrice) / firstPrice) * 100;
+}
+
 export function dcaMaxDropCoveredPct(input: {
   side: FuturesSide;
   maxClips: number | null;
@@ -283,10 +297,7 @@ export function dcaMaxDropCoveredPct(input: {
   if (last === undefined) {
     return null;
   }
-  if (input.side === "long") {
-    return ((100 - last) / 100) * 100;
-  }
-  return ((last - 100) / 100) * 100;
+  return dcaCoveredRangePct(input.side, 100, last);
 }
 
 export function dcaLastClipDeviationPct(input: {
@@ -540,8 +551,10 @@ function dcaLadderOrderPrices(input: {
         })
       : [];
   const prices = [first, ...addPrices];
-  while (prices.length < input.count) {
-    prices.push(prices[prices.length - 1] ?? first);
+  if (input.spacingKind !== "atr") {
+    while (prices.length < input.count) {
+      prices.push(prices[prices.length - 1] ?? first);
+    }
   }
   return prices.slice(0, input.count);
 }
@@ -589,7 +602,7 @@ export function dcaLadderLevels(input: {
   let totalQty = 0;
   let weighted = 0;
   let totalUsdt = 0;
-  for (let i = 0; i < count; i += 1) {
+  for (let i = 0; i < prices.length; i += 1) {
     const price = prices[i] ?? first;
     if (!(price > 0)) {
       break;
@@ -643,6 +656,9 @@ export function dcaClipsUntilMaxValue(input: {
   sizeUnit: "qty" | "usdt";
   sizeMultiplier: number;
   deviationMultiplier: number;
+  spacingKind?: DcaSpacingKind | null;
+  atr?: number | null;
+  atrSpacingMult?: number | null;
 }): number | null {
   if (!(input.maxValue > 0) || !(input.clipSize > 0)) {
     return null;
