@@ -40,7 +40,7 @@ Primary: `bg-accent-strong` / `text-ink`. Secondary: surface + `border-line`. Gh
 
 `html` sets `color-scheme: dark` so native `<select>` lists use the dark OS picker (not a white flash). Do not force `select` to `canvas` — fields sit on canvas cards and use `surface-raised`.
 
-**Bot form (draft)** is the **Bot form** tab on this page (`/admin/theme?tab=bot`). Proposed standard for every desk (Off, not a checkbox that hides exits; same section order). Same chrome: **Actions** are one-shot (Save, Close bot, footer); **Status** is a dropdown. Each desk keeps its own statuses (Perps: Active / Reduce only / Disabled. DCA: Active / Stop adding / Disabled). **Active** and **Disabled** are the same words on both. Stop adding is not Reduce only. Those lists do not merge. Local mock only. Do not apply to live Perps / DCA / backtest forms until Click signs it. The **Theme** tab keeps the colour, type, and control reference.
+**Bot form (draft)** is the **Bot form** tab on this page (`/admin/theme?tab=bot`). Proposed standard for every desk (Off, not a checkbox that hides exits; same section order). Same chrome: **Actions** are one-shot (Save, footer); **Status** is a dropdown. **Active** + Save turns the bot on (today’s Save and Arm). **Disabled** + Save closes that bot’s positions and turns it off (today’s Close bot). There are no Arm / Save and Arm / Close bot buttons. A note under Status says what Save will do for the selected mode. Each desk keeps its own extra status (Perps Reduce only, DCA Stop adding). **Active** and **Disabled** are the same words on both. Those lists do not merge. Local mock only. Do not apply to live Perps / DCA / backtest forms until Click signs it. The **Theme** tab keeps the colour, type, and control reference.
 
 ## Motion
 

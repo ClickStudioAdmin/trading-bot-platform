@@ -46,15 +46,45 @@ const deskBtnClass =
 type DeskKind = "perps" | "dca";
 
 const PERPS_STATUS_OPTIONS = [
-  { value: "active", label: "Active", fill: "bg-success" },
-  { value: "reduce_only", label: "Reduce only", fill: "bg-warning" },
-  { value: "disabled", label: "Disabled", fill: "bg-ink-faint" },
+  {
+    value: "active",
+    label: "Active",
+    fill: "bg-success",
+    note: "Save turns this bot on. It may open and add. Existing rows stay.",
+  },
+  {
+    value: "reduce_only",
+    label: "Reduce only",
+    fill: "bg-warning",
+    note: "Save stops new opens and adds. Exits still run. Existing rows stay.",
+  },
+  {
+    value: "disabled",
+    label: "Disabled",
+    fill: "bg-ink-faint",
+    note: "Save closes every position this bot owns and turns it off.",
+  },
 ] as const;
 
 const DCA_STATUS_OPTIONS = [
-  { value: "active", label: "Active", fill: "bg-success" },
-  { value: "stop_adding", label: "Stop adding", fill: "bg-warning" },
-  { value: "disabled", label: "Disabled", fill: "bg-ink-faint" },
+  {
+    value: "active",
+    label: "Active",
+    fill: "bg-success",
+    note: "Save turns this bot on. It listens for entries. Existing clips stay.",
+  },
+  {
+    value: "stop_adding",
+    label: "Stop adding",
+    fill: "bg-warning",
+    note: "Save stops new clips. Exits still run. Existing clips stay.",
+  },
+  {
+    value: "disabled",
+    label: "Disabled",
+    fill: "bg-ink-faint",
+    note: "Save closes every position this bot owns and turns it off.",
+  },
 ] as const;
 
 function statusOptionsFor(desk: DeskKind) {
@@ -274,8 +304,8 @@ export function ThemeBotFormDraft() {
       <p className="text-sm text-ink-muted">
         Draft standard for every desk. Local only — nothing saves. Same
         chrome on every bot: Actions are one-shot, Status is a dropdown.
-        Each desk keeps its own statuses. Switch the sample desk to see
-        both.
+        Disabled closes that bot’s positions. Switch the sample desk to
+        see each status list.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -294,9 +324,9 @@ export function ThemeBotFormDraft() {
         </button>
       </div>
 
-      <div className="divide-y divide-line rounded-card border border-line bg-canvas px-5">
-        <Group title="Bot">
-        <div className="mb-4 flex flex-wrap gap-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className={labelClass}>Sample desk</p>
+        <div className="flex gap-1 rounded-control border border-line bg-surface p-0.5">
           <button
             type="button"
             className={`rounded-control px-3 py-1.5 text-xs ${
@@ -326,6 +356,10 @@ export function ThemeBotFormDraft() {
             DCA
           </button>
         </div>
+      </div>
+
+      <div className="divide-y divide-line rounded-card border border-line bg-canvas px-5">
+        <Group title="Bot">
         <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_auto_16rem]">
           <Field label="Name">
             <input
@@ -339,13 +373,6 @@ export function ThemeBotFormDraft() {
             <div className="mt-1 flex flex-wrap gap-2">
               <button type="button" className={headerPrimaryClass}>
                 Save
-              </button>
-              <button
-                type="button"
-                className={headerPrimaryClass}
-                title="Close all positions. Status stays as you set it."
-              >
-                Close bot
               </button>
             </div>
           </div>
@@ -366,10 +393,14 @@ export function ThemeBotFormDraft() {
               </select>
               <StatusLight fill={selectedStatus.fill} />
             </div>
-            <p className="mt-1.5 text-[11px] text-ink-faint">
-              {desk === "perps"
-                ? "Active may open. Reduce only will not open or add. Disabled does neither."
-                : "Active listens. Stop adding holds the ladder. Disabled is off."}
+            <p
+              className={`mt-1.5 text-[11px] ${
+                selectedStatus.value === "disabled"
+                  ? "text-warning"
+                  : "text-ink-faint"
+              }`}
+            >
+              {selectedStatus.note}
             </p>
           </div>
         </div>
@@ -872,8 +903,8 @@ function ThemeBotFormReference() {
       <div className="space-y-2">
         <p className={labelClass}>DCA statuses</p>
         <p className="text-xs text-ink-faint">
-          Own list. Stop adding is not Reduce only. Today&apos;s Arm / Disarm
-          / Idle become this dropdown.
+          Own list. Stop adding is not Reduce only. Save and Arm / Arm /
+          Disarm / Close bot become Status + Save.
         </p>
         <div className="flex flex-wrap gap-x-4 gap-y-2">
           <StatusLight fill="bg-success" label="Active" />
@@ -886,8 +917,8 @@ function ThemeBotFormReference() {
       <div className="space-y-2">
         <p className={labelClass}>Current DCA buttons (replaced by the dropdown)</p>
         <p className="text-xs text-ink-faint">
-          Same UX as Perps Mode: pick a status, do not use a second set of
-          lifecycle buttons.
+          Replaced. Pick the status, then Save. Save and Arm is Active +
+          Save. Close bot is Disabled + Save.
         </p>
         <div className="flex flex-wrap gap-2">
           <button type="button" className={headerLongClass}>
@@ -909,6 +940,13 @@ function ThemeBotFormReference() {
             title="Stop listening for new entries"
           >
             Disarm
+          </button>
+          <button
+            type="button"
+            className={headerPrimaryClass}
+            title="Replaced by Status Disabled. Save then closes the bot’s positions."
+          >
+            Close bot
           </button>
           <span
             className="inline-flex"
