@@ -976,7 +976,7 @@ export function BacktestRecipeFields({
             }
             className={fieldClass}
           >
-            <option value="percent">%</option>
+            <option value="percent">Percentage</option>
             <option value="atr">ATR</option>
           </select>
         </label>
@@ -1098,7 +1098,7 @@ export function BacktestRecipeFields({
             }
             className={fieldClass}
           >
-            <option value="percent">%</option>
+            <option value="percent">Percentage</option>
             <option value="atr">ATR × multiplier</option>
           </select>
         </label>

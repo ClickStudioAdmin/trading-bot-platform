@@ -1864,7 +1864,7 @@ export function DcaPlaybookForm({
                   }
                   className={fieldClass}
                 >
-                  <option value="percent">%</option>
+                  <option value="percent">Percentage</option>
                   <option value="atr">ATR</option>
                 </select>
               </label>
@@ -2027,8 +2027,22 @@ export function DcaPlaybookForm({
               }
               className={fieldClass}
             >
-              <option value="percent">%</option>
+              <option value="percent">Percentage</option>
               <option value="atr">ATR × multiplier</option>
+            </select>
+          </label>
+          <label className={labelClass}>
+            Take profit type
+            <select
+              name="takeProfitBasis"
+              value={takeProfitBasis}
+              onChange={(event) =>
+                setTakeProfitBasis(parseDcaExitBasis(event.target.value))
+              }
+              className={fieldClass}
+            >
+              <option value="average">Average entry</option>
+              <option value="first_entry">First fill</option>
             </select>
           </label>
           {takeProfitKind === "percent" ? (
@@ -2070,20 +2084,6 @@ export function DcaPlaybookForm({
           ) : takeProfitKind === "atr" ? (
             <input type="hidden" name="atrPeriod" value={atrPeriod} />
           ) : null}
-          <label className={labelClass}>
-            Take profit type
-            <select
-              name="takeProfitBasis"
-              value={takeProfitBasis}
-              onChange={(event) =>
-                setTakeProfitBasis(parseDcaExitBasis(event.target.value))
-              }
-              className={fieldClass}
-            >
-              <option value="average">Average entry</option>
-              <option value="first_entry">First fill</option>
-            </select>
-          </label>
         </div>
         <label className="flex items-start gap-2 py-2 text-xs text-ink">
           <input
@@ -2138,16 +2138,6 @@ export function DcaPlaybookForm({
         </p>
         <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
           <label className={labelClass}>
-            Stop loss %
-            <PercentInput
-              name="stopLossPct"
-              value={stopLossPct}
-              onChange={setStopLossPct}
-              placeholder="Off"
-              ariaLabel="Stop loss percent"
-            />
-          </label>
-          <label className={labelClass}>
             Stop loss type
             <select
               name="stopLossBasis"
@@ -2160,6 +2150,16 @@ export function DcaPlaybookForm({
               <option value="average">Average entry</option>
               <option value="first_entry">First fill</option>
             </select>
+          </label>
+          <label className={labelClass}>
+            Stop loss %
+            <PercentInput
+              name="stopLossPct"
+              value={stopLossPct}
+              onChange={setStopLossPct}
+              placeholder="Off"
+              ariaLabel="Stop loss percent"
+            />
           </label>
         </div>
         <p className={sectionTitleClass}>
