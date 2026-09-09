@@ -1,5 +1,6 @@
 import { formatDeskType, type DeskType } from "@/lib/accounts/model";
 import {
+  parseDcaFilterSpec,
   writeDcaFilterFormFields,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
@@ -486,6 +487,21 @@ function asNullableNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function filterSpecFromRecipe(value: unknown): DcaFilterSpec | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const row = value as Record<string, unknown>;
+  return parseDcaFilterSpec({
+    kind: row.kind,
+    timeframe: row.timeframe,
+    compare: row.compare,
+    level: row.level,
+    period: row.period,
+    multiplier: row.multiplier,
+  });
+}
+
 export function dcaRecipeToConfig(
   recipe: DcaTemplateRecipe | Record<string, unknown>,
   options: { symbol?: string; webhookId?: string | null; venue?: string },
@@ -709,10 +725,18 @@ export function dcaRecipeToConfig(
   if (shortMultiplier != null) {
     form.set("shortIndicatorMultiplier", String(shortMultiplier));
   }
-  writeDcaFilterFormFields(form, "confirm", recipe.confirm);
-  writeDcaFilterFormFields(form, "shortConfirm", recipe.shortConfirm);
-  writeDcaFilterFormFields(form, "exitIf", recipe.exitIf);
-  writeDcaFilterFormFields(form, "shortExitIf", recipe.shortExitIf);
+  writeDcaFilterFormFields(form, "confirm", filterSpecFromRecipe(recipe.confirm));
+  writeDcaFilterFormFields(
+    form,
+    "shortConfirm",
+    filterSpecFromRecipe(recipe.shortConfirm),
+  );
+  writeDcaFilterFormFields(form, "exitIf", filterSpecFromRecipe(recipe.exitIf));
+  writeDcaFilterFormFields(
+    form,
+    "shortExitIf",
+    filterSpecFromRecipe(recipe.shortExitIf),
+  );
   const parsed = parseDcaPlaybookForm(form, venue);
   if (!parsed.ok) {
     return parsed;
