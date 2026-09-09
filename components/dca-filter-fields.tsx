@@ -49,7 +49,7 @@ export function DcaFilterBlock({
   labelClass: string;
 }) {
   return (
-    <div className="space-y-2 sm:col-span-2 lg:col-span-4">
+    <div className="col-span-full space-y-2">
       <label className={labelClass}>
         {label}
         <select
@@ -107,7 +107,7 @@ function DcaFilterParamFields({
   const showLevelRange = spec.kind === "rsi" && spec.compare === "between";
   const showMultiplier = spec.kind === "supertrend" || spec.kind === "atr_band";
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2">
       <label className={labelClass}>
         Period
         <GroupedNumberInput
@@ -164,7 +164,7 @@ function DcaFilterParamFields({
           ))}
         </select>
       </label>
-      <label className={labelClass}>
+      <label className={`${labelClass} col-span-2`}>
         When
         <select
           name={named ? `${prefix}Compare` : undefined}

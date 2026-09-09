@@ -421,21 +421,13 @@ function BacktestIndicatorStartFields({
     </label>
   ) : null;
   return (
-    <>
+    <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2">
       {showPairPeriods ? (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5">
+        <>
           {indicatorField}
           {timeframeField}
           {pairFields}
-        </div>
-      ) : kind === "rsi" ? (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5">
-          {indicatorField}
-          {periodField}
-          {timeframeField}
-          {whenField}
-          {levelField}
-        </div>
+        </>
       ) : (
         <>
           {indicatorField}
@@ -445,7 +437,7 @@ function BacktestIndicatorStartFields({
           {levelField}
         </>
       )}
-    </>
+    </div>
   );
 }
 
@@ -466,7 +458,7 @@ function BacktestTrendStartFields({
 }) {
   const whenOptions = dcaIndicatorWhenOptions("supertrend", side, false);
   return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5">
+    <div className="col-span-full grid grid-cols-2 gap-x-3 gap-y-2">
       <label className={labelClass}>
         Trend
         <select
