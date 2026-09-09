@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
+import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { ChevronIcon, TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import {
   dcaFilterSpecForKind,
   type DcaFilterSpec,
@@ -44,6 +46,42 @@ const deskBtnClass =
   "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
 
 type DeskKind = "perps" | "dca" | "cnc";
+
+const SAMPLE_PAIRS: LinearPerp[] = [
+  {
+    symbol: "BTCUSDT",
+    baseCoin: "BTC",
+    quoteCoin: "USDT",
+    minQty: 0.001,
+    maxQty: 100,
+    maxMktQty: 100,
+    minNotional: 5,
+    minPrice: 0.1,
+    tickSize: 0.1,
+  },
+  {
+    symbol: "ETHUSDT",
+    baseCoin: "ETH",
+    quoteCoin: "USDT",
+    minQty: 0.01,
+    maxQty: 1000,
+    maxMktQty: 1000,
+    minNotional: 5,
+    minPrice: 0.01,
+    tickSize: 0.01,
+  },
+  {
+    symbol: "SOLUSDT",
+    baseCoin: "SOL",
+    quoteCoin: "USDT",
+    minQty: 0.1,
+    maxQty: 10000,
+    maxMktQty: 10000,
+    minNotional: 5,
+    minPrice: 0.01,
+    tickSize: 0.01,
+  },
+];
 
 const PERPS_STATUS_OPTIONS = [
   {
@@ -635,18 +673,14 @@ export function ThemeBotFormDraft() {
 
         {desk !== "cnc" ? (
         <>
-        <Group title={desk === "dca" ? "Pair and Trigger" : undefined}>
+        <Group title="Pair and Trigger">
           <div className={rowClass}>
             <Field label="Contract">
-              <select
+              <FuturesSymbolSelect
+                options={SAMPLE_PAIRS}
                 value={symbol}
-                onChange={(event) => setSymbol(event.target.value)}
-                className={fieldClass}
-              >
-                <option value="BTCUSDT">BTC-USDT</option>
-                <option value="ETHUSDT">ETH-USDT</option>
-                <option value="SOLUSDT">SOL-USDT</option>
-              </select>
+                onChange={setSymbol}
+              />
             </Field>
             {desk === "perps" ? (
               <>
@@ -734,6 +768,31 @@ export function ThemeBotFormDraft() {
             )}
           </div>
 
+          {desk === "dca" && direction === "both" ? (
+            <p className="text-xs text-ink-muted">
+              Long and Short are independent positions and never flatten each
+              other
+            </p>
+          ) : null}
+        </Group>
+
+        {!closing &&
+        (startKind === "webhook" ||
+          startKind === "price" ||
+          (showStartParams && startKind !== "price")) ? (
+        <Group
+          title={
+            startKind === "indicator"
+              ? "Indicator"
+              : startKind === "trend"
+                ? "Trend"
+                : startKind === "webhook"
+                  ? "Signal Webhook"
+                  : desk === "dca"
+                    ? "Price Cross"
+                    : "Trigger"
+          }
+        >
           {startKind === "webhook" && !closing ? (
             <div className={rowClass}>
               <Field label="Webhook" className="lg:col-span-2">
@@ -887,15 +946,8 @@ export function ThemeBotFormDraft() {
               ) : null}
             </div>
           ) : null}
-
-          {desk === "dca" && direction === "both" ? (
-            <p className="text-xs text-ink-muted">
-              Long and Short are independent positions and never flatten each
-              other
-            </p>
-          ) : null}
-
         </Group>
+        ) : null}
 
         {desk === "dca" && !closing ? (
           <OptionalSection
