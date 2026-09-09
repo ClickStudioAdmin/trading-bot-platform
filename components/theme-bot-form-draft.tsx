@@ -249,9 +249,9 @@ export function ThemeBotFormDraft() {
   return (
     <div className="space-y-3">
       <p className="text-sm text-ink-muted">
-        Draft standard for every desk. Local only — nothing saves. The card
-        below is one armed bot as it would look live. Other states sit in
-        Reference at the bottom.
+        Draft standard for every desk. Local only — nothing saves. Status is
+        the Mode dropdown. Actions are Save and the footer. Other states sit
+        in Reference.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -272,7 +272,7 @@ export function ThemeBotFormDraft() {
 
       <div className="divide-y divide-line rounded-card border border-line bg-canvas px-5">
         <Group title="Bot">
-        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-2">
+        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_16rem_auto]">
           <Field label="Name">
             <input
               value={name}
@@ -281,28 +281,36 @@ export function ThemeBotFormDraft() {
             />
           </Field>
           <div>
-            <p className={labelClass}>Status and Actions</p>
-            <div className="mt-1 space-y-3">
-            <div className="flex items-center gap-2">
-              <select className={`${fieldClass} mt-0 min-w-0 flex-1`} defaultValue="active">
+            <p className={labelClass}>Status</p>
+            <div className="mt-1 flex items-center gap-2">
+              <select
+                className={`${fieldClass} mt-0 min-w-0 flex-1`}
+                defaultValue="active"
+                aria-label="Status"
+              >
                 <option value="active">Active</option>
                 <option value="reduce_only">Reduce only</option>
                 <option value="disabled">Disabled</option>
               </select>
               <StatusLight fill="bg-success" />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <p className="mt-1.5 text-[11px] text-ink-faint">
+              Active listens. Reduce only stops new adds. Disabled is idle.
+            </p>
+          </div>
+          <div>
+            <p className={labelClass}>Actions</p>
+            <div className="mt-1 flex flex-wrap gap-2">
               <button type="button" className={headerPrimaryClass}>
                 Save
               </button>
               <button
                 type="button"
                 className={headerPrimaryClass}
-                title="Stop listening for new entries"
+                title="Close all positions. Status stays as you set it."
               >
-                Disarm
+                Close bot
               </button>
-            </div>
             </div>
           </div>
         </div>
@@ -800,10 +808,31 @@ function ThemeBotFormReference() {
       </div>
 
       <div className="space-y-2">
-        <p className={labelClass}>Lifecycle buttons</p>
+        <p className={labelClass}>Status mapping</p>
         <p className="text-xs text-ink-faint">
-          Sample bot is armed with no open position, so it only shows Save and
-          Disarm. These appear in other states.
+          Proposed Status replaces today&apos;s DCA Arm / Disarm / Stop adding.
+          Same three modes on every desk.
+        </p>
+        <ul className="list-disc space-y-1 pl-5 text-sm text-ink-muted">
+          <li>
+            <span className="text-ink">Active</span> — Armed. Listens for
+            entries.
+          </li>
+          <li>
+            <span className="text-ink">Reduce only</span> — Stop adding. Holds
+            the row, no new clips.
+          </li>
+          <li>
+            <span className="text-ink">Disabled</span> — Idle / Disarmed. No
+            new entries.
+          </li>
+        </ul>
+      </div>
+
+      <div className="space-y-2">
+        <p className={labelClass}>Current DCA buttons (not on the standard)</p>
+        <p className="text-xs text-ink-faint">
+          These are the verbs Mode replaces. Keep them here so we can compare.
         </p>
         <div className="flex flex-wrap gap-2">
           <button type="button" className={headerLongClass}>
@@ -822,9 +851,9 @@ function ThemeBotFormReference() {
           <button
             type="button"
             className={headerPrimaryClass}
-            title="Close all positions and place the bot in idle mode (no new entries)"
+            title="Stop listening for new entries"
           >
-            Close bot
+            Disarm
           </button>
           <span
             className="inline-flex"
