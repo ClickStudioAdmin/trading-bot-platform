@@ -22,7 +22,7 @@ Columns: `spacing_kind`, `atr_period`, `atr_spacing_mult`, `take_profit_kind`, `
 
 ## Later waves (parked)
 
-Dual Both leftover overlap is this path (confirm the start, then Exit-if the old side). Not an in-playbook natural hedge or opposite-aware clip. Click locked that 9 Sep 2026. Do not start until Click says go.
+Dual Both leftover overlap is this path (confirm the start, then Exit-if the old side). Not an in-playbook natural hedge or opposite-aware clip. Click locked that 9 Sep 2026. A later admin **research wizard** would run wave 2 as its stage 2; that wizard is also parked. Do not start until Click says go.
 
 | Wave | What | Notes |
 | --- | --- | --- |

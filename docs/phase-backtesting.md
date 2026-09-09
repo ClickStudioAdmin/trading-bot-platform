@@ -97,6 +97,6 @@ Replay still does **not** persist trailing peak across clips. Indicator start us
 - TV Strategy / webhook-only recipes.
 - C&C, walk-forward, tick-level, Pine parity.
 - Unbounded float sweeps or more than 96 scenarios (Fly job later).
-- Admin studies / scenario grids (`/admin/backtests`). Parked until Click restarts that product.
+- Admin studies / scenario grids (`/admin/backtests`). Parked until Click restarts that product. A **research wizard** (staged entry → filters/Exit-if → scale, then one platform template) was designed 9 Sep 2026 and parked the same day. Not `/welcome`. Admin first; members later.
 - Chart trading.
 - Writing simulated fills into the live blotter.

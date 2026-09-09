@@ -11,3 +11,4 @@ Not a phase. Not ordered. Not a gate before Fly.io or anything else. Work these 
 7. Refine **charts and locations** (where charts sit, which page owns them). See [phase-charts.md](phase-charts.md). Added 30 Aug 2026.
 8. Further **copy trade** testing (share, catalogue, paper and live follow, fan-out, guards). See [phase-copy-trading.md](phase-copy-trading.md) step 10. Added 1 Sep 2026.
 9. Consider making **templates public** later (member-visible catalog, not the old backtest Publish snapshot). Publish snapshot was removed 2 Sep 2026.
+10. **Research wizard** (admin `/admin/backtests`): staged sweeps — least-bad start, then filters/Exit-if, then scale, then one idle platform template. Designed 9 Sep 2026; parked the same day. Needs wave 2. See [phase-backtesting.md](phase-backtesting.md).
