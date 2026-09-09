@@ -171,16 +171,18 @@ function Group({
   hint,
   children,
 }: {
-  title: string;
+  title?: string;
   hint?: string;
   children: ReactNode;
 }) {
   return (
     <section className="space-y-3 py-5">
-      <div>
-        <h3 className={sectionTitleClass}>{title}</h3>
-        {hint ? <p className="mt-1 text-xs text-ink-faint">{hint}</p> : null}
-      </div>
+      {title || hint ? (
+        <div>
+          {title ? <h3 className={sectionTitleClass}>{title}</h3> : null}
+          {hint ? <p className="mt-1 text-xs text-ink-faint">{hint}</p> : null}
+        </div>
+      ) : null}
       {children}
     </section>
   );
@@ -282,6 +284,7 @@ export function ThemeBotFormDraft() {
   const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(null);
   const [skipIfOpen, setSkipIfOpen] = useState(true);
   const [restGrid, setRestGrid] = useState(true);
+  const [direction, setDirection] = useState<"long" | "short" | "both">("long");
   const [desk, setDesk] = useState<DeskKind>("perps");
   const [status, setStatus] = useState("active");
   const skipDeskDirty = useRef(false);
@@ -319,6 +322,7 @@ export function ThemeBotFormDraft() {
     exitIf,
     skipIfOpen,
     restGrid,
+    direction,
     status,
   };
   const draftKey = JSON.stringify(draftValue);
@@ -354,6 +358,9 @@ export function ThemeBotFormDraft() {
     skipDeskDirty.current = true;
     setDesk(next);
     setStatus("active");
+    if (next === "perps" && (startKind === "indicator" || startKind === "trend")) {
+      setStartKind("price");
+    }
   }
 
   function saveDraft() {
@@ -467,7 +474,7 @@ export function ThemeBotFormDraft() {
         </div>
         </Group>
 
-        <Group title="Pair and start">
+        <Group title={desk === "dca" ? "Pair and Trigger" : undefined}>
           <div className={rowClass}>
             <Field label="Contract">
               <select
@@ -480,63 +487,101 @@ export function ThemeBotFormDraft() {
                 <option value="SOLUSDT">SOL-USDT</option>
               </select>
             </Field>
-            <Field label="Action">
-              <select
-                value={action}
-                onChange={(event) => setAction(event.target.value as Action)}
-                className={fieldClass}
-              >
-                <option value="buy">Buy</option>
-                <option value="sell">Sell</option>
-                <option value="close_long">Close long</option>
-                <option value="close_short">Close short</option>
-              </select>
-            </Field>
-            <Field label="Order">
-              <span className="mt-1 flex w-fit rounded-control border border-line bg-surface p-0.5">
-                <button
-                  type="button"
-                  className="rounded-control bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink"
-                >
-                  Market
-                </button>
-                <button
-                  type="button"
-                  className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:text-ink"
-                >
-                  Limit
-                </button>
-              </span>
-            </Field>
-            <Field label="Start">
-              <select
-                value={startKind}
-                onChange={(event) => {
-                  const next = event.target.value as StartKind;
-                  setStartKind(next);
-                  if (next === "trend") {
-                    setWhen("cross_gte");
-                    setPeriod(String(DEFAULT_DCA_SUPERTREND_PERIOD));
-                  } else if (next === "indicator") {
-                    setWhen("cross_lte");
-                    setPeriod(String(DEFAULT_DCA_RSI_PERIOD));
-                  }
-                }}
-                className={fieldClass}
-              >
-                <option value="price">Price</option>
-                <option value="indicator">Indicator</option>
-                <option value="trend">Trend</option>
-                <option value="webhook">Webhook</option>
-              </select>
-            </Field>
+            {desk === "perps" ? (
+              <>
+                <Field label="Action">
+                  <select
+                    value={action}
+                    onChange={(event) => setAction(event.target.value as Action)}
+                    className={fieldClass}
+                  >
+                    <option value="buy">Buy</option>
+                    <option value="sell">Sell</option>
+                    <option value="close_long">Close long</option>
+                    <option value="close_short">Close short</option>
+                  </select>
+                </Field>
+                <Field label="Order">
+                  <span className="mt-1 flex w-fit rounded-control border border-line bg-surface p-0.5">
+                    <button
+                      type="button"
+                      className="rounded-control bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink"
+                    >
+                      Market
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:text-ink"
+                    >
+                      Limit
+                    </button>
+                  </span>
+                </Field>
+                <Field label="When">
+                  <select
+                    value={startKind === "webhook" ? "webhook" : "price"}
+                    onChange={(event) =>
+                      setStartKind(event.target.value as StartKind)
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="price">Price cross</option>
+                    <option value="webhook">Signal webhook</option>
+                  </select>
+                </Field>
+              </>
+            ) : (
+              <>
+                <Field label="Direction">
+                  <select
+                    value={direction}
+                    onChange={(event) =>
+                      setDirection(
+                        event.target.value as "long" | "short" | "both",
+                      )
+                    }
+                    className={fieldClass}
+                  >
+                    <option value="long">Long</option>
+                    <option value="short">Short</option>
+                    <option value="both">Both</option>
+                  </select>
+                </Field>
+                <Field label="Initial Order Trigger" className="lg:col-span-2">
+                  <select
+                    value={startKind}
+                    onChange={(event) => {
+                      const next = event.target.value as StartKind;
+                      setStartKind(next);
+                      if (next === "trend") {
+                        setWhen("cross_gte");
+                        setPeriod(String(DEFAULT_DCA_SUPERTREND_PERIOD));
+                      } else if (next === "indicator") {
+                        setWhen("cross_lte");
+                        setPeriod(String(DEFAULT_DCA_RSI_PERIOD));
+                      }
+                    }}
+                    className={fieldClass}
+                  >
+                    <option value="indicator">Indicator</option>
+                    <option value="trend">Trend</option>
+                    <option value="price">Price Cross</option>
+                    <option value="webhook">Signal Webhook</option>
+                  </select>
+                </Field>
+              </>
+            )}
           </div>
 
           {startKind === "webhook" && !closing ? (
             <div className={rowClass}>
               <Field label="Webhook" className="lg:col-span-2">
                 <select className={fieldClass} defaultValue="">
-                  <option value="">Pick a Signal webhook</option>
+                  <option value="">
+                    {desk === "perps"
+                      ? "Pick a webhook"
+                      : "Pick a Signal webhook"}
+                  </option>
                   <option value="sample">Sample signal</option>
                 </select>
               </Field>
@@ -551,12 +596,18 @@ export function ThemeBotFormDraft() {
                   onChange={(event) => setPriceSource(event.target.value)}
                   className={fieldClass}
                 >
-                  <option value="last">Last</option>
-                  <option value="mark">Mark</option>
-                  <option value="index">Index</option>
+                  <option value="last">
+                    {desk === "perps" ? "Last is" : "Last"}
+                  </option>
+                  <option value="mark">
+                    {desk === "perps" ? "Mark is" : "Mark"}
+                  </option>
+                  <option value="index">
+                    {desk === "perps" ? "Index is" : "Index"}
+                  </option>
                 </select>
               </Field>
-              <Field label="When">
+              <Field label={desk === "perps" ? "Compare" : "When"}>
                 <select
                   value={priceWhen}
                   onChange={(event) => setPriceWhen(event.target.value)}
@@ -676,12 +727,19 @@ export function ThemeBotFormDraft() {
             </div>
           ) : null}
 
+          {desk === "dca" && direction === "both" ? (
+            <p className="text-xs text-ink-muted">
+              Long and Short are independent positions and never flatten each
+              other
+            </p>
+          ) : null}
+
         </Group>
 
-        {!closing ? (
-          <Group title="Confirm" hint={DCA_CONFIRM_FIELD_LABEL}>
+        {desk === "dca" && !closing ? (
+          <Group title="Initial Order Trigger Parameters">
             <DcaFilterBlock
-              label="Filter"
+              label={DCA_CONFIRM_FIELD_LABEL}
               prefix="themeConfirm"
               side="long"
               spec={confirm}
@@ -694,7 +752,7 @@ export function ThemeBotFormDraft() {
         ) : null}
 
         {!closing ? (
-          <Group title="Size">
+          <Group title={desk === "dca" ? "Initial Order Size" : undefined}>
             <div className={rowClass}>
               <Field label="Size">
                 <GroupedNumberInput
@@ -704,7 +762,7 @@ export function ThemeBotFormDraft() {
                   className={fieldClass}
                 />
               </Field>
-              <Field label="Unit">
+              <Field label={desk === "dca" ? "Size unit" : "Unit"}>
                 <select
                   value={sizeUnit}
                   onChange={(event) =>
@@ -719,7 +777,7 @@ export function ThemeBotFormDraft() {
             </div>
           </Group>
         ) : (
-          <Group title="Size">
+          <Group>
             <div className={rowClass}>
               <Field label="Qty to close" hint="Empty closes the whole row.">
                 <GroupedNumberInput
@@ -735,10 +793,29 @@ export function ThemeBotFormDraft() {
         )}
 
         {desk === "dca" ? (
-        <Group
-          title="Strategy extras"
-          hint="DCA / scale-in only. Not on the Perps baseline."
-        >
+        <Group title="Additional orders">
+          <div className={rowClass}>
+            <Field label="Averaging">
+              <select className={fieldClass} defaultValue="dip">
+                <option value="dip">Position — add on price deviation</option>
+                <option value="interval">Position — add on interval</option>
+              </select>
+            </Field>
+          </div>
+          <label className="mt-2 flex items-start gap-2 text-xs text-ink">
+            <input
+              type="checkbox"
+              checked={restGrid}
+              onChange={(event) => setRestGrid(event.target.checked)}
+              className="mt-0.5 size-4 accent-accent"
+            />
+            Remaining orders placed as GTC limit (instead of market)
+          </label>
+        </Group>
+        ) : null}
+
+        {desk === "dca" ? (
+        <Group title="Additional order multipliers">
           <div className="mb-2 flex flex-wrap gap-2">
             <button
               type="button"
@@ -754,13 +831,7 @@ export function ThemeBotFormDraft() {
             </button>
           </div>
           <div className={rowClass}>
-            <Field label="Additional orders">
-              <select className={fieldClass} defaultValue="dip">
-                <option value="dip">Price deviation</option>
-                <option value="interval">Interval</option>
-              </select>
-            </Field>
-            <Field label="Size multiplier">
+            <Field label="Order size multiplier">
               <GroupedNumberInput
                 value="1"
                 onChange={() => undefined}
@@ -777,15 +848,6 @@ export function ThemeBotFormDraft() {
               />
             </Field>
           </div>
-          <label className="mt-2 flex items-start gap-2 text-xs text-ink">
-            <input
-              type="checkbox"
-              checked={restGrid}
-              onChange={(event) => setRestGrid(event.target.checked)}
-              className="mt-0.5 size-4 accent-accent"
-            />
-            Remaining orders placed as GTC limit (instead of market)
-          </label>
         </Group>
         ) : null}
 
@@ -862,7 +924,8 @@ export function ThemeBotFormDraft() {
               />
             </Group>
 
-            <Group title="Move breakeven">
+            {desk === "dca" ? (
+            <Group title="Move Breakeven">
               <div className={rowClass}>
                 <Field label="Move stop to breakeven at %">
                   <OffNumber value={breakevenAt} onChange={setBreakevenAt} />
@@ -875,10 +938,12 @@ export function ThemeBotFormDraft() {
                 </Field>
               </div>
             </Group>
+            ) : null}
 
+            {desk === "dca" ? (
             <Group title="Exit-if">
               <DcaFilterBlock
-                label="Filter"
+                label="Exit-if"
                 prefix="themeExitIf"
                 side="long"
                 spec={exitIf}
@@ -888,7 +953,9 @@ export function ThemeBotFormDraft() {
                 labelClass={labelClass}
               />
             </Group>
+            ) : null}
 
+            {desk === "perps" ? (
             <section className="py-5">
               <label className="flex items-start gap-2 text-sm text-ink">
                 <input
@@ -900,11 +967,13 @@ export function ThemeBotFormDraft() {
                 <span>
                   Skip if this side is already open
                   <span className="mt-1 block text-xs text-ink-muted">
-                    Flag only. Off means a new fire can add to the same row.
+                    Off means each new cross or trigger can add size to the same
+                    row.
                   </span>
                 </span>
               </label>
             </section>
+            ) : null}
           </>
         ) : null}
 
