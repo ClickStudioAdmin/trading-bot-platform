@@ -162,6 +162,88 @@ function CollapseIcon() {
   );
 }
 
+function MonitorIcon() {
+  return (
+    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
+      <rect
+        x="2.5"
+        y="3.5"
+        width="13"
+        height="9"
+        rx="1.4"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M7 14.5h4M9 12.5v2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ExitMonitorIcon() {
+  return (
+    <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
+      <rect
+        x="2.5"
+        y="3.5"
+        width="13"
+        height="9"
+        rx="1.4"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <path
+        d="M7 14.5h4M9 12.5v2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M6.2 6.2 8 8M11.8 6.2 10 8M6.2 10.3 8 8.5M11.8 10.3 10 8.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+type WebkitFullscreenDocument = Document & {
+  webkitFullscreenElement?: Element | null;
+  webkitExitFullscreen?: () => Promise<void>;
+};
+
+type WebkitFullscreenElement = HTMLElement & {
+  webkitRequestFullscreen?: () => Promise<void>;
+};
+
+function monitorFullscreenElement(): Element | null {
+  const doc = document as WebkitFullscreenDocument;
+  return document.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
+}
+
+function requestMonitorFullscreen(node: HTMLElement) {
+  const el = node as WebkitFullscreenElement;
+  const request = el.requestFullscreen?.bind(el) ?? el.webkitRequestFullscreen?.bind(el);
+  if (!request) {
+    return Promise.reject(new Error("Fullscreen is not available."));
+  }
+  return request();
+}
+
+function exitMonitorFullscreen() {
+  const doc = document as WebkitFullscreenDocument;
+  const exit = document.exitFullscreen?.bind(document) ?? doc.webkitExitFullscreen?.bind(doc);
+  if (!exit) {
+    return Promise.resolve();
+  }
+  return exit();
+}
+
 function CameraIcon() {
   return (
     <svg viewBox="0 0 18 18" className="size-4" fill="none" aria-hidden>
@@ -281,31 +363,57 @@ export function DeskChart({
   viewKey?: number;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<ChartHandle | null>(null);
   const viewRef = useRef<ChartViewApi | null>(null);
   const padEdgesRef = useRef<(() => void) | null>(null);
   const [menu, setMenu] = useState<ChartContextMenuState>(null);
   const [expanded, setExpanded] = useState(false);
+  const [monitorFull, setMonitorFull] = useState(false);
   const [viewportH, setViewportH] = useState(0);
+  const fillViewport = expanded || monitorFull;
   const frameHeight =
-    expanded && viewportH > CHART_TOOLBAR_H ? viewportH : height;
+    fillViewport && viewportH > CHART_TOOLBAR_H ? viewportH : height;
   const plotHeight = frameHeight - CHART_TOOLBAR_H;
 
   useEffect(() => {
-    if (!expanded) {
+    function syncFs() {
+      const node = frameRef.current;
+      const on = node != null && monitorFullscreenElement() === node;
+      setMonitorFull(on);
+      if (on) {
+        setViewportH(window.innerHeight);
+      }
+    }
+    document.addEventListener("fullscreenchange", syncFs);
+    document.addEventListener("webkitfullscreenchange", syncFs);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncFs);
+      document.removeEventListener("webkitfullscreenchange", syncFs);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!expanded && !monitorFull) {
       return;
     }
     function sync() {
       setViewportH(window.innerHeight);
     }
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setExpanded(false);
+      if (event.key !== "Escape") {
+        return;
       }
+      if (monitorFullscreenElement()) {
+        return;
+      }
+      setExpanded(false);
     }
     sync();
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (expanded && !monitorFull) {
+      document.body.style.overflow = "hidden";
+    }
     window.addEventListener("resize", sync);
     window.addEventListener("keydown", onKey);
     return () => {
@@ -313,7 +421,7 @@ export function DeskChart({
       window.removeEventListener("resize", sync);
       window.removeEventListener("keydown", onKey);
     };
-  }, [expanded]);
+  }, [expanded, monitorFull]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -440,12 +548,15 @@ export function DeskChart({
 
   const frame = (
     <div
+      ref={frameRef}
       className={
-        expanded
-          ? "fixed inset-0 z-50 flex h-dvh w-full flex-col bg-canvas"
-          : "flex w-full flex-col overflow-hidden rounded-card border border-line bg-canvas"
+        expanded && !monitorFull
+          ? "desk-chart-frame fixed inset-0 z-50 flex h-dvh w-full flex-col bg-canvas"
+          : monitorFull
+            ? "desk-chart-frame flex h-full w-full flex-col bg-canvas"
+            : "desk-chart-frame flex w-full flex-col overflow-hidden rounded-card border border-line bg-canvas"
       }
-      style={expanded ? undefined : { height }}
+      style={fillViewport ? undefined : { height }}
     >
       <div className="grid min-h-9 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-line px-1.5 py-1">
         <div className="min-w-0">{toolbar}</div>
@@ -453,18 +564,54 @@ export function DeskChart({
         <div className="flex items-center gap-0.5">
           <button
             type="button"
-            title={expanded ? "Exit full screen" : "Full screen"}
-            aria-label={expanded ? "Exit full screen" : "Full screen"}
+            title={expanded ? "Exit browser fill" : "Fill browser"}
+            aria-label={expanded ? "Exit browser fill" : "Fill browser"}
             aria-pressed={expanded}
             className={SHOT_BUTTON}
             onClick={() => {
-              if (!expanded) {
-                setViewportH(window.innerHeight);
+              if (expanded) {
+                if (monitorFullscreenElement() === frameRef.current) {
+                  void exitMonitorFullscreen();
+                }
+                setExpanded(false);
+                return;
               }
-              setExpanded((current) => !current);
+              setViewportH(window.innerHeight);
+              setExpanded(true);
             }}
           >
             {expanded ? <CollapseIcon /> : <ExpandIcon />}
+          </button>
+          <button
+            type="button"
+            title={monitorFull ? "Exit full screen" : "Full screen"}
+            aria-label={monitorFull ? "Exit full screen" : "Full screen"}
+            aria-pressed={monitorFull}
+            className={SHOT_BUTTON}
+            onClick={() => {
+              const node = frameRef.current;
+              if (!node) {
+                return;
+              }
+              if (monitorFullscreenElement() === node) {
+                void exitMonitorFullscreen();
+                return;
+              }
+              setViewportH(window.innerHeight);
+              setMonitorFull(true);
+              window.requestAnimationFrame(() => {
+                const next = frameRef.current;
+                if (!next) {
+                  setMonitorFull(false);
+                  return;
+                }
+                void requestMonitorFullscreen(next).catch(() => {
+                  setMonitorFull(false);
+                });
+              });
+            }}
+          >
+            {monitorFull ? <ExitMonitorIcon /> : <MonitorIcon />}
           </button>
           <ChartScreenshotControls
             getChart={() => chartRef.current}

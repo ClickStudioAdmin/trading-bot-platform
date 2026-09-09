@@ -126,6 +126,7 @@ assert.equal(
   ),
   "Liq",
 );
+assert.equal(backtestFillMarkerText(fills[1]!, true), "Add 2 long");
 assert.equal(backtestFillMarkerText(fills[3]!, true), "Open short");
 
 const exits = plannedExitsForBacktestCycle(recipe, grouped.closed[1]!);

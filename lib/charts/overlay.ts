@@ -285,7 +285,9 @@ export function buildBacktestChartOverlay(input: {
           ? "belowBar"
           : "aboveBar",
         color: current
-          ? CHART_COLORS.entry
+          ? row.side === "short"
+            ? CHART_COLORS.sell
+            : CHART_COLORS.buy
           : flatten
             ? row.reason === "take_profit"
               ? CHART_COLORS.takeProfit

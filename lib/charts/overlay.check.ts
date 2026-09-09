@@ -73,6 +73,63 @@ assert.equal(replay.lines.length, 1);
 assert.equal(replay.lines.some((row) => row.title === "When"), true);
 assert.equal(replay.markers[0]?.shape, "circle");
 assert.equal(replay.markers[0]?.text, "Open short");
+assert.equal(replay.markers[0]?.color, CHART_COLORS.sell);
+
+const bothOpen = buildBacktestChartOverlay({
+  triggerPrice: null,
+  includeAdds: true,
+  orders: [
+    {
+      atMs: 1_700_000_000_000,
+      action: "buy",
+      side: "long",
+      qty: 1,
+      price: 100,
+      feeUsdt: 0,
+      realizedUsdt: null,
+      clipIndex: 1,
+    },
+    {
+      atMs: 1_700_000_050_000,
+      action: "buy",
+      side: "long",
+      qty: 1,
+      price: 90,
+      feeUsdt: 0,
+      realizedUsdt: null,
+      clipIndex: 2,
+    },
+    {
+      atMs: 1_700_000_100_000,
+      action: "sell",
+      side: "short",
+      qty: 1,
+      price: 80,
+      feeUsdt: 0,
+      realizedUsdt: null,
+      clipIndex: 1,
+    },
+    {
+      atMs: 1_700_000_150_000,
+      action: "sell",
+      side: "short",
+      qty: 1,
+      price: 70,
+      feeUsdt: 0,
+      realizedUsdt: null,
+      clipIndex: 2,
+    },
+  ],
+});
+assert.deepEqual(
+  bothOpen.markers.map((row) => [row.text, row.color, row.shape]),
+  [
+    ["Open long", CHART_COLORS.buy, "circle"],
+    ["Add 2 long", CHART_COLORS.buy, "circle"],
+    ["Open short", CHART_COLORS.sell, "circle"],
+    ["Add 2 short", CHART_COLORS.sell, "circle"],
+  ],
+);
 
 const closed = buildBacktestChartOverlay({
   triggerPrice: null,

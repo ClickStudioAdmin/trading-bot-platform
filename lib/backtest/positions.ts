@@ -314,10 +314,11 @@ export function backtestFillMarkerText(
 ): string {
   if (stillOpen) {
     const index = row.clipIndex ?? 1;
+    const side = row.side === "short" ? "short" : "long";
     if (index > 1) {
-      return `Add ${index}`;
+      return `Add ${index} ${side}`;
     }
-    return row.side === "short" ? "Open short" : "Open long";
+    return side === "short" ? "Open short" : "Open long";
   }
   if (row.action === "flatten") {
     if (row.reason === "take_profit") {
