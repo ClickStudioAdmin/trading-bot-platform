@@ -103,7 +103,8 @@ function DcaFilterParamFields({
 }) {
   const whenOptions = dcaFilterWhenOptions(spec.kind, side);
   const whenValue = dcaFilterWhenValue(spec.compare);
-  const showLevel = spec.kind === "rsi";
+  const showLevel = spec.kind === "rsi" && spec.compare !== "between";
+  const showLevelRange = spec.kind === "rsi" && spec.compare === "between";
   const showMultiplier = spec.kind === "supertrend" || spec.kind === "atr_band";
   return (
     <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4">
@@ -168,12 +169,22 @@ function DcaFilterParamFields({
         <select
           name={named ? `${prefix}Compare` : undefined}
           value={whenValue}
-          onChange={(event) =>
-            onChange({
-              ...spec,
-              compare: event.target.value as DcaFilterSpec["compare"],
-            })
-          }
+          onChange={(event) => {
+            const compare = event.target.value as DcaFilterSpec["compare"];
+            if (compare === "between") {
+              const from = spec.level;
+              const to = spec.levelTo;
+              const valid = from != null && to != null && from < to;
+              onChange({
+                ...spec,
+                compare,
+                level: valid ? from : 30,
+                levelTo: valid ? to : 70,
+              });
+              return;
+            }
+            onChange({ ...spec, compare, levelTo: null });
+          }}
           className={fieldClass}
         >
           {whenOptions.map((option) => (
@@ -200,6 +211,42 @@ function DcaFilterParamFields({
             className={fieldClass}
           />
         </label>
+      ) : null}
+      {showLevelRange ? (
+        <>
+          <label className={labelClass}>
+            From
+            <GroupedNumberInput
+              name={named ? `${prefix}Level` : undefined}
+              value={spec.level == null ? "" : String(spec.level)}
+              onChange={(next) => {
+                const level = Number(next.replace(/,/g, "").trim());
+                onChange({
+                  ...spec,
+                  level: Number.isFinite(level) ? level : spec.level,
+                });
+              }}
+              allowDecimal
+              className={fieldClass}
+            />
+          </label>
+          <label className={labelClass}>
+            To
+            <GroupedNumberInput
+              name={named ? `${prefix}LevelTo` : undefined}
+              value={spec.levelTo == null ? "" : String(spec.levelTo)}
+              onChange={(next) => {
+                const levelTo = Number(next.replace(/,/g, "").trim());
+                onChange({
+                  ...spec,
+                  levelTo: Number.isFinite(levelTo) ? levelTo : spec.levelTo,
+                });
+              }}
+              allowDecimal
+              className={fieldClass}
+            />
+          </label>
+        </>
       ) : null}
     </div>
   );

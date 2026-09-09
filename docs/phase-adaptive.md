@@ -24,19 +24,19 @@ Columns: `spacing_kind`, `atr_period`, `atr_spacing_mult`, `take_profit_kind`, `
 
 ## Wave 2 — Confirm
 
-One optional AND filter under each side’s start. Default **Off**. Period / timeframe match Start. When is sit-only (is above / is bullish / at or below) — not crosses or turns. Those stay on the initial trigger. On Both, Long and Short are separate sections (start + Confirm). Cycle-lock Confirm with Start. Not stacked AND filters.
+One optional AND filter under each side’s start. Default **Off**. Period / timeframe match Start. When is sit-only (is above / is bullish / at or below) plus range: RSI **Between** two levels, Price vs BB / ATR band **Price is inside**. Not crosses or turns — those stay on the initial trigger. Supertrend and Price vs EMA/SMA stay two-way. On Both, Long and Short are separate sections (start + Confirm). Cycle-lock Confirm with Start. Not stacked AND filters.
 
 Catalog: **Price vs EMA**, **Price vs SMA**, **RSI**, **Price vs BB**, **ATR band**, **Supertrend**. No MACD, no MA-cross, no ADX, no Market Structure.
 
 Confirm is **AND** with the start at fire time (`now` only, no latch). Missing bars = not met. Dual Both leftover overlap is this path (confirm the start, then Exit-if the old side). Not an in-playbook natural hedge.
 
-ATR band is Keltner-style: `EMA(period) ± ATR(period) × multiplier`. When: price above upper / below lower. Defaults: period **10**, multiplier **2**.
+ATR band is Keltner-style: `EMA(period) ± ATR(period) × multiplier`. When: price above upper / below lower / inside. Defaults: period **10**, multiplier **2**. RSI Between stores the high in the existing `*_multiplier` column (no new migration).
 
 Summary: one muted line when on (`Confirm: Price vs EMA · 4h`).
 
 ## Wave 2b — Exit-if
 
-Same Off pattern on Stop loss. Own kind + sit-only When, **not** the inverse of Confirm. Editable while a position is open (like TP/SL). One Exit-if per side on Both.
+Same Off pattern on Stop loss. Own kind + sit-only When (plus the same RSI / BB / ATR ranges), **not** the inverse of Confirm. Editable while a position is open (like TP/SL). One Exit-if per side on Both.
 
 When open, market flatten that side. Order in `decideDcaTick`: **% SL first, then Exit-if, then TP**. Replay wick SL / liq still win if they hit first that bar. Indicator Exit-if is **close-based**.
 

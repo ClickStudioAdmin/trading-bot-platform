@@ -115,6 +115,35 @@ if (confirmApplied.ok) {
   assert.equal(confirmApplied.config.exitIf?.level, 70);
 }
 
+const rangeSnap = snapshotDcaRecipe({
+  ...parsed.config,
+  confirm: {
+    kind: "rsi",
+    timeframe: "15",
+    compare: "between",
+    level: 30,
+    levelTo: 70,
+    period: 14,
+    multiplier: null,
+  },
+  exitIf: {
+    kind: "bb",
+    timeframe: "60",
+    compare: "inside",
+    level: null,
+    period: 20,
+    multiplier: null,
+  },
+});
+const rangeApplied = dcaRecipeToConfig(rangeSnap, {});
+assert.equal(rangeApplied.ok, true);
+if (rangeApplied.ok) {
+  assert.equal(rangeApplied.config.confirm?.compare, "between");
+  assert.equal(rangeApplied.config.confirm?.level, 30);
+  assert.equal(rangeApplied.config.confirm?.levelTo, 70);
+  assert.equal(rangeApplied.config.exitIf?.compare, "inside");
+}
+
 const remapped = dcaRecipeToConfig(snapshot, { symbol: "SOLUSDT" });
 assert.equal(remapped.ok, true);
 if (remapped.ok) {

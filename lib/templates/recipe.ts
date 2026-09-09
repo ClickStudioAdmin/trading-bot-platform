@@ -497,6 +497,7 @@ function filterSpecFromRecipe(value: unknown): DcaFilterSpec | null {
     timeframe: row.timeframe,
     compare: row.compare,
     level: row.level,
+    levelTo: row.levelTo,
     period: row.period,
     multiplier: row.multiplier,
   });

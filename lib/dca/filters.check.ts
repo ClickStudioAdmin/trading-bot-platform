@@ -7,6 +7,8 @@ import {
   dcaFilterSpecForKind,
   dcaFilterSummaryLine,
   dcaFilterWhenOptions,
+  filterColumns,
+  filterFromRow,
   parseDcaFilterForm,
   parseDcaFilterKind,
   parseDcaFilterSpec,
@@ -53,6 +55,17 @@ for (const kind of [
   assert.ok(values.includes("gte"));
   assert.ok(values.includes("lte"));
 }
+assert.ok(dcaFilterWhenOptions("rsi").some((row) => row.value === "between"));
+assert.ok(dcaFilterWhenOptions("bb").some((row) => row.value === "inside"));
+assert.ok(dcaFilterWhenOptions("atr_band").some((row) => row.value === "inside"));
+assert.equal(
+  dcaFilterWhenOptions("ema").some((row) => row.value === "inside"),
+  false,
+);
+assert.equal(
+  dcaFilterWhenOptions("supertrend").some((row) => row.value === "between"),
+  false,
+);
 assert.equal(parseDcaFilterKind(""), null);
 assert.equal(parseDcaFilterKind("macd"), null);
 assert.equal(parseDcaFilterKind("ema"), "ema");
@@ -137,6 +150,90 @@ assert.equal(
   }),
   null,
 );
+assert.equal(
+  atrBandMet({
+    bars: flatBars,
+    period: 10,
+    multiplier: 2,
+    compare: "inside",
+  }),
+  true,
+);
+assert.equal(
+  atrBandMet({
+    bars: [...flatBars.slice(0, -1), { high: 200, low: 199, close: 200 }],
+    period: 10,
+    multiplier: 2,
+    compare: "inside",
+  }),
+  false,
+);
+
+const midRsi = [10, 11, 10, 11, 10, 11, 10, 11, 10, 11, 10, 11, 10, 11, 10];
+const rsiBetween: DcaFilterSpec = {
+  kind: "rsi",
+  timeframe: "15",
+  compare: "between",
+  level: 30,
+  levelTo: 70,
+  period: 14,
+  multiplier: null,
+};
+assert.equal(
+  dcaFilterMet({
+    spec: rsiBetween,
+    side: "long",
+    closes: midRsi,
+    bars: null,
+  }),
+  true,
+);
+assert.equal(
+  dcaFilterMet({
+    spec: rsiBetween,
+    side: "long",
+    closes: rising,
+    bars: null,
+  }),
+  false,
+);
+
+const flatCloses = Array.from({ length: 24 }, () => 100);
+const bbInside: DcaFilterSpec = {
+  kind: "bb",
+  timeframe: "15",
+  compare: "inside",
+  level: null,
+  period: 20,
+  multiplier: null,
+};
+assert.equal(
+  dcaFilterMet({
+    spec: bbInside,
+    side: "long",
+    closes: flatCloses,
+    bars: null,
+  }),
+  true,
+);
+assert.equal(
+  dcaFilterMet({
+    spec: bbInside,
+    side: "long",
+    closes: [...flatCloses.slice(0, -1), 200],
+    bars: null,
+  }),
+  false,
+);
+
+const rsiBetweenCols = filterColumns("confirm", rsiBetween);
+assert.equal(rsiBetweenCols.confirm_compare, "between");
+assert.equal(rsiBetweenCols.confirm_level, 30);
+assert.equal(rsiBetweenCols.confirm_multiplier, 70);
+const rsiBetweenRow = filterFromRow(rsiBetweenCols, "confirm");
+assert.equal(rsiBetweenRow?.compare, "between");
+assert.equal(rsiBetweenRow?.level, 30);
+assert.equal(rsiBetweenRow?.levelTo, 70);
 
 const offForm = new FormData();
 offForm.set("symbol", "BTCUSDT");
@@ -210,5 +307,60 @@ const rsiMissing = parseDcaFilterForm(
   "Confirm",
 );
 assert.equal(rsiMissing.ok, false);
+
+const rsiBetweenMissing = parseDcaFilterForm(
+  (() => {
+    const form = new FormData();
+    form.set("confirmKind", "rsi");
+    form.set("confirmTimeframe", "15");
+    form.set("confirmCompare", "between");
+    form.set("confirmLevel", "30");
+    form.set("confirmPeriod", "14");
+    return form;
+  })(),
+  "confirm",
+  false,
+  "Confirm",
+);
+assert.equal(rsiBetweenMissing.ok, false);
+
+const rsiBetweenFlipped = parseDcaFilterForm(
+  (() => {
+    const form = new FormData();
+    form.set("confirmKind", "rsi");
+    form.set("confirmTimeframe", "15");
+    form.set("confirmCompare", "between");
+    form.set("confirmLevel", "70");
+    form.set("confirmLevelTo", "30");
+    form.set("confirmPeriod", "14");
+    return form;
+  })(),
+  "confirm",
+  false,
+  "Confirm",
+);
+assert.equal(rsiBetweenFlipped.ok, false);
+
+const rsiBetweenOk = parseDcaFilterForm(
+  (() => {
+    const form = new FormData();
+    form.set("confirmKind", "rsi");
+    form.set("confirmTimeframe", "15");
+    form.set("confirmCompare", "between");
+    form.set("confirmLevel", "30");
+    form.set("confirmLevelTo", "70");
+    form.set("confirmPeriod", "14");
+    return form;
+  })(),
+  "confirm",
+  false,
+  "Confirm",
+);
+assert.equal(rsiBetweenOk.ok, true);
+if (rsiBetweenOk.ok) {
+  assert.equal(rsiBetweenOk.spec?.compare, "between");
+  assert.equal(rsiBetweenOk.spec?.level, 30);
+  assert.equal(rsiBetweenOk.spec?.levelTo, 70);
+}
 
 console.log("dca filter checks passed");
