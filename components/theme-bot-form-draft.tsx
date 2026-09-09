@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { ColumnHint } from "@/components/column-hint";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { ChevronIcon, TabButton } from "@/components/trade-expand";
@@ -250,6 +251,22 @@ function EnableCheck({ checked }: { checked: boolean }) {
   );
 }
 
+function HintTip({ text }: { text: string }) {
+  return (
+    <ColumnHint
+      label={
+        <span
+          className="inline-flex size-3.5 items-center justify-center rounded-full border border-line-strong text-[9px] font-semibold leading-none text-ink-faint"
+          aria-label="More information"
+        >
+          i
+        </span>
+      }
+      hint={text}
+    />
+  );
+}
+
 function OptionalSection({
   title,
   hint,
@@ -265,42 +282,21 @@ function OptionalSection({
 }) {
   return (
     <section className="space-y-3 py-5">
-      <label className="flex cursor-pointer items-start gap-3">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(event) => onEnabled(event.target.checked)}
-          className="sr-only"
-        />
-        <EnableCheck checked={enabled} />
-        <span>
+      <div className="flex items-center gap-2">
+        <label className="flex cursor-pointer items-center gap-3">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(event) => onEnabled(event.target.checked)}
+            className="sr-only"
+          />
+          <EnableCheck checked={enabled} />
           <span className={sectionTitleClass}>{title}</span>
-          {hint ? (
-            <span className="mt-1 block text-xs font-normal normal-case tracking-normal text-ink-faint">
-              {hint}
-            </span>
-          ) : null}
-        </span>
-      </label>
+        </label>
+        {hint ? <HintTip text={hint} /> : null}
+      </div>
       {enabled ? children : null}
     </section>
-  );
-}
-
-function CarryFieldGroup({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="rounded-card border border-line bg-surface px-4 py-3">
-      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-        {title}
-      </p>
-      <div className={`${rowClass} mt-2`}>{children}</div>
-    </div>
   );
 }
 
@@ -316,9 +312,9 @@ function Group({
   return (
     <section className="space-y-3 py-5">
       {title || hint ? (
-        <div>
+        <div className="flex items-center gap-1.5">
           {title ? <h3 className={sectionTitleClass}>{title}</h3> : null}
-          {hint ? <p className="mt-1 text-xs text-ink-faint">{hint}</p> : null}
+          {hint ? <HintTip text={hint} /> : null}
         </div>
       ) : null}
       {children}
@@ -357,14 +353,42 @@ function Field({
 }) {
   return (
     <label className={`${labelClass} ${className ?? ""}`}>
-      {label}
-      {hint ? (
-        <span className="mt-0.5 block text-[11px] font-normal normal-case tracking-normal text-ink-faint">
-          {hint}
-        </span>
-      ) : null}
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {hint ? <HintTip text={hint} /> : null}
+      </span>
       {children}
     </label>
+  );
+}
+
+function OrderTypePill({
+  value,
+  onChange,
+}: {
+  value: "market" | "limit";
+  onChange?: (next: "market" | "limit") => void;
+}) {
+  return (
+    <span className="mt-1 flex w-fit rounded-control border border-line bg-surface p-0.5">
+      {(["market", "limit"] as const).map((option) => {
+        const selected = value === option;
+        return (
+          <button
+            key={option}
+            type="button"
+            className={
+              selected
+                ? "rounded-control bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink"
+                : "rounded-control px-3 py-1.5 text-sm text-ink-muted hover:text-ink"
+            }
+            onClick={() => onChange?.(option)}
+          >
+            {option === "market" ? "Market" : "Limit"}
+          </button>
+        );
+      })}
+    </span>
   );
 }
 
@@ -642,7 +666,10 @@ export function ThemeBotFormDraft() {
             />
           </Field>
           <div>
-            <p className={labelClass}>Status</p>
+            <p className={`${labelClass} inline-flex items-center gap-1`}>
+              Status
+              <HintTip text={selectedStatus.note} />
+            </p>
             <div className="mt-1 flex items-center gap-2">
               <select
                 className={`${fieldClass} mt-0 min-w-0 flex-1`}
@@ -658,15 +685,6 @@ export function ThemeBotFormDraft() {
               </select>
               <StatusLight fill={selectedStatus.fill} />
             </div>
-            <p
-              className={`mt-1.5 text-[11px] ${
-                selectedStatus.value === "disabled"
-                  ? "text-warning"
-                  : "text-ink-faint"
-              }`}
-            >
-              {selectedStatus.note}
-            </p>
           </div>
         </div>
         </Group>
@@ -697,20 +715,7 @@ export function ThemeBotFormDraft() {
                   </select>
                 </Field>
                 <Field label="Order">
-                  <span className="mt-1 flex w-fit rounded-control border border-line bg-surface p-0.5">
-                    <button
-                      type="button"
-                      className="rounded-control bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink"
-                    >
-                      Market
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:text-ink"
-                    >
-                      Limit
-                    </button>
-                  </span>
+                  <OrderTypePill value="market" />
                 </Field>
                 <Field label="When">
                   <select
@@ -727,7 +732,10 @@ export function ThemeBotFormDraft() {
               </>
             ) : (
               <>
-                <Field label="Direction">
+                <Field
+                  label="Direction"
+                  hint="Long and Short are independent positions and never flatten each other."
+                >
                   <select
                     value={direction}
                     onChange={(event) =>
@@ -768,18 +776,9 @@ export function ThemeBotFormDraft() {
             )}
           </div>
 
-          {desk === "dca" && direction === "both" ? (
-            <p className="text-xs text-ink-muted">
-              Long and Short are independent positions and never flatten each
-              other
-            </p>
-          ) : null}
         </Group>
 
-        {!closing &&
-        (startKind === "webhook" ||
-          startKind === "price" ||
-          (showStartParams && startKind !== "price")) ? (
+        {!closing ? (
         <Group
           title={
             startKind === "indicator"
@@ -921,7 +920,7 @@ export function ThemeBotFormDraft() {
                   ))}
                 </select>
               </Field>
-              <Field label="When" className="lg:col-span-2">
+              <Field label="When">
                 <select
                   value={when}
                   onChange={(event) => setWhen(event.target.value)}
@@ -1017,22 +1016,22 @@ export function ThemeBotFormDraft() {
         {desk === "dca" ? (
         <Group title="Additional orders">
           <div className={rowClass}>
-            <Field label="Averaging">
+            <Field label="Averaging" className="lg:col-span-2">
               <select className={fieldClass} defaultValue="dip">
                 <option value="dip">Position — add on price deviation</option>
                 <option value="interval">Position — add on interval</option>
               </select>
             </Field>
+            <Field
+              label="Order"
+              hint="Limit rests remaining adds as GTC. Market fills them when the add triggers."
+            >
+              <OrderTypePill
+                value={restGrid ? "limit" : "market"}
+                onChange={(next) => setRestGrid(next === "limit")}
+              />
+            </Field>
           </div>
-          <label className="mt-2 flex items-start gap-2 text-xs text-ink">
-            <input
-              type="checkbox"
-              checked={restGrid}
-              onChange={(event) => setRestGrid(event.target.checked)}
-              className="mt-0.5 size-4 accent-accent"
-            />
-            Remaining orders placed as GTC limit (instead of market)
-          </label>
         </Group>
         ) : null}
 
@@ -1225,12 +1224,9 @@ export function ThemeBotFormDraft() {
                   onChange={(event) => setSkipIfOpen(event.target.checked)}
                   className="mt-0.5 size-4 accent-accent"
                 />
-                <span>
+                <span className="inline-flex items-center gap-1.5">
                   Skip if this side is already open
-                  <span className="mt-1 block text-xs text-ink-muted">
-                    Off means each new cross or trigger can add size to the same
-                    row.
-                  </span>
+                  <HintTip text="Off means each new cross or trigger can add size to the same row." />
                 </span>
               </label>
             </section>
@@ -1240,19 +1236,33 @@ export function ThemeBotFormDraft() {
         </>
         ) : (
           <>
-            <Group title="Entry">
-              <CarryFieldGroup title="Conditions (all must be true)">
+            <Group
+              title="Entry"
+              hint="All conditions must be true."
+            >
+              <div className={rowClass}>
                 <Field label="Min APR %">
                   <OffNumber value={minApr} onChange={setMinApr} />
                 </Field>
                 <Field label="Min DTE">
-                  <OffNumber value={minDte} onChange={setMinDte} allowDecimal={false} />
+                  <OffNumber
+                    value={minDte}
+                    onChange={setMinDte}
+                    allowDecimal={false}
+                  />
                 </Field>
                 <Field label="Max DTE">
-                  <OffNumber value={maxDte} onChange={setMaxDte} allowDecimal={false} />
+                  <OffNumber
+                    value={maxDte}
+                    onChange={setMaxDte}
+                    allowDecimal={false}
+                  />
                 </Field>
-              </CarryFieldGroup>
-              <CarryFieldGroup title="Position and Orders">
+              </div>
+            </Group>
+
+            <Group title="Position and Orders">
+              <div className={rowClass}>
                 <Field label="Max Position Size">
                   <OffNumber
                     value={maxOpenNotional}
@@ -1306,11 +1316,11 @@ export function ThemeBotFormDraft() {
                     />
                   </Field>
                 ) : null}
-              </CarryFieldGroup>
+              </div>
             </Group>
 
-            <Group title="Exit">
-              <CarryFieldGroup title="Conditions (any can be true)">
+            <Group title="Exit" hint="Any condition can be true.">
+              <div className={rowClass}>
                 <Field label="DTE ≤">
                   <OffNumber
                     value={closeMaxDte}
@@ -1321,8 +1331,6 @@ export function ThemeBotFormDraft() {
                 <Field label="APR % below">
                   <OffNumber value={closeMinApr} onChange={setCloseMinApr} />
                 </Field>
-              </CarryFieldGroup>
-              <CarryFieldGroup title="Position and Orders">
                 <Field label="Order Type">
                   <select
                     value={exitSizeType}
@@ -1337,30 +1345,32 @@ export function ThemeBotFormDraft() {
                     <option value="fixed">Fixed (entire position)</option>
                   </select>
                 </Field>
-              </CarryFieldGroup>
-              <OptionalSection
-                title="Take profit"
-                enabled={carryTpOn}
-                onEnabled={setCarryTpOn}
-              >
-                <div className={rowClass}>
-                  <Field label="Take profit %">
-                    <OffNumber value={carryTp} onChange={setCarryTp} />
-                  </Field>
-                </div>
-              </OptionalSection>
-              <OptionalSection
-                title="Stop loss"
-                enabled={carrySlOn}
-                onEnabled={setCarrySlOn}
-              >
-                <div className={rowClass}>
-                  <Field label="Stop loss %">
-                    <OffNumber value={carrySl} onChange={setCarrySl} />
-                  </Field>
-                </div>
-              </OptionalSection>
+              </div>
             </Group>
+
+            <OptionalSection
+              title="Take profit"
+              enabled={carryTpOn}
+              onEnabled={setCarryTpOn}
+            >
+              <div className={rowClass}>
+                <Field label="Take profit %">
+                  <OffNumber value={carryTp} onChange={setCarryTp} />
+                </Field>
+              </div>
+            </OptionalSection>
+
+            <OptionalSection
+              title="Stop loss"
+              enabled={carrySlOn}
+              onEnabled={setCarrySlOn}
+            >
+              <div className={rowClass}>
+                <Field label="Stop loss %">
+                  <OffNumber value={carrySl} onChange={setCarrySl} />
+                </Field>
+              </div>
+            </OptionalSection>
           </>
         )}
 
@@ -1593,67 +1603,61 @@ function ExitMethodFields({
   onOrderType: (next: string) => void;
 }) {
   return (
-    <div className="space-y-2">
-      <div className={rowClass}>
-        <Field label="Method">
-          <select
-            value={method}
-            onChange={(event) => onMethod(event.target.value as ExitMethod)}
-            className={fieldClass}
-          >
-            {EXIT_METHODS.filter((option) => option.value).map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+    <div className={rowClass}>
+      <Field label="Method">
+        <select
+          value={method}
+          onChange={(event) => onMethod(event.target.value as ExitMethod)}
+          className={fieldClass}
+        >
+          {EXIT_METHODS.filter((option) => option.value).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {method === "price" ? (
+        <Field label="Price">
+          <OffNumber value={value} onChange={onValue} />
+        </Field>
+      ) : null}
+      {method === "percent" ? (
+        <Field label="Target %">
+          <OffNumber value={value} onChange={onValue} />
+        </Field>
+      ) : null}
+      {method === "atr" ? (
+        <Field label="ATR multiple">
+          <OffNumber value={value || "2"} onChange={onValue} />
+        </Field>
+      ) : null}
+      {method !== "price" ? (
+        <Field label="Basis">
+          <select className={fieldClass} defaultValue="first_entry">
+            <option value="first_entry">First fill</option>
+            <option value="average">Average entry</option>
           </select>
         </Field>
-        {method === "price" ? (
-          <Field label="Price">
-            <OffNumber value={value} onChange={onValue} />
-          </Field>
-        ) : null}
-        {method === "percent" ? (
-          <Field label="Target %">
-            <OffNumber value={value} onChange={onValue} />
-          </Field>
-        ) : null}
-        {method === "atr" ? (
-          <Field label="ATR multiple">
-            <OffNumber value={value || "2"} onChange={onValue} />
-          </Field>
-        ) : null}
-      </div>
-      {method ? (
-        <div className={rowClass}>
-          {method !== "price" ? (
-            <Field label="Basis">
-              <select className={fieldClass} defaultValue="first_entry">
-                <option value="first_entry">First fill</option>
-                <option value="average">Average entry</option>
-              </select>
-            </Field>
-          ) : (
-            <Field label="Trigger">
-              <select className={fieldClass} defaultValue="last">
-                <option value="last">Last</option>
-                <option value="mark">Mark</option>
-                <option value="index">Index</option>
-              </select>
-            </Field>
-          )}
-          <Field label="Order type">
-            <select
-              value={orderType}
-              onChange={(event) => onOrderType(event.target.value)}
-              className={fieldClass}
-            >
-              <option value="market">Market</option>
-              <option value="limit">Limit</option>
-            </select>
-          </Field>
-        </div>
-      ) : null}
+      ) : (
+        <Field label="Trigger">
+          <select className={fieldClass} defaultValue="last">
+            <option value="last">Last</option>
+            <option value="mark">Mark</option>
+            <option value="index">Index</option>
+          </select>
+        </Field>
+      )}
+      <Field label="Order type">
+        <select
+          value={orderType}
+          onChange={(event) => onOrderType(event.target.value)}
+          className={fieldClass}
+        >
+          <option value="market">Market</option>
+          <option value="limit">Limit</option>
+        </select>
+      </Field>
     </div>
   );
 }
