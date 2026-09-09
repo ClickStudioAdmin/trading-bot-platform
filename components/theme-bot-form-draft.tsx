@@ -691,7 +691,7 @@ export function ThemeBotFormDraft() {
 
         {desk !== "cnc" ? (
         <>
-        <Group title="Pair and Trigger">
+        <Group title="What & When">
           <div className={rowClass}>
             <Field label="Contract">
               <FuturesSymbolSelect
@@ -780,17 +780,15 @@ export function ThemeBotFormDraft() {
 
         {!closing ? (
         <Group
-          title={
+          title={`Trigger - ${
             startKind === "indicator"
               ? "Indicator"
               : startKind === "trend"
                 ? "Trend"
                 : startKind === "webhook"
                   ? "Signal Webhook"
-                  : desk === "dca"
-                    ? "Price Cross"
-                    : "Trigger"
-          }
+                  : "Price Cross"
+          }`}
         >
           {startKind === "webhook" && !closing ? (
             <div className={rowClass}>
@@ -973,7 +971,7 @@ export function ThemeBotFormDraft() {
         ) : null}
 
         {!closing ? (
-          <Group title={desk === "dca" ? "Initial Order Size" : undefined}>
+          <Group title={desk === "dca" ? "Initial Order Size" : "Order Size"}>
             <div className={rowClass}>
               <Field label="Size">
                 <GroupedNumberInput
