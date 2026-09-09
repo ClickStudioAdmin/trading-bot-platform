@@ -193,6 +193,39 @@ export function backtestSavedListHref(): string {
   return "/account/backtests?tab=saved";
 }
 
+export function canDeleteBacktestRun(
+  run: Pick<BacktestRun, "userId">,
+  userId: string,
+  isAdmin: boolean,
+): boolean {
+  if (isAdmin) {
+    return true;
+  }
+  return run.userId === userId;
+}
+
+export const BACKTEST_BULK_DELETE_MAX = 100;
+
+export function parseBacktestRunIds(raw: unknown): string[] {
+  const values = Array.isArray(raw)
+    ? raw
+    : raw instanceof FormData
+      ? raw.getAll("runId")
+      : [raw];
+  const ids: string[] = [];
+  for (const value of values) {
+    const id = String(value ?? "").trim();
+    if (!id || ids.includes(id)) {
+      continue;
+    }
+    ids.push(id);
+    if (ids.length >= BACKTEST_BULK_DELETE_MAX) {
+      break;
+    }
+  }
+  return ids;
+}
+
 export function backtestQueueSeedFromRun(run: BacktestRun): {
   recipe: BacktestRecipe;
   sourceTemplateId: string;

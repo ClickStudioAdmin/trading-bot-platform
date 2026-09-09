@@ -474,16 +474,7 @@ export function canReadBacktestRun(
   return run.userId === userId || run.userId === null;
 }
 
-export function canDeleteBacktestRun(
-  run: Pick<BacktestRun, "userId">,
-  userId: string,
-  isAdmin: boolean,
-): boolean {
-  if (isAdmin) {
-    return true;
-  }
-  return run.userId === userId;
-}
+export { canDeleteBacktestRun } from "./model";
 
 export async function listLinkedBacktestRuns(
   templateIds: string[],

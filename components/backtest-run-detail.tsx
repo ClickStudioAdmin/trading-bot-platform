@@ -400,6 +400,7 @@ export function BacktestRunDetail({
             isAdmin={isAdmin}
             primaryRunId={comparablePrimary.id}
             returnTo={`${listHref}/${run.id}`}
+            watchRunId={run.id}
           />
         </section>
       ) : null}

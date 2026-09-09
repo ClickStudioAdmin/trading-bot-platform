@@ -34,6 +34,7 @@ import {
   parseFeePreset,
   parseBacktestLeverage,
   parseStartingBalance,
+  parseBacktestRunIds,
 } from "./model";
 import {
   canDeleteBacktestRun,
@@ -571,6 +572,38 @@ export async function saveBacktestAsPlatformTemplateAction(
   return { ok: true, runId: run.id };
 }
 
+async function deleteOwnedBacktest(
+  runId: string,
+  memberId: string,
+  isAdmin: boolean,
+): Promise<{ ok: true; templateId: string | null } | { ok: false; error: string }> {
+  const run = await loadBacktestRun(runId);
+  if (!run || !canDeleteBacktestRun(run, memberId, isAdmin)) {
+    return { ok: false, error: "That run was not found." };
+  }
+  const deleted = await deleteBacktestRun(run.id);
+  if (!deleted.ok) {
+    return deleted;
+  }
+  return { ok: true, templateId: run.templateId };
+}
+
+async function cleanupEmptyBacktestedTemplates(
+  templateIds: Array<string | null>,
+) {
+  const unique = [...new Set(templateIds.filter((id): id is string => Boolean(id)))];
+  for (const templateId of unique) {
+    const leftover = await countBacktestRunsForTemplate(templateId);
+    if (leftover !== 0) {
+      continue;
+    }
+    const template = await loadTemplateById(templateId);
+    if (template?.visibility === "backtested") {
+      await deleteTemplate(templateId);
+    }
+  }
+}
+
 export async function deleteBacktestAction(
   formData: FormData,
 ): Promise<BacktestActionResult> {
@@ -578,25 +611,55 @@ export async function deleteBacktestAction(
   if (!auth.ok) {
     return auth;
   }
-  const run = await loadBacktestRun(String(formData.get("runId") ?? ""));
-  if (!run || !canDeleteBacktestRun(run, auth.member.id, auth.isAdmin)) {
-    return { ok: false, error: "That run was not found." };
-  }
-  const templateId = run.templateId;
-  const deleted = await deleteBacktestRun(run.id);
+  const runId = String(formData.get("runId") ?? "");
+  const deleted = await deleteOwnedBacktest(
+    runId,
+    auth.member.id,
+    auth.isAdmin,
+  );
   if (!deleted.ok) {
     return deleted;
   }
-  if (templateId) {
-    const leftover = await countBacktestRunsForTemplate(templateId);
-    if (leftover === 0) {
-      const template = await loadTemplateById(templateId);
-      if (template?.visibility === "backtested") {
-        await deleteTemplate(templateId);
-      }
+  await cleanupEmptyBacktestedTemplates([deleted.templateId]);
+  revalidateBacktests();
+  return { ok: true, runId };
+}
+
+export async function deleteBacktestRunsAction(
+  formData: FormData,
+): Promise<BacktestActionResult> {
+  const auth = await requireMember();
+  if (!auth.ok) {
+    return auth;
+  }
+  const ids = parseBacktestRunIds(formData);
+  if (ids.length === 0) {
+    return { ok: false, error: "Select at least one backtest." };
+  }
+  const templateIds: Array<string | null> = [];
+  let removed = 0;
+  for (const id of ids) {
+    const deleted = await deleteOwnedBacktest(
+      id,
+      auth.member.id,
+      auth.isAdmin,
+    );
+    if (deleted.ok) {
+      removed += 1;
+      templateIds.push(deleted.templateId);
     }
   }
+  await cleanupEmptyBacktestedTemplates(templateIds);
   revalidateBacktests();
-  return { ok: true, runId: run.id };
+  if (removed === 0) {
+    return { ok: false, error: "Could not remove those backtests." };
+  }
+  if (removed < ids.length) {
+    return {
+      ok: true,
+      notes: [`Removed ${removed} of ${ids.length} backtests.`],
+    };
+  }
+  return { ok: true };
 }
 

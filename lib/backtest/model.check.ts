@@ -32,6 +32,7 @@ import {
   completedBacktestNotionalUsdt,
   backtestRerunHref,
   backtestSavedListHref,
+  parseBacktestRunIds,
   peakLockedNotionalUsdt,
   realizedAprPct,
   realizedEndingUsdt,
@@ -495,6 +496,12 @@ assert.equal(
   "/account/backtests?rerun=run-abc#replay",
 );
 assert.equal(backtestSavedListHref(), "/account/backtests?tab=saved");
+assert.deepEqual(parseBacktestRunIds([" a ", "a", "", "b"]), ["a", "b"]);
+const bulkForm = new FormData();
+bulkForm.append("runId", "run-1");
+bulkForm.append("runId", "run-2");
+assert.deepEqual(parseBacktestRunIds(bulkForm), ["run-1", "run-2"]);
+assert.equal(parseBacktestRunIds([]).length, 0);
 const seeded = backtestQueueSeedFromRun({
   id: "run-abc",
   userId: "user-1",

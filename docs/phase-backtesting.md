@@ -23,7 +23,7 @@ User
       or Load into new backtest → same form, new run
 ```
 
-Site header **Backtesting Tool** (`/account/backtests`). Two tabs: **New Backtest** (queue form) and **Saved Backtests** (`?tab=saved`, the run list). **Load into new backtest**, drafts, and template links open the New tab. **All backtests** on a run opens Saved.
+Site header **Backtesting Tool** (`/account/backtests`). Two tabs: **New Backtest** (queue form) and **Saved Backtests** (`?tab=saved`, the run list). The saved list and a run’s Comparables table have row checkboxes and bulk **Delete** (confirm). Same owner/admin rule as row **Remove**. **Load into new backtest**, drafts, and template links open the New tab. **All backtests** on a run opens Saved.
 
 Each run has its own **detail page**: parameters, stats, desk-style open / past positions (expand for orders and synthesized logs), account-impact timeline, and an inline chart. The Saved list shows name, type, contract, comps, days, win rate, ROE, APR, status, and Actions. Name opens the detail page in this tab. Old `?run=` URLs redirect.
 
