@@ -234,7 +234,16 @@ export function ThemeBotFormDraft() {
   const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(null);
   const [skipIfOpen, setSkipIfOpen] = useState(true);
   const [restGrid, setRestGrid] = useState(true);
+  const [status, setStatus] = useState<"active" | "stop_adding" | "disabled">(
+    "active",
+  );
   const closing = action === "close_long" || action === "close_short";
+  const statusFill =
+    status === "active"
+      ? "bg-success"
+      : status === "stop_adding"
+        ? "bg-warning"
+        : "bg-ink-faint";
   const startKindForFields =
     startKind === "trend" ? "supertrend" : indicatorKind;
   const whenOptions = dcaIndicatorWhenOptions(startKindForFields, "long", false);
@@ -250,8 +259,8 @@ export function ThemeBotFormDraft() {
     <div className="space-y-3">
       <p className="text-sm text-ink-muted">
         Draft standard for every desk. Local only — nothing saves. Status is
-        the Mode dropdown. Actions are Save and the footer. Other states sit
-        in Reference.
+        one dropdown on every bot. Actions are one-shot (Save, Close bot,
+        footer). Other chrome sits in Reference.
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -300,17 +309,22 @@ export function ThemeBotFormDraft() {
             <div className="mt-1 flex items-center gap-2">
               <select
                 className={`${fieldClass} mt-0 min-w-0 flex-1`}
-                defaultValue="active"
+                value={status}
+                onChange={(event) =>
+                  setStatus(
+                    event.target.value as "active" | "stop_adding" | "disabled",
+                  )
+                }
                 aria-label="Status"
               >
                 <option value="active">Active</option>
-                <option value="reduce_only">Reduce only</option>
+                <option value="stop_adding">Stop adding</option>
                 <option value="disabled">Disabled</option>
               </select>
-              <StatusLight fill="bg-success" />
+              <StatusLight fill={statusFill} />
             </div>
             <p className="mt-1.5 text-[11px] text-ink-faint">
-              Active listens. Reduce only stops new adds. Disabled is idle.
+              Active listens. Stop adding holds the row. Disabled is idle.
             </p>
           </div>
         </div>
@@ -798,33 +812,31 @@ function ThemeBotFormReference() {
       <div className="space-y-2">
         <p className={labelClass}>Status lights</p>
         <div className="flex flex-wrap gap-x-4 gap-y-2">
-          <StatusLight fill="bg-ink-faint" label="Idle" />
-          <StatusLight fill="bg-success" label="Armed / Active" />
+          <StatusLight fill="bg-success" label="Active" />
           <StatusLight fill="bg-warning" label="Stop adding" />
-          <StatusLight fill="bg-warning" label="Reduce only" />
           <StatusLight fill="bg-ink-faint" label="Disabled" />
-          <StatusLight fill="bg-success" label="In use" inUse />
+          <StatusLight fill="bg-success" label="In use (open position)" inUse />
         </div>
       </div>
 
       <div className="space-y-2">
         <p className={labelClass}>Status mapping</p>
         <p className="text-xs text-ink-faint">
-          Proposed Status replaces today&apos;s DCA Arm / Disarm / Stop adding.
-          Same three modes on every desk.
+          Same three statuses on Perps and DCA. Today&apos;s buttons map onto
+          the dropdown. They are not extra actions.
         </p>
         <ul className="list-disc space-y-1 pl-5 text-sm text-ink-muted">
           <li>
-            <span className="text-ink">Active</span> — Armed. Listens for
-            entries.
+            <span className="text-ink">Active</span> — Perps Active. DCA Armed
+            / Arm / Save and Arm.
           </li>
           <li>
-            <span className="text-ink">Reduce only</span> — Stop adding. Holds
-            the row, no new clips.
+            <span className="text-ink">Stop adding</span> — Perps Reduce only.
+            DCA Stop adding. No new entries. Exits still run.
           </li>
           <li>
-            <span className="text-ink">Disabled</span> — Idle / Disarmed. No
-            new entries.
+            <span className="text-ink">Disabled</span> — Perps Disabled. DCA
+            Idle / Disarm.
           </li>
         </ul>
       </div>

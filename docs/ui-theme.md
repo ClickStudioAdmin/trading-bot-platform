@@ -40,7 +40,7 @@ Primary: `bg-accent-strong` / `text-ink`. Secondary: surface + `border-line`. Gh
 
 `html` sets `color-scheme: dark` so native `<select>` lists use the dark OS picker (not a white flash). Do not force `select` to `canvas` — fields sit on canvas cards and use `surface-raised`.
 
-**Bot form (draft)** is the **Bot form** tab on this page (`/admin/theme?tab=bot`). Proposed standard for every desk (Off, not a checkbox that hides exits; same section order). Lifecycle is one **Status** Mode (Active / Reduce only / Disabled), not Arm / Disarm. **Actions** are Save, Close bot, and the footer (Backtest / template / Remove). Other states sit in **Reference**. Local mock only. Do not apply to live Perps / DCA / backtest forms until Click signs it. The **Theme** tab keeps the colour, type, and control reference.
+**Bot form (draft)** is the **Bot form** tab on this page (`/admin/theme?tab=bot`). Proposed standard for every desk (Off, not a checkbox that hides exits; same section order). Lifecycle is one **Status** (Active / Stop adding / Disabled) on every bot. Stop adding is today’s Perps Reduce only and DCA Stop adding. **Actions** are one-shot only (Save, Close bot, footer). Local mock only. Do not apply to live Perps / DCA / backtest forms until Click signs it. The **Theme** tab keeps the colour, type, and control reference.
 
 ## Motion
 
