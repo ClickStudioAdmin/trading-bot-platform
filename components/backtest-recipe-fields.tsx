@@ -1113,6 +1113,7 @@ export function BacktestRecipeFields({
           />
         </label>
         ) : (
+        <>
         <label className={labelClass}>
           TP ATR multiple
           <RecipeNumberInput
@@ -1124,6 +1125,24 @@ export function BacktestRecipeFields({
             }
           />
         </label>
+        {(recipe.spacingKind ?? "percent") !== "atr" ? (
+        <label className={labelClass}>
+          ATR period
+          <RecipeNumberInput
+            value={recipe.atrPeriod}
+            emptyValue={14}
+            allowDecimal={false}
+            className={fieldClass}
+            onCommit={(next) =>
+              onChange({
+                ...recipe,
+                atrPeriod: next == null ? 14 : Math.trunc(next),
+              })
+            }
+          />
+        </label>
+        ) : null}
+        </>
         )}
         <label className={labelClass}>
           Stop %

@@ -2165,20 +2165,32 @@ export function DcaPlaybookForm({
             />
           </label>
           )}
-          {takeProfitKind === "atr" &&
-          !(averaging === "dip" && spacingKind === "atr") ? (
-            <label className={labelClass}>
-              ATR period
-              <GroupedNumberInput
-                name="atrPeriod"
-                value={atrPeriod}
-                onChange={setAtrPeriod}
-                className={fieldClass}
-                ariaLabel="ATR period"
-              />
-            </label>
-          ) : takeProfitKind === "atr" ? (
-            <input type="hidden" name="atrPeriod" value={atrPeriod} />
+          {takeProfitKind === "atr" ? (
+            <CycleLock
+              locked={
+                cycleLocked && averaging === "dip" && spacingKind === "atr"
+              }
+            >
+              <label className={labelClass}>
+                ATR period
+                <GroupedNumberInput
+                  name={
+                    averaging === "dip" && spacingKind === "atr"
+                      ? undefined
+                      : "atrPeriod"
+                  }
+                  value={atrPeriod}
+                  onChange={setAtrPeriod}
+                  className={fieldClass}
+                  ariaLabel="ATR period"
+                />
+                {averaging === "dip" && spacingKind === "atr" ? (
+                  <p className="mt-1 text-xs text-ink-muted">
+                    Same ATR as additional orders
+                  </p>
+                ) : null}
+              </label>
+            </CycleLock>
           ) : null}
         </div>
         <label className="flex items-start gap-2 py-2 text-xs text-ink">
