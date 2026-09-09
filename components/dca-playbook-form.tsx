@@ -2377,6 +2377,7 @@ export function DcaPlaybookForm({
           />
           Take profit placed as GTC limit (instead of market)
         </label>
+        <div className="space-y-2 border-t border-line pt-3">
         <p className={sectionTitleClass}>
           Trailing stop
         </p>
@@ -2405,6 +2406,7 @@ export function DcaPlaybookForm({
               ariaLabel="Trailing percent"
             />
           </label>
+        </div>
         </div>
       </fieldset>
 
@@ -2461,6 +2463,7 @@ export function DcaPlaybookForm({
             />
           </label>
         </div>
+        <div className="space-y-2 border-t border-line pt-3">
         {direction === "both" ? (
           <div className="space-y-3">
             <DcaFilterBlock
@@ -2496,6 +2499,7 @@ export function DcaPlaybookForm({
             labelClass={labelClass}
           />
         )}
+        </div>
       </fieldset>
       </div>
 
