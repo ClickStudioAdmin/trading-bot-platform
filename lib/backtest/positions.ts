@@ -322,7 +322,7 @@ export function backtestFillMarkerText(
   }
   if (row.action === "flatten") {
     if (row.reason === "take_profit") {
-      return "TP";
+      return row.side === "short" ? "TP short" : "TP long";
     }
     if (row.reason === "stop") {
       return "SL";

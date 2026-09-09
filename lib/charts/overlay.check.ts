@@ -245,7 +245,7 @@ const history = buildBacktestChartOverlay({
 });
 assert.deepEqual(
   history.markers.map((row) => row.text),
-  ["Entry", "TP", "Entry", "Liq"],
+  ["Entry", "TP long", "Entry", "Liq"],
 );
 const latestId = listBacktestCycles(historyOrders).at(-1)?.id;
 const focused = buildBacktestChartOverlay({
@@ -262,7 +262,7 @@ const focused = buildBacktestChartOverlay({
 });
 assert.deepEqual(
   focused.markers.map((row) => row.text),
-  ["Entry", "TP", "Entry", "Add 2", "Liq"],
+  ["Entry", "TP long", "Entry", "Add 2", "Liq"],
 );
 assert.equal(backtestChartIncludeAdds("15"), true);
 assert.equal(backtestChartIncludeAdds("D"), false);
