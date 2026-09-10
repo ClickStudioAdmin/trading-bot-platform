@@ -1291,6 +1291,18 @@ assert.deepEqual(dcaIntervalParts(15), { unit: "minutes", value: "15" });
 assert.deepEqual(dcaIntervalParts(120), { unit: "hours", value: "2" });
 assert.deepEqual(dcaIntervalParts(1440), { unit: "days", value: "1" });
 
+const missingDip = new FormData();
+missingDip.set("symbol", "BTCUSDT");
+missingDip.set("side", "long");
+missingDip.set("clipSize", "0.01");
+missingDip.set("sizeUnit", "qty");
+missingDip.set("averaging", "dip");
+const missingDipParsed = parseDcaPlaybookForm(missingDip);
+assert.equal(missingDipParsed.ok, false);
+if (!missingDipParsed.ok) {
+  assert.equal(missingDipParsed.error, "Enter a price deviation %.");
+}
+
 const dipForm = new FormData();
 dipForm.set("symbol", "BTCUSDT");
 dipForm.set("side", "long");

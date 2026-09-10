@@ -240,6 +240,7 @@ export function BotStatusField({
   desk,
   name,
   value,
+  applied,
   onChange,
   inUse = false,
   accountReduceOnly = false,
@@ -247,6 +248,7 @@ export function BotStatusField({
   desk: BotDeskKind;
   name: string;
   value: string;
+  applied?: string;
   onChange: (next: string) => void;
   inUse?: boolean;
   accountReduceOnly?: boolean;
@@ -254,6 +256,9 @@ export function BotStatusField({
   const options = statusOptionsFor(desk);
   const selected =
     options.find((option) => option.value === value) ?? options[0];
+  const live =
+    options.find((option) => option.value === (applied ?? value)) ?? selected;
+  const pending = applied != null && applied !== value;
   return (
     <div>
       <p className={botLabelClass}>
@@ -276,15 +281,18 @@ export function BotStatusField({
           ))}
         </select>
         <StatusLight
-          fill={selected.fill}
+          fill={live.fill}
           label={
-            accountReduceOnly && selected.value === "active"
+            accountReduceOnly && live.value === "active"
               ? "Active · book Reduce only has priority"
-              : selected.label
+              : live.label
           }
           inUse={inUse}
         />
       </div>
+      {pending ? (
+        <p className="mt-1 text-xs text-ink-muted">Save bot to apply Status</p>
+      ) : null}
     </div>
   );
 }

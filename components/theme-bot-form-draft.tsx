@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { BotStatusField } from "@/components/bot-form-chrome";
 import { ColumnHint } from "@/components/column-hint";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
@@ -88,79 +89,6 @@ const SAMPLE_PAIRS: LinearPerp[] = [
     tickSize: 0.01,
   },
 ];
-
-const PERPS_STATUS_OPTIONS = [
-  {
-    value: "active",
-    label: "Active",
-    fill: "bg-success",
-    note: "Save turns this bot on. It may open and add. Existing rows stay.",
-  },
-  {
-    value: "reduce_only",
-    label: "Reduce only",
-    fill: "bg-warning",
-    note: "Save stops new opens and adds. Exits still run. Existing rows stay.",
-  },
-  {
-    value: "disabled",
-    label: "Disabled",
-    fill: "bg-ink-faint",
-    note: "Save closes every position this bot owns and turns it off.",
-  },
-] as const;
-
-const DCA_STATUS_OPTIONS = [
-  {
-    value: "active",
-    label: "Active",
-    fill: "bg-success",
-    note: "Save turns this bot on. It listens for entries. Existing clips stay.",
-  },
-  {
-    value: "stop_adding",
-    label: "Stop adding",
-    fill: "bg-warning",
-    note: "Save stops new clips. Exits still run. Existing clips stay.",
-  },
-  {
-    value: "disabled",
-    label: "Disabled",
-    fill: "bg-ink-faint",
-    note: "Save closes every position this bot owns and turns it off.",
-  },
-] as const;
-
-const CNC_STATUS_OPTIONS = [
-  {
-    value: "active",
-    label: "Active",
-    fill: "bg-success",
-    note: "Save turns this bot on. It may open and add carries. Existing rows stay.",
-  },
-  {
-    value: "reduce_only",
-    label: "Reduce only",
-    fill: "bg-warning",
-    note: "Save stops new opens and adds. Exits still run. Existing carries stay.",
-  },
-  {
-    value: "disabled",
-    label: "Disabled",
-    fill: "bg-ink-faint",
-    note: "Save closes every carry this bot owns and turns it off.",
-  },
-] as const;
-
-function statusOptionsFor(desk: DeskKind) {
-  if (desk === "dca") {
-    return DCA_STATUS_OPTIONS;
-  }
-  if (desk === "cnc") {
-    return CNC_STATUS_OPTIONS;
-  }
-  return PERPS_STATUS_OPTIONS;
-}
 
 function StatusLight({
   fill,
@@ -761,6 +689,7 @@ export function ThemeBotFormDraft() {
   const [direction, setDirection] = useState<"long" | "short" | "both">("long");
   const [desk, setDesk] = useState<DeskKind>("perps");
   const [status, setStatus] = useState("disabled");
+  const [appliedStatus, setAppliedStatus] = useState("disabled");
   const skipDeskDirty = useRef(false);
   const savedDraft = useRef<string | null>(null);
   const [saveTick, setSaveTick] = useState(0);
@@ -854,9 +783,6 @@ export function ThemeBotFormDraft() {
   const dirty = draftKey !== savedDraft.current;
   void saveTick;
   const closing = action === "close_long" || action === "close_short";
-  const statusOptions = statusOptionsFor(desk);
-  const selectedStatus =
-    statusOptions.find((option) => option.value === status) ?? statusOptions[0];
   const showStartParams = startKind !== "webhook" && !closing;
   const bothSides = desk === "dca" && direction === "both";
   const requireTp = desk !== "cnc" && !closing && tpOn;
@@ -900,6 +826,7 @@ export function ThemeBotFormDraft() {
     setSaveAttempted(false);
     setDesk(next);
     setStatus("active");
+    setAppliedStatus("active");
     if (next === "perps" && (startKind === "indicator" || startKind === "trend")) {
       setStartKind("price");
     }
@@ -964,6 +891,7 @@ export function ThemeBotFormDraft() {
       return;
     }
     savedDraft.current = draftKey;
+    setAppliedStatus(status);
     setSaveAttempted(false);
     setSaveTick((tick) => tick + 1);
   }
@@ -1040,7 +968,7 @@ export function ThemeBotFormDraft() {
               </p>
               {saveAttempted && hasMissing ? (
                 <p className="mt-1 text-sm text-danger">
-                  Fill required fields in enabled sections before saving.
+                  Fill required fields before saving.
                 </p>
               ) : null}
             </div>
@@ -1062,26 +990,13 @@ export function ThemeBotFormDraft() {
               className={fieldClass}
             />
           </Field>
-          <div>
-            <p className={labelClass}>
-              <HintLabel text="Status" hint={selectedStatus.note} />
-            </p>
-            <div className="mt-1 flex items-center gap-2">
-              <select
-                className={`${fieldClass} mt-0 min-w-0 flex-1`}
-                value={selectedStatus.value}
-                onChange={(event) => setStatus(event.target.value)}
-                aria-label="Status"
-              >
-                {statusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <StatusLight fill={selectedStatus.fill} />
-            </div>
-          </div>
+          <BotStatusField
+            desk={desk}
+            name="themeStatus"
+            value={status}
+            applied={appliedStatus}
+            onChange={setStatus}
+          />
         </div>
         </Group>
 

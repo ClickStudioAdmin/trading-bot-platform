@@ -110,6 +110,7 @@ import {
   type DcaIndicatorKind,
 } from "@/lib/dca/indicators";
 import {
+  dcaFilterComplete,
   dcaFilterSpecForKind,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
@@ -993,17 +994,15 @@ export function DcaPlaybookForm({
     leverage,
   });
   const ladderMaxError = sizeCheckReady ? ladderMaxErrorLive : null;
-  const maxValueMissing =
-    maxValueMode !== "none" && asNumber(maxValue) == null
-      ? "Enter a max value."
-      : dcaMaxValueUsesBook(maxValueKind) &&
-          asNumber(maxValue) != null &&
-          (asNumber(maxValue) as number) > 100
-        ? "Percent must be 100 or less."
-        : null;
+  const maxValueOverCap =
+    dcaMaxValueUsesBook(maxValueKind) &&
+    asNumber(maxValue) != null &&
+    (asNumber(maxValue) as number) > 100
+      ? "Percent must be 100 or less."
+      : null;
   const saveError =
-    maxValueMissing ??
-    (asNumber(clipForSave) === null ? sizeError : (sizeError ?? ladderMaxError));
+    maxValueOverCap ??
+    (asNumber(clipForSave) === null ? null : (sizeError ?? ladderMaxError));
   const saveBlocked = cycleLocked ? null : saveError;
   const restGridEffective = averaging !== "interval" && restGrid;
   const needsAtr =
@@ -1209,22 +1208,6 @@ export function DcaPlaybookForm({
     !playbook ||
     statusDirty ||
     (formTick > 0 && !dcaFormMatchesPlaybook(playbook, liveConfig));
-  const confirmMissing =
-    Boolean(confirm) && !confirm?.kind
-      ? "Enter the required filter values."
-      : null;
-  const shortConfirmMissing =
-    direction === "both" && Boolean(shortConfirm) && !shortConfirm?.kind
-      ? "Enter the required filter values."
-      : null;
-  const exitIfMissing =
-    Boolean(exitIf) && !exitIf?.kind
-      ? "Enter the required filter values."
-      : null;
-  const shortExitIfMissing =
-    direction === "both" && Boolean(shortExitIf) && !shortExitIf?.kind
-      ? "Enter the required filter values."
-      : null;
   const tpMissing =
     tpOn &&
     (takeProfitKind === "atr"
@@ -1236,15 +1219,25 @@ export function DcaPlaybookForm({
   const slMissing = slOn && asNumber(stopLossPct) == null;
   const breakevenMissing =
     breakevenOn && asNumber(breakevenActivationPct) == null;
-  const optionalMissing =
-    confirmMissing ??
-    shortConfirmMissing ??
-    exitIfMissing ??
-    shortExitIfMissing ??
-    tpMissing ??
-    trailMissing ??
-    slMissing ??
-    breakevenMissing;
+  const parseConstraint =
+    !parsedLive.ok && parsedLive.error === "Percent must be 100 or less."
+      ? parsedLive.error
+      : null;
+  const requiredMissing =
+    Boolean(confirm && !dcaFilterComplete(confirm)) ||
+    (direction === "both" &&
+      Boolean(shortConfirm && !dcaFilterComplete(shortConfirm))) ||
+    Boolean(exitIf && !dcaFilterComplete(exitIf)) ||
+    (direction === "both" &&
+      Boolean(shortExitIf && !dcaFilterComplete(shortExitIf))) ||
+    tpMissing ||
+    trailMissing ||
+    slMissing ||
+    breakevenMissing ||
+    (!cycleLocked && !parsedLive.ok && !parseConstraint);
+  const constraintBlocked = cycleLocked
+    ? null
+    : (parseConstraint ?? saveBlocked);
   function recipeForBacktest() {
     const parsed = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
     if (!parsed.ok) {
@@ -1306,7 +1299,7 @@ export function DcaPlaybookForm({
           | HTMLElement
           | null;
         const skip = submitter?.dataset.skipSizeGuard === "1";
-        if ((saveBlocked || optionalMissing) && !skip) {
+        if ((constraintBlocked || requiredMissing) && !skip) {
           return false;
         }
         if (status === "disabled" && disableNeedsConfirm(hasOpenPosition)) {
@@ -1322,9 +1315,9 @@ export function DcaPlaybookForm({
       <DirtySaveBanner
         dirty={dirty}
         error={
-          optionalMissing
-            ? "Fill required fields in enabled sections before saving."
-            : saveBlocked ?? undefined
+          requiredMissing
+            ? "Fill required fields before saving."
+            : constraintBlocked ?? undefined
         }
       >
         <div className="flex flex-wrap items-center gap-2">
@@ -1333,11 +1326,11 @@ export function DcaPlaybookForm({
             pendingLabel="Savingâ€¦"
             deskAction="default"
             className={headerPrimaryClass}
-            disabled={Boolean(saveBlocked || optionalMissing)}
+            disabled={Boolean(constraintBlocked || requiredMissing)}
             title={
-              saveBlocked ??
-              (optionalMissing
-                ? "Fill required fields in enabled sections before saving."
+              constraintBlocked ??
+              (requiredMissing
+                ? "Fill required fields before saving."
                 : undefined)
             }
           >
@@ -1366,6 +1359,7 @@ export function DcaPlaybookForm({
             desk="dca"
             name="botStatusControl"
             value={status}
+            applied={currentStatus}
             onChange={(next) => {
               setStatus(next as DcaBotStatus);
               setFormTick((tick) => tick + 1);
@@ -1880,9 +1874,6 @@ export function DcaPlaybookForm({
                     dcaMaxValueUsesBook(maxValueKind) ? "e.g. 20" : "e.g. 700"
                   }
                 />
-                {maxValueMissing ? (
-                  <p className="mt-1 text-xs text-danger">{maxValueMissing}</p>
-                ) : null}
               </label>
             ) : null}
           </div>

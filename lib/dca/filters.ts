@@ -64,6 +64,23 @@ export const DEFAULT_DCA_ATR_BAND_MULT = 2;
 export const DCA_CONFIRM_FIELD_LABEL =
   "Secondary Condition (must be true for the entry trigger to execute)";
 
+export function dcaFilterComplete(
+  spec: DcaFilterSpec | null | undefined,
+): boolean {
+  if (!spec) {
+    return false;
+  }
+  if (spec.kind === "rsi") {
+    if (spec.level == null) {
+      return false;
+    }
+    if (spec.compare === "between") {
+      return spec.levelTo != null && spec.level < spec.levelTo;
+    }
+  }
+  return spec.period != null && spec.period > 0;
+}
+
 export function parseDcaFilterKind(value: unknown): DcaFilterKind | null {
   const raw = String(value ?? "").trim();
   return (DCA_FILTER_KINDS as readonly string[]).includes(raw)

@@ -41,6 +41,7 @@ import {
   cloneFuturesAutomationForm,
   defaultFuturesAutomationForm,
   parseAutomationEntry,
+  parseFuturesAutomationForm,
   type FuturesAutomationFormValues,
 } from "@/lib/futures/automation";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
@@ -50,7 +51,11 @@ import {
   type BacktestLibraryItem,
 } from "@/components/backtest-dialog";
 import { snapshotPerpsRecipe } from "@/lib/templates/recipe";
-import { dcaFilterSpecForKind, type DcaFilterSpec } from "@/lib/dca/filters";
+import {
+  dcaFilterComplete,
+  dcaFilterSpecForKind,
+  type DcaFilterSpec,
+} from "@/lib/dca/filters";
 import {
   DEFAULT_DCA_RSI_PERIOD,
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
@@ -272,6 +277,7 @@ function RuleCard({
   const [triggerPrice, setTriggerPrice] = useState(layer.triggerPrice);
   const [symbol, setSymbol] = useState(layer.symbol);
   const [entrySource, setEntrySource] = useState(layer.entrySource);
+  const [webhookId, setWebhookId] = useState(layer.webhookId);
   const entrySide: FuturesSide = formAction === "sell" ? "short" : "long";
   const [indicatorKind, setIndicatorKind] = useState<DcaIndicatorKind>(
     layer.indicator?.kind ??
@@ -367,8 +373,12 @@ function RuleCard({
   const trailMissing = trailOn && trailingStop.trim() === "";
   const breakevenMissing =
     !closing && breakevenOn && breakevenActivationPct.trim() === "";
-  const optionalMissing =
-    tpMissing || slMissing || trailMissing || breakevenMissing;
+  const tpLimitMissing =
+    tpOn && tpOrderType === "limit" && tpLimitPrice.trim() === "";
+  const slLimitMissing =
+    slOn && slOrderType === "limit" && slLimitPrice.trim() === "";
+  const confirmMissing = Boolean(confirm) && !dcaFilterComplete(confirm);
+  const exitIfMissing = Boolean(exitIf) && !dcaFilterComplete(exitIf);
   const tpsl =
     tpOn || slOn
       ? {
@@ -401,12 +411,8 @@ function RuleCard({
       : null;
   const webhookEntry = entrySource === "webhook";
   const whenWebhooks =
-    layer.webhookId &&
-    !triggerWebhooks.some((hook) => hook.id === layer.webhookId)
-      ? [
-          ...triggerWebhooks,
-          { id: layer.webhookId, name: "Webhook (removed)" },
-        ]
+    webhookId && !triggerWebhooks.some((hook) => hook.id === webhookId)
+      ? [...triggerWebhooks, { id: webhookId, name: "Webhook (removed)" }]
       : triggerWebhooks;
   const selected = options.find((row) => row.symbol === symbol);
   const baseCoin = selected?.baseCoin ?? "Token";
@@ -424,6 +430,46 @@ function RuleCard({
       multiplier: Number(indicatorMultiplier) || null,
     };
   }
+  const snapshotLayer: FuturesAutomationFormValues = {
+    ...layer,
+    mode,
+    formAction,
+    orderType,
+    sizeUnit,
+    size,
+    limitPrice,
+    triggerPrice,
+    symbol,
+    entrySource,
+    webhookId,
+    tpsl,
+    trailing,
+    indicator: liveIndicator(),
+    confirm: closing ? null : confirm,
+    exitIf: closing ? null : exitIf,
+    breakevenActivationPct:
+      closing || !breakevenOn ? "" : breakevenActivationPct,
+    breakevenOffsetPct: closing || !breakevenOn ? "" : breakevenOffsetPct,
+  };
+  let parsedLive: ReturnType<typeof parseFuturesAutomationForm>;
+  try {
+    parsedLive = parseFuturesAutomationForm(
+      perpsFormToSnapshotSource(snapshotLayer, venueId),
+      venueId,
+    );
+  } catch {
+    parsedLive = { ok: false, error: "Could not read the form." };
+  }
+  const requiredMissing =
+    tpMissing ||
+    slMissing ||
+    trailMissing ||
+    breakevenMissing ||
+    tpLimitMissing ||
+    slLimitMissing ||
+    confirmMissing ||
+    exitIfMissing ||
+    !parsedLive.ok;
   function liveRecipe() {
     return snapshotPerpsRecipe({
       name: layer.name,
@@ -474,7 +520,7 @@ function RuleCard({
       }}
       onChange={() => setDirty(true)}
       guard={() => {
-        if (optionalMissing) {
+        if (requiredMissing) {
           return false;
         }
         if (mode === "disabled" && disableNeedsConfirm(inUse)) {
@@ -492,8 +538,8 @@ function RuleCard({
       <DirtySaveBanner
         dirty={dirty}
         error={
-          optionalMissing
-            ? "Fill required fields in enabled sections before saving."
+          requiredMissing
+            ? "Fill required fields before saving."
             : undefined
         }
       >
@@ -503,7 +549,7 @@ function RuleCard({
             pendingLabel="Saving…"
             deskAction="default"
             className={botHeaderPrimaryClass}
-            disabled={optionalMissing}
+            disabled={requiredMissing}
           >
             Save
           </PendingSubmitButton>
@@ -524,6 +570,7 @@ function RuleCard({
             desk="perps"
             name={`${prefix}mode`}
             value={mode}
+            applied={layer.mode}
             onChange={(next) => setMode(parseAutomationMode(next))}
             inUse={inUse}
             accountReduceOnly={accountReduceOnly}
@@ -671,7 +718,8 @@ function RuleCard({
             <BotField label="Webhook" className="lg:col-span-2" required>
               <select
                 name={`${prefix}webhookId`}
-                defaultValue={layer.webhookId}
+                value={webhookId}
+                onChange={(event) => setWebhookId(event.target.value)}
                 className={botFieldClass}
               >
                 <option value="">
@@ -1045,30 +1093,7 @@ function RuleCard({
           library={backtestLibrary}
           currentRecipe={liveRecipe()}
           buildForm={() =>
-            perpsFormToSnapshotSource(
-              {
-                ...layer,
-                mode,
-                formAction,
-                orderType,
-                sizeUnit,
-                size,
-                limitPrice,
-                triggerPrice,
-                symbol,
-                entrySource,
-                tpsl,
-                trailing,
-                indicator: liveIndicator(),
-                confirm: closing ? null : confirm,
-                exitIf: closing ? null : exitIf,
-                breakevenActivationPct:
-                  closing || !breakevenOn ? "" : breakevenActivationPct,
-                breakevenOffsetPct:
-                  closing || !breakevenOn ? "" : breakevenOffsetPct,
-              },
-              venueId,
-            )
+            perpsFormToSnapshotSource(snapshotLayer, venueId)
           }
           onSaved={(saved) =>
             onTemplateSaved?.({

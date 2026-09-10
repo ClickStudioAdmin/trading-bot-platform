@@ -777,7 +777,15 @@ export function writeDcaCycleFormFields(
     form.set("webhookId", current.webhookId);
   }
   const averaging = dcaAveragingKind(current);
-  form.set("averaging", averaging);
+  if (
+    averaging === "interval" ||
+    current.dipPct != null ||
+    current.dcaMode === "order"
+  ) {
+    form.set("averaging", averaging);
+  } else {
+    form.delete("averaging");
+  }
   if (current.dcaMode === "order") {
     form.set("restGrid", "1");
   } else {
@@ -1310,8 +1318,13 @@ export function parseDcaPlaybookForm(
   if (averaging === "interval" && intervalMinutes.value === null) {
     return { ok: false, error: "Enter how often to add an order." };
   }
-  if (restGrid && spacingKind === "percent" && dipPct.value === null) {
-    return { ok: false, error: "Enter a price deviation % for the grid." };
+  if (
+    averaging === "dip" &&
+    spacingKind === "percent" &&
+    dipPct.value === null &&
+    (String(form.get("averaging") ?? "").trim() === "dip" || restGrid)
+  ) {
+    return { ok: false, error: "Enter a price deviation %." };
   }
   if (spacingKind === "atr") {
     if (atrPeriod == null) {

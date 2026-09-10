@@ -336,9 +336,13 @@ function RuleRow({
   const [slOn, setSlOn] = useState(Boolean(layer.stopLoss.trim()));
   const [takeProfit, setTakeProfit] = useState(layer.takeProfit);
   const [stopLoss, setStopLoss] = useState(layer.stopLoss);
+  const [maxOpenCount, setMaxOpenCount] = useState(layer.maxOpenCount || "1");
+  const [orderSizeUsdt, setOrderSizeUsdt] = useState(String(layer.notionalUsdt));
   const missingTp = tpOn && !takeProfit.trim();
   const missingSl = slOn && !stopLoss.trim();
-  const missing = missingTp || missingSl;
+  const missingCount = !maxOpenCount.trim();
+  const missingSize = sizeType === "fixed" && !orderSizeUsdt.trim();
+  const missing = missingTp || missingSl || missingCount || missingSize;
 
   return (
     <StayOnPageForm
@@ -368,9 +372,7 @@ function RuleRow({
       <DirtySaveBanner
         dirty={dirty}
         error={
-          missing
-            ? "Fill required fields in enabled sections before saving."
-            : undefined
+          missing ? "Fill required fields before saving." : undefined
         }
       >
         <div className="flex flex-wrap items-center gap-2">
@@ -379,6 +381,7 @@ function RuleRow({
             pendingLabel="Saving…"
             deskAction="default"
             className={botHeaderPrimaryClass}
+            disabled={missing}
           >
             Save
           </PendingSubmitButton>
@@ -399,6 +402,7 @@ function RuleRow({
             desk="cnc"
             name={`${prefix}mode`}
             value={mode}
+            applied={layer.mode}
             onChange={(next) => setMode(parseAutomationMode(next))}
             inUse={inUse}
             accountReduceOnly={accountReduceOnly}
@@ -435,7 +439,8 @@ function RuleRow({
           <CarryNumber
             name={`${prefix}maxOpenCount`}
             label="Max pairs"
-            defaultValue={layer.maxOpenCount || "1"}
+            value={maxOpenCount}
+            onChange={setMaxOpenCount}
             required
           />
           <BotField label="Order Type" required>
@@ -456,7 +461,8 @@ function RuleRow({
               <CarryNumber
                 name={`${prefix}notionalUsdt`}
                 label="Order size (USDT)"
-                defaultValue={String(layer.notionalUsdt)}
+                value={orderSizeUsdt}
+                onChange={setOrderSizeUsdt}
                 required
               />
               <CarryNumber
@@ -553,6 +559,8 @@ function RuleRow({
                 mode,
                 sizeType,
                 exitSizeType,
+                maxOpenCount,
+                notionalUsdt: Number(orderSizeUsdt.replace(/,/g, "")) || 0,
                 takeProfit: tpOn ? takeProfit : "",
                 stopLoss: slOn ? stopLoss : "",
               }),
@@ -567,6 +575,8 @@ function RuleRow({
               mode,
               sizeType,
               exitSizeType,
+              maxOpenCount,
+              notionalUsdt: Number(orderSizeUsdt.replace(/,/g, "")) || 0,
               takeProfit: tpOn ? takeProfit : "",
               stopLoss: slOn ? stopLoss : "",
             })

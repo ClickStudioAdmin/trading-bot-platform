@@ -574,7 +574,13 @@ export function dcaRecipeToConfig(
     dipPct: asNullableNumber(recipe.dipPct),
     intervalMinutes: asNullableNumber(recipe.intervalMinutes),
   });
-  form.set("averaging", averaging);
+  if (
+    averaging === "interval" ||
+    recipe.dipPct != null ||
+    recipe.dcaMode === "order"
+  ) {
+    form.set("averaging", averaging);
+  }
   if (recipe.dcaMode === "order") {
     form.set("restGrid", "1");
   }

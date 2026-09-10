@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { parseDcaPlaybookForm } from "./playbook";
 import {
   atrBandMet,
+  dcaFilterComplete,
   dcaFilterLabel,
   dcaFilterMet,
   dcaFilterSpecForKind,
@@ -361,6 +362,18 @@ if (rsiBetweenOk.ok) {
   assert.equal(rsiBetweenOk.spec?.compare, "between");
   assert.equal(rsiBetweenOk.spec?.level, 30);
   assert.equal(rsiBetweenOk.spec?.levelTo, 70);
+  assert.equal(dcaFilterComplete(rsiBetweenOk.spec), true);
 }
+assert.equal(
+  dcaFilterComplete({
+    kind: "rsi",
+    timeframe: "15",
+    compare: "lte",
+    level: null,
+    period: 14,
+    multiplier: null,
+  }),
+  false,
+);
 
 console.log("dca filter checks passed");
