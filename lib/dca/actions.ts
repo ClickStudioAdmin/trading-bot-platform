@@ -1,6 +1,7 @@
 "use server";
 
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
+import type { TradingAccountMode } from "@/lib/accounts/model";
 import { dcaSaveVerb, parseDcaBotStatus } from "@/lib/bots/status";
 import {
   dcaConfigMaxOrderError,
@@ -16,13 +17,15 @@ import {
   type DcaPlaybookConfig,
 } from "@/lib/dca/playbook";
 import { loadOpenFuturesOnSymbol } from "@/lib/futures/list";
-import { parseFuturesSide } from "@/lib/futures/model";
+import { parseFuturesSide, type FuturesSide } from "@/lib/futures/model";
 import {
   applyDcaVerb,
   lastPriceFor,
   parseDcaPlaybookVerb,
   syncDcaPlaybookWorking,
+  type DcaVerb,
 } from "@/lib/dca/run";
+import { afterDeskWork } from "@/lib/ui/after-desk-work";
 import { loadDcaBookUsdt, loadDcaSizingLeverage } from "@/lib/dca/book";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
@@ -30,6 +33,9 @@ import { loadHyperliquidLinearPerps } from "@/lib/venues/hyperliquid/market";
 import {
   deleteDcaPlaybook,
   loadDcaPlaybookById,
+  patchDcaLeg,
+  resetDcaLeg,
+  resetDcaPlaybook,
   saveDcaPlaybook,
 } from "@/lib/dca/store";
 import { writeEventLog } from "@/lib/logs/write";
@@ -57,6 +63,142 @@ async function syncRunningPlaybookWorking(input: {
     playbook: input.playbook,
     mode: input.mode,
   });
+}
+
+function deferDcaVerb(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+  verb: DcaVerb;
+  side?: FuturesSide | null;
+  userId: string;
+  accountId: string;
+}): void {
+  afterDeskWork(`dca-${input.verb}`, async () => {
+    const result = await applyDcaVerb({
+      playbook: input.playbook,
+      mode: input.mode,
+      verb: input.verb,
+      side: input.side,
+    });
+    if (!result.ok) {
+      await writeEventLog({
+        level: "error",
+        scope: "trade",
+        event: "engine.close_failed",
+        message: result.error,
+        userId: input.userId,
+        accountId: input.accountId,
+        strategy: FUTURES_STRATEGY_ID,
+        data: { playbookId: input.playbook.id, verb: input.verb },
+      });
+    }
+    revalidatePath(FUTURES_PATHS.automations);
+    revalidatePath(FUTURES_PATHS.positions);
+  });
+}
+
+async function persistDcaVerbStatus(input: {
+  playbook: DcaPlaybook;
+  verb: DcaVerb;
+  side?: FuturesSide | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Auth is not configured." };
+  }
+  const sides = input.side
+    ? [input.side]
+    : dcaEnabledSides(input.playbook.direction);
+  if (input.verb === "close-playbook") {
+    return resetDcaPlaybook({ supabase, id: input.playbook.id });
+  }
+  if (input.verb === "arm") {
+    for (const side of sides) {
+      const patched = await patchDcaLeg({
+        supabase,
+        id: input.playbook.id,
+        side,
+        patch: { status: "armed" },
+      });
+      if (!patched.ok) {
+        return patched;
+      }
+    }
+    return { ok: true };
+  }
+  if (input.verb === "disarm") {
+    const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
+      accountId: input.playbook.accountId,
+      userId: input.playbook.userId,
+    });
+    for (const side of sides) {
+      const openQty = opens.find((row) => row.side === side)?.qty ?? 0;
+      const patched =
+        openQty > 0
+          ? await patchDcaLeg({
+              supabase,
+              id: input.playbook.id,
+              side,
+              patch: { status: "stop_adding" },
+            })
+          : await resetDcaLeg({
+              supabase,
+              id: input.playbook.id,
+              side,
+            });
+      if (!patched.ok) {
+        return patched;
+      }
+    }
+    return { ok: true };
+  }
+  return { ok: true };
+}
+
+function noticeForDcaVerb(verb: DcaVerb, ownsOpen: boolean): string {
+  if (verb === "close-playbook") {
+    return ownsOpen ? "Bot saved. Closing positions…" : "Bot saved.";
+  }
+  if (verb === "close-position") {
+    return "Closing this position…";
+  }
+  if (verb === "disarm") {
+    return ownsOpen ? "Bot saved. Stopping adds." : "Bot saved.";
+  }
+  if (verb === "arm") {
+    return "Bot saved. Turning on…";
+  }
+  return "Bot saved.";
+}
+
+async function acceptDcaVerb(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+  verb: DcaVerb;
+  side?: FuturesSide | null;
+  userId: string;
+  accountId: string;
+  ownsOpen?: boolean;
+}): Promise<DcaDeskActionResult> {
+  const persisted = await persistDcaVerbStatus({
+    playbook: input.playbook,
+    verb: input.verb,
+    side: input.side,
+  });
+  if (!persisted.ok) {
+    return deskActionError(persisted.error);
+  }
+  deferDcaVerb(input);
+  const playbook =
+    (await loadDcaPlaybookById(input.playbook.id, input.accountId)) ??
+    input.playbook;
+  revalidatePath(FUTURES_PATHS.automations);
+  revalidatePath(FUTURES_PATHS.positions);
+  return {
+    ok: true,
+    notice: noticeForDcaVerb(input.verb, Boolean(input.ownsOpen)),
+    playbook,
+  };
 }
 
 export async function saveDcaPlaybookAction(
@@ -99,24 +241,20 @@ export async function saveDcaPlaybookAction(
   if (verb === "arm") {
     return saveDcaPlaybookWith("arm", formData);
   }
-  const saved = await saveDcaPlaybookWith("save", formData);
+  const saved = await saveDcaPlaybookWith("save", formData, {
+    skipSync: verb !== "save",
+  });
   if (!saved.ok || !saved.playbook || verb === "save") {
     return saved;
   }
-  const applied = await applyDcaVerb({
+  return acceptDcaVerb({
     playbook: saved.playbook,
     mode: session.account.mode,
     verb,
+    userId: session.member.id,
+    accountId: session.account.id,
+    ownsOpen: hasOpenPosition,
   });
-  if (!applied.ok) {
-    return deskActionError(applied.error);
-  }
-  revalidatePath(FUTURES_PATHS.automations);
-  revalidatePath(FUTURES_PATHS.positions);
-  const playbook =
-    (await loadDcaPlaybookById(saved.playbook.id, session.account.id)) ??
-    saved.playbook;
-  return { ok: true, notice: applied.message, playbook };
 }
 
 export async function saveAndArmDcaPlaybookAction(
@@ -177,6 +315,7 @@ async function rejectIfOverMaxOrder(
 async function saveDcaPlaybookWith(
   intentRaw: string,
   formData: FormData,
+  options?: { skipSync?: boolean },
 ): Promise<DcaDeskActionResult> {
   const session = await requirePerpsUiSession();
   if (!deskAllowsDcaPlaybooks(session.account)) {
@@ -240,29 +379,28 @@ async function saveDcaPlaybookWith(
       side: config.direction,
     },
   });
-  await syncRunningPlaybookWorking({
-    playbook: saved.playbook,
-    mode: session.account.mode,
-  });
+  if (!options?.skipSync) {
+    afterDeskWork("dca-sync", async () => {
+      await syncRunningPlaybookWorking({
+        playbook: saved.playbook,
+        mode: session.account.mode,
+      });
+      revalidatePath(FUTURES_PATHS.positions);
+    });
+  }
   revalidatePath(FUTURES_PATHS.automations);
   if (dcaPlaybookIsRunning(saved.playbook)) {
     revalidatePath(FUTURES_PATHS.positions);
   }
   const intent = parseDcaSaveIntent(intentRaw);
   if (intent === "arm" && dcaStartListens(config.startKind)) {
-    const armed = await applyDcaVerb({
+    return acceptDcaVerb({
       playbook: saved.playbook,
       mode: session.account.mode,
       verb: "arm",
+      userId: session.member.id,
+      accountId: session.account.id,
     });
-    if (!armed.ok) {
-      return deskActionError(armed.error);
-    }
-    revalidatePath(FUTURES_PATHS.positions);
-    const playbook =
-      (await loadDcaPlaybookById(saved.playbook.id, session.account.id)) ??
-      saved.playbook;
-    return { ok: true, notice: armed.message, playbook };
   }
   return {
     ok: true,
@@ -353,24 +491,21 @@ export async function closeDcaPositionFromRow(formData: FormData) {
   if (!playbook) {
     redirect(withQuery(next, { paperError: "That bot was not found." }));
   }
-  const result = await applyDcaVerb({
+  deferDcaVerb({
     playbook,
     mode: session.account.mode,
     verb: "close-position",
     side,
+    userId: session.member.id,
+    accountId: session.account.id,
   });
-  if (!result.ok) {
-    redirect(withQuery(next, { paperError: result.error }));
-  }
   revalidatePath(FUTURES_PATHS.automations);
   revalidatePath(FUTURES_PATHS.positions);
   revalidatePath(FUTURES_PATHS.root);
   redirect(
     withQuery(next, {
       paper:
-        session.account.mode === "live"
-          ? "live-position-closed"
-          : "position-closed",
+        session.account.mode === "live" ? "live-closing" : "closing",
     }),
   );
 }
@@ -434,18 +569,16 @@ export async function runDcaPlaybookVerb(
   if (!saved.ok) {
     return deskActionError(saved.error);
   }
-  const result = await applyDcaVerb({
+  const ownsOpen = Boolean(
+    saved.playbook && dcaPlaybookHasOpenCycle(saved.playbook, opens),
+  );
+  return acceptDcaVerb({
     playbook: saved.playbook,
     mode: session.account.mode,
     verb,
     side,
+    userId: session.member.id,
+    accountId: session.account.id,
+    ownsOpen,
   });
-  if (!result.ok) {
-    return deskActionError(result.error);
-  }
-  revalidatePath(FUTURES_PATHS.positions);
-  const playbook =
-    (await loadDcaPlaybookById(saved.playbook.id, session.account.id)) ??
-    saved.playbook;
-  return { ok: true, notice: result.message, playbook };
 }

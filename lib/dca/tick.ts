@@ -47,6 +47,7 @@ import {
   dcaNeedsTickBars,
   dcaTickBarTimeframes,
   dcaOpenExitLimits,
+  dcaShouldFlattenIdleOpen,
   dcaStartListens,
   decideDcaTick,
   dcaTickValueCapUsdt,
@@ -277,6 +278,23 @@ export async function runDcaPlaybookTick(input?: {
         side,
         atr,
       });
+      if (
+        dcaShouldFlattenIdleOpen({
+          status: leg.status,
+          positionQty: open?.qty ?? null,
+        })
+      ) {
+        const flattened = await flattenPlaybook({
+          playbook,
+          mode: account.mode,
+          side,
+          reason: "Bot is disabled.",
+        });
+        if (flattened.ok) {
+          acted += 1;
+        }
+        continue;
+      }
       if (
         dcaLegIsRunning(leg.status) &&
         leg.clipsFilled >= 1 &&

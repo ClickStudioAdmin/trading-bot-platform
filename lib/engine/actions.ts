@@ -30,6 +30,7 @@ import {
   readDeskNameFromSettingsForm,
 } from "@/lib/accounts/actions";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { afterDeskWork } from "@/lib/ui/after-desk-work";
 import { deskActionError, type DeskActionResult } from "@/lib/ui/desk-action";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -117,17 +118,30 @@ export async function savePaperRules(
     return deskActionError(settingsError.message);
   }
 
-  if (one) {
-    const flattenErrors = await flattenOwnedPaperRules({
-      supabase,
-      userId: user.id,
-      accountId: account.id,
-      accountMode: account.mode,
-      layers: parsed.config.layers,
+  const closing =
+    one && flattenOwnedRuleIds(parsed.config.layers).length > 0;
+  if (closing) {
+    afterDeskWork("cnc-flatten", async () => {
+      const flattenErrors = await flattenOwnedPaperRules({
+        supabase,
+        userId: user.id,
+        accountId: account.id,
+        accountMode: account.mode,
+        layers: parsed.config.layers,
+      });
+      if (flattenErrors) {
+        await writeEventLog({
+          level: "error",
+          scope: "trade",
+          event: "engine.close_failed",
+          message: flattenErrors,
+          userId: user.id,
+          accountId: account.id,
+          strategy: "cash-and-carry",
+        });
+      }
+      revalidatePath("/strategies/cash-and-carry");
     });
-    if (flattenErrors) {
-      return deskActionError(flattenErrors);
-    }
   }
 
   await writeEventLog({
@@ -152,7 +166,11 @@ export async function savePaperRules(
   const loaded = await loadPaperRules();
   return {
     ok: true,
-    notice: one ? "Bot saved." : "Bots saved.",
+    notice: closing
+      ? "Bot saved. Closing carries…"
+      : one
+        ? "Bot saved."
+        : "Bots saved.",
     layers: paperConfigToFormValues(loaded.config).layers,
     inUseRuleIds: loaded.inUseRuleIds,
     reduceOnly: loaded.config.reduceOnly,

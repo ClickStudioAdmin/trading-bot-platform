@@ -171,6 +171,10 @@ export default async function FuturesPositionsPage({
           livePositionClosed={
             firstSearchValue(params.paper) === "live-position-closed"
           }
+          closing={firstSearchValue(params.paper) === "closing"}
+          liveClosing={firstSearchValue(params.paper) === "live-closing"}
+          closingAll={firstSearchValue(params.paper) === "closing-all"}
+          liveClosingAll={firstSearchValue(params.paper) === "live-closing-all"}
           error={firstSearchValue(params.paperError)}
         />
 

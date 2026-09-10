@@ -24,6 +24,10 @@ export function FuturesFlash({
   livePlaybookClosed,
   positionClosed,
   livePositionClosed,
+  closing,
+  liveClosing,
+  closingAll,
+  liveClosingAll,
   error,
 }: {
   opened: boolean;
@@ -51,12 +55,31 @@ export function FuturesFlash({
   livePlaybookClosed?: boolean;
   positionClosed?: boolean;
   livePositionClosed?: boolean;
+  closing?: boolean;
+  liveClosing?: boolean;
+  closingAll?: boolean;
+  liveClosingAll?: boolean;
   error?: string;
 }) {
   if (error) {
     return (
       <p className="rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
         {error}
+      </p>
+    );
+  }
+  if (liveClosingAll || closingAll) {
+    return (
+      <p className="text-sm text-ink">
+        Closing positions and cancelling orders. The blotter updates as they
+        fill.
+      </p>
+    );
+  }
+  if (liveClosing || closing) {
+    return (
+      <p className="text-sm text-ink">
+        Closing this position. The blotter updates when the venue fills.
       </p>
     );
   }

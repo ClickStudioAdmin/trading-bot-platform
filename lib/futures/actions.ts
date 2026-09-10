@@ -62,6 +62,7 @@ import { listExchangeConnections } from "@/lib/exchanges/store";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_PATHS, FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
+import { afterDeskWork } from "@/lib/ui/after-desk-work";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -205,24 +206,39 @@ export async function closeAllFutures(formData: FormData) {
   const next = safeFuturesReturnPath(String(formData.get("next") ?? ""));
   const session = await requirePerpsUiSession();
   const { member, account } = session;
-  const result = await runFuturesCommand({
-    actor: {
-      userId: member.id,
-      accountId: account.id,
-      mode: account.mode,
-    },
-    command: {
-      kind: "close-all",
-      scope: formData.get("scope"),
-      confirm: formData.get("confirm"),
-      setReduceOnly: formData.get("setReduceOnly"),
-      idempotencyKey: formData.get("idempotencyKey"),
-    },
+  const actor = {
+    userId: member.id,
+    accountId: account.id,
+    mode: account.mode,
+  };
+  const command = {
+    kind: "close-all" as const,
+    scope: formData.get("scope"),
+    confirm: formData.get("confirm"),
+    setReduceOnly: formData.get("setReduceOnly"),
+    idempotencyKey: formData.get("idempotencyKey"),
+  };
+  afterDeskWork("close-all", async () => {
+    const result = await runFuturesCommand({ actor, command });
+    if (!result.ok) {
+      await writeEventLog({
+        level: "error",
+        scope: "trade",
+        event: "engine.close_failed",
+        message: result.error,
+        userId: member.id,
+        accountId: account.id,
+        strategy: FUTURES_STRATEGY_ID,
+        data: { scope: formData.get("scope") },
+      });
+    }
+    revalidatePath(FUTURES_PATHS.positions);
   });
-  if (!result.ok) {
-    fail(next, result.error);
-  }
-  redirect(withQuery(next, { paper: result.flash }));
+  redirect(
+    withQuery(next, {
+      paper: account.mode === "live" ? "live-closing-all" : "closing-all",
+    }),
+  );
 }
 
 export async function amendFuturesWorking(formData: FormData) {
@@ -483,22 +499,39 @@ export async function saveFuturesAutomations(
     strategy: FUTURES_STRATEGY_ID,
     data: { count: parsed.rules.length },
   });
-  if (one) {
-    const flattenErrors = await flattenOwnedFuturesRules({
-      userId: user.id,
-      accountId: account.id,
-      mode: account.mode,
-      rules: parsed.rules,
+  const closing =
+    one && flattenOwnedRuleIds(parsed.rules).length > 0;
+  if (closing) {
+    afterDeskWork("perps-flatten", async () => {
+      const flattenErrors = await flattenOwnedFuturesRules({
+        userId: user.id,
+        accountId: account.id,
+        mode: account.mode,
+        rules: parsed.rules,
+      });
+      if (flattenErrors) {
+        await writeEventLog({
+          level: "error",
+          scope: "trade",
+          event: "engine.close_failed",
+          message: flattenErrors,
+          userId: user.id,
+          accountId: account.id,
+          strategy: FUTURES_STRATEGY_ID,
+        });
+      }
+      revalidatePath(FUTURES_PATHS.positions);
     });
-    if (flattenErrors) {
-      return deskActionError(flattenErrors);
-    }
   }
   revalidatePath(FUTURES_PATHS.positions);
   const rules = await loadFuturesAutomationRules(account.id);
   return {
     ok: true,
-    notice: one ? "Bot saved." : "Bots saved.",
+    notice: closing
+      ? "Bot saved. Closing positions…"
+      : one
+        ? "Bot saved."
+        : "Bots saved.",
     forms: rules.map(futuresRuleToForm),
   };
 }

@@ -44,4 +44,4 @@ Geist is the next/font face on `--font-geist` (not a local family named `Geist`)
 
 ## Motion
 
-Short press on buttons (`scale` + opacity). Server-action submits swap the label for a spinner, then a success check for 1.5s. No decorative animation.
+Short press on buttons (`scale` + opacity). Server-action submits swap the label for a spinner, then a success check for 1.5s. Desk Save / Disable / Close / Close All return when the app has accepted the work — venue flatten, cancel, and grid sync finish in the background. The banner or blotter flash says that. No decorative animation.

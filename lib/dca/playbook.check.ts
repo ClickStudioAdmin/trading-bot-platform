@@ -34,6 +34,7 @@ import {
   dcaDipMet,
   dcaNeedsAtrBars,
   dcaEnabledSides,
+  dcaShouldFlattenIdleOpen,
   dcaStartListens,
   dcaNeedsIndicatorCloses,
   dcaLegIsRunning,
@@ -697,6 +698,9 @@ assert.equal(
   }),
   "Entry # 2: Minimum limit is $1.",
 );
+assert.equal(dcaShouldFlattenIdleOpen({ status: "idle", positionQty: 0.1 }), true);
+assert.equal(dcaShouldFlattenIdleOpen({ status: "idle", positionQty: 0 }), false);
+assert.equal(dcaShouldFlattenIdleOpen({ status: "armed", positionQty: 0.1 }), false);
 assert.equal(dcaStartListens("immediate"), false);
 assert.equal(dcaStartListens("price"), true);
 assert.equal(dcaStartListens("webhook"), true);

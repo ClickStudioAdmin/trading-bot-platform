@@ -630,6 +630,17 @@ export function dcaConfigMaxOrderError(input: {
   });
 }
 
+export function dcaShouldFlattenIdleOpen(input: {
+  status: DcaStatus;
+  positionQty: number | null;
+}): boolean {
+  return (
+    input.status === "idle" &&
+    input.positionQty != null &&
+    input.positionQty > 0
+  );
+}
+
 export function dcaStartListens(startKind: DcaStartKind): boolean {
   return (
     startKind === "price" ||
