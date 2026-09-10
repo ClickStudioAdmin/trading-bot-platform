@@ -85,6 +85,7 @@ import {
   dcaLegFor,
   dcaCycleFieldsLocked,
   dcaPlaybookHasOpenCycle,
+  dcaPlaybookHoldsCycle,
   dcaPlaybookIsRunning,
   dcaAtrTimeframe,
   parseDcaExitBasis,
@@ -944,8 +945,7 @@ export function DcaPlaybookForm({
   const statusDirty = status !== currentStatus;
   const cycleLocked = dcaCycleFieldsLocked({
     hasOpenCycle: hasOpenPosition,
-    running,
-    status,
+    holdsCycle: Boolean(playbook && dcaPlaybookHoldsCycle(playbook)),
   });
   const selectedPair = options.find((row) => row.symbol === symbol);
   const resolvedMaxValue = dcaResolvedMaxValueUsdt({
@@ -1395,8 +1395,14 @@ export function DcaPlaybookForm({
       </BotFormGroup>
       {cycleLocked ? (
         <p className="py-5 text-xs text-warning">
-          A position is open. Cycle settings are locked. Take profit and stops
-          still save.
+          {status === "disabled" && statusDirty
+            ? "Save Disabled to close this position. Cycle settings stay locked until the close is accepted."
+            : "A position is open. Cycle settings are locked. Take profit and stops still save."}
+        </p>
+      ) : hasOpenPosition && !running ? (
+        <p className="py-5 text-xs text-warning">
+          Closing this position. Cycle settings are unlocked for the next
+          cycle.
         </p>
       ) : null}
 

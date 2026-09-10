@@ -883,7 +883,7 @@ export function dcaPlaybookHoldsCycle(
   playbook: Pick<DcaPlaybook, "direction" | "long" | "short">,
 ): boolean {
   return dcaEnabledSides(playbook.direction).some((side) => {
-    const status = dcaLegFor(playbook, side).status;
+    const status = side === "long" ? playbook.long.status : playbook.short.status;
     return status === "armed" || status === "stop_adding" || status === "closing";
   });
 }
