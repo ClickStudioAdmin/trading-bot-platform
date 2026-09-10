@@ -1,4 +1,6 @@
+import { parseStep } from "@/lib/exchanges/bybit/qty";
 import { formatPerpMinQty } from "@/lib/exchanges/bybit/ticket-size";
+import type { BybitInstrument } from "@/lib/exchanges/bybit/universe";
 import {
   parseFuturesQty,
   parseFuturesSide,
@@ -899,6 +901,18 @@ export function dcaPlaybookHasOpenCycle(
   );
 }
 
+/** Open-cycle lock. Disabled unlocks immediately, including while flatten is in flight. */
+export function dcaCycleFieldsLocked(input: {
+  hasOpenCycle: boolean;
+  running: boolean;
+  status?: string | null;
+}): boolean {
+  if (!input.hasOpenCycle || !input.running) {
+    return false;
+  }
+  return String(input.status ?? "").trim() !== "disabled";
+}
+
 export function writeDcaCycleFormFields(
   form: FormData,
   current: DcaPlaybookConfig,
@@ -1021,9 +1035,13 @@ export function resolveDcaSaveConfig(
 ):
   | { ok: true; config: DcaPlaybookConfig; cycleLocked: boolean }
   | { ok: false; error: string; cycleLocked: boolean } {
-  const cycleLocked = Boolean(
-    existing && dcaPlaybookHasOpenCycle(existing, opens),
-  );
+  const cycleLocked = dcaCycleFieldsLocked({
+    hasOpenCycle: Boolean(
+      existing && dcaPlaybookHasOpenCycle(existing, opens),
+    ),
+    running: Boolean(existing && dcaPlaybookIsRunning(existing)),
+    status: String(form.get("botStatus") ?? ""),
+  });
   if (existing && cycleLocked) {
     writeDcaCycleFormFields(form, existing);
   }
@@ -3002,15 +3020,37 @@ function sameNullablePrice(left: number | null, right: number | null): boolean {
   return sameSafetyNumber(left, right);
 }
 
+function sameVenuePrice(
+  left: number | null,
+  right: number | null,
+  instrument?: BybitInstrument,
+): boolean {
+  if (left === null && right === null) {
+    return true;
+  }
+  if (left === null || right === null) {
+    return false;
+  }
+  if (sameSafetyNumber(left, right)) {
+    return true;
+  }
+  const tick = parseStep(instrument?.priceFilter?.tickSize, 0);
+  if (!(tick > 0)) {
+    return false;
+  }
+  return Math.abs(left - right) < tick;
+}
+
 export function dcaExitTpslNeedsVenueSync(
   current: FuturesTpsl,
   next: FuturesTpsl,
+  instrument?: BybitInstrument,
 ): boolean {
   const from = tpslWithoutLimitExits(current);
   const to = tpslWithoutLimitExits(next);
   return (
-    !sameNullablePrice(from.takeProfit, to.takeProfit) ||
-    !sameNullablePrice(from.stopLoss, to.stopLoss) ||
+    !sameVenuePrice(from.takeProfit, to.takeProfit, instrument) ||
+    !sameVenuePrice(from.stopLoss, to.stopLoss, instrument) ||
     (to.takeProfit !== null && from.tpOrderType !== to.tpOrderType) ||
     (to.stopLoss !== null && from.slOrderType !== to.slOrderType)
   );

@@ -83,6 +83,7 @@ import {
   dcaEnabledSides,
   dcaIntervalParts,
   dcaLegFor,
+  dcaCycleFieldsLocked,
   dcaPlaybookHasOpenCycle,
   dcaPlaybookIsRunning,
   dcaAtrTimeframe,
@@ -932,7 +933,6 @@ export function DcaPlaybookForm({
   const hasOpenPosition = Boolean(
     playbook?.id && dcaPlaybookHasOpenCycle(playbook, openPositions),
   );
-  const cycleLocked = hasOpenPosition;
   const armed = liveLegs.some(
     (leg) => leg.status === "armed" || leg.status === "closing",
   );
@@ -942,6 +942,11 @@ export function DcaPlaybookForm({
     : "disabled";
   const [status, setStatus] = useState<DcaBotStatus>(currentStatus);
   const statusDirty = status !== currentStatus;
+  const cycleLocked = dcaCycleFieldsLocked({
+    hasOpenCycle: hasOpenPosition,
+    running,
+    status,
+  });
   const selectedPair = options.find((row) => row.symbol === symbol);
   const resolvedMaxValue = dcaResolvedMaxValueUsdt({
     kind: maxValueKind,

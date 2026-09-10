@@ -47,6 +47,7 @@ import {
   dcaOpenHint,
   dcaPlaybookConflict,
   dcaPlaybookHasOpenCycle,
+  dcaCycleFieldsLocked,
   dcaPlaybookIsRunning,
   dcaWithLockedCycleConfig,
   resolveDcaSaveConfig,
@@ -1911,6 +1912,42 @@ if (row) {
     assert.equal(restored.config.stopLossPct, 2);
     assert.equal(restored.config.takeProfitBasis, "first_entry");
   }
+  const disabledUnlock = resolveDcaSaveConfig(exitOnly, "bybit", row, [
+    { symbol: row.symbol, side: "long", qty: 1 },
+  ]);
+  exitOnly.set("botStatus", "disabled");
+  const disabledSave = resolveDcaSaveConfig(exitOnly, "bybit", row, [
+    { symbol: row.symbol, side: "long", qty: 1 },
+  ]);
+  assert.equal(disabledUnlock.ok, true);
+  assert.equal(disabledSave.ok, true);
+  if (disabledSave.ok) {
+    assert.equal(disabledSave.cycleLocked, false);
+  }
+  assert.equal(
+    dcaCycleFieldsLocked({
+      hasOpenCycle: true,
+      running: true,
+      status: "active",
+    }),
+    true,
+  );
+  assert.equal(
+    dcaCycleFieldsLocked({
+      hasOpenCycle: true,
+      running: true,
+      status: "disabled",
+    }),
+    false,
+  );
+  assert.equal(
+    dcaCycleFieldsLocked({
+      hasOpenCycle: true,
+      running: false,
+      status: "active",
+    }),
+    false,
+  );
 }
 assert.equal(
   dcaPlaybookIsRunning({
@@ -2194,6 +2231,38 @@ assert.equal(
   dcaExitTpslNeedsVenueSync(
     { ...emptyTpsl, takeProfit: 2.4, tpOrderType: "market" },
     { ...emptyTpsl, takeProfit: 2.5, tpOrderType: "market" },
+  ),
+  true,
+);
+assert.equal(
+  dcaExitTpslNeedsVenueSync(
+    { ...emptyTpsl, takeProfit: 79184.4, stopLoss: 74186.2 },
+    {
+      ...emptyTpsl,
+      takeProfit: 79184.4123,
+      stopLoss: 74186.23456,
+    },
+    {
+      symbol: "BTCUSDT",
+      status: "Trading",
+      baseCoin: "BTC",
+      quoteCoin: "USDT",
+      priceFilter: { tickSize: "0.1" },
+    },
+  ),
+  false,
+);
+assert.equal(
+  dcaExitTpslNeedsVenueSync(
+    { ...emptyTpsl, takeProfit: 79184.4 },
+    { ...emptyTpsl, takeProfit: 79184.5 },
+    {
+      symbol: "BTCUSDT",
+      status: "Trading",
+      baseCoin: "BTC",
+      quoteCoin: "USDT",
+      priceFilter: { tickSize: "0.1" },
+    },
   ),
   true,
 );

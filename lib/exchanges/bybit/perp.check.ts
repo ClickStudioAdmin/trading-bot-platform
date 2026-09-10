@@ -10,6 +10,8 @@ import {
   qtyForCloseQty,
   perpVenueMinimums,
   qtyForPerpNotional,
+  perpLimitPriceBandError,
+  snapPerpPriceText,
   snapPerpSizedLimit,
 } from "./perp";
 
@@ -288,5 +290,39 @@ if (snappedClip.ok) {
   assert.equal(snappedClip.priceText, "121315.1");
   assert.equal(snappedClip.qtyText, "0.106");
 }
+
+const dirtyStop = snapPerpPriceText("74186.23456", btcVenue);
+assert.equal(dirtyStop.ok, true);
+if (dirtyStop.ok) {
+  assert.equal(dirtyStop.text, "74186.2");
+}
+const clearStop = snapPerpPriceText("0", btcVenue);
+assert.equal(clearStop.ok, true);
+if (clearStop.ok) {
+  assert.equal(clearStop.text, "0");
+}
+
+assert.equal(
+  perpLimitPriceBandError({
+    limitPrice: 1214.4,
+    mark: 78_139,
+    instrument: {
+      ...btcVenue,
+      riskParameters: { priceLimitRatioX: "0.05", priceLimitRatioY: "0.05" },
+    },
+  }) !== null,
+  true,
+);
+assert.equal(
+  perpLimitPriceBandError({
+    limitPrice: 77_500,
+    mark: 78_139,
+    instrument: {
+      ...btcVenue,
+      riskParameters: { priceLimitRatioX: "0.05", priceLimitRatioY: "0.05" },
+    },
+  }),
+  null,
+);
 
 console.log("bybit perp checks passed");

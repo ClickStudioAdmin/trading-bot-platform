@@ -597,7 +597,14 @@ export async function bybitSetTradingStop(input: {
   if (set.ok) {
     return { ok: true };
   }
+  if (isUnchangedTradingStop(set.error)) {
+    return { ok: true };
+  }
   return set;
+}
+
+export function isUnchangedTradingStop(error: string): boolean {
+  return /not modified/i.test(error);
 }
 
 function snapshotFromRow(

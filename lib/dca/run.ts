@@ -11,6 +11,7 @@ import {
   loadDeskVenueContext,
 } from "@/lib/venues/hyperliquid/desk";
 import { loadHyperliquidInstrument } from "@/lib/venues/hyperliquid/market";
+import { isUnchangedTradingStop } from "@/lib/exchanges/bybit/orders";
 import {
   loadPerpInstrument,
   snapPerpSizedLimit,
@@ -36,8 +37,10 @@ import type { FuturesSide } from "@/lib/futures/model";
 import type { FuturesTrailing } from "@/lib/futures/trailing";
 import {
   emptyFuturesTpsl,
+  resolveFuturesTpslPrices,
   tickerTriggerPrices,
   tpslFromRow,
+  tpslHasLevels,
   tpslWithoutLimitExits,
   type FuturesTpsl,
 } from "@/lib/futures/tpsl";
@@ -1247,7 +1250,7 @@ async function syncDcaPlaybookExitsUnlocked(input: {
   });
   const tpType =
     planned.takeProfit === null ? "market" : input.playbook.takeProfitOrderType;
-  const nextTpsl: FuturesTpsl = {
+  let nextTpsl: FuturesTpsl = {
     ...current,
     takeProfit: planned.takeProfit,
     stopLoss,
@@ -1259,8 +1262,32 @@ async function syncDcaPlaybookExitsUnlocked(input: {
         : null,
     slLimitPrice: null,
   };
+  const instrument = await instrumentForPlaybook(input.playbook);
+  if (instrument && tpslHasLevels(nextTpsl)) {
+    const priced = resolveFuturesTpslPrices({
+      tpsl: nextTpsl,
+      side: input.side,
+      entryPrice: open.entryPrice,
+      instrument,
+    });
+    if (priced.ok) {
+      nextTpsl = priced.tpsl;
+    }
+  }
   const actor = playbookActor(input.playbook, input.mode);
-  if (dcaExitTpslNeedsVenueSync(current, nextTpsl)) {
+  const recentFailures = await loadRecentDcaSyncFailures({
+    accountId: input.playbook.accountId,
+    playbookId: input.playbook.id,
+  });
+  const tpslStamp = dcaSyncFailureStamp({
+    playbookId: input.playbook.id,
+    playbookUpdatedAtMs: input.playbook.updatedAtMs,
+    reason: "set_tpsl",
+  });
+  if (
+    dcaExitTpslNeedsVenueSync(current, nextTpsl, instrument) &&
+    !shouldSkipDcaSyncRetry(recentFailures, tpslStamp)
+  ) {
     const set = await runFuturesCommand({
       actor,
       command: {
@@ -1272,16 +1299,17 @@ async function syncDcaPlaybookExitsUnlocked(input: {
         venueTpsl: tpslWithoutLimitExits(nextTpsl),
       },
     });
-    if (!set.ok) {
+    if (!set.ok && !isUnchangedTradingStop(set.error ?? "")) {
       await logDcaSyncFailed({
         playbook: input.playbook,
         side: input.side,
         error: set.error,
         reason: "set_tpsl",
+        recent: recentFailures,
       });
     }
   }
-  if (tpType === "limit" && planned.takeProfit !== null) {
+  if (tpType === "limit" && nextTpsl.takeProfit !== null) {
     await restExitLimit({
       playbook: input.playbook,
       mode: input.mode,
@@ -1289,7 +1317,7 @@ async function syncDcaPlaybookExitsUnlocked(input: {
       kind: "tp",
       positionId: open.id,
       qty: open.qty,
-      limitPrice: planned.takeProfit,
+      limitPrice: nextTpsl.takeProfit,
     });
   } else {
     await cancelExitLimit({

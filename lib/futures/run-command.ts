@@ -54,7 +54,11 @@ import {
   type BybitTicker,
 } from "@/lib/exchanges/bybit/client";
 import {
+  isUnchangedTradingStop,
+} from "@/lib/exchanges/bybit/orders";
+import {
   loadPerpInstrument,
+  perpLimitPriceBandError,
   priceForPerp,
   qtyForCloseQty,
   qtyForCopyPaperNotional,
@@ -231,12 +235,16 @@ async function applyVenueTradingStop(input: {
   trailing: FuturesTrailing | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const stop = combinedVenueTradingStop(input.tpsl, input.trailing);
-  return setPerpTradingStopOnVenue({
+  const set = await setPerpTradingStopOnVenue({
     connection: input.connection,
     symbol: input.symbol,
     positionIdx: hedgePositionIdx(input.side),
     ...stop,
   });
+  if (!set.ok && isUnchangedTradingStop(set.error)) {
+    return { ok: true };
+  }
+  return set;
 }
 
 function resolvePlaceTpsl(
@@ -763,6 +771,14 @@ async function runPlace(
       return fail(priced.error);
     }
     limit = priced;
+    const band = perpLimitPriceBandError({
+      limitPrice: priced.price,
+      mark,
+      instrument,
+    });
+    if (band) {
+      return fail(band);
+    }
   }
   const sizePrice = limit?.price ?? mark;
   let sized: { ok: true; qty: number; text: string } | { ok: false; error: string };
@@ -1262,8 +1278,21 @@ async function runSetTpsl(
         "Bind an exchange in Desk Settings before trading.",
       );
     }
+    let venueTpsl = command.venueTpsl ?? tpsl;
+    if (tpslHasLevels(venueTpsl)) {
+      const pricedVenue = resolveFuturesTpslPrices({
+        tpsl: venueTpsl,
+        side: row.side,
+        entryPrice: row.entryPrice,
+        instrument,
+      });
+      if (!pricedVenue.ok) {
+        return fail(pricedVenue.error);
+      }
+      venueTpsl = pricedVenue.tpsl;
+    }
     const stop = combinedVenueTradingStop(
-      command.venueTpsl ?? tpsl,
+      venueTpsl,
       trailingFromRow(row),
     );
     const set = await setPerpTradingStopOnVenue({
@@ -1272,7 +1301,7 @@ async function runSetTpsl(
       positionIdx: hedgePositionIdx(row.side),
       ...stop,
     });
-    if (!set.ok) {
+    if (!set.ok && !isUnchangedTradingStop(set.error)) {
       await writeEventLog({
         level: "error",
         scope: "trade",

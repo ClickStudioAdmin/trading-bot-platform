@@ -63,6 +63,33 @@ function lotMaxMkt(instrument: BybitInstrument | undefined): number {
   return parseStep(instrument?.lotSizeFilter?.maxMktOrderQty, 0);
 }
 
+export function perpLimitPriceBand(
+  instrument: BybitInstrument | undefined,
+): number {
+  const x = parseStep(instrument?.riskParameters?.priceLimitRatioX, 0);
+  const y = parseStep(instrument?.riskParameters?.priceLimitRatioY, 0);
+  const ratio = Math.max(x, y);
+  return ratio > 0 ? ratio : 0.15;
+}
+
+export function perpLimitPriceBandError(input: {
+  limitPrice: number;
+  mark: number;
+  instrument?: BybitInstrument;
+}): string | null {
+  if (!(input.limitPrice > 0) || !(input.mark > 0)) {
+    return null;
+  }
+  const ratio = perpLimitPriceBand(input.instrument);
+  const high = input.mark * (1 + ratio);
+  const low = input.mark * (1 - ratio);
+  if (input.limitPrice <= high && input.limitPrice >= low) {
+    return null;
+  }
+  const pct = Math.max(1, Math.round(ratio * 100));
+  return `That limit is outside the exchange price band (within about ${pct}% of the mark).`;
+}
+
 export function perpVenueMinimums(
   instrument: BybitInstrument | undefined,
 ): { minQty: number; minNotionalUsdt: number } {
@@ -233,6 +260,29 @@ export function snapPerpSizedLimit(input: {
     price: priced.price,
     priceText: priced.text,
   };
+}
+
+/** Tick-snap a venue price string. `0` / blank stay as clear. */
+export function snapPerpPriceText(
+  raw: string | undefined,
+  instrument: BybitInstrument | undefined,
+): { ok: true; text: string | undefined } | { ok: false; error: string } {
+  if (raw === undefined) {
+    return { ok: true, text: undefined };
+  }
+  const trimmed = raw.trim();
+  if (trimmed === "" || trimmed === "0") {
+    return { ok: true, text: trimmed === "" ? raw : "0" };
+  }
+  const price = Number(trimmed);
+  if (!(price > 0) || !Number.isFinite(price)) {
+    return { ok: false, error: "Enter a positive limit price." };
+  }
+  const priced = priceForPerp(price, instrument);
+  if (!priced.ok) {
+    return priced;
+  }
+  return { ok: true, text: priced.text };
 }
 
 function baseRank(baseCoin: string): number {

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import type { FuturesTpsl } from "./tpsl";
+import { isUnchangedTradingStop } from "../exchanges/bybit/orders";
 import {
   estimatedTpslPnl,
   futuresTpslPercentPrice,
@@ -448,5 +449,8 @@ if (atrTp.ok) {
   assert.equal(atrTp.tpsl.takeProfit, 1212.4);
   assert.equal(venueTradingStopFields(atrTp.tpsl).takeProfit, "1212.4");
 }
+
+assert.equal(isUnchangedTradingStop("Bybit rejected that order: not modified"), true);
+assert.equal(isUnchangedTradingStop("Bybit rejected that order: price is invalid"), false);
 
 console.log("futures tpsl checks passed");

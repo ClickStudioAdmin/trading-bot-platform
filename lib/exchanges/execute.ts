@@ -21,6 +21,7 @@ import {
   loadPerpInstrument,
   priceForPerp,
   qtyForPerp,
+  snapPerpPriceText,
   snapPerpSizedLimit,
 } from "@/lib/exchanges/bybit/perp";
 import { loadHyperliquidInstrument } from "@/lib/venues/hyperliquid/market";
@@ -597,6 +598,55 @@ export async function setPerpTradingStopOnVenue(input: {
   trailingStop?: string;
   activePrice?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const instrument =
+    input.connection.venue === "hyperliquid"
+      ? await loadHyperliquidInstrument(
+          hyperliquidInfoEnvironment(input.connection.environment),
+          input.symbol,
+        )
+      : await loadPerpInstrument(input.symbol);
+  if (input.connection.venue === "bybit" && !instrument) {
+    return {
+      ok: false,
+      error: "That symbol is not a trading USDT linear perpetual on Bybit.",
+    };
+  }
+  const takeProfit = instrument
+    ? snapPerpPriceText(input.takeProfit, instrument)
+    : { ok: true as const, text: input.takeProfit };
+  if (!takeProfit.ok) {
+    return takeProfit;
+  }
+  const stopLoss = instrument
+    ? snapPerpPriceText(input.stopLoss, instrument)
+    : { ok: true as const, text: input.stopLoss };
+  if (!stopLoss.ok) {
+    return stopLoss;
+  }
+  const tpLimitPrice = instrument
+    ? snapPerpPriceText(input.tpLimitPrice, instrument)
+    : { ok: true as const, text: input.tpLimitPrice };
+  if (!tpLimitPrice.ok) {
+    return tpLimitPrice;
+  }
+  const slLimitPrice = instrument
+    ? snapPerpPriceText(input.slLimitPrice, instrument)
+    : { ok: true as const, text: input.slLimitPrice };
+  if (!slLimitPrice.ok) {
+    return slLimitPrice;
+  }
+  const trailingStop = instrument
+    ? snapPerpPriceText(input.trailingStop, instrument)
+    : { ok: true as const, text: input.trailingStop };
+  if (!trailingStop.ok) {
+    return trailingStop;
+  }
+  const activePrice = instrument
+    ? snapPerpPriceText(input.activePrice, instrument)
+    : { ok: true as const, text: input.activePrice };
+  if (!activePrice.ok) {
+    return activePrice;
+  }
   if (input.connection.venue === "hyperliquid") {
     const hl = hlCreds(input.connection);
     return setHyperliquidTradingStop({
@@ -604,12 +654,12 @@ export async function setPerpTradingStopOnVenue(input: {
       agentKey: hl.agentKey,
       accountAddress: hl.accountAddress,
       symbol: input.symbol,
-      takeProfit: input.takeProfit,
-      stopLoss: input.stopLoss,
+      takeProfit: takeProfit.text ?? input.takeProfit,
+      stopLoss: stopLoss.text ?? input.stopLoss,
       tpOrderType: input.tpOrderType,
       slOrderType: input.slOrderType,
-      tpLimitPrice: input.tpLimitPrice,
-      slLimitPrice: input.slLimitPrice,
+      tpLimitPrice: tpLimitPrice.text,
+      slLimitPrice: slLimitPrice.text,
     });
   }
   if (input.connection.venue !== "bybit") {
@@ -620,8 +670,8 @@ export async function setPerpTradingStopOnVenue(input: {
     credentials: creds(input.connection),
     symbol: input.symbol,
     positionIdx: input.positionIdx,
-    takeProfit: input.takeProfit,
-    stopLoss: input.stopLoss,
+    takeProfit: takeProfit.text ?? input.takeProfit,
+    stopLoss: stopLoss.text ?? input.stopLoss,
     tpTriggerBy: input.tpTriggerBy,
     slTriggerBy: input.slTriggerBy,
     tpslMode: input.tpslMode,
@@ -629,9 +679,9 @@ export async function setPerpTradingStopOnVenue(input: {
     slSize: input.slSize,
     tpOrderType: input.tpOrderType,
     slOrderType: input.slOrderType,
-    tpLimitPrice: input.tpLimitPrice,
-    slLimitPrice: input.slLimitPrice,
-    trailingStop: input.trailingStop,
-    activePrice: input.activePrice,
+    tpLimitPrice: tpLimitPrice.text,
+    slLimitPrice: slLimitPrice.text,
+    trailingStop: trailingStop.text,
+    activePrice: activePrice.text,
   });
 }
