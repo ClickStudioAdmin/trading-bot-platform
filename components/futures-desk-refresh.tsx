@@ -1,13 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 const REFRESH_MS = 8_000;
 const URGENT_REFRESH_MS = 2_000;
 
 export function FuturesDeskRefresh({ urgent = false }: { urgent?: boolean }) {
   const router = useRouter();
+  const wasUrgent = useRef(false);
+
+  useEffect(() => {
+    if (urgent && !wasUrgent.current && !document.hidden) {
+      router.refresh();
+    }
+    wasUrgent.current = urgent;
+  }, [router, urgent]);
 
   useEffect(() => {
     let timer = 0;
@@ -30,9 +38,6 @@ export function FuturesDeskRefresh({ urgent = false }: { urgent?: boolean }) {
       stop();
       if (document.hidden) {
         return;
-      }
-      if (urgent) {
-        refresh();
       }
       timer = window.setInterval(refresh, urgent ? URGENT_REFRESH_MS : REFRESH_MS);
     }

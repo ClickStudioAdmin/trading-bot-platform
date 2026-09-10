@@ -1944,63 +1944,36 @@ if (row) {
     }),
     false,
   );
+  const idleLeg = {
+    status: "idle" as const,
+    clipsFilled: 0,
+    lastClipPrice: null,
+    lastClipAtMs: null,
+    firstFillPrice: null,
+    breakevenDone: false,
+    cycleMaxValue: null,
+  };
   assert.equal(
     dcaPlaybookHoldsCycle({
       direction: "long",
-      long: {
-        status: "armed",
-        clipsFilled: 1,
-        lastClipPrice: null,
-        lastClipAtMs: null,
-        firstFillPrice: null,
-      },
-      short: {
-        status: "idle",
-        clipsFilled: 0,
-        lastClipPrice: null,
-        lastClipAtMs: null,
-        firstFillPrice: null,
-      },
+      long: { ...idleLeg, status: "armed", clipsFilled: 1 },
+      short: idleLeg,
     }),
     true,
   );
   assert.equal(
     dcaPlaybookHoldsCycle({
       direction: "long",
-      long: {
-        status: "closing",
-        clipsFilled: 1,
-        lastClipPrice: null,
-        lastClipAtMs: null,
-        firstFillPrice: null,
-      },
-      short: {
-        status: "idle",
-        clipsFilled: 0,
-        lastClipPrice: null,
-        lastClipAtMs: null,
-        firstFillPrice: null,
-      },
+      long: { ...idleLeg, status: "closing", clipsFilled: 1 },
+      short: idleLeg,
     }),
     true,
   );
   assert.equal(
     dcaPlaybookHoldsCycle({
       direction: "long",
-      long: {
-        status: "idle",
-        clipsFilled: 0,
-        lastClipPrice: null,
-        lastClipAtMs: null,
-        firstFillPrice: null,
-      },
-      short: {
-        status: "idle",
-        clipsFilled: 0,
-        lastClipPrice: null,
-        lastClipAtMs: null,
-        firstFillPrice: null,
-      },
+      long: idleLeg,
+      short: idleLeg,
     }),
     false,
   );
