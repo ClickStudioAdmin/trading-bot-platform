@@ -27,6 +27,7 @@ import { submitFuturesTrade } from "@/lib/futures/actions";
 import { futuresWebhookOrigin } from "@/lib/futures/webhook";
 import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
 import { loadFuturesDesk } from "@/lib/futures/list";
+import { futuresDeskNeedsUrgentRefresh } from "@/lib/futures/pending-close";
 import { markFuturesOpen } from "@/lib/futures/mark";
 import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { loadFuturesSettings } from "@/lib/futures/settings";
@@ -281,7 +282,10 @@ export async function HyperliquidFuturesPositions({
             playbookOwnsOrders={dcaBlotter}
             copyDesk={copyDesk}
             exchangeName="Hyperliquid"
-            urgentRefresh={open.some((row) => row.status === "closing")}
+            urgentRefresh={futuresDeskNeedsUrgentRefresh({
+              positions: open,
+              working: desk.working,
+            })}
             emptyMessage={
               showTicket
                 ? undefined
