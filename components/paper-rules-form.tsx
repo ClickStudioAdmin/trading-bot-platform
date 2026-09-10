@@ -372,7 +372,7 @@ function RuleRow({
       <input type="hidden" name="ruleCount" value="1" />
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
       <DirtySaveBanner
-        dirty={dirty}
+        dirty={dirty || missing}
         error={
           missing ? "Fill required fields before saving." : undefined
         }

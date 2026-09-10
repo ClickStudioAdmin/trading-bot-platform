@@ -950,7 +950,7 @@ export function ThemeBotFormDraft() {
       </div>
 
       <div className="flex flex-col divide-y divide-line rounded-card border border-line bg-canvas px-5">
-        {dirty ? (
+        {dirty || hasMissing ? (
           <div className="flex flex-wrap items-center justify-between gap-3 py-4">
             <div>
               <p className="text-sm text-warning">

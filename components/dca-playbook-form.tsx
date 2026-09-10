@@ -1205,10 +1205,6 @@ export function DcaPlaybookForm({
     parsedLive = { ok: false, error: "Could not read the form." };
   }
   const liveConfig = parsedLive.ok ? parsedLive.config : null;
-  const dirty =
-    !playbook ||
-    statusDirty ||
-    (formTick > 0 && !dcaFormMatchesPlaybook(playbook, liveConfig));
   const tpMissing =
     tpOn &&
     (takeProfitKind === "atr"
@@ -1236,6 +1232,11 @@ export function DcaPlaybookForm({
     slMissing ||
     breakevenMissing ||
     (!cycleLocked && !parsedLive.ok && !parseConstraint);
+  const dirty =
+    !playbook ||
+    statusDirty ||
+    requiredMissing ||
+    (formTick > 0 && !dcaFormMatchesPlaybook(playbook, liveConfig));
   const constraintBlocked = cycleLocked
     ? null
     : (parseConstraint ?? saveBlocked);

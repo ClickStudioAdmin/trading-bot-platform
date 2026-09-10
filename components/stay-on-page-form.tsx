@@ -22,6 +22,7 @@ type DeskFormStatus = {
   okAction: string | null;
   error: string | null;
   notice: string | null;
+  markDirty: () => void;
 };
 
 const idleStatus: DeskFormStatus = {
@@ -32,6 +33,7 @@ const idleStatus: DeskFormStatus = {
   okAction: null,
   error: null,
   notice: null,
+  markDirty: () => {},
 };
 
 const DeskFormContext = createContext<DeskFormStatus>(idleStatus);
@@ -132,6 +134,12 @@ export const StayOnPageForm = forwardRef<
     setNotice(null);
   }
 
+  function markDirty() {
+    dismissNotice();
+    onChange?.({} as FormEvent<HTMLFormElement>);
+    onInput?.({} as FormEvent<HTMLFormElement>);
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (guard && !guard(event)) {
@@ -199,6 +207,7 @@ export const StayOnPageForm = forwardRef<
           okAction,
           error,
           notice,
+          markDirty,
         }}
       >
         {children}

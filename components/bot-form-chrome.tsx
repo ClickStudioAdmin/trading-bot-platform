@@ -2,6 +2,7 @@
 
 import { type ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
+import { useDeskFormStatus } from "@/components/stay-on-page-form";
 import {
   statusOptionsFor,
   type BotDeskKind,
@@ -91,6 +92,7 @@ export function OptionalSection({
   locked?: boolean;
   children: ReactNode;
 }) {
+  const { markDirty } = useDeskFormStatus();
   return (
     <section
       className={`col-span-full block w-full min-w-0 ${
@@ -104,7 +106,10 @@ export function OptionalSection({
           <input
             type="checkbox"
             checked={enabled}
-            onChange={(event) => onEnabled(event.target.checked)}
+            onChange={(event) => {
+              onEnabled(event.target.checked);
+              markDirty();
+            }}
             className="sr-only"
             aria-label={title}
           />

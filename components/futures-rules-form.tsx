@@ -547,7 +547,7 @@ function RuleCard({
       <input type="hidden" name="deskVenue" value={venueId} />
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
       <DirtySaveBanner
-        dirty={dirty}
+        dirty={dirty || requiredMissing}
         error={
           requiredMissing
             ? "Fill required fields before saving."
