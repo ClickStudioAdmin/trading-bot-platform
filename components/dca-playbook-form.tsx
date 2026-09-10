@@ -18,6 +18,7 @@ import {
   botRowClass5,
   botSectionTitleClass,
   deskActionBtnClass,
+  deskActionSelectClass,
   triggerSectionTitle,
 } from "@/components/bot-form-chrome";
 import { ColumnHint } from "@/components/column-hint";
@@ -574,12 +575,12 @@ export function DcaPlaybooksDesk({
               ]);
               setCloneMenu((n) => n + 1);
             }}
-            className={deskActionBtnClass}
+            className={deskActionSelectClass}
           >
             <option value="">Clone existing bot</option>
             {cloneSources.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.name} Â· {item.symbol}
+                {item.name} · {item.symbol}
               </option>
             ))}
           </select>
@@ -1262,7 +1263,7 @@ export function DcaPlaybookForm({
     ) : (
       <PendingSubmitButton
         deskAction="delete"
-        pendingLabel="Removingâ€¦"
+        pendingLabel="Removing…"
         className={headerRemoveClass}
         skipSizeGuard
       >
@@ -1323,7 +1324,7 @@ export function DcaPlaybookForm({
         <div className="flex flex-wrap items-center gap-2">
           <DeskFormFlash />
           <PendingSubmitButton
-            pendingLabel="Savingâ€¦"
+            pendingLabel="Saving…"
             deskAction="default"
             className={headerPrimaryClass}
             disabled={Boolean(constraintBlocked || requiredMissing)}
@@ -2168,7 +2169,7 @@ export function DcaPlaybookForm({
               className={fieldClass}
             >
               <option value="percent">Percentage</option>
-              <option value="atr">ATR Ã— multiplier</option>
+              <option value="atr">ATR × multiplier</option>
             </select>
           </label>
           {takeProfitKind === "percent" ? (
@@ -2514,12 +2515,12 @@ export function DcaPlaybookForm({
           <SummaryStat
             label="Covered Range"
             value={
-              summary.covered === null ? "â€”" : `${trimPct(summary.covered)}%`
+              summary.covered === null ? "—" : `${trimPct(summary.covered)}%`
             }
             hint={
               averaging === "dip" && spacingKind === "atr"
                 ? atrFetch === "loading"
-                  ? "Reading last ATRâ€¦"
+                  ? "Reading last ATR…"
                   : atrFetch === "error"
                     ? "Could not read last ATR"
                     : summary.spacingHint
@@ -2534,7 +2535,7 @@ export function DcaPlaybookForm({
             label="Max Exposure"
             value={
               summary.required === null
-                ? "â€”"
+                ? "—"
                 : formatUsdAmount(summary.required)
             }
             hint={
@@ -2547,14 +2548,14 @@ export function DcaPlaybookForm({
                     showLadderTabs ? "This side only" : null,
                   ]
                     .filter(Boolean)
-                    .join(" Â· ")
+                    .join(" · ")
             }
           />
           <SummaryStat
             label="Initial Margin"
             value={
               summary.initialMargin === null
-                ? "â€”"
+                ? "—"
                 : formatUsdAmount(summary.initialMargin)
             }
             valueClass={
@@ -2567,36 +2568,36 @@ export function DcaPlaybookForm({
             hint={
               summary.initialMargin === null
                 ? leverage == null || !(leverage > 0)
-                  ? "Max exposure Ã· leverage. Set leverage to estimate."
+                  ? "Max exposure ÷ leverage. Set leverage to estimate."
                   : null
                 : [
-                    `Max exposure Ã· ${leverage}Ã—`,
+                    `Max exposure ÷ ${leverage}×`,
                     availableUsdt !== null
                       ? summary.initialMargin > availableUsdt
-                        ? `Available ${formatUsdAmount(availableUsdt)} â€” less than this margin`
+                        ? `Available ${formatUsdAmount(availableUsdt)} — less than this margin`
                         : `Available ${formatUsdAmount(availableUsdt)}`
                       : null,
                     showLadderTabs ? "This side only" : null,
                   ]
                     .filter(Boolean)
-                    .join(" Â· ") || null
+                    .join(" · ") || null
             }
           />
           <SummaryStat
             label="Profit range"
             value={
               summary.levels.length === 0
-                ? "â€”"
+                ? "—"
                 : takeProfitKind === "atr" && liveAtr == null
-                  ? "â€”"
+                  ? "—"
                   : summary.profitFromTp
                     ? summary.profitRange === null
-                      ? "â€”"
+                      ? "—"
                       : formatProfitRange(
                           summary.profitRange.min,
                           summary.profitRange.max,
                         )
-                    : "âˆž"
+                    : "∞"
             }
             valueClass={
               summary.levels.length === 0 ? "text-ink" : "text-success"
@@ -2607,19 +2608,19 @@ export function DcaPlaybookForm({
                 : takeProfitKind === "atr" && liveAtr == null
                   ? atrFetch === "error"
                     ? "Could not read last ATR"
-                    : "Reading last ATRâ€¦"
+                    : "Reading last ATR…"
                   : summary.profitFromTp
                     ? "Does not consider trailing or breakeven stops"
-                    : "No take profit â€” unlimited"
+                    : "No take profit — unlimited"
             }
           />
           <SummaryStat
             label="Loss range"
             value={
               summary.levels.length === 0
-                ? "â€”"
+                ? "—"
                 : summary.lossRange === null
-                  ? "âˆž"
+                  ? "∞"
                   : formatProfitRange(
                       summary.lossRange.min,
                       summary.lossRange.max,
@@ -2633,7 +2634,7 @@ export function DcaPlaybookForm({
                 ? "Enter order size and max orders"
                 : summary.lossFromSl
                   ? "Does not consider trailing or breakeven stops"
-                  : "No stop loss â€” unlimited"
+                  : "No stop loss — unlimited"
             }
           />
         </div>
@@ -2704,7 +2705,7 @@ export function DcaPlaybookForm({
                     </td>
                     <td className="px-3 py-2 tabular-nums text-ink-muted">
                       {row.index === 1
-                        ? "â€”"
+                        ? "—"
                         : `${row.deviationPct > 0 ? "+" : ""}${trimPct(row.deviationPct)}%`}
                     </td>
                     <td
@@ -2738,9 +2739,9 @@ export function DcaPlaybookForm({
                     >
                       {summary.profitFromTp
                         ? takeProfitKind === "atr" && liveAtr == null
-                          ? "â€”"
+                          ? "—"
                           : formatUsdAmount(row.profitUsdt)
-                        : "âˆž"}
+                        : "∞"}
                     </td>
                     <td
                       className={`px-3 py-2 tabular-nums ${
@@ -2750,7 +2751,7 @@ export function DcaPlaybookForm({
                       }`}
                     >
                       {row.lossUsdt === null
-                        ? "âˆž"
+                        ? "∞"
                         : formatUsdAmount(row.lossUsdt)}
                     </td>
                   </tr>
@@ -2785,10 +2786,10 @@ export function DcaPlaybookForm({
                 ? summary.tpHint
                   ? ` Profit is ${summary.tpHint} from that average.`
                   : " Profit is take profit from that average."
-                : " No take profit â€” profit is unlimited."}
+                : " No take profit — profit is unlimited."}
               {summary.lossFromSl
                 ? " Loss is stop loss from that average."
-                : " No stop loss â€” loss is unlimited."}
+                : " No stop loss — loss is unlimited."}
             </p>
           </div>
         ) : (
@@ -2863,7 +2864,7 @@ function TriggerFields({
 
 function formatLadderPrice(value: number): string {
   if (!(value > 0) || !Number.isFinite(value)) {
-    return "â€”";
+    return "—";
   }
   const digits = value >= 1000 ? 2 : value >= 1 ? 4 : 6;
   return value.toLocaleString("en-US", {
@@ -2874,7 +2875,7 @@ function formatLadderPrice(value: number): string {
 
 function formatGroupedNumber(value: number): string {
   if (!Number.isFinite(value)) {
-    return "â€”";
+    return "—";
   }
   const abs = Math.abs(value);
   const decimals = Number.isInteger(abs) ? 0 : 2;
@@ -2909,7 +2910,7 @@ function formatProfitRange(min: number, max: number): string {
   if (Math.abs(max - min) < 0.005) {
     return formatUsdAmount(max);
   }
-  return `${formatUsdAmount(min)} â€“ ${formatUsdAmount(max)}`;
+  return `${formatUsdAmount(min)} – ${formatUsdAmount(max)}`;
 }
 
 function trimPct(value: number): string {

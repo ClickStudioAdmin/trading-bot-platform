@@ -25,6 +25,7 @@ export const botHeaderRemoveClass =
   "shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
 export const deskActionBtnClass =
   "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
+export const deskActionSelectClass = `${deskActionBtnClass} desk-action-select`;
 
 export function HintLabel({
   text,

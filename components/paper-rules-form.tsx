@@ -13,6 +13,7 @@ import {
   botHeaderRemoveClass,
   botRowClass,
   deskActionBtnClass,
+  deskActionSelectClass,
 } from "@/components/bot-form-chrome";
 import {
   saveAccountReduceOnly,
@@ -254,7 +255,7 @@ export function PaperRulesForm({
               onHasSetsChange?.(true);
               setCloneMenu((n) => n + 1);
             }}
-            className={deskActionBtnClass}
+            className={deskActionSelectClass}
           >
             <option value="">Clone existing bot</option>
             {cloneSources.map((item) => (

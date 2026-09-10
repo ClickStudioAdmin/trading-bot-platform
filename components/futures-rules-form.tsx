@@ -17,6 +17,7 @@ import {
   botRowClass,
   botRowClass5,
   deskActionBtnClass,
+  deskActionSelectClass,
   triggerSectionTitle,
 } from "@/components/bot-form-chrome";
 import {
@@ -183,7 +184,7 @@ export function FuturesAutomationsDesk({
               ]);
               setCloneMenu((n) => n + 1);
             }}
-            className={deskActionBtnClass}
+            className={deskActionSelectClass}
           >
             <option value="">Clone existing bot</option>
             {cloneSources.map((item) => (

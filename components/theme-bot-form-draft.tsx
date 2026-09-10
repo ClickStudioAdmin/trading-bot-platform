@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import {
   BotStatusField,
   deskActionBtnClass,
+  deskActionSelectClass,
   triggerSectionTitle,
 } from "@/components/bot-form-chrome";
 import {
@@ -900,7 +901,7 @@ export function ThemeBotFormDraft() {
         <button type="button" className={deskBtnClass}>
           Create New Bot from Template
         </button>
-        <select aria-label="Clone existing bot" className={deskBtnClass} defaultValue="">
+        <select aria-label="Clone existing bot" className={deskActionSelectClass} defaultValue="">
           <option value="">Clone existing bot</option>
           <option value="sample">Sample bot</option>
         </select>

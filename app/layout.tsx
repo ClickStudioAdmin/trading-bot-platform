@@ -6,6 +6,8 @@ import "./globals.css";
 
 const geist = Geist({
   subsets: ["latin"],
+  variable: "--font-geist",
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
@@ -24,8 +26,12 @@ export default async function RootLayout({
   await redirectIfNeedsFirstDesk();
 
   return (
-    <html lang="en" className={geist.className} style={{ colorScheme: "dark" }}>
-      <body className="min-h-dvh bg-canvas text-ink">
+    <html
+      lang="en"
+      className={geist.variable}
+      style={{ colorScheme: "dark" }}
+    >
+      <body className="min-h-dvh bg-canvas font-sans text-ink">
         <AppFrame>{children}</AppFrame>
       </body>
     </html>
