@@ -29,8 +29,13 @@ import {
   type PaperLayerFormValues,
   type PaperRulesFormValues,
 } from "@/lib/engine/rules";
-import { disableConfirmMessage, disableNeedsConfirm } from "@/lib/bots/status";
+import {
+  disableConfirmMessage,
+  disableConfirmTitle,
+  disableNeedsConfirm,
+} from "@/lib/bots/status";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { useConfirmDialog } from "@/components/confirm-modal";
 import {
   DeskFormFlash,
   StayOnPageForm,
@@ -346,7 +351,10 @@ function RuleRow({
   const missingSize = sizeType === "fixed" && !orderSizeUsdt.trim();
   const missing = missingTp || missingSl || missingCount || missingSize;
 
+  const { confirm: askConfirm, dialog } = useConfirmDialog();
+
   return (
+    <>
     <StayOnPageForm
       action={savePaperRules}
       onResult={(result) => {
@@ -356,12 +364,17 @@ function RuleRow({
         }
       }}
       onChange={() => setDirty(true)}
-      guard={() => {
+      guard={async () => {
         if (missing) {
           return false;
         }
         if (mode === "disabled" && disableNeedsConfirm(inUse)) {
-          return window.confirm(disableConfirmMessage("cnc"));
+          return askConfirm({
+            title: disableConfirmTitle(),
+            message: disableConfirmMessage("cnc"),
+            confirmLabel: "Disable",
+            danger: true,
+          });
         }
         return true;
       }}
@@ -608,6 +621,8 @@ function RuleRow({
         )}
       </AdditionalActions>
     </StayOnPageForm>
+    {dialog}
+    </>
   );
 }
 

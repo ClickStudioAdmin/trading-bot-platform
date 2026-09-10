@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import {
   dcaSaveVerb,
   dcaStatusFromLegs,
+  disableConfirmMessage,
+  disableConfirmTitle,
   disableNeedsConfirm,
   flattenOwnedRuleIds,
   parseDcaBotStatus,
@@ -105,3 +107,12 @@ assert.deepEqual(
 
 assert.equal(disableNeedsConfirm(true), true);
 assert.equal(disableNeedsConfirm(false), false);
+assert.equal(disableConfirmTitle(), "Disable this bot?");
+assert.equal(
+  disableConfirmMessage("dca"),
+  "Disabled closes every position this bot owns and turns it off.",
+);
+assert.equal(
+  disableConfirmMessage("cnc"),
+  "Disabled closes every carry this bot owns and turns it off.",
+);

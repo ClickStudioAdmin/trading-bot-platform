@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RemoveBacktestButton } from "@/components/backtest-run-view";
@@ -48,6 +49,7 @@ export function BacktestRunsTable({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
+  const { confirm, dialog } = useConfirmDialog();
   const removableIds = runs
     .filter((row) => canDeleteBacktestRun(row, memberId, isAdmin))
     .map((row) => row.id);
@@ -94,11 +96,13 @@ export function BacktestRunsTable({
       return;
     }
     const label = selectedCount === 1 ? "backtest" : "backtests";
-    if (
-      !window.confirm(
-        `Delete ${selectedCount} ${label}? This cannot be undone.`,
-      )
-    ) {
+    const ok = await confirm({
+      title: `Delete ${selectedCount} ${label}?`,
+      message: "This cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
     setPending(true);
@@ -127,6 +131,7 @@ export function BacktestRunsTable({
 
   return (
     <div className="space-y-3">
+      {dialog}
       {selectedCount > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm text-ink-muted">{selectedCount} selected</p>

@@ -51,6 +51,9 @@ export function StarterPackCheckbox({
   );
 }
 
+const modalStack: number[] = [];
+let nextModalId = 0;
+
 export function Modal({
   title,
   onClose,
@@ -58,6 +61,7 @@ export function Modal({
   wide = false,
   size,
   sticky,
+  elevated = false,
 }: {
   title: string;
   onClose: () => void;
@@ -65,22 +69,33 @@ export function Modal({
   wide?: boolean;
   size?: "md" | "lg" | "xl";
   sticky?: React.ReactNode;
+  elevated?: boolean;
 }) {
   useEffect(() => {
+    const id = ++nextModalId;
+    modalStack.push(id);
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && modalStack[modalStack.length - 1] === id) {
         onClose();
       }
     }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      const index = modalStack.lastIndexOf(id);
+      if (index >= 0) {
+        modalStack.splice(index, 1);
+      }
+    };
   }, [onClose]);
   if (typeof document === "undefined") {
     return null;
   }
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/70 p-4"
+      className={`fixed inset-0 flex items-center justify-center bg-canvas/70 p-4 ${
+        elevated ? "z-[60]" : "z-50"
+      }`}
       onClick={onClose}
     >
       <div

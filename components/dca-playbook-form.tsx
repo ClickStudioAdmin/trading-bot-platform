@@ -29,6 +29,7 @@ import {
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { useConfirmDialog } from "@/components/confirm-modal";
 import {
   DeskFormFlash,
   StayOnPageForm,
@@ -38,6 +39,7 @@ import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   dcaStatusFromLegs,
   disableConfirmMessage,
+  disableConfirmTitle,
   disableNeedsConfirm,
   type DcaBotStatus,
 } from "@/lib/bots/status";
@@ -698,6 +700,7 @@ export function DcaPlaybookForm({
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const { confirm: askConfirm, dialog } = useConfirmDialog();
   const source = playbook ?? seed;
   const [direction, setDirection] = useState(
     source?.direction === "both" && !policy.includeBoth
@@ -1285,6 +1288,7 @@ export function DcaPlaybookForm({
   ) : null;
 
   return (
+    <>
     <StayOnPageForm
       id={playbook ? `bot-${playbook.id}` : undefined}
       ref={formRef}
@@ -1299,7 +1303,7 @@ export function DcaPlaybookForm({
       }}
       onResult={(result) => onResult?.(result as DcaDeskActionResult)}
       onChange={() => setFormTick((tick) => tick + 1)}
-      guard={(event) => {
+      guard={async (event) => {
         const submitter = (event.nativeEvent as SubmitEvent).submitter as
           | HTMLElement
           | null;
@@ -1308,7 +1312,12 @@ export function DcaPlaybookForm({
           return false;
         }
         if (status === "disabled" && disableNeedsConfirm(hasOpenPosition)) {
-          return window.confirm(disableConfirmMessage("dca"));
+          return askConfirm({
+            title: disableConfirmTitle(),
+            message: disableConfirmMessage("dca"),
+            confirmLabel: "Disable",
+            danger: true,
+          });
         }
         return true;
       }}
@@ -2811,6 +2820,8 @@ export function DcaPlaybookForm({
       </BotFormGroup>
       ) : null}
     </StayOnPageForm>
+    {dialog}
+    </>
   );
 }
 

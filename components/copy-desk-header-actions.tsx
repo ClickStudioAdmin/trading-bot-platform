@@ -1,6 +1,7 @@
 "use client";
 
-import type { FormEvent } from "react";
+import { useRef, type FormEvent } from "react";
+import { useConfirmDialog } from "@/components/confirm-modal";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { pauseDeskCopyAction, unfollowDeskCopyAction } from "@/lib/copy/actions";
 import {
@@ -17,6 +18,9 @@ export function CopyDeskHeaderActions({
   next: string;
   unfollowBlock: "open" | "last" | null;
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const skipConfirm = useRef(false);
+  const { confirm, dialog } = useConfirmDialog();
   const unfollowTitle =
     unfollowBlock === "open"
       ? COPY_UNFOLLOW_OPEN_TRADES
@@ -24,14 +28,24 @@ export function CopyDeskHeaderActions({
         ? COPY_UNFOLLOW_LAST_DESK
         : "Unfollow and delete this copy desk";
 
-  function onUnfollow(event: FormEvent<HTMLFormElement>) {
-    if (
-      !window.confirm(
-        "Unfollow this desk? Your copy desk will be deleted. A private invite stays so you can follow again.",
-      )
-    ) {
-      event.preventDefault();
+  async function onUnfollow(event: FormEvent<HTMLFormElement>) {
+    if (skipConfirm.current) {
+      skipConfirm.current = false;
+      return;
     }
+    event.preventDefault();
+    const ok = await confirm({
+      title: "Unfollow this desk?",
+      message:
+        "Your copy desk will be deleted. A private invite stays so you can follow again.",
+      confirmLabel: "Unfollow",
+      danger: true,
+    });
+    if (!ok) {
+      return;
+    }
+    skipConfirm.current = true;
+    formRef.current?.requestSubmit();
   }
 
   return (
@@ -47,7 +61,11 @@ export function CopyDeskHeaderActions({
           {paused ? "Resume" : "Pause"}
         </PendingSubmitButton>
       </form>
-      <form action={unfollowDeskCopyAction} onSubmit={onUnfollow}>
+      <form
+        ref={formRef}
+        action={unfollowDeskCopyAction}
+        onSubmit={(event) => void onUnfollow(event)}
+      >
         <input type="hidden" name="next" value={next} />
         <input type="hidden" name="confirm" value="1" />
         <PendingSubmitButton
@@ -60,6 +78,7 @@ export function CopyDeskHeaderActions({
           Unfollow
         </PendingSubmitButton>
       </form>
+      {dialog}
     </div>
   );
 }

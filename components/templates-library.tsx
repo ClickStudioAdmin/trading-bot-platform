@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useConfirmDialog } from "@/components/confirm-modal";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BacktestHighlightHover } from "@/components/backtest-highlight-hover";
@@ -234,6 +235,7 @@ export function TemplatesLibrary({
   const [bulkFolderOpen, setBulkFolderOpen] = useState(false);
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [importing, setImporting] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   useEffect(() => {
     setTab(tabForVariant(initialTab, variant));
@@ -488,7 +490,13 @@ export function TemplatesLibrary({
   }
 
   async function deleteTemplateRow(row: AutomationTemplate) {
-    if (!window.confirm(`Delete “${row.name}”? This cannot be undone.`)) {
+    const ok = await confirm({
+      title: `Delete “${row.name}”?`,
+      message: "This cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
     const data = new FormData();
@@ -506,7 +514,13 @@ export function TemplatesLibrary({
   }
 
   async function deleteFolderRow(row: AutomationTemplateSet) {
-    if (!window.confirm(`Delete folder “${row.name}”? This cannot be undone.`)) {
+    const ok = await confirm({
+      title: `Delete folder “${row.name}”?`,
+      message: "This cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
     const data = new FormData();
@@ -573,27 +587,36 @@ export function TemplatesLibrary({
     }
     const noun = templateTab ? "template" : "folder";
     const plural = ids.length === 1 ? noun : `${noun}s`;
-    if (
-      op === "delete" &&
-      !window.confirm(`Delete ${ids.length} ${plural}? This cannot be undone.`)
-    ) {
-      return;
+    if (op === "delete") {
+      const ok = await confirm({
+        title: `Delete ${ids.length} ${plural}?`,
+        message: "This cannot be undone.",
+        confirmLabel: "Delete",
+        danger: true,
+      });
+      if (!ok) {
+        return;
+      }
     }
-    if (
-      op === "unpublish" &&
-      !window.confirm(
-        `Unpublish ${ids.length} platform ${plural}? Members will no longer see them. User copies stay.`,
-      )
-    ) {
-      return;
+    if (op === "unpublish") {
+      const ok = await confirm({
+        title: `Unpublish ${ids.length} platform ${plural}?`,
+        message: "Members will no longer see them. User copies stay.",
+        confirmLabel: "Unpublish",
+      });
+      if (!ok) {
+        return;
+      }
     }
-    if (
-      op === "publish" &&
-      !window.confirm(
-        `Publish ${ids.length} ${plural} as platform copies? User rows stay.`,
-      )
-    ) {
-      return;
+    if (op === "publish") {
+      const ok = await confirm({
+        title: `Publish ${ids.length} ${plural}?`,
+        message: "Publish as platform copies. User rows stay.",
+        confirmLabel: "Publish",
+      });
+      if (!ok) {
+        return;
+      }
     }
     const data = new FormData();
     data.set("kind", templateTab ? "template" : "folder");
@@ -1241,6 +1264,7 @@ export function TemplatesLibrary({
           }}
         />
       ) : null}
+      {dialog}
     </div>
   );
 }
@@ -1797,6 +1821,7 @@ function TemplateEditModal({
   const [starterPack, setStarterPack] = useState(template.starterPack);
   const [publishName, setPublishName] = useState(template.name);
   const [pending, setPending] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   async function save() {
     setPending(true);
@@ -1816,7 +1841,13 @@ function TemplateEditModal({
   }
 
   async function remove() {
-    if (!window.confirm(`Delete “${template.name}”?`)) {
+    const ok = await confirm({
+      title: `Delete “${template.name}”?`,
+      message: "This cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
     const data = new FormData();
@@ -1836,6 +1867,7 @@ function TemplateEditModal({
   }
 
   return (
+    <>
     <Modal title="Edit template" onClose={onClose}>
       <p className="mt-1 text-xs text-ink-faint">{recipePreview(template.recipe)}</p>
       <label className="mt-4 block text-xs text-ink-muted">
@@ -1943,6 +1975,8 @@ function TemplateEditModal({
         </button>
       </div>
     </Modal>
+    {dialog}
+    </>
   );
 }
 
@@ -1971,6 +2005,7 @@ function FolderEditModal({
   const [starterPack, setStarterPack] = useState(set.starterPack);
   const [ids, setIds] = useState(set.items.map((item) => item.templateId));
   const [pending, setPending] = useState(false);
+  const { confirm, dialog } = useConfirmDialog();
 
   async function save() {
     setPending(true);
@@ -1987,7 +2022,13 @@ function FolderEditModal({
   }
 
   async function remove() {
-    if (!window.confirm(`Delete folder “${set.name}”?`)) {
+    const ok = await confirm({
+      title: `Delete folder “${set.name}”?`,
+      message: "This cannot be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
     const data = new FormData();
@@ -1996,6 +2037,7 @@ function FolderEditModal({
   }
 
   return (
+    <>
     <Modal title="Edit folder" onClose={onClose} wide>
       <label className="mt-4 block text-xs text-ink-muted">
         Name
@@ -2046,6 +2088,8 @@ function FolderEditModal({
         </button>
       </div>
     </Modal>
+    {dialog}
+    </>
   );
 }
 

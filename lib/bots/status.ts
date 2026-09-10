@@ -141,9 +141,13 @@ export function disableNeedsConfirm(ownsOpen: boolean): boolean {
   return ownsOpen;
 }
 
+export function disableConfirmTitle(): string {
+  return "Disable this bot?";
+}
+
 export function disableConfirmMessage(desk: BotDeskKind): string {
   if (desk === "cnc") {
-    return "Disabled closes every carry this bot owns and turns it off. Continue?";
+    return "Disabled closes every carry this bot owns and turns it off.";
   }
-  return "Disabled closes every position this bot owns and turns it off. Continue?";
+  return "Disabled closes every position this bot owns and turns it off.";
 }

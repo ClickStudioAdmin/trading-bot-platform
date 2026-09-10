@@ -95,7 +95,9 @@ export const StayOnPageForm = forwardRef<
     action: (data: FormData) => Promise<DeskActionResult>;
     actions?: Record<string, (data: FormData) => Promise<DeskActionResult>>;
     onResult?: (result: DeskActionResult) => void;
-    guard?: (event: FormEvent<HTMLFormElement>) => boolean;
+    guard?: (
+      event: FormEvent<HTMLFormElement>,
+    ) => boolean | Promise<boolean>;
     onInput?: (event: FormEvent<HTMLFormElement>) => void;
     onChange?: (event: FormEvent<HTMLFormElement>) => void;
     className?: string;
@@ -142,7 +144,7 @@ export const StayOnPageForm = forwardRef<
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (guard && !guard(event)) {
+    if (guard && !(await guard(event))) {
       return;
     }
     const submitter = (event.nativeEvent as SubmitEvent).submitter as

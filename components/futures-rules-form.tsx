@@ -27,13 +27,18 @@ import {
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { useConfirmDialog } from "@/components/confirm-modal";
 import {
   DeskFormFlash,
   StayOnPageForm,
   keepFormKeys,
 } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
-import { disableConfirmMessage, disableNeedsConfirm } from "@/lib/bots/status";
+import {
+  disableConfirmMessage,
+  disableConfirmTitle,
+  disableNeedsConfirm,
+} from "@/lib/bots/status";
 import { parseAutomationMode } from "@/lib/engine/decide";
 import {
   saveFuturesAutomations,
@@ -520,7 +525,10 @@ function RuleCard({
     });
   }
 
+  const { confirm: askConfirm, dialog } = useConfirmDialog();
+
   return (
+    <>
     <StayOnPageForm
       action={saveFuturesAutomations}
       onResult={(result) => {
@@ -530,12 +538,17 @@ function RuleCard({
         }
       }}
       onChange={() => setDirty(true)}
-      guard={() => {
+      guard={async () => {
         if (requiredMissing) {
           return false;
         }
         if (mode === "disabled" && disableNeedsConfirm(inUse)) {
-          return window.confirm(disableConfirmMessage("perps"));
+          return askConfirm({
+            title: disableConfirmTitle(),
+            message: disableConfirmMessage("perps"),
+            confirmLabel: "Disable",
+            danger: true,
+          });
         }
         return true;
       }}
@@ -1199,5 +1212,7 @@ function RuleCard({
         )}
       </AdditionalActions>
     </StayOnPageForm>
+    {dialog}
+    </>
   );
 }
