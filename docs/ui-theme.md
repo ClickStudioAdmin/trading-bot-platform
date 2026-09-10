@@ -36,7 +36,7 @@ Desk chrome (header, footer, strategy nav, strategy pages, `/account`, `/admin`)
 
 ## Controls
 
-Primary: `bg-accent-strong` / `text-ink`. Secondary: surface + `border-line`. Ghost: ink-muted, no fill. Danger: `danger` text or fill for destructive only.
+Primary: `bg-accent-strong` / `text-ink`. Desk **Create New Bot**, **Create New Bot from Template**, and **Clone existing bot** use that same primary. Secondary: surface + `border-line`. Ghost: ink-muted, no fill. Danger: `danger` text or fill for destructive only.
 
 `html` sets `color-scheme: dark` so native `<select>` lists use the dark OS picker (not a white flash). Do not force `select` to `canvas` — fields sit on canvas cards and use `surface-raised`.
 

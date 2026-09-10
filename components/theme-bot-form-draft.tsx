@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import {
   BotStatusField,
+  deskActionBtnClass,
   triggerSectionTitle,
 } from "@/components/bot-form-chrome";
 import {
@@ -48,8 +49,7 @@ const headerGhostClass =
   "shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink";
 const headerRemoveClass =
   "shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
-const deskBtnClass =
-  "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
+const deskBtnClass = deskActionBtnClass;
 
 type DeskKind = "perps" | "dca" | "cnc";
 

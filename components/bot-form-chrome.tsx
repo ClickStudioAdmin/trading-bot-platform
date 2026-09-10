@@ -23,6 +23,8 @@ export const botHeaderGhostClass =
   "shrink-0 rounded-control px-2 py-0.5 text-xs text-ink-muted hover:bg-surface-raised hover:text-ink";
 export const botHeaderRemoveClass =
   "shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
+export const deskActionBtnClass =
+  "rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent";
 
 export function HintLabel({
   text,

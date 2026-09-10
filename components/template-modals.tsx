@@ -22,6 +22,7 @@ import {
   type TemplateVisibility,
 } from "@/lib/templates/recipe";
 import { formatDeskType } from "@/lib/accounts/model";
+import { deskActionBtnClass } from "@/components/bot-form-chrome";
 
 const fieldClass =
   "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
@@ -56,12 +57,14 @@ export function Modal({
   children,
   wide = false,
   size,
+  sticky,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
   size?: "md" | "lg" | "xl";
+  sticky?: React.ReactNode;
 }) {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -84,7 +87,9 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative max-h-[90vh] w-full overflow-y-auto rounded-card border border-line bg-surface-raised p-5 ${
+        className={`relative flex max-h-[90vh] w-full flex-col rounded-card border border-line bg-surface-raised ${
+          sticky ? "overflow-hidden" : "overflow-y-auto p-5"
+        } ${
           size === "xl"
             ? "max-w-3xl"
             : size === "lg" || wide
@@ -93,9 +98,24 @@ export function Modal({
         }`}
         onClick={(event) => event.stopPropagation()}
       >
-        <PanelCloseButton onClick={onClose} />
-        <h2 className="pr-8 text-lg font-semibold text-ink">{title}</h2>
-        {children}
+        {sticky ? (
+          <>
+            <div className="shrink-0 border-b border-line px-5 pt-5 pb-4">
+              <PanelCloseButton onClick={onClose} />
+              <h2 className="pr-8 text-lg font-semibold text-ink">{title}</h2>
+              {sticky}
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 [overflow-anchor:none]">
+              {children}
+            </div>
+          </>
+        ) : (
+          <>
+            <PanelCloseButton onClick={onClose} />
+            <h2 className="pr-8 text-lg font-semibold text-ink">{title}</h2>
+            {children}
+          </>
+        )}
       </div>
     </div>,
     document.body,
@@ -539,15 +559,46 @@ function ApplyFromLibraryButton({
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={secondaryBtn}>
+      <button type="button" onClick={() => setOpen(true)} className={deskActionBtnClass}>
         Create New Bot from Template
       </button>
       {open ? (
-        <Modal title="Create New Bot from Template" onClose={() => setOpen(false)} wide>
-          <p className="mt-1 text-sm text-ink-muted">
-            Tick a folder or individual templates. Creates idle or disabled
-            bots on this desk. Nothing is armed.
-          </p>
+        <Modal
+          title="Create New Bot from Template"
+          onClose={() => setOpen(false)}
+          wide
+          sticky={
+            <>
+              <p className="mt-1 text-sm text-ink-muted">
+                Tick a folder or individual templates. Creates idle or
+                disabled bots on this desk. Nothing is armed.
+              </p>
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className={secondaryBtn}
+                >
+                  {result?.results ? "Close" : "Cancel"}
+                </button>
+                {!result?.results ? (
+                  <button
+                    type="button"
+                    disabled={selected.length === 0 || pending}
+                    onClick={() => void onApply()}
+                    className={primaryBtn}
+                  >
+                    {pending
+                      ? "Applying…"
+                      : selected.length > 1
+                        ? `Apply ${selected.length}`
+                        : "Apply"}
+                  </button>
+                ) : null}
+              </div>
+            </>
+          }
+        >
           <LibraryTree
             folders={tree}
             selectedIds={selectedIds}
@@ -573,25 +624,6 @@ function ApplyFromLibraryButton({
           ) : (
             <ResultNote result={result} />
           )}
-          <div className="mt-4 flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className={secondaryBtn}>
-              {result?.results ? "Close" : "Cancel"}
-            </button>
-            {!result?.results ? (
-              <button
-                type="button"
-                disabled={selected.length === 0 || pending}
-                onClick={() => void onApply()}
-                className={primaryBtn}
-              >
-                {pending
-                  ? "Applying…"
-                  : selected.length > 1
-                    ? `Apply ${selected.length}`
-                    : "Apply"}
-              </button>
-            ) : null}
-          </div>
         </Modal>
       ) : null}
     </>
@@ -715,7 +747,7 @@ function LibraryTree({
     );
   }
   return (
-    <ul className="mt-3 space-y-1">
+    <ul className="space-y-1">
       {folders.map((folder) => (
         <FolderNode
           key={folder.id}

@@ -17,6 +17,7 @@ import {
   botRowClass,
   botRowClass5,
   botSectionTitleClass,
+  deskActionBtnClass,
   triggerSectionTitle,
 } from "@/components/bot-form-chrome";
 import { ColumnHint } from "@/components/column-hint";
@@ -492,8 +493,7 @@ export function DcaPlaybooksDesk({
   const cloneSources = cards
     .map((card) => card.playbook)
     .filter((playbook): playbook is DcaPlaybook => Boolean(playbook));
-  const addPlaybookClass =
-    "rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong";
+  const addPlaybookClass = deskActionBtnClass;
 
   function appendApplied(items: AppliedDeskItem[]) {
     const playbooks = items
@@ -574,7 +574,7 @@ export function DcaPlaybooksDesk({
               ]);
               setCloneMenu((n) => n + 1);
             }}
-            className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
+            className={deskActionBtnClass}
           >
             <option value="">Clone existing bot</option>
             {cloneSources.map((item) => (
