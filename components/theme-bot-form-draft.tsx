@@ -1521,21 +1521,24 @@ export function ThemeBotFormDraft() {
           </>
         )}
 
-        <section className="flex flex-wrap items-center justify-end gap-2 py-5">
-          {desk !== "cnc" ? (
-          <button type="button" className={headerGhostClass}>
-            Backtest
-          </button>
-          ) : null}
-          <button type="button" className={headerGhostClass}>
-            Save as template
-          </button>
-          <button type="button" className={headerGhostClass}>
-            Save as platform template
-          </button>
-          <button type="button" className={headerRemoveClass}>
-            Remove
-          </button>
+        <section className="flex flex-wrap items-center justify-between gap-2 py-5">
+          <h3 className={sectionTitleClass}>Additional Actions</h3>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {desk !== "cnc" ? (
+            <button type="button" className={headerGhostClass}>
+              Backtest
+            </button>
+            ) : null}
+            <button type="button" className={headerGhostClass}>
+              Save as template
+            </button>
+            <button type="button" className={headerGhostClass}>
+              Save as platform template
+            </button>
+            <button type="button" className={headerRemoveClass}>
+              Remove
+            </button>
+          </div>
         </section>
       </div>
 
