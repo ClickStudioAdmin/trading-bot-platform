@@ -5,6 +5,9 @@ import { createPortal } from "react-dom";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { closeAllFutures } from "@/lib/futures/actions";
 import {
+  closeAllBlockNewSizeCopy,
+  closeAllExtraBody,
+  closeAllScopeBody,
   confirmPhraseForScope,
   type CloseAllScope,
 } from "@/lib/futures/close-all";
@@ -16,26 +19,23 @@ const BUTTON_CLASS =
 
 const COPY: Record<
   CloseAllScope,
-  { label: string; title: string; body: string; confirm: string; pending: string }
+  { label: string; title: string; confirm: string; pending: string }
 > = {
   positions: {
     label: "Close All",
     title: "Close All",
-    body: "Market-closes every open position at full size. Working orders stay, except a leftover reduce-only close limit on a row that fully closes. This cannot be undone.",
     confirm: "Confirm close all",
     pending: "Closing…",
   },
   orders: {
     label: "Cancel All Open Orders",
     title: "Cancel All Open Orders",
-    body: "Cancels every open working order on this book. Open positions stay. This cannot be undone.",
     confirm: "Confirm cancel all",
     pending: "Cancelling…",
   },
   all: {
     label: "Close All & Cancel All Open Orders",
     title: "Close All & Cancel All Open Orders",
-    body: "Cancels every open working order on this book, then market-closes every open position at full size. This cannot be undone.",
     confirm: "Confirm close all",
     pending: "Closing…",
   },
@@ -74,12 +74,12 @@ export function FuturesPositionBulkActions({
         openCount={openCount}
         workingCount={workingCount}
         extraBody={
-          copyDesk
-            ? " This desk has no bot to idle. Copied limits cancel, then positions close at market."
-            : panicOnly
-              ? " The bot stays armed unless you Close bot on Automations, or turn on Reduce only."
-              : undefined
+          closeAllExtraBody({
+            copyDesk,
+            dcaDesk: panicOnly,
+          }) ?? undefined
         }
+        dcaDesk={panicOnly}
       />
     </div>
   );
@@ -112,6 +112,7 @@ function FuturesBulkButton({
   openCount,
   workingCount,
   extraBody,
+  dcaDesk = false,
 }: {
   next: string;
   scope: CloseAllScope;
@@ -119,6 +120,7 @@ function FuturesBulkButton({
   openCount: number;
   workingCount: number;
   extraBody?: string;
+  dcaDesk?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -138,6 +140,7 @@ function FuturesBulkButton({
           openCount={openCount}
           workingCount={workingCount}
           extraBody={extraBody}
+          dcaDesk={dcaDesk}
           onClose={() => setOpen(false)}
         />
       ) : null}
@@ -151,6 +154,7 @@ function FuturesBulkDialog({
   openCount,
   workingCount,
   extraBody,
+  dcaDesk = false,
   onClose,
 }: {
   next: string;
@@ -158,10 +162,13 @@ function FuturesBulkDialog({
   openCount: number;
   workingCount: number;
   extraBody?: string;
+  dcaDesk?: boolean;
   onClose: () => void;
 }) {
   const titleId = useId();
   const copy = COPY[scope];
+  const blockNew = closeAllBlockNewSizeCopy({ dcaDesk });
+  const body = closeAllScopeBody(scope);
   const phrase = confirmPhraseForScope(scope);
   const [confirm, setConfirm] = useState("");
   const matched = confirm.trim() === phrase;
@@ -210,8 +217,7 @@ function FuturesBulkDialog({
           </button>
         </div>
         <p className="mt-2 text-sm text-ink-muted">
-          {copy.body}
-          {extraBody}
+          {[body, extraBody].filter(Boolean).join(" ")}
         </p>
         <dl
           className={`mt-3 grid gap-x-4 gap-y-3 ${showPositions && showOrders ? "grid-cols-2" : "grid-cols-1"}`}
@@ -242,10 +248,9 @@ function FuturesBulkDialog({
                 className="mt-0.5"
               />
               <span>
-                Set reduce only
+                {blockNew.label}
                 <span className="mt-1 block text-xs text-ink-muted">
-                  Blocks Buy and Sell on this book so size cannot come back.
-                  Active automation rules also switch to Reduce only.
+                  {blockNew.hint}
                 </span>
               </span>
             </label>

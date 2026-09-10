@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import {
   CANCEL_ALL_CONFIRM,
   CLOSE_ALL_CONFIRM,
+  closeAllBlockNewSizeCopy,
+  closeAllExtraBody,
   closeAllFlash,
+  closeAllScopeBody,
   parseCloseAllConfirm,
   parseCloseAllScope,
   parseSetReduceOnly,
@@ -63,5 +66,30 @@ assert.equal(
   closeAllFlash({ live: true, closedCount: 0, cancelledCount: 3 }),
   "cancelled-all",
 );
+assert.match(closeAllScopeBody("all"), /Closing \/ Cancelling/);
+assert.match(closeAllScopeBody("all"), /cannot be undone/);
+assert.equal(closeAllScopeBody("all").includes("then market-closes"), false);
+assert.match(
+  closeAllExtraBody({ dcaDesk: true }) ?? "",
+  /stays Active/,
+);
+assert.match(
+  closeAllExtraBody({ dcaDesk: true }) ?? "",
+  /Stop adding or Disable/,
+);
+assert.equal(closeAllExtraBody({ dcaDesk: true })?.includes("Reduce only"), false);
+assert.equal(closeAllExtraBody({}), null);
+assert.equal(closeAllBlockNewSizeCopy({ dcaDesk: true }).label, "Block new clips");
+assert.match(
+  closeAllBlockNewSizeCopy({ dcaDesk: true }).hint,
+  /Desk Settings/,
+);
+assert.equal(
+  closeAllBlockNewSizeCopy({ dcaDesk: true }).hint.includes(
+    "Active automation rules",
+  ),
+  false,
+);
+assert.equal(closeAllBlockNewSizeCopy({}).label, "Set reduce only");
 
 console.log("futures command checks passed");
