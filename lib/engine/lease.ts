@@ -12,13 +12,14 @@ export const ENGINE_LOOP_MS = 20_000;
 export const ENGINE_INDICATOR_LOOP_MS = 8_000;
 
 export function engineLoopMs(input: {
-  indicatorArmed: boolean;
+  indicatorArmed?: boolean;
+  hot?: boolean;
   idleMs?: number;
   indicatorMs?: number;
 }): number {
   const idle = Math.max(5_000, Math.floor(input.idleMs ?? ENGINE_LOOP_MS));
   const fast = Math.max(5_000, Math.floor(input.indicatorMs ?? ENGINE_INDICATOR_LOOP_MS));
-  return input.indicatorArmed ? Math.min(idle, fast) : idle;
+  return input.indicatorArmed || input.hot ? Math.min(idle, fast) : idle;
 }
 
 export function venueSlotWaitMs(slotStartMs: number, nowMs: number): number {

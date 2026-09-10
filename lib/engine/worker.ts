@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { runEngineCycle } from "./cycle";
-import { hasArmedIndicatorStarts } from "./hot-desks";
+import { listHotEngineAccountIds } from "./hot-desks";
 import {
   ENGINE_INDICATOR_LOOP_MS,
   ENGINE_LOOP_MS,
@@ -49,9 +49,9 @@ async function main(): Promise<void> {
   });
   console.log(`engine worker started ${workerId}`);
   for (;;) {
-    const indicatorArmed = await hasArmedIndicatorStarts();
+    const hot = (await listHotEngineAccountIds()).length > 0;
     const loopMs = engineLoopMs({
-      indicatorArmed,
+      hot,
       idleMs,
       indicatorMs,
     });

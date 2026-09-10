@@ -134,7 +134,10 @@ assert.equal(venueSlotWaitMs(1_000, 1_000), 0);
 assert.equal(venueSlotWaitMs(8_000, 1_000), 0);
 
 assert.equal(engineLoopMs({ indicatorArmed: false }), 20_000);
+assert.equal(engineLoopMs({}), 20_000);
 assert.equal(engineLoopMs({ indicatorArmed: true }), 8_000);
+assert.equal(engineLoopMs({ hot: true }), 8_000);
+assert.equal(engineLoopMs({ hot: false, indicatorArmed: false }), 20_000);
 assert.equal(
   engineLoopMs({ indicatorArmed: true, idleMs: 20_000, indicatorMs: 8_000 }),
   8_000,

@@ -85,7 +85,7 @@ Same key on two desks still shares venue margin **and** rate limits. A per-conne
 
 ### 6. Clock
 
-Fly loop is **20 seconds** when idle, **8 seconds** while an indicator-start DCA bot is armed. Desk mark / P&L paint from Bybit public tickers through `GET /api/market/tickers` every 2 seconds (no private key). Fills and working orders still refresh with the page (~8s). Do not tick faster than the venue budget allows.
+Fly loop is **20 seconds** when idle, **8 seconds** while any desk is hot (open or closing futures row, armed or closing DCA bot, or an Active Perps rule). Desk mark / P&L paint from Bybit public tickers through `GET /api/market/tickers` every 2 seconds (no private key). Fills and working orders still refresh with the page (~8s). Do not tick faster than the venue budget allows.
 
 ## What this is not
 
