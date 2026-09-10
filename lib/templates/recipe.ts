@@ -22,6 +22,7 @@ import {
   type FuturesAutomationFormValues,
   type FuturesAutomationRule,
 } from "@/lib/futures/automation";
+import { writeFuturesConditionFormFields } from "@/lib/futures/conditions";
 
 export const TEMPLATE_RECIPE_VERSION = 1;
 export const TEMPLATE_NAME_MAX = 80;
@@ -131,6 +132,11 @@ export type PerpsTemplateRecipe = {
   skipIfOpen: boolean;
   tpsl: FuturesAutomationFormValues["tpsl"];
   trailing: FuturesAutomationFormValues["trailing"];
+  indicator?: FuturesAutomationFormValues["indicator"];
+  confirm?: DcaFilterSpec | null;
+  exitIf?: DcaFilterSpec | null;
+  breakevenActivationPct?: number | null;
+  breakevenOffsetPct?: number | null;
 };
 
 export type PaperTemplateRecipe = {
@@ -321,7 +327,17 @@ export function snapshotPerpsRecipe(
     | "skipIfOpen"
     | "tpsl"
     | "trailing"
-  >,
+  > &
+    Partial<
+      Pick<
+        FuturesAutomationRule,
+        | "indicator"
+        | "confirm"
+        | "exitIf"
+        | "breakevenActivationPct"
+        | "breakevenOffsetPct"
+      >
+    >,
 ): PerpsTemplateRecipe {
   const formAction =
     rule.action === "flatten"
@@ -347,6 +363,11 @@ export function snapshotPerpsRecipe(
     skipIfOpen: rule.skipIfOpen,
     tpsl: rule.tpsl,
     trailing: rule.trailing,
+    indicator: rule.indicator ?? null,
+    confirm: rule.confirm ?? null,
+    exitIf: rule.exitIf ?? null,
+    breakevenActivationPct: rule.breakevenActivationPct ?? null,
+    breakevenOffsetPct: rule.breakevenOffsetPct ?? null,
   };
 }
 
@@ -430,7 +451,12 @@ function parsePerpsTemplateRecipe(
     sizeUnit: row.sizeUnit === "usdt" ? "usdt" : "qty",
     size: String(row.size ?? ""),
     limitPrice: String(row.limitPrice ?? ""),
-    entrySource: row.entrySource === "webhook" ? "webhook" : "price",
+    entrySource:
+      row.entrySource === "webhook" ||
+      row.entrySource === "indicator" ||
+      row.entrySource === "trend"
+        ? row.entrySource
+        : "price",
     triggerBy:
       row.triggerBy === "mark" || row.triggerBy === "index"
         ? row.triggerBy
@@ -440,6 +466,11 @@ function parsePerpsTemplateRecipe(
     skipIfOpen: row.skipIfOpen !== false,
     tpsl: (row.tpsl as PerpsTemplateRecipe["tpsl"]) ?? null,
     trailing: (row.trailing as PerpsTemplateRecipe["trailing"]) ?? null,
+    indicator: (row.indicator as PerpsTemplateRecipe["indicator"]) ?? null,
+    confirm: filterSpecFromRecipe(row.confirm),
+    exitIf: filterSpecFromRecipe(row.exitIf),
+    breakevenActivationPct: asNullableNumber(row.breakevenActivationPct),
+    breakevenOffsetPct: asNullableNumber(row.breakevenOffsetPct),
   };
   const built = perpsRecipeToRule(recipe, { sortOrder: 0 });
   if (!built.ok) {
@@ -788,6 +819,13 @@ export function perpsRecipeToRule(
     form.set("r0_skipIfOpen", "on");
   }
   writeAutomationExitsToForm(form, "r0_", recipe.tpsl, recipe.trailing);
+  writeFuturesConditionFormFields(form, "r0_", {
+    indicator: recipe.indicator,
+    confirm: recipe.confirm,
+    exitIf: recipe.exitIf,
+    breakevenActivationPct: recipe.breakevenActivationPct,
+    breakevenOffsetPct: recipe.breakevenOffsetPct,
+  });
   const parsed = parseFuturesAutomationForm(form, venue);
   if (!parsed.ok) {
     return parsed;
@@ -1038,6 +1076,19 @@ export function perpsFormToSnapshotSource(
     form.set("r0_skipIfOpen", "on");
   }
   writeAutomationExitsToForm(form, "r0_", layer.tpsl, layer.trailing);
+  writeFuturesConditionFormFields(form, "r0_", {
+    indicator: layer.indicator,
+    confirm: layer.confirm,
+    exitIf: layer.exitIf,
+    breakevenActivationPct:
+      layer.breakevenActivationPct.trim() === ""
+        ? null
+        : Number(layer.breakevenActivationPct),
+    breakevenOffsetPct:
+      layer.breakevenOffsetPct.trim() === ""
+        ? null
+        : Number(layer.breakevenOffsetPct),
+  });
   return form;
 }
 

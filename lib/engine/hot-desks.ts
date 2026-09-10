@@ -78,17 +78,29 @@ export async function hasArmedIndicatorStarts(): Promise<boolean> {
   if (!supabase) {
     return false;
   }
-  const { data, error } = await supabase
-    .from("dca_playbooks")
-    .select("id")
-    .in("start_kind", ["indicator", "trend"])
-    .or("long_status.eq.armed,short_status.eq.armed")
-    .limit(1);
-  if (error) {
-    console.error("engine indicator starts", error.message);
-    return false;
+  const [dca, perps] = await Promise.all([
+    supabase
+      .from("dca_playbooks")
+      .select("id")
+      .in("start_kind", ["indicator", "trend"])
+      .or("long_status.eq.armed,short_status.eq.armed")
+      .limit(1),
+    supabase
+      .from("futures_automation_rules")
+      .select("id")
+      .eq("mode", "active")
+      .or(
+        "entry_source.in.(indicator,trend),confirm_kind.not.is.null,exit_if_kind.not.is.null",
+      )
+      .limit(1),
+  ]);
+  if (dca.error) {
+    console.error("engine indicator starts", dca.error.message);
   }
-  return (data ?? []).length > 0;
+  if (perps.error) {
+    console.error("engine perps indicator starts", perps.error.message);
+  }
+  return (dca.data ?? []).length > 0 || (perps.data ?? []).length > 0;
 }
 
 export async function listEngineDeskKinds(): Promise<EngineDeskKinds> {

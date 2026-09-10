@@ -29,9 +29,17 @@ import {
   type FuturesTrailing,
 } from "./trailing";
 import { parseDeskFuturesSymbol } from "@/lib/venues/hyperliquid/symbol";
+import type { DcaFilterSpec } from "@/lib/dca/filters";
+import type { DcaIndicatorStart } from "@/lib/dca/playbook";
+import {
+  conditionColumns,
+  conditionsFromRow,
+  parseFuturesConditionForm,
+  type FuturesAutomationEntry,
+} from "./conditions";
 
+export type { FuturesAutomationEntry };
 export type FuturesTriggerCompare = "gte" | "lte";
-export type FuturesAutomationEntry = "price" | "webhook";
 
 export type FuturesAutomationRule = {
   id: string | null;
@@ -53,6 +61,11 @@ export type FuturesAutomationRule = {
   skipIfOpen: boolean;
   tpsl: FuturesTpsl | null;
   trailing: FuturesTrailing | null;
+  indicator: DcaIndicatorStart | null;
+  confirm: DcaFilterSpec | null;
+  exitIf: DcaFilterSpec | null;
+  breakevenActivationPct: number | null;
+  breakevenOffsetPct: number | null;
   conditionTrue: boolean;
   lastFiredAtMs: number | null;
 };
@@ -76,6 +89,11 @@ export type FuturesAutomationFormValues = {
   skipIfOpen: boolean;
   tpsl: FuturesTpsl | null;
   trailing: FuturesTrailing | null;
+  indicator: DcaIndicatorStart | null;
+  confirm: DcaFilterSpec | null;
+  exitIf: DcaFilterSpec | null;
+  breakevenActivationPct: string;
+  breakevenOffsetPct: string;
 };
 
 export function defaultFuturesAutomationForm(
@@ -101,6 +119,11 @@ export function defaultFuturesAutomationForm(
     skipIfOpen: true,
     tpsl: null,
     trailing: null,
+    indicator: null,
+    confirm: null,
+    exitIf: null,
+    breakevenActivationPct: "",
+    breakevenOffsetPct: "",
   };
 }
 
@@ -316,6 +339,18 @@ export function parseFuturesAutomationForm(
       parsed.rule.action === "flatten" ? null : exits.tpsl;
     parsed.rule.trailing =
       parsed.rule.action === "flatten" ? null : exits.trailing;
+    const conditions = parseFuturesConditionForm(form, prefix, {
+      entrySource: parsed.rule.entrySource,
+      closing: parsed.rule.action === "flatten",
+    });
+    if (!conditions.ok) {
+      return conditions;
+    }
+    parsed.rule.indicator = conditions.indicator;
+    parsed.rule.confirm = conditions.confirm;
+    parsed.rule.exitIf = conditions.exitIf;
+    parsed.rule.breakevenActivationPct = conditions.breakevenActivationPct;
+    parsed.rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
     rules.push(parsed.rule);
   }
   return { ok: true, rules };
@@ -477,7 +512,13 @@ export function parseFuturesAutomationFields(input: {
     }
     limitPrice = parsed.price;
   }
-  const entrySource = parseAutomationEntry(input.entrySource);
+  let entrySource = parseAutomationEntry(input.entrySource);
+  if (
+    actionParsed.action === "flatten" &&
+    (entrySource === "indicator" || entrySource === "trend")
+  ) {
+    entrySource = "price";
+  }
   const webhookId = String(input.webhookId ?? "").trim() || null;
   if (entrySource === "webhook" && !webhookId) {
     return { ok: false, error: "Pick a Signal webhook." };
@@ -486,17 +527,16 @@ export function parseFuturesAutomationFields(input: {
   if (!triggerBy.ok) {
     return triggerBy;
   }
-  const compare =
-    entrySource === "webhook"
-      ? { ok: true as const, compare: "gte" as const }
-      : parseFuturesTriggerCompare(input.triggerCompare);
+  const priceEntry = entrySource === "price";
+  const compare = priceEntry
+    ? parseFuturesTriggerCompare(input.triggerCompare)
+    : { ok: true as const, compare: "gte" as const };
   if (!compare.ok) {
     return compare;
   }
-  const triggerPrice =
-    entrySource === "webhook"
-      ? { ok: true as const, price: 1 }
-      : parseFuturesLimitPrice(input.triggerPrice);
+  const triggerPrice = priceEntry
+    ? parseFuturesLimitPrice(input.triggerPrice)
+    : { ok: true as const, price: 1 };
   if (!triggerPrice.ok) {
     return { ok: false, error: "Enter a trigger price." };
   }
@@ -531,6 +571,11 @@ export function parseFuturesAutomationFields(input: {
       skipIfOpen: parseSkipIfOpen(input.skipIfOpen),
       tpsl: null,
       trailing: null,
+      indicator: null,
+      confirm: null,
+      exitIf: null,
+      breakevenActivationPct: null,
+      breakevenOffsetPct: null,
       conditionTrue: Boolean(input.conditionTrue),
       lastFiredAtMs: Number.isFinite(lastFired) ? lastFired : null,
     },
@@ -569,7 +614,11 @@ function parseSkipIfOpen(raw: unknown): boolean {
 }
 
 export function parseAutomationEntry(raw: unknown): FuturesAutomationEntry {
-  return raw === "webhook" ? "webhook" : "price";
+  const value = String(raw ?? "").trim().toLowerCase();
+  if (value === "webhook" || value === "indicator" || value === "trend") {
+    return value;
+  }
+  return "price";
 }
 
 function emptyParsedRule(): FuturesAutomationRule {
@@ -593,6 +642,11 @@ function emptyParsedRule(): FuturesAutomationRule {
     skipIfOpen: true,
     tpsl: null,
     trailing: null,
+    indicator: null,
+    confirm: null,
+    exitIf: null,
+    breakevenActivationPct: null,
+    breakevenOffsetPct: null,
     conditionTrue: false,
     lastFiredAtMs: null,
   };
@@ -652,6 +706,7 @@ export function parseFuturesAutomationRow(
         Number(row.trailing_active) > 0 ? Number(row.trailing_active) : null,
       trailingPeak: null,
     });
+    attachRuleConditions(preferred.rule, row);
     return preferred.rule;
   }
   if (venue) {
@@ -661,7 +716,11 @@ export function parseFuturesAutomationRow(
     ...fields,
     venue: "hyperliquid",
   });
-  return hyperliquid.ok ? hyperliquid.rule : emptyParsedRule();
+  if (!hyperliquid.ok) {
+    return emptyParsedRule();
+  }
+  attachRuleConditions(hyperliquid.rule, row);
+  return hyperliquid.rule;
 }
 
 function formActionOf(
@@ -696,6 +755,15 @@ export function futuresRuleToForm(
     skipIfOpen: rule.skipIfOpen,
     tpsl: rule.tpsl,
     trailing: rule.trailing,
+    indicator: rule.indicator,
+    confirm: rule.confirm,
+    exitIf: rule.exitIf,
+    breakevenActivationPct:
+      rule.breakevenActivationPct == null
+        ? ""
+        : String(rule.breakevenActivationPct),
+    breakevenOffsetPct:
+      rule.breakevenOffsetPct == null ? "" : String(rule.breakevenOffsetPct),
   };
 }
 
@@ -737,7 +805,25 @@ export function futuresAutomationToRow(
     sl_limit_price: rule.tpsl?.slLimitPrice ?? null,
     trailing_stop: rule.trailing?.distance ?? null,
     trailing_active: rule.trailing?.activePrice ?? null,
+    ...conditionColumns(rule),
     condition_true: false,
     updated_at: new Date().toISOString(),
   };
+}
+
+function attachRuleConditions(
+  rule: FuturesAutomationRule,
+  row: Record<string, unknown>,
+): void {
+  if (rule.action === "flatten") {
+    return;
+  }
+  const conditions = conditionsFromRow(row);
+  if (rule.entrySource === "indicator" || rule.entrySource === "trend") {
+    rule.indicator = conditions.indicator;
+  }
+  rule.confirm = conditions.confirm;
+  rule.exitIf = conditions.exitIf;
+  rule.breakevenActivationPct = conditions.breakevenActivationPct;
+  rule.breakevenOffsetPct = conditions.breakevenOffsetPct;
 }

@@ -13,10 +13,16 @@ import {
   botFieldClass,
   botHeaderPrimaryClass,
   botHeaderRemoveClass,
+  botLabelClass,
   botRowClass,
   botRowClass5,
   triggerSectionTitle,
 } from "@/components/bot-form-chrome";
+import {
+  IndicatorStartFields,
+  TrendStartFields,
+} from "@/components/bot-indicator-fields";
+import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
@@ -44,7 +50,18 @@ import {
   type BacktestLibraryItem,
 } from "@/components/backtest-dialog";
 import { snapshotPerpsRecipe } from "@/lib/templates/recipe";
-import type { FuturesOrderType, FuturesTrigger } from "@/lib/futures/model";
+import { dcaFilterSpecForKind, type DcaFilterSpec } from "@/lib/dca/filters";
+import {
+  DEFAULT_DCA_RSI_PERIOD,
+  DEFAULT_DCA_SUPERTREND_MULTIPLIER,
+  DEFAULT_DCA_SUPERTREND_PERIOD,
+  indicatorCompareForDirection,
+  parseDcaIndicatorCompare,
+  type DcaIndicatorKind,
+  type DcaIndicatorTimeframe,
+} from "@/lib/dca/indicators";
+import type { DcaIndicatorStart } from "@/lib/dca/playbook";
+import type { FuturesOrderType, FuturesSide, FuturesTrigger } from "@/lib/futures/model";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
@@ -173,7 +190,7 @@ export function FuturesAutomationsDesk({
       {empty ? (
         <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
           No bots yet. Add a bot to fire Buy, Sell, or Close on a price
-          cross or a Signal webhook.
+          cross, Indicator, Trend, or a Signal webhook.
         </p>
       ) : (
         layers.map((layer) => (
@@ -255,6 +272,60 @@ function RuleCard({
   const [triggerPrice, setTriggerPrice] = useState(layer.triggerPrice);
   const [symbol, setSymbol] = useState(layer.symbol);
   const [entrySource, setEntrySource] = useState(layer.entrySource);
+  const entrySide: FuturesSide = formAction === "sell" ? "short" : "long";
+  const [indicatorKind, setIndicatorKind] = useState<DcaIndicatorKind>(
+    layer.indicator?.kind ??
+      (layer.entrySource === "trend" ? "supertrend" : "rsi"),
+  );
+  const [indicatorTimeframe, setIndicatorTimeframe] =
+    useState<DcaIndicatorTimeframe>(layer.indicator?.timeframe ?? "15");
+  const [indicatorCompare, setIndicatorCompare] = useState(
+    layer.indicator?.compare ??
+      indicatorCompareForDirection(
+        layer.formAction === "sell" ? "short" : "long",
+        layer.indicator?.kind ??
+          (layer.entrySource === "trend" ? "supertrend" : "rsi"),
+        "",
+      ),
+  );
+  const [indicatorLevel, setIndicatorLevel] = useState(
+    layer.indicator?.level != null
+      ? String(layer.indicator.level)
+      : layer.formAction === "sell"
+        ? "70"
+        : "30",
+  );
+  const [indicatorPeriod, setIndicatorPeriod] = useState(
+    String(
+      layer.indicator?.period ??
+        (layer.entrySource === "trend"
+          ? DEFAULT_DCA_SUPERTREND_PERIOD
+          : DEFAULT_DCA_RSI_PERIOD),
+    ),
+  );
+  const [indicatorSlowPeriod, setIndicatorSlowPeriod] = useState(
+    layer.indicator?.slowPeriod != null
+      ? String(layer.indicator.slowPeriod)
+      : "",
+  );
+  const [indicatorMultiplier, setIndicatorMultiplier] = useState(
+    String(layer.indicator?.multiplier ?? DEFAULT_DCA_SUPERTREND_MULTIPLIER),
+  );
+  const [confirm, setConfirm] = useState<DcaFilterSpec | null>(
+    layer.confirm ?? null,
+  );
+  const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(
+    layer.exitIf ?? null,
+  );
+  const [breakevenOn, setBreakevenOn] = useState(
+    layer.breakevenActivationPct.trim() !== "",
+  );
+  const [breakevenActivationPct, setBreakevenActivationPct] = useState(
+    layer.breakevenActivationPct,
+  );
+  const [breakevenOffsetPct, setBreakevenOffsetPct] = useState(
+    layer.breakevenOffsetPct,
+  );
   const [tpOn, setTpOn] = useState(() => layer.tpsl?.takeProfit != null);
   const [slOn, setSlOn] = useState(() => layer.tpsl?.stopLoss != null);
   const [trailOn, setTrailOn] = useState(
@@ -294,7 +365,10 @@ function RuleCard({
   const tpMissing = tpOn && takeProfit.trim() === "";
   const slMissing = slOn && stopLoss.trim() === "";
   const trailMissing = trailOn && trailingStop.trim() === "";
-  const optionalMissing = tpMissing || slMissing || trailMissing;
+  const breakevenMissing =
+    !closing && breakevenOn && breakevenActivationPct.trim() === "";
+  const optionalMissing =
+    tpMissing || slMissing || trailMissing || breakevenMissing;
   const tpsl =
     tpOn || slOn
       ? {
@@ -336,6 +410,20 @@ function RuleCard({
       : triggerWebhooks;
   const selected = options.find((row) => row.symbol === symbol);
   const baseCoin = selected?.baseCoin ?? "Token";
+  function liveIndicator(): DcaIndicatorStart | null {
+    if (entrySource !== "indicator" && entrySource !== "trend") {
+      return null;
+    }
+    return {
+      kind: indicatorKind,
+      timeframe: indicatorTimeframe,
+      compare: parseDcaIndicatorCompare(indicatorCompare),
+      level: Number(indicatorLevel) || null,
+      period: Number(indicatorPeriod) || null,
+      slowPeriod: Number(indicatorSlowPeriod) || null,
+      multiplier: Number(indicatorMultiplier) || null,
+    };
+  }
   function liveRecipe() {
     return snapshotPerpsRecipe({
       name: layer.name,
@@ -363,6 +451,15 @@ function RuleCard({
       skipIfOpen: layer.skipIfOpen,
       tpsl,
       trailing,
+      indicator: liveIndicator(),
+      confirm: closing ? null : confirm,
+      exitIf: closing ? null : exitIf,
+      breakevenActivationPct: closing || !breakevenOn
+        ? null
+        : Number(breakevenActivationPct.replace(/,/g, "")) || null,
+      breakevenOffsetPct: closing || !breakevenOn
+        ? null
+        : Number(breakevenOffsetPct.replace(/,/g, "")) || 0,
     });
   }
 
@@ -448,11 +545,27 @@ function RuleCard({
             <select
               name={`${prefix}action`}
               value={formAction}
-              onChange={(event) =>
-                setFormAction(
-                  event.target.value as FuturesAutomationFormValues["formAction"],
-                )
-              }
+              onChange={(event) => {
+                const next = event.target
+                  .value as FuturesAutomationFormValues["formAction"];
+                setFormAction(next);
+                if (next === "close_long" || next === "close_short") {
+                  if (
+                    entrySource === "indicator" ||
+                    entrySource === "trend"
+                  ) {
+                    setEntrySource("price");
+                  }
+                  return;
+                }
+                const side: FuturesSide = next === "sell" ? "short" : "long";
+                setIndicatorCompare(
+                  indicatorCompareForDirection(side, indicatorKind, ""),
+                );
+                if (indicatorKind === "rsi") {
+                  setIndicatorLevel(side === "short" ? "70" : "30");
+                }
+              }}
               className={botFieldClass}
             >
               <option value="buy">Buy</option>
@@ -472,12 +585,33 @@ function RuleCard({
             <input type="hidden" name={`${prefix}entrySource`} value={entrySource} />
             <select
               value={entrySource}
-              onChange={(event) =>
-                setEntrySource(parseAutomationEntry(event.target.value))
-              }
+              onChange={(event) => {
+                const next = parseAutomationEntry(event.target.value);
+                setEntrySource(next);
+                if (next === "trend") {
+                  setIndicatorKind("supertrend");
+                  setIndicatorCompare(
+                    indicatorCompareForDirection(entrySide, "supertrend", ""),
+                  );
+                  setIndicatorPeriod(String(DEFAULT_DCA_SUPERTREND_PERIOD));
+                  setIndicatorMultiplier(
+                    String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
+                  );
+                }
+                if (next === "indicator" && indicatorKind === "supertrend") {
+                  setIndicatorKind("rsi");
+                  setIndicatorCompare(
+                    indicatorCompareForDirection(entrySide, "rsi", ""),
+                  );
+                  setIndicatorPeriod(String(DEFAULT_DCA_RSI_PERIOD));
+                  setIndicatorLevel(entrySide === "short" ? "70" : "30");
+                }
+              }}
               className={botFieldClass}
             >
               <option value="price">Price cross</option>
+              {closing ? null : <option value="indicator">Indicator</option>}
+              {closing ? null : <option value="trend">Trend</option>}
               <option value="webhook">Signal webhook</option>
             </select>
           </BotField>
@@ -501,7 +635,39 @@ function RuleCard({
 
       <BotFormGroup title={triggerSectionTitle(entrySource)}>
         <div className={botRowClass5}>
-          {webhookEntry ? (
+          {entrySource === "indicator" && !closing ? (
+            <IndicatorStartFields
+              side={entrySide}
+              prefix={`${prefix}indicator`}
+              kind={indicatorKind}
+              timeframe={indicatorTimeframe}
+              compare={indicatorCompare}
+              level={indicatorLevel}
+              period={indicatorPeriod}
+              slowPeriod={indicatorSlowPeriod}
+              onKindChange={setIndicatorKind}
+              onTimeframeChange={setIndicatorTimeframe}
+              onCompareChange={setIndicatorCompare}
+              onLevelChange={setIndicatorLevel}
+              onPeriodChange={setIndicatorPeriod}
+              onSlowPeriodChange={setIndicatorSlowPeriod}
+            />
+          ) : entrySource === "trend" && !closing ? (
+            <TrendStartFields
+              side={entrySide}
+              prefix={`${prefix}indicator`}
+              kind={indicatorKind}
+              timeframe={indicatorTimeframe}
+              compare={indicatorCompare}
+              period={indicatorPeriod}
+              multiplier={indicatorMultiplier}
+              onKindChange={setIndicatorKind}
+              onTimeframeChange={setIndicatorTimeframe}
+              onCompareChange={setIndicatorCompare}
+              onPeriodChange={setIndicatorPeriod}
+              onMultiplierChange={setIndicatorMultiplier}
+            />
+          ) : webhookEntry ? (
             <BotField label="Webhook" className="lg:col-span-2" required>
               <select
                 name={`${prefix}webhookId`}
@@ -616,6 +782,107 @@ function RuleCard({
 
       {!closing ? (
         <>
+          <OptionalSection
+            title="Secondary Entry Condition"
+            hint="Must be true for the entry trigger to execute."
+            enabled={Boolean(confirm)}
+            onEnabled={(next) =>
+              setConfirm(
+                next ? (confirm ?? dcaFilterSpecForKind("rsi", entrySide)) : null,
+              )
+            }
+          >
+            <DcaFilterBlock
+              label="Kind"
+              prefix={`${prefix}confirm`}
+              side={entrySide}
+              spec={confirm}
+              onChange={setConfirm}
+              named
+              dense
+              allowOff={false}
+              gridClass={botRowClass5}
+              whenClass=""
+              fieldClass={botFieldClass}
+              labelClass={botLabelClass}
+            />
+          </OptionalSection>
+          <OptionalSection
+            title="Hard Exit Condition"
+            hint="Flattens this bot’s open size at market when the condition is true."
+            enabled={Boolean(exitIf)}
+            onEnabled={(next) =>
+              setExitIf(
+                next ? (exitIf ?? dcaFilterSpecForKind("rsi", entrySide)) : null,
+              )
+            }
+          >
+            <DcaFilterBlock
+              label="Kind"
+              prefix={`${prefix}exitIf`}
+              side={entrySide}
+              spec={exitIf}
+              onChange={setExitIf}
+              named
+              dense
+              allowOff={false}
+              gridClass={botRowClass5}
+              whenClass=""
+              fieldClass={botFieldClass}
+              labelClass={botLabelClass}
+            />
+          </OptionalSection>
+          {!breakevenOn ? (
+            <div hidden>
+              <input
+                type="hidden"
+                name={`${prefix}breakevenActivationPct`}
+                value=""
+              />
+              <input
+                type="hidden"
+                name={`${prefix}breakevenOffsetPct`}
+                value=""
+              />
+            </div>
+          ) : null}
+          <OptionalSection
+            title="Move Breakeven"
+            enabled={breakevenOn}
+            onEnabled={setBreakevenOn}
+          >
+            <div className={botRowClass}>
+              <BotField label="Move stop to breakeven at %" required>
+                <span className="relative mt-0.5 block">
+                  <GroupedNumberInput
+                    name={`${prefix}breakevenActivationPct`}
+                    value={breakevenActivationPct}
+                    onChange={setBreakevenActivationPct}
+                    allowDecimal
+                    className={`${botFieldClass} pr-7`}
+                  />
+                  <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                    %
+                  </span>
+                </span>
+              </BotField>
+              <BotField label="Breakeven offset %">
+                <span className="relative mt-0.5 block">
+                  <GroupedNumberInput
+                    name={`${prefix}breakevenOffsetPct`}
+                    value={breakevenOffsetPct}
+                    onChange={setBreakevenOffsetPct}
+                    allowDecimal
+                    placeholder="0"
+                    className={`${botFieldClass} pr-7`}
+                  />
+                  <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                    %
+                  </span>
+                </span>
+              </BotField>
+            </div>
+          </OptionalSection>
           {tpOn || slOn ? (
             <>
               <input type="hidden" name={`${prefix}tpsl`} value="on" />
@@ -789,6 +1056,13 @@ function RuleCard({
                 entrySource,
                 tpsl,
                 trailing,
+                indicator: liveIndicator(),
+                confirm: closing ? null : confirm,
+                exitIf: closing ? null : exitIf,
+                breakevenActivationPct:
+                  closing || !breakevenOn ? "" : breakevenActivationPct,
+                breakevenOffsetPct:
+                  closing || !breakevenOn ? "" : breakevenOffsetPct,
               },
               venueId,
             )

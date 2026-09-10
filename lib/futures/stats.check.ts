@@ -54,6 +54,7 @@ function closed(partial: Partial<FuturesPosition> & { realizedUsdt: number; noti
     trailingStop: null,
     trailingActive: null,
     trailingPeak: null,
+    breakevenDone: false,
   };
 }
 

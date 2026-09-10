@@ -3,9 +3,18 @@ import {
   decideFuturesAutomationTick,
   futuresAutomationIdempotencyKey,
   parseFuturesAutomationRow,
-  triggerConditionMet,
   type FuturesAutomationRule,
 } from "./automation";
+import {
+  emptyBarsByTimeframe,
+  futuresAutomationNeedsBars,
+  futuresAutomationNeedsWideBars,
+  futuresAutomationTimeframes,
+  futuresBreakevenDue,
+  futuresBreakevenStop,
+  futuresEntryConditionMet,
+  futuresFilterMet,
+} from "./conditions";
 import { runFuturesCommand } from "./command";
 import { parseFuturesPositionRow, type FuturesPosition } from "./model";
 import {
@@ -15,7 +24,7 @@ import {
 import { writeEventLog } from "@/lib/logs/write";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
 import { createServiceClient } from "@/lib/supabase/admin";
-import { triggerPrice, tickerTriggerPrices } from "./tpsl";
+import { triggerPrice, tickerTriggerPrices, tpslFromRow } from "./tpsl";
 import {
   deskAllowsPerpsRecipes,
   parseDeskQuery,
@@ -27,6 +36,18 @@ import {
   parseStoredVenueId,
 } from "@/lib/exchanges/venues";
 import { loadDeskTickerMap } from "@/lib/market/desk-tickers";
+import { loadDeskIndicatorBars } from "@/lib/market/desk-klines";
+import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
+import type { CandleBar } from "@/lib/market/candles";
+
+type DeskAccount = {
+  userId: string;
+  mode: TradingAccountMode;
+  deskType: ReturnType<typeof parseDeskType>;
+  copyOfAccountId: string | null;
+  venue: ReturnType<typeof parseStoredVenueId>;
+  venueEnvironment: ReturnType<typeof parseStoredVenueEnvironment>;
+};
 
 export async function runFuturesAutomationTick(input?: {
   accountId?: string;
@@ -117,6 +138,13 @@ export async function runFuturesAutomationTick(input?: {
   }
 
   const deskTickerCache = new Map<string, Map<string, BybitTicker>>();
+  const klineCache = new Map<string, CandleBar[]>();
+  const parsedRules: {
+    rawAccountId: string;
+    rule: FuturesAutomationRule;
+    account: DeskAccount;
+  }[] = [];
+
   let fired = 0;
   for (const raw of ruleRows) {
     const accountId = String((raw as { account_id: string }).account_id);
@@ -125,10 +153,11 @@ export async function runFuturesAutomationTick(input?: {
       raw as Record<string, unknown>,
       account?.venue,
     );
-    if (rule.entrySource === "webhook") {
+    if (!account || !rule.id || !deskAllowsPerpsRecipes(account)) {
       continue;
     }
-    if (!account || !rule.id || !deskAllowsPerpsRecipes(account)) {
+    parsedRules.push({ rawAccountId: accountId, rule, account });
+    if (rule.entrySource === "webhook") {
       continue;
     }
     let deskTickers = tickers;
@@ -146,25 +175,25 @@ export async function runFuturesAutomationTick(input?: {
       deskTickers = deskTickerCache.get(cacheKey) ?? tickers;
     }
     const ticker = deskTickers.get(rule.symbol);
-    if (!ticker) {
-      continue;
-    }
-    const prices = tickerTriggerPrices(ticker);
-    const price = triggerPrice(rule.triggerBy, prices);
-    if (!(price != null && price > 0)) {
-      continue;
-    }
+    const prices = ticker ? tickerTriggerPrices(ticker) : null;
+    const price = prices ? triggerPrice(rule.triggerBy, prices) : null;
+    const barsByTimeframe = await loadRuleBars({
+      rule,
+      account,
+      cache: klineCache,
+    });
     const side = automationSide(rule);
     const bookOpens = opensByAccount.get(accountId) ?? [];
     const openOnSide = bookOpens.find(
       (row) => row.symbol === rule.symbol && row.side === side,
     );
     const decision = decideFuturesAutomationTick({
-      conditionMet: triggerConditionMet(
+      conditionMet: futuresEntryConditionMet({
+        rule,
+        side,
         price,
-        rule.triggerCompare,
-        rule.triggerPrice,
-      ),
+        barsByTimeframe,
+      }),
       wasTrue: rule.conditionTrue,
       action: rule.action,
       mode: rule.mode,
@@ -230,6 +259,23 @@ export async function runFuturesAutomationTick(input?: {
     }
   }
 
+  const { data: latestOpenRows } = await supabase
+    .from("futures_positions")
+    .select("*")
+    .eq("status", "open")
+    .in("account_id", uniqueAccountIds);
+  const latestOpens = (latestOpenRows ?? []).map((row) =>
+    parseFuturesPositionRow(row as Record<string, unknown>),
+  );
+  await monitorOwnedFuturesPositions({
+    opens: latestOpens,
+    rules: parsedRules,
+    tickers,
+    deskTickerCache,
+    klineCache,
+    providedTickers: Boolean(input?.tickers),
+  });
+
   return { fired };
 }
 
@@ -254,23 +300,46 @@ export async function fireWebhookAutomationEntries(input: {
   if (!ruleRows || ruleRows.length === 0) {
     return { fired: 0 };
   }
-  const { data: settingsRow } = await supabase
-    .from("strategy_settings")
-    .select("reduce_only")
-    .eq("strategy_id", FUTURES_STRATEGY_ID)
-    .eq("account_id", input.accountId)
-    .maybeSingle();
-  const { data: openRows } = await supabase
-    .from("futures_positions")
-    .select("*")
-    .eq("status", "open")
-    .eq("account_id", input.accountId);
+  const [{ data: settingsRow }, { data: openRows }, { data: accountRow }] =
+    await Promise.all([
+      supabase
+        .from("strategy_settings")
+        .select("reduce_only")
+        .eq("strategy_id", FUTURES_STRATEGY_ID)
+        .eq("account_id", input.accountId)
+        .maybeSingle(),
+      supabase
+        .from("futures_positions")
+        .select("*")
+        .eq("status", "open")
+        .eq("account_id", input.accountId),
+      supabase
+        .from("trading_accounts")
+        .select("venue, venue_environment")
+        .eq("id", input.accountId)
+        .maybeSingle(),
+    ]);
   const bookReduceOnly = Boolean(
     (settingsRow as { reduce_only?: unknown } | null)?.reduce_only,
   );
+  const venue = parseStoredVenueId(
+    (accountRow as { venue?: unknown } | null)?.venue,
+  );
+  const account: DeskAccount = {
+    userId: input.userId,
+    mode: input.mode,
+    deskType: "perps_bots",
+    copyOfAccountId: null,
+    venue,
+    venueEnvironment: parseStoredVenueEnvironment(
+      venue,
+      (accountRow as { venue_environment?: unknown } | null)?.venue_environment,
+    ),
+  };
   const opens = (openRows ?? []).map((row) =>
     parseFuturesPositionRow(row as Record<string, unknown>),
   );
+  const klineCache = new Map<string, CandleBar[]>();
   let fired = 0;
   for (const raw of ruleRows) {
     const rule = parseFuturesAutomationRow(raw as Record<string, unknown>);
@@ -281,8 +350,18 @@ export async function fireWebhookAutomationEntries(input: {
     const openOnSide = opens.find(
       (row) => row.symbol === rule.symbol && row.side === side,
     );
+    const barsByTimeframe = await loadRuleBars({
+      rule,
+      account,
+      cache: klineCache,
+    });
     const decision = decideFuturesAutomationTick({
-      conditionMet: true,
+      conditionMet: futuresEntryConditionMet({
+        rule,
+        side,
+        price: null,
+        barsByTimeframe,
+      }),
       wasTrue: false,
       action: rule.action,
       mode: rule.mode,
@@ -343,6 +422,247 @@ export async function fireWebhookAutomationEntries(input: {
     }
   }
   return { fired };
+}
+
+async function monitorOwnedFuturesPositions(input: {
+  opens: FuturesPosition[];
+  rules: {
+    rawAccountId: string;
+    rule: FuturesAutomationRule;
+    account: DeskAccount;
+  }[];
+  tickers: Map<string, BybitTicker>;
+  deskTickerCache: Map<string, Map<string, BybitTicker>>;
+  klineCache: Map<string, CandleBar[]>;
+  providedTickers: boolean;
+}): Promise<void> {
+  const byId = new Map(
+    input.rules
+      .filter((row) => row.rule.id)
+      .map((row) => [row.rule.id as string, row]),
+  );
+  for (const open of input.opens) {
+    if (!open.ruleId) {
+      continue;
+    }
+    const owned = byId.get(open.ruleId);
+    if (!owned || owned.rule.action === "flatten") {
+      continue;
+    }
+    const { rule, account } = owned;
+    if (!rule.exitIf && rule.breakevenActivationPct == null) {
+      continue;
+    }
+    let deskTickers = input.tickers;
+    if (account.venue === "hyperliquid" && !input.providedTickers) {
+      const cacheKey = `${account.venue}:${account.venueEnvironment ?? ""}`;
+      if (!input.deskTickerCache.has(cacheKey)) {
+        input.deskTickerCache.set(
+          cacheKey,
+          (await loadDeskTickerMap(
+            account.venue,
+            account.venueEnvironment,
+          ).catch(() => new Map())) as Map<string, BybitTicker>,
+        );
+      }
+      deskTickers = input.deskTickerCache.get(cacheKey) ?? input.tickers;
+    }
+    const ticker = deskTickers.get(open.symbol);
+    const last = ticker ? triggerPrice("last", tickerTriggerPrices(ticker)) : null;
+    const barsByTimeframe = await loadRuleBars({
+      rule,
+      account,
+      cache: input.klineCache,
+    });
+    if (
+      rule.exitIf &&
+      futuresFilterMet({
+        spec: rule.exitIf,
+        side: open.side,
+        barsByTimeframe,
+      })
+    ) {
+      const closed = await runFuturesCommand({
+        actor: {
+          userId: account.userId,
+          accountId: open.accountId,
+          mode: account.mode,
+        },
+        command: {
+          kind: "place",
+          action: "flatten",
+          symbol: open.symbol,
+          positionId: open.id,
+          orderType: "market",
+          source: "engine",
+          ruleId: rule.id,
+          ruleName: rule.name,
+        },
+      });
+      if (closed.ok) {
+        await writeEventLog({
+          scope: "trade",
+          event: "engine.exit_if",
+          message: `Hard Exit flattened ${rule.name} on ${open.symbol}.`,
+          userId: account.userId,
+          accountId: open.accountId,
+          strategy: FUTURES_STRATEGY_ID,
+          data: {
+            ruleId: rule.id,
+            ruleName: rule.name,
+            symbol: open.symbol,
+            side: open.side,
+            positionId: open.id,
+          },
+        });
+      } else {
+        await writeEventLog({
+          level: "warning",
+          scope: "trade",
+          event: "engine.exit_if_failed",
+          message: closed.error,
+          userId: account.userId,
+          accountId: open.accountId,
+          strategy: FUTURES_STRATEGY_ID,
+          data: {
+            ruleId: rule.id,
+            symbol: open.symbol,
+            positionId: open.id,
+          },
+        });
+      }
+      continue;
+    }
+    if (
+      last != null &&
+      futuresBreakevenDue({
+        side: open.side,
+        qty: open.qty,
+        entryPrice: open.entryPrice,
+        mark: last,
+        activationPct: rule.breakevenActivationPct,
+        done: open.breakevenDone,
+      })
+    ) {
+      const current = tpslFromRow(open);
+      const stop = futuresBreakevenStop({
+        side: open.side,
+        entryPrice: open.entryPrice,
+        currentStop: current?.stopLoss ?? open.stopLoss,
+        offsetPct: rule.breakevenOffsetPct,
+      });
+      if (stop == null || !(stop > 0)) {
+        continue;
+      }
+      const moved = await runFuturesCommand({
+        actor: {
+          userId: account.userId,
+          accountId: open.accountId,
+          mode: account.mode,
+        },
+        command: {
+          kind: "set-tpsl",
+          positionId: open.id,
+          symbol: open.symbol,
+          form: new FormData(),
+          tpsl: {
+            ...(current ?? {
+              takeProfit: open.takeProfit,
+              stopLoss: stop,
+              tpTrigger: open.tpTrigger,
+              slTrigger: open.slTrigger,
+              mode: open.tpslMode,
+              tpQty: open.tpQty,
+              slQty: open.slQty,
+              tpOrderType: open.tpOrderType,
+              slOrderType: "market",
+              tpLimitPrice: open.tpLimitPrice,
+              slLimitPrice: null,
+            }),
+            stopLoss: stop,
+            slOrderType: "market",
+            slLimitPrice: null,
+          },
+        },
+      });
+      if (!moved.ok) {
+        await writeEventLog({
+          level: "warning",
+          scope: "trade",
+          event: "engine.breakeven_failed",
+          message: moved.error,
+          userId: account.userId,
+          accountId: open.accountId,
+          strategy: FUTURES_STRATEGY_ID,
+          data: {
+            ruleId: rule.id,
+            symbol: open.symbol,
+            positionId: open.id,
+          },
+        });
+        continue;
+      }
+      const supabase = createServiceClient();
+      if (supabase) {
+        await supabase
+          .from("futures_positions")
+          .update({ breakeven_done: true })
+          .eq("id", open.id)
+          .eq("status", "open");
+      }
+      await writeEventLog({
+        scope: "trade",
+        event: "engine.breakeven",
+        message: `Moved stop to breakeven for ${rule.name} on ${open.symbol}.`,
+        userId: account.userId,
+        accountId: open.accountId,
+        strategy: FUTURES_STRATEGY_ID,
+        data: {
+          ruleId: rule.id,
+          ruleName: rule.name,
+          symbol: open.symbol,
+          side: open.side,
+          positionId: open.id,
+          stop,
+        },
+      });
+    }
+  }
+}
+
+async function loadRuleBars(input: {
+  rule: FuturesAutomationRule;
+  account: DeskAccount;
+  cache: Map<string, CandleBar[]>;
+}): Promise<Map<DcaIndicatorTimeframe, CandleBar[]>> {
+  if (!futuresAutomationNeedsBars(input.rule)) {
+    return emptyBarsByTimeframe();
+  }
+  const barsByTimeframe = emptyBarsByTimeframe();
+  const wide = futuresAutomationNeedsWideBars(input.rule);
+  for (const timeframe of futuresAutomationTimeframes(input.rule)) {
+    const key = `${input.account.venue}:${input.rule.symbol}:${timeframe}`;
+    if (!input.cache.has(key)) {
+      const fetched = await loadDeskIndicatorBars({
+        venue: input.account.venue,
+        venueEnvironment: input.account.venueEnvironment,
+        symbol: input.rule.symbol,
+        interval: timeframe,
+        limit: wide ? 500 : 80,
+      }).catch((error: unknown) => {
+        console.error(
+          "engine perps indicator bars",
+          input.rule.symbol,
+          timeframe,
+          error instanceof Error ? error.message : error,
+        );
+        return [];
+      });
+      input.cache.set(key, fetched);
+    }
+    barsByTimeframe.set(timeframe, input.cache.get(key) ?? []);
+  }
+  return barsByTimeframe;
 }
 
 async function fireAutomationRule(input: {

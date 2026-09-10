@@ -29,6 +29,25 @@ assert.equal(
   canBacktestPerpsRecipe({ ...base, entrySource: "webhook" }).ok,
   false,
 );
+assert.equal(
+  canBacktestPerpsRecipe({ ...base, entrySource: "indicator" }).ok,
+  false,
+);
+assert.equal(
+  canBacktestPerpsRecipe({
+    ...base,
+    entrySource: "indicator",
+    indicator: {
+      kind: "rsi",
+      timeframe: "15",
+      compare: "lte",
+      level: 80,
+      period: 14,
+      slowPeriod: null,
+    },
+  }).ok,
+  true,
+);
 assert.equal(canBacktestPerpsRecipe({ ...base, size: "" }).ok, false);
 assert.deepEqual(recipeAction({ ...base, formAction: "close_short" }), {
   action: "flatten",
@@ -197,5 +216,23 @@ assert.equal(
   wiped.orders.some((row) => row.atMs === 3_000),
   false,
 );
+
+const confirmBlocked = replayPerpsPriceCross({
+  bars,
+  recipe: {
+    ...base,
+    confirm: {
+      kind: "rsi",
+      timeframe: "15",
+      compare: "lte",
+      level: 1,
+      period: 14,
+      multiplier: null,
+    },
+  },
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(confirmBlocked.orders.length, 0);
 
 console.log("backtest replay checks passed");

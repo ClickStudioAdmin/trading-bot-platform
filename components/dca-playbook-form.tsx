@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
@@ -20,6 +20,10 @@ import {
   triggerSectionTitle,
 } from "@/components/bot-form-chrome";
 import { ColumnHint } from "@/components/column-hint";
+import {
+  IndicatorStartFields,
+  TrendStartFields,
+} from "@/components/bot-indicator-fields";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -92,20 +96,11 @@ import {
   type DcaStartKind,
 } from "@/lib/dca/playbook";
 import {
-  DCA_INDICATOR_KIND_OPTIONS,
-  DCA_TREND_KIND_OPTIONS,
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
-  DCA_INDICATOR_TIMEFRAMES,
   DCA_INDICATOR_TIMEFRAME_LABELS,
   defaultDcaIndicatorLevel,
   defaultDcaIndicatorPeriod,
   defaultDcaIndicatorSlowPeriod,
-  dcaIndicatorIsLegacyEmaPrice,
-  dcaIndicatorShowsLevel,
-  dcaIndicatorUsesPairPeriods,
-  dcaIndicatorUsesPeriod,
-  dcaIndicatorWhenOptions,
-  dcaIndicatorWhenValue,
   indicatorCompareForDirection,
   lastAtrValue,
   parseDcaIndicatorTimeframe,
@@ -113,10 +108,8 @@ import {
   oppositeRsiCompare,
   oppositeRsiLevel,
   type DcaIndicatorKind,
-  type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
 import {
-  DCA_CONFIRM_FIELD_LABEL,
   dcaFilterSpecForKind,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
@@ -585,7 +578,7 @@ export function DcaPlaybooksDesk({
             <option value="">Clone existing bot</option>
             {cloneSources.map((item) => (
               <option key={item.id} value={item.id}>
-                {item.name} · {item.symbol}
+                {item.name} Â· {item.symbol}
               </option>
             ))}
           </select>
@@ -1276,7 +1269,7 @@ export function DcaPlaybookForm({
     ) : (
       <PendingSubmitButton
         deskAction="delete"
-        pendingLabel="Removing…"
+        pendingLabel="Removingâ€¦"
         className={headerRemoveClass}
         skipSizeGuard
       >
@@ -1337,7 +1330,7 @@ export function DcaPlaybookForm({
         <div className="flex flex-wrap items-center gap-2">
           <DeskFormFlash />
           <PendingSubmitButton
-            pendingLabel="Saving…"
+            pendingLabel="Savingâ€¦"
             deskAction="default"
             className={headerPrimaryClass}
             disabled={Boolean(saveBlocked || optionalMissing)}
@@ -2184,7 +2177,7 @@ export function DcaPlaybookForm({
               className={fieldClass}
             >
               <option value="percent">Percentage</option>
-              <option value="atr">ATR × multiplier</option>
+              <option value="atr">ATR Ã— multiplier</option>
             </select>
           </label>
           {takeProfitKind === "percent" ? (
@@ -2530,12 +2523,12 @@ export function DcaPlaybookForm({
           <SummaryStat
             label="Covered Range"
             value={
-              summary.covered === null ? "—" : `${trimPct(summary.covered)}%`
+              summary.covered === null ? "â€”" : `${trimPct(summary.covered)}%`
             }
             hint={
               averaging === "dip" && spacingKind === "atr"
                 ? atrFetch === "loading"
-                  ? "Reading last ATR…"
+                  ? "Reading last ATRâ€¦"
                   : atrFetch === "error"
                     ? "Could not read last ATR"
                     : summary.spacingHint
@@ -2550,7 +2543,7 @@ export function DcaPlaybookForm({
             label="Max Exposure"
             value={
               summary.required === null
-                ? "—"
+                ? "â€”"
                 : formatUsdAmount(summary.required)
             }
             hint={
@@ -2563,14 +2556,14 @@ export function DcaPlaybookForm({
                     showLadderTabs ? "This side only" : null,
                   ]
                     .filter(Boolean)
-                    .join(" · ")
+                    .join(" Â· ")
             }
           />
           <SummaryStat
             label="Initial Margin"
             value={
               summary.initialMargin === null
-                ? "—"
+                ? "â€”"
                 : formatUsdAmount(summary.initialMargin)
             }
             valueClass={
@@ -2583,36 +2576,36 @@ export function DcaPlaybookForm({
             hint={
               summary.initialMargin === null
                 ? leverage == null || !(leverage > 0)
-                  ? "Max exposure ÷ leverage. Set leverage to estimate."
+                  ? "Max exposure Ã· leverage. Set leverage to estimate."
                   : null
                 : [
-                    `Max exposure ÷ ${leverage}×`,
+                    `Max exposure Ã· ${leverage}Ã—`,
                     availableUsdt !== null
                       ? summary.initialMargin > availableUsdt
-                        ? `Available ${formatUsdAmount(availableUsdt)} — less than this margin`
+                        ? `Available ${formatUsdAmount(availableUsdt)} â€” less than this margin`
                         : `Available ${formatUsdAmount(availableUsdt)}`
                       : null,
                     showLadderTabs ? "This side only" : null,
                   ]
                     .filter(Boolean)
-                    .join(" · ") || null
+                    .join(" Â· ") || null
             }
           />
           <SummaryStat
             label="Profit range"
             value={
               summary.levels.length === 0
-                ? "—"
+                ? "â€”"
                 : takeProfitKind === "atr" && liveAtr == null
-                  ? "—"
+                  ? "â€”"
                   : summary.profitFromTp
                     ? summary.profitRange === null
-                      ? "—"
+                      ? "â€”"
                       : formatProfitRange(
                           summary.profitRange.min,
                           summary.profitRange.max,
                         )
-                    : "∞"
+                    : "âˆž"
             }
             valueClass={
               summary.levels.length === 0 ? "text-ink" : "text-success"
@@ -2623,19 +2616,19 @@ export function DcaPlaybookForm({
                 : takeProfitKind === "atr" && liveAtr == null
                   ? atrFetch === "error"
                     ? "Could not read last ATR"
-                    : "Reading last ATR…"
+                    : "Reading last ATRâ€¦"
                   : summary.profitFromTp
                     ? "Does not consider trailing or breakeven stops"
-                    : "No take profit — unlimited"
+                    : "No take profit â€” unlimited"
             }
           />
           <SummaryStat
             label="Loss range"
             value={
               summary.levels.length === 0
-                ? "—"
+                ? "â€”"
                 : summary.lossRange === null
-                  ? "∞"
+                  ? "âˆž"
                   : formatProfitRange(
                       summary.lossRange.min,
                       summary.lossRange.max,
@@ -2649,7 +2642,7 @@ export function DcaPlaybookForm({
                 ? "Enter order size and max orders"
                 : summary.lossFromSl
                   ? "Does not consider trailing or breakeven stops"
-                  : "No stop loss — unlimited"
+                  : "No stop loss â€” unlimited"
             }
           />
         </div>
@@ -2720,7 +2713,7 @@ export function DcaPlaybookForm({
                     </td>
                     <td className="px-3 py-2 tabular-nums text-ink-muted">
                       {row.index === 1
-                        ? "—"
+                        ? "â€”"
                         : `${row.deviationPct > 0 ? "+" : ""}${trimPct(row.deviationPct)}%`}
                     </td>
                     <td
@@ -2754,9 +2747,9 @@ export function DcaPlaybookForm({
                     >
                       {summary.profitFromTp
                         ? takeProfitKind === "atr" && liveAtr == null
-                          ? "—"
+                          ? "â€”"
                           : formatUsdAmount(row.profitUsdt)
-                        : "∞"}
+                        : "âˆž"}
                     </td>
                     <td
                       className={`px-3 py-2 tabular-nums ${
@@ -2766,7 +2759,7 @@ export function DcaPlaybookForm({
                       }`}
                     >
                       {row.lossUsdt === null
-                        ? "∞"
+                        ? "âˆž"
                         : formatUsdAmount(row.lossUsdt)}
                     </td>
                   </tr>
@@ -2801,10 +2794,10 @@ export function DcaPlaybookForm({
                 ? summary.tpHint
                   ? ` Profit is ${summary.tpHint} from that average.`
                   : " Profit is take profit from that average."
-                : " No take profit — profit is unlimited."}
+                : " No take profit â€” profit is unlimited."}
               {summary.lossFromSl
                 ? " Loss is stop loss from that average."
-                : " No stop loss — loss is unlimited."}
+                : " No stop loss â€” loss is unlimited."}
             </p>
           </div>
         ) : (
@@ -2825,317 +2818,6 @@ export function DcaPlaybookForm({
   );
 }
 
-function IndicatorStartFields({
-  side,
-  prefix,
-  kind,
-  timeframe,
-  compare,
-  level,
-  period,
-  slowPeriod,
-  onKindChange,
-  onTimeframeChange,
-  onCompareChange,
-  onLevelChange,
-  onPeriodChange,
-  onSlowPeriodChange,
-}: {
-  side: "long" | "short";
-  prefix: "indicator" | "shortIndicator";
-  kind: DcaIndicatorKind;
-  timeframe: DcaIndicatorTimeframe;
-  compare: string;
-  level: string;
-  period: string;
-  slowPeriod: string;
-  onKindChange: (next: DcaIndicatorKind) => void;
-  onTimeframeChange: (next: DcaIndicatorTimeframe) => void;
-  onCompareChange: (next: string) => void;
-  onLevelChange: (next: string) => void;
-  onPeriodChange: (next: string) => void;
-  onSlowPeriodChange: (next: string) => void;
-}) {
-  const includeLegacyEmaPrice = dcaIndicatorIsLegacyEmaPrice(
-    kind,
-    compare,
-    level,
-  );
-  const whenOptions = dcaIndicatorWhenOptions(
-    kind,
-    side,
-    includeLegacyEmaPrice,
-  );
-  const showPairPeriods =
-    dcaIndicatorUsesPairPeriods(kind) && !includeLegacyEmaPrice;
-  const whenField = (
-    <label className={labelClass}>
-      <HintLabel text="When" required />
-      <select
-        name={`${prefix}Compare`}
-        value={dcaIndicatorWhenValue(kind, side, compare, level)}
-        onChange={(event) => {
-          const next = event.target.value;
-          onCompareChange(next);
-          if (kind === "ema_cross" && next !== "legacy") {
-            onLevelChange("");
-          }
-        }}
-        className={fieldClass}
-      >
-        {whenOptions.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-  const indicatorField = (
-    <label className={labelClass}>
-      <HintLabel text="Indicator" required />
-      <select
-        name={`${prefix}Kind`}
-        value={kind}
-        onChange={(event) => {
-          const next = event.target.value as DcaIndicatorKind;
-          onKindChange(next);
-          onCompareChange(indicatorCompareForDirection(side, next, ""));
-          if (next === "rsi") {
-            onLevelChange("30");
-          } else if (next === "macd") {
-            onLevelChange("0");
-          } else if (
-            kind === "rsi" ||
-            kind === "macd" ||
-            dcaIndicatorIsLegacyEmaPrice(kind, compare, level)
-          ) {
-            onLevelChange("");
-          }
-          if (dcaIndicatorUsesPairPeriods(next)) {
-            onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
-            onSlowPeriodChange(String(defaultDcaIndicatorSlowPeriod(next)));
-          } else {
-            onSlowPeriodChange("");
-            if (dcaIndicatorUsesPeriod(next)) {
-              onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
-            }
-          }
-        }}
-        className={fieldClass}
-      >
-        {DCA_INDICATOR_KIND_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-  const timeframeField = (
-    <label className={labelClass}>
-      <HintLabel text="Timeframe" required />
-      <select
-        name={`${prefix}Timeframe`}
-        value={timeframe}
-        onChange={(event) =>
-          onTimeframeChange(event.target.value as DcaIndicatorTimeframe)
-        }
-        className={fieldClass}
-      >
-        {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
-          <option key={interval} value={interval}>
-            {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-  const pairFields = (
-    <>
-      <label className={labelClass}>
-        <HintLabel text="Fast" required />
-        <GroupedNumberInput
-          name={`${prefix}Period`}
-          value={period}
-          onChange={onPeriodChange}
-          className={fieldClass}
-        />
-      </label>
-      {whenField}
-      <label className={labelClass}>
-        <HintLabel text="Slow" required />
-        <GroupedNumberInput
-          name={`${prefix}SlowPeriod`}
-          value={slowPeriod}
-          onChange={onSlowPeriodChange}
-          className={fieldClass}
-        />
-      </label>
-    </>
-  );
-  const periodField = dcaIndicatorUsesPeriod(kind) ? (
-    <label className={labelClass}>
-      <HintLabel text="Period" required />
-      <GroupedNumberInput
-        name={`${prefix}Period`}
-        value={period}
-        onChange={onPeriodChange}
-        className={fieldClass}
-      />
-    </label>
-  ) : null;
-  const levelField = dcaIndicatorShowsLevel(kind, compare, level) ? (
-    <label className={labelClass}>
-      <HintLabel
-        text={kind === "ema_cross" ? "Level (price)" : "Level"}
-        required
-      />
-      <GroupedNumberInput
-        name={`${prefix}Level`}
-        value={level}
-        onChange={onLevelChange}
-        allowDecimal
-        allowNegative={kind === "macd"}
-        className={fieldClass}
-      />
-    </label>
-  ) : null;
-  return (
-    <>
-      {showPairPeriods ? (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5 lg:col-span-4">
-          {indicatorField}
-          {timeframeField}
-          {pairFields}
-        </div>
-      ) : kind === "rsi" ? (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5 lg:col-span-4">
-          {indicatorField}
-          {periodField}
-          {timeframeField}
-          {whenField}
-          {levelField}
-        </div>
-      ) : (
-        <>
-          {indicatorField}
-          {periodField}
-          {timeframeField}
-          {whenField}
-          {levelField}
-        </>
-      )}
-    </>
-  );
-}
-
-function TrendStartFields({
-  side,
-  prefix,
-  kind,
-  timeframe,
-  compare,
-  period,
-  multiplier,
-  onKindChange,
-  onTimeframeChange,
-  onCompareChange,
-  onPeriodChange,
-  onMultiplierChange,
-}: {
-  side: "long" | "short";
-  prefix: "indicator" | "shortIndicator";
-  kind: DcaIndicatorKind;
-  timeframe: DcaIndicatorTimeframe;
-  compare: string;
-  period: string;
-  multiplier: string;
-  onKindChange: (next: DcaIndicatorKind) => void;
-  onTimeframeChange: (next: DcaIndicatorTimeframe) => void;
-  onCompareChange: (next: string) => void;
-  onPeriodChange: (next: string) => void;
-  onMultiplierChange: (next: string) => void;
-}) {
-  const trendKind = kind === "supertrend" ? kind : "supertrend";
-  const whenOptions = dcaIndicatorWhenOptions(trendKind, side, false);
-  return (
-    <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5 lg:col-span-4">
-      <label className={labelClass}>
-        <HintLabel text="Trend" required />
-        <select
-          name={`${prefix}Kind`}
-          value={trendKind}
-          onChange={(event) => {
-            const next = event.target.value as DcaIndicatorKind;
-            onKindChange(next);
-            onCompareChange(indicatorCompareForDirection(side, next, ""));
-            onPeriodChange(String(defaultDcaIndicatorPeriod(next)));
-            onMultiplierChange(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
-          }}
-          className={fieldClass}
-        >
-          {DCA_TREND_KIND_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className={labelClass}>
-        <HintLabel text="Period" required />
-        <GroupedNumberInput
-          name={`${prefix}Period`}
-          value={period}
-          onChange={onPeriodChange}
-          className={fieldClass}
-        />
-      </label>
-      <label className={labelClass}>
-        <HintLabel text="Multiplier" required />
-        <GroupedNumberInput
-          name={`${prefix}Multiplier`}
-          value={multiplier}
-          onChange={onMultiplierChange}
-          allowDecimal
-          className={fieldClass}
-        />
-      </label>
-      <label className={labelClass}>
-        <HintLabel text="Timeframe" required />
-        <select
-          name={`${prefix}Timeframe`}
-          value={timeframe}
-          onChange={(event) =>
-            onTimeframeChange(event.target.value as DcaIndicatorTimeframe)
-          }
-          className={fieldClass}
-        >
-          {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
-            <option key={interval} value={interval}>
-              {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className={labelClass}>
-        <HintLabel text="When" required />
-        <select
-          name={`${prefix}Compare`}
-          value={dcaIndicatorWhenValue(trendKind, side, compare)}
-          onChange={(event) => onCompareChange(event.target.value)}
-          className={fieldClass}
-        >
-          {whenOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-    </div>
-  );
-}
 
 function TriggerFields({
   prefix,
@@ -3190,7 +2872,7 @@ function TriggerFields({
 
 function formatLadderPrice(value: number): string {
   if (!(value > 0) || !Number.isFinite(value)) {
-    return "—";
+    return "â€”";
   }
   const digits = value >= 1000 ? 2 : value >= 1 ? 4 : 6;
   return value.toLocaleString("en-US", {
@@ -3201,7 +2883,7 @@ function formatLadderPrice(value: number): string {
 
 function formatGroupedNumber(value: number): string {
   if (!Number.isFinite(value)) {
-    return "—";
+    return "â€”";
   }
   const abs = Math.abs(value);
   const decimals = Number.isInteger(abs) ? 0 : 2;
@@ -3236,7 +2918,7 @@ function formatProfitRange(min: number, max: number): string {
   if (Math.abs(max - min) < 0.005) {
     return formatUsdAmount(max);
   }
-  return `${formatUsdAmount(min)} – ${formatUsdAmount(max)}`;
+  return `${formatUsdAmount(min)} â€“ ${formatUsdAmount(max)}`;
 }
 
 function trimPct(value: number): string {

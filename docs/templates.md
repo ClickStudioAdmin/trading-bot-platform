@@ -41,7 +41,7 @@ A named snapshot of **one** idle bot for **one** `desk_type`.
 
 Stored as versioned JSON (`recipe` + `recipe_version`) plus metadata. Live tables keep evolving with migrations; apply runs the same parsers the Save form uses (defaults for missing keys, reject unknown desk type). Do not create parallel copies of every `dca_playbooks` column.
 
-**Snapshot includes:** name (as default for the new row), contract/symbol if present, sizing, start, averaging, exits, Perps action/trigger, C&C bot filters — the fields a user would type on Automations.
+**Snapshot includes:** name (as default for the new row), contract/symbol if present, sizing, start, averaging, exits, Perps action/trigger plus Indicator / Trend / Secondary Entry / Hard Exit / Move Breakeven, C&C bot filters — the fields a user would type on Automations.
 
 **Snapshot never includes:** API keys, webhook tokens, `webhook_id` (desk-specific door), runtime (`condition_true`, `clips_filled`, `long_*` / `short_*` status, `last_fired_at`, arm/disarm latches), position or working-order ids, reduce-only / desk caps.
 

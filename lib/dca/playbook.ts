@@ -1391,7 +1391,7 @@ export function parseDcaPlaybookForm(
   if (startKind === "webhook" && !webhookId) {
     return { ok: false, error: "Choose a Signal webhook." };
   }
-  const longIndicator = parseIndicatorStartFields(
+  const longIndicator = parseDcaIndicatorStartFields(
     form,
     {
       kind: "indicatorKind",
@@ -1409,7 +1409,7 @@ export function parseDcaPlaybookForm(
   if (!longIndicator.ok) {
     return longIndicator;
   }
-  const shortIndicator = parseIndicatorStartFields(
+  const shortIndicator = parseDcaIndicatorStartFields(
     form,
     {
       kind: "shortIndicatorKind",
@@ -1511,7 +1511,7 @@ export function parseDcaPlaybookForm(
   };
 }
 
-function parseIndicatorStartFields(
+export function parseDcaIndicatorStartFields(
   form: FormData,
   names: {
     kind: string;

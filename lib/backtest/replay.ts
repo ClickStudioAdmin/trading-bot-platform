@@ -1,6 +1,16 @@
 import { decideFuturesAutomationTick } from "@/lib/futures/automation";
-import { triggerConditionMet } from "@/lib/futures/automation";
+import {
+  futuresBreakevenDue,
+  futuresBreakevenStop,
+  futuresEntryConditionMet,
+  futuresFilterMet,
+} from "@/lib/futures/conditions";
 import type { FuturesAction, FuturesSide } from "@/lib/futures/model";
+import {
+  resampleBarsForTimeframe,
+  type DcaIndicatorTimeframe,
+} from "@/lib/dca/indicators";
+import { backtestTapeInterval } from "./model";
 import {
   paperStopLossHit,
   paperTakeProfitHit,
@@ -40,6 +50,12 @@ export function canBacktestPerpsRecipe(
   if (!(size > 0)) {
     return { ok: false, error: "This bot needs a size before it can replay." };
   }
+  if (recipe.entrySource === "indicator" || recipe.entrySource === "trend") {
+    if (!recipe.indicator?.kind || !recipe.indicator.timeframe) {
+      return { ok: false, error: "This bot needs Indicator or Trend settings." };
+    }
+    return { ok: true };
+  }
   const trigger = Number(String(recipe.triggerPrice).replace(/,/g, "").trim());
   if (!(trigger > 0)) {
     return { ok: false, error: "This bot needs a When price." };
@@ -77,6 +93,7 @@ type OpenSim = {
   entry: number;
   tpsl: FuturesTpsl | null;
   trailing: FuturesTrailing | null;
+  breakevenDone: boolean;
 };
 
 function mergeSimPosition(
@@ -95,6 +112,7 @@ function mergeSimPosition(
       entry: (current.entry * current.qty + price * qty) / nextQty,
       tpsl: current.tpsl ?? tpsl,
       trailing: current.trailing ?? trailing,
+      breakevenDone: current.breakevenDone,
     };
   }
   return {
@@ -103,6 +121,7 @@ function mergeSimPosition(
     entry: price,
     tpsl,
     trailing: trailing ? armTrailingAt(trailing, price) : null,
+    breakevenDone: false,
   };
 }
 
@@ -119,6 +138,28 @@ function unrealized(
   return side === "long" ? (mark - entry) * qty : (entry - mark) * qty;
 }
 
+function replayBarsByTimeframe(
+  window: CandleBar[],
+  tape: DcaIndicatorTimeframe,
+  timeframes: DcaIndicatorTimeframe[],
+): Map<DcaIndicatorTimeframe, CandleBar[]> {
+  const map = new Map<DcaIndicatorTimeframe, CandleBar[]>();
+  for (const timeframe of timeframes) {
+    const resampled = resampleBarsForTimeframe(window, tape, timeframe);
+    map.set(
+      timeframe,
+      resampled.map((row, index) => ({
+        timeMs: window[Math.min(index, window.length - 1)]?.timeMs ?? index,
+        open: row.close,
+        high: row.high,
+        low: row.low,
+        close: row.close,
+      })),
+    );
+  }
+  return map;
+}
+
 export function replayPerpsPriceCross(input: {
   bars: CandleBar[];
   recipe: PerpsTemplateRecipe;
@@ -131,9 +172,12 @@ export function replayPerpsPriceCross(input: {
     return { orders: [], stats: emptyBacktestStats(input.startingUsdt) };
   }
   const { action, closeSide } = recipeAction(input.recipe);
-  const trigger = Number(
-    String(input.recipe.triggerPrice).replace(/,/g, "").trim(),
-  );
+  const tape = backtestTapeInterval(input.recipe, 1, 2);
+  const conditionTimeframes = [
+    input.recipe.indicator?.timeframe,
+    input.recipe.confirm?.timeframe,
+    input.recipe.exitIf?.timeframe,
+  ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
   let wasTrue = false;
   let open: OpenSim | null = null;
   const orders: SimulatedOrder[] = [];
@@ -260,16 +304,86 @@ export function replayPerpsPriceCross(input: {
           flattenOpen(bar.timeMs, tp.price, "take_profit");
         }
       }
+      const barsByTimeframe = replayBarsByTimeframe(
+        input.bars.slice(0, input.bars.indexOf(bar) + 1),
+        tape,
+        conditionTimeframes,
+      );
+      if (
+        open &&
+        input.recipe.exitIf &&
+        futuresFilterMet({
+          spec: input.recipe.exitIf,
+          side: open.side,
+          barsByTimeframe,
+        })
+      ) {
+        flattenOpen(bar.timeMs, price, "exit_if");
+      }
+      if (
+        open &&
+        futuresBreakevenDue({
+          side: open.side,
+          qty: open.qty,
+          entryPrice: open.entry,
+          mark: price,
+          activationPct: input.recipe.breakevenActivationPct,
+          done: open.breakevenDone,
+        })
+      ) {
+        const stop = futuresBreakevenStop({
+          side: open.side,
+          entryPrice: open.entry,
+          currentStop: open.tpsl?.stopLoss ?? null,
+          offsetPct: input.recipe.breakevenOffsetPct,
+        });
+        if (stop != null && stop > 0) {
+          open.tpsl = {
+            takeProfit: open.tpsl?.takeProfit ?? null,
+            stopLoss: stop,
+            tpTrigger: open.tpsl?.tpTrigger ?? "last",
+            slTrigger: open.tpsl?.slTrigger ?? "last",
+            mode: open.tpsl?.mode ?? "full",
+            tpQty: open.tpsl?.tpQty ?? null,
+            slQty: open.tpsl?.slQty ?? null,
+            tpOrderType: open.tpsl?.tpOrderType ?? "market",
+            slOrderType: "market",
+            tpLimitPrice: open.tpsl?.tpLimitPrice ?? null,
+            slLimitPrice: null,
+          };
+          open.breakevenDone = true;
+        }
+      }
     }
     if (liquidated) {
       markEquity(0);
       continue;
     }
-    const conditionMet = triggerConditionMet(
-      price,
-      input.recipe.triggerCompare,
-      trigger,
+    const barsByTimeframe = replayBarsByTimeframe(
+      input.bars.slice(0, input.bars.indexOf(bar) + 1),
+      tape,
+      conditionTimeframes,
     );
+    const side: FuturesSide =
+      action === "flatten"
+        ? (closeSide ?? "long")
+        : action === "sell"
+          ? "short"
+          : "long";
+    const conditionMet = futuresEntryConditionMet({
+      rule: {
+        entrySource: input.recipe.entrySource,
+        indicator: input.recipe.indicator,
+        confirm: input.recipe.confirm,
+        triggerCompare: input.recipe.triggerCompare,
+        triggerPrice: Number(
+          String(input.recipe.triggerPrice).replace(/,/g, "").trim(),
+        ),
+      },
+      side,
+      price,
+      barsByTimeframe,
+    });
     const hasOpenOnSide =
       action === "flatten"
         ? Boolean(open && open.side === (closeSide ?? "long"))

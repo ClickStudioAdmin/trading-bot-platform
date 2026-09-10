@@ -436,6 +436,24 @@ export function backtestTapeInterval(
   toMs: number,
 ): DcaIndicatorTimeframe {
   if (
+    recipe?.kind === "perps" &&
+    (recipe.entrySource === "indicator" || recipe.entrySource === "trend")
+  ) {
+    const rows = [
+      recipe.indicator?.timeframe,
+      recipe.confirm?.timeframe,
+      recipe.exitIf?.timeframe,
+    ].filter((row): row is DcaIndicatorTimeframe => Boolean(row));
+    if (rows.length === 1) {
+      return rows[0];
+    }
+    if (rows.length > 1) {
+      return rows.reduce((finest, next) =>
+        finerDcaIndicatorTimeframe(finest, next),
+      );
+    }
+  }
+  if (
     recipe?.kind === "dca" &&
     (recipe.startKind === "indicator" || recipe.startKind === "trend")
   ) {

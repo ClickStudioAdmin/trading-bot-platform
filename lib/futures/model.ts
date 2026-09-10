@@ -39,6 +39,7 @@ export type FuturesPosition = {
   trailingStop: number | null;
   trailingActive: number | null;
   trailingPeak: number | null;
+  breakevenDone: boolean;
 };
 
 export type FuturesOrder = {
@@ -245,5 +246,6 @@ export function parseFuturesPositionRow(
     trailingActive:
       Number(row.trailing_active) > 0 ? Number(row.trailing_active) : null,
     trailingPeak: Number(row.trailing_peak) > 0 ? Number(row.trailing_peak) : null,
+    breakevenDone: Boolean(row.breakeven_done),
   };
 }

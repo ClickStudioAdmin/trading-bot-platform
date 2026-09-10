@@ -242,6 +242,34 @@ if (webhookParsed.ok) {
   );
 }
 
+const indicatorRule = new FormData();
+indicatorRule.set("ruleCount", "1");
+indicatorRule.set("r0_name", "RSI long");
+indicatorRule.set("r0_symbol", "BTCUSDT");
+indicatorRule.set("r0_action", "buy");
+indicatorRule.set("r0_orderType", "market");
+indicatorRule.set("r0_size", "0.01");
+indicatorRule.set("r0_entrySource", "indicator");
+indicatorRule.set("r0_indicatorKind", "rsi");
+indicatorRule.set("r0_indicatorTimeframe", "15");
+indicatorRule.set("r0_indicatorCompare", "cross_lte");
+indicatorRule.set("r0_indicatorLevel", "30");
+indicatorRule.set("r0_indicatorPeriod", "14");
+indicatorRule.set("r0_confirmKind", "ema");
+indicatorRule.set("r0_confirmTimeframe", "240");
+indicatorRule.set("r0_confirmCompare", "gte");
+indicatorRule.set("r0_confirmPeriod", "20");
+indicatorRule.set("r0_breakevenActivationPct", "2");
+indicatorRule.set("r0_breakevenOffsetPct", "0");
+const indicatorParsed = parseFuturesAutomationForm(indicatorRule);
+assert.equal(indicatorParsed.ok, true);
+if (indicatorParsed.ok) {
+  assert.equal(indicatorParsed.rules[0]?.entrySource, "indicator");
+  assert.equal(indicatorParsed.rules[0]?.indicator?.kind, "rsi");
+  assert.equal(indicatorParsed.rules[0]?.confirm?.kind, "ema");
+  assert.equal(indicatorParsed.rules[0]?.breakevenActivationPct, 2);
+}
+
 assert.deepEqual(
   futuresDeskAutomationStatus({
     signedIn: true,

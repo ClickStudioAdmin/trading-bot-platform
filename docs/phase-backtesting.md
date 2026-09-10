@@ -80,7 +80,7 @@ Migrations: `supabase/migrations/20260830120000_backtest_runs.sql`, `supabase/mi
 
 ## Engine rules
 
-- Perps replay uses `decideFuturesAutomationTick` on each bar close, then ticket exits on the same book.
+- Perps replay uses `decideFuturesAutomationTick` on each bar close, then ticket exits on the same book. Price, Indicator, and Trend When replay; webhook still rejected. Secondary Entry is a same-tick AND. Hard Exit flattens on the close. Move Breakeven amends the simulated stop. Tape interval prefers the finest Indicator / confirm / exit-if timeframe.
 - DCA replay uses `decideDcaTick` (same clip / percent-exit / breakeven math as live). Percent **stop** also fires on the adverse wick at the planned SL (same-bar stop wins versus percent TP on close). Rest-grid bots fill GTC adds at `dcaSafetyPrices` (repriced from the current average after each add, same as live). Limit TP rests after the first fill and closes at the limit on the favorable wick. Disarm with qty still on the book becomes `stop_adding`, not a flatten. Marked equity ≤ $0 on the adverse wick flattens as **liquidation** and stops the replay; a tighter stop still wins if it is hit first.
 - Signal / webhook When, webhook-start, or **manual** start: **rejected** at user queue time.
 - Venue truth: Bybit klines for Bybit, HL candles for HL.
