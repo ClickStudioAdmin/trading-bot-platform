@@ -8,6 +8,7 @@ import {
   BotStatusField,
   DirtySaveBanner,
   HintLabel,
+  OptionalSection,
   OrderTypePill,
   botFieldClass,
   botHeaderPrimaryClass,
@@ -43,8 +44,7 @@ import {
   type BacktestLibraryItem,
 } from "@/components/backtest-dialog";
 import { snapshotPerpsRecipe } from "@/lib/templates/recipe";
-import { FuturesTpslFields } from "@/components/futures-tpsl";
-import { FuturesTrailingFields } from "@/components/futures-trailing";
+import type { FuturesOrderType, FuturesTrigger } from "@/lib/futures/model";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
@@ -79,7 +79,9 @@ export function FuturesAutomationsDesk({
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
 }) {
-  const [layers, setLayers] = useState(rules);
+  const [layers, setLayers] = useState(() =>
+    [...rules].sort((a, b) => b.sortOrder - a.sortOrder),
+  );
   const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
   const library = [...backtestLibrary, ...extraLibrary];
   const [cloneMenu, setCloneMenu] = useState(0);
@@ -105,7 +107,7 @@ export function FuturesAutomationsDesk({
     setLayers((current) => {
       const seen = new Set(current.map((row) => row.id).filter(Boolean));
       const fresh = nextRules.filter((row) => !row.id || !seen.has(row.id));
-      return fresh.length === 0 ? current : [...current, ...fresh];
+      return fresh.length === 0 ? current : [...fresh, ...current];
     });
   }
 
@@ -113,11 +115,66 @@ export function FuturesAutomationsDesk({
     if (!result.ok || !result.forms) {
       return;
     }
-    setLayers((current) => keepFormKeys(current, result.forms ?? []));
+    setLayers((current) =>
+      keepFormKeys(
+        current,
+        [...(result.forms ?? [])].sort((a, b) => b.sortOrder - a.sortOrder),
+      ),
+    );
   }
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            setLayers((current) => [
+              defaultFuturesAutomationForm(current.length, defaultSymbol),
+              ...current,
+            ])
+          }
+          className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
+        >
+          Create New Bot
+        </button>
+        {accountId ? (
+          <DeskTemplateBar
+            deskType="perps"
+            accountId={accountId}
+            templates={templates}
+            sets={sets}
+            onApplied={appendApplied}
+          />
+        ) : null}
+        {cloneSources.length > 0 ? (
+          <select
+            key={cloneMenu}
+            aria-label="Clone existing bot"
+            defaultValue=""
+            onChange={(event) => {
+              const key = event.target.value;
+              const source = cloneSources.find((item) => item.key === key);
+              if (!source) {
+                return;
+              }
+              setLayers((current) => [
+                cloneFuturesAutomationForm(source),
+                ...current,
+              ]);
+              setCloneMenu((n) => n + 1);
+            }}
+            className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
+          >
+            <option value="">Clone existing bot</option>
+            {cloneSources.map((item) => (
+              <option key={item.key} value={item.key}>
+                {item.name} · {item.symbol}
+              </option>
+            ))}
+          </select>
+        ) : null}
+      </div>
       {empty ? (
         <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
           No bots yet. Add a bot to fire Buy, Sell, or Close on a price
@@ -157,56 +214,6 @@ export function FuturesAutomationsDesk({
           />
         ))
       )}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            setLayers((current) => [
-              ...current,
-              defaultFuturesAutomationForm(current.length, defaultSymbol),
-            ])
-          }
-          className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
-        >
-          Create New Bot
-        </button>
-        {accountId ? (
-          <DeskTemplateBar
-            deskType="perps"
-            accountId={accountId}
-            templates={templates}
-            sets={sets}
-            onApplied={appendApplied}
-          />
-        ) : null}
-        {cloneSources.length > 0 ? (
-          <select
-            key={cloneMenu}
-            aria-label="Clone existing bot"
-            defaultValue=""
-            onChange={(event) => {
-              const key = event.target.value;
-              const source = cloneSources.find((item) => item.key === key);
-              if (!source) {
-                return;
-              }
-              setLayers((current) => [
-                ...current,
-                cloneFuturesAutomationForm(source),
-              ]);
-              setCloneMenu((n) => n + 1);
-            }}
-            className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
-          >
-            <option value="">Clone existing bot</option>
-            {cloneSources.map((item) => (
-              <option key={item.key} value={item.key}>
-                {item.name} · {item.symbol}
-              </option>
-            ))}
-          </select>
-        ) : null}
-      </div>
     </div>
   );
 }
@@ -253,7 +260,76 @@ function RuleCard({
   const [triggerPrice, setTriggerPrice] = useState(layer.triggerPrice);
   const [symbol, setSymbol] = useState(layer.symbol);
   const [entrySource, setEntrySource] = useState(layer.entrySource);
+  const [tpOn, setTpOn] = useState(() => layer.tpsl?.takeProfit != null);
+  const [slOn, setSlOn] = useState(() => layer.tpsl?.stopLoss != null);
+  const [trailOn, setTrailOn] = useState(
+    () => Boolean(layer.trailing && layer.trailing.distance > 0),
+  );
+  const [takeProfit, setTakeProfit] = useState(
+    layer.tpsl?.takeProfit != null ? String(layer.tpsl.takeProfit) : "",
+  );
+  const [stopLoss, setStopLoss] = useState(
+    layer.tpsl?.stopLoss != null ? String(layer.tpsl.stopLoss) : "",
+  );
+  const [tpTrigger, setTpTrigger] = useState<FuturesTrigger>(
+    layer.tpsl?.tpTrigger ?? "last",
+  );
+  const [slTrigger, setSlTrigger] = useState<FuturesTrigger>(
+    layer.tpsl?.slTrigger ?? "last",
+  );
+  const [tpOrderType, setTpOrderType] = useState<FuturesOrderType>(
+    layer.tpsl?.tpOrderType === "limit" ? "limit" : "market",
+  );
+  const [slOrderType, setSlOrderType] = useState<FuturesOrderType>(
+    layer.tpsl?.slOrderType === "limit" ? "limit" : "market",
+  );
+  const [tpLimitPrice, setTpLimitPrice] = useState(
+    layer.tpsl?.tpLimitPrice != null ? String(layer.tpsl.tpLimitPrice) : "",
+  );
+  const [slLimitPrice, setSlLimitPrice] = useState(
+    layer.tpsl?.slLimitPrice != null ? String(layer.tpsl.slLimitPrice) : "",
+  );
+  const [trailingStop, setTrailingStop] = useState(
+    layer.trailing != null ? String(layer.trailing.distance) : "",
+  );
+  const [trailingActive, setTrailingActive] = useState(
+    layer.trailing?.activePrice != null ? String(layer.trailing.activePrice) : "",
+  );
   const closing = formAction === "close_long" || formAction === "close_short";
+  const tpMissing = tpOn && takeProfit.trim() === "";
+  const slMissing = slOn && stopLoss.trim() === "";
+  const trailMissing = trailOn && trailingStop.trim() === "";
+  const optionalMissing = tpMissing || slMissing || trailMissing;
+  const tpsl =
+    tpOn || slOn
+      ? {
+          takeProfit: tpOn ? Number(takeProfit.replace(/,/g, "")) || null : null,
+          stopLoss: slOn ? Number(stopLoss.replace(/,/g, "")) || null : null,
+          tpTrigger,
+          slTrigger,
+          mode: layer.tpsl?.mode ?? "full",
+          tpQty: layer.tpsl?.tpQty ?? null,
+          slQty: layer.tpsl?.slQty ?? null,
+          tpOrderType,
+          slOrderType,
+          tpLimitPrice:
+            tpOn && tpOrderType === "limit"
+              ? Number(tpLimitPrice.replace(/,/g, "")) || null
+              : null,
+          slLimitPrice:
+            slOn && slOrderType === "limit"
+              ? Number(slLimitPrice.replace(/,/g, "")) || null
+              : null,
+        }
+      : null;
+  const trailing =
+        trailOn && Number(trailingStop.replace(/,/g, "")) > 0
+      ? {
+          distance: Number(trailingStop.replace(/,/g, "")),
+          activePrice: Number(trailingActive.replace(/,/g, "")) || null,
+          peak: layer.trailing?.peak ?? null,
+        }
+      : null;
   const webhookEntry = entrySource === "webhook";
   const whenWebhooks =
     layer.webhookId &&
@@ -290,8 +366,8 @@ function RuleCard({
       triggerCompare: layer.triggerCompare,
       triggerPrice: Number(triggerPrice.replace(/,/g, "")) || 0,
       skipIfOpen: layer.skipIfOpen,
-      tpsl: layer.tpsl,
-      trailing: layer.trailing,
+      tpsl,
+      trailing,
     });
   }
 
@@ -306,25 +382,36 @@ function RuleCard({
       }}
       onChange={() => setDirty(true)}
       guard={() => {
+        if (optionalMissing) {
+          return false;
+        }
         if (mode === "disabled" && disableNeedsConfirm(inUse)) {
           return window.confirm(disableConfirmMessage("perps"));
         }
         return true;
       }}
-      className="scroll-mt-24 divide-y divide-line rounded-card border border-line bg-canvas px-5"
+      className="flex flex-col scroll-mt-24 divide-y divide-line rounded-card border border-line bg-canvas px-5"
       id={layer.id ? `bot-${layer.id}` : undefined}
     >
       <input type="hidden" name="saveScope" value="one" />
       <input type="hidden" name="ruleCount" value="1" />
       <input type="hidden" name="deskVenue" value={venueId} />
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
-      <DirtySaveBanner dirty={dirty}>
+      <DirtySaveBanner
+        dirty={dirty}
+        error={
+          optionalMissing
+            ? "Fill required fields in enabled sections before saving."
+            : undefined
+        }
+      >
         <div className="flex flex-wrap items-center gap-2">
           <DeskFormFlash />
           <PendingSubmitButton
             pendingLabel="Saving…"
             deskAction="default"
             className={botHeaderPrimaryClass}
+            disabled={optionalMissing}
           >
             Save
           </PendingSubmitButton>
@@ -533,11 +620,171 @@ function RuleCard({
 
       {!closing ? (
         <>
-          <FuturesTpslFields namePrefix={prefix} defaultTpsl={layer.tpsl} />
-          <FuturesTrailingFields
-            namePrefix={prefix}
-            defaultTrailing={layer.trailing}
-          />
+          {tpOn || slOn ? (
+            <>
+              <input type="hidden" name={`${prefix}tpsl`} value="on" />
+              <input
+                type="hidden"
+                name={`${prefix}tpslMode`}
+                value={layer.tpsl?.mode ?? "full"}
+              />
+            </>
+          ) : null}
+          <OptionalSection
+            title="Take profit"
+            enabled={tpOn}
+            error={tpMissing ? "Required" : undefined}
+            onEnabled={setTpOn}
+          >
+            <div className={botRowClass}>
+              <BotField
+                label="Price"
+                error={tpMissing ? "Required" : undefined}
+              >
+                <GroupedNumberInput
+                  name={`${prefix}takeProfit`}
+                  value={takeProfit}
+                  onChange={setTakeProfit}
+                  allowDecimal
+                  className={botFieldClass}
+                />
+              </BotField>
+              <BotField label="Trigger">
+                <select
+                  name={`${prefix}tpTrigger`}
+                  value={tpTrigger}
+                  onChange={(event) =>
+                    setTpTrigger(event.target.value as FuturesTrigger)
+                  }
+                  className={botFieldClass}
+                >
+                  <option value="last">Last</option>
+                  <option value="mark">Mark</option>
+                  <option value="index">Index</option>
+                </select>
+              </BotField>
+              <BotField label="Order type">
+                <select
+                  name={`${prefix}tpOrderType`}
+                  value={tpOrderType}
+                  onChange={(event) =>
+                    setTpOrderType(event.target.value as FuturesOrderType)
+                  }
+                  className={botFieldClass}
+                >
+                  <option value="market">Market</option>
+                  <option value="limit">Limit</option>
+                </select>
+              </BotField>
+              {tpOrderType === "limit" ? (
+                <BotField label="Limit price">
+                  <GroupedNumberInput
+                    name={`${prefix}tpLimitPrice`}
+                    value={tpLimitPrice}
+                    onChange={setTpLimitPrice}
+                    allowDecimal
+                    className={botFieldClass}
+                  />
+                </BotField>
+              ) : (
+                <input type="hidden" name={`${prefix}tpLimitPrice`} value="" />
+              )}
+            </div>
+          </OptionalSection>
+          <OptionalSection
+            title="Trailing stop"
+            enabled={trailOn}
+            error={trailMissing ? "Required" : undefined}
+            onEnabled={setTrailOn}
+          >
+            {trailOn ? (
+              <input type="hidden" name={`${prefix}trailing`} value="on" />
+            ) : null}
+            <div className={botRowClass}>
+              <BotField
+                label="Retracement"
+                error={trailMissing ? "Required" : undefined}
+              >
+                <GroupedNumberInput
+                  name={`${prefix}trailingStop`}
+                  value={trailingStop}
+                  onChange={setTrailingStop}
+                  allowDecimal
+                  className={botFieldClass}
+                />
+              </BotField>
+              <BotField label="Activation price" hint="Empty is Off.">
+                <GroupedNumberInput
+                  name={`${prefix}trailingActive`}
+                  value={trailingActive}
+                  onChange={setTrailingActive}
+                  allowDecimal
+                  className={botFieldClass}
+                />
+              </BotField>
+            </div>
+          </OptionalSection>
+          <OptionalSection
+            title="Stop loss"
+            enabled={slOn}
+            error={slMissing ? "Required" : undefined}
+            onEnabled={setSlOn}
+          >
+            <div className={botRowClass}>
+              <BotField
+                label="Price"
+                error={slMissing ? "Required" : undefined}
+              >
+                <GroupedNumberInput
+                  name={`${prefix}stopLoss`}
+                  value={stopLoss}
+                  onChange={setStopLoss}
+                  allowDecimal
+                  className={botFieldClass}
+                />
+              </BotField>
+              <BotField label="Trigger">
+                <select
+                  name={`${prefix}slTrigger`}
+                  value={slTrigger}
+                  onChange={(event) =>
+                    setSlTrigger(event.target.value as FuturesTrigger)
+                  }
+                  className={botFieldClass}
+                >
+                  <option value="last">Last</option>
+                  <option value="mark">Mark</option>
+                  <option value="index">Index</option>
+                </select>
+              </BotField>
+              <BotField label="Order type">
+                <select
+                  name={`${prefix}slOrderType`}
+                  value={slOrderType}
+                  onChange={(event) =>
+                    setSlOrderType(event.target.value as FuturesOrderType)
+                  }
+                  className={botFieldClass}
+                >
+                  <option value="market">Market</option>
+                  <option value="limit">Limit</option>
+                </select>
+              </BotField>
+              {slOrderType === "limit" ? (
+                <BotField label="Limit price">
+                  <GroupedNumberInput
+                    name={`${prefix}slLimitPrice`}
+                    value={slLimitPrice}
+                    onChange={setSlLimitPrice}
+                    allowDecimal
+                    className={botFieldClass}
+                  />
+                </BotField>
+              ) : (
+                <input type="hidden" name={`${prefix}slLimitPrice`} value="" />
+              )}
+            </div>
+          </OptionalSection>
         </>
       ) : null}
 
@@ -568,6 +815,8 @@ function RuleCard({
                 triggerPrice,
                 symbol,
                 entrySource,
+                tpsl,
+                trailing,
               },
               venueId,
             )

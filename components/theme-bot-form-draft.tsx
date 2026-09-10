@@ -287,7 +287,11 @@ function OptionalSection({
   children: ReactNode;
 }) {
   return (
-    <section className={nested ? "space-y-3" : "space-y-3 py-5"}>
+    <section
+      className={`col-span-full block w-full min-w-0 ${
+        nested ? "space-y-3" : "space-y-3 py-5"
+      }`}
+    >
       <label className="flex cursor-pointer items-center gap-3">
         <input
           type="checkbox"
@@ -318,7 +322,7 @@ function Group({
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 py-5">
+    <section className="col-span-full block w-full min-w-0 space-y-3 py-5">
       {title ? (
         <h3 className={sectionTitleClass}>
           <HintLabel text={title} hint={hint} />
@@ -999,7 +1003,7 @@ export function ThemeBotFormDraft() {
         </div>
       </div>
 
-      <div className="divide-y divide-line rounded-card border border-line bg-canvas px-5">
+      <div className="flex flex-col divide-y divide-line rounded-card border border-line bg-canvas px-5">
         {dirty ? (
           <div className="flex flex-wrap items-center justify-between gap-3 py-4">
             <div>

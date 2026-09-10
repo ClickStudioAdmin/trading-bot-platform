@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Children,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   AdditionalActions,
   BotField,
@@ -214,12 +207,10 @@ function CycleLock({
   if (!locked) {
     return children;
   }
-  return Children.map(children, (child) =>
-    child == null ? null : (
-      <div inert className="pointer-events-none opacity-40" aria-disabled>
-        {child}
-      </div>
-    ),
+  return (
+    <span inert className="pointer-events-none opacity-40" aria-disabled>
+      {children}
+    </span>
   );
 }
 
@@ -497,7 +488,11 @@ export function DcaPlaybooksDesk({
   const library = [...backtestLibrary, ...extraLibrary];
   const [cards, setCards] = useState<
     { key: string; playbook: DcaPlaybook | null; seed?: DcaPlaybook }[]
-  >(() => playbooks.map((playbook) => ({ key: playbook.id, playbook })));
+  >(() =>
+    [...playbooks]
+      .reverse()
+      .map((playbook) => ({ key: playbook.id, playbook })),
+  );
   const [cloneMenu, setCloneMenu] = useState(0);
   const empty = cards.length === 0;
   const cloneSources = cards
@@ -527,8 +522,8 @@ export function DcaPlaybooksDesk({
         return current;
       }
       return [
-        ...current,
         ...fresh.map((playbook) => ({ key: playbook.id, playbook })),
+        ...current,
       ];
     });
   }
@@ -541,6 +536,61 @@ export function DcaPlaybooksDesk({
           Desk Settings. Take profit and stop still run.
         </p>
       ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            setCards((current) => [
+              { key: `new-${current.length}-${Date.now()}`, playbook: null },
+              ...current,
+            ])
+          }
+          className={addPlaybookClass}
+        >
+          Create New Bot
+        </button>
+        {accountId ? (
+          <DeskTemplateBar
+            deskType="dca"
+            accountId={accountId}
+            templates={templates}
+            sets={sets}
+            onApplied={appendApplied}
+          />
+        ) : null}
+        {cloneSources.length > 0 ? (
+          <select
+            key={cloneMenu}
+            aria-label="Clone existing bot"
+            defaultValue=""
+            onChange={(event) => {
+              const id = event.target.value;
+              const source = cloneSources.find((item) => item.id === id);
+              if (!source) {
+                return;
+              }
+              const seed = dcaCloneIdleDraft(source);
+              setCards((current) => [
+                {
+                  key: `clone-${source.id}-${Date.now()}`,
+                  playbook: null,
+                  seed,
+                },
+                ...current,
+              ]);
+              setCloneMenu((n) => n + 1);
+            }}
+            className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
+          >
+            <option value="">Clone existing bot</option>
+            {cloneSources.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name} · {item.symbol}
+              </option>
+            ))}
+          </select>
+        ) : null}
+      </div>
       {empty ? (
         <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
           No bots yet. Add a bot to own orders and exits on one
@@ -574,7 +624,7 @@ export function DcaPlaybooksDesk({
             defaultName={
               card.playbook?.name ??
               card.seed?.name ??
-              (index === 0 ? DEFAULT_DCA_NAME : `DCA ${index + 1}`)
+              (cards.length === 1 ? DEFAULT_DCA_NAME : `DCA ${cards.length - index}`)
             }
             onResult={(result) => {
               const next = result as DcaDeskActionResult;
@@ -605,61 +655,6 @@ export function DcaPlaybooksDesk({
           />
         ))
       )}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            setCards((current) => [
-              ...current,
-              { key: `new-${current.length}-${Date.now()}`, playbook: null },
-            ])
-          }
-          className={addPlaybookClass}
-        >
-          Create New Bot
-        </button>
-        {accountId ? (
-          <DeskTemplateBar
-            deskType="dca"
-            accountId={accountId}
-            templates={templates}
-            sets={sets}
-            onApplied={appendApplied}
-          />
-        ) : null}
-        {cloneSources.length > 0 ? (
-          <select
-            key={cloneMenu}
-            aria-label="Clone existing bot"
-            defaultValue=""
-            onChange={(event) => {
-              const id = event.target.value;
-              const source = cloneSources.find((item) => item.id === id);
-              if (!source) {
-                return;
-              }
-              const seed = dcaCloneIdleDraft(source);
-              setCards((current) => [
-                ...current,
-                {
-                  key: `clone-${source.id}-${Date.now()}`,
-                  playbook: null,
-                  seed,
-                },
-              ]);
-              setCloneMenu((n) => n + 1);
-            }}
-            className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
-          >
-            <option value="">Clone existing bot</option>
-            {cloneSources.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} · {item.symbol}
-              </option>
-            ))}
-          </select>
-        ) : null}
-      </div>
     </div>
   );
 }
@@ -789,6 +784,28 @@ export function DcaPlaybookForm({
   );
   const [takeProfitOrderType, setTakeProfitOrderType] =
     useState<FuturesOrderType>(source?.takeProfitOrderType ?? "market");
+  const [tpOn, setTpOn] = useState(() =>
+    source?.takeProfitKind === "atr"
+      ? source.takeProfitAtrMult != null
+      : source?.takeProfitPct != null,
+  );
+  const [trailingTriggerPct, setTrailingTriggerPct] = useState(
+    optional(source?.trailingTriggerPct),
+  );
+  const [trailingPct, setTrailingPct] = useState(optional(source?.trailingPct));
+  const [trailOn, setTrailOn] = useState(
+    () => source?.trailingPct != null || source?.trailingTriggerPct != null,
+  );
+  const [breakevenActivationPct, setBreakevenActivationPct] = useState(
+    optional(source?.breakevenActivationPct),
+  );
+  const [breakevenOffsetPct, setBreakevenOffsetPct] = useState(
+    optional(source?.breakevenOffsetPct),
+  );
+  const [breakevenOn, setBreakevenOn] = useState(
+    () => source?.breakevenActivationPct != null,
+  );
+  const [slOn, setSlOn] = useState(() => source?.stopLossPct != null);
   const [indicatorKind, setIndicatorKind] = useState<DcaIndicatorKind>(
     source?.indicatorKind ??
       (source?.startKind === "trend" ? "supertrend" : "rsi"),
@@ -1085,11 +1102,11 @@ export function DcaPlaybookForm({
       atrSpacingMult,
       maxClips,
       maxValue: valueCapUsdt == null ? "" : String(valueCapUsdt),
-      takeProfitPct,
+      takeProfitPct: tpOn ? takeProfitPct : "",
       takeProfitKind,
-      takeProfitAtrMult,
+      takeProfitAtrMult: tpOn ? takeProfitAtrMult : "",
       takeProfitBasis,
-      stopLossPct,
+      stopLossPct: slOn ? stopLossPct : "",
       stopLossBasis,
       leverage,
     };
@@ -1112,12 +1129,14 @@ export function DcaPlaybookForm({
     sizeMultiplier,
     sizeUnit,
     sizeUnitForClip,
+    slOn,
     stopLossBasis,
     stopLossPct,
     takeProfitBasis,
     takeProfitKind,
     takeProfitAtrMult,
     takeProfitPct,
+    tpOn,
     leverage,
   ]);
   const showLadderTabs = direction === "both";
@@ -1159,13 +1178,17 @@ export function DcaPlaybookForm({
       spacingKind,
       atrPeriod,
       atrSpacingMult,
-      takeProfitKind,
-      takeProfitAtrMult,
-      takeProfitPct,
+      takeProfitKind: tpOn ? takeProfitKind : "percent",
+      takeProfitAtrMult: tpOn ? takeProfitAtrMult : "",
+      takeProfitPct: tpOn ? takeProfitPct : "",
       takeProfitBasis,
       takeProfitOrderType,
-      stopLossPct,
+      stopLossPct: slOn ? stopLossPct : "",
       stopLossBasis,
+      trailingTriggerPct: trailOn ? trailingTriggerPct : "",
+      trailingPct: trailOn ? trailingPct : "",
+      breakevenActivationPct: breakevenOn ? breakevenActivationPct : "",
+      breakevenOffsetPct: breakevenOn ? breakevenOffsetPct : "",
       indicatorKind,
       indicatorTimeframe,
       indicatorCompare,
@@ -1221,11 +1244,32 @@ export function DcaPlaybookForm({
     direction === "both" && Boolean(shortExitIf) && !shortExitIf?.kind
       ? "Enter the required filter values."
       : null;
+  const tpMissing =
+    tpOn &&
+    (takeProfitKind === "atr"
+      ? asNumber(takeProfitAtrMult) == null
+      : asNumber(takeProfitPct) == null)
+      ? "Required"
+      : null;
+  const trailMissing =
+    trailOn &&
+    (asNumber(trailingTriggerPct) == null || asNumber(trailingPct) == null)
+      ? "Required"
+      : null;
+  const slMissing = slOn && asNumber(stopLossPct) == null ? "Required" : null;
+  const breakevenMissing =
+    breakevenOn && asNumber(breakevenActivationPct) == null
+      ? "Required"
+      : null;
   const optionalMissing =
     confirmMissing ??
     shortConfirmMissing ??
     exitIfMissing ??
-    shortExitIfMissing;
+    shortExitIfMissing ??
+    tpMissing ??
+    trailMissing ??
+    slMissing ??
+    breakevenMissing;
   function recipeForBacktest() {
     const parsed = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
     if (!parsed.ok) {
@@ -1295,7 +1339,7 @@ export function DcaPlaybookForm({
         }
         return true;
       }}
-      className="scroll-mt-24 divide-y divide-line rounded-card border border-line bg-canvas px-5"
+      className="flex flex-col scroll-mt-24 divide-y divide-line rounded-card border border-line bg-canvas px-5"
     >
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <input type="hidden" name="deskVenue" value={policy.venueId} />
@@ -1358,8 +1402,7 @@ export function DcaPlaybookForm({
         </p>
       ) : null}
 
-      <CycleLock locked={cycleLocked}>
-      <BotFormGroup title="What & When">
+      <BotFormGroup title="What & When" locked={cycleLocked}>
         <div className={rowClass}>
           <label className={labelClass}>
             Contract
@@ -1490,7 +1533,7 @@ export function DcaPlaybookForm({
         </div>
       </BotFormGroup>
 
-      <BotFormGroup title={triggerSectionTitle(startKind)}>
+      <BotFormGroup title={triggerSectionTitle(startKind)} locked={cycleLocked}>
         <div className={rowClass}>
           {startKind === "price" && direction === "both" ? (
             <div className="space-y-4 sm:col-span-2 lg:col-span-4">
@@ -1705,6 +1748,7 @@ export function DcaPlaybookForm({
         <BotFormGroup
           title="Secondary Entry Condition"
           hint="Must be true for the entry trigger to execute."
+          locked={cycleLocked}
         >
           <OptionalSection
             title="Long"
@@ -1761,6 +1805,7 @@ export function DcaPlaybookForm({
         <OptionalSection
           title="Secondary Entry Condition"
           hint="Must be true for the entry trigger to execute."
+          locked={cycleLocked}
           enabled={Boolean(confirm)}
           onEnabled={(next) =>
             setConfirm(
@@ -1791,14 +1836,8 @@ export function DcaPlaybookForm({
         </OptionalSection>
       )}
 
-      <BotFormGroup title="Maximum Exposure">
-          <div
-            className={
-              maxValueMode === "none"
-                ? "grid grid-cols-2 gap-x-3 gap-y-2"
-                : "grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)_minmax(0,1fr)] gap-x-3 gap-y-2"
-            }
-          >
+      <BotFormGroup title="Maximum Exposure" locked={cycleLocked}>
+          <div className={rowClass}>
             <label className={`min-w-0 ${labelClass}`}>
               Max orders
               <GroupedNumberInput
@@ -1876,7 +1915,7 @@ export function DcaPlaybookForm({
             />
           ) : null}
         </BotFormGroup>
-        <BotFormGroup title="Initial Order Size">
+        <BotFormGroup title="Initial Order Size" locked={cycleLocked}>
           <div className={rowClass}>
             {budgetSizesClip ? (
               <input type="hidden" name="sizeUnit" value="usdt" />
@@ -1930,9 +1969,9 @@ export function DcaPlaybookForm({
           </div>
         </BotFormGroup>
 
-        <BotFormGroup title="Additional orders">
+        <BotFormGroup title="Additional orders" locked={cycleLocked}>
           <div className={rowClass}>
-            <label className={labelClass}>
+            <label className={`${labelClass} lg:col-span-2`}>
               Averaging
               <select
                 name="averaging"
@@ -1971,7 +2010,6 @@ export function DcaPlaybookForm({
                   name="dipPct"
                   value={dipPct}
                   onChange={setDipPct}
-                  placeholder="Off"
                   ariaLabel="Price deviation percent"
                 />
               </label>
@@ -2048,7 +2086,7 @@ export function DcaPlaybookForm({
             ) : null}
           </div>
         </BotFormGroup>
-        <BotFormGroup title="Additional order multipliers">
+        <BotFormGroup title="Additional order multipliers" locked={cycleLocked}>
           <div className="mb-2 flex flex-wrap gap-2">
             <button
               type="button"
@@ -2099,9 +2137,27 @@ export function DcaPlaybookForm({
           </div>
           {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         </BotFormGroup>
-      </CycleLock>
 
-      <BotFormGroup title="Take profit">
+      {!tpOn ? (
+        <div hidden>
+          <input type="hidden" name="takeProfitKind" value="percent" />
+          <input type="hidden" name="takeProfitPct" value="" />
+          <input type="hidden" name="takeProfitAtrMult" value="" />
+          <input type="hidden" name="takeProfitBasis" value={takeProfitBasis} />
+          <input type="hidden" name="takeProfitOrderType" value="market" />
+        </div>
+      ) : null}
+      <OptionalSection
+        title="Take profit"
+        enabled={tpOn}
+        error={tpMissing ?? undefined}
+        onEnabled={(next) => {
+          setTpOn(next);
+          if (next && takeProfitKind === "percent" && !takeProfitPct) {
+            setTakeProfitKind("percent");
+          }
+        }}
+      >
           <div className={rowClass}>
           <label className={labelClass}>
             Method
@@ -2118,7 +2174,7 @@ export function DcaPlaybookForm({
             </select>
           </label>
           <label className={labelClass}>
-            Take profit type
+            Basis
             <select
               name="takeProfitBasis"
               value={takeProfitBasis}
@@ -2132,16 +2188,19 @@ export function DcaPlaybookForm({
             </select>
           </label>
           {takeProfitKind === "percent" ? (
-          <label className={labelClass}>
-            Take profit target
+          <BotField
+            label="Target %"
+            error={
+              tpOn && asNumber(takeProfitPct) == null ? "Required" : undefined
+            }
+          >
             <PercentInput
               name="takeProfitPct"
               value={takeProfitPct}
               onChange={setTakeProfitPct}
-              placeholder="Off"
               ariaLabel="Take profit target percent"
             />
-          </label>
+          </BotField>
           ) : (
           <>
             <CycleLock
@@ -2177,55 +2236,76 @@ export function DcaPlaybookForm({
             </label>
           </>
           )}
-        </div>
-        <label className="flex items-start gap-2 py-2 text-xs text-ink">
-          <input
-            type="hidden"
-            name="takeProfitOrderType"
-            value={takeProfitOrderType}
-          />
-          <input
-            type="checkbox"
-            checked={takeProfitOrderType === "limit"}
-            onChange={(event) =>
-              setTakeProfitOrderType(event.target.checked ? "limit" : "market")
-            }
-            className="mt-0.5"
-          />
-          Take profit placed as GTC limit (instead of market)
-        </label>
-      </BotFormGroup>
-
-      <BotFormGroup title="Trailing stop">
-        <div className={rowClass}>
-          <label className={labelClass}>
-            <ColumnHint
-              label="Trigger %"
-              hint="Trail starts after price moves this %."
+          <BotField label="Order type">
+            <OrderTypePill
+              name="takeProfitOrderType"
+              value={takeProfitOrderType === "limit" ? "limit" : "market"}
+              onChange={setTakeProfitOrderType}
             />
+          </BotField>
+        </div>
+      </OptionalSection>
+
+      {!trailOn ? (
+        <div hidden>
+          <input type="hidden" name="trailingTriggerPct" value="" />
+          <input type="hidden" name="trailingPct" value="" />
+        </div>
+      ) : null}
+      <OptionalSection
+        title="Trailing stop"
+        enabled={trailOn}
+        error={trailMissing ?? undefined}
+        onEnabled={setTrailOn}
+      >
+        <div className={rowClass}>
+          <BotField
+            label="Trigger %"
+            hint="Trail starts after price moves this %."
+            error={
+              trailOn && asNumber(trailingTriggerPct) == null
+                ? "Required"
+                : undefined
+            }
+          >
             <PercentInput
               name="trailingTriggerPct"
-              defaultValue={optional(source?.trailingTriggerPct)}
-              placeholder="Off"
+              value={trailingTriggerPct}
+              onChange={setTrailingTriggerPct}
               ariaLabel="Trailing trigger percent"
             />
-          </label>
-          <label className={labelClass}>
-            Trailing %
+          </BotField>
+          <BotField
+            label="Trailing %"
+            error={
+              trailOn && asNumber(trailingPct) == null ? "Required" : undefined
+            }
+          >
             <PercentInput
               name="trailingPct"
-              defaultValue={optional(source?.trailingPct)}
-              placeholder="Off"
+              value={trailingPct}
+              onChange={setTrailingPct}
               ariaLabel="Trailing percent"
             />
-          </label>
+          </BotField>
         </div>
-      </BotFormGroup>
+      </OptionalSection>
 
-      <BotFormGroup title="Stop loss">
+      {!slOn ? (
+        <div hidden>
+          <input type="hidden" name="stopLossPct" value="" />
+          <input type="hidden" name="stopLossBasis" value={stopLossBasis} />
+        </div>
+      ) : null}
+      <OptionalSection
+        title="Stop loss"
+        enabled={slOn}
+        error={slMissing ?? undefined}
+        onEnabled={setSlOn}
+      >
         <div className={rowClass}>
           <label className={labelClass}>
-            Stop loss type
+            Basis
             <select
               name="stopLossBasis"
               value={stopLossBasis}
@@ -2238,41 +2318,53 @@ export function DcaPlaybookForm({
               <option value="first_entry">First fill</option>
             </select>
           </label>
-          <label className={labelClass}>
-            Stop loss %
+          <BotField label="Stop loss %" error={slMissing ?? undefined}>
             <PercentInput
               name="stopLossPct"
               value={stopLossPct}
               onChange={setStopLossPct}
-              placeholder="Off"
               ariaLabel="Stop loss percent"
             />
-          </label>
+          </BotField>
         </div>
-      </BotFormGroup>
+      </OptionalSection>
 
-      <BotFormGroup title="Move Breakeven">
+      {!breakevenOn ? (
+        <div hidden>
+          <input type="hidden" name="breakevenActivationPct" value="" />
+          <input type="hidden" name="breakevenOffsetPct" value="" />
+        </div>
+      ) : null}
+      <OptionalSection
+        title="Move Breakeven"
+        enabled={breakevenOn}
+        error={breakevenMissing ?? undefined}
+        onEnabled={setBreakevenOn}
+      >
         <div className={rowClass}>
-          <label className={labelClass}>
-            Move stop to breakeven at %
+          <BotField
+            label="Move stop to breakeven at %"
+            error={breakevenMissing ?? undefined}
+          >
             <PercentInput
               name="breakevenActivationPct"
-              defaultValue={optional(source?.breakevenActivationPct)}
-              placeholder="Off"
+              value={breakevenActivationPct}
+              onChange={setBreakevenActivationPct}
               ariaLabel="Move stop to breakeven at percent"
             />
-          </label>
+          </BotField>
           <label className={labelClass}>
             Breakeven offset %
             <PercentInput
               name="breakevenOffsetPct"
-              defaultValue={optional(source?.breakevenOffsetPct)}
+              value={breakevenOffsetPct}
+              onChange={setBreakevenOffsetPct}
               placeholder="0"
               ariaLabel="Breakeven offset percent"
             />
           </label>
         </div>
-      </BotFormGroup>
+      </OptionalSection>
 
       {direction === "both" ? (
         <BotFormGroup title="Hard Exit Condition">
@@ -2407,7 +2499,10 @@ export function DcaPlaybookForm({
         </div>
       ) : null}
       {!running || ladderOpen ? (
-      <BotFormGroup title="Summary">
+      <BotFormGroup
+        title="Summary"
+        className="-mx-5 rounded-b-card bg-surface px-5"
+      >
         {confirmSummary ? (
           <p className="text-xs text-ink-muted">{confirmSummary}</p>
         ) : null}

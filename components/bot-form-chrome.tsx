@@ -63,6 +63,7 @@ export function OptionalSection({
   onEnabled,
   error,
   nested = false,
+  locked = false,
   children,
 }: {
   title: string;
@@ -71,10 +72,17 @@ export function OptionalSection({
   onEnabled: (next: boolean) => void;
   error?: string;
   nested?: boolean;
+  locked?: boolean;
   children: ReactNode;
 }) {
   return (
-    <section className={nested ? "space-y-3" : "space-y-3 py-5"}>
+    <section
+      className={`col-span-full block w-full min-w-0 ${
+        nested ? "space-y-3" : "space-y-3 py-5"
+      }${locked ? " pointer-events-none opacity-40" : ""}`}
+      inert={locked || undefined}
+      aria-disabled={locked || undefined}
+    >
       <label className="flex cursor-pointer items-center gap-3">
         <input
           type="checkbox"
@@ -98,14 +106,24 @@ export function OptionalSection({
 export function BotFormGroup({
   title,
   hint,
+  locked = false,
+  className,
   children,
 }: {
   title?: string;
   hint?: string;
+  locked?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 py-5">
+    <section
+      className={`col-span-full block w-full min-w-0 space-y-3 py-5${
+        locked ? " pointer-events-none opacity-40" : ""
+      }${className ? ` ${className}` : ""}`}
+      inert={locked || undefined}
+      aria-disabled={locked || undefined}
+    >
       {title ? (
         <h3 className={botSectionTitleClass}>
           <HintLabel text={title} hint={hint} />
@@ -291,7 +309,7 @@ export function AdditionalActions({
   children: ReactNode;
 }) {
   return (
-    <section className="flex flex-wrap items-center justify-between gap-2 py-5">
+    <section className="col-span-full flex w-full min-w-0 flex-wrap items-center justify-between gap-2 py-5">
       <h3 className={botSectionTitleClass}>Additional Actions</h3>
       <div className="flex flex-wrap items-center justify-end gap-2">
         {children}

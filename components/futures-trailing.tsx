@@ -17,8 +17,10 @@ const TICKET_INPUT =
 export function FuturesTrailingFields({
   namePrefix = "",
   defaultTrailing = null,
+  stacked = false,
 }: {
   namePrefix?: string;
+  stacked?: boolean;
   defaultTrailing?: {
     distance: number;
     activePrice: number | null;
@@ -44,7 +46,7 @@ export function FuturesTrailingFields({
         Trailing stop
       </label>
       {enabled ? (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={stacked ? "grid gap-3" : "grid gap-3 sm:grid-cols-2"}>
           <label className="block text-xs text-ink-muted">
             Retracement
             <GroupedNumberInput

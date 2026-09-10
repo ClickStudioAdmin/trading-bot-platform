@@ -27,8 +27,10 @@ const TICKET_QTY =
 export function FuturesTpslFields({
   namePrefix = "",
   defaultTpsl = null,
+  stacked = false,
 }: {
   namePrefix?: string;
+  stacked?: boolean;
   defaultTpsl?: {
     takeProfit: number | null;
     stopLoss: number | null;
@@ -75,7 +77,7 @@ export function FuturesTpslFields({
         ) : null}
       </div>
       {enabled ? (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className={stacked ? "grid gap-3" : "grid gap-3 sm:grid-cols-2"}>
           <TpslPriceField
             name={`${namePrefix}takeProfit`}
             triggerName={`${namePrefix}tpTrigger`}

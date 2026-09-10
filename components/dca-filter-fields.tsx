@@ -37,7 +37,7 @@ export function DcaFilterBlock({
   onChange,
   named = false,
   dense = false,
-  allowOff = true,
+  allowOff = false,
   gridClass,
   whenClass: whenClassProp,
   fieldClass,

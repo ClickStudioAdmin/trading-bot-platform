@@ -150,7 +150,7 @@ export function PaperRulesForm({
     visibility?: string;
   }[];
 }) {
-  const [layers, setLayers] = useState(values.layers);
+  const [layers, setLayers] = useState(() => [...values.layers].reverse());
   const [cloneMenu, setCloneMenu] = useState(0);
   const [inUseIds, setInUseIds] = useState(inUseRuleIds);
   const inUse = new Set(inUseIds);
@@ -162,7 +162,9 @@ export function PaperRulesForm({
       return;
     }
     if (result.layers) {
-      setLayers((current) => keepFormKeys(current, result.layers ?? []));
+      setLayers((current) =>
+        keepFormKeys(current, [...(result.layers ?? [])].reverse()),
+      );
       onHasSetsChange?.(result.layers.length > 0);
     }
     if (result.inUseRuleIds) {
@@ -185,7 +187,7 @@ export function PaperRulesForm({
     setLayers((current) => {
       const seen = new Set(current.map((row) => row.id).filter(Boolean));
       const fresh = nextLayers.filter((row) => !row.id || !seen.has(row.id));
-      return fresh.length === 0 ? current : [...current, ...fresh];
+      return fresh.length === 0 ? current : [...fresh, ...current];
     });
     onHasSetsChange?.(true);
   }
@@ -211,39 +213,13 @@ export function PaperRulesForm({
         </p>
       ) : null}
 
-      {empty ? (
-        <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
-          No bots yet. Add a bot to start the engine, or leave this
-          empty if you only trade by hand.
-        </p>
-      ) : (
-        layers.map((layer) => {
-          const id = Number(layer.id);
-          const used = Number.isFinite(id) && inUse.has(id);
-          return (
-            <RuleRow
-              key={layer.key}
-              layer={layer}
-              canRemove={!used}
-              inUse={used}
-              accountReduceOnly={reduceOnly}
-              isAdmin={isAdmin}
-              onSaved={applySaveResult}
-              onRemove={() => removeLayer(layer.key, layer.id)}
-              folders={sets}
-              recipeLibrary={recipeLibrary}
-            />
-          );
-        })
-      )}
-
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() =>
             setLayers((current) => [
-              ...current,
               layerToForm(current.length),
+              ...current,
             ])
           }
           className="rounded-control border border-line bg-surface-raised px-4 py-2 text-sm font-medium text-ink hover:border-line-strong"
@@ -271,8 +247,8 @@ export function PaperRulesForm({
                 return;
               }
               setLayers((current) => [
-                ...current,
                 clonePaperLayerForm(source),
+                ...current,
               ]);
               onHasSetsChange?.(true);
               setCloneMenu((n) => n + 1);
@@ -288,6 +264,32 @@ export function PaperRulesForm({
           </select>
         ) : null}
       </div>
+
+      {empty ? (
+        <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
+          No bots yet. Add a bot to start the engine, or leave this
+          empty if you only trade by hand.
+        </p>
+      ) : (
+        layers.map((layer) => {
+          const id = Number(layer.id);
+          const used = Number.isFinite(id) && inUse.has(id);
+          return (
+            <RuleRow
+              key={layer.key}
+              layer={layer}
+              canRemove={!used}
+              inUse={used}
+              accountReduceOnly={reduceOnly}
+              isAdmin={isAdmin}
+              onSaved={applySaveResult}
+              onRemove={() => removeLayer(layer.key, layer.id)}
+              folders={sets}
+              recipeLibrary={recipeLibrary}
+            />
+          );
+        })
+      )}
     </div>
   );
 }
@@ -357,7 +359,7 @@ function RuleRow({
         }
         return true;
       }}
-      className="scroll-mt-24 divide-y divide-line rounded-card border border-line bg-canvas px-5"
+      className="flex flex-col scroll-mt-24 divide-y divide-line rounded-card border border-line bg-canvas px-5"
       id={layer.id ? `bot-${layer.id}` : undefined}
     >
       <input type="hidden" name="saveScope" value="one" />
