@@ -2555,7 +2555,7 @@ function ThemeBotFormReference() {
           Could not save. Sample error flash.
         </DraftCallout>
         <DraftCallout tone="warning">
-          Size is above the desk max. Save is blocked so this bot is not lost.
+          Size is above the desk max. Save is blocked.
         </DraftCallout>
         <DraftCallout tone="warning">
           Reduce only is on. New orders stay blocked until you turn it off in

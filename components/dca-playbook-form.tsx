@@ -221,7 +221,7 @@ function SizeGuardNote({ message }: { message: string | null }) {
       className="rounded-card border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning"
       role="status"
     >
-      {message} Save is blocked so this bot is not lost.
+      {message} Save is blocked.
     </p>
   );
 }
