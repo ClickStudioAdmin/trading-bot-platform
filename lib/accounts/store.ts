@@ -313,12 +313,12 @@ export async function loadAccountUsage(
       .from("futures_positions")
       .select("account_id")
       .in("account_id", accountIds)
-      .eq("status", "open"),
+      .in("status", ["open", "closing"]),
     supabase
       .from("futures_working_orders")
       .select("account_id")
       .in("account_id", accountIds)
-      .eq("status", "open"),
+      .in("status", ["open", "cancelling"]),
     selectPaperEngineSettings(supabase, { accountIds }),
     selectPaperRuleModes(supabase, accountIds),
     selectFuturesAutomationModes(supabase, accountIds),

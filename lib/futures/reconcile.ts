@@ -1,6 +1,10 @@
 import { writeFuturesAdd, writeFuturesCloseSlice, writeFuturesOpen, patchFuturesTrailingPeak, patchFuturesWorking } from "./ledger";
 import { parseFuturesPositionRow, type FuturesPosition } from "./model";
 import {
+  FUTURES_LIVE_POSITION_STATUSES,
+  FUTURES_LIVE_WORKING_STATUSES,
+} from "./pending-close";
+import {
   paperStopCloseQty,
   paperStopLossHit,
   paperTakeProfitHit,
@@ -174,7 +178,7 @@ export async function reconcileOpenFuturesWorkingOrders(
   let query = supabase
     .from("futures_working_orders")
     .select("*")
-    .eq("status", "open")
+    .in("status", [...FUTURES_LIVE_WORKING_STATUSES])
     .order("created_at", { ascending: true });
   if (input?.accountId) {
     query = query.eq("account_id", input.accountId);
@@ -234,6 +238,13 @@ async function reconcileOneWorkingOrder(input: {
       supabase: input.supabase,
       row: input.row,
       connection: live,
+    });
+  }
+  if (input.row.status === "cancelling") {
+    return closeWorkingOrder({
+      supabase: input.supabase,
+      row: input.row,
+      status: "cancelled",
     });
   }
   const ticker =
@@ -315,6 +326,13 @@ async function reconcileLiveWorking(input: {
       row: input.row,
       status: venueStatus,
     });
+  } else if (input.row.status === "cancelling") {
+    const cancelled = await cancelFuturesWorkingRow({
+      supabase: input.supabase,
+      row: input.row,
+      connection: input.connection,
+    });
+    applied = cancelled.ok;
   }
   return applied;
 }
@@ -350,7 +368,9 @@ async function applyWorkingFill(input: {
   const status: FuturesWorkingStatus = done
     ? "filled"
     : input.nextStatus === "open"
-      ? "open"
+      ? input.row.status === "cancelling"
+        ? "cancelling"
+        : "open"
       : input.nextStatus;
   const now = new Date().toISOString();
   const { data, error } = await input.supabase
@@ -359,13 +379,13 @@ async function applyWorkingFill(input: {
       filled_qty: nextFilled,
       remaining_qty: remaining,
       status: status === "open" ? "open" : status,
-      closed_at: status === "open" ? null : now,
+      closed_at: status === "open" || status === "cancelling" ? null : now,
       updated_at: now,
     })
     .eq("id", input.row.id)
     .eq("account_id", input.row.accountId)
     .eq("filled_qty", input.row.filledQty)
-    .eq("status", "open")
+    .in("status", [...FUTURES_LIVE_WORKING_STATUSES])
     .select("id");
   if (error || !data || data.length === 0) {
     return false;
@@ -648,7 +668,7 @@ async function closeWorkingOrder(input: {
     })
     .eq("id", input.row.id)
     .eq("account_id", input.row.accountId)
-    .eq("status", "open")
+    .in("status", [...FUTURES_LIVE_WORKING_STATUSES])
     .select("id");
   if (error || !data || data.length === 0) {
     return false;
@@ -668,7 +688,7 @@ export async function cancelFuturesWorkingRow(input: {
   row: FuturesWorkingOrder;
   connection: BoundConnectionSecrets | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (input.row.status !== "open") {
+  if (input.row.status !== "open" && input.row.status !== "cancelling") {
     return { ok: false, error: "That order is no longer open." };
   }
   if (input.connection && input.row.venueOrderId) {
@@ -705,7 +725,7 @@ export async function cancelReduceOnlyWorkingForPosition(input: {
     .select("*")
     .eq("account_id", input.accountId)
     .eq("user_id", input.userId)
-    .eq("status", "open")
+    .in("status", [...FUTURES_LIVE_WORKING_STATUSES])
     .eq("reduce_only", true)
     .eq("position_id", input.positionId);
   if (error || !data) {
@@ -822,7 +842,7 @@ export async function reconcileOpenFuturesVenuePositions(
   let query = supabase
     .from("futures_positions")
     .select("*")
-    .eq("status", "open")
+    .in("status", [...FUTURES_LIVE_POSITION_STATUSES])
     .order("opened_at", { ascending: true });
   if (input?.accountId) {
     query = query.eq("account_id", input.accountId);
@@ -924,7 +944,7 @@ export async function reconcileOpenFuturesStops(
   let query = supabase
     .from("futures_positions")
     .select("*")
-    .eq("status", "open")
+    .in("status", [...FUTURES_LIVE_POSITION_STATUSES])
     .order("opened_at", { ascending: true });
   if (input?.accountId) {
     query = query.eq("account_id", input.accountId);
@@ -1244,7 +1264,7 @@ async function loadOpenReduceOnlyWorking(
   let query = supabase
     .from("futures_working_orders")
     .select("*")
-    .eq("status", "open")
+    .in("status", [...FUTURES_LIVE_WORKING_STATUSES])
     .eq("reduce_only", true);
   if (input?.accountId) {
     query = query.eq("account_id", input.accountId);
@@ -1273,7 +1293,7 @@ async function loadOpenOnSymbol(
     .eq("account_id", accountId)
     .eq("user_id", userId)
     .eq("symbol", symbol)
-    .eq("status", "open");
+    .in("status", [...FUTURES_LIVE_POSITION_STATUSES]);
   if (error || !data) {
     return [];
   }

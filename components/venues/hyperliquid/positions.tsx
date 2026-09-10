@@ -281,6 +281,7 @@ export async function HyperliquidFuturesPositions({
             playbookOwnsOrders={dcaBlotter}
             copyDesk={copyDesk}
             exchangeName="Hyperliquid"
+            urgentRefresh={open.some((row) => row.status === "closing")}
             emptyMessage={
               showTicket
                 ? undefined

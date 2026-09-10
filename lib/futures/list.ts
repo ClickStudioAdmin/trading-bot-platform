@@ -17,6 +17,11 @@ import {
   type EventLogRow,
 } from "@/lib/logs/list";
 import { createServiceClient } from "@/lib/supabase/admin";
+import {
+  FUTURES_LIVE_POSITION_STATUSES,
+  FUTURES_LIVE_WORKING_STATUSES,
+  futuresPositionIsLive,
+} from "./pending-close";
 
 export type FuturesListScope = {
   accountId: string;
@@ -54,8 +59,10 @@ export async function loadFuturesPositions(input?: {
     .eq("account_id", resolved.accountId)
     .eq("user_id", resolved.userId)
     .order("opened_at", { ascending: false });
-  if (input?.status) {
-    query = query.eq("status", input.status);
+  if (input?.status === "closed") {
+    query = query.eq("status", "closed");
+  } else if (input?.status === "open") {
+    query = query.in("status", [...FUTURES_LIVE_POSITION_STATUSES]);
   }
   const { data, error } = await query;
   if (error || !data) {
@@ -116,6 +123,12 @@ export async function loadOpenFuturesWorking(
   return loadFuturesWorking(scope, ["open"]);
 }
 
+export async function loadLiveFuturesWorking(
+  scope?: FuturesListScope,
+): Promise<FuturesWorkingOrder[]> {
+  return loadFuturesWorking(scope, [...FUTURES_LIVE_WORKING_STATUSES]);
+}
+
 export type FuturesDeskPosition = FuturesPosition & {
   orders: FuturesOrder[];
   logs: EventLogRow[];
@@ -153,7 +166,7 @@ export async function loadFuturesDesk(): Promise<{
   const [rows, orders, working, webhookNames] = await Promise.all([
     loadFuturesPositions(),
     loadFuturesOrders(),
-    loadOpenFuturesWorking(),
+    loadLiveFuturesWorking(),
     listFuturesOrderWebhookNames(session.account.id),
   ]);
   const oldestOpenMs = rows.reduce((oldest, row) => {
@@ -179,7 +192,7 @@ export async function loadFuturesDesk(): Promise<{
   return {
     signedIn: true,
     exchangeBook: accountCanHoldConnections(session.account.mode),
-    open: withLogs.filter((row) => row.status === "open"),
+    open: withLogs.filter((row) => futuresPositionIsLive(row.status)),
     closed: withLogs.filter((row) => row.status === "closed"),
     working,
     webhookNames,
@@ -201,7 +214,7 @@ export async function loadOpenFuturesByRuleId(
     .select("*")
     .eq("account_id", resolved.accountId)
     .eq("user_id", resolved.userId)
-    .eq("status", "open")
+    .in("status", [...FUTURES_LIVE_POSITION_STATUSES])
     .eq("rule_id", id);
   if (error || !data) {
     return [];
@@ -226,7 +239,7 @@ export async function loadOpenFuturesOnSymbol(
     .eq("account_id", resolved.accountId)
     .eq("user_id", resolved.userId)
     .eq("symbol", symbol)
-    .eq("status", "open");
+    .in("status", [...FUTURES_LIVE_POSITION_STATUSES]);
   if (error || !data) {
     return [];
   }

@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 const REFRESH_MS = 8_000;
+const URGENT_REFRESH_MS = 2_000;
 
-export function FuturesDeskRefresh() {
+export function FuturesDeskRefresh({ urgent = false }: { urgent?: boolean }) {
   const router = useRouter();
 
   useEffect(() => {
@@ -30,7 +31,7 @@ export function FuturesDeskRefresh() {
       if (document.hidden) {
         return;
       }
-      timer = window.setInterval(refresh, REFRESH_MS);
+      timer = window.setInterval(refresh, urgent ? URGENT_REFRESH_MS : REFRESH_MS);
     }
 
     function onVisibility() {
@@ -48,7 +49,7 @@ export function FuturesDeskRefresh() {
       stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [router]);
+  }, [router, urgent]);
 
   return null;
 }

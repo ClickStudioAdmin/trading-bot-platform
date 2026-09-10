@@ -6,6 +6,7 @@ import {
   nextWorkingFill,
   paperLimitShouldFill,
   parseFuturesWorkingRow,
+  formatWorkingStatus,
   WORKING_AMEND_UNCHANGED,
   workingActionLabel,
   workingSideLabel,
@@ -168,6 +169,11 @@ const engineRaw = {
 const engineWorking = parseFuturesWorkingRow(engineRaw);
 assert.equal(engineWorking.source, "engine");
 assert.equal(engineWorking.ruleName, "DCA 1INCH");
+assert.equal(formatWorkingStatus("cancelling"), "Cancelling");
+assert.equal(
+  parseFuturesWorkingRow({ ...engineRaw, status: "cancelling" }).status,
+  "cancelling",
+);
 
 const webhookWorking = parseFuturesWorkingRow({
   ...engineRaw,

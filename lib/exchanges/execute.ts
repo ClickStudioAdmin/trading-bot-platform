@@ -1,5 +1,6 @@
 import {
   bybitAmendLinearOrder,
+  bybitCancelAllLinearOrders,
   bybitCancelLinearOrder,
   bybitCreateLinearLimitOrder,
   bybitCreateMarketOrder,
@@ -414,6 +415,28 @@ export async function readPerpOrderOnVenue(input: {
     credentials: creds(input.connection),
     orderId: input.orderId,
   });
+}
+
+export async function cancelPerpOrdersOnVenueForSymbol(input: {
+  connection: BoundConnectionSecrets;
+  symbol: string;
+}): Promise<
+  | { ok: true; mode: "all" }
+  | { ok: true; mode: "unsupported" }
+  | { ok: false; error: string }
+> {
+  if (input.connection.venue === "hyperliquid") {
+    return { ok: true, mode: "unsupported" };
+  }
+  if (input.connection.venue !== "bybit") {
+    return { ok: false, error: "That exchange cannot cancel futures orders yet." };
+  }
+  const cancelled = await bybitCancelAllLinearOrders({
+    environmentId: input.connection.environment,
+    credentials: creds(input.connection),
+    symbol: input.symbol,
+  });
+  return cancelled.ok ? { ok: true, mode: "all" } : cancelled;
 }
 
 export async function cancelPerpOrderOnVenue(input: {

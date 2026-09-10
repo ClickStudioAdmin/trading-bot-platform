@@ -24,10 +24,11 @@ import {
 } from "@/lib/dca/indicators";
 import {
   loadFuturesWorking,
+  loadLiveFuturesWorking,
   loadOpenFuturesOnSymbol,
-  loadOpenFuturesWorking,
 } from "@/lib/futures/list";
 import { parseFuturesPositionRow } from "@/lib/futures/model";
+import { FUTURES_LIVE_POSITION_STATUSES } from "@/lib/futures/pending-close";
 import type { FuturesSide } from "@/lib/futures/model";
 import { tickerTriggerPrices } from "@/lib/futures/tpsl";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
@@ -116,7 +117,7 @@ export async function runDcaPlaybookTick(input?: {
     supabase
       .from("futures_positions")
       .select("*")
-      .eq("status", "open")
+      .in("status", [...FUTURES_LIVE_POSITION_STATUSES])
       .in("account_id", accountIds),
     input?.tickers
       ? Promise.resolve(input.tickers)
@@ -223,7 +224,7 @@ export async function runDcaPlaybookTick(input?: {
             ["open", "filled"],
           )
         : Promise.resolve([]),
-      loadOpenFuturesWorking({
+      loadLiveFuturesWorking({
         accountId: playbook.accountId,
         userId: playbook.userId,
       }),
@@ -265,23 +266,26 @@ export async function runDcaPlaybookTick(input?: {
           row.symbol === playbook.symbol &&
           row.side === side,
       );
-      if (leg.status === "closing") {
-        if (open && open.qty > 0) {
-          const flattened = await flattenPlaybook({
-            playbook,
-            mode: account.mode,
-            side,
-            reason: "Close requested.",
-          });
-          if (!flattened.ok) {
-            continue;
-          }
-        }
-        const kept = await keepListeningAfterFlatten({
+      if (leg.status === "closing" || open?.status === "closing") {
+        const flattened = await flattenPlaybook({
           playbook,
+          mode: account.mode,
           side,
+          reason:
+            leg.status === "closing" ? "Close requested." : "Close All requested.",
         });
-        if (kept.ok) {
+        if (!flattened.ok) {
+          continue;
+        }
+        if (leg.status === "closing") {
+          const kept = await keepListeningAfterFlatten({
+            playbook,
+            side,
+          });
+          if (kept.ok) {
+            acted += 1;
+          }
+        } else {
           acted += 1;
         }
         continue;

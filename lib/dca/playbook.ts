@@ -2206,7 +2206,7 @@ export function dcaGridClipCounts(
     if (index === null) {
       continue;
     }
-    if (!row.status || row.status === "open") {
+    if (!row.status || row.status === "open" || row.status === "cancelling") {
       open += 1;
     }
     if (row.status === "filled" && index >= 1) {
@@ -3034,7 +3034,7 @@ export function dcaOpenExitLimits(
 ): DcaSafetyWorkingRow[] {
   return working.filter(
     (row) =>
-      (!row.status || row.status === "open") &&
+      (!row.status || row.status === "open" || row.status === "cancelling") &&
       isDcaExitLimitKey(row.idempotencyKey, playbookId, side, kind),
   );
 }
@@ -3114,7 +3114,8 @@ export function planDcaSafetySync(input: {
       isDcaClipKey(row.idempotencyKey, input.playbookId, input.side),
   );
   const matchingOpen = matching.filter(
-    (row) => !row.status || row.status === "open",
+    (row) =>
+      !row.status || row.status === "open" || row.status === "cancelling",
   );
   const filledIndices = new Set<number>();
   for (const row of matching) {
@@ -3193,6 +3194,9 @@ export function planDcaSafetySync(input: {
     const row = openByIndex.get(clipIndex);
     if (!row) {
       rest.push({ clipIndex, qty: want.qty, limitPrice: want.limitPrice });
+      continue;
+    }
+    if (row.status === "cancelling") {
       continue;
     }
     const priceChanged = !sameSafetyNumber(row.limitPrice, want.limitPrice);
@@ -3301,7 +3305,7 @@ export function dcaOpenHint(input: {
   });
   const tpLimitResting = (input.working ?? []).some(
     (row) =>
-      (!row.status || row.status === "open") &&
+      (!row.status || row.status === "open" || row.status === "cancelling") &&
       isDcaExitLimitKey(
         row.idempotencyKey,
         input.playbook.id,
@@ -3361,7 +3365,9 @@ export function dcaHintsForCopyOpen(
     });
     const tpLimitResting = (working ?? []).some(
       (item) =>
-        (!item.status || item.status === "open") &&
+        (!item.status ||
+          item.status === "open" ||
+          item.status === "cancelling") &&
         (isDcaExitLimitKey(item.idempotencyKey, playbook.id, row.side, "tp") ||
           parseDcaExitLimitKind(item.idempotencyKey) === "tp"),
     );

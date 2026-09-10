@@ -66,7 +66,7 @@ export async function syncHyperliquidWorkingOrders(input: {
     .select("*")
     .eq("account_id", input.accountId)
     .eq("user_id", input.userId)
-    .eq("status", "open");
+    .in("status", ["open", "cancelling"]);
   const existing = (data ?? []).map((row) =>
     parseFuturesWorkingRow(row as Record<string, unknown>),
   );
@@ -143,7 +143,7 @@ export async function syncHyperliquidVenuePositions(input: {
     .select("*")
     .eq("account_id", input.accountId)
     .eq("user_id", input.userId)
-    .eq("status", "open");
+    .in("status", ["open", "closing"]);
   const open = (data ?? []).map((row) =>
     parseFuturesPositionRow(row as Record<string, unknown>),
   );

@@ -358,6 +358,31 @@ export async function bybitReadLinearOrder(input: {
   return { ok: false, error: "Bybit did not return that order." };
 }
 
+export async function bybitCancelAllLinearOrders(input: {
+  environmentId: string;
+  credentials: BybitPrivateCreds;
+  symbol: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const cancelled = await bybitPrivateRequest<Record<string, unknown>>({
+    environmentId: input.environmentId,
+    credentials: input.credentials,
+    method: "POST",
+    path: "/v5/order/cancel-all",
+    body: JSON.stringify({
+      category: "linear",
+      symbol: input.symbol,
+    }),
+    allowMissingResult: true,
+  });
+  if (cancelled.ok) {
+    return { ok: true };
+  }
+  if (/not exists|not found|already|no order|110001|110010/i.test(cancelled.error)) {
+    return { ok: true };
+  }
+  return cancelled;
+}
+
 export async function bybitCancelLinearOrder(input: {
   environmentId: string;
   credentials: BybitPrivateCreds;

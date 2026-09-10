@@ -313,6 +313,7 @@ export default async function FuturesPositionsPage({
           webhookNames={desk.webhookNames}
           playbookOwnsOrders={dcaBlotter}
           copyDesk={copyDesk}
+          urgentRefresh={open.some((row) => row.status === "closing")}
           emptyMessage={
             showTicket
               ? undefined

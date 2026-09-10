@@ -9,7 +9,12 @@ import type {
 } from "./model";
 import { parseFuturesTriggerColumn, parseFuturesTradeSource } from "./model";
 
-export type FuturesWorkingStatus = "open" | "filled" | "cancelled" | "rejected";
+export type FuturesWorkingStatus =
+  | "open"
+  | "cancelling"
+  | "filled"
+  | "cancelled"
+  | "rejected";
 
 export type FuturesWorkingOrder = {
   id: string;
@@ -211,7 +216,12 @@ export function parseFuturesWorkingRow(
 }
 
 function parseWorkingStatus(raw: unknown): FuturesWorkingStatus {
-  if (raw === "filled" || raw === "cancelled" || raw === "rejected") {
+  if (
+    raw === "filled" ||
+    raw === "cancelled" ||
+    raw === "rejected" ||
+    raw === "cancelling"
+  ) {
     return raw;
   }
   return "open";
@@ -226,6 +236,9 @@ export function formatWorkingStatus(status: FuturesWorkingStatus): string {
   }
   if (status === "rejected") {
     return "Rejected";
+  }
+  if (status === "cancelling") {
+    return "Cancelling";
   }
   return "Open";
 }

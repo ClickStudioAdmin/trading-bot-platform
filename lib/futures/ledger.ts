@@ -238,7 +238,7 @@ export async function writeFuturesFlatten(input: {
   ruleName?: string | null;
   leverage?: number | null;
 }): Promise<{ error: string | null }> {
-  if (input.row.status !== "open") {
+  if (input.row.status !== "open" && input.row.status !== "closing") {
     return { error: "That position is already closed." };
   }
   const realized =
@@ -259,7 +259,7 @@ export async function writeFuturesFlatten(input: {
     })
     .eq("id", input.row.id)
     .eq("account_id", input.row.accountId)
-    .eq("status", "open");
+    .in("status", ["open", "closing"]);
   if (error) {
     return { error: error.message };
   }
@@ -319,7 +319,7 @@ export async function writeFuturesCloseSlice(input: {
   ruleName?: string | null;
   leverage?: number | null;
 }): Promise<{ error: string | null; remaining: number }> {
-  if (input.row.status !== "open") {
+  if (input.row.status !== "open" && input.row.status !== "closing") {
     return { error: "That position is already closed.", remaining: 0 };
   }
   const closeQty = Math.min(input.qty, input.row.qty);
@@ -362,7 +362,7 @@ export async function writeFuturesCloseSlice(input: {
     })
     .eq("id", input.row.id)
     .eq("account_id", input.row.accountId)
-    .eq("status", "open");
+    .in("status", ["open", "closing"]);
   if (error) {
     return { error: error.message, remaining };
   }

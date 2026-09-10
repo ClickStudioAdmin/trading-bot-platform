@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ColumnHint } from "@/components/column-hint";
 import { LocalTime } from "@/components/local-time";
+import { PendingStatusChip } from "@/components/pending-status-chip";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { TokenIcon } from "@/components/token-icon";
 import { TpslPair } from "@/components/futures-tpsl";
@@ -33,6 +34,7 @@ export function FuturesWorkingOrders({
   playbookOwnsOrders = false,
   copyDesk = false,
   exchangeName = "Bybit",
+  urgentRefresh = false,
 }: {
   signedIn: boolean;
   working: FuturesWorkingOrder[];
@@ -44,13 +46,17 @@ export function FuturesWorkingOrders({
   playbookOwnsOrders?: boolean;
   copyDesk?: boolean;
   exchangeName?: string;
+  urgentRefresh?: boolean;
 }) {
   const showOrderMeta = !playbookOwnsOrders;
   const colSpan = showOrderMeta ? 11 : 8;
   const rows = sortFuturesWorkingRows(working);
+  const urgent =
+    urgentRefresh ||
+    working.some((row) => row.status === "cancelling");
   return (
     <section>
-      <FuturesDeskRefresh />
+      <FuturesDeskRefresh urgent={urgent} />
       <div className="mb-3 flex items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">
@@ -234,7 +240,15 @@ function WorkingRow({
         {workingSideLabel(row.action)}
       </td>
       <td className="px-4 py-3">
-        {workingTypeLabel(row)}
+        <span className="flex flex-wrap items-center gap-2">
+          {workingTypeLabel(row)}
+          {!showOrderMeta && row.status === "cancelling" ? (
+            <PendingStatusChip
+              label="Cancelling"
+              hint="Cancel submitted. This order leaves when the venue confirms."
+            />
+          ) : null}
+        </span>
       </td>
       <td className="px-4 py-3 tabular-nums">
         <span title={formatQtyFull(row.remainingQty)}>
@@ -277,39 +291,46 @@ function WorkingRow({
             )}
           </td>
           <td className="px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <ColumnHint
-                hint="Change remaining qty or limit"
-                label={
-                  <FuturesWorkingEdit
-                    workingId={row.id}
-                    symbol={row.symbol}
-                    action={row.action}
-                    reduceOnly={row.reduceOnly}
-                    remainingQty={row.remainingQty}
-                    filledQty={row.filledQty}
-                    limitPrice={row.limitPrice}
-                    next={next}
-                  />
-                }
+            {row.status === "cancelling" ? (
+              <PendingStatusChip
+                label="Cancelling"
+                hint="Cancel submitted. This order leaves when the venue confirms."
               />
-              <form action={cancelFuturesWorking}>
-                <input type="hidden" name="next" value={next} />
-                <input type="hidden" name="workingId" value={row.id} />
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
                 <ColumnHint
-                  hint="Cancel remaining size"
+                  hint="Change remaining qty or limit"
                   label={
-                    <PendingSubmitButton
-                      pendingLabel="Cancelling"
-                      successKey={`working-cancel-${row.id}`}
-                      className={ACTION_CLASS}
-                    >
-                      Cancel
-                    </PendingSubmitButton>
+                    <FuturesWorkingEdit
+                      workingId={row.id}
+                      symbol={row.symbol}
+                      action={row.action}
+                      reduceOnly={row.reduceOnly}
+                      remainingQty={row.remainingQty}
+                      filledQty={row.filledQty}
+                      limitPrice={row.limitPrice}
+                      next={next}
+                    />
                   }
                 />
-              </form>
-            </div>
+                <form action={cancelFuturesWorking}>
+                  <input type="hidden" name="next" value={next} />
+                  <input type="hidden" name="workingId" value={row.id} />
+                  <ColumnHint
+                    hint="Cancel remaining size"
+                    label={
+                      <PendingSubmitButton
+                        pendingLabel="Cancelling"
+                        successKey={`working-cancel-${row.id}`}
+                        className={ACTION_CLASS}
+                      >
+                        Cancel
+                      </PendingSubmitButton>
+                    }
+                  />
+                </form>
+              </div>
+            )}
           </td>
         </>
       ) : null}

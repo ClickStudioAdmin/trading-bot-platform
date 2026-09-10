@@ -3,7 +3,7 @@ export type FuturesAction = "buy" | "sell" | "flatten";
 export type FuturesOrderType = "market" | "limit";
 export type FuturesTrigger = "last" | "mark" | "index";
 export type FuturesTpslMode = "full" | "partial";
-export type FuturesPositionStatus = "open" | "closed";
+export type FuturesPositionStatus = "open" | "closing" | "closed";
 export type FuturesTradeSource = "manual" | "engine" | "webhook";
 
 export type FuturesPosition = {
@@ -221,7 +221,12 @@ export function parseFuturesPositionRow(
     notionalUsdt: Number(row.notional_usdt) || 0,
     realizedUsdt: Number(row.realized_usdt) || 0,
     leverage: asPositiveNumber(row.leverage),
-    status: row.status === "closed" ? "closed" : "open",
+    status:
+      row.status === "closed"
+        ? "closed"
+        : row.status === "closing"
+          ? "closing"
+          : "open",
     source: parseFuturesTradeSource(row.source),
     ruleId: String(row.rule_id ?? "").trim() || null,
     ruleName: String(row.rule_name ?? "").trim() || null,

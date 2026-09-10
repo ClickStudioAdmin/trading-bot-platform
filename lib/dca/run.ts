@@ -11,8 +11,18 @@ import { runFuturesCommand, deleteCommandReceipt } from "@/lib/futures/command";
 import {
   loadOpenFuturesOnSymbol,
   loadOpenFuturesWorking,
+  loadLiveFuturesWorking,
   loadFuturesWorking,
 } from "@/lib/futures/list";
+import {
+  dcaFlattenVenuePlan,
+  mapWithConcurrency,
+  PENDING_CLOSE_CANCEL_CONCURRENCY,
+} from "@/lib/futures/pending-close";
+import { loadFuturesSettings } from "@/lib/futures/settings";
+import { cancelPerpOrdersOnVenueForSymbol } from "@/lib/exchanges/execute";
+import { loadBoundVenueForAccount } from "@/lib/exchanges/live-trade";
+import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { triggerConditionMet } from "@/lib/futures/automation";
 import type { FuturesSide } from "@/lib/futures/model";
 import type { FuturesTrailing } from "@/lib/futures/trailing";
@@ -399,18 +409,17 @@ async function cancelSafetyOrders(input: {
   mode: TradingAccountMode;
   side: FuturesSide;
 }): Promise<void> {
-  const working = await loadOpenFuturesWorking({
+  const working = await loadLiveFuturesWorking({
     accountId: input.playbook.accountId,
     userId: input.playbook.userId,
   });
   const actor = playbookActor(input.playbook, input.mode);
-  for (const row of working) {
-    if (row.reduceOnly) {
-      continue;
-    }
-    if (!isDcaClipKey(row.idempotencyKey, input.playbook.id, input.side)) {
-      continue;
-    }
+  const rows = working.filter(
+    (row) =>
+      !row.reduceOnly &&
+      isDcaClipKey(row.idempotencyKey, input.playbook.id, input.side),
+  );
+  await mapWithConcurrency(rows, PENDING_CLOSE_CANCEL_CONCURRENCY, async (row) => {
     const result = await runFuturesCommand({
       actor,
       command: {
@@ -426,7 +435,7 @@ async function cancelSafetyOrders(input: {
         reason: "cancel_grid",
       });
     }
-  }
+  });
 }
 
 async function cancelExitLimit(input: {
@@ -435,7 +444,7 @@ async function cancelExitLimit(input: {
   side: FuturesSide;
   kind: DcaExitLimitKind;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const working = await loadOpenFuturesWorking({
+  const working = await loadLiveFuturesWorking({
     accountId: input.playbook.accountId,
     userId: input.playbook.userId,
   });
@@ -446,7 +455,8 @@ async function cancelExitLimit(input: {
     input.kind,
   );
   const actor = playbookActor(input.playbook, input.mode);
-  for (const row of rows) {
+  let firstError: string | null = null;
+  await mapWithConcurrency(rows, PENDING_CLOSE_CANCEL_CONCURRENCY, async (row) => {
     const result = await runFuturesCommand({
       actor,
       command: {
@@ -461,10 +471,10 @@ async function cancelExitLimit(input: {
         error: result.error,
         reason: `cancel_${input.kind}`,
       });
-      return result;
+      firstError ??= result.error;
     }
-  }
-  return { ok: true };
+  });
+  return firstError ? { ok: false, error: firstError } : { ok: true };
 }
 
 async function restExitLimit(input: {
@@ -1323,36 +1333,70 @@ async function syncDcaTrailing(input: {
   }
 }
 
+async function boundConnectionForPlaybook(input: {
+  playbook: DcaPlaybook;
+  mode: TradingAccountMode;
+}) {
+  if (!accountCanHoldConnections(input.mode)) {
+    return null;
+  }
+  const settings = await loadFuturesSettings(input.playbook.accountId);
+  if (!settings.connectionId) {
+    return null;
+  }
+  const bound = await loadBoundVenueForAccount({
+    userId: input.playbook.userId,
+    accountId: input.playbook.accountId,
+    mode: input.mode,
+    connectionId: settings.connectionId,
+  });
+  return bound.ok ? bound.connection : null;
+}
+
 async function flattenSide(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
   side: FuturesSide;
   reason?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  await cancelSafetyOrders(input);
-  await cancelExitLimit({ ...input, kind: "tp" });
-  await cancelExitLimit({ ...input, kind: "sl" });
-  const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
-    accountId: input.playbook.accountId,
-    userId: input.playbook.userId,
-  });
-  const open = opens.find((row) => row.side === input.side);
-  if (!open) {
-    return { ok: true };
-  }
-  const result = await runFuturesCommand({
-    actor: playbookActor(input.playbook, input.mode),
-    command: {
-      kind: "place",
-      action: "flatten",
-      symbol: input.playbook.symbol,
-      positionId: open.id,
-      orderType: "market",
-      ...playbookCommandMeta(input.playbook, input.reason),
-      idempotencyKey: dcaFlattenKey(input.playbook.id, input.side, open.id),
-    },
-  });
-  return result.ok ? { ok: true } : result;
+  const cancelWork = (async () => {
+    const connection = await boundConnectionForPlaybook(input);
+    const plan = dcaFlattenVenuePlan(connection?.venue ?? null);
+    if (plan.useSymbolCancelAll && connection) {
+      await cancelPerpOrdersOnVenueForSymbol({
+        connection,
+        symbol: input.playbook.symbol,
+      });
+    }
+    await cancelSafetyOrders(input);
+    await cancelExitLimit({ ...input, kind: "tp" });
+    await cancelExitLimit({ ...input, kind: "sl" });
+  })();
+  const flattenWork = (async () => {
+    const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
+      accountId: input.playbook.accountId,
+      userId: input.playbook.userId,
+    });
+    const open = opens.find((row) => row.side === input.side);
+    if (!open) {
+      return { ok: true as const };
+    }
+    const result = await runFuturesCommand({
+      actor: playbookActor(input.playbook, input.mode),
+      command: {
+        kind: "place",
+        action: "flatten",
+        symbol: input.playbook.symbol,
+        positionId: open.id,
+        orderType: "market",
+        ...playbookCommandMeta(input.playbook, input.reason),
+        idempotencyKey: dcaFlattenKey(input.playbook.id, input.side, open.id),
+      },
+    });
+    return result.ok ? { ok: true as const } : result;
+  })();
+  const [, flattened] = await Promise.all([cancelWork, flattenWork]);
+  return flattened;
 }
 
 export async function keepListeningAfterFlatten(input: {

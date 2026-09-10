@@ -8,7 +8,17 @@ import {
   writeFuturesCloseSlice,
   writeFuturesOpen,
 } from "./ledger";
-import { loadOpenFuturesOnSymbol, loadOpenFuturesWorking, loadFuturesPositions } from "./list";
+import {
+  loadOpenFuturesOnSymbol,
+  loadOpenFuturesWorking,
+  loadLiveFuturesWorking,
+  loadFuturesPositions,
+} from "./list";
+import {
+  dcaFlattenVenuePlan,
+  mapWithConcurrency,
+  PENDING_CLOSE_CANCEL_CONCURRENCY,
+} from "./pending-close";
 import { markFromTicker } from "./math";
 import {
   parseFuturesAction,
@@ -55,6 +65,7 @@ import {
 import type { BybitInstrument } from "@/lib/exchanges/bybit/universe";
 import {
   cancelPerpOrderOnVenue,
+  cancelPerpOrdersOnVenueForSymbol,
   placePerpLimitOnVenue,
   placePerpMarketOnVenue,
   setPerpTradingStopOnVenue,
@@ -721,6 +732,9 @@ async function runPlace(
   }
 
   const sameSide = opens.find((row) => row.side === wantedSide) ?? null;
+  if (sameSide?.status === "closing") {
+    return fail("That position is already closing.");
+  }
   const decided = decideFuturesAction({
     action: actionParsed.action,
     open: sameSide ? { side: sameSide.side, qty: sameSide.qty } : null,
@@ -1429,7 +1443,7 @@ async function runCancelWorking(
 ): Promise<CommandOutcome> {
   const { actor, supabase } = ctx;
   const workingId = String(command.workingId ?? "").trim();
-  const opens = await loadOpenFuturesWorking(actorScope(actor));
+  const opens = await loadLiveFuturesWorking(actorScope(actor));
   const row = opens.find((item) => item.id === workingId) ?? null;
   if (!row) {
     return fail("That order is no longer open.");
@@ -1649,7 +1663,7 @@ async function runCloseAll(
     closePositions && parseSetReduceOnly(command.setReduceOnly);
   const { actor, supabase, liveBook } = ctx;
   const listScope = actorScope(actor);
-  const working = cancelOrders ? await loadOpenFuturesWorking(listScope) : [];
+  const working = cancelOrders ? await loadLiveFuturesWorking(listScope) : [];
   const opens = closePositions
     ? await loadFuturesPositions({ status: "open", scope: listScope })
     : [];
@@ -1715,48 +1729,93 @@ async function runCloseAll(
 
   const childCtx: CommandCtx = { ...ctx, key: null };
   let cancelledCount = 0;
-  for (const row of working) {
-    const cancelled = await cancelFuturesWorkingRow({
-      supabase,
-      row,
-      connection,
-    });
-    if (!cancelled.ok) {
-      return fail(`Could not cancel ${row.symbol}: ${cancelled.error}`);
-    }
-    cancelledCount += 1;
-    await writeEventLog({
-      scope: "trade",
-      event: "trade.futures",
-      message: withFuturesOrigin(`Cancelled limit ${row.symbol}`, {
-        source: row.source,
-        ruleName: row.ruleName,
-      }),
-      userId: actor.userId,
-      accountId: actor.accountId,
-      strategy: FUTURES_STRATEGY_ID,
-      data: {
-        symbol: row.symbol,
-        workingId: row.id,
-        action: row.action,
-        ...futuresOriginLog({ source: row.source, ruleName: row.ruleName }),
-      },
-    });
-  }
-
   let closedCount = 0;
-  for (const row of opens) {
-    const closed = await runPlace(childCtx, {
-      kind: "place",
-      action: "close",
-      symbol: row.symbol,
-      positionId: row.id,
-      orderType: "market",
-    });
-    if (!closed.ok) {
-      return fail(`Could not close ${row.symbol}: ${closed.error}`);
+  let cancelError: string | null = null;
+  let closeError: string | null = null;
+
+  const cancelWork = (async () => {
+    if (working.length === 0) {
+      return;
     }
-    closedCount += 1;
+    const plan = dcaFlattenVenuePlan(connection?.venue ?? null);
+    if (plan.useSymbolCancelAll && connection) {
+      const symbols = [...new Set(working.map((row) => row.symbol))];
+      await mapWithConcurrency(
+        symbols,
+        PENDING_CLOSE_CANCEL_CONCURRENCY,
+        async (symbol) => {
+          const cancelled = await cancelPerpOrdersOnVenueForSymbol({
+            connection,
+            symbol,
+          });
+          if (!cancelled.ok) {
+            cancelError ??= `Could not cancel ${symbol}: ${cancelled.error}`;
+          }
+        },
+      );
+    }
+    await mapWithConcurrency(
+      working,
+      PENDING_CLOSE_CANCEL_CONCURRENCY,
+      async (row) => {
+        const cancelled = await cancelFuturesWorkingRow({
+          supabase,
+          row,
+          connection: plan.useSymbolCancelAll ? null : connection,
+        });
+        if (!cancelled.ok) {
+          cancelError ??= `Could not cancel ${row.symbol}: ${cancelled.error}`;
+          return;
+        }
+        cancelledCount += 1;
+        await writeEventLog({
+          scope: "trade",
+          event: "trade.futures",
+          message: withFuturesOrigin(`Cancelled limit ${row.symbol}`, {
+            source: row.source,
+            ruleName: row.ruleName,
+          }),
+          userId: actor.userId,
+          accountId: actor.accountId,
+          strategy: FUTURES_STRATEGY_ID,
+          data: {
+            symbol: row.symbol,
+            workingId: row.id,
+            action: row.action,
+            ...futuresOriginLog({ source: row.source, ruleName: row.ruleName }),
+          },
+        });
+      },
+    );
+  })();
+
+  const flattenWork = (async () => {
+    await mapWithConcurrency(
+      opens,
+      PENDING_CLOSE_CANCEL_CONCURRENCY,
+      async (row) => {
+        const closed = await runPlace(childCtx, {
+          kind: "place",
+          action: "close",
+          symbol: row.symbol,
+          positionId: row.id,
+          orderType: "market",
+        });
+        if (!closed.ok) {
+          closeError ??= `Could not close ${row.symbol}: ${closed.error}`;
+          return;
+        }
+        closedCount += 1;
+      },
+    );
+  })();
+
+  await Promise.all([cancelWork, flattenWork]);
+  if (cancelError) {
+    return fail(cancelError);
+  }
+  if (closeError) {
+    return fail(closeError);
   }
 
   await writeEventLog({

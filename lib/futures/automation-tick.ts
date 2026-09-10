@@ -17,6 +17,7 @@ import {
 } from "./conditions";
 import { runFuturesCommand } from "./command";
 import { parseFuturesPositionRow, type FuturesPosition } from "./model";
+import { FUTURES_LIVE_POSITION_STATUSES } from "./pending-close";
 import {
   fetchBybitTickers,
   type BybitTicker,
@@ -101,7 +102,7 @@ export async function runFuturesAutomationTick(input?: {
     supabase
       .from("futures_positions")
       .select("*")
-      .eq("status", "open")
+      .in("status", [...FUTURES_LIVE_POSITION_STATUSES])
       .in("account_id", uniqueAccountIds),
     input?.tickers
       ? Promise.resolve(input.tickers)
@@ -292,7 +293,7 @@ export async function runFuturesAutomationTick(input?: {
   const { data: latestOpenRows } = await supabase
     .from("futures_positions")
     .select("*")
-    .eq("status", "open")
+    .in("status", [...FUTURES_LIVE_POSITION_STATUSES])
     .in("account_id", uniqueAccountIds);
   const latestOpens = (latestOpenRows ?? []).map((row) =>
     parseFuturesPositionRow(row as Record<string, unknown>),
@@ -341,7 +342,7 @@ export async function fireWebhookAutomationEntries(input: {
       supabase
         .from("futures_positions")
         .select("*")
-        .eq("status", "open")
+        .in("status", [...FUTURES_LIVE_POSITION_STATUSES])
         .eq("account_id", input.accountId),
       supabase
         .from("trading_accounts")

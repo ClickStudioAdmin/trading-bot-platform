@@ -44,7 +44,7 @@ export async function listFuturesAutomationRuleIdsInUse(
     .from("futures_positions")
     .select("rule_id")
     .eq("account_id", accountId)
-    .eq("status", "open")
+    .in("status", ["open", "closing"])
     .not("rule_id", "is", null);
   return [
     ...new Set(

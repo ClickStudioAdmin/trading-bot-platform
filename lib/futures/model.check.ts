@@ -9,6 +9,7 @@ import {
   parseFuturesSizeUnit,
   parseFuturesSymbol,
   parseFuturesTradeSource,
+  parseFuturesPositionRow,
 } from "./model";
 
 const cleaned = parseFuturesSymbol("btc-usdt");
@@ -68,5 +69,22 @@ assert.equal(parseFuturesTradeSource("engine"), "engine");
 assert.equal(parseFuturesTradeSource("webhook"), "webhook");
 assert.equal(parseFuturesTradeSource("manual"), "manual");
 assert.equal(parseFuturesTradeSource(null), "manual");
+
+const closingRow = parseFuturesPositionRow({
+  id: "p1",
+  user_id: "u1",
+  account_id: "a1",
+  symbol: "BTCUSDT",
+  side: "long",
+  qty: 1,
+  entry_price: 100,
+  notional_usdt: 100,
+  realized_usdt: 0,
+  status: "closing",
+  source: "manual",
+  opened_at: "2026-09-10T00:00:00.000Z",
+  closed_at: null,
+});
+assert.equal(closingRow.status, "closing");
 
 console.log("futures model checks passed");

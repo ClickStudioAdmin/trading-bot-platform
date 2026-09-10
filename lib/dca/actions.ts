@@ -16,8 +16,16 @@ import {
   type DcaPlaybook,
   type DcaPlaybookConfig,
 } from "@/lib/dca/playbook";
-import { loadOpenFuturesOnSymbol } from "@/lib/futures/list";
+import {
+  loadLiveFuturesWorking,
+  loadOpenFuturesOnSymbol,
+} from "@/lib/futures/list";
 import { parseFuturesSide, type FuturesSide } from "@/lib/futures/model";
+import {
+  markFuturesPendingClose,
+  selectIds,
+  sidesForMark,
+} from "@/lib/futures/pending-close";
 import {
   applyDcaVerb,
   lastPriceFor,
@@ -169,6 +177,41 @@ async function persistDcaVerbStatus(input: {
   return { ok: true };
 }
 
+async function markDcaPendingClose(input: {
+  playbook: DcaPlaybook;
+  side?: FuturesSide | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const sides = sidesForMark(
+    input.side,
+    dcaEnabledSides(input.playbook.direction),
+  );
+  const [positions, working] = await Promise.all([
+    loadOpenFuturesOnSymbol(input.playbook.symbol, {
+      accountId: input.playbook.accountId,
+      userId: input.playbook.userId,
+    }),
+    loadLiveFuturesWorking({
+      accountId: input.playbook.accountId,
+      userId: input.playbook.userId,
+    }),
+  ]);
+  const livePositions = positions.filter(
+    (row) => row.status === "open" && sides.includes(row.side),
+  );
+  const liveWorking = working.filter(
+    (row) =>
+      row.status === "open" &&
+      row.symbol === input.playbook.symbol &&
+      sides.includes(row.side),
+  );
+  return markFuturesPendingClose({
+    accountId: input.playbook.accountId,
+    userId: input.playbook.userId,
+    positionIds: selectIds(livePositions),
+    workingIds: selectIds(liveWorking),
+  });
+}
+
 function noticeForDcaVerb(verb: DcaVerb, ownsOpen: boolean): string {
   if (verb === "close-playbook") {
     return ownsOpen ? "Bot saved. Closing positions…" : "Bot saved.";
@@ -201,6 +244,15 @@ async function acceptDcaVerb(input: {
   });
   if (!persisted.ok) {
     return deskActionError(persisted.error);
+  }
+  if (input.verb === "close-playbook" || input.verb === "close-position") {
+    const marked = await markDcaPendingClose({
+      playbook: input.playbook,
+      side: input.side,
+    });
+    if (!marked.ok) {
+      return deskActionError(marked.error);
+    }
   }
   deferDcaVerb(input);
   const playbook =
@@ -512,6 +564,10 @@ export async function closeDcaPositionFromRow(formData: FormData) {
   });
   if (!persisted.ok) {
     redirect(withQuery(next, { paperError: persisted.error }));
+  }
+  const marked = await markDcaPendingClose({ playbook, side });
+  if (!marked.ok) {
+    redirect(withQuery(next, { paperError: marked.error }));
   }
   deferDcaVerb({
     playbook,

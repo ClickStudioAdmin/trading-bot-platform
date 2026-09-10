@@ -12,7 +12,13 @@ import {
   upsertFuturesAutomationRules,
 } from "./automation-load";
 import { flattenOwnedRuleIds } from "@/lib/bots/status";
-import { loadOpenFuturesByRuleId } from "./list";
+import { loadOpenFuturesByRuleId, loadFuturesPositions, loadLiveFuturesWorking } from "./list";
+import {
+  markFuturesPendingClose,
+  selectIds,
+  workingOwnedByPerpsDisable,
+} from "./pending-close";
+import { parseCloseAllScope } from "./close-all";
 import type { DeskActionResult } from "@/lib/ui/desk-action";
 import { deskActionError } from "@/lib/ui/desk-action";
 import { runFuturesCommand } from "./command";
@@ -218,6 +224,31 @@ export async function closeAllFutures(formData: FormData) {
     setReduceOnly: formData.get("setReduceOnly"),
     idempotencyKey: formData.get("idempotencyKey"),
   };
+  const scoped = parseCloseAllScope(formData.get("scope"));
+  if (scoped.ok) {
+    const listScope = { accountId: account.id, userId: member.id };
+    const positions =
+      scoped.scope === "orders"
+        ? []
+        : (await loadFuturesPositions({ status: "open", scope: listScope })).filter(
+            (row) => row.status === "open",
+          );
+    const working =
+      scoped.scope === "positions"
+        ? []
+        : (await loadLiveFuturesWorking(listScope)).filter(
+            (row) => row.status === "open",
+          );
+    const marked = await markFuturesPendingClose({
+      accountId: account.id,
+      userId: member.id,
+      positionIds: selectIds(positions),
+      workingIds: selectIds(working),
+    });
+    if (!marked.ok) {
+      fail(next, marked.error);
+    }
+  }
   afterDeskWork("close-all", async () => {
     const result = await runFuturesCommand({ actor, command });
     if (!result.ok) {
@@ -502,6 +533,31 @@ export async function saveFuturesAutomations(
   const closing =
     one && flattenOwnedRuleIds(parsed.rules).length > 0;
   if (closing) {
+    const ownedPositions = (
+      await Promise.all(
+        flattenOwnedRuleIds(parsed.rules).map((rule) =>
+          loadOpenFuturesByRuleId(String(rule.id), {
+            accountId: account.id,
+            userId: user.id,
+          }),
+        ),
+      )
+    )
+      .flat()
+      .filter((row) => row.status === "open");
+    const working = (await loadLiveFuturesWorking({
+      accountId: account.id,
+      userId: user.id,
+    })).filter((row) => row.status === "open");
+    const marked = await markFuturesPendingClose({
+      accountId: account.id,
+      userId: user.id,
+      positionIds: selectIds(ownedPositions),
+      workingIds: selectIds(workingOwnedByPerpsDisable(working, ownedPositions)),
+    });
+    if (!marked.ok) {
+      return deskActionError(marked.error);
+    }
     afterDeskWork("perps-flatten", async () => {
       const flattenErrors = await flattenOwnedFuturesRules({
         userId: user.id,
@@ -844,12 +900,12 @@ async function loadOpenFuturesCount(
     .select("id", { count: "exact", head: true })
     .eq("account_id", accountId)
     .eq("user_id", userId)
-    .eq("status", "open");
+    .in("status", ["open", "closing"]);
   const { count: working } = await supabase
     .from("futures_working_orders")
     .select("id", { count: "exact", head: true })
     .eq("account_id", accountId)
     .eq("user_id", userId)
-    .eq("status", "open");
+    .in("status", ["open", "cancelling"]);
   return (positions ?? 0) + (working ?? 0);
 }

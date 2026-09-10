@@ -2,10 +2,8 @@
 
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  ButtonBusyIcon,
-  PendingSubmitButton,
-} from "@/components/pending-submit-button";
+import { PendingStatusChip } from "@/components/pending-status-chip";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { closeDcaPositionFromRow } from "@/lib/dca/actions";
 import { submitFuturesTrade } from "@/lib/futures/actions";
@@ -35,6 +33,14 @@ export function FuturesCloseActions({
   closing?: boolean;
   copyDesk?: boolean;
 }) {
+  if (trade.status === "closing" || closing) {
+    return (
+      <PendingStatusChip
+        label="Closing"
+        hint="Close submitted. This row leaves when the venue fills."
+      />
+    );
+  }
   if (copyDesk) {
     return <CloseCopiedPositionButton trade={trade} next={next} />;
   }
@@ -125,14 +131,10 @@ function CloseDcaPositionButton({
 
   if (closing || held) {
     return (
-      <span
-        className={`${ACTION_CLASS} pointer-events-none opacity-70`}
-        title="Close submitted. The blotter updates when the venue fills."
-        aria-busy
-        aria-label="Closing"
-      >
-        <ButtonBusyIcon />
-      </span>
+      <PendingStatusChip
+        label="Closing"
+        hint="Close submitted. This row leaves when the venue fills."
+      />
     );
   }
 
