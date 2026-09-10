@@ -139,12 +139,6 @@ export default async function FuturesAutomationsPage({
     return (
       <main className="mx-auto max-w-7xl px-6 pt-6 pb-8">
         <PageHeading as="h2" title="Automations (bots)" />
-        <p className="-mt-4 text-sm text-ink-muted">
-          Add a bot per contract. The app owns orders and exits. Save
-          and Arm to listen, then price, indicator, Trend, or a bound
-          Signal. Stop adding leaves the position. Close bot flattens and
-          idles. Close on Positions only closes that side.
-        </p>
         {hl ? (
           <p className="mt-4 rounded-card border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
             This Hyperliquid desk is one-way. Long or short only. Indicators

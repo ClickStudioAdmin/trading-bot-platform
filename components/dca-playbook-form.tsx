@@ -118,7 +118,6 @@ import {
 import {
   DCA_CONFIRM_FIELD_LABEL,
   dcaFilterSpecForKind,
-  dcaFilterSummaryLine,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
 import { closedLiveIndicatorBars } from "@/lib/market/desk-klines";
@@ -1147,18 +1146,6 @@ export function DcaPlaybookForm({
       ? "short"
       : "long";
   const summary = summaryBySide[activeLadderSide];
-  const confirmSummary = dcaFilterSummaryLine(
-    "Confirm",
-    confirm,
-    shortConfirm,
-    direction === "both",
-  );
-  const exitIfSummary = dcaFilterSummaryLine(
-    "Exit-if",
-    exitIf,
-    shortExitIf,
-    direction === "both",
-  );
   function snapshotOverlay() {
     return {
       name: source?.name || defaultName || DEFAULT_DCA_NAME,
@@ -1334,7 +1321,7 @@ export function DcaPlaybookForm({
         }
         return true;
       }}
-      className="flex flex-col scroll-mt-24 divide-y divide-line rounded-card border border-line bg-canvas px-5"
+      className="flex flex-col scroll-mt-24 divide-y divide-line overflow-hidden rounded-card border border-line bg-canvas px-5"
     >
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <input type="hidden" name="deskVenue" value={policy.venueId} />
@@ -2494,14 +2481,8 @@ export function DcaPlaybookForm({
       {!running || ladderOpen ? (
       <BotFormGroup
         title="Summary"
-        className="-mx-5 rounded-b-card bg-surface px-5"
+        className="-mx-5 w-[calc(100%+2.5rem)] rounded-b-card bg-surface px-5"
       >
-        {confirmSummary ? (
-          <p className="text-xs text-ink-muted">{confirmSummary}</p>
-        ) : null}
-        {exitIfSummary ? (
-          <p className="text-xs text-ink-muted">{exitIfSummary}</p>
-        ) : null}
         {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         <div
           className={
@@ -2673,7 +2654,7 @@ export function DcaPlaybookForm({
           />
         </div>
         {summary.levels.length > 0 ? (
-          <div className="thin-scroll mt-4 max-h-80 overflow-auto rounded-card border border-line">
+          <div className="thin-scroll mt-4 max-h-80 overflow-auto rounded-card border border-line bg-canvas">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
                 <tr>

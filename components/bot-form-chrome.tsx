@@ -129,7 +129,7 @@ export function BotFormGroup({
 }) {
   return (
     <section
-      className={`col-span-full block w-full min-w-0 space-y-3 py-5${
+      className={`col-span-full block min-w-0 space-y-3 py-5${
         locked ? " pointer-events-none opacity-40" : ""
       }${className ? ` ${className}` : ""}`}
       inert={locked || undefined}
