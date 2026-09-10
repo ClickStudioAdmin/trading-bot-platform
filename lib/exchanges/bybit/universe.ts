@@ -38,10 +38,6 @@ export type BybitInstrument = {
     minPrice?: string;
     maxPrice?: string;
   };
-  riskParameters?: {
-    priceLimitRatioX?: string;
-    priceLimitRatioY?: string;
-  };
 };
 
 export type CarryPair = {

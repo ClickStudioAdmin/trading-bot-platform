@@ -58,7 +58,6 @@ import {
 } from "@/lib/exchanges/bybit/orders";
 import {
   loadPerpInstrument,
-  perpLimitPriceBandError,
   priceForPerp,
   qtyForCloseQty,
   qtyForCopyPaperNotional,
@@ -771,14 +770,6 @@ async function runPlace(
       return fail(priced.error);
     }
     limit = priced;
-    const band = perpLimitPriceBandError({
-      limitPrice: priced.price,
-      mark,
-      instrument,
-    });
-    if (band) {
-      return fail(band);
-    }
   }
   const sizePrice = limit?.price ?? mark;
   let sized: { ok: true; qty: number; text: string } | { ok: false; error: string };
