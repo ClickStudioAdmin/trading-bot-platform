@@ -79,9 +79,7 @@ export function FuturesAutomationsDesk({
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
 }) {
-  const [layers, setLayers] = useState(() =>
-    [...rules].sort((a, b) => b.sortOrder - a.sortOrder),
-  );
+  const [layers, setLayers] = useState(() => [...rules].reverse());
   const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
   const library = [...backtestLibrary, ...extraLibrary];
   const [cloneMenu, setCloneMenu] = useState(0);
@@ -116,10 +114,7 @@ export function FuturesAutomationsDesk({
       return;
     }
     setLayers((current) =>
-      keepFormKeys(
-        current,
-        [...(result.forms ?? [])].sort((a, b) => b.sortOrder - a.sortOrder),
-      ),
+      keepFormKeys(current, [...(result.forms ?? [])].reverse()),
     );
   }
 
