@@ -736,11 +736,13 @@ export function ThemeBotFormDraft() {
   const [tpMethod, setTpMethod] = useState<ExitMethod>("percent");
   const [tpValue, setTpValue] = useState("");
   const [tpOrderType, setTpOrderType] = useState("market");
+  const [tpLimitPrice, setTpLimitPrice] = useState("");
   const [trailValue, setTrailValue] = useState("");
   const [trailTrigger, setTrailTrigger] = useState("");
   const [slMethod, setSlMethod] = useState<ExitMethod>("");
   const [slValue, setSlValue] = useState("");
   const [slOrderType, setSlOrderType] = useState("market");
+  const [slLimitPrice, setSlLimitPrice] = useState("");
   const [breakevenAt, setBreakevenAt] = useState("");
   const [breakevenOffset, setBreakevenOffset] = useState("0");
   const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(null);
@@ -806,11 +808,13 @@ export function ThemeBotFormDraft() {
     tpMethod,
     tpValue,
     tpOrderType,
+    tpLimitPrice,
     trailValue,
     trailTrigger,
     slMethod,
     slValue,
     slOrderType,
+    slLimitPrice,
     breakevenAt,
     breakevenOffset,
     exitIf,
@@ -1662,19 +1666,54 @@ export function ThemeBotFormDraft() {
               onEnabled={(next) => {
                 setTpOn(next);
                 if (next && !tpMethod) {
-                  setTpMethod("percent");
+                  setTpMethod(desk === "dca" ? "percent" : "price");
                 }
               }}
             >
-              <ExitMethodFields
-                method={tpMethod || "percent"}
-                onMethod={setTpMethod}
-                value={tpValue}
-                onValue={setTpValue}
-                orderType={tpOrderType}
-                onOrderType={setTpOrderType}
-                invalid={showFieldErrors && missing.tpValue}
-              />
+              {desk === "dca" ? (
+                <ExitMethodFields
+                  method={tpMethod || "percent"}
+                  onMethod={setTpMethod}
+                  value={tpValue}
+                  onValue={setTpValue}
+                  orderType={tpOrderType}
+                  onOrderType={setTpOrderType}
+                  invalid={showFieldErrors && missing.tpValue}
+                />
+              ) : (
+                <div className={rowClass}>
+                  <Field label="Price" required>
+                    <OffNumber
+                      value={tpValue}
+                      onChange={setTpValue}
+                      required
+                      invalid={showFieldErrors && missing.tpValue}
+                    />
+                  </Field>
+                  <Field label="Trigger" required>
+                    <select className={fieldClass} defaultValue="last">
+                      <option value="last">Last</option>
+                      <option value="mark">Mark</option>
+                      <option value="index">Index</option>
+                    </select>
+                  </Field>
+                  <Field label="Order type" required>
+                    <OrderTypePill
+                      value={tpOrderType === "limit" ? "limit" : "market"}
+                      onChange={setTpOrderType}
+                    />
+                  </Field>
+                  {tpOrderType === "limit" ? (
+                    <Field label="Limit price" required>
+                      <OffNumber
+                        value={tpLimitPrice}
+                        onChange={setTpLimitPrice}
+                        required
+                      />
+                    </Field>
+                  ) : null}
+                </div>
+              )}
             </OptionalSection>
 
             <OptionalSection
@@ -1772,15 +1811,20 @@ export function ThemeBotFormDraft() {
                     </select>
                   </Field>
                   <Field label="Order type" required>
-                    <select
-                      value={slOrderType}
-                      onChange={(event) => setSlOrderType(event.target.value)}
-                      className={fieldClass}
-                    >
-                      <option value="market">Market</option>
-                      <option value="limit">Limit</option>
-                    </select>
+                    <OrderTypePill
+                      value={slOrderType === "limit" ? "limit" : "market"}
+                      onChange={setSlOrderType}
+                    />
                   </Field>
+                  {slOrderType === "limit" ? (
+                    <Field label="Limit price" required>
+                      <OffNumber
+                        value={slLimitPrice}
+                        onChange={setSlLimitPrice}
+                        required
+                      />
+                    </Field>
+                  ) : null}
                 </div>
               )}
             </OptionalSection>
@@ -2357,14 +2401,10 @@ function ExitMethodFields({
       </Field>
       {valueField}
       <Field label="Order type" required>
-        <select
-          value={orderType}
-          onChange={(event) => onOrderType(event.target.value)}
-          className={fieldClass}
-        >
-          <option value="market">Market</option>
-          <option value="limit">Limit</option>
-        </select>
+        <OrderTypePill
+          value={orderType === "limit" ? "limit" : "market"}
+          onChange={onOrderType}
+        />
       </Field>
     </div>
   );

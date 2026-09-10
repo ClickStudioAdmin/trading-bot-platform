@@ -656,17 +656,11 @@ function RuleCard({
                 </select>
               </BotField>
               <BotField label="Order type" required>
-                <select
+                <OrderTypePill
                   name={`${prefix}tpOrderType`}
-                  value={tpOrderType}
-                  onChange={(event) =>
-                    setTpOrderType(event.target.value as FuturesOrderType)
-                  }
-                  className={botFieldClass}
-                >
-                  <option value="market">Market</option>
-                  <option value="limit">Limit</option>
-                </select>
+                  value={tpOrderType === "limit" ? "limit" : "market"}
+                  onChange={setTpOrderType}
+                />
               </BotField>
               {tpOrderType === "limit" ? (
                 <BotField label="Limit price" required>
@@ -742,17 +736,11 @@ function RuleCard({
                 </select>
               </BotField>
               <BotField label="Order type" required>
-                <select
+                <OrderTypePill
                   name={`${prefix}slOrderType`}
-                  value={slOrderType}
-                  onChange={(event) =>
-                    setSlOrderType(event.target.value as FuturesOrderType)
-                  }
-                  className={botFieldClass}
-                >
-                  <option value="market">Market</option>
-                  <option value="limit">Limit</option>
-                </select>
+                  value={slOrderType === "limit" ? "limit" : "market"}
+                  onChange={setSlOrderType}
+                />
               </BotField>
               {slOrderType === "limit" ? (
                 <BotField label="Limit price" required>
