@@ -126,6 +126,20 @@ async function persistDcaVerbStatus(input: {
     }
     return { ok: true };
   }
+  if (input.verb === "close-position") {
+    for (const side of sides) {
+      const patched = await patchDcaLeg({
+        supabase,
+        id: input.playbook.id,
+        side,
+        patch: { status: "closing" },
+      });
+      if (!patched.ok) {
+        return patched;
+      }
+    }
+    return { ok: true };
+  }
   if (input.verb === "disarm") {
     const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
       accountId: input.playbook.accountId,
@@ -490,6 +504,14 @@ export async function closeDcaPositionFromRow(formData: FormData) {
   const playbook = await loadDcaPlaybookById(id, session.account.id);
   if (!playbook) {
     redirect(withQuery(next, { paperError: "That bot was not found." }));
+  }
+  const persisted = await persistDcaVerbStatus({
+    playbook,
+    verb: "close-position",
+    side,
+  });
+  if (!persisted.ok) {
+    redirect(withQuery(next, { paperError: persisted.error }));
   }
   deferDcaVerb({
     playbook,

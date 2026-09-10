@@ -76,10 +76,6 @@ function queryLooksSuccessful() {
     paper === "live-playbook-closed" ||
     paper === "position-closed" ||
     paper === "live-position-closed" ||
-    paper === "closing" ||
-    paper === "live-closing" ||
-    paper === "closing-all" ||
-    paper === "live-closing-all" ||
     params.get("created") === "1"
   );
 }

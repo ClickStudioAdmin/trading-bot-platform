@@ -852,6 +852,7 @@ function OpenFuturesRows({
           next={next}
           playbookOwnsOrders={playbookOwnsOrders}
           playbookId={dcaHint?.playbookId ?? null}
+          closing={Boolean(dcaHint?.closing)}
           copyDesk={copyDesk}
         />
       </td>

@@ -78,6 +78,7 @@ import { parseDcaPlaybookVerb } from "./run";
 
 assert.equal(parseDcaStatus("armed"), "armed");
 assert.equal(parseDcaStatus("stop_adding"), "stop_adding");
+assert.equal(parseDcaStatus("closing"), "closing");
 assert.equal(parseDcaStatus("nope"), "idle");
 assert.equal(dcaClipAction("long"), "buy");
 assert.equal(dcaClipAction("short"), "sell");
@@ -701,6 +702,7 @@ assert.equal(
 assert.equal(dcaShouldFlattenIdleOpen({ status: "idle", positionQty: 0.1 }), true);
 assert.equal(dcaShouldFlattenIdleOpen({ status: "idle", positionQty: 0 }), false);
 assert.equal(dcaShouldFlattenIdleOpen({ status: "armed", positionQty: 0.1 }), false);
+assert.equal(dcaShouldFlattenIdleOpen({ status: "closing", positionQty: 0.1 }), false);
 assert.equal(dcaStartListens("immediate"), false);
 assert.equal(dcaStartListens("price"), true);
 assert.equal(dcaStartListens("webhook"), true);
@@ -749,6 +751,7 @@ assert.equal(
 assert.equal(dcaLegIsRunning("idle"), false);
 assert.equal(dcaLegIsRunning("armed"), true);
 assert.equal(dcaLegIsRunning("stop_adding"), true);
+assert.equal(dcaLegIsRunning("closing"), false);
 assert.equal(
   dcaWebhookSignalApplies({
     startKind: "webhook",
@@ -965,6 +968,9 @@ const base = {
 };
 
 assert.deepEqual(decideDcaTick({ ...base, status: "idle" }).action, {
+  kind: "none",
+});
+assert.deepEqual(decideDcaTick({ ...base, status: "closing" }).action, {
   kind: "none",
 });
 assert.equal(
@@ -1941,6 +1947,16 @@ assert.equal(
   "Stopped",
 );
 assert.equal(
+  formatDcaNextAdd({
+    status: "closing",
+    dipPct: 2,
+    intervalMinutes: 15,
+    lastClipAtMs: 0,
+    nowMs: 0,
+  }),
+  "Closing",
+);
+assert.equal(
   formatDcaOrdersProgress({ filled: 1, maxClips: 20 }),
   "1/20",
 );
@@ -2005,6 +2021,22 @@ assert.equal(
     side: "long",
   })?.playbookId,
   (row as DcaPlaybook).id,
+);
+assert.equal(
+  dcaOpenHint({
+    playbook: row as DcaPlaybook,
+    symbol: "BTCUSDT",
+    side: "long",
+  })?.closing,
+  false,
+);
+assert.equal(
+  dcaOpenHint({
+    playbook: { ...(row as DcaPlaybook), long: { ...(row as DcaPlaybook).long, status: "closing" } },
+    symbol: "BTCUSDT",
+    side: "long",
+  })?.closing,
+  true,
 );
 assert.equal(
   dcaHintsForOpen(

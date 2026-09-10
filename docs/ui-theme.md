@@ -44,4 +44,4 @@ Geist is the next/font face on `--font-geist` (not a local family named `Geist`)
 
 ## Motion
 
-Short press on buttons (`scale` + opacity). Server-action submits swap the label for a spinner, then a success check for 1.5s. Desk Save / Disable / Close / Close All return when the app has accepted the work — venue flatten, cancel, and grid sync finish in the background. The banner or blotter flash says that. No decorative animation.
+Short press on buttons (`scale` + opacity). Server-action submits swap the label for a spinner, then a success check for 1.5s when the work is actually done. Desk Save / Disable return when the app has accepted the work — venue flatten, cancel, and grid sync finish in the background. A DCA row **Close** stays on a spinner until that position leaves the blotter. Do not flash a success tick and return to Close while flatten is still in flight. The banner or blotter flash says the desk accepted the close. No decorative animation.

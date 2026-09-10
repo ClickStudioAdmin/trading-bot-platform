@@ -2,7 +2,10 @@
 
 import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
+import {
+  ButtonBusyIcon,
+  PendingSubmitButton,
+} from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { closeDcaPositionFromRow } from "@/lib/dca/actions";
 import { submitFuturesTrade } from "@/lib/futures/actions";
@@ -15,17 +18,21 @@ const ACTION_CLASS =
 const INPUT_CLASS =
   "w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none";
 
+const CLOSING_ROW_KEY = "tbp-closing-row";
+
 export function FuturesCloseActions({
   trade,
   next,
   playbookOwnsOrders = false,
   playbookId = null,
+  closing = false,
   copyDesk = false,
 }: {
   trade: MarkedFutures;
   next: string;
   playbookOwnsOrders?: boolean;
   playbookId?: string | null;
+  closing?: boolean;
   copyDesk?: boolean;
 }) {
   if (copyDesk) {
@@ -35,8 +42,10 @@ export function FuturesCloseActions({
     return (
       <CloseDcaPositionButton
         playbookId={playbookId}
+        positionId={trade.id}
         side={trade.side}
         next={next}
+        closing={closing}
       />
     );
   }
@@ -84,17 +93,56 @@ function CloseCopiedPositionButton({
   );
 }
 
+function markDcaRowClosing(positionId: string) {
+  try {
+    sessionStorage.setItem(CLOSING_ROW_KEY, positionId);
+  } catch {
+    /* ignore */
+  }
+}
+
 function CloseDcaPositionButton({
   playbookId,
+  positionId,
   side,
   next,
+  closing,
 }: {
   playbookId: string;
+  positionId: string;
   side: MarkedFutures["side"];
   next: string;
+  closing: boolean;
 }) {
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    try {
+      setHeld(sessionStorage.getItem(CLOSING_ROW_KEY) === positionId);
+    } catch {
+      setHeld(false);
+    }
+  }, [positionId]);
+
+  if (closing || held) {
+    return (
+      <span
+        className={`${ACTION_CLASS} pointer-events-none opacity-70`}
+        title="Close submitted. The blotter updates when the venue fills."
+        aria-busy
+        aria-label="Closing"
+      >
+        <ButtonBusyIcon />
+      </span>
+    );
+  }
+
   return (
-    <form action={closeDcaPositionFromRow}>
+    <form
+      action={async (formData) => {
+        markDcaRowClosing(positionId);
+        await closeDcaPositionFromRow(formData);
+      }}
+    >
       <input type="hidden" name="next" value={next} />
       <input type="hidden" name="playbookId" value={playbookId} />
       <input type="hidden" name="side" value={side} />
@@ -104,7 +152,6 @@ function CloseDcaPositionButton({
       >
         <PendingSubmitButton
           pendingLabel="Closing…"
-          successKey={`close-dca-position-row-${playbookId}-${side}`}
           className={ACTION_CLASS}
           skipSizeGuard
         >

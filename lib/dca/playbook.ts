@@ -72,7 +72,7 @@ import {
 
 export type { DcaFilterSpec } from "./filters";
 
-export type DcaStatus = "idle" | "armed" | "stop_adding";
+export type DcaStatus = "idle" | "armed" | "stop_adding" | "closing";
 export type DcaDirection = "long" | "short" | "both";
 export type DcaStartKind = "immediate" | "price" | "webhook" | "indicator" | "trend";
 export type DcaMode = "position" | "order";
@@ -194,7 +194,7 @@ export type DcaTickDecision = {
 };
 
 export function parseDcaStatus(value: unknown): DcaStatus {
-  if (value === "armed" || value === "stop_adding") {
+  if (value === "armed" || value === "stop_adding" || value === "closing") {
     return value;
   }
   return "idle";
@@ -1102,6 +1102,7 @@ export function dcaLegFor(
 export type DcaOpenHint = {
   playbookId: string;
   orders: string;
+  closing: boolean;
   plannedTakeProfit: number | null;
   plannedStopLoss: number | null;
   plannedTrailing: number | null;
@@ -2464,7 +2465,7 @@ export function decideDcaTick(input: {
       : indicatorNow;
   const disarmEdge = disarmMet && !input.disarmConditionTrue;
 
-  if (input.status === "idle") {
+  if (input.status === "idle" || input.status === "closing") {
     return {
       action: { kind: "none" },
       nextArmTrue,
@@ -2758,6 +2759,9 @@ export function formatDcaNextAdd(input: {
 }): string {
   if (input.status === "idle") {
     return "—";
+  }
+  if (input.status === "closing") {
+    return "Closing";
   }
   if (input.status === "stop_adding") {
     return "Stopped";
@@ -3236,7 +3240,9 @@ export function dcaPlaybookStatusLabel(playbook: DcaPlaybook): string {
           ? "Armed"
           : leg.status === "stop_adding"
             ? "Stopped adding"
-            : "Idle";
+            : leg.status === "closing"
+              ? "Closing"
+              : "Idle";
       const clips = leg.clipsFilled > 0 ? ` · ${leg.clipsFilled} orders` : "";
       if (sides.length === 1) {
         return `${status}${clips}`;
@@ -3309,6 +3315,7 @@ export function dcaOpenHint(input: {
       filled,
       maxClips: input.playbook.maxClips,
     }),
+    closing: leg.status === "closing",
     plannedTakeProfit: planned.takeProfit,
     plannedStopLoss: planned.stopLoss,
     plannedTrailing: planned.trailingStop,
@@ -3364,6 +3371,7 @@ export function dcaHintsForCopyOpen(
         filled,
         maxClips: playbook.maxClips,
       }),
+      closing: dcaLegFor(playbook, row.side).status === "closing",
       plannedTakeProfit: planned.takeProfit,
       plannedStopLoss: planned.stopLoss,
       plannedTrailing: planned.trailingStop,

@@ -265,6 +265,27 @@ export async function runDcaPlaybookTick(input?: {
           row.symbol === playbook.symbol &&
           row.side === side,
       );
+      if (leg.status === "closing") {
+        if (open && open.qty > 0) {
+          const flattened = await flattenPlaybook({
+            playbook,
+            mode: account.mode,
+            side,
+            reason: "Close requested.",
+          });
+          if (!flattened.ok) {
+            continue;
+          }
+        }
+        const kept = await keepListeningAfterFlatten({
+          playbook,
+          side,
+        });
+        if (kept.ok) {
+          acted += 1;
+        }
+        continue;
+      }
       await syncDcaPlaybookExits({
         playbook,
         mode: account.mode,

@@ -933,7 +933,9 @@ export function DcaPlaybookForm({
     playbook?.id && dcaPlaybookHasOpenCycle(playbook, openPositions),
   );
   const cycleLocked = hasOpenPosition;
-  const armed = liveLegs.some((leg) => leg.status === "armed");
+  const armed = liveLegs.some(
+    (leg) => leg.status === "armed" || leg.status === "closing",
+  );
   const stopAdding = liveLegs.some((leg) => leg.status === "stop_adding");
   const currentStatus: DcaBotStatus = playbook
     ? dcaStatusFromLegs({ armed, stopAdding })
