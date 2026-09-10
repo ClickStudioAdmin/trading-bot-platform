@@ -4,6 +4,7 @@ import {
   FUTURES_LIVE_WORKING_STATUSES,
   dcaFlattenVenuePlan,
   futuresPositionIsLive,
+  futuresDeskNeedsUrgentRefresh,
   futuresWorkingIsLive,
   futuresWorkingIsPendingCancel,
   mapWithConcurrency,
@@ -22,6 +23,25 @@ assert.equal(futuresWorkingIsPendingCancel("cancelling"), true);
 assert.equal(futuresWorkingIsPendingCancel("open"), false);
 assert.equal(futuresWorkingIsLive("cancelling"), true);
 assert.equal(futuresWorkingIsLive("filled"), false);
+assert.equal(
+  futuresDeskNeedsUrgentRefresh({
+    positions: [{ status: "open" }],
+    working: [{ status: "open" }],
+  }),
+  false,
+);
+assert.equal(
+  futuresDeskNeedsUrgentRefresh({
+    positions: [{ status: "closing" }],
+  }),
+  true,
+);
+assert.equal(
+  futuresDeskNeedsUrgentRefresh({
+    working: [{ status: "cancelling" }],
+  }),
+  true,
+);
 assert.equal(dcaFlattenVenuePlan("bybit").waitForGridBeforeFlatten, false);
 assert.equal(dcaFlattenVenuePlan("bybit").useSymbolCancelAll, true);
 assert.equal(dcaFlattenVenuePlan("hyperliquid").useSymbolCancelAll, false);

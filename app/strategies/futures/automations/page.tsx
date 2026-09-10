@@ -7,7 +7,8 @@ import { FuturesAutomationsDesk } from "@/components/futures-rules-form";
 import { FuturesRulesGuide } from "@/components/futures-rules-guide";
 import { dcaPaperBookUsdt } from "@/lib/dca/book";
 import { listDcaPlaybooksForAccount } from "@/lib/dca/store";
-import { loadFuturesPositions } from "@/lib/futures/list";
+import { loadFuturesPositions, loadLiveFuturesWorking } from "@/lib/futures/list";
+import { futuresDeskNeedsUrgentRefresh } from "@/lib/futures/pending-close";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadAccountSnapshot } from "@/lib/exchanges/account-snapshot";
 import { fetchBybitTickers } from "@/lib/exchanges/bybit/client";
@@ -100,9 +101,12 @@ export default async function FuturesAutomationsPage({
     )
       ? null
       : (settings.paperLeverage ?? null);
-    const openPositions = await loadFuturesPositions({
-      status: "open",
-    }).catch(() => []);
+    const [openPositions, liveWorking] = await Promise.all([
+      loadFuturesPositions({
+        status: "open",
+      }).catch(() => []),
+      loadLiveFuturesWorking().catch(() => []),
+    ]);
     if (accountCanHoldConnections(session.account.mode) && settings.connectionId) {
       const connections = await listExchangeConnections(session.member.id);
       const bound = connections.find((row) => row.id === settings.connectionId);
@@ -178,6 +182,10 @@ export default async function FuturesAutomationsPage({
               side: row.side,
               qty: row.qty,
             }))}
+            urgentRefresh={futuresDeskNeedsUrgentRefresh({
+              positions: openPositions,
+              working: liveWorking,
+            })}
           />
         </div>
       </main>

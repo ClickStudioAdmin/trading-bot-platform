@@ -48,6 +48,7 @@ import {
   dcaPlaybookConflict,
   dcaPlaybookHasOpenCycle,
   dcaCycleFieldsLocked,
+  dcaPlaybookHoldsCycle,
   dcaPlaybookIsRunning,
   dcaWithLockedCycleConfig,
   resolveDcaSaveConfig,

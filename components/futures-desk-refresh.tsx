@@ -31,6 +31,9 @@ export function FuturesDeskRefresh({ urgent = false }: { urgent?: boolean }) {
       if (document.hidden) {
         return;
       }
+      if (urgent) {
+        refresh();
+      }
       timer = window.setInterval(refresh, urgent ? URGENT_REFRESH_MS : REFRESH_MS);
     }
 

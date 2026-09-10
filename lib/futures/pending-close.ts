@@ -18,6 +18,16 @@ export function futuresWorkingIsLive(status: string): boolean {
   return status === "open" || status === "cancelling";
 }
 
+export function futuresDeskNeedsUrgentRefresh(input: {
+  positions?: readonly { status: string }[];
+  working?: readonly { status: string }[];
+}): boolean {
+  return (
+    Boolean(input.positions?.some((row) => row.status === "closing")) ||
+    Boolean(input.working?.some((row) => row.status === "cancelling"))
+  );
+}
+
 export function dcaFlattenVenuePlan(venue: string | null | undefined): {
   waitForGridBeforeFlatten: false;
   useSymbolCancelAll: boolean;
