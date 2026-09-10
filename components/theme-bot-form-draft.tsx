@@ -25,6 +25,8 @@ import {
   defaultDcaIndicatorLevel,
   defaultDcaIndicatorPeriod,
   defaultDcaIndicatorSlowPeriod,
+  oppositeIndicatorCompare,
+  oppositeRsiLevel,
   type DcaIndicatorKind,
   type DcaIndicatorTimeframe,
 } from "@/lib/dca/indicators";
@@ -438,6 +440,222 @@ function OffNumber({
   );
 }
 
+function SideBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-3">
+      <h4 className={sectionTitleClass}>{title}</h4>
+      {children}
+    </div>
+  );
+}
+
+function TriggerParamFields({
+  startKind,
+  desk,
+  side,
+  priceSource,
+  onPriceSource,
+  priceWhen,
+  onPriceWhen,
+  priceLevel,
+  onPriceLevel,
+  indicatorKind,
+  onIndicatorKind,
+  timeframe,
+  onTimeframe,
+  when,
+  onWhen,
+  period,
+  onPeriod,
+  slowPeriod,
+  onSlowPeriod,
+  level,
+  onLevel,
+  multiplier,
+  onMultiplier,
+}: {
+  startKind: StartKind;
+  desk: DeskKind;
+  side: "long" | "short";
+  priceSource: string;
+  onPriceSource: (next: string) => void;
+  priceWhen: string;
+  onPriceWhen: (next: string) => void;
+  priceLevel: string;
+  onPriceLevel: (next: string) => void;
+  indicatorKind: DcaIndicatorKind;
+  onIndicatorKind: (next: DcaIndicatorKind) => void;
+  timeframe: DcaIndicatorTimeframe;
+  onTimeframe: (next: DcaIndicatorTimeframe) => void;
+  when: string;
+  onWhen: (next: string) => void;
+  period: string;
+  onPeriod: (next: string) => void;
+  slowPeriod: string;
+  onSlowPeriod: (next: string) => void;
+  level: string;
+  onLevel: (next: string) => void;
+  multiplier: string;
+  onMultiplier: (next: string) => void;
+}) {
+  const kindForFields = startKind === "trend" ? "supertrend" : indicatorKind;
+  const whenOptions = dcaIndicatorWhenOptions(kindForFields, side, false);
+  const showPeriod =
+    startKind === "trend" || dcaIndicatorUsesPeriod(indicatorKind);
+  const showPair =
+    startKind === "indicator" && dcaIndicatorUsesPairPeriods(indicatorKind);
+  const showLevel =
+    startKind === "indicator" &&
+    dcaIndicatorShowsLevel(indicatorKind, when, level);
+
+  if (startKind === "price") {
+    return (
+      <div className={rowClass5}>
+        <Field label="Price source">
+          <select
+            value={priceSource}
+            onChange={(event) => onPriceSource(event.target.value)}
+            className={fieldClass}
+          >
+            <option value="last">{desk === "perps" ? "Last is" : "Last"}</option>
+            <option value="mark">{desk === "perps" ? "Mark is" : "Mark"}</option>
+            <option value="index">
+              {desk === "perps" ? "Index is" : "Index"}
+            </option>
+          </select>
+        </Field>
+        <Field label={desk === "perps" ? "Compare" : "When"}>
+          <select
+            value={priceWhen}
+            onChange={(event) => onPriceWhen(event.target.value)}
+            className={fieldClass}
+          >
+            <option value="gte">At or above</option>
+            <option value="lte">At or below</option>
+          </select>
+        </Field>
+        <Field label="Price">
+          <OffNumber value={priceLevel} onChange={onPriceLevel} />
+        </Field>
+      </div>
+    );
+  }
+
+  if (startKind === "webhook") {
+    return null;
+  }
+
+  return (
+    <div className={rowClass5}>
+      {startKind === "indicator" ? (
+        <Field label="Indicator">
+          <select
+            value={indicatorKind}
+            onChange={(event) => {
+              const kind = event.target.value as DcaIndicatorKind;
+              onIndicatorKind(kind);
+              onPeriod(String(defaultDcaIndicatorPeriod(kind)));
+              onSlowPeriod(String(defaultDcaIndicatorSlowPeriod(kind)));
+              onLevel(
+                defaultDcaIndicatorLevel(kind) == null
+                  ? ""
+                  : String(defaultDcaIndicatorLevel(kind)),
+              );
+              const options = dcaIndicatorWhenOptions(kind, side, false);
+              onWhen(options[0]?.value ?? "gte");
+            }}
+            className={fieldClass}
+          >
+            {DCA_INDICATOR_KIND_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      ) : (
+        <Field label="Trend">
+          <select className={fieldClass} value="supertrend" disabled>
+            <option value="supertrend">Supertrend</option>
+          </select>
+        </Field>
+      )}
+      {showPeriod ? (
+        <Field label="Period">
+          <GroupedNumberInput
+            value={period}
+            onChange={onPeriod}
+            className={fieldClass}
+          />
+        </Field>
+      ) : null}
+      {showPair ? (
+        <Field label="Slow">
+          <GroupedNumberInput
+            value={slowPeriod}
+            onChange={onSlowPeriod}
+            className={fieldClass}
+          />
+        </Field>
+      ) : null}
+      {startKind === "trend" ? (
+        <Field label="Multiplier">
+          <GroupedNumberInput
+            value={multiplier}
+            onChange={onMultiplier}
+            allowDecimal
+            className={fieldClass}
+          />
+        </Field>
+      ) : null}
+      <Field label="Timeframe">
+        <select
+          value={timeframe}
+          onChange={(event) =>
+            onTimeframe(event.target.value as DcaIndicatorTimeframe)
+          }
+          className={fieldClass}
+        >
+          {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
+            <option key={interval} value={interval}>
+              {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="When">
+        <select
+          value={when}
+          onChange={(event) => onWhen(event.target.value)}
+          className={fieldClass}
+        >
+          {whenOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {showLevel ? (
+        <Field label="Level">
+          <GroupedNumberInput
+            value={level}
+            onChange={onLevel}
+            allowDecimal
+            className={fieldClass}
+          />
+        </Field>
+      ) : null}
+    </div>
+  );
+}
+
 export function ThemeBotFormDraft() {
   const [name, setName] = useState("Sample bot");
   const [symbol, setSymbol] = useState("BTCUSDT");
@@ -455,8 +673,23 @@ export function ThemeBotFormDraft() {
   const [multiplier, setMultiplier] = useState(
     String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
   );
+  const [shortPriceSource, setShortPriceSource] = useState("last");
+  const [shortPriceWhen, setShortPriceWhen] = useState("lte");
+  const [shortPriceLevel, setShortPriceLevel] = useState("");
+  const [shortIndicatorKind, setShortIndicatorKind] =
+    useState<DcaIndicatorKind>("rsi");
+  const [shortTimeframe, setShortTimeframe] =
+    useState<DcaIndicatorTimeframe>("15");
+  const [shortWhen, setShortWhen] = useState("cross_gte");
+  const [shortPeriod, setShortPeriod] = useState(String(DEFAULT_DCA_RSI_PERIOD));
+  const [shortSlowPeriod, setShortSlowPeriod] = useState("21");
+  const [shortLevel, setShortLevel] = useState("70");
+  const [shortMultiplier, setShortMultiplier] = useState(
+    String(DEFAULT_DCA_SUPERTREND_MULTIPLIER),
+  );
   const [confirmOn, setConfirmOn] = useState(false);
   const [confirm, setConfirm] = useState<DcaFilterSpec | null>(null);
+  const [shortConfirm, setShortConfirm] = useState<DcaFilterSpec | null>(null);
   const [tpOn, setTpOn] = useState(true);
   const [trailOn, setTrailOn] = useState(false);
   const [slOn, setSlOn] = useState(false);
@@ -496,6 +729,7 @@ export function ThemeBotFormDraft() {
   const [breakevenAt, setBreakevenAt] = useState("");
   const [breakevenOffset, setBreakevenOffset] = useState("0");
   const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(null);
+  const [shortExitIf, setShortExitIf] = useState<DcaFilterSpec | null>(null);
   const [skipIfOpen, setSkipIfOpen] = useState(true);
   const [restGrid, setRestGrid] = useState(true);
   const [direction, setDirection] = useState<"long" | "short" | "both">("long");
@@ -520,8 +754,19 @@ export function ThemeBotFormDraft() {
     slowPeriod,
     level,
     multiplier,
+    shortPriceSource,
+    shortPriceWhen,
+    shortPriceLevel,
+    shortIndicatorKind,
+    shortTimeframe,
+    shortWhen,
+    shortPeriod,
+    shortSlowPeriod,
+    shortLevel,
+    shortMultiplier,
     confirmOn,
     confirm,
+    shortConfirm,
     tpOn,
     trailOn,
     slOn,
@@ -541,6 +786,7 @@ export function ThemeBotFormDraft() {
     breakevenAt,
     breakevenOffset,
     exitIf,
+    shortExitIf,
     skipIfOpen,
     restGrid,
     direction,
@@ -572,16 +818,8 @@ export function ThemeBotFormDraft() {
   const statusOptions = statusOptionsFor(desk);
   const selectedStatus =
     statusOptions.find((option) => option.value === status) ?? statusOptions[0];
-  const startKindForFields =
-    startKind === "trend" ? "supertrend" : indicatorKind;
-  const whenOptions = dcaIndicatorWhenOptions(startKindForFields, "long", false);
-  const showPeriod =
-    startKind === "trend" || dcaIndicatorUsesPeriod(indicatorKind);
-  const showPair = startKind === "indicator" && dcaIndicatorUsesPairPeriods(indicatorKind);
-  const showLevel =
-    startKind === "indicator" &&
-    dcaIndicatorShowsLevel(indicatorKind, when, level);
   const showStartParams = startKind !== "webhook" && !closing;
+  const bothSides = desk === "dca" && direction === "both";
   const requireTp = desk !== "cnc" && !closing && tpOn;
   const requireSl = desk !== "cnc" && !closing && slOn;
   const requireTrail = desk !== "cnc" && !closing && trailOn;
@@ -601,8 +839,14 @@ export function ThemeBotFormDraft() {
     breakevenOffset: requireBreakeven && !filled(breakevenOffset),
     carryTp: requireCarryTp && !filled(carryTp),
     carrySl: requireCarrySl && !filled(carrySl),
-    confirm: requireConfirm && !dcaFilterComplete(confirm),
-    exitIf: requireExitIf && !dcaFilterComplete(exitIf),
+    confirm:
+      requireConfirm &&
+      (!dcaFilterComplete(confirm) ||
+        (bothSides && !dcaFilterComplete(shortConfirm))),
+    exitIf:
+      requireExitIf &&
+      (!dcaFilterComplete(exitIf) ||
+        (bothSides && !dcaFilterComplete(shortExitIf))),
   };
   const hasMissing = Object.values(missing).some(Boolean);
   const showFieldErrors = saveAttempted && hasMissing;
@@ -623,6 +867,55 @@ export function ThemeBotFormDraft() {
     if (next === "perps" && (startKind === "indicator" || startKind === "trend")) {
       setStartKind("price");
     }
+  }
+
+  function applyDirection(next: "long" | "short" | "both") {
+    const kindForSeed = startKind === "trend" ? "supertrend" : indicatorKind;
+    if (next === "both" && direction !== "both") {
+      setShortPriceSource(priceSource);
+      setShortPriceWhen(priceWhen === "gte" ? "lte" : "gte");
+      setShortPriceLevel(priceLevel);
+      setShortIndicatorKind(indicatorKind);
+      setShortTimeframe(timeframe);
+      setShortWhen(oppositeIndicatorCompare(kindForSeed, when));
+      setShortPeriod(period);
+      setShortSlowPeriod(slowPeriod);
+      const numericLevel = Number(level.replace(/,/g, ""));
+      setShortLevel(
+        indicatorKind === "rsi"
+          ? String(
+              oppositeRsiLevel(
+                Number.isFinite(numericLevel) ? numericLevel : 30,
+              ),
+            )
+          : level,
+      );
+      setShortMultiplier(multiplier);
+      if (confirmOn) {
+        setShortConfirm((current) => current ?? dcaFilterSpecForKind("rsi", "short"));
+      }
+      if (exitIfOn) {
+        setShortExitIf((current) => current ?? dcaFilterSpecForKind("rsi", "short"));
+      }
+    } else if (direction === "both" && next === "short") {
+      setPriceSource(shortPriceSource);
+      setPriceWhen(shortPriceWhen);
+      setPriceLevel(shortPriceLevel);
+      setIndicatorKind(shortIndicatorKind);
+      setTimeframe(shortTimeframe);
+      setWhen(shortWhen);
+      setPeriod(shortPeriod);
+      setSlowPeriod(shortSlowPeriod);
+      setLevel(shortLevel);
+      setMultiplier(shortMultiplier);
+      if (shortConfirm) {
+        setConfirm(shortConfirm);
+      }
+      if (shortExitIf) {
+        setExitIf(shortExitIf);
+      }
+    }
+    setDirection(next);
   }
 
   function saveDraft() {
@@ -802,7 +1095,7 @@ export function ThemeBotFormDraft() {
                   <select
                     value={direction}
                     onChange={(event) =>
-                      setDirection(
+                      applyDirection(
                         event.target.value as "long" | "short" | "both",
                       )
                     }
@@ -822,9 +1115,13 @@ export function ThemeBotFormDraft() {
                       if (next === "trend") {
                         setWhen("cross_gte");
                         setPeriod(String(DEFAULT_DCA_SUPERTREND_PERIOD));
+                        setShortWhen("cross_lte");
+                        setShortPeriod(String(DEFAULT_DCA_SUPERTREND_PERIOD));
                       } else if (next === "indicator") {
                         setWhen("cross_lte");
                         setPeriod(String(DEFAULT_DCA_RSI_PERIOD));
+                        setShortWhen("cross_gte");
+                        setShortPeriod(String(DEFAULT_DCA_RSI_PERIOD));
                       }
                     }}
                     className={fieldClass}
@@ -882,150 +1179,100 @@ export function ThemeBotFormDraft() {
             </div>
           ) : null}
 
-          {startKind === "price" && !closing ? (
-            <div className={rowClass5}>
-              <Field label="Price source">
-                <select
-                  value={priceSource}
-                  onChange={(event) => setPriceSource(event.target.value)}
-                  className={fieldClass}
-                >
-                  <option value="last">
-                    {desk === "perps" ? "Last is" : "Last"}
-                  </option>
-                  <option value="mark">
-                    {desk === "perps" ? "Mark is" : "Mark"}
-                  </option>
-                  <option value="index">
-                    {desk === "perps" ? "Index is" : "Index"}
-                  </option>
-                </select>
-              </Field>
-              <Field label={desk === "perps" ? "Compare" : "When"}>
-                <select
-                  value={priceWhen}
-                  onChange={(event) => setPriceWhen(event.target.value)}
-                  className={fieldClass}
-                >
-                  <option value="gte">At or above</option>
-                  <option value="lte">At or below</option>
-                </select>
-              </Field>
-              <Field label="Price">
-                <OffNumber value={priceLevel} onChange={setPriceLevel} />
-              </Field>
-            </div>
-          ) : null}
-
-          {showStartParams && startKind !== "price" ? (
-            <div className={rowClass5}>
-              {startKind === "indicator" ? (
-                <Field label="Indicator">
-                  <select
-                    value={indicatorKind}
-                    onChange={(event) => {
-                      const kind = event.target.value as DcaIndicatorKind;
-                      setIndicatorKind(kind);
-                      setPeriod(String(defaultDcaIndicatorPeriod(kind)));
-                      setSlowPeriod(String(defaultDcaIndicatorSlowPeriod(kind)));
-                      setLevel(
-                        defaultDcaIndicatorLevel(kind) == null
-                          ? ""
-                          : String(defaultDcaIndicatorLevel(kind)),
-                      );
-                      const options = dcaIndicatorWhenOptions(kind, "long", false);
-                      setWhen(options[0]?.value ?? "gte");
-                    }}
-                    className={fieldClass}
-                  >
-                    {DCA_INDICATOR_KIND_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              ) : (
-                <Field label="Trend">
-                  <select className={fieldClass} value="supertrend" disabled>
-                    <option value="supertrend">Supertrend</option>
-                  </select>
-                </Field>
-              )}
-              {showPeriod ? (
-                <Field label="Period">
-                  <GroupedNumberInput
-                    value={period}
-                    onChange={setPeriod}
-                    className={fieldClass}
+          {showStartParams ? (
+            bothSides ? (
+              <div className="space-y-5">
+                <SideBlock title="Long">
+                  <TriggerParamFields
+                    startKind={startKind}
+                    desk={desk}
+                    side="long"
+                    priceSource={priceSource}
+                    onPriceSource={setPriceSource}
+                    priceWhen={priceWhen}
+                    onPriceWhen={setPriceWhen}
+                    priceLevel={priceLevel}
+                    onPriceLevel={setPriceLevel}
+                    indicatorKind={indicatorKind}
+                    onIndicatorKind={setIndicatorKind}
+                    timeframe={timeframe}
+                    onTimeframe={setTimeframe}
+                    when={when}
+                    onWhen={setWhen}
+                    period={period}
+                    onPeriod={setPeriod}
+                    slowPeriod={slowPeriod}
+                    onSlowPeriod={setSlowPeriod}
+                    level={level}
+                    onLevel={setLevel}
+                    multiplier={multiplier}
+                    onMultiplier={setMultiplier}
                   />
-                </Field>
-              ) : null}
-              {showPair ? (
-                <Field label="Slow">
-                  <GroupedNumberInput
-                    value={slowPeriod}
-                    onChange={setSlowPeriod}
-                    className={fieldClass}
-                  />
-                </Field>
-              ) : null}
-              {startKind === "trend" ? (
-                <Field label="Multiplier">
-                  <GroupedNumberInput
-                    value={multiplier}
-                    onChange={setMultiplier}
-                    allowDecimal
-                    className={fieldClass}
-                  />
-                </Field>
-              ) : null}
-              <Field label="Timeframe">
-                <select
-                  value={timeframe}
-                  onChange={(event) =>
-                    setTimeframe(event.target.value as DcaIndicatorTimeframe)
-                  }
-                  className={fieldClass}
-                >
-                  {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
-                    <option key={interval} value={interval}>
-                      {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="When">
-                <select
-                  value={when}
-                  onChange={(event) => setWhen(event.target.value)}
-                  className={fieldClass}
-                >
-                  {whenOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              {showLevel ? (
-                <Field label="Level">
-                  <GroupedNumberInput
-                    value={level}
-                    onChange={setLevel}
-                    allowDecimal
-                    className={fieldClass}
-                  />
-                </Field>
-              ) : null}
-            </div>
+                </SideBlock>
+                <div className="space-y-5 border-t border-line pt-5">
+                  <SideBlock title="Short">
+                    <TriggerParamFields
+                      startKind={startKind}
+                      desk={desk}
+                      side="short"
+                      priceSource={shortPriceSource}
+                      onPriceSource={setShortPriceSource}
+                      priceWhen={shortPriceWhen}
+                      onPriceWhen={setShortPriceWhen}
+                      priceLevel={shortPriceLevel}
+                      onPriceLevel={setShortPriceLevel}
+                      indicatorKind={shortIndicatorKind}
+                      onIndicatorKind={setShortIndicatorKind}
+                      timeframe={shortTimeframe}
+                      onTimeframe={setShortTimeframe}
+                      when={shortWhen}
+                      onWhen={setShortWhen}
+                      period={shortPeriod}
+                      onPeriod={setShortPeriod}
+                      slowPeriod={shortSlowPeriod}
+                      onSlowPeriod={setShortSlowPeriod}
+                      level={shortLevel}
+                      onLevel={setShortLevel}
+                      multiplier={shortMultiplier}
+                      onMultiplier={setShortMultiplier}
+                    />
+                  </SideBlock>
+                </div>
+              </div>
+            ) : (
+              <TriggerParamFields
+                startKind={startKind}
+                desk={desk}
+                side={direction === "short" ? "short" : "long"}
+                priceSource={priceSource}
+                onPriceSource={setPriceSource}
+                priceWhen={priceWhen}
+                onPriceWhen={setPriceWhen}
+                priceLevel={priceLevel}
+                onPriceLevel={setPriceLevel}
+                indicatorKind={indicatorKind}
+                onIndicatorKind={setIndicatorKind}
+                timeframe={timeframe}
+                onTimeframe={setTimeframe}
+                when={when}
+                onWhen={setWhen}
+                period={period}
+                onPeriod={setPeriod}
+                slowPeriod={slowPeriod}
+                onSlowPeriod={setSlowPeriod}
+                level={level}
+                onLevel={setLevel}
+                multiplier={multiplier}
+                onMultiplier={setMultiplier}
+              />
+            )
           ) : null}
         </Group>
         ) : null}
 
         {desk === "dca" && !closing ? (
           <OptionalSection
-            title="Secondary Condition"
+            title="Secondary Entry Condition"
             hint="Must be true for the entry trigger to execute."
             enabled={confirmOn}
             error={
@@ -1035,22 +1282,72 @@ export function ThemeBotFormDraft() {
             }
             onEnabled={(next) => {
               setConfirmOn(next);
-              setConfirm(next ? (confirm ?? dcaFilterSpecForKind("rsi", "long")) : null);
+              setConfirm(
+                next
+                  ? (confirm ??
+                    dcaFilterSpecForKind(
+                      "rsi",
+                      direction === "short" ? "short" : "long",
+                    ))
+                  : null,
+              );
+              if (next && bothSides) {
+                setShortConfirm(
+                  (current) => current ?? dcaFilterSpecForKind("rsi", "short"),
+                );
+              }
             }}
           >
-            <DcaFilterBlock
-              label="Kind"
-              prefix="themeConfirm"
-              side="long"
-              spec={confirm}
-              onChange={setConfirm}
-              dense
-              allowOff={false}
-              gridClass={rowClass5}
-              whenClass=""
-              fieldClass={fieldClass}
-              labelClass={labelClass}
-            />
+            {bothSides ? (
+              <div className="space-y-5">
+                <SideBlock title="Long">
+                  <DcaFilterBlock
+                    label="Kind"
+                    prefix="themeConfirm"
+                    side="long"
+                    spec={confirm}
+                    onChange={setConfirm}
+                    dense
+                    allowOff={false}
+                    gridClass={rowClass5}
+                    whenClass=""
+                    fieldClass={fieldClass}
+                    labelClass={labelClass}
+                  />
+                </SideBlock>
+                <div className="space-y-5 border-t border-line pt-5">
+                  <SideBlock title="Short">
+                    <DcaFilterBlock
+                      label="Kind"
+                      prefix="themeShortConfirm"
+                      side="short"
+                      spec={shortConfirm}
+                      onChange={setShortConfirm}
+                      dense
+                      allowOff={false}
+                      gridClass={rowClass5}
+                      whenClass=""
+                      fieldClass={fieldClass}
+                      labelClass={labelClass}
+                    />
+                  </SideBlock>
+                </div>
+              </div>
+            ) : (
+              <DcaFilterBlock
+                label="Kind"
+                prefix="themeConfirm"
+                side={direction === "short" ? "short" : "long"}
+                spec={confirm}
+                onChange={setConfirm}
+                dense
+                allowOff={false}
+                gridClass={rowClass5}
+                whenClass=""
+                fieldClass={fieldClass}
+                labelClass={labelClass}
+              />
+            )}
           </OptionalSection>
         ) : null}
 
@@ -1330,7 +1627,7 @@ export function ThemeBotFormDraft() {
 
             {desk === "dca" ? (
             <OptionalSection
-              title="Exit-if"
+              title="Hard Exit Condition"
               enabled={exitIfOn}
               error={
                 showFieldErrors && missing.exitIf
@@ -1339,22 +1636,72 @@ export function ThemeBotFormDraft() {
               }
               onEnabled={(next) => {
                 setExitIfOn(next);
-                setExitIf(next ? (exitIf ?? dcaFilterSpecForKind("rsi", "long")) : null);
+                setExitIf(
+                  next
+                    ? (exitIf ??
+                      dcaFilterSpecForKind(
+                        "rsi",
+                        direction === "short" ? "short" : "long",
+                      ))
+                    : null,
+                );
+                if (next && bothSides) {
+                  setShortExitIf(
+                    (current) => current ?? dcaFilterSpecForKind("rsi", "short"),
+                  );
+                }
               }}
             >
-              <DcaFilterBlock
-                label="Kind"
-                prefix="themeExitIf"
-                side="long"
-                spec={exitIf}
-                onChange={setExitIf}
-                dense
-                allowOff={false}
-                gridClass={rowClass5}
-                whenClass=""
-                fieldClass={fieldClass}
-                labelClass={labelClass}
-              />
+              {bothSides ? (
+                <div className="space-y-5">
+                  <SideBlock title="Long">
+                    <DcaFilterBlock
+                      label="Kind"
+                      prefix="themeExitIf"
+                      side="long"
+                      spec={exitIf}
+                      onChange={setExitIf}
+                      dense
+                      allowOff={false}
+                      gridClass={rowClass5}
+                      whenClass=""
+                      fieldClass={fieldClass}
+                      labelClass={labelClass}
+                    />
+                  </SideBlock>
+                  <div className="space-y-5 border-t border-line pt-5">
+                    <SideBlock title="Short">
+                      <DcaFilterBlock
+                        label="Kind"
+                        prefix="themeShortExitIf"
+                        side="short"
+                        spec={shortExitIf}
+                        onChange={setShortExitIf}
+                        dense
+                        allowOff={false}
+                        gridClass={rowClass5}
+                        whenClass=""
+                        fieldClass={fieldClass}
+                        labelClass={labelClass}
+                      />
+                    </SideBlock>
+                  </div>
+                </div>
+              ) : (
+                <DcaFilterBlock
+                  label="Kind"
+                  prefix="themeExitIf"
+                  side={direction === "short" ? "short" : "long"}
+                  spec={exitIf}
+                  onChange={setExitIf}
+                  dense
+                  allowOff={false}
+                  gridClass={rowClass5}
+                  whenClass=""
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
+              )}
             </OptionalSection>
             ) : null}
 
