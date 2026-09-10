@@ -38,6 +38,8 @@ export function DcaFilterBlock({
   named = false,
   dense = false,
   allowOff = true,
+  gridClass,
+  whenClass: whenClassProp,
   fieldClass,
   labelClass,
 }: {
@@ -49,6 +51,8 @@ export function DcaFilterBlock({
   named?: boolean;
   dense?: boolean;
   allowOff?: boolean;
+  gridClass?: string;
+  whenClass?: string;
   fieldClass: string;
   labelClass: string;
 }) {
@@ -83,12 +87,16 @@ export function DcaFilterBlock({
       fieldClass={fieldClass}
       labelClass={labelClass}
       bare={dense}
-      whenClass={dense ? "lg:col-span-2" : "col-span-2"}
+      whenClass={whenClassProp ?? (dense ? "lg:col-span-2" : "col-span-2")}
     />
   ) : null;
   if (dense) {
     return (
-      <div className="grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-4">
+      <div
+        className={
+          gridClass ?? "grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-4"
+        }
+      >
         {kindField}
         {params}
       </div>

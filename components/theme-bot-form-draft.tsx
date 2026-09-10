@@ -37,6 +37,7 @@ const labelClass = "block text-xs text-ink-muted";
 const sectionTitleClass =
   "text-xs font-semibold uppercase tracking-[0.1em] text-ink";
 const rowClass = "grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-4";
+const rowClass5 = "grid grid-cols-2 gap-x-3 gap-y-2 lg:grid-cols-5";
 const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
 const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
 const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`;
@@ -837,6 +838,20 @@ export function ThemeBotFormDraft() {
               </>
             )}
           </div>
+          {desk === "perps" && !closing ? (
+            <label className="flex items-start gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                checked={skipIfOpen}
+                onChange={(event) => setSkipIfOpen(event.target.checked)}
+                className="mt-0.5 size-4 accent-accent"
+              />
+              <HintLabel
+                text="Skip if this side is already open"
+                hint="Off means each new cross or trigger can add size to the same row."
+              />
+            </label>
+          ) : null}
 
         </Group>
 
@@ -853,7 +868,7 @@ export function ThemeBotFormDraft() {
           }`}
         >
           {startKind === "webhook" && !closing ? (
-            <div className={rowClass}>
+            <div className={rowClass5}>
               <Field label="Webhook" className="lg:col-span-2">
                 <select className={fieldClass} defaultValue="">
                   <option value="">
@@ -868,7 +883,7 @@ export function ThemeBotFormDraft() {
           ) : null}
 
           {startKind === "price" && !closing ? (
-            <div className={rowClass}>
+            <div className={rowClass5}>
               <Field label="Price source">
                 <select
                   value={priceSource}
@@ -903,7 +918,7 @@ export function ThemeBotFormDraft() {
           ) : null}
 
           {showStartParams && startKind !== "price" ? (
-            <div className={rowClass}>
+            <div className={rowClass5}>
               {startKind === "indicator" ? (
                 <Field label="Indicator">
                   <select
@@ -1031,6 +1046,8 @@ export function ThemeBotFormDraft() {
               onChange={setConfirm}
               dense
               allowOff={false}
+              gridClass={rowClass5}
+              whenClass=""
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
@@ -1333,28 +1350,14 @@ export function ThemeBotFormDraft() {
                 onChange={setExitIf}
                 dense
                 allowOff={false}
+                gridClass={rowClass5}
+                whenClass=""
                 fieldClass={fieldClass}
                 labelClass={labelClass}
               />
             </OptionalSection>
             ) : null}
 
-            {desk === "perps" ? (
-            <section className="py-5">
-              <label className="flex items-start gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  checked={skipIfOpen}
-                  onChange={(event) => setSkipIfOpen(event.target.checked)}
-                  className="mt-0.5 size-4 accent-accent"
-                />
-                <HintLabel
-                  text="Skip if this side is already open"
-                  hint="Off means each new cross or trigger can add size to the same row."
-                />
-              </label>
-            </section>
-            ) : null}
           </>
         ) : null}
         </>
