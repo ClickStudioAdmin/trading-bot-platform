@@ -1,5 +1,6 @@
 "use client";
 
+import { HintLabel } from "@/components/bot-form-chrome";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import {
   DCA_FILTER_KIND_OPTIONS,
@@ -58,7 +59,7 @@ export function DcaFilterBlock({
 }) {
   const kindField = (
     <label className={labelClass}>
-      {label}
+      <HintLabel text={label} required />
       <select
         name={named ? `${prefix}Kind` : undefined}
         value={spec?.kind ?? ""}
@@ -139,7 +140,7 @@ function DcaFilterParamFields({
   const fields = (
     <>
       <label className={labelClass}>
-        Period
+        <HintLabel text="Period" required />
         <GroupedNumberInput
           name={named ? `${prefix}Period` : undefined}
           value={spec.period == null ? "" : String(spec.period)}
@@ -155,7 +156,7 @@ function DcaFilterParamFields({
       </label>
       {showMultiplier ? (
         <label className={labelClass}>
-          Multiplier
+          <HintLabel text="Multiplier" required />
           <GroupedNumberInput
             name={named ? `${prefix}Multiplier` : undefined}
             value={spec.multiplier == null ? "" : String(spec.multiplier)}
@@ -175,7 +176,7 @@ function DcaFilterParamFields({
         </label>
       ) : null}
       <label className={labelClass}>
-        Timeframe
+        <HintLabel text="Timeframe" required />
         <select
           name={named ? `${prefix}Timeframe` : undefined}
           value={spec.timeframe}
@@ -195,7 +196,7 @@ function DcaFilterParamFields({
         </select>
       </label>
       <label className={`${labelClass} ${whenClass}`}>
-        When
+        <HintLabel text="When" required />
         <select
           name={named ? `${prefix}Compare` : undefined}
           value={whenValue}
@@ -226,7 +227,7 @@ function DcaFilterParamFields({
       </label>
       {showLevel ? (
         <label className={labelClass}>
-          Level
+          <HintLabel text="Level" required />
           <GroupedNumberInput
             name={named ? `${prefix}Level` : undefined}
             value={spec.level == null ? "" : String(spec.level)}
@@ -245,7 +246,7 @@ function DcaFilterParamFields({
       {showLevelRange ? (
         <>
           <label className={labelClass}>
-            From
+            <HintLabel text="From" required />
             <GroupedNumberInput
               name={named ? `${prefix}Level` : undefined}
               value={spec.level == null ? "" : String(spec.level)}
@@ -261,7 +262,7 @@ function DcaFilterParamFields({
             />
           </label>
           <label className={labelClass}>
-            To
+            <HintLabel text="To" required />
             <GroupedNumberInput
               name={named ? `${prefix}LevelTo` : undefined}
               value={spec.levelTo == null ? "" : String(spec.levelTo)}

@@ -386,7 +386,7 @@ function RuleRow({
       </DirtySaveBanner>
       <BotFormGroup title="Bot">
         <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
-          <BotField label="Name">
+          <BotField label="Name" required>
             <input
               id={`${prefix}name`}
               name={`${prefix}name`}
@@ -436,8 +436,9 @@ function RuleRow({
             name={`${prefix}maxOpenCount`}
             label="Max pairs"
             defaultValue={layer.maxOpenCount || "1"}
+            required
           />
-          <BotField label="Order Type">
+          <BotField label="Order Type" required>
             <select
               name={`${prefix}sizeType`}
               value={sizeType}
@@ -456,6 +457,7 @@ function RuleRow({
                 name={`${prefix}notionalUsdt`}
                 label="Order size (USDT)"
                 defaultValue={String(layer.notionalUsdt)}
+                required
               />
               <CarryNumber
                 name={`${prefix}minCapacity`}
@@ -486,7 +488,7 @@ function RuleRow({
             defaultValue={layer.closeMinApr}
             allowDecimal
           />
-          <BotField label="Order Type">
+          <BotField label="Order Type" required>
             <select
               name={`${prefix}exitSizeType`}
               value={exitSizeType}
@@ -507,7 +509,6 @@ function RuleRow({
         title="Take profit"
         enabled={tpOn}
         onEnabled={setTpOn}
-        error={missingTp ? "Required" : undefined}
       >
         <input type="hidden" name={`${prefix}takeProfitOn`} value="1" />
         <div className={botRowClass}>
@@ -517,7 +518,7 @@ function RuleRow({
             value={takeProfit}
             onChange={setTakeProfit}
             allowDecimal
-            error={missingTp ? "Required" : undefined}
+            required
           />
         </div>
       </OptionalSection>
@@ -525,7 +526,6 @@ function RuleRow({
         title="Stop loss"
         enabled={slOn}
         onEnabled={setSlOn}
-        error={missingSl ? "Required" : undefined}
       >
         <input type="hidden" name={`${prefix}stopLossOn`} value="1" />
         <div className={botRowClass}>
@@ -535,7 +535,7 @@ function RuleRow({
             value={stopLoss}
             onChange={setStopLoss}
             allowDecimal
-            error={missingSl ? "Required" : undefined}
+            required
           />
         </div>
       </OptionalSection>
@@ -606,7 +606,7 @@ function CarryNumber({
   value,
   onChange,
   allowDecimal,
-  error,
+  required = false,
 }: {
   name: string;
   label: string;
@@ -614,10 +614,10 @@ function CarryNumber({
   value?: string;
   onChange?: (next: string) => void;
   allowDecimal?: boolean;
-  error?: string;
+  required?: boolean;
 }) {
   return (
-    <BotField label={label} error={error}>
+    <BotField label={label} required={required}>
       <GroupedNumberInput
         name={name}
         defaultValue={defaultValue}

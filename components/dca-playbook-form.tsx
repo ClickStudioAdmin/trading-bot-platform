@@ -7,6 +7,7 @@ import {
   BotFormGroup,
   BotStatusField,
   DirtySaveBanner,
+  HintLabel,
   OptionalSection,
   OrderTypePill,
   botFieldClass,
@@ -1248,19 +1249,13 @@ export function DcaPlaybookForm({
     tpOn &&
     (takeProfitKind === "atr"
       ? asNumber(takeProfitAtrMult) == null
-      : asNumber(takeProfitPct) == null)
-      ? "Required"
-      : null;
+      : asNumber(takeProfitPct) == null);
   const trailMissing =
     trailOn &&
-    (asNumber(trailingTriggerPct) == null || asNumber(trailingPct) == null)
-      ? "Required"
-      : null;
-  const slMissing = slOn && asNumber(stopLossPct) == null ? "Required" : null;
+    (asNumber(trailingTriggerPct) == null || asNumber(trailingPct) == null);
+  const slMissing = slOn && asNumber(stopLossPct) == null;
   const breakevenMissing =
-    breakevenOn && asNumber(breakevenActivationPct) == null
-      ? "Required"
-      : null;
+    breakevenOn && asNumber(breakevenActivationPct) == null;
   const optionalMissing =
     confirmMissing ??
     shortConfirmMissing ??
@@ -1359,7 +1354,12 @@ export function DcaPlaybookForm({
             deskAction="default"
             className={headerPrimaryClass}
             disabled={Boolean(saveBlocked || optionalMissing)}
-            title={saveBlocked ?? optionalMissing ?? undefined}
+            title={
+              saveBlocked ??
+              (optionalMissing
+                ? "Fill required fields in enabled sections before saving."
+                : undefined)
+            }
           >
             Save
           </PendingSubmitButton>
@@ -1373,7 +1373,7 @@ export function DcaPlaybookForm({
       ) : null}
       <BotFormGroup title="Bot">
         <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
-          <BotField label="Name">
+          <BotField label="Name" required>
             <input
               name="name"
               defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
@@ -1405,7 +1405,7 @@ export function DcaPlaybookForm({
       <BotFormGroup title="What & When" locked={cycleLocked}>
         <div className={rowClass}>
           <label className={labelClass}>
-            Contract
+            <HintLabel text="Contract" required />
             <FuturesSymbolSelect
               options={options}
               defaultSymbol={defaultSymbol}
@@ -1414,9 +1414,10 @@ export function DcaPlaybookForm({
             />
           </label>
           <label className={labelClass}>
-            <ColumnHint
-              label="Direction"
+            <HintLabel
+              text="Direction"
               hint="Long and Short are independent positions and never flatten each other."
+              required
             />
             <select
               name="direction"
@@ -1475,7 +1476,7 @@ export function DcaPlaybookForm({
             </select>
           </label>
           <label className={`${labelClass} lg:col-span-2`}>
-            Initial Order Trigger
+            <HintLabel text="Initial Order Trigger" required />
             <select
               name="startKind"
               value={startKind}
@@ -1590,7 +1591,7 @@ export function DcaPlaybookForm({
             signalWebhooks.length > 0 ? (
               <>
                 <label className={`${labelClass} lg:col-span-2`}>
-                  Signal Webhook
+                  <HintLabel text="Signal Webhook" required />
                   <select
                     name="webhookId"
                     defaultValue={source?.webhookId ?? signalWebhooks[0]?.id}
@@ -1881,9 +1882,14 @@ export function DcaPlaybookForm({
             </label>
             {maxValueMode !== "none" ? (
               <label className={`min-w-0 ${labelClass}`}>
-                {dcaMaxValueUsesBook(maxValueKind)
-                  ? "Percent"
-                  : policy.quoteLabel}
+                <HintLabel
+                  text={
+                    dcaMaxValueUsesBook(maxValueKind)
+                      ? "Percent"
+                      : policy.quoteLabel
+                  }
+                  required
+                />
                 <GroupedNumberInput
                   name="maxValue"
                   value={maxValue}
@@ -1921,7 +1927,7 @@ export function DcaPlaybookForm({
               <input type="hidden" name="sizeUnit" value="usdt" />
             ) : (
               <label className={labelClass}>
-                Size unit
+                <HintLabel text="Size unit" required />
                 <select
                   name="sizeUnit"
                   value={sizeUnit}
@@ -1936,9 +1942,14 @@ export function DcaPlaybookForm({
               </label>
             )}
             <label className={labelClass}>
-              {budgetSizesClip
-                ? `Order size (${policy.quoteLabel})`
-                : "Order size"}
+              <HintLabel
+                text={
+                  budgetSizesClip
+                    ? `Order size (${policy.quoteLabel})`
+                    : "Order size"
+                }
+                required
+              />
               {derivedClip != null ? (
                 <>
                   <input type="hidden" name="clipSize" value={clipForSave} />
@@ -1970,9 +1981,9 @@ export function DcaPlaybookForm({
         </BotFormGroup>
 
         <BotFormGroup title="Additional orders" locked={cycleLocked}>
-          <div className={rowClass}>
-            <label className={`${labelClass} lg:col-span-2`}>
-              Averaging
+          <div className={botRowClass5}>
+            <label className={labelClass}>
+              <HintLabel text="Averaging" required />
               <select
                 name="averaging"
                 value={averaging}
@@ -1987,7 +1998,7 @@ export function DcaPlaybookForm({
             </label>
             {averaging === "dip" ? (
               <label className={labelClass}>
-                Spacing
+                <HintLabel text="Spacing" required />
                 <select
                   name="spacingKind"
                   value={spacingKind}
@@ -2005,7 +2016,7 @@ export function DcaPlaybookForm({
             )}
             {averaging === "dip" && spacingKind === "percent" ? (
               <label className={labelClass}>
-                Price deviation %
+                <HintLabel text="Price deviation %" required />
                 <PercentInput
                   name="dipPct"
                   value={dipPct}
@@ -2017,7 +2028,7 @@ export function DcaPlaybookForm({
             {averaging === "dip" && spacingKind === "atr" ? (
               <>
                 <label className={labelClass}>
-                  ATR period
+                  <HintLabel text="ATR period" required />
                   <GroupedNumberInput
                     name="atrPeriod"
                     value={atrPeriod}
@@ -2027,7 +2038,7 @@ export function DcaPlaybookForm({
                   />
                 </label>
                 <label className={labelClass}>
-                  ATR spacing
+                  <HintLabel text="ATR spacing" required />
                   <GroupedNumberInput
                     name="atrSpacingMult"
                     value={atrSpacingMult}
@@ -2041,7 +2052,9 @@ export function DcaPlaybookForm({
             ) : null}
             {averaging === "interval" ? (
               <div>
-                <p className={labelClass}>Add every</p>
+                <p className={labelClass}>
+                  <HintLabel text="Add every" required />
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                   <select
                     name="intervalUnit"
@@ -2074,6 +2087,7 @@ export function DcaPlaybookForm({
               <BotField
                 label="Order"
                 hint="Limit rests remaining adds as GTC. Market fills them when the add triggers."
+                required
               >
                 {restGrid ? (
                   <input type="hidden" name="restGrid" value="1" />
@@ -2087,31 +2101,31 @@ export function DcaPlaybookForm({
           </div>
         </BotFormGroup>
         <BotFormGroup title="Additional order multipliers" locked={cycleLocked}>
-          <div className="mb-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setSizeMultiplier("1");
-                setDeviationMultiplier("1");
-              }}
-              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
-            >
-              Equal orders
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSizeMultiplier("2");
-                setDeviationMultiplier("1.5");
-              }}
-              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
-            >
-              Martingale
-            </button>
-          </div>
-          <div className={rowClass}>
-            <label className={labelClass}>
-              Order size multiplier
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSizeMultiplier("1");
+                  setDeviationMultiplier("1");
+                }}
+                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
+              >
+                Equal orders
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSizeMultiplier("2");
+                  setDeviationMultiplier("1.5");
+                }}
+                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
+              >
+                Martingale
+              </button>
+            </div>
+            <label className={`${labelClass} min-w-40 flex-1`}>
+              <HintLabel text="Order size multiplier" required />
               <GroupedNumberInput
                 name="sizeMultiplier"
                 value={sizeMultiplier}
@@ -2124,8 +2138,8 @@ export function DcaPlaybookForm({
                 }`}
               />
             </label>
-            <label className={labelClass}>
-              Price deviation multiplier
+            <label className={`${labelClass} min-w-40 flex-1`}>
+              <HintLabel text="Price deviation multiplier" required />
               <GroupedNumberInput
                 name="deviationMultiplier"
                 value={deviationMultiplier}
@@ -2150,7 +2164,6 @@ export function DcaPlaybookForm({
       <OptionalSection
         title="Take profit"
         enabled={tpOn}
-        error={tpMissing ?? undefined}
         onEnabled={(next) => {
           setTpOn(next);
           if (next && takeProfitKind === "percent" && !takeProfitPct) {
@@ -2160,7 +2173,7 @@ export function DcaPlaybookForm({
       >
           <div className={rowClass}>
           <label className={labelClass}>
-            Method
+            <HintLabel text="Method" required />
             <select
               name="takeProfitKind"
               value={takeProfitKind}
@@ -2174,7 +2187,7 @@ export function DcaPlaybookForm({
             </select>
           </label>
           <label className={labelClass}>
-            Basis
+            <HintLabel text="Basis" required />
             <select
               name="takeProfitBasis"
               value={takeProfitBasis}
@@ -2188,12 +2201,7 @@ export function DcaPlaybookForm({
             </select>
           </label>
           {takeProfitKind === "percent" ? (
-          <BotField
-            label="Target %"
-            error={
-              tpOn && asNumber(takeProfitPct) == null ? "Required" : undefined
-            }
-          >
+          <BotField label="Target %" required>
             <PercentInput
               name="takeProfitPct"
               value={takeProfitPct}
@@ -2209,7 +2217,7 @@ export function DcaPlaybookForm({
               }
             >
               <label className={labelClass}>
-                ATR period
+                <HintLabel text="ATR period" required />
                 <GroupedNumberInput
                   name={
                     averaging === "dip" && spacingKind === "atr"
@@ -2224,7 +2232,7 @@ export function DcaPlaybookForm({
               </label>
             </CycleLock>
             <label className={labelClass}>
-              ATR multiple
+              <HintLabel text="ATR multiple" required />
               <GroupedNumberInput
                 name="takeProfitAtrMult"
                 value={takeProfitAtrMult}
@@ -2236,7 +2244,7 @@ export function DcaPlaybookForm({
             </label>
           </>
           )}
-          <BotField label="Order type">
+          <BotField label="Order type" required>
             <OrderTypePill
               name="takeProfitOrderType"
               value={takeProfitOrderType === "limit" ? "limit" : "market"}
@@ -2255,18 +2263,13 @@ export function DcaPlaybookForm({
       <OptionalSection
         title="Trailing stop"
         enabled={trailOn}
-        error={trailMissing ?? undefined}
         onEnabled={setTrailOn}
       >
         <div className={rowClass}>
           <BotField
             label="Trigger %"
             hint="Trail starts after price moves this %."
-            error={
-              trailOn && asNumber(trailingTriggerPct) == null
-                ? "Required"
-                : undefined
-            }
+            required
           >
             <PercentInput
               name="trailingTriggerPct"
@@ -2275,12 +2278,7 @@ export function DcaPlaybookForm({
               ariaLabel="Trailing trigger percent"
             />
           </BotField>
-          <BotField
-            label="Trailing %"
-            error={
-              trailOn && asNumber(trailingPct) == null ? "Required" : undefined
-            }
-          >
+          <BotField label="Trailing %" required>
             <PercentInput
               name="trailingPct"
               value={trailingPct}
@@ -2300,12 +2298,11 @@ export function DcaPlaybookForm({
       <OptionalSection
         title="Stop loss"
         enabled={slOn}
-        error={slMissing ?? undefined}
         onEnabled={setSlOn}
       >
         <div className={rowClass}>
           <label className={labelClass}>
-            Basis
+            <HintLabel text="Basis" required />
             <select
               name="stopLossBasis"
               value={stopLossBasis}
@@ -2318,7 +2315,7 @@ export function DcaPlaybookForm({
               <option value="first_entry">First fill</option>
             </select>
           </label>
-          <BotField label="Stop loss %" error={slMissing ?? undefined}>
+          <BotField label="Stop loss %" required>
             <PercentInput
               name="stopLossPct"
               value={stopLossPct}
@@ -2338,14 +2335,10 @@ export function DcaPlaybookForm({
       <OptionalSection
         title="Move Breakeven"
         enabled={breakevenOn}
-        error={breakevenMissing ?? undefined}
         onEnabled={setBreakevenOn}
       >
         <div className={rowClass}>
-          <BotField
-            label="Move stop to breakeven at %"
-            error={breakevenMissing ?? undefined}
-          >
+          <BotField label="Move stop to breakeven at %" required>
             <PercentInput
               name="breakevenActivationPct"
               value={breakevenActivationPct}
@@ -2896,7 +2889,7 @@ function IndicatorStartFields({
     dcaIndicatorUsesPairPeriods(kind) && !includeLegacyEmaPrice;
   const whenField = (
     <label className={labelClass}>
-      When
+      <HintLabel text="When" required />
       <select
         name={`${prefix}Compare`}
         value={dcaIndicatorWhenValue(kind, side, compare, level)}
@@ -2919,7 +2912,7 @@ function IndicatorStartFields({
   );
   const indicatorField = (
     <label className={labelClass}>
-      Indicator
+      <HintLabel text="Indicator" required />
       <select
         name={`${prefix}Kind`}
         value={kind}
@@ -2960,7 +2953,7 @@ function IndicatorStartFields({
   );
   const timeframeField = (
     <label className={labelClass}>
-      Timeframe
+      <HintLabel text="Timeframe" required />
       <select
         name={`${prefix}Timeframe`}
         value={timeframe}
@@ -2980,7 +2973,7 @@ function IndicatorStartFields({
   const pairFields = (
     <>
       <label className={labelClass}>
-        Fast
+        <HintLabel text="Fast" required />
         <GroupedNumberInput
           name={`${prefix}Period`}
           value={period}
@@ -2990,7 +2983,7 @@ function IndicatorStartFields({
       </label>
       {whenField}
       <label className={labelClass}>
-        Slow
+        <HintLabel text="Slow" required />
         <GroupedNumberInput
           name={`${prefix}SlowPeriod`}
           value={slowPeriod}
@@ -3002,7 +2995,7 @@ function IndicatorStartFields({
   );
   const periodField = dcaIndicatorUsesPeriod(kind) ? (
     <label className={labelClass}>
-      Period
+      <HintLabel text="Period" required />
       <GroupedNumberInput
         name={`${prefix}Period`}
         value={period}
@@ -3013,7 +3006,10 @@ function IndicatorStartFields({
   ) : null;
   const levelField = dcaIndicatorShowsLevel(kind, compare, level) ? (
     <label className={labelClass}>
-      {kind === "ema_cross" ? "Level (price)" : "Level"}
+      <HintLabel
+        text={kind === "ema_cross" ? "Level (price)" : "Level"}
+        required
+      />
       <GroupedNumberInput
         name={`${prefix}Level`}
         value={level}
@@ -3085,7 +3081,7 @@ function TrendStartFields({
   return (
     <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5 lg:col-span-4">
       <label className={labelClass}>
-        Trend
+        <HintLabel text="Trend" required />
         <select
           name={`${prefix}Kind`}
           value={trendKind}
@@ -3106,7 +3102,7 @@ function TrendStartFields({
         </select>
       </label>
       <label className={labelClass}>
-        Period
+        <HintLabel text="Period" required />
         <GroupedNumberInput
           name={`${prefix}Period`}
           value={period}
@@ -3115,7 +3111,7 @@ function TrendStartFields({
         />
       </label>
       <label className={labelClass}>
-        Multiplier
+        <HintLabel text="Multiplier" required />
         <GroupedNumberInput
           name={`${prefix}Multiplier`}
           value={multiplier}
@@ -3125,7 +3121,7 @@ function TrendStartFields({
         />
       </label>
       <label className={labelClass}>
-        Timeframe
+        <HintLabel text="Timeframe" required />
         <select
           name={`${prefix}Timeframe`}
           value={timeframe}
@@ -3142,7 +3138,7 @@ function TrendStartFields({
         </select>
       </label>
       <label className={labelClass}>
-        When
+        <HintLabel text="When" required />
         <select
           name={`${prefix}Compare`}
           value={dcaIndicatorWhenValue(trendKind, side, compare)}
@@ -3176,7 +3172,7 @@ function TriggerFields({
   return (
     <>
       <label className={labelClass}>
-        Price
+        <HintLabel text="Price" required />
         <select
           name={`${prefix}TriggerBy`}
           defaultValue={triggerBy}
@@ -3188,7 +3184,7 @@ function TriggerFields({
         </select>
       </label>
       <label className={labelClass}>
-        When
+        <HintLabel text="When" required />
         <select
           name={`${prefix}Compare`}
           defaultValue={compare}
@@ -3199,7 +3195,7 @@ function TriggerFields({
         </select>
       </label>
       <label className={labelClass}>
-        Level ({quoteLabel})
+        <HintLabel text={`Level (${quoteLabel})`} required />
         <GroupedNumberInput
           name={`${prefix}Price`}
           defaultValue={price}

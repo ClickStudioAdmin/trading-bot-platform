@@ -414,7 +414,7 @@ function RuleCard({
       </DirtySaveBanner>
       <BotFormGroup title="Bot">
         <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
-          <BotField label="Name">
+          <BotField label="Name" required>
             <input
               id={`${prefix}name`}
               name={`${prefix}name`}
@@ -436,7 +436,7 @@ function RuleCard({
 
       <BotFormGroup title="What & When">
         <div className={botRowClass}>
-          <BotField label="Contract">
+          <BotField label="Contract" required>
             <FuturesSymbolSelect
               name={`${prefix}symbol`}
               options={options}
@@ -444,7 +444,7 @@ function RuleCard({
               onChange={setSymbol}
             />
           </BotField>
-          <BotField label="Action">
+          <BotField label="Action" required>
             <select
               name={`${prefix}action`}
               value={formAction}
@@ -461,14 +461,14 @@ function RuleCard({
               <option value="close_short">Close short</option>
             </select>
           </BotField>
-          <BotField label="Order">
+          <BotField label="Order" required>
             <OrderTypePill
               name={`${prefix}orderType`}
               value={orderType === "limit" ? "limit" : "market"}
               onChange={setOrderType}
             />
           </BotField>
-          <BotField label="When">
+          <BotField label="When" required>
             <input type="hidden" name={`${prefix}entrySource`} value={entrySource} />
             <select
               value={entrySource}
@@ -502,7 +502,7 @@ function RuleCard({
       <BotFormGroup title={triggerSectionTitle(entrySource)}>
         <div className={botRowClass5}>
           {webhookEntry ? (
-            <BotField label="Webhook" className="lg:col-span-2">
+            <BotField label="Webhook" className="lg:col-span-2" required>
               <select
                 name={`${prefix}webhookId`}
                 defaultValue={layer.webhookId}
@@ -522,7 +522,7 @@ function RuleCard({
             </BotField>
           ) : (
             <>
-              <BotField label="Price source">
+              <BotField label="Price source" required>
                 <select
                   name={`${prefix}triggerBy`}
                   defaultValue={layer.triggerBy}
@@ -533,7 +533,7 @@ function RuleCard({
                   <option value="index">Index is</option>
                 </select>
               </BotField>
-              <BotField label="Compare">
+              <BotField label="Compare" required>
                 <select
                   name={`${prefix}triggerCompare`}
                   defaultValue={layer.triggerCompare}
@@ -543,7 +543,7 @@ function RuleCard({
                   <option value="lte">At or below</option>
                 </select>
               </BotField>
-              <BotField label="Price">
+              <BotField label="Price" required>
                 <GroupedNumberInput
                   name={`${prefix}triggerPrice`}
                   value={triggerPrice}
@@ -555,7 +555,7 @@ function RuleCard({
             </>
           )}
           {orderType === "limit" ? (
-            <BotField label="Limit price">
+            <BotField label="Limit price" required>
               <GroupedNumberInput
                 name={`${prefix}limitPrice`}
                 value={limitPrice}
@@ -573,6 +573,7 @@ function RuleCard({
           <BotField
             label={closing ? "Qty to close" : "Size"}
             hint={closing ? "Empty closes the whole row." : undefined}
+            required={!closing}
           >
             <span className="relative mt-1 block">
               {!closing && sizeUnit === "usdt" ? (
@@ -595,7 +596,7 @@ function RuleCard({
           {closing ? (
             <input type="hidden" name={`${prefix}sizeUnit`} value="qty" />
           ) : (
-            <BotField label="Unit">
+            <BotField label="Unit" required>
               <input type="hidden" name={`${prefix}sizeUnit`} value={sizeUnit} />
               <select
                 value={sizeUnit}
@@ -628,14 +629,10 @@ function RuleCard({
           <OptionalSection
             title="Take profit"
             enabled={tpOn}
-            error={tpMissing ? "Required" : undefined}
             onEnabled={setTpOn}
           >
             <div className={botRowClass}>
-              <BotField
-                label="Price"
-                error={tpMissing ? "Required" : undefined}
-              >
+              <BotField label="Price" required>
                 <GroupedNumberInput
                   name={`${prefix}takeProfit`}
                   value={takeProfit}
@@ -644,7 +641,7 @@ function RuleCard({
                   className={botFieldClass}
                 />
               </BotField>
-              <BotField label="Trigger">
+              <BotField label="Trigger" required>
                 <select
                   name={`${prefix}tpTrigger`}
                   value={tpTrigger}
@@ -658,7 +655,7 @@ function RuleCard({
                   <option value="index">Index</option>
                 </select>
               </BotField>
-              <BotField label="Order type">
+              <BotField label="Order type" required>
                 <select
                   name={`${prefix}tpOrderType`}
                   value={tpOrderType}
@@ -672,7 +669,7 @@ function RuleCard({
                 </select>
               </BotField>
               {tpOrderType === "limit" ? (
-                <BotField label="Limit price">
+                <BotField label="Limit price" required>
                   <GroupedNumberInput
                     name={`${prefix}tpLimitPrice`}
                     value={tpLimitPrice}
@@ -689,17 +686,13 @@ function RuleCard({
           <OptionalSection
             title="Trailing stop"
             enabled={trailOn}
-            error={trailMissing ? "Required" : undefined}
             onEnabled={setTrailOn}
           >
             {trailOn ? (
               <input type="hidden" name={`${prefix}trailing`} value="on" />
             ) : null}
             <div className={botRowClass}>
-              <BotField
-                label="Retracement"
-                error={trailMissing ? "Required" : undefined}
-              >
+              <BotField label="Retracement" required>
                 <GroupedNumberInput
                   name={`${prefix}trailingStop`}
                   value={trailingStop}
@@ -722,14 +715,10 @@ function RuleCard({
           <OptionalSection
             title="Stop loss"
             enabled={slOn}
-            error={slMissing ? "Required" : undefined}
             onEnabled={setSlOn}
           >
             <div className={botRowClass}>
-              <BotField
-                label="Price"
-                error={slMissing ? "Required" : undefined}
-              >
+              <BotField label="Price" required>
                 <GroupedNumberInput
                   name={`${prefix}stopLoss`}
                   value={stopLoss}
@@ -738,7 +727,7 @@ function RuleCard({
                   className={botFieldClass}
                 />
               </BotField>
-              <BotField label="Trigger">
+              <BotField label="Trigger" required>
                 <select
                   name={`${prefix}slTrigger`}
                   value={slTrigger}
@@ -752,7 +741,7 @@ function RuleCard({
                   <option value="index">Index</option>
                 </select>
               </BotField>
-              <BotField label="Order type">
+              <BotField label="Order type" required>
                 <select
                   name={`${prefix}slOrderType`}
                   value={slOrderType}
@@ -766,7 +755,7 @@ function RuleCard({
                 </select>
               </BotField>
               {slOrderType === "limit" ? (
-                <BotField label="Limit price">
+                <BotField label="Limit price" required>
                   <GroupedNumberInput
                     name={`${prefix}slLimitPrice`}
                     value={slLimitPrice}

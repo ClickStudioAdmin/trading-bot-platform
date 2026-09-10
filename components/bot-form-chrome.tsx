@@ -27,13 +27,28 @@ export const botHeaderRemoveClass =
 export function HintLabel({
   text,
   hint,
+  required = false,
   className,
 }: {
   text: string;
   hint?: string;
+  required?: boolean;
   className?: string;
 }) {
-  const label = className ? <span className={className}>{text}</span> : text;
+  const label = (
+    <span className={className}>
+      {text}
+      {required ? (
+        <>
+          <span className="text-danger" aria-hidden>
+            {" "}
+            *
+          </span>
+          <span className="sr-only"> required</span>
+        </>
+      ) : null}
+    </span>
+  );
   return hint ? <ColumnHint label={label} hint={hint} /> : label;
 }
 
@@ -61,7 +76,6 @@ export function OptionalSection({
   hint,
   enabled,
   onEnabled,
-  error,
   nested = false,
   locked = false,
   children,
@@ -70,7 +84,6 @@ export function OptionalSection({
   hint?: string;
   enabled: boolean;
   onEnabled: (next: boolean) => void;
-  error?: string;
   nested?: boolean;
   locked?: boolean;
   children: ReactNode;
@@ -93,12 +106,7 @@ export function OptionalSection({
         <EnableCheck checked={enabled} />
         <HintLabel text={title} hint={hint} className={botSectionTitleClass} />
       </label>
-      {enabled ? (
-        <>
-          {error ? <p className="text-xs text-danger">{error}</p> : null}
-          {children}
-        </>
-      ) : null}
+      {enabled ? children : null}
     </section>
   );
 }
@@ -137,19 +145,21 @@ export function BotFormGroup({
 export function BotField({
   label,
   hint,
+  required = false,
   className,
   error,
   children,
 }: {
   label: string;
   hint?: string;
+  required?: boolean;
   className?: string;
   error?: string;
   children: ReactNode;
 }) {
   return (
     <label className={`${botLabelClass} ${className ?? ""}`}>
-      <HintLabel text={label} hint={hint} />
+      <HintLabel text={label} hint={hint} required={required} />
       {children}
       {error ? <span className="mt-1 block text-xs text-danger">{error}</span> : null}
     </label>
