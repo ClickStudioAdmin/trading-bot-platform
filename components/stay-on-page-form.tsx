@@ -144,13 +144,14 @@ export const StayOnPageForm = forwardRef<
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (guard && !(await guard(event))) {
-      return;
-    }
+    const form = event.currentTarget;
     const submitter = (event.nativeEvent as SubmitEvent).submitter as
       | HTMLButtonElement
       | null;
-    const data = new FormData(event.currentTarget, submitter);
+    if (guard && !(await guard(event))) {
+      return;
+    }
+    const data = new FormData(form, submitter);
     const key = submitter?.dataset.deskAction || "default";
     const fn = (key !== "default" && actions?.[key]) || action;
     setPending(true);
