@@ -1,31 +1,30 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { BotStatusField } from "@/components/bot-form-chrome";
+import { useState, type ReactNode } from "react";
+import {
+  BotStatusField,
+  triggerSectionTitle,
+} from "@/components/bot-form-chrome";
+import {
+  IndicatorStartFields,
+  TrendStartFields,
+} from "@/components/bot-indicator-fields";
 import { ColumnHint } from "@/components/column-hint";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
+import {
+  dcaFilterComplete,
+  dcaFilterSpecForKind,
+  type DcaFilterSpec,
+} from "@/lib/dca/filters";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { ChevronIcon, TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import type { LinearPerp } from "@/lib/exchanges/bybit/perp";
 import {
-  dcaFilterSpecForKind,
-  type DcaFilterSpec,
-} from "@/lib/dca/filters";
-import {
-  DCA_INDICATOR_KIND_OPTIONS,
-  DCA_INDICATOR_TIMEFRAME_LABELS,
-  DCA_INDICATOR_TIMEFRAMES,
   DEFAULT_DCA_RSI_PERIOD,
   DEFAULT_DCA_SUPERTREND_MULTIPLIER,
   DEFAULT_DCA_SUPERTREND_PERIOD,
-  dcaIndicatorShowsLevel,
-  dcaIndicatorUsesPairPeriods,
-  dcaIndicatorUsesPeriod,
-  dcaIndicatorWhenOptions,
-  defaultDcaIndicatorLevel,
-  defaultDcaIndicatorPeriod,
-  defaultDcaIndicatorSlowPeriod,
+  indicatorCompareForDirection,
   oppositeIndicatorCompare,
   oppositeRsiLevel,
   type DcaIndicatorKind,
@@ -149,17 +148,21 @@ function DraftStat({
   label,
   value,
   hint,
+  valueClass = "text-ink",
 }: {
   label: string;
   value: string;
   hint?: string;
+  valueClass?: string;
 }) {
   return (
     <div className="min-w-0 flex-1 basis-36 text-center">
       <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
         {label}
       </p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">{value}</p>
+      <p className={`mt-1 text-2xl font-semibold tabular-nums ${valueClass}`}>
+        {value}
+      </p>
       {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
     </div>
   );
@@ -272,14 +275,7 @@ function Group({
   );
 }
 
-const EXIT_METHODS = [
-  { value: "", label: "Off" },
-  { value: "price", label: "Price" },
-  { value: "percent", label: "Percentage" },
-  { value: "atr", label: "ATR × multiplier" },
-] as const;
-
-type ExitMethod = (typeof EXIT_METHODS)[number]["value"];
+type ExitMethod = "" | "price" | "percent" | "atr";
 type StartKind = "price" | "indicator" | "trend" | "webhook";
 type Action = "buy" | "sell" | "close_long" | "close_short";
 
@@ -338,21 +334,6 @@ function filled(raw: string): boolean {
   return raw.trim() !== "";
 }
 
-function dcaFilterComplete(spec: DcaFilterSpec | null): boolean {
-  if (!spec) {
-    return false;
-  }
-  if (spec.kind === "rsi") {
-    if (spec.level == null) {
-      return false;
-    }
-    if (spec.compare === "between") {
-      return spec.levelTo != null && spec.level < spec.levelTo;
-    }
-  }
-  return true;
-}
-
 function OffNumber({
   value,
   onChange,
@@ -392,82 +373,40 @@ function SideBlock({
   );
 }
 
-function TriggerParamFields({
-  startKind,
+function PriceTriggerFields({
   desk,
-  side,
   priceSource,
   onPriceSource,
   priceWhen,
   onPriceWhen,
   priceLevel,
   onPriceLevel,
-  indicatorKind,
-  onIndicatorKind,
-  timeframe,
-  onTimeframe,
-  when,
-  onWhen,
-  period,
-  onPeriod,
-  slowPeriod,
-  onSlowPeriod,
-  level,
-  onLevel,
-  multiplier,
-  onMultiplier,
+  invalid = false,
 }: {
-  startKind: StartKind;
   desk: DeskKind;
-  side: "long" | "short";
   priceSource: string;
   onPriceSource: (next: string) => void;
   priceWhen: string;
   onPriceWhen: (next: string) => void;
   priceLevel: string;
   onPriceLevel: (next: string) => void;
-  indicatorKind: DcaIndicatorKind;
-  onIndicatorKind: (next: DcaIndicatorKind) => void;
-  timeframe: DcaIndicatorTimeframe;
-  onTimeframe: (next: DcaIndicatorTimeframe) => void;
-  when: string;
-  onWhen: (next: string) => void;
-  period: string;
-  onPeriod: (next: string) => void;
-  slowPeriod: string;
-  onSlowPeriod: (next: string) => void;
-  level: string;
-  onLevel: (next: string) => void;
-  multiplier: string;
-  onMultiplier: (next: string) => void;
+  invalid?: boolean;
 }) {
-  const kindForFields = startKind === "trend" ? "supertrend" : indicatorKind;
-  const whenOptions = dcaIndicatorWhenOptions(kindForFields, side, false);
-  const showPeriod =
-    startKind === "trend" || dcaIndicatorUsesPeriod(indicatorKind);
-  const showPair =
-    startKind === "indicator" && dcaIndicatorUsesPairPeriods(indicatorKind);
-  const showLevel =
-    startKind === "indicator" &&
-    dcaIndicatorShowsLevel(indicatorKind, when, level);
-
-  if (startKind === "price") {
+  if (desk === "perps") {
     return (
-      <div className={rowClass5}>
+      <>
         <Field label="Price source" required>
           <select
             value={priceSource}
             onChange={(event) => onPriceSource(event.target.value)}
             className={fieldClass}
           >
-            <option value="last">{desk === "perps" ? "Last is" : "Last"}</option>
-            <option value="mark">{desk === "perps" ? "Mark is" : "Mark"}</option>
-            <option value="index">
-              {desk === "perps" ? "Index is" : "Index"}
-            </option>
+            <option value="last">Last is</option>
+            <option value="mark">Mark is</option>
+            <option value="index">Index is</option>
           </select>
         </Field>
-        <Field label={desk === "perps" ? "Compare" : "When"} required>
+        <Field label="Compare" required>
           <select
             value={priceWhen}
             onChange={(event) => onPriceWhen(event.target.value)}
@@ -478,118 +417,48 @@ function TriggerParamFields({
           </select>
         </Field>
         <Field label="Price" required>
-          <OffNumber value={priceLevel} onChange={onPriceLevel} />
+          <OffNumber
+            value={priceLevel}
+            onChange={onPriceLevel}
+            required
+            invalid={invalid}
+          />
         </Field>
-      </div>
+      </>
     );
   }
-
-  if (startKind === "webhook") {
-    return null;
-  }
-
   return (
-    <div className={rowClass5}>
-      {startKind === "indicator" ? (
-        <Field label="Indicator" required>
-          <select
-            value={indicatorKind}
-            onChange={(event) => {
-              const kind = event.target.value as DcaIndicatorKind;
-              onIndicatorKind(kind);
-              onPeriod(String(defaultDcaIndicatorPeriod(kind)));
-              onSlowPeriod(String(defaultDcaIndicatorSlowPeriod(kind)));
-              onLevel(
-                defaultDcaIndicatorLevel(kind) == null
-                  ? ""
-                  : String(defaultDcaIndicatorLevel(kind)),
-              );
-              const options = dcaIndicatorWhenOptions(kind, side, false);
-              onWhen(options[0]?.value ?? "gte");
-            }}
-            className={fieldClass}
-          >
-            {DCA_INDICATOR_KIND_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-      ) : (
-        <Field label="Trend" required>
-          <select className={fieldClass} value="supertrend" disabled>
-            <option value="supertrend">Supertrend</option>
-          </select>
-        </Field>
-      )}
-      {showPeriod ? (
-        <Field label="Period" required>
-          <GroupedNumberInput
-            value={period}
-            onChange={onPeriod}
-            className={fieldClass}
-          />
-        </Field>
-      ) : null}
-      {showPair ? (
-        <Field label="Slow" required>
-          <GroupedNumberInput
-            value={slowPeriod}
-            onChange={onSlowPeriod}
-            className={fieldClass}
-          />
-        </Field>
-      ) : null}
-      {startKind === "trend" ? (
-        <Field label="Multiplier" required>
-          <GroupedNumberInput
-            value={multiplier}
-            onChange={onMultiplier}
-            allowDecimal
-            className={fieldClass}
-          />
-        </Field>
-      ) : null}
-      <Field label="Timeframe" required>
+    <>
+      <Field label="Price" required>
         <select
-          value={timeframe}
-          onChange={(event) =>
-            onTimeframe(event.target.value as DcaIndicatorTimeframe)
-          }
+          value={priceSource}
+          onChange={(event) => onPriceSource(event.target.value)}
           className={fieldClass}
         >
-          {DCA_INDICATOR_TIMEFRAMES.map((interval) => (
-            <option key={interval} value={interval}>
-              {DCA_INDICATOR_TIMEFRAME_LABELS[interval]}
-            </option>
-          ))}
+          <option value="last">Last</option>
+          <option value="mark">Mark</option>
+          <option value="index">Index</option>
         </select>
       </Field>
       <Field label="When" required>
         <select
-          value={when}
-          onChange={(event) => onWhen(event.target.value)}
+          value={priceWhen}
+          onChange={(event) => onPriceWhen(event.target.value)}
           className={fieldClass}
         >
-          {whenOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
+          <option value="gte">At or above</option>
+          <option value="lte">At or below</option>
         </select>
       </Field>
-      {showLevel ? (
-        <Field label="Level" required>
-          <GroupedNumberInput
-            value={level}
-            onChange={onLevel}
-            allowDecimal
-            className={fieldClass}
-          />
-        </Field>
-      ) : null}
-    </div>
+      <Field label="Level (USDT)" required>
+        <OffNumber
+          value={priceLevel}
+          onChange={onPriceLevel}
+          required
+          invalid={invalid}
+        />
+      </Field>
+    </>
   );
 }
 
@@ -654,8 +523,15 @@ export function ThemeBotFormDraft() {
   const [carrySlOn, setCarrySlOn] = useState(false);
   const [carryTp, setCarryTp] = useState("");
   const [carrySl, setCarrySl] = useState("");
+  const [orderType, setOrderType] = useState<"market" | "limit">("market");
+  const [limitPrice, setLimitPrice] = useState("");
+  const [webhookId, setWebhookId] = useState("sample");
   const [size, setSize] = useState("100");
   const [sizeUnit, setSizeUnit] = useState<"qty" | "usdt">("usdt");
+  const [sizeMultiplier, setSizeMultiplier] = useState("1");
+  const [deviationMultiplier, setDeviationMultiplier] = useState("1");
+  const [ladderOpen, setLadderOpen] = useState(true);
+  const [ladderTab, setLadderTab] = useState<"long" | "short">("long");
   const [maxClips, setMaxClips] = useState("");
   const [maxValueMode, setMaxValueMode] = useState<
     "none" | "usdt" | "percent" | "margin"
@@ -690,15 +566,15 @@ export function ThemeBotFormDraft() {
   const [desk, setDesk] = useState<DeskKind>("perps");
   const [status, setStatus] = useState("disabled");
   const [appliedStatus, setAppliedStatus] = useState("disabled");
-  const skipDeskDirty = useRef(false);
-  const savedDraft = useRef<string | null>(null);
-  const [saveTick, setSaveTick] = useState(0);
-  const [saveAttempted, setSaveAttempted] = useState(false);
+  const [savedKey, setSavedKey] = useState<string | null>(null);
   const draftValue = {
     name,
     symbol,
     action,
     startKind,
+    orderType,
+    limitPrice,
+    webhookId,
     priceSource,
     priceWhen,
     priceLevel,
@@ -731,6 +607,8 @@ export function ThemeBotFormDraft() {
     shortExitIfOn,
     size,
     sizeUnit,
+    sizeMultiplier,
+    deviationMultiplier,
     maxClips,
     maxValueMode,
     maxValue,
@@ -777,13 +655,21 @@ export function ThemeBotFormDraft() {
     status,
   };
   const draftKey = JSON.stringify(draftValue);
-  if (savedDraft.current === null) {
-    savedDraft.current = draftKey;
+  if (savedKey === null) {
+    setSavedKey(draftKey);
   }
-  const dirty = draftKey !== savedDraft.current;
-  void saveTick;
-  const closing = action === "close_long" || action === "close_short";
-  const showStartParams = startKind !== "webhook" && !closing;
+  const dirty = savedKey !== null && draftKey !== savedKey;
+  const closing =
+    desk === "perps" &&
+    (action === "close_long" || action === "close_short");
+  const entrySide: "long" | "short" =
+    desk === "dca"
+      ? direction === "short"
+        ? "short"
+        : "long"
+      : action === "sell" || action === "close_short"
+        ? "short"
+        : "long";
   const bothSides = desk === "dca" && direction === "both";
   const requireTp = desk !== "cnc" && !closing && tpOn;
   const requireSl = desk !== "cnc" && !closing && slOn;
@@ -796,7 +682,31 @@ export function ThemeBotFormDraft() {
   const requireShortConfirm = bothSides && !closing && shortConfirmOn;
   const requireExitIf = desk !== "cnc" && !closing && exitIfOn;
   const requireShortExitIf = bothSides && !closing && shortExitIfOn;
+  const requirePrice =
+    startKind === "price" && (desk === "perps" || !closing);
+  const requireLimitPrice =
+    desk === "perps" && orderType === "limit" && !filled(limitPrice);
+  const requireWebhook =
+    startKind === "webhook" && (desk === "perps" || !closing) && !filled(webhookId);
+  const requireSize = desk !== "cnc" && !closing && !filled(size);
+  const requireDip =
+    desk === "dca" &&
+    averaging === "dip" &&
+    spacingKind === "percent" &&
+    !filled(dipPct);
+  const requireAtrSpacing =
+    desk === "dca" && averaging === "dip" && spacingKind === "atr" && !filled(atrSpacing);
+  const requireMaxValue =
+    desk === "dca" && maxValueMode !== "none" && !filled(maxValue);
   const missing = {
+    priceLevel: requirePrice && !filled(priceLevel),
+    shortPriceLevel: requirePrice && bothSides && !filled(shortPriceLevel),
+    limitPrice: requireLimitPrice,
+    webhookId: requireWebhook,
+    size: requireSize,
+    dipPct: requireDip,
+    atrSpacing: requireAtrSpacing,
+    maxValue: requireMaxValue,
     tpValue: requireTp && !filled(tpValue),
     slValue: requireSl && !filled(slValue),
     trailValue: requireTrail && !filled(trailValue),
@@ -811,23 +721,46 @@ export function ThemeBotFormDraft() {
     shortExitIf: requireShortExitIf && !dcaFilterComplete(shortExitIf),
   };
   const hasMissing = Object.values(missing).some(Boolean);
-  const showFieldErrors = saveAttempted && hasMissing;
+  const showFieldErrors = dirty && hasMissing;
 
-  useEffect(() => {
-    if (skipDeskDirty.current) {
-      savedDraft.current = draftKey;
-      skipDeskDirty.current = false;
-      setSaveTick((tick) => tick + 1);
+  function applyStartKind(next: StartKind) {
+    if (next === "trend") {
+      setIndicatorKind("supertrend");
+      setWhen(indicatorCompareForDirection(entrySide, "supertrend", ""));
+      setPeriod(String(DEFAULT_DCA_SUPERTREND_PERIOD));
+      setMultiplier(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
+      setLevel("");
+      setShortIndicatorKind("supertrend");
+      setShortWhen(indicatorCompareForDirection("short", "supertrend", ""));
+      setShortPeriod(String(DEFAULT_DCA_SUPERTREND_PERIOD));
+      setShortMultiplier(String(DEFAULT_DCA_SUPERTREND_MULTIPLIER));
+      setShortLevel("");
+    } else if (
+      next === "indicator" &&
+      (startKind === "trend" || indicatorKind === "supertrend")
+    ) {
+      setIndicatorKind("rsi");
+      setWhen(indicatorCompareForDirection(entrySide, "rsi", ""));
+      setPeriod(String(DEFAULT_DCA_RSI_PERIOD));
+      setLevel(entrySide === "short" ? "70" : "30");
+      setShortIndicatorKind("rsi");
+      setShortWhen(indicatorCompareForDirection("short", "rsi", ""));
+      setShortPeriod(String(DEFAULT_DCA_RSI_PERIOD));
+      setShortLevel("70");
     }
-  }, [desk, draftKey]);
+    setStartKind(next);
+  }
 
   function switchDesk(next: DeskKind) {
-    skipDeskDirty.current = true;
-    setSaveAttempted(false);
+    setSavedKey(null);
     setDesk(next);
     setStatus("active");
     setAppliedStatus("active");
-    if (next === "perps" && (startKind === "indicator" || startKind === "trend")) {
+    if (
+      next === "perps" &&
+      closing &&
+      (startKind === "indicator" || startKind === "trend")
+    ) {
       setStartKind("price");
     }
   }
@@ -887,13 +820,10 @@ export function ThemeBotFormDraft() {
 
   function saveDraft() {
     if (hasMissing) {
-      setSaveAttempted(true);
       return;
     }
-    savedDraft.current = draftKey;
+    setSavedKey(draftKey);
     setAppliedStatus(status);
-    setSaveAttempted(false);
-    setSaveTick((tick) => tick + 1);
   }
 
   return (
@@ -966,7 +896,7 @@ export function ThemeBotFormDraft() {
               <p className="text-sm text-warning">
                 You have unsaved changes on this bot
               </p>
-              {saveAttempted && hasMissing ? (
+              {hasMissing ? (
                 <p className="mt-1 text-sm text-danger">
                   Fill required fields before saving.
                 </p>
@@ -975,6 +905,10 @@ export function ThemeBotFormDraft() {
             <button
               type="button"
               className={headerPrimaryClass}
+              disabled={hasMissing}
+              title={
+                hasMissing ? "Fill required fields before saving." : undefined
+              }
               onClick={saveDraft}
             >
               Save
@@ -1016,7 +950,27 @@ export function ThemeBotFormDraft() {
                 <Field label="Action" required>
                   <select
                     value={action}
-                    onChange={(event) => setAction(event.target.value as Action)}
+                    onChange={(event) => {
+                      const next = event.target.value as Action;
+                      setAction(next);
+                      if (next === "close_long" || next === "close_short") {
+                        if (
+                          startKind === "indicator" ||
+                          startKind === "trend"
+                        ) {
+                          setStartKind("price");
+                        }
+                        return;
+                      }
+                      const side: "long" | "short" =
+                        next === "sell" ? "short" : "long";
+                      setWhen(
+                        indicatorCompareForDirection(side, indicatorKind, ""),
+                      );
+                      if (indicatorKind === "rsi") {
+                        setLevel(side === "short" ? "70" : "30");
+                      }
+                    }}
                     className={fieldClass}
                   >
                     <option value="buy">Buy</option>
@@ -1026,17 +980,21 @@ export function ThemeBotFormDraft() {
                   </select>
                 </Field>
                 <Field label="Order" required>
-                  <OrderTypePill value="market" />
+                  <OrderTypePill value={orderType} onChange={setOrderType} />
                 </Field>
                 <Field label="When" required>
                   <select
-                    value={startKind === "webhook" ? "webhook" : "price"}
+                    value={startKind}
                     onChange={(event) =>
-                      setStartKind(event.target.value as StartKind)
+                      applyStartKind(event.target.value as StartKind)
                     }
                     className={fieldClass}
                   >
                     <option value="price">Price cross</option>
+                    {closing ? null : (
+                      <option value="indicator">Indicator</option>
+                    )}
+                    {closing ? null : <option value="trend">Trend</option>}
                     <option value="webhook">Signal webhook</option>
                   </select>
                 </Field>
@@ -1065,21 +1023,9 @@ export function ThemeBotFormDraft() {
                 <Field label="Initial Order Trigger" className="lg:col-span-2" required>
                   <select
                     value={startKind}
-                    onChange={(event) => {
-                      const next = event.target.value as StartKind;
-                      setStartKind(next);
-                      if (next === "trend") {
-                        setWhen("cross_gte");
-                        setPeriod(String(DEFAULT_DCA_SUPERTREND_PERIOD));
-                        setShortWhen("cross_lte");
-                        setShortPeriod(String(DEFAULT_DCA_SUPERTREND_PERIOD));
-                      } else if (next === "indicator") {
-                        setWhen("cross_lte");
-                        setPeriod(String(DEFAULT_DCA_RSI_PERIOD));
-                        setShortWhen("cross_gte");
-                        setShortPeriod(String(DEFAULT_DCA_RSI_PERIOD));
-                      }
-                    }}
+                    onChange={(event) =>
+                      applyStartKind(event.target.value as StartKind)
+                    }
                     className={fieldClass}
                   >
                     <option value="indicator">Indicator</option>
@@ -1108,22 +1054,23 @@ export function ThemeBotFormDraft() {
 
         </Group>
 
-        {!closing ? (
-        <Group
-          title={`Trigger - ${
-            startKind === "indicator"
-              ? "Indicator"
-              : startKind === "trend"
-                ? "Trend"
-                : startKind === "webhook"
-                  ? "Signal Webhook"
-                  : "Price Cross"
-          }`}
-        >
-          {startKind === "webhook" && !closing ? (
+        <Group title={triggerSectionTitle(startKind)}>
+          {startKind === "webhook" ? (
             <div className={rowClass5}>
-              <Field label="Webhook" className="lg:col-span-2" required>
-                <select className={fieldClass} defaultValue="">
+              <Field
+                label={desk === "perps" ? "Webhook" : "Signal Webhook"}
+                className="lg:col-span-2"
+                required
+              >
+                <select
+                  className={
+                    showFieldErrors && missing.webhookId
+                      ? fieldInvalidClass
+                      : fieldClass
+                  }
+                  value={webhookId}
+                  onChange={(event) => setWebhookId(event.target.value)}
+                >
                   <option value="">
                     {desk === "perps"
                       ? "Pick a webhook"
@@ -1132,99 +1079,223 @@ export function ThemeBotFormDraft() {
                   <option value="sample">Sample signal</option>
                 </select>
               </Field>
+              {desk === "perps" && orderType === "limit" ? (
+                <Field label="Limit price" required>
+                  <OffNumber
+                    value={limitPrice}
+                    onChange={setLimitPrice}
+                    required
+                    invalid={showFieldErrors && missing.limitPrice}
+                  />
+                </Field>
+              ) : null}
             </div>
-          ) : null}
-
-          {showStartParams ? (
+          ) : startKind === "indicator" && !closing ? (
             bothSides ? (
               <div className="space-y-5">
                 <SideBlock title="Long">
-                  <TriggerParamFields
-                    startKind={startKind}
-                    desk={desk}
-                    side="long"
-                    priceSource={priceSource}
-                    onPriceSource={setPriceSource}
-                    priceWhen={priceWhen}
-                    onPriceWhen={setPriceWhen}
-                    priceLevel={priceLevel}
-                    onPriceLevel={setPriceLevel}
-                    indicatorKind={indicatorKind}
-                    onIndicatorKind={setIndicatorKind}
-                    timeframe={timeframe}
-                    onTimeframe={setTimeframe}
-                    when={when}
-                    onWhen={setWhen}
-                    period={period}
-                    onPeriod={setPeriod}
-                    slowPeriod={slowPeriod}
-                    onSlowPeriod={setSlowPeriod}
-                    level={level}
-                    onLevel={setLevel}
-                    multiplier={multiplier}
-                    onMultiplier={setMultiplier}
-                  />
+                  <div className={rowClass}>
+                    <IndicatorStartFields
+                      side="long"
+                      prefix="theme"
+                      kind={indicatorKind}
+                      timeframe={timeframe}
+                      compare={when}
+                      level={level}
+                      period={period}
+                      slowPeriod={slowPeriod}
+                      onKindChange={setIndicatorKind}
+                      onTimeframeChange={setTimeframe}
+                      onCompareChange={setWhen}
+                      onLevelChange={setLevel}
+                      onPeriodChange={setPeriod}
+                      onSlowPeriodChange={setSlowPeriod}
+                    />
+                  </div>
                 </SideBlock>
                 <div className="space-y-5 border-t border-line pt-5">
                   <SideBlock title="Short">
-                    <TriggerParamFields
-                      startKind={startKind}
-                      desk={desk}
-                      side="short"
-                      priceSource={shortPriceSource}
-                      onPriceSource={setShortPriceSource}
-                      priceWhen={shortPriceWhen}
-                      onPriceWhen={setShortPriceWhen}
-                      priceLevel={shortPriceLevel}
-                      onPriceLevel={setShortPriceLevel}
-                      indicatorKind={shortIndicatorKind}
-                      onIndicatorKind={setShortIndicatorKind}
-                      timeframe={shortTimeframe}
-                      onTimeframe={setShortTimeframe}
-                      when={shortWhen}
-                      onWhen={setShortWhen}
-                      period={shortPeriod}
-                      onPeriod={setShortPeriod}
-                      slowPeriod={shortSlowPeriod}
-                      onSlowPeriod={setShortSlowPeriod}
-                      level={shortLevel}
-                      onLevel={setShortLevel}
-                      multiplier={shortMultiplier}
-                      onMultiplier={setShortMultiplier}
-                    />
+                    <div className={rowClass}>
+                      <IndicatorStartFields
+                        side="short"
+                        prefix="themeShort"
+                        kind={shortIndicatorKind}
+                        timeframe={shortTimeframe}
+                        compare={shortWhen}
+                        level={shortLevel}
+                        period={shortPeriod}
+                        slowPeriod={shortSlowPeriod}
+                        onKindChange={setShortIndicatorKind}
+                        onTimeframeChange={setShortTimeframe}
+                        onCompareChange={setShortWhen}
+                        onLevelChange={setShortLevel}
+                        onPeriodChange={setShortPeriod}
+                        onSlowPeriodChange={setShortSlowPeriod}
+                      />
+                    </div>
                   </SideBlock>
                 </div>
               </div>
             ) : (
-              <TriggerParamFields
-                startKind={startKind}
-                desk={desk}
-                side={direction === "short" ? "short" : "long"}
-                priceSource={priceSource}
-                onPriceSource={setPriceSource}
-                priceWhen={priceWhen}
-                onPriceWhen={setPriceWhen}
-                priceLevel={priceLevel}
-                onPriceLevel={setPriceLevel}
-                indicatorKind={indicatorKind}
-                onIndicatorKind={setIndicatorKind}
-                timeframe={timeframe}
-                onTimeframe={setTimeframe}
-                when={when}
-                onWhen={setWhen}
-                period={period}
-                onPeriod={setPeriod}
-                slowPeriod={slowPeriod}
-                onSlowPeriod={setSlowPeriod}
-                level={level}
-                onLevel={setLevel}
-                multiplier={multiplier}
-                onMultiplier={setMultiplier}
-              />
+              <div className={rowClass5}>
+                <IndicatorStartFields
+                  side={entrySide}
+                  prefix="theme"
+                  kind={indicatorKind}
+                  timeframe={timeframe}
+                  compare={when}
+                  level={level}
+                  period={period}
+                  slowPeriod={slowPeriod}
+                  onKindChange={setIndicatorKind}
+                  onTimeframeChange={setTimeframe}
+                  onCompareChange={setWhen}
+                  onLevelChange={setLevel}
+                  onPeriodChange={setPeriod}
+                  onSlowPeriodChange={setSlowPeriod}
+                />
+                {desk === "perps" && orderType === "limit" ? (
+                  <Field label="Limit price" required>
+                    <OffNumber
+                      value={limitPrice}
+                      onChange={setLimitPrice}
+                      required
+                      invalid={showFieldErrors && missing.limitPrice}
+                    />
+                  </Field>
+                ) : null}
+              </div>
             )
-          ) : null}
+          ) : startKind === "trend" && !closing ? (
+            bothSides ? (
+              <div className="space-y-5">
+                <SideBlock title="Long">
+                  <div className={rowClass}>
+                    <TrendStartFields
+                      side="long"
+                      prefix="theme"
+                      kind={indicatorKind}
+                      timeframe={timeframe}
+                      compare={when}
+                      period={period}
+                      multiplier={multiplier}
+                      onKindChange={setIndicatorKind}
+                      onTimeframeChange={setTimeframe}
+                      onCompareChange={setWhen}
+                      onPeriodChange={setPeriod}
+                      onMultiplierChange={setMultiplier}
+                    />
+                  </div>
+                </SideBlock>
+                <div className="space-y-5 border-t border-line pt-5">
+                  <SideBlock title="Short">
+                    <div className={rowClass}>
+                      <TrendStartFields
+                        side="short"
+                        prefix="themeShort"
+                        kind={shortIndicatorKind}
+                        timeframe={shortTimeframe}
+                        compare={shortWhen}
+                        period={shortPeriod}
+                        multiplier={shortMultiplier}
+                        onKindChange={setShortIndicatorKind}
+                        onTimeframeChange={setShortTimeframe}
+                        onCompareChange={setShortWhen}
+                        onPeriodChange={setShortPeriod}
+                        onMultiplierChange={setShortMultiplier}
+                      />
+                    </div>
+                  </SideBlock>
+                </div>
+              </div>
+            ) : (
+              <div className={rowClass5}>
+                <TrendStartFields
+                  side={entrySide}
+                  prefix="theme"
+                  kind={indicatorKind}
+                  timeframe={timeframe}
+                  compare={when}
+                  period={period}
+                  multiplier={multiplier}
+                  onKindChange={setIndicatorKind}
+                  onTimeframeChange={setTimeframe}
+                  onCompareChange={setWhen}
+                  onPeriodChange={setPeriod}
+                  onMultiplierChange={setMultiplier}
+                />
+                {desk === "perps" && orderType === "limit" ? (
+                  <Field label="Limit price" required>
+                    <OffNumber
+                      value={limitPrice}
+                      onChange={setLimitPrice}
+                      required
+                      invalid={showFieldErrors && missing.limitPrice}
+                    />
+                  </Field>
+                ) : null}
+              </div>
+            )
+          ) : (
+            <div className={desk === "perps" ? rowClass5 : rowClass}>
+              {bothSides ? (
+                <div className="space-y-5 sm:col-span-2 lg:col-span-4">
+                  <SideBlock title="Long">
+                    <div className={rowClass}>
+                      <PriceTriggerFields
+                        desk={desk}
+                        priceSource={priceSource}
+                        onPriceSource={setPriceSource}
+                        priceWhen={priceWhen}
+                        onPriceWhen={setPriceWhen}
+                        priceLevel={priceLevel}
+                        onPriceLevel={setPriceLevel}
+                        invalid={showFieldErrors && missing.priceLevel}
+                      />
+                    </div>
+                  </SideBlock>
+                  <div className="space-y-5 border-t border-line pt-5">
+                    <SideBlock title="Short">
+                      <div className={rowClass}>
+                        <PriceTriggerFields
+                          desk={desk}
+                          priceSource={shortPriceSource}
+                          onPriceSource={setShortPriceSource}
+                          priceWhen={shortPriceWhen}
+                          onPriceWhen={setShortPriceWhen}
+                          priceLevel={shortPriceLevel}
+                          onPriceLevel={setShortPriceLevel}
+                          invalid={showFieldErrors && missing.shortPriceLevel}
+                        />
+                      </div>
+                    </SideBlock>
+                  </div>
+                </div>
+              ) : (
+                <PriceTriggerFields
+                  desk={desk}
+                  priceSource={priceSource}
+                  onPriceSource={setPriceSource}
+                  priceWhen={priceWhen}
+                  onPriceWhen={setPriceWhen}
+                  priceLevel={priceLevel}
+                  onPriceLevel={setPriceLevel}
+                  invalid={showFieldErrors && missing.priceLevel}
+                />
+              )}
+              {desk === "perps" && orderType === "limit" ? (
+                <Field label="Limit price" required>
+                  <OffNumber
+                    value={limitPrice}
+                    onChange={setLimitPrice}
+                    required
+                    invalid={showFieldErrors && missing.limitPrice}
+                  />
+                </Field>
+              ) : null}
+            </div>
+          )}
         </Group>
-        ) : null}
 
         {!closing ? (
           bothSides ? (
@@ -1388,26 +1459,71 @@ export function ThemeBotFormDraft() {
         {!closing ? (
           <Group title={desk === "dca" ? "Initial Order Size" : "Order Size"}>
             <div className={rowClass}>
-              <Field label="Size" required>
-                <GroupedNumberInput
-                  value={size}
-                  onChange={setSize}
-                  allowDecimal
-                  className={fieldClass}
-                />
-              </Field>
-              <Field label={desk === "dca" ? "Size unit" : "Unit"} required>
-                <select
-                  value={sizeUnit}
-                  onChange={(event) =>
-                    setSizeUnit(event.target.value as "qty" | "usdt")
-                  }
-                  className={fieldClass}
-                >
-                  <option value="usdt">USDT</option>
-                  <option value="qty">Qty</option>
-                </select>
-              </Field>
+              {desk === "dca" ? (
+                <>
+                  <Field label="Size unit" required>
+                    <select
+                      value={sizeUnit}
+                      onChange={(event) =>
+                        setSizeUnit(event.target.value as "qty" | "usdt")
+                      }
+                      className={fieldClass}
+                    >
+                      <option value="usdt">USDT</option>
+                      <option value="qty">Token qty</option>
+                    </select>
+                  </Field>
+                  <Field label="Order size" required>
+                    <GroupedNumberInput
+                      value={size}
+                      onChange={setSize}
+                      allowDecimal
+                      className={
+                        showFieldErrors && missing.size
+                          ? fieldInvalidClass
+                          : fieldClass
+                      }
+                    />
+                  </Field>
+                </>
+              ) : (
+                <>
+                  <Field label="Size" required>
+                    <span className="relative mt-1 block">
+                      {sizeUnit === "usdt" ? (
+                        <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
+                          $
+                        </span>
+                      ) : null}
+                      <GroupedNumberInput
+                        value={size}
+                        onChange={setSize}
+                        allowDecimal
+                        className={`${
+                          showFieldErrors && missing.size
+                            ? fieldInvalidClass
+                            : fieldClass
+                        } ${sizeUnit === "usdt" ? "pl-7" : ""}`}
+                      />
+                    </span>
+                  </Field>
+                  <Field label="Unit" required>
+                    <select
+                      value={sizeUnit}
+                      onChange={(event) =>
+                        setSizeUnit(event.target.value as "qty" | "usdt")
+                      }
+                      className={fieldClass}
+                    >
+                      <option value="usdt">USDT</option>
+                      <option value="qty">
+                        {SAMPLE_PAIRS.find((pair) => pair.symbol === symbol)
+                          ?.baseCoin ?? "BTC"}
+                      </option>
+                    </select>
+                  </Field>
+                </>
+              )}
             </div>
           </Group>
         ) : (
@@ -1543,28 +1659,36 @@ export function ThemeBotFormDraft() {
               <button
                 type="button"
                 className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
+                onClick={() => {
+                  setSizeMultiplier("1");
+                  setDeviationMultiplier("1");
+                }}
               >
                 Equal orders
               </button>
               <button
                 type="button"
                 className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
+                onClick={() => {
+                  setSizeMultiplier("2");
+                  setDeviationMultiplier("1.5");
+                }}
               >
                 Martingale
               </button>
             </div>
             <Field label="Order size multiplier" className="min-w-40 flex-1" required>
               <GroupedNumberInput
-                value="1"
-                onChange={() => undefined}
+                value={sizeMultiplier}
+                onChange={setSizeMultiplier}
                 allowDecimal
                 className={fieldClass}
               />
             </Field>
             <Field label="Price deviation multiplier" className="min-w-40 flex-1" required>
               <GroupedNumberInput
-                value="1"
-                onChange={() => undefined}
+                value={deviationMultiplier}
+                onChange={setDeviationMultiplier}
                 allowDecimal
                 className={fieldClass}
               />
@@ -1587,12 +1711,14 @@ export function ThemeBotFormDraft() {
             >
               {desk === "dca" ? (
                 <ExitMethodFields
-                  method={tpMethod || "percent"}
+                  method={tpMethod === "atr" ? "atr" : "percent"}
                   onMethod={setTpMethod}
                   value={tpValue}
                   onValue={setTpValue}
                   orderType={tpOrderType}
                   onOrderType={setTpOrderType}
+                  atrPeriod={atrPeriod}
+                  onAtrPeriod={setAtrPeriod}
                   invalid={showFieldErrors && missing.tpValue}
                 />
               ) : (
@@ -2029,10 +2155,129 @@ export function ThemeBotFormDraft() {
             </button>
           </div>
         </section>
+        {desk === "dca" ? (
+          <ThemeDcaSummary
+            bothSides={bothSides}
+            ladderOpen={ladderOpen}
+            onLadderOpen={setLadderOpen}
+            ladderTab={ladderTab}
+            onLadderTab={setLadderTab}
+          />
+        ) : null}
       </div>
 
       <ThemeBotFormReference />
     </div>
+  );
+}
+
+function ThemeDcaSummary({
+  bothSides,
+  ladderOpen,
+  onLadderOpen,
+  ladderTab,
+  onLadderTab,
+}: {
+  bothSides: boolean;
+  ladderOpen: boolean;
+  onLadderOpen: (next: boolean) => void;
+  ladderTab: "long" | "short";
+  onLadderTab: (next: "long" | "short") => void;
+}) {
+  return (
+    <>
+      <div className="py-4">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
+          aria-expanded={ladderOpen}
+          onClick={() => onLadderOpen(!ladderOpen)}
+        >
+          {ladderOpen ? "Hide Summary" : "Show Summary"}
+          <ChevronIcon className={ladderOpen ? "rotate-90" : undefined} />
+        </button>
+      </div>
+      {ladderOpen ? (
+        <section className="-mx-5 w-[calc(100%+2.5rem)] space-y-3 rounded-b-card bg-surface px-5 py-5">
+          <h3 className={sectionTitleClass}>Summary</h3>
+          <div
+            className={
+              bothSides
+                ? "mb-3 flex items-end justify-between gap-3 border-b border-line"
+                : "mb-2"
+            }
+          >
+            {bothSides ? (
+              <div
+                role="tablist"
+                aria-label="Ladder side"
+                className="flex gap-1"
+              >
+                <TabButton
+                  selected={ladderTab === "long"}
+                  panelId="theme-draft-ladder"
+                  onClick={() => onLadderTab("long")}
+                >
+                  Long ladder
+                </TabButton>
+                <TabButton
+                  selected={ladderTab === "short"}
+                  panelId="theme-draft-ladder"
+                  onClick={() => onLadderTab("short")}
+                >
+                  Short ladder
+                </TabButton>
+              </div>
+            ) : null}
+            <p
+              className={`text-xs text-ink-muted ${
+                bothSides ? "pb-2 text-right" : ""
+              }`}
+            >
+              Summary is based on the current asset price and the parameters
+              configured above
+            </p>
+          </div>
+          <div
+            role={bothSides ? "tabpanel" : undefined}
+            id={bothSides ? "theme-draft-ladder" : undefined}
+            className="flex flex-wrap"
+          >
+            <DraftStat
+              label="Covered Range"
+              value="4.2%"
+              hint="First fill to last clip"
+            />
+            <DraftStat
+              label="Max Exposure"
+              value="$1,200"
+              hint={
+                bothSides
+                  ? "Full ladder notional · This side only"
+                  : "Full ladder notional"
+              }
+            />
+            <DraftStat
+              label="Initial Margin"
+              value="$120"
+              hint="Max exposure ÷ 10×"
+            />
+            <DraftStat
+              label="Profit range"
+              value="∞"
+              hint="No take profit — unlimited"
+              valueClass="text-success"
+            />
+            <DraftStat
+              label="Loss range"
+              value="∞"
+              hint="No stop loss — unlimited"
+              valueClass="text-danger"
+            />
+          </div>
+        </section>
+      ) : null}
+    </>
   );
 }
 
@@ -2168,7 +2413,7 @@ function ThemeBotFormReference() {
       <div className="space-y-3">
         <p className={labelClass}>DCA summary / ladder</p>
         <p className="text-xs text-ink-faint">
-          DCA only. Not on the Perps baseline. Show / Hide when the bot is
+          Same block as the sample DCA card. Show / Hide when the bot is
           running. Long / Short tabs only when Direction is Both.
         </p>
         <button
@@ -2233,6 +2478,8 @@ function ExitMethodFields({
   onValue,
   orderType,
   onOrderType,
+  atrPeriod,
+  onAtrPeriod,
   invalid = false,
 }: {
   method: ExitMethod;
@@ -2241,61 +2488,23 @@ function ExitMethodFields({
   onValue: (next: string) => void;
   orderType: string;
   onOrderType: (next: string) => void;
+  atrPeriod: string;
+  onAtrPeriod: (next: string) => void;
   invalid?: boolean;
 }) {
-  const valueField =
-    method === "price" ? (
-      <Field label="Price" required>
-        <OffNumber
-          value={value}
-          onChange={onValue}
-          required
-          invalid={invalid}
-        />
-      </Field>
-    ) : method === "percent" ? (
-      <Field label="Target %" required>
-        <OffNumber
-          value={value}
-          onChange={onValue}
-          required
-          invalid={invalid}
-        />
-      </Field>
-    ) : method === "atr" ? (
-      <Field label="ATR multiple" required>
-        <OffNumber
-          value={value}
-          onChange={onValue}
-          required
-          invalid={invalid}
-        />
-      </Field>
-    ) : null;
-
   return (
     <div className={rowClass}>
-      {method !== "price" ? (
-        <Field label="Basis" required>
-          <select className={fieldClass} defaultValue="average">
-            <option value="average">Average entry</option>
-            <option value="first_entry">First fill</option>
-          </select>
-        </Field>
-      ) : (
-        <Field label="Trigger" required>
-          <select className={fieldClass} defaultValue="last">
-            <option value="last">Last</option>
-            <option value="mark">Mark</option>
-            <option value="index">Index</option>
-          </select>
-        </Field>
-      )}
+      <Field label="Basis" required>
+        <select className={fieldClass} defaultValue="average">
+          <option value="average">Average entry</option>
+          <option value="first_entry">First fill</option>
+        </select>
+      </Field>
       <Field label="Method" required>
         <select
-          value={method}
+          value={method === "atr" ? "atr" : "percent"}
           onChange={(event) => {
-            const next = event.target.value as ExitMethod;
+            const next = event.target.value === "atr" ? "atr" : "percent";
             onMethod(next);
             if (next === "atr" && !filled(value)) {
               onValue("2");
@@ -2303,14 +2512,38 @@ function ExitMethodFields({
           }}
           className={fieldClass}
         >
-          {EXIT_METHODS.filter((option) => option.value).map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
+          <option value="percent">Percentage</option>
+          <option value="atr">ATR × multiplier</option>
         </select>
       </Field>
-      {valueField}
+      {method === "atr" ? (
+        <>
+          <Field label="ATR period" required>
+            <GroupedNumberInput
+              value={atrPeriod}
+              onChange={onAtrPeriod}
+              className={fieldClass}
+            />
+          </Field>
+          <Field label="ATR multiple" required>
+            <OffNumber
+              value={value}
+              onChange={onValue}
+              required
+              invalid={invalid}
+            />
+          </Field>
+        </>
+      ) : (
+        <Field label="Target %" required>
+          <OffNumber
+            value={value}
+            onChange={onValue}
+            required
+            invalid={invalid}
+          />
+        </Field>
+      )}
       <Field label="Order type" required>
         <OrderTypePill
           value={orderType === "limit" ? "limit" : "market"}

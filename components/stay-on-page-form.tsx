@@ -4,6 +4,7 @@ import {
   createContext,
   forwardRef,
   useContext,
+  useEffect,
   useRef,
   useState,
   type FormEvent,
@@ -123,6 +124,14 @@ export const StayOnPageForm = forwardRef<
   const [notice, setNotice] = useState<string | null>(null);
   const okTimer = useRef(0);
 
+  useEffect(() => {
+    return () => window.clearTimeout(okTimer.current);
+  }, []);
+
+  function dismissNotice() {
+    setNotice(null);
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (guard && !guard(event)) {
@@ -137,6 +146,7 @@ export const StayOnPageForm = forwardRef<
     setPending(true);
     setPendingAction(key);
     setError(null);
+    setNotice(null);
     setOk(false);
     setOkAction(null);
     try {
@@ -155,6 +165,7 @@ export const StayOnPageForm = forwardRef<
       okTimer.current = window.setTimeout(() => {
         setOk(false);
         setOkAction(null);
+        setNotice(null);
       }, OK_MS);
       onResult?.(result);
     } finally {
@@ -168,8 +179,14 @@ export const StayOnPageForm = forwardRef<
       ref={ref}
       id={id}
       noValidate={noValidate}
-      onInput={onInput}
-      onChange={onChange}
+      onInput={(event) => {
+        dismissNotice();
+        onInput?.(event);
+      }}
+      onChange={(event) => {
+        dismissNotice();
+        onChange?.(event);
+      }}
       onSubmit={(event) => void onSubmit(event)}
       className={className}
     >
