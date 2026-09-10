@@ -26,6 +26,7 @@ import { listFuturesWebhooks } from "@/lib/futures/webhook-load";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { loadFuturesDesk } from "@/lib/futures/list";
+import { futuresDeskNeedsUrgentRefresh } from "@/lib/futures/pending-close";
 import { markFuturesOpen } from "@/lib/futures/mark";
 import { reconcileOpenFuturesBooks } from "@/lib/futures/reconcile";
 import { loadFuturesSettings } from "@/lib/futures/settings";
@@ -313,7 +314,10 @@ export default async function FuturesPositionsPage({
           webhookNames={desk.webhookNames}
           playbookOwnsOrders={dcaBlotter}
           copyDesk={copyDesk}
-          urgentRefresh={open.some((row) => row.status === "closing")}
+          urgentRefresh={futuresDeskNeedsUrgentRefresh({
+            positions: open,
+            working: desk.working,
+          })}
           emptyMessage={
             showTicket
               ? undefined
