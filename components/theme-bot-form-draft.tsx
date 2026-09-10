@@ -1609,7 +1609,10 @@ export function ThemeBotFormDraft() {
         )}
 
         {desk === "dca" ? (
-        <Group title="Additional orders">
+        <Group
+          title="Add spacing"
+          hint="This method applies to every add after the first fill. The step next to Spacing is the first add; later adds use the same method."
+        >
           <div className={rowClass5}>
             <Field label="Averaging" className="lg:col-span-2" required>
               <select
@@ -1624,7 +1627,11 @@ export function ThemeBotFormDraft() {
               </select>
             </Field>
             {averaging === "dip" ? (
-              <Field label="Spacing" required>
+              <Field
+                label="Spacing"
+                hint="Percentage or ATR. Used for every add, not only the first."
+                required
+              >
                 <select
                   className={fieldClass}
                   value={spacingKind}
@@ -1640,7 +1647,11 @@ export function ThemeBotFormDraft() {
               </Field>
             ) : null}
             {averaging === "dip" && spacingKind === "percent" ? (
-              <Field label="Price deviation %" required>
+              <Field
+                label="Price deviation %"
+                hint="Distance from the previous fill for the first add. Later adds use this times Price deviation multiplier."
+                required
+              >
                 <span className="relative mt-1 block">
                   <GroupedNumberInput
                     value={dipPct}
@@ -1667,7 +1678,11 @@ export function ThemeBotFormDraft() {
                     }
                   />
                 </Field>
-                <Field label="ATR spacing" required>
+                <Field
+                  label="ATR spacing"
+                  hint="First-add distance in ATR multiples. Later adds use this times Price deviation multiplier."
+                  required
+                >
                   <GroupedNumberInput
                     value={atrSpacing}
                     onChange={setAtrSpacing}
@@ -1731,7 +1746,10 @@ export function ThemeBotFormDraft() {
         ) : null}
 
         {desk === "dca" ? (
-        <Group title="Additional order multipliers">
+        <Group
+          title="Later add scaling"
+          hint="How size and distance grow after the first add. 1 keeps later adds the same as the first add."
+        >
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex flex-wrap gap-2">
               <button
@@ -1755,7 +1773,12 @@ export function ThemeBotFormDraft() {
                 Martingale
               </button>
             </div>
-            <Field label="Order size multiplier" className="min-w-40 flex-1" required>
+            <Field
+              label="Order size multiplier"
+              hint="1 keeps every clip the same size. 1.5 means each later clip is 1.5× the last."
+              className="min-w-40 flex-1"
+              required
+            >
               <GroupedNumberInput
                 value={sizeMultiplier}
                 onChange={setSizeMultiplier}
@@ -1763,7 +1786,12 @@ export function ThemeBotFormDraft() {
                 className={fieldClass}
               />
             </Field>
-            <Field label="Price deviation multiplier" className="min-w-40 flex-1" required>
+            <Field
+              label="Price deviation multiplier"
+              hint="1 keeps every add the same distance. Above 1 widens each later step. Does not replace Price deviation % or ATR spacing."
+              className="min-w-40 flex-1"
+              required
+            >
               <GroupedNumberInput
                 value={deviationMultiplier}
                 onChange={setDeviationMultiplier}

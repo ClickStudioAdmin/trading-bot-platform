@@ -1991,7 +1991,11 @@ export function DcaPlaybookForm({
           </div>
         </BotFormGroup>
 
-        <BotFormGroup title="Additional orders" locked={cycleLocked}>
+        <BotFormGroup
+          title="Add spacing"
+          hint="This method applies to every add after the first fill. The step next to Spacing is the first add; later adds use the same method."
+          locked={cycleLocked}
+        >
           <div className={botRowClass5}>
             <label className={`${labelClass} lg:col-span-2`}>
               <HintLabel text="Averaging" required />
@@ -2009,7 +2013,11 @@ export function DcaPlaybookForm({
             </label>
             {averaging === "dip" ? (
               <label className={labelClass}>
-                <HintLabel text="Spacing" required />
+                <HintLabel
+                  text="Spacing"
+                  hint="Percentage or ATR. Used for every add, not only the first."
+                  required
+                />
                 <select
                   name="spacingKind"
                   value={spacingKind}
@@ -2027,7 +2035,11 @@ export function DcaPlaybookForm({
             )}
             {averaging === "dip" && spacingKind === "percent" ? (
               <label className={labelClass}>
-                <HintLabel text="Price deviation %" required />
+                <HintLabel
+                  text="Price deviation %"
+                  hint="Distance from the previous fill for the first add. Later adds use this times Price deviation multiplier."
+                  required
+                />
                 <PercentInput
                   name="dipPct"
                   value={dipPct}
@@ -2049,7 +2061,11 @@ export function DcaPlaybookForm({
                   />
                 </label>
                 <label className={labelClass}>
-                  <HintLabel text="ATR spacing" required />
+                  <HintLabel
+                    text="ATR spacing"
+                    hint="First-add distance in ATR multiples. Later adds use this times Price deviation multiplier."
+                    required
+                  />
                   <GroupedNumberInput
                     name="atrSpacingMult"
                     value={atrSpacingMult}
@@ -2111,7 +2127,11 @@ export function DcaPlaybookForm({
             ) : null}
           </div>
         </BotFormGroup>
-        <BotFormGroup title="Additional order multipliers" locked={cycleLocked}>
+        <BotFormGroup
+          title="Later add scaling"
+          hint="How size and distance grow after the first add. 1 keeps later adds the same as the first add."
+          locked={cycleLocked}
+        >
           <div className="flex flex-wrap items-end gap-3">
             <div className="flex flex-wrap gap-2">
               <button
@@ -2136,7 +2156,11 @@ export function DcaPlaybookForm({
               </button>
             </div>
             <label className={`${labelClass} min-w-40 flex-1`}>
-              <HintLabel text="Order size multiplier" required />
+              <HintLabel
+                text="Order size multiplier"
+                hint="1 keeps every clip the same size. 1.5 means each later clip is 1.5× the last."
+                required
+              />
               <GroupedNumberInput
                 name="sizeMultiplier"
                 value={sizeMultiplier}
@@ -2150,7 +2174,11 @@ export function DcaPlaybookForm({
               />
             </label>
             <label className={`${labelClass} min-w-40 flex-1`}>
-              <HintLabel text="Price deviation multiplier" required />
+              <HintLabel
+                text="Price deviation multiplier"
+                hint="1 keeps every add the same distance. Above 1 widens each later step. Does not replace Price deviation % or ATR spacing."
+                required
+              />
               <GroupedNumberInput
                 name="deviationMultiplier"
                 value={deviationMultiplier}
