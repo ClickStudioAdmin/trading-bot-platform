@@ -305,16 +305,19 @@ function OptionalSection({
         nested ? "space-y-3" : "space-y-3 py-5"
       }`}
     >
-      <label className="flex cursor-pointer items-center gap-3">
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(event) => onEnabled(event.target.checked)}
-          className="sr-only"
-        />
-        <EnableCheck checked={enabled} />
+      <div className="flex items-center gap-3">
+        <label className="inline-flex shrink-0 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(event) => onEnabled(event.target.checked)}
+            className="sr-only"
+            aria-label={title}
+          />
+          <EnableCheck checked={enabled} />
+        </label>
         <HintLabel text={title} hint={hint} className={sectionTitleClass} />
-      </label>
+      </div>
       {enabled ? children : null}
     </section>
   );
