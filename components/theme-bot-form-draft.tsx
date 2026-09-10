@@ -1514,7 +1514,7 @@ export function ThemeBotFormDraft() {
         {desk === "dca" ? (
         <Group title="Additional orders">
           <div className={rowClass5}>
-            <Field label="Averaging" required>
+            <Field label="Averaging" className="lg:col-span-2" required>
               <select
                 className={fieldClass}
                 value={averaging}
@@ -1522,8 +1522,8 @@ export function ThemeBotFormDraft() {
                   setAveraging(event.target.value as "dip" | "interval")
                 }
               >
-                <option value="dip">Position — add on price deviation</option>
-                <option value="interval">Position — add on interval</option>
+                <option value="dip">Add on price deviation</option>
+                <option value="interval">Add on interval</option>
               </select>
             </Field>
             {averaging === "dip" ? (

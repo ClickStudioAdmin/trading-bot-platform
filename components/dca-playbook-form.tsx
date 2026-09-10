@@ -1969,7 +1969,7 @@ export function DcaPlaybookForm({
 
         <BotFormGroup title="Additional orders" locked={cycleLocked}>
           <div className={botRowClass5}>
-            <label className={labelClass}>
+            <label className={`${labelClass} lg:col-span-2`}>
               <HintLabel text="Averaging" required />
               <select
                 name="averaging"
@@ -1979,8 +1979,8 @@ export function DcaPlaybookForm({
                 }
                 className={fieldClass}
               >
-                <option value="dip">Position — add on price deviation</option>
-                <option value="interval">Position — add on interval</option>
+                <option value="dip">Add on price deviation</option>
+                <option value="interval">Add on interval</option>
               </select>
             </label>
             {averaging === "dip" ? (
