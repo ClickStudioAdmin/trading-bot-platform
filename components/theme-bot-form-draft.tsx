@@ -1311,7 +1311,7 @@ export function ThemeBotFormDraft() {
         </Group>
         ) : null}
 
-        {desk !== "cnc" && !closing ? (
+        {!closing ? (
           bothSides ? (
             <Group
               title="Secondary Entry Condition"
@@ -1829,7 +1829,6 @@ export function ThemeBotFormDraft() {
               )}
             </OptionalSection>
 
-            {desk !== "cnc" ? (
             <OptionalSection
               title="Move Breakeven"
               enabled={breakevenOn}
@@ -1854,10 +1853,8 @@ export function ThemeBotFormDraft() {
                 </Field>
               </div>
             </OptionalSection>
-            ) : null}
 
-            {desk !== "cnc" ? (
-            bothSides ? (
+            {bothSides ? (
               <Group title="Hard Exit Condition">
                 <OptionalSection
                   title="Long"
@@ -1943,8 +1940,7 @@ export function ThemeBotFormDraft() {
                   labelClass={labelClass}
                 />
               </OptionalSection>
-            )
-            ) : null}
+            )}
 
           </>
         ) : null}
