@@ -23,6 +23,7 @@ import {
   parseDcaPlaybookVerb,
   syncDcaPlaybookWorking,
 } from "@/lib/dca/run";
+import { loadDcaBookUsdt, loadDcaSizingLeverage } from "@/lib/dca/book";
 import { loadUsdtLinearPerps } from "@/lib/exchanges/bybit/perp";
 import { hyperliquidInfoEnvironment } from "@/lib/venues/hyperliquid/desk";
 import { loadHyperliquidLinearPerps } from "@/lib/venues/hyperliquid/market";
@@ -126,7 +127,13 @@ export async function saveAndArmDcaPlaybookAction(
 
 async function rejectIfOverMaxOrder(
   config: DcaPlaybookConfig,
-  desk: { venue: string; venueEnvironment: string | null },
+  desk: {
+    id: string;
+    venue: string;
+    venueEnvironment: string | null;
+    mode: "paper" | "live";
+  },
+  userId: string,
 ): Promise<string | null> {
   const pairs =
     desk.venue === "hyperliquid"
@@ -139,6 +146,18 @@ async function rejectIfOverMaxOrder(
     return "That contract is not available.";
   }
   const lastPrice = await lastPriceFor(config.symbol, desk);
+  const bookUsdt = await loadDcaBookUsdt({
+    userId,
+    accountId: desk.id,
+    mode: desk.mode,
+  });
+  const leverage = await loadDcaSizingLeverage({
+    userId,
+    accountId: desk.id,
+    mode: desk.mode,
+    symbol: config.symbol,
+    side: dcaEnabledSides(config.direction)[0] ?? "long",
+  });
   return dcaConfigMaxOrderError({
     config,
     lastPrice,
@@ -146,7 +165,12 @@ async function rejectIfOverMaxOrder(
     maxMktQty: pair.maxMktQty,
     minQty: pair.minQty,
     minNotional: pair.minNotional,
+    minPrice: pair.minPrice,
+    tickSize: pair.tickSize,
     baseCoin: pair.baseCoin,
+    bookUsdt,
+    leverage,
+    availableUsdt: bookUsdt,
   });
 }
 
@@ -179,7 +203,11 @@ async function saveDcaPlaybookWith(
   }
   const { config, cycleLocked } = parsed;
   if (!cycleLocked) {
-    const overMax = await rejectIfOverMaxOrder(config, session.account);
+    const overMax = await rejectIfOverMaxOrder(
+      config,
+      session.account,
+      session.member.id,
+    );
     if (overMax) {
       return deskActionError(overMax);
     }
@@ -383,7 +411,11 @@ export async function runDcaPlaybookVerb(
   }
   const { config, cycleLocked } = parsed;
   if (verb === "arm" && !cycleLocked) {
-    const overMax = await rejectIfOverMaxOrder(config, session.account);
+    const overMax = await rejectIfOverMaxOrder(
+      config,
+      session.account,
+      session.member.id,
+    );
     if (overMax) {
       return deskActionError(overMax);
     }

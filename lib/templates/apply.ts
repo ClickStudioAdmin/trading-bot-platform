@@ -1,8 +1,10 @@
 import { listTradingAccounts } from "@/lib/accounts/store";
 import type { TradingAccount } from "@/lib/accounts/model";
 import { deskAllowsPerpsRecipes, deskAllowsTemplateApply } from "@/lib/accounts/model";
+import { loadDcaBookUsdt, loadDcaSizingLeverage } from "@/lib/dca/book";
 import {
   dcaConfigMaxOrderError,
+  dcaEnabledSides,
   dcaPlaybookConflict,
   type DcaPlaybook,
   type DcaPlaybookConfig,
@@ -91,6 +93,7 @@ function remapTemplateSymbol(symbol: string, venue: string): string {
 async function rejectDcaMaxOrder(
   config: DcaPlaybookConfig,
   desk: TradingAccount,
+  userId: string,
 ): Promise<string | null> {
   const pairs =
     desk.venue === "hyperliquid"
@@ -103,14 +106,31 @@ async function rejectDcaMaxOrder(
     return "That contract is not available.";
   }
   const lastPrice = await lastPriceFor(config.symbol, desk);
+  const bookUsdt = await loadDcaBookUsdt({
+    userId,
+    accountId: desk.id,
+    mode: desk.mode,
+  });
+  const leverage = await loadDcaSizingLeverage({
+    userId,
+    accountId: desk.id,
+    mode: desk.mode,
+    symbol: config.symbol,
+    side: dcaEnabledSides(config.direction)[0] ?? "long",
+  });
   return dcaConfigMaxOrderError({
     config,
     lastPrice,
     maxQty: pair.maxQty,
     minQty: pair.minQty,
     minNotional: pair.minNotional,
+    minPrice: pair.minPrice,
+    tickSize: pair.tickSize,
     maxMktQty: pair.maxMktQty,
     baseCoin: pair.baseCoin,
+    bookUsdt,
+    leverage,
+    availableUsdt: bookUsdt,
   });
 }
 
@@ -168,7 +188,11 @@ async function applyDcaTemplate(input: {
       symbol: built.config.symbol,
     };
   }
-  const sizeError = await rejectDcaMaxOrder(built.config, input.desk);
+  const sizeError = await rejectDcaMaxOrder(
+    built.config,
+    input.desk,
+    input.userId,
+  );
   if (sizeError) {
     return {
       templateId: input.template.id,

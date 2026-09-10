@@ -11,6 +11,7 @@ import {
   dcaClipKey,
   dcaClipCycleKey,
   dcaClipRestKey,
+  dcaConfigMarginError,
   dcaConfigMaxOrderError,
   dcaCycleEnded,
   dcaLiveQtyBlocksCycleEnd,
@@ -592,6 +593,109 @@ assert.equal(
     baseCoin: "BTC",
   }),
   null,
+);
+assert.equal(
+  dcaConfigMarginError({
+    config: {
+      direction: "long",
+      clipSize: 100,
+      sizeUnit: "usdt",
+      maxClips: 15,
+      maxValue: null,
+      maxValueKind: "usdt",
+      dipPct: null,
+      sizeMultiplier: 2,
+      deviationMultiplier: 1,
+    },
+    lastPrice: 100_000,
+    leverage: 10,
+    availableUsdt: 89_676.4,
+  }),
+  "This ladder needs $327,670 initial margin. Available is $89,676.4.",
+);
+assert.equal(
+  dcaConfigMarginError({
+    config: {
+      direction: "long",
+      clipSize: 100,
+      sizeUnit: "usdt",
+      maxClips: 3,
+      maxValue: null,
+      maxValueKind: "usdt",
+      dipPct: null,
+      sizeMultiplier: 2,
+      deviationMultiplier: 1,
+    },
+    lastPrice: 100_000,
+    leverage: 10,
+    availableUsdt: 89_676.4,
+  }),
+  null,
+);
+assert.equal(
+  dcaConfigMarginError({
+    config: {
+      direction: "both",
+      clipSize: 50_000,
+      sizeUnit: "usdt",
+      maxClips: 1,
+      maxValue: null,
+      maxValueKind: "usdt",
+      dipPct: null,
+      sizeMultiplier: 1,
+      deviationMultiplier: 1,
+    },
+    lastPrice: 100_000,
+    leverage: 10,
+    availableUsdt: 9_000,
+  }),
+  "Long and short need $10,000 initial margin. Available is $9,000.",
+);
+assert.equal(
+  dcaConfigMaxOrderError({
+    config: {
+      direction: "long",
+      dcaMode: "position",
+      clipSize: 100,
+      sizeUnit: "usdt",
+      maxClips: 15,
+      maxValue: null,
+      maxValueKind: "usdt",
+      dipPct: null,
+      sizeMultiplier: 2,
+      deviationMultiplier: 1,
+    },
+    lastPrice: 100_000,
+    maxQty: 119,
+    maxMktQty: 119,
+    baseCoin: "BTC",
+    leverage: 10,
+    availableUsdt: 89_676.4,
+  }),
+  "This ladder needs $327,670 initial margin. Available is $89,676.4.",
+);
+assert.equal(
+  dcaConfigMaxOrderError({
+    config: {
+      direction: "long",
+      dcaMode: "order",
+      clipSize: 100,
+      sizeUnit: "usdt",
+      maxClips: 3,
+      maxValue: null,
+      maxValueKind: "usdt",
+      dipPct: 1,
+      sizeMultiplier: 1,
+      deviationMultiplier: 1,
+    },
+    lastPrice: 0.4,
+    maxQty: 1_000_000,
+    maxMktQty: 1_000_000,
+    minPrice: 1,
+    tickSize: 0.1,
+    baseCoin: "BTC",
+  }),
+  "Entry # 2: Minimum limit is $1.",
 );
 assert.equal(dcaStartListens("immediate"), false);
 assert.equal(dcaStartListens("price"), true);

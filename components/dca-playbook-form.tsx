@@ -996,9 +996,12 @@ export function DcaPlaybookForm({
     maxMktQty: selectedPair?.maxMktQty ?? 0,
     minQty: selectedPair?.minQty ?? 0,
     minNotional: selectedPair?.minNotional ?? 0,
+    minPrice: selectedPair?.minPrice,
+    tickSize: selectedPair?.tickSize,
     baseCoin: selectedPair?.baseCoin ?? "Token",
     bookUsdt: accountBookUsdt,
     leverage,
+    availableUsdt: accountBookUsdt,
   });
   const ladderMaxError = sizeCheckReady ? ladderMaxErrorLive : null;
   const maxValueOverCap =
@@ -2572,9 +2575,9 @@ export function DcaPlaybookForm({
                 : formatUsdAmount(summary.initialMargin)
             }
             valueClass={
-              availableUsdt !== null &&
+              accountBookUsdt !== null &&
               summary.initialMargin !== null &&
-              summary.initialMargin > availableUsdt
+              summary.initialMargin > accountBookUsdt
                 ? "text-warning"
                 : "text-ink"
             }
@@ -2585,10 +2588,10 @@ export function DcaPlaybookForm({
                   : null
                 : [
                     `Max exposure ÷ ${leverage}×`,
-                    availableUsdt !== null
-                      ? summary.initialMargin > availableUsdt
-                        ? `Available ${formatUsdAmount(availableUsdt)} — less than this margin`
-                        : `Available ${formatUsdAmount(availableUsdt)}`
+                    accountBookUsdt !== null
+                      ? summary.initialMargin > accountBookUsdt
+                        ? `Available ${formatUsdAmount(accountBookUsdt)} — less than this margin`
+                        : `Available ${formatUsdAmount(accountBookUsdt)}`
                       : null,
                     showLadderTabs ? "This side only" : null,
                   ]

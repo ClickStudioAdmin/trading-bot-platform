@@ -4,6 +4,7 @@ import { positionMarginUsdt } from "@/lib/futures/stats";
 import {
   formatPerpMinQty,
   perpEffectiveMaxQty,
+  perpTicketLimitError,
   perpTicketSizeError,
 } from "@/lib/exchanges/bybit/ticket-size";
 
@@ -852,6 +853,64 @@ export function dcaLadderMaxOrderError(input: {
     return `${label} is ${qtyText} ${input.baseCoin}, above the ${maxText} ${input.baseCoin} ${kind}.`;
   }
   return dcaLadderMinOrderError(input);
+}
+
+export function dcaLadderRestPriceError(input: {
+  sides: readonly FuturesSide[];
+  entryPrice: number;
+  maxClips: number | null;
+  maxValue: number | null;
+  dipPct: number | null;
+  clipSize: number;
+  sizeUnit: "qty" | "usdt";
+  sizeMultiplier: number;
+  deviationMultiplier: number;
+  restGrid: boolean;
+  minPrice?: number;
+  tickSize?: number;
+}): string | null {
+  if (!input.restGrid) {
+    return null;
+  }
+  const minPrice = input.minPrice ?? 0;
+  const tickSize = input.tickSize ?? 0;
+  if (!(minPrice > 0) && !(tickSize > 0)) {
+    return null;
+  }
+  if (!(input.entryPrice > 0) || !(input.clipSize > 0)) {
+    return null;
+  }
+  for (const side of input.sides) {
+    const count = dcaPlannedOrderCount({ ...input, side });
+    const prices = dcaLadderOrderPrices({
+      side,
+      entryPrice: input.entryPrice,
+      count,
+      dipPct: input.dipPct,
+      deviationMultiplier: input.deviationMultiplier,
+    });
+    for (let i = 1; i < count; i += 1) {
+      const price = prices[i];
+      if (price == null) {
+        continue;
+      }
+      const err = perpTicketLimitError({
+        limitPrice: String(price),
+        minPrice,
+        tickSize,
+      });
+      if (!err) {
+        continue;
+      }
+      const entry = `Entry # ${i + 1}`;
+      const label =
+        input.sides.length > 1
+          ? `${side === "long" ? "Long" : "Short"} ${entry}`
+          : entry;
+      return `${label}: ${err}`;
+    }
+  }
+  return null;
 }
 
 function dcaLadderMinOrderError(input: {

@@ -1,3 +1,4 @@
+import { formatPerpMinQty } from "@/lib/exchanges/bybit/ticket-size";
 import {
   parseFuturesQty,
   parseFuturesSide,
@@ -25,8 +26,12 @@ import {
   dcaClipFromBudget,
   dcaClipSizeAt,
   dcaDipPctAt,
+  dcaInitialMarginUsdt,
   dcaLadderMaxOrderError,
+  dcaLadderRestPriceError,
   dcaPlannedExits,
+  dcaPlannedOrderCount,
+  dcaRequiredUsdt,
   dcaResolvedSafetyPrices,
   parseDcaAtrMult,
   parseDcaAtrPeriod,
@@ -455,6 +460,82 @@ export function dcaEnabledSides(direction: DcaDirection): FuturesSide[] {
   return [direction];
 }
 
+export function dcaConfigMarginError(input: {
+  config: Pick<
+    DcaPlaybookConfig,
+    | "direction"
+    | "clipSize"
+    | "sizeUnit"
+    | "maxClips"
+    | "maxValue"
+    | "maxValueKind"
+    | "dipPct"
+    | "sizeMultiplier"
+    | "deviationMultiplier"
+  >;
+  lastPrice: number | null;
+  bookUsdt?: number | null;
+  leverage?: number | null;
+  availableUsdt?: number | null;
+}): string | null {
+  const available = input.availableUsdt;
+  if (available == null || !Number.isFinite(available) || available < 0) {
+    return null;
+  }
+  const leverage = input.leverage;
+  if (leverage == null || !(leverage > 0)) {
+    return null;
+  }
+  const { config } = input;
+  if (!(config.clipSize > 0)) {
+    return null;
+  }
+  if (config.sizeUnit === "qty" && !(input.lastPrice && input.lastPrice > 0)) {
+    return null;
+  }
+  const maxValue = dcaResolvedMaxValueUsdt({
+    kind: config.maxValueKind,
+    maxValue: config.maxValue,
+    bookUsdt: input.bookUsdt ?? null,
+    leverage,
+  });
+  const sides = dcaEnabledSides(config.direction);
+  const entryPrice =
+    input.lastPrice && input.lastPrice > 0 ? input.lastPrice : 1;
+  let exposure = 0;
+  for (const side of sides) {
+    const clips = dcaPlannedOrderCount({
+      side,
+      entryPrice,
+      maxClips: config.maxClips,
+      maxValue,
+      dipPct: config.dipPct,
+      clipSize: config.clipSize,
+      sizeUnit: config.sizeUnit,
+      sizeMultiplier: config.sizeMultiplier,
+      deviationMultiplier: config.deviationMultiplier,
+    });
+    const sideExposure = dcaRequiredUsdt({
+      clipSize: config.clipSize,
+      sizeUnit: config.sizeUnit,
+      maxClips: clips,
+      sizeMultiplier: config.sizeMultiplier,
+      mark: input.lastPrice,
+    });
+    if (sideExposure == null) {
+      return null;
+    }
+    exposure += sideExposure;
+  }
+  const margin = dcaInitialMarginUsdt(exposure, leverage);
+  if (margin == null || !(margin > available)) {
+    return null;
+  }
+  const who =
+    sides.length > 1 ? "Long and short need" : "This ladder needs";
+  return `${who} $${formatPerpMinQty(margin)} initial margin. Available is $${formatPerpMinQty(available)}.`;
+}
+
 export function dcaConfigMaxOrderError(input: {
   config: Pick<
     DcaPlaybookConfig,
@@ -474,41 +555,78 @@ export function dcaConfigMaxOrderError(input: {
   maxMktQty: number;
   minQty?: number;
   minNotional?: number;
+  minPrice?: number;
+  tickSize?: number;
   baseCoin: string;
   bookUsdt?: number | null;
   leverage?: number | null;
+  availableUsdt?: number | null;
 }): string | null {
   const { config } = input;
   if (!(config.clipSize > 0)) {
     return null;
   }
-  if (config.sizeUnit === "usdt" && !(input.lastPrice && input.lastPrice > 0)) {
-    return null;
+  const resolvedMaxValue = dcaResolvedMaxValueUsdt({
+    kind: config.maxValueKind,
+    maxValue: config.maxValue,
+    bookUsdt: input.bookUsdt ?? null,
+    leverage: input.leverage ?? null,
+  });
+  const sides = dcaEnabledSides(config.direction);
+  const restGrid = config.dcaMode === "order";
+  const entryPrice =
+    input.lastPrice && input.lastPrice > 0 ? input.lastPrice : 1;
+  const canCheckVenueQty =
+    (input.maxQty > 0 || input.maxMktQty > 0) &&
+    (config.sizeUnit !== "usdt" ||
+      (input.lastPrice != null && input.lastPrice > 0));
+  if (canCheckVenueQty) {
+    const venue = dcaLadderMaxOrderError({
+      sides,
+      restGrid,
+      entryPrice,
+      maxClips: config.maxClips,
+      maxValue: resolvedMaxValue,
+      dipPct: config.dipPct,
+      clipSize: config.clipSize,
+      sizeUnit: config.sizeUnit,
+      sizeMultiplier: config.sizeMultiplier,
+      deviationMultiplier: config.deviationMultiplier,
+      maxQty: input.maxQty,
+      maxMktQty: input.maxMktQty,
+      minQty: input.minQty ?? 0,
+      minNotional: input.minNotional ?? 0,
+      baseCoin: input.baseCoin,
+    });
+    if (venue) {
+      return venue;
+    }
   }
-  if (!(input.maxQty > 0) && !(input.maxMktQty > 0)) {
-    return null;
+  if (restGrid && input.lastPrice != null && input.lastPrice > 0) {
+    const restPrice = dcaLadderRestPriceError({
+      sides,
+      restGrid,
+      entryPrice: input.lastPrice,
+      maxClips: config.maxClips,
+      maxValue: resolvedMaxValue,
+      dipPct: config.dipPct,
+      clipSize: config.clipSize,
+      sizeUnit: config.sizeUnit,
+      sizeMultiplier: config.sizeMultiplier,
+      deviationMultiplier: config.deviationMultiplier,
+      minPrice: input.minPrice,
+      tickSize: input.tickSize,
+    });
+    if (restPrice) {
+      return restPrice;
+    }
   }
-  return dcaLadderMaxOrderError({
-    sides: dcaEnabledSides(config.direction),
-    restGrid: config.dcaMode === "order",
-    entryPrice: input.lastPrice && input.lastPrice > 0 ? input.lastPrice : 1,
-    maxClips: config.maxClips,
-    maxValue: dcaResolvedMaxValueUsdt({
-      kind: config.maxValueKind,
-      maxValue: config.maxValue,
-      bookUsdt: input.bookUsdt ?? null,
-      leverage: input.leverage ?? null,
-    }),
-    dipPct: config.dipPct,
-    clipSize: config.clipSize,
-    sizeUnit: config.sizeUnit,
-    sizeMultiplier: config.sizeMultiplier,
-    deviationMultiplier: config.deviationMultiplier,
-    maxQty: input.maxQty,
-    maxMktQty: input.maxMktQty,
-    minQty: input.minQty ?? 0,
-    minNotional: input.minNotional ?? 0,
-    baseCoin: input.baseCoin,
+  return dcaConfigMarginError({
+    config,
+    lastPrice: input.lastPrice,
+    bookUsdt: input.bookUsdt,
+    leverage: input.leverage,
+    availableUsdt: input.availableUsdt,
   });
 }
 

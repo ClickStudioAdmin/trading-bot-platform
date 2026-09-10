@@ -11,6 +11,7 @@ import {
   dcaLadderLevels,
   dcaLadderLossRange,
   dcaLadderMaxOrderError,
+  dcaLadderRestPriceError,
   dcaLadderProfitRange,
   dcaInitialMarginUsdt,
   dcaLastClipDeviationPct,
@@ -264,6 +265,23 @@ assert.equal(
     baseCoin: "BTC",
   }),
   "Entry # 1: Minimum order is $10 (0.1 BTC).",
+);
+assert.equal(
+  dcaLadderRestPriceError({
+    sides: ["long"],
+    entryPrice: 0.4,
+    maxClips: 3,
+    maxValue: null,
+    dipPct: 1,
+    clipSize: 100,
+    sizeUnit: "usdt",
+    sizeMultiplier: 1,
+    deviationMultiplier: 1,
+    restGrid: true,
+    minPrice: 1,
+    tickSize: 0.1,
+  }),
+  "Entry # 2: Minimum limit is $1.",
 );
 assert.equal(dcaDipPctAt(0, 1, 2), 1);
 assert.equal(dcaDipPctAt(1, 1, 2), 2);
