@@ -1992,8 +1992,8 @@ export function DcaPlaybookForm({
         </BotFormGroup>
 
         <BotFormGroup
-          title="Add spacing"
-          hint="This method applies to every add after the first fill. The step next to Spacing is the first add; later adds use the same method."
+          title="Additional Order Rules"
+          hint="How later clips are triggered and filled. Size and distance live in Additional Order Sizes."
           locked={cycleLocked}
         >
           <div className={botRowClass5}>
@@ -2033,50 +2033,6 @@ export function DcaPlaybookForm({
             ) : (
               <input type="hidden" name="spacingKind" value="percent" />
             )}
-            {averaging === "dip" && spacingKind === "percent" ? (
-              <label className={labelClass}>
-                <HintLabel
-                  text="Price deviation %"
-                  hint="Distance from the previous fill for the first add. Later adds use this times Price deviation multiplier."
-                  required
-                />
-                <PercentInput
-                  name="dipPct"
-                  value={dipPct}
-                  onChange={setDipPct}
-                  ariaLabel="Price deviation percent"
-                />
-              </label>
-            ) : null}
-            {averaging === "dip" && spacingKind === "atr" ? (
-              <>
-                <label className={labelClass}>
-                  <HintLabel text="ATR period" required />
-                  <GroupedNumberInput
-                    name="atrPeriod"
-                    value={atrPeriod}
-                    onChange={setAtrPeriod}
-                    className={fieldClass}
-                    ariaLabel="ATR period"
-                  />
-                </label>
-                <label className={labelClass}>
-                  <HintLabel
-                    text="ATR spacing"
-                    hint="First-add distance in ATR multiples. Later adds use this times Price deviation multiplier."
-                    required
-                  />
-                  <GroupedNumberInput
-                    name="atrSpacingMult"
-                    value={atrSpacingMult}
-                    onChange={setAtrSpacingMult}
-                    allowDecimal
-                    className={fieldClass}
-                    ariaLabel="ATR spacing multiple"
-                  />
-                </label>
-              </>
-            ) : null}
             {averaging === "interval" ? (
               <div>
                 <p className={labelClass}>
@@ -2128,37 +2084,37 @@ export function DcaPlaybookForm({
           </div>
         </BotFormGroup>
         <BotFormGroup
-          title="Later add scaling"
-          hint="How size and distance grow after the first add. 1 keeps later adds the same as the first add."
+          title="Additional Order Sizes"
+          hint="First-add distance plus how size and distance grow on later clips. Entry #1 uses Initial Order Size."
           locked={cycleLocked}
         >
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setSizeMultiplier("1");
-                  setDeviationMultiplier("1");
-                }}
-                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
-              >
-                Equal orders
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSizeMultiplier("2");
-                  setDeviationMultiplier("1.5");
-                }}
-                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
-              >
-                Martingale
-              </button>
-            </div>
-            <label className={`${labelClass} min-w-40 flex-1`}>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSizeMultiplier("1");
+                setDeviationMultiplier("1");
+              }}
+              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
+            >
+              Equal orders
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSizeMultiplier("2");
+                setDeviationMultiplier("1.5");
+              }}
+              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
+            >
+              Martingale
+            </button>
+          </div>
+          <div className={botRowClass5}>
+            <label className={labelClass}>
               <HintLabel
                 text="Order size multiplier"
-                hint="1 keeps every clip the same size. 1.5 means each later clip is 1.5× the last."
+                hint="Applies from Entry #2. 1 keeps every clip the same size. 1.5 means each later clip is 1.5× the last."
                 required
               />
               <GroupedNumberInput
@@ -2173,20 +2129,68 @@ export function DcaPlaybookForm({
                 }`}
               />
             </label>
-            <label className={`${labelClass} min-w-40 flex-1`}>
-              <HintLabel
-                text="Price deviation multiplier"
-                hint="1 keeps every add the same distance. Above 1 widens each later step. Does not replace Price deviation % or ATR spacing."
-                required
-              />
-              <GroupedNumberInput
-                name="deviationMultiplier"
-                value={deviationMultiplier}
-                onChange={setDeviationMultiplier}
-                allowDecimal
-                className={fieldClass}
-              />
-            </label>
+            {averaging === "dip" && spacingKind === "percent" ? (
+              <label className={labelClass}>
+                <HintLabel
+                  text="Price deviation %"
+                  hint="Distance from the previous fill for Entry #2. Later adds use this times Price deviation multiplier."
+                  required
+                />
+                <PercentInput
+                  name="dipPct"
+                  value={dipPct}
+                  onChange={setDipPct}
+                  ariaLabel="Price deviation percent"
+                />
+              </label>
+            ) : null}
+            {averaging === "dip" && spacingKind === "atr" ? (
+              <>
+                <label className={labelClass}>
+                  <HintLabel text="ATR period" required />
+                  <GroupedNumberInput
+                    name="atrPeriod"
+                    value={atrPeriod}
+                    onChange={setAtrPeriod}
+                    className={fieldClass}
+                    ariaLabel="ATR period"
+                  />
+                </label>
+                <label className={labelClass}>
+                  <HintLabel
+                    text="ATR spacing"
+                    hint="Entry #2 distance in ATR multiples. Later adds use this times Price deviation multiplier."
+                    required
+                  />
+                  <GroupedNumberInput
+                    name="atrSpacingMult"
+                    value={atrSpacingMult}
+                    onChange={setAtrSpacingMult}
+                    allowDecimal
+                    className={fieldClass}
+                    ariaLabel="ATR spacing multiple"
+                  />
+                </label>
+              </>
+            ) : null}
+            {averaging === "dip" ? (
+              <label className={labelClass}>
+                <HintLabel
+                  text="Price deviation multiplier"
+                  hint="Applies from Entry #3. 1 keeps every add the same distance as Price deviation % or ATR spacing."
+                  required
+                />
+                <GroupedNumberInput
+                  name="deviationMultiplier"
+                  value={deviationMultiplier}
+                  onChange={setDeviationMultiplier}
+                  allowDecimal
+                  className={fieldClass}
+                />
+              </label>
+            ) : (
+              <input type="hidden" name="deviationMultiplier" value={deviationMultiplier} />
+            )}
           </div>
           {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
         </BotFormGroup>

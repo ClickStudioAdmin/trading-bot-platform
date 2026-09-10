@@ -1610,8 +1610,8 @@ export function ThemeBotFormDraft() {
 
         {desk === "dca" ? (
         <Group
-          title="Add spacing"
-          hint="This method applies to every add after the first fill. The step next to Spacing is the first add; later adds use the same method."
+          title="Additional Order Rules"
+          hint="How later clips are triggered and filled. Size and distance live in Additional Order Sizes."
         >
           <div className={rowClass5}>
             <Field label="Averaging" className="lg:col-span-2" required>
@@ -1645,56 +1645,6 @@ export function ThemeBotFormDraft() {
                   <option value="atr">ATR</option>
                 </select>
               </Field>
-            ) : null}
-            {averaging === "dip" && spacingKind === "percent" ? (
-              <Field
-                label="Price deviation %"
-                hint="Distance from the previous fill for the first add. Later adds use this times Price deviation multiplier."
-                required
-              >
-                <span className="relative mt-1 block">
-                  <GroupedNumberInput
-                    value={dipPct}
-                    onChange={setDipPct}
-                    allowDecimal
-                    className={`${fieldClass} mt-0 pr-7`}
-                  />
-                  <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
-                    %
-                  </span>
-                </span>
-              </Field>
-            ) : null}
-            {averaging === "dip" && spacingKind === "atr" ? (
-              <>
-                <Field label="ATR period" required>
-                  <GroupedNumberInput
-                    value={atrPeriod}
-                    onChange={setAtrPeriod}
-                    className={
-                      showFieldErrors && missing.atrPeriod
-                        ? fieldInvalidClass
-                        : fieldClass
-                    }
-                  />
-                </Field>
-                <Field
-                  label="ATR spacing"
-                  hint="First-add distance in ATR multiples. Later adds use this times Price deviation multiplier."
-                  required
-                >
-                  <GroupedNumberInput
-                    value={atrSpacing}
-                    onChange={setAtrSpacing}
-                    allowDecimal
-                    className={
-                      showFieldErrors && missing.atrSpacing
-                        ? fieldInvalidClass
-                        : fieldClass
-                    }
-                  />
-                </Field>
-              </>
             ) : null}
             {averaging === "interval" ? (
               <div>
@@ -1747,36 +1697,35 @@ export function ThemeBotFormDraft() {
 
         {desk === "dca" ? (
         <Group
-          title="Later add scaling"
-          hint="How size and distance grow after the first add. 1 keeps later adds the same as the first add."
+          title="Additional Order Sizes"
+          hint="First-add distance plus how size and distance grow on later clips. Entry #1 uses Initial Order Size."
         >
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
-                onClick={() => {
-                  setSizeMultiplier("1");
-                  setDeviationMultiplier("1");
-                }}
-              >
-                Equal orders
-              </button>
-              <button
-                type="button"
-                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
-                onClick={() => {
-                  setSizeMultiplier("2");
-                  setDeviationMultiplier("1.5");
-                }}
-              >
-                Martingale
-              </button>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
+              onClick={() => {
+                setSizeMultiplier("1");
+                setDeviationMultiplier("1");
+              }}
+            >
+              Equal orders
+            </button>
+            <button
+              type="button"
+              className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs text-ink"
+              onClick={() => {
+                setSizeMultiplier("2");
+                setDeviationMultiplier("1.5");
+              }}
+            >
+              Martingale
+            </button>
+          </div>
+          <div className={rowClass5}>
             <Field
               label="Order size multiplier"
-              hint="1 keeps every clip the same size. 1.5 means each later clip is 1.5× the last."
-              className="min-w-40 flex-1"
+              hint="Applies from Entry #2. 1 keeps every clip the same size. 1.5 means each later clip is 1.5× the last."
               required
             >
               <GroupedNumberInput
@@ -1786,19 +1735,70 @@ export function ThemeBotFormDraft() {
                 className={fieldClass}
               />
             </Field>
-            <Field
-              label="Price deviation multiplier"
-              hint="1 keeps every add the same distance. Above 1 widens each later step. Does not replace Price deviation % or ATR spacing."
-              className="min-w-40 flex-1"
-              required
-            >
-              <GroupedNumberInput
-                value={deviationMultiplier}
-                onChange={setDeviationMultiplier}
-                allowDecimal
-                className={fieldClass}
-              />
-            </Field>
+            {averaging === "dip" && spacingKind === "percent" ? (
+              <Field
+                label="Price deviation %"
+                hint="Distance from the previous fill for Entry #2. Later adds use this times Price deviation multiplier."
+                required
+              >
+                <span className="relative mt-1 block">
+                  <GroupedNumberInput
+                    value={dipPct}
+                    onChange={setDipPct}
+                    allowDecimal
+                    className={`${fieldClass} mt-0 pr-7`}
+                  />
+                  <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                    %
+                  </span>
+                </span>
+              </Field>
+            ) : null}
+            {averaging === "dip" && spacingKind === "atr" ? (
+              <>
+                <Field label="ATR period" required>
+                  <GroupedNumberInput
+                    value={atrPeriod}
+                    onChange={setAtrPeriod}
+                    className={
+                      showFieldErrors && missing.atrPeriod
+                        ? fieldInvalidClass
+                        : fieldClass
+                    }
+                  />
+                </Field>
+                <Field
+                  label="ATR spacing"
+                  hint="Entry #2 distance in ATR multiples. Later adds use this times Price deviation multiplier."
+                  required
+                >
+                  <GroupedNumberInput
+                    value={atrSpacing}
+                    onChange={setAtrSpacing}
+                    allowDecimal
+                    className={
+                      showFieldErrors && missing.atrSpacing
+                        ? fieldInvalidClass
+                        : fieldClass
+                    }
+                  />
+                </Field>
+              </>
+            ) : null}
+            {averaging === "dip" ? (
+              <Field
+                label="Price deviation multiplier"
+                hint="Applies from Entry #3. 1 keeps every add the same distance as Price deviation % or ATR spacing."
+                required
+              >
+                <GroupedNumberInput
+                  value={deviationMultiplier}
+                  onChange={setDeviationMultiplier}
+                  allowDecimal
+                  className={fieldClass}
+                />
+              </Field>
+            ) : null}
           </div>
         </Group>
         ) : null}

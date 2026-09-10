@@ -12,7 +12,7 @@ Push `develop` so GitHub Actions migrates the development database (`20260909120
 
 ## Wave 1 — ATR spacing + ATR take profit
 
-Add spacing: Spacing `%` | `ATR`. Geometric ATR step is `atr * atr_spacing_mult * deviationMultiplier^addIndex` from the previous clip (absolute ATR distance, not % of price). Rest-grid converts that distance to a limit at rest time and reprices after each add.
+Additional Order Rules: Spacing `%` | `ATR`. Additional Order Sizes hold ATR period / spacing and the deviation multiplier. Geometric ATR step is `atr * atr_spacing_mult * deviationMultiplier^addIndex` from the previous clip (absolute ATR distance, not % of price). Rest-grid converts that distance to a limit at rest time and reprices after each add.
 
 Take profit: Method `%` | `ATR × multiplier` from the same basis (average / first fill). `%` TP is still PnL %. ATR TP compares mark to the ATR price. Trailing stays `%`.
 
