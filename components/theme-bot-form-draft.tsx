@@ -1610,7 +1610,7 @@ export function ThemeBotFormDraft() {
 
         {desk === "dca" ? (
         <Group
-          title="Add spacing"
+          title="Additional Order Types"
           hint="This method applies to every add after the first fill. The step next to Spacing is the first add; later adds use the same method."
         >
           <div className={rowClass5}>
@@ -1648,7 +1648,7 @@ export function ThemeBotFormDraft() {
             ) : null}
             {averaging === "dip" && spacingKind === "percent" ? (
               <Field
-                label="Price deviation %"
+                label="Initial Price Deviation"
                 hint="Distance from the previous fill for the first add. Later adds use this times Price deviation multiplier."
                 required
               >
@@ -1747,7 +1747,7 @@ export function ThemeBotFormDraft() {
 
         {desk === "dca" ? (
         <Group
-          title="Later add scaling"
+          title="Additional Order Scaling"
           hint="How size and distance grow after the first add. 1 keeps later adds the same as the first add."
         >
           <div className="flex flex-wrap items-end gap-3">
@@ -1788,7 +1788,7 @@ export function ThemeBotFormDraft() {
             </Field>
             <Field
               label="Price deviation multiplier"
-              hint="1 keeps every add the same distance. Above 1 widens each later step. Does not replace Price deviation % or ATR spacing."
+              hint="1 keeps every add the same distance. Above 1 widens each later step. Does not replace Initial Price Deviation or ATR spacing."
               className="min-w-40 flex-1"
               required
             >

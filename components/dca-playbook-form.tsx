@@ -1992,7 +1992,7 @@ export function DcaPlaybookForm({
         </BotFormGroup>
 
         <BotFormGroup
-          title="Add spacing"
+          title="Additional Order Types"
           hint="This method applies to every add after the first fill. The step next to Spacing is the first add; later adds use the same method."
           locked={cycleLocked}
         >
@@ -2036,7 +2036,7 @@ export function DcaPlaybookForm({
             {averaging === "dip" && spacingKind === "percent" ? (
               <label className={labelClass}>
                 <HintLabel
-                  text="Price deviation %"
+                  text="Initial Price Deviation"
                   hint="Distance from the previous fill for the first add. Later adds use this times Price deviation multiplier."
                   required
                 />
@@ -2128,7 +2128,7 @@ export function DcaPlaybookForm({
           </div>
         </BotFormGroup>
         <BotFormGroup
-          title="Later add scaling"
+          title="Additional Order Scaling"
           hint="How size and distance grow after the first add. 1 keeps later adds the same as the first add."
           locked={cycleLocked}
         >
@@ -2176,7 +2176,7 @@ export function DcaPlaybookForm({
             <label className={`${labelClass} min-w-40 flex-1`}>
               <HintLabel
                 text="Price deviation multiplier"
-                hint="1 keeps every add the same distance. Above 1 widens each later step. Does not replace Price deviation % or ATR spacing."
+                hint="1 keeps every add the same distance. Above 1 widens each later step. Does not replace Initial Price Deviation or ATR spacing."
                 required
               />
               <GroupedNumberInput
@@ -2594,7 +2594,7 @@ export function DcaPlaybookForm({
                       ? `First add ${summary.spacingHint} from last clip`
                       : "First add 1 ATR from last clip"
                 : summary.covered === null
-                  ? "Set max orders and price deviation %"
+                  ? "Set max orders and initial price deviation"
                   : "First fill to last clip"
             }
           />
@@ -2866,7 +2866,7 @@ export function DcaPlaybookForm({
             {averaging === "dip"
               ? spacingKind === "atr"
                 ? " ATR spacing sets later prices from last clip."
-                : " Price deviation % sets later prices."
+                : " Initial Price Deviation sets later prices."
               : ""}
           </p>
         )}

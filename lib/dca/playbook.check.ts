@@ -1416,7 +1416,7 @@ missingDip.set("averaging", "dip");
 const missingDipParsed = parseDcaPlaybookForm(missingDip);
 assert.equal(missingDipParsed.ok, false);
 if (!missingDipParsed.ok) {
-  assert.equal(missingDipParsed.error, "Enter a price deviation %.");
+  assert.equal(missingDipParsed.error, "Enter an initial price deviation.");
 }
 
 const dipForm = new FormData();

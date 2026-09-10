@@ -1481,7 +1481,7 @@ export function parseDcaPlaybookForm(
     dipPct.value === null &&
     (String(form.get("averaging") ?? "").trim() === "dip" || restGrid)
   ) {
-    return { ok: false, error: "Enter a price deviation %." };
+    return { ok: false, error: "Enter an initial price deviation." };
   }
   if (spacingKind === "atr") {
     if (atrPeriod == null) {
