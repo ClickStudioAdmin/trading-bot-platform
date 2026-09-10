@@ -169,8 +169,37 @@ assert.equal(exitsParsed.ok, true);
 if (exitsParsed.ok) {
   assert.equal(exitsParsed.rules[0]?.tpsl?.takeProfit, 95000);
   assert.equal(exitsParsed.rules[0]?.tpsl?.stopLoss, 85000);
+  assert.equal(exitsParsed.rules[0]?.tpsl?.tpKind, "price");
+  assert.equal(exitsParsed.rules[0]?.tpsl?.slKind, "price");
   assert.equal(exitsParsed.rules[0]?.tpsl?.tpTrigger, "last");
   assert.equal(exitsParsed.rules[0]?.tpsl?.slTrigger, "mark");
+}
+
+const percentExits = new FormData();
+percentExits.set("ruleCount", "1");
+percentExits.set("r0_name", "Pct");
+percentExits.set("r0_mode", "active");
+percentExits.set("r0_symbol", "BTCUSDT");
+percentExits.set("r0_action", "buy");
+percentExits.set("r0_orderType", "market");
+percentExits.set("r0_sizeUnit", "qty");
+percentExits.set("r0_size", "0.01");
+percentExits.set("r0_triggerBy", "last");
+percentExits.set("r0_triggerCompare", "gte");
+percentExits.set("r0_triggerPrice", "90000");
+percentExits.set("r0_tpsl", "on");
+percentExits.set("r0_tpKind", "percent");
+percentExits.set("r0_slKind", "percent");
+percentExits.set("r0_takeProfit", "2");
+percentExits.set("r0_stopLoss", "1");
+percentExits.set("r0_tpslMode", "full");
+const percentExitsParsed = parseFuturesAutomationForm(percentExits);
+assert.equal(percentExitsParsed.ok, true);
+if (percentExitsParsed.ok) {
+  assert.equal(percentExitsParsed.rules[0]?.tpsl?.tpKind, "percent");
+  assert.equal(percentExitsParsed.rules[0]?.tpsl?.takeProfit, 2);
+  assert.equal(percentExitsParsed.rules[0]?.tpsl?.slKind, "percent");
+  assert.equal(percentExitsParsed.rules[0]?.tpsl?.stopLoss, 1);
 }
 
 const close = new FormData();

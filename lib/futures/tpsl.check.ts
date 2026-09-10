@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import type { FuturesTpsl } from "./tpsl";
 import {
   estimatedTpslPnl,
+  futuresTpslPercentPrice,
   paperStopCloseQty,
   paperStopHit,
   parseFuturesTpslForm,
   parseFuturesTrigger,
+  resolveFuturesTpslPrices,
   tpslAfterStopHit,
   validateTpslQty,
   validateTpslVsReference,
@@ -366,5 +368,63 @@ assert.equal(venueWithoutLimitTp.takeProfit, null);
 assert.equal(venueWithoutLimitTp.stopLoss, 70000);
 assert.equal(venueWithoutLimitTp.tpOrderType, "market");
 assert.equal(venueWithoutLimitTp.slOrderType, "market");
+
+const longTp = futuresTpslPercentPrice({
+  side: "long",
+  entryPrice: 100,
+  percent: 2,
+  kind: "take_profit",
+});
+assert.equal(longTp.ok && longTp.price, 102);
+const longSl = futuresTpslPercentPrice({
+  side: "long",
+  entryPrice: 100,
+  percent: 1.5,
+  kind: "stop_loss",
+});
+assert.equal(longSl.ok && longSl.price, 98.5);
+const shortTp = futuresTpslPercentPrice({
+  side: "short",
+  entryPrice: 100,
+  percent: 2,
+  kind: "take_profit",
+});
+assert.equal(shortTp.ok && shortTp.price, 98);
+assert.equal(
+  futuresTpslPercentPrice({
+    side: "long",
+    entryPrice: 100,
+    percent: 100,
+    kind: "stop_loss",
+  }).ok,
+  false,
+);
+
+const percentForm = new FormData();
+percentForm.set("tpsl", "on");
+percentForm.set("tpKind", "percent");
+percentForm.set("slKind", "percent");
+percentForm.set("takeProfit", "2");
+percentForm.set("stopLoss", "1.5");
+const percentParsed = parseFuturesTpslForm(percentForm, undefined);
+assert.equal(percentParsed.ok, true);
+if (percentParsed.ok && percentParsed.tpsl) {
+  assert.equal(percentParsed.tpsl.tpKind, "percent");
+  assert.equal(percentParsed.tpsl.slKind, "percent");
+  assert.equal(percentParsed.tpsl.takeProfit, 2);
+  assert.equal(percentParsed.tpsl.stopLoss, 1.5);
+  const resolved = resolveFuturesTpslPrices({
+    tpsl: percentParsed.tpsl,
+    side: "long",
+    entryPrice: 100,
+  });
+  assert.equal(resolved.ok, true);
+  if (resolved.ok) {
+    assert.equal(resolved.tpsl.takeProfit, 102);
+    assert.equal(resolved.tpsl.stopLoss, 98.5);
+    assert.equal(resolved.tpsl.tpKind, "price");
+    assert.equal(resolved.tpsl.slKind, "price");
+  }
+}
 
 console.log("futures tpsl checks passed");

@@ -509,6 +509,15 @@ function formatLogDataField(
         return { label, value: decision };
       }
     }
+    if (key === "entrySource") {
+      const sources: Record<string, string> = {
+        price: "Price",
+        indicator: "Indicator",
+        trend: "Trend",
+        webhook: "Signal webhook",
+      };
+      return { label, value: sources[value] ?? value };
+    }
     if (key === "clipIndex" && /^\d+$/.test(value)) {
       return { label: "Ladder", value: dcaEntryLabel(Number(value)) };
     }
@@ -552,6 +561,8 @@ const LOG_FIELD_LABELS: Record<string, string> = {
   mode: "Mode",
   reason: "Reason",
   closeReason: "Reason",
+  why: "Why",
+  entrySource: "Entry",
   ruleName: "Bot",
   webhook: "Webhook",
   closeMaxDte: "Close max DTE",
@@ -598,10 +609,12 @@ function formatLogReason(reason: string): string {
     mark_apr: "Mark APR",
     take_profit: "Take profit",
     stop_loss: "Stop loss",
+    exit_if: "Hard Exit",
     end_cycle: "Cycle end",
     close_playbook: "Close bot",
     position_open: "Position still open",
     clip: "Add order",
+    arm: "Start met",
   };
   return labels[reason] ?? dcaSyncReasonLabel(reason) ?? reason;
 }
@@ -650,6 +663,10 @@ function formatLogEvent(event: string): string {
     "engine.fired": "Bot fired",
     "engine.open_failed": "Engine open failed",
     "engine.close_failed": "Engine close failed",
+    "engine.exit_if": "Hard Exit",
+    "engine.exit_if_failed": "Hard Exit failed",
+    "engine.breakeven": "Moved breakeven",
+    "engine.breakeven_failed": "Breakeven failed",
   };
   return labels[event] ?? event;
 }

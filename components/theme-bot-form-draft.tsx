@@ -358,6 +358,35 @@ function OffNumber({
   );
 }
 
+function PercentField({
+  value,
+  onChange,
+  required = false,
+  invalid = false,
+  placeholder,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  required?: boolean;
+  invalid?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <span className="relative mt-1 block">
+      <GroupedNumberInput
+        value={value}
+        onChange={onChange}
+        allowDecimal
+        placeholder={placeholder ?? (required ? "" : "Off")}
+        className={`${invalid ? fieldInvalidClass : fieldClass} mt-0 pr-7`}
+      />
+      <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+        %
+      </span>
+    </span>
+  );
+}
+
 function SideBlock({
   title,
   children,
@@ -539,12 +568,16 @@ export function ThemeBotFormDraft() {
   const [maxValue, setMaxValue] = useState("");
   const [tpMethod, setTpMethod] = useState<ExitMethod>("percent");
   const [tpValue, setTpValue] = useState("");
+  const [tpBasis, setTpBasis] = useState("average");
+  const [tpTrigger, setTpTrigger] = useState("last");
   const [tpOrderType, setTpOrderType] = useState("market");
   const [tpLimitPrice, setTpLimitPrice] = useState("");
   const [trailValue, setTrailValue] = useState("");
   const [trailTrigger, setTrailTrigger] = useState("");
   const [slMethod, setSlMethod] = useState<ExitMethod>("");
   const [slValue, setSlValue] = useState("");
+  const [slBasis, setSlBasis] = useState("average");
+  const [slTrigger, setSlTrigger] = useState("last");
   const [slOrderType, setSlOrderType] = useState("market");
   const [slLimitPrice, setSlLimitPrice] = useState("");
   const [breakevenAt, setBreakevenAt] = useState("");
@@ -614,12 +647,16 @@ export function ThemeBotFormDraft() {
     maxValue,
     tpMethod,
     tpValue,
+    tpBasis,
+    tpTrigger,
     tpOrderType,
     tpLimitPrice,
     trailValue,
     trailTrigger,
     slMethod,
     slValue,
+    slBasis,
+    slTrigger,
     slOrderType,
     slLimitPrice,
     breakevenAt,
@@ -696,8 +733,24 @@ export function ThemeBotFormDraft() {
     !filled(dipPct);
   const requireAtrSpacing =
     desk === "dca" && averaging === "dip" && spacingKind === "atr" && !filled(atrSpacing);
+  const requireAtrPeriod =
+    desk === "dca" &&
+    ((averaging === "dip" && spacingKind === "atr") ||
+      (tpOn && tpMethod === "atr")) &&
+    !filled(atrPeriod);
+  const requireInterval =
+    desk === "dca" && averaging === "interval" && !filled(intervalValue);
+  const requireMaxClips =
+    desk === "dca" && averaging === "dip" && restGrid && !filled(maxClips);
   const requireMaxValue =
     desk === "dca" && maxValueMode !== "none" && !filled(maxValue);
+  const requireTpLimit =
+    desk === "perps" && !closing && tpOn && tpOrderType === "limit" && !filled(tpLimitPrice);
+  const requireSlLimit =
+    desk === "perps" && !closing && slOn && slOrderType === "limit" && !filled(slLimitPrice);
+  const requireMaxPairs = desk === "cnc" && !filled(maxOpenCount);
+  const requireCarrySize =
+    desk === "cnc" && carrySizeType === "fixed" && !filled(orderSizeUsdt);
   const missing = {
     priceLevel: requirePrice && !filled(priceLevel),
     shortPriceLevel: requirePrice && bothSides && !filled(shortPriceLevel),
@@ -705,16 +758,22 @@ export function ThemeBotFormDraft() {
     webhookId: requireWebhook,
     size: requireSize,
     dipPct: requireDip,
+    atrPeriod: requireAtrPeriod,
     atrSpacing: requireAtrSpacing,
+    intervalValue: requireInterval,
+    maxClips: requireMaxClips,
     maxValue: requireMaxValue,
     tpValue: requireTp && !filled(tpValue),
+    tpLimitPrice: requireTpLimit,
     slValue: requireSl && !filled(slValue),
+    slLimitPrice: requireSlLimit,
     trailValue: requireTrail && !filled(trailValue),
     trailTrigger: requireTrailTrigger && !filled(trailTrigger),
     breakevenAt: requireBreakeven && !filled(breakevenAt),
-    breakevenOffset: requireBreakeven && desk === "dca" && !filled(breakevenOffset),
     carryTp: requireCarryTp && !filled(carryTp),
     carrySl: requireCarrySl && !filled(carrySl),
+    maxOpenCount: requireMaxPairs,
+    orderSizeUsdt: requireCarrySize,
     confirm: requireConfirm && !dcaFilterComplete(confirm),
     shortConfirm: requireShortConfirm && !dcaFilterComplete(shortConfirm),
     exitIf: requireExitIf && !dcaFilterComplete(exitIf),
@@ -921,6 +980,7 @@ export function ThemeBotFormDraft() {
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
+              maxLength={40}
               className={fieldClass}
             />
           </Field>
@@ -1365,11 +1425,7 @@ export function ThemeBotFormDraft() {
                 setConfirmOn(next);
                 setConfirm(
                   next
-                    ? (confirm ??
-                      dcaFilterSpecForKind(
-                        "rsi",
-                        direction === "short" ? "short" : "long",
-                      ))
+                    ? (confirm ?? dcaFilterSpecForKind("rsi", entrySide))
                     : null,
                 );
               }}
@@ -1377,7 +1433,7 @@ export function ThemeBotFormDraft() {
               <DcaFilterBlock
                 label="Kind"
                 prefix="themeConfirm"
-                side={direction === "short" ? "short" : "long"}
+                side={entrySide}
                 spec={confirm}
                 onChange={setConfirm}
                 dense
@@ -1394,11 +1450,15 @@ export function ThemeBotFormDraft() {
         {desk === "dca" && !closing ? (
           <Group title="Maximum Exposure">
             <div className={rowClass}>
-              <Field label="Max orders">
+              <Field label="Max orders" required={averaging === "dip" && restGrid}>
                 <GroupedNumberInput
                   value={maxClips}
                   onChange={setMaxClips}
-                  className={fieldClass}
+                  className={
+                    showFieldErrors && missing.maxClips
+                      ? fieldInvalidClass
+                      : fieldClass
+                  }
                   placeholder="No cap"
                 />
               </Field>
@@ -1443,7 +1503,11 @@ export function ThemeBotFormDraft() {
                     value={maxValue}
                     onChange={setMaxValue}
                     allowDecimal
-                    className={fieldClass}
+                    className={
+                      showFieldErrors && missing.maxValue
+                        ? fieldInvalidClass
+                        : fieldClass
+                    }
                     placeholder={
                       maxValueMode === "percent" || maxValueMode === "margin"
                         ? "e.g. 20"
@@ -1510,9 +1574,10 @@ export function ThemeBotFormDraft() {
                   <Field label="Unit" required>
                     <select
                       value={sizeUnit}
-                      onChange={(event) =>
-                        setSizeUnit(event.target.value as "qty" | "usdt")
-                      }
+                      onChange={(event) => {
+                        setSizeUnit(event.target.value as "qty" | "usdt");
+                        setSize("");
+                      }}
                       className={fieldClass}
                     >
                       <option value="usdt">USDT</option>
@@ -1594,7 +1659,11 @@ export function ThemeBotFormDraft() {
                   <GroupedNumberInput
                     value={atrPeriod}
                     onChange={setAtrPeriod}
-                    className={fieldClass}
+                    className={
+                      showFieldErrors && missing.atrPeriod
+                        ? fieldInvalidClass
+                        : fieldClass
+                    }
                   />
                 </Field>
                 <Field label="ATR spacing" required>
@@ -1602,7 +1671,11 @@ export function ThemeBotFormDraft() {
                     value={atrSpacing}
                     onChange={setAtrSpacing}
                     allowDecimal
-                    className={fieldClass}
+                    className={
+                      showFieldErrors && missing.atrSpacing
+                        ? fieldInvalidClass
+                        : fieldClass
+                    }
                   />
                 </Field>
               </>
@@ -1630,7 +1703,11 @@ export function ThemeBotFormDraft() {
                   <GroupedNumberInput
                     value={intervalValue}
                     onChange={setIntervalValue}
-                    className={fieldClass}
+                    className={
+                      showFieldErrors && missing.intervalValue
+                        ? fieldInvalidClass
+                        : fieldClass
+                    }
                     placeholder={intervalUnit === "minutes" ? "15" : "1"}
                   />
                 </div>
@@ -1715,24 +1792,58 @@ export function ThemeBotFormDraft() {
                   onMethod={setTpMethod}
                   value={tpValue}
                   onValue={setTpValue}
+                  basis={tpBasis}
+                  onBasis={setTpBasis}
                   orderType={tpOrderType}
                   onOrderType={setTpOrderType}
                   atrPeriod={atrPeriod}
                   onAtrPeriod={setAtrPeriod}
+                  atrPeriodInvalid={showFieldErrors && missing.atrPeriod}
                   invalid={showFieldErrors && missing.tpValue}
                 />
               ) : (
                 <div className={rowClass}>
-                  <Field label="Price" required>
-                    <OffNumber
-                      value={tpValue}
-                      onChange={setTpValue}
-                      required
-                      invalid={showFieldErrors && missing.tpValue}
-                    />
+                  <Field label="Type" required>
+                    <select
+                      className={fieldClass}
+                      value={tpMethod === "percent" ? "percent" : "price"}
+                      onChange={(event) => {
+                        setTpMethod(
+                          event.target.value === "percent" ? "percent" : "price",
+                        );
+                        setTpValue("");
+                      }}
+                    >
+                      <option value="price">Price</option>
+                      <option value="percent">Percentage</option>
+                    </select>
+                  </Field>
+                  <Field
+                    label={tpMethod === "percent" ? "%" : "Price"}
+                    required
+                  >
+                    {tpMethod === "percent" ? (
+                      <PercentField
+                        value={tpValue}
+                        onChange={setTpValue}
+                        required
+                        invalid={showFieldErrors && missing.tpValue}
+                      />
+                    ) : (
+                      <OffNumber
+                        value={tpValue}
+                        onChange={setTpValue}
+                        required
+                        invalid={showFieldErrors && missing.tpValue}
+                      />
+                    )}
                   </Field>
                   <Field label="Trigger" required>
-                    <select className={fieldClass} defaultValue="last">
+                    <select
+                      className={fieldClass}
+                      value={tpTrigger}
+                      onChange={(event) => setTpTrigger(event.target.value)}
+                    >
                       <option value="last">Last</option>
                       <option value="mark">Mark</option>
                       <option value="index">Index</option>
@@ -1750,6 +1861,7 @@ export function ThemeBotFormDraft() {
                         value={tpLimitPrice}
                         onChange={setTpLimitPrice}
                         required
+                        invalid={showFieldErrors && missing.tpLimitPrice}
                       />
                     </Field>
                   ) : null}
@@ -1770,7 +1882,7 @@ export function ThemeBotFormDraft() {
                       hint="Trail starts after price moves this %."
                       required
                     >
-                      <OffNumber
+                      <PercentField
                         value={trailTrigger}
                         onChange={setTrailTrigger}
                         required
@@ -1778,7 +1890,7 @@ export function ThemeBotFormDraft() {
                       />
                     </Field>
                     <Field label="Trailing %" required>
-                      <OffNumber
+                      <PercentField
                         value={trailValue}
                         onChange={setTrailValue}
                         required
@@ -1820,13 +1932,17 @@ export function ThemeBotFormDraft() {
               {desk === "dca" ? (
                 <div className={rowClass}>
                   <Field label="Basis" required>
-                    <select className={fieldClass} defaultValue="average">
+                    <select
+                      className={fieldClass}
+                      value={slBasis}
+                      onChange={(event) => setSlBasis(event.target.value)}
+                    >
                       <option value="average">Average entry</option>
                       <option value="first_entry">First fill</option>
                     </select>
                   </Field>
                   <Field label="Stop loss %" required>
-                    <OffNumber
+                    <PercentField
                       value={slValue}
                       onChange={setSlValue}
                       required
@@ -1836,16 +1952,47 @@ export function ThemeBotFormDraft() {
                 </div>
               ) : (
                 <div className={rowClass}>
-                  <Field label="Price" required>
-                    <OffNumber
-                      value={slValue}
-                      onChange={setSlValue}
-                      required
-                      invalid={showFieldErrors && missing.slValue}
-                    />
+                  <Field label="Type" required>
+                    <select
+                      className={fieldClass}
+                      value={slMethod === "percent" ? "percent" : "price"}
+                      onChange={(event) => {
+                        setSlMethod(
+                          event.target.value === "percent" ? "percent" : "price",
+                        );
+                        setSlValue("");
+                      }}
+                    >
+                      <option value="price">Price</option>
+                      <option value="percent">Percentage</option>
+                    </select>
+                  </Field>
+                  <Field
+                    label={slMethod === "percent" ? "%" : "Price"}
+                    required
+                  >
+                    {slMethod === "percent" ? (
+                      <PercentField
+                        value={slValue}
+                        onChange={setSlValue}
+                        required
+                        invalid={showFieldErrors && missing.slValue}
+                      />
+                    ) : (
+                      <OffNumber
+                        value={slValue}
+                        onChange={setSlValue}
+                        required
+                        invalid={showFieldErrors && missing.slValue}
+                      />
+                    )}
                   </Field>
                   <Field label="Trigger" required>
-                    <select className={fieldClass} defaultValue="last">
+                    <select
+                      className={fieldClass}
+                      value={slTrigger}
+                      onChange={(event) => setSlTrigger(event.target.value)}
+                    >
                       <option value="last">Last</option>
                       <option value="mark">Mark</option>
                       <option value="index">Index</option>
@@ -1863,6 +2010,7 @@ export function ThemeBotFormDraft() {
                         value={slLimitPrice}
                         onChange={setSlLimitPrice}
                         required
+                        invalid={showFieldErrors && missing.slLimitPrice}
                       />
                     </Field>
                   ) : null}
@@ -1877,19 +2025,18 @@ export function ThemeBotFormDraft() {
             >
               <div className={rowClass}>
                 <Field label="Move stop to breakeven at %" required>
-                  <OffNumber
+                  <PercentField
                     value={breakevenAt}
                     onChange={setBreakevenAt}
                     required
                     invalid={showFieldErrors && missing.breakevenAt}
                   />
                 </Field>
-                <Field label="Breakeven offset %" required={desk === "dca"}>
-                  <OffNumber
+                <Field label="Breakeven offset %">
+                  <PercentField
                     value={breakevenOffset}
                     onChange={setBreakevenOffset}
-                    required={desk === "dca"}
-                    invalid={showFieldErrors && missing.breakevenOffset}
+                    placeholder="0"
                   />
                 </Field>
               </div>
@@ -1953,16 +2100,17 @@ export function ThemeBotFormDraft() {
             ) : (
               <OptionalSection
                 title="Hard Exit Condition"
+                hint={
+                  desk === "perps"
+                    ? "Flattens this bot's open size at market when the condition is true."
+                    : undefined
+                }
                 enabled={exitIfOn}
                 onEnabled={(next) => {
                   setExitIfOn(next);
                   setExitIf(
                     next
-                      ? (exitIf ??
-                        dcaFilterSpecForKind(
-                          "rsi",
-                          direction === "short" ? "short" : "long",
-                        ))
+                      ? (exitIf ?? dcaFilterSpecForKind("rsi", entrySide))
                       : null,
                   );
                 }}
@@ -1970,7 +2118,7 @@ export function ThemeBotFormDraft() {
                 <DcaFilterBlock
                   label="Kind"
                   prefix="themeExitIf"
-                  side={direction === "short" ? "short" : "long"}
+                  side={entrySide}
                   spec={exitIf}
                   onChange={setExitIf}
                   dense
@@ -2025,7 +2173,11 @@ export function ThemeBotFormDraft() {
                   <GroupedNumberInput
                     value={maxOpenCount}
                     onChange={setMaxOpenCount}
-                    className={fieldClass}
+                    className={
+                      showFieldErrors && missing.maxOpenCount
+                        ? fieldInvalidClass
+                        : fieldClass
+                    }
                   />
                 </Field>
                 <Field label="Order Type" required>
@@ -2049,7 +2201,11 @@ export function ThemeBotFormDraft() {
                         value={orderSizeUsdt}
                         onChange={setOrderSizeUsdt}
                         allowDecimal
-                        className={fieldClass}
+                        className={
+                          showFieldErrors && missing.orderSizeUsdt
+                            ? fieldInvalidClass
+                            : fieldClass
+                        }
                       />
                     </Field>
                     <Field label="Min usable book">
@@ -2476,26 +2632,36 @@ function ExitMethodFields({
   onMethod,
   value,
   onValue,
+  basis,
+  onBasis,
   orderType,
   onOrderType,
   atrPeriod,
   onAtrPeriod,
+  atrPeriodInvalid = false,
   invalid = false,
 }: {
   method: ExitMethod;
   onMethod: (next: ExitMethod) => void;
   value: string;
   onValue: (next: string) => void;
+  basis: string;
+  onBasis: (next: string) => void;
   orderType: string;
   onOrderType: (next: string) => void;
   atrPeriod: string;
   onAtrPeriod: (next: string) => void;
+  atrPeriodInvalid?: boolean;
   invalid?: boolean;
 }) {
   return (
     <div className={rowClass}>
       <Field label="Basis" required>
-        <select className={fieldClass} defaultValue="average">
+        <select
+          className={fieldClass}
+          value={basis}
+          onChange={(event) => onBasis(event.target.value)}
+        >
           <option value="average">Average entry</option>
           <option value="first_entry">First fill</option>
         </select>
@@ -2522,7 +2688,7 @@ function ExitMethodFields({
             <GroupedNumberInput
               value={atrPeriod}
               onChange={onAtrPeriod}
-              className={fieldClass}
+              className={atrPeriodInvalid ? fieldInvalidClass : fieldClass}
             />
           </Field>
           <Field label="ATR multiple" required>
@@ -2536,7 +2702,7 @@ function ExitMethodFields({
         </>
       ) : (
         <Field label="Target %" required>
-          <OffNumber
+          <PercentField
             value={value}
             onChange={onValue}
             required

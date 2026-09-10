@@ -14,6 +14,7 @@ import { backtestTapeInterval } from "./model";
 import {
   paperStopLossHit,
   paperTakeProfitHit,
+  resolveFuturesTpslPrices,
   tpslHasLevels,
   type FuturesTpsl,
 } from "@/lib/futures/tpsl";
@@ -104,13 +105,22 @@ function mergeSimPosition(
   tpsl: FuturesTpsl | null,
   trailing: FuturesTrailing | null,
 ): OpenSim {
+  const priced =
+    tpsl && tpslHasLevels(tpsl)
+      ? resolveFuturesTpslPrices({
+          tpsl,
+          side,
+          entryPrice: price,
+        })
+      : null;
+  const nextTpsl = priced?.ok ? priced.tpsl : tpsl;
   if (current && current.side === side) {
     const nextQty = current.qty + qty;
     return {
       side,
       qty: nextQty,
       entry: (current.entry * current.qty + price * qty) / nextQty,
-      tpsl: current.tpsl ?? tpsl,
+      tpsl: current.tpsl ?? nextTpsl,
       trailing: current.trailing ?? trailing,
       breakevenDone: current.breakevenDone,
     };
@@ -119,7 +129,7 @@ function mergeSimPosition(
     side,
     qty,
     entry: price,
-    tpsl,
+    tpsl: nextTpsl,
     trailing: trailing ? armTrailingAt(trailing, price) : null,
     breakevenDone: false,
   };

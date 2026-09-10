@@ -424,6 +424,56 @@ export function dcaFilterLabel(spec: DcaFilterSpec | null | undefined): string {
   return `${kind} · ${timeframe}`;
 }
 
+export function formatDcaFilterReason(
+  spec: DcaFilterSpec,
+  _side: FuturesSide = "long",
+): string {
+  const timeframe =
+    DCA_INDICATOR_TIMEFRAME_LABELS[spec.timeframe] ?? spec.timeframe;
+  const suffix = ` · ${timeframe}`;
+  const period = spec.period ?? defaultDcaFilterPeriod(spec.kind);
+  if (spec.kind === "rsi") {
+    if (
+      spec.compare === "between" &&
+      spec.level != null &&
+      spec.levelTo != null
+    ) {
+      return `RSI ${period} between ${spec.level} and ${spec.levelTo}${suffix}`;
+    }
+    const when = spec.compare === "gte" ? "at or above" : "at or below";
+    const level = spec.level != null ? ` ${spec.level}` : "";
+    return `RSI ${period} ${when}${level}${suffix}`;
+  }
+  if (spec.kind === "supertrend") {
+    const multiplier = spec.multiplier ?? DEFAULT_DCA_SUPERTREND_MULTIPLIER;
+    const when = spec.compare === "lte" ? "is bearish" : "is bullish";
+    return `Supertrend ${period} × ${multiplier} ${when}${suffix}`;
+  }
+  if (spec.kind === "bb") {
+    const when =
+      spec.compare === "inside"
+        ? "Price is inside BB"
+        : spec.compare === "lte"
+          ? "Price is below bottom BB"
+          : "Price is above top BB";
+    return `${when} ${period}${suffix}`;
+  }
+  if (spec.kind === "atr_band") {
+    const multiplier = spec.multiplier ?? DEFAULT_DCA_ATR_BAND_MULT;
+    const when =
+      spec.compare === "inside"
+        ? "Price is inside ATR band"
+        : spec.compare === "lte"
+          ? "Price is below lower ATR band"
+          : "Price is above upper ATR band";
+    return `${when} ${period} × ${multiplier}${suffix}`;
+  }
+  const name = spec.kind === "sma" ? "SMA" : "EMA";
+  const when =
+    spec.compare === "lte" ? "Price is below" : "Price is above";
+  return `${when} ${name} ${period}${suffix}`;
+}
+
 export function dcaFilterSummaryLine(
   label: string,
   longSpec: DcaFilterSpec | null | undefined,

@@ -31,6 +31,8 @@ assert.equal(
 assert.ok(eventLogOptionsForScopes(["trade"]).includes("trade.opened"));
 assert.ok(eventLogOptionsForScopes(["trade"]).includes("dca.decision"));
 assert.ok(eventLogOptionsForScopes(["trade"]).includes("engine.fired"));
+assert.ok(eventLogOptionsForScopes(["trade"]).includes("engine.exit_if"));
+assert.ok(eventLogOptionsForScopes(["trade"]).includes("engine.breakeven"));
 assert.ok(eventLogOptionsForScopes(["strategy"]).includes("template.shared"));
 assert.ok(eventLogOptionsForScopes(["strategy"]).includes("template.imported"));
 assert.ok(

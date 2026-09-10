@@ -60,6 +60,7 @@ export type FuturesPlaceCommand = {
   source?: unknown;
   ruleId?: unknown;
   ruleName?: unknown;
+  reason?: unknown;
 };
 
 export type FuturesCommand =
@@ -72,6 +73,7 @@ export type FuturesCommand =
       tpsl?: FuturesTpsl;
       venueTpsl?: FuturesTpsl;
       idempotencyKey?: unknown;
+      reason?: unknown;
     }
   | {
       kind: "set-trailing";

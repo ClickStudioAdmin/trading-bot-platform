@@ -32,7 +32,7 @@ Each run has its own **detail page**: parameters, stats, desk-style open / past 
 | Lock | Decision |
 | --- | --- |
 | Recipes | **Perps bots price-cross** and **DCA price / indicator / Trend start**. User queue rejects **manual** and **webhook**. |
-| Perps bot exits | Same ticket set as manual: TP/SL (full/partial, last/mark/index, market/limit) plus trailing. Optional. Buy/sell only. Flatten rules stay flatten-only. |
+| Perps bot exits | Same ticket set as manual: TP/SL (price or percent from the fill, full/partial, last/mark/index, market/limit) plus trailing. Optional. Buy/sell only. Flatten rules stay flatten-only. |
 | Unpublished runs | **Owner only** (plus admin). Leftover published copies (`user_id` null) stay readable. New publishes are parked. |
 | Remove | Owner deletes their run. Admin can delete any, including leftover published copies. Unused `backtested` snapshot is deleted with the last run that pointed at it. A linked **user** template is kept. |
 | Bar fill (entries) | First clip: decide on **bar close**, fill at **close**. Rest-grid adds (`Remaining orders as GTC limit`): fill at the **limit** when the **adverse wick** reaches it. Same-bar path is adverse-first (adds, then TP). The entry bar does not fill the new ladder or a new TP limit — those rest after the close, like live. |

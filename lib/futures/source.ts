@@ -54,11 +54,15 @@ export function formatFuturesOrigin(input: {
 export function futuresOriginLog(input: {
   source: FuturesTradeSource;
   ruleName?: string | null;
-}): { source: FuturesTradeSource; ruleName?: string } {
+  reason?: string | null;
+}): { source: FuturesTradeSource; ruleName?: string; reason?: string } {
   const ruleName = String(input.ruleName ?? "").trim();
-  return ruleName
-    ? { source: input.source, ruleName }
-    : { source: input.source };
+  const reason = String(input.reason ?? "").trim();
+  return {
+    source: input.source,
+    ...(ruleName ? { ruleName } : {}),
+    ...(reason ? { reason } : {}),
+  };
 }
 
 export function withFuturesOrigin(
@@ -67,9 +71,12 @@ export function withFuturesOrigin(
     source: FuturesTradeSource;
     ruleName?: string | null;
     webhookNames?: readonly string[];
+    reason?: string | null;
   },
 ): string {
-  return `${message} · ${formatFuturesOrigin(input)}`;
+  const origin = formatFuturesOrigin(input);
+  const reason = String(input.reason ?? "").trim();
+  return reason ? `${message} · ${origin}. ${reason}` : `${message} · ${origin}`;
 }
 
 export function resolveOrderOrigin(

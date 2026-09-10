@@ -67,6 +67,7 @@ import {
 } from "@/lib/dca/indicators";
 import type { DcaIndicatorStart } from "@/lib/dca/playbook";
 import type { FuturesOrderType, FuturesSide, FuturesTrigger } from "@/lib/futures/model";
+import type { FuturesTpslLevelKind } from "@/lib/futures/tpsl";
 import { DeskTemplateBar, SaveAsTemplateButton } from "@/components/template-modals";
 import { perpsFormToSnapshotSource } from "@/lib/templates/recipe";
 import type { AppliedDeskItem } from "@/lib/templates/apply";
@@ -343,6 +344,12 @@ function RuleCard({
   const [stopLoss, setStopLoss] = useState(
     layer.tpsl?.stopLoss != null ? String(layer.tpsl.stopLoss) : "",
   );
+  const [tpKind, setTpKind] = useState<FuturesTpslLevelKind>(
+    layer.tpsl?.tpKind === "percent" ? "percent" : "price",
+  );
+  const [slKind, setSlKind] = useState<FuturesTpslLevelKind>(
+    layer.tpsl?.slKind === "percent" ? "percent" : "price",
+  );
   const [tpTrigger, setTpTrigger] = useState<FuturesTrigger>(
     layer.tpsl?.tpTrigger ?? "last",
   );
@@ -384,6 +391,8 @@ function RuleCard({
       ? {
           takeProfit: tpOn ? Number(takeProfit.replace(/,/g, "")) || null : null,
           stopLoss: slOn ? Number(stopLoss.replace(/,/g, "")) || null : null,
+          tpKind: tpOn ? tpKind : "price",
+          slKind: slOn ? slKind : "price",
           tpTrigger,
           slTrigger,
           mode: layer.tpsl?.mode ?? "full",
@@ -873,15 +882,45 @@ function RuleCard({
             enabled={tpOn}
             onEnabled={setTpOn}
           >
-            <div className={botRowClass}>
-              <BotField label="Price" required>
-                <GroupedNumberInput
-                  name={`${prefix}takeProfit`}
-                  value={takeProfit}
-                  onChange={setTakeProfit}
-                  allowDecimal
+            <div className={botRowClass5}>
+              <BotField label="Type" required>
+                <select
+                  name={`${prefix}tpKind`}
+                  value={tpKind}
+                  onChange={(event) => {
+                    const next = event.target.value === "percent" ? "percent" : "price";
+                    setTpKind(next);
+                    setTakeProfit("");
+                  }}
                   className={botFieldClass}
-                />
+                >
+                  <option value="price">Price</option>
+                  <option value="percent">Percentage</option>
+                </select>
+              </BotField>
+              <BotField label={tpKind === "percent" ? "%" : "Price"} required>
+                {tpKind === "percent" ? (
+                  <span className="relative mt-0.5 block">
+                    <GroupedNumberInput
+                      name={`${prefix}takeProfit`}
+                      value={takeProfit}
+                      onChange={setTakeProfit}
+                      allowDecimal
+                      className={`${botFieldClass} pr-7`}
+                    />
+                    <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                      %
+                    </span>
+                  </span>
+                ) : (
+                  <GroupedNumberInput
+                    name={`${prefix}takeProfit`}
+                    value={takeProfit}
+                    onChange={setTakeProfit}
+                    allowDecimal
+                    className={botFieldClass}
+                  />
+                )}
               </BotField>
               <BotField label="Trigger" required>
                 <select
@@ -953,15 +992,45 @@ function RuleCard({
             enabled={slOn}
             onEnabled={setSlOn}
           >
-            <div className={botRowClass}>
-              <BotField label="Price" required>
-                <GroupedNumberInput
-                  name={`${prefix}stopLoss`}
-                  value={stopLoss}
-                  onChange={setStopLoss}
-                  allowDecimal
+            <div className={botRowClass5}>
+              <BotField label="Type" required>
+                <select
+                  name={`${prefix}slKind`}
+                  value={slKind}
+                  onChange={(event) => {
+                    const next = event.target.value === "percent" ? "percent" : "price";
+                    setSlKind(next);
+                    setStopLoss("");
+                  }}
                   className={botFieldClass}
-                />
+                >
+                  <option value="price">Price</option>
+                  <option value="percent">Percentage</option>
+                </select>
+              </BotField>
+              <BotField label={slKind === "percent" ? "%" : "Price"} required>
+                {slKind === "percent" ? (
+                  <span className="relative mt-0.5 block">
+                    <GroupedNumberInput
+                      name={`${prefix}stopLoss`}
+                      value={stopLoss}
+                      onChange={setStopLoss}
+                      allowDecimal
+                      className={`${botFieldClass} pr-7`}
+                    />
+                    <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                      %
+                    </span>
+                  </span>
+                ) : (
+                  <GroupedNumberInput
+                    name={`${prefix}stopLoss`}
+                    value={stopLoss}
+                    onChange={setStopLoss}
+                    allowDecimal
+                    className={botFieldClass}
+                  />
+                )}
               </BotField>
               <BotField label="Trigger" required>
                 <select

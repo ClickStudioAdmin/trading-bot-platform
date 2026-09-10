@@ -39,6 +39,14 @@ import { loadDeskTickerMap } from "@/lib/market/desk-tickers";
 import { loadDeskIndicatorBars } from "@/lib/market/desk-klines";
 import type { DcaIndicatorTimeframe } from "@/lib/dca/indicators";
 import type { CandleBar } from "@/lib/market/candles";
+import {
+  formatBreakevenReason,
+  formatFuturesEntryReasons,
+  formatHardExitReason,
+  futuresBreakevenMessage,
+  futuresFiredMessage,
+  futuresHardExitMessage,
+} from "@/lib/bots/condition-copy";
 
 type DeskAccount = {
   userId: string;
@@ -202,19 +210,32 @@ export async function runFuturesAutomationTick(input?: {
       hasOpenOnSide: Boolean(openOnSide),
     });
     if (decision.fire) {
+      const reasons = formatFuturesEntryReasons({
+        entrySource: rule.entrySource,
+        side,
+        triggerBy: rule.triggerBy,
+        triggerCompare: rule.triggerCompare,
+        triggerPrice: rule.triggerPrice,
+        price,
+        indicator: rule.indicator,
+        confirm: rule.confirm,
+      });
       const result = await fireAutomationRule({
         rule,
         accountId,
         userId: account.userId,
         mode: account.mode,
         positionId: openOnSide?.id ?? null,
+        reason: reasons,
       });
       if (!result.ok) {
         await writeEventLog({
           level: "warning",
           scope: "trade",
           event: "engine.open_failed",
-          message: result.error,
+          message: reasons
+            ? `${result.error} Trying: ${reasons}.`
+            : result.error,
           userId: account.userId,
           accountId,
           strategy: FUTURES_STRATEGY_ID,
@@ -225,6 +246,7 @@ export async function runFuturesAutomationTick(input?: {
             side,
             action: rule.action,
             positionId: openOnSide?.id ?? null,
+            reason: reasons,
           },
         });
         continue;
@@ -233,7 +255,13 @@ export async function runFuturesAutomationTick(input?: {
       await writeEventLog({
         scope: "trade",
         event: "engine.fired",
-        message: `Automation ${rule.name} fired on ${rule.symbol}.`,
+        message: futuresFiredMessage({
+          name: rule.name,
+          symbol: rule.symbol,
+          action: rule.action,
+          closeSide: rule.closeSide,
+          reasons,
+        }),
         userId: account.userId,
         accountId,
         strategy: FUTURES_STRATEGY_ID,
@@ -244,6 +272,8 @@ export async function runFuturesAutomationTick(input?: {
           side,
           action: rule.action,
           positionId: result.positionId,
+          entrySource: rule.entrySource,
+          reason: reasons,
         },
       });
       await patchRule(supabase, rule.id, {
@@ -372,19 +402,36 @@ export async function fireWebhookAutomationEntries(input: {
     if (!decision.fire) {
       continue;
     }
+    const reasons = formatFuturesEntryReasons({
+      entrySource: rule.entrySource,
+      side,
+      triggerBy: rule.triggerBy,
+      triggerCompare: rule.triggerCompare,
+      triggerPrice: rule.triggerPrice,
+      indicator: rule.indicator,
+      confirm: rule.confirm,
+    });
     const result = await fireAutomationRule({
       rule,
       accountId: input.accountId,
       userId: input.userId,
       mode: input.mode,
       positionId: openOnSide?.id ?? null,
+      reason: reasons,
     });
     if (result.ok) {
       fired += 1;
       await writeEventLog({
         scope: "trade",
         event: "engine.fired",
-        message: `Signal fired ${rule.name} on ${rule.symbol}.`,
+        message: futuresFiredMessage({
+          name: rule.name,
+          symbol: rule.symbol,
+          action: rule.action,
+          closeSide: rule.closeSide,
+          reasons,
+          webhook: true,
+        }),
         userId: input.userId,
         accountId: input.accountId,
         strategy: FUTURES_STRATEGY_ID,
@@ -396,6 +443,8 @@ export async function fireWebhookAutomationEntries(input: {
           action: rule.action,
           positionId: result.positionId,
           webhookId: input.webhookId,
+          entrySource: rule.entrySource,
+          reason: reasons,
         },
       });
       await patchRule(supabase, rule.id, {
@@ -406,7 +455,7 @@ export async function fireWebhookAutomationEntries(input: {
         level: "warning",
         scope: "trade",
         event: "engine.open_failed",
-        message: result.error,
+        message: reasons ? `${result.error} Trying: ${reasons}.` : result.error,
         userId: input.userId,
         accountId: input.accountId,
         strategy: FUTURES_STRATEGY_ID,
@@ -417,6 +466,7 @@ export async function fireWebhookAutomationEntries(input: {
           side,
           webhookId: input.webhookId,
           positionId: openOnSide?.id ?? null,
+          reason: reasons,
         },
       });
     }
@@ -482,6 +532,7 @@ async function monitorOwnedFuturesPositions(input: {
         barsByTimeframe,
       })
     ) {
+      const reasons = formatHardExitReason(rule.exitIf, open.side);
       const closed = await runFuturesCommand({
         actor: {
           userId: account.userId,
@@ -497,13 +548,18 @@ async function monitorOwnedFuturesPositions(input: {
           source: "engine",
           ruleId: rule.id,
           ruleName: rule.name,
+          reason: reasons,
         },
       });
       if (closed.ok) {
         await writeEventLog({
           scope: "trade",
           event: "engine.exit_if",
-          message: `Hard Exit flattened ${rule.name} on ${open.symbol}.`,
+          message: futuresHardExitMessage({
+            name: rule.name,
+            symbol: open.symbol,
+            reasons,
+          }),
           userId: account.userId,
           accountId: open.accountId,
           strategy: FUTURES_STRATEGY_ID,
@@ -513,6 +569,7 @@ async function monitorOwnedFuturesPositions(input: {
             symbol: open.symbol,
             side: open.side,
             positionId: open.id,
+            reason: reasons,
           },
         });
       } else {
@@ -520,7 +577,7 @@ async function monitorOwnedFuturesPositions(input: {
           level: "warning",
           scope: "trade",
           event: "engine.exit_if_failed",
-          message: closed.error,
+          message: `${closed.error} Trying Hard Exit: ${reasons}.`,
           userId: account.userId,
           accountId: open.accountId,
           strategy: FUTURES_STRATEGY_ID,
@@ -528,6 +585,7 @@ async function monitorOwnedFuturesPositions(input: {
             ruleId: rule.id,
             symbol: open.symbol,
             positionId: open.id,
+            reason: reasons,
           },
         });
       }
@@ -554,6 +612,14 @@ async function monitorOwnedFuturesPositions(input: {
       if (stop == null || !(stop > 0)) {
         continue;
       }
+      const reasons = formatBreakevenReason({
+        side: open.side,
+        entryPrice: open.entryPrice,
+        mark: last,
+        activationPct: rule.breakevenActivationPct ?? 0,
+        offsetPct: rule.breakevenOffsetPct,
+        stop,
+      });
       const moved = await runFuturesCommand({
         actor: {
           userId: account.userId,
@@ -565,6 +631,7 @@ async function monitorOwnedFuturesPositions(input: {
           positionId: open.id,
           symbol: open.symbol,
           form: new FormData(),
+          reason: reasons,
           tpsl: {
             ...(current ?? {
               takeProfit: open.takeProfit,
@@ -590,7 +657,7 @@ async function monitorOwnedFuturesPositions(input: {
           level: "warning",
           scope: "trade",
           event: "engine.breakeven_failed",
-          message: moved.error,
+          message: `${moved.error} Trying: ${reasons}.`,
           userId: account.userId,
           accountId: open.accountId,
           strategy: FUTURES_STRATEGY_ID,
@@ -598,6 +665,7 @@ async function monitorOwnedFuturesPositions(input: {
             ruleId: rule.id,
             symbol: open.symbol,
             positionId: open.id,
+            reason: reasons,
           },
         });
         continue;
@@ -613,7 +681,11 @@ async function monitorOwnedFuturesPositions(input: {
       await writeEventLog({
         scope: "trade",
         event: "engine.breakeven",
-        message: `Moved stop to breakeven for ${rule.name} on ${open.symbol}.`,
+        message: futuresBreakevenMessage({
+          name: rule.name,
+          symbol: open.symbol,
+          reasons,
+        }),
         userId: account.userId,
         accountId: open.accountId,
         strategy: FUTURES_STRATEGY_ID,
@@ -624,6 +696,7 @@ async function monitorOwnedFuturesPositions(input: {
           side: open.side,
           positionId: open.id,
           stop,
+          reason: reasons,
         },
       });
     }
@@ -671,6 +744,7 @@ async function fireAutomationRule(input: {
   userId: string;
   mode: TradingAccountMode;
   positionId: string | null;
+  reason?: string;
 }): Promise<
   { ok: true; positionId: string | null } | { ok: false; error: string }
 > {
@@ -697,6 +771,7 @@ async function fireAutomationRule(input: {
       source: "engine",
       ruleId: rule.id,
       ruleName: rule.name,
+      reason: input.reason,
       tpsl: rule.action === "flatten" ? null : rule.tpsl,
       trailing: rule.action === "flatten" ? null : rule.trailing,
     },

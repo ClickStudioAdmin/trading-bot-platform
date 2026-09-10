@@ -143,6 +143,35 @@ assert.equal(withTp.orders[1]?.price, 110);
 assert.equal(withTp.stats.trades, 1);
 assert.equal(withTp.stats.openQty, 0);
 
+const withPctTp = replayPerpsPriceCross({
+  bars: [
+    { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },
+    { timeMs: 2_000, open: 101, high: 101, low: 101, close: 101 },
+    { timeMs: 3_000, open: 101, high: 120, low: 100, close: 110 },
+  ],
+  recipe: {
+    ...base,
+    tpsl: {
+      takeProfit: 2,
+      stopLoss: null,
+      tpKind: "percent",
+      tpTrigger: "last",
+      slTrigger: "last",
+      mode: "full",
+      tpQty: null,
+      slQty: null,
+      tpOrderType: "market",
+      slOrderType: "market",
+      tpLimitPrice: null,
+      slLimitPrice: null,
+    },
+  },
+  feeRate: 0,
+  startingUsdt: 10_000,
+});
+assert.equal(withPctTp.orders[1]?.reason, "take_profit");
+assert.equal(withPctTp.orders[1]?.price, 103.02);
+
 const withSl = replayPerpsPriceCross({
   bars: [
     { timeMs: 1_000, open: 99, high: 99, low: 99, close: 99 },

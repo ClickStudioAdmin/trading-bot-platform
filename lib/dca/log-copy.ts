@@ -131,8 +131,11 @@ export function dcaDecisionMessage(input: {
   reason?: string | null;
   clipsFilled?: number | null;
   maxClips?: number | null;
+  why?: string | null;
 }): string {
   const name = input.name.trim() || "Bot";
+  const why = String(input.why ?? "").trim();
+  const withWhy = (line: string) => (why ? `${line} ${why}.` : line);
   if (input.kind === "clip") {
     const next =
       input.clipsFilled !== null &&
@@ -146,13 +149,13 @@ export function dcaDecisionMessage(input: {
       input.maxClips >= 1
         ? ` of ${Math.floor(input.maxClips)}`
         : "";
-    return `${name} adding ${next}${cap}.`;
+    return withWhy(`${name} adding ${next}${cap}.`);
   }
   if (input.kind === "arm") {
-    return `${name} start met. Placing the first order.`;
+    return withWhy(`${name} start met. Placing the first order.`);
   }
   if (input.kind === "disarm") {
-    return `${name} stop-adding trigger met.`;
+    return withWhy(`${name} stop-adding trigger met.`);
   }
   if (input.kind === "stop_adding") {
     const cap =
@@ -164,21 +167,21 @@ export function dcaDecisionMessage(input: {
     return `${name} hit the order cap${cap}.`;
   }
   if (input.kind === "breakeven") {
-    return `${name} moving stop to breakeven.`;
+    return withWhy(`${name} moving stop to breakeven.`);
   }
   if (input.kind === "end_cycle") {
     return `${name} cycle ended.`;
   }
   if (input.kind === "close" && input.reason === "take_profit") {
-    return `${name} take profit hit. Flattening.`;
+    return withWhy(`${name} take profit hit. Flattening.`);
   }
   if (input.kind === "close" && input.reason === "stop_loss") {
-    return `${name} stop loss hit. Flattening.`;
+    return withWhy(`${name} stop loss hit. Flattening.`);
   }
   if (input.kind === "close" && input.reason === "exit_if") {
-    return `${name} Exit-if hit. Flattening.`;
+    return withWhy(`${name} Hard Exit hit. Flattening.`);
   }
-  return `${name} ${input.kind}.`;
+  return withWhy(`${name} ${input.kind}.`);
 }
 
 function formatLogPrice(value: number | null | undefined): string | null {

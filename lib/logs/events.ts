@@ -60,6 +60,10 @@ export const EVENT_LOG_OPTIONS = [
   { event: "template.saved", scope: "strategy" },
   { event: "template.shared", scope: "strategy" },
   { event: "engine.fired", scope: "trade" },
+  { event: "engine.exit_if", scope: "trade" },
+  { event: "engine.exit_if_failed", scope: "trade" },
+  { event: "engine.breakeven", scope: "trade" },
+  { event: "engine.breakeven_failed", scope: "trade" },
   { event: "trade.futures", scope: "trade" },
   { event: "trade.futures_failed", scope: "trade" },
 ] as const;

@@ -1410,7 +1410,26 @@ export function BacktestRecipeFields({
         </>
       )}
       <label className={labelClass}>
-        Take profit
+        Take profit type
+        <select
+          className={fieldClass}
+          value={recipe.tpsl?.tpKind === "percent" ? "percent" : "price"}
+          onChange={(event) =>
+            onChange({
+              ...recipe,
+              tpsl: {
+                ...(recipe.tpsl ?? emptyFuturesTpsl()),
+                tpKind: event.target.value === "percent" ? "percent" : "price",
+              },
+            })
+          }
+        >
+          <option value="price">Price</option>
+          <option value="percent">Percentage</option>
+        </select>
+      </label>
+      <label className={labelClass}>
+        {recipe.tpsl?.tpKind === "percent" ? "Take profit %" : "Take profit"}
         <RecipeNumberInput
           value={recipe.tpsl?.takeProfit}
           emptyValue={null}
@@ -1427,7 +1446,26 @@ export function BacktestRecipeFields({
         />
       </label>
       <label className={labelClass}>
-        Stop
+        Stop type
+        <select
+          className={fieldClass}
+          value={recipe.tpsl?.slKind === "percent" ? "percent" : "price"}
+          onChange={(event) =>
+            onChange({
+              ...recipe,
+              tpsl: {
+                ...(recipe.tpsl ?? emptyFuturesTpsl()),
+                slKind: event.target.value === "percent" ? "percent" : "price",
+              },
+            })
+          }
+        >
+          <option value="price">Price</option>
+          <option value="percent">Percentage</option>
+        </select>
+      </label>
+      <label className={labelClass}>
+        {recipe.tpsl?.slKind === "percent" ? "Stop %" : "Stop"}
         <RecipeNumberInput
           value={recipe.tpsl?.stopLoss}
           emptyValue={null}

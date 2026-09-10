@@ -361,6 +361,8 @@ const EXIT_FORM_KEYS = [
   "tpslMode",
   "takeProfit",
   "stopLoss",
+  "tpKind",
+  "slKind",
   "tpTrigger",
   "slTrigger",
   "tpQty",
@@ -421,9 +423,11 @@ export function writeAutomationExitsToForm(
     form.set(`${prefix}tpslMode`, tpsl.mode);
     if (tpsl.takeProfit != null) {
       form.set(`${prefix}takeProfit`, String(tpsl.takeProfit));
+      form.set(`${prefix}tpKind`, tpsl.tpKind === "percent" ? "percent" : "price");
     }
     if (tpsl.stopLoss != null) {
       form.set(`${prefix}stopLoss`, String(tpsl.stopLoss));
+      form.set(`${prefix}slKind`, tpsl.slKind === "percent" ? "percent" : "price");
     }
     form.set(`${prefix}tpTrigger`, tpsl.tpTrigger);
     form.set(`${prefix}slTrigger`, tpsl.slTrigger);
@@ -687,6 +691,8 @@ export function parseFuturesAutomationRow(
     preferred.rule.tpsl = tpslFromRow({
       takeProfit: Number(row.take_profit) > 0 ? Number(row.take_profit) : null,
       stopLoss: Number(row.stop_loss) > 0 ? Number(row.stop_loss) : null,
+      tpKind: row.tp_kind === "percent" ? "percent" : "price",
+      slKind: row.sl_kind === "percent" ? "percent" : "price",
       tpTrigger: tpBy.ok ? tpBy.trigger : "last",
       slTrigger: slBy.ok ? slBy.trigger : "last",
       tpslMode: row.tpsl_mode === "partial" ? "partial" : "full",
@@ -794,6 +800,18 @@ export function futuresAutomationToRow(
     skip_if_open: rule.skipIfOpen,
     take_profit: rule.tpsl?.takeProfit ?? null,
     stop_loss: rule.tpsl?.stopLoss ?? null,
+    tp_kind:
+      rule.tpsl?.takeProfit != null
+        ? rule.tpsl.tpKind === "percent"
+          ? "percent"
+          : "price"
+        : null,
+    sl_kind:
+      rule.tpsl?.stopLoss != null
+        ? rule.tpsl.slKind === "percent"
+          ? "percent"
+          : "price"
+        : null,
     tp_trigger: rule.tpsl?.tpTrigger ?? null,
     sl_trigger: rule.tpsl?.slTrigger ?? null,
     tpsl_mode: rule.tpsl?.mode ?? null,

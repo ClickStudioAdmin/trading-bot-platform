@@ -46,7 +46,7 @@ Phase accepted. TradingView is [phase-9.md](phase-9.md).
 - Single-leg blotter tables
 - Manual Buy / Sell / Close on Bybit linear USDT perps
 - Buy/Sell Market or GTC Limit. Close is Market or reduce-only GTC Limit; both take a qty (full or a slice). Open orders table + Edit remaining qty/limit + Cancel.
-- Take profit / stop loss on Buy and Sell (market or limit), and add/edit on an open position. Last / Mark / Index trigger. Entire-position or partial. Each stop can fill at market or rest a limit (empty limit uses the trigger). Partial qty can differ on TP vs SL.
+- Take profit / stop loss on Buy and Sell (market or limit), and add/edit on an open position. Each level is a **Price** or a **Percentage** from the fill (ticket) or entry (open position). Last / Mark / Index trigger. Entire-position or partial. Each stop can fill at market or rest a limit (empty limit uses the trigger). Partial qty can differ on TP vs SL. Perps bots store the same Type on the recipe and resolve the percent when the order fills.
 - Trailing stop on Buy and Sell (market or limit), and add/edit on an open position. Retracement by price distance. Optional activation price. Entire-position market close. Paper: SL, then trailing, then TP.
 - Event logs with `strategy = futures`
 - Typed `runFuturesCommand` for place / close / close-all / TP-SL / trailing / amend / cancel. Form actions are adapters. Optional idempotency key (Bybit `orderLinkId` on live). No webhook this phase.

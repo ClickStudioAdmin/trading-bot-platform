@@ -59,7 +59,26 @@ assert.equal(
     kind: "close",
     reason: "exit_if",
   }),
-  "DCA Test - SOL Exit-if hit. Flattening.",
+  "DCA Test - SOL Hard Exit hit. Flattening.",
+);
+
+assert.equal(
+  dcaDecisionMessage({
+    name: "DCA Test - SOL",
+    kind: "arm",
+    why: "RSI 14 crosses below 30 · 15m, and Secondary Entry RSI 14 at or below 50 · 1h",
+  }),
+  "DCA Test - SOL start met. Placing the first order. RSI 14 crosses below 30 · 15m, and Secondary Entry RSI 14 at or below 50 · 1h.",
+);
+
+assert.equal(
+  dcaDecisionMessage({
+    name: "DCA Test - SOL",
+    kind: "close",
+    reason: "exit_if",
+    why: "Supertrend 10 × 3 turns bearish · 15m",
+  }),
+  "DCA Test - SOL Hard Exit hit. Flattening. Supertrend 10 × 3 turns bearish · 15m.",
 );
 
 console.log("dca log-copy checks passed");

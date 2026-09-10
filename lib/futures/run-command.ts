@@ -98,6 +98,7 @@ import {
   combinedVenueTradingStop,
   parseFuturesTpslForm,
   parseFuturesTpslPatch,
+  resolveFuturesTpslPrices,
   tpslFromRow,
   tpslHasLevels,
   validateTpslQty,
@@ -381,7 +382,8 @@ async function runPlace(
   const source = parseFuturesTradeSource(command.source);
   const ruleId = String(command.ruleId ?? "").trim() || null;
   const ruleName = String(command.ruleName ?? "").trim() || null;
-  const origin = futuresOriginLog({ source, ruleName });
+  const reason = String(command.reason ?? "").trim() || null;
+  const origin = futuresOriginLog({ source, ruleName, reason });
   const settings = await loadFuturesSettings(actor.accountId);
   const opens = await loadOpenFuturesOnSymbol(symbol, actorScope(actor));
   const wantedSide = actionParsed.action === "buy" ? "long" : "short";
@@ -778,8 +780,18 @@ async function runPlace(
   if (!tpslParsed.ok) {
     return fail(tpslParsed.error);
   }
-  const tpsl = tpslParsed.tpsl;
+  let tpsl = tpslParsed.tpsl;
   if (tpsl) {
+    const priced = resolveFuturesTpslPrices({
+      tpsl,
+      side: decided.positionSide,
+      entryPrice: sizePrice,
+      instrument,
+    });
+    if (!priced.ok) {
+      return fail(priced.error);
+    }
+    tpsl = priced.tpsl;
     const checked = validateTpslVsReference({
       side: decided.positionSide,
       tpsl,
@@ -1190,6 +1202,18 @@ async function runSetTpsl(
     }
     tpsl = parsed.tpsl;
   }
+  if (tpslHasLevels(tpsl)) {
+    const priced = resolveFuturesTpslPrices({
+      tpsl,
+      side: row.side,
+      entryPrice: row.entryPrice,
+      instrument,
+    });
+    if (!priced.ok) {
+      return fail(priced.error);
+    }
+    tpsl = priced.tpsl;
+  }
   const mark = markFromTicker(ticker ?? {});
   if (tpslHasLevels(tpsl)) {
     const checked = validateTpslVsReference({
@@ -1256,11 +1280,14 @@ async function runSetTpsl(
   if (written.error) {
     return fail(written.error);
   }
+  const tpslReason = String(command.reason ?? "").trim();
   await writeEventLog({
     scope: "trade",
     event: "trade.futures",
     message: tpslHasLevels(tpsl)
-      ? `Set TP/SL on ${symbol} ${row.side}`
+      ? tpslReason
+        ? `Set TP/SL on ${symbol} ${row.side}. ${tpslReason}`
+        : `Set TP/SL on ${symbol} ${row.side}`
       : `Cleared TP/SL on ${symbol} ${row.side}`,
     userId: actor.userId,
     accountId: actor.accountId,
@@ -1272,6 +1299,7 @@ async function runSetTpsl(
       takeProfit: tpsl.takeProfit,
       stopLoss: tpsl.stopLoss,
       live: liveBook,
+      ...(tpslReason ? { reason: tpslReason } : {}),
     },
   });
   return {

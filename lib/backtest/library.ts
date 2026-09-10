@@ -567,12 +567,18 @@ export function recipeParamRows(
       value:
         recipe.tpsl?.takeProfit == null
           ? "Off"
-          : String(recipe.tpsl.takeProfit),
+          : recipe.tpsl.tpKind === "percent"
+            ? `${recipe.tpsl.takeProfit}%`
+            : String(recipe.tpsl.takeProfit),
     },
     {
       label: "Stop",
       value:
-        recipe.tpsl?.stopLoss == null ? "Off" : String(recipe.tpsl.stopLoss),
+        recipe.tpsl?.stopLoss == null
+          ? "Off"
+          : recipe.tpsl.slKind === "percent"
+            ? `${recipe.tpsl.stopLoss}%`
+            : String(recipe.tpsl.stopLoss),
     },
     {
       label: "Trailing",

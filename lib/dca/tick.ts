@@ -57,6 +57,12 @@ import {
   dcaPlaybookFilterNeedsWideBars,
   seriesForFilter,
 } from "./filters";
+import {
+  formatBreakevenReason,
+  formatDcaStartReasons,
+  formatHardExitReason,
+  formatPriceCrossReason,
+} from "@/lib/bots/condition-copy";
 import { dcaDecisionMessage } from "./log-copy";
 import {
   applyDcaVerb,
@@ -401,6 +407,15 @@ export async function runDcaPlaybookTick(input?: {
       } else {
         playbook.shortIndicatorTrue = decision.nextIndicatorTrue;
       }
+      const why = dcaActionWhy({
+        playbook,
+        side,
+        action: decision.action,
+        lastPrice: prices.last,
+        mark: prices.mark,
+        entryPrice: open?.entryPrice ?? null,
+        clipsFilled: leg.clipsFilled,
+      });
       if (
         decision.action.kind !== "none" &&
         decision.action.kind !== "end_cycle"
@@ -417,6 +432,7 @@ export async function runDcaPlaybookTick(input?: {
               "reason" in decision.action ? decision.action.reason : null,
             clipsFilled: leg.clipsFilled,
             maxClips: playbook.maxClips,
+            why,
           }),
           data: {
             kind: decision.action.kind,
@@ -428,6 +444,7 @@ export async function runDcaPlaybookTick(input?: {
             last: prices.last,
             entryPrice: open?.entryPrice ?? null,
             tpLimitResting,
+            ...(why ? { why } : {}),
           },
         });
       }
@@ -437,6 +454,7 @@ export async function runDcaPlaybookTick(input?: {
         side,
         lastPrice: prices.last,
         action: decision.action,
+        why,
       });
       if (result.acted) {
         acted += 1;
@@ -446,12 +464,60 @@ export async function runDcaPlaybookTick(input?: {
   return { acted };
 }
 
+function dcaActionWhy(input: {
+  playbook: DcaPlaybook;
+  side: FuturesSide;
+  action: ReturnType<typeof decideDcaTick>["action"];
+  lastPrice: number | null;
+  mark: number | null;
+  entryPrice: number | null;
+  clipsFilled: number;
+}): string {
+  const { playbook, side, action } = input;
+  if (
+    action.kind === "arm" ||
+    (action.kind === "clip" && input.clipsFilled === 0)
+  ) {
+    return formatDcaStartReasons({
+      startKind: playbook.startKind,
+      side,
+      armTrigger: dcaArmTriggerForSide(playbook, side),
+      indicator: dcaIndicatorStartForSide(playbook, side),
+      confirm: dcaFilterForSide(playbook, side, "confirm"),
+      price: input.lastPrice,
+    });
+  }
+  if (action.kind === "disarm" && playbook.disarmTrigger) {
+    return formatPriceCrossReason({
+      source: playbook.disarmTrigger.triggerBy,
+      compare: playbook.disarmTrigger.compare,
+      level: playbook.disarmTrigger.price,
+      price: input.lastPrice,
+    });
+  }
+  if (action.kind === "close" && action.reason === "exit_if") {
+    const exitIf = dcaFilterForSide(playbook, side, "exitIf");
+    return exitIf ? formatHardExitReason(exitIf, side) : "";
+  }
+  if (action.kind === "breakeven") {
+    return formatBreakevenReason({
+      side,
+      entryPrice: input.entryPrice ?? 0,
+      mark: input.mark ?? input.lastPrice ?? 0,
+      activationPct: playbook.breakevenActivationPct ?? 0,
+      offsetPct: playbook.breakevenOffsetPct,
+    });
+  }
+  return "";
+}
+
 async function applyTickAction(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
   side: FuturesSide;
   lastPrice: number | null;
   action: ReturnType<typeof decideDcaTick>["action"];
+  why?: string;
 }): Promise<{ acted: boolean }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -467,15 +533,17 @@ async function applyTickAction(input: {
       verb: "arm",
       side: input.side,
       forcePlace: true,
+      reason: input.why,
     });
     if (!armed.ok) {
+      const why = String(input.why ?? "").trim();
       await logDcaEvent({
         playbook: input.playbook,
         side: input.side,
         level: "warning",
         event: "engine.open_failed",
-        message: armed.error,
-        data: { reason: "arm" },
+        message: why ? `${armed.error} Trying: ${why}.` : armed.error,
+        data: { reason: "arm", ...(why ? { why } : {}) },
       });
     }
     return { acted: armed.ok };
@@ -503,6 +571,7 @@ async function applyTickAction(input: {
       playbook: input.playbook,
       mode: input.mode,
       side: input.side,
+      reason: input.why,
     });
     return { acted: moved.ok };
   }
@@ -515,15 +584,17 @@ async function applyTickAction(input: {
       mode: input.mode,
       side: input.side,
       lastPrice: input.lastPrice,
+      reason: input.why,
     });
     if (!placed.ok) {
+      const why = String(input.why ?? "").trim();
       await logDcaEvent({
         playbook: input.playbook,
         side: input.side,
         level: "warning",
         event: "engine.open_failed",
-        message: placed.error,
-        data: { reason: "clip" },
+        message: why ? `${placed.error} Trying: ${why}.` : placed.error,
+        data: { reason: "clip", ...(why ? { why } : {}) },
       });
       return { acted: false };
     }
@@ -587,15 +658,20 @@ async function applyTickAction(input: {
     playbook: input.playbook,
     mode: input.mode,
     side: input.side,
+    reason: input.why,
   });
   if (!closed.ok) {
+    const why = String(input.why ?? "").trim();
     await logDcaEvent({
       playbook: input.playbook,
       side: input.side,
       level: "warning",
       event: "engine.open_failed",
-      message: closed.error,
-      data: { reason: input.action.reason },
+      message: why ? `${closed.error} Trying: ${why}.` : closed.error,
+      data: {
+        reason: input.action.reason,
+        ...(why ? { why } : {}),
+      },
     });
     return { acted: false };
   }
@@ -604,6 +680,7 @@ async function applyTickAction(input: {
     id: input.playbook.id,
     side: input.side,
   });
+  const why = String(input.why ?? "").trim();
   await logDcaEvent({
     playbook: input.playbook,
     side: input.side,
@@ -612,9 +689,14 @@ async function applyTickAction(input: {
       input.action.reason === "take_profit"
         ? `${input.playbook.name} hit take profit.`
         : input.action.reason === "exit_if"
-          ? `${input.playbook.name} Exit-if hit.`
+          ? why
+            ? `${input.playbook.name} Hard Exit hit. ${why}.`
+            : `${input.playbook.name} Hard Exit hit.`
           : `${input.playbook.name} hit stop loss.`,
-    data: { reason: input.action.reason },
+    data: {
+      reason: input.action.reason,
+      ...(why ? { why } : {}),
+    },
   });
   return { acted: true };
 }

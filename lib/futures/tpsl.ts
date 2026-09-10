@@ -11,9 +11,14 @@ import { paperLimitShouldFill } from "./working";
 
 export type { FuturesTpslMode } from "./model";
 
+export const FUTURES_TPSL_LEVEL_KINDS = ["price", "percent"] as const;
+export type FuturesTpslLevelKind = (typeof FUTURES_TPSL_LEVEL_KINDS)[number];
+
 export type FuturesTpsl = {
   takeProfit: number | null;
   stopLoss: number | null;
+  tpKind?: FuturesTpslLevelKind;
+  slKind?: FuturesTpslLevelKind;
   tpTrigger: FuturesTrigger;
   slTrigger: FuturesTrigger;
   mode: FuturesTpslMode;
@@ -41,6 +46,138 @@ export function parseFuturesTrigger(
     return { ok: true, trigger: "index" };
   }
   return { ok: false, error: "Choose Last, Mark, or Index." };
+}
+
+export function parseFuturesTpslLevelKind(
+  raw: unknown,
+): { ok: true; kind: FuturesTpslLevelKind } | { ok: false; error: string } {
+  const kind = String(raw ?? "price").trim().toLowerCase();
+  if (kind === "" || kind === "price") {
+    return { ok: true, kind: "price" };
+  }
+  if (kind === "percent" || kind === "percentage" || kind === "pct") {
+    return { ok: true, kind: "percent" };
+  }
+  return { ok: false, error: "Choose Price or Percentage." };
+}
+
+export function futuresTpslLevelKind(
+  kind: FuturesTpslLevelKind | null | undefined,
+): FuturesTpslLevelKind {
+  return kind === "percent" ? "percent" : "price";
+}
+
+export function futuresTpslPercentPrice(input: {
+  side: FuturesSide;
+  entryPrice: number;
+  percent: number;
+  kind: "take_profit" | "stop_loss";
+}): { ok: true; price: number } | { ok: false; error: string } {
+  if (!(input.entryPrice > 0)) {
+    return { ok: false, error: "Need an entry to set a percent TP/SL." };
+  }
+  if (!(input.percent > 0)) {
+    return {
+      ok: false,
+      error:
+        input.kind === "take_profit"
+          ? "Enter a positive take profit percent."
+          : "Enter a positive stop loss percent.",
+    };
+  }
+  const longProtective =
+    input.kind === "stop_loss"
+      ? input.side === "long"
+      : input.side === "short";
+  if (longProtective && input.percent >= 100) {
+    return {
+      ok: false,
+      error:
+        input.kind === "stop_loss"
+          ? "Stop loss percent must be below 100% on a long."
+          : "Take profit percent must be below 100% on a short.",
+    };
+  }
+  const factor = input.percent / 100;
+  const price = longProtective
+    ? input.entryPrice * (1 - factor)
+    : input.entryPrice * (1 + factor);
+  if (!(price > 0) || !Number.isFinite(price)) {
+    return { ok: false, error: "That percent does not resolve to a valid price." };
+  }
+  return { ok: true, price };
+}
+
+export function resolveFuturesTpslPrices(input: {
+  tpsl: FuturesTpsl;
+  side: FuturesSide;
+  entryPrice: number;
+  instrument?: BybitInstrument;
+}): { ok: true; tpsl: FuturesTpsl } | { ok: false; error: string } {
+  const tpKind = futuresTpslLevelKind(input.tpsl.tpKind);
+  const slKind = futuresTpslLevelKind(input.tpsl.slKind);
+  let takeProfit = input.tpsl.takeProfit;
+  let stopLoss = input.tpsl.stopLoss;
+  if (takeProfit !== null && tpKind === "percent") {
+    const resolved = futuresTpslPercentPrice({
+      side: input.side,
+      entryPrice: input.entryPrice,
+      percent: takeProfit,
+      kind: "take_profit",
+    });
+    if (!resolved.ok) {
+      return resolved;
+    }
+    const priced = priceForPerp(resolved.price, input.instrument);
+    if (!priced.ok) {
+      return priced;
+    }
+    takeProfit = priced.price;
+  }
+  if (stopLoss !== null && slKind === "percent") {
+    const resolved = futuresTpslPercentPrice({
+      side: input.side,
+      entryPrice: input.entryPrice,
+      percent: stopLoss,
+      kind: "stop_loss",
+    });
+    if (!resolved.ok) {
+      return resolved;
+    }
+    const priced = priceForPerp(resolved.price, input.instrument);
+    if (!priced.ok) {
+      return priced;
+    }
+    stopLoss = priced.price;
+  }
+  let tpLimitPrice = input.tpsl.tpLimitPrice;
+  let slLimitPrice = input.tpsl.slLimitPrice;
+  if (
+    takeProfit !== null &&
+    input.tpsl.tpOrderType === "limit" &&
+    tpLimitPrice == null
+  ) {
+    tpLimitPrice = takeProfit;
+  }
+  if (
+    stopLoss !== null &&
+    input.tpsl.slOrderType === "limit" &&
+    slLimitPrice == null
+  ) {
+    slLimitPrice = stopLoss;
+  }
+  return {
+    ok: true,
+    tpsl: {
+      ...input.tpsl,
+      takeProfit,
+      stopLoss,
+      tpKind: takeProfit === null ? input.tpsl.tpKind : "price",
+      slKind: stopLoss === null ? input.tpsl.slKind : "price",
+      tpLimitPrice,
+      slLimitPrice,
+    },
+  };
 }
 
 export function parseFuturesTpslMode(
@@ -107,6 +244,14 @@ function readTpslFromForm(
   if (requireLevel && takeRaw.price === null && stopRaw.price === null) {
     return { ok: false, error: "Enter a take profit, a stop loss, or both." };
   }
+  const tpKindParsed = parseFuturesTpslLevelKind(form.get("tpKind"));
+  if (!tpKindParsed.ok) {
+    return tpKindParsed;
+  }
+  const slKindParsed = parseFuturesTpslLevelKind(form.get("slKind"));
+  if (!slKindParsed.ok) {
+    return slKindParsed;
+  }
   const tpTrigger = parseFuturesTrigger(form.get("tpTrigger"));
   if (!tpTrigger.ok) {
     return tpTrigger;
@@ -121,14 +266,16 @@ function readTpslFromForm(
   }
   let takeProfit: number | null = takeRaw.price;
   let stopLoss: number | null = stopRaw.price;
-  if (takeProfit !== null) {
+  const tpKind = takeProfit === null ? "price" : tpKindParsed.kind;
+  const slKind = stopLoss === null ? "price" : slKindParsed.kind;
+  if (takeProfit !== null && tpKind === "price") {
     const priced = priceForPerp(takeProfit, instrument);
     if (!priced.ok) {
       return priced;
     }
     takeProfit = priced.price;
   }
-  if (stopLoss !== null) {
+  if (stopLoss !== null && slKind === "price") {
     const priced = priceForPerp(stopLoss, instrument);
     if (!priced.ok) {
       return priced;
@@ -145,7 +292,7 @@ function readTpslFromForm(
   }
   const tpLimit = parseStopLimitPrice({
     orderType: tpOrder.orderType,
-    trigger: takeProfit,
+    trigger: tpKind === "percent" ? null : takeProfit,
     raw: form.get("tpLimitPrice"),
     label: "take profit",
     instrument,
@@ -155,7 +302,7 @@ function readTpslFromForm(
   }
   const slLimit = parseStopLimitPrice({
     orderType: slOrder.orderType,
-    trigger: stopLoss,
+    trigger: slKind === "percent" ? null : stopLoss,
     raw: form.get("slLimitPrice"),
     label: "stop loss",
     instrument,
@@ -201,6 +348,8 @@ function readTpslFromForm(
     tpsl: {
       takeProfit,
       stopLoss,
+      tpKind,
+      slKind,
       tpTrigger: tpTrigger.trigger,
       slTrigger: slTrigger.trigger,
       mode,
@@ -623,6 +772,8 @@ export function emptyFuturesTpsl(): FuturesTpsl {
   return {
     takeProfit: null,
     stopLoss: null,
+    tpKind: "price",
+    slKind: "price",
     tpTrigger: "last",
     slTrigger: "last",
     mode: "full",
@@ -722,6 +873,8 @@ export function tpslColumns(tpsl: FuturesTpsl | null | undefined) {
 export function tpslFromRow(row: {
   takeProfit: number | null;
   stopLoss: number | null;
+  tpKind?: FuturesTpslLevelKind | null;
+  slKind?: FuturesTpslLevelKind | null;
   tpTrigger: FuturesTrigger;
   slTrigger: FuturesTrigger;
   tpslMode?: FuturesTpslMode | null;
@@ -741,6 +894,8 @@ export function tpslFromRow(row: {
   return {
     takeProfit: row.takeProfit,
     stopLoss: row.stopLoss,
+    tpKind: row.takeProfit === null ? "price" : futuresTpslLevelKind(row.tpKind),
+    slKind: row.stopLoss === null ? "price" : futuresTpslLevelKind(row.slKind),
     tpTrigger: row.tpTrigger,
     slTrigger: row.slTrigger,
     mode,

@@ -51,6 +51,7 @@ import {
   dcaExitTpslNeedsVenueSync,
   dcaFlattenKey,
   dcaAtrTimeframe,
+  dcaArmTriggerForSide,
   dcaIndicatorStartForSide,
   dcaIndicatorTimeframes,
   dcaNeedsAtrBars,
@@ -70,6 +71,7 @@ import {
   type DcaPlaybook,
   type DcaStatus,
 } from "./playbook";
+import { formatDcaStartReasons } from "@/lib/bots/condition-copy";
 import { dcaFilterForSide, dcaFilterMet, dcaPlaybookFilterNeedsWideBars } from "./filters";
 import { dcaSyncFailedMessage } from "./log-copy";
 import { isUnchangedWorkingAmend } from "@/lib/futures/working";
@@ -95,10 +97,12 @@ function playbookActor(playbook: DcaPlaybook, mode: TradingAccountMode) {
   };
 }
 
-function playbookCommandMeta(playbook: DcaPlaybook) {
+function playbookCommandMeta(playbook: DcaPlaybook, reason?: string) {
+  const trimmed = String(reason ?? "").trim();
   return {
     source: "engine" as const,
     ruleName: playbook.name,
+    ...(trimmed ? { reason: trimmed } : {}),
   };
 }
 
@@ -852,6 +856,7 @@ async function placeClip(input: {
   mode: TradingAccountMode;
   side: FuturesSide;
   lastPrice: number;
+  reason?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const leg = dcaLegFor(input.playbook, input.side);
   const firstClip = leg.clipsFilled === 0;
@@ -953,7 +958,7 @@ async function placeClip(input: {
         leg.clipsFilled,
         generation,
       ),
-      ...playbookCommandMeta(input.playbook),
+      ...playbookCommandMeta(input.playbook, input.reason),
       trailing: firstClip
         ? clipTrailing(input.playbook, input.side, input.lastPrice)
         : null,
@@ -1273,6 +1278,7 @@ async function flattenSide(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
   side: FuturesSide;
+  reason?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   await cancelSafetyOrders(input);
   await cancelExitLimit({ ...input, kind: "tp" });
@@ -1293,7 +1299,7 @@ async function flattenSide(input: {
       symbol: input.playbook.symbol,
       positionId: open.id,
       orderType: "market",
-      ...playbookCommandMeta(input.playbook),
+      ...playbookCommandMeta(input.playbook, input.reason),
       idempotencyKey: dcaFlattenKey(input.playbook.id, input.side, open.id),
     },
   });
@@ -1335,6 +1341,7 @@ async function moveStopToBreakeven(input: {
   playbook: DcaPlaybook;
   mode: TradingAccountMode;
   side: FuturesSide;
+  reason?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const opens = await loadOpenFuturesOnSymbol(input.playbook.symbol, {
     accountId: input.playbook.accountId,
@@ -1361,6 +1368,7 @@ async function moveStopToBreakeven(input: {
       positionId: open.id,
       symbol: input.playbook.symbol,
       form: new FormData(),
+      reason: input.reason,
       tpsl: {
         ...current,
         stopLoss: stop,
@@ -1408,6 +1416,7 @@ async function applyDcaVerbUnlocked(input: {
   side?: FuturesSide | null;
   source?: "manual" | "webhook";
   forcePlace?: boolean;
+  reason?: string;
 }): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -1476,11 +1485,15 @@ async function applyDcaVerbUnlocked(input: {
   }
 
   if (input.verb === "close-playbook") {
+    const flattenWhy =
+      input.reason ??
+      (input.source === "webhook" ? "Signal webhook" : undefined);
     for (const side of sides) {
       const closed = await flattenSide({
         playbook: input.playbook,
         mode: input.mode,
         side,
+        reason: flattenWhy,
       });
       if (!closed.ok) {
         return closed;
@@ -1513,18 +1526,28 @@ async function applyDcaVerbUnlocked(input: {
     await logDcaEvent({
       playbook: input.playbook,
       event: "dca.closed",
-      message: `Closed ${input.playbook.name}.`,
-      data: { sides, reason: "close_playbook" },
+      message: flattenWhy
+        ? `Closed ${input.playbook.name}. ${flattenWhy}.`
+        : `Closed ${input.playbook.name}.`,
+      data: {
+        sides,
+        reason: "close_playbook",
+        ...(flattenWhy ? { why: flattenWhy } : {}),
+      },
     });
     return { ok: true, message: "Bot closed." };
   }
 
   if (input.verb === "close-position") {
+    const flattenWhy =
+      input.reason ??
+      (input.source === "webhook" ? "Signal webhook" : undefined);
     for (const side of sides) {
       const closed = await flattenSide({
         playbook: input.playbook,
         mode: input.mode,
         side,
+        reason: flattenWhy,
       });
       if (!closed.ok) {
         return closed;
@@ -1541,10 +1564,18 @@ async function applyDcaVerbUnlocked(input: {
     await logDcaEvent({
       playbook: input.playbook,
       event: "dca.closed",
-      message: dcaStartListens(input.playbook.startKind)
-        ? `${input.playbook.name} position closed. Waiting for the next start.`
-        : `Closed ${input.playbook.name}.`,
-      data: { sides, reason: "close_position" },
+      message: flattenWhy
+        ? dcaStartListens(input.playbook.startKind)
+          ? `${input.playbook.name} position closed. Waiting for the next start. ${flattenWhy}.`
+          : `Closed ${input.playbook.name}. ${flattenWhy}.`
+        : dcaStartListens(input.playbook.startKind)
+          ? `${input.playbook.name} position closed. Waiting for the next start.`
+          : `Closed ${input.playbook.name}.`,
+      data: {
+        sides,
+        reason: "close_position",
+        ...(flattenWhy ? { why: flattenWhy } : {}),
+      },
     });
     return {
       ok: true,
@@ -1681,6 +1712,16 @@ async function applyDcaVerbUnlocked(input: {
       mode: input.mode,
       side,
       lastPrice,
+      reason:
+        input.reason ??
+        formatDcaStartReasons({
+          startKind: playbook.startKind,
+          side,
+          armTrigger: dcaArmTriggerForSide(playbook, side),
+          indicator: dcaIndicatorStartForSide(playbook, side),
+          confirm: dcaFilterForSide(playbook, side, "confirm"),
+          price: lastPrice,
+        }),
     });
     if (!clip.ok) {
       if (placed + waiting + resumed === 0) {
@@ -1710,16 +1751,19 @@ async function applyDcaVerbUnlocked(input: {
   if (placed === 0 && waiting === 0 && resumed === 0 && already > 0) {
     return { ok: true, message: "Bot is already armed." };
   }
+  const why = String(input.reason ?? "").trim();
   await logDcaEvent({
     playbook,
     event: "dca.armed",
     message:
       placed > 0
-        ? `Armed ${playbook.name}. First order placed.`
+        ? why
+          ? `Armed ${playbook.name}. First order placed. ${why}.`
+          : `Armed ${playbook.name}. First order placed.`
         : resumed > 0
           ? `Resumed adding on ${playbook.name}.`
           : `Armed ${playbook.name}. Waiting for the start trigger.`,
-    data: { sides, placed, resumed, waiting },
+    data: { sides, placed, resumed, waiting, ...(why ? { why } : {}) },
   });
   if (placed > 0) {
     return { ok: true, message: "Bot armed. First order placed." };
@@ -1737,6 +1781,7 @@ export async function applyDcaVerb(input: {
   side?: FuturesSide | null;
   source?: "manual" | "webhook";
   forcePlace?: boolean;
+  reason?: string;
 }): Promise<{ ok: true; message: string } | { ok: false; error: string }> {
   return withDeskLease({
     accountId: input.playbook.accountId,

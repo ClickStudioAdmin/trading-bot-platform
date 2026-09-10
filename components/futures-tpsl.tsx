@@ -5,7 +5,11 @@ import { createPortal } from "react-dom";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
 import { saveFuturesTpsl } from "@/lib/futures/actions";
-import { estimatedTpslPnl } from "@/lib/futures/tpsl";
+import {
+  estimatedTpslPnl,
+  futuresTpslPercentPrice,
+  type FuturesTpslLevelKind,
+} from "@/lib/futures/tpsl";
 import type {
   FuturesOrderType,
   FuturesSide,
@@ -34,6 +38,8 @@ export function FuturesTpslFields({
   defaultTpsl?: {
     takeProfit: number | null;
     stopLoss: number | null;
+    tpKind?: FuturesTpslLevelKind;
+    slKind?: FuturesTpslLevelKind;
     tpTrigger?: FuturesTrigger;
     slTrigger?: FuturesTrigger;
     mode?: FuturesTpslMode;
@@ -80,10 +86,12 @@ export function FuturesTpslFields({
         <div className={stacked ? "grid gap-3" : "grid gap-3 sm:grid-cols-2"}>
           <TpslPriceField
             name={`${namePrefix}takeProfit`}
+            kindName={`${namePrefix}tpKind`}
             triggerName={`${namePrefix}tpTrigger`}
             orderName={`${namePrefix}tpOrderType`}
             limitName={`${namePrefix}tpLimitPrice`}
             label="Take profit"
+            defaultKind={defaultTpsl?.tpKind}
             defaultPrice={defaultTpsl?.takeProfit}
             defaultTrigger={defaultTpsl?.tpTrigger}
             defaultOrderType={defaultTpsl?.tpOrderType}
@@ -94,10 +102,12 @@ export function FuturesTpslFields({
           />
           <TpslPriceField
             name={`${namePrefix}stopLoss`}
+            kindName={`${namePrefix}slKind`}
             triggerName={`${namePrefix}slTrigger`}
             orderName={`${namePrefix}slOrderType`}
             limitName={`${namePrefix}slLimitPrice`}
             label="Stop loss"
+            defaultKind={defaultTpsl?.slKind}
             defaultPrice={defaultTpsl?.stopLoss}
             defaultTrigger={defaultTpsl?.slTrigger}
             defaultOrderType={defaultTpsl?.slOrderType}
@@ -363,6 +373,8 @@ function FuturesTpslDialog({
   const [mode, setMode] = useState<FuturesTpslMode>(
     tpslMode === "partial" ? "partial" : "full",
   );
+  const [tpKind, setTpKind] = useState<FuturesTpslLevelKind>("price");
+  const [slKind, setSlKind] = useState<FuturesTpslLevelKind>("price");
   const [tp, setTp] = useState(
     takeProfit === null
       ? ""
@@ -395,23 +407,35 @@ function FuturesTpslDialog({
     mode === "partial" ? optionalNumber(tpQtyText) ?? qty : qty;
   const slCloseQty =
     mode === "partial" ? optionalNumber(slQtyText) ?? qty : qty;
+  const tpExit = dialogExitPrice({
+    side,
+    entryPrice,
+    kind: tpKind,
+    level: optionalNumber(tp),
+    orderType: tpType,
+    limit: optionalNumber(tpLimit),
+    stopKind: "take_profit",
+  });
+  const slExit = dialogExitPrice({
+    side,
+    entryPrice,
+    kind: slKind,
+    level: optionalNumber(sl),
+    orderType: slType,
+    limit: optionalNumber(slLimit),
+    stopKind: "stop_loss",
+  });
   const profit = estimatedTpslPnl({
     side,
     qty: tpCloseQty,
     entryPrice,
-    exitPrice:
-      tpType === "limit"
-        ? (optionalNumber(tpLimit) ?? optionalNumber(tp))
-        : optionalNumber(tp),
+    exitPrice: tpExit,
   });
   const loss = estimatedTpslPnl({
     side,
     qty: slCloseQty,
     entryPrice,
-    exitPrice:
-      slType === "limit"
-        ? (optionalNumber(slLimit) ?? optionalNumber(sl))
-        : optionalNumber(sl),
+    exitPrice: slExit,
   });
 
   useEffect(() => {
@@ -491,8 +515,14 @@ function FuturesTpslDialog({
           <ModeToggle mode={mode} onChange={setModeAndPrefill} />
           <TpslDialogRow
             name="takeProfit"
+            kindName="tpKind"
+            kind={tpKind}
+            onKindChange={(next) => {
+              setTp(convertDialogLevel(tp, tpKind, next, side, entryPrice, "take_profit"));
+              setTpKind(next);
+            }}
             triggerName="tpTrigger"
-            label="TP price"
+            label={tpKind === "percent" ? "TP %" : "TP price"}
             resultLabel="Profit"
             value={tp}
             onChange={setTp}
@@ -525,8 +555,14 @@ function FuturesTpslDialog({
           />
           <TpslDialogRow
             name="stopLoss"
+            kindName="slKind"
+            kind={slKind}
+            onKindChange={(next) => {
+              setSl(convertDialogLevel(sl, slKind, next, side, entryPrice, "stop_loss"));
+              setSlKind(next);
+            }}
             triggerName="slTrigger"
-            label="SL price"
+            label={slKind === "percent" ? "SL %" : "SL price"}
             resultLabel="Loss"
             value={sl}
             onChange={setSl}
@@ -580,6 +616,74 @@ function FuturesTpslDialog({
   );
 }
 
+function dialogExitPrice(input: {
+  side: FuturesSide;
+  entryPrice: number;
+  kind: FuturesTpslLevelKind;
+  level: number | null;
+  orderType: FuturesOrderType;
+  limit: number | null;
+  stopKind: "take_profit" | "stop_loss";
+}): number | null {
+  if (input.orderType === "limit" && input.limit != null) {
+    return input.limit;
+  }
+  if (input.level == null) {
+    return null;
+  }
+  if (input.kind !== "percent") {
+    return input.level;
+  }
+  const resolved = futuresTpslPercentPrice({
+    side: input.side,
+    entryPrice: input.entryPrice,
+    percent: input.level,
+    kind: input.stopKind,
+  });
+  return resolved.ok ? resolved.price : null;
+}
+
+function convertDialogLevel(
+  value: string,
+  from: FuturesTpslLevelKind,
+  to: FuturesTpslLevelKind,
+  side: FuturesSide,
+  entryPrice: number,
+  stopKind: "take_profit" | "stop_loss",
+): string {
+  if (from === to) {
+    return value;
+  }
+  const level = optionalNumber(value);
+  if (level == null || !(entryPrice > 0)) {
+    return "";
+  }
+  if (to === "percent") {
+    const move =
+      stopKind === "take_profit"
+        ? side === "long"
+          ? ((level - entryPrice) / entryPrice) * 100
+          : ((entryPrice - level) / entryPrice) * 100
+        : side === "long"
+          ? ((entryPrice - level) / entryPrice) * 100
+          : ((level - entryPrice) / entryPrice) * 100;
+    if (!(move > 0)) {
+      return "";
+    }
+    return formatGroupedNumberInput(String(Number(move.toPrecision(8))), true);
+  }
+  const resolved = futuresTpslPercentPrice({
+    side,
+    entryPrice,
+    percent: level,
+    kind: stopKind,
+  });
+  if (!resolved.ok) {
+    return "";
+  }
+  return formatGroupedNumberInput(String(resolved.price), true);
+}
+
 function HeaderStat({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -591,12 +695,14 @@ function HeaderStat({ label, value }: { label: string; value: string }) {
 
 function TpslPriceField({
   name,
+  kindName,
   triggerName,
   label,
   qtyName,
   qtyAria,
   orderName: orderNameProp,
   limitName: limitNameProp,
+  defaultKind,
   defaultPrice,
   defaultTrigger,
   defaultOrderType,
@@ -604,12 +710,14 @@ function TpslPriceField({
   defaultQty,
 }: {
   name: string;
+  kindName: string;
   triggerName: string;
   label: string;
   qtyName?: string;
   qtyAria?: string;
   orderName?: string;
   limitName?: string;
+  defaultKind?: FuturesTpslLevelKind;
   defaultPrice?: number | null;
   defaultTrigger?: FuturesTrigger;
   defaultOrderType?: FuturesOrderType;
@@ -618,6 +726,9 @@ function TpslPriceField({
 }) {
   const [orderType, setOrderType] = useState<FuturesOrderType>(
     defaultOrderType === "limit" ? "limit" : "market",
+  );
+  const [kind, setKind] = useState<FuturesTpslLevelKind>(
+    defaultKind === "percent" ? "percent" : "price",
   );
   const orderName =
     orderNameProp ?? (name.endsWith("stopLoss") ? "slOrderType" : "tpOrderType");
@@ -629,22 +740,41 @@ function TpslPriceField({
       ? takeProfit
         ? "Take profit trigger"
         : "Stop loss trigger"
-      : label;
+      : kind === "percent"
+        ? `${label} %`
+        : label;
   const limitLabel = takeProfit ? "Take profit limit" : "Stop loss limit";
   return (
     <div className="space-y-2">
       <label className="block text-xs text-ink-muted">
+        Type
+        <TpslTypeSelect name={kindName} value={kind} onChange={setKind} />
+      </label>
+      <label className="block text-xs text-ink-muted">
         {triggerLabel}
         <span className="mt-1 flex gap-1">
-          <GroupedNumberInput
-            name={name}
-            allowDecimal
-            placeholder="0.0"
-            defaultValue={
-              defaultPrice != null ? String(defaultPrice) : ""
-            }
-            className={TICKET_INPUT}
-          />
+          <span className={kind === "percent" ? "relative min-w-0 flex-1" : "contents"}>
+            <GroupedNumberInput
+              key={kind}
+              name={name}
+              allowDecimal
+              placeholder={kind === "percent" ? "1.5" : "0.0"}
+              defaultValue={
+                kind === (defaultKind === "percent" ? "percent" : "price") &&
+                defaultPrice != null
+                  ? String(defaultPrice)
+                  : ""
+              }
+              className={
+                kind === "percent" ? `${TICKET_INPUT} w-full pr-7` : TICKET_INPUT
+              }
+            />
+            {kind === "percent" ? (
+              <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                %
+              </span>
+            ) : null}
+          </span>
           <TriggerSelect
             name={triggerName}
             defaultValue={defaultTrigger ?? "last"}
@@ -657,7 +787,9 @@ function TpslPriceField({
         </span>
         {orderType === "market" ? (
           <span className="mt-1 block text-[11px] text-ink-faint">
-            Closes at market when this price hits.
+            {kind === "percent"
+              ? "Closes at market when this percent from the fill hits."
+              : "Closes at market when this price hits."}
           </span>
         ) : null}
       </label>
@@ -697,6 +829,9 @@ function TpslPriceField({
 
 function TpslDialogRow({
   name,
+  kindName,
+  kind,
+  onKindChange,
   triggerName,
   label,
   resultLabel,
@@ -741,6 +876,9 @@ function TpslDialogRow({
   percentValue: string;
   onPercentChange: (next: string) => void;
   onPercentPick: (pct: number) => void;
+  kindName: string;
+  kind: FuturesTpslLevelKind;
+  onKindChange: (next: FuturesTpslLevelKind) => void;
 }) {
   const takeProfit = name === "takeProfit";
   const triggerLabel =
@@ -752,18 +890,34 @@ function TpslDialogRow({
   const limitLabel = takeProfit ? "TP limit" : "SL limit";
   return (
     <div className="space-y-2">
+      <label className="block text-sm text-ink">
+        Type
+        <TpslTypeSelect
+          name={kindName}
+          value={kind}
+          onChange={onKindChange}
+          className={INPUT_CLASS}
+        />
+      </label>
       <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2">
         <label className="block text-sm text-ink">
           {triggerLabel}
           <span className="mt-1 flex gap-1">
-            <GroupedNumberInput
-              name={name}
-              value={value}
-              onChange={onChange}
-              allowDecimal
-              placeholder="0.0"
-              className={INPUT_CLASS}
-            />
+            <span className={kind === "percent" ? "relative min-w-0 flex-1" : "contents"}>
+              <GroupedNumberInput
+                name={name}
+                value={value}
+                onChange={onChange}
+                allowDecimal
+                placeholder={kind === "percent" ? "1.5" : "0.0"}
+                className={kind === "percent" ? `${INPUT_CLASS} pr-8` : INPUT_CLASS}
+              />
+              {kind === "percent" ? (
+                <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-ink-muted">
+                  %
+                </span>
+              ) : null}
+            </span>
             <TriggerSelect name={triggerName} defaultValue={defaultTrigger} />
             <OrderTypeSelect
               name={orderTypeName}
@@ -773,7 +927,9 @@ function TpslDialogRow({
           </span>
           {orderType === "market" ? (
             <span className="mt-1 block text-xs text-ink-faint">
-              Closes at market when this price hits.
+              {kind === "percent"
+                ? "Closes at market when this percent from entry hits."
+                : "Closes at market when this price hits."}
             </span>
           ) : null}
         </label>
@@ -851,6 +1007,32 @@ function TpslDialogRow({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function TpslTypeSelect({
+  name,
+  value,
+  onChange,
+  className = SELECT_CLASS,
+}: {
+  name: string;
+  value: FuturesTpslLevelKind;
+  onChange: (next: FuturesTpslLevelKind) => void;
+  className?: string;
+}) {
+  return (
+    <select
+      name={name}
+      value={value}
+      onChange={(event) =>
+        onChange(event.target.value === "percent" ? "percent" : "price")
+      }
+      className={`${className} mt-1 w-full`}
+    >
+      <option value="price">Price</option>
+      <option value="percent">Percentage</option>
+    </select>
   );
 }
 

@@ -71,6 +71,26 @@ assert.equal(
 );
 assert.equal(
   withFuturesOrigin("Opened BTCUSDT long", {
+    source: "engine",
+    ruleName: "Sample bot",
+    reason: "RSI 14 crosses below 30 · 15m",
+  }),
+  "Opened BTCUSDT long · Auto · Sample bot. RSI 14 crosses below 30 · 15m",
+);
+assert.deepEqual(
+  futuresOriginLog({
+    source: "engine",
+    ruleName: "Sample bot",
+    reason: "RSI 14 crosses below 30 · 15m",
+  }),
+  {
+    source: "engine",
+    ruleName: "Sample bot",
+    reason: "RSI 14 crosses below 30 · 15m",
+  },
+);
+assert.equal(
+  withFuturesOrigin("Opened BTCUSDT long", {
     source: "webhook",
     ruleName: "Custom TV Strategy",
   }),
