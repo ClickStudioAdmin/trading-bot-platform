@@ -108,6 +108,20 @@ export function futuresTpslPercentPrice(input: {
   return { ok: true, price };
 }
 
+function snapTpslPrice(
+  price: number | null,
+  instrument: BybitInstrument | undefined,
+): { ok: true; price: number | null } | { ok: false; error: string } {
+  if (price === null) {
+    return { ok: true, price: null };
+  }
+  const priced = priceForPerp(price, instrument);
+  if (!priced.ok) {
+    return priced;
+  }
+  return { ok: true, price: priced.price };
+}
+
 export function resolveFuturesTpslPrices(input: {
   tpsl: FuturesTpsl;
   side: FuturesSide;
@@ -128,11 +142,7 @@ export function resolveFuturesTpslPrices(input: {
     if (!resolved.ok) {
       return resolved;
     }
-    const priced = priceForPerp(resolved.price, input.instrument);
-    if (!priced.ok) {
-      return priced;
-    }
-    takeProfit = priced.price;
+    takeProfit = resolved.price;
   }
   if (stopLoss !== null && slKind === "percent") {
     const resolved = futuresTpslPercentPrice({
@@ -144,12 +154,18 @@ export function resolveFuturesTpslPrices(input: {
     if (!resolved.ok) {
       return resolved;
     }
-    const priced = priceForPerp(resolved.price, input.instrument);
-    if (!priced.ok) {
-      return priced;
-    }
-    stopLoss = priced.price;
+    stopLoss = resolved.price;
   }
+  const snappedTp = snapTpslPrice(takeProfit, input.instrument);
+  if (!snappedTp.ok) {
+    return snappedTp;
+  }
+  takeProfit = snappedTp.price;
+  const snappedSl = snapTpslPrice(stopLoss, input.instrument);
+  if (!snappedSl.ok) {
+    return snappedSl;
+  }
+  stopLoss = snappedSl.price;
   let tpLimitPrice = input.tpsl.tpLimitPrice;
   let slLimitPrice = input.tpsl.slLimitPrice;
   if (
@@ -166,6 +182,16 @@ export function resolveFuturesTpslPrices(input: {
   ) {
     slLimitPrice = stopLoss;
   }
+  const snappedTpLimit = snapTpslPrice(tpLimitPrice, input.instrument);
+  if (!snappedTpLimit.ok) {
+    return snappedTpLimit;
+  }
+  tpLimitPrice = snappedTpLimit.price;
+  const snappedSlLimit = snapTpslPrice(slLimitPrice, input.instrument);
+  if (!snappedSlLimit.ok) {
+    return snappedSlLimit;
+  }
+  slLimitPrice = snappedSlLimit.price;
   return {
     ok: true,
     tpsl: {

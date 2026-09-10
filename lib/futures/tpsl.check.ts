@@ -427,4 +427,26 @@ if (percentParsed.ok && percentParsed.tpsl) {
   }
 }
 
+const tickInstrument = {
+  symbol: "SOLUSDT",
+  status: "Trading",
+  baseCoin: "SOL",
+  quoteCoin: "USDT",
+  priceFilter: { tickSize: "0.1", minPrice: "0.1" },
+};
+const atrTp = resolveFuturesTpslPrices({
+  tpsl: levels({
+    takeProfit: 1212.475944322307,
+    stopLoss: null,
+  }),
+  side: "long",
+  entryPrice: 1180,
+  instrument: tickInstrument,
+});
+assert.equal(atrTp.ok, true);
+if (atrTp.ok) {
+  assert.equal(atrTp.tpsl.takeProfit, 1212.4);
+  assert.equal(venueTradingStopFields(atrTp.tpsl).takeProfit, "1212.4");
+}
+
 console.log("futures tpsl checks passed");
