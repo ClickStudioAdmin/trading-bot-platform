@@ -878,6 +878,16 @@ export function dcaPlaybookIsRunning(
   return dcaLegIsRunning(playbook.long.status) || dcaLegIsRunning(playbook.short.status);
 }
 
+/** Saved bot still owns a cycle (Active, Stop adding, or Closing). Not the Status dropdown. */
+export function dcaPlaybookHoldsCycle(
+  playbook: Pick<DcaPlaybook, "direction" | "long" | "short">,
+): boolean {
+  return dcaEnabledSides(playbook.direction).some((side) => {
+    const status = dcaLegFor(playbook, side).status;
+    return status === "armed" || status === "stop_adding" || status === "closing";
+  });
+}
+
 export type DcaCycleOpen = {
   symbol: string;
   side: FuturesSide;
@@ -901,16 +911,12 @@ export function dcaPlaybookHasOpenCycle(
   );
 }
 
-/** Open-cycle lock. Disabled unlocks immediately, including while flatten is in flight. */
+/** Open-cycle lock. Selecting Disabled does not unlock. Save Disabled does, after marks. */
 export function dcaCycleFieldsLocked(input: {
   hasOpenCycle: boolean;
-  running: boolean;
-  status?: string | null;
+  holdsCycle: boolean;
 }): boolean {
-  if (!input.hasOpenCycle || !input.running) {
-    return false;
-  }
-  return String(input.status ?? "").trim() !== "disabled";
+  return input.hasOpenCycle && input.holdsCycle;
 }
 
 export function writeDcaCycleFormFields(
@@ -1039,8 +1045,7 @@ export function resolveDcaSaveConfig(
     hasOpenCycle: Boolean(
       existing && dcaPlaybookHasOpenCycle(existing, opens),
     ),
-    running: Boolean(existing && dcaPlaybookIsRunning(existing)),
-    status: String(form.get("botStatus") ?? ""),
+    holdsCycle: Boolean(existing && dcaPlaybookHoldsCycle(existing)),
   });
   if (existing && cycleLocked) {
     writeDcaCycleFormFields(form, existing);
