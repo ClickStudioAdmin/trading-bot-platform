@@ -2160,20 +2160,6 @@ export function DcaPlaybookForm({
       >
           <div className={rowClass}>
           <label className={labelClass}>
-            <HintLabel text="Method" required />
-            <select
-              name="takeProfitKind"
-              value={takeProfitKind}
-              onChange={(event) =>
-                setTakeProfitKind(parseDcaTakeProfitKind(event.target.value))
-              }
-              className={fieldClass}
-            >
-              <option value="percent">Percentage</option>
-              <option value="atr">ATR × multiplier</option>
-            </select>
-          </label>
-          <label className={labelClass}>
             <HintLabel text="Basis" required />
             <select
               name="takeProfitBasis"
@@ -2185,6 +2171,20 @@ export function DcaPlaybookForm({
             >
               <option value="average">Average entry</option>
               <option value="first_entry">First fill</option>
+            </select>
+          </label>
+          <label className={labelClass}>
+            <HintLabel text="Method" required />
+            <select
+              name="takeProfitKind"
+              value={takeProfitKind}
+              onChange={(event) =>
+                setTakeProfitKind(parseDcaTakeProfitKind(event.target.value))
+              }
+              className={fieldClass}
+            >
+              <option value="percent">Percentage</option>
+              <option value="atr">ATR × multiplier</option>
             </select>
           </label>
           {takeProfitKind === "percent" ? (

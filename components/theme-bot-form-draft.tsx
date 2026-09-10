@@ -351,14 +351,7 @@ const EXIT_METHODS = [
   { value: "atr", label: "ATR × multiplier" },
 ] as const;
 
-const TRAIL_METHODS = [
-  { value: "", label: "Off" },
-  { value: "distance", label: "Distance" },
-  { value: "percent", label: "Percentage" },
-] as const;
-
 type ExitMethod = (typeof EXIT_METHODS)[number]["value"];
-type TrailMethod = (typeof TRAIL_METHODS)[number]["value"];
 type StartKind = "price" | "indicator" | "trend" | "webhook";
 type Action = "buy" | "sell" | "close_long" | "close_short";
 
@@ -743,7 +736,6 @@ export function ThemeBotFormDraft() {
   const [tpMethod, setTpMethod] = useState<ExitMethod>("percent");
   const [tpValue, setTpValue] = useState("");
   const [tpOrderType, setTpOrderType] = useState("market");
-  const [trailMethod, setTrailMethod] = useState<TrailMethod>("");
   const [trailValue, setTrailValue] = useState("");
   const [trailTrigger, setTrailTrigger] = useState("");
   const [slMethod, setSlMethod] = useState<ExitMethod>("");
@@ -754,6 +746,15 @@ export function ThemeBotFormDraft() {
   const [exitIf, setExitIf] = useState<DcaFilterSpec | null>(null);
   const [shortExitIf, setShortExitIf] = useState<DcaFilterSpec | null>(null);
   const [skipIfOpen, setSkipIfOpen] = useState(true);
+  const [averaging, setAveraging] = useState<"dip" | "interval">("dip");
+  const [spacingKind, setSpacingKind] = useState<"percent" | "atr">("percent");
+  const [dipPct, setDipPct] = useState("1");
+  const [atrPeriod, setAtrPeriod] = useState("14");
+  const [atrSpacing, setAtrSpacing] = useState("1");
+  const [intervalUnit, setIntervalUnit] = useState<"minutes" | "hours" | "days">(
+    "hours",
+  );
+  const [intervalValue, setIntervalValue] = useState("1");
   const [restGrid, setRestGrid] = useState(true);
   const [direction, setDirection] = useState<"long" | "short" | "both">("long");
   const [desk, setDesk] = useState<DeskKind>("perps");
@@ -805,7 +806,6 @@ export function ThemeBotFormDraft() {
     tpMethod,
     tpValue,
     tpOrderType,
-    trailMethod,
     trailValue,
     trailTrigger,
     slMethod,
@@ -816,6 +816,13 @@ export function ThemeBotFormDraft() {
     exitIf,
     shortExitIf,
     skipIfOpen,
+    averaging,
+    spacingKind,
+    dipPct,
+    atrPeriod,
+    atrSpacing,
+    intervalUnit,
+    intervalValue,
     restGrid,
     direction,
     minApr,
@@ -851,8 +858,7 @@ export function ThemeBotFormDraft() {
   const requireTp = desk !== "cnc" && !closing && tpOn;
   const requireSl = desk !== "cnc" && !closing && slOn;
   const requireTrail = desk !== "cnc" && !closing && trailOn;
-  const trailKind = trailMethod || "percent";
-  const requireTrailTrigger = requireTrail && trailKind === "percent";
+  const requireTrailTrigger = requireTrail && desk === "dca";
   const requireBreakeven = desk === "dca" && !closing && breakevenOn;
   const requireCarryTp = desk === "cnc" && carryTpOn;
   const requireCarrySl = desk === "cnc" && carrySlOn;
@@ -1503,23 +1509,110 @@ export function ThemeBotFormDraft() {
 
         {desk === "dca" ? (
         <Group title="Additional orders">
-          <div className={rowClass}>
-            <Field label="Averaging" className="lg:col-span-2" required>
-              <select className={fieldClass} defaultValue="dip">
+          <div className={rowClass5}>
+            <Field label="Averaging" required>
+              <select
+                className={fieldClass}
+                value={averaging}
+                onChange={(event) =>
+                  setAveraging(event.target.value as "dip" | "interval")
+                }
+              >
                 <option value="dip">Position — add on price deviation</option>
                 <option value="interval">Position — add on interval</option>
               </select>
             </Field>
-            <Field
-              label="Order"
-              hint="Limit rests remaining adds as GTC. Market fills them when the add triggers."
-              required
-            >
-              <OrderTypePill
-                value={restGrid ? "limit" : "market"}
-                onChange={(next) => setRestGrid(next === "limit")}
-              />
-            </Field>
+            {averaging === "dip" ? (
+              <Field label="Spacing" required>
+                <select
+                  className={fieldClass}
+                  value={spacingKind}
+                  onChange={(event) =>
+                    setSpacingKind(
+                      event.target.value === "atr" ? "atr" : "percent",
+                    )
+                  }
+                >
+                  <option value="percent">Percentage</option>
+                  <option value="atr">ATR</option>
+                </select>
+              </Field>
+            ) : null}
+            {averaging === "dip" && spacingKind === "percent" ? (
+              <Field label="Price deviation %" required>
+                <span className="relative mt-1 block">
+                  <GroupedNumberInput
+                    value={dipPct}
+                    onChange={setDipPct}
+                    allowDecimal
+                    className={`${fieldClass} mt-0 pr-7`}
+                  />
+                  <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                    %
+                  </span>
+                </span>
+              </Field>
+            ) : null}
+            {averaging === "dip" && spacingKind === "atr" ? (
+              <>
+                <Field label="ATR period" required>
+                  <GroupedNumberInput
+                    value={atrPeriod}
+                    onChange={setAtrPeriod}
+                    className={fieldClass}
+                  />
+                </Field>
+                <Field label="ATR spacing" required>
+                  <GroupedNumberInput
+                    value={atrSpacing}
+                    onChange={setAtrSpacing}
+                    allowDecimal
+                    className={fieldClass}
+                  />
+                </Field>
+              </>
+            ) : null}
+            {averaging === "interval" ? (
+              <div>
+                <p className={labelClass}>
+                  <HintLabel text="Add every" required />
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    className={fieldClass}
+                    value={intervalUnit}
+                    onChange={(event) =>
+                      setIntervalUnit(
+                        event.target.value as "minutes" | "hours" | "days",
+                      )
+                    }
+                    aria-label="Interval unit"
+                  >
+                    <option value="minutes">Minutes</option>
+                    <option value="hours">Hours</option>
+                    <option value="days">Days</option>
+                  </select>
+                  <GroupedNumberInput
+                    value={intervalValue}
+                    onChange={setIntervalValue}
+                    className={fieldClass}
+                    placeholder={intervalUnit === "minutes" ? "15" : "1"}
+                  />
+                </div>
+              </div>
+            ) : null}
+            {averaging === "dip" ? (
+              <Field
+                label="Order"
+                hint="Limit rests remaining adds as GTC. Market fills them when the add triggers."
+                required
+              >
+                <OrderTypePill
+                  value={restGrid ? "limit" : "market"}
+                  onChange={(next) => setRestGrid(next === "limit")}
+                />
+              </Field>
+            ) : null}
           </div>
         </Group>
         ) : null}
@@ -1587,48 +1680,10 @@ export function ThemeBotFormDraft() {
             <OptionalSection
               title="Trailing stop"
               enabled={trailOn}
-              onEnabled={(next) => {
-                setTrailOn(next);
-                if (next && !trailMethod) {
-                  setTrailMethod("percent");
-                }
-              }}
+              onEnabled={setTrailOn}
             >
               <div className={rowClass}>
-                <Field label="Method" required>
-                  <select
-                    value={trailMethod || "percent"}
-                    onChange={(event) =>
-                      setTrailMethod(event.target.value as TrailMethod)
-                    }
-                    className={fieldClass}
-                  >
-                    {TRAIL_METHODS.filter((option) => option.value).map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                {(trailMethod || "percent") === "distance" ? (
-                  <>
-                    <Field label="Retracement" required>
-                      <OffNumber
-                        value={trailValue}
-                        onChange={setTrailValue}
-                        required
-                        invalid={showFieldErrors && missing.trailValue}
-                      />
-                    </Field>
-                    <Field label="Activation price" hint="Empty is Off.">
-                      <OffNumber
-                        value={trailTrigger}
-                        onChange={setTrailTrigger}
-                      />
-                    </Field>
-                  </>
-                ) : null}
-                {(trailMethod || "percent") === "percent" ? (
+                {desk === "dca" ? (
                   <>
                     <Field
                       label="Trigger %"
@@ -1651,7 +1706,24 @@ export function ThemeBotFormDraft() {
                       />
                     </Field>
                   </>
-                ) : null}
+                ) : (
+                  <>
+                    <Field label="Retracement" required>
+                      <OffNumber
+                        value={trailValue}
+                        onChange={setTrailValue}
+                        required
+                        invalid={showFieldErrors && missing.trailValue}
+                      />
+                    </Field>
+                    <Field label="Activation price" hint="Empty is Off.">
+                      <OffNumber
+                        value={trailTrigger}
+                        onChange={setTrailTrigger}
+                      />
+                    </Field>
+                  </>
+                )}
               </div>
             </OptionalSection>
 
@@ -1661,19 +1733,56 @@ export function ThemeBotFormDraft() {
               onEnabled={(next) => {
                 setSlOn(next);
                 if (next && !slMethod) {
-                  setSlMethod("percent");
+                  setSlMethod(desk === "dca" ? "percent" : "price");
                 }
               }}
             >
-              <ExitMethodFields
-                method={slMethod || "percent"}
-                onMethod={setSlMethod}
-                value={slValue}
-                onValue={setSlValue}
-                orderType={slOrderType}
-                onOrderType={setSlOrderType}
-                invalid={showFieldErrors && missing.slValue}
-              />
+              {desk === "dca" ? (
+                <div className={rowClass}>
+                  <Field label="Basis" required>
+                    <select className={fieldClass} defaultValue="average">
+                      <option value="average">Average entry</option>
+                      <option value="first_entry">First fill</option>
+                    </select>
+                  </Field>
+                  <Field label="Stop loss %" required>
+                    <OffNumber
+                      value={slValue}
+                      onChange={setSlValue}
+                      required
+                      invalid={showFieldErrors && missing.slValue}
+                    />
+                  </Field>
+                </div>
+              ) : (
+                <div className={rowClass}>
+                  <Field label="Price" required>
+                    <OffNumber
+                      value={slValue}
+                      onChange={setSlValue}
+                      required
+                      invalid={showFieldErrors && missing.slValue}
+                    />
+                  </Field>
+                  <Field label="Trigger" required>
+                    <select className={fieldClass} defaultValue="last">
+                      <option value="last">Last</option>
+                      <option value="mark">Mark</option>
+                      <option value="index">Index</option>
+                    </select>
+                  </Field>
+                  <Field label="Order type" required>
+                    <select
+                      value={slOrderType}
+                      onChange={(event) => setSlOrderType(event.target.value)}
+                      className={fieldClass}
+                    >
+                      <option value="market">Market</option>
+                      <option value="limit">Limit</option>
+                    </select>
+                  </Field>
+                </div>
+              )}
             </OptionalSection>
 
             {desk === "dca" ? (
@@ -2211,6 +2320,22 @@ function ExitMethodFields({
 
   return (
     <div className={rowClass}>
+      {method !== "price" ? (
+        <Field label="Basis" required>
+          <select className={fieldClass} defaultValue="average">
+            <option value="average">Average entry</option>
+            <option value="first_entry">First fill</option>
+          </select>
+        </Field>
+      ) : (
+        <Field label="Trigger" required>
+          <select className={fieldClass} defaultValue="last">
+            <option value="last">Last</option>
+            <option value="mark">Mark</option>
+            <option value="index">Index</option>
+          </select>
+        </Field>
+      )}
       <Field label="Method" required>
         <select
           value={method}
@@ -2231,22 +2356,6 @@ function ExitMethodFields({
         </select>
       </Field>
       {valueField}
-      {method !== "price" ? (
-        <Field label="Basis" required>
-          <select className={fieldClass} defaultValue="first_entry">
-            <option value="first_entry">First fill</option>
-            <option value="average">Average entry</option>
-          </select>
-        </Field>
-      ) : (
-        <Field label="Trigger" required>
-          <select className={fieldClass} defaultValue="last">
-            <option value="last">Last</option>
-            <option value="mark">Mark</option>
-            <option value="index">Index</option>
-          </select>
-        </Field>
-      )}
       <Field label="Order type" required>
         <select
           value={orderType}
