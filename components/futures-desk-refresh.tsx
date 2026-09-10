@@ -9,8 +9,14 @@ const URGENT_REFRESH_MS = 2_000;
 export function FuturesDeskRefresh({ urgent = false }: { urgent?: boolean }) {
   const router = useRouter();
   const wasUrgent = useRef(false);
+  const armed = useRef(false);
 
   useEffect(() => {
+    if (!armed.current) {
+      armed.current = true;
+      wasUrgent.current = urgent;
+      return;
+    }
     if (urgent && !wasUrgent.current && !document.hidden) {
       router.refresh();
     }
