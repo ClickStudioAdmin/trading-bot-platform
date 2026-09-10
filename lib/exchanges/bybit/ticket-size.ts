@@ -74,7 +74,8 @@ export function perpTicketSizeError(input: {
     if (maxQty > 0 && sizePrice) {
       const qty = amount / sizePrice;
       if (qty > maxQty) {
-        return `Maximum size is ${formatPerpMinQty(maxQty)} ${input.baseCoin}.`;
+        const maxUsdt = maxQty * sizePrice;
+        return `Maximum order is $${formatPerpMinQty(maxUsdt)} (${formatPerpMinQty(maxQty)} ${input.baseCoin}).`;
       }
     }
     return null;

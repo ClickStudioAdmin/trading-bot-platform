@@ -472,6 +472,8 @@ export function dcaConfigMaxOrderError(input: {
   lastPrice: number | null;
   maxQty: number;
   maxMktQty: number;
+  minQty?: number;
+  minNotional?: number;
   baseCoin: string;
   bookUsdt?: number | null;
   leverage?: number | null;
@@ -504,6 +506,8 @@ export function dcaConfigMaxOrderError(input: {
     deviationMultiplier: config.deviationMultiplier,
     maxQty: input.maxQty,
     maxMktQty: input.maxMktQty,
+    minQty: input.minQty ?? 0,
+    minNotional: input.minNotional ?? 0,
     baseCoin: input.baseCoin,
   });
 }

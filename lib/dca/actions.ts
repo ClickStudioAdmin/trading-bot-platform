@@ -144,6 +144,8 @@ async function rejectIfOverMaxOrder(
     lastPrice,
     maxQty: pair.maxQty,
     maxMktQty: pair.maxMktQty,
+    minQty: pair.minQty,
+    minNotional: pair.minNotional,
     baseCoin: pair.baseCoin,
   });
 }

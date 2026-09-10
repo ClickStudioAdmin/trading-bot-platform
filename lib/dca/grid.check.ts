@@ -153,7 +153,7 @@ assert.equal(
     maxMktQty: 119,
     baseCoin: "BTC",
   }),
-  "Entry # 18 is 163.84 BTC, above the 119 BTC market maximum.",
+  "Entry # 18 is $13,107,200, above the $9,520,000 market maximum (119 BTC).",
 );
 assert.equal(
   dcaLadderMaxOrderError({
@@ -225,7 +225,7 @@ assert.equal(
     maxMktQty: 1.5,
     baseCoin: "BTC",
   }),
-  "Entry # 2 is 2 BTC, above the 1.5 BTC maximum.",
+  "Entry # 2 is $100, above the $75 maximum (1.5 BTC).",
 );
 assert.equal(
   dcaLadderMaxOrderError({
@@ -244,6 +244,26 @@ assert.equal(
     baseCoin: "BTC",
   }),
   "Long Entry # 4 is 80 BTC, above the 50 BTC market maximum.",
+);
+assert.equal(
+  dcaLadderMaxOrderError({
+    sides: ["long"],
+    entryPrice: 100,
+    maxClips: 3,
+    maxValue: null,
+    dipPct: null,
+    clipSize: 1,
+    sizeUnit: "usdt",
+    sizeMultiplier: 1,
+    deviationMultiplier: 1,
+    restGrid: true,
+    maxQty: 100,
+    maxMktQty: 100,
+    minQty: 0.1,
+    minNotional: 5,
+    baseCoin: "BTC",
+  }),
+  "Entry # 1: Minimum order is $10 (0.1 BTC).",
 );
 assert.equal(dcaDipPctAt(0, 1, 2), 1);
 assert.equal(dcaDipPctAt(1, 1, 2), 2);

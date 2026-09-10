@@ -107,6 +107,8 @@ async function rejectDcaMaxOrder(
     config,
     lastPrice,
     maxQty: pair.maxQty,
+    minQty: pair.minQty,
+    minNotional: pair.minNotional,
     maxMktQty: pair.maxMktQty,
     baseCoin: pair.baseCoin,
   });

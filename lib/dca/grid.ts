@@ -4,6 +4,7 @@ import { positionMarginUsdt } from "@/lib/futures/stats";
 import {
   formatPerpMinQty,
   perpEffectiveMaxQty,
+  perpTicketSizeError,
 } from "@/lib/exchanges/bybit/ticket-size";
 
 export function dcaClipSizeAt(
@@ -743,6 +744,8 @@ export type DcaOverMaxOrder = {
   orderNumber: number;
   qty: number;
   maxQty: number;
+  price: number;
+  notionalUsdt: number;
   orderType: "market" | "limit";
 };
 
@@ -803,6 +806,8 @@ export function dcaFirstOrderOverMaxQty(input: {
         orderNumber: i + 1,
         qty,
         maxQty: cap,
+        price,
+        notionalUsdt: qty * price,
         orderType,
       };
     }
@@ -824,6 +829,8 @@ export function dcaLadderMaxOrderError(input: {
   maxQty: number;
   maxMktQty: number;
   baseCoin: string;
+  minQty?: number;
+  minNotional?: number;
 }): string | null {
   for (const side of input.sides) {
     const hit = dcaFirstOrderOverMaxQty({ ...input, side });
@@ -838,7 +845,83 @@ export function dcaLadderMaxOrderError(input: {
         ? `${hit.side === "long" ? "Long" : "Short"} ${entry}`
         : entry;
     const kind = hit.orderType === "market" ? "market maximum" : "maximum";
+    if (input.sizeUnit === "usdt") {
+      const maxUsdt = hit.maxQty * hit.price;
+      return `${label} is $${formatPerpMinQty(hit.notionalUsdt)}, above the $${formatPerpMinQty(maxUsdt)} ${kind} (${maxText} ${input.baseCoin}).`;
+    }
     return `${label} is ${qtyText} ${input.baseCoin}, above the ${maxText} ${input.baseCoin} ${kind}.`;
+  }
+  return dcaLadderMinOrderError(input);
+}
+
+function dcaLadderMinOrderError(input: {
+  sides: readonly FuturesSide[];
+  entryPrice: number;
+  maxClips: number | null;
+  maxValue: number | null;
+  dipPct: number | null;
+  clipSize: number;
+  sizeUnit: "qty" | "usdt";
+  sizeMultiplier: number;
+  deviationMultiplier: number;
+  restGrid: boolean;
+  maxQty: number;
+  maxMktQty: number;
+  baseCoin: string;
+  minQty?: number;
+  minNotional?: number;
+}): string | null {
+  const minQty = input.minQty ?? 0;
+  const minNotional = input.minNotional ?? 0;
+  if (!(minQty > 0) && !(minNotional > 0)) {
+    return null;
+  }
+  if (
+    !(input.clipSize > 0) ||
+    !(input.sizeMultiplier > 0) ||
+    !(input.entryPrice > 0)
+  ) {
+    return null;
+  }
+  for (const side of input.sides) {
+    const count = dcaPlannedOrderCount({ ...input, side });
+    const prices = dcaLadderOrderPrices({
+      side,
+      entryPrice: input.entryPrice,
+      count,
+      dipPct: input.dipPct,
+      deviationMultiplier: input.deviationMultiplier,
+    });
+    for (let i = 0; i < count; i += 1) {
+      const price = prices[i] ?? input.entryPrice;
+      const size = dcaClipSizeAt(i, input.clipSize, input.sizeMultiplier);
+      const orderType = dcaClipOrderType(i, input.restGrid);
+      const cap = perpEffectiveMaxQty({
+        maxQty: input.maxQty,
+        maxMktQty: input.maxMktQty,
+        orderType,
+      });
+      const err = perpTicketSizeError({
+        size: String(size),
+        unit: input.sizeUnit,
+        minQty,
+        maxQty: cap,
+        minNotional,
+        lastPrice: price,
+        limitPrice: String(price),
+        orderType,
+        baseCoin: input.baseCoin,
+      });
+      if (!err || !err.startsWith("Minimum")) {
+        continue;
+      }
+      const entry = `Entry # ${i + 1}`;
+      const label =
+        input.sides.length > 1
+          ? `${side === "long" ? "Long" : "Short"} ${entry}`
+          : entry;
+      return `${label}: ${err}`;
+    }
   }
   return null;
 }

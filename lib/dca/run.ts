@@ -74,6 +74,12 @@ import {
 import { formatDcaStartReasons } from "@/lib/bots/condition-copy";
 import { dcaFilterForSide, dcaFilterMet, dcaPlaybookFilterNeedsWideBars } from "./filters";
 import { dcaSyncFailedMessage } from "./log-copy";
+import {
+  dcaSyncFailureStamp,
+  shouldSkipDcaSyncRetry,
+  type DcaSyncFailureStamp,
+} from "./sync-failure";
+import { loadRecentDcaSyncFailures } from "./sync-failure-store";
 import { isUnchangedWorkingAmend } from "@/lib/futures/working";
 import {
   listDcaPlaybooksForAccount,
@@ -119,7 +125,21 @@ async function logDcaSyncFailed(input: {
   clipIndex?: number;
   limitPrice?: number;
   qty?: number;
+  recent?: DcaSyncFailureStamp[];
 }): Promise<void> {
+  const stamp = dcaSyncFailureStamp({
+    playbookId: input.playbook.id,
+    playbookUpdatedAtMs: input.playbook.updatedAtMs,
+    reason: input.reason,
+    clipIndex: input.clipIndex,
+    qty: input.qty,
+    limitPrice: input.limitPrice,
+    error: input.error,
+  });
+  if (input.recent && shouldSkipDcaSyncRetry(input.recent, stamp)) {
+    return;
+  }
+  input.recent?.push(stamp);
   await logDcaEvent({
     playbook: input.playbook,
     side: input.side,
@@ -136,6 +156,7 @@ async function logDcaSyncFailed(input: {
     }),
     data: {
       reason: input.reason,
+      playbookUpdatedAtMs: input.playbook.updatedAtMs,
       ...(input.clipIndex !== undefined ? { clipIndex: input.clipIndex } : {}),
       ...(input.playbook.maxClips !== null
         ? { maxClips: input.playbook.maxClips }
@@ -728,6 +749,10 @@ async function syncDcaPlaybookGridUnlocked(input: {
     input.mode === "live"
       ? capDcaSafetySync(rawPlan, DCA_LIVE_GRID_OPS_PER_SYNC)
       : rawPlan;
+  const recentFailures = await loadRecentDcaSyncFailures({
+    accountId: input.playbook.accountId,
+    playbookId: input.playbook.id,
+  });
   const actor = playbookActor(input.playbook, input.mode);
   for (const workingId of plan.cancelIds) {
     const cancelled = await runFuturesCommand({
@@ -740,10 +765,21 @@ async function syncDcaPlaybookGridUnlocked(input: {
         side: input.side,
         error: cancelled.error,
         reason: "cancel_grid",
+        recent: recentFailures,
       });
     }
   }
   for (const item of plan.amend) {
+    const amendStamp = dcaSyncFailureStamp({
+      playbookId: input.playbook.id,
+      playbookUpdatedAtMs: input.playbook.updatedAtMs,
+      reason: "amend_grid",
+      qty: item.qty,
+      limitPrice: item.limitPrice,
+    });
+    if (shouldSkipDcaSyncRetry(recentFailures, amendStamp)) {
+      continue;
+    }
     const amended = await runFuturesCommand({
       actor,
       command: {
@@ -762,6 +798,7 @@ async function syncDcaPlaybookGridUnlocked(input: {
         reason: "amend_grid",
         limitPrice: item.limitPrice,
         qty: item.qty,
+        recent: recentFailures,
       });
     }
   }
@@ -804,6 +841,17 @@ async function syncDcaPlaybookGridUnlocked(input: {
     if (!open) {
       continue;
     }
+    const restStamp = dcaSyncFailureStamp({
+      playbookId: input.playbook.id,
+      playbookUpdatedAtMs: input.playbook.updatedAtMs,
+      reason: "rest_grid",
+      clipIndex: item.clipIndex,
+      qty: item.qty,
+      limitPrice: item.limitPrice,
+    });
+    if (shouldSkipDcaSyncRetry(recentFailures, restStamp)) {
+      continue;
+    }
     const rested = await runFuturesCommand({
       actor,
       command: {
@@ -833,6 +881,7 @@ async function syncDcaPlaybookGridUnlocked(input: {
         clipIndex: item.clipIndex,
         limitPrice: item.limitPrice,
         qty: item.qty,
+        recent: recentFailures,
       });
       continue;
     }

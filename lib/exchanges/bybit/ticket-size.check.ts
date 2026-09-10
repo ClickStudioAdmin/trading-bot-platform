@@ -118,7 +118,7 @@ assert.equal(
     orderType: "market",
     baseCoin: "BTC",
   }),
-  "Maximum size is 1 BTC.",
+  "Maximum order is $50,000 (1 BTC).",
 );
 
 assert.equal(
