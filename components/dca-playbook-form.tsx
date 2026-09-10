@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   AdditionalActions,
@@ -22,6 +23,7 @@ import {
   triggerSectionTitle,
 } from "@/components/bot-form-chrome";
 import { ColumnHint } from "@/components/column-hint";
+import { FuturesDeskRefresh } from "@/components/futures-desk-refresh";
 import {
   IndicatorStartFields,
   TrendStartFields,
@@ -465,6 +467,7 @@ export function DcaPlaybooksDesk({
   venueEnvironment = null,
   backtestLibrary = [],
   openPositions = [],
+  urgentRefresh = false,
 }: {
   playbooks: DcaPlaybook[];
   options: LinearPerp[];
@@ -483,7 +486,9 @@ export function DcaPlaybooksDesk({
   venueEnvironment?: string | null;
   backtestLibrary?: BacktestLibraryItem[];
   openPositions?: DcaCycleOpen[];
+  urgentRefresh?: boolean;
 }) {
+  const router = useRouter();
   const [extraLibrary, setExtraLibrary] = useState<BacktestLibraryItem[]>([]);
   const library = [...backtestLibrary, ...extraLibrary];
   const [cards, setCards] = useState<
@@ -529,6 +534,7 @@ export function DcaPlaybooksDesk({
 
   return (
     <div className="space-y-3">
+      <FuturesDeskRefresh urgent={urgentRefresh} />
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. New orders stay blocked until you turn it off in
@@ -631,6 +637,7 @@ export function DcaPlaybooksDesk({
                 setCards((current) =>
                   current.filter((item) => item.key !== card.key),
                 );
+                router.refresh();
                 return;
               }
               if (next.playbook) {
@@ -641,6 +648,9 @@ export function DcaPlaybooksDesk({
                       : item,
                   ),
                 );
+              }
+              if (next.ok) {
+                router.refresh();
               }
             }}
             onRemoveDraft={
