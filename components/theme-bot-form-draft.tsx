@@ -760,7 +760,7 @@ export function ThemeBotFormDraft() {
   const [restGrid, setRestGrid] = useState(true);
   const [direction, setDirection] = useState<"long" | "short" | "both">("long");
   const [desk, setDesk] = useState<DeskKind>("perps");
-  const [status, setStatus] = useState("active");
+  const [status, setStatus] = useState("disabled");
   const skipDeskDirty = useRef(false);
   const savedDraft = useRef<string | null>(null);
   const [saveTick, setSaveTick] = useState(0);
@@ -863,12 +863,12 @@ export function ThemeBotFormDraft() {
   const requireSl = desk !== "cnc" && !closing && slOn;
   const requireTrail = desk !== "cnc" && !closing && trailOn;
   const requireTrailTrigger = requireTrail && desk === "dca";
-  const requireBreakeven = desk === "dca" && !closing && breakevenOn;
+  const requireBreakeven = desk !== "cnc" && !closing && breakevenOn;
   const requireCarryTp = desk === "cnc" && carryTpOn;
   const requireCarrySl = desk === "cnc" && carrySlOn;
-  const requireConfirm = desk === "dca" && !closing && confirmOn;
+  const requireConfirm = desk !== "cnc" && !closing && confirmOn;
   const requireShortConfirm = bothSides && !closing && shortConfirmOn;
-  const requireExitIf = desk === "dca" && !closing && exitIfOn;
+  const requireExitIf = desk !== "cnc" && !closing && exitIfOn;
   const requireShortExitIf = bothSides && !closing && shortExitIfOn;
   const missing = {
     tpValue: requireTp && !filled(tpValue),
@@ -876,7 +876,7 @@ export function ThemeBotFormDraft() {
     trailValue: requireTrail && !filled(trailValue),
     trailTrigger: requireTrailTrigger && !filled(trailTrigger),
     breakevenAt: requireBreakeven && !filled(breakevenAt),
-    breakevenOffset: requireBreakeven && !filled(breakevenOffset),
+    breakevenOffset: requireBreakeven && desk === "dca" && !filled(breakevenOffset),
     carryTp: requireCarryTp && !filled(carryTp),
     carrySl: requireCarrySl && !filled(carrySl),
     confirm: requireConfirm && !dcaFilterComplete(confirm),
@@ -1311,7 +1311,7 @@ export function ThemeBotFormDraft() {
         </Group>
         ) : null}
 
-        {desk === "dca" && !closing ? (
+        {desk !== "cnc" && !closing ? (
           bothSides ? (
             <Group
               title="Secondary Entry Condition"
@@ -1829,7 +1829,7 @@ export function ThemeBotFormDraft() {
               )}
             </OptionalSection>
 
-            {desk === "dca" ? (
+            {desk !== "cnc" ? (
             <OptionalSection
               title="Move Breakeven"
               enabled={breakevenOn}
@@ -1844,11 +1844,11 @@ export function ThemeBotFormDraft() {
                     invalid={showFieldErrors && missing.breakevenAt}
                   />
                 </Field>
-                <Field label="Breakeven offset %" required>
+                <Field label="Breakeven offset %" required={desk === "dca"}>
                   <OffNumber
                     value={breakevenOffset}
                     onChange={setBreakevenOffset}
-                    required
+                    required={desk === "dca"}
                     invalid={showFieldErrors && missing.breakevenOffset}
                   />
                 </Field>
@@ -1856,7 +1856,7 @@ export function ThemeBotFormDraft() {
             </OptionalSection>
             ) : null}
 
-            {desk === "dca" ? (
+            {desk !== "cnc" ? (
             bothSides ? (
               <Group title="Hard Exit Condition">
                 <OptionalSection

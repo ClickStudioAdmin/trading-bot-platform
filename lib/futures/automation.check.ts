@@ -223,6 +223,7 @@ if (hlParsed.ok) {
 }
 
 assert.equal(defaultFuturesAutomationForm(0).formAction, "buy");
+assert.equal(defaultFuturesAutomationForm(0).mode, "disabled");
 
 const webhookRule = new FormData();
 webhookRule.set("ruleCount", "1");
@@ -350,6 +351,6 @@ assert.notEqual(clonedRule.key, cloneSource.key);
 assert.equal(clonedRule.symbol, "ETHUSDT");
 assert.equal(clonedRule.size, "0.5");
 assert.equal(clonedRule.formAction, "sell");
-assert.equal(clonedRule.mode, "active");
+assert.equal(clonedRule.mode, "disabled");
 
 console.log("futures automation checks passed");

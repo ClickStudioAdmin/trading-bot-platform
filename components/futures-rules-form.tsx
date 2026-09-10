@@ -734,6 +734,34 @@ function RuleCard({
         </div>
       </BotFormGroup>
 
+      {!closing ? (
+        <OptionalSection
+          title="Secondary Entry Condition"
+          hint="Must be true for the entry trigger to execute."
+          enabled={Boolean(confirm)}
+          onEnabled={(next) =>
+            setConfirm(
+              next ? (confirm ?? dcaFilterSpecForKind("rsi", entrySide)) : null,
+            )
+          }
+        >
+          <DcaFilterBlock
+            label="Kind"
+            prefix={`${prefix}confirm`}
+            side={entrySide}
+            spec={confirm}
+            onChange={setConfirm}
+            named
+            dense
+            allowOff={false}
+            gridClass={botRowClass5}
+            whenClass=""
+            fieldClass={botFieldClass}
+            labelClass={botLabelClass}
+          />
+        </OptionalSection>
+      ) : null}
+
       <BotFormGroup title={closing ? undefined : "Order Size"}>
         <div className={botRowClass}>
           <BotField
@@ -782,107 +810,6 @@ function RuleCard({
 
       {!closing ? (
         <>
-          <OptionalSection
-            title="Secondary Entry Condition"
-            hint="Must be true for the entry trigger to execute."
-            enabled={Boolean(confirm)}
-            onEnabled={(next) =>
-              setConfirm(
-                next ? (confirm ?? dcaFilterSpecForKind("rsi", entrySide)) : null,
-              )
-            }
-          >
-            <DcaFilterBlock
-              label="Kind"
-              prefix={`${prefix}confirm`}
-              side={entrySide}
-              spec={confirm}
-              onChange={setConfirm}
-              named
-              dense
-              allowOff={false}
-              gridClass={botRowClass5}
-              whenClass=""
-              fieldClass={botFieldClass}
-              labelClass={botLabelClass}
-            />
-          </OptionalSection>
-          <OptionalSection
-            title="Hard Exit Condition"
-            hint="Flattens this bot’s open size at market when the condition is true."
-            enabled={Boolean(exitIf)}
-            onEnabled={(next) =>
-              setExitIf(
-                next ? (exitIf ?? dcaFilterSpecForKind("rsi", entrySide)) : null,
-              )
-            }
-          >
-            <DcaFilterBlock
-              label="Kind"
-              prefix={`${prefix}exitIf`}
-              side={entrySide}
-              spec={exitIf}
-              onChange={setExitIf}
-              named
-              dense
-              allowOff={false}
-              gridClass={botRowClass5}
-              whenClass=""
-              fieldClass={botFieldClass}
-              labelClass={botLabelClass}
-            />
-          </OptionalSection>
-          {!breakevenOn ? (
-            <div hidden>
-              <input
-                type="hidden"
-                name={`${prefix}breakevenActivationPct`}
-                value=""
-              />
-              <input
-                type="hidden"
-                name={`${prefix}breakevenOffsetPct`}
-                value=""
-              />
-            </div>
-          ) : null}
-          <OptionalSection
-            title="Move Breakeven"
-            enabled={breakevenOn}
-            onEnabled={setBreakevenOn}
-          >
-            <div className={botRowClass}>
-              <BotField label="Move stop to breakeven at %" required>
-                <span className="relative mt-0.5 block">
-                  <GroupedNumberInput
-                    name={`${prefix}breakevenActivationPct`}
-                    value={breakevenActivationPct}
-                    onChange={setBreakevenActivationPct}
-                    allowDecimal
-                    className={`${botFieldClass} pr-7`}
-                  />
-                  <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
-                    %
-                  </span>
-                </span>
-              </BotField>
-              <BotField label="Breakeven offset %">
-                <span className="relative mt-0.5 block">
-                  <GroupedNumberInput
-                    name={`${prefix}breakevenOffsetPct`}
-                    value={breakevenOffsetPct}
-                    onChange={setBreakevenOffsetPct}
-                    allowDecimal
-                    placeholder="0"
-                    className={`${botFieldClass} pr-7`}
-                  />
-                  <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
-                    %
-                  </span>
-                </span>
-              </BotField>
-            </div>
-          </OptionalSection>
           {tpOn || slOn ? (
             <>
               <input type="hidden" name={`${prefix}tpsl`} value="on" />
@@ -1023,6 +950,82 @@ function RuleCard({
                 <input type="hidden" name={`${prefix}slLimitPrice`} value="" />
               )}
             </div>
+          </OptionalSection>
+          {!breakevenOn ? (
+            <div hidden>
+              <input
+                type="hidden"
+                name={`${prefix}breakevenActivationPct`}
+                value=""
+              />
+              <input
+                type="hidden"
+                name={`${prefix}breakevenOffsetPct`}
+                value=""
+              />
+            </div>
+          ) : null}
+          <OptionalSection
+            title="Move Breakeven"
+            enabled={breakevenOn}
+            onEnabled={setBreakevenOn}
+          >
+            <div className={botRowClass}>
+              <BotField label="Move stop to breakeven at %" required>
+                <span className="relative mt-0.5 block">
+                  <GroupedNumberInput
+                    name={`${prefix}breakevenActivationPct`}
+                    value={breakevenActivationPct}
+                    onChange={setBreakevenActivationPct}
+                    allowDecimal
+                    className={`${botFieldClass} pr-7`}
+                  />
+                  <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                    %
+                  </span>
+                </span>
+              </BotField>
+              <BotField label="Breakeven offset %">
+                <span className="relative mt-0.5 block">
+                  <GroupedNumberInput
+                    name={`${prefix}breakevenOffsetPct`}
+                    value={breakevenOffsetPct}
+                    onChange={setBreakevenOffsetPct}
+                    allowDecimal
+                    placeholder="0"
+                    className={`${botFieldClass} pr-7`}
+                  />
+                  <span className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm text-ink-muted">
+                    %
+                  </span>
+                </span>
+              </BotField>
+            </div>
+          </OptionalSection>
+          <OptionalSection
+            title="Hard Exit Condition"
+            hint="Flattens this bot’s open size at market when the condition is true."
+            enabled={Boolean(exitIf)}
+            onEnabled={(next) =>
+              setExitIf(
+                next ? (exitIf ?? dcaFilterSpecForKind("rsi", entrySide)) : null,
+              )
+            }
+          >
+            <DcaFilterBlock
+              label="Kind"
+              prefix={`${prefix}exitIf`}
+              side={entrySide}
+              spec={exitIf}
+              onChange={setExitIf}
+              named
+              dense
+              allowOff={false}
+              gridClass={botRowClass5}
+              whenClass=""
+              fieldClass={botFieldClass}
+              labelClass={botLabelClass}
+            />
           </OptionalSection>
         </>
       ) : null}

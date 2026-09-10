@@ -130,6 +130,7 @@ assert.deepEqual(blockedRuleDeletes([4], []), []);
 assert.equal(paperConfigToFormValues({ enabled: false, layers: [] }).layers.length, 0);
 
 assert.equal(defaultPaperConfig().layers.length, 1);
+assert.equal(defaultPaperConfig().layers[0]?.mode, "disabled");
 
 assert.equal(copyPaperSetName("Core carry"), "Core carry (copy)");
 assert.equal(copyPaperSetName("Core carry (copy)"), "Core carry (copy)");

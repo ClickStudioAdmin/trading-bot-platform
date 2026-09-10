@@ -39,7 +39,7 @@ export function defaultPaperLayer(sortOrder = 0): PaperEngineLayer {
     id: null,
     name: `Bot ${sortOrder + 1}`,
     sortOrder,
-    mode: "active",
+    mode: "disabled",
     sizeType: "dynamic",
     exitSizeType: "dynamic",
     notionalUsdt: DEFAULT_PAPER_NOTIONAL_USDT,

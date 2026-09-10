@@ -104,7 +104,7 @@ export function defaultFuturesAutomationForm(
     id: "",
     key: `new-${Date.now()}-${index}`,
     name: `Rule ${index + 1}`,
-    mode: "active",
+    mode: "disabled",
     symbol,
     formAction: "buy",
     orderType: "market",

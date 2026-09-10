@@ -932,7 +932,7 @@ export function DcaPlaybookForm({
   const stopAdding = liveLegs.some((leg) => leg.status === "stop_adding");
   const currentStatus: DcaBotStatus = playbook
     ? dcaStatusFromLegs({ armed, stopAdding })
-    : "active";
+    : "disabled";
   const [status, setStatus] = useState<DcaBotStatus>(currentStatus);
   const statusDirty = status !== currentStatus;
   const selectedPair = options.find((row) => row.symbol === symbol);
