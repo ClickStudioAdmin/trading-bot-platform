@@ -275,6 +275,7 @@ function OptionalSection({
   enabled,
   onEnabled,
   error,
+  nested = false,
   children,
 }: {
   title: string;
@@ -282,10 +283,11 @@ function OptionalSection({
   enabled: boolean;
   onEnabled: (next: boolean) => void;
   error?: string;
+  nested?: boolean;
   children: ReactNode;
 }) {
   return (
-    <section className="space-y-3 py-5">
+    <section className={nested ? "space-y-3" : "space-y-3 py-5"}>
       <label className="flex cursor-pointer items-center gap-3">
         <input
           type="checkbox"
@@ -689,12 +691,14 @@ export function ThemeBotFormDraft() {
   );
   const [confirmOn, setConfirmOn] = useState(false);
   const [confirm, setConfirm] = useState<DcaFilterSpec | null>(null);
+  const [shortConfirmOn, setShortConfirmOn] = useState(false);
   const [shortConfirm, setShortConfirm] = useState<DcaFilterSpec | null>(null);
   const [tpOn, setTpOn] = useState(true);
   const [trailOn, setTrailOn] = useState(false);
   const [slOn, setSlOn] = useState(false);
   const [breakevenOn, setBreakevenOn] = useState(false);
   const [exitIfOn, setExitIfOn] = useState(false);
+  const [shortExitIfOn, setShortExitIfOn] = useState(false);
   const [minApr, setMinApr] = useState("");
   const [minDte, setMinDte] = useState("");
   const [maxDte, setMaxDte] = useState("");
@@ -766,12 +770,14 @@ export function ThemeBotFormDraft() {
     shortMultiplier,
     confirmOn,
     confirm,
+    shortConfirmOn,
     shortConfirm,
     tpOn,
     trailOn,
     slOn,
     breakevenOn,
     exitIfOn,
+    shortExitIfOn,
     size,
     sizeUnit,
     tpMethod,
@@ -829,7 +835,9 @@ export function ThemeBotFormDraft() {
   const requireCarryTp = desk === "cnc" && carryTpOn;
   const requireCarrySl = desk === "cnc" && carrySlOn;
   const requireConfirm = desk === "dca" && !closing && confirmOn;
+  const requireShortConfirm = bothSides && !closing && shortConfirmOn;
   const requireExitIf = desk === "dca" && !closing && exitIfOn;
+  const requireShortExitIf = bothSides && !closing && shortExitIfOn;
   const missing = {
     tpValue: requireTp && !filled(tpValue),
     slValue: requireSl && !filled(slValue),
@@ -839,14 +847,10 @@ export function ThemeBotFormDraft() {
     breakevenOffset: requireBreakeven && !filled(breakevenOffset),
     carryTp: requireCarryTp && !filled(carryTp),
     carrySl: requireCarrySl && !filled(carrySl),
-    confirm:
-      requireConfirm &&
-      (!dcaFilterComplete(confirm) ||
-        (bothSides && !dcaFilterComplete(shortConfirm))),
-    exitIf:
-      requireExitIf &&
-      (!dcaFilterComplete(exitIf) ||
-        (bothSides && !dcaFilterComplete(shortExitIf))),
+    confirm: requireConfirm && !dcaFilterComplete(confirm),
+    shortConfirm: requireShortConfirm && !dcaFilterComplete(shortConfirm),
+    exitIf: requireExitIf && !dcaFilterComplete(exitIf),
+    shortExitIf: requireShortExitIf && !dcaFilterComplete(shortExitIf),
   };
   const hasMissing = Object.values(missing).some(Boolean);
   const showFieldErrors = saveAttempted && hasMissing;
@@ -891,9 +895,11 @@ export function ThemeBotFormDraft() {
           : level,
       );
       setShortMultiplier(multiplier);
+      setShortConfirmOn(confirmOn);
       if (confirmOn) {
         setShortConfirm((current) => current ?? dcaFilterSpecForKind("rsi", "short"));
       }
+      setShortExitIfOn(exitIfOn);
       if (exitIfOn) {
         setShortExitIf((current) => current ?? dcaFilterSpecForKind("rsi", "short"));
       }
@@ -908,6 +914,8 @@ export function ThemeBotFormDraft() {
       setSlowPeriod(shortSlowPeriod);
       setLevel(shortLevel);
       setMultiplier(shortMultiplier);
+      setConfirmOn(shortConfirmOn);
+      setExitIfOn(shortExitIfOn);
       if (shortConfirm) {
         setConfirm(shortConfirm);
       }
@@ -1271,69 +1279,97 @@ export function ThemeBotFormDraft() {
         ) : null}
 
         {desk === "dca" && !closing ? (
-          <OptionalSection
-            title="Secondary Entry Condition"
-            hint="Must be true for the entry trigger to execute."
-            enabled={confirmOn}
-            error={
-              showFieldErrors && missing.confirm
-                ? "Enter the required filter values."
-                : undefined
-            }
-            onEnabled={(next) => {
-              setConfirmOn(next);
-              setConfirm(
-                next
-                  ? (confirm ??
-                    dcaFilterSpecForKind(
-                      "rsi",
-                      direction === "short" ? "short" : "long",
-                    ))
-                  : null,
-              );
-              if (next && bothSides) {
-                setShortConfirm(
-                  (current) => current ?? dcaFilterSpecForKind("rsi", "short"),
-                );
+          bothSides ? (
+            <Group
+              title="Secondary Entry Condition"
+              hint="Must be true for the entry trigger to execute."
+            >
+              <OptionalSection
+                title="Long"
+                nested
+                enabled={confirmOn}
+                error={
+                  showFieldErrors && missing.confirm
+                    ? "Enter the required filter values."
+                    : undefined
+                }
+                onEnabled={(next) => {
+                  setConfirmOn(next);
+                  setConfirm(
+                    next ? (confirm ?? dcaFilterSpecForKind("rsi", "long")) : null,
+                  );
+                }}
+              >
+                <DcaFilterBlock
+                  label="Kind"
+                  prefix="themeConfirm"
+                  side="long"
+                  spec={confirm}
+                  onChange={setConfirm}
+                  dense
+                  allowOff={false}
+                  gridClass={rowClass5}
+                  whenClass=""
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
+              </OptionalSection>
+              <OptionalSection
+                title="Short"
+                nested
+                enabled={shortConfirmOn}
+                error={
+                  showFieldErrors && missing.shortConfirm
+                    ? "Enter the required filter values."
+                    : undefined
+                }
+                onEnabled={(next) => {
+                  setShortConfirmOn(next);
+                  setShortConfirm(
+                    next
+                      ? (shortConfirm ?? dcaFilterSpecForKind("rsi", "short"))
+                      : null,
+                  );
+                }}
+              >
+                <DcaFilterBlock
+                  label="Kind"
+                  prefix="themeShortConfirm"
+                  side="short"
+                  spec={shortConfirm}
+                  onChange={setShortConfirm}
+                  dense
+                  allowOff={false}
+                  gridClass={rowClass5}
+                  whenClass=""
+                  fieldClass={fieldClass}
+                  labelClass={labelClass}
+                />
+              </OptionalSection>
+            </Group>
+          ) : (
+            <OptionalSection
+              title="Secondary Entry Condition"
+              hint="Must be true for the entry trigger to execute."
+              enabled={confirmOn}
+              error={
+                showFieldErrors && missing.confirm
+                  ? "Enter the required filter values."
+                  : undefined
               }
-            }}
-          >
-            {bothSides ? (
-              <div className="space-y-5">
-                <SideBlock title="Long">
-                  <DcaFilterBlock
-                    label="Kind"
-                    prefix="themeConfirm"
-                    side="long"
-                    spec={confirm}
-                    onChange={setConfirm}
-                    dense
-                    allowOff={false}
-                    gridClass={rowClass5}
-                    whenClass=""
-                    fieldClass={fieldClass}
-                    labelClass={labelClass}
-                  />
-                </SideBlock>
-                <div className="space-y-5 border-t border-line pt-5">
-                  <SideBlock title="Short">
-                    <DcaFilterBlock
-                      label="Kind"
-                      prefix="themeShortConfirm"
-                      side="short"
-                      spec={shortConfirm}
-                      onChange={setShortConfirm}
-                      dense
-                      allowOff={false}
-                      gridClass={rowClass5}
-                      whenClass=""
-                      fieldClass={fieldClass}
-                      labelClass={labelClass}
-                    />
-                  </SideBlock>
-                </div>
-              </div>
-            ) : (
+              onEnabled={(next) => {
+                setConfirmOn(next);
+                setConfirm(
+                  next
+                    ? (confirm ??
+                      dcaFilterSpecForKind(
+                        "rsi",
+                        direction === "short" ? "short" : "long",
+                      ))
+                    : null,
+                );
+              }}
+            >
               <DcaFilterBlock
                 label="Kind"
                 prefix="themeConfirm"
@@ -1347,8 +1383,8 @@ export function ThemeBotFormDraft() {
                 fieldClass={fieldClass}
                 labelClass={labelClass}
               />
-            )}
-          </OptionalSection>
+            </OptionalSection>
+          )
         ) : null}
 
         {!closing ? (
@@ -1626,68 +1662,93 @@ export function ThemeBotFormDraft() {
             ) : null}
 
             {desk === "dca" ? (
-            <OptionalSection
-              title="Hard Exit Condition"
-              enabled={exitIfOn}
-              error={
-                showFieldErrors && missing.exitIf
-                  ? "Enter the required filter values."
-                  : undefined
-              }
-              onEnabled={(next) => {
-                setExitIfOn(next);
-                setExitIf(
-                  next
-                    ? (exitIf ??
-                      dcaFilterSpecForKind(
-                        "rsi",
-                        direction === "short" ? "short" : "long",
-                      ))
-                    : null,
-                );
-                if (next && bothSides) {
-                  setShortExitIf(
-                    (current) => current ?? dcaFilterSpecForKind("rsi", "short"),
-                  );
+            bothSides ? (
+              <Group title="Hard Exit Condition">
+                <OptionalSection
+                  title="Long"
+                  nested
+                  enabled={exitIfOn}
+                  error={
+                    showFieldErrors && missing.exitIf
+                      ? "Enter the required filter values."
+                      : undefined
+                  }
+                  onEnabled={(next) => {
+                    setExitIfOn(next);
+                    setExitIf(
+                      next ? (exitIf ?? dcaFilterSpecForKind("rsi", "long")) : null,
+                    );
+                  }}
+                >
+                  <DcaFilterBlock
+                    label="Kind"
+                    prefix="themeExitIf"
+                    side="long"
+                    spec={exitIf}
+                    onChange={setExitIf}
+                    dense
+                    allowOff={false}
+                    gridClass={rowClass5}
+                    whenClass=""
+                    fieldClass={fieldClass}
+                    labelClass={labelClass}
+                  />
+                </OptionalSection>
+                <OptionalSection
+                  title="Short"
+                  nested
+                  enabled={shortExitIfOn}
+                  error={
+                    showFieldErrors && missing.shortExitIf
+                      ? "Enter the required filter values."
+                      : undefined
+                  }
+                  onEnabled={(next) => {
+                    setShortExitIfOn(next);
+                    setShortExitIf(
+                      next
+                        ? (shortExitIf ?? dcaFilterSpecForKind("rsi", "short"))
+                        : null,
+                    );
+                  }}
+                >
+                  <DcaFilterBlock
+                    label="Kind"
+                    prefix="themeShortExitIf"
+                    side="short"
+                    spec={shortExitIf}
+                    onChange={setShortExitIf}
+                    dense
+                    allowOff={false}
+                    gridClass={rowClass5}
+                    whenClass=""
+                    fieldClass={fieldClass}
+                    labelClass={labelClass}
+                  />
+                </OptionalSection>
+              </Group>
+            ) : (
+              <OptionalSection
+                title="Hard Exit Condition"
+                enabled={exitIfOn}
+                error={
+                  showFieldErrors && missing.exitIf
+                    ? "Enter the required filter values."
+                    : undefined
                 }
-              }}
-            >
-              {bothSides ? (
-                <div className="space-y-5">
-                  <SideBlock title="Long">
-                    <DcaFilterBlock
-                      label="Kind"
-                      prefix="themeExitIf"
-                      side="long"
-                      spec={exitIf}
-                      onChange={setExitIf}
-                      dense
-                      allowOff={false}
-                      gridClass={rowClass5}
-                      whenClass=""
-                      fieldClass={fieldClass}
-                      labelClass={labelClass}
-                    />
-                  </SideBlock>
-                  <div className="space-y-5 border-t border-line pt-5">
-                    <SideBlock title="Short">
-                      <DcaFilterBlock
-                        label="Kind"
-                        prefix="themeShortExitIf"
-                        side="short"
-                        spec={shortExitIf}
-                        onChange={setShortExitIf}
-                        dense
-                        allowOff={false}
-                        gridClass={rowClass5}
-                        whenClass=""
-                        fieldClass={fieldClass}
-                        labelClass={labelClass}
-                      />
-                    </SideBlock>
-                  </div>
-                </div>
-              ) : (
+                onEnabled={(next) => {
+                  setExitIfOn(next);
+                  setExitIf(
+                    next
+                      ? (exitIf ??
+                        dcaFilterSpecForKind(
+                          "rsi",
+                          direction === "short" ? "short" : "long",
+                        ))
+                      : null,
+                  );
+                }}
+              >
                 <DcaFilterBlock
                   label="Kind"
                   prefix="themeExitIf"
@@ -1701,8 +1762,8 @@ export function ThemeBotFormDraft() {
                   fieldClass={fieldClass}
                   labelClass={labelClass}
                 />
-              )}
-            </OptionalSection>
+              </OptionalSection>
+            )
             ) : null}
 
           </>
