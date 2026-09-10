@@ -991,7 +991,7 @@ export function ThemeBotFormDraft() {
         </div>
       </div>
 
-      <div className="divide-y divide-line rounded-card border border-line bg-canvas px-5">
+      <div className="divide-y divide-line rounded-card border border-line bg-surface px-5">
         {dirty ? (
           <div className="flex flex-wrap items-center justify-between gap-3 py-4">
             <div>
