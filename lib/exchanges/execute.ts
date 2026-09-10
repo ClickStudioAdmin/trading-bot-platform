@@ -17,7 +17,13 @@ import {
   type BybitLinearRisk,
   type BybitTpslAttach,
 } from "@/lib/exchanges/bybit/orders";
-import { loadPerpInstrument, qtyForPerp } from "@/lib/exchanges/bybit/perp";
+import {
+  loadPerpInstrument,
+  priceForPerp,
+  qtyForPerp,
+  snapPerpSizedLimit,
+} from "@/lib/exchanges/bybit/perp";
+import { loadHyperliquidInstrument } from "@/lib/venues/hyperliquid/market";
 import { normalizeAddress } from "@/lib/exchanges/hyperliquid/agent";
 import {
   amendHyperliquidOrder,
@@ -309,14 +315,27 @@ export async function placePerpLimitOnVenue(input: {
   orderLinkId?: string;
 }): Promise<{ ok: true; orderId: string } | { ok: false; error: string }> {
   if (input.connection.venue === "hyperliquid") {
+    const env = hyperliquidInfoEnvironment(input.connection.environment);
+    const instrument = await loadHyperliquidInstrument(env, input.symbol);
+    const snapped = instrument
+      ? snapPerpSizedLimit({
+          size: Number(input.qty),
+          sizeUnit: "qty",
+          limitPrice: Number(input.price),
+          instrument,
+        })
+      : null;
+    if (snapped && !snapped.ok) {
+      return snapped;
+    }
     const hl = hlCreds(input.connection);
     return placeHyperliquidLimit({
       environmentId: input.connection.environment,
       agentKey: hl.agentKey,
       symbol: input.symbol,
       side: input.side,
-      qty: input.qty,
-      price: input.price,
+      qty: snapped?.ok ? snapped.qtyText : input.qty,
+      price: snapped?.ok ? snapped.priceText : input.price,
       reduceOnly: input.reduceOnly,
       tpsl: input.tpsl,
       orderLinkId: input.orderLinkId,
@@ -324,6 +343,22 @@ export async function placePerpLimitOnVenue(input: {
   }
   if (input.connection.venue !== "bybit") {
     return { ok: false, error: "That exchange cannot place futures orders yet." };
+  }
+  const instrument = await loadPerpInstrument(input.symbol);
+  if (!instrument) {
+    return {
+      ok: false,
+      error: "That symbol is not a trading USDT linear perpetual on Bybit.",
+    };
+  }
+  const snapped = snapPerpSizedLimit({
+    size: Number(input.qty),
+    sizeUnit: "qty",
+    limitPrice: Number(input.price),
+    instrument,
+  });
+  if (!snapped.ok) {
+    return snapped;
   }
   const hedge = await bybitEnsureHedgeMode({
     environmentId: input.connection.environment,
@@ -338,8 +373,8 @@ export async function placePerpLimitOnVenue(input: {
     credentials: creds(input.connection),
     symbol: input.symbol,
     side: input.side,
-    qty: input.qty,
-    price: input.price,
+    qty: snapped.qtyText,
+    price: snapped.priceText,
     reduceOnly: input.reduceOnly,
     positionIdx: hedge.ok ? input.positionIdx : 0,
     tpsl: input.tpsl,
@@ -362,6 +397,22 @@ export async function amendPerpOrderOnVenue(input: {
     if (!input.qty && !input.price) {
       return { ok: false, error: WORKING_AMEND_UNCHANGED };
     }
+    const env = hyperliquidInfoEnvironment(input.connection.environment);
+    const instrument = await loadHyperliquidInstrument(env, input.symbol);
+    const qty =
+      input.qty && instrument
+        ? qtyForPerp(Number(input.qty), instrument)
+        : null;
+    if (qty && !qty.ok) {
+      return qty;
+    }
+    const price =
+      input.price && instrument
+        ? priceForPerp(Number(input.price), instrument)
+        : null;
+    if (price && !price.ok) {
+      return price;
+    }
     const hl = hlCreds(input.connection);
     return amendHyperliquidOrder({
       environmentId: input.connection.environment,
@@ -369,8 +420,8 @@ export async function amendPerpOrderOnVenue(input: {
       accountAddress: hl.accountAddress,
       symbol: input.symbol,
       orderId: input.orderId,
-      qty: input.qty,
-      price: input.price,
+      qty: qty?.ok ? qty.text : input.qty,
+      price: price?.ok ? price.text : input.price,
     });
   }
   if (input.connection.venue !== "bybit") {
@@ -379,13 +430,30 @@ export async function amendPerpOrderOnVenue(input: {
   if (!input.qty && !input.price) {
     return { ok: false, error: WORKING_AMEND_UNCHANGED };
   }
+  const instrument = await loadPerpInstrument(input.symbol);
+  if (!instrument) {
+    return {
+      ok: false,
+      error: "That symbol is not a trading USDT linear perpetual on Bybit.",
+    };
+  }
+  const qty = input.qty ? qtyForPerp(Number(input.qty), instrument) : null;
+  if (qty && !qty.ok) {
+    return qty;
+  }
+  const price = input.price
+    ? priceForPerp(Number(input.price), instrument)
+    : null;
+  if (price && !price.ok) {
+    return price;
+  }
   return bybitAmendLinearOrder({
     environmentId: input.connection.environment,
     credentials: creds(input.connection),
     symbol: input.symbol,
     orderId: input.orderId,
-    qty: input.qty,
-    price: input.price,
+    qty: qty?.ok ? qty.text : input.qty,
+    price: price?.ok ? price.text : input.price,
   });
 }
 

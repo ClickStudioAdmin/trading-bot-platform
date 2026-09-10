@@ -206,6 +206,35 @@ export function priceForPerp(
   };
 }
 
+/** Lot-step qty + tick price. USDT clips become coin qty at the snapped limit. */
+export function snapPerpSizedLimit(input: {
+  size: number;
+  sizeUnit: "qty" | "usdt";
+  limitPrice: number;
+  instrument: BybitInstrument | undefined;
+}):
+  | { ok: true; qty: number; qtyText: string; price: number; priceText: string }
+  | { ok: false; error: string } {
+  const priced = priceForPerp(input.limitPrice, input.instrument);
+  if (!priced.ok) {
+    return priced;
+  }
+  const sized =
+    input.sizeUnit === "usdt"
+      ? qtyForPerpNotional(input.size, priced.price, input.instrument)
+      : qtyForPerp(input.size, input.instrument);
+  if (!sized.ok) {
+    return sized;
+  }
+  return {
+    ok: true,
+    qty: sized.qty,
+    qtyText: sized.text,
+    price: priced.price,
+    priceText: priced.text,
+  };
+}
+
 function baseRank(baseCoin: string): number {
   const pinned = PINNED_BASE_COINS.indexOf(baseCoin);
   return pinned === -1 ? PINNED_BASE_COINS.length : pinned;

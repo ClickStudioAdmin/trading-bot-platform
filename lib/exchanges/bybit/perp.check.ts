@@ -10,6 +10,7 @@ import {
   qtyForCloseQty,
   perpVenueMinimums,
   qtyForPerpNotional,
+  snapPerpSizedLimit,
 } from "./perp";
 
 assert.equal(
@@ -259,6 +260,33 @@ assert.equal(priced.ok, true);
 if (priced.ok) {
   assert.equal(priced.price, 80123.4);
   assert.equal(priced.text, "80123.4");
+}
+
+const btcVenue = {
+  symbol: "BTCUSDT",
+  status: "Trading",
+  baseCoin: "BTC",
+  quoteCoin: "USDT",
+  lotSizeFilter: {
+    qtyStep: "0.001",
+    minOrderQty: "0.001",
+    minNotionalValue: "5",
+  },
+  priceFilter: { tickSize: "0.1" },
+} as const;
+const dirtyClipUsdt = 100 * 1.5 ** 12;
+assert.equal(dirtyClipUsdt, 12974.6337890625);
+assert.equal(String(dirtyClipUsdt), "12974.6337890625");
+const snappedClip = snapPerpSizedLimit({
+  size: dirtyClipUsdt,
+  sizeUnit: "usdt",
+  limitPrice: 121315.17230055,
+  instrument: btcVenue,
+});
+assert.equal(snappedClip.ok, true);
+if (snappedClip.ok) {
+  assert.equal(snappedClip.priceText, "121315.1");
+  assert.equal(snappedClip.qtyText, "0.106");
 }
 
 console.log("bybit perp checks passed");

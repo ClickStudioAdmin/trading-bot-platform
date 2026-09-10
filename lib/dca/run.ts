@@ -6,7 +6,15 @@ import {
 } from "@/lib/market/desk-klines";
 import type { CandleBar } from "@/lib/market/candles";
 import { lastAtrValue, type DcaIndicatorTimeframe } from "@/lib/dca/indicators";
-import { loadDeskVenueContext } from "@/lib/venues/hyperliquid/desk";
+import {
+  hyperliquidInfoEnvironment,
+  loadDeskVenueContext,
+} from "@/lib/venues/hyperliquid/desk";
+import { loadHyperliquidInstrument } from "@/lib/venues/hyperliquid/market";
+import {
+  loadPerpInstrument,
+  snapPerpSizedLimit,
+} from "@/lib/exchanges/bybit/perp";
 import { runFuturesCommand, deleteCommandReceipt } from "@/lib/futures/command";
 import {
   loadOpenFuturesOnSymbol,
@@ -259,6 +267,20 @@ async function lastPriceForPlaybook(playbook: {
 }): Promise<number | null> {
   const desk = await loadDeskVenueContext(playbook.accountId);
   return lastPriceFor(playbook.symbol, desk);
+}
+
+async function instrumentForPlaybook(playbook: {
+  accountId: string;
+  symbol: string;
+}) {
+  const desk = await loadDeskVenueContext(playbook.accountId);
+  if (desk.venue === "hyperliquid") {
+    return loadHyperliquidInstrument(
+      hyperliquidInfoEnvironment(desk.venueEnvironment),
+      playbook.symbol,
+    );
+  }
+  return loadPerpInstrument(playbook.symbol);
 }
 
 async function atrForPlaybook(
@@ -764,6 +786,7 @@ async function syncDcaPlaybookGridUnlocked(input: {
     playbookId: input.playbook.id,
   });
   const actor = playbookActor(input.playbook, input.mode);
+  const instrument = await instrumentForPlaybook(input.playbook);
   for (const workingId of plan.cancelIds) {
     const cancelled = await runFuturesCommand({
       actor,
@@ -780,12 +803,37 @@ async function syncDcaPlaybookGridUnlocked(input: {
     }
   }
   for (const item of plan.amend) {
+    const snapped = instrument
+      ? snapPerpSizedLimit({
+          size: item.qty,
+          sizeUnit: "qty",
+          limitPrice: item.limitPrice,
+          instrument,
+        })
+      : null;
+    if (snapped && !snapped.ok) {
+      await logDcaSyncFailed({
+        playbook: input.playbook,
+        side: input.side,
+        positionId: open?.id ?? null,
+        error: snapped.error,
+        reason: "amend_grid",
+        limitPrice: item.limitPrice,
+        qty: item.qty,
+        recent: recentFailures,
+      });
+      continue;
+    }
+    const qty = snapped?.ok ? snapped.qty : item.qty;
+    const limitPrice = snapped?.ok ? snapped.price : item.limitPrice;
+    const qtyText = snapped?.ok ? snapped.qtyText : String(item.qty);
+    const priceText = snapped?.ok ? snapped.priceText : String(item.limitPrice);
     const amendStamp = dcaSyncFailureStamp({
       playbookId: input.playbook.id,
       playbookUpdatedAtMs: input.playbook.updatedAtMs,
       reason: "amend_grid",
-      qty: item.qty,
-      limitPrice: item.limitPrice,
+      qty,
+      limitPrice,
     });
     if (shouldSkipDcaSyncRetry(recentFailures, amendStamp)) {
       continue;
@@ -795,8 +843,8 @@ async function syncDcaPlaybookGridUnlocked(input: {
       command: {
         kind: "amend-working",
         workingId: item.workingId,
-        qty: String(item.qty),
-        limitPrice: String(item.limitPrice),
+        qty: qtyText,
+        limitPrice: priceText,
       },
     });
     if (!amended.ok && !isUnchangedWorkingAmend(amended.error ?? "")) {
@@ -806,8 +854,8 @@ async function syncDcaPlaybookGridUnlocked(input: {
         positionId: open?.id ?? null,
         error: amended.error,
         reason: "amend_grid",
-        limitPrice: item.limitPrice,
-        qty: item.qty,
+        limitPrice,
+        qty,
         recent: recentFailures,
       });
     }
@@ -851,13 +899,40 @@ async function syncDcaPlaybookGridUnlocked(input: {
     if (!open) {
       continue;
     }
+    const snapped = instrument
+      ? snapPerpSizedLimit({
+          size: item.qty,
+          sizeUnit: input.playbook.sizeUnit,
+          limitPrice: item.limitPrice,
+          instrument,
+        })
+      : null;
+    if (snapped && !snapped.ok) {
+      await logDcaSyncFailed({
+        playbook: input.playbook,
+        side: input.side,
+        positionId: open.id,
+        error: snapped.error,
+        reason: "rest_grid",
+        clipIndex: item.clipIndex,
+        limitPrice: item.limitPrice,
+        qty: item.qty,
+        recent: recentFailures,
+      });
+      continue;
+    }
+    const qty = snapped?.ok ? snapped.qty : item.qty;
+    const limitPrice = snapped?.ok ? snapped.price : item.limitPrice;
+    const sizeText = snapped?.ok ? snapped.qtyText : String(item.qty);
+    const priceText = snapped?.ok ? snapped.priceText : String(item.limitPrice);
+    const sizeUnit = snapped?.ok ? "qty" : input.playbook.sizeUnit;
     const restStamp = dcaSyncFailureStamp({
       playbookId: input.playbook.id,
       playbookUpdatedAtMs: input.playbook.updatedAtMs,
       reason: "rest_grid",
       clipIndex: item.clipIndex,
-      qty: item.qty,
-      limitPrice: item.limitPrice,
+      qty,
+      limitPrice,
     });
     if (shouldSkipDcaSyncRetry(recentFailures, restStamp)) {
       continue;
@@ -869,9 +944,9 @@ async function syncDcaPlaybookGridUnlocked(input: {
         action: dcaClipAction(input.side),
         symbol: input.playbook.symbol,
         orderType: "limit",
-        limitPrice: String(item.limitPrice),
-        size: String(item.qty),
-        sizeUnit: input.playbook.sizeUnit,
+        limitPrice: priceText,
+        size: sizeText,
+        sizeUnit,
         idempotencyKey: dcaClipCycleKey(
           input.playbook.id,
           input.side,
@@ -889,8 +964,8 @@ async function syncDcaPlaybookGridUnlocked(input: {
         error: rested.error,
         reason: "rest_grid",
         clipIndex: item.clipIndex,
-        limitPrice: item.limitPrice,
-        qty: item.qty,
+        limitPrice,
+        qty,
         recent: recentFailures,
       });
       continue;
