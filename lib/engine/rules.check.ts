@@ -113,6 +113,18 @@ missingSize.set("ruleCount", "1");
 missingSize.set("r0_sizeType", "fixed");
 assert.equal(parsePaperRulesForm(missingSize).ok, false);
 
+const missingTp = new FormData();
+missingTp.set("ruleCount", "1");
+missingTp.set("r0_notionalUsdt", "10000");
+missingTp.set("r0_takeProfitOn", "1");
+assert.equal(parsePaperRulesForm(missingTp).ok, false);
+
+const missingSl = new FormData();
+missingSl.set("ruleCount", "1");
+missingSl.set("r0_notionalUsdt", "10000");
+missingSl.set("r0_stopLossOn", "1");
+assert.equal(parsePaperRulesForm(missingSl).ok, false);
+
 assert.deepEqual(blockedRuleDeletes([1, 2, 3], [2, 9]), [2]);
 assert.deepEqual(blockedRuleDeletes([4], []), []);
 assert.equal(paperConfigToFormValues({ enabled: false, layers: [] }).layers.length, 0);

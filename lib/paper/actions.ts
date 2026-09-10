@@ -32,10 +32,12 @@ import {
   asNumber,
   parsePaperCarryRow,
   pickOpenCarryForPair,
+  type PaperCarryRow,
 } from "@/lib/paper/rows";
 import { persistOpportunities } from "@/lib/opportunities/persist";
 import { scanOneOpportunity } from "@/lib/opportunities/scan";
 import { requireCashAndCarrySession } from "@/lib/accounts/guard";
+import type { TradingAccountMode } from "@/lib/accounts/model";
 import { withQuery } from "@/lib/accounts/model";
 import { createServiceClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -301,6 +303,128 @@ export async function openPaperCarry(formData: FormData) {
   await persistOpportunities([rawScan]);
 
   flash(next, { paper: liveBook ? "live-opened" : "opened" });
+}
+
+export async function closePaperCarryMarket(input: {
+  supabase: SupabaseClient;
+  userId: string;
+  accountId: string;
+  accountMode: TradingAccountMode;
+  row: PaperCarryRow;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const liveBook = accountCanHoldConnections(input.accountMode);
+  let match;
+  try {
+    match = await scanOneOpportunity({
+      spotSymbol: input.row.spotSymbol,
+      futureSymbol: input.row.futureSymbol,
+      baseCoin: input.row.baseCoin,
+      deliveryTimeMs: input.row.deliveryTimeMs,
+    });
+  } catch (cause) {
+    return {
+      ok: false,
+      error: cause instanceof Error ? cause.message : "Scan failed",
+    };
+  }
+  if (!match) {
+    return {
+      ok: false,
+      error:
+        "That pair is not in the live scan, so it cannot be marked or closed.",
+    };
+  }
+  await persistOpportunities([match]);
+  const usableCapacityUsdt = usableBookUsdt(
+    match.capacityUsdt,
+    await loadUsableBookShare(),
+  );
+  match = { ...match, capacityUsdt: usableCapacityUsdt };
+  const clipUsdt = input.row.notionalUsdt;
+  const { data: orderRows } = await input.supabase
+    .from("paper_orders")
+    .select("*")
+    .eq("account_id", input.accountId)
+    .eq("carry_id", input.row.id);
+  const orders = (orderRows ?? []).map((item) =>
+    parsePaperOrderRow(item as Record<string, unknown>),
+  );
+  let venueClose: Awaited<ReturnType<typeof closeCashAndCarryOnVenue>> | null =
+    null;
+  if (liveBook) {
+    const bound = await loadBoundVenueForAccount({
+      userId: input.userId,
+      accountId: input.accountId,
+      mode: input.accountMode,
+    });
+    if (!bound.ok) {
+      return { ok: false, error: bound.error };
+    }
+    const qty = await qtyTextForVenueClose({
+      spotSymbol: input.row.spotSymbol,
+      futureSymbol: input.row.futureSymbol,
+      orders,
+      clipUsdt,
+      remainingNotionalUsdt: input.row.notionalUsdt,
+      spotAsk: match.spotAsk,
+    });
+    if (!qty.ok) {
+      return { ok: false, error: qty.error };
+    }
+    venueClose = await closeCashAndCarryOnVenue({
+      connection: bound.connection,
+      spotSymbol: input.row.spotSymbol,
+      futureSymbol: input.row.futureSymbol,
+      qty: qty.qty,
+    });
+    if (!venueClose.ok) {
+      await writeEventLog({
+        level: "error",
+        scope: "trade",
+        event: "trade.close_failed",
+        message: venueClose.error,
+        userId: input.userId,
+        accountId: input.accountId,
+        strategy: "cash-and-carry",
+        data: { carryId: input.row.id, mode: "market", venue: "bybit" },
+      });
+      return { ok: false, error: venueClose.error };
+    }
+  }
+  const written = await writeCloseClip({
+    supabase: input.supabase,
+    userId: input.userId,
+    accountId: input.accountId,
+    row: input.row,
+    opportunity: match,
+    clipUsdt,
+    source: "engine",
+    reason: null,
+    priorCloses: priorClosesFromOrders(orders, input.row.id),
+    ...venueOrderFields(venueClose?.ok ? venueClose.fill : null),
+  });
+  if (written.error) {
+    return { ok: false, error: written.error };
+  }
+  await writeEventLog({
+    scope: "trade",
+    event: "trade.closed",
+    message: liveBook
+      ? `Closed ${input.row.futureSymbol} on the connected exchange`
+      : `Closed paper ${input.row.futureSymbol}`,
+    userId: input.userId,
+    accountId: input.accountId,
+    strategy: "cash-and-carry",
+    data: {
+      carryId: input.row.id,
+      futureSymbol: input.row.futureSymbol,
+      clipUsdt,
+      source: input.row.source,
+      closeSource: "engine",
+      mode: "market",
+    },
+  });
+  return { ok: true };
 }
 
 export async function closeOpenPaperCarry(formData: FormData) {

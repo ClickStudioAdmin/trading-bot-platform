@@ -1,6 +1,23 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  AdditionalActions,
+  BotField,
+  BotFormGroup,
+  BotStatusField,
+  DirtySaveBanner,
+  OptionalSection,
+  OrderTypePill,
+  botFieldClass,
+  botHeaderPrimaryClass,
+  botHeaderRemoveClass,
+  botLabelClass,
+  botRowClass,
+  botRowClass5,
+  botSectionTitleClass,
+  triggerSectionTitle,
+} from "@/components/bot-form-chrome";
 import { ColumnHint } from "@/components/column-hint";
 import { DcaFilterBlock } from "@/components/dca-filter-fields";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
@@ -11,6 +28,12 @@ import {
 } from "@/components/stay-on-page-form";
 import { ChevronIcon, TabButton } from "@/components/trade-expand";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
+import {
+  dcaStatusFromLegs,
+  disableConfirmMessage,
+  disableNeedsConfirm,
+  type DcaBotStatus,
+} from "@/lib/bots/status";
 import {
   deleteDcaPlaybookAction,
   runDcaArmAction,
@@ -53,9 +76,7 @@ import {
   dcaLegFor,
   dcaPlaybookHasOpenCycle,
   dcaPlaybookIsRunning,
-  dcaPlaybookStatusLabel,
   dcaAtrTimeframe,
-  dcaStartListens,
   parseDcaExitBasis,
   parseDcaMaxValueKind,
   parseDcaPlaybookForm,
@@ -95,6 +116,7 @@ import {
 } from "@/lib/dca/indicators";
 import {
   DCA_CONFIRM_FIELD_LABEL,
+  dcaFilterSpecForKind,
   dcaFilterSummaryLine,
   type DcaFilterSpec,
 } from "@/lib/dca/filters";
@@ -123,20 +145,13 @@ import {
   type DcaPlaybookUiPolicy,
 } from "@/lib/dca/ui-policy";
 
-const fieldClass =
-  "mt-0.5 w-full rounded-control border border-line bg-surface-raised px-2 py-1.5 text-sm text-ink focus:border-line-strong focus:outline-none";
-const labelClass = "block text-xs text-ink-muted";
-const sectionClass =
-  "space-y-2 rounded-card border border-line bg-canvas px-3 py-2";
-const sectionTitleClass =
-  "text-[11px] uppercase tracking-[0.08em] text-ink-faint";
-const rowClass = "grid gap-x-3 gap-y-2 sm:grid-cols-2 lg:grid-cols-4";
-const headerBtnClass = "rounded-control px-3 py-1.5 text-xs font-medium";
-const headerPrimaryClass = `${headerBtnClass} bg-accent-strong text-ink hover:bg-accent`;
-const headerSecondaryClass = `${headerBtnClass} border border-line bg-surface text-ink hover:bg-surface-raised`;
-const headerLongClass = `${headerBtnClass} bg-success text-canvas`;
-const headerRemoveClass =
-  "shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10";
+const fieldClass = botFieldClass;
+const labelClass = botLabelClass;
+const sectionClass = "space-y-3";
+const sectionTitleClass = botSectionTitleClass;
+const rowClass = botRowClass;
+const headerPrimaryClass = botHeaderPrimaryClass;
+const headerRemoveClass = botHeaderRemoveClass;
 
 function optional(value: number | null | undefined): string {
   return value == null ? "" : String(value);
@@ -429,51 +444,6 @@ function SummaryStat({
       </p>
       {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
     </div>
-  );
-}
-
-function DcaStatusLight({
-  playbook,
-  reduceOnly,
-}: {
-  playbook: DcaPlaybook | null;
-  reduceOnly: boolean;
-}) {
-  const label = playbook ? dcaPlaybookStatusLabel(playbook) : "Idle";
-  const sides = playbook ? dcaEnabledSides(playbook.direction) : [];
-  const legs = playbook
-    ? sides.map((side) => dcaLegFor(playbook, side))
-    : [];
-  const armed = legs.some((leg) => leg.status === "armed");
-  const stopped = legs.some((leg) => leg.status === "stop_adding");
-  const inUse = legs.some(
-    (leg) => leg.clipsFilled > 0 || leg.status !== "idle",
-  );
-  const fill =
-    reduceOnly && (armed || stopped)
-      ? "bg-warning"
-      : armed
-        ? "bg-success"
-        : stopped
-          ? "bg-warning"
-          : "bg-ink-faint";
-  const title =
-    reduceOnly && (armed || stopped)
-      ? `${label} · book Reduce only has priority`
-      : label;
-  return (
-    <span
-      className="relative flex size-3.5 shrink-0"
-      title={title}
-      aria-label={title}
-    >
-      {inUse ? (
-        <span
-          className={`absolute inline-flex size-full animate-ping rounded-full opacity-60 ${fill}`}
-        />
-      ) : null}
-      <span className={`relative inline-flex size-3.5 rounded-full ${fill}`} />
-    </span>
   );
 }
 
@@ -945,14 +915,12 @@ export function DcaPlaybookForm({
   );
   const cycleLocked = hasOpenPosition;
   const armed = liveLegs.some((leg) => leg.status === "armed");
-  const showStopAdding = hasOpenPosition && armed;
-  const showDisarm = Boolean(playbook) && armed && !hasOpenPosition;
-  const showClosePlaybook =
-    hasOpenPosition ||
-    liveLegs.some((leg) => leg.status === "stop_adding");
-  const showSaveAndArm = dcaStartListens(startKind) && !running;
-  const showArmButton =
-    dcaStartListens(startKind) && Boolean(playbook) && running;
+  const stopAdding = liveLegs.some((leg) => leg.status === "stop_adding");
+  const currentStatus: DcaBotStatus = playbook
+    ? dcaStatusFromLegs({ armed, stopAdding })
+    : "active";
+  const [status, setStatus] = useState<DcaBotStatus>(currentStatus);
+  const statusDirty = status !== currentStatus;
   const selectedPair = options.find((row) => row.symbol === symbol);
   const resolvedMaxValue = dcaResolvedMaxValueUsdt({
     kind: maxValueKind,
@@ -1231,8 +1199,29 @@ export function DcaPlaybookForm({
   const liveConfig = parsedLive.ok ? parsedLive.config : null;
   const dirty =
     !playbook ||
+    statusDirty ||
     (formTick > 0 && !dcaFormMatchesPlaybook(playbook, liveConfig));
-  const showSave = dirty;
+  const confirmMissing =
+    Boolean(confirm) && !confirm?.kind
+      ? "Enter the required filter values."
+      : null;
+  const shortConfirmMissing =
+    direction === "both" && Boolean(shortConfirm) && !shortConfirm?.kind
+      ? "Enter the required filter values."
+      : null;
+  const exitIfMissing =
+    Boolean(exitIf) && !exitIf?.kind
+      ? "Enter the required filter values."
+      : null;
+  const shortExitIfMissing =
+    direction === "both" && Boolean(shortExitIf) && !shortExitIf?.kind
+      ? "Enter the required filter values."
+      : null;
+  const optionalMissing =
+    confirmMissing ??
+    shortConfirmMissing ??
+    exitIfMissing ??
+    shortExitIfMissing;
   function recipeForBacktest() {
     const parsed = parseDcaPlaybookForm(snapshotForm(), policy.venueId);
     if (!parsed.ok) {
@@ -1294,130 +1283,70 @@ export function DcaPlaybookForm({
           | HTMLElement
           | null;
         const skip = submitter?.dataset.skipSizeGuard === "1";
-        if (saveBlocked && !skip) {
+        if ((saveBlocked || optionalMissing) && !skip) {
           return false;
+        }
+        if (status === "disabled" && disableNeedsConfirm(hasOpenPosition)) {
+          return window.confirm(disableConfirmMessage("dca"));
         }
         return true;
       }}
-      className="scroll-mt-24 space-y-3 rounded-card border border-line bg-surface px-4 py-3"
+      className="scroll-mt-24 divide-y divide-line rounded-card border border-line bg-canvas px-5"
     >
       <input type="hidden" name="playbookId" value={playbook?.id ?? ""} />
       <input type="hidden" name="deskVenue" value={policy.venueId} />
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-2">
-          {showSaveAndArm || (playbook && showArmButton && !armed) ? (
-            <p className="shrink-0 text-xs text-ink-muted">
-              Initial Order Triggers
-            </p>
-          ) : null}
-          {showSaveAndArm ? (
-            <PendingSubmitButton
-              deskAction="save-arm"
-              pendingLabel="Arming…"
-              className={headerLongClass}
-              disabled={Boolean(saveBlocked)}
-              title={saveBlocked ?? undefined}
-            >
-              Save and Arm
-            </PendingSubmitButton>
-          ) : null}
-          {playbook ? (
-            <>
-              {showArmButton && !armed ? (
-                <PendingSubmitButton
-                  deskAction="arm"
-                  pendingLabel="Arming…"
-                  className={headerSecondaryClass}
-                  disabled={Boolean(saveBlocked)}
-                  title={saveBlocked ?? undefined}
-                >
-                  Arm
-                </PendingSubmitButton>
-              ) : null}
-            </>
-          ) : null}
+      <input type="hidden" name="botStatus" value={status} />
+      <DirtySaveBanner
+        dirty={dirty}
+        error={
+          optionalMissing
+            ? "Fill required fields in enabled sections before saving."
+            : saveBlocked ?? undefined
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <DeskFormFlash />
+          <PendingSubmitButton
+            pendingLabel="Saving…"
+            deskAction="default"
+            className={headerPrimaryClass}
+            disabled={Boolean(saveBlocked || optionalMissing)}
+            title={saveBlocked ?? optionalMissing ?? undefined}
+          >
+            Save
+          </PendingSubmitButton>
         </div>
-        <DcaStatusLight playbook={playbook ?? null} reduceOnly={reduceOnly} />
-      </div>
-      <DeskFormFlash />
-      {saveBlocked ? <SizeGuardNote message={saveBlocked} /> : null}
+      </DirtySaveBanner>
       {reduceOnly ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. New orders stay blocked until you turn it off in
           Desk Settings. Take profit and stop still run.
         </p>
       ) : null}
-
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="min-w-0 flex-1 text-[11px] text-ink-muted">
-          Name
-          <input
-            name="name"
-            defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
-            maxLength={40}
-            onChange={() => setFormTick((tick) => tick + 1)}
-            className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
+      <BotFormGroup title="Bot">
+        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
+          <BotField label="Name">
+            <input
+              name="name"
+              defaultValue={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+              maxLength={40}
+              onChange={() => setFormTick((tick) => tick + 1)}
+              className={fieldClass}
+            />
+          </BotField>
+          <BotStatusField
+            desk="dca"
+            name="botStatusControl"
+            value={status}
+            onChange={(next) => {
+              setStatus(next as DcaBotStatus);
+              setFormTick((tick) => tick + 1);
+            }}
+            inUse={hasOpenPosition}
+            accountReduceOnly={reduceOnly}
           />
-        </label>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {showSave ? (
-            <PendingSubmitButton
-              pendingLabel="Saving…"
-              deskAction="default"
-              className={headerPrimaryClass}
-              disabled={Boolean(saveBlocked)}
-              title={saveBlocked ?? undefined}
-            >
-              Save
-            </PendingSubmitButton>
-          ) : null}
-          {playbook && showStopAdding ? (
-              <span
-                className="inline-flex"
-                title="Stop adding any new orders (also cancels any existing entry limit orders)"
-              >
-                <PendingSubmitButton
-                  deskAction="disarm"
-                  pendingLabel="Stopping…"
-                  className={headerPrimaryClass}
-                  skipSizeGuard
-                >
-                  Stop adding
-                </PendingSubmitButton>
-              </span>
-            ) : null}
-          {showDisarm ? (
-              <span
-                className="inline-flex"
-                title="Stop listening for new entries"
-              >
-                <PendingSubmitButton
-                  deskAction="disarm"
-                  pendingLabel="Disarming…"
-                  className={headerPrimaryClass}
-                  skipSizeGuard
-                >
-                  Disarm
-                </PendingSubmitButton>
-              </span>
-            ) : null}
-          {playbook && showClosePlaybook ? (
-              <span
-                className="inline-flex"
-                title="Close all positions and place the bot in idle mode (no new entries)"
-              >
-                <PendingSubmitButton
-                  deskAction="close"
-                  pendingLabel="Closing…"
-                  className={headerPrimaryClass}
-                  skipSizeGuard
-                >
-                  Close bot
-                </PendingSubmitButton>
-              </span>
-            ) : null}
         </div>
-      </div>
+      </BotFormGroup>
       {cycleLocked ? (
         <p className="text-xs text-warning">
           A position is open. Cycle settings are locked. Take profit and stops
@@ -1428,7 +1357,7 @@ export function DcaPlaybookForm({
       <CycleLock locked={cycleLocked}>
       <fieldset className={sectionClass}>
         <p className={sectionTitleClass}>
-          Pair and Trigger
+          What & When
         </p>
         <div className={rowClass}>
           <label className={labelClass}>
@@ -1441,7 +1370,10 @@ export function DcaPlaybookForm({
             />
           </label>
           <label className={labelClass}>
-            Direction
+            <ColumnHint
+              label="Direction"
+              hint="Long and Short are independent positions and never flatten each other."
+            />
             <select
               name="direction"
               value={direction}
@@ -1564,7 +1496,7 @@ export function DcaPlaybookForm({
 
       <fieldset className={sectionClass}>
         <p className={sectionTitleClass}>
-          Initial Order Trigger Parameters
+          {triggerSectionTitle(startKind)}
         </p>
         <div className={rowClass}>
           {startKind === "price" && direction === "both" ? (
@@ -1580,16 +1512,6 @@ export function DcaPlaybookForm({
                     quoteLabel={policy.quoteLabel}
                   />
                 </div>
-                <DcaFilterBlock
-                  label={DCA_CONFIRM_FIELD_LABEL}
-                  prefix="confirm"
-                  side="long"
-                  spec={confirm}
-                  onChange={setConfirm}
-                  named
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                />
               </div>
               <div className="space-y-2 border-t border-line pt-3">
                 <p className={sectionTitleClass}>Short</p>
@@ -1614,16 +1536,6 @@ export function DcaPlaybookForm({
                     quoteLabel={policy.quoteLabel}
                   />
                 </div>
-                <DcaFilterBlock
-                  label={DCA_CONFIRM_FIELD_LABEL}
-                  prefix="shortConfirm"
-                  side="short"
-                  spec={shortConfirm}
-                  onChange={setShortConfirm}
-                  named
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                />
               </div>
             </div>
           ) : null}
@@ -1635,16 +1547,6 @@ export function DcaPlaybookForm({
                 compare={source?.armTrigger?.compare ?? "gte"}
                 price={optional(source?.armTrigger?.price)}
                 quoteLabel={policy.quoteLabel}
-              />
-              <DcaFilterBlock
-                label={DCA_CONFIRM_FIELD_LABEL}
-                prefix="confirm"
-                side={direction === "short" ? "short" : "long"}
-                spec={confirm}
-                onChange={setConfirm}
-                named
-                fieldClass={fieldClass}
-                labelClass={labelClass}
               />
             </>
           ) : null}
@@ -1666,8 +1568,8 @@ export function DcaPlaybookForm({
                   </select>
                 </label>
                 <p className="self-end text-xs text-ink-muted sm:col-span-2">
-                  Save and Arm first. Then the bound Signal starts the first
-                  order.
+                  Set Status to Active and Save first. Then the bound Signal
+                  starts the first order.
                 </p>
               </>
             ) : (
@@ -1676,51 +1578,10 @@ export function DcaPlaybookForm({
                 <Link href={webhooksHref} className="text-accent">
                   Webhooks
                 </Link>{" "}
-                first. Save and Arm, then buy / sell starts that side only.
+                first. Set Status to Active and Save, then buy / sell starts
+                that side only.
               </p>
             )
-          ) : null}
-          {startKind === "webhook" && direction === "both" ? (
-            <div className="space-y-4 sm:col-span-2 lg:col-span-4">
-              <div className="space-y-2">
-                <p className={sectionTitleClass}>Long</p>
-                <DcaFilterBlock
-                  label={DCA_CONFIRM_FIELD_LABEL}
-                  prefix="confirm"
-                  side="long"
-                  spec={confirm}
-                  onChange={setConfirm}
-                  named
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                />
-              </div>
-              <div className="space-y-2 border-t border-line pt-3">
-                <p className={sectionTitleClass}>Short</p>
-                <DcaFilterBlock
-                  label={DCA_CONFIRM_FIELD_LABEL}
-                  prefix="shortConfirm"
-                  side="short"
-                  spec={shortConfirm}
-                  onChange={setShortConfirm}
-                  named
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                />
-              </div>
-            </div>
-          ) : null}
-          {startKind === "webhook" && direction !== "both" ? (
-            <DcaFilterBlock
-              label={DCA_CONFIRM_FIELD_LABEL}
-              prefix="confirm"
-              side={direction === "short" ? "short" : "long"}
-              spec={confirm}
-              onChange={setConfirm}
-              named
-              fieldClass={fieldClass}
-              labelClass={labelClass}
-            />
           ) : null}
           {startKind === "indicator" && direction === "both" ? (
             <div className="space-y-4 sm:col-span-2 lg:col-span-4">
@@ -1744,16 +1605,6 @@ export function DcaPlaybookForm({
                     onSlowPeriodChange={setIndicatorSlowPeriod}
                   />
                 </div>
-                <DcaFilterBlock
-                  label={DCA_CONFIRM_FIELD_LABEL}
-                  prefix="confirm"
-                  side="long"
-                  spec={confirm}
-                  onChange={setConfirm}
-                  named
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                />
               </div>
               <div className="space-y-2 border-t border-line pt-3">
                 <p className={sectionTitleClass}>Short</p>
@@ -1775,16 +1626,6 @@ export function DcaPlaybookForm({
                     onSlowPeriodChange={setShortIndicatorSlowPeriod}
                   />
                 </div>
-                <DcaFilterBlock
-                  label={DCA_CONFIRM_FIELD_LABEL}
-                  prefix="shortConfirm"
-                  side="short"
-                  spec={shortConfirm}
-                  onChange={setShortConfirm}
-                  named
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                />
               </div>
             </div>
           ) : null}
@@ -1805,16 +1646,6 @@ export function DcaPlaybookForm({
                 onLevelChange={setIndicatorLevel}
                 onPeriodChange={setIndicatorPeriod}
                 onSlowPeriodChange={setIndicatorSlowPeriod}
-              />
-              <DcaFilterBlock
-                label={DCA_CONFIRM_FIELD_LABEL}
-                prefix="confirm"
-                side={direction === "short" ? "short" : "long"}
-                spec={confirm}
-                onChange={setConfirm}
-                named
-                fieldClass={fieldClass}
-                labelClass={labelClass}
               />
             </>
           ) : null}
@@ -1838,16 +1669,6 @@ export function DcaPlaybookForm({
                     onMultiplierChange={setIndicatorMultiplier}
                   />
                 </div>
-                <DcaFilterBlock
-                  label={DCA_CONFIRM_FIELD_LABEL}
-                  prefix="confirm"
-                  side="long"
-                  spec={confirm}
-                  onChange={setConfirm}
-                  named
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                />
               </div>
               <div className="space-y-2 border-t border-line pt-3">
                 <p className={sectionTitleClass}>Short</p>
@@ -1867,16 +1688,6 @@ export function DcaPlaybookForm({
                     onMultiplierChange={setShortIndicatorMultiplier}
                   />
                 </div>
-                <DcaFilterBlock
-                  label={DCA_CONFIRM_FIELD_LABEL}
-                  prefix="shortConfirm"
-                  side="short"
-                  spec={shortConfirm}
-                  onChange={setShortConfirm}
-                  named
-                  fieldClass={fieldClass}
-                  labelClass={labelClass}
-                />
               </div>
             </div>
           ) : null}
@@ -1896,20 +1707,100 @@ export function DcaPlaybookForm({
                 onPeriodChange={setIndicatorPeriod}
                 onMultiplierChange={setIndicatorMultiplier}
               />
-              <DcaFilterBlock
-                label={DCA_CONFIRM_FIELD_LABEL}
-                prefix="confirm"
-                side={direction === "short" ? "short" : "long"}
-                spec={confirm}
-                onChange={setConfirm}
-                named
-                fieldClass={fieldClass}
-                labelClass={labelClass}
-              />
             </>
           ) : null}
         </div>
       </fieldset>
+
+      {direction === "both" ? (
+        <BotFormGroup
+          title="Secondary Entry Condition"
+          hint="Must be true for the entry trigger to execute."
+        >
+          <OptionalSection
+            title="Long"
+            nested
+            enabled={Boolean(confirm)}
+            onEnabled={(next) =>
+              setConfirm(next ? (confirm ?? dcaFilterSpecForKind("rsi", "long")) : null)
+            }
+          >
+            <DcaFilterBlock
+              label="Kind"
+              prefix="confirm"
+              side="long"
+              spec={confirm}
+              onChange={setConfirm}
+              named
+              dense
+              allowOff={false}
+              gridClass={botRowClass5}
+              whenClass=""
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+          </OptionalSection>
+          <OptionalSection
+            title="Short"
+            nested
+            enabled={Boolean(shortConfirm)}
+            onEnabled={(next) =>
+              setShortConfirm(
+                next
+                  ? (shortConfirm ?? dcaFilterSpecForKind("rsi", "short"))
+                  : null,
+              )
+            }
+          >
+            <DcaFilterBlock
+              label="Kind"
+              prefix="shortConfirm"
+              side="short"
+              spec={shortConfirm}
+              onChange={setShortConfirm}
+              named
+              dense
+              allowOff={false}
+              gridClass={botRowClass5}
+              whenClass=""
+              fieldClass={fieldClass}
+              labelClass={labelClass}
+            />
+          </OptionalSection>
+        </BotFormGroup>
+      ) : (
+        <OptionalSection
+          title="Secondary Entry Condition"
+          hint="Must be true for the entry trigger to execute."
+          enabled={Boolean(confirm)}
+          onEnabled={(next) =>
+            setConfirm(
+              next
+                ? (confirm ??
+                  dcaFilterSpecForKind(
+                    "rsi",
+                    direction === "short" ? "short" : "long",
+                  ))
+                : null,
+            )
+          }
+        >
+          <DcaFilterBlock
+            label="Kind"
+            prefix="confirm"
+            side={direction === "short" ? "short" : "long"}
+            spec={confirm}
+            onChange={setConfirm}
+            named
+            dense
+            allowOff={false}
+            gridClass={botRowClass5}
+            whenClass=""
+            fieldClass={fieldClass}
+            labelClass={labelClass}
+          />
+        </OptionalSection>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <fieldset className={sectionClass}>
@@ -2204,19 +2095,18 @@ export function DcaPlaybookForm({
               </div>
             ) : null}
             {averaging === "dip" ? (
-              <label className="flex items-start gap-2 py-2 text-xs text-ink sm:col-span-2">
-                <input
-                  type="checkbox"
-                  name="restGrid"
-                  value="1"
-                  checked={restGrid}
-                  onChange={(event) => {
-                    setRestGrid(event.target.checked);
-                  }}
-                  className="mt-0.5"
+              <BotField
+                label="Order"
+                hint="Limit rests remaining adds as GTC. Market fills them when the add triggers."
+              >
+                {restGrid ? (
+                  <input type="hidden" name="restGrid" value="1" />
+                ) : null}
+                <OrderTypePill
+                  value={restGrid ? "limit" : "market"}
+                  onChange={(next) => setRestGrid(next === "limit")}
                 />
-                Remaining orders placed as GTC limit (instead of market)
-              </label>
+              </BotField>
             ) : null}
           </div>
         </fieldset>
@@ -2463,94 +2353,141 @@ export function DcaPlaybookForm({
             />
           </label>
         </div>
-        <div className="space-y-2 border-t border-line pt-3">
-        {direction === "both" ? (
-          <div className="space-y-3">
+      </fieldset>
+      </div>
+
+      {direction === "both" ? (
+        <BotFormGroup title="Hard Exit Condition">
+          <OptionalSection
+            title="Long"
+            nested
+            enabled={Boolean(exitIf)}
+            onEnabled={(next) =>
+              setExitIf(next ? (exitIf ?? dcaFilterSpecForKind("rsi", "long")) : null)
+            }
+          >
             <DcaFilterBlock
-              label="Long Exit-if"
+              label="Kind"
               prefix="exitIf"
               side="long"
               spec={exitIf}
               onChange={setExitIf}
               named
+              dense
+              allowOff={false}
+              gridClass={botRowClass5}
+              whenClass=""
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
+          </OptionalSection>
+          <OptionalSection
+            title="Short"
+            nested
+            enabled={Boolean(shortExitIf)}
+            onEnabled={(next) =>
+              setShortExitIf(
+                next
+                  ? (shortExitIf ?? dcaFilterSpecForKind("rsi", "short"))
+                  : null,
+              )
+            }
+          >
             <DcaFilterBlock
-              label="Short Exit-if"
+              label="Kind"
               prefix="shortExitIf"
               side="short"
               spec={shortExitIf}
               onChange={setShortExitIf}
               named
+              dense
+              allowOff={false}
+              gridClass={botRowClass5}
+              whenClass=""
               fieldClass={fieldClass}
               labelClass={labelClass}
             />
-          </div>
-        ) : (
+          </OptionalSection>
+        </BotFormGroup>
+      ) : (
+        <OptionalSection
+          title="Hard Exit Condition"
+          enabled={Boolean(exitIf)}
+          onEnabled={(next) =>
+            setExitIf(
+              next
+                ? (exitIf ??
+                  dcaFilterSpecForKind(
+                    "rsi",
+                    direction === "short" ? "short" : "long",
+                  ))
+                : null,
+            )
+          }
+        >
           <DcaFilterBlock
-            label="Exit-if"
+            label="Kind"
             prefix="exitIf"
             side={direction === "short" ? "short" : "long"}
             spec={exitIf}
             onChange={setExitIf}
             named
+            dense
+            allowOff={false}
+            gridClass={botRowClass5}
+            whenClass=""
             fieldClass={fieldClass}
             labelClass={labelClass}
           />
-        )}
-        </div>
-      </fieldset>
-      </div>
+        </OptionalSection>
+      )}
 
-      <div className="flex flex-wrap items-center gap-2">
-        {running ? (
-          <div>
-            {ladderMaxError && !ladderOpen ? (
-              <SizeGuardNote message={ladderMaxError} />
-            ) : null}
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
-              aria-expanded={ladderOpen}
-              onClick={() => setLadderOpen((open) => !open)}
-            >
-              {ladderOpen ? "Hide Summary" : "Show Summary"}
-              <ChevronIcon className={ladderOpen ? "rotate-90" : undefined} />
-            </button>
-          </div>
-        ) : null}
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-          <BacktestTemplateLink
-            current={liveRecipe()}
-            getRecipe={recipeForBacktest}
-            templates={backtestLibrary}
-            venueId={policy.venueId}
-            venueEnvironment={venueEnvironment}
-          />
-          <SaveAsTemplateButton
-            isAdmin={isAdmin}
-            defaultName={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
-            kind="dca"
-            folders={folders}
-            library={backtestLibrary}
-            currentRecipe={liveRecipe()}
-            buildForm={snapshotForm}
-            onSaved={(saved) => {
-              const recipe = liveRecipe();
-              if (recipe) {
-                onTemplateSaved?.({
-                  id: saved.id,
-                  name: saved.name,
-                  recipe,
-                  visibility: saved.visibility,
-                });
-              }
-            }}
-          />
-          {removeControl}
+      <AdditionalActions>
+        <BacktestTemplateLink
+          current={liveRecipe()}
+          getRecipe={recipeForBacktest}
+          templates={backtestLibrary}
+          venueId={policy.venueId}
+          venueEnvironment={venueEnvironment}
+        />
+        <SaveAsTemplateButton
+          isAdmin={isAdmin}
+          defaultName={source?.name ?? defaultName ?? DEFAULT_DCA_NAME}
+          kind="dca"
+          folders={folders}
+          library={backtestLibrary}
+          currentRecipe={liveRecipe()}
+          buildForm={snapshotForm}
+          onSaved={(saved) => {
+            const recipe = liveRecipe();
+            if (recipe) {
+              onTemplateSaved?.({
+                id: saved.id,
+                name: saved.name,
+                recipe,
+                visibility: saved.visibility,
+              });
+            }
+          }}
+        />
+        {removeControl}
+      </AdditionalActions>
+      {running ? (
+        <div className="py-4">
+          {ladderMaxError && !ladderOpen ? (
+            <SizeGuardNote message={ladderMaxError} />
+          ) : null}
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink"
+            aria-expanded={ladderOpen}
+            onClick={() => setLadderOpen((open) => !open)}
+          >
+            {ladderOpen ? "Hide Summary" : "Show Summary"}
+            <ChevronIcon className={ladderOpen ? "rotate-90" : undefined} />
+          </button>
         </div>
-      </div>
+      ) : null}
       {!running || ladderOpen ? (
       <fieldset className={sectionClass}>
         <p className={sectionTitleClass}>

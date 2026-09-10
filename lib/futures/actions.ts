@@ -9,7 +9,10 @@ import {
   futuresAutomationsAreRunning,
   loadFuturesAutomationRules,
   saveFuturesAutomationRules,
+  upsertFuturesAutomationRules,
 } from "./automation-load";
+import { flattenOwnedRuleIds } from "@/lib/bots/status";
+import { loadOpenFuturesByRuleId } from "./list";
 import type { DeskActionResult } from "@/lib/ui/desk-action";
 import { deskActionError } from "@/lib/ui/desk-action";
 import { runFuturesCommand } from "./command";
@@ -442,12 +445,20 @@ export async function saveFuturesAutomations(
   if (!supabase) {
     return deskActionError("Auth is not configured.");
   }
-  const saved = await saveFuturesAutomationRules({
-    supabase,
-    userId: user.id,
-    accountId: account.id,
-    rules: parsed.rules,
-  });
+  const one = String(formData.get("saveScope") ?? "").trim() === "one";
+  const saved = one
+    ? await upsertFuturesAutomationRules({
+        supabase,
+        userId: user.id,
+        accountId: account.id,
+        rules: parsed.rules,
+      })
+    : await saveFuturesAutomationRules({
+        supabase,
+        userId: user.id,
+        accountId: account.id,
+        rules: parsed.rules,
+      });
   if (!saved.ok) {
     await writeEventLog({
       level: "error",
@@ -472,13 +483,61 @@ export async function saveFuturesAutomations(
     strategy: FUTURES_STRATEGY_ID,
     data: { count: parsed.rules.length },
   });
+  if (one) {
+    const flattenErrors = await flattenOwnedFuturesRules({
+      userId: user.id,
+      accountId: account.id,
+      mode: account.mode,
+      rules: parsed.rules,
+    });
+    if (flattenErrors) {
+      return deskActionError(flattenErrors);
+    }
+  }
   revalidatePath(FUTURES_PATHS.positions);
   const rules = await loadFuturesAutomationRules(account.id);
   return {
     ok: true,
-    notice: "Bots saved.",
+    notice: one ? "Bot saved." : "Bots saved.",
     forms: rules.map(futuresRuleToForm),
   };
+}
+
+async function flattenOwnedFuturesRules(input: {
+  userId: string;
+  accountId: string;
+  mode: Parameters<typeof runFuturesCommand>[0]["actor"]["mode"];
+  rules: { id: string | null; mode: string }[];
+}): Promise<string | null> {
+  for (const rule of flattenOwnedRuleIds(input.rules)) {
+    const opens = await loadOpenFuturesByRuleId(rule.id, {
+      accountId: input.accountId,
+      userId: input.userId,
+    });
+    for (const row of opens) {
+      const closed = await runFuturesCommand({
+        actor: {
+          userId: input.userId,
+          accountId: input.accountId,
+          mode: input.mode,
+        },
+        command: {
+          kind: "place",
+          action: "flatten",
+          symbol: row.symbol,
+          positionId: row.id,
+          orderType: "market",
+          source: "engine",
+          ruleId: rule.id,
+          ruleName: row.ruleName,
+        },
+      });
+      if (!closed.ok) {
+        return closed.error;
+      }
+    }
+  }
+  return null;
 }
 
 export async function detachFuturesConnection() {

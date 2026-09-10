@@ -1,16 +1,25 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
+import {
+  AdditionalActions,
+  BotField,
+  BotFormGroup,
+  BotStatusField,
+  DirtySaveBanner,
+  OptionalSection,
+  botFieldClass,
+  botHeaderPrimaryClass,
+  botHeaderRemoveClass,
+  botRowClass,
+} from "@/components/bot-form-chrome";
 import {
   saveAccountReduceOnly,
   savePaperRules,
   type SavePaperRulesResult,
   type SaveReduceOnlyResult,
 } from "@/lib/engine/actions";
-import {
-  parseAutomationMode,
-  type AutomationMode,
-} from "@/lib/engine/decide";
+import { parseAutomationMode } from "@/lib/engine/decide";
 import {
   clonePaperLayerForm,
   defaultPaperLayer,
@@ -18,6 +27,7 @@ import {
   type PaperLayerFormValues,
   type PaperRulesFormValues,
 } from "@/lib/engine/rules";
+import { disableConfirmMessage, disableNeedsConfirm } from "@/lib/bots/status";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   DeskFormFlash,
@@ -192,13 +202,7 @@ export function PaperRulesForm({
   }
 
   return (
-    <StayOnPageForm
-      action={savePaperRules}
-      onResult={applySaveResult}
-      className="space-y-4"
-    >
-      <input type="hidden" name="ruleCount" value={layers.length} />
-
+    <div className="space-y-4">
       {reduceOnly && !empty ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Account Reduce only is on. Active bots will not open or add size.
@@ -208,23 +212,23 @@ export function PaperRulesForm({
       ) : null}
 
       {empty ? (
-        <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
+        <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
           No bots yet. Add a bot to start the engine, or leave this
           empty if you only trade by hand.
         </p>
       ) : (
-        layers.map((layer, index) => {
+        layers.map((layer) => {
           const id = Number(layer.id);
           const used = Number.isFinite(id) && inUse.has(id);
           return (
             <RuleRow
               key={layer.key}
-              index={index}
               layer={layer}
               canRemove={!used}
               inUse={used}
               accountReduceOnly={reduceOnly}
               isAdmin={isAdmin}
+              onSaved={applySaveResult}
               onRemove={() => removeLayer(layer.key, layer.id)}
               folders={sets}
               recipeLibrary={recipeLibrary}
@@ -283,20 +287,8 @@ export function PaperRulesForm({
             ))}
           </select>
         ) : null}
-        {empty ? null : (
-          <>
-            <DeskFormFlash />
-            <PendingSubmitButton
-              pendingLabel="Saving…"
-              deskAction="default"
-              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-            >
-              Save Bots
-            </PendingSubmitButton>
-          </>
-        )}
       </div>
-    </StayOnPageForm>
+    </div>
   );
 }
 
@@ -309,23 +301,23 @@ function layerToForm(index: number): PaperLayerFormValues {
 }
 
 function RuleRow({
-  index,
   layer,
   canRemove,
   inUse,
   accountReduceOnly,
   isAdmin,
   onRemove,
+  onSaved,
   folders = [],
   recipeLibrary = [],
 }: {
-  index: number;
   layer: PaperLayerFormValues;
   canRemove: boolean;
   inUse: boolean;
   accountReduceOnly: boolean;
   isAdmin: boolean;
   onRemove: () => void;
+  onSaved: (result: SavePaperRulesResult) => void;
   folders?: AutomationTemplateSet[];
   recipeLibrary?: readonly {
     name: string;
@@ -333,109 +325,137 @@ function RuleRow({
     visibility?: string;
   }[];
 }) {
-  const prefix = `r${index}_`;
+  const prefix = "r0_";
+  const [dirty, setDirty] = useState(!layer.id);
   const [sizeType, setSizeType] = useState(layer.sizeType);
   const [exitSizeType, setExitSizeType] = useState(layer.exitSizeType);
   const [mode, setMode] = useState(layer.mode);
+  const [tpOn, setTpOn] = useState(Boolean(layer.takeProfit.trim()));
+  const [slOn, setSlOn] = useState(Boolean(layer.stopLoss.trim()));
+  const [takeProfit, setTakeProfit] = useState(layer.takeProfit);
+  const [stopLoss, setStopLoss] = useState(layer.stopLoss);
+  const missingTp = tpOn && !takeProfit.trim();
+  const missingSl = slOn && !stopLoss.trim();
+  const missing = missingTp || missingSl;
+
   return (
-    <section className="rounded-card border border-line bg-surface px-4 py-3">
-      <div className="mb-2 grid grid-cols-[minmax(0,1fr)_13rem_auto] items-center gap-x-2 gap-y-0.5">
-        <label
-          htmlFor={`${prefix}name`}
-          className="text-[11px] text-ink-muted"
-        >
-          Name
-        </label>
-        <label
-          htmlFor={`${prefix}mode`}
-          className="text-[11px] text-ink-muted"
-        >
-          Mode
-        </label>
-        <ModeLight
-          mode={mode}
-          inUse={inUse}
-          accountReduceOnly={accountReduceOnly}
-        />
-        <input
-          id={`${prefix}name`}
-          name={`${prefix}name`}
-          defaultValue={layer.name}
-          maxLength={40}
-          placeholder={`Bot ${index + 1}`}
-          className="w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
-        />
-        <select
-          id={`${prefix}mode`}
-          name={`${prefix}mode`}
-          value={mode}
-          onChange={(event) => setMode(parseAutomationMode(event.target.value))}
-          className="w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
-        >
-          <option value="active">
-            {accountReduceOnly ? "Active (Reduce only)" : "Active"}
-          </option>
-          <option value="reduce_only">Reduce only</option>
-          <option value="disabled">Disabled</option>
-        </select>
-        <span />
-      </div>
+    <StayOnPageForm
+      action={savePaperRules}
+      onResult={(result) => {
+        onSaved(result);
+        if (result.ok) {
+          setDirty(false);
+        }
+      }}
+      onChange={() => setDirty(true)}
+      guard={() => {
+        if (missing) {
+          return false;
+        }
+        if (mode === "disabled" && disableNeedsConfirm(inUse)) {
+          return window.confirm(disableConfirmMessage("cnc"));
+        }
+        return true;
+      }}
+      className="scroll-mt-24 divide-y divide-line rounded-card border border-line bg-canvas px-5"
+      id={layer.id ? `bot-${layer.id}` : undefined}
+    >
+      <input type="hidden" name="saveScope" value="one" />
+      <input type="hidden" name="ruleCount" value="1" />
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
-      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-        Entry
-      </p>
-      <div className="mt-1 grid gap-2 md:grid-cols-2">
-        <FieldGroup title="Conditions (all must be true)">
-          <Field
+      <DirtySaveBanner
+        dirty={dirty}
+        error={
+          missing
+            ? "Fill required fields in enabled sections before saving."
+            : undefined
+        }
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <DeskFormFlash />
+          <PendingSubmitButton
+            pendingLabel="Saving…"
+            deskAction="default"
+            className={botHeaderPrimaryClass}
+          >
+            Save
+          </PendingSubmitButton>
+        </div>
+      </DirtySaveBanner>
+      <BotFormGroup title="Bot">
+        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
+          <BotField label="Name">
+            <input
+              id={`${prefix}name`}
+              name={`${prefix}name`}
+              defaultValue={layer.name}
+              maxLength={40}
+              className={botFieldClass}
+            />
+          </BotField>
+          <BotStatusField
+            desk="cnc"
+            name={`${prefix}mode`}
+            value={mode}
+            onChange={(next) => setMode(parseAutomationMode(next))}
+            inUse={inUse}
+            accountReduceOnly={accountReduceOnly}
+          />
+        </div>
+      </BotFormGroup>
+      <BotFormGroup title="Entry" hint="All conditions must be true.">
+        <div className={botRowClass}>
+          <CarryNumber
             name={`${prefix}minApr`}
             label="Min APR %"
             defaultValue={layer.minApr}
             allowDecimal
           />
-          <Field
+          <CarryNumber
             name={`${prefix}minDte`}
             label="Min DTE"
             defaultValue={layer.minDte}
           />
-          <Field
+          <CarryNumber
             name={`${prefix}maxDte`}
             label="Max DTE"
             defaultValue={layer.maxDte}
           />
-        </FieldGroup>
-        <FieldGroup title="Position and Orders">
-          <Field
+        </div>
+      </BotFormGroup>
+      <BotFormGroup title="Position and Orders">
+        <div className={botRowClass}>
+          <CarryNumber
             name={`${prefix}maxOpenNotional`}
             label="Max Position Size"
             defaultValue={layer.maxOpenNotional}
           />
-          <Field
+          <CarryNumber
             name={`${prefix}maxOpenCount`}
             label="Max pairs"
             defaultValue={layer.maxOpenCount || "1"}
           />
-          <label className="block text-[11px] text-ink-muted">
-            Order Type
+          <BotField label="Order Type">
             <select
               name={`${prefix}sizeType`}
               value={sizeType}
               onChange={(event) =>
                 setSizeType(event.target.value === "dynamic" ? "dynamic" : "fixed")
               }
-              className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
+              className={botFieldClass}
             >
               <option value="dynamic">Dynamic (scale in)</option>
               <option value="fixed">Fixed</option>
             </select>
-          </label>
+          </BotField>
           {sizeType === "fixed" ? (
             <>
-              <Field
+              <CarryNumber
                 name={`${prefix}notionalUsdt`}
                 label="Order size (USDT)"
                 defaultValue={String(layer.notionalUsdt)}
               />
-              <Field
+              <CarryNumber
                 name={`${prefix}minCapacity`}
                 label="Min usable book"
                 defaultValue={layer.minCapacity}
@@ -443,34 +463,28 @@ function RuleRow({
             </>
           ) : null}
           {sizeType === "dynamic" || exitSizeType === "dynamic" ? (
-            <Field
+            <CarryNumber
               name={`${prefix}minSize`}
               label="Min Order Size"
               defaultValue={layer.minSize}
             />
           ) : null}
-        </FieldGroup>
-      </div>
-      <p className="mt-3 text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-        Exit
-      </p>
-      <div className="mt-1 grid gap-2 md:grid-cols-3">
-        <FieldGroup title="Conditions (any can be true)">
-          <Field
+        </div>
+      </BotFormGroup>
+      <BotFormGroup title="Exit" hint="Any condition can be true.">
+        <div className={botRowClass}>
+          <CarryNumber
             name={`${prefix}closeMaxDte`}
             label="DTE ≤"
             defaultValue={layer.closeMaxDte}
           />
-          <Field
+          <CarryNumber
             name={`${prefix}closeMinApr`}
             label="APR % below"
             defaultValue={layer.closeMinApr}
             allowDecimal
           />
-        </FieldGroup>
-        <FieldGroup title="Position and Orders">
-          <label className="block text-[11px] text-ink-muted">
-            Order Type
+          <BotField label="Order Type">
             <select
               name={`${prefix}exitSizeType`}
               value={exitSizeType}
@@ -479,29 +493,51 @@ function RuleRow({
                   event.target.value === "fixed" ? "fixed" : "dynamic",
                 )
               }
-              className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
+              className={botFieldClass}
             >
               <option value="dynamic">Dynamic (scale out)</option>
               <option value="fixed">Fixed (entire position)</option>
             </select>
-          </label>
-        </FieldGroup>
-        <FieldGroup title="Stops">
-          <Field
+          </BotField>
+        </div>
+      </BotFormGroup>
+      <OptionalSection
+        title="Take profit"
+        enabled={tpOn}
+        onEnabled={setTpOn}
+        error={missingTp ? "Required" : undefined}
+      >
+        <input type="hidden" name={`${prefix}takeProfitOn`} value="1" />
+        <div className={botRowClass}>
+          <CarryNumber
             name={`${prefix}takeProfit`}
             label="Take profit %"
-            defaultValue={layer.takeProfit}
+            value={takeProfit}
+            onChange={setTakeProfit}
             allowDecimal
+            error={missingTp ? "Required" : undefined}
           />
-          <Field
+        </div>
+      </OptionalSection>
+      <OptionalSection
+        title="Stop loss"
+        enabled={slOn}
+        onEnabled={setSlOn}
+        error={missingSl ? "Required" : undefined}
+      >
+        <input type="hidden" name={`${prefix}stopLossOn`} value="1" />
+        <div className={botRowClass}>
+          <CarryNumber
             name={`${prefix}stopLoss`}
             label="Stop loss %"
-            defaultValue={layer.stopLoss}
+            value={stopLoss}
+            onChange={setStopLoss}
             allowDecimal
+            error={missingSl ? "Required" : undefined}
           />
-        </FieldGroup>
-      </div>
-      <div className="mt-3 flex items-end justify-end gap-3">
+        </div>
+      </OptionalSection>
+      <AdditionalActions>
         <SaveAsTemplateButton
           isAdmin={isAdmin}
           defaultName={layer.name}
@@ -515,6 +551,8 @@ function RuleRow({
                 mode,
                 sizeType,
                 exitSizeType,
+                takeProfit: tpOn ? takeProfit : "",
+                stopLoss: slOn ? stopLoss : "",
               }),
             );
             return parsed.ok && parsed.config.layers[0]
@@ -527,6 +565,8 @@ function RuleRow({
               mode,
               sizeType,
               exitSizeType,
+              takeProfit: tpOn ? takeProfit : "",
+              stopLoss: slOn ? stopLoss : "",
             })
           }
         />
@@ -534,7 +574,7 @@ function RuleRow({
           <button
             type="button"
             onClick={onRemove}
-            className="shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
+            className={botHeaderRemoveClass}
           >
             Remove
           </button>
@@ -546,110 +586,44 @@ function RuleRow({
             <button
               type="button"
               disabled
-              className="pointer-events-none shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger opacity-40"
+              className={`${botHeaderRemoveClass} pointer-events-none opacity-40`}
             >
               Remove
             </button>
           </span>
         )}
-      </div>
-    </section>
+      </AdditionalActions>
+    </StayOnPageForm>
   );
 }
 
-function FieldGroup({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="rounded-card border border-line bg-canvas px-3 py-2">
-      <p className="text-[11px] uppercase tracking-[0.08em] text-ink-faint">
-        {title}
-      </p>
-      <div className="mt-1 grid grid-cols-2 gap-x-2 gap-y-1.5">{children}</div>
-    </div>
-  );
-}
-
-function Field({
+function CarryNumber({
   name,
   label,
   defaultValue,
+  value,
+  onChange,
   allowDecimal,
+  error,
 }: {
   name: string;
   label: string;
-  defaultValue: string;
+  defaultValue?: string;
+  value?: string;
+  onChange?: (next: string) => void;
   allowDecimal?: boolean;
+  error?: string;
 }) {
   return (
-    <label className="block text-[11px] text-ink-muted">
-      {label}
+    <BotField label={label} error={error}>
       <GroupedNumberInput
         name={name}
         defaultValue={defaultValue}
+        value={value}
+        onChange={onChange}
         allowDecimal={allowDecimal}
+        className={botFieldClass}
       />
-    </label>
-  );
-}
-
-function modeLightLabel(
-  mode: AutomationMode,
-  accountReduceOnly: boolean,
-): string {
-  if (mode === "reduce_only") {
-    return "Reduce only";
-  }
-  if (mode === "disabled") {
-    return "Disabled";
-  }
-  return accountReduceOnly
-    ? "Active · account Reduce only has priority"
-    : "Active";
-}
-
-function modeLightFill(
-  mode: AutomationMode,
-  accountReduceOnly: boolean,
-): string {
-  if (mode === "disabled") {
-    return "bg-ink-faint";
-  }
-  if (mode === "reduce_only" || accountReduceOnly) {
-    return "bg-warning";
-  }
-  return "bg-success";
-}
-
-function ModeLight({
-  mode,
-  inUse,
-  accountReduceOnly,
-}: {
-  mode: AutomationMode;
-  inUse: boolean;
-  accountReduceOnly: boolean;
-}) {
-  const fill = modeLightFill(mode, accountReduceOnly);
-  const label = inUse
-    ? `${modeLightLabel(mode, accountReduceOnly)} · in use by an open position`
-    : modeLightLabel(mode, accountReduceOnly);
-  return (
-    <span
-      className="relative flex size-3.5 shrink-0"
-      title={label}
-      aria-label={label}
-    >
-      {inUse ? (
-        <span
-          className={`absolute inline-flex size-full animate-ping rounded-full opacity-60 ${fill}`}
-        />
-      ) : null}
-      <span className={`relative inline-flex size-3.5 rounded-full ${fill}`} />
-    </span>
+    </BotField>
   );
 }

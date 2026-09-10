@@ -1,8 +1,12 @@
 "use server";
 
 import { requirePerpsUiSession } from "@/lib/accounts/guard";
+import { dcaSaveVerb, parseDcaBotStatus } from "@/lib/bots/status";
 import {
   dcaConfigMaxOrderError,
+  dcaEnabledSides,
+  dcaLegFor,
+  dcaPlaybookHasOpenCycle,
   dcaPlaybookIsRunning,
   dcaStartListens,
   parseDcaPlaybookId,
@@ -57,7 +61,61 @@ async function syncRunningPlaybookWorking(input: {
 export async function saveDcaPlaybookAction(
   formData: FormData,
 ): Promise<DcaDeskActionResult> {
-  return saveDcaPlaybookWith("save", formData);
+  const selectedRaw = String(formData.get("botStatus") ?? "").trim();
+  if (!selectedRaw) {
+    return saveDcaPlaybookWith("save", formData);
+  }
+  const session = await requirePerpsUiSession();
+  if (!deskAllowsDcaPlaybooks(session.account)) {
+    return deskActionError("This desk is not a DCA desk.");
+  }
+  const playbookId = parseDcaPlaybookId(formData.get("playbookId"));
+  const existing = playbookId
+    ? await loadDcaPlaybookById(playbookId, session.account.id)
+    : null;
+  const opens = existing
+    ? await loadOpenFuturesOnSymbol(existing.symbol, {
+        accountId: session.account.id,
+        userId: session.member.id,
+      })
+    : [];
+  const running = Boolean(existing && dcaPlaybookIsRunning(existing));
+  const armed = Boolean(
+    existing &&
+      dcaEnabledSides(existing.direction).some(
+        (side) => dcaLegFor(existing, side).status === "armed",
+      ),
+  );
+  const hasOpenPosition = Boolean(
+    existing && dcaPlaybookHasOpenCycle(existing, opens),
+  );
+  const verb = dcaSaveVerb({
+    selected: parseDcaBotStatus(selectedRaw),
+    running,
+    armed,
+    hasOpenPosition,
+  });
+  if (verb === "arm") {
+    return saveDcaPlaybookWith("arm", formData);
+  }
+  const saved = await saveDcaPlaybookWith("save", formData);
+  if (!saved.ok || !saved.playbook || verb === "save") {
+    return saved;
+  }
+  const applied = await applyDcaVerb({
+    playbook: saved.playbook,
+    mode: session.account.mode,
+    verb,
+  });
+  if (!applied.ok) {
+    return deskActionError(applied.error);
+  }
+  revalidatePath(FUTURES_PATHS.automations);
+  revalidatePath(FUTURES_PATHS.positions);
+  const playbook =
+    (await loadDcaPlaybookById(saved.playbook.id, session.account.id)) ??
+    saved.playbook;
+  return { ok: true, notice: applied.message, playbook };
 }
 
 export async function saveAndArmDcaPlaybookAction(

@@ -50,6 +50,28 @@ export async function getOpportunityPaperProps(
   };
 }
 
+export async function loadOpenPaperCarriesByRuleId(
+  ruleId: number,
+  scope: { accountId: string; userId: string },
+): Promise<PaperCarryRow[]> {
+  const supabase = createServiceClient();
+  const id = Number(ruleId);
+  if (!supabase || !Number.isFinite(id)) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("paper_carries")
+    .select("*")
+    .eq("account_id", scope.accountId)
+    .eq("user_id", scope.userId)
+    .eq("rule_id", id)
+    .in("status", ["open", "closing"]);
+  if (error || !data) {
+    return [];
+  }
+  return data.map((row) => parsePaperCarryRow(row as Record<string, unknown>));
+}
+
 export async function listPaperCarries(): Promise<PaperCarryRow[]> {
   const session = await getSessionContext();
   const supabase = createServiceClient();

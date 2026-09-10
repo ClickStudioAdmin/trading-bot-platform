@@ -71,6 +71,35 @@ export async function futuresAutomationsAreRunning(
   return (data ?? []).length > 0;
 }
 
+export async function upsertFuturesAutomationRules(input: {
+  supabase: SupabaseClient;
+  userId: string;
+  accountId: string;
+  rules: FuturesAutomationRule[];
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  for (const rule of input.rules) {
+    const row = futuresAutomationToRow(input.userId, input.accountId, rule);
+    if (rule.id) {
+      const { error } = await input.supabase
+        .from("futures_automation_rules")
+        .update(row)
+        .eq("id", rule.id)
+        .eq("account_id", input.accountId);
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+    } else {
+      const { error } = await input.supabase
+        .from("futures_automation_rules")
+        .insert(row);
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+    }
+  }
+  return { ok: true };
+}
+
 export async function saveFuturesAutomationRules(input: {
   supabase: SupabaseClient;
   userId: string;

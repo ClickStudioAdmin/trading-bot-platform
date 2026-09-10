@@ -1,6 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import {
+  AdditionalActions,
+  BotField,
+  BotFormGroup,
+  BotStatusField,
+  DirtySaveBanner,
+  HintLabel,
+  OrderTypePill,
+  botFieldClass,
+  botHeaderPrimaryClass,
+  botHeaderRemoveClass,
+  botRowClass,
+  botRowClass5,
+  triggerSectionTitle,
+} from "@/components/bot-form-chrome";
 import { FuturesSymbolSelect } from "@/components/futures-symbol-select";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
@@ -9,10 +24,8 @@ import {
   keepFormKeys,
 } from "@/components/stay-on-page-form";
 import { GroupedNumberInput } from "@/components/usdt-size-input";
-import {
-  parseAutomationMode,
-  type AutomationMode,
-} from "@/lib/engine/decide";
+import { disableConfirmMessage, disableNeedsConfirm } from "@/lib/bots/status";
+import { parseAutomationMode } from "@/lib/engine/decide";
 import {
   saveFuturesAutomations,
   type SaveFuturesAutomationsResult,
@@ -104,23 +117,16 @@ export function FuturesAutomationsDesk({
   }
 
   return (
-    <StayOnPageForm
-      action={saveFuturesAutomations}
-      onResult={applySaveResult}
-      className="space-y-4"
-    >
-      <input type="hidden" name="ruleCount" value={layers.length} />
-      <input type="hidden" name="deskVenue" value={venueId} />
+    <div className="space-y-4">
       {empty ? (
-        <p className="rounded-card border border-line bg-surface px-4 py-6 text-sm text-ink-muted">
+        <p className="rounded-card border border-line bg-canvas px-4 py-6 text-sm text-ink-muted">
           No bots yet. Add a bot to fire Buy, Sell, or Close on a price
           cross or a Signal webhook.
         </p>
       ) : (
-        layers.map((layer, index) => (
+        layers.map((layer) => (
           <RuleCard
             key={layer.key}
-            index={index}
             layer={layer}
             options={options}
             triggerWebhooks={triggerWebhooks}
@@ -132,6 +138,7 @@ export function FuturesAutomationsDesk({
             venueId={venueId}
             venueEnvironment={venueEnvironment}
             backtestLibrary={library}
+            onSaved={applySaveResult}
             onTemplateSaved={(item) =>
               setExtraLibrary((current) => [
                 ...current.filter((row) => row.id !== item.id),
@@ -199,25 +206,12 @@ export function FuturesAutomationsDesk({
             ))}
           </select>
         ) : null}
-        {empty ? null : (
-          <>
-            <DeskFormFlash />
-            <PendingSubmitButton
-              pendingLabel="Saving…"
-              deskAction="default"
-              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-            >
-              Save Bots
-            </PendingSubmitButton>
-          </>
-        )}
       </div>
-    </StayOnPageForm>
+    </div>
   );
 }
 
 function RuleCard({
-  index,
   layer,
   options,
   triggerWebhooks,
@@ -225,6 +219,7 @@ function RuleCard({
   inUse,
   isAdmin,
   onRemove,
+  onSaved,
   folders = [],
   quoteLabel = "USDT",
   venueId = "bybit",
@@ -232,7 +227,6 @@ function RuleCard({
   backtestLibrary = [],
   onTemplateSaved,
 }: {
-  index: number;
   layer: FuturesAutomationFormValues;
   options: LinearPerp[];
   triggerWebhooks: Pick<FuturesWebhookRow, "id" | "name">[];
@@ -240,6 +234,7 @@ function RuleCard({
   inUse: boolean;
   isAdmin: boolean;
   onRemove: () => void;
+  onSaved: (result: SaveFuturesAutomationsResult) => void;
   folders?: AutomationTemplateSet[];
   quoteLabel?: string;
   venueId?: string;
@@ -247,7 +242,8 @@ function RuleCard({
   backtestLibrary?: BacktestLibraryItem[];
   onTemplateSaved?: (item: BacktestLibraryItem) => void;
 }) {
-  const prefix = `r${index}_`;
+  const prefix = "r0_";
+  const [dirty, setDirty] = useState(!layer.id);
   const [mode, setMode] = useState(layer.mode);
   const [formAction, setFormAction] = useState(layer.formAction);
   const [orderType, setOrderType] = useState(layer.orderType);
@@ -300,91 +296,203 @@ function RuleCard({
   }
 
   return (
-    <section
+    <StayOnPageForm
+      action={saveFuturesAutomations}
+      onResult={(result) => {
+        onSaved(result);
+        if (result.ok) {
+          setDirty(false);
+        }
+      }}
+      onChange={() => setDirty(true)}
+      guard={() => {
+        if (mode === "disabled" && disableNeedsConfirm(inUse)) {
+          return window.confirm(disableConfirmMessage("perps"));
+        }
+        return true;
+      }}
+      className="scroll-mt-24 divide-y divide-line rounded-card border border-line bg-canvas px-5"
       id={layer.id ? `bot-${layer.id}` : undefined}
-      className="scroll-mt-24 rounded-card border border-line bg-surface px-4 py-3"
     >
-      <div className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-x-3">
-        <label htmlFor={`${prefix}name`} className="block text-[11px] text-ink-muted">
-          Name
-          <input
-            id={`${prefix}name`}
-            name={`${prefix}name`}
-            defaultValue={layer.name}
-            maxLength={40}
-            className="mt-0.5 w-full rounded-control border border-line bg-surface-raised px-1.5 py-1 text-sm font-semibold text-ink focus:border-line-strong focus:outline-none"
-          />
-        </label>
-        <label htmlFor={`${prefix}mode`} className="block text-[11px] text-ink-muted">
-          Mode
-          <span className="mt-0.5 flex items-center gap-2">
-            <select
-              id={`${prefix}mode`}
-              name={`${prefix}mode`}
-              value={mode}
-              onChange={(event) => setMode(parseAutomationMode(event.target.value))}
-              className="w-52 rounded-control border border-line bg-surface-raised px-1.5 py-1 text-xs text-ink focus:border-line-strong focus:outline-none"
-            >
-              <option value="active">
-                {accountReduceOnly ? "Active (Reduce only)" : "Active"}
-              </option>
-              <option value="reduce_only">Reduce only</option>
-              <option value="disabled">Disabled</option>
-            </select>
-            <ModeLight
-              mode={mode}
-              inUse={inUse}
-              accountReduceOnly={accountReduceOnly}
-            />
-          </span>
-        </label>
-      </div>
+      <input type="hidden" name="saveScope" value="one" />
+      <input type="hidden" name="ruleCount" value="1" />
+      <input type="hidden" name="deskVenue" value={venueId} />
       <input type="hidden" name={`${prefix}id`} value={layer.id} />
-
-      <div className="mt-3 grid items-end gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <label className="block text-sm text-ink">
-          Contract
-          <FuturesSymbolSelect
-            name={`${prefix}symbol`}
-            options={options}
-            value={symbol}
-            onChange={setSymbol}
-          />
-        </label>
-        <label className="block text-sm text-ink">
-          Action
-          <select
-            name={`${prefix}action`}
-            value={formAction}
-            onChange={(event) =>
-              setFormAction(
-                event.target.value as FuturesAutomationFormValues["formAction"],
-              )
-            }
-            className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+      <DirtySaveBanner dirty={dirty}>
+        <div className="flex flex-wrap items-center gap-2">
+          <DeskFormFlash />
+          <PendingSubmitButton
+            pendingLabel="Saving…"
+            deskAction="default"
+            className={botHeaderPrimaryClass}
           >
-            <option value="buy">Buy</option>
-            <option value="sell">Sell</option>
-            <option value="close_long">Close long</option>
-            <option value="close_short">Close short</option>
-          </select>
-        </label>
-        <label className="block text-sm text-ink">
-          Order
-          <input type="hidden" name={`${prefix}orderType`} value={orderType} />
-          <span className="mt-1 flex w-fit rounded-control border border-line bg-surface p-0.5">
-            <Toggle active={orderType === "market"} onClick={() => setOrderType("market")}>
-              Market
-            </Toggle>
-            <Toggle active={orderType === "limit"} onClick={() => setOrderType("limit")}>
-              Limit
-            </Toggle>
-          </span>
-        </label>
-        <label className="block text-sm text-ink">
-          {closing ? "Qty to close" : "Size"}
-          <span className="mt-1 flex gap-1">
-            <span className="relative min-w-0 flex-1">
+            Save
+          </PendingSubmitButton>
+        </div>
+      </DirtySaveBanner>
+      <BotFormGroup title="Bot">
+        <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1fr)_16rem]">
+          <BotField label="Name">
+            <input
+              id={`${prefix}name`}
+              name={`${prefix}name`}
+              defaultValue={layer.name}
+              maxLength={40}
+              className={botFieldClass}
+            />
+          </BotField>
+          <BotStatusField
+            desk="perps"
+            name={`${prefix}mode`}
+            value={mode}
+            onChange={(next) => setMode(parseAutomationMode(next))}
+            inUse={inUse}
+            accountReduceOnly={accountReduceOnly}
+          />
+        </div>
+      </BotFormGroup>
+
+      <BotFormGroup title="What & When">
+        <div className={botRowClass}>
+          <BotField label="Contract">
+            <FuturesSymbolSelect
+              name={`${prefix}symbol`}
+              options={options}
+              value={symbol}
+              onChange={setSymbol}
+            />
+          </BotField>
+          <BotField label="Action">
+            <select
+              name={`${prefix}action`}
+              value={formAction}
+              onChange={(event) =>
+                setFormAction(
+                  event.target.value as FuturesAutomationFormValues["formAction"],
+                )
+              }
+              className={botFieldClass}
+            >
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+              <option value="close_long">Close long</option>
+              <option value="close_short">Close short</option>
+            </select>
+          </BotField>
+          <BotField label="Order">
+            <OrderTypePill
+              name={`${prefix}orderType`}
+              value={orderType === "limit" ? "limit" : "market"}
+              onChange={setOrderType}
+            />
+          </BotField>
+          <BotField label="When">
+            <input type="hidden" name={`${prefix}entrySource`} value={entrySource} />
+            <select
+              value={entrySource}
+              onChange={(event) =>
+                setEntrySource(parseAutomationEntry(event.target.value))
+              }
+              className={botFieldClass}
+            >
+              <option value="price">Price cross</option>
+              <option value="webhook">Signal webhook</option>
+            </select>
+          </BotField>
+        </div>
+        {closing ? null : (
+          <label className="flex items-start gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              name={`${prefix}skipIfOpen`}
+              value="on"
+              defaultChecked={layer.skipIfOpen}
+              className="mt-0.5 size-4 accent-accent"
+            />
+            <HintLabel
+              text="Skip if this side is already open"
+              hint="Off means each new cross or trigger can add size to the same row."
+            />
+          </label>
+        )}
+      </BotFormGroup>
+
+      <BotFormGroup title={triggerSectionTitle(entrySource)}>
+        <div className={botRowClass5}>
+          {webhookEntry ? (
+            <BotField label="Webhook" className="lg:col-span-2">
+              <select
+                name={`${prefix}webhookId`}
+                defaultValue={layer.webhookId}
+                className={botFieldClass}
+              >
+                <option value="">
+                  {triggerWebhooks.length === 0
+                    ? "Create a Signal webhook first"
+                    : "Pick a webhook"}
+                </option>
+                {whenWebhooks.map((hook) => (
+                  <option key={hook.id} value={hook.id}>
+                    {hook.name}
+                  </option>
+                ))}
+              </select>
+            </BotField>
+          ) : (
+            <>
+              <BotField label="Price source">
+                <select
+                  name={`${prefix}triggerBy`}
+                  defaultValue={layer.triggerBy}
+                  className={botFieldClass}
+                >
+                  <option value="last">Last is</option>
+                  <option value="mark">Mark is</option>
+                  <option value="index">Index is</option>
+                </select>
+              </BotField>
+              <BotField label="Compare">
+                <select
+                  name={`${prefix}triggerCompare`}
+                  defaultValue={layer.triggerCompare}
+                  className={botFieldClass}
+                >
+                  <option value="gte">At or above</option>
+                  <option value="lte">At or below</option>
+                </select>
+              </BotField>
+              <BotField label="Price">
+                <GroupedNumberInput
+                  name={`${prefix}triggerPrice`}
+                  value={triggerPrice}
+                  onChange={setTriggerPrice}
+                  allowDecimal
+                  className={botFieldClass}
+                />
+              </BotField>
+            </>
+          )}
+          {orderType === "limit" ? (
+            <BotField label="Limit price">
+              <GroupedNumberInput
+                name={`${prefix}limitPrice`}
+                value={limitPrice}
+                onChange={setLimitPrice}
+                allowDecimal
+                className={botFieldClass}
+              />
+            </BotField>
+          ) : null}
+        </div>
+      </BotFormGroup>
+
+      <BotFormGroup title={closing ? undefined : "Order Size"}>
+        <div className={botRowClass}>
+          <BotField
+            label={closing ? "Qty to close" : "Size"}
+            hint={closing ? "Empty closes the whole row." : undefined}
+          >
+            <span className="relative mt-1 block">
               {!closing && sizeUnit === "usdt" ? (
                 <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
                   $
@@ -395,149 +503,33 @@ function RuleCard({
                 value={size}
                 onChange={setSize}
                 allowDecimal
-                className={`w-full rounded-control border border-line bg-surface-raised py-2 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none ${
-                  !closing && sizeUnit === "usdt" ? "pr-3 pl-7" : "px-3"
+                placeholder={closing ? "All" : undefined}
+                className={`${botFieldClass} ${
+                  !closing && sizeUnit === "usdt" ? "pl-7" : ""
                 }`}
               />
             </span>
-            {closing ? (
-              <input type="hidden" name={`${prefix}sizeUnit`} value="qty" />
-            ) : (
-              <>
-                <input type="hidden" name={`${prefix}sizeUnit`} value={sizeUnit} />
-                <span className="flex shrink-0 rounded-control border border-line bg-surface p-0.5">
-                  <Toggle
-                    active={sizeUnit === "qty"}
-                    onClick={() => {
-                      setSizeUnit("qty");
-                      setSize("");
-                    }}
-                  >
-                    {baseCoin}
-                  </Toggle>
-                  <Toggle
-                    active={sizeUnit === "usdt"}
-                    onClick={() => {
-                      setSizeUnit("usdt");
-                      setSize("");
-                    }}
-                  >
-                    {quoteLabel}
-                  </Toggle>
-                </span>
-              </>
-            )}
-          </span>
+          </BotField>
           {closing ? (
-            <span className="mt-1 block text-xs text-ink-muted">
-              Empty closes the whole row.
-            </span>
-          ) : null}
-        </label>
-      </div>
-
-      {orderType === "limit" ? (
-        <label className="mt-3 block max-w-xs text-sm text-ink">
-          Limit price
-          <span className="relative mt-1 block">
-            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-              $
-            </span>
-            <GroupedNumberInput
-              name={`${prefix}limitPrice`}
-              value={limitPrice}
-              onChange={setLimitPrice}
-              allowDecimal
-              className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
-            />
-          </span>
-        </label>
-      ) : null}
-
-      <div
-        className={`mt-3 grid items-end gap-3 ${
-          webhookEntry
-            ? "md:grid-cols-3"
-            : "sm:grid-cols-2 md:grid-cols-4"
-        }`}
-      >
-        <label className="block text-sm text-ink">
-          When
-          <input type="hidden" name={`${prefix}entrySource`} value={entrySource} />
-          <select
-            value={entrySource}
-            onChange={(event) =>
-              setEntrySource(parseAutomationEntry(event.target.value))
-            }
-            className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-          >
-            <option value="price">Price cross</option>
-            <option value="webhook">Signal webhook</option>
-          </select>
-        </label>
-        {webhookEntry ? (
-          <label className="block text-sm text-ink md:col-span-2">
-            Webhook
-            <select
-              name={`${prefix}webhookId`}
-              defaultValue={layer.webhookId}
-              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-            >
-              <option value="">
-                {triggerWebhooks.length === 0
-                  ? "Create a Signal webhook first"
-                  : "Pick a webhook"}
-              </option>
-              {whenWebhooks.map((hook) => (
-                <option key={hook.id} value={hook.id}>
-                  {hook.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : (
-          <>
-            <label className="block text-sm text-ink">
-              Price source
+            <input type="hidden" name={`${prefix}sizeUnit`} value="qty" />
+          ) : (
+            <BotField label="Unit">
+              <input type="hidden" name={`${prefix}sizeUnit`} value={sizeUnit} />
               <select
-                name={`${prefix}triggerBy`}
-                defaultValue={layer.triggerBy}
-                className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                value={sizeUnit}
+                onChange={(event) => {
+                  setSizeUnit(event.target.value as "qty" | "usdt");
+                  setSize("");
+                }}
+                className={botFieldClass}
               >
-                <option value="last">Last is</option>
-                <option value="mark">Mark is</option>
-                <option value="index">Index is</option>
+                <option value="usdt">{quoteLabel}</option>
+                <option value="qty">{baseCoin}</option>
               </select>
-            </label>
-            <label className="block text-sm text-ink">
-              Compare
-              <select
-                name={`${prefix}triggerCompare`}
-                defaultValue={layer.triggerCompare}
-                className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
-              >
-                <option value="gte">At or above</option>
-                <option value="lte">At or below</option>
-              </select>
-            </label>
-            <label className="block text-sm text-ink">
-              Price
-              <span className="relative mt-1 block">
-                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-ink-muted">
-                  $
-                </span>
-                <GroupedNumberInput
-                  name={`${prefix}triggerPrice`}
-                  value={triggerPrice}
-                  onChange={setTriggerPrice}
-                  allowDecimal
-                  className="w-full rounded-control border border-line bg-surface-raised py-2 pr-3 pl-7 text-sm tabular-nums text-ink focus:border-line-strong focus:outline-none"
-                />
-              </span>
-            </label>
-          </>
-        )}
-      </div>
+            </BotField>
+          )}
+        </div>
+      </BotFormGroup>
 
       {!closing ? (
         <>
@@ -549,154 +541,69 @@ function RuleCard({
         </>
       ) : null}
 
-      <div className="mt-3 flex items-end justify-between gap-3">
-        {closing ? (
-          <span />
-        ) : (
-          <label className="flex items-start gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
-              name={`${prefix}skipIfOpen`}
-              value="on"
-              defaultChecked={layer.skipIfOpen}
-              className="mt-0.5 size-4"
-            />
-            <span>
-              Skip if this side is already open
-              <span className="mt-1 block text-xs text-ink-muted">
-                Off means each new cross or trigger can add size to the same row.
-              </span>
-            </span>
-          </label>
-        )}
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-          <BacktestTemplateLink
-            current={liveRecipe()}
-            templates={backtestLibrary}
-            venueId={venueId}
-            venueEnvironment={venueEnvironment}
-          />
-          <SaveAsTemplateButton
-            isAdmin={isAdmin}
-            defaultName={layer.name}
-            kind="perps"
-            folders={folders}
-            library={backtestLibrary}
-            currentRecipe={liveRecipe()}
-            buildForm={() =>
-              perpsFormToSnapshotSource(
-                {
-                  ...layer,
-                  mode,
-                  formAction,
-                  orderType,
-                  sizeUnit,
-                  size,
-                  limitPrice,
-                  triggerPrice,
-                  symbol,
-                  entrySource,
-                },
-                venueId,
-              )
-            }
-            onSaved={(saved) =>
-              onTemplateSaved?.({
-                id: saved.id,
-                name: saved.name,
-                recipe: liveRecipe(),
-                visibility: saved.visibility,
-              })
-            }
-          />
-          {inUse ? (
-            <span
-              className="inline-flex"
-              title="This bot has an open position. Close that row before removing it."
-            >
-              <button
-                type="button"
-                disabled
-                className="pointer-events-none shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger opacity-40"
-              >
-                Remove
-              </button>
-            </span>
-          ) : (
+      <AdditionalActions>
+        <BacktestTemplateLink
+          current={liveRecipe()}
+          templates={backtestLibrary}
+          venueId={venueId}
+          venueEnvironment={venueEnvironment}
+        />
+        <SaveAsTemplateButton
+          isAdmin={isAdmin}
+          defaultName={layer.name}
+          kind="perps"
+          folders={folders}
+          library={backtestLibrary}
+          currentRecipe={liveRecipe()}
+          buildForm={() =>
+            perpsFormToSnapshotSource(
+              {
+                ...layer,
+                mode,
+                formAction,
+                orderType,
+                sizeUnit,
+                size,
+                limitPrice,
+                triggerPrice,
+                symbol,
+                entrySource,
+              },
+              venueId,
+            )
+          }
+          onSaved={(saved) =>
+            onTemplateSaved?.({
+              id: saved.id,
+              name: saved.name,
+              recipe: liveRecipe(),
+              visibility: saved.visibility,
+            })
+          }
+        />
+        {inUse ? (
+          <span
+            className="inline-flex"
+            title="This bot has an open position. Close that row before removing it."
+          >
             <button
               type="button"
-              onClick={onRemove}
-              className="shrink-0 rounded-control border border-line px-2 py-0.5 text-xs text-danger hover:bg-danger/10"
+              disabled
+              className={`${botHeaderRemoveClass} pointer-events-none opacity-40`}
             >
               Remove
             </button>
-          )}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Toggle({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-control px-3 py-1.5 text-sm ${
-        active
-          ? "bg-surface-raised font-medium text-ink"
-          : "text-ink-muted hover:text-ink"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function ModeLight({
-  mode,
-  inUse,
-  accountReduceOnly,
-}: {
-  mode: AutomationMode;
-  inUse: boolean;
-  accountReduceOnly: boolean;
-}) {
-  const fill =
-    mode === "disabled"
-      ? "bg-ink-faint"
-      : mode === "reduce_only" || accountReduceOnly
-        ? "bg-warning"
-        : "bg-success";
-  const label =
-    mode === "disabled"
-      ? "Disabled"
-      : mode === "reduce_only"
-        ? "Reduce only"
-        : accountReduceOnly
-          ? "Active · book Reduce only has priority"
-          : "Active";
-  const title = inUse ? `${label} · in use by an open position` : label;
-  return (
-    <span
-      className="relative flex size-3.5 shrink-0"
-      title={title}
-      aria-label={title}
-    >
-      {inUse ? (
-        <span
-          className={`absolute inline-flex size-full animate-ping rounded-full opacity-60 ${fill}`}
-        />
-      ) : null}
-      <span className={`relative inline-flex size-3.5 rounded-full ${fill}`} />
-    </span>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={onRemove}
+            className={botHeaderRemoveClass}
+          >
+            Remove
+          </button>
+        )}
+      </AdditionalActions>
+    </StayOnPageForm>
   );
 }

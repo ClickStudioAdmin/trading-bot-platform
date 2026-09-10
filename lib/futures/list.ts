@@ -186,6 +186,31 @@ export async function loadFuturesDesk(): Promise<{
   };
 }
 
+export async function loadOpenFuturesByRuleId(
+  ruleId: string,
+  scope?: FuturesListScope,
+): Promise<FuturesPosition[]> {
+  const resolved = await resolveFuturesListScope(scope);
+  const supabase = createServiceClient();
+  const id = String(ruleId ?? "").trim();
+  if (!resolved || !supabase || !id) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("futures_positions")
+    .select("*")
+    .eq("account_id", resolved.accountId)
+    .eq("user_id", resolved.userId)
+    .eq("status", "open")
+    .eq("rule_id", id);
+  if (error || !data) {
+    return [];
+  }
+  return data.map((row) =>
+    parseFuturesPositionRow(row as Record<string, unknown>),
+  );
+}
+
 export async function loadOpenFuturesOnSymbol(
   symbol: string,
   scope?: FuturesListScope,

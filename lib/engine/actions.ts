@@ -1,5 +1,6 @@
 "use server";
 
+import { flattenOwnedRuleIds } from "@/lib/bots/status";
 import {
   blockedRuleDeletes,
   paperConfigToFormValues,
@@ -8,12 +9,16 @@ import {
   type PaperLayerFormValues,
 } from "@/lib/engine/rules";
 import { loadPaperRules } from "@/lib/engine/load";
+import { closePaperCarryMarket } from "@/lib/paper/actions";
+import { loadOpenPaperCarriesByRuleId } from "@/lib/paper/list";
 import { applyDeskBindRules, loadAccountUsage } from "@/lib/accounts/store";
 import {
   deskPath,
   formatStrategyDetachBlockers,
   strategyDetachBlockers,
+  type TradingAccountMode,
 } from "@/lib/accounts/model";
+import type { PaperEngineLayer } from "@/lib/engine/decide";
 import { accountCanHoldConnections } from "@/lib/exchanges/venues";
 import { parseReduceOnly } from "@/lib/engine/settings";
 import { listExchangeConnections } from "@/lib/exchanges/store";
@@ -57,13 +62,44 @@ export async function savePaperRules(
     return deskActionError("Auth is not configured.");
   }
 
-  const clearReduceOnly = parsed.config.layers.length === 0;
+  const one = String(formData.get("saveScope") ?? "").trim() === "one";
+  const clearReduceOnly = !one && parsed.config.layers.length === 0;
+  const savedLayers = one
+    ? await upsertPaperRules({
+        supabase,
+        userId: user.id,
+        accountId: account.id,
+        layers: parsed.config.layers,
+      })
+    : await replacePaperRules({
+        supabase,
+        userId: user.id,
+        accountId: account.id,
+        layers: parsed.config.layers,
+      });
+  if (!savedLayers.ok) {
+    await writeEventLog({
+      level: "error",
+      scope: "strategy",
+      event: "automations.save_failed",
+      message: savedLayers.error,
+      userId: user.id,
+      accountId: account.id,
+      strategy: "cash-and-carry",
+    });
+    return deskActionError(savedLayers.error);
+  }
+
+  const loadedAfterRules = await loadPaperRules();
+  const enabled = loadedAfterRules.config.layers.some(
+    (layer) => layer.mode !== "disabled",
+  );
   const { error: settingsError } = await supabase
     .from("paper_engine_settings")
     .upsert({
       user_id: user.id,
       account_id: account.id,
-      enabled: parsed.config.enabled,
+      enabled,
       ...(clearReduceOnly ? { reduce_only: false } : {}),
       updated_at: new Date().toISOString(),
     });
@@ -81,131 +117,33 @@ export async function savePaperRules(
     return deskActionError(settingsError.message);
   }
 
-  const { data: existing, error: loadError } = await supabase
-    .from("paper_rules")
-    .select("id")
-    .eq("account_id", account.id);
-
-  if (loadError) {
-    await writeEventLog({
-      level: "error",
-      scope: "strategy",
-      event: "automations.save_failed",
-      message: loadError.message,
+  if (one) {
+    const flattenErrors = await flattenOwnedPaperRules({
+      supabase,
       userId: user.id,
       accountId: account.id,
-      strategy: "cash-and-carry",
+      accountMode: account.mode,
+      layers: parsed.config.layers,
     });
-    return deskActionError(loadError.message);
-  }
-
-  const keepIds = new Set(
-    parsed.config.layers
-      .map((layer) => layer.id)
-      .filter((id): id is number => id !== null && Number.isFinite(id)),
-  );
-  const staleIds = (existing ?? [])
-    .map((row) => Number(row.id))
-    .filter((id) => !keepIds.has(id));
-
-  if (staleIds.length > 0) {
-    const { data: openRows, error: openError } = await supabase
-      .from("paper_carries")
-      .select("rule_id")
-      .eq("account_id", account.id)
-      .in("status", ["open", "closing"])
-      .in("rule_id", staleIds);
-
-    if (openError) {
-      await writeEventLog({
-        level: "error",
-        scope: "strategy",
-        event: "automations.save_failed",
-        message: openError.message,
-        userId: user.id,
-        accountId: account.id,
-        strategy: "cash-and-carry",
-      });
-      return deskActionError(openError.message);
-    }
-
-    const blocked = blockedRuleDeletes(
-      staleIds,
-      (openRows ?? [])
-        .map((row) => Number((row as { rule_id: unknown }).rule_id))
-        .filter((id) => Number.isFinite(id)),
-    );
-    if (blocked.length > 0) {
-      return deskActionError(
-        "Cannot remove a bot that has an open position.",
-      );
-    }
-
-    const { error } = await supabase
-      .from("paper_rules")
-      .delete()
-      .eq("account_id", account.id)
-      .in("id", staleIds);
-    if (error) {
-      await writeEventLog({
-        level: "error",
-        scope: "strategy",
-        event: "automations.save_failed",
-        message: error.message,
-        userId: user.id,
-        accountId: account.id,
-        strategy: "cash-and-carry",
-      });
-      return deskActionError(error.message);
-    }
-  }
-
-  for (const layer of parsed.config.layers) {
-    const payload = paperLayerToRow(user.id, layer, account.id);
-    if (layer.id !== null) {
-      const { error } = await supabase
-        .from("paper_rules")
-        .update(payload)
-        .eq("id", layer.id)
-        .eq("account_id", account.id);
-      if (error) {
-        await writeEventLog({
-          level: "error",
-          scope: "strategy",
-          event: "automations.save_failed",
-          message: error.message,
-          userId: user.id,
-          accountId: account.id,
-          strategy: "cash-and-carry",
-        });
-        return deskActionError(error.message);
-      }
-    } else {
-      const { error } = await supabase.from("paper_rules").insert(payload);
-      if (error) {
-        await writeEventLog({
-          level: "error",
-          scope: "strategy",
-          event: "automations.save_failed",
-          message: error.message,
-          userId: user.id,
-          accountId: account.id,
-          strategy: "cash-and-carry",
-        });
-        return deskActionError(error.message);
-      }
+    if (flattenErrors) {
+      return deskActionError(flattenErrors);
     }
   }
 
   await writeEventLog({
     scope: "strategy",
     event: "automations.saved",
-    message: `Saved ${parsed.config.layers.length} automation layer(s)`,
+    message:
+      parsed.config.layers.length === 0
+        ? "Cleared cash-and-carry automations"
+        : one
+          ? "Saved cash-and-carry bot"
+          : `Saved ${parsed.config.layers.length} automation layer(s)`,
     userId: user.id,
     accountId: account.id,
     strategy: "cash-and-carry",
     data: {
-      enabled: parsed.config.enabled,
+      enabled,
       layerCount: parsed.config.layers.length,
       ...(clearReduceOnly ? { reduceOnly: false } : {}),
     },
@@ -214,11 +152,154 @@ export async function savePaperRules(
   const loaded = await loadPaperRules();
   return {
     ok: true,
-    notice: "Bots saved.",
+    notice: one ? "Bot saved." : "Bots saved.",
     layers: paperConfigToFormValues(loaded.config).layers,
     inUseRuleIds: loaded.inUseRuleIds,
     reduceOnly: loaded.config.reduceOnly,
   };
+}
+
+async function upsertPaperRules(input: {
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>;
+  userId: string;
+  accountId: string;
+  layers: PaperEngineLayer[];
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  for (const layer of input.layers) {
+    const payload = paperLayerToRow(input.userId, layer, input.accountId);
+    if (layer.id !== null) {
+      const { sort_order: _sortOrder, ...rest } = payload;
+      const { error } = await input.supabase
+        .from("paper_rules")
+        .update(rest)
+        .eq("id", layer.id)
+        .eq("account_id", input.accountId);
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+    } else {
+      const { data: last } = await input.supabase
+        .from("paper_rules")
+        .select("sort_order")
+        .eq("account_id", input.accountId)
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextSort =
+        last && Number.isFinite(Number(last.sort_order))
+          ? Number(last.sort_order) + 1
+          : 0;
+      const { error } = await input.supabase.from("paper_rules").insert({
+        ...payload,
+        sort_order: nextSort,
+      });
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+    }
+  }
+  return { ok: true };
+}
+
+async function replacePaperRules(input: {
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>;
+  userId: string;
+  accountId: string;
+  layers: PaperEngineLayer[];
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: existing, error: loadError } = await input.supabase
+    .from("paper_rules")
+    .select("id")
+    .eq("account_id", input.accountId);
+  if (loadError) {
+    return { ok: false, error: loadError.message };
+  }
+
+  const keepIds = new Set(
+    input.layers
+      .map((layer) => layer.id)
+      .filter((id): id is number => id !== null && Number.isFinite(id)),
+  );
+  const staleIds = (existing ?? [])
+    .map((row) => Number(row.id))
+    .filter((id) => !keepIds.has(id));
+
+  if (staleIds.length > 0) {
+    const { data: openRows, error: openError } = await input.supabase
+      .from("paper_carries")
+      .select("rule_id")
+      .eq("account_id", input.accountId)
+      .in("status", ["open", "closing"])
+      .in("rule_id", staleIds);
+    if (openError) {
+      return { ok: false, error: openError.message };
+    }
+    const blocked = blockedRuleDeletes(
+      staleIds,
+      (openRows ?? [])
+        .map((row) => Number((row as { rule_id: unknown }).rule_id))
+        .filter((id) => Number.isFinite(id)),
+    );
+    if (blocked.length > 0) {
+      return { ok: false, error: "Cannot remove a bot that has an open position." };
+    }
+    const { error } = await input.supabase
+      .from("paper_rules")
+      .delete()
+      .eq("account_id", input.accountId)
+      .in("id", staleIds);
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+  }
+
+  for (const layer of input.layers) {
+    const payload = paperLayerToRow(input.userId, layer, input.accountId);
+    if (layer.id !== null) {
+      const { error } = await input.supabase
+        .from("paper_rules")
+        .update(payload)
+        .eq("id", layer.id)
+        .eq("account_id", input.accountId);
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+    } else {
+      const { error } = await input.supabase.from("paper_rules").insert(payload);
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+    }
+  }
+  return { ok: true };
+}
+
+async function flattenOwnedPaperRules(input: {
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>;
+  userId: string;
+  accountId: string;
+  accountMode: TradingAccountMode;
+  layers: { id: number | null; mode: string }[];
+}): Promise<string | null> {
+  for (const layer of flattenOwnedRuleIds(input.layers)) {
+    const opens = await loadOpenPaperCarriesByRuleId(Number(layer.id), {
+      accountId: input.accountId,
+      userId: input.userId,
+    });
+    for (const row of opens) {
+      const closed = await closePaperCarryMarket({
+        supabase: input.supabase,
+        userId: input.userId,
+        accountId: input.accountId,
+        accountMode: input.accountMode,
+        row,
+      });
+      if (!closed.ok) {
+        return closed.error;
+      }
+    }
+  }
+  return null;
 }
 
 export async function savePaperSettings(formData: FormData) {
