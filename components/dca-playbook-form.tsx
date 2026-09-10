@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  Children,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   AdditionalActions,
   BotField,
@@ -147,7 +154,6 @@ import {
 
 const fieldClass = botFieldClass;
 const labelClass = botLabelClass;
-const sectionClass = "space-y-3";
 const sectionTitleClass = botSectionTitleClass;
 const rowClass = botRowClass;
 const headerPrimaryClass = botHeaderPrimaryClass;
@@ -208,14 +214,12 @@ function CycleLock({
   if (!locked) {
     return children;
   }
-  return (
-    <div
-      inert
-      className="pointer-events-none opacity-40"
-      aria-disabled
-    >
-      {children}
-    </div>
+  return Children.map(children, (child) =>
+    child == null ? null : (
+      <div inert className="pointer-events-none opacity-40" aria-disabled>
+        {child}
+      </div>
+    ),
   );
 }
 
@@ -1318,7 +1322,7 @@ export function DcaPlaybookForm({
         </div>
       </DirtySaveBanner>
       {reduceOnly ? (
-        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+        <p className="my-5 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Reduce only is on. New orders stay blocked until you turn it off in
           Desk Settings. Take profit and stop still run.
         </p>
@@ -1348,17 +1352,14 @@ export function DcaPlaybookForm({
         </div>
       </BotFormGroup>
       {cycleLocked ? (
-        <p className="text-xs text-warning">
+        <p className="py-5 text-xs text-warning">
           A position is open. Cycle settings are locked. Take profit and stops
           still save.
         </p>
       ) : null}
 
       <CycleLock locked={cycleLocked}>
-      <fieldset className={sectionClass}>
-        <p className={sectionTitleClass}>
-          What & When
-        </p>
+      <BotFormGroup title="What & When">
         <div className={rowClass}>
           <label className={labelClass}>
             Contract
@@ -1430,7 +1431,7 @@ export function DcaPlaybookForm({
               ) : null}
             </select>
           </label>
-          <label className={`${labelClass} sm:col-span-2`}>
+          <label className={`${labelClass} lg:col-span-2`}>
             Initial Order Trigger
             <select
               name="startKind"
@@ -1487,17 +1488,9 @@ export function DcaPlaybookForm({
             </select>
           </label>
         </div>
-        {direction === "both" ? (
-          <p className="text-xs text-ink-muted">
-            Long and Short are independent positions and never flatten each other
-          </p>
-        ) : null}
-      </fieldset>
+      </BotFormGroup>
 
-      <fieldset className={sectionClass}>
-        <p className={sectionTitleClass}>
-          {triggerSectionTitle(startKind)}
-        </p>
+      <BotFormGroup title={triggerSectionTitle(startKind)}>
         <div className={rowClass}>
           {startKind === "price" && direction === "both" ? (
             <div className="space-y-4 sm:col-span-2 lg:col-span-4">
@@ -1567,10 +1560,6 @@ export function DcaPlaybookForm({
                     ))}
                   </select>
                 </label>
-                <p className="self-end text-xs text-ink-muted sm:col-span-2">
-                  Set Status to Active and Save first. Then the bound Signal
-                  starts the first order.
-                </p>
               </>
             ) : (
               <p className="self-end text-xs text-ink-muted lg:col-span-3">
@@ -1710,7 +1699,7 @@ export function DcaPlaybookForm({
             </>
           ) : null}
         </div>
-      </fieldset>
+      </BotFormGroup>
 
       {direction === "both" ? (
         <BotFormGroup
@@ -1802,11 +1791,7 @@ export function DcaPlaybookForm({
         </OptionalSection>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <fieldset className={sectionClass}>
-          <p className={sectionTitleClass}>
-            Maximum Exposure
-          </p>
+      <BotFormGroup title="Maximum Exposure">
           <div
             className={
               maxValueMode === "none"
@@ -1890,37 +1875,9 @@ export function DcaPlaybookForm({
               value={String(leverage)}
             />
           ) : null}
-          {maxValueMode === "percent" ? (
-            <p className="text-xs text-ink-muted">
-              {resolvedMaxValue != null && accountBookUsdt != null
-                ? `${asNumber(maxValue)}% of ${formatUsdAmount(accountBookUsdt)} = ${formatUsdAmount(resolvedMaxValue)}. Recalculates at the start of each cycle.`
-                : "Recalculates from account balance at the start of each cycle. 100% is the cap."}
-            </p>
-          ) : null}
-          {maxValueMode === "margin" ? (
-            <p className="text-xs text-ink-muted">
-              {resolvedMaxValue != null &&
-              accountBookUsdt != null &&
-              leverage != null &&
-              leverage > 0
-                ? `${asNumber(maxValue)}% of ${formatUsdAmount(accountBookUsdt)} available × ${leverage}× = ${formatUsdAmount(resolvedMaxValue)}. Recalculates at the start of each cycle.`
-                : leverage == null || !(leverage > 0)
-                  ? "100% is full buying power (available × leverage). Set leverage to calculate."
-                  : "100% is full buying power (available × leverage). Recalculates at the start of each cycle."}
-            </p>
-          ) : null}
-        </fieldset>
-        <fieldset className={sectionClass}>
-          <p className={sectionTitleClass}>
-            Initial Order Size
-          </p>
-          <div
-            className={
-              budgetSizesClip
-                ? "grid gap-x-3 gap-y-2"
-                : "grid gap-x-3 gap-y-2 sm:grid-cols-2"
-            }
-          >
+        </BotFormGroup>
+        <BotFormGroup title="Initial Order Size">
+          <div className={rowClass}>
             {budgetSizesClip ? (
               <input type="hidden" name="sizeUnit" value="usdt" />
             ) : (
@@ -1968,32 +1925,13 @@ export function DcaPlaybookForm({
               )}
               {sizeError ? (
                 <p className="mt-1 text-xs text-danger">{sizeError}</p>
-              ) : derivedClip != null ? (
-                <p className="mt-1 text-xs text-ink-muted">
-                  Calculated from max value and max orders at the start of each cycle
-                </p>
-              ) : budgetSizesClip ? (
-                <p className="mt-1 text-xs text-ink-muted">
-                  {dcaMaxValueUsesBook(maxValueKind) &&
-                  accountBookUsdt == null
-                    ? "Need an account balance to calculate from %."
-                    : maxValueKind === "margin" &&
-                        (leverage == null || !(leverage > 0))
-                      ? "Set leverage to calculate % of available margin."
-                      : null}
-                </p>
               ) : null}
             </label>
           </div>
-        </fieldset>
-      </div>
+        </BotFormGroup>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <fieldset className={sectionClass}>
-          <p className={sectionTitleClass}>
-            Additional orders
-          </p>
-          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+        <BotFormGroup title="Additional orders">
+          <div className={rowClass}>
             <label className={labelClass}>
               Averaging
               <select
@@ -2109,12 +2047,9 @@ export function DcaPlaybookForm({
               </BotField>
             ) : null}
           </div>
-        </fieldset>
-        <fieldset className={sectionClass}>
-          <p className={sectionTitleClass}>
-            Additional order multipliers
-          </p>
-          <div className="flex flex-wrap gap-2 pb-2">
+        </BotFormGroup>
+        <BotFormGroup title="Additional order multipliers">
+          <div className="mb-2 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => {
@@ -2136,7 +2071,7 @@ export function DcaPlaybookForm({
               Martingale
             </button>
           </div>
-          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+          <div className={rowClass}>
             <label className={labelClass}>
               Order size multiplier
               <GroupedNumberInput
@@ -2163,14 +2098,11 @@ export function DcaPlaybookForm({
             </label>
           </div>
           {ladderMaxError ? <SizeGuardNote message={ladderMaxError} /> : null}
-        </fieldset>
-      </div>
+        </BotFormGroup>
       </CycleLock>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <fieldset className={sectionClass}>
-          <p className={sectionTitleClass}>Take profit</p>
-          <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+      <BotFormGroup title="Take profit">
+          <div className={rowClass}>
           <label className={labelClass}>
             Method
             <select
@@ -2230,11 +2162,6 @@ export function DcaPlaybookForm({
                   className={fieldClass}
                   ariaLabel="ATR period"
                 />
-                {averaging === "dip" && spacingKind === "atr" ? (
-                  <p className="mt-1 text-xs text-ink-muted">
-                    Same ATR as additional orders
-                  </p>
-                ) : null}
               </label>
             </CycleLock>
             <label className={labelClass}>
@@ -2267,15 +2194,14 @@ export function DcaPlaybookForm({
           />
           Take profit placed as GTC limit (instead of market)
         </label>
-        <div className="space-y-2 border-t border-line pt-3">
-        <p className={sectionTitleClass}>
-          Trailing stop
-        </p>
-        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+      </BotFormGroup>
+
+      <BotFormGroup title="Trailing stop">
+        <div className={rowClass}>
           <label className={labelClass}>
             <ColumnHint
               label="Trigger %"
-              hint="The trailing stop will be triggered once the price moves by this %."
+              hint="Trail starts after price moves this %."
             />
             <PercentInput
               name="trailingTriggerPct"
@@ -2285,10 +2211,7 @@ export function DcaPlaybookForm({
             />
           </label>
           <label className={labelClass}>
-            <ColumnHint
-              label="Trailing %"
-              hint="The % from the price where the stop will be placed."
-            />
+            Trailing %
             <PercentInput
               name="trailingPct"
               defaultValue={optional(source?.trailingPct)}
@@ -2297,14 +2220,10 @@ export function DcaPlaybookForm({
             />
           </label>
         </div>
-        </div>
-      </fieldset>
+      </BotFormGroup>
 
-      <fieldset className={sectionClass}>
-        <p className={sectionTitleClass}>
-          Stop loss
-        </p>
-        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+      <BotFormGroup title="Stop loss">
+        <div className={rowClass}>
           <label className={labelClass}>
             Stop loss type
             <select
@@ -2330,10 +2249,10 @@ export function DcaPlaybookForm({
             />
           </label>
         </div>
-        <p className={sectionTitleClass}>
-          Move Breakeven
-        </p>
-        <div className="grid gap-x-3 gap-y-2 sm:grid-cols-2">
+      </BotFormGroup>
+
+      <BotFormGroup title="Move Breakeven">
+        <div className={rowClass}>
           <label className={labelClass}>
             Move stop to breakeven at %
             <PercentInput
@@ -2353,8 +2272,7 @@ export function DcaPlaybookForm({
             />
           </label>
         </div>
-      </fieldset>
-      </div>
+      </BotFormGroup>
 
       {direction === "both" ? (
         <BotFormGroup title="Hard Exit Condition">
@@ -2489,10 +2407,7 @@ export function DcaPlaybookForm({
         </div>
       ) : null}
       {!running || ladderOpen ? (
-      <fieldset className={sectionClass}>
-        <p className={sectionTitleClass}>
-          Summary
-        </p>
+      <BotFormGroup title="Summary">
         {confirmSummary ? (
           <p className="text-xs text-ink-muted">{confirmSummary}</p>
         ) : null}
@@ -2835,7 +2750,7 @@ export function DcaPlaybookForm({
           </p>
         )}
         </div>
-      </fieldset>
+      </BotFormGroup>
       ) : null}
     </StayOnPageForm>
   );
@@ -3014,8 +2929,6 @@ function IndicatorStartFields({
       />
     </label>
   ) : null;
-  const sideHint =
-    side === "short" ? "Triggers Short" : "Triggers Long";
   return (
     <>
       {showPairPeriods ? (
@@ -3023,12 +2936,6 @@ function IndicatorStartFields({
           {indicatorField}
           {timeframeField}
           {pairFields}
-          <p className="col-span-full text-xs text-ink-muted">
-            {sideHint}
-            {compare === "cross_lte"
-              ? ` when the fast ${kind === "sma_cross" ? "SMA" : "EMA"} crosses below the slow.`
-              : ` when the fast ${kind === "sma_cross" ? "SMA" : "EMA"} crosses above the slow.`}
-          </p>
         </div>
       ) : kind === "rsi" ? (
         <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:col-span-2 sm:grid-cols-5 lg:col-span-4">
@@ -3037,16 +2944,6 @@ function IndicatorStartFields({
           {timeframeField}
           {whenField}
           {levelField}
-          <p className="col-span-full text-xs text-ink-muted">
-            {sideHint}
-            {compare === "gte"
-              ? " while RSI is at or above the level."
-              : compare === "lte"
-                ? " while RSI is at or below the level."
-                : compare === "cross_gte"
-                  ? " when RSI crosses above the level."
-                  : " when RSI crosses below the level."}
-          </p>
         </div>
       ) : (
         <>
@@ -3057,51 +2954,6 @@ function IndicatorStartFields({
           {levelField}
         </>
       )}
-      {kind === "macd" ? (
-        <p className="self-end text-xs text-ink-muted sm:col-span-2">
-          {side === "short" ? "Triggers Short" : "Triggers Long"}
-          {compare === "lte"
-            ? " while the histogram is below the level."
-            : compare === "gte"
-              ? " while the histogram is above the level."
-              : compare === "cross_lte"
-                ? " when the histogram crosses below the level."
-                : " when the histogram crosses above the level."}
-        </p>
-      ) : null}
-      {kind === "ema" || kind === "sma" ? (
-        <p className="self-end text-xs text-ink-muted sm:col-span-2">
-          {side === "short" ? "Triggers Short" : "Triggers Long"}
-          {compare === "cross_lte"
-            ? ` when price crosses below the ${kind === "sma" ? "SMA" : "EMA"}.`
-            : compare === "lte"
-              ? ` when price is below the ${kind === "sma" ? "SMA" : "EMA"}.`
-              : compare === "gte"
-                ? ` when price is above the ${kind === "sma" ? "SMA" : "EMA"}.`
-                : ` when price crosses above the ${kind === "sma" ? "SMA" : "EMA"}.`}
-        </p>
-      ) : null}
-      {kind === "bb" ? (
-        <p className="self-end text-xs text-ink-muted sm:col-span-2">
-          {side === "short" ? "Triggers Short" : "Triggers Long"}
-          {compare === "cross_lte"
-            ? " when price crosses below the bottom Bollinger Band."
-            : compare === "cross_gte"
-              ? " when price crosses above the top Bollinger Band."
-              : compare === "lte"
-                ? " when price is below the bottom Bollinger Band."
-                : " when price is above the top Bollinger Band."}
-        </p>
-      ) : null}
-      {kind === "ema_cross" &&
-      dcaIndicatorShowsLevel(kind, compare, level) ? (
-        <p className="text-xs text-ink-muted sm:col-span-2">
-          {side === "short" ? "Triggers Short" : "Triggers Long"}
-          {compare === "cross_lte"
-            ? " when EMA 21 crosses below the price level."
-            : " when EMA 21 crosses above the price level."}
-        </p>
-      ) : null}
     </>
   );
 }
@@ -3209,16 +3061,6 @@ function TrendStartFields({
           ))}
         </select>
       </label>
-      <p className="col-span-full text-xs text-ink-muted">
-        {side === "short" ? "Triggers Short" : "Triggers Long"}
-        {compare === "cross_lte"
-          ? " when Supertrend turns bearish."
-          : compare === "lte"
-            ? " while Supertrend is bearish."
-            : compare === "gte"
-              ? " while Supertrend is bullish."
-              : " when Supertrend turns bullish."}
-      </p>
     </div>
   );
 }
