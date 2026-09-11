@@ -185,7 +185,7 @@ export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
   max_followers_accepted: "Max Followers",
   max_stored_backtests: "Max Saved Backtests",
   max_backtest_years: "Max Backtest timeframe (years)",
-  affiliate_max_depth: "Affiliate earn depth (1–5)",
+  affiliate_max_depth: "Earning Depth (1–5)",
 };
 
 export type MembershipPlan = {
@@ -427,12 +427,12 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     title: "Affiliates",
     fixedOrder: true,
     rows: [
-      { kind: "cap", key: "affiliate_max_depth", label: "Earn depth" },
-      { kind: "rate", key: "l1", label: "L1 commission" },
-      { kind: "rate", key: "l2", label: "L2 commission" },
-      { kind: "rate", key: "l3", label: "L3 commission" },
-      { kind: "rate", key: "l4", label: "L4 commission" },
-      { kind: "rate", key: "l5", label: "L5 commission" },
+      { kind: "cap", key: "affiliate_max_depth", label: "Earning Depth" },
+      { kind: "rate", key: "l1", label: "L1 Commission" },
+      { kind: "rate", key: "l2", label: "L2 Commission" },
+      { kind: "rate", key: "l3", label: "L3 Commission" },
+      { kind: "rate", key: "l4", label: "L4 Commission" },
+      { kind: "rate", key: "l5", label: "L5 Commission" },
     ],
   },
 ];
