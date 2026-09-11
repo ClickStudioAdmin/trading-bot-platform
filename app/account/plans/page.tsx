@@ -29,8 +29,9 @@ export default async function AccountPlansPage() {
     <div>
       <PageHeading title="Plans" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
-        Same rows across every plan. Scan down: Free first, then what Plus
-        adds, then what Pro adds. Card checkout is the next step.
+        One section per feature group. In each section, shared rows sit at the
+        top and higher-plan extras sit at the bottom. Card checkout is the next
+        step.
       </p>
       {!listed.ok ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

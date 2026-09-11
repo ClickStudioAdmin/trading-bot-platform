@@ -1,7 +1,8 @@
 import {
+  PLAN_COMPARE_SECTIONS,
   comparePlanCell,
-  compareUpgradeBands,
   formatPlanPrice,
+  sortCompareSectionRows,
   type MembershipPlan,
   type PlanCompareCell,
   type PlanCompareRow,
@@ -21,8 +22,6 @@ export function MembershipPlanCards({
       </p>
     );
   }
-
-  const bands = compareUpgradeBands(plans);
 
   return (
     <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
@@ -58,11 +57,11 @@ export function MembershipPlanCards({
           </tr>
         </thead>
         <tbody>
-          {bands.map((band) => (
-            <CompareBand
-              key={band.title}
-              title={band.title}
-              sections={band.sections}
+          {PLAN_COMPARE_SECTIONS.map((section) => (
+            <CompareSection
+              key={section.title}
+              title={section.title}
+              rows={sortCompareSectionRows(plans, section.rows)}
               plans={plans}
               currentPlanId={currentPlanId}
             />
@@ -108,41 +107,6 @@ export function MembershipPlanCards({
   );
 }
 
-function CompareBand({
-  title,
-  sections,
-  plans,
-  currentPlanId,
-}: {
-  title: string;
-  sections: readonly { title: string; rows: readonly PlanCompareRow[] }[];
-  plans: MembershipPlan[];
-  currentPlanId: string | null;
-}) {
-  return (
-    <>
-      <tr className="border-t border-line bg-canvas">
-        <th
-          colSpan={plans.length + 1}
-          scope="colgroup"
-          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.16em] text-accent"
-        >
-          {title}
-        </th>
-      </tr>
-      {sections.map((section) => (
-        <CompareSection
-          key={`${title}-${section.title}`}
-          title={section.title}
-          rows={section.rows}
-          plans={plans}
-          currentPlanId={currentPlanId}
-        />
-      ))}
-    </>
-  );
-}
-
 function CompareSection({
   title,
   rows,
@@ -160,7 +124,7 @@ function CompareSection({
         <th
           colSpan={plans.length + 1}
           scope="colgroup"
-          className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.16em] text-ink-muted"
+          className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.16em] text-accent"
         >
           {title}
         </th>

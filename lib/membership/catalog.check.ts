@@ -4,8 +4,8 @@ import {
   canArchivePlan,
   canDeletePlan,
   comparePlanCell,
-  compareUpgradeBands,
   rowUnlockIndex,
+  sortCompareSectionRows,
   emptyCaps,
   emptyFeatures,
   formatPlanCap,
@@ -216,28 +216,17 @@ assert.equal(
   }),
   1,
 );
-const bands = compareUpgradeBands([freePlan, plusPlan, proPlan]);
+const modeRows = sortCompareSectionRows(
+  [freePlan, plusPlan, proPlan],
+  [
+    { kind: "feature", key: "mode_live", label: "Live" },
+    { kind: "feature", key: "mode_paper", label: "Paper" },
+    { kind: "cap", key: "max_live_desks", label: "Max Live" },
+  ],
+);
 assert.deepEqual(
-  bands.map((band) => band.title),
-  ["On Free", "Added on Plus", "Added on Pro", "Not on these plans yet"],
-);
-assert.equal(
-  bands[0].sections.some((section) =>
-    section.rows.some((row) => row.kind === "feature" && row.key === "desk_dca"),
-  ),
-  true,
-);
-assert.equal(
-  bands[1].sections.some((section) =>
-    section.rows.some((row) => row.kind === "feature" && row.key === "mode_live"),
-  ),
-  true,
-);
-assert.equal(
-  bands[2].sections.some((section) =>
-    section.rows.some((row) => row.kind === "feature" && row.key === "copy_follow"),
-  ),
-  true,
+  modeRows.map((row) => row.key),
+  ["mode_paper", "mode_live", "max_live_desks"],
 );
 
 console.log("membership catalog checks passed");
