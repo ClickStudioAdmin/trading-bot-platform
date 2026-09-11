@@ -18,7 +18,10 @@ function compareBlocks(plans: MembershipPlan[]): CompareBlock[] {
   const blocks: CompareBlock[] = [{ type: "header" }];
   PLAN_COMPARE_SECTIONS.forEach((section, index) => {
     blocks.push({ type: "section", title: section.title, first: index === 0 });
-    for (const row of sortCompareSectionRows(plans, section.rows)) {
+    const rows = section.fixedOrder
+      ? section.rows
+      : sortCompareSectionRows(plans, section.rows);
+    for (const row of rows) {
       blocks.push({ type: "row", row });
     }
   });

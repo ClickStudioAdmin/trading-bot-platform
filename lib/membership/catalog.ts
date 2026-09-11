@@ -28,9 +28,10 @@ export type PlanFeatureKey = (typeof PLAN_FEATURE_KEYS)[number];
 export type PlanFeatures = Record<PlanFeatureKey, boolean>;
 
 export const PLAN_CAP_KEYS = [
-  "max_desks",
-  "max_live_desks",
   "max_paper_desks",
+  "max_live_desks",
+  "max_demo_desks",
+  "max_live_env_desks",
   "max_exchange_connections",
   "max_bots_per_desk",
   "max_inbound_webhooks",
@@ -99,9 +100,10 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
   {
     title: "Desks",
     keys: [
-      "max_desks",
-      "max_live_desks",
       "max_paper_desks",
+      "max_live_desks",
+      "max_demo_desks",
+      "max_live_env_desks",
       "max_exchange_connections",
     ],
   },
@@ -146,9 +148,10 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
 };
 
 export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
-  max_desks: "Max desks",
-  max_live_desks: "Max Live desks",
   max_paper_desks: "Max Paper desks",
+  max_live_desks: "Max Live desks",
+  max_demo_desks: "Max Demo desks",
+  max_live_env_desks: "Max Live-environment desks",
   max_exchange_connections: "Max exchange connections",
   max_bots_per_desk: "Max bots / playbooks per desk",
   max_inbound_webhooks: "Max inbound webhooks",
@@ -280,6 +283,8 @@ export function formatPlanCap(value: number | null): string {
 export type PlanCompareSection = {
   title: string;
   rows: readonly PlanCompareRow[];
+  /** Keep listed order instead of sorting by unlock plan. */
+  fixedOrder?: boolean;
 };
 
 export type PlanCompareRow =
@@ -305,9 +310,10 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
       { kind: "feature", key: "mode_paper", label: "Paper desks" },
       { kind: "feature", key: "mode_live", label: "Live / Connected desks" },
       { kind: "feature", key: "venue_non_bybit", label: "Non-Bybit venues" },
-      { kind: "cap", key: "max_desks", label: "Max desks" },
-      { kind: "cap", key: "max_live_desks", label: "Max Live desks" },
       { kind: "cap", key: "max_paper_desks", label: "Max Paper desks" },
+      { kind: "cap", key: "max_live_desks", label: "Max Live desks" },
+      { kind: "cap", key: "max_demo_desks", label: "Max Demo desks" },
+      { kind: "cap", key: "max_live_env_desks", label: "Max Live-environment desks" },
       { kind: "cap", key: "max_exchange_connections", label: "Max exchange connections" },
     ],
   },
@@ -333,6 +339,7 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   },
   {
     title: "Backtesting",
+    fixedOrder: true,
     rows: [
       { kind: "feature", key: "research_backtest", label: "Backtesting tool" },
       { kind: "cap", key: "max_stored_backtests", label: "Max stored backtests" },
@@ -347,13 +354,6 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
       { kind: "rate", key: "l2", label: "L2 commission" },
       { kind: "rate", key: "l3", label: "L3 commission" },
       { kind: "cap", key: "affiliate_max_depth", label: "Earn depth" },
-    ],
-  },
-  {
-    title: "Extras",
-    rows: [
-      { kind: "feature", key: "research_chart", label: "Positions Chart" },
-      { kind: "feature", key: "extras_starter_pack", label: "Starter Pack apply" },
     ],
   },
 ];

@@ -47,8 +47,8 @@ Suggested seed (editable):
 | Plan | Price | Point of the gate |
 | --- | --- | --- |
 | Free | $0 | 1–2 Paper desks, Bybit only, Perps + DCA, Chart, no Live, no copy, no backtest, no affiliate |
-| Plus | paid | Live desks (small cap), webhooks, templates, maybe one venue |
-| Pro | higher | Copy follow + share, backtest, more desks, affiliate enroll |
+| Plus | paid | Live desks (small cap), copy follow + share + catalogue, webhooks, templates, maybe one venue |
+| Pro | higher | Backtest, more desks, affiliate enroll |
 
 Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until roadmap 10.
 
@@ -70,7 +70,7 @@ Affiliate: enroll + referral code; earn multi-level (implies enroll); see downli
 
 ### Resource caps
 
-Max desks (total), max Live, max Paper, max exchange connections, max bots/playbooks per desk, max inbound webhooks, max copy follows, max followers when sharing, max stored backtests, max backtest bar-length or pairs, optional per-plan earn depth (capped by program max).
+Max Paper desks, max Live / Connected desks (any environment), max Demo desks, max Live-environment desks, max exchange connections, max bots/playbooks per desk, max inbound webhooks, max copy follows, max followers when sharing, max stored backtests, max backtest bar-length or pairs, optional per-plan earn depth (capped by program max). No combined max-desks total. Demo covers exchange Demo / Testnet; Live-environment is exchange Live. Environment caps sit inside the Live / Connected total.
 
 ### Gates
 
