@@ -17,7 +17,6 @@ export const PLAN_FEATURE_KEYS = [
   "copy_follow",
   "copy_share",
   "copy_catalogue",
-  "research_chart",
   "research_backtest",
   "research_backtest_attach_templates",
   "signals_inbound_webhooks",
@@ -25,7 +24,6 @@ export const PLAN_FEATURE_KEYS = [
   "extras_templates",
   "extras_share_templates",
   "extras_import_export_templates",
-  "extras_starter_pack",
   "affiliate_enroll",
 ] as const;
 
@@ -33,11 +31,6 @@ export type PlanFeatureKey = (typeof PLAN_FEATURE_KEYS)[number];
 export type PlanFeatures = Record<PlanFeatureKey, boolean>;
 
 export const PLAN_CAP_KEYS = [
-  "max_desk_cash_and_carry",
-  "max_desk_perps",
-  "max_desk_perps_bots",
-  "max_desk_signal_follower",
-  "max_desk_dca",
   "max_paper_desks",
   "max_demo_desks",
   "max_live_env_desks",
@@ -100,26 +93,9 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
     title: "Affiliates",
     keys: ["affiliate_enroll"],
   },
-  {
-    title: "Extras",
-    keys: ["research_chart", "extras_starter_pack"],
-  },
 ];
 
 export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
-  {
-    title: "Manual Desk Types",
-    keys: ["max_desk_perps"],
-  },
-  {
-    title: "Automated Desk Types",
-    keys: [
-      "max_desk_perps_bots",
-      "max_desk_dca",
-      "max_desk_cash_and_carry",
-      "max_desk_signal_follower",
-    ],
-  },
   {
     title: "Bots & Templates",
     keys: ["max_bots_per_desk"],
@@ -159,7 +135,6 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   copy_follow: "Copy other Desks",
   copy_share: "Desk Sharing - Private",
   copy_catalogue: "Desk Sharing - Public",
-  research_chart: "Positions Chart",
   research_backtest: "Backtesting Tool",
   research_backtest_attach_templates: "Attach Results to Bot Template",
   signals_inbound_webhooks: "Inbound TradingView / Signal webhooks",
@@ -167,16 +142,10 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   extras_templates: "Save Templates",
   extras_share_templates: "Share Templates",
   extras_import_export_templates: "Import / Export Templates",
-  extras_starter_pack: "Starter Pack apply",
   affiliate_enroll: "Affiliate enroll",
 };
 
 export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
-  max_desk_cash_and_carry: "Cash & Carry",
-  max_desk_perps: "Perps",
-  max_desk_perps_bots: "Perps bots",
-  max_desk_signal_follower: "TradingView Strategy",
-  max_desk_dca: "DCA",
   max_paper_desks: "Paper Desks",
   max_demo_desks: "Exchange Connected Desks - Demo Mode",
   max_live_env_desks: "Exchange Connected Desks - Live Mode",
@@ -520,9 +489,7 @@ export function coreDeskFeaturesOn(): Pick<
   | "desk_signal_follower"
   | "desk_dca"
   | "mode_paper"
-  | "research_chart"
   | "extras_advanced_dca"
-  | "extras_starter_pack"
 > {
   return {
     desk_cash_and_carry: true,
@@ -531,8 +498,6 @@ export function coreDeskFeaturesOn(): Pick<
     desk_signal_follower: true,
     desk_dca: true,
     mode_paper: true,
-    research_chart: true,
     extras_advanced_dca: true,
-    extras_starter_pack: true,
   };
 }

@@ -54,13 +54,13 @@ Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until r
 
 ### Features (on / off)
 
-Desk types are numeric caps, not ticks. **Manual Desk Types:** Perps. **Automated Desk Types:** Perps, DCA, Cash & Carry, TradingView Strategy. Empty = unlimited. Scale-in stays off the catalog until that desk type exists.
+Desk types are ticks, not per-type counts. **Manual Desk Types:** Perps. **Automated Desk Types:** Perps, DCA, Cash & Carry, TradingView Strategy. Scale-in stays off the catalog until that desk type exists. Positions Chart and Starter Pack apply are not plan features.
 
 Copy: Copy other Desks, Max Desk Copies, Desk Sharing - Public, Desk Sharing - Private.
 
-Research: Backtesting Tool; Attach Results to Bot Template (Plus and Pro); Positions Chart.
+Research: Backtesting Tool; Attach Results to Bot Template (Plus and Pro).
 
-Signals and extras: inbound TradingView / Signal webhooks; Save Templates; Share Templates (on for existing plans); Import / Export Templates (Plus and Pro); Starter Pack apply (usually Free). Advanced DCA stays off the public catalog for now.
+Signals and extras: inbound TradingView / Signal webhooks; Save Templates; Share Templates (on for existing plans); Import / Export Templates (Plus and Pro). Advanced DCA stays off the public catalog for now.
 
 Affiliate: enroll + referral code; earn multi-level (implies enroll); see downline stats.
 
@@ -68,7 +68,7 @@ Affiliate: enroll + referral code; earn multi-level (implies enroll); see downli
 
 ### Resource caps
 
-Per desk type: max Perps, Cash and Carry, Perps bots, TradingView Strategy, DCA. Also max Paper desks, Exchange Connected Desks - Demo Mode, Exchange Connected Desks - Live Mode, Max Bots per Desk, Max Desk Copies, Max Followers, Max Saved Backtests, Max Backtest Timeframe in years (limits the date range they can run), optional per-plan earn depth (capped by program max). No combined max-desks or max Live-desks total, no max exchange connections, and no Paper / Live ticks. Demo covers exchange Demo / Testnet; Live-environment is exchange Live.
+Max Paper desks, Exchange Connected Desks - Demo Mode, Exchange Connected Desks - Live Mode, Max Bots per Desk, Max Desk Copies, Max Followers, Max Saved Backtests, Max Backtest Timeframe in years (limits the date range they can run), optional per-plan earn depth (capped by program max). No per-desk-type counts, no combined max-desks or max Live-desks total, no max exchange connections, and no Paper / Live ticks. Demo covers exchange Demo / Testnet; Live-environment is exchange Live.
 
 ### Gates
 
