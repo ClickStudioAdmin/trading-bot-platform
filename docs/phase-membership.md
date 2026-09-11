@@ -1,6 +1,6 @@
 # Plans, payments, and affiliates
 
-**Roadmap 5.** Spec written 11 Sep 2026. **Not started.** Do not add Stripe, a chain watcher, or `plan_*` / wallet migrations until Click starts this item. Hyperliquid step 7 and copy step 10 stay the current desk-test work.
+**Roadmap 5.** Spec written 11 Sep 2026. Steps 1–3 are in repo (docs, schema, admin + member plan pages). Do not start Stripe or the chain watcher until Click starts step 5 / 6. Hyperliquid step 7 and copy step 10 stay the current desk-test work.
 
 One combined phase: freemium plans, feature/cap gates, Stripe cards, a prepaid crypto credit wallet, and a multi-level affiliate program that pays a percent of **platform subscription** invoices only.
 
@@ -8,7 +8,7 @@ The paying customer is the **login** (`members`). One subscription covers every 
 
 ## Status
 
-Docs only. Click approved the product locks on 11 Sep 2026. Stop after this file and the [roadmap.md](roadmap.md) reorder until Click says start this item.
+Steps 1–3 in repo 11 Sep 2026. Click started schema + admin/member plan pages. Stop after step 3 until Click says go on step 4. Push `develop` to migrate.
 
 ## Purpose
 
@@ -19,8 +19,8 @@ Enough Free to test (Paper, a small desk cap, core Perps/DCA, Chart). Named upgr
 | # | Step | Who | Done when |
 | --- | --- | --- | --- |
 | 1 | Docs | Agent | This file is the phase. Roadmap item 5 is the combined commercial stack. Cross-refs updated. **In repo 11 Sep 2026.** Stop. |
-| 2 | Schema | Agent | Migrations: plans (archive, features, caps, per-plan L1/L2/L3 %), `members.plan_id` + billing fields, processor-agnostic invoices, USD credit ledger, referral tree, commission rows, payouts, program settings. Existing members land on seed **Free**. No Stripe SDK yet if it can wait for step 5. Push `develop` to migrate. |
-| 3 | Admin plans | Agent | `/admin/plans`: create, edit, archive (no delete once used), sort, public flag, price, feature ticks, numeric caps, affiliate %. Seed Free / Plus / Pro (editable). L1+L2+L3 cannot exceed 100%. |
+| 2 | Schema | Agent | Migrations: plans (archive, features, caps, per-plan L1/L2/L3 %), `members.plan_id` + billing fields, processor-agnostic invoices, USD credit ledger, referral tree, commission rows, payouts, program settings. Existing members land on seed **Free**. No Stripe SDK yet if it can wait for step 5. Push `develop` to migrate. **In repo 11 Sep 2026.** |
+| 3 | Admin plans | Agent | `/admin/plans` create/edit/archive; `/account/plans` public catalog. Seed Free / Plus / Pro. L1+L2+L3 cannot exceed 100%. **In repo 11 Sep 2026.** |
 | 4 | Entitlements + Upgrade UX | Agent | `assertEntitlement` on create desk, Live, copy, backtest, enroll, caps. Surfaces stay visible; controls disable; page/inline **Upgrade** names the cheapest public plan that unlocks it. Cap notice: “You have 2 of 2 desks. Upgrade to add another.” `/account/billing` shell (plan, invoices placeholder). Server actions reject. |
 | 5 | Stripe cards | Agent | Test keys on `develop`, live on `main`. Checkout upgrade, Customer Portal, idempotent webhooks (`checkout.session.completed`, `customer.subscription.updated`, invoice paid/refunded). One collection method per member. Comp plan from admin (no commission invoice). |
 | 6 | Credit wallet | Agent | Unique deposit address per member. Admin-listed majors and EVM nets (incl. Arbitrum). Quote → confirm → **USD credit** (not a multi-currency wallet). Billing tick deducts plan price. Leftover stays. Withdraw leftover as **USDT** only, ≥ min payout, no arrears. Treasury keys on a billing worker only. |
@@ -30,7 +30,7 @@ Enough Free to test (Paper, a small desk cap, core Perps/DCA, Chart). Named upgr
 | 10 | Commissions + payouts | Agent | Invoice → pending hold → payable (refund in hold = no earn). Per-plan %; snapshot last enroll plan if enroll is off. Withdraw locks: enroll on, no arrears, ≥ min. USDT out only. Tables ready for Stripe Connect later. Gas deducted from the send or covered by the minimum. |
 | 11 | Desk test | Click | Free gates visible/disabled. Upgrade Stripe test. Crypto top-up + leftover debit. Affiliate list/chart/stats. Hold then withdraw. Downgrade grace then oldest-first exit. Archive a used plan (cannot delete). |
 
-Stop after each micro-step until Click says go. After step 1, wait. After acceptance of step 11, stop and wait.
+Stop after each micro-step until Click says go. Next is step 4 (entitlements + Upgrade UX). After acceptance of step 11, stop and wait.
 
 ## How it works
 

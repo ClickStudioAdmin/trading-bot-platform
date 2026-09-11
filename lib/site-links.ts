@@ -36,6 +36,7 @@ export const CASH_AND_CARRY_SECONDARY_LINKS = [
 export const ADMIN_NAV_LINKS = [
   { href: "/admin", label: "Overview", exact: true },
   { href: "/admin/settings", label: "Settings" },
+  { href: "/admin/plans", label: "Plans" },
   { href: "/admin/members", label: "Members" },
   { href: "/admin/templates", label: "Templates" },
   { href: "/admin/logs", label: "Logs" },
@@ -45,6 +46,7 @@ export const ADMIN_NAV_LINKS = [
 export const ACCOUNT_DESK_LINKS = [
   { href: "/account", label: "Overview", exact: true },
   { href: "/account/settings", label: "Settings", exact: true },
+  { href: "/account/plans", label: "Plans", exact: true },
   { href: "/account/exchanges", label: "Exchanges", exact: true },
   { href: "/account/sub-accounts", label: "Manage Desks", exact: true },
   { href: "/account/templates", label: "Bot Templates", exact: true },

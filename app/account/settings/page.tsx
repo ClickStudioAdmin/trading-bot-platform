@@ -50,7 +50,11 @@ export default async function AccountSettingsPage({
       <PageHeading title="Settings" />
       <p className="-mt-4 text-sm text-ink-muted">
         Your desk login. Sub-accounts and exchange keys stay on their own
-        pages.
+        pages. Membership plans are on{" "}
+        <Link href="/account/plans" className="text-accent hover:text-accent-strong">
+          Plans
+        </Link>
+        .
       </p>
       <nav
         aria-label="Settings"

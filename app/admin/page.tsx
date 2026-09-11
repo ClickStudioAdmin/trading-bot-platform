@@ -196,6 +196,11 @@ export default async function AdminOverviewPage() {
         <h2 className="text-lg font-semibold tracking-tight">Shortcuts</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Shortcut
+            href="/admin/plans"
+            label="Plans"
+            hint="Features, caps, affiliate rates"
+          />
+          <Shortcut
             href="/admin/members"
             label="Members"
             hint="Invite-only logins"

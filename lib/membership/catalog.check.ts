@@ -1,0 +1,125 @@
+import assert from "node:assert/strict";
+import {
+  affiliateRatesOk,
+  canArchivePlan,
+  canDeletePlan,
+  emptyCaps,
+  emptyFeatures,
+  formatPlanCap,
+  formatPlanPrice,
+  parseCaps,
+  parseFeatures,
+  publicCatalogPlans,
+  slugifyPlanName,
+  type MembershipPlan,
+} from "./catalog";
+import { parsePlanForm, parsePlanId } from "./form";
+
+assert.equal(emptyFeatures().desk_dca, false);
+assert.equal(emptyCaps().max_desks, null);
+assert.equal(parseFeatures({ desk_dca: true, nope: true }).desk_dca, true);
+assert.equal(parseFeatures({ desk_dca: true }).desk_scale_in, false);
+assert.equal(parseCaps({ max_desks: 2, max_live_desks: "nope" }).max_desks, 2);
+assert.equal(parseCaps({ max_desks: 2 }).max_live_desks, null);
+
+assert.equal(affiliateRatesOk(20, 5, 0), true);
+assert.equal(affiliateRatesOk(80, 20, 1), false);
+assert.equal(affiliateRatesOk(-1, 0, 0), false);
+assert.equal(affiliateRatesOk(20, 5, 80), false);
+
+assert.equal(slugifyPlanName(" Plus Plan "), "plus-plan");
+assert.equal(formatPlanPrice(0), "Free");
+assert.equal(formatPlanPrice(29), "$29 / month");
+assert.equal(formatPlanCap(null), "Unlimited");
+assert.equal(formatPlanCap(2), "2");
+
+const unused = {
+  isDefault: false,
+  memberCount: 0,
+  archivedAt: null,
+};
+assert.equal(canDeletePlan(unused), true);
+assert.equal(canArchivePlan(unused), true);
+assert.equal(canDeletePlan({ isDefault: true, memberCount: 0 }), false);
+assert.equal(canDeletePlan({ isDefault: false, memberCount: 3 }), false);
+assert.equal(
+  canArchivePlan({ isDefault: true, archivedAt: null }),
+  false,
+);
+assert.equal(
+  canArchivePlan({ isDefault: false, archivedAt: "2026-09-11T00:00:00Z" }),
+  false,
+);
+
+const create = new FormData();
+create.set("name", " Plus ");
+create.set("sortOrder", "2");
+create.set("priceUsd", "29");
+create.set("public", "1");
+create.set("feature_desk_dca", "1");
+create.set("feature_mode_live", "1");
+create.set("cap_max_desks", "4");
+create.set("affiliateL1Pct", "10");
+create.set("affiliateL2Pct", "5");
+create.set("affiliateL3Pct", "0");
+const parsed = parsePlanForm(create);
+assert.equal(parsed.ok, true);
+if (parsed.ok) {
+  assert.equal(parsed.values.name, "Plus");
+  assert.equal(parsed.values.slug, "plus");
+  assert.equal(parsed.values.priceUsd, 29);
+  assert.equal(parsed.values.features.desk_dca, true);
+  assert.equal(parsed.values.features.desk_scale_in, false);
+  assert.equal(parsed.values.caps.max_desks, 4);
+  assert.equal(parsed.values.caps.max_live_desks, null);
+  assert.equal(parsed.values.affiliateL1Pct, 10);
+}
+
+const overRates = new FormData();
+overRates.set("name", "Pro");
+overRates.set("affiliateL1Pct", "50");
+overRates.set("affiliateL2Pct", "40");
+overRates.set("affiliateL3Pct", "20");
+assert.equal(parsePlanForm(overRates).ok, false);
+
+const badCap = new FormData();
+badCap.set("name", "Pro");
+badCap.set("cap_max_desks", "1.5");
+assert.equal(parsePlanForm(badCap).ok, false);
+
+assert.equal(parsePlanId("not-a-uuid"), null);
+assert.ok(parsePlanId("2f1c7d5a-3b9e-4a11-9c22-0d4e6f8a1b30"));
+
+const archived: MembershipPlan = {
+  id: "2f1c7d5a-3b9e-4a11-9c22-0d4e6f8a1b30",
+  slug: "old",
+  name: "Old",
+  sortOrder: 9,
+  public: true,
+  archivedAt: "2026-09-11T00:00:00Z",
+  isDefault: false,
+  priceUsd: 10,
+  stripePriceId: null,
+  affiliateL1Pct: 0,
+  affiliateL2Pct: 0,
+  affiliateL3Pct: 0,
+  features: emptyFeatures(),
+  caps: emptyCaps(),
+  createdAt: "2026-09-11T00:00:00Z",
+  updatedAt: "2026-09-11T00:00:00Z",
+  memberCount: 0,
+};
+const live: MembershipPlan = {
+  ...archived,
+  id: "3f1c7d5a-3b9e-4a11-9c22-0d4e6f8a1b31",
+  slug: "plus",
+  name: "Plus",
+  sortOrder: 1,
+  archivedAt: null,
+};
+assert.deepEqual(
+  publicCatalogPlans([archived, live]).map((plan) => plan.slug),
+  ["plus"],
+);
+
+console.log("membership catalog checks passed");

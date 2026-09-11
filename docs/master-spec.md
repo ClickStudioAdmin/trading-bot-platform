@@ -31,13 +31,13 @@ Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 a
 
 **Copy trading is started** (roadmap 3): [phase-copy-trading.md](phase-copy-trading.md). Steps 1–9 are in repo. Stop after each copy-trading micro-step until Click says go. Next is step 10 (Click desk test). Push `develop` to migrate.
 
-The locked sequence after Phase 11 is [roadmap.md](roadmap.md). **Plans, payments, and affiliates** is roadmap 5 ([phase-membership.md](phase-membership.md)) — docs only; do not start until Click says go. Standing unordered notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
+The locked sequence after Phase 11 is [roadmap.md](roadmap.md). **Plans, payments, and affiliates** is roadmap 5 ([phase-membership.md](phase-membership.md)). Steps 1–3 are in repo. Do not start Stripe or entitlements until Click says go. Standing unordered notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
 
 ## Later
 
 Do not implement until Click starts that roadmap item. Order and notes: [roadmap.md](roadmap.md).
 
-**Plans, payments, and affiliates** (roadmap 5). Spec written: [phase-membership.md](phase-membership.md). Do not add Stripe, a chain watcher, or plan/wallet tables until Click starts that item.
+**Plans, payments, and affiliates** (roadmap 5). Spec: [phase-membership.md](phase-membership.md). Schema and plan pages are in repo. Do not add Stripe or a chain watcher until Click starts those micro-steps.
 
 **Backup market data** (roadmap 9). Indicator start and other public candles stay on **Bybit public klines first**. When that item starts, failover if the call fails (timeout, HTTP 403, empty list):
 
