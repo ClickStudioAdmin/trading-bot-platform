@@ -176,7 +176,7 @@ function AdminPlanRow({
 }) {
   if (row.kind === "feature") {
     return (
-      <label className="inline-flex items-start gap-2 text-sm text-ink">
+      <label className="flex w-full items-start gap-2 text-sm text-ink">
         <input
           type="checkbox"
           name={`feature_${row.key}`}
