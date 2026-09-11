@@ -148,8 +148,11 @@ function PlanCell({
         <p className="text-xs font-medium uppercase tracking-[0.16em] text-ink">
           {plan.name}
         </p>
+        <p className="mt-2 text-lg font-semibold tabular-nums text-ink">
+          {formatPlanPrice(plan.priceUsd)}
+        </p>
         {planIsArchived(plan) ? (
-          <span className="mt-1 inline-flex">
+          <span className="mt-2 inline-flex">
             <ColumnHint
               label={
                 <span className="inline-flex items-center justify-center rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
@@ -160,13 +163,10 @@ function PlanCell({
             />
           </span>
         ) : plan.visibility !== "public" ? (
-          <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint">
+          <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint">
             {plan.visibility === "draft" ? "Draft preview" : "Private"}
           </p>
         ) : null}
-        <p className="mt-2 text-lg font-semibold tabular-nums text-ink">
-          {formatPlanPrice(plan.priceUsd)}
-        </p>
       </div>
     );
   }
