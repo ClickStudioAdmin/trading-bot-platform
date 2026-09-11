@@ -3,6 +3,8 @@ import {
   adminPlanSections,
   affiliateRateFieldName,
   PLAN_NAME_MAX,
+  PLAN_VISIBILITIES,
+  PLAN_VISIBILITY_LABELS,
   type MembershipPlan,
   type PlanCompareRow,
 } from "@/lib/membership/catalog";
@@ -76,25 +78,51 @@ export function AdminPlanForm({
             />
           </label>
         </div>
-        <div className="mt-4 flex flex-wrap gap-6 text-sm text-ink">
-          <label className="inline-flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="public"
-              value="1"
-              defaultChecked={plan?.public ?? true}
-            />
-            Public (upgrade catalog)
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="block text-sm text-ink">
+            Visibility
+            <select
+              name="visibility"
+              defaultValue={plan?.visibility ?? "draft"}
+              className={fieldClass}
+            >
+              {PLAN_VISIBILITIES.map((value) => (
+                <option key={value} value={value}>
+                  {PLAN_VISIBILITY_LABELS[value]}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs text-ink-muted">
+              Public is on the Plans page. Private is assign-only. Draft is not
+              published.
+            </span>
           </label>
-          <label className="inline-flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="isDefault"
-              value="1"
-              defaultChecked={plan?.isDefault ?? false}
-            />
-            Default for new members
-          </label>
+          <div className="space-y-3 self-end pb-1 text-sm text-ink">
+            <label className="inline-flex items-start gap-2">
+              <input
+                type="checkbox"
+                name="preview"
+                value="1"
+                defaultChecked={plan?.preview ?? false}
+                className="mt-0.5"
+              />
+              <span>
+                Show this draft on the Plans page for preview
+                <span className="mt-1 block text-xs text-ink-muted">
+                  Admins only. Ignored unless visibility is Draft.
+                </span>
+              </span>
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                name="isDefault"
+                value="1"
+                defaultChecked={plan?.isDefault ?? false}
+              />
+              Default for new members
+            </label>
+          </div>
         </div>
       </section>
 

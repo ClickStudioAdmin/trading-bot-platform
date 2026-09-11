@@ -4,6 +4,7 @@ import { AdminPlanRowActions } from "@/components/admin-plan-row-actions";
 import { PageHeading } from "@/components/page-heading";
 import {
   formatPlanPrice,
+  PLAN_VISIBILITY_LABELS,
   planIsArchived,
 } from "@/lib/membership/catalog";
 import { listMembershipPlans } from "@/lib/membership/store";
@@ -79,7 +80,10 @@ export default async function AdminPlansPage({
                     {plan.name}
                   </Link>
                   <p className="mt-0.5 text-xs text-ink-faint">
-                    {plan.public ? "Public" : "Hidden"}
+                    {PLAN_VISIBILITY_LABELS[plan.visibility]}
+                    {plan.visibility === "draft" && plan.preview
+                      ? " · Preview"
+                      : ""}
                     {plan.isDefault ? " · Default" : ""}
                     {plan.features.affiliate_enroll
                       ? ` · L1 ${plan.affiliateL1Pct}%`
@@ -92,7 +96,9 @@ export default async function AdminPlansPage({
                   {planIsArchived(plan) ? (
                     <span className="text-ink-muted">Archived</span>
                   ) : (
-                    <span className="text-success">Live</span>
+                    <span className="text-success">
+                      {plan.visibility === "draft" ? "Draft" : "Live"}
+                    </span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-right">

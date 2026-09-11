@@ -67,11 +67,23 @@ assert.equal(
   canArchivePlan({ isDefault: false, archivedAt: "2026-09-11T00:00:00Z" }),
   false,
 );
-const livePlan = { id: "live", archivedAt: null, isDefault: true };
+const livePlan = {
+  id: "live",
+  archivedAt: null,
+  isDefault: true,
+  visibility: "public" as const,
+};
 const archivedPlan = {
   id: "old",
   archivedAt: "2026-09-11T00:00:00Z",
   isDefault: false,
+  visibility: "public" as const,
+};
+const draftPlan = {
+  id: "draft",
+  archivedAt: null,
+  isDefault: false,
+  visibility: "draft" as const,
 };
 assert.deepEqual(assignablePlans([livePlan, archivedPlan]).map((p) => p.id), [
   "live",
@@ -81,12 +93,16 @@ assert.deepEqual(
   ["live", "old"],
 );
 assert.equal(defaultAssignablePlanId([archivedPlan, livePlan]), "live");
+assert.deepEqual(
+  assignablePlans([livePlan, draftPlan]).map((plan) => plan.id),
+  ["live"],
+);
 
 const create = new FormData();
 create.set("name", " Plus ");
 create.set("sortOrder", "2");
 create.set("priceUsd", "29");
-create.set("public", "1");
+create.set("visibility", "public");
 create.set("feature_desk_dca", "1");
 create.set("feature_mode_live", "1");
 create.set("cap_max_paper_desks", "4");
@@ -115,8 +131,15 @@ assert.equal(parsePlanForm(overRates).ok, false);
 
 const badCap = new FormData();
 badCap.set("name", "Pro");
+badCap.set("visibility", "public");
 badCap.set("cap_max_paper_desks", "1.5");
 assert.equal(parsePlanForm(badCap).ok, false);
+
+const draftDefault = new FormData();
+draftDefault.set("name", "Soon");
+draftDefault.set("visibility", "draft");
+draftDefault.set("isDefault", "1");
+assert.equal(parsePlanForm(draftDefault).ok, false);
 
 assert.equal(parsePlanId("not-a-uuid"), null);
 assert.ok(parsePlanId("2f1c7d5a-3b9e-4a11-9c22-0d4e6f8a1b30"));
@@ -126,7 +149,8 @@ const archived: MembershipPlan = {
   slug: "old",
   name: "Old",
   sortOrder: 9,
-  public: true,
+  visibility: "public",
+  preview: false,
   archivedAt: "2026-09-11T00:00:00Z",
   isDefault: false,
   priceUsd: 10,
@@ -153,6 +177,36 @@ const live: MembershipPlan = {
 assert.deepEqual(
   publicCatalogPlans([archived, live]).map((plan) => plan.slug),
   ["plus"],
+);
+const privatePlan: MembershipPlan = {
+  ...live,
+  id: "4f1c7d5a-3b9e-4a11-9c22-0d4e6f8a1b32",
+  slug: "vip",
+  visibility: "private",
+};
+const draftPreview: MembershipPlan = {
+  ...live,
+  id: "5f1c7d5a-3b9e-4a11-9c22-0d4e6f8a1b33",
+  slug: "soon",
+  sortOrder: 8,
+  visibility: "draft",
+  preview: true,
+};
+assert.deepEqual(
+  publicCatalogPlans([live, privatePlan, draftPreview]).map((plan) => plan.slug),
+  ["plus"],
+);
+assert.deepEqual(
+  publicCatalogPlans([live, privatePlan, draftPreview], {
+    currentPlanId: privatePlan.id,
+  }).map((plan) => plan.slug),
+  ["plus", "vip"],
+);
+assert.deepEqual(
+  publicCatalogPlans([live, draftPreview], { includePreviewDrafts: true }).map(
+    (plan) => plan.slug,
+  ),
+  ["plus", "soon"],
 );
 
 assert.deepEqual(

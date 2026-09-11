@@ -23,15 +23,23 @@ export default async function AccountPlansPage() {
     listMembershipPlans(),
     getMemberPlanId(member.id),
   ]);
-  const plans = listed.ok ? publicCatalogPlans(listed.plans) : [];
+  const plans = listed.ok
+    ? publicCatalogPlans(listed.plans, {
+        currentPlanId,
+        includePreviewDrafts: member.role === "admin",
+      })
+    : [];
 
   return (
     <div>
       <PageHeading title="Plans" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
         One section per feature group. In each section, shared rows sit at the
-        top and higher-plan extras sit at the bottom. Card checkout is the next
+        top and higher-plan extras sit at the bottom.         Card checkout is the next
         step.
+        {member.role === "admin"
+          ? " Drafts marked for preview appear here for admins only."
+          : ""}
       </p>
       {!listed.ok ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

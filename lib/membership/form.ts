@@ -8,16 +8,19 @@ import {
   emptyCaps,
   emptyFeatures,
   parseCapValue,
+  parsePlanVisibility,
   slugifyPlanName,
   type PlanCaps,
   type PlanFeatures,
+  type PlanVisibility,
 } from "./catalog";
 
 export type PlanFormValues = {
   name: string;
   slug: string;
   sortOrder: number;
-  public: boolean;
+  visibility: PlanVisibility;
+  preview: boolean;
   isDefault: boolean;
   priceUsd: number;
   stripePriceId: string | null;
@@ -107,6 +110,14 @@ export function parsePlanForm(formData: FormData): PlanFormResult {
     };
   }
 
+  const visibility = parsePlanVisibility(readString(formData, "visibility"));
+  if (!visibility) {
+    return { ok: false, error: "Choose a visibility." };
+  }
+  if (readCheckbox(formData, "isDefault") && visibility === "draft") {
+    return { ok: false, error: "The default plan cannot be a draft." };
+  }
+
   const stripeRaw = readString(formData, "stripePriceId");
   const existingSlug = readString(formData, "slug");
 
@@ -144,7 +155,8 @@ export function parsePlanForm(formData: FormData): PlanFormResult {
       name,
       slug: existingSlug || slugifyPlanName(name),
       sortOrder,
-      public: readCheckbox(formData, "public"),
+      visibility,
+      preview: visibility === "draft" && readCheckbox(formData, "preview"),
       isDefault: readCheckbox(formData, "isDefault"),
       priceUsd,
       stripePriceId: stripeRaw || null,

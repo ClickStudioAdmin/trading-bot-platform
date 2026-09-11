@@ -80,12 +80,22 @@ export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
   affiliate_max_depth: "Earning Depth (1–5)",
 };
 
+export const PLAN_VISIBILITIES = ["public", "private", "draft"] as const;
+export type PlanVisibility = (typeof PLAN_VISIBILITIES)[number];
+
+export const PLAN_VISIBILITY_LABELS: Record<PlanVisibility, string> = {
+  public: "Public",
+  private: "Private",
+  draft: "Draft",
+};
+
 export type MembershipPlan = {
   id: string;
   slug: string;
   name: string;
   sortOrder: number;
-  public: boolean;
+  visibility: PlanVisibility;
+  preview: boolean;
   archivedAt: string | null;
   isDefault: boolean;
   priceUsd: number;
@@ -206,8 +216,26 @@ export function affiliateRatesOk(...pcts: number[]): boolean {
   return affiliatePctSum(...pcts) <= AFFILIATE_PCT_MAX;
 }
 
+export function parsePlanVisibility(value: unknown): PlanVisibility | null {
+  return PLAN_VISIBILITIES.includes(value as PlanVisibility)
+    ? (value as PlanVisibility)
+    : null;
+}
+
 export function planIsArchived(plan: Pick<MembershipPlan, "archivedAt">): boolean {
   return Boolean(plan.archivedAt);
+}
+
+export function planIsDraft(
+  plan: Pick<MembershipPlan, "visibility">,
+): boolean {
+  return plan.visibility === "draft";
+}
+
+export function planIsPublic(
+  plan: Pick<MembershipPlan, "visibility">,
+): boolean {
+  return plan.visibility === "public";
 }
 
 export function planIsUsed(plan: Pick<MembershipPlan, "memberCount" | "isDefault">): boolean {
@@ -222,20 +250,32 @@ export function canArchivePlan(plan: Pick<MembershipPlan, "isDefault" | "archive
   return !plan.isDefault && !plan.archivedAt;
 }
 
-export function assignablePlans<T extends Pick<MembershipPlan, "id" | "archivedAt" | "isDefault">>(
+export function assignablePlans<
+  T extends Pick<MembershipPlan, "id" | "archivedAt" | "visibility">,
+>(
   plans: readonly T[],
   currentPlanId?: string | null,
 ): T[] {
   return plans.filter(
-    (plan) => !planIsArchived(plan) || plan.id === currentPlanId,
+    (plan) =>
+      (!planIsArchived(plan) && !planIsDraft(plan)) ||
+      plan.id === currentPlanId,
   );
 }
 
 export function defaultAssignablePlanId(
-  plans: readonly Pick<MembershipPlan, "id" | "archivedAt" | "isDefault">[],
+  plans: readonly Pick<
+    MembershipPlan,
+    "id" | "archivedAt" | "isDefault" | "visibility"
+  >[],
 ): string | null {
   const open = assignablePlans(plans);
-  return open.find((plan) => plan.isDefault)?.id ?? open[0]?.id ?? null;
+  return (
+    open.find((plan) => plan.isDefault && planIsPublic(plan))?.id ??
+    open.find((plan) => plan.isDefault)?.id ??
+    open[0]?.id ??
+    null
+  );
 }
 
 export function slugifyPlanName(name: string): string {
@@ -451,9 +491,28 @@ export function comparePlanCell(
 
 export function publicCatalogPlans(
   plans: MembershipPlan[],
+  input: {
+    currentPlanId?: string | null;
+    includePreviewDrafts?: boolean;
+  } = {},
 ): MembershipPlan[] {
   return plans
-    .filter((plan) => plan.public && !planIsArchived(plan))
+    .filter((plan) => {
+      if (planIsArchived(plan)) {
+        return false;
+      }
+      if (planIsPublic(plan)) {
+        return true;
+      }
+      if (plan.id === input.currentPlanId) {
+        return true;
+      }
+      return (
+        planIsDraft(plan) &&
+        plan.preview &&
+        Boolean(input.includePreviewDrafts)
+      );
+    })
     .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 }
 

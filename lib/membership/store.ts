@@ -4,6 +4,7 @@ import {
   canDeletePlan,
   parseCaps,
   parseFeatures,
+  parsePlanVisibility,
   slugifyPlanName,
   type MembershipPlan,
 } from "./catalog";
@@ -15,6 +16,8 @@ type PlanRow = {
   name: string;
   sort_order: number;
   public: boolean;
+  visibility?: string | null;
+  preview?: boolean | null;
   archived_at: string | null;
   is_default: boolean;
   price_usd: number | string;
@@ -32,7 +35,7 @@ type PlanRow = {
 };
 
 const PLAN_COLUMNS =
-  "id, slug, name, sort_order, public, archived_at, is_default, price_usd, stripe_price_id, affiliate_l1_pct, affiliate_l2_pct, affiliate_l3_pct, affiliate_l4_pct, affiliate_l5_pct, features, caps, created_at, updated_at";
+  "id, slug, name, sort_order, public, visibility, preview, archived_at, is_default, price_usd, stripe_price_id, affiliate_l1_pct, affiliate_l2_pct, affiliate_l3_pct, affiliate_l4_pct, affiliate_l5_pct, features, caps, created_at, updated_at";
 
 function asNumber(value: number | string): number {
   return typeof value === "number" ? value : Number(value);
@@ -44,7 +47,10 @@ function mapPlan(row: PlanRow, memberCount = 0): MembershipPlan {
     slug: row.slug,
     name: row.name,
     sortOrder: row.sort_order,
-    public: row.public,
+    visibility:
+      parsePlanVisibility(row.visibility) ??
+      (row.public ? "public" : "private"),
+    preview: row.preview === true,
     archivedAt: row.archived_at,
     isDefault: row.is_default,
     priceUsd: asNumber(row.price_usd),
@@ -179,6 +185,10 @@ export async function saveMembershipPlan(input: {
     return { ok: false, error: "Database is not configured." };
   }
 
+  if (input.values.isDefault && input.values.visibility === "draft") {
+    return { ok: false, error: "The default plan cannot be a draft." };
+  }
+
   if (input.id) {
     const existing = await getMembershipPlan(input.id);
     if (!existing.ok) {
@@ -209,7 +219,9 @@ export async function saveMembershipPlan(input: {
     slug,
     name: input.values.name,
     sort_order: input.values.sortOrder,
-    public: input.values.public,
+    public: input.values.visibility === "public",
+    visibility: input.values.visibility,
+    preview: input.values.preview,
     is_default: input.values.isDefault,
     price_usd: input.values.priceUsd,
     stripe_price_id: input.values.stripePriceId,
