@@ -2,6 +2,7 @@ import {
   PLAN_COMPARE_SECTIONS,
   comparePlanCell,
   formatPlanPrice,
+  planIsArchived,
   sortCompareSectionRows,
   type MembershipPlan,
   type PlanCompareCell,
@@ -146,7 +147,11 @@ function PlanCell({
         <p className="text-xs font-medium uppercase tracking-[0.16em] text-ink">
           {plan.name}
         </p>
-        {plan.visibility !== "public" ? (
+        {planIsArchived(plan) ? (
+          <span className="mt-1 inline-flex items-center justify-center rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
+            Legacy
+          </span>
+        ) : plan.visibility !== "public" ? (
           <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint">
             {plan.visibility === "draft" ? "Draft preview" : "Private"}
           </p>
