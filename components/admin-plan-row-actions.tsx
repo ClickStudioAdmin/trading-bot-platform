@@ -3,6 +3,7 @@
 import { useConfirmDialog } from "@/components/confirm-modal";
 import {
   archiveMembershipPlanAction,
+  cloneMembershipPlanAction,
   deleteMembershipPlanAction,
   unarchiveMembershipPlanAction,
 } from "@/lib/membership/actions";
@@ -35,6 +36,12 @@ export function AdminPlanRowActions({ plan }: { plan: MembershipPlan }) {
     await archiveMembershipPlanAction(data);
   }
 
+  async function onClone() {
+    const data = new FormData();
+    data.set("planId", plan.id);
+    await cloneMembershipPlanAction(data);
+  }
+
   async function onUnarchive() {
     const data = new FormData();
     data.set("planId", plan.id);
@@ -59,6 +66,9 @@ export function AdminPlanRowActions({ plan }: { plan: MembershipPlan }) {
   return (
     <div className="flex flex-wrap justify-end gap-1">
       {dialog}
+      <button type="button" className={ghost} onClick={() => void onClone()}>
+        Clone
+      </button>
       {archived ? (
         <button type="button" className={ghost} onClick={() => void onUnarchive()}>
           Un-archive

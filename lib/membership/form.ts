@@ -8,8 +8,10 @@ import {
   emptyCaps,
   emptyFeatures,
   parseCapValue,
+  clonedPlanName,
   parsePlanVisibility,
   slugifyPlanName,
+  type MembershipPlan,
   type PlanCaps,
   type PlanFeatures,
   type PlanVisibility,
@@ -36,6 +38,26 @@ export type PlanFormValues = {
 export type PlanFormResult =
   | { ok: true; values: PlanFormValues }
   | { ok: false; error: string };
+
+export function clonePlanValues(plan: MembershipPlan): PlanFormValues {
+  return {
+    name: clonedPlanName(plan.name),
+    slug: "",
+    sortOrder: plan.sortOrder,
+    visibility: "draft",
+    preview: false,
+    isDefault: false,
+    priceUsd: plan.priceUsd,
+    stripePriceId: null,
+    affiliateL1Pct: plan.affiliateL1Pct,
+    affiliateL2Pct: plan.affiliateL2Pct,
+    affiliateL3Pct: plan.affiliateL3Pct,
+    affiliateL4Pct: plan.affiliateL4Pct,
+    affiliateL5Pct: plan.affiliateL5Pct,
+    features: { ...plan.features },
+    caps: { ...plan.caps },
+  };
+}
 
 function readString(formData: FormData, key: string): string {
   return String(formData.get(key) ?? "").trim();

@@ -20,7 +20,7 @@ Enough Free to test (Paper, a small desk cap, core Perps/DCA, Chart). Named upgr
 | --- | --- | --- | --- |
 | 1 | Docs | Agent | This file is the phase. Roadmap item 5 is the combined commercial stack. Cross-refs updated. **In repo 11 Sep 2026.** Stop. |
 | 2 | Schema | Agent | Migrations: plans (archive, features, caps, per-plan L1/L2/L3 %), `members.plan_id` + billing fields, processor-agnostic invoices, USD credit ledger, referral tree, commission rows, payouts, program settings. Existing members land on seed **Free**. No Stripe SDK yet if it can wait for step 4. Push `develop` to migrate. **In repo 11 Sep 2026.** |
-| 3 | Admin plans | Agent | `/admin/plans` create/edit/archive; `/account/plans` public catalog. Seed Free / Plus / Pro. L1–L5 cannot exceed 100%. Visibility: public / private / draft (+ draft preview on Plans for admins). Admin assigns a plan on `/admin/members` (comp, no invoice) so affiliate rates have a login to read. **In repo 11 Sep 2026.** |
+| 3 | Admin plans | Agent | `/admin/plans` create/edit/archive; `/account/plans` public catalog. Seed Free / Plus / Pro. L1–L5 cannot exceed 100%. Visibility: public / private / draft (+ draft preview on Plans for admins). Clone copies a plan as a new draft. Admin assigns a plan on `/admin/members` (comp, no invoice) so affiliate rates have a login to read. **In repo 11 Sep 2026.** |
 | 4 | Stripe cards | Agent | Test keys on `develop`, live on `main`. `/account/billing` (plan, method, invoices, Stripe Portal). Checkout upgrade, Customer Portal, idempotent webhooks (`checkout.session.completed`, `customer.subscription.updated`, invoice paid/refunded). One collection method per member. Comp plan from admin (no commission invoice). Wallet tiles wait for step 5. |
 | 5 | Credit wallet | Agent | Unique deposit address per member. Admin-listed majors and EVM nets (incl. Arbitrum). Quote → confirm → **USD credit** (not a multi-currency wallet). Billing tick deducts plan price. Leftover stays. Withdraw leftover as **USDT** only, ≥ min payout, no arrears. Treasury keys on a billing worker only. |
 | 6 | Downgrade grace | Agent | Entitlements change at period end. Admin grace days (default 7). Banner + operable extras. After grace, billing worker Close/Disable **oldest desk first**: forbidden features, then numeric caps. Upgrade during grace cancels the sweep. Ledgers stay. |
@@ -36,7 +36,7 @@ Stop after each micro-step until Click says go. Next is step 4 (Stripe cards). D
 
 ### Plans
 
-Admin creates named tiers at `/admin/plans`. The editor uses the same groups and row order as `/account/plans` (features, caps, and affiliate rates in one section each). Code reads entitlements only — no hardcoded “Pro” except the seed rows.
+Admin creates named tiers at `/admin/plans`. Clone makes a draft copy (new name `… copy`, not default, no Stripe price). The editor uses the same groups and row order as `/account/plans` (features, caps, and affiliate rates in one section each). Code reads entitlements only — no hardcoded “Pro” except the seed rows.
 
 Each plan: name, sort, **visibility** (`public` on `/account/plans`, `private` assign-only — the assigned member still sees it on Plans, `draft` unpublished), optional draft **preview** (admins see it on Plans), price (`0` = Free), Stripe price id, **L1–L5 affiliate %**, feature flags, numeric caps (empty = unlimited). The default plan cannot be a draft.
 

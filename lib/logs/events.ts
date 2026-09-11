@@ -33,6 +33,7 @@ export const EVENT_LOG_OPTIONS = [
   { event: "exchange.saved", scope: "system" },
   { event: "exchange.verify_failed", scope: "system" },
   { event: "membership.plan_archived", scope: "system" },
+  { event: "membership.plan_cloned", scope: "system" },
   { event: "membership.plan_created", scope: "system" },
   { event: "membership.plan_deleted", scope: "system" },
   { event: "membership.plan_unarchived", scope: "system" },

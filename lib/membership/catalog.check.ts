@@ -19,11 +19,12 @@ import {
   adminPlanSections,
   PLAN_COMPARE_SECTIONS,
   PLAN_FEATURE_KEYS,
+  clonedPlanName,
   publicCatalogPlans,
   slugifyPlanName,
   type MembershipPlan,
 } from "./catalog";
-import { parsePlanForm, parsePlanId } from "./form";
+import { clonePlanValues, parsePlanForm, parsePlanId } from "./form";
 
 assert.equal(emptyFeatures().desk_dca, false);
 assert.equal(emptyCaps().max_demo_desks, null);
@@ -42,6 +43,9 @@ assert.equal(affiliateRatesOk(10, 10, 10, 10, 10), true);
 assert.equal(affiliateRatesOk(20, 20, 20, 20, 21), false);
 
 assert.equal(slugifyPlanName(" Plus Plan "), "plus-plan");
+assert.equal(clonedPlanName("Plus"), "Plus copy");
+assert.equal(clonedPlanName("A".repeat(40)).length, 40);
+assert.ok(clonedPlanName("A".repeat(40)).endsWith(" copy"));
 assert.equal(formatPlanPrice(0), "Free");
 assert.equal(formatPlanPrice(29), "$29 / month");
 assert.equal(formatPlanCap(null), "Unlimited");
@@ -178,6 +182,14 @@ assert.deepEqual(
   publicCatalogPlans([archived, live]).map((plan) => plan.slug),
   ["plus"],
 );
+const cloned = clonePlanValues(live);
+assert.equal(cloned.name, "Plus copy");
+assert.equal(cloned.visibility, "draft");
+assert.equal(cloned.preview, false);
+assert.equal(cloned.isDefault, false);
+assert.equal(cloned.stripePriceId, null);
+assert.equal(cloned.priceUsd, live.priceUsd);
+assert.deepEqual(cloned.features, live.features);
 const privatePlan: MembershipPlan = {
   ...live,
   id: "4f1c7d5a-3b9e-4a11-9c22-0d4e6f8a1b32",

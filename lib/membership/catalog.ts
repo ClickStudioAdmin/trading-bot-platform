@@ -278,6 +278,15 @@ export function defaultAssignablePlanId(
   );
 }
 
+export function clonedPlanName(name: string): string {
+  const suffix = " copy";
+  const base = name.trim() || "Plan";
+  if (base.length + suffix.length <= PLAN_NAME_MAX) {
+    return `${base}${suffix}`;
+  }
+  return `${base.slice(0, PLAN_NAME_MAX - suffix.length)}${suffix}`;
+}
+
 export function slugifyPlanName(name: string): string {
   const slug = name
     .trim()

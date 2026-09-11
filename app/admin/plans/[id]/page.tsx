@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminPlanForm } from "@/components/admin-plan-form";
+import { AdminPlanRowActions } from "@/components/admin-plan-row-actions";
 import { PageHeading } from "@/components/page-heading";
 import { getMembershipPlan } from "@/lib/membership/store";
 import { firstSearchValue } from "@/lib/paper/open";
@@ -27,6 +28,7 @@ export default async function AdminEditPlanPage({
   const error = firstSearchValue(query.error);
   const saved = firstSearchValue(query.saved) === "1";
   const created = firstSearchValue(query.created) === "1";
+  const cloned = firstSearchValue(query.cloned) === "1";
 
   return (
     <div>
@@ -44,9 +46,17 @@ export default async function AdminEditPlanPage({
       {created ? (
         <p className="mt-4 text-sm text-success">Plan created.</p>
       ) : null}
+      {cloned ? (
+        <p className="mt-4 text-sm text-success">
+          Draft copy created. Rename it before you publish.
+        </p>
+      ) : null}
       {saved ? (
         <p className="mt-4 text-sm text-success">Plan saved.</p>
       ) : null}
+      <div className="mt-4 flex justify-end">
+        <AdminPlanRowActions plan={loaded.plan} />
+      </div>
       <AdminPlanForm plan={loaded.plan} />
       <p className="mt-6">
         <Link href="/admin/plans" className="text-sm text-accent hover:text-accent-strong">

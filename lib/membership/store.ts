@@ -8,7 +8,7 @@ import {
   slugifyPlanName,
   type MembershipPlan,
 } from "./catalog";
-import type { PlanFormValues } from "./form";
+import { clonePlanValues, type PlanFormValues } from "./form";
 
 type PlanRow = {
   id: string;
@@ -255,6 +255,16 @@ export async function saveMembershipPlan(input: {
     return { ok: false, error: error?.message ?? "Could not create plan." };
   }
   return { ok: true, id: String((data as { id: string }).id) };
+}
+
+export async function cloneMembershipPlan(
+  id: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const existing = await getMembershipPlan(id);
+  if (!existing.ok) {
+    return existing;
+  }
+  return saveMembershipPlan({ values: clonePlanValues(existing.plan) });
 }
 
 export async function archiveMembershipPlan(

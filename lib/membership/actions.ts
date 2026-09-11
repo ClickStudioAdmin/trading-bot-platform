@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { parsePlanForm, parsePlanId } from "./form";
 import {
   archiveMembershipPlan,
+  cloneMembershipPlan,
   deleteMembershipPlan,
   saveMembershipPlan,
   unarchiveMembershipPlan,
@@ -65,6 +66,27 @@ export async function updateMembershipPlanAction(formData: FormData) {
   });
   refreshPlans();
   redirect(`/admin/plans/${id}?saved=1`);
+}
+
+export async function cloneMembershipPlanAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = parsePlanId(String(formData.get("planId") ?? ""));
+  if (!id) {
+    fail("/admin/plans", "Missing plan.");
+  }
+  const saved = await cloneMembershipPlan(id);
+  if (!saved.ok) {
+    fail("/admin/plans", saved.error);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.plan_cloned",
+    message: "Cloned a membership plan",
+    userId: admin.id,
+    data: { sourcePlanId: id, planId: saved.id },
+  });
+  refreshPlans();
+  redirect(`/admin/plans/${saved.id}?cloned=1`);
 }
 
 export async function archiveMembershipPlanAction(formData: FormData) {
