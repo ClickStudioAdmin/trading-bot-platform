@@ -144,7 +144,7 @@ assert.deepEqual(
   [
     "Manual Desk Types",
     "Automated Desk Types",
-    "Maximum Desks (any kind)",
+    "Any Type",
     "Bots & Templates",
     "Webhooks",
     "Copy Trading",
@@ -195,7 +195,7 @@ assert.equal(
   true,
 );
 const deskResources = PLAN_COMPARE_SECTIONS.find(
-  (section) => section.title === "Maximum Desks (any kind)",
+  (section) => section.title === "Any Type",
 );
 assert.ok(deskResources);
 assert.equal(
@@ -262,7 +262,7 @@ assert.equal(
 assert.deepEqual(
   comparePlanCell(
     { ...live, features: emptyFeatures(), caps: { ...emptyCaps(), max_paper_desks: 2 } },
-    { kind: "cap", key: "max_paper_desks", label: "Paper Desks" },
+    { kind: "cap", key: "max_paper_desks", label: "Paper Trading" },
   ),
   { kind: "value", text: "2" },
 );

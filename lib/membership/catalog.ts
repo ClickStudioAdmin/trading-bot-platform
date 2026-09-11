@@ -69,9 +69,9 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
 };
 
 export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
-  max_paper_desks: "Paper Desks",
-  max_demo_desks: "Exchange Connected Desks - Demo Mode",
-  max_live_env_desks: "Exchange Connected Desks - Live Mode",
+  max_paper_desks: "Paper Trading",
+  max_demo_desks: "Exchange Connected - Demo Mode",
+  max_live_env_desks: "Exchange Connected - Live Mode",
   max_bots_per_desk: "Max Bots per Desk",
   max_copy_follows: "Max Desk Copies",
   max_followers_accepted: "Max Followers",
@@ -288,12 +288,12 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     ],
   },
   {
-    title: "Maximum Desks (any kind)",
+    title: "Any Type",
     fixedOrder: true,
     rows: [
-      { kind: "cap", key: "max_paper_desks", label: "Paper Desks" },
-      { kind: "cap", key: "max_demo_desks", label: "Exchange Connected Desks - Demo Mode" },
-      { kind: "cap", key: "max_live_env_desks", label: "Exchange Connected Desks - Live Mode" },
+      { kind: "cap", key: "max_paper_desks", label: "Paper Trading" },
+      { kind: "cap", key: "max_demo_desks", label: "Exchange Connected - Demo Mode" },
+      { kind: "cap", key: "max_live_env_desks", label: "Exchange Connected - Live Mode" },
     ],
   },
   {
