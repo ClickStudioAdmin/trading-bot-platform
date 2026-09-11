@@ -64,11 +64,11 @@ export type PlanCapGroup = {
 export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
   {
     title: "Automation",
-    keys: [
-      "signals_inbound_webhooks",
-      "extras_advanced_dca",
-      "extras_templates",
-    ],
+    keys: ["extras_advanced_dca", "extras_templates"],
+  },
+  {
+    title: "Webhooks",
+    keys: ["signals_inbound_webhooks"],
   },
   {
     title: "Copy Trading",
@@ -112,7 +112,11 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
   },
   {
     title: "Automation",
-    keys: ["max_bots_per_desk", "max_inbound_webhooks"],
+    keys: ["max_bots_per_desk"],
+  },
+  {
+    title: "Webhooks",
+    keys: ["max_inbound_webhooks"],
   },
   {
     title: "Copy Trading",
@@ -362,10 +366,15 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   {
     title: "Automation",
     rows: [
-      { kind: "feature", key: "signals_inbound_webhooks", label: "Inbound webhooks" },
       { kind: "feature", key: "extras_advanced_dca", label: "Advanced DCA" },
       { kind: "feature", key: "extras_templates", label: "Templates" },
       { kind: "cap", key: "max_bots_per_desk", label: "Max bots per desk" },
+    ],
+  },
+  {
+    title: "Webhooks",
+    rows: [
+      { kind: "feature", key: "signals_inbound_webhooks", label: "Inbound webhooks" },
       { kind: "cap", key: "max_inbound_webhooks", label: "Max inbound webhooks" },
     ],
   },
