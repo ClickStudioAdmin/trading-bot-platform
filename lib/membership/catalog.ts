@@ -448,6 +448,13 @@ export function rowUnlockIndex(
       return plan.features[row.key];
     }
     if (row.kind === "cap") {
+      if (
+        row.key === "max_followers_accepted" &&
+        !plan.features.copy_share &&
+        !plan.features.copy_catalogue
+      ) {
+        return false;
+      }
       const value = plan.caps[row.key];
       return value === null || value > 0;
     }
@@ -475,6 +482,13 @@ export function comparePlanCell(
   }
   if (row.kind === "cap") {
     const value = plan.caps[row.key];
+    if (
+      row.key === "max_followers_accepted" &&
+      !plan.features.copy_share &&
+      !plan.features.copy_catalogue
+    ) {
+      return { kind: "cross" };
+    }
     if (value === 0) {
       return { kind: "cross" };
     }

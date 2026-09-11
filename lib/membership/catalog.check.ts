@@ -281,6 +281,28 @@ assert.equal(
   ).kind,
   "cross",
 );
+assert.equal(
+  comparePlanCell(
+    {
+      ...live,
+      features: emptyFeatures(),
+      caps: { ...emptyCaps(), max_followers_accepted: null },
+    },
+    { kind: "cap", key: "max_followers_accepted", label: "Max followers" },
+  ).kind,
+  "cross",
+);
+assert.deepEqual(
+  comparePlanCell(
+    {
+      ...live,
+      features: { ...emptyFeatures(), copy_share: true },
+      caps: { ...emptyCaps(), max_followers_accepted: null },
+    },
+    { kind: "cap", key: "max_followers_accepted", label: "Max followers" },
+  ),
+  { kind: "value", text: "Unlimited" },
+);
 
 const freePlan: MembershipPlan = {
   ...live,
