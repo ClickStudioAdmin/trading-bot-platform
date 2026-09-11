@@ -276,6 +276,109 @@ export function formatPlanCap(value: number | null): string {
   return value === null ? "Unlimited" : String(value);
 }
 
+export type PlanCompareSection = {
+  title: string;
+  rows: readonly PlanCompareRow[];
+};
+
+export type PlanCompareRow =
+  | { kind: "feature"; key: PlanFeatureKey; label: string }
+  | { kind: "cap"; key: PlanCapKey; label: string }
+  | { kind: "rate"; key: "l1" | "l2" | "l3"; label: string };
+
+export type PlanCompareCell =
+  | { kind: "tick" }
+  | { kind: "cross" }
+  | { kind: "value"; text: string };
+
+export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
+  {
+    title: "Desks",
+    rows: [
+      { kind: "feature", key: "desk_cash_and_carry", label: "Cash and Carry" },
+      { kind: "feature", key: "desk_perps", label: "Perps (ticket)" },
+      { kind: "feature", key: "desk_perps_bots", label: "Perps bots" },
+      { kind: "feature", key: "desk_signal_follower", label: "TradingView Strategy" },
+      { kind: "feature", key: "desk_dca", label: "DCA" },
+      { kind: "feature", key: "desk_scale_in", label: "Scale-in" },
+      { kind: "cap", key: "max_desks", label: "Max desks" },
+      { kind: "cap", key: "max_live_desks", label: "Max Live desks" },
+      { kind: "cap", key: "max_paper_desks", label: "Max Paper desks" },
+    ],
+  },
+  {
+    title: "Mode and venue",
+    rows: [
+      { kind: "feature", key: "mode_paper", label: "Paper desks" },
+      { kind: "feature", key: "mode_live", label: "Live / Connected desks" },
+      { kind: "feature", key: "venue_non_bybit", label: "Non-Bybit venues" },
+      { kind: "cap", key: "max_exchange_connections", label: "Max exchange connections" },
+    ],
+  },
+  {
+    title: "Copy trading",
+    rows: [
+      { kind: "feature", key: "copy_follow", label: "Follow a desk" },
+      { kind: "feature", key: "copy_share", label: "Share / list a desk" },
+      { kind: "feature", key: "copy_catalogue", label: "Public catalogue" },
+      { kind: "cap", key: "max_copy_follows", label: "Max copy follows" },
+      { kind: "cap", key: "max_followers_accepted", label: "Max followers when sharing" },
+    ],
+  },
+  {
+    title: "Research",
+    rows: [
+      { kind: "feature", key: "research_chart", label: "Positions Chart" },
+      { kind: "feature", key: "research_backtest", label: "Backtesting tool" },
+      { kind: "cap", key: "max_stored_backtests", label: "Max stored backtests" },
+      { kind: "cap", key: "max_backtest_bars", label: "Max backtest bar length" },
+    ],
+  },
+  {
+    title: "Signals and extras",
+    rows: [
+      { kind: "feature", key: "signals_inbound_webhooks", label: "Inbound webhooks" },
+      { kind: "feature", key: "extras_advanced_dca", label: "Advanced DCA" },
+      { kind: "feature", key: "extras_templates", label: "Templates" },
+      { kind: "feature", key: "extras_starter_pack", label: "Starter Pack apply" },
+      { kind: "cap", key: "max_bots_per_desk", label: "Max bots per desk" },
+      { kind: "cap", key: "max_inbound_webhooks", label: "Max inbound webhooks" },
+    ],
+  },
+  {
+    title: "Affiliate",
+    rows: [
+      { kind: "feature", key: "affiliate_enroll", label: "Affiliate enroll" },
+      { kind: "rate", key: "l1", label: "L1 commission" },
+      { kind: "rate", key: "l2", label: "L2 commission" },
+      { kind: "rate", key: "l3", label: "L3 commission" },
+      { kind: "cap", key: "affiliate_max_depth", label: "Earn depth" },
+    ],
+  },
+];
+
+export function comparePlanCell(
+  plan: Pick<
+    MembershipPlan,
+    "features" | "caps" | "affiliateL1Pct" | "affiliateL2Pct" | "affiliateL3Pct"
+  >,
+  row: PlanCompareRow,
+): PlanCompareCell {
+  if (row.kind === "feature") {
+    return plan.features[row.key] ? { kind: "tick" } : { kind: "cross" };
+  }
+  if (row.kind === "cap") {
+    return { kind: "value", text: formatPlanCap(plan.caps[row.key]) };
+  }
+  const pct =
+    row.key === "l1"
+      ? plan.affiliateL1Pct
+      : row.key === "l2"
+        ? plan.affiliateL2Pct
+        : plan.affiliateL3Pct;
+  return { kind: "value", text: `${pct}%` };
+}
+
 export function publicCatalogPlans(
   plans: MembershipPlan[],
 ): MembershipPlan[] {

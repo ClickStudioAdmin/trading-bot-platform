@@ -3,12 +3,14 @@ import {
   affiliateRatesOk,
   canArchivePlan,
   canDeletePlan,
+  comparePlanCell,
   emptyCaps,
   emptyFeatures,
   formatPlanCap,
   formatPlanPrice,
   parseCaps,
   parseFeatures,
+  PLAN_COMPARE_SECTIONS,
   publicCatalogPlans,
   slugifyPlanName,
   type MembershipPlan,
@@ -120,6 +122,39 @@ const live: MembershipPlan = {
 assert.deepEqual(
   publicCatalogPlans([archived, live]).map((plan) => plan.slug),
   ["plus"],
+);
+
+const desks = PLAN_COMPARE_SECTIONS.find((section) => section.title === "Desks");
+assert.ok(desks);
+assert.equal(desks.rows[0].kind, "feature");
+assert.equal(desks.rows.some((row) => row.kind === "cap" && row.key === "max_desks"), true);
+assert.equal(
+  comparePlanCell(
+    { ...live, features: { ...emptyFeatures(), desk_dca: true }, caps: { ...emptyCaps(), max_desks: 2 } },
+    { kind: "feature", key: "desk_dca", label: "DCA" },
+  ).kind,
+  "tick",
+);
+assert.equal(
+  comparePlanCell(
+    { ...live, features: emptyFeatures(), caps: emptyCaps() },
+    { kind: "feature", key: "mode_live", label: "Live" },
+  ).kind,
+  "cross",
+);
+assert.deepEqual(
+  comparePlanCell(
+    { ...live, features: emptyFeatures(), caps: { ...emptyCaps(), max_desks: 2 } },
+    { kind: "cap", key: "max_desks", label: "Max desks" },
+  ),
+  { kind: "value", text: "2" },
+);
+assert.deepEqual(
+  comparePlanCell(
+    { ...live, features: emptyFeatures(), caps: emptyCaps(), affiliateL1Pct: 20 },
+    { kind: "rate", key: "l1", label: "L1" },
+  ),
+  { kind: "value", text: "20%" },
 );
 
 console.log("membership catalog checks passed");
