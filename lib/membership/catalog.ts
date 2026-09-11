@@ -1,5 +1,7 @@
 export const PLAN_NAME_MAX = 40;
-export const AFFILIATE_LEVEL_MAX = 3;
+export const AFFILIATE_LEVEL_MAX = 5;
+export const AFFILIATE_RATE_KEYS = ["l1", "l2", "l3", "l4", "l5"] as const;
+export type AffiliateRateKey = (typeof AFFILIATE_RATE_KEYS)[number];
 export const AFFILIATE_PCT_MAX = 100;
 
 export const PLAN_FEATURE_KEYS = [
@@ -28,11 +30,15 @@ export type PlanFeatureKey = (typeof PLAN_FEATURE_KEYS)[number];
 export type PlanFeatures = Record<PlanFeatureKey, boolean>;
 
 export const PLAN_CAP_KEYS = [
+  "max_desk_cash_and_carry",
+  "max_desk_perps",
+  "max_desk_perps_bots",
+  "max_desk_signal_follower",
+  "max_desk_dca",
   "max_paper_desks",
   "max_live_desks",
   "max_demo_desks",
   "max_live_env_desks",
-  "max_exchange_connections",
   "max_bots_per_desk",
   "max_inbound_webhooks",
   "max_copy_follows",
@@ -56,21 +62,6 @@ export type PlanCapGroup = {
 };
 
 export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
-  {
-    title: "Desk Types",
-    keys: [
-      "desk_cash_and_carry",
-      "desk_perps",
-      "desk_perps_bots",
-      "desk_signal_follower",
-      "desk_dca",
-      "desk_scale_in",
-    ],
-  },
-  {
-    title: "Desk Resources",
-    keys: ["mode_paper", "mode_live"],
-  },
   {
     title: "Automation",
     keys: [
@@ -99,13 +90,24 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
 
 export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
   {
+    title: "Manual Desks",
+    keys: ["max_desk_perps", "max_desk_cash_and_carry"],
+  },
+  {
+    title: "Automated Desks",
+    keys: [
+      "max_desk_perps_bots",
+      "max_desk_signal_follower",
+      "max_desk_dca",
+    ],
+  },
+  {
     title: "Desk Resources",
     keys: [
       "max_paper_desks",
       "max_live_desks",
       "max_demo_desks",
       "max_live_env_desks",
-      "max_exchange_connections",
     ],
   },
   {
@@ -128,7 +130,7 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
 
 export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   desk_cash_and_carry: "Cash and Carry",
-  desk_perps: "Manual Trading (perps)",
+  desk_perps: "Perps",
   desk_perps_bots: "Perps bots",
   desk_signal_follower: "TradingView Strategy",
   desk_dca: "DCA",
@@ -149,18 +151,22 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
 };
 
 export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
+  max_desk_cash_and_carry: "Cash and Carry",
+  max_desk_perps: "Perps",
+  max_desk_perps_bots: "Perps bots",
+  max_desk_signal_follower: "TradingView Strategy",
+  max_desk_dca: "DCA",
   max_paper_desks: "Max Paper desks",
   max_live_desks: "Max Live desks",
   max_demo_desks: "Max Demo desks",
   max_live_env_desks: "Max Live-environment desks",
-  max_exchange_connections: "Max exchange connections",
   max_bots_per_desk: "Max bots / playbooks per desk",
   max_inbound_webhooks: "Max inbound webhooks",
   max_copy_follows: "Max copy follows",
   max_followers_accepted: "Max followers when sharing",
   max_stored_backtests: "Max stored backtests",
   max_backtest_bars: "Max backtest bar length",
-  affiliate_max_depth: "Affiliate earn depth (1–3)",
+  affiliate_max_depth: "Affiliate earn depth (1–5)",
 };
 
 export type MembershipPlan = {
@@ -176,6 +182,8 @@ export type MembershipPlan = {
   affiliateL1Pct: number;
   affiliateL2Pct: number;
   affiliateL3Pct: number;
+  affiliateL4Pct: number;
+  affiliateL5Pct: number;
   features: PlanFeatures;
   caps: PlanCaps;
   createdAt: string;
@@ -230,15 +238,43 @@ export function parseCapValue(value: unknown): number | null {
   return n;
 }
 
-export function affiliatePctSum(l1: number, l2: number, l3: number): number {
-  return l1 + l2 + l3;
+export type PlanAffiliateRates = Pick<
+  MembershipPlan,
+  | "affiliateL1Pct"
+  | "affiliateL2Pct"
+  | "affiliateL3Pct"
+  | "affiliateL4Pct"
+  | "affiliateL5Pct"
+>;
+
+export function planAffiliateRate(
+  plan: PlanAffiliateRates,
+  key: AffiliateRateKey,
+): number {
+  if (key === "l1") {
+    return plan.affiliateL1Pct;
+  }
+  if (key === "l2") {
+    return plan.affiliateL2Pct;
+  }
+  if (key === "l3") {
+    return plan.affiliateL3Pct;
+  }
+  if (key === "l4") {
+    return plan.affiliateL4Pct;
+  }
+  return plan.affiliateL5Pct;
 }
 
-export function affiliateRatesOk(l1: number, l2: number, l3: number): boolean {
-  if ([l1, l2, l3].some((n) => !Number.isFinite(n) || n < 0 || n > AFFILIATE_PCT_MAX)) {
+export function affiliatePctSum(...pcts: number[]): number {
+  return pcts.reduce((sum, n) => sum + n, 0);
+}
+
+export function affiliateRatesOk(...pcts: number[]): boolean {
+  if (pcts.some((n) => !Number.isFinite(n) || n < 0 || n > AFFILIATE_PCT_MAX)) {
     return false;
   }
-  return affiliatePctSum(l1, l2, l3) <= AFFILIATE_PCT_MAX;
+  return affiliatePctSum(...pcts) <= AFFILIATE_PCT_MAX;
 }
 
 export function planIsArchived(plan: Pick<MembershipPlan, "archivedAt">): boolean {
@@ -291,7 +327,7 @@ export type PlanCompareSection = {
 export type PlanCompareRow =
   | { kind: "feature"; key: PlanFeatureKey; label: string }
   | { kind: "cap"; key: PlanCapKey; label: string }
-  | { kind: "rate"; key: "l1" | "l2" | "l3"; label: string };
+  | { kind: "rate"; key: AffiliateRateKey; label: string };
 
 export type PlanCompareCell =
   | { kind: "tick" }
@@ -300,26 +336,27 @@ export type PlanCompareCell =
 
 export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   {
-    title: "Desk Types",
+    title: "Manual Desks",
     rows: [
-      { kind: "feature", key: "desk_cash_and_carry", label: "Cash and Carry" },
-      { kind: "feature", key: "desk_perps", label: "Manual Trading (perps)" },
-      { kind: "feature", key: "desk_perps_bots", label: "Perps bots" },
-      { kind: "feature", key: "desk_signal_follower", label: "TradingView Strategy" },
-      { kind: "feature", key: "desk_dca", label: "DCA" },
-      { kind: "feature", key: "desk_scale_in", label: "Scale-in" },
+      { kind: "cap", key: "max_desk_perps", label: "Perps" },
+      { kind: "cap", key: "max_desk_cash_and_carry", label: "Cash and Carry" },
+    ],
+  },
+  {
+    title: "Automated Desks",
+    rows: [
+      { kind: "cap", key: "max_desk_perps_bots", label: "Perps bots" },
+      { kind: "cap", key: "max_desk_signal_follower", label: "TradingView Strategy" },
+      { kind: "cap", key: "max_desk_dca", label: "DCA" },
     ],
   },
   {
     title: "Desk Resources",
     rows: [
-      { kind: "feature", key: "mode_paper", label: "Paper desks" },
-      { kind: "feature", key: "mode_live", label: "Live / Connected desks" },
       { kind: "cap", key: "max_paper_desks", label: "Max Paper desks" },
       { kind: "cap", key: "max_live_desks", label: "Max Live desks" },
       { kind: "cap", key: "max_demo_desks", label: "Max Demo desks" },
       { kind: "cap", key: "max_live_env_desks", label: "Max Live-environment desks" },
-      { kind: "cap", key: "max_exchange_connections", label: "Max exchange connections" },
     ],
   },
   {
@@ -353,20 +390,22 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   },
   {
     title: "Affiliates",
+    fixedOrder: true,
     rows: [
+      { kind: "cap", key: "affiliate_max_depth", label: "Earn depth" },
       { kind: "rate", key: "l1", label: "L1 commission" },
       { kind: "rate", key: "l2", label: "L2 commission" },
       { kind: "rate", key: "l3", label: "L3 commission" },
-      { kind: "cap", key: "affiliate_max_depth", label: "Earn depth" },
+      { kind: "rate", key: "l4", label: "L4 commission" },
+      { kind: "rate", key: "l5", label: "L5 commission" },
     ],
   },
 ];
 
+type ComparePlan = Pick<MembershipPlan, "features" | "caps"> & PlanAffiliateRates;
+
 export function rowUnlockIndex(
-  plans: readonly Pick<
-    MembershipPlan,
-    "features" | "caps" | "affiliateL1Pct" | "affiliateL2Pct" | "affiliateL3Pct"
-  >[],
+  plans: readonly ComparePlan[],
   row: PlanCompareRow,
 ): number {
   const index = plans.findIndex((plan) => {
@@ -377,22 +416,13 @@ export function rowUnlockIndex(
       const value = plan.caps[row.key];
       return value === null || value > 0;
     }
-    const pct =
-      row.key === "l1"
-        ? plan.affiliateL1Pct
-        : row.key === "l2"
-          ? plan.affiliateL2Pct
-          : plan.affiliateL3Pct;
-    return pct > 0;
+    return planAffiliateRate(plan, row.key) > 0;
   });
   return index === -1 ? plans.length : index;
 }
 
 export function sortCompareSectionRows(
-  plans: readonly Pick<
-    MembershipPlan,
-    "features" | "caps" | "affiliateL1Pct" | "affiliateL2Pct" | "affiliateL3Pct"
-  >[],
+  plans: readonly ComparePlan[],
   rows: readonly PlanCompareRow[],
 ): PlanCompareRow[] {
   return rows
@@ -402,10 +432,7 @@ export function sortCompareSectionRows(
 }
 
 export function comparePlanCell(
-  plan: Pick<
-    MembershipPlan,
-    "features" | "caps" | "affiliateL1Pct" | "affiliateL2Pct" | "affiliateL3Pct"
-  >,
+  plan: ComparePlan,
   row: PlanCompareRow,
 ): PlanCompareCell {
   if (row.kind === "feature") {
@@ -418,12 +445,7 @@ export function comparePlanCell(
     }
     return { kind: "value", text: formatPlanCap(value) };
   }
-  const pct =
-    row.key === "l1"
-      ? plan.affiliateL1Pct
-      : row.key === "l2"
-        ? plan.affiliateL2Pct
-        : plan.affiliateL3Pct;
+  const pct = planAffiliateRate(plan, row.key);
   if (pct === 0) {
     return { kind: "cross" };
   }

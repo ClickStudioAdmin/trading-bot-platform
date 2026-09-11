@@ -104,10 +104,10 @@ export function AdminPlanForm({
           Affiliate rates
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Percent of a referred member’s subscription invoice. L1 + L2 + L3
-          cannot exceed 100.
+          Percent of a referred member’s subscription invoice. L1 through L5
+          cannot exceed 100 combined.
         </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <div className="mt-4 grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <PctField
             name="affiliateL1Pct"
             label="L1 %"
@@ -122,6 +122,16 @@ export function AdminPlanForm({
             name="affiliateL3Pct"
             label="L3 %"
             defaultValue={plan?.affiliateL3Pct ?? 0}
+          />
+          <PctField
+            name="affiliateL4Pct"
+            label="L4 %"
+            defaultValue={plan?.affiliateL4Pct ?? 0}
+          />
+          <PctField
+            name="affiliateL5Pct"
+            label="L5 %"
+            defaultValue={plan?.affiliateL5Pct ?? 0}
           />
         </div>
       </section>

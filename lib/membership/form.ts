@@ -24,6 +24,8 @@ export type PlanFormValues = {
   affiliateL1Pct: number;
   affiliateL2Pct: number;
   affiliateL3Pct: number;
+  affiliateL4Pct: number;
+  affiliateL5Pct: number;
   features: PlanFeatures;
   caps: PlanCaps;
 };
@@ -93,17 +95,16 @@ export function parsePlanForm(formData: FormData): PlanFormResult {
   const l1 = readPct(formData, "affiliateL1Pct");
   const l2 = readPct(formData, "affiliateL2Pct");
   const l3 = readPct(formData, "affiliateL3Pct");
-  if (l1 === null || l2 === null || l3 === null) {
+  const l4 = readPct(formData, "affiliateL4Pct");
+  const l5 = readPct(formData, "affiliateL5Pct");
+  if (l1 === null || l2 === null || l3 === null || l4 === null || l5 === null) {
     return { ok: false, error: "Affiliate percents must be numbers." };
   }
-  if (!affiliateRatesOk(l1, l2, l3)) {
+  if (!affiliateRatesOk(l1, l2, l3, l4, l5)) {
     return {
       ok: false,
-      error: `Affiliate L1–L3 must each be 0–${AFFILIATE_PCT_MAX} and cannot add up to more than ${AFFILIATE_PCT_MAX}%.`,
+      error: `Affiliate L1–L${AFFILIATE_LEVEL_MAX} must each be 0–${AFFILIATE_PCT_MAX} and cannot add up to more than ${AFFILIATE_PCT_MAX}%.`,
     };
-  }
-  if (l3 > 0 && AFFILIATE_LEVEL_MAX < 3) {
-    return { ok: false, error: "Affiliate depth cannot exceed 3." };
   }
 
   const stripeRaw = readString(formData, "stripePriceId");
@@ -129,7 +130,10 @@ export function parsePlanForm(formData: FormData): PlanFormResult {
       };
     }
     if (key === "affiliate_max_depth" && parsed > AFFILIATE_LEVEL_MAX) {
-      return { ok: false, error: "Affiliate earn depth cannot be more than 3." };
+      return {
+        ok: false,
+        error: `Affiliate earn depth cannot be more than ${AFFILIATE_LEVEL_MAX}.`,
+      };
     }
     caps[key] = parsed;
   }
@@ -147,6 +151,8 @@ export function parsePlanForm(formData: FormData): PlanFormResult {
       affiliateL1Pct: l1,
       affiliateL2Pct: l2,
       affiliateL3Pct: l3,
+      affiliateL4Pct: l4,
+      affiliateL5Pct: l5,
       features,
       caps,
     },

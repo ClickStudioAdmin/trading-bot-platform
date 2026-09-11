@@ -20,12 +20,12 @@ Enough Free to test (Paper, a small desk cap, core Perps/DCA, Chart). Named upgr
 | --- | --- | --- | --- |
 | 1 | Docs | Agent | This file is the phase. Roadmap item 5 is the combined commercial stack. Cross-refs updated. **In repo 11 Sep 2026.** Stop. |
 | 2 | Schema | Agent | Migrations: plans (archive, features, caps, per-plan L1/L2/L3 %), `members.plan_id` + billing fields, processor-agnostic invoices, USD credit ledger, referral tree, commission rows, payouts, program settings. Existing members land on seed **Free**. No Stripe SDK yet if it can wait for step 5. Push `develop` to migrate. **In repo 11 Sep 2026.** |
-| 3 | Admin plans | Agent | `/admin/plans` create/edit/archive; `/account/plans` public catalog. Seed Free / Plus / Pro. L1+L2+L3 cannot exceed 100%. **In repo 11 Sep 2026.** |
+| 3 | Admin plans | Agent | `/admin/plans` create/edit/archive; `/account/plans` public catalog. Seed Free / Plus / Pro. L1–L5 cannot exceed 100%. **In repo 11 Sep 2026.** |
 | 4 | Entitlements + Upgrade UX | Agent | `assertEntitlement` on create desk, Live, copy, backtest, enroll, caps. Surfaces stay visible; controls disable; page/inline **Upgrade** names the cheapest public plan that unlocks it. Cap notice: “You have 2 of 2 desks. Upgrade to add another.” `/account/billing` shell (plan, invoices placeholder). Server actions reject. |
 | 5 | Stripe cards | Agent | Test keys on `develop`, live on `main`. Checkout upgrade, Customer Portal, idempotent webhooks (`checkout.session.completed`, `customer.subscription.updated`, invoice paid/refunded). One collection method per member. Comp plan from admin (no commission invoice). |
 | 6 | Credit wallet | Agent | Unique deposit address per member. Admin-listed majors and EVM nets (incl. Arbitrum). Quote → confirm → **USD credit** (not a multi-currency wallet). Billing tick deducts plan price. Leftover stays. Withdraw leftover as **USDT** only, ≥ min payout, no arrears. Treasury keys on a billing worker only. |
 | 7 | Downgrade grace | Agent | Entitlements change at period end. Admin grace days (default 7). Banner + operable extras. After grace, billing worker Close/Disable **oldest desk first**: forbidden features, then numeric caps. Upgrade during grace cancels the sweep. Ledgers stay. |
-| 8 | Affiliate program admin | Agent | `/admin/affiliates`: max depth (default 2, hard cap 3), hold days (default 30), min payout, USDT networks, payout queue (export mark-paid, approve/reject withdraw). Rates stay on each plan row. |
+| 8 | Affiliate program admin | Agent | `/admin/affiliates`: max depth (default 2, hard cap 5), hold days (default 30), min payout, USDT networks, payout queue (export mark-paid, approve/reject withdraw). Rates stay on each plan row. |
 | 9 | Affiliate portal | Agent | `HEADER_LINKS` after Backtesting Tool → `/account/affiliates`. Referral kit, downline list (no private data), org chart, stats tiles. Never-enrolled = teaser + Upgrade. Lost enroll = full view, actions disabled, keep earning at last paid enroll-plan rates. Optional referral code on signup. |
 | 10 | Commissions + payouts | Agent | Invoice → pending hold → payable (refund in hold = no earn). Per-plan %; snapshot last enroll plan if enroll is off. Withdraw locks: enroll on, no arrears, ≥ min. USDT out only. Tables ready for Stripe Connect later. Gas deducted from the send or covered by the minimum. |
 | 11 | Desk test | Click | Free gates visible/disabled. Upgrade Stripe test. Crypto top-up + leftover debit. Affiliate list/chart/stats. Hold then withdraw. Downgrade grace then oldest-first exit. Archive a used plan (cannot delete). |
@@ -38,7 +38,7 @@ Stop after each micro-step until Click says go. Next is step 4 (entitlements + U
 
 Admin creates named tiers at `/admin/plans`. Code reads entitlements only — no hardcoded “Pro” except the seed rows.
 
-Each plan: name, sort, public (upgrade catalog), price (`0` = Free), Stripe price id, **L1/L2/L3 affiliate %**, feature flags, numeric caps (empty = unlimited).
+Each plan: name, sort, public (upgrade catalog), price (`0` = Free), Stripe price id, **L1–L5 affiliate %**, feature flags, numeric caps (empty = unlimited).
 
 **Archive, do not delete** once any member is or was on that plan. Archived: hidden from public upgrade, no new checkout, existing members stay until they change. Admin can un-archive. A never-used draft may be deleted.
 
@@ -54,9 +54,7 @@ Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until r
 
 ### Features (on / off)
 
-Desk types: Cash and Carry, Manual Trading (perps), Perps bots, TradingView Strategy, DCA, Scale-in (off until that desk type exists).
-
-Mode and venue: Paper, Live / Connected, extra venues after Bybit (one flag per registry venue, or “non-Bybit venues”).
+Desk types are numeric caps, not ticks. **Manual Desks:** Perps, Cash and Carry. **Automated Desks:** Perps bots, TradingView Strategy, DCA. Empty = unlimited. Scale-in stays off the catalog until that desk type exists.
 
 Copy: follow, share/list, appear in the public catalogue.
 
@@ -70,7 +68,7 @@ Affiliate: enroll + referral code; earn multi-level (implies enroll); see downli
 
 ### Resource caps
 
-Max Paper desks, max Live / Connected desks (any environment), max Demo desks, max Live-environment desks, max exchange connections, max bots/playbooks per desk, max inbound webhooks, max copy follows, max followers when sharing, max stored backtests, max backtest bar-length or pairs, optional per-plan earn depth (capped by program max). No combined max-desks total. Demo covers exchange Demo / Testnet; Live-environment is exchange Live. Environment caps sit inside the Live / Connected total.
+Per desk type: max Perps, Cash and Carry, Perps bots, TradingView Strategy, DCA. Also max Paper desks, max Live desks (any environment), max Demo desks, max Live-environment desks, max bots/playbooks per desk, max inbound webhooks, max copy follows, max followers when sharing, max stored backtests, max backtest bar-length or pairs, optional per-plan earn depth (capped by program max). No combined max-desks total, no max exchange connections, and no Paper / Live ticks. Demo covers exchange Demo / Testnet; Live-environment is exchange Live. Environment caps sit inside the Live total.
 
 ### Gates
 
@@ -117,7 +115,7 @@ Header, right of Backtesting Tool: Copy Trading · Backtesting Tool · **Affilia
 
 Attribution: first-touch referral code (optional cookie later with the marketing site). Locked when the referred member first **pays**. Free attributed signups do not pay commission until the first paid invoice. No self-referral, no cycles. Instant enroll when the plan allows. Comp / admin-granted plans do not create a commission invoice.
 
-**Rates are per plan** (L1 / L2 / L3). Higher plans can earn more. New invoices use the referrer’s current plan rates, or the last-enroll snapshot if enroll is off. Rate edits apply to new invoices only. Program **max depth** default 2, hard cap 3. A plan may zero L2/L3.
+**Rates are per plan** (L1–L5). Higher plans can earn more. New invoices use the referrer’s current plan rates, or the last-enroll snapshot if enroll is off. Rate edits apply to new invoices only. Program **max depth** default 2, hard cap 5. A plan may zero L2–L5.
 
 **Hold then earn.** Commission starts pending for admin hold days (default **30**). Refund / chargeback / wallet reversal in the hold → never payable. After the hold, payable. Do not edit a paid row in place.
 

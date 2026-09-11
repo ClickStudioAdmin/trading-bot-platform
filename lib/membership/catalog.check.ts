@@ -34,6 +34,8 @@ assert.equal(affiliateRatesOk(20, 5, 0), true);
 assert.equal(affiliateRatesOk(80, 20, 1), false);
 assert.equal(affiliateRatesOk(-1, 0, 0), false);
 assert.equal(affiliateRatesOk(20, 5, 80), false);
+assert.equal(affiliateRatesOk(10, 10, 10, 10, 10), true);
+assert.equal(affiliateRatesOk(20, 20, 20, 20, 21), false);
 
 assert.equal(slugifyPlanName(" Plus Plan "), "plus-plan");
 assert.equal(formatPlanPrice(0), "Free");
@@ -111,6 +113,8 @@ const archived: MembershipPlan = {
   affiliateL1Pct: 0,
   affiliateL2Pct: 0,
   affiliateL3Pct: 0,
+  affiliateL4Pct: 0,
+  affiliateL5Pct: 0,
   features: emptyFeatures(),
   caps: emptyCaps(),
   createdAt: "2026-09-11T00:00:00Z",
@@ -132,7 +136,15 @@ assert.deepEqual(
 
 assert.deepEqual(
   PLAN_COMPARE_SECTIONS.map((section) => section.title),
-  ["Desk Types", "Desk Resources", "Automation", "Copy Trading", "Backtesting", "Affiliates"],
+  [
+    "Manual Desks",
+    "Automated Desks",
+    "Desk Resources",
+    "Automation",
+    "Copy Trading",
+    "Backtesting",
+    "Affiliates",
+  ],
 );
 const compareFeatureKeys = PLAN_COMPARE_SECTIONS.flatMap((section) =>
   section.rows.filter((row) => row.kind === "feature").map((row) => row.key),
@@ -145,6 +157,14 @@ const hiddenCompareFeatures = new Set<string>([
   "extras_starter_pack",
   "venue_non_bybit",
   "affiliate_enroll",
+  "mode_paper",
+  "mode_live",
+  "desk_cash_and_carry",
+  "desk_perps",
+  "desk_perps_bots",
+  "desk_signal_follower",
+  "desk_dca",
+  "desk_scale_in",
 ]);
 assert.equal(
   compareFeatureKeys.some((key) => hiddenCompareFeatures.has(key)),
@@ -155,19 +175,24 @@ assert.deepEqual(
   [...PLAN_FEATURE_KEYS].filter((key) => !hiddenCompareFeatures.has(key)).sort(),
 );
 assert.deepEqual([...compareCapKeys].sort(), [...PLAN_CAP_KEYS].sort());
-const deskTypes = PLAN_COMPARE_SECTIONS.find(
-  (section) => section.title === "Desk Types",
+const manualDesks = PLAN_COMPARE_SECTIONS.find(
+  (section) => section.title === "Manual Desks",
 );
-assert.ok(deskTypes);
-assert.equal(deskTypes.rows[0].kind, "feature");
+assert.ok(manualDesks);
+assert.equal(manualDesks.rows[0].kind, "cap");
+assert.equal(manualDesks.rows[0].key, "max_desk_perps");
 assert.equal(
-  deskTypes.rows.some((row) => row.kind === "feature" && row.key === "desk_perps"),
-  true,
-);
-assert.equal(
-  deskTypes.rows.find((row) => row.kind === "feature" && row.key === "desk_perps")
+  manualDesks.rows.find((row) => row.kind === "cap" && row.key === "max_desk_perps")
     ?.label,
-  "Manual Trading (perps)",
+  "Perps",
+);
+const automatedDesks = PLAN_COMPARE_SECTIONS.find(
+  (section) => section.title === "Automated Desks",
+);
+assert.ok(automatedDesks);
+assert.equal(
+  automatedDesks.rows.some((row) => row.kind === "cap" && row.key === "max_desk_dca"),
+  true,
 );
 const deskResources = PLAN_COMPARE_SECTIONS.find(
   (section) => section.title === "Desk Resources",
@@ -191,7 +216,7 @@ assert.equal(
 );
 assert.equal(
   deskResources.rows.some((row) => row.kind === "feature" && row.key === "mode_live"),
-  true,
+  false,
 );
 const backtesting = PLAN_COMPARE_SECTIONS.find(
   (section) => section.title === "Backtesting",
@@ -200,6 +225,13 @@ assert.ok(backtesting);
 assert.equal(backtesting.fixedOrder, true);
 assert.equal(backtesting.rows[0].kind, "feature");
 assert.equal(backtesting.rows[0].key, "research_backtest");
+const affiliates = PLAN_COMPARE_SECTIONS.find(
+  (section) => section.title === "Affiliates",
+);
+assert.ok(affiliates);
+assert.equal(affiliates.fixedOrder, true);
+assert.equal(affiliates.rows[0].kind, "cap");
+assert.equal(affiliates.rows[0].key, "affiliate_max_depth");
 assert.equal(
   comparePlanCell(
     { ...live, features: { ...emptyFeatures(), desk_dca: true }, caps: { ...emptyCaps(), max_paper_desks: 2 } },
