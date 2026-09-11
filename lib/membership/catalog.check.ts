@@ -8,6 +8,7 @@ import {
   sortCompareSectionRows,
   emptyCaps,
   emptyFeatures,
+  formatBacktestTimeframe,
   formatPlanCap,
   formatPlanPrice,
   parseCaps,
@@ -42,6 +43,9 @@ assert.equal(formatPlanPrice(0), "Free");
 assert.equal(formatPlanPrice(29), "$29 / month");
 assert.equal(formatPlanCap(null), "Unlimited");
 assert.equal(formatPlanCap(2), "2");
+assert.equal(formatBacktestTimeframe(null), "Unlimited");
+assert.equal(formatBacktestTimeframe(1), "1 year");
+assert.equal(formatBacktestTimeframe(3), "3 years");
 
 const unused = {
   isDefault: false,
@@ -140,6 +144,7 @@ assert.deepEqual(
     "Manual Desks",
     "Automated Desks",
     "Desk Resources",
+    "Bot Templates",
     "Webhooks",
     "Copy Trading",
     "Backtesting",

@@ -19,9 +19,11 @@ export const PLAN_FEATURE_KEYS = [
   "copy_catalogue",
   "research_chart",
   "research_backtest",
+  "research_backtest_attach_templates",
   "signals_inbound_webhooks",
   "extras_advanced_dca",
   "extras_templates",
+  "extras_share_templates",
   "extras_starter_pack",
   "affiliate_enroll",
 ] as const;
@@ -43,7 +45,7 @@ export const PLAN_CAP_KEYS = [
   "max_copy_follows",
   "max_followers_accepted",
   "max_stored_backtests",
-  "max_backtest_bars",
+  "max_backtest_years",
   "affiliate_max_depth",
 ] as const;
 
@@ -75,8 +77,8 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
     ],
   },
   {
-    title: "Desk Resources",
-    keys: ["extras_templates"],
+    title: "Bot Templates",
+    keys: ["extras_templates", "extras_share_templates"],
   },
   {
     title: "Webhooks",
@@ -84,11 +86,11 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
   },
   {
     title: "Copy Trading",
-    keys: ["copy_follow", "copy_share", "copy_catalogue"],
+    keys: ["copy_share", "copy_follow", "copy_catalogue"],
   },
   {
     title: "Backtesting",
-    keys: ["research_backtest"],
+    keys: ["research_backtest", "research_backtest_attach_templates"],
   },
   {
     title: "Affiliates",
@@ -133,7 +135,7 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
   },
   {
     title: "Backtesting",
-    keys: ["max_stored_backtests", "max_backtest_bars"],
+    keys: ["max_stored_backtests", "max_backtest_years"],
   },
   {
     title: "Affiliates",
@@ -152,13 +154,15 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   mode_live: "Live / Connected desks",
   venue_non_bybit: "Non-Bybit venues",
   copy_follow: "Follow a desk",
-  copy_share: "Share / list a desk",
-  copy_catalogue: "Appear in the public catalogue",
+  copy_share: "Private Sharing",
+  copy_catalogue: "Public sharing",
   research_chart: "Positions Chart",
   research_backtest: "Backtesting tool",
+  research_backtest_attach_templates: "Attach results to Bot templates",
   signals_inbound_webhooks: "Inbound TradingView / Signal webhooks",
   extras_advanced_dca: "Advanced DCA (Confirm, Exit-if, ATR)",
-  extras_templates: "Save Bot templates",
+  extras_templates: "Save Templates",
+  extras_share_templates: "Share Templates",
   extras_starter_pack: "Starter Pack apply",
   affiliate_enroll: "Affiliate enroll",
 };
@@ -177,7 +181,7 @@ export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
   max_copy_follows: "Max copy follows",
   max_followers_accepted: "Max followers when sharing",
   max_stored_backtests: "Max stored backtests",
-  max_backtest_bars: "Max backtest bar length",
+  max_backtest_years: "Max Backtest timeframe (years)",
   affiliate_max_depth: "Affiliate earn depth (1–5)",
 };
 
@@ -329,6 +333,13 @@ export function formatPlanCap(value: number | null): string {
   return value === null ? "Unlimited" : String(value);
 }
 
+export function formatBacktestTimeframe(value: number | null): string {
+  if (value === null) {
+    return "Unlimited";
+  }
+  return value === 1 ? "1 year" : `${value} years`;
+}
+
 export type PlanCompareSection = {
   title: string;
   rows: readonly PlanCompareRow[];
@@ -371,7 +382,13 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
       { kind: "cap", key: "max_paper_desks", label: "Paper Desks" },
       { kind: "cap", key: "max_demo_desks", label: "Exchange Connected Desks (Demo Mode)" },
       { kind: "cap", key: "max_live_env_desks", label: "Exchange Connected Desks (Live Mode)" },
-      { kind: "feature", key: "extras_templates", label: "Save Bot templates" },
+    ],
+  },
+  {
+    title: "Bot Templates",
+    rows: [
+      { kind: "feature", key: "extras_templates", label: "Save Templates" },
+      { kind: "feature", key: "extras_share_templates", label: "Share Templates" },
     ],
   },
   {
@@ -383,10 +400,11 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   },
   {
     title: "Copy Trading",
+    fixedOrder: true,
     rows: [
+      { kind: "feature", key: "copy_share", label: "Private Sharing" },
       { kind: "feature", key: "copy_follow", label: "Follow a desk" },
-      { kind: "feature", key: "copy_share", label: "Share / list a desk" },
-      { kind: "feature", key: "copy_catalogue", label: "Public catalogue" },
+      { kind: "feature", key: "copy_catalogue", label: "Public sharing" },
       { kind: "cap", key: "max_copy_follows", label: "Max copy follows" },
       { kind: "cap", key: "max_followers_accepted", label: "Max followers when sharing" },
     ],
@@ -396,8 +414,9 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     fixedOrder: true,
     rows: [
       { kind: "feature", key: "research_backtest", label: "Backtesting tool" },
+      { kind: "feature", key: "research_backtest_attach_templates", label: "Attach results to Bot templates" },
       { kind: "cap", key: "max_stored_backtests", label: "Max stored backtests" },
-      { kind: "cap", key: "max_backtest_bars", label: "Max backtest bar length" },
+      { kind: "cap", key: "max_backtest_years", label: "Max Backtest timeframe" },
     ],
   },
   {
@@ -454,6 +473,9 @@ export function comparePlanCell(
     const value = plan.caps[row.key];
     if (value === 0) {
       return { kind: "cross" };
+    }
+    if (row.key === "max_backtest_years") {
+      return { kind: "value", text: formatBacktestTimeframe(value) };
     }
     return { kind: "value", text: formatPlanCap(value) };
   }
