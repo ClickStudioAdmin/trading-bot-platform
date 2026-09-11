@@ -407,7 +407,11 @@ export function comparePlanCell(
     return plan.features[row.key] ? { kind: "tick" } : { kind: "cross" };
   }
   if (row.kind === "cap") {
-    return { kind: "value", text: formatPlanCap(plan.caps[row.key]) };
+    const value = plan.caps[row.key];
+    if (value === 0) {
+      return { kind: "cross" };
+    }
+    return { kind: "value", text: formatPlanCap(value) };
   }
   const pct =
     row.key === "l1"
@@ -415,6 +419,9 @@ export function comparePlanCell(
       : row.key === "l2"
         ? plan.affiliateL2Pct
         : plan.affiliateL3Pct;
+  if (pct === 0) {
+    return { kind: "cross" };
+  }
   return { kind: "value", text: `${pct}%` };
 }
 

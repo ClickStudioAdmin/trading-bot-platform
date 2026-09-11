@@ -44,45 +44,47 @@ export function MembershipPlanCards({
   const blocks = compareBlocks(plans);
 
   return (
-    <div
-      className="mt-6 grid overflow-x-auto"
-      style={{
-        gridTemplateColumns: `minmax(12.5rem, 15rem) repeat(${plans.length}, minmax(11rem, 1fr))`,
-        gridTemplateRows: `repeat(${blocks.length}, auto)`,
-        columnGap: "0.85rem",
-      }}
-    >
+    <div className="mt-6 overflow-x-auto">
       <div
-        className="grid grid-rows-subgrid"
-        style={{ gridColumn: 1, gridRow: "1 / -1" }}
+        className="grid w-max max-w-full"
+        style={{
+          gridTemplateColumns: `minmax(11.5rem, 13rem) repeat(${plans.length}, 8.75rem)`,
+          gridTemplateRows: `repeat(${blocks.length}, auto)`,
+          columnGap: "0.75rem",
+        }}
       >
-        {blocks.map((block, index) => (
-          <LabelCell key={labelKey(block, index)} block={block} />
-        ))}
+        <div
+          className="grid grid-rows-subgrid"
+          style={{ gridColumn: 1, gridRow: "1 / -1" }}
+        >
+          {blocks.map((block, index) => (
+            <LabelCell key={labelKey(block, index)} block={block} />
+          ))}
+        </div>
+        {plans.map((plan, planIndex) => {
+          const current = plan.id === currentPlanId;
+          return (
+            <div
+              key={plan.id}
+              className={`grid grid-rows-subgrid overflow-hidden rounded-card border ${
+                current
+                  ? "border-accent bg-surface"
+                  : "border-line bg-surface"
+              }`}
+              style={{ gridColumn: planIndex + 2, gridRow: "1 / -1" }}
+            >
+              {blocks.map((block, index) => (
+                <PlanCell
+                  key={labelKey(block, index)}
+                  block={block}
+                  plan={plan}
+                  current={current}
+                />
+              ))}
+            </div>
+          );
+        })}
       </div>
-      {plans.map((plan, planIndex) => {
-        const current = plan.id === currentPlanId;
-        return (
-          <div
-            key={plan.id}
-            className={`grid grid-rows-subgrid rounded-card border ${
-              current
-                ? "border-accent bg-surface-raised"
-                : "border-line bg-surface"
-            }`}
-            style={{ gridColumn: planIndex + 2, gridRow: "1 / -1" }}
-          >
-            {blocks.map((block, index) => (
-              <PlanCell
-                key={labelKey(block, index)}
-                block={block}
-                plan={plan}
-                current={current}
-              />
-            ))}
-          </div>
-        );
-      })}
     </div>
   );
 }
@@ -128,7 +130,11 @@ function PlanCell({
 }) {
   if (block.type === "header") {
     return (
-      <div className="px-4 pb-4 pt-5 text-center">
+      <div
+        className={`border-b border-line px-3 pb-4 pt-5 text-center ${
+          current ? "bg-surface-raised" : "bg-canvas"
+        }`}
+      >
         {current ? (
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-accent">
             Your plan

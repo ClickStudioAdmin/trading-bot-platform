@@ -158,6 +158,20 @@ assert.deepEqual(
   ),
   { kind: "value", text: "20%" },
 );
+assert.equal(
+  comparePlanCell(
+    { ...live, features: emptyFeatures(), caps: { ...emptyCaps(), max_live_desks: 0 } },
+    { kind: "cap", key: "max_live_desks", label: "Max Live" },
+  ).kind,
+  "cross",
+);
+assert.equal(
+  comparePlanCell(
+    { ...live, features: emptyFeatures(), caps: emptyCaps(), affiliateL1Pct: 0 },
+    { kind: "rate", key: "l1", label: "L1" },
+  ).kind,
+  "cross",
+);
 
 const freePlan: MembershipPlan = {
   ...live,
