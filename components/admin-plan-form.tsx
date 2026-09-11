@@ -1,11 +1,10 @@
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
-  PLAN_CAP_GROUPS,
-  PLAN_CAP_LABELS,
-  PLAN_FEATURE_GROUPS,
-  PLAN_FEATURE_LABELS,
+  adminPlanSections,
+  affiliateRateFieldName,
   PLAN_NAME_MAX,
   type MembershipPlan,
+  type PlanCompareRow,
 } from "@/lib/membership/catalog";
 import {
   createMembershipPlanAction,
@@ -99,95 +98,36 @@ export function AdminPlanForm({
         </div>
       </section>
 
-      <section className="rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">
-          Affiliate rates
-        </h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          Percent of a referred member’s subscription invoice. L1 through L5
-          cannot exceed 100 combined.
-        </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          <PctField
-            name="affiliateL1Pct"
-            label="L1 %"
-            defaultValue={plan?.affiliateL1Pct ?? 0}
-          />
-          <PctField
-            name="affiliateL2Pct"
-            label="L2 %"
-            defaultValue={plan?.affiliateL2Pct ?? 0}
-          />
-          <PctField
-            name="affiliateL3Pct"
-            label="L3 %"
-            defaultValue={plan?.affiliateL3Pct ?? 0}
-          />
-          <PctField
-            name="affiliateL4Pct"
-            label="L4 %"
-            defaultValue={plan?.affiliateL4Pct ?? 0}
-          />
-          <PctField
-            name="affiliateL5Pct"
-            label="L5 %"
-            defaultValue={plan?.affiliateL5Pct ?? 0}
-          />
-        </div>
-      </section>
-
-      {PLAN_FEATURE_GROUPS.map((group) => (
-        <section
-          key={group.title}
-          className="rounded-card border border-line bg-surface p-5"
-        >
-          <h2 className="text-lg font-semibold tracking-tight">{group.title}</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {group.keys.map((key) => (
-              <label
-                key={key}
-                className="inline-flex items-start gap-2 text-sm text-ink"
-              >
-                <input
-                  type="checkbox"
-                  name={`feature_${key}`}
-                  value="1"
-                  defaultChecked={plan?.features[key] ?? false}
-                  className="mt-0.5"
-                />
-                <span>{PLAN_FEATURE_LABELS[key]}</span>
-              </label>
-            ))}
-          </div>
-        </section>
-      ))}
-
-      {PLAN_CAP_GROUPS.map((group) => (
-        <section
-          key={group.title}
-          className="rounded-card border border-line bg-surface p-5"
-        >
-          <h2 className="text-lg font-semibold tracking-tight">{group.title}</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Empty means unlimited.
-          </p>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {group.keys.map((key) => (
-              <label key={key} className="block text-sm text-ink">
-                {PLAN_CAP_LABELS[key]}
-                <input
-                  name={`cap_${key}`}
-                  type="number"
-                  min={0}
-                  step={1}
-                  defaultValue={plan?.caps[key] ?? ""}
-                  className={fieldClass}
-                />
-              </label>
-            ))}
-          </div>
-        </section>
-      ))}
+      {adminPlanSections().map((section) => {
+        const hasCaps = section.rows.some((row) => row.kind === "cap");
+        const hasRates = section.rows.some((row) => row.kind === "rate");
+        return (
+          <section
+            key={section.title}
+            className="rounded-card border border-line bg-surface p-5"
+          >
+            <h2 className="text-lg font-semibold tracking-tight">
+              {section.title}
+            </h2>
+            {hasCaps ? (
+              <p className="mt-1 text-sm text-ink-muted">
+                Empty means unlimited.
+              </p>
+            ) : null}
+            {hasRates ? (
+              <p className="mt-1 text-sm text-ink-muted">
+                Percent of a referred member’s subscription invoice. L1 through
+                L5 cannot exceed 100 combined.
+              </p>
+            ) : null}
+            <div className="mt-4 space-y-4">
+              {section.rows.map((row) => (
+                <AdminPlanRow key={`${row.kind}-${row.key}`} row={row} plan={plan} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
 
       <PendingSubmitButton
         pendingLabel={plan ? "Saving…" : "Creating…"}
@@ -199,26 +139,54 @@ export function AdminPlanForm({
   );
 }
 
-function PctField({
-  name,
-  label,
-  defaultValue,
+function AdminPlanRow({
+  row,
+  plan,
 }: {
-  name: string;
-  label: string;
-  defaultValue: number;
+  row: PlanCompareRow;
+  plan?: MembershipPlan;
 }) {
+  if (row.kind === "feature") {
+    return (
+      <label className="inline-flex items-start gap-2 text-sm text-ink">
+        <input
+          type="checkbox"
+          name={`feature_${row.key}`}
+          value="1"
+          defaultChecked={plan?.features[row.key] ?? false}
+          className="mt-0.5"
+        />
+        <span>{row.label}</span>
+      </label>
+    );
+  }
+  if (row.kind === "cap") {
+    return (
+      <label className="block max-w-md text-sm text-ink">
+        {row.label}
+        <input
+          name={`cap_${row.key}`}
+          type="number"
+          min={0}
+          step={1}
+          defaultValue={plan?.caps[row.key] ?? ""}
+          className={fieldClass}
+        />
+      </label>
+    );
+  }
+  const field = affiliateRateFieldName(row.key);
   return (
-    <label className="block text-sm text-ink">
-      {label}
+    <label className="block max-w-xs text-sm text-ink">
+      {row.label}
       <input
-        name={name}
+        name={field}
         type="number"
         min={0}
         max={100}
         step="0.01"
         required
-        defaultValue={defaultValue}
+        defaultValue={plan?.[field] ?? 0}
         className={fieldClass}
       />
     </label>

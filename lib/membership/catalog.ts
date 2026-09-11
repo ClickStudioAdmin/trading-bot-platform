@@ -45,83 +45,6 @@ export const PLAN_CAP_KEYS = [
 export type PlanCapKey = (typeof PLAN_CAP_KEYS)[number];
 export type PlanCaps = Record<PlanCapKey, number | null>;
 
-export type PlanFeatureGroup = {
-  title: string;
-  keys: readonly PlanFeatureKey[];
-};
-
-export type PlanCapGroup = {
-  title: string;
-  keys: readonly PlanCapKey[];
-};
-
-export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
-  {
-    title: "Manual Desk Types",
-    keys: ["desk_perps"],
-  },
-  {
-    title: "Automated Desk Types",
-    keys: [
-      "desk_perps_bots",
-      "desk_dca",
-      "desk_cash_and_carry",
-      "desk_signal_follower",
-    ],
-  },
-  {
-    title: "Bots & Templates",
-    keys: [
-      "extras_templates",
-      "extras_share_templates",
-      "extras_import_export_templates",
-    ],
-  },
-  {
-    title: "Webhooks",
-    keys: ["signals_inbound_webhooks"],
-  },
-  {
-    title: "Copy Trading",
-    keys: ["copy_follow", "copy_catalogue", "copy_share"],
-  },
-  {
-    title: "Backtesting",
-    keys: ["research_backtest", "research_backtest_attach_templates"],
-  },
-  {
-    title: "Affiliates",
-    keys: ["affiliate_enroll"],
-  },
-];
-
-export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
-  {
-    title: "Bots & Templates",
-    keys: ["max_bots_per_desk"],
-  },
-  {
-    title: "Maximum Desks (any kind)",
-    keys: [
-      "max_paper_desks",
-      "max_demo_desks",
-      "max_live_env_desks",
-    ],
-  },
-  {
-    title: "Copy Trading",
-    keys: ["max_copy_follows", "max_followers_accepted"],
-  },
-  {
-    title: "Backtesting",
-    keys: ["max_backtest_years", "max_stored_backtests"],
-  },
-  {
-    title: "Affiliates",
-    keys: ["affiliate_max_depth"],
-  },
-];
-
 export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   desk_cash_and_carry: "Cash & Carry",
   desk_perps: "Perps",
@@ -234,6 +157,24 @@ export type PlanAffiliateRates = Pick<
   | "affiliateL4Pct"
   | "affiliateL5Pct"
 >;
+
+export function affiliateRateFieldName(
+  key: AffiliateRateKey,
+): keyof PlanAffiliateRates {
+  if (key === "l1") {
+    return "affiliateL1Pct";
+  }
+  if (key === "l2") {
+    return "affiliateL2Pct";
+  }
+  if (key === "l3") {
+    return "affiliateL3Pct";
+  }
+  if (key === "l4") {
+    return "affiliateL4Pct";
+  }
+  return "affiliateL5Pct";
+}
 
 export function planAffiliateRate(
   plan: PlanAffiliateRates,
@@ -405,6 +346,25 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     ],
   },
 ];
+
+export function adminPlanSections(): PlanCompareSection[] {
+  return PLAN_COMPARE_SECTIONS.map((section) => {
+    if (section.title !== "Affiliates") {
+      return section;
+    }
+    return {
+      ...section,
+      rows: [
+        {
+          kind: "feature",
+          key: "affiliate_enroll",
+          label: PLAN_FEATURE_LABELS.affiliate_enroll,
+        },
+        ...section.rows,
+      ],
+    };
+  });
+}
 
 type ComparePlan = Pick<MembershipPlan, "features" | "caps"> & PlanAffiliateRates;
 

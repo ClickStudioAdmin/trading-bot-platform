@@ -36,7 +36,7 @@ Stop after each micro-step until Click says go. Next is step 4 (entitlements + U
 
 ### Plans
 
-Admin creates named tiers at `/admin/plans`. Code reads entitlements only — no hardcoded “Pro” except the seed rows.
+Admin creates named tiers at `/admin/plans`. The editor uses the same groups and row order as `/account/plans` (features, caps, and affiliate rates in one section each). Code reads entitlements only — no hardcoded “Pro” except the seed rows.
 
 Each plan: name, sort, public (upgrade catalog), price (`0` = Free), Stripe price id, **L1–L5 affiliate %**, feature flags, numeric caps (empty = unlimited).
 

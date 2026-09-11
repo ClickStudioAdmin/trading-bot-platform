@@ -14,6 +14,7 @@ import {
   parseCaps,
   parseFeatures,
   PLAN_CAP_KEYS,
+  adminPlanSections,
   PLAN_COMPARE_SECTIONS,
   PLAN_FEATURE_KEYS,
   publicCatalogPlans,
@@ -227,6 +228,23 @@ assert.ok(affiliates);
 assert.equal(affiliates.fixedOrder, true);
 assert.equal(affiliates.rows[0].kind, "cap");
 assert.equal(affiliates.rows[0].key, "affiliate_max_depth");
+const adminSections = adminPlanSections();
+assert.deepEqual(
+  adminSections.map((section) => section.title),
+  PLAN_COMPARE_SECTIONS.map((section) => section.title),
+);
+for (const [index, section] of PLAN_COMPARE_SECTIONS.entries()) {
+  const adminRows =
+    section.title === "Affiliates"
+      ? adminSections[index].rows.slice(1)
+      : adminSections[index].rows;
+  assert.deepEqual(
+    adminRows.map((row) => `${row.kind}:${row.key}`),
+    section.rows.map((row) => `${row.kind}:${row.key}`),
+  );
+}
+assert.equal(adminSections.at(-1)?.rows[0].kind, "feature");
+assert.equal(adminSections.at(-1)?.rows[0].key, "affiliate_enroll");
 assert.equal(
   comparePlanCell(
     { ...live, features: { ...emptyFeatures(), desk_dca: true }, caps: { ...emptyCaps(), max_paper_desks: 2 } },
