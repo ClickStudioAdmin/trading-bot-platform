@@ -56,7 +56,7 @@ export type PlanCapGroup = {
 
 export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
   {
-    title: "Desk types",
+    title: "Desks",
     keys: [
       "desk_cash_and_carry",
       "desk_perps",
@@ -64,38 +64,40 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
       "desk_signal_follower",
       "desk_dca",
       "desk_scale_in",
+      "mode_paper",
+      "mode_live",
+      "venue_non_bybit",
     ],
   },
   {
-    title: "Mode and venue",
-    keys: ["mode_paper", "mode_live", "venue_non_bybit"],
-  },
-  {
-    title: "Copy trading",
-    keys: ["copy_follow", "copy_share", "copy_catalogue"],
-  },
-  {
-    title: "Research",
-    keys: ["research_chart", "research_backtest"],
-  },
-  {
-    title: "Signals and extras",
+    title: "Automation",
     keys: [
       "signals_inbound_webhooks",
       "extras_advanced_dca",
       "extras_templates",
-      "extras_starter_pack",
     ],
   },
   {
-    title: "Affiliate",
+    title: "Copy Trading",
+    keys: ["copy_follow", "copy_share", "copy_catalogue"],
+  },
+  {
+    title: "Backtesting",
+    keys: ["research_backtest"],
+  },
+  {
+    title: "Affiliates",
     keys: ["affiliate_enroll"],
+  },
+  {
+    title: "Extras",
+    keys: ["research_chart", "extras_starter_pack"],
   },
 ];
 
 export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
   {
-    title: "Desks and keys",
+    title: "Desks",
     keys: [
       "max_desks",
       "max_live_desks",
@@ -104,20 +106,19 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
     ],
   },
   {
-    title: "Bots and signals",
+    title: "Automation",
     keys: ["max_bots_per_desk", "max_inbound_webhooks"],
   },
   {
-    title: "Copy and research",
-    keys: [
-      "max_copy_follows",
-      "max_followers_accepted",
-      "max_stored_backtests",
-      "max_backtest_bars",
-    ],
+    title: "Copy Trading",
+    keys: ["max_copy_follows", "max_followers_accepted"],
   },
   {
-    title: "Affiliate",
+    title: "Backtesting",
+    keys: ["max_stored_backtests", "max_backtest_bars"],
+  },
+  {
+    title: "Affiliates",
     keys: ["affiliate_max_depth"],
   },
 ];
@@ -301,22 +302,27 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
       { kind: "feature", key: "desk_signal_follower", label: "TradingView Strategy" },
       { kind: "feature", key: "desk_dca", label: "DCA" },
       { kind: "feature", key: "desk_scale_in", label: "Scale-in" },
-      { kind: "cap", key: "max_desks", label: "Max desks" },
-      { kind: "cap", key: "max_live_desks", label: "Max Live desks" },
-      { kind: "cap", key: "max_paper_desks", label: "Max Paper desks" },
-    ],
-  },
-  {
-    title: "Mode and venue",
-    rows: [
       { kind: "feature", key: "mode_paper", label: "Paper desks" },
       { kind: "feature", key: "mode_live", label: "Live / Connected desks" },
       { kind: "feature", key: "venue_non_bybit", label: "Non-Bybit venues" },
+      { kind: "cap", key: "max_desks", label: "Max desks" },
+      { kind: "cap", key: "max_live_desks", label: "Max Live desks" },
+      { kind: "cap", key: "max_paper_desks", label: "Max Paper desks" },
       { kind: "cap", key: "max_exchange_connections", label: "Max exchange connections" },
     ],
   },
   {
-    title: "Copy trading",
+    title: "Automation",
+    rows: [
+      { kind: "feature", key: "signals_inbound_webhooks", label: "Inbound webhooks" },
+      { kind: "feature", key: "extras_advanced_dca", label: "Advanced DCA" },
+      { kind: "feature", key: "extras_templates", label: "Templates" },
+      { kind: "cap", key: "max_bots_per_desk", label: "Max bots per desk" },
+      { kind: "cap", key: "max_inbound_webhooks", label: "Max inbound webhooks" },
+    ],
+  },
+  {
+    title: "Copy Trading",
     rows: [
       { kind: "feature", key: "copy_follow", label: "Follow a desk" },
       { kind: "feature", key: "copy_share", label: "Share / list a desk" },
@@ -326,33 +332,28 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     ],
   },
   {
-    title: "Research",
+    title: "Backtesting",
     rows: [
-      { kind: "feature", key: "research_chart", label: "Positions Chart" },
       { kind: "feature", key: "research_backtest", label: "Backtesting tool" },
       { kind: "cap", key: "max_stored_backtests", label: "Max stored backtests" },
       { kind: "cap", key: "max_backtest_bars", label: "Max backtest bar length" },
     ],
   },
   {
-    title: "Signals and extras",
-    rows: [
-      { kind: "feature", key: "signals_inbound_webhooks", label: "Inbound webhooks" },
-      { kind: "feature", key: "extras_advanced_dca", label: "Advanced DCA" },
-      { kind: "feature", key: "extras_templates", label: "Templates" },
-      { kind: "feature", key: "extras_starter_pack", label: "Starter Pack apply" },
-      { kind: "cap", key: "max_bots_per_desk", label: "Max bots per desk" },
-      { kind: "cap", key: "max_inbound_webhooks", label: "Max inbound webhooks" },
-    ],
-  },
-  {
-    title: "Affiliate",
+    title: "Affiliates",
     rows: [
       { kind: "feature", key: "affiliate_enroll", label: "Affiliate enroll" },
       { kind: "rate", key: "l1", label: "L1 commission" },
       { kind: "rate", key: "l2", label: "L2 commission" },
       { kind: "rate", key: "l3", label: "L3 commission" },
       { kind: "cap", key: "affiliate_max_depth", label: "Earn depth" },
+    ],
+  },
+  {
+    title: "Extras",
+    rows: [
+      { kind: "feature", key: "research_chart", label: "Positions Chart" },
+      { kind: "feature", key: "extras_starter_pack", label: "Starter Pack apply" },
     ],
   },
 ];

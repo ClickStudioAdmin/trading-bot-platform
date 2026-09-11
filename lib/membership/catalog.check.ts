@@ -12,7 +12,9 @@ import {
   formatPlanPrice,
   parseCaps,
   parseFeatures,
+  PLAN_CAP_KEYS,
   PLAN_COMPARE_SECTIONS,
+  PLAN_FEATURE_KEYS,
   publicCatalogPlans,
   slugifyPlanName,
   type MembershipPlan,
@@ -126,10 +128,32 @@ assert.deepEqual(
   ["plus"],
 );
 
+assert.deepEqual(
+  PLAN_COMPARE_SECTIONS.map((section) => section.title),
+  ["Desks", "Automation", "Copy Trading", "Backtesting", "Affiliates", "Extras"],
+);
+const compareFeatureKeys = PLAN_COMPARE_SECTIONS.flatMap((section) =>
+  section.rows.filter((row) => row.kind === "feature").map((row) => row.key),
+);
+const compareCapKeys = PLAN_COMPARE_SECTIONS.flatMap((section) =>
+  section.rows.filter((row) => row.kind === "cap").map((row) => row.key),
+);
+assert.deepEqual([...compareFeatureKeys].sort(), [...PLAN_FEATURE_KEYS].sort());
+assert.deepEqual([...compareCapKeys].sort(), [...PLAN_CAP_KEYS].sort());
 const desks = PLAN_COMPARE_SECTIONS.find((section) => section.title === "Desks");
 assert.ok(desks);
 assert.equal(desks.rows[0].kind, "feature");
 assert.equal(desks.rows.some((row) => row.kind === "cap" && row.key === "max_desks"), true);
+assert.equal(
+  desks.rows.some((row) => row.kind === "feature" && row.key === "mode_live"),
+  true,
+);
+const extras = PLAN_COMPARE_SECTIONS.find((section) => section.title === "Extras");
+assert.ok(extras);
+assert.equal(
+  extras.rows.some((row) => row.kind === "feature" && row.key === "research_chart"),
+  true,
+);
 assert.equal(
   comparePlanCell(
     { ...live, features: { ...emptyFeatures(), desk_dca: true }, caps: { ...emptyCaps(), max_desks: 2 } },
