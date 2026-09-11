@@ -36,7 +36,6 @@ export const PLAN_CAP_KEYS = [
   "max_desk_signal_follower",
   "max_desk_dca",
   "max_paper_desks",
-  "max_live_desks",
   "max_demo_desks",
   "max_live_env_desks",
   "max_bots_per_desk",
@@ -62,6 +61,19 @@ export type PlanCapGroup = {
 };
 
 export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
+  {
+    title: "Manual Desks",
+    keys: ["desk_perps"],
+  },
+  {
+    title: "Automated Desks",
+    keys: [
+      "desk_perps_bots",
+      "desk_dca",
+      "desk_cash_and_carry",
+      "desk_signal_follower",
+    ],
+  },
   {
     title: "Automation",
     keys: ["extras_advanced_dca", "extras_templates"],
@@ -91,21 +103,21 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
 export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
   {
     title: "Manual Desks",
-    keys: ["max_desk_perps", "max_desk_cash_and_carry"],
+    keys: ["max_desk_perps"],
   },
   {
     title: "Automated Desks",
     keys: [
       "max_desk_perps_bots",
-      "max_desk_signal_follower",
       "max_desk_dca",
+      "max_desk_cash_and_carry",
+      "max_desk_signal_follower",
     ],
   },
   {
     title: "Desk Resources",
     keys: [
       "max_paper_desks",
-      "max_live_desks",
       "max_demo_desks",
       "max_live_env_desks",
     ],
@@ -133,7 +145,7 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
 ];
 
 export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
-  desk_cash_and_carry: "Cash and Carry",
+  desk_cash_and_carry: "Cash & Carry",
   desk_perps: "Perps",
   desk_perps_bots: "Perps bots",
   desk_signal_follower: "TradingView Strategy",
@@ -155,15 +167,14 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
 };
 
 export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
-  max_desk_cash_and_carry: "Cash and Carry",
+  max_desk_cash_and_carry: "Cash & Carry",
   max_desk_perps: "Perps",
   max_desk_perps_bots: "Perps bots",
   max_desk_signal_follower: "TradingView Strategy",
   max_desk_dca: "DCA",
-  max_paper_desks: "Max Paper desks",
-  max_live_desks: "Max Live desks",
-  max_demo_desks: "Max Demo desks",
-  max_live_env_desks: "Max Live-environment desks",
+  max_paper_desks: "Paper Desks",
+  max_demo_desks: "Exchange Connected Desks (Demo Mode)",
+  max_live_env_desks: "Exchange Connected Desks (Live Mode)",
   max_bots_per_desk: "Max bots / playbooks per desk",
   max_inbound_webhooks: "Max inbound webhooks",
   max_copy_follows: "Max copy follows",
@@ -342,25 +353,25 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   {
     title: "Manual Desks",
     rows: [
-      { kind: "cap", key: "max_desk_perps", label: "Perps" },
-      { kind: "cap", key: "max_desk_cash_and_carry", label: "Cash and Carry" },
+      { kind: "feature", key: "desk_perps", label: "Perps" },
     ],
   },
   {
     title: "Automated Desks",
+    fixedOrder: true,
     rows: [
-      { kind: "cap", key: "max_desk_perps_bots", label: "Perps bots" },
-      { kind: "cap", key: "max_desk_signal_follower", label: "TradingView Strategy" },
-      { kind: "cap", key: "max_desk_dca", label: "DCA" },
+      { kind: "feature", key: "desk_perps_bots", label: "Perps" },
+      { kind: "feature", key: "desk_dca", label: "DCA" },
+      { kind: "feature", key: "desk_cash_and_carry", label: "Cash & Carry" },
+      { kind: "feature", key: "desk_signal_follower", label: "TradingView Strategy" },
     ],
   },
   {
     title: "Desk Resources",
     rows: [
-      { kind: "cap", key: "max_paper_desks", label: "Max Paper desks" },
-      { kind: "cap", key: "max_live_desks", label: "Max Live desks" },
-      { kind: "cap", key: "max_demo_desks", label: "Max Demo desks" },
-      { kind: "cap", key: "max_live_env_desks", label: "Max Live-environment desks" },
+      { kind: "cap", key: "max_paper_desks", label: "Paper Desks" },
+      { kind: "cap", key: "max_demo_desks", label: "Exchange Connected Desks (Demo Mode)" },
+      { kind: "cap", key: "max_live_env_desks", label: "Exchange Connected Desks (Live Mode)" },
     ],
   },
   {

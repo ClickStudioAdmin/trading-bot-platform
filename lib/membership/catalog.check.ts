@@ -22,11 +22,11 @@ import {
 import { parsePlanForm, parsePlanId } from "./form";
 
 assert.equal(emptyFeatures().desk_dca, false);
-assert.equal(emptyCaps().max_live_desks, null);
+assert.equal(emptyCaps().max_demo_desks, null);
 assert.equal(parseFeatures({ desk_dca: true, nope: true }).desk_dca, true);
 assert.equal(parseFeatures({ desk_dca: true }).desk_scale_in, false);
-assert.equal(parseCaps({ max_live_desks: 2, max_paper_desks: "nope" }).max_live_desks, 2);
-assert.equal(parseCaps({ max_live_desks: 2 }).max_paper_desks, null);
+assert.equal(parseCaps({ max_demo_desks: 2, max_paper_desks: "nope" }).max_demo_desks, 2);
+assert.equal(parseCaps({ max_demo_desks: 2 }).max_paper_desks, null);
 assert.equal(parseCaps({ max_demo_desks: 1, max_live_env_desks: 3 }).max_demo_desks, 1);
 assert.equal(parseCaps({ max_demo_desks: 1, max_live_env_desks: 3 }).max_live_env_desks, 3);
 
@@ -81,7 +81,7 @@ if (parsed.ok) {
   assert.equal(parsed.values.features.desk_dca, true);
   assert.equal(parsed.values.features.desk_scale_in, false);
   assert.equal(parsed.values.caps.max_paper_desks, 4);
-  assert.equal(parsed.values.caps.max_live_desks, null);
+  assert.equal(parsed.values.caps.max_demo_desks, null);
   assert.equal(parsed.values.affiliateL1Pct, 10);
 }
 
@@ -160,12 +160,14 @@ const hiddenCompareFeatures = new Set<string>([
   "affiliate_enroll",
   "mode_paper",
   "mode_live",
-  "desk_cash_and_carry",
-  "desk_perps",
-  "desk_perps_bots",
-  "desk_signal_follower",
-  "desk_dca",
   "desk_scale_in",
+]);
+const hiddenCompareCaps = new Set<string>([
+  "max_desk_perps",
+  "max_desk_cash_and_carry",
+  "max_desk_perps_bots",
+  "max_desk_signal_follower",
+  "max_desk_dca",
 ]);
 assert.equal(
   compareFeatureKeys.some((key) => hiddenCompareFeatures.has(key)),
@@ -175,15 +177,18 @@ assert.deepEqual(
   [...compareFeatureKeys].sort(),
   [...PLAN_FEATURE_KEYS].filter((key) => !hiddenCompareFeatures.has(key)).sort(),
 );
-assert.deepEqual([...compareCapKeys].sort(), [...PLAN_CAP_KEYS].sort());
+assert.deepEqual(
+  [...compareCapKeys].sort(),
+  [...PLAN_CAP_KEYS].filter((key) => !hiddenCompareCaps.has(key)).sort(),
+);
 const manualDesks = PLAN_COMPARE_SECTIONS.find(
   (section) => section.title === "Manual Desks",
 );
 assert.ok(manualDesks);
-assert.equal(manualDesks.rows[0].kind, "cap");
-assert.equal(manualDesks.rows[0].key, "max_desk_perps");
+assert.equal(manualDesks.rows[0].kind, "feature");
+assert.equal(manualDesks.rows[0].key, "desk_perps");
 assert.equal(
-  manualDesks.rows.find((row) => row.kind === "cap" && row.key === "max_desk_perps")
+  manualDesks.rows.find((row) => row.kind === "feature" && row.key === "desk_perps")
     ?.label,
   "Perps",
 );
@@ -192,7 +197,7 @@ const automatedDesks = PLAN_COMPARE_SECTIONS.find(
 );
 assert.ok(automatedDesks);
 assert.equal(
-  automatedDesks.rows.some((row) => row.kind === "cap" && row.key === "max_desk_dca"),
+  automatedDesks.rows.some((row) => row.kind === "feature" && row.key === "desk_dca"),
   true,
 );
 const deskResources = PLAN_COMPARE_SECTIONS.find(
@@ -201,10 +206,6 @@ const deskResources = PLAN_COMPARE_SECTIONS.find(
 assert.ok(deskResources);
 assert.equal(
   deskResources.rows.some((row) => row.kind === "cap" && row.key === "max_paper_desks"),
-  true,
-);
-assert.equal(
-  deskResources.rows.some((row) => row.kind === "cap" && row.key === "max_live_desks"),
   true,
 );
 assert.equal(
@@ -250,7 +251,7 @@ assert.equal(
 assert.deepEqual(
   comparePlanCell(
     { ...live, features: emptyFeatures(), caps: { ...emptyCaps(), max_paper_desks: 2 } },
-    { kind: "cap", key: "max_paper_desks", label: "Max Paper desks" },
+    { kind: "cap", key: "max_paper_desks", label: "Paper Desks" },
   ),
   { kind: "value", text: "2" },
 );
@@ -263,8 +264,8 @@ assert.deepEqual(
 );
 assert.equal(
   comparePlanCell(
-    { ...live, features: emptyFeatures(), caps: { ...emptyCaps(), max_live_desks: 0 } },
-    { kind: "cap", key: "max_live_desks", label: "Max Live" },
+    { ...live, features: emptyFeatures(), caps: { ...emptyCaps(), max_demo_desks: 0 } },
+    { kind: "cap", key: "max_demo_desks", label: "Max Demo" },
   ).kind,
   "cross",
 );
@@ -283,7 +284,7 @@ const freePlan: MembershipPlan = {
   name: "Free",
   sortOrder: 0,
   features: { ...emptyFeatures(), desk_dca: true, mode_paper: true },
-  caps: { ...emptyCaps(), max_paper_desks: 2, max_live_desks: 0 },
+  caps: { ...emptyCaps(), max_paper_desks: 2, max_demo_desks: 0 },
 };
 const plusPlan: MembershipPlan = {
   ...live,
@@ -291,7 +292,7 @@ const plusPlan: MembershipPlan = {
   slug: "plus",
   name: "Plus",
   features: { ...freePlan.features, mode_live: true },
-  caps: { ...emptyCaps(), max_paper_desks: 4, max_live_desks: 2 },
+  caps: { ...emptyCaps(), max_paper_desks: 4, max_demo_desks: 2 },
 };
 const proPlan: MembershipPlan = {
   ...live,
@@ -328,8 +329,8 @@ assert.equal(
 assert.equal(
   rowUnlockIndex([freePlan, plusPlan, proPlan], {
     kind: "cap",
-    key: "max_live_desks",
-    label: "Max Live",
+    key: "max_demo_desks",
+    label: "Max Demo",
   }),
   1,
 );
@@ -338,12 +339,12 @@ const modeRows = sortCompareSectionRows(
   [
     { kind: "feature", key: "mode_live", label: "Live" },
     { kind: "feature", key: "mode_paper", label: "Paper" },
-    { kind: "cap", key: "max_live_desks", label: "Max Live" },
+    { kind: "cap", key: "max_demo_desks", label: "Max Demo" },
   ],
 );
 assert.deepEqual(
   modeRows.map((row) => row.key),
-  ["mode_paper", "mode_live", "max_live_desks"],
+  ["mode_paper", "mode_live", "max_demo_desks"],
 );
 
 console.log("membership catalog checks passed");

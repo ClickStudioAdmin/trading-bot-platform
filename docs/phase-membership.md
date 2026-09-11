@@ -54,7 +54,7 @@ Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until r
 
 ### Features (on / off)
 
-Desk types are numeric caps, not ticks. **Manual Desks:** Perps, Cash and Carry. **Automated Desks:** Perps bots, TradingView Strategy, DCA. Empty = unlimited. Scale-in stays off the catalog until that desk type exists.
+Desk types are numeric caps, not ticks. **Manual Desks:** Perps. **Automated Desks:** Perps, DCA, Cash & Carry, TradingView Strategy. Empty = unlimited. Scale-in stays off the catalog until that desk type exists.
 
 Copy: follow, share/list, appear in the public catalogue.
 
@@ -68,7 +68,7 @@ Affiliate: enroll + referral code; earn multi-level (implies enroll); see downli
 
 ### Resource caps
 
-Per desk type: max Perps, Cash and Carry, Perps bots, TradingView Strategy, DCA. Also max Paper desks, max Live desks (any environment), max Demo desks, max Live-environment desks, max bots/playbooks per desk, max inbound webhooks, max copy follows, max followers when sharing, max stored backtests, max backtest bar-length or pairs, optional per-plan earn depth (capped by program max). No combined max-desks total, no max exchange connections, and no Paper / Live ticks. Demo covers exchange Demo / Testnet; Live-environment is exchange Live. Environment caps sit inside the Live total.
+Per desk type: max Perps, Cash and Carry, Perps bots, TradingView Strategy, DCA. Also max Paper desks, Exchange Connected Desks (Demo Mode), Exchange Connected Desks (Live Mode), max bots/playbooks per desk, max inbound webhooks, max copy follows, max followers when sharing, max stored backtests, max backtest bar-length or pairs, optional per-plan earn depth (capped by program max). No combined max-desks or max Live-desks total, no max exchange connections, and no Paper / Live ticks. Demo covers exchange Demo / Testnet; Live-environment is exchange Live.
 
 ### Gates
 
