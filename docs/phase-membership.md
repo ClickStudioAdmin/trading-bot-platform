@@ -107,7 +107,7 @@ Per desk: cancel working orders, market-exit positions, disable bots, disable th
 
 Pay on **platform subscription only**. Not trading PnL, not copy AUM. Copy take-rate stays parked in [phase-copy-trading.md](phase-copy-trading.md).
 
-Header, right of Backtesting Tool: Copy Trading · Backtesting Tool · **Affiliates** → `/account/affiliates`.
+Header: Copy Trading · Backtesting Tool · **Plans** · later **Affiliates** → `/account/affiliates`.
 
 - Never enrolled: teaser, Upgrade, list/chart/payouts disabled.
 - Enrolled: referral code + share URL; downline **list** (alias or “Member”, level, attributed vs paid, month joined — never email, phone, Stripe ids, desks, keys, balances); **org chart** of the same tree (click node → list row); **stats** (attributed signups, paid conversions, conversion %, active paid downline, counts by level, referred subscription MRR, earnings this period / all-time, pending vs paid out, last payout). Tiles + period table in v1.
