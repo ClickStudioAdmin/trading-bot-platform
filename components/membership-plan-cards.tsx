@@ -57,10 +57,11 @@ export function MembershipPlanCards({
           </tr>
         </thead>
         <tbody>
-          {PLAN_COMPARE_SECTIONS.map((section) => (
+          {PLAN_COMPARE_SECTIONS.map((section, index) => (
             <CompareSection
               key={section.title}
               title={section.title}
+              first={index === 0}
               rows={sortCompareSectionRows(plans, section.rows)}
               plans={plans}
               currentPlanId={currentPlanId}
@@ -109,22 +110,32 @@ export function MembershipPlanCards({
 
 function CompareSection({
   title,
+  first,
   rows,
   plans,
   currentPlanId,
 }: {
   title: string;
+  first: boolean;
   rows: readonly PlanCompareRow[];
   plans: MembershipPlan[];
   currentPlanId: string | null;
 }) {
   return (
     <>
+      {first ? null : (
+        <tr aria-hidden>
+          <td
+            colSpan={plans.length + 1}
+            className="h-8 border-0 bg-canvas p-0"
+          />
+        </tr>
+      )}
       <tr className="border-t border-line bg-surface-raised">
         <th
           colSpan={plans.length + 1}
           scope="colgroup"
-          className="px-4 py-2 text-left text-xs font-medium uppercase tracking-[0.16em] text-accent"
+          className="px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.16em] text-accent"
         >
           {title}
         </th>
@@ -161,11 +172,11 @@ function CompareMark({ cell }: { cell: PlanCompareCell }) {
   if (cell.kind === "tick") {
     return (
       <span className="inline-flex text-success" aria-label="Included">
-        <svg viewBox="0 0 16 16" fill="none" className="size-4" aria-hidden>
+        <svg viewBox="0 0 16 16" fill="none" className="size-7" aria-hidden>
           <path
             d="M3.5 8.5 6.5 11.5 12.5 4.5"
             stroke="currentColor"
-            strokeWidth="1.75"
+            strokeWidth="2.25"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -174,11 +185,11 @@ function CompareMark({ cell }: { cell: PlanCompareCell }) {
     );
   }
   if (cell.kind === "cross") {
-    return (
-      <span className="text-ink-faint" aria-label="Not included">
-        ×
-      </span>
-    );
+    return null;
   }
-  return <span className="tabular-nums text-ink">{cell.text}</span>;
+  return (
+    <span className="text-lg font-semibold tabular-nums text-ink">
+      {cell.text}
+    </span>
+  );
 }
