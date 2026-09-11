@@ -1,6 +1,6 @@
 # Phase 11 — DCA desk type
 
-Complete. Phase 10 is complete. See [phase-10.md](phase-10.md). After Phase 11, see [roadmap.md](roadmap.md). Fly.io is next to build; scale-in / position builder is roadmap 7.
+Complete. Phase 10 is complete. See [phase-10.md](phase-10.md). After Phase 11, see [roadmap.md](roadmap.md). Fly.io is parked; scale-in / position builder is roadmap 10.
 
 ## Purpose
 
@@ -51,7 +51,7 @@ Phase accepted. Do not start Fly.io or scale-in until Click asks. Sequence: [roa
 
 ## Out of scope
 
-- Scale-in / position builder (roadmap 6)
+- Scale-in / position builder (roadmap 10)
 - Chained Perps recipes
 - `/strategies/dca` ledger
 - Hyperliquid / MEXC / XT

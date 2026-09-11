@@ -31,13 +31,15 @@ Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 a
 
 **Copy trading is started** (roadmap 3): [phase-copy-trading.md](phase-copy-trading.md). Steps 1–9 are in repo. Stop after each copy-trading micro-step until Click says go. Next is step 10 (Click desk test). Push `develop` to migrate.
 
-The locked sequence after Phase 11 is [roadmap.md](roadmap.md). Standing unordered notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
+The locked sequence after Phase 11 is [roadmap.md](roadmap.md). **Plans, payments, and affiliates** is roadmap 5 ([phase-membership.md](phase-membership.md)) — docs only; do not start until Click says go. Standing unordered notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
 
 ## Later
 
 Do not implement until Click starts that roadmap item. Order and notes: [roadmap.md](roadmap.md).
 
-**Backup market data** (roadmap 5). Indicator start and other public candles stay on **Bybit public klines first**. When that item starts, failover if the call fails (timeout, HTTP 403, empty list):
+**Plans, payments, and affiliates** (roadmap 5). Spec written: [phase-membership.md](phase-membership.md). Do not add Stripe, a chain watcher, or plan/wallet tables until Click starts that item.
+
+**Backup market data** (roadmap 9). Indicator start and other public candles stay on **Bybit public klines first**. When that item starts, failover if the call fails (timeout, HTTP 403, empty list):
 
 1. Public linear klines from **Binance** and/or **OKX**, mapped to the same Bybit contract. Same RSI / MACD / EMA math. Prefer the trading venue’s book; backups are for uptime, not a second truth.
 2. If public failover is not enough: a paid candle SLA (**CoinAPI** or **Kaiko**).
@@ -47,4 +49,4 @@ TradingView stays a Signal webhook, not a candle vendor. Orders stay on the boun
 
 ## Multi-tenancy
 
-Bring-your-own API keys, stored on the **login**. Live desks bind one key. The same key on two desks shares venue margin. Isolation needs another trade-only key. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue. Hyperliquid is roadmap 2 ([phase-hyperliquid.md](phase-hyperliquid.md)); other CEXes are roadmap 16. Connected Exchange books show a Unified account snapshot (available, margin, IM/MM) from the bound key on My Account and on hover of the strategy exchange chip. The active desk for a tab is `?desk=` on desk-scoped URLs. The session cookie is last-used only.
+Bring-your-own API keys, stored on the **login**. Live desks bind one key. The same key on two desks shares venue margin. Isolation needs another trade-only key. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue. Hyperliquid is roadmap 2 ([phase-hyperliquid.md](phase-hyperliquid.md)); other CEXes are roadmap 15. Connected Exchange books show a Unified account snapshot (available, margin, IM/MM) from the bound key on My Account and on hover of the strategy exchange chip. The active desk for a tab is `?desk=` on desk-scoped URLs. The session cookie is last-used only.

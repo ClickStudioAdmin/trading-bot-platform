@@ -1,6 +1,6 @@
 # Hyperliquid venue
 
-**Roadmap 2.** Started 29 Aug 2026. **Not MEXC** (roadmap 16). Fly.io is parked. Bybit desks stay Bybit.
+**Roadmap 2.** Started 29 Aug 2026. **Not MEXC** (roadmap 15). Fly.io is parked. Bybit desks stay Bybit.
 
 Bybit desks stay Bybit. Hyperliquid is a **second venue-locked desk**, not a flag inside the existing Perps/DCA pages. Internal **venue capabilities** say what each exchange can do. The next CEX (MEXC) is another capability row + adapter + page module — not another rewrite of Bybit.
 
@@ -167,7 +167,7 @@ Stop after each step until Click says go. Do not start MEXC in this phase.
 
 ## Out of scope
 
-- MEXC / XT / Binance (roadmap 16; capability row + adapter + module)
+- MEXC / XT / Binance (roadmap 15; capability row + adapter + module)
 - Cash and Carry on Hyperliquid
 - HIP-3
 - Subaccount fake hedge
@@ -175,8 +175,8 @@ Stop after each step until Click says go. Do not start MEXC in this phase.
 - Copy trading ([phase-copy-trading.md](phase-copy-trading.md)), event-driven signals, Starter Pack CTA ([roadmap.md](roadmap.md))
 - `if (hyperliquid)` inside Bybit components
 - Fly.io in this pass (roadmap 1 first); private APIs from the browser
-- Scale-in / position builder (roadmap 6)
+- Scale-in / position builder (roadmap 10)
 
 ## After this: other exchanges
 
-Roadmap 16. New capability row (likely HMAC, USDT, Bybit-like hedge if true). Prefer **reusing the Bybit desk module** if parameters match; only a `lib/exchanges/mexc` adapter. If MEXC is one-way or different symbols, it gets its own module like Hyperliquid. Write `docs/phase-mexc.md` when that item starts.
+Roadmap 15. New capability row (likely HMAC, USDT, Bybit-like hedge if true). Prefer **reusing the Bybit desk module** if parameters match; only a `lib/exchanges/mexc` adapter. If MEXC is one-way or different symbols, it gets its own module like Hyperliquid. Write `docs/phase-mexc.md` when that item starts.

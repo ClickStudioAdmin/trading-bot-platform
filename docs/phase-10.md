@@ -41,7 +41,7 @@ Same venue key on two desks still shares IM. Isolation = another desk **and** an
 
 ## Later
 
-See [roadmap.md](roadmap.md). DCA is Phase 11 (complete). Scale-in / position builder is roadmap 6. Hyperliquid is roadmap 2. Live TradingView alert test is current desk-test ([phase-9.md](phase-9.md) Later).
+See [roadmap.md](roadmap.md). DCA is Phase 11 (complete). Scale-in / position builder is roadmap 10. Hyperliquid is roadmap 2. Live TradingView alert test is current desk-test ([phase-9.md](phase-9.md) Later).
 
 ## What this phase includes
 
@@ -55,7 +55,7 @@ See [roadmap.md](roadmap.md). DCA is Phase 11 (complete). Scale-in / position bu
 
 ## Out of scope
 
-- DCA / scale-in types (DCA shipped in Phase 11; scale-in is roadmap 7)
+- DCA / scale-in types (DCA shipped in Phase 11; scale-in is roadmap 10)
 - Richer if/then recipes
 - Playbook-level venue override
 - Hyperliquid / MEXC / XT

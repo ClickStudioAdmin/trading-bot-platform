@@ -94,7 +94,7 @@ Fly loop is **20 seconds** when idle, **8 seconds** while any desk is hot (open 
 - Not calling private APIs from the browser
 - Not Vercel Cron
 - Not rewriting `runFuturesCommand` or the ledgers
-- Not moving inbound webhooks onto Fly in this pass (roadmap 4 can add internal event signals later)
+- Not moving inbound webhooks onto Fly in this pass (roadmap 8 can add internal event signals later)
 
 ## How we know it will scale (before many users)
 

@@ -1,6 +1,6 @@
 # Onboarding wizard (later)
 
-Postponed. **Roadmap 9** ([roadmap.md](roadmap.md)). Not the current phase. Do not implement until Click starts this item.
+Postponed. **Roadmap 6** ([roadmap.md](roadmap.md)). Not the current phase. Do not implement until Click starts this item.
 
 The first-desk gate is already shipped. This phase **refines** `/welcome`; it does not replace it.
 
@@ -26,11 +26,12 @@ Lock screens with Click before coding. Likely pieces, not a build list until the
 
 ## Out of scope (when this work starts)
 
-- Scale-in / position builder (roadmap 6)
+- Scale-in / position builder (roadmap 10)
 - Hyperliquid / MEXC / XT
 - Fly.io (roadmap 1; already done if this item is in order)
 - Calling private exchange APIs from the browser
 - Auto-creating a Demo Account again
 - Auto-arm / auto-enable / marketplace
 - Paper auto-switch ([phase-auto-switch.md](phase-auto-switch.md))
-- Backup market-data vendors (roadmap 5)
+- Backup market-data vendors (roadmap 9)
+- Plans, payments, and affiliates (roadmap 5; [phase-membership.md](phase-membership.md))

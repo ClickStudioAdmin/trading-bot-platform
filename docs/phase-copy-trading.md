@@ -86,6 +86,6 @@ RLS: catalogue is public + sharing-on listings, or the viewer’s open private g
 - Copying recipes or bots (limits and fills copy; the parent playbook does not). A parent **% of account** or **% of available margin** max value compounds on the parent; followers copy the resulting fill and limit sizes. Cycle-skip estimates use the parent’s current book when the parent is idle, and the stamped clip once a cycle has started.
 - Row-level follower TP/SL
 - Payouts / affiliate take-rate
-- Membership gates on who may list (roadmap 8)
-- MEXC (roadmap 16)
+- Membership gates on who may list (roadmap 5; [phase-membership.md](phase-membership.md))
+- MEXC (roadmap 15)
 - Reading hedge mode from the bound account (owner-written brief in v1)
