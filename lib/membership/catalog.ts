@@ -64,11 +64,11 @@ export type PlanCapGroup = {
 
 export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
   {
-    title: "Manual Desks",
+    title: "Manual Desk Types",
     keys: ["desk_perps"],
   },
   {
-    title: "Automated Desks",
+    title: "Automated Desk Types",
     keys: [
       "desk_perps_bots",
       "desk_dca",
@@ -108,11 +108,11 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
 
 export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
   {
-    title: "Manual Desks",
+    title: "Manual Desk Types",
     keys: ["max_desk_perps"],
   },
   {
-    title: "Automated Desks",
+    title: "Automated Desk Types",
     keys: [
       "max_desk_perps_bots",
       "max_desk_dca",
@@ -125,7 +125,7 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
     keys: ["max_bots_per_desk"],
   },
   {
-    title: "Maximum Desks",
+    title: "Maximum Desks (any kind)",
     keys: [
       "max_paper_desks",
       "max_demo_desks",
@@ -180,7 +180,7 @@ export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
   max_paper_desks: "Paper Desks",
   max_demo_desks: "Exchange Connected Desks (Demo Mode)",
   max_live_env_desks: "Exchange Connected Desks (Live Mode)",
-  max_bots_per_desk: "Max bots / playbooks per desk",
+  max_bots_per_desk: "Max Bots per Desk",
   max_copy_follows: "Max Copies",
   max_followers_accepted: "Max followers when sharing",
   max_stored_backtests: "Max stored backtests",
@@ -362,13 +362,13 @@ export type PlanCompareCell =
 
 export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   {
-    title: "Manual Desks",
+    title: "Manual Desk Types",
     rows: [
       { kind: "feature", key: "desk_perps", label: "Perps" },
     ],
   },
   {
-    title: "Automated Desks",
+    title: "Automated Desk Types",
     fixedOrder: true,
     rows: [
       { kind: "feature", key: "desk_perps_bots", label: "Perps" },
@@ -378,7 +378,7 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     ],
   },
   {
-    title: "Maximum Desks",
+    title: "Maximum Desks (any kind)",
     fixedOrder: true,
     rows: [
       { kind: "cap", key: "max_paper_desks", label: "Paper Desks" },
@@ -390,7 +390,7 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     title: "Bots & Templates",
     fixedOrder: true,
     rows: [
-      { kind: "cap", key: "max_bots_per_desk", label: "Max bots per desk" },
+      { kind: "cap", key: "max_bots_per_desk", label: "Max Bots per Desk" },
       { kind: "feature", key: "extras_templates", label: "Save Templates" },
       { kind: "feature", key: "extras_share_templates", label: "Share Templates" },
       { kind: "feature", key: "extras_import_export_templates", label: "Import / Export Templates" },

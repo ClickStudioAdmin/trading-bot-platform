@@ -141,9 +141,9 @@ assert.deepEqual(
 assert.deepEqual(
   PLAN_COMPARE_SECTIONS.map((section) => section.title),
   [
-    "Manual Desks",
-    "Automated Desks",
-    "Maximum Desks",
+    "Manual Desk Types",
+    "Automated Desk Types",
+    "Maximum Desks (any kind)",
     "Bots & Templates",
     "Webhooks",
     "Copy Trading",
@@ -187,7 +187,7 @@ assert.deepEqual(
   [...PLAN_CAP_KEYS].filter((key) => !hiddenCompareCaps.has(key)).sort(),
 );
 const manualDesks = PLAN_COMPARE_SECTIONS.find(
-  (section) => section.title === "Manual Desks",
+  (section) => section.title === "Manual Desk Types",
 );
 assert.ok(manualDesks);
 assert.equal(manualDesks.rows[0].kind, "feature");
@@ -198,7 +198,7 @@ assert.equal(
   "Perps",
 );
 const automatedDesks = PLAN_COMPARE_SECTIONS.find(
-  (section) => section.title === "Automated Desks",
+  (section) => section.title === "Automated Desk Types",
 );
 assert.ok(automatedDesks);
 assert.equal(
@@ -206,7 +206,7 @@ assert.equal(
   true,
 );
 const deskResources = PLAN_COMPARE_SECTIONS.find(
-  (section) => section.title === "Maximum Desks",
+  (section) => section.title === "Maximum Desks (any kind)",
 );
 assert.ok(deskResources);
 assert.equal(
