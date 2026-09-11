@@ -1,3 +1,4 @@
+import { ColumnHint } from "@/components/column-hint";
 import {
   PLAN_COMPARE_SECTIONS,
   comparePlanCell,
@@ -148,8 +149,15 @@ function PlanCell({
           {plan.name}
         </p>
         {planIsArchived(plan) ? (
-          <span className="mt-1 inline-flex items-center justify-center rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
-            Legacy
+          <span className="mt-1 inline-flex">
+            <ColumnHint
+              label={
+                <span className="inline-flex items-center justify-center rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
+                  Legacy
+                </span>
+              }
+              hint="Plan is no longer available. You stay on this plan unless you upgrade or cancel your subscription."
+            />
           </span>
         ) : plan.visibility !== "public" ? (
           <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint">
