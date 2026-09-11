@@ -62,7 +62,7 @@ Research: Backtesting Tool; Attach Results to Bot Template (Plus and Pro).
 
 Signals and extras: inbound TradingView / Signal webhooks; Save Templates; Share Templates (on for existing plans); Import / Export Templates (Plus and Pro). Advanced DCA stays off the public catalog for now.
 
-Affiliate: enroll + referral code; earn multi-level (implies enroll); see downline stats; **Pay subscription from affiliate earnings** (catalog tick). Opt-in on Account Settings: “Deduct subscription payment from available affiliate earnings”. Payable only — pending cannot pay rent. Billing applies the debit in Stripe / wallet / commission steps.
+Affiliate: enroll + referral code; earn multi-level (implies enroll); see downline stats; **Pay subscription from affiliate earnings** (catalog tick). Opt-in on Account Settings: “Deduct subscription payment from available affiliate earnings”. Payable only — pending cannot pay rent. Billing applies the debit in Stripe / wallet / commission steps. That debit is still a paid subscription invoice: **upstream affiliates still earn** their L1–L5 on it (same as card or wallet). Not comp. The paying member does not earn on their own invoice.
 
 `/admin/*` is role-based, never a plan flag.
 
@@ -82,7 +82,7 @@ UI **never hides** a gated surface. Disable the control. Persistent **Upgrade** 
 
 One active **collection method** per member (`stripe` or `wallet`). They can switch.
 
-**Invoices** are processor-agnostic: `method` (stripe \| wallet), `external_id`, USD amount. Commission keys off the invoice.
+**Invoices** are processor-agnostic: `method` (stripe \| wallet), `external_id`, USD amount. Commission keys off the invoice. Paying rent from payable affiliate earnings still writes a **paid** invoice for the plan price (not `comp`). A mixed tick (earnings then leftover card/wallet) is one invoice. Upline commission uses that full invoice amount. Only admin comp skips commission.
 
 **Leftover credit** stays on cancel / Free. Spend later or withdraw as USDT if ≥ minimum payout and no arrears. Not forfeited.
 
@@ -113,13 +113,13 @@ Public site header (not the app chrome): Home · How it works · **Pricing** →
 - Enrolled: referral code + share URL; downline **list** (alias or “Member”, level, attributed vs paid, month joined — never email, phone, Stripe ids, desks, keys, balances); **org chart** of the same tree (click node → list row); **stats** (attributed signups, paid conversions, conversion %, active paid downline, counts by level, referred subscription MRR, earnings this period / all-time, pending vs paid out, last payout). Tiles + period table in v1.
 - Lost enroll: still **see** list/chart/stats. All actions disabled (codes, invite copy, withdraw). **Keep earning** at a snapshot of the **last paid enroll plan** rates. Payouts unlock only when enroll is on, **all outstanding subscription invoices are paid**, and payable ≥ minimum.
 
-Attribution: first-touch referral code (optional cookie later with the marketing site). Locked when the referred member first **pays**. Free attributed signups do not pay commission until the first paid invoice. No self-referral, no cycles. Instant enroll when the plan allows. Comp / admin-granted plans do not create a commission invoice.
+Attribution: first-touch referral code (optional cookie later with the marketing site). Locked when the referred member first **pays**. Free attributed signups do not pay commission until the first paid invoice. No self-referral, no cycles. Instant enroll when the plan allows. Comp / admin-granted plans do not create a commission invoice. A subscription paid (in full or in part) by deducting the member’s own payable affiliate earnings **does** create a commission invoice for their upline. Same hold, refund-in-hold, and rate snapshot rules. The source of funds does not skip L1–L5.
 
 **Rates are per plan** (L1–L5). Higher plans can earn more. New invoices use the referrer’s current plan rates, or the last-enroll snapshot if enroll is off. Rate edits apply to new invoices only. Program **max depth** default 2, hard cap 5. A plan may zero L2–L5.
 
 **Hold then earn.** Commission starts pending for admin hold days (default **30**). Refund / chargeback / wallet reversal in the hold → never payable. After the hold, payable. Do not edit a paid row in place.
 
-**Payouts.** Method catalog: manual/export, Stripe Connect (schema-ready, can ship after export), **USDT withdraw** from treasury to the affiliate’s address on an admin-listed USDT network. They pick address + network, not a coin. After hold, payable commission credits the same platform wallet. If the plan has **Pay subscription from affiliate earnings** and `members.pay_subscription_from_affiliate` is on, a billing tick applies payable earnings to that member’s subscription invoice first; leftover still charges Stripe or wallet. Pending cannot pay rent and cannot withdraw.
+**Payouts.** Method catalog: manual/export, Stripe Connect (schema-ready, can ship after export), **USDT withdraw** from treasury to the affiliate’s address on an admin-listed USDT network. They pick address + network, not a coin. After hold, payable commission credits the same platform wallet. If the plan has **Pay subscription from affiliate earnings** and `members.pay_subscription_from_affiliate` is on, a billing tick applies payable earnings to that member’s subscription invoice first; leftover still charges Stripe or wallet. That invoice still awards upstream affiliates their commission. Pending cannot pay rent and cannot withdraw.
 
 Withdraw locks (all): enroll on; no outstanding subscription invoices; payable ≥ min. Failures: visible disabled control + notice.
 
