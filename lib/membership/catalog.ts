@@ -24,6 +24,7 @@ export const PLAN_FEATURE_KEYS = [
   "extras_advanced_dca",
   "extras_templates",
   "extras_share_templates",
+  "extras_import_export_templates",
   "extras_starter_pack",
   "affiliate_enroll",
 ] as const;
@@ -41,7 +42,6 @@ export const PLAN_CAP_KEYS = [
   "max_demo_desks",
   "max_live_env_desks",
   "max_bots_per_desk",
-  "max_inbound_webhooks",
   "max_copy_follows",
   "max_followers_accepted",
   "max_stored_backtests",
@@ -78,7 +78,11 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
   },
   {
     title: "Bot Templates",
-    keys: ["extras_templates", "extras_share_templates"],
+    keys: [
+      "extras_templates",
+      "extras_share_templates",
+      "extras_import_export_templates",
+    ],
   },
   {
     title: "Webhooks",
@@ -86,7 +90,7 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
   },
   {
     title: "Copy Trading",
-    keys: ["copy_share", "copy_follow", "copy_catalogue"],
+    keys: ["copy_follow", "copy_share", "copy_catalogue"],
   },
   {
     title: "Backtesting",
@@ -126,10 +130,6 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
     ],
   },
   {
-    title: "Webhooks",
-    keys: ["max_inbound_webhooks"],
-  },
-  {
     title: "Copy Trading",
     keys: ["max_copy_follows", "max_followers_accepted"],
   },
@@ -163,6 +163,7 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   extras_advanced_dca: "Advanced DCA (Confirm, Exit-if, ATR)",
   extras_templates: "Save Templates",
   extras_share_templates: "Share Templates",
+  extras_import_export_templates: "Import / Export Templates",
   extras_starter_pack: "Starter Pack apply",
   affiliate_enroll: "Affiliate enroll",
 };
@@ -177,7 +178,6 @@ export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
   max_demo_desks: "Exchange Connected Desks (Demo Mode)",
   max_live_env_desks: "Exchange Connected Desks (Live Mode)",
   max_bots_per_desk: "Max bots / playbooks per desk",
-  max_inbound_webhooks: "Max inbound webhooks",
   max_copy_follows: "Max copy follows",
   max_followers_accepted: "Max followers when sharing",
   max_stored_backtests: "Max stored backtests",
@@ -389,21 +389,21 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     rows: [
       { kind: "feature", key: "extras_templates", label: "Save Templates" },
       { kind: "feature", key: "extras_share_templates", label: "Share Templates" },
+      { kind: "feature", key: "extras_import_export_templates", label: "Import / Export Templates" },
     ],
   },
   {
     title: "Webhooks",
     rows: [
       { kind: "feature", key: "signals_inbound_webhooks", label: "Inbound webhooks" },
-      { kind: "cap", key: "max_inbound_webhooks", label: "Max inbound webhooks" },
     ],
   },
   {
     title: "Copy Trading",
     fixedOrder: true,
     rows: [
-      { kind: "feature", key: "copy_share", label: "Private Sharing" },
       { kind: "feature", key: "copy_follow", label: "Follow a desk" },
+      { kind: "feature", key: "copy_share", label: "Private Sharing" },
       { kind: "feature", key: "copy_catalogue", label: "Public sharing" },
       { kind: "cap", key: "max_copy_follows", label: "Max copy follows" },
       { kind: "cap", key: "max_followers_accepted", label: "Max followers when sharing" },
