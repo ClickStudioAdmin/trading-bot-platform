@@ -55,7 +55,7 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   mode_paper: "Paper desks",
   mode_live: "Live / Connected desks",
   venue_non_bybit: "Non-Bybit venues",
-  copy_follow: "Copy other Desks",
+  copy_follow: "Copy other Trader's Desks",
   copy_share: "Desk Sharing - Private",
   copy_catalogue: "Desk Sharing - Public",
   research_backtest: "Backtesting Tool",
@@ -288,7 +288,7 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     ],
   },
   {
-    title: "Any Type",
+    title: "Maximum Desks (any type)",
     fixedOrder: true,
     rows: [
       { kind: "cap", key: "max_paper_desks", label: "Paper Trading" },
@@ -316,7 +316,7 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     title: "Copy Trading",
     fixedOrder: true,
     rows: [
-      { kind: "feature", key: "copy_follow", label: "Copy other Desks" },
+      { kind: "feature", key: "copy_follow", label: "Copy other Trader's Desks" },
       { kind: "cap", key: "max_copy_follows", label: "Max Desk Copies" },
       { kind: "feature", key: "copy_catalogue", label: "Desk Sharing - Public" },
       { kind: "feature", key: "copy_share", label: "Desk Sharing - Private" },

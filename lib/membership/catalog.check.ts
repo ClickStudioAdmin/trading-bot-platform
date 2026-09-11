@@ -144,7 +144,7 @@ assert.deepEqual(
   [
     "Manual Desk Types",
     "Automated Desk Types",
-    "Any Type",
+    "Maximum Desks (any type)",
     "Bots & Templates",
     "Webhooks",
     "Copy Trading",
@@ -195,7 +195,7 @@ assert.equal(
   true,
 );
 const deskResources = PLAN_COMPARE_SECTIONS.find(
-  (section) => section.title === "Any Type",
+  (section) => section.title === "Maximum Desks (any type)",
 );
 assert.ok(deskResources);
 assert.equal(
