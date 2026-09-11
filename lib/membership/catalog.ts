@@ -161,7 +161,7 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   research_backtest: "Backtesting tool",
   signals_inbound_webhooks: "Inbound TradingView / Signal webhooks",
   extras_advanced_dca: "Advanced DCA (Confirm, Exit-if, ATR)",
-  extras_templates: "Templates (save, apply, folders, export)",
+  extras_templates: "Save Bot templates",
   extras_starter_pack: "Starter Pack apply",
   affiliate_enroll: "Affiliate enroll",
 };
@@ -377,7 +377,7 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   {
     title: "Automation",
     rows: [
-      { kind: "feature", key: "extras_templates", label: "Templates" },
+      { kind: "feature", key: "extras_templates", label: "Save Bot templates" },
       { kind: "cap", key: "max_bots_per_desk", label: "Max bots per desk" },
     ],
   },
