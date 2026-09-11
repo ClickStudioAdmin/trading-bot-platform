@@ -62,7 +62,7 @@ Research: Backtesting Tool; Attach Results to Bot Template (Plus and Pro).
 
 Signals and extras: inbound TradingView / Signal webhooks; Save Templates; Share Templates (on for existing plans); Import / Export Templates (Plus and Pro). Advanced DCA stays off the public catalog for now.
 
-Affiliate: enroll + referral code; earn multi-level (implies enroll); see downline stats.
+Affiliate: enroll + referral code; earn multi-level (implies enroll); see downline stats; **Pay subscription from affiliate earnings** (catalog tick). Opt-in on Account Settings: “Deduct subscription payment from available affiliate earnings”. Payable only — pending cannot pay rent. Billing applies the debit in Stripe / wallet / commission steps.
 
 `/admin/*` is role-based, never a plan flag.
 
@@ -119,7 +119,7 @@ Attribution: first-touch referral code (optional cookie later with the marketing
 
 **Hold then earn.** Commission starts pending for admin hold days (default **30**). Refund / chargeback / wallet reversal in the hold → never payable. After the hold, payable. Do not edit a paid row in place.
 
-**Payouts.** Method catalog: manual/export, Stripe Connect (schema-ready, can ship after export), **USDT withdraw** from treasury to the affiliate’s address on an admin-listed USDT network. They pick address + network, not a coin. After hold, payable commission credits the same platform wallet (may pay their own rent or withdraw). Pending cannot pay rent and cannot withdraw.
+**Payouts.** Method catalog: manual/export, Stripe Connect (schema-ready, can ship after export), **USDT withdraw** from treasury to the affiliate’s address on an admin-listed USDT network. They pick address + network, not a coin. After hold, payable commission credits the same platform wallet. If the plan has **Pay subscription from affiliate earnings** and `members.pay_subscription_from_affiliate` is on, a billing tick applies payable earnings to that member’s subscription invoice first; leftover still charges Stripe or wallet. Pending cannot pay rent and cannot withdraw.
 
 Withdraw locks (all): enroll on; no outstanding subscription invoices; payable ≥ min. Failures: visible disabled control + notice.
 

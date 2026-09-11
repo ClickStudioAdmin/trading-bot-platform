@@ -67,6 +67,15 @@ const named = parseOwnProfile(profile);
 assert.equal(named.ok, true);
 if (named.ok) {
   assert.equal(named.name, "Click");
+  assert.equal(named.paySubscriptionFromAffiliate, false);
+}
+const deduct = new FormData();
+deduct.set("name", "Click");
+deduct.set("paySubscriptionFromAffiliate", "1");
+const deducted = parseOwnProfile(deduct);
+assert.equal(deducted.ok, true);
+if (deducted.ok) {
+  assert.equal(deducted.paySubscriptionFromAffiliate, true);
 }
 assert.equal(parseOwnProfile(new FormData()).ok, false);
 

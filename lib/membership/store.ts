@@ -154,6 +154,24 @@ export async function getMemberPlanId(
   return typeof id === "string" ? id : null;
 }
 
+export async function getMemberPaySubscriptionFromAffiliate(
+  userId: string,
+): Promise<boolean> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return false;
+  }
+  const { data } = await supabase
+    .from("members")
+    .select("pay_subscription_from_affiliate")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return (
+    (data as { pay_subscription_from_affiliate?: unknown } | null)
+      ?.pay_subscription_from_affiliate === true
+  );
+}
+
 async function nextUniqueSlug(
   supabase: NonNullable<ReturnType<typeof createServiceClient>>,
   name: string,

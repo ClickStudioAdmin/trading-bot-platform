@@ -25,6 +25,7 @@ export const PLAN_FEATURE_KEYS = [
   "extras_share_templates",
   "extras_import_export_templates",
   "affiliate_enroll",
+  "affiliate_pay_subscription",
 ] as const;
 
 export type PlanFeatureKey = (typeof PLAN_FEATURE_KEYS)[number];
@@ -66,6 +67,7 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   extras_share_templates: "Share Templates",
   extras_import_export_templates: "Import / Export Templates",
   affiliate_enroll: "Affiliate enroll",
+  affiliate_pay_subscription: "Pay subscription from affiliate earnings",
 };
 
 export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
@@ -408,6 +410,11 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
       { kind: "rate", key: "l3", label: "L3 Commission" },
       { kind: "rate", key: "l4", label: "L4 Commission" },
       { kind: "rate", key: "l5", label: "L5 Commission" },
+      {
+        kind: "feature",
+        key: "affiliate_pay_subscription",
+        label: PLAN_FEATURE_LABELS.affiliate_pay_subscription,
+      },
     ],
   },
 ];

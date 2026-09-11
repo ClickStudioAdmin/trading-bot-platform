@@ -207,7 +207,11 @@ export async function updateOwnProfile(formData: FormData) {
   }
   const { error } = await supabase
     .from("members")
-    .update({ name: parsed.name, updated_at: new Date().toISOString() })
+    .update({
+      name: parsed.name,
+      pay_subscription_from_affiliate: parsed.paySubscriptionFromAffiliate,
+      updated_at: new Date().toISOString(),
+    })
     .eq("user_id", member.id);
   if (error) {
     redirect(settingsPath({ error: error.message }));
@@ -217,7 +221,10 @@ export async function updateOwnProfile(formData: FormData) {
     event: "member.profile_updated",
     message: "Updated profile name",
     userId: member.id,
-    data: { name: parsed.name },
+    data: {
+      name: parsed.name,
+      paySubscriptionFromAffiliate: parsed.paySubscriptionFromAffiliate,
+    },
   });
   revalidatePath("/", "layout");
   redirect(settingsPath({ saved: "profile" }));

@@ -76,8 +76,23 @@ export function parseOwnProfileName(
 
 export function parseOwnProfile(
   formData: FormData,
-): { ok: true; name: string } | { ok: false; error: string } {
-  return parseOwnProfileName(formData.get("name"));
+):
+  | {
+      ok: true;
+      name: string;
+      paySubscriptionFromAffiliate: boolean;
+    }
+  | { ok: false; error: string } {
+  const parsed = parseOwnProfileName(formData.get("name"));
+  if (!parsed.ok) {
+    return parsed;
+  }
+  return {
+    ok: true,
+    name: parsed.name,
+    paySubscriptionFromAffiliate:
+      String(formData.get("paySubscriptionFromAffiliate") ?? "") === "1",
+  };
 }
 
 export function parseOwnPasswordChange(

@@ -30,6 +30,11 @@ assert.equal(emptyFeatures().desk_dca, false);
 assert.equal(emptyCaps().max_demo_desks, null);
 assert.equal(parseFeatures({ desk_dca: true, nope: true }).desk_dca, true);
 assert.equal(parseFeatures({ desk_dca: true }).desk_scale_in, false);
+assert.equal(parseFeatures({}).affiliate_pay_subscription, false);
+assert.equal(
+  parseFeatures({ affiliate_pay_subscription: true }).affiliate_pay_subscription,
+  true,
+);
 assert.equal(parseCaps({ max_demo_desks: 2, max_paper_desks: "nope" }).max_demo_desks, 2);
 assert.equal(parseCaps({ max_demo_desks: 2 }).max_paper_desks, null);
 assert.equal(parseCaps({ max_demo_desks: 1, max_live_env_desks: 3 }).max_demo_desks, 1);
@@ -325,6 +330,14 @@ assert.ok(affiliates);
 assert.equal(affiliates.fixedOrder, true);
 assert.equal(affiliates.rows[0].kind, "cap");
 assert.equal(affiliates.rows[0].key, "affiliate_max_depth");
+assert.equal(
+  affiliates.rows.at(-1)?.kind,
+  "feature",
+);
+assert.equal(
+  affiliates.rows.at(-1)?.key,
+  "affiliate_pay_subscription",
+);
 const adminSections = adminPlanSections();
 assert.deepEqual(
   adminSections.map((section) => section.title),
