@@ -18,6 +18,7 @@ Style: dark modern business portal. Tokens live in `app/globals.css` (`@theme`).
 | `ink-faint` | `#6B7382` | Inactive nav, hints |
 | `accent` | `#A78BFA` | Active states, links, primary actions, charts |
 | `accent-strong` | `#8B6CF6` | Primary button fill |
+| `plan-header` | `#764DED` | Plan compare card headers |
 | `success` | `#34D399` | Positive change |
 | `danger` | `#F07167` | Negative change, alerts, badges |
 | `warning` | `#F5B942` | Caution, secondary chart segment |

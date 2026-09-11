@@ -136,12 +136,10 @@ function PlanCell({
   if (block.type === "header") {
     return (
       <div
-        className={`border-b border-line px-3 pb-4 pt-5 text-center ${
-          current ? "bg-surface-raised" : "bg-canvas"
-        }`}
+        className="border-b border-line bg-plan-header px-3 pb-4 pt-5 text-center"
       >
         {current ? (
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-accent">
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink">
             Your plan
           </p>
         ) : null}
