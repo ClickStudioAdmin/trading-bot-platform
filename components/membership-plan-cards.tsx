@@ -49,7 +49,7 @@ export function MembershipPlanCards({
   const blocks = compareBlocks(plans);
 
   return (
-    <div className="mt-6 overflow-x-auto">
+    <div className="mt-6 overflow-x-auto pt-6">
       <div
         className="grid w-max max-w-full"
         style={{
@@ -71,13 +71,18 @@ export function MembershipPlanCards({
           return (
             <div
               key={plan.id}
-              className={`grid grid-rows-subgrid overflow-hidden rounded-card border ${
+              className={`relative grid grid-rows-subgrid overflow-visible rounded-card border ${
                 current
                   ? "border-accent bg-surface"
                   : "border-line bg-surface"
               }`}
               style={{ gridColumn: planIndex + 2, gridRow: "1 / -1" }}
             >
+              {current ? (
+                <p className="pointer-events-none absolute inset-x-0 -top-6 text-center text-[11px] font-medium uppercase tracking-[0.16em] text-accent">
+                  Your plan
+                </p>
+              ) : null}
               {blocks.map((block, index) => (
                 <PlanCell
                   key={labelKey(block, index)}
@@ -135,14 +140,7 @@ function PlanCell({
 }) {
   if (block.type === "header") {
     return (
-      <div
-        className="border-b border-line bg-plan-header px-3 pb-4 pt-5 text-center"
-      >
-        {current ? (
-          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink">
-            Your plan
-          </p>
-        ) : null}
+      <div className="overflow-hidden rounded-t-card border-b border-line bg-plan-header px-3 pb-4 pt-5 text-center">
         <p className="text-xs font-medium uppercase tracking-[0.16em] text-ink">
           {plan.name}
         </p>
@@ -152,18 +150,16 @@ function PlanCell({
         {planIsArchived(plan) ? (
           <span className="mt-2 inline-flex">
             <ColumnHint
-              label={
-                <span className="inline-flex items-center justify-center rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
-                  Legacy
-                </span>
-              }
+              label={<PlanStatusBadge>Legacy</PlanStatusBadge>}
               hint="Plan is no longer available. You stay on this plan unless you upgrade or cancel your subscription."
             />
           </span>
         ) : plan.visibility !== "public" ? (
-          <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.16em] text-ink-faint">
-            {plan.visibility === "draft" ? "Draft preview" : "Private"}
-          </p>
+          <span className="mt-2 inline-flex">
+            <PlanStatusBadge>
+              {plan.visibility === "draft" ? "Draft preview" : "Private"}
+            </PlanStatusBadge>
+          </span>
         ) : null}
       </div>
     );
@@ -173,7 +169,7 @@ function PlanCell({
   }
   if (block.type === "footer") {
     return (
-      <div className="px-4 pb-5 pt-6 text-center">
+      <div className="rounded-b-card px-4 pb-5 pt-6 text-center">
         {current ? (
           <p className="rounded-control bg-canvas px-3 py-2 text-sm text-ink">
             Current plan
@@ -199,6 +195,14 @@ function PlanCell({
     <div className="flex items-center justify-center px-3 py-2">
       <CompareMark cell={comparePlanCell(plan, block.row)} />
     </div>
+  );
+}
+
+function PlanStatusBadge({ children }: { children: string }) {
+  return (
+    <span className="inline-flex items-center justify-center rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning">
+      {children}
+    </span>
   );
 }
 
