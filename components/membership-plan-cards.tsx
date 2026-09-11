@@ -8,6 +8,24 @@ import {
   type PlanCompareRow,
 } from "@/lib/membership/catalog";
 
+type CompareBlock =
+  | { type: "header" }
+  | { type: "section"; title: string; first: boolean }
+  | { type: "row"; row: PlanCompareRow }
+  | { type: "footer" };
+
+function compareBlocks(plans: MembershipPlan[]): CompareBlock[] {
+  const blocks: CompareBlock[] = [{ type: "header" }];
+  PLAN_COMPARE_SECTIONS.forEach((section, index) => {
+    blocks.push({ type: "section", title: section.title, first: index === 0 });
+    for (const row of sortCompareSectionRows(plans, section.rows)) {
+      blocks.push({ type: "row", row });
+    }
+  });
+  blocks.push({ type: "footer" });
+  return blocks;
+}
+
 export function MembershipPlanCards({
   plans,
   currentPlanId,
@@ -23,148 +41,139 @@ export function MembershipPlanCards({
     );
   }
 
+  const blocks = compareBlocks(plans);
+
   return (
-    <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
-      <table className="min-w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-line">
-            <th className="sticky left-0 z-10 min-w-52 bg-surface px-4 py-4 text-left font-medium text-ink-muted">
-              <span className="sr-only">Feature</span>
-            </th>
-            {plans.map((plan) => {
-              const current = plan.id === currentPlanId;
-              return (
-                <th
-                  key={plan.id}
-                  className={`min-w-36 px-4 py-4 text-center ${
-                    current ? "bg-surface-raised" : "bg-surface"
-                  }`}
-                >
-                  {current ? (
-                    <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-accent">
-                      Your plan
-                    </p>
-                  ) : null}
-                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-ink">
-                    {plan.name}
-                  </p>
-                  <p className="mt-2 text-lg font-semibold tabular-nums text-ink">
-                    {formatPlanPrice(plan.priceUsd)}
-                  </p>
-                </th>
-              );
-            })}
-          </tr>
-        </thead>
-        <tbody>
-          {PLAN_COMPARE_SECTIONS.map((section, index) => (
-            <CompareSection
-              key={section.title}
-              title={section.title}
-              first={index === 0}
-              rows={sortCompareSectionRows(plans, section.rows)}
-              plans={plans}
-              currentPlanId={currentPlanId}
-            />
-          ))}
-        </tbody>
-        <tfoot>
-          <tr className="border-t border-line">
-            <td className="sticky left-0 z-10 bg-surface px-4 py-4" />
-            {plans.map((plan) => {
-              const current = plan.id === currentPlanId;
-              return (
-                <td
-                  key={plan.id}
-                  className={`px-4 py-4 text-center ${
-                    current ? "bg-surface-raised" : "bg-surface"
-                  }`}
-                >
-                  {current ? (
-                    <p className="rounded-control bg-canvas px-3 py-2 text-sm text-ink">
-                      Current plan
-                    </p>
-                  ) : (
-                    <div>
-                      <button
-                        type="button"
-                        disabled
-                        className="w-full rounded-control bg-accent-strong/40 px-4 py-2 text-sm font-medium text-ink"
-                      >
-                        Upgrade
-                      </button>
-                      <p className="mt-2 text-xs text-ink-faint">
-                        Card checkout is the next step.
-                      </p>
-                    </div>
-                  )}
-                </td>
-              );
-            })}
-          </tr>
-        </tfoot>
-      </table>
+    <div
+      className="mt-6 grid overflow-x-auto"
+      style={{
+        gridTemplateColumns: `minmax(12.5rem, 15rem) repeat(${plans.length}, minmax(11rem, 1fr))`,
+        gridTemplateRows: `repeat(${blocks.length}, auto)`,
+        columnGap: "0.85rem",
+      }}
+    >
+      <div
+        className="grid grid-rows-subgrid"
+        style={{ gridColumn: 1, gridRow: "1 / -1" }}
+      >
+        {blocks.map((block, index) => (
+          <LabelCell key={labelKey(block, index)} block={block} />
+        ))}
+      </div>
+      {plans.map((plan, planIndex) => {
+        const current = plan.id === currentPlanId;
+        return (
+          <div
+            key={plan.id}
+            className={`grid grid-rows-subgrid rounded-card border ${
+              current
+                ? "border-accent bg-surface-raised"
+                : "border-line bg-surface"
+            }`}
+            style={{ gridColumn: planIndex + 2, gridRow: "1 / -1" }}
+          >
+            {blocks.map((block, index) => (
+              <PlanCell
+                key={labelKey(block, index)}
+                block={block}
+                plan={plan}
+                current={current}
+              />
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function CompareSection({
-  title,
-  first,
-  rows,
-  plans,
-  currentPlanId,
-}: {
-  title: string;
-  first: boolean;
-  rows: readonly PlanCompareRow[];
-  plans: MembershipPlan[];
-  currentPlanId: string | null;
-}) {
+function labelKey(block: CompareBlock, index: number): string {
+  if (block.type === "section") {
+    return `section-${block.title}`;
+  }
+  if (block.type === "row") {
+    return `${block.row.kind}-${block.row.key}`;
+  }
+  return `${block.type}-${index}`;
+}
+
+function LabelCell({ block }: { block: CompareBlock }) {
+  if (block.type === "header" || block.type === "footer") {
+    return <div />;
+  }
+  if (block.type === "section") {
+    return (
+      <div
+        className={`px-1 text-xs font-medium uppercase tracking-[0.16em] text-accent ${
+          block.first ? "pb-2 pt-5" : "pb-2 pt-8"
+        }`}
+      >
+        {block.title}
+      </div>
+    );
+  }
   return (
-    <>
-      {first ? null : (
-        <tr aria-hidden>
-          <td
-            colSpan={plans.length + 1}
-            className="h-8 border-0 bg-canvas p-0"
-          />
-        </tr>
-      )}
-      <tr className="border-t border-line bg-surface-raised">
-        <th
-          colSpan={plans.length + 1}
-          scope="colgroup"
-          className="px-4 py-3 text-left text-xs font-medium uppercase tracking-[0.16em] text-accent"
-        >
-          {title}
-        </th>
-      </tr>
-      {rows.map((row) => (
-        <tr key={`${row.kind}-${row.key}`} className="border-t border-line">
-          <th
-            scope="row"
-            className="sticky left-0 bg-surface px-4 py-2.5 text-left font-normal text-ink"
-          >
-            {row.label}
-          </th>
-          {plans.map((plan) => {
-            const current = plan.id === currentPlanId;
-            const cell = comparePlanCell(plan, row);
-            return (
-              <td
-                key={plan.id}
-                className={`px-4 py-2.5 text-center ${
-                  current ? "bg-surface-raised" : "bg-surface"
-                }`}
-              >
-                <CompareMark cell={cell} />
-              </td>
-            );
-          })}
-        </tr>
-      ))}
-    </>
+    <div className="px-1 py-2 text-sm text-ink">{block.row.label}</div>
+  );
+}
+
+function PlanCell({
+  block,
+  plan,
+  current,
+}: {
+  block: CompareBlock;
+  plan: MembershipPlan;
+  current: boolean;
+}) {
+  if (block.type === "header") {
+    return (
+      <div className="px-4 pb-4 pt-5 text-center">
+        {current ? (
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-accent">
+            Your plan
+          </p>
+        ) : null}
+        <p className="text-xs font-medium uppercase tracking-[0.16em] text-ink">
+          {plan.name}
+        </p>
+        <p className="mt-2 text-lg font-semibold tabular-nums text-ink">
+          {formatPlanPrice(plan.priceUsd)}
+        </p>
+      </div>
+    );
+  }
+  if (block.type === "section") {
+    return <div className={block.first ? "pt-5" : "pt-8"} />;
+  }
+  if (block.type === "footer") {
+    return (
+      <div className="px-4 pb-5 pt-6 text-center">
+        {current ? (
+          <p className="rounded-control bg-canvas px-3 py-2 text-sm text-ink">
+            Current plan
+          </p>
+        ) : (
+          <div>
+            <button
+              type="button"
+              disabled
+              className="w-full rounded-control bg-accent-strong/40 px-4 py-2 text-sm font-medium text-ink"
+            >
+              Upgrade
+            </button>
+            <p className="mt-2 text-xs text-ink-faint">
+              Card checkout is the next step.
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center justify-center px-3 py-2">
+      <CompareMark cell={comparePlanCell(plan, block.row)} />
+    </div>
   );
 }
 
@@ -172,11 +181,11 @@ function CompareMark({ cell }: { cell: PlanCompareCell }) {
   if (cell.kind === "tick") {
     return (
       <span className="inline-flex text-success" aria-label="Included">
-        <svg viewBox="0 0 16 16" fill="none" className="size-7" aria-hidden>
+        <svg viewBox="0 0 16 16" fill="none" className="size-5" aria-hidden>
           <path
             d="M3.5 8.5 6.5 11.5 12.5 4.5"
             stroke="currentColor"
-            strokeWidth="2.25"
+            strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -188,7 +197,7 @@ function CompareMark({ cell }: { cell: PlanCompareCell }) {
     return null;
   }
   return (
-    <span className="text-lg font-semibold tabular-nums text-ink">
+    <span className="text-base font-semibold tabular-nums text-ink">
       {cell.text}
     </span>
   );
