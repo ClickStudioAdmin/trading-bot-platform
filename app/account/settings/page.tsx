@@ -203,7 +203,7 @@ export default async function AccountSettingsPage({
               className="mt-0.5"
             />
             <span>
-              Deduct subscription payment from available affiliate earnings
+              Deduct Plan Payment from Earnings
               <span className="mt-1 block text-xs text-ink-faint">
                 Payable earnings only. Pending commissions cannot be used.
                 Your upline still earns commission on that payment.

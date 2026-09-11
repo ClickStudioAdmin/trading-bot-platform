@@ -67,7 +67,7 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   extras_share_templates: "Share Templates",
   extras_import_export_templates: "Import / Export Templates",
   affiliate_enroll: "Affiliate enroll",
-  affiliate_pay_subscription: "Pay subscription from affiliate earnings",
+  affiliate_pay_subscription: "Deduct Plan Payment from Earnings",
 };
 
 export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
