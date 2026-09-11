@@ -154,11 +154,16 @@ function PlanCell({
               hint="Plan is no longer available. You stay on this plan unless you upgrade or cancel your subscription."
             />
           </span>
-        ) : plan.visibility !== "public" ? (
+        ) : plan.visibility === "draft" ? (
           <span className="mt-2 inline-flex">
-            <PlanStatusBadge>
-              {plan.visibility === "draft" ? "Draft preview" : "Private"}
-            </PlanStatusBadge>
+            <PlanStatusBadge>Draft preview</PlanStatusBadge>
+          </span>
+        ) : plan.visibility === "private" ? (
+          <span className="mt-2 inline-flex">
+            <ColumnHint
+              label={<PlanStatusBadge>Private</PlanStatusBadge>}
+              hint="This plan is not publicly available."
+            />
           </span>
         ) : null}
       </div>
