@@ -140,20 +140,19 @@ const compareFeatureKeys = PLAN_COMPARE_SECTIONS.flatMap((section) =>
 const compareCapKeys = PLAN_COMPARE_SECTIONS.flatMap((section) =>
   section.rows.filter((row) => row.kind === "cap").map((row) => row.key),
 );
-const hiddenCompareFeatures = [
+const hiddenCompareFeatures = new Set<string>([
   "research_chart",
   "extras_starter_pack",
   "venue_non_bybit",
   "affiliate_enroll",
-] as const;
-for (const key of hiddenCompareFeatures) {
-  assert.equal(compareFeatureKeys.includes(key), false);
-}
+]);
+assert.equal(
+  compareFeatureKeys.some((key) => hiddenCompareFeatures.has(key)),
+  false,
+);
 assert.deepEqual(
   [...compareFeatureKeys].sort(),
-  [...PLAN_FEATURE_KEYS].filter(
-    (key) => !hiddenCompareFeatures.includes(key),
-  ).sort(),
+  [...PLAN_FEATURE_KEYS].filter((key) => !hiddenCompareFeatures.has(key)).sort(),
 );
 assert.deepEqual([...compareCapKeys].sort(), [...PLAN_CAP_KEYS].sort());
 const deskTypes = PLAN_COMPARE_SECTIONS.find(
