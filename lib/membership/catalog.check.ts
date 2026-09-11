@@ -143,8 +143,8 @@ assert.deepEqual(
   [
     "Manual Desks",
     "Automated Desks",
-    "Desk Resources",
-    "Bot Templates",
+    "Maximum Desks",
+    "Bots & Templates",
     "Webhooks",
     "Copy Trading",
     "Backtesting",
@@ -206,7 +206,7 @@ assert.equal(
   true,
 );
 const deskResources = PLAN_COMPARE_SECTIONS.find(
-  (section) => section.title === "Desk Resources",
+  (section) => section.title === "Maximum Desks",
 );
 assert.ok(deskResources);
 assert.equal(

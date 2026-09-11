@@ -77,7 +77,7 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
     ],
   },
   {
-    title: "Bot Templates",
+    title: "Bots & Templates",
     keys: [
       "extras_templates",
       "extras_share_templates",
@@ -118,11 +118,14 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
       "max_desk_dca",
       "max_desk_cash_and_carry",
       "max_desk_signal_follower",
-      "max_bots_per_desk",
     ],
   },
   {
-    title: "Desk Resources",
+    title: "Bots & Templates",
+    keys: ["max_bots_per_desk"],
+  },
+  {
+    title: "Maximum Desks",
     keys: [
       "max_paper_desks",
       "max_demo_desks",
@@ -178,7 +181,7 @@ export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
   max_demo_desks: "Exchange Connected Desks (Demo Mode)",
   max_live_env_desks: "Exchange Connected Desks (Live Mode)",
   max_bots_per_desk: "Max bots / playbooks per desk",
-  max_copy_follows: "Max copy follows",
+  max_copy_follows: "Max Copies",
   max_followers_accepted: "Max followers when sharing",
   max_stored_backtests: "Max stored backtests",
   max_backtest_years: "Max Backtest timeframe (years)",
@@ -372,11 +375,10 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
       { kind: "feature", key: "desk_dca", label: "DCA" },
       { kind: "feature", key: "desk_cash_and_carry", label: "Cash & Carry" },
       { kind: "feature", key: "desk_signal_follower", label: "TradingView Strategy" },
-      { kind: "cap", key: "max_bots_per_desk", label: "Max bots per desk" },
     ],
   },
   {
-    title: "Desk Resources",
+    title: "Maximum Desks",
     fixedOrder: true,
     rows: [
       { kind: "cap", key: "max_paper_desks", label: "Paper Desks" },
@@ -385,8 +387,10 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     ],
   },
   {
-    title: "Bot Templates",
+    title: "Bots & Templates",
+    fixedOrder: true,
     rows: [
+      { kind: "cap", key: "max_bots_per_desk", label: "Max bots per desk" },
       { kind: "feature", key: "extras_templates", label: "Save Templates" },
       { kind: "feature", key: "extras_share_templates", label: "Share Templates" },
       { kind: "feature", key: "extras_import_export_templates", label: "Import / Export Templates" },
@@ -403,7 +407,7 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     fixedOrder: true,
     rows: [
       { kind: "feature", key: "copy_follow", label: "Copy Trading" },
-      { kind: "cap", key: "max_copy_follows", label: "Max copy follows" },
+      { kind: "cap", key: "max_copy_follows", label: "Max Copies" },
       { kind: "feature", key: "copy_share", label: "Private Sharing" },
       { kind: "feature", key: "copy_catalogue", label: "Public sharing" },
       { kind: "cap", key: "max_followers_accepted", label: "Max followers when sharing" },
