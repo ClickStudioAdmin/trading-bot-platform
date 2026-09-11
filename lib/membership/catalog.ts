@@ -90,7 +90,7 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
   },
   {
     title: "Copy Trading",
-    keys: ["copy_follow", "copy_share", "copy_catalogue"],
+    keys: ["copy_follow", "copy_catalogue", "copy_share"],
   },
   {
     title: "Backtesting",
@@ -138,7 +138,7 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
   },
   {
     title: "Backtesting",
-    keys: ["max_stored_backtests", "max_backtest_years"],
+    keys: ["max_backtest_years", "max_stored_backtests"],
   },
   {
     title: "Affiliates",
@@ -156,7 +156,7 @@ export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   mode_paper: "Paper desks",
   mode_live: "Live / Connected desks",
   venue_non_bybit: "Non-Bybit venues",
-  copy_follow: "Copy Trading",
+  copy_follow: "Follow other Traders",
   copy_share: "Private Sharing",
   copy_catalogue: "Public sharing",
   research_chart: "Positions Chart",
@@ -181,9 +181,9 @@ export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
   max_demo_desks: "Exchange Connected Desks (Demo Mode)",
   max_live_env_desks: "Exchange Connected Desks (Live Mode)",
   max_bots_per_desk: "Max Bots per Desk",
-  max_copy_follows: "Max Copies",
+  max_copy_follows: "Max Follows",
   max_followers_accepted: "Max followers when sharing",
-  max_stored_backtests: "Max stored backtests",
+  max_stored_backtests: "Max Saved Backtests",
   max_backtest_years: "Max Backtest timeframe (years)",
   affiliate_max_depth: "Affiliate earn depth (1–5)",
 };
@@ -406,10 +406,10 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     title: "Copy Trading",
     fixedOrder: true,
     rows: [
-      { kind: "feature", key: "copy_follow", label: "Copy Trading" },
-      { kind: "cap", key: "max_copy_follows", label: "Max Copies" },
-      { kind: "feature", key: "copy_share", label: "Private Sharing" },
+      { kind: "feature", key: "copy_follow", label: "Follow other Traders" },
+      { kind: "cap", key: "max_copy_follows", label: "Max Follows" },
       { kind: "feature", key: "copy_catalogue", label: "Public sharing" },
+      { kind: "feature", key: "copy_share", label: "Private Sharing" },
       { kind: "cap", key: "max_followers_accepted", label: "Max followers when sharing" },
     ],
   },
@@ -418,9 +418,9 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
     fixedOrder: true,
     rows: [
       { kind: "feature", key: "research_backtest", label: "Backtesting tool" },
-      { kind: "feature", key: "research_backtest_attach_templates", label: "Attach results to Bot templates" },
-      { kind: "cap", key: "max_stored_backtests", label: "Max stored backtests" },
       { kind: "cap", key: "max_backtest_years", label: "Max Backtest timeframe" },
+      { kind: "feature", key: "research_backtest_attach_templates", label: "Attach results to Bot templates" },
+      { kind: "cap", key: "max_stored_backtests", label: "Max Saved Backtests" },
     ],
   },
   {
