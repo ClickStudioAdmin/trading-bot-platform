@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HEADER_LINKS } from "@/lib/site-links";
+import { HEADER_LINKS, isAppChromePath, PUBLIC_NAV_LINKS } from "@/lib/site-links";
 
 function navItemClass(active: boolean): string {
   return `rounded-control px-3 py-1.5 text-sm ${
@@ -10,6 +10,41 @@ function navItemClass(active: boolean): string {
       ? "bg-surface-raised text-ink"
       : "text-ink-muted hover:bg-surface-raised hover:text-ink"
   }`;
+}
+
+export function HeaderChromeLinks({ signedIn }: { signedIn: boolean }) {
+  const pathname = usePathname();
+  if (isAppChromePath(pathname)) {
+    return signedIn ? <HeaderBrowseLinks /> : null;
+  }
+  return <HeaderPublicLinks />;
+}
+
+export function HeaderPublicLinks() {
+  const pathname = usePathname();
+  return (
+    <nav aria-label="Site" className="flex items-center gap-1">
+      {PUBLIC_NAV_LINKS.map((link) => {
+        const [pathPart] = link.href.split("#");
+        const path = pathPart || "/";
+        const hashLink = link.href.includes("#");
+        const active = hashLink
+          ? false
+          : link.exact
+            ? pathname === path
+            : pathname === path || pathname.startsWith(`${path}/`);
+        return (
+          <Link
+            key={link.href}
+            href={link.href}
+            className={navItemClass(active)}
+          >
+            {link.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 }
 
 export function HeaderBrowseLinks() {
