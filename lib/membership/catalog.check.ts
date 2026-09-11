@@ -161,6 +161,7 @@ const hiddenCompareFeatures = new Set<string>([
   "mode_paper",
   "mode_live",
   "desk_scale_in",
+  "extras_advanced_dca",
 ]);
 const hiddenCompareCaps = new Set<string>([
   "max_desk_perps",

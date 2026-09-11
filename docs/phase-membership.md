@@ -60,7 +60,7 @@ Copy: follow, share/list, appear in the public catalogue.
 
 Research: backtesting tool; Positions Chart.
 
-Signals and extras: inbound TradingView / Signal webhooks; advanced DCA (optional, can stay Free); templates save/apply/folders/export; Starter Pack apply (usually Free).
+Signals and extras: inbound TradingView / Signal webhooks; templates save/apply/folders/export; Starter Pack apply (usually Free). Advanced DCA stays off the public catalog for now.
 
 Affiliate: enroll + referral code; earn multi-level (implies enroll); see downline stats.
 

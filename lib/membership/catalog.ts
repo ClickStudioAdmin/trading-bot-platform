@@ -76,7 +76,7 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
   },
   {
     title: "Automation",
-    keys: ["extras_advanced_dca", "extras_templates"],
+    keys: ["extras_templates"],
   },
   {
     title: "Webhooks",
@@ -377,7 +377,6 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   {
     title: "Automation",
     rows: [
-      { kind: "feature", key: "extras_advanced_dca", label: "Advanced DCA" },
       { kind: "feature", key: "extras_templates", label: "Templates" },
       { kind: "cap", key: "max_bots_per_desk", label: "Max bots per desk" },
     ],
