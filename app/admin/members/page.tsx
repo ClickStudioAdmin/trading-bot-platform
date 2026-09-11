@@ -4,6 +4,7 @@ import { AdminMembersTable } from "@/components/admin-members-table";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { PageHeading } from "@/components/page-heading";
 import { listMembers } from "@/lib/members/list";
+import { listMembershipPlans } from "@/lib/membership/store";
 import { firstSearchValue } from "@/lib/paper/open";
 import {
   MEMBER_PAGE_SIZE,
@@ -24,6 +25,10 @@ export default async function AdminMembersPage({
   const params = await searchParams;
   const query = parseMemberListQuery(params);
   const list = await listMembers(query);
+  const listed = await listMembershipPlans();
+  const planNames = Object.fromEntries(
+    (listed.ok ? listed.plans : []).map((plan) => [plan.id, plan.name]),
+  );
   const created = firstSearchValue(params.created) === "1";
   const updated = firstSearchValue(params.updated) === "1";
   const error = firstSearchValue(params.error);
@@ -114,7 +119,7 @@ export default async function AdminMembersPage({
         </div>
       </form>
 
-      <AdminMembersTable rows={list.rows} query={query} />
+      <AdminMembersTable rows={list.rows} query={query} planNames={planNames} />
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-ink-muted">
         <p>

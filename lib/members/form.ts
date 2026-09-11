@@ -1,4 +1,5 @@
 import { emailIsListedAdmin } from "@/lib/admin/emails";
+import { parsePlanId } from "@/lib/membership/form";
 
 export type MemberRole = "member" | "admin";
 export type MemberStatus = "active" | "disabled";
@@ -9,6 +10,7 @@ export type MemberFormValues = {
   password: string;
   role: MemberRole;
   status: MemberStatus;
+  planId: string;
 };
 
 export type ParsedMemberForm =
@@ -44,6 +46,11 @@ export function parseMemberForm(
     return { ok: false, error: "Choose a status." };
   }
 
+  const planId = parsePlanId(String(formData.get("planId") ?? ""));
+  if (!planId) {
+    return { ok: false, error: "Choose a plan." };
+  }
+
   let role: MemberRole = roleRaw;
   let status: MemberStatus = statusRaw;
   if (emailIsListedAdmin(email)) {
@@ -53,7 +60,7 @@ export function parseMemberForm(
 
   return {
     ok: true,
-    values: { name, email, password, role, status },
+    values: { name, email, password, role, status, planId },
   };
 }
 

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
   affiliateRatesOk,
+  assignablePlans,
   canArchivePlan,
   canDeletePlan,
+  defaultAssignablePlanId,
   comparePlanCell,
   rowUnlockIndex,
   sortCompareSectionRows,
@@ -65,6 +67,20 @@ assert.equal(
   canArchivePlan({ isDefault: false, archivedAt: "2026-09-11T00:00:00Z" }),
   false,
 );
+const livePlan = { id: "live", archivedAt: null, isDefault: true };
+const archivedPlan = {
+  id: "old",
+  archivedAt: "2026-09-11T00:00:00Z",
+  isDefault: false,
+};
+assert.deepEqual(assignablePlans([livePlan, archivedPlan]).map((p) => p.id), [
+  "live",
+]);
+assert.deepEqual(
+  assignablePlans([livePlan, archivedPlan], "old").map((p) => p.id),
+  ["live", "old"],
+);
+assert.equal(defaultAssignablePlanId([archivedPlan, livePlan]), "live");
 
 const create = new FormData();
 create.set("name", " Plus ");

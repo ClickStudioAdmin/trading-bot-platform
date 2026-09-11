@@ -7,7 +7,7 @@ import { parseMemberRow, type MemberRow } from "@/lib/members/rows";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 const MEMBER_COLUMNS =
-  "id, user_id, email, name, role, status, created_at, updated_at";
+  "id, user_id, email, name, role, status, plan_id, created_at, updated_at";
 
 export type MemberListResult = {
   rows: MemberRow[];

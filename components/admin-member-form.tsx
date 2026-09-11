@@ -2,15 +2,19 @@ import { emailIsListedAdmin } from "@/lib/admin/emails";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { createMember, updateMember } from "@/lib/members/actions";
 import type { MemberFormValues } from "@/lib/members/form";
+import type { MembershipPlan } from "@/lib/membership/catalog";
+import { planIsArchived } from "@/lib/membership/catalog";
 
 export function AdminMemberForm({
   mode,
   memberId,
   values,
+  plans,
 }: {
   mode: "create" | "edit";
   memberId?: number;
   values: MemberFormValues;
+  plans: MembershipPlan[];
 }) {
   const locked = emailIsListedAdmin(values.email);
   const action = mode === "create" ? createMember : updateMember;
@@ -88,6 +92,27 @@ export function AdminMemberForm({
           </select>
         </label>
       </div>
+      <label className="block text-xs text-ink-muted" htmlFor="planId">
+        Plan
+        <select
+          id="planId"
+          name="planId"
+          defaultValue={values.planId}
+          required
+          className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+        >
+          {plans.map((plan) => (
+            <option key={plan.id} value={plan.id}>
+              {plan.name}
+              {planIsArchived(plan) ? " (archived)" : ""}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs text-ink-faint">
+          Admin assign. Affiliate earning rates come from this plan. No
+          invoice.
+        </span>
+      </label>
       {locked ? (
         <>
           <input type="hidden" name="role" value="admin" />

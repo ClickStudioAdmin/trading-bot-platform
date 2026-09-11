@@ -5,6 +5,8 @@ import { AdminMemberForm } from "@/components/admin-member-form";
 import { PageHeading } from "@/components/page-heading";
 import { parseMemberId } from "@/lib/members/form";
 import { getMemberById } from "@/lib/members/list";
+import { assignablePlans } from "@/lib/membership/catalog";
+import { listMembershipPlans } from "@/lib/membership/store";
 import { firstSearchValue } from "@/lib/paper/open";
 
 export const metadata: Metadata = {
@@ -30,14 +32,19 @@ export default async function AdminEditMemberPage({
   }
   const query = await searchParams;
   const error = firstSearchValue(query.error);
+  const listed = await listMembershipPlans();
+  const plans = listed.ok
+    ? assignablePlans(listed.plans, member.planId)
+    : [];
+  const loadError = listed.ok ? null : listed.error;
 
   return (
     <div>
       <PageHeading overline="Admin" title="Edit member" />
       <p className="-mt-4 text-sm text-ink-muted">{member.email}</p>
-      {error ? (
+      {error || loadError ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
+          {error ?? loadError}
         </p>
       ) : null}
       <AdminMemberForm
@@ -49,7 +56,9 @@ export default async function AdminEditMemberPage({
           password: "",
           role: member.role,
           status: member.status,
+          planId: member.planId,
         }}
+        plans={plans}
       />
       <p className="mt-6">
         <Link href="/admin/members" className="text-sm text-accent hover:text-accent-strong">

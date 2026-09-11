@@ -11,9 +11,11 @@ import type { MemberRow } from "@/lib/members/rows";
 export function AdminMembersTable({
   rows,
   query,
+  planNames,
 }: {
   rows: MemberRow[];
   query: MemberListQuery;
+  planNames: Record<string, string>;
 }) {
   return (
     <div className="mt-6 overflow-x-auto rounded-card border border-line bg-surface">
@@ -24,6 +26,7 @@ export function AdminMembersTable({
             <SortHeader query={query} sort="email" label="Email" />
             <SortHeader query={query} sort="role" label="Role" />
             <SortHeader query={query} sort="status" label="Status" />
+            <th className="px-4 py-3 font-medium">Plan</th>
             <SortHeader query={query} sort="created" label="Created" />
             <th className="px-4 py-3 font-medium">Actions</th>
           </tr>
@@ -31,7 +34,7 @@ export function AdminMembersTable({
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-4 py-6 text-sm text-ink-muted">
+              <td colSpan={7} className="px-4 py-6 text-sm text-ink-muted">
                 No members match.
               </td>
             </tr>
@@ -47,6 +50,9 @@ export function AdminMembersTable({
                   }`}
                 >
                   {row.status}
+                </td>
+                <td className="px-4 py-3 text-ink-muted">
+                  {planNames[row.planId] ?? "—"}
                 </td>
                 <td className="px-4 py-3 tabular-nums text-ink-muted">
                   <LocalTime at={row.createdAt} mode="date" />

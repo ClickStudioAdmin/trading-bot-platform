@@ -14,6 +14,10 @@ import { loadInboundCopyInvites } from "@/lib/copy/shares";
 import { changeOwnPassword, updateOwnProfile } from "@/lib/members/actions";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionMember } from "@/lib/auth/session";
+import {
+  getMemberPlanId,
+  getMembershipPlan,
+} from "@/lib/membership/store";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -44,6 +48,13 @@ export default async function AccountSettingsPage({
     tab === "profile" ? await loadTraderProfile(member.id) : null;
   const invites =
     tab === "profile" ? await loadInboundCopyInvites(member.id) : [];
+  const planId =
+    tab === "profile" ? await getMemberPlanId(member.id) : null;
+  const plan =
+    tab === "profile" && planId
+      ? await getMembershipPlan(planId)
+      : null;
+  const planName = plan?.ok ? plan.plan.name : null;
 
   return (
     <div>
@@ -161,6 +172,21 @@ export default async function AccountSettingsPage({
             />
             <span className="mt-1 block text-xs text-ink-faint">
               Email is the login. An admin can change it from Members.
+            </span>
+          </label>
+          <label className="block text-xs text-ink-muted">
+            Plan
+            <input
+              value={planName ?? "—"}
+              readOnly
+              className={`${fieldClass} text-ink-muted`}
+            />
+            <span className="mt-1 block text-xs text-ink-faint">
+              Affiliate earning rates use this plan. Compare plans on{" "}
+              <Link href="/account/plans" className="text-accent">
+                Plans
+              </Link>
+              .
             </span>
           </label>
           <PendingSubmitButton

@@ -1,6 +1,6 @@
 # Plans, payments, and affiliates
 
-**Roadmap 5.** Spec written 11 Sep 2026. Steps 1–3 are in repo (docs, schema, admin + member plan pages). Do not start Stripe or the chain watcher until Click starts step 5 / 6. Hyperliquid step 7 and copy step 10 stay the current desk-test work.
+**Roadmap 5.** Spec written 11 Sep 2026. Steps 1–3 are in repo (docs, schema, admin + member plan pages). Do not start Stripe or the chain watcher until Click starts step 4 / 5. Upgrade UX / gates wait until step 10 so they land on settled surfaces. Hyperliquid step 7 and copy step 10 stay the current desk-test work.
 
 One combined phase: freemium plans, feature/cap gates, Stripe cards, a prepaid crypto credit wallet, and a multi-level affiliate program that pays a percent of **platform subscription** invoices only.
 
@@ -8,7 +8,7 @@ The paying customer is the **login** (`members`). One subscription covers every 
 
 ## Status
 
-Steps 1–3 in repo 11 Sep 2026. Click started schema + admin/member plan pages. Stop after step 3 until Click says go on step 4. Push `develop` to migrate.
+Steps 1–3 in repo 11 Sep 2026. Click started schema + admin/member plan pages. Stop after step 3 until Click says go on step 4 (Stripe). Upgrade UX / gates are step 10. Push `develop` to migrate.
 
 ## Purpose
 
@@ -19,18 +19,18 @@ Enough Free to test (Paper, a small desk cap, core Perps/DCA, Chart). Named upgr
 | # | Step | Who | Done when |
 | --- | --- | --- | --- |
 | 1 | Docs | Agent | This file is the phase. Roadmap item 5 is the combined commercial stack. Cross-refs updated. **In repo 11 Sep 2026.** Stop. |
-| 2 | Schema | Agent | Migrations: plans (archive, features, caps, per-plan L1/L2/L3 %), `members.plan_id` + billing fields, processor-agnostic invoices, USD credit ledger, referral tree, commission rows, payouts, program settings. Existing members land on seed **Free**. No Stripe SDK yet if it can wait for step 5. Push `develop` to migrate. **In repo 11 Sep 2026.** |
-| 3 | Admin plans | Agent | `/admin/plans` create/edit/archive; `/account/plans` public catalog. Seed Free / Plus / Pro. L1–L5 cannot exceed 100%. **In repo 11 Sep 2026.** |
-| 4 | Entitlements + Upgrade UX | Agent | `assertEntitlement` on create desk, Live, copy, backtest, enroll, caps. Surfaces stay visible; controls disable; page/inline **Upgrade** names the cheapest public plan that unlocks it. Cap notice: “You have 2 of 2 desks. Upgrade to add another.” `/account/billing` shell (plan, invoices placeholder). Server actions reject. |
-| 5 | Stripe cards | Agent | Test keys on `develop`, live on `main`. Checkout upgrade, Customer Portal, idempotent webhooks (`checkout.session.completed`, `customer.subscription.updated`, invoice paid/refunded). One collection method per member. Comp plan from admin (no commission invoice). |
-| 6 | Credit wallet | Agent | Unique deposit address per member. Admin-listed majors and EVM nets (incl. Arbitrum). Quote → confirm → **USD credit** (not a multi-currency wallet). Billing tick deducts plan price. Leftover stays. Withdraw leftover as **USDT** only, ≥ min payout, no arrears. Treasury keys on a billing worker only. |
-| 7 | Downgrade grace | Agent | Entitlements change at period end. Admin grace days (default 7). Banner + operable extras. After grace, billing worker Close/Disable **oldest desk first**: forbidden features, then numeric caps. Upgrade during grace cancels the sweep. Ledgers stay. |
-| 8 | Affiliate program admin | Agent | `/admin/affiliates`: max depth (default 2, hard cap 5), hold days (default 30), min payout, USDT networks, payout queue (export mark-paid, approve/reject withdraw). Rates stay on each plan row. |
-| 9 | Affiliate portal | Agent | `HEADER_LINKS` after Backtesting Tool → `/account/affiliates`. Referral kit, downline list (no private data), org chart, stats tiles. Never-enrolled = teaser + Upgrade. Lost enroll = full view, actions disabled, keep earning at last paid enroll-plan rates. Optional referral code on signup. |
-| 10 | Commissions + payouts | Agent | Invoice → pending hold → payable (refund in hold = no earn). Per-plan %; snapshot last enroll plan if enroll is off. Withdraw locks: enroll on, no arrears, ≥ min. USDT out only. Tables ready for Stripe Connect later. Gas deducted from the send or covered by the minimum. |
+| 2 | Schema | Agent | Migrations: plans (archive, features, caps, per-plan L1/L2/L3 %), `members.plan_id` + billing fields, processor-agnostic invoices, USD credit ledger, referral tree, commission rows, payouts, program settings. Existing members land on seed **Free**. No Stripe SDK yet if it can wait for step 4. Push `develop` to migrate. **In repo 11 Sep 2026.** |
+| 3 | Admin plans | Agent | `/admin/plans` create/edit/archive; `/account/plans` public catalog. Seed Free / Plus / Pro. L1–L5 cannot exceed 100%. Admin assigns a plan on `/admin/members` (comp, no invoice) so affiliate rates have a login to read. **In repo 11 Sep 2026.** |
+| 4 | Stripe cards | Agent | Test keys on `develop`, live on `main`. Checkout upgrade, Customer Portal, idempotent webhooks (`checkout.session.completed`, `customer.subscription.updated`, invoice paid/refunded). One collection method per member. Comp plan from admin (no commission invoice). |
+| 5 | Credit wallet | Agent | Unique deposit address per member. Admin-listed majors and EVM nets (incl. Arbitrum). Quote → confirm → **USD credit** (not a multi-currency wallet). Billing tick deducts plan price. Leftover stays. Withdraw leftover as **USDT** only, ≥ min payout, no arrears. Treasury keys on a billing worker only. |
+| 6 | Downgrade grace | Agent | Entitlements change at period end. Admin grace days (default 7). Banner + operable extras. After grace, billing worker Close/Disable **oldest desk first**: forbidden features, then numeric caps. Upgrade during grace cancels the sweep. Ledgers stay. |
+| 7 | Affiliate program admin | Agent | `/admin/affiliates`: max depth (default 2, hard cap 5), hold days (default 30), min payout, USDT networks, payout queue (export mark-paid, approve/reject withdraw). Rates stay on each plan row. |
+| 8 | Affiliate portal | Agent | `HEADER_LINKS` after Backtesting Tool → `/account/affiliates`. Referral kit, downline list (no private data), org chart, stats tiles. Never-enrolled = teaser + Upgrade. Lost enroll = full view, actions disabled, keep earning at last paid enroll-plan rates. Optional referral code on signup. |
+| 9 | Commissions + payouts | Agent | Invoice → pending hold → payable (refund in hold = no earn). Per-plan %; snapshot last enroll plan if enroll is off. Withdraw locks: enroll on, no arrears, ≥ min. USDT out only. Tables ready for Stripe Connect later. Gas deducted from the send or covered by the minimum. |
+| 10 | Entitlements + Upgrade UX | Agent | After payments and affiliates, so gates land on settled UI. `assertEntitlement` on create desk, Live, copy, backtest, enroll, caps. Surfaces stay visible; controls disable; page/inline **Upgrade** names the cheapest public plan that unlocks it. Cap notice: “You have 2 of 2 desks. Upgrade to add another.” `/account/billing` shell (plan, invoices placeholder). Server actions reject. |
 | 11 | Desk test | Click | Free gates visible/disabled. Upgrade Stripe test. Crypto top-up + leftover debit. Affiliate list/chart/stats. Hold then withdraw. Downgrade grace then oldest-first exit. Archive a used plan (cannot delete). |
 
-Stop after each micro-step until Click says go. Next is step 4 (entitlements + Upgrade UX). After acceptance of step 11, stop and wait.
+Stop after each micro-step until Click says go. Next is step 4 (Stripe cards). Do not start Upgrade UX / gates until step 10. After acceptance of step 11, stop and wait.
 
 ## How it works
 
@@ -130,6 +130,7 @@ KYC / travel-rule / money-transmitter: Click owns compliance. V1 is admin-approv
 ## What this phase includes
 
 - Admin plan catalog with features, caps, per-plan affiliate %, archive
+- Admin assigns `plan_id` on a member profile (comp). Affiliate earnings later read that plan’s L1–L5. If the plan has enroll, snapshot `last_enroll_plan_id`.
 - `assertEntitlement` + visible-but-disabled Upgrade UX + `/account/billing`
 - Stripe card subscriptions (develop test / main live)
 - USD credit wallet, crypto top-up rails, billing tick, USDT withdraw

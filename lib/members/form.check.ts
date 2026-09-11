@@ -7,11 +7,13 @@ create.set("email", "Trader@Click.studio");
 create.set("password", "password1");
 create.set("role", "member");
 create.set("status", "active");
+create.set("planId", "00000000-0000-4000-8000-000000000001");
 const created = parseMemberForm(create, "create");
 assert.equal(created.ok, true);
 if (created.ok) {
   assert.equal(created.values.name, "Desk Trader");
   assert.equal(created.values.email, "trader@click.studio");
+  assert.equal(created.values.planId, "00000000-0000-4000-8000-000000000001");
 }
 
 const shortPassword = new FormData();
@@ -20,6 +22,7 @@ shortPassword.set("email", "trader@click.studio");
 shortPassword.set("password", "short");
 shortPassword.set("role", "member");
 shortPassword.set("status", "active");
+shortPassword.set("planId", "00000000-0000-4000-8000-000000000001");
 const rejected = parseMemberForm(shortPassword, "create");
 assert.equal(rejected.ok, false);
 
@@ -29,6 +32,7 @@ edit.set("email", "trader@click.studio");
 edit.set("password", "");
 edit.set("role", "admin");
 edit.set("status", "disabled");
+edit.set("planId", "00000000-0000-4000-8000-000000000001");
 const edited = parseMemberForm(edit, "edit");
 assert.equal(edited.ok, true);
 
@@ -38,12 +42,21 @@ listed.set("email", "click.studio.admin@gmail.com");
 listed.set("password", "");
 listed.set("role", "member");
 listed.set("status", "disabled");
+listed.set("planId", "00000000-0000-4000-8000-000000000001");
 const forced = parseMemberForm(listed, "edit");
 assert.equal(forced.ok, true);
 if (forced.ok) {
   assert.equal(forced.values.role, "admin");
   assert.equal(forced.values.status, "active");
 }
+
+const noPlan = new FormData();
+noPlan.set("name", "Desk Trader");
+noPlan.set("email", "trader@click.studio");
+noPlan.set("password", "password1");
+noPlan.set("role", "member");
+noPlan.set("status", "active");
+assert.equal(parseMemberForm(noPlan, "create").ok, false);
 
 assert.equal(parseMemberId("12"), 12);
 assert.equal(parseMemberId("nope"), null);

@@ -11,6 +11,7 @@ import {
   parseOwnPasswordChange,
   parseOwnProfile,
 } from "@/lib/members/form";
+import { getMembershipPlan } from "@/lib/membership/store";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -29,6 +30,11 @@ export async function createMember(formData: FormData) {
     );
   }
 
+  const plan = await getMembershipPlan(parsed.values.planId);
+  if (!plan.ok) {
+    redirect(`/admin/members/new?error=${encodeURIComponent(plan.error)}`);
+  }
+
   const userId = crypto.randomUUID();
   const now = new Date().toISOString();
   const { error: insertError } = await supabase.from("members").insert({
@@ -37,6 +43,11 @@ export async function createMember(formData: FormData) {
     name: parsed.values.name,
     role: parsed.values.role,
     status: parsed.values.status,
+    plan_id: plan.plan.id,
+    last_enroll_plan_id: plan.plan.features.affiliate_enroll
+      ? plan.plan.id
+      : null,
+    subscription_status: "comp",
     password_hash: hashPassword(parsed.values.password),
     created_at: now,
     updated_at: now,
@@ -56,6 +67,7 @@ export async function createMember(formData: FormData) {
       email: parsed.values.email,
       role: parsed.values.role,
       status: parsed.values.status,
+      planId: plan.plan.id,
     },
   });
 
@@ -85,7 +97,7 @@ export async function updateMember(formData: FormData) {
 
   const { data: existing, error: loadError } = await supabase
     .from("members")
-    .select("id, user_id, email")
+    .select("id, user_id, email, plan_id")
     .eq("id", memberId)
     .maybeSingle();
 
@@ -105,13 +117,27 @@ export async function updateMember(formData: FormData) {
     );
   }
 
+  const plan = await getMembershipPlan(parsed.values.planId);
+  if (!plan.ok) {
+    redirect(
+      `/admin/members/${memberId}?error=${encodeURIComponent(plan.error)}`,
+    );
+  }
+
   const update: Record<string, unknown> = {
     email: parsed.values.email,
     name: parsed.values.name,
     role: parsed.values.role,
     status: parsed.values.status,
+    plan_id: plan.plan.id,
     updated_at: new Date().toISOString(),
   };
+  if (String(existing.plan_id ?? "") !== plan.plan.id) {
+    update.subscription_status = "comp";
+  }
+  if (plan.plan.features.affiliate_enroll) {
+    update.last_enroll_plan_id = plan.plan.id;
+  }
   if (parsed.values.password) {
     update.password_hash = hashPassword(parsed.values.password);
   }
@@ -138,6 +164,7 @@ export async function updateMember(formData: FormData) {
       email: parsed.values.email,
       role: parsed.values.role,
       status: parsed.values.status,
+      planId: plan.plan.id,
     },
   });
 

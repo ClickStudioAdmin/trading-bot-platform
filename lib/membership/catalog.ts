@@ -222,6 +222,22 @@ export function canArchivePlan(plan: Pick<MembershipPlan, "isDefault" | "archive
   return !plan.isDefault && !plan.archivedAt;
 }
 
+export function assignablePlans<T extends Pick<MembershipPlan, "id" | "archivedAt" | "isDefault">>(
+  plans: readonly T[],
+  currentPlanId?: string | null,
+): T[] {
+  return plans.filter(
+    (plan) => !planIsArchived(plan) || plan.id === currentPlanId,
+  );
+}
+
+export function defaultAssignablePlanId(
+  plans: readonly Pick<MembershipPlan, "id" | "archivedAt" | "isDefault">[],
+): string | null {
+  const open = assignablePlans(plans);
+  return open.find((plan) => plan.isDefault)?.id ?? open[0]?.id ?? null;
+}
+
 export function slugifyPlanName(name: string): string {
   const slug = name
     .trim()

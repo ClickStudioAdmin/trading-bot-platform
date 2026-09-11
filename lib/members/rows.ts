@@ -7,6 +7,7 @@ export type MemberRow = {
   name: string;
   role: MemberRole;
   status: MemberStatus;
+  planId: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -21,6 +22,7 @@ export function parseMemberRow(row: Record<string, unknown>): MemberRow {
     name: String(row.name),
     role,
     status,
+    planId: typeof row.plan_id === "string" ? row.plan_id : "",
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };
