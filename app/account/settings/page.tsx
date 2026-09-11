@@ -194,7 +194,7 @@ export default async function AccountSettingsPage({
               .
             </span>
           </label>
-          <label className="inline-flex items-start gap-2 text-sm text-ink">
+          <label className="flex items-start gap-2 text-sm text-ink">
             <input
               type="checkbox"
               name="paySubscriptionFromAffiliate"
@@ -210,13 +210,15 @@ export default async function AccountSettingsPage({
               </span>
             </span>
           </label>
-          <PendingSubmitButton
-            pendingLabel="Saving…"
-            successKey="save-profile"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-          >
-            Save profile
-          </PendingSubmitButton>
+          <div>
+            <PendingSubmitButton
+              pendingLabel="Saving…"
+              successKey="save-profile"
+              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            >
+              Save profile
+            </PendingSubmitButton>
+          </div>
         </form>
         <form
           action={saveTraderProfileAction}
