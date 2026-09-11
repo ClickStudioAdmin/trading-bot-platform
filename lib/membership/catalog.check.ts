@@ -203,6 +203,21 @@ assert.deepEqual(
   ["plus", "vip"],
 );
 assert.deepEqual(
+  publicCatalogPlans(
+    [
+      {
+        ...privatePlan,
+        name: "VIP",
+        sortOrder: 2,
+        archivedAt: "2026-09-11T00:00:00Z",
+      },
+      live,
+    ],
+    { currentPlanId: privatePlan.id },
+  ).map((plan) => plan.slug),
+  ["plus", "vip"],
+);
+assert.deepEqual(
   publicCatalogPlans([live, draftPreview], { includePreviewDrafts: true }).map(
     (plan) => plan.slug,
   ),

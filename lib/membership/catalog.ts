@@ -498,13 +498,13 @@ export function publicCatalogPlans(
 ): MembershipPlan[] {
   return plans
     .filter((plan) => {
+      if (plan.id === input.currentPlanId) {
+        return true;
+      }
       if (planIsArchived(plan)) {
         return false;
       }
       if (planIsPublic(plan)) {
-        return true;
-      }
-      if (plan.id === input.currentPlanId) {
         return true;
       }
       return (

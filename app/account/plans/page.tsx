@@ -29,14 +29,18 @@ export default async function AccountPlansPage() {
         includePreviewDrafts: member.role === "admin",
       })
     : [];
+  const current = plans.find((plan) => plan.id === currentPlanId);
 
   return (
     <div>
       <PageHeading title="Plans" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
         One section per feature group. In each section, shared rows sit at the
-        top and higher-plan extras sit at the bottom.         Card checkout is the next
+        top and higher-plan extras sit at the bottom. Card checkout is the next
         step.
+        {current?.visibility === "private"
+          ? ` You are on ${current.name}, a private plan assigned to this login.`
+          : ""}
         {member.role === "admin"
           ? " Drafts marked for preview appear here for admins only."
           : ""}
