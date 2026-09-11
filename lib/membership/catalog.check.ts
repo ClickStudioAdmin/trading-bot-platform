@@ -140,7 +140,6 @@ assert.deepEqual(
     "Manual Desks",
     "Automated Desks",
     "Desk Resources",
-    "Automation",
     "Webhooks",
     "Copy Trading",
     "Backtesting",

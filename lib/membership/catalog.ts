@@ -75,7 +75,7 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
     ],
   },
   {
-    title: "Automation",
+    title: "Desk Resources",
     keys: ["extras_templates"],
   },
   {
@@ -112,6 +112,7 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
       "max_desk_dca",
       "max_desk_cash_and_carry",
       "max_desk_signal_follower",
+      "max_bots_per_desk",
     ],
   },
   {
@@ -121,10 +122,6 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
       "max_demo_desks",
       "max_live_env_desks",
     ],
-  },
-  {
-    title: "Automation",
-    keys: ["max_bots_per_desk"],
   },
   {
     title: "Webhooks",
@@ -364,21 +361,17 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
       { kind: "feature", key: "desk_dca", label: "DCA" },
       { kind: "feature", key: "desk_cash_and_carry", label: "Cash & Carry" },
       { kind: "feature", key: "desk_signal_follower", label: "TradingView Strategy" },
+      { kind: "cap", key: "max_bots_per_desk", label: "Max bots per desk" },
     ],
   },
   {
     title: "Desk Resources",
+    fixedOrder: true,
     rows: [
       { kind: "cap", key: "max_paper_desks", label: "Paper Desks" },
       { kind: "cap", key: "max_demo_desks", label: "Exchange Connected Desks (Demo Mode)" },
       { kind: "cap", key: "max_live_env_desks", label: "Exchange Connected Desks (Live Mode)" },
-    ],
-  },
-  {
-    title: "Automation",
-    rows: [
       { kind: "feature", key: "extras_templates", label: "Save Bot templates" },
-      { kind: "cap", key: "max_bots_per_desk", label: "Max bots per desk" },
     ],
   },
   {
