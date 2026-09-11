@@ -56,7 +56,7 @@ Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until r
 
 Desk types are numeric caps, not ticks. **Manual Desks:** Perps. **Automated Desks:** Perps, DCA, Cash & Carry, TradingView Strategy. Empty = unlimited. Scale-in stays off the catalog until that desk type exists.
 
-Copy: follow, Private Sharing, Public sharing.
+Copy: Copy Trading, max copy follows, Private Sharing, Public sharing.
 
 Research: backtesting tool; attach results to Bot templates (Plus and Pro); Positions Chart.
 
