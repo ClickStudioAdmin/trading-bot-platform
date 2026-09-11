@@ -48,7 +48,7 @@ export function MembershipPlanCards({
       <div
         className="grid w-max max-w-full"
         style={{
-          gridTemplateColumns: `minmax(11.5rem, 13rem) repeat(${plans.length}, 8.75rem)`,
+          gridTemplateColumns: `18rem repeat(${plans.length}, 12rem)`,
           gridTemplateRows: `repeat(${blocks.length}, auto)`,
           columnGap: "0.75rem",
         }}
