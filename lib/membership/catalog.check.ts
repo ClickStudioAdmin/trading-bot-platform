@@ -4,6 +4,8 @@ import {
   canArchivePlan,
   canDeletePlan,
   comparePlanCell,
+  compareUpgradeBands,
+  rowUnlockIndex,
   emptyCaps,
   emptyFeatures,
   formatPlanCap,
@@ -155,6 +157,87 @@ assert.deepEqual(
     { kind: "rate", key: "l1", label: "L1" },
   ),
   { kind: "value", text: "20%" },
+);
+
+const freePlan: MembershipPlan = {
+  ...live,
+  id: "free",
+  slug: "free",
+  name: "Free",
+  sortOrder: 0,
+  features: { ...emptyFeatures(), desk_dca: true, mode_paper: true },
+  caps: { ...emptyCaps(), max_desks: 2, max_live_desks: 0 },
+};
+const plusPlan: MembershipPlan = {
+  ...live,
+  id: "plus",
+  slug: "plus",
+  name: "Plus",
+  features: { ...freePlan.features, mode_live: true },
+  caps: { ...emptyCaps(), max_desks: 4, max_live_desks: 2 },
+};
+const proPlan: MembershipPlan = {
+  ...live,
+  id: "pro",
+  slug: "pro",
+  name: "Pro",
+  features: { ...plusPlan.features, copy_follow: true },
+  caps: plusPlan.caps,
+};
+assert.equal(
+  rowUnlockIndex([freePlan, plusPlan, proPlan], {
+    kind: "feature",
+    key: "desk_dca",
+    label: "DCA",
+  }),
+  0,
+);
+assert.equal(
+  rowUnlockIndex([freePlan, plusPlan, proPlan], {
+    kind: "feature",
+    key: "mode_live",
+    label: "Live",
+  }),
+  1,
+);
+assert.equal(
+  rowUnlockIndex([freePlan, plusPlan, proPlan], {
+    kind: "feature",
+    key: "copy_follow",
+    label: "Follow",
+  }),
+  2,
+);
+assert.equal(
+  rowUnlockIndex([freePlan, plusPlan, proPlan], {
+    kind: "cap",
+    key: "max_live_desks",
+    label: "Max Live",
+  }),
+  1,
+);
+const bands = compareUpgradeBands([freePlan, plusPlan, proPlan]);
+assert.deepEqual(
+  bands.map((band) => band.title),
+  ["On Free", "Added on Plus", "Added on Pro", "Not on these plans yet"],
+);
+assert.equal(
+  bands[0].sections.some((section) =>
+    section.rows.some((row) => row.kind === "feature" && row.key === "desk_dca"),
+  ),
+  true,
+);
+assert.equal(
+  bands[1].sections.some((section) =>
+    section.rows.some((row) => row.kind === "feature" && row.key === "mode_live"),
+  ),
+  true,
+);
+assert.equal(
+  bands[2].sections.some((section) =>
+    section.rows.some((row) => row.kind === "feature" && row.key === "copy_follow"),
+  ),
+  true,
 );
 
 console.log("membership catalog checks passed");

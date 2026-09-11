@@ -29,9 +29,8 @@ export default async function AccountPlansPage() {
     <div>
       <PageHeading title="Plans" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
-        One subscription per login. Features you do not have stay visible in
-        the app and stay disabled until you upgrade. Card checkout is the next
-        step.
+        Same rows across every plan. Scan down: Free first, then what Plus
+        adds, then what Pro adds. Card checkout is the next step.
       </p>
       {!listed.ok ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">

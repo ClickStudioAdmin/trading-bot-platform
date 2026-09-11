@@ -357,6 +357,72 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   },
 ];
 
+export function rowUnlockIndex(
+  plans: readonly Pick<
+    MembershipPlan,
+    "features" | "caps" | "affiliateL1Pct" | "affiliateL2Pct" | "affiliateL3Pct"
+  >[],
+  row: PlanCompareRow,
+): number {
+  const index = plans.findIndex((plan) => {
+    if (row.kind === "feature") {
+      return plan.features[row.key];
+    }
+    if (row.kind === "cap") {
+      const value = plan.caps[row.key];
+      return value === null || value > 0;
+    }
+    const pct =
+      row.key === "l1"
+        ? plan.affiliateL1Pct
+        : row.key === "l2"
+          ? plan.affiliateL2Pct
+          : plan.affiliateL3Pct;
+    return pct > 0;
+  });
+  return index === -1 ? plans.length : index;
+}
+
+export type PlanCompareBand = {
+  title: string;
+  planId: string | null;
+  sections: PlanCompareSection[];
+};
+
+export function compareUpgradeBands(
+  plans: readonly MembershipPlan[],
+): PlanCompareBand[] {
+  const bands: PlanCompareBand[] = plans.map((plan, index) => ({
+    title: index === 0 ? `On ${plan.name}` : `Added on ${plan.name}`,
+    planId: plan.id,
+    sections: [],
+  }));
+  const later: PlanCompareBand = {
+    title: "Not on these plans yet",
+    planId: null,
+    sections: [],
+  };
+
+  for (const section of PLAN_COMPARE_SECTIONS) {
+    const grouped = new Map<number, PlanCompareRow[]>();
+    for (const row of section.rows) {
+      const index = rowUnlockIndex(plans, row);
+      const list = grouped.get(index) ?? [];
+      list.push(row);
+      grouped.set(index, list);
+    }
+    for (const [index, rows] of grouped) {
+      const band = index >= plans.length ? later : bands[index];
+      if (!band || rows.length === 0) {
+        continue;
+      }
+      band.sections.push({ title: section.title, rows });
+    }
+  }
+
+  return [...bands, later].filter((band) => band.sections.length > 0);
+}
+
 export function comparePlanCell(
   plan: Pick<
     MembershipPlan,
