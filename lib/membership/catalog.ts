@@ -74,7 +74,7 @@ export const PLAN_CAP_LABELS: Record<PlanCapKey, string> = {
   max_live_env_desks: "Exchange Connected - Live Mode",
   max_bots_per_desk: "Max Bots per Desk",
   max_copy_follows: "Max Desk Copies",
-  max_followers_accepted: "Max Followers",
+  max_followers_accepted: "Max Followers per Desk",
   max_stored_backtests: "Max Saved Backtests",
   max_backtest_years: "Max Backtest Timeframe (years)",
   affiliate_max_depth: "Earning Depth (1–5)",
@@ -320,7 +320,7 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
       { kind: "cap", key: "max_copy_follows", label: "Max Desk Copies" },
       { kind: "feature", key: "copy_catalogue", label: "Desk Sharing - Public" },
       { kind: "feature", key: "copy_share", label: "Desk Sharing - Private" },
-      { kind: "cap", key: "max_followers_accepted", label: "Max Followers" },
+      { kind: "cap", key: "max_followers_accepted", label: "Max Followers per Desk" },
     ],
   },
   {
