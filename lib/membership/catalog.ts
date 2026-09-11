@@ -57,7 +57,7 @@ export type PlanCapGroup = {
 
 export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
   {
-    title: "Desks",
+    title: "Desk Types",
     keys: [
       "desk_cash_and_carry",
       "desk_perps",
@@ -65,10 +65,11 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
       "desk_signal_follower",
       "desk_dca",
       "desk_scale_in",
-      "mode_paper",
-      "mode_live",
-      "venue_non_bybit",
     ],
+  },
+  {
+    title: "Desk Resources",
+    keys: ["mode_paper", "mode_live"],
   },
   {
     title: "Automation",
@@ -98,7 +99,7 @@ export const PLAN_FEATURE_GROUPS: readonly PlanFeatureGroup[] = [
 
 export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
   {
-    title: "Desks",
+    title: "Desk Resources",
     keys: [
       "max_paper_desks",
       "max_live_desks",
@@ -127,7 +128,7 @@ export const PLAN_CAP_GROUPS: readonly PlanCapGroup[] = [
 
 export const PLAN_FEATURE_LABELS: Record<PlanFeatureKey, string> = {
   desk_cash_and_carry: "Cash and Carry",
-  desk_perps: "Perps (ticket)",
+  desk_perps: "Manual Trading (perps)",
   desk_perps_bots: "Perps bots",
   desk_signal_follower: "TradingView Strategy",
   desk_dca: "DCA",
@@ -299,17 +300,21 @@ export type PlanCompareCell =
 
 export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   {
-    title: "Desks",
+    title: "Desk Types",
     rows: [
       { kind: "feature", key: "desk_cash_and_carry", label: "Cash and Carry" },
-      { kind: "feature", key: "desk_perps", label: "Perps (ticket)" },
+      { kind: "feature", key: "desk_perps", label: "Manual Trading (perps)" },
       { kind: "feature", key: "desk_perps_bots", label: "Perps bots" },
       { kind: "feature", key: "desk_signal_follower", label: "TradingView Strategy" },
       { kind: "feature", key: "desk_dca", label: "DCA" },
       { kind: "feature", key: "desk_scale_in", label: "Scale-in" },
+    ],
+  },
+  {
+    title: "Desk Resources",
+    rows: [
       { kind: "feature", key: "mode_paper", label: "Paper desks" },
       { kind: "feature", key: "mode_live", label: "Live / Connected desks" },
-      { kind: "feature", key: "venue_non_bybit", label: "Non-Bybit venues" },
       { kind: "cap", key: "max_paper_desks", label: "Max Paper desks" },
       { kind: "cap", key: "max_live_desks", label: "Max Live desks" },
       { kind: "cap", key: "max_demo_desks", label: "Max Demo desks" },
@@ -349,7 +354,6 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
   {
     title: "Affiliates",
     rows: [
-      { kind: "feature", key: "affiliate_enroll", label: "Affiliate enroll" },
       { kind: "rate", key: "l1", label: "L1 commission" },
       { kind: "rate", key: "l2", label: "L2 commission" },
       { kind: "rate", key: "l3", label: "L3 commission" },

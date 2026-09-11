@@ -54,7 +54,7 @@ Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until r
 
 ### Features (on / off)
 
-Desk types: Cash and Carry, Perps (ticket), Perps bots, TradingView Strategy, DCA, Scale-in (off until that desk type exists).
+Desk types: Cash and Carry, Manual Trading (perps), Perps bots, TradingView Strategy, DCA, Scale-in (off until that desk type exists).
 
 Mode and venue: Paper, Live / Connected, extra venues after Bybit (one flag per registry venue, or “non-Bybit venues”).
 

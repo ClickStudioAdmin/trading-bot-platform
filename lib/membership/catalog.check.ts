@@ -132,7 +132,7 @@ assert.deepEqual(
 
 assert.deepEqual(
   PLAN_COMPARE_SECTIONS.map((section) => section.title),
-  ["Desks", "Automation", "Copy Trading", "Backtesting", "Affiliates"],
+  ["Desk Types", "Desk Resources", "Automation", "Copy Trading", "Backtesting", "Affiliates"],
 );
 const compareFeatureKeys = PLAN_COMPARE_SECTIONS.flatMap((section) =>
   section.rows.filter((row) => row.kind === "feature").map((row) => row.key),
@@ -140,42 +140,58 @@ const compareFeatureKeys = PLAN_COMPARE_SECTIONS.flatMap((section) =>
 const compareCapKeys = PLAN_COMPARE_SECTIONS.flatMap((section) =>
   section.rows.filter((row) => row.kind === "cap").map((row) => row.key),
 );
-assert.equal(
-  compareFeatureKeys.includes("research_chart"),
-  false,
-);
-assert.equal(
-  compareFeatureKeys.includes("extras_starter_pack"),
-  false,
-);
+const hiddenCompareFeatures = [
+  "research_chart",
+  "extras_starter_pack",
+  "venue_non_bybit",
+  "affiliate_enroll",
+] as const;
+for (const key of hiddenCompareFeatures) {
+  assert.equal(compareFeatureKeys.includes(key), false);
+}
 assert.deepEqual(
   [...compareFeatureKeys].sort(),
   [...PLAN_FEATURE_KEYS].filter(
-    (key) => key !== "research_chart" && key !== "extras_starter_pack",
+    (key) => !hiddenCompareFeatures.includes(key),
   ).sort(),
 );
 assert.deepEqual([...compareCapKeys].sort(), [...PLAN_CAP_KEYS].sort());
-const desks = PLAN_COMPARE_SECTIONS.find((section) => section.title === "Desks");
-assert.ok(desks);
-assert.equal(desks.rows[0].kind, "feature");
+const deskTypes = PLAN_COMPARE_SECTIONS.find(
+  (section) => section.title === "Desk Types",
+);
+assert.ok(deskTypes);
+assert.equal(deskTypes.rows[0].kind, "feature");
 assert.equal(
-  desks.rows.some((row) => row.kind === "cap" && row.key === "max_paper_desks"),
+  deskTypes.rows.some((row) => row.kind === "feature" && row.key === "desk_perps"),
   true,
 );
 assert.equal(
-  desks.rows.some((row) => row.kind === "cap" && row.key === "max_live_desks"),
+  deskTypes.rows.find((row) => row.kind === "feature" && row.key === "desk_perps")
+    ?.label,
+  "Manual Trading (perps)",
+);
+const deskResources = PLAN_COMPARE_SECTIONS.find(
+  (section) => section.title === "Desk Resources",
+);
+assert.ok(deskResources);
+assert.equal(
+  deskResources.rows.some((row) => row.kind === "cap" && row.key === "max_paper_desks"),
   true,
 );
 assert.equal(
-  desks.rows.some((row) => row.kind === "cap" && row.key === "max_demo_desks"),
+  deskResources.rows.some((row) => row.kind === "cap" && row.key === "max_live_desks"),
   true,
 );
 assert.equal(
-  desks.rows.some((row) => row.kind === "cap" && row.key === "max_live_env_desks"),
+  deskResources.rows.some((row) => row.kind === "cap" && row.key === "max_demo_desks"),
   true,
 );
 assert.equal(
-  desks.rows.some((row) => row.kind === "feature" && row.key === "mode_live"),
+  deskResources.rows.some((row) => row.kind === "cap" && row.key === "max_live_env_desks"),
+  true,
+);
+assert.equal(
+  deskResources.rows.some((row) => row.kind === "feature" && row.key === "mode_live"),
   true,
 );
 const backtesting = PLAN_COMPARE_SECTIONS.find(
