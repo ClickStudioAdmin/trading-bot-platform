@@ -39,7 +39,7 @@ export default async function AdminSettingsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const tab = parseSettingsTab(firstSearchValue(params.tab));
+  const tab = parseSettingsTab(firstSearchValue(params.tab) ?? "general");
   const saved = firstSearchValue(params.saved);
   const error = firstSearchValue(params.error);
   const copyDaysError = error === "copy-days";
