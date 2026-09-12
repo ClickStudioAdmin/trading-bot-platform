@@ -43,7 +43,7 @@ export function CheckoutPayment({
   const [deduct, setDeduct] = useState(deductSelected);
 
   return (
-    <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+    <div className="mt-6 grid items-start gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
       <section className="rounded-card border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold tracking-tight">{planName}</h2>
         <p className="mt-1 text-sm text-ink-muted">{planPrice}</p>
@@ -58,7 +58,7 @@ export function CheckoutPayment({
         </div>
       </section>
 
-      <section className="rounded-card border border-line bg-surface p-5">
+      <section className="overflow-hidden rounded-card border border-line bg-surface p-4">
         {method === "stripe" ? (
           existingStripeSubscription ? (
             <form action={confirmStripePlanChangeAction} className="space-y-4">
@@ -87,17 +87,11 @@ export function CheckoutPayment({
               </p>
             </div>
           ) : (
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">Card</h2>
-              <p className="mt-1 mb-4 text-sm text-ink-muted">
-                Pay on this page. The form stays on TBP.
-              </p>
-              <StripeEmbeddedCheckout
-                key={planId}
-                planId={planId}
-                publishableKey={publishableKey}
-              />
-            </div>
+            <StripeEmbeddedCheckout
+              key={planId}
+              planId={planId}
+              publishableKey={publishableKey}
+            />
           )
         ) : (
           <form action={saveCheckoutCryptoAction} className="space-y-4">

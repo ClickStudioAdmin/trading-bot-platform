@@ -45,7 +45,7 @@ export function StripeEmbeddedCheckout({
   );
 
   return (
-    <div id="checkout" className="min-h-[28rem]">
+    <div id="checkout" className="min-h-64">
       <EmbeddedCheckoutProvider
         stripe={stripePromiseFor(publishableKey)}
         options={options}

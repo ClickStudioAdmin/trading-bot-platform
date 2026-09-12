@@ -49,7 +49,7 @@ export default async function AccountCheckoutPage({
   const stripeReady = stripeSecretConfigured();
 
   return (
-    <div>
+    <div className="max-w-4xl">
       <PageHeading title="Checkout" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
         Choose Card or Crypto. The payment form stays on this page. Compare
