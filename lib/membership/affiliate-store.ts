@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   EMPTY_AFFILIATE_SETTINGS,
+  affiliateRateKeyForLevel,
   canCreateCommissionInvoice,
   commissionUsd,
   enrollState,
@@ -25,11 +26,7 @@ import {
   type EnrollState,
   type PayoutStatus,
 } from "./affiliate";
-import {
-  affiliateRateKeyForLevel,
-  planAffiliateRate,
-  type MembershipPlan,
-} from "./catalog";
+import { planAffiliateRate, type MembershipPlan } from "./catalog";
 import { getMembershipPlan, listMembershipPlans } from "./store";
 import { roundUsd } from "./wallet";
 
