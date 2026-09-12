@@ -4,7 +4,8 @@ const VERSION = 1;
 const IV_LEN = 12;
 const TAG_LEN = 16;
 const KEY_LEN = 32;
-const AAD = Buffer.from("tbp.billing.hd.v1");
+const HD_AAD = Buffer.from("tbp.billing.hd.v1");
+const GAS_AAD = Buffer.from("tbp.billing.gas.v1");
 
 export type EncryptedBillingSecret = {
   ciphertext: Buffer;
@@ -30,8 +31,9 @@ export function billingCredentialsConfigured(): boolean {
   return billingCredentialsKey() !== null;
 }
 
-export function encryptBillingSecret(
+function encryptWithAad(
   secret: Record<string, string>,
+  aad: Buffer,
 ): EncryptedBillingSecret {
   const key = billingCredentialsKey();
   if (!key) {
@@ -39,7 +41,7 @@ export function encryptBillingSecret(
   }
   const nonce = randomBytes(IV_LEN);
   const cipher = createCipheriv("aes-256-gcm", key, nonce);
-  cipher.setAAD(AAD);
+  cipher.setAAD(aad);
   const body = Buffer.concat([
     cipher.update(JSON.stringify(secret), "utf8"),
     cipher.final(),
@@ -52,9 +54,22 @@ export function encryptBillingSecret(
   return { ciphertext, nonce };
 }
 
-export function decryptBillingSecret(
+export function encryptBillingSecret(
+  secret: Record<string, string>,
+): EncryptedBillingSecret {
+  return encryptWithAad(secret, HD_AAD);
+}
+
+export function encryptBillingGasSecret(
+  secret: Record<string, string>,
+): EncryptedBillingSecret {
+  return encryptWithAad(secret, GAS_AAD);
+}
+
+function decryptWithAad(
   ciphertext: Buffer,
   nonce: Buffer,
+  aad: Buffer,
 ): Record<string, string> | null {
   const key = billingCredentialsKey();
   if (!key || ciphertext.length < 1 + TAG_LEN + 1 || nonce.length !== IV_LEN) {
@@ -67,7 +82,7 @@ export function decryptBillingSecret(
   const body = ciphertext.subarray(1 + TAG_LEN);
   try {
     const decipher = createDecipheriv("aes-256-gcm", key, nonce);
-    decipher.setAAD(AAD);
+    decipher.setAAD(aad);
     decipher.setAuthTag(tag);
     const json = Buffer.concat([
       decipher.update(body),
@@ -94,4 +109,18 @@ export function decryptBillingSecret(
   } catch {
     return null;
   }
+}
+
+export function decryptBillingSecret(
+  ciphertext: Buffer,
+  nonce: Buffer,
+): Record<string, string> | null {
+  return decryptWithAad(ciphertext, nonce, HD_AAD);
+}
+
+export function decryptBillingGasSecret(
+  ciphertext: Buffer,
+  nonce: Buffer,
+): Record<string, string> | null {
+  return decryptWithAad(ciphertext, nonce, GAS_AAD);
 }

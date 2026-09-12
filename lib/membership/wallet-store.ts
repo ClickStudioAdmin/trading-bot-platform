@@ -2,9 +2,13 @@ import { fromByteaParam, toByteaParam } from "@/lib/exchanges/connections";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   billingCredentialsConfigured,
+  decryptBillingGasSecret,
   decryptBillingSecret,
+  encryptBillingGasSecret,
   encryptBillingSecret,
 } from "./billing-encrypt";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import type { Hex } from "viem";
 import { createDepositMnemonic, deriveDepositAddress } from "./hd";
 import {
   billingChainEnvironment,
@@ -50,6 +54,13 @@ export type DepositAddress = {
 export type HdSeedStatus = {
   configured: boolean;
   keyReady: boolean;
+  createdAt: string | null;
+};
+
+export type GasWalletStatus = {
+  configured: boolean;
+  keyReady: boolean;
+  address: string | null;
   createdAt: string | null;
 };
 
@@ -287,6 +298,107 @@ export async function createDepositHdSeed(): Promise<
     return { ok: false, error: error.message };
   }
   return { ok: true, mnemonic };
+}
+
+export async function getGasWalletStatus(): Promise<GasWalletStatus> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return {
+      configured: false,
+      keyReady: billingCredentialsConfigured(),
+      address: null,
+      createdAt: null,
+    };
+  }
+  const { data } = await supabase
+    .from("platform_settings")
+    .select("billing_gas_ciphertext, billing_gas_address, billing_gas_created_at")
+    .eq("id", "tbp")
+    .maybeSingle();
+  const address =
+    typeof (data as { billing_gas_address?: unknown } | null)?.billing_gas_address ===
+    "string"
+      ? String((data as { billing_gas_address: string }).billing_gas_address)
+      : null;
+  return {
+    configured: Boolean(
+      data &&
+        (fromByteaParam((data as { billing_gas_ciphertext?: unknown }).billing_gas_ciphertext) ||
+          address),
+    ),
+    keyReady: billingCredentialsConfigured(),
+    address,
+    createdAt:
+      typeof (data as { billing_gas_created_at?: unknown } | null)?.billing_gas_created_at ===
+      "string"
+        ? String((data as { billing_gas_created_at: string }).billing_gas_created_at)
+        : null,
+  };
+}
+
+export async function loadGasPrivateKey(): Promise<Hex | null> {
+  const supabase = createServiceClient();
+  if (!supabase || !billingCredentialsConfigured()) {
+    return null;
+  }
+  const { data } = await supabase
+    .from("platform_settings")
+    .select("billing_gas_ciphertext, billing_gas_nonce")
+    .eq("id", "tbp")
+    .maybeSingle();
+  if (!data) {
+    return null;
+  }
+  const ciphertext = fromByteaParam(
+    (data as { billing_gas_ciphertext?: unknown }).billing_gas_ciphertext,
+  );
+  const nonce = fromByteaParam((data as { billing_gas_nonce?: unknown }).billing_gas_nonce);
+  if (!ciphertext || !nonce) {
+    return null;
+  }
+  const secret = decryptBillingGasSecret(ciphertext, nonce);
+  const privateKey = secret?.privateKey?.trim() ?? "";
+  if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
+    return null;
+  }
+  return privateKey as Hex;
+}
+
+export async function createGasWallet(): Promise<
+  { ok: true; address: string; privateKey: string } | { ok: false; error: string }
+> {
+  if (!billingCredentialsConfigured()) {
+    return {
+      ok: false,
+      error:
+        "Add BILLING_CREDENTIALS_KEY (64 hex) to this environment, then restart the app.",
+    };
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const status = await getGasWalletStatus();
+  if (status.configured) {
+    return { ok: false, error: "A gas wallet is already stored." };
+  }
+  const privateKey = generatePrivateKey();
+  const account = privateKeyToAccount(privateKey);
+  const address = account.address.toLowerCase();
+  const sealed = encryptBillingGasSecret({ privateKey });
+  const { error } = await supabase
+    .from("platform_settings")
+    .update({
+      billing_gas_ciphertext: toByteaParam(sealed.ciphertext),
+      billing_gas_nonce: toByteaParam(sealed.nonce),
+      billing_gas_address: address,
+      billing_gas_created_at: new Date().toISOString(),
+    })
+    .eq("id", "tbp");
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, address, privateKey };
 }
 
 export async function getDepositAddress(

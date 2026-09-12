@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { CopyTextButton } from "@/components/copy-text-button";
 import { CreateDepositSeed } from "@/components/create-deposit-seed";
+import { CreateGasWallet } from "@/components/create-gas-wallet";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { billingChainEnvironment } from "@/lib/membership/wallet";
@@ -10,6 +12,7 @@ import {
 } from "@/lib/membership/wallet-actions";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import {
+  getGasWalletStatus,
   getHdSeedStatus,
   listAllBillingChains,
   listBillingTokens,
@@ -33,14 +36,16 @@ export default async function AdminBillingPage({
   const saved = firstSearchValue(params.saved);
   const scanned = firstSearchValue(params.scanned) === "1";
   const credited = firstSearchValue(params.credited);
-  const [hd, chains, addresses] = await Promise.all([
+  const [hd, gas, chains, addresses] = await Promise.all([
     getHdSeedStatus(),
+    getGasWalletStatus(),
     listAllBillingChains(),
     listDepositAddresses(),
   ]);
   const tokens = await listBillingTokens(chains.map((chain) => chain.id));
   const env = billingChainEnvironment();
   const createdAt = parseDisplayTime(hd.createdAt);
+  const gasCreatedAt = parseDisplayTime(gas.createdAt);
 
   return (
     <div>
@@ -49,7 +54,8 @@ export default async function AdminBillingPage({
         EVM deposit rails. This environment is{" "}
         <span className="text-ink">{env}</span>. Develop uses testnets.
         Production uses mainnets. The admin wallet seed is never stored —
-        only the public receive address.
+        only the public receive address. Sweeps drip gas from a dedicated
+        encrypted wallet, not from the admin payout wallet.
       </p>
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -88,6 +94,38 @@ export default async function AdminBillingPage({
         {!hd.configured ? (
           <div className="mt-4">
             <CreateDepositSeed />
+          </div>
+        ) : null}
+      </section>
+
+      <section className="mt-6 rounded-card border border-line bg-surface p-5">
+        <h2 className="text-lg font-semibold tracking-tight">Gas wallet</h2>
+        <p className="mt-2 text-sm text-ink-muted">
+          Dedicated hot wallet. The system drips ETH from here onto a deposit
+          address before sweeping USDT to the admin receive address. Not the
+          admin payout wallet.
+        </p>
+        <p className="mt-3 text-sm text-ink">
+          {gas.configured
+            ? `Wallet stored${gasCreatedAt ? ` · ${formatLocalDate(gasCreatedAt)}` : ""}.`
+            : "No gas wallet yet."}{" "}
+          {gas.keyReady ? "Encryption key is set." : "Encryption key is missing."}
+        </p>
+        {gas.address ? (
+          <div className="mt-3 space-y-2">
+            <p className="break-all rounded-card border border-line bg-surface-raised px-3 py-2 font-mono text-xs text-ink">
+              {gas.address}
+            </p>
+            <CopyTextButton text={gas.address} label="Copy address" />
+            <p className="text-xs text-ink-faint">
+              Send {env === "production" ? "ETH" : "testnet ETH"} here on each
+              listed chain so drips and sweeps can run.
+            </p>
+          </div>
+        ) : null}
+        {!gas.configured ? (
+          <div className="mt-4">
+            <CreateGasWallet />
           </div>
         ) : null}
       </section>

@@ -7,6 +7,7 @@ import {
   type Hex,
 } from "viem";
 import type { BillingChain } from "./wallet-store";
+import { privateKeyToAccount } from "viem/accounts";
 import { deriveDepositAccount } from "./hd";
 
 const ERC20_ABI = parseAbi([
@@ -43,6 +44,18 @@ export function billingWalletClient(
   index: number,
 ) {
   const account = deriveDepositAccount(mnemonic, index);
+  return createWalletClient({
+    account,
+    chain: evmChainFromBilling(chain),
+    transport: http(chain.rpcUrl),
+  });
+}
+
+export function billingWalletFromPrivateKey(
+  chain: BillingChain,
+  privateKey: Hex,
+) {
+  const account = privateKeyToAccount(privateKey);
   return createWalletClient({
     account,
     chain: evmChainFromBilling(chain),

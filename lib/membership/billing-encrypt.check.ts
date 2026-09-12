@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
   billingCredentialsConfigured,
+  decryptBillingGasSecret,
   decryptBillingSecret,
+  encryptBillingGasSecret,
   encryptBillingSecret,
 } from "./billing-encrypt";
 
@@ -18,6 +20,13 @@ assert.notEqual(once.nonce.equals(twice.nonce), true);
 assert.notEqual(once.ciphertext.equals(twice.ciphertext), true);
 assert.deepEqual(decryptBillingSecret(once.ciphertext, once.nonce), payload);
 assert.deepEqual(decryptBillingSecret(twice.ciphertext, twice.nonce), payload);
+
+const gas = encryptBillingGasSecret({ privateKey: "0xabc" });
+assert.deepEqual(decryptBillingGasSecret(gas.ciphertext, gas.nonce), {
+  privateKey: "0xabc",
+});
+assert.equal(decryptBillingSecret(gas.ciphertext, gas.nonce), null);
+assert.equal(decryptBillingGasSecret(once.ciphertext, once.nonce), null);
 
 const tampered = Buffer.from(once.ciphertext);
 tampered[tampered.length - 1] ^= 1;

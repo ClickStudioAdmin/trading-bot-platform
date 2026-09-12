@@ -111,10 +111,8 @@ export function CheckoutPayment({
           )
         ) : (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold tracking-tight">Crypto</h2>
             <p className="text-sm text-ink-muted">
-              Send the listed token to your unique address, then pay the plan
-              from Main credit.
+              Pay from Main credit, or top up on the right.
             </p>
             <CryptoWalletPanel
               mainUsd={creditUsd}

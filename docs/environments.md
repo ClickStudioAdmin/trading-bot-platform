@@ -191,13 +191,14 @@ Webhook events: `checkout.session.completed`, `customer.subscription.updated` (a
 
 ## Deposit HD (membership step 5)
 
-EVM only. The watcher uses **public RPCs for now** (Arbitrum Sepolia official endpoint on develop). Per-member deposit addresses come from an encrypted HD seed. Testnet HD on **Development**. Mainnet HD on **Production**. Never `NEXT_PUBLIC_`. Never store the **admin wallet** seed or private key — that address is public text on `/admin/billing` only. Alchemy is optional later; do not add `ALCHEMY_API_KEY` until Click switches.
+EVM only. The watcher uses **public RPCs for now** (Arbitrum Sepolia official endpoint on develop). Per-member deposit addresses come from an encrypted HD seed. A dedicated **gas wallet** (encrypted private key; public address in the clear) drips native ETH onto a deposit address before sweep. Testnet HD / gas on **Development**. Mainnet HD / gas on **Production**. Never `NEXT_PUBLIC_`. Never store the **admin wallet** seed or private key — that address is public text on `/admin/billing` only. Alchemy is optional later; do not add `ALCHEMY_API_KEY` until Click switches.
 
 | Variable | Where | Value |
 | --- | --- | --- |
-| `BILLING_CREDENTIALS_KEY` | Vercel Development / `.env.local` / Fly billing worker | 64 hex (`openssl rand -hex 32`). Encrypts the **deposit HD seed**. Develop ≠ production. Not `EXCHANGE_CREDENTIALS_KEY` |
+| `BILLING_CREDENTIALS_KEY` | Vercel Development / `.env.local` / Fly billing worker | 64 hex (`openssl rand -hex 32`). Encrypts the **deposit HD seed** and the **gas wallet** private key. Develop ≠ production. Not `EXCHANGE_CREDENTIALS_KEY` |
 | `BILLING_CREDENTIALS_KEY` | Vercel Production / Fly `tbp-engine` | A **different** 64 hex key |
 | Deposit HD seed | Encrypted at rest in `platform_settings` | Created once on `/admin/billing`. Write the mnemonic down; the app does not show it again |
+| Gas wallet | Encrypted at rest in `platform_settings` | Created once on `/admin/billing`. Public address is stored in the clear. Private key is encrypted with `BILLING_CREDENTIALS_KEY`. Click funds that address with native ETH per chain |
 | Admin receive address | `/admin/billing` chain row | Public `0x…` only. Keys stay with Click |
 
 Do not put the production HD key or seed on develop. The admin wallet private key does not get an env var. Parked for production only: pin the receive address in a server env and refuse sweeps to any other address ([click-list.md](click-list.md) item 13).

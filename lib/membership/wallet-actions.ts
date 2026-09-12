@@ -19,6 +19,7 @@ import { watchMembershipDeposits } from "./watch-deposits";
 import { planDeductDecision, roundUsd } from "./wallet";
 import {
   createDepositHdSeed,
+  createGasWallet,
   payPlanFromWallet,
   updateBillingChain,
   updateBillingToken,
@@ -71,6 +72,25 @@ export async function createDepositHdSeedAction(): Promise<
     scope: "system",
     event: "membership.hd_seed_created",
     message: "Created encrypted deposit HD seed",
+  });
+  revalidatePath("/admin/billing");
+  return created;
+}
+
+export async function createGasWalletAction(): Promise<
+  | { ok: true; address: string; privateKey: string }
+  | { ok: false; error: string }
+> {
+  await requireAdmin();
+  const created = await createGasWallet();
+  if (!created.ok) {
+    return created;
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.gas_wallet_created",
+    message: "Created encrypted billing gas wallet",
+    data: { address: created.address },
   });
   revalidatePath("/admin/billing");
   return created;
