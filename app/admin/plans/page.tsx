@@ -65,6 +65,7 @@ export default async function AdminPlansPage({
               <th className="px-4 py-3 font-medium">Plan</th>
               <th className="px-4 py-3 font-medium">Price</th>
               <th className="px-4 py-3 font-medium">Members</th>
+              <th className="px-4 py-3 font-medium">Price ID</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium text-right">Actions</th>
             </tr>
@@ -92,6 +93,11 @@ export default async function AdminPlansPage({
                 </td>
                 <td className="px-4 py-3 text-ink">{formatPlanPrice(plan.priceUsd)}</td>
                 <td className="px-4 py-3 tabular-nums text-ink">{plan.memberCount}</td>
+                <td className="px-4 py-3 font-mono text-xs text-ink">
+                  {plan.stripePriceId || (
+                    <span className="font-sans text-ink-faint">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   {planIsArchived(plan) ? (
                     <span className="text-ink-muted">Archived</span>
@@ -116,7 +122,7 @@ export default async function AdminPlansPage({
             ))}
             {plans.length === 0 && listed.ok ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-ink-muted">
+                <td colSpan={6} className="px-4 py-6 text-ink-muted">
                   No plans yet.
                 </td>
               </tr>
