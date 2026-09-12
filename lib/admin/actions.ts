@@ -39,6 +39,12 @@ export async function saveAdminSettings(formData: FormData) {
   if (!savedCopy.ok) {
     redirect("/admin/settings?tab=copy&error=copy-days");
   }
+  revalidatePath("/admin/settings");
+  redirect("/admin/settings?tab=copy&saved=1");
+}
+
+export async function saveAutoTickAction(formData: FormData) {
+  await requireAdmin();
   const enabled = formData.get("autoTick") === "on";
   const store = await cookies();
   const expiresAtMs = Date.now() + SESSION_DAYS * 86_400_000;
@@ -51,5 +57,5 @@ export async function saveAdminSettings(formData: FormData) {
   });
   revalidatePath("/", "layout");
   revalidatePath("/admin/settings");
-  redirect("/admin/settings?tab=copy&saved=1");
+  redirect("/admin/settings?saved=1");
 }

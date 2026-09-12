@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { saveAdminSettings } from "@/lib/admin/actions";
+import { saveAdminSettings, saveAutoTickAction } from "@/lib/admin/actions";
 import { loadAutoTickEnabled } from "@/lib/admin/settings";
 import { loadCopyPlatformSettings } from "@/lib/copy/settings";
 import { billingChainEnvironment } from "@/lib/membership/wallet";
@@ -47,7 +47,7 @@ export default async function AdminSettingsPage({
   const copyFollowersCeilingError = error === "copy-followers-ceiling";
   const copyFollowersRangeError = error === "copy-followers-range";
   const [autoTick, copySettings, gas, chains] = await Promise.all([
-    tab === "copy" ? loadAutoTickEnabled() : Promise.resolve(false),
+    tab === "general" ? loadAutoTickEnabled() : Promise.resolve(false),
     tab === "copy"
       ? loadCopyPlatformSettings()
       : Promise.resolve({
@@ -91,7 +91,38 @@ export default async function AdminSettingsPage({
       </nav>
 
       {tab === "general" ? (
-        <p className="mt-6 text-sm text-ink-muted">Nothing here yet.</p>
+        <>
+          {saved === "1" ? (
+            <p className="mt-6 text-sm text-success">Settings saved.</p>
+          ) : null}
+          <form
+            action={saveAutoTickAction}
+            className="mt-6 max-w-lg space-y-4 rounded-card border border-line bg-surface p-5"
+          >
+            <label className="flex items-start gap-2 text-sm text-ink">
+              <input
+                type="checkbox"
+                name="autoTick"
+                defaultChecked={autoTick}
+                className="mt-0.5"
+              />
+              <span>
+                Auto tick
+                <span className="mt-1 block text-xs text-ink-muted">
+                  Off by default. Fly is the clock. Turn this on only to nudge
+                  Vercel every 5 seconds while an admin tab is open.
+                </span>
+              </span>
+            </label>
+            <PendingSubmitButton
+              pendingLabel="Saving…"
+              successKey="save-auto-tick"
+              className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
+            >
+              Save settings
+            </PendingSubmitButton>
+          </form>
+        </>
       ) : null}
 
       {tab === "copy" ? (
@@ -171,21 +202,6 @@ export default async function AdminSettingsPage({
               <span className="mt-1 block text-xs text-ink-muted">
                 Hard cap. A desk cannot save a higher number. Empty uses the
                 default as the cap, or no cap if both are empty.
-              </span>
-            </label>
-            <label className="flex items-start gap-2 text-sm text-ink">
-              <input
-                type="checkbox"
-                name="autoTick"
-                defaultChecked={autoTick}
-                className="mt-0.5"
-              />
-              <span>
-                Auto tick
-                <span className="mt-1 block text-xs text-ink-muted">
-                  Off by default. Fly is the clock. Turn this on only to nudge
-                  Vercel every 5 seconds while an admin tab is open.
-                </span>
               </span>
             </label>
             <PendingSubmitButton

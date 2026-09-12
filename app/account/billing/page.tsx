@@ -164,6 +164,22 @@ export default async function AccountBillingPage({
         </section>
 
         <section className="rounded-card border border-line bg-surface p-5">
+          <CryptoWalletPanel
+            mainUsd={deposit?.books.main ?? 0}
+            affiliateUsd={deposit?.books.affiliate ?? 0}
+            address={deposit?.address ?? null}
+            addressError={deposit?.addressError ?? null}
+            chains={deposit?.chains ?? []}
+            tokens={deposit?.tokens ?? []}
+            deductOn={billing.paySubscriptionFromCredit}
+            affiliateNote={billing.paySubscriptionFromAffiliate}
+            booksOnly
+          />
+        </section>
+      </div>
+
+      <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
+        <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">
             Payment method
           </h2>
@@ -196,22 +212,6 @@ export default async function AccountBillingPage({
               ) : null}
             </div>
           </form>
-        </section>
-      </div>
-
-      <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
-        <section className="rounded-card border border-line bg-surface p-5">
-          <CryptoWalletPanel
-            mainUsd={deposit?.books.main ?? 0}
-            affiliateUsd={deposit?.books.affiliate ?? 0}
-            address={deposit?.address ?? null}
-            addressError={deposit?.addressError ?? null}
-            chains={deposit?.chains ?? []}
-            tokens={deposit?.tokens ?? []}
-            deductOn={billing.paySubscriptionFromCredit}
-            affiliateNote={billing.paySubscriptionFromAffiliate}
-            booksOnly
-          />
         </section>
         <section className="rounded-card border border-line bg-surface p-5">
           <TopUpWallet
