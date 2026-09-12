@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CopyTextButton } from "@/components/copy-text-button";
 import { CreateDepositSeed } from "@/components/create-deposit-seed";
 import { CreateGasWallet } from "@/components/create-gas-wallet";
+import { RevealGasWallet } from "@/components/reveal-gas-wallet";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { billingChainEnvironment } from "@/lib/membership/wallet";
@@ -119,10 +120,12 @@ export default async function AdminBillingPage({
             <CopyTextButton text={gas.address} label="Copy address" />
             <p className="text-xs text-ink-faint">
               Send {env === "production" ? "ETH" : "testnet ETH"} here on each
-              listed chain so drips and sweeps can run.
+              listed chain so drips and sweeps can run. There is no seed
+              phrase — backup is the private key.
             </p>
           </div>
         ) : null}
+        {gas.configured ? <RevealGasWallet /> : null}
         {!gas.configured ? (
           <div className="mt-4">
             <CreateGasWallet />

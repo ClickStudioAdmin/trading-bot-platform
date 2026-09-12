@@ -44,6 +44,7 @@ export const EVENT_LOG_OPTIONS = [
   { event: "membership.stripe_subscription", scope: "system" },
   { event: "membership.hd_seed_created", scope: "system" },
   { event: "membership.gas_wallet_created", scope: "system" },
+  { event: "membership.gas_wallet_revealed", scope: "system" },
   { event: "membership.gas_drip", scope: "system" },
   { event: "membership.billing_chain", scope: "system" },
   { event: "membership.billing_token", scope: "system" },

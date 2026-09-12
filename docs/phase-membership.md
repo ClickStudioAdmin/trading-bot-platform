@@ -94,7 +94,7 @@ A **transfer** is two linked rows (Affiliate `transfer_out` + Main `transfer_in`
 | Wallet | Keys in TBP? | Role |
 | --- | --- | --- |
 | **Deposit HD** | Yes — one encrypted seed / `xprv` | Derive a unique EVM address per login (same address on every listed EVM chain). Watch those addresses. Sweep inbound funds **to** the admin address. |
-| **Gas wallet** | Yes — one encrypted private key | Dedicated hot wallet. Drips native ETH onto a deposit address when a sweep needs gas. Same address on every listed EVM chain. Click funds it per chain. Not the admin payout wallet. |
+| **Gas wallet** | Yes — one encrypted private key | Dedicated hot wallet. Drips native ETH onto a deposit address when a sweep needs gas. Same address on every listed EVM chain. Click funds it per chain. Not the admin payout wallet. Admin can reveal the private key on `/admin/billing` for offline backup (no mnemonic). |
 | **Admin wallet** | **Never.** No seed, mnemonic, or private key | Public receive address per chain (admin-stored). Click holds the keys offline. Pays USDT withdraws by hand and marks the queue. |
 
 Deposit HD is encrypted at rest with `BILLING_CREDENTIALS_KEY` (server / billing worker only; develop ≠ production). Not `EXCHANGE_CREDENTIALS_KEY`. Never `NEXT_PUBLIC_`. Decrypt only on the billing worker. Persist **address + derivation index** per member (`membership_deposit_addresses`). Browser sees the public address only. Per-address private keys are not stored as rows — they are derived from the seed when sweeping.

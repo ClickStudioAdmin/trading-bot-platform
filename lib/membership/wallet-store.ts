@@ -364,6 +364,32 @@ export async function loadGasPrivateKey(): Promise<Hex | null> {
   return privateKey as Hex;
 }
 
+export async function revealGasWallet(): Promise<
+  { ok: true; address: string; privateKey: string } | { ok: false; error: string }
+> {
+  if (!billingCredentialsConfigured()) {
+    return {
+      ok: false,
+      error:
+        "Add BILLING_CREDENTIALS_KEY (64 hex) to this environment, then restart the app.",
+    };
+  }
+  const privateKey = await loadGasPrivateKey();
+  if (!privateKey) {
+    return {
+      ok: false,
+      error:
+        "Could not decrypt the gas wallet. Check BILLING_CREDENTIALS_KEY matches the key used when it was created.",
+    };
+  }
+  const account = privateKeyToAccount(privateKey);
+  return {
+    ok: true,
+    address: account.address.toLowerCase(),
+    privateKey,
+  };
+}
+
 export async function createGasWallet(): Promise<
   { ok: true; address: string; privateKey: string } | { ok: false; error: string }
 > {

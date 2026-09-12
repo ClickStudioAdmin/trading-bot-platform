@@ -45,6 +45,9 @@ assert.ok(
   eventLogOptionsForScopes(["system"]).includes("membership.gas_wallet_created"),
 );
 assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("membership.gas_wallet_revealed"),
+);
+assert.ok(
   eventLogOptionsForScopes(["system"]).includes("membership.gas_drip"),
 );
 assert.ok(

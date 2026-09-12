@@ -21,6 +21,7 @@ import {
   createDepositHdSeed,
   createGasWallet,
   payPlanFromWallet,
+  revealGasWallet,
   updateBillingChain,
   updateBillingToken,
   walletBookBalances,
@@ -94,6 +95,24 @@ export async function createGasWalletAction(): Promise<
   });
   revalidatePath("/admin/billing");
   return created;
+}
+
+export async function revealGasWalletAction(): Promise<
+  | { ok: true; address: string; privateKey: string }
+  | { ok: false; error: string }
+> {
+  await requireAdmin();
+  const revealed = await revealGasWallet();
+  if (!revealed.ok) {
+    return revealed;
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.gas_wallet_revealed",
+    message: "Revealed billing gas wallet private key for backup",
+    data: { address: revealed.address },
+  });
+  return revealed;
 }
 
 export async function saveBillingChainAction(formData: FormData) {
