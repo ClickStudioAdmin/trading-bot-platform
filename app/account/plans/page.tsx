@@ -37,7 +37,7 @@ export default async function AccountPlansPage() {
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
         One section per feature group. In each section, shared rows sit at the
         top and higher-plan extras sit at the bottom. Upgrade opens Checkout
-        to choose Card or Crypto credit.
+        to choose Card or Crypto.
         {current?.visibility === "private"
           ? ` You are on ${current.name}, a private plan assigned to this login.`
           : ""}

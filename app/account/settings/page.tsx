@@ -191,7 +191,7 @@ export default async function AccountSettingsPage({
               <Link href="/account/plans" className="text-accent">
                 Plans
               </Link>
-              . Card and crypto credit are on{" "}
+              . Card and Crypto are on{" "}
               <Link href="/account/billing" className="text-accent">
                 Billing
               </Link>

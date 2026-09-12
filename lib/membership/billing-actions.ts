@@ -9,6 +9,7 @@ import {
   checkoutPath,
   decideUpgrade,
   parseBillingMethod,
+  parsePaySubscriptionFromCredit,
 } from "./billing";
 import {
   getMemberBilling,
@@ -35,9 +36,14 @@ export async function setBillingMethodAction(formData: FormData) {
   }
   const method = parseBillingMethod(formData.get("billingMethod"));
   if (!method) {
-    fail("Choose Card or Crypto credit.");
+    fail("Choose Card or Crypto.");
   }
-  const saved = await saveBillingMethod(member.id, method);
+  const paySubscriptionFromCredit = parsePaySubscriptionFromCredit(
+    formData.get("paySubscriptionFromCredit"),
+  );
+  const saved = await saveBillingMethod(member.id, method, {
+    paySubscriptionFromCredit,
+  });
   if (!saved.ok) {
     fail(saved.error);
   }
@@ -59,7 +65,7 @@ export async function setBillingMethodAction(formData: FormData) {
     event: "membership.billing_method",
     message: `Set collection method to ${method}`,
     userId: member.id,
-    data: { method },
+    data: { method, paySubscriptionFromCredit },
   });
   revalidatePath("/account/billing");
   redirect(billingPath({ saved: "method" }));
@@ -81,11 +87,14 @@ export async function continueUpgradeAction(formData: FormData) {
     redirect(
       checkoutPath({
         plan: planId,
-        error: "Choose Card or Crypto credit.",
+        error: "Choose Card or Crypto.",
       }),
     );
     return;
   }
+  const paySubscriptionFromCredit = parsePaySubscriptionFromCredit(
+    formData.get("paySubscriptionFromCredit"),
+  );
   const loaded = await getMembershipPlan(planId);
   if (!loaded.ok) {
     redirect(checkoutPath({ plan: planId, error: loaded.error }));
@@ -98,7 +107,9 @@ export async function continueUpgradeAction(formData: FormData) {
     target,
     method,
   });
-  const saved = await saveBillingMethod(member.id, method);
+  const saved = await saveBillingMethod(member.id, method, {
+    paySubscriptionFromCredit,
+  });
   if (!saved.ok) {
     redirect(checkoutPath({ plan: planId, error: saved.error }));
     return;
@@ -113,7 +124,7 @@ export async function continueUpgradeAction(formData: FormData) {
     redirect(
       checkoutPath({
         plan: planId,
-        error: "Choose Card or Crypto credit.",
+        error: "Choose Card or Crypto.",
       }),
     );
     return;
@@ -126,9 +137,9 @@ export async function continueUpgradeAction(formData: FormData) {
     await writeEventLog({
       scope: "system",
       event: "membership.billing_method",
-      message: "Selected crypto credit for upgrade",
+      message: "Selected Crypto for upgrade",
       userId: member.id,
-      data: { method, planId },
+      data: { method, planId, paySubscriptionFromCredit },
     });
     revalidatePath("/account/billing");
     revalidatePath("/account/billing/checkout");

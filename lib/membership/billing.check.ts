@@ -5,6 +5,7 @@ import {
   decideUpgrade,
   formatUsd,
   parseBillingMethod,
+  parsePaySubscriptionFromCredit,
   stripeCentsToUsd,
   walletEntryDelta,
 } from "./billing";
@@ -12,6 +13,9 @@ import {
 assert.equal(parseBillingMethod("stripe"), "stripe");
 assert.equal(parseBillingMethod("wallet"), "wallet");
 assert.equal(parseBillingMethod("comp"), null);
+assert.equal(parsePaySubscriptionFromCredit("1"), true);
+assert.equal(parsePaySubscriptionFromCredit("on"), false);
+assert.equal(parsePaySubscriptionFromCredit(null), false);
 assert.equal(billingPath(), "/account/billing");
 assert.equal(checkoutPath(), "/account/billing/checkout");
 assert.equal(

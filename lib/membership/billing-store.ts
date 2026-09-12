@@ -26,10 +26,13 @@ type MemberBillingRow = {
   subscription_status: string | null;
   period_end: string | null;
   pay_subscription_from_affiliate?: boolean | null;
+  pay_subscription_from_credit?: boolean | null;
 };
 
-const BILLING_COLUMNS =
+const BILLING_COLUMNS_CORE =
   "user_id, email, name, plan_id, billing_method, stripe_customer_id, stripe_subscription_id, subscription_status, period_end, pay_subscription_from_affiliate";
+
+const BILLING_COLUMNS = `${BILLING_COLUMNS_CORE}, pay_subscription_from_credit`;
 
 function mapBilling(row: MemberBillingRow): MemberBilling {
   return {
@@ -43,54 +46,75 @@ function mapBilling(row: MemberBillingRow): MemberBilling {
     subscriptionStatus: parseSubscriptionStatus(row.subscription_status),
     periodEnd: row.period_end,
     paySubscriptionFromAffiliate: row.pay_subscription_from_affiliate === true,
+    paySubscriptionFromCredit: row.pay_subscription_from_credit === true,
   };
+}
+
+async function loadMemberBilling(
+  column: "user_id" | "stripe_customer_id",
+  value: string,
+): Promise<MemberBilling | null> {
+  const supabase = createServiceClient();
+  if (!supabase || !value) {
+    return null;
+  }
+  const full = await supabase
+    .from("members")
+    .select(BILLING_COLUMNS)
+    .eq(column, value)
+    .maybeSingle();
+  if (full.data) {
+    return mapBilling(full.data as MemberBillingRow);
+  }
+  const core = await supabase
+    .from("members")
+    .select(BILLING_COLUMNS_CORE)
+    .eq(column, value)
+    .maybeSingle();
+  return core.data ? mapBilling(core.data as MemberBillingRow) : null;
 }
 
 export async function getMemberBilling(
   userId: string,
 ): Promise<MemberBilling | null> {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return null;
-  }
-  const { data } = await supabase
-    .from("members")
-    .select(BILLING_COLUMNS)
-    .eq("user_id", userId)
-    .maybeSingle();
-  return data ? mapBilling(data as MemberBillingRow) : null;
+  return loadMemberBilling("user_id", userId);
 }
 
 export async function getMemberBillingByCustomer(
   customerId: string,
 ): Promise<MemberBilling | null> {
-  const supabase = createServiceClient();
-  if (!supabase || !customerId) {
-    return null;
-  }
-  const { data } = await supabase
-    .from("members")
-    .select(BILLING_COLUMNS)
-    .eq("stripe_customer_id", customerId)
-    .maybeSingle();
-  return data ? mapBilling(data as MemberBillingRow) : null;
+  return loadMemberBilling("stripe_customer_id", customerId);
 }
 
 export async function saveBillingMethod(
   userId: string,
   method: "stripe" | "wallet",
+  extras: { paySubscriptionFromCredit?: boolean } = {},
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
-  const { error } = await supabase
+  const update: Record<string, unknown> = {
+    billing_method: method,
+    updated_at: new Date().toISOString(),
+  };
+  if (method === "wallet") {
+    update.pay_subscription_from_credit =
+      extras.paySubscriptionFromCredit === true;
+  }
+  let { error } = await supabase
     .from("members")
-    .update({
-      billing_method: method,
-      updated_at: new Date().toISOString(),
-    })
+    .update(update)
     .eq("user_id", userId);
+  if (error && "pay_subscription_from_credit" in update) {
+    delete update.pay_subscription_from_credit;
+    const retry = await supabase
+      .from("members")
+      .update(update)
+      .eq("user_id", userId);
+    error = retry.error;
+  }
   if (error) {
     return { ok: false, error: error.message };
   }

@@ -61,7 +61,8 @@ export default async function AccountBillingPage({
       <PageHeading title="Billing" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
         One collection method per login. Card uses Stripe Checkout. Crypto
-        credit is selected now; deposits are the next step. Compare plans on{" "}
+        can optionally deduct Crypto Credit first. Deposits are the next
+        step. Compare plans on{" "}
         <Link href="/account/plans" className="text-accent">
           Plans
         </Link>
@@ -114,13 +115,14 @@ export default async function AccountBillingPage({
           Payment method
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Card charges Stripe. Crypto credit will debit USD wallet balance
-          once deposits ship.
+          Card charges Stripe. Crypto is the collection method. Deduct from
+          Crypto Credit is optional and applies when deposits ship.
         </p>
         <form action={setBillingMethodAction} className="mt-4 space-y-4">
           <BillingMethodRadios
             name="billingMethod"
             selected={billing.billingMethod}
+            deductSelected={billing.paySubscriptionFromCredit}
           />
           <div className="flex flex-wrap gap-3">
             <PendingSubmitButton
@@ -159,6 +161,12 @@ export default async function AccountBillingPage({
         >
           Top up
         </button>
+        {billing.paySubscriptionFromCredit ? (
+          <p className="mt-3 text-xs text-ink-faint">
+            Deduct payments from Crypto Credit is on. Credit applies first
+            when the billing tick ships.
+          </p>
+        ) : null}
         {billing.paySubscriptionFromAffiliate ? (
           <p className="mt-3 text-xs text-ink-faint">
             Deduct Plan Payment from Earnings is on. Payable affiliate

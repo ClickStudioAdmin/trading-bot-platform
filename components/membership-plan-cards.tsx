@@ -203,7 +203,7 @@ function PlanCell({
               </Link>
             )}
             <p className="mt-2 text-xs text-ink-faint">
-              Choose Card or Crypto credit at Checkout.
+              Choose Card or Crypto at Checkout.
             </p>
           </div>
         ) : (

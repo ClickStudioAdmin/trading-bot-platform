@@ -50,7 +50,7 @@ export default async function AccountCheckoutPage({
     <div className="max-w-lg">
       <PageHeading title="Checkout" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Choose Card or Crypto credit, then continue. Compare plans on{" "}
+        Choose Card or Crypto, then continue. Compare plans on{" "}
         <Link href="/account/plans" className="text-accent">
           Plans
         </Link>
@@ -66,8 +66,8 @@ export default async function AccountCheckoutPage({
       ) : null}
       {notice === "wallet" ? (
         <p className="mt-6 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Crypto credit is your collection method. Top-up is the next step.
-          Your plan does not change until credit can pay the invoice.
+          Crypto is your collection method. Top-up is the next step. Your
+          plan does not change until Crypto or credit can pay the invoice.
         </p>
       ) : null}
       {!stripeReady ? (
@@ -92,6 +92,7 @@ export default async function AccountCheckoutPage({
             <BillingMethodRadios
               name="billingMethod"
               selected={billing.billingMethod}
+              deductSelected={billing.paySubscriptionFromCredit}
             />
             <PendingSubmitButton
               pendingLabel="Continuing…"

@@ -11,8 +11,11 @@ export type BillingMethod = (typeof BILLING_METHODS)[number];
 
 export const BILLING_METHOD_LABELS: Record<BillingMethod, string> = {
   stripe: "Card",
-  wallet: "Crypto credit",
+  wallet: "Crypto",
 };
+
+export const CRYPTO_CREDIT_DEDUCT_LABEL =
+  "Deduct payments from Crypto Credit where possible";
 
 export const SUBSCRIPTION_STATUSES = [
   "none",
@@ -48,6 +51,7 @@ export type MemberBilling = {
   subscriptionStatus: SubscriptionStatus;
   periodEnd: string | null;
   paySubscriptionFromAffiliate: boolean;
+  paySubscriptionFromCredit: boolean;
 };
 
 export type MembershipInvoice = {
@@ -67,6 +71,10 @@ export function parseBillingMethod(value: unknown): BillingMethod | null {
   return BILLING_METHODS.includes(value as BillingMethod)
     ? (value as BillingMethod)
     : null;
+}
+
+export function parsePaySubscriptionFromCredit(value: unknown): boolean {
+  return String(value ?? "") === "1";
 }
 
 export function parseSubscriptionStatus(
