@@ -54,7 +54,7 @@ export function MembershipPlanCards({
   return (
     <div className="mt-6 overflow-x-auto pt-6">
       <div
-        className="grid w-max max-w-full"
+        className="mx-auto grid w-max max-w-full"
         style={{
           gridTemplateColumns: `18rem repeat(${plans.length}, 12rem)`,
           gridTemplateRows: `repeat(${blocks.length}, auto)`,
