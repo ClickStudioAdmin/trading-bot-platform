@@ -11,6 +11,11 @@ import {
   parseOwnPasswordChange,
   parseOwnProfile,
 } from "@/lib/members/form";
+import {
+  attributeReferral,
+  ensureReferralCode,
+  findReferralCodeOwner,
+} from "@/lib/membership/affiliate-store";
 import { getMembershipPlan } from "@/lib/membership/store";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
@@ -34,6 +39,14 @@ export async function createMember(formData: FormData) {
   if (!plan.ok) {
     redirect(`/admin/members/new?error=${encodeURIComponent(plan.error)}`);
   }
+  if (parsed.values.referralCode) {
+    const owner = await findReferralCodeOwner(parsed.values.referralCode);
+    if (!owner) {
+      redirect(
+        `/admin/members/new?error=${encodeURIComponent("That referral code was not found.")}`,
+      );
+    }
+  }
 
   const userId = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -55,6 +68,19 @@ export async function createMember(formData: FormData) {
 
   if (insertError) {
     redirect(`/admin/members/new?error=${encodeURIComponent(insertError.message)}`);
+  }
+
+  if (parsed.values.referralCode) {
+    const attributed = await attributeReferral({
+      userId,
+      code: parsed.values.referralCode,
+    });
+    if (!attributed.ok) {
+      redirect(`/admin/members/new?error=${encodeURIComponent(attributed.error)}`);
+    }
+  }
+  if (plan.plan.features.affiliate_enroll) {
+    await ensureReferralCode(userId);
   }
 
   await writeEventLog({

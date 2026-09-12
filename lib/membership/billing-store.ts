@@ -8,6 +8,10 @@ import {
   type MembershipInvoice,
 } from "./billing";
 import {
+  createCommissionsForInvoice,
+  voidPendingCommissionsForInvoice,
+} from "./affiliate-store";
+import {
   getDefaultMembershipPlan,
   getMembershipPlan,
   listMembershipPlans,
@@ -206,21 +210,37 @@ export async function recordStripeInvoice(
   if (existing) {
     return { ok: true, inserted: false };
   }
-  const { error } = await supabase.from("membership_invoices").insert({
-    user_id: userId,
-    plan_id: planId,
-    method: write.method,
-    external_id: write.externalId,
-    amount_usd: write.amountUsd,
-    status: write.status,
-    period_start: write.periodStart,
-    period_end: write.periodEnd,
-  });
+  const { data, error } = await supabase
+    .from("membership_invoices")
+    .insert({
+      user_id: userId,
+      plan_id: planId,
+      method: write.method,
+      external_id: write.externalId,
+      amount_usd: write.amountUsd,
+      status: write.status,
+      period_start: write.periodStart,
+      period_end: write.periodEnd,
+    })
+    .select("id")
+    .single();
   if (error) {
     if (error.code === "23505") {
       return { ok: true, inserted: false };
     }
     return { ok: false, error: error.message };
+  }
+  if (write.status === "paid" && data?.id) {
+    const commissions = await createCommissionsForInvoice({
+      invoiceId: String(data.id),
+      sourceUserId: userId,
+      method: write.method,
+      status: write.status,
+      amountUsd: write.amountUsd,
+    });
+    if (!commissions.ok) {
+      return commissions;
+    }
   }
   return { ok: true, inserted: true };
 }
@@ -232,6 +252,12 @@ export async function markStripeInvoiceRefunded(
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
+  const { data } = await supabase
+    .from("membership_invoices")
+    .select("id")
+    .eq("method", "stripe")
+    .eq("external_id", invoiceId)
+    .maybeSingle();
   const { error } = await supabase
     .from("membership_invoices")
     .update({ status: "refunded" })
@@ -239,6 +265,9 @@ export async function markStripeInvoiceRefunded(
     .eq("external_id", invoiceId);
   if (error) {
     return { ok: false, error: error.message };
+  }
+  if (data?.id) {
+    return voidPendingCommissionsForInvoice(String(data.id));
   }
   return { ok: true };
 }

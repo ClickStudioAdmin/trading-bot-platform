@@ -7,6 +7,7 @@ export const PUBLIC_NAV_LINKS = [
 export const HEADER_LINKS = [
   { href: "/account/copy", label: "Copy Trading" },
   { href: "/account/backtests", label: "Backtesting Tool" },
+  { href: "/account/affiliates", label: "Affiliates" },
   { href: "/account/plans", label: "Plans" },
 ] as const;
 
@@ -41,6 +42,7 @@ export const ADMIN_NAV_LINKS = [
   { href: "/admin/settings", label: "Settings" },
   { href: "/admin/billing", label: "Billing & Wallets" },
   { href: "/admin/plans", label: "Plans" },
+  { href: "/admin/affiliates", label: "Affiliates" },
   { href: "/admin/members", label: "Members" },
   { href: "/admin/templates", label: "Templates" },
   { href: "/admin/logs", label: "Logs" },

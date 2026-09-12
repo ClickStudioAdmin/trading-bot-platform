@@ -37,7 +37,7 @@ The locked sequence after Phase 11 is [roadmap.md](roadmap.md). **Plans, payment
 
 Do not implement until Click starts that roadmap item. Order and notes: [roadmap.md](roadmap.md).
 
-**Plans, payments, and affiliates** (roadmap 5). Spec: [phase-membership.md](phase-membership.md). Steps 1–5 are in repo (plans, Stripe, two USD books, unique EVM deposits). Next is step 6 (grace). Upgrade UX / gates wait for step 10.
+**Plans, payments, and affiliates** (roadmap 5). Spec: [phase-membership.md](phase-membership.md). Steps 1–8 are in repo (plans, Stripe, two USD books, unique EVM deposits, affiliate admin/portal/commissions). Next is step 9 (entitlements + Upgrade UX). Downgrade grace is step 10.
 
 **Backup market data** (roadmap 9). Indicator start and other public candles stay on **Bybit public klines first**. When that item starts, failover if the call fails (timeout, HTTP 403, empty list):
 

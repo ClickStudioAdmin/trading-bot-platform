@@ -113,6 +113,22 @@ export function AdminMemberForm({
           invoice.
         </span>
       </label>
+      {mode === "create" ? (
+        <label className="block text-xs text-ink-muted" htmlFor="referralCode">
+          Referral code
+          <input
+            id="referralCode"
+            name="referralCode"
+            defaultValue={values.referralCode ?? ""}
+            maxLength={32}
+            className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+          />
+          <span className="mt-1 block text-xs text-ink-faint">
+            Optional first-touch attribution. Must match an enrolled member’s
+            code.
+          </span>
+        </label>
+      ) : null}
       {locked ? (
         <>
           <input type="hidden" name="role" value="admin" />

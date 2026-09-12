@@ -14,6 +14,7 @@ if (created.ok) {
   assert.equal(created.values.name, "Desk Trader");
   assert.equal(created.values.email, "trader@click.studio");
   assert.equal(created.values.planId, "00000000-0000-4000-8000-000000000001");
+  assert.equal(created.values.referralCode, null);
 }
 
 const shortPassword = new FormData();

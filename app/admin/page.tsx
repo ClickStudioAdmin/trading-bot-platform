@@ -201,6 +201,11 @@ export default async function AdminOverviewPage() {
             hint="Features, caps, affiliate rates"
           />
           <Shortcut
+            href="/admin/affiliates"
+            label="Affiliates"
+            hint="Program, hold, payout queue"
+          />
+          <Shortcut
             href="/admin/members"
             label="Members"
             hint="Invite-only logins"

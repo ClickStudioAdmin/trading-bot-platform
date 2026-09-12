@@ -11,6 +11,7 @@ import {
   decideUpgrade,
   parsePaySubscriptionFromCredit,
 } from "./billing";
+import { createCommissionsForInvoice } from "./affiliate-store";
 import { getMemberBilling, saveBillingMethod } from "./billing-store";
 import { parsePlanId } from "./form";
 import { getMembershipPlan } from "./store";
@@ -322,6 +323,17 @@ export async function payPlanWithCreditAction(formData: FormData) {
     });
     if (!paid.ok) {
       redirect(checkoutPath({ plan: planId, error: paid.error }));
+      return;
+    }
+    const commissions = await createCommissionsForInvoice({
+      invoiceId: paid.invoiceId,
+      sourceUserId: member.id,
+      method: "wallet",
+      status: "paid",
+      amountUsd: target.priceUsd,
+    });
+    if (!commissions.ok) {
+      redirect(checkoutPath({ plan: planId, error: commissions.error }));
       return;
     }
     if (billing?.stripeSubscriptionId && stripeSecretConfigured()) {

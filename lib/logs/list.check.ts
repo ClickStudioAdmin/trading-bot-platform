@@ -51,6 +51,12 @@ assert.ok(
   eventLogOptionsForScopes(["system"]).includes("membership.gas_drip"),
 );
 assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("membership.affiliate_settings"),
+);
+assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("membership.payout_requested"),
+);
+assert.ok(
   eventLogOptionsForScopes(["system"]).includes("copy.profile_saved"),
 );
 assert.ok(

@@ -1,4 +1,5 @@
 import { emailIsListedAdmin } from "@/lib/admin/emails";
+import { parseOptionalReferralCode } from "@/lib/membership/affiliate";
 import { parsePlanId } from "@/lib/membership/form";
 
 export type MemberRole = "member" | "admin";
@@ -11,6 +12,7 @@ export type MemberFormValues = {
   role: MemberRole;
   status: MemberStatus;
   planId: string;
+  referralCode: string | null;
 };
 
 export type ParsedMemberForm =
@@ -50,6 +52,10 @@ export function parseMemberForm(
   if (!planId) {
     return { ok: false, error: "Choose a plan." };
   }
+  const referral = parseOptionalReferralCode(formData.get("referralCode"));
+  if (!referral.ok) {
+    return referral;
+  }
 
   let role: MemberRole = roleRaw;
   let status: MemberStatus = statusRaw;
@@ -60,7 +66,15 @@ export function parseMemberForm(
 
   return {
     ok: true,
-    values: { name, email, password, role, status, planId },
+    values: {
+      name,
+      email,
+      password,
+      role,
+      status,
+      planId,
+      referralCode: referral.code,
+    },
   };
 }
 

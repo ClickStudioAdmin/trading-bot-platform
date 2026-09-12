@@ -53,7 +53,7 @@ Current tables:
 | `membership_referrals` | membership | First-touch attribution. No self-referral. |
 | `membership_commissions` | membership | Per invoice + earner + level. `pending` / `payable` / `paid` / `void`. |
 | `membership_payouts` | membership | Export / Connect / USDT withdraw queue. |
-| `membership_payout_items` | membership | Commission rows on a payout. |
+| `membership_payout_items` | membership | Commission rows on a payout. Unique `commission_id` so a commission cannot sit on two payouts. |
 
 Phase 4 rules migrations: `supabase/migrations/20260822160000_paper_rules.sql` then `supabase/migrations/20260822170000_paper_rule_layers.sql`.
 

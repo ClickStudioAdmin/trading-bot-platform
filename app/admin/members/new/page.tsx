@@ -46,6 +46,7 @@ export default async function AdminNewMemberPage({
           role: "member",
           status: "active",
           planId,
+          referralCode: null,
         }}
         plans={plans}
       />

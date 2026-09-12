@@ -57,6 +57,7 @@ export default async function AdminEditMemberPage({
           role: member.role,
           status: member.status,
           planId: member.planId,
+          referralCode: null,
         }}
         plans={plans}
       />
