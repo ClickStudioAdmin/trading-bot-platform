@@ -16,7 +16,10 @@ export const BILLING_METHOD_LABELS: Record<BillingMethod, string> = {
 };
 
 export const CRYPTO_CREDIT_DEDUCT_LABEL =
-  "Deduct payments from Your Wallets where possible";
+  "Deduct payment from Affiliate earnings if required";
+
+export const CRYPTO_CREDIT_DEDUCT_NOTE =
+  "If your Main Wallet doesn't have sufficient funds to pay your subscription, the shortfall will be transferred from your Affiliate earnings to your Main Wallet.";
 
 export const SUBSCRIPTION_STATUSES = [
   "none",

@@ -43,7 +43,7 @@ export function TopUpWallet({
 
   return (
     <div id="top-up" className="space-y-3">
-      <h2 className="text-lg font-semibold tracking-tight">Top up</h2>
+      <h2 className="text-lg font-semibold tracking-tight">Top up Main Wallet</h2>
       <p className="text-sm text-ink-muted">{depositLabel}</p>
       {address ? (
         <>

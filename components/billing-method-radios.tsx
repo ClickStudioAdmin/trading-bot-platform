@@ -4,6 +4,7 @@ import { useState, type ChangeEvent } from "react";
 import {
   BILLING_METHOD_LABELS,
   CRYPTO_CREDIT_DEDUCT_LABEL,
+  CRYPTO_CREDIT_DEDUCT_NOTE,
   type BillingMethod,
 } from "@/lib/membership/billing";
 
@@ -84,8 +85,7 @@ export function BillingMethodRadios({
             <span>
               {CRYPTO_CREDIT_DEDUCT_LABEL}
               <span className="mt-1 block text-xs text-ink-faint">
-                Use USD credit first when the balance can cover part or all
-                of the invoice. Leftover still charges Crypto.
+                {CRYPTO_CREDIT_DEDUCT_NOTE}
               </span>
             </span>
           </label>
