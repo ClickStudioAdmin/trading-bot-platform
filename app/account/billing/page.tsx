@@ -60,9 +60,9 @@ export default async function AccountBillingPage({
     <div>
       <PageHeading title="Billing" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
-        One collection method per login. Card uses Stripe Checkout. Crypto
-        can optionally deduct Crypto Credit first. Deposits are the next
-        step. Compare plans on{" "}
+        One collection method per login. Card uses the on-site Stripe form.
+        Crypto can optionally deduct Crypto Credit first. Deposits are the
+        next step. Compare plans on{" "}
         <Link href="/account/plans" className="text-accent">
           Plans
         </Link>

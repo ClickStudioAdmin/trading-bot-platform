@@ -160,6 +160,31 @@ export type UpgradeDecision =
   | { kind: "wallet_shell" }
   | { kind: "reject"; error: string };
 
+export function hasUsableStripeSubscription(billing: {
+  stripeSubscriptionId: string | null;
+  subscriptionStatus: SubscriptionStatus;
+}): boolean {
+  return Boolean(
+    billing.stripeSubscriptionId &&
+      (billing.subscriptionStatus === "active" ||
+        billing.subscriptionStatus === "past_due"),
+  );
+}
+
+export function embeddedCheckoutReturnUrl(origin: string): string {
+  const base = origin.trim().replace(/\/$/, "");
+  return `${base}/account/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
+}
+
+export function stripeCheckoutBranding() {
+  return {
+    background_color: "#161b22",
+    button_color: "#8b6cf6",
+    border_style: "rounded" as const,
+    display_name: "TBP",
+  };
+}
+
 export function decideUpgrade(input: {
   currentPlanId: string | null;
   target: Pick<

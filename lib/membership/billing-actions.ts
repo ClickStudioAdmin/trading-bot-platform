@@ -6,10 +6,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   billingPath,
-  checkoutPath,
   decideUpgrade,
+  embeddedCheckoutReturnUrl,
+  hasUsableStripeSubscription,
   parseBillingMethod,
   parsePaySubscriptionFromCredit,
+  stripeCheckoutBranding,
 } from "./billing";
 import {
   getMemberBilling,
@@ -19,6 +21,10 @@ import {
 import { parsePlanId } from "./form";
 import { getMembershipPlan } from "./store";
 import { billingOrigin, getStripe, stripeSecretConfigured } from "./stripe";
+
+export type EmbeddedCheckoutResult =
+  | { ok: true; clientSecret: string }
+  | { ok: false; error: string };
 
 function fail(
   error: string,
@@ -71,130 +77,64 @@ export async function setBillingMethodAction(formData: FormData) {
   redirect(billingPath({ saved: "method" }));
 }
 
-export async function continueUpgradeAction(formData: FormData) {
+export async function createEmbeddedCheckoutSecret(
+  planIdRaw: string,
+): Promise<EmbeddedCheckoutResult> {
   const member = await getSessionMember();
   if (!member) {
-    redirect("/sign-in");
-    return;
+    return { ok: false, error: "Sign in to continue." };
   }
-  const planId = parsePlanId(String(formData.get("planId") ?? ""));
+  const planId = parsePlanId(planIdRaw);
   if (!planId) {
-    redirect("/account/plans");
-    return;
+    return { ok: false, error: "That plan is not valid." };
   }
-  const method = parseBillingMethod(formData.get("billingMethod"));
-  if (!method) {
-    redirect(
-      checkoutPath({
-        plan: planId,
-        error: "Choose Card or Crypto.",
-      }),
-    );
-    return;
-  }
-  const paySubscriptionFromCredit = parsePaySubscriptionFromCredit(
-    formData.get("paySubscriptionFromCredit"),
-  );
   const loaded = await getMembershipPlan(planId);
   if (!loaded.ok) {
-    redirect(checkoutPath({ plan: planId, error: loaded.error }));
-    return;
+    return { ok: false, error: loaded.error };
   }
   const target = loaded.plan;
   const billing = await getMemberBilling(member.id);
   const decision = decideUpgrade({
     currentPlanId: billing?.planId ?? null,
     target,
-    method,
+    method: "stripe",
   });
-  const saved = await saveBillingMethod(member.id, method, {
-    paySubscriptionFromCredit,
-  });
-  if (!saved.ok) {
-    redirect(checkoutPath({ plan: planId, error: saved.error }));
-    return;
-  }
   if (decision.kind === "current") {
-    redirect(
-      checkoutPath({ plan: planId, error: "You are already on that plan." }),
-    );
-    return;
-  }
-  if (decision.kind === "need_method") {
-    redirect(
-      checkoutPath({
-        plan: planId,
-        error: "Choose Card or Crypto.",
-      }),
-    );
-    return;
+    return { ok: false, error: "You are already on that plan." };
   }
   if (decision.kind === "reject") {
-    redirect(checkoutPath({ plan: planId, error: decision.error }));
-    return;
+    return { ok: false, error: decision.error };
   }
-  if (decision.kind === "wallet_shell") {
-    await writeEventLog({
-      scope: "system",
-      event: "membership.billing_method",
-      message: "Selected Crypto for upgrade",
-      userId: member.id,
-      data: { method, planId, paySubscriptionFromCredit },
-    });
-    revalidatePath("/account/billing");
-    revalidatePath("/account/billing/checkout");
-    redirect(checkoutPath({ plan: planId, notice: "wallet" }));
-    return;
+  if (decision.kind !== "checkout") {
+    return { ok: false, error: "Choose Card to use the Stripe form." };
+  }
+  const saved = await saveBillingMethod(member.id, "stripe");
+  if (!saved.ok) {
+    return { ok: false, error: saved.error };
+  }
+  if (billing && hasUsableStripeSubscription(billing)) {
+    return {
+      ok: false,
+      error: "This login already has a Stripe subscription. Confirm the plan change.",
+    };
   }
   const stripe = getStripe();
   const origin = await billingOrigin();
   if (!stripeSecretConfigured() || !stripe || !origin) {
-    redirect(
-      checkoutPath({
-        plan: planId,
-        error:
-          "Stripe is not configured. Add STRIPE_SECRET_KEY and APP_BASE_URL on this environment.",
-      }),
-    );
-    return;
+    return {
+      ok: false,
+      error:
+        "Stripe is not configured. Add STRIPE_SECRET_KEY, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, and APP_BASE_URL on this environment.",
+    };
   }
   const priceId = target.stripePriceId ?? "";
+  if (!priceId) {
+    return {
+      ok: false,
+      error: "This plan has no Stripe price yet. Add a price id on Admin → Plans.",
+    };
+  }
   try {
-    if (
-      billing?.stripeSubscriptionId &&
-      (billing.subscriptionStatus === "active" ||
-        billing.subscriptionStatus === "past_due")
-    ) {
-      const subscription = await stripe.subscriptions.retrieve(
-        billing.stripeSubscriptionId,
-      );
-      const itemId = subscription.items.data[0]?.id;
-      if (!itemId || !priceId) {
-        redirect(
-          checkoutPath({
-            plan: planId,
-            error: "Could not update the current Stripe subscription.",
-          }),
-        );
-        return;
-      }
-      await stripe.subscriptions.update(billing.stripeSubscriptionId, {
-        items: [{ id: itemId, price: priceId }],
-        proration_behavior: "create_prorations",
-        cancel_at_period_end: false,
-        metadata: { userId: member.id, planId },
-      });
-      await writeEventLog({
-        scope: "system",
-        event: "membership.checkout_started",
-        message: "Updated Stripe subscription price",
-        userId: member.id,
-        data: { planId, subscriptionId: billing.stripeSubscriptionId },
-      });
-      revalidatePath("/account/billing");
-      redirect(billingPath({ upgraded: "1" }));
-      return;
-    }
     let customerId = billing?.stripeCustomerId ?? null;
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -209,47 +149,151 @@ export async function continueUpgradeAction(formData: FormData) {
       });
     }
     const session = await stripe.checkout.sessions.create({
+      ui_mode: "embedded_page",
       mode: "subscription",
       customer: customerId,
       client_reference_id: member.id,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/account/billing?checkout=success`,
-      cancel_url: `${origin}${checkoutPath({ plan: planId, checkout: "cancel" })}`,
+      redirect_on_completion: "if_required",
+      return_url: embeddedCheckoutReturnUrl(origin),
+      branding_settings: stripeCheckoutBranding(),
       metadata: { userId: member.id, planId },
       subscription_data: {
         metadata: { userId: member.id, planId },
       },
     });
-    const checkoutUrl = session.url;
-    if (!checkoutUrl) {
-      redirect(
-        checkoutPath({
-          plan: planId,
-          error: "Stripe did not return a checkout URL.",
-        }),
-      );
-      return;
+    const clientSecret = session.client_secret;
+    if (!clientSecret) {
+      return { ok: false, error: "Stripe did not return a checkout client secret." };
     }
     await writeEventLog({
       scope: "system",
       event: "membership.checkout_started",
-      message: "Started Stripe checkout",
+      message: "Started on-site Stripe checkout",
       userId: member.id,
       data: { planId, sessionId: session.id },
     });
-    redirect(checkoutUrl);
+    return { ok: true, clientSecret };
+  } catch (cause) {
+    return {
+      ok: false,
+      error:
+        cause instanceof Error ? cause.message : "Stripe checkout failed.",
+    };
+  }
+}
+
+export async function confirmStripePlanChangeAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+    return;
+  }
+  const planId = parsePlanId(String(formData.get("planId") ?? ""));
+  if (!planId) {
+    fail("That plan is not valid.");
+  }
+  const loaded = await getMembershipPlan(planId);
+  if (!loaded.ok) {
+    fail(loaded.error);
+  }
+  const target = loaded.plan;
+  const billing = await getMemberBilling(member.id);
+  const decision = decideUpgrade({
+    currentPlanId: billing?.planId ?? null,
+    target,
+    method: "stripe",
+  });
+  if (decision.kind === "current") {
+    fail("You are already on that plan.");
+  }
+  if (decision.kind === "reject") {
+    fail(decision.error);
+  }
+  if (decision.kind !== "checkout" || !billing || !hasUsableStripeSubscription(billing)) {
+    fail("No Stripe subscription to update. Pay with the card form.");
+  }
+  const stripe = getStripe();
+  if (!stripeSecretConfigured() || !stripe) {
+    fail("Stripe is not configured.");
+  }
+  const priceId = target.stripePriceId ?? "";
+  try {
+    const subscription = await stripe.subscriptions.retrieve(
+      billing.stripeSubscriptionId as string,
+    );
+    const itemId = subscription.items.data[0]?.id;
+    if (!itemId || !priceId) {
+      fail("Could not update the current Stripe subscription.");
+    }
+    await stripe.subscriptions.update(billing.stripeSubscriptionId as string, {
+      items: [{ id: itemId, price: priceId }],
+      proration_behavior: "create_prorations",
+      cancel_at_period_end: false,
+      metadata: { userId: member.id, planId },
+    });
+    const saved = await saveBillingMethod(member.id, "stripe");
+    if (!saved.ok) {
+      fail(saved.error);
+    }
+    await writeEventLog({
+      scope: "system",
+      event: "membership.checkout_started",
+      message: "Updated Stripe subscription price",
+      userId: member.id,
+      data: { planId, subscriptionId: billing.stripeSubscriptionId },
+    });
+    revalidatePath("/account/billing");
+    redirect(billingPath({ upgraded: "1" }));
   } catch (cause) {
     if (isNextRedirect(cause)) {
       throw cause;
     }
-    redirect(
-      checkoutPath({
-        plan: planId,
-        error:
-          cause instanceof Error ? cause.message : "Stripe checkout failed.",
-      }),
-    );
+    fail(cause instanceof Error ? cause.message : "Stripe update failed.");
   }
+}
+
+export async function saveCheckoutCryptoAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+    return;
+  }
+  const planId = parsePlanId(String(formData.get("planId") ?? ""));
+  const paySubscriptionFromCredit = parsePaySubscriptionFromCredit(
+    formData.get("paySubscriptionFromCredit"),
+  );
+  const saved = await saveBillingMethod(member.id, "wallet", {
+    paySubscriptionFromCredit,
+  });
+  if (!saved.ok) {
+    fail(saved.error, planId ? { plan: planId } : {});
+  }
+  const billing = await getMemberBilling(member.id);
+  if (billing?.stripeSubscriptionId && stripeSecretConfigured()) {
+    const stripe = getStripe();
+    if (stripe) {
+      try {
+        await stripe.subscriptions.update(billing.stripeSubscriptionId, {
+          cancel_at_period_end: true,
+        });
+      } catch (cause) {
+        fail(
+          cause instanceof Error ? cause.message : "Stripe update failed.",
+          planId ? { plan: planId } : {},
+        );
+      }
+    }
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.billing_method",
+    message: "Selected Crypto for upgrade",
+    userId: member.id,
+    data: { method: "wallet", planId, paySubscriptionFromCredit },
+  });
+  revalidatePath("/account/billing");
+  revalidatePath("/account/billing/checkout");
 }
 
 function isNextRedirect(error: unknown): boolean {

@@ -3,7 +3,9 @@ import {
   billingPath,
   checkoutPath,
   decideUpgrade,
+  embeddedCheckoutReturnUrl,
   formatUsd,
+  hasUsableStripeSubscription,
   parseBillingMethod,
   parsePaySubscriptionFromCredit,
   stripeCentsToUsd,
@@ -16,6 +18,24 @@ assert.equal(parseBillingMethod("comp"), null);
 assert.equal(parsePaySubscriptionFromCredit("1"), true);
 assert.equal(parsePaySubscriptionFromCredit("on"), false);
 assert.equal(parsePaySubscriptionFromCredit(null), false);
+assert.equal(
+  embeddedCheckoutReturnUrl("https://app.example/"),
+  "https://app.example/account/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}",
+);
+assert.equal(
+  hasUsableStripeSubscription({
+    stripeSubscriptionId: "sub_1",
+    subscriptionStatus: "active",
+  }),
+  true,
+);
+assert.equal(
+  hasUsableStripeSubscription({
+    stripeSubscriptionId: null,
+    subscriptionStatus: "comp",
+  }),
+  false,
+);
 assert.equal(billingPath(), "/account/billing");
 assert.equal(checkoutPath(), "/account/billing/checkout");
 assert.equal(

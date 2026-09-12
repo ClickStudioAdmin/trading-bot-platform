@@ -1,21 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BillingMethodRadios } from "@/components/billing-method-radios";
+import { CheckoutPayment } from "@/components/checkout-payment";
 import { PageHeading } from "@/components/page-heading";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getSessionMember } from "@/lib/auth/session";
-import { continueUpgradeAction } from "@/lib/membership/billing-actions";
-import { getMemberBilling } from "@/lib/membership/billing-store";
+import { hasUsableStripeSubscription } from "@/lib/membership/billing";
+import { getMemberBilling, walletCreditUsd } from "@/lib/membership/billing-store";
 import { formatPlanPrice } from "@/lib/membership/catalog";
 import { parsePlanId } from "@/lib/membership/form";
 import { getMembershipPlan } from "@/lib/membership/store";
-import { stripeSecretConfigured } from "@/lib/membership/stripe";
+import {
+  stripePublishableKey,
+  stripeSecretConfigured,
+} from "@/lib/membership/stripe";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Checkout",
-  description: "Choose a payment method and continue.",
+  description: "Choose a payment method and pay on this page.",
 };
 
 export default async function AccountCheckoutPage({
@@ -32,9 +34,10 @@ export default async function AccountCheckoutPage({
   if (!planId) {
     redirect("/account/plans");
   }
-  const [billing, loaded] = await Promise.all([
+  const [billing, loaded, credit] = await Promise.all([
     getMemberBilling(member.id),
     getMembershipPlan(planId),
+    walletCreditUsd(member.id),
   ]);
   if (!billing || !loaded.ok) {
     redirect("/account/plans");
@@ -42,15 +45,14 @@ export default async function AccountCheckoutPage({
   const target = loaded.plan;
   const current = billing.planId === target.id;
   const error = firstSearchValue(params.error);
-  const notice = firstSearchValue(params.notice);
-  const checkout = firstSearchValue(params.checkout);
   const stripeReady = stripeSecretConfigured();
 
   return (
-    <div className="max-w-lg">
+    <div>
       <PageHeading title="Checkout" />
-      <p className="-mt-4 text-sm text-ink-muted">
-        Choose Card or Crypto, then continue. Compare plans on{" "}
+      <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
+        Choose Card or Crypto. The payment form stays on this page. Compare
+        plans on{" "}
         <Link href="/account/plans" className="text-accent">
           Plans
         </Link>
@@ -61,48 +63,30 @@ export default async function AccountCheckoutPage({
           {error}
         </p>
       ) : null}
-      {checkout === "cancel" ? (
-        <p className="mt-6 text-sm text-ink-muted">Checkout canceled.</p>
-      ) : null}
-      {notice === "wallet" ? (
-        <p className="mt-6 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Crypto is your collection method. Top-up is the next step. Your
-          plan does not change until Crypto or credit can pay the invoice.
-        </p>
-      ) : null}
-      {!stripeReady ? (
-        <p className="mt-6 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Stripe test keys are not on this environment yet. You can still
-          choose a payment method.
-        </p>
-      ) : null}
 
-      <section className="mt-6 rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">{target.name}</h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          {formatPlanPrice(target.priceUsd)}
-        </p>
-        {current ? (
+      {current ? (
+        <section className="mt-6 max-w-lg rounded-card border border-line bg-surface p-5">
+          <h2 className="text-lg font-semibold tracking-tight">{target.name}</h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            {formatPlanPrice(target.priceUsd)}
+          </p>
           <p className="mt-4 text-sm text-ink-muted">
             You are already on this plan.
           </p>
-        ) : (
-          <form action={continueUpgradeAction} className="mt-4 space-y-4">
-            <input type="hidden" name="planId" value={target.id} />
-            <BillingMethodRadios
-              name="billingMethod"
-              selected={billing.billingMethod}
-              deductSelected={billing.paySubscriptionFromCredit}
-            />
-            <PendingSubmitButton
-              pendingLabel="Continuing…"
-              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-            >
-              Continue
-            </PendingSubmitButton>
-          </form>
-        )}
-      </section>
+        </section>
+      ) : (
+        <CheckoutPayment
+          planId={target.id}
+          planName={target.name}
+          planPrice={formatPlanPrice(target.priceUsd)}
+          selected={billing.billingMethod}
+          deductSelected={billing.paySubscriptionFromCredit}
+          creditUsd={credit}
+          stripeReady={stripeReady}
+          publishableKey={stripePublishableKey()}
+          existingStripeSubscription={hasUsableStripeSubscription(billing)}
+        />
+      )}
 
       <p className="mt-4 text-sm text-ink-faint">
         <Link href="/account/plans" className="text-accent">

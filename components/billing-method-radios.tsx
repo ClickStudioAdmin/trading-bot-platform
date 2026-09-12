@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import {
   BILLING_METHOD_LABELS,
   CRYPTO_CREDIT_DEDUCT_LABEL,
@@ -12,13 +12,22 @@ export function BillingMethodRadios({
   selected,
   deductName = "paySubscriptionFromCredit",
   deductSelected = false,
+  onMethodChange,
+  onDeductChange,
 }: {
   name: string;
   selected: BillingMethod | null;
   deductName?: string;
   deductSelected?: boolean;
+  onMethodChange?: (method: BillingMethod) => void;
+  onDeductChange?: (checked: boolean) => void;
 }) {
   const [method, setMethod] = useState<BillingMethod>(selected ?? "stripe");
+
+  function choose(next: BillingMethod) {
+    setMethod(next);
+    onMethodChange?.(next);
+  }
 
   return (
     <fieldset className="space-y-3">
@@ -29,13 +38,13 @@ export function BillingMethodRadios({
           name={name}
           value="stripe"
           checked={method === "stripe"}
-          onChange={() => setMethod("stripe")}
+          onChange={() => choose("stripe")}
           className="mt-0.5"
         />
         <span>
           {BILLING_METHOD_LABELS.stripe}
           <span className="mt-1 block text-xs text-ink-faint">
-            Stripe Checkout and Customer Portal.
+            On-site Stripe form.
           </span>
         </span>
       </label>
@@ -46,7 +55,7 @@ export function BillingMethodRadios({
             name={name}
             value="wallet"
             checked={method === "wallet"}
-            onChange={() => setMethod("wallet")}
+            onChange={() => choose("wallet")}
             className="mt-0.5"
           />
           <span>
@@ -62,7 +71,13 @@ export function BillingMethodRadios({
               type="checkbox"
               name={deductName}
               value="1"
-              defaultChecked={deductSelected}
+              {...(onDeductChange
+                ? {
+                    checked: deductSelected,
+                    onChange: (event: ChangeEvent<HTMLInputElement>) =>
+                      onDeductChange(event.target.checked),
+                  }
+                : { defaultChecked: deductSelected })}
               className="mt-0.5"
             />
             <span>

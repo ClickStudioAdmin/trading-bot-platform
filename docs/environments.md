@@ -183,7 +183,9 @@ Test-mode keys on **Development** / local `.env.local`. Live keys on **Productio
 | `STRIPE_SECRET_KEY` | Vercel Production | `sk_live_…` |
 | `STRIPE_WEBHOOK_SECRET` | Vercel Development / `.env.local` | `whsec_…` for `POST /api/stripe/webhook` |
 | `STRIPE_WEBHOOK_SECRET` | Vercel Production | A **different** live `whsec_…` |
-| `APP_BASE_URL` | Same as TradingView | Checkout success / cancel and Customer Portal return |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Vercel Development / `.env.local` | `pk_test_…` for the on-site Checkout embed |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Vercel Production | `pk_live_…` |
+| `APP_BASE_URL` | Same as TradingView | Embedded Checkout return and Customer Portal return |
 
 Webhook events: `checkout.session.completed`, `customer.subscription.updated` (and created / deleted), `invoice.paid`, `invoice.updated`, `charge.refunded`. Each paid plan needs a Stripe Price id on `/admin/plans`.
 

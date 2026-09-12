@@ -8,6 +8,14 @@ export function stripeSecretConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY?.trim());
 }
 
+export function stripePublishableKey(): string {
+  return process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim() ?? "";
+}
+
+export function stripePublishableConfigured(): boolean {
+  return Boolean(stripePublishableKey());
+}
+
 export function getStripe(): Stripe | null {
   if (cached !== undefined) {
     return cached;
