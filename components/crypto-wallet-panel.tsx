@@ -47,7 +47,7 @@ export function TopUpWallet({
       <p className="text-sm text-ink-muted">{depositLabel}</p>
       {address ? (
         <>
-          <p className="break-all rounded-card border border-line bg-surface-raised px-3 py-2 font-mono text-xs text-ink">
+          <p className="break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
             {address.address}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -57,7 +57,7 @@ export function TopUpWallet({
                 href={explorer}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-control border border-line bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink hover:border-line-strong"
+                className="rounded-control border border-line bg-canvas px-3 py-1.5 text-xs font-medium text-ink hover:border-line-strong"
               >
                 Explorer
               </a>

@@ -16,7 +16,7 @@ export async function saveAdminSettings(formData: FormData) {
   await requireAdmin();
   const days = parseCopyMinActivityDays(formData.get("copyMinActivityDays"));
   if (!days.ok) {
-    redirect("/admin/settings?error=copy-days");
+    redirect("/admin/settings?tab=copy&error=copy-days");
   }
   const limits = parseCopyFollowerLimits({
     defaultValue: formData.get("copyMaxFollowersDefault"),

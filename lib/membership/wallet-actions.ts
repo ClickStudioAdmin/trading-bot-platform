@@ -152,7 +152,7 @@ export async function saveBillingChainAction(formData: FormData) {
   });
   revalidatePath("/admin/settings");
   revalidatePath("/admin/billing");
-  redirect("/admin/settings?saved=chain");
+  redirect("/admin/settings?tab=crypto&saved=chain");
 }
 
 export async function saveBillingTokenAction(formData: FormData) {
@@ -183,7 +183,7 @@ export async function saveBillingTokenAction(formData: FormData) {
   });
   revalidatePath("/admin/settings");
   revalidatePath("/admin/billing");
-  redirect("/admin/settings?saved=token");
+  redirect("/admin/settings?tab=crypto&saved=token");
 }
 
 export async function scanBillingDepositsAction() {

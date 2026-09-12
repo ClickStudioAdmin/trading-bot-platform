@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 const SETTINGS_TABS = ["general", "copy", "crypto"] as const;
 type SettingsTab = (typeof SETTINGS_TABS)[number];
 
-function parseSettingsTab(value: string): SettingsTab {
+function parseSettingsTab(value: string | undefined): SettingsTab {
   return SETTINGS_TABS.includes(value as SettingsTab)
     ? (value as SettingsTab)
     : "general";
@@ -133,7 +133,7 @@ export default async function AdminSettingsPage({
                 step={1}
                 required
                 defaultValue={copySettings.minActivityDays}
-                className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                className={BILLING_FIELD_CLASS}
               />
               <span className="mt-1 block text-xs text-ink-muted">
                 A connected desk needs a first venue fill at least this many
@@ -150,7 +150,7 @@ export default async function AdminSettingsPage({
                 step={1}
                 defaultValue={copySettings.maxFollowersDefault ?? ""}
                 placeholder="No cap"
-                className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                className={BILLING_FIELD_CLASS}
               />
               <span className="mt-1 block text-xs text-ink-muted">
                 Pre-fills Maximum copy traders on a new share. If the platform
@@ -166,7 +166,7 @@ export default async function AdminSettingsPage({
                 step={1}
                 defaultValue={copySettings.maxFollowersCeiling ?? ""}
                 placeholder="Same as default"
-                className="mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+                className={BILLING_FIELD_CLASS}
               />
               <span className="mt-1 block text-xs text-ink-muted">
                 Hard cap. A desk cannot save a higher number. Empty uses the

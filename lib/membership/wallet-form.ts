@@ -2,7 +2,7 @@ import { isEvmAddress } from "./hd";
 import { parseTokenKind, type TokenKind } from "./wallet";
 
 export const BILLING_FIELD_CLASS =
-  "mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
+  "mt-1 w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none";
 
 export function parseChainName(value: unknown): string | null {
   const name = String(value ?? "").trim();
