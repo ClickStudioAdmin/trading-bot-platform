@@ -215,19 +215,14 @@ export async function payPlanWithCreditAction(formData: FormData) {
     return;
   }
   const planId = parsePlanId(String(formData.get("planId") ?? ""));
-  const failPay = (error: string): never => {
-    if (planId) {
-      redirect(checkoutPath({ plan: planId, error }));
-      throw new Error(error);
-    }
-    failBilling(error);
-  };
   if (!planId) {
-    failPay("That plan is not valid.");
+    redirect(checkoutPath({ error: "That plan is not valid." }));
+    return;
   }
   const loaded = await getMembershipPlan(planId);
   if (!loaded.ok) {
-    failPay(loaded.error);
+    redirect(checkoutPath({ plan: planId, error: loaded.error }));
+    return;
   }
   const target = loaded.plan;
   const billing = await getMemberBilling(member.id);
@@ -237,10 +232,12 @@ export async function payPlanWithCreditAction(formData: FormData) {
     method: "wallet",
   });
   if (decision.kind === "current") {
-    failPay("You are already on that plan.");
+    redirect(checkoutPath({ plan: planId, error: "You are already on that plan." }));
+    return;
   }
   if (decision.kind === "reject") {
-    failPay(decision.error);
+    redirect(checkoutPath({ plan: planId, error: decision.error }));
+    return;
   }
   const saved = await saveBillingMethod(member.id, "wallet", {
     paySubscriptionFromCredit: parsePaySubscriptionFromCredit(
@@ -248,7 +245,8 @@ export async function payPlanWithCreditAction(formData: FormData) {
     ),
   });
   if (!saved.ok) {
-    failPay(saved.error);
+    redirect(checkoutPath({ plan: planId, error: saved.error }));
+    return;
   }
   const books = await walletBookBalances(member.id);
   const useAffiliate =
@@ -261,9 +259,13 @@ export async function payPlanWithCreditAction(formData: FormData) {
     useAffiliate,
   });
   if (!deduct.ok) {
-    failPay(
-      `Need ${roundUsd(deduct.shortUsd)} more Main credit to pay this plan.`,
+    redirect(
+      checkoutPath({
+        plan: planId,
+        error: `Need ${roundUsd(deduct.shortUsd)} more Main credit to pay this plan.`,
+      }),
     );
+    return;
   }
   try {
     const paid = await payPlanFromWallet({
@@ -274,7 +276,8 @@ export async function payPlanWithCreditAction(formData: FormData) {
       setEnroll: target.features.affiliate_enroll,
     });
     if (!paid.ok) {
-      failPay(paid.error);
+      redirect(checkoutPath({ plan: planId, error: paid.error }));
+      return;
     }
     if (billing?.stripeSubscriptionId && stripeSecretConfigured()) {
       const stripe = getStripe();
@@ -300,12 +303,17 @@ export async function payPlanWithCreditAction(formData: FormData) {
     revalidatePath("/account/billing/checkout");
     revalidatePath("/account/plans");
     redirect(billingPath({ upgraded: "wallet" }));
+    return;
   } catch (cause) {
     if (isNextRedirect(cause)) {
       throw cause;
     }
-    failPay(
-      cause instanceof Error ? cause.message : "Wallet payment failed.",
+    redirect(
+      checkoutPath({
+        plan: planId,
+        error:
+          cause instanceof Error ? cause.message : "Wallet payment failed.",
+      }),
     );
   }
 }
