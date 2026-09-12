@@ -132,6 +132,40 @@ export function parseOwnPasswordChange(
   return { ok: true, current, next };
 }
 
+export function parseAffiliateSignup(formData: FormData):
+  | {
+      ok: true;
+      name: string;
+      email: string;
+      password: string;
+      referralCode: string | null;
+    }
+  | { ok: false; error: string } {
+  const name = String(formData.get("name") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  if (name.length < 1 || name.length > 80) {
+    return { ok: false, error: "Enter a name up to 80 characters." };
+  }
+  if (!isEmail(email)) {
+    return { ok: false, error: "Enter a valid email." };
+  }
+  if (password.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+  const referral = parseOptionalReferralCode(formData.get("referralCode"));
+  if (!referral.ok) {
+    return referral;
+  }
+  return {
+    ok: true,
+    name,
+    email,
+    password,
+    referralCode: referral.code,
+  };
+}
+
 export function parseMemberId(raw: string): number | null {
   const id = Number(raw);
   if (!Number.isInteger(id) || id <= 0) {

@@ -79,6 +79,11 @@ export function SiteFooter({ appHref = null }: { appHref?: string | null }) {
               </Link>
             </li>
             <li>
+              <Link href="/affiliates" className="text-ink-muted hover:text-ink">
+                Affiliates
+              </Link>
+            </li>
+            <li>
               <Link href="/pricing" className="text-ink-muted hover:text-ink">
                 Pricing
               </Link>

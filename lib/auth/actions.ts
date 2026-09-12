@@ -3,7 +3,7 @@
 import { emailIsListedAdmin } from "@/lib/admin/emails";
 import { deskHomePath, pickDefaultAccount } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
-import { WELCOME_PATH } from "@/lib/auth/onboarding-path";
+import { AFFILIATES_PATH, WELCOME_PATH } from "@/lib/auth/onboarding-path";
 import { createSession, clearSession, getSessionMember } from "@/lib/auth/session";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { memberDisplayName } from "@/lib/members/sync";
@@ -11,6 +11,10 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 
 async function redirectAfterSignIn(userId: string) {
+  const member = await getSessionMember();
+  if (member && !member.platformMember) {
+    redirect(AFFILIATES_PATH);
+  }
   const accounts = await listTradingAccounts(userId);
   if (accounts.length === 0) {
     redirect(WELCOME_PATH);

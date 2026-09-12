@@ -45,10 +45,10 @@ export default async function AdminAffiliatesPage({
     <div>
       <PageHeading overline="Admin" title="Affiliates" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Program knobs and the USDT withdraw queue. Rates stay on each plan.
-        Allowed withdraw chains are ticked on Settings → Crypto. Click sends
-        USDT from the admin wallet outside this app, then marks the queue
-        paid.
+        Program knobs and the USDT withdraw queue. Default L1–L5 apply to
+        affiliates who are not platform members, and to unpaid members.
+        Platform members on a current plan use that plan’s rates. Allowed
+        withdraw chains are ticked on Settings → Crypto.
       </p>
       {saved ? (
         <p className="mt-6 text-sm text-success">
@@ -112,6 +112,38 @@ export default async function AdminAffiliatesPage({
             className={BILLING_FIELD_CLASS}
           />
         </label>
+        <fieldset className="space-y-3">
+          <legend className="text-sm text-ink">Default affiliate rates</legend>
+          <p className="text-xs text-ink-muted">
+            For affiliates who are not platform users. L1–L5 cannot add up to
+            more than 100%.
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            {(
+              [
+                ["defaultL1Pct", "L1", settings.defaultL1Pct],
+                ["defaultL2Pct", "L2", settings.defaultL2Pct],
+                ["defaultL3Pct", "L3", settings.defaultL3Pct],
+                ["defaultL4Pct", "L4", settings.defaultL4Pct],
+                ["defaultL5Pct", "L5", settings.defaultL5Pct],
+              ] as const
+            ).map(([name, label, value]) => (
+              <label key={name} className="block text-sm text-ink">
+                {label}
+                <input
+                  type="number"
+                  name={name}
+                  min={0}
+                  max={100}
+                  step="0.01"
+                  required
+                  defaultValue={value}
+                  className={BILLING_FIELD_CLASS}
+                />
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <label className="block text-sm text-ink">
           Downgrade grace days
           <input

@@ -7,15 +7,19 @@ import {
   holdHasElapsed,
   holdUntilIso,
   parseAffiliateHoldDays,
+  affiliatePortalPath,
+  parseAffiliatePortalTab,
   parseAffiliateMaxDepth,
   parseAffiliateMinPayout,
   parseOptionalReferralCode,
+  affiliateRateSource,
   parsePayoutNetwork,
+  parseProgramDefaultRates,
   parseReferralCode,
   ratePctForLevel,
   referralShareUrl,
   resolveEarnDepth,
-  unpaidUsesFreeAffiliateRates,
+  unpaidUsesProgramAffiliateRates,
   walkUpline,
   withdrawDecision,
   wouldCreateReferralCycle,
@@ -28,6 +32,25 @@ assert.equal(parseAffiliateMaxDepth(0).ok, false);
 assert.equal(parseAffiliateHoldDays(0).ok, true);
 assert.equal(parseAffiliateHoldDays(-1).ok, false);
 assert.equal(parseAffiliateMinPayout("50").ok, true);
+assert.deepEqual(
+  parseProgramDefaultRates({ l1: "10", l2: "5", l3: 0, l4: 0, l5: 0 }),
+  {
+    ok: true,
+    defaultL1Pct: 10,
+    defaultL2Pct: 5,
+    defaultL3Pct: 0,
+    defaultL4Pct: 0,
+    defaultL5Pct: 0,
+  },
+);
+assert.equal(
+  parseProgramDefaultRates({ l1: 80, l2: 20, l3: 1, l4: 0, l5: 0 }).ok,
+  false,
+);
+assert.equal(affiliateRateSource({ platformMember: false, pastDue: false }), "program");
+assert.equal(affiliateRateSource({ platformMember: true, pastDue: true }), "program");
+assert.equal(affiliateRateSource({ platformMember: true, pastDue: false }), "plan");
+
 assert.deepEqual(parsePayoutNetwork("arbitrum-sepolia", ["arbitrum-sepolia"]), {
   ok: true,
   network: "arbitrum-sepolia",
@@ -55,10 +78,10 @@ assert.equal(ratePctForLevel([10, 0, 2], 2, 3), 0);
 assert.equal(commissionUsd(19, 10), 1.9);
 assert.equal(commissionUsd(0.009, 10), 0);
 
-assert.equal(unpaidUsesFreeAffiliateRates("past_due"), true);
-assert.equal(unpaidUsesFreeAffiliateRates("active"), false);
-assert.equal(unpaidUsesFreeAffiliateRates("comp"), false);
-assert.equal(unpaidUsesFreeAffiliateRates("canceled"), false);
+assert.equal(unpaidUsesProgramAffiliateRates("past_due"), true);
+assert.equal(unpaidUsesProgramAffiliateRates("active"), false);
+assert.equal(unpaidUsesProgramAffiliateRates("comp"), false);
+assert.equal(unpaidUsesProgramAffiliateRates("canceled"), false);
 
 assert.equal(holdHasElapsed(holdUntilIso(1_000, 0), 1_000), true);
 assert.equal(holdHasElapsed(holdUntilIso(1_000, 1), 1_000), false);
@@ -113,7 +136,13 @@ assert.equal(conversionPct(4, 1), 25);
 assert.equal(conversionPct(0, 0), 0);
 assert.equal(
   referralShareUrl("https://app.example", "AB12"),
-  "https://app.example/?ref=AB12",
+  "https://app.example/affiliates?ref=AB12",
+);
+assert.equal(parseAffiliatePortalTab("network"), "network");
+assert.equal(parseAffiliatePortalTab("nope"), "overview");
+assert.equal(
+  affiliatePortalPath("payouts", { saved: "withdraw" }),
+  "/affiliates?tab=payouts&saved=withdraw",
 );
 
 console.log("membership affiliate checks passed");

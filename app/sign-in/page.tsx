@@ -24,8 +24,7 @@ export default async function SignInPage({
         </p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">Sign in</h1>
         <p className="mt-3 text-sm text-ink-muted">
-          Invite-only. Sign in with a desk member account. Market pages stay
-          public.
+          Sign in with a desk or affiliate account. Market pages stay public.
         </p>
         {error ? (
           <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -62,6 +61,13 @@ export default async function SignInPage({
             Sign in
           </PendingSubmitButton>
         </form>
+        <p className="mt-6 text-sm text-ink-muted">
+          Promote the platform without a membership?{" "}
+          <a href="/affiliates" className="text-accent hover:text-accent-strong">
+            Join as an affiliate
+          </a>
+          .
+        </p>
       </main>
   );
 }

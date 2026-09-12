@@ -59,6 +59,7 @@ export async function createMember(formData: FormData) {
     plan_id: plan.plan.id,
     last_enroll_plan_id: plan.plan.id,
     subscription_status: "comp",
+    platform_member: true,
     password_hash: hashPassword(parsed.values.password),
     created_at: now,
     updated_at: now,

@@ -1,13 +1,14 @@
 export const PUBLIC_NAV_LINKS = [
   { href: "/", label: "Home", exact: true },
   { href: "/#how-it-works", label: "How it works", exact: false },
+  { href: "/affiliates", label: "Affiliates", exact: false },
   { href: "/pricing", label: "Pricing", exact: false },
 ] as const;
 
 export const HEADER_LINKS = [
   { href: "/account/copy", label: "Copy Trading" },
   { href: "/account/backtests", label: "Backtesting Tool" },
-  { href: "/account/affiliates", label: "Affiliates" },
+  { href: "/affiliates", label: "Affiliates" },
   { href: "/account/plans", label: "Plans" },
 ] as const;
 

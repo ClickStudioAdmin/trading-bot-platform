@@ -26,6 +26,9 @@ export default async function WelcomePage({
   if (!member) {
     redirect("/sign-in");
   }
+  if (!member.platformMember) {
+    redirect("/affiliates");
+  }
   if (await memberHasDesk(member.id)) {
     const session = await getSessionContext();
     redirect(

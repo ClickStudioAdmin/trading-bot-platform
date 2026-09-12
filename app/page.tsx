@@ -1,6 +1,6 @@
 import { MarketingHome } from "@/components/marketing-home";
 import { deskHomePath } from "@/lib/accounts/model";
-import { WELCOME_PATH } from "@/lib/auth/onboarding-path";
+import { AFFILIATES_PATH, WELCOME_PATH } from "@/lib/auth/onboarding-path";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
 
 export default async function Home() {
@@ -9,7 +9,9 @@ export default async function Home() {
   const appHref = session
     ? deskHomePath(session.account.deskType, session.account.id)
     : member
-      ? WELCOME_PATH
+      ? member.platformMember
+        ? WELCOME_PATH
+        : AFFILIATES_PATH
       : null;
   return <MarketingHome appHref={appHref} />;
 }

@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { parseMemberForm, parseMemberId, parseOwnPasswordChange, parseOwnProfile } from "./form";
+import {
+  parseAffiliateSignup,
+  parseMemberForm,
+  parseMemberId,
+  parseOwnPasswordChange,
+  parseOwnProfile,
+} from "./form";
 
 const create = new FormData();
 create.set("name", " Desk Trader ");
@@ -98,5 +104,19 @@ same.set("currentPassword", "password1");
 same.set("newPassword", "password1");
 same.set("confirmPassword", "password1");
 assert.equal(parseOwnPasswordChange(same).ok, false);
+
+const affiliate = new FormData();
+affiliate.set("name", " Promoter ");
+affiliate.set("email", "Promoter@Click.studio");
+affiliate.set("password", "password1");
+affiliate.set("referralCode", "ab-12");
+const signedUp = parseAffiliateSignup(affiliate);
+assert.equal(signedUp.ok, true);
+if (signedUp.ok) {
+  assert.equal(signedUp.name, "Promoter");
+  assert.equal(signedUp.email, "promoter@click.studio");
+  assert.equal(signedUp.referralCode, "AB-12");
+}
+assert.equal(parseAffiliateSignup(new FormData()).ok, false);
 
 console.log("member form checks passed");

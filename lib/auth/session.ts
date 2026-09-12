@@ -26,6 +26,7 @@ export type SessionMember = {
   name: string;
   role: MemberRole;
   status: MemberStatus;
+  platformMember: boolean;
 };
 
 export type SessionContext = {
@@ -66,11 +67,22 @@ export async function getSessionMember(): Promise<SessionMember | null> {
   if (!supabase) {
     return null;
   }
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("members")
-    .select("user_id, email, name, role, status")
+    .select("user_id, email, name, role, status, platform_member")
     .eq("user_id", parsed.userId)
     .maybeSingle();
+  if (error) {
+    const retry = await supabase
+      .from("members")
+      .select("user_id, email, name, role, status")
+      .eq("user_id", parsed.userId)
+      .maybeSingle();
+    data = retry.data
+      ? { ...retry.data, platform_member: true }
+      : null;
+    error = retry.error;
+  }
   if (error || !data || data.status === "disabled") {
     return null;
   }
@@ -80,6 +92,7 @@ export async function getSessionMember(): Promise<SessionMember | null> {
     name: String(data.name),
     role: data.role === "admin" ? "admin" : "member",
     status: data.status === "disabled" ? "disabled" : "active",
+    platformMember: data.platform_member !== false,
   };
 }
 

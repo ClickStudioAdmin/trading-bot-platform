@@ -14,10 +14,13 @@ import {
   parseDowngradeGraceDays,
   parsePayoutMethod,
   parsePayoutStatus,
+  parseAffiliateRatePct,
   parseReferralCode,
+  programDefaultRates,
   ratePctForLevel,
   resolveEarnDepth,
-  unpaidUsesFreeAffiliateRates,
+  affiliateRateSource,
+  unpaidUsesProgramAffiliateRates,
   walkUpline,
   wouldCreateReferralCycle,
   type AffiliateProgramSettings,
@@ -26,7 +29,6 @@ import {
 } from "./affiliate";
 import { planAffiliateRate, type MembershipPlan } from "./catalog";
 import {
-  getDefaultMembershipPlan,
   getMembershipPlan,
   listMembershipPlans,
 } from "./store";
@@ -45,7 +47,7 @@ export type CommissionRow = {
   earnerUserId: string;
   sourceUserId: string;
   invoiceId: string;
-  ratePlanId: string;
+  ratePlanId: string | null;
   level: number;
   ratePct: number;
   amountUsd: number;
@@ -78,15 +80,30 @@ export type DownlineRow = {
   planPriceUsd: number;
 };
 
+export type AffiliateRateRow = {
+  level: number;
+  ratePct: number;
+  active: boolean;
+};
+
+export type AffiliateRateCard = {
+  source: "plan" | "program";
+  planName: string | null;
+  earnDepth: number;
+  rows: AffiliateRateRow[];
+};
+
 export type AffiliatePortal = {
   code: string | null;
   settings: AffiliateProgramSettings;
+  rates: AffiliateRateCard;
   payableUsd: number;
   pendingUsd: number;
   paidOutUsd: number;
   lastPayoutAt: string | null;
   downline: DownlineRow[];
   tree: AffiliateTreeNode[];
+  commissions: CommissionRow[];
   stats: {
     attributed: number;
     paid: number;
@@ -112,6 +129,11 @@ function mapSettings(row: Record<string, unknown>): AffiliateProgramSettings {
   const hold = parseAffiliateHoldDays(row.affiliate_hold_days);
   const min = parseAffiliateMinPayout(row.affiliate_min_payout_usd);
   const grace = parseDowngradeGraceDays(row.downgrade_grace_days);
+  const l1 = parseAffiliateRatePct(row.affiliate_default_l1_pct);
+  const l2 = parseAffiliateRatePct(row.affiliate_default_l2_pct);
+  const l3 = parseAffiliateRatePct(row.affiliate_default_l3_pct);
+  const l4 = parseAffiliateRatePct(row.affiliate_default_l4_pct);
+  const l5 = parseAffiliateRatePct(row.affiliate_default_l5_pct);
   return {
     maxDepth: depth.ok ? depth.depth : EMPTY_AFFILIATE_SETTINGS.maxDepth,
     holdDays: hold.ok ? hold.days : EMPTY_AFFILIATE_SETTINGS.holdDays,
@@ -123,25 +145,40 @@ function mapSettings(row: Record<string, unknown>): AffiliateProgramSettings {
     downgradeGraceDays: grace.ok
       ? grace.days
       : EMPTY_AFFILIATE_SETTINGS.downgradeGraceDays,
+    defaultL1Pct: l1.ok ? l1.pct : EMPTY_AFFILIATE_SETTINGS.defaultL1Pct,
+    defaultL2Pct: l2.ok ? l2.pct : EMPTY_AFFILIATE_SETTINGS.defaultL2Pct,
+    defaultL3Pct: l3.ok ? l3.pct : EMPTY_AFFILIATE_SETTINGS.defaultL3Pct,
+    defaultL4Pct: l4.ok ? l4.pct : EMPTY_AFFILIATE_SETTINGS.defaultL4Pct,
+    defaultL5Pct: l5.ok ? l5.pct : EMPTY_AFFILIATE_SETTINGS.defaultL5Pct,
   };
 }
+
+const SETTINGS_COLUMNS =
+  "affiliate_max_depth, affiliate_hold_days, affiliate_min_payout_usd, affiliate_payout_coin, downgrade_grace_days";
+const SETTINGS_COLUMNS_FULL = `${SETTINGS_COLUMNS}, affiliate_default_l1_pct, affiliate_default_l2_pct, affiliate_default_l3_pct, affiliate_default_l4_pct, affiliate_default_l5_pct`;
 
 export async function loadAffiliateSettings(): Promise<AffiliateProgramSettings> {
   const supabase = createServiceClient();
   if (!supabase) {
     return EMPTY_AFFILIATE_SETTINGS;
   }
-  const { data, error } = await supabase
+  const full = await supabase
     .from("platform_settings")
-    .select(
-      "affiliate_max_depth, affiliate_hold_days, affiliate_min_payout_usd, affiliate_payout_coin, downgrade_grace_days",
-    )
+    .select(SETTINGS_COLUMNS_FULL)
     .eq("id", "tbp")
     .maybeSingle();
-  if (error || !data) {
+  if (!full.error && full.data) {
+    return mapSettings(full.data as Record<string, unknown>);
+  }
+  const core = await supabase
+    .from("platform_settings")
+    .select(SETTINGS_COLUMNS)
+    .eq("id", "tbp")
+    .maybeSingle();
+  if (core.error || !core.data) {
     return EMPTY_AFFILIATE_SETTINGS;
   }
-  return mapSettings(data as Record<string, unknown>);
+  return mapSettings(core.data as Record<string, unknown>);
 }
 
 export async function saveAffiliateSettings(
@@ -151,15 +188,30 @@ export async function saveAffiliateSettings(
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
-  const { error } = await supabase.from("platform_settings").upsert({
+  const row: Record<string, unknown> = {
     id: "tbp",
     affiliate_max_depth: input.maxDepth,
     affiliate_hold_days: input.holdDays,
     affiliate_min_payout_usd: input.minPayoutUsd,
     affiliate_payout_coin: input.payoutCoin,
     downgrade_grace_days: input.downgradeGraceDays,
+    affiliate_default_l1_pct: input.defaultL1Pct,
+    affiliate_default_l2_pct: input.defaultL2Pct,
+    affiliate_default_l3_pct: input.defaultL3Pct,
+    affiliate_default_l4_pct: input.defaultL4Pct,
+    affiliate_default_l5_pct: input.defaultL5Pct,
     updated_at: new Date().toISOString(),
-  });
+  };
+  let { error } = await supabase.from("platform_settings").upsert(row);
+  if (error) {
+    delete row.affiliate_default_l1_pct;
+    delete row.affiliate_default_l2_pct;
+    delete row.affiliate_default_l3_pct;
+    delete row.affiliate_default_l4_pct;
+    delete row.affiliate_default_l5_pct;
+    const retry = await supabase.from("platform_settings").upsert(row);
+    error = retry.error;
+  }
   if (error) {
     return { ok: false, error: "Could not save affiliate settings." };
   }
@@ -304,26 +356,72 @@ function planRates(plan: MembershipPlan): number[] {
   });
 }
 
-async function ratePlanForEarner(
+export type EarnerRateResolution = {
+  source: "plan" | "program";
+  rates: number[];
+  planId: string | null;
+  planName: string | null;
+  planCap: number | null;
+};
+
+async function resolveEarnerRates(
   earnerUserId: string,
-): Promise<MembershipPlan | null> {
+  settings: AffiliateProgramSettings,
+): Promise<EarnerRateResolution | null> {
   const supabase = createServiceClient();
   if (!supabase) {
     return null;
   }
-  const { data } = await supabase
+  let { data } = await supabase
     .from("members")
-    .select("plan_id, subscription_status")
+    .select("plan_id, subscription_status, platform_member")
     .eq("user_id", earnerUserId)
     .maybeSingle();
   if (!data) {
+    const retry = await supabase
+      .from("members")
+      .select("plan_id, subscription_status")
+      .eq("user_id", earnerUserId)
+      .maybeSingle();
+    data = retry.data
+      ? { ...retry.data, platform_member: true }
+      : null;
+  }
+  if (!data) {
     return null;
   }
-  if (unpaidUsesFreeAffiliateRates(String(data.subscription_status ?? ""))) {
-    return getDefaultMembershipPlan();
+  const source = affiliateRateSource({
+    platformMember: data.platform_member !== false,
+    pastDue: unpaidUsesProgramAffiliateRates(
+      String(data.subscription_status ?? ""),
+    ),
+  });
+  if (source === "program") {
+    return {
+      source,
+      rates: programDefaultRates(settings),
+      planId: null,
+      planName: null,
+      planCap: null,
+    };
   }
   const current = await getMembershipPlan(String(data.plan_id));
-  return current.ok ? current.plan : null;
+  if (!current.ok) {
+    return {
+      source: "program",
+      rates: programDefaultRates(settings),
+      planId: null,
+      planName: null,
+      planCap: null,
+    };
+  }
+  return {
+    source,
+    rates: planRates(current.plan),
+    planId: current.plan.id,
+    planName: current.plan.name,
+    planCap: current.plan.caps.affiliate_max_depth,
+  };
 }
 
 export async function createCommissionsForInvoice(input: {
@@ -356,15 +454,12 @@ export async function createCommissionsForInvoice(input: {
   const holdUntil = holdUntilIso(now, settings.holdDays);
   let created = 0;
   for (const hop of path) {
-    const plan = await ratePlanForEarner(hop.earnerUserId);
-    if (!plan) {
+    const resolved = await resolveEarnerRates(hop.earnerUserId, settings);
+    if (!resolved) {
       continue;
     }
-    const earnDepth = resolveEarnDepth(
-      settings.maxDepth,
-      plan.caps.affiliate_max_depth,
-    );
-    const ratePct = ratePctForLevel(planRates(plan), hop.level, earnDepth);
+    const earnDepth = resolveEarnDepth(settings.maxDepth, resolved.planCap);
+    const ratePct = ratePctForLevel(resolved.rates, hop.level, earnDepth);
     const amountUsd = commissionUsd(input.amountUsd, ratePct);
     if (amountUsd < 0.01) {
       continue;
@@ -373,7 +468,7 @@ export async function createCommissionsForInvoice(input: {
       earner_user_id: hop.earnerUserId,
       source_user_id: input.sourceUserId,
       invoice_id: input.invoiceId,
-      rate_plan_id: plan.id,
+      rate_plan_id: resolved.planId,
       level: hop.level,
       rate_pct: ratePct,
       amount_usd: amountUsd,
@@ -511,7 +606,7 @@ function mapCommission(row: Record<string, unknown>): CommissionRow | null {
     earnerUserId: String(row.earner_user_id),
     sourceUserId: String(row.source_user_id),
     invoiceId: String(row.invoice_id),
-    ratePlanId: String(row.rate_plan_id),
+    ratePlanId: row.rate_plan_id ? String(row.rate_plan_id) : null,
     level: Number(row.level),
     ratePct: Number(row.rate_pct),
     amountUsd: Number(row.amount_usd),
@@ -1003,15 +1098,33 @@ export async function loadAffiliatePortal(
       .filter((row) => row.firstPaidAt)
       .reduce((sum, row) => sum + row.planPriceUsd, 0),
   );
+  const resolved = await resolveEarnerRates(userId, settings);
+  const earnDepth = resolveEarnDepth(
+    settings.maxDepth,
+    resolved?.planCap ?? null,
+  );
+  const rateValues = resolved?.rates ?? programDefaultRates(settings);
+  const rates: AffiliateRateCard = {
+    source: resolved?.source ?? "program",
+    planName: resolved?.planName ?? null,
+    earnDepth,
+    rows: [1, 2, 3, 4, 5].map((level) => ({
+      level,
+      ratePct: ratePctForLevel(rateValues, level, earnDepth),
+      active: level <= earnDepth,
+    })),
+  };
   return {
     code,
     settings,
+    rates,
     payableUsd,
     pendingUsd,
     paidOutUsd,
     lastPayoutAt: lastPaid?.paidAt ?? lastPaid?.createdAt ?? null,
     downline,
     tree: buildAffiliateTree(downline, children, userId),
+    commissions,
     stats: {
       attributed: downline.length,
       paid,

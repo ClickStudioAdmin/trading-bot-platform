@@ -1,6 +1,8 @@
 import {
   AFFILIATE_LEVEL_MAX,
+  AFFILIATE_PCT_MAX,
   AFFILIATE_RATE_KEYS,
+  affiliateRatesOk,
   type AffiliateRateKey,
 } from "./catalog";
 import { isEvmAddress } from "./hd";
@@ -40,6 +42,11 @@ export type AffiliateProgramSettings = {
   minPayoutUsd: number;
   payoutCoin: string;
   downgradeGraceDays: number;
+  defaultL1Pct: number;
+  defaultL2Pct: number;
+  defaultL3Pct: number;
+  defaultL4Pct: number;
+  defaultL5Pct: number;
 };
 
 export const EMPTY_AFFILIATE_SETTINGS: AffiliateProgramSettings = {
@@ -48,7 +55,93 @@ export const EMPTY_AFFILIATE_SETTINGS: AffiliateProgramSettings = {
   minPayoutUsd: AFFILIATE_MIN_PAYOUT_DEFAULT,
   payoutCoin: AFFILIATE_PAYOUT_COIN,
   downgradeGraceDays: DOWNGRADE_GRACE_DAYS_DEFAULT,
+  defaultL1Pct: 0,
+  defaultL2Pct: 0,
+  defaultL3Pct: 0,
+  defaultL4Pct: 0,
+  defaultL5Pct: 0,
 };
+
+export function programDefaultRates(
+  settings: Pick<
+    AffiliateProgramSettings,
+    | "defaultL1Pct"
+    | "defaultL2Pct"
+    | "defaultL3Pct"
+    | "defaultL4Pct"
+    | "defaultL5Pct"
+  >,
+): number[] {
+  return [
+    settings.defaultL1Pct,
+    settings.defaultL2Pct,
+    settings.defaultL3Pct,
+    settings.defaultL4Pct,
+    settings.defaultL5Pct,
+  ];
+}
+
+export function parseAffiliateRatePct(
+  value: unknown,
+): { ok: true; pct: number } | { ok: false; error: string } {
+  const n = Number(value);
+  if (!Number.isFinite(n)) {
+    return { ok: false, error: "Affiliate percents must be numbers." };
+  }
+  return { ok: true, pct: Math.round(n * 100) / 100 };
+}
+
+export function parseProgramDefaultRates(input: {
+  l1: unknown;
+  l2: unknown;
+  l3: unknown;
+  l4: unknown;
+  l5: unknown;
+}):
+  | {
+      ok: true;
+      defaultL1Pct: number;
+      defaultL2Pct: number;
+      defaultL3Pct: number;
+      defaultL4Pct: number;
+      defaultL5Pct: number;
+    }
+  | { ok: false; error: string } {
+  const l1 = parseAffiliateRatePct(input.l1);
+  const l2 = parseAffiliateRatePct(input.l2);
+  const l3 = parseAffiliateRatePct(input.l3);
+  const l4 = parseAffiliateRatePct(input.l4);
+  const l5 = parseAffiliateRatePct(input.l5);
+  if (!l1.ok || !l2.ok || !l3.ok || !l4.ok || !l5.ok) {
+    return { ok: false, error: "Affiliate percents must be numbers." };
+  }
+  if (!affiliateRatesOk(l1.pct, l2.pct, l3.pct, l4.pct, l5.pct)) {
+    return {
+      ok: false,
+      error: `Default L1–L${AFFILIATE_LEVEL_MAX} must each be 0–${AFFILIATE_PCT_MAX} and cannot add up to more than ${AFFILIATE_PCT_MAX}%.`,
+    };
+  }
+  return {
+    ok: true,
+    defaultL1Pct: l1.pct,
+    defaultL2Pct: l2.pct,
+    defaultL3Pct: l3.pct,
+    defaultL4Pct: l4.pct,
+    defaultL5Pct: l5.pct,
+  };
+}
+
+export type AffiliateRateSource = "plan" | "program";
+
+export function affiliateRateSource(input: {
+  platformMember: boolean;
+  pastDue: boolean;
+}): AffiliateRateSource {
+  if (!input.platformMember || input.pastDue) {
+    return "program";
+  }
+  return "plan";
+}
 
 export function clampAffiliateDepth(value: number): number {
   if (!Number.isInteger(value)) {
@@ -184,7 +277,7 @@ export function holdHasElapsed(holdUntilIso: string, nowMs: number): boolean {
   return Number.isFinite(until) && until <= nowMs;
 }
 
-export function unpaidUsesFreeAffiliateRates(status: string): boolean {
+export function unpaidUsesProgramAffiliateRates(status: string): boolean {
   return status === "past_due";
 }
 
@@ -300,7 +393,39 @@ export function parseCommissionStatus(value: unknown): CommissionStatus | null {
 
 export function referralShareUrl(origin: string, code: string): string {
   const base = origin.replace(/\/$/, "");
-  return `${base}/?ref=${encodeURIComponent(code)}`;
+  return `${base}/affiliates?ref=${encodeURIComponent(code)}`;
+}
+
+export const AFFILIATE_PORTAL_TABS = [
+  "overview",
+  "network",
+  "referrals",
+  "payouts",
+] as const;
+export type AffiliatePortalTab = (typeof AFFILIATE_PORTAL_TABS)[number];
+
+export function parseAffiliatePortalTab(value: unknown): AffiliatePortalTab {
+  const raw = String(value ?? "").trim().toLowerCase();
+  return AFFILIATE_PORTAL_TABS.includes(raw as AffiliatePortalTab)
+    ? (raw as AffiliatePortalTab)
+    : "overview";
+}
+
+export function affiliatePortalPath(
+  tab: AffiliatePortalTab = "overview",
+  extra: Record<string, string> = {},
+): string {
+  const params = new URLSearchParams();
+  if (tab !== "overview") {
+    params.set("tab", tab);
+  }
+  for (const [key, value] of Object.entries(extra)) {
+    if (value) {
+      params.set(key, value);
+    }
+  }
+  const query = params.toString();
+  return query ? `/affiliates?${query}` : "/affiliates";
 }
 
 export type AffiliateStatSource = {
