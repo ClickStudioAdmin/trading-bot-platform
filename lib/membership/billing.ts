@@ -3,6 +3,7 @@ import {
   planIsDraft,
   type MembershipPlan,
 } from "./catalog";
+import { walletEntryDelta as walletBookDelta } from "./wallet";
 
 export const BILLING_PATH = "/account/billing";
 export const CHECKOUT_PATH = "/account/billing/checkout";
@@ -221,16 +222,7 @@ export function decideUpgrade(input: {
 }
 
 export function walletEntryDelta(kind: string, amountUsd: number): number {
-  if (!Number.isFinite(amountUsd)) {
-    return 0;
-  }
-  if (kind === "deposit" || kind === "commission") {
-    return Math.abs(amountUsd);
-  }
-  if (kind === "debit_rent" || kind === "withdraw") {
-    return -Math.abs(amountUsd);
-  }
-  return amountUsd;
+  return walletBookDelta(kind, amountUsd);
 }
 
 export function formatUsd(amount: number): string {

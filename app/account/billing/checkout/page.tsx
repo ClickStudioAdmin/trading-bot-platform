@@ -4,7 +4,8 @@ import { CheckoutPayment } from "@/components/checkout-payment";
 import { PageHeading } from "@/components/page-heading";
 import { getSessionMember } from "@/lib/auth/session";
 import { hasUsableStripeSubscription } from "@/lib/membership/billing";
-import { getMemberBilling, walletCreditUsd } from "@/lib/membership/billing-store";
+import { getMemberBilling } from "@/lib/membership/billing-store";
+import { loadMemberDepositContext } from "@/lib/membership/wallet-store";
 import { formatPlanPrice } from "@/lib/membership/catalog";
 import { parsePlanId } from "@/lib/membership/form";
 import { getMembershipPlan } from "@/lib/membership/store";
@@ -35,10 +36,10 @@ export default async function AccountCheckoutPage({
   if (!planId) {
     redirect("/account/plans");
   }
-  const [billing, loaded, credit] = await Promise.all([
+  const [billing, loaded, deposit] = await Promise.all([
     getMemberBilling(member.id),
     getMembershipPlan(planId),
-    walletCreditUsd(member.id),
+    loadMemberDepositContext(member.id),
   ]);
   if (!billing || !loaded.ok) {
     redirect("/account/plans");
@@ -46,6 +47,8 @@ export default async function AccountCheckoutPage({
   const target = loaded.plan;
   const current = billing.planId === target.id;
   const error = firstSearchValue(params.error);
+  const deposited = firstSearchValue(params.deposited);
+  const scanned = firstSearchValue(params.scanned) === "1";
   const stripeReady = stripeSecretConfigured();
 
   return (
@@ -62,6 +65,16 @@ export default async function AccountCheckoutPage({
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
+        </p>
+      ) : null}
+      {deposited ? (
+        <p className="mt-6 text-sm text-success">
+          Credited {deposited} deposit{deposited === "1" ? "" : "s"} to Main.
+        </p>
+      ) : null}
+      {scanned ? (
+        <p className="mt-6 text-sm text-ink-muted">
+          No new confirmed deposits in the recent window.
         </p>
       ) : null}
 
@@ -82,7 +95,17 @@ export default async function AccountCheckoutPage({
           planPrice={formatPlanPrice(target.priceUsd)}
           selected={billing.billingMethod}
           deductSelected={billing.paySubscriptionFromCredit}
-          creditUsd={credit}
+          creditUsd={deposit.books.main}
+          affiliateUsd={deposit.books.affiliate}
+          depositAddress={deposit.address}
+          addressError={deposit.addressError}
+          chains={deposit.chains}
+          tokens={deposit.tokens}
+          planPriceUsd={target.priceUsd}
+          useAffiliate={
+            billing.paySubscriptionFromAffiliate &&
+            target.features.affiliate_pay_subscription
+          }
           stripeReady={stripeReady}
           publishableKey={stripePublishableKey()}
           missingSecret={!stripeReady}

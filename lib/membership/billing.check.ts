@@ -49,6 +49,8 @@ assert.equal(walletEntryDelta("deposit", 10), 10);
 assert.equal(walletEntryDelta("withdraw", 10), -10);
 assert.equal(walletEntryDelta("debit_rent", -25), -25);
 assert.equal(walletEntryDelta("adjust", -3), -3);
+assert.equal(walletEntryDelta("transfer_in", 4), 4);
+assert.equal(walletEntryDelta("transfer_out", 4), -4);
 
 const paid = {
   id: "p1",

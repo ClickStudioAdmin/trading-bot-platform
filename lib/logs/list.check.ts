@@ -39,6 +39,9 @@ assert.ok(
   eventLogOptionsForScopes(["system"]).includes("exchange.verify_failed"),
 );
 assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("membership.deposit_credited"),
+);
+assert.ok(
   eventLogOptionsForScopes(["system"]).includes("copy.profile_saved"),
 );
 assert.ok(

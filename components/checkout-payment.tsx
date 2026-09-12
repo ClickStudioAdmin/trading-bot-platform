@@ -4,15 +4,17 @@ import { useState } from "react";
 import { BillingMethodRadios } from "@/components/billing-method-radios";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { StripeEmbeddedCheckout } from "@/components/stripe-embedded-checkout";
-import {
-  CRYPTO_CREDIT_DEDUCT_LABEL,
-  formatUsd,
-  type BillingMethod,
-} from "@/lib/membership/billing";
+import { CryptoWalletPanel } from "@/components/crypto-wallet-panel";
+import { type BillingMethod } from "@/lib/membership/billing";
 import {
   confirmStripePlanChangeAction,
   saveCheckoutCryptoAction,
 } from "@/lib/membership/billing-actions";
+import type {
+  BillingChain,
+  BillingToken,
+  DepositAddress,
+} from "@/lib/membership/wallet-store";
 
 export function CheckoutPayment({
   planId,
@@ -21,6 +23,13 @@ export function CheckoutPayment({
   selected,
   deductSelected,
   creditUsd,
+  affiliateUsd,
+  depositAddress,
+  addressError,
+  chains,
+  tokens,
+  planPriceUsd,
+  useAffiliate,
   stripeReady,
   publishableKey,
   missingSecret,
@@ -33,6 +42,13 @@ export function CheckoutPayment({
   selected: BillingMethod | null;
   deductSelected: boolean;
   creditUsd: number;
+  affiliateUsd: number;
+  depositAddress: DepositAddress | null;
+  addressError: string | null;
+  chains: BillingChain[];
+  tokens: BillingToken[];
+  planPriceUsd: number;
+  useAffiliate: boolean;
   stripeReady: boolean;
   publishableKey: string;
   missingSecret: boolean;
@@ -94,42 +110,43 @@ export function CheckoutPayment({
             />
           )
         ) : (
-          <form action={saveCheckoutCryptoAction} className="space-y-4">
+          <div className="space-y-4">
             <h2 className="text-lg font-semibold tracking-tight">Crypto</h2>
-            <p className="text-2xl font-semibold tabular-nums tracking-tight">
-              {formatUsd(creditUsd)}
-            </p>
             <p className="text-sm text-ink-muted">
-              USD credit on this login. Deposit addresses and top-up are the
-              next step. The plan does not change until Crypto or credit can
-              pay the invoice.
+              Send the listed token to your unique address, then pay the plan
+              from Main credit.
             </p>
-            {deduct ? (
-              <p className="text-xs text-ink-faint">
-                {CRYPTO_CREDIT_DEDUCT_LABEL} is on.
-              </p>
-            ) : null}
-            <input type="hidden" name="planId" value={planId} />
-            {deduct ? (
-              <input type="hidden" name="paySubscriptionFromCredit" value="1" />
-            ) : null}
-            <div className="flex flex-wrap gap-3">
+            <CryptoWalletPanel
+              mainUsd={creditUsd}
+              affiliateUsd={affiliateUsd}
+              address={depositAddress}
+              addressError={addressError}
+              chains={chains}
+              tokens={tokens}
+              deductOn={deduct}
+              useAffiliate={useAffiliate}
+              planId={planId}
+              planPriceUsd={planPriceUsd}
+              checkout
+            />
+            <form action={saveCheckoutCryptoAction}>
+              <input type="hidden" name="planId" value={planId} />
+              {deduct ? (
+                <input
+                  type="hidden"
+                  name="paySubscriptionFromCredit"
+                  value="1"
+                />
+              ) : null}
               <PendingSubmitButton
                 pendingLabel="Saving…"
                 successKey="save-checkout-crypto"
-                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+                className="rounded-control border border-line px-4 py-2 text-sm text-ink hover:border-line-strong"
               >
                 Save Crypto method
               </PendingSubmitButton>
-              <button
-                type="button"
-                disabled
-                className="rounded-control bg-accent-strong/40 px-4 py-2 text-sm font-medium text-ink"
-              >
-                Top up
-              </button>
-            </div>
-          </form>
+            </form>
+          </div>
         )}
       </section>
     </div>

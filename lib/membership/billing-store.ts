@@ -4,7 +4,6 @@ import {
   parseInvoiceMethod,
   parseInvoiceStatus,
   parseSubscriptionStatus,
-  walletEntryDelta,
   type MemberBilling,
   type MembershipInvoice,
 } from "./billing";
@@ -14,6 +13,8 @@ import {
   listMembershipPlans,
 } from "./store";
 import type { AppliedSubscription, StripeInvoiceWrite } from "./stripe-apply";
+
+export { walletBookBalances, walletCreditUsd } from "./wallet-store";
 
 type MemberBillingRow = {
   user_id: string;
@@ -286,18 +287,4 @@ export async function listMemberInvoices(
     });
   }
   return invoices;
-}
-
-export async function walletCreditUsd(userId: string): Promise<number> {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return 0;
-  }
-  const { data } = await supabase
-    .from("membership_wallet_entries")
-    .select("kind, amount_usd")
-    .eq("user_id", userId);
-  return (data ?? []).reduce((sum, row) => {
-    return sum + walletEntryDelta(String(row.kind), Number(row.amount_usd));
-  }, 0);
 }

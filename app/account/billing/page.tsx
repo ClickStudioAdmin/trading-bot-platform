@@ -12,11 +12,12 @@ import {
   openCustomerPortalAction,
   setBillingMethodAction,
 } from "@/lib/membership/billing-actions";
+import { CryptoWalletPanel } from "@/components/crypto-wallet-panel";
 import {
   getMemberBilling,
   listMemberInvoices,
-  walletCreditUsd,
 } from "@/lib/membership/billing-store";
+import { loadMemberDepositContext } from "@/lib/membership/wallet-store";
 import { formatPlanPrice, planIsArchived } from "@/lib/membership/catalog";
 import { getMembershipPlan } from "@/lib/membership/store";
 import { stripeSecretConfigured } from "@/lib/membership/stripe";
@@ -42,15 +43,17 @@ export default async function AccountBillingPage({
   const error = firstSearchValue(params.error);
   const saved = firstSearchValue(params.saved);
   const checkout = firstSearchValue(params.checkout);
-  const upgraded = firstSearchValue(params.upgraded) === "1";
+  const upgraded = firstSearchValue(params.upgraded);
   const billing = await getMemberBilling(member.id);
   if (!billing) {
     redirect("/account/settings");
   }
-  const [currentPlan, invoices, credit] = await Promise.all([
+  const deposited = firstSearchValue(params.deposited);
+  const scanned = firstSearchValue(params.scanned) === "1";
+  const [currentPlan, invoices, deposit] = await Promise.all([
     getMembershipPlan(billing.planId),
     listMemberInvoices(member.id),
-    walletCreditUsd(member.id),
+    loadMemberDepositContext(member.id),
   ]);
   const plan = currentPlan.ok ? currentPlan.plan : null;
   const periodMs = parseDisplayTime(billing.periodEnd);
@@ -61,8 +64,8 @@ export default async function AccountBillingPage({
       <PageHeading title="Billing" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
         One collection method per login. Card uses the on-site Stripe form.
-        Crypto can optionally deduct Crypto Credit first. Deposits are the
-        next step. Compare plans on{" "}
+        Crypto can optionally deduct Main Wallet credit first. Compare plans
+        on{" "}
         <Link href="/account/plans" className="text-accent">
           Plans
         </Link>
@@ -76,10 +79,25 @@ export default async function AccountBillingPage({
       {saved === "method" ? (
         <p className="mt-6 text-sm text-success">Payment method saved.</p>
       ) : null}
-      {upgraded ? (
+      {upgraded === "1" ? (
         <p className="mt-6 text-sm text-success">
           Subscription update sent to Stripe. This page refreshes when the
           webhook confirms.
+        </p>
+      ) : null}
+      {upgraded === "wallet" ? (
+        <p className="mt-6 text-sm text-success">
+          Plan paid from Main Wallet credit.
+        </p>
+      ) : null}
+      {deposited ? (
+        <p className="mt-6 text-sm text-success">
+          Credited {deposited} deposit{deposited === "1" ? "" : "s"} to Main.
+        </p>
+      ) : null}
+      {scanned ? (
+        <p className="mt-6 text-sm text-ink-muted">
+          No new confirmed deposits in the recent window.
         </p>
       ) : null}
       {checkout === "success" ? (
@@ -124,7 +142,7 @@ export default async function AccountBillingPage({
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
           Card charges Stripe. Crypto is the collection method. Deduct from
-          Crypto Credit is optional and applies when deposits ship.
+          Main Wallet credit is optional.
         </p>
         <form action={setBillingMethodAction} className="mt-4 space-y-4">
           <BillingMethodRadios
@@ -154,32 +172,23 @@ export default async function AccountBillingPage({
       </section>
 
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Crypto credit</h2>
-        <p className="mt-3 text-2xl font-semibold tabular-nums tracking-tight">
-          {formatUsd(credit)}
-        </p>
-        <p className="mt-2 text-sm text-ink-muted">
-          USD credit on this login. Deposit addresses and top-up are the next
-          step.
-        </p>
-        <button
-          type="button"
-          disabled
-          className="mt-4 rounded-control bg-accent-strong/40 px-4 py-2 text-sm font-medium text-ink"
-        >
-          Top up
-        </button>
-        {billing.paySubscriptionFromCredit ? (
-          <p className="mt-3 text-xs text-ink-faint">
-            Deduct payments from Crypto Credit is on. Credit applies first
-            when the billing tick ships.
-          </p>
-        ) : null}
+        <h2 className="text-lg font-semibold tracking-tight">Crypto wallets</h2>
+        <div className="mt-4">
+          <CryptoWalletPanel
+            mainUsd={deposit.books.main}
+            affiliateUsd={deposit.books.affiliate}
+            address={deposit.address}
+            addressError={deposit.addressError}
+            chains={deposit.chains}
+            tokens={deposit.tokens}
+            deductOn={billing.paySubscriptionFromCredit}
+          />
+        </div>
         {billing.paySubscriptionFromAffiliate ? (
           <p className="mt-3 text-xs text-ink-faint">
             Deduct Plan Payment from Earnings is on. Payable affiliate
-            earnings will apply first when commissions ship. Your upline still
-            earns on that invoice.
+            earnings can cover a Main shortfall. Your upline still earns on
+            that invoice.
           </p>
         ) : null}
       </section>
