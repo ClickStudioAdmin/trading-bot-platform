@@ -200,7 +200,7 @@ EVM only. The watcher uses **public RPCs for now** (Arbitrum Sepolia official en
 | Deposit HD seed | Encrypted at rest in `platform_settings` | Created once on `/admin/billing`. Write the mnemonic down; the app does not show it again |
 | Admin receive address | `/admin/billing` chain row | Public `0x…` only. Keys stay with Click |
 
-Do not put the production HD key or seed on develop. The admin wallet private key does not get an env var.
+Do not put the production HD key or seed on develop. The admin wallet private key does not get an env var. Parked for production only: pin the receive address in a server env and refuse sweeps to any other address ([click-list.md](click-list.md) item 13).
 
 ## Merge to production
 

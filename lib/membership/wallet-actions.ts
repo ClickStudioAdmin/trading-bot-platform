@@ -20,8 +20,6 @@ import { planDeductDecision, roundUsd } from "./wallet";
 import {
   createDepositHdSeed,
   payPlanFromWallet,
-  replaceDepositHdSeed,
-  revealDepositHdSeed,
   updateBillingChain,
   updateBillingToken,
   walletBookBalances,
@@ -76,39 +74,6 @@ export async function createDepositHdSeedAction(): Promise<
   });
   revalidatePath("/admin/billing");
   return created;
-}
-
-export async function revealDepositHdSeedAction(): Promise<
-  { ok: true; mnemonic: string } | { ok: false; error: string }
-> {
-  await requireAdmin();
-  const revealed = await revealDepositHdSeed();
-  if (!revealed.ok) {
-    return revealed;
-  }
-  await writeEventLog({
-    scope: "system",
-    event: "membership.hd_seed_revealed",
-    message: "Revealed deposit HD seed backup on admin billing",
-  });
-  return revealed;
-}
-
-export async function replaceDepositHdSeedAction(): Promise<
-  { ok: true; mnemonic: string } | { ok: false; error: string }
-> {
-  await requireAdmin();
-  const replaced = await replaceDepositHdSeed();
-  if (!replaced.ok) {
-    return replaced;
-  }
-  await writeEventLog({
-    scope: "system",
-    event: "membership.hd_seed_replaced",
-    message: "Replaced unused deposit HD seed",
-  });
-  revalidatePath("/admin/billing");
-  return replaced;
 }
 
 export async function saveBillingChainAction(formData: FormData) {

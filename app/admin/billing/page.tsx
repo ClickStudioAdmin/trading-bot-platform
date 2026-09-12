@@ -85,12 +85,11 @@ export default async function AdminBillingPage({
           {addresses.length} member address
           {addresses.length === 1 ? "" : "es"} issued.
         </p>
-        <div className="mt-4">
-          <CreateDepositSeed
-            configured={hd.configured}
-            addressCount={addresses.length}
-          />
-        </div>
+        {!hd.configured ? (
+          <div className="mt-4">
+            <CreateDepositSeed />
+          </div>
+        ) : null}
       </section>
 
       <section className="mt-6 rounded-card border border-line bg-surface p-5">

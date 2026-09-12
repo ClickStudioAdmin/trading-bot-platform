@@ -289,64 +289,6 @@ export async function createDepositHdSeed(): Promise<
   return { ok: true, mnemonic };
 }
 
-export async function revealDepositHdSeed(): Promise<
-  { ok: true; mnemonic: string } | { ok: false; error: string }
-> {
-  if (!billingCredentialsConfigured()) {
-    return {
-      ok: false,
-      error:
-        "Add BILLING_CREDENTIALS_KEY (64 hex) to this environment, then restart the app.",
-    };
-  }
-  const mnemonic = await loadDepositMnemonic();
-  if (!mnemonic) {
-    return {
-      ok: false,
-      error: "Could not decrypt the stored seed. Check BILLING_CREDENTIALS_KEY.",
-    };
-  }
-  return { ok: true, mnemonic };
-}
-
-export async function replaceDepositHdSeed(): Promise<
-  { ok: true; mnemonic: string } | { ok: false; error: string }
-> {
-  if (!billingCredentialsConfigured()) {
-    return {
-      ok: false,
-      error:
-        "Add BILLING_CREDENTIALS_KEY (64 hex) to this environment, then restart the app.",
-    };
-  }
-  const issued = await listDepositAddresses();
-  if (issued.length > 0) {
-    return {
-      ok: false,
-      error:
-        "Cannot replace the seed after member addresses are issued. Show the backup instead.",
-    };
-  }
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return { ok: false, error: "Database is not configured." };
-  }
-  const mnemonic = createDepositMnemonic();
-  const sealed = encryptBillingSecret({ mnemonic });
-  const { error } = await supabase
-    .from("platform_settings")
-    .update({
-      billing_hd_ciphertext: toByteaParam(sealed.ciphertext),
-      billing_hd_nonce: toByteaParam(sealed.nonce),
-      billing_hd_created_at: new Date().toISOString(),
-    })
-    .eq("id", "tbp");
-  if (error) {
-    return { ok: false, error: error.message };
-  }
-  return { ok: true, mnemonic };
-}
-
 export async function getDepositAddress(
   userId: string,
 ): Promise<DepositAddress | null> {

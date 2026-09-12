@@ -43,8 +43,6 @@ export const EVENT_LOG_OPTIONS = [
   { event: "membership.invoice_paid", scope: "system" },
   { event: "membership.stripe_subscription", scope: "system" },
   { event: "membership.hd_seed_created", scope: "system" },
-  { event: "membership.hd_seed_revealed", scope: "system" },
-  { event: "membership.hd_seed_replaced", scope: "system" },
   { event: "membership.billing_chain", scope: "system" },
   { event: "membership.billing_token", scope: "system" },
   { event: "membership.deposit_watched", scope: "system" },
