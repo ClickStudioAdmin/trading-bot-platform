@@ -4,7 +4,12 @@ import { getSessionMember } from "@/lib/auth/session";
 import { writeEventLog } from "@/lib/logs/write";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { billingPath, decideUpgrade, parseBillingMethod } from "./billing";
+import {
+  billingPath,
+  checkoutPath,
+  decideUpgrade,
+  parseBillingMethod,
+} from "./billing";
 import {
   getMemberBilling,
   saveBillingMethod,
@@ -62,15 +67,18 @@ export async function continueUpgradeAction(formData: FormData) {
   }
   const planId = parsePlanId(String(formData.get("planId") ?? ""));
   if (!planId) {
-    fail("Choose a plan to upgrade.");
+    redirect("/account/plans");
   }
+  const failCheckout = (error: string): never => {
+    redirect(checkoutPath({ plan: planId, error }));
+  };
   const method = parseBillingMethod(formData.get("billingMethod"));
   if (!method) {
-    fail("Choose Card or Crypto credit.", { upgrade: planId });
+    failCheckout("Choose Card or Crypto credit.");
   }
   const plan = await getMembershipPlan(planId);
   if (!plan.ok) {
-    fail(plan.error, { upgrade: planId });
+    failCheckout(plan.error);
   }
   const billing = await getMemberBilling(member.id);
   const decision = decideUpgrade({
@@ -80,16 +88,16 @@ export async function continueUpgradeAction(formData: FormData) {
   });
   const saved = await saveBillingMethod(member.id, method);
   if (!saved.ok) {
-    fail(saved.error, { upgrade: planId });
+    failCheckout(saved.error);
   }
   if (decision.kind === "current") {
-    fail("You are already on that plan.", { upgrade: planId });
+    failCheckout("You are already on that plan.");
   }
   if (decision.kind === "need_method") {
-    fail("Choose Card or Crypto credit.", { upgrade: planId });
+    failCheckout("Choose Card or Crypto credit.");
   }
   if (decision.kind === "reject") {
-    fail(decision.error, { upgrade: planId });
+    failCheckout(decision.error);
   }
   if (decision.kind === "wallet_shell") {
     await writeEventLog({
@@ -100,18 +108,18 @@ export async function continueUpgradeAction(formData: FormData) {
       data: { method, planId },
     });
     revalidatePath("/account/billing");
-    redirect(billingPath({ upgrade: planId, notice: "wallet" }));
+    revalidatePath("/account/billing/checkout");
+    redirect(checkoutPath({ plan: planId, notice: "wallet" }));
   }
   if (!stripeSecretConfigured()) {
-    fail(
+    failCheckout(
       "Stripe is not configured. Add STRIPE_SECRET_KEY on this environment.",
-      { upgrade: planId },
     );
   }
   const stripe = getStripe();
   const origin = await billingOrigin();
   if (!stripe || !origin) {
-    fail("Stripe or APP_BASE_URL is not configured.", { upgrade: planId });
+    failCheckout("Stripe or APP_BASE_URL is not configured.");
   }
   try {
     if (
@@ -124,9 +132,7 @@ export async function continueUpgradeAction(formData: FormData) {
       );
       const itemId = subscription.items.data[0]?.id;
       if (!itemId || !plan.plan.stripePriceId) {
-        fail("Could not update the current Stripe subscription.", {
-          upgrade: planId,
-        });
+        failCheckout("Could not update the current Stripe subscription.");
       }
       await stripe.subscriptions.update(billing.stripeSubscriptionId, {
         items: [{ id: itemId, price: plan.plan.stripePriceId }],
@@ -163,14 +169,14 @@ export async function continueUpgradeAction(formData: FormData) {
       client_reference_id: member.id,
       line_items: [{ price: plan.plan.stripePriceId ?? "", quantity: 1 }],
       success_url: `${origin}/account/billing?checkout=success`,
-      cancel_url: `${origin}/account/billing?checkout=cancel`,
+      cancel_url: `${origin}${checkoutPath({ plan: planId, checkout: "cancel" })}`,
       metadata: { userId: member.id, planId },
       subscription_data: {
         metadata: { userId: member.id, planId },
       },
     });
     if (!session.url) {
-      fail("Stripe did not return a checkout URL.", { upgrade: planId });
+      failCheckout("Stripe did not return a checkout URL.");
     }
     await writeEventLog({
       scope: "system",
@@ -184,9 +190,8 @@ export async function continueUpgradeAction(formData: FormData) {
     if (isNextRedirect(cause)) {
       throw cause;
     }
-    fail(
+    failCheckout(
       cause instanceof Error ? cause.message : "Stripe checkout failed.",
-      { upgrade: planId },
     );
   }
 }

@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BillingMethodRadios } from "@/components/billing-method-radios";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getSessionMember } from "@/lib/auth/session";
 import {
-  BILLING_METHOD_LABELS,
   SUBSCRIPTION_STATUS_LABELS,
   formatUsd,
-  type BillingMethod,
 } from "@/lib/membership/billing";
 import {
-  continueUpgradeAction,
   openCustomerPortalAction,
   setBillingMethodAction,
 } from "@/lib/membership/billing-actions";
@@ -43,22 +41,18 @@ export default async function AccountBillingPage({
   const params = await searchParams;
   const error = firstSearchValue(params.error);
   const saved = firstSearchValue(params.saved);
-  const notice = firstSearchValue(params.notice);
   const checkout = firstSearchValue(params.checkout);
   const upgraded = firstSearchValue(params.upgraded) === "1";
-  const upgradeId = firstSearchValue(params.upgrade) ?? null;
   const billing = await getMemberBilling(member.id);
   if (!billing) {
     redirect("/account/settings");
   }
-  const [currentPlan, upgradePlan, invoices, credit] = await Promise.all([
+  const [currentPlan, invoices, credit] = await Promise.all([
     getMembershipPlan(billing.planId),
-    upgradeId ? getMembershipPlan(upgradeId) : Promise.resolve(null),
     listMemberInvoices(member.id),
     walletCreditUsd(member.id),
   ]);
   const plan = currentPlan.ok ? currentPlan.plan : null;
-  const target = upgradePlan && upgradePlan.ok ? upgradePlan.plan : null;
   const periodMs = parseDisplayTime(billing.periodEnd);
   const stripeReady = stripeSecretConfigured();
 
@@ -95,12 +89,6 @@ export default async function AccountBillingPage({
       {checkout === "cancel" ? (
         <p className="mt-6 text-sm text-ink-muted">Checkout canceled.</p>
       ) : null}
-      {notice === "wallet" ? (
-        <p className="mt-6 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Crypto credit is your collection method. Top-up is the next step.
-          Your plan does not change until credit can pay the invoice.
-        </p>
-      ) : null}
       {!stripeReady ? (
         <p className="mt-6 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Stripe test keys are not on this environment yet. You can still
@@ -121,28 +109,6 @@ export default async function AccountBillingPage({
         </p>
       </section>
 
-      {target ? (
-        <section className="mt-6 rounded-card border border-accent bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">Upgrade</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            {target.name} · {formatPlanPrice(target.priceUsd)}
-          </p>
-          <form action={continueUpgradeAction} className="mt-4 space-y-4">
-            <input type="hidden" name="planId" value={target.id} />
-            <MethodRadios
-              name="billingMethod"
-              selected={billing.billingMethod}
-            />
-            <PendingSubmitButton
-              pendingLabel="Continuing…"
-              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-            >
-              Continue
-            </PendingSubmitButton>
-          </form>
-        </section>
-      ) : null}
-
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold tracking-tight">
           Payment method
@@ -152,7 +118,7 @@ export default async function AccountBillingPage({
           once deposits ship.
         </p>
         <form action={setBillingMethodAction} className="mt-4 space-y-4">
-          <MethodRadios
+          <BillingMethodRadios
             name="billingMethod"
             selected={billing.billingMethod}
           />
@@ -245,49 +211,5 @@ export default async function AccountBillingPage({
         )}
       </section>
     </div>
-  );
-}
-
-function MethodRadios({
-  name,
-  selected,
-}: {
-  name: string;
-  selected: BillingMethod | null;
-}) {
-  return (
-    <fieldset className="space-y-3">
-      <legend className="sr-only">Select payment method</legend>
-      <label className="flex items-start gap-2 text-sm text-ink">
-        <input
-          type="radio"
-          name={name}
-          value="stripe"
-          defaultChecked={selected === "stripe" || selected === null}
-          className="mt-0.5"
-        />
-        <span>
-          {BILLING_METHOD_LABELS.stripe}
-          <span className="mt-1 block text-xs text-ink-faint">
-            Stripe Checkout and Customer Portal.
-          </span>
-        </span>
-      </label>
-      <label className="flex items-start gap-2 text-sm text-ink">
-        <input
-          type="radio"
-          name={name}
-          value="wallet"
-          defaultChecked={selected === "wallet"}
-          className="mt-0.5"
-        />
-        <span>
-          {BILLING_METHOD_LABELS.wallet}
-          <span className="mt-1 block text-xs text-ink-faint">
-            Pay from USD credit. Top-up is next.
-          </span>
-        </span>
-      </label>
-    </fieldset>
   );
 }

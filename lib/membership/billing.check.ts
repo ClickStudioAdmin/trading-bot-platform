@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   billingPath,
+  checkoutPath,
   decideUpgrade,
   formatUsd,
   parseBillingMethod,
@@ -12,9 +13,10 @@ assert.equal(parseBillingMethod("stripe"), "stripe");
 assert.equal(parseBillingMethod("wallet"), "wallet");
 assert.equal(parseBillingMethod("comp"), null);
 assert.equal(billingPath(), "/account/billing");
+assert.equal(checkoutPath(), "/account/billing/checkout");
 assert.equal(
-  billingPath({ upgrade: "plan-1", error: "Nope" }),
-  "/account/billing?upgrade=plan-1&error=Nope",
+  checkoutPath({ plan: "plan-1", error: "Nope" }),
+  "/account/billing/checkout?plan=plan-1&error=Nope",
 );
 assert.equal(stripeCentsToUsd(9900), 99);
 assert.equal(stripeCentsToUsd(199), 1.99);

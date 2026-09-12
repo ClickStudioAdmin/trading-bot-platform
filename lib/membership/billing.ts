@@ -5,6 +5,7 @@ import {
 } from "./catalog";
 
 export const BILLING_PATH = "/account/billing";
+export const CHECKOUT_PATH = "/account/billing/checkout";
 export const BILLING_METHODS = ["stripe", "wallet"] as const;
 export type BillingMethod = (typeof BILLING_METHODS)[number];
 
@@ -99,6 +100,19 @@ export function billingPath(
   }
   const encoded = params.toString();
   return encoded ? `${BILLING_PATH}?${encoded}` : BILLING_PATH;
+}
+
+export function checkoutPath(
+  query: Record<string, string | undefined> = {},
+): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value) {
+      params.set(key, value);
+    }
+  }
+  const encoded = params.toString();
+  return encoded ? `${CHECKOUT_PATH}?${encoded}` : CHECKOUT_PATH;
 }
 
 export function appOriginFromEnv(): string {

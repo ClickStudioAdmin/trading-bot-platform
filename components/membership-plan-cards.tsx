@@ -189,7 +189,7 @@ function PlanCell({
           <div>
             {checkout ? (
               <Link
-                href={`/account/billing?upgrade=${plan.id}`}
+                href={`/account/billing/checkout?plan=${plan.id}`}
                 className="block w-full rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent"
               >
                 Upgrade
@@ -203,7 +203,7 @@ function PlanCell({
               </Link>
             )}
             <p className="mt-2 text-xs text-ink-faint">
-              Choose Card or Crypto credit on Billing.
+              Choose Card or Crypto credit at Checkout.
             </p>
           </div>
         ) : (
