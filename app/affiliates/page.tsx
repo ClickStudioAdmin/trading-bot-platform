@@ -61,8 +61,8 @@ export default async function AffiliatesPage({
           chains={chains}
           platformMember={member.platformMember}
           tab={tab}
-          saved={saved}
-          error={error}
+          saved={saved ?? null}
+          error={error ?? null}
         />
       </main>
     );
