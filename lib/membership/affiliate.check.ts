@@ -3,7 +3,6 @@ import {
   canCreateCommissionInvoice,
   commissionUsd,
   conversionPct,
-  enrollState,
   generateReferralCode,
   holdHasElapsed,
   holdUntilIso,
@@ -11,11 +10,12 @@ import {
   parseAffiliateMaxDepth,
   parseAffiliateMinPayout,
   parseOptionalReferralCode,
+  parsePayoutNetwork,
   parseReferralCode,
-  parseUsdtNetworks,
   ratePctForLevel,
   referralShareUrl,
   resolveEarnDepth,
+  unpaidUsesFreeAffiliateRates,
   walkUpline,
   withdrawDecision,
   wouldCreateReferralCycle,
@@ -28,11 +28,11 @@ assert.equal(parseAffiliateMaxDepth(0).ok, false);
 assert.equal(parseAffiliateHoldDays(0).ok, true);
 assert.equal(parseAffiliateHoldDays(-1).ok, false);
 assert.equal(parseAffiliateMinPayout("50").ok, true);
-assert.deepEqual(parseUsdtNetworks("ethereum, Arbitrum"), {
+assert.deepEqual(parsePayoutNetwork("arbitrum-sepolia", ["arbitrum-sepolia"]), {
   ok: true,
-  networks: ["ethereum", "arbitrum"],
+  network: "arbitrum-sepolia",
 });
-assert.equal(parseUsdtNetworks("").ok, false);
+assert.equal(parsePayoutNetwork("ethereum", ["arbitrum-sepolia"]).ok, false);
 
 assert.equal(parseReferralCode("ab-12").ok, true);
 assert.equal(parseOptionalReferralCode("").ok, true);
@@ -55,18 +55,13 @@ assert.equal(ratePctForLevel([10, 0, 2], 2, 3), 0);
 assert.equal(commissionUsd(19, 10), 1.9);
 assert.equal(commissionUsd(0.009, 10), 0);
 
+assert.equal(unpaidUsesFreeAffiliateRates("past_due"), true);
+assert.equal(unpaidUsesFreeAffiliateRates("active"), false);
+assert.equal(unpaidUsesFreeAffiliateRates("comp"), false);
+assert.equal(unpaidUsesFreeAffiliateRates("canceled"), false);
+
 assert.equal(holdHasElapsed(holdUntilIso(1_000, 0), 1_000), true);
 assert.equal(holdHasElapsed(holdUntilIso(1_000, 1), 1_000), false);
-
-assert.equal(enrollState({ currentEnroll: true, lastEnrollPlanId: null }), "enrolled");
-assert.equal(
-  enrollState({ currentEnroll: false, lastEnrollPlanId: "plan-1" }),
-  "lost",
-);
-assert.equal(
-  enrollState({ currentEnroll: false, lastEnrollPlanId: null }),
-  "never",
-);
 
 assert.equal(
   canCreateCommissionInvoice({ method: "stripe", status: "paid", amountUsd: 19 }),
@@ -91,7 +86,6 @@ assert.equal(wouldCreateReferralCycle([], "a", "a"), true);
 
 assert.equal(
   withdrawDecision({
-    enrollState: "enrolled",
     arrears: false,
     payableUsd: 50,
     minPayoutUsd: 50,
@@ -100,16 +94,6 @@ assert.equal(
 );
 assert.equal(
   withdrawDecision({
-    enrollState: "lost",
-    arrears: false,
-    payableUsd: 80,
-    minPayoutUsd: 50,
-  }).ok,
-  false,
-);
-assert.equal(
-  withdrawDecision({
-    enrollState: "enrolled",
     arrears: true,
     payableUsd: 80,
     minPayoutUsd: 50,
@@ -118,7 +102,6 @@ assert.equal(
 );
 assert.equal(
   withdrawDecision({
-    enrollState: "enrolled",
     arrears: false,
     payableUsd: 49.99,
     minPayoutUsd: 50,

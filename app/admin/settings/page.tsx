@@ -266,7 +266,8 @@ export default async function AdminSettingsPage({
           </section>
           <p className="mt-8 text-sm text-ink-muted">
             Deposit rails for this environment ({env}). Develop uses testnets.
-            Production uses mainnets.
+            Production uses mainnets. Tick Affiliate Payouts Allowed on a chain
+            so members can withdraw USDT there.
           </p>
           {chains.length === 0 ? (
             <p className="mt-4 text-sm text-warning">
@@ -344,6 +345,15 @@ export default async function AdminSettingsPage({
                       defaultValue={chain.adminAddress ?? ""}
                       className={BILLING_FIELD_CLASS}
                     />
+                  </label>
+                  <label className="flex items-start gap-2 text-sm text-ink md:col-span-2">
+                    <input
+                      type="checkbox"
+                      name="affiliatePayouts"
+                      defaultChecked={chain.affiliatePayouts}
+                      className="mt-0.5"
+                    />
+                    <span>Affiliate Payouts Allowed on this chain</span>
                   </label>
                   <div>
                     <PendingSubmitButton

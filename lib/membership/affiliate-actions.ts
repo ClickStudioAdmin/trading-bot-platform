@@ -5,22 +5,21 @@ import { getSessionMember } from "@/lib/auth/session";
 import { writeEventLog } from "@/lib/logs/write";
 import {
   AFFILIATE_PAYOUT_COIN,
-  enrollState,
   parseAffiliateHoldDays,
   parseAffiliateMaxDepth,
   parseAffiliateMinPayout,
   parseDowngradeGraceDays,
   parsePayoutAddress,
   parsePayoutNetwork,
-  parseUsdtNetworks,
   withdrawDecision,
 } from "./affiliate";
+import { listAffiliatePayoutChains } from "./wallet-store";
 import { parseUuid } from "./wallet-form";
 import {
   approvePayout,
   listPayableCommissions,
   loadAffiliateSettings,
-  loadMemberEnroll,
+  loadMemberArrears,
   markPayoutPaid,
   rejectPayout,
   releaseDueCommissions,
@@ -52,10 +51,6 @@ export async function saveAffiliateSettingsAction(formData: FormData) {
   if (!min.ok) {
     adminFail(min.error);
   }
-  const networks = parseUsdtNetworks(formData.get("usdtNetworks"));
-  if (!networks.ok) {
-    adminFail(networks.error);
-  }
   const grace = parseDowngradeGraceDays(formData.get("downgradeGraceDays"));
   if (!grace.ok) {
     adminFail(grace.error);
@@ -65,7 +60,6 @@ export async function saveAffiliateSettingsAction(formData: FormData) {
     holdDays: hold.days,
     minPayoutUsd: min.usd,
     payoutCoin: AFFILIATE_PAYOUT_COIN,
-    usdtNetworks: networks.networks,
     downgradeGraceDays: grace.days,
   });
   if (!saved.ok) {
@@ -159,9 +153,10 @@ export async function requestAffiliatePayoutAction(formData: FormData) {
   }
   await releaseDueCommissions();
   const settings = await loadAffiliateSettings();
+  const payoutChains = await listAffiliatePayoutChains();
   const network = parsePayoutNetwork(
     formData.get("network"),
-    settings.usdtNetworks,
+    payoutChains.map((chain) => chain.slug),
   );
   if (!network.ok) {
     portalFail(network.error);
@@ -170,15 +165,11 @@ export async function requestAffiliatePayoutAction(formData: FormData) {
   if (!address.ok) {
     portalFail(address.error);
   }
-  const enroll = await loadMemberEnroll(member.id);
+  const arrears = await loadMemberArrears(member.id);
   const payable = await listPayableCommissions(member.id);
   const payableUsd = payable.reduce((sum, row) => sum + row.amountUsd, 0);
   const allowed = withdrawDecision({
-    enrollState: enrollState({
-      currentEnroll: enroll.currentEnroll,
-      lastEnrollPlanId: enroll.lastEnrollPlanId,
-    }),
-    arrears: enroll.arrears,
+    arrears,
     payableUsd,
     minPayoutUsd: settings.minPayoutUsd,
   });

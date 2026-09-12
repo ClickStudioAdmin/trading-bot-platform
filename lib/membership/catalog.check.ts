@@ -344,17 +344,11 @@ assert.deepEqual(
   PLAN_COMPARE_SECTIONS.map((section) => section.title),
 );
 for (const [index, section] of PLAN_COMPARE_SECTIONS.entries()) {
-  const adminRows =
-    section.title === "Affiliates"
-      ? adminSections[index].rows.slice(1)
-      : adminSections[index].rows;
   assert.deepEqual(
-    adminRows.map((row) => `${row.kind}:${row.key}`),
+    adminSections[index].rows.map((row) => `${row.kind}:${row.key}`),
     section.rows.map((row) => `${row.kind}:${row.key}`),
   );
 }
-assert.equal(adminSections.at(-1)?.rows[0].kind, "feature");
-assert.equal(adminSections.at(-1)?.rows[0].key, "affiliate_enroll");
 assert.equal(
   comparePlanCell(
     { ...live, features: { ...emptyFeatures(), desk_dca: true }, caps: { ...emptyCaps(), max_paper_desks: 2 } },

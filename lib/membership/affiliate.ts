@@ -10,12 +10,6 @@ export const AFFILIATE_MAX_DEPTH_DEFAULT = 2;
 export const AFFILIATE_HOLD_DAYS_DEFAULT = 30;
 export const AFFILIATE_MIN_PAYOUT_DEFAULT = 50;
 export const AFFILIATE_PAYOUT_COIN = "USDT";
-export const AFFILIATE_NETWORKS_DEFAULT = [
-  "ethereum",
-  "arbitrum",
-  "base",
-  "polygon",
-] as const;
 export const DOWNGRADE_GRACE_DAYS_DEFAULT = 7;
 export const REFERRAL_CODE_MIN = 4;
 export const REFERRAL_CODE_MAX = 32;
@@ -40,14 +34,11 @@ export const COMMISSION_STATUSES = [
 ] as const;
 export type CommissionStatus = (typeof COMMISSION_STATUSES)[number];
 
-export type EnrollState = "enrolled" | "lost" | "never";
-
 export type AffiliateProgramSettings = {
   maxDepth: number;
   holdDays: number;
   minPayoutUsd: number;
   payoutCoin: string;
-  usdtNetworks: string[];
   downgradeGraceDays: number;
 };
 
@@ -56,7 +47,6 @@ export const EMPTY_AFFILIATE_SETTINGS: AffiliateProgramSettings = {
   holdDays: AFFILIATE_HOLD_DAYS_DEFAULT,
   minPayoutUsd: AFFILIATE_MIN_PAYOUT_DEFAULT,
   payoutCoin: AFFILIATE_PAYOUT_COIN,
-  usdtNetworks: [...AFFILIATE_NETWORKS_DEFAULT],
   downgradeGraceDays: DOWNGRADE_GRACE_DAYS_DEFAULT,
 };
 
@@ -108,35 +98,6 @@ export function parseDowngradeGraceDays(
     return { ok: false, error: "Grace days must be a whole number, zero or more." };
   }
   return { ok: true, days: n };
-}
-
-export function parseUsdtNetworks(
-  value: unknown,
-): { ok: true; networks: string[] } | { ok: false; error: string } {
-  const raw = Array.isArray(value)
-    ? value.map((item) => String(item))
-    : String(value ?? "").split(/[\s,]+/);
-  const networks = [
-    ...new Set(
-      raw
-        .map((item) => item.trim().toLowerCase())
-        .filter((item) => item.length > 0),
-    ),
-  ];
-  if (networks.length === 0) {
-    return { ok: false, error: "Add at least one USDT network." };
-  }
-  if (
-    networks.some(
-      (item) => item.length < 2 || item.length > 32 || !/^[a-z0-9-]+$/.test(item),
-    )
-  ) {
-    return {
-      ok: false,
-      error: "Networks use lowercase letters, numbers, and dashes.",
-    };
-  }
-  return { ok: true, networks };
 }
 
 export function parseReferralCode(
@@ -223,14 +184,8 @@ export function holdHasElapsed(holdUntilIso: string, nowMs: number): boolean {
   return Number.isFinite(until) && until <= nowMs;
 }
 
-export function enrollState(input: {
-  currentEnroll: boolean;
-  lastEnrollPlanId: string | null;
-}): EnrollState {
-  if (input.currentEnroll) {
-    return "enrolled";
-  }
-  return input.lastEnrollPlanId ? "lost" : "never";
+export function unpaidUsesFreeAffiliateRates(status: string): boolean {
+  return status === "past_due";
 }
 
 export function canCreateCommissionInvoice(input: {
@@ -285,20 +240,10 @@ export function wouldCreateReferralCycle(
 }
 
 export function withdrawDecision(input: {
-  enrollState: EnrollState;
   arrears: boolean;
   payableUsd: number;
   minPayoutUsd: number;
 }): { ok: true } | { ok: false; reason: string } {
-  if (input.enrollState !== "enrolled") {
-    return {
-      ok: false,
-      reason:
-        input.enrollState === "lost"
-          ? "Withdraw unlocks when affiliate enroll is on again."
-          : "Upgrade to a plan with affiliate enroll to withdraw.",
-    };
-  }
   if (input.arrears) {
     return {
       ok: false,
@@ -320,7 +265,7 @@ export function parsePayoutNetwork(
 ): { ok: true; network: string } | { ok: false; error: string } {
   const network = String(value ?? "").trim().toLowerCase();
   if (!allowed.includes(network)) {
-    return { ok: false, error: "Pick a listed USDT network." };
+    return { ok: false, error: "Pick a chain that allows affiliate payouts." };
   }
   return { ok: true, network };
 }

@@ -420,22 +420,7 @@ export const PLAN_COMPARE_SECTIONS: readonly PlanCompareSection[] = [
 ];
 
 export function adminPlanSections(): PlanCompareSection[] {
-  return PLAN_COMPARE_SECTIONS.map((section) => {
-    if (section.title !== "Affiliates") {
-      return section;
-    }
-    return {
-      ...section,
-      rows: [
-        {
-          kind: "feature",
-          key: "affiliate_enroll",
-          label: PLAN_FEATURE_LABELS.affiliate_enroll,
-        },
-        ...section.rows,
-      ],
-    };
-  });
+  return PLAN_COMPARE_SECTIONS.map((section) => section);
 }
 
 type ComparePlan = Pick<MembershipPlan, "features" | "caps"> & PlanAffiliateRates;

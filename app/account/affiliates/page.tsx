@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import Link from "next/link";
 import { AffiliateOrgChart } from "@/components/affiliate-org-chart";
 import { CopyTextButton } from "@/components/copy-text-button";
 import { PageHeading } from "@/components/page-heading";
@@ -15,10 +14,11 @@ import { requestAffiliatePayoutAction } from "@/lib/membership/affiliate-actions
 import {
   listMemberPayouts,
   loadAffiliatePortal,
-  loadMemberEnroll,
+  loadMemberArrears,
 } from "@/lib/membership/affiliate-store";
 import { formatUsd } from "@/lib/membership/billing";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
+import { listBillingChains } from "@/lib/membership/wallet-store";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
@@ -39,12 +39,8 @@ export default async function AccountAffiliatesPage({
   const params = await searchParams;
   const error = firstSearchValue(params.error);
   const saved = firstSearchValue(params.saved);
-  const enroll = await loadMemberEnroll(member.id);
-  const portal = await loadAffiliatePortal(
-    member.id,
-    enroll.currentEnroll,
-    enroll.lastEnrollPlanId,
-  );
+  const arrears = await loadMemberArrears(member.id);
+  const portal = await loadAffiliatePortal(member.id);
   const headerStore = await headers();
   const host =
     headerStore.get("x-forwarded-host") ?? headerStore.get("host") ?? "";
@@ -52,14 +48,17 @@ export default async function AccountAffiliatesPage({
   const origin = host ? `${proto}://${host}` : "";
   const shareUrl =
     portal.code && origin ? referralShareUrl(origin, portal.code) : "";
-  const actionsOn = portal.enroll === "enrolled";
   const withdraw = withdrawDecision({
-    enrollState: portal.enroll,
-    arrears: enroll.arrears,
+    arrears,
     payableUsd: portal.payableUsd,
     minPayoutUsd: portal.settings.minPayoutUsd,
   });
   const payouts = await listMemberPayouts(member.id);
+  const chains = await listBillingChains();
+  const payoutChains = chains.filter((chain) => chain.affiliatePayouts);
+  const canWithdraw = withdraw.ok && payoutChains.length > 0;
+  const chainName = (slug: string) =>
+    chains.find((chain) => chain.slug === slug)?.name ?? slug;
 
   return (
     <div>
@@ -79,30 +78,11 @@ export default async function AccountAffiliatesPage({
           {error}
         </p>
       ) : null}
-
-      {portal.enroll === "never" ? (
-        <section className="mt-6 rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Affiliate enroll
-          </h2>
-          <p className="mt-2 text-sm text-ink-muted">
-            This plan cannot enroll. Upgrade to get a referral code, see your
-            downline, and withdraw USDT.
-          </p>
-          <Link
-            href="/account/plans"
-            className="mt-4 inline-flex rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-          >
-            Upgrade
-          </Link>
-        </section>
-      ) : null}
-
-      {portal.enroll === "lost" ? (
+      {arrears ? (
         <p className="mt-6 text-sm text-warning">
-          Enroll is off on your current plan. You still see this tree and keep
-          earning at your last enroll-plan rates. Codes and withdraw stay
-          locked until enroll is on again.
+          Your subscription is unpaid. New commissions use Free plan rates
+          until you pay again. Withdraw stays locked while invoices are
+          outstanding.
         </p>
       ) : null}
 
@@ -146,22 +126,16 @@ export default async function AccountAffiliatesPage({
             {shareUrl ? (
               <p className="mt-1 break-all text-sm text-ink-muted">{shareUrl}</p>
             ) : null}
-            {actionsOn ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <CopyTextButton text={portal.code} label="Copy code" />
-                {shareUrl ? (
-                  <CopyTextButton text={shareUrl} label="Copy link" />
-                ) : null}
-              </div>
-            ) : (
-              <p className="mt-3 text-xs text-ink-faint">
-                Copy and invite stay locked until enroll is on.
-              </p>
-            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <CopyTextButton text={portal.code} label="Copy code" />
+              {shareUrl ? (
+                <CopyTextButton text={shareUrl} label="Copy link" />
+              ) : null}
+            </div>
           </>
         ) : (
           <p className="mt-2 text-sm text-ink-muted">
-            A referral code appears after you enroll.
+            A referral code could not be created yet. Refresh and try again.
           </p>
         )}
       </section>
@@ -209,18 +183,24 @@ export default async function AccountAffiliatesPage({
         {!withdraw.ok ? (
           <p className="mt-3 text-sm text-warning">{withdraw.reason}</p>
         ) : null}
+        {withdraw.ok && payoutChains.length === 0 ? (
+          <p className="mt-3 text-sm text-warning">
+            Affiliate payouts are not enabled on any chain yet. An admin can
+            tick this on Settings → Crypto.
+          </p>
+        ) : null}
         <form action={requestAffiliatePayoutAction} className="mt-4 max-w-lg space-y-3">
           <label className="block text-sm text-ink">
-            Network
+            Chain
             <select
               name="network"
-              disabled={!withdraw.ok}
+              disabled={!canWithdraw}
               className={BILLING_FIELD_CLASS}
-              defaultValue={portal.settings.usdtNetworks[0] ?? ""}
+              defaultValue={payoutChains[0]?.slug ?? ""}
             >
-              {portal.settings.usdtNetworks.map((network) => (
-                <option key={network} value={network}>
-                  {network}
+              {payoutChains.map((chain) => (
+                <option key={chain.id} value={chain.slug}>
+                  {chain.name}
                 </option>
               ))}
             </select>
@@ -229,14 +209,14 @@ export default async function AccountAffiliatesPage({
             Address
             <input
               name="address"
-              disabled={!withdraw.ok}
+              disabled={!canWithdraw}
               placeholder="0x…"
               className={BILLING_FIELD_CLASS}
             />
           </label>
           <PendingSubmitButton
             pendingLabel="Requesting…"
-            disabled={!withdraw.ok}
+            disabled={!canWithdraw}
             className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:bg-accent-strong/40"
           >
             Request withdraw
@@ -247,7 +227,7 @@ export default async function AccountAffiliatesPage({
             {payouts.map((payout) => (
               <li key={payout.id}>
                 {formatUsd(payout.amountUsd)} · {payout.status}
-                {payout.network ? ` · ${payout.network}` : ""}
+                {payout.network ? ` · ${chainName(payout.network)}` : ""}
               </li>
             ))}
           </ul>

@@ -5,7 +5,6 @@ import {
   affiliateRateKeyForLevel,
   canCreateCommissionInvoice,
   commissionUsd,
-  enrollState,
   generateReferralCode,
   holdUntilIso,
   parseAffiliateHoldDays,
@@ -16,18 +15,21 @@ import {
   parsePayoutMethod,
   parsePayoutStatus,
   parseReferralCode,
-  parseUsdtNetworks,
   ratePctForLevel,
   resolveEarnDepth,
+  unpaidUsesFreeAffiliateRates,
   walkUpline,
   wouldCreateReferralCycle,
   type AffiliateProgramSettings,
   type CommissionStatus,
-  type EnrollState,
   type PayoutStatus,
 } from "./affiliate";
 import { planAffiliateRate, type MembershipPlan } from "./catalog";
-import { getMembershipPlan, listMembershipPlans } from "./store";
+import {
+  getDefaultMembershipPlan,
+  getMembershipPlan,
+  listMembershipPlans,
+} from "./store";
 import { roundUsd } from "./wallet";
 
 export type ReferralRecord = {
@@ -77,7 +79,6 @@ export type DownlineRow = {
 };
 
 export type AffiliatePortal = {
-  enroll: EnrollState;
   code: string | null;
   settings: AffiliateProgramSettings;
   payableUsd: number;
@@ -110,7 +111,6 @@ function mapSettings(row: Record<string, unknown>): AffiliateProgramSettings {
   const depth = parseAffiliateMaxDepth(row.affiliate_max_depth);
   const hold = parseAffiliateHoldDays(row.affiliate_hold_days);
   const min = parseAffiliateMinPayout(row.affiliate_min_payout_usd);
-  const networks = parseUsdtNetworks(row.affiliate_usdt_networks);
   const grace = parseDowngradeGraceDays(row.downgrade_grace_days);
   return {
     maxDepth: depth.ok ? depth.depth : EMPTY_AFFILIATE_SETTINGS.maxDepth,
@@ -120,9 +120,6 @@ function mapSettings(row: Record<string, unknown>): AffiliateProgramSettings {
       typeof row.affiliate_payout_coin === "string" && row.affiliate_payout_coin
         ? row.affiliate_payout_coin
         : EMPTY_AFFILIATE_SETTINGS.payoutCoin,
-    usdtNetworks: networks.ok
-      ? networks.networks
-      : EMPTY_AFFILIATE_SETTINGS.usdtNetworks,
     downgradeGraceDays: grace.ok
       ? grace.days
       : EMPTY_AFFILIATE_SETTINGS.downgradeGraceDays,
@@ -137,7 +134,7 @@ export async function loadAffiliateSettings(): Promise<AffiliateProgramSettings>
   const { data, error } = await supabase
     .from("platform_settings")
     .select(
-      "affiliate_max_depth, affiliate_hold_days, affiliate_min_payout_usd, affiliate_payout_coin, affiliate_usdt_networks, downgrade_grace_days",
+      "affiliate_max_depth, affiliate_hold_days, affiliate_min_payout_usd, affiliate_payout_coin, downgrade_grace_days",
     )
     .eq("id", "tbp")
     .maybeSingle();
@@ -160,7 +157,6 @@ export async function saveAffiliateSettings(
     affiliate_hold_days: input.holdDays,
     affiliate_min_payout_usd: input.minPayoutUsd,
     affiliate_payout_coin: input.payoutCoin,
-    affiliate_usdt_networks: input.usdtNetworks,
     downgrade_grace_days: input.downgradeGraceDays,
     updated_at: new Date().toISOString(),
   });
@@ -317,25 +313,17 @@ async function ratePlanForEarner(
   }
   const { data } = await supabase
     .from("members")
-    .select("plan_id, last_enroll_plan_id")
+    .select("plan_id, subscription_status")
     .eq("user_id", earnerUserId)
     .maybeSingle();
   if (!data) {
     return null;
   }
+  if (unpaidUsesFreeAffiliateRates(String(data.subscription_status ?? ""))) {
+    return getDefaultMembershipPlan();
+  }
   const current = await getMembershipPlan(String(data.plan_id));
-  if (current.ok && current.plan.features.affiliate_enroll) {
-    return current.plan;
-  }
-  const lastId =
-    typeof data.last_enroll_plan_id === "string"
-      ? data.last_enroll_plan_id
-      : null;
-  if (!lastId) {
-    return null;
-  }
-  const last = await getMembershipPlan(lastId);
-  return last.ok ? last.plan : null;
+  return current.ok ? current.plan : null;
 }
 
 export async function createCommissionsForInvoice(input: {
@@ -964,17 +952,11 @@ async function downlineChildMap(): Promise<Map<string, string[]>> {
 
 export async function loadAffiliatePortal(
   userId: string,
-  currentEnroll: boolean,
-  lastEnrollPlanId: string | null,
 ): Promise<AffiliatePortal> {
   const settings = await loadAffiliateSettings();
   await releaseDueCommissions();
-  const enroll = enrollState({ currentEnroll, lastEnrollPlanId });
-  let code: string | null = null;
-  if (enroll !== "never") {
-    const ensured = await ensureReferralCode(userId);
-    code = ensured.ok ? ensured.code : null;
-  }
+  const ensured = await ensureReferralCode(userId);
+  const code = ensured.ok ? ensured.code : null;
   const [downline, commissions, payouts, children] = await Promise.all([
     loadDownline(userId, false),
     listEarnerCommissions(userId),
@@ -1022,7 +1004,6 @@ export async function loadAffiliatePortal(
       .reduce((sum, row) => sum + row.planPriceUsd, 0),
   );
   return {
-    enroll,
     code,
     settings,
     payableUsd,
@@ -1117,30 +1098,15 @@ export async function findMemberByEmailOrCode(
     : { userId: owner.userId, email: owner.userId };
 }
 
-export async function loadMemberEnroll(userId: string): Promise<{
-  currentEnroll: boolean;
-  lastEnrollPlanId: string | null;
-  arrears: boolean;
-}> {
+export async function loadMemberArrears(userId: string): Promise<boolean> {
   const supabase = createServiceClient();
   if (!supabase) {
-    return { currentEnroll: false, lastEnrollPlanId: null, arrears: false };
+    return false;
   }
   const { data } = await supabase
     .from("members")
-    .select("plan_id, last_enroll_plan_id, subscription_status")
+    .select("subscription_status")
     .eq("user_id", userId)
     .maybeSingle();
-  if (!data) {
-    return { currentEnroll: false, lastEnrollPlanId: null, arrears: false };
-  }
-  const plan = await getMembershipPlan(String(data.plan_id));
-  return {
-    currentEnroll: plan.ok && plan.plan.features.affiliate_enroll,
-    lastEnrollPlanId:
-      typeof data.last_enroll_plan_id === "string"
-        ? data.last_enroll_plan_id
-        : null,
-    arrears: data.subscription_status === "past_due",
-  };
+  return data?.subscription_status === "past_due";
 }

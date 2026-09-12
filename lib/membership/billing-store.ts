@@ -179,7 +179,7 @@ export async function applyMemberSubscription(
     billing_method: "stripe",
     updated_at: new Date().toISOString(),
   };
-  if (plan.ok && plan.plan.features.affiliate_enroll) {
+  if (plan.ok) {
     update.last_enroll_plan_id = planId;
   }
   const { error } = await supabase

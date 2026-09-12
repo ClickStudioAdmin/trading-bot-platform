@@ -46,8 +46,9 @@ export default async function AdminAffiliatesPage({
       <PageHeading overline="Admin" title="Affiliates" />
       <p className="-mt-4 text-sm text-ink-muted">
         Program knobs and the USDT withdraw queue. Rates stay on each plan.
-        Click sends USDT from the admin wallet outside this app, then marks
-        the queue paid.
+        Allowed withdraw chains are ticked on Settings → Crypto. Click sends
+        USDT from the admin wallet outside this app, then marks the queue
+        paid.
       </p>
       {saved ? (
         <p className="mt-6 text-sm text-success">
@@ -110,19 +111,6 @@ export default async function AdminAffiliatesPage({
             defaultValue={settings.minPayoutUsd}
             className={BILLING_FIELD_CLASS}
           />
-        </label>
-        <label className="block text-sm text-ink">
-          USDT networks
-          <input
-            name="usdtNetworks"
-            required
-            defaultValue={settings.usdtNetworks.join(", ")}
-            className={BILLING_FIELD_CLASS}
-          />
-          <span className="mt-1 block text-xs text-ink-muted">
-            Comma-separated. Members pick a network and an address. Coin is
-            USDT.
-          </span>
         </label>
         <label className="block text-sm text-ink">
           Downgrade grace days

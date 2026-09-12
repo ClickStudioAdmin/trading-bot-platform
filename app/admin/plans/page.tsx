@@ -86,9 +86,7 @@ export default async function AdminPlansPage({
                       ? " · Preview"
                       : ""}
                     {plan.isDefault ? " · Default" : ""}
-                    {plan.features.affiliate_enroll
-                      ? ` · L1 ${plan.affiliateL1Pct}%`
-                      : ""}
+                    {` · L1 ${plan.affiliateL1Pct}%`}
                   </p>
                 </td>
                 <td className="px-4 py-3 text-ink">{formatPlanPrice(plan.priceUsd)}</td>

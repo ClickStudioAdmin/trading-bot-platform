@@ -57,9 +57,7 @@ export async function createMember(formData: FormData) {
     role: parsed.values.role,
     status: parsed.values.status,
     plan_id: plan.plan.id,
-    last_enroll_plan_id: plan.plan.features.affiliate_enroll
-      ? plan.plan.id
-      : null,
+    last_enroll_plan_id: plan.plan.id,
     subscription_status: "comp",
     password_hash: hashPassword(parsed.values.password),
     created_at: now,
@@ -79,9 +77,7 @@ export async function createMember(formData: FormData) {
       redirect(`/admin/members/new?error=${encodeURIComponent(attributed.error)}`);
     }
   }
-  if (plan.plan.features.affiliate_enroll) {
-    await ensureReferralCode(userId);
-  }
+  await ensureReferralCode(userId);
 
   await writeEventLog({
     scope: "system",
@@ -161,9 +157,7 @@ export async function updateMember(formData: FormData) {
   if (String(existing.plan_id ?? "") !== plan.plan.id) {
     update.subscription_status = "comp";
   }
-  if (plan.plan.features.affiliate_enroll) {
-    update.last_enroll_plan_id = plan.plan.id;
-  }
+  update.last_enroll_plan_id = plan.plan.id;
   if (parsed.values.password) {
     update.password_hash = hashPassword(parsed.values.password);
   }

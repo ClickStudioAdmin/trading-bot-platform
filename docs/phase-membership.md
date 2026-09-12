@@ -12,7 +12,7 @@ Steps 1–8 in repo 13 Sep 2026. Stripe cards + `/account/billing` + Checkout em
 
 ## Purpose
 
-Enough Free to test (Paper, a small desk cap, core Perps/DCA, Chart). Named upgrade when they want Live, copy, backtest, more desks, or affiliates. Admin defines the catalog. Gates stay **visible and disabled** with an **Upgrade** banner. Affiliates get `/account/affiliates` (list, org chart, stats) and earn a held percent of referred subscription invoices, paid out as USDT (or export / later Connect).
+Enough Free to test (Paper, a small desk cap, core Perps/DCA, Chart). Named upgrade when they want Live, copy, backtest, or more desks. Admin defines the catalog. Gates stay **visible and disabled** with an **Upgrade** banner. Every login is an affiliate: `/account/affiliates` (list, org chart, stats) and a held percent of referred subscription invoices, paid out as USDT (or export / later Connect).
 
 ## Current micro-step
 
@@ -23,10 +23,10 @@ Enough Free to test (Paper, a small desk cap, core Perps/DCA, Chart). Named upgr
 | 3 | Admin plans | Agent | `/admin/plans` create/edit/archive; `/account/plans` in-app catalog; public `/pricing`. Seed Free / Plus / Pro. L1–L5 cannot exceed 100%. Visibility: public / private / draft (+ draft preview on Plans for admins). Clone copies a plan as a new draft. Admin assigns a plan on `/admin/members` (comp, no invoice) so affiliate rates have a login to read. **In repo 11 Sep 2026.** |
 | 4 | Stripe cards | Agent | Test keys on `develop`, live on `main`. `/account/billing` (plan, method, invoices, Stripe Portal). `/account/billing/checkout` for Upgrade: method left, Stripe embed or Crypto shell right. Members stay on TBP. Customer Portal, idempotent webhooks. One collection method per member (Card / Crypto; optional deduct from Crypto Credit). Comp plan from admin (no commission invoice). Wallet tile shows $0; Top-up waits for step 5. **In repo 12 Sep 2026.** |
 | 5 | Credit wallet | Agent | Two USD books (Main + Affiliate). **EVM only.** Admin-defined chains/tokens. Encrypted **deposit HD seed** derives a unique address per member. Encrypted **gas wallet** drips ETH onto that address when a sweep needs gas (not the admin payout wallet). Watcher uses **public RPCs for now** (`eth_getLogs` on listed tokens; Alchemy later). Develop seed: Arbitrum Sepolia + testnet USDT. Sweep deposit → **admin address** (public only; admin seed/key never stored). Stables credit 1:1 to Main. Checkout can pay from Main; shortfall may transfer from payable Affiliate → Main first. Click sends USDT payouts by hand from the admin wallet and marks the queue. **In repo 12 Sep 2026.** |
-| 6 | Affiliate program admin | Agent | `/admin/affiliates`: max depth (default 2, hard cap 5), hold days (default 30), min payout, USDT networks, payout queue (export mark-paid, approve/reject withdraw). Rates stay on each plan row. **In repo 13 Sep 2026.** |
-| 7 | Affiliate portal | Agent | `HEADER_LINKS` after Backtesting Tool → `/account/affiliates`. Referral kit, downline list (no private data), org chart, stats tiles. Never-enrolled = teaser + Upgrade. Lost enroll = full view, actions disabled, keep earning at last paid enroll-plan rates. Optional referral code on signup. **In repo 13 Sep 2026.** |
-| 8 | Commissions + payouts | Agent | Invoice → pending hold → payable (refund in hold = no earn). Per-plan %; snapshot last enroll plan if enroll is off. Withdraw locks: enroll on, no arrears, ≥ min. USDT out only. Tables ready for Stripe Connect later. Gas deducted from the send or covered by the minimum. **In repo 13 Sep 2026.** |
-| 9 | Entitlements + Upgrade UX | Agent | After payments and affiliates, so gates land on settled UI. `assertEntitlement` on create desk, Live, copy, backtest, enroll, caps. Surfaces stay visible; controls disable; page/inline **Upgrade** names the cheapest public plan that unlocks it. Cap notice: “You have 2 of 2 desks. Upgrade to add another.” Server actions reject. Billing page already exists from step 4. |
+| 6 | Affiliate program admin | Agent | `/admin/affiliates`: max depth (default 2, hard cap 5), hold days (default 30), min payout, payout queue (export mark-paid, approve/reject withdraw). USDT withdraw chains are ticked on each billing chain (`Affiliate Payouts Allowed on this chain`). Rates stay on each plan row. **In repo 13 Sep 2026.** |
+| 7 | Affiliate portal | Agent | `HEADER_LINKS` after Backtesting Tool → `/account/affiliates`. Referral kit, downline list (no private data), org chart, stats tiles. Every login is an affiliate. Optional referral code on signup. **In repo 13 Sep 2026.** |
+| 8 | Commissions + payouts | Agent | Invoice → pending hold → payable (refund in hold = no earn). Per-plan %. Withdraw locks: no arrears, ≥ min. USDT out only. Tables ready for Stripe Connect later. Gas deducted from the send or covered by the minimum. **In repo 13 Sep 2026.** |
+| 9 | Entitlements + Upgrade UX | Agent | After payments and affiliates, so gates land on settled UI. `assertEntitlement` on create desk, Live, copy, backtest, caps. Surfaces stay visible; controls disable; page/inline **Upgrade** names the cheapest public plan that unlocks it. Cap notice: “You have 2 of 2 desks. Upgrade to add another.” Server actions reject. Billing page already exists from step 4. |
 | 10 | Downgrade grace | Agent | Entitlements change at period end. Admin grace days (default 7, already saved on `/admin/affiliates`). Banner + operable extras. After grace, billing worker Close/Disable **oldest desk first**: forbidden features, then numeric caps. Upgrade during grace cancels the sweep. Ledgers stay. Click moved this after step 9 on 13 Sep 2026. |
 | 11 | Desk test | Click | Free gates visible/disabled. Upgrade Stripe test. Crypto top-up + leftover debit. Affiliate list/chart/stats. Hold then withdraw. Downgrade grace then oldest-first exit. Archive a used plan (cannot delete). |
 
@@ -46,9 +46,9 @@ Suggested seed (editable):
 
 | Plan | Price | Point of the gate |
 | --- | --- | --- |
-| Free | $0 | 1–2 Paper desks, Bybit only, Perps + DCA, Chart, no Live, no copy, no backtest, no affiliate |
+| Free | $0 | 1–2 Paper desks, Bybit only, Perps + DCA, Chart, no Live, no copy, no backtest |
 | Plus | paid | Live desks (small cap), copy follow + share + catalogue, webhooks, templates, maybe one venue |
-| Pro | higher | Backtest, more desks, affiliate enroll |
+| Pro | higher | Backtest, more desks |
 
 Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until roadmap 10.
 
@@ -62,7 +62,7 @@ Research: Backtesting Tool; Attach Results to Bot Template (Plus and Pro).
 
 Signals and extras: inbound TradingView / Signal webhooks; Save Templates; Share Templates (on for existing plans); Import / Export Templates (Plus and Pro). Advanced DCA stays off the public catalog for now.
 
-Affiliate: enroll + referral code; earn multi-level (implies enroll); see downline stats; **Deduct Plan Payment from Earnings** (catalog tick). Same label on Account Settings as the opt-in. Payable only — pending cannot move. Billing **transfers** the shortfall Affiliate → Main, then debits Main. That is still a paid subscription invoice: **upstream affiliates still earn** their L1–L5 on it. Not comp. The paying member does not earn on their own invoice.
+Affiliate: every login is an affiliate (not a plan tick). Referral code, earn multi-level, see downline stats. **Deduct Plan Payment from Earnings** stays a catalog tick. Same label on Account Settings as the opt-in. Payable only — pending cannot move. Billing **transfers** the shortfall Affiliate → Main, then debits Main. That is still a paid subscription invoice: **upstream affiliates still earn** their L1–L5 on it. Not comp. The paying member does not earn on their own invoice.
 
 `/admin/*` is role-based, never a plan flag.
 
@@ -87,7 +87,7 @@ UI **never hides** a gated surface. Disable the control. Persistent **Upgrade** 
 
 A **transfer** is two linked rows (Affiliate `transfer_out` + Main `transfer_in`) with the same transfer id. Never edit a row in place. Never mix these books with desk money ledgers.
 
-**Deposit rails — EVM only.** Locked: no Solana, Tron, native Bitcoin, or other non-EVM chains. Admin defines accepted **EVM chains and tokens** (chain id, public RPC URL, explorer, contract, decimals, kind) on `/admin/settings`. The watcher uses **public RPCs for now** (`eth_getLogs` / receipts / balances) against **per-member deposit addresses**. Develop is seeded with **Arbitrum Sepolia** (`421614`) and testnet USDT; production stays empty until Click adds mainnet rows. Alchemy can replace the public RPC later — do not put an Alchemy key in `NEXT_PUBLIC_`. BTC is **wrapped BTC (WBTC) on EVM**. Stables credit 1:1 USD. ETH / WBTC / other non-stables wait for a quote step. Overpay stays on Main.
+**Deposit rails — EVM only.** Locked: no Solana, Tron, native Bitcoin, or other non-EVM chains. Admin defines accepted **EVM chains and tokens** (chain id, public RPC URL, explorer, contract, decimals, kind, affiliate payouts) on `/admin/settings`. The watcher uses **public RPCs for now** (`eth_getLogs` / receipts / balances) against **per-member deposit addresses**. Develop is seeded with **Arbitrum Sepolia** (`421614`) and testnet USDT; production stays empty until Click adds mainnet rows. Alchemy can replace the public RPC later — do not put an Alchemy key in `NEXT_PUBLIC_`. BTC is **wrapped BTC (WBTC) on EVM**. Stables credit 1:1 USD. ETH / WBTC / other non-stables wait for a quote step. Overpay stays on Main.
 
 **Three on-chain wallets (do not mix).**
 
@@ -143,28 +143,26 @@ Pay on **platform subscription only**. Not trading PnL, not copy AUM. Copy take-
 
 Public site header (not the app chrome): Home · How it works · **Pricing** → `/pricing`. App header: Copy Trading · Backtesting Tool · **Affiliates** → `/account/affiliates` · **Plans**.
 
-- Never enrolled: teaser, Upgrade, list/chart/payouts disabled.
-- Enrolled: referral code + share URL; downline **list** (alias or “Member”, level, attributed vs paid, month joined — never email, phone, Stripe ids, desks, keys, balances); **org chart** of the same tree (click node → list row); **stats** (attributed signups, paid conversions, conversion %, active paid downline, counts by level, referred subscription MRR, earnings this period / all-time, pending vs paid out, last payout). Tiles + period table in v1.
-- Lost enroll: still **see** list/chart/stats. All actions disabled (codes, invite copy, withdraw). **Keep earning** at a snapshot of the **last paid enroll plan** rates. Payouts unlock only when enroll is on, **all outstanding subscription invoices are paid**, and payable ≥ minimum.
+Every login is an affiliate. Referral code + share URL; downline **list** (alias or “Member”, level, attributed vs paid, month joined — never email, phone, Stripe ids, desks, keys, balances); **org chart** of the same tree (click node → list row); **stats** (attributed signups, paid conversions, conversion %, active paid downline, counts by level, referred subscription MRR, earnings this period / all-time, pending vs paid out, last payout). Tiles + period table in v1.
 
-Attribution: first-touch referral code (optional cookie later with the marketing site). Locked when the referred member first **pays**. Free attributed signups do not pay commission until the first paid invoice. No self-referral, no cycles. Instant enroll when the plan allows. Comp / admin-granted plans do not create a commission invoice. A subscription paid (in full or in part) by deducting the member’s own payable affiliate earnings **does** create a commission invoice for their upline. Same hold, refund-in-hold, and rate snapshot rules. The source of funds does not skip L1–L5.
+Attribution: first-touch referral code (optional cookie later with the marketing site). Locked when the referred member first **pays**. Free attributed signups do not pay commission until the first paid invoice. No self-referral, no cycles. Comp / admin-granted plans do not create a commission invoice. A subscription paid (in full or in part) by deducting the member’s own payable affiliate earnings **does** create a commission invoice for their upline. Same hold, refund-in-hold, and rate rules. The source of funds does not skip L1–L5.
 
-**Rates are per plan** (L1–L5). Higher plans can earn more. New invoices use the referrer’s current plan rates, or the last-enroll snapshot if enroll is off. Rate edits apply to new invoices only. Program **max depth** default 2, hard cap 5. A plan may zero L2–L5.
+**Rates are per plan** (L1–L5). Higher plans can earn more. New invoices use the referrer’s current plan rates. If their subscription is **past due / unpaid**, new commissions use the **Free** (default) plan rates until they pay again — then they return to their plan rates. Already-written commission rows keep the rate they were stamped with. Rate edits apply to new invoices only. Program **max depth** default 2, hard cap 5. A plan may zero L2–L5.
 
 **Hold then earn.** Commission starts pending for admin hold days (default **30**). Refund / chargeback / wallet reversal in the hold → never payable. After the hold, payable. Do not edit a paid row in place.
 
-**Payouts.** Method catalog: manual/export, Stripe Connect (schema-ready, can ship after export), **USDT withdraw** (Click sends from the **admin wallet** outside this app — that wallet’s seed/key is never stored — then marks the queue paid). They pick address + network, not a coin. After hold, commission is **payable on the Affiliate book** (not Main). If the plan has **Deduct Plan Payment from Earnings** and `members.pay_subscription_from_affiliate` is on, the billing tick may **transfer** payable Affiliate → Main, then debit Main. Pending cannot pay rent, cannot transfer, and cannot withdraw.
+**Payouts.** Method catalog: manual/export, Stripe Connect (schema-ready, can ship after export), **USDT withdraw** (Click sends from the **admin wallet** outside this app — that wallet’s seed/key is never stored — then marks the queue paid). They pick address + a chain that allows affiliate payouts, not a coin. After hold, commission is **payable on the Affiliate book** (not Main). If the plan has **Deduct Plan Payment from Earnings** and `members.pay_subscription_from_affiliate` is on, the billing tick may **transfer** payable Affiliate → Main, then debit Main. Pending cannot pay rent, cannot transfer, and cannot withdraw.
 
-Withdraw locks (all): enroll on; no outstanding subscription invoices; payable ≥ min. Failures: visible disabled control + notice.
+Withdraw locks (all): no outstanding subscription invoices; payable ≥ min. Failures: visible disabled control + notice.
 
-Admin `/admin/affiliates`: max depth, hold days, min payout, payout coin (USDT), USDT networks, payout queue, downgrade grace days. Admin downline may show email; the member portal never does.
+Admin `/admin/affiliates`: max depth, hold days, min payout, payout coin (USDT), payout queue, downgrade grace days. Allowed USDT withdraw chains are ticked per billing chain on `/admin/settings`. Admin downline may show email; the member portal never does.
 
 KYC / travel-rule / money-transmitter: Click owns compliance. V1 is admin-approved crypto withdraws. No full KYC flow in this item.
 
 ## What this phase includes
 
 - Admin plan catalog with features, caps, per-plan affiliate %, archive
-- Admin assigns `plan_id` on a member profile (comp). Affiliate earnings later read that plan’s L1–L5. If the plan has enroll, snapshot `last_enroll_plan_id`.
+- Admin assigns `plan_id` on a member profile (comp). Affiliate earnings read that plan’s L1–L5.
 - `assertEntitlement` + visible-but-disabled Upgrade UX (after payments/affiliates)
 - Stripe card subscriptions (develop test / main live) and `/account/billing`
 - Two USD books (Main + Affiliate), unique EVM deposit addresses from an encrypted HD seed, encrypted gas wallet for automated drips, public-RPC watch (Alchemy later), sweep to admin address (admin key never stored), checkout pay-from-credit, manual USDT payouts

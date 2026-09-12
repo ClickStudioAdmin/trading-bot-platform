@@ -33,6 +33,7 @@ export type BillingChain = {
   environment: BillingChainEnvironment;
   confirmations: number;
   adminAddress: string | null;
+  affiliatePayouts: boolean;
   lastScannedBlock: number | null;
   sortOrder: number;
 };
@@ -76,6 +77,7 @@ type ChainRow = {
   environment: string;
   confirmations: number;
   admin_address: string | null;
+  affiliate_payouts?: boolean | null;
   last_scanned_block: number | string | null;
   sort_order: number;
 };
@@ -100,6 +102,7 @@ function mapChain(row: ChainRow): BillingChain {
     environment: row.environment === "production" ? "production" : "development",
     confirmations: Number(row.confirmations),
     adminAddress: row.admin_address ? row.admin_address.toLowerCase() : null,
+    affiliatePayouts: row.affiliate_payouts === true,
     lastScannedBlock:
       row.last_scanned_block === null || row.last_scanned_block === undefined
         ? null
@@ -162,42 +165,56 @@ export async function walletCreditUsd(userId: string): Promise<number> {
   return books.main;
 }
 
-export async function listBillingChains(
-  environment: BillingChainEnvironment = billingChainEnvironment(),
+const CHAIN_COLUMNS =
+  "id, slug, name, chain_id, rpc_url, explorer_url, environment, confirmations, admin_address, last_scanned_block, sort_order";
+const CHAIN_COLUMNS_FULL = `${CHAIN_COLUMNS}, affiliate_payouts`;
+
+async function selectBillingChains(
+  environment?: BillingChainEnvironment,
 ): Promise<BillingChain[]> {
   const supabase = createServiceClient();
   if (!supabase) {
     return [];
   }
-  const { data, error } = await supabase
-    .from("membership_billing_chains")
-    .select(
-      "id, slug, name, chain_id, rpc_url, explorer_url, environment, confirmations, admin_address, last_scanned_block, sort_order",
-    )
-    .eq("environment", environment)
-    .order("sort_order", { ascending: true });
-  if (error || !data) {
+  const full = supabase.from("membership_billing_chains").select(CHAIN_COLUMNS_FULL);
+  const scoped = environment ? full.eq("environment", environment) : full;
+  const { data, error } = environment
+    ? await scoped.order("sort_order", { ascending: true })
+    : await scoped
+        .order("environment", { ascending: true })
+        .order("sort_order", { ascending: true });
+  if (!error && data) {
+    return data.map((row) => mapChain(row as ChainRow));
+  }
+  const core = supabase.from("membership_billing_chains").select(CHAIN_COLUMNS);
+  const coreScoped = environment ? core.eq("environment", environment) : core;
+  const retry = environment
+    ? await coreScoped.order("sort_order", { ascending: true })
+    : await coreScoped
+        .order("environment", { ascending: true })
+        .order("sort_order", { ascending: true });
+  if (retry.error || !retry.data) {
     return [];
   }
-  return data.map((row) => mapChain(row as ChainRow));
+  return retry.data.map((row) => mapChain(row as ChainRow));
+}
+
+export async function listBillingChains(
+  environment: BillingChainEnvironment = billingChainEnvironment(),
+): Promise<BillingChain[]> {
+  return selectBillingChains(environment);
 }
 
 export async function listAllBillingChains(): Promise<BillingChain[]> {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return [];
-  }
-  const { data, error } = await supabase
-    .from("membership_billing_chains")
-    .select(
-      "id, slug, name, chain_id, rpc_url, explorer_url, environment, confirmations, admin_address, last_scanned_block, sort_order",
-    )
-    .order("environment", { ascending: true })
-    .order("sort_order", { ascending: true });
-  if (error || !data) {
-    return [];
-  }
-  return data.map((row) => mapChain(row as ChainRow));
+  return selectBillingChains();
+}
+
+export async function listAffiliatePayoutChains(
+  environment: BillingChainEnvironment = billingChainEnvironment(),
+): Promise<BillingChain[]> {
+  return (await listBillingChains(environment)).filter(
+    (chain) => chain.affiliatePayouts,
+  );
 }
 
 export async function listBillingTokens(
@@ -536,21 +553,32 @@ export async function updateBillingChain(input: {
   explorerUrl: string | null;
   confirmations: number;
   adminAddress: string | null;
+  affiliatePayouts: boolean;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
-  const { error } = await supabase
+  const update: Record<string, unknown> = {
+    name: input.name,
+    rpc_url: input.rpcUrl,
+    explorer_url: input.explorerUrl,
+    confirmations: input.confirmations,
+    admin_address: input.adminAddress,
+    affiliate_payouts: input.affiliatePayouts,
+  };
+  let { error } = await supabase
     .from("membership_billing_chains")
-    .update({
-      name: input.name,
-      rpc_url: input.rpcUrl,
-      explorer_url: input.explorerUrl,
-      confirmations: input.confirmations,
-      admin_address: input.adminAddress,
-    })
+    .update(update)
     .eq("id", input.id);
+  if (error && "affiliate_payouts" in update) {
+    delete update.affiliate_payouts;
+    const retry = await supabase
+      .from("membership_billing_chains")
+      .update(update)
+      .eq("id", input.id);
+    error = retry.error;
+  }
   if (error) {
     return { ok: false, error: error.message };
   }

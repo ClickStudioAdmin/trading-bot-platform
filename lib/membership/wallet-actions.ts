@@ -141,6 +141,7 @@ export async function saveBillingChainAction(formData: FormData) {
     explorerUrl: explorer,
     confirmations,
     adminAddress,
+    affiliatePayouts: formData.get("affiliatePayouts") === "on",
   });
   if (!saved.ok) {
     failAdmin(saved.error);
@@ -153,6 +154,7 @@ export async function saveBillingChainAction(formData: FormData) {
   });
   revalidatePath("/admin/settings");
   revalidatePath("/admin/billing");
+  revalidatePath("/account/affiliates");
   redirect("/admin/settings?tab=crypto&saved=chain");
 }
 
@@ -319,7 +321,7 @@ export async function payPlanWithCreditAction(formData: FormData) {
       planId,
       amountUsd: target.priceUsd,
       transferUsd: deduct.transferUsd,
-      setEnroll: target.features.affiliate_enroll,
+      setEnroll: true,
     });
     if (!paid.ok) {
       redirect(checkoutPath({ plan: planId, error: paid.error }));
