@@ -1,0 +1,279 @@
+import { createServiceClient } from "@/lib/supabase/admin";
+import {
+  parseBillingMethod,
+  parseInvoiceMethod,
+  parseInvoiceStatus,
+  parseSubscriptionStatus,
+  walletEntryDelta,
+  type MemberBilling,
+  type MembershipInvoice,
+} from "./billing";
+import {
+  getDefaultMembershipPlan,
+  getMembershipPlan,
+  listMembershipPlans,
+} from "./store";
+import type { AppliedSubscription, StripeInvoiceWrite } from "./stripe-apply";
+
+type MemberBillingRow = {
+  user_id: string;
+  email: string;
+  name: string;
+  plan_id: string;
+  billing_method: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id?: string | null;
+  subscription_status: string | null;
+  period_end: string | null;
+  pay_subscription_from_affiliate?: boolean | null;
+};
+
+const BILLING_COLUMNS =
+  "user_id, email, name, plan_id, billing_method, stripe_customer_id, stripe_subscription_id, subscription_status, period_end, pay_subscription_from_affiliate";
+
+function mapBilling(row: MemberBillingRow): MemberBilling {
+  return {
+    userId: row.user_id,
+    email: row.email,
+    name: row.name,
+    planId: row.plan_id,
+    billingMethod: parseBillingMethod(row.billing_method),
+    stripeCustomerId: row.stripe_customer_id,
+    stripeSubscriptionId: row.stripe_subscription_id ?? null,
+    subscriptionStatus: parseSubscriptionStatus(row.subscription_status),
+    periodEnd: row.period_end,
+    paySubscriptionFromAffiliate: row.pay_subscription_from_affiliate === true,
+  };
+}
+
+export async function getMemberBilling(
+  userId: string,
+): Promise<MemberBilling | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data } = await supabase
+    .from("members")
+    .select(BILLING_COLUMNS)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data ? mapBilling(data as MemberBillingRow) : null;
+}
+
+export async function getMemberBillingByCustomer(
+  customerId: string,
+): Promise<MemberBilling | null> {
+  const supabase = createServiceClient();
+  if (!supabase || !customerId) {
+    return null;
+  }
+  const { data } = await supabase
+    .from("members")
+    .select(BILLING_COLUMNS)
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+  return data ? mapBilling(data as MemberBillingRow) : null;
+}
+
+export async function saveBillingMethod(
+  userId: string,
+  method: "stripe" | "wallet",
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase
+    .from("members")
+    .update({
+      billing_method: method,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+export async function saveStripeCustomerIds(input: {
+  userId: string;
+  stripeCustomerId: string;
+  stripeSubscriptionId?: string | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const update: Record<string, unknown> = {
+    stripe_customer_id: input.stripeCustomerId,
+    billing_method: "stripe",
+    updated_at: new Date().toISOString(),
+  };
+  if (input.stripeSubscriptionId) {
+    update.stripe_subscription_id = input.stripeSubscriptionId;
+  }
+  const { error } = await supabase
+    .from("members")
+    .update(update)
+    .eq("user_id", input.userId);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+export async function applyMemberSubscription(
+  userId: string,
+  applied: AppliedSubscription,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  let planId = applied.planId;
+  if (applied.revertToDefault) {
+    const fallback = await getDefaultMembershipPlan();
+    planId = fallback?.id ?? planId;
+  }
+  if (!planId) {
+    return { ok: false, error: "Could not resolve a plan from Stripe." };
+  }
+  const plan = await getMembershipPlan(planId);
+  const update: Record<string, unknown> = {
+    plan_id: planId,
+    stripe_customer_id: applied.stripeCustomerId,
+    stripe_subscription_id: applied.stripeSubscriptionId,
+    subscription_status: applied.subscriptionStatus,
+    period_end: applied.periodEnd,
+    billing_method: "stripe",
+    updated_at: new Date().toISOString(),
+  };
+  if (plan.ok && plan.plan.features.affiliate_enroll) {
+    update.last_enroll_plan_id = planId;
+  }
+  const { error } = await supabase
+    .from("members")
+    .update(update)
+    .eq("user_id", userId);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+export async function recordStripeInvoice(
+  userId: string,
+  planId: string,
+  write: StripeInvoiceWrite,
+): Promise<{ ok: true; inserted: boolean } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { data: existing } = await supabase
+    .from("membership_invoices")
+    .select("id, status")
+    .eq("method", "stripe")
+    .eq("external_id", write.externalId)
+    .maybeSingle();
+  if (existing) {
+    return { ok: true, inserted: false };
+  }
+  const { error } = await supabase.from("membership_invoices").insert({
+    user_id: userId,
+    plan_id: planId,
+    method: write.method,
+    external_id: write.externalId,
+    amount_usd: write.amountUsd,
+    status: write.status,
+    period_start: write.periodStart,
+    period_end: write.periodEnd,
+  });
+  if (error) {
+    if (error.code === "23505") {
+      return { ok: true, inserted: false };
+    }
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, inserted: true };
+}
+
+export async function markStripeInvoiceRefunded(
+  invoiceId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase
+    .from("membership_invoices")
+    .update({ status: "refunded" })
+    .eq("method", "stripe")
+    .eq("external_id", invoiceId);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+export async function listMemberInvoices(
+  userId: string,
+): Promise<MembershipInvoice[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data } = await supabase
+    .from("membership_invoices")
+    .select(
+      "id, plan_id, method, external_id, amount_usd, status, period_start, period_end, created_at",
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const rows = data ?? [];
+  const listed = await listMembershipPlans();
+  const names = new Map(
+    (listed.ok ? listed.plans : []).map((plan) => [plan.id, plan.name]),
+  );
+  const invoices: MembershipInvoice[] = [];
+  for (const row of rows) {
+    const method = parseInvoiceMethod(row.method);
+    const status = parseInvoiceStatus(row.status);
+    if (!method || !status) {
+      continue;
+    }
+    const planId = String(row.plan_id);
+    invoices.push({
+      id: String(row.id),
+      planId,
+      planName: names.get(planId) ?? "Plan",
+      method,
+      externalId:
+        typeof row.external_id === "string" ? row.external_id : null,
+      amountUsd: Number(row.amount_usd),
+      status,
+      periodStart:
+        typeof row.period_start === "string" ? row.period_start : null,
+      periodEnd: typeof row.period_end === "string" ? row.period_end : null,
+      createdAt: String(row.created_at),
+    });
+  }
+  return invoices;
+}
+
+export async function walletCreditUsd(userId: string): Promise<number> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return 0;
+  }
+  const { data } = await supabase
+    .from("membership_wallet_entries")
+    .select("kind, amount_usd")
+    .eq("user_id", userId);
+  return (data ?? []).reduce((sum, row) => {
+    return sum + walletEntryDelta(String(row.kind), Number(row.amount_usd));
+  }, 0);
+}

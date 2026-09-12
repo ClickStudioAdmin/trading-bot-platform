@@ -173,6 +173,20 @@ The same key encrypts the Futures webhook token (AAD `tbp.futures.webhook.v1`) s
 
 Never put the webhook token in `NEXT_PUBLIC_*`. Rotate the token on Futures Settings if it leaks.
 
+## Stripe (membership step 4)
+
+Test-mode keys on **Development** / local `.env.local`. Live keys on **Production** / `main` only. Never `NEXT_PUBLIC_` for the secret or webhook signing secret.
+
+| Variable | Where | Value |
+| --- | --- | --- |
+| `STRIPE_SECRET_KEY` | Vercel Development / `.env.local` | `sk_test_…` from the Stripe sandbox |
+| `STRIPE_SECRET_KEY` | Vercel Production | `sk_live_…` |
+| `STRIPE_WEBHOOK_SECRET` | Vercel Development / `.env.local` | `whsec_…` for `POST /api/stripe/webhook` |
+| `STRIPE_WEBHOOK_SECRET` | Vercel Production | A **different** live `whsec_…` |
+| `APP_BASE_URL` | Same as TradingView | Checkout success / cancel and Customer Portal return |
+
+Webhook events: `checkout.session.completed`, `customer.subscription.updated` (and created / deleted), `invoice.paid`, `invoice.updated`, `charge.refunded`. Each paid plan needs a Stripe Price id on `/admin/plans`.
+
 ## Merge to production
 
 Open a pull request from `develop` into `main`. After merge:

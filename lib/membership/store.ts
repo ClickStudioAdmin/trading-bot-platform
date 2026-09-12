@@ -138,6 +138,32 @@ export async function getMembershipPlan(
   return { ok: true, plan: mapPlan(row, counts.get(row.id) ?? 0) };
 }
 
+export async function getMembershipPlanByStripePriceId(
+  stripePriceId: string,
+): Promise<MembershipPlan | null> {
+  const supabase = createServiceClient();
+  if (!supabase || !stripePriceId) {
+    return null;
+  }
+  const { data } = await supabase
+    .from("membership_plans")
+    .select(PLAN_COLUMNS)
+    .eq("stripe_price_id", stripePriceId)
+    .maybeSingle();
+  if (!data) {
+    return null;
+  }
+  return mapPlan(data as PlanRow);
+}
+
+export async function getDefaultMembershipPlan(): Promise<MembershipPlan | null> {
+  const listed = await listMembershipPlans();
+  if (!listed.ok) {
+    return null;
+  }
+  return listed.plans.find((plan) => plan.isDefault) ?? null;
+}
+
 export async function getMemberPlanId(
   userId: string,
 ): Promise<string | null> {

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ColumnHint } from "@/components/column-hint";
 import {
   PLAN_COMPARE_SECTIONS,
@@ -34,9 +35,11 @@ function compareBlocks(plans: MembershipPlan[]): CompareBlock[] {
 export function MembershipPlanCards({
   plans,
   currentPlanId,
+  checkout = false,
 }: {
   plans: MembershipPlan[];
   currentPlanId: string | null;
+  checkout?: boolean;
 }) {
   if (plans.length === 0) {
     return (
@@ -89,6 +92,7 @@ export function MembershipPlanCards({
                   block={block}
                   plan={plan}
                   current={current}
+                  checkout={checkout}
                 />
               ))}
             </div>
@@ -133,10 +137,12 @@ function PlanCell({
   block,
   plan,
   current,
+  checkout,
 }: {
   block: CompareBlock;
   plan: MembershipPlan;
   current: boolean;
+  checkout: boolean;
 }) {
   if (block.type === "header") {
     return (
@@ -179,19 +185,29 @@ function PlanCell({
           <p className="rounded-control bg-canvas px-3 py-2 text-sm text-ink">
             Current plan
           </p>
-        ) : (
+        ) : plan.priceUsd > 0 ? (
           <div>
-            <button
-              type="button"
-              disabled
-              className="w-full rounded-control bg-accent-strong/40 px-4 py-2 text-sm font-medium text-ink"
-            >
-              Upgrade
-            </button>
+            {checkout ? (
+              <Link
+                href={`/account/billing?upgrade=${plan.id}`}
+                className="block w-full rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent"
+              >
+                Upgrade
+              </Link>
+            ) : (
+              <Link
+                href="/sign-in"
+                className="block w-full rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent"
+              >
+                Sign in
+              </Link>
+            )}
             <p className="mt-2 text-xs text-ink-faint">
-              Card checkout is the next step.
+              Choose Card or Crypto credit on Billing.
             </p>
           </div>
+        ) : (
+          <p className="text-xs text-ink-faint">Free</p>
         )}
       </div>
     );
