@@ -50,16 +50,16 @@ export function TopUpWallet({
           <p className="break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
             {address.address}
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <CopyTextButton text={address.address} label="Copy address" />
             {explorer ? (
               <a
                 href={explorer}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-control border border-line bg-canvas px-3 py-1.5 text-xs font-medium text-ink hover:border-line-strong"
+                className="text-xs text-accent hover:underline"
               >
-                Explorer
+                Go to Explorer
               </a>
             ) : null}
           </div>
@@ -81,7 +81,7 @@ export function TopUpWallet({
           <PendingSubmitButton
             pendingLabel="Checking…"
             successKey="check-deposit"
-            className="rounded-control border border-line px-4 py-2 text-sm text-ink hover:border-line-strong"
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
             Check for deposit
           </PendingSubmitButton>
@@ -91,7 +91,7 @@ export function TopUpWallet({
           <PendingSubmitButton
             pendingLabel="Checking…"
             successKey="check-deposit"
-            className="rounded-control border border-line px-4 py-2 text-sm text-ink hover:border-line-strong"
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
           >
             Check for deposit
           </PendingSubmitButton>

@@ -242,7 +242,7 @@ export default async function AdminSettingsPage({
               </label>
               <PendingSubmitButton
                 pendingLabel="Saving…"
-                className="rounded-control border border-line px-4 py-2 text-sm text-ink hover:border-line-strong"
+                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
               >
                 Save level
               </PendingSubmitButton>
@@ -391,7 +391,7 @@ export default async function AdminSettingsPage({
                     <div className="flex items-end">
                       <PendingSubmitButton
                         pendingLabel="Saving…"
-                        className="rounded-control border border-line px-4 py-2 text-sm text-ink hover:border-line-strong"
+                        className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
                       >
                         Save token
                       </PendingSubmitButton>
