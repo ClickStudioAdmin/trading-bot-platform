@@ -49,7 +49,7 @@ function failBilling(
 }
 
 function failAdmin(error: string): never {
-  redirect(`/admin/settings?error=${encodeURIComponent(error)}`);
+  redirect(`/admin/settings?tab=crypto&error=${encodeURIComponent(error)}`);
   throw new Error(error);
 }
 
@@ -116,7 +116,7 @@ export async function saveGasLowEthAction(formData: FormData) {
   });
   revalidatePath("/admin/settings");
   revalidatePath("/admin/billing");
-  redirect("/admin/settings?saved=gaslow");
+  redirect("/admin/settings?tab=crypto&saved=gaslow");
 }
 
 export async function saveBillingChainAction(formData: FormData) {

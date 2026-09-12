@@ -24,12 +24,12 @@ export async function saveAdminSettings(formData: FormData) {
   });
   if (!limits.ok) {
     if (limits.error.includes("above")) {
-      redirect("/admin/settings?error=copy-followers-range");
+      redirect("/admin/settings?tab=copy&error=copy-followers-range");
     }
     if (limits.error.includes("Platform maximum")) {
-      redirect("/admin/settings?error=copy-followers-ceiling");
+      redirect("/admin/settings?tab=copy&error=copy-followers-ceiling");
     }
-    redirect("/admin/settings?error=copy-followers");
+    redirect("/admin/settings?tab=copy&error=copy-followers");
   }
   const savedCopy = await saveCopyPlatformSettings({
     minActivityDays: days.days,
@@ -37,7 +37,7 @@ export async function saveAdminSettings(formData: FormData) {
     maxFollowersCeiling: limits.maxFollowersCeiling,
   });
   if (!savedCopy.ok) {
-    redirect("/admin/settings?error=copy-days");
+    redirect("/admin/settings?tab=copy&error=copy-days");
   }
   const enabled = formData.get("autoTick") === "on";
   const store = await cookies();
@@ -51,5 +51,5 @@ export async function saveAdminSettings(formData: FormData) {
   });
   revalidatePath("/", "layout");
   revalidatePath("/admin/settings");
-  redirect("/admin/settings?saved=1");
+  redirect("/admin/settings?tab=copy&saved=1");
 }
