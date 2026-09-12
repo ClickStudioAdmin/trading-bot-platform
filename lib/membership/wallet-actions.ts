@@ -21,11 +21,12 @@ import {
   createDepositHdSeed,
   createGasWallet,
   payPlanFromWallet,
-  revealGasWallet,
   updateBillingChain,
   updateBillingToken,
+  updateGasLowEth,
   walletBookBalances,
 } from "./wallet-store";
+import { parseGasLowEth } from "./gas-drip";
 import {
   parseChainName,
   parseConfirmations,
@@ -97,22 +98,24 @@ export async function createGasWalletAction(): Promise<
   return created;
 }
 
-export async function revealGasWalletAction(): Promise<
-  | { ok: true; address: string; privateKey: string }
-  | { ok: false; error: string }
-> {
+export async function saveGasLowEthAction(formData: FormData) {
   await requireAdmin();
-  const revealed = await revealGasWallet();
-  if (!revealed.ok) {
-    return revealed;
+  const lowEth = parseGasLowEth(formData.get("lowEth"));
+  if (!lowEth) {
+    failAdmin("Low ETH level must be above 0 and at most 10, with up to 8 decimals.");
+  }
+  const saved = await updateGasLowEth(lowEth);
+  if (!saved.ok) {
+    failAdmin(saved.error);
   }
   await writeEventLog({
     scope: "system",
-    event: "membership.gas_wallet_revealed",
-    message: "Revealed billing gas wallet private key for backup",
-    data: { address: revealed.address },
+    event: "membership.gas_low_updated",
+    message: `Set gas wallet low ETH level to ${lowEth}`,
+    data: { lowEth },
   });
-  return revealed;
+  revalidatePath("/admin/billing");
+  redirect("/admin/billing?saved=gaslow");
 }
 
 export async function saveBillingChainAction(formData: FormData) {

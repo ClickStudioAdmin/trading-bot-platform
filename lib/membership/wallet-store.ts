@@ -10,6 +10,7 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { Hex } from "viem";
 import { createDepositMnemonic, deriveDepositAddress } from "./hd";
+import { DEFAULT_GAS_LOW_ETH, parseGasLowEth } from "./gas-drip";
 import {
   billingChainEnvironment,
   bookBalancesFromEntries,
@@ -62,6 +63,7 @@ export type GasWalletStatus = {
   keyReady: boolean;
   address: string | null;
   createdAt: string | null;
+  lowEth: string;
 };
 
 type ChainRow = {
@@ -308,13 +310,23 @@ export async function getGasWalletStatus(): Promise<GasWalletStatus> {
       keyReady: billingCredentialsConfigured(),
       address: null,
       createdAt: null,
+      lowEth: DEFAULT_GAS_LOW_ETH,
     };
   }
-  const { data } = await supabase
+  const full = await supabase
     .from("platform_settings")
-    .select("billing_gas_ciphertext, billing_gas_address, billing_gas_created_at")
+    .select(
+      "billing_gas_ciphertext, billing_gas_address, billing_gas_created_at, billing_gas_low_eth",
+    )
     .eq("id", "tbp")
     .maybeSingle();
+  const { data } = full.error
+    ? await supabase
+        .from("platform_settings")
+        .select("billing_gas_ciphertext, billing_gas_address, billing_gas_created_at")
+        .eq("id", "tbp")
+        .maybeSingle()
+    : full;
   const address =
     typeof (data as { billing_gas_address?: unknown } | null)?.billing_gas_address ===
     "string"
@@ -333,7 +345,32 @@ export async function getGasWalletStatus(): Promise<GasWalletStatus> {
       "string"
         ? String((data as { billing_gas_created_at: string }).billing_gas_created_at)
         : null,
+    lowEth:
+      parseGasLowEth(
+        (data as { billing_gas_low_eth?: unknown } | null)?.billing_gas_low_eth,
+      ) ?? DEFAULT_GAS_LOW_ETH,
   };
+}
+
+export async function updateGasLowEth(
+  lowEth: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = parseGasLowEth(lowEth);
+  if (!parsed) {
+    return { ok: false, error: "Low ETH level must be between 0 and 10." };
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase
+    .from("platform_settings")
+    .update({ billing_gas_low_eth: Number(parsed) })
+    .eq("id", "tbp");
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }
 
 export async function loadGasPrivateKey(): Promise<Hex | null> {
@@ -362,32 +399,6 @@ export async function loadGasPrivateKey(): Promise<Hex | null> {
     return null;
   }
   return privateKey as Hex;
-}
-
-export async function revealGasWallet(): Promise<
-  { ok: true; address: string; privateKey: string } | { ok: false; error: string }
-> {
-  if (!billingCredentialsConfigured()) {
-    return {
-      ok: false,
-      error:
-        "Add BILLING_CREDENTIALS_KEY (64 hex) to this environment, then restart the app.",
-    };
-  }
-  const privateKey = await loadGasPrivateKey();
-  if (!privateKey) {
-    return {
-      ok: false,
-      error:
-        "Could not decrypt the gas wallet. Check BILLING_CREDENTIALS_KEY matches the key used when it was created.",
-    };
-  }
-  const account = privateKeyToAccount(privateKey);
-  return {
-    ok: true,
-    address: account.address.toLowerCase(),
-    privateKey,
-  };
 }
 
 export async function createGasWallet(): Promise<
@@ -602,6 +613,42 @@ export async function markDepositSwept(
     .eq("chain_id", chainId)
     .eq("tx_hash", txHash.toLowerCase())
     .eq("log_index", logIndex);
+}
+
+export type UnsweptDepositCredit = {
+  chainId: string;
+  count: number;
+  amountUsd: number;
+};
+
+export async function listUnsweptDepositCredits(): Promise<
+  UnsweptDepositCredit[]
+> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("membership_deposit_txs")
+    .select("chain_id, amount_usd")
+    .is("sweep_tx_hash", null);
+  if (error || !data) {
+    return [];
+  }
+  const byChain = new Map<string, UnsweptDepositCredit>();
+  for (const row of data) {
+    const chainId = String(row.chain_id);
+    const amountUsd = Number(row.amount_usd);
+    const current = byChain.get(chainId) ?? {
+      chainId,
+      count: 0,
+      amountUsd: 0,
+    };
+    current.count += 1;
+    current.amountUsd += Number.isFinite(amountUsd) ? amountUsd : 0;
+    byChain.set(chainId, current);
+  }
+  return [...byChain.values()];
 }
 
 export async function creditOnChainDeposit(input: {
