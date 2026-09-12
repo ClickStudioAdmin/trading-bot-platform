@@ -34,7 +34,7 @@ import { firstSearchValue } from "@/lib/paper/open";
 import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
 
 export const metadata: Metadata = {
-  title: "Billing",
+  title: "Billing & Wallets",
   description: "Deposit chains, tokens, and HD seed.",
 };
 
@@ -65,12 +65,11 @@ export default async function AdminBillingPage({
     listAdminWalletSnapshots(envChains, tokens),
     listDepositSweepSnapshots(envChains, tokens, addresses, unswept),
   ]);
-  const createdAt = parseDisplayTime(hd.createdAt);
   const gasCreatedAt = parseDisplayTime(gas.createdAt);
 
   return (
     <div>
-      <PageHeading overline="Admin" title="Billing" />
+      <PageHeading overline="Admin" title="Billing & Wallets" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
         EVM deposit rails. This environment is{" "}
         <span className="text-ink">{env}</span>. Develop uses testnets.
@@ -99,28 +98,107 @@ export default async function AdminBillingPage({
         </p>
       ) : null}
 
-      <section className="mt-6 rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Deposit HD seed</h2>
-        <p className="mt-2 text-sm text-ink-muted">
-          One encrypted mnemonic derives a unique address per member. Needs{" "}
-          <code className="text-ink">BILLING_CREDENTIALS_KEY</code>.
-        </p>
-        <p className="mt-3 text-sm text-ink">
-          {hd.configured
-            ? `Seed stored${createdAt ? ` · ${formatLocalDate(createdAt)}` : ""}.`
-            : "No seed yet."}{" "}
-          {hd.keyReady ? "Encryption key is set." : "Encryption key is missing."}
-        </p>
-        <p className="mt-2 text-xs text-ink-faint">
-          {addresses.length} member address
-          {addresses.length === 1 ? "" : "es"} issued.
-        </p>
-        {!hd.configured ? (
+      {!hd.configured ? (
+        <section className="mt-6 rounded-card border border-line bg-surface p-5">
+          <h2 className="text-lg font-semibold tracking-tight">Deposit HD seed</h2>
+          <p className="mt-2 text-sm text-ink-muted">
+            One encrypted mnemonic derives a unique address per member. Needed
+            once per environment. Needs{" "}
+            <code className="text-ink">BILLING_CREDENTIALS_KEY</code>.
+          </p>
+          <p className="mt-3 text-sm text-ink">
+            No seed yet.{" "}
+            {hd.keyReady ? "Encryption key is set." : "Encryption key is missing."}
+          </p>
           <div className="mt-4">
             <CreateDepositSeed />
           </div>
-        ) : null}
+        </section>
+      ) : null}
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-2 lg:items-start">
+      <section className="rounded-card border border-line bg-surface p-5">
+        <h2 className="text-lg font-semibold tracking-tight">Admin wallets</h2>
+        <p className="mt-2 text-sm text-ink-muted">
+          On-chain balances at the public receive address. Swept USDT lands
+          here. Keys stay with you.
+        </p>
+        {adminWallets.length === 0 ? (
+          <p className="mt-3 text-sm text-ink-muted">
+            No listed chains in this environment yet.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-4">
+            {adminWallets.map((row) => (
+              <WalletChainCard
+                key={row.chainId}
+                title={row.chainName}
+                address={row.address}
+                explorerUrl={row.explorerUrl}
+                empty={
+                  row.address
+                    ? null
+                    : "Set the admin receive address on this chain below."
+                }
+              >
+                {row.address ? <WalletAssetRows assets={row.assets} /> : null}
+              </WalletChainCard>
+            ))}
+          </div>
+        )}
       </section>
+
+      <section className="rounded-card border border-line bg-surface p-5">
+        <h2 className="text-lg font-semibold tracking-tight">
+          Deposit wallets
+        </h2>
+        <p className="mt-2 text-sm text-ink-muted">
+          Snapshot of issued member addresses. Leftover on-chain balances are
+          not yet swept to the admin wallet.
+        </p>
+        <p className="mt-3 text-sm text-ink">
+          {addresses.length} issued address
+          {addresses.length === 1 ? "" : "es"}.
+        </p>
+        {depositSweeps.length === 0 ? (
+          <p className="mt-3 text-sm text-ink-muted">
+            No listed chains in this environment yet.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-4">
+            {depositSweeps.map((row) => (
+              <WalletChainCard
+                key={row.chainId}
+                title={row.chainName}
+                detail={`${row.leftoverWallets} with leftover${
+                  row.failed > 0 ? ` · ${row.failed} unread` : ""
+                }`}
+              >
+                <WalletAssetRows
+                  assets={row.assets.map((asset) => ({
+                    ...asset,
+                    warn: Boolean(asset.amount && asset.amount !== "0"),
+                    note:
+                      asset.amount && asset.amount !== "0"
+                        ? asset.symbol === "ETH"
+                          ? "leftover"
+                          : "yet to be swept"
+                        : null,
+                  }))}
+                />
+                <p className="mt-2 text-xs text-ink-faint">
+                  {row.creditedUnsweptCount === 0
+                    ? "No credited deposits waiting on a sweep hash."
+                    : `${row.creditedUnsweptCount} credited deposit${
+                        row.creditedUnsweptCount === 1 ? "" : "s"
+                      } still missing a sweep hash · ${formatUsd(row.creditedUnsweptUsd)}`}
+                </p>
+              </WalletChainCard>
+            ))}
+          </div>
+        )}
+      </section>
+      </div>
 
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold tracking-tight">Gas wallet</h2>
@@ -198,88 +276,6 @@ export default async function AdminBillingPage({
             <CreateGasWallet />
           </div>
         ) : null}
-      </section>
-
-      <section className="mt-6 rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Admin wallets</h2>
-        <p className="mt-2 text-sm text-ink-muted">
-          On-chain balances at the public receive address. Swept USDT lands
-          here. Keys stay with you.
-        </p>
-        {adminWallets.length === 0 ? (
-          <p className="mt-3 text-sm text-ink-muted">
-            No listed chains in this environment yet.
-          </p>
-        ) : (
-          <div className="mt-4 space-y-4">
-            {adminWallets.map((row) => (
-              <WalletChainCard
-                key={row.chainId}
-                title={row.chainName}
-                address={row.address}
-                explorerUrl={row.explorerUrl}
-                empty={
-                  row.address
-                    ? null
-                    : "Set the admin receive address on this chain below."
-                }
-              >
-                {row.address ? <WalletAssetRows assets={row.assets} /> : null}
-              </WalletChainCard>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="mt-6 rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">
-          Deposit wallets
-        </h2>
-        <p className="mt-2 text-sm text-ink-muted">
-          Snapshot of issued member addresses. Leftover on-chain balances are
-          not yet swept to the admin wallet.
-        </p>
-        <p className="mt-3 text-sm text-ink">
-          {addresses.length} issued address
-          {addresses.length === 1 ? "" : "es"}.
-        </p>
-        {depositSweeps.length === 0 ? (
-          <p className="mt-3 text-sm text-ink-muted">
-            No listed chains in this environment yet.
-          </p>
-        ) : (
-          <div className="mt-4 space-y-4">
-            {depositSweeps.map((row) => (
-              <WalletChainCard
-                key={row.chainId}
-                title={row.chainName}
-                detail={`${row.leftoverWallets} with leftover${
-                  row.failed > 0 ? ` · ${row.failed} unread` : ""
-                }`}
-              >
-                <WalletAssetRows
-                  assets={row.assets.map((asset) => ({
-                    ...asset,
-                    warn: Boolean(asset.amount && asset.amount !== "0"),
-                    note:
-                      asset.amount && asset.amount !== "0"
-                        ? asset.symbol === "ETH"
-                          ? "leftover"
-                          : "yet to be swept"
-                        : null,
-                  }))}
-                />
-                <p className="mt-2 text-xs text-ink-faint">
-                  {row.creditedUnsweptCount === 0
-                    ? "No credited deposits waiting on a sweep hash."
-                    : `${row.creditedUnsweptCount} credited deposit${
-                        row.creditedUnsweptCount === 1 ? "" : "s"
-                      } still missing a sweep hash · ${formatUsd(row.creditedUnsweptUsd)}`}
-                </p>
-              </WalletChainCard>
-            ))}
-          </div>
-        )}
       </section>
 
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
