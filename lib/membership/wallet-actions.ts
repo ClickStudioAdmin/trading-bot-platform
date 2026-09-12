@@ -49,7 +49,7 @@ function failBilling(
 }
 
 function failAdmin(error: string): never {
-  redirect(`/admin/billing?error=${encodeURIComponent(error)}`);
+  redirect(`/admin/settings?error=${encodeURIComponent(error)}`);
   throw new Error(error);
 }
 
@@ -114,8 +114,9 @@ export async function saveGasLowEthAction(formData: FormData) {
     message: `Set gas wallet low ETH level to ${lowEth}`,
     data: { lowEth },
   });
+  revalidatePath("/admin/settings");
   revalidatePath("/admin/billing");
-  redirect("/admin/billing?saved=gaslow");
+  redirect("/admin/settings?saved=gaslow");
 }
 
 export async function saveBillingChainAction(formData: FormData) {
@@ -149,8 +150,9 @@ export async function saveBillingChainAction(formData: FormData) {
     message: `Updated billing chain ${name}`,
     data: { chainId: id },
   });
+  revalidatePath("/admin/settings");
   revalidatePath("/admin/billing");
-  redirect("/admin/billing?saved=chain");
+  redirect("/admin/settings?saved=chain");
 }
 
 export async function saveBillingTokenAction(formData: FormData) {
@@ -179,8 +181,9 @@ export async function saveBillingTokenAction(formData: FormData) {
     message: `Updated billing token ${symbol}`,
     data: { tokenId: id },
   });
+  revalidatePath("/admin/settings");
   revalidatePath("/admin/billing");
-  redirect("/admin/billing?saved=token");
+  redirect("/admin/settings?saved=token");
 }
 
 export async function scanBillingDepositsAction() {

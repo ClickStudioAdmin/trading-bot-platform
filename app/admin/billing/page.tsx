@@ -15,13 +15,7 @@ import {
   gasExplorerAddressUrl,
   listGasWalletBalances,
 } from "@/lib/membership/gas-monitor";
-import {
-  saveBillingChainAction,
-  saveBillingTokenAction,
-  saveGasLowEthAction,
-  scanBillingDepositsAction,
-} from "@/lib/membership/wallet-actions";
-import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
+import { scanBillingDepositsAction } from "@/lib/membership/wallet-actions";
 import {
   getGasWalletStatus,
   getHdSeedStatus,
@@ -45,7 +39,6 @@ export default async function AdminBillingPage({
 }) {
   const params = await searchParams;
   const error = firstSearchValue(params.error);
-  const saved = firstSearchValue(params.saved);
   const scanned = firstSearchValue(params.scanned) === "1";
   const credited = firstSearchValue(params.credited);
   const [hd, gas, chains, addresses, unswept] = await Promise.all([
@@ -81,15 +74,6 @@ export default async function AdminBillingPage({
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </p>
-      ) : null}
-      {saved === "chain" ? (
-        <p className="mt-6 text-sm text-success">Chain saved.</p>
-      ) : null}
-      {saved === "token" ? (
-        <p className="mt-6 text-sm text-success">Token saved.</p>
-      ) : null}
-      {saved === "gaslow" ? (
-        <p className="mt-6 text-sm text-success">Low ETH level saved.</p>
       ) : null}
       {scanned ? (
         <p className="mt-6 text-sm text-success">
@@ -138,7 +122,7 @@ export default async function AdminBillingPage({
                 empty={
                   row.address
                     ? null
-                    : "Set the admin receive address on this chain below."
+                    : "Set the admin receive address on Settings."
                 }
               >
                 {row.address ? <WalletAssetRows assets={row.assets} /> : null}
@@ -245,30 +229,9 @@ export default async function AdminBillingPage({
             )}
             <p className="text-xs text-ink-faint">
               Send {env === "production" ? "ETH" : "testnet ETH"} to this
-              address on each listed chain so drips and sweeps can run.
+              address on each listed chain so drips and sweeps can run. Low ETH
+              level is on Settings.
             </p>
-            <form action={saveGasLowEthAction} className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
-              <label className="block text-sm text-ink">
-                Low ETH level
-                <input
-                  name="lowEth"
-                  required
-                  defaultValue={gas.lowEth}
-                  inputMode="decimal"
-                  className={BILLING_FIELD_CLASS}
-                />
-                <span className="mt-1 block text-xs text-ink-faint">
-                  Warn when a listed chain is at or below this amount. Default
-                  0.005 ETH.
-                </span>
-              </label>
-              <PendingSubmitButton
-                pendingLabel="Saving…"
-                className="rounded-control border border-line px-4 py-2 text-sm text-ink hover:border-line-strong"
-              >
-                Save level
-              </PendingSubmitButton>
-            </form>
           </div>
         ) : null}
         {!gas.configured ? (
@@ -297,149 +260,6 @@ export default async function AdminBillingPage({
         </div>
       </section>
 
-      {chains.length === 0 ? (
-        <p className="mt-6 text-sm text-warning">
-          No billing chains yet. Push <code className="text-ink">develop</code>{" "}
-          so the wallet migration can seed Arbitrum Sepolia.
-        </p>
-      ) : null}
-
-      {chains.map((chain) => {
-        const chainTokens = tokens.filter((token) => token.chainId === chain.id);
-        return (
-          <section
-            key={chain.id}
-            className="mt-6 space-y-5 rounded-card border border-line bg-surface p-5"
-          >
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">{chain.name}</h2>
-              <p className="mt-1 text-xs text-ink-faint">
-                {chain.environment} · chain id {chain.chainId} · last scanned{" "}
-                {chain.lastScannedBlock ?? "—"}
-              </p>
-            </div>
-            <form action={saveBillingChainAction} className="grid gap-4 md:grid-cols-2">
-              <input type="hidden" name="chainId" value={chain.id} />
-              <label className="block text-sm text-ink">
-                Name
-                <input
-                  name="name"
-                  required
-                  defaultValue={chain.name}
-                  className={BILLING_FIELD_CLASS}
-                />
-              </label>
-              <label className="block text-sm text-ink">
-                Confirmations
-                <input
-                  name="confirmations"
-                  type="number"
-                  min={1}
-                  max={128}
-                  required
-                  defaultValue={chain.confirmations}
-                  className={BILLING_FIELD_CLASS}
-                />
-              </label>
-              <label className="block text-sm text-ink md:col-span-2">
-                Public RPC
-                <input
-                  name="rpcUrl"
-                  required
-                  defaultValue={chain.rpcUrl}
-                  className={BILLING_FIELD_CLASS}
-                />
-              </label>
-              <label className="block text-sm text-ink md:col-span-2">
-                Explorer URL
-                <input
-                  name="explorerUrl"
-                  defaultValue={chain.explorerUrl ?? ""}
-                  className={BILLING_FIELD_CLASS}
-                />
-              </label>
-              <label className="block text-sm text-ink md:col-span-2">
-                Admin receive address (public only)
-                <input
-                  name="adminAddress"
-                  placeholder="0x…"
-                  defaultValue={chain.adminAddress ?? ""}
-                  className={BILLING_FIELD_CLASS}
-                />
-              </label>
-              <div>
-                <PendingSubmitButton
-                  pendingLabel="Saving…"
-                  className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-                >
-                  Save chain
-                </PendingSubmitButton>
-              </div>
-            </form>
-
-            {chainTokens.map((token) => (
-              <form
-                key={token.id}
-                action={saveBillingTokenAction}
-                className="grid gap-4 border-t border-line pt-5 md:grid-cols-2"
-              >
-                <input type="hidden" name="tokenId" value={token.id} />
-                <label className="block text-sm text-ink">
-                  Symbol
-                  <input
-                    name="symbol"
-                    required
-                    defaultValue={token.symbol}
-                    className={BILLING_FIELD_CLASS}
-                  />
-                </label>
-                <label className="block text-sm text-ink">
-                  Decimals
-                  <input
-                    name="decimals"
-                    type="number"
-                    min={0}
-                    max={36}
-                    required
-                    defaultValue={token.decimals}
-                    className={BILLING_FIELD_CLASS}
-                  />
-                </label>
-                <label className="block text-sm text-ink md:col-span-2">
-                  Contract
-                  <input
-                    name="contractAddress"
-                    required
-                    defaultValue={token.contractAddress}
-                    className={BILLING_FIELD_CLASS}
-                  />
-                </label>
-                <label className="block text-sm text-ink">
-                  Kind
-                  <select
-                    name="kind"
-                    defaultValue={token.kind}
-                    className={BILLING_FIELD_CLASS}
-                  >
-                    <option value="stable">Stable (1:1 USD)</option>
-                    <option value="wbtc">WBTC</option>
-                    <option value="native">Native</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-                <div className="flex items-end">
-                  <PendingSubmitButton
-                    pendingLabel="Saving…"
-                    className="rounded-control border border-line px-4 py-2 text-sm text-ink hover:border-line-strong"
-                  >
-                    Save token
-                  </PendingSubmitButton>
-                </div>
-              </form>
-            ))}
-          </section>
-        );
-      })}
     </div>
   );
 }
