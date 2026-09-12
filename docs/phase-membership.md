@@ -82,7 +82,7 @@ UI **never hides** a gated surface. Disable the control. Persistent **Upgrade** 
 
 | Book | What sits there | Typical rows |
 | --- | --- | --- |
-| **Main Wallet** | Unused crypto paid in for subscriptions (and any transfer in from Affiliate) | `deposit`, `transfer_in`, `debit_rent`, `withdraw`, `adjust` |
+| **Main Wallet** | Unused USD credit from 1:1 stablecoin top-ups (and any transfer in from Affiliate) | `deposit`, `transfer_in`, `debit_rent`, `withdraw`, `adjust` |
 | **Affiliate earnings** | Held then payable commission | `commission`, `transfer_out`, `withdraw`, `void`, `adjust` |
 
 A **transfer** is two linked rows (Affiliate `transfer_out` + Main `transfer_in`) with the same transfer id. Never edit a row in place. Never mix these books with desk money ledgers.
@@ -110,7 +110,7 @@ Deposit HD is encrypted at rest with `BILLING_CREDENTIALS_KEY` (server / billing
 3. Debit the full plan price from Main.
 4. If Main is still short → past_due → Free + grace. Leftover Stripe/card is unchanged.
 
-That write is still a **paid** invoice for the plan price (not `comp`). Upline L1–L5 still earn on it. The paying member does not earn on their own invoice. **Deduct payments from Crypto Credit where possible** means “use Main first” (the credit book). Checkout **Pay with credit** runs that deduct now. Recurring wallet ticks wait for a later step.
+That write is still a **paid** invoice for the plan price (not `comp`). Upline L1–L5 still earn on it. The paying member does not earn on their own invoice. **Deduct payments from Your Wallets where possible** means “use Main first” (the USD credit book). Checkout **Pay with credit** runs that deduct now. Recurring wallet ticks wait for a later step.
 
 One active **collection method** per member (`stripe` = Card or `wallet` = Crypto). Switching to Crypto sets Stripe `cancel_at_period_end`.
 

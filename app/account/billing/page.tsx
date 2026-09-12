@@ -73,7 +73,8 @@ export default async function AccountBillingPage({
       <PageHeading title="Billing and Wallets" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
         One collection method per login. Card uses the on-site Stripe form.
-        Crypto can optionally deduct Main Wallet credit first. Compare plans
+        Crypto is a payment method: listed stables credit Your Wallets 1:1 as
+        USD. You can optionally deduct that credit first. Compare plans
         on{" "}
         <Link href="/account/plans" className="text-accent">
           Plans
@@ -110,7 +111,7 @@ export default async function AccountBillingPage({
       ) : null}
       {upgraded === "wallet" ? (
         <p className="mt-6 text-sm text-success">
-          Plan paid from Main Wallet credit.
+          Plan paid from Your Wallets.
         </p>
       ) : null}
       {deposited ? (
@@ -167,8 +168,8 @@ export default async function AccountBillingPage({
             Payment method
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
-            Card charges Stripe. Crypto is the collection method. Deduct from
-            Main Wallet credit is optional.
+            Card charges Stripe. Crypto is only the payment method. Listed
+            stables credit Your Wallets 1:1 as USD. Deduct is optional.
           </p>
           <form action={setBillingMethodAction} className="mt-4 space-y-4">
             <BillingMethodRadios

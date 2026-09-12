@@ -43,7 +43,7 @@ export function TopUpWallet({
 
   return (
     <div id="top-up" className="space-y-3">
-      <h2 className="text-lg font-semibold tracking-tight">Top up Wallet</h2>
+      <h2 className="text-lg font-semibold tracking-tight">Top up</h2>
       <p className="text-sm text-ink-muted">{depositLabel}</p>
       {address ? (
         <>
@@ -141,7 +141,7 @@ export function CryptoWalletPanel({
 
   const books = (
     <div className="space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight">Crypto wallets</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Your Wallets</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
@@ -161,8 +161,8 @@ export function CryptoWalletPanel({
           </div>
         </div>
         <p className="text-sm text-ink-muted">
-          Main is unused crypto paid in. Affiliate is commission. Rent always
-          debits Main.
+          USD books, not crypto wallets. Listed stables credit Main 1:1.
+          Affiliate is commission. Rent always debits Main.
         </p>
         {deductOn ? (
           <p className="text-xs text-ink-faint">

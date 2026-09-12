@@ -16,7 +16,7 @@ export const BILLING_METHOD_LABELS: Record<BillingMethod, string> = {
 };
 
 export const CRYPTO_CREDIT_DEDUCT_LABEL =
-  "Deduct payments from Crypto Credit where possible";
+  "Deduct payments from Your Wallets where possible";
 
 export const SUBSCRIPTION_STATUSES = [
   "none",

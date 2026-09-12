@@ -61,7 +61,8 @@ export function BillingMethodRadios({
           <span>
             {BILLING_METHOD_LABELS.wallet}
             <span className="mt-1 block text-xs text-ink-faint">
-              Pay with crypto. Deposit rails are next.
+              Pay with listed stablecoins. They credit Your Wallets 1:1 as
+              USD.
             </span>
           </span>
         </label>
