@@ -108,6 +108,14 @@ export default async function AccountBillingPage({
           Status: {SUBSCRIPTION_STATUS_LABELS[billing.subscriptionStatus]}
           {periodMs ? ` · Period ends ${formatLocalDate(periodMs)}` : ""}
         </p>
+        <div className="mt-4">
+          <Link
+            href="/account/plans"
+            className="inline-flex rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent"
+          >
+            Upgrade
+          </Link>
+        </div>
       </section>
 
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
