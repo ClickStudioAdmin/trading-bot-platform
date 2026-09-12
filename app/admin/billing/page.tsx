@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { CopyTextButton } from "@/components/copy-text-button";
 import { CreateDepositSeed } from "@/components/create-deposit-seed";
@@ -64,7 +65,6 @@ export default async function AdminBillingPage({
     listAdminWalletSnapshots(envChains, tokens),
     listDepositSweepSnapshots(envChains, tokens, addresses, unswept),
   ]);
-  const gasLow = gasBalances.some((row) => row.low);
   const createdAt = parseDisplayTime(hd.createdAt);
   const gasCreatedAt = parseDisplayTime(gas.createdAt);
 
@@ -136,82 +136,39 @@ export default async function AdminBillingPage({
           {gas.keyReady ? "Encryption key is set." : "Encryption key is missing."}
         </p>
         {gas.address ? (
-          <div className="mt-3 space-y-4">
-            {gasLow ? (
-              <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-                Gas wallet ETH is at or below {gas.lowEth} ETH on at least one
-                listed chain. Send {env === "production" ? "ETH" : "testnet ETH"}{" "}
-                to this address.
+          <div className="mt-4 space-y-4">
+            {gasBalances.length === 0 ? (
+              <p className="text-sm text-ink-muted">
+                No listed chains in this environment yet.
               </p>
-            ) : null}
-            <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-                Public address
-              </p>
-              <p className="break-all rounded-card border border-line bg-surface-raised px-3 py-2 font-mono text-xs text-ink">
-                {gas.address}
-              </p>
-              <CopyTextButton text={gas.address} label="Copy address" />
-              <p className="text-xs text-ink-faint">
-                Send {env === "production" ? "ETH" : "testnet ETH"} here on each
-                listed chain so drips and sweeps can run.
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-ink-muted">
-                ETH balance
-              </p>
-              {gasBalances.length === 0 ? (
-                <p className="mt-2 text-sm text-ink-muted">
-                  No listed chains in this environment yet.
-                </p>
-              ) : (
-                <ul className="mt-2 divide-y divide-line rounded-card border border-line">
-                  {gasBalances.map((row) => {
-                    const explorer = gasExplorerAddressUrl(
-                      row.explorerUrl,
-                      gas.address ?? "",
-                    );
-                    return (
-                      <li
-                        key={row.chainId}
-                        className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
-                      >
-                        <div>
-                          <p className="text-sm text-ink">{row.name}</p>
-                          {explorer ? (
-                            <a
-                              href={explorer}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs text-accent hover:underline"
-                            >
-                              Explorer
-                            </a>
-                          ) : null}
-                        </div>
-                        <div className="text-right">
-                          {row.error ? (
-                            <p className="text-sm text-warning">{row.error}</p>
-                          ) : (
-                            <p
-                              className={`text-sm tabular-nums ${row.low ? "text-warning" : "text-ink"}`}
-                            >
-                              {row.balanceEth} ETH
-                            </p>
-                          )}
-                          {row.low ? (
-                            <p className="text-xs text-warning">
-                              Low · at or below {gas.lowEth} ETH
-                            </p>
-                          ) : null}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+            ) : (
+              gasBalances.map((row) => (
+                <WalletChainCard
+                  key={row.chainId}
+                  title={row.name}
+                  address={gas.address}
+                  explorerUrl={row.explorerUrl}
+                >
+                  <WalletAssetRows
+                    assets={[
+                      {
+                        symbol: "ETH",
+                        amount: row.balanceEth,
+                        error: row.error,
+                        warn: row.low,
+                        note: row.low
+                          ? `Low · at or below ${gas.lowEth} ETH`
+                          : null,
+                      },
+                    ]}
+                  />
+                </WalletChainCard>
+              ))
+            )}
+            <p className="text-xs text-ink-faint">
+              Send {env === "production" ? "ETH" : "testnet ETH"} to this
+              address on each listed chain so drips and sweeps can run.
+            </p>
             <form action={saveGasLowEthAction} className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
               <label className="block text-sm text-ink">
                 Low ETH level
@@ -255,63 +212,21 @@ export default async function AdminBillingPage({
           </p>
         ) : (
           <div className="mt-4 space-y-4">
-            {adminWallets.map((row) => {
-              const explorer = row.address
-                ? gasExplorerAddressUrl(row.explorerUrl, row.address)
-                : null;
-              return (
-                <div
-                  key={row.chainId}
-                  className="rounded-card border border-line bg-surface-raised p-4"
-                >
-                  <p className="text-sm font-medium text-ink">{row.chainName}</p>
-                  {row.address ? (
-                    <div className="mt-2 space-y-2">
-                      <p className="break-all font-mono text-xs text-ink">
-                        {row.address}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <CopyTextButton
-                          text={row.address}
-                          label="Copy address"
-                        />
-                        {explorer ? (
-                          <a
-                            href={explorer}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs text-accent hover:underline"
-                          >
-                            Explorer
-                          </a>
-                        ) : null}
-                      </div>
-                      <ul className="divide-y divide-line rounded-card border border-line">
-                        {row.assets.map((asset) => (
-                          <li
-                            key={asset.symbol}
-                            className="flex items-center justify-between gap-3 px-3 py-2"
-                          >
-                            <p className="text-sm text-ink-muted">{asset.symbol}</p>
-                            {asset.error ? (
-                              <p className="text-sm text-warning">{asset.error}</p>
-                            ) : (
-                              <p className="text-sm tabular-nums text-ink">
-                                {asset.amount} {asset.symbol}
-                              </p>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-sm text-warning">
-                      Set the admin receive address on this chain below.
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+            {adminWallets.map((row) => (
+              <WalletChainCard
+                key={row.chainId}
+                title={row.chainName}
+                address={row.address}
+                explorerUrl={row.explorerUrl}
+                empty={
+                  row.address
+                    ? null
+                    : "Set the admin receive address on this chain below."
+                }
+              >
+                {row.address ? <WalletAssetRows assets={row.assets} /> : null}
+              </WalletChainCard>
+            ))}
           </div>
         )}
       </section>
@@ -333,52 +248,37 @@ export default async function AdminBillingPage({
             No listed chains in this environment yet.
           </p>
         ) : (
-          <ul className="mt-4 divide-y divide-line rounded-card border border-line">
+          <div className="mt-4 space-y-4">
             {depositSweeps.map((row) => (
-              <li key={row.chainId} className="space-y-2 px-3 py-3">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="text-sm font-medium text-ink">{row.chainName}</p>
-                  <p className="text-xs text-ink-faint">
-                    {row.leftoverWallets} with leftover
-                    {row.failed > 0 ? ` · ${row.failed} unread` : ""}
-                  </p>
-                </div>
-                {row.assets.map((asset) => (
-                  <div
-                    key={asset.symbol}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <p className="text-sm text-ink-muted">{asset.symbol}</p>
-                    {asset.error ? (
-                      <p className="text-sm text-warning">{asset.error}</p>
-                    ) : (
-                      <p
-                        className={`text-sm tabular-nums ${
-                          asset.amount && asset.amount !== "0"
-                            ? "text-warning"
-                            : "text-ink"
-                        }`}
-                      >
-                        {asset.amount} {asset.symbol}
-                        {asset.amount && asset.amount !== "0"
-                          ? asset.symbol === "ETH"
-                            ? " leftover"
-                            : " yet to be swept"
-                          : ""}
-                      </p>
-                    )}
-                  </div>
-                ))}
-                <p className="text-xs text-ink-faint">
+              <WalletChainCard
+                key={row.chainId}
+                title={row.chainName}
+                detail={`${row.leftoverWallets} with leftover${
+                  row.failed > 0 ? ` · ${row.failed} unread` : ""
+                }`}
+              >
+                <WalletAssetRows
+                  assets={row.assets.map((asset) => ({
+                    ...asset,
+                    warn: Boolean(asset.amount && asset.amount !== "0"),
+                    note:
+                      asset.amount && asset.amount !== "0"
+                        ? asset.symbol === "ETH"
+                          ? "leftover"
+                          : "yet to be swept"
+                        : null,
+                  }))}
+                />
+                <p className="mt-2 text-xs text-ink-faint">
                   {row.creditedUnsweptCount === 0
                     ? "No credited deposits waiting on a sweep hash."
                     : `${row.creditedUnsweptCount} credited deposit${
                         row.creditedUnsweptCount === 1 ? "" : "s"
                       } still missing a sweep hash · ${formatUsd(row.creditedUnsweptUsd)}`}
                 </p>
-              </li>
+              </WalletChainCard>
             ))}
-          </ul>
+          </div>
         )}
       </section>
 
@@ -545,5 +445,91 @@ export default async function AdminBillingPage({
         );
       })}
     </div>
+  );
+}
+
+type WalletAssetRow = {
+  symbol: string;
+  amount: string | null;
+  error: string | null;
+  warn?: boolean;
+  note?: string | null;
+};
+
+function WalletChainCard({
+  title,
+  detail,
+  address,
+  explorerUrl,
+  empty,
+  children,
+}: {
+  title: string;
+  detail?: string;
+  address?: string | null;
+  explorerUrl?: string | null;
+  empty?: string | null;
+  children?: ReactNode;
+}) {
+  const explorer = address
+    ? gasExplorerAddressUrl(explorerUrl ?? null, address)
+    : null;
+  return (
+    <div className="rounded-card border border-line bg-surface-raised p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-sm font-medium text-ink">{title}</p>
+        {detail ? <p className="text-xs text-ink-faint">{detail}</p> : null}
+      </div>
+      {address ? (
+        <div className="mt-2 space-y-2">
+          <p className="break-all font-mono text-xs text-ink">{address}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <CopyTextButton text={address} label="Copy address" />
+            {explorer ? (
+              <a
+                href={explorer}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-accent hover:underline"
+              >
+                Explorer
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+      {empty ? <p className="mt-2 text-sm text-warning">{empty}</p> : null}
+      {children ? <div className="mt-2">{children}</div> : null}
+    </div>
+  );
+}
+
+function WalletAssetRows({ assets }: { assets: WalletAssetRow[] }) {
+  if (assets.length === 0) {
+    return null;
+  }
+  return (
+    <ul className="divide-y divide-line rounded-card border border-line">
+      {assets.map((asset) => (
+        <li
+          key={asset.symbol}
+          className="flex items-center justify-between gap-3 px-3 py-2"
+        >
+          <p className="text-sm text-ink-muted">{asset.symbol}</p>
+          <div className="text-right">
+            {asset.error ? (
+              <p className="text-sm text-warning">{asset.error}</p>
+            ) : (
+              <p
+                className={`text-sm tabular-nums ${asset.warn ? "text-warning" : "text-ink"}`}
+              >
+                {asset.amount} {asset.symbol}
+                {asset.note ? ` · ${asset.note}` : ""}
+              </p>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
