@@ -23,6 +23,8 @@ export function CheckoutPayment({
   creditUsd,
   stripeReady,
   publishableKey,
+  missingSecret,
+  missingPublishable,
   existingStripeSubscription,
 }: {
   planId: string;
@@ -33,6 +35,8 @@ export function CheckoutPayment({
   creditUsd: number;
   stripeReady: boolean;
   publishableKey: string;
+  missingSecret: boolean;
+  missingPublishable: boolean;
   existingStripeSubscription: boolean;
 }) {
   const [method, setMethod] = useState<BillingMethod>(selected ?? "stripe");
@@ -75,8 +79,11 @@ export function CheckoutPayment({
             <div>
               <h2 className="text-lg font-semibold tracking-tight">Card</h2>
               <p className="mt-2 text-sm text-warning">
-                Stripe is not configured. Add STRIPE_SECRET_KEY and
-                NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY on this environment.
+                {missingSecret && missingPublishable
+                  ? "This environment has no Stripe keys. Add STRIPE_SECRET_KEY (sk_test_) and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY (pk_test_) to .env.local, then restart next dev."
+                  : missingSecret
+                    ? "Missing STRIPE_SECRET_KEY (sk_test_) in .env.local. Restart next dev after adding it."
+                    : "Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY (pk_test_) in .env.local. Restart next dev after adding it."}
               </p>
             </div>
           ) : (

@@ -9,6 +9,7 @@ import { formatPlanPrice } from "@/lib/membership/catalog";
 import { parsePlanId } from "@/lib/membership/form";
 import { getMembershipPlan } from "@/lib/membership/store";
 import {
+  stripePublishableConfigured,
   stripePublishableKey,
   stripeSecretConfigured,
 } from "@/lib/membership/stripe";
@@ -84,6 +85,8 @@ export default async function AccountCheckoutPage({
           creditUsd={credit}
           stripeReady={stripeReady}
           publishableKey={stripePublishableKey()}
+          missingSecret={!stripeReady}
+          missingPublishable={!stripePublishableConfigured()}
           existingStripeSubscription={hasUsableStripeSubscription(billing)}
         />
       )}
