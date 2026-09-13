@@ -1774,6 +1774,45 @@ export async function archiveAffiliateCampaign(input: {
   return { ok: true };
 }
 
+export async function renameAffiliateLink(input: {
+  userId: string;
+  linkId: string;
+  name: unknown;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.linkId === AFFILIATE_SYSTEM_LINK_ID) {
+    return { ok: false, error: "The Default link cannot be renamed." };
+  }
+  const name = parseAffiliateLabel(
+    input.name,
+    AFFILIATE_LINK_NAME_MAX,
+    "Enter a link name (1–40 characters).",
+  );
+  if (!name.ok) {
+    return name;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { data, error } = await supabase
+    .from("membership_affiliate_links")
+    .update({ name: name.name })
+    .eq("id", input.linkId)
+    .eq("user_id", input.userId)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    if (schemaGap(error)) {
+      return { ok: false, error: "Custom links are not available yet." };
+    }
+    return { ok: false, error: error.message };
+  }
+  if (!data) {
+    return { ok: false, error: "That link was not found." };
+  }
+  return { ok: true };
+}
+
 export async function archiveAffiliateLink(input: {
   userId: string;
   linkId: string;

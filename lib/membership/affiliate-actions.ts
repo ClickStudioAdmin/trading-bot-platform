@@ -39,6 +39,7 @@ import {
   requestUsdtPayout,
   archiveAffiliateCampaign,
   archiveAffiliateLink,
+  renameAffiliateLink,
   attributeReferral,
   createAffiliateCampaign,
   createAffiliateLink,
@@ -475,4 +476,32 @@ export async function archiveAffiliateLinkAction(formData: FormData) {
   });
   revalidatePath(AFFILIATES_PATH);
   redirect(affiliatePortalPath("links", { saved: "link-archived" }));
+}
+
+export async function renameAffiliateLinkAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  const linkId = parseUuid(formData.get("linkId"));
+  if (!linkId) {
+    portalFail("That link was not found.", "links");
+  }
+  const renamed = await renameAffiliateLink({
+    userId: member.id,
+    linkId,
+    name: formData.get("name"),
+  });
+  if (!renamed.ok) {
+    portalFail(renamed.error, "links");
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.affiliate_link_renamed",
+    message: "Renamed an affiliate link",
+    userId: member.id,
+    data: { linkId },
+  });
+  revalidatePath(AFFILIATES_PATH);
+  redirect(affiliatePortalPath("links", { saved: "link-renamed" }));
 }

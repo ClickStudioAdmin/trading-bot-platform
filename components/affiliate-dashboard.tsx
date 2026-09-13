@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AffiliateArchiveButton } from "@/components/affiliate-archive-button";
+import { AffiliateLinkActions } from "@/components/affiliate-link-actions";
 import { AffiliateOrgChartFrame } from "@/components/affiliate-org-chart-frame";
 import { CopyTextButton } from "@/components/copy-text-button";
 import { PageHeading } from "@/components/page-heading";
@@ -118,6 +119,9 @@ export function AffiliateDashboard({
       ) : null}
       {saved === "link-archived" ? (
         <p className="mt-6 text-sm text-success">Link archived.</p>
+      ) : null}
+      {saved === "link-renamed" ? (
+        <p className="mt-6 text-sm text-success">Link renamed.</p>
       ) : null}
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -622,11 +626,11 @@ function AffiliateLinkRowView({
         {archived ? "Archived" : "Active"}
       </td>
       <td className="px-4 py-3">
-        {!archived && canArchiveAffiliateLink(link.kind) ? (
-          <AffiliateArchiveButton
-            kind="link"
+        {link.kind === "custom" ? (
+          <AffiliateLinkActions
             id={link.id}
             name={link.name}
+            canArchive={!archived && canArchiveAffiliateLink(link.kind)}
           />
         ) : (
           <span className="text-ink-faint">—</span>
