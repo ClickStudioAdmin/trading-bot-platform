@@ -8,7 +8,6 @@ import { getSessionMember } from "@/lib/auth/session";
 import {
   firstTouchReferralCode,
   parseAffiliatePortalTab,
-  referralShareUrl,
 } from "@/lib/membership/affiliate";
 import { readReferralCookie } from "@/lib/membership/affiliate-cookie";
 import { signUpAffiliateAction } from "@/lib/membership/affiliate-actions";
@@ -50,8 +49,6 @@ export default async function AffiliatesPage({
       headerStore.get("x-forwarded-host") ?? headerStore.get("host") ?? "";
     const proto = headerStore.get("x-forwarded-proto") ?? "http";
     const origin = host ? `${proto}://${host}` : "";
-    const shareUrl =
-      portal.code && origin ? referralShareUrl(origin, portal.code) : "";
     const [payouts, chains] = await Promise.all([
       listMemberPayouts(member.id),
       listBillingChains(),
@@ -61,7 +58,6 @@ export default async function AffiliatesPage({
         <div className="mx-auto max-w-7xl">
           <AffiliateDashboard
             portal={portal}
-            shareUrl={shareUrl}
             origin={origin}
             arrears={arrears}
             payouts={payouts}

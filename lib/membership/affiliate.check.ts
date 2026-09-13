@@ -11,7 +11,9 @@ import {
   parseAffiliateHoldDays,
   affiliateLandingLabel,
   affiliateLandingPath,
+  affiliateLinkKindLabel,
   affiliateLinkShareUrl,
+  affiliateRowShareUrl,
   affiliatePortalPath,
   generateAffiliateLinkSlug,
   parseAffiliateLanding,
@@ -172,6 +174,19 @@ assert.equal(affiliateLandingPath("affiliates"), "/affiliates");
 assert.equal(affiliateLandingLabel("home"), "Home page");
 assert.equal(
   affiliateLinkShareUrl("https://app.example", "AB12CD"),
+  "https://app.example/r/AB12CD",
+);
+assert.equal(affiliateLinkKindLabel("system"), "System");
+assert.equal(affiliateLinkKindLabel("custom"), "Custom");
+assert.equal(
+  affiliateRowShareUrl("https://app.example", { kind: "system", slug: "AB12" }),
+  "https://app.example/affiliates?ref=AB12",
+);
+assert.equal(
+  affiliateRowShareUrl("https://app.example", {
+    kind: "custom",
+    slug: "AB12CD",
+  }),
   "https://app.example/r/AB12CD",
 );
 assert.deepEqual(parseAffiliateLinkSlug("ab12cd"), {

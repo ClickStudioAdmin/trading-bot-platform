@@ -8,8 +8,9 @@ import {
   AFFILIATE_LANDINGS,
   AFFILIATE_LINK_NAME_MAX,
   affiliateLandingLabel,
-  affiliateLinkShareUrl,
+  affiliateLinkKindLabel,
   affiliatePortalPath,
+  affiliateRowShareUrl,
   monthJoinedLabel,
   withdrawDecision,
   type AffiliatePortalTab,
@@ -31,7 +32,6 @@ import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
 
 export function AffiliateDashboard({
   portal,
-  shareUrl,
   origin,
   arrears,
   payouts,
@@ -42,7 +42,6 @@ export function AffiliateDashboard({
   error,
 }: {
   portal: AffiliatePortal;
-  shareUrl: string;
   origin: string;
   arrears: boolean;
   payouts: PayoutRow[];
@@ -223,38 +222,6 @@ export function AffiliateDashboard({
                 </Link>
               )}
             </div>
-          </section>
-
-          <section className="mt-6 rounded-card border border-line bg-surface p-5">
-            <h2 className="text-lg font-semibold tracking-tight">Referral kit</h2>
-            {portal.code ? (
-              <>
-                <p className="mt-2 font-mono text-lg text-ink">{portal.code}</p>
-                {shareUrl ? (
-                  <p className="mt-1 break-all text-sm text-ink-muted">{shareUrl}</p>
-                ) : null}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <CopyTextButton text={portal.code} label="Copy code" />
-                  {shareUrl ? (
-                    <CopyTextButton text={shareUrl} label="Copy link" />
-                  ) : null}
-                </div>
-                <p className="mt-3 text-sm text-ink-muted">
-                  Create landing-page links and campaigns on the{" "}
-                  <Link
-                    href={affiliatePortalPath("links")}
-                    className="text-accent hover:text-accent-strong"
-                  >
-                    Links
-                  </Link>{" "}
-                  tab.
-                </p>
-              </>
-            ) : (
-              <p className="mt-2 text-sm text-ink-muted">
-                A referral code could not be created yet. Refresh and try again.
-              </p>
-            )}
           </section>
         </>
       ) : null}
@@ -452,9 +419,13 @@ export function AffiliateDashboard({
           </div>
           <section className="rounded-card border border-line bg-surface p-5">
             <h2 className="text-lg font-semibold tracking-tight">Your links</h2>
+            <p className="mt-2 text-sm text-ink-muted">
+              Default is your system link. It cannot be removed. Custom links
+              choose a landing page and can sit on a campaign.
+            </p>
             {portal.links.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">
-                No custom links yet. Create one to share a landing page.
+                A referral code could not be created yet. Refresh and try again.
               </p>
             ) : (
               <div className="mt-4 overflow-x-auto">
@@ -462,6 +433,7 @@ export function AffiliateDashboard({
                   <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
                     <tr>
                       <th className="pb-2 pr-4 font-medium">Name</th>
+                      <th className="pb-2 pr-4 font-medium">Type</th>
                       <th className="pb-2 pr-4 font-medium">Campaign</th>
                       <th className="pb-2 pr-4 font-medium">Landing</th>
                       <th className="pb-2 pr-4 font-medium">Link</th>
@@ -472,11 +444,16 @@ export function AffiliateDashboard({
                   <tbody className="divide-y divide-line">
                     {portal.links.map((link) => {
                       const url = origin
-                        ? affiliateLinkShareUrl(origin, link.slug)
-                        : `/r/${link.slug}`;
+                        ? affiliateRowShareUrl(origin, link)
+                        : link.kind === "system"
+                          ? `/affiliates?ref=${encodeURIComponent(link.slug)}`
+                          : `/r/${link.slug}`;
                       return (
                         <tr key={link.id}>
                           <td className="py-2 pr-4 text-ink">{link.name}</td>
+                          <td className="py-2 pr-4 text-ink-muted">
+                            {affiliateLinkKindLabel(link.kind)}
+                          </td>
                           <td className="py-2 pr-4 text-ink-muted">
                             {link.campaignName ?? "—"}
                           </td>
@@ -490,7 +467,15 @@ export function AffiliateDashboard({
                             {link.attributed}
                           </td>
                           <td className="py-2">
-                            <CopyTextButton text={url} label="Copy" />
+                            <div className="flex flex-wrap gap-2">
+                              <CopyTextButton text={url} label="Copy link" />
+                              {link.kind === "system" ? (
+                                <CopyTextButton
+                                  text={link.slug}
+                                  label="Copy code"
+                                />
+                              ) : null}
+                            </div>
                           </td>
                         </tr>
                       );

@@ -33,7 +33,10 @@ import {
   unpaidUsesProgramAffiliateRates,
   walkUpline,
   wouldCreateReferralCycle,
+  AFFILIATE_SYSTEM_LINK_ID,
+  AFFILIATE_SYSTEM_LINK_NAME,
   type AffiliateLanding,
+  type AffiliateLinkKind,
   type AffiliateProgramSettings,
   type CommissionStatus,
   type PayoutStatus,
@@ -117,6 +120,7 @@ export type AffiliateCampaignRow = {
 
 export type AffiliateLinkRow = {
   id: string;
+  kind: AffiliateLinkKind;
   campaignId: string | null;
   campaignName: string | null;
   slug: string;
@@ -1273,7 +1277,7 @@ export async function loadAffiliatePortal(
     tree: buildAffiliateTree(downline, children, userId),
     commissions,
     campaigns,
-    links,
+    links: withSystemAffiliateLink(code, downline, links),
     stats: {
       attributed: downline.length,
       paid,
@@ -1495,6 +1499,33 @@ export async function listAffiliateCampaigns(
   }));
 }
 
+function withSystemAffiliateLink(
+  code: string | null,
+  downline: DownlineRow[],
+  links: AffiliateLinkRow[],
+): AffiliateLinkRow[] {
+  if (!code) {
+    return links;
+  }
+  const attributed = downline.filter(
+    (row) => row.level === 1 && !row.linkId,
+  ).length;
+  return [
+    {
+      id: AFFILIATE_SYSTEM_LINK_ID,
+      kind: "system",
+      campaignId: null,
+      campaignName: null,
+      slug: code,
+      name: AFFILIATE_SYSTEM_LINK_NAME,
+      landing: "affiliates",
+      createdAt: "",
+      attributed,
+    },
+    ...links,
+  ];
+}
+
 export async function listAffiliateLinks(
   userId: string,
 ): Promise<AffiliateLinkRow[]> {
@@ -1533,6 +1564,7 @@ export async function listAffiliateLinks(
       const campaignId = optionalId(row.campaign_id);
       return {
         id: String(row.id),
+        kind: "custom" as const,
         campaignId,
         campaignName: campaignId ? (names.get(campaignId) ?? null) : null,
         slug: String(row.slug),

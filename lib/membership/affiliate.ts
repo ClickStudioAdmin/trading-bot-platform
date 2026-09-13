@@ -26,6 +26,10 @@ export const AFFILIATE_CAMPAIGN_MAX = 40;
 export const AFFILIATE_LINK_MAX = 80;
 export const AFFILIATE_LANDINGS = ["home", "affiliates"] as const;
 export type AffiliateLanding = (typeof AFFILIATE_LANDINGS)[number];
+export const AFFILIATE_LINK_KINDS = ["system", "custom"] as const;
+export type AffiliateLinkKind = (typeof AFFILIATE_LINK_KINDS)[number];
+export const AFFILIATE_SYSTEM_LINK_ID = "system";
+export const AFFILIATE_SYSTEM_LINK_NAME = "Default";
 
 export const PAYOUT_METHODS = ["export", "stripe_connect", "usdt"] as const;
 export type PayoutMethod = (typeof PAYOUT_METHODS)[number];
@@ -458,6 +462,19 @@ export function affiliateLandingLabel(landing: AffiliateLanding): string {
 export function affiliateLinkShareUrl(origin: string, slug: string): string {
   const base = origin.replace(/\/$/, "");
   return `${base}/r/${encodeURIComponent(slug)}`;
+}
+
+export function affiliateLinkKindLabel(kind: AffiliateLinkKind): string {
+  return kind === "system" ? "System" : "Custom";
+}
+
+export function affiliateRowShareUrl(
+  origin: string,
+  link: { kind: AffiliateLinkKind; slug: string },
+): string {
+  return link.kind === "system"
+    ? referralShareUrl(origin, link.slug)
+    : affiliateLinkShareUrl(origin, link.slug);
 }
 
 export function parseAffiliateLabel(
