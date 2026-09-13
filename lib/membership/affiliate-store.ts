@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
+  AFFILIATE_ALIAS_TAKEN,
   AFFILIATE_CAMPAIGN_MAX,
   AFFILIATE_CAMPAIGN_NAME_MAX,
   AFFILIATE_LINK_MAX,
@@ -1148,31 +1149,69 @@ async function memberLabels(
   if (!supabase) {
     return { labels, emails };
   }
-  const profiles = await selectInChunks(userIds, (chunk) =>
-    supabase.from("trader_profiles").select("user_id, alias").in("user_id", chunk),
-  );
-  const aliases = new Map(
-    profiles.map((row) => [String(row.user_id), String(row.alias)]),
-  );
-  for (const userId of userIds) {
-    const alias = aliases.get(userId)?.trim();
-    labels.set(userId, alias || "Member");
-  }
-  if (!showEmail) {
-    return { labels, emails };
-  }
   const members = await selectInChunks(userIds, (chunk) =>
-    supabase.from("members").select("user_id, email, plan_id").in("user_id", chunk),
+    supabase
+      .from("members")
+      .select("user_id, email, affiliate_alias")
+      .in("user_id", chunk),
   );
   for (const member of members) {
     const id = String(member.user_id);
-    const email = String(member.email);
-    emails.set(id, email);
-    if ((labels.get(id) ?? "Member") === "Member") {
-      labels.set(id, email);
+    const alias = String(member.affiliate_alias ?? "").trim();
+    labels.set(id, alias || "Member");
+    if (showEmail) {
+      emails.set(id, String(member.email));
+      if (!alias) {
+        labels.set(id, String(member.email));
+      }
+    }
+  }
+  for (const userId of userIds) {
+    if (!labels.has(userId)) {
+      labels.set(userId, "Member");
     }
   }
   return { labels, emails };
+}
+
+export async function loadAffiliateAlias(
+  userId: string,
+): Promise<string | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("members")
+    .select("affiliate_alias")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  const alias = String(data.affiliate_alias ?? "").trim();
+  return alias || null;
+}
+
+export async function saveAffiliateAlias(input: {
+  userId: string;
+  alias: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase
+    .from("members")
+    .update({ affiliate_alias: input.alias, updated_at: new Date().toISOString() })
+    .eq("user_id", input.userId);
+  if (error?.code === "23505") {
+    return { ok: false, error: AFFILIATE_ALIAS_TAKEN };
+  }
+  if (error) {
+    return { ok: false, error: "Could not save affiliate alias." };
+  }
+  return { ok: true };
 }
 
 async function memberPlans(

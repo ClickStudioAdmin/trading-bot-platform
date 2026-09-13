@@ -27,6 +27,7 @@ import {
   parsePayoutNetwork,
   parseProgramDefaultRates,
   withdrawDecision,
+  parseAffiliateAlias,
   type AffiliatePortalTab,
 } from "./affiliate";
 import { listAffiliatePayoutChains } from "./wallet-store";
@@ -50,10 +51,9 @@ import {
   createAffiliateLink,
   ensureReferralCode,
   findReferralCodeOwner,
+  saveAffiliateAlias,
   saveAffiliateSettings,
 } from "./affiliate-store";
-import { parseTraderAlias } from "@/lib/copy/model";
-import { loadTraderProfile, saveTraderProfile } from "@/lib/copy/profile";
 import { getDefaultMembershipPlan } from "./store";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
@@ -342,16 +342,13 @@ export async function saveAffiliateAliasAction(formData: FormData) {
   if (!member) {
     redirect("/sign-in");
   }
-  const parsed = parseTraderAlias(formData.get("alias"));
+  const parsed = parseAffiliateAlias(formData.get("alias"));
   if (!parsed.ok) {
     portalFail(parsed.error, "settings");
   }
-  const existing = await loadTraderProfile(member.id);
-  const saved = await saveTraderProfile({
+  const saved = await saveAffiliateAlias({
     userId: member.id,
     alias: parsed.alias,
-    bio: existing?.bio ?? null,
-    logoPath: existing?.logoPath ?? null,
   });
   if (!saved.ok) {
     portalFail(saved.error, "settings");
@@ -359,7 +356,7 @@ export async function saveAffiliateAliasAction(formData: FormData) {
   await writeEventLog({
     scope: "system",
     event: "membership.affiliate_alias",
-    message: "Saved affiliate profile alias",
+    message: "Saved affiliate alias",
     userId: member.id,
     data: { alias: parsed.alias },
   });

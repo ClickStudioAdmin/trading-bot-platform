@@ -9,6 +9,7 @@ import { CopyTextButton } from "@/components/copy-text-button";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
+  AFFILIATE_ALIAS_MAX,
   AFFILIATE_CAMPAIGN_NAME_MAX,
   AFFILIATE_LANDINGS,
   AFFILIATE_LINK_NAME_MAX,
@@ -41,7 +42,6 @@ import type {
   PayoutRow,
 } from "@/lib/membership/affiliate-store";
 import { formatCount, formatUsd } from "@/lib/membership/billing";
-import { TRADER_ALIAS_MAX } from "@/lib/copy/model";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import type { BillingChain } from "@/lib/membership/wallet-store";
 import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
@@ -143,7 +143,7 @@ export function AffiliateDashboard({
       ) : null}
       {saved === "alias" ? (
         <p className="mt-6 text-sm text-success">
-          Profile alias saved. Your network shows this name.
+          Affiliate alias saved. Your network shows this name.
         </p>
       ) : null}
       {saved === "joined" ? (
@@ -688,11 +688,12 @@ export function AffiliateDashboard({
         <div className="mt-6 space-y-5">
           <section className="rounded-card border border-line bg-surface p-5">
             <h2 className="text-lg font-semibold tracking-tight">
-              Profile alias
+              Affiliate alias
             </h2>
             <p className="mt-2 text-sm text-ink-muted">
-              Shown on your network instead of your real name. Other affiliates
-              see this, never your email.
+              Shown on your affiliate network instead of your real name. This is
+              not your trader alias — that stays on Account Settings for copy
+              trading.
             </p>
             <form action={saveAffiliateAliasAction} className="mt-4 space-y-3">
               <label className="block text-sm text-ink">
@@ -702,7 +703,7 @@ export function AffiliateDashboard({
                   defaultValue={profileAlias}
                   required
                   minLength={2}
-                  maxLength={TRADER_ALIAS_MAX}
+                  maxLength={AFFILIATE_ALIAS_MAX}
                   autoComplete="nickname"
                   className={BILLING_FIELD_CLASS}
                 />

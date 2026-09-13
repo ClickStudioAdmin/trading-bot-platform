@@ -251,7 +251,8 @@ export default async function AccountSettingsPage({
             <p className="text-sm text-ink">Trader profile</p>
             <p className="mt-1 text-xs text-ink-muted">
               Required before you share a desk. Other members see this alias
-              and logo, never your email.
+              and logo, never your email. This is not your affiliate alias —
+              that lives on Affiliates → Settings.
             </p>
           </div>
           <label className="block text-xs text-ink-muted">

@@ -20,6 +20,9 @@ export const REFERRAL_CODE_MAX = 32;
 export const REFERRAL_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export const AFFILIATE_LINK_SLUG_MIN = 6;
 export const AFFILIATE_LINK_SLUG_MAX = 16;
+export const AFFILIATE_ALIAS_MIN = 2;
+export const AFFILIATE_ALIAS_MAX = 32;
+export const AFFILIATE_ALIAS_TAKEN = "That affiliate alias is already taken.";
 export const AFFILIATE_CAMPAIGN_NAME_MAX = 40;
 export const AFFILIATE_LINK_NAME_MAX = 40;
 export const AFFILIATE_CAMPAIGN_MAX = 40;
@@ -683,6 +686,32 @@ export function parseAffiliateLabel(
     return { ok: false, error: emptyError };
   }
   return { ok: true, name };
+}
+
+export function parseAffiliateAlias(
+  value: unknown,
+): { ok: true; alias: string } | { ok: false; error: string } {
+  const alias = String(value ?? "").trim().replace(/\s+/g, " ");
+  if (!alias) {
+    return { ok: false, error: "Enter an affiliate alias." };
+  }
+  if (
+    alias.length < AFFILIATE_ALIAS_MIN ||
+    alias.length > AFFILIATE_ALIAS_MAX
+  ) {
+    return {
+      ok: false,
+      error: `Affiliate alias must be ${AFFILIATE_ALIAS_MIN} to ${AFFILIATE_ALIAS_MAX} characters.`,
+    };
+  }
+  if (!/^[A-Za-z][A-Za-z0-9_ -]*$/.test(alias)) {
+    return {
+      ok: false,
+      error:
+        "Use letters, numbers, spaces, underscore, or hyphen. Start with a letter.",
+    };
+  }
+  return { ok: true, alias };
 }
 
 export function parseAffiliateLinkSlug(

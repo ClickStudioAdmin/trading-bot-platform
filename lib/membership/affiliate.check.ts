@@ -42,6 +42,7 @@ import {
   parseAffiliatePortalPage,
   AFFILIATE_PORTAL_PAGE_SIZE,
   generateAffiliateLinkSlug,
+  parseAffiliateAlias,
   parseAffiliateLanding,
   parseAffiliateLabel,
   parseAffiliateLinkSlug,
@@ -633,6 +634,16 @@ assert.deepEqual(parseAffiliateLinkSlug("ab12cd"), {
 assert.equal(parseAffiliateLinkSlug("ab").ok, false);
 assert.equal(parseAffiliateLabel("Spring", 40, "Enter a name.").ok, true);
 assert.equal(parseAffiliateLabel("", 40, "Enter a name.").ok, false);
+assert.equal(parseAffiliateAlias("").ok, false);
+assert.equal(parseAffiliateAlias("a").ok, false);
+assert.equal(parseAffiliateAlias("1click").ok, false);
+assert.equal(parseAffiliateAlias("click!").ok, false);
+const affiliateAlias = parseAffiliateAlias(" Ava  Walker ");
+assert.equal(affiliateAlias.ok, true);
+if (affiliateAlias.ok) {
+  assert.equal(affiliateAlias.alias, "Ava Walker");
+}
+assert.equal(parseAffiliateAlias("x".repeat(33)).ok, false);
 assert.equal(generateAffiliateLinkSlug(Uint8Array.from([0, 1, 2, 3, 4, 5, 6, 7])).length, 8);
 
 console.log("membership affiliate checks passed");
