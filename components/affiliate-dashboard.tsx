@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { AffiliateArchiveButton } from "@/components/affiliate-archive-button";
+import { ColumnHint } from "@/components/column-hint";
 import { AffiliateLinkActions } from "@/components/affiliate-link-actions";
 import { AffiliatePayoutSettingsButton } from "@/components/affiliate-payout-settings";
 import { AffiliateOrgChartFrame } from "@/components/affiliate-org-chart-frame";
@@ -199,34 +200,42 @@ export function AffiliateDashboard({
             <StatTile
               label="Signups"
               value={formatCount(portal.stats.attributed)}
+              hint="People who joined through your referral, paid or not."
             />
             <StatTile
               label="Paid conversions"
               value={formatCount(portal.stats.paid)}
+              hint="Signups who have paid for a membership at least once."
             />
             <StatTile
               label="Conversion"
               value={`${portal.stats.conversionPct}%`}
+              hint="Paid conversions as a percent of signups."
             />
             <StatTile
               label="Referred MRR"
               value={formatUsd(portal.stats.referredMrrUsd)}
+              hint="What your paid downline pays the platform each month. Not your commission."
             />
             <StatTile
               label="Pending"
               value={formatUsd(portal.pendingUsd)}
+              hint="Your commission still on hold. It becomes payable after the hold, unless refunded."
             />
             <StatTile
               label="Payable"
               value={formatUsd(portal.payableUsd)}
+              hint="Commission past the hold that you can withdraw."
             />
             <StatTile
               label="Paid out"
               value={formatUsd(portal.paidOutUsd)}
+              hint="Commission already sent to your payout address."
             />
             <StatTile
               label="Earned (30d)"
               value={formatUsd(portal.stats.earnedPeriodUsd)}
+              hint="Commission credited to you in the last 30 days, including amounts still on hold."
             />
           </section>
 
@@ -971,11 +980,19 @@ function TabLink({
   );
 }
 
-function StatTile({ label, value }: { label: string; value: string }) {
+function StatTile({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+}) {
   return (
     <div className="rounded-card border border-line bg-surface p-4">
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-        {label}
+        <ColumnHint label={label} hint={hint} />
       </p>
       <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
         {value}
