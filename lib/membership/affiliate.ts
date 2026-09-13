@@ -728,6 +728,85 @@ export function affiliateDownlineRowHref(
   return `${affiliatePortalPagePath("network", page)}#downline-${userId}`;
 }
 
+export const AFFILIATE_ORG_ROOT_ID = "you";
+
+export type AffiliateOrgChartSource = {
+  userId: string;
+  label: string;
+  level: number;
+  paid: boolean;
+  children: AffiliateOrgChartSource[];
+};
+
+export type AffiliateOrgChartRow = {
+  id: string;
+  parentId: string | null;
+  label: string;
+  level: number;
+  paid: boolean;
+  childCount: number;
+};
+
+export function flattenAffiliateOrgChart(
+  nodes: readonly AffiliateOrgChartSource[],
+): AffiliateOrgChartRow[] {
+  const rows: AffiliateOrgChartRow[] = [
+    {
+      id: AFFILIATE_ORG_ROOT_ID,
+      parentId: null,
+      label: "You",
+      level: 0,
+      paid: true,
+      childCount: nodes.length,
+    },
+  ];
+  const walk = (node: AffiliateOrgChartSource, parentId: string) => {
+    rows.push({
+      id: node.userId,
+      parentId,
+      label: node.label,
+      level: node.level,
+      paid: node.paid,
+      childCount: node.children.length,
+    });
+    for (const child of node.children) {
+      walk(child, node.userId);
+    }
+  };
+  for (const node of nodes) {
+    walk(node, AFFILIATE_ORG_ROOT_ID);
+  }
+  return rows;
+}
+
+export function escapeHtmlText(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+export function affiliateOrgChartNodeHtml(
+  row: AffiliateOrgChartRow,
+  href: string | null,
+): string {
+  const label = escapeHtmlText(row.label);
+  const meta =
+    row.level === 0
+      ? "Your network"
+      : `L${row.level} · ${row.paid ? "paid" : "signup"}`;
+  const title = href
+    ? `<a href="${escapeHtmlText(href)}" style="color:#F4F6F8;text-decoration:none">${label}</a>`
+    : `<span style="color:#F4F6F8">${label}</span>`;
+  const border = row.level === 0 ? "#A78BFA" : "#2A313C";
+  return `<div style="box-sizing:border-box;height:100%;padding:10px 12px;border:1px solid ${border};border-radius:8px;background:#1C222C;font-size:14px;line-height:1.25">
+    <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</div>
+    <div style="margin-top:4px;color:#9AA3B2;font-size:12px">${meta}</div>
+  </div>`;
+}
+
 export type AffiliateStatSource = {
   attributed: number;
   paid: number;

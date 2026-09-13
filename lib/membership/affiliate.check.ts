@@ -18,7 +18,11 @@ import {
   affiliatePortalPath,
   affiliatePortalPagePath,
   affiliateDownlineRowHref,
+  affiliateOrgChartNodeHtml,
   affiliatePageLabel,
+  escapeHtmlText,
+  flattenAffiliateOrgChart,
+  AFFILIATE_ORG_ROOT_ID,
   affiliatePortalPageForIndex,
   paginateAffiliateList,
   parseAffiliatePortalPage,
@@ -299,6 +303,48 @@ assert.equal(
     })),
   ),
   "/affiliates?tab=network&page=2#downline-b",
+);
+{
+  const rows = flattenAffiliateOrgChart([
+    {
+      userId: "a",
+      label: "Ann",
+      level: 1,
+      paid: true,
+      children: [
+        {
+          userId: "b",
+          label: "Bob",
+          level: 2,
+          paid: false,
+          children: [],
+        },
+      ],
+    },
+  ]);
+  assert.equal(rows[0]?.id, AFFILIATE_ORG_ROOT_ID);
+  assert.equal(rows[0]?.parentId, null);
+  assert.equal(rows[0]?.childCount, 1);
+  assert.equal(rows[1]?.id, "a");
+  assert.equal(rows[1]?.parentId, AFFILIATE_ORG_ROOT_ID);
+  assert.equal(rows[2]?.id, "b");
+  assert.equal(rows[2]?.parentId, "a");
+  assert.equal(rows.length, 3);
+}
+assert.equal(escapeHtmlText(`<x & "y">`), "&lt;x &amp; &quot;y&quot;&gt;");
+assert.equal(
+  affiliateOrgChartNodeHtml(
+    {
+      id: "a",
+      parentId: "you",
+      label: "Ann <x>",
+      level: 1,
+      paid: true,
+      childCount: 0,
+    },
+    "/affiliates?tab=network#downline-a",
+  ).includes("Ann &lt;x&gt;"),
+  true,
 );
 assert.equal(parseAffiliateLanding("home").ok, true);
 assert.equal(parseAffiliateLanding("affiliates").ok, true);

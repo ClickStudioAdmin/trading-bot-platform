@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AffiliateOrgChart } from "@/components/affiliate-org-chart";
+import {
+  AffiliateOrgChart,
+  type AffiliateOrgChartApi,
+} from "@/components/affiliate-org-chart";
 import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
+
+const control =
+  "rounded-control border border-line px-3 py-1.5 text-xs text-ink hover:border-line-strong disabled:text-ink-faint disabled:hover:border-line";
 
 export function AffiliateOrgChartFrame({
   nodes,
@@ -14,6 +20,7 @@ export function AffiliateOrgChartFrame({
   const frameRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [monitor, setMonitor] = useState(false);
+  const [api, setApi] = useState<AffiliateOrgChartApi | null>(null);
 
   useEffect(() => {
     const onFullscreen = () => {
@@ -22,10 +29,14 @@ export function AffiliateOrgChartFrame({
       if (active) {
         setExpanded(true);
       }
+      window.setTimeout(() => {
+        api?.resize();
+        api?.fit();
+      }, 80);
     };
     document.addEventListener("fullscreenchange", onFullscreen);
     return () => document.removeEventListener("fullscreenchange", onFullscreen);
-  }, []);
+  }, [api]);
 
   useEffect(() => {
     if (!expanded) {
@@ -39,11 +50,15 @@ export function AffiliateOrgChartFrame({
       }
     };
     window.addEventListener("keydown", onKey);
+    window.setTimeout(() => {
+      api?.resize();
+      api?.fit();
+    }, 80);
     return () => {
       document.body.style.overflow = previous;
       window.removeEventListener("keydown", onKey);
     };
-  }, [expanded]);
+  }, [expanded, api]);
 
   async function enterMonitor() {
     const node = frameRef.current;
@@ -74,19 +89,64 @@ export function AffiliateOrgChartFrame({
       ref={frameRef}
       className={
         expanded
-          ? "fixed inset-0 z-50 flex flex-col bg-canvas p-6"
-          : "rounded-card border border-line bg-surface p-5"
+          ? "affiliate-org-chart-frame fixed inset-0 z-50 flex flex-col bg-canvas p-6"
+          : "affiliate-org-chart-frame rounded-card border border-line bg-surface p-5"
       }
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold tracking-tight">Org chart</h2>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Org chart</h2>
+          <p className="mt-1 text-xs text-ink-muted">
+            Drag to pan. Scroll to zoom. Use + on a node to expand that branch.
+          </p>
+        </div>
         {nodes.length > 0 ? (
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={control}
+              disabled={!api}
+              onClick={() => api?.expandAll()}
+            >
+              Expand all
+            </button>
+            <button
+              type="button"
+              className={control}
+              disabled={!api}
+              onClick={() => api?.collapseAll()}
+            >
+              Collapse all
+            </button>
+            <button
+              type="button"
+              className={control}
+              disabled={!api}
+              onClick={() => api?.fit()}
+            >
+              Fit
+            </button>
+            <button
+              type="button"
+              className={control}
+              disabled={!api}
+              onClick={() => api?.zoomOut()}
+            >
+              Zoom out
+            </button>
+            <button
+              type="button"
+              className={control}
+              disabled={!api}
+              onClick={() => api?.zoomIn()}
+            >
+              Zoom in
+            </button>
             {!expanded ? (
               <button
                 type="button"
+                className={control}
                 onClick={() => setExpanded(true)}
-                className="rounded-control border border-line px-3 py-1.5 text-xs text-ink hover:border-line-strong"
               >
                 Expand
               </button>
@@ -94,16 +154,16 @@ export function AffiliateOrgChartFrame({
             {monitor ? (
               <button
                 type="button"
+                className={control}
                 onClick={() => void exitMonitor()}
-                className="rounded-control border border-line px-3 py-1.5 text-xs text-ink hover:border-line-strong"
               >
                 Exit fullscreen
               </button>
             ) : (
               <button
                 type="button"
+                className={control}
                 onClick={() => void enterMonitor()}
-                className="rounded-control border border-line px-3 py-1.5 text-xs text-ink hover:border-line-strong"
               >
                 Fullscreen
               </button>
@@ -111,8 +171,8 @@ export function AffiliateOrgChartFrame({
             {expanded && !monitor ? (
               <button
                 type="button"
+                className={control}
                 onClick={() => void closeExpand()}
-                className="rounded-control border border-line px-3 py-1.5 text-xs text-ink hover:border-line-strong"
               >
                 Close
               </button>
@@ -128,11 +188,15 @@ export function AffiliateOrgChartFrame({
         <div
           className={
             expanded
-              ? "mt-4 min-h-0 flex-1 overflow-auto rounded-card border border-line bg-surface p-5 text-base"
-              : "mt-3"
+              ? "mt-4 min-h-0 flex-1 overflow-hidden rounded-card border border-line bg-canvas"
+              : "mt-3 h-80 overflow-hidden rounded-control border border-line bg-canvas"
           }
         >
-          <AffiliateOrgChart nodes={nodes} rowHref={rowHref} />
+          <AffiliateOrgChart
+            nodes={nodes}
+            rowHref={rowHref}
+            onReady={setApi}
+          />
         </div>
       )}
     </section>

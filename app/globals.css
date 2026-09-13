@@ -48,6 +48,26 @@ body {
   background: var(--color-canvas);
 }
 
+.affiliate-org-chart-frame:fullscreen,
+.affiliate-org-chart-frame:-webkit-full-screen {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  border-width: 0;
+  background: var(--color-canvas);
+  padding: 1.5rem;
+}
+
+.affiliate-org-chart {
+  background: var(--color-canvas);
+}
+
+.affiliate-org-chart svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 a[href],
 button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]) {
