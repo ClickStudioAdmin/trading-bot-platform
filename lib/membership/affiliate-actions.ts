@@ -381,7 +381,7 @@ export async function createAffiliateCampaignAction(formData: FormData) {
     name: formData.get("name"),
   });
   if (!created.ok) {
-    portalFail(created.error, "links");
+    portalFail(created.error, "campaigns");
   }
   await writeEventLog({
     scope: "system",
@@ -391,7 +391,7 @@ export async function createAffiliateCampaignAction(formData: FormData) {
     data: { campaignId: created.id },
   });
   revalidatePath(AFFILIATES_PATH);
-  redirect(affiliatePortalPath("links", { saved: "campaign" }));
+  redirect(affiliatePortalPath("campaigns", { saved: "campaign" }));
 }
 
 export async function createAffiliateLinkAction(formData: FormData) {
@@ -431,14 +431,14 @@ export async function archiveAffiliateCampaignAction(formData: FormData) {
   }
   const campaignId = parseUuid(formData.get("campaignId"));
   if (!campaignId) {
-    portalFail("Choose a campaign.", "links");
+    portalFail("Choose a campaign.", "campaigns");
   }
   const archived = await archiveAffiliateCampaign({
     userId: member.id,
     campaignId,
   });
   if (!archived.ok) {
-    portalFail(archived.error, "links");
+    portalFail(archived.error, "campaigns");
   }
   await writeEventLog({
     scope: "system",
@@ -448,7 +448,7 @@ export async function archiveAffiliateCampaignAction(formData: FormData) {
     data: { campaignId },
   });
   revalidatePath(AFFILIATES_PATH);
-  redirect(affiliatePortalPath("links", { saved: "campaign-archived" }));
+  redirect(affiliatePortalPath("campaigns", { saved: "campaign-archived" }));
 }
 
 export async function archiveAffiliateLinkAction(formData: FormData) {

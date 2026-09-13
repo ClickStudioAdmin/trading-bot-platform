@@ -512,8 +512,9 @@ export function parseAffiliateLinkSlug(
 export const AFFILIATE_PORTAL_TABS = [
   "overview",
   "network",
-  "referrals",
+  "campaigns",
   "links",
+  "referrals",
   "payouts",
 ] as const;
 export type AffiliatePortalTab = (typeof AFFILIATE_PORTAL_TABS)[number];

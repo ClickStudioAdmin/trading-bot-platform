@@ -25,6 +25,7 @@ import {
   upgradeAffiliateToPlatformAction,
 } from "@/lib/membership/affiliate-actions";
 import type {
+  AffiliateCampaignRow,
   AffiliateLinkRow,
   AffiliatePortal,
   PayoutRow,
@@ -88,11 +89,14 @@ export function AffiliateDashboard({
         <TabLink href={affiliatePortalPath("network")} selected={tab === "network"}>
           Network
         </TabLink>
-        <TabLink href={affiliatePortalPath("referrals")} selected={tab === "referrals"}>
-          Referrals
+        <TabLink href={affiliatePortalPath("campaigns")} selected={tab === "campaigns"}>
+          Campaigns
         </TabLink>
         <TabLink href={affiliatePortalPath("links")} selected={tab === "links"}>
           Links
+        </TabLink>
+        <TabLink href={affiliatePortalPath("referrals")} selected={tab === "referrals"}>
+          Referrals
         </TabLink>
         <TabLink href={affiliatePortalPath("payouts")} selected={tab === "payouts"}>
           Payouts
@@ -339,113 +343,99 @@ export function AffiliateDashboard({
         </section>
       ) : null}
 
+      {tab === "campaigns" ? (
+        <div className="mt-6 space-y-5">
+          <section className="rounded-card border border-line bg-surface p-5">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Create a campaign
+            </h2>
+            <form
+              action={createAffiliateCampaignAction}
+              className="mt-4 max-w-lg space-y-3"
+            >
+              <label className="block text-sm text-ink">
+                Name
+                <input
+                  name="name"
+                  required
+                  maxLength={AFFILIATE_CAMPAIGN_NAME_MAX}
+                  className={BILLING_FIELD_CLASS}
+                />
+              </label>
+              <PendingSubmitButton
+                pendingLabel="Creating…"
+                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+              >
+                Create campaign
+              </PendingSubmitButton>
+            </form>
+          </section>
+          <section>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Your campaigns
+            </h2>
+            {portal.campaigns.length === 0 &&
+            portal.archivedCampaigns.length === 0 ? (
+              <p className="mt-3 text-sm text-ink-muted">No campaigns yet.</p>
+            ) : (
+              <AffiliateCampaignsTable portal={portal} />
+            )}
+          </section>
+        </div>
+      ) : null}
+
       {tab === "links" ? (
         <div className="mt-6 space-y-5">
-          <div className="grid gap-5 lg:grid-cols-2">
-            <section className="rounded-card border border-line bg-surface p-5">
-              <h2 className="text-lg font-semibold tracking-tight">
-                Campaigns
-              </h2>
-              <form action={createAffiliateCampaignAction} className="mt-4 space-y-3">
-                <label className="block text-sm text-ink">
-                  Name
-                  <input
-                    name="name"
-                    required
-                    maxLength={AFFILIATE_CAMPAIGN_NAME_MAX}
-                    className={BILLING_FIELD_CLASS}
-                  />
-                </label>
-                <PendingSubmitButton
-                  pendingLabel="Creating…"
-                  className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          <section className="rounded-card border border-line bg-surface p-5">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Create a link
+            </h2>
+            <form
+              action={createAffiliateLinkAction}
+              className="mt-4 max-w-lg space-y-3"
+            >
+              <label className="block text-sm text-ink">
+                Name
+                <input
+                  name="name"
+                  required
+                  maxLength={AFFILIATE_LINK_NAME_MAX}
+                  className={BILLING_FIELD_CLASS}
+                />
+              </label>
+              <label className="block text-sm text-ink">
+                Landing page
+                <select
+                  name="landing"
+                  defaultValue="home"
+                  className={BILLING_FIELD_CLASS}
                 >
-                  Create campaign
-                </PendingSubmitButton>
-              </form>
-              {portal.campaigns.length === 0 &&
-              portal.archivedCampaigns.length === 0 ? (
-                <p className="mt-4 text-sm text-ink-muted">No campaigns yet.</p>
-              ) : (
-                <ul className="mt-4 divide-y divide-line text-sm">
-                  {portal.campaigns.map((campaign) => (
-                    <li
-                      key={campaign.id}
-                      className="flex items-center justify-between gap-3 py-2 text-ink"
-                    >
-                      <span>{campaign.name}</span>
-                      <AffiliateArchiveButton
-                        kind="campaign"
-                        id={campaign.id}
-                        name={campaign.name}
-                      />
-                    </li>
+                  {AFFILIATE_LANDINGS.map((landing) => (
+                    <option key={landing} value={landing}>
+                      {affiliateLandingLabel(landing)}
+                    </option>
                   ))}
-                </ul>
-              )}
-              {portal.archivedCampaigns.length > 0 ? (
-                <div className="mt-4 border-t border-line pt-4">
-                  <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                    Archived
-                  </p>
-                  <ul className="mt-2 divide-y divide-line text-sm text-ink-muted">
-                    {portal.archivedCampaigns.map((campaign) => (
-                      <li key={campaign.id} className="py-2">
-                        {campaign.name}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </section>
-            <section className="rounded-card border border-line bg-surface p-5">
-              <h2 className="text-lg font-semibold tracking-tight">
-                Create a link
-              </h2>
-              <form action={createAffiliateLinkAction} className="mt-4 space-y-3">
-                <label className="block text-sm text-ink">
-                  Name
-                  <input
-                    name="name"
-                    required
-                    maxLength={AFFILIATE_LINK_NAME_MAX}
-                    className={BILLING_FIELD_CLASS}
-                  />
-                </label>
-                <label className="block text-sm text-ink">
-                  Landing page
-                  <select
-                    name="landing"
-                    defaultValue="home"
-                    className={BILLING_FIELD_CLASS}
-                  >
-                    {AFFILIATE_LANDINGS.map((landing) => (
-                      <option key={landing} value={landing}>
-                        {affiliateLandingLabel(landing)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block text-sm text-ink">
-                  Campaign
-                  <select name="campaignId" defaultValue="" className={BILLING_FIELD_CLASS}>
-                    <option value="">No campaign</option>
-                    {portal.campaigns.map((campaign) => (
-                      <option key={campaign.id} value={campaign.id}>
-                        {campaign.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <PendingSubmitButton
-                  pendingLabel="Creating…"
-                  className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-                >
-                  Create link
-                </PendingSubmitButton>
-              </form>
-            </section>
-          </div>
+                </select>
+              </label>
+              <label className="block text-sm text-ink">
+                Campaign
+                <select name="campaignId" defaultValue="" className={BILLING_FIELD_CLASS}>
+                  <option value="">No campaign</option>
+                  {portal.campaigns.map((campaign) => (
+                    <option key={campaign.id} value={campaign.id}>
+                      {campaign.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <PendingSubmitButton
+                pendingLabel="Creating…"
+                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+              >
+                Create link
+              </PendingSubmitButton>
+            </form>
+          </section>
           <section>
             <h2 className="text-lg font-semibold tracking-tight">Your links</h2>
             {portal.links.length === 0 && portal.archivedLinks.length === 0 ? (
@@ -454,17 +444,28 @@ export function AffiliateDashboard({
               </p>
             ) : (
               <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
-                <table className="w-full min-w-[42rem] text-left text-sm">
+                <table className="w-full text-left text-sm">
                   <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
                     <tr>
-                      <th className="px-4 py-3 font-medium">Name</th>
-                      <th className="px-4 py-3 font-medium">Landing</th>
-                      <th className="px-4 py-3 font-medium">Campaign</th>
-                      <th className="px-4 py-3 font-medium">Link</th>
-                      <th className="px-4 py-3 font-medium">Type</th>
-                      <th className="px-4 py-3 font-medium">Signups</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium">Actions</th>
+                      <th className="px-4 py-3 font-medium whitespace-nowrap">
+                        Name
+                      </th>
+                      <th className="px-4 py-3 font-medium whitespace-nowrap">
+                        Landing
+                      </th>
+                      <th className="px-4 py-3 font-medium whitespace-nowrap">
+                        Campaign
+                      </th>
+                      <th className="w-64 px-4 py-3 font-medium">Link</th>
+                      <th className="px-4 py-3 font-medium whitespace-nowrap">
+                        Type
+                      </th>
+                      <th className="px-4 py-3 font-medium whitespace-nowrap">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 font-medium whitespace-nowrap">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -484,108 +485,209 @@ export function AffiliateDashboard({
       ) : null}
 
       {tab === "payouts" ? (
-        <section className="mt-6 rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Withdraw USDT
-          </h2>
-          <p className="mt-2 text-sm text-ink-muted">
-            Payable {formatUsd(portal.payableUsd)}. Minimum{" "}
-            {formatUsd(portal.settings.minPayoutUsd)}. Last payout{" "}
-            {portal.lastPayoutAt ? monthJoinedLabel(portal.lastPayoutAt) : "—"}.
-          </p>
-          {!withdraw.ok ? (
-            <p className="mt-3 text-sm text-warning">{withdraw.reason}</p>
-          ) : null}
-          {withdraw.ok && payoutChains.length === 0 ? (
-            <p className="mt-3 text-sm text-warning">
-              Affiliate payouts are not enabled on any chain yet. An admin can
-              tick this on Settings → Crypto.
+        <div className="mt-6 space-y-5">
+          <section className="rounded-card border border-line bg-surface p-5">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Withdraw USDT
+            </h2>
+            <p className="mt-2 text-sm text-ink-muted">
+              Payable {formatUsd(portal.payableUsd)}. Minimum{" "}
+              {formatUsd(portal.settings.minPayoutUsd)}. Last payout{" "}
+              {portal.lastPayoutAt ? monthJoinedLabel(portal.lastPayoutAt) : "—"}.
             </p>
-          ) : null}
-          <form action={requestAffiliatePayoutAction} className="mt-4 max-w-lg space-y-3">
-            <label className="block text-sm text-ink">
-              Chain
-              <select
-                name="network"
-                disabled={!canWithdraw}
-                className={BILLING_FIELD_CLASS}
-                defaultValue={payoutChains[0]?.slug ?? ""}
-              >
-                {payoutChains.map((chain) => (
-                  <option key={chain.id} value={chain.slug}>
-                    {chain.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block text-sm text-ink">
-              Address
-              <input
-                name="address"
-                disabled={!canWithdraw}
-                placeholder="0x…"
-                className={BILLING_FIELD_CLASS}
-              />
-            </label>
-            <PendingSubmitButton
-              pendingLabel="Requesting…"
-              disabled={!canWithdraw}
-              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:bg-accent-strong/40"
+            {!withdraw.ok ? (
+              <p className="mt-3 text-sm text-warning">{withdraw.reason}</p>
+            ) : null}
+            {withdraw.ok && payoutChains.length === 0 ? (
+              <p className="mt-3 text-sm text-warning">
+                Affiliate payouts are not enabled on any chain yet. An admin can
+                tick this on Settings → Crypto.
+              </p>
+            ) : null}
+            <form
+              action={requestAffiliatePayoutAction}
+              className="mt-4 flex flex-wrap items-end gap-3"
             >
-              Request withdraw
-            </PendingSubmitButton>
-          </form>
-
-          <h3 className="mt-8 text-lg font-semibold tracking-tight">Payouts</h3>
-          {payouts.length === 0 ? (
-            <p className="mt-3 text-sm text-ink-muted">No payouts yet.</p>
-          ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                  <tr>
-                    <th className="pb-2 pr-4 font-medium">Date</th>
-                    <th className="pb-2 pr-4 font-medium">Amount</th>
-                    <th className="pb-2 pr-4 font-medium">Status</th>
-                    <th className="pb-2 pr-4 font-medium">Chain</th>
-                    <th className="pb-2 pr-4 font-medium">Address</th>
-                    <th className="pb-2 font-medium">Paid</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {payouts.map((payout) => {
-                    const created = parseDisplayTime(payout.createdAt);
-                    const paid = parseDisplayTime(payout.paidAt);
-                    return (
-                      <tr key={payout.id}>
-                        <td className="py-2 pr-4 text-ink-muted">
-                          {created ? formatLocalDate(created) : "—"}
-                        </td>
-                        <td className="py-2 pr-4 tabular-nums text-ink">
-                          {formatUsd(payout.amountUsd)}
-                        </td>
-                        <td className="py-2 pr-4 capitalize text-ink-muted">
-                          {payout.status}
-                        </td>
-                        <td className="py-2 pr-4 text-ink">
-                          {payout.network ? chainName(payout.network) : "—"}
-                        </td>
-                        <td className="max-w-[12rem] truncate py-2 pr-4 font-mono text-xs text-ink-muted">
-                          {payout.address ?? "—"}
-                        </td>
-                        <td className="py-2 text-ink-muted">
-                          {paid ? formatLocalDate(paid) : "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+              <label className="w-48 shrink-0 text-sm text-ink">
+                Chain
+                <select
+                  name="network"
+                  disabled={!canWithdraw}
+                  className={BILLING_FIELD_CLASS}
+                  defaultValue={payoutChains[0]?.slug ?? ""}
+                >
+                  {payoutChains.map((chain) => (
+                    <option key={chain.id} value={chain.slug}>
+                      {chain.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="min-w-[16rem] flex-1 text-sm text-ink">
+                Address
+                <input
+                  name="address"
+                  disabled={!canWithdraw}
+                  placeholder="0x…"
+                  className={BILLING_FIELD_CLASS}
+                />
+              </label>
+              <PendingSubmitButton
+                pendingLabel="Requesting…"
+                disabled={!canWithdraw}
+                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:bg-accent-strong/40"
+              >
+                Request withdraw
+              </PendingSubmitButton>
+            </form>
+          </section>
+          <section>
+            <h2 className="text-lg font-semibold tracking-tight">Payouts</h2>
+            {payouts.length === 0 ? (
+              <p className="mt-3 text-sm text-ink-muted">No payouts yet.</p>
+            ) : (
+              <AffiliatePayoutsTable
+                payouts={payouts}
+                chainName={chainName}
+              />
+            )}
+          </section>
+        </div>
       ) : null}
     </div>
+  );
+}
+
+function AffiliatePayoutsTable({
+  payouts,
+  chainName,
+}: {
+  payouts: PayoutRow[];
+  chainName: (slug: string) => string;
+}) {
+  return (
+    <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
+      <table className="w-full text-left text-sm">
+        <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+          <tr>
+            <th className="px-4 py-3 font-medium whitespace-nowrap">Date</th>
+            <th className="px-4 py-3 font-medium whitespace-nowrap">Amount</th>
+            <th className="px-4 py-3 font-medium whitespace-nowrap">Status</th>
+            <th className="px-4 py-3 font-medium whitespace-nowrap">Chain</th>
+            <th className="px-4 py-3 font-medium">Address</th>
+            <th className="px-4 py-3 font-medium whitespace-nowrap">Paid</th>
+          </tr>
+        </thead>
+        <tbody>
+          {payouts.map((payout) => {
+            const created = parseDisplayTime(payout.createdAt);
+            const paid = parseDisplayTime(payout.paidAt);
+            return (
+              <tr
+                key={payout.id}
+                className="border-b border-line last:border-b-0"
+              >
+                <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
+                  {created ? formatLocalDate(created) : "—"}
+                </td>
+                <td className="px-4 py-3 tabular-nums whitespace-nowrap text-ink">
+                  {formatUsd(payout.amountUsd)}
+                </td>
+                <td className="px-4 py-3 capitalize whitespace-nowrap text-ink-muted">
+                  {payout.status}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-ink">
+                  {payout.network ? chainName(payout.network) : "—"}
+                </td>
+                <td className="max-w-64 truncate px-4 py-3 font-mono text-xs text-ink-muted">
+                  {payout.address ?? "—"}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
+                  {paid ? formatLocalDate(paid) : "—"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AffiliateCampaignsTable({ portal }: { portal: AffiliatePortal }) {
+  const links = [...portal.links, ...portal.archivedLinks];
+  return (
+    <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
+      <table className="w-full text-left text-sm">
+        <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
+          <tr>
+            <th className="px-4 py-3 font-medium whitespace-nowrap">Name</th>
+            <th className="px-4 py-3 font-medium whitespace-nowrap">Links</th>
+            <th className="px-4 py-3 font-medium whitespace-nowrap">
+              Signups
+            </th>
+            <th className="px-4 py-3 font-medium whitespace-nowrap">Status</th>
+            <th className="px-4 py-3 font-medium whitespace-nowrap">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {[...portal.campaigns, ...portal.archivedCampaigns].map((campaign) => (
+            <AffiliateCampaignRowView
+              key={campaign.id}
+              campaign={campaign}
+              linkCount={
+                links.filter((link) => link.campaignId === campaign.id).length
+              }
+              signups={
+                portal.downline.filter(
+                  (row) => row.level === 1 && row.campaignId === campaign.id,
+                ).length
+              }
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AffiliateCampaignRowView({
+  campaign,
+  linkCount,
+  signups,
+}: {
+  campaign: AffiliateCampaignRow;
+  linkCount: number;
+  signups: number;
+}) {
+  const archived = Boolean(campaign.archivedAt);
+  const muted = archived ? "text-ink-muted" : "text-ink";
+  return (
+    <tr className="border-b border-line last:border-b-0">
+      <td className={`px-4 py-3 whitespace-nowrap ${muted}`}>{campaign.name}</td>
+      <td className={`px-4 py-3 tabular-nums whitespace-nowrap ${muted}`}>
+        {linkCount}
+      </td>
+      <td className={`px-4 py-3 tabular-nums whitespace-nowrap ${muted}`}>
+        {signups}
+      </td>
+      <td className={`px-4 py-3 whitespace-nowrap ${muted}`}>
+        {archived ? "Archived" : "Active"}
+      </td>
+      <td className="px-4 py-3 whitespace-nowrap">
+        {archived ? (
+          <span className="text-ink-faint">—</span>
+        ) : (
+          <AffiliateArchiveButton
+            kind="campaign"
+            id={campaign.id}
+            name={campaign.name}
+          />
+        )}
+      </td>
+    </tr>
   );
 }
 
@@ -605,27 +707,32 @@ function AffiliateLinkRowView({
   const muted = archived ? "text-ink-muted" : "text-ink";
   return (
     <tr className="border-b border-line last:border-b-0">
-      <td className={`px-4 py-3 ${muted}`}>{link.name}</td>
-      <td className={`px-4 py-3 ${muted}`}>
+      <td className={`px-4 py-3 whitespace-nowrap ${muted}`}>{link.name}</td>
+      <td className={`px-4 py-3 whitespace-nowrap ${muted}`}>
         {affiliateLandingLabel(link.landing)}
       </td>
-      <td className="px-4 py-3 text-ink-muted">{link.campaignName ?? "—"}</td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
+        {link.campaignName ?? "—"}
+      </td>
+      <td className="w-64 max-w-64 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="min-w-0 truncate font-mono text-xs text-ink-muted">
-            {url}
-          </span>
-          <CopyTextButton text={url} label="Copy link" />
+          <input
+            readOnly
+            size={1}
+            value={url}
+            aria-label={`${link.name} share link`}
+            className="min-w-0 flex-1 truncate rounded-control border border-line bg-canvas px-2.5 py-1.5 font-mono text-xs text-ink-muted"
+          />
+          <CopyTextButton text={url} label="Copy" />
         </div>
       </td>
-      <td className="px-4 py-3 text-ink-muted">
+      <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
         {affiliateLinkKindLabel(link.kind)}
       </td>
-      <td className={`px-4 py-3 tabular-nums ${muted}`}>{link.attributed}</td>
-      <td className={`px-4 py-3 ${muted}`}>
+      <td className={`px-4 py-3 whitespace-nowrap ${muted}`}>
         {archived ? "Archived" : "Active"}
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 whitespace-nowrap">
         {link.kind === "custom" ? (
           <AffiliateLinkActions
             id={link.id}

@@ -157,15 +157,17 @@ assert.equal(
   "https://app.example/affiliates?ref=AB12",
 );
 assert.equal(parseAffiliatePortalTab("network"), "network");
+assert.equal(parseAffiliatePortalTab("campaigns"), "campaigns");
 assert.equal(parseAffiliatePortalTab("links"), "links");
+assert.equal(parseAffiliatePortalTab("referrals"), "referrals");
 assert.equal(parseAffiliatePortalTab("nope"), "overview");
 assert.equal(
   affiliatePortalPath("payouts", { saved: "withdraw" }),
   "/affiliates?tab=payouts&saved=withdraw",
 );
 assert.equal(
-  affiliatePortalPath("links", { saved: "campaign" }),
-  "/affiliates?tab=links&saved=campaign",
+  affiliatePortalPath("campaigns", { saved: "campaign" }),
+  "/affiliates?tab=campaigns&saved=campaign",
 );
 assert.equal(parseAffiliateLanding("home").ok, true);
 assert.equal(parseAffiliateLanding("affiliates").ok, true);
