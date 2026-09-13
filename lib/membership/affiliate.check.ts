@@ -23,16 +23,21 @@ import {
   parseAffiliatePortalTab,
   parseAffiliateMaxDepth,
   parseAffiliateMinPayout,
+  parseAutoPayoutUsd,
   parseOptionalReferralCode,
+  autoPayoutDecision,
   affiliateRateSource,
+  parsePayoutAmount,
   parsePayoutNetwork,
   parseProgramDefaultRates,
+  pickCommissionsForPayout,
   parseReferralCode,
   ratePctForLevel,
   referralShareUrl,
   resolveEarnDepth,
   unpaidUsesProgramAffiliateRates,
   walkUpline,
+  withdrawAmountDecision,
   withdrawDecision,
   wouldCreateReferralCycle,
 } from "./affiliate";
@@ -146,6 +151,84 @@ assert.equal(
     arrears: false,
     payableUsd: 49.99,
     minPayoutUsd: 50,
+  }).ok,
+  false,
+);
+assert.deepEqual(parsePayoutAmount("75.5"), { ok: true, amountUsd: 75.5 });
+assert.equal(parsePayoutAmount("").ok, false);
+assert.equal(
+  withdrawAmountDecision({
+    payableUsd: 120,
+    minPayoutUsd: 50,
+    amountUsd: 50,
+  }).ok,
+  true,
+);
+assert.equal(
+  withdrawAmountDecision({
+    payableUsd: 120,
+    minPayoutUsd: 50,
+    amountUsd: 49.99,
+  }).ok,
+  false,
+);
+assert.equal(
+  withdrawAmountDecision({
+    payableUsd: 120,
+    minPayoutUsd: 50,
+    amountUsd: 120.01,
+  }).ok,
+  false,
+);
+assert.deepEqual(
+  pickCommissionsForPayout(
+    [{ amountUsd: 40 }, { amountUsd: 40 }, { amountUsd: 40 }],
+    50,
+  ).map((row) => row.amountUsd),
+  [40, 40],
+);
+assert.deepEqual(
+  pickCommissionsForPayout(
+    [{ amountUsd: 40 }, { amountUsd: 40 }, { amountUsd: 40 }],
+    120,
+  ).map((row) => row.amountUsd),
+  [40, 40, 40],
+);
+assert.equal(parseAutoPayoutUsd("50", 50).ok, false);
+assert.deepEqual(parseAutoPayoutUsd("50.01", 50), { ok: true, usd: 50.01 });
+assert.equal(
+  autoPayoutDecision({
+    autoPayout: true,
+    autoPayoutUsd: 80,
+    minPayoutUsd: 50,
+    payableUsd: 80,
+    arrears: false,
+    address: "0xabc",
+    network: "arbitrum",
+  }).ok,
+  true,
+);
+assert.equal(
+  autoPayoutDecision({
+    autoPayout: true,
+    autoPayoutUsd: 80,
+    minPayoutUsd: 50,
+    payableUsd: 79.99,
+    arrears: false,
+    address: "0xabc",
+    network: "arbitrum",
+  }).ok,
+  false,
+);
+assert.equal(
+  autoPayoutDecision({
+    autoPayout: true,
+    autoPayoutUsd: 50,
+    minPayoutUsd: 50,
+    payableUsd: 80,
+    arrears: false,
+    address: "0xabc",
+    network: "arbitrum",
   }).ok,
   false,
 );

@@ -6,13 +6,16 @@ import {
   AFFILIATE_LINK_MAX,
   AFFILIATE_LINK_NAME_MAX,
   AFFILIATE_LINK_SLUG_MAX,
+  EMPTY_AFFILIATE_PAYOUT_SETTINGS,
   EMPTY_AFFILIATE_SETTINGS,
   affiliateRateKeyForLevel,
+  autoPayoutDecision,
   canCreateCommissionInvoice,
   commissionUsd,
   generateAffiliateLinkSlug,
   generateReferralCode,
   holdUntilIso,
+  pickCommissionsForPayout,
   parseAffiliateCookieDays,
   parseAffiliateHoldDays,
   parseAffiliateLabel,
@@ -37,6 +40,7 @@ import {
   AFFILIATE_SYSTEM_LINK_NAME,
   type AffiliateLanding,
   type AffiliateLinkKind,
+  type AffiliatePayoutSettings,
   type AffiliateProgramSettings,
   type CommissionStatus,
   type PayoutStatus,
@@ -156,6 +160,7 @@ export type AffiliatePortal = {
   archivedCampaigns: AffiliateCampaignRow[];
   links: AffiliateLinkRow[];
   archivedLinks: AffiliateLinkRow[];
+  payoutSettings: AffiliatePayoutSettings;
   stats: {
     attributed: number;
     paid: number;
@@ -624,6 +629,7 @@ export async function releaseDueCommissions(
     return { ok: false, error: error.message };
   }
   let released = 0;
+  const earners = new Set<string>();
   for (const row of data ?? []) {
     const id = String(row.id);
     const amountUsd = Number(row.amount_usd);
@@ -657,6 +663,10 @@ export async function releaseDueCommissions(
       return { ok: false, error: updateError.message };
     }
     released += 1;
+    earners.add(String(row.earner_user_id));
+  }
+  for (const earnerId of earners) {
+    await maybeAutoAffiliatePayout(earnerId);
   }
   return { ok: true, released };
 }
@@ -753,17 +763,26 @@ export async function requestUsdtPayout(input: {
   userId: string;
   network: string;
   address: string;
+  amountUsd: number;
 }): Promise<{ ok: true; payoutId: string } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
   const payable = await listPayableCommissions(input.userId);
-  const amountUsd = roundUsd(
+  const payableUsd = roundUsd(
     payable.reduce((sum, row) => sum + row.amountUsd, 0),
   );
-  if (amountUsd < 0.01) {
+  if (payableUsd < 0.01) {
     return { ok: false, error: "No payable earnings are ready to withdraw." };
+  }
+  const amountUsd = roundUsd(input.amountUsd);
+  const items = pickCommissionsForPayout(payable, amountUsd);
+  const allocated = roundUsd(
+    items.reduce((sum, row) => sum + row.amountUsd, 0),
+  );
+  if (allocated + 1e-9 < amountUsd) {
+    return { ok: false, error: "That amount is not available to withdraw." };
   }
   const { data, error } = await supabase
     .from("membership_payouts")
@@ -781,11 +800,11 @@ export async function requestUsdtPayout(input: {
     return { ok: false, error: error?.message ?? "Could not request payout." };
   }
   const payoutId = String(data.id);
-  if (payable.length > 0) {
+  if (items.length > 0) {
     const { error: itemError } = await supabase
       .from("membership_payout_items")
       .insert(
-        payable.map((row) => ({
+        items.map((row) => ({
           payout_id: payoutId,
           commission_id: row.id,
         })),
@@ -811,6 +830,92 @@ export async function requestUsdtPayout(input: {
     return { ok: false, error: walletError.message };
   }
   return { ok: true, payoutId };
+}
+
+export async function loadAffiliatePayoutSettings(
+  userId: string,
+): Promise<AffiliatePayoutSettings> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return EMPTY_AFFILIATE_PAYOUT_SETTINGS;
+  }
+  const { data, error } = await supabase
+    .from("membership_affiliate_payout_settings")
+    .select("network, address, auto_payout, auto_payout_usd")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) {
+    return EMPTY_AFFILIATE_PAYOUT_SETTINGS;
+  }
+  return {
+    network: typeof data.network === "string" ? data.network : null,
+    address: typeof data.address === "string" ? data.address : null,
+    autoPayout: data.auto_payout === true,
+    autoPayoutUsd:
+      data.auto_payout_usd != null && Number.isFinite(Number(data.auto_payout_usd))
+        ? Number(data.auto_payout_usd)
+        : null,
+  };
+}
+
+export async function saveAffiliatePayoutSettings(input: {
+  userId: string;
+  network: string;
+  address: string;
+  autoPayout: boolean;
+  autoPayoutUsd: number | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase.from("membership_affiliate_payout_settings").upsert({
+    user_id: input.userId,
+    network: input.network,
+    address: input.address,
+    auto_payout: input.autoPayout,
+    auto_payout_usd: input.autoPayoutUsd,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+export async function maybeAutoAffiliatePayout(
+  userId: string,
+): Promise<{ ok: true; payoutId?: string } | { ok: false; error: string }> {
+  const [saved, program, arrears, payable] = await Promise.all([
+    loadAffiliatePayoutSettings(userId),
+    loadAffiliateSettings(),
+    loadMemberArrears(userId),
+    listPayableCommissions(userId),
+  ]);
+  const payableUsd = roundUsd(
+    payable.reduce((sum, row) => sum + row.amountUsd, 0),
+  );
+  const decision = autoPayoutDecision({
+    autoPayout: saved.autoPayout,
+    autoPayoutUsd: saved.autoPayoutUsd,
+    minPayoutUsd: program.minPayoutUsd,
+    payableUsd,
+    arrears,
+    address: saved.address,
+    network: saved.network,
+  });
+  if (!decision.ok) {
+    return { ok: true };
+  }
+  if (!saved.network || !saved.address) {
+    return { ok: true };
+  }
+  return requestUsdtPayout({
+    userId,
+    network: saved.network,
+    address: saved.address,
+    amountUsd: decision.amountUsd,
+  });
 }
 
 async function loadPayout(
@@ -999,6 +1104,25 @@ export async function listPayouts(limit = 80): Promise<PayoutRow[]> {
   return rows.map((row) => ({ ...row, email: emails.get(row.userId) }));
 }
 
+const USER_ID_IN_CHUNK = 80;
+
+async function selectInChunks<T extends Record<string, unknown>>(
+  ids: string[],
+  query: (
+    chunk: string[],
+  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let i = 0; i < ids.length; i += USER_ID_IN_CHUNK) {
+    const { data, error } = await query(ids.slice(i, i + USER_ID_IN_CHUNK));
+    if (error) {
+      continue;
+    }
+    rows.push(...(data ?? []));
+  }
+  return rows;
+}
+
 async function memberLabels(
   userIds: string[],
   showEmail: boolean,
@@ -1012,12 +1136,16 @@ async function memberLabels(
   if (!supabase) {
     return { labels, emails };
   }
-  const [{ data: profiles }, { data: members }] = await Promise.all([
-    supabase.from("trader_profiles").select("user_id, alias").in("user_id", userIds),
-    supabase.from("members").select("user_id, email, plan_id").in("user_id", userIds),
+  const [profiles, members] = await Promise.all([
+    selectInChunks(userIds, (chunk) =>
+      supabase.from("trader_profiles").select("user_id, alias").in("user_id", chunk),
+    ),
+    selectInChunks(userIds, (chunk) =>
+      supabase.from("members").select("user_id, email, plan_id").in("user_id", chunk),
+    ),
   ]);
   const aliases = new Map(
-    (profiles ?? []).map((row) => [String(row.user_id), String(row.alias)]),
+    profiles.map((row) => [String(row.user_id), String(row.alias)]),
   );
   for (const member of members ?? []) {
     const id = String(member.user_id);
@@ -1050,11 +1178,10 @@ async function memberPlanPrices(
   const byId = new Map(
     (listed.ok ? listed.plans : []).map((plan) => [plan.id, plan.priceUsd]),
   );
-  const { data } = await supabase
-    .from("members")
-    .select("user_id, plan_id")
-    .in("user_id", userIds);
-  for (const row of data ?? []) {
+  const data = await selectInChunks(userIds, (chunk) =>
+    supabase.from("members").select("user_id, plan_id").in("user_id", chunk),
+  );
+  for (const row of data) {
     prices.set(String(row.user_id), byId.get(String(row.plan_id)) ?? 0);
   }
   return prices;
@@ -1202,9 +1329,10 @@ export async function loadAffiliatePortal(
 ): Promise<AffiliatePortal> {
   const settings = await loadAffiliateSettings();
   await releaseDueCommissions();
+  await maybeAutoAffiliatePayout(userId);
   const ensured = await ensureReferralCode(userId);
   const code = ensured.ok ? ensured.code : null;
-  const [downline, commissions, payouts, children, campaigns, links] =
+  const [downline, commissions, payouts, children, campaigns, links, payoutSettings] =
     await Promise.all([
       loadDownline(userId, false),
       listEarnerCommissions(userId),
@@ -1212,6 +1340,7 @@ export async function loadAffiliatePortal(
       downlineChildMap(),
       listAffiliateCampaigns(userId),
       listAffiliateLinks(userId),
+      loadAffiliatePayoutSettings(userId),
     ]);
   const pendingUsd = roundUsd(
     commissions
@@ -1288,6 +1417,7 @@ export async function loadAffiliatePortal(
       links.filter((row) => !row.archivedAt),
     ),
     archivedLinks: links.filter((row) => row.archivedAt),
+    payoutSettings,
     stats: {
       attributed: downline.length,
       paid,

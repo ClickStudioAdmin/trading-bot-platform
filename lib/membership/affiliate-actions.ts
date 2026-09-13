@@ -19,8 +19,11 @@ import {
   parseAffiliateHoldDays,
   parseAffiliateMaxDepth,
   parseAffiliateMinPayout,
+  parseAutoPayoutUsd,
   parseDowngradeGraceDays,
   parsePayoutAddress,
+  parsePayoutAmount,
+  withdrawAmountDecision,
   parsePayoutNetwork,
   parseProgramDefaultRates,
   withdrawDecision,
@@ -37,6 +40,8 @@ import {
   rejectPayout,
   releaseDueCommissions,
   requestUsdtPayout,
+  maybeAutoAffiliatePayout,
+  saveAffiliatePayoutSettings,
   archiveAffiliateCampaign,
   archiveAffiliateLink,
   renameAffiliateLink,
@@ -226,6 +231,10 @@ export async function requestAffiliatePayoutAction(formData: FormData) {
   if (!address.ok) {
     portalFail(address.error, "payouts");
   }
+  const amount = parsePayoutAmount(formData.get("amountUsd"));
+  if (!amount.ok) {
+    portalFail(amount.error, "payouts");
+  }
   const arrears = await loadMemberArrears(member.id);
   const payable = await listPayableCommissions(member.id);
   const payableUsd = payable.reduce((sum, row) => sum + row.amountUsd, 0);
@@ -237,10 +246,19 @@ export async function requestAffiliatePayoutAction(formData: FormData) {
   if (!allowed.ok) {
     portalFail(allowed.reason, "payouts");
   }
+  const amountOk = withdrawAmountDecision({
+    payableUsd,
+    minPayoutUsd: settings.minPayoutUsd,
+    amountUsd: amount.amountUsd,
+  });
+  if (!amountOk.ok) {
+    portalFail(amountOk.reason, "payouts");
+  }
   const requested = await requestUsdtPayout({
     userId: member.id,
     network: network.network,
     address: address.address,
+    amountUsd: amount.amountUsd,
   });
   if (!requested.ok) {
     portalFail(requested.error, "payouts");
@@ -250,12 +268,71 @@ export async function requestAffiliatePayoutAction(formData: FormData) {
     event: "membership.payout_requested",
     message: "Requested a USDT affiliate payout",
     userId: member.id,
-    data: { payoutId: requested.payoutId, network: network.network },
+    data: {
+      payoutId: requested.payoutId,
+      network: network.network,
+      amountUsd: amount.amountUsd,
+    },
   });
   revalidatePath(AFFILIATES_PATH);
   revalidatePath("/account/affiliates");
   revalidatePath("/admin/affiliates");
   redirect(affiliatePortalPath("payouts", { saved: "withdraw" }));
+}
+
+export async function saveAffiliatePayoutSettingsAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  const payoutChains = await listAffiliatePayoutChains();
+  const network = parsePayoutNetwork(
+    formData.get("network"),
+    payoutChains.map((chain) => chain.slug),
+  );
+  if (!network.ok) {
+    portalFail(network.error, "payouts");
+  }
+  const address = parsePayoutAddress(formData.get("address"));
+  if (!address.ok) {
+    portalFail(address.error, "payouts");
+  }
+  const autoPayout = String(formData.get("autoPayout") ?? "") === "1";
+  const settings = await loadAffiliateSettings();
+  let autoPayoutUsd: number | null = null;
+  if (autoPayout) {
+    const parsed = parseAutoPayoutUsd(
+      formData.get("autoPayoutUsd"),
+      settings.minPayoutUsd,
+    );
+    if (!parsed.ok) {
+      portalFail(parsed.error, "payouts");
+    }
+    autoPayoutUsd = parsed.usd;
+  }
+  const saved = await saveAffiliatePayoutSettings({
+    userId: member.id,
+    network: network.network,
+    address: address.address,
+    autoPayout,
+    autoPayoutUsd,
+  });
+  if (!saved.ok) {
+    portalFail(saved.error, "payouts");
+  }
+  if (autoPayout) {
+    await maybeAutoAffiliatePayout(member.id);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.payout_settings",
+    message: "Saved affiliate payout settings",
+    userId: member.id,
+    data: { network: network.network, autoPayout, autoPayoutUsd },
+  });
+  revalidatePath(AFFILIATES_PATH);
+  revalidatePath("/account/affiliates");
+  redirect(affiliatePortalPath("payouts", { saved: "payout-settings" }));
 }
 
 export async function signUpAffiliateAction(formData: FormData) {

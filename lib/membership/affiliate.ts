@@ -397,6 +397,121 @@ export function withdrawDecision(input: {
   return { ok: true };
 }
 
+export function parsePayoutAmount(
+  value: unknown,
+): { ok: true; amountUsd: number } | { ok: false; error: string } {
+  const raw = String(value ?? "").trim().replace(/[$,]/g, "");
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) {
+    return { ok: false, error: "Enter a withdraw amount." };
+  }
+  const amountUsd = roundUsd(n);
+  if (amountUsd < 0.01) {
+    return { ok: false, error: "Enter a withdraw amount." };
+  }
+  return { ok: true, amountUsd };
+}
+
+export function withdrawAmountDecision(input: {
+  payableUsd: number;
+  minPayoutUsd: number;
+  amountUsd: number;
+}): { ok: true } | { ok: false; reason: string } {
+  if (input.amountUsd + 1e-9 < input.minPayoutUsd) {
+    return {
+      ok: false,
+      reason: `Amount must be at least $${input.minPayoutUsd.toFixed(2)}.`,
+    };
+  }
+  if (input.amountUsd - 1e-9 > input.payableUsd) {
+    return {
+      ok: false,
+      reason: `Amount cannot exceed payable $${input.payableUsd.toFixed(2)}.`,
+    };
+  }
+  return { ok: true };
+}
+
+export function pickCommissionsForPayout<T extends { amountUsd: number }>(
+  rows: readonly T[],
+  amountUsd: number,
+): T[] {
+  const picked: T[] = [];
+  let sum = 0;
+  for (const row of rows) {
+    if (sum + 1e-9 >= amountUsd) {
+      break;
+    }
+    picked.push(row);
+    sum = roundUsd(sum + row.amountUsd);
+  }
+  return picked;
+}
+
+export type AffiliatePayoutSettings = {
+  network: string | null;
+  address: string | null;
+  autoPayout: boolean;
+  autoPayoutUsd: number | null;
+};
+
+export const EMPTY_AFFILIATE_PAYOUT_SETTINGS: AffiliatePayoutSettings = {
+  network: null,
+  address: null,
+  autoPayout: false,
+  autoPayoutUsd: null,
+};
+
+export function parseAutoPayoutUsd(
+  value: unknown,
+  minPayoutUsd: number,
+): { ok: true; usd: number } | { ok: false; error: string } {
+  const parsed = parsePayoutAmount(value);
+  if (!parsed.ok) {
+    return { ok: false, error: "Enter an auto payout amount." };
+  }
+  if (parsed.amountUsd <= minPayoutUsd + 1e-9) {
+    return {
+      ok: false,
+      error: `Auto payout must be more than the minimum $${minPayoutUsd.toFixed(2)}.`,
+    };
+  }
+  return { ok: true, usd: parsed.amountUsd };
+}
+
+export function autoPayoutDecision(input: {
+  autoPayout: boolean;
+  autoPayoutUsd: number | null;
+  minPayoutUsd: number;
+  payableUsd: number;
+  arrears: boolean;
+  address: string | null;
+  network: string | null;
+}): { ok: true; amountUsd: number } | { ok: false; reason: string } {
+  if (!input.autoPayout) {
+    return { ok: false, reason: "Auto payouts are off." };
+  }
+  if (input.arrears) {
+    return { ok: false, reason: "Pay outstanding invoices first." };
+  }
+  if (!input.address || !input.network) {
+    return { ok: false, reason: "Save a payout chain and address first." };
+  }
+  if (
+    input.autoPayoutUsd == null ||
+    input.autoPayoutUsd <= input.minPayoutUsd + 1e-9
+  ) {
+    return {
+      ok: false,
+      reason: `Auto payout must be more than $${input.minPayoutUsd.toFixed(2)}.`,
+    };
+  }
+  if (input.payableUsd + 1e-9 < input.autoPayoutUsd) {
+    return { ok: false, reason: "Payable is under the auto payout amount." };
+  }
+  return { ok: true, amountUsd: roundUsd(input.payableUsd) };
+}
+
 export function parsePayoutNetwork(
   value: unknown,
   allowed: readonly string[],

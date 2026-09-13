@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AffiliateArchiveButton } from "@/components/affiliate-archive-button";
 import { AffiliateLinkActions } from "@/components/affiliate-link-actions";
+import { AffiliatePayoutSettingsButton } from "@/components/affiliate-payout-settings";
 import { AffiliateOrgChartFrame } from "@/components/affiliate-org-chart-frame";
 import { CopyTextButton } from "@/components/copy-text-button";
 import { PageHeading } from "@/components/page-heading";
@@ -106,6 +107,9 @@ export function AffiliateDashboard({
         <p className="mt-6 text-sm text-success">
           Withdraw requested. Admin sends USDT and marks it paid.
         </p>
+      ) : null}
+      {saved === "payout-settings" ? (
+        <p className="mt-6 text-sm text-success">Payout settings saved.</p>
       ) : null}
       {saved === "joined" ? (
         <p className="mt-6 text-sm text-success">
@@ -351,9 +355,9 @@ export function AffiliateDashboard({
             </h2>
             <form
               action={createAffiliateCampaignAction}
-              className="mt-4 max-w-lg space-y-3"
+              className="mt-4 flex flex-wrap items-end gap-3"
             >
-              <label className="block text-sm text-ink">
+              <label className="min-w-[12rem] flex-1 text-sm text-ink">
                 Name
                 <input
                   name="name"
@@ -392,9 +396,9 @@ export function AffiliateDashboard({
             </h2>
             <form
               action={createAffiliateLinkAction}
-              className="mt-4 max-w-lg space-y-3"
+              className="mt-4 flex flex-wrap items-end gap-3"
             >
-              <label className="block text-sm text-ink">
+              <label className="min-w-[12rem] flex-1 text-sm text-ink">
                 Name
                 <input
                   name="name"
@@ -403,7 +407,7 @@ export function AffiliateDashboard({
                   className={BILLING_FIELD_CLASS}
                 />
               </label>
-              <label className="block text-sm text-ink">
+              <label className="w-44 shrink-0 text-sm text-ink">
                 Landing page
                 <select
                   name="landing"
@@ -417,7 +421,7 @@ export function AffiliateDashboard({
                   ))}
                 </select>
               </label>
-              <label className="block text-sm text-ink">
+              <label className="min-w-[12rem] flex-1 text-sm text-ink">
                 Campaign
                 <select name="campaignId" defaultValue="" className={BILLING_FIELD_CLASS}>
                   <option value="">No campaign</option>
@@ -456,7 +460,7 @@ export function AffiliateDashboard({
                       <th className="px-4 py-3 font-medium whitespace-nowrap">
                         Campaign
                       </th>
-                      <th className="w-64 px-4 py-3 font-medium">Link</th>
+                      <th className="px-4 py-3 font-medium">Link</th>
                       <th className="px-4 py-3 font-medium whitespace-nowrap">
                         Type
                       </th>
@@ -487,9 +491,19 @@ export function AffiliateDashboard({
       {tab === "payouts" ? (
         <div className="mt-6 space-y-5">
           <section className="rounded-card border border-line bg-surface p-5">
-            <h2 className="text-lg font-semibold tracking-tight">
-              Withdraw USDT
-            </h2>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <h2 className="text-lg font-semibold tracking-tight">
+                Withdraw USDT
+              </h2>
+              <AffiliatePayoutSettingsButton
+                settings={portal.payoutSettings}
+                minPayoutUsd={portal.settings.minPayoutUsd}
+                chains={payoutChains.map((chain) => ({
+                  slug: chain.slug,
+                  name: chain.name,
+                }))}
+              />
+            </div>
             <p className="mt-2 text-sm text-ink-muted">
               Payable {formatUsd(portal.payableUsd)}. Minimum{" "}
               {formatUsd(portal.settings.minPayoutUsd)}. Last payout{" "}
@@ -508,13 +522,15 @@ export function AffiliateDashboard({
               action={requestAffiliatePayoutAction}
               className="mt-4 flex flex-wrap items-end gap-3"
             >
-              <label className="w-48 shrink-0 text-sm text-ink">
+              <label className="w-44 shrink-0 text-sm text-ink">
                 Chain
                 <select
                   name="network"
                   disabled={!canWithdraw}
                   className={BILLING_FIELD_CLASS}
-                  defaultValue={payoutChains[0]?.slug ?? ""}
+                  defaultValue={
+                    portal.payoutSettings.network ?? payoutChains[0]?.slug ?? ""
+                  }
                 >
                   {payoutChains.map((chain) => (
                     <option key={chain.id} value={chain.slug}>
@@ -523,11 +539,26 @@ export function AffiliateDashboard({
                   ))}
                 </select>
               </label>
-              <label className="min-w-[16rem] flex-1 text-sm text-ink">
+              <label className="w-32 shrink-0 text-sm text-ink">
+                Amount
+                <input
+                  name="amountUsd"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min={portal.settings.minPayoutUsd}
+                  max={portal.payableUsd}
+                  disabled={!canWithdraw}
+                  placeholder="0.00"
+                  className={BILLING_FIELD_CLASS}
+                />
+              </label>
+              <label className="min-w-[12rem] flex-1 text-sm text-ink">
                 Address
                 <input
                   name="address"
                   disabled={!canWithdraw}
+                  defaultValue={portal.payoutSettings.address ?? ""}
                   placeholder="0x…"
                   className={BILLING_FIELD_CLASS}
                 />
@@ -714,16 +745,18 @@ function AffiliateLinkRowView({
       <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
         {link.campaignName ?? "—"}
       </td>
-      <td className="w-64 max-w-64 px-4 py-3">
-        <div className="flex min-w-0 items-center gap-2">
+      <td className="px-4 py-3">
+        <div className="flex flex-nowrap items-center gap-2">
           <input
             readOnly
             size={1}
             value={url}
             aria-label={`${link.name} share link`}
-            className="min-w-0 flex-1 truncate rounded-control border border-line bg-canvas px-2.5 py-1.5 font-mono text-xs text-ink-muted"
+            className="w-56 min-w-0 truncate rounded-control border border-line bg-canvas px-2.5 py-1.5 font-mono text-xs text-ink-muted"
           />
-          <CopyTextButton text={url} label="Copy" />
+          <span className="shrink-0">
+            <CopyTextButton text={url} label="Copy" />
+          </span>
         </div>
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
