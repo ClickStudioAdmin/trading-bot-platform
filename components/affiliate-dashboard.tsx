@@ -456,7 +456,7 @@ export function AffiliateDashboard({
               custom link or campaign to hide it from new use. Old /r/ URLs
               still work.
             </p>
-            {portal.links.length === 0 ? (
+            {portal.links.length === 0 && portal.archivedLinks.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">
                 A referral code could not be created yet. Refresh and try again.
               </p>
@@ -466,17 +466,16 @@ export function AffiliateDashboard({
                   <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
                     <tr>
                       <th className="pb-2 pr-4 font-medium">Name</th>
-                      <th className="pb-2 pr-4 font-medium">Type</th>
-                      <th className="pb-2 pr-4 font-medium">Campaign</th>
                       <th className="pb-2 pr-4 font-medium">Landing</th>
+                      <th className="pb-2 pr-4 font-medium">Campaign</th>
                       <th className="pb-2 pr-4 font-medium">Link</th>
-                      <th className="pb-2 pr-4 font-medium">Attributed</th>
-                      <th className="pb-2 pr-4 font-medium">Copy</th>
-                      <th className="pb-2 font-medium">Archive</th>
+                      <th className="pb-2 pr-4 font-medium">Type</th>
+                      <th className="pb-2 pr-4 font-medium">Status</th>
+                      <th className="pb-2 font-medium">Copy</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
-                    {portal.links.map((link) => (
+                    {[...portal.links, ...portal.archivedLinks].map((link) => (
                       <AffiliateLinkRowView
                         key={link.id}
                         link={link}
@@ -487,38 +486,6 @@ export function AffiliateDashboard({
                 </table>
               </div>
             )}
-            {portal.archivedLinks.length > 0 ? (
-              <div className="mt-6 border-t border-line pt-5">
-                <h3 className="text-sm font-semibold tracking-tight text-ink-muted">
-                  Archived
-                </h3>
-                <div className="mt-3 overflow-x-auto">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                      <tr>
-                        <th className="pb-2 pr-4 font-medium">Name</th>
-                        <th className="pb-2 pr-4 font-medium">Type</th>
-                        <th className="pb-2 pr-4 font-medium">Campaign</th>
-                        <th className="pb-2 pr-4 font-medium">Landing</th>
-                        <th className="pb-2 pr-4 font-medium">Link</th>
-                        <th className="pb-2 pr-4 font-medium">Attributed</th>
-                        <th className="pb-2 font-medium">Copy</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-line">
-                      {portal.archivedLinks.map((link) => (
-                        <AffiliateLinkRowView
-                          key={link.id}
-                          link={link}
-                          origin={origin}
-                          archived
-                        />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : null}
           </section>
         </div>
       ) : null}
@@ -632,12 +599,11 @@ export function AffiliateDashboard({
 function AffiliateLinkRowView({
   link,
   origin,
-  archived = false,
 }: {
   link: AffiliateLinkRow;
   origin: string;
-  archived?: boolean;
 }) {
+  const archived = Boolean(link.archivedAt);
   const url = origin
     ? affiliateRowShareUrl(origin, link)
     : link.kind === "system"
@@ -647,38 +613,33 @@ function AffiliateLinkRowView({
   return (
     <tr>
       <td className={`py-2 pr-4 ${muted}`}>{link.name}</td>
-      <td className="py-2 pr-4 text-ink-muted">
-        {affiliateLinkKindLabel(link.kind)}
-      </td>
-      <td className="py-2 pr-4 text-ink-muted">{link.campaignName ?? "—"}</td>
       <td className={`py-2 pr-4 ${muted}`}>
         {affiliateLandingLabel(link.landing)}
       </td>
+      <td className="py-2 pr-4 text-ink-muted">{link.campaignName ?? "—"}</td>
       <td className="max-w-[16rem] truncate py-2 pr-4 font-mono text-xs text-ink-muted">
         {url}
       </td>
-      <td className={`py-2 pr-4 tabular-nums ${muted}`}>{link.attributed}</td>
-      <td className="py-2 pr-4">
-        <div className="flex flex-wrap gap-2">
-          <CopyTextButton text={url} label="Copy link" />
-          {link.kind === "system" ? (
-            <CopyTextButton text={link.slug} label="Copy code" />
-          ) : null}
-        </div>
+      <td className="py-2 pr-4 text-ink-muted">
+        {affiliateLinkKindLabel(link.kind)}
       </td>
-      {archived ? null : (
-        <td className="py-2">
-          {canArchiveAffiliateLink(link.kind) ? (
+      <td className="py-2 pr-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={archived ? "text-ink-muted" : "text-ink"}>
+            {archived ? "Archived" : "Active"}
+          </span>
+          {!archived && canArchiveAffiliateLink(link.kind) ? (
             <AffiliateArchiveButton
               kind="link"
               id={link.id}
               name={link.name}
             />
-          ) : (
-            <span className="text-xs text-ink-faint">—</span>
-          )}
-        </td>
-      )}
+          ) : null}
+        </div>
+      </td>
+      <td className="py-2">
+        <CopyTextButton text={url} label="Copy link" />
+      </td>
     </tr>
   );
 }
