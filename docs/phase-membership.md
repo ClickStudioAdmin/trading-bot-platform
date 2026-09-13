@@ -8,7 +8,7 @@ The paying customer is the **login** (`members`). One subscription covers every 
 
 ## Status
 
-Steps 1–8 in repo 13 Sep 2026. Stripe cards + `/account/billing` + Checkout embed + two USD books + unique EVM deposit addresses + affiliate admin, portal, commissions, and payout queue. Develop is seeded with **Arbitrum Sepolia** + testnet USDT and watches **public RPCs** for now (Alchemy later). Encrypted **gas wallet** drips ETH onto a deposit address before sweep. Upgrade UX / gates are step 9. Downgrade grace is step 10. Push `develop` to migrate. Add `BILLING_CREDENTIALS_KEY` on Vercel Development / `.env.local`. Create the HD seed and gas wallet on `/admin/billing`, then fund the gas wallet with testnet ETH.
+Steps 1–8 in repo 13 Sep 2026. Stripe cards + `/account/billing` + Checkout embed + two USD books + unique EVM deposit addresses + affiliate admin, portal, commissions, and payout queue. Develop is seeded with **Arbitrum Sepolia** + testnet USDT and watches **public RPCs** for now (Alchemy later). Encrypted **gas wallet** drips ETH onto a deposit address before sweep. A develop-only John affiliate tree is a migration (`docs/john-affiliate-demo.md`); do not take those rows to production. Upgrade UX / gates are step 9. Downgrade grace is step 10. Push `develop` to migrate. Add `BILLING_CREDENTIALS_KEY` on Vercel Development / `.env.local`. Create the HD seed and gas wallet on `/admin/billing`, then fund the gas wallet with testnet ETH.
 
 ## Purpose
 
