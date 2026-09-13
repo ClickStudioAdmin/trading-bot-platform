@@ -26,6 +26,21 @@ export type AffiliateOrgChartApi = {
 
 type OrgChartState = {
   lastTransform: { x: number; y: number; k: number };
+  data?: {
+    id?: string;
+    _highlighted?: boolean;
+    _upToTheRootHighlighted?: boolean;
+    _centered?: boolean;
+    _centeredWithDescendants?: boolean;
+  }[];
+  allNodes?: {
+    data: {
+      _highlighted?: boolean;
+      _upToTheRootHighlighted?: boolean;
+      _centered?: boolean;
+      _centeredWithDescendants?: boolean;
+    };
+  }[];
   svg: {
     transition: () => {
       duration: (ms: number) => {
@@ -57,6 +72,7 @@ type OrgChartHandle = {
   nodeButtonY: (value: () => number) => OrgChartHandle;
   initialExpandLevel: (value: number) => OrgChartHandle;
   initialZoom: (value: number) => OrgChartHandle;
+  setActiveNodeCentered: (value: boolean) => OrgChartHandle;
   nodeContent: (
     value: (node: { data: Record<string, unknown> }) => string,
   ) => OrgChartHandle;
@@ -136,10 +152,31 @@ function applyChartHeight(chart: OrgChartHandle, host: HTMLElement) {
   }
 }
 
+function clearHighlightFlags(chart: OrgChartHandle) {
+  const state = chart.getChartState();
+  for (const row of state.data ?? []) {
+    row._highlighted = false;
+    row._upToTheRootHighlighted = false;
+    row._centered = false;
+    row._centeredWithDescendants = false;
+  }
+  for (const node of state.allNodes ?? []) {
+    node.data._highlighted = false;
+    node.data._upToTheRootHighlighted = false;
+    node.data._centered = false;
+    node.data._centeredWithDescendants = false;
+  }
+}
+
 function highlightPerson(chart: OrgChartHandle, id: string) {
-  chart.clearHighlighting();
+  clearHighlightFlags(chart);
   chart.setUpToTheRootHighlighted(id);
-  chart.setHighlighted(id);
+  const state = chart.getChartState();
+  const row = (state.data ?? []).find((item) => String(item.id) === id);
+  if (row) {
+    row._highlighted = true;
+    row._centered = false;
+  }
   chart.render();
 }
 
@@ -192,6 +229,7 @@ export function AffiliateOrgChart({
         .nodeButtonX(() => -14)
         .nodeButtonY(() => -8)
         .initialZoom(AFFILIATE_ORG_MIN_ZOOM)
+        .setActiveNodeCentered(false)
         .initialExpandLevel(2)
         .nodeContent((node) => {
           const row = node.data as {
@@ -264,7 +302,8 @@ export function AffiliateOrgChart({
           highlightPerson(next, id);
         },
         clearFind: () => {
-          next.clearHighlighting();
+          clearHighlightFlags(next);
+          next.render();
         },
         setLayout: (layout: AffiliateOrgLayout) => {
           next.layout(layout).render();
