@@ -342,9 +342,6 @@ export function AffiliateDashboard({
               <h2 className="text-lg font-semibold tracking-tight">
                 Campaigns
               </h2>
-              <p className="mt-2 text-sm text-ink-muted">
-                Group links so later stats can filter by campaign.
-              </p>
               <form action={createAffiliateCampaignAction} className="mt-4 space-y-3">
                 <label className="block text-sm text-ink">
                   Name
@@ -401,10 +398,6 @@ export function AffiliateDashboard({
               <h2 className="text-lg font-semibold tracking-tight">
                 Create a link
               </h2>
-              <p className="mt-2 text-sm text-ink-muted">
-                First-touch visitors land on the page you choose. Home or the
-                public affiliate page for now.
-              </p>
               <form action={createAffiliateLinkAction} className="mt-4 space-y-3">
                 <label className="block text-sm text-ink">
                   Name
@@ -449,32 +442,27 @@ export function AffiliateDashboard({
               </form>
             </section>
           </div>
-          <section className="rounded-card border border-line bg-surface p-5">
+          <section>
             <h2 className="text-lg font-semibold tracking-tight">Your links</h2>
-            <p className="mt-2 text-sm text-ink-muted">
-              Default is your system link. It cannot be archived. Archive a
-              custom link or campaign to hide it from new use. Old /r/ URLs
-              still work.
-            </p>
             {portal.links.length === 0 && portal.archivedLinks.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">
                 A referral code could not be created yet. Refresh and try again.
               </p>
             ) : (
-              <div className="mt-4 overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+              <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
+                <table className="w-full min-w-[42rem] text-left text-sm">
+                  <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
                     <tr>
-                      <th className="pb-2 pr-4 font-medium">Name</th>
-                      <th className="pb-2 pr-4 font-medium">Landing</th>
-                      <th className="pb-2 pr-4 font-medium">Campaign</th>
-                      <th className="pb-2 pr-4 font-medium">Link</th>
-                      <th className="pb-2 pr-4 font-medium">Type</th>
-                      <th className="pb-2 pr-4 font-medium">Status</th>
-                      <th className="pb-2 font-medium">Copy</th>
+                      <th className="px-4 py-3 font-medium">Name</th>
+                      <th className="px-4 py-3 font-medium">Landing</th>
+                      <th className="px-4 py-3 font-medium">Campaign</th>
+                      <th className="px-4 py-3 font-medium">Link</th>
+                      <th className="px-4 py-3 font-medium">Type</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Copy</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-line">
+                  <tbody>
                     {[...portal.links, ...portal.archivedLinks].map((link) => (
                       <AffiliateLinkRowView
                         key={link.id}
@@ -611,19 +599,19 @@ function AffiliateLinkRowView({
       : `/r/${link.slug}`;
   const muted = archived ? "text-ink-muted" : "text-ink";
   return (
-    <tr>
-      <td className={`py-2 pr-4 ${muted}`}>{link.name}</td>
-      <td className={`py-2 pr-4 ${muted}`}>
+    <tr className="border-b border-line last:border-b-0">
+      <td className={`px-4 py-3 ${muted}`}>{link.name}</td>
+      <td className={`px-4 py-3 ${muted}`}>
         {affiliateLandingLabel(link.landing)}
       </td>
-      <td className="py-2 pr-4 text-ink-muted">{link.campaignName ?? "—"}</td>
-      <td className="max-w-[16rem] truncate py-2 pr-4 font-mono text-xs text-ink-muted">
+      <td className="px-4 py-3 text-ink-muted">{link.campaignName ?? "—"}</td>
+      <td className="max-w-[16rem] truncate px-4 py-3 font-mono text-xs text-ink-muted">
         {url}
       </td>
-      <td className="py-2 pr-4 text-ink-muted">
+      <td className="px-4 py-3 text-ink-muted">
         {affiliateLinkKindLabel(link.kind)}
       </td>
-      <td className="py-2 pr-4">
+      <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className={archived ? "text-ink-muted" : "text-ink"}>
             {archived ? "Archived" : "Active"}
@@ -637,7 +625,7 @@ function AffiliateLinkRowView({
           ) : null}
         </div>
       </td>
-      <td className="py-2">
+      <td className="px-4 py-3">
         <CopyTextButton text={url} label="Copy link" />
       </td>
     </tr>
