@@ -647,6 +647,16 @@ export function parseAffiliatePortalPage(value: unknown): number {
   return Number.isFinite(page) && page > 0 ? page : 1;
 }
 
+export const AFFILIATE_NETWORK_VIEWS = ["list", "chart"] as const;
+export type AffiliateNetworkView = (typeof AFFILIATE_NETWORK_VIEWS)[number];
+
+export function parseAffiliateNetworkView(value: unknown): AffiliateNetworkView {
+  const raw = String(value ?? "").trim().toLowerCase();
+  return AFFILIATE_NETWORK_VIEWS.includes(raw as AffiliateNetworkView)
+    ? (raw as AffiliateNetworkView)
+    : "list";
+}
+
 export function paginateAffiliateList<T>(
   rows: readonly T[],
   page: number,
@@ -719,13 +729,23 @@ export function affiliatePortalPagePath(
   return affiliatePortalPath(tab, page > 1 ? { page: String(page) } : {});
 }
 
+export function affiliateNetworkPath(
+  view: AffiliateNetworkView = "list",
+  page = 1,
+): string {
+  return affiliatePortalPath("network", {
+    ...(view !== "list" ? { view } : {}),
+    ...(view === "list" && page > 1 ? { page: String(page) } : {}),
+  });
+}
+
 export function affiliateDownlineRowHref(
   userId: string,
   downline: readonly { userId: string }[],
 ): string {
   const index = downline.findIndex((row) => row.userId === userId);
   const page = affiliatePortalPageForIndex(index);
-  return `${affiliatePortalPagePath("network", page)}#downline-${userId}`;
+  return `${affiliateNetworkPath("list", page)}#downline-${userId}`;
 }
 
 export const AFFILIATE_ORG_ROOT_ID = "you";

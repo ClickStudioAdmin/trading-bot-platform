@@ -14,6 +14,7 @@ import {
   affiliateLandingLabel,
   affiliateLinkKindLabel,
   affiliatePageLabel,
+  affiliateNetworkPath,
   affiliatePortalPagePath,
   affiliatePortalPath,
   canArchiveAffiliateLink,
@@ -21,6 +22,7 @@ import {
   affiliateRowShareUrl,
   monthJoinedLabel,
   withdrawDecision,
+  type AffiliateNetworkView,
   type AffiliatePortalTab,
 } from "@/lib/membership/affiliate";
 import {
@@ -48,6 +50,7 @@ export function AffiliateDashboard({
   chains,
   platformMember,
   tab,
+  view,
   page,
   saved,
   error,
@@ -59,6 +62,7 @@ export function AffiliateDashboard({
   chains: BillingChain[];
   platformMember: boolean;
   tab: AffiliatePortalTab;
+  view: AffiliateNetworkView;
   page: number;
   saved: string | null;
   error: string | null;
@@ -272,49 +276,76 @@ export function AffiliateDashboard({
       ) : null}
 
       {tab === "network" ? (
-        <div className="mt-6 grid gap-5 lg:grid-cols-2">
-          <section className="rounded-card border border-line bg-surface p-5">
-            <h2 className="text-lg font-semibold tracking-tight">Downline</h2>
-            {portal.downline.length === 0 ? (
-              <p className="mt-2 text-sm text-ink-muted">No referrals yet.</p>
-            ) : (
-              <>
-                <div className="mt-4 overflow-x-auto">
-                  <table className="min-w-full text-left text-sm">
-                    <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                      <tr>
-                        <th className="pb-2 pr-4 font-medium">Affiliate</th>
-                        <th className="pb-2 pr-4 font-medium">Level</th>
-                        <th className="pb-2 pr-4 font-medium">Status</th>
-                        <th className="pb-2 font-medium">Joined</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-line">
-                      {downlinePage.rows.map((row) => (
-                        <tr key={row.userId} id={`downline-${row.userId}`}>
-                          <td className="py-2 pr-4 text-ink">{row.label}</td>
-                          <td className="py-2 pr-4 tabular-nums text-ink">
-                            L{row.level}
-                          </td>
-                          <td className="py-2 pr-4 text-ink-muted">
-                            {row.firstPaidAt ? "paid" : "signup"}
-                          </td>
-                          <td className="py-2 text-ink-muted">
-                            {monthJoinedLabel(row.attributedAt)}
-                          </td>
+        <div className="mt-6">
+          <div className="flex justify-end">
+            <div
+              role="tablist"
+              aria-label="Network view"
+              className="flex w-fit rounded-control border border-line bg-surface p-0.5"
+            >
+              <NetworkViewLink
+                href={affiliateNetworkPath("list", page)}
+                selected={view === "list"}
+              >
+                List
+              </NetworkViewLink>
+              <NetworkViewLink
+                href={affiliateNetworkPath("chart")}
+                selected={view === "chart"}
+              >
+                Chart
+              </NetworkViewLink>
+            </div>
+          </div>
+          {view === "chart" ? (
+            <div className="mt-4">
+              <AffiliateOrgChartFrame
+                nodes={portal.tree}
+                downline={portal.downline.map((row) => ({
+                  userId: row.userId,
+                }))}
+              />
+            </div>
+          ) : (
+            <section className="mt-4 rounded-card border border-line bg-surface p-5">
+              <h3 className="text-sm font-medium text-ink">Downline</h3>
+              {portal.downline.length === 0 ? (
+                <p className="mt-2 text-sm text-ink-muted">No referrals yet.</p>
+              ) : (
+                <>
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                        <tr>
+                          <th className="pb-2 pr-4 font-medium">Affiliate</th>
+                          <th className="pb-2 pr-4 font-medium">Level</th>
+                          <th className="pb-2 pr-4 font-medium">Status</th>
+                          <th className="pb-2 font-medium">Joined</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <AffiliateTablePager tab="network" list={downlinePage} />
-              </>
-            )}
-          </section>
-          <AffiliateOrgChartFrame
-            nodes={portal.tree}
-            downline={portal.downline.map((row) => ({ userId: row.userId }))}
-          />
+                      </thead>
+                      <tbody className="divide-y divide-line">
+                        {downlinePage.rows.map((row) => (
+                          <tr key={row.userId} id={`downline-${row.userId}`}>
+                            <td className="py-2 pr-4 text-ink">{row.label}</td>
+                            <td className="py-2 pr-4 tabular-nums text-ink">
+                              L{row.level}
+                            </td>
+                            <td className="py-2 pr-4 text-ink-muted">
+                              {row.firstPaidAt ? "paid" : "signup"}
+                            </td>
+                            <td className="py-2 text-ink-muted">
+                              {monthJoinedLabel(row.attributedAt)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <AffiliateTablePager tab="network" list={downlinePage} />
+                </>
+              )}
+            </section>
+          )}
         </div>
       ) : null}
 
@@ -873,6 +904,31 @@ function AffiliateTablePager({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function NetworkViewLink({
+  href,
+  selected,
+  children,
+}: {
+  href: string;
+  selected: boolean;
+  children: string;
+}) {
+  return (
+    <Link
+      href={href}
+      role="tab"
+      aria-selected={selected}
+      className={
+        selected
+          ? "rounded-control bg-surface-raised px-3 py-1.5 text-sm font-medium text-ink"
+          : "rounded-control px-3 py-1.5 text-sm text-ink-muted hover:text-ink"
+      }
+    >
+      {children}
+    </Link>
   );
 }
 

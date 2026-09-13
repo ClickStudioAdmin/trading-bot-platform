@@ -7,6 +7,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getSessionMember } from "@/lib/auth/session";
 import {
   firstTouchReferralCode,
+  parseAffiliateNetworkView,
   parseAffiliatePortalPage,
   parseAffiliatePortalTab,
 } from "@/lib/membership/affiliate";
@@ -37,6 +38,7 @@ export default async function AffiliatesPage({
   const saved = firstSearchValue(params.saved);
   const tab = parseAffiliatePortalTab(firstSearchValue(params.tab));
   const page = parseAffiliatePortalPage(firstSearchValue(params.page));
+  const view = parseAffiliateNetworkView(firstSearchValue(params.view));
   const referralCode =
     firstTouchReferralCode(
       await readReferralCookie(),
@@ -46,7 +48,8 @@ export default async function AffiliatesPage({
   if (member) {
     const arrears = await loadMemberArrears(member.id);
     const portal = await loadAffiliatePortal(member.id, {
-      includeTree: tab === "network",
+      includeTree: tab === "network" && view === "chart",
+      includeLabels: tab === "network",
     });
     const headerStore = await headers();
     const host =
@@ -68,6 +71,7 @@ export default async function AffiliatesPage({
             chains={chains}
             platformMember={member.platformMember}
             tab={tab}
+            view={view}
             page={page}
             saved={saved ?? null}
             error={error ?? null}

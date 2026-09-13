@@ -15,6 +15,7 @@ import {
   canArchiveAffiliateLink,
   affiliateLinkShareUrl,
   affiliateRowShareUrl,
+  affiliateNetworkPath,
   affiliatePortalPath,
   affiliatePortalPagePath,
   affiliateDownlineRowHref,
@@ -25,6 +26,7 @@ import {
   AFFILIATE_ORG_ROOT_ID,
   affiliatePortalPageForIndex,
   paginateAffiliateList,
+  parseAffiliateNetworkView,
   parseAffiliatePortalPage,
   AFFILIATE_PORTAL_PAGE_SIZE,
   generateAffiliateLinkSlug,
@@ -256,6 +258,19 @@ assert.equal(parseAffiliatePortalTab("campaigns"), "campaigns");
 assert.equal(parseAffiliatePortalTab("links"), "links");
 assert.equal(parseAffiliatePortalTab("referrals"), "referrals");
 assert.equal(parseAffiliatePortalTab("nope"), "overview");
+assert.equal(parseAffiliateNetworkView("chart"), "chart");
+assert.equal(parseAffiliateNetworkView("list"), "list");
+assert.equal(parseAffiliateNetworkView("nope"), "list");
+assert.equal(affiliateNetworkPath("list"), "/affiliates?tab=network");
+assert.equal(
+  affiliateNetworkPath("list", 2),
+  "/affiliates?tab=network&page=2",
+);
+assert.equal(affiliateNetworkPath("chart"), "/affiliates?tab=network&view=chart");
+assert.equal(
+  affiliateNetworkPath("chart", 3),
+  "/affiliates?tab=network&view=chart",
+);
 assert.equal(
   affiliatePortalPath("payouts", { saved: "withdraw" }),
   "/affiliates?tab=payouts&saved=withdraw",

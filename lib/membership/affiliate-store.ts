@@ -1376,7 +1376,7 @@ export function buildAffiliateTree(
 
 export async function loadAffiliatePortal(
   userId: string,
-  options: { includeTree?: boolean } = {},
+  options: { includeTree?: boolean; includeLabels?: boolean } = {},
 ): Promise<AffiliatePortal> {
   const settings = await loadAffiliateSettings();
   await releaseDueCommissions(Date.now(), userId);
@@ -1393,7 +1393,7 @@ export async function loadAffiliatePortal(
       loadAffiliatePayoutSettings(userId),
     ]);
   const downline = await applyDownlineMeta(graph.rows, false, {
-    includeLabels: options.includeTree,
+    includeLabels: options.includeLabels ?? options.includeTree,
   });
   const pendingUsd = roundUsd(
     commissions

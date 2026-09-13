@@ -191,7 +191,7 @@ export function AffiliateOrgChartFrame({
           className={
             expanded
               ? "mt-4 min-h-0 flex-1 overflow-hidden rounded-card border border-line bg-canvas"
-              : "mt-3 h-80 overflow-hidden rounded-control border border-line bg-canvas"
+              : "mt-3 h-[min(36rem,70vh)] overflow-hidden rounded-control border border-line bg-canvas"
           }
         >
           <AffiliateOrgChart
