@@ -5,9 +5,15 @@ import {
   DESK_SEARCH_HEADER,
   parseDeskQuery,
 } from "@/lib/accounts/model";
+import { parseOptionalReferralCode } from "@/lib/membership/affiliate";
+import {
+  REFERRAL_COOKIE,
+  referralCookieOptions,
+} from "@/lib/membership/affiliate-cookie";
+import { loadAffiliateCookieDays } from "@/lib/membership/affiliate-cookie-days";
 import { NextResponse, type NextRequest } from "next/server";
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(DESK_PATHNAME_HEADER, request.nextUrl.pathname);
   requestHeaders.set(
@@ -18,9 +24,33 @@ export function proxy(request: NextRequest) {
   if (desk) {
     requestHeaders.set(DESK_HEADER, desk);
   }
-  return NextResponse.next({
+  const response = NextResponse.next({
     request: { headers: requestHeaders },
   });
+  await captureFirstTouchReferral(request, response);
+  return response;
+}
+
+async function captureFirstTouchReferral(
+  request: NextRequest,
+  response: NextResponse,
+): Promise<void> {
+  if (request.cookies.get(REFERRAL_COOKIE)?.value) {
+    return;
+  }
+  const incoming = parseOptionalReferralCode(
+    request.nextUrl.searchParams.get("ref") ??
+      request.nextUrl.searchParams.get("referralCode"),
+  );
+  if (!incoming.ok || !incoming.code) {
+    return;
+  }
+  const days = await loadAffiliateCookieDays();
+  response.cookies.set(
+    REFERRAL_COOKIE,
+    incoming.code,
+    referralCookieOptions(days),
+  );
 }
 
 export const config = {

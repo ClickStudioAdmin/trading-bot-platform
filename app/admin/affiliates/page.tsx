@@ -5,23 +5,20 @@ import {
   approvePayoutAction,
   markPayoutPaidAction,
   rejectPayoutAction,
-  saveAffiliateSettingsAction,
 } from "@/lib/membership/affiliate-actions";
 import {
   findMemberByEmailOrCode,
   listPayouts,
-  loadAffiliateSettings,
   loadDownline,
   releaseDueCommissions,
 } from "@/lib/membership/affiliate-store";
 import { formatUsd } from "@/lib/membership/billing";
-import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { firstSearchValue } from "@/lib/paper/open";
 import { monthJoinedLabel } from "@/lib/membership/affiliate";
 
 export const metadata: Metadata = {
   title: "Affiliates",
-  description: "Affiliate program settings and payout queue.",
+  description: "Affiliate payout queue and downline lookup.",
 };
 
 export default async function AdminAffiliatesPage({
@@ -34,10 +31,7 @@ export default async function AdminAffiliatesPage({
   const error = firstSearchValue(params.error);
   const lookup = firstSearchValue(params.q) ?? "";
   await releaseDueCommissions();
-  const [settings, payouts] = await Promise.all([
-    loadAffiliateSettings(),
-    listPayouts(),
-  ]);
+  const payouts = await listPayouts();
   const found = lookup ? await findMemberByEmailOrCode(lookup) : null;
   const downline = found ? await loadDownline(found.userId, true) : [];
 
@@ -45,10 +39,9 @@ export default async function AdminAffiliatesPage({
     <div>
       <PageHeading overline="Admin" title="Affiliates" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Program knobs and the USDT withdraw queue. Default L1–L5 apply to
-        affiliates who are not platform members, and to unpaid members.
-        Platform members on a current plan use that plan’s rates. Allowed
-        withdraw chains are ticked on Settings → Crypto.
+        USDT withdraw queue and downline lookup. Program knobs live on
+        Settings → Affiliates. Allowed withdraw chains are ticked on
+        Settings → Crypto.
       </p>
       {saved ? (
         <p className="mt-6 text-sm text-success">
@@ -58,117 +51,14 @@ export default async function AdminAffiliatesPage({
               ? "Payout rejected."
               : saved === "paid"
                 ? "Payout marked paid."
-                : "Settings saved."}
+                : "Saved."}
         </p>
       ) : null}
       {error ? (
         <p className="mt-6 text-sm text-danger">{error}</p>
       ) : null}
 
-      <form
-        action={saveAffiliateSettingsAction}
-        className="mt-6 max-w-lg space-y-4 rounded-card border border-line bg-surface p-5"
-      >
-        <h2 className="text-lg font-semibold tracking-tight">Program</h2>
-        <label className="block text-sm text-ink">
-          Maximum depth
-          <input
-            type="number"
-            name="maxDepth"
-            min={1}
-            max={5}
-            required
-            defaultValue={settings.maxDepth}
-            className={BILLING_FIELD_CLASS}
-          />
-          <span className="mt-1 block text-xs text-ink-muted">
-            Default 2. Hard cap 5. A plan can earn fewer levels than this.
-          </span>
-        </label>
-        <label className="block text-sm text-ink">
-          Hold days
-          <input
-            type="number"
-            name="holdDays"
-            min={0}
-            required
-            defaultValue={settings.holdDays}
-            className={BILLING_FIELD_CLASS}
-          />
-          <span className="mt-1 block text-xs text-ink-muted">
-            Commission stays pending this many days. Refund in the hold voids
-            it. Use 0 while testing.
-          </span>
-        </label>
-        <label className="block text-sm text-ink">
-          Minimum payout (USD)
-          <input
-            type="number"
-            name="minPayoutUsd"
-            min={0}
-            step="0.01"
-            required
-            defaultValue={settings.minPayoutUsd}
-            className={BILLING_FIELD_CLASS}
-          />
-        </label>
-        <fieldset className="space-y-3">
-          <legend className="text-sm text-ink">Default affiliate rates</legend>
-          <p className="text-xs text-ink-muted">
-            For affiliates who are not platform users. L1–L5 cannot add up to
-            more than 100%.
-          </p>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-            {(
-              [
-                ["defaultL1Pct", "L1", settings.defaultL1Pct],
-                ["defaultL2Pct", "L2", settings.defaultL2Pct],
-                ["defaultL3Pct", "L3", settings.defaultL3Pct],
-                ["defaultL4Pct", "L4", settings.defaultL4Pct],
-                ["defaultL5Pct", "L5", settings.defaultL5Pct],
-              ] as const
-            ).map(([name, label, value]) => (
-              <label key={name} className="block text-sm text-ink">
-                {label}
-                <input
-                  type="number"
-                  name={name}
-                  min={0}
-                  max={100}
-                  step="0.01"
-                  required
-                  defaultValue={value}
-                  className={BILLING_FIELD_CLASS}
-                />
-              </label>
-            ))}
-          </div>
-        </fieldset>
-        <label className="block text-sm text-ink">
-          Downgrade grace days
-          <input
-            type="number"
-            name="downgradeGraceDays"
-            min={0}
-            required
-            defaultValue={settings.downgradeGraceDays}
-            className={BILLING_FIELD_CLASS}
-          />
-          <span className="mt-1 block text-xs text-ink-muted">
-            Saved now. Auto-exit after grace waits for the next membership
-            step.
-          </span>
-        </label>
-        <PendingSubmitButton
-          pendingLabel="Saving…"
-          successKey="save-affiliate-settings"
-          className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
-        >
-          Save settings
-        </PendingSubmitButton>
-      </form>
-
-      <section className="mt-8 rounded-card border border-line bg-surface p-5">
+      <section className="mt-6 rounded-card border border-line bg-surface p-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold tracking-tight">

@@ -45,19 +45,26 @@ export default async function AccountSettingsPage({
     firstSearchValue(params.tab) === "password" || saved === "password"
       ? "password"
       : "profile";
+  const showPlatformSettings = member.platformMember;
   const trader =
-    tab === "profile" ? await loadTraderProfile(member.id) : null;
+    tab === "profile" && showPlatformSettings
+      ? await loadTraderProfile(member.id)
+      : null;
   const invites =
-    tab === "profile" ? await loadInboundCopyInvites(member.id) : [];
+    tab === "profile" && showPlatformSettings
+      ? await loadInboundCopyInvites(member.id)
+      : [];
   const planId =
-    tab === "profile" ? await getMemberPlanId(member.id) : null;
+    tab === "profile" && showPlatformSettings
+      ? await getMemberPlanId(member.id)
+      : null;
   const plan =
     tab === "profile" && planId
       ? await getMembershipPlan(planId)
       : null;
   const planName = plan?.ok ? plan.plan.name : null;
   const paySubscriptionFromAffiliate =
-    tab === "profile"
+    tab === "profile" && showPlatformSettings
       ? await getMemberPaySubscriptionFromAffiliate(member.id)
       : false;
 
@@ -65,12 +72,18 @@ export default async function AccountSettingsPage({
     <div>
       <PageHeading title="Settings" />
       <p className="-mt-4 text-sm text-ink-muted">
-        Your desk login. Sub-accounts and exchange keys stay on their own
-        pages. Membership plans are on{" "}
-        <Link href="/account/plans" className="text-accent hover:text-accent-strong">
-          Plans
-        </Link>
-        .
+        {showPlatformSettings ? (
+          <>
+            Your desk login. Sub-accounts and exchange keys stay on their own
+            pages. Membership plans are on{" "}
+            <Link href="/account/plans" className="text-accent hover:text-accent-strong">
+              Plans
+            </Link>
+            .
+          </>
+        ) : (
+          <>Your affiliate login. Name and password live here.</>
+        )}
       </p>
       <nav
         aria-label="Settings"
@@ -179,41 +192,45 @@ export default async function AccountSettingsPage({
               Email is the login. An admin can change it from Members.
             </span>
           </label>
-          <label className="block text-xs text-ink-muted">
-            Plan
-            <input
-              value={planName ?? "—"}
-              readOnly
-              className={`${fieldClass} text-ink-muted`}
-            />
-            <span className="mt-1 block text-xs text-ink-faint">
-              Affiliate earning rates use this plan. Compare plans on{" "}
-              <Link href="/account/plans" className="text-accent">
-                Plans
-              </Link>
-              . Card and Crypto are on{" "}
-              <Link href="/account/billing" className="text-accent">
-                Billing
-              </Link>
-              .
-            </span>
-          </label>
-          <label className="flex items-start gap-2 text-sm text-ink">
-            <input
-              type="checkbox"
-              name="paySubscriptionFromAffiliate"
-              value="1"
-              defaultChecked={paySubscriptionFromAffiliate}
-              className="mt-0.5"
-            />
-            <span>
-              Deduct Plan Payment from Earnings
-              <span className="mt-1 block text-xs text-ink-faint">
-                Payable earnings only. Pending commissions cannot be used.
-                Your upline still earns commission on that payment.
-              </span>
-            </span>
-          </label>
+          {showPlatformSettings ? (
+            <>
+              <label className="block text-xs text-ink-muted">
+                Plan
+                <input
+                  value={planName ?? "—"}
+                  readOnly
+                  className={`${fieldClass} text-ink-muted`}
+                />
+                <span className="mt-1 block text-xs text-ink-faint">
+                  Affiliate earning rates use this plan. Compare plans on{" "}
+                  <Link href="/account/plans" className="text-accent">
+                    Plans
+                  </Link>
+                  . Card and Crypto are on{" "}
+                  <Link href="/account/billing" className="text-accent">
+                    Billing
+                  </Link>
+                  .
+                </span>
+              </label>
+              <label className="flex items-start gap-2 text-sm text-ink">
+                <input
+                  type="checkbox"
+                  name="paySubscriptionFromAffiliate"
+                  value="1"
+                  defaultChecked={paySubscriptionFromAffiliate}
+                  className="mt-0.5"
+                />
+                <span>
+                  Deduct Plan Payment from Earnings
+                  <span className="mt-1 block text-xs text-ink-faint">
+                    Payable earnings only. Pending commissions cannot be used.
+                    Your upline still earns commission on that payment.
+                  </span>
+                </span>
+              </label>
+            </>
+          ) : null}
           <div>
             <PendingSubmitButton
               pendingLabel="Saving…"
@@ -224,6 +241,8 @@ export default async function AccountSettingsPage({
             </PendingSubmitButton>
           </div>
         </form>
+        {showPlatformSettings ? (
+        <>
         <form
           action={saveTraderProfileAction}
           className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
@@ -311,6 +330,8 @@ export default async function AccountSettingsPage({
               ))}
             </ul>
           </section>
+        ) : null}
+        </>
         ) : null}
         </>
       )}

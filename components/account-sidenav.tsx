@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { DeskMark, DeskTypeMark } from "@/components/desk-mark";
 import { SiteLogo } from "@/components/site-logo";
-import { ACCOUNT_DESK_LINKS } from "@/lib/site-links";
 import { rememberTradingAccount } from "@/lib/accounts/actions";
 import {
   DESK_QUERY,
@@ -21,11 +20,15 @@ import {
   type DeskType,
   type TradingAccount,
 } from "@/lib/accounts/model";
+import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
+import { ACCOUNT_DESK_LINKS, AFFILIATE_ONLY_LINKS } from "@/lib/site-links";
 
 export function AccountSidenav({
   desks,
+  platformMember,
 }: {
   desks: TradingAccount[];
+  platformMember: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -39,28 +42,35 @@ export function AccountSidenav({
   return (
     <aside className="sticky top-0 z-20 flex h-dvh w-72 shrink-0 flex-col overflow-y-auto border-r border-line bg-surface px-4 py-6">
       <div className="mb-6">
-        <SiteLogo linked={false} />
+        <SiteLogo
+          linked={!platformMember}
+          href={platformMember ? "/" : AFFILIATES_PATH}
+        />
       </div>
       <NavGroup
         label="Account"
         ariaLabel="Account"
-        links={ACCOUNT_DESK_LINKS}
+        links={platformMember ? ACCOUNT_DESK_LINKS : AFFILIATE_ONLY_LINKS}
         pathname={pathname}
       />
-      <DeskGroup
-        className="mt-5"
-        label="Automated desks"
-        types={AUTOMATED_DESK_TYPES}
-        desks={desks}
-        currentDeskId={currentDeskId}
-        createDeskType={createDeskType}
-      />
-      <ManualDeskGroup
-        className="mt-5"
-        desks={desks.filter((desk) => desk.deskType === "perps")}
-        currentDeskId={currentDeskId}
-        creating={createDeskType === "perps"}
-      />
+      {platformMember ? (
+        <>
+          <DeskGroup
+            className="mt-5"
+            label="Automated desks"
+            types={AUTOMATED_DESK_TYPES}
+            desks={desks}
+            currentDeskId={currentDeskId}
+            createDeskType={createDeskType}
+          />
+          <ManualDeskGroup
+            className="mt-5"
+            desks={desks.filter((desk) => desk.deskType === "perps")}
+            currentDeskId={currentDeskId}
+            creating={createDeskType === "perps"}
+          />
+        </>
+      ) : null}
     </aside>
   );
 }

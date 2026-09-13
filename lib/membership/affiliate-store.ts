@@ -1,13 +1,23 @@
 import { randomBytes } from "node:crypto";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
+  AFFILIATE_CAMPAIGN_MAX,
+  AFFILIATE_CAMPAIGN_NAME_MAX,
+  AFFILIATE_LINK_MAX,
+  AFFILIATE_LINK_NAME_MAX,
+  AFFILIATE_LINK_SLUG_MAX,
   EMPTY_AFFILIATE_SETTINGS,
   affiliateRateKeyForLevel,
   canCreateCommissionInvoice,
   commissionUsd,
+  generateAffiliateLinkSlug,
   generateReferralCode,
   holdUntilIso,
+  parseAffiliateCookieDays,
   parseAffiliateHoldDays,
+  parseAffiliateLabel,
+  parseAffiliateLanding,
+  parseAffiliateLinkSlug,
   parseAffiliateMaxDepth,
   parseAffiliateMinPayout,
   parseCommissionStatus,
@@ -23,6 +33,7 @@ import {
   unpaidUsesProgramAffiliateRates,
   walkUpline,
   wouldCreateReferralCycle,
+  type AffiliateLanding,
   type AffiliateProgramSettings,
   type CommissionStatus,
   type PayoutStatus,
@@ -32,6 +43,7 @@ import {
   getMembershipPlan,
   listMembershipPlans,
 } from "./store";
+import { rememberAffiliateCookieDays } from "./affiliate-cookie-days";
 import { roundUsd } from "./wallet";
 
 export type ReferralRecord = {
@@ -48,6 +60,8 @@ export type CommissionRow = {
   sourceUserId: string;
   invoiceId: string;
   ratePlanId: string | null;
+  campaignId: string | null;
+  linkId: string | null;
   level: number;
   ratePct: number;
   amountUsd: number;
@@ -78,6 +92,8 @@ export type DownlineRow = {
   attributedAt: string;
   firstPaidAt: string | null;
   planPriceUsd: number;
+  campaignId: string | null;
+  linkId: string | null;
 };
 
 export type AffiliateRateRow = {
@@ -93,6 +109,32 @@ export type AffiliateRateCard = {
   rows: AffiliateRateRow[];
 };
 
+export type AffiliateCampaignRow = {
+  id: string;
+  name: string;
+  createdAt: string;
+};
+
+export type AffiliateLinkRow = {
+  id: string;
+  campaignId: string | null;
+  campaignName: string | null;
+  slug: string;
+  name: string;
+  landing: AffiliateLanding;
+  createdAt: string;
+  attributed: number;
+};
+
+export type PublicAffiliateLink = {
+  id: string;
+  userId: string;
+  campaignId: string | null;
+  slug: string;
+  landing: AffiliateLanding;
+  code: string;
+};
+
 export type AffiliatePortal = {
   code: string | null;
   settings: AffiliateProgramSettings;
@@ -104,6 +146,8 @@ export type AffiliatePortal = {
   downline: DownlineRow[];
   tree: AffiliateTreeNode[];
   commissions: CommissionRow[];
+  campaigns: AffiliateCampaignRow[];
+  links: AffiliateLinkRow[];
   stats: {
     attributed: number;
     paid: number;
@@ -124,11 +168,24 @@ export type AffiliateTreeNode = {
   children: AffiliateTreeNode[];
 };
 
+function schemaGap(error: { code?: string; message?: string }): boolean {
+  return (
+    error.code === "42P01" ||
+    error.code === "42703" ||
+    /does not exist/i.test(error.message ?? "")
+  );
+}
+
+function optionalId(value: unknown): string | null {
+  return typeof value === "string" && value ? value : null;
+}
+
 function mapSettings(row: Record<string, unknown>): AffiliateProgramSettings {
   const depth = parseAffiliateMaxDepth(row.affiliate_max_depth);
   const hold = parseAffiliateHoldDays(row.affiliate_hold_days);
   const min = parseAffiliateMinPayout(row.affiliate_min_payout_usd);
   const grace = parseDowngradeGraceDays(row.downgrade_grace_days);
+  const cookie = parseAffiliateCookieDays(row.affiliate_cookie_days);
   const l1 = parseAffiliateRatePct(row.affiliate_default_l1_pct);
   const l2 = parseAffiliateRatePct(row.affiliate_default_l2_pct);
   const l3 = parseAffiliateRatePct(row.affiliate_default_l3_pct);
@@ -145,6 +202,7 @@ function mapSettings(row: Record<string, unknown>): AffiliateProgramSettings {
     downgradeGraceDays: grace.ok
       ? grace.days
       : EMPTY_AFFILIATE_SETTINGS.downgradeGraceDays,
+    cookieDays: cookie.ok ? cookie.days : EMPTY_AFFILIATE_SETTINGS.cookieDays,
     defaultL1Pct: l1.ok ? l1.pct : EMPTY_AFFILIATE_SETTINGS.defaultL1Pct,
     defaultL2Pct: l2.ok ? l2.pct : EMPTY_AFFILIATE_SETTINGS.defaultL2Pct,
     defaultL3Pct: l3.ok ? l3.pct : EMPTY_AFFILIATE_SETTINGS.defaultL3Pct,
@@ -155,7 +213,8 @@ function mapSettings(row: Record<string, unknown>): AffiliateProgramSettings {
 
 const SETTINGS_COLUMNS =
   "affiliate_max_depth, affiliate_hold_days, affiliate_min_payout_usd, affiliate_payout_coin, downgrade_grace_days";
-const SETTINGS_COLUMNS_FULL = `${SETTINGS_COLUMNS}, affiliate_default_l1_pct, affiliate_default_l2_pct, affiliate_default_l3_pct, affiliate_default_l4_pct, affiliate_default_l5_pct`;
+const SETTINGS_COLUMNS_RATES = `${SETTINGS_COLUMNS}, affiliate_default_l1_pct, affiliate_default_l2_pct, affiliate_default_l3_pct, affiliate_default_l4_pct, affiliate_default_l5_pct`;
+const SETTINGS_COLUMNS_FULL = `${SETTINGS_COLUMNS_RATES}, affiliate_cookie_days`;
 
 export async function loadAffiliateSettings(): Promise<AffiliateProgramSettings> {
   const supabase = createServiceClient();
@@ -168,7 +227,15 @@ export async function loadAffiliateSettings(): Promise<AffiliateProgramSettings>
     .eq("id", "tbp")
     .maybeSingle();
   if (!full.error && full.data) {
-    return mapSettings(full.data as Record<string, unknown>);
+    return rememberSettings(mapSettings(full.data as Record<string, unknown>));
+  }
+  const rates = await supabase
+    .from("platform_settings")
+    .select(SETTINGS_COLUMNS_RATES)
+    .eq("id", "tbp")
+    .maybeSingle();
+  if (!rates.error && rates.data) {
+    return rememberSettings(mapSettings(rates.data as Record<string, unknown>));
   }
   const core = await supabase
     .from("platform_settings")
@@ -178,7 +245,14 @@ export async function loadAffiliateSettings(): Promise<AffiliateProgramSettings>
   if (core.error || !core.data) {
     return EMPTY_AFFILIATE_SETTINGS;
   }
-  return mapSettings(core.data as Record<string, unknown>);
+  return rememberSettings(mapSettings(core.data as Record<string, unknown>));
+}
+
+function rememberSettings(
+  settings: AffiliateProgramSettings,
+): AffiliateProgramSettings {
+  rememberAffiliateCookieDays(settings.cookieDays);
+  return settings;
 }
 
 export async function saveAffiliateSettings(
@@ -195,6 +269,7 @@ export async function saveAffiliateSettings(
     affiliate_min_payout_usd: input.minPayoutUsd,
     affiliate_payout_coin: input.payoutCoin,
     downgrade_grace_days: input.downgradeGraceDays,
+    affiliate_cookie_days: input.cookieDays,
     affiliate_default_l1_pct: input.defaultL1Pct,
     affiliate_default_l2_pct: input.defaultL2Pct,
     affiliate_default_l3_pct: input.defaultL3Pct,
@@ -203,18 +278,25 @@ export async function saveAffiliateSettings(
     updated_at: new Date().toISOString(),
   };
   let { error } = await supabase.from("platform_settings").upsert(row);
+  if (error && String(error.message).includes("affiliate_cookie_days")) {
+    delete row.affiliate_cookie_days;
+    const retryCookie = await supabase.from("platform_settings").upsert(row);
+    error = retryCookie.error;
+  }
   if (error) {
     delete row.affiliate_default_l1_pct;
     delete row.affiliate_default_l2_pct;
     delete row.affiliate_default_l3_pct;
     delete row.affiliate_default_l4_pct;
     delete row.affiliate_default_l5_pct;
+    delete row.affiliate_cookie_days;
     const retry = await supabase.from("platform_settings").upsert(row);
     error = retry.error;
   }
   if (error) {
     return { ok: false, error: "Could not save affiliate settings." };
   }
+  rememberAffiliateCookieDays(input.cookieDays);
   return { ok: true };
 }
 
@@ -299,6 +381,7 @@ async function listReferralHops(): Promise<
 export async function attributeReferral(input: {
   userId: string;
   code: string;
+  linkSlug?: string | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const owner = await findReferralCodeOwner(input.code);
   if (!owner) {
@@ -323,11 +406,25 @@ export async function attributeReferral(input: {
   if (wouldCreateReferralCycle(hops, input.userId, owner.userId)) {
     return { ok: false, error: "That referral would create a cycle." };
   }
-  const { error } = await supabase.from("membership_referrals").insert({
+  const link = input.linkSlug
+    ? await findOwnedAffiliateLink(owner.userId, input.linkSlug)
+    : null;
+  const payload: Record<string, unknown> = {
     user_id: input.userId,
     referrer_user_id: owner.userId,
     code: owner.code,
-  });
+  };
+  if (link) {
+    payload.campaign_id = link.campaignId;
+    payload.link_id = link.id;
+  }
+  let { error } = await supabase.from("membership_referrals").insert(payload);
+  if (error && schemaGap(error) && link) {
+    delete payload.campaign_id;
+    delete payload.link_id;
+    const retry = await supabase.from("membership_referrals").insert(payload);
+    error = retry.error;
+  }
   if (error) {
     if (error.code === "23505") {
       return { ok: true };
@@ -445,9 +542,10 @@ export async function createCommissionsForInvoice(input: {
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
-  const [settings, hops] = await Promise.all([
+  const [settings, hops, attribution] = await Promise.all([
     loadAffiliateSettings(),
     listReferralHops(),
+    loadReferralAttribution(input.sourceUserId),
   ]);
   const path = walkUpline(hops, input.sourceUserId, settings.maxDepth);
   const now = input.nowMs ?? Date.now();
@@ -464,7 +562,7 @@ export async function createCommissionsForInvoice(input: {
     if (amountUsd < 0.01) {
       continue;
     }
-    const { error } = await supabase.from("membership_commissions").insert({
+    const payload: Record<string, unknown> = {
       earner_user_id: hop.earnerUserId,
       source_user_id: input.sourceUserId,
       invoice_id: input.invoiceId,
@@ -474,7 +572,20 @@ export async function createCommissionsForInvoice(input: {
       amount_usd: amountUsd,
       status: "pending",
       hold_until: holdUntil,
-    });
+    };
+    if (attribution.campaignId) {
+      payload.campaign_id = attribution.campaignId;
+    }
+    if (attribution.linkId) {
+      payload.link_id = attribution.linkId;
+    }
+    let { error } = await supabase.from("membership_commissions").insert(payload);
+    if (error && schemaGap(error)) {
+      delete payload.campaign_id;
+      delete payload.link_id;
+      const retry = await supabase.from("membership_commissions").insert(payload);
+      error = retry.error;
+    }
     if (!error) {
       created += 1;
     } else if (error.code !== "23505") {
@@ -583,15 +694,27 @@ export async function listPayableCommissions(
     return [];
   }
   const queued = await listQueuedCommissionIds();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("membership_commissions")
     .select(
-      "id, earner_user_id, source_user_id, invoice_id, rate_plan_id, level, rate_pct, amount_usd, status, hold_until, created_at",
+      "id, earner_user_id, source_user_id, invoice_id, rate_plan_id, campaign_id, link_id, level, rate_pct, amount_usd, status, hold_until, created_at",
     )
     .eq("earner_user_id", userId)
     .eq("status", "payable")
     .order("created_at", { ascending: true });
-  return (data ?? [])
+  const rows = error && schemaGap(error)
+    ? (
+        await supabase
+          .from("membership_commissions")
+          .select(
+            "id, earner_user_id, source_user_id, invoice_id, rate_plan_id, level, rate_pct, amount_usd, status, hold_until, created_at",
+          )
+          .eq("earner_user_id", userId)
+          .eq("status", "payable")
+          .order("created_at", { ascending: true })
+      ).data
+    : data;
+  return (rows ?? [])
     .map(mapCommission)
     .filter((row): row is CommissionRow => row !== null && !queued.has(row.id));
 }
@@ -607,6 +730,8 @@ function mapCommission(row: Record<string, unknown>): CommissionRow | null {
     sourceUserId: String(row.source_user_id),
     invoiceId: String(row.invoice_id),
     ratePlanId: row.rate_plan_id ? String(row.rate_plan_id) : null,
+    campaignId: optionalId(row.campaign_id),
+    linkId: optionalId(row.link_id),
     level: Number(row.level),
     ratePct: Number(row.rate_pct),
     amountUsd: Number(row.amount_usd),
@@ -936,13 +1061,28 @@ export async function loadDownline(
   if (!supabase) {
     return [];
   }
-  const { data: referrals } = await supabase
+  const withAttr = await supabase
     .from("membership_referrals")
-    .select("user_id, referrer_user_id, attributed_at, first_paid_at");
+    .select(
+      "user_id, referrer_user_id, attributed_at, first_paid_at, campaign_id, link_id",
+    );
+  const referrals =
+    withAttr.error && schemaGap(withAttr.error)
+      ? (
+          await supabase
+            .from("membership_referrals")
+            .select("user_id, referrer_user_id, attributed_at, first_paid_at")
+        ).data
+      : withAttr.data;
   const children = new Map<string, string[]>();
   const meta = new Map<
     string,
-    { attributedAt: string; firstPaidAt: string | null }
+    {
+      attributedAt: string;
+      firstPaidAt: string | null;
+      campaignId: string | null;
+      linkId: string | null;
+    }
   >();
   for (const row of referrals ?? []) {
     const userId = String(row.user_id);
@@ -954,6 +1094,8 @@ export async function loadDownline(
       attributedAt: String(row.attributed_at),
       firstPaidAt:
         typeof row.first_paid_at === "string" ? row.first_paid_at : null,
+      campaignId: optionalId((row as { campaign_id?: unknown }).campaign_id),
+      linkId: optionalId((row as { link_id?: unknown }).link_id),
     });
   }
   const rows: DownlineRow[] = [];
@@ -973,6 +1115,8 @@ export async function loadDownline(
         attributedAt: info.attributedAt,
         firstPaidAt: info.firstPaidAt,
         planPriceUsd: 0,
+        campaignId: info.campaignId,
+        linkId: info.linkId,
       });
       walk(userId, level + 1);
     }
@@ -1052,12 +1196,15 @@ export async function loadAffiliatePortal(
   await releaseDueCommissions();
   const ensured = await ensureReferralCode(userId);
   const code = ensured.ok ? ensured.code : null;
-  const [downline, commissions, payouts, children] = await Promise.all([
-    loadDownline(userId, false),
-    listEarnerCommissions(userId),
-    listMemberPayouts(userId),
-    downlineChildMap(),
-  ]);
+  const [downline, commissions, payouts, children, campaigns, links] =
+    await Promise.all([
+      loadDownline(userId, false),
+      listEarnerCommissions(userId),
+      listMemberPayouts(userId),
+      downlineChildMap(),
+      listAffiliateCampaigns(userId),
+      listAffiliateLinks(userId),
+    ]);
   const pendingUsd = roundUsd(
     commissions
       .filter((row) => row.status === "pending")
@@ -1125,6 +1272,8 @@ export async function loadAffiliatePortal(
     downline,
     tree: buildAffiliateTree(downline, children, userId),
     commissions,
+    campaigns,
+    links,
     stats: {
       attributed: downline.length,
       paid,
@@ -1147,15 +1296,28 @@ async function listEarnerCommissions(userId: string): Promise<CommissionRow[]> {
   if (!supabase) {
     return [];
   }
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("membership_commissions")
     .select(
-      "id, earner_user_id, source_user_id, invoice_id, rate_plan_id, level, rate_pct, amount_usd, status, hold_until, created_at",
+      "id, earner_user_id, source_user_id, invoice_id, rate_plan_id, campaign_id, link_id, level, rate_pct, amount_usd, status, hold_until, created_at",
     )
     .eq("earner_user_id", userId)
     .order("created_at", { ascending: false })
     .limit(200);
-  return (data ?? [])
+  const rows =
+    error && schemaGap(error)
+      ? (
+          await supabase
+            .from("membership_commissions")
+            .select(
+              "id, earner_user_id, source_user_id, invoice_id, rate_plan_id, level, rate_pct, amount_usd, status, hold_until, created_at",
+            )
+            .eq("earner_user_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(200)
+        ).data
+      : data;
+  return (rows ?? [])
     .map((row) => mapCommission(row as Record<string, unknown>))
     .filter((row): row is CommissionRow => row !== null);
 }
@@ -1222,4 +1384,272 @@ export async function loadMemberArrears(userId: string): Promise<boolean> {
     .eq("user_id", userId)
     .maybeSingle();
   return data?.subscription_status === "past_due";
+}
+
+async function loadReferralAttribution(
+  sourceUserId: string,
+): Promise<{ campaignId: string | null; linkId: string | null }> {
+  const empty = { campaignId: null, linkId: null };
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return empty;
+  }
+  const { data, error } = await supabase
+    .from("membership_referrals")
+    .select("campaign_id, link_id")
+    .eq("user_id", sourceUserId)
+    .maybeSingle();
+  if (error || !data) {
+    return empty;
+  }
+  return {
+    campaignId: optionalId(data.campaign_id),
+    linkId: optionalId(data.link_id),
+  };
+}
+
+export async function findOwnedAffiliateLink(
+  userId: string,
+  slug: string,
+): Promise<{ id: string; campaignId: string | null; slug: string } | null> {
+  const parsed = parseAffiliateLinkSlug(slug);
+  if (!parsed.ok) {
+    return null;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("membership_affiliate_links")
+    .select("id, campaign_id, slug, user_id")
+    .eq("user_id", userId)
+    .ilike("slug", parsed.slug)
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return {
+    id: String(data.id),
+    campaignId: optionalId(data.campaign_id),
+    slug: String(data.slug),
+  };
+}
+
+export async function findPublicAffiliateLink(
+  slug: string,
+): Promise<PublicAffiliateLink | null> {
+  const parsed = parseAffiliateLinkSlug(slug);
+  if (!parsed.ok) {
+    return null;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("membership_affiliate_links")
+    .select("id, user_id, campaign_id, slug, landing")
+    .ilike("slug", parsed.slug)
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  const landing = parseAffiliateLanding(data.landing);
+  if (!landing.ok) {
+    return null;
+  }
+  const ensured = await ensureReferralCode(String(data.user_id));
+  if (!ensured.ok) {
+    return null;
+  }
+  return {
+    id: String(data.id),
+    userId: String(data.user_id),
+    campaignId: optionalId(data.campaign_id),
+    slug: String(data.slug),
+    landing: landing.landing,
+    code: ensured.code,
+  };
+}
+
+export async function listAffiliateCampaigns(
+  userId: string,
+): Promise<AffiliateCampaignRow[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("membership_affiliate_campaigns")
+    .select("id, name, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) {
+    return [];
+  }
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    name: String(row.name),
+    createdAt: String(row.created_at),
+  }));
+}
+
+export async function listAffiliateLinks(
+  userId: string,
+): Promise<AffiliateLinkRow[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data, error } = await supabase
+    .from("membership_affiliate_links")
+    .select("id, campaign_id, slug, name, landing, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) {
+    return [];
+  }
+  const campaigns = await listAffiliateCampaigns(userId);
+  const names = new Map(campaigns.map((row) => [row.id, row.name]));
+  const counts = new Map<string, number>();
+  const refs = await supabase
+    .from("membership_referrals")
+    .select("link_id")
+    .eq("referrer_user_id", userId);
+  for (const row of refs.data ?? []) {
+    const linkId = optionalId(row.link_id);
+    if (!linkId) {
+      continue;
+    }
+    counts.set(linkId, (counts.get(linkId) ?? 0) + 1);
+  }
+  return (data ?? [])
+    .map((row) => {
+      const landing = parseAffiliateLanding(row.landing);
+      if (!landing.ok) {
+        return null;
+      }
+      const campaignId = optionalId(row.campaign_id);
+      return {
+        id: String(row.id),
+        campaignId,
+        campaignName: campaignId ? (names.get(campaignId) ?? null) : null,
+        slug: String(row.slug),
+        name: String(row.name),
+        landing: landing.landing,
+        createdAt: String(row.created_at),
+        attributed: counts.get(String(row.id)) ?? 0,
+      };
+    })
+    .filter((row): row is AffiliateLinkRow => row !== null);
+}
+
+export async function createAffiliateCampaign(input: {
+  userId: string;
+  name: unknown;
+}): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const name = parseAffiliateLabel(
+    input.name,
+    AFFILIATE_CAMPAIGN_NAME_MAX,
+    "Enter a campaign name (1–40 characters).",
+  );
+  if (!name.ok) {
+    return name;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const existing = await listAffiliateCampaigns(input.userId);
+  if (existing.length >= AFFILIATE_CAMPAIGN_MAX) {
+    return {
+      ok: false,
+      error: `You can create up to ${AFFILIATE_CAMPAIGN_MAX} campaigns.`,
+    };
+  }
+  const { data, error } = await supabase
+    .from("membership_affiliate_campaigns")
+    .insert({ user_id: input.userId, name: name.name })
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    if (error.code === "23505") {
+      return { ok: false, error: "You already have a campaign with that name." };
+    }
+    if (schemaGap(error)) {
+      return { ok: false, error: "Campaigns are not available yet." };
+    }
+    return { ok: false, error: error.message };
+  }
+  if (!data) {
+    return { ok: false, error: "Could not create that campaign." };
+  }
+  return { ok: true, id: String(data.id) };
+}
+
+export async function createAffiliateLink(input: {
+  userId: string;
+  name: unknown;
+  landing: unknown;
+  campaignId: string | null;
+}): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
+  const name = parseAffiliateLabel(
+    input.name,
+    AFFILIATE_LINK_NAME_MAX,
+    "Enter a link name (1–40 characters).",
+  );
+  if (!name.ok) {
+    return name;
+  }
+  const landing = parseAffiliateLanding(input.landing);
+  if (!landing.ok) {
+    return landing;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  if (input.campaignId) {
+    const { data: campaign } = await supabase
+      .from("membership_affiliate_campaigns")
+      .select("id")
+      .eq("id", input.campaignId)
+      .eq("user_id", input.userId)
+      .maybeSingle();
+    if (!campaign) {
+      return { ok: false, error: "That campaign was not found." };
+    }
+  }
+  const existing = await listAffiliateLinks(input.userId);
+  if (existing.length >= AFFILIATE_LINK_MAX) {
+    return {
+      ok: false,
+      error: `You can create up to ${AFFILIATE_LINK_MAX} links.`,
+    };
+  }
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const slug = generateAffiliateLinkSlug(randomBytes(8)).slice(
+      0,
+      AFFILIATE_LINK_SLUG_MAX,
+    );
+    const { error } = await supabase.from("membership_affiliate_links").insert({
+      user_id: input.userId,
+      campaign_id: input.campaignId,
+      slug,
+      name: name.name,
+      landing: landing.landing,
+    });
+    if (!error) {
+      return { ok: true, slug };
+    }
+    if (error.code === "23505") {
+      continue;
+    }
+    if (schemaGap(error)) {
+      return { ok: false, error: "Custom links are not available yet." };
+    }
+    return { ok: false, error: error.message };
+  }
+  return { ok: false, error: "Could not allocate a link slug." };
 }

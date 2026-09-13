@@ -36,10 +36,12 @@ export function MembershipPlanCards({
   plans,
   currentPlanId,
   checkout = false,
+  joinHref = null,
 }: {
   plans: MembershipPlan[];
   currentPlanId: string | null;
   checkout?: boolean;
+  joinHref?: string | null;
 }) {
   if (plans.length === 0) {
     return (
@@ -93,6 +95,7 @@ export function MembershipPlanCards({
                   plan={plan}
                   current={current}
                   checkout={checkout}
+                  joinHref={joinHref}
                 />
               ))}
             </div>
@@ -138,11 +141,13 @@ function PlanCell({
   plan,
   current,
   checkout,
+  joinHref,
 }: {
   block: CompareBlock;
   plan: MembershipPlan;
   current: boolean;
   checkout: boolean;
+  joinHref: string | null;
 }) {
   if (block.type === "header") {
     return (
@@ -196,16 +201,25 @@ function PlanCell({
               </Link>
             ) : (
               <Link
-                href="/sign-in"
+                href={joinHref ?? "/sign-up"}
                 className="block w-full rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent"
               >
-                Sign in
+                Start free
               </Link>
             )}
             <p className="mt-2 text-xs text-ink-faint">
-              Choose Card or Crypto at Checkout.
+              {checkout
+                ? "Choose Card or Crypto at Checkout."
+                : "Create a free account, then upgrade."}
             </p>
           </div>
+        ) : joinHref ? (
+          <Link
+            href={joinHref}
+            className="block w-full rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent"
+          >
+            Start free
+          </Link>
         ) : (
           <p className="text-xs text-ink-faint">Free</p>
         )}

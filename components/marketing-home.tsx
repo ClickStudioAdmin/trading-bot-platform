@@ -53,8 +53,8 @@ const STEPS = [
 ];
 
 export function MarketingHome({ appHref = null }: { appHref?: string | null }) {
-  const primaryHref = appHref ?? "/sign-in";
-  const primaryLabel = appHref ? "Go to App" : "Sign in";
+  const primaryHref = appHref ?? "/sign-up";
+  const primaryLabel = appHref ? "Go to App" : "Start free";
   const appLinkProps = appHref
     ? { target: "_blank" as const, rel: "noreferrer" }
     : {};
@@ -70,9 +70,8 @@ export function MarketingHome({ appHref = null }: { appHref?: string | null }) {
             Your strategies. Your keys. One desk.
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-ink-muted sm:text-base">
-            Invite-only desk for running typed books. Paper trade on live marks,
-            or bind a trade-only exchange key. The app places and manages
-            orders. You keep the keys.
+            Free to start. Paper trade on live marks, or bind a trade-only
+            exchange key. The app places and manages orders. You keep the keys.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
@@ -82,6 +81,14 @@ export function MarketingHome({ appHref = null }: { appHref?: string | null }) {
             >
               {primaryLabel}
             </Link>
+            {appHref ? null : (
+              <Link
+                href="/sign-in"
+                className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+              >
+                Sign in
+              </Link>
+            )}
             <Link
               href="#desks"
               className="rounded-control px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
@@ -165,7 +172,7 @@ export function MarketingHome({ appHref = null }: { appHref?: string | null }) {
             className="mt-6 inline-flex rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
             {...appLinkProps}
           >
-            {appHref ? "Go to App" : "Sign in to the desk"}
+            {appHref ? "Go to App" : "Start free"}
           </Link>
         </div>
       </section>

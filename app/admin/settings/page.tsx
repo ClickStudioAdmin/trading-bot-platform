@@ -6,6 +6,9 @@ import { saveAdminSettings, saveAutoTickAction } from "@/lib/admin/actions";
 import { loadAutoTickEnabled } from "@/lib/admin/settings";
 import { loadCopyPlatformSettings } from "@/lib/copy/settings";
 import { billingChainEnvironment } from "@/lib/membership/wallet";
+import { saveAffiliateSettingsAction } from "@/lib/membership/affiliate-actions";
+import { loadAffiliateSettings } from "@/lib/membership/affiliate-store";
+import { EMPTY_AFFILIATE_SETTINGS } from "@/lib/membership/affiliate";
 import {
   saveBillingChainAction,
   saveBillingTokenAction,
@@ -24,7 +27,7 @@ export const metadata: Metadata = {
   description: "System settings for Trading Bot Platform.",
 };
 
-const SETTINGS_TABS = ["general", "copy", "crypto"] as const;
+const SETTINGS_TABS = ["general", "copy", "affiliates", "crypto"] as const;
 type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 function parseSettingsTab(value: string | undefined): SettingsTab {
@@ -46,7 +49,7 @@ export default async function AdminSettingsPage({
   const copyFollowersError = error === "copy-followers";
   const copyFollowersCeilingError = error === "copy-followers-ceiling";
   const copyFollowersRangeError = error === "copy-followers-range";
-  const [autoTick, copySettings, gas, chains] = await Promise.all([
+  const [autoTick, copySettings, affiliateSettings, gas, chains] = await Promise.all([
     tab === "general" ? loadAutoTickEnabled() : Promise.resolve(false),
     tab === "copy"
       ? loadCopyPlatformSettings()
@@ -55,6 +58,9 @@ export default async function AdminSettingsPage({
           maxFollowersDefault: null,
           maxFollowersCeiling: null,
         }),
+    tab === "affiliates"
+      ? loadAffiliateSettings()
+      : Promise.resolve(EMPTY_AFFILIATE_SETTINGS),
     tab === "crypto"
       ? getGasWalletStatus()
       : Promise.resolve({
@@ -84,6 +90,12 @@ export default async function AdminSettingsPage({
         </TabLink>
         <TabLink href="/admin/settings?tab=copy" selected={tab === "copy"}>
           Copy Trading
+        </TabLink>
+        <TabLink
+          href="/admin/settings?tab=affiliates"
+          selected={tab === "affiliates"}
+        >
+          Affiliates
         </TabLink>
         <TabLink href="/admin/settings?tab=crypto" selected={tab === "crypto"}>
           Crypto Wallets & Chains
@@ -207,6 +219,142 @@ export default async function AdminSettingsPage({
             <PendingSubmitButton
               pendingLabel="Saving…"
               successKey="save-admin-settings"
+              className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
+            >
+              Save settings
+            </PendingSubmitButton>
+          </form>
+        </>
+      ) : null}
+
+      {tab === "affiliates" ? (
+        <>
+          {saved === "1" ? (
+            <p className="mt-6 text-sm text-success">Settings saved.</p>
+          ) : null}
+          {error ? (
+            <p className="mt-6 text-sm text-danger">{error}</p>
+          ) : null}
+          <form
+            action={saveAffiliateSettingsAction}
+            className="mt-6 max-w-lg space-y-4 rounded-card border border-line bg-surface p-5"
+          >
+            <h2 className="text-lg font-semibold tracking-tight">Program</h2>
+            <p className="text-sm text-ink-muted">
+              Default L1–L5 apply to affiliates who are not platform members,
+              and to unpaid members. Platform members on a current plan use
+              that plan’s rates.
+            </p>
+            <label className="block text-sm text-ink">
+              Maximum depth
+              <input
+                type="number"
+                name="maxDepth"
+                min={1}
+                max={5}
+                required
+                defaultValue={affiliateSettings.maxDepth}
+                className={BILLING_FIELD_CLASS}
+              />
+              <span className="mt-1 block text-xs text-ink-muted">
+                Default 2. Hard cap 5. A plan can earn fewer levels than this.
+              </span>
+            </label>
+            <label className="block text-sm text-ink">
+              Hold days
+              <input
+                type="number"
+                name="holdDays"
+                min={0}
+                required
+                defaultValue={affiliateSettings.holdDays}
+                className={BILLING_FIELD_CLASS}
+              />
+              <span className="mt-1 block text-xs text-ink-muted">
+                Commission stays pending this many days. Refund in the hold
+                voids it. Use 0 while testing.
+              </span>
+            </label>
+            <label className="block text-sm text-ink">
+              Referral cookie days
+              <input
+                type="number"
+                name="cookieDays"
+                min={1}
+                max={3650}
+                required
+                defaultValue={affiliateSettings.cookieDays}
+                className={BILLING_FIELD_CLASS}
+              />
+              <span className="mt-1 block text-xs text-ink-muted">
+                First-touch referral from ?ref= is stored in a cookie. Default
+                30 days. A later code does not replace it.
+              </span>
+            </label>
+            <label className="block text-sm text-ink">
+              Minimum payout (USD)
+              <input
+                type="number"
+                name="minPayoutUsd"
+                min={0}
+                step="0.01"
+                required
+                defaultValue={affiliateSettings.minPayoutUsd}
+                className={BILLING_FIELD_CLASS}
+              />
+            </label>
+            <fieldset className="space-y-3">
+              <legend className="text-sm text-ink">
+                Default affiliate rates
+              </legend>
+              <p className="text-xs text-ink-muted">
+                For affiliates who are not platform users. L1–L5 cannot add up
+                to more than 100%.
+              </p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                {(
+                  [
+                    ["defaultL1Pct", "L1", affiliateSettings.defaultL1Pct],
+                    ["defaultL2Pct", "L2", affiliateSettings.defaultL2Pct],
+                    ["defaultL3Pct", "L3", affiliateSettings.defaultL3Pct],
+                    ["defaultL4Pct", "L4", affiliateSettings.defaultL4Pct],
+                    ["defaultL5Pct", "L5", affiliateSettings.defaultL5Pct],
+                  ] as const
+                ).map(([name, label, value]) => (
+                  <label key={name} className="block text-sm text-ink">
+                    {label}
+                    <input
+                      type="number"
+                      name={name}
+                      min={0}
+                      max={100}
+                      step="0.01"
+                      required
+                      defaultValue={value}
+                      className={BILLING_FIELD_CLASS}
+                    />
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <label className="block text-sm text-ink">
+              Downgrade grace days
+              <input
+                type="number"
+                name="downgradeGraceDays"
+                min={0}
+                required
+                defaultValue={affiliateSettings.downgradeGraceDays}
+                className={BILLING_FIELD_CLASS}
+              />
+              <span className="mt-1 block text-xs text-ink-muted">
+                Saved now. Auto-exit after grace waits for the next membership
+                step.
+              </span>
+            </label>
+            <PendingSubmitButton
+              pendingLabel="Saving…"
+              successKey="save-affiliate-settings"
               className="rounded-control bg-accent-strong px-3 py-1.5 text-xs font-medium text-ink"
             >
               Save settings

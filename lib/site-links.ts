@@ -1,15 +1,19 @@
 export const PUBLIC_NAV_LINKS = [
   { href: "/", label: "Home", exact: true },
   { href: "/#how-it-works", label: "How it works", exact: false },
-  { href: "/affiliates", label: "Affiliates", exact: false },
   { href: "/pricing", label: "Pricing", exact: false },
+  { href: "/affiliates", label: "Affiliates", exact: false },
 ] as const;
 
 export const HEADER_LINKS = [
   { href: "/account/copy", label: "Copy Trading" },
   { href: "/account/backtests", label: "Backtesting Tool" },
-  { href: "/affiliates", label: "Affiliates" },
   { href: "/account/plans", label: "Plans" },
+  { href: "/affiliates", label: "Affiliates" },
+] as const;
+
+export const AFFILIATE_ONLY_HEADER_LINKS = [
+  { href: "/affiliates", label: "Affiliates" },
 ] as const;
 
 export function isAppChromePath(pathname: string): boolean {
@@ -18,6 +22,17 @@ export function isAppChromePath(pathname: string): boolean {
     pathname.startsWith("/strategies") ||
     pathname.startsWith("/admin")
   );
+}
+
+export function isAffiliatePortalPath(pathname: string): boolean {
+  return pathname === "/affiliates" || pathname.startsWith("/affiliates/");
+}
+
+export function usesSignedInAppChrome(
+  pathname: string,
+  signedIn: boolean,
+): boolean {
+  return isAppChromePath(pathname) || (signedIn && isAffiliatePortalPath(pathname));
 }
 
 export const STRATEGY_LINKS = [
@@ -57,6 +72,10 @@ export const ACCOUNT_DESK_LINKS = [
   { href: "/account/exchanges", label: "Exchanges", exact: true },
   { href: "/account/sub-accounts", label: "Manage Desks", exact: true },
   { href: "/account/templates", label: "Bot Templates", exact: true },
+] as const;
+
+export const AFFILIATE_ONLY_LINKS = [
+  { href: "/account/settings", label: "Settings", exact: true },
 ] as const;
 
 export const FUTURES_PRIMARY_LINKS = [

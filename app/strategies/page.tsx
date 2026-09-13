@@ -15,11 +15,14 @@ export default async function StrategiesPage() {
     <main className="mx-auto max-w-7xl px-6 py-8">
       <PageHeading overline="Desk" title="Desks" />
       <p className="-mt-2 text-sm text-ink-muted">
-        Sign in to open a typed desk. Type locks the manager: Cash and Carry,
-        Perps, TradingView Strategy, or DCA.
+        Create a free account to open a typed desk. Type locks the manager:
+        Cash and Carry, Perps, TradingView Strategy, or DCA.
       </p>
-      <p className="mt-8 text-sm">
-        <Link href="/sign-in" className="text-accent hover:text-accent-strong">
+      <p className="mt-8 flex flex-wrap gap-4 text-sm">
+        <Link href="/sign-up" className="text-accent hover:text-accent-strong">
+          Start free
+        </Link>
+        <Link href="/sign-in" className="text-ink-muted hover:text-ink">
           Sign in
         </Link>
       </p>

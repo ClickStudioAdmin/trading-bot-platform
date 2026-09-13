@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SiteLogo } from "@/components/site-logo";
 import { formatDeskType, type DeskType } from "@/lib/accounts/model";
-import { isAppChromePath } from "@/lib/site-links";
+import { usesSignedInAppChrome } from "@/lib/site-links";
 
 const FOOTER_DESKS: { id: string; deskType: DeskType }[] = [
   { id: "cash-and-carry", deskType: "cash_and_carry" },
@@ -14,8 +14,14 @@ const FOOTER_DESKS: { id: string; deskType: DeskType }[] = [
   { id: "dca", deskType: "dca" },
 ];
 
-export function SiteFooter({ appHref = null }: { appHref?: string | null }) {
-  const compact = isAppChromePath(usePathname());
+export function SiteFooter({
+  appHref = null,
+  signedIn = false,
+}: {
+  appHref?: string | null;
+  signedIn?: boolean;
+}) {
+  const compact = usesSignedInAppChrome(usePathname(), signedIn);
 
   if (compact) {
     return (
@@ -88,17 +94,31 @@ export function SiteFooter({ appHref = null }: { appHref?: string | null }) {
                 Pricing
               </Link>
             </li>
-            <li>
-              <Link
-                href={appHref ?? "/sign-in"}
-                className="text-ink-muted hover:text-ink"
-                {...(appHref
-                  ? { target: "_blank" as const, rel: "noreferrer" }
-                  : {})}
-              >
-                {appHref ? "Go to App" : "Sign in"}
-              </Link>
-            </li>
+            {appHref ? (
+              <li>
+                <Link
+                  href={appHref}
+                  className="text-ink-muted hover:text-ink"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Go to App
+                </Link>
+              </li>
+            ) : (
+              <>
+                <li>
+                  <Link href="/sign-up" className="text-ink-muted hover:text-ink">
+                    Start free
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/sign-in" className="text-ink-muted hover:text-ink">
+                    Sign in
+                  </Link>
+                </li>
+              </>
+            )}
           </ul>
         </div>
       </div>

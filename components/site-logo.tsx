@@ -3,9 +3,11 @@ import Link from "next/link";
 export function SiteLogo({
   compact = false,
   linked = true,
+  href = "/",
 }: {
   compact?: boolean;
   linked?: boolean;
+  href?: string;
 }) {
   const mark = (
     <>
@@ -53,7 +55,7 @@ export function SiteLogo({
   }
 
   return (
-    <Link href="/" className="flex items-center gap-2.5 text-ink">
+    <Link href={href} className="flex items-center gap-2.5 text-ink">
       {mark}
     </Link>
   );

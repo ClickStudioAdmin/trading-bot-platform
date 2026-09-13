@@ -3,11 +3,29 @@
 import { emailIsListedAdmin } from "@/lib/admin/emails";
 import { deskHomePath, pickDefaultAccount } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
-import { AFFILIATES_PATH, WELCOME_PATH } from "@/lib/auth/onboarding-path";
+import {
+  AFFILIATES_PATH,
+  SIGN_UP_PATH,
+  WELCOME_PATH,
+} from "@/lib/auth/onboarding-path";
 import { createSession, clearSession, getSessionMember } from "@/lib/auth/session";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { writeEventLog } from "@/lib/logs/write";
+import { parseAffiliateSignup } from "@/lib/members/form";
 import { memberDisplayName } from "@/lib/members/sync";
+import {
+  clearReferralCookie,
+  readReferralCookie,
+  readReferralLinkCookie,
+} from "@/lib/membership/affiliate-cookie";
+import {
+  attributeReferral,
+  ensureReferralCode,
+  findReferralCodeOwner,
+} from "@/lib/membership/affiliate-store";
+import { getDefaultMembershipPlan } from "@/lib/membership/store";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 async function redirectAfterSignIn(userId: string) {
@@ -21,6 +39,91 @@ async function redirectAfterSignIn(userId: string) {
   }
   const home = pickDefaultAccount(accounts);
   redirect(home ? deskHomePath(home.deskType, home.id) : WELCOME_PATH);
+}
+
+function signUpFail(error: string): never {
+  redirect(`${SIGN_UP_PATH}?error=${encodeURIComponent(error)}`);
+}
+
+export async function signUpMember(formData: FormData) {
+  const signedIn = await getSessionMember();
+  if (signedIn) {
+    if (!signedIn.platformMember) {
+      redirect(AFFILIATES_PATH);
+    }
+    await redirectAfterSignIn(signedIn.id);
+  }
+  const parsed = parseAffiliateSignup(formData);
+  if (!parsed.ok) {
+    signUpFail(parsed.error);
+  }
+  const referralCode = parsed.referralCode ?? (await readReferralCookie());
+  const linkSlug = await readReferralLinkCookie();
+  if (referralCode) {
+    const owner = await findReferralCodeOwner(referralCode);
+    if (!owner) {
+      signUpFail("That referral code was not found.");
+    }
+  }
+  const plan = await getDefaultMembershipPlan();
+  if (!plan) {
+    signUpFail("The Free plan is not configured.");
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    signUpFail("Database is not configured.");
+  }
+  const userId = crypto.randomUUID();
+  const now = new Date().toISOString();
+  const listedAdmin = emailIsListedAdmin(parsed.email);
+  const row: Record<string, unknown> = {
+    user_id: userId,
+    email: parsed.email,
+    name: parsed.name,
+    role: listedAdmin ? "admin" : "member",
+    status: "active",
+    platform_member: true,
+    plan_id: plan.id,
+    last_enroll_plan_id: plan.id,
+    subscription_status: "none",
+    password_hash: hashPassword(parsed.password),
+    created_at: now,
+    updated_at: now,
+  };
+  let { error } = await supabase.from("members").insert(row);
+  if (error && String(error.message).includes("platform_member")) {
+    delete row.platform_member;
+    const retry = await supabase.from("members").insert(row);
+    error = retry.error;
+  }
+  if (error) {
+    if (error.code === "23505") {
+      signUpFail("That email already has an account. Sign in instead.");
+    }
+    signUpFail(error.message);
+  }
+  if (referralCode) {
+    const attributed = await attributeReferral({
+      userId,
+      code: referralCode,
+      linkSlug,
+    });
+    if (!attributed.ok) {
+      signUpFail(attributed.error);
+    }
+  }
+  await ensureReferralCode(userId);
+  await clearReferralCookie();
+  await writeEventLog({
+    scope: "system",
+    event: "member.signed_up",
+    message: `Public signup ${parsed.email}`,
+    userId,
+    data: { email: parsed.email, planId: plan.id },
+  });
+  await createSession(userId);
+  revalidatePath("/", "layout");
+  redirect(WELCOME_PATH);
 }
 
 export async function signIn(formData: FormData) {

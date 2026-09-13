@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HEADER_LINKS, isAppChromePath, PUBLIC_NAV_LINKS } from "@/lib/site-links";
+import {
+  AFFILIATE_ONLY_HEADER_LINKS,
+  HEADER_LINKS,
+  PUBLIC_NAV_LINKS,
+  usesSignedInAppChrome,
+} from "@/lib/site-links";
 
 function navItemClass(active: boolean): string {
   return `rounded-control px-3 py-1.5 text-sm ${
@@ -12,10 +17,20 @@ function navItemClass(active: boolean): string {
   }`;
 }
 
-export function HeaderChromeLinks({ signedIn }: { signedIn: boolean }) {
+export function HeaderChromeLinks({
+  signedIn,
+  platformMember = true,
+}: {
+  signedIn: boolean;
+  platformMember?: boolean;
+}) {
   const pathname = usePathname();
-  if (isAppChromePath(pathname)) {
-    return signedIn ? <HeaderBrowseLinks /> : null;
+  if (usesSignedInAppChrome(pathname, signedIn)) {
+    return signedIn ? (
+      <HeaderBrowseLinks
+        links={platformMember ? HEADER_LINKS : AFFILIATE_ONLY_HEADER_LINKS}
+      />
+    ) : null;
   }
   return <HeaderPublicLinks />;
 }
@@ -47,11 +62,15 @@ export function HeaderPublicLinks() {
   );
 }
 
-export function HeaderBrowseLinks() {
+export function HeaderBrowseLinks({
+  links = HEADER_LINKS,
+}: {
+  links?: readonly { href: string; label: string }[];
+}) {
   const pathname = usePathname();
   return (
     <nav aria-label="Browse" className="flex items-center gap-1">
-      {HEADER_LINKS.map((link) => {
+      {links.map((link) => {
         const active =
           pathname === link.href || pathname.startsWith(`${link.href}/`);
         return (

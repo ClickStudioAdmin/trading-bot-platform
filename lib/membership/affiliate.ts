@@ -10,12 +10,22 @@ import { roundUsd } from "./wallet";
 
 export const AFFILIATE_MAX_DEPTH_DEFAULT = 2;
 export const AFFILIATE_HOLD_DAYS_DEFAULT = 30;
+export const AFFILIATE_COOKIE_DAYS_DEFAULT = 30;
+export const AFFILIATE_COOKIE_DAYS_MAX = 3650;
 export const AFFILIATE_MIN_PAYOUT_DEFAULT = 50;
 export const AFFILIATE_PAYOUT_COIN = "USDT";
 export const DOWNGRADE_GRACE_DAYS_DEFAULT = 7;
 export const REFERRAL_CODE_MIN = 4;
 export const REFERRAL_CODE_MAX = 32;
 export const REFERRAL_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+export const AFFILIATE_LINK_SLUG_MIN = 6;
+export const AFFILIATE_LINK_SLUG_MAX = 16;
+export const AFFILIATE_CAMPAIGN_NAME_MAX = 40;
+export const AFFILIATE_LINK_NAME_MAX = 40;
+export const AFFILIATE_CAMPAIGN_MAX = 40;
+export const AFFILIATE_LINK_MAX = 80;
+export const AFFILIATE_LANDINGS = ["home", "affiliates"] as const;
+export type AffiliateLanding = (typeof AFFILIATE_LANDINGS)[number];
 
 export const PAYOUT_METHODS = ["export", "stripe_connect", "usdt"] as const;
 export type PayoutMethod = (typeof PAYOUT_METHODS)[number];
@@ -42,6 +52,7 @@ export type AffiliateProgramSettings = {
   minPayoutUsd: number;
   payoutCoin: string;
   downgradeGraceDays: number;
+  cookieDays: number;
   defaultL1Pct: number;
   defaultL2Pct: number;
   defaultL3Pct: number;
@@ -55,6 +66,7 @@ export const EMPTY_AFFILIATE_SETTINGS: AffiliateProgramSettings = {
   minPayoutUsd: AFFILIATE_MIN_PAYOUT_DEFAULT,
   payoutCoin: AFFILIATE_PAYOUT_COIN,
   downgradeGraceDays: DOWNGRADE_GRACE_DAYS_DEFAULT,
+  cookieDays: AFFILIATE_COOKIE_DAYS_DEFAULT,
   defaultL1Pct: 0,
   defaultL2Pct: 0,
   defaultL3Pct: 0,
@@ -173,6 +185,31 @@ export function parseAffiliateHoldDays(
   return { ok: true, days: n };
 }
 
+export function parseAffiliateCookieDays(
+  value: unknown,
+): { ok: true; days: number } | { ok: false; error: string } {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 1 || n > AFFILIATE_COOKIE_DAYS_MAX) {
+    return {
+      ok: false,
+      error: `Referral cookie days must be 1 to ${AFFILIATE_COOKIE_DAYS_MAX}.`,
+    };
+  }
+  return { ok: true, days: n };
+}
+
+export function firstTouchReferralCode(
+  cookie: string | null,
+  url: string | null,
+): string | null {
+  const stored = parseOptionalReferralCode(cookie);
+  if (stored.ok && stored.code) {
+    return stored.code;
+  }
+  const incoming = parseOptionalReferralCode(url);
+  return incoming.ok ? incoming.code : null;
+}
+
 export function parseAffiliateMinPayout(
   value: unknown,
 ): { ok: true; usd: number } | { ok: false; error: string } {
@@ -229,6 +266,10 @@ export function generateReferralCode(bytes: Uint8Array): string {
     code += REFERRAL_CODE_ALPHABET[byte % REFERRAL_CODE_ALPHABET.length];
   }
   return code;
+}
+
+export function generateAffiliateLinkSlug(bytes: Uint8Array): string {
+  return generateReferralCode(bytes);
 }
 
 export function affiliateRateKeyForLevel(
@@ -396,10 +437,62 @@ export function referralShareUrl(origin: string, code: string): string {
   return `${base}/affiliates?ref=${encodeURIComponent(code)}`;
 }
 
+export function parseAffiliateLanding(
+  value: unknown,
+): { ok: true; landing: AffiliateLanding } | { ok: false; error: string } {
+  const raw = String(value ?? "").trim();
+  if (AFFILIATE_LANDINGS.includes(raw as AffiliateLanding)) {
+    return { ok: true, landing: raw as AffiliateLanding };
+  }
+  return { ok: false, error: "Choose a landing page." };
+}
+
+export function affiliateLandingPath(landing: AffiliateLanding): string {
+  return landing === "affiliates" ? "/affiliates" : "/";
+}
+
+export function affiliateLandingLabel(landing: AffiliateLanding): string {
+  return landing === "affiliates" ? "Affiliate page" : "Home page";
+}
+
+export function affiliateLinkShareUrl(origin: string, slug: string): string {
+  const base = origin.replace(/\/$/, "");
+  return `${base}/r/${encodeURIComponent(slug)}`;
+}
+
+export function parseAffiliateLabel(
+  value: unknown,
+  max: number,
+  emptyError: string,
+): { ok: true; name: string } | { ok: false; error: string } {
+  const name = String(value ?? "").trim();
+  if (name.length < 1 || name.length > max) {
+    return { ok: false, error: emptyError };
+  }
+  return { ok: true, name };
+}
+
+export function parseAffiliateLinkSlug(
+  value: unknown,
+): { ok: true; slug: string } | { ok: false; error: string } {
+  const slug = String(value ?? "").trim().toUpperCase();
+  if (
+    slug.length < AFFILIATE_LINK_SLUG_MIN ||
+    slug.length > AFFILIATE_LINK_SLUG_MAX
+  ) {
+    return { ok: false, error: "That link was not found." };
+  }
+  if (!/^[A-Z0-9]+$/.test(slug)) {
+    return { ok: false, error: "That link was not found." };
+  }
+  return { ok: true, slug };
+}
+
 export const AFFILIATE_PORTAL_TABS = [
   "overview",
   "network",
   "referrals",
+  "links",
   "payouts",
 ] as const;
 export type AffiliatePortalTab = (typeof AFFILIATE_PORTAL_TABS)[number];

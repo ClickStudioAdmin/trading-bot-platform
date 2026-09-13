@@ -13,6 +13,7 @@ import { getSessionContext, getSessionMember } from "@/lib/auth/session";
 export {
   AFFILIATES_PATH,
   pathSkipsOnboarding,
+  SIGN_UP_PATH,
   WELCOME_PATH,
 } from "@/lib/auth/onboarding-path";
 

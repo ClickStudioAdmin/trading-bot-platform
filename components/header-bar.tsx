@@ -3,17 +3,22 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { SiteLogo } from "@/components/site-logo";
+import { isAffiliatePortalPath } from "@/lib/site-links";
 
 export function HeaderBar({
   start,
   children,
+  signedIn = false,
 }: {
   start?: ReactNode;
   children: ReactNode;
+  signedIn?: boolean;
 }) {
   const pathname = usePathname();
   const hideLogo =
-    pathname.startsWith("/account") || pathname.startsWith("/strategies");
+    pathname.startsWith("/account") ||
+    pathname.startsWith("/strategies") ||
+    (signedIn && isAffiliatePortalPath(pathname));
 
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-surface/90 backdrop-blur-sm">

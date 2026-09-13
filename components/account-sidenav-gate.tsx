@@ -4,21 +4,23 @@ import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { AccountSidenav } from "@/components/account-sidenav";
 import type { TradingAccount } from "@/lib/accounts/model";
-import { isAppChromePath } from "@/lib/site-links";
+import { usesSignedInAppChrome } from "@/lib/site-links";
 
 export function AccountSidenavGate({
-  deskId,
+  signedIn,
+  platformMember,
   desks,
   children,
 }: {
-  deskId: string | null;
+  signedIn: boolean;
+  platformMember: boolean;
   desks: TradingAccount[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   if (
-    !deskId ||
-    !isAppChromePath(pathname) ||
+    !signedIn ||
+    !usesSignedInAppChrome(pathname, signedIn) ||
     pathname.startsWith("/admin")
   ) {
     return children;
@@ -27,7 +29,7 @@ export function AccountSidenavGate({
   return (
     <div className="flex min-h-dvh">
       <Suspense>
-        <AccountSidenav desks={desks} />
+        <AccountSidenav desks={desks} platformMember={platformMember} />
       </Suspense>
       {children}
     </div>

@@ -4,12 +4,18 @@ import { requireAdmin } from "@/lib/admin/access";
 import { emailIsListedAdmin } from "@/lib/admin/emails";
 import { hashPassword } from "@/lib/auth/password";
 import { createSession, getSessionMember } from "@/lib/auth/session";
+import {
+  clearReferralCookie,
+  readReferralCookie,
+  readReferralLinkCookie,
+} from "@/lib/membership/affiliate-cookie";
 import { parseAffiliateSignup } from "@/lib/members/form";
 import { writeEventLog } from "@/lib/logs/write";
 import { AFFILIATES_PATH, WELCOME_PATH } from "@/lib/auth/onboarding-path";
 import {
   AFFILIATE_PAYOUT_COIN,
   affiliatePortalPath,
+  parseAffiliateCookieDays,
   parseAffiliateHoldDays,
   parseAffiliateMaxDepth,
   parseAffiliateMinPayout,
@@ -18,6 +24,7 @@ import {
   parsePayoutNetwork,
   parseProgramDefaultRates,
   withdrawDecision,
+  type AffiliatePortalTab,
 } from "./affiliate";
 import { listAffiliatePayoutChains } from "./wallet-store";
 import { parseUuid } from "./wallet-form";
@@ -31,6 +38,8 @@ import {
   releaseDueCommissions,
   requestUsdtPayout,
   attributeReferral,
+  createAffiliateCampaign,
+  createAffiliateLink,
   ensureReferralCode,
   findReferralCodeOwner,
   saveAffiliateSettings,
@@ -44,7 +53,16 @@ function adminFail(error: string): never {
   redirect(`/admin/affiliates?error=${encodeURIComponent(error)}`);
 }
 
-function portalFail(error: string, tab: "overview" | "payouts" = "overview"): never {
+function settingsFail(error: string): never {
+  redirect(
+    `/admin/settings?tab=affiliates&error=${encodeURIComponent(error)}`,
+  );
+}
+
+function portalFail(
+  error: string,
+  tab: AffiliatePortalTab = "overview",
+): never {
   redirect(affiliatePortalPath(tab, { error }));
 }
 
@@ -56,19 +74,23 @@ export async function saveAffiliateSettingsAction(formData: FormData) {
   await requireAdmin();
   const depth = parseAffiliateMaxDepth(formData.get("maxDepth"));
   if (!depth.ok) {
-    adminFail(depth.error);
+    settingsFail(depth.error);
   }
   const hold = parseAffiliateHoldDays(formData.get("holdDays"));
   if (!hold.ok) {
-    adminFail(hold.error);
+    settingsFail(hold.error);
   }
   const min = parseAffiliateMinPayout(formData.get("minPayoutUsd"));
   if (!min.ok) {
-    adminFail(min.error);
+    settingsFail(min.error);
   }
   const grace = parseDowngradeGraceDays(formData.get("downgradeGraceDays"));
   if (!grace.ok) {
-    adminFail(grace.error);
+    settingsFail(grace.error);
+  }
+  const cookie = parseAffiliateCookieDays(formData.get("cookieDays"));
+  if (!cookie.ok) {
+    settingsFail(cookie.error);
   }
   const rates = parseProgramDefaultRates({
     l1: formData.get("defaultL1Pct"),
@@ -78,7 +100,7 @@ export async function saveAffiliateSettingsAction(formData: FormData) {
     l5: formData.get("defaultL5Pct"),
   });
   if (!rates.ok) {
-    adminFail(rates.error);
+    settingsFail(rates.error);
   }
   const saved = await saveAffiliateSettings({
     maxDepth: depth.depth,
@@ -86,6 +108,7 @@ export async function saveAffiliateSettingsAction(formData: FormData) {
     minPayoutUsd: min.usd,
     payoutCoin: AFFILIATE_PAYOUT_COIN,
     downgradeGraceDays: grace.days,
+    cookieDays: cookie.days,
     defaultL1Pct: rates.defaultL1Pct,
     defaultL2Pct: rates.defaultL2Pct,
     defaultL3Pct: rates.defaultL3Pct,
@@ -93,7 +116,7 @@ export async function saveAffiliateSettingsAction(formData: FormData) {
     defaultL5Pct: rates.defaultL5Pct,
   });
   if (!saved.ok) {
-    adminFail(saved.error);
+    settingsFail(saved.error);
   }
   await writeEventLog({
     scope: "system",
@@ -103,12 +126,14 @@ export async function saveAffiliateSettingsAction(formData: FormData) {
       maxDepth: depth.depth,
       holdDays: hold.days,
       minPayoutUsd: min.usd,
+      cookieDays: cookie.days,
     },
   });
+  revalidatePath("/admin/settings");
   revalidatePath("/admin/affiliates");
   revalidatePath(AFFILIATES_PATH);
   revalidatePath("/account/affiliates");
-  redirect("/admin/affiliates?saved=1");
+  redirect("/admin/settings?tab=affiliates&saved=1");
 }
 
 export async function approvePayoutAction(formData: FormData) {
@@ -239,8 +264,10 @@ export async function signUpAffiliateAction(formData: FormData) {
   if (!parsed.ok) {
     signupFail(parsed.error);
   }
-  if (parsed.referralCode) {
-    const owner = await findReferralCodeOwner(parsed.referralCode);
+  const referralCode = parsed.referralCode ?? (await readReferralCookie());
+  const linkSlug = await readReferralLinkCookie();
+  if (referralCode) {
+    const owner = await findReferralCodeOwner(referralCode);
     if (!owner) {
       signupFail("That referral code was not found.");
     }
@@ -276,16 +303,18 @@ export async function signUpAffiliateAction(formData: FormData) {
     }
     signupFail(error.message);
   }
-  if (parsed.referralCode) {
+  if (referralCode) {
     const attributed = await attributeReferral({
       userId,
-      code: parsed.referralCode,
+      code: referralCode,
+      linkSlug,
     });
     if (!attributed.ok) {
       signupFail(attributed.error);
     }
   }
   await ensureReferralCode(userId);
+  await clearReferralCookie();
   await writeEventLog({
     scope: "system",
     event: "membership.affiliate_signed_up",
@@ -337,4 +366,57 @@ export async function upgradeAffiliateToPlatformAction() {
   revalidatePath("/", "layout");
   revalidatePath(AFFILIATES_PATH);
   redirect(WELCOME_PATH);
+}
+
+export async function createAffiliateCampaignAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  const created = await createAffiliateCampaign({
+    userId: member.id,
+    name: formData.get("name"),
+  });
+  if (!created.ok) {
+    portalFail(created.error, "links");
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.affiliate_campaign",
+    message: "Created an affiliate campaign",
+    userId: member.id,
+    data: { campaignId: created.id },
+  });
+  revalidatePath(AFFILIATES_PATH);
+  redirect(affiliatePortalPath("links", { saved: "campaign" }));
+}
+
+export async function createAffiliateLinkAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  const campaignRaw = String(formData.get("campaignId") ?? "").trim();
+  const campaignId = campaignRaw ? parseUuid(campaignRaw) : null;
+  if (campaignRaw && !campaignId) {
+    portalFail("Choose a campaign.", "links");
+  }
+  const created = await createAffiliateLink({
+    userId: member.id,
+    name: formData.get("name"),
+    landing: formData.get("landing"),
+    campaignId,
+  });
+  if (!created.ok) {
+    portalFail(created.error, "links");
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.affiliate_link",
+    message: "Created an affiliate link",
+    userId: member.id,
+    data: { slug: created.slug },
+  });
+  revalidatePath(AFFILIATES_PATH);
+  redirect(affiliatePortalPath("links", { saved: "link" }));
 }

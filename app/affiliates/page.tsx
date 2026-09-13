@@ -6,9 +6,11 @@ import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getSessionMember } from "@/lib/auth/session";
 import {
+  firstTouchReferralCode,
   parseAffiliatePortalTab,
   referralShareUrl,
 } from "@/lib/membership/affiliate";
+import { readReferralCookie } from "@/lib/membership/affiliate-cookie";
 import { signUpAffiliateAction } from "@/lib/membership/affiliate-actions";
 import {
   listMemberPayouts,
@@ -35,7 +37,10 @@ export default async function AffiliatesPage({
   const saved = firstSearchValue(params.saved);
   const tab = parseAffiliatePortalTab(firstSearchValue(params.tab));
   const referralCode =
-    firstSearchValue(params.ref) ?? firstSearchValue(params.referralCode) ?? "";
+    firstTouchReferralCode(
+      await readReferralCookie(),
+      firstSearchValue(params.ref) ?? firstSearchValue(params.referralCode),
+    ) ?? "";
 
   if (member) {
     const arrears = await loadMemberArrears(member.id);
@@ -52,19 +57,22 @@ export default async function AffiliatesPage({
       listBillingChains(),
     ]);
     return (
-      <main className="mx-auto max-w-7xl px-6 py-12">
-        <AffiliateDashboard
-          portal={portal}
-          shareUrl={shareUrl}
-          arrears={arrears}
-          payouts={payouts}
-          chains={chains}
-          platformMember={member.platformMember}
-          tab={tab}
-          saved={saved ?? null}
-          error={error ?? null}
-        />
-      </main>
+      <div className="px-6 py-8">
+        <div className="mx-auto max-w-7xl">
+          <AffiliateDashboard
+            portal={portal}
+            shareUrl={shareUrl}
+            origin={origin}
+            arrears={arrears}
+            payouts={payouts}
+            chains={chains}
+            platformMember={member.platformMember}
+            tab={tab}
+            saved={saved ?? null}
+            error={error ?? null}
+          />
+        </div>
+      </div>
     );
   }
 
@@ -76,10 +84,15 @@ export default async function AffiliatesPage({
           <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
             Promote the platform and earn a percent of referred membership
             subscriptions. You do not need a platform account to join. Platform
-            users are already affiliates — sign in to open your dashboard.
+            users are already affiliates — sign in to open your dashboard. To
+            run desks,{" "}
+            <Link href="/sign-up" className="text-accent hover:text-accent-strong">
+              start free
+            </Link>
+            .
           </p>
           <ul className="mt-6 max-w-xl list-disc space-y-2 pl-5 text-sm text-ink-muted">
-            <li>Share a unique referral code and link.</li>
+            <li>Share a unique referral code and custom landing links.</li>
             <li>Commission is on platform subscriptions only, not trading PnL.</li>
             <li>Withdraw payable earnings as USDT after the hold.</li>
           </ul>
@@ -89,8 +102,8 @@ export default async function AffiliatesPage({
             Join as an affiliate
           </h2>
           <p className="mt-2 text-sm text-ink-muted">
-            Separate from platform membership. Upgrade to Free later if you
-            want desks.
+            Separate from platform membership. Upgrade later to unlock
+            platform features and earn higher commissions.
           </p>
           {error ? (
             <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -149,7 +162,11 @@ export default async function AffiliatesPage({
             </PendingSubmitButton>
           </form>
           <p className="mt-4 text-sm text-ink-muted">
-            Already have an account?{" "}
+            Want desks?{" "}
+            <Link href="/sign-up" className="text-accent hover:text-accent-strong">
+              Start free
+            </Link>
+            . Already have an account?{" "}
             <Link href="/sign-in" className="text-accent hover:text-accent-strong">
               Sign in
             </Link>

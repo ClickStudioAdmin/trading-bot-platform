@@ -4,12 +4,19 @@ import { CopyTextButton } from "@/components/copy-text-button";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
+  AFFILIATE_CAMPAIGN_NAME_MAX,
+  AFFILIATE_LANDINGS,
+  AFFILIATE_LINK_NAME_MAX,
+  affiliateLandingLabel,
+  affiliateLinkShareUrl,
   affiliatePortalPath,
   monthJoinedLabel,
   withdrawDecision,
   type AffiliatePortalTab,
 } from "@/lib/membership/affiliate";
 import {
+  createAffiliateCampaignAction,
+  createAffiliateLinkAction,
   requestAffiliatePayoutAction,
   upgradeAffiliateToPlatformAction,
 } from "@/lib/membership/affiliate-actions";
@@ -25,6 +32,7 @@ import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
 export function AffiliateDashboard({
   portal,
   shareUrl,
+  origin,
   arrears,
   payouts,
   chains,
@@ -35,6 +43,7 @@ export function AffiliateDashboard({
 }: {
   portal: AffiliatePortal;
   shareUrl: string;
+  origin: string;
   arrears: boolean;
   payouts: PayoutRow[];
   chains: BillingChain[];
@@ -79,6 +88,9 @@ export function AffiliateDashboard({
         <TabLink href={affiliatePortalPath("referrals")} selected={tab === "referrals"}>
           Referrals
         </TabLink>
+        <TabLink href={affiliatePortalPath("links")} selected={tab === "links"}>
+          Links
+        </TabLink>
         <TabLink href={affiliatePortalPath("payouts")} selected={tab === "payouts"}>
           Payouts
         </TabLink>
@@ -92,6 +104,12 @@ export function AffiliateDashboard({
         <p className="mt-6 text-sm text-success">
           You are in. Share your code to start attributing referrals.
         </p>
+      ) : null}
+      {saved === "campaign" ? (
+        <p className="mt-6 text-sm text-success">Campaign created.</p>
+      ) : null}
+      {saved === "link" ? (
+        <p className="mt-6 text-sm text-success">Link created.</p>
       ) : null}
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -128,31 +146,6 @@ export function AffiliateDashboard({
 
       {tab === "overview" ? (
         <>
-          <section className="mt-6 rounded-card border border-line bg-surface p-5">
-            <h2 className="text-lg font-semibold tracking-tight">
-              Current rates
-            </h2>
-            <p className="mt-2 text-sm text-ink-muted">{rateNote}</p>
-            <table className="mt-4 w-full max-w-md text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase tracking-[0.12em] text-ink-muted">
-                  <th className="py-1.5 font-medium">Level</th>
-                  <th className="py-1.5 font-medium">Commission</th>
-                </tr>
-              </thead>
-              <tbody>
-                {portal.rates.rows.map((row) => (
-                  <tr key={row.level} className="border-t border-line">
-                    <td className="py-2 text-ink">L{row.level}</td>
-                    <td className="py-2 tabular-nums text-ink">
-                      {row.active ? `${row.ratePct}%` : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
           <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile label="Attributed" value={String(portal.stats.attributed)} />
             <StatTile
@@ -186,6 +179,53 @@ export function AffiliateDashboard({
           </section>
 
           <section className="mt-6 rounded-card border border-line bg-surface p-5">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Current rates
+            </h2>
+            <p className="mt-2 text-sm text-ink-muted">{rateNote}</p>
+            <table className="mt-4 w-full max-w-md text-sm">
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-[0.12em] text-ink-muted">
+                  <th className="py-1.5 font-medium">Level</th>
+                  <th className="py-1.5 font-medium">Commission</th>
+                </tr>
+              </thead>
+              <tbody>
+                {portal.rates.rows.map((row) => (
+                  <tr key={row.level} className="border-t border-line">
+                    <td className="py-2 text-ink">L{row.level}</td>
+                    <td className="py-2 tabular-nums text-ink">
+                      {row.active ? `${row.ratePct}%` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="mt-4 max-w-md border-t border-line pt-4">
+              <p className="text-sm text-ink-muted">
+                Paid plans pay higher L1–L5 on referred subscriptions.
+              </p>
+              {!platformMember ? (
+                <form action={upgradeAffiliateToPlatformAction} className="mt-3">
+                  <PendingSubmitButton
+                    pendingLabel="Upgrading…"
+                    className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+                  >
+                    Upgrade to earn higher rates
+                  </PendingSubmitButton>
+                </form>
+              ) : (
+                <Link
+                  href="/account/plans"
+                  className="mt-3 inline-flex rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+                >
+                  Upgrade to earn higher rates
+                </Link>
+              )}
+            </div>
+          </section>
+
+          <section className="mt-6 rounded-card border border-line bg-surface p-5">
             <h2 className="text-lg font-semibold tracking-tight">Referral kit</h2>
             {portal.code ? (
               <>
@@ -199,6 +239,16 @@ export function AffiliateDashboard({
                     <CopyTextButton text={shareUrl} label="Copy link" />
                   ) : null}
                 </div>
+                <p className="mt-3 text-sm text-ink-muted">
+                  Create landing-page links and campaigns on the{" "}
+                  <Link
+                    href={affiliatePortalPath("links")}
+                    className="text-accent hover:text-accent-strong"
+                  >
+                    Links
+                  </Link>{" "}
+                  tab.
+                </p>
               </>
             ) : (
               <p className="mt-2 text-sm text-ink-muted">
@@ -307,6 +357,150 @@ export function AffiliateDashboard({
             </div>
           )}
         </section>
+      ) : null}
+
+      {tab === "links" ? (
+        <div className="mt-6 space-y-5">
+          <div className="grid gap-5 lg:grid-cols-2">
+            <section className="rounded-card border border-line bg-surface p-5">
+              <h2 className="text-lg font-semibold tracking-tight">
+                Campaigns
+              </h2>
+              <p className="mt-2 text-sm text-ink-muted">
+                Group links so later stats can filter by campaign.
+              </p>
+              <form action={createAffiliateCampaignAction} className="mt-4 space-y-3">
+                <label className="block text-sm text-ink">
+                  Name
+                  <input
+                    name="name"
+                    required
+                    maxLength={AFFILIATE_CAMPAIGN_NAME_MAX}
+                    className={BILLING_FIELD_CLASS}
+                  />
+                </label>
+                <PendingSubmitButton
+                  pendingLabel="Creating…"
+                  className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+                >
+                  Create campaign
+                </PendingSubmitButton>
+              </form>
+              {portal.campaigns.length === 0 ? (
+                <p className="mt-4 text-sm text-ink-muted">No campaigns yet.</p>
+              ) : (
+                <ul className="mt-4 divide-y divide-line text-sm">
+                  {portal.campaigns.map((campaign) => (
+                    <li key={campaign.id} className="py-2 text-ink">
+                      {campaign.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+            <section className="rounded-card border border-line bg-surface p-5">
+              <h2 className="text-lg font-semibold tracking-tight">
+                Create a link
+              </h2>
+              <p className="mt-2 text-sm text-ink-muted">
+                First-touch visitors land on the page you choose. Home or the
+                public affiliate page for now.
+              </p>
+              <form action={createAffiliateLinkAction} className="mt-4 space-y-3">
+                <label className="block text-sm text-ink">
+                  Name
+                  <input
+                    name="name"
+                    required
+                    maxLength={AFFILIATE_LINK_NAME_MAX}
+                    className={BILLING_FIELD_CLASS}
+                  />
+                </label>
+                <label className="block text-sm text-ink">
+                  Landing page
+                  <select
+                    name="landing"
+                    defaultValue="home"
+                    className={BILLING_FIELD_CLASS}
+                  >
+                    {AFFILIATE_LANDINGS.map((landing) => (
+                      <option key={landing} value={landing}>
+                        {affiliateLandingLabel(landing)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm text-ink">
+                  Campaign
+                  <select name="campaignId" defaultValue="" className={BILLING_FIELD_CLASS}>
+                    <option value="">No campaign</option>
+                    {portal.campaigns.map((campaign) => (
+                      <option key={campaign.id} value={campaign.id}>
+                        {campaign.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <PendingSubmitButton
+                  pendingLabel="Creating…"
+                  className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+                >
+                  Create link
+                </PendingSubmitButton>
+              </form>
+            </section>
+          </div>
+          <section className="rounded-card border border-line bg-surface p-5">
+            <h2 className="text-lg font-semibold tracking-tight">Your links</h2>
+            {portal.links.length === 0 ? (
+              <p className="mt-3 text-sm text-ink-muted">
+                No custom links yet. Create one to share a landing page.
+              </p>
+            ) : (
+              <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                    <tr>
+                      <th className="pb-2 pr-4 font-medium">Name</th>
+                      <th className="pb-2 pr-4 font-medium">Campaign</th>
+                      <th className="pb-2 pr-4 font-medium">Landing</th>
+                      <th className="pb-2 pr-4 font-medium">Link</th>
+                      <th className="pb-2 pr-4 font-medium">Attributed</th>
+                      <th className="pb-2 font-medium">Copy</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {portal.links.map((link) => {
+                      const url = origin
+                        ? affiliateLinkShareUrl(origin, link.slug)
+                        : `/r/${link.slug}`;
+                      return (
+                        <tr key={link.id}>
+                          <td className="py-2 pr-4 text-ink">{link.name}</td>
+                          <td className="py-2 pr-4 text-ink-muted">
+                            {link.campaignName ?? "—"}
+                          </td>
+                          <td className="py-2 pr-4 text-ink">
+                            {affiliateLandingLabel(link.landing)}
+                          </td>
+                          <td className="max-w-[16rem] truncate py-2 pr-4 font-mono text-xs text-ink-muted">
+                            {url}
+                          </td>
+                          <td className="py-2 pr-4 tabular-nums text-ink">
+                            {link.attributed}
+                          </td>
+                          <td className="py-2">
+                            <CopyTextButton text={url} label="Copy" />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+        </div>
       ) : null}
 
       {tab === "payouts" ? (

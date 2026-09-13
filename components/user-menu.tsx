@@ -38,12 +38,20 @@ export function UserMenu({ name }: { name: string | null }) {
 
   if (!name) {
     return (
-      <Link
-        href="/sign-in"
-        className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
-      >
-        Sign in
-      </Link>
+      <div className="flex items-center gap-2">
+        <Link
+          href="/sign-in"
+          className="rounded-control px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+        >
+          Sign in
+        </Link>
+        <Link
+          href="/sign-up"
+          className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
+        >
+          Start free
+        </Link>
+      </div>
     );
   }
 

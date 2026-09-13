@@ -62,7 +62,11 @@ export default async function SignInPage({
           </PendingSubmitButton>
         </form>
         <p className="mt-6 text-sm text-ink-muted">
-          Promote the platform without a membership?{" "}
+          New here?{" "}
+          <a href="/sign-up" className="text-accent hover:text-accent-strong">
+            Create a free account
+          </a>
+          . Promote the platform without desks?{" "}
           <a href="/affiliates" className="text-accent hover:text-accent-strong">
             Join as an affiliate
           </a>

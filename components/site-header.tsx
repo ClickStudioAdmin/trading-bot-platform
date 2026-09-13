@@ -17,7 +17,15 @@ export async function SiteHeader() {
   const autoTick = admin ? await loadAutoTickEnabled() : false;
 
   return (
-    <HeaderBar start={<HeaderChromeLinks signedIn={Boolean(user)} />}>
+    <HeaderBar
+      signedIn={Boolean(user)}
+      start={
+        <HeaderChromeLinks
+          signedIn={Boolean(user)}
+          platformMember={user?.platformMember !== false}
+        />
+      }
+    >
       <div className="flex shrink-0 items-center justify-end gap-2">
         <UserMenu
           name={user ? memberDisplayName(user.email, user.name) : null}

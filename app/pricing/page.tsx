@@ -17,15 +17,19 @@ export default async function PricingPage() {
     <main className="mx-auto max-w-7xl px-6 py-12">
       <PageHeading title="Pricing" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
-        Public plans only. Sign in to see a private or assigned plan on Plans
-        in the app.
+        Public plans only. Start free, then upgrade when you want more.
+        Sign in to see a private or assigned plan on Plans in the app.
       </p>
       {!listed.ok ? (
         <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {listed.error}
         </p>
       ) : null}
-      <MembershipPlanCards plans={plans} currentPlanId={null} />
+      <MembershipPlanCards
+        plans={plans}
+        currentPlanId={null}
+        joinHref="/sign-up"
+      />
     </main>
   );
 }
