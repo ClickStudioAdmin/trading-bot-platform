@@ -633,12 +633,66 @@ export const AFFILIATE_PORTAL_TABS = [
   "payouts",
 ] as const;
 export type AffiliatePortalTab = (typeof AFFILIATE_PORTAL_TABS)[number];
+export const AFFILIATE_PORTAL_PAGE_SIZE = 20;
 
 export function parseAffiliatePortalTab(value: unknown): AffiliatePortalTab {
   const raw = String(value ?? "").trim().toLowerCase();
   return AFFILIATE_PORTAL_TABS.includes(raw as AffiliatePortalTab)
     ? (raw as AffiliatePortalTab)
     : "overview";
+}
+
+export function parseAffiliatePortalPage(value: unknown): number {
+  const page = Math.trunc(Number(String(value ?? "").trim()));
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+export function paginateAffiliateList<T>(
+  rows: readonly T[],
+  page: number,
+  pageSize = AFFILIATE_PORTAL_PAGE_SIZE,
+): {
+  rows: T[];
+  page: number;
+  pageCount: number;
+  total: number;
+  from: number;
+  to: number;
+} {
+  const total = rows.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), pageCount);
+  const start = (safePage - 1) * pageSize;
+  const slice = rows.slice(start, start + pageSize);
+  return {
+    rows: slice,
+    page: safePage,
+    pageCount,
+    total,
+    from: total === 0 ? 0 : start + 1,
+    to: start + slice.length,
+  };
+}
+
+export function affiliatePageLabel(input: {
+  total: number;
+  from: number;
+  to: number;
+}): string {
+  if (input.total === 0) {
+    return "No rows.";
+  }
+  return `Showing ${input.from}–${input.to} of ${input.total}`;
+}
+
+export function affiliatePortalPageForIndex(
+  index: number,
+  pageSize = AFFILIATE_PORTAL_PAGE_SIZE,
+): number {
+  if (index < 0) {
+    return 1;
+  }
+  return Math.floor(index / pageSize) + 1;
 }
 
 export function affiliatePortalPath(
@@ -656,6 +710,22 @@ export function affiliatePortalPath(
   }
   const query = params.toString();
   return query ? `/affiliates?${query}` : "/affiliates";
+}
+
+export function affiliatePortalPagePath(
+  tab: AffiliatePortalTab,
+  page = 1,
+): string {
+  return affiliatePortalPath(tab, page > 1 ? { page: String(page) } : {});
+}
+
+export function affiliateDownlineRowHref(
+  userId: string,
+  downline: readonly { userId: string }[],
+): string {
+  const index = downline.findIndex((row) => row.userId === userId);
+  const page = affiliatePortalPageForIndex(index);
+  return `${affiliatePortalPagePath("network", page)}#downline-${userId}`;
 }
 
 export type AffiliateStatSource = {

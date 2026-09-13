@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { AffiliateArchiveButton } from "@/components/affiliate-archive-button";
 import { AffiliateLinkActions } from "@/components/affiliate-link-actions";
@@ -12,8 +13,12 @@ import {
   AFFILIATE_LINK_NAME_MAX,
   affiliateLandingLabel,
   affiliateLinkKindLabel,
+  affiliateDownlineRowHref,
+  affiliatePageLabel,
+  affiliatePortalPagePath,
   affiliatePortalPath,
   canArchiveAffiliateLink,
+  paginateAffiliateList,
   affiliateRowShareUrl,
   monthJoinedLabel,
   withdrawDecision,
@@ -44,6 +49,7 @@ export function AffiliateDashboard({
   chains,
   platformMember,
   tab,
+  page,
   saved,
   error,
 }: {
@@ -54,6 +60,7 @@ export function AffiliateDashboard({
   chains: BillingChain[];
   platformMember: boolean;
   tab: AffiliatePortalTab;
+  page: number;
   saved: string | null;
   error: string | null;
 }) {
@@ -68,6 +75,17 @@ export function AffiliateDashboard({
     chains.find((chain) => chain.slug === slug)?.name ?? slug;
   const sourceLabel = (userId: string) =>
     portal.downline.find((row) => row.userId === userId)?.label ?? "Member";
+  const downlinePage = paginateAffiliateList(portal.downline, page);
+  const commissionPage = paginateAffiliateList(portal.commissions, page);
+  const campaignPage = paginateAffiliateList(
+    [...portal.campaigns, ...portal.archivedCampaigns],
+    page,
+  );
+  const linkPage = paginateAffiliateList(
+    [...portal.links, ...portal.archivedLinks],
+    page,
+  );
+  const payoutPage = paginateAffiliateList(payouts, page);
   const rateNote =
     portal.rates.source === "plan" && portal.rates.planName
       ? `Your ${portal.rates.planName} plan rates.`
@@ -261,37 +279,45 @@ export function AffiliateDashboard({
             {portal.downline.length === 0 ? (
               <p className="mt-2 text-sm text-ink-muted">No referrals yet.</p>
             ) : (
-              <div className="mt-4 overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                    <tr>
-                      <th className="pb-2 pr-4 font-medium">Affiliate</th>
-                      <th className="pb-2 pr-4 font-medium">Level</th>
-                      <th className="pb-2 pr-4 font-medium">Status</th>
-                      <th className="pb-2 font-medium">Joined</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {portal.downline.map((row) => (
-                      <tr key={row.userId} id={`downline-${row.userId}`}>
-                        <td className="py-2 pr-4 text-ink">{row.label}</td>
-                        <td className="py-2 pr-4 tabular-nums text-ink">
-                          L{row.level}
-                        </td>
-                        <td className="py-2 pr-4 text-ink-muted">
-                          {row.firstPaidAt ? "paid" : "signup"}
-                        </td>
-                        <td className="py-2 text-ink-muted">
-                          {monthJoinedLabel(row.attributedAt)}
-                        </td>
+              <>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                      <tr>
+                        <th className="pb-2 pr-4 font-medium">Affiliate</th>
+                        <th className="pb-2 pr-4 font-medium">Level</th>
+                        <th className="pb-2 pr-4 font-medium">Status</th>
+                        <th className="pb-2 font-medium">Joined</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {downlinePage.rows.map((row) => (
+                        <tr key={row.userId} id={`downline-${row.userId}`}>
+                          <td className="py-2 pr-4 text-ink">{row.label}</td>
+                          <td className="py-2 pr-4 tabular-nums text-ink">
+                            L{row.level}
+                          </td>
+                          <td className="py-2 pr-4 text-ink-muted">
+                            {row.firstPaidAt ? "paid" : "signup"}
+                          </td>
+                          <td className="py-2 text-ink-muted">
+                            {monthJoinedLabel(row.attributedAt)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <AffiliateTablePager tab="network" list={downlinePage} />
+              </>
             )}
           </section>
-          <AffiliateOrgChartFrame nodes={portal.tree} />
+          <AffiliateOrgChartFrame
+            nodes={portal.tree}
+            rowHref={(userId) =>
+              affiliateDownlineRowHref(userId, portal.downline)
+            }
+          />
         </div>
       ) : null}
 
@@ -304,52 +330,55 @@ export function AffiliateDashboard({
           {portal.commissions.length === 0 ? (
             <p className="mt-4 text-sm text-ink-muted">No commissions yet.</p>
           ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                  <tr>
-                    <th className="pb-2 pr-4 font-medium">Date</th>
-                    <th className="pb-2 pr-4 font-medium">From</th>
-                    <th className="pb-2 pr-4 font-medium">Level</th>
-                    <th className="pb-2 pr-4 font-medium">Rate</th>
-                    <th className="pb-2 pr-4 font-medium">Amount</th>
-                    <th className="pb-2 pr-4 font-medium">Status</th>
-                    <th className="pb-2 font-medium">Hold until</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {portal.commissions.map((row) => {
-                    const created = parseDisplayTime(row.createdAt);
-                    const hold = parseDisplayTime(row.holdUntil);
-                    return (
-                      <tr key={row.id}>
-                        <td className="py-2 pr-4 text-ink-muted">
-                          {created ? formatLocalDate(created) : "—"}
-                        </td>
-                        <td className="py-2 pr-4 text-ink">
-                          {sourceLabel(row.sourceUserId)}
-                        </td>
-                        <td className="py-2 pr-4 tabular-nums text-ink">
-                          L{row.level}
-                        </td>
-                        <td className="py-2 pr-4 tabular-nums text-ink">
-                          {row.ratePct}%
-                        </td>
-                        <td className="py-2 pr-4 tabular-nums text-ink">
-                          {formatUsd(row.amountUsd)}
-                        </td>
-                        <td className="py-2 pr-4 capitalize text-ink-muted">
-                          {row.status}
-                        </td>
-                        <td className="py-2 text-ink-muted">
-                          {hold ? formatLocalDate(hold) : "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                    <tr>
+                      <th className="pb-2 pr-4 font-medium">Date</th>
+                      <th className="pb-2 pr-4 font-medium">From</th>
+                      <th className="pb-2 pr-4 font-medium">Level</th>
+                      <th className="pb-2 pr-4 font-medium">Rate</th>
+                      <th className="pb-2 pr-4 font-medium">Amount</th>
+                      <th className="pb-2 pr-4 font-medium">Status</th>
+                      <th className="pb-2 font-medium">Hold until</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {commissionPage.rows.map((row) => {
+                      const created = parseDisplayTime(row.createdAt);
+                      const hold = parseDisplayTime(row.holdUntil);
+                      return (
+                        <tr key={row.id}>
+                          <td className="py-2 pr-4 text-ink-muted">
+                            {created ? formatLocalDate(created) : "—"}
+                          </td>
+                          <td className="py-2 pr-4 text-ink">
+                            {sourceLabel(row.sourceUserId)}
+                          </td>
+                          <td className="py-2 pr-4 tabular-nums text-ink">
+                            L{row.level}
+                          </td>
+                          <td className="py-2 pr-4 tabular-nums text-ink">
+                            {row.ratePct}%
+                          </td>
+                          <td className="py-2 pr-4 tabular-nums text-ink">
+                            {formatUsd(row.amountUsd)}
+                          </td>
+                          <td className="py-2 pr-4 capitalize text-ink-muted">
+                            {row.status}
+                          </td>
+                          <td className="py-2 text-ink-muted">
+                            {hold ? formatLocalDate(hold) : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <AffiliateTablePager tab="referrals" list={commissionPage} />
+            </>
           )}
         </section>
       ) : null}
@@ -389,7 +418,11 @@ export function AffiliateDashboard({
             portal.archivedCampaigns.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">No campaigns yet.</p>
             ) : (
-              <AffiliateCampaignsTable portal={portal} />
+              <AffiliateCampaignsTable
+                portal={portal}
+                campaigns={campaignPage.rows}
+                pager={<AffiliateTablePager tab="campaigns" list={campaignPage} />}
+              />
             )}
           </section>
         </div>
@@ -480,7 +513,7 @@ export function AffiliateDashboard({
                     </tr>
                   </thead>
                   <tbody>
-                    {[...portal.links, ...portal.archivedLinks].map((link) => (
+                    {linkPage.rows.map((link) => (
                       <AffiliateLinkRowView
                         key={link.id}
                         link={link}
@@ -489,6 +522,9 @@ export function AffiliateDashboard({
                     ))}
                   </tbody>
                 </table>
+                <div className="px-4 pb-4">
+                  <AffiliateTablePager tab="links" list={linkPage} />
+                </div>
               </div>
             )}
           </section>
@@ -585,8 +621,9 @@ export function AffiliateDashboard({
               <p className="mt-3 text-sm text-ink-muted">No payouts yet.</p>
             ) : (
               <AffiliatePayoutsTable
-                payouts={payouts}
+                payouts={payoutPage.rows}
                 chainName={chainName}
+                pager={<AffiliateTablePager tab="payouts" list={payoutPage} />}
               />
             )}
           </section>
@@ -599,9 +636,11 @@ export function AffiliateDashboard({
 function AffiliatePayoutsTable({
   payouts,
   chainName,
+  pager,
 }: {
   payouts: PayoutRow[];
   chainName: (slug: string) => string;
+  pager: ReactNode;
 }) {
   return (
     <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
@@ -648,11 +687,20 @@ function AffiliatePayoutsTable({
           })}
         </tbody>
       </table>
+      <div className="px-4 pb-4">{pager}</div>
     </div>
   );
 }
 
-function AffiliateCampaignsTable({ portal }: { portal: AffiliatePortal }) {
+function AffiliateCampaignsTable({
+  portal,
+  campaigns,
+  pager,
+}: {
+  portal: AffiliatePortal;
+  campaigns: AffiliateCampaignRow[];
+  pager: ReactNode;
+}) {
   const links = [...portal.links, ...portal.archivedLinks];
   return (
     <div className="mt-4 overflow-x-auto rounded-card border border-line bg-surface">
@@ -671,7 +719,7 @@ function AffiliateCampaignsTable({ portal }: { portal: AffiliatePortal }) {
           </tr>
         </thead>
         <tbody>
-          {[...portal.campaigns, ...portal.archivedCampaigns].map((campaign) => (
+          {campaigns.map((campaign) => (
             <AffiliateCampaignRowView
               key={campaign.id}
               campaign={campaign}
@@ -687,6 +735,7 @@ function AffiliateCampaignsTable({ portal }: { portal: AffiliatePortal }) {
           ))}
         </tbody>
       </table>
+      <div className="px-4 pb-4">{pager}</div>
     </div>
   );
 }
@@ -784,6 +833,49 @@ function AffiliateLinkRowView({
         )}
       </td>
     </tr>
+  );
+}
+
+function AffiliateTablePager({
+  tab,
+  list,
+}: {
+  tab: AffiliatePortalTab;
+  list: {
+    page: number;
+    pageCount: number;
+    total: number;
+    from: number;
+    to: number;
+  };
+}) {
+  if (list.total === 0) {
+    return null;
+  }
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-ink-muted">
+      <p>{affiliatePageLabel(list)}</p>
+      {list.pageCount > 1 ? (
+        <div className="flex gap-2">
+          {list.page > 1 ? (
+            <Link
+              href={affiliatePortalPagePath(tab, list.page - 1)}
+              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            >
+              Previous
+            </Link>
+          ) : null}
+          {list.page < list.pageCount ? (
+            <Link
+              href={affiliatePortalPagePath(tab, list.page + 1)}
+              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            >
+              Next
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

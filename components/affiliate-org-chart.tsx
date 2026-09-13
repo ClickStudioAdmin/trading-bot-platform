@@ -2,8 +2,10 @@ import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
 
 export function AffiliateOrgChart({
   nodes,
+  rowHref,
 }: {
   nodes: AffiliateTreeNode[];
+  rowHref: (userId: string) => string;
 }) {
   if (nodes.length === 0) {
     return null;
@@ -13,7 +15,7 @@ export function AffiliateOrgChart({
       {nodes.map((node) => (
         <li key={node.userId}>
           <a
-            href={`#downline-${node.userId}`}
+            href={rowHref(node.userId)}
             className="text-accent hover:underline"
           >
             {node.label}
@@ -25,7 +27,7 @@ export function AffiliateOrgChart({
           </span>
           {node.children.length > 0 ? (
             <div className="mt-2">
-              <AffiliateOrgChart nodes={node.children} />
+              <AffiliateOrgChart nodes={node.children} rowHref={rowHref} />
             </div>
           ) : null}
         </li>

@@ -6,8 +6,10 @@ import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
 
 export function AffiliateOrgChartFrame({
   nodes,
+  rowHref,
 }: {
   nodes: AffiliateTreeNode[];
+  rowHref: (userId: string) => string;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
@@ -130,7 +132,7 @@ export function AffiliateOrgChartFrame({
               : "mt-3"
           }
         >
-          <AffiliateOrgChart nodes={nodes} />
+          <AffiliateOrgChart nodes={nodes} rowHref={rowHref} />
         </div>
       )}
     </section>

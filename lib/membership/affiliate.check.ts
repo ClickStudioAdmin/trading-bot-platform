@@ -16,6 +16,13 @@ import {
   affiliateLinkShareUrl,
   affiliateRowShareUrl,
   affiliatePortalPath,
+  affiliatePortalPagePath,
+  affiliateDownlineRowHref,
+  affiliatePageLabel,
+  affiliatePortalPageForIndex,
+  paginateAffiliateList,
+  parseAffiliatePortalPage,
+  AFFILIATE_PORTAL_PAGE_SIZE,
   generateAffiliateLinkSlug,
   parseAffiliateLanding,
   parseAffiliateLabel,
@@ -251,6 +258,47 @@ assert.equal(
 assert.equal(
   affiliatePortalPath("campaigns", { saved: "campaign" }),
   "/affiliates?tab=campaigns&saved=campaign",
+);
+assert.equal(AFFILIATE_PORTAL_PAGE_SIZE, 20);
+assert.equal(parseAffiliatePortalPage("3"), 3);
+assert.equal(parseAffiliatePortalPage("0"), 1);
+assert.equal(parseAffiliatePortalPage("nope"), 1);
+assert.equal(affiliatePortalPagePath("network", 1), "/affiliates?tab=network");
+assert.equal(
+  affiliatePortalPagePath("network", 2),
+  "/affiliates?tab=network&page=2",
+);
+assert.equal(affiliatePortalPageForIndex(0), 1);
+assert.equal(affiliatePortalPageForIndex(19), 1);
+assert.equal(affiliatePortalPageForIndex(20), 2);
+assert.equal(affiliatePortalPageForIndex(-1), 1);
+{
+  const listed = paginateAffiliateList(
+    Array.from({ length: 45 }, (_, index) => index + 1),
+    2,
+  );
+  assert.equal(listed.page, 2);
+  assert.equal(listed.pageCount, 3);
+  assert.deepEqual(listed.rows, Array.from({ length: 20 }, (_, index) => index + 21));
+  assert.equal(listed.from, 21);
+  assert.equal(listed.to, 40);
+  assert.equal(
+    affiliatePageLabel(listed),
+    "Showing 21–40 of 45",
+  );
+}
+assert.equal(
+  paginateAffiliateList(["a"], 9).page,
+  1,
+);
+assert.equal(
+  affiliateDownlineRowHref(
+    "b",
+    Array.from({ length: 21 }, (_, index) => ({
+      userId: index === 20 ? "b" : `a${index}`,
+    })),
+  ),
+  "/affiliates?tab=network&page=2#downline-b",
 );
 assert.equal(parseAffiliateLanding("home").ok, true);
 assert.equal(parseAffiliateLanding("affiliates").ok, true);

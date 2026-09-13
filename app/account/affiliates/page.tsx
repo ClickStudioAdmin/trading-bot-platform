@@ -8,7 +8,7 @@ export default async function AccountAffiliatesRedirect({
 }) {
   const params = await searchParams;
   const query = new URLSearchParams();
-  for (const key of ["error", "saved", "tab"]) {
+  for (const key of ["error", "saved", "tab", "page"]) {
     const value = firstSearchValue(params[key]);
     if (value) {
       query.set(key, value);
