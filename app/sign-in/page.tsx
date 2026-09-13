@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { signIn } from "@/lib/auth/actions";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { redirectSignedInHome } from "@/lib/auth/onboarding";
+import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -26,52 +28,54 @@ export default async function SignInPage({
         <p className="mt-3 text-sm text-ink-muted">
           Sign in with a desk or affiliate account. Market pages stay public.
         </p>
-        {error ? (
-          <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-            {error}
+        <section className="mt-8 rounded-card border border-line bg-surface p-5">
+          {error ? (
+            <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+              {error}
+            </p>
+          ) : null}
+          <form action={signIn} className="space-y-3">
+            <label className="block text-sm text-ink" htmlFor="email">
+              Email
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className={BILLING_FIELD_CLASS}
+              />
+            </label>
+            <label className="block text-sm text-ink" htmlFor="password">
+              Password
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                className={BILLING_FIELD_CLASS}
+              />
+            </label>
+            <PendingSubmitButton
+              pendingLabel="Signing in…"
+              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+            >
+              Sign in
+            </PendingSubmitButton>
+          </form>
+          <p className="mt-4 text-sm text-ink-muted">
+            New here?{" "}
+            <Link href="/sign-up" className="text-accent hover:text-accent-strong">
+              Create a free account
+            </Link>
+            . Promote the platform without desks?{" "}
+            <Link href="/affiliates" className="text-accent hover:text-accent-strong">
+              Join as an affiliate
+            </Link>
+            .
           </p>
-        ) : null}
-        <form action={signIn} className="mt-8 space-y-4">
-          <label className="block text-xs text-ink-muted" htmlFor="email">
-            Email
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
-            />
-          </label>
-          <label className="block text-xs text-ink-muted" htmlFor="password">
-            Password
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
-            />
-          </label>
-          <PendingSubmitButton
-            pendingLabel="Signing in…"
-            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-          >
-            Sign in
-          </PendingSubmitButton>
-        </form>
-        <p className="mt-6 text-sm text-ink-muted">
-          New here?{" "}
-          <a href="/sign-up" className="text-accent hover:text-accent-strong">
-            Create a free account
-          </a>
-          . Promote the platform without desks?{" "}
-          <a href="/affiliates" className="text-accent hover:text-accent-strong">
-            Join as an affiliate
-          </a>
-          .
-        </p>
+        </section>
       </main>
   );
 }

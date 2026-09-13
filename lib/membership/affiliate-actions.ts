@@ -37,6 +37,8 @@ import {
   rejectPayout,
   releaseDueCommissions,
   requestUsdtPayout,
+  archiveAffiliateCampaign,
+  archiveAffiliateLink,
   attributeReferral,
   createAffiliateCampaign,
   createAffiliateLink,
@@ -419,4 +421,58 @@ export async function createAffiliateLinkAction(formData: FormData) {
   });
   revalidatePath(AFFILIATES_PATH);
   redirect(affiliatePortalPath("links", { saved: "link" }));
+}
+
+export async function archiveAffiliateCampaignAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  const campaignId = parseUuid(formData.get("campaignId"));
+  if (!campaignId) {
+    portalFail("Choose a campaign.", "links");
+  }
+  const archived = await archiveAffiliateCampaign({
+    userId: member.id,
+    campaignId,
+  });
+  if (!archived.ok) {
+    portalFail(archived.error, "links");
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.affiliate_campaign_archived",
+    message: "Archived an affiliate campaign",
+    userId: member.id,
+    data: { campaignId },
+  });
+  revalidatePath(AFFILIATES_PATH);
+  redirect(affiliatePortalPath("links", { saved: "campaign-archived" }));
+}
+
+export async function archiveAffiliateLinkAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  const linkId = parseUuid(formData.get("linkId"));
+  if (!linkId) {
+    portalFail("That link was not found.", "links");
+  }
+  const archived = await archiveAffiliateLink({
+    userId: member.id,
+    linkId,
+  });
+  if (!archived.ok) {
+    portalFail(archived.error, "links");
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.affiliate_link_archived",
+    message: "Archived an affiliate link",
+    userId: member.id,
+    data: { linkId },
+  });
+  revalidatePath(AFFILIATES_PATH);
+  redirect(affiliatePortalPath("links", { saved: "link-archived" }));
 }

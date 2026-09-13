@@ -12,6 +12,7 @@ import {
   affiliateLandingLabel,
   affiliateLandingPath,
   affiliateLinkKindLabel,
+  canArchiveAffiliateLink,
   affiliateLinkShareUrl,
   affiliateRowShareUrl,
   affiliatePortalPath,
@@ -178,6 +179,8 @@ assert.equal(
 );
 assert.equal(affiliateLinkKindLabel("system"), "System");
 assert.equal(affiliateLinkKindLabel("custom"), "Custom");
+assert.equal(canArchiveAffiliateLink("system"), false);
+assert.equal(canArchiveAffiliateLink("custom"), true);
 assert.equal(
   affiliateRowShareUrl("https://app.example", { kind: "system", slug: "AB12" }),
   "https://app.example/affiliates?ref=AB12",

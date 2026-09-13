@@ -116,6 +116,7 @@ export type AffiliateCampaignRow = {
   id: string;
   name: string;
   createdAt: string;
+  archivedAt: string | null;
 };
 
 export type AffiliateLinkRow = {
@@ -128,6 +129,7 @@ export type AffiliateLinkRow = {
   landing: AffiliateLanding;
   createdAt: string;
   attributed: number;
+  archivedAt: string | null;
 };
 
 export type PublicAffiliateLink = {
@@ -151,7 +153,9 @@ export type AffiliatePortal = {
   tree: AffiliateTreeNode[];
   commissions: CommissionRow[];
   campaigns: AffiliateCampaignRow[];
+  archivedCampaigns: AffiliateCampaignRow[];
   links: AffiliateLinkRow[];
+  archivedLinks: AffiliateLinkRow[];
   stats: {
     attributed: number;
     paid: number;
@@ -1276,8 +1280,14 @@ export async function loadAffiliatePortal(
     downline,
     tree: buildAffiliateTree(downline, children, userId),
     commissions,
-    campaigns,
-    links: withSystemAffiliateLink(code, downline, links),
+    campaigns: campaigns.filter((row) => !row.archivedAt),
+    archivedCampaigns: campaigns.filter((row) => row.archivedAt),
+    links: withSystemAffiliateLink(
+      code,
+      downline,
+      links.filter((row) => !row.archivedAt),
+    ),
+    archivedLinks: links.filter((row) => row.archivedAt),
     stats: {
       attributed: downline.length,
       paid,
@@ -1484,18 +1494,29 @@ export async function listAffiliateCampaigns(
   if (!supabase) {
     return [];
   }
-  const { data, error } = await supabase
+  const withArchive = await supabase
     .from("membership_affiliate_campaigns")
-    .select("id, name, created_at")
+    .select("id, name, created_at, archived_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
-  if (error) {
+  const data =
+    withArchive.error && schemaGap(withArchive.error)
+      ? (
+          await supabase
+            .from("membership_affiliate_campaigns")
+            .select("id, name, created_at")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false })
+        ).data
+      : withArchive.data;
+  if (!data && withArchive.error && !schemaGap(withArchive.error)) {
     return [];
   }
   return (data ?? []).map((row) => ({
     id: String(row.id),
     name: String(row.name),
     createdAt: String(row.created_at),
+    archivedAt: optionalId((row as { archived_at?: unknown }).archived_at),
   }));
 }
 
@@ -1521,6 +1542,7 @@ function withSystemAffiliateLink(
       landing: "affiliates",
       createdAt: "",
       attributed,
+      archivedAt: null,
     },
     ...links,
   ];
@@ -1533,12 +1555,22 @@ export async function listAffiliateLinks(
   if (!supabase) {
     return [];
   }
-  const { data, error } = await supabase
+  const withArchive = await supabase
     .from("membership_affiliate_links")
-    .select("id, campaign_id, slug, name, landing, created_at")
+    .select("id, campaign_id, slug, name, landing, created_at, archived_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
-  if (error) {
+  const data =
+    withArchive.error && schemaGap(withArchive.error)
+      ? (
+          await supabase
+            .from("membership_affiliate_links")
+            .select("id, campaign_id, slug, name, landing, created_at")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false })
+        ).data
+      : withArchive.data;
+  if (!data && withArchive.error && !schemaGap(withArchive.error)) {
     return [];
   }
   const campaigns = await listAffiliateCampaigns(userId);
@@ -1556,7 +1588,7 @@ export async function listAffiliateLinks(
     counts.set(linkId, (counts.get(linkId) ?? 0) + 1);
   }
   return (data ?? [])
-    .map((row) => {
+    .map((row): AffiliateLinkRow | null => {
       const landing = parseAffiliateLanding(row.landing);
       if (!landing.ok) {
         return null;
@@ -1564,7 +1596,7 @@ export async function listAffiliateLinks(
       const campaignId = optionalId(row.campaign_id);
       return {
         id: String(row.id),
-        kind: "custom" as const,
+        kind: "custom",
         campaignId,
         campaignName: campaignId ? (names.get(campaignId) ?? null) : null,
         slug: String(row.slug),
@@ -1572,6 +1604,7 @@ export async function listAffiliateLinks(
         landing: landing.landing,
         createdAt: String(row.created_at),
         attributed: counts.get(String(row.id)) ?? 0,
+        archivedAt: optionalId((row as { archived_at?: unknown }).archived_at),
       };
     })
     .filter((row): row is AffiliateLinkRow => row !== null);
@@ -1593,7 +1626,9 @@ export async function createAffiliateCampaign(input: {
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
-  const existing = await listAffiliateCampaigns(input.userId);
+  const existing = (await listAffiliateCampaigns(input.userId)).filter(
+    (row) => !row.archivedAt,
+  );
   if (existing.length >= AFFILIATE_CAMPAIGN_MAX) {
     return {
       ok: false,
@@ -1643,17 +1678,33 @@ export async function createAffiliateLink(input: {
     return { ok: false, error: "Database is not configured." };
   }
   if (input.campaignId) {
-    const { data: campaign } = await supabase
+    const owned = await supabase
       .from("membership_affiliate_campaigns")
-      .select("id")
+      .select("id, archived_at")
       .eq("id", input.campaignId)
       .eq("user_id", input.userId)
       .maybeSingle();
-    if (!campaign) {
+    const campaign =
+      owned.error && schemaGap(owned.error)
+        ? (
+            await supabase
+              .from("membership_affiliate_campaigns")
+              .select("id")
+              .eq("id", input.campaignId)
+              .eq("user_id", input.userId)
+              .maybeSingle()
+          ).data
+        : owned.data;
+    if (
+      !campaign ||
+      optionalId((campaign as { archived_at?: unknown }).archived_at)
+    ) {
       return { ok: false, error: "That campaign was not found." };
     }
   }
-  const existing = await listAffiliateLinks(input.userId);
+  const existing = (await listAffiliateLinks(input.userId)).filter(
+    (row) => !row.archivedAt,
+  );
   if (existing.length >= AFFILIATE_LINK_MAX) {
     return {
       ok: false,
@@ -1684,4 +1735,81 @@ export async function createAffiliateLink(input: {
     return { ok: false, error: error.message };
   }
   return { ok: false, error: "Could not allocate a link slug." };
+}
+
+export async function archiveAffiliateCampaign(input: {
+  userId: string;
+  campaignId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { data, error } = await supabase
+    .from("membership_affiliate_campaigns")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", input.campaignId)
+    .eq("user_id", input.userId)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    if (schemaGap(error)) {
+      return { ok: false, error: "Archive is not available yet." };
+    }
+    return { ok: false, error: error.message };
+  }
+  if (!data) {
+    const existing = await supabase
+      .from("membership_affiliate_campaigns")
+      .select("id, archived_at")
+      .eq("id", input.campaignId)
+      .eq("user_id", input.userId)
+      .maybeSingle();
+    if (existing.data && optionalId(existing.data.archived_at)) {
+      return { ok: true };
+    }
+    return { ok: false, error: "That campaign was not found." };
+  }
+  return { ok: true };
+}
+
+export async function archiveAffiliateLink(input: {
+  userId: string;
+  linkId: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (input.linkId === AFFILIATE_SYSTEM_LINK_ID) {
+    return { ok: false, error: "The Default link cannot be archived." };
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { data, error } = await supabase
+    .from("membership_affiliate_links")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", input.linkId)
+    .eq("user_id", input.userId)
+    .is("archived_at", null)
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    if (schemaGap(error)) {
+      return { ok: false, error: "Archive is not available yet." };
+    }
+    return { ok: false, error: error.message };
+  }
+  if (!data) {
+    const existing = await supabase
+      .from("membership_affiliate_links")
+      .select("id, archived_at")
+      .eq("id", input.linkId)
+      .eq("user_id", input.userId)
+      .maybeSingle();
+    if (existing.data && optionalId(existing.data.archived_at)) {
+      return { ok: true };
+    }
+    return { ok: false, error: "That link was not found." };
+  }
+  return { ok: true };
 }

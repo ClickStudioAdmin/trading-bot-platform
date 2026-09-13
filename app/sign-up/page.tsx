@@ -5,15 +5,13 @@ import { signUpMember } from "@/lib/auth/actions";
 import { redirectSignedInHome } from "@/lib/auth/onboarding";
 import { firstTouchReferralCode } from "@/lib/membership/affiliate";
 import { readReferralCookie } from "@/lib/membership/affiliate-cookie";
+import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { firstSearchValue } from "@/lib/paper/open";
 
 export const metadata: Metadata = {
   title: "Start free",
   description: "Create a Free membership on Trading Bot Platform.",
 };
-
-const fieldClass =
-  "mt-1 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none";
 
 export default async function SignUpPage({
   searchParams,
@@ -40,80 +38,82 @@ export default async function SignUpPage({
         Create a Free account, then open your first desk. Upgrade later for
         Live, copy, backtest, or more desks. Every login is also an affiliate.
       </p>
-      {error ? (
-        <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
+      <section className="mt-8 rounded-card border border-line bg-surface p-5">
+        {error ? (
+          <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
+            {error}
+          </p>
+        ) : null}
+        <form action={signUpMember} className="space-y-3">
+          <label className="block text-sm text-ink" htmlFor="name">
+            Name
+            <input
+              id="name"
+              name="name"
+              required
+              maxLength={80}
+              autoComplete="name"
+              className={BILLING_FIELD_CLASS}
+            />
+          </label>
+          <label className="block text-sm text-ink" htmlFor="email">
+            Email
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+              className={BILLING_FIELD_CLASS}
+            />
+          </label>
+          <label className="block text-sm text-ink" htmlFor="password">
+            Password
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              className={BILLING_FIELD_CLASS}
+            />
+            <span className="mt-1 block text-xs text-ink-muted">
+              At least 8 characters.
+            </span>
+          </label>
+          <label className="block text-sm text-ink" htmlFor="referralCode">
+            Referral code
+            <input
+              id="referralCode"
+              name="referralCode"
+              defaultValue={referralCode}
+              autoComplete="off"
+              className={BILLING_FIELD_CLASS}
+            />
+            <span className="mt-1 block text-xs text-ink-muted">
+              Optional. Use a code if someone referred you.
+            </span>
+          </label>
+          <PendingSubmitButton
+            pendingLabel="Creating…"
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          >
+            Create free account
+          </PendingSubmitButton>
+        </form>
+        <p className="mt-4 text-sm text-ink-muted">
+          Already have an account?{" "}
+          <Link href="/sign-in" className="text-accent hover:text-accent-strong">
+            Sign in
+          </Link>
+          . Promote the platform without desks?{" "}
+          <Link href="/affiliates" className="text-accent hover:text-accent-strong">
+            Join as an affiliate
+          </Link>
+          .
         </p>
-      ) : null}
-      <form action={signUpMember} className="mt-8 space-y-4">
-        <label className="block text-xs text-ink-muted" htmlFor="name">
-          Name
-          <input
-            id="name"
-            name="name"
-            required
-            maxLength={80}
-            autoComplete="name"
-            className={fieldClass}
-          />
-        </label>
-        <label className="block text-xs text-ink-muted" htmlFor="email">
-          Email
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-            className={fieldClass}
-          />
-        </label>
-        <label className="block text-xs text-ink-muted" htmlFor="password">
-          Password
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            className={fieldClass}
-          />
-          <span className="mt-1 block text-xs text-ink-faint">
-            At least 8 characters.
-          </span>
-        </label>
-        <label className="block text-xs text-ink-muted" htmlFor="referralCode">
-          Referral code
-          <input
-            id="referralCode"
-            name="referralCode"
-            defaultValue={referralCode}
-            autoComplete="off"
-            className={fieldClass}
-          />
-          <span className="mt-1 block text-xs text-ink-faint">
-            Optional. Use a code if someone referred you.
-          </span>
-        </label>
-        <PendingSubmitButton
-          pendingLabel="Creating…"
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-        >
-          Create free account
-        </PendingSubmitButton>
-      </form>
-      <p className="mt-6 text-sm text-ink-muted">
-        Already have an account?{" "}
-        <Link href="/sign-in" className="text-accent hover:text-accent-strong">
-          Sign in
-        </Link>
-        . Promote the platform without desks?{" "}
-        <Link href="/affiliates" className="text-accent hover:text-accent-strong">
-          Join as an affiliate
-        </Link>
-        .
-      </p>
+      </section>
     </main>
   );
 }

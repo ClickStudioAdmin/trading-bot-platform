@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AffiliateArchiveButton } from "@/components/affiliate-archive-button";
 import { AffiliateOrgChartFrame } from "@/components/affiliate-org-chart-frame";
 import { CopyTextButton } from "@/components/copy-text-button";
 import { PageHeading } from "@/components/page-heading";
@@ -10,6 +11,7 @@ import {
   affiliateLandingLabel,
   affiliateLinkKindLabel,
   affiliatePortalPath,
+  canArchiveAffiliateLink,
   affiliateRowShareUrl,
   monthJoinedLabel,
   withdrawDecision,
@@ -22,6 +24,7 @@ import {
   upgradeAffiliateToPlatformAction,
 } from "@/lib/membership/affiliate-actions";
 import type {
+  AffiliateLinkRow,
   AffiliatePortal,
   PayoutRow,
 } from "@/lib/membership/affiliate-store";
@@ -109,6 +112,12 @@ export function AffiliateDashboard({
       ) : null}
       {saved === "link" ? (
         <p className="mt-6 text-sm text-success">Link created.</p>
+      ) : null}
+      {saved === "campaign-archived" ? (
+        <p className="mt-6 text-sm text-success">Campaign archived.</p>
+      ) : null}
+      {saved === "link-archived" ? (
+        <p className="mt-6 text-sm text-success">Link archived.</p>
       ) : null}
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -353,17 +362,40 @@ export function AffiliateDashboard({
                   Create campaign
                 </PendingSubmitButton>
               </form>
-              {portal.campaigns.length === 0 ? (
+              {portal.campaigns.length === 0 &&
+              portal.archivedCampaigns.length === 0 ? (
                 <p className="mt-4 text-sm text-ink-muted">No campaigns yet.</p>
               ) : (
                 <ul className="mt-4 divide-y divide-line text-sm">
                   {portal.campaigns.map((campaign) => (
-                    <li key={campaign.id} className="py-2 text-ink">
-                      {campaign.name}
+                    <li
+                      key={campaign.id}
+                      className="flex items-center justify-between gap-3 py-2 text-ink"
+                    >
+                      <span>{campaign.name}</span>
+                      <AffiliateArchiveButton
+                        kind="campaign"
+                        id={campaign.id}
+                        name={campaign.name}
+                      />
                     </li>
                   ))}
                 </ul>
               )}
+              {portal.archivedCampaigns.length > 0 ? (
+                <div className="mt-4 border-t border-line pt-4">
+                  <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                    Archived
+                  </p>
+                  <ul className="mt-2 divide-y divide-line text-sm text-ink-muted">
+                    {portal.archivedCampaigns.map((campaign) => (
+                      <li key={campaign.id} className="py-2">
+                        {campaign.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </section>
             <section className="rounded-card border border-line bg-surface p-5">
               <h2 className="text-lg font-semibold tracking-tight">
@@ -420,8 +452,9 @@ export function AffiliateDashboard({
           <section className="rounded-card border border-line bg-surface p-5">
             <h2 className="text-lg font-semibold tracking-tight">Your links</h2>
             <p className="mt-2 text-sm text-ink-muted">
-              Default is your system link. It cannot be removed. Custom links
-              choose a landing page and can sit on a campaign.
+              Default is your system link. It cannot be archived. Archive a
+              custom link or campaign to hide it from new use. Old /r/ URLs
+              still work.
             </p>
             {portal.links.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">
@@ -438,52 +471,54 @@ export function AffiliateDashboard({
                       <th className="pb-2 pr-4 font-medium">Landing</th>
                       <th className="pb-2 pr-4 font-medium">Link</th>
                       <th className="pb-2 pr-4 font-medium">Attributed</th>
-                      <th className="pb-2 font-medium">Copy</th>
+                      <th className="pb-2 pr-4 font-medium">Copy</th>
+                      <th className="pb-2 font-medium">Archive</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-line">
-                    {portal.links.map((link) => {
-                      const url = origin
-                        ? affiliateRowShareUrl(origin, link)
-                        : link.kind === "system"
-                          ? `/affiliates?ref=${encodeURIComponent(link.slug)}`
-                          : `/r/${link.slug}`;
-                      return (
-                        <tr key={link.id}>
-                          <td className="py-2 pr-4 text-ink">{link.name}</td>
-                          <td className="py-2 pr-4 text-ink-muted">
-                            {affiliateLinkKindLabel(link.kind)}
-                          </td>
-                          <td className="py-2 pr-4 text-ink-muted">
-                            {link.campaignName ?? "—"}
-                          </td>
-                          <td className="py-2 pr-4 text-ink">
-                            {affiliateLandingLabel(link.landing)}
-                          </td>
-                          <td className="max-w-[16rem] truncate py-2 pr-4 font-mono text-xs text-ink-muted">
-                            {url}
-                          </td>
-                          <td className="py-2 pr-4 tabular-nums text-ink">
-                            {link.attributed}
-                          </td>
-                          <td className="py-2">
-                            <div className="flex flex-wrap gap-2">
-                              <CopyTextButton text={url} label="Copy link" />
-                              {link.kind === "system" ? (
-                                <CopyTextButton
-                                  text={link.slug}
-                                  label="Copy code"
-                                />
-                              ) : null}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {portal.links.map((link) => (
+                      <AffiliateLinkRowView
+                        key={link.id}
+                        link={link}
+                        origin={origin}
+                      />
+                    ))}
                   </tbody>
                 </table>
               </div>
             )}
+            {portal.archivedLinks.length > 0 ? (
+              <div className="mt-6 border-t border-line pt-5">
+                <h3 className="text-sm font-semibold tracking-tight text-ink-muted">
+                  Archived
+                </h3>
+                <div className="mt-3 overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                      <tr>
+                        <th className="pb-2 pr-4 font-medium">Name</th>
+                        <th className="pb-2 pr-4 font-medium">Type</th>
+                        <th className="pb-2 pr-4 font-medium">Campaign</th>
+                        <th className="pb-2 pr-4 font-medium">Landing</th>
+                        <th className="pb-2 pr-4 font-medium">Link</th>
+                        <th className="pb-2 pr-4 font-medium">Attributed</th>
+                        <th className="pb-2 font-medium">Copy</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {portal.archivedLinks.map((link) => (
+                        <AffiliateLinkRowView
+                          key={link.id}
+                          link={link}
+                          origin={origin}
+                          archived
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
           </section>
         </div>
       ) : null}
@@ -591,6 +626,60 @@ export function AffiliateDashboard({
         </section>
       ) : null}
     </div>
+  );
+}
+
+function AffiliateLinkRowView({
+  link,
+  origin,
+  archived = false,
+}: {
+  link: AffiliateLinkRow;
+  origin: string;
+  archived?: boolean;
+}) {
+  const url = origin
+    ? affiliateRowShareUrl(origin, link)
+    : link.kind === "system"
+      ? `/affiliates?ref=${encodeURIComponent(link.slug)}`
+      : `/r/${link.slug}`;
+  const muted = archived ? "text-ink-muted" : "text-ink";
+  return (
+    <tr>
+      <td className={`py-2 pr-4 ${muted}`}>{link.name}</td>
+      <td className="py-2 pr-4 text-ink-muted">
+        {affiliateLinkKindLabel(link.kind)}
+      </td>
+      <td className="py-2 pr-4 text-ink-muted">{link.campaignName ?? "—"}</td>
+      <td className={`py-2 pr-4 ${muted}`}>
+        {affiliateLandingLabel(link.landing)}
+      </td>
+      <td className="max-w-[16rem] truncate py-2 pr-4 font-mono text-xs text-ink-muted">
+        {url}
+      </td>
+      <td className={`py-2 pr-4 tabular-nums ${muted}`}>{link.attributed}</td>
+      <td className="py-2 pr-4">
+        <div className="flex flex-wrap gap-2">
+          <CopyTextButton text={url} label="Copy link" />
+          {link.kind === "system" ? (
+            <CopyTextButton text={link.slug} label="Copy code" />
+          ) : null}
+        </div>
+      </td>
+      {archived ? null : (
+        <td className="py-2">
+          {canArchiveAffiliateLink(link.kind) ? (
+            <AffiliateArchiveButton
+              kind="link"
+              id={link.id}
+              name={link.name}
+            />
+          ) : (
+            <span className="text-xs text-ink-faint">—</span>
+          )}
+        </td>
+      )}
+    </tr>
   );
 }
 

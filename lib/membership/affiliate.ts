@@ -468,6 +468,10 @@ export function affiliateLinkKindLabel(kind: AffiliateLinkKind): string {
   return kind === "system" ? "System" : "Custom";
 }
 
+export function canArchiveAffiliateLink(kind: AffiliateLinkKind): boolean {
+  return kind === "custom";
+}
+
 export function affiliateRowShareUrl(
   origin: string,
   link: { kind: AffiliateLinkKind; slug: string },
