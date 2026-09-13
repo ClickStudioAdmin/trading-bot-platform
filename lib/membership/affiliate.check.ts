@@ -269,6 +269,8 @@ assert.equal(parseAffiliatePortalTab("network"), "network");
 assert.equal(parseAffiliatePortalTab("campaigns"), "campaigns");
 assert.equal(parseAffiliatePortalTab("links"), "links");
 assert.equal(parseAffiliatePortalTab("referrals"), "referrals");
+assert.equal(parseAffiliatePortalTab("payouts"), "payouts");
+assert.equal(parseAffiliatePortalTab("settings"), "settings");
 assert.equal(parseAffiliatePortalTab("nope"), "overview");
 assert.equal(parseAffiliateNetworkView("chart"), "chart");
 assert.equal(parseAffiliateNetworkView("list"), "list");

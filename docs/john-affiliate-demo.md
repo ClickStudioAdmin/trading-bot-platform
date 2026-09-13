@@ -12,17 +12,17 @@ Emails are deterministic (`john.1-2@tbp-john-demo.invalid`). User ids are `md5('
 
 ## Who they are
 
-- First name **John**. Display name / alias is `John 1-3-5` (path in the tree).
-- Email `john.{path}@tbp-john-demo.invalid` (example `john.1-2@tbp-john-demo.invalid`).
+- Login name is still John; public **profile alias** is a unique first + last name (for example `Ava Walker`). Emails stay `john.{path}@tbp-john-demo.invalid`.
 - Password **`55555555`** for every John. Sign-in requires 8 characters, so this is eight 5s (not six).
 - Hung under the first active **admin** login (`click.studio.admin@gmail.com` when present).
 - Full **5×5** tree: five direct referrals under the admin and under every John, five levels deep (**3,905** Johns).
+- Every John is a paid platform member on **Pro** or **Premium** (Premium if that plan exists). Follow-up migration `20260914090000_john_demo_aliases_and_plans.sql`.
 
 Cleanup matches the `@tbp-john-demo.invalid` email domain, `John demo` campaigns, `JDEM*` links, and `john-demo:` payout / invoice ids.
 
 ## What else is seeded
 
-- Mix of paid Plus members, Free signups, and affiliate-only Johns.
+- All Johns paid on Pro or Premium so network MRR and conversion look full.
 - Admin campaigns / custom links (including one archived each).
 - Commissions in **pending**, **payable**, **paid**, and **void**.
 - Payouts in **requested**, **approved**, **rejected**, and **paid** (admin queue + a few John portals).

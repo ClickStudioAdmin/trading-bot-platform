@@ -708,6 +708,7 @@ export const AFFILIATE_PORTAL_TABS = [
   "links",
   "referrals",
   "payouts",
+  "settings",
 ] as const;
 export type AffiliatePortalTab = (typeof AFFILIATE_PORTAL_TABS)[number];
 export const AFFILIATE_PORTAL_PAGE_SIZE = 20;

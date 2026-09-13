@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AffiliateArchiveButton } from "@/components/affiliate-archive-button";
 import { ColumnHint } from "@/components/column-hint";
 import { AffiliateLinkActions } from "@/components/affiliate-link-actions";
-import { AffiliatePayoutSettingsButton } from "@/components/affiliate-payout-settings";
+import { AffiliatePayoutSettingsForm } from "@/components/affiliate-payout-settings";
 import { AffiliateOrgChartFrame } from "@/components/affiliate-org-chart-frame";
 import { CopyTextButton } from "@/components/copy-text-button";
 import { PageHeading } from "@/components/page-heading";
@@ -31,6 +31,7 @@ import {
   createAffiliateCampaignAction,
   createAffiliateLinkAction,
   requestAffiliatePayoutAction,
+  saveAffiliateAliasAction,
   upgradeAffiliateToPlatformAction,
 } from "@/lib/membership/affiliate-actions";
 import type {
@@ -40,6 +41,7 @@ import type {
   PayoutRow,
 } from "@/lib/membership/affiliate-store";
 import { formatCount, formatUsd } from "@/lib/membership/billing";
+import { TRADER_ALIAS_MAX } from "@/lib/copy/model";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import type { BillingChain } from "@/lib/membership/wallet-store";
 import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
@@ -50,6 +52,7 @@ export function AffiliateDashboard({
   arrears,
   payouts,
   chains,
+  profileAlias,
   platformMember,
   tab,
   view,
@@ -62,6 +65,7 @@ export function AffiliateDashboard({
   arrears: boolean;
   payouts: PayoutRow[];
   chains: BillingChain[];
+  profileAlias: string;
   platformMember: boolean;
   tab: AffiliatePortalTab;
   view: AffiliateNetworkView;
@@ -125,6 +129,9 @@ export function AffiliateDashboard({
         <TabLink href={affiliatePortalPath("payouts")} selected={tab === "payouts"}>
           Payouts
         </TabLink>
+        <TabLink href={affiliatePortalPath("settings")} selected={tab === "settings"}>
+          Settings
+        </TabLink>
       </nav>
       {saved === "withdraw" ? (
         <p className="mt-6 text-sm text-success">
@@ -133,6 +140,11 @@ export function AffiliateDashboard({
       ) : null}
       {saved === "payout-settings" ? (
         <p className="mt-6 text-sm text-success">Payout settings saved.</p>
+      ) : null}
+      {saved === "alias" ? (
+        <p className="mt-6 text-sm text-success">
+          Profile alias saved. Your network shows this name.
+        </p>
       ) : null}
       {saved === "joined" ? (
         <p className="mt-6 text-sm text-success">
@@ -188,9 +200,8 @@ export function AffiliateDashboard({
       ) : null}
       {!portal.payoutSettings.address ? (
         <p className="mt-6 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          Save a payout address in Manage payout settings on the Payouts tab.
-          Withdraws and auto payout requests use that address so you do not
-          enter it each time.
+          Save a payout address on the Settings tab. Withdraws and auto payout
+          requests use that address so you do not enter it each time.
         </p>
       ) : null}
 
@@ -587,19 +598,9 @@ export function AffiliateDashboard({
       {tab === "payouts" ? (
         <div className="mt-6 space-y-5">
           <section className="rounded-card border border-line bg-surface p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <h2 className="text-lg font-semibold tracking-tight">
-                Withdraw USDT
-              </h2>
-              <AffiliatePayoutSettingsButton
-                settings={portal.payoutSettings}
-                minPayoutUsd={portal.settings.minPayoutUsd}
-                chains={payoutChains.map((chain) => ({
-                  slug: chain.slug,
-                  name: chain.name,
-                }))}
-              />
-            </div>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Withdraw USDT
+            </h2>
             <p className="mt-2 text-sm text-ink-muted">
               Payable {formatUsd(portal.payableUsd)}. Minimum{" "}
               {formatUsd(portal.settings.minPayoutUsd)}. Last payout{" "}
@@ -677,6 +678,70 @@ export function AffiliateDashboard({
                 payouts={payoutPage.rows}
                 chainName={chainName}
                 pager={<AffiliateTablePager tab="payouts" list={payoutPage} />}
+              />
+            )}
+          </section>
+        </div>
+      ) : null}
+
+      {tab === "settings" ? (
+        <div className="mt-6 space-y-5">
+          <section className="rounded-card border border-line bg-surface p-5">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Profile alias
+            </h2>
+            <p className="mt-2 text-sm text-ink-muted">
+              Shown on your network instead of your real name. Other affiliates
+              see this, never your email.
+            </p>
+            <form action={saveAffiliateAliasAction} className="mt-4 space-y-3">
+              <label className="block text-sm text-ink">
+                Alias
+                <input
+                  name="alias"
+                  defaultValue={profileAlias}
+                  required
+                  minLength={2}
+                  maxLength={TRADER_ALIAS_MAX}
+                  autoComplete="nickname"
+                  className={BILLING_FIELD_CLASS}
+                />
+                <span className="mt-1 block text-xs text-ink-muted">
+                  2–32 characters. Letters, numbers, spaces, _ and -. Start
+                  with a letter.
+                </span>
+              </label>
+              <PendingSubmitButton
+                pendingLabel="Saving…"
+                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+              >
+                Save alias
+              </PendingSubmitButton>
+            </form>
+          </section>
+          <section className="rounded-card border border-line bg-surface p-5">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Payout settings
+            </h2>
+            <p className="mt-2 text-sm text-ink-muted">
+              Saved chain and address are used on each withdraw so you do not
+              re-enter them. Auto payouts open a payout request for the full
+              payable when the balance is over the amount you set. Admin still
+              approves, sends USDT, and marks it paid.
+            </p>
+            {payoutChains.length === 0 ? (
+              <p className="mt-3 text-sm text-warning">
+                Affiliate payouts are not enabled on any chain yet. An admin can
+                tick this on Settings → Crypto.
+              </p>
+            ) : (
+              <AffiliatePayoutSettingsForm
+                settings={portal.payoutSettings}
+                minPayoutUsd={portal.settings.minPayoutUsd}
+                chains={payoutChains.map((chain) => ({
+                  slug: chain.slug,
+                  name: chain.name,
+                }))}
               />
             )}
           </section>

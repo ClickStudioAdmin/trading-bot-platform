@@ -52,6 +52,8 @@ import {
   findReferralCodeOwner,
   saveAffiliateSettings,
 } from "./affiliate-store";
+import { parseTraderAlias } from "@/lib/copy/model";
+import { loadTraderProfile, saveTraderProfile } from "@/lib/copy/profile";
 import { getDefaultMembershipPlan } from "./store";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
@@ -291,11 +293,11 @@ export async function saveAffiliatePayoutSettingsAction(formData: FormData) {
     payoutChains.map((chain) => chain.slug),
   );
   if (!network.ok) {
-    portalFail(network.error, "payouts");
+    portalFail(network.error, "settings");
   }
   const address = parsePayoutAddress(formData.get("address"));
   if (!address.ok) {
-    portalFail(address.error, "payouts");
+    portalFail(address.error, "settings");
   }
   const autoPayout = String(formData.get("autoPayout") ?? "") === "1";
   const settings = await loadAffiliateSettings();
@@ -306,7 +308,7 @@ export async function saveAffiliatePayoutSettingsAction(formData: FormData) {
       settings.minPayoutUsd,
     );
     if (!parsed.ok) {
-      portalFail(parsed.error, "payouts");
+      portalFail(parsed.error, "settings");
     }
     autoPayoutUsd = parsed.usd;
   }
@@ -318,7 +320,7 @@ export async function saveAffiliatePayoutSettingsAction(formData: FormData) {
     autoPayoutUsd,
   });
   if (!saved.ok) {
-    portalFail(saved.error, "payouts");
+    portalFail(saved.error, "settings");
   }
   if (autoPayout) {
     await maybeAutoAffiliatePayout(member.id);
@@ -332,7 +334,38 @@ export async function saveAffiliatePayoutSettingsAction(formData: FormData) {
   });
   revalidatePath(AFFILIATES_PATH);
   revalidatePath("/account/affiliates");
-  redirect(affiliatePortalPath("payouts", { saved: "payout-settings" }));
+  redirect(affiliatePortalPath("settings", { saved: "payout-settings" }));
+}
+
+export async function saveAffiliateAliasAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  const parsed = parseTraderAlias(formData.get("alias"));
+  if (!parsed.ok) {
+    portalFail(parsed.error, "settings");
+  }
+  const existing = await loadTraderProfile(member.id);
+  const saved = await saveTraderProfile({
+    userId: member.id,
+    alias: parsed.alias,
+    bio: existing?.bio ?? null,
+    logoPath: existing?.logoPath ?? null,
+  });
+  if (!saved.ok) {
+    portalFail(saved.error, "settings");
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.affiliate_alias",
+    message: "Saved affiliate profile alias",
+    userId: member.id,
+    data: { alias: parsed.alias },
+  });
+  revalidatePath(AFFILIATES_PATH);
+  revalidatePath("/account/affiliates");
+  redirect(affiliatePortalPath("settings", { saved: "alias" }));
 }
 
 export async function signUpAffiliateAction(formData: FormData) {

@@ -13,6 +13,7 @@ import {
 } from "@/lib/membership/affiliate";
 import { readReferralCookie } from "@/lib/membership/affiliate-cookie";
 import { signUpAffiliateAction } from "@/lib/membership/affiliate-actions";
+import { loadTraderProfile } from "@/lib/copy/profile";
 import {
   listMemberPayouts,
   loadAffiliatePortal,
@@ -56,9 +57,10 @@ export default async function AffiliatesPage({
       headerStore.get("x-forwarded-host") ?? headerStore.get("host") ?? "";
     const proto = headerStore.get("x-forwarded-proto") ?? "http";
     const origin = host ? `${proto}://${host}` : "";
-    const [payouts, chains] = await Promise.all([
+    const [payouts, chains, trader] = await Promise.all([
       listMemberPayouts(member.id),
       listBillingChains(),
+      loadTraderProfile(member.id),
     ]);
     return (
       <div className="px-6 py-8">
@@ -69,6 +71,7 @@ export default async function AffiliatesPage({
             arrears={arrears}
             payouts={payouts}
             chains={chains}
+            profileAlias={trader?.alias ?? ""}
             platformMember={member.platformMember}
             tab={tab}
             view={view}
