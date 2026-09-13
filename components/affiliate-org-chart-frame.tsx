@@ -7,7 +7,6 @@ import {
 } from "@/components/affiliate-org-chart";
 import {
   AFFILIATE_ORG_LAYOUTS,
-  affiliateDownlineRowHref,
   affiliateOrgLayoutLabel,
   flattenAffiliateOrgChart,
   searchAffiliateOrgChart,
@@ -20,12 +19,9 @@ const control =
 
 export function AffiliateOrgChartFrame({
   nodes,
-  downline,
 }: {
   nodes: AffiliateTreeNode[];
-  downline: readonly { userId: string }[];
 }) {
-  const rowHref = (userId: string) => affiliateDownlineRowHref(userId, downline);
   const frameRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [monitor, setMonitor] = useState(false);
@@ -43,10 +39,14 @@ export function AffiliateOrgChartFrame({
     [rows, query],
   );
 
-  function choosePerson(id: string, label: string) {
+  function rememberPerson(id: string, label: string) {
     setQuery(label);
     setFoundId(id);
     setOpen(false);
+  }
+
+  function choosePerson(id: string, label: string) {
+    rememberPerson(id, label);
     api?.findPerson(id);
   }
 
@@ -133,7 +133,8 @@ export function AffiliateOrgChartFrame({
         <div>
           <h2 className="text-lg font-semibold tracking-tight">Org chart</h2>
           <p className="mt-1 text-xs text-ink-muted">
-            Drag to pan. Scroll to zoom. Use + on a node to expand that branch.
+            Click a person to highlight the path to You. Drag to pan. Scroll to
+            zoom. Use + on a node to expand that branch.
           </p>
           {nodes.length > 0 ? (
             <div
@@ -371,7 +372,7 @@ export function AffiliateOrgChartFrame({
         >
           <AffiliateOrgChart
             nodes={nodes}
-            rowHref={rowHref}
+            onSelect={rememberPerson}
             onReady={setApi}
           />
         </div>

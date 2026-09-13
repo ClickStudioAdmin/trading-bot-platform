@@ -750,7 +750,7 @@ export function affiliateDownlineRowHref(
 
 export const AFFILIATE_ORG_ROOT_ID = "you";
 export const AFFILIATE_ORG_MIN_ZOOM = 1.25;
-export const AFFILIATE_ORG_LAYOUTS = ["top", "right", "bottom", "left"] as const;
+export const AFFILIATE_ORG_LAYOUTS = ["top", "left", "right", "bottom"] as const;
 export type AffiliateOrgLayout = (typeof AFFILIATE_ORG_LAYOUTS)[number];
 
 export function parseAffiliateOrgLayout(value: unknown): AffiliateOrgLayout {

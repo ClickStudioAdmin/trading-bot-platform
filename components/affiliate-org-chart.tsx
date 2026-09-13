@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import {
   AFFILIATE_ORG_MIN_ZOOM,
-  AFFILIATE_ORG_ROOT_ID,
   affiliateOrgAutoZoom,
   affiliateOrgChartNodeHtml,
   affiliateOrgUserZoomedOut,
@@ -137,19 +136,26 @@ function applyChartHeight(chart: OrgChartHandle, host: HTMLElement) {
   }
 }
 
+function highlightPerson(chart: OrgChartHandle, id: string) {
+  chart.clearHighlighting();
+  chart.setUpToTheRootHighlighted(id);
+  chart.setHighlighted(id);
+  chart.render();
+}
+
 export function AffiliateOrgChart({
   nodes,
-  rowHref,
+  onSelect,
   onReady,
 }: {
   nodes: AffiliateTreeNode[];
-  rowHref: (userId: string) => string;
+  onSelect?: (id: string, label: string) => void;
   onReady?: (api: AffiliateOrgChartApi | null) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const hrefRef = useRef(rowHref);
+  const selectRef = useRef(onSelect);
   const readyRef = useRef(onReady);
-  hrefRef.current = rowHref;
+  selectRef.current = onSelect;
   readyRef.current = onReady;
 
   useEffect(() => {
@@ -196,9 +202,7 @@ export function AffiliateOrgChart({
             childCount: number;
             parentId: string | null;
           };
-          const href =
-            row.id === AFFILIATE_ORG_ROOT_ID ? null : hrefRef.current(row.id);
-          return affiliateOrgChartNodeHtml(row, href, {
+          return affiliateOrgChartNodeHtml(row, null, {
             onPath: Boolean(node.data._upToTheRootHighlighted),
             selected: Boolean(node.data._highlighted),
           });
@@ -225,10 +229,11 @@ export function AffiliateOrgChart({
         })
         .onNodeClick((node) => {
           const id = String(node.data.id ?? "");
-          if (!id || id === AFFILIATE_ORG_ROOT_ID) {
+          if (!id) {
             return;
           }
-          window.location.assign(hrefRef.current(id));
+          highlightPerson(next, id);
+          selectRef.current?.(id, String(node.data.label ?? "Member"));
         })
         .data(rows)
         .render()
@@ -256,10 +261,7 @@ export function AffiliateOrgChart({
           next.zoomOut();
         },
         findPerson: (id: string) => {
-          next.clearHighlighting();
-          next.setUpToTheRootHighlighted(id);
-          next.setHighlighted(id);
-          next.render();
+          highlightPerson(next, id);
         },
         clearFind: () => {
           next.clearHighlighting();

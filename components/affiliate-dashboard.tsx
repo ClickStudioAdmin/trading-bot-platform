@@ -299,12 +299,7 @@ export function AffiliateDashboard({
           </div>
           {view === "chart" ? (
             <div className="mt-4">
-              <AffiliateOrgChartFrame
-                nodes={portal.tree}
-                downline={portal.downline.map((row) => ({
-                  userId: row.userId,
-                }))}
-              />
+              <AffiliateOrgChartFrame nodes={portal.tree} />
             </div>
           ) : (
             <section className="mt-4 rounded-card border border-line bg-surface p-5">
