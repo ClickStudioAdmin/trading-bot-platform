@@ -305,6 +305,83 @@ export function ratePctForLevel(
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
 }
 
+export function affiliateOrgRunRateUsd(input: {
+  planPriceUsd: number;
+  paid: boolean;
+  ratePct: number;
+}): number {
+  if (!input.paid || input.planPriceUsd < 0.01) {
+    return 0;
+  }
+  return commissionUsd(input.planPriceUsd, input.ratePct);
+}
+
+export function affiliateOrgPlanLabel(planName: string | null | undefined): string {
+  const name = String(planName ?? "").trim();
+  return name || "Affiliate";
+}
+
+export function affiliateOrgRunRateLabel(
+  runRateUsd: number,
+  kind: "person" | "root" = "person",
+): string {
+  if (runRateUsd < 0.01) {
+    return kind === "root" ? "$0.00 / mo" : "Signup";
+  }
+  return `${new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(runRateUsd)} / mo`;
+}
+
+export function affiliateDownlinePersonMeta(
+  row: {
+    planName?: string | null;
+    planPriceUsd: number;
+    firstPaidAt: string | null;
+    level: number;
+  },
+  rates: {
+    earnDepth: number;
+    rows: readonly { level: number; ratePct: number }[];
+  },
+): { planLabel: string; runRateUsd: number; runRateLabel: string } {
+  const ratePct = ratePctForLevel(
+    [1, 2, 3, 4, 5].map(
+      (level) => rates.rows.find((item) => item.level === level)?.ratePct ?? 0,
+    ),
+    row.level,
+    rates.earnDepth,
+  );
+  const runRateUsd = affiliateOrgRunRateUsd({
+    planPriceUsd: row.planPriceUsd,
+    paid: Boolean(row.firstPaidAt),
+    ratePct,
+  });
+  return {
+    planLabel: affiliateOrgPlanLabel(row.planName),
+    runRateUsd,
+    runRateLabel: affiliateOrgRunRateLabel(runRateUsd),
+  };
+}
+
+export type AffiliateOrgRunRateNode = {
+  runRateUsd?: number;
+  children: readonly AffiliateOrgRunRateNode[];
+};
+
+export function sumAffiliateOrgRunRate(
+  nodes: readonly AffiliateOrgRunRateNode[],
+): number {
+  return roundUsd(
+    nodes.reduce(
+      (sum, node) =>
+        sum + (node.runRateUsd ?? 0) + sumAffiliateOrgRunRate(node.children),
+      0,
+    ),
+  );
+}
+
 export function commissionUsd(amountUsd: number, ratePct: number): number {
   if (amountUsd < 0.01 || ratePct <= 0) {
     return 0;
@@ -749,7 +826,7 @@ export function affiliateDownlineRowHref(
 }
 
 export const AFFILIATE_ORG_ROOT_ID = "you";
-export const AFFILIATE_ORG_MIN_ZOOM = 1.25;
+export const AFFILIATE_ORG_MIN_ZOOM = 1.1;
 export const AFFILIATE_ORG_LAYOUTS = ["top", "left", "right", "bottom"] as const;
 export type AffiliateOrgLayout = (typeof AFFILIATE_ORG_LAYOUTS)[number];
 
@@ -797,6 +874,8 @@ export type AffiliateOrgChartSource = {
   label: string;
   level: number;
   paid: boolean;
+  planName?: string | null;
+  runRateUsd?: number;
   children: AffiliateOrgChartSource[];
 };
 
@@ -806,6 +885,8 @@ export type AffiliateOrgChartRow = {
   label: string;
   level: number;
   paid: boolean;
+  planName?: string | null;
+  runRateUsd?: number;
   childCount: number;
 };
 
@@ -863,6 +944,7 @@ export function affiliateOrgPathToRoot(
 
 export function flattenAffiliateOrgChart(
   nodes: readonly AffiliateOrgChartSource[],
+  root: { planName?: string | null } = {},
 ): AffiliateOrgChartRow[] {
   const rows: AffiliateOrgChartRow[] = [
     {
@@ -871,6 +953,8 @@ export function flattenAffiliateOrgChart(
       label: "You",
       level: 0,
       paid: true,
+      planName: root.planName ?? null,
+      runRateUsd: sumAffiliateOrgRunRate(nodes),
       childCount: nodes.length,
     },
   ];
@@ -881,6 +965,8 @@ export function flattenAffiliateOrgChart(
       label: node.label,
       level: node.level,
       paid: node.paid,
+      planName: node.planName ?? null,
+      runRateUsd: node.runRateUsd ?? 0,
       childCount: node.children.length,
     });
     for (const child of node.children) {
@@ -908,10 +994,15 @@ export function affiliateOrgChartNodeHtml(
   highlight?: { onPath?: boolean; selected?: boolean },
 ): string {
   const label = escapeHtmlText(row.label);
+  const plan = escapeHtmlText(affiliateOrgPlanLabel(row.planName));
   const meta =
-    row.level === 0
-      ? "Your network"
-      : `L${row.level} · ${row.paid ? "paid" : "signup"}`;
+    row.level === 0 ? plan : `${plan} · L${row.level}`;
+  const runRate = escapeHtmlText(
+    affiliateOrgRunRateLabel(
+      row.runRateUsd ?? 0,
+      row.level === 0 ? "root" : "person",
+    ),
+  );
   const title = href
     ? `<a href="${escapeHtmlText(href)}" style="color:#F4F6F8;text-decoration:none">${label}</a>`
     : `<span style="color:#F4F6F8">${label}</span>`;
@@ -923,7 +1014,8 @@ export function affiliateOrgChartNodeHtml(
   const borderWidth = highlight?.selected || highlight?.onPath ? 2 : 1;
   return `<div style="box-sizing:border-box;height:100%;padding:10px 12px;border:${borderWidth}px solid ${border};border-radius:8px;background:#1C222C;font-size:14px;line-height:1.25">
     <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</div>
-    <div style="margin-top:4px;color:#9AA3B2;font-size:12px">${meta}</div>
+    <div style="margin-top:4px;color:#9AA3B2;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${meta}</div>
+    <div style="margin-top:2px;color:#F4F6F8;font-size:12px;font-variant-numeric:tabular-nums">${runRate}</div>
   </div>`;
 }
 

@@ -7,6 +7,7 @@ import {
   PLAN_VISIBILITY_LABELS,
   planIsArchived,
 } from "@/lib/membership/catalog";
+import { formatCount } from "@/lib/membership/billing";
 import { listMembershipPlans } from "@/lib/membership/store";
 import { firstSearchValue } from "@/lib/paper/open";
 
@@ -66,6 +67,7 @@ export default async function AdminPlansPage({
               <th className="px-4 py-3 font-medium">Price</th>
               <th className="px-4 py-3 font-medium">Members</th>
               <th className="px-4 py-3 font-medium">Price ID</th>
+              <th className="px-4 py-3 font-medium">Visibility</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium text-right">Actions</th>
             </tr>
@@ -81,20 +83,24 @@ export default async function AdminPlansPage({
                     {plan.name}
                   </Link>
                   <p className="mt-0.5 text-xs text-ink-faint">
-                    {PLAN_VISIBILITY_LABELS[plan.visibility]}
-                    {plan.visibility === "draft" && plan.preview
-                      ? " · Preview"
-                      : ""}
-                    {plan.isDefault ? " · Default" : ""}
-                    {` · L1 ${plan.affiliateL1Pct}%`}
+                    {plan.isDefault ? "Default · " : ""}
+                    {`L1 ${plan.affiliateL1Pct}%`}
                   </p>
                 </td>
                 <td className="px-4 py-3 text-ink">{formatPlanPrice(plan.priceUsd)}</td>
-                <td className="px-4 py-3 tabular-nums text-ink">{plan.memberCount}</td>
+                <td className="px-4 py-3 tabular-nums text-ink">
+                  {formatCount(plan.memberCount)}
+                </td>
                 <td className="px-4 py-3 font-mono text-xs text-ink">
                   {plan.stripePriceId || (
                     <span className="font-sans text-ink-faint">—</span>
                   )}
+                </td>
+                <td className="px-4 py-3 text-ink">
+                  {PLAN_VISIBILITY_LABELS[plan.visibility]}
+                  {plan.visibility === "draft" && plan.preview
+                    ? " · Preview"
+                    : ""}
                 </td>
                 <td className="px-4 py-3">
                   {planIsArchived(plan) ? (
@@ -120,7 +126,7 @@ export default async function AdminPlansPage({
             ))}
             {plans.length === 0 && listed.ok ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-ink-muted">
+                <td colSpan={7} className="px-4 py-6 text-ink-muted">
                   No plans yet.
                 </td>
               </tr>

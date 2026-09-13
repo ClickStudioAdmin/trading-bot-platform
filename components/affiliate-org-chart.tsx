@@ -26,6 +26,7 @@ export type AffiliateOrgChartApi = {
 
 type OrgChartState = {
   lastTransform: { x: number; y: number; k: number };
+  layout?: string;
   data?: {
     id?: string;
     _highlighted?: boolean;
@@ -34,6 +35,9 @@ type OrgChartState = {
     _centeredWithDescendants?: boolean;
   }[];
   allNodes?: {
+    x?: number;
+    y?: number;
+    parent?: unknown;
     data: {
       _highlighted?: boolean;
       _upToTheRootHighlighted?: boolean;
@@ -47,12 +51,17 @@ type OrgChartState = {
         call: (behavior: unknown, value?: unknown) => void;
       };
     };
+    call: (behavior: unknown, ...args: unknown[]) => void;
   };
-  zoomBehavior: { scaleTo: unknown };
+  centerG?: {
+    attr: (name: string, value?: string) => unknown;
+  };
+  zoomBehavior: { scaleTo: unknown; translateBy: unknown; translateTo: unknown };
 };
 
 type OrgChartHandle = {
   container: (el: HTMLElement) => OrgChartHandle;
+  svgWidth: (value: number) => OrgChartHandle;
   svgHeight: (value: number) => OrgChartHandle;
   data: (rows: unknown[]) => OrgChartHandle;
   compact: (value: boolean) => OrgChartHandle;
@@ -72,6 +81,7 @@ type OrgChartHandle = {
   nodeButtonY: (value: () => number) => OrgChartHandle;
   initialExpandLevel: (value: number) => OrgChartHandle;
   initialZoom: (value: number) => OrgChartHandle;
+  rootMargin: (value: number) => OrgChartHandle;
   setActiveNodeCentered: (value: boolean) => OrgChartHandle;
   nodeContent: (
     value: (node: { data: Record<string, unknown> }) => string,
@@ -122,10 +132,57 @@ function scaleChartTo(chart: OrgChartHandle, scale: number, animate: boolean) {
     .call(state.zoomBehavior.scaleTo, scale);
 }
 
+const AFFILIATE_ORG_TOP_INSET = 36;
+const AFFILIATE_ORG_READY_HEIGHT = 200;
+
+function nudgeChart(chart: OrgChartHandle, x: number, y: number) {
+  const state = chart.getChartState();
+  state.svg.call(state.zoomBehavior.translateBy, x, y);
+}
+
+function pinRootToTop(chart: OrgChartHandle, inset: number) {
+  const state = chart.getChartState();
+  const root = (state.allNodes ?? []).find((node) => !node.parent);
+  if (!root) {
+    return;
+  }
+  const top = (root.y ?? 0) * state.lastTransform.k + state.lastTransform.y;
+  const dy = inset - top;
+  if (Math.abs(dy) > 0.5) {
+    nudgeChart(chart, 0, dy);
+  }
+}
+
+function placeOpeningView(chart: OrgChartHandle, host: HTMLElement) {
+  if (host.clientHeight < AFFILIATE_ORG_READY_HEIGHT) {
+    return false;
+  }
+  applyChartHeight(chart, host);
+  const state = chart.getChartState();
+  const root = (state.allNodes ?? []).find((node) => !node.parent);
+  if (!root) {
+    return false;
+  }
+  state.centerG?.attr("transform", "translate(0,0)");
+  const height = Math.max(host.clientHeight, 240);
+  state.svg.call(state.zoomBehavior.scaleTo, AFFILIATE_ORG_MIN_ZOOM);
+  state.svg.call(state.zoomBehavior.translateTo, root.x ?? 0, root.y ?? 0);
+  nudgeChart(chart, 0, AFFILIATE_ORG_TOP_INSET - height / 2);
+  return true;
+}
+
 function fitChart(chart: OrgChartHandle, animate: boolean) {
   const currentScale = chartScale(chart);
+  const pinTop = () => {
+    if (
+      chart.getChartState().layout === "top" &&
+      !affiliateOrgUserZoomedOut(chartScale(chart))
+    ) {
+      pinRootToTop(chart, AFFILIATE_ORG_TOP_INSET);
+    }
+  };
   if (affiliateOrgUserZoomedOut(currentScale)) {
-    chart.fit({ animate, scale: false });
+    chart.fit({ animate, scale: false, onCompleted: pinTop });
     return;
   }
   chart.fit({
@@ -139,16 +196,20 @@ function fitChart(chart: OrgChartHandle, animate: boolean) {
       if (Math.abs(target - chartScale(chart)) > 0.001) {
         scaleChartTo(chart, target, animate);
       }
+      pinTop();
     },
   });
 }
 
 function applyChartHeight(chart: OrgChartHandle, host: HTMLElement) {
   const height = Math.max(host.clientHeight, 240);
+  const width = Math.max(host.clientWidth, 240);
   chart.svgHeight(height);
+  chart.svgWidth(width);
   const svg = host.querySelector("svg");
   if (svg) {
     svg.setAttribute("height", String(height));
+    svg.setAttribute("width", String(width));
   }
 }
 
@@ -182,10 +243,12 @@ function highlightPerson(chart: OrgChartHandle, id: string) {
 
 export function AffiliateOrgChart({
   nodes,
+  rootPlanName,
   onSelect,
   onReady,
 }: {
   nodes: AffiliateTreeNode[];
+  rootPlanName?: string | null;
   onSelect?: (id: string, label: string) => void;
   onReady?: (api: AffiliateOrgChartApi | null) => void;
 }) {
@@ -208,7 +271,9 @@ export function AffiliateOrgChart({
       if (disposed || !hostRef.current) {
         return;
       }
-      const rows = flattenAffiliateOrgChart(nodes);
+      const rows = flattenAffiliateOrgChart(nodes, {
+        planName: rootPlanName,
+      });
       const next = new OrgChart() as unknown as OrgChartHandle;
       next
         .container(hostRef.current)
@@ -217,8 +282,8 @@ export function AffiliateOrgChart({
         .layout("top")
         .defaultFont("var(--font-geist), ui-sans-serif, system-ui, sans-serif")
         .duration(200)
-        .nodeWidth(() => 176)
-        .nodeHeight(() => 72)
+        .nodeWidth(() => 188)
+        .nodeHeight(() => 96)
         .childrenMargin(() => 50)
         .siblingsMargin(() => 16)
         .neighbourMargin(() => 20)
@@ -229,6 +294,7 @@ export function AffiliateOrgChart({
         .nodeButtonX(() => -14)
         .nodeButtonY(() => -8)
         .initialZoom(AFFILIATE_ORG_MIN_ZOOM)
+        .rootMargin(72)
         .setActiveNodeCentered(false)
         .initialExpandLevel(2)
         .nodeContent((node) => {
@@ -237,6 +303,8 @@ export function AffiliateOrgChart({
             label: string;
             level: number;
             paid: boolean;
+            planName: string | null;
+            runRateUsd: number;
             childCount: number;
             parentId: string | null;
           };
@@ -274,9 +342,9 @@ export function AffiliateOrgChart({
           selectRef.current?.(id, String(node.data.label ?? "Member"));
         })
         .data(rows)
-        .render()
-        .fit({ animate: false, scale: false });
+        .render();
       chart = next;
+      let placed = placeOpeningView(next, hostRef.current);
       const api: AffiliateOrgChartApi = {
         expandAll: () => {
           next.expandAll();
@@ -287,7 +355,7 @@ export function AffiliateOrgChart({
           fitChart(next, true);
         },
         fit: () => {
-          next.fit();
+          fitChart(next, true);
         },
         refit: () => {
           fitChart(next, true);
@@ -318,7 +386,13 @@ export function AffiliateOrgChart({
       };
       readyRef.current?.(api);
       observer = new ResizeObserver(() => {
+        if (!hostRef.current) {
+          return;
+        }
         api.resize();
+        if (!placed) {
+          placed = placeOpeningView(next, hostRef.current);
+        }
       });
       observer.observe(hostRef.current);
     });
@@ -330,7 +404,7 @@ export function AffiliateOrgChart({
       chart?.clear();
       host.replaceChildren();
     };
-  }, [nodes]);
+  }, [nodes, rootPlanName]);
 
   if (nodes.length === 0) {
     return null;

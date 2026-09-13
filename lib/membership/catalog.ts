@@ -304,8 +304,11 @@ export function formatPlanPrice(priceUsd: number): string {
     return "Free";
   }
   const rounded = Number.isInteger(priceUsd)
-    ? String(priceUsd)
-    : priceUsd.toFixed(2);
+    ? new Intl.NumberFormat("en-US").format(priceUsd)
+    : new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(priceUsd);
   return `$${rounded} / month`;
 }
 

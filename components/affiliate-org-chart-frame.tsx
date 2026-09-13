@@ -19,8 +19,10 @@ const control =
 
 export function AffiliateOrgChartFrame({
   nodes,
+  rootPlanName,
 }: {
   nodes: AffiliateTreeNode[];
+  rootPlanName?: string | null;
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
@@ -123,6 +125,7 @@ export function AffiliateOrgChartFrame({
   return (
     <section
       ref={frameRef}
+      aria-label="Org chart"
       className={
         expanded
           ? "affiliate-org-chart-frame fixed inset-0 z-50 flex flex-col bg-canvas p-6"
@@ -131,16 +134,11 @@ export function AffiliateOrgChartFrame({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">Org chart</h2>
-          <p className="mt-1 text-xs text-ink-muted">
-            Click a person to highlight the path to You. Drag to pan. Scroll to
-            zoom. Use + on a node to expand that branch.
-          </p>
           {nodes.length > 0 ? (
             <div
               role="group"
               aria-label="Chart layout"
-              className="mt-3 flex w-fit rounded-control border border-line bg-canvas p-0.5"
+              className="flex w-fit rounded-control border border-line bg-canvas p-0.5"
             >
               {AFFILIATE_ORG_LAYOUTS.map((option) => {
                 const selected = layout === option;
@@ -372,6 +370,7 @@ export function AffiliateOrgChartFrame({
         >
           <AffiliateOrgChart
             nodes={nodes}
+            rootPlanName={rootPlanName}
             onSelect={rememberPerson}
             onReady={setApi}
           />

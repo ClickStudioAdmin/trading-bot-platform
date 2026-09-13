@@ -4,6 +4,7 @@ import {
   checkoutPath,
   decideUpgrade,
   embeddedCheckoutReturnUrl,
+  formatCount,
   formatUsd,
   hasUsableStripeSubscription,
   parseBillingMethod,
@@ -45,6 +46,10 @@ assert.equal(
 assert.equal(stripeCentsToUsd(9900), 99);
 assert.equal(stripeCentsToUsd(199), 1.99);
 assert.equal(formatUsd(99), "$99");
+assert.equal(formatUsd(37088), "$37,088");
+assert.equal(formatUsd(11.78), "$11.78");
+assert.equal(formatCount(3905), "3,905");
+assert.equal(formatCount(10000), "10,000");
 assert.equal(walletEntryDelta("deposit", 10), 10);
 assert.equal(walletEntryDelta("withdraw", 10), -10);
 assert.equal(walletEntryDelta("debit_rent", -25), -25);

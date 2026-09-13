@@ -228,7 +228,16 @@ export function walletEntryDelta(kind: string, amountUsd: number): number {
   return walletBookDelta(kind, amountUsd);
 }
 
+export function formatCount(value: number): string {
+  return new Intl.NumberFormat("en-US").format(value);
+}
+
 export function formatUsd(amount: number): string {
-  const rounded = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
-  return `$${rounded}`;
+  const integer = Number.isInteger(amount);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: integer ? 0 : 2,
+    maximumFractionDigits: integer ? 0 : 2,
+  }).format(amount);
 }

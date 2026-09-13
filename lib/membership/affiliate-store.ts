@@ -32,6 +32,7 @@ import {
   programDefaultRates,
   ratePctForLevel,
   resolveEarnDepth,
+  affiliateOrgRunRateUsd,
   affiliateRateSource,
   unpaidUsesProgramAffiliateRates,
   walkUpline,
@@ -99,6 +100,7 @@ export type DownlineRow = {
   attributedAt: string;
   firstPaidAt: string | null;
   planPriceUsd: number;
+  planName: string | null;
   campaignId: string | null;
   linkId: string | null;
 };
@@ -178,6 +180,8 @@ export type AffiliateTreeNode = {
   label: string;
   level: number;
   paid: boolean;
+  planName: string | null;
+  runRateUsd: number;
   children: AffiliateTreeNode[];
 };
 
@@ -1171,28 +1175,32 @@ async function memberLabels(
   return { labels, emails };
 }
 
-async function memberPlanPrices(
+async function memberPlans(
   userIds: string[],
-): Promise<Map<string, number>> {
-  const prices = new Map<string, number>();
+): Promise<Map<string, { priceUsd: number; planName: string | null }>> {
+  const plans = new Map<string, { priceUsd: number; planName: string | null }>();
   if (userIds.length === 0) {
-    return prices;
+    return plans;
   }
   const supabase = createServiceClient();
   if (!supabase) {
-    return prices;
+    return plans;
   }
   const listed = await listMembershipPlans();
   const byId = new Map(
-    (listed.ok ? listed.plans : []).map((plan) => [plan.id, plan.priceUsd]),
+    (listed.ok ? listed.plans : []).map((plan) => [plan.id, plan]),
   );
   const data = await selectInChunks(userIds, (chunk) =>
     supabase.from("members").select("user_id, plan_id").in("user_id", chunk),
   );
   for (const row of data) {
-    prices.set(String(row.user_id), byId.get(String(row.plan_id)) ?? 0);
+    const plan = byId.get(String(row.plan_id));
+    plans.set(String(row.user_id), {
+      priceUsd: plan?.priceUsd ?? 0,
+      planName: plan?.name ?? null,
+    });
   }
-  return prices;
+  return plans;
 }
 
 type ReferralAttrRow = {
@@ -1250,10 +1258,10 @@ async function applyDownlineMeta(
     return rows;
   }
   const includeLabels = options.includeLabels ?? true;
-  const paidIds = rows
-    .filter((row) => row.firstPaidAt)
-    .map((row) => row.userId);
-  const [named, prices] = await Promise.all([
+  const planIds = includeLabels
+    ? rows.map((row) => row.userId)
+    : rows.filter((row) => row.firstPaidAt).map((row) => row.userId);
+  const [named, plans] = await Promise.all([
     includeLabels
       ? memberLabels(
           rows.map((row) => row.userId),
@@ -1263,13 +1271,14 @@ async function applyDownlineMeta(
           labels: new Map<string, string>(),
           emails: new Map<string, string>(),
         }),
-    memberPlanPrices(paidIds),
+    memberPlans(planIds),
   ]);
   return rows.map((row) => ({
     ...row,
     label: named.labels.get(row.userId) ?? "Member",
     email: showEmail ? named.emails.get(row.userId) : undefined,
-    planPriceUsd: prices.get(row.userId) ?? 0,
+    planPriceUsd: plans.get(row.userId)?.priceUsd ?? 0,
+    planName: plans.get(row.userId)?.planName ?? null,
   }));
 }
 
@@ -1319,6 +1328,7 @@ async function loadDownlineGraph(
         attributedAt: info.attributedAt,
         firstPaidAt: info.firstPaidAt,
         planPriceUsd: 0,
+        planName: null,
         campaignId: info.campaignId,
         linkId: info.linkId,
       });
@@ -1342,6 +1352,7 @@ export function buildAffiliateTree(
   rows: DownlineRow[],
   parentChildren: Map<string, string[]>,
   rootUserId: string,
+  options: { ratePctForLevel?: (level: number) => number } = {},
 ): AffiliateTreeNode[] {
   const byId = new Map(rows.map((row) => [row.userId, row]));
   const build = (userId: string, level: number): AffiliateTreeNode | null => {
@@ -1358,14 +1369,23 @@ export function buildAffiliateTree(
         label: "You",
         level: 0,
         paid: true,
+        planName: null,
+        runRateUsd: 0,
         children,
       };
     }
+    const paid = Boolean(row.firstPaidAt);
     return {
       userId: row.userId,
       label: row.label,
       level: row.level,
-      paid: Boolean(row.firstPaidAt),
+      paid,
+      planName: row.planName,
+      runRateUsd: affiliateOrgRunRateUsd({
+        planPriceUsd: row.planPriceUsd,
+        paid,
+        ratePct: options.ratePctForLevel?.(row.level) ?? 0,
+      }),
       children,
     };
   };
@@ -1461,7 +1481,10 @@ export async function loadAffiliatePortal(
     lastPayoutAt: lastPaid?.paidAt ?? lastPaid?.createdAt ?? null,
     downline,
     tree: options.includeTree
-      ? buildAffiliateTree(downline, graph.children, userId)
+      ? buildAffiliateTree(downline, graph.children, userId, {
+          ratePctForLevel: (level) =>
+            ratePctForLevel(rateValues, level, earnDepth),
+        })
       : [],
     commissions,
     campaigns: campaigns.filter((row) => !row.archivedAt),

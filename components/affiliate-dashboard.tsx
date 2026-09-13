@@ -19,6 +19,7 @@ import {
   affiliatePortalPath,
   canArchiveAffiliateLink,
   paginateAffiliateList,
+  affiliateDownlinePersonMeta,
   affiliateRowShareUrl,
   monthJoinedLabel,
   withdrawDecision,
@@ -37,7 +38,7 @@ import type {
   AffiliatePortal,
   PayoutRow,
 } from "@/lib/membership/affiliate-store";
-import { formatUsd } from "@/lib/membership/billing";
+import { formatCount, formatUsd } from "@/lib/membership/billing";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import type { BillingChain } from "@/lib/membership/wallet-store";
 import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
@@ -195,10 +196,13 @@ export function AffiliateDashboard({
       {tab === "overview" ? (
         <>
           <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatTile label="Signups" value={String(portal.stats.attributed)} />
+            <StatTile
+              label="Signups"
+              value={formatCount(portal.stats.attributed)}
+            />
             <StatTile
               label="Paid conversions"
-              value={String(portal.stats.paid)}
+              value={formatCount(portal.stats.paid)}
             />
             <StatTile
               label="Conversion"
@@ -299,7 +303,10 @@ export function AffiliateDashboard({
           </div>
           {view === "chart" ? (
             <div className="mt-4">
-              <AffiliateOrgChartFrame nodes={portal.tree} />
+              <AffiliateOrgChartFrame
+                nodes={portal.tree}
+                rootPlanName={portal.rates.planName}
+              />
             </div>
           ) : (
             <section className="mt-4 rounded-card border border-line bg-surface p-5">
@@ -313,26 +320,40 @@ export function AffiliateDashboard({
                       <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
                         <tr>
                           <th className="pb-2 pr-4 font-medium">Affiliate</th>
+                          <th className="pb-2 pr-4 font-medium">Plan</th>
                           <th className="pb-2 pr-4 font-medium">Level</th>
                           <th className="pb-2 pr-4 font-medium">Status</th>
+                          <th className="pb-2 pr-4 font-medium">To you</th>
                           <th className="pb-2 font-medium">Joined</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line">
-                        {downlinePage.rows.map((row) => (
-                          <tr key={row.userId} id={`downline-${row.userId}`}>
-                            <td className="py-2 pr-4 text-ink">{row.label}</td>
-                            <td className="py-2 pr-4 tabular-nums text-ink">
-                              L{row.level}
-                            </td>
-                            <td className="py-2 pr-4 text-ink-muted">
-                              {row.firstPaidAt ? "paid" : "signup"}
-                            </td>
-                            <td className="py-2 text-ink-muted">
-                              {monthJoinedLabel(row.attributedAt)}
-                            </td>
-                          </tr>
-                        ))}
+                        {downlinePage.rows.map((row) => {
+                          const person = affiliateDownlinePersonMeta(
+                            row,
+                            portal.rates,
+                          );
+                          return (
+                            <tr key={row.userId} id={`downline-${row.userId}`}>
+                              <td className="py-2 pr-4 text-ink">{row.label}</td>
+                              <td className="py-2 pr-4 text-ink">
+                                {person.planLabel}
+                              </td>
+                              <td className="py-2 pr-4 tabular-nums text-ink">
+                                L{row.level}
+                              </td>
+                              <td className="py-2 pr-4 text-ink-muted">
+                                {row.firstPaidAt ? "paid" : "signup"}
+                              </td>
+                              <td className="py-2 pr-4 tabular-nums text-ink">
+                                {person.runRateLabel}
+                              </td>
+                              <td className="py-2 text-ink-muted">
+                                {monthJoinedLabel(row.attributedAt)}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

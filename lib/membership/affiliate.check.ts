@@ -20,6 +20,11 @@ import {
   affiliatePortalPagePath,
   affiliateDownlineRowHref,
   affiliateOrgChartNodeHtml,
+  affiliateOrgPlanLabel,
+  affiliateOrgRunRateLabel,
+  affiliateOrgRunRateUsd,
+  affiliateDownlinePersonMeta,
+  sumAffiliateOrgRunRate,
   affiliatePageLabel,
   escapeHtmlText,
   flattenAffiliateOrgChart,
@@ -360,6 +365,7 @@ assert.equal(
   assert.equal(rows[2]?.parentId, "a");
   assert.equal(rows.length, 3);
 }
+assert.equal(affiliateOrgUserZoomedOut(AFFILIATE_ORG_MIN_ZOOM), false);
 assert.equal(affiliateOrgUserZoomedOut(1.25), false);
 assert.equal(affiliateOrgUserZoomedOut(0.8), true);
 assert.equal(
@@ -404,6 +410,7 @@ assert.equal(
         attributedAt: "2026-01-01T00:00:00.000Z",
         firstPaidAt: "2026-01-02T00:00:00.000Z",
         planPriceUsd: 10,
+        planName: "Plus",
         campaignId: null,
         linkId: null,
       },
@@ -414,18 +421,23 @@ assert.equal(
         attributedAt: "2026-01-03T00:00:00.000Z",
         firstPaidAt: null,
         planPriceUsd: 0,
+        planName: null,
         campaignId: null,
         linkId: null,
       },
     ],
     children,
     "root",
+    { ratePctForLevel: (level) => (level === 1 ? 20 : 10) },
   );
   assert.equal(tree.length, 1);
   assert.equal(tree[0]?.label, "Ann");
   assert.equal(tree[0]?.paid, true);
+  assert.equal(tree[0]?.planName, "Plus");
+  assert.equal(tree[0]?.runRateUsd, 2);
   assert.equal(tree[0]?.children[0]?.label, "Bob");
   assert.equal(tree[0]?.children[0]?.paid, false);
+  assert.equal(tree[0]?.children[0]?.runRateUsd, 0);
 }
 assert.equal(escapeHtmlText(`<x & "y">`), "&lt;x &amp; &quot;y&quot;&gt;");
 assert.equal(
@@ -485,6 +497,106 @@ assert.equal(
     null,
     { selected: true, onPath: true },
   ).includes("#8B6CF6"),
+  true,
+);
+assert.equal(affiliateOrgPlanLabel(null), "Affiliate");
+assert.equal(affiliateOrgPlanLabel("Plus"), "Plus");
+assert.equal(
+  affiliateOrgRunRateUsd({ planPriceUsd: 20, paid: true, ratePct: 10 }),
+  2,
+);
+assert.equal(
+  affiliateOrgRunRateUsd({ planPriceUsd: 20, paid: false, ratePct: 10 }),
+  0,
+);
+assert.equal(affiliateOrgRunRateLabel(0), "Signup");
+assert.equal(affiliateOrgRunRateLabel(0, "root"), "$0.00 / mo");
+assert.equal(affiliateOrgRunRateLabel(2), "$2.00 / mo");
+assert.equal(affiliateOrgRunRateLabel(1237.5), "$1,237.50 / mo");
+{
+  const paid = affiliateDownlinePersonMeta(
+    {
+      planName: "Plus",
+      planPriceUsd: 20,
+      firstPaidAt: "2026-01-01",
+      level: 1,
+    },
+    {
+      earnDepth: 2,
+      rows: [
+        { level: 1, ratePct: 10 },
+        { level: 2, ratePct: 5 },
+      ],
+    },
+  );
+  assert.equal(paid.planLabel, "Plus");
+  assert.equal(paid.runRateUsd, 2);
+  assert.equal(paid.runRateLabel, "$2.00 / mo");
+  const signup = affiliateDownlinePersonMeta(
+    {
+      planName: null,
+      planPriceUsd: 0,
+      firstPaidAt: null,
+      level: 1,
+    },
+    { earnDepth: 2, rows: [{ level: 1, ratePct: 10 }] },
+  );
+  assert.equal(signup.planLabel, "Affiliate");
+  assert.equal(signup.runRateLabel, "Signup");
+}
+assert.equal(
+  sumAffiliateOrgRunRate([
+    { runRateUsd: 2, children: [{ runRateUsd: 1, children: [] }] },
+  ]),
+  3,
+);
+assert.equal(
+  flattenAffiliateOrgChart(
+    [
+      {
+        userId: "a",
+        label: "Ann",
+        level: 1,
+        paid: true,
+        planName: "Plus",
+        runRateUsd: 2,
+        children: [],
+      },
+    ],
+    { planName: "Pro" },
+  )[0]?.runRateUsd,
+  2,
+);
+assert.equal(
+  affiliateOrgChartNodeHtml(
+    {
+      id: "a",
+      parentId: "you",
+      label: "Ann",
+      level: 1,
+      paid: true,
+      planName: "Plus",
+      runRateUsd: 2,
+      childCount: 0,
+    },
+    null,
+  ).includes("Plus · L1"),
+  true,
+);
+assert.equal(
+  affiliateOrgChartNodeHtml(
+    {
+      id: "a",
+      parentId: "you",
+      label: "Ann",
+      level: 1,
+      paid: false,
+      planName: null,
+      runRateUsd: 0,
+      childCount: 0,
+    },
+    null,
+  ).includes("Signup"),
   true,
 );
 assert.equal(parseAffiliateLanding("home").ok, true);
