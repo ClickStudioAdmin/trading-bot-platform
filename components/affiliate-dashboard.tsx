@@ -13,7 +13,6 @@ import {
   AFFILIATE_LINK_NAME_MAX,
   affiliateLandingLabel,
   affiliateLinkKindLabel,
-  affiliateDownlineRowHref,
   affiliatePageLabel,
   affiliatePortalPagePath,
   affiliatePortalPath,
@@ -314,9 +313,7 @@ export function AffiliateDashboard({
           </section>
           <AffiliateOrgChartFrame
             nodes={portal.tree}
-            rowHref={(userId) =>
-              affiliateDownlineRowHref(userId, portal.downline)
-            }
+            downline={portal.downline.map((row) => ({ userId: row.userId }))}
           />
         </div>
       ) : null}

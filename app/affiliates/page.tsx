@@ -45,7 +45,9 @@ export default async function AffiliatesPage({
 
   if (member) {
     const arrears = await loadMemberArrears(member.id);
-    const portal = await loadAffiliatePortal(member.id);
+    const portal = await loadAffiliatePortal(member.id, {
+      includeTree: tab === "network",
+    });
     const headerStore = await headers();
     const host =
       headerStore.get("x-forwarded-host") ?? headerStore.get("host") ?? "";

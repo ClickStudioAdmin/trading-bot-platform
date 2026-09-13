@@ -5,6 +5,7 @@ import {
   AffiliateOrgChart,
   type AffiliateOrgChartApi,
 } from "@/components/affiliate-org-chart";
+import { affiliateDownlineRowHref } from "@/lib/membership/affiliate";
 import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
 
 const control =
@@ -12,11 +13,12 @@ const control =
 
 export function AffiliateOrgChartFrame({
   nodes,
-  rowHref,
+  downline,
 }: {
   nodes: AffiliateTreeNode[];
-  rowHref: (userId: string) => string;
+  downline: readonly { userId: string }[];
 }) {
+  const rowHref = (userId: string) => affiliateDownlineRowHref(userId, downline);
   const frameRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [monitor, setMonitor] = useState(false);

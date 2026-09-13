@@ -615,16 +615,21 @@ export async function createCommissionsForInvoice(input: {
 
 export async function releaseDueCommissions(
   nowMs = Date.now(),
+  earnerUserId?: string,
 ): Promise<{ ok: true; released: number } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
-  const { data, error } = await supabase
+  let query = supabase
     .from("membership_commissions")
     .select("id, earner_user_id, amount_usd, level")
     .eq("status", "pending")
     .lte("hold_until", new Date(nowMs).toISOString());
+  if (earnerUserId) {
+    query = query.eq("earner_user_id", earnerUserId);
+  }
+  const { data, error } = await query;
   if (error) {
     return { ok: false, error: error.message };
   }
@@ -1104,7 +1109,8 @@ export async function listPayouts(limit = 80): Promise<PayoutRow[]> {
   return rows.map((row) => ({ ...row, email: emails.get(row.userId) }));
 }
 
-const USER_ID_IN_CHUNK = 80;
+const USER_ID_IN_CHUNK = 100;
+const REFERRAL_PAGE_SIZE = 1000;
 
 async function selectInChunks<T extends Record<string, unknown>>(
   ids: string[],
@@ -1112,15 +1118,17 @@ async function selectInChunks<T extends Record<string, unknown>>(
     chunk: string[],
   ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
 ): Promise<T[]> {
-  const rows: T[] = [];
+  const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += USER_ID_IN_CHUNK) {
-    const { data, error } = await query(ids.slice(i, i + USER_ID_IN_CHUNK));
-    if (error) {
-      continue;
-    }
-    rows.push(...(data ?? []));
+    chunks.push(ids.slice(i, i + USER_ID_IN_CHUNK));
   }
-  return rows;
+  const pages = await Promise.all(
+    chunks.map(async (chunk) => {
+      const { data, error } = await query(chunk);
+      return error ? [] : (data ?? []);
+    }),
+  );
+  return pages.flat();
 }
 
 async function memberLabels(
@@ -1136,28 +1144,28 @@ async function memberLabels(
   if (!supabase) {
     return { labels, emails };
   }
-  const [profiles, members] = await Promise.all([
-    selectInChunks(userIds, (chunk) =>
-      supabase.from("trader_profiles").select("user_id, alias").in("user_id", chunk),
-    ),
-    selectInChunks(userIds, (chunk) =>
-      supabase.from("members").select("user_id, email, plan_id").in("user_id", chunk),
-    ),
-  ]);
+  const profiles = await selectInChunks(userIds, (chunk) =>
+    supabase.from("trader_profiles").select("user_id, alias").in("user_id", chunk),
+  );
   const aliases = new Map(
     profiles.map((row) => [String(row.user_id), String(row.alias)]),
   );
-  for (const member of members ?? []) {
+  for (const userId of userIds) {
+    const alias = aliases.get(userId)?.trim();
+    labels.set(userId, alias || "Member");
+  }
+  if (!showEmail) {
+    return { labels, emails };
+  }
+  const members = await selectInChunks(userIds, (chunk) =>
+    supabase.from("members").select("user_id, email, plan_id").in("user_id", chunk),
+  );
+  for (const member of members) {
     const id = String(member.user_id);
     const email = String(member.email);
     emails.set(id, email);
-    const alias = aliases.get(id)?.trim();
-    if (alias) {
-      labels.set(id, alias);
-    } else if (showEmail) {
+    if ((labels.get(id) ?? "Member") === "Member") {
       labels.set(id, email);
-    } else {
-      labels.set(id, "Member");
     }
   }
   return { labels, emails };
@@ -1187,29 +1195,90 @@ async function memberPlanPrices(
   return prices;
 }
 
-export async function loadDownline(
-  rootUserId: string,
-  showEmail = false,
-): Promise<DownlineRow[]> {
-  const settings = await loadAffiliateSettings();
+type ReferralAttrRow = {
+  user_id: unknown;
+  referrer_user_id: unknown;
+  attributed_at: unknown;
+  first_paid_at: unknown;
+  campaign_id?: unknown;
+  link_id?: unknown;
+};
+
+type DownlineGraph = {
+  rows: DownlineRow[];
+  children: Map<string, string[]>;
+};
+
+async function listReferralAttributionRows(): Promise<ReferralAttrRow[]> {
   const supabase = createServiceClient();
   if (!supabase) {
     return [];
   }
-  const withAttr = await supabase
-    .from("membership_referrals")
-    .select(
-      "user_id, referrer_user_id, attributed_at, first_paid_at, campaign_id, link_id",
-    );
-  const referrals =
-    withAttr.error && schemaGap(withAttr.error)
-      ? (
-          await supabase
-            .from("membership_referrals")
-            .select("user_id, referrer_user_id, attributed_at, first_paid_at")
-        ).data
-      : withAttr.data;
+  const wide =
+    "user_id, referrer_user_id, attributed_at, first_paid_at, campaign_id, link_id";
+  const narrow = "user_id, referrer_user_id, attributed_at, first_paid_at";
+  let columns = wide;
+  const rows: ReferralAttrRow[] = [];
+  for (let from = 0; ; from += REFERRAL_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("membership_referrals")
+      .select(columns)
+      .order("user_id", { ascending: true })
+      .range(from, from + REFERRAL_PAGE_SIZE - 1);
+    if (error && schemaGap(error) && columns === wide) {
+      columns = narrow;
+      from -= REFERRAL_PAGE_SIZE;
+      continue;
+    }
+    if (error) {
+      break;
+    }
+    rows.push(...(((data ?? []) as unknown) as ReferralAttrRow[]));
+    if ((data ?? []).length < REFERRAL_PAGE_SIZE) {
+      break;
+    }
+  }
+  return rows;
+}
+
+async function applyDownlineMeta(
+  rows: DownlineRow[],
+  showEmail: boolean,
+  options: { includeLabels?: boolean } = {},
+): Promise<DownlineRow[]> {
+  if (rows.length === 0) {
+    return rows;
+  }
+  const includeLabels = options.includeLabels ?? true;
+  const paidIds = rows
+    .filter((row) => row.firstPaidAt)
+    .map((row) => row.userId);
+  const [named, prices] = await Promise.all([
+    includeLabels
+      ? memberLabels(
+          rows.map((row) => row.userId),
+          showEmail,
+        )
+      : Promise.resolve({
+          labels: new Map<string, string>(),
+          emails: new Map<string, string>(),
+        }),
+    memberPlanPrices(paidIds),
+  ]);
+  return rows.map((row) => ({
+    ...row,
+    label: named.labels.get(row.userId) ?? "Member",
+    email: showEmail ? named.emails.get(row.userId) : undefined,
+    planPriceUsd: prices.get(row.userId) ?? 0,
+  }));
+}
+
+async function loadDownlineGraph(
+  rootUserId: string,
+  maxDepth: number,
+): Promise<DownlineGraph> {
   const children = new Map<string, string[]>();
+  const referrals = await listReferralAttributionRows();
   const meta = new Map<
     string,
     {
@@ -1219,7 +1288,7 @@ export async function loadDownline(
       linkId: string | null;
     }
   >();
-  for (const row of referrals ?? []) {
+  for (const row of referrals) {
     const userId = String(row.user_id);
     const referrer = String(row.referrer_user_id);
     const list = children.get(referrer) ?? [];
@@ -1229,13 +1298,13 @@ export async function loadDownline(
       attributedAt: String(row.attributed_at),
       firstPaidAt:
         typeof row.first_paid_at === "string" ? row.first_paid_at : null,
-      campaignId: optionalId((row as { campaign_id?: unknown }).campaign_id),
-      linkId: optionalId((row as { link_id?: unknown }).link_id),
+      campaignId: optionalId(row.campaign_id),
+      linkId: optionalId(row.link_id),
     });
   }
   const rows: DownlineRow[] = [];
   const walk = (parent: string, level: number) => {
-    if (level > settings.maxDepth) {
+    if (level > maxDepth) {
       return;
     }
     for (const userId of children.get(parent) ?? []) {
@@ -1257,17 +1326,16 @@ export async function loadDownline(
     }
   };
   walk(rootUserId, 1);
-  const ids = rows.map((row) => row.userId);
-  const [named, prices] = await Promise.all([
-    memberLabels(ids, showEmail),
-    memberPlanPrices(ids),
-  ]);
-  return rows.map((row) => ({
-    ...row,
-    label: named.labels.get(row.userId) ?? "Member",
-    email: showEmail ? named.emails.get(row.userId) : undefined,
-    planPriceUsd: prices.get(row.userId) ?? 0,
-  }));
+  return { rows, children };
+}
+
+export async function loadDownline(
+  rootUserId: string,
+  showEmail = false,
+): Promise<DownlineRow[]> {
+  const settings = await loadAffiliateSettings();
+  const graph = await loadDownlineGraph(rootUserId, settings.maxDepth);
+  return applyDownlineMeta(graph.rows, showEmail);
 }
 
 export function buildAffiliateTree(
@@ -1306,42 +1374,27 @@ export function buildAffiliateTree(
     .filter((node): node is AffiliateTreeNode => node !== null);
 }
 
-async function downlineChildMap(): Promise<Map<string, string[]>> {
-  const supabase = createServiceClient();
-  const children = new Map<string, string[]>();
-  if (!supabase) {
-    return children;
-  }
-  const { data } = await supabase
-    .from("membership_referrals")
-    .select("user_id, referrer_user_id");
-  for (const row of data ?? []) {
-    const referrer = String(row.referrer_user_id);
-    const list = children.get(referrer) ?? [];
-    list.push(String(row.user_id));
-    children.set(referrer, list);
-  }
-  return children;
-}
-
 export async function loadAffiliatePortal(
   userId: string,
+  options: { includeTree?: boolean } = {},
 ): Promise<AffiliatePortal> {
   const settings = await loadAffiliateSettings();
-  await releaseDueCommissions();
+  await releaseDueCommissions(Date.now(), userId);
   await maybeAutoAffiliatePayout(userId);
   const ensured = await ensureReferralCode(userId);
   const code = ensured.ok ? ensured.code : null;
-  const [downline, commissions, payouts, children, campaigns, links, payoutSettings] =
+  const [graph, commissions, payouts, campaigns, links, payoutSettings] =
     await Promise.all([
-      loadDownline(userId, false),
+      loadDownlineGraph(userId, settings.maxDepth),
       listEarnerCommissions(userId),
       listMemberPayouts(userId),
-      downlineChildMap(),
       listAffiliateCampaigns(userId),
       listAffiliateLinks(userId),
       loadAffiliatePayoutSettings(userId),
     ]);
+  const downline = await applyDownlineMeta(graph.rows, false, {
+    includeLabels: options.includeTree,
+  });
   const pendingUsd = roundUsd(
     commissions
       .filter((row) => row.status === "pending")
@@ -1407,7 +1460,9 @@ export async function loadAffiliatePortal(
     paidOutUsd,
     lastPayoutAt: lastPaid?.paidAt ?? lastPaid?.createdAt ?? null,
     downline,
-    tree: buildAffiliateTree(downline, children, userId),
+    tree: options.includeTree
+      ? buildAffiliateTree(downline, graph.children, userId)
+      : [],
     commissions,
     campaigns: campaigns.filter((row) => !row.archivedAt),
     archivedCampaigns: campaigns.filter((row) => row.archivedAt),

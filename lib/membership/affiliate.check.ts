@@ -52,6 +52,7 @@ import {
   withdrawDecision,
   wouldCreateReferralCycle,
 } from "./affiliate";
+import { buildAffiliateTree } from "./affiliate-store";
 
 assert.equal(parseAffiliateMaxDepth(2).ok, true);
 assert.equal(parseAffiliateMaxDepth(5).ok, true);
@@ -330,6 +331,43 @@ assert.equal(
   assert.equal(rows[2]?.id, "b");
   assert.equal(rows[2]?.parentId, "a");
   assert.equal(rows.length, 3);
+}
+{
+  const children = new Map<string, string[]>([
+    ["root", ["a"]],
+    ["a", ["b"]],
+  ]);
+  const tree = buildAffiliateTree(
+    [
+      {
+        userId: "a",
+        level: 1,
+        label: "Ann",
+        attributedAt: "2026-01-01T00:00:00.000Z",
+        firstPaidAt: "2026-01-02T00:00:00.000Z",
+        planPriceUsd: 10,
+        campaignId: null,
+        linkId: null,
+      },
+      {
+        userId: "b",
+        level: 2,
+        label: "Bob",
+        attributedAt: "2026-01-03T00:00:00.000Z",
+        firstPaidAt: null,
+        planPriceUsd: 0,
+        campaignId: null,
+        linkId: null,
+      },
+    ],
+    children,
+    "root",
+  );
+  assert.equal(tree.length, 1);
+  assert.equal(tree[0]?.label, "Ann");
+  assert.equal(tree[0]?.paid, true);
+  assert.equal(tree[0]?.children[0]?.label, "Bob");
+  assert.equal(tree[0]?.children[0]?.paid, false);
 }
 assert.equal(escapeHtmlText(`<x & "y">`), "&lt;x &amp; &quot;y&quot;&gt;");
 assert.equal(
