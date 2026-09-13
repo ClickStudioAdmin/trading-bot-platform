@@ -749,6 +749,26 @@ export function affiliateDownlineRowHref(
 }
 
 export const AFFILIATE_ORG_ROOT_ID = "you";
+export const AFFILIATE_ORG_MIN_ZOOM = 1.25;
+
+export function affiliateOrgUserZoomedOut(
+  scale: number,
+  minScale = AFFILIATE_ORG_MIN_ZOOM,
+): boolean {
+  return scale + 0.001 < minScale;
+}
+
+export function affiliateOrgAutoZoom(input: {
+  fitScale: number;
+  currentScale: number;
+  minScale?: number;
+}): number {
+  const minScale = input.minScale ?? AFFILIATE_ORG_MIN_ZOOM;
+  if (affiliateOrgUserZoomedOut(input.currentScale, minScale)) {
+    return input.currentScale;
+  }
+  return Math.max(input.fitScale, input.currentScale, minScale);
+}
 
 export type AffiliateOrgChartSource = {
   userId: string;

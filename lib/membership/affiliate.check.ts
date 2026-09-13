@@ -23,7 +23,10 @@ import {
   affiliatePageLabel,
   escapeHtmlText,
   flattenAffiliateOrgChart,
+  AFFILIATE_ORG_MIN_ZOOM,
   AFFILIATE_ORG_ROOT_ID,
+  affiliateOrgAutoZoom,
+  affiliateOrgUserZoomedOut,
   affiliatePortalPageForIndex,
   paginateAffiliateList,
   parseAffiliateNetworkView,
@@ -347,6 +350,36 @@ assert.equal(
   assert.equal(rows[2]?.parentId, "a");
   assert.equal(rows.length, 3);
 }
+assert.equal(affiliateOrgUserZoomedOut(1.25), false);
+assert.equal(affiliateOrgUserZoomedOut(0.8), true);
+assert.equal(
+  affiliateOrgAutoZoom({
+    fitScale: 0.4,
+    currentScale: AFFILIATE_ORG_MIN_ZOOM,
+  }),
+  AFFILIATE_ORG_MIN_ZOOM,
+);
+assert.equal(
+  affiliateOrgAutoZoom({
+    fitScale: 2,
+    currentScale: AFFILIATE_ORG_MIN_ZOOM,
+  }),
+  2,
+);
+assert.equal(
+  affiliateOrgAutoZoom({
+    fitScale: 2,
+    currentScale: 0.7,
+  }),
+  0.7,
+);
+assert.equal(
+  affiliateOrgAutoZoom({
+    fitScale: 1.1,
+    currentScale: 1.8,
+  }),
+  1.8,
+);
 {
   const children = new Map<string, string[]>([
     ["root", ["a"]],

@@ -2,8 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import {
+  AFFILIATE_ORG_MIN_ZOOM,
   AFFILIATE_ORG_ROOT_ID,
+  affiliateOrgAutoZoom,
   affiliateOrgChartNodeHtml,
+  affiliateOrgUserZoomedOut,
   flattenAffiliateOrgChart,
 } from "@/lib/membership/affiliate";
 import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
@@ -12,9 +15,22 @@ export type AffiliateOrgChartApi = {
   expandAll: () => void;
   collapseAll: () => void;
   fit: () => void;
+  refit: () => void;
   zoomIn: () => void;
   zoomOut: () => void;
   resize: () => void;
+};
+
+type OrgChartState = {
+  lastTransform: { x: number; y: number; k: number };
+  svg: {
+    transition: () => {
+      duration: (ms: number) => {
+        call: (behavior: unknown, value?: unknown) => void;
+      };
+    };
+  };
+  zoomBehavior: { scaleTo: unknown };
 };
 
 type OrgChartHandle = {
@@ -37,6 +53,7 @@ type OrgChartHandle = {
   nodeButtonX: (value: () => number) => OrgChartHandle;
   nodeButtonY: (value: () => number) => OrgChartHandle;
   initialExpandLevel: (value: number) => OrgChartHandle;
+  initialZoom: (value: number) => OrgChartHandle;
   nodeContent: (
     value: (node: { data: Record<string, unknown> }) => string,
   ) => OrgChartHandle;
@@ -51,13 +68,52 @@ type OrgChartHandle = {
     value: (node: { data: Record<string, unknown> }) => void,
   ) => OrgChartHandle;
   render: () => OrgChartHandle;
-  fit: (input?: { animate?: boolean }) => OrgChartHandle;
+  fit: (input?: {
+    animate?: boolean;
+    scale?: boolean;
+    onCompleted?: () => void;
+  }) => OrgChartHandle;
   expandAll: () => OrgChartHandle;
   collapseAll: () => OrgChartHandle;
   zoomIn: () => void;
   zoomOut: () => void;
   clear: () => void;
+  getChartState: () => OrgChartState;
 };
+
+function chartScale(chart: OrgChartHandle): number {
+  const k = chart.getChartState().lastTransform.k;
+  return typeof k === "number" && k > 0 ? k : AFFILIATE_ORG_MIN_ZOOM;
+}
+
+function scaleChartTo(chart: OrgChartHandle, scale: number, animate: boolean) {
+  const state = chart.getChartState();
+  state.svg
+    .transition()
+    .duration(animate ? 200 : 0)
+    .call(state.zoomBehavior.scaleTo, scale);
+}
+
+function fitChart(chart: OrgChartHandle, animate: boolean) {
+  const currentScale = chartScale(chart);
+  if (affiliateOrgUserZoomedOut(currentScale)) {
+    chart.fit({ animate, scale: false });
+    return;
+  }
+  chart.fit({
+    animate,
+    scale: true,
+    onCompleted: () => {
+      const target = affiliateOrgAutoZoom({
+        fitScale: chartScale(chart),
+        currentScale,
+      });
+      if (Math.abs(target - chartScale(chart)) > 0.001) {
+        scaleChartTo(chart, target, animate);
+      }
+    },
+  });
+}
 
 function applyChartHeight(chart: OrgChartHandle, host: HTMLElement) {
   const height = Math.max(host.clientHeight, 240);
@@ -116,6 +172,7 @@ export function AffiliateOrgChart({
         .nodeButtonHeight(() => 22)
         .nodeButtonX(() => -14)
         .nodeButtonY(() => -8)
+        .initialZoom(AFFILIATE_ORG_MIN_ZOOM)
         .initialExpandLevel(2)
         .nodeContent((node) => {
           const row = node.data as {
@@ -155,17 +212,22 @@ export function AffiliateOrgChart({
         })
         .data(rows)
         .render()
-        .fit({ animate: false });
+        .fit({ animate: false, scale: false });
       chart = next;
       const api: AffiliateOrgChartApi = {
         expandAll: () => {
-          next.expandAll().fit();
+          next.expandAll();
+          fitChart(next, true);
         },
         collapseAll: () => {
-          next.collapseAll().fit();
+          next.collapseAll();
+          fitChart(next, true);
         },
         fit: () => {
           next.fit();
+        },
+        refit: () => {
+          fitChart(next, true);
         },
         zoomIn: () => {
           next.zoomIn();

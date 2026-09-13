@@ -33,7 +33,7 @@ export function AffiliateOrgChartFrame({
       }
       window.setTimeout(() => {
         api?.resize();
-        api?.fit();
+        api?.refit();
       }, 80);
     };
     document.addEventListener("fullscreenchange", onFullscreen);
@@ -54,7 +54,7 @@ export function AffiliateOrgChartFrame({
     window.addEventListener("keydown", onKey);
     window.setTimeout(() => {
       api?.resize();
-      api?.fit();
+      api?.refit();
     }, 80);
     return () => {
       document.body.style.overflow = previous;
