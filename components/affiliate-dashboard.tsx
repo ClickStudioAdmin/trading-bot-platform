@@ -155,7 +155,7 @@ export function AffiliateDashboard({
       {tab === "overview" ? (
         <>
           <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatTile label="Attributed" value={String(portal.stats.attributed)} />
+            <StatTile label="Signups" value={String(portal.stats.attributed)} />
             <StatTile
               label="Paid conversions"
               value={String(portal.stats.paid)}
@@ -260,7 +260,7 @@ export function AffiliateDashboard({
                           L{row.level}
                         </td>
                         <td className="py-2 pr-4 text-ink-muted">
-                          {row.firstPaidAt ? "paid" : "attributed"}
+                          {row.firstPaidAt ? "paid" : "signup"}
                         </td>
                         <td className="py-2 text-ink-muted">
                           {monthJoinedLabel(row.attributedAt)}
@@ -458,8 +458,9 @@ export function AffiliateDashboard({
                       <th className="px-4 py-3 font-medium">Campaign</th>
                       <th className="px-4 py-3 font-medium">Link</th>
                       <th className="px-4 py-3 font-medium">Type</th>
+                      <th className="px-4 py-3 font-medium">Signups</th>
                       <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium">Copy</th>
+                      <th className="px-4 py-3 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -605,28 +606,31 @@ function AffiliateLinkRowView({
         {affiliateLandingLabel(link.landing)}
       </td>
       <td className="px-4 py-3 text-ink-muted">{link.campaignName ?? "—"}</td>
-      <td className="max-w-[16rem] truncate px-4 py-3 font-mono text-xs text-ink-muted">
-        {url}
+      <td className="px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="min-w-0 truncate font-mono text-xs text-ink-muted">
+            {url}
+          </span>
+          <CopyTextButton text={url} label="Copy link" />
+        </div>
       </td>
       <td className="px-4 py-3 text-ink-muted">
         {affiliateLinkKindLabel(link.kind)}
       </td>
-      <td className="px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={archived ? "text-ink-muted" : "text-ink"}>
-            {archived ? "Archived" : "Active"}
-          </span>
-          {!archived && canArchiveAffiliateLink(link.kind) ? (
-            <AffiliateArchiveButton
-              kind="link"
-              id={link.id}
-              name={link.name}
-            />
-          ) : null}
-        </div>
+      <td className={`px-4 py-3 tabular-nums ${muted}`}>{link.attributed}</td>
+      <td className={`px-4 py-3 ${muted}`}>
+        {archived ? "Archived" : "Active"}
       </td>
       <td className="px-4 py-3">
-        <CopyTextButton text={url} label="Copy link" />
+        {!archived && canArchiveAffiliateLink(link.kind) ? (
+          <AffiliateArchiveButton
+            kind="link"
+            id={link.id}
+            name={link.name}
+          />
+        ) : (
+          <span className="text-ink-faint">—</span>
+        )}
       </td>
     </tr>
   );

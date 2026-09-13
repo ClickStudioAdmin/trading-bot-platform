@@ -21,7 +21,7 @@ export function AffiliateOrgChart({
           <span className="text-ink-muted">
             {" "}
             · L{node.level}
-            {node.paid ? " · paid" : " · attributed"}
+            {node.paid ? " · paid" : " · signup"}
           </span>
           {node.children.length > 0 ? (
             <div className="mt-2">

@@ -204,7 +204,7 @@ export default async function AdminAffiliatesPage({
                   <li key={row.userId}>
                     L{row.level} · {row.label}
                     {row.email && row.email !== row.label ? ` · ${row.email}` : ""}
-                    {row.firstPaidAt ? " · paid" : " · attributed"}
+                    {row.firstPaidAt ? " · paid" : " · signup"}
                   </li>
                 ))}
               </ul>
