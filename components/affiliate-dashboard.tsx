@@ -166,8 +166,8 @@ export function AffiliateDashboard({
       {!portal.payoutSettings.address ? (
         <p className="mt-6 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Save a payout address in Manage payout settings on the Payouts tab.
-          Withdraws and auto payouts use that address so you do not enter it
-          each time.
+          Withdraws and auto payout requests use that address so you do not
+          enter it each time.
         </p>
       ) : null}
 

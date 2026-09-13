@@ -43,8 +43,10 @@ export function AffiliatePayoutSettingsButton({
         >
           <p className="mt-2 text-sm text-ink-muted">
             Saved chain and address are used on each withdraw so you do not
-            re-enter them. Auto payouts create a withdraw of all payable when
-            the balance is over the amount you set.
+            re-enter them. Auto payouts open a payout request for the full
+            payable when the balance is over the amount you set. That request
+            uses the same queue as Request withdraw — admin still approves,
+            sends USDT, and marks it paid.
           </p>
           <form
             action={saveAffiliatePayoutSettingsAction}
@@ -87,8 +89,8 @@ export function AffiliatePayoutSettingsButton({
               <span>
                 Auto payouts
                 <span className="mt-0.5 block text-xs text-ink-muted">
-                  When payable is over your amount, request a withdraw of the
-                  full payable balance.
+                  When payable is over your amount, open a payout request for
+                  the full payable. Same path as a manual withdraw.
                 </span>
               </span>
             </label>
