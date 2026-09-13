@@ -8,6 +8,7 @@ import {
   affiliateOrgChartNodeHtml,
   affiliateOrgUserZoomedOut,
   flattenAffiliateOrgChart,
+  type AffiliateOrgLayout,
 } from "@/lib/membership/affiliate";
 import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
 
@@ -19,6 +20,9 @@ export type AffiliateOrgChartApi = {
   zoomIn: () => void;
   zoomOut: () => void;
   resize: () => void;
+  findPerson: (id: string) => void;
+  clearFind: () => void;
+  setLayout: (layout: AffiliateOrgLayout) => void;
 };
 
 type OrgChartState = {
@@ -62,11 +66,20 @@ type OrgChartHandle = {
       node: { children?: unknown; data: Record<string, unknown> };
     }) => string,
   ) => OrgChartHandle;
-  linkUpdate: (value: (this: SVGElement) => void) => OrgChartHandle;
+  linkUpdate: (
+    value: (
+      this: SVGElement,
+      node: { data: Record<string, unknown> },
+    ) => void,
+  ) => OrgChartHandle;
   nodeUpdate: (value: (this: SVGGElement) => void) => OrgChartHandle;
   onNodeClick: (
     value: (node: { data: Record<string, unknown> }) => void,
   ) => OrgChartHandle;
+  setCentered: (id: string) => OrgChartHandle;
+  setHighlighted: (id: string) => OrgChartHandle;
+  setUpToTheRootHighlighted: (id: string) => OrgChartHandle;
+  clearHighlighting: () => OrgChartHandle;
   render: () => OrgChartHandle;
   fit: (input?: {
     animate?: boolean;
@@ -185,16 +198,23 @@ export function AffiliateOrgChart({
           };
           const href =
             row.id === AFFILIATE_ORG_ROOT_ID ? null : hrefRef.current(row.id);
-          return affiliateOrgChartNodeHtml(row, href);
+          return affiliateOrgChartNodeHtml(row, href, {
+            onPath: Boolean(node.data._upToTheRootHighlighted),
+            selected: Boolean(node.data._highlighted),
+          });
         })
         .buttonContent(({ node }) => {
           const open = Boolean(node.children);
           const count = Number(node.data._directSubordinatesPaging ?? 0);
           return `<div style="margin:auto;border:1px solid #2A313C;border-radius:8px;background:#161B22;color:#9AA3B2;font-size:10px;line-height:1;padding:3px 6px">${open ? "−" : "+"} ${count}</div>`;
         })
-        .linkUpdate(function () {
-          this.setAttribute("stroke", "#2A313C");
-          this.setAttribute("stroke-width", "1.5");
+        .linkUpdate(function (node) {
+          const onPath = Boolean(node.data._upToTheRootHighlighted);
+          this.setAttribute("stroke", onPath ? "#A78BFA" : "#2A313C");
+          this.setAttribute("stroke-width", onPath ? "2.5" : "1.5");
+          if (onPath) {
+            this.parentNode?.appendChild(this);
+          }
         })
         .nodeUpdate(function () {
           const rect = this.querySelector(".node-rect");
@@ -234,6 +254,19 @@ export function AffiliateOrgChart({
         },
         zoomOut: () => {
           next.zoomOut();
+        },
+        findPerson: (id: string) => {
+          next.clearHighlighting();
+          next.setUpToTheRootHighlighted(id);
+          next.setHighlighted(id);
+          next.render();
+        },
+        clearFind: () => {
+          next.clearHighlighting();
+        },
+        setLayout: (layout: AffiliateOrgLayout) => {
+          next.layout(layout).render();
+          fitChart(next, true);
         },
         resize: () => {
           if (!hostRef.current) {

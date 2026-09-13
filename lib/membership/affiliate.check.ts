@@ -23,6 +23,8 @@ import {
   affiliatePageLabel,
   escapeHtmlText,
   flattenAffiliateOrgChart,
+  searchAffiliateOrgChart,
+  affiliateOrgPathToRoot,
   AFFILIATE_ORG_MIN_ZOOM,
   AFFILIATE_ORG_ROOT_ID,
   affiliateOrgAutoZoom,
@@ -30,6 +32,8 @@ import {
   affiliatePortalPageForIndex,
   paginateAffiliateList,
   parseAffiliateNetworkView,
+  parseAffiliateOrgLayout,
+  affiliateOrgLayoutLabel,
   parseAffiliatePortalPage,
   AFFILIATE_PORTAL_PAGE_SIZE,
   generateAffiliateLinkSlug,
@@ -264,6 +268,12 @@ assert.equal(parseAffiliatePortalTab("nope"), "overview");
 assert.equal(parseAffiliateNetworkView("chart"), "chart");
 assert.equal(parseAffiliateNetworkView("list"), "list");
 assert.equal(parseAffiliateNetworkView("nope"), "list");
+assert.equal(parseAffiliateOrgLayout("left"), "left");
+assert.equal(parseAffiliateOrgLayout("right"), "right");
+assert.equal(parseAffiliateOrgLayout("bottom"), "bottom");
+assert.equal(parseAffiliateOrgLayout("nope"), "top");
+assert.equal(affiliateOrgLayoutLabel("top"), "Top");
+assert.equal(affiliateOrgLayoutLabel("left"), "Left");
 assert.equal(affiliateNetworkPath("list"), "/affiliates?tab=network");
 assert.equal(
   affiliateNetworkPath("list", 2),
@@ -430,6 +440,51 @@ assert.equal(
     },
     "/affiliates?tab=network#downline-a",
   ).includes("Ann &lt;x&gt;"),
+  true,
+);
+{
+  const rows = flattenAffiliateOrgChart([
+    {
+      userId: "a",
+      label: "Ann",
+      level: 1,
+      paid: true,
+      children: [
+        {
+          userId: "b",
+          label: "Bob Smith",
+          level: 2,
+          paid: false,
+          children: [],
+        },
+      ],
+    },
+  ]);
+  assert.deepEqual(
+    searchAffiliateOrgChart(rows, "bo").map((hit) => hit.id),
+    ["b"],
+  );
+  assert.equal(searchAffiliateOrgChart(rows, "you")[0]?.id, AFFILIATE_ORG_ROOT_ID);
+  assert.deepEqual(affiliateOrgPathToRoot(rows, "b"), [
+    "b",
+    "a",
+    AFFILIATE_ORG_ROOT_ID,
+  ]);
+  assert.equal(searchAffiliateOrgChart(rows, "zzz").length, 0);
+}
+assert.equal(
+  affiliateOrgChartNodeHtml(
+    {
+      id: "a",
+      parentId: "you",
+      label: "Ann",
+      level: 1,
+      paid: true,
+      childCount: 0,
+    },
+    null,
+    { selected: true, onPath: true },
+  ).includes("#8B6CF6"),
   true,
 );
 assert.equal(parseAffiliateLanding("home").ok, true);

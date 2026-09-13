@@ -750,6 +750,28 @@ export function affiliateDownlineRowHref(
 
 export const AFFILIATE_ORG_ROOT_ID = "you";
 export const AFFILIATE_ORG_MIN_ZOOM = 1.25;
+export const AFFILIATE_ORG_LAYOUTS = ["top", "right", "bottom", "left"] as const;
+export type AffiliateOrgLayout = (typeof AFFILIATE_ORG_LAYOUTS)[number];
+
+export function parseAffiliateOrgLayout(value: unknown): AffiliateOrgLayout {
+  const raw = String(value ?? "").trim().toLowerCase();
+  return AFFILIATE_ORG_LAYOUTS.includes(raw as AffiliateOrgLayout)
+    ? (raw as AffiliateOrgLayout)
+    : "top";
+}
+
+export function affiliateOrgLayoutLabel(layout: AffiliateOrgLayout): string {
+  if (layout === "right") {
+    return "Right";
+  }
+  if (layout === "bottom") {
+    return "Bottom";
+  }
+  if (layout === "left") {
+    return "Left";
+  }
+  return "Top";
+}
 
 export function affiliateOrgUserZoomedOut(
   scale: number,
@@ -786,6 +808,58 @@ export type AffiliateOrgChartRow = {
   paid: boolean;
   childCount: number;
 };
+
+export type AffiliateOrgSearchHit = {
+  id: string;
+  label: string;
+  level: number;
+};
+
+export function searchAffiliateOrgChart(
+  rows: readonly Pick<AffiliateOrgChartRow, "id" | "label" | "level">[],
+  query: string,
+  limit = 8,
+): AffiliateOrgSearchHit[] {
+  const needle = query.trim().toLowerCase();
+  if (!needle) {
+    return [];
+  }
+  return rows
+    .map((row) => {
+      const label = row.label.toLowerCase();
+      const score = label === needle ? 0 : label.startsWith(needle) ? 1 : 2;
+      return { row, score, label };
+    })
+    .filter((item) => item.label.includes(needle))
+    .sort((left, right) => {
+      if (left.score !== right.score) {
+        return left.score - right.score;
+      }
+      return left.row.label.localeCompare(right.row.label);
+    })
+    .slice(0, limit)
+    .map(({ row }) => ({
+      id: row.id,
+      label: row.label,
+      level: row.level,
+    }));
+}
+
+export function affiliateOrgPathToRoot(
+  rows: readonly Pick<AffiliateOrgChartRow, "id" | "parentId">[],
+  id: string,
+): string[] {
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const path: string[] = [];
+  const seen = new Set<string>();
+  let current = byId.get(id);
+  while (current && !seen.has(current.id)) {
+    path.push(current.id);
+    seen.add(current.id);
+    current = current.parentId ? byId.get(current.parentId) : undefined;
+  }
+  return path;
+}
 
 export function flattenAffiliateOrgChart(
   nodes: readonly AffiliateOrgChartSource[],
@@ -831,6 +905,7 @@ export function escapeHtmlText(value: string): string {
 export function affiliateOrgChartNodeHtml(
   row: AffiliateOrgChartRow,
   href: string | null,
+  highlight?: { onPath?: boolean; selected?: boolean },
 ): string {
   const label = escapeHtmlText(row.label);
   const meta =
@@ -840,8 +915,13 @@ export function affiliateOrgChartNodeHtml(
   const title = href
     ? `<a href="${escapeHtmlText(href)}" style="color:#F4F6F8;text-decoration:none">${label}</a>`
     : `<span style="color:#F4F6F8">${label}</span>`;
-  const border = row.level === 0 ? "#A78BFA" : "#2A313C";
-  return `<div style="box-sizing:border-box;height:100%;padding:10px 12px;border:1px solid ${border};border-radius:8px;background:#1C222C;font-size:14px;line-height:1.25">
+  const border = highlight?.selected
+    ? "#8B6CF6"
+    : highlight?.onPath || row.level === 0
+      ? "#A78BFA"
+      : "#2A313C";
+  const borderWidth = highlight?.selected || highlight?.onPath ? 2 : 1;
+  return `<div style="box-sizing:border-box;height:100%;padding:10px 12px;border:${borderWidth}px solid ${border};border-radius:8px;background:#1C222C;font-size:14px;line-height:1.25">
     <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${title}</div>
     <div style="margin-top:4px;color:#9AA3B2;font-size:12px">${meta}</div>
   </div>`;

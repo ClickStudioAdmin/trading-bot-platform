@@ -1,11 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   AffiliateOrgChart,
   type AffiliateOrgChartApi,
 } from "@/components/affiliate-org-chart";
-import { affiliateDownlineRowHref } from "@/lib/membership/affiliate";
+import {
+  AFFILIATE_ORG_LAYOUTS,
+  affiliateDownlineRowHref,
+  affiliateOrgLayoutLabel,
+  flattenAffiliateOrgChart,
+  searchAffiliateOrgChart,
+  type AffiliateOrgLayout,
+} from "@/lib/membership/affiliate";
 import type { AffiliateTreeNode } from "@/lib/membership/affiliate-store";
 
 const control =
@@ -23,6 +30,33 @@ export function AffiliateOrgChartFrame({
   const [expanded, setExpanded] = useState(false);
   const [monitor, setMonitor] = useState(false);
   const [api, setApi] = useState<AffiliateOrgChartApi | null>(null);
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const [foundId, setFoundId] = useState<string | null>(null);
+  const [layout, setLayout] = useState<AffiliateOrgLayout>("top");
+  const searchId = useId();
+  const listId = `${searchId}-list`;
+  const rows = useMemo(() => flattenAffiliateOrgChart(nodes), [nodes]);
+  const hits = useMemo(
+    () => searchAffiliateOrgChart(rows, query),
+    [rows, query],
+  );
+
+  function choosePerson(id: string, label: string) {
+    setQuery(label);
+    setFoundId(id);
+    setOpen(false);
+    api?.findPerson(id);
+  }
+
+  function clearFind() {
+    setQuery("");
+    setFoundId(null);
+    setOpen(false);
+    setActive(0);
+    api?.clearFind();
+  }
 
   useEffect(() => {
     const onFullscreen = () => {
@@ -47,7 +81,7 @@ export function AffiliateOrgChartFrame({
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !document.fullscreenElement) {
+      if (event.key === "Escape" && !document.fullscreenElement && !open) {
         setExpanded(false);
       }
     };
@@ -60,7 +94,7 @@ export function AffiliateOrgChartFrame({
       document.body.style.overflow = previous;
       window.removeEventListener("keydown", onKey);
     };
-  }, [expanded, api]);
+  }, [expanded, api, open]);
 
   async function enterMonitor() {
     const node = frameRef.current;
@@ -101,6 +135,36 @@ export function AffiliateOrgChartFrame({
           <p className="mt-1 text-xs text-ink-muted">
             Drag to pan. Scroll to zoom. Use + on a node to expand that branch.
           </p>
+          {nodes.length > 0 ? (
+            <div
+              role="group"
+              aria-label="Chart layout"
+              className="mt-3 flex w-fit rounded-control border border-line bg-canvas p-0.5"
+            >
+              {AFFILIATE_ORG_LAYOUTS.map((option) => {
+                const selected = layout === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    disabled={!api}
+                    aria-pressed={selected}
+                    className={
+                      selected
+                        ? "rounded-control bg-surface-raised px-3 py-1.5 text-xs font-medium text-ink"
+                        : "rounded-control px-3 py-1.5 text-xs text-ink-muted hover:text-ink disabled:text-ink-faint"
+                    }
+                    onClick={() => {
+                      setLayout(option);
+                      api?.setLayout(option);
+                    }}
+                  >
+                    {affiliateOrgLayoutLabel(option)}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
         </div>
         {nodes.length > 0 ? (
           <div className="flex flex-wrap gap-2">
@@ -182,6 +246,117 @@ export function AffiliateOrgChartFrame({
           </div>
         ) : null}
       </div>
+      {nodes.length > 0 ? (
+        <div
+          className="relative mt-3 max-w-md"
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+              setOpen(false);
+            }
+          }}
+        >
+          <label className="text-xs text-ink-muted" htmlFor={searchId}>
+            Find a person
+          </label>
+          <div className="mt-1 flex gap-2">
+            <input
+              id={searchId}
+              type="search"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={open && hits.length > 0}
+              aria-controls={listId}
+              aria-activedescendant={
+                open && hits[active] ? `${listId}-${hits[active].id}` : undefined
+              }
+              value={query}
+              placeholder="Name"
+              autoComplete="off"
+              className="w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink placeholder:text-ink-faint focus:border-line-strong focus:outline-none"
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setOpen(true);
+                setActive(0);
+                if (foundId) {
+                  setFoundId(null);
+                  api?.clearFind();
+                }
+              }}
+              onFocus={() => setOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowDown" && hits.length > 0) {
+                  event.preventDefault();
+                  setOpen(true);
+                  setActive((index) => (index + 1) % hits.length);
+                  return;
+                }
+                if (event.key === "ArrowUp" && hits.length > 0) {
+                  event.preventDefault();
+                  setOpen(true);
+                  setActive((index) =>
+                    index === 0 ? hits.length - 1 : index - 1,
+                  );
+                  return;
+                }
+                if (event.key === "Enter" && hits[active]) {
+                  event.preventDefault();
+                  choosePerson(hits[active].id, hits[active].label);
+                  return;
+                }
+                if (event.key === "Escape") {
+                  event.stopPropagation();
+                  if (open) {
+                    event.preventDefault();
+                    setOpen(false);
+                  } else if (query) {
+                    event.preventDefault();
+                    clearFind();
+                  }
+                }
+              }}
+            />
+            {query ? (
+              <button type="button" className={control} onClick={clearFind}>
+                Clear
+              </button>
+            ) : null}
+          </div>
+          {open && query.trim() && hits.length > 0 ? (
+            <ul
+              id={listId}
+              role="listbox"
+              className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-control border border-line bg-surface-raised py-1"
+            >
+              {hits.map((hit, index) => (
+                <li key={hit.id} role="presentation">
+                  <button
+                    type="button"
+                    id={`${listId}-${hit.id}`}
+                    role="option"
+                    aria-selected={index === active}
+                    className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm ${
+                      index === active
+                        ? "bg-canvas text-ink"
+                        : "text-ink hover:bg-canvas"
+                    }`}
+                    onMouseEnter={() => setActive(index)}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => choosePerson(hit.id, hit.label)}
+                  >
+                    <span>{hit.label}</span>
+                    <span className="text-xs text-ink-muted">
+                      {hit.level === 0 ? "You" : `L${hit.level}`}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {open && query.trim() && hits.length === 0 ? (
+            <p className="mt-2 text-sm text-ink-muted">No one matched that.</p>
+          ) : null}
+        </div>
+      ) : null}
       {nodes.length === 0 ? (
         <p className="mt-2 text-sm text-ink-muted">
           The chart fills as people join with your code.
