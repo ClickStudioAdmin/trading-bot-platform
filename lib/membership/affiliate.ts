@@ -199,8 +199,8 @@ export function parseAffiliateCookieDays(
 }
 
 export function firstTouchReferralCode(
-  cookie: string | null,
-  url: string | null,
+  cookie: string | null | undefined,
+  url: string | null | undefined,
 ): string | null {
   const stored = parseOptionalReferralCode(cookie);
   if (stored.ok && stored.code) {
