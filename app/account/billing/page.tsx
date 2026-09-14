@@ -226,18 +226,23 @@ export default async function AccountBillingPage({
                 Billing cycle
               </p>
               {cycle ? (
-                <>
-                  <p className="mt-1 text-sm text-ink">
-                    {formatLocalDate(cycle.startMs)} –{" "}
-                    {formatLocalDate(cycle.endMs)}
-                  </p>
-                  <p className="mt-1 text-sm text-ink-muted">
-                    {formatRemainingCycle(cycle.remainingMs)}
-                  </p>
-                </>
+                <p className="mt-1 text-sm text-ink">
+                  {formatLocalDate(cycle.startMs)} –{" "}
+                  {formatLocalDate(cycle.endMs)}
+                </p>
               ) : (
                 <p className="mt-1 text-sm text-ink-muted">No end date set.</p>
               )}
+              <p className="mt-3 text-xs uppercase tracking-[0.12em] text-ink-muted">
+                Next payment due
+              </p>
+              <p className="mt-1 text-sm text-ink">
+                {!plan || plan.priceUsd < 0.01
+                  ? "Not required"
+                  : cycle
+                    ? `${formatLocalDate(cycle.endMs)} · ${formatRemainingCycle(cycle.remainingMs)}`
+                    : "No end date set."}
+              </p>
             </div>
           </div>
           <div className="mt-4">
