@@ -64,8 +64,13 @@ export default async function AccountBillingPage({
   }
   const deposited = firstSearchValue(params.deposited);
   const scanned = firstSearchValue(params.scanned) === "1";
-  const books = await walletBookBalances(member.id);
-  const showCardTab = billing.billingMethod === "stripe";
+  const [books, currentPlan] = await Promise.all([
+    walletBookBalances(member.id),
+    getMembershipPlan(billing.planId),
+  ]);
+  const plan = currentPlan.ok ? currentPlan.plan : null;
+  const showCardTab =
+    billing.billingMethod === "stripe" && (plan?.priceUsd ?? 0) >= 0.01;
   const showWalletTab = showMemberWalletTab(
     billing.billingMethod,
     books.main,
@@ -81,10 +86,7 @@ export default async function AccountBillingPage({
           : requestedTab === "wallet" && showWalletTab
             ? "wallet"
             : "overview";
-  const [currentPlan, invoices, deposit, ledger, withdraw] = await Promise.all([
-    tab === "overview"
-      ? getMembershipPlan(billing.planId)
-      : Promise.resolve(null),
+  const [invoices, deposit, ledger, withdraw] = await Promise.all([
     tab === "invoices" ? listMemberInvoices(member.id) : Promise.resolve([]),
     tab === "wallet"
       ? loadMemberDepositContext(member.id)
@@ -94,7 +96,6 @@ export default async function AccountBillingPage({
       ? loadMainWalletWithdrawContext(member.id)
       : Promise.resolve(null),
   ]);
-  const plan = currentPlan?.ok ? currentPlan.plan : null;
   const cycle = resolveBillingCycle({ periodEnd: billing.periodEnd });
   const stripeReady = stripeSecretConfigured();
   const showPaymentMethod =
