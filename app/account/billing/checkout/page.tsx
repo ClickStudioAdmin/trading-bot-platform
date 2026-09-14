@@ -65,11 +65,11 @@ export default async function AccountCheckoutPage({
 
   return (
     <div>
-      <PageHeading title={charge.kind === "upgrade" ? "Upgrade" : "Checkout"} />
+      <PageHeading title="Upgrade" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
         {charge.kind === "upgrade"
           ? "Uses your saved payment method. Due today is the remainder of this cycle. The new monthly fee starts next cycle."
-          : "First paid period is the full plan price. Choose Card or Crypto if you have not saved a method yet."}{" "}
+          : "Due today is the first month in full. Then the monthly fee repeats. Choose Card or Crypto if you have not saved a method yet."}{" "}
         Compare plans on{" "}
         <Link href="/account/plans" className="text-accent">
           Plans
@@ -110,7 +110,11 @@ export default async function AccountCheckoutPage({
           currentPlanName={currentPlan?.name ?? null}
           chargeKind={charge.kind}
           dueUsd={charge.dueUsd}
-          periodEndLabel={periodMs ? formatLocalDate(periodMs) : null}
+          periodEndLabel={
+            charge.kind === "upgrade" && periodMs
+              ? formatLocalDate(periodMs)
+              : null
+          }
           selected={billing.billingMethod}
           deductSelected={billing.paySubscriptionFromCredit}
           creditUsd={deposit.books.main}

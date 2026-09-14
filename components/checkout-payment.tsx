@@ -80,23 +80,42 @@ export function CheckoutPayment({
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">{planName}</h2>
           <p className="mt-1 text-sm text-ink-muted">{planPrice}</p>
-          {upgrade ? (
-            <div className="mt-4 space-y-2 text-sm text-ink-muted">
-              {currentPlanName ? (
-                <p>
-                  From {currentPlanName} to {planName}.
-                </p>
-              ) : null}
-              <p>
-                Due today {formatUsd(dueUsd)} for the rest of this cycle
-                {periodEndLabel ? ` (ends ${periodEndLabel})` : ""}.
+          <div className="mt-4 space-y-3">
+            {currentPlanName ? (
+              <p className="text-sm text-ink-muted">
+                From {currentPlanName} to {planName}.
               </p>
-              <p>
-                {planPrice} starts on the next billing date
-                {periodEndLabel ? ` (${periodEndLabel})` : ""}.
+            ) : null}
+            <div>
+              <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                Due today
+              </p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">
+                {formatUsd(dueUsd)}
+              </p>
+              <p className="mt-1 text-sm text-ink-muted">
+                {upgrade
+                  ? periodEndLabel
+                    ? `Remainder of this cycle (ends ${periodEndLabel}).`
+                    : "Remainder of this cycle."
+                  : "First month in full."}
               </p>
             </div>
-          ) : null}
+            <div>
+              <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                Then
+              </p>
+              <p className="mt-1 text-sm text-ink">
+                {planPrice}
+                {periodEndLabel
+                  ? ` starting ${periodEndLabel}`
+                  : upgrade
+                    ? " starting next billing date"
+                    : " after this first month"}
+                .
+              </p>
+            </div>
+          </div>
           {methodLocked ? (
             <p className="mt-4 text-sm text-ink-muted">
               Paying with {method === "wallet" ? "Crypto" : "the card on file"}.
