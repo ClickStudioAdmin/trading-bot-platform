@@ -3,9 +3,11 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useState,
   type ReactNode,
 } from "react";
+import QRCode from "qrcode";
 import { CopyTextButton } from "@/components/copy-text-button";
 import {
   ButtonBusyIcon,
@@ -152,6 +154,43 @@ function CheckDepositButton({ checkout }: { checkout?: boolean }) {
   );
 }
 
+function DepositAddressQr({ value }: { value: string }) {
+  const [svg, setSvg] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void QRCode.toString(value, {
+      type: "svg",
+      margin: 1,
+      width: 144,
+      errorCorrectionLevel: "M",
+      color: { dark: "#0B0E14", light: "#F4F6F8" },
+    }).then((markup) => {
+      if (!cancelled) {
+        setSvg(markup);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [value]);
+  if (!svg) {
+    return (
+      <div
+        className="size-36 shrink-0 rounded-control border border-line bg-ink"
+        aria-hidden
+      />
+    );
+  }
+  return (
+    <div
+      className="size-36 shrink-0 overflow-hidden rounded-control border border-line bg-ink [&_svg]:block [&_svg]:size-full"
+      role="img"
+      aria-label="Deposit address QR code"
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  );
+}
+
 export function TopUpWallet({
   address,
   addressError,
@@ -195,12 +234,15 @@ export function TopUpWallet({
         <>
       <p className="text-sm text-ink-muted">{depositLabel}</p>
       {address ? (
-        <>
-          <p className="break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
-            {address.address}
-          </p>
-          <CopyTextButton text={address.address} label="Copy address" />
-        </>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          <DepositAddressQr value={address.address} />
+          <div className="min-w-0 flex-1 space-y-3">
+            <p className="break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
+              {address.address}
+            </p>
+            <CopyTextButton text={address.address} label="Copy address" />
+          </div>
+        </div>
       ) : (
         <p className="text-sm text-warning">
           {addressError ?? "Deposit address is not available yet."}
