@@ -350,10 +350,10 @@ export function CryptoWalletPanel({
         {mainShort ? (
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
             Main Wallet does not have enough to pay this plan. Use Top up Main
-            Wallet below to send USDT, then check for the deposit.
+            Wallet below to send USDT.
           </p>
         ) : null}
-        {checkout && planId && typeof planPriceUsd === "number" ? (
+        {checkout && canPay && planId && typeof planPriceUsd === "number" ? (
           <form action={payPlanWithCreditAction}>
             <input type="hidden" name="planId" value={planId} />
             {deductOn ? (
@@ -362,16 +362,10 @@ export function CryptoWalletPanel({
             <PendingSubmitButton
               pendingLabel="Paying…"
               successKey="pay-credit"
-              disabled={!canPay}
-              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:bg-accent-strong/40"
+              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
             >
               Pay with credit
             </PendingSubmitButton>
-            {!payEnabled ? (
-              <p className="mt-2 text-xs text-ink-faint">
-                Save Crypto as your method to pay with credit.
-              </p>
-            ) : null}
           </form>
         ) : null}
         {withdrawLive ? (

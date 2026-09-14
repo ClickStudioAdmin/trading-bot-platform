@@ -268,7 +268,7 @@ function CheckoutCryptoPay({
           payEnabled
         />
         {canPay ? null : (
-          <div className="border-t border-line pt-4">
+          <div className="space-y-4 border-t border-line pt-4">
             <TopUpWallet
               address={address}
               addressError={addressError}
@@ -276,6 +276,15 @@ function CheckoutCryptoPay({
               tokens={tokens}
               planId={planId}
               checkout
+              showCheck={false}
+            />
+            <CheckoutDepositWatcher
+              planId={planId}
+              dueUsd={dueUsd}
+              deduct={deduct}
+              affiliateUsd={affiliateUsd}
+              useAffiliate={useAffiliate}
+              autoPay={false}
             />
           </div>
         )}
@@ -298,26 +307,20 @@ function CheckoutCryptoPay({
   );
 }
 
-function CheckoutInitialCrypto({
+function CheckoutDepositWatcher({
   planId,
   dueUsd,
   deduct,
   affiliateUsd,
   useAffiliate,
-  address,
-  addressError,
-  chains,
-  tokens,
+  autoPay,
 }: {
   planId: string;
   dueUsd: number;
   deduct: boolean;
   affiliateUsd: number;
   useAffiliate: boolean;
-  address: DepositAddress | null;
-  addressError: string | null;
-  chains: BillingChain[];
-  tokens: BillingToken[];
+  autoPay: boolean;
 }) {
   const live = useLiveMainWallet(0);
   const [paying, setPaying] = useState(false);
@@ -325,31 +328,22 @@ function CheckoutInitialCrypto({
   const payingRef = useRef(false);
   const busyRef = useRef(false);
 
-  function canCover(mainUsd: number) {
-    return planDeductDecision({
-      priceUsd: dueUsd,
-      mainUsd,
-      affiliateUsd,
-      useAffiliate,
-    }).ok;
-  }
-
-  async function completePay() {
-    if (payingRef.current) {
-      return;
-    }
-    payingRef.current = true;
-    setPaying(true);
-    const form = new FormData();
-    form.set("planId", planId);
-    if (deduct) {
-      form.set("paySubscriptionFromCredit", "1");
-    }
-    await payPlanWithCreditAction(form);
-  }
-
   useEffect(() => {
     let cancelled = false;
+
+    async function completePay() {
+      if (!autoPay || payingRef.current) {
+        return;
+      }
+      payingRef.current = true;
+      setPaying(true);
+      const form = new FormData();
+      form.set("planId", planId);
+      if (deduct) {
+        form.set("paySubscriptionFromCredit", "1");
+      }
+      await payPlanWithCreditAction(form);
+    }
 
     async function poll() {
       if (cancelled || busyRef.current || payingRef.current) {
@@ -373,7 +367,13 @@ function CheckoutInitialCrypto({
         }
         const mainUsd =
           typeof result.mainUsd === "number" ? result.mainUsd : live.mainUsd;
-        if (canCover(mainUsd)) {
+        const enough = planDeductDecision({
+          priceUsd: dueUsd,
+          mainUsd,
+          affiliateUsd,
+          useAffiliate,
+        }).ok;
+        if (enough) {
           await completePay();
         } else {
           live.setStatus({
@@ -401,26 +401,10 @@ function CheckoutInitialCrypto({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [planId, dueUsd, deduct, affiliateUsd, useAffiliate]);
+  }, [planId, dueUsd, deduct, affiliateUsd, useAffiliate, autoPay]);
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold tracking-tight">Pay with Crypto</h2>
-      <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
-        <dt className="text-ink-muted">Amount due:</dt>
-        <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
-      </dl>
-      <TopUpWallet
-        address={address}
-        addressError={addressError}
-        chains={chains}
-        tokens={tokens}
-        planId={planId}
-        checkout
-        heading={null}
-        showCheck={false}
-        instructions="Send at least this amount in a listed stablecoin. You can send more than Due Today so leftover covers later months."
-      />
+    <div className="space-y-2">
       <p className="flex items-center gap-2 text-sm text-ink-muted" role="status">
         <ButtonBusyIcon />
         {paying
@@ -439,6 +423,57 @@ function CheckoutInitialCrypto({
           {live.notice}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function CheckoutInitialCrypto({
+  planId,
+  dueUsd,
+  deduct,
+  affiliateUsd,
+  useAffiliate,
+  address,
+  addressError,
+  chains,
+  tokens,
+}: {
+  planId: string;
+  dueUsd: number;
+  deduct: boolean;
+  affiliateUsd: number;
+  useAffiliate: boolean;
+  address: DepositAddress | null;
+  addressError: string | null;
+  chains: BillingChain[];
+  tokens: BillingToken[];
+}) {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold tracking-tight">Pay with Crypto</h2>
+      <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
+        <dt className="text-ink-muted">Amount due:</dt>
+        <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
+      </dl>
+      <TopUpWallet
+        address={address}
+        addressError={addressError}
+        chains={chains}
+        tokens={tokens}
+        planId={planId}
+        checkout
+        heading={null}
+        showCheck={false}
+        instructions="Send at least this amount in a listed stablecoin. You can send more than Due Today so leftover covers later months."
+      />
+      <CheckoutDepositWatcher
+        planId={planId}
+        dueUsd={dueUsd}
+        deduct={deduct}
+        affiliateUsd={affiliateUsd}
+        useAffiliate={useAffiliate}
+        autoPay
+      />
     </div>
   );
 }
