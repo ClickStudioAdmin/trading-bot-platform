@@ -239,7 +239,7 @@ export function LiveWalletHeadingBalance({
 }) {
   const live = useLiveMainWallet(fallbackUsd);
   return (
-    <div className="text-right">
+    <div>
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
         Wallet balance
       </p>

@@ -98,6 +98,8 @@ export default async function AccountBillingPage({
   const plan = currentPlan?.ok ? currentPlan.plan : null;
   const cycle = resolveBillingCycle({ periodEnd: billing.periodEnd });
   const stripeReady = stripeSecretConfigured();
+  const showPaymentMethod =
+    Boolean(billing.billingMethod) && billing.subscriptionStatus !== "none";
 
   return (
     <div>
@@ -193,7 +195,7 @@ export default async function AccountBillingPage({
       {checkout === "cancel" ? (
         <p className="mt-6 text-sm text-ink-muted">Checkout canceled.</p>
       ) : null}
-      {!stripeReady && tab === "overview" ? (
+      {!stripeReady && tab === "overview" && showPaymentMethod ? (
         <p className="mt-6 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Stripe test keys are not on this environment yet. You can still
           choose a payment method.
@@ -248,6 +250,7 @@ export default async function AccountBillingPage({
           </div>
         </section>
 
+        {showPaymentMethod ? (
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">
             Payment method
@@ -273,12 +276,13 @@ export default async function AccountBillingPage({
             </div>
           </form>
         </section>
+        ) : null}
       </div>
         </>
       ) : tab === "wallet" ? (
         <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
           <div className="mt-6 space-y-5">
-            <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="grid items-start gap-5 lg:grid-cols-2">
               <div>
                 <h2 className="text-lg font-semibold tracking-tight">
                   Manage wallet
