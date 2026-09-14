@@ -155,7 +155,7 @@ Attribution: first-touch. A `?ref=` (or `?referralCode=`) on any public page wri
 
 Withdraw locks (all): no outstanding subscription invoices; payable ≥ min; requested amount ≥ min and ≤ payable. Failures: visible disabled control + notice.
 
-Admin `/admin/settings` Affiliates: max depth, hold days, referral cookie days (default 30), min payout, payout coin (USDT), default L1–L5, downgrade grace days. `/admin/affiliates` is payout files (generate / download / mark file paid), the request queue (reject before a file), and downline lookup. Allowed USDT withdraw chains are ticked per billing chain on `/admin/settings` Crypto. Admin downline may show email; the member portal never does.
+Admin `/admin/settings` Affiliates: max depth, hold days, referral cookie days (default 30), min payout, payout coin (USDT), default L1–L5, downgrade grace days. `/admin/affiliates` is payout files (generate / view details / download / mark file paid), the request queue (reject before a file), and downline lookup. View details opens the full payment list for that file, pending or paid. Allowed USDT withdraw chains are ticked per billing chain on `/admin/settings` Crypto. Admin downline may show email; the member portal never does.
 
 KYC / travel-rule / money-transmitter: Click owns compliance. V1 is admin-approved crypto withdraws. No full KYC flow in this item.
 

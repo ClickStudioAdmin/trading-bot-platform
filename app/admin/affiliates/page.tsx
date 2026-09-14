@@ -136,6 +136,14 @@ export default async function AdminAffiliatesPage({
                     <td className="py-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <a
+                          href={`/admin/affiliates/files/${file.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-control border border-line px-2 py-1 text-xs text-ink hover:border-line-strong"
+                        >
+                          View details
+                        </a>
+                        <a
                           href={`/admin/affiliates/files/${file.id}/export`}
                           className="rounded-control border border-line px-2 py-1 text-xs text-ink hover:border-line-strong"
                         >

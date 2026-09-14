@@ -1117,16 +1117,24 @@ export async function listPayouts(limit = 80): Promise<PayoutRow[]> {
   const rows = (data ?? [])
     .map((row) => mapPayout(row as Record<string, unknown>))
     .filter((row): row is PayoutRow => row !== null);
+  return withPayoutEmails(supabase, rows);
+}
+
+async function withPayoutEmails(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  rows: PayoutRow[],
+): Promise<PayoutRow[]> {
   const userIds = [...new Set(rows.map((row) => row.userId))];
   const emails = new Map<string, string>();
-  if (userIds.length > 0) {
-    const { data: members } = await supabase
-      .from("members")
-      .select("user_id, email")
-      .in("user_id", userIds);
-    for (const member of members ?? []) {
-      emails.set(String(member.user_id), String(member.email));
-    }
+  if (userIds.length === 0) {
+    return rows;
+  }
+  const { data: members } = await supabase
+    .from("members")
+    .select("user_id, email")
+    .in("user_id", userIds);
+  for (const member of members ?? []) {
+    emails.set(String(member.user_id), String(member.email));
   }
   return rows.map((row) => ({ ...row, email: emails.get(row.userId) }));
 }
@@ -1165,6 +1173,26 @@ export async function listPayoutFiles(limit = 80): Promise<PayoutFileRow[]> {
     .filter((row): row is PayoutFileRow => row !== null);
 }
 
+export async function loadPayoutFile(
+  fileId: string,
+): Promise<PayoutFileRow | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data } = await supabase
+    .from("membership_payout_files")
+    .select(
+      "id, network, status, amount_usd, payout_count, external_id, created_at, paid_at",
+    )
+    .eq("id", fileId)
+    .maybeSingle();
+  if (!data) {
+    return null;
+  }
+  return mapPayoutFile(data as Record<string, unknown>);
+}
+
 export async function listPayoutsForFile(fileId: string): Promise<PayoutRow[]> {
   const supabase = createServiceClient();
   if (!supabase) {
@@ -1177,9 +1205,10 @@ export async function listPayoutsForFile(fileId: string): Promise<PayoutRow[]> {
     )
     .eq("payout_file_id", fileId)
     .order("created_at", { ascending: true });
-  return (data ?? [])
+  const rows = (data ?? [])
     .map((row) => mapPayout(row as Record<string, unknown>))
     .filter((row): row is PayoutRow => row !== null);
+  return withPayoutEmails(supabase, rows);
 }
 
 export async function generatePayoutFiles(): Promise<
