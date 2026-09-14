@@ -218,12 +218,6 @@ export function TopUpWallet({
     tokens.find((row) => row.chainId === chain?.id && row.kind === "stable") ??
     tokens[0] ??
     null;
-  const networkLabel = chain
-    ? token
-      ? `${chain.name} · ${token.symbol}`
-      : chain.name
-    : "—";
-
   return (
     <div id="top-up" className="space-y-3">
       {heading ? (
@@ -240,7 +234,9 @@ export function TopUpWallet({
           <div className="min-w-0 flex-1 space-y-3">
             <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
               <dt className="text-ink-muted">Network:</dt>
-              <dd className="text-ink">{networkLabel}</dd>
+              <dd className="text-ink">{chain?.name ?? "—"}</dd>
+              <dt className="text-ink-muted">Token:</dt>
+              <dd className="text-ink">{token?.symbol ?? "—"}</dd>
               <dt className="text-ink-muted">Address:</dt>
               <dd className="min-w-0">
                 <p className="break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
