@@ -10,7 +10,11 @@ import {
   TopUpWallet,
   useLiveMainWallet,
 } from "@/components/crypto-wallet-panel";
-import { formatUsd, type BillingMethod } from "@/lib/membership/billing";
+import {
+  BILLING_METHOD_LABELS,
+  formatUsd,
+  type BillingMethod,
+} from "@/lib/membership/billing";
 import {
   confirmStripePlanChangeAction,
   saveCheckoutMethodAction,
@@ -99,14 +103,24 @@ export function CheckoutPayment({
     <div className="mt-6 grid items-start gap-5 lg:grid-cols-[minmax(22rem,28rem)_minmax(26rem,1fr)]">
       <div className="space-y-5">
         <section className="rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">{planName}</h2>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Subscription Details
+          </h2>
           <dl className="mt-4 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
-            <dt className="text-ink-muted">Upgrading from:</dt>
+            <dt className="text-ink-muted">Current Plan:</dt>
             <dd className="text-ink">{currentPlanName ?? "—"}</dd>
+            <dt className="text-ink-muted">Upgrading to:</dt>
+            <dd className="text-ink">{planName}</dd>
             <dt className="text-ink-muted">Due Today:</dt>
             <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
             <dt className="text-ink-muted">Then:</dt>
             <dd className="text-ink">{planPrice}</dd>
+            {showMethodPicker ? null : (
+              <>
+                <dt className="text-ink-muted">Payment Method:</dt>
+                <dd className="text-ink">{BILLING_METHOD_LABELS[method]}</dd>
+              </>
+            )}
           </dl>
           {showMethodPicker ? (
             <div className="mt-5 border-t border-line pt-4">
@@ -127,12 +141,7 @@ export function CheckoutPayment({
                 }}
               />
             </div>
-          ) : (
-            <p className="mt-4 text-sm text-ink-muted">
-              Paying with {method === "wallet" ? "Crypto" : "the card on file"}.
-              Change method on Billing.
-            </p>
-          )}
+          ) : null}
         </section>
         <CheckoutTopUp
           always={!upgrade}
