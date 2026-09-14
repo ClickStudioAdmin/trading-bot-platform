@@ -411,15 +411,15 @@ export async function requestMainWalletWithdrawAction(formData: FormData) {
     payoutChains.map((chain) => chain.slug),
   );
   if (!network.ok) {
-    failBilling(network.error);
+    failBilling(network.error, { tab: "wallet" });
   }
   const address = parsePayoutAddress(formData.get("address"));
   if (!address.ok) {
-    failBilling(address.error);
+    failBilling(address.error, { tab: "wallet" });
   }
   const amount = parsePayoutAmount(formData.get("amountUsd"));
   if (!amount.ok) {
-    failBilling(amount.error);
+    failBilling(amount.error, { tab: "wallet" });
   }
   const [minPayoutUsd, arrears, books] = await Promise.all([
     loadWalletMinPayoutUsd(),
@@ -433,7 +433,7 @@ export async function requestMainWalletWithdrawAction(formData: FormData) {
     balanceNoun: "Main Wallet",
   });
   if (!allowed.ok) {
-    failBilling(allowed.reason);
+    failBilling(allowed.reason, { tab: "wallet" });
   }
   const amountOk = withdrawAmountDecision({
     payableUsd: books.main,
@@ -441,7 +441,7 @@ export async function requestMainWalletWithdrawAction(formData: FormData) {
     amountUsd: amount.amountUsd,
   });
   if (!amountOk.ok) {
-    failBilling(amountOk.reason);
+    failBilling(amountOk.reason, { tab: "wallet" });
   }
   const requested = await requestUsdtPayout({
     userId: member.id,
@@ -451,7 +451,7 @@ export async function requestMainWalletWithdrawAction(formData: FormData) {
     book: "main",
   });
   if (!requested.ok) {
-    failBilling(requested.error);
+    failBilling(requested.error, { tab: "wallet" });
   }
   await writeEventLog({
     scope: "system",
@@ -467,5 +467,5 @@ export async function requestMainWalletWithdrawAction(formData: FormData) {
   revalidatePath("/account/billing");
   revalidatePath("/admin/billing");
   revalidatePath("/admin/affiliates");
-  redirect(billingPath({ saved: "withdraw" }));
+  redirect(billingPath({ tab: "wallet", saved: "withdraw" }));
 }

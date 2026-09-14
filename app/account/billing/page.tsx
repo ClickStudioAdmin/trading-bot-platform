@@ -61,6 +61,7 @@ export default async function AccountBillingPage({
   const deposited = firstSearchValue(params.deposited);
   const scanned = firstSearchValue(params.scanned) === "1";
   const showCardTab = billing.billingMethod === "stripe";
+  const showWalletTab = billing.billingMethod === "wallet";
   const requestedTab = firstSearchValue(params.tab);
   const tab =
     requestedTab === "invoices"
@@ -69,17 +70,19 @@ export default async function AccountBillingPage({
         ? "ledger"
         : requestedTab === "card" && showCardTab
           ? "card"
-          : "overview";
+          : requestedTab === "wallet" && showWalletTab
+            ? "wallet"
+            : "overview";
   const [currentPlan, invoices, deposit, ledger, withdraw] = await Promise.all([
     tab === "overview"
       ? getMembershipPlan(billing.planId)
       : Promise.resolve(null),
     tab === "invoices" ? listMemberInvoices(member.id) : Promise.resolve([]),
-    tab === "overview"
+    tab === "wallet"
       ? loadMemberDepositContext(member.id)
       : Promise.resolve(null),
     tab === "ledger" ? listMainWalletLedger(member.id) : Promise.resolve([]),
-    tab === "overview"
+    tab === "wallet"
       ? loadMainWalletWithdrawContext(member.id)
       : Promise.resolve(null),
   ]);
@@ -125,6 +128,14 @@ export default async function AccountBillingPage({
             selected={tab === "card"}
           >
             Card
+          </TabLink>
+        ) : null}
+        {showWalletTab ? (
+          <TabLink
+            href="/account/billing?tab=wallet"
+            selected={tab === "wallet"}
+          >
+            Wallet
           </TabLink>
         ) : null}
       </nav>
@@ -182,7 +193,6 @@ export default async function AccountBillingPage({
 
       {tab === "overview" ? (
         <>
-      <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
       <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">Current plan</h2>
@@ -230,34 +240,46 @@ export default async function AccountBillingPage({
             </div>
           </form>
         </section>
-
-        <section className="rounded-card border border-line bg-surface p-5">
-          <CryptoWalletPanel
-            mainUsd={deposit?.books.main ?? 0}
-            affiliateUsd={deposit?.payableAffiliateUsd ?? 0}
-            address={deposit?.address ?? null}
-            addressError={deposit?.addressError ?? null}
-            chains={deposit?.chains ?? []}
-            tokens={deposit?.tokens ?? []}
-            deductOn={billing.paySubscriptionFromCredit}
-            affiliateNote={billing.paySubscriptionFromAffiliate}
-            booksOnly
-            withdraw={withdraw ?? undefined}
-          />
-        </section>
-
-        <section className="rounded-card border border-line bg-surface p-5">
-          <TopUpWallet
-            address={deposit?.address ?? null}
-            addressError={deposit?.addressError ?? null}
-            chains={deposit?.chains ?? []}
-            tokens={deposit?.tokens ?? []}
-            revealAddress={billing.billingMethod === "wallet"}
-          />
-        </section>
       </div>
-      </LiveMainWallet>
         </>
+      ) : tab === "wallet" ? (
+        <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
+          <div className="mt-6 space-y-5">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">
+                Manage wallet
+              </h2>
+              <p className="mt-1 text-sm text-ink-muted">
+                Listed stables credit Main 1:1. Enter a receive address on each
+                withdraw request.
+              </p>
+            </div>
+            <div className="grid items-start gap-5 lg:grid-cols-2">
+              <section className="rounded-card border border-line bg-surface p-5">
+                <CryptoWalletPanel
+                  mainUsd={deposit?.books.main ?? 0}
+                  affiliateUsd={deposit?.payableAffiliateUsd ?? 0}
+                  address={deposit?.address ?? null}
+                  addressError={deposit?.addressError ?? null}
+                  chains={deposit?.chains ?? []}
+                  tokens={deposit?.tokens ?? []}
+                  deductOn={billing.paySubscriptionFromCredit}
+                  affiliateNote={billing.paySubscriptionFromAffiliate}
+                  booksOnly
+                  withdraw={withdraw ?? undefined}
+                />
+              </section>
+              <section className="rounded-card border border-line bg-surface p-5">
+                <TopUpWallet
+                  address={deposit?.address ?? null}
+                  addressError={deposit?.addressError ?? null}
+                  chains={deposit?.chains ?? []}
+                  tokens={deposit?.tokens ?? []}
+                />
+              </section>
+            </div>
+          </div>
+        </LiveMainWallet>
       ) : tab === "ledger" ? (
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold tracking-tight">Account ledger</h2>

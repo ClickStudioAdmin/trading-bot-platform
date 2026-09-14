@@ -47,6 +47,10 @@ assert.equal(
   false,
 );
 assert.equal(billingPath(), "/account/billing");
+assert.equal(
+  billingPath({ tab: "wallet", saved: "withdraw" }),
+  "/account/billing?tab=wallet&saved=withdraw",
+);
 assert.equal(checkoutPath(), "/account/billing/checkout");
 assert.equal(
   checkoutPath({ plan: "plan-1", error: "Nope" }),
