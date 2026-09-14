@@ -26,8 +26,10 @@ import {
   parseAffiliateMinPayout,
   parseCommissionStatus,
   parseDowngradeGraceDays,
+  parsePayoutFileStatus,
   parsePayoutMethod,
   parsePayoutStatus,
+  payoutEligibleForAirdropFile,
   parseAffiliateRatePct,
   parseReferralCode,
   programDefaultRates,
@@ -45,6 +47,7 @@ import {
   type AffiliatePayoutSettings,
   type AffiliateProgramSettings,
   type CommissionStatus,
+  type PayoutFileStatus,
   type PayoutStatus,
 } from "./affiliate";
 import { planAffiliateRate, type MembershipPlan } from "./catalog";
@@ -90,7 +93,19 @@ export type PayoutRow = {
   externalId: string | null;
   createdAt: string;
   paidAt: string | null;
+  payoutFileId: string | null;
   email?: string;
+};
+
+export type PayoutFileRow = {
+  id: string;
+  network: string;
+  status: PayoutFileStatus;
+  amountUsd: number;
+  payoutCount: number;
+  externalId: string | null;
+  createdAt: string;
+  paidAt: string | null;
 };
 
 export type DownlineRow = {
@@ -938,7 +953,7 @@ async function loadPayout(
   const { data } = await supabase
     .from("membership_payouts")
     .select(
-      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at",
+      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at, payout_file_id",
     )
     .eq("id", payoutId)
     .maybeSingle();
@@ -976,6 +991,8 @@ function mapPayout(row: Record<string, unknown>): PayoutRow | null {
     externalId: typeof row.external_id === "string" ? row.external_id : null,
     createdAt: String(row.created_at),
     paidAt: typeof row.paid_at === "string" ? row.paid_at : null,
+    payoutFileId:
+      typeof row.payout_file_id === "string" ? row.payout_file_id : null,
   };
 }
 
@@ -1005,7 +1022,7 @@ export async function rejectPayout(
   payoutId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const payout = await loadPayout(payoutId);
-  if (!payout || (payout.status !== "requested" && payout.status !== "approved")) {
+  if (!payout || !payoutEligibleForAirdropFile(payout.status)) {
     return { ok: false, error: "That payout cannot be rejected." };
   }
   const supabase = createServiceClient();
@@ -1093,7 +1110,7 @@ export async function listPayouts(limit = 80): Promise<PayoutRow[]> {
   const { data } = await supabase
     .from("membership_payouts")
     .select(
-      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at",
+      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at, payout_file_id",
     )
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -1112,6 +1129,231 @@ export async function listPayouts(limit = 80): Promise<PayoutRow[]> {
     }
   }
   return rows.map((row) => ({ ...row, email: emails.get(row.userId) }));
+}
+
+function mapPayoutFile(row: Record<string, unknown>): PayoutFileRow | null {
+  const status = parsePayoutFileStatus(row.status);
+  if (!status) {
+    return null;
+  }
+  return {
+    id: String(row.id),
+    network: String(row.network),
+    status,
+    amountUsd: Number(row.amount_usd),
+    payoutCount: Number(row.payout_count),
+    externalId: typeof row.external_id === "string" ? row.external_id : null,
+    createdAt: String(row.created_at),
+    paidAt: typeof row.paid_at === "string" ? row.paid_at : null,
+  };
+}
+
+export async function listPayoutFiles(limit = 80): Promise<PayoutFileRow[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data } = await supabase
+    .from("membership_payout_files")
+    .select(
+      "id, network, status, amount_usd, payout_count, external_id, created_at, paid_at",
+    )
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? [])
+    .map((row) => mapPayoutFile(row as Record<string, unknown>))
+    .filter((row): row is PayoutFileRow => row !== null);
+}
+
+export async function listPayoutsForFile(fileId: string): Promise<PayoutRow[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  const { data } = await supabase
+    .from("membership_payouts")
+    .select(
+      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at, payout_file_id",
+    )
+    .eq("payout_file_id", fileId)
+    .order("created_at", { ascending: true });
+  return (data ?? [])
+    .map((row) => mapPayout(row as Record<string, unknown>))
+    .filter((row): row is PayoutRow => row !== null);
+}
+
+export async function generatePayoutFiles(): Promise<
+  { ok: true; files: PayoutFileRow[] } | { ok: false; error: string }
+> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { data, error } = await supabase
+    .from("membership_payouts")
+    .select(
+      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at, payout_file_id",
+    )
+    .in("status", ["requested", "approved"]);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  const eligible = (data ?? [])
+    .map((row) => mapPayout(row as Record<string, unknown>))
+    .filter((row): row is PayoutRow => row !== null)
+    .filter(
+      (row) =>
+        payoutEligibleForAirdropFile(row.status) &&
+        Boolean(row.network?.trim()) &&
+        Boolean(row.address?.trim()),
+    );
+  if (eligible.length === 0) {
+    return {
+      ok: false,
+      error: "No requested payouts with a chain and address.",
+    };
+  }
+  const byNetwork = new Map<string, PayoutRow[]>();
+  for (const row of eligible) {
+    const network = String(row.network);
+    const group = byNetwork.get(network) ?? [];
+    group.push(row);
+    byNetwork.set(network, group);
+  }
+  const files: PayoutFileRow[] = [];
+  for (const [network, rows] of byNetwork) {
+    const amountUsd = roundUsd(
+      rows.reduce((sum, row) => sum + row.amountUsd, 0),
+    );
+    const { data: created, error: createError } = await supabase
+      .from("membership_payout_files")
+      .insert({
+        network,
+        status: "pending",
+        amount_usd: amountUsd,
+        payout_count: rows.length,
+      })
+      .select(
+        "id, network, status, amount_usd, payout_count, external_id, created_at, paid_at",
+      )
+      .single();
+    if (createError || !created) {
+      return {
+        ok: false,
+        error: createError?.message ?? "Could not create a payout file.",
+      };
+    }
+    const mapped = mapPayoutFile(created as Record<string, unknown>);
+    if (!mapped) {
+      return { ok: false, error: "Could not create a payout file." };
+    }
+    const { data: claimed, error: claimError } = await supabase
+      .from("membership_payouts")
+      .update({
+        status: "pending",
+        payout_file_id: mapped.id,
+      })
+      .in(
+        "id",
+        rows.map((row) => row.id),
+      )
+      .in("status", ["requested", "approved"])
+      .select("id, amount_usd");
+    if (claimError) {
+      await supabase.from("membership_payout_files").delete().eq("id", mapped.id);
+      return { ok: false, error: claimError.message };
+    }
+    const claimedRows = claimed ?? [];
+    if (claimedRows.length === 0) {
+      await supabase.from("membership_payout_files").delete().eq("id", mapped.id);
+      continue;
+    }
+    const claimedAmount = roundUsd(
+      claimedRows.reduce((sum, row) => sum + Number(row.amount_usd), 0),
+    );
+    if (
+      claimedRows.length !== mapped.payoutCount ||
+      claimedAmount !== mapped.amountUsd
+    ) {
+      const { error: fixError } = await supabase
+        .from("membership_payout_files")
+        .update({
+          amount_usd: claimedAmount,
+          payout_count: claimedRows.length,
+        })
+        .eq("id", mapped.id);
+      if (fixError) {
+        return { ok: false, error: fixError.message };
+      }
+      files.push({
+        ...mapped,
+        amountUsd: claimedAmount,
+        payoutCount: claimedRows.length,
+      });
+      continue;
+    }
+    files.push(mapped);
+  }
+  if (files.length === 0) {
+    return {
+      ok: false,
+      error: "No requested payouts with a chain and address.",
+    };
+  }
+  return { ok: true, files };
+}
+
+export async function markPayoutFilePaid(
+  fileId: string,
+  externalId?: string | null,
+): Promise<{ ok: true; payoutCount: number } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { data: fileRow } = await supabase
+    .from("membership_payout_files")
+    .select(
+      "id, network, status, amount_usd, payout_count, external_id, created_at, paid_at",
+    )
+    .eq("id", fileId)
+    .maybeSingle();
+  const file = fileRow
+    ? mapPayoutFile(fileRow as Record<string, unknown>)
+    : null;
+  if (!file) {
+    return { ok: false, error: "That payout file was not found." };
+  }
+  if (file.status === "paid") {
+    return { ok: true, payoutCount: file.payoutCount };
+  }
+  if (file.status !== "pending") {
+    return { ok: false, error: "That payout file cannot be marked paid." };
+  }
+  const payouts = await listPayoutsForFile(fileId);
+  const open = payouts.filter((row) => row.status === "pending");
+  if (open.length === 0 && payouts.some((row) => row.status !== "paid")) {
+    return { ok: false, error: "That payout file has no pending requests." };
+  }
+  for (const payout of open) {
+    const saved = await markPayoutPaid(payout.id, externalId ?? payout.externalId);
+    if (!saved.ok) {
+      return saved;
+    }
+  }
+  const { error } = await supabase
+    .from("membership_payout_files")
+    .update({
+      status: "paid",
+      paid_at: new Date().toISOString(),
+      external_id: externalId ?? file.externalId,
+    })
+    .eq("id", fileId)
+    .eq("status", "pending");
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, payoutCount: open.length || file.payoutCount };
 }
 
 const USER_ID_IN_CHUNK = 100;
@@ -1591,7 +1833,7 @@ export async function listMemberPayouts(userId: string): Promise<PayoutRow[]> {
   const { data } = await supabase
     .from("membership_payouts")
     .select(
-      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at",
+      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at, payout_file_id",
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })

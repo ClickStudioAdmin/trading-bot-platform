@@ -40,10 +40,14 @@ export type PayoutMethod = (typeof PAYOUT_METHODS)[number];
 export const PAYOUT_STATUSES = [
   "requested",
   "approved",
+  "pending",
   "rejected",
   "paid",
 ] as const;
 export type PayoutStatus = (typeof PAYOUT_STATUSES)[number];
+
+export const PAYOUT_FILE_STATUSES = ["pending", "paid"] as const;
+export type PayoutFileStatus = (typeof PAYOUT_FILE_STATUSES)[number];
 
 export const COMMISSION_STATUSES = [
   "pending",
@@ -623,6 +627,71 @@ export function parsePayoutStatus(value: unknown): PayoutStatus | null {
   return PAYOUT_STATUSES.includes(value as PayoutStatus)
     ? (value as PayoutStatus)
     : null;
+}
+
+export function parsePayoutFileStatus(value: unknown): PayoutFileStatus | null {
+  return PAYOUT_FILE_STATUSES.includes(value as PayoutFileStatus)
+    ? (value as PayoutFileStatus)
+    : null;
+}
+
+export function payoutStatusLabel(status: PayoutStatus): string {
+  if (status === "pending") {
+    return "Pending";
+  }
+  if (status === "requested") {
+    return "Requested";
+  }
+  if (status === "approved") {
+    return "Approved";
+  }
+  if (status === "rejected") {
+    return "Rejected";
+  }
+  return "Paid";
+}
+
+export function payoutEligibleForAirdropFile(status: PayoutStatus): boolean {
+  return status === "requested" || status === "approved";
+}
+
+export function mergePayoutsForAirdrop(
+  rows: { address: string; amountUsd: number }[],
+): { address: string; amountUsd: number }[] {
+  const merged = new Map<string, { address: string; amountUsd: number }>();
+  for (const row of rows) {
+    const address = row.address.trim();
+    if (!address) {
+      continue;
+    }
+    const key = address.toLowerCase();
+    const existing = merged.get(key);
+    if (existing) {
+      existing.amountUsd = roundUsd(existing.amountUsd + row.amountUsd);
+    } else {
+      merged.set(key, { address, amountUsd: roundUsd(row.amountUsd) });
+    }
+  }
+  return [...merged.values()];
+}
+
+export function affiliateAirdropCsv(
+  rows: { address: string; amountUsd: number }[],
+): string {
+  const lines = [
+    "address,amount",
+    ...mergePayoutsForAirdrop(rows).map(
+      (row) => `${csvCell(row.address)},${row.amountUsd.toFixed(2)}`,
+    ),
+  ];
+  return `${lines.join("\n")}\n`;
+}
+
+function csvCell(value: string): string {
+  if (/[",\n]/.test(value)) {
+    return `"${value.replaceAll('"', '""')}"`;
+  }
+  return value;
 }
 
 export function parseCommissionStatus(value: unknown): CommissionStatus | null {

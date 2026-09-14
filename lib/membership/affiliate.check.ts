@@ -42,9 +42,15 @@ import {
   parseAffiliatePortalPage,
   AFFILIATE_PORTAL_PAGE_SIZE,
   generateAffiliateLinkSlug,
+  affiliateAirdropCsv,
+  mergePayoutsForAirdrop,
   parseAffiliateAlias,
   parseAffiliateLanding,
   parseAffiliateLabel,
+  parsePayoutFileStatus,
+  parsePayoutStatus,
+  payoutEligibleForAirdropFile,
+  payoutStatusLabel,
   parseAffiliateLinkSlug,
   parseAffiliatePortalTab,
   parseAffiliateMaxDepth,
@@ -632,6 +638,30 @@ assert.deepEqual(parseAffiliateLinkSlug("ab12cd"), {
   slug: "AB12CD",
 });
 assert.equal(parseAffiliateLinkSlug("ab").ok, false);
+assert.equal(parsePayoutStatus("pending"), "pending");
+assert.equal(parsePayoutFileStatus("pending"), "pending");
+assert.equal(parsePayoutFileStatus("paid"), "paid");
+assert.equal(payoutEligibleForAirdropFile("requested"), true);
+assert.equal(payoutEligibleForAirdropFile("pending"), false);
+assert.equal(payoutStatusLabel("pending"), "Pending");
+assert.deepEqual(
+  mergePayoutsForAirdrop([
+    { address: "0xAbc", amountUsd: 10 },
+    { address: "0xabc", amountUsd: 2.5 },
+    { address: "0xDef", amountUsd: 1 },
+  ]),
+  [
+    { address: "0xAbc", amountUsd: 12.5 },
+    { address: "0xDef", amountUsd: 1 },
+  ],
+);
+assert.equal(
+  affiliateAirdropCsv([
+    { address: "0xAbc", amountUsd: 10 },
+    { address: "0xabc", amountUsd: 2.5 },
+  ]),
+  "address,amount\n0xAbc,12.50\n",
+);
 assert.equal(parseAffiliateLabel("Spring", 40, "Enter a name.").ok, true);
 assert.equal(parseAffiliateLabel("", 40, "Enter a name.").ok, false);
 assert.equal(parseAffiliateAlias("").ok, false);

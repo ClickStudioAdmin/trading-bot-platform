@@ -57,6 +57,12 @@ assert.ok(
   eventLogOptionsForScopes(["system"]).includes("membership.payout_requested"),
 );
 assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("membership.payout_file_created"),
+);
+assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("membership.payout_file_paid"),
+);
+assert.ok(
   eventLogOptionsForScopes(["system"]).includes("copy.profile_saved"),
 );
 assert.ok(

@@ -13,6 +13,8 @@ import {
   AFFILIATE_CAMPAIGN_NAME_MAX,
   AFFILIATE_LANDINGS,
   AFFILIATE_LINK_NAME_MAX,
+  payoutStatusLabel,
+  referralShareUrl,
   affiliateLandingLabel,
   affiliateLinkKindLabel,
   affiliatePageLabel,
@@ -97,10 +99,17 @@ export function AffiliateDashboard({
   const payoutPage = paginateAffiliateList(payouts, page);
   const rateNote =
     portal.rates.source === "plan" && portal.rates.planName
-      ? `Your ${portal.rates.planName} plan rates.`
+      ? `You are on ${portal.rates.planName} rates. Affiliate-only and unpaid subscriptions use program default rates. Paid plans use that plan’s L1–L5.`
       : platformMember && arrears
-        ? "Unpaid subscription — program default rates until you pay again."
-        : "Program default rates. Platform members earn their plan rates.";
+        ? "Unpaid / affiliate-only uses program rates. Paid plans use that plan’s L1–L5. Your unpaid subscription is on program defaults until you pay again."
+        : "Unpaid / affiliate-only uses program rates. Paid plans use that plan’s L1–L5.";
+  const defaultShareUrl = portal.code
+    ? referralShareUrl(origin, portal.code)
+    : "";
+  const shareRates = portal.rates.rows
+    .filter((row) => row.active)
+    .map((row) => `L${row.level} ${row.ratePct}%`)
+    .join(" · ");
 
   return (
     <div>
@@ -135,7 +144,7 @@ export function AffiliateDashboard({
       </nav>
       {saved === "withdraw" ? (
         <p className="mt-6 text-sm text-success">
-          Withdraw requested. Admin sends USDT and marks it paid.
+          Withdraw requested. It will go out on the next payout list.
         </p>
       ) : null}
       {saved === "payout-settings" ? (
@@ -207,6 +216,10 @@ export function AffiliateDashboard({
 
       {tab === "overview" ? (
         <>
+          <p className="mt-6 max-w-2xl text-sm text-ink-muted">
+            Signups stay yours even if they later click someone else’s link.
+            Commission starts when they first pay.
+          </p>
           <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile
               label="Signups"
@@ -250,49 +263,79 @@ export function AffiliateDashboard({
             />
           </section>
 
-          <section className="mt-6 rounded-card border border-line bg-surface p-5">
-            <h2 className="text-lg font-semibold tracking-tight">
-              Current rates
-            </h2>
-            <p className="mt-2 text-sm text-ink-muted">{rateNote}</p>
-            <table className="mt-4 w-full max-w-md text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase tracking-[0.12em] text-ink-muted">
-                  <th className="py-1.5 font-medium">Level</th>
-                  <th className="py-1.5 font-medium">Commission</th>
-                </tr>
-              </thead>
-              <tbody>
-                {portal.rates.rows.map((row) => (
-                  <tr key={row.level} className="border-t border-line">
-                    <td className="py-2 text-ink">L{row.level}</td>
-                    <td className="py-2 tabular-nums text-ink">
-                      {row.active ? `${row.ratePct}%` : "—"}
-                    </td>
+          <section className="mt-6 grid gap-4 lg:grid-cols-2 lg:items-start">
+            <div className="rounded-card border border-line bg-surface p-5">
+              <h2 className="text-lg font-semibold tracking-tight">
+                Current rates
+              </h2>
+              <p className="mt-2 text-sm text-ink-muted">{rateNote}</p>
+              <table className="mt-4 w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-[0.12em] text-ink-muted">
+                    <th className="py-1.5 font-medium">Level</th>
+                    <th className="py-1.5 font-medium">Commission</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="mt-4 max-w-md border-t border-line pt-4">
-              <p className="text-sm text-ink-muted">
-                Paid plans pay higher L1–L5 on referred subscriptions.
-              </p>
-              {!platformMember ? (
-                <form action={upgradeAffiliateToPlatformAction} className="mt-3">
-                  <PendingSubmitButton
-                    pendingLabel="Upgrading…"
-                    className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+                </thead>
+                <tbody>
+                  {portal.rates.rows.map((row) => (
+                    <tr key={row.level} className="border-t border-line">
+                      <td className="py-2 text-ink">L{row.level}</td>
+                      <td className="py-2 tabular-nums text-ink">
+                        {row.active ? `${row.ratePct}%` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="mt-4 border-t border-line pt-4">
+                <p className="text-sm text-ink-muted">
+                  Paid plans pay higher L1–L5 on referred subscriptions.
+                </p>
+                {!platformMember ? (
+                  <form action={upgradeAffiliateToPlatformAction} className="mt-3">
+                    <PendingSubmitButton
+                      pendingLabel="Upgrading…"
+                      className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+                    >
+                      Upgrade to earn higher rates
+                    </PendingSubmitButton>
+                  </form>
+                ) : (
+                  <Link
+                    href="/account/plans"
+                    className="mt-3 inline-flex rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
                   >
                     Upgrade to earn higher rates
-                  </PendingSubmitButton>
-                </form>
+                  </Link>
+                )}
+              </div>
+            </div>
+            <div className="rounded-card border border-line bg-surface p-5">
+              <h2 className="text-lg font-semibold tracking-tight">
+                Default link
+              </h2>
+              <p className="mt-2 text-sm text-ink-muted">
+                System Default. Share this. Custom landings are on the Links
+                tab.
+              </p>
+              {defaultShareUrl ? (
+                <>
+                  <p className="mt-4 break-all font-mono text-sm text-ink">
+                    {defaultShareUrl}
+                  </p>
+                  <div className="mt-3">
+                    <CopyTextButton text={defaultShareUrl} label="Copy link" />
+                  </div>
+                  {shareRates ? (
+                    <p className="mt-4 text-sm text-ink-muted">
+                      Your current rates: {shareRates}.
+                    </p>
+                  ) : null}
+                </>
               ) : (
-                <Link
-                  href="/account/plans"
-                  className="mt-3 inline-flex rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-                >
-                  Upgrade to earn higher rates
-                </Link>
+                <p className="mt-4 text-sm text-ink-muted">
+                  Your referral code will show here after the first visit.
+                </p>
               )}
             </div>
           </section>
@@ -727,8 +770,9 @@ export function AffiliateDashboard({
             <p className="mt-2 text-sm text-ink-muted">
               Saved chain and address are used on each withdraw so you do not
               re-enter them. Auto payouts open a payout request for the full
-              payable when the balance is over the amount you set. Admin still
-              approves, sends USDT, and marks it paid.
+              payable when the balance is over the amount you set. Requests go
+              onto the next payout list. Admin sends USDT, then marks that file
+              paid.
             </p>
             {payoutChains.length === 0 ? (
               <p className="mt-3 text-sm text-warning">
@@ -789,8 +833,8 @@ function AffiliatePayoutsTable({
                 <td className="px-4 py-3 tabular-nums whitespace-nowrap text-ink">
                   {formatUsd(payout.amountUsd)}
                 </td>
-                <td className="px-4 py-3 capitalize whitespace-nowrap text-ink-muted">
-                  {payout.status}
+                <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
+                  {payoutStatusLabel(payout.status)}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-ink">
                   {payout.network ? chainName(payout.network) : "—"}

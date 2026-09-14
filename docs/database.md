@@ -54,7 +54,8 @@ Current tables:
 | `membership_affiliate_links` | membership | Named `/r/{slug}` share links. Landing `home` or `affiliates`. Optional `campaign_id`. Unique slug even after archive. `archived_at` hides from the active list; `/r/` still resolves. Service-role only. |
 | `membership_referrals` | membership | First-touch attribution. Optional `campaign_id` / `link_id` from the share link. No self-referral. |
 | `membership_commissions` | membership | Per invoice + earner + level. `pending` / `payable` / `paid` / `void`. `rate_plan_id` is null when the row used program default rates. Copies `campaign_id` / `link_id` from the paying member’s referral so earnings can filter by campaign. |
-| `membership_payouts` | membership | Export / Connect / USDT withdraw queue. |
+| `membership_payouts` | membership | Export / Connect / USDT withdraw queue. Status: `requested`, `approved` (legacy), `pending` (on a payout file), `rejected`, `paid`. Optional `payout_file_id`. |
+| `membership_payout_files` | membership | Airdrop batch per chain. Generate from requested/approved payouts; status `pending` then `paid`. CSV is `address,amount` (same address summed). |
 | `membership_payout_items` | membership | Commission rows on a payout. Unique `commission_id` so a commission cannot sit on two payouts. |
 
 Phase 4 rules migrations: `supabase/migrations/20260822160000_paper_rules.sql` then `supabase/migrations/20260822170000_paper_rule_layers.sql`.

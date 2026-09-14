@@ -26,7 +26,7 @@ Cleanup matches the `@tbp-john-demo.invalid` email domain, `John demo` campaigns
 - Unique first + last **affiliate aliases** (network labels). Trader aliases stay `John {path}`.
 - Admin campaigns / custom links (including one archived each).
 - Commissions in **pending**, **payable**, **paid**, and **void**.
-- Payouts in **requested**, **approved**, **rejected**, and **paid** (admin queue + a few John portals).
+- Payouts in **requested**, **approved**, **rejected**, and **paid** (admin queue + a few John portals). New live payouts go **requested → pending (on a file) → paid**.
 - Program max depth set to **5** so the tree is visible. Default L1–L5 rates are filled in only if they were all zero.
 
 ## Remove

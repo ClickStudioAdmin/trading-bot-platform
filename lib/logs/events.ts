@@ -46,6 +46,8 @@ export const EVENT_LOG_OPTIONS = [
   { event: "membership.payout_approved", scope: "system" },
   { event: "membership.payout_rejected", scope: "system" },
   { event: "membership.payout_paid", scope: "system" },
+  { event: "membership.payout_file_created", scope: "system" },
+  { event: "membership.payout_file_paid", scope: "system" },
   { event: "membership.stripe_subscription", scope: "system" },
   { event: "membership.hd_seed_created", scope: "system" },
   { event: "membership.gas_wallet_created", scope: "system" },

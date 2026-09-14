@@ -34,9 +34,11 @@ import { listAffiliatePayoutChains } from "./wallet-store";
 import { parseUuid } from "./wallet-form";
 import {
   approvePayout,
+  generatePayoutFiles,
   listPayableCommissions,
   loadAffiliateSettings,
   loadMemberArrears,
+  markPayoutFilePaid,
   markPayoutPaid,
   rejectPayout,
   releaseDueCommissions,
@@ -188,6 +190,54 @@ export async function rejectPayoutAction(formData: FormData) {
   revalidatePath(AFFILIATES_PATH);
   revalidatePath("/account/affiliates");
   redirect("/admin/affiliates?saved=rejected");
+}
+
+export async function generatePayoutFilesAction(_formData?: FormData) {
+  const admin = await requireAdmin();
+  const saved = await generatePayoutFiles();
+  if (!saved.ok) {
+    adminFail(saved.error);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.payout_file_created",
+    message: "Generated affiliate payout lists",
+    userId: admin.id,
+    data: {
+      fileIds: saved.files.map((file) => file.id),
+      networks: saved.files.map((file) => file.network),
+    },
+  });
+  revalidatePath("/admin/affiliates");
+  revalidatePath(AFFILIATES_PATH);
+  revalidatePath("/account/affiliates");
+  redirect(
+    `/admin/affiliates?saved=files&count=${encodeURIComponent(String(saved.files.length))}`,
+  );
+}
+
+export async function markPayoutFilePaidAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const fileId = parseUuid(formData.get("fileId"));
+  if (!fileId) {
+    adminFail("Missing payout file.");
+  }
+  const externalId = String(formData.get("externalId") ?? "").trim() || null;
+  const saved = await markPayoutFilePaid(fileId, externalId);
+  if (!saved.ok) {
+    adminFail(saved.error);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.payout_file_paid",
+    message: "Marked an affiliate payout file paid",
+    userId: admin.id,
+    data: { fileId, externalId, payoutCount: saved.payoutCount },
+  });
+  revalidatePath("/admin/affiliates");
+  revalidatePath(AFFILIATES_PATH);
+  revalidatePath("/account/affiliates");
+  redirect("/admin/affiliates?saved=file-paid");
 }
 
 export async function markPayoutPaidAction(formData: FormData) {
