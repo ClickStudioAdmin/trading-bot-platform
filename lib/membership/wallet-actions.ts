@@ -13,8 +13,18 @@ import {
 } from "./billing";
 import {
   createCommissionsForInvoice,
+  loadAffiliateSettings,
+  loadMemberArrears,
+  requestUsdtPayout,
   sumPayableAffiliateUsd,
 } from "./affiliate-store";
+import {
+  parsePayoutAddress,
+  parsePayoutAmount,
+  parsePayoutNetwork,
+  withdrawAmountDecision,
+  withdrawDecision,
+} from "./affiliate";
 import { getMemberBilling, saveBillingMethod } from "./billing-store";
 import { parsePlanId } from "./form";
 import { getMembershipPlan } from "./store";
@@ -28,6 +38,7 @@ import {
   updateBillingChain,
   updateBillingToken,
   updateGasLowEth,
+  listAffiliatePayoutChains,
   walletBookBalances,
 } from "./wallet-store";
 import { parseGasLowEth } from "./gas-drip";
@@ -215,48 +226,32 @@ export async function scanBillingDepositsAction() {
   );
 }
 
-export async function checkMyDepositAction() {
+export type CheckDepositResult =
+  | { ok: true; credited: number; mainUsd: number }
+  | { ok: false; error: string; mainUsd?: number };
+
+async function checkMemberDeposit(): Promise<CheckDepositResult> {
   const member = await getSessionMember();
   if (!member) {
-    redirect("/sign-in");
-    return;
+    return { ok: false, error: "Sign in to check deposits." };
   }
   const watched = await watchMembershipDeposits({
     userId: member.id,
     advanceCursor: false,
   });
-  revalidatePath("/account/billing");
-  revalidatePath("/account/billing/checkout");
-  if (watched.credited > 0) {
-    redirect(billingPath({ deposited: String(watched.credited) }));
+  const books = await walletBookBalances(member.id);
+  if (watched.errors[0] && watched.credited === 0) {
+    return { ok: false, error: watched.errors[0], mainUsd: books.main };
   }
-  if (watched.errors[0]) {
-    failBilling(watched.errors[0]);
-  }
-  redirect(billingPath({ scanned: "1" }));
+  return { ok: true, credited: watched.credited, mainUsd: books.main };
 }
 
-export async function checkCheckoutDepositAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-    return;
-  }
-  const planId = parsePlanId(String(formData.get("planId") ?? ""));
-  const watched = await watchMembershipDeposits({
-    userId: member.id,
-    advanceCursor: false,
-  });
-  revalidatePath("/account/billing");
-  revalidatePath("/account/billing/checkout");
-  const query = planId ? { plan: planId } : {};
-  if (watched.credited > 0) {
-    redirect(checkoutPath({ ...query, deposited: String(watched.credited) }));
-  }
-  if (watched.errors[0]) {
-    redirect(checkoutPath({ ...query, error: watched.errors[0] }));
-  }
-  redirect(checkoutPath({ ...query, scanned: "1" }));
+export async function checkMyDepositAction(): Promise<CheckDepositResult> {
+  return checkMemberDeposit();
+}
+
+export async function checkCheckoutDepositAction(): Promise<CheckDepositResult> {
+  return checkMemberDeposit();
 }
 
 export async function payPlanWithCreditAction(formData: FormData) {
@@ -381,4 +376,73 @@ export async function payPlanWithCreditAction(formData: FormData) {
       }),
     );
   }
+}
+
+export async function requestMainWalletWithdrawAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  const payoutChains = await listAffiliatePayoutChains();
+  const network = parsePayoutNetwork(
+    formData.get("network"),
+    payoutChains.map((chain) => chain.slug),
+  );
+  if (!network.ok) {
+    failBilling(network.error);
+  }
+  const address = parsePayoutAddress(formData.get("address"));
+  if (!address.ok) {
+    failBilling(address.error);
+  }
+  const amount = parsePayoutAmount(formData.get("amountUsd"));
+  if (!amount.ok) {
+    failBilling(amount.error);
+  }
+  const [settings, arrears, books] = await Promise.all([
+    loadAffiliateSettings(),
+    loadMemberArrears(member.id),
+    walletBookBalances(member.id),
+  ]);
+  const allowed = withdrawDecision({
+    arrears,
+    payableUsd: books.main,
+    minPayoutUsd: settings.minPayoutUsd,
+  });
+  if (!allowed.ok) {
+    failBilling(allowed.reason);
+  }
+  const amountOk = withdrawAmountDecision({
+    payableUsd: books.main,
+    minPayoutUsd: settings.minPayoutUsd,
+    amountUsd: amount.amountUsd,
+  });
+  if (!amountOk.ok) {
+    failBilling(amountOk.reason);
+  }
+  const requested = await requestUsdtPayout({
+    userId: member.id,
+    network: network.network,
+    address: address.address,
+    amountUsd: amount.amountUsd,
+    book: "main",
+  });
+  if (!requested.ok) {
+    failBilling(requested.error);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.wallet_withdraw_requested",
+    message: "Requested a USDT Main Wallet withdraw",
+    userId: member.id,
+    data: {
+      payoutId: requested.payoutId,
+      network: network.network,
+      amountUsd: amount.amountUsd,
+    },
+  });
+  revalidatePath("/account/billing");
+  revalidatePath("/admin/billing");
+  revalidatePath("/admin/affiliates");
+  redirect(billingPath({ saved: "withdraw" }));
 }

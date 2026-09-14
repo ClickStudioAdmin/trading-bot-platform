@@ -3,9 +3,11 @@ import {
   billingPath,
   checkoutPath,
   decideUpgrade,
+  embeddedCardReturnUrl,
   embeddedCheckoutReturnUrl,
   formatCount,
   formatUsd,
+  invoiceMethodLabel,
   hasUsableStripeSubscription,
   parseBillingMethod,
   parsePaySubscriptionFromCredit,
@@ -13,6 +15,9 @@ import {
   walletEntryDelta,
 } from "./billing";
 
+assert.equal(invoiceMethodLabel("stripe"), "Card");
+assert.equal(invoiceMethodLabel("wallet"), "Crypto");
+assert.equal(invoiceMethodLabel("comp"), "Comp");
 assert.equal(parseBillingMethod("stripe"), "stripe");
 assert.equal(parseBillingMethod("wallet"), "wallet");
 assert.equal(parseBillingMethod("comp"), null);
@@ -22,6 +27,10 @@ assert.equal(parsePaySubscriptionFromCredit(null), false);
 assert.equal(
   embeddedCheckoutReturnUrl("https://app.example/"),
   "https://app.example/account/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}",
+);
+assert.equal(
+  embeddedCardReturnUrl("https://app.example/"),
+  "https://app.example/account/billing?tab=card&saved=card&session_id={CHECKOUT_SESSION_ID}",
 );
 assert.equal(
   hasUsableStripeSubscription({

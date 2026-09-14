@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import {
   bookBalancesFromEntries,
+  mainWalletLedgerLabel,
   planDeductDecision,
   tokenAmountToUsd,
   walletEntryDelta,
   walletInvoiceExternalId,
+  withRunningBalances,
 } from "./wallet";
 
 assert.equal(walletEntryDelta("deposit", 10), 10);
@@ -59,6 +61,31 @@ assert.equal(tokenAmountToUsd(BigInt(10000000), 6, "wbtc"), null);
 assert.equal(
   walletInvoiceExternalId("user-1", "2026-09-12T00:00:00.000Z"),
   "wallet:user-1:2026-09-12T00:00:00.000Z",
+);
+
+assert.equal(mainWalletLedgerLabel("deposit"), "Deposit");
+assert.equal(mainWalletLedgerLabel("debit_rent"), "Plan payment");
+assert.equal(
+  mainWalletLedgerLabel("transfer_in"),
+  "Transfer from Affiliate",
+);
+assert.equal(mainWalletLedgerLabel("withdraw"), "Withdrawal");
+assert.equal(
+  mainWalletLedgerLabel("withdraw", "USDT withdraw requested"),
+  "Withdrawal",
+);
+assert.equal(
+  mainWalletLedgerLabel("adjust", "USDT withdraw rejected"),
+  "USDT withdraw rejected",
+);
+assert.deepEqual(
+  withRunningBalances([
+    { kind: "deposit", amountUsd: 100 },
+    { kind: "transfer_in", amountUsd: 25 },
+    { kind: "debit_rent", amountUsd: 40 },
+    { kind: "withdraw", amountUsd: 30 },
+  ]).map((row) => row.balanceUsd),
+  [100, 125, 85, 55],
 );
 
 console.log("membership wallet checks passed");

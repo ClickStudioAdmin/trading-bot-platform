@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
-import { payoutStatusLabel, shortenPayoutAddress } from "@/lib/membership/affiliate";
+import {
+  adminPayoutsPath,
+  payoutStatusLabel,
+  shortenPayoutAddress,
+} from "@/lib/membership/affiliate";
 import {
   listPayoutsForFile,
   loadPayoutFile,
@@ -48,8 +52,11 @@ export default async function AdminPayoutFilePage({
         <p className="mt-2 font-mono text-xs text-ink-muted">{file.externalId}</p>
       ) : null}
       <div className="mt-4 flex flex-wrap gap-3">
-        <Link href="/admin/affiliates" className="text-sm text-accent hover:underline">
-          Back to payouts
+        <Link
+          href={adminPayoutsPath(file.book)}
+          className="text-sm text-accent hover:underline"
+        >
+          {file.book === "main" ? "Back to withdrawals" : "Back to payouts"}
         </Link>
         <a
           href={`/admin/affiliates/files/${file.id}/export`}

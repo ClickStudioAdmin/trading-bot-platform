@@ -53,6 +53,9 @@ import {
   parseAffiliateLabel,
   parsePayoutFileStatus,
   parsePayoutStatus,
+  adminPayoutsPath,
+  isOpenWalletWithdraw,
+  parsePayoutBook,
   payoutEligibleForAirdropFile,
   payoutStatusLabel,
   shortenPayoutAddress,
@@ -304,6 +307,21 @@ assert.equal(
   affiliateNetworkPath("chart", 3),
   "/affiliates?tab=network&view=chart",
 );
+assert.equal(parsePayoutBook("main"), "main");
+assert.equal(parsePayoutBook("affiliate"), "affiliate");
+assert.equal(parsePayoutBook("nope"), "affiliate");
+assert.equal(adminPayoutsPath("affiliate"), "/admin/affiliates");
+assert.equal(
+  adminPayoutsPath("main"),
+  "/admin/billing?tab=withdrawals",
+);
+assert.equal(
+  adminPayoutsPath("main", { saved: "files", count: "2" }),
+  "/admin/billing?tab=withdrawals&saved=files&count=2",
+);
+assert.equal(isOpenWalletWithdraw("requested"), true);
+assert.equal(isOpenWalletWithdraw("pending"), true);
+assert.equal(isOpenWalletWithdraw("paid"), false);
 assert.equal(
   affiliatePortalPath("payouts", { saved: "withdraw" }),
   "/affiliates?tab=payouts&saved=withdraw",

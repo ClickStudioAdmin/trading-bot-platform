@@ -27,6 +27,7 @@ import {
   parseCommissionStatus,
   parseDowngradeGraceDays,
   chunkPayoutsForAirdropFiles,
+  parsePayoutBook,
   parsePayoutFileStatus,
   parsePayoutMethod,
   parsePayoutStatus,
@@ -60,7 +61,11 @@ import {
   listMembershipPlans,
 } from "./store";
 import { rememberAffiliateCookieDays } from "./affiliate-cookie-days";
-import { roundUsd } from "./wallet";
+import {
+  bookBalancesFromEntries,
+  roundUsd,
+  type WalletBook,
+} from "./wallet";
 
 export type ReferralRecord = {
   userId: string;
@@ -98,6 +103,7 @@ export type PayoutRow = {
   createdAt: string;
   paidAt: string | null;
   payoutFileId: string | null;
+  book: WalletBook;
   email?: string;
 };
 
@@ -110,6 +116,7 @@ export type PayoutFileRow = {
   externalId: string | null;
   createdAt: string;
   paidAt: string | null;
+  book: WalletBook;
 };
 
 export type DownlineRow = {
@@ -211,6 +218,31 @@ function schemaGap(error: { code?: string; message?: string }): boolean {
     error.code === "42703" ||
     /does not exist/i.test(error.message ?? "")
   );
+}
+
+const PAYOUT_COLUMNS =
+  "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at, payout_file_id";
+const PAYOUT_COLUMNS_FULL = `${PAYOUT_COLUMNS}, book`;
+const PAYOUT_FILE_COLUMNS =
+  "id, network, status, amount_usd, payout_count, external_id, created_at, paid_at";
+const PAYOUT_FILE_COLUMNS_FULL = `${PAYOUT_FILE_COLUMNS}, book`;
+
+async function mainBookUsd(userId: string): Promise<number> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return 0;
+  }
+  const { data } = await supabase
+    .from("membership_wallet_entries")
+    .select("kind, amount_usd, book")
+    .eq("user_id", userId);
+  return bookBalancesFromEntries(
+    (data ?? []).map((row) => ({
+      kind: String(row.kind),
+      amountUsd: Number(row.amount_usd),
+      book: typeof row.book === "string" ? row.book : null,
+    })),
+  ).main;
 }
 
 function optionalId(value: unknown): string | null {
@@ -798,27 +830,37 @@ export async function requestUsdtPayout(input: {
   network: string;
   address: string;
   amountUsd: number;
+  book?: WalletBook;
 }): Promise<{ ok: true; payoutId: string } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
-  const payable = await listPayableCommissions(input.userId);
-  const payableUsd = roundUsd(
-    payable.reduce((sum, row) => sum + row.amountUsd, 0),
-  );
-  if (payableUsd < 0.01) {
-    return { ok: false, error: "No payable earnings are ready to withdraw." };
-  }
+  const book = input.book ?? "affiliate";
   const amountUsd = roundUsd(input.amountUsd);
-  const items = pickCommissionsForPayout(payable, amountUsd);
-  const allocated = roundUsd(
-    items.reduce((sum, row) => sum + row.amountUsd, 0),
-  );
-  if (allocated + 1e-9 < amountUsd) {
-    return { ok: false, error: "That amount is not available to withdraw." };
+  let items: Awaited<ReturnType<typeof listPayableCommissions>> = [];
+  if (book === "affiliate") {
+    const payable = await listPayableCommissions(input.userId);
+    const payableUsd = roundUsd(
+      payable.reduce((sum, row) => sum + row.amountUsd, 0),
+    );
+    if (payableUsd < 0.01) {
+      return { ok: false, error: "No payable earnings are ready to withdraw." };
+    }
+    items = pickCommissionsForPayout(payable, amountUsd);
+    const allocated = roundUsd(
+      items.reduce((sum, row) => sum + row.amountUsd, 0),
+    );
+    if (allocated + 1e-9 < amountUsd) {
+      return { ok: false, error: "That amount is not available to withdraw." };
+    }
+  } else {
+    const available = await mainBookUsd(input.userId);
+    if (available + 1e-9 < amountUsd) {
+      return { ok: false, error: "That amount is not available to withdraw." };
+    }
   }
-  const { data, error } = await supabase
+  let inserted = await supabase
     .from("membership_payouts")
     .insert({
       user_id: input.userId,
@@ -827,9 +869,25 @@ export async function requestUsdtPayout(input: {
       status: "requested",
       network: input.network,
       address: input.address,
+      book,
     })
     .select("id")
     .single();
+  if (inserted.error && schemaGap(inserted.error) && book === "affiliate") {
+    inserted = await supabase
+      .from("membership_payouts")
+      .insert({
+        user_id: input.userId,
+        method: "usdt",
+        amount_usd: amountUsd,
+        status: "requested",
+        network: input.network,
+        address: input.address,
+      })
+      .select("id")
+      .single();
+  }
+  const { data, error } = inserted;
   if (error || !data) {
     return { ok: false, error: error?.message ?? "Could not request payout." };
   }
@@ -852,7 +910,7 @@ export async function requestUsdtPayout(input: {
     .from("membership_wallet_entries")
     .insert({
       user_id: input.userId,
-      book: "affiliate",
+      book,
       kind: "withdraw",
       amount_usd: amountUsd,
       external_id: `payout:${payoutId}`,
@@ -959,13 +1017,21 @@ async function loadPayout(
   if (!supabase) {
     return null;
   }
-  const { data } = await supabase
+  const full = await supabase
     .from("membership_payouts")
-    .select(
-      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at, payout_file_id",
-    )
+    .select(PAYOUT_COLUMNS_FULL)
     .eq("id", payoutId)
     .maybeSingle();
+  const data =
+    full.error && schemaGap(full.error)
+      ? (
+          await supabase
+            .from("membership_payouts")
+            .select(PAYOUT_COLUMNS)
+            .eq("id", payoutId)
+            .maybeSingle()
+        ).data
+      : full.data;
   if (!data) {
     return null;
   }
@@ -1002,6 +1068,7 @@ function mapPayout(row: Record<string, unknown>): PayoutRow | null {
     paidAt: typeof row.paid_at === "string" ? row.paid_at : null,
     payoutFileId:
       typeof row.payout_file_id === "string" ? row.payout_file_id : null,
+    book: parsePayoutBook(row.book),
   };
 }
 
@@ -1048,7 +1115,7 @@ export async function rejectPayout(
       .from("membership_wallet_entries")
       .insert({
         user_id: payout.userId,
-        book: "affiliate",
+        book: payout.book,
         kind: "adjust",
         amount_usd: payout.amountUsd,
         external_id: `payout-reject:${payoutId}`,
@@ -1111,18 +1178,32 @@ export async function markPayoutPaid(
   return { ok: true };
 }
 
-export async function listPayouts(limit = 80): Promise<PayoutRow[]> {
+export async function listPayouts(
+  limit = 80,
+  book: WalletBook = "affiliate",
+): Promise<PayoutRow[]> {
   const supabase = createServiceClient();
   if (!supabase) {
     return [];
   }
-  const { data } = await supabase
+  const full = await supabase
     .from("membership_payouts")
-    .select(
-      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at, payout_file_id",
-    )
+    .select(PAYOUT_COLUMNS_FULL)
+    .eq("book", book)
     .order("created_at", { ascending: false })
     .limit(limit);
+  const data =
+    full.error && schemaGap(full.error) && book === "affiliate"
+      ? (
+          await supabase
+            .from("membership_payouts")
+            .select(PAYOUT_COLUMNS)
+            .order("created_at", { ascending: false })
+            .limit(limit)
+        ).data
+      : full.error && schemaGap(full.error)
+        ? []
+        : full.data;
   const rows = (data ?? [])
     .map((row) => mapPayout(row as Record<string, unknown>))
     .filter((row): row is PayoutRow => row !== null);
@@ -1162,41 +1243,71 @@ function mapPayoutFile(row: Record<string, unknown>): PayoutFileRow | null {
     externalId: typeof row.external_id === "string" ? row.external_id : null,
     createdAt: String(row.created_at),
     paidAt: typeof row.paid_at === "string" ? row.paid_at : null,
+    book: parsePayoutBook(row.book),
   };
 }
 
-export async function listPayoutFiles(limit = 80): Promise<PayoutFileRow[]> {
+export async function listPayoutFiles(
+  limit = 80,
+  book: WalletBook = "affiliate",
+): Promise<PayoutFileRow[]> {
   const supabase = createServiceClient();
   if (!supabase) {
     return [];
   }
-  const { data } = await supabase
+  const full = await supabase
     .from("membership_payout_files")
-    .select(
-      "id, network, status, amount_usd, payout_count, external_id, created_at, paid_at",
-    )
+    .select(PAYOUT_FILE_COLUMNS_FULL)
+    .eq("book", book)
     .order("created_at", { ascending: false })
     .limit(limit);
+  const data =
+    full.error && schemaGap(full.error) && book === "affiliate"
+      ? (
+          await supabase
+            .from("membership_payout_files")
+            .select(PAYOUT_FILE_COLUMNS)
+            .order("created_at", { ascending: false })
+            .limit(limit)
+        ).data
+      : full.error && schemaGap(full.error)
+        ? []
+        : full.data;
   return (data ?? [])
     .map((row) => mapPayoutFile(row as Record<string, unknown>))
     .filter((row): row is PayoutFileRow => row !== null);
 }
 
-export async function loadAdminPayoutQueueStats(): Promise<AdminPayoutQueueStats> {
+export async function loadAdminPayoutQueueStats(
+  book: WalletBook = "affiliate",
+): Promise<AdminPayoutQueueStats> {
   const empty = summarizeAdminPayoutQueue([], 0);
   const supabase = createServiceClient();
   if (!supabase) {
     return empty;
   }
-  const [{ data }, files] = await Promise.all([
-    supabase
-      .from("membership_payouts")
-      .select("amount_usd, status, network, address"),
-    supabase
-      .from("membership_payout_files")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending"),
-  ]);
+  const payoutsQuery = supabase
+    .from("membership_payouts")
+    .select("amount_usd, status, network, address, book")
+    .eq("book", book);
+  const filesQuery = supabase
+    .from("membership_payout_files")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending")
+    .eq("book", book);
+  const [payoutsResult, files] = await Promise.all([payoutsQuery, filesQuery]);
+  const data =
+    payoutsResult.error &&
+    schemaGap(payoutsResult.error) &&
+    book === "affiliate"
+      ? (
+          await supabase
+            .from("membership_payouts")
+            .select("amount_usd, status, network, address")
+        ).data
+      : payoutsResult.error && schemaGap(payoutsResult.error)
+        ? []
+        : payoutsResult.data;
   const rows = (data ?? []).flatMap((row) => {
     const status = parsePayoutStatus(row.status);
     if (!status) {
@@ -1211,7 +1322,18 @@ export async function loadAdminPayoutQueueStats(): Promise<AdminPayoutQueueStats
       },
     ];
   });
-  return summarizeAdminPayoutQueue(rows, files.count ?? 0);
+  const pendingFileCount =
+    files.error && schemaGap(files.error) && book === "affiliate"
+      ? (
+          await supabase
+            .from("membership_payout_files")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "pending")
+        ).count ?? 0
+      : files.error && schemaGap(files.error)
+        ? 0
+        : files.count ?? 0;
+  return summarizeAdminPayoutQueue(rows, pendingFileCount);
 }
 
 export async function loadPayoutFile(
@@ -1221,13 +1343,21 @@ export async function loadPayoutFile(
   if (!supabase) {
     return null;
   }
-  const { data } = await supabase
+  const full = await supabase
     .from("membership_payout_files")
-    .select(
-      "id, network, status, amount_usd, payout_count, external_id, created_at, paid_at",
-    )
+    .select(PAYOUT_FILE_COLUMNS_FULL)
     .eq("id", fileId)
     .maybeSingle();
+  const data =
+    full.error && schemaGap(full.error)
+      ? (
+          await supabase
+            .from("membership_payout_files")
+            .select(PAYOUT_FILE_COLUMNS)
+            .eq("id", fileId)
+            .maybeSingle()
+        ).data
+      : full.data;
   if (!data) {
     return null;
   }
@@ -1239,13 +1369,21 @@ export async function listPayoutsForFile(fileId: string): Promise<PayoutRow[]> {
   if (!supabase) {
     return [];
   }
-  const { data } = await supabase
+  const full = await supabase
     .from("membership_payouts")
-    .select(
-      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at, payout_file_id",
-    )
+    .select(PAYOUT_COLUMNS_FULL)
     .eq("payout_file_id", fileId)
     .order("created_at", { ascending: true });
+  const data =
+    full.error && schemaGap(full.error)
+      ? (
+          await supabase
+            .from("membership_payouts")
+            .select(PAYOUT_COLUMNS)
+            .eq("payout_file_id", fileId)
+            .order("created_at", { ascending: true })
+        ).data
+      : full.data;
   const rows = (data ?? [])
     .map((row) => mapPayout(row as Record<string, unknown>))
     .filter((row): row is PayoutRow => row !== null);
@@ -1259,13 +1397,23 @@ export async function generatePayoutFiles(
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
-  const { data, error } = await supabase
+  const book = input.book ?? "affiliate";
+  const full = await supabase
     .from("membership_payouts")
-    .select(
-      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at, payout_file_id",
-    )
+    .select(PAYOUT_COLUMNS_FULL)
+    .eq("book", book)
     .in("status", ["requested", "approved"])
     .order("created_at", { ascending: true });
+  const fallback =
+    full.error && schemaGap(full.error) && book === "affiliate"
+      ? await supabase
+          .from("membership_payouts")
+          .select(PAYOUT_COLUMNS)
+          .in("status", ["requested", "approved"])
+          .order("created_at", { ascending: true })
+      : null;
+  const error = fallback ? fallback.error : full.error;
+  const data = fallback ? fallback.data : full.data;
   if (error) {
     return { ok: false, error: error.message };
   }
@@ -1301,7 +1449,7 @@ export async function generatePayoutFiles(
       maxAmountUsd: input.maxAmountUsd,
     });
     for (const chunk of chunks) {
-      const created = await createPayoutFile(supabase, network, chunk);
+      const created = await createPayoutFile(supabase, network, chunk, book);
       if (!created.ok) {
         return created;
       }
@@ -1323,6 +1471,7 @@ async function createPayoutFile(
   supabase: NonNullable<ReturnType<typeof createServiceClient>>,
   network: string,
   rows: PayoutRow[],
+  book: WalletBook,
 ): Promise<
   | { ok: true; file: PayoutFileRow | null }
   | { ok: false; error: string }
@@ -1330,18 +1479,30 @@ async function createPayoutFile(
   const amountUsd = roundUsd(
     rows.reduce((sum, row) => sum + row.amountUsd, 0),
   );
-  const { data: created, error: createError } = await supabase
+  let createdRow = await supabase
     .from("membership_payout_files")
     .insert({
       network,
       status: "pending",
       amount_usd: amountUsd,
       payout_count: rows.length,
+      book,
     })
-    .select(
-      "id, network, status, amount_usd, payout_count, external_id, created_at, paid_at",
-    )
+    .select(PAYOUT_FILE_COLUMNS_FULL)
     .single();
+  if (createdRow.error && schemaGap(createdRow.error) && book === "affiliate") {
+    createdRow = await supabase
+      .from("membership_payout_files")
+      .insert({
+        network,
+        status: "pending",
+        amount_usd: amountUsd,
+        payout_count: rows.length,
+      })
+      .select(PAYOUT_FILE_COLUMNS)
+      .single();
+  }
+  const { data: created, error: createError } = createdRow;
   if (createError || !created) {
     return {
       ok: false,
@@ -1412,9 +1573,7 @@ export async function markPayoutFilePaid(
   }
   const { data: fileRow } = await supabase
     .from("membership_payout_files")
-    .select(
-      "id, network, status, amount_usd, payout_count, external_id, created_at, paid_at",
-    )
+    .select(PAYOUT_FILE_COLUMNS_FULL)
     .eq("id", fileId)
     .maybeSingle();
   const file = fileRow
@@ -1924,19 +2083,34 @@ async function listEarnerCommissions(userId: string): Promise<CommissionRow[]> {
     .filter((row): row is CommissionRow => row !== null);
 }
 
-export async function listMemberPayouts(userId: string): Promise<PayoutRow[]> {
+export async function listMemberPayouts(
+  userId: string,
+  book: WalletBook = "affiliate",
+): Promise<PayoutRow[]> {
   const supabase = createServiceClient();
   if (!supabase) {
     return [];
   }
-  const { data } = await supabase
+  const full = await supabase
     .from("membership_payouts")
-    .select(
-      "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at, payout_file_id",
-    )
+    .select(PAYOUT_COLUMNS_FULL)
     .eq("user_id", userId)
+    .eq("book", book)
     .order("created_at", { ascending: false })
     .limit(50);
+  const data =
+    full.error && schemaGap(full.error) && book === "affiliate"
+      ? (
+          await supabase
+            .from("membership_payouts")
+            .select(PAYOUT_COLUMNS)
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(50)
+        ).data
+      : full.error && schemaGap(full.error)
+        ? []
+        : full.data;
   return (data ?? [])
     .map((row) => mapPayout(row as Record<string, unknown>))
     .filter((row): row is PayoutRow => row !== null);

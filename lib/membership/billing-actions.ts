@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import {
   billingPath,
   decideUpgrade,
+  embeddedCardReturnUrl,
   embeddedCheckoutReturnUrl,
   hasUsableStripeSubscription,
   parseBillingMethod,
@@ -305,27 +306,61 @@ function isNextRedirect(error: unknown): boolean {
   );
 }
 
-export async function openCustomerPortalAction() {
+export async function createEmbeddedCardSecret(): Promise<EmbeddedCheckoutResult> {
   const member = await getSessionMember();
   if (!member) {
-    redirect("/sign-in");
-    return;
+    return { ok: false, error: "Sign in to continue." };
   }
   const billing = await getMemberBilling(member.id);
-  if (!billing?.stripeCustomerId) {
-    fail("No card customer yet. Upgrade with Card first.");
+  if (billing?.billingMethod === "wallet") {
+    return {
+      ok: false,
+      error: "Switch to Credit Card (Stripe) and save the method first.",
+    };
   }
   const stripe = getStripe();
   const origin = await billingOrigin();
-  if (!stripe || !origin) {
-    fail("Stripe is not configured.");
+  if (!stripeSecretConfigured() || !stripe || !origin) {
+    return {
+      ok: false,
+      error:
+        "Stripe is not configured. Add STRIPE_SECRET_KEY, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, and APP_BASE_URL on this environment.",
+    };
   }
-  const session = await stripe.billingPortal.sessions.create({
-    customer: billing.stripeCustomerId,
-    return_url: `${origin}/account/billing`,
-  });
-  if (!session.url) {
-    fail("Stripe did not return a portal URL.");
+  try {
+    let customerId = billing?.stripeCustomerId ?? null;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: member.email,
+        name: member.name,
+        metadata: { userId: member.id },
+      });
+      customerId = customer.id;
+      await saveStripeCustomerIds({
+        userId: member.id,
+        stripeCustomerId: customerId,
+      });
+    }
+    const session = await stripe.checkout.sessions.create({
+      ui_mode: "embedded_page",
+      mode: "setup",
+      customer: customerId,
+      currency: "usd",
+      client_reference_id: member.id,
+      redirect_on_completion: "if_required",
+      return_url: embeddedCardReturnUrl(origin),
+      branding_settings: stripeCheckoutBranding(),
+      metadata: { userId: member.id, purpose: "manage_card" },
+    });
+    const clientSecret = session.client_secret;
+    if (!clientSecret) {
+      return { ok: false, error: "Stripe did not return a card client secret." };
+    }
+    return { ok: true, clientSecret };
+  } catch (cause) {
+    return {
+      ok: false,
+      error: cause instanceof Error ? cause.message : "Stripe card form failed.",
+    };
   }
-  redirect(session.url);
 }

@@ -7,6 +7,11 @@ import {
   type MemberBilling,
   type MembershipInvoice,
 } from "./billing";
+
+export type AdminInvoice = MembershipInvoice & {
+  userId: string;
+  email: string | null;
+};
 import {
   createCommissionsForInvoice,
   voidPendingCommissionsForInvoice,
@@ -272,6 +277,38 @@ export async function markStripeInvoiceRefunded(
   return { ok: true };
 }
 
+function mapInvoice(
+  row: Record<string, unknown>,
+  names: Map<string, string>,
+): MembershipInvoice | null {
+  const method = parseInvoiceMethod(row.method);
+  const status = parseInvoiceStatus(row.status);
+  if (!method || !status) {
+    return null;
+  }
+  const planId = String(row.plan_id);
+  return {
+    id: String(row.id),
+    planId,
+    planName: names.get(planId) ?? "Plan",
+    method,
+    externalId: typeof row.external_id === "string" ? row.external_id : null,
+    amountUsd: Number(row.amount_usd),
+    status,
+    periodStart:
+      typeof row.period_start === "string" ? row.period_start : null,
+    periodEnd: typeof row.period_end === "string" ? row.period_end : null,
+    createdAt: String(row.created_at),
+  };
+}
+
+async function planNames(): Promise<Map<string, string>> {
+  const listed = await listMembershipPlans();
+  return new Map(
+    (listed.ok ? listed.plans : []).map((plan) => [plan.id, plan.name]),
+  );
+}
+
 export async function listMemberInvoices(
   userId: string,
 ): Promise<MembershipInvoice[]> {
@@ -287,33 +324,56 @@ export async function listMemberInvoices(
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(50);
-  const rows = data ?? [];
-  const listed = await listMembershipPlans();
-  const names = new Map(
-    (listed.ok ? listed.plans : []).map((plan) => [plan.id, plan.name]),
-  );
-  const invoices: MembershipInvoice[] = [];
-  for (const row of rows) {
-    const method = parseInvoiceMethod(row.method);
-    const status = parseInvoiceStatus(row.status);
-    if (!method || !status) {
-      continue;
-    }
-    const planId = String(row.plan_id);
-    invoices.push({
-      id: String(row.id),
-      planId,
-      planName: names.get(planId) ?? "Plan",
-      method,
-      externalId:
-        typeof row.external_id === "string" ? row.external_id : null,
-      amountUsd: Number(row.amount_usd),
-      status,
-      periodStart:
-        typeof row.period_start === "string" ? row.period_start : null,
-      periodEnd: typeof row.period_end === "string" ? row.period_end : null,
-      createdAt: String(row.created_at),
-    });
+  const names = await planNames();
+  return (data ?? [])
+    .map((row) => mapInvoice(row as Record<string, unknown>, names))
+    .filter((row): row is MembershipInvoice => row !== null);
+}
+
+export async function listAdminInvoices(
+  limit = 200,
+): Promise<AdminInvoice[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
   }
-  return invoices;
+  const { data } = await supabase
+    .from("membership_invoices")
+    .select(
+      "id, user_id, plan_id, method, external_id, amount_usd, status, period_start, period_end, created_at",
+    )
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  const names = await planNames();
+  const invoices = (data ?? []).flatMap((row) => {
+    const mapped = mapInvoice(row as Record<string, unknown>, names);
+    if (!mapped) {
+      return [];
+    }
+    return [
+      {
+        ...mapped,
+        userId: String(row.user_id),
+        email: null as string | null,
+      },
+    ];
+  });
+  const userIds = [...new Set(invoices.map((row) => row.userId))];
+  if (userIds.length === 0) {
+    return invoices;
+  }
+  const { data: members } = await supabase
+    .from("members")
+    .select("user_id, email")
+    .in("user_id", userIds);
+  const emails = new Map(
+    (members ?? []).map((member) => [
+      String(member.user_id),
+      String(member.email),
+    ]),
+  );
+  return invoices.map((row) => ({
+    ...row,
+    email: emails.get(row.userId) ?? null,
+  }));
 }

@@ -6,6 +6,7 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { StripeEmbeddedCheckout } from "@/components/stripe-embedded-checkout";
 import {
   CryptoWalletPanel,
+  LiveMainWallet,
   TopUpWallet,
 } from "@/components/crypto-wallet-panel";
 import { type BillingMethod } from "@/lib/membership/billing";
@@ -63,6 +64,7 @@ export function CheckoutPayment({
   const cryptoSaved = selected === "wallet";
 
   return (
+    <LiveMainWallet initialMainUsd={creditUsd}>
     <div className="mt-6 grid items-start gap-5 lg:grid-cols-[minmax(22rem,28rem)_minmax(26rem,1fr)]">
       <div className="space-y-5">
         <section className="rounded-card border border-line bg-surface p-5">
@@ -178,5 +180,6 @@ export function CheckoutPayment({
         )}
       </section>
     </div>
+    </LiveMainWallet>
   );
 }

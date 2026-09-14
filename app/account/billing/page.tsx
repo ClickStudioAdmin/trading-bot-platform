@@ -8,22 +8,29 @@ import {
   SUBSCRIPTION_STATUS_LABELS,
   formatUsd,
 } from "@/lib/membership/billing";
-import {
-  openCustomerPortalAction,
-  setBillingMethodAction,
-} from "@/lib/membership/billing-actions";
+import { setBillingMethodAction } from "@/lib/membership/billing-actions";
+import { StripeEmbeddedCard } from "@/components/stripe-embedded-checkout";
 import {
   CryptoWalletPanel,
+  LiveMainWallet,
   TopUpWallet,
 } from "@/components/crypto-wallet-panel";
 import {
   getMemberBilling,
   listMemberInvoices,
 } from "@/lib/membership/billing-store";
-import { loadMemberDepositContext } from "@/lib/membership/wallet-store";
+import {
+  listMainWalletLedger,
+  loadMainWalletWithdrawContext,
+  loadMemberDepositContext,
+} from "@/lib/membership/wallet-store";
 import { formatPlanPrice, planIsArchived } from "@/lib/membership/catalog";
 import { getMembershipPlan } from "@/lib/membership/store";
-import { stripeSecretConfigured } from "@/lib/membership/stripe";
+import {
+  stripePublishableConfigured,
+  stripePublishableKey,
+  stripeSecretConfigured,
+} from "@/lib/membership/stripe";
 import { firstSearchValue } from "@/lib/paper/open";
 import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
 import { redirect } from "next/navigation";
@@ -53,15 +60,27 @@ export default async function AccountBillingPage({
   }
   const deposited = firstSearchValue(params.deposited);
   const scanned = firstSearchValue(params.scanned) === "1";
+  const showCardTab = billing.billingMethod === "stripe";
+  const requestedTab = firstSearchValue(params.tab);
   const tab =
-    firstSearchValue(params.tab) === "invoices" ? "invoices" : "overview";
-  const [currentPlan, invoices, deposit] = await Promise.all([
+    requestedTab === "invoices"
+      ? "invoices"
+      : requestedTab === "ledger"
+        ? "ledger"
+        : requestedTab === "card" && showCardTab
+          ? "card"
+          : "overview";
+  const [currentPlan, invoices, deposit, ledger, withdraw] = await Promise.all([
     tab === "overview"
       ? getMembershipPlan(billing.planId)
       : Promise.resolve(null),
     tab === "invoices" ? listMemberInvoices(member.id) : Promise.resolve([]),
     tab === "overview"
       ? loadMemberDepositContext(member.id)
+      : Promise.resolve(null),
+    tab === "ledger" ? listMainWalletLedger(member.id) : Promise.resolve([]),
+    tab === "overview"
+      ? loadMainWalletWithdrawContext(member.id)
       : Promise.resolve(null),
   ]);
   const plan = currentPlan?.ok ? currentPlan.plan : null;
@@ -89,11 +108,25 @@ export default async function AccountBillingPage({
           Overview
         </TabLink>
         <TabLink
+          href="/account/billing?tab=ledger"
+          selected={tab === "ledger"}
+        >
+          Account ledger
+        </TabLink>
+        <TabLink
           href="/account/billing?tab=invoices"
           selected={tab === "invoices"}
         >
           Invoices
         </TabLink>
+        {showCardTab ? (
+          <TabLink
+            href="/account/billing?tab=card"
+            selected={tab === "card"}
+          >
+            Card
+          </TabLink>
+        ) : null}
       </nav>
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -102,6 +135,14 @@ export default async function AccountBillingPage({
       ) : null}
       {saved === "method" ? (
         <p className="mt-6 text-sm text-success">Payment method saved.</p>
+      ) : null}
+      {saved === "card" ? (
+        <p className="mt-6 text-sm text-success">Card details saved.</p>
+      ) : null}
+      {saved === "withdraw" ? (
+        <p className="mt-6 text-sm text-success">
+          Withdraw requested. It will go out on the next payout list.
+        </p>
       ) : null}
       {upgraded === "1" ? (
         <p className="mt-6 text-sm text-success">
@@ -141,6 +182,7 @@ export default async function AccountBillingPage({
 
       {tab === "overview" ? (
         <>
+      <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
       <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">Current plan</h2>
@@ -185,15 +227,6 @@ export default async function AccountBillingPage({
               >
                 Save method
               </PendingSubmitButton>
-              {billing.stripeCustomerId ? (
-                <PendingSubmitButton
-                  formAction={openCustomerPortalAction}
-                  pendingLabel="Opening…"
-                  className="rounded-control border border-line px-4 py-2 text-sm text-ink hover:border-line-strong"
-                >
-                  Manage card
-                </PendingSubmitButton>
-              ) : null}
             </div>
           </form>
         </section>
@@ -209,6 +242,7 @@ export default async function AccountBillingPage({
             deductOn={billing.paySubscriptionFromCredit}
             affiliateNote={billing.paySubscriptionFromAffiliate}
             booksOnly
+            withdraw={withdraw ?? undefined}
           />
         </section>
 
@@ -222,7 +256,73 @@ export default async function AccountBillingPage({
           />
         </section>
       </div>
+      </LiveMainWallet>
         </>
+      ) : tab === "ledger" ? (
+      <section className="mt-6 rounded-card border border-line bg-surface p-5">
+        <h2 className="text-lg font-semibold tracking-tight">Account ledger</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Running Main Wallet activity: deposits, plan payments, withdrawals,
+          and transfers from Affiliate when you deduct from earnings.
+        </p>
+        {ledger.length === 0 ? (
+          <p className="mt-4 text-sm text-ink-muted">No Main Wallet activity yet.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                <tr>
+                  <th className="pb-2 pr-4 font-medium">Date</th>
+                  <th className="pb-2 pr-4 font-medium">Description</th>
+                  <th className="pb-2 pr-4 font-medium">Amount</th>
+                  <th className="pb-2 font-medium">Balance</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {ledger.map((row) => {
+                  const created = parseDisplayTime(row.createdAt);
+                  const credit = row.deltaUsd >= 0;
+                  return (
+                    <tr key={row.id}>
+                      <td className="py-2 pr-4 whitespace-nowrap text-ink-muted">
+                        {created ? formatLocalDate(created) : "—"}
+                      </td>
+                      <td className="py-2 pr-4 text-ink">{row.label}</td>
+                      <td
+                        className={`py-2 pr-4 tabular-nums ${
+                          credit ? "text-success" : "text-danger"
+                        }`}
+                      >
+                        {credit ? "+" : "−"}
+                        {formatUsd(Math.abs(row.deltaUsd))}
+                      </td>
+                      <td className="py-2 tabular-nums text-ink">
+                        {formatUsd(row.balanceUsd)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+      ) : tab === "card" ? (
+      <section className="mt-6 overflow-hidden rounded-card border border-line bg-surface p-5">
+        <h2 className="text-lg font-semibold tracking-tight">Manage card</h2>
+        <p className="mt-1 text-sm text-ink-muted">
+          Update the card Stripe charges. You stay on this page.
+        </p>
+        {!stripeReady || !stripePublishableConfigured() ? (
+          <p className="mt-4 text-sm text-warning">
+            Stripe is not configured on this environment.
+          </p>
+        ) : (
+          <div className="mt-4">
+            <StripeEmbeddedCard publishableKey={stripePublishableKey()} />
+          </div>
+        )}
+      </section>
       ) : (
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold tracking-tight">Invoices</h2>

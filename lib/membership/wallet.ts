@@ -153,6 +153,48 @@ export function walletInvoiceExternalId(
   return `wallet:${userId}:${periodStartIso}`;
 }
 
+export function mainWalletLedgerLabel(
+  kind: string,
+  memo?: string | null,
+): string {
+  if (kind === "deposit") {
+    return "Deposit";
+  }
+  if (kind === "debit_rent") {
+    return "Plan payment";
+  }
+  if (kind === "transfer_in") {
+    return "Transfer from Affiliate";
+  }
+  if (kind === "transfer_out") {
+    return "Transfer to Main";
+  }
+  if (kind === "withdraw") {
+    return "Withdrawal";
+  }
+  if (kind === "commission") {
+    return "Commission";
+  }
+  const note = String(memo ?? "").trim();
+  if (note) {
+    return note;
+  }
+  if (kind === "adjust") {
+    return "Adjustment";
+  }
+  return kind;
+}
+
+export function withRunningBalances<T extends WalletEntryLike>(
+  rowsOldestFirst: readonly T[],
+): Array<T & { balanceUsd: number }> {
+  let balance = 0;
+  return rowsOldestFirst.map((row) => {
+    balance = roundUsd(balance + walletEntryDelta(row.kind, row.amountUsd));
+    return { ...row, balanceUsd: balance };
+  });
+}
+
 export function explorerAddressUrl(
   explorerUrl: string | null,
   address: string,

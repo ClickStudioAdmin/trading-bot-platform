@@ -20,10 +20,12 @@ export async function GET(
     ),
   );
   const network = payouts[0]?.network?.replace(/[^a-z0-9-]/gi, "") || "payout";
+  const prefix =
+    payouts[0]?.book === "main" ? "wallet-withdraw" : "affiliate-payout";
   return new Response(csv, {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename=affiliate-payout-${network}-${id.slice(0, 8)}.csv`,
+      "content-disposition": `attachment; filename=${prefix}-${network}-${id.slice(0, 8)}.csv`,
     },
   });
 }

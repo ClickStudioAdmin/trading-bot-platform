@@ -11,13 +11,27 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { Hex } from "viem";
 import { createDepositMnemonic, deriveDepositAddress } from "./hd";
 import { DEFAULT_GAS_LOW_ETH, parseGasLowEth } from "./gas-drip";
-import { sumPayableAffiliateUsd } from "./affiliate-store";
+import {
+  listMemberPayouts,
+  loadAffiliatePayoutSettings,
+  loadAffiliateSettings,
+  loadMemberArrears,
+  sumPayableAffiliateUsd,
+  type PayoutRow,
+} from "./affiliate-store";
+import {
+  isOpenWalletWithdraw,
+  withdrawDecision,
+} from "./affiliate";
 import {
   billingChainEnvironment,
   bookBalancesFromEntries,
   inferWalletBook,
+  mainWalletLedgerLabel,
   parseTokenKind,
+  walletEntryDelta,
   walletInvoiceExternalId,
+  withRunningBalances,
   WALLET_PERIOD_MS,
   type BillingChainEnvironment,
   type TokenKind,
@@ -757,6 +771,108 @@ export type MemberDepositContext = {
   tokens: BillingToken[];
   hdReady: boolean;
 };
+
+export type WalletLedgerRow = {
+  id: string;
+  kind: string;
+  amountUsd: number;
+  memo: string | null;
+  createdAt: string;
+  label: string;
+  deltaUsd: number;
+  balanceUsd: number;
+};
+
+export async function listMainWalletLedger(
+  userId: string,
+): Promise<WalletLedgerRow[]> {
+  const supabase = createServiceClient();
+  if (!supabase || !userId) {
+    return [];
+  }
+  const full = await supabase
+    .from("membership_wallet_entries")
+    .select("id, kind, amount_usd, memo, created_at, book")
+    .eq("user_id", userId)
+    .eq("book", "main")
+    .order("created_at", { ascending: true })
+    .limit(200);
+  const data =
+    full.error &&
+    (full.error.code === "42703" || /does not exist/i.test(full.error.message ?? ""))
+      ? (
+          await supabase
+            .from("membership_wallet_entries")
+            .select("id, kind, amount_usd, memo, created_at")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: true })
+            .limit(200)
+        ).data
+      : full.error
+        ? []
+        : full.data;
+  const rows = (data ?? [])
+    .map((row) => {
+      const kind = String(row.kind);
+      const book =
+        "book" in row && typeof row.book === "string" ? row.book : null;
+      if (inferWalletBook(kind, book) !== "main") {
+        return null;
+      }
+      return {
+        id: String(row.id),
+        kind,
+        amountUsd: Number(row.amount_usd),
+        memo: typeof row.memo === "string" ? row.memo : null,
+        createdAt: String(row.created_at),
+      };
+    })
+    .filter((row): row is Omit<WalletLedgerRow, "label" | "deltaUsd" | "balanceUsd"> => row !== null);
+  return withRunningBalances(rows)
+    .reverse()
+    .map((row) => ({
+      ...row,
+      label: mainWalletLedgerLabel(row.kind, row.memo),
+      deltaUsd: walletEntryDelta(row.kind, row.amountUsd),
+    }));
+}
+
+export type MainWalletWithdrawContext = {
+  minPayoutUsd: number;
+  mainUsd: number;
+  chains: BillingChain[];
+  network: string | null;
+  address: string | null;
+  pending: PayoutRow[];
+  withdraw: ReturnType<typeof withdrawDecision>;
+};
+
+export async function loadMainWalletWithdrawContext(
+  userId: string,
+): Promise<MainWalletWithdrawContext> {
+  const [program, payoutSettings, chains, arrears, payouts, books] =
+    await Promise.all([
+      loadAffiliateSettings(),
+      loadAffiliatePayoutSettings(userId),
+      listAffiliatePayoutChains(),
+      loadMemberArrears(userId),
+      listMemberPayouts(userId, "main"),
+      walletBookBalances(userId),
+    ]);
+  return {
+    minPayoutUsd: program.minPayoutUsd,
+    mainUsd: books.main,
+    chains,
+    network: payoutSettings.network,
+    address: payoutSettings.address,
+    pending: payouts.filter((row) => isOpenWalletWithdraw(row.status)),
+    withdraw: withdrawDecision({
+      arrears,
+      payableUsd: books.main,
+      minPayoutUsd: program.minPayoutUsd,
+    }),
+  };
+}
 
 export async function loadMemberDepositContext(
   userId: string,

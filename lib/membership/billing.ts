@@ -101,6 +101,16 @@ export function parseInvoiceStatus(value: unknown): InvoiceStatus | null {
     : null;
 }
 
+export function invoiceMethodLabel(method: InvoiceMethod): string {
+  if (method === "stripe") {
+    return "Card";
+  }
+  if (method === "wallet") {
+    return "Crypto";
+  }
+  return "Comp";
+}
+
 export function billingPath(
   query: Record<string, string | undefined> = {},
 ): string {
@@ -178,6 +188,11 @@ export function hasUsableStripeSubscription(billing: {
 export function embeddedCheckoutReturnUrl(origin: string): string {
   const base = origin.trim().replace(/\/$/, "");
   return `${base}/account/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
+}
+
+export function embeddedCardReturnUrl(origin: string): string {
+  const base = origin.trim().replace(/\/$/, "");
+  return `${base}/account/billing?tab=card&saved=card&session_id={CHECKOUT_SESSION_ID}`;
 }
 
 export function stripeCheckoutBranding() {

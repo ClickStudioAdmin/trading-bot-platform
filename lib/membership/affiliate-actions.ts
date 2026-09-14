@@ -24,6 +24,8 @@ import {
   parsePayoutAddress,
   parsePayoutAmount,
   withdrawAmountDecision,
+  adminPayoutsPath,
+  parsePayoutBook,
   parsePayoutFileMaxAmount,
   parsePayoutFileMaxRows,
   parsePayoutFileNetwork,
@@ -33,6 +35,7 @@ import {
   parseAffiliateAlias,
   type AffiliatePortalTab,
 } from "./affiliate";
+import type { WalletBook } from "./wallet";
 import { listAffiliatePayoutChains } from "./wallet-store";
 import { parseUuid } from "./wallet-form";
 import {
@@ -64,8 +67,16 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-function adminFail(error: string): never {
-  redirect(`/admin/affiliates?error=${encodeURIComponent(error)}`);
+function adminFail(error: string, book: WalletBook = "affiliate"): never {
+  redirect(adminPayoutsPath(book, { error }));
+}
+
+function revalidatePayoutSurfaces() {
+  revalidatePath("/admin/affiliates");
+  revalidatePath("/admin/billing");
+  revalidatePath(AFFILIATES_PATH);
+  revalidatePath("/account/affiliates");
+  revalidatePath("/account/billing");
 }
 
 function settingsFail(error: string): never {
@@ -153,74 +164,79 @@ export async function saveAffiliateSettingsAction(formData: FormData) {
 
 export async function approvePayoutAction(formData: FormData) {
   const admin = await requireAdmin();
+  const book = parsePayoutBook(formData.get("book"));
   const payoutId = parseUuid(formData.get("payoutId"));
   if (!payoutId) {
-    adminFail("Missing payout.");
+    adminFail("Missing payout.", book);
   }
   const saved = await approvePayout(payoutId);
   if (!saved.ok) {
-    adminFail(saved.error);
+    adminFail(saved.error, book);
   }
   await writeEventLog({
     scope: "system",
     event: "membership.payout_approved",
     message: "Approved an affiliate payout",
     userId: admin.id,
-    data: { payoutId },
+    data: { payoutId, book },
   });
-  revalidatePath("/admin/affiliates");
-  redirect("/admin/affiliates?saved=approved");
+  revalidatePayoutSurfaces();
+  redirect(adminPayoutsPath(book, { saved: "approved" }));
 }
 
 export async function rejectPayoutAction(formData: FormData) {
   const admin = await requireAdmin();
+  const book = parsePayoutBook(formData.get("book"));
   const payoutId = parseUuid(formData.get("payoutId"));
   if (!payoutId) {
-    adminFail("Missing payout.");
+    adminFail("Missing payout.", book);
   }
   const saved = await rejectPayout(payoutId);
   if (!saved.ok) {
-    adminFail(saved.error);
+    adminFail(saved.error, book);
   }
   await writeEventLog({
     scope: "system",
     event: "membership.payout_rejected",
-    message: "Rejected an affiliate payout",
+    message: "Rejected a payout request",
     userId: admin.id,
-    data: { payoutId },
+    data: { payoutId, book },
   });
-  revalidatePath("/admin/affiliates");
-  revalidatePath(AFFILIATES_PATH);
-  revalidatePath("/account/affiliates");
-  redirect("/admin/affiliates?saved=rejected");
+  revalidatePayoutSurfaces();
+  redirect(adminPayoutsPath(book, { saved: "rejected" }));
 }
 
 export async function generatePayoutFilesAction(formData: FormData) {
   const admin = await requireAdmin();
+  const book = parsePayoutBook(formData.get("book"));
   const maxRows = parsePayoutFileMaxRows(formData.get("maxRows"));
   if (!maxRows.ok) {
-    adminFail(maxRows.error);
+    adminFail(maxRows.error, book);
   }
   const maxAmount = parsePayoutFileMaxAmount(formData.get("maxAmountUsd"));
   if (!maxAmount.ok) {
-    adminFail(maxAmount.error);
+    adminFail(maxAmount.error, book);
   }
   const network = parsePayoutFileNetwork(formData.get("network"));
   if (!network.ok) {
-    adminFail(network.error);
+    adminFail(network.error, book);
   }
   const saved = await generatePayoutFiles({
     maxRows: maxRows.maxRows,
     maxAmountUsd: maxAmount.maxAmountUsd,
     network: network.network,
+    book,
   });
   if (!saved.ok) {
-    adminFail(saved.error);
+    adminFail(saved.error, book);
   }
   await writeEventLog({
     scope: "system",
     event: "membership.payout_file_created",
-    message: "Generated affiliate payout lists",
+    message:
+      book === "main"
+        ? "Generated wallet withdrawal lists"
+        : "Generated affiliate payout lists",
     userId: admin.id,
     data: {
       fileIds: saved.files.map((file) => file.id),
@@ -228,62 +244,62 @@ export async function generatePayoutFilesAction(formData: FormData) {
       maxRows: maxRows.maxRows,
       maxAmountUsd: maxAmount.maxAmountUsd,
       network: network.network,
+      book,
     },
   });
-  revalidatePath("/admin/affiliates");
-  revalidatePath(AFFILIATES_PATH);
-  revalidatePath("/account/affiliates");
+  revalidatePayoutSurfaces();
   redirect(
-    `/admin/affiliates?saved=files&count=${encodeURIComponent(String(saved.files.length))}`,
+    adminPayoutsPath(book, {
+      saved: "files",
+      count: String(saved.files.length),
+    }),
   );
 }
 
 export async function markPayoutFilePaidAction(formData: FormData) {
   const admin = await requireAdmin();
+  const book = parsePayoutBook(formData.get("book"));
   const fileId = parseUuid(formData.get("fileId"));
   if (!fileId) {
-    adminFail("Missing payout file.");
+    adminFail("Missing payout file.", book);
   }
   const externalId = String(formData.get("externalId") ?? "").trim() || null;
   const saved = await markPayoutFilePaid(fileId, externalId);
   if (!saved.ok) {
-    adminFail(saved.error);
+    adminFail(saved.error, book);
   }
   await writeEventLog({
     scope: "system",
     event: "membership.payout_file_paid",
-    message: "Marked an affiliate payout file paid",
+    message: "Marked a payout file paid",
     userId: admin.id,
-    data: { fileId, externalId, payoutCount: saved.payoutCount },
+    data: { fileId, externalId, payoutCount: saved.payoutCount, book },
   });
-  revalidatePath("/admin/affiliates");
-  revalidatePath(AFFILIATES_PATH);
-  revalidatePath("/account/affiliates");
-  redirect("/admin/affiliates?saved=file-paid");
+  revalidatePayoutSurfaces();
+  redirect(adminPayoutsPath(book, { saved: "file-paid" }));
 }
 
 export async function markPayoutPaidAction(formData: FormData) {
   const admin = await requireAdmin();
+  const book = parsePayoutBook(formData.get("book"));
   const payoutId = parseUuid(formData.get("payoutId"));
   if (!payoutId) {
-    adminFail("Missing payout.");
+    adminFail("Missing payout.", book);
   }
   const externalId = String(formData.get("externalId") ?? "").trim() || null;
   const saved = await markPayoutPaid(payoutId, externalId);
   if (!saved.ok) {
-    adminFail(saved.error);
+    adminFail(saved.error, book);
   }
   await writeEventLog({
     scope: "system",
     event: "membership.payout_paid",
-    message: "Marked an affiliate payout paid",
+    message: "Marked a payout paid",
     userId: admin.id,
-    data: { payoutId, externalId },
+    data: { payoutId, externalId, book },
   });
-  revalidatePath("/admin/affiliates");
-  revalidatePath(AFFILIATES_PATH);
-  revalidatePath("/account/affiliates");
-  redirect("/admin/affiliates?saved=paid");
+  revalidatePayoutSurfaces();
+  redirect(adminPayoutsPath(book, { saved: "paid" }));
 }
 
 export async function requestAffiliatePayoutAction(formData: FormData) {
@@ -333,6 +349,7 @@ export async function requestAffiliatePayoutAction(formData: FormData) {
     network: network.network,
     address: address.address,
     amountUsd: amount.amountUsd,
+    book: "affiliate",
   });
   if (!requested.ok) {
     portalFail(requested.error, "payouts");

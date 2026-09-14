@@ -6,7 +6,7 @@ import {
   type AffiliateRateKey,
 } from "./catalog";
 import { isEvmAddress } from "./hd";
-import { roundUsd } from "./wallet";
+import { parseWalletBook, roundUsd, type WalletBook } from "./wallet";
 
 export const AFFILIATE_MAX_DEPTH_DEFAULT = 2;
 export const AFFILIATE_HOLD_DAYS_DEFAULT = 30;
@@ -692,7 +692,38 @@ export type GeneratePayoutFilesInput = {
   maxRows: number;
   maxAmountUsd: number | null;
   network: string | null;
+  book?: WalletBook;
 };
+
+export function parsePayoutBook(value: unknown): WalletBook {
+  return parseWalletBook(value) ?? "affiliate";
+}
+
+export function adminPayoutsPath(
+  book: WalletBook,
+  query: Record<string, string | undefined> = {},
+): string {
+  const params = new URLSearchParams();
+  if (book === "main") {
+    params.set("tab", "withdrawals");
+  }
+  for (const [key, value] of Object.entries(query)) {
+    if (value) {
+      params.set(key, value);
+    }
+  }
+  const encoded = params.toString();
+  const base = book === "main" ? "/admin/billing" : "/admin/affiliates";
+  return encoded ? `${base}?${encoded}` : base;
+}
+
+export function isOpenWalletWithdraw(status: PayoutStatus): boolean {
+  return (
+    status === "requested" ||
+    status === "approved" ||
+    status === "pending"
+  );
+}
 
 export function summarizeAdminPayoutQueue(
   rows: {
