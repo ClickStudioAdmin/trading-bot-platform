@@ -35,7 +35,7 @@ import type {
 
 const DEPOSIT_POLL_MS = 10_000;
 const DEPOSIT_INSTRUCTIONS =
-  "Send at least the amount due in a listed stablecoin. You can transfer more than Due Today. Any remaining balance will be used to cover future subscription payments when due.";
+  "Transfer at least the amount due in a listed stablecoin. You can transfer more than Due Today. Any remaining balance will be used to cover future subscription payments when due.";
 
 export function CheckoutPayment({
   planId,
