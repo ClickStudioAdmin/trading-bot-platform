@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { BillingMethodRadios } from "@/components/billing-method-radios";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { StripeEmbeddedCheckout } from "@/components/stripe-embedded-checkout";
@@ -13,7 +13,7 @@ import {
 import { formatUsd, type BillingMethod } from "@/lib/membership/billing";
 import {
   confirmStripePlanChangeAction,
-  saveCheckoutCryptoAction,
+  saveCheckoutMethodAction,
 } from "@/lib/membership/billing-actions";
 import { planDeductDecision } from "@/lib/membership/wallet";
 import type {

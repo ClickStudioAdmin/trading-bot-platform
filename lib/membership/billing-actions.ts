@@ -411,21 +411,31 @@ export async function confirmStripePlanChangeAction(formData: FormData) {
   }
 }
 
-export async function saveCheckoutCryptoAction(formData: FormData) {
+export async function saveCheckoutMethodAction(formData: FormData) {
   const member = await getSessionMember();
   if (!member) {
     redirect("/sign-in");
     return;
   }
   const planId = parsePlanId(String(formData.get("planId") ?? ""));
+  const method = parseBillingMethod(formData.get("billingMethod"));
+  if (!method) {
+    if (planId) {
+      failCheckout(planId, "Choose Card or Crypto.");
+    }
+    fail("Choose Card or Crypto.");
+  }
   const paySubscriptionFromCredit = parsePaySubscriptionFromCredit(
     formData.get("paySubscriptionFromCredit"),
   );
-  const saved = await saveBillingMethod(member.id, "wallet", {
+  const saved = await saveBillingMethod(member.id, method, {
     paySubscriptionFromCredit,
   });
   if (!saved.ok) {
-    fail(saved.error, planId ? { plan: planId } : {});
+    if (planId) {
+      failCheckout(planId, saved.error);
+    }
+    fail(saved.error);
   }
   const billing = await getMemberBilling(member.id);
   if (billing?.stripeSubscriptionId && stripeSecretConfigured()) {
@@ -433,22 +443,24 @@ export async function saveCheckoutCryptoAction(formData: FormData) {
     if (stripe) {
       try {
         await stripe.subscriptions.update(billing.stripeSubscriptionId, {
-          cancel_at_period_end: true,
+          cancel_at_period_end: method === "wallet",
         });
       } catch (cause) {
-        fail(
-          cause instanceof Error ? cause.message : "Stripe update failed.",
-          planId ? { plan: planId } : {},
-        );
+        const message =
+          cause instanceof Error ? cause.message : "Stripe update failed.";
+        if (planId) {
+          failCheckout(planId, message);
+        }
+        fail(message);
       }
     }
   }
   await writeEventLog({
     scope: "system",
     event: "membership.billing_method",
-    message: "Selected Crypto for upgrade",
+    message: `Selected ${method} at checkout`,
     userId: member.id,
-    data: { method: "wallet", planId, paySubscriptionFromCredit },
+    data: { method, planId, paySubscriptionFromCredit },
   });
   revalidatePath("/account/billing");
   revalidatePath("/account/billing/checkout");
