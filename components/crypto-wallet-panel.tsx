@@ -200,6 +200,7 @@ export function TopUpWallet({
   revealAddress = true,
   heading = "Top up Main Wallet",
   showCheck = true,
+  instructions,
 }: {
   address: DepositAddress | null;
   addressError: string | null;
@@ -210,16 +211,18 @@ export function TopUpWallet({
   revealAddress?: boolean;
   heading?: string | null;
   showCheck?: boolean;
+  instructions?: string;
 }) {
   const chain = chains[0] ?? null;
   const token =
     tokens.find((row) => row.chainId === chain?.id && row.kind === "stable") ??
     tokens[0] ??
     null;
-  const depositLabel =
-    token && chain
-      ? `Send ${token.symbol} on ${chain.name}`
-      : "Send the listed testnet token to this address";
+  const networkLabel = chain
+    ? token
+      ? `${chain.name} · ${token.symbol}`
+      : chain.name
+    : "—";
 
   return (
     <div id="top-up" className="space-y-3">
@@ -232,16 +235,25 @@ export function TopUpWallet({
         </p>
       ) : (
         <>
-      <p className="text-sm text-ink-muted">{depositLabel}</p>
       {address ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-          <DepositAddressQr value={address.address} />
           <div className="min-w-0 flex-1 space-y-3">
-            <p className="break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
-              {address.address}
-            </p>
+            <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
+              <dt className="text-ink-muted">Network:</dt>
+              <dd className="text-ink">{networkLabel}</dd>
+              <dt className="text-ink-muted">Address:</dt>
+              <dd className="min-w-0">
+                <p className="break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
+                  {address.address}
+                </p>
+              </dd>
+            </dl>
             <CopyTextButton text={address.address} label="Copy address" />
+            {instructions ? (
+              <p className="text-sm text-ink-muted">{instructions}</p>
+            ) : null}
           </div>
+          <DepositAddressQr value={address.address} />
         </div>
       ) : (
         <p className="text-sm text-warning">

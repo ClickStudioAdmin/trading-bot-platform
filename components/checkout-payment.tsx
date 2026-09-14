@@ -410,10 +410,6 @@ function CheckoutInitialCrypto({
         <dt className="text-ink-muted">Amount due:</dt>
         <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
       </dl>
-      <p className="text-sm text-ink-muted">
-        Send at least this amount in a listed stablecoin. You can send more
-        than Due Today so leftover Main credit covers later months.
-      </p>
       <TopUpWallet
         address={address}
         addressError={addressError}
@@ -423,6 +419,7 @@ function CheckoutInitialCrypto({
         checkout
         heading={null}
         showCheck={false}
+        instructions="Send at least this amount in a listed stablecoin. You can send more than Due Today so leftover Main credit covers later months."
       />
       <p className="flex items-center gap-2 text-sm text-ink-muted" role="status">
         <ButtonBusyIcon />
