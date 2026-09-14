@@ -465,6 +465,7 @@ export function withdrawDecision(input: {
   arrears: boolean;
   payableUsd: number;
   minPayoutUsd: number;
+  balanceNoun?: string;
 }): { ok: true } | { ok: false; reason: string } {
   if (input.arrears) {
     return {
@@ -473,9 +474,10 @@ export function withdrawDecision(input: {
     };
   }
   if (input.payableUsd + 1e-9 < input.minPayoutUsd) {
+    const noun = input.balanceNoun ?? "Payable";
     return {
       ok: false,
-      reason: `Payable must be at least $${input.minPayoutUsd.toFixed(2)}.`,
+      reason: `${noun} must be at least $${input.minPayoutUsd.toFixed(2)}.`,
     };
   }
   return { ok: true };

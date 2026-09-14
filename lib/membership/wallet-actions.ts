@@ -13,7 +13,6 @@ import {
 } from "./billing";
 import {
   createCommissionsForInvoice,
-  loadAffiliateSettings,
   loadMemberArrears,
   requestUsdtPayout,
   sumPayableAffiliateUsd,
@@ -30,7 +29,7 @@ import { parsePlanId } from "./form";
 import { getMembershipPlan } from "./store";
 import { stripeSecretConfigured, getStripe } from "./stripe";
 import { watchMembershipDeposits } from "./watch-deposits";
-import { planDeductDecision, roundUsd } from "./wallet";
+import { parseWalletMinPayout, planDeductDecision, roundUsd } from "./wallet";
 import {
   createDepositHdSeed,
   createGasWallet,
@@ -38,7 +37,9 @@ import {
   updateBillingChain,
   updateBillingToken,
   updateGasLowEth,
+  updateWalletMinPayout,
   listAffiliatePayoutChains,
+  loadWalletMinPayoutUsd,
   walletBookBalances,
 } from "./wallet-store";
 import { parseGasLowEth } from "./gas-drip";
@@ -132,6 +133,27 @@ export async function saveGasLowEthAction(formData: FormData) {
   revalidatePath("/admin/settings");
   revalidatePath("/admin/billing");
   redirect("/admin/settings?tab=crypto&saved=gaslow");
+}
+
+export async function saveWalletMinPayoutAction(formData: FormData) {
+  await requireAdmin();
+  const min = parseWalletMinPayout(formData.get("walletMinPayoutUsd"));
+  if (!min.ok) {
+    failAdmin(min.error);
+  }
+  const saved = await updateWalletMinPayout(min.usd);
+  if (!saved.ok) {
+    failAdmin(saved.error);
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.wallet_min_payout",
+    message: `Set Main Wallet minimum withdraw to ${min.usd}`,
+    data: { walletMinPayoutUsd: min.usd },
+  });
+  revalidatePath("/admin/settings");
+  revalidatePath("/account/billing");
+  redirect("/admin/settings?tab=crypto&saved=walletmin");
 }
 
 export async function saveBillingChainAction(formData: FormData) {
@@ -399,22 +421,23 @@ export async function requestMainWalletWithdrawAction(formData: FormData) {
   if (!amount.ok) {
     failBilling(amount.error);
   }
-  const [settings, arrears, books] = await Promise.all([
-    loadAffiliateSettings(),
+  const [minPayoutUsd, arrears, books] = await Promise.all([
+    loadWalletMinPayoutUsd(),
     loadMemberArrears(member.id),
     walletBookBalances(member.id),
   ]);
   const allowed = withdrawDecision({
     arrears,
     payableUsd: books.main,
-    minPayoutUsd: settings.minPayoutUsd,
+    minPayoutUsd,
+    balanceNoun: "Main Wallet",
   });
   if (!allowed.ok) {
     failBilling(allowed.reason);
   }
   const amountOk = withdrawAmountDecision({
     payableUsd: books.main,
-    minPayoutUsd: settings.minPayoutUsd,
+    minPayoutUsd,
     amountUsd: amount.amountUsd,
   });
   if (!amountOk.ok) {

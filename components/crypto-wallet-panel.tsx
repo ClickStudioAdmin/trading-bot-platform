@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   createContext,
   useContext,
@@ -13,10 +12,7 @@ import {
   PendingSubmitButton,
 } from "@/components/pending-submit-button";
 import { formatUsd } from "@/lib/membership/billing";
-import {
-  payoutStatusLabel,
-  shortenPayoutAddress,
-} from "@/lib/membership/affiliate";
+import { payoutStatusLabel } from "@/lib/membership/affiliate";
 import {
   checkCheckoutDepositAction,
   checkMyDepositAction,
@@ -351,18 +347,13 @@ function MainWalletWithdrawForm({
 }: {
   withdraw: MainWalletWithdrawContext;
 }) {
-  const hasAddress = Boolean(withdraw.address);
-  const canWithdraw =
-    withdraw.withdraw.ok && withdraw.chains.length > 0 && hasAddress;
+  const canWithdraw = withdraw.withdraw.ok && withdraw.chains.length > 0;
   return (
     <div className="space-y-3 border-t border-line pt-4">
       <h3 className="text-sm font-medium text-ink">Request withdraw</h3>
       <p className="text-xs text-ink-muted">
-        USDT from Main Wallet. Chain and address are saved on{" "}
-        <Link href="/affiliates?tab=settings" className="text-accent hover:underline">
-          Affiliates → Settings
-        </Link>
-        .
+        USDT from Main Wallet. Enter the receive address for this request.
+        Minimum {formatUsd(withdraw.minPayoutUsd)}.
       </p>
       {!withdraw.withdraw.ok ? (
         <p className="text-sm text-warning">{withdraw.withdraw.reason}</p>
@@ -373,23 +364,17 @@ function MainWalletWithdrawForm({
           on Settings → Crypto.
         </p>
       ) : null}
-      {withdraw.withdraw.ok && withdraw.chains.length > 0 && !hasAddress ? (
-        <p className="text-sm text-warning">
-          Save a payout address on Affiliates → Settings first.
-        </p>
-      ) : null}
       <form
         action={requestMainWalletWithdrawAction}
         className="flex flex-wrap items-end gap-3"
       >
-        <input type="hidden" name="address" value={withdraw.address ?? ""} />
         <label className="w-44 shrink-0 text-sm text-ink">
           Chain
           <select
             name="network"
             disabled={!canWithdraw}
             className={BILLING_FIELD_CLASS}
-            defaultValue={withdraw.network ?? withdraw.chains[0]?.slug ?? ""}
+            defaultValue={withdraw.chains[0]?.slug ?? ""}
           >
             {withdraw.chains.map((chain) => (
               <option key={chain.id} value={chain.slug}>
@@ -412,15 +397,19 @@ function MainWalletWithdrawForm({
             className={BILLING_FIELD_CLASS}
           />
         </label>
-        <div className="min-w-[10rem] text-sm text-ink">
+        <label className="min-w-[16rem] flex-1 text-sm text-ink">
           Address
-          <p
-            className="mt-1 rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink"
-            title={withdraw.address ?? undefined}
-          >
-            {shortenPayoutAddress(withdraw.address)}
-          </p>
-        </div>
+          <input
+            name="address"
+            type="text"
+            required
+            disabled={!canWithdraw}
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="0x…"
+            className={`${BILLING_FIELD_CLASS} font-mono text-xs`}
+          />
+        </label>
         <PendingSubmitButton
           pendingLabel="Requesting…"
           disabled={!canWithdraw}

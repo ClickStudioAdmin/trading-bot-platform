@@ -52,6 +52,7 @@ export const EVENT_LOG_OPTIONS = [
   { event: "membership.hd_seed_created", scope: "system" },
   { event: "membership.gas_wallet_created", scope: "system" },
   { event: "membership.gas_low_updated", scope: "system" },
+  { event: "membership.wallet_min_payout", scope: "system" },
   { event: "membership.gas_drip", scope: "system" },
   { event: "membership.billing_chain", scope: "system" },
   { event: "membership.billing_token", scope: "system" },

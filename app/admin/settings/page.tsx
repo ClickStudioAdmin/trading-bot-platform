@@ -13,12 +13,15 @@ import {
   saveBillingChainAction,
   saveBillingTokenAction,
   saveGasLowEthAction,
+  saveWalletMinPayoutAction,
 } from "@/lib/membership/wallet-actions";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
+import { WALLET_MIN_PAYOUT_DEFAULT } from "@/lib/membership/wallet";
 import {
   getGasWalletStatus,
   listAllBillingChains,
   listBillingTokens,
+  loadWalletMinPayoutUsd,
 } from "@/lib/membership/wallet-store";
 import { firstSearchValue } from "@/lib/paper/open";
 
@@ -49,7 +52,8 @@ export default async function AdminSettingsPage({
   const copyFollowersError = error === "copy-followers";
   const copyFollowersCeilingError = error === "copy-followers-ceiling";
   const copyFollowersRangeError = error === "copy-followers-range";
-  const [autoTick, copySettings, affiliateSettings, gas, chains] = await Promise.all([
+  const [autoTick, copySettings, affiliateSettings, gas, chains, walletMinPayoutUsd] =
+    await Promise.all([
     tab === "general" ? loadAutoTickEnabled() : Promise.resolve(false),
     tab === "copy"
       ? loadCopyPlatformSettings()
@@ -71,6 +75,9 @@ export default async function AdminSettingsPage({
           lowEth: "0.005",
         }),
     tab === "crypto" ? listAllBillingChains() : Promise.resolve([]),
+    tab === "crypto"
+      ? loadWalletMinPayoutUsd()
+      : Promise.resolve(WALLET_MIN_PAYOUT_DEFAULT),
   ]);
   const tokens =
     tab === "crypto"
@@ -368,6 +375,11 @@ export default async function AdminSettingsPage({
           {saved === "gaslow" ? (
             <p className="mt-6 text-sm text-success">Low ETH level saved.</p>
           ) : null}
+          {saved === "walletmin" ? (
+            <p className="mt-6 text-sm text-success">
+              Main Wallet minimum withdraw saved.
+            </p>
+          ) : null}
           {saved === "chain" ? (
             <p className="mt-6 text-sm text-success">Chain saved.</p>
           ) : null}
@@ -381,6 +393,42 @@ export default async function AdminSettingsPage({
           error !== "copy-followers-range" ? (
             <p className="mt-6 text-sm text-danger">{error}</p>
           ) : null}
+          <section className="mt-6 rounded-card border border-line bg-surface p-5">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Main Wallet withdraw
+            </h2>
+            <p className="mt-2 text-sm text-ink-muted">
+              Separate from the affiliate payout minimum. Members enter a
+              receive address on each request.
+            </p>
+            <form
+              action={saveWalletMinPayoutAction}
+              className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-end"
+            >
+              <label className="block text-sm text-ink">
+                Minimum withdraw (USD)
+                <input
+                  name="walletMinPayoutUsd"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  required
+                  defaultValue={walletMinPayoutUsd}
+                  className={BILLING_FIELD_CLASS}
+                />
+                <span className="mt-1 block text-xs text-ink-muted">
+                  Default $100. Leftover Main credit can withdraw at or above
+                  this amount when there are no arrears.
+                </span>
+              </label>
+              <PendingSubmitButton
+                pendingLabel="Saving…"
+                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+              >
+                Save minimum
+              </PendingSubmitButton>
+            </form>
+          </section>
           <section className="mt-6 rounded-card border border-line bg-surface p-5">
             <h2 className="text-lg font-semibold tracking-tight">Gas wallet</h2>
             <p className="mt-2 text-sm text-ink-muted">

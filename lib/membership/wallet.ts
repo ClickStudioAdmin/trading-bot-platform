@@ -19,6 +19,7 @@ export const BILLING_CHAIN_ENVS = ["development", "production"] as const;
 export type BillingChainEnvironment = (typeof BILLING_CHAIN_ENVS)[number];
 
 export const WALLET_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
+export const WALLET_MIN_PAYOUT_DEFAULT = 100;
 
 export type WalletBookBalances = {
   main: number;
@@ -63,6 +64,16 @@ export function inferWalletBook(kind: string, book?: string | null): WalletBook 
     return parsed;
   }
   return kind === "commission" ? "affiliate" : "main";
+}
+
+export function parseWalletMinPayout(
+  value: unknown,
+): { ok: true; usd: number } | { ok: false; error: string } {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > 1_000_000) {
+    return { ok: false, error: "Minimum withdraw must be zero or more." };
+  }
+  return { ok: true, usd: roundUsd(n) };
 }
 
 export function roundUsd(amount: number): number {

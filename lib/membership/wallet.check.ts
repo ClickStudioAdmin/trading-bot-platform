@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   bookBalancesFromEntries,
   mainWalletLedgerLabel,
+  parseWalletMinPayout,
   planDeductDecision,
   tokenAmountToUsd,
   walletEntryDelta,
@@ -63,6 +64,8 @@ assert.equal(
   "wallet:user-1:2026-09-12T00:00:00.000Z",
 );
 
+assert.deepEqual(parseWalletMinPayout(100), { ok: true, usd: 100 });
+assert.equal(parseWalletMinPayout(-1).ok, false);
 assert.equal(mainWalletLedgerLabel("deposit"), "Deposit");
 assert.equal(mainWalletLedgerLabel("debit_rent"), "Plan payment");
 assert.equal(

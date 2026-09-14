@@ -48,6 +48,9 @@ assert.ok(
   eventLogOptionsForScopes(["system"]).includes("membership.gas_low_updated"),
 );
 assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("membership.wallet_min_payout"),
+);
+assert.ok(
   eventLogOptionsForScopes(["system"]).includes("membership.gas_drip"),
 );
 assert.ok(

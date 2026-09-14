@@ -13,8 +13,6 @@ import { createDepositMnemonic, deriveDepositAddress } from "./hd";
 import { DEFAULT_GAS_LOW_ETH, parseGasLowEth } from "./gas-drip";
 import {
   listMemberPayouts,
-  loadAffiliatePayoutSettings,
-  loadAffiliateSettings,
   loadMemberArrears,
   sumPayableAffiliateUsd,
   type PayoutRow,
@@ -29,9 +27,11 @@ import {
   inferWalletBook,
   mainWalletLedgerLabel,
   parseTokenKind,
+  parseWalletMinPayout,
   walletEntryDelta,
   walletInvoiceExternalId,
   withRunningBalances,
+  WALLET_MIN_PAYOUT_DEFAULT,
   WALLET_PERIOD_MS,
   type BillingChainEnvironment,
   type TokenKind,
@@ -398,6 +398,46 @@ export async function updateGasLowEth(
   const { error } = await supabase
     .from("platform_settings")
     .update({ billing_gas_low_eth: Number(parsed) })
+    .eq("id", "tbp");
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
+export async function loadWalletMinPayoutUsd(): Promise<number> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return WALLET_MIN_PAYOUT_DEFAULT;
+  }
+  const { data, error } = await supabase
+    .from("platform_settings")
+    .select("wallet_min_payout_usd")
+    .eq("id", "tbp")
+    .maybeSingle();
+  if (error || !data) {
+    return WALLET_MIN_PAYOUT_DEFAULT;
+  }
+  const parsed = parseWalletMinPayout(
+    (data as { wallet_min_payout_usd?: unknown }).wallet_min_payout_usd,
+  );
+  return parsed.ok ? parsed.usd : WALLET_MIN_PAYOUT_DEFAULT;
+}
+
+export async function updateWalletMinPayout(
+  usd: number,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = parseWalletMinPayout(usd);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase
+    .from("platform_settings")
+    .update({ wallet_min_payout_usd: parsed.usd })
     .eq("id", "tbp");
   if (error) {
     return { ok: false, error: error.message };
@@ -841,8 +881,6 @@ export type MainWalletWithdrawContext = {
   minPayoutUsd: number;
   mainUsd: number;
   chains: BillingChain[];
-  network: string | null;
-  address: string | null;
   pending: PayoutRow[];
   withdraw: ReturnType<typeof withdrawDecision>;
 };
@@ -850,26 +888,23 @@ export type MainWalletWithdrawContext = {
 export async function loadMainWalletWithdrawContext(
   userId: string,
 ): Promise<MainWalletWithdrawContext> {
-  const [program, payoutSettings, chains, arrears, payouts, books] =
-    await Promise.all([
-      loadAffiliateSettings(),
-      loadAffiliatePayoutSettings(userId),
-      listAffiliatePayoutChains(),
-      loadMemberArrears(userId),
-      listMemberPayouts(userId, "main"),
-      walletBookBalances(userId),
-    ]);
+  const [minPayoutUsd, chains, arrears, payouts, books] = await Promise.all([
+    loadWalletMinPayoutUsd(),
+    listAffiliatePayoutChains(),
+    loadMemberArrears(userId),
+    listMemberPayouts(userId, "main"),
+    walletBookBalances(userId),
+  ]);
   return {
-    minPayoutUsd: program.minPayoutUsd,
+    minPayoutUsd,
     mainUsd: books.main,
     chains,
-    network: payoutSettings.network,
-    address: payoutSettings.address,
     pending: payouts.filter((row) => isOpenWalletWithdraw(row.status)),
     withdraw: withdrawDecision({
       arrears,
       payableUsd: books.main,
-      minPayoutUsd: program.minPayoutUsd,
+      minPayoutUsd,
+      balanceNoun: "Main Wallet",
     }),
   };
 }
