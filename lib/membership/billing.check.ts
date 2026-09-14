@@ -9,7 +9,9 @@ import {
   embeddedCardReturnUrl,
   embeddedCheckoutReturnUrl,
   formatCount,
+  formatRemainingCycle,
   formatUsd,
+  resolveBillingCycle,
   invoiceMethodLabel,
   hasUsableStripeSubscription,
   parseBillingMethod,
@@ -168,5 +170,15 @@ assert.deepEqual(
   }),
   { kind: "upgrade", dueUsd: 15, periodEnd: inFifteenDays },
 );
+
+const cycle = resolveBillingCycle({
+  periodEnd: inFifteenDays,
+  nowMs: now,
+});
+assert.ok(cycle);
+assert.equal(cycle.remainingMs, 15 * 24 * 60 * 60 * 1000);
+assert.equal(formatRemainingCycle(15 * 24 * 60 * 60 * 1000), "15 days left");
+assert.equal(formatRemainingCycle(0), "Ended");
+assert.equal(resolveBillingCycle({ periodEnd: null }), null);
 
 console.log("membership billing checks passed");

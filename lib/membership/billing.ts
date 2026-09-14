@@ -326,3 +326,52 @@ export function formatUsd(amount: number): string {
     maximumFractionDigits: integer ? 0 : 2,
   }).format(amount);
 }
+
+export type BillingCycleWindow = {
+  startMs: number;
+  endMs: number;
+  remainingMs: number;
+};
+
+export function resolveBillingCycle(input: {
+  periodEnd: string | null;
+  periodStart?: string | null;
+  nowMs?: number;
+  periodMs?: number;
+}): BillingCycleWindow | null {
+  const endMs = input.periodEnd ? Date.parse(input.periodEnd) : NaN;
+  if (!Number.isFinite(endMs) || endMs <= 0) {
+    return null;
+  }
+  const startParsed = input.periodStart ? Date.parse(input.periodStart) : NaN;
+  const startMs = Number.isFinite(startParsed)
+    ? startParsed
+    : endMs - (input.periodMs ?? WALLET_PERIOD_MS);
+  const now = input.nowMs ?? Date.now();
+  return {
+    startMs,
+    endMs,
+    remainingMs: endMs - now,
+  };
+}
+
+export function formatRemainingCycle(remainingMs: number): string {
+  if (!Number.isFinite(remainingMs) || remainingMs <= 0) {
+    return "Ended";
+  }
+  const dayMs = 24 * 60 * 60 * 1000;
+  const hourMs = 60 * 60 * 1000;
+  const days = Math.floor(remainingMs / dayMs);
+  const hours = Math.floor((remainingMs % dayMs) / hourMs);
+  if (days >= 2) {
+    return `${days} days left`;
+  }
+  if (days === 1) {
+    return hours > 0 ? `1 day ${hours}h left` : "1 day left";
+  }
+  if (hours >= 1) {
+    return `${hours}h left`;
+  }
+  const minutes = Math.max(1, Math.floor(remainingMs / 60_000));
+  return `${minutes} min left`;
+}

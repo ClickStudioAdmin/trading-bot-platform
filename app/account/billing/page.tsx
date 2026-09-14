@@ -6,7 +6,9 @@ import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getSessionMember } from "@/lib/auth/session";
 import {
   SUBSCRIPTION_STATUS_LABELS,
+  formatRemainingCycle,
   formatUsd,
+  resolveBillingCycle,
 } from "@/lib/membership/billing";
 import { setBillingMethodAction } from "@/lib/membership/billing-actions";
 import { StripeEmbeddedCard } from "@/components/stripe-embedded-checkout";
@@ -93,7 +95,7 @@ export default async function AccountBillingPage({
       : Promise.resolve(null),
   ]);
   const plan = currentPlan?.ok ? currentPlan.plan : null;
-  const periodMs = parseDisplayTime(billing.periodEnd);
+  const cycle = resolveBillingCycle({ periodEnd: billing.periodEnd });
   const stripeReady = stripeSecretConfigured();
 
   return (
@@ -202,15 +204,39 @@ export default async function AccountBillingPage({
       <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">Current plan</h2>
-          <p className="mt-3 text-sm text-ink">{plan?.name ?? "—"}</p>
-          <p className="mt-1 text-sm text-ink-muted">
-            {plan ? formatPlanPrice(plan.priceUsd) : ""}
-            {planIsArchived(plan ?? { archivedAt: null }) ? " · Legacy" : ""}
-          </p>
-          <p className="mt-2 text-xs text-ink-faint">
-            Status: {SUBSCRIPTION_STATUS_LABELS[billing.subscriptionStatus]}
-            {periodMs ? ` · Period ends ${formatLocalDate(periodMs)}` : ""}
-          </p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-sm text-ink">{plan?.name ?? "—"}</p>
+              <p className="mt-1 text-sm text-ink-muted">
+                {plan ? formatPlanPrice(plan.priceUsd) : ""}
+                {planIsArchived(plan ?? { archivedAt: null })
+                  ? " · Legacy"
+                  : ""}
+              </p>
+              <p className="mt-2 text-xs text-ink-faint">
+                Status:{" "}
+                {SUBSCRIPTION_STATUS_LABELS[billing.subscriptionStatus]}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+                Billing cycle
+              </p>
+              {cycle ? (
+                <>
+                  <p className="mt-1 text-sm text-ink">
+                    {formatLocalDate(cycle.startMs)} –{" "}
+                    {formatLocalDate(cycle.endMs)}
+                  </p>
+                  <p className="mt-1 text-sm text-ink-muted">
+                    {formatRemainingCycle(cycle.remainingMs)}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-1 text-sm text-ink-muted">No end date set.</p>
+              )}
+            </div>
+          </div>
           <div className="mt-4">
             <Link
               href="/account/plans"
