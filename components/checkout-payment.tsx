@@ -419,7 +419,7 @@ function CheckoutInitialCrypto({
         checkout
         heading={null}
         showCheck={false}
-        instructions="Send at least this amount in a listed stablecoin. You can send more than Due Today so leftover Main credit covers later months."
+        instructions="Send at least this amount in a listed stablecoin. You can send more than Due Today so leftover covers later months."
       />
       <p className="flex items-center gap-2 text-sm text-ink-muted" role="status">
         <ButtonBusyIcon />
