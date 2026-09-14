@@ -63,7 +63,7 @@ export function CheckoutPayment({
   const cryptoSaved = selected === "wallet";
 
   return (
-    <div className="mt-6 grid items-start gap-5 lg:grid-cols-[minmax(28rem,36rem)_minmax(0,1fr)]">
+    <div className="mt-6 grid items-start gap-5 lg:grid-cols-[minmax(22rem,28rem)_minmax(26rem,1fr)]">
       <div className="space-y-5">
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">{planName}</h2>
