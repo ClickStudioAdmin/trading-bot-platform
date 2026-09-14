@@ -35,7 +35,7 @@ import type {
 
 const DEPOSIT_POLL_MS = 10_000;
 const DEPOSIT_INSTRUCTIONS =
-  "Transfer at least the amount due in a listed stablecoin. You can transfer more than Due Today. Any remaining balance will be used to cover future subscription payments when due.";
+  "Transfer at least the amount due today in a listed stablecoin. We recommend transferring more than is due. Any remaining account balance will be utilized to cover future subscription payments when due. Account balances can be withdrawn at any time.";
 
 export function CheckoutPayment({
   planId,
@@ -453,7 +453,9 @@ function CheckoutInitialCrypto({
 }) {
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold tracking-tight">Pay with Crypto</h2>
+      <h2 className="text-lg font-semibold tracking-tight">
+        Fund your account with Crypto
+      </h2>
       <TopUpWallet
         address={address}
         addressError={addressError}
