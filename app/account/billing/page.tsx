@@ -113,7 +113,7 @@ export default async function AccountBillingPage({
       <PageHeading title="Billing and Wallets" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
         One collection method per login. Card uses the on-site Stripe form.
-        Crypto is a payment method: listed stables credit Your Wallets 1:1 as
+        Crypto is a payment method: listed stables credit your account 1:1 as
         USD. You can optionally deduct that credit first. Compare plans
         on{" "}
         <Link href="/account/plans" className="text-accent">
@@ -147,7 +147,7 @@ export default async function AccountBillingPage({
             href="/account/billing?tab=wallet"
             selected={tab === "wallet"}
           >
-            Manage Wallet
+            Manage Account Balance
           </TabLink>
         ) : null}
         {showLedgerTab ? (
@@ -155,7 +155,7 @@ export default async function AccountBillingPage({
             href="/account/billing?tab=ledger"
             selected={tab === "ledger"}
           >
-            Wallet Ledger
+            Account Ledger
           </TabLink>
         ) : null}
       </nav>
@@ -183,7 +183,7 @@ export default async function AccountBillingPage({
       ) : null}
       {upgraded === "wallet" ? (
         <p className="mt-6 text-sm text-success">
-          Plan paid from Your Wallets.
+          Plan paid from your account.
         </p>
       ) : null}
       {deposited ? (
@@ -277,7 +277,7 @@ export default async function AccountBillingPage({
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
             Card charges Stripe. Crypto is only the payment method. Listed
-            stables credit Your Wallets 1:1 as USD. Deduct is optional.
+            stables credit your account 1:1 as USD.
           </p>
           <form action={setBillingMethodAction} className="mt-4 space-y-4">
             <BillingMethodRadios
@@ -305,7 +305,7 @@ export default async function AccountBillingPage({
             <div className="grid items-start gap-5 lg:grid-cols-2">
               <div>
                 <h2 className="text-lg font-semibold tracking-tight">
-                  Manage wallet
+                  Manage Account Balance
                 </h2>
                 <p className="mt-1 text-sm text-ink-muted">
                   {billing.billingMethod === "wallet"
@@ -339,7 +339,7 @@ export default async function AccountBillingPage({
                   addressError={deposit?.addressError ?? null}
                   chains={deposit?.chains ?? []}
                   tokens={deposit?.tokens ?? []}
-                  heading="Top up Account Wallet"
+                  heading="Top up Account Balance",
                   instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
                   revealAddress={billing.billingMethod === "wallet"}
                 />
@@ -349,7 +349,7 @@ export default async function AccountBillingPage({
         </LiveMainWallet>
       ) : tab === "ledger" ? (
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Wallet Ledger</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Account Ledger</h2>
         <p className="mt-1 text-sm text-ink-muted">
           Running Account Wallet activity: deposits, plan payments, withdrawals,
           and transfers from Affiliate when you deduct from earnings.

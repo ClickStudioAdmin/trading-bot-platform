@@ -198,7 +198,7 @@ export function TopUpWallet({
   tokens,
   checkout,
   revealAddress = true,
-  heading = "Top up Account Wallet",
+  heading = "Top up Account Balance",
   showCheck = true,
   instructions,
   dueUsd,
@@ -280,7 +280,7 @@ export function LiveWalletHeadingBalance({
   return (
     <div>
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-        Account Wallet
+        Balance
       </p>
       <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">
         {formatUsd(live.mainUsd)}
