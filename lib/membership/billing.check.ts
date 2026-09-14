@@ -144,6 +144,14 @@ assert.equal(
   false,
 );
 assert.equal(
+  isPaidCycleUpgrade({
+    currentPriceUsd: 19,
+    targetPriceUsd: 49,
+    periodEnd: null,
+  }),
+  true,
+);
+assert.equal(
   prorateUpgradeUsd({
     oldPriceUsd: 19,
     newPriceUsd: 49,
@@ -168,7 +176,21 @@ assert.deepEqual(
     periodEnd: inFifteenDays,
     nowMs: now,
   }),
-  { kind: "upgrade", dueUsd: 15, periodEnd: inFifteenDays },
+  { kind: "upgrade", dueUsd: 15, periodEnd: inFifteenDays, basis: "prorate" },
+);
+assert.deepEqual(
+  checkoutCharge({
+    currentPriceUsd: 19,
+    targetPriceUsd: 49,
+    periodEnd: null,
+    nowMs: now,
+  }),
+  {
+    kind: "upgrade",
+    dueUsd: 30,
+    periodEnd: new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    basis: "delta",
+  },
 );
 
 const cycle = resolveBillingCycle({

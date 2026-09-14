@@ -57,7 +57,8 @@ export default async function AccountCheckoutPage({
     targetPriceUsd: target.priceUsd,
     periodEnd: billing.periodEnd,
   });
-  const periodMs = parseDisplayTime(billing.periodEnd);
+  const cycleEndMs =
+    charge.kind === "upgrade" ? parseDisplayTime(charge.periodEnd) : null;
   const error = firstSearchValue(params.error);
   const deposited = firstSearchValue(params.deposited);
   const scanned = firstSearchValue(params.scanned) === "1";
@@ -109,11 +110,10 @@ export default async function AccountCheckoutPage({
           planPrice={formatPlanPrice(target.priceUsd)}
           currentPlanName={currentPlan?.name ?? null}
           chargeKind={charge.kind}
+          chargeBasis={charge.kind === "upgrade" ? charge.basis : "full"}
           dueUsd={charge.dueUsd}
           periodEndLabel={
-            charge.kind === "upgrade" && periodMs
-              ? formatLocalDate(periodMs)
-              : null
+            cycleEndMs ? formatLocalDate(cycleEndMs) : null
           }
           selected={billing.billingMethod}
           deductSelected={billing.paySubscriptionFromCredit}

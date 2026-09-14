@@ -210,22 +210,23 @@ export function stripeCheckoutBranding() {
 
 export type CheckoutCharge =
   | { kind: "initial"; dueUsd: number }
-  | { kind: "upgrade"; dueUsd: number; periodEnd: string };
+  | {
+      kind: "upgrade";
+      dueUsd: number;
+      periodEnd: string;
+      basis: "prorate" | "delta";
+    };
 
 export function isPaidCycleUpgrade(input: {
   currentPriceUsd: number;
   targetPriceUsd: number;
-  periodEnd: string | null;
+  periodEnd?: string | null;
   nowMs?: number;
 }): boolean {
-  if (roundUsd(input.currentPriceUsd) < 0.01) {
-    return false;
-  }
-  if (roundUsd(input.targetPriceUsd) <= roundUsd(input.currentPriceUsd)) {
-    return false;
-  }
-  const end = input.periodEnd ? Date.parse(input.periodEnd) : NaN;
-  return Number.isFinite(end) && end > (input.nowMs ?? Date.now());
+  return (
+    roundUsd(input.currentPriceUsd) >= 0.01 &&
+    roundUsd(input.targetPriceUsd) > roundUsd(input.currentPriceUsd)
+  );
 }
 
 export function prorateUpgradeUsd(input: {
@@ -255,23 +256,30 @@ export function checkoutCharge(input: {
   periodEnd: string | null;
   nowMs?: number;
 }): CheckoutCharge {
-  if (
-    isPaidCycleUpgrade(input) &&
-    input.periodEnd &&
-    Date.parse(input.periodEnd) > (input.nowMs ?? Date.now())
-  ) {
+  if (!isPaidCycleUpgrade(input)) {
+    return { kind: "initial", dueUsd: roundUsd(input.targetPriceUsd) };
+  }
+  const now = input.nowMs ?? Date.now();
+  const end = input.periodEnd ? Date.parse(input.periodEnd) : NaN;
+  if (input.periodEnd && Number.isFinite(end) && end > now) {
     return {
       kind: "upgrade",
       dueUsd: prorateUpgradeUsd({
         oldPriceUsd: input.currentPriceUsd,
         newPriceUsd: input.targetPriceUsd,
         periodEnd: input.periodEnd,
-        nowMs: input.nowMs,
+        nowMs: now,
       }),
       periodEnd: input.periodEnd,
+      basis: "prorate",
     };
   }
-  return { kind: "initial", dueUsd: roundUsd(input.targetPriceUsd) };
+  return {
+    kind: "upgrade",
+    dueUsd: roundUsd(input.targetPriceUsd - input.currentPriceUsd),
+    periodEnd: new Date(now + WALLET_PERIOD_MS).toISOString(),
+    basis: "delta",
+  };
 }
 
 export function decideUpgrade(input: {

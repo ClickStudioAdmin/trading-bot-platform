@@ -28,6 +28,7 @@ export function CheckoutPayment({
   planPrice,
   currentPlanName,
   chargeKind,
+  chargeBasis,
   dueUsd,
   periodEndLabel,
   selected,
@@ -50,6 +51,7 @@ export function CheckoutPayment({
   planPrice: string;
   currentPlanName: string | null;
   chargeKind: "initial" | "upgrade";
+  chargeBasis: "full" | "prorate" | "delta";
   dueUsd: number;
   periodEndLabel: string | null;
   selected: BillingMethod | null;
@@ -94,11 +96,13 @@ export function CheckoutPayment({
                 {formatUsd(dueUsd)}
               </p>
               <p className="mt-1 text-sm text-ink-muted">
-                {upgrade
+                {chargeBasis === "prorate"
                   ? periodEndLabel
                     ? `Remainder of this cycle (ends ${periodEndLabel}).`
                     : "Remainder of this cycle."
-                  : "First month in full."}
+                  : chargeBasis === "delta"
+                    ? "Difference from your current plan for a new cycle."
+                    : "First month in full."}
               </p>
             </div>
             <div>
@@ -175,24 +179,16 @@ export function CheckoutPayment({
 
       <section className="overflow-hidden rounded-card border border-line bg-surface p-4">
         {method === "stripe" ? (
-          upgrade && !existingStripeSubscription ? (
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                Pay with card
-              </h2>
-              <p className="mt-2 text-sm text-warning">
-                No Stripe subscription is on file. Save a card on Billing →
-                Card, or start the first paid plan from Checkout while on Free.
-              </p>
-            </div>
-          ) : existingStripeSubscription ? (
+          upgrade || existingStripeSubscription ? (
             <form action={confirmStripePlanChangeAction} className="space-y-4">
               <h2 className="text-lg font-semibold tracking-tight">
                 {upgrade ? "Pay with card" : "Card"}
               </h2>
               <p className="text-sm text-ink-muted">
                 {upgrade
-                  ? `A one-off charge of ${formatUsd(dueUsd)} for the rest of this cycle. The new monthly fee starts next cycle.`
+                  ? chargeBasis === "delta"
+                    ? `A one-off charge of ${formatUsd(dueUsd)} (the difference from your current plan). Then the new monthly fee.`
+                    : `A one-off charge of ${formatUsd(dueUsd)} for the rest of this cycle. The new monthly fee starts next cycle.`
                   : "A card is already on file. Confirm to start this plan on Stripe."}
               </p>
               <input type="hidden" name="planId" value={planId} />

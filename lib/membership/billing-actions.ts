@@ -45,6 +45,47 @@ function failCheckout(planId: string, error: string): never {
   throw new Error(error);
 }
 
+function paymentMethodId(value: unknown): string | null {
+  if (typeof value === "string" && value) {
+    return value;
+  }
+  if (value && typeof value === "object" && "id" in value) {
+    const id = (value as { id?: unknown }).id;
+    return typeof id === "string" && id ? id : null;
+  }
+  return null;
+}
+
+async function stripeDefaultPaymentMethod(
+  stripe: NonNullable<ReturnType<typeof getStripe>>,
+  customerId: string | null,
+  subscription: { default_payment_method?: unknown } | null,
+): Promise<string | null> {
+  const fromSub = paymentMethodId(subscription?.default_payment_method);
+  if (fromSub) {
+    return fromSub;
+  }
+  if (!customerId) {
+    return null;
+  }
+  const customer = await stripe.customers.retrieve(customerId);
+  if ("deleted" in customer && customer.deleted) {
+    return null;
+  }
+  const fromCustomer = paymentMethodId(
+    customer.invoice_settings?.default_payment_method,
+  );
+  if (fromCustomer) {
+    return fromCustomer;
+  }
+  const listed = await stripe.paymentMethods.list({
+    customer: customerId,
+    type: "card",
+    limit: 1,
+  });
+  return listed.data[0]?.id ?? null;
+}
+
 export async function setBillingMethodAction(formData: FormData) {
   const member = await getSessionMember();
   if (!member) {
@@ -236,8 +277,8 @@ export async function confirmStripePlanChangeAction(formData: FormData) {
   if (decision.kind === "reject") {
     failCheckout(planId, decision.error);
   }
-  if (decision.kind !== "checkout" || !billing || !hasUsableStripeSubscription(billing)) {
-    failCheckout(planId, "No Stripe subscription to update. Pay with the card form.");
+  if (decision.kind !== "checkout" || !billing) {
+    failCheckout(planId, "Choose Card to pay on this page.");
   }
   const stripe = getStripe();
   if (!stripeSecretConfigured() || !stripe) {
@@ -250,24 +291,26 @@ export async function confirmStripePlanChangeAction(formData: FormData) {
     targetPriceUsd: target.priceUsd,
     periodEnd: billing.periodEnd,
   });
+  const hasSub = hasUsableStripeSubscription(billing);
+  if (charge.kind !== "upgrade" && !hasSub) {
+    failCheckout(planId, "Pay with the card form.");
+  }
   try {
-    const subscription = await stripe.subscriptions.retrieve(
-      billing.stripeSubscriptionId as string,
-    );
-    const itemId = subscription.items.data[0]?.id;
-    if (!itemId || !priceId) {
+    const subscription =
+      hasSub && billing.stripeSubscriptionId
+        ? await stripe.subscriptions.retrieve(billing.stripeSubscriptionId)
+        : null;
+    const itemId = subscription?.items.data[0]?.id;
+    if (hasSub && (!itemId || !priceId)) {
       failCheckout(planId, "Could not update the current Stripe subscription.");
     }
     const dueCents = Math.round(charge.dueUsd * 100);
     if (dueCents >= 1) {
-      const paymentMethod =
-        typeof subscription.default_payment_method === "string"
-          ? subscription.default_payment_method
-          : subscription.default_payment_method &&
-              typeof subscription.default_payment_method === "object" &&
-              "id" in subscription.default_payment_method
-            ? String(subscription.default_payment_method.id)
-            : null;
+      const paymentMethod = await stripeDefaultPaymentMethod(
+        stripe,
+        billing.stripeCustomerId,
+        subscription,
+      );
       if (!billing.stripeCustomerId || !paymentMethod) {
         failCheckout(
           planId,
@@ -282,7 +325,10 @@ export async function confirmStripePlanChangeAction(formData: FormData) {
           payment_method: paymentMethod,
           confirm: true,
           off_session: true,
-          description: `Upgrade to ${target.name} — remainder of this cycle`,
+          description:
+            charge.kind === "upgrade" && charge.basis === "delta"
+              ? `Upgrade to ${target.name} — difference from current plan`
+              : `Upgrade to ${target.name} — remainder of this cycle`,
           metadata: {
             userId: member.id,
             planId,
@@ -315,12 +361,14 @@ export async function confirmStripePlanChangeAction(formData: FormData) {
         }),
       );
     }
-    await stripe.subscriptions.update(billing.stripeSubscriptionId as string, {
-      items: [{ id: itemId, price: priceId }],
-      proration_behavior: "none",
-      cancel_at_period_end: false,
-      metadata: { userId: member.id, planId },
-    });
+    if (hasSub && itemId && priceId && billing.stripeSubscriptionId) {
+      await stripe.subscriptions.update(billing.stripeSubscriptionId, {
+        items: [{ id: itemId, price: priceId }],
+        proration_behavior: "none",
+        cancel_at_period_end: false,
+        metadata: { userId: member.id, planId },
+      });
+    }
     const applied = await applyMemberPlanNow({
       userId: member.id,
       planId,

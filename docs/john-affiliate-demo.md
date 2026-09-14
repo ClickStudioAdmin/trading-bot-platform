@@ -17,6 +17,7 @@ Emails are deterministic (`john.1-2@tbp-john-demo.invalid`). User ids are `md5('
 - Hung under the first active **admin** login (`click.studio.admin@gmail.com` when present).
 - Full **5×5** tree: five direct referrals under the admin and under every John, five levels deep (**3,905** Johns).
 - Every John is a paid platform member on **Pro** or **Premium** (Premium if that plan exists). Follow-up migrations `20260914090000_john_demo_aliases_and_plans.sql` (plans) and `20260914110000_john_demo_affiliate_aliases.sql` (affiliate aliases).
+- Billing `period_end` is a hash-stable random instant in the rest of the current calendar month (`20260914190000_dummy_billing_cycles.sql`). The same migration also fills any other login that still has a null `period_end` (develop test accounts).
 
 Cleanup matches the `@tbp-john-demo.invalid` email domain, `John demo` campaigns, `JDEM*` URLs, and `john-demo:` payout / invoice ids.
 
