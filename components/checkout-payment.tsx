@@ -143,19 +143,6 @@ export function CheckoutPayment({
             </div>
           ) : null}
         </section>
-        <CheckoutTopUp
-          always={!upgrade}
-          visible={cryptoSelected}
-          dueUsd={dueUsd}
-          creditUsd={creditUsd}
-          affiliateUsd={affiliateUsd}
-          useAffiliate={useAffiliate}
-          address={depositAddress}
-          addressError={addressError}
-          chains={chains}
-          tokens={tokens}
-          planId={planId}
-        />
       </div>
 
       <section className="overflow-hidden rounded-card border border-line bg-surface p-4">
@@ -202,11 +189,6 @@ export function CheckoutPayment({
           )
         ) : (
           <div className="space-y-4">
-            <p className="text-sm text-ink-muted">
-              {upgrade
-                ? `${formatUsd(dueUsd)} will be deducted from Main for the rest of this cycle.`
-                : "Pay from Main credit, or top up on the left."}
-            </p>
             <CryptoWalletPanel
               mainUsd={creditUsd}
               affiliateUsd={affiliateUsd}
@@ -221,6 +203,19 @@ export function CheckoutPayment({
               checkout
               booksOnly
               payEnabled
+            />
+            <CheckoutTopUp
+              always={!upgrade}
+              visible={cryptoSelected}
+              dueUsd={dueUsd}
+              creditUsd={creditUsd}
+              affiliateUsd={affiliateUsd}
+              useAffiliate={useAffiliate}
+              address={depositAddress}
+              addressError={addressError}
+              chains={chains}
+              tokens={tokens}
+              planId={planId}
             />
           </div>
         )}
@@ -266,7 +261,7 @@ function CheckoutTopUp({
     return null;
   }
   return (
-    <section className="rounded-card border border-line bg-surface p-5">
+    <div className="border-t border-line pt-4">
       <TopUpWallet
         address={address}
         addressError={addressError}
@@ -275,6 +270,6 @@ function CheckoutTopUp({
         planId={planId}
         checkout
       />
-    </section>
+    </div>
   );
 }

@@ -133,16 +133,6 @@ export default async function AccountCheckoutPage({
           })}
         />
       )}
-
-      <p className="mt-4 text-sm text-ink-faint">
-        <Link href="/account/plans" className="text-accent">
-          Back to Plans
-        </Link>
-        {" · "}
-        <Link href="/account/billing" className="text-accent">
-          Billing
-        </Link>
-      </p>
     </div>
   );
 }
