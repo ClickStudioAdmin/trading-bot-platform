@@ -26,7 +26,10 @@ import {
   checkCheckoutDepositAction,
   payPlanWithCreditAction,
 } from "@/lib/membership/wallet-actions";
-import { planDeductDecision } from "@/lib/membership/wallet";
+import {
+  ACCOUNT_WALLET_DEPOSIT_NOTE,
+  planDeductDecision,
+} from "@/lib/membership/wallet";
 import type {
   BillingChain,
   BillingToken,
@@ -34,8 +37,6 @@ import type {
 } from "@/lib/membership/wallet-store";
 
 const DEPOSIT_POLL_MS = 10_000;
-const DEPOSIT_INSTRUCTIONS =
-  "Transfer at least the amount due today in a listed stablecoin. We recommend transferring more than is due. Any remaining account balance will be utilized to cover future subscription payments when due. Account balances can be withdrawn at any time.";
 
 export function CheckoutPayment({
   planId,
@@ -279,7 +280,7 @@ function CheckoutCryptoPay({
               planId={planId}
               checkout
               showCheck={false}
-              instructions={DEPOSIT_INSTRUCTIONS}
+              instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
             />
             <CheckoutDepositWatcher
               planId={planId}
@@ -465,7 +466,7 @@ function CheckoutInitialCrypto({
         checkout
         heading={null}
         showCheck={false}
-        instructions={DEPOSIT_INSTRUCTIONS}
+        instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
         dueUsd={dueUsd}
       />
       <CheckoutDepositWatcher

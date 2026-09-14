@@ -20,6 +20,8 @@ export type BillingChainEnvironment = (typeof BILLING_CHAIN_ENVS)[number];
 
 export const WALLET_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 export const WALLET_MIN_PAYOUT_DEFAULT = 100;
+export const ACCOUNT_WALLET_DEPOSIT_NOTE =
+  "Transfer at least the amount due today in a listed stablecoin. We recommend transferring more than is due. Any remaining account balance will be utilized to cover future subscription payments when due. Account balances can be withdrawn at any time.";
 
 export function hasMainWalletCredit(mainUsd: number): boolean {
   return roundUsd(mainUsd) >= 0.01;
