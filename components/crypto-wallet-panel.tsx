@@ -20,11 +20,7 @@ import {
   requestMainWalletWithdrawAction,
 } from "@/lib/membership/wallet-actions";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
-import {
-  explorerAddressUrl,
-  planDeductDecision,
-  roundUsd,
-} from "@/lib/membership/wallet";
+import { planDeductDecision, roundUsd } from "@/lib/membership/wallet";
 import type {
   BillingChain,
   BillingToken,
@@ -181,15 +177,11 @@ export function TopUpWallet({
     tokens.find((row) => row.chainId === chain?.id && row.kind === "stable") ??
     tokens[0] ??
     null;
-  const explorer = chain
-    ? explorerAddressUrl(chain.explorerUrl, address?.address ?? "")
-    : null;
   const depositLabel =
     token && chain
       ? `Send ${token.symbol} on ${chain.name}`
       : "Send the listed testnet token to this address";
 
-  const confirmations = chain?.confirmations ?? 3;
   return (
     <div id="top-up" className="space-y-3">
       {heading ? (
@@ -207,27 +199,7 @@ export function TopUpWallet({
           <p className="break-all rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink">
             {address.address}
           </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <CopyTextButton text={address.address} label="Copy address" />
-            {explorer ? (
-              <a
-                href={explorer}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs text-accent hover:underline"
-              >
-                Go to Explorer
-              </a>
-            ) : null}
-          </div>
-          <p className="text-xs text-ink-faint">
-            Same address on every listed EVM chain. Wait for {confirmations}{" "}
-            confirmation{confirmations === 1 ? "" : "s"}
-            {showCheck
-              ? ", then check for the deposit"
-              : ". This page checks for the deposit automatically"}
-            . Stables credit 1:1 USD to Main.
-          </p>
+          <CopyTextButton text={address.address} label="Copy address" />
         </>
       ) : (
         <p className="text-sm text-warning">
