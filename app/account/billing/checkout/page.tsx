@@ -96,7 +96,7 @@ export default async function AccountCheckoutPage({
           selected={billing.billingMethod}
           deductSelected={billing.paySubscriptionFromCredit}
           creditUsd={deposit.books.main}
-          affiliateUsd={deposit.books.affiliate}
+          affiliateUsd={deposit.payableAffiliateUsd}
           depositAddress={deposit.address}
           addressError={deposit.addressError}
           chains={deposit.chains}

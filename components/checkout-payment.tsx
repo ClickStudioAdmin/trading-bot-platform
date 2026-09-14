@@ -4,7 +4,10 @@ import { useState } from "react";
 import { BillingMethodRadios } from "@/components/billing-method-radios";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { StripeEmbeddedCheckout } from "@/components/stripe-embedded-checkout";
-import { CryptoWalletPanel } from "@/components/crypto-wallet-panel";
+import {
+  CryptoWalletPanel,
+  TopUpWallet,
+} from "@/components/crypto-wallet-panel";
 import { type BillingMethod } from "@/lib/membership/billing";
 import {
   confirmStripePlanChangeAction,
@@ -57,22 +60,62 @@ export function CheckoutPayment({
 }) {
   const [method, setMethod] = useState<BillingMethod>(selected ?? "stripe");
   const [deduct, setDeduct] = useState(deductSelected);
+  const cryptoSaved = selected === "wallet";
 
   return (
-    <div className="mt-6 grid items-start gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
-      <section className="rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">{planName}</h2>
-        <p className="mt-1 text-sm text-ink-muted">{planPrice}</p>
-        <div className="mt-4">
-          <BillingMethodRadios
-            name="billingMethod"
-            selected={method}
-            deductSelected={deduct}
-            onMethodChange={setMethod}
-            onDeductChange={setDeduct}
-          />
-        </div>
-      </section>
+    <div className="mt-6 grid items-start gap-5 lg:grid-cols-[minmax(28rem,36rem)_minmax(0,1fr)]">
+      <div className="space-y-5">
+        <section className="rounded-card border border-line bg-surface p-5">
+          <h2 className="text-lg font-semibold tracking-tight">{planName}</h2>
+          <p className="mt-1 text-sm text-ink-muted">{planPrice}</p>
+          <div className="mt-4">
+            <BillingMethodRadios
+              name="billingMethod"
+              selected={method}
+              deductSelected={deduct}
+              onMethodChange={setMethod}
+              onDeductChange={setDeduct}
+            />
+          </div>
+          {method === "wallet" ? (
+            <form action={saveCheckoutCryptoAction} className="mt-4">
+              <input type="hidden" name="planId" value={planId} />
+              {deduct ? (
+                <input
+                  type="hidden"
+                  name="paySubscriptionFromCredit"
+                  value="1"
+                />
+              ) : null}
+              <PendingSubmitButton
+                pendingLabel="Saving…"
+                successKey="save-checkout-crypto"
+                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+              >
+                Save method
+              </PendingSubmitButton>
+              {!cryptoSaved ? (
+                <p className="mt-3 text-xs text-ink-faint">
+                  Save Crypto as your method to see your deposit address and
+                  pay with credit.
+                </p>
+              ) : null}
+            </form>
+          ) : null}
+        </section>
+        {method === "wallet" && cryptoSaved ? (
+          <section className="rounded-card border border-line bg-surface p-5">
+            <TopUpWallet
+              address={depositAddress}
+              addressError={addressError}
+              chains={chains}
+              tokens={tokens}
+              planId={planId}
+              checkout
+            />
+          </section>
+        ) : null}
+      </div>
 
       <section className="overflow-hidden rounded-card border border-line bg-surface p-4">
         {method === "stripe" ? (
@@ -112,7 +155,9 @@ export function CheckoutPayment({
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-ink-muted">
-              Pay from Main credit, or top up on the right.
+              {cryptoSaved
+                ? "Pay from Main credit, or top up on the left."
+                : "Save Crypto as your method, then pay from Main credit."}
             </p>
             <CryptoWalletPanel
               mainUsd={creditUsd}
@@ -126,24 +171,9 @@ export function CheckoutPayment({
               planId={planId}
               planPriceUsd={planPriceUsd}
               checkout
+              booksOnly
+              payEnabled={cryptoSaved}
             />
-            <form action={saveCheckoutCryptoAction}>
-              <input type="hidden" name="planId" value={planId} />
-              {deduct ? (
-                <input
-                  type="hidden"
-                  name="paySubscriptionFromCredit"
-                  value="1"
-                />
-              ) : null}
-              <PendingSubmitButton
-                pendingLabel="Saving…"
-                successKey="save-checkout-crypto"
-                className="rounded-control border border-line px-4 py-2 text-sm text-ink hover:border-line-strong"
-              >
-                Save Crypto method
-              </PendingSubmitButton>
-            </form>
           </div>
         )}
       </section>

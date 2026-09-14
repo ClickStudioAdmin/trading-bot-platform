@@ -637,7 +637,7 @@ export async function archiveAffiliateLinkAction(formData: FormData) {
   }
   const linkId = parseUuid(formData.get("linkId"));
   if (!linkId) {
-    portalFail("That link was not found.", "links");
+    portalFail("That URL was not found.", "links");
   }
   const archived = await archiveAffiliateLink({
     userId: member.id,
@@ -664,7 +664,7 @@ export async function renameAffiliateLinkAction(formData: FormData) {
   }
   const linkId = parseUuid(formData.get("linkId"));
   if (!linkId) {
-    portalFail("That link was not found.", "links");
+    portalFail("That URL was not found.", "links");
   }
   const renamed = await renameAffiliateLink({
     userId: member.id,

@@ -805,7 +805,7 @@ export function parsePayoutFileNetwork(
 }
 
 export function chunkPayoutsForAirdropFiles<
-  T extends { address: string; amountUsd: number },
+  T extends { address: string | null; amountUsd: number },
 >(
   rows: T[],
   input: { maxRows: number; maxAmountUsd: number | null },
@@ -813,7 +813,7 @@ export function chunkPayoutsForAirdropFiles<
   const groups: T[][] = [];
   const index = new Map<string, T[]>();
   for (const row of rows) {
-    const key = row.address.trim().toLowerCase();
+    const key = row.address?.trim().toLowerCase() ?? "";
     if (!key) {
       continue;
     }
@@ -991,10 +991,10 @@ export function parseAffiliateLinkSlug(
     slug.length < AFFILIATE_LINK_SLUG_MIN ||
     slug.length > AFFILIATE_LINK_SLUG_MAX
   ) {
-    return { ok: false, error: "That link was not found." };
+    return { ok: false, error: "That URL was not found." };
   }
   if (!/^[A-Z0-9]+$/.test(slug)) {
-    return { ok: false, error: "That link was not found." };
+    return { ok: false, error: "That URL was not found." };
   }
   return { ok: true, slug };
 }

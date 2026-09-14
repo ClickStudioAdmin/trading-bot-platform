@@ -22,11 +22,11 @@ export function AffiliateArchiveButton({
 
   async function onArchive() {
     const ok = await confirm({
-      title: kind === "campaign" ? "Archive this campaign?" : "Archive this link?",
+      title: kind === "campaign" ? "Archive this campaign?" : "Archive this URL?",
       message:
         kind === "campaign"
-          ? `${name} leaves the picker. Existing links and stats keep this campaign. Old /r/ URLs still work.`
-          : `${name} leaves your active list. The /r/ URL still works and past attributions stay on this link.`,
+          ? `${name} leaves the picker. Existing URLs and stats keep this campaign. Old /r/ URLs still work.`
+          : `${name} leaves your active list. The /r/ URL still works and past attributions stay on this URL.`,
       confirmLabel: "Archive",
     });
     if (!ok) {

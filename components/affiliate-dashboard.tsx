@@ -131,10 +131,10 @@ export function AffiliateDashboard({
           Campaigns
         </TabLink>
         <TabLink href={affiliatePortalPath("links")} selected={tab === "links"}>
-          Links
+          URLs
         </TabLink>
         <TabLink href={affiliatePortalPath("referrals")} selected={tab === "referrals"}>
-          Referrals
+          Commissions
         </TabLink>
         <TabLink href={affiliatePortalPath("payouts")} selected={tab === "payouts"}>
           Payouts
@@ -165,16 +165,16 @@ export function AffiliateDashboard({
         <p className="mt-6 text-sm text-success">Campaign created.</p>
       ) : null}
       {saved === "link" ? (
-        <p className="mt-6 text-sm text-success">Link created.</p>
+        <p className="mt-6 text-sm text-success">URL created.</p>
       ) : null}
       {saved === "campaign-archived" ? (
         <p className="mt-6 text-sm text-success">Campaign archived.</p>
       ) : null}
       {saved === "link-archived" ? (
-        <p className="mt-6 text-sm text-success">Link archived.</p>
+        <p className="mt-6 text-sm text-success">URL archived.</p>
       ) : null}
       {saved === "link-renamed" ? (
-        <p className="mt-6 text-sm text-success">Link renamed.</p>
+        <p className="mt-6 text-sm text-success">URL renamed.</p>
       ) : null}
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -218,7 +218,7 @@ export function AffiliateDashboard({
       {tab === "overview" ? (
         <>
           <p className="mt-6 max-w-2xl text-sm text-ink-muted">
-            Signups stay yours even if they later click someone else’s link.
+            Signups stay yours even if they later click someone else’s URL.
             Commission starts when they first pay.
           </p>
           <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -313,10 +313,10 @@ export function AffiliateDashboard({
             </div>
             <div className="rounded-card border border-line bg-surface p-5">
               <h2 className="text-lg font-semibold tracking-tight">
-                Default link
+                Default URL
               </h2>
               <p className="mt-2 text-sm text-ink-muted">
-                System Default. Share this. Custom landings are on the Links
+                System Default. Share this. Custom landings are on the URLs
                 tab.
               </p>
               {defaultShareUrl ? (
@@ -325,7 +325,7 @@ export function AffiliateDashboard({
                     {defaultShareUrl}
                   </p>
                   <div className="mt-3">
-                    <CopyTextButton text={defaultShareUrl} label="Copy link" />
+                    <CopyTextButton text={defaultShareUrl} label="Copy URL" />
                   </div>
                   {shareRates ? (
                     <p className="mt-4 text-sm text-ink-muted">
@@ -540,7 +540,7 @@ export function AffiliateDashboard({
         <div className="mt-6 space-y-5">
           <section className="rounded-card border border-line bg-surface p-5">
             <h2 className="text-lg font-semibold tracking-tight">
-              Create a link
+              Create a URL
             </h2>
             <form
               action={createAffiliateLinkAction}
@@ -584,12 +584,12 @@ export function AffiliateDashboard({
                 pendingLabel="Creating…"
                 className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
               >
-                Create link
+                Create URL
               </PendingSubmitButton>
             </form>
           </section>
           <section>
-            <h2 className="text-lg font-semibold tracking-tight">Your links</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Your URLs</h2>
             {portal.links.length === 0 && portal.archivedLinks.length === 0 ? (
               <p className="mt-3 text-sm text-ink-muted">
                 A referral code could not be created yet. Refresh and try again.
@@ -608,7 +608,7 @@ export function AffiliateDashboard({
                       <th className="px-4 py-3 font-medium whitespace-nowrap">
                         Campaign
                       </th>
-                      <th className="px-4 py-3 font-medium">Link</th>
+                      <th className="px-4 py-3 font-medium">URL</th>
                       <th className="px-4 py-3 font-medium whitespace-nowrap">
                         Type
                       </th>
@@ -641,78 +641,139 @@ export function AffiliateDashboard({
 
       {tab === "payouts" ? (
         <div className="mt-6 space-y-5">
-          <section className="rounded-card border border-line bg-surface p-5">
-            <h2 className="text-lg font-semibold tracking-tight">
-              Withdraw USDT
-            </h2>
-            <p className="mt-2 text-sm text-ink-muted">
-              Payable {formatUsd(portal.payableUsd)}. Minimum{" "}
-              {formatUsd(portal.settings.minPayoutUsd)}. Last payout{" "}
-              {portal.lastPayoutAt ? monthJoinedLabel(portal.lastPayoutAt) : "—"}.
-            </p>
-            {!withdraw.ok ? (
-              <p className="mt-3 text-sm text-warning">{withdraw.reason}</p>
-            ) : null}
-            {withdraw.ok && payoutChains.length === 0 ? (
-              <p className="mt-3 text-sm text-warning">
-                Affiliate payouts are not enabled on any chain yet. An admin can
-                tick this on Settings → Crypto.
+          <div className="grid gap-4 lg:grid-cols-3 lg:items-start">
+            <section className="rounded-card border border-line bg-surface p-5 lg:col-span-2">
+              <h2 className="text-lg font-semibold tracking-tight">
+                Payout request
+              </h2>
+              <p className="mt-2 text-sm text-ink-muted">
+                Request USDT from payable earnings. Change chain and address on
+                Settings.
               </p>
-            ) : null}
-            <form
-              action={requestAffiliatePayoutAction}
-              className="mt-4 flex flex-wrap items-end gap-3"
-            >
-              <label className="w-44 shrink-0 text-sm text-ink">
-                Chain
-                <select
-                  name="network"
-                  disabled={!canWithdraw}
-                  className={BILLING_FIELD_CLASS}
-                  defaultValue={
-                    portal.payoutSettings.network ?? payoutChains[0]?.slug ?? ""
-                  }
-                >
-                  {payoutChains.map((chain) => (
-                    <option key={chain.id} value={chain.slug}>
-                      {chain.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="w-32 shrink-0 text-sm text-ink">
-                Amount
-                <input
-                  name="amountUsd"
-                  type="number"
-                  inputMode="decimal"
-                  step="0.01"
-                  min={portal.settings.minPayoutUsd}
-                  max={portal.payableUsd}
-                  disabled={!canWithdraw}
-                  placeholder="0.00"
-                  className={BILLING_FIELD_CLASS}
-                />
-              </label>
-              <label className="min-w-[12rem] flex-1 text-sm text-ink">
-                Address
-                <input
-                  name="address"
-                  disabled={!canWithdraw}
-                  defaultValue={portal.payoutSettings.address ?? ""}
-                  placeholder="0x…"
-                  className={BILLING_FIELD_CLASS}
-                />
-              </label>
-              <PendingSubmitButton
-                pendingLabel="Requesting…"
-                disabled={!canWithdraw}
-                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:bg-accent-strong/40"
+              {!withdraw.ok ? (
+                <p className="mt-3 text-sm text-warning">{withdraw.reason}</p>
+              ) : null}
+              {withdraw.ok && payoutChains.length === 0 ? (
+                <p className="mt-3 text-sm text-warning">
+                  Affiliate payouts are not enabled on any chain yet. An admin can
+                  tick this on Settings → Crypto.
+                </p>
+              ) : null}
+              <form
+                action={requestAffiliatePayoutAction}
+                className="mt-4 flex flex-wrap items-end gap-3"
               >
-                Request withdraw
-              </PendingSubmitButton>
-            </form>
-          </section>
+                <input
+                  type="hidden"
+                  name="address"
+                  value={portal.payoutSettings.address ?? ""}
+                />
+                <label className="w-44 shrink-0 text-sm text-ink">
+                  Chain
+                  <select
+                    name="network"
+                    disabled={!canWithdraw}
+                    className={BILLING_FIELD_CLASS}
+                    defaultValue={
+                      portal.payoutSettings.network ?? payoutChains[0]?.slug ?? ""
+                    }
+                  >
+                    {payoutChains.map((chain) => (
+                      <option key={chain.id} value={chain.slug}>
+                        {chain.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="w-32 shrink-0 text-sm text-ink">
+                  Amount
+                  <input
+                    name="amountUsd"
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min={portal.settings.minPayoutUsd}
+                    max={portal.payableUsd}
+                    disabled={!canWithdraw}
+                    placeholder="0.00"
+                    className={BILLING_FIELD_CLASS}
+                  />
+                </label>
+                <div className="min-w-[10rem] text-sm text-ink">
+                  Address
+                  <p
+                    className="mt-1 rounded-control border border-line bg-canvas px-3 py-2 font-mono text-xs text-ink"
+                    title={portal.payoutSettings.address ?? undefined}
+                  >
+                    {shortenPayoutAddress(portal.payoutSettings.address)}
+                  </p>
+                </div>
+                <PendingSubmitButton
+                  pendingLabel="Requesting…"
+                  disabled={!canWithdraw}
+                  className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink disabled:bg-accent-strong/40"
+                >
+                  Request payout
+                </PendingSubmitButton>
+              </form>
+            </section>
+            <section className="rounded-card border border-line bg-surface p-5">
+              <h2 className="text-lg font-semibold tracking-tight">
+                Available
+              </h2>
+              <dl className="mt-4 space-y-3 text-sm">
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-ink-muted">Payable</dt>
+                  <dd className="tabular-nums font-semibold text-ink">
+                    {formatUsd(portal.payableUsd)}
+                  </dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-ink-muted">Pending</dt>
+                  <dd className="tabular-nums text-ink">
+                    {formatUsd(portal.pendingUsd)}
+                  </dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-ink-muted">Paid out</dt>
+                  <dd className="tabular-nums text-ink">
+                    {formatUsd(portal.paidOutUsd)}
+                  </dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-ink-muted">Minimum</dt>
+                  <dd className="tabular-nums text-ink">
+                    {formatUsd(portal.settings.minPayoutUsd)}
+                  </dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-ink-muted">Last payout</dt>
+                  <dd className="text-ink">
+                    {portal.lastPayoutAt
+                      ? monthJoinedLabel(portal.lastPayoutAt)
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3 border-t border-line pt-3">
+                  <dt className="text-ink-muted">Auto payouts</dt>
+                  <dd className="text-right text-ink">
+                    {portal.payoutSettings.autoPayout ? (
+                      <>
+                        On
+                        {portal.payoutSettings.autoPayoutUsd != null ? (
+                          <span className="mt-0.5 block text-xs text-ink-muted">
+                            Over {formatUsd(portal.payoutSettings.autoPayoutUsd)}
+                          </span>
+                        ) : null}
+                      </>
+                    ) : (
+                      "Off"
+                    )}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          </div>
           <section>
             <h2 className="text-lg font-semibold tracking-tight">Payouts</h2>
             {payouts.length === 0 ? (
@@ -875,7 +936,7 @@ function AffiliateCampaignsTable({
         <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
           <tr>
             <th className="px-4 py-3 font-medium whitespace-nowrap">Name</th>
-            <th className="px-4 py-3 font-medium whitespace-nowrap">Links</th>
+            <th className="px-4 py-3 font-medium whitespace-nowrap">URLs</th>
             <th className="px-4 py-3 font-medium whitespace-nowrap">
               Signups
             </th>
@@ -974,7 +1035,7 @@ function AffiliateLinkRowView({
             readOnly
             size={1}
             value={url}
-            aria-label={`${link.name} share link`}
+            aria-label={`${link.name} share URL`}
             className="w-56 min-w-0 truncate rounded-control border border-line bg-canvas px-2.5 py-1.5 font-mono text-xs text-ink-muted"
           />
           <span className="shrink-0">

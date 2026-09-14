@@ -18,13 +18,13 @@ Emails are deterministic (`john.1-2@tbp-john-demo.invalid`). User ids are `md5('
 - Full **5×5** tree: five direct referrals under the admin and under every John, five levels deep (**3,905** Johns).
 - Every John is a paid platform member on **Pro** or **Premium** (Premium if that plan exists). Follow-up migrations `20260914090000_john_demo_aliases_and_plans.sql` (plans) and `20260914110000_john_demo_affiliate_aliases.sql` (affiliate aliases).
 
-Cleanup matches the `@tbp-john-demo.invalid` email domain, `John demo` campaigns, `JDEM*` links, and `john-demo:` payout / invoice ids.
+Cleanup matches the `@tbp-john-demo.invalid` email domain, `John demo` campaigns, `JDEM*` URLs, and `john-demo:` payout / invoice ids.
 
 ## What else is seeded
 
 - All Johns paid on Pro or Premium so network MRR and conversion look full.
 - Unique first + last **affiliate aliases** (network labels). Trader aliases stay `John {path}`.
-- Admin campaigns / custom links (including one archived each).
+- Admin campaigns / custom URLs (including one archived each).
 - Commissions in **pending**, **payable**, **paid**, and **void**.
 - Payouts in **requested**, **approved**, **rejected**, and **paid** (admin queue + a few John portals). New live payouts go **requested → pending (on a file) → paid**.
 - Program max depth set to **5** so the tree is visible. Default L1–L5 rates are filled in only if they were all zero.

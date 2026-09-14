@@ -11,7 +11,10 @@ import {
   decideUpgrade,
   parsePaySubscriptionFromCredit,
 } from "./billing";
-import { createCommissionsForInvoice } from "./affiliate-store";
+import {
+  createCommissionsForInvoice,
+  sumPayableAffiliateUsd,
+} from "./affiliate-store";
 import { getMemberBilling, saveBillingMethod } from "./billing-store";
 import { parsePlanId } from "./form";
 import { getMembershipPlan } from "./store";
@@ -296,14 +299,17 @@ export async function payPlanWithCreditAction(formData: FormData) {
     redirect(checkoutPath({ plan: planId, error: saved.error }));
     return;
   }
-  const books = await walletBookBalances(member.id);
+  const [books, payableAffiliateUsd] = await Promise.all([
+    walletBookBalances(member.id),
+    sumPayableAffiliateUsd(member.id),
+  ]);
   const useAffiliate =
     billing?.paySubscriptionFromAffiliate === true &&
     target.features.affiliate_pay_subscription;
   const deduct = planDeductDecision({
     priceUsd: target.priceUsd,
     mainUsd: books.main,
-    affiliateUsd: books.affiliate,
+    affiliateUsd: payableAffiliateUsd,
     useAffiliate,
   });
   if (!deduct.ok) {

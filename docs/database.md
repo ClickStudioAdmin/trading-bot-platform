@@ -51,7 +51,7 @@ Current tables:
 | `membership_deposit_txs` | membership | Idempotent inbound credits (`chain` + `tx_hash` + `log_index`). Optional sweep hash. Service-role only. |
 | `membership_referral_codes` | membership | One code per login. Unique case-insensitive. |
 | `membership_affiliate_campaigns` | membership | Per-login campaign names. Active names unique per user (case-insensitive). `archived_at` hides from new assignment; historical IDs stay. Service-role only. |
-| `membership_affiliate_links` | membership | Named `/r/{slug}` share links. Landing `home` or `affiliates`. Optional `campaign_id`. Unique slug even after archive. `archived_at` hides from the active list; `/r/` still resolves. Service-role only. |
+| `membership_affiliate_links` | membership | Named `/r/{slug}` share URLs. Landing `home` or `affiliates`. Optional `campaign_id`. Unique slug even after archive. `archived_at` hides from the active list; `/r/` still resolves. Service-role only. |
 | `membership_referrals` | membership | First-touch attribution. Optional `campaign_id` / `link_id` from the share link. No self-referral. |
 | `membership_commissions` | membership | Per invoice + earner + level. `pending` / `payable` / `paid` / `void`. `rate_plan_id` is null when the row used program default rates. Copies `campaign_id` / `link_id` from the paying member’s referral so earnings can filter by campaign. |
 | `membership_payouts` | membership | Export / Connect / USDT withdraw queue. Status: `requested`, `approved` (legacy), `pending` (on a payout file), `rejected`, `paid`. Optional `payout_file_id`. |

@@ -115,6 +115,7 @@ export function CryptoWalletPanel({
   checkout,
   affiliateNote,
   booksOnly,
+  payEnabled = true,
 }: {
   mainUsd: number;
   affiliateUsd: number;
@@ -129,8 +130,10 @@ export function CryptoWalletPanel({
   checkout?: boolean;
   affiliateNote?: boolean;
   booksOnly?: boolean;
+  payEnabled?: boolean;
 }) {
   const canPay =
+    payEnabled &&
     typeof planPriceUsd === "number" &&
     planDeductDecision({
       priceUsd: planPriceUsd,
@@ -141,28 +144,13 @@ export function CryptoWalletPanel({
 
   const books = (
     <div className="space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight">Your Wallets</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-              Main Wallet
-            </p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
-              {formatUsd(mainUsd)}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-              Affiliate earnings
-            </p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
-              {formatUsd(affiliateUsd)}
-            </p>
-          </div>
-        </div>
+        <h2 className="text-lg font-semibold tracking-tight">Main Wallet</h2>
+        <p className="text-2xl font-semibold tabular-nums tracking-tight">
+          {formatUsd(mainUsd)}
+        </p>
         <p className="text-sm text-ink-muted">
-          USD books, not crypto wallets. Listed stables credit Main 1:1.
-          Affiliate is commission. Rent always debits Main.
+          USD book, not a crypto wallet. Listed stables credit Main 1:1. Rent
+          always debits Main.
         </p>
         {deductOn ? (
           <p className="text-xs text-ink-faint">
@@ -189,6 +177,11 @@ export function CryptoWalletPanel({
             >
               Pay with credit
             </PendingSubmitButton>
+            {!payEnabled ? (
+              <p className="mt-2 text-xs text-ink-faint">
+                Save Crypto as your method to pay with credit.
+              </p>
+            ) : null}
           </form>
         ) : null}
     </div>

@@ -100,7 +100,7 @@ export default async function AffiliatesPage({
             .
           </p>
           <ul className="mt-6 max-w-xl list-disc space-y-2 pl-5 text-sm text-ink-muted">
-            <li>Share a unique referral code and custom landing links.</li>
+            <li>Share a unique referral code and custom landing URLs.</li>
             <li>Commission is on platform subscriptions only, not trading PnL.</li>
             <li>Withdraw payable earnings as USDT after the hold.</li>
           </ul>

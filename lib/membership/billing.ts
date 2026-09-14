@@ -11,7 +11,7 @@ export const BILLING_METHODS = ["stripe", "wallet"] as const;
 export type BillingMethod = (typeof BILLING_METHODS)[number];
 
 export const BILLING_METHOD_LABELS: Record<BillingMethod, string> = {
-  stripe: "Card",
+  stripe: "Credit Card (Stripe)",
   wallet: "Crypto",
 };
 

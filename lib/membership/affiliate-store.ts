@@ -733,6 +733,11 @@ export async function listQueuedCommissionIds(): Promise<Set<string>> {
   return queued;
 }
 
+export async function sumPayableAffiliateUsd(userId: string): Promise<number> {
+  const payable = await listPayableCommissions(userId);
+  return roundUsd(payable.reduce((sum, row) => sum + row.amountUsd, 0));
+}
+
 export async function listPayableCommissions(
   userId: string,
 ): Promise<CommissionRow[]> {
@@ -2247,7 +2252,7 @@ export async function createAffiliateLink(input: {
   const name = parseAffiliateLabel(
     input.name,
     AFFILIATE_LINK_NAME_MAX,
-    "Enter a link name (1–40 characters).",
+    "Enter a URL name (1–40 characters).",
   );
   if (!name.ok) {
     return name;
@@ -2291,7 +2296,7 @@ export async function createAffiliateLink(input: {
   if (existing.length >= AFFILIATE_LINK_MAX) {
     return {
       ok: false,
-      error: `You can create up to ${AFFILIATE_LINK_MAX} links.`,
+      error: `You can create up to ${AFFILIATE_LINK_MAX} URLs.`,
     };
   }
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -2313,11 +2318,11 @@ export async function createAffiliateLink(input: {
       continue;
     }
     if (schemaGap(error)) {
-      return { ok: false, error: "Custom links are not available yet." };
+      return { ok: false, error: "Custom URLs are not available yet." };
     }
     return { ok: false, error: error.message };
   }
-  return { ok: false, error: "Could not allocate a link slug." };
+  return { ok: false, error: "Could not allocate a URL slug." };
 }
 
 export async function archiveAffiliateCampaign(input: {
@@ -2363,12 +2368,12 @@ export async function renameAffiliateLink(input: {
   name: unknown;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   if (input.linkId === AFFILIATE_SYSTEM_LINK_ID) {
-    return { ok: false, error: "The Default link cannot be renamed." };
+    return { ok: false, error: "The Default URL cannot be renamed." };
   }
   const name = parseAffiliateLabel(
     input.name,
     AFFILIATE_LINK_NAME_MAX,
-    "Enter a link name (1–40 characters).",
+    "Enter a URL name (1–40 characters).",
   );
   if (!name.ok) {
     return name;
@@ -2386,12 +2391,12 @@ export async function renameAffiliateLink(input: {
     .maybeSingle();
   if (error) {
     if (schemaGap(error)) {
-      return { ok: false, error: "Custom links are not available yet." };
+      return { ok: false, error: "Custom URLs are not available yet." };
     }
     return { ok: false, error: error.message };
   }
   if (!data) {
-    return { ok: false, error: "That link was not found." };
+    return { ok: false, error: "That URL was not found." };
   }
   return { ok: true };
 }
@@ -2401,7 +2406,7 @@ export async function archiveAffiliateLink(input: {
   linkId: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   if (input.linkId === AFFILIATE_SYSTEM_LINK_ID) {
-    return { ok: false, error: "The Default link cannot be archived." };
+    return { ok: false, error: "The Default URL cannot be archived." };
   }
   const supabase = createServiceClient();
   if (!supabase) {
@@ -2431,7 +2436,7 @@ export async function archiveAffiliateLink(input: {
     if (existing.data && optionalId(existing.data.archived_at)) {
       return { ok: true };
     }
-    return { ok: false, error: "That link was not found." };
+    return { ok: false, error: "That URL was not found." };
   }
   return { ok: true };
 }

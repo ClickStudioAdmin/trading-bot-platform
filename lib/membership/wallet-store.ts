@@ -11,6 +11,7 @@ import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import type { Hex } from "viem";
 import { createDepositMnemonic, deriveDepositAddress } from "./hd";
 import { DEFAULT_GAS_LOW_ETH, parseGasLowEth } from "./gas-drip";
+import { sumPayableAffiliateUsd } from "./affiliate-store";
 import {
   billingChainEnvironment,
   bookBalancesFromEntries,
@@ -749,6 +750,7 @@ export async function payPlanFromWallet(input: {
 
 export type MemberDepositContext = {
   books: WalletBookBalances;
+  payableAffiliateUsd: number;
   address: DepositAddress | null;
   addressError: string | null;
   chains: BillingChain[];
@@ -759,15 +761,17 @@ export type MemberDepositContext = {
 export async function loadMemberDepositContext(
   userId: string,
 ): Promise<MemberDepositContext> {
-  const [books, hd, chains] = await Promise.all([
+  const [books, hd, chains, payableAffiliateUsd] = await Promise.all([
     walletBookBalances(userId),
     getHdSeedStatus(),
     listBillingChains(),
+    sumPayableAffiliateUsd(userId),
   ]);
   const tokens = await listBillingTokens(chains.map((chain) => chain.id));
   if (!hd.configured) {
     return {
       books,
+      payableAffiliateUsd,
       address: null,
       addressError: hd.keyReady
         ? "Deposit addresses are not ready yet."
@@ -780,6 +784,7 @@ export async function loadMemberDepositContext(
   const ensured = await ensureDepositAddress(userId);
   return {
     books,
+    payableAffiliateUsd,
     address: ensured.ok ? ensured.address : null,
     addressError: ensured.ok ? null : ensured.error,
     chains,

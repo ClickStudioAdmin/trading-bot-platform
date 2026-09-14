@@ -31,7 +31,7 @@ export function AffiliateLinkActions({
         <AffiliateArchiveButton kind="link" id={id} name={name} />
       ) : null}
       {open ? (
-        <Modal title="Rename link" onClose={() => setOpen(false)} elevated>
+        <Modal title="Rename URL" onClose={() => setOpen(false)} elevated>
           <form action={renameAffiliateLinkAction} className="mt-4 space-y-3">
             <input type="hidden" name="linkId" value={id} />
             <label className="block text-sm text-ink">
