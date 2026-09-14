@@ -108,7 +108,9 @@ export default async function AccountCheckoutPage({
           chargeBasis={charge.kind === "upgrade" ? charge.basis : "full"}
           dueUsd={charge.dueUsd}
           selected={billing.billingMethod}
-          deductSelected={billing.paySubscriptionFromCredit}
+          deductSelected={
+            charge.kind === "initial" || billing.paySubscriptionFromCredit
+          }
           creditUsd={deposit.books.main}
           affiliateUsd={deposit.payableAffiliateUsd}
           depositAddress={deposit.address}
