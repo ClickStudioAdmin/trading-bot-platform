@@ -6,6 +6,7 @@ import { getSessionMember } from "@/lib/auth/session";
 import {
   checkoutCharge,
   hasUsableStripeSubscription,
+  showCheckoutMethodPicker,
 } from "@/lib/membership/billing";
 import { getMemberBilling } from "@/lib/membership/billing-store";
 import { loadMemberDepositContext } from "@/lib/membership/wallet-store";
@@ -18,7 +19,6 @@ import {
   stripeSecretConfigured,
 } from "@/lib/membership/stripe";
 import { firstSearchValue } from "@/lib/paper/open";
-import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -57,8 +57,6 @@ export default async function AccountCheckoutPage({
     targetPriceUsd: target.priceUsd,
     periodEnd: billing.periodEnd,
   });
-  const cycleEndMs =
-    charge.kind === "upgrade" ? parseDisplayTime(charge.periodEnd) : null;
   const error = firstSearchValue(params.error);
   const deposited = firstSearchValue(params.deposited);
   const scanned = firstSearchValue(params.scanned) === "1";
@@ -68,9 +66,6 @@ export default async function AccountCheckoutPage({
     <div>
       <PageHeading title="Upgrade" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
-        {charge.kind === "upgrade"
-          ? "Uses your saved payment method. Due today is the remainder of this cycle. The new monthly fee starts next cycle."
-          : "Due today is the first month in full. Then the monthly fee repeats. Choose Card or Crypto if you have not saved a method yet."}{" "}
         Compare plans on{" "}
         <Link href="/account/plans" className="text-accent">
           Plans
@@ -112,9 +107,6 @@ export default async function AccountCheckoutPage({
           chargeKind={charge.kind}
           chargeBasis={charge.kind === "upgrade" ? charge.basis : "full"}
           dueUsd={charge.dueUsd}
-          periodEndLabel={
-            cycleEndMs ? formatLocalDate(cycleEndMs) : null
-          }
           selected={billing.billingMethod}
           deductSelected={billing.paySubscriptionFromCredit}
           creditUsd={deposit.books.main}
@@ -132,6 +124,11 @@ export default async function AccountCheckoutPage({
           missingSecret={!stripeReady}
           missingPublishable={!stripePublishableConfigured()}
           existingStripeSubscription={hasUsableStripeSubscription(billing)}
+          showMethodPicker={showCheckoutMethodPicker({
+            chargeKind: charge.kind,
+            billingMethod: billing.billingMethod,
+            subscriptionStatus: billing.subscriptionStatus,
+          })}
         />
       )}
 

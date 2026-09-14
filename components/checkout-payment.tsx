@@ -30,7 +30,6 @@ export function CheckoutPayment({
   chargeKind,
   chargeBasis,
   dueUsd,
-  periodEndLabel,
   selected,
   deductSelected,
   creditUsd,
@@ -45,6 +44,7 @@ export function CheckoutPayment({
   missingSecret,
   missingPublishable,
   existingStripeSubscription,
+  showMethodPicker,
 }: {
   planId: string;
   planName: string;
@@ -53,7 +53,6 @@ export function CheckoutPayment({
   chargeKind: "initial" | "upgrade";
   chargeBasis: "full" | "prorate" | "delta";
   dueUsd: number;
-  periodEndLabel: string | null;
   selected: BillingMethod | null;
   deductSelected: boolean;
   creditUsd: number;
@@ -68,12 +67,13 @@ export function CheckoutPayment({
   missingSecret: boolean;
   missingPublishable: boolean;
   existingStripeSubscription: boolean;
+  showMethodPicker: boolean;
 }) {
-  const methodLocked = selected !== null;
   const [method, setMethod] = useState<BillingMethod>(selected ?? "stripe");
   const [deduct, setDeduct] = useState(deductSelected);
   const cryptoSaved = selected === "wallet";
   const upgrade = chargeKind === "upgrade";
+  const useCardOnFile = upgrade || (existingStripeSubscription && !showMethodPicker);
 
   return (
     <LiveMainWallet initialMainUsd={creditUsd}>
@@ -81,52 +81,21 @@ export function CheckoutPayment({
       <div className="space-y-5">
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">{planName}</h2>
-          <p className="mt-1 text-sm text-ink-muted">{planPrice}</p>
-          <div className="mt-4 space-y-3">
-            {currentPlanName ? (
-              <p className="text-sm text-ink-muted">
-                From {currentPlanName} to {planName}.
+          <dl className="mt-4 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
+            <dt className="text-ink-muted">Upgrading from:</dt>
+            <dd className="text-ink">{currentPlanName ?? "—"}</dd>
+            <dt className="text-ink-muted">Due Today:</dt>
+            <dd className="text-2xl font-semibold tabular-nums tracking-tight text-ink">
+              {formatUsd(dueUsd)}
+            </dd>
+            <dt className="text-ink-muted">Then:</dt>
+            <dd className="text-ink">{planPrice}</dd>
+          </dl>
+          {showMethodPicker ? (
+            <div className="mt-5 border-t border-line pt-4">
+              <p className="mb-3 text-sm font-medium text-ink">
+                Payment method
               </p>
-            ) : null}
-            <div>
-              <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                Due today
-              </p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">
-                {formatUsd(dueUsd)}
-              </p>
-              <p className="mt-1 text-sm text-ink-muted">
-                {chargeBasis === "prorate"
-                  ? periodEndLabel
-                    ? `Remainder of this cycle (ends ${periodEndLabel}).`
-                    : "Remainder of this cycle."
-                  : chargeBasis === "delta"
-                    ? "Difference from your current plan for a new cycle."
-                    : "First month in full."}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-                Then
-              </p>
-              <p className="mt-1 text-sm text-ink">
-                {planPrice}
-                {periodEndLabel
-                  ? ` starting ${periodEndLabel}`
-                  : upgrade
-                    ? " starting next billing date"
-                    : " after this first month"}
-                .
-              </p>
-            </div>
-          </div>
-          {methodLocked ? (
-            <p className="mt-4 text-sm text-ink-muted">
-              Paying with {method === "wallet" ? "Crypto" : "the card on file"}.
-              Change method on Billing.
-            </p>
-          ) : (
-            <div className="mt-4">
               <BillingMethodRadios
                 name="billingMethod"
                 selected={method}
@@ -135,8 +104,13 @@ export function CheckoutPayment({
                 onDeductChange={setDeduct}
               />
             </div>
+          ) : (
+            <p className="mt-4 text-sm text-ink-muted">
+              Paying with {method === "wallet" ? "Crypto" : "the card on file"}.
+              Change method on Billing.
+            </p>
           )}
-          {!methodLocked && method === "wallet" ? (
+          {showMethodPicker && method === "wallet" ? (
             <form action={saveCheckoutCryptoAction} className="mt-4">
               <input type="hidden" name="planId" value={planId} />
               {deduct ? (
@@ -179,7 +153,7 @@ export function CheckoutPayment({
 
       <section className="overflow-hidden rounded-card border border-line bg-surface p-4">
         {method === "stripe" ? (
-          upgrade || existingStripeSubscription ? (
+          useCardOnFile ? (
             <form action={confirmStripePlanChangeAction} className="space-y-4">
               <h2 className="text-lg font-semibold tracking-tight">
                 {upgrade ? "Pay with card" : "Card"}

@@ -5,6 +5,7 @@ import {
   checkoutPath,
   decideUpgrade,
   isPaidCycleUpgrade,
+  showCheckoutMethodPicker,
   prorateUpgradeUsd,
   embeddedCardReturnUrl,
   embeddedCheckoutReturnUrl,
@@ -160,6 +161,39 @@ assert.equal(
   }),
   15,
 );
+assert.equal(
+  showCheckoutMethodPicker({
+    chargeKind: "initial",
+    billingMethod: null,
+    subscriptionStatus: "none",
+  }),
+  true,
+);
+assert.equal(
+  showCheckoutMethodPicker({
+    chargeKind: "initial",
+    billingMethod: "stripe",
+    subscriptionStatus: "none",
+  }),
+  true,
+);
+assert.equal(
+  showCheckoutMethodPicker({
+    chargeKind: "upgrade",
+    billingMethod: null,
+    subscriptionStatus: "none",
+  }),
+  false,
+);
+assert.equal(
+  showCheckoutMethodPicker({
+    chargeKind: "upgrade",
+    billingMethod: "stripe",
+    subscriptionStatus: "active",
+  }),
+  false,
+);
+
 assert.deepEqual(
   checkoutCharge({
     currentPriceUsd: 0,

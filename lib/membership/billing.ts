@@ -250,6 +250,19 @@ export function prorateUpgradeUsd(input: {
   return roundUsd((delta * remaining) / periodMs);
 }
 
+export function showCheckoutMethodPicker(input: {
+  chargeKind: "initial" | "upgrade";
+  billingMethod: BillingMethod | null;
+  subscriptionStatus: SubscriptionStatus;
+}): boolean {
+  if (input.chargeKind !== "initial") {
+    return false;
+  }
+  return (
+    input.billingMethod === null || input.subscriptionStatus === "none"
+  );
+}
+
 export function checkoutCharge(input: {
   currentPriceUsd: number;
   targetPriceUsd: number;
