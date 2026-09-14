@@ -71,9 +71,28 @@ export function CheckoutPayment({
 }) {
   const [method, setMethod] = useState<BillingMethod>(selected ?? "stripe");
   const [deduct, setDeduct] = useState(deductSelected);
-  const cryptoSaved = selected === "wallet";
+  const persistChain = useRef(Promise.resolve());
   const upgrade = chargeKind === "upgrade";
   const useCardOnFile = upgrade || (existingStripeSubscription && !showMethodPicker);
+  const cryptoSelected = method === "wallet";
+
+  function persistCheckoutMethod(
+    nextMethod: BillingMethod,
+    nextDeduct: boolean,
+  ) {
+    if (!showMethodPicker) {
+      return;
+    }
+    const form = new FormData();
+    form.set("planId", planId);
+    form.set("billingMethod", nextMethod);
+    if (nextDeduct) {
+      form.set("paySubscriptionFromCredit", "1");
+    }
+    persistChain.current = persistChain.current
+      .catch(() => undefined)
+      .then(() => saveCheckoutMethodAction(form));
+  }
 
   return (
     <LiveMainWallet initialMainUsd={creditUsd}>
@@ -100,8 +119,14 @@ export function CheckoutPayment({
                 name="billingMethod"
                 selected={method}
                 deductSelected={deduct}
-                onMethodChange={setMethod}
-                onDeductChange={setDeduct}
+                onMethodChange={(next) => {
+                  setMethod(next);
+                  persistCheckoutMethod(next, deduct);
+                }}
+                onDeductChange={(checked) => {
+                  setDeduct(checked);
+                  persistCheckoutMethod(method, checked);
+                }}
               />
             </div>
           ) : (
@@ -110,35 +135,10 @@ export function CheckoutPayment({
               Change method on Billing.
             </p>
           )}
-          {showMethodPicker && method === "wallet" ? (
-            <form action={saveCheckoutCryptoAction} className="mt-4">
-              <input type="hidden" name="planId" value={planId} />
-              {deduct ? (
-                <input
-                  type="hidden"
-                  name="paySubscriptionFromCredit"
-                  value="1"
-                />
-              ) : null}
-              <PendingSubmitButton
-                pendingLabel="Saving…"
-                successKey="save-checkout-crypto"
-                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-              >
-                Save method
-              </PendingSubmitButton>
-              {!cryptoSaved ? (
-                <p className="mt-3 text-xs text-ink-faint">
-                  Save Crypto as your method to see your deposit address and
-                  pay with credit.
-                </p>
-              ) : null}
-            </form>
-          ) : null}
         </section>
         <CheckoutTopUp
           always={!upgrade}
-          visible={method === "wallet" && cryptoSaved}
+          visible={cryptoSelected}
           dueUsd={dueUsd}
           creditUsd={creditUsd}
           affiliateUsd={affiliateUsd}
@@ -198,9 +198,7 @@ export function CheckoutPayment({
             <p className="text-sm text-ink-muted">
               {upgrade
                 ? `${formatUsd(dueUsd)} will be deducted from Main for the rest of this cycle.`
-                : cryptoSaved
-                  ? "Pay from Main credit, or top up on the left."
-                  : "Save Crypto as your method, then pay from Main credit."}
+                : "Pay from Main credit, or top up on the left."}
             </p>
             <CryptoWalletPanel
               mainUsd={creditUsd}
@@ -215,7 +213,7 @@ export function CheckoutPayment({
               planPriceUsd={dueUsd}
               checkout
               booksOnly
-              payEnabled={cryptoSaved}
+              payEnabled
             />
           </div>
         )}
