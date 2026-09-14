@@ -79,7 +79,7 @@ export default async function AccountCheckoutPage({
       ) : null}
       {deposited ? (
         <p className="mt-6 text-sm text-success">
-          Credited {deposited} deposit{deposited === "1" ? "" : "s"} to Main.
+          Credited {deposited} deposit{deposited === "1" ? "" : "s"} to Account Wallet.
         </p>
       ) : null}
       {scanned ? (

@@ -939,7 +939,7 @@ export async function loadMainWalletWithdrawContext(
       arrears,
       payableUsd: books.main,
       minPayoutUsd,
-      balanceNoun: "Main Wallet",
+      balanceNoun: "Account Wallet",
     }),
   };
 }

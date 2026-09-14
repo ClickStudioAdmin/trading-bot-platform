@@ -204,7 +204,7 @@ export function mainWalletLedgerLabel(
     return "Transfer from Affiliate";
   }
   if (kind === "transfer_out") {
-    return "Transfer to Main";
+    return "Transfer to Account Wallet";
   }
   if (kind === "withdraw") {
     return "Withdrawal";

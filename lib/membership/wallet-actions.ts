@@ -369,7 +369,7 @@ export async function payPlanWithCreditAction(formData: FormData) {
     redirect(
       checkoutPath({
         plan: planId,
-        error: `Need ${roundUsd(deduct.shortUsd)} more Main credit to pay this plan.`,
+        error: `Need ${roundUsd(deduct.shortUsd)} more Account Wallet credit to pay this plan.`,
       }),
     );
     return;
@@ -479,7 +479,7 @@ export async function requestMainWalletWithdrawAction(formData: FormData) {
     arrears,
     payableUsd: books.main,
     minPayoutUsd,
-    balanceNoun: "Main Wallet",
+    balanceNoun: "Account Wallet",
   });
   if (!allowed.ok) {
     failBilling(allowed.reason, { tab: "wallet" });
@@ -505,7 +505,7 @@ export async function requestMainWalletWithdrawAction(formData: FormData) {
   await writeEventLog({
     scope: "system",
     event: "membership.wallet_withdraw_requested",
-    message: "Requested a USDT Main Wallet withdraw",
+    message: "Requested a USDT Account Wallet withdraw",
     userId: member.id,
     data: {
       payoutId: requested.payoutId,

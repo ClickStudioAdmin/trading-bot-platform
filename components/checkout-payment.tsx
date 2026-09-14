@@ -34,6 +34,8 @@ import type {
 } from "@/lib/membership/wallet-store";
 
 const DEPOSIT_POLL_MS = 10_000;
+const DEPOSIT_INSTRUCTIONS =
+  "Send at least this amount in a listed stablecoin. You can send more than Due Today so leftover covers later months.";
 
 export function CheckoutPayment({
   planId,
@@ -277,6 +279,7 @@ function CheckoutCryptoPay({
               planId={planId}
               checkout
               showCheck={false}
+              instructions={DEPOSIT_INSTRUCTIONS}
             />
             <CheckoutDepositWatcher
               planId={planId}
@@ -464,7 +467,7 @@ function CheckoutInitialCrypto({
         checkout
         heading={null}
         showCheck={false}
-        instructions="Send at least this amount in a listed stablecoin. You can send more than Due Today so leftover covers later months."
+        instructions={DEPOSIT_INSTRUCTIONS}
       />
       <CheckoutDepositWatcher
         planId={planId}

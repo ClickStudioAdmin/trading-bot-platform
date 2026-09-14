@@ -113,7 +113,7 @@ function CheckDepositButton({ checkout }: { checkout?: boolean }) {
       live.setStatus({
         notice:
           result.credited > 0
-            ? `Credited ${result.credited} deposit${result.credited === 1 ? "" : "s"} to Main.`
+            ? `Credited ${result.credited} deposit${result.credited === 1 ? "" : "s"} to Account Wallet.`
             : "No new confirmed deposits in the recent window.",
         noticeOk: result.credited > 0,
       });
@@ -198,7 +198,7 @@ export function TopUpWallet({
   tokens,
   checkout,
   revealAddress = true,
-  heading = "Top up Main Wallet",
+  heading = "Top up Account Wallet",
   showCheck = true,
   instructions,
 }: {
@@ -272,7 +272,7 @@ export function LiveWalletHeadingBalance({
   return (
     <div>
       <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-        Wallet balance
+        Account Wallet
       </p>
       <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">
         {formatUsd(live.mainUsd)}
@@ -337,7 +337,19 @@ export function CryptoWalletPanel({
 
   const books = (
     <div className="space-y-4">
-        {hideBalance ? null : (
+        {hideBalance ? null : checkout ? (
+          <>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Pay with Account Balance
+            </h2>
+            <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
+              <dt className="text-ink-muted">Current balance:</dt>
+              <dd className="tabular-nums text-ink">
+                {formatUsd(shownMainUsd)}
+              </dd>
+            </dl>
+          </>
+        ) : (
           <>
             <h2 className="text-lg font-semibold tracking-tight">
               Wallet balance
@@ -349,8 +361,8 @@ export function CryptoWalletPanel({
         )}
         {mainShort ? (
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-            Main Wallet does not have enough to pay this plan. Use Top up Main
-            Wallet below to send USDT.
+            Account Wallet does not have enough to pay for the upgrade. Top up
+            your Wallet below.
           </p>
         ) : null}
         {checkout && canPay && planId && typeof planPriceUsd === "number" ? (
@@ -403,7 +415,7 @@ function MainWalletWithdrawForm({
     <div className="space-y-3">
       <h2 className="text-lg font-semibold tracking-tight">Request withdraw</h2>
       <p className="text-sm text-ink-muted">
-        USDT from Main Wallet. Enter the receive address for this request.
+        USDT from Account Wallet. Enter the receive address for this request.
         Minimum {formatUsd(withdraw.minPayoutUsd)}.
       </p>
       {!withdraw.withdraw.ok ? (
