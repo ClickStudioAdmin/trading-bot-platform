@@ -1,8 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BillingMethodRadios } from "@/components/billing-method-radios";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
+import {
+  ButtonBusyIcon,
+  PendingSubmitButton,
+} from "@/components/pending-submit-button";
 import { StripeEmbeddedCheckout } from "@/components/stripe-embedded-checkout";
 import {
   CryptoWalletPanel,
@@ -19,12 +22,18 @@ import {
   confirmStripePlanChangeAction,
   saveCheckoutMethodAction,
 } from "@/lib/membership/billing-actions";
+import {
+  checkCheckoutDepositAction,
+  payPlanWithCreditAction,
+} from "@/lib/membership/wallet-actions";
 import { planDeductDecision } from "@/lib/membership/wallet";
 import type {
   BillingChain,
   BillingToken,
   DepositAddress,
 } from "@/lib/membership/wallet-store";
+
+const DEPOSIT_POLL_MS = 10_000;
 
 export function CheckoutPayment({
   planId,
@@ -78,7 +87,6 @@ export function CheckoutPayment({
   const persistChain = useRef(Promise.resolve());
   const upgrade = chargeKind === "upgrade";
   const useCardOnFile = upgrade || (existingStripeSubscription && !showMethodPicker);
-  const cryptoSelected = method === "wallet";
 
   function persistCheckoutMethod(
     nextMethod: BillingMethod,
@@ -188,36 +196,19 @@ export function CheckoutPayment({
             />
           )
         ) : (
-          <div className="space-y-4">
-            <CryptoWalletPanel
-              mainUsd={creditUsd}
-              affiliateUsd={affiliateUsd}
-              address={depositAddress}
-              addressError={addressError}
-              chains={chains}
-              tokens={tokens}
-              deductOn={deduct}
-              useAffiliate={useAffiliate}
-              planId={planId}
-              planPriceUsd={dueUsd}
-              checkout
-              booksOnly
-              payEnabled
-            />
-            <CheckoutTopUp
-              always={!upgrade}
-              visible={cryptoSelected}
-              dueUsd={dueUsd}
-              creditUsd={creditUsd}
-              affiliateUsd={affiliateUsd}
-              useAffiliate={useAffiliate}
-              address={depositAddress}
-              addressError={addressError}
-              chains={chains}
-              tokens={tokens}
-              planId={planId}
-            />
-          </div>
+          <CheckoutCryptoPay
+            upgrade={upgrade}
+            planId={planId}
+            dueUsd={dueUsd}
+            deduct={deduct}
+            creditUsd={creditUsd}
+            affiliateUsd={affiliateUsd}
+            useAffiliate={useAffiliate}
+            address={depositAddress}
+            addressError={addressError}
+            chains={chains}
+            tokens={tokens}
+          />
         )}
       </section>
     </div>
@@ -225,10 +216,11 @@ export function CheckoutPayment({
   );
 }
 
-function CheckoutTopUp({
-  always,
-  visible,
+function CheckoutCryptoPay({
+  upgrade,
+  planId,
   dueUsd,
+  deduct,
   creditUsd,
   affiliateUsd,
   useAffiliate,
@@ -236,11 +228,11 @@ function CheckoutTopUp({
   addressError,
   chains,
   tokens,
-  planId,
 }: {
-  always: boolean;
-  visible: boolean;
+  upgrade: boolean;
+  planId: string;
   dueUsd: number;
+  deduct: boolean;
   creditUsd: number;
   affiliateUsd: number;
   useAffiliate: boolean;
@@ -248,20 +240,180 @@ function CheckoutTopUp({
   addressError: string | null;
   chains: BillingChain[];
   tokens: BillingToken[];
-  planId: string;
 }) {
   const live = useLiveMainWallet(creditUsd);
-  const short = !planDeductDecision({
+  const canPay = planDeductDecision({
     priceUsd: dueUsd,
     mainUsd: live.mainUsd,
     affiliateUsd,
     useAffiliate,
   }).ok;
-  if (!visible || (!always && !short)) {
-    return null;
+
+  if (upgrade) {
+    return (
+      <div className="space-y-4">
+        <CryptoWalletPanel
+          mainUsd={creditUsd}
+          affiliateUsd={affiliateUsd}
+          address={address}
+          addressError={addressError}
+          chains={chains}
+          tokens={tokens}
+          deductOn={deduct}
+          useAffiliate={useAffiliate}
+          planId={planId}
+          planPriceUsd={dueUsd}
+          checkout
+          booksOnly
+          payEnabled
+        />
+        {canPay ? null : (
+          <div className="border-t border-line pt-4">
+            <TopUpWallet
+              address={address}
+              addressError={addressError}
+              chains={chains}
+              tokens={tokens}
+              planId={planId}
+              checkout
+            />
+          </div>
+        )}
+      </div>
+    );
   }
+
   return (
-    <div className="border-t border-line pt-4">
+    <CheckoutInitialCrypto
+      planId={planId}
+      dueUsd={dueUsd}
+      deduct={deduct}
+      affiliateUsd={affiliateUsd}
+      useAffiliate={useAffiliate}
+      address={address}
+      addressError={addressError}
+      chains={chains}
+      tokens={tokens}
+    />
+  );
+}
+
+function CheckoutInitialCrypto({
+  planId,
+  dueUsd,
+  deduct,
+  affiliateUsd,
+  useAffiliate,
+  address,
+  addressError,
+  chains,
+  tokens,
+}: {
+  planId: string;
+  dueUsd: number;
+  deduct: boolean;
+  affiliateUsd: number;
+  useAffiliate: boolean;
+  address: DepositAddress | null;
+  addressError: string | null;
+  chains: BillingChain[];
+  tokens: BillingToken[];
+}) {
+  const live = useLiveMainWallet(0);
+  const [paying, setPaying] = useState(false);
+  const [credited, setCredited] = useState(false);
+  const payingRef = useRef(false);
+  const busyRef = useRef(false);
+
+  function canCover(mainUsd: number) {
+    return planDeductDecision({
+      priceUsd: dueUsd,
+      mainUsd,
+      affiliateUsd,
+      useAffiliate,
+    }).ok;
+  }
+
+  async function completePay() {
+    if (payingRef.current) {
+      return;
+    }
+    payingRef.current = true;
+    setPaying(true);
+    const form = new FormData();
+    form.set("planId", planId);
+    if (deduct) {
+      form.set("paySubscriptionFromCredit", "1");
+    }
+    await payPlanWithCreditAction(form);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function poll() {
+      if (cancelled || busyRef.current || payingRef.current) {
+        return;
+      }
+      busyRef.current = true;
+      try {
+        const result = await checkCheckoutDepositAction();
+        if (cancelled) {
+          return;
+        }
+        if (typeof result.mainUsd === "number") {
+          live.setMainUsd(result.mainUsd);
+        }
+        if (!result.ok) {
+          live.setStatus({ error: result.error });
+          return;
+        }
+        if (result.credited > 0) {
+          setCredited(true);
+        }
+        const mainUsd =
+          typeof result.mainUsd === "number" ? result.mainUsd : live.mainUsd;
+        if (canCover(mainUsd)) {
+          await completePay();
+        } else {
+          live.setStatus({
+            notice:
+              result.credited > 0
+                ? "Deposit credited. Send the remaining amount if Due Today is not covered yet."
+                : null,
+            noticeOk: result.credited > 0,
+          });
+        }
+      } catch {
+        if (!cancelled) {
+          live.setStatus({ error: "Could not check for deposits." });
+        }
+      } finally {
+        busyRef.current = false;
+      }
+    }
+
+    void poll();
+    const timer = window.setInterval(() => {
+      void poll();
+    }, DEPOSIT_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [planId, dueUsd, deduct, affiliateUsd, useAffiliate]);
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold tracking-tight">Pay with Crypto</h2>
+      <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
+        <dt className="text-ink-muted">Amount due:</dt>
+        <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
+      </dl>
+      <p className="text-sm text-ink-muted">
+        Send at least this amount in a listed stablecoin. You can send more
+        than Due Today so leftover Main credit covers later months.
+      </p>
       <TopUpWallet
         address={address}
         addressError={addressError}
@@ -269,7 +421,27 @@ function CheckoutTopUp({
         tokens={tokens}
         planId={planId}
         checkout
+        heading={null}
+        showCheck={false}
       />
+      <p className="flex items-center gap-2 text-sm text-ink-muted" role="status">
+        <ButtonBusyIcon />
+        {paying
+          ? "Deposit received. Completing payment…"
+          : credited
+            ? "Waiting for enough confirmed credit…"
+            : "Waiting for deposit…"}
+      </p>
+      {live.error ? (
+        <p className="text-sm text-danger" role="alert">
+          {live.error}
+        </p>
+      ) : null}
+      {live.notice && !paying ? (
+        <p className="text-sm text-success" role="status">
+          {live.notice}
+        </p>
+      ) : null}
     </div>
   );
 }

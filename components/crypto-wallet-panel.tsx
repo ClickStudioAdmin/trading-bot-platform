@@ -163,6 +163,8 @@ export function TopUpWallet({
   tokens,
   checkout,
   revealAddress = true,
+  heading = "Top up Main Wallet",
+  showCheck = true,
 }: {
   address: DepositAddress | null;
   addressError: string | null;
@@ -171,6 +173,8 @@ export function TopUpWallet({
   planId?: string;
   checkout?: boolean;
   revealAddress?: boolean;
+  heading?: string | null;
+  showCheck?: boolean;
 }) {
   const chain = chains[0] ?? null;
   const token =
@@ -185,9 +189,12 @@ export function TopUpWallet({
       ? `Send ${token.symbol} on ${chain.name}`
       : "Send the listed testnet token to this address";
 
+  const confirmations = chain?.confirmations ?? 3;
   return (
     <div id="top-up" className="space-y-3">
-      <h2 className="text-lg font-semibold tracking-tight">Top up Main Wallet</h2>
+      {heading ? (
+        <h2 className="text-lg font-semibold tracking-tight">{heading}</h2>
+      ) : null}
       {!revealAddress ? (
         <p className="text-sm text-ink-muted">
           Save Crypto as your method to see your deposit address.
@@ -214,10 +221,12 @@ export function TopUpWallet({
             ) : null}
           </div>
           <p className="text-xs text-ink-faint">
-            Same address on every listed EVM chain. Wait for{" "}
-            {chain?.confirmations ?? 3} confirmation
-            {(chain?.confirmations ?? 3) === 1 ? "" : "s"}, then check for the
-            deposit. Stables credit 1:1 USD to Main.
+            Same address on every listed EVM chain. Wait for {confirmations}{" "}
+            confirmation{confirmations === 1 ? "" : "s"}
+            {showCheck
+              ? ", then check for the deposit"
+              : ". This page checks for the deposit automatically"}
+            . Stables credit 1:1 USD to Main.
           </p>
         </>
       ) : (
@@ -225,7 +234,7 @@ export function TopUpWallet({
           {addressError ?? "Deposit address is not available yet."}
         </p>
       )}
-      <CheckDepositButton checkout={checkout} />
+      {showCheck ? <CheckDepositButton checkout={checkout} /> : null}
         </>
       )}
     </div>
