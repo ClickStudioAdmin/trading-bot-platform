@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   billingPath,
+  checkoutCharge,
   checkoutPath,
   decideUpgrade,
   parsePaySubscriptionFromCredit,
@@ -24,12 +25,21 @@ import {
   withdrawAmountDecision,
   withdrawDecision,
 } from "./affiliate";
-import { getMemberBilling, saveBillingMethod } from "./billing-store";
+import {
+  applyMemberPlanNow,
+  getMemberBilling,
+  saveBillingMethod,
+} from "./billing-store";
 import { parsePlanId } from "./form";
 import { getMembershipPlan } from "./store";
 import { stripeSecretConfigured, getStripe } from "./stripe";
 import { watchMembershipDeposits } from "./watch-deposits";
-import { parseWalletMinPayout, planDeductDecision, roundUsd } from "./wallet";
+import {
+  parseWalletMinPayout,
+  planDeductDecision,
+  roundUsd,
+  walletUpgradeInvoiceExternalId,
+} from "./wallet";
 import {
   createDepositHdSeed,
   createGasWallet,
@@ -307,14 +317,24 @@ export async function payPlanWithCreditAction(formData: FormData) {
     redirect(checkoutPath({ plan: planId, error: decision.error }));
     return;
   }
-  const saved = await saveBillingMethod(member.id, "wallet", {
-    paySubscriptionFromCredit: parsePaySubscriptionFromCredit(
-      formData.get("paySubscriptionFromCredit"),
-    ),
+  const currentPlan = billing
+    ? await getMembershipPlan(billing.planId)
+    : { ok: false as const, error: "No plan" };
+  const charge = checkoutCharge({
+    currentPriceUsd: currentPlan.ok ? currentPlan.plan.priceUsd : 0,
+    targetPriceUsd: target.priceUsd,
+    periodEnd: billing?.periodEnd ?? null,
   });
-  if (!saved.ok) {
-    redirect(checkoutPath({ plan: planId, error: saved.error }));
-    return;
+  if (charge.kind === "initial") {
+    const saved = await saveBillingMethod(member.id, "wallet", {
+      paySubscriptionFromCredit: parsePaySubscriptionFromCredit(
+        formData.get("paySubscriptionFromCredit"),
+      ),
+    });
+    if (!saved.ok) {
+      redirect(checkoutPath({ plan: planId, error: saved.error }));
+      return;
+    }
   }
   const [books, payableAffiliateUsd] = await Promise.all([
     walletBookBalances(member.id),
@@ -323,8 +343,24 @@ export async function payPlanWithCreditAction(formData: FormData) {
   const useAffiliate =
     billing?.paySubscriptionFromAffiliate === true &&
     target.features.affiliate_pay_subscription;
+  if (charge.kind === "upgrade" && charge.dueUsd < 0.01) {
+    const applied = await applyMemberPlanNow({
+      userId: member.id,
+      planId,
+      periodEnd: charge.periodEnd,
+    });
+    if (!applied.ok) {
+      redirect(checkoutPath({ plan: planId, error: applied.error }));
+      return;
+    }
+    revalidatePath("/account/billing");
+    revalidatePath("/account/billing/checkout");
+    revalidatePath("/account/plans");
+    redirect(billingPath({ upgraded: "wallet" }));
+    return;
+  }
   const deduct = planDeductDecision({
-    priceUsd: target.priceUsd,
+    priceUsd: charge.dueUsd,
     mainUsd: books.main,
     affiliateUsd: payableAffiliateUsd,
     useAffiliate,
@@ -339,12 +375,23 @@ export async function payPlanWithCreditAction(formData: FormData) {
     return;
   }
   try {
+    const now = Date.now();
     const paid = await payPlanFromWallet({
       userId: member.id,
       planId,
-      amountUsd: target.priceUsd,
+      amountUsd: charge.dueUsd,
       transferUsd: deduct.transferUsd,
       setEnroll: true,
+      nowMs: now,
+      periodEnd: charge.kind === "upgrade" ? charge.periodEnd : undefined,
+      externalId:
+        charge.kind === "upgrade"
+          ? walletUpgradeInvoiceExternalId(
+              member.id,
+              planId,
+              charge.periodEnd,
+            )
+          : undefined,
     });
     if (!paid.ok) {
       redirect(checkoutPath({ plan: planId, error: paid.error }));
@@ -355,7 +402,7 @@ export async function payPlanWithCreditAction(formData: FormData) {
       sourceUserId: member.id,
       method: "wallet",
       status: "paid",
-      amountUsd: target.priceUsd,
+      amountUsd: charge.dueUsd,
     });
     if (!commissions.ok) {
       redirect(checkoutPath({ plan: planId, error: commissions.error }));
@@ -379,6 +426,8 @@ export async function payPlanWithCreditAction(formData: FormData) {
         invoiceId: paid.invoiceId,
         transferUsd: deduct.transferUsd,
         method: "wallet",
+        dueUsd: charge.dueUsd,
+        kind: charge.kind,
       },
     });
     revalidatePath("/account/billing");

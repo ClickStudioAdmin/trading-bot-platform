@@ -158,6 +158,35 @@ export async function saveStripeCustomerIds(input: {
   return { ok: true };
 }
 
+export async function applyMemberPlanNow(input: {
+  userId: string;
+  planId: string;
+  periodEnd: string | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const plan = await getMembershipPlan(input.planId);
+  if (!plan.ok) {
+    return { ok: false, error: plan.error };
+  }
+  const { error } = await supabase
+    .from("members")
+    .update({
+      plan_id: input.planId,
+      last_enroll_plan_id: input.planId,
+      subscription_status: "active",
+      period_end: input.periodEnd,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", input.userId);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
 export async function applyMemberSubscription(
   userId: string,
   applied: AppliedSubscription,

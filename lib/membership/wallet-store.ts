@@ -775,14 +775,18 @@ export async function payPlanFromWallet(input: {
   transferUsd: number;
   setEnroll: boolean;
   nowMs?: number;
+  periodStart?: string;
+  periodEnd?: string;
+  externalId?: string;
 }): Promise<{ ok: true; invoiceId: string } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
   }
   const now = input.nowMs ?? Date.now();
-  const periodStart = new Date(now).toISOString();
-  const periodEnd = new Date(now + WALLET_PERIOD_MS).toISOString();
+  const periodStart = input.periodStart ?? new Date(now).toISOString();
+  const periodEnd =
+    input.periodEnd ?? new Date(now + WALLET_PERIOD_MS).toISOString();
   const { data, error } = await supabase.rpc("pay_membership_from_wallet", {
     p_user_id: input.userId,
     p_plan_id: input.planId,
@@ -790,7 +794,8 @@ export async function payPlanFromWallet(input: {
     p_transfer_usd: input.transferUsd,
     p_period_start: periodStart,
     p_period_end: periodEnd,
-    p_external_id: walletInvoiceExternalId(input.userId, periodStart),
+    p_external_id:
+      input.externalId ?? walletInvoiceExternalId(input.userId, periodStart),
     p_set_enroll: input.setEnroll,
   });
   if (error) {

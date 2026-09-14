@@ -175,6 +175,14 @@ export function walletInvoiceExternalId(
   return `wallet:${userId}:${periodStartIso}`;
 }
 
+export function walletUpgradeInvoiceExternalId(
+  userId: string,
+  planId: string,
+  periodEndIso: string,
+): string {
+  return `wallet-upgrade:${userId}:${planId}:${periodEndIso}`;
+}
+
 export function mainWalletLedgerLabel(
   kind: string,
   memo?: string | null,

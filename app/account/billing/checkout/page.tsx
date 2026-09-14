@@ -3,7 +3,10 @@ import Link from "next/link";
 import { CheckoutPayment } from "@/components/checkout-payment";
 import { PageHeading } from "@/components/page-heading";
 import { getSessionMember } from "@/lib/auth/session";
-import { hasUsableStripeSubscription } from "@/lib/membership/billing";
+import {
+  checkoutCharge,
+  hasUsableStripeSubscription,
+} from "@/lib/membership/billing";
 import { getMemberBilling } from "@/lib/membership/billing-store";
 import { loadMemberDepositContext } from "@/lib/membership/wallet-store";
 import { formatPlanPrice } from "@/lib/membership/catalog";
@@ -15,11 +18,12 @@ import {
   stripeSecretConfigured,
 } from "@/lib/membership/stripe";
 import { firstSearchValue } from "@/lib/paper/open";
+import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Checkout",
-  description: "Choose a payment method and pay on this page.",
+  description: "Pay for a plan on this page.",
 };
 
 export default async function AccountCheckoutPage({
@@ -46,6 +50,14 @@ export default async function AccountCheckoutPage({
   }
   const target = loaded.plan;
   const current = billing.planId === target.id;
+  const currentLoaded = await getMembershipPlan(billing.planId);
+  const currentPlan = currentLoaded.ok ? currentLoaded.plan : null;
+  const charge = checkoutCharge({
+    currentPriceUsd: currentPlan?.priceUsd ?? 0,
+    targetPriceUsd: target.priceUsd,
+    periodEnd: billing.periodEnd,
+  });
+  const periodMs = parseDisplayTime(billing.periodEnd);
   const error = firstSearchValue(params.error);
   const deposited = firstSearchValue(params.deposited);
   const scanned = firstSearchValue(params.scanned) === "1";
@@ -53,10 +65,12 @@ export default async function AccountCheckoutPage({
 
   return (
     <div>
-      <PageHeading title="Checkout" />
+      <PageHeading title={charge.kind === "upgrade" ? "Upgrade" : "Checkout"} />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
-        Choose Card or Crypto. The payment form stays on this page. Compare
-        plans on{" "}
+        {charge.kind === "upgrade"
+          ? "Uses your saved payment method. Due today is the remainder of this cycle. The new monthly fee starts next cycle."
+          : "First paid period is the full plan price. Choose Card or Crypto if you have not saved a method yet."}{" "}
+        Compare plans on{" "}
         <Link href="/account/plans" className="text-accent">
           Plans
         </Link>
@@ -93,6 +107,10 @@ export default async function AccountCheckoutPage({
           planId={target.id}
           planName={target.name}
           planPrice={formatPlanPrice(target.priceUsd)}
+          currentPlanName={currentPlan?.name ?? null}
+          chargeKind={charge.kind}
+          dueUsd={charge.dueUsd}
+          periodEndLabel={periodMs ? formatLocalDate(periodMs) : null}
           selected={billing.billingMethod}
           deductSelected={billing.paySubscriptionFromCredit}
           creditUsd={deposit.books.main}
@@ -101,7 +119,6 @@ export default async function AccountCheckoutPage({
           addressError={deposit.addressError}
           chains={deposit.chains}
           tokens={deposit.tokens}
-          planPriceUsd={target.priceUsd}
           useAffiliate={
             billing.paySubscriptionFromAffiliate &&
             target.features.affiliate_pay_subscription

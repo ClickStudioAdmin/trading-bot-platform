@@ -8,6 +8,7 @@ import {
   tokenAmountToUsd,
   walletEntryDelta,
   walletInvoiceExternalId,
+  walletUpgradeInvoiceExternalId,
   withRunningBalances,
 } from "./wallet";
 
@@ -63,6 +64,14 @@ assert.equal(tokenAmountToUsd(BigInt(10000000), 6, "wbtc"), null);
 assert.equal(
   walletInvoiceExternalId("user-1", "2026-09-12T00:00:00.000Z"),
   "wallet:user-1:2026-09-12T00:00:00.000Z",
+);
+assert.equal(
+  walletUpgradeInvoiceExternalId(
+    "user-1",
+    "plan-2",
+    "2026-10-01T00:00:00.000Z",
+  ),
+  "wallet-upgrade:user-1:plan-2:2026-10-01T00:00:00.000Z",
 );
 
 assert.deepEqual(parseWalletMinPayout(100), { ok: true, usd: 100 });

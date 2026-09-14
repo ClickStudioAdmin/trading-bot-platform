@@ -3,7 +3,11 @@ import {
   planIsDraft,
   type MembershipPlan,
 } from "./catalog";
-import { walletEntryDelta as walletBookDelta } from "./wallet";
+import {
+  WALLET_PERIOD_MS,
+  roundUsd,
+  walletEntryDelta as walletBookDelta,
+} from "./wallet";
 
 export const BILLING_PATH = "/account/billing";
 export const CHECKOUT_PATH = "/account/billing/checkout";
@@ -202,6 +206,72 @@ export function stripeCheckoutBranding() {
     border_style: "rounded" as const,
     display_name: "TBP",
   };
+}
+
+export type CheckoutCharge =
+  | { kind: "initial"; dueUsd: number }
+  | { kind: "upgrade"; dueUsd: number; periodEnd: string };
+
+export function isPaidCycleUpgrade(input: {
+  currentPriceUsd: number;
+  targetPriceUsd: number;
+  periodEnd: string | null;
+  nowMs?: number;
+}): boolean {
+  if (roundUsd(input.currentPriceUsd) < 0.01) {
+    return false;
+  }
+  if (roundUsd(input.targetPriceUsd) <= roundUsd(input.currentPriceUsd)) {
+    return false;
+  }
+  const end = input.periodEnd ? Date.parse(input.periodEnd) : NaN;
+  return Number.isFinite(end) && end > (input.nowMs ?? Date.now());
+}
+
+export function prorateUpgradeUsd(input: {
+  oldPriceUsd: number;
+  newPriceUsd: number;
+  periodEnd: string;
+  nowMs?: number;
+  periodMs?: number;
+}): number {
+  const now = input.nowMs ?? Date.now();
+  const end = Date.parse(input.periodEnd);
+  if (!Number.isFinite(end) || end <= now) {
+    return 0;
+  }
+  const periodMs = input.periodMs ?? WALLET_PERIOD_MS;
+  const remaining = Math.min(periodMs, end - now);
+  const delta = roundUsd(input.newPriceUsd) - roundUsd(input.oldPriceUsd);
+  if (delta <= 0 || periodMs <= 0) {
+    return 0;
+  }
+  return roundUsd((delta * remaining) / periodMs);
+}
+
+export function checkoutCharge(input: {
+  currentPriceUsd: number;
+  targetPriceUsd: number;
+  periodEnd: string | null;
+  nowMs?: number;
+}): CheckoutCharge {
+  if (
+    isPaidCycleUpgrade(input) &&
+    input.periodEnd &&
+    Date.parse(input.periodEnd) > (input.nowMs ?? Date.now())
+  ) {
+    return {
+      kind: "upgrade",
+      dueUsd: prorateUpgradeUsd({
+        oldPriceUsd: input.currentPriceUsd,
+        newPriceUsd: input.targetPriceUsd,
+        periodEnd: input.periodEnd,
+        nowMs: input.nowMs,
+      }),
+      periodEnd: input.periodEnd,
+    };
+  }
+  return { kind: "initial", dueUsd: roundUsd(input.targetPriceUsd) };
 }
 
 export function decideUpgrade(input: {

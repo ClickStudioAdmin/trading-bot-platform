@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   billingPath,
+  checkoutCharge,
+  checkoutPath,
   decideUpgrade,
   embeddedCardReturnUrl,
   embeddedCheckoutReturnUrl,
@@ -15,10 +17,13 @@ import {
   stripeCheckoutBranding,
 } from "./billing";
 import {
+  applyMemberPlanNow,
   getMemberBilling,
+  recordStripeInvoice,
   saveBillingMethod,
   saveStripeCustomerIds,
 } from "./billing-store";
+import { invoiceWriteFromPaid } from "./stripe-apply";
 import { parsePlanId } from "./form";
 import { getMembershipPlan } from "./store";
 import { billingOrigin, getStripe, stripeSecretConfigured } from "./stripe";
@@ -32,6 +37,11 @@ function fail(
   extra: Record<string, string | undefined> = {},
 ): never {
   redirect(billingPath({ ...extra, error }));
+  throw new Error(error);
+}
+
+function failCheckout(planId: string, error: string): never {
+  redirect(checkoutPath({ plan: planId, error }));
   throw new Error(error);
 }
 
@@ -95,6 +105,21 @@ export async function createEmbeddedCheckoutSecret(
   }
   const target = loaded.plan;
   const billing = await getMemberBilling(member.id);
+  const currentPlan = billing
+    ? await getMembershipPlan(billing.planId)
+    : { ok: false as const, error: "No plan" };
+  const charge = checkoutCharge({
+    currentPriceUsd: currentPlan.ok ? currentPlan.plan.priceUsd : 0,
+    targetPriceUsd: target.priceUsd,
+    periodEnd: billing?.periodEnd ?? null,
+  });
+  if (charge.kind === "upgrade") {
+    return {
+      ok: false,
+      error:
+        "Use the upgrade charge on this page. A new Stripe checkout is only for a first paid plan.",
+    };
+  }
   const decision = decideUpgrade({
     currentPlanId: billing?.planId ?? null,
     target,
@@ -192,11 +217,11 @@ export async function confirmStripePlanChangeAction(formData: FormData) {
   }
   const planId = parsePlanId(String(formData.get("planId") ?? ""));
   if (!planId) {
-    fail("That plan is not valid.");
+    failCheckout(planId || "", "That plan is not valid.");
   }
   const loaded = await getMembershipPlan(planId);
   if (!loaded.ok) {
-    fail(loaded.error);
+    failCheckout(planId, loaded.error);
   }
   const target = loaded.plan;
   const billing = await getMemberBilling(member.id);
@@ -206,51 +231,135 @@ export async function confirmStripePlanChangeAction(formData: FormData) {
     method: "stripe",
   });
   if (decision.kind === "current") {
-    fail("You are already on that plan.");
+    failCheckout(planId, "You are already on that plan.");
   }
   if (decision.kind === "reject") {
-    fail(decision.error);
+    failCheckout(planId, decision.error);
   }
   if (decision.kind !== "checkout" || !billing || !hasUsableStripeSubscription(billing)) {
-    fail("No Stripe subscription to update. Pay with the card form.");
+    failCheckout(planId, "No Stripe subscription to update. Pay with the card form.");
   }
   const stripe = getStripe();
   if (!stripeSecretConfigured() || !stripe) {
-    fail("Stripe is not configured.");
+    failCheckout(planId, "Stripe is not configured.");
   }
   const priceId = target.stripePriceId ?? "";
+  const currentPlan = await getMembershipPlan(billing.planId);
+  const charge = checkoutCharge({
+    currentPriceUsd: currentPlan.ok ? currentPlan.plan.priceUsd : 0,
+    targetPriceUsd: target.priceUsd,
+    periodEnd: billing.periodEnd,
+  });
   try {
     const subscription = await stripe.subscriptions.retrieve(
       billing.stripeSubscriptionId as string,
     );
     const itemId = subscription.items.data[0]?.id;
     if (!itemId || !priceId) {
-      fail("Could not update the current Stripe subscription.");
+      failCheckout(planId, "Could not update the current Stripe subscription.");
+    }
+    const dueCents = Math.round(charge.dueUsd * 100);
+    if (dueCents >= 1) {
+      const paymentMethod =
+        typeof subscription.default_payment_method === "string"
+          ? subscription.default_payment_method
+          : subscription.default_payment_method &&
+              typeof subscription.default_payment_method === "object" &&
+              "id" in subscription.default_payment_method
+            ? String(subscription.default_payment_method.id)
+            : null;
+      if (!billing.stripeCustomerId || !paymentMethod) {
+        failCheckout(
+          planId,
+          "Update your card on Billing → Card, then try again.",
+        );
+      }
+      const intent = await stripe.paymentIntents.create(
+        {
+          amount: dueCents,
+          currency: "usd",
+          customer: billing.stripeCustomerId,
+          payment_method: paymentMethod,
+          confirm: true,
+          off_session: true,
+          description: `Upgrade to ${target.name} — remainder of this cycle`,
+          metadata: {
+            userId: member.id,
+            planId,
+            purpose: "upgrade_prorate",
+          },
+        },
+        {
+          idempotencyKey: `upgrade-pi:${member.id}:${planId}:${charge.kind === "upgrade" ? charge.periodEnd : "initial"}`,
+        },
+      );
+      if (intent.status !== "succeeded") {
+        failCheckout(
+          planId,
+          "Card payment did not complete. Update the card and try again.",
+        );
+      }
+      const nowSec = Math.floor(Date.now() / 1000);
+      const periodEndSec =
+        charge.kind === "upgrade"
+          ? Math.floor(Date.parse(charge.periodEnd) / 1000)
+          : nowSec;
+      await recordStripeInvoice(
+        member.id,
+        planId,
+        invoiceWriteFromPaid({
+          invoiceId: intent.id,
+          amountPaidCents: dueCents,
+          periodStart: nowSec,
+          periodEnd: periodEndSec,
+        }),
+      );
     }
     await stripe.subscriptions.update(billing.stripeSubscriptionId as string, {
       items: [{ id: itemId, price: priceId }],
-      proration_behavior: "create_prorations",
+      proration_behavior: "none",
       cancel_at_period_end: false,
       metadata: { userId: member.id, planId },
     });
+    const applied = await applyMemberPlanNow({
+      userId: member.id,
+      planId,
+      periodEnd:
+        charge.kind === "upgrade" ? charge.periodEnd : billing.periodEnd,
+    });
+    if (!applied.ok) {
+      failCheckout(planId, applied.error);
+    }
     const saved = await saveBillingMethod(member.id, "stripe");
     if (!saved.ok) {
-      fail(saved.error);
+      failCheckout(planId, saved.error);
     }
     await writeEventLog({
       scope: "system",
       event: "membership.checkout_started",
-      message: "Updated Stripe subscription price",
+      message:
+        charge.kind === "upgrade"
+          ? "Charged card upgrade remainder and scheduled new monthly price"
+          : "Updated Stripe subscription price",
       userId: member.id,
-      data: { planId, subscriptionId: billing.stripeSubscriptionId },
+      data: {
+        planId,
+        subscriptionId: billing.stripeSubscriptionId,
+        dueUsd: charge.dueUsd,
+        kind: charge.kind,
+      },
     });
     revalidatePath("/account/billing");
+    revalidatePath("/account/plans");
     redirect(billingPath({ upgraded: "1" }));
   } catch (cause) {
     if (isNextRedirect(cause)) {
       throw cause;
     }
-    fail(cause instanceof Error ? cause.message : "Stripe update failed.");
+    failCheckout(
+      planId,
+      cause instanceof Error ? cause.message : "Stripe update failed.",
+    );
   }
 }
 

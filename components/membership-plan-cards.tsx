@@ -209,7 +209,7 @@ function PlanCell({
             )}
             <p className="mt-2 text-xs text-ink-faint">
               {checkout
-                ? "Choose Card or Crypto at Checkout."
+                ? "Uses your saved payment method at Checkout."
                 : "Create a free account, then upgrade."}
             </p>
           </div>

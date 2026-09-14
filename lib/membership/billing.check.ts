@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import {
   billingPath,
+  checkoutCharge,
   checkoutPath,
   decideUpgrade,
+  isPaidCycleUpgrade,
+  prorateUpgradeUsd,
   embeddedCardReturnUrl,
   embeddedCheckoutReturnUrl,
   formatCount,
@@ -116,6 +119,54 @@ assert.equal(
     method: "stripe",
   }).kind,
   "reject",
+);
+
+const now = 1_779_000_000_000;
+const inFifteenDays = new Date(now + 15 * 24 * 60 * 60 * 1000).toISOString();
+assert.equal(
+  isPaidCycleUpgrade({
+    currentPriceUsd: 19,
+    targetPriceUsd: 49,
+    periodEnd: inFifteenDays,
+    nowMs: now,
+  }),
+  true,
+);
+assert.equal(
+  isPaidCycleUpgrade({
+    currentPriceUsd: 0,
+    targetPriceUsd: 19,
+    periodEnd: inFifteenDays,
+    nowMs: now,
+  }),
+  false,
+);
+assert.equal(
+  prorateUpgradeUsd({
+    oldPriceUsd: 19,
+    newPriceUsd: 49,
+    periodEnd: inFifteenDays,
+    nowMs: now,
+  }),
+  15,
+);
+assert.deepEqual(
+  checkoutCharge({
+    currentPriceUsd: 0,
+    targetPriceUsd: 19,
+    periodEnd: inFifteenDays,
+    nowMs: now,
+  }),
+  { kind: "initial", dueUsd: 19 },
+);
+assert.deepEqual(
+  checkoutCharge({
+    currentPriceUsd: 19,
+    targetPriceUsd: 49,
+    periodEnd: inFifteenDays,
+    nowMs: now,
+  }),
+  { kind: "upgrade", dueUsd: 15, periodEnd: inFifteenDays },
 );
 
 console.log("membership billing checks passed");

@@ -8,12 +8,14 @@ import {
   CryptoWalletPanel,
   LiveMainWallet,
   TopUpWallet,
+  useLiveMainWallet,
 } from "@/components/crypto-wallet-panel";
-import { type BillingMethod } from "@/lib/membership/billing";
+import { formatUsd, type BillingMethod } from "@/lib/membership/billing";
 import {
   confirmStripePlanChangeAction,
   saveCheckoutCryptoAction,
 } from "@/lib/membership/billing-actions";
+import { planDeductDecision } from "@/lib/membership/wallet";
 import type {
   BillingChain,
   BillingToken,
@@ -24,6 +26,10 @@ export function CheckoutPayment({
   planId,
   planName,
   planPrice,
+  currentPlanName,
+  chargeKind,
+  dueUsd,
+  periodEndLabel,
   selected,
   deductSelected,
   creditUsd,
@@ -32,7 +38,6 @@ export function CheckoutPayment({
   addressError,
   chains,
   tokens,
-  planPriceUsd,
   useAffiliate,
   stripeReady,
   publishableKey,
@@ -43,6 +48,10 @@ export function CheckoutPayment({
   planId: string;
   planName: string;
   planPrice: string;
+  currentPlanName: string | null;
+  chargeKind: "initial" | "upgrade";
+  dueUsd: number;
+  periodEndLabel: string | null;
   selected: BillingMethod | null;
   deductSelected: boolean;
   creditUsd: number;
@@ -51,7 +60,6 @@ export function CheckoutPayment({
   addressError: string | null;
   chains: BillingChain[];
   tokens: BillingToken[];
-  planPriceUsd: number;
   useAffiliate: boolean;
   stripeReady: boolean;
   publishableKey: string;
@@ -59,9 +67,11 @@ export function CheckoutPayment({
   missingPublishable: boolean;
   existingStripeSubscription: boolean;
 }) {
+  const methodLocked = selected !== null;
   const [method, setMethod] = useState<BillingMethod>(selected ?? "stripe");
   const [deduct, setDeduct] = useState(deductSelected);
   const cryptoSaved = selected === "wallet";
+  const upgrade = chargeKind === "upgrade";
 
   return (
     <LiveMainWallet initialMainUsd={creditUsd}>
@@ -70,16 +80,40 @@ export function CheckoutPayment({
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">{planName}</h2>
           <p className="mt-1 text-sm text-ink-muted">{planPrice}</p>
-          <div className="mt-4">
-            <BillingMethodRadios
-              name="billingMethod"
-              selected={method}
-              deductSelected={deduct}
-              onMethodChange={setMethod}
-              onDeductChange={setDeduct}
-            />
-          </div>
-          {method === "wallet" ? (
+          {upgrade ? (
+            <div className="mt-4 space-y-2 text-sm text-ink-muted">
+              {currentPlanName ? (
+                <p>
+                  From {currentPlanName} to {planName}.
+                </p>
+              ) : null}
+              <p>
+                Due today {formatUsd(dueUsd)} for the rest of this cycle
+                {periodEndLabel ? ` (ends ${periodEndLabel})` : ""}.
+              </p>
+              <p>
+                {planPrice} starts on the next billing date
+                {periodEndLabel ? ` (${periodEndLabel})` : ""}.
+              </p>
+            </div>
+          ) : null}
+          {methodLocked ? (
+            <p className="mt-4 text-sm text-ink-muted">
+              Paying with {method === "wallet" ? "Crypto" : "the card on file"}.
+              Change method on Billing.
+            </p>
+          ) : (
+            <div className="mt-4">
+              <BillingMethodRadios
+                name="billingMethod"
+                selected={method}
+                deductSelected={deduct}
+                onMethodChange={setMethod}
+                onDeductChange={setDeduct}
+              />
+            </div>
+          )}
+          {!methodLocked && method === "wallet" ? (
             <form action={saveCheckoutCryptoAction} className="mt-4">
               <input type="hidden" name="planId" value={planId} />
               {deduct ? (
@@ -105,35 +139,51 @@ export function CheckoutPayment({
             </form>
           ) : null}
         </section>
-        {method === "wallet" && cryptoSaved ? (
-          <section className="rounded-card border border-line bg-surface p-5">
-            <TopUpWallet
-              address={depositAddress}
-              addressError={addressError}
-              chains={chains}
-              tokens={tokens}
-              planId={planId}
-              checkout
-            />
-          </section>
-        ) : null}
+        <CheckoutTopUp
+          always={!upgrade}
+          visible={method === "wallet" && cryptoSaved}
+          dueUsd={dueUsd}
+          creditUsd={creditUsd}
+          affiliateUsd={affiliateUsd}
+          useAffiliate={useAffiliate}
+          address={depositAddress}
+          addressError={addressError}
+          chains={chains}
+          tokens={tokens}
+          planId={planId}
+        />
       </div>
 
       <section className="overflow-hidden rounded-card border border-line bg-surface p-4">
         {method === "stripe" ? (
-          existingStripeSubscription ? (
+          upgrade && !existingStripeSubscription ? (
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">
+                Pay with card
+              </h2>
+              <p className="mt-2 text-sm text-warning">
+                No Stripe subscription is on file. Save a card on Billing →
+                Card, or start the first paid plan from Checkout while on Free.
+              </p>
+            </div>
+          ) : existingStripeSubscription ? (
             <form action={confirmStripePlanChangeAction} className="space-y-4">
-              <h2 className="text-lg font-semibold tracking-tight">Card</h2>
+              <h2 className="text-lg font-semibold tracking-tight">
+                {upgrade ? "Pay with card" : "Card"}
+              </h2>
               <p className="text-sm text-ink-muted">
-                A card is already on file. Confirm to change this plan on
-                Stripe. You stay on this site.
+                {upgrade
+                  ? `A one-off charge of ${formatUsd(dueUsd)} for the rest of this cycle. The new monthly fee starts next cycle.`
+                  : "A card is already on file. Confirm to start this plan on Stripe."}
               </p>
               <input type="hidden" name="planId" value={planId} />
               <PendingSubmitButton
-                pendingLabel="Updating…"
+                pendingLabel={upgrade ? "Paying…" : "Updating…"}
                 className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
               >
-                Confirm plan change
+                {upgrade
+                  ? `Pay ${formatUsd(dueUsd)} today`
+                  : "Confirm plan change"}
               </PendingSubmitButton>
             </form>
           ) : !stripeReady || !publishableKey ? (
@@ -157,9 +207,11 @@ export function CheckoutPayment({
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-ink-muted">
-              {cryptoSaved
-                ? "Pay from Main credit, or top up on the left."
-                : "Save Crypto as your method, then pay from Main credit."}
+              {upgrade
+                ? `${formatUsd(dueUsd)} will be deducted from Main for the rest of this cycle.`
+                : cryptoSaved
+                  ? "Pay from Main credit, or top up on the left."
+                  : "Save Crypto as your method, then pay from Main credit."}
             </p>
             <CryptoWalletPanel
               mainUsd={creditUsd}
@@ -171,7 +223,7 @@ export function CheckoutPayment({
               deductOn={deduct}
               useAffiliate={useAffiliate}
               planId={planId}
-              planPriceUsd={planPriceUsd}
+              planPriceUsd={dueUsd}
               checkout
               booksOnly
               payEnabled={cryptoSaved}
@@ -181,5 +233,54 @@ export function CheckoutPayment({
       </section>
     </div>
     </LiveMainWallet>
+  );
+}
+
+function CheckoutTopUp({
+  always,
+  visible,
+  dueUsd,
+  creditUsd,
+  affiliateUsd,
+  useAffiliate,
+  address,
+  addressError,
+  chains,
+  tokens,
+  planId,
+}: {
+  always: boolean;
+  visible: boolean;
+  dueUsd: number;
+  creditUsd: number;
+  affiliateUsd: number;
+  useAffiliate: boolean;
+  address: DepositAddress | null;
+  addressError: string | null;
+  chains: BillingChain[];
+  tokens: BillingToken[];
+  planId: string;
+}) {
+  const live = useLiveMainWallet(creditUsd);
+  const short = !planDeductDecision({
+    priceUsd: dueUsd,
+    mainUsd: live.mainUsd,
+    affiliateUsd,
+    useAffiliate,
+  }).ok;
+  if (!visible || (!always && !short)) {
+    return null;
+  }
+  return (
+    <section className="rounded-card border border-line bg-surface p-5">
+      <TopUpWallet
+        address={address}
+        addressError={addressError}
+        chains={chains}
+        tokens={tokens}
+        planId={planId}
+        checkout
+      />
+    </section>
   );
 }

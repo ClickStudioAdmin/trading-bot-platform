@@ -78,7 +78,7 @@ export function LiveMainWallet({
   );
 }
 
-function useLiveMainWallet(fallbackUsd: number): LiveMainWalletValue {
+export function useLiveMainWallet(fallbackUsd: number): LiveMainWalletValue {
   const live = useContext(LiveMainWalletContext);
   return (
     live ?? {
