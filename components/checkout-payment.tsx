@@ -104,9 +104,7 @@ export function CheckoutPayment({
             <dt className="text-ink-muted">Upgrading from:</dt>
             <dd className="text-ink">{currentPlanName ?? "—"}</dd>
             <dt className="text-ink-muted">Due Today:</dt>
-            <dd className="text-2xl font-semibold tabular-nums tracking-tight text-ink">
-              {formatUsd(dueUsd)}
-            </dd>
+            <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
             <dt className="text-ink-muted">Then:</dt>
             <dd className="text-ink">{planPrice}</dd>
           </dl>
