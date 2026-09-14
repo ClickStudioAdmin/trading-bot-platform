@@ -19,10 +19,12 @@ import {
   getMemberBilling,
   listMemberInvoices,
 } from "@/lib/membership/billing-store";
+import { showMemberWalletTab } from "@/lib/membership/wallet";
 import {
   listMainWalletLedger,
   loadMainWalletWithdrawContext,
   loadMemberDepositContext,
+  walletBookBalances,
 } from "@/lib/membership/wallet-store";
 import { formatPlanPrice, planIsArchived } from "@/lib/membership/catalog";
 import { getMembershipPlan } from "@/lib/membership/store";
@@ -60,8 +62,12 @@ export default async function AccountBillingPage({
   }
   const deposited = firstSearchValue(params.deposited);
   const scanned = firstSearchValue(params.scanned) === "1";
+  const books = await walletBookBalances(member.id);
   const showCardTab = billing.billingMethod === "stripe";
-  const showWalletTab = billing.billingMethod === "wallet";
+  const showWalletTab = showMemberWalletTab(
+    billing.billingMethod,
+    books.main,
+  );
   const requestedTab = firstSearchValue(params.tab);
   const tab =
     requestedTab === "invoices"
@@ -250,8 +256,9 @@ export default async function AccountBillingPage({
                 Manage wallet
               </h2>
               <p className="mt-1 text-sm text-ink-muted">
-                Listed stables credit Main 1:1. Enter a receive address on each
-                withdraw request.
+                {billing.billingMethod === "wallet"
+                  ? "Listed stables credit Main 1:1. Enter a receive address on each withdraw request."
+                  : "Leftover Main stays here until the balance is zero. Switch to Crypto on Overview to top up again."}
               </p>
             </div>
             <div className="grid items-start gap-5 lg:grid-cols-2">
@@ -275,6 +282,7 @@ export default async function AccountBillingPage({
                   addressError={deposit?.addressError ?? null}
                   chains={deposit?.chains ?? []}
                   tokens={deposit?.tokens ?? []}
+                  revealAddress={billing.billingMethod === "wallet"}
                 />
               </section>
             </div>

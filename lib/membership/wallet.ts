@@ -21,6 +21,17 @@ export type BillingChainEnvironment = (typeof BILLING_CHAIN_ENVS)[number];
 export const WALLET_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 export const WALLET_MIN_PAYOUT_DEFAULT = 100;
 
+export function hasMainWalletCredit(mainUsd: number): boolean {
+  return roundUsd(mainUsd) >= 0.01;
+}
+
+export function showMemberWalletTab(
+  billingMethod: string | null,
+  mainUsd: number,
+): boolean {
+  return billingMethod === "wallet" || hasMainWalletCredit(mainUsd);
+}
+
 export type WalletBookBalances = {
   main: number;
   affiliate: number;

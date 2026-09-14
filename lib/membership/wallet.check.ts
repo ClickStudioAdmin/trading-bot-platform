@@ -4,6 +4,7 @@ import {
   mainWalletLedgerLabel,
   parseWalletMinPayout,
   planDeductDecision,
+  showMemberWalletTab,
   tokenAmountToUsd,
   walletEntryDelta,
   walletInvoiceExternalId,
@@ -66,6 +67,11 @@ assert.equal(
 
 assert.deepEqual(parseWalletMinPayout(100), { ok: true, usd: 100 });
 assert.equal(parseWalletMinPayout(-1).ok, false);
+assert.equal(showMemberWalletTab("wallet", 0), true);
+assert.equal(showMemberWalletTab("stripe", 0), false);
+assert.equal(showMemberWalletTab("stripe", 0.004), false);
+assert.equal(showMemberWalletTab("stripe", 0.01), true);
+assert.equal(showMemberWalletTab("stripe", 50), true);
 assert.equal(mainWalletLedgerLabel("deposit"), "Deposit");
 assert.equal(mainWalletLedgerLabel("debit_rent"), "Plan payment");
 assert.equal(
