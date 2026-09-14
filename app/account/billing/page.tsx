@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BillingMethodRadios } from "@/components/billing-method-radios";
+import { SavedBillingMethodForm } from "@/components/billing-method-radios";
 import { PageHeading } from "@/components/page-heading";
-import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { getSessionMember } from "@/lib/auth/session";
 import {
   formatRemainingCycle,
   formatUsd,
   resolveBillingCycle,
 } from "@/lib/membership/billing";
-import { setBillingMethodAction } from "@/lib/membership/billing-actions";
 import { StripeEmbeddedCard } from "@/components/stripe-embedded-checkout";
 import {
   CryptoWalletPanel,
@@ -273,28 +271,16 @@ export default async function AccountBillingPage({
         {showPaymentMethod ? (
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">
-            Payment method
+            Current payment method
           </h2>
           <p className="mt-1 text-sm text-ink-muted">
             Card charges Stripe. Crypto is only the payment method. Listed
             stables credit your account 1:1 as USD.
           </p>
-          <form action={setBillingMethodAction} className="mt-4 space-y-4">
-            <BillingMethodRadios
-              name="billingMethod"
-              selected={billing.billingMethod}
-              deductSelected={billing.paySubscriptionFromCredit}
-            />
-            <div className="flex flex-wrap gap-3">
-              <PendingSubmitButton
-                pendingLabel="Saving…"
-                successKey="save-billing-method"
-                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-              >
-                Save method
-              </PendingSubmitButton>
-            </div>
-          </form>
+          <SavedBillingMethodForm
+            selected={billing.billingMethod}
+            deductSelected={billing.paySubscriptionFromCredit}
+          />
         </section>
         ) : null}
       </div>
@@ -339,7 +325,7 @@ export default async function AccountBillingPage({
                   addressError={deposit?.addressError ?? null}
                   chains={deposit?.chains ?? []}
                   tokens={deposit?.tokens ?? []}
-                  heading="Top up Account Balance",
+                  heading="Top up Account Balance"
                   instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
                   revealAddress={billing.billingMethod === "wallet"}
                 />

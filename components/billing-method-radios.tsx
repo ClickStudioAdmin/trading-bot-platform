@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   BILLING_METHOD_LABELS,
   CRYPTO_CREDIT_DEDUCT_LABEL,
   CRYPTO_CREDIT_DEDUCT_NOTE,
   type BillingMethod,
 } from "@/lib/membership/billing";
+import { setBillingMethodAction } from "@/lib/membership/billing-actions";
 
 export function BillingMethodRadios({
   name,
@@ -91,5 +93,41 @@ export function BillingMethodRadios({
         ) : null}
       </div>
     </fieldset>
+  );
+}
+
+export function SavedBillingMethodForm({
+  selected,
+  deductSelected,
+}: {
+  selected: BillingMethod | null;
+  deductSelected: boolean;
+}) {
+  const savedMethod = selected ?? "stripe";
+  const [method, setMethod] = useState<BillingMethod>(savedMethod);
+  const [deduct, setDeduct] = useState(deductSelected);
+  const dirty =
+    method !== savedMethod ||
+    (method === "wallet" && deduct !== deductSelected);
+
+  return (
+    <form action={setBillingMethodAction} className="mt-4 space-y-4">
+      <BillingMethodRadios
+        name="billingMethod"
+        selected={method}
+        deductSelected={deduct}
+        onMethodChange={setMethod}
+        onDeductChange={setDeduct}
+      />
+      {dirty ? (
+        <PendingSubmitButton
+          pendingLabel="Saving…"
+          successKey="save-billing-method"
+          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+        >
+          Save new payment method
+        </PendingSubmitButton>
+      ) : null}
+    </form>
   );
 }
