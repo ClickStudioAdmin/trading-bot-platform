@@ -201,6 +201,7 @@ export function TopUpWallet({
   heading = "Top up Account Wallet",
   showCheck = true,
   instructions,
+  dueUsd,
 }: {
   address: DepositAddress | null;
   addressError: string | null;
@@ -212,6 +213,7 @@ export function TopUpWallet({
   heading?: string | null;
   showCheck?: boolean;
   instructions?: string;
+  dueUsd?: number;
 }) {
   const chain = chains[0] ?? null;
   const token =
@@ -233,6 +235,12 @@ export function TopUpWallet({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
           <div className="min-w-0 flex-1 space-y-3">
             <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
+              {typeof dueUsd === "number" ? (
+                <>
+                  <dt className="text-ink-muted">Amount due:</dt>
+                  <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
+                </>
+              ) : null}
               <dt className="text-ink-muted">Network:</dt>
               <dd className="text-ink">{chain?.name ?? "—"}</dd>
               <dt className="text-ink-muted">Token:</dt>
@@ -347,6 +355,14 @@ export function CryptoWalletPanel({
               <dd className="tabular-nums text-ink">
                 {formatUsd(shownMainUsd)}
               </dd>
+              {typeof planPriceUsd === "number" ? (
+                <>
+                  <dt className="text-ink-muted">Amount due:</dt>
+                  <dd className="tabular-nums text-ink">
+                    {formatUsd(planPriceUsd)}
+                  </dd>
+                </>
+              ) : null}
             </dl>
           </>
         ) : (
