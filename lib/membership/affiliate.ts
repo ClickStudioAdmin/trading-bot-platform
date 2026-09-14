@@ -655,6 +655,71 @@ export function payoutEligibleForAirdropFile(status: PayoutStatus): boolean {
   return status === "requested" || status === "approved";
 }
 
+export type AdminPayoutQueueStats = {
+  readyUsd: number;
+  readyCount: number;
+  toSendUsd: number;
+  toSendCount: number;
+  outstandingUsd: number;
+  paidUsd: number;
+  paidCount: number;
+  pendingFileCount: number;
+  toSendByNetwork: { network: string; amountUsd: number; count: number }[];
+};
+
+export function summarizeAdminPayoutQueue(
+  rows: {
+    status: PayoutStatus;
+    amountUsd: number;
+    network: string | null;
+    address: string | null;
+  }[],
+  pendingFileCount = 0,
+): AdminPayoutQueueStats {
+  let readyUsd = 0;
+  let readyCount = 0;
+  let toSendUsd = 0;
+  let toSendCount = 0;
+  let paidUsd = 0;
+  let paidCount = 0;
+  const byNetwork = new Map<string, { amountUsd: number; count: number }>();
+  for (const row of rows) {
+    const amount = roundUsd(row.amountUsd);
+    if (
+      payoutEligibleForAirdropFile(row.status) &&
+      Boolean(row.network?.trim()) &&
+      Boolean(row.address?.trim())
+    ) {
+      readyUsd = roundUsd(readyUsd + amount);
+      readyCount += 1;
+    } else if (row.status === "pending") {
+      toSendUsd = roundUsd(toSendUsd + amount);
+      toSendCount += 1;
+      const network = row.network?.trim() || "unknown";
+      const existing = byNetwork.get(network) ?? { amountUsd: 0, count: 0 };
+      existing.amountUsd = roundUsd(existing.amountUsd + amount);
+      existing.count += 1;
+      byNetwork.set(network, existing);
+    } else if (row.status === "paid") {
+      paidUsd = roundUsd(paidUsd + amount);
+      paidCount += 1;
+    }
+  }
+  return {
+    readyUsd,
+    readyCount,
+    toSendUsd,
+    toSendCount,
+    outstandingUsd: roundUsd(readyUsd + toSendUsd),
+    paidUsd,
+    paidCount,
+    pendingFileCount,
+    toSendByNetwork: [...byNetwork.entries()]
+      .map(([network, row]) => ({ network, ...row }))
+      .sort((a, b) => b.amountUsd - a.amountUsd || a.network.localeCompare(b.network)),
+  };
+}
+
 export function mergePayoutsForAirdrop(
   rows: { address: string; amountUsd: number }[],
 ): { address: string; amountUsd: number }[] {

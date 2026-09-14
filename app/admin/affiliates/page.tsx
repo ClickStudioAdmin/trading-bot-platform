@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ColumnHint } from "@/components/column-hint";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
@@ -10,10 +11,11 @@ import {
   findMemberByEmailOrCode,
   listPayoutFiles,
   listPayouts,
+  loadAdminPayoutQueueStats,
   loadDownline,
   releaseDueCommissions,
 } from "@/lib/membership/affiliate-store";
-import { formatUsd } from "@/lib/membership/billing";
+import { formatCount, formatUsd } from "@/lib/membership/billing";
 import { firstSearchValue } from "@/lib/paper/open";
 import {
   monthJoinedLabel,
@@ -37,12 +39,13 @@ export default async function AdminAffiliatesPage({
   const fileCount = firstSearchValue(params.count);
   const lookup = firstSearchValue(params.q) ?? "";
   await releaseDueCommissions();
-  const [payouts, files] = await Promise.all([listPayouts(), listPayoutFiles()]);
+  const [payouts, files, stats] = await Promise.all([
+    listPayouts(),
+    listPayoutFiles(),
+    loadAdminPayoutQueueStats(),
+  ]);
   const found = lookup ? await findMemberByEmailOrCode(lookup) : null;
   const downline = found ? await loadDownline(found.userId, true) : [];
-  const openRequests = payouts.filter((row) =>
-    payoutEligibleForAirdropFile(row.status),
-  );
 
   return (
     <div>
@@ -70,6 +73,40 @@ export default async function AdminAffiliatesPage({
       ) : null}
       {error ? (
         <p className="mt-6 text-sm text-danger">{error}</p>
+      ) : null}
+
+      <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile
+          label="Required to payout"
+          value={formatUsd(stats.outstandingUsd)}
+          hint="USDT still owed: requests not yet on a list plus payments on pending files."
+        />
+        <StatTile
+          label="To generate"
+          value={formatUsd(stats.readyUsd)}
+          hint={`${formatCount(stats.readyCount)} request${stats.readyCount === 1 ? "" : "s"} with a chain and address. Generate payout lists to add them to a file.`}
+        />
+        <StatTile
+          label="On payout lists"
+          value={formatUsd(stats.toSendUsd)}
+          hint={`${formatCount(stats.toSendCount)} payment${stats.toSendCount === 1 ? "" : "s"} on ${formatCount(stats.pendingFileCount)} pending file${stats.pendingFileCount === 1 ? "" : "s"}. This is the USDT to send in the next airdrop.`}
+        />
+        <StatTile
+          label="Paid out"
+          value={formatUsd(stats.paidUsd)}
+          hint={`${formatCount(stats.paidCount)} payment${stats.paidCount === 1 ? "" : "s"} already marked paid.`}
+        />
+      </section>
+      {stats.toSendByNetwork.length > 0 ? (
+        <p className="mt-3 text-sm text-ink-muted">
+          To send by chain:{" "}
+          {stats.toSendByNetwork
+            .map(
+              (row) =>
+                `${row.network} ${formatUsd(row.amountUsd)} (${formatCount(row.count)})`,
+            )
+            .join(" · ")}
+        </p>
       ) : null}
 
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
@@ -100,12 +137,6 @@ export default async function AdminAffiliatesPage({
             </form>
           </div>
         </div>
-        {openRequests.length > 0 ? (
-          <p className="mt-3 text-sm text-ink-muted">
-            {openRequests.length} request
-            {openRequests.length === 1 ? "" : "s"} ready to add to a list.
-          </p>
-        ) : null}
         {files.length === 0 ? (
           <p className="mt-4 text-sm text-ink-muted">No payout files yet.</p>
         ) : (
@@ -296,6 +327,27 @@ export default async function AdminAffiliatesPage({
           </div>
         ) : null}
       </section>
+    </div>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <div className="rounded-card border border-line bg-surface p-4">
+      <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+        <ColumnHint label={label} hint={hint} />
+      </p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
+        {value}
+      </p>
     </div>
   );
 }

@@ -30,6 +30,7 @@ import {
   parsePayoutMethod,
   parsePayoutStatus,
   payoutEligibleForAirdropFile,
+  summarizeAdminPayoutQueue,
   parseAffiliateRatePct,
   parseReferralCode,
   programDefaultRates,
@@ -46,6 +47,7 @@ import {
   type AffiliateLinkKind,
   type AffiliatePayoutSettings,
   type AffiliateProgramSettings,
+  type AdminPayoutQueueStats,
   type CommissionStatus,
   type PayoutFileStatus,
   type PayoutStatus,
@@ -1171,6 +1173,38 @@ export async function listPayoutFiles(limit = 80): Promise<PayoutFileRow[]> {
   return (data ?? [])
     .map((row) => mapPayoutFile(row as Record<string, unknown>))
     .filter((row): row is PayoutFileRow => row !== null);
+}
+
+export async function loadAdminPayoutQueueStats(): Promise<AdminPayoutQueueStats> {
+  const empty = summarizeAdminPayoutQueue([], 0);
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return empty;
+  }
+  const [{ data }, files] = await Promise.all([
+    supabase
+      .from("membership_payouts")
+      .select("amount_usd, status, network, address"),
+    supabase
+      .from("membership_payout_files")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+  ]);
+  const rows = (data ?? []).flatMap((row) => {
+    const status = parsePayoutStatus(row.status);
+    if (!status) {
+      return [];
+    }
+    return [
+      {
+        status,
+        amountUsd: Number(row.amount_usd),
+        network: typeof row.network === "string" ? row.network : null,
+        address: typeof row.address === "string" ? row.address : null,
+      },
+    ];
+  });
+  return summarizeAdminPayoutQueue(rows, files.count ?? 0);
 }
 
 export async function loadPayoutFile(

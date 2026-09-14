@@ -51,6 +51,7 @@ import {
   parsePayoutStatus,
   payoutEligibleForAirdropFile,
   payoutStatusLabel,
+  summarizeAdminPayoutQueue,
   parseAffiliateLinkSlug,
   parseAffiliatePortalTab,
   parseAffiliateMaxDepth,
@@ -661,6 +662,63 @@ assert.equal(
     { address: "0xabc", amountUsd: 2.5 },
   ]),
   "address,amount\n0xAbc,12.50\n",
+);
+assert.deepEqual(
+  summarizeAdminPayoutQueue(
+    [
+      {
+        status: "requested",
+        amountUsd: 40,
+        network: "arbitrum",
+        address: "0xabc",
+      },
+      {
+        status: "requested",
+        amountUsd: 10,
+        network: null,
+        address: "0xabc",
+      },
+      {
+        status: "pending",
+        amountUsd: 25,
+        network: "arbitrum",
+        address: "0xdef",
+      },
+      {
+        status: "pending",
+        amountUsd: 5,
+        network: "base",
+        address: "0xghi",
+      },
+      {
+        status: "paid",
+        amountUsd: 100,
+        network: "arbitrum",
+        address: "0xabc",
+      },
+      {
+        status: "rejected",
+        amountUsd: 8,
+        network: "arbitrum",
+        address: "0xabc",
+      },
+    ],
+    1,
+  ),
+  {
+    readyUsd: 40,
+    readyCount: 1,
+    toSendUsd: 30,
+    toSendCount: 2,
+    outstandingUsd: 70,
+    paidUsd: 100,
+    paidCount: 1,
+    pendingFileCount: 1,
+    toSendByNetwork: [
+      { network: "arbitrum", amountUsd: 25, count: 1 },
+      { network: "base", amountUsd: 5, count: 1 },
+    ],
+  },
 );
 assert.equal(parseAffiliateLabel("Spring", 40, "Enter a name.").ok, true);
 assert.equal(parseAffiliateLabel("", 40, "Enter a name.").ok, false);
