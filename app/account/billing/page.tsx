@@ -21,8 +21,12 @@ import {
   getMemberBilling,
   listMemberInvoices,
 } from "@/lib/membership/billing-store";
-import { showMemberWalletTab } from "@/lib/membership/wallet";
 import {
+  showMemberLedgerTab,
+  showMemberWalletTab,
+} from "@/lib/membership/wallet";
+import {
+  hasMainWalletLedger,
   listMainWalletLedger,
   loadMainWalletWithdrawContext,
   loadMemberDepositContext,
@@ -64,9 +68,10 @@ export default async function AccountBillingPage({
   }
   const deposited = firstSearchValue(params.deposited);
   const scanned = firstSearchValue(params.scanned) === "1";
-  const [books, currentPlan] = await Promise.all([
+  const [books, currentPlan, hasLedger] = await Promise.all([
     walletBookBalances(member.id),
     getMembershipPlan(billing.planId),
+    hasMainWalletLedger(member.id),
   ]);
   const plan = currentPlan.ok ? currentPlan.plan : null;
   const showCardTab =
@@ -75,11 +80,12 @@ export default async function AccountBillingPage({
     billing.billingMethod,
     books.main,
   );
+  const showLedgerTab = showMemberLedgerTab(plan?.priceUsd ?? 0, hasLedger);
   const requestedTab = firstSearchValue(params.tab);
   const tab =
     requestedTab === "invoices"
       ? "invoices"
-      : requestedTab === "ledger"
+      : requestedTab === "ledger" && showLedgerTab
         ? "ledger"
         : requestedTab === "card" && showCardTab
           ? "card"
@@ -122,12 +128,6 @@ export default async function AccountBillingPage({
           Overview
         </TabLink>
         <TabLink
-          href="/account/billing?tab=ledger"
-          selected={tab === "ledger"}
-        >
-          Account ledger
-        </TabLink>
-        <TabLink
           href="/account/billing?tab=invoices"
           selected={tab === "invoices"}
         >
@@ -146,7 +146,15 @@ export default async function AccountBillingPage({
             href="/account/billing?tab=wallet"
             selected={tab === "wallet"}
           >
-            Wallet
+            Manage Wallet
+          </TabLink>
+        ) : null}
+        {showLedgerTab ? (
+          <TabLink
+            href="/account/billing?tab=ledger"
+            selected={tab === "ledger"}
+          >
+            Wallet Ledger
           </TabLink>
         ) : null}
       </nav>
@@ -338,7 +346,7 @@ export default async function AccountBillingPage({
         </LiveMainWallet>
       ) : tab === "ledger" ? (
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Account ledger</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Wallet Ledger</h2>
         <p className="mt-1 text-sm text-ink-muted">
           Running Main Wallet activity: deposits, plan payments, withdrawals,
           and transfers from Affiliate when you deduct from earnings.

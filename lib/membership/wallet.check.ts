@@ -4,6 +4,7 @@ import {
   mainWalletLedgerLabel,
   parseWalletMinPayout,
   planDeductDecision,
+  showMemberLedgerTab,
   showMemberWalletTab,
   tokenAmountToUsd,
   walletEntryDelta,
@@ -81,6 +82,12 @@ assert.equal(showMemberWalletTab("stripe", 0), false);
 assert.equal(showMemberWalletTab("stripe", 0.004), false);
 assert.equal(showMemberWalletTab("stripe", 0.01), true);
 assert.equal(showMemberWalletTab("stripe", 50), true);
+
+assert.equal(showMemberLedgerTab(0, false), false);
+assert.equal(showMemberLedgerTab(0, true), true);
+assert.equal(showMemberLedgerTab(0.004, false), false);
+assert.equal(showMemberLedgerTab(19, false), true);
+assert.equal(showMemberLedgerTab(19, true), true);
 assert.equal(mainWalletLedgerLabel("deposit"), "Deposit");
 assert.equal(mainWalletLedgerLabel("debit_rent"), "Plan payment");
 assert.equal(

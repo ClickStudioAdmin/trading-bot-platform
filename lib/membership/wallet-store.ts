@@ -828,6 +828,36 @@ export type WalletLedgerRow = {
   balanceUsd: number;
 };
 
+export async function hasMainWalletLedger(userId: string): Promise<boolean> {
+  const supabase = createServiceClient();
+  if (!supabase || !userId) {
+    return false;
+  }
+  const full = await supabase
+    .from("membership_wallet_entries")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("book", "main")
+    .limit(1);
+  if (
+    full.error &&
+    (full.error.code === "42703" || /does not exist/i.test(full.error.message ?? ""))
+  ) {
+    const fallback = await supabase
+      .from("membership_wallet_entries")
+      .select("id, kind")
+      .eq("user_id", userId)
+      .limit(50);
+    return (fallback.data ?? []).some(
+      (row) => inferWalletBook(String(row.kind), null) === "main",
+    );
+  }
+  if (full.error) {
+    return false;
+  }
+  return (full.data?.length ?? 0) > 0;
+}
+
 export async function listMainWalletLedger(
   userId: string,
 ): Promise<WalletLedgerRow[]> {

@@ -32,6 +32,13 @@ export function showMemberWalletTab(
   return billingMethod === "wallet" || hasMainWalletCredit(mainUsd);
 }
 
+export function showMemberLedgerTab(
+  planPriceUsd: number,
+  hasMainLedger: boolean,
+): boolean {
+  return planPriceUsd >= 0.01 || hasMainLedger;
+}
+
 export type WalletBookBalances = {
   main: number;
   affiliate: number;
