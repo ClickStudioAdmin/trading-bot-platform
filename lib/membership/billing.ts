@@ -23,7 +23,7 @@ export const CRYPTO_CREDIT_DEDUCT_LABEL =
   "Deduct payment from Affiliate earnings if required";
 
 export const CRYPTO_CREDIT_DEDUCT_NOTE =
-  "If your Account Wallet doesn't have sufficient funds to pay your subscription, the shortfall will be transferred from your Affiliate earnings to your Account Wallet.";
+  "If your Account balance doesn't have sufficient funds to pay your subscription, the shortfall will be transferred from your Affiliate earnings to your Account balance.";
 
 export const SUBSCRIPTION_STATUSES = [
   "none",

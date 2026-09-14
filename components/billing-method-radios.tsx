@@ -45,7 +45,7 @@ export function BillingMethodRadios({
         <span>
           {BILLING_METHOD_LABELS.stripe}
           <span className="mt-1 block text-xs text-ink-faint">
-            On-site Stripe form.
+            Automatic payments handled by Stripe.
           </span>
         </span>
       </label>
@@ -62,8 +62,7 @@ export function BillingMethodRadios({
           <span>
             {BILLING_METHOD_LABELS.wallet}
             <span className="mt-1 block text-xs text-ink-faint">
-              Pay with listed stablecoins. They credit your account 1:1 as
-              USD.
+              Manual payments to top up your account balance.
             </span>
           </span>
         </label>
