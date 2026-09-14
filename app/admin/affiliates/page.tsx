@@ -18,9 +18,12 @@ import {
 import { formatCount, formatUsd } from "@/lib/membership/billing";
 import { firstSearchValue } from "@/lib/paper/open";
 import {
+  PAYOUT_FILE_MAX_ROWS_DEFAULT,
+  PAYOUT_FILE_MAX_ROWS_MAX,
   monthJoinedLabel,
   payoutEligibleForAirdropFile,
   payoutStatusLabel,
+  shortenPayoutAddress,
 } from "@/lib/membership/affiliate";
 
 export const metadata: Metadata = {
@@ -116,27 +119,69 @@ export default async function AdminAffiliatesPage({
               Payout files
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
-              One CSV per chain, address and amount. Download, airdrop, then
-              mark the file paid.
+              One CSV per list, address and amount. Same address stays on one
+              file. Extra rows or amount go on the next list. Download, airdrop,
+              then mark the file paid.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <a
-              href="/admin/affiliates/export"
-              className="text-sm text-accent hover:underline"
-            >
-              Export all payouts
-            </a>
-            <form action={generatePayoutFilesAction}>
-              <PendingSubmitButton
-                pendingLabel="Generating…"
-                className="rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink"
-              >
-                Generate payout lists
-              </PendingSubmitButton>
-            </form>
-          </div>
+          <a
+            href="/admin/affiliates/export"
+            className="text-sm text-accent hover:underline"
+          >
+            Export all payouts
+          </a>
         </div>
+        <form
+          action={generatePayoutFilesAction}
+          className="mt-4 flex flex-wrap items-end gap-3"
+        >
+          <label className="text-sm text-ink">
+            Chain
+            <select
+              name="network"
+              className="mt-1 block min-w-[10rem] rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+              defaultValue=""
+            >
+              <option value="">All chains</option>
+              {stats.readyByNetwork.map((row) => (
+                <option key={row.network} value={row.network}>
+                  {row.network}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm text-ink">
+            Max rows
+            <input
+              name="maxRows"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={PAYOUT_FILE_MAX_ROWS_MAX}
+              required
+              defaultValue={PAYOUT_FILE_MAX_ROWS_DEFAULT}
+              className="mt-1 block w-24 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+            />
+          </label>
+          <label className="text-sm text-ink">
+            Max amount
+            <input
+              name="maxAmountUsd"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0.01"
+              placeholder="No cap"
+              className="mt-1 block w-28 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+            />
+          </label>
+          <PendingSubmitButton
+            pendingLabel="Generating…"
+            className="rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink"
+          >
+            Generate payout lists
+          </PendingSubmitButton>
+        </form>
         {files.length === 0 ? (
           <p className="mt-4 text-sm text-ink-muted">No payout files yet.</p>
         ) : (
@@ -246,8 +291,11 @@ export default async function AdminAffiliatesPage({
                       {formatUsd(payout.amountUsd)}
                     </td>
                     <td className="py-3 pr-3">{payout.network ?? "—"}</td>
-                    <td className="max-w-[10rem] truncate py-3 pr-3 font-mono text-xs">
-                      {payout.address ?? "—"}
+                    <td
+                      className="py-3 pr-3 font-mono text-xs"
+                      title={payout.address ?? undefined}
+                    >
+                      {shortenPayoutAddress(payout.address)}
                     </td>
                     <td className="py-3 pr-3">
                       {payoutStatusLabel(payout.status)}

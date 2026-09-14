@@ -635,6 +635,17 @@ export function parsePayoutFileStatus(value: unknown): PayoutFileStatus | null {
     : null;
 }
 
+export function shortenPayoutAddress(address: string | null | undefined): string {
+  const value = String(address ?? "").trim();
+  if (!value) {
+    return "—";
+  }
+  if (value.length <= 10) {
+    return value;
+  }
+  return `${value.slice(0, 5)}.....${value.slice(-5)}`;
+}
+
 export function payoutStatusLabel(status: PayoutStatus): string {
   if (status === "pending") {
     return "Pending";
@@ -655,6 +666,15 @@ export function payoutEligibleForAirdropFile(status: PayoutStatus): boolean {
   return status === "requested" || status === "approved";
 }
 
+export const PAYOUT_FILE_MAX_ROWS_DEFAULT = 200;
+export const PAYOUT_FILE_MAX_ROWS_MAX = 2000;
+
+export type AdminPayoutNetworkStat = {
+  network: string;
+  amountUsd: number;
+  count: number;
+};
+
 export type AdminPayoutQueueStats = {
   readyUsd: number;
   readyCount: number;
@@ -664,7 +684,14 @@ export type AdminPayoutQueueStats = {
   paidUsd: number;
   paidCount: number;
   pendingFileCount: number;
-  toSendByNetwork: { network: string; amountUsd: number; count: number }[];
+  readyByNetwork: AdminPayoutNetworkStat[];
+  toSendByNetwork: AdminPayoutNetworkStat[];
+};
+
+export type GeneratePayoutFilesInput = {
+  maxRows: number;
+  maxAmountUsd: number | null;
+  network: string | null;
 };
 
 export function summarizeAdminPayoutQueue(
@@ -682,7 +709,8 @@ export function summarizeAdminPayoutQueue(
   let toSendCount = 0;
   let paidUsd = 0;
   let paidCount = 0;
-  const byNetwork = new Map<string, { amountUsd: number; count: number }>();
+  const readyNetworks = new Map<string, { amountUsd: number; count: number }>();
+  const pendingNetworks = new Map<string, { amountUsd: number; count: number }>();
   for (const row of rows) {
     const amount = roundUsd(row.amountUsd);
     if (
@@ -692,14 +720,11 @@ export function summarizeAdminPayoutQueue(
     ) {
       readyUsd = roundUsd(readyUsd + amount);
       readyCount += 1;
+      addNetworkStat(readyNetworks, row.network, amount);
     } else if (row.status === "pending") {
       toSendUsd = roundUsd(toSendUsd + amount);
       toSendCount += 1;
-      const network = row.network?.trim() || "unknown";
-      const existing = byNetwork.get(network) ?? { amountUsd: 0, count: 0 };
-      existing.amountUsd = roundUsd(existing.amountUsd + amount);
-      existing.count += 1;
-      byNetwork.set(network, existing);
+      addNetworkStat(pendingNetworks, row.network, amount);
     } else if (row.status === "paid") {
       paidUsd = roundUsd(paidUsd + amount);
       paidCount += 1;
@@ -714,10 +739,120 @@ export function summarizeAdminPayoutQueue(
     paidUsd,
     paidCount,
     pendingFileCount,
-    toSendByNetwork: [...byNetwork.entries()]
-      .map(([network, row]) => ({ network, ...row }))
-      .sort((a, b) => b.amountUsd - a.amountUsd || a.network.localeCompare(b.network)),
+    readyByNetwork: sortNetworkStats(readyNetworks),
+    toSendByNetwork: sortNetworkStats(pendingNetworks),
   };
+}
+
+function addNetworkStat(
+  map: Map<string, { amountUsd: number; count: number }>,
+  network: string | null,
+  amount: number,
+) {
+  const key = network?.trim() || "unknown";
+  const existing = map.get(key) ?? { amountUsd: 0, count: 0 };
+  existing.amountUsd = roundUsd(existing.amountUsd + amount);
+  existing.count += 1;
+  map.set(key, existing);
+}
+
+function sortNetworkStats(
+  map: Map<string, { amountUsd: number; count: number }>,
+): AdminPayoutNetworkStat[] {
+  return [...map.entries()]
+    .map(([network, row]) => ({ network, ...row }))
+    .sort((a, b) => b.amountUsd - a.amountUsd || a.network.localeCompare(b.network));
+}
+
+export function parsePayoutFileMaxRows(
+  value: unknown,
+): { ok: true; maxRows: number } | { ok: false; error: string } {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 1 || n > PAYOUT_FILE_MAX_ROWS_MAX) {
+    return {
+      ok: false,
+      error: `Max rows per list must be 1 to ${PAYOUT_FILE_MAX_ROWS_MAX}.`,
+    };
+  }
+  return { ok: true, maxRows: n };
+}
+
+export function parsePayoutFileMaxAmount(
+  value: unknown,
+): { ok: true; maxAmountUsd: number | null } | { ok: false; error: string } {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return { ok: true, maxAmountUsd: null };
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0 || n > 1_000_000) {
+    return { ok: false, error: "Max amount per list must be more than zero." };
+  }
+  return { ok: true, maxAmountUsd: roundUsd(n) };
+}
+
+export function parsePayoutFileNetwork(
+  value: unknown,
+): { ok: true; network: string | null } | { ok: false; error: string } {
+  const network = String(value ?? "").trim();
+  if (!network) {
+    return { ok: true, network: null };
+  }
+  if (!/^[a-z0-9][a-z0-9-]{0,47}$/i.test(network)) {
+    return { ok: false, error: "Choose a valid chain." };
+  }
+  return { ok: true, network: network.toLowerCase() };
+}
+
+export function chunkPayoutsForAirdropFiles<
+  T extends { address: string; amountUsd: number },
+>(
+  rows: T[],
+  input: { maxRows: number; maxAmountUsd: number | null },
+): T[][] {
+  const groups: T[][] = [];
+  const index = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = row.address.trim().toLowerCase();
+    if (!key) {
+      continue;
+    }
+    const existing = index.get(key);
+    if (existing) {
+      existing.push(row);
+    } else {
+      const group = [row];
+      index.set(key, group);
+      groups.push(group);
+    }
+  }
+  const chunks: T[][] = [];
+  let current: T[] = [];
+  let currentRows = 0;
+  let currentAmount = 0;
+  for (const group of groups) {
+    const groupAmount = roundUsd(
+      group.reduce((sum, row) => sum + row.amountUsd, 0),
+    );
+    const wouldExceedRows = currentRows + 1 > input.maxRows;
+    const wouldExceedAmount =
+      input.maxAmountUsd != null &&
+      currentRows > 0 &&
+      currentAmount + groupAmount > input.maxAmountUsd + 1e-9;
+    if (currentRows > 0 && (wouldExceedRows || wouldExceedAmount)) {
+      chunks.push(current);
+      current = [];
+      currentRows = 0;
+      currentAmount = 0;
+    }
+    current.push(...group);
+    currentRows += 1;
+    currentAmount = roundUsd(currentAmount + groupAmount);
+  }
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+  return chunks;
 }
 
 export function mergePayoutsForAirdrop(

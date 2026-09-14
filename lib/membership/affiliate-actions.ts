@@ -24,6 +24,9 @@ import {
   parsePayoutAddress,
   parsePayoutAmount,
   withdrawAmountDecision,
+  parsePayoutFileMaxAmount,
+  parsePayoutFileMaxRows,
+  parsePayoutFileNetwork,
   parsePayoutNetwork,
   parseProgramDefaultRates,
   withdrawDecision,
@@ -192,9 +195,25 @@ export async function rejectPayoutAction(formData: FormData) {
   redirect("/admin/affiliates?saved=rejected");
 }
 
-export async function generatePayoutFilesAction(_formData?: FormData) {
+export async function generatePayoutFilesAction(formData: FormData) {
   const admin = await requireAdmin();
-  const saved = await generatePayoutFiles();
+  const maxRows = parsePayoutFileMaxRows(formData.get("maxRows"));
+  if (!maxRows.ok) {
+    adminFail(maxRows.error);
+  }
+  const maxAmount = parsePayoutFileMaxAmount(formData.get("maxAmountUsd"));
+  if (!maxAmount.ok) {
+    adminFail(maxAmount.error);
+  }
+  const network = parsePayoutFileNetwork(formData.get("network"));
+  if (!network.ok) {
+    adminFail(network.error);
+  }
+  const saved = await generatePayoutFiles({
+    maxRows: maxRows.maxRows,
+    maxAmountUsd: maxAmount.maxAmountUsd,
+    network: network.network,
+  });
   if (!saved.ok) {
     adminFail(saved.error);
   }
@@ -206,6 +225,9 @@ export async function generatePayoutFilesAction(_formData?: FormData) {
     data: {
       fileIds: saved.files.map((file) => file.id),
       networks: saved.files.map((file) => file.network),
+      maxRows: maxRows.maxRows,
+      maxAmountUsd: maxAmount.maxAmountUsd,
+      network: network.network,
     },
   });
   revalidatePath("/admin/affiliates");

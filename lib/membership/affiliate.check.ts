@@ -43,7 +43,11 @@ import {
   AFFILIATE_PORTAL_PAGE_SIZE,
   generateAffiliateLinkSlug,
   affiliateAirdropCsv,
+  chunkPayoutsForAirdropFiles,
   mergePayoutsForAirdrop,
+  parsePayoutFileMaxAmount,
+  parsePayoutFileMaxRows,
+  parsePayoutFileNetwork,
   parseAffiliateAlias,
   parseAffiliateLanding,
   parseAffiliateLabel,
@@ -51,6 +55,7 @@ import {
   parsePayoutStatus,
   payoutEligibleForAirdropFile,
   payoutStatusLabel,
+  shortenPayoutAddress,
   summarizeAdminPayoutQueue,
   parseAffiliateLinkSlug,
   parseAffiliatePortalTab,
@@ -645,6 +650,11 @@ assert.equal(parsePayoutFileStatus("paid"), "paid");
 assert.equal(payoutEligibleForAirdropFile("requested"), true);
 assert.equal(payoutEligibleForAirdropFile("pending"), false);
 assert.equal(payoutStatusLabel("pending"), "Pending");
+assert.equal(
+  shortenPayoutAddress("0x5555555555555555555555555555555555555555"),
+  "0x555.....55555",
+);
+assert.equal(shortenPayoutAddress("0xabc"), "0xabc");
 assert.deepEqual(
   mergePayoutsForAirdrop([
     { address: "0xAbc", amountUsd: 10 },
@@ -714,11 +724,54 @@ assert.deepEqual(
     paidUsd: 100,
     paidCount: 1,
     pendingFileCount: 1,
+    readyByNetwork: [{ network: "arbitrum", amountUsd: 40, count: 1 }],
     toSendByNetwork: [
       { network: "arbitrum", amountUsd: 25, count: 1 },
       { network: "base", amountUsd: 5, count: 1 },
     ],
   },
+);
+assert.equal(parsePayoutFileMaxRows(200).ok, true);
+assert.equal(parsePayoutFileMaxRows(0).ok, false);
+assert.equal(parsePayoutFileMaxAmount("").ok, true);
+assert.equal(parsePayoutFileMaxAmount("50").ok, true);
+assert.equal(parsePayoutFileNetwork("").ok, true);
+assert.deepEqual(parsePayoutFileNetwork("Arbitrum-Sepolia"), {
+  ok: true,
+  network: "arbitrum-sepolia",
+});
+assert.deepEqual(
+  chunkPayoutsForAirdropFiles(
+    [
+      { address: "0xA", amountUsd: 10 },
+      { address: "0xB", amountUsd: 10 },
+      { address: "0xC", amountUsd: 10 },
+    ],
+    { maxRows: 2, maxAmountUsd: null },
+  ).map((chunk) => chunk.map((row) => row.address)),
+  [["0xA", "0xB"], ["0xC"]],
+);
+assert.equal(
+  chunkPayoutsForAirdropFiles(
+    [
+      { address: "0xA", amountUsd: 10 },
+      { address: "0xa", amountUsd: 5 },
+      { address: "0xB", amountUsd: 10 },
+    ],
+    { maxRows: 1, maxAmountUsd: null },
+  ).length,
+  2,
+);
+assert.deepEqual(
+  chunkPayoutsForAirdropFiles(
+    [
+      { address: "0xA", amountUsd: 20 },
+      { address: "0xB", amountUsd: 20 },
+      { address: "0xC", amountUsd: 10 },
+    ],
+    { maxRows: 10, maxAmountUsd: 30 },
+  ).map((chunk) => chunk.map((row) => row.address)),
+  [["0xA"], ["0xB", "0xC"]],
 );
 assert.equal(parseAffiliateLabel("Spring", 40, "Enter a name.").ok, true);
 assert.equal(parseAffiliateLabel("", 40, "Enter a name.").ok, false);

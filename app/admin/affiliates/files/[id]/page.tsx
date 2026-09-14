@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
-import { payoutStatusLabel } from "@/lib/membership/affiliate";
+import { payoutStatusLabel, shortenPayoutAddress } from "@/lib/membership/affiliate";
 import {
   listPayoutsForFile,
   loadPayoutFile,
@@ -91,8 +91,11 @@ export default async function AdminPayoutFilePage({
                         {formatUsd(payout.amountUsd)}
                       </td>
                       <td className="py-3 pr-3">{payout.network ?? "—"}</td>
-                      <td className="py-3 pr-3 font-mono text-xs break-all">
-                        {payout.address ?? "—"}
+                      <td
+                        className="py-3 pr-3 font-mono text-xs whitespace-nowrap"
+                        title={payout.address ?? undefined}
+                      >
+                        {shortenPayoutAddress(payout.address)}
                       </td>
                       <td className="py-3 pr-3 whitespace-nowrap">
                         {payoutStatusLabel(payout.status)}

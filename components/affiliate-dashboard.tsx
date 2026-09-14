@@ -15,6 +15,7 @@ import {
   AFFILIATE_LINK_NAME_MAX,
   payoutStatusLabel,
   referralShareUrl,
+  shortenPayoutAddress,
   affiliateLandingLabel,
   affiliateLinkKindLabel,
   affiliatePageLabel,
@@ -839,8 +840,11 @@ function AffiliatePayoutsTable({
                 <td className="px-4 py-3 whitespace-nowrap text-ink">
                   {payout.network ? chainName(payout.network) : "—"}
                 </td>
-                <td className="max-w-64 truncate px-4 py-3 font-mono text-xs text-ink-muted">
-                  {payout.address ?? "—"}
+                <td
+                  className="px-4 py-3 font-mono text-xs whitespace-nowrap text-ink-muted"
+                  title={payout.address ?? undefined}
+                >
+                  {shortenPayoutAddress(payout.address)}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
                   {paid ? formatLocalDate(paid) : "—"}

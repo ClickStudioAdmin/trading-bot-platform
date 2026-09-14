@@ -26,6 +26,7 @@ import {
   parseAffiliateMinPayout,
   parseCommissionStatus,
   parseDowngradeGraceDays,
+  chunkPayoutsForAirdropFiles,
   parsePayoutFileStatus,
   parsePayoutMethod,
   parsePayoutStatus,
@@ -49,6 +50,7 @@ import {
   type AffiliateProgramSettings,
   type AdminPayoutQueueStats,
   type CommissionStatus,
+  type GeneratePayoutFilesInput,
   type PayoutFileStatus,
   type PayoutStatus,
 } from "./affiliate";
@@ -1245,9 +1247,9 @@ export async function listPayoutsForFile(fileId: string): Promise<PayoutRow[]> {
   return withPayoutEmails(supabase, rows);
 }
 
-export async function generatePayoutFiles(): Promise<
-  { ok: true; files: PayoutFileRow[] } | { ok: false; error: string }
-> {
+export async function generatePayoutFiles(
+  input: GeneratePayoutFilesInput,
+): Promise<{ ok: true; files: PayoutFileRow[] } | { ok: false; error: string }> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
@@ -1257,7 +1259,8 @@ export async function generatePayoutFiles(): Promise<
     .select(
       "id, user_id, method, amount_usd, status, network, address, external_id, created_at, paid_at, payout_file_id",
     )
-    .in("status", ["requested", "approved"]);
+    .in("status", ["requested", "approved"])
+    .order("created_at", { ascending: true });
   if (error) {
     return { ok: false, error: error.message };
   }
@@ -1268,12 +1271,15 @@ export async function generatePayoutFiles(): Promise<
       (row) =>
         payoutEligibleForAirdropFile(row.status) &&
         Boolean(row.network?.trim()) &&
-        Boolean(row.address?.trim()),
+        Boolean(row.address?.trim()) &&
+        (!input.network || String(row.network).toLowerCase() === input.network),
     );
   if (eligible.length === 0) {
     return {
       ok: false,
-      error: "No requested payouts with a chain and address.",
+      error: input.network
+        ? "No requested payouts on that chain with an address."
+        : "No requested payouts with a chain and address.",
     };
   }
   const byNetwork = new Map<string, PayoutRow[]>();
@@ -1285,77 +1291,19 @@ export async function generatePayoutFiles(): Promise<
   }
   const files: PayoutFileRow[] = [];
   for (const [network, rows] of byNetwork) {
-    const amountUsd = roundUsd(
-      rows.reduce((sum, row) => sum + row.amountUsd, 0),
-    );
-    const { data: created, error: createError } = await supabase
-      .from("membership_payout_files")
-      .insert({
-        network,
-        status: "pending",
-        amount_usd: amountUsd,
-        payout_count: rows.length,
-      })
-      .select(
-        "id, network, status, amount_usd, payout_count, external_id, created_at, paid_at",
-      )
-      .single();
-    if (createError || !created) {
-      return {
-        ok: false,
-        error: createError?.message ?? "Could not create a payout file.",
-      };
-    }
-    const mapped = mapPayoutFile(created as Record<string, unknown>);
-    if (!mapped) {
-      return { ok: false, error: "Could not create a payout file." };
-    }
-    const { data: claimed, error: claimError } = await supabase
-      .from("membership_payouts")
-      .update({
-        status: "pending",
-        payout_file_id: mapped.id,
-      })
-      .in(
-        "id",
-        rows.map((row) => row.id),
-      )
-      .in("status", ["requested", "approved"])
-      .select("id, amount_usd");
-    if (claimError) {
-      await supabase.from("membership_payout_files").delete().eq("id", mapped.id);
-      return { ok: false, error: claimError.message };
-    }
-    const claimedRows = claimed ?? [];
-    if (claimedRows.length === 0) {
-      await supabase.from("membership_payout_files").delete().eq("id", mapped.id);
-      continue;
-    }
-    const claimedAmount = roundUsd(
-      claimedRows.reduce((sum, row) => sum + Number(row.amount_usd), 0),
-    );
-    if (
-      claimedRows.length !== mapped.payoutCount ||
-      claimedAmount !== mapped.amountUsd
-    ) {
-      const { error: fixError } = await supabase
-        .from("membership_payout_files")
-        .update({
-          amount_usd: claimedAmount,
-          payout_count: claimedRows.length,
-        })
-        .eq("id", mapped.id);
-      if (fixError) {
-        return { ok: false, error: fixError.message };
+    const chunks = chunkPayoutsForAirdropFiles(rows, {
+      maxRows: input.maxRows,
+      maxAmountUsd: input.maxAmountUsd,
+    });
+    for (const chunk of chunks) {
+      const created = await createPayoutFile(supabase, network, chunk);
+      if (!created.ok) {
+        return created;
       }
-      files.push({
-        ...mapped,
-        amountUsd: claimedAmount,
-        payoutCount: claimedRows.length,
-      });
-      continue;
+      if (created.file) {
+        files.push(created.file);
+      }
     }
-    files.push(mapped);
   }
   if (files.length === 0) {
     return {
@@ -1364,6 +1312,89 @@ export async function generatePayoutFiles(): Promise<
     };
   }
   return { ok: true, files };
+}
+
+async function createPayoutFile(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  network: string,
+  rows: PayoutRow[],
+): Promise<
+  | { ok: true; file: PayoutFileRow | null }
+  | { ok: false; error: string }
+> {
+  const amountUsd = roundUsd(
+    rows.reduce((sum, row) => sum + row.amountUsd, 0),
+  );
+  const { data: created, error: createError } = await supabase
+    .from("membership_payout_files")
+    .insert({
+      network,
+      status: "pending",
+      amount_usd: amountUsd,
+      payout_count: rows.length,
+    })
+    .select(
+      "id, network, status, amount_usd, payout_count, external_id, created_at, paid_at",
+    )
+    .single();
+  if (createError || !created) {
+    return {
+      ok: false,
+      error: createError?.message ?? "Could not create a payout file.",
+    };
+  }
+  const mapped = mapPayoutFile(created as Record<string, unknown>);
+  if (!mapped) {
+    return { ok: false, error: "Could not create a payout file." };
+  }
+  const { data: claimed, error: claimError } = await supabase
+    .from("membership_payouts")
+    .update({
+      status: "pending",
+      payout_file_id: mapped.id,
+    })
+    .in(
+      "id",
+      rows.map((row) => row.id),
+    )
+    .in("status", ["requested", "approved"])
+    .select("id, amount_usd");
+  if (claimError) {
+    await supabase.from("membership_payout_files").delete().eq("id", mapped.id);
+    return { ok: false, error: claimError.message };
+  }
+  const claimedRows = claimed ?? [];
+  if (claimedRows.length === 0) {
+    await supabase.from("membership_payout_files").delete().eq("id", mapped.id);
+    return { ok: true, file: null };
+  }
+  const claimedAmount = roundUsd(
+    claimedRows.reduce((sum, row) => sum + Number(row.amount_usd), 0),
+  );
+  if (
+    claimedRows.length !== mapped.payoutCount ||
+    claimedAmount !== mapped.amountUsd
+  ) {
+    const { error: fixError } = await supabase
+      .from("membership_payout_files")
+      .update({
+        amount_usd: claimedAmount,
+        payout_count: claimedRows.length,
+      })
+      .eq("id", mapped.id);
+    if (fixError) {
+      return { ok: false, error: fixError.message };
+    }
+    return {
+      ok: true,
+      file: {
+        ...mapped,
+        amountUsd: claimedAmount,
+        payoutCount: claimedRows.length,
+      },
+    };
+  }
+  return { ok: true, file: mapped };
 }
 
 export async function markPayoutFilePaid(
