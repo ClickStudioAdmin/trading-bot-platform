@@ -22,6 +22,7 @@ import {
   listMemberInvoices,
 } from "@/lib/membership/billing-store";
 import {
+  ACCOUNT_WALLET_DEPOSIT_NOTE,
   showMemberLedgerTab,
   showMemberWalletTab,
 } from "@/lib/membership/wallet";
@@ -339,6 +340,7 @@ export default async function AccountBillingPage({
                   chains={deposit?.chains ?? []}
                   tokens={deposit?.tokens ?? []}
                   heading="Top up Account Wallet"
+                  instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
                   revealAddress={billing.billingMethod === "wallet"}
                 />
               </section>

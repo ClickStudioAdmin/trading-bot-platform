@@ -430,10 +430,6 @@ function MainWalletWithdrawForm({
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-semibold tracking-tight">Request withdraw</h2>
-      <p className="text-sm text-ink-muted">
-        USDT from Account Wallet. Enter the receive address for this request.
-        Minimum {formatUsd(withdraw.minPayoutUsd)}.
-      </p>
       {!withdraw.withdraw.ok ? (
         <p className="text-sm text-warning">{withdraw.withdraw.reason}</p>
       ) : null}
