@@ -232,6 +232,24 @@ export function TopUpWallet({
   );
 }
 
+export function LiveWalletHeadingBalance({
+  fallbackUsd,
+}: {
+  fallbackUsd: number;
+}) {
+  const live = useLiveMainWallet(fallbackUsd);
+  return (
+    <div className="text-right">
+      <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+        Wallet balance
+      </p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">
+        {formatUsd(live.mainUsd)}
+      </p>
+    </div>
+  );
+}
+
 export function CryptoWalletPanel({
   mainUsd,
   affiliateUsd,
@@ -246,6 +264,7 @@ export function CryptoWalletPanel({
   checkout,
   affiliateNote,
   booksOnly,
+  hideBalance = false,
   payEnabled = true,
   withdraw,
 }: {
@@ -262,6 +281,7 @@ export function CryptoWalletPanel({
   checkout?: boolean;
   affiliateNote?: boolean;
   booksOnly?: boolean;
+  hideBalance?: boolean;
   payEnabled?: boolean;
   withdraw?: MainWalletWithdrawContext;
 }) {
@@ -286,10 +306,16 @@ export function CryptoWalletPanel({
 
   const books = (
     <div className="space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight">Wallet balance</h2>
-        <p className="text-2xl font-semibold tabular-nums tracking-tight">
-          {formatUsd(shownMainUsd)}
-        </p>
+        {hideBalance ? null : (
+          <>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Wallet balance
+            </h2>
+            <p className="text-2xl font-semibold tabular-nums tracking-tight">
+              {formatUsd(shownMainUsd)}
+            </p>
+          </>
+        )}
         {mainShort ? (
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
             Main Wallet does not have enough to pay this plan. Use Top up Main
@@ -349,9 +375,9 @@ function MainWalletWithdrawForm({
 }) {
   const canWithdraw = withdraw.withdraw.ok && withdraw.chains.length > 0;
   return (
-    <div className="space-y-3 border-t border-line pt-4">
-      <h3 className="text-sm font-medium text-ink">Request withdraw</h3>
-      <p className="text-xs text-ink-muted">
+    <div className="space-y-3">
+      <h2 className="text-lg font-semibold tracking-tight">Request withdraw</h2>
+      <p className="text-sm text-ink-muted">
         USDT from Main Wallet. Enter the receive address for this request.
         Minimum {formatUsd(withdraw.minPayoutUsd)}.
       </p>
@@ -364,11 +390,8 @@ function MainWalletWithdrawForm({
           on Settings → Crypto.
         </p>
       ) : null}
-      <form
-        action={requestMainWalletWithdrawAction}
-        className="flex flex-wrap items-end gap-3"
-      >
-        <label className="w-44 shrink-0 text-sm text-ink">
+      <form action={requestMainWalletWithdrawAction} className="space-y-3">
+        <label className="block text-sm text-ink">
           Chain
           <select
             name="network"
@@ -383,7 +406,7 @@ function MainWalletWithdrawForm({
             ))}
           </select>
         </label>
-        <label className="w-32 shrink-0 text-sm text-ink">
+        <label className="block text-sm text-ink">
           Amount
           <input
             name="amountUsd"
@@ -397,7 +420,7 @@ function MainWalletWithdrawForm({
             className={BILLING_FIELD_CLASS}
           />
         </label>
-        <label className="min-w-[16rem] flex-1 text-sm text-ink">
+        <label className="block text-sm text-ink">
           Address
           <input
             name="address"

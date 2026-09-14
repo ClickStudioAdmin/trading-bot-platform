@@ -15,6 +15,7 @@ import { StripeEmbeddedCard } from "@/components/stripe-embedded-checkout";
 import {
   CryptoWalletPanel,
   LiveMainWallet,
+  LiveWalletHeadingBalance,
   TopUpWallet,
 } from "@/components/crypto-wallet-panel";
 import {
@@ -277,15 +278,20 @@ export default async function AccountBillingPage({
       ) : tab === "wallet" ? (
         <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
           <div className="mt-6 space-y-5">
-            <div>
-              <h2 className="text-lg font-semibold tracking-tight">
-                Manage wallet
-              </h2>
-              <p className="mt-1 text-sm text-ink-muted">
-                {billing.billingMethod === "wallet"
-                  ? "Listed stables credit Main 1:1. Enter a receive address on each withdraw request."
-                  : "Leftover Main stays here until the balance is zero. Switch to Crypto on Overview to top up again."}
-              </p>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight">
+                  Manage wallet
+                </h2>
+                <p className="mt-1 text-sm text-ink-muted">
+                  {billing.billingMethod === "wallet"
+                    ? "Listed stables credit Main 1:1. Enter a receive address on each withdraw request."
+                    : "Leftover Main stays here until the balance is zero. Switch to Crypto on Overview to top up again."}
+                </p>
+              </div>
+              <LiveWalletHeadingBalance
+                fallbackUsd={deposit?.books.main ?? 0}
+              />
             </div>
             <div className="grid items-start gap-5 lg:grid-cols-2">
               <section className="rounded-card border border-line bg-surface p-5">
@@ -299,6 +305,7 @@ export default async function AccountBillingPage({
                   deductOn={billing.paySubscriptionFromCredit}
                   affiliateNote={billing.paySubscriptionFromAffiliate}
                   booksOnly
+                  hideBalance
                   withdraw={withdraw ?? undefined}
                 />
               </section>
