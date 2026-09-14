@@ -12,7 +12,10 @@ import {
   openCustomerPortalAction,
   setBillingMethodAction,
 } from "@/lib/membership/billing-actions";
-import { TopUpWallet } from "@/components/crypto-wallet-panel";
+import {
+  CryptoWalletPanel,
+  TopUpWallet,
+} from "@/components/crypto-wallet-panel";
 import {
   getMemberBilling,
   listMemberInvoices,
@@ -139,7 +142,6 @@ export default async function AccountBillingPage({
       {tab === "overview" ? (
         <>
       <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
-        <div className="space-y-5">
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">Current plan</h2>
           <p className="mt-3 text-sm text-ink">{plan?.name ?? "—"}</p>
@@ -196,17 +198,29 @@ export default async function AccountBillingPage({
           </form>
         </section>
 
-        {billing.billingMethod === "wallet" ? (
-          <section className="rounded-card border border-line bg-surface p-5">
-            <TopUpWallet
-              address={deposit?.address ?? null}
-              addressError={deposit?.addressError ?? null}
-              chains={deposit?.chains ?? []}
-              tokens={deposit?.tokens ?? []}
-            />
-          </section>
-        ) : null}
-        </div>
+        <section className="rounded-card border border-line bg-surface p-5">
+          <CryptoWalletPanel
+            mainUsd={deposit?.books.main ?? 0}
+            affiliateUsd={deposit?.payableAffiliateUsd ?? 0}
+            address={deposit?.address ?? null}
+            addressError={deposit?.addressError ?? null}
+            chains={deposit?.chains ?? []}
+            tokens={deposit?.tokens ?? []}
+            deductOn={billing.paySubscriptionFromCredit}
+            affiliateNote={billing.paySubscriptionFromAffiliate}
+            booksOnly
+          />
+        </section>
+
+        <section className="rounded-card border border-line bg-surface p-5">
+          <TopUpWallet
+            address={deposit?.address ?? null}
+            addressError={deposit?.addressError ?? null}
+            chains={deposit?.chains ?? []}
+            tokens={deposit?.tokens ?? []}
+            revealAddress={billing.billingMethod === "wallet"}
+          />
+        </section>
       </div>
         </>
       ) : (

@@ -118,70 +118,65 @@ export default async function AdminAffiliatesPage({
             <h2 className="text-lg font-semibold tracking-tight">
               Payout files
             </h2>
-            <p className="mt-1 text-sm text-ink-muted">
-              One CSV per list, address and amount. Same address stays on one
-              file. Extra rows or amount go on the next list. Download, airdrop,
-              then mark the file paid.
-            </p>
-          </div>
-          <a
-            href="/admin/affiliates/export"
-            className="text-sm text-accent hover:underline"
-          >
-            Export all payouts
-          </a>
-        </div>
-        <form
-          action={generatePayoutFilesAction}
-          className="mt-4 flex flex-wrap items-end gap-3"
-        >
-          <label className="text-sm text-ink">
-            Chain
-            <select
-              name="network"
-              className="mt-1 block min-w-[10rem] rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
-              defaultValue=""
+            <a
+              href="/admin/affiliates/export"
+              className="mt-1 inline-block text-sm text-accent hover:underline"
             >
-              <option value="">All chains</option>
-              {stats.readyByNetwork.map((row) => (
-                <option key={row.network} value={row.network}>
-                  {row.network}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm text-ink">
-            Max rows
-            <input
-              name="maxRows"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={PAYOUT_FILE_MAX_ROWS_MAX}
-              required
-              defaultValue={PAYOUT_FILE_MAX_ROWS_DEFAULT}
-              className="mt-1 block w-24 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
-            />
-          </label>
-          <label className="text-sm text-ink">
-            Max amount
-            <input
-              name="maxAmountUsd"
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="0.01"
-              placeholder="No cap"
-              className="mt-1 block w-28 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
-            />
-          </label>
-          <PendingSubmitButton
-            pendingLabel="Generating…"
-            className="rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink"
+              Export all payouts
+            </a>
+          </div>
+          <form
+            action={generatePayoutFilesAction}
+            className="flex flex-wrap items-end justify-end gap-3"
           >
-            Generate payout lists
-          </PendingSubmitButton>
-        </form>
+            <label className="text-sm text-ink">
+              Chain
+              <select
+                name="network"
+                className="mt-1 block min-w-[10rem] rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+                defaultValue=""
+              >
+                <option value="">All chains</option>
+                {stats.readyByNetwork.map((row) => (
+                  <option key={row.network} value={row.network}>
+                    {row.network}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm text-ink">
+              Max rows
+              <input
+                name="maxRows"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={PAYOUT_FILE_MAX_ROWS_MAX}
+                required
+                defaultValue={PAYOUT_FILE_MAX_ROWS_DEFAULT}
+                className="mt-1 block w-24 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+              />
+            </label>
+            <label className="text-sm text-ink">
+              Max amount
+              <input
+                name="maxAmountUsd"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0.01"
+                placeholder="No cap"
+                className="mt-1 block w-28 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink"
+              />
+            </label>
+            <PendingSubmitButton
+              pendingLabel="Generating…"
+              className="rounded-control bg-accent-strong px-3 py-2 text-sm font-medium text-ink"
+            >
+              Generate payout lists
+            </PendingSubmitButton>
+          </form>
+        </div>
         {files.length === 0 ? (
           <p className="mt-4 text-sm text-ink-muted">No payout files yet.</p>
         ) : (
@@ -260,10 +255,6 @@ export default async function AdminAffiliatesPage({
 
       <section className="mt-8 rounded-card border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold tracking-tight">Payout queue</h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          Reject a request before it goes into a file. Pending rows are already
-          on a list.
-        </p>
         {payouts.length === 0 ? (
           <p className="mt-4 text-sm text-ink-muted">No payouts yet.</p>
         ) : (

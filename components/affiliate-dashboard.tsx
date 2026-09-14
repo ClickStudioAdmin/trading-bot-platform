@@ -721,57 +721,27 @@ export function AffiliateDashboard({
               <h2 className="text-lg font-semibold tracking-tight">
                 Available
               </h2>
-              <dl className="mt-4 space-y-3 text-sm">
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-ink-muted">Payable</dt>
-                  <dd className="tabular-nums font-semibold text-ink">
-                    {formatUsd(portal.payableUsd)}
-                  </dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-ink-muted">Pending</dt>
-                  <dd className="tabular-nums text-ink">
-                    {formatUsd(portal.pendingUsd)}
-                  </dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-ink-muted">Paid out</dt>
-                  <dd className="tabular-nums text-ink">
-                    {formatUsd(portal.paidOutUsd)}
-                  </dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-ink-muted">Minimum</dt>
-                  <dd className="tabular-nums text-ink">
-                    {formatUsd(portal.settings.minPayoutUsd)}
-                  </dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-ink-muted">Last payout</dt>
-                  <dd className="text-ink">
-                    {portal.lastPayoutAt
-                      ? monthJoinedLabel(portal.lastPayoutAt)
-                      : "—"}
-                  </dd>
-                </div>
-                <div className="flex items-baseline justify-between gap-3 border-t border-line pt-3">
-                  <dt className="text-ink-muted">Auto payouts</dt>
-                  <dd className="text-right text-ink">
-                    {portal.payoutSettings.autoPayout ? (
-                      <>
-                        On
-                        {portal.payoutSettings.autoPayoutUsd != null ? (
-                          <span className="mt-0.5 block text-xs text-ink-muted">
-                            Over {formatUsd(portal.payoutSettings.autoPayoutUsd)}
-                          </span>
-                        ) : null}
-                      </>
-                    ) : (
-                      "Off"
-                    )}
-                  </dd>
-                </div>
-              </dl>
+              <p className="mt-4 text-3xl font-semibold tabular-nums tracking-tight">
+                {formatUsd(portal.payableUsd)}
+              </p>
+              <p className="mt-1 text-sm text-ink-muted">Payable</p>
+              <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-line pt-3 text-sm">
+                <p className="text-ink-muted">Auto payouts</p>
+                <p className="text-right text-ink">
+                  {portal.payoutSettings.autoPayout ? (
+                    <>
+                      On
+                      {portal.payoutSettings.autoPayoutUsd != null ? (
+                        <span className="mt-0.5 block text-xs text-ink-muted">
+                          Over {formatUsd(portal.payoutSettings.autoPayoutUsd)}
+                        </span>
+                      ) : null}
+                    </>
+                  ) : (
+                    "Off"
+                  )}
+                </p>
+              </div>
             </section>
           </div>
           <section>
@@ -874,9 +844,9 @@ function AffiliatePayoutsTable({
           <tr>
             <th className="px-4 py-3 font-medium whitespace-nowrap">Date</th>
             <th className="px-4 py-3 font-medium whitespace-nowrap">Amount</th>
-            <th className="px-4 py-3 font-medium whitespace-nowrap">Status</th>
             <th className="px-4 py-3 font-medium whitespace-nowrap">Chain</th>
             <th className="px-4 py-3 font-medium">Address</th>
+            <th className="px-4 py-3 font-medium whitespace-nowrap">Status</th>
             <th className="px-4 py-3 font-medium whitespace-nowrap">Paid</th>
           </tr>
         </thead>
@@ -895,9 +865,6 @@ function AffiliatePayoutsTable({
                 <td className="px-4 py-3 tabular-nums whitespace-nowrap text-ink">
                   {formatUsd(payout.amountUsd)}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
-                  {payoutStatusLabel(payout.status)}
-                </td>
                 <td className="px-4 py-3 whitespace-nowrap text-ink">
                   {payout.network ? chainName(payout.network) : "—"}
                 </td>
@@ -906,6 +873,9 @@ function AffiliatePayoutsTable({
                   title={payout.address ?? undefined}
                 >
                   {shortenPayoutAddress(payout.address)}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
+                  {payoutStatusLabel(payout.status)}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
                   {paid ? formatLocalDate(paid) : "—"}

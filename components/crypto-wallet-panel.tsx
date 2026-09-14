@@ -1,12 +1,16 @@
 import { CopyTextButton } from "@/components/copy-text-button";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { CRYPTO_CREDIT_DEDUCT_LABEL, formatUsd } from "@/lib/membership/billing";
+import { formatUsd } from "@/lib/membership/billing";
 import {
   checkCheckoutDepositAction,
   checkMyDepositAction,
   payPlanWithCreditAction,
 } from "@/lib/membership/wallet-actions";
-import { explorerAddressUrl, planDeductDecision } from "@/lib/membership/wallet";
+import {
+  explorerAddressUrl,
+  planDeductDecision,
+  roundUsd,
+} from "@/lib/membership/wallet";
 import type {
   BillingChain,
   BillingToken,
@@ -20,6 +24,7 @@ export function TopUpWallet({
   tokens,
   planId,
   checkout,
+  revealAddress = true,
 }: {
   address: DepositAddress | null;
   addressError: string | null;
@@ -27,6 +32,7 @@ export function TopUpWallet({
   tokens: BillingToken[];
   planId?: string;
   checkout?: boolean;
+  revealAddress?: boolean;
 }) {
   const chain = chains[0] ?? null;
   const token =
@@ -44,6 +50,12 @@ export function TopUpWallet({
   return (
     <div id="top-up" className="space-y-3">
       <h2 className="text-lg font-semibold tracking-tight">Top up Main Wallet</h2>
+      {!revealAddress ? (
+        <p className="text-sm text-ink-muted">
+          Save Crypto as your method to see your deposit address.
+        </p>
+      ) : (
+        <>
       <p className="text-sm text-ink-muted">{depositLabel}</p>
       {address ? (
         <>
@@ -97,6 +109,8 @@ export function TopUpWallet({
           </PendingSubmitButton>
         </form>
       )}
+        </>
+      )}
     </div>
   );
 }
@@ -141,26 +155,21 @@ export function CryptoWalletPanel({
       affiliateUsd,
       useAffiliate: useAffiliate === true,
     }).ok;
+  const mainShort =
+    checkout &&
+    typeof planPriceUsd === "number" &&
+    roundUsd(mainUsd) + 1e-9 < roundUsd(planPriceUsd);
 
   const books = (
     <div className="space-y-4">
-        <h2 className="text-lg font-semibold tracking-tight">Main Wallet</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Wallet balance</h2>
         <p className="text-2xl font-semibold tabular-nums tracking-tight">
           {formatUsd(mainUsd)}
         </p>
-        <p className="text-sm text-ink-muted">
-          USD book, not a crypto wallet. Listed stables credit Main 1:1. Rent
-          always debits Main.
-        </p>
-        {deductOn ? (
-          <p className="text-xs text-ink-faint">
-            {CRYPTO_CREDIT_DEDUCT_LABEL} is on.
-          </p>
-        ) : null}
-        {affiliateNote ? (
-          <p className="text-xs text-ink-faint">
-            Deduct Plan Payment from Earnings is on. Payable affiliate earnings
-            can cover a Main shortfall. Your upline still earns on that invoice.
+        {mainShort ? (
+          <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+            Main Wallet does not have enough to pay this plan. Use Top up Main
+            Wallet below to send USDT, then check for the deposit.
           </p>
         ) : null}
         {checkout && planId && typeof planPriceUsd === "number" ? (

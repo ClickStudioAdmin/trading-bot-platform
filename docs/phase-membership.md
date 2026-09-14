@@ -120,7 +120,7 @@ One active **collection method** per member (`stripe` = Card or `wallet` = Crypt
 
 **Leftover Main** stays on cancel / Free. Spend later or withdraw as USDT if ≥ minimum and no arrears — Click sends that USDT by hand. Affiliate withdraw is a separate payout from the Affiliate book (same manual send). Not forfeited.
 
-**Billing page** `/account/billing` (account chrome, not the header browse row): left column is plan, payment method, then top up Main Wallet after Crypto is saved. Deposit address stays hidden until the saved method is Crypto. Invoices, Stripe Portal. Payable affiliate earnings stay on Affiliates. Plans **Upgrade** opens `/account/billing/checkout?plan=` — method on the left; Stripe **embedded** form or Pay with credit on the right. Switching Card → Crypto requires **Save method** before the deposit address and Pay with credit unlock. Members stay on TBP. Success returns to Billing.
+**Billing page** `/account/billing` (account chrome, not the header browse row): two-by-two — Current plan · Payment method, then Wallet balance · Top up Main Wallet. Deposit address stays hidden until the saved method is Crypto. Invoices, Stripe Portal. Payable affiliate earnings stay on Affiliates. Plans **Upgrade** opens `/account/billing/checkout?plan=` — method on the left; Stripe **embedded** form or Pay with credit on the right. Switching Card → Crypto requires **Save method** before the deposit address and Pay with credit unlock. Members stay on TBP. Success returns to Billing.
 
 Hosted crypto-subscription auto-pull is not the primary model (it fights leftover credit). Re-evaluate Stripe stablecoins / OpenSettle as optional top-up helpers when this item starts.
 
