@@ -22,7 +22,12 @@ import {
   requestMainWalletWithdrawAction,
 } from "@/lib/membership/wallet-actions";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
-import { planDeductDecision, roundUsd } from "@/lib/membership/wallet";
+import {
+  METHOD_TOP_UP_SHORTFALL,
+  accountBalanceCoversNextCycle,
+  planDeductDecision,
+  roundUsd,
+} from "@/lib/membership/wallet";
 import type {
   BillingChain,
   BillingToken,
@@ -202,6 +207,7 @@ export function TopUpWallet({
   showCheck = true,
   instructions,
   dueUsd,
+  cycleDueUsd,
 }: {
   address: DepositAddress | null;
   addressError: string | null;
@@ -214,7 +220,12 @@ export function TopUpWallet({
   showCheck?: boolean;
   instructions?: string;
   dueUsd?: number;
+  cycleDueUsd?: number;
 }) {
+  const live = useLiveMainWallet(0);
+  const shortForCycle =
+    typeof cycleDueUsd === "number" &&
+    !accountBalanceCoversNextCycle(live.mainUsd, cycleDueUsd);
   const chain = chains[0] ?? null;
   const token =
     tokens.find((row) => row.chainId === chain?.id && row.kind === "stable") ??
@@ -253,6 +264,11 @@ export function TopUpWallet({
               </dd>
             </dl>
             <CopyTextButton text={address.address} label="Copy address" />
+            {shortForCycle ? (
+              <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+                {METHOD_TOP_UP_SHORTFALL}
+              </p>
+            ) : null}
             {instructions ? (
               <p className="text-sm text-ink-muted">{instructions}</p>
             ) : null}

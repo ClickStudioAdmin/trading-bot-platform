@@ -4,6 +4,7 @@ import {
   mainWalletLedgerLabel,
   parseWalletMinPayout,
   planDeductDecision,
+  accountBalanceCoversNextCycle,
   showMemberLedgerTab,
   showMemberWalletTab,
   tokenAmountToUsd,
@@ -12,6 +13,10 @@ import {
   walletUpgradeInvoiceExternalId,
   withRunningBalances,
 } from "./wallet";
+
+assert.equal(accountBalanceCoversNextCycle(19, 19), true);
+assert.equal(accountBalanceCoversNextCycle(18.99, 19), false);
+assert.equal(accountBalanceCoversNextCycle(0, 0), true);
 
 assert.equal(walletEntryDelta("deposit", 10), 10);
 assert.equal(walletEntryDelta("commission", 4), 4);

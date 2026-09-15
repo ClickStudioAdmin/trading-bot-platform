@@ -25,6 +25,7 @@ import {
 } from "@/lib/membership/billing-store";
 import {
   ACCOUNT_WALLET_DEPOSIT_NOTE,
+  METHOD_TOP_UP_NOTE,
   showMemberLedgerTab,
   showMemberWalletTab,
 } from "@/lib/membership/wallet";
@@ -321,7 +322,8 @@ export default async function AccountBillingPage({
                   chains={deposit?.chains ?? []}
                   tokens={deposit?.tokens ?? []}
                   heading="Top up Account Balance"
-                  instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
+                  instructions={METHOD_TOP_UP_NOTE}
+                  cycleDueUsd={plan?.priceUsd ?? 0}
                 />
               </LiveMainWallet>
             </section>

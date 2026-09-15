@@ -22,9 +22,23 @@ export const WALLET_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 export const WALLET_MIN_PAYOUT_DEFAULT = 100;
 export const ACCOUNT_WALLET_DEPOSIT_NOTE =
   "Transfer at least the amount due today in a listed stablecoin. We recommend transferring more than is due. Any remaining account balance will be utilized to cover future subscription payments when due. Account balances can be withdrawn at any time.";
+export const METHOD_TOP_UP_NOTE =
+  "Ensure you always maintain enough account balance to pay for your next month's subscription payment. Any remaining account balance will be utilized to cover future subscription payments when due. Account balances can be withdrawn at any time. Transfer one of the listed stablecoins.";
+export const METHOD_TOP_UP_SHORTFALL =
+  "Your account balance doesn't have enough funds to cover your next billing cycle.";
 
 export function hasMainWalletCredit(mainUsd: number): boolean {
   return roundUsd(mainUsd) >= 0.01;
+}
+
+export function accountBalanceCoversNextCycle(
+  mainUsd: number,
+  cycleUsd: number,
+): boolean {
+  if (roundUsd(cycleUsd) < 0.01) {
+    return true;
+  }
+  return roundUsd(mainUsd) >= roundUsd(cycleUsd);
 }
 
 export function showMemberWalletTab(
