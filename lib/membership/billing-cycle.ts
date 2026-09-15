@@ -66,6 +66,18 @@ export function renewalAlreadyCovered(
   });
 }
 
+export function openInvoiceIsDue(
+  invoice: { dueAt: string | null; periodStart: string | null },
+  nowMs = Date.now(),
+): boolean {
+  const dueMs = Date.parse(invoice.dueAt ?? "");
+  if (Number.isFinite(dueMs)) {
+    return nowMs >= dueMs;
+  }
+  const startMs = Date.parse(invoice.periodStart ?? "");
+  return Number.isFinite(startMs) && nowMs >= startMs;
+}
+
 export function matchOpenRenewalInvoice(
   open: readonly {
     id: string;

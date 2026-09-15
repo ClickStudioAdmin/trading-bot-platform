@@ -4,6 +4,7 @@ import {
   INVOICE_LEAD_MS,
   invoiceStatusLabel,
   matchOpenRenewalInvoice,
+  openInvoiceIsDue,
   renewalAlreadyCovered,
   renewalCycleFromPeriodEnd,
   renewalExternalId,
@@ -95,6 +96,20 @@ assert.equal(
     { externalId: "renewal:user-1:2026-10-15T00:00:00.000Z", periodStartMs: periodEnd },
   ),
   false,
+);
+assert.equal(
+  openInvoiceIsDue(
+    { dueAt: new Date(cycle.dueAtMs).toISOString(), periodStart: new Date(periodEnd).toISOString() },
+    cycle.dueAtMs - 1,
+  ),
+  false,
+);
+assert.equal(
+  openInvoiceIsDue(
+    { dueAt: new Date(cycle.dueAtMs).toISOString(), periodStart: new Date(periodEnd).toISOString() },
+    cycle.dueAtMs,
+  ),
+  true,
 );
 assert.equal(invoiceStatusLabel("open"), "Unpaid");
 assert.equal(invoiceStatusLabel("paid"), "Paid");

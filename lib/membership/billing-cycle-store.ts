@@ -2,6 +2,7 @@ import { writeEventLog } from "@/lib/logs/write";
 import { createServiceClient } from "@/lib/supabase/admin";
 import {
   matchOpenRenewalInvoice,
+  openInvoiceIsDue,
   renewalAlreadyCovered,
   renewalCycleFromPeriodEnd,
   renewalExternalId,
@@ -136,10 +137,14 @@ export async function collectOpenWalletInvoices(input?: {
   nowMs?: number;
   userIds?: string[];
 }): Promise<{ collected: number; errors: string[] }> {
+  const nowMs = input?.nowMs ?? Date.now();
   const open = await listOpenInvoices("wallet", input?.userIds);
   const errors: string[] = [];
   let collected = 0;
   for (const invoice of open) {
+    if (!openInvoiceIsDue(invoice, nowMs)) {
+      continue;
+    }
     const paid = await tryCollectWalletInvoice(invoice);
     if (!paid.ok) {
       if (paid.skip) {
