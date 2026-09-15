@@ -281,6 +281,7 @@ export default async function AccountBillingPage({
           <SavedBillingMethodForm
             selected={billing.billingMethod}
             deductSelected={billing.paySubscriptionFromCredit}
+            hasStripeSubscription={hasUsableStripeSubscription(billing)}
           />
           {billing.billingMethod === "stripe" &&
           (plan?.priceUsd ?? 0) >= 0.01 &&

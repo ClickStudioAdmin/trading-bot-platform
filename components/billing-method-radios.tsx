@@ -99,9 +99,11 @@ export function BillingMethodRadios({
 export function SavedBillingMethodForm({
   selected,
   deductSelected,
+  hasStripeSubscription,
 }: {
   selected: BillingMethod | null;
   deductSelected: boolean;
+  hasStripeSubscription: boolean;
 }) {
   const savedMethod = selected ?? "stripe";
   const [method, setMethod] = useState<BillingMethod>(savedMethod);
@@ -119,7 +121,9 @@ export function SavedBillingMethodForm({
         onMethodChange={setMethod}
         onDeductChange={setDeduct}
       />
-      {savedMethod === "stripe" && method === "wallet" ? (
+      {hasStripeSubscription &&
+      savedMethod === "stripe" &&
+      method === "wallet" ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Your Stripe subscription will be cancelled when you save the new
           method. Ensure you top up your account with crypto payments prior to
