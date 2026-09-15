@@ -286,25 +286,27 @@ export default async function AccountBillingPage({
           </div>
         </section>
       ) : tab === "method" ? (
-        <section className="mt-6 rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Current payment method
-          </h2>
-          <SavedBillingMethodForm
-            selected={billing.billingMethod}
-            deductSelected={billing.paySubscriptionFromCredit}
-            hasStripeSubscription={hasUsableStripeSubscription(billing)}
-          />
+        <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
+          <section className="rounded-card border border-line bg-surface p-5">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Current payment method
+            </h2>
+            <SavedBillingMethodForm
+              selected={billing.billingMethod}
+              deductSelected={billing.paySubscriptionFromCredit}
+              hasStripeSubscription={hasUsableStripeSubscription(billing)}
+            />
+          </section>
           {billing.billingMethod === "stripe" &&
           (plan?.priceUsd ?? 0) >= 0.01 &&
           !hasUsableStripeSubscription(billing) ? (
-            <div className="mt-6 space-y-3 border-t border-line pt-4">
+            <section className="rounded-card border border-line bg-surface p-5">
               {!stripeReady || !stripePublishableConfigured() ? (
                 <p className="text-sm text-warning">
                   Stripe is not configured on this environment.
                 </p>
               ) : (
-                <>
+                <div className="space-y-3">
                   <p className="text-sm text-ink-muted">
                     Enter your card to start automatic Stripe payments. This
                     cycle stays paid; Stripe charges from the next renewal.
@@ -312,29 +314,30 @@ export default async function AccountBillingPage({
                   <StripeSwitchToCard
                     publishableKey={stripePublishableKey()}
                   />
-                </>
+                </div>
               )}
-            </div>
-          ) : null}
-          <OnceAfterSave
-            showOnce={
-              saved === "method" && billing.billingMethod === "wallet"
-            }
-          >
-            <div className="mt-6 border-t border-line pt-4">
-              <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
-                <TopUpWallet
-                  address={deposit?.address ?? null}
-                  addressError={deposit?.addressError ?? null}
-                  chains={deposit?.chains ?? []}
-                  tokens={deposit?.tokens ?? []}
-                  heading="Top up Account Balance"
-                  instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
-                />
-              </LiveMainWallet>
-            </div>
-          </OnceAfterSave>
-        </section>
+            </section>
+          ) : (
+            <OnceAfterSave
+              showOnce={
+                saved === "method" && billing.billingMethod === "wallet"
+              }
+            >
+              <section className="rounded-card border border-line bg-surface p-5">
+                <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
+                  <TopUpWallet
+                    address={deposit?.address ?? null}
+                    addressError={deposit?.addressError ?? null}
+                    chains={deposit?.chains ?? []}
+                    tokens={deposit?.tokens ?? []}
+                    heading="Top up Account Balance"
+                    instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
+                  />
+                </LiveMainWallet>
+              </section>
+            </OnceAfterSave>
+          )}
+        </div>
       ) : tab === "wallet" ? (
         <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
           <div className="mt-6 space-y-5">
