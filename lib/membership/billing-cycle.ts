@@ -1,12 +1,14 @@
 import { WALLET_PERIOD_MS, roundUsd } from "./wallet";
 
 export const INVOICE_LEAD_MS = 7 * 24 * 60 * 60 * 1000;
+export const INVOICE_COLLECT_LEAD_MS = 6 * 60 * 60 * 1000;
 export const INVOICE_DUE_BUFFER_MS = 6 * 60 * 60 * 1000;
 
 export function renewalCycleFromPeriodEnd(periodEndMs: number): {
   periodStartMs: number;
   periodEndMs: number;
   dueAtMs: number;
+  collectAfterMs: number;
   issueAfterMs: number;
 } {
   const periodStartMs = periodEndMs;
@@ -14,6 +16,7 @@ export function renewalCycleFromPeriodEnd(periodEndMs: number): {
     periodStartMs,
     periodEndMs: periodStartMs + WALLET_PERIOD_MS,
     dueAtMs: periodEndMs + INVOICE_DUE_BUFFER_MS,
+    collectAfterMs: periodEndMs - INVOICE_COLLECT_LEAD_MS,
     issueAfterMs: periodEndMs - INVOICE_LEAD_MS,
   };
 }
@@ -66,16 +69,19 @@ export function renewalAlreadyCovered(
   });
 }
 
-export function openInvoiceIsDue(
+export function openInvoiceIsCollectible(
   invoice: { dueAt: string | null; periodStart: string | null },
   nowMs = Date.now(),
 ): boolean {
-  const dueMs = Date.parse(invoice.dueAt ?? "");
-  if (Number.isFinite(dueMs)) {
-    return nowMs >= dueMs;
-  }
   const startMs = Date.parse(invoice.periodStart ?? "");
-  return Number.isFinite(startMs) && nowMs >= startMs;
+  if (Number.isFinite(startMs)) {
+    return nowMs >= startMs - INVOICE_COLLECT_LEAD_MS;
+  }
+  const dueMs = Date.parse(invoice.dueAt ?? "");
+  return (
+    Number.isFinite(dueMs) &&
+    nowMs >= dueMs - INVOICE_DUE_BUFFER_MS - INVOICE_COLLECT_LEAD_MS
+  );
 }
 
 export function matchOpenRenewalInvoice(

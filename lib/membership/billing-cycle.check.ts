@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import {
+  INVOICE_COLLECT_LEAD_MS,
   INVOICE_DUE_BUFFER_MS,
   INVOICE_LEAD_MS,
   invoiceStatusLabel,
   matchOpenRenewalInvoice,
-  openInvoiceIsDue,
+  openInvoiceIsCollectible,
   renewalAlreadyCovered,
   renewalCycleFromPeriodEnd,
   renewalExternalId,
@@ -15,6 +16,7 @@ const periodEnd = Date.parse("2026-10-15T00:00:00.000Z");
 const cycle = renewalCycleFromPeriodEnd(periodEnd);
 assert.equal(cycle.periodStartMs, periodEnd);
 assert.equal(cycle.dueAtMs, periodEnd + INVOICE_DUE_BUFFER_MS);
+assert.equal(cycle.collectAfterMs, periodEnd - INVOICE_COLLECT_LEAD_MS);
 assert.equal(cycle.issueAfterMs, periodEnd - INVOICE_LEAD_MS);
 
 assert.equal(
@@ -98,16 +100,16 @@ assert.equal(
   false,
 );
 assert.equal(
-  openInvoiceIsDue(
+  openInvoiceIsCollectible(
     { dueAt: new Date(cycle.dueAtMs).toISOString(), periodStart: new Date(periodEnd).toISOString() },
-    cycle.dueAtMs - 1,
+    cycle.collectAfterMs - 1,
   ),
   false,
 );
 assert.equal(
-  openInvoiceIsDue(
+  openInvoiceIsCollectible(
     { dueAt: new Date(cycle.dueAtMs).toISOString(), periodStart: new Date(periodEnd).toISOString() },
-    cycle.dueAtMs,
+    cycle.collectAfterMs,
   ),
   true,
 );
