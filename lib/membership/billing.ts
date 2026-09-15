@@ -199,6 +199,30 @@ export function embeddedCardReturnUrl(origin: string): string {
   return `${base}/account/billing?tab=card&saved=card&session_id={CHECKOUT_SESSION_ID}`;
 }
 
+export function embeddedSwitchToCardReturnUrl(origin: string): string {
+  const base = origin.trim().replace(/\/$/, "");
+  return `${base}/account/billing?saved=method&session_id={CHECKOUT_SESSION_ID}`;
+}
+
+/** Stripe trial_end unix seconds, or null when the cycle is too close to charge now. */
+export function switchToCardTrialEnd(
+  periodEnd: string | null,
+  nowMs = Date.now(),
+): number | null {
+  if (!periodEnd) {
+    return null;
+  }
+  const endMs = Date.parse(periodEnd);
+  if (!Number.isFinite(endMs)) {
+    return null;
+  }
+  const minMs = nowMs + 48 * 60 * 60 * 1000;
+  if (endMs < minMs) {
+    return null;
+  }
+  return Math.floor(endMs / 1000);
+}
+
 export function stripeCheckoutBranding() {
   return {
     background_color: "#161b22",

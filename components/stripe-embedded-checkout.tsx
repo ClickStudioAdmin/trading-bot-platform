@@ -7,6 +7,7 @@ import { useMemo, useRef } from "react";
 import {
   createEmbeddedCardSecret,
   createEmbeddedCheckoutSecret,
+  createSwitchToCardSecret,
 } from "@/lib/membership/billing-actions";
 
 const stripeByKey = new Map<string, Promise<Stripe | null>>();
@@ -49,6 +50,40 @@ export function StripeEmbeddedCheckout({
 
   return (
     <div id="checkout" className="min-h-64">
+      <EmbeddedCheckoutProvider
+        stripe={stripePromiseFor(publishableKey)}
+        options={options}
+      >
+        <EmbeddedCheckout />
+      </EmbeddedCheckoutProvider>
+    </div>
+  );
+}
+
+export function StripeSwitchToCard({
+  publishableKey,
+}: {
+  publishableKey: string;
+}) {
+  const router = useRouter();
+  const options = useMemo(
+    () => ({
+      fetchClientSecret: async () => {
+        const result = await createSwitchToCardSecret();
+        if (!result.ok) {
+          throw new Error(result.error);
+        }
+        return result.clientSecret;
+      },
+      onComplete: () => {
+        router.push("/account/billing?saved=method");
+      },
+    }),
+    [router],
+  );
+
+  return (
+    <div id="switch-to-card" className="min-h-64">
       <EmbeddedCheckoutProvider
         stripe={stripePromiseFor(publishableKey)}
         options={options}

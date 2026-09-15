@@ -6,6 +6,7 @@ import {
   getMemberBillingByCustomer,
   markStripeInvoiceRefunded,
   recordStripeInvoice,
+  saveBillingMethod,
   saveStripeCustomerIds,
 } from "./billing-store";
 import { getMembershipPlanByStripePriceId } from "./store";
@@ -52,6 +53,9 @@ async function handleCheckoutCompleted(
     stripeSubscriptionId: subscriptionId,
   });
   if (!subscriptionId) {
+    if (text(session.metadata?.purpose) === "switch_to_card") {
+      return handleSwitchToCardSetup(session, userId, customerId);
+    }
     return { ok: true };
   }
   const stripe = getStripe();
@@ -60,6 +64,66 @@ async function handleCheckoutCompleted(
   }
   const subscription = await stripe.subscriptions.retrieve(subscriptionId);
   return handleSubscription(subscription, userId);
+}
+
+async function handleSwitchToCardSetup(
+  session: Stripe.Checkout.Session,
+  userId: string,
+  customerId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const saved = await saveBillingMethod(userId, "stripe");
+  if (!saved.ok) {
+    return saved;
+  }
+  const billing = await getMemberBilling(userId);
+  const stripe = getStripe();
+  if (!stripe) {
+    return { ok: false, error: "Stripe is not configured." };
+  }
+  const paymentMethod = await setupPaymentMethodId(stripe, session);
+  if (paymentMethod) {
+    try {
+      await stripe.customers.update(customerId, {
+        invoice_settings: { default_payment_method: paymentMethod },
+      });
+    } catch {
+      // Card is still on the customer from Checkout setup.
+    }
+  }
+  if (billing?.stripeSubscriptionId) {
+    try {
+      await stripe.subscriptions.update(billing.stripeSubscriptionId, {
+        cancel_at_period_end: false,
+        ...(paymentMethod ? { default_payment_method: paymentMethod } : {}),
+      });
+    } catch (cause) {
+      return {
+        ok: false,
+        error:
+          cause instanceof Error ? cause.message : "Stripe subscription resume failed.",
+      };
+    }
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "membership.billing_method",
+    message: "Switched collection method to Card",
+    userId,
+    data: { method: "stripe", purpose: "switch_to_card" },
+  });
+  return { ok: true };
+}
+
+async function setupPaymentMethodId(
+  stripe: NonNullable<ReturnType<typeof getStripe>>,
+  session: Stripe.Checkout.Session,
+): Promise<string | null> {
+  const fromSession = idOf(session.setup_intent);
+  if (!fromSession) {
+    return null;
+  }
+  const setupIntent = await stripe.setupIntents.retrieve(fromSession);
+  return idOf(setupIntent.payment_method);
 }
 
 async function handleSubscription(

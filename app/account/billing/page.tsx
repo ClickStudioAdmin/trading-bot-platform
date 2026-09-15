@@ -43,7 +43,7 @@ import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Billing and Wallets",
+  title: "Billing & Account Balance",
   description: "Plan, payment method, wallets, and invoices.",
 };
 
@@ -108,7 +108,7 @@ export default async function AccountBillingPage({
 
   return (
     <div>
-      <PageHeading title="Billing and Wallets" />
+      <PageHeading title="Billing & Account Balance" />
       <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
         One collection method per login. Card uses the on-site Stripe form.
         Crypto is a payment method: listed stables credit your account 1:1 as
@@ -120,7 +120,7 @@ export default async function AccountBillingPage({
         .
       </p>
       <nav
-        aria-label="Billing and Wallets"
+        aria-label="Billing & Account Balance"
         className="mt-5 flex border-b border-line"
       >
         <TabLink href="/account/billing" selected={tab === "overview"}>
@@ -273,13 +273,12 @@ export default async function AccountBillingPage({
           <h2 className="text-lg font-semibold tracking-tight">
             Current payment method
           </h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            Card charges Stripe. Crypto is only the payment method. Listed
-            stables credit your account 1:1 as USD.
-          </p>
           <SavedBillingMethodForm
             selected={billing.billingMethod}
             deductSelected={billing.paySubscriptionFromCredit}
+            publishableKey={stripePublishableKey()}
+            stripeReady={stripeReady}
+            planIsPaid={(plan?.priceUsd ?? 0) >= 0.01}
           />
         </section>
         ) : null}

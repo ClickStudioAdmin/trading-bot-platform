@@ -9,6 +9,8 @@ import {
   prorateUpgradeUsd,
   embeddedCardReturnUrl,
   embeddedCheckoutReturnUrl,
+  embeddedSwitchToCardReturnUrl,
+  switchToCardTrialEnd,
   formatCount,
   formatRemainingCycle,
   formatUsd,
@@ -37,6 +39,10 @@ assert.equal(
 assert.equal(
   embeddedCardReturnUrl("https://app.example/"),
   "https://app.example/account/billing?tab=card&saved=card&session_id={CHECKOUT_SESSION_ID}",
+);
+assert.equal(
+  embeddedSwitchToCardReturnUrl("https://app.example/"),
+  "https://app.example/account/billing?saved=method&session_id={CHECKOUT_SESSION_ID}",
 );
 assert.equal(
   hasUsableStripeSubscription({
@@ -126,6 +132,18 @@ assert.equal(
 
 const now = 1_779_000_000_000;
 const inFifteenDays = new Date(now + 15 * 24 * 60 * 60 * 1000).toISOString();
+assert.equal(
+  switchToCardTrialEnd(inFifteenDays, now),
+  Math.floor(Date.parse(inFifteenDays) / 1000),
+);
+assert.equal(
+  switchToCardTrialEnd(
+    new Date(now + 24 * 60 * 60 * 1000).toISOString(),
+    now,
+  ),
+  null,
+);
+assert.equal(switchToCardTrialEnd(null, now), null);
 assert.equal(
   isPaidCycleUpgrade({
     currentPriceUsd: 19,

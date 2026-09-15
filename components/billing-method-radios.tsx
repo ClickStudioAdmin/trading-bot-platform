@@ -2,6 +2,7 @@
 
 import { useState, type ChangeEvent } from "react";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { StripeSwitchToCard } from "@/components/stripe-embedded-checkout";
 import {
   BILLING_METHOD_LABELS,
   CRYPTO_CREDIT_DEDUCT_LABEL,
@@ -99,35 +100,67 @@ export function BillingMethodRadios({
 export function SavedBillingMethodForm({
   selected,
   deductSelected,
+  publishableKey,
+  stripeReady,
+  planIsPaid,
 }: {
   selected: BillingMethod | null;
   deductSelected: boolean;
+  publishableKey: string;
+  stripeReady: boolean;
+  planIsPaid: boolean;
 }) {
   const savedMethod = selected ?? "stripe";
   const [method, setMethod] = useState<BillingMethod>(savedMethod);
   const [deduct, setDeduct] = useState(deductSelected);
+  const switchingToCard = savedMethod === "wallet" && method === "stripe";
+  const needsStripeEmbed = switchingToCard && planIsPaid;
   const dirty =
     method !== savedMethod ||
     (method === "wallet" && deduct !== deductSelected);
 
   return (
-    <form action={setBillingMethodAction} className="mt-4 space-y-4">
-      <BillingMethodRadios
-        name="billingMethod"
-        selected={method}
-        deductSelected={deduct}
-        onMethodChange={setMethod}
-        onDeductChange={setDeduct}
-      />
-      {dirty ? (
-        <PendingSubmitButton
-          pendingLabel="Saving…"
-          successKey="save-billing-method"
-          className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-        >
-          Save new payment method
-        </PendingSubmitButton>
+    <div className="mt-4 space-y-4">
+      <form action={setBillingMethodAction} className="space-y-4">
+        <BillingMethodRadios
+          name="billingMethod"
+          selected={method}
+          deductSelected={deduct}
+          onMethodChange={setMethod}
+          onDeductChange={setDeduct}
+        />
+        {savedMethod === "stripe" && method === "wallet" ? (
+          <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+            Your Stripe subscription will be cancelled when you save the new
+            method. Ensure you top up your account with crypto payments prior to
+            the next billing cycle.
+          </p>
+        ) : null}
+        {dirty && !needsStripeEmbed ? (
+          <PendingSubmitButton
+            pendingLabel="Saving…"
+            successKey="save-billing-method"
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          >
+            Save new payment method
+          </PendingSubmitButton>
+        ) : null}
+      </form>
+      {needsStripeEmbed ? (
+        !stripeReady || !publishableKey ? (
+          <p className="text-sm text-warning">
+            Stripe is not configured on this environment.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            <p className="rounded-card border border-line bg-surface-raised px-4 py-3 text-sm text-ink-muted">
+              Enter your card to start automatic Stripe payments. This cycle
+              stays paid; Stripe charges from the next renewal.
+            </p>
+            <StripeSwitchToCard publishableKey={publishableKey} />
+          </div>
+        )
       ) : null}
-    </form>
+    </div>
   );
 }

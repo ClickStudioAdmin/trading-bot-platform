@@ -11,7 +11,9 @@ import {
   decideUpgrade,
   embeddedCardReturnUrl,
   embeddedCheckoutReturnUrl,
+  embeddedSwitchToCardReturnUrl,
   hasUsableStripeSubscription,
+  switchToCardTrialEnd,
   parseBillingMethod,
   parsePaySubscriptionFromCredit,
   stripeCheckoutBranding,
@@ -473,6 +475,123 @@ function isNextRedirect(error: unknown): boolean {
     "digest" in error &&
     String((error as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")
   );
+}
+
+export async function createSwitchToCardSecret(): Promise<EmbeddedCheckoutResult> {
+  const member = await getSessionMember();
+  if (!member) {
+    return { ok: false, error: "Sign in to continue." };
+  }
+  const billing = await getMemberBilling(member.id);
+  if (!billing || billing.billingMethod !== "wallet") {
+    return {
+      ok: false,
+      error: "Switch to Card from Crypto to start a Stripe subscription.",
+    };
+  }
+  const loaded = await getMembershipPlan(billing.planId);
+  if (!loaded.ok) {
+    return { ok: false, error: loaded.error };
+  }
+  const plan = loaded.plan;
+  if (plan.priceUsd < 0.01) {
+    return { ok: false, error: "Free plans do not need a Stripe subscription." };
+  }
+  const stripe = getStripe();
+  const origin = await billingOrigin();
+  if (!stripeSecretConfigured() || !stripe || !origin) {
+    return {
+      ok: false,
+      error:
+        "Stripe is not configured. Add STRIPE_SECRET_KEY, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, and APP_BASE_URL on this environment.",
+    };
+  }
+  try {
+    let customerId = billing.stripeCustomerId ?? null;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: member.email,
+        name: member.name,
+        metadata: { userId: member.id },
+      });
+      customerId = customer.id;
+      await saveStripeCustomerIds({
+        userId: member.id,
+        stripeCustomerId: customerId,
+      });
+    }
+    if (hasUsableStripeSubscription(billing)) {
+      const session = await stripe.checkout.sessions.create({
+        ui_mode: "embedded_page",
+        mode: "setup",
+        customer: customerId,
+        currency: "usd",
+        client_reference_id: member.id,
+        redirect_on_completion: "if_required",
+        return_url: embeddedSwitchToCardReturnUrl(origin),
+        branding_settings: stripeCheckoutBranding(),
+        metadata: {
+          userId: member.id,
+          planId: billing.planId,
+          purpose: "switch_to_card",
+        },
+      });
+      const clientSecret = session.client_secret;
+      if (!clientSecret) {
+        return { ok: false, error: "Stripe did not return a checkout client secret." };
+      }
+      return { ok: true, clientSecret };
+    }
+    const priceId = plan.stripePriceId ?? "";
+    if (!priceId) {
+      return {
+        ok: false,
+        error: "This plan has no Stripe price yet. Add a price id on Admin → Plans.",
+      };
+    }
+    const trialEnd = switchToCardTrialEnd(billing.periodEnd);
+    const session = await stripe.checkout.sessions.create({
+      ui_mode: "embedded_page",
+      mode: "subscription",
+      customer: customerId,
+      client_reference_id: member.id,
+      line_items: [{ price: priceId, quantity: 1 }],
+      redirect_on_completion: "if_required",
+      return_url: embeddedSwitchToCardReturnUrl(origin),
+      branding_settings: stripeCheckoutBranding(),
+      metadata: {
+        userId: member.id,
+        planId: billing.planId,
+        purpose: "switch_to_card",
+      },
+      subscription_data: {
+        metadata: {
+          userId: member.id,
+          planId: billing.planId,
+          purpose: "switch_to_card",
+        },
+        ...(trialEnd ? { trial_end: trialEnd } : {}),
+      },
+    });
+    const clientSecret = session.client_secret;
+    if (!clientSecret) {
+      return { ok: false, error: "Stripe did not return a checkout client secret." };
+    }
+    await writeEventLog({
+      scope: "system",
+      event: "membership.checkout_started",
+      message: "Started Crypto to Card Stripe checkout",
+      userId: member.id,
+      data: { planId: billing.planId, sessionId: session.id },
+    });
+    return { ok: true, clientSecret };
+  } catch (cause) {
+    return {
+      ok: false,
+      error:
+        cause instanceof Error ? cause.message : "Stripe checkout failed.",
+    };
+  }
 }
 
 export async function createEmbeddedCardSecret(): Promise<EmbeddedCheckoutResult> {
