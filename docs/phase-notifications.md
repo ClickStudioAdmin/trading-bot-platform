@@ -10,7 +10,7 @@ Never trust the browser for payment status, desk health, or unread counts.
 
 ## Status
 
-Steps 1–2 in repo 16 Sep 2026 (this file + schema). Next is step 3 (catalog + `notify()`). Push `develop` to migrate. Do not add Resend until step 8.
+Steps 1–3 in repo 16 Sep 2026 (docs, schema, catalog + `notify()`). Next is step 4 (inbox + badges). Push `develop` to migrate. Do not add Resend until step 8.
 
 ## Purpose
 
@@ -22,7 +22,7 @@ Members and admins see numbered badges for work they must do, plus an inbox of n
 | --- | --- | --- | --- |
 | 1 | Docs | Agent | This file is the phase. Roadmap split applied. **In repo 16 Sep 2026.** |
 | 2 | Schema | Agent | `user_notifications`, `user_notification_preferences`, `email_dispatches`, `platform_settings.disabled_emails`. RPCs for insert / mark read / unread / claim dispatch / upsert prefs. Inbox by `user_id`. Service-role only. Push `develop` to migrate. **In repo 16 Sep 2026.** |
-| 3 | Catalog + `notify()` | Agent | TypeScript catalog, locked copy, preference checks, dispatch claim. Email no-ops if Resend is unset. Tests for mutes, operator skip, idempotency keys. Stop. |
+| 3 | Catalog + `notify()` | Agent | TypeScript catalog, locked copy, preference checks, dispatch claim. Email no-ops if Resend is unset. Tests for mutes, operator skip, idempotency keys. **In repo 16 Sep 2026.** |
 | 4 | Inbox + badges | Agent | `/account/notifications`, Overview widget, amber `NavBadge`, header mix (actions + unread), extend Attention. Affiliate-only allowed on Inbox. Stop. |
 | 5 | Settings | Agent | `/account/settings` Notifications tab (Email / In-app per event). `/admin/settings` Notifications tab (platform email kill switches + Sent to). Stop. |
 | 6 | Wire commercial | Agent | `notify()` from billing, affiliate payouts, copy invites, password change. Stop. |
