@@ -196,7 +196,7 @@ export function embeddedCheckoutReturnUrl(origin: string): string {
 
 export function embeddedCardReturnUrl(origin: string): string {
   const base = origin.trim().replace(/\/$/, "");
-  return `${base}/account/billing?tab=card&saved=card&session_id={CHECKOUT_SESSION_ID}`;
+  return `${base}/account/billing?tab=method&saved=card&session_id={CHECKOUT_SESSION_ID}`;
 }
 
 export function embeddedSwitchToCardReturnUrl(origin: string): string {

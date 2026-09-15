@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  OnceAfterSave,
-  SavedBillingMethodForm,
-} from "@/components/billing-method-radios";
+import { SavedBillingMethodForm } from "@/components/billing-method-radios";
 import { PageHeading } from "@/components/page-heading";
 import { getSessionMember } from "@/lib/auth/session";
 import {
@@ -80,8 +77,6 @@ export default async function AccountBillingPage({
     hasMainWalletLedger(member.id),
   ]);
   const plan = currentPlan.ok ? currentPlan.plan : null;
-  const showCardTab =
-    billing.billingMethod === "stripe" && (plan?.priceUsd ?? 0) >= 0.01;
   const showWalletTab = showMemberWalletTab(
     billing.billingMethod,
     books.main,
@@ -93,21 +88,18 @@ export default async function AccountBillingPage({
   const tab =
     requestedTab === "invoices"
       ? "invoices"
-      : requestedTab === "method" && showPaymentMethod
+      : (requestedTab === "method" || requestedTab === "card") &&
+          showPaymentMethod
         ? "method"
         : requestedTab === "ledger" && showLedgerTab
           ? "ledger"
-          : requestedTab === "card" && showCardTab
-            ? "card"
-            : requestedTab === "wallet" && showWalletTab
+          : requestedTab === "wallet" && showWalletTab
               ? "wallet"
               : "overview";
   const [invoices, deposit, ledger, withdraw] = await Promise.all([
     tab === "invoices" ? listMemberInvoices(member.id) : Promise.resolve([]),
     tab === "wallet" ||
-    (tab === "method" &&
-      billing.billingMethod === "wallet" &&
-      saved === "method")
+    (tab === "method" && billing.billingMethod === "wallet")
       ? loadMemberDepositContext(member.id)
       : Promise.resolve(null),
     tab === "ledger" ? listMainWalletLedger(member.id) : Promise.resolve([]),
@@ -150,14 +142,6 @@ export default async function AccountBillingPage({
             selected={tab === "method"}
           >
             Manage Payment Method
-          </TabLink>
-        ) : null}
-        {showCardTab ? (
-          <TabLink
-            href="/account/billing?tab=card"
-            selected={tab === "card"}
-          >
-            Card
           </TabLink>
         ) : null}
         {showWalletTab ? (
@@ -298,13 +282,24 @@ export default async function AccountBillingPage({
             />
           </section>
           {billing.billingMethod === "stripe" &&
-          (plan?.priceUsd ?? 0) >= 0.01 &&
-          !hasUsableStripeSubscription(billing) ? (
-            <section className="rounded-card border border-line bg-surface p-5">
+          (plan?.priceUsd ?? 0) >= 0.01 ? (
+            <section className="overflow-hidden rounded-card border border-line bg-surface p-5">
               {!stripeReady || !stripePublishableConfigured() ? (
                 <p className="text-sm text-warning">
                   Stripe is not configured on this environment.
                 </p>
+              ) : hasUsableStripeSubscription(billing) ? (
+                <div className="space-y-3">
+                  <h2 className="text-lg font-semibold tracking-tight">
+                    Manage card
+                  </h2>
+                  <p className="text-sm text-ink-muted">
+                    Update the card Stripe charges. You stay on this page.
+                  </p>
+                  <StripeEmbeddedCard
+                    publishableKey={stripePublishableKey()}
+                  />
+                </div>
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-ink-muted">
@@ -317,26 +312,20 @@ export default async function AccountBillingPage({
                 </div>
               )}
             </section>
-          ) : (
-            <OnceAfterSave
-              showOnce={
-                saved === "method" && billing.billingMethod === "wallet"
-              }
-            >
-              <section className="rounded-card border border-line bg-surface p-5">
-                <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
-                  <TopUpWallet
-                    address={deposit?.address ?? null}
-                    addressError={deposit?.addressError ?? null}
-                    chains={deposit?.chains ?? []}
-                    tokens={deposit?.tokens ?? []}
-                    heading="Top up Account Balance"
-                    instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
-                  />
-                </LiveMainWallet>
-              </section>
-            </OnceAfterSave>
-          )}
+          ) : billing.billingMethod === "wallet" ? (
+            <section className="rounded-card border border-line bg-surface p-5">
+              <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
+                <TopUpWallet
+                  address={deposit?.address ?? null}
+                  addressError={deposit?.addressError ?? null}
+                  chains={deposit?.chains ?? []}
+                  tokens={deposit?.tokens ?? []}
+                  heading="Top up Account Balance"
+                  instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
+                />
+              </LiveMainWallet>
+            </section>
+          ) : null}
         </div>
       ) : tab === "wallet" ? (
         <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
@@ -432,22 +421,6 @@ export default async function AccountBillingPage({
                 })}
               </tbody>
             </table>
-          </div>
-        )}
-      </section>
-      ) : tab === "card" ? (
-      <section className="mt-6 overflow-hidden rounded-card border border-line bg-surface p-5">
-        <h2 className="text-lg font-semibold tracking-tight">Manage card</h2>
-        <p className="mt-1 text-sm text-ink-muted">
-          Update the card Stripe charges. You stay on this page.
-        </p>
-        {!stripeReady || !stripePublishableConfigured() ? (
-          <p className="mt-4 text-sm text-warning">
-            Stripe is not configured on this environment.
-          </p>
-        ) : (
-          <div className="mt-4">
-            <StripeEmbeddedCard publishableKey={stripePublishableKey()} />
           </div>
         )}
       </section>

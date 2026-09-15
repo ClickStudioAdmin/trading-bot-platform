@@ -110,7 +110,7 @@ export function StripeEmbeddedCard({
         return result.clientSecret;
       },
       onComplete: () => {
-        router.push("/account/billing?tab=card&saved=card");
+        router.push("/account/billing?tab=method&saved=card");
       },
     }),
     [router],

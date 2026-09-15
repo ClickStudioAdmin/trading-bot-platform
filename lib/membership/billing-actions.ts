@@ -316,7 +316,7 @@ export async function confirmStripePlanChangeAction(formData: FormData) {
       if (!billing.stripeCustomerId || !paymentMethod) {
         failCheckout(
           planId,
-          "Update your card on Billing → Card, then try again.",
+          "Update your card on Billing → Manage Payment Method, then try again.",
         );
       }
       const intent = await stripe.paymentIntents.create(

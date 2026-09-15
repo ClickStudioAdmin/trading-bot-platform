@@ -38,7 +38,7 @@ assert.equal(
 );
 assert.equal(
   embeddedCardReturnUrl("https://app.example/"),
-  "https://app.example/account/billing?tab=card&saved=card&session_id={CHECKOUT_SESSION_ID}",
+  "https://app.example/account/billing?tab=method&saved=card&session_id={CHECKOUT_SESSION_ID}",
 );
 assert.equal(
   embeddedSwitchToCardReturnUrl("https://app.example/"),
