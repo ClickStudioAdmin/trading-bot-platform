@@ -28,8 +28,10 @@ import {
   listMemberInvoices,
 } from "@/lib/membership/billing-store";
 import {
+  accountBalanceCoversNextCycle,
   creditedDepositsNotice,
   methodTopUpNote,
+  methodTopUpShortfall,
   showMemberLedgerTab,
   showMemberWalletTab,
 } from "@/lib/membership/wallet";
@@ -298,6 +300,11 @@ export default async function AccountBillingPage({
           <p className="mt-1 text-sm tabular-nums text-ink">
             {formatUsd(books.main)}
           </p>
+          {!accountBalanceCoversNextCycle(books.main, plan?.priceUsd ?? 0) ? (
+            <p className="mt-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+              {methodTopUpShortfall(plan?.priceUsd ?? 0)}
+            </p>
+          ) : null}
           <p className="mt-4">
             <Link
               href={billingPath({ tab: "wallet" })}

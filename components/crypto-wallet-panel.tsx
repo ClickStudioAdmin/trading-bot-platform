@@ -240,6 +240,11 @@ export function TopUpWallet({
       {heading ? (
         <h2 className="text-lg font-semibold tracking-tight">{heading}</h2>
       ) : null}
+      {shortForCycle && typeof cycleDueUsd === "number" ? (
+        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          {methodTopUpShortfall(cycleDueUsd)}
+        </p>
+      ) : null}
       {!revealAddress ? (
         <p className="text-sm text-ink-muted">
           Save Crypto as your method to see your deposit address.
@@ -284,11 +289,6 @@ export function TopUpWallet({
           {addressError ?? "Deposit address is not available yet."}
         </p>
       )}
-      {shortForCycle && typeof cycleDueUsd === "number" ? (
-        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          {methodTopUpShortfall(cycleDueUsd)}
-        </p>
-      ) : null}
       {instructions ? (
         <p className="text-sm text-ink-muted">{instructions}</p>
       ) : null}
