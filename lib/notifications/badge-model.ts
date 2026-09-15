@@ -74,10 +74,6 @@ export function adminActionTotal(counts: AdminActionCounts): number {
   );
 }
 
-export function headerNoticeCount(actions: number, unread: number): number {
-  return Math.max(0, Math.trunc(actions)) + Math.max(0, Math.trunc(unread));
-}
-
 export function deskActionCountsFromAttention(input: {
   accounts: readonly {
     id: string;

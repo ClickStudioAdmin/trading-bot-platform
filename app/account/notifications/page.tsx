@@ -43,8 +43,8 @@ export default async function AccountNotificationsPage() {
         }
       />
       <p className="-mt-4 text-sm text-ink-muted">
-        Email copies land here. Required-action counts on Overview and Billing
-        stay until you fix the work. Change what you get on{" "}
+        Email copies land here. This badge is unread notices only. Work that
+        still needs doing stays on Overview and Billing. Change what you get on{" "}
         <Link
           href="/account/settings?tab=notifications"
           className="text-accent hover:text-accent-strong"

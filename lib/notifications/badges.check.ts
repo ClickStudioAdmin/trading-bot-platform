@@ -5,7 +5,6 @@ import {
   EMPTY_ADMIN_ACTIONS,
   EMPTY_MEMBER_ACTIONS,
   formatNavBadgeCount,
-  headerNoticeCount,
   memberActionTotal,
   memberBillingActionTotal,
   memberOverviewAttention,
@@ -45,7 +44,6 @@ assert.equal(
   }),
   2,
 );
-assert.equal(headerNoticeCount(2, 3), 5);
 assert.equal(adminActionTotal(EMPTY_ADMIN_ACTIONS), 0);
 assert.equal(
   adminActionTotal({

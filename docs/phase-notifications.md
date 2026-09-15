@@ -25,7 +25,7 @@ Members and admins see numbered badges for work they must do, plus an inbox of n
 | 1 | Docs | Agent | This file is the phase. Roadmap split applied. **In repo 16 Sep 2026.** |
 | 2 | Schema | Agent | `user_notifications`, `user_notification_preferences`, `email_dispatches`, `platform_settings.disabled_emails`. RPCs for insert / mark read / unread / claim dispatch / upsert prefs. Inbox by `user_id`. Service-role only. Push `develop` to migrate. **In repo 16 Sep 2026.** |
 | 3 | Catalog + `notify()` | Agent | TypeScript catalog, locked copy, preference checks, dispatch claim. Email no-ops if Resend is unset. Tests for mutes, operator skip, idempotency keys. **In repo 16 Sep 2026.** |
-| 4 | Inbox + badges | Agent | `/account/notifications`, Overview widget, amber `NavBadge`, header mix (actions + unread), extend Attention. Affiliate-only allowed on Inbox. Stop. **In repo 16 Sep 2026.** |
+| 4 | Inbox + badges | Agent | `/account/notifications`, Overview widget, amber `NavBadge`. Header Inbox = unread only. Action counts stay on Overview / Billing / Affiliates. Extend Attention. Affiliate-only allowed on Inbox. Stop. **In repo 16 Sep 2026.** |
 | 5 | Settings | Agent | `/account/settings` Notifications tab (Email / In-app per event). `/admin/settings` Notifications tab (platform email kill switches + Sent to). Stop. **In repo 16 Sep 2026.** |
 | 6 | Wire commercial | Agent | `notify()` from billing, affiliate payouts, copy invites, password change. Stop. |
 | 7 | Wire critical + operator | Agent | Deduped live-desk critical, sweep fail, gas low, operator mail. Absorb click-list 12. Stop. |
@@ -40,11 +40,11 @@ Domain action → notify(template, user)
                  → email (Resend; skip if muted or key missing)
                  → inbox row (skip operator templates and in-app mutes)
 
-Live domain state → action counts → amber numbered badge (cap 99+)
-Inbox unread     → folded into the header Inbox badge with actions
+Live domain state → action counts → amber numbered badge on Overview / Billing / Affiliates (cap 99+)
+Inbox unread     → header Inbox badge only
 ```
 
-**Inbox** is informational history. **Badges** are the work queue. A read inbox row does not clear a badge.
+**Inbox** is informational history. **Action badges** are the work queue. Do not mix them. A read inbox row does not clear an action badge.
 
 No bell dropdown. Inbox page + header Inbox link. Theme tokens only.
 
@@ -106,14 +106,14 @@ Computed. Never stored as todos.
 
 **Admin:** `affiliate_payouts`, `wallet_withdraws`, `sweep_failed`, `gas_low`, `past_due_members`, `desk_critical`.
 
-Header account badge = member actions + unread inbox. Header admin / Overview = admin action sum.
+Header Inbox = unread inbox only. Overview / Billing / Affiliates = action counts. Header admin / Admin Overview = admin action sum.
 
 ## Surfaces (from step 4)
 
 - `/account/notifications` — Inbox (affiliate-only allowed)
 - `/account/settings?tab=notifications`
 - `/admin/settings?tab=notifications`
-- Header Inbox (actions + unread); amber counts on Overview, Billing, Affiliates
+- Header Inbox (unread only); amber action counts on Overview, Billing, Affiliates
 - Admin Overview, Billing, Affiliates amber counts
 - Overview Attention + recent notifications widget
 
