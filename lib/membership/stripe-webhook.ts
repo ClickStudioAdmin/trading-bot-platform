@@ -112,6 +112,40 @@ async function handleSwitchToCardSetup(
   return { ok: true };
 }
 
+export async function ensureCardSwitchSubscription(
+  userId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const billing = await getMemberBilling(userId);
+  const stripe = getStripe();
+  if (!stripe || !billing?.stripeCustomerId || billing.stripeSubscriptionId) {
+    return { ok: true };
+  }
+  let paymentMethod: string | null = null;
+  try {
+    const customer = await stripe.customers.retrieve(billing.stripeCustomerId);
+    if (!customer.deleted) {
+      paymentMethod = idOf(customer.invoice_settings?.default_payment_method);
+    }
+    if (!paymentMethod) {
+      const cards = await stripe.paymentMethods.list({
+        customer: billing.stripeCustomerId,
+        type: "card",
+        limit: 1,
+      });
+      paymentMethod = cards.data[0]?.id ?? null;
+    }
+  } catch {
+    return { ok: true };
+  }
+  return startCardSwitchSubscription({
+    stripe,
+    userId,
+    customerId: billing.stripeCustomerId,
+    billing,
+    paymentMethod,
+  });
+}
+
 async function startCardSwitchSubscription(input: {
   stripe: NonNullable<ReturnType<typeof getStripe>>;
   userId: string;

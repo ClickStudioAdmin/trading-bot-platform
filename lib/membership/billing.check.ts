@@ -22,6 +22,7 @@ import {
   billingMethodPriceNote,
   invoiceMethodLabel,
   hasUsableStripeSubscription,
+  showManageCardForm,
   parseBillingMethod,
   parsePaySubscriptionFromCredit,
   stripeCentsToUsd,
@@ -65,6 +66,14 @@ assert.equal(
     stripeSubscriptionId: null,
     subscriptionStatus: "comp",
   }),
+  false,
+);
+assert.equal(
+  showManageCardForm({ hasUsableSubscription: false, hasCardOnFile: true }),
+  true,
+);
+assert.equal(
+  showManageCardForm({ hasUsableSubscription: false, hasCardOnFile: false }),
   false,
 );
 assert.equal(parseBillingPage("2"), 2);

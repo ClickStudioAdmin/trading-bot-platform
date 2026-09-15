@@ -11,6 +11,7 @@ import {
   formatUsd,
   invoiceMethodLabel,
   hasUsableStripeSubscription,
+  showManageCardForm,
   paginateBillingRows,
   parseBillingPage,
   resolveBillingCycle,
@@ -46,6 +47,7 @@ import {
 import { formatPlanPrice, planIsArchived } from "@/lib/membership/catalog";
 import { getMembershipPlan } from "@/lib/membership/store";
 import {
+  stripeCustomerHasCard,
   stripePublishableConfigured,
   stripePublishableKey,
   stripeSecretConfigured,
@@ -120,6 +122,18 @@ export default async function AccountBillingPage({
   const ledgerPage = paginateBillingRows(ledger, tablePage);
   const cycle = resolveBillingCycle({ periodEnd: billing.periodEnd });
   const stripeReady = stripeSecretConfigured();
+  const usableStripeSub = hasUsableStripeSubscription(billing);
+  const manageCard =
+    tab === "method" &&
+    billing.billingMethod === "stripe" &&
+    (plan?.priceUsd ?? 0) >= 0.01
+      ? showManageCardForm({
+          hasUsableSubscription: usableStripeSub,
+          hasCardOnFile: usableStripeSub
+            ? true
+            : await stripeCustomerHasCard(billing.stripeCustomerId),
+        })
+      : false;
 
   return (
     <div>
@@ -318,7 +332,7 @@ export default async function AccountBillingPage({
                 billing.paySubscriptionFromAffiliate ||
                 billing.paySubscriptionFromCredit
               }
-              hasStripeSubscription={hasUsableStripeSubscription(billing)}
+              hasStripeSubscription={usableStripeSub || manageCard}
             />
           </section>
           {billing.billingMethod === "stripe" &&
@@ -328,7 +342,7 @@ export default async function AccountBillingPage({
                 <p className="text-sm text-warning">
                   Stripe is not configured on this environment.
                 </p>
-              ) : hasUsableStripeSubscription(billing) ? (
+              ) : manageCard ? (
                 <div className="space-y-3">
                   <h2 className="text-lg font-semibold tracking-tight">
                     Manage card

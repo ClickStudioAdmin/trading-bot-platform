@@ -2,7 +2,6 @@
 
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
-import { useRouter } from "next/navigation";
 import { useMemo, useRef } from "react";
 import {
   createEmbeddedCardSecret,
@@ -64,7 +63,6 @@ export function StripeSwitchToCard({
 }: {
   publishableKey: string;
 }) {
-  const router = useRouter();
   const options = useMemo(
     () => ({
       fetchClientSecret: async () => {
@@ -75,10 +73,10 @@ export function StripeSwitchToCard({
         return result.clientSecret;
       },
       onComplete: () => {
-        router.push("/account/billing?tab=method&saved=method");
+        window.location.assign("/account/billing?tab=method&saved=method");
       },
     }),
-    [router],
+    [],
   );
 
   return (
@@ -98,7 +96,6 @@ export function StripeEmbeddedCard({
 }: {
   publishableKey: string;
 }) {
-  const router = useRouter();
   const options = useMemo(
     () => ({
       fetchClientSecret: async () => {
@@ -109,10 +106,10 @@ export function StripeEmbeddedCard({
         return result.clientSecret;
       },
       onComplete: () => {
-        router.push("/account/billing?tab=method&saved=card");
+        window.location.assign("/account/billing?tab=method&saved=card");
       },
     }),
-    [router],
+    [],
   );
 
   return (

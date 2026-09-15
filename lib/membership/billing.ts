@@ -245,6 +245,13 @@ export function hasUsableStripeSubscription(billing: {
   );
 }
 
+export function showManageCardForm(input: {
+  hasUsableSubscription: boolean;
+  hasCardOnFile: boolean;
+}): boolean {
+  return input.hasUsableSubscription || input.hasCardOnFile;
+}
+
 export function embeddedCheckoutReturnUrl(origin: string): string {
   const base = origin.trim().replace(/\/$/, "");
   return `${base}/account/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`;

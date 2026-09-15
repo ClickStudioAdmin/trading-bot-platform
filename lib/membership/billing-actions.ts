@@ -28,6 +28,7 @@ import { invoiceWriteFromPaid } from "./stripe-apply";
 import { parsePlanId } from "./form";
 import { getMembershipPlan } from "./store";
 import { billingOrigin, getStripe, stripeSecretConfigured } from "./stripe";
+import { ensureCardSwitchSubscription } from "./stripe-webhook";
 
 export type EmbeddedCheckoutResult =
   | { ok: true; clientSecret: string }
@@ -604,6 +605,9 @@ export async function createEmbeddedCardSecret(): Promise<EmbeddedCheckoutResult
     const clientSecret = session.client_secret;
     if (!clientSecret) {
       return { ok: false, error: "Stripe did not return a card client secret." };
+    }
+    if (billing && !billing.stripeSubscriptionId) {
+      await ensureCardSwitchSubscription(member.id);
     }
     return { ok: true, clientSecret };
   } catch (cause) {

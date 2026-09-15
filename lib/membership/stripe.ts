@@ -25,6 +25,46 @@ export function getStripe(): Stripe | null {
   return cached;
 }
 
+function stripeObjectId(value: unknown): string | null {
+  if (typeof value === "string" && value) {
+    return value;
+  }
+  if (value && typeof value === "object" && "id" in value) {
+    const id = (value as { id?: unknown }).id;
+    return typeof id === "string" ? id : null;
+  }
+  return null;
+}
+
+export async function stripeCustomerHasCard(
+  customerId: string | null,
+): Promise<boolean> {
+  if (!customerId) {
+    return false;
+  }
+  const stripe = getStripe();
+  if (!stripe) {
+    return false;
+  }
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    if (customer.deleted) {
+      return false;
+    }
+    if (stripeObjectId(customer.invoice_settings?.default_payment_method)) {
+      return true;
+    }
+    const cards = await stripe.paymentMethods.list({
+      customer: customerId,
+      type: "card",
+      limit: 1,
+    });
+    return cards.data.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export function stripeWebhookSecret(): string {
   return process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? "";
 }
