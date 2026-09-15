@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SavedBillingMethodForm } from "@/components/billing-method-radios";
+import {
+  OnceAfterSave,
+  SavedBillingMethodForm,
+} from "@/components/billing-method-radios";
 import { PageHeading } from "@/components/page-heading";
 import { getSessionMember } from "@/lib/auth/session";
 import {
@@ -102,7 +105,9 @@ export default async function AccountBillingPage({
   const [invoices, deposit, ledger, withdraw] = await Promise.all([
     tab === "invoices" ? listMemberInvoices(member.id) : Promise.resolve([]),
     tab === "wallet" ||
-    (tab === "method" && billing.billingMethod === "wallet")
+    (tab === "method" &&
+      billing.billingMethod === "wallet" &&
+      saved === "method")
       ? loadMemberDepositContext(member.id)
       : Promise.resolve(null),
     tab === "ledger" ? listMainWalletLedger(member.id) : Promise.resolve([]),
@@ -311,7 +316,11 @@ export default async function AccountBillingPage({
               )}
             </div>
           ) : null}
-          {billing.billingMethod === "wallet" ? (
+          <OnceAfterSave
+            showOnce={
+              saved === "method" && billing.billingMethod === "wallet"
+            }
+          >
             <div className="mt-6 border-t border-line pt-4">
               <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
                 <TopUpWallet
@@ -324,7 +333,7 @@ export default async function AccountBillingPage({
                 />
               </LiveMainWallet>
             </div>
-          ) : null}
+          </OnceAfterSave>
         </section>
       ) : tab === "wallet" ? (
         <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>

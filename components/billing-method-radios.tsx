@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type ReactNode } from "react";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import {
   BILLING_METHOD_LABELS,
@@ -141,4 +141,31 @@ export function SavedBillingMethodForm({
       ) : null}
     </form>
   );
+}
+
+/** Renders children once after a save redirect, then drops `saved` so a refresh hides them. */
+export function OnceAfterSave({
+  showOnce,
+  children,
+}: {
+  showOnce: boolean;
+  children: ReactNode;
+}) {
+  const [visible] = useState(showOnce);
+  useEffect(() => {
+    if (!showOnce || typeof window === "undefined") {
+      return;
+    }
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has("saved")) {
+      return;
+    }
+    url.searchParams.delete("saved");
+    const next = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState(window.history.state, "", next);
+  }, [showOnce]);
+  if (!visible) {
+    return null;
+  }
+  return children;
 }
