@@ -56,6 +56,7 @@ type LiveMainWalletValue = {
 const LiveMainWalletContext = createContext<LiveMainWalletValue | null>(null);
 
 const BALANCE_POLL_MS = 10_000;
+const NOTICE_CLEAR_MS = 5_000;
 
 export function LiveMainWallet({
   initialMainUsd,
@@ -100,6 +101,18 @@ export function LiveMainWallet({
       window.clearInterval(timer);
     };
   }, [pollBalance]);
+  useEffect(() => {
+    if (!notice || !noticeOk) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setNotice(null);
+      setNoticeOk(false);
+    }, NOTICE_CLEAR_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [notice, noticeOk]);
   return (
     <LiveMainWalletContext.Provider
       value={{
