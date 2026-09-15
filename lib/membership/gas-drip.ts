@@ -29,6 +29,16 @@ export function formatTokenAmount(amount: bigint, decimals: number): string {
   return trimmed ? `${whole}.${trimmed}` : whole;
 }
 
+export function formatTokenAmountDisplay(amount: string): string {
+  const match = /^(-)?(\d+)(?:\.(\d+))?$/.exec(amount.trim());
+  if (!match) {
+    return amount;
+  }
+  const [, sign, whole, frac] = match;
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return `${sign ?? ""}${grouped}${frac ? `.${frac}` : ""}`;
+}
+
 export function isGasBalanceLow(balanceWei: bigint, lowEth: string): boolean {
   const parsed = parseGasLowEth(lowEth);
   if (!parsed) {

@@ -4,6 +4,7 @@ import {
   dripNeededWei,
   formatEthAmount,
   formatTokenAmount,
+  formatTokenAmountDisplay,
   gasWalletCanCover,
   isGasBalanceLow,
   parseGasLowEth,
@@ -49,6 +50,9 @@ assert.equal(parseGasLowEth("0.000000001"), null);
 assert.equal(formatEthAmount(BigInt("5000000000000000")), "0.005");
 assert.equal(formatTokenAmount(BigInt("2500000"), 6), "2.5");
 assert.equal(formatTokenAmount(BigInt(0), 6), "0");
+assert.equal(formatTokenAmountDisplay("101000000"), "101,000,000");
+assert.equal(formatTokenAmountDisplay("0.499978660371668"), "0.499978660371668");
+assert.equal(formatTokenAmountDisplay("1234.5"), "1,234.5");
 assert.equal(
   isGasBalanceLow(BigInt("5000000000000000"), "0.005"),
   true,

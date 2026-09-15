@@ -18,6 +18,7 @@ import {
   listAdminWalletSnapshots,
   listDepositSweepSnapshots,
 } from "@/lib/membership/billing-balances";
+import { formatTokenAmountDisplay } from "@/lib/membership/gas-drip";
 import { billingChainEnvironment } from "@/lib/membership/wallet";
 import {
   gasExplorerAddressUrl,
@@ -529,7 +530,7 @@ function WalletAssetRows({ assets }: { assets: WalletAssetRow[] }) {
               <p
                 className={`text-sm tabular-nums ${asset.warn ? "text-warning" : "text-ink"}`}
               >
-                {asset.amount} {asset.symbol}
+                {formatTokenAmountDisplay(asset.amount)} {asset.symbol}
                 {asset.note ? ` · ${asset.note}` : ""}
               </p>
             )}
