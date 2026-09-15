@@ -1,6 +1,6 @@
 # Plans, payments, and affiliates
 
-**Roadmap 5.** Spec written 11 Sep 2026. Steps 1–5 are in repo (docs, schema, admin + member plan pages, Stripe + payment-method shell, credit wallet rails). Click moved downgrade grace to after entitlements (13 Sep 2026). Upgrade UX / gates wait until step 9 so they land on settled surfaces. Hyperliquid step 7 and copy step 10 stay the current desk-test work.
+**Roadmap 5.** Spec written 11 Sep 2026. **Closed at step 8** on 16 Sep 2026. Click moved downgrade grace after entitlements (13 Sep 2026), then moved entitlements / grace / desk test to [phase-entitlements.md](phase-entitlements.md) (roadmap 8) so notifications could start first. Hyperliquid step 7 and copy step 10 stay Click desk-test.
 
 One combined phase: freemium plans, feature/cap gates, Stripe cards, a prepaid crypto credit wallet, and a multi-level affiliate program that pays a percent of **platform subscription** invoices only.
 
@@ -8,7 +8,7 @@ The paying customer is the **login** (`members`). One subscription covers every 
 
 ## Status
 
-Steps 1–8 in repo 13 Sep 2026. Stripe cards + `/account/billing` + Checkout embed + two USD books + unique EVM deposit addresses + affiliate admin, portal, commissions, and payout queue. Develop is seeded with **Arbitrum Sepolia** + testnet USDT and watches **public RPCs** for now (Alchemy later). Encrypted **gas wallet** drips ETH onto a deposit address before sweep. A develop-only John affiliate tree is a migration (`docs/john-affiliate-demo.md`); do not take those rows to production. Upgrade UX / gates are step 9. Downgrade grace is step 10. Push `develop` to migrate. Add `BILLING_CREDENTIALS_KEY` on Vercel Development / `.env.local`. Create the HD seed and gas wallet on `/admin/billing`, then fund the gas wallet with testnet ETH.
+Steps 1–8 in repo 13 Sep 2026. Stripe cards + `/account/billing` + Checkout embed + two USD books + unique EVM deposit addresses + affiliate admin, portal, commissions, and payout queue. Develop is seeded with **Arbitrum Sepolia** + testnet USDT and watches **public RPCs** for now (Alchemy later). Encrypted **gas wallet** drips ETH onto a deposit address before sweep. A develop-only John affiliate tree is a migration (`docs/john-affiliate-demo.md`); do not take those rows to production. This phase is **complete at step 8**. Entitlements / Upgrade UX / grace are [phase-entitlements.md](phase-entitlements.md). Notifications are [phase-notifications.md](phase-notifications.md). Add `BILLING_CREDENTIALS_KEY` on Vercel Development / `.env.local` and Fly `tbp-engine-dev`. Create the HD seed and gas wallet on `/admin/billing`, then fund the gas wallet with testnet ETH.
 
 ## Purpose
 
@@ -26,11 +26,9 @@ Enough Free to test (Paper, a small desk cap, core Perps/DCA, Chart). Named upgr
 | 6 | Affiliate program admin | Agent | `/admin/settings?tab=affiliates`: max depth (default 2, hard cap 5), hold days (default 30), min payout, default L1–L5 (non-members + unpaid). `/admin/affiliates` is the payout queue (export mark-paid, approve/reject withdraw). USDT withdraw chains are ticked on each billing chain (`Affiliate Payouts Allowed on this chain`). Plan rates stay on each plan row. **In repo 13 Sep 2026.** |
 | 7 | Affiliate portal | Agent | Public `/affiliates` (header + signup). Signed-in uses account chrome + sidebar. Platform members see the usual account/desk links. Affiliate-only see Settings (profile + password) only. Tabs: Overview, Network, Campaigns, URLs, Commissions, Payouts, Settings. Custom `/r/{slug}` URLs (home or affiliate landing) + campaigns. Upgrade to Free platform membership. **In repo 13 Sep 2026.** |
 | 8 | Commissions + payouts | Agent | Invoice → pending hold → payable (refund in hold = no earn). Per-plan %. Withdraw locks: no arrears, ≥ min. USDT out only. Tables ready for Stripe Connect later. Gas deducted from the send or covered by the minimum. **In repo 13 Sep 2026.** |
-| 9 | Entitlements + Upgrade UX | Agent | After payments and affiliates, so gates land on settled UI. `assertEntitlement` on create desk, Live, copy, backtest, caps. Surfaces stay visible; controls disable; page/inline **Upgrade** names the cheapest public plan that unlocks it. Cap notice: “You have 2 of 2 desks. Upgrade to add another.” Server actions reject. Billing page already exists from step 4. |
-| 10 | Downgrade grace | Agent | Entitlements change at period end. Admin grace days (default 7, already saved on `/admin/affiliates`). Banner + operable extras. After grace, billing worker Close/Disable **oldest desk first**: forbidden features, then numeric caps. Upgrade during grace cancels the sweep. Ledgers stay. Click moved this after step 9 on 13 Sep 2026. |
-| 11 | Desk test | Click | Free gates visible/disabled. Upgrade Stripe test. Crypto top-up + leftover debit. Affiliate list/chart/stats. Hold then withdraw. Downgrade grace then oldest-first exit. Archive a used plan (cannot delete). |
+| 9–11 | Moved | — | Entitlements, Upgrade UX, downgrade grace, and the membership desk test are [phase-entitlements.md](phase-entitlements.md) (roadmap 8). **Moved 16 Sep 2026.** |
 
-Stop after each micro-step until Click says go. Next is step 9 (entitlements + Upgrade UX). Do not start Upgrade UX / gates until step 9. After acceptance of step 11, stop and wait.
+This phase **stops at step 8**. Do not start entitlements here. Notifications is the current commercial phase ([phase-notifications.md](phase-notifications.md)).
 
 ## How it works
 
@@ -50,7 +48,7 @@ Suggested seed (editable):
 | Plus | paid | Live desks (small cap), copy follow + share + catalogue, webhooks, templates, maybe one venue |
 | Pro | higher | Backtest, more desks |
 
-Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until roadmap 10.
+Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until roadmap 11.
 
 ### Features (on / off)
 
@@ -182,14 +180,15 @@ KYC / travel-rule / money-transmitter: Click owns compliance. V1 is admin-approv
 - Storing or using the **admin wallet** seed or private key; automated payout from the admin wallet
 - Hosted crypto-sub auto-pull as the primary model
 - Yearly prices, vanity referral slugs, promo coupons (unless Click asks)
-- Marketing website (roadmap 11)
-- Onboarding wizard refine (roadmap 6) — Starter Pack still never arms
-- Transactional email (roadmap 7) — failed payment / low credit is in-app first
-- Internal webhooks (roadmap 8), backup candles (roadmap 9), scale-in (roadmap 10)
-- MEXC and further CEXes (roadmap 15)
+- Marketing website (roadmap 12)
+- Onboarding wizard refine (roadmap 7) — Starter Pack still never arms
+- Transactional notifications and email (roadmap 6) — [phase-notifications.md](phase-notifications.md)
+- Entitlements / Upgrade UX / grace (roadmap 8) — [phase-entitlements.md](phase-entitlements.md)
+- Internal webhooks (roadmap 9), backup candles (roadmap 10), scale-in (roadmap 11)
+- MEXC and further CEXes (roadmap 16)
 - Fly scale-from-admin (parked)
 - Full KYC product
 
 ## After this
 
-Onboarding / Starter Packs is roadmap 6. Notifications (including billing email) is roadmap 7.
+Notifications is roadmap 6. Onboarding / Starter Packs is roadmap 7. Entitlements is roadmap 8.
