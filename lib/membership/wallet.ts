@@ -53,7 +53,7 @@ export function methodTopUpNote(cycleUsd: number): string {
 }
 
 export function methodTopUpShortfall(cycleUsd: number): string {
-  return `Your account balance doesn't have enough funds to cover your next billing cycle (${formatWalletUsd(cycleUsd)}).`;
+  return `Your account balance doesn't have enough to cover your next billing cycle (${formatWalletUsd(cycleUsd)}).`;
 }
 
 export function creditedDepositsNotice(count: number): string {

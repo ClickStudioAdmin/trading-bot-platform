@@ -37,11 +37,15 @@ assert.equal(
 );
 assert.equal(
   methodTopUpShortfall(19),
-  "Your account balance doesn't have enough funds to cover your next billing cycle ($19).",
+  "Your account balance doesn't have enough to cover your next billing cycle ($19).",
 );
 assert.equal(
   methodTopUpShortfall(19.5),
-  "Your account balance doesn't have enough funds to cover your next billing cycle ($19.50).",
+  "Your account balance doesn't have enough to cover your next billing cycle ($19.50).",
+);
+assert.equal(
+  methodTopUpShortfall(20_000),
+  "Your account balance doesn't have enough to cover your next billing cycle ($20,000).",
 );
 assert.equal(creditedDepositsNotice(1), "Credited 1 deposit to Account Balance.");
 assert.equal(creditedDepositsNotice(3), "Credited 3 deposits to Account Balance.");

@@ -64,7 +64,8 @@ export function BillingMethodRadios({
           <span>
             {BILLING_METHOD_LABELS.wallet}
             <span className="mt-1 block text-xs text-ink-faint">
-              Manual payments to top up your account balance.
+              Manual payments required to top up your account. Monthly
+              payments are deducted from your account balance when due.
             </span>
           </span>
         </label>
