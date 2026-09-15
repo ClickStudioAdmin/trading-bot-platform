@@ -180,23 +180,32 @@ async function startCardSwitchSubscription(input: {
 
 async function cardSwitchSubscriptionItem(
   stripe: NonNullable<ReturnType<typeof getStripe>>,
-  plan: { name: string; priceUsd: number; stripePriceId: string | null },
+  plan: { id: string; name: string; priceUsd: number; stripePriceId: string | null },
 ): Promise<Stripe.SubscriptionCreateParams.Item> {
   const cents = Math.round(plan.priceUsd * 100);
+  let productId: string | null = null;
   if (plan.stripePriceId) {
     try {
       const price = await stripe.prices.retrieve(plan.stripePriceId);
       if (price.unit_amount === cents && price.currency === "usd") {
         return { price: plan.stripePriceId };
       }
+      productId = idOf(price.product);
     } catch {
-      // Catalog price id does not match the TBP plan amount.
+      // Catalog price id is missing or does not match the TBP plan amount.
     }
+  }
+  if (!productId) {
+    const product = await stripe.products.create({
+      name: plan.name,
+      metadata: { planId: plan.id, purpose: "switch_to_card" },
+    });
+    productId = product.id;
   }
   return {
     price_data: {
       currency: "usd",
-      product_data: { name: plan.name },
+      product: productId,
       unit_amount: cents,
       recurring: { interval: "month" },
     },
