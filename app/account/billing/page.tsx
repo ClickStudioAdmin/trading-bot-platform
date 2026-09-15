@@ -279,15 +279,15 @@ export default async function AccountBillingPage({
                     ? `${formatLocalDate(cycle.endMs)} · ${formatRemainingCycle(cycle.remainingMs)}`
                     : "No end date set."}
               </p>
+              <div className="mt-4">
+                <Link
+                  href="/account/plans"
+                  className="inline-flex rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent"
+                >
+                  Upgrade
+                </Link>
+              </div>
             </div>
-          </div>
-          <div className="mt-4">
-            <Link
-              href="/account/plans"
-              className="inline-flex rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent"
-            >
-              Upgrade
-            </Link>
           </div>
         </section>
         <section className="rounded-card border border-line bg-surface p-5">
