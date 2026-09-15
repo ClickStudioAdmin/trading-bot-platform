@@ -393,8 +393,8 @@ export function CryptoWalletPanel({
         )}
         {mainShort ? (
           <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-            Account Wallet does not have enough to pay for the upgrade. Top up
-            your Wallet below.
+            Account Balance does not have enough to pay for the upgrade. Top up
+            your Account Balance below.
           </p>
         ) : null}
         {checkout && canPay && planId && typeof planPriceUsd === "number" ? (
