@@ -278,14 +278,6 @@ export default async function AccountBillingPage({
                     ? `${formatLocalDate(cycle.endMs)} · ${formatRemainingCycle(cycle.remainingMs)}`
                     : "No end date set."}
               </p>
-              <p className="mt-3 text-xs uppercase tracking-[0.12em] text-ink-muted">
-                Payment method
-              </p>
-              <p className="mt-1 text-sm text-ink">
-                {billing.billingMethod
-                  ? BILLING_METHOD_LABELS[billing.billingMethod]
-                  : "—"}
-              </p>
             </div>
           </div>
           <div className="mt-4">
