@@ -29,7 +29,6 @@ export function StripeEmbeddedCheckout({
   planId: string;
   publishableKey: string;
 }) {
-  const router = useRouter();
   const planRef = useRef(planId);
   planRef.current = planId;
   const options = useMemo(
@@ -42,10 +41,10 @@ export function StripeEmbeddedCheckout({
         return result.clientSecret;
       },
       onComplete: () => {
-        router.push("/account/billing?checkout=success");
+        window.location.assign("/account/billing?checkout=success");
       },
     }),
-    [router],
+    [],
   );
 
   return (

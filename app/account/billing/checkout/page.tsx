@@ -4,6 +4,7 @@ import { CheckoutPayment } from "@/components/checkout-payment";
 import { PageHeading } from "@/components/page-heading";
 import { getSessionMember } from "@/lib/auth/session";
 import {
+  billingPath,
   checkoutCharge,
   hasUsableStripeSubscription,
   showCheckoutMethodPicker,
@@ -50,7 +51,9 @@ export default async function AccountCheckoutPage({
     redirect("/account/plans");
   }
   const target = loaded.plan;
-  const current = billing.planId === target.id;
+  if (billing.planId === target.id) {
+    redirect(billingPath({ checkout: "success" }));
+  }
   const currentLoaded = await getMembershipPlan(billing.planId);
   const currentPlan = currentLoaded.ok ? currentLoaded.plan : null;
   const charge = checkoutCharge({
@@ -89,53 +92,41 @@ export default async function AccountCheckoutPage({
         </p>
       ) : null}
 
-      {current ? (
-        <section className="mt-6 max-w-lg rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">{target.name}</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            {formatPlanPrice(target.priceUsd)}
-          </p>
-          <p className="mt-4 text-sm text-ink-muted">
-            You are already on this plan.
-          </p>
-        </section>
-      ) : (
-        <CheckoutPayment
-          planId={target.id}
-          planName={target.name}
-          planPrice={formatPlanPrice(target.priceUsd)}
-          currentPlanName={currentPlan?.name ?? null}
-          chargeKind={charge.kind}
-          chargeBasis={charge.kind === "upgrade" ? charge.basis : "full"}
-          dueUsd={charge.dueUsd}
-          selected={billing.billingMethod}
-          deductSelected={
-            charge.kind === "initial" ||
-            billing.paySubscriptionFromAffiliate ||
-            billing.paySubscriptionFromCredit
-          }
-          creditUsd={deposit.books.main}
-          affiliateUsd={deposit.payableAffiliateUsd}
-          depositAddress={deposit.address}
-          addressError={deposit.addressError}
-          chains={deposit.chains}
-          tokens={deposit.tokens}
-          useAffiliate={
-            billing.paySubscriptionFromAffiliate &&
-            target.features.affiliate_pay_subscription
-          }
-          stripeReady={stripeReady}
-          publishableKey={stripePublishableKey()}
-          missingSecret={!stripeReady}
-          missingPublishable={!stripePublishableConfigured()}
-          existingStripeSubscription={hasUsableStripeSubscription(billing)}
-          showMethodPicker={showCheckoutMethodPicker({
-            chargeKind: charge.kind,
-            billingMethod: billing.billingMethod,
-            subscriptionStatus: billing.subscriptionStatus,
-          })}
-        />
-      )}
+      <CheckoutPayment
+        planId={target.id}
+        planName={target.name}
+        planPrice={formatPlanPrice(target.priceUsd)}
+        currentPlanName={currentPlan?.name ?? null}
+        chargeKind={charge.kind}
+        chargeBasis={charge.kind === "upgrade" ? charge.basis : "full"}
+        dueUsd={charge.dueUsd}
+        selected={billing.billingMethod}
+        deductSelected={
+          charge.kind === "initial" ||
+          billing.paySubscriptionFromAffiliate ||
+          billing.paySubscriptionFromCredit
+        }
+        creditUsd={deposit.books.main}
+        affiliateUsd={deposit.payableAffiliateUsd}
+        depositAddress={deposit.address}
+        addressError={deposit.addressError}
+        chains={deposit.chains}
+        tokens={deposit.tokens}
+        useAffiliate={
+          billing.paySubscriptionFromAffiliate &&
+          target.features.affiliate_pay_subscription
+        }
+        stripeReady={stripeReady}
+        publishableKey={stripePublishableKey()}
+        missingSecret={!stripeReady}
+        missingPublishable={!stripePublishableConfigured()}
+        existingStripeSubscription={hasUsableStripeSubscription(billing)}
+        showMethodPicker={showCheckoutMethodPicker({
+          chargeKind: charge.kind,
+          billingMethod: billing.billingMethod,
+          subscriptionStatus: billing.subscriptionStatus,
+        })}
+      />
     </div>
   );
 }
