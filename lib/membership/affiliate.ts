@@ -173,6 +173,30 @@ export function clampAffiliateDepth(value: number): number {
   return Math.min(AFFILIATE_LEVEL_MAX, Math.max(1, value));
 }
 
+export function affiliateNetworkLabel(input: {
+  alias?: string | null;
+  name?: string | null;
+}): string {
+  const alias = input.alias?.trim() ?? "";
+  if (alias) {
+    return alias;
+  }
+  const name = input.name?.trim() ?? "";
+  return name || "Member";
+}
+
+export function sortDownlineNewestFirst<
+  T extends { attributedAt: string; level: number },
+>(rows: readonly T[]): T[] {
+  return [...rows].sort((left, right) => {
+    const byDate = right.attributedAt.localeCompare(left.attributedAt);
+    if (byDate !== 0) {
+      return byDate;
+    }
+    return left.level - right.level;
+  });
+}
+
 export function parseAffiliateMaxDepth(
   value: unknown,
 ): { ok: true; depth: number } | { ok: false; error: string } {

@@ -24,6 +24,8 @@ import {
   affiliateOrgRunRateLabel,
   affiliateOrgRunRateUsd,
   affiliateDownlinePersonMeta,
+  affiliateNetworkLabel,
+  sortDownlineNewestFirst,
   sumAffiliateOrgRunRate,
   affiliatePageLabel,
   escapeHtmlText,
@@ -588,6 +590,17 @@ assert.equal(affiliateOrgRunRateLabel(1237.5), "$1,237.50 / mo");
   assert.equal(signup.planLabel, "Affiliate");
   assert.equal(signup.runRateLabel, "Signup");
 }
+assert.equal(affiliateNetworkLabel({ alias: "Ava", name: "Tim" }), "Ava");
+assert.equal(affiliateNetworkLabel({ alias: "  ", name: "Tim Gale" }), "Tim Gale");
+assert.equal(affiliateNetworkLabel({ alias: null, name: null }), "Member");
+assert.deepEqual(
+  sortDownlineNewestFirst([
+    { userId: "old", attributedAt: "2026-01-01T00:00:00.000Z", level: 1 },
+    { userId: "new", attributedAt: "2026-09-15T00:00:00.000Z", level: 1 },
+    { userId: "mid", attributedAt: "2026-06-01T00:00:00.000Z", level: 2 },
+  ]).map((row) => row.userId),
+  ["new", "mid", "old"],
+);
 assert.equal(
   sumAffiliateOrgRunRate([
     { runRateUsd: 2, children: [{ runRateUsd: 1, children: [] }] },

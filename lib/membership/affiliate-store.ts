@@ -38,8 +38,11 @@ import {
   programDefaultRates,
   ratePctForLevel,
   resolveEarnDepth,
+  affiliateNetworkLabel,
   affiliateOrgRunRateUsd,
   affiliateRateSource,
+  clampAffiliateDepth,
+  sortDownlineNewestFirst,
   unpaidUsesProgramAffiliateRates,
   walkUpline,
   wouldCreateReferralCycle,
@@ -434,14 +437,7 @@ export async function findReferralCodeOwner(
 async function listReferralHops(): Promise<
   Array<{ userId: string; referrerUserId: string }>
 > {
-  const supabase = createServiceClient();
-  if (!supabase) {
-    return [];
-  }
-  const { data } = await supabase
-    .from("membership_referrals")
-    .select("user_id, referrer_user_id");
-  return (data ?? []).map((row) => ({
+  return (await listReferralAttributionRows()).map((row) => ({
     userId: String(row.user_id),
     referrerUserId: String(row.referrer_user_id),
   }));
@@ -1652,13 +1648,14 @@ async function memberLabels(
   const members = await selectInChunks(userIds, (chunk) =>
     supabase
       .from("members")
-      .select("user_id, email, affiliate_alias")
+      .select("user_id, email, name, affiliate_alias")
       .in("user_id", chunk),
   );
   for (const member of members) {
     const id = String(member.user_id);
     const alias = String(member.affiliate_alias ?? "").trim();
-    labels.set(id, alias || "Member");
+    const name = String(member.name ?? "").trim();
+    labels.set(id, affiliateNetworkLabel({ alias, name }));
     if (showEmail) {
       emails.set(id, String(member.email));
       if (!alias) {
@@ -1761,20 +1758,23 @@ async function listReferralAttributionRows(): Promise<ReferralAttrRow[]> {
   if (!supabase) {
     return [];
   }
-  const wide =
-    "user_id, referrer_user_id, attributed_at, first_paid_at, campaign_id, link_id";
-  const narrow = "user_id, referrer_user_id, attributed_at, first_paid_at";
-  let columns = wide;
+  const columnSets = [
+    "user_id, referrer_user_id, attributed_at, first_paid_at, campaign_id, link_id",
+    "user_id, referrer_user_id, attributed_at, first_paid_at",
+    "user_id, referrer_user_id",
+  ];
+  let columnsIndex = 0;
   const rows: ReferralAttrRow[] = [];
-  for (let from = 0; ; from += REFERRAL_PAGE_SIZE) {
+  for (let from = 0; ; ) {
     const { data, error } = await supabase
       .from("membership_referrals")
-      .select(columns)
+      .select(columnSets[columnsIndex])
       .order("user_id", { ascending: true })
       .range(from, from + REFERRAL_PAGE_SIZE - 1);
-    if (error && schemaGap(error) && columns === wide) {
-      columns = narrow;
-      from -= REFERRAL_PAGE_SIZE;
+    if (error && schemaGap(error) && columnsIndex < columnSets.length - 1) {
+      columnsIndex += 1;
+      from = 0;
+      rows.length = 0;
       continue;
     }
     if (error) {
@@ -1784,6 +1784,7 @@ async function listReferralAttributionRows(): Promise<ReferralAttrRow[]> {
     if ((data ?? []).length < REFERRAL_PAGE_SIZE) {
       break;
     }
+    from += REFERRAL_PAGE_SIZE;
   }
   return rows;
 }
@@ -1843,16 +1844,18 @@ async function loadDownlineGraph(
     list.push(userId);
     children.set(referrer, list);
     meta.set(userId, {
-      attributedAt: String(row.attributed_at),
+      attributedAt:
+        typeof row.attributed_at === "string" ? row.attributed_at : "",
       firstPaidAt:
         typeof row.first_paid_at === "string" ? row.first_paid_at : null,
       campaignId: optionalId(row.campaign_id),
       linkId: optionalId(row.link_id),
     });
   }
+  const depth = clampAffiliateDepth(maxDepth);
   const rows: DownlineRow[] = [];
   const walk = (parent: string, level: number) => {
-    if (level > maxDepth) {
+    if (level > depth) {
       return;
     }
     for (const userId of children.get(parent) ?? []) {
@@ -1875,7 +1878,7 @@ async function loadDownlineGraph(
     }
   };
   walk(rootUserId, 1);
-  return { rows, children };
+  return { rows: sortDownlineNewestFirst(rows), children };
 }
 
 export async function loadDownline(

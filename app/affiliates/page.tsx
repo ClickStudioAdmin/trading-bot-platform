@@ -50,7 +50,7 @@ export default async function AffiliatesPage({
     const arrears = await loadMemberArrears(member.id);
     const portal = await loadAffiliatePortal(member.id, {
       includeTree: tab === "network" && view === "chart",
-      includeLabels: tab === "network",
+      includeLabels: tab === "network" || tab === "referrals",
     });
     const headerStore = await headers();
     const host =
