@@ -5,6 +5,7 @@ import {
   listBillingChains,
   listBillingTokens,
   listDepositAddresses,
+  listUnsweptDepositTxs,
   loadDepositMnemonic,
   markChainScanned,
   markDepositSwept,
@@ -262,5 +263,86 @@ export async function watchMembershipDeposits(input: {
       );
     }
   }
+  if (mnemonic) {
+    await sweepOpenCredits({
+      mnemonic,
+      chains,
+      tokens,
+      addresses,
+      userId: input.userId,
+      result,
+    });
+  }
   return result;
+}
+
+function tokenAmountBigInt(raw: string): bigint | null {
+  const whole = raw.trim().split(".")[0] ?? "";
+  if (!/^\d+$/.test(whole)) {
+    return null;
+  }
+  try {
+    const amount = BigInt(whole);
+    return amount > BigInt(0) ? amount : null;
+  } catch {
+    return null;
+  }
+}
+
+async function sweepOpenCredits(input: {
+  mnemonic: string;
+  chains: BillingChain[];
+  tokens: BillingToken[];
+  addresses: DepositAddress[];
+  userId?: string;
+  result: WatchDepositsResult;
+}): Promise<void> {
+  const rows = await listUnsweptDepositTxs(input.userId);
+  if (rows.length === 0) {
+    return;
+  }
+  const chainById = new Map(input.chains.map((row) => [row.id, row]));
+  const tokenById = new Map(input.tokens.map((row) => [row.id, row]));
+  const destByAddress = addressMap(input.addresses);
+  for (const row of rows) {
+    const chain = chainById.get(row.chainId);
+    const token = tokenById.get(row.tokenId);
+    const dest = destByAddress.get(row.toAddress);
+    const amount = tokenAmountBigInt(row.tokenAmount);
+    if (!chain?.adminAddress || !token || !dest || !amount) {
+      continue;
+    }
+    const swept = await sweepDepositToken({
+      chain,
+      token,
+      mnemonic: input.mnemonic,
+      derivationIndex: dest.derivationIndex,
+      amount,
+    });
+    if (!swept.ok) {
+      await writeEventLog({
+        level: "warning",
+        scope: "system",
+        event: "membership.deposit_swept",
+        message: `Sweep retry skipped: ${swept.error}`,
+        userId: dest.userId,
+        data: { chainId: chain.id, depositTx: row.txHash },
+      });
+      input.result.errors.push(`${chain.name}: ${swept.error}`);
+      continue;
+    }
+    await markDepositSwept(chain.id, row.txHash, row.logIndex, swept.txHash);
+    await writeEventLog({
+      scope: "system",
+      event: "membership.deposit_swept",
+      message: `Swept deposit on ${chain.name}`,
+      userId: dest.userId,
+      data: {
+        chainId: chain.id,
+        depositTx: row.txHash,
+        sweepTx: swept.txHash,
+      },
+    });
+    input.result.swept += 1;
+  }
 }

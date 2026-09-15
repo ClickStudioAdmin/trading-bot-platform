@@ -705,6 +705,16 @@ export type UnsweptDepositCredit = {
   amountUsd: number;
 };
 
+export type UnsweptDepositTx = {
+  userId: string;
+  chainId: string;
+  tokenId: string;
+  txHash: string;
+  logIndex: number;
+  toAddress: string;
+  tokenAmount: string;
+};
+
 export async function listUnsweptDepositCredits(): Promise<
   UnsweptDepositCredit[]
 > {
@@ -733,6 +743,39 @@ export async function listUnsweptDepositCredits(): Promise<
     byChain.set(chainId, current);
   }
   return [...byChain.values()];
+}
+
+export async function listUnsweptDepositTxs(
+  userId?: string,
+): Promise<UnsweptDepositTx[]> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return [];
+  }
+  let query = supabase
+    .from("membership_deposit_txs")
+    .select(
+      "user_id, chain_id, token_id, tx_hash, log_index, to_address, token_amount",
+    )
+    .is("sweep_tx_hash", null)
+    .order("created_at", { ascending: true })
+    .limit(200);
+  if (userId) {
+    query = query.eq("user_id", userId);
+  }
+  const { data, error } = await query;
+  if (error || !data) {
+    return [];
+  }
+  return data.map((row) => ({
+    userId: String(row.user_id),
+    chainId: String(row.chain_id),
+    tokenId: String(row.token_id),
+    txHash: String(row.tx_hash),
+    logIndex: Number(row.log_index),
+    toAddress: String(row.to_address).toLowerCase(),
+    tokenAmount: String(row.token_amount),
+  }));
 }
 
 export async function creditOnChainDeposit(input: {
