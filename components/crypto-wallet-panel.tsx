@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -18,6 +19,7 @@ import { payoutStatusLabel } from "@/lib/membership/affiliate";
 import {
   checkCheckoutDepositAction,
   checkMyDepositAction,
+  readMyAccountBalanceAction,
   payPlanWithCreditAction,
   requestMainWalletWithdrawAction,
 } from "@/lib/membership/wallet-actions";
@@ -26,6 +28,7 @@ import {
   accountBalanceCoversNextCycle,
   accountShortfallUsd,
   creditedDepositsNotice,
+  engineCreditedBalanceNotice,
   methodTopUpShortfall,
   planDeductDecision,
   roundUsd,
@@ -52,17 +55,51 @@ type LiveMainWalletValue = {
 
 const LiveMainWalletContext = createContext<LiveMainWalletValue | null>(null);
 
+const BALANCE_POLL_MS = 10_000;
+
 export function LiveMainWallet({
   initialMainUsd,
+  pollBalance = false,
   children,
 }: {
   initialMainUsd: number;
+  pollBalance?: boolean;
   children: ReactNode;
 }) {
   const [mainUsd, setMainUsd] = useState(initialMainUsd);
   const [notice, setNotice] = useState<string | null>(null);
   const [noticeOk, setNoticeOk] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const mainUsdRef = useRef(initialMainUsd);
+  useEffect(() => {
+    mainUsdRef.current = mainUsd;
+  }, [mainUsd]);
+  useEffect(() => {
+    if (!pollBalance) {
+      return;
+    }
+    let cancelled = false;
+    async function refresh() {
+      const result = await readMyAccountBalanceAction();
+      if (cancelled || !result.ok) {
+        return;
+      }
+      if (roundUsd(result.mainUsd) > roundUsd(mainUsdRef.current) + 1e-9) {
+        setNotice(engineCreditedBalanceNotice());
+        setNoticeOk(true);
+        setError(null);
+      }
+      setMainUsd(result.mainUsd);
+    }
+    void refresh();
+    const timer = window.setInterval(() => {
+      void refresh();
+    }, BALANCE_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [pollBalance]);
   return (
     <LiveMainWalletContext.Provider
       value={{
@@ -195,6 +232,34 @@ function DepositAddressQr({ value }: { value: string }) {
       aria-label="Deposit address QR code"
       dangerouslySetInnerHTML={{ __html: svg }}
     />
+  );
+}
+
+export function LiveAccountBalanceSummary({
+  cycleDueUsd,
+}: {
+  cycleDueUsd: number;
+}) {
+  const live = useLiveMainWallet(0);
+  return (
+    <>
+      <p className="mt-3 text-xs uppercase tracking-[0.12em] text-ink-muted">
+        Current balance
+      </p>
+      <p className="mt-1 text-sm tabular-nums text-ink">
+        {formatUsd(live.mainUsd)}
+      </p>
+      {live.notice && live.noticeOk ? (
+        <p className="mt-3 text-sm text-success" role="status">
+          {live.notice}
+        </p>
+      ) : null}
+      {!accountBalanceCoversNextCycle(live.mainUsd, cycleDueUsd) ? (
+        <p className="mt-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          {methodTopUpShortfall(cycleDueUsd)}
+        </p>
+      ) : null}
+    </>
   );
 }
 

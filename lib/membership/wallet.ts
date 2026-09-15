@@ -61,6 +61,10 @@ export function creditedDepositsNotice(count: number): string {
   return `Credited ${n} deposit${n === 1 ? "" : "s"} to Account Balance.`;
 }
 
+export function engineCreditedBalanceNotice(): string {
+  return "A deposit was credited to Account Balance.";
+}
+
 export function depositCreditIsFresh(
   createdAt: unknown,
   startedMs: number,

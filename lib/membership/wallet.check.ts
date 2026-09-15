@@ -9,6 +9,7 @@ import {
   accountShortfallUsd,
   checkoutPartialCreditNotice,
   creditedDepositsNotice,
+  engineCreditedBalanceNotice,
   depositCreditIsFresh,
   methodTopUpNote,
   methodTopUpShortfall,
@@ -49,6 +50,10 @@ assert.equal(
 );
 assert.equal(creditedDepositsNotice(1), "Credited 1 deposit to Account Balance.");
 assert.equal(creditedDepositsNotice(3), "Credited 3 deposits to Account Balance.");
+assert.equal(
+  engineCreditedBalanceNotice(),
+  "A deposit was credited to Account Balance.",
+);
 assert.equal(
   checkoutPartialCreditNotice("$19.99"),
   "Deposit added to account balance. Shortfall of $19.99 still required for payment.",

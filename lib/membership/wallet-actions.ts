@@ -282,6 +282,17 @@ export async function checkMyDepositAction(): Promise<CheckDepositResult> {
   return checkMemberDeposit();
 }
 
+export async function readMyAccountBalanceAction(): Promise<
+  { ok: true; mainUsd: number } | { ok: false; error: string }
+> {
+  const member = await getSessionMember();
+  if (!member) {
+    return { ok: false, error: "Sign in to check Account Balance." };
+  }
+  const books = await walletBookBalances(member.id);
+  return { ok: true, mainUsd: books.main };
+}
+
 export async function checkCheckoutDepositAction(): Promise<CheckDepositResult> {
   return checkMemberDeposit();
 }

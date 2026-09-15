@@ -21,6 +21,7 @@ import {
 } from "@/components/stripe-embedded-checkout";
 import {
   CryptoWalletPanel,
+  LiveAccountBalanceSummary,
   LiveMainWallet,
   TopUpWallet,
 } from "@/components/crypto-wallet-panel";
@@ -29,10 +30,8 @@ import {
   listMemberInvoices,
 } from "@/lib/membership/billing-store";
 import {
-  accountBalanceCoversNextCycle,
   creditedDepositsNotice,
   methodTopUpNote,
-  methodTopUpShortfall,
   showMemberLedgerTab,
   showMemberWalletTab,
 } from "@/lib/membership/wallet";
@@ -291,28 +290,20 @@ export default async function AccountBillingPage({
           </div>
         </section>
         <section className="rounded-card border border-line bg-surface p-5">
-          <h2 className="text-lg font-semibold tracking-tight">
-            Account Balance
-          </h2>
-          <p className="mt-3 text-xs uppercase tracking-[0.12em] text-ink-muted">
-            Current balance
-          </p>
-          <p className="mt-1 text-sm tabular-nums text-ink">
-            {formatUsd(books.main)}
-          </p>
-          {!accountBalanceCoversNextCycle(books.main, plan?.priceUsd ?? 0) ? (
-            <p className="mt-4 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-              {methodTopUpShortfall(plan?.priceUsd ?? 0)}
+          <LiveMainWallet initialMainUsd={books.main} pollBalance>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Account Balance
+            </h2>
+            <LiveAccountBalanceSummary cycleDueUsd={plan?.priceUsd ?? 0} />
+            <p className="mt-4">
+              <Link
+                href={billingPath({ tab: "wallet" })}
+                className="text-sm text-accent hover:text-accent-strong"
+              >
+                Manage Account Balance
+              </Link>
             </p>
-          ) : null}
-          <p className="mt-4">
-            <Link
-              href={billingPath({ tab: "wallet" })}
-              className="text-sm text-accent hover:text-accent-strong"
-            >
-              Manage Account Balance
-            </Link>
-          </p>
+          </LiveMainWallet>
         </section>
         </div>
       ) : tab === "method" ? (
@@ -363,7 +354,10 @@ export default async function AccountBillingPage({
             </section>
           ) : billing.billingMethod === "wallet" ? (
             <section className="rounded-card border border-line bg-surface p-5">
-              <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
+              <LiveMainWallet
+                initialMainUsd={deposit?.books.main ?? 0}
+                pollBalance
+              >
                 <TopUpWallet
                   address={deposit?.address ?? null}
                   addressError={deposit?.addressError ?? null}
@@ -378,7 +372,10 @@ export default async function AccountBillingPage({
           ) : null}
         </div>
       ) : tab === "wallet" ? (
-        <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
+        <LiveMainWallet
+          initialMainUsd={deposit?.books.main ?? 0}
+          pollBalance
+        >
           <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
               <section className="rounded-card border border-line bg-surface p-5">
                 <CryptoWalletPanel
