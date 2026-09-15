@@ -128,7 +128,7 @@ export async function setBillingMethodAction(formData: FormData) {
     data: { method, paySubscriptionFromCredit },
   });
   revalidatePath("/account/billing");
-  redirect(billingPath({ saved: "method" }));
+  redirect(billingPath({ tab: "method", saved: "method" }));
 }
 
 export async function createEmbeddedCheckoutSecret(

@@ -201,7 +201,7 @@ export function embeddedCardReturnUrl(origin: string): string {
 
 export function embeddedSwitchToCardReturnUrl(origin: string): string {
   const base = origin.trim().replace(/\/$/, "");
-  return `${base}/account/billing?saved=method&session_id={CHECKOUT_SESSION_ID}`;
+  return `${base}/account/billing?tab=method&saved=method&session_id={CHECKOUT_SESSION_ID}`;
 }
 
 /** Stripe trial_end unix seconds, or null when the cycle is too close to charge now. */

@@ -84,21 +84,25 @@ export default async function AccountBillingPage({
     books.main,
   );
   const showLedgerTab = showMemberLedgerTab(plan?.priceUsd ?? 0, hasLedger);
+  const showPaymentMethod =
+    Boolean(billing.billingMethod) && billing.subscriptionStatus !== "none";
   const requestedTab = firstSearchValue(params.tab);
   const tab =
     requestedTab === "invoices"
       ? "invoices"
-      : requestedTab === "ledger" && showLedgerTab
-        ? "ledger"
-        : requestedTab === "card" && showCardTab
-          ? "card"
-          : requestedTab === "wallet" && showWalletTab
-            ? "wallet"
-            : "overview";
+      : requestedTab === "method" && showPaymentMethod
+        ? "method"
+        : requestedTab === "ledger" && showLedgerTab
+          ? "ledger"
+          : requestedTab === "card" && showCardTab
+            ? "card"
+            : requestedTab === "wallet" && showWalletTab
+              ? "wallet"
+              : "overview";
   const [invoices, deposit, ledger, withdraw] = await Promise.all([
     tab === "invoices" ? listMemberInvoices(member.id) : Promise.resolve([]),
     tab === "wallet" ||
-    (tab === "overview" && billing.billingMethod === "wallet")
+    (tab === "method" && billing.billingMethod === "wallet")
       ? loadMemberDepositContext(member.id)
       : Promise.resolve(null),
     tab === "ledger" ? listMainWalletLedger(member.id) : Promise.resolve([]),
@@ -108,8 +112,6 @@ export default async function AccountBillingPage({
   ]);
   const cycle = resolveBillingCycle({ periodEnd: billing.periodEnd });
   const stripeReady = stripeSecretConfigured();
-  const showPaymentMethod =
-    Boolean(billing.billingMethod) && billing.subscriptionStatus !== "none";
 
   return (
     <div>
@@ -137,6 +139,14 @@ export default async function AccountBillingPage({
         >
           Invoices
         </TabLink>
+        {showPaymentMethod ? (
+          <TabLink
+            href="/account/billing?tab=method"
+            selected={tab === "method"}
+          >
+            Manage Payment Method
+          </TabLink>
+        ) : null}
         {showCardTab ? (
           <TabLink
             href="/account/billing?tab=card"
@@ -207,7 +217,7 @@ export default async function AccountBillingPage({
       {checkout === "cancel" ? (
         <p className="mt-6 text-sm text-ink-muted">Checkout canceled.</p>
       ) : null}
-      {!stripeReady && tab === "overview" && showPaymentMethod ? (
+      {!stripeReady && tab === "method" && showPaymentMethod ? (
         <p className="mt-6 rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           Stripe test keys are not on this environment yet. You can still
           choose a payment method.
@@ -215,9 +225,7 @@ export default async function AccountBillingPage({
       ) : null}
 
       {tab === "overview" ? (
-        <>
-      <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
-        <section className="rounded-card border border-line bg-surface p-5">
+        <section className="mt-6 rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">
             Current subscription
           </h2>
@@ -272,9 +280,8 @@ export default async function AccountBillingPage({
             </Link>
           </div>
         </section>
-
-        {showPaymentMethod ? (
-        <section className="rounded-card border border-line bg-surface p-5">
+      ) : tab === "method" ? (
+        <section className="mt-6 rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">
             Current payment method
           </h2>
@@ -319,9 +326,6 @@ export default async function AccountBillingPage({
             </div>
           ) : null}
         </section>
-        ) : null}
-      </div>
-        </>
       ) : tab === "wallet" ? (
         <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
           <div className="mt-6 space-y-5">
@@ -333,7 +337,7 @@ export default async function AccountBillingPage({
                 <p className="mt-1 text-sm text-ink-muted">
                   {billing.billingMethod === "wallet"
                     ? "Listed stables credit Account Wallet 1:1. Enter a receive address on each withdraw request."
-                    : "Leftover Account Wallet stays here until the balance is zero. Switch to Crypto on Overview to top up again."}
+                    : "Leftover Account Wallet stays here until the balance is zero. Switch to Crypto on Manage Payment Method to top up again."}
                 </p>
               </div>
               <LiveWalletHeadingBalance

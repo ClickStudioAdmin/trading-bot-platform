@@ -76,7 +76,7 @@ export function StripeSwitchToCard({
         return result.clientSecret;
       },
       onComplete: () => {
-        router.push("/account/billing?saved=method");
+        router.push("/account/billing?tab=method&saved=method");
       },
     }),
     [router],

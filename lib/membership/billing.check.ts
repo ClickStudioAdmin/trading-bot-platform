@@ -42,7 +42,7 @@ assert.equal(
 );
 assert.equal(
   embeddedSwitchToCardReturnUrl("https://app.example/"),
-  "https://app.example/account/billing?saved=method&session_id={CHECKOUT_SESSION_ID}",
+  "https://app.example/account/billing?tab=method&saved=method&session_id={CHECKOUT_SESSION_ID}",
 );
 assert.equal(
   hasUsableStripeSubscription({
