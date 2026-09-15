@@ -13,7 +13,6 @@ import {
   embeddedCheckoutReturnUrl,
   embeddedSwitchToCardReturnUrl,
   hasUsableStripeSubscription,
-  switchToCardTrialEnd,
   parseBillingMethod,
   parsePaySubscriptionFromCredit,
   stripeCheckoutBranding,
@@ -520,42 +519,12 @@ export async function createSwitchToCardSecret(): Promise<EmbeddedCheckoutResult
         stripeCustomerId: customerId,
       });
     }
-    if (hasUsableStripeSubscription(billing)) {
-      const session = await stripe.checkout.sessions.create({
-        ui_mode: "embedded_page",
-        mode: "setup",
-        customer: customerId,
-        currency: "usd",
-        client_reference_id: member.id,
-        redirect_on_completion: "if_required",
-        return_url: embeddedSwitchToCardReturnUrl(origin),
-        branding_settings: stripeCheckoutBranding(),
-        metadata: {
-          userId: member.id,
-          planId: billing.planId,
-          purpose: "switch_to_card",
-        },
-      });
-      const clientSecret = session.client_secret;
-      if (!clientSecret) {
-        return { ok: false, error: "Stripe did not return a checkout client secret." };
-      }
-      return { ok: true, clientSecret };
-    }
-    const priceId = plan.stripePriceId ?? "";
-    if (!priceId) {
-      return {
-        ok: false,
-        error: "This plan has no Stripe price yet. Add a price id on Admin → Plans.",
-      };
-    }
-    const trialEnd = switchToCardTrialEnd(billing.periodEnd);
     const session = await stripe.checkout.sessions.create({
       ui_mode: "embedded_page",
-      mode: "subscription",
+      mode: "setup",
       customer: customerId,
+      currency: "usd",
       client_reference_id: member.id,
-      line_items: [{ price: priceId, quantity: 1 }],
       redirect_on_completion: "if_required",
       return_url: embeddedSwitchToCardReturnUrl(origin),
       branding_settings: stripeCheckoutBranding(),
@@ -563,14 +532,6 @@ export async function createSwitchToCardSecret(): Promise<EmbeddedCheckoutResult
         userId: member.id,
         planId: billing.planId,
         purpose: "switch_to_card",
-      },
-      subscription_data: {
-        metadata: {
-          userId: member.id,
-          planId: billing.planId,
-          purpose: "switch_to_card",
-        },
-        ...(trialEnd ? { trial_end: trialEnd } : {}),
       },
     });
     const clientSecret = session.client_secret;

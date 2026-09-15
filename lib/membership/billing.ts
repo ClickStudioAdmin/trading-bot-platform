@@ -260,7 +260,7 @@ export function embeddedSwitchToCardReturnUrl(origin: string): string {
   return `${base}/account/billing?tab=method&saved=method&session_id={CHECKOUT_SESSION_ID}`;
 }
 
-/** Stripe trial_end unix seconds, or null when the cycle is too close to charge now. */
+/** First Stripe charge unix seconds after a paid cycle, or null when the cycle is too close to charge now. Not a marketing trial. */
 export function switchToCardTrialEnd(
   periodEnd: string | null,
   nowMs = Date.now(),

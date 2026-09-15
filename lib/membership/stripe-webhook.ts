@@ -10,7 +10,8 @@ import {
   saveStripeCustomerIds,
 } from "./billing-store";
 import { markOpenStripeInvoicePaid } from "./billing-cycle-store";
-import { getMembershipPlanByStripePriceId } from "./store";
+import { switchToCardTrialEnd } from "./billing";
+import { getMembershipPlan, getMembershipPlanByStripePriceId } from "./store";
 import { getStripe } from "./stripe";
 import {
   applySubscriptionSnapshot,
@@ -91,19 +92,15 @@ async function handleSwitchToCardSetup(
       // Card is still on the customer from Checkout setup.
     }
   }
-  if (billing?.stripeSubscriptionId) {
-    try {
-      await stripe.subscriptions.update(billing.stripeSubscriptionId, {
-        cancel_at_period_end: false,
-        ...(paymentMethod ? { default_payment_method: paymentMethod } : {}),
-      });
-    } catch (cause) {
-      return {
-        ok: false,
-        error:
-          cause instanceof Error ? cause.message : "Stripe subscription resume failed.",
-      };
-    }
+  const started = await startCardSwitchSubscription({
+    stripe,
+    userId,
+    customerId,
+    billing,
+    paymentMethod,
+  });
+  if (!started.ok) {
+    return started;
   }
   await writeEventLog({
     scope: "system",
@@ -113,6 +110,97 @@ async function handleSwitchToCardSetup(
     data: { method: "stripe", purpose: "switch_to_card" },
   });
   return { ok: true };
+}
+
+async function startCardSwitchSubscription(input: {
+  stripe: NonNullable<ReturnType<typeof getStripe>>;
+  userId: string;
+  customerId: string;
+  billing: Awaited<ReturnType<typeof getMemberBilling>>;
+  paymentMethod: string | null;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { stripe, userId, customerId, billing, paymentMethod } = input;
+  if (!billing) {
+    return { ok: true };
+  }
+  const loaded = await getMembershipPlan(billing.planId);
+  if (!loaded.ok) {
+    return loaded;
+  }
+  if (loaded.plan.priceUsd < 0.01) {
+    return { ok: true };
+  }
+  const item = await cardSwitchSubscriptionItem(stripe, loaded.plan);
+  const firstCharge = switchToCardTrialEnd(billing.periodEnd);
+  try {
+    if (billing.stripeSubscriptionId) {
+      const current = await stripe.subscriptions.retrieve(
+        billing.stripeSubscriptionId,
+      );
+      const existingItemId = current.items.data[0]?.id;
+      await stripe.subscriptions.update(billing.stripeSubscriptionId, {
+        cancel_at_period_end: false,
+        proration_behavior: "none",
+        items: existingItemId ? [{ id: existingItemId, ...item }] : [item],
+        ...(paymentMethod ? { default_payment_method: paymentMethod } : {}),
+      });
+      return { ok: true };
+    }
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [item],
+      ...(paymentMethod ? { default_payment_method: paymentMethod } : {}),
+      ...(firstCharge
+        ? {
+            billing_cycle_anchor: firstCharge,
+            proration_behavior: "none",
+          }
+        : {}),
+      metadata: {
+        userId,
+        planId: billing.planId,
+        purpose: "switch_to_card",
+      },
+    });
+    return saveStripeCustomerIds({
+      userId,
+      stripeCustomerId: customerId,
+      stripeSubscriptionId: subscription.id,
+    });
+  } catch (cause) {
+    return {
+      ok: false,
+      error:
+        cause instanceof Error
+          ? cause.message
+          : "Stripe subscription update failed.",
+    };
+  }
+}
+
+async function cardSwitchSubscriptionItem(
+  stripe: NonNullable<ReturnType<typeof getStripe>>,
+  plan: { name: string; priceUsd: number; stripePriceId: string | null },
+): Promise<Stripe.SubscriptionCreateParams.Item> {
+  const cents = Math.round(plan.priceUsd * 100);
+  if (plan.stripePriceId) {
+    try {
+      const price = await stripe.prices.retrieve(plan.stripePriceId);
+      if (price.unit_amount === cents && price.currency === "usd") {
+        return { price: plan.stripePriceId };
+      }
+    } catch {
+      // Catalog price id does not match the TBP plan amount.
+    }
+  }
+  return {
+    price_data: {
+      currency: "usd",
+      product_data: { name: plan.name },
+      unit_amount: cents,
+      recurring: { interval: "month" },
+    },
+  };
 }
 
 async function setupPaymentMethodId(
