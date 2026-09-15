@@ -336,6 +336,16 @@ export function ratePctForLevel(
   return Number.isFinite(rate) && rate > 0 ? rate : 0;
 }
 
+export function affiliateRateCardRows(
+  rates: readonly number[],
+  earnDepth: number,
+): Array<{ level: number; ratePct: number; active: boolean }> {
+  return [1, 2, 3, 4, 5].map((level) => {
+    const ratePct = ratePctForLevel(rates, level, earnDepth);
+    return { level, ratePct, active: ratePct > 0 };
+  });
+}
+
 export function affiliateOrgRunRateUsd(input: {
   planPriceUsd: number;
   paid: boolean;

@@ -76,6 +76,7 @@ import {
   pickCommissionsForPayout,
   parseReferralCode,
   ratePctForLevel,
+  affiliateRateCardRows,
   referralShareUrl,
   resolveEarnDepth,
   unpaidUsesProgramAffiliateRates,
@@ -142,6 +143,20 @@ assert.equal(resolveEarnDepth(2, null), 2);
 assert.equal(ratePctForLevel([10, 5, 0], 1, 2), 10);
 assert.equal(ratePctForLevel([10, 5, 0], 2, 1), 0);
 assert.equal(ratePctForLevel([10, 0, 2], 2, 3), 0);
+assert.deepEqual(
+  affiliateRateCardRows([15, 10, 0, 0, 0], 5).map((row) => ({
+    level: row.level,
+    active: row.active,
+    ratePct: row.ratePct,
+  })),
+  [
+    { level: 1, active: true, ratePct: 15 },
+    { level: 2, active: true, ratePct: 10 },
+    { level: 3, active: false, ratePct: 0 },
+    { level: 4, active: false, ratePct: 0 },
+    { level: 5, active: false, ratePct: 0 },
+  ],
+);
 assert.equal(commissionUsd(19, 10), 1.9);
 assert.equal(commissionUsd(0.009, 10), 0);
 

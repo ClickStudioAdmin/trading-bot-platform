@@ -37,6 +37,7 @@ import {
   parseReferralCode,
   programDefaultRates,
   ratePctForLevel,
+  affiliateRateCardRows,
   resolveEarnDepth,
   affiliateNetworkLabel,
   affiliateOrgRunRateUsd,
@@ -2007,11 +2008,7 @@ export async function loadAffiliatePortal(
     source: resolved?.source ?? "program",
     planName: resolved?.planName ?? null,
     earnDepth,
-    rows: [1, 2, 3, 4, 5].map((level) => ({
-      level,
-      ratePct: ratePctForLevel(rateValues, level, earnDepth),
-      active: level <= earnDepth,
-    })),
+    rows: affiliateRateCardRows(rateValues, earnDepth),
   };
   return {
     code,
