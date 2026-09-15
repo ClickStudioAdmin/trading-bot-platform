@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/admin";
 import {
   matchOpenRenewalInvoice,
   openInvoiceIsCollectible,
+  openInvoiceShouldVoidOnMethodChange,
   renewalAlreadyCovered,
   renewalCycleFromPeriodEnd,
   renewalExternalId,
@@ -47,13 +48,14 @@ export async function runMembershipBillingCycle(input?: {
 
 export async function issueDueRenewalInvoices(
   nowMs = Date.now(),
+  userIds?: string[],
 ): Promise<{ issued: number; errors: string[] }> {
   const supabase = createServiceClient();
   const errors: string[] = [];
   if (!supabase) {
     return { issued: 0, errors: ["Database is not configured."] };
   }
-  const { data: members, error } = await supabase
+  let query = supabase
     .from("members")
     .select(
       "user_id, plan_id, billing_method, subscription_status, period_end",
@@ -61,6 +63,10 @@ export async function issueDueRenewalInvoices(
     .eq("subscription_status", "active")
     .in("billing_method", ["stripe", "wallet"])
     .not("period_end", "is", null);
+  if (userIds && userIds.length > 0) {
+    query = query.in("user_id", userIds);
+  }
+  const { data: members, error } = await query;
   if (error) {
     return { issued: 0, errors: [error.message] };
   }
@@ -300,6 +306,72 @@ export async function listOpenInvoices(
       },
     ];
   });
+}
+
+export async function voidOpenInvoices(
+  userId: string,
+  method: BillingMethod,
+): Promise<{ ok: true; voided: number } | { ok: false; error: string }> {
+  const open = await listOpenInvoices(method, [userId]);
+  return voidOpenInvoiceRows(open);
+}
+
+export async function voidOpenInvoicesOtherMethod(
+  userId: string,
+  keepMethod: BillingMethod,
+): Promise<{ ok: true; voided: number } | { ok: false; error: string }> {
+  const open = await listOpenInvoices(undefined, [userId]);
+  return voidOpenInvoiceRows(
+    open.filter((row) =>
+      openInvoiceShouldVoidOnMethodChange(row.method, keepMethod),
+    ),
+  );
+}
+
+export async function reconcileOpenInvoicesAfterMethodChange(
+  userId: string,
+  method: BillingMethod,
+  nowMs = Date.now(),
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const voided = await voidOpenInvoicesOtherMethod(userId, method);
+  if (!voided.ok) {
+    return voided;
+  }
+  if (voided.voided > 0) {
+    await writeEventLog({
+      scope: "system",
+      event: "membership.invoice_voided",
+      message: "Voided open invoices for the previous collection method",
+      userId,
+      data: { method, voided: voided.voided },
+    });
+  }
+  await issueDueRenewalInvoices(nowMs, [userId]);
+  return { ok: true };
+}
+
+async function voidOpenInvoiceRows(
+  rows: OpenInvoiceRow[],
+): Promise<{ ok: true; voided: number } | { ok: false; error: string }> {
+  if (rows.length === 0) {
+    return { ok: true, voided: 0 };
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase
+    .from("membership_invoices")
+    .update({ status: "void" })
+    .in(
+      "id",
+      rows.map((row) => row.id),
+    )
+    .eq("status", "open");
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true, voided: rows.length };
 }
 
 export async function markOpenStripeInvoicePaid(input: {

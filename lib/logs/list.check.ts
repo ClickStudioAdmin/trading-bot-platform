@@ -45,6 +45,9 @@ assert.ok(
   eventLogOptionsForScopes(["system"]).includes("membership.invoice_issued"),
 );
 assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("membership.invoice_voided"),
+);
+assert.ok(
   eventLogOptionsForScopes(["system"]).includes(
     "membership.commission_released",
   ),

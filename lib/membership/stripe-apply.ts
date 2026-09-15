@@ -94,6 +94,17 @@ export function stripeWebhookAppliesToMember(input: {
   return input.billingMethod !== "wallet";
 }
 
+/** Crypto collection owns invoices. A leftover Stripe invoice.paid must not record or commission. */
+export function stripeInvoicePaidApplies(
+  billingMethod: BillingMethod | null,
+): boolean {
+  return billingMethod !== "wallet";
+}
+
+export function cardUpgradeIntentReady(status: string): boolean {
+  return status === "succeeded";
+}
+
 export function applySubscriptionSnapshot(input: {
   customerId: string;
   subscriptionId: string | null;

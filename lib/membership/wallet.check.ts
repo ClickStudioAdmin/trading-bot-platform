@@ -80,6 +80,13 @@ assert.deepEqual(
   ]),
   { main: 60, affiliate: 0 },
 );
+assert.deepEqual(
+  bookBalancesFromEntries([
+    { kind: "commission", amountUsd: 10, book: "affiliate" },
+    { kind: "adjust", amountUsd: -10, book: "affiliate" },
+  ]),
+  { main: 0, affiliate: 0 },
+);
 assert.equal(accountBalancePendingWithdrawNote(0), null);
 assert.equal(
   accountBalancePendingWithdrawNote(40),

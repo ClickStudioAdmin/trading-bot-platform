@@ -6,6 +6,7 @@ import {
   invoiceStatusLabel,
   matchOpenRenewalInvoice,
   openInvoiceIsCollectible,
+  openInvoiceShouldVoidOnMethodChange,
   renewalAlreadyCovered,
   renewalCycleFromPeriodEnd,
   renewalExternalId,
@@ -115,5 +116,7 @@ assert.equal(
 );
 assert.equal(invoiceStatusLabel("open"), "Unpaid");
 assert.equal(invoiceStatusLabel("paid"), "Paid");
+assert.equal(openInvoiceShouldVoidOnMethodChange("stripe", "wallet"), true);
+assert.equal(openInvoiceShouldVoidOnMethodChange("wallet", "wallet"), false);
 
 console.log("membership billing cycle checks passed");

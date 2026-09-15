@@ -4,7 +4,9 @@ import {
   applySubscriptionSnapshot,
   invoiceWriteFromPaid,
   isLiveStripeSubscriptionStatus,
+  cardUpgradeIntentReady,
   stripeCollectionSyncAction,
+  stripeInvoicePaidApplies,
   stripeWebhookAppliesToMember,
   walletStripeWebhookAction,
 } from "./stripe-apply";
@@ -134,5 +136,9 @@ assert.equal(
   }),
   true,
 );
+assert.equal(stripeInvoicePaidApplies("wallet"), false);
+assert.equal(stripeInvoicePaidApplies("stripe"), true);
+assert.equal(cardUpgradeIntentReady("succeeded"), true);
+assert.equal(cardUpgradeIntentReady("requires_action"), false);
 
 console.log("membership stripe-apply checks passed");

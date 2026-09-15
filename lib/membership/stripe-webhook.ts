@@ -10,7 +10,10 @@ import {
   saveBillingMethod,
   saveStripeCustomerIds,
 } from "./billing-store";
-import { markOpenStripeInvoicePaid } from "./billing-cycle-store";
+import {
+  markOpenStripeInvoicePaid,
+  voidOpenInvoices,
+} from "./billing-cycle-store";
 import { switchToCardTrialEnd } from "./billing";
 import { getMembershipPlan, getMembershipPlanByStripePriceId } from "./store";
 import { getStripe, isStripeMissingResource } from "./stripe";
@@ -19,6 +22,7 @@ import {
   invoiceWriteFromPaid,
   isLiveStripeSubscriptionStatus,
   stripeCollectionSyncAction,
+  stripeInvoicePaidApplies,
 } from "./stripe-apply";
 
 export async function handleStripeEvent(
@@ -445,6 +449,20 @@ async function handleInvoicePaid(
     (await getMemberBillingByCustomer(customerId)) ??
     (await memberFromInvoice(invoice));
   if (!member) {
+    return { ok: true };
+  }
+  if (!stripeInvoicePaidApplies(member.billingMethod)) {
+    const voided = await voidOpenInvoices(member.userId, "stripe");
+    if (!voided.ok) {
+      return voided;
+    }
+    await writeEventLog({
+      scope: "system",
+      event: "membership.invoice_paid",
+      message: "Ignored Stripe invoice.paid; Crypto collection is saved",
+      userId: member.userId,
+      data: { invoiceId: invoice.id, voided: voided.voided },
+    });
     return { ok: true };
   }
   const priceId = invoicePriceId(invoice);

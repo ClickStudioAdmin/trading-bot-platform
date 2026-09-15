@@ -12,11 +12,12 @@ import {
   affiliateRateKeyForLevel,
   autoPayoutDecision,
   canCreateCommissionInvoice,
+  commissionReversalUsd,
   commissionUsd,
+  countsTowardEarnedCommission,
   generateAffiliateLinkSlug,
   generateReferralCode,
   holdUntilIso,
-  pickCommissionsForPayout,
   parseAffiliateCookieDays,
   parseAffiliateHoldDays,
   parseAffiliateLabel,
@@ -231,7 +232,7 @@ const PAYOUT_FILE_COLUMNS =
   "id, network, status, amount_usd, payout_count, external_id, created_at, paid_at";
 const PAYOUT_FILE_COLUMNS_FULL = `${PAYOUT_FILE_COLUMNS}, book`;
 
-async function mainBookUsd(userId: string): Promise<number> {
+async function bookUsd(userId: string, book: WalletBook): Promise<number> {
   const supabase = createServiceClient();
   if (!supabase) {
     return 0;
@@ -246,7 +247,7 @@ async function mainBookUsd(userId: string): Promise<number> {
       amountUsd: Number(row.amount_usd),
       book: typeof row.book === "string" ? row.book : null,
     })),
-  ).main;
+  )[book];
 }
 
 function optionalId(value: unknown): string | null {
@@ -747,6 +748,96 @@ export async function voidPendingCommissionsForInvoice(
   return { ok: true };
 }
 
+export async function reverseCommissionsForInvoice(
+  invoiceId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const pending = await voidPendingCommissionsForInvoice(invoiceId);
+  if (!pending.ok) {
+    return pending;
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { data, error } = await supabase
+    .from("membership_commissions")
+    .select(
+      "id, earner_user_id, source_user_id, invoice_id, rate_plan_id, campaign_id, link_id, level, rate_pct, amount_usd, status, hold_until",
+    )
+    .eq("invoice_id", invoiceId)
+    .in("status", ["payable", "paid"]);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  for (const row of data ?? []) {
+    const amountUsd = Number(row.amount_usd);
+    if (!(amountUsd >= 0.01)) {
+      continue;
+    }
+    const originalId = String(row.id);
+    const reversalUsd = commissionReversalUsd(amountUsd);
+    const { data: existing } = await supabase
+      .from("membership_commissions")
+      .select("id")
+      .eq("invoice_id", invoiceId)
+      .eq("earner_user_id", row.earner_user_id)
+      .eq("level", row.level)
+      .lt("amount_usd", 0)
+      .maybeSingle();
+    if (!existing) {
+      const payload: Record<string, unknown> = {
+        earner_user_id: row.earner_user_id,
+        source_user_id: row.source_user_id,
+        invoice_id: invoiceId,
+        rate_plan_id: row.rate_plan_id,
+        level: row.level,
+        rate_pct: row.rate_pct,
+        amount_usd: reversalUsd,
+        status: "void",
+        hold_until: row.hold_until,
+      };
+      if (row.campaign_id) {
+        payload.campaign_id = row.campaign_id;
+      }
+      if (row.link_id) {
+        payload.link_id = row.link_id;
+      }
+      let inserted = await supabase.from("membership_commissions").insert(payload);
+      if (inserted.error && schemaGap(inserted.error)) {
+        delete payload.campaign_id;
+        delete payload.link_id;
+        inserted = await supabase.from("membership_commissions").insert(payload);
+      }
+      if (inserted.error && inserted.error.code !== "23505") {
+        return { ok: false, error: inserted.error.message };
+      }
+    }
+    const externalId = `commission-reversal:${originalId}`;
+    const { data: walletExisting } = await supabase
+      .from("membership_wallet_entries")
+      .select("id")
+      .eq("external_id", externalId)
+      .maybeSingle();
+    if (walletExisting) {
+      continue;
+    }
+    const { error: walletError } = await supabase
+      .from("membership_wallet_entries")
+      .insert({
+        user_id: String(row.earner_user_id),
+        book: "affiliate",
+        kind: "adjust",
+        amount_usd: reversalUsd,
+        external_id: externalId,
+        memo: "Commission reversal",
+      });
+    if (walletError && walletError.code !== "23505") {
+      return { ok: false, error: walletError.message };
+    }
+  }
+  return { ok: true };
+}
+
 export async function listQueuedCommissionIds(): Promise<Set<string>> {
   const supabase = createServiceClient();
   const queued = new Set<string>();
@@ -763,8 +854,7 @@ export async function listQueuedCommissionIds(): Promise<Set<string>> {
 }
 
 export async function sumPayableAffiliateUsd(userId: string): Promise<number> {
-  const payable = await listPayableCommissions(userId);
-  return roundUsd(payable.reduce((sum, row) => sum + row.amountUsd, 0));
+  return bookUsd(userId, "affiliate");
 }
 
 export async function listPayableCommissions(
@@ -835,27 +925,17 @@ export async function requestUsdtPayout(input: {
   }
   const book = input.book ?? "affiliate";
   const amountUsd = roundUsd(input.amountUsd);
-  let items: Awaited<ReturnType<typeof listPayableCommissions>> = [];
-  if (book === "affiliate") {
-    const payable = await listPayableCommissions(input.userId);
-    const payableUsd = roundUsd(
-      payable.reduce((sum, row) => sum + row.amountUsd, 0),
-    );
-    if (payableUsd < 0.01) {
-      return { ok: false, error: "No payable earnings are ready to withdraw." };
-    }
-    items = pickCommissionsForPayout(payable, amountUsd);
-    const allocated = roundUsd(
-      items.reduce((sum, row) => sum + row.amountUsd, 0),
-    );
-    if (allocated + 1e-9 < amountUsd) {
-      return { ok: false, error: "That amount is not available to withdraw." };
-    }
-  } else {
-    const available = await mainBookUsd(input.userId);
-    if (available + 1e-9 < amountUsd) {
-      return { ok: false, error: "That amount is not available to withdraw." };
-    }
+  const available = await bookUsd(input.userId, book);
+  if (available + 1e-9 < amountUsd) {
+    return {
+      ok: false,
+      error:
+        book === "affiliate"
+          ? available < 0.01
+            ? "No payable earnings are ready to withdraw."
+            : "That amount is not available to withdraw."
+          : "That amount is not available to withdraw.",
+    };
   }
   let inserted = await supabase
     .from("membership_payouts")
@@ -889,20 +969,6 @@ export async function requestUsdtPayout(input: {
     return { ok: false, error: error?.message ?? "Could not request payout." };
   }
   const payoutId = String(data.id);
-  if (items.length > 0) {
-    const { error: itemError } = await supabase
-      .from("membership_payout_items")
-      .insert(
-        items.map((row) => ({
-          payout_id: payoutId,
-          commission_id: row.id,
-        })),
-      );
-    if (itemError) {
-      await supabase.from("membership_payouts").delete().eq("id", payoutId);
-      return { ok: false, error: itemError.message };
-    }
-  }
   const { error: walletError } = await supabase
     .from("membership_wallet_entries")
     .insert({
@@ -975,15 +1041,12 @@ export async function saveAffiliatePayoutSettings(input: {
 export async function maybeAutoAffiliatePayout(
   userId: string,
 ): Promise<{ ok: true; payoutId?: string } | { ok: false; error: string }> {
-  const [saved, program, arrears, payable] = await Promise.all([
+  const [saved, program, arrears, payableUsd] = await Promise.all([
     loadAffiliatePayoutSettings(userId),
     loadAffiliateSettings(),
     loadMemberArrears(userId),
-    listPayableCommissions(userId),
+    sumPayableAffiliateUsd(userId),
   ]);
-  const payableUsd = roundUsd(
-    payable.reduce((sum, row) => sum + row.amountUsd, 0),
-  );
   const decision = autoPayoutDecision({
     autoPayout: saved.autoPayout,
     autoPayoutUsd: saved.autoPayoutUsd,
@@ -1963,12 +2026,7 @@ export async function loadAffiliatePortal(
       .filter((row) => row.status === "pending")
       .reduce((sum, row) => sum + row.amountUsd, 0),
   );
-  const payableUsd = roundUsd(
-    (await listPayableCommissions(userId)).reduce(
-      (sum, row) => sum + row.amountUsd,
-      0,
-    ),
-  );
+  const payableUsd = await sumPayableAffiliateUsd(userId);
   const paidOutUsd = roundUsd(
     payouts
       .filter((row) => row.status === "paid")
@@ -1978,14 +2036,15 @@ export async function loadAffiliatePortal(
   const periodStart = Date.now() - 30 * 86_400_000;
   const earnedAllUsd = roundUsd(
     commissions
-      .filter((row) => row.status !== "void")
+      .filter((row) => countsTowardEarnedCommission(row))
       .reduce((sum, row) => sum + row.amountUsd, 0),
   );
   const earnedPeriodUsd = roundUsd(
     commissions
       .filter(
         (row) =>
-          row.status !== "void" && Date.parse(row.createdAt) >= periodStart,
+          countsTowardEarnedCommission(row) &&
+          Date.parse(row.createdAt) >= periodStart,
       )
       .reduce((sum, row) => sum + row.amountUsd, 0),
   );

@@ -14,7 +14,7 @@ export type AdminInvoice = MembershipInvoice & {
 };
 import {
   createCommissionsForInvoice,
-  voidPendingCommissionsForInvoice,
+  reverseCommissionsForInvoice,
 } from "./affiliate-store";
 import {
   getDefaultMembershipPlan,
@@ -346,7 +346,7 @@ export async function markStripeInvoiceRefunded(
     return { ok: false, error: error.message };
   }
   if (data?.id) {
-    return voidPendingCommissionsForInvoice(String(data.id));
+    return reverseCommissionsForInvoice(String(data.id));
   }
   return { ok: true };
 }

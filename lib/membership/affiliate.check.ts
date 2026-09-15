@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
   canCreateCommissionInvoice,
+  commissionReversalUsd,
   commissionUsd,
+  countsTowardEarnedCommission,
   conversionPct,
   generateReferralCode,
   holdHasElapsed,
@@ -116,6 +118,19 @@ assert.equal(
   parseProgramDefaultRates({ l1: 80, l2: 20, l3: 1, l4: 0, l5: 0 }).ok,
   false,
 );
+assert.equal(
+  countsTowardEarnedCommission({ status: "payable", amountUsd: 10 }),
+  true,
+);
+assert.equal(
+  countsTowardEarnedCommission({ status: "void", amountUsd: 10 }),
+  false,
+);
+assert.equal(
+  countsTowardEarnedCommission({ status: "void", amountUsd: -10 }),
+  true,
+);
+assert.equal(commissionReversalUsd(12.5), -12.5);
 assert.equal(affiliateRateSource({ platformMember: false, pastDue: false }), "program");
 assert.equal(affiliateRateSource({ platformMember: true, pastDue: true }), "program");
 assert.equal(affiliateRateSource({ platformMember: true, pastDue: false }), "plan");

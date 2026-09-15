@@ -41,8 +41,8 @@ import { parseUuid } from "./wallet-form";
 import {
   approvePayout,
   generatePayoutFiles,
-  listPayableCommissions,
   loadAffiliateSettings,
+  sumPayableAffiliateUsd,
   loadMemberArrears,
   markPayoutFilePaid,
   markPayoutPaid,
@@ -326,8 +326,7 @@ export async function requestAffiliatePayoutAction(formData: FormData) {
     portalFail(amount.error, "payouts");
   }
   const arrears = await loadMemberArrears(member.id);
-  const payable = await listPayableCommissions(member.id);
-  const payableUsd = payable.reduce((sum, row) => sum + row.amountUsd, 0);
+  const payableUsd = await sumPayableAffiliateUsd(member.id);
   const allowed = withdrawDecision({
     arrears,
     payableUsd,

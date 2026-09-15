@@ -24,7 +24,8 @@ import {
   saveBillingMethod,
   saveStripeCustomerIds,
 } from "./billing-store";
-import { invoiceWriteFromPaid } from "./stripe-apply";
+import { cardUpgradeIntentReady, invoiceWriteFromPaid } from "./stripe-apply";
+import { reconcileOpenInvoicesAfterMethodChange } from "./billing-cycle-store";
 import { parsePlanId } from "./form";
 import { getMembershipPlan } from "./store";
 import { billingOrigin, getStripe, stripeSecretConfigured } from "./stripe";
@@ -138,6 +139,13 @@ async function commitCollectionMethod(
   const saved = await saveBillingMethod(userId, method, extras);
   if (!saved.ok) {
     return saved;
+  }
+  const reconciled = await reconcileOpenInvoicesAfterMethodChange(
+    userId,
+    method,
+  );
+  if (!reconciled.ok) {
+    return reconciled;
   }
   if (method === "stripe" && !synced.live) {
     return ensureCardSwitchSubscription(userId);
@@ -355,7 +363,7 @@ export async function confirmStripePlanChangeAction(formData: FormData) {
           idempotencyKey: `upgrade-pi:${member.id}:${planId}:${charge.kind === "upgrade" ? charge.periodEnd : "initial"}`,
         },
       );
-      if (intent.status !== "succeeded") {
+      if (!cardUpgradeIntentReady(intent.status)) {
         failCheckout(
           planId,
           "Card payment did not complete. Update the card and try again.",
@@ -366,7 +374,7 @@ export async function confirmStripePlanChangeAction(formData: FormData) {
         charge.kind === "upgrade"
           ? Math.floor(Date.parse(charge.periodEnd) / 1000)
           : nowSec;
-      await recordStripeInvoice(
+      const recorded = await recordStripeInvoice(
         member.id,
         planId,
         invoiceWriteFromPaid({
@@ -376,6 +384,9 @@ export async function confirmStripePlanChangeAction(formData: FormData) {
           periodEnd: periodEndSec,
         }),
       );
+      if (!recorded.ok) {
+        failCheckout(planId, recorded.error);
+      }
     }
     if (hasSub && itemId && priceId && billing.stripeSubscriptionId) {
       await stripe.subscriptions.update(billing.stripeSubscriptionId, {

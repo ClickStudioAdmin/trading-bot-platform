@@ -456,6 +456,18 @@ export function canCreateCommissionInvoice(input: {
   );
 }
 
+/** Voided pending originals drop out. Negative reversal rows still count. */
+export function countsTowardEarnedCommission(input: {
+  status: string;
+  amountUsd: number;
+}): boolean {
+  return !(input.status === "void" && input.amountUsd >= 0);
+}
+
+export function commissionReversalUsd(amountUsd: number): number {
+  return roundUsd(-Math.abs(amountUsd));
+}
+
 export type UplineHop = {
   userId: string;
   referrerUserId: string;

@@ -119,6 +119,13 @@ export function matchOpenRenewalInvoice(
   return null;
 }
 
+export function openInvoiceShouldVoidOnMethodChange(
+  invoiceMethod: string,
+  savedMethod: string,
+): boolean {
+  return invoiceMethod !== savedMethod;
+}
+
 export function invoiceStatusLabel(status: string): string {
   if (status === "open") {
     return "Unpaid";
