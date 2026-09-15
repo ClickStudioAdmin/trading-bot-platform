@@ -47,7 +47,7 @@ assert.equal(creditedDepositsNotice(1), "Credited 1 deposit to Account Balance."
 assert.equal(creditedDepositsNotice(3), "Credited 3 deposits to Account Balance.");
 assert.equal(
   checkoutPartialCreditNotice("$19.99"),
-  "Deposit added to Account Balance. Due Today still needs $19.99.",
+  "Deposit added to account balance. Shortfall of $19.99 still required for payment.",
 );
 assert.equal(depositCreditIsFresh("2026-09-15T02:00:00.000Z", Date.parse("2026-09-15T02:00:01.000Z")), true);
 assert.equal(depositCreditIsFresh("2026-09-15T01:00:00.000Z", Date.parse("2026-09-15T02:00:00.000Z")), false);

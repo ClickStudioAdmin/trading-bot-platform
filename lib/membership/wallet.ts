@@ -66,7 +66,7 @@ export function depositCreditIsFresh(
 }
 
 export function checkoutPartialCreditNotice(remainingUsdLabel: string): string {
-  return `Deposit added to Account Balance. Due Today still needs ${remainingUsdLabel}.`;
+  return `Deposit added to account balance. Shortfall of ${remainingUsdLabel} still required for payment.`;
 }
 
 export function hasMainWalletCredit(mainUsd: number): boolean {

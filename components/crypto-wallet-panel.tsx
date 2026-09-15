@@ -375,10 +375,6 @@ export function CryptoWalletPanel({
                   <dd className="tabular-nums text-ink">
                     {formatUsd(planPriceUsd)}
                   </dd>
-                </>
-              ) : null}
-              {shortUsd >= 0.01 ? (
-                <>
                   <dt className="text-ink-muted">Account shortfall:</dt>
                   <dd className="tabular-nums text-ink">
                     {formatUsd(shortUsd)}

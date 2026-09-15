@@ -1,6 +1,8 @@
 import { deskIsCopy, parseDeskQuery, parseDeskType } from "@/lib/accounts/model";
 import { runCashAndCarryDeskTick } from "@/lib/engine/cash-and-carry-tick";
 import {
+  ENGINE_BILLING_DEPOSIT_SCAN_KEY,
+  ENGINE_BILLING_DEPOSIT_TTL_SECONDS,
   ENGINE_CLAIM_BATCH,
   ENGINE_DESK_CONCURRENCY,
   ENGINE_HOT_CLAIM_BATCH,
@@ -40,6 +42,7 @@ import { writeEventLog } from "@/lib/logs/write";
 import { processOneQueuedBacktest } from "@/lib/backtest/execute";
 import { BACKTEST_VERCEL_BAR_LIMIT } from "@/lib/backtest/model";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
+import { watchMembershipDeposits } from "@/lib/membership/watch-deposits";
 import { createServiceClient } from "@/lib/supabase/admin";
 
 export type EngineCycleStats = {
@@ -172,6 +175,9 @@ export async function runEngineCycle(
       flyWorker ? undefined : BACKTEST_VERCEL_BAR_LIMIT,
     );
   }
+  if (maxMs === undefined || Date.now() - started < maxMs) {
+    await watchBillingDeposits(workerId);
+  }
 
   if (!options?.silent) {
     await writeEventLog({
@@ -193,6 +199,41 @@ export async function runEngineCycle(
     });
   }
   return stats;
+}
+
+async function watchBillingDeposits(workerId: string): Promise<void> {
+  const won = await tryClaimEngineScan({
+    workerId,
+    scanKey: ENGINE_BILLING_DEPOSIT_SCAN_KEY,
+    ttlSeconds: ENGINE_BILLING_DEPOSIT_TTL_SECONDS,
+  });
+  if (!won) {
+    return;
+  }
+  try {
+    const watched = await watchMembershipDeposits({ advanceCursor: true });
+    await writeEventLog({
+      scope: "system",
+      event: "membership.deposit_watched",
+      message: `Engine scanned deposits: ${watched.credited} credited, ${watched.swept} swept`,
+      data: {
+        workerId,
+        scanned: watched.scanned,
+        credited: watched.credited,
+        swept: watched.swept,
+        errors: watched.errors.slice(0, 5),
+      },
+    });
+  } catch (cause) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "membership.deposit_watched",
+      message:
+        cause instanceof Error ? cause.message : "Deposit watch failed",
+      data: { workerId },
+    });
+  }
 }
 
 async function loadSharedMarket(input: {
