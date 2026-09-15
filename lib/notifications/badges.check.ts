@@ -84,6 +84,7 @@ assert.deepEqual(
     accountShortfall: true,
     copyInvite: 2,
     updateCard: true,
+    deskCritical: 1,
   }),
   [
     {
@@ -93,6 +94,10 @@ assert.deepEqual(
     {
       label: "Account Balance is short for your next payment.",
       href: "/account/billing?tab=wallet",
+    },
+    {
+      label: "One live desk has a critical issue.",
+      href: "/account",
     },
     {
       label: "2 copy invites are waiting.",

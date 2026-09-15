@@ -38,6 +38,14 @@ export async function writeEventLog(input: EventLogInput): Promise<void> {
       strategy: input.strategy ?? null,
       data: redactLogData(input.data ?? {}),
     });
+    try {
+      const { notifyFromCriticalLog } = await import(
+        "@/lib/notifications/critical"
+      );
+      await notifyFromCriticalLog({ ...input, message });
+    } catch {
+      // Notices must never break the action that produced the event.
+    }
   } catch {
     // Logging must never break the action that produced the event.
   }

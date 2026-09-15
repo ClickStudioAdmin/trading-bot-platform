@@ -54,6 +54,7 @@ export default async function AccountOverviewPage() {
     accountShortfall: chrome.actions.accountShortfall > 0,
     copyInvite: chrome.actions.copyInvite,
     updateCard: chrome.actions.updateCard > 0,
+    deskCritical: chrome.actions.deskCritical,
   });
 
   return (

@@ -65,6 +65,13 @@ assert.ok(
   eventLogOptionsForScopes(["system"]).includes("membership.gas_drip"),
 );
 assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("membership.sweep_failed"),
+);
+assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("membership.gas_low"),
+);
+assert.ok(eventLogOptionsForScopes(["trade"]).includes("dca.sync_failed"));
+assert.ok(
   eventLogOptionsForScopes(["system"]).includes("membership.affiliate_settings"),
 );
 assert.ok(

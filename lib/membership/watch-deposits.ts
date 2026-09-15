@@ -128,6 +128,18 @@ async function creditLog(input: {
     derivationIndex: dest.derivationIndex,
     amount: parsed.amount,
   });
+  if (!swept.ok) {
+    const { notifySweepFailed } = await import("@/lib/notifications/critical");
+    try {
+      await notifySweepFailed({
+        depositTxId: `${input.chain.id}:${parsed.txHash}:${parsed.logIndex}`,
+        chainName: input.chain.name,
+        detail: swept.error,
+      });
+    } catch {
+      // Notices must never block deposit credit.
+    }
+  }
   if (swept.ok) {
     await markDepositSwept(
       input.chain.id,
@@ -151,7 +163,7 @@ async function creditLog(input: {
   await writeEventLog({
     level: "warning",
     scope: "system",
-    event: "membership.deposit_swept",
+    event: "membership.sweep_failed",
     message: `Sweep skipped: ${swept.error}`,
     userId: dest.userId,
     data: { chainId: input.chain.id, depositTx: parsed.txHash },
@@ -320,10 +332,22 @@ async function sweepOpenCredits(input: {
       amount,
     });
     if (!swept.ok) {
+      try {
+        const { notifySweepFailed } = await import(
+          "@/lib/notifications/critical"
+        );
+        await notifySweepFailed({
+          depositTxId: `${chain.id}:${row.txHash}:${row.logIndex}`,
+          chainName: chain.name,
+          detail: swept.error,
+        });
+      } catch {
+        // Notices must never block a sweep retry.
+      }
       await writeEventLog({
         level: "warning",
         scope: "system",
-        event: "membership.deposit_swept",
+        event: "membership.sweep_failed",
         message: `Sweep retry skipped: ${swept.error}`,
         userId: dest.userId,
         data: { chainId: chain.id, depositTx: row.txHash },

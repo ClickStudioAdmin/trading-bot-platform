@@ -1,6 +1,7 @@
 import type { Hex } from "viem";
 import { writeEventLog } from "@/lib/logs/write";
-import { dripNeededWei, gasWalletCanCover } from "./gas-drip";
+import { notifyGasLow } from "@/lib/notifications/critical";
+import { dripNeededWei, formatEthAmount, gasWalletCanCover } from "./gas-drip";
 import { sweepReceiptSucceeded } from "./sweep-receipt";
 import {
   billingPublicClient,
@@ -8,8 +9,12 @@ import {
   billingWalletFromPrivateKey,
   ERC20_ABI,
 } from "./rpc";
-import type { BillingChain, BillingToken } from "./wallet-store";
-import { loadGasPrivateKey } from "./wallet-store";
+import {
+  getGasWalletStatus,
+  loadGasPrivateKey,
+  type BillingChain,
+  type BillingToken,
+} from "./wallet-store";
 
 const FALLBACK_SWEEP_COST_WEI = BigInt("200000000000000");
 const FALLBACK_DRIP_TX_WEI = BigInt("30000000000000");
@@ -95,6 +100,28 @@ async function fundDepositGas(input: {
       dripTxCostWei: dripTxCost,
     })
   ) {
+    const status = await getGasWalletStatus();
+    try {
+      await notifyGasLow({
+        chainId: input.chain.id,
+        chainName: input.chain.name,
+        balanceEth: formatEthAmount(gasBalance),
+        thresholdEth: status.lowEth,
+      });
+    } catch {
+      // Notices must never block a sweep.
+    }
+    await writeEventLog({
+      level: "warning",
+      scope: "system",
+      event: "membership.gas_low",
+      message: `Gas wallet low on ${input.chain.name}`,
+      data: {
+        chainId: input.chain.id,
+        balanceEth: formatEthAmount(gasBalance),
+        thresholdEth: status.lowEth,
+      },
+    });
     return {
       ok: false,
       error: `Gas wallet ${gasAddress} needs more ETH on ${input.chain.name} to drip gas.`,

@@ -5,19 +5,72 @@ export type NotificationPreferences = {
   disabledInApp: string[];
 };
 
+export type PlatformAlertSettings = {
+  disabledEmails: string[];
+  disabledBadges: string[];
+  demoBadgeCounts: Record<string, number>;
+};
+
 export async function loadPlatformDisabledEmails(): Promise<string[]> {
+  const settings = await loadPlatformAlertSettings();
+  return settings.disabledEmails;
+}
+
+export async function loadPlatformAlertSettings(): Promise<PlatformAlertSettings> {
+  const empty: PlatformAlertSettings = {
+    disabledEmails: [],
+    disabledBadges: [],
+    demoBadgeCounts: {},
+  };
   const supabase = createServiceClient();
   if (!supabase) {
-    return [];
+    return empty;
   }
-  const { data } = await supabase
+  const full = await supabase
     .from("platform_settings")
-    .select("disabled_emails")
+    .select("disabled_emails, disabled_badges, demo_badge_counts")
     .eq("id", "tbp")
     .maybeSingle();
-  return Array.isArray(data?.disabled_emails)
-    ? data.disabled_emails.map(String)
-    : [];
+  const data =
+    full.error || !full.data
+      ? (
+          await supabase
+            .from("platform_settings")
+            .select("disabled_emails")
+            .eq("id", "tbp")
+            .maybeSingle()
+        ).data
+      : full.data;
+  if (!data) {
+    return empty;
+  }
+  const row = data as {
+    disabled_emails?: unknown;
+    disabled_badges?: unknown;
+    demo_badge_counts?: unknown;
+  };
+  const demo =
+    row.demo_badge_counts &&
+    typeof row.demo_badge_counts === "object" &&
+    !Array.isArray(row.demo_badge_counts)
+      ? (row.demo_badge_counts as Record<string, unknown>)
+      : {};
+  const demoBadgeCounts: Record<string, number> = {};
+  for (const [key, value] of Object.entries(demo)) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) {
+      demoBadgeCounts[key] = Math.trunc(n);
+    }
+  }
+  return {
+    disabledEmails: Array.isArray(row.disabled_emails)
+      ? row.disabled_emails.map(String)
+      : [],
+    disabledBadges: Array.isArray(row.disabled_badges)
+      ? row.disabled_badges.map(String)
+      : [],
+    demoBadgeCounts,
+  };
 }
 
 export async function loadNotificationPreferences(
@@ -178,16 +231,33 @@ export async function saveNotificationPreferences(
 export async function savePlatformDisabledEmails(
   disabledEmails: string[],
 ): Promise<boolean> {
+  return savePlatformAlertSettings({ disabledEmails });
+}
+
+export async function savePlatformAlertSettings(input: {
+  disabledEmails?: string[];
+  disabledBadges?: string[];
+  demoBadgeCounts?: Record<string, number> | null;
+}): Promise<boolean> {
   const supabase = createServiceClient();
   if (!supabase) {
     return false;
   }
+  const patch: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+  if (input.disabledEmails) {
+    patch.disabled_emails = input.disabledEmails;
+  }
+  if (input.disabledBadges) {
+    patch.disabled_badges = input.disabledBadges;
+  }
+  if (input.demoBadgeCounts !== undefined) {
+    patch.demo_badge_counts = input.demoBadgeCounts ?? {};
+  }
   const { error } = await supabase
     .from("platform_settings")
-    .update({
-      disabled_emails: disabledEmails,
-      updated_at: new Date().toISOString(),
-    })
+    .update(patch)
     .eq("id", "tbp");
   return !error;
 }

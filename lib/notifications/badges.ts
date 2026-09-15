@@ -16,6 +16,12 @@ import {
   type AdminActionCounts,
   type MemberActionCounts,
 } from "./badge-model";
+import {
+  countAdminDeskCritical,
+  countGasLow,
+  countMemberDeskCritical,
+  countSweepFailed,
+} from "./critical";
 import { countUnreadUserNotifications } from "./store";
 
 export type { AdminActionCounts, MemberActionCounts };
@@ -107,13 +113,17 @@ export const loadMemberNotificationChrome = cache(
         ? 1
         : 0;
     const desk = deskActionCountsFromAttention({ accounts, binds });
+    const liveIds = accounts
+      .filter((account) => account.mode === "live")
+      .map((account) => account.id);
+    const deskCritical = await countMemberDeskCritical(userId, liveIds);
     return chromeFromMemberActions(
       {
         pastDue,
         accountShortfall: short,
         unboundLive: desk.unboundLive,
         sharedKey: desk.sharedKey,
-        deskCritical: 0,
+        deskCritical,
         copyInvite,
         updateCard: 0,
       },
@@ -124,19 +134,28 @@ export const loadMemberNotificationChrome = cache(
 
 export const loadAdminNotificationChrome = cache(
   async (): Promise<AdminNotificationChrome> => {
-    const [affiliatePayouts, walletWithdraws, pastDueMembers] =
-      await Promise.all([
-        countQueuedPayouts("affiliate"),
-        countQueuedPayouts("main"),
-        countPastDueMembers(),
-      ]);
+    const [
+      affiliatePayouts,
+      walletWithdraws,
+      pastDueMembers,
+      sweepFailed,
+      gasLow,
+      deskCritical,
+    ] = await Promise.all([
+      countQueuedPayouts("affiliate"),
+      countQueuedPayouts("main"),
+      countPastDueMembers(),
+      countSweepFailed(),
+      countGasLow(),
+      countAdminDeskCritical(),
+    ]);
     return chromeFromAdminActions({
       affiliatePayouts,
       walletWithdraws,
-      sweepFailed: 0,
-      gasLow: 0,
+      sweepFailed,
+      gasLow,
       pastDueMembers,
-      deskCritical: 0,
+      deskCritical,
     });
   },
 );

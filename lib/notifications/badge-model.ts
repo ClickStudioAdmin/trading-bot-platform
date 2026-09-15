@@ -103,6 +103,7 @@ export function notificationAttentionItems(input: {
   accountShortfall: boolean;
   copyInvite: number;
   updateCard: boolean;
+  deskCritical?: number;
 }): OverviewAttention[] {
   const items: OverviewAttention[] = [];
   if (input.pastDue) {
@@ -121,6 +122,17 @@ export function notificationAttentionItems(input: {
     items.push({
       label: "Account Balance is short for your next payment.",
       href: "/account/billing?tab=wallet",
+    });
+  }
+  if (input.deskCritical === 1) {
+    items.push({
+      label: "One live desk has a critical issue.",
+      href: "/account",
+    });
+  } else if (input.deskCritical && input.deskCritical > 1) {
+    items.push({
+      label: `${input.deskCritical} live desks have a critical issue.`,
+      href: "/account",
     });
   }
   if (input.copyInvite === 1) {
@@ -149,6 +161,7 @@ export function memberOverviewAttention(input: {
   accountShortfall: boolean;
   copyInvite: number;
   updateCard: boolean;
+  deskCritical?: number;
 }): OverviewAttention[] {
   return [
     ...notificationAttentionItems({
@@ -156,6 +169,7 @@ export function memberOverviewAttention(input: {
       accountShortfall: input.accountShortfall,
       copyInvite: input.copyInvite,
       updateCard: input.updateCard,
+      deskCritical: input.deskCritical,
     }),
     ...overviewAttentionItems({
       accounts: input.accounts,

@@ -10,13 +10,13 @@ Never trust the browser for payment status, desk health, or unread counts.
 
 ## Status
 
-Steps 1–5 in repo 16 Sep 2026 (docs, schema, catalog + `notify()`, inbox + badges, settings). Next is step 6 (wire commercial `notify()`). Push `develop` to migrate. Do not add Resend until step 8.
+Steps 1–5 and 7 in repo 16 Sep 2026. Step 6 (commercial `notify()`) is still open. Push `develop` to migrate. Do not add Resend until step 8.
 
 ## Purpose
 
 Members and admins see numbered badges for work they must do, plus an inbox of notices that can also go out as email. Admin and each login control the switches. Critical live-desk failures page and persist ([click-list.md](click-list.md) item 12).
 
-`desk_critical`, `update_card`, `sweep_failed`, and `gas_low` badge loaders return 0 until steps 6–7 write those signals.
+`update_card` badge stays 0 until step 6. `desk_critical`, `sweep_failed`, and `gas_low` are live from step 7.
 
 ## Current micro-step
 
@@ -28,7 +28,7 @@ Members and admins see numbered badges for work they must do, plus an inbox of n
 | 4 | Inbox + badges | Agent | `/account/notifications`, Overview widget, amber `NavBadge`. Header Inbox = unread only. Action counts stay on Overview / Billing / Affiliates. Extend Attention. Affiliate-only allowed on Inbox. Stop. **In repo 16 Sep 2026.** |
 | 5 | Settings | Agent | `/account/settings` Notifications tab (Email / In-app per event). `/admin/settings` Notifications tab (platform email kill switches + Sent to). Stop. **In repo 16 Sep 2026.** |
 | 6 | Wire commercial | Agent | `notify()` from billing, affiliate payouts, copy invites, password change. Stop. |
-| 7 | Wire critical + operator | Agent | Deduped live-desk critical, sweep fail, gas low, operator mail. Absorb click-list 12. Stop. |
+| 7 | Wire critical + operator | Agent | Deduped live-desk critical, sweep fail, gas low, operator mail. Absorb click-list 12. Stop. **In repo 16 Sep 2026.** |
 | 8 | Resend + desk test | Agent + Click | `RESEND_API_KEY` + `EMAIL_FROM` on Vercel and Fly (develop ≠ production). One `NoticeEmail` layout. Mute, unread, badge clear, no fill spam. Stop. |
 
 Stop after each micro-step until Click says go. Do not start entitlements, onboarding refine, or internal webhooks.

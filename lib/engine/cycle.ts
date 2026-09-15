@@ -281,6 +281,14 @@ async function watchBillingDeposits(workerId: string): Promise<void> {
   }
   try {
     const watched = await watchMembershipDeposits({ advanceCursor: true });
+    try {
+      const { watchOperatorGasWallets } = await import(
+        "@/lib/notifications/critical"
+      );
+      await watchOperatorGasWallets();
+    } catch {
+      // Gas notices must never block deposit watch.
+    }
     await writeEventLog({
       scope: "system",
       event: "membership.deposit_watched",
