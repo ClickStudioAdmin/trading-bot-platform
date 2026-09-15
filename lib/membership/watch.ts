@@ -112,3 +112,25 @@ export function scanWindow(input: {
       : floor + input.chunk - BigInt(1);
   return { fromBlock: floor, toBlock };
 }
+
+export function scanWindows(input: {
+  headBlock: bigint;
+  lastScanned: bigint | null;
+  lookback: bigint;
+  chunk: bigint;
+}): { fromBlock: bigint; toBlock: bigint }[] {
+  const windows: { fromBlock: bigint; toBlock: bigint }[] = [];
+  let lastScanned = input.lastScanned;
+  for (;;) {
+    const window = scanWindow({ ...input, lastScanned });
+    if (!window) {
+      break;
+    }
+    windows.push(window);
+    if (window.toBlock >= input.headBlock) {
+      break;
+    }
+    lastScanned = window.toBlock;
+  }
+  return windows;
+}

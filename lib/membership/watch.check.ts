@@ -5,6 +5,7 @@ import {
   padAddressTopic,
   parseErc20TransferLog,
   scanWindow,
+  scanWindows,
   topicAddress,
 } from "./watch";
 
@@ -46,6 +47,21 @@ assert.deepEqual(
     chunk: BigInt(20),
   }),
   { fromBlock: BigInt(91), toBlock: BigInt(100) },
+);
+assert.deepEqual(
+  scanWindows({
+    headBlock: BigInt(10000),
+    lastScanned: null,
+    lookback: BigInt(8000),
+    chunk: BigInt(2000),
+  }),
+  [
+    { fromBlock: BigInt(2000), toBlock: BigInt(3999) },
+    { fromBlock: BigInt(4000), toBlock: BigInt(5999) },
+    { fromBlock: BigInt(6000), toBlock: BigInt(7999) },
+    { fromBlock: BigInt(8000), toBlock: BigInt(9999) },
+    { fromBlock: BigInt(10000), toBlock: BigInt(10000) },
+  ],
 );
 
 console.log("membership watch checks passed");

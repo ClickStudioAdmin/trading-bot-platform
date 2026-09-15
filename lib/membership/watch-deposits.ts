@@ -17,7 +17,7 @@ import {
   ERC20_TRANSFER_TOPIC,
   padAddressTopic,
   parseErc20TransferLog,
-  scanWindow,
+  scanWindows,
 } from "./watch";
 import { tokenAmountToUsd } from "./wallet";
 import { sweepDepositToken } from "./sweep";
@@ -192,7 +192,7 @@ export async function watchMembershipDeposits(input: {
         if (token.kind !== "stable") {
           continue;
         }
-        let window = scanWindow({
+        const windows = scanWindows({
           headBlock: head,
           lastScanned: input.advanceCursor
             ? chain.lastScannedBlock === null
@@ -202,7 +202,7 @@ export async function watchMembershipDeposits(input: {
           lookback: LOOKBACK_BLOCKS,
           chunk: CHUNK_BLOCKS,
         });
-        while (window) {
+        for (const window of windows) {
           for (let i = 0; i < addresses.length; i += ADDRESS_CHUNK) {
             const slice = addresses.slice(i, i + ADDRESS_CHUNK);
             const logs = await logsForChunk({
@@ -242,15 +242,6 @@ export async function watchMembershipDeposits(input: {
               }
             }
           }
-          if (!input.advanceCursor || window.toBlock >= head) {
-            break;
-          }
-          window = scanWindow({
-            headBlock: head,
-            lastScanned: window.toBlock,
-            lookback: LOOKBACK_BLOCKS,
-            chunk: CHUNK_BLOCKS,
-          });
         }
       }
       if (input.advanceCursor) {
