@@ -19,6 +19,7 @@ import {
   formatUsd,
   resolveBillingCycle,
   BILLING_METHOD_LABELS,
+  billingMethodPriceNote,
   invoiceMethodLabel,
   hasUsableStripeSubscription,
   parseBillingMethod,
@@ -30,7 +31,10 @@ import {
 assert.equal(invoiceMethodLabel("stripe"), "Card");
 assert.equal(invoiceMethodLabel("wallet"), "Crypto");
 assert.equal(invoiceMethodLabel("comp"), "Comp");
-assert.equal(BILLING_METHOD_LABELS.wallet, "Crypto (account balance)");
+assert.equal(BILLING_METHOD_LABELS.wallet, "Crypto");
+assert.equal(billingMethodPriceNote("wallet"), "Crypto (account balance)");
+assert.equal(billingMethodPriceNote("stripe"), "Credit Card (Stripe)");
+assert.equal(billingMethodPriceNote(null), "—");
 assert.equal(parseBillingMethod("stripe"), "stripe");
 assert.equal(parseBillingMethod("wallet"), "wallet");
 assert.equal(parseBillingMethod("comp"), null);

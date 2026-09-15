@@ -16,8 +16,18 @@ export type BillingMethod = (typeof BILLING_METHODS)[number];
 
 export const BILLING_METHOD_LABELS: Record<BillingMethod, string> = {
   stripe: "Credit Card (Stripe)",
-  wallet: "Crypto (account balance)",
+  wallet: "Crypto",
 };
+
+export function billingMethodPriceNote(method: BillingMethod | null): string {
+  if (method === "wallet") {
+    return "Crypto (account balance)";
+  }
+  if (method === "stripe") {
+    return BILLING_METHOD_LABELS.stripe;
+  }
+  return "—";
+}
 
 export const CRYPTO_CREDIT_DEDUCT_LABEL =
   "Deduct payment from Affiliate earnings if required";

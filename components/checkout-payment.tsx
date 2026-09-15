@@ -15,7 +15,7 @@ import {
   useLiveMainWallet,
 } from "@/components/crypto-wallet-panel";
 import {
-  BILLING_METHOD_LABELS,
+  billingMethodPriceNote,
   formatUsd,
   type BillingMethod,
 } from "@/lib/membership/billing";
@@ -129,13 +129,14 @@ export function CheckoutPayment({
             <dt className="text-ink-muted">Due Today:</dt>
             <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
             <dt className="text-ink-muted">Then:</dt>
-            <dd className="text-ink">{planPrice}</dd>
-            {showMethodPicker ? null : (
-              <>
-                <dt className="text-ink-muted">Payment Method:</dt>
-                <dd className="text-ink">{BILLING_METHOD_LABELS[method]}</dd>
-              </>
-            )}
+            <dd className="text-ink">
+              {planPrice}
+              {showMethodPicker ? null : (
+                <span className="mt-1 block text-ink-muted">
+                  {billingMethodPriceNote(method)}
+                </span>
+              )}
+            </dd>
           </dl>
           {showMethodPicker ? (
             <div className="mt-5 border-t border-line pt-4">

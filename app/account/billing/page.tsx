@@ -4,7 +4,7 @@ import { SavedBillingMethodForm } from "@/components/billing-method-radios";
 import { PageHeading } from "@/components/page-heading";
 import { getSessionMember } from "@/lib/auth/session";
 import {
-  BILLING_METHOD_LABELS,
+  billingMethodPriceNote,
   billingPageLabel,
   billingPath,
   formatRemainingCycle,
@@ -249,9 +249,7 @@ export default async function AccountBillingPage({
                 {plan ? formatPlanPrice(plan.priceUsd) : "—"}
               </p>
               <p className="mt-1 text-sm text-ink-muted">
-                {billing.billingMethod
-                  ? BILLING_METHOD_LABELS[billing.billingMethod]
-                  : "—"}
+                {billingMethodPriceNote(billing.billingMethod)}
               </p>
             </div>
             <div>
