@@ -264,14 +264,6 @@ export function TopUpWallet({
               </dd>
             </dl>
             <CopyTextButton text={address.address} label="Copy address" />
-            {shortForCycle ? (
-              <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-                {METHOD_TOP_UP_SHORTFALL}
-              </p>
-            ) : null}
-            {instructions ? (
-              <p className="text-sm text-ink-muted">{instructions}</p>
-            ) : null}
           </div>
           <DepositAddressQr value={address.address} />
         </div>
@@ -280,6 +272,14 @@ export function TopUpWallet({
           {addressError ?? "Deposit address is not available yet."}
         </p>
       )}
+      {shortForCycle ? (
+        <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          {METHOD_TOP_UP_SHORTFALL}
+        </p>
+      ) : null}
+      {instructions ? (
+        <p className="text-sm text-ink-muted">{instructions}</p>
+      ) : null}
       {showCheck ? <CheckDepositButton checkout={checkout} /> : null}
         </>
       )}
