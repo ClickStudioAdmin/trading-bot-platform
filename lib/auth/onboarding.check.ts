@@ -19,6 +19,7 @@ assert.equal(pathAllowsAffiliateOnly("/affiliates"), true);
 assert.equal(pathAllowsAffiliateOnly("/r/AB12CD"), true);
 assert.equal(pathAllowsAffiliateOnly("/sign-up"), true);
 assert.equal(pathAllowsAffiliateOnly("/account/settings"), true);
+assert.equal(pathAllowsAffiliateOnly("/account/notifications"), true);
 assert.equal(pathAllowsAffiliateOnly("/welcome"), false);
 assert.equal(pathAllowsAffiliateOnly("/account"), false);
 assert.equal(pathAllowsAffiliateOnly("/account/billing"), false);

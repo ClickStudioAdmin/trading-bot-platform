@@ -24,13 +24,23 @@ import {
   loadWalletMinPayoutUsd,
 } from "@/lib/membership/wallet-store";
 import { firstSearchValue } from "@/lib/paper/open";
+import { AdminNotificationSettingsForm } from "@/components/notification-settings-form";
+import { savePlatformNotificationEmailsAction } from "@/lib/notifications/actions";
+import { adminSettingGroups } from "@/lib/notifications/settings";
+import { loadPlatformDisabledEmails } from "@/lib/notifications/store";
 
 export const metadata: Metadata = {
   title: "Admin settings",
   description: "System settings for Trading Bot Platform.",
 };
 
-const SETTINGS_TABS = ["general", "copy", "affiliates", "crypto"] as const;
+const SETTINGS_TABS = [
+  "general",
+  "copy",
+  "affiliates",
+  "crypto",
+  "notifications",
+] as const;
 type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 function parseSettingsTab(value: string | undefined): SettingsTab {
@@ -91,7 +101,7 @@ export default async function AdminSettingsPage({
       <p className="-mt-4 text-sm text-ink-muted">
         Desk-wide knobs. Members and logs stay in the menu.
       </p>
-      <nav aria-label="Settings" className="mt-5 flex border-b border-line">
+      <nav aria-label="Settings" className="mt-5 flex flex-wrap border-b border-line">
         <TabLink href="/admin/settings" selected={tab === "general"}>
           General
         </TabLink>
@@ -106,6 +116,12 @@ export default async function AdminSettingsPage({
         </TabLink>
         <TabLink href="/admin/settings?tab=crypto" selected={tab === "crypto"}>
           Crypto Wallets & Chains
+        </TabLink>
+        <TabLink
+          href="/admin/settings?tab=notifications"
+          selected={tab === "notifications"}
+        >
+          Notifications
         </TabLink>
       </nav>
 
@@ -625,7 +641,42 @@ export default async function AdminSettingsPage({
           })}
         </>
       ) : null}
+
+      {tab === "notifications" ? (
+        <NotificationsTab
+          saved={saved === "1"}
+          error={error === "notifications"}
+        />
+      ) : null}
     </div>
+  );
+}
+
+async function NotificationsTab({
+  saved,
+  error,
+}: {
+  saved: boolean;
+  error: boolean;
+}) {
+  const disabledEmails = await loadPlatformDisabledEmails();
+  return (
+    <>
+      {saved ? (
+        <p className="mt-6 text-sm text-success">Settings saved.</p>
+      ) : null}
+      {error ? (
+        <p className="mt-6 text-sm text-danger">
+          Could not save notification settings. Push develop so the
+          notifications migration is on this database.
+        </p>
+      ) : null}
+      <AdminNotificationSettingsForm
+        groups={adminSettingGroups()}
+        disabledEmails={disabledEmails}
+        action={savePlatformNotificationEmailsAction}
+      />
+    </>
   );
 }
 

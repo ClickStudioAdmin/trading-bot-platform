@@ -5,11 +5,15 @@ import { deskHomePath } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { AFFILIATES_PATH, WELCOME_PATH } from "@/lib/auth/onboarding-path";
 import { getSessionContext, getSessionMember } from "@/lib/auth/session";
+import { loadMemberNotificationChrome } from "@/lib/notifications/badges";
 
 export async function AppFrame({ children }: { children: React.ReactNode }) {
   const member = await getSessionMember();
   const session = await getSessionContext();
   const desks = member ? await listTradingAccounts(member.id) : [];
+  const chrome = member
+    ? await loadMemberNotificationChrome(member.id, member.platformMember)
+    : null;
   const appHref = session
     ? deskHomePath(session.account.deskType, session.account.id)
     : member
@@ -23,6 +27,15 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
       signedIn={Boolean(member)}
       platformMember={member?.platformMember === true}
       desks={desks}
+      badges={
+        chrome
+          ? {
+              "/account": chrome.overview,
+              "/account/notifications": chrome.inbox,
+              "/account/billing": chrome.billing,
+            }
+          : undefined
+      }
     >
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
         <SiteHeader />

@@ -138,7 +138,10 @@ export function inboxShouldInsert(input: {
 }
 
 export function resendConfigured(
-  env: { RESEND_API_KEY?: string; EMAIL_FROM?: string } = process.env,
+  env: { RESEND_API_KEY?: string | undefined; EMAIL_FROM?: string | undefined } = {
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    EMAIL_FROM: process.env.EMAIL_FROM,
+  },
 ): boolean {
   return Boolean(
     String(env.RESEND_API_KEY ?? "").trim() && String(env.EMAIL_FROM ?? "").trim(),

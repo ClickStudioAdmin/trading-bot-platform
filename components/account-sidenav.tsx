@@ -23,14 +23,17 @@ import {
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { upgradeAffiliateToPlatformAction } from "@/lib/membership/affiliate-actions";
+import { NavBadge } from "@/components/nav-badge";
 import { ACCOUNT_DESK_LINKS, AFFILIATE_ONLY_LINKS } from "@/lib/site-links";
 
 export function AccountSidenav({
   desks,
   platformMember,
+  badges = {},
 }: {
   desks: TradingAccount[];
   platformMember: boolean;
+  badges?: Record<string, number>;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -54,6 +57,7 @@ export function AccountSidenav({
         ariaLabel="Account"
         links={platformMember ? ACCOUNT_DESK_LINKS : AFFILIATE_ONLY_LINKS}
         pathname={pathname}
+        badges={badges}
       />
       {!platformMember ? (
         <div className="mt-5">
@@ -289,12 +293,14 @@ function NavGroup({
   ariaLabel,
   links,
   pathname,
+  badges,
   className,
 }: {
   label: string;
   ariaLabel: string;
   links: readonly { href: string; label: string; exact?: boolean }[];
   pathname: string;
+  badges?: Record<string, number>;
   className?: string;
 }) {
   return (
@@ -315,13 +321,14 @@ function NavGroup({
             <Link
               key={link.href}
               href={link.href}
-              className={`rounded-control px-3 py-1.5 text-sm ${
+              className={`flex items-center justify-between gap-2 rounded-control px-3 py-1.5 text-sm ${
                 active
                   ? "bg-surface-raised text-ink"
                   : "text-ink-faint hover:bg-surface-raised hover:text-ink"
               }`}
             >
-              {link.label}
+              <span>{link.label}</span>
+              <NavBadge count={badges?.[link.href] ?? 0} />
             </Link>
           );
         })}

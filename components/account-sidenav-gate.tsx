@@ -10,11 +10,13 @@ export function AccountSidenavGate({
   signedIn,
   platformMember,
   desks,
+  badges,
   children,
 }: {
   signedIn: boolean;
   platformMember: boolean;
   desks: TradingAccount[];
+  badges?: Record<string, number>;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -29,7 +31,11 @@ export function AccountSidenavGate({
   return (
     <div className="flex min-h-dvh">
       <Suspense>
-        <AccountSidenav desks={desks} platformMember={platformMember} />
+        <AccountSidenav
+          desks={desks}
+          platformMember={platformMember}
+          badges={badges}
+        />
       </Suspense>
       {children}
     </div>

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AccountSnapshotBody } from "@/components/account-snapshot";
+import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
-import { overviewAttentionItems } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { getSessionContext } from "@/lib/auth/session";
 import { loadAccountSnapshots } from "@/lib/exchanges/account-snapshot";
@@ -15,6 +15,11 @@ import {
   listConnectionDeskBinds,
   listExchangeConnections,
 } from "@/lib/exchanges/store";
+import {
+  loadMemberNotificationChrome,
+  memberOverviewAttention,
+} from "@/lib/notifications/badges";
+import { listUserNotifications } from "@/lib/notifications/store";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -38,7 +43,18 @@ export default async function AccountOverviewPage() {
     session.member.id,
     connections.map((row) => row.id),
   );
-  const attention = overviewAttentionItems({ accounts, binds });
+  const [chrome, notices] = await Promise.all([
+    loadMemberNotificationChrome(session.member.id, true),
+    listUserNotifications(session.member.id, 5),
+  ]);
+  const attention = memberOverviewAttention({
+    accounts,
+    binds,
+    pastDue: chrome.actions.pastDue > 0,
+    accountShortfall: chrome.actions.accountShortfall > 0,
+    copyInvite: chrome.actions.copyInvite,
+    updateCard: chrome.actions.updateCard > 0,
+  });
 
   return (
     <div className="space-y-8">
@@ -81,6 +97,45 @@ export default async function AccountOverviewPage() {
             </ul>
           )}
         </div>
+      </section>
+
+      <section className="rounded-card border border-line bg-surface p-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Notices</h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              Recent inbox rows. Required-action counts stay on Attention until
+              the work is done.
+            </p>
+          </div>
+          <Link
+            href="/account/notifications"
+            className="text-sm text-accent hover:text-accent-strong"
+          >
+            Inbox
+          </Link>
+        </div>
+        {notices.length === 0 ? (
+          <p className="mt-4 text-sm text-ink-muted">No notices yet.</p>
+        ) : (
+          <ul className="mt-4 divide-y divide-line">
+            {notices.map((row) => (
+              <li key={row.id} className="py-3 first:pt-0 last:pb-0">
+                <Link
+                  href={row.href}
+                  className={`text-sm hover:text-accent ${
+                    row.readAt ? "text-ink-muted" : "text-ink"
+                  }`}
+                >
+                  {row.title}
+                </Link>
+                <p className="mt-1 text-xs text-ink-faint">
+                  <LocalTime at={row.createdAt} />
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="rounded-card border border-line bg-surface p-5">

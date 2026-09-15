@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NavBadge } from "@/components/nav-badge";
 import {
   AFFILIATE_ONLY_HEADER_LINKS,
   HEADER_LINKS,
@@ -87,12 +88,29 @@ export function HeaderBrowseLinks({
   );
 }
 
-export function HeaderAdminLink() {
+export function HeaderAdminLink({ count = 0 }: { count?: number }) {
   const pathname = usePathname();
   const active = pathname === "/admin" || pathname.startsWith("/admin/");
   return (
-    <Link href="/admin" className={navItemClass(active)}>
-      Admin
+    <Link href="/admin" className={`${navItemClass(active)} flex items-center gap-2`}>
+      <span>Admin</span>
+      <NavBadge count={count} />
+    </Link>
+  );
+}
+
+export function HeaderInboxLink({ count = 0 }: { count?: number }) {
+  const pathname = usePathname();
+  const active =
+    pathname === "/account/notifications" ||
+    pathname.startsWith("/account/notifications/");
+  return (
+    <Link
+      href="/account/notifications"
+      className={`${navItemClass(active)} flex items-center gap-2`}
+    >
+      <span>Inbox</span>
+      <NavBadge count={count} />
     </Link>
   );
 }

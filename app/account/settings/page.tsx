@@ -12,13 +12,17 @@ import {
 } from "@/lib/copy/model";
 import { loadInboundCopyInvites } from "@/lib/copy/shares";
 import { changeOwnPassword, updateOwnProfile } from "@/lib/members/actions";
+import { saveMemberNotificationPrefsAction } from "@/lib/notifications/actions";
+import { memberSettingGroups } from "@/lib/notifications/settings";
+import { loadNotificationPreferences } from "@/lib/notifications/store";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionMember } from "@/lib/auth/session";
+import { MemberNotificationSettingsForm } from "@/components/notification-settings-form";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Settings",
-  description: "Desk profile and password.",
+  description: "Desk profile, password, and notifications.",
 };
 
 const fieldClass =
@@ -36,10 +40,13 @@ export default async function AccountSettingsPage({
   const params = await searchParams;
   const error = firstSearchValue(params.error);
   const saved = firstSearchValue(params.saved);
+  const rawTab = firstSearchValue(params.tab);
   const tab =
-    firstSearchValue(params.tab) === "password" || saved === "password"
+    rawTab === "password" || saved === "password"
       ? "password"
-      : "profile";
+      : rawTab === "notifications" || saved === "notifications"
+        ? "notifications"
+        : "profile";
   const showPlatformSettings = member.platformMember;
   const trader =
     tab === "profile" && showPlatformSettings
@@ -69,7 +76,7 @@ export default async function AccountSettingsPage({
       </p>
       <nav
         aria-label="Settings"
-        className="mt-5 flex border-b border-line"
+        className="mt-5 flex flex-wrap border-b border-line"
       >
         <TabLink href="/account/settings" selected={tab === "profile"}>
           Profile
@@ -80,10 +87,18 @@ export default async function AccountSettingsPage({
         >
           Password
         </TabLink>
+        <TabLink
+          href="/account/settings?tab=notifications"
+          selected={tab === "notifications"}
+        >
+          Notifications
+        </TabLink>
       </nav>
       {error ? (
         <p className="mt-6 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
+          {error === "notifications"
+            ? "Could not save notification settings."
+            : error}
         </p>
       ) : null}
       {saved === "profile" ? (
@@ -95,8 +110,16 @@ export default async function AccountSettingsPage({
       {saved === "password" ? (
         <p className="mt-6 text-sm text-success">Password changed.</p>
       ) : null}
+      {saved === "notifications" ? (
+        <p className="mt-6 text-sm text-success">Notification settings saved.</p>
+      ) : null}
 
-      {tab === "password" ? (
+      {tab === "notifications" ? (
+        <NotificationSettingsTab
+          affiliateOnly={!showPlatformSettings}
+          userId={member.id}
+        />
+      ) : tab === "password" ? (
         <form
           action={changeOwnPassword}
           className="mt-6 space-y-4 rounded-card border border-line bg-surface p-5"
@@ -280,6 +303,23 @@ export default async function AccountSettingsPage({
         </>
       )}
     </div>
+  );
+}
+
+async function NotificationSettingsTab({
+  affiliateOnly,
+  userId,
+}: {
+  affiliateOnly: boolean;
+  userId: string;
+}) {
+  const prefs = await loadNotificationPreferences(userId);
+  return (
+    <MemberNotificationSettingsForm
+      groups={memberSettingGroups(affiliateOnly)}
+      prefs={prefs}
+      action={saveMemberNotificationPrefsAction}
+    />
   );
 }
 

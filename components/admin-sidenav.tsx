@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NavBadge } from "@/components/nav-badge";
 import { ADMIN_NAV_LINKS } from "@/lib/site-links";
 
-export function AdminSidenav() {
+export function AdminSidenav({
+  badges = {},
+}: {
+  badges?: Record<string, number>;
+}) {
   const pathname = usePathname();
 
   return (
@@ -22,13 +27,14 @@ export function AdminSidenav() {
             <Link
               key={link.href}
               href={link.href}
-              className={`rounded-control px-3 py-2 text-sm ${
+              className={`flex items-center justify-between gap-2 rounded-control px-3 py-2 text-sm ${
                 active
                   ? "bg-surface-raised text-ink"
                   : "text-ink-faint hover:bg-surface-raised hover:text-ink"
               }`}
             >
-              {link.label}
+              <span>{link.label}</span>
+              <NavBadge count={badges[link.href] ?? 0} />
             </Link>
           );
         })}

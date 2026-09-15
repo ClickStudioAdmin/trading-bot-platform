@@ -27,6 +27,8 @@ export function pathAllowsAffiliateOnly(pathname: string): boolean {
     pathname.startsWith(`${AFFILIATES_PATH}/`) ||
     pathname === "/account/settings" ||
     pathname.startsWith("/account/settings/") ||
+    pathname === "/account/notifications" ||
+    pathname.startsWith("/account/notifications/") ||
     pathname === "/pricing" ||
     pathname.startsWith("/sign-in") ||
     pathname === SIGN_UP_PATH ||
