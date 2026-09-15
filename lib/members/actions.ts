@@ -229,16 +229,10 @@ export async function updateOwnProfile(formData: FormData) {
   const { error } = await supabase
     .from("members")
     .update(
-      member.platformMember
-        ? {
-            name: parsed.name,
-            pay_subscription_from_affiliate: parsed.paySubscriptionFromAffiliate,
-            updated_at: new Date().toISOString(),
-          }
-        : {
-            name: parsed.name,
-            updated_at: new Date().toISOString(),
-          },
+      {
+        name: parsed.name,
+        updated_at: new Date().toISOString(),
+      },
     )
     .eq("user_id", member.id);
   if (error) {
@@ -251,7 +245,6 @@ export async function updateOwnProfile(formData: FormData) {
     userId: member.id,
     data: {
       name: parsed.name,
-      paySubscriptionFromAffiliate: parsed.paySubscriptionFromAffiliate,
     },
   });
   revalidatePath("/", "layout");

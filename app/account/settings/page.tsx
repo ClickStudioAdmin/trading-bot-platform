@@ -15,7 +15,6 @@ import { changeOwnPassword, updateOwnProfile } from "@/lib/members/actions";
 import { firstSearchValue } from "@/lib/paper/open";
 import { getSessionMember } from "@/lib/auth/session";
 import {
-  getMemberPaySubscriptionFromAffiliate,
   getMemberPlanId,
   getMembershipPlan,
 } from "@/lib/membership/store";
@@ -63,10 +62,6 @@ export default async function AccountSettingsPage({
       ? await getMembershipPlan(planId)
       : null;
   const planName = plan?.ok ? plan.plan.name : null;
-  const paySubscriptionFromAffiliate =
-    tab === "profile" && showPlatformSettings
-      ? await getMemberPaySubscriptionFromAffiliate(member.id)
-      : false;
 
   return (
     <div>
@@ -211,22 +206,6 @@ export default async function AccountSettingsPage({
                     Billing
                   </Link>
                   .
-                </span>
-              </label>
-              <label className="flex items-start gap-2 text-sm text-ink">
-                <input
-                  type="checkbox"
-                  name="paySubscriptionFromAffiliate"
-                  value="1"
-                  defaultChecked={paySubscriptionFromAffiliate}
-                  className="mt-0.5"
-                />
-                <span>
-                  Deduct Plan Payment from Earnings
-                  <span className="mt-1 block text-xs text-ink-faint">
-                    Payable earnings only. Pending commissions cannot be used.
-                    Your upline still earns commission on that payment.
-                  </span>
                 </span>
               </label>
             </>

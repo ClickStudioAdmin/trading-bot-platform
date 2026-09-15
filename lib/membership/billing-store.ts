@@ -110,8 +110,9 @@ export async function saveBillingMethod(
     updated_at: new Date().toISOString(),
   };
   if (method === "wallet") {
-    update.pay_subscription_from_credit =
-      extras.paySubscriptionFromCredit === true;
+    const deduct = extras.paySubscriptionFromCredit === true;
+    update.pay_subscription_from_credit = deduct;
+    update.pay_subscription_from_affiliate = deduct;
   }
   let { error } = await supabase
     .from("members")

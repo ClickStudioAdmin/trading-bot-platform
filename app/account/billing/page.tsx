@@ -320,7 +320,10 @@ export default async function AccountBillingPage({
             </h2>
             <SavedBillingMethodForm
               selected={billing.billingMethod}
-              deductSelected={billing.paySubscriptionFromCredit}
+              deductSelected={
+                billing.paySubscriptionFromAffiliate ||
+                billing.paySubscriptionFromCredit
+              }
               hasStripeSubscription={hasUsableStripeSubscription(billing)}
             />
           </section>

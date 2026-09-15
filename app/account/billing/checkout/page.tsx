@@ -110,7 +110,9 @@ export default async function AccountCheckoutPage({
           dueUsd={charge.dueUsd}
           selected={billing.billingMethod}
           deductSelected={
-            charge.kind === "initial" || billing.paySubscriptionFromCredit
+            charge.kind === "initial" ||
+            billing.paySubscriptionFromAffiliate ||
+            billing.paySubscriptionFromCredit
           }
           creditUsd={deposit.books.main}
           affiliateUsd={deposit.payableAffiliateUsd}
