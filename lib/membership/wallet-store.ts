@@ -871,7 +871,7 @@ export async function listMainWalletLedger(
     .eq("user_id", userId)
     .eq("book", "main")
     .order("created_at", { ascending: true })
-    .limit(200);
+    .limit(500);
   const data =
     full.error &&
     (full.error.code === "42703" || /does not exist/i.test(full.error.message ?? ""))
@@ -881,7 +881,7 @@ export async function listMainWalletLedger(
             .select("id, kind, amount_usd, memo, created_at")
             .eq("user_id", userId)
             .order("created_at", { ascending: true })
-            .limit(200)
+            .limit(500)
         ).data
       : full.error
         ? []

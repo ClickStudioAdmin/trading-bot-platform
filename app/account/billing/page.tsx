@@ -5,9 +5,13 @@ import { PageHeading } from "@/components/page-heading";
 import { getSessionMember } from "@/lib/auth/session";
 import {
   BILLING_METHOD_LABELS,
+  billingPageLabel,
+  billingPath,
   formatRemainingCycle,
   formatUsd,
   hasUsableStripeSubscription,
+  paginateBillingRows,
+  parseBillingPage,
   resolveBillingCycle,
 } from "@/lib/membership/billing";
 import {
@@ -107,6 +111,9 @@ export default async function AccountBillingPage({
       ? loadMainWalletWithdrawContext(member.id)
       : Promise.resolve(null),
   ]);
+  const tablePage = parseBillingPage(firstSearchValue(params.page));
+  const invoicePage = paginateBillingRows(invoices, tablePage);
+  const ledgerPage = paginateBillingRows(ledger, tablePage);
   const cycle = resolveBillingCycle({ periodEnd: billing.periodEnd });
   const stripeReady = stripeSecretConfigured();
 
@@ -377,7 +384,7 @@ export default async function AccountBillingPage({
           Running Account Wallet activity: deposits, plan payments, withdrawals,
           and transfers from Affiliate when you deduct from earnings.
         </p>
-        {ledger.length === 0 ? (
+        {ledgerPage.total === 0 ? (
           <p className="mt-4 text-sm text-ink-muted">No Account Wallet activity yet.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
@@ -391,7 +398,7 @@ export default async function AccountBillingPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {ledger.map((row) => {
+                {ledgerPage.rows.map((row) => {
                   const created = parseDisplayTime(row.createdAt);
                   const credit = row.deltaUsd >= 0;
                   return (
@@ -416,13 +423,17 @@ export default async function AccountBillingPage({
                 })}
               </tbody>
             </table>
+            <BillingTablePager
+              tab="ledger"
+              list={ledgerPage}
+            />
           </div>
         )}
       </section>
       ) : (
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold tracking-tight">Invoices</h2>
-        {invoices.length === 0 ? (
+        {invoicePage.total === 0 ? (
           <p className="mt-3 text-sm text-ink-muted">No invoices yet.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
@@ -437,7 +448,7 @@ export default async function AccountBillingPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {invoices.map((invoice) => {
+                {invoicePage.rows.map((invoice) => {
                   const created = parseDisplayTime(invoice.createdAt);
                   return (
                     <tr key={invoice.id}>
@@ -459,10 +470,60 @@ export default async function AccountBillingPage({
                 })}
               </tbody>
             </table>
+            <BillingTablePager
+              tab="invoices"
+              list={invoicePage}
+            />
           </div>
         )}
       </section>
       )}
+    </div>
+  );
+}
+
+function BillingTablePager({
+  tab,
+  list,
+}: {
+  tab: "invoices" | "ledger";
+  list: {
+    page: number;
+    pageCount: number;
+    total: number;
+    from: number;
+    to: number;
+  };
+}) {
+  if (list.total === 0) {
+    return null;
+  }
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-ink-muted">
+      <p>{billingPageLabel(list)}</p>
+      {list.pageCount > 1 ? (
+        <div className="flex gap-2">
+          {list.page > 1 ? (
+            <Link
+              href={billingPath({
+                tab,
+                page: list.page > 2 ? String(list.page - 1) : undefined,
+              })}
+              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            >
+              Previous
+            </Link>
+          ) : null}
+          {list.page < list.pageCount ? (
+            <Link
+              href={billingPath({ tab, page: String(list.page + 1) })}
+              className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+            >
+              Next
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

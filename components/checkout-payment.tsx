@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { BillingMethodRadios } from "@/components/billing-method-radios";
 import {
@@ -24,6 +25,7 @@ import {
 } from "@/lib/membership/billing-actions";
 import {
   checkCheckoutDepositAction,
+  payCheckoutWithCreditAction,
   payPlanWithCreditAction,
 } from "@/lib/membership/wallet-actions";
 import {
@@ -330,6 +332,7 @@ function CheckoutDepositWatcher({
   const live = useLiveMainWallet(0);
   const [paying, setPaying] = useState(false);
   const [credited, setCredited] = useState(false);
+  const [paidPlan, setPaidPlan] = useState<string | null>(null);
   const payingRef = useRef(false);
   const busyRef = useRef(false);
 
@@ -347,7 +350,21 @@ function CheckoutDepositWatcher({
       if (deduct) {
         form.set("paySubscriptionFromCredit", "1");
       }
-      await payPlanWithCreditAction(form);
+      const paid = await payCheckoutWithCreditAction(form);
+      if (cancelled) {
+        return;
+      }
+      if (!paid.ok) {
+        payingRef.current = false;
+        setPaying(false);
+        live.setStatus({ error: paid.error });
+        return;
+      }
+      setPaidPlan(paid.planName);
+      live.setStatus({
+        notice: `Payment received. You're on ${paid.planName}.`,
+        noticeOk: true,
+      });
     }
 
     async function poll() {
@@ -407,6 +424,22 @@ function CheckoutDepositWatcher({
       window.clearInterval(timer);
     };
   }, [planId, dueUsd, deduct, affiliateUsd, useAffiliate, autoPay]);
+
+  if (paidPlan) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-success" role="status">
+          Payment received. You're on {paidPlan}.
+        </p>
+        <Link
+          href="/account/billing"
+          className="inline-flex rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent"
+        >
+          Go to Billing
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">

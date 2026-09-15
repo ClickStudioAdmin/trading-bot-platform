@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import {
   billingPath,
+  billingPageLabel,
+  paginateBillingRows,
+  parseBillingPage,
   checkoutCharge,
   checkoutPath,
   decideUpgrade,
@@ -57,6 +60,21 @@ assert.equal(
     subscriptionStatus: "comp",
   }),
   false,
+);
+assert.equal(parseBillingPage("2"), 2);
+assert.equal(parseBillingPage("0"), 1);
+assert.equal(parseBillingPage("nope"), 1);
+assert.deepEqual(paginateBillingRows(["a", "b", "c"], 2, 2), {
+  rows: ["c"],
+  page: 2,
+  pageCount: 2,
+  total: 3,
+  from: 3,
+  to: 3,
+});
+assert.equal(
+  billingPageLabel({ total: 3, from: 3, to: 3 }),
+  "Showing 3–3 of 3",
 );
 assert.equal(billingPath(), "/account/billing");
 assert.equal(

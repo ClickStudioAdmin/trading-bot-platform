@@ -115,6 +115,51 @@ export function invoiceMethodLabel(method: InvoiceMethod): string {
   return "Comp";
 }
 
+export const BILLING_TABLE_PAGE_SIZE = 20;
+
+export function parseBillingPage(value: unknown): number {
+  const page = Math.trunc(Number(String(value ?? "").trim()));
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+export function paginateBillingRows<T>(
+  rows: readonly T[],
+  page: number,
+  pageSize = BILLING_TABLE_PAGE_SIZE,
+): {
+  rows: T[];
+  page: number;
+  pageCount: number;
+  total: number;
+  from: number;
+  to: number;
+} {
+  const total = rows.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(Math.max(1, page), pageCount);
+  const start = (safePage - 1) * pageSize;
+  const slice = rows.slice(start, start + pageSize);
+  return {
+    rows: slice,
+    page: safePage,
+    pageCount,
+    total,
+    from: total === 0 ? 0 : start + 1,
+    to: start + slice.length,
+  };
+}
+
+export function billingPageLabel(input: {
+  total: number;
+  from: number;
+  to: number;
+}): string {
+  if (input.total === 0) {
+    return "No rows.";
+  }
+  return `Showing ${input.from}–${input.to} of ${input.total}`;
+}
+
 export function billingPath(
   query: Record<string, string | undefined> = {},
 ): string {

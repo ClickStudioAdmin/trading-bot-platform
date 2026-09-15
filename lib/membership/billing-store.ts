@@ -352,7 +352,7 @@ export async function listMemberInvoices(
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(500);
   const names = await planNames();
   return (data ?? [])
     .map((row) => mapInvoice(row as Record<string, unknown>, names))

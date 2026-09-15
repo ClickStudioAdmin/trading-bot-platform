@@ -79,15 +79,6 @@ function failAdmin(error: string): never {
   throw new Error(error);
 }
 
-function isNextRedirect(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "digest" in error &&
-    String((error as { digest?: unknown }).digest).startsWith("NEXT_REDIRECT")
-  );
-}
-
 export async function createDepositHdSeedAction(): Promise<
   { ok: true; mnemonic: string } | { ok: false; error: string }
 > {
@@ -286,21 +277,24 @@ export async function checkCheckoutDepositAction(): Promise<CheckDepositResult> 
   return checkMemberDeposit();
 }
 
-export async function payPlanWithCreditAction(formData: FormData) {
+export type PayPlanCreditResult =
+  | { ok: true; planName: string }
+  | { ok: false; error: string };
+
+async function payPlanWithCredit(
+  formData: FormData,
+): Promise<PayPlanCreditResult> {
   const member = await getSessionMember();
   if (!member) {
-    redirect("/sign-in");
-    return;
+    return { ok: false, error: "Sign in to continue." };
   }
   const planId = parsePlanId(String(formData.get("planId") ?? ""));
   if (!planId) {
-    redirect(checkoutPath({ error: "That plan is not valid." }));
-    return;
+    return { ok: false, error: "That plan is not valid." };
   }
   const loaded = await getMembershipPlan(planId);
   if (!loaded.ok) {
-    redirect(checkoutPath({ plan: planId, error: loaded.error }));
-    return;
+    return { ok: false, error: loaded.error };
   }
   const target = loaded.plan;
   const billing = await getMemberBilling(member.id);
@@ -310,12 +304,10 @@ export async function payPlanWithCreditAction(formData: FormData) {
     method: "wallet",
   });
   if (decision.kind === "current") {
-    redirect(checkoutPath({ plan: planId, error: "You are already on that plan." }));
-    return;
+    return { ok: false, error: "You are already on that plan." };
   }
   if (decision.kind === "reject") {
-    redirect(checkoutPath({ plan: planId, error: decision.error }));
-    return;
+    return { ok: false, error: decision.error };
   }
   const currentPlan = billing
     ? await getMembershipPlan(billing.planId)
@@ -332,8 +324,7 @@ export async function payPlanWithCreditAction(formData: FormData) {
       ),
     });
     if (!saved.ok) {
-      redirect(checkoutPath({ plan: planId, error: saved.error }));
-      return;
+      return { ok: false, error: saved.error };
     }
   }
   const [books, payableAffiliateUsd] = await Promise.all([
@@ -350,14 +341,12 @@ export async function payPlanWithCreditAction(formData: FormData) {
       periodEnd: charge.periodEnd,
     });
     if (!applied.ok) {
-      redirect(checkoutPath({ plan: planId, error: applied.error }));
-      return;
+      return { ok: false, error: applied.error };
     }
     revalidatePath("/account/billing");
     revalidatePath("/account/billing/checkout");
     revalidatePath("/account/plans");
-    redirect(billingPath({ upgraded: "wallet" }));
-    return;
+    return { ok: true, planName: target.name };
   }
   const deduct = planDeductDecision({
     priceUsd: charge.dueUsd,
@@ -366,13 +355,10 @@ export async function payPlanWithCreditAction(formData: FormData) {
     useAffiliate,
   });
   if (!deduct.ok) {
-    redirect(
-      checkoutPath({
-        plan: planId,
-        error: `Need ${roundUsd(deduct.shortUsd)} more Account Wallet credit to pay this plan.`,
-      }),
-    );
-    return;
+    return {
+      ok: false,
+      error: `Need ${roundUsd(deduct.shortUsd)} more Account Balance credit to pay this plan.`,
+    };
   }
   try {
     const now = Date.now();
@@ -394,8 +380,7 @@ export async function payPlanWithCreditAction(formData: FormData) {
           : undefined,
     });
     if (!paid.ok) {
-      redirect(checkoutPath({ plan: planId, error: paid.error }));
-      return;
+      return { ok: false, error: paid.error };
     }
     const commissions = await createCommissionsForInvoice({
       invoiceId: paid.invoiceId,
@@ -405,8 +390,7 @@ export async function payPlanWithCreditAction(formData: FormData) {
       amountUsd: charge.dueUsd,
     });
     if (!commissions.ok) {
-      redirect(checkoutPath({ plan: planId, error: commissions.error }));
-      return;
+      return { ok: false, error: commissions.error };
     }
     if (billing?.stripeSubscriptionId && stripeSecretConfigured()) {
       const stripe = getStripe();
@@ -433,20 +417,34 @@ export async function payPlanWithCreditAction(formData: FormData) {
     revalidatePath("/account/billing");
     revalidatePath("/account/billing/checkout");
     revalidatePath("/account/plans");
-    redirect(billingPath({ upgraded: "wallet" }));
-    return;
+    return { ok: true, planName: target.name };
   } catch (cause) {
-    if (isNextRedirect(cause)) {
-      throw cause;
-    }
-    redirect(
-      checkoutPath({
-        plan: planId,
-        error:
-          cause instanceof Error ? cause.message : "Wallet payment failed.",
-      }),
-    );
+    return {
+      ok: false,
+      error: cause instanceof Error ? cause.message : "Wallet payment failed.",
+    };
   }
+}
+
+export async function payCheckoutWithCreditAction(
+  formData: FormData,
+): Promise<PayPlanCreditResult> {
+  return payPlanWithCredit(formData);
+}
+
+export async function payPlanWithCreditAction(formData: FormData) {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+    return;
+  }
+  const result = await payPlanWithCredit(formData);
+  const planId = parsePlanId(String(formData.get("planId") ?? ""));
+  if (!result.ok) {
+    redirect(checkoutPath({ plan: planId || "", error: result.error }));
+    return;
+  }
+  redirect(billingPath({ upgraded: "wallet" }));
 }
 
 export async function requestMainWalletWithdrawAction(formData: FormData) {
