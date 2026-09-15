@@ -408,13 +408,19 @@ export function formatCount(value: number): string {
 }
 
 export function formatUsd(amount: number): string {
-  const integer = Number.isInteger(amount);
+  const value = Number(amount);
+  if (!Number.isFinite(value)) {
+    return "$0";
+  }
+  const rounded = Math.round(value * 100) / 100;
+  const integer = Number.isInteger(rounded);
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
+    useGrouping: true,
     minimumFractionDigits: integer ? 0 : 2,
     maximumFractionDigits: integer ? 0 : 2,
-  }).format(amount);
+  }).format(rounded);
 }
 
 export type BillingCycleWindow = {

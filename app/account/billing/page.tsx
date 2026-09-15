@@ -222,7 +222,8 @@ export default async function AccountBillingPage({
       ) : null}
 
       {tab === "overview" ? (
-        <section className="mt-6 rounded-card border border-line bg-surface p-5">
+        <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
+        <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">
             Subscription Details
           </h2>
@@ -287,6 +288,26 @@ export default async function AccountBillingPage({
             </Link>
           </div>
         </section>
+        <section className="rounded-card border border-line bg-surface p-5">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Account Balance
+          </h2>
+          <p className="mt-3 text-xs uppercase tracking-[0.12em] text-ink-muted">
+            Current balance
+          </p>
+          <p className="mt-1 text-sm tabular-nums text-ink">
+            {formatUsd(books.main)}
+          </p>
+          <p className="mt-4">
+            <Link
+              href={billingPath({ tab: "wallet" })}
+              className="text-sm text-accent hover:text-accent-strong"
+            >
+              Manage Account Balance
+            </Link>
+          </p>
+        </section>
+        </div>
       ) : tab === "method" ? (
         <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
           <section className="rounded-card border border-line bg-surface p-5">

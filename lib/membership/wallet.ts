@@ -29,9 +29,14 @@ const METHOD_TOP_UP_NOTE_REST =
 
 export function formatWalletUsd(amount: number): string {
   const rounded = roundUsd(amount);
-  return Number.isInteger(rounded)
-    ? `$${rounded}`
-    : `$${rounded.toFixed(2)}`;
+  const integer = Number.isInteger(rounded);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    useGrouping: true,
+    minimumFractionDigits: integer ? 0 : 2,
+    maximumFractionDigits: integer ? 0 : 2,
+  }).format(rounded);
 }
 
 export function accountShortfallUsd(dueUsd: number, mainUsd: number): number {

@@ -375,6 +375,10 @@ export function CryptoWalletPanel({
                   <dd className="tabular-nums text-ink">
                     {formatUsd(planPriceUsd)}
                   </dd>
+                </>
+              ) : null}
+              {shortUsd >= 0.01 ? (
+                <>
                   <dt className="text-ink-muted">Account shortfall:</dt>
                   <dd className="tabular-nums text-ink">
                     {formatUsd(shortUsd)}
@@ -410,7 +414,7 @@ export function CryptoWalletPanel({
               successKey="pay-credit"
               className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
             >
-              Pay with credit
+              Pay from account balance and confirm upgrade
             </PendingSubmitButton>
           </form>
         ) : null}

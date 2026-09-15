@@ -91,6 +91,7 @@ assert.equal(stripeCentsToUsd(199), 1.99);
 assert.equal(formatUsd(99), "$99");
 assert.equal(formatUsd(37088), "$37,088");
 assert.equal(formatUsd(11.78), "$11.78");
+assert.equal(formatUsd(20160.01), "$20,160.01");
 assert.equal(formatCount(3905), "3,905");
 assert.equal(formatCount(10000), "10,000");
 assert.equal(walletEntryDelta("deposit", 10), 10);
