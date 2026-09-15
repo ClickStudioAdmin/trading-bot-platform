@@ -11,13 +11,26 @@ import {
   notificationAttentionItems,
 } from "./badge-model";
 import {
+  ADMIN_BADGE_SETTINGS,
+  AFFILIATE_BADGE_SETTINGS,
+  applyAdminBadgeGates,
+  applyMemberBadgeGates,
+  BADGE_IDS,
+  BADGE_SETTINGS,
+  demoBadgesAllowed,
+  gatedBadgeCount,
+  MEMBER_BADGE_SETTINGS,
+  SAMPLE_BADGE_COUNTS,
+} from "./badges-catalog";
+import {
   adminSettingGroups,
   emailSwitchLockedOn,
   memberSettingGroups,
   notificationAudience,
   NOTIFICATION_LABELS,
 } from "./settings";
-import { NOTIFICATION_IDS } from "./catalog";
+import { NOTIFICATION_IDS, operatorNotificationIds } from "./catalog";
+import { sampleInboxNotices } from "./seed";
 
 assert.equal(formatNavBadgeCount(0), null);
 assert.equal(formatNavBadgeCount(-3), null);
@@ -127,6 +140,16 @@ assert.equal(
 );
 assert.equal(
   memberSettingGroups(true).some((group) => group.id === "billing"),
+  false,
+);
+assert.equal(
+  memberSettingGroups(true).some((group) => group.id === "security"),
+  true,
+);
+assert.equal(
+  memberSettingGroups(true)
+    .find((group) => group.id === "affiliates")
+    ?.ids.includes("commission_released"),
   true,
 );
 assert.equal(
@@ -134,11 +157,89 @@ assert.equal(
   true,
 );
 assert.equal(
-  adminSettingGroups().some((group) => group.id === "operator"),
+  memberSettingGroups(true).some((group) => group.id === "affiliates"),
   true,
+);
+assert.equal(
+  memberSettingGroups(true).some((group) => group.id === "payouts"),
+  false,
+);
+assert.equal(
+  adminSettingGroups().some((group) => group.id === "admin"),
+  true,
+);
+assert.equal(adminSettingGroups()[0]?.id, "admin");
+const adminEmails = adminSettingGroups().find((group) => group.id === "admin");
+assert.deepEqual(adminEmails?.ids, operatorNotificationIds());
+const adminAffiliates = adminSettingGroups().find(
+  (group) => group.id === "affiliates",
+);
+assert.equal(adminAffiliates?.ids.includes("commission_released"), true);
+assert.equal(
+  adminAffiliates?.ids.includes("operator_payout_requested"),
+  false,
 );
 for (const id of NOTIFICATION_IDS) {
   assert.equal(Boolean(NOTIFICATION_LABELS[id]), true);
 }
+
+assert.equal(demoBadgesAllowed({ VERCEL_ENV: "production" }), false);
+assert.equal(demoBadgesAllowed({ VERCEL_ENV: "preview" }), true);
+assert.equal(gatedBadgeCount(3, true, 9), 0);
+assert.equal(gatedBadgeCount(0, false, 4), 4);
+assert.equal(gatedBadgeCount(2, false, 1), 2);
+assert.equal(BADGE_SETTINGS.length, BADGE_IDS.length);
+assert.equal(
+  MEMBER_BADGE_SETTINGS.length +
+    AFFILIATE_BADGE_SETTINGS.length +
+    ADMIN_BADGE_SETTINGS.length,
+  BADGE_IDS.length,
+);
+assert.equal(
+  AFFILIATE_BADGE_SETTINGS.some((row) => row.id === "affiliate_payouts"),
+  true,
+);
+for (const id of BADGE_IDS) {
+  assert.equal(SAMPLE_BADGE_COUNTS[id] > 0, true);
+}
+
+assert.equal(
+  applyMemberBadgeGates(
+    { ...EMPTY_MEMBER_ACTIONS, pastDue: 1, copyInvite: 2 },
+    ["copy_invite"],
+    { past_due: 1, copy_invite: 9 },
+    true,
+  ).copyInvite,
+  0,
+);
+assert.equal(
+  applyMemberBadgeGates(EMPTY_MEMBER_ACTIONS, [], SAMPLE_BADGE_COUNTS, true)
+    .copyInvite,
+  SAMPLE_BADGE_COUNTS.copy_invite,
+);
+assert.equal(
+  applyMemberBadgeGates(EMPTY_MEMBER_ACTIONS, [], SAMPLE_BADGE_COUNTS, false)
+    .copyInvite,
+  0,
+);
+assert.equal(
+  applyAdminBadgeGates(
+    { ...EMPTY_ADMIN_ACTIONS, affiliatePayouts: 1 },
+    ["affiliate_payouts"],
+    SAMPLE_BADGE_COUNTS,
+    true,
+  ).affiliatePayouts,
+  0,
+);
+assert.equal(
+  applyAdminBadgeGates(EMPTY_ADMIN_ACTIONS, [], SAMPLE_BADGE_COUNTS, true)
+    .deskCritical,
+  SAMPLE_BADGE_COUNTS.admin_desk_critical,
+);
+
+const samples = sampleInboxNotices();
+assert.equal(samples.length >= 16, true);
+assert.equal(samples.some((row) => row.read), true);
+assert.equal(samples.some((row) => !row.read), true);
 
 console.log("notification badge checks passed");

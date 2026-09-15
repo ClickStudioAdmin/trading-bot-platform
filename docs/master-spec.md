@@ -31,13 +31,13 @@ Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 a
 
 **Copy trading is started** (roadmap 3): [phase-copy-trading.md](phase-copy-trading.md). Steps 1–9 are in repo. Stop after each copy-trading micro-step until Click says go. Next is step 10 (Click desk test). Push `develop` to migrate.
 
-The locked sequence after Phase 11 is [roadmap.md](roadmap.md). **Plans, payments, and affiliates** is roadmap 5 ([phase-membership.md](phase-membership.md)), closed at step 8. **Notifications** is roadmap 6 ([phase-notifications.md](phase-notifications.md)) — current commercial work; stop after each micro-step. Entitlements are roadmap 8 ([phase-entitlements.md](phase-entitlements.md)); do not start until Click says go. Standing unordered notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
+The locked sequence after Phase 11 is [roadmap.md](roadmap.md). **Plans, payments, and affiliates** is roadmap 5 ([phase-membership.md](phase-membership.md)), closed at step 8. **Notifications** is roadmap 6 ([phase-notifications.md](phase-notifications.md)) — current commercial work; stop after each micro-step. **Entitlements, identity, and plan gates** is roadmap 7 ([phase-entitlements.md](phase-entitlements.md)); do not start until Click says go. Onboarding is roadmap 8. Standing unordered notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
 
 ## Later
 
 Do not implement until Click starts that roadmap item. Order and notes: [roadmap.md](roadmap.md).
 
-**Plans, payments, and affiliates** (roadmap 5). Spec: [phase-membership.md](phase-membership.md). Closed at step 8. Entitlements are [phase-entitlements.md](phase-entitlements.md) (roadmap 8).
+**Plans, payments, and affiliates** (roadmap 5). Spec: [phase-membership.md](phase-membership.md). Closed at step 8. Entitlements / identity / plan gates are [phase-entitlements.md](phase-entitlements.md) (roadmap 7).
 
 **Transactional notifications and email** (roadmap 6). Spec: [phase-notifications.md](phase-notifications.md). Inbox + computed badges + Resend. No fills this pass.
 

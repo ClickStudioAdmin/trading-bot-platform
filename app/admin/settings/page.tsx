@@ -24,10 +24,19 @@ import {
   loadWalletMinPayoutUsd,
 } from "@/lib/membership/wallet-store";
 import { firstSearchValue } from "@/lib/paper/open";
-import { AdminNotificationSettingsForm } from "@/components/notification-settings-form";
-import { savePlatformNotificationEmailsAction } from "@/lib/notifications/actions";
+import {
+  AdminBadgeSettingsForm,
+  AdminNotificationSettingsForm,
+} from "@/components/notification-settings-form";
+import {
+  clearDemoBadgeCountsAction,
+  savePlatformBadgesAction,
+  savePlatformNotificationEmailsAction,
+  seedAdminInboxAction,
+} from "@/lib/notifications/actions";
+import { demoBadgesAllowed } from "@/lib/notifications/badges-catalog";
 import { adminSettingGroups } from "@/lib/notifications/settings";
-import { loadPlatformDisabledEmails } from "@/lib/notifications/store";
+import { loadPlatformAlertSettings } from "@/lib/notifications/store";
 
 export const metadata: Metadata = {
   title: "Admin settings",
@@ -121,7 +130,7 @@ export default async function AdminSettingsPage({
           href="/admin/settings?tab=notifications"
           selected={tab === "notifications"}
         >
-          Notifications
+          Notifications & Alerts
         </TabLink>
       </nav>
 
@@ -643,10 +652,7 @@ export default async function AdminSettingsPage({
       ) : null}
 
       {tab === "notifications" ? (
-        <NotificationsTab
-          saved={saved === "1"}
-          error={error === "notifications"}
-        />
+        <NotificationsTab saved={saved} error={error} />
       ) : null}
     </div>
   );
@@ -656,24 +662,88 @@ async function NotificationsTab({
   saved,
   error,
 }: {
-  saved: boolean;
-  error: boolean;
+  saved: string | undefined;
+  error: string | undefined;
 }) {
-  const disabledEmails = await loadPlatformDisabledEmails();
+  const settings = await loadPlatformAlertSettings();
+  const allowDemo = demoBadgesAllowed();
+  const demoActive = allowDemo && Object.keys(settings.demoBadgeCounts).length > 0;
   return (
     <>
-      {saved ? (
-        <p className="mt-6 text-sm text-success">Settings saved.</p>
+      {saved === "1" ? (
+        <p className="mt-6 text-sm text-success">Notification settings saved.</p>
       ) : null}
-      {error ? (
-        <p className="mt-6 text-sm text-danger">
-          Could not save notification settings. Push develop so the
-          notifications migration is on this database.
+      {saved === "badges" ? (
+        <p className="mt-6 text-sm text-success">Alert settings saved.</p>
+      ) : null}
+      {saved === "seeded" ? (
+        <p className="mt-6 text-sm text-success">
+          Sample notices were added to your inbox
+          {allowDemo ? ", and sample alert counts are on." : "."}
         </p>
       ) : null}
+      {saved === "demo-cleared" ? (
+        <p className="mt-6 text-sm text-success">
+          Sample alert counts were cleared.
+        </p>
+      ) : null}
+      {error === "notifications" || error === "badges" || error === "seed" || error === "demo" ? (
+        <p className="mt-6 text-sm text-danger">
+          Could not save that change. Push develop so the notifications
+          migrations are on this database.
+        </p>
+      ) : null}
+
+      {allowDemo ? (
+        <section className="mt-6 rounded-card border border-line bg-surface p-5">
+          <h2 className="text-sm font-semibold text-ink">Desk test samples</h2>
+          <p className="mt-2 text-sm text-ink-muted">
+            Adds sample inbox rows to the signed-in admin and turns on sample
+            alert counts so Overview, Billing, and Affiliates look populated.
+            Hidden in production.
+          </p>
+          {demoActive ? (
+            <p className="mt-2 text-xs text-ink-faint">
+              Sample alert counts are on. Off switches still hide a badge.
+            </p>
+          ) : null}
+          <div className="mt-4 flex flex-wrap gap-3">
+            <form action={seedAdminInboxAction}>
+              <PendingSubmitButton
+                pendingLabel="Adding…"
+                successKey="seed-admin-inbox"
+                className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+              >
+                Add sample notices to my inbox
+              </PendingSubmitButton>
+            </form>
+            {demoActive ? (
+              <form action={clearDemoBadgeCountsAction}>
+                <PendingSubmitButton
+                  pendingLabel="Clearing…"
+                  successKey="clear-demo-badges"
+                  className="rounded-control border border-line px-4 py-2 text-sm font-medium text-ink"
+                >
+                  Clear sample alert counts
+                </PendingSubmitButton>
+              </form>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      <h2 className="mt-10 text-lg font-semibold tracking-tight">Alerts</h2>
+      <AdminBadgeSettingsForm
+        disabledBadges={settings.disabledBadges}
+        action={savePlatformBadgesAction}
+      />
+
+      <h2 className="mx-auto mt-10 w-[60%] text-lg font-semibold tracking-tight">
+        Notifications
+      </h2>
       <AdminNotificationSettingsForm
         groups={adminSettingGroups()}
-        disabledEmails={disabledEmails}
+        disabledEmails={settings.disabledEmails}
         action={savePlatformNotificationEmailsAction}
       />
     </>

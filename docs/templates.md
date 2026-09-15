@@ -229,7 +229,7 @@ Stop after acceptance. Do not start Fly.io, Hyperliquid, scale-in, or backup kli
 - Marketplace
 - Fly.io, private APIs from the browser
 - Scale-in / position builder (roadmap 11)
-- Starter Pack delivery to new members and CTA on new desk (roadmap 7; [phase-onboarding.md](phase-onboarding.md))
+- Starter Pack delivery to new members and CTA on new desk (roadmap 8; [phase-onboarding.md](phase-onboarding.md))
 - Plans, payments, and affiliates (roadmap 5; [phase-membership.md](phase-membership.md))
 - Hyperliquid / MEXC ([phase-hyperliquid.md](phase-hyperliquid.md))
 - Copy trading (roadmap 3; [phase-copy-trading.md](phase-copy-trading.md)); Hedged DCA

@@ -21,7 +21,12 @@ import {
   payoutOperatorHref,
   resendConfigured,
 } from "./catalog";
-import { inboxBody, inboxTitle, notificationCopy } from "./copy";
+import {
+  inboxBody,
+  inboxTitle,
+  notificationCopy,
+  sampleOperatorNotice,
+} from "./copy";
 
 assert.equal(NOTIFICATION_IDS.length, 21);
 assert.equal(isNotificationId("invoice_issued"), true);
@@ -39,6 +44,10 @@ assert.deepEqual(
   false,
 );
 assert.equal(memberNotificationIds(true).includes("payout_paid"), true);
+assert.equal(memberNotificationIds(true).includes("commission_released"), true);
+assert.equal(memberNotificationIds(true).includes("password_changed"), true);
+assert.equal(memberNotificationIds(true).includes("invoice_issued"), false);
+assert.equal(memberNotificationIds(true).includes("account_shortfall"), false);
 assert.equal(
   memberNotificationIds(false).includes("copy_invite_received"),
   true,
@@ -190,5 +199,12 @@ const operator = notificationCopy.operator_gas_low({
 });
 assert.match(operator.subject, /Gas wallet low/);
 assert.equal(operator.actionUrl, "/admin/billing");
+
+for (const id of operatorNotificationIds()) {
+  const sample = sampleOperatorNotice(id);
+  assert.equal(sample.subject.length > 0, true);
+  assert.equal(sample.paragraphs.length > 0, true);
+  assert.equal(sample.actionLabel.length > 0, true);
+}
 
 console.log("notification catalog checks passed");

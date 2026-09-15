@@ -22,7 +22,13 @@ import {
   countMemberDeskCritical,
   countSweepFailed,
 } from "./critical";
-import { countUnreadUserNotifications } from "./store";
+import {
+  applyAdminBadgeGates,
+  applyMemberBadgeGates,
+} from "./badges-catalog";
+import { countUnreadUserNotifications, loadPlatformAlertSettings } from "./store";
+
+const loadAlertGates = cache(loadPlatformAlertSettings);
 
 export type { AdminActionCounts, MemberActionCounts };
 export {
@@ -90,7 +96,10 @@ export const loadMemberNotificationChrome = cache(
     if (!userId) {
       return chromeFromMemberActions(EMPTY_MEMBER_ACTIONS, 0);
     }
-    const unread = await countUnreadUserNotifications(userId);
+    const [unread, gates] = await Promise.all([
+      countUnreadUserNotifications(userId),
+      loadAlertGates(),
+    ]);
     if (!platformMember) {
       return chromeFromMemberActions({ ...EMPTY_MEMBER_ACTIONS }, unread);
     }
@@ -118,15 +127,19 @@ export const loadMemberNotificationChrome = cache(
       .map((account) => account.id);
     const deskCritical = await countMemberDeskCritical(userId, liveIds);
     return chromeFromMemberActions(
-      {
-        pastDue,
-        accountShortfall: short,
-        unboundLive: desk.unboundLive,
-        sharedKey: desk.sharedKey,
-        deskCritical,
-        copyInvite,
-        updateCard: 0,
-      },
+      applyMemberBadgeGates(
+        {
+          pastDue,
+          accountShortfall: short,
+          unboundLive: desk.unboundLive,
+          sharedKey: desk.sharedKey,
+          deskCritical,
+          copyInvite,
+          updateCard: 0,
+        },
+        gates.disabledBadges,
+        gates.demoBadgeCounts,
+      ),
       unread,
     );
   },
@@ -141,6 +154,7 @@ export const loadAdminNotificationChrome = cache(
       sweepFailed,
       gasLow,
       deskCritical,
+      gates,
     ] = await Promise.all([
       countQueuedPayouts("affiliate"),
       countQueuedPayouts("main"),
@@ -148,15 +162,22 @@ export const loadAdminNotificationChrome = cache(
       countSweepFailed(),
       countGasLow(),
       countAdminDeskCritical(),
+      loadAlertGates(),
     ]);
-    return chromeFromAdminActions({
-      affiliatePayouts,
-      walletWithdraws,
-      sweepFailed,
-      gasLow,
-      pastDueMembers,
-      deskCritical,
-    });
+    return chromeFromAdminActions(
+      applyAdminBadgeGates(
+        {
+          affiliatePayouts,
+          walletWithdraws,
+          sweepFailed,
+          gasLow,
+          pastDueMembers,
+          deskCritical,
+        },
+        gates.disabledBadges,
+        gates.demoBadgeCounts,
+      ),
+    );
   },
 );
 

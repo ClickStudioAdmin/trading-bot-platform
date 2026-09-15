@@ -1,6 +1,6 @@
 # Plans, payments, and affiliates
 
-**Roadmap 5.** Spec written 11 Sep 2026. **Closed at step 8** on 16 Sep 2026. Click moved downgrade grace after entitlements (13 Sep 2026), then moved entitlements / grace / desk test to [phase-entitlements.md](phase-entitlements.md) (roadmap 8) so notifications could start first. Hyperliquid step 7 and copy step 10 stay Click desk-test.
+**Roadmap 5.** Spec written 11 Sep 2026. **Closed at step 8** on 16 Sep 2026. Click moved downgrade grace after entitlements (13 Sep 2026), then moved entitlements / grace / desk test to [phase-entitlements.md](phase-entitlements.md) (now roadmap 7, after notifications) so notifications could start first. Hyperliquid step 7 and copy step 10 stay Click desk-test.
 
 One combined phase: freemium plans, feature/cap gates, Stripe cards, a prepaid crypto credit wallet, and a multi-level affiliate program that pays a percent of **platform subscription** invoices only.
 
@@ -26,7 +26,7 @@ Enough Free to test (Paper, a small desk cap, core Perps/DCA, Chart). Named upgr
 | 6 | Affiliate program admin | Agent | `/admin/settings?tab=affiliates`: max depth (default 2, hard cap 5), hold days (default 30), min payout, default L1–L5 (non-members + unpaid). `/admin/affiliates` is the payout queue (export mark-paid, approve/reject withdraw). USDT withdraw chains are ticked on each billing chain (`Affiliate Payouts Allowed on this chain`). Plan rates stay on each plan row. **In repo 13 Sep 2026.** |
 | 7 | Affiliate portal | Agent | Public `/affiliates` (header + signup). Signed-in uses account chrome + sidebar. Platform members see the usual account/desk links. Affiliate-only see Settings (profile + password) only. Tabs: Overview, Network, Campaigns, URLs, Commissions, Payouts, Settings. Custom `/r/{slug}` URLs (home or affiliate landing) + campaigns. Upgrade to Free platform membership. **In repo 13 Sep 2026.** |
 | 8 | Commissions + payouts | Agent | Invoice → pending hold → payable (refund in hold = no earn). Per-plan %. Withdraw locks: no arrears, ≥ min. USDT out only. Tables ready for Stripe Connect later. Gas deducted from the send or covered by the minimum. **In repo 13 Sep 2026.** |
-| 9–11 | Moved | — | Entitlements, Upgrade UX, downgrade grace, and the membership desk test are [phase-entitlements.md](phase-entitlements.md) (roadmap 8). **Moved 16 Sep 2026.** |
+| 9–11 | Moved | — | Entitlements, Upgrade UX, downgrade grace, and the membership desk test are [phase-entitlements.md](phase-entitlements.md) (roadmap 7 after the 16 Sep 2026 reorder). **Moved 16 Sep 2026.** |
 
 This phase **stops at step 8**. Do not start entitlements here. Notifications is the current commercial phase ([phase-notifications.md](phase-notifications.md)).
 
@@ -181,9 +181,9 @@ KYC / travel-rule / money-transmitter: Click owns compliance. V1 is admin-approv
 - Hosted crypto-sub auto-pull as the primary model
 - Yearly prices, vanity referral slugs, promo coupons (unless Click asks)
 - Marketing website (roadmap 12)
-- Onboarding wizard refine (roadmap 7) — Starter Pack still never arms
 - Transactional notifications and email (roadmap 6) — [phase-notifications.md](phase-notifications.md)
-- Entitlements / Upgrade UX / grace (roadmap 8) — [phase-entitlements.md](phase-entitlements.md)
+- Entitlements / identity / plan gates (roadmap 7) — [phase-entitlements.md](phase-entitlements.md)
+- Onboarding wizard refine (roadmap 8) — Starter Pack still never arms
 - Internal webhooks (roadmap 9), backup candles (roadmap 10), scale-in (roadmap 11)
 - MEXC and further CEXes (roadmap 16)
 - Fly scale-from-admin (parked)
@@ -191,4 +191,4 @@ KYC / travel-rule / money-transmitter: Click owns compliance. V1 is admin-approv
 
 ## After this
 
-Notifications is roadmap 6. Onboarding / Starter Packs is roadmap 7. Entitlements is roadmap 8.
+Notifications is roadmap 6. Entitlements / identity / plan gates is roadmap 7. Onboarding / Starter Packs is roadmap 8.

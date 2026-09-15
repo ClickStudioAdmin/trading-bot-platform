@@ -42,12 +42,6 @@ const EMAIL_DEFAULT_ON = new Set<NotificationId>([
 ]);
 
 const AFFILIATE_ONLY_IDS = new Set<NotificationId>([
-  "invoice_issued",
-  "invoice_paid",
-  "payment_failed",
-  "subscription_past_due",
-  "deposit_credited",
-  "account_shortfall",
   "commission_released",
   "payout_requested",
   "payout_paid",

@@ -61,6 +61,8 @@ Current tables:
 | `user_notification_preferences` | notifications | Per-login mute arrays (`disabled_emails`, `disabled_in_app`). Service-role upsert RPC. |
 | `email_dispatches` | notifications | Idempotency `(template, entity_key)` for one-shot and reminder mail. `claim_email_dispatch` returns true only on first insert. |
 | `platform_settings.disabled_emails` | notifications | Platform kill switch for outbound email template IDs. |
+| `platform_settings.disabled_badges` | notifications | Platform kill switch for required-action badge IDs. Off hides the number; live work stays. |
+| `platform_settings.demo_badge_counts` | notifications | Develop-only overlay counts so chrome can look populated. Production ignores this column. |
 
 Phase 4 rules migrations: `supabase/migrations/20260822160000_paper_rules.sql` then `supabase/migrations/20260822170000_paper_rule_layers.sql`.
 

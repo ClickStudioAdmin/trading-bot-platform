@@ -260,6 +260,52 @@ export const notificationCopy = {
     ),
 };
 
+export function sampleOperatorNotice(id: string): NotificationNotice {
+  switch (id) {
+    case "operator_payout_requested":
+      return notificationCopy.operator_payout_requested({
+        memberLabel: "Plus member",
+        amount: "$80.00",
+        bookLabel: "Affiliate book",
+        addressShort: "0x12a…9f3",
+        network: "Arbitrum Sepolia",
+        href: "/admin/affiliates",
+      });
+    case "operator_sweep_failed":
+      return notificationCopy.operator_sweep_failed({
+        chain: "Arbitrum Sepolia",
+        detail: "insufficient funds for gas",
+      });
+    case "operator_gas_low":
+      return notificationCopy.operator_gas_low({
+        chain: "Arbitrum Sepolia",
+        balanceEth: "0.001",
+        thresholdEth: "0.005",
+      });
+    case "operator_payment_failed":
+      return notificationCopy.operator_payment_failed({
+        memberLabel: "Plus member",
+        planName: "Plus",
+        amount: "$49.00",
+        reason: "Card was declined.",
+      });
+    case "operator_desk_critical":
+      return notificationCopy.operator_desk_critical({
+        memberLabel: "Plus member",
+        deskName: "Bybit Live 1",
+        venue: "Bybit",
+        detail: "retCode 10016: Order quantity is invalid.",
+      });
+    default:
+      return notificationCopy.operator_desk_critical({
+        memberLabel: "Member",
+        deskName: "Live desk",
+        venue: "Bybit",
+        detail: "Unknown operator template.",
+      });
+  }
+}
+
 export function inboxTitle(notice: NotificationNotice): string {
   return notice.subject;
 }

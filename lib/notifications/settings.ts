@@ -47,16 +47,18 @@ export const NOTIFICATION_HINTS: Record<NotificationId, string> = {
   deposit_credited: "A crypto deposit hit Account Balance.",
   account_shortfall: "Account Balance cannot cover the next collect.",
   commission_released: "Held commission moved to the Affiliate book.",
-  payout_requested: "A USDT withdraw is queued.",
-  payout_paid: "A USDT withdraw was marked paid.",
-  payout_rejected: "A USDT withdraw was rejected and returned.",
+  payout_requested: "An Affiliate or Account Balance USDT withdraw is queued.",
+  payout_paid: "An Affiliate or Account Balance USDT withdraw was marked paid.",
+  payout_rejected:
+    "An Affiliate or Account Balance USDT withdraw was rejected and returned.",
   copy_invite_received: "Someone invited this login to copy a desk.",
   copy_invite_revoked: "A copy invite was withdrawn.",
   desk_sync_failed: "A live desk could not sync with the venue.",
   desk_order_failed: "A live desk hit a repeating reject.",
   exchange_verify_failed: "An exchange key failed verification.",
   password_changed: "This login’s password was changed. Email stays on.",
-  operator_payout_requested: "A member asked for a USDT payout.",
+  operator_payout_requested:
+    "A member asked for an Affiliate or Account Balance USDT payout.",
   operator_sweep_failed: "A credited deposit did not sweep.",
   operator_gas_low: "The gas wallet is below the threshold.",
   operator_payment_failed: "A member payment failed.",
@@ -75,10 +77,11 @@ export const MEMBER_NOTIFICATION_GROUPS: NotificationSettingGroup[] = [
       "deposit_credited",
       "account_shortfall",
     ],
+    platformOnly: true,
   },
   {
-    id: "payouts",
-    label: "Payouts",
+    id: "affiliates",
+    label: "Affiliates",
     ids: [
       "commission_released",
       "payout_requested",
@@ -109,9 +112,9 @@ export const MEMBER_NOTIFICATION_GROUPS: NotificationSettingGroup[] = [
   },
 ];
 
-export const OPERATOR_NOTIFICATION_GROUP: NotificationSettingGroup = {
-  id: "operator",
-  label: "Operators",
+export const ADMIN_NOTIFICATION_GROUP: NotificationSettingGroup = {
+  id: "admin",
+  label: "Admin emails",
   ids: [
     "operator_payout_requested",
     "operator_sweep_failed",
@@ -132,16 +135,18 @@ export function memberSettingGroups(
 ): NotificationSettingGroup[] {
   return MEMBER_NOTIFICATION_GROUPS.filter(
     (group) => !affiliateOnly || !group.platformOnly,
-  ).map((group) => ({
-    ...group,
-    ids: group.ids.filter((id) =>
-      memberNotificationIds(affiliateOnly).includes(id),
-    ),
-  }));
+  )
+    .map((group) => ({
+      ...group,
+      ids: group.ids.filter((id) =>
+        memberNotificationIds(affiliateOnly).includes(id),
+      ),
+    }))
+    .filter((group) => group.ids.length > 0);
 }
 
 export function adminSettingGroups(): NotificationSettingGroup[] {
-  return [...MEMBER_NOTIFICATION_GROUPS, OPERATOR_NOTIFICATION_GROUP];
+  return [ADMIN_NOTIFICATION_GROUP, ...MEMBER_NOTIFICATION_GROUPS];
 }
 
 export function emailSwitchDefaultOn(id: NotificationId): boolean {

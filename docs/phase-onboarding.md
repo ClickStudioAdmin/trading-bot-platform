@@ -1,6 +1,6 @@
 # Onboarding wizard (later)
 
-Postponed. **Roadmap 7** ([roadmap.md](roadmap.md)). Not the current phase. Do not implement until Click starts this item.
+Postponed. **Roadmap 8** ([roadmap.md](roadmap.md)). Not the current phase. Do not implement until Click starts this item. Entitlements / identity / plan gates is roadmap 7.
 
 The first-desk gate is already shipped. This phase **refines** `/welcome`; it does not replace it.
 

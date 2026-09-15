@@ -11,9 +11,17 @@ import {
   NOTIFICATION_IDS,
 } from "./catalog";
 import {
+  BADGE_IDS,
+  demoBadgesAllowed,
+  isBadgeId,
+  SAMPLE_BADGE_COUNTS,
+} from "./badges-catalog";
+import { seedUserInbox } from "./seed";
+import {
   markUserNotificationsRead,
   markUserNotificationsUnread,
   saveNotificationPreferences,
+  savePlatformAlertSettings,
   savePlatformDisabledEmails,
 } from "./store";
 
@@ -98,6 +106,57 @@ export async function savePlatformNotificationEmailsAction(formData: FormData) {
   if (!saved) {
     redirect("/admin/settings?tab=notifications&error=notifications");
   }
-  revalidatePath("/admin/settings");
+  refreshAdminAlertPaths();
   redirect("/admin/settings?tab=notifications&saved=1");
+}
+
+export async function savePlatformBadgesAction(formData: FormData) {
+  await requireAdmin();
+  const enabled = new Set(
+    formData.getAll("badge").map(String).filter(isBadgeId),
+  );
+  const disabledBadges = BADGE_IDS.filter((id) => !enabled.has(id));
+  const saved = await savePlatformAlertSettings({ disabledBadges });
+  if (!saved) {
+    redirect("/admin/settings?tab=notifications&error=badges");
+  }
+  refreshAdminAlertPaths();
+  redirect("/admin/settings?tab=notifications&saved=badges");
+}
+
+export async function seedAdminInboxAction() {
+  const admin = await requireAdmin();
+  if (!demoBadgesAllowed()) {
+    redirect("/admin/settings?tab=notifications&error=seed");
+  }
+  const inserted = await seedUserInbox(admin.id);
+  const demoSaved = await savePlatformAlertSettings({
+    demoBadgeCounts: SAMPLE_BADGE_COUNTS,
+  });
+  if (inserted === 0 && !demoSaved) {
+    redirect("/admin/settings?tab=notifications&error=seed");
+  }
+  refreshAdminAlertPaths();
+  redirect("/admin/settings?tab=notifications&saved=seeded");
+}
+
+export async function clearDemoBadgeCountsAction() {
+  await requireAdmin();
+  if (!demoBadgesAllowed()) {
+    redirect("/admin/settings?tab=notifications&error=demo");
+  }
+  const saved = await savePlatformAlertSettings({ demoBadgeCounts: {} });
+  if (!saved) {
+    redirect("/admin/settings?tab=notifications&error=demo");
+  }
+  refreshAdminAlertPaths();
+  redirect("/admin/settings?tab=notifications&saved=demo-cleared");
+}
+
+function refreshAdminAlertPaths() {
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/settings");
+  revalidatePath("/account/notifications");
+  revalidatePath("/account");
+  revalidatePath("/admin");
 }

@@ -1,3 +1,5 @@
+import type { AdminActionCounts, MemberActionCounts } from "./badge-model";
+
 export const BADGE_IDS = [
   "past_due",
   "account_shortfall",
@@ -134,6 +136,66 @@ export function demoBadgesAllowed(
   },
 ): boolean {
   return env.VERCEL_ENV !== "production";
+}
+
+export const AFFILIATE_BADGE_IDS: readonly BadgeId[] = ["affiliate_payouts"];
+
+export const MEMBER_BADGE_SETTINGS = BADGE_SETTINGS.filter(
+  (row) => row.audience === "member",
+);
+
+export const AFFILIATE_BADGE_SETTINGS = BADGE_SETTINGS.filter((row) =>
+  AFFILIATE_BADGE_IDS.includes(row.id),
+);
+
+export const ADMIN_BADGE_SETTINGS = BADGE_SETTINGS.filter(
+  (row) =>
+    row.audience === "admin" && !AFFILIATE_BADGE_IDS.includes(row.id),
+);
+
+export function applyMemberBadgeGates(
+  actions: MemberActionCounts,
+  disabled: readonly string[],
+  demo: Record<string, number> = {},
+  allowDemo = demoBadgesAllowed(),
+): MemberActionCounts {
+  const count = (id: BadgeId, live: number) =>
+    gatedBadgeCount(
+      live,
+      badgeIsDisabled(disabled, id),
+      allowDemo ? (demo[id] ?? 0) : 0,
+    );
+  return {
+    pastDue: count("past_due", actions.pastDue),
+    accountShortfall: count("account_shortfall", actions.accountShortfall),
+    unboundLive: count("unbound_live", actions.unboundLive),
+    sharedKey: count("shared_key", actions.sharedKey),
+    deskCritical: count("desk_critical", actions.deskCritical),
+    copyInvite: count("copy_invite", actions.copyInvite),
+    updateCard: count("update_card", actions.updateCard),
+  };
+}
+
+export function applyAdminBadgeGates(
+  actions: AdminActionCounts,
+  disabled: readonly string[],
+  demo: Record<string, number> = {},
+  allowDemo = demoBadgesAllowed(),
+): AdminActionCounts {
+  const count = (id: BadgeId, live: number) =>
+    gatedBadgeCount(
+      live,
+      badgeIsDisabled(disabled, id),
+      allowDemo ? (demo[id] ?? 0) : 0,
+    );
+  return {
+    affiliatePayouts: count("affiliate_payouts", actions.affiliatePayouts),
+    walletWithdraws: count("wallet_withdraws", actions.walletWithdraws),
+    sweepFailed: count("sweep_failed", actions.sweepFailed),
+    gasLow: count("gas_low", actions.gasLow),
+    pastDueMembers: count("past_due_members", actions.pastDueMembers),
+    deskCritical: count("admin_desk_critical", actions.deskCritical),
+  };
 }
 
 export const SAMPLE_BADGE_COUNTS: Record<BadgeId, number> = {

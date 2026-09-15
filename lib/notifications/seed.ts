@@ -1,3 +1,4 @@
+import { createServiceClient } from "@/lib/supabase/admin";
 import { inboxBody, inboxTitle, notificationCopy } from "./copy";
 import { insertUserNotification } from "./store";
 
@@ -105,7 +106,7 @@ export function sampleInboxNotices(): SeedRow[] {
     {
       template: "desk_sync_failed",
       notice: notificationCopy.desk_sync_failed({
-        deskName: "Bybit Liveable",
+        deskName: "Bybit Live 2",
         venue: "Bybit",
         detail: "retCode 10016: Order quantity is invalid.",
         href: "/strategies/futures/activity",
@@ -168,7 +169,7 @@ export function sampleInboxNotices(): SeedRow[] {
 }
 
 export async function seedUserInbox(userId: string): Promise<number> {
-  const supabase = (await import("@/lib/supabase/admin")).createServiceClient();
+  const supabase = createServiceClient();
   if (!supabase || !userId) {
     return 0;
   }
