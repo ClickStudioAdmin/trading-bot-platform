@@ -260,6 +260,98 @@ export const notificationCopy = {
     ),
 };
 
+export function sampleNotice(id: string): NotificationNotice {
+  switch (id) {
+    case "invoice_issued":
+      return notificationCopy.invoice_issued({
+        planName: "Plus",
+        amount: "$49.00",
+        dueAt: "18 Sep 2026",
+      });
+    case "invoice_paid":
+      return notificationCopy.invoice_paid({
+        planName: "Plus",
+        amount: "$49.00",
+        periodEnd: "16 Oct 2026",
+      });
+    case "payment_failed":
+      return notificationCopy.payment_failed({
+        planName: "Plus",
+        amount: "$49.00",
+        reason: "Card was declined.",
+      });
+    case "subscription_past_due":
+      return notificationCopy.subscription_past_due({ planName: "Plus" });
+    case "deposit_credited":
+      return notificationCopy.deposit_credited({
+        amount: "$120.00",
+        token: "USDT",
+      });
+    case "account_shortfall":
+      return notificationCopy.account_shortfall({
+        planName: "Plus",
+        amount: "$49.00",
+        mainUsd: "$12.00",
+        shortUsd: "$37.00",
+      });
+    case "commission_released":
+      return notificationCopy.commission_released({ amount: "$18.50" });
+    case "payout_requested":
+      return notificationCopy.payout_requested({
+        amount: "$80.00",
+        addressShort: "0x12a…9f3",
+        network: "Arbitrum Sepolia",
+        href: "/affiliates?tab=payouts",
+      });
+    case "payout_paid":
+      return notificationCopy.payout_paid({
+        amount: "$80.00",
+        addressShort: "0x12a…9f3",
+        network: "Arbitrum Sepolia",
+        href: "/affiliates?tab=payouts",
+      });
+    case "payout_rejected":
+      return notificationCopy.payout_rejected({
+        amount: "$25.00",
+        bookLabel: "Affiliate book",
+        optionalNote: " Address checksum failed.",
+        href: "/affiliates?tab=payouts",
+      });
+    case "copy_invite_received":
+      return notificationCopy.copy_invite_received({
+        deskName: "Bybit Live 1",
+        traderAlias: "Northwind",
+      });
+    case "copy_invite_revoked":
+      return notificationCopy.copy_invite_revoked({
+        deskName: "Hyper Live",
+      });
+    case "desk_sync_failed":
+      return notificationCopy.desk_sync_failed({
+        deskName: "Bybit Live 2",
+        venue: "Bybit",
+        detail: "retCode 10016: Order quantity is invalid.",
+        href: "/strategies/futures/activity",
+      });
+    case "desk_order_failed":
+      return notificationCopy.desk_order_failed({
+        deskName: "Hyper Live",
+        venue: "Hyperliquid",
+        detail: "Reduce only order would increase position",
+        href: "/strategies/futures/positions",
+      });
+    case "exchange_verify_failed":
+      return notificationCopy.exchange_verify_failed({
+        connectionName: "Bybit demo",
+        venue: "Bybit",
+      });
+    case "password_changed":
+      return notificationCopy.password_changed();
+    default:
+      return sampleOperatorNotice(id);
+  }
+}
+
 export function sampleOperatorNotice(id: string): NotificationNotice {
   switch (id) {
     case "operator_payout_requested":

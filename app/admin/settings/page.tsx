@@ -732,20 +732,31 @@ async function NotificationsTab({
         </section>
       ) : null}
 
-      <h2 className="mt-10 text-lg font-semibold tracking-tight">Alerts</h2>
-      <AdminBadgeSettingsForm
-        disabledBadges={settings.disabledBadges}
-        action={savePlatformBadgesAction}
-      />
+      <p className="mt-6 text-sm text-ink-muted">
+        Locked email copy lives on{" "}
+        <Link href="/admin/email-templates" className="text-accent hover:text-accent-strong">
+          Email templates
+        </Link>
+        .
+      </p>
 
-      <h2 className="mx-auto mt-10 w-[60%] text-lg font-semibold tracking-tight">
-        Notifications
-      </h2>
-      <AdminNotificationSettingsForm
-        groups={adminSettingGroups()}
-        disabledEmails={settings.disabledEmails}
-        action={savePlatformNotificationEmailsAction}
-      />
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Notifications</h2>
+          <AdminNotificationSettingsForm
+            groups={adminSettingGroups()}
+            disabledEmails={settings.disabledEmails}
+            action={savePlatformNotificationEmailsAction}
+          />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Alerts</h2>
+          <AdminBadgeSettingsForm
+            disabledBadges={settings.disabledBadges}
+            action={savePlatformBadgesAction}
+          />
+        </div>
+      </div>
     </>
   );
 }

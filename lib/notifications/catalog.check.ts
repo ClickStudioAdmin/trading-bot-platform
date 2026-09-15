@@ -25,6 +25,7 @@ import {
   inboxBody,
   inboxTitle,
   notificationCopy,
+  sampleNotice,
   sampleOperatorNotice,
 } from "./copy";
 
@@ -200,11 +201,15 @@ const operator = notificationCopy.operator_gas_low({
 assert.match(operator.subject, /Gas wallet low/);
 assert.equal(operator.actionUrl, "/admin/billing");
 
-for (const id of operatorNotificationIds()) {
-  const sample = sampleOperatorNotice(id);
+for (const id of NOTIFICATION_IDS) {
+  const sample = sampleNotice(id);
   assert.equal(sample.subject.length > 0, true);
   assert.equal(sample.paragraphs.length > 0, true);
   assert.equal(sample.actionLabel.length > 0, true);
+}
+for (const id of operatorNotificationIds()) {
+  const sample = sampleOperatorNotice(id);
+  assert.equal(sample.subject, sampleNotice(id).subject);
 }
 
 console.log("notification catalog checks passed");

@@ -1,6 +1,4 @@
-import { NoticeEmail } from "@/components/notice-email";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
-import { sampleOperatorNotice } from "@/lib/notifications/copy";
 import {
   emailDefaultOn,
   notificationIsDisabled,
@@ -84,7 +82,7 @@ export function AdminBadgeSettingsForm({
   action: (formData: FormData) => void | Promise<void>;
 }) {
   return (
-    <form action={action} className="mt-6 space-y-6">
+    <form action={action} className="mt-4 space-y-6">
       <p className="text-sm text-ink-muted">
         Off hides that numbered alert everywhere it appears. Live work still
         exists; only the badge is gone.
@@ -156,51 +154,43 @@ export function AdminNotificationSettingsForm({
   action: (formData: FormData) => void | Promise<void>;
 }) {
   return (
-    <form action={action} className="mx-auto mt-6 w-[60%] space-y-6">
-      {groups.map((group) =>
-        group.id === "admin" ? (
-          <AdminEmailTemplates
-            key={group.id}
-            ids={group.ids}
-            disabledEmails={disabledEmails}
-          />
-        ) : (
-          <section
-            key={group.id}
-            className="rounded-card border border-line bg-surface p-5"
-          >
-            <h2 className="text-sm font-semibold text-ink">{group.label}</h2>
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[32rem] text-left text-sm">
-                <thead>
-                  <tr className="text-xs uppercase tracking-[0.12em] text-ink-faint">
-                    <th className="pb-2 font-medium">Notice</th>
-                    <th className="w-28 pb-2 font-medium">Sent to</th>
-                    <th className="w-20 pb-2 text-center font-medium">Email</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-line">
-                  {group.ids.map((id) => (
-                    <SettingRow
-                      key={id}
-                      id={id}
-                      emailOn={!notificationIsDisabled(disabledEmails, id)}
-                      inAppOn
-                      showInApp={false}
-                      sentTo={
-                        notificationAudience(id) === "operator"
-                          ? "Admins"
-                          : "Member"
-                      }
-                      emailDefault={emailDefaultOn(id)}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ),
-      )}
+    <form action={action} className="mt-4 space-y-6">
+      {groups.map((group) => (
+        <section
+          key={group.id}
+          className="rounded-card border border-line bg-surface p-5"
+        >
+          <h2 className="text-sm font-semibold text-ink">{group.label}</h2>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[28rem] text-left text-sm">
+              <thead>
+                <tr className="text-xs uppercase tracking-[0.12em] text-ink-faint">
+                  <th className="pb-2 font-medium">Notice</th>
+                  <th className="w-28 pb-2 font-medium">Sent to</th>
+                  <th className="w-20 pb-2 text-center font-medium">Email</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {group.ids.map((id) => (
+                  <SettingRow
+                    key={id}
+                    id={id}
+                    emailOn={!notificationIsDisabled(disabledEmails, id)}
+                    inAppOn
+                    showInApp={false}
+                    sentTo={
+                      notificationAudience(id) === "operator"
+                        ? "Admins"
+                        : "Member"
+                    }
+                    emailDefault={emailDefaultOn(id)}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
       <PendingSubmitButton
         pendingLabel="Saving…"
         successKey="save-admin-notifications"
@@ -209,47 +199,6 @@ export function AdminNotificationSettingsForm({
         Save notifications
       </PendingSubmitButton>
     </form>
-  );
-}
-
-function AdminEmailTemplates({
-  ids,
-  disabledEmails,
-}: {
-  ids: NotificationId[];
-  disabledEmails: string[];
-}) {
-  return (
-    <section className="rounded-card border border-line bg-surface p-5">
-      <h2 className="text-sm font-semibold text-ink">Admin emails</h2>
-      <p className="mt-2 text-sm text-ink-muted">
-        These go to listed admins only. They never write a member inbox row.
-        Copy is locked. Off stops that mail for every admin.
-      </p>
-      <div className="mt-5 space-y-6">
-        {ids.map((id) => (
-          <div key={id} className="border-t border-line pt-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-ink">{NOTIFICATION_LABELS[id]}</p>
-                <p className="mt-1 text-xs text-ink-faint">
-                  {NOTIFICATION_HINTS[id]}
-                </p>
-              </div>
-              <SettingsCheck
-                name="email"
-                value={id}
-                defaultChecked={!notificationIsDisabled(disabledEmails, id)}
-                label={`${NOTIFICATION_LABELS[id]} email`}
-              />
-            </div>
-            <div className="mt-4">
-              <NoticeEmail notice={sampleOperatorNotice(id)} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
   );
 }
 

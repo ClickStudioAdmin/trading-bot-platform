@@ -26,7 +26,7 @@ Members and admins see numbered badges for work they must do, plus an inbox of n
 | 2 | Schema | Agent | `user_notifications`, `user_notification_preferences`, `email_dispatches`, `platform_settings.disabled_emails` / `disabled_badges` / `demo_badge_counts`. RPCs for insert / mark read / unread / claim dispatch / upsert prefs. Inbox by `user_id`. Service-role only. Push `develop` to migrate. **In repo 16 Sep 2026.** |
 | 3 | Catalog + `notify()` | Agent | TypeScript catalog, locked copy, preference checks, dispatch claim. Email no-ops if Resend is unset. Tests for mutes, operator skip, idempotency keys. **In repo 16 Sep 2026.** |
 | 4 | Inbox + badges | Agent | `/account/notifications`, Overview widget, amber `NavBadge`. Header Inbox = unread only. Action counts stay on Overview / Billing / Affiliates. Extend Attention. Affiliate-only allowed on Inbox. Stop. **In repo 16 Sep 2026.** |
-| 5 | Settings | Agent | `/account/settings` Notifications tab (Email / In-app per event). `/admin/settings` Notifications & Alerts tab (platform email kill switches + badge On/Off + develop sample inbox). Admin emails (`operator_*`) are the first Notifications block, with locked `NoticeEmail` previews. Affiliate member notices sit in Affiliates. Stop. **In repo 16 Sep 2026.** |
+| 5 | Settings | Agent | `/account/settings` Notifications tab (Email / In-app per event). `/admin/settings` Notifications & Alerts tab: Notifications and Alerts as two columns. Locked `NoticeEmail` previews on `/admin/email-templates`. Affiliate-only members see Affiliates + Security only. Stop. **In repo 16 Sep 2026.** |
 | 6 | Wire commercial | Agent | `notify()` from billing, affiliate payouts, copy invites, password change. Stop. |
 | 7 | Wire critical + operator | Agent | Deduped live-desk critical, sweep fail, gas low, operator mail. Absorb click-list 12. Stop. **In repo 16 Sep 2026.** |
 | 7a | Admin roles | Agent | Admins can create and assign **admin roles**. Each operator template is sent only to the roles ticked on that template (default: every admin role). `/admin` nav and server actions gate on the role’s permissions. Listed owner email stays a full-access role that cannot be locked out. Never trust the browser. Stop. **Not started.** |
@@ -81,7 +81,7 @@ Same ID in email, inbox, and settings.
 
 ## Email templates
 
-FQX `NoticeEmail` shape: subject = heading = preview; one or two short paragraphs; one button. Inbox title = subject. Inbox body = first paragraph. Amounts USD. From name Trading Bot Platform. Admin previews live on `/admin/settings?tab=notifications` under Admin emails. Resend send is still step 8.
+FQX `NoticeEmail` shape: subject = heading = preview; one or two short paragraphs; one button. Inbox title = subject. Inbox body = first paragraph. Amounts USD. From name Trading Bot Platform. Locked previews live on `/admin/email-templates`. Settings only has on/off switches. Resend send is still step 8.
 
 Member footer (step 8): “You can change these emails on Account Settings → Notifications.” Operator mail omits that footer.
 
@@ -127,7 +127,8 @@ Platform kill switches: `platform_settings.disabled_badges` hides a badge everyw
 
 - `/account/notifications` — Inbox (affiliate-only allowed)
 - `/account/settings?tab=notifications`
-- `/admin/settings?tab=notifications` (tab label Notifications & Alerts)
+- `/admin/settings?tab=notifications` (Notifications and Alerts as two columns)
+- `/admin/email-templates` — locked `NoticeEmail` previews
 - Header Inbox (unread only); amber action counts on Overview, Billing, Affiliates
 - Admin Overview, Billing, Affiliates amber counts
 - Overview Attention + recent notifications widget
