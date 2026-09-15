@@ -181,26 +181,6 @@ export function AffiliateDashboard({
           {error}
         </p>
       ) : null}
-      {!platformMember ? (
-        <form
-          action={upgradeAffiliateToPlatformAction}
-          className="mt-6 rounded-card border border-line bg-surface p-5"
-        >
-          <h2 className="text-lg font-semibold tracking-tight">
-            Platform membership
-          </h2>
-          <p className="mt-2 text-sm text-ink-muted">
-            You are an affiliate only. Upgrade to open desks, billing, and the
-            rest of the app on the Free plan.
-          </p>
-          <PendingSubmitButton
-            pendingLabel="Upgrading…"
-            className="mt-4 rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-          >
-            Upgrade account to full platform membership (free to start)
-          </PendingSubmitButton>
-        </form>
-      ) : null}
       {arrears ? (
         <p className="mt-6 text-sm text-warning">
           Your subscription is unpaid. New commissions use program default

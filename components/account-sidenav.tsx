@@ -21,6 +21,8 @@ import {
   type TradingAccount,
 } from "@/lib/accounts/model";
 import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { upgradeAffiliateToPlatformAction } from "@/lib/membership/affiliate-actions";
 import { ACCOUNT_DESK_LINKS, AFFILIATE_ONLY_LINKS } from "@/lib/site-links";
 
 export function AccountSidenav({
@@ -53,6 +55,16 @@ export function AccountSidenav({
         links={platformMember ? ACCOUNT_DESK_LINKS : AFFILIATE_ONLY_LINKS}
         pathname={pathname}
       />
+      {!platformMember ? (
+        <form action={upgradeAffiliateToPlatformAction} className="mt-5">
+          <PendingSubmitButton
+            pendingLabel="Upgrading…"
+            className="w-full rounded-control bg-accent-strong px-3 py-2 text-left text-sm font-medium leading-snug text-ink hover:bg-accent"
+          >
+            Upgrade account to full platform membership (free to start)
+          </PendingSubmitButton>
+        </form>
+      ) : null}
       {platformMember ? (
         <>
           <DeskGroup
