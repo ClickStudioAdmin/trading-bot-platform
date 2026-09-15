@@ -28,7 +28,10 @@ import { invoiceWriteFromPaid } from "./stripe-apply";
 import { parsePlanId } from "./form";
 import { getMembershipPlan } from "./store";
 import { billingOrigin, getStripe, stripeSecretConfigured } from "./stripe";
-import { ensureCardSwitchSubscription } from "./stripe-webhook";
+import {
+  ensureCardSwitchSubscription,
+  syncStripeForCollectionMethod,
+} from "./stripe-webhook";
 
 export type EmbeddedCheckoutResult =
   | { ok: true; clientSecret: string }
@@ -101,24 +104,11 @@ export async function setBillingMethodAction(formData: FormData) {
   const paySubscriptionFromCredit = parsePaySubscriptionFromCredit(
     formData.get("paySubscriptionFromCredit"),
   );
-  const saved = await saveBillingMethod(member.id, method, {
+  const committed = await commitCollectionMethod(member.id, method, {
     paySubscriptionFromCredit,
   });
-  if (!saved.ok) {
-    fail(saved.error);
-  }
-  const billing = await getMemberBilling(member.id);
-  if (billing?.stripeSubscriptionId && stripeSecretConfigured()) {
-    const stripe = getStripe();
-    if (stripe) {
-      try {
-        await stripe.subscriptions.update(billing.stripeSubscriptionId, {
-          cancel_at_period_end: method === "wallet",
-        });
-      } catch (cause) {
-        fail(cause instanceof Error ? cause.message : "Stripe update failed.");
-      }
-    }
+  if (!committed.ok) {
+    fail(committed.error);
   }
   await writeEventLog({
     scope: "system",
@@ -129,6 +119,30 @@ export async function setBillingMethodAction(formData: FormData) {
   });
   revalidatePath("/account/billing");
   redirect(billingPath({ tab: "method", saved: "method" }));
+}
+
+async function commitCollectionMethod(
+  userId: string,
+  method: "stripe" | "wallet",
+  extras: { paySubscriptionFromCredit?: boolean },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const billing = await getMemberBilling(userId);
+  const synced = await syncStripeForCollectionMethod({
+    userId,
+    method,
+    subscriptionId: billing?.stripeSubscriptionId ?? null,
+  });
+  if (!synced.ok) {
+    return synced;
+  }
+  const saved = await saveBillingMethod(userId, method, extras);
+  if (!saved.ok) {
+    return saved;
+  }
+  if (method === "stripe" && !synced.live) {
+    return ensureCardSwitchSubscription(userId);
+  }
+  return { ok: true };
 }
 
 export async function createEmbeddedCheckoutSecret(
@@ -430,32 +444,14 @@ export async function saveCheckoutMethodAction(formData: FormData) {
   const paySubscriptionFromCredit = parsePaySubscriptionFromCredit(
     formData.get("paySubscriptionFromCredit"),
   );
-  const saved = await saveBillingMethod(member.id, method, {
+  const committed = await commitCollectionMethod(member.id, method, {
     paySubscriptionFromCredit,
   });
-  if (!saved.ok) {
+  if (!committed.ok) {
     if (planId) {
-      failCheckout(planId, saved.error);
+      failCheckout(planId, committed.error);
     }
-    fail(saved.error);
-  }
-  const billing = await getMemberBilling(member.id);
-  if (billing?.stripeSubscriptionId && stripeSecretConfigured()) {
-    const stripe = getStripe();
-    if (stripe) {
-      try {
-        await stripe.subscriptions.update(billing.stripeSubscriptionId, {
-          cancel_at_period_end: method === "wallet",
-        });
-      } catch (cause) {
-        const message =
-          cause instanceof Error ? cause.message : "Stripe update failed.";
-        if (planId) {
-          failCheckout(planId, message);
-        }
-        fail(message);
-      }
-    }
+    fail(committed.error);
   }
   await writeEventLog({
     scope: "system",
@@ -606,9 +602,7 @@ export async function createEmbeddedCardSecret(): Promise<EmbeddedCheckoutResult
     if (!clientSecret) {
       return { ok: false, error: "Stripe did not return a card client secret." };
     }
-    if (billing && !billing.stripeSubscriptionId) {
-      await ensureCardSwitchSubscription(member.id);
-    }
+    await ensureCardSwitchSubscription(member.id);
     return { ok: true, clientSecret };
   } catch (cause) {
     return {

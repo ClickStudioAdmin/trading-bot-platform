@@ -93,6 +93,15 @@ export async function stripeCustomerHasCard(
   return (await loadStripeCardOnFile(customerId)) !== null;
 }
 
+export function isStripeMissingResource(cause: unknown): boolean {
+  return (
+    typeof cause === "object" &&
+    cause !== null &&
+    "code" in cause &&
+    (cause as { code?: unknown }).code === "resource_missing"
+  );
+}
+
 export function stripeWebhookSecret(): string {
   return process.env.STRIPE_WEBHOOK_SECRET?.trim() ?? "";
 }

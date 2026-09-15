@@ -32,7 +32,8 @@ import {
 } from "./billing-store";
 import { parsePlanId } from "./form";
 import { getMembershipPlan } from "./store";
-import { stripeSecretConfigured, getStripe } from "./stripe";
+import { stripeSecretConfigured } from "./stripe";
+import { syncStripeForCollectionMethod } from "./stripe-webhook";
 import { collectOpenWalletInvoices } from "./billing-cycle-store";
 import { watchMembershipDeposits } from "./watch-deposits";
 import {
@@ -413,11 +414,13 @@ async function payPlanWithCredit(
       return { ok: false, error: commissions.error };
     }
     if (billing?.stripeSubscriptionId && stripeSecretConfigured()) {
-      const stripe = getStripe();
-      if (stripe) {
-        await stripe.subscriptions.update(billing.stripeSubscriptionId, {
-          cancel_at_period_end: true,
-        });
+      const synced = await syncStripeForCollectionMethod({
+        userId: member.id,
+        method: "wallet",
+        subscriptionId: billing.stripeSubscriptionId,
+      });
+      if (!synced.ok) {
+        return { ok: false, error: synced.error };
       }
     }
     await writeEventLog({

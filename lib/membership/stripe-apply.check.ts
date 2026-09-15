@@ -3,6 +3,10 @@ import {
   alreadyRecordedInvoice,
   applySubscriptionSnapshot,
   invoiceWriteFromPaid,
+  isLiveStripeSubscriptionStatus,
+  stripeCollectionSyncAction,
+  stripeWebhookAppliesToMember,
+  walletStripeWebhookAction,
 } from "./stripe-apply";
 
 const paid = invoiceWriteFromPaid({
@@ -84,5 +88,51 @@ if (!("ok" in canceledOpen)) {
   assert.equal(canceledOpen.subscriptionStatus, "canceled");
   assert.equal(canceledOpen.planId, "plan-pro");
 }
+
+assert.equal(isLiveStripeSubscriptionStatus("active"), true);
+assert.equal(isLiveStripeSubscriptionStatus("past_due"), true);
+assert.equal(isLiveStripeSubscriptionStatus("trialing"), true);
+assert.equal(isLiveStripeSubscriptionStatus("canceled"), false);
+assert.equal(isLiveStripeSubscriptionStatus("incomplete_expired"), false);
+assert.equal(
+  stripeCollectionSyncAction({ method: "wallet", stripeStatus: "active" }),
+  "cancel_at_period_end",
+);
+assert.equal(
+  stripeCollectionSyncAction({ method: "stripe", stripeStatus: "active" }),
+  "resume",
+);
+assert.equal(
+  stripeCollectionSyncAction({ method: "stripe", stripeStatus: "canceled" }),
+  "recreate",
+);
+assert.equal(
+  stripeCollectionSyncAction({ method: "stripe", stripeStatus: null }),
+  "recreate",
+);
+assert.equal(
+  stripeCollectionSyncAction({ method: "wallet", stripeStatus: "canceled" }),
+  "none",
+);
+if ("ok" in active || "ok" in canceledEnded || "ok" in canceledOpen) {
+  throw new Error("expected subscription snapshots");
+}
+assert.equal(walletStripeWebhookAction(active), "ignore");
+assert.equal(walletStripeWebhookAction(canceledEnded), "clear_subscription");
+assert.equal(walletStripeWebhookAction(canceledOpen), "clear_subscription");
+assert.equal(
+  stripeWebhookAppliesToMember({
+    billingMethod: "wallet",
+    applied: active,
+  }),
+  false,
+);
+assert.equal(
+  stripeWebhookAppliesToMember({
+    billingMethod: "stripe",
+    applied: canceledEnded,
+  }),
+  true,
+);
 
 console.log("membership stripe-apply checks passed");

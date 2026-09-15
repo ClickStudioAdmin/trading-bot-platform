@@ -2,6 +2,7 @@ import { writeEventLog } from "@/lib/logs/write";
 import type Stripe from "stripe";
 import {
   applyMemberSubscription,
+  clearStripeSubscriptionId,
   getMemberBilling,
   getMemberBillingByCustomer,
   markStripeInvoiceRefunded,
@@ -12,10 +13,12 @@ import {
 import { markOpenStripeInvoicePaid } from "./billing-cycle-store";
 import { switchToCardTrialEnd } from "./billing";
 import { getMembershipPlan, getMembershipPlanByStripePriceId } from "./store";
-import { getStripe } from "./stripe";
+import { getStripe, isStripeMissingResource } from "./stripe";
 import {
   applySubscriptionSnapshot,
   invoiceWriteFromPaid,
+  isLiveStripeSubscriptionStatus,
+  stripeCollectionSyncAction,
 } from "./stripe-apply";
 
 export async function handleStripeEvent(
@@ -112,13 +115,116 @@ async function handleSwitchToCardSetup(
   return { ok: true };
 }
 
+export async function syncStripeForCollectionMethod(input: {
+  userId: string;
+  method: "stripe" | "wallet";
+  subscriptionId: string | null;
+}): Promise<{ ok: true; live: boolean } | { ok: false; error: string }> {
+  const stripe = getStripe();
+  if (!stripe || !input.subscriptionId) {
+    return { ok: true, live: false };
+  }
+  let stripeStatus: string | null;
+  try {
+    const current = await stripe.subscriptions.retrieve(input.subscriptionId);
+    stripeStatus = current.status;
+  } catch (cause) {
+    if (isStripeMissingResource(cause)) {
+      const cleared = await clearStripeSubscriptionId(input.userId);
+      if (!cleared.ok) {
+        return cleared;
+      }
+      return { ok: true, live: false };
+    }
+    return {
+      ok: false,
+      error:
+        cause instanceof Error ? cause.message : "Stripe subscription lookup failed.",
+    };
+  }
+  const action = stripeCollectionSyncAction({
+    method: input.method,
+    stripeStatus,
+  });
+  try {
+    if (action === "cancel_at_period_end") {
+      await stripe.subscriptions.update(input.subscriptionId, {
+        cancel_at_period_end: true,
+      });
+      return { ok: true, live: true };
+    }
+    if (action === "resume") {
+      await stripe.subscriptions.update(input.subscriptionId, {
+        cancel_at_period_end: false,
+      });
+      return { ok: true, live: true };
+    }
+    if (action === "recreate") {
+      const cleared = await clearStripeSubscriptionId(input.userId);
+      if (!cleared.ok) {
+        return cleared;
+      }
+    }
+    return { ok: true, live: false };
+  } catch (cause) {
+    if (isStripeMissingResource(cause) || action === "recreate") {
+      const cleared = await clearStripeSubscriptionId(input.userId);
+      if (!cleared.ok) {
+        return cleared;
+      }
+      return { ok: true, live: false };
+    }
+    return {
+      ok: false,
+      error:
+        cause instanceof Error ? cause.message : "Stripe subscription update failed.",
+    };
+  }
+}
+
+async function liveStripeSubscriptionId(
+  stripe: NonNullable<ReturnType<typeof getStripe>>,
+  subscriptionId: string | null,
+): Promise<string | null> {
+  if (!subscriptionId) {
+    return null;
+  }
+  try {
+    const current = await stripe.subscriptions.retrieve(subscriptionId);
+    return isLiveStripeSubscriptionStatus(current.status) ? current.id : null;
+  } catch (cause) {
+    if (isStripeMissingResource(cause)) {
+      return null;
+    }
+    throw cause;
+  }
+}
+
 export async function ensureCardSwitchSubscription(
   userId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const billing = await getMemberBilling(userId);
   const stripe = getStripe();
-  if (!stripe || !billing?.stripeCustomerId || billing.stripeSubscriptionId) {
+  if (!stripe || !billing?.stripeCustomerId) {
     return { ok: true };
+  }
+  try {
+    const liveId = await liveStripeSubscriptionId(
+      stripe,
+      billing.stripeSubscriptionId,
+    );
+    if (liveId) {
+      await stripe.subscriptions.update(liveId, {
+        cancel_at_period_end: false,
+      });
+      return { ok: true };
+    }
+  } catch (cause) {
+    return {
+      ok: false,
+      error:
+        cause instanceof Error ? cause.message : "Stripe subscription update failed.",
+    };
   }
   let paymentMethod: string | null = null;
   try {
@@ -137,11 +243,17 @@ export async function ensureCardSwitchSubscription(
   } catch {
     return { ok: true };
   }
+  if (!paymentMethod) {
+    return { ok: true };
+  }
   return startCardSwitchSubscription({
     stripe,
     userId,
     customerId: billing.stripeCustomerId,
-    billing,
+    billing: {
+      ...billing,
+      stripeSubscriptionId: null,
+    },
     paymentMethod,
   });
 }
@@ -167,18 +279,26 @@ async function startCardSwitchSubscription(input: {
   const item = await cardSwitchSubscriptionItem(stripe, loaded.plan);
   const firstCharge = switchToCardTrialEnd(billing.periodEnd);
   try {
-    if (billing.stripeSubscriptionId) {
-      const current = await stripe.subscriptions.retrieve(
-        billing.stripeSubscriptionId,
-      );
+    const liveId = await liveStripeSubscriptionId(
+      stripe,
+      billing.stripeSubscriptionId,
+    );
+    if (liveId) {
+      const current = await stripe.subscriptions.retrieve(liveId);
       const existingItemId = current.items.data[0]?.id;
-      await stripe.subscriptions.update(billing.stripeSubscriptionId, {
+      await stripe.subscriptions.update(liveId, {
         cancel_at_period_end: false,
         proration_behavior: "none",
         items: existingItemId ? [{ id: existingItemId, ...item }] : [item],
         ...(paymentMethod ? { default_payment_method: paymentMethod } : {}),
       });
       return { ok: true };
+    }
+    if (billing.stripeSubscriptionId) {
+      const cleared = await clearStripeSubscriptionId(userId);
+      if (!cleared.ok) {
+        return cleared;
+      }
     }
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
@@ -293,15 +413,22 @@ async function handleSubscription(
   if (!saved.ok) {
     return saved;
   }
+  const message =
+    saved.effect === "wallet_ignored"
+      ? "Ignored Stripe subscription while Crypto is the collection method"
+      : saved.effect === "wallet_cleared"
+        ? "Cleared ended Stripe subscription; Crypto collection unchanged"
+        : "Applied Stripe subscription";
   await writeEventLog({
     scope: "system",
     event: "membership.stripe_subscription",
-    message: "Applied Stripe subscription",
+    message,
     userId,
     data: {
       status: applied.subscriptionStatus,
       planId: applied.planId,
       subscriptionId: subscription.id,
+      effect: saved.effect,
     },
   });
   return { ok: true };

@@ -21,7 +21,12 @@ import {
   getMembershipPlan,
   listMembershipPlans,
 } from "./store";
-import type { AppliedSubscription, StripeInvoiceWrite } from "./stripe-apply";
+import {
+  stripeWebhookAppliesToMember,
+  walletStripeWebhookAction,
+  type AppliedSubscription,
+  type StripeInvoiceWrite,
+} from "./stripe-apply";
 
 export { walletBookBalances, walletCreditUsd } from "./wallet-store";
 
@@ -188,10 +193,49 @@ export async function applyMemberPlanNow(input: {
   return { ok: true };
 }
 
+export async function clearStripeSubscriptionId(
+  userId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return { ok: false, error: "Database is not configured." };
+  }
+  const { error } = await supabase
+    .from("members")
+    .update({
+      stripe_subscription_id: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
 export async function applyMemberSubscription(
   userId: string,
   applied: AppliedSubscription,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; effect: "applied" | "wallet_ignored" | "wallet_cleared" }
+  | { ok: false; error: string }
+> {
+  const existing = await getMemberBilling(userId);
+  if (
+    !stripeWebhookAppliesToMember({
+      billingMethod: existing?.billingMethod ?? null,
+      applied,
+    })
+  ) {
+    if (walletStripeWebhookAction(applied) === "clear_subscription") {
+      const cleared = await clearStripeSubscriptionId(userId);
+      if (!cleared.ok) {
+        return cleared;
+      }
+      return { ok: true, effect: "wallet_cleared" };
+    }
+    return { ok: true, effect: "wallet_ignored" };
+  }
   const supabase = createServiceClient();
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
@@ -224,7 +268,7 @@ export async function applyMemberSubscription(
   if (error) {
     return { ok: false, error: error.message };
   }
-  return { ok: true };
+  return { ok: true, effect: "applied" };
 }
 
 export async function recordStripeInvoice(
