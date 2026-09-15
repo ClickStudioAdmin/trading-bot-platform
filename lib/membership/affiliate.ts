@@ -761,6 +761,16 @@ export function isOpenWalletWithdraw(status: PayoutStatus): boolean {
   );
 }
 
+export function openWithdrawUsd(
+  rows: readonly { status: PayoutStatus; amountUsd: number }[],
+): number {
+  return roundUsd(
+    rows
+      .filter((row) => isOpenWalletWithdraw(row.status))
+      .reduce((sum, row) => sum + Math.abs(row.amountUsd), 0),
+  );
+}
+
 export function summarizeAdminPayoutQueue(
   rows: {
     status: PayoutStatus;

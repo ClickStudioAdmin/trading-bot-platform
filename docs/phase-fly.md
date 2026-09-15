@@ -142,16 +142,17 @@ You need an **org** token, not a GitHub-app launch.
 Tell the agent when that secret is saved. Still do not use Launch from GitHub.
 
 **5. Let GitHub create the empty app**  
-After the token is on GitHub, push `develop`. The job creates **tbp-engine-dev** in Fly org **tbp-154** (the TBP org). It will then stop and say the three app secrets are missing. That is expected. Also run **Deploy Database** if that has not gone green yet. The app will not appear under Apps until this step succeeds. Do not click **Launch an App**.
+After the token is on GitHub, push `develop`. The job creates **tbp-engine-dev** in Fly org **tbp-154** (the TBP org). It will then stop and say the four app secrets are missing. That is expected. Also run **Deploy Database** if that has not gone green yet. The app will not appear under Apps until this step succeeds. Do not click **Launch an App**.
 
-**6. Copy three secrets onto that Fly app**  
+**6. Copy four secrets onto that Fly app**  
 Once **tbp-engine-dev** appears in the Fly dashboard, open it (do not Launch another app). Open **Secrets**. Add exactly these names, with the **same values already on Vercel Development** (the `develop` environment), not Production:
 
 - `SUPABASE_URL` — development project URL
 - `SUPABASE_SERVICE_ROLE_KEY` — development **service role** key (the secret one, never a `NEXT_PUBLIC_` key)
 - `EXCHANGE_CREDENTIALS_KEY` — the same 64-character key Vercel Development uses to encrypt exchange API keys
+- `BILLING_CREDENTIALS_KEY` — the same key Vercel Development uses to decrypt the deposit HD seed and gas wallet (sweeps fail silently without it)
 
-If those three do not match Vercel Development, the worker will talk to the wrong database or fail to decrypt keys. Do not paste production values here.
+If those four do not match Vercel Development, the worker will talk to the wrong database or fail to decrypt keys. Do not paste production values here.
 
 Re-run **Deploy Engine**. You want both green:
 

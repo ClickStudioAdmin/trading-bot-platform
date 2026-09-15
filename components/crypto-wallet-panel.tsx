@@ -26,6 +26,7 @@ import {
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import {
   accountBalanceCoversNextCycle,
+  accountBalancePendingWithdrawNote,
   accountShortfallUsd,
   creditedDepositsNotice,
   engineCreditedBalanceNotice,
@@ -42,6 +43,7 @@ import type {
 
 type LiveMainWalletValue = {
   mainUsd: number;
+  pendingWithdrawUsd: number;
   setMainUsd: (usd: number) => void;
   notice: string | null;
   noticeOk: boolean;
@@ -60,14 +62,19 @@ const NOTICE_CLEAR_MS = 5_000;
 
 export function LiveMainWallet({
   initialMainUsd,
+  initialPendingWithdrawUsd = 0,
   pollBalance = false,
   children,
 }: {
   initialMainUsd: number;
+  initialPendingWithdrawUsd?: number;
   pollBalance?: boolean;
   children: ReactNode;
 }) {
   const [mainUsd, setMainUsd] = useState(initialMainUsd);
+  const [pendingWithdrawUsd, setPendingWithdrawUsd] = useState(
+    initialPendingWithdrawUsd,
+  );
   const [notice, setNotice] = useState<string | null>(null);
   const [noticeOk, setNoticeOk] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +98,9 @@ export function LiveMainWallet({
         setError(null);
       }
       setMainUsd(result.mainUsd);
+      if (typeof result.pendingWithdrawUsd === "number") {
+        setPendingWithdrawUsd(result.pendingWithdrawUsd);
+      }
     }
     void refresh();
     const timer = window.setInterval(() => {
@@ -117,6 +127,7 @@ export function LiveMainWallet({
     <LiveMainWalletContext.Provider
       value={{
         mainUsd,
+        pendingWithdrawUsd,
         setMainUsd,
         notice,
         noticeOk,
@@ -133,11 +144,30 @@ export function LiveMainWallet({
   );
 }
 
+function AccountBalanceAmount({
+  mainUsd,
+  pendingWithdrawUsd,
+}: {
+  mainUsd: number;
+  pendingWithdrawUsd: number;
+}) {
+  const pending = accountBalancePendingWithdrawNote(pendingWithdrawUsd);
+  return (
+    <>
+      {formatUsd(mainUsd)}
+      {pending ? (
+        <span className="text-ink-muted"> ({pending})</span>
+      ) : null}
+    </>
+  );
+}
+
 export function useLiveMainWallet(fallbackUsd: number): LiveMainWalletValue {
   const live = useContext(LiveMainWalletContext);
   return (
     live ?? {
       mainUsd: fallbackUsd,
+      pendingWithdrawUsd: 0,
       setMainUsd: () => {},
       notice: null,
       noticeOk: false,
@@ -260,7 +290,10 @@ export function LiveAccountBalanceSummary({
         Current balance
       </p>
       <p className="mt-1 text-sm tabular-nums text-ink">
-        {formatUsd(live.mainUsd)}
+        <AccountBalanceAmount
+          mainUsd={live.mainUsd}
+          pendingWithdrawUsd={live.pendingWithdrawUsd}
+        />
       </p>
       {live.notice && live.noticeOk ? (
         <p className="mt-3 text-sm text-success" role="status">
@@ -337,7 +370,10 @@ export function TopUpWallet({
                 <>
                   <dt className="text-ink-muted">Current Balance:</dt>
                   <dd className="tabular-nums text-ink">
-                    {formatUsd(live.mainUsd)}
+                    <AccountBalanceAmount
+                      mainUsd={live.mainUsd}
+                      pendingWithdrawUsd={live.pendingWithdrawUsd}
+                    />
                   </dd>
                 </>
               ) : null}
@@ -445,7 +481,10 @@ export function CryptoWalletPanel({
             <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
               <dt className="text-ink-muted">Current balance:</dt>
               <dd className="tabular-nums text-ink">
-                {formatUsd(shownMainUsd)}
+                <AccountBalanceAmount
+                  mainUsd={shownMainUsd}
+                  pendingWithdrawUsd={live.pendingWithdrawUsd}
+                />
               </dd>
               {typeof planPriceUsd === "number" ? (
                 <>
@@ -471,7 +510,10 @@ export function CryptoWalletPanel({
               Wallet balance
             </h2>
             <p className="text-2xl font-semibold tabular-nums tracking-tight">
-              {formatUsd(shownMainUsd)}
+              <AccountBalanceAmount
+                mainUsd={shownMainUsd}
+                pendingWithdrawUsd={live.pendingWithdrawUsd}
+              />
             </p>
           </>
         )}

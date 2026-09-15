@@ -27,6 +27,16 @@ export const ACCOUNT_UPGRADE_DEPOSIT_NOTE =
 const METHOD_TOP_UP_NOTE_REST =
   " Any remaining account balance will be utilized to cover future subscription payments when due. Account balances can be withdrawn at any time. Transfer one of the listed stablecoins.";
 
+export function accountBalancePendingWithdrawNote(
+  pendingUsd: number,
+): string | null {
+  const pending = roundUsd(pendingUsd);
+  if (pending < 0.01) {
+    return null;
+  }
+  return `+ ${formatWalletUsd(pending)} pending withdraw`;
+}
+
 export function formatWalletUsd(amount: number): string {
   const rounded = roundUsd(amount);
   const integer = Number.isInteger(rounded);

@@ -42,6 +42,7 @@ import {
   listMainWalletLedger,
   loadMainWalletWithdrawContext,
   loadMemberDepositContext,
+  pendingMainWithdrawUsd,
   walletBookBalances,
 } from "@/lib/membership/wallet-store";
 import { formatPlanPrice, planIsArchived } from "@/lib/membership/catalog";
@@ -81,10 +82,11 @@ export default async function AccountBillingPage({
   }
   const deposited = firstSearchValue(params.deposited);
   const scanned = firstSearchValue(params.scanned) === "1";
-  const [books, currentPlan, hasLedger] = await Promise.all([
+  const [books, currentPlan, hasLedger, pendingWithdrawUsd] = await Promise.all([
     walletBookBalances(member.id),
     getMembershipPlan(billing.planId),
     hasMainWalletLedger(member.id),
+    pendingMainWithdrawUsd(member.id),
   ]);
   const plan = currentPlan.ok ? currentPlan.plan : null;
   const showWalletTab = showMemberWalletTab(
@@ -306,7 +308,11 @@ export default async function AccountBillingPage({
           </div>
         </section>
         <section className="rounded-card border border-line bg-surface p-5">
-          <LiveMainWallet initialMainUsd={books.main} pollBalance>
+          <LiveMainWallet
+            initialMainUsd={books.main}
+            initialPendingWithdrawUsd={pendingWithdrawUsd}
+            pollBalance
+          >
             <h2 className="text-lg font-semibold tracking-tight">
               Account Balance
             </h2>
@@ -372,6 +378,7 @@ export default async function AccountBillingPage({
             <section className="rounded-card border border-line bg-surface p-5">
               <LiveMainWallet
                 initialMainUsd={deposit?.books.main ?? 0}
+                initialPendingWithdrawUsd={pendingWithdrawUsd}
                 pollBalance
               >
                 <TopUpWallet
@@ -390,6 +397,7 @@ export default async function AccountBillingPage({
       ) : tab === "wallet" ? (
         <LiveMainWallet
           initialMainUsd={deposit?.books.main ?? 0}
+          initialPendingWithdrawUsd={pendingWithdrawUsd}
           pollBalance
         >
           <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">

@@ -68,10 +68,11 @@ jobs:
           ')"
           echo "Fly secret names:"
           echo "$names"
-          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY EXCHANGE_CREDENTIALS_KEY; do
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY EXCHANGE_CREDENTIALS_KEY BILLING_CREDENTIALS_KEY; do
             if ! echo "$names" | grep -qx "$name"; then
               echo "tbp-engine-dev exists, but $name is not set on the Fly app."
-              echo "In Fly, open tbp-engine-dev → Secrets and add the three development values from Vercel Development."
+              echo "In Fly, open tbp-engine-dev → Secrets and add the development values from Vercel Development:"
+              echo "SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, EXCHANGE_CREDENTIALS_KEY, BILLING_CREDENTIALS_KEY."
               echo "Then re-run this workflow. Do not use Launch from GitHub."
               exit 1
             fi
@@ -105,6 +106,30 @@ jobs:
 
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Check Fly app secrets
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          payload="$(flyctl secrets list --app tbp-engine --json)"
+          names="$(echo "$payload" | jq -r '
+            if type == "array" then
+              .[] | (.Name // .name // empty)
+            elif type == "object" then
+              (.Secrets // .secrets // [])[] | (.Name // .name // empty)
+            else empty
+            end
+          ')"
+          echo "Fly secret names:"
+          echo "$names"
+          for name in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY EXCHANGE_CREDENTIALS_KEY BILLING_CREDENTIALS_KEY; do
+            if ! echo "$names" | grep -qx "$name"; then
+              echo "tbp-engine exists, but $name is not set on the Fly app."
+              echo "In Fly, open tbp-engine → Secrets and add the production values from Vercel Production."
+              echo "Then re-run this workflow."
+              exit 1
+            fi
+          done
 
       - name: Deploy
         env:

@@ -42,6 +42,7 @@ export const EVENT_LOG_OPTIONS = [
   { event: "membership.checkout_started", scope: "system" },
   { event: "membership.invoice_paid", scope: "system" },
   { event: "membership.invoice_issued", scope: "system" },
+  { event: "membership.commission_released", scope: "system" },
   { event: "membership.affiliate_settings", scope: "system" },
   { event: "membership.payout_requested", scope: "system" },
   { event: "membership.payout_approved", scope: "system" },

@@ -52,6 +52,7 @@ import {
   updateWalletMinPayout,
   listAffiliatePayoutChains,
   loadWalletMinPayoutUsd,
+  pendingMainWithdrawUsd,
   walletBookBalances,
 } from "./wallet-store";
 import { parseGasLowEth } from "./gas-drip";
@@ -284,14 +285,18 @@ export async function checkMyDepositAction(): Promise<CheckDepositResult> {
 }
 
 export async function readMyAccountBalanceAction(): Promise<
-  { ok: true; mainUsd: number } | { ok: false; error: string }
+  | { ok: true; mainUsd: number; pendingWithdrawUsd: number }
+  | { ok: false; error: string }
 > {
   const member = await getSessionMember();
   if (!member) {
     return { ok: false, error: "Sign in to check Account Balance." };
   }
-  const books = await walletBookBalances(member.id);
-  return { ok: true, mainUsd: books.main };
+  const [books, pendingWithdrawUsd] = await Promise.all([
+    walletBookBalances(member.id),
+    pendingMainWithdrawUsd(member.id),
+  ]);
+  return { ok: true, mainUsd: books.main, pendingWithdrawUsd };
 }
 
 export async function checkCheckoutDepositAction(): Promise<CheckDepositResult> {

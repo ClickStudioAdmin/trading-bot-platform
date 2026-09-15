@@ -1,6 +1,7 @@
 import type { Hex } from "viem";
 import { writeEventLog } from "@/lib/logs/write";
 import { dripNeededWei, gasWalletCanCover } from "./gas-drip";
+import { sweepReceiptSucceeded } from "./sweep-receipt";
 import {
   billingPublicClient,
   billingWalletClient,
@@ -103,7 +104,10 @@ async function fundDepositGas(input: {
     to: input.depositAddress,
     value: dripWei,
   });
-  await publicClient.waitForTransactionReceipt({ hash });
+  const dripReceipt = await publicClient.waitForTransactionReceipt({ hash });
+  if (!sweepReceiptSucceeded(dripReceipt.status)) {
+    return { ok: false, error: "Gas drip transaction reverted." };
+  }
   return { ok: true, dripped: true, txHash: hash };
 }
 
@@ -163,6 +167,13 @@ export async function sweepDepositToken(input: {
       functionName: "transfer",
       args: [admin as Hex, amount],
     });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (!sweepReceiptSucceeded(receipt.status)) {
+      return {
+        ok: false,
+        error: "Sweep transaction reverted. Funds stay on the deposit address.",
+      };
+    }
     return { ok: true, txHash: hash };
   } catch (cause) {
     return {

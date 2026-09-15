@@ -141,7 +141,7 @@ Admin header **Tick** runs the same cycle (`POST /api/engine/admin-tick`). Auto 
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | GitHub Environment `development` | Same value as Vercel **Protection Bypass for Automation**. Preview deployments are SSO-protected; without this header the tick gets `401 Protected Deployment` |
 | `FLY_API_TOKEN` | GitHub Environments `development` and `production` | Fly deploy token. [`.github/workflows/deploy-engine.yml`](../.github/workflows/deploy-engine.yml) |
 
-Fly app secrets (not GitHub): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EXCHANGE_CREDENTIALS_KEY` — development values on `tbp-engine-dev`, production on `tbp-engine`. Never mix.
+Fly app secrets (not GitHub): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EXCHANGE_CREDENTIALS_KEY`, `BILLING_CREDENTIALS_KEY` — development values on `tbp-engine-dev`, production on `tbp-engine`. Never mix. Deploy Engine fails if any of the four is missing.
 
 The Vercel function already uses `SUPABASE_SERVICE_ROLE_KEY` on that Vercel environment. Never put the service role or `CRON_SECRET` in `NEXT_PUBLIC_*`. Never put production secrets on Preview or the `development` GitHub Environment.
 

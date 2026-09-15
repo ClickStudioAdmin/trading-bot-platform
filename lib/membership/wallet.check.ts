@@ -6,6 +6,7 @@ import {
   planDeductDecision,
   ACCOUNT_UPGRADE_DEPOSIT_NOTE,
   accountBalanceCoversNextCycle,
+  accountBalancePendingWithdrawNote,
   accountShortfallUsd,
   checkoutPartialCreditNotice,
   creditedDepositsNotice,
@@ -72,6 +73,18 @@ assert.equal(walletEntryDelta("transfer_out", 7.5), -7.5);
 assert.equal(walletEntryDelta("debit_rent", -25), -25);
 assert.equal(walletEntryDelta("withdraw", 10), -10);
 assert.equal(walletEntryDelta("adjust", -3), -3);
+assert.deepEqual(
+  bookBalancesFromEntries([
+    { kind: "deposit", amountUsd: 100, book: "main" },
+    { kind: "withdraw", amountUsd: 40, book: "main" },
+  ]),
+  { main: 60, affiliate: 0 },
+);
+assert.equal(accountBalancePendingWithdrawNote(0), null);
+assert.equal(
+  accountBalancePendingWithdrawNote(40),
+  "+ $40 pending withdraw",
+);
 
 assert.deepEqual(
   bookBalancesFromEntries([

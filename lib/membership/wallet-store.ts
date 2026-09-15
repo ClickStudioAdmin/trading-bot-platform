@@ -19,6 +19,7 @@ import {
 } from "./affiliate-store";
 import {
   isOpenWalletWithdraw,
+  openWithdrawUsd,
   withdrawDecision,
 } from "./affiliate";
 import {
@@ -179,6 +180,40 @@ export async function walletBookBalances(
 export async function walletCreditUsd(userId: string): Promise<number> {
   const books = await walletBookBalances(userId);
   return books.main;
+}
+
+export async function pendingMainWithdrawUsd(userId: string): Promise<number> {
+  const supabase = createServiceClient();
+  if (!supabase || !userId) {
+    return 0;
+  }
+  const full = await supabase
+    .from("membership_payouts")
+    .select("status, amount_usd")
+    .eq("user_id", userId)
+    .eq("book", "main")
+    .in("status", ["requested", "approved", "pending"]);
+  if (full.error) {
+    return 0;
+  }
+  return openWithdrawUsd(
+    (full.data ?? []).flatMap((row) => {
+      const status = String(row.status);
+      if (
+        status !== "requested" &&
+        status !== "approved" &&
+        status !== "pending"
+      ) {
+        return [];
+      }
+      return [
+        {
+          status,
+          amountUsd: Number(row.amount_usd),
+        },
+      ];
+    }),
+  );
 }
 
 const CHAIN_COLUMNS =

@@ -57,6 +57,7 @@ import {
   parsePayoutStatus,
   adminPayoutsPath,
   isOpenWalletWithdraw,
+  openWithdrawUsd,
   parsePayoutBook,
   payoutEligibleForAirdropFile,
   payoutStatusLabel,
@@ -350,6 +351,14 @@ assert.equal(
 assert.equal(isOpenWalletWithdraw("requested"), true);
 assert.equal(isOpenWalletWithdraw("pending"), true);
 assert.equal(isOpenWalletWithdraw("paid"), false);
+assert.equal(
+  openWithdrawUsd([
+    { status: "requested", amountUsd: 40 },
+    { status: "pending", amountUsd: 10 },
+    { status: "paid", amountUsd: 99 },
+  ]),
+  50,
+);
 assert.equal(
   affiliatePortalPath("payouts", { saved: "withdraw" }),
   "/affiliates?tab=payouts&saved=withdraw",

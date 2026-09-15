@@ -42,6 +42,7 @@ import { writeEventLog } from "@/lib/logs/write";
 import { processOneQueuedBacktest } from "@/lib/backtest/execute";
 import { BACKTEST_VERCEL_BAR_LIMIT } from "@/lib/backtest/model";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
+import { releaseDueCommissions } from "@/lib/membership/affiliate-store";
 import { runMembershipBillingCycle } from "@/lib/membership/billing-cycle-store";
 import { watchMembershipDeposits } from "@/lib/membership/watch-deposits";
 import { createServiceClient } from "@/lib/supabase/admin";
@@ -182,6 +183,9 @@ export async function runEngineCycle(
   if (maxMs === undefined || Date.now() - started < maxMs) {
     await runMembershipInvoices(workerId);
   }
+  if (maxMs === undefined || Date.now() - started < maxMs) {
+    await releaseMembershipCommissions(workerId);
+  }
 
   if (!options?.silent) {
     await writeEventLog({
@@ -203,6 +207,39 @@ export async function runEngineCycle(
     });
   }
   return stats;
+}
+
+async function releaseMembershipCommissions(workerId: string): Promise<void> {
+  try {
+    const released = await releaseDueCommissions();
+    if (!released.ok) {
+      await writeEventLog({
+        level: "error",
+        scope: "system",
+        event: "membership.commission_released",
+        message: released.error,
+        data: { workerId },
+      });
+      return;
+    }
+    if (released.released > 0) {
+      await writeEventLog({
+        scope: "system",
+        event: "membership.commission_released",
+        message: `Released ${released.released} held commission${released.released === 1 ? "" : "s"} to payable`,
+        data: { workerId, released: released.released },
+      });
+    }
+  } catch (cause) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "membership.commission_released",
+      message:
+        cause instanceof Error ? cause.message : "Commission hold release failed",
+      data: { workerId },
+    });
+  }
 }
 
 async function runMembershipInvoices(workerId: string): Promise<void> {
