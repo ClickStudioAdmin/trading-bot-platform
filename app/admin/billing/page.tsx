@@ -527,12 +527,14 @@ function WalletAssetRows({ assets }: { assets: WalletAssetRow[] }) {
             {asset.error ? (
               <p className="text-sm text-warning">{asset.error}</p>
             ) : (
-              <p
-                className={`text-sm tabular-nums ${asset.warn ? "text-warning" : "text-ink"}`}
-              >
-                {formatTokenAmountDisplay(asset.amount)} {asset.symbol}
-                {asset.note ? ` · ${asset.note}` : ""}
-              </p>
+              <>
+                <p className="text-sm tabular-nums text-ink">
+                  {formatTokenAmountDisplay(asset.amount ?? "0")} {asset.symbol}
+                </p>
+                {asset.note ? (
+                  <p className="mt-0.5 text-xs text-warning">{asset.note}</p>
+                ) : null}
+              </>
             )}
           </div>
         </li>
