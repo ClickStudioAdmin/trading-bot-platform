@@ -202,10 +202,10 @@ assert.equal(
       arrears: false,
       payableUsd: 80,
       minPayoutUsd: 100,
-      balanceNoun: "Account Wallet",
+      balanceNoun: "Account Balance",
     }) as { ok: false; reason: string }
   ).reason,
-  "Account Wallet must be at least $100.00.",
+  "Account Balance must be at least $100.00.",
 );
 assert.deepEqual(parsePayoutAmount("75.5"), { ok: true, amountUsd: 75.5 });
 assert.equal(parsePayoutAmount("").ok, false);

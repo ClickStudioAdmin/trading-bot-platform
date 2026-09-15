@@ -477,7 +477,7 @@ export async function requestMainWalletWithdrawAction(formData: FormData) {
     arrears,
     payableUsd: books.main,
     minPayoutUsd,
-    balanceNoun: "Account Wallet",
+    balanceNoun: "Account Balance",
   });
   if (!allowed.ok) {
     failBilling(allowed.reason, { tab: "wallet" });
@@ -503,7 +503,7 @@ export async function requestMainWalletWithdrawAction(formData: FormData) {
   await writeEventLog({
     scope: "system",
     event: "membership.wallet_withdraw_requested",
-    message: "Requested a USDT Account Wallet withdraw",
+    message: "Requested a USDT Account Balance withdraw",
     userId: member.id,
     data: {
       payoutId: requested.payoutId,

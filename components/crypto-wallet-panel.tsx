@@ -23,8 +23,10 @@ import {
 } from "@/lib/membership/wallet-actions";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import {
-  METHOD_TOP_UP_SHORTFALL,
   accountBalanceCoversNextCycle,
+  accountShortfallUsd,
+  creditedDepositsNotice,
+  methodTopUpShortfall,
   planDeductDecision,
   roundUsd,
 } from "@/lib/membership/wallet";
@@ -118,7 +120,7 @@ function CheckDepositButton({ checkout }: { checkout?: boolean }) {
       live.setStatus({
         notice:
           result.credited > 0
-            ? `Credited ${result.credited} deposit${result.credited === 1 ? "" : "s"} to Account Wallet.`
+            ? creditedDepositsNotice(result.credited)
             : "No new confirmed deposits in the recent window.",
         noticeOk: result.credited > 0,
       });
@@ -282,9 +284,9 @@ export function TopUpWallet({
           {addressError ?? "Deposit address is not available yet."}
         </p>
       )}
-      {shortForCycle ? (
+      {shortForCycle && typeof cycleDueUsd === "number" ? (
         <p className="rounded-card border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          {METHOD_TOP_UP_SHORTFALL}
+          {methodTopUpShortfall(cycleDueUsd)}
         </p>
       ) : null}
       {instructions ? (
@@ -347,6 +349,10 @@ export function CryptoWalletPanel({
     checkout &&
     typeof planPriceUsd === "number" &&
     roundUsd(shownMainUsd) + 1e-9 < roundUsd(planPriceUsd);
+  const shortUsd =
+    checkout && typeof planPriceUsd === "number"
+      ? accountShortfallUsd(planPriceUsd, shownMainUsd)
+      : 0;
   const withdrawLive = withdraw
     ? { ...withdraw, mainUsd: shownMainUsd }
     : undefined;
@@ -368,6 +374,14 @@ export function CryptoWalletPanel({
                   <dt className="text-ink-muted">Amount due:</dt>
                   <dd className="tabular-nums text-ink">
                     {formatUsd(planPriceUsd)}
+                  </dd>
+                </>
+              ) : null}
+              {shortUsd >= 0.01 ? (
+                <>
+                  <dt className="text-ink-muted">Account shortfall:</dt>
+                  <dd className="tabular-nums text-ink">
+                    {formatUsd(shortUsd)}
                   </dd>
                 </>
               ) : null}

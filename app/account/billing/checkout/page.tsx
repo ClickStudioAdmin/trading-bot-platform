@@ -9,6 +9,7 @@ import {
   showCheckoutMethodPicker,
 } from "@/lib/membership/billing";
 import { getMemberBilling } from "@/lib/membership/billing-store";
+import { creditedDepositsNotice } from "@/lib/membership/wallet";
 import { loadMemberDepositContext } from "@/lib/membership/wallet-store";
 import { formatPlanPrice } from "@/lib/membership/catalog";
 import { parsePlanId } from "@/lib/membership/form";
@@ -79,7 +80,7 @@ export default async function AccountCheckoutPage({
       ) : null}
       {deposited ? (
         <p className="mt-6 text-sm text-success">
-          Credited {deposited} deposit{deposited === "1" ? "" : "s"} to Account Wallet.
+          {creditedDepositsNotice(Number(deposited))}
         </p>
       ) : null}
       {scanned ? (

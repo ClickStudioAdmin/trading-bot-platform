@@ -4,7 +4,14 @@ import {
   mainWalletLedgerLabel,
   parseWalletMinPayout,
   planDeductDecision,
+  ACCOUNT_UPGRADE_DEPOSIT_NOTE,
   accountBalanceCoversNextCycle,
+  accountShortfallUsd,
+  checkoutPartialCreditNotice,
+  creditedDepositsNotice,
+  depositCreditIsFresh,
+  methodTopUpNote,
+  methodTopUpShortfall,
   showMemberLedgerTab,
   showMemberWalletTab,
   tokenAmountToUsd,
@@ -13,6 +20,37 @@ import {
   walletUpgradeInvoiceExternalId,
   withRunningBalances,
 } from "./wallet";
+
+assert.equal(accountShortfallUsd(29.99, 15), 14.99);
+assert.equal(accountShortfallUsd(29.99, 29.99), 0);
+assert.equal(
+  methodTopUpNote(19).startsWith(
+    "Ensure you always maintain enough account balance to pay for your next month's subscription payment ($19).",
+  ),
+  true,
+);
+assert.equal(
+  ACCOUNT_UPGRADE_DEPOSIT_NOTE.startsWith(
+    "Transfer at least the account shortfall to cover today's payment.",
+  ),
+  true,
+);
+assert.equal(
+  methodTopUpShortfall(19),
+  "Your account balance doesn't have enough funds to cover your next billing cycle ($19).",
+);
+assert.equal(
+  methodTopUpShortfall(19.5),
+  "Your account balance doesn't have enough funds to cover your next billing cycle ($19.50).",
+);
+assert.equal(creditedDepositsNotice(1), "Credited 1 deposit to Account Balance.");
+assert.equal(creditedDepositsNotice(3), "Credited 3 deposits to Account Balance.");
+assert.equal(
+  checkoutPartialCreditNotice("$19.99"),
+  "Deposit added to Account Balance. Due Today still needs $19.99.",
+);
+assert.equal(depositCreditIsFresh("2026-09-15T02:00:00.000Z", Date.parse("2026-09-15T02:00:01.000Z")), true);
+assert.equal(depositCreditIsFresh("2026-09-15T01:00:00.000Z", Date.parse("2026-09-15T02:00:00.000Z")), false);
 
 assert.equal(accountBalanceCoversNextCycle(19, 19), true);
 assert.equal(accountBalanceCoversNextCycle(18.99, 19), false);
@@ -98,6 +136,10 @@ assert.equal(mainWalletLedgerLabel("debit_rent"), "Plan payment");
 assert.equal(
   mainWalletLedgerLabel("transfer_in"),
   "Transfer from Affiliate",
+);
+assert.equal(
+  mainWalletLedgerLabel("transfer_out"),
+  "Transfer to Account Balance",
 );
 assert.equal(mainWalletLedgerLabel("withdraw"), "Withdrawal");
 assert.equal(

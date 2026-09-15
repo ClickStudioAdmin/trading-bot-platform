@@ -29,7 +29,9 @@ import {
   payPlanWithCreditAction,
 } from "@/lib/membership/wallet-actions";
 import {
+  ACCOUNT_UPGRADE_DEPOSIT_NOTE,
   ACCOUNT_WALLET_DEPOSIT_NOTE,
+  checkoutPartialCreditNotice,
   planDeductDecision,
 } from "@/lib/membership/wallet";
 import type {
@@ -283,7 +285,7 @@ function CheckoutCryptoPay({
               checkout
               showCheck={false}
               showBalance={false}
-              instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
+              instructions={ACCOUNT_UPGRADE_DEPOSIT_NOTE}
             />
             <CheckoutDepositWatcher
               planId={planId}
@@ -389,19 +391,19 @@ function CheckoutDepositWatcher({
         }
         const mainUsd =
           typeof result.mainUsd === "number" ? result.mainUsd : live.mainUsd;
-        const enough = planDeductDecision({
+        const decision = planDeductDecision({
           priceUsd: dueUsd,
           mainUsd,
           affiliateUsd,
           useAffiliate,
-        }).ok;
-        if (enough) {
+        });
+        if (decision.ok) {
           await completePay();
         } else {
           live.setStatus({
             notice:
               result.credited > 0
-                ? "Deposit credited. Send the remaining amount if Due Today is not covered yet."
+                ? checkoutPartialCreditNotice(formatUsd(decision.shortUsd))
                 : null,
             noticeOk: result.credited > 0,
           });

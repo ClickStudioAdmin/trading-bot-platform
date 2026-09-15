@@ -22,10 +22,52 @@ export const WALLET_PERIOD_MS = 30 * 24 * 60 * 60 * 1000;
 export const WALLET_MIN_PAYOUT_DEFAULT = 100;
 export const ACCOUNT_WALLET_DEPOSIT_NOTE =
   "Transfer at least the amount due today in a listed stablecoin. We recommend transferring more than is due. Any remaining account balance will be utilized to cover future subscription payments when due. Account balances can be withdrawn at any time.";
-export const METHOD_TOP_UP_NOTE =
-  "Ensure you always maintain enough account balance to pay for your next month's subscription payment. Any remaining account balance will be utilized to cover future subscription payments when due. Account balances can be withdrawn at any time. Transfer one of the listed stablecoins.";
-export const METHOD_TOP_UP_SHORTFALL =
-  "Your account balance doesn't have enough funds to cover your next billing cycle.";
+export const ACCOUNT_UPGRADE_DEPOSIT_NOTE =
+  "Transfer at least the account shortfall to cover today's payment. We recommend transferring more than is due. Any remaining account balance will be utilized to cover future subscription payments when due. Account balances can be withdrawn at any time.";
+const METHOD_TOP_UP_NOTE_REST =
+  " Any remaining account balance will be utilized to cover future subscription payments when due. Account balances can be withdrawn at any time. Transfer one of the listed stablecoins.";
+
+export function formatWalletUsd(amount: number): string {
+  const rounded = roundUsd(amount);
+  return Number.isInteger(rounded)
+    ? `$${rounded}`
+    : `$${rounded.toFixed(2)}`;
+}
+
+export function accountShortfallUsd(dueUsd: number, mainUsd: number): number {
+  return Math.max(0, roundUsd(roundUsd(dueUsd) - roundUsd(mainUsd)));
+}
+
+export function methodTopUpNote(cycleUsd: number): string {
+  const amount = roundUsd(cycleUsd);
+  const cycle =
+    amount >= 0.01
+      ? ` (${formatWalletUsd(amount)})`
+      : "";
+  return `Ensure you always maintain enough account balance to pay for your next month's subscription payment${cycle}.${METHOD_TOP_UP_NOTE_REST}`;
+}
+
+export function methodTopUpShortfall(cycleUsd: number): string {
+  return `Your account balance doesn't have enough funds to cover your next billing cycle (${formatWalletUsd(cycleUsd)}).`;
+}
+
+export function creditedDepositsNotice(count: number): string {
+  const n = Math.max(0, Math.trunc(count));
+  return `Credited ${n} deposit${n === 1 ? "" : "s"} to Account Balance.`;
+}
+
+export function depositCreditIsFresh(
+  createdAt: unknown,
+  startedMs: number,
+  slackMs = 5_000,
+): boolean {
+  const ms = Date.parse(String(createdAt ?? ""));
+  return Number.isFinite(ms) && ms >= startedMs - slackMs;
+}
+
+export function checkoutPartialCreditNotice(remainingUsdLabel: string): string {
+  return `Deposit added to Account Balance. Due Today still needs ${remainingUsdLabel}.`;
+}
 
 export function hasMainWalletCredit(mainUsd: number): boolean {
   return roundUsd(mainUsd) >= 0.01;
@@ -220,7 +262,7 @@ export function mainWalletLedgerLabel(
     return "Transfer from Affiliate";
   }
   if (kind === "transfer_out") {
-    return "Transfer to Account Wallet";
+    return "Transfer to Account Balance";
   }
   if (kind === "withdraw") {
     return "Withdrawal";

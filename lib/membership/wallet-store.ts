@@ -24,6 +24,7 @@ import {
 import {
   billingChainEnvironment,
   bookBalancesFromEntries,
+  depositCreditIsFresh,
   inferWalletBook,
   mainWalletLedgerLabel,
   parseTokenKind,
@@ -745,16 +746,34 @@ export async function creditOnChainDeposit(input: {
   tokenAmount: string;
   amountUsd: number;
   blockNumber: bigint;
-}): Promise<{ ok: true; entryId: string | null } | { ok: false; error: string }> {
+}): Promise<
+  { ok: true; entryId: string | null; created: boolean } | { ok: false; error: string }
+> {
   const supabase = createServiceClient();
   if (!supabase) {
     return { ok: false, error: "Database is not configured." };
+  }
+  const startedMs = Date.now();
+  const txHash = input.txHash.toLowerCase();
+  const { data: existing } = await supabase
+    .from("membership_deposit_txs")
+    .select("credited_entry_id, created_at")
+    .eq("chain_id", input.chainId)
+    .eq("tx_hash", txHash)
+    .eq("log_index", input.logIndex)
+    .maybeSingle();
+  if (existing?.credited_entry_id != null) {
+    return {
+      ok: true,
+      entryId: String(existing.credited_entry_id),
+      created: false,
+    };
   }
   const { data, error } = await supabase.rpc("credit_membership_deposit", {
     p_user_id: input.userId,
     p_chain_id: input.chainId,
     p_token_id: input.tokenId,
-    p_tx_hash: input.txHash,
+    p_tx_hash: txHash,
     p_log_index: input.logIndex,
     p_from_address: input.fromAddress,
     p_to_address: input.toAddress,
@@ -765,7 +784,19 @@ export async function creditOnChainDeposit(input: {
   if (error) {
     return { ok: false, error: error.message };
   }
-  return { ok: true, entryId: typeof data === "string" ? data : null };
+  const entryId = typeof data === "string" ? data : null;
+  const { data: credited } = await supabase
+    .from("membership_deposit_txs")
+    .select("created_at")
+    .eq("chain_id", input.chainId)
+    .eq("tx_hash", txHash)
+    .eq("log_index", input.logIndex)
+    .maybeSingle();
+  return {
+    ok: true,
+    entryId,
+    created: depositCreditIsFresh(credited?.created_at, startedMs),
+  };
 }
 
 export async function payPlanFromWallet(input: {
@@ -939,7 +970,7 @@ export async function loadMainWalletWithdrawContext(
       arrears,
       payableUsd: books.main,
       minPayoutUsd,
-      balanceNoun: "Account Wallet",
+      balanceNoun: "Account Balance",
     }),
   };
 }

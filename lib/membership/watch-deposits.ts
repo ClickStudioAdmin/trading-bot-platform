@@ -70,14 +70,14 @@ async function creditLog(input: {
     blockNumber: string | number | bigint;
   };
   mnemonic: string | null;
-}): Promise<"credited" | "swept" | "skipped"> {
+}): Promise<{ created: boolean; swept: boolean }> {
   const parsed = parseErc20TransferLog(input.log);
   if (!parsed) {
-    return "skipped";
+    return { created: false, swept: false };
   }
   const dest = input.byAddress.get(parsed.to);
   if (!dest) {
-    return "skipped";
+    return { created: false, swept: false };
   }
   const usd = tokenAmountToUsd(
     parsed.amount,
@@ -85,7 +85,7 @@ async function creditLog(input: {
     input.token.kind,
   );
   if (usd === null) {
-    return "skipped";
+    return { created: false, swept: false };
   }
   const credited = await creditOnChainDeposit({
     userId: dest.userId,
@@ -102,20 +102,22 @@ async function creditLog(input: {
   if (!credited.ok) {
     throw new Error(credited.error);
   }
-  await writeEventLog({
-    scope: "system",
-    event: "membership.deposit_credited",
-    message: `Credited ${usd} USD on ${input.chain.name}`,
-    userId: dest.userId,
-    data: {
-      chainId: input.chain.id,
-      txHash: parsed.txHash,
-      logIndex: parsed.logIndex,
-      amountUsd: usd,
-    },
-  });
+  if (credited.created) {
+    await writeEventLog({
+      scope: "system",
+      event: "membership.deposit_credited",
+      message: `Credited ${usd} USD on ${input.chain.name}`,
+      userId: dest.userId,
+      data: {
+        chainId: input.chain.id,
+        txHash: parsed.txHash,
+        logIndex: parsed.logIndex,
+        amountUsd: usd,
+      },
+    });
+  }
   if (!input.chain.adminAddress || !input.mnemonic) {
-    return "credited";
+    return { created: credited.created, swept: false };
   }
   const swept = await sweepDepositToken({
     chain: input.chain,
@@ -142,7 +144,7 @@ async function creditLog(input: {
         sweepTx: swept.txHash,
       },
     });
-    return "swept";
+    return { created: credited.created, swept: true };
   }
   await writeEventLog({
     level: "warning",
@@ -152,7 +154,7 @@ async function creditLog(input: {
     userId: dest.userId,
     data: { chainId: input.chain.id, depositTx: parsed.txHash },
   });
-  return "credited";
+  return { created: credited.created, swept: false };
 }
 
 export async function watchMembershipDeposits(input: {
@@ -229,10 +231,10 @@ export async function watchMembershipDeposits(input: {
                   log,
                   mnemonic,
                 });
-                if (outcome === "credited" || outcome === "swept") {
+                if (outcome.created) {
                   result.credited += 1;
                 }
-                if (outcome === "swept") {
+                if (outcome.swept) {
                   result.swept += 1;
                 }
               } catch (cause) {

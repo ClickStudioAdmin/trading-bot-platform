@@ -28,7 +28,8 @@ import {
   listMemberInvoices,
 } from "@/lib/membership/billing-store";
 import {
-  METHOD_TOP_UP_NOTE,
+  creditedDepositsNotice,
+  methodTopUpNote,
   showMemberLedgerTab,
   showMemberWalletTab,
 } from "@/lib/membership/wallet";
@@ -197,7 +198,7 @@ export default async function AccountBillingPage({
       ) : null}
       {deposited ? (
         <p className="mt-6 text-sm text-success">
-          Credited {deposited} deposit{deposited === "1" ? "" : "s"} to Account Wallet.
+          {creditedDepositsNotice(Number(deposited))}
         </p>
       ) : null}
       {scanned ? (
@@ -338,7 +339,7 @@ export default async function AccountBillingPage({
                   chains={deposit?.chains ?? []}
                   tokens={deposit?.tokens ?? []}
                   heading="Top up Account Balance"
-                  instructions={METHOD_TOP_UP_NOTE}
+                  instructions={methodTopUpNote(plan?.priceUsd ?? 0)}
                   cycleDueUsd={plan?.priceUsd ?? 0}
                 />
               </LiveMainWallet>
@@ -370,7 +371,7 @@ export default async function AccountBillingPage({
                   chains={deposit?.chains ?? []}
                   tokens={deposit?.tokens ?? []}
                   heading="Top up Account Balance"
-                  instructions={METHOD_TOP_UP_NOTE}
+                  instructions={methodTopUpNote(plan?.priceUsd ?? 0)}
                   cycleDueUsd={plan?.priceUsd ?? 0}
                   revealAddress={billing.billingMethod === "wallet"}
                 />
@@ -381,11 +382,11 @@ export default async function AccountBillingPage({
       <section className="mt-6 rounded-card border border-line bg-surface p-5">
         <h2 className="text-lg font-semibold tracking-tight">Account Ledger</h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Running Account Wallet activity: deposits, plan payments, withdrawals,
+          Running Account Balance activity: deposits, plan payments, withdrawals,
           and transfers from Affiliate when you deduct from earnings.
         </p>
         {ledgerPage.total === 0 ? (
-          <p className="mt-4 text-sm text-ink-muted">No Account Wallet activity yet.</p>
+          <p className="mt-4 text-sm text-ink-muted">No Account Balance activity yet.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="min-w-full text-left text-sm">
