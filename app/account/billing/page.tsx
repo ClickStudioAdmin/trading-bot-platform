@@ -6,9 +6,13 @@ import { getSessionMember } from "@/lib/auth/session";
 import {
   formatRemainingCycle,
   formatUsd,
+  hasUsableStripeSubscription,
   resolveBillingCycle,
 } from "@/lib/membership/billing";
-import { StripeEmbeddedCard } from "@/components/stripe-embedded-checkout";
+import {
+  StripeEmbeddedCard,
+  StripeSwitchToCard,
+} from "@/components/stripe-embedded-checkout";
 import {
   CryptoWalletPanel,
   LiveMainWallet,
@@ -93,7 +97,8 @@ export default async function AccountBillingPage({
             : "overview";
   const [invoices, deposit, ledger, withdraw] = await Promise.all([
     tab === "invoices" ? listMemberInvoices(member.id) : Promise.resolve([]),
-    tab === "wallet"
+    tab === "wallet" ||
+    (tab === "overview" && billing.billingMethod === "wallet")
       ? loadMemberDepositContext(member.id)
       : Promise.resolve(null),
     tab === "ledger" ? listMainWalletLedger(member.id) : Promise.resolve([]),
@@ -276,10 +281,42 @@ export default async function AccountBillingPage({
           <SavedBillingMethodForm
             selected={billing.billingMethod}
             deductSelected={billing.paySubscriptionFromCredit}
-            publishableKey={stripePublishableKey()}
-            stripeReady={stripeReady}
-            planIsPaid={(plan?.priceUsd ?? 0) >= 0.01}
           />
+          {billing.billingMethod === "stripe" &&
+          (plan?.priceUsd ?? 0) >= 0.01 &&
+          !hasUsableStripeSubscription(billing) ? (
+            <div className="mt-6 space-y-3 border-t border-line pt-4">
+              {!stripeReady || !stripePublishableConfigured() ? (
+                <p className="text-sm text-warning">
+                  Stripe is not configured on this environment.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm text-ink-muted">
+                    Enter your card to start automatic Stripe payments. This
+                    cycle stays paid; Stripe charges from the next renewal.
+                  </p>
+                  <StripeSwitchToCard
+                    publishableKey={stripePublishableKey()}
+                  />
+                </>
+              )}
+            </div>
+          ) : null}
+          {billing.billingMethod === "wallet" ? (
+            <div className="mt-6 border-t border-line pt-4">
+              <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
+                <TopUpWallet
+                  address={deposit?.address ?? null}
+                  addressError={deposit?.addressError ?? null}
+                  chains={deposit?.chains ?? []}
+                  tokens={deposit?.tokens ?? []}
+                  heading="Top up Account Balance"
+                  instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
+                />
+              </LiveMainWallet>
+            </div>
+          ) : null}
         </section>
         ) : null}
       </div>

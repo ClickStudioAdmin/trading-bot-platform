@@ -483,10 +483,10 @@ export async function createSwitchToCardSecret(): Promise<EmbeddedCheckoutResult
     return { ok: false, error: "Sign in to continue." };
   }
   const billing = await getMemberBilling(member.id);
-  if (!billing || billing.billingMethod !== "wallet") {
+  if (!billing || billing.billingMethod !== "stripe") {
     return {
       ok: false,
-      error: "Switch to Card from Crypto to start a Stripe subscription.",
+      error: "Save Credit Card as your method first.",
     };
   }
   const loaded = await getMembershipPlan(billing.planId);
