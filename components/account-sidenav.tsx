@@ -56,14 +56,28 @@ export function AccountSidenav({
         pathname={pathname}
       />
       {!platformMember ? (
-        <form action={upgradeAffiliateToPlatformAction} className="mt-5">
-          <PendingSubmitButton
-            pendingLabel="Upgrading…"
-            className="w-full rounded-control bg-accent-strong px-3 py-2 text-left text-sm font-medium leading-snug text-ink hover:bg-accent"
-          >
-            Upgrade account to full platform membership (free to start)
-          </PendingSubmitButton>
-        </form>
+        <div className="mt-5">
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
+            Account type
+          </p>
+          <p className="mt-3 text-sm text-ink-muted">
+            This login is affiliate-only. You can share links and earn on
+            referred subscriptions, but you cannot open desks.
+          </p>
+          <p className="mt-3 text-sm text-ink-muted">
+            Convert to a Free platform membership to use the trading app.
+            Your network, commissions, and payout settings stay. You can
+            choose a paid plan later.
+          </p>
+          <form action={upgradeAffiliateToPlatformAction} className="mt-4">
+            <PendingSubmitButton
+              pendingLabel="Converting…"
+              className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent"
+            >
+              Convert
+            </PendingSubmitButton>
+          </form>
+        </div>
       ) : null}
       {platformMember ? (
         <>

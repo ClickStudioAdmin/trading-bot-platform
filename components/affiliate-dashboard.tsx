@@ -36,7 +36,6 @@ import {
   createAffiliateLinkAction,
   requestAffiliatePayoutAction,
   saveAffiliateAliasAction,
-  upgradeAffiliateToPlatformAction,
 } from "@/lib/membership/affiliate-actions";
 import type {
   AffiliateCampaignRow,
@@ -272,23 +271,14 @@ export function AffiliateDashboard({
                 <p className="text-sm text-ink-muted">
                   Paid plans pay higher L1–L5 on referred subscriptions.
                 </p>
-                {!platformMember ? (
-                  <form action={upgradeAffiliateToPlatformAction} className="mt-3">
-                    <PendingSubmitButton
-                      pendingLabel="Upgrading…"
-                      className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-                    >
-                      Upgrade to earn higher rates
-                    </PendingSubmitButton>
-                  </form>
-                ) : (
+                {platformMember ? (
                   <Link
                     href="/account/plans"
                     className="mt-3 inline-flex rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
                   >
                     Upgrade to earn higher rates
                   </Link>
-                )}
+                ) : null}
               </div>
             </div>
             <div className="rounded-card border border-line bg-surface p-5">
