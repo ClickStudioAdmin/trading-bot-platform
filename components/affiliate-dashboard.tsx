@@ -730,7 +730,7 @@ export function AffiliateDashboard({
       ) : null}
 
       {tab === "settings" ? (
-        <div className="mt-6 space-y-5">
+        <div className="mt-6 grid gap-4 lg:grid-cols-2 lg:items-start">
           <section className="rounded-card border border-line bg-surface p-5">
             <h2 className="text-lg font-semibold tracking-tight">
               Affiliate alias
