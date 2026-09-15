@@ -81,7 +81,6 @@ export default async function AdminBillingPage({
   const adminWallets = overview?.adminWallets ?? [];
   const depositSweeps = overview?.depositSweeps ?? [];
   const addresses = overview?.addresses ?? [];
-  const gasCreatedAt = gas ? parseDisplayTime(gas.createdAt) : null;
   const [payouts, files, stats] = withdrawals ?? [[], [], null];
 
   return (
@@ -285,12 +284,6 @@ export default async function AdminBillingPage({
           Dedicated hot wallet. The system drips ETH from here onto a deposit
           address before sweeping USDT to the admin receive address. Not the
           admin payout wallet.
-        </p>
-        <p className="mt-3 text-sm text-ink">
-          {gas.configured
-            ? `Wallet stored${gasCreatedAt ? ` · ${formatLocalDate(gasCreatedAt)}` : ""}.`
-            : "No gas wallet yet."}{" "}
-          {gas.keyReady ? "Encryption key is set." : "Encryption key is missing."}
         </p>
         {gas.address ? (
           <div className="mt-4 space-y-4">

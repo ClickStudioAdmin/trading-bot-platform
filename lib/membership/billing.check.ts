@@ -23,6 +23,9 @@ import {
   invoiceMethodLabel,
   hasUsableStripeSubscription,
   showManageCardForm,
+  formatStripeCardBrand,
+  stripeCardExpiryLabel,
+  stripeCardOnFileLabel,
   parseBillingMethod,
   parsePaySubscriptionFromCredit,
   stripeCentsToUsd,
@@ -75,6 +78,26 @@ assert.equal(
 assert.equal(
   showManageCardForm({ hasUsableSubscription: false, hasCardOnFile: false }),
   false,
+);
+assert.equal(formatStripeCardBrand("visa"), "Visa");
+assert.equal(formatStripeCardBrand("amex"), "Amex");
+assert.equal(
+  stripeCardOnFileLabel({
+    brand: "visa",
+    last4: "4242",
+    expMonth: 12,
+    expYear: 2034,
+  }),
+  "Visa •••• 4242",
+);
+assert.equal(
+  stripeCardExpiryLabel({
+    brand: "visa",
+    last4: "4242",
+    expMonth: 4,
+    expYear: 2031,
+  }),
+  "Expires 04/2031",
 );
 assert.equal(parseBillingPage("2"), 2);
 assert.equal(parseBillingPage("0"), 1);

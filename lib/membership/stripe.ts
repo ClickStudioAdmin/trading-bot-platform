@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import Stripe from "stripe";
-import { appOriginFromEnv } from "./billing";
+import { appOriginFromEnv, type StripeCardOnFile } from "./billing";
 
 let cached: Stripe | null | undefined;
 
@@ -36,33 +36,61 @@ function stripeObjectId(value: unknown): string | null {
   return null;
 }
 
-export async function stripeCustomerHasCard(
+function cardFromPaymentMethod(
+  paymentMethod: Stripe.PaymentMethod | null,
+): StripeCardOnFile | null {
+  const card = paymentMethod?.card;
+  if (!card?.last4) {
+    return null;
+  }
+  return {
+    brand: card.brand,
+    last4: card.last4,
+    expMonth: card.exp_month,
+    expYear: card.exp_year,
+  };
+}
+
+export async function loadStripeCardOnFile(
   customerId: string | null,
-): Promise<boolean> {
+): Promise<StripeCardOnFile | null> {
   if (!customerId) {
-    return false;
+    return null;
   }
   const stripe = getStripe();
   if (!stripe) {
-    return false;
+    return null;
   }
   try {
     const customer = await stripe.customers.retrieve(customerId);
     if (customer.deleted) {
-      return false;
+      return null;
     }
-    if (stripeObjectId(customer.invoice_settings?.default_payment_method)) {
-      return true;
+    const defaultId = stripeObjectId(
+      customer.invoice_settings?.default_payment_method,
+    );
+    if (defaultId) {
+      const paymentMethod = await stripe.paymentMethods.retrieve(defaultId);
+      const fromDefault = cardFromPaymentMethod(paymentMethod);
+      if (fromDefault) {
+        return fromDefault;
+      }
     }
     const cards = await stripe.paymentMethods.list({
       customer: customerId,
       type: "card",
       limit: 1,
     });
-    return cards.data.length > 0;
+    return cardFromPaymentMethod(cards.data[0] ?? null);
   } catch {
-    return false;
+    return null;
   }
+}
+
+export async function stripeCustomerHasCard(
+  customerId: string | null,
+): Promise<boolean> {
+  return (await loadStripeCardOnFile(customerId)) !== null;
 }
 
 export function stripeWebhookSecret(): string {

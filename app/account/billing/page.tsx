@@ -12,14 +12,14 @@ import {
   invoiceMethodLabel,
   hasUsableStripeSubscription,
   showManageCardForm,
+  stripeCardExpiryLabel,
+  stripeCardOnFileLabel,
   paginateBillingRows,
   parseBillingPage,
   resolveBillingCycle,
 } from "@/lib/membership/billing";
-import {
-  StripeEmbeddedCard,
-  StripeSwitchToCard,
-} from "@/components/stripe-embedded-checkout";
+import { ManageSavedCard } from "@/components/manage-saved-card";
+import { StripeSwitchToCard } from "@/components/stripe-embedded-checkout";
 import {
   CryptoWalletPanel,
   LiveAccountBalanceSummary,
@@ -47,7 +47,7 @@ import {
 import { formatPlanPrice, planIsArchived } from "@/lib/membership/catalog";
 import { getMembershipPlan } from "@/lib/membership/store";
 import {
-  stripeCustomerHasCard,
+  loadStripeCardOnFile,
   stripePublishableConfigured,
   stripePublishableKey,
   stripeSecretConfigured,
@@ -123,15 +123,17 @@ export default async function AccountBillingPage({
   const cycle = resolveBillingCycle({ periodEnd: billing.periodEnd });
   const stripeReady = stripeSecretConfigured();
   const usableStripeSub = hasUsableStripeSubscription(billing);
+  const cardOnFile =
+    tab === "method" && billing.billingMethod === "stripe"
+      ? await loadStripeCardOnFile(billing.stripeCustomerId)
+      : null;
   const manageCard =
     tab === "method" &&
     billing.billingMethod === "stripe" &&
     (plan?.priceUsd ?? 0) >= 0.01
       ? showManageCardForm({
           hasUsableSubscription: usableStripeSub,
-          hasCardOnFile: usableStripeSub
-            ? true
-            : await stripeCustomerHasCard(billing.stripeCustomerId),
+          hasCardOnFile: Boolean(cardOnFile),
         })
       : false;
 
@@ -343,17 +345,17 @@ export default async function AccountBillingPage({
                   Stripe is not configured on this environment.
                 </p>
               ) : manageCard ? (
-                <div className="space-y-3">
-                  <h2 className="text-lg font-semibold tracking-tight">
-                    Manage card
-                  </h2>
-                  <p className="text-sm text-ink-muted">
-                    Update the card Stripe charges. You stay on this page.
-                  </p>
-                  <StripeEmbeddedCard
-                    publishableKey={stripePublishableKey()}
-                  />
-                </div>
+                <ManageSavedCard
+                  cardLabel={
+                    cardOnFile
+                      ? stripeCardOnFileLabel(cardOnFile)
+                      : "Card on file"
+                  }
+                  expiryLabel={
+                    cardOnFile ? stripeCardExpiryLabel(cardOnFile) : null
+                  }
+                  publishableKey={stripePublishableKey()}
+                />
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-ink-muted">

@@ -252,6 +252,34 @@ export function showManageCardForm(input: {
   return input.hasUsableSubscription || input.hasCardOnFile;
 }
 
+export type StripeCardOnFile = {
+  brand: string;
+  last4: string;
+  expMonth: number;
+  expYear: number;
+};
+
+export function formatStripeCardBrand(brand: string): string {
+  const raw = brand.trim();
+  if (!raw) {
+    return "Card";
+  }
+  const lower = raw.toLowerCase();
+  if (lower === "amex" || lower === "american express") {
+    return "Amex";
+  }
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+export function stripeCardOnFileLabel(card: StripeCardOnFile): string {
+  return `${formatStripeCardBrand(card.brand)} •••• ${card.last4}`;
+}
+
+export function stripeCardExpiryLabel(card: StripeCardOnFile): string {
+  const month = String(card.expMonth).padStart(2, "0");
+  return `Expires ${month}/${card.expYear}`;
+}
+
 export function embeddedCheckoutReturnUrl(origin: string): string {
   const base = origin.trim().replace(/\/$/, "");
   return `${base}/account/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
