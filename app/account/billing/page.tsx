@@ -4,6 +4,7 @@ import { SavedBillingMethodForm } from "@/components/billing-method-radios";
 import { PageHeading } from "@/components/page-heading";
 import { getSessionMember } from "@/lib/auth/session";
 import {
+  BILLING_METHOD_LABELS,
   formatRemainingCycle,
   formatUsd,
   hasUsableStripeSubscription,
@@ -16,7 +17,6 @@ import {
 import {
   CryptoWalletPanel,
   LiveMainWallet,
-  LiveWalletHeadingBalance,
   TopUpWallet,
 } from "@/components/crypto-wallet-panel";
 import {
@@ -216,7 +216,7 @@ export default async function AccountBillingPage({
       {tab === "overview" ? (
         <section className="mt-6 rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">
-            Current subscription
+            Subscription Details
           </h2>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <div>
@@ -240,7 +240,9 @@ export default async function AccountBillingPage({
               <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
                 Billing cycle
               </p>
-              {cycle ? (
+              {!plan || plan.priceUsd < 0.01 ? (
+                <p className="mt-1 text-sm text-ink">NA</p>
+              ) : cycle ? (
                 <p className="mt-1 text-sm text-ink">
                   {formatLocalDate(cycle.startMs)} –{" "}
                   {formatLocalDate(cycle.endMs)}
@@ -257,6 +259,14 @@ export default async function AccountBillingPage({
                   : cycle
                     ? `${formatLocalDate(cycle.endMs)} · ${formatRemainingCycle(cycle.remainingMs)}`
                     : "No end date set."}
+              </p>
+              <p className="mt-3 text-xs uppercase tracking-[0.12em] text-ink-muted">
+                Payment method
+              </p>
+              <p className="mt-1 text-sm text-ink">
+                {billing.billingMethod
+                  ? BILLING_METHOD_LABELS[billing.billingMethod]
+                  : "—"}
               </p>
             </div>
           </div>
@@ -330,23 +340,7 @@ export default async function AccountBillingPage({
         </div>
       ) : tab === "wallet" ? (
         <LiveMainWallet initialMainUsd={deposit?.books.main ?? 0}>
-          <div className="mt-6 space-y-5">
-            <div className="grid items-start gap-5 lg:grid-cols-2">
-              <div>
-                <h2 className="text-lg font-semibold tracking-tight">
-                  Manage Account Balance
-                </h2>
-                <p className="mt-1 text-sm text-ink-muted">
-                  {billing.billingMethod === "wallet"
-                    ? "Listed stables credit Account Wallet 1:1. Enter a receive address on each withdraw request."
-                    : "Leftover Account Wallet stays here until the balance is zero. Switch to Crypto on Manage Payment Method to top up again."}
-                </p>
-              </div>
-              <LiveWalletHeadingBalance
-                fallbackUsd={deposit?.books.main ?? 0}
-              />
-            </div>
-            <div className="grid items-start gap-5 lg:grid-cols-2">
+          <div className="mt-6 grid items-start gap-5 lg:grid-cols-2">
               <section className="rounded-card border border-line bg-surface p-5">
                 <CryptoWalletPanel
                   mainUsd={deposit?.books.main ?? 0}
@@ -370,10 +364,10 @@ export default async function AccountBillingPage({
                   tokens={deposit?.tokens ?? []}
                   heading="Top up Account Balance"
                   instructions={METHOD_TOP_UP_NOTE}
+                  cycleDueUsd={plan?.priceUsd ?? 0}
                   revealAddress={billing.billingMethod === "wallet"}
                 />
               </section>
-            </div>
           </div>
         </LiveMainWallet>
       ) : tab === "ledger" ? (

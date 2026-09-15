@@ -208,6 +208,7 @@ export function TopUpWallet({
   instructions,
   dueUsd,
   cycleDueUsd,
+  showBalance = true,
 }: {
   address: DepositAddress | null;
   addressError: string | null;
@@ -221,6 +222,7 @@ export function TopUpWallet({
   instructions?: string;
   dueUsd?: number;
   cycleDueUsd?: number;
+  showBalance?: boolean;
 }) {
   const live = useLiveMainWallet(0);
   const shortForCycle =
@@ -246,6 +248,14 @@ export function TopUpWallet({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
           <div className="min-w-0 flex-1 space-y-3">
             <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-3 text-sm">
+              {showBalance ? (
+                <>
+                  <dt className="text-ink-muted">Current Balance:</dt>
+                  <dd className="tabular-nums text-ink">
+                    {formatUsd(live.mainUsd)}
+                  </dd>
+                </>
+              ) : null}
               {typeof dueUsd === "number" ? (
                 <>
                   <dt className="text-ink-muted">Amount due:</dt>
@@ -283,24 +293,6 @@ export function TopUpWallet({
       {showCheck ? <CheckDepositButton checkout={checkout} /> : null}
         </>
       )}
-    </div>
-  );
-}
-
-export function LiveWalletHeadingBalance({
-  fallbackUsd,
-}: {
-  fallbackUsd: number;
-}) {
-  const live = useLiveMainWallet(fallbackUsd);
-  return (
-    <div>
-      <p className="text-xs uppercase tracking-[0.12em] text-ink-muted">
-        Balance
-      </p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-ink">
-        {formatUsd(live.mainUsd)}
-      </p>
     </div>
   );
 }

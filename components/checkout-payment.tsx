@@ -280,6 +280,7 @@ function CheckoutCryptoPay({
               planId={planId}
               checkout
               showCheck={false}
+              showBalance={false}
               instructions={ACCOUNT_WALLET_DEPOSIT_NOTE}
             />
             <CheckoutDepositWatcher
