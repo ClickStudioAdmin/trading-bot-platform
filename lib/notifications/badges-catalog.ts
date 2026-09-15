@@ -129,7 +129,9 @@ export function gatedBadgeCount(
 }
 
 export function demoBadgesAllowed(
-  env: { VERCEL_ENV?: string } = process.env,
+  env: { VERCEL_ENV?: string | undefined } = {
+    VERCEL_ENV: process.env.VERCEL_ENV,
+  },
 ): boolean {
   return env.VERCEL_ENV !== "production";
 }
