@@ -248,7 +248,10 @@ export default async function AccountBillingPage({
               <p className="mt-1 text-sm text-ink">
                 {plan ? formatPlanPrice(plan.priceUsd) : "—"}
               </p>
-              <p className="mt-1 text-sm text-ink-muted">
+              <p className="mt-3 text-xs uppercase tracking-[0.12em] text-ink-muted">
+                Payment method
+              </p>
+              <p className="mt-1 text-sm text-ink">
                 {billingMethodPriceNote(billing.billingMethod)}
               </p>
             </div>

@@ -129,14 +129,13 @@ export function CheckoutPayment({
             <dt className="text-ink-muted">Due Today:</dt>
             <dd className="tabular-nums text-ink">{formatUsd(dueUsd)}</dd>
             <dt className="text-ink-muted">Then:</dt>
-            <dd className="text-ink">
-              {planPrice}
-              {showMethodPicker ? null : (
-                <span className="mt-1 block text-ink-muted">
-                  {billingMethodPriceNote(method)}
-                </span>
-              )}
-            </dd>
+            <dd className="text-ink">{planPrice}</dd>
+            {showMethodPicker ? null : (
+              <>
+                <dt className="text-ink-muted">Payment Method:</dt>
+                <dd className="text-ink">{billingMethodPriceNote(method)}</dd>
+              </>
+            )}
           </dl>
           {showMethodPicker ? (
             <div className="mt-5 border-t border-line pt-4">
