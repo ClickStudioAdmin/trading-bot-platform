@@ -41,12 +41,12 @@ Domain action → notify(template, user)
                  → inbox row (skip operator templates and in-app mutes)
 
 Live domain state → action counts → amber numbered badge (cap 99+)
-Inbox unread     → Inbox nav + folded into header with actions
+Inbox unread     → folded into the header Inbox badge with actions
 ```
 
 **Inbox** is informational history. **Badges** are the work queue. A read inbox row does not clear a badge.
 
-No bell dropdown. Inbox page + nav. Theme tokens only.
+No bell dropdown. Inbox page + header Inbox link. Theme tokens only.
 
 Operator templates email admins only and never write a member inbox row.
 
@@ -113,7 +113,7 @@ Header account badge = member actions + unread inbox. Header admin / Overview = 
 - `/account/notifications` — Inbox (affiliate-only allowed)
 - `/account/settings?tab=notifications`
 - `/admin/settings?tab=notifications`
-- Account sidenav Inbox unread; amber counts on Overview, Billing, Affiliates
+- Header Inbox (actions + unread); amber counts on Overview, Billing, Affiliates
 - Admin Overview, Billing, Affiliates amber counts
 - Overview Attention + recent notifications widget
 

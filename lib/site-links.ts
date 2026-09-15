@@ -67,7 +67,6 @@ export const ADMIN_NAV_LINKS = [
 
 export const ACCOUNT_DESK_LINKS = [
   { href: "/account", label: "Overview", exact: true },
-  { href: "/account/notifications", label: "Inbox", exact: true },
   { href: "/account/settings", label: "Settings", exact: true },
   { href: "/account/billing", label: "Billing & Account Balance", exact: false },
   { href: "/account/exchanges", label: "Exchanges", exact: true },
@@ -76,7 +75,6 @@ export const ACCOUNT_DESK_LINKS = [
 ] as const;
 
 export const AFFILIATE_ONLY_LINKS = [
-  { href: "/account/notifications", label: "Inbox", exact: true },
   { href: "/account/settings", label: "Settings", exact: true },
 ] as const;
 
