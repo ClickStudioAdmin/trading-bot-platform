@@ -327,6 +327,7 @@ function mapInvoice(
     periodStart:
       typeof row.period_start === "string" ? row.period_start : null,
     periodEnd: typeof row.period_end === "string" ? row.period_end : null,
+    dueAt: typeof row.due_at === "string" ? row.due_at : null,
     createdAt: String(row.created_at),
   };
 }
@@ -348,7 +349,7 @@ export async function listMemberInvoices(
   const { data } = await supabase
     .from("membership_invoices")
     .select(
-      "id, plan_id, method, external_id, amount_usd, status, period_start, period_end, created_at",
+      "id, plan_id, method, external_id, amount_usd, status, period_start, period_end, due_at, created_at",
     )
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
@@ -369,7 +370,7 @@ export async function listAdminInvoices(
   const { data } = await supabase
     .from("membership_invoices")
     .select(
-      "id, user_id, plan_id, method, external_id, amount_usd, status, period_start, period_end, created_at",
+      "id, user_id, plan_id, method, external_id, amount_usd, status, period_start, period_end, due_at, created_at",
     )
     .order("created_at", { ascending: false })
     .limit(limit);

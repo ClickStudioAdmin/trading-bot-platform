@@ -9,6 +9,7 @@ import {
   billingPath,
   formatRemainingCycle,
   formatUsd,
+  invoiceMethodLabel,
   hasUsableStripeSubscription,
   paginateBillingRows,
   parseBillingPage,
@@ -35,6 +36,7 @@ import {
   showMemberLedgerTab,
   showMemberWalletTab,
 } from "@/lib/membership/wallet";
+import { invoiceStatusLabel } from "@/lib/membership/billing-cycle";
 import {
   hasMainWalletLedger,
   listMainWalletLedger,
@@ -245,6 +247,11 @@ export default async function AccountBillingPage({
               </p>
               <p className="mt-1 text-sm text-ink">
                 {plan ? formatPlanPrice(plan.priceUsd) : "—"}
+              </p>
+              <p className="mt-1 text-sm text-ink-muted">
+                {billing.billingMethod
+                  ? BILLING_METHOD_LABELS[billing.billingMethod]
+                  : "—"}
               </p>
             </div>
             <div>
@@ -469,7 +476,8 @@ export default async function AccountBillingPage({
             <table className="min-w-full text-left text-sm">
               <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
                 <tr>
-                  <th className="pb-2 pr-4 font-medium">Date</th>
+                  <th className="pb-2 pr-4 font-medium">Issued</th>
+                  <th className="pb-2 pr-4 font-medium">Due</th>
                   <th className="pb-2 pr-4 font-medium">Plan</th>
                   <th className="pb-2 pr-4 font-medium">Method</th>
                   <th className="pb-2 pr-4 font-medium">Amount</th>
@@ -479,20 +487,24 @@ export default async function AccountBillingPage({
               <tbody className="divide-y divide-line">
                 {invoicePage.rows.map((invoice) => {
                   const created = parseDisplayTime(invoice.createdAt);
+                  const due = parseDisplayTime(invoice.dueAt);
                   return (
                     <tr key={invoice.id}>
                       <td className="py-2 pr-4 text-ink-muted">
                         {created ? formatLocalDate(created) : "—"}
                       </td>
+                      <td className="py-2 pr-4 text-ink-muted">
+                        {due ? formatLocalDate(due) : "—"}
+                      </td>
                       <td className="py-2 pr-4 text-ink">{invoice.planName}</td>
-                      <td className="py-2 pr-4 text-ink-muted capitalize">
-                        {invoice.method}
+                      <td className="py-2 pr-4 text-ink-muted">
+                        {invoiceMethodLabel(invoice.method)}
                       </td>
                       <td className="py-2 pr-4 tabular-nums text-ink">
                         {formatUsd(invoice.amountUsd)}
                       </td>
-                      <td className="py-2 capitalize text-ink-muted">
-                        {invoice.status}
+                      <td className="py-2 text-ink-muted">
+                        {invoiceStatusLabel(invoice.status)}
                       </td>
                     </tr>
                   );

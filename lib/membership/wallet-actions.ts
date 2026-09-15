@@ -33,6 +33,7 @@ import {
 import { parsePlanId } from "./form";
 import { getMembershipPlan } from "./store";
 import { stripeSecretConfigured, getStripe } from "./stripe";
+import { collectOpenWalletInvoices } from "./billing-cycle-store";
 import { watchMembershipDeposits } from "./watch-deposits";
 import {
   parseWalletMinPayout,
@@ -229,6 +230,11 @@ export async function saveBillingTokenAction(formData: FormData) {
 export async function scanBillingDepositsAction() {
   await requireAdmin();
   const watched = await watchMembershipDeposits({ advanceCursor: true });
+  if (watched.creditedUserIds.length > 0) {
+    await collectOpenWalletInvoices({
+      userIds: [...new Set(watched.creditedUserIds)],
+    });
+  }
   await writeEventLog({
     scope: "system",
     event: "membership.deposit_watched",
@@ -262,6 +268,9 @@ async function checkMemberDeposit(): Promise<CheckDepositResult> {
     userId: member.id,
     advanceCursor: false,
   });
+  if (watched.credited > 0) {
+    await collectOpenWalletInvoices({ userIds: [member.id] });
+  }
   const books = await walletBookBalances(member.id);
   if (watched.errors[0] && watched.credited === 0) {
     return { ok: false, error: watched.errors[0], mainUsd: books.main };

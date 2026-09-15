@@ -30,6 +30,7 @@ export type WatchDepositsResult = {
   scanned: number;
   credited: number;
   swept: number;
+  creditedUserIds: string[];
   errors: string[];
 };
 
@@ -70,7 +71,7 @@ async function creditLog(input: {
     blockNumber: string | number | bigint;
   };
   mnemonic: string | null;
-}): Promise<{ created: boolean; swept: boolean }> {
+}): Promise<{ created: boolean; swept: boolean; userId?: string }> {
   const parsed = parseErc20TransferLog(input.log);
   if (!parsed) {
     return { created: false, swept: false };
@@ -117,7 +118,7 @@ async function creditLog(input: {
     });
   }
   if (!input.chain.adminAddress || !input.mnemonic) {
-    return { created: credited.created, swept: false };
+    return { created: credited.created, swept: false, userId: dest.userId };
   }
   const swept = await sweepDepositToken({
     chain: input.chain,
@@ -144,7 +145,7 @@ async function creditLog(input: {
         sweepTx: swept.txHash,
       },
     });
-    return { created: credited.created, swept: true };
+    return { created: credited.created, swept: true, userId: dest.userId };
   }
   await writeEventLog({
     level: "warning",
@@ -154,7 +155,7 @@ async function creditLog(input: {
     userId: dest.userId,
     data: { chainId: input.chain.id, depositTx: parsed.txHash },
   });
-  return { created: credited.created, swept: false };
+  return { created: credited.created, swept: false, userId: dest.userId };
 }
 
 export async function watchMembershipDeposits(input: {
@@ -165,6 +166,7 @@ export async function watchMembershipDeposits(input: {
     scanned: 0,
     credited: 0,
     swept: 0,
+    creditedUserIds: [],
     errors: [],
   };
   const chains = await listBillingChains();
@@ -233,6 +235,9 @@ export async function watchMembershipDeposits(input: {
                 });
                 if (outcome.created) {
                   result.credited += 1;
+                  if (outcome.userId) {
+                    result.creditedUserIds.push(outcome.userId);
+                  }
                 }
                 if (outcome.swept) {
                   result.swept += 1;

@@ -42,6 +42,7 @@ import { writeEventLog } from "@/lib/logs/write";
 import { processOneQueuedBacktest } from "@/lib/backtest/execute";
 import { BACKTEST_VERCEL_BAR_LIMIT } from "@/lib/backtest/model";
 import { FUTURES_STRATEGY_ID } from "@/lib/strategies/registry";
+import { runMembershipBillingCycle } from "@/lib/membership/billing-cycle-store";
 import { watchMembershipDeposits } from "@/lib/membership/watch-deposits";
 import { createServiceClient } from "@/lib/supabase/admin";
 
@@ -178,6 +179,9 @@ export async function runEngineCycle(
   if (maxMs === undefined || Date.now() - started < maxMs) {
     await watchBillingDeposits(workerId);
   }
+  if (maxMs === undefined || Date.now() - started < maxMs) {
+    await runMembershipInvoices(workerId);
+  }
 
   if (!options?.silent) {
     await writeEventLog({
@@ -199,6 +203,34 @@ export async function runEngineCycle(
     });
   }
   return stats;
+}
+
+async function runMembershipInvoices(workerId: string): Promise<void> {
+  try {
+    const billed = await runMembershipBillingCycle();
+    if (billed.issued > 0 || billed.collected > 0 || billed.errors.length > 0) {
+      await writeEventLog({
+        scope: "system",
+        event: "membership.invoice_issued",
+        message: `Engine billing cycle issued ${billed.issued}, collected ${billed.collected}`,
+        data: {
+          workerId,
+          issued: billed.issued,
+          collected: billed.collected,
+          errors: billed.errors.slice(0, 5),
+        },
+      });
+    }
+  } catch (cause) {
+    await writeEventLog({
+      level: "error",
+      scope: "system",
+      event: "membership.invoice_issued",
+      message:
+        cause instanceof Error ? cause.message : "Billing cycle failed",
+      data: { workerId },
+    });
+  }
 }
 
 async function watchBillingDeposits(workerId: string): Promise<void> {

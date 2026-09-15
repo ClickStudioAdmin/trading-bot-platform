@@ -9,6 +9,7 @@ import {
   saveBillingMethod,
   saveStripeCustomerIds,
 } from "./billing-store";
+import { markOpenStripeInvoicePaid } from "./billing-cycle-store";
 import { getMembershipPlanByStripePriceId } from "./store";
 import { getStripe } from "./stripe";
 import {
@@ -199,6 +200,27 @@ async function handleInvoicePaid(
     periodStart: invoicePeriod(invoice, "start"),
     periodEnd: invoicePeriod(invoice, "end"),
   });
+  const matched = await markOpenStripeInvoicePaid({
+    userId: member.userId,
+    stripeInvoiceId: invoice.id,
+    amountUsd: write.amountUsd,
+    periodStartMs: write.periodStart ? Date.parse(write.periodStart) : null,
+    periodEnd: write.periodEnd,
+    planId,
+  });
+  if ("ok" in matched && matched.ok === false) {
+    return matched;
+  }
+  if ("matched" in matched && matched.matched) {
+    await writeEventLog({
+      scope: "system",
+      event: "membership.invoice_paid",
+      message: "Marked open Stripe invoice paid",
+      userId: member.userId,
+      data: { invoiceId: invoice.id, amountUsd: write.amountUsd, planId },
+    });
+    return { ok: true };
+  }
   const recorded = await recordStripeInvoice(member.userId, planId, write);
   if (!recorded.ok) {
     return recorded;

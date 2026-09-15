@@ -8,6 +8,7 @@ import { CreateGasWallet } from "@/components/create-gas-wallet";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { formatUsd, invoiceMethodLabel } from "@/lib/membership/billing";
+import { invoiceStatusLabel } from "@/lib/membership/billing-cycle";
 import { listAdminInvoices } from "@/lib/membership/billing-store";
 import {
   listPayoutFiles,
@@ -152,6 +153,7 @@ export default async function AdminBillingPage({
                     <th className="py-2 pr-3 font-medium">Method</th>
                     <th className="py-2 pr-3 font-medium">Amount</th>
                     <th className="py-2 pr-3 font-medium">Status</th>
+                    <th className="py-2 pr-3 font-medium">Due</th>
                     <th className="py-2 pr-3 font-medium">Period</th>
                     <th className="py-2 font-medium">External id</th>
                   </tr>
@@ -159,6 +161,7 @@ export default async function AdminBillingPage({
                 <tbody>
                   {invoices.map((invoice) => {
                     const created = parseDisplayTime(invoice.createdAt);
+                    const due = parseDisplayTime(invoice.dueAt);
                     const periodStart = parseDisplayTime(invoice.periodStart);
                     const periodEnd = parseDisplayTime(invoice.periodEnd);
                     return (
@@ -176,7 +179,12 @@ export default async function AdminBillingPage({
                         <td className="py-3 pr-3 tabular-nums">
                           {formatUsd(invoice.amountUsd)}
                         </td>
-                        <td className="py-3 pr-3 capitalize">{invoice.status}</td>
+                        <td className="py-3 pr-3">
+                          {invoiceStatusLabel(invoice.status)}
+                        </td>
+                        <td className="py-3 pr-3 whitespace-nowrap text-ink-muted">
+                          {due ? formatLocalDate(due) : "—"}
+                        </td>
                         <td className="py-3 pr-3 whitespace-nowrap text-ink-muted">
                           {periodStart && periodEnd
                             ? `${formatLocalDate(periodStart)} – ${formatLocalDate(periodEnd)}`

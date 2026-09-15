@@ -42,6 +42,9 @@ assert.ok(
   eventLogOptionsForScopes(["system"]).includes("membership.deposit_credited"),
 );
 assert.ok(
+  eventLogOptionsForScopes(["system"]).includes("membership.invoice_issued"),
+);
+assert.ok(
   eventLogOptionsForScopes(["system"]).includes("membership.gas_wallet_created"),
 );
 assert.ok(

@@ -16,7 +16,7 @@ export type BillingMethod = (typeof BILLING_METHODS)[number];
 
 export const BILLING_METHOD_LABELS: Record<BillingMethod, string> = {
   stripe: "Credit Card (Stripe)",
-  wallet: "Crypto",
+  wallet: "Crypto (account balance)",
 };
 
 export const CRYPTO_CREDIT_DEDUCT_LABEL =
@@ -45,7 +45,7 @@ export const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
 export const INVOICE_METHODS = ["stripe", "wallet", "comp"] as const;
 export type InvoiceMethod = (typeof INVOICE_METHODS)[number];
 
-export const INVOICE_STATUSES = ["paid", "refunded", "void"] as const;
+export const INVOICE_STATUSES = ["open", "paid", "refunded", "void"] as const;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 
 export type MemberBilling = {
@@ -72,6 +72,7 @@ export type MembershipInvoice = {
   status: InvoiceStatus;
   periodStart: string | null;
   periodEnd: string | null;
+  dueAt: string | null;
   createdAt: string;
 };
 
