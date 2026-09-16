@@ -11,7 +11,7 @@ GitHub. Hosted Supabase and Vercel are not.
 - Repo-root Next.js on Vercel — UI and the paper tick HTTP door
 - Paper engine tick lives in `lib/engine` and is host-agnostic. Fly.io (Sydney) is the always-on worker (`runEngineCycle`, per-desk leases). GitHub Actions can still POST the Vercel tick as a leased fallback. See [phase-fly.md](phase-fly.md).
 - Supabase — Postgres only. Sign-in is the `members` table and a signed cookie. Trading state is scoped to `trading_accounts`, not the login
-- A member can have many desks. Each desk is Paper or Live at create, and has a type (`cash_and_carry`, `perps` / ticket only, `perps_bots` / Perps bots, `signal_follower` / TradingView Strategy, `dca`) that locks the UI. See [phase-desk-roles.md](phase-desk-roles.md). Hyperliquid (roadmap 2) also locks **venue** on the desk so Bybit pages stay Bybit ([phase-hyperliquid.md](phase-hyperliquid.md)). Paper uses the in-app ledger. Connected Exchange desks place venue orders from the Fly worker (Sydney) or the Vercel tick fallback when a key is bound.
+- A member can have many desks. Each desk is Paper or Live at create, and has a type (`cash_and_carry`, `perps` / ticket only, `perps_bots` / Perps bots, `signal_follower` / TradingView Strategy, `dca`) that locks the UI. See [phase-desk-roles.md](phase-desk-roles.md). Hyperliquid also locks **venue** on the desk so Bybit pages stay Bybit ([phase-hyperliquid.md](phase-hyperliquid.md)). Paper uses the in-app ledger. Connected Exchange desks place venue orders from the Fly worker (Sydney) or the Vercel tick fallback when a key is bound.
 - New members start with zero desks. After they confirm email they land on Overview (`/account`) and can create a desk from Manage desks when they want. Existing members who already have desks still open the last desk. After the first desk exists, at least one must remain.
 - `/admin` — `members.role = admin`, plus `click.studio.admin@gmail.com`. Overview is the landing page. Members, templates, logs, settings, and theme sit in the left menu
 
@@ -27,21 +27,19 @@ Dark business portal. Tokens in `app/globals.css`. Visual guide at `/admin/theme
 
 ## Current phase
 
-Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Fly.io **is accepted and parked** ([phase-fly.md](phase-fly.md)). Hyperliquid steps 1–6 are in repo ([phase-hyperliquid.md](phase-hyperliquid.md)). Desk roles (Perps vs Perps bots) are in repo ([phase-desk-roles.md](phase-desk-roles.md)). Next Hyperliquid item is Click’s desk test (step 7).
+Phase 11 is complete. See [phase-11.md](phase-11.md). Phase 1 through Phase 11 are complete. Fly.io **is accepted** ([phase-fly.md](phase-fly.md)). Hyperliquid steps 1–6 and copy steps 1–9 are in repo; leftover desk-test is V1 system test. Desk roles (Perps vs Perps bots) are in repo ([phase-desk-roles.md](phase-desk-roles.md)).
 
-**Copy trading is started** (roadmap 3): [phase-copy-trading.md](phase-copy-trading.md). Steps 1–9 are in repo. Stop after each copy-trading micro-step until Click says go. Next is step 10 (Click desk test). Push `develop` to migrate.
-
-The locked sequence after Phase 11 is [roadmap.md](roadmap.md). **Plans, payments, and affiliates** is roadmap 5 ([phase-membership.md](phase-membership.md)), closed at step 8. **Notifications** is roadmap 6 ([phase-notifications.md](phase-notifications.md)) — steps 1–8 in repo; Click desk-tests Resend. **Entitlements, identity, and plan gates** is roadmap 7 ([phase-entitlements.md](phase-entitlements.md)); step 1 (verify + forgot password) is in repo. Onboarding is roadmap 8. Admin roles are parked ([phase-admin-roles.md](phase-admin-roles.md)). Standing unordered notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md). Paper auto-switch stays parked ([phase-auto-switch.md](phase-auto-switch.md)).
+The plan after Phase 11 is [roadmap.md](roadmap.md) (**V1 locked order, V2 unordered**). **Current V1 item is identity** ([phase-entitlements.md](phase-entitlements.md) identity slice): verify + forgot password in repo. Next is 2FA ([phase-2fa.md](phase-2fa.md)), then UI cleanup, then entitlements / plan gates. Plans, payments, and affiliates are shipped ([phase-membership.md](phase-membership.md)). Notifications steps 1–8 are in repo ([phase-notifications.md](phase-notifications.md)). Standing notes: [click-list.md](click-list.md). Automation templates: [templates.md](templates.md).
 
 ## Later
 
 Do not implement until Click starts that roadmap item. Order and notes: [roadmap.md](roadmap.md).
 
-**Plans, payments, and affiliates** (roadmap 5). Spec: [phase-membership.md](phase-membership.md). Closed at step 8. Entitlements / identity / plan gates are [phase-entitlements.md](phase-entitlements.md) (roadmap 7).
+**Plans, payments, and affiliates** (shipped). Spec: [phase-membership.md](phase-membership.md). Closed at step 8. Identity is V1 item 1. Entitlements / plan gates are V1 item 4 ([phase-entitlements.md](phase-entitlements.md)).
 
-**Transactional notifications and email** (roadmap 6). Spec: [phase-notifications.md](phase-notifications.md). Inbox + computed badges + Resend. No fills this pass. Admin roles postponed.
+**Transactional notifications and email** (shipped). Spec: [phase-notifications.md](phase-notifications.md). Inbox + computed badges + Resend. No fills this pass. Admin roles are V2.
 
-**Backup market data** (roadmap 10). Indicator start and other public candles stay on **Bybit public klines first**. When that item starts, failover if the call fails (timeout, HTTP 403, empty list):
+**Backup market data** (V2). Indicator start and other public candles stay on **Bybit public klines first**. When that item starts, failover if the call fails (timeout, HTTP 403, empty list):
 
 1. Public linear klines from **Binance** and/or **OKX**, mapped to the same Bybit contract. Same RSI / MACD / EMA math. Prefer the trading venue’s book; backups are for uptime, not a second truth.
 2. If public failover is not enough: a paid candle SLA (**CoinAPI** or **Kaiko**).
@@ -51,4 +49,4 @@ TradingView stays a Signal webhook, not a candle vendor. Orders stay on the boun
 
 ## Multi-tenancy
 
-Bring-your-own API keys, stored on the **login**. Live desks bind one key. The same key on two desks shares venue margin. Isolation needs another trade-only key. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue. Hyperliquid is roadmap 2 ([phase-hyperliquid.md](phase-hyperliquid.md)); other CEXes are roadmap 16. Connected Exchange books show a Unified account snapshot (available, margin, IM/MM) from the bound key on My Account and on hover of the strategy exchange chip. The active desk for a tab is `?desk=` on desk-scoped URLs. The session cookie is last-used only.
+Bring-your-own API keys, stored on the **login**. Live desks bind one key. The same key on two desks shares venue margin. Isolation needs another trade-only key. No custody of user funds. Trade-only keys, no withdrawal. The connection model is venue-agnostic; Bybit is the first enabled venue. Hyperliquid is shipped as a venue ([phase-hyperliquid.md](phase-hyperliquid.md)); other CEXes are V2. Connected Exchange books show a Unified account snapshot (available, margin, IM/MM) from the bound key on My Account and on hover of the strategy exchange chip. The active desk for a tab is `?desk=` on desk-scoped URLs. The session cookie is last-used only.

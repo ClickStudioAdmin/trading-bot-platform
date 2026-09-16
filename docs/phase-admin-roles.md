@@ -1,6 +1,6 @@
 # Admin roles
 
-**Later phase.** Spec written 16 Sep 2026 as notifications step 7a. Click postponed it **16 Sep 2026** so notifications could finish Resend without role routing. Not in the locked sequence until Click places it. Operator mail stays every admin until this phase.
+**V2** ([roadmap.md](roadmap.md)). Spec written 16 Sep 2026 as notifications step 7a. Click postponed it **16 Sep 2026**. No V2 order. Operator mail stays every admin until this phase.
 
 Do not implement until Click starts this item. Notifications stay [phase-notifications.md](phase-notifications.md). Entitlements stay [phase-entitlements.md](phase-entitlements.md).
 

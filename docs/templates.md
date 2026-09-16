@@ -228,9 +228,9 @@ Stop after acceptance. Do not start Fly.io, Hyperliquid, scale-in, or backup kli
 - In-place edit of another member’s `recipe` JSON
 - Marketplace
 - Fly.io, private APIs from the browser
-- Scale-in / position builder (roadmap 11)
-- Starter Pack delivery to new members and CTA on new desk (roadmap 8; [phase-onboarding.md](phase-onboarding.md))
-- Plans, payments, and affiliates (roadmap 5; [phase-membership.md](phase-membership.md))
-- Hyperliquid / MEXC ([phase-hyperliquid.md](phase-hyperliquid.md))
-- Copy trading (roadmap 3; [phase-copy-trading.md](phase-copy-trading.md)); Hedged DCA
-- Backtesting and `backtested` templates (roadmap 4; [phase-backtesting.md](phase-backtesting.md))
+- Scale-in / position builder (V2)
+- Starter Pack delivery to new members and CTA on new desk (V1 item 5; [phase-onboarding.md](phase-onboarding.md))
+- Plans, payments, and affiliates (shipped; [phase-membership.md](phase-membership.md))
+- Hyperliquid leftover desk-test (V1 system test); MEXC (V2) ([phase-hyperliquid.md](phase-hyperliquid.md))
+- Copy leftover desk-test (V1 system test); Hedged DCA (V2) ([phase-copy-trading.md](phase-copy-trading.md))
+- Backtesting and `backtested` templates (shipped; [phase-backtesting.md](phase-backtesting.md))

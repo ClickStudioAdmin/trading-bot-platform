@@ -1,6 +1,6 @@
 # Plans, payments, and affiliates
 
-**Roadmap 5.** Spec written 11 Sep 2026. **Closed at step 8** on 16 Sep 2026. Click moved downgrade grace after entitlements (13 Sep 2026), then moved entitlements / grace / desk test to [phase-entitlements.md](phase-entitlements.md) (now roadmap 7, after notifications) so notifications could start first. Hyperliquid step 7 and copy step 10 stay Click desk-test.
+**Shipped.** Spec written 11 Sep 2026. **Closed at step 8** on 16 Sep 2026. Identity / 2FA / plan gates are later V1 items ([roadmap.md](roadmap.md)). Hyperliquid and copy leftover desk-test sit in V1 system test.
 
 One combined phase: freemium plans, feature/cap gates, Stripe cards, a prepaid crypto credit wallet, and a multi-level affiliate program that pays a percent of **platform subscription** invoices only.
 
@@ -48,7 +48,7 @@ Suggested seed (editable):
 | Plus | paid | Live desks (small cap), copy follow + share + catalogue, webhooks, templates, maybe one venue |
 | Pro | higher | Backtest, more desks |
 
-Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until roadmap 11.
+Recommend **Chart free, backtest paid**. Scale-in feature flag stays off until V2.
 
 ### Features (on / off)
 
@@ -180,15 +180,14 @@ KYC / travel-rule / money-transmitter: Click owns compliance. V1 is admin-approv
 - Storing or using the **admin wallet** seed or private key; automated payout from the admin wallet
 - Hosted crypto-sub auto-pull as the primary model
 - Yearly prices, vanity referral slugs, promo coupons (unless Click asks)
-- Marketing website (roadmap 12)
-- Transactional notifications and email (roadmap 6) — [phase-notifications.md](phase-notifications.md)
-- Entitlements / identity / plan gates (roadmap 7) — [phase-entitlements.md](phase-entitlements.md)
-- Onboarding wizard refine (roadmap 8) — Starter Pack still never arms
-- Internal webhooks (roadmap 9), backup candles (roadmap 10), scale-in (roadmap 11)
-- MEXC and further CEXes (roadmap 16)
+- Marketing website (V1 item 7)
+- Transactional notifications and email (shipped) — [phase-notifications.md](phase-notifications.md)
+- Identity / 2FA / entitlements / plan gates (V1 items 1, 2, 4) — [phase-entitlements.md](phase-entitlements.md), [phase-2fa.md](phase-2fa.md)
+- Onboarding wizard refine (V1 item 5) — Starter Pack still never arms
+- Internal webhooks, backup candles, scale-in, MEXC (V2)
 - Fly scale-from-admin (parked)
 - Full KYC product
 
 ## After this
 
-Notifications is roadmap 6. Entitlements / identity / plan gates is roadmap 7. Onboarding / Starter Packs is roadmap 8.
+See [roadmap.md](roadmap.md). Notifications are shipped. Current V1 item is identity.

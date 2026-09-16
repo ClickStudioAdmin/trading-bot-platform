@@ -1,6 +1,6 @@
 # Click’s standing list
 
-Not a phase. Not ordered. Not a gate before Fly.io or anything else. Work these whenever they come up during later phases. Ask to see this list when needed.
+Not a phase. Not ordered. Not a V1 gate. Work these during V1 system test or whenever Click picks one up. Leftover product ideas that are not in V1 sit as V2 consideration ([roadmap.md](roadmap.md)).
 
 1. Test TradingView webhooks (live alerts, not only the Positions dummy). See [phase-9.md](phase-9.md) Later.
 2. Test all DCA indicator and Trend start triggers (RSI / MACD / EMA / Supertrend, sit vs cross, timeframes). Compare on **Bybit** (same pair and timeframe, last closed candle), not Binance.

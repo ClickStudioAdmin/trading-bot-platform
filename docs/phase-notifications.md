@@ -1,6 +1,6 @@
 # Transactional notifications and email
 
-**Roadmap 6.** Spec locked 16 Sep 2026. Click split this out of old roadmap 7 and started it after membership steps 1–8. The plan-gate phase is now [phase-entitlements.md](phase-entitlements.md) (roadmap 7), immediately after this phase. Admin roles were step 7a here; Click postponed them **16 Sep 2026** to a later phase ([phase-admin-roles.md](phase-admin-roles.md)). Hyperliquid step 7 and copy step 10 stay Click desk-test.
+**Shipped** (V1 plan: [roadmap.md](roadmap.md)). Spec locked 16 Sep 2026. Admin roles are V2 ([phase-admin-roles.md](phase-admin-roles.md)). Hyperliquid and copy leftover desk-test sit in V1 system test.
 
 Clone the FQX split: one catalog ID drives email, inbox, and settings; required-action badges are **computed live** from domain state; the inbox is the email mirror, not `event_logs`. TBP has no organisations. Inbox and prefs key on `user_id`.
 
@@ -10,7 +10,7 @@ Never trust the browser for payment status, desk health, or unread counts.
 
 ## Status
 
-Steps 1–8 in repo 16 Sep 2026. Add `RESEND_API_KEY` + `EMAIL_FROM` on Vercel and Fly (develop ≠ production). Click desk-tests mute, unread, badge clear, and no fill spam. Do not start entitlements or admin roles.
+Steps 1–8 in repo 16 Sep 2026. Add `RESEND_API_KEY` + `EMAIL_FROM` on Vercel and Fly (develop ≠ production). Click desk-tests mute, unread, badge clear, and no fill spam. Identity is the current V1 item. Do not start 2FA, gates, or admin roles until Click says go.
 
 ## Purpose
 
@@ -64,7 +64,7 @@ Same ID in email, inbox, and settings.
 
 **Operator — email only:** `operator_payout_requested`, `operator_sweep_failed`, `operator_gas_low`, `operator_payment_failed`, `operator_desk_critical`.
 
-**Not this phase:** fills, blotter chatter, plan-limit / Upgrade / grace / email verification / 2FA (roadmap 7), marketing, password-reset (current auth; verification is roadmap 7), `engine.tick`, `deposit_watched`. Admin **roles** are [phase-admin-roles.md](phase-admin-roles.md).
+**Not this phase:** fills, blotter chatter, plan-limit / Upgrade / grace, marketing, `engine.tick`, `deposit_watched`. Identity and password-reset are V1 item 1. 2FA is V1 item 2. Admin **roles** are V2 ([phase-admin-roles.md](phase-admin-roles.md)).
 
 ## Email templates
 
@@ -125,13 +125,13 @@ Desk Activity and blotters stay. They are not the inbox.
 ## Out of scope
 
 - Trade fill / opened / closed / unwound notices
-- Entitlements, identity, Upgrade UX, downgrade grace (roadmap 7)
-- Onboarding wizard refine (roadmap 8)
-- Internal webhooks (roadmap 9)
+- Identity / 2FA / entitlements / Upgrade / grace (later V1 items)
+- Onboarding wizard refine (V1 item 5)
+- Internal webhooks (V2)
 - Organisation / multi-seat **member** notification roles (FQX-only). Admin roles are [phase-admin-roles.md](phase-admin-roles.md).
 - Bell dropdown
 - Marketing mail
 
 ## After this
 
-Entitlements / identity / plan gates is roadmap 7. Onboarding is roadmap 8. Internal webhooks is roadmap 9. Admin roles are parked ([phase-admin-roles.md](phase-admin-roles.md)).
+See [roadmap.md](roadmap.md). Current V1 item is identity. Admin roles are V2 ([phase-admin-roles.md](phase-admin-roles.md)).

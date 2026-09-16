@@ -5,16 +5,18 @@ alwaysApply: true
 
 # Phase discipline
 
-Read [docs/master-spec.md](docs/master-spec.md) and the current phase doc before changing code.
+Read [docs/master-spec.md](docs/master-spec.md) and the current V1 item in [docs/roadmap.md](docs/roadmap.md) before changing code.
 
-Work only on the current phase. Phase 1 through Phase 11 are complete. See [docs/phase-11.md](docs/phase-11.md). Locked sequence: [docs/roadmap.md](docs/roadmap.md). Fly.io is accepted and parked ([docs/phase-fly.md](docs/phase-fly.md)). Hyperliquid is started ([docs/phase-hyperliquid.md](docs/phase-hyperliquid.md)). Copy trading is started ([docs/phase-copy-trading.md](docs/phase-copy-trading.md)). Stop after each Hyperliquid or copy-trading micro-step until Click says go. Do not start MEXC, scale-in, or later items until Click asks.
+Work only on the current V1 item. Phase 1 through Phase 11 are complete. See [docs/phase-11.md](docs/phase-11.md). Fly.io is accepted ([docs/phase-fly.md](docs/phase-fly.md)). Hyperliquid and copy leftover desk-test wait for V1 system test. Do not start a later V1 item or any V2 item until Click asks.
 
 Feature work happens on `develop`. Merge to `main` only when the user is ready for production.
 
 Phase 11 is the first managing playbook. Type `dca` on the desk. Same `futures_*` ledger and `runFuturesCommand`. The app owns orders and exits. Signals only arm. Stacked playbooks, one per contract and side. The engine worker claims **one desk at a time** (Postgres leases). Do not call private exchange APIs from the browser. Paper accounts still use the in-app ledger.
 
-Do not create later-phase tables or speculative architecture. Copy trading is [docs/phase-copy-trading.md](docs/phase-copy-trading.md); stop after each micro-step. Do not start 2FA, plan gates, downgrade grace, scale-in, MEXC, or onboarding refine until Click starts that item. Standing unordered notes: [docs/click-list.md](docs/click-list.md). Hyperliquid is roadmap 2 ([docs/phase-hyperliquid.md](docs/phase-hyperliquid.md)). Copy trading is roadmap 3. Plans, payments, and affiliates is roadmap 5 ([docs/phase-membership.md](docs/phase-membership.md)), closed at step 8. Notifications is roadmap 6 ([docs/phase-notifications.md](docs/phase-notifications.md)); steps 1–8 in repo, Click desk-tests Resend. Admin roles are parked ([docs/phase-admin-roles.md](docs/phase-admin-roles.md)). Entitlements / identity / plan gates is roadmap 7 ([docs/phase-entitlements.md](docs/phase-entitlements.md)); step 1 (verify + forgot password) is in repo. Onboarding is roadmap 8. Scale-in / position builder is roadmap 11.
+**Current V1 item: identity** ([docs/phase-entitlements.md](docs/phase-entitlements.md) identity slice). Verify + forgot password is in repo. Stop. Next is 2FA ([docs/phase-2fa.md](docs/phase-2fa.md)) — settings enroll + sign-in only, not plan gates. Then UI cleanup, then entitlements / plan gates, then onboarding. V2 (webhooks, backup candles, scale-in, MEXC, admin roles, …) has no order.
+
+Do not create later-phase tables or speculative architecture. Standing notes: [docs/click-list.md](docs/click-list.md).
 
 Keep dependencies minimal. Prefer the simplest solution that satisfies the current phase.
 
-Stop at the end of the phase. After acceptance criteria pass, report results and wait for instruction.
+Stop at the end of the item. After acceptance criteria pass, report results and wait for instruction.
