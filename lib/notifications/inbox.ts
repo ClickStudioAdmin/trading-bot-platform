@@ -20,6 +20,16 @@ export const EMPTY_INBOX_FILTERS: InboxFilters = {
   event: "",
 };
 
+export function markReadSelection(
+  all: boolean,
+  ids: number[],
+): "all" | number[] | null {
+  if (all) {
+    return "all";
+  }
+  return ids.length > 0 ? ids : null;
+}
+
 export function parseInboxPage(value: unknown): number {
   const page = Math.trunc(Number(String(value ?? "").trim()));
   return Number.isFinite(page) && page > 0 ? page : 1;

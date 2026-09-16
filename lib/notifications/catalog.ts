@@ -131,6 +131,26 @@ export function inboxShouldInsert(input: {
   return !notificationIsDisabled(input.userDisabledInApp, input.template);
 }
 
+export type EmailDispatchClaim = "new" | "retry";
+
+export function parseEmailDispatchClaim(
+  value: unknown,
+): EmailDispatchClaim | null {
+  if (value === true || value === "new") {
+    return "new";
+  }
+  if (value === "retry") {
+    return "retry";
+  }
+  return null;
+}
+
+export function emailDispatchShouldComplete(
+  email: "sent" | "skipped" | "unconfigured" | "failed",
+): boolean {
+  return email === "sent" || email === "skipped";
+}
+
 export function resendConfigured(
   env: { RESEND_API_KEY?: string | undefined; EMAIL_FROM?: string | undefined } = {
     RESEND_API_KEY: process.env.RESEND_API_KEY,

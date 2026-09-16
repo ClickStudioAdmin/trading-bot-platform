@@ -2,7 +2,7 @@
 
 **Roadmap 7.** Spec written 16 Sep 2026. These were membership steps 9–11, then sat as roadmap 8. Click moved this phase to **immediately after notifications** on 16 Sep 2026 and added identity: email verification and optional 2FA. Onboarding is now roadmap 8. Internal webhooks stay roadmap 9.
 
-Do not implement until Click starts this item. Membership billing, wallets, and affiliates stay [phase-membership.md](phase-membership.md) (roadmap 5, closed at step 8). Admin roles and role-routed operator mail stay notifications step **7a** ([phase-notifications.md](phase-notifications.md)).
+Do not implement until Click starts this item. Membership billing, wallets, and affiliates stay [phase-membership.md](phase-membership.md) (roadmap 5, closed at step 8). Admin roles and role-routed operator mail are [phase-admin-roles.md](phase-admin-roles.md) (parked; not this phase).
 
 Never trust the browser for entitlements, verification, 2FA, or admin permissions. Server actions reject.
 
@@ -30,7 +30,7 @@ Stop after each micro-step until Click says go. After step 5, stop and wait.
 
 ### Identity
 
-Email verification uses a signed, single-use token (or short code) mailed through the notifications / Resend path once roadmap 6 step 8 is live. Until then this phase waits or no-ops send the same way `notify()` does today.
+Email verification uses a signed, single-use token (or short code) mailed through the notifications / Resend path ([phase-notifications.md](phase-notifications.md) step 8). Until keys are set, send no-ops the same way `notify()` does today.
 
 Password change: current password + new password, then email confirm. The password does not change if the confirm is missing or expired. Optional 2FA, when enabled, is also required to change the password.
 
@@ -57,7 +57,7 @@ Per desk: cancel working orders, market-exit positions, disable bots, disable th
 
 ## Out of scope
 
-- Notifications product (roadmap 6) — already its own phase, including admin roles (step 7a)
+- Notifications product (roadmap 6) — already its own phase. Admin roles are [phase-admin-roles.md](phase-admin-roles.md)
 - Onboarding wizard refine (roadmap 8)
 - Internal webhooks (roadmap 9)
 - Scale-in (roadmap 11)

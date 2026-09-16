@@ -99,6 +99,7 @@ export const EVENT_LOG_OPTIONS = [
   { event: "engine.breakeven_failed", scope: "trade" },
   { event: "trade.futures", scope: "trade" },
   { event: "trade.futures_failed", scope: "trade" },
+  { event: "trade.futures_working_failed", scope: "trade" },
 ] as const;
 
 export function eventLogOptionsForScopes(

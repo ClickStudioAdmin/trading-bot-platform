@@ -4,6 +4,9 @@ import { getVenue } from "@/lib/exchanges/venues";
 export const CRITICAL_LOG_EVENTS = [
   "dca.sync_failed",
   "trade.futures_failed",
+  "trade.futures_working_failed",
+  "trade.order_failed",
+  "trade.open_failed",
   "exchange.verify_failed",
 ] as const;
 

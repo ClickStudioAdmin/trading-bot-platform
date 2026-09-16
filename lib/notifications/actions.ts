@@ -19,6 +19,7 @@ import {
 import { safeNoticeHref } from "./hrefs";
 import {
   inboxPath,
+  markReadSelection,
   parseInboxFilters,
   parseInboxPage,
 } from "./inbox";
@@ -69,9 +70,15 @@ function refreshNoticePaths() {
 
 export async function markNotificationsReadAction(formData: FormData) {
   const member = await requireMember();
-  const ids = parseIds(formData);
-  const all = formData.get("all") === "1";
-  await markUserNotificationsRead(member.id, all ? undefined : ids);
+  const selection = markReadSelection(
+    formData.get("all") === "1",
+    parseIds(formData),
+  );
+  if (selection === "all") {
+    await markUserNotificationsRead(member.id);
+  } else if (selection) {
+    await markUserNotificationsRead(member.id, selection);
+  }
   refreshNoticePaths();
   const next = formData.get("next");
   if (typeof next === "string" && next.trim()) {

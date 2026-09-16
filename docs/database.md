@@ -59,7 +59,7 @@ Current tables:
 | `membership_payout_items` | membership | Optional commission attach on older affiliate payouts. New affiliate withdraws debit the Affiliate book only and do not write items. Unique `commission_id` so a listed commission cannot sit on two payouts. Refunds do not remove a row from a generated file. |
 | `user_notifications` | notifications | In-app inbox. `user_id` + template + title + body + href + `read_at`. Service-role RPCs insert / mark read / unread. Not `event_logs`. |
 | `user_notification_preferences` | notifications | Per-login mute arrays (`disabled_emails`, `disabled_in_app`). Service-role upsert RPC. |
-| `email_dispatches` | notifications | Idempotency `(template, entity_key)` for one-shot and reminder mail. `claim_email_dispatch` returns true only on first insert. |
+| `email_dispatches` | notifications | Idempotency `(template, entity_key)` for one-shot and reminder mail. `claim_email_dispatch` returns `new` / `retry` / `done`. `completed_at` is set after a send or a mute/skip. Failed or unconfigured Resend stays retryable. |
 | `platform_settings.disabled_emails` | notifications | Platform kill switch for outbound email template IDs. |
 | `platform_settings.disabled_badges` | notifications | Platform kill switch for required-action badge IDs. Off hides the number; live work stays. |
 | `platform_settings.demo_badge_counts` | notifications | Develop-only overlay counts so chrome can look populated. Production ignores this column. |

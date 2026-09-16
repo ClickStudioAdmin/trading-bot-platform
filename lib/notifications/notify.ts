@@ -1,12 +1,22 @@
 import {
+  emailDispatchShouldComplete,
   emailShouldSend,
   inboxShouldInsert,
+  isOperatorNotificationId,
   resendConfigured,
   type NotificationId,
 } from "./catalog";
 import { inboxBody, inboxTitle, type NotificationNotice } from "./copy";
 import {
+  MEMBER_EMAIL_FOOTER,
+  noticeAbsoluteHref,
+  noticeEmailHtml,
+  noticeEmailText,
+  sendResendEmail,
+} from "./email";
+import {
   claimEmailDispatch,
+  completeEmailDispatch,
   insertUserNotification,
   loadNotificationPreferences,
   loadPlatformDisabledEmails,
@@ -15,7 +25,7 @@ import {
 export type NotifyResult = {
   claimed: boolean;
   inbox: boolean;
-  email: "sent" | "skipped" | "unconfigured";
+  email: "sent" | "skipped" | "unconfigured" | "failed";
 };
 
 export async function notify(input: {
@@ -47,6 +57,7 @@ export async function notify(input: {
 
   let inbox = false;
   if (
+    claimed === "new" &&
     input.userId &&
     inboxShouldInsert({
       template: input.template,
@@ -64,6 +75,10 @@ export async function notify(input: {
   }
 
   let email: NotifyResult["email"] = "skipped";
+  const actionHref = noticeAbsoluteHref(input.notice.actionUrl);
+  const footer = isOperatorNotificationId(input.template)
+    ? undefined
+    : MEMBER_EMAIL_FOOTER;
   for (const to of recipients) {
     const decision = emailShouldSend({
       template: input.template,
@@ -73,12 +88,29 @@ export async function notify(input: {
       resendConfigured: configured,
     });
     if (!decision.send) {
-      if (decision.reason === "resend") {
+      if (decision.reason === "resend" && email === "skipped") {
         email = "unconfigured";
       }
       continue;
     }
-    email = "unconfigured";
+    const sent = await sendResendEmail({
+      to,
+      subject: input.notice.subject,
+      html: noticeEmailHtml(input.notice, { footer, actionHref }),
+      text: noticeEmailText(input.notice, { footer, actionHref }),
+    });
+    if (sent.ok) {
+      email = "sent";
+      continue;
+    }
+    console.error("resend_send_failed", input.template, sent.error);
+    if (email !== "sent") {
+      email = "failed";
+    }
+  }
+
+  if (emailDispatchShouldComplete(email)) {
+    await completeEmailDispatch(input.template, input.entityKey);
   }
 
   return { claimed: true, inbox, email };

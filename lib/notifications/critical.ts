@@ -37,7 +37,7 @@ export {
 };
 
 const REPEAT_WINDOW_MS = 30 * 60 * 1000;
-const CRITICAL_LOOKBACK_MS = 24 * 60 * 60 * 1000;
+const CRITICAL_LOOKBACK_MS = REPEAT_WINDOW_MS;
 
 export async function notifyFromCriticalLog(
   input: EventLogInput,
@@ -196,10 +196,11 @@ async function notifyDeskSyncFailed(input: {
   const href = criticalDeskHref(input.desk);
   const venue = venueLabel(input.desk.venue);
   const operators = await loadOperatorEmails();
-  const memberLabel = await loadMemberLabel(input.userId);
+  const member = await loadMemberContact(input.userId);
   await notify({
     template: "desk_sync_failed",
     userId: input.userId,
+    toEmail: member.email,
     entityKey: deskSyncFailedKey(input.desk.id),
     notice: notificationCopy.desk_sync_failed({
       deskName: input.desk.name,
@@ -213,7 +214,7 @@ async function notifyDeskSyncFailed(input: {
     entityKey: operatorDeskCriticalKey(input.desk.id, "sync"),
     toEmail: operators,
     notice: notificationCopy.operator_desk_critical({
-      memberLabel,
+      memberLabel: member.label,
       deskName: input.desk.name,
       venue,
       detail: input.detail,
@@ -230,10 +231,11 @@ async function notifyDeskOrderFailed(input: {
   const href = criticalDeskHref(input.desk);
   const venue = venueLabel(input.desk.venue);
   const operators = await loadOperatorEmails();
-  const memberLabel = await loadMemberLabel(input.userId);
+  const member = await loadMemberContact(input.userId);
   await notify({
     template: "desk_order_failed",
     userId: input.userId,
+    toEmail: member.email,
     entityKey: deskOrderFailedKey(input.desk.id, input.family),
     notice: notificationCopy.desk_order_failed({
       deskName: input.desk.name,
@@ -247,7 +249,7 @@ async function notifyDeskOrderFailed(input: {
     entityKey: operatorDeskCriticalKey(input.desk.id, input.family),
     toEmail: operators,
     notice: notificationCopy.operator_desk_critical({
-      memberLabel,
+      memberLabel: member.label,
       deskName: input.desk.name,
       venue,
       detail: input.detail,
@@ -265,10 +267,11 @@ async function notifyExchangeVerifyFailed(input: EventLogInput): Promise<void> {
   const venue = venueLabel(String(input.data?.venue ?? ""));
   const connectionName = venue || "Exchange key";
   const operators = await loadOperatorEmails();
-  const memberLabel = await loadMemberLabel(input.userId);
+  const member = await loadMemberContact(input.userId);
   await notify({
     template: "exchange_verify_failed",
     userId: input.userId,
+    toEmail: member.email,
     entityKey: exchangeVerifyFailedKey(connectionId),
     notice: notificationCopy.exchange_verify_failed({
       connectionName,
@@ -283,7 +286,7 @@ async function notifyExchangeVerifyFailed(input: EventLogInput): Promise<void> {
         entityKey: operatorDeskCriticalKey(desk.id, "verify"),
         toEmail: operators,
         notice: notificationCopy.operator_desk_critical({
-          memberLabel,
+          memberLabel: member.label,
           deskName: desk.name,
           venue: venue || venueLabel(desk.venue),
           detail: input.message,
@@ -361,10 +364,13 @@ async function liveAccountIdSet(accountIds: string[]): Promise<Set<string>> {
   return new Set((data ?? []).map((row) => String(row.id)));
 }
 
-async function loadMemberLabel(userId: string): Promise<string> {
+async function loadMemberContact(userId: string): Promise<{
+  email: string | null;
+  label: string;
+}> {
   const supabase = createServiceClient();
   if (!supabase) {
-    return "Member";
+    return { email: null, label: "Member" };
   }
   const { data } = await supabase
     .from("members")
@@ -372,7 +378,13 @@ async function loadMemberLabel(userId: string): Promise<string> {
     .eq("user_id", userId)
     .maybeSingle();
   if (!data) {
-    return "Member";
+    return { email: null, label: "Member" };
   }
-  return memberDisplayName(String(data.email ?? ""), String(data.name ?? ""));
+  const email = String(data.email ?? "")
+    .trim()
+    .toLowerCase();
+  return {
+    email: email.includes("@") ? email : null,
+    label: memberDisplayName(String(data.email ?? ""), String(data.name ?? "")),
+  };
 }

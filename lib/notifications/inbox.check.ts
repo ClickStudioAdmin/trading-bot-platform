@@ -7,6 +7,7 @@ import {
   inboxPageLabel,
   inboxPageWindow,
   inboxPath,
+  markReadSelection,
   parseInboxFilters,
   parseInboxPage,
 } from "./inbox";
@@ -97,5 +98,10 @@ assert.equal(
   inboxFilterTemplates(EMPTY_INBOX_FILTERS, MEMBER_NOTIFICATION_GROUPS),
   null,
 );
+
+assert.equal(markReadSelection(true, []), "all");
+assert.equal(markReadSelection(true, [3]), "all");
+assert.deepEqual(markReadSelection(false, [3, 8]), [3, 8]);
+assert.equal(markReadSelection(false, []), null);
 
 console.log("notification inbox checks passed");

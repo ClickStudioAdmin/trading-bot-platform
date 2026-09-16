@@ -151,6 +151,9 @@ Once **tbp-engine-dev** appears in the Fly dashboard, open it (do not Launch ano
 - `SUPABASE_SERVICE_ROLE_KEY` — development **service role** key (the secret one, never a `NEXT_PUBLIC_` key)
 - `EXCHANGE_CREDENTIALS_KEY` — the same 64-character key Vercel Development uses to encrypt exchange API keys
 - `BILLING_CREDENTIALS_KEY` — the same key Vercel Development uses to decrypt the deposit HD seed and gas wallet (sweeps fail silently without it)
+- `RESEND_API_KEY` — same develop Resend key as Vercel Development (mail no-ops if missing)
+- `EMAIL_FROM` — same develop From as Vercel Development
+- `APP_BASE_URL` — same develop origin as Vercel (email buttons)
 
 If those four do not match Vercel Development, the worker will talk to the wrong database or fail to decrypt keys. Do not paste production values here.
 

@@ -4,6 +4,7 @@ import { NoticeEmail } from "@/components/notice-email";
 import { PageHeading } from "@/components/page-heading";
 import { isOperatorNotificationId } from "@/lib/notifications/catalog";
 import { sampleNotice } from "@/lib/notifications/copy";
+import { MEMBER_EMAIL_FOOTER } from "@/lib/notifications/email";
 import {
   adminSettingGroups,
   NOTIFICATION_HINTS,
@@ -14,9 +15,6 @@ export const metadata: Metadata = {
   title: "Email templates",
   description: "Locked transactional email copy.",
 };
-
-const MEMBER_FOOTER =
-  "You can change these emails on Account Settings → Notifications.";
 
 export default function AdminEmailTemplatesPage() {
   return (
@@ -52,7 +50,9 @@ export default function AdminEmailTemplatesPage() {
                     <NoticeEmail
                       notice={sampleNotice(id)}
                       footer={
-                        isOperatorNotificationId(id) ? undefined : MEMBER_FOOTER
+                        isOperatorNotificationId(id)
+                          ? undefined
+                          : MEMBER_EMAIL_FOOTER
                       }
                     />
                   </div>

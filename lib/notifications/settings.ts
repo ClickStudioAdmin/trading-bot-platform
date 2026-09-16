@@ -239,7 +239,7 @@ export const MEMBER_CHANNEL_LIST: ChannelList = {
         {
           id: "update_card",
           label: "Update card",
-          hint: "Member Billing. Off until commercial notify is wired.",
+          hint: "Member Billing when collection is Card and the subscription is past due.",
           showInApp: false,
           badgeId: "update_card",
         },

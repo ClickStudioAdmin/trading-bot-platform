@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  CRITICAL_LOG_EVENTS,
   criticalDeskHref,
   criticalFamily,
   repeatingOrderShouldNotify,
@@ -20,6 +21,9 @@ assert.equal(criticalFamily(""), "desk");
 assert.equal(repeatingOrderShouldNotify(1), false);
 assert.equal(repeatingOrderShouldNotify(2), true);
 assert.equal(repeatingOrderShouldNotify(5), true);
+assert.equal(CRITICAL_LOG_EVENTS.includes("trade.order_failed"), true);
+assert.equal(CRITICAL_LOG_EVENTS.includes("trade.open_failed"), true);
+assert.equal(CRITICAL_LOG_EVENTS.includes("trade.futures_working_failed"), true);
 
 assert.equal(
   criticalDeskHref({

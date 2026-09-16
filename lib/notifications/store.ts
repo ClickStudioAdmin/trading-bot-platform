@@ -1,4 +1,8 @@
 import { createServiceClient } from "@/lib/supabase/admin";
+import {
+  parseEmailDispatchClaim,
+  type EmailDispatchClaim,
+} from "./catalog";
 import { INBOX_PAGE_SIZE, inboxPageWindow } from "./inbox";
 
 export type NotificationPreferences = {
@@ -103,19 +107,34 @@ export async function loadNotificationPreferences(
 export async function claimEmailDispatch(
   template: string,
   entityKey: string,
-): Promise<boolean> {
+): Promise<EmailDispatchClaim | null> {
   const supabase = createServiceClient();
   if (!supabase) {
-    return false;
+    return null;
   }
   const { data, error } = await supabase.rpc("claim_email_dispatch", {
     p_template: template,
     p_entity_key: entityKey,
   });
   if (error) {
+    return null;
+  }
+  return parseEmailDispatchClaim(data);
+}
+
+export async function completeEmailDispatch(
+  template: string,
+  entityKey: string,
+): Promise<boolean> {
+  const supabase = createServiceClient();
+  if (!supabase) {
     return false;
   }
-  return data === true;
+  const { error } = await supabase.rpc("complete_email_dispatch", {
+    p_template: template,
+    p_entity_key: entityKey,
+  });
+  return !error;
 }
 
 export type UserNotification = {
@@ -276,6 +295,9 @@ export async function markUserNotificationsRead(
 ): Promise<boolean> {
   const supabase = createServiceClient();
   if (!supabase || !userId) {
+    return false;
+  }
+  if (ids && ids.length === 0) {
     return false;
   }
   const { error } = await supabase.rpc("mark_user_notifications_read", {

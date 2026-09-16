@@ -60,7 +60,7 @@ export const BADGE_SETTINGS: BadgeSetting[] = [
   {
     id: "update_card",
     label: "Update card",
-    hint: "Member Billing. Off until commercial notify is wired.",
+    hint: "Member Billing when collection is Card and the subscription is past due.",
     audience: "member",
   },
   {

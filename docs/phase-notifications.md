@@ -1,6 +1,6 @@
 # Transactional notifications and email
 
-**Roadmap 6.** Spec locked 16 Sep 2026. Click split this out of old roadmap 7 and started it after membership steps 1–8. The plan-gate phase is now [phase-entitlements.md](phase-entitlements.md) (roadmap 7), immediately after this phase. Hyperliquid step 7 and copy step 10 stay Click desk-test.
+**Roadmap 6.** Spec locked 16 Sep 2026. Click split this out of old roadmap 7 and started it after membership steps 1–8. The plan-gate phase is now [phase-entitlements.md](phase-entitlements.md) (roadmap 7), immediately after this phase. Admin roles were step 7a here; Click postponed them **16 Sep 2026** to a later phase ([phase-admin-roles.md](phase-admin-roles.md)). Hyperliquid step 7 and copy step 10 stay Click desk-test.
 
 Clone the FQX split: one catalog ID drives email, inbox, and settings; required-action badges are **computed live** from domain state; the inbox is the email mirror, not `event_logs`. TBP has no organisations. Inbox and prefs key on `user_id`.
 
@@ -10,7 +10,7 @@ Never trust the browser for payment status, desk health, or unread counts.
 
 ## Status
 
-Steps 1–7 in repo 16 Sep 2026. Push `develop` to migrate. Click chooses 7a (admin roles) or 8 (Resend) next. Do not start entitlements.
+Steps 1–8 in repo 16 Sep 2026. Add `RESEND_API_KEY` + `EMAIL_FROM` on Vercel and Fly (develop ≠ production). Click desk-tests mute, unread, badge clear, and no fill spam. Do not start entitlements or admin roles.
 
 ## Purpose
 
@@ -29,8 +29,7 @@ Members and admins see numbered badges for work they must do, plus an inbox of n
 | 5 | Settings | Agent | `/account/settings` Notifications tab (Email / In-app per event). `/admin/settings` Notifications & Alerts tab: one Member list and one Admin list; Email / In-app / Alert on the same trigger row. Locked `NoticeEmail` previews on `/admin/email-templates`. Affiliate-only members see Affiliates + Security only. Stop. **In repo 16 Sep 2026.** |
 | 6 | Wire commercial | Agent | `notify()` from billing, affiliate payouts, copy invites, password change. `update_card` live on Stripe `past_due`. Stop. **In repo 16 Sep 2026.** |
 | 7 | Wire critical + operator | Agent | Deduped live-desk critical, sweep fail, gas low, operator mail. Absorb click-list 12. Stop. **In repo 16 Sep 2026.** |
-| 7a | Admin roles | Agent | Admins can create and assign **admin roles**. Each operator template is sent only to the roles ticked on that template (default: every admin role). `/admin` nav and server actions gate on the role’s permissions. Listed owner email stays a full-access role that cannot be locked out. Never trust the browser. Stop. **Not started.** |
-| 8 | Resend + desk test | Agent + Click | `RESEND_API_KEY` + `EMAIL_FROM` on Vercel and Fly (develop ≠ production). One `NoticeEmail` layout. Mute, unread, badge clear, no fill spam. Role routing from 7a applies when mail actually sends. Stop. |
+| 8 | Resend + desk test | Agent + Click | `RESEND_API_KEY` + `EMAIL_FROM` on Vercel and Fly (develop ≠ production). One `NoticeEmail` HTML layout. Member footer. Mute, unread, badge clear, no fill spam. Operator mail still every admin. Stop. **In repo 16 Sep 2026.** Click adds keys and desk-tests. |
 
 Stop after each micro-step until Click says go. Do not start entitlements, onboarding refine, or internal webhooks.
 
@@ -49,23 +48,11 @@ Inbox unread     → header Inbox badge only
 
 No bell dropdown. Inbox page + header Inbox link. Theme tokens only.
 
-Operator templates email admins only and never write a member inbox row. After step 7a they email only the roles assigned on that template.
+Operator templates email admins only and never write a member inbox row. Role routing is [phase-admin-roles.md](phase-admin-roles.md), not this phase.
 
 `password_changed` email is not mute-able. Other member templates respect platform then user mutes.
 
 Affiliate-only logins: Inbox + Settings. Settings show Affiliates (commission + withdraws) and Security (`password_changed`) only — no Billing, Copy, or Desks. No desk-critical or unbound-live badges.
-
-### Admin roles (step 7a)
-
-Do not build until Click starts 7a. After step 6 or 7 as Click directs.
-
-Admins create named **admin roles**. Each role has a permission set that matches today’s admin surfaces: Overview, Settings, Plans, Billing & Wallets, Affiliates, Members, Templates, Logs, Theme, and **Roles** (who can edit roles). Existing `members.role = admin` land on a seed **Admin** role with every permission. `click.studio.admin@gmail.com` (and any later listed owner) is an **Owner** role: all permissions, cannot be deleted, cannot lose Roles or be demoted by a lesser admin.
-
-`requireAdmin` becomes `requireAdmin(permission)`. The nav hides links the role cannot use. Server actions still reject. Never trust the browser.
-
-Each operator template has **Send to roles** (multi-select). Empty / all-on means every admin role. Off for a role skips that mail. Platform email kill switch still wins. Member inbox is unchanged.
-
-Role CRUD lives on `/admin/members` or `/admin/settings` (lock the screen with Click when 7a starts). Assign a role when promoting a member to admin.
 
 ## Catalog
 
@@ -77,11 +64,11 @@ Same ID in email, inbox, and settings.
 
 **Operator — email only:** `operator_payout_requested`, `operator_sweep_failed`, `operator_gas_low`, `operator_payment_failed`, `operator_desk_critical`.
 
-**Not this phase:** fills, blotter chatter, plan-limit / Upgrade / grace / email verification / 2FA (roadmap 7), marketing, password-reset (current auth; verification is roadmap 7), `engine.tick`, `deposit_watched`. Admin **roles** are step 7a in this phase, not a later item.
+**Not this phase:** fills, blotter chatter, plan-limit / Upgrade / grace / email verification / 2FA (roadmap 7), marketing, password-reset (current auth; verification is roadmap 7), `engine.tick`, `deposit_watched`. Admin **roles** are [phase-admin-roles.md](phase-admin-roles.md).
 
 ## Email templates
 
-FQX `NoticeEmail` shape: subject = heading = preview; one or two short paragraphs; one button. Inbox title = subject. Inbox body = first paragraph. Amounts USD. From name Trading Bot Platform. Locked previews live on `/admin/email-templates`. Settings only has on/off switches. Resend send is still step 8.
+FQX `NoticeEmail` shape: subject = heading = preview; one or two short paragraphs; one button. Inbox title = subject. Inbox body = first paragraph. Amounts USD. From name Trading Bot Platform. Locked previews live on `/admin/email-templates`. Settings only has on/off switches. Resend send uses the same layout (inline HTML + text). Button links use `APP_BASE_URL` + the inbox path. A dispatch is not complete until mail sends or is muted/skipped; Resend errors and a missing key stay retryable. Existing rows from before that change were marked complete.
 
 Member footer (step 8): “You can change these emails on Account Settings → Notifications.” Operator mail omits that footer.
 
@@ -117,7 +104,7 @@ Computed. Never stored as todos.
 
 **Member:** `past_due`, `account_shortfall` (collect window open), `unbound_live`, `desk_critical`, `copy_invite`, `update_card` (Card collection + `past_due`). A key on more than one desk is warned at bind time only — not an alert.
 
-**Admin:** `affiliate_payouts`, `wallet_withdraws`, `sweep_failed`, `gas_low`, `past_due_members`, `desk_critical`.
+**Admin:** `affiliate_payouts`, `wallet_withdraws`, `sweep_failed`, `gas_low`, `past_due_members`, `desk_critical`. `desk_critical` counts live desks with a critical log in the last 30 minutes (same window as repeating-reject mail).
 
 Header Inbox = unread inbox only. Overview / Billing / Affiliates = action counts. Header admin / Admin Overview = admin action sum. The same count also sits on the destination tab: member Billing Overview (`past_due`), Manage Payment Method (`update_card`), Manage Account Balance (`account_shortfall`); admin Billing Overview (`sweep_failed` + `gas_low`) and Wallet withdrawal requests (`wallet_withdraws`). Copy invites sit on header Copy Trading and the All tab.
 
@@ -128,7 +115,7 @@ Platform kill switches: `platform_settings.disabled_emails` and `disabled_badges
 - `/account/notifications` — Inbox (affiliate-only allowed). Status / Scope / Event filters (same Apply / Clear bar as desk Activity). 20 per page (`?page=`), same Previous / Next as Billing. Message / Date / Actions table with checkbox bulk Mark read / Mark unread. Desk notices open Activity with `?desk=` so the layout does not bounce.
 - `/account/settings?tab=notifications`
 - `/admin/settings?tab=notifications` (Member list + Admin list; Email / In-app / Alert)
-- `/admin/email-templates` — locked `NoticeEmail` previews
+- `/admin/email-templates` — locked `NoticeEmail` previews (same layout Resend sends)
 - Header Inbox (unread only); amber action counts on Overview, Billing, Affiliates, and the destination tab / Copy Trading link
 - Admin Overview, Billing, Affiliates amber counts
 - Overview Attention + recent notifications widget. Admin Overview Attention lists gated admin alerts with links to Affiliates, Billing, Members, and Logs.
@@ -141,10 +128,10 @@ Desk Activity and blotters stay. They are not the inbox.
 - Entitlements, identity, Upgrade UX, downgrade grace (roadmap 7)
 - Onboarding wizard refine (roadmap 8)
 - Internal webhooks (roadmap 9)
-- Organisation / multi-seat **member** notification roles (FQX-only). Admin roles are step 7a.
+- Organisation / multi-seat **member** notification roles (FQX-only). Admin roles are [phase-admin-roles.md](phase-admin-roles.md).
 - Bell dropdown
 - Marketing mail
 
 ## After this
 
-Entitlements / identity / plan gates is roadmap 7. Onboarding is roadmap 8. Internal webhooks is roadmap 9.
+Entitlements / identity / plan gates is roadmap 7. Onboarding is roadmap 8. Internal webhooks is roadmap 9. Admin roles are parked ([phase-admin-roles.md](phase-admin-roles.md)).

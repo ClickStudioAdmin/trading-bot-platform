@@ -20,6 +20,8 @@ import {
   payoutMemberHref,
   payoutOperatorHref,
   resendConfigured,
+  emailDispatchShouldComplete,
+  parseEmailDispatchClaim,
 } from "./catalog";
 import {
   inboxBody,
@@ -147,6 +149,16 @@ assert.equal(
   }),
   false,
 );
+
+assert.equal(parseEmailDispatchClaim("new"), "new");
+assert.equal(parseEmailDispatchClaim(true), "new");
+assert.equal(parseEmailDispatchClaim("retry"), "retry");
+assert.equal(parseEmailDispatchClaim("done"), null);
+assert.equal(parseEmailDispatchClaim(false), null);
+assert.equal(emailDispatchShouldComplete("sent"), true);
+assert.equal(emailDispatchShouldComplete("skipped"), true);
+assert.equal(emailDispatchShouldComplete("unconfigured"), false);
+assert.equal(emailDispatchShouldComplete("failed"), false);
 
 assert.equal(resendConfigured({}), false);
 assert.equal(resendConfigured({ RESEND_API_KEY: "rk", EMAIL_FROM: "" }), false);
