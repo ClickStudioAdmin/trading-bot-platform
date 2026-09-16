@@ -192,13 +192,12 @@ export async function listUserNotificationPage(
   if (!supabase || !userId) {
     return { ...empty, rows: [] };
   }
-  const counted = applyInboxListFilters(
-    supabase
-      .from("user_notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
-    filters,
-  );
+  // PostgREST builders are too deep for a typed filter helper (TS2589).
+  let counted = supabase
+    .from("user_notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId) as unknown as InboxNotificationQuery;
+  counted = applyInboxNotificationFilters(counted, filters);
   const countedResult = await counted;
   if (countedResult.error) {
     return { ...empty, rows: [] };
@@ -207,15 +206,14 @@ export async function listUserNotificationPage(
   if (window.total === 0) {
     return { ...window, rows: [] };
   }
-  const { data, error } = await applyInboxListFilters(
-    supabase
-      .from("user_notifications")
-      .select("id, template, title, body, href, read_at, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .range(window.start, window.end - 1),
-    filters,
-  );
+  let listed = supabase
+    .from("user_notifications")
+    .select("id, template, title, body, href, read_at, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .range(window.start, window.end - 1) as unknown as InboxNotificationQuery;
+  listed = applyInboxNotificationFilters(listed, filters);
+  const { data, error } = await listed;
   if (error || !data) {
     return { ...window, rows: [] };
   }
@@ -228,24 +226,30 @@ export async function listUserNotificationPage(
   };
 }
 
-function applyInboxListFilters<T extends {
-  is: (column: string, value: null) => T;
-  not: (column: string, operator: string, value: null) => T;
-  in: (column: string, values: string[]) => T;
-}>(
-  query: T,
+type InboxNotificationQuery = {
+  is: (column: string, value: null) => InboxNotificationQuery;
+  not: (column: string, operator: string, value: null) => InboxNotificationQuery;
+  in: (column: string, values: string[]) => InboxNotificationQuery;
+  then: Promise<{
+    data: Record<string, unknown>[] | null;
+    error: { message: string } | null;
+    count: number | null;
+  }>["then"];
+};
+
+function applyInboxNotificationFilters(
+  query: InboxNotificationQuery,
   filters?: { status?: "unread" | "read" | ""; templates?: string[] | null },
-): T {
-  let next = query;
+): InboxNotificationQuery {
   if (filters?.status === "unread") {
-    next = next.is("read_at", null);
+    query = query.is("read_at", null);
   } else if (filters?.status === "read") {
-    next = next.not("read_at", "is", null);
+    query = query.not("read_at", "is", null);
   }
   if (filters?.templates && filters.templates.length > 0) {
-    next = next.in("template", filters.templates);
+    query = query.in("template", filters.templates);
   }
-  return next;
+  return query;
 }
 
 export async function countUnreadUserNotifications(
