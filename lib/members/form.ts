@@ -94,6 +94,20 @@ export function parseOwnProfile(
   return parseOwnProfileName(formData.get("name"));
 }
 
+export function parseOwnPasswordReset(
+  formData: FormData,
+): { ok: true; next: string } | { ok: false; error: string } {
+  const next = String(formData.get("newPassword") ?? "");
+  const confirm = String(formData.get("confirmPassword") ?? "");
+  if (next.length < 8) {
+    return { ok: false, error: "New password must be at least 8 characters." };
+  }
+  if (next !== confirm) {
+    return { ok: false, error: "New password and confirmation do not match." };
+  }
+  return { ok: true, next };
+}
+
 export function parseOwnPasswordChange(
   formData: FormData,
 ):

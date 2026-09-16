@@ -4,6 +4,7 @@ import {
   parseMemberForm,
   parseMemberId,
   parseOwnPasswordChange,
+  parseOwnPasswordReset,
   parseOwnProfile,
 } from "./form";
 
@@ -95,6 +96,19 @@ same.set("currentPassword", "password1");
 same.set("newPassword", "password1");
 same.set("confirmPassword", "password1");
 assert.equal(parseOwnPasswordChange(same).ok, false);
+
+const resetOk = new FormData();
+resetOk.set("newPassword", "password2");
+resetOk.set("confirmPassword", "password2");
+const reset = parseOwnPasswordReset(resetOk);
+assert.equal(reset.ok, true);
+if (reset.ok) {
+  assert.equal(reset.next, "password2");
+}
+const resetMismatch = new FormData();
+resetMismatch.set("newPassword", "password2");
+resetMismatch.set("confirmPassword", "password3");
+assert.equal(parseOwnPasswordReset(resetMismatch).ok, false);
 
 const affiliate = new FormData();
 affiliate.set("name", " Promoter ");

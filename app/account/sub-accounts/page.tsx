@@ -21,7 +21,8 @@ import {
   loadAccountUsage,
   type AccountUsage,
 } from "@/lib/accounts/store";
-import { getSessionContext } from "@/lib/auth/session";
+import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
+import { requireVerifiedEmail } from "@/lib/auth/session";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
@@ -35,16 +36,17 @@ export default async function ManageSubAccountsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
+  const member = await requireVerifiedEmail();
+  if (!member.platformMember) {
+    redirect(AFFILIATES_PATH);
   }
   const params = await searchParams;
   const error = firstSearchValue(params.error);
   const deleted = firstSearchValue(params.deleted) === "1";
   const renamed = firstSearchValue(params.renamed) === "1";
-  const accounts = await listTradingAccounts(session.member.id);
+  const accounts = await listTradingAccounts(member.id);
   const usage = await loadAccountUsage(accounts);
+  const currentId = pickDefaultAccount(accounts)?.id ?? "";
 
   return (
     <div>
@@ -75,14 +77,14 @@ export default async function ManageSubAccountsPage({
             types={AUTOMATED_DESK_TYPES}
             accounts={accounts}
             usage={usage}
-            currentId={session.account.id}
+            currentId={currentId}
           />
           <DeskTypeSections
             label="Manual trading desks"
             types={MANUAL_DESK_TYPES}
             accounts={accounts}
             usage={usage}
-            currentId={session.account.id}
+            currentId={currentId}
             hideTypeHeading
           />
         </>

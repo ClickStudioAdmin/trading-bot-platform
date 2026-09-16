@@ -23,10 +23,9 @@ import {
   parseStoredVenueEnvironment,
 } from "@/lib/exchanges/venues";
 import { writeEventLog } from "@/lib/logs/write";
-import { WELCOME_PATH } from "@/lib/auth/onboarding-path";
 import {
   getSessionContext,
-  getSessionMember,
+  requireVerifiedEmail,
   setActiveAccountId,
 } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
@@ -37,12 +36,8 @@ const SUB_ACCOUNTS_PATH = "/account/sub-accounts";
 function createDeskErrorPath(
   formData: FormData,
   message: string,
-  firstDesk: boolean,
 ): string {
   const next = String(formData.get("next") ?? "");
-  if (firstDesk || next === WELCOME_PATH) {
-    return `${WELCOME_PATH}?error=${encodeURIComponent(message)}`;
-  }
   if (next.startsWith("/account/desks/new")) {
     const typed = String(formData.get("deskType") ?? "").trim();
     const params = new URLSearchParams();
@@ -77,10 +72,7 @@ function accountReturnPath(
 
 
 export async function rememberTradingAccount(accountId: string) {
-  const user = await getSessionMember();
-  if (!user) {
-    return;
-  }
+  const user = await requireVerifiedEmail();
   const accounts = await listTradingAccounts(user.id);
   const match = accounts.find((account) => account.id === accountId);
   if (!match) {
@@ -90,10 +82,7 @@ export async function rememberTradingAccount(accountId: string) {
 }
 
 export async function switchTradingAccount(formData: FormData) {
-  const user = await getSessionMember();
-  if (!user) {
-    redirect("/sign-in");
-  }
+  const user = await requireVerifiedEmail();
   const accountId = String(formData.get("accountId") ?? "");
   const accounts = await listTradingAccounts(user.id);
   const match = accounts.find((account) => account.id === accountId);
@@ -107,14 +96,10 @@ export async function switchTradingAccount(formData: FormData) {
 }
 
 export async function createTradingAccount(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const desks = await listTradingAccounts(member.id);
-  const firstDesk = desks.length === 0;
   const fail = (message: string): never =>
-    redirect(createDeskErrorPath(formData, message, firstDesk));
+    redirect(createDeskErrorPath(formData, message));
   const named = validateNewDeskName(
     formData.get("name"),
     desks.map((desk) => desk.name),

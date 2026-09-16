@@ -1,56 +1,13 @@
-import type { Metadata } from "next";
-import { deskHomePath } from "@/lib/accounts/model";
-import { OnboardingWizard } from "@/components/onboarding-wizard";
-import { memberHasDesk } from "@/lib/auth/onboarding";
-import { getSessionContext, getSessionMember } from "@/lib/auth/session";
-import { connectionIdsBoundToOtherDesks } from "@/lib/exchanges/connections";
-import {
-  listConnectionDeskBinds,
-  listExchangeConnections,
-} from "@/lib/exchanges/store";
-import { memberDisplayName } from "@/lib/members/sync";
-import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
+import { listTradingAccounts } from "@/lib/accounts/store";
+import { SIGN_IN_PATH } from "@/lib/auth/onboarding-path";
+import { signedInHomePath } from "@/lib/auth/onboarding";
+import { getSessionMember } from "@/lib/auth/session";
 
-export const metadata: Metadata = {
-  title: "Welcome",
-  description: "Create your first desk.",
-};
-
-export default async function WelcomePage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default async function WelcomeRedirectPage() {
   const member = await getSessionMember();
   if (!member) {
-    redirect("/sign-in");
+    redirect(SIGN_IN_PATH);
   }
-  if (!member.platformMember) {
-    redirect("/affiliates");
-  }
-  if (await memberHasDesk(member.id)) {
-    const session = await getSessionContext();
-    redirect(
-      session
-        ? deskHomePath(session.account.deskType, session.account.id)
-        : "/strategies",
-    );
-  }
-
-  const params = await searchParams;
-  const error = firstSearchValue(params.error);
-  const connections = await listExchangeConnections(member.id);
-  const sharedConnectionIds = connectionIdsBoundToOtherDesks(
-    await listConnectionDeskBinds(member.id),
-  );
-
-  return (
-    <OnboardingWizard
-      name={memberDisplayName(member.email, member.name)}
-      connections={connections}
-      sharedConnectionIds={sharedConnectionIds}
-      error={error}
-    />
-  );
+  redirect(signedInHomePath(member, await listTradingAccounts(member.id)));
 }

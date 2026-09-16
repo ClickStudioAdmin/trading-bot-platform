@@ -1,17 +1,28 @@
 "use server";
 
 import { emailIsListedAdmin } from "@/lib/admin/emails";
-import { deskHomePath, pickDefaultAccount } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import {
-  AFFILIATES_PATH,
+  FORGOT_PASSWORD_PATH,
+  RESET_PASSWORD_PATH,
+  SIGN_IN_PATH,
   SIGN_UP_PATH,
-  WELCOME_PATH,
+  VERIFY_PATH,
 } from "@/lib/auth/onboarding-path";
-import { createSession, clearSession, getSessionMember } from "@/lib/auth/session";
+import { signedInHomePath } from "@/lib/auth/onboarding";
+import {
+  clearSession,
+  createSession,
+  getSessionMember,
+} from "@/lib/auth/session";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import {
+  consumeMemberAuthLink,
+  markEmailVerified,
+  sendMemberAuthLink,
+} from "@/lib/auth/verify";
 import { writeEventLog } from "@/lib/logs/write";
-import { parseAffiliateSignup } from "@/lib/members/form";
+import { parseAffiliateSignup, parseOwnPasswordReset } from "@/lib/members/form";
 import { memberDisplayName } from "@/lib/members/sync";
 import {
   clearReferralCookie,
@@ -30,27 +41,68 @@ import { redirect } from "next/navigation";
 
 async function redirectAfterSignIn(userId: string) {
   const member = await getSessionMember();
-  if (member && !member.platformMember) {
-    redirect(AFFILIATES_PATH);
+  if (!member) {
+    redirect(SIGN_IN_PATH);
   }
   const accounts = await listTradingAccounts(userId);
-  if (accounts.length === 0) {
-    redirect(WELCOME_PATH);
-  }
-  const home = pickDefaultAccount(accounts);
-  redirect(home ? deskHomePath(home.deskType, home.id) : WELCOME_PATH);
+  redirect(signedInHomePath(member, accounts));
 }
 
 function signUpFail(error: string): never {
   redirect(`${SIGN_UP_PATH}?error=${encodeURIComponent(error)}`);
 }
 
+function forgotPath(query: { sent?: "1"; error?: string }): string {
+  const params = new URLSearchParams();
+  if (query.sent) {
+    params.set("sent", query.sent);
+  }
+  if (query.error) {
+    params.set("error", query.error);
+  }
+  const encoded = params.toString();
+  return encoded ? `${FORGOT_PASSWORD_PATH}?${encoded}` : FORGOT_PASSWORD_PATH;
+}
+
+function resetPath(query: { token?: string; error?: string }): string {
+  const params = new URLSearchParams();
+  if (query.token) {
+    params.set("token", query.token);
+  }
+  if (query.error) {
+    params.set("error", query.error);
+  }
+  const encoded = params.toString();
+  return encoded ? `${RESET_PASSWORD_PATH}?${encoded}` : RESET_PASSWORD_PATH;
+}
+
+async function findMemberByEmail(email: string): Promise<{
+  userId: string;
+  status: string;
+  passwordHash: string;
+} | null> {
+  const supabase = createServiceClient();
+  if (!supabase) {
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("members")
+    .select("user_id, status, password_hash")
+    .eq("email", email)
+    .maybeSingle();
+  if (error || !data) {
+    return null;
+  }
+  return {
+    userId: String(data.user_id),
+    status: String(data.status ?? ""),
+    passwordHash: data.password_hash ? String(data.password_hash) : "",
+  };
+}
+
 export async function signUpMember(formData: FormData) {
   const signedIn = await getSessionMember();
   if (signedIn) {
-    if (!signedIn.platformMember) {
-      redirect(AFFILIATES_PATH);
-    }
     await redirectAfterSignIn(signedIn.id);
   }
   const parsed = parseAffiliateSignup(formData);
@@ -121,9 +173,10 @@ export async function signUpMember(formData: FormData) {
     userId,
     data: { email: parsed.email, planId: plan.id },
   });
+  await sendMemberAuthLink(userId, parsed.email, "verify");
   await createSession(userId);
   revalidatePath("/", "layout");
-  redirect(WELCOME_PATH);
+  redirect(VERIFY_PATH);
 }
 
 export async function signIn(formData: FormData) {
@@ -179,6 +232,7 @@ export async function signIn(formData: FormData) {
       role: "admin",
       status: "active",
       password_hash: hashPassword(password),
+      email_verified_at: now,
       created_at: now,
       updated_at: now,
     });
@@ -198,13 +252,15 @@ export async function signIn(formData: FormData) {
 
   const stored = existing.password_hash ? String(existing.password_hash) : "";
   if (!stored && emailIsListedAdmin(email)) {
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from("members")
       .update({
         password_hash: hashPassword(password),
         role: "admin",
         status: "active",
-        updated_at: new Date().toISOString(),
+        email_verified_at: now,
+        updated_at: now,
       })
       .eq("user_id", userId);
     if (error) {
@@ -224,9 +280,102 @@ export async function signIn(formData: FormData) {
 
 export async function signOut() {
   await clearSession();
-  redirect("/sign-in");
+  redirect(SIGN_IN_PATH);
 }
 
 export async function signedInMember() {
   return getSessionMember();
 }
+
+const VERIFY_EMAIL_FAIL = `${VERIFY_PATH}?error=${encodeURIComponent("That confirmation link is invalid or has expired.")}`;
+
+export async function confirmVerifyEmailAction(formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  const consumed = await consumeMemberAuthLink(token, "verify");
+  if (!consumed) {
+    redirect(VERIFY_EMAIL_FAIL);
+  }
+  await markEmailVerified(consumed.userId);
+  await writeEventLog({
+    scope: "system",
+    event: "member.email_verified",
+    message: "Confirmed email",
+    userId: consumed.userId,
+  });
+  const session = await getSessionMember();
+  if (session?.id === consumed.userId) {
+    revalidatePath("/", "layout");
+    await redirectAfterSignIn(consumed.userId);
+  }
+  redirect(`${SIGN_IN_PATH}?verified=1`);
+}
+
+export async function resendVerifyEmailAction() {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect(SIGN_IN_PATH);
+  }
+  if (member.emailVerifiedAt) {
+    await redirectAfterSignIn(member.id);
+  }
+  await sendMemberAuthLink(member.id, member.email, "verify");
+  redirect(`${VERIFY_PATH}?sent=1`);
+}
+
+export async function requestPasswordResetAction(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email) {
+    redirect(forgotPath({ sent: "1" }));
+  }
+  const member = await findMemberByEmail(email);
+  if (member && member.status !== "disabled") {
+    await sendMemberAuthLink(member.userId, email, "reset");
+  }
+  redirect(forgotPath({ sent: "1" }));
+}
+
+export async function resetPasswordAction(formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  const parsed = parseOwnPasswordReset(formData);
+  if (!parsed.ok) {
+    redirect(resetPath({ token, error: parsed.error }));
+  }
+  const consumed = await consumeMemberAuthLink(token, "reset");
+  if (!consumed) {
+    redirect(
+      resetPath({
+        error: "That reset link is invalid or has expired.",
+      }),
+    );
+  }
+  const supabase = createServiceClient();
+  if (!supabase) {
+    redirect(resetPath({ token, error: "Database is not configured." }));
+  }
+  const now = new Date().toISOString();
+  const { error } = await supabase
+    .from("members")
+    .update({
+      password_hash: hashPassword(parsed.next),
+      email_verified_at: now,
+      updated_at: now,
+    })
+    .eq("user_id", consumed.userId);
+  if (error) {
+    redirect(resetPath({ token, error: error.message }));
+  }
+  await writeEventLog({
+    scope: "system",
+    event: "member.password_changed",
+    message: "Reset desk password",
+    userId: consumed.userId,
+  });
+  const { notifyPasswordChanged } = await import(
+    "@/lib/notifications/commercial"
+  );
+  await notifyPasswordChanged({ userId: consumed.userId });
+  await clearSession();
+  revalidatePath("/", "layout");
+  redirect(`${SIGN_IN_PATH}?reset=1`);
+}
+

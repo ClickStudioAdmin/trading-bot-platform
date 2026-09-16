@@ -4,7 +4,8 @@ import { AccountSnapshotBody } from "@/components/account-snapshot";
 import { LocalTime } from "@/components/local-time";
 import { PageHeading } from "@/components/page-heading";
 import { listTradingAccounts } from "@/lib/accounts/store";
-import { getSessionContext } from "@/lib/auth/session";
+import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
+import { requireVerifiedEmail } from "@/lib/auth/session";
 import { loadAccountSnapshots } from "@/lib/exchanges/account-snapshot";
 import type { AccountSnapshotView } from "@/lib/exchanges/account-view";
 import {
@@ -29,24 +30,24 @@ export const metadata: Metadata = {
 };
 
 export default async function AccountOverviewPage() {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
+  const member = await requireVerifiedEmail();
+  if (!member.platformMember) {
+    redirect(AFFILIATES_PATH);
   }
-  const accounts = await listTradingAccounts(session.member.id);
+  const accounts = await listTradingAccounts(member.id);
   const paperCount = accounts.filter((account) => account.mode === "paper").length;
   const liveCount = accounts.length - paperCount;
   const [connections, binds] = await Promise.all([
-    listExchangeConnections(session.member.id),
-    listConnectionDeskBinds(session.member.id),
+    listExchangeConnections(member.id),
+    listConnectionDeskBinds(member.id),
   ]);
   const snapshots = await loadAccountSnapshots(
-    session.member.id,
+    member.id,
     connections.map((row) => row.id),
   );
   const [chrome, notices] = await Promise.all([
-    loadMemberNotificationChrome(session.member.id, true),
-    listUserNotifications(session.member.id, 5),
+    loadMemberNotificationChrome(member.id, true),
+    listUserNotifications(member.id, 5),
   ]);
   const attention = memberOverviewAttention({
     accounts,

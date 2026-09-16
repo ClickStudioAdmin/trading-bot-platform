@@ -14,7 +14,8 @@ import {
   listConnectionDeskBinds,
   listExchangeConnections,
 } from "@/lib/exchanges/store";
-import { getSessionContext } from "@/lib/auth/session";
+import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
+import { requireVerifiedEmail } from "@/lib/auth/session";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
 
@@ -28,9 +29,9 @@ export default async function NewDeskPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
+  const member = await requireVerifiedEmail();
+  if (!member.platformMember) {
+    redirect(AFFILIATES_PATH);
   }
   const params = await searchParams;
   const typed = parseDeskTypeChoice(firstSearchValue(params.type));
@@ -38,10 +39,10 @@ export default async function NewDeskPage({
     redirect(createDeskPath(DEFAULT_DESK_TYPE));
   }
   const error = firstSearchValue(params.error);
-  const accounts = await listTradingAccounts(session.member.id);
-  const connections = await listExchangeConnections(session.member.id);
+  const accounts = await listTradingAccounts(member.id);
+  const connections = await listExchangeConnections(member.id);
   const sharedConnectionIds = connectionIdsBoundToOtherDesks(
-    await listConnectionDeskBinds(session.member.id),
+    await listConnectionDeskBinds(member.id),
   );
 
   return (

@@ -3,7 +3,7 @@
 import { requireAdmin } from "@/lib/admin/access";
 import { emailIsListedAdmin } from "@/lib/admin/emails";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
-import { getSessionMember } from "@/lib/auth/session";
+import { requireVerifiedEmail } from "@/lib/auth/session";
 import { writeEventLog } from "@/lib/logs/write";
 import {
   parseMemberForm,
@@ -61,6 +61,7 @@ export async function createMember(formData: FormData) {
     subscription_status: "comp",
     platform_member: true,
     password_hash: hashPassword(parsed.values.password),
+    email_verified_at: now,
     created_at: now,
     updated_at: now,
   });
@@ -220,10 +221,7 @@ function settingsPath(query: {
 }
 
 export async function updateOwnProfile(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const parsed = parseOwnProfile(formData);
   if (!parsed.ok) {
     redirect(settingsPath({ error: parsed.error }));
@@ -258,10 +256,7 @@ export async function updateOwnProfile(formData: FormData) {
 }
 
 export async function changeOwnPassword(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const parsed = parseOwnPasswordChange(formData);
   if (!parsed.ok) {
     redirect(settingsPath({ tab: "password", error: parsed.error }));

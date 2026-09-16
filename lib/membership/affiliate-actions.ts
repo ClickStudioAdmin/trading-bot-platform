@@ -3,7 +3,7 @@
 import { requireAdmin } from "@/lib/admin/access";
 import { emailIsListedAdmin } from "@/lib/admin/emails";
 import { hashPassword } from "@/lib/auth/password";
-import { createSession, getSessionMember } from "@/lib/auth/session";
+import { createSession, getSessionMember, requireVerifiedEmail } from "@/lib/auth/session";
 import {
   clearReferralCookie,
   readReferralCookie,
@@ -11,7 +11,12 @@ import {
 } from "@/lib/membership/affiliate-cookie";
 import { parseAffiliateSignup } from "@/lib/members/form";
 import { writeEventLog } from "@/lib/logs/write";
-import { AFFILIATES_PATH, WELCOME_PATH } from "@/lib/auth/onboarding-path";
+import {
+  ACCOUNT_HOME_PATH,
+  AFFILIATES_PATH,
+  VERIFY_PATH,
+} from "@/lib/auth/onboarding-path";
+import { sendMemberAuthLink } from "@/lib/auth/verify";
 import {
   AFFILIATE_PAYOUT_COIN,
   affiliatePortalPath,
@@ -303,10 +308,7 @@ export async function markPayoutPaidAction(formData: FormData) {
 }
 
 export async function requestAffiliatePayoutAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   await releaseDueCommissions();
   const settings = await loadAffiliateSettings();
   const payoutChains = await listAffiliatePayoutChains();
@@ -371,10 +373,7 @@ export async function requestAffiliatePayoutAction(formData: FormData) {
 }
 
 export async function saveAffiliatePayoutSettingsAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const payoutChains = await listAffiliatePayoutChains();
   const network = parsePayoutNetwork(
     formData.get("network"),
@@ -426,10 +425,7 @@ export async function saveAffiliatePayoutSettingsAction(formData: FormData) {
 }
 
 export async function saveAffiliateAliasAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const parsed = parseAffiliateAlias(formData.get("alias"));
   if (!parsed.ok) {
     portalFail(parsed.error, "settings");
@@ -520,18 +516,16 @@ export async function signUpAffiliateAction(formData: FormData) {
     userId,
     data: { email: parsed.email },
   });
+  await sendMemberAuthLink(userId, parsed.email, "verify");
   await createSession(userId);
   revalidatePath(AFFILIATES_PATH);
-  redirect(`${AFFILIATES_PATH}?saved=joined`);
+  redirect(VERIFY_PATH);
 }
 
 export async function upgradeAffiliateToPlatformAction() {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   if (member.platformMember) {
-    redirect(WELCOME_PATH);
+    redirect(ACCOUNT_HOME_PATH);
   }
   const plan = await getDefaultMembershipPlan();
   if (!plan) {
@@ -563,14 +557,11 @@ export async function upgradeAffiliateToPlatformAction() {
   });
   revalidatePath("/", "layout");
   revalidatePath(AFFILIATES_PATH);
-  redirect(WELCOME_PATH);
+  redirect(ACCOUNT_HOME_PATH);
 }
 
 export async function createAffiliateCampaignAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const created = await createAffiliateCampaign({
     userId: member.id,
     name: formData.get("name"),
@@ -590,10 +581,7 @@ export async function createAffiliateCampaignAction(formData: FormData) {
 }
 
 export async function createAffiliateLinkAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const campaignRaw = String(formData.get("campaignId") ?? "").trim();
   const campaignId = campaignRaw ? parseUuid(campaignRaw) : null;
   if (campaignRaw && !campaignId) {
@@ -620,10 +608,7 @@ export async function createAffiliateLinkAction(formData: FormData) {
 }
 
 export async function archiveAffiliateCampaignAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const campaignId = parseUuid(formData.get("campaignId"));
   if (!campaignId) {
     portalFail("Choose a campaign.", "campaigns");
@@ -647,10 +632,7 @@ export async function archiveAffiliateCampaignAction(formData: FormData) {
 }
 
 export async function archiveAffiliateLinkAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const linkId = parseUuid(formData.get("linkId"));
   if (!linkId) {
     portalFail("That URL was not found.", "links");
@@ -674,10 +656,7 @@ export async function archiveAffiliateLinkAction(formData: FormData) {
 }
 
 export async function renameAffiliateLinkAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const linkId = parseUuid(formData.get("linkId"));
   if (!linkId) {
     portalFail("That URL was not found.", "links");

@@ -16,7 +16,11 @@ import {
   loadAccountUsage,
   loadTradingAccountById,
 } from "@/lib/accounts/store";
-import { getSessionContext, getSessionMember, setActiveAccountId } from "@/lib/auth/session";
+import {
+  getSessionContext,
+  requireVerifiedEmail,
+  setActiveAccountId,
+} from "@/lib/auth/session";
 import {
   accountCanHoldConnections,
   connectionFitsDesk,
@@ -91,10 +95,7 @@ function traderSettingsPath(query: {
 }
 
 export async function saveTraderProfileAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const parsed = parseTraderProfileForm({
     alias: formData.get("alias"),
     bio: formData.get("bio"),
@@ -378,10 +379,7 @@ function safeCopyCataloguePath(value: unknown): string {
 }
 
 export async function toggleDeskCopyFavoriteAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const accountId = String(formData.get("accountId") ?? "").trim();
   const next = safeCopyCataloguePath(formData.get("next"));
   if (!accountId) {
@@ -410,10 +408,7 @@ export async function toggleDeskCopyFavoriteAction(formData: FormData) {
 }
 
 export async function createCopyDeskAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const parentId = String(formData.get("parentAccountId") ?? "").trim();
   const fail = (message: string) => deskActionError(message);
   if (!parentId) {

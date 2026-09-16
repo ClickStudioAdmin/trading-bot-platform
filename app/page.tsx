@@ -1,17 +1,11 @@
 import { MarketingHome } from "@/components/marketing-home";
-import { deskHomePath } from "@/lib/accounts/model";
-import { AFFILIATES_PATH, WELCOME_PATH } from "@/lib/auth/onboarding-path";
-import { getSessionContext, getSessionMember } from "@/lib/auth/session";
+import { listTradingAccounts } from "@/lib/accounts/store";
+import { signedInHomePath } from "@/lib/auth/onboarding";
+import { getSessionMember } from "@/lib/auth/session";
 
 export default async function Home() {
-  const session = await getSessionContext();
-  const member = session ? null : await getSessionMember();
-  const appHref = session
-    ? deskHomePath(session.account.deskType, session.account.id)
-    : member
-      ? member.platformMember
-        ? WELCOME_PATH
-        : AFFILIATES_PATH
-      : null;
+  const member = await getSessionMember();
+  const desks = member ? await listTradingAccounts(member.id) : [];
+  const appHref = member ? signedInHomePath(member, desks) : null;
   return <MarketingHome appHref={appHref} />;
 }

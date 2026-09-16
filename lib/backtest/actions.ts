@@ -71,6 +71,9 @@ async function requireMember() {
   if (!member) {
     return { ok: false as const, error: "Sign in to continue." };
   }
+  if (!member.emailVerifiedAt) {
+    return { ok: false as const, error: "Confirm your email first." };
+  }
   return {
     ok: true as const,
     member,

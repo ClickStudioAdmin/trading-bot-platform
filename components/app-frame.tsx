@@ -3,24 +3,18 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { deskHomePath } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
-import { AFFILIATES_PATH, WELCOME_PATH } from "@/lib/auth/onboarding-path";
-import { getSessionContext, getSessionMember } from "@/lib/auth/session";
+import { signedInHomePath } from "@/lib/auth/onboarding";
+import { getSessionMember } from "@/lib/auth/session";
 import { loadMemberNotificationChrome } from "@/lib/notifications/badges";
 
 export async function AppFrame({ children }: { children: React.ReactNode }) {
   const member = await getSessionMember();
-  const session = await getSessionContext();
   const desks = member ? await listTradingAccounts(member.id) : [];
-  const chrome = member
-    ? await loadMemberNotificationChrome(member.id, member.platformMember)
-    : null;
-  const appHref = session
-    ? deskHomePath(session.account.deskType, session.account.id)
-    : member
-      ? member.platformMember
-        ? WELCOME_PATH
-        : AFFILIATES_PATH
+  const chrome =
+    member?.emailVerifiedAt
+      ? await loadMemberNotificationChrome(member.id, member.platformMember)
       : null;
+  const appHref = member ? signedInHomePath(member, desks) : null;
 
   return (
     <AccountSidenavGate

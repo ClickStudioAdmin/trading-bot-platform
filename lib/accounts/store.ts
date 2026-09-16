@@ -103,7 +103,7 @@ export async function loadTradingAccountById(
   return parseTradingAccountRow(data as Record<string, unknown>);
 }
 
-/** Legacy helper. New members create their first desk on `/welcome`. */
+/** Legacy helper. New members land on Overview and create a desk when they want. */
 export async function ensureDefaultPaperAccount(
   userId: string,
 ): Promise<TradingAccount | null> {

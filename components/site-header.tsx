@@ -20,12 +20,14 @@ import { connection } from "next/server";
 export async function SiteHeader() {
   await connection();
   const user = await getSessionMember();
-  const admin = user ? await getAdminUser() : null;
-  const accounts = user ? await listTradingAccounts(user.id) : [];
+  const verified = Boolean(user?.emailVerifiedAt);
+  const admin = verified && user ? await getAdminUser() : null;
+  const accounts = verified && user ? await listTradingAccounts(user.id) : [];
   const autoTick = admin ? await loadAutoTickEnabled() : false;
-  const memberChrome = user
-    ? await loadMemberNotificationChrome(user.id, user.platformMember)
-    : null;
+  const memberChrome =
+    verified && user
+      ? await loadMemberNotificationChrome(user.id, user.platformMember)
+      : null;
   const adminChrome = admin ? await loadAdminNotificationChrome() : null;
 
   return (

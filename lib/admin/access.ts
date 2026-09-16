@@ -1,5 +1,9 @@
 import { emailIsListedAdmin } from "@/lib/admin/emails";
-import { getSessionMember, type SessionMember } from "@/lib/auth/session";
+import {
+  getSessionMember,
+  requireVerifiedEmail,
+  type SessionMember,
+} from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
 export type AdminUser = {
@@ -22,10 +26,7 @@ export async function getAdminUser(): Promise<AdminUser | null> {
 }
 
 export async function requireAdmin(): Promise<AdminUser> {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   if (!memberIsAdmin(member)) {
     redirect("/strategies");
   }

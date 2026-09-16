@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdmin } from "@/lib/admin/access";
-import { getSessionMember } from "@/lib/auth/session";
+import { requireVerifiedEmail } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
@@ -54,11 +54,7 @@ function parseIds(formData: FormData): number[] {
 }
 
 async function requireMember() {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
-  return member;
+  return requireVerifiedEmail();
 }
 
 function refreshNoticePaths() {

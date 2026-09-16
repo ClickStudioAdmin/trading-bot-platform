@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 export default async function BookOverviewPage() {
   const session = await getSessionContext();
   if (!session) {
-    redirect("/sign-in");
+    redirect("/account");
   }
   const current = session.account;
   const usage = (await loadAccountUsage([current])).get(current.id);

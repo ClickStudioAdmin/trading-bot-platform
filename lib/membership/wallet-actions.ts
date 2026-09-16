@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdmin } from "@/lib/admin/access";
-import { getSessionMember } from "@/lib/auth/session";
+import { getSessionMember, requireVerifiedEmail } from "@/lib/auth/session";
 import { writeEventLog } from "@/lib/logs/write";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -266,6 +266,9 @@ async function checkMemberDeposit(): Promise<CheckDepositResult> {
   if (!member) {
     return { ok: false, error: "Sign in to check deposits." };
   }
+  if (!member.emailVerifiedAt) {
+    return { ok: false, error: "Confirm your email first." };
+  }
   const watched = await watchMembershipDeposits({
     userId: member.id,
     advanceCursor: false,
@@ -292,6 +295,9 @@ export async function readMyAccountBalanceAction(): Promise<
   if (!member) {
     return { ok: false, error: "Sign in to check Account Balance." };
   }
+  if (!member.emailVerifiedAt) {
+    return { ok: false, error: "Confirm your email first." };
+  }
   const [books, pendingWithdrawUsd] = await Promise.all([
     walletBookBalances(member.id),
     pendingMainWithdrawUsd(member.id),
@@ -313,6 +319,9 @@ async function payPlanWithCredit(
   const member = await getSessionMember();
   if (!member) {
     return { ok: false, error: "Sign in to continue." };
+  }
+  if (!member.emailVerifiedAt) {
+    return { ok: false, error: "Confirm your email first." };
   }
   const planId = parsePlanId(String(formData.get("planId") ?? ""));
   if (!planId) {
@@ -472,11 +481,7 @@ export async function payCheckoutWithCreditAction(
 }
 
 export async function payPlanWithCreditAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-    return;
-  }
+  const member = await requireVerifiedEmail();
   const result = await payPlanWithCredit(formData);
   const planId = parsePlanId(String(formData.get("planId") ?? ""));
   if (!result.ok) {
@@ -487,10 +492,7 @@ export async function payPlanWithCreditAction(formData: FormData) {
 }
 
 export async function requestMainWalletWithdrawAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-  }
+  const member = await requireVerifiedEmail();
   const payoutChains = await listAffiliatePayoutChains();
   const network = parsePayoutNetwork(
     formData.get("network"),

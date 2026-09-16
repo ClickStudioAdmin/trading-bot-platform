@@ -15,8 +15,10 @@ import {
   sessionSecret,
   signSessionToken,
 } from "@/lib/auth/token";
+import { VERIFY_PATH } from "@/lib/auth/onboarding-path";
 import type { MemberRole, MemberStatus } from "@/lib/members/form";
 import { createServiceClient } from "@/lib/supabase/admin";
+import { redirect } from "next/navigation";
 
 export const ACCOUNT_COOKIE = "tbp_account";
 
@@ -27,6 +29,7 @@ export type SessionMember = {
   role: MemberRole;
   status: MemberStatus;
   platformMember: boolean;
+  emailVerifiedAt: string | null;
 };
 
 export type SessionContext = {
@@ -69,23 +72,42 @@ export async function getSessionMember(): Promise<SessionMember | null> {
   }
   let { data, error } = await supabase
     .from("members")
-    .select("user_id, email, name, role, status, platform_member")
+    .select(
+      "user_id, email, name, role, status, platform_member, email_verified_at",
+    )
     .eq("user_id", parsed.userId)
     .maybeSingle();
   if (error) {
     const retry = await supabase
       .from("members")
-      .select("user_id, email, name, role, status")
+      .select("user_id, email, name, role, status, platform_member")
       .eq("user_id", parsed.userId)
       .maybeSingle();
     data = retry.data
-      ? { ...retry.data, platform_member: true }
+      ? { ...retry.data, email_verified_at: "legacy" }
       : null;
-    error = retry.error;
+    if (retry.error) {
+      const legacy = await supabase
+        .from("members")
+        .select("user_id, email, name, role, status")
+        .eq("user_id", parsed.userId)
+        .maybeSingle();
+      data = legacy.data
+        ? {
+            ...legacy.data,
+            platform_member: true,
+            email_verified_at: "legacy",
+          }
+        : null;
+      error = legacy.error;
+    } else {
+      error = retry.error;
+    }
   }
   if (error || !data || data.status === "disabled") {
     return null;
   }
+  const verifiedRaw = data.email_verified_at;
   return {
     id: String(data.user_id),
     email: String(data.email),
@@ -93,12 +115,27 @@ export async function getSessionMember(): Promise<SessionMember | null> {
     role: data.role === "admin" ? "admin" : "member",
     status: data.status === "disabled" ? "disabled" : "active",
     platformMember: data.platform_member !== false,
+    emailVerifiedAt:
+      verifiedRaw == null || verifiedRaw === ""
+        ? null
+        : String(verifiedRaw),
   };
+}
+
+export async function requireVerifiedEmail(): Promise<SessionMember> {
+  const member = await getSessionMember();
+  if (!member) {
+    redirect("/sign-in");
+  }
+  if (!member.emailVerifiedAt) {
+    redirect(VERIFY_PATH);
+  }
+  return member;
 }
 
 export async function getSessionContext(): Promise<SessionContext | null> {
   const member = await getSessionMember();
-  if (!member) {
+  if (!member || !member.emailVerifiedAt) {
     return null;
   }
   const accounts = await listTradingAccounts(member.id);

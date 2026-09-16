@@ -22,7 +22,8 @@ import {
 import { exchangeCredentialsConfigured } from "@/lib/exchanges/encrypt";
 import { enabledVenues, getVenue } from "@/lib/exchanges/venues";
 import { firstSearchValue } from "@/lib/paper/open";
-import { getSessionContext } from "@/lib/auth/session";
+import { AFFILIATES_PATH } from "@/lib/auth/onboarding-path";
+import { requireVerifiedEmail } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -35,9 +36,9 @@ export default async function AccountExchangesPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const session = await getSessionContext();
-  if (!session) {
-    redirect("/sign-in");
+  const member = await requireVerifiedEmail();
+  if (!member.platformMember) {
+    redirect(AFFILIATES_PATH);
   }
   const params = await searchParams;
   const error = firstSearchValue(params.error);
@@ -46,8 +47,8 @@ export default async function AccountExchangesPage({
   const replaced = firstSearchValue(params.replaced) === "1";
   const removed = firstSearchValue(params.removed) === "1";
   const [connections, binds] = await Promise.all([
-    listExchangeConnections(session.member.id),
-    listConnectionDeskBinds(session.member.id),
+    listExchangeConnections(member.id),
+    listConnectionDeskBinds(member.id),
   ]);
   const venues = enabledVenues();
   const canSave = exchangeCredentialsConfigured();

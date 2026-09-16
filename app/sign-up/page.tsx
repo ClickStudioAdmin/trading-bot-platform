@@ -35,8 +35,9 @@ export default async function SignUpPage({
       </p>
       <h1 className="mt-3 text-3xl font-semibold tracking-tight">Start free</h1>
       <p className="mt-3 text-sm text-ink-muted">
-        Create a Free account, then open your first desk. Upgrade later for
-        Live, copy, backtest, or more desks. Every login is also an affiliate.
+        Create a Free account and confirm your email. You can open a desk
+        from Overview when you are ready. Upgrade later for Live, copy,
+        backtest, or more desks. Every login is also an affiliate.
       </p>
       <section className="mt-8 rounded-card border border-line bg-surface p-5">
         {error ? (

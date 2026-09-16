@@ -28,10 +28,26 @@ export function isAffiliatePortalPath(pathname: string): boolean {
   return pathname === "/affiliates" || pathname.startsWith("/affiliates/");
 }
 
+export function isIdentityPath(pathname: string): boolean {
+  return (
+    pathname === "/account/verify" ||
+    pathname.startsWith("/account/verify/") ||
+    pathname === "/verify-email" ||
+    pathname.startsWith("/verify-email/") ||
+    pathname === "/forgot-password" ||
+    pathname.startsWith("/forgot-password/") ||
+    pathname === "/reset-password" ||
+    pathname.startsWith("/reset-password/")
+  );
+}
+
 export function usesSignedInAppChrome(
   pathname: string,
   signedIn: boolean,
 ): boolean {
+  if (isIdentityPath(pathname)) {
+    return false;
+  }
   return isAppChromePath(pathname) || (signedIn && isAffiliatePortalPath(pathname));
 }
 

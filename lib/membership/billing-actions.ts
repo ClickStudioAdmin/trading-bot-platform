@@ -1,6 +1,6 @@
 "use server";
 
-import { getSessionMember } from "@/lib/auth/session";
+import { getSessionMember, requireVerifiedEmail } from "@/lib/auth/session";
 import { writeEventLog } from "@/lib/logs/write";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -93,11 +93,7 @@ async function stripeDefaultPaymentMethod(
 }
 
 export async function setBillingMethodAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-    return;
-  }
+  const member = await requireVerifiedEmail();
   const method = parseBillingMethod(formData.get("billingMethod"));
   if (!method) {
     fail("Choose Card or Crypto.");
@@ -159,6 +155,9 @@ export async function createEmbeddedCheckoutSecret(
   const member = await getSessionMember();
   if (!member) {
     return { ok: false, error: "Sign in to continue." };
+  }
+  if (!member.emailVerifiedAt) {
+    return { ok: false, error: "Confirm your email first." };
   }
   const planId = parsePlanId(planIdRaw);
   if (!planId) {
@@ -275,11 +274,7 @@ export async function createEmbeddedCheckoutSecret(
 }
 
 export async function confirmStripePlanChangeAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-    return;
-  }
+  const member = await requireVerifiedEmail();
   const planId = parsePlanId(String(formData.get("planId") ?? ""));
   if (!planId) {
     failCheckout(planId || "", "That plan is not valid.");
@@ -439,11 +434,7 @@ export async function confirmStripePlanChangeAction(formData: FormData) {
 }
 
 export async function saveCheckoutMethodAction(formData: FormData) {
-  const member = await getSessionMember();
-  if (!member) {
-    redirect("/sign-in");
-    return;
-  }
+  const member = await requireVerifiedEmail();
   const planId = parsePlanId(String(formData.get("planId") ?? ""));
   const method = parseBillingMethod(formData.get("billingMethod"));
   if (!method) {
@@ -488,6 +479,9 @@ export async function createSwitchToCardSecret(): Promise<EmbeddedCheckoutResult
   const member = await getSessionMember();
   if (!member) {
     return { ok: false, error: "Sign in to continue." };
+  }
+  if (!member.emailVerifiedAt) {
+    return { ok: false, error: "Confirm your email first." };
   }
   const billing = await getMemberBilling(member.id);
   if (!billing || billing.billingMethod !== "stripe") {
@@ -567,6 +561,9 @@ export async function createEmbeddedCardSecret(): Promise<EmbeddedCheckoutResult
   const member = await getSessionMember();
   if (!member) {
     return { ok: false, error: "Sign in to continue." };
+  }
+  if (!member.emailVerifiedAt) {
+    return { ok: false, error: "Confirm your email first." };
   }
   const billing = await getMemberBilling(member.id);
   if (billing?.billingMethod === "wallet") {

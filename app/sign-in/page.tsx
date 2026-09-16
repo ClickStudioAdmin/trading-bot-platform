@@ -13,11 +13,11 @@ export const metadata: Metadata = {
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; verified?: string; reset?: string }>;
 }) {
   await redirectSignedInHome();
 
-  const { error } = await searchParams;
+  const { error, verified, reset } = await searchParams;
 
   return (
       <main className="mx-auto max-w-md px-6 py-16">
@@ -32,6 +32,16 @@ export default async function SignInPage({
           {error ? (
             <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
               {error}
+            </p>
+          ) : null}
+          {verified === "1" ? (
+            <p className="mb-4 rounded-card border border-line bg-surface-raised px-4 py-3 text-sm text-ink-muted">
+              Email confirmed. Sign in to continue.
+            </p>
+          ) : null}
+          {reset === "1" ? (
+            <p className="mb-4 rounded-card border border-line bg-surface-raised px-4 py-3 text-sm text-ink-muted">
+              Password saved. Sign in with the new password.
             </p>
           ) : null}
           <form action={signIn} className="space-y-3">
@@ -64,6 +74,14 @@ export default async function SignInPage({
               Sign in
             </PendingSubmitButton>
           </form>
+          <p className="mt-4 text-sm text-ink-muted">
+            <Link
+              href="/forgot-password"
+              className="text-accent hover:text-accent-strong"
+            >
+              Forgot password
+            </Link>
+          </p>
           <p className="mt-4 text-sm text-ink-muted">
             New here?{" "}
             <Link href="/sign-up" className="text-accent hover:text-accent-strong">

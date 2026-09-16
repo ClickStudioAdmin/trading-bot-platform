@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { AppFrame } from "@/components/app-frame";
-import { redirectIfNeedsFirstDesk } from "@/lib/auth/onboarding";
+import { redirectIfNeedsGate } from "@/lib/auth/onboarding";
 import "./globals.css";
 
 const geist = Geist({
@@ -23,7 +23,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  await redirectIfNeedsFirstDesk();
+  await redirectIfNeedsGate();
 
   return (
     <html

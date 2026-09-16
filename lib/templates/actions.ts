@@ -96,6 +96,9 @@ async function requireMember() {
   if (!member) {
     return { ok: false as const, error: "Sign in to continue." };
   }
+  if (!member.emailVerifiedAt) {
+    return { ok: false as const, error: "Confirm your email first." };
+  }
   return {
     ok: true as const,
     member,
@@ -285,6 +288,9 @@ export async function placeSavedTemplate(input: {
   const member = await getSessionMember();
   if (!member) {
     return { ok: false, error: "Sign in to continue." };
+  }
+  if (!member.emailVerifiedAt) {
+    return { ok: false, error: "Confirm your email first." };
   }
   const isAdmin = memberIsAdmin(member);
   input = {
