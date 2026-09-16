@@ -26,6 +26,7 @@ import {
   applyAdminBadgeGates,
   applyMemberBadgeGates,
 } from "./badges-catalog";
+import { memberNeedsCardUpdate } from "./commercial";
 import { countUnreadUserNotifications, loadPlatformAlertSettings } from "./store";
 
 const loadAlertGates = cache(loadPlatformAlertSettings);
@@ -138,7 +139,12 @@ export const loadMemberNotificationChrome = cache(
           sharedKey: desk.sharedKey,
           deskCritical,
           copyInvite,
-          updateCard: 0,
+          updateCard: memberNeedsCardUpdate({
+            billingMethod: billing?.billingMethod ?? null,
+            subscriptionStatus: billing?.subscriptionStatus ?? "",
+          })
+            ? 1
+            : 0,
         },
         gates.disabledBadges,
         gates.demoBadgeCounts,

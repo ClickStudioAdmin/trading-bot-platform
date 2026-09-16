@@ -177,6 +177,15 @@ export async function inviteDeskCopyShare(input: {
     if (error || !parsed) {
       return { ok: false, error: "Could not send the invite." };
     }
+    const { notifyCopyInviteReceived } = await import(
+      "@/lib/notifications/commercial"
+    );
+    await notifyCopyInviteReceived({
+      shareId: parsed.id,
+      toUserId: parsed.toUserId,
+      fromUserId: parsed.fromUserId,
+      parentAccountId: parsed.parentAccountId,
+    });
     return { ok: true, share: parsed };
   }
   const { data, error } = await supabase
@@ -198,6 +207,15 @@ export async function inviteDeskCopyShare(input: {
   if (error || !parsed) {
     return { ok: false, error: "Could not send the invite." };
   }
+  const { notifyCopyInviteReceived } = await import(
+    "@/lib/notifications/commercial"
+  );
+  await notifyCopyInviteReceived({
+    shareId: parsed.id,
+    toUserId: parsed.toUserId,
+    fromUserId: parsed.fromUserId,
+    parentAccountId: parsed.parentAccountId,
+  });
   return { ok: true, share: parsed };
 }
 
@@ -266,11 +284,19 @@ export async function revokeDeskCopyShare(input: {
     .eq("id", input.shareId)
     .eq("parent_account_id", input.parentAccountId)
     .eq("from_user_id", input.fromUserId)
-    .select("id")
+    .select("id, to_user_id, parent_account_id")
     .maybeSingle();
   if (error || !data) {
     return { ok: false, error: "Could not revoke that invite." };
   }
+  const { notifyCopyInviteRevoked } = await import(
+    "@/lib/notifications/commercial"
+  );
+  await notifyCopyInviteRevoked({
+    shareId: String(data.id),
+    toUserId: String(data.to_user_id),
+    parentAccountId: String(data.parent_account_id),
+  });
   return { ok: true };
 }
 

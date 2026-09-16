@@ -13,6 +13,12 @@ import { getMemberBilling } from "./billing-store";
 import { createCommissionsForInvoice } from "./affiliate-store";
 import { getMembershipPlan } from "./store";
 import { parseBillingMethod, type BillingMethod } from "./billing";
+import {
+  notifyAccountShortfall,
+  notifyInvoiceIssued,
+  notifyInvoicePaid,
+  notifySubscriptionPastDue,
+} from "@/lib/notifications/commercial";
 import { planDeductDecision, roundUsd } from "./wallet";
 import { walletBookBalances as loadBooks } from "./wallet-store";
 import { sumPayableAffiliateUsd as loadPayable } from "./affiliate-store";
@@ -134,6 +140,13 @@ export async function issueDueRenewalInvoices(
         userId,
         data: { invoiceId: created.invoiceId, externalId, method },
       });
+      await notifyInvoiceIssued({
+        userId,
+        invoiceId: created.invoiceId,
+        planId: loaded.plan.id,
+        amountUsd: roundUsd(loaded.plan.priceUsd),
+        dueAt: new Date(cycle.dueAtMs).toISOString(),
+      });
     }
   }
   return { issued, errors };
@@ -186,6 +199,20 @@ async function tryCollectWalletInvoice(
     useAffiliate,
   });
   if (!deduct.ok) {
+    await notifyAccountShortfall({
+      userId: invoice.userId,
+      invoiceId: invoice.id,
+      amountUsd: invoice.amountUsd,
+      mainUsd: books.main,
+      shortUsd: deduct.shortUsd,
+    });
+    const dueMs = Date.parse(invoice.dueAt ?? "");
+    if (Number.isFinite(dueMs) && dueMs <= Date.now()) {
+      await notifySubscriptionPastDue({
+        userId: invoice.userId,
+        periodEnd: invoice.periodEnd,
+      });
+    }
     return { ok: false, skip: true, error: "Short Account Balance." };
   }
   const supabase = createServiceClient();
@@ -220,6 +247,13 @@ async function tryCollectWalletInvoice(
       transferUsd: deduct.transferUsd,
       amountUsd: invoice.amountUsd,
     },
+  });
+  await notifyInvoicePaid({
+    userId: invoice.userId,
+    invoiceId,
+    planId: invoice.planId,
+    amountUsd: invoice.amountUsd,
+    periodEnd: invoice.periodEnd,
   });
   return { ok: true };
 }

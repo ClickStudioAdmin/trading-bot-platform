@@ -14,7 +14,7 @@ import {
   markOpenStripeInvoicePaid,
   voidOpenInvoices,
 } from "./billing-cycle-store";
-import { switchToCardTrialEnd } from "./billing";
+import { stripeCentsToUsd, switchToCardTrialEnd } from "./billing";
 import { getMembershipPlan, getMembershipPlanByStripePriceId } from "./store";
 import { getStripe, isStripeMissingResource } from "./stripe";
 import {
@@ -37,6 +37,8 @@ export async function handleStripeEvent(
       return handleSubscription(event.data.object as Stripe.Subscription);
     case "invoice.paid":
       return handleInvoicePaid(event.data.object as Stripe.Invoice);
+    case "invoice.payment_failed":
+      return handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
     case "invoice.updated":
       return handleInvoiceUpdated(event.data.object as Stripe.Invoice);
     case "charge.refunded":
@@ -495,6 +497,16 @@ async function handleInvoicePaid(
       userId: member.userId,
       data: { invoiceId: invoice.id, amountUsd: write.amountUsd, planId },
     });
+    const { notifyInvoicePaid } = await import(
+      "@/lib/notifications/commercial"
+    );
+    await notifyInvoicePaid({
+      userId: member.userId,
+      invoiceId: invoice.id,
+      planId,
+      amountUsd: write.amountUsd,
+      periodEnd: write.periodEnd,
+    });
     return { ok: true };
   }
   const recorded = await recordStripeInvoice(member.userId, planId, write);
@@ -509,7 +521,52 @@ async function handleInvoicePaid(
       userId: member.userId,
       data: { invoiceId: invoice.id, amountUsd: write.amountUsd, planId },
     });
+    const { notifyInvoicePaid } = await import(
+      "@/lib/notifications/commercial"
+    );
+    await notifyInvoicePaid({
+      userId: member.userId,
+      invoiceId: invoice.id,
+      planId,
+      amountUsd: write.amountUsd,
+      periodEnd: write.periodEnd,
+    });
   }
+  return { ok: true };
+}
+
+async function handleInvoicePaymentFailed(
+  invoice: Stripe.Invoice,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const customerId = idOf(invoice.customer);
+  if (!customerId || !invoice.id) {
+    return { ok: true };
+  }
+  const member =
+    (await getMemberBillingByCustomer(customerId)) ??
+    (await memberFromInvoice(invoice));
+  if (!member) {
+    return { ok: true };
+  }
+  if (!stripeInvoicePaidApplies(member.billingMethod)) {
+    return { ok: true };
+  }
+  const amountUsd = stripeCentsToUsd(invoice.amount_due ?? 0);
+  const raw = invoice as {
+    last_finalization_error?: { message?: string | null };
+  };
+  const reason =
+    text(raw.last_finalization_error?.message) ??
+    "Card collect did not succeed.";
+  const { notifyPaymentFailed } = await import(
+    "@/lib/notifications/commercial"
+  );
+  await notifyPaymentFailed({
+    userId: member.userId,
+    invoiceOrIntentId: invoice.id,
+    amountUsd,
+    reason,
+  });
   return { ok: true };
 }
 

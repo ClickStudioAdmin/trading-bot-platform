@@ -117,6 +117,17 @@ async function creditLog(input: {
         amountUsd: usd,
       },
     });
+    const { notifyDepositCredited } = await import(
+      "@/lib/notifications/commercial"
+    );
+    await notifyDepositCredited({
+      userId: dest.userId,
+      chain: input.chain.name,
+      txHash: parsed.txHash,
+      logIndex: parsed.logIndex,
+      amountUsd: usd,
+      token: input.token.symbol,
+    });
   }
   if (!input.chain.adminAddress || !input.mnemonic) {
     return { created: credited.created, swept: false, userId: dest.userId };

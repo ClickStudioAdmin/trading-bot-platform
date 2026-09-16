@@ -10,13 +10,13 @@ Never trust the browser for payment status, desk health, or unread counts.
 
 ## Status
 
-Steps 1–5 and 7 in repo 16 Sep 2026. Step 6 (commercial `notify()`) is still open. Push `develop` to migrate. Do not add Resend until step 8.
+Steps 1–7 in repo 16 Sep 2026. Push `develop` to migrate. Click chooses 7a (admin roles) or 8 (Resend) next. Do not start entitlements.
 
 ## Purpose
 
 Members and admins see numbered badges for work they must do, plus an inbox of notices that can also go out as email. Admin and each login control the switches. Critical live-desk failures page and persist ([click-list.md](click-list.md) item 12).
 
-`update_card` badge stays 0 until step 6. `desk_critical`, `sweep_failed`, and `gas_low` are live from step 7.
+`update_card` is live when collection is Card (Stripe) and the subscription is `past_due`. `desk_critical`, `sweep_failed`, and `gas_low` are live from step 7.
 
 ## Current micro-step
 
@@ -27,7 +27,7 @@ Members and admins see numbered badges for work they must do, plus an inbox of n
 | 3 | Catalog + `notify()` | Agent | TypeScript catalog, locked copy, preference checks, dispatch claim. Email no-ops if Resend is unset. Tests for mutes, operator skip, idempotency keys. **In repo 16 Sep 2026.** |
 | 4 | Inbox + badges | Agent | `/account/notifications`, Overview widget, amber `NavBadge`. Header Inbox = unread only. Action counts stay on Overview / Billing / Affiliates. Extend Attention. Affiliate-only allowed on Inbox. Stop. **In repo 16 Sep 2026.** |
 | 5 | Settings | Agent | `/account/settings` Notifications tab (Email / In-app per event). `/admin/settings` Notifications & Alerts tab: one Member list and one Admin list; Email / In-app / Alert on the same trigger row. Locked `NoticeEmail` previews on `/admin/email-templates`. Affiliate-only members see Affiliates + Security only. Stop. **In repo 16 Sep 2026.** |
-| 6 | Wire commercial | Agent | `notify()` from billing, affiliate payouts, copy invites, password change. Stop. |
+| 6 | Wire commercial | Agent | `notify()` from billing, affiliate payouts, copy invites, password change. `update_card` live on Stripe `past_due`. Stop. **In repo 16 Sep 2026.** |
 | 7 | Wire critical + operator | Agent | Deduped live-desk critical, sweep fail, gas low, operator mail. Absorb click-list 12. Stop. **In repo 16 Sep 2026.** |
 | 7a | Admin roles | Agent | Admins can create and assign **admin roles**. Each operator template is sent only to the roles ticked on that template (default: every admin role). `/admin` nav and server actions gate on the role’s permissions. Listed owner email stays a full-access role that cannot be locked out. Never trust the browser. Stop. **Not started.** |
 | 8 | Resend + desk test | Agent + Click | `RESEND_API_KEY` + `EMAIL_FROM` on Vercel and Fly (develop ≠ production). One `NoticeEmail` layout. Mute, unread, badge clear, no fill spam. Role routing from 7a applies when mail actually sends. Stop. |
@@ -115,7 +115,7 @@ Dispatch keys (step 3): `invoice:{invoiceId}`, `invoice-paid:{invoiceId}`, `paym
 
 Computed. Never stored as todos.
 
-**Member:** `past_due`, `account_shortfall` (collect window open), `unbound_live`, `shared_key` (already on Overview Attention), `desk_critical`, `copy_invite`, `update_card`.
+**Member:** `past_due`, `account_shortfall` (collect window open), `unbound_live`, `shared_key` (already on Overview Attention), `desk_critical`, `copy_invite`, `update_card` (Card collection + `past_due`).
 
 **Admin:** `affiliate_payouts`, `wallet_withdraws`, `sweep_failed`, `gas_low`, `past_due_members`, `desk_critical`.
 

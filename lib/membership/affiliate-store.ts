@@ -723,6 +723,14 @@ export async function releaseDueCommissions(
     }
     released += 1;
     earners.add(String(row.earner_user_id));
+    const { notifyCommissionReleased } = await import(
+      "@/lib/notifications/commercial"
+    );
+    await notifyCommissionReleased({
+      userId: String(row.earner_user_id),
+      commissionId: id,
+      amountUsd,
+    });
   }
   for (const earnerId of earners) {
     await maybeAutoAffiliatePayout(earnerId);
@@ -984,6 +992,17 @@ export async function requestUsdtPayout(input: {
     await supabase.from("membership_payouts").delete().eq("id", payoutId);
     return { ok: false, error: walletError.message };
   }
+  const { notifyPayoutRequested } = await import(
+    "@/lib/notifications/commercial"
+  );
+  await notifyPayoutRequested({
+    userId: input.userId,
+    payoutId,
+    amountUsd,
+    address: input.address,
+    network: input.network,
+    book,
+  });
   return { ok: true, payoutId };
 }
 
@@ -1199,6 +1218,15 @@ export async function rejectPayout(
   if (error) {
     return { ok: false, error: error.message };
   }
+  const { notifyPayoutRejected } = await import(
+    "@/lib/notifications/commercial"
+  );
+  await notifyPayoutRejected({
+    userId: payout.userId,
+    payoutId,
+    amountUsd: payout.amountUsd,
+    book: payout.book,
+  });
   return { ok: true };
 }
 
@@ -1235,6 +1263,15 @@ export async function markPayoutPaid(
   if (error) {
     return { ok: false, error: error.message };
   }
+  const { notifyPayoutPaid } = await import("@/lib/notifications/commercial");
+  await notifyPayoutPaid({
+    userId: payout.userId,
+    payoutId,
+    amountUsd: payout.amountUsd,
+    address: payout.address ?? "",
+    network: payout.network ?? "",
+    book: payout.book,
+  });
   return { ok: true };
 }
 

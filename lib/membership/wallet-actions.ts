@@ -442,6 +442,17 @@ async function payPlanWithCredit(
         kind: charge.kind,
       },
     });
+    const { notifyInvoicePaid } = await import(
+      "@/lib/notifications/commercial"
+    );
+    await notifyInvoicePaid({
+      userId: member.id,
+      invoiceId: paid.invoiceId,
+      planId,
+      amountUsd: charge.dueUsd,
+      periodEnd:
+        charge.kind === "upgrade" ? charge.periodEnd : billing?.periodEnd ?? null,
+    });
     revalidatePath("/account/billing");
     revalidatePath("/account/billing/checkout");
     revalidatePath("/account/plans");

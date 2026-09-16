@@ -174,6 +174,12 @@ export async function updateMember(formData: FormData) {
     );
   }
 
+  if (parsed.values.password) {
+    const { notifyPasswordChanged } = await import(
+      "@/lib/notifications/commercial"
+    );
+    await notifyPasswordChanged({ userId });
+  }
   await writeEventLog({
     scope: "system",
     event: "member.updated",
@@ -299,6 +305,10 @@ export async function changeOwnPassword(formData: FormData) {
     message: "Changed desk password",
     userId: member.id,
   });
+  const { notifyPasswordChanged } = await import(
+    "@/lib/notifications/commercial"
+  );
+  await notifyPasswordChanged({ userId: member.id });
   revalidatePath("/", "layout");
   redirect(settingsPath({ tab: "password", saved: "password" }));
 }

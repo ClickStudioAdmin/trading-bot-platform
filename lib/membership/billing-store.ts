@@ -268,6 +268,15 @@ export async function applyMemberSubscription(
   if (error) {
     return { ok: false, error: error.message };
   }
+  if (applied.subscriptionStatus === "past_due") {
+    const { notifySubscriptionPastDue } = await import(
+      "@/lib/notifications/commercial"
+    );
+    await notifySubscriptionPastDue({
+      userId,
+      periodEnd: applied.periodEnd,
+    });
+  }
   return { ok: true, effect: "applied" };
 }
 
