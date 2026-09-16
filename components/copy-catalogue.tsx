@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NavBadge } from "@/components/nav-badge";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { toggleDeskCopyFavoriteAction } from "@/lib/copy/actions";
 import { copyCatalogueHref } from "@/lib/copy/catalogue-href";
@@ -95,6 +96,7 @@ export function CopyCatalogueBoard({
   connections,
   openParentId = "",
   showFilters = true,
+  inviteCount = 0,
 }: {
   cards: CopyCatalogueCard[];
   tab: CopyCatalogueTab;
@@ -105,9 +107,10 @@ export function CopyCatalogueBoard({
   connections: ExchangeConnection[];
   openParentId?: string;
   showFilters?: boolean;
+  inviteCount?: number;
 }) {
-  const tabs: { id: CopyCatalogueTab; label: string }[] = [
-    { id: "all", label: "All" },
+  const tabs: { id: CopyCatalogueTab; label: string; count?: number }[] = [
+    { id: "all", label: "All", count: inviteCount },
     { id: "favorites", label: "Favorites" },
     { id: "subscribed", label: "Subscribed" },
   ];
@@ -127,11 +130,12 @@ export function CopyCatalogueBoard({
             })}
             className={
               tab === item.id
-                ? "border-b-2 border-accent pb-2 text-sm font-medium text-ink"
-                : "pb-2 text-sm text-ink-faint hover:text-ink-muted"
+                ? "inline-flex items-center gap-2 border-b-2 border-accent pb-2 text-sm font-medium text-ink"
+                : "inline-flex items-center gap-2 pb-2 text-sm text-ink-faint hover:text-ink-muted"
             }
           >
             {item.label}
+            <NavBadge count={item.count ?? 0} />
           </Link>
         ))}
       </div>

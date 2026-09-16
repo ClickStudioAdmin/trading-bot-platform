@@ -37,8 +37,10 @@ export {
   EMPTY_ADMIN_ACTIONS,
   EMPTY_MEMBER_ACTIONS,
   formatNavBadgeCount,
+  adminBillingTabCounts,
   memberActionTotal,
   memberBillingActionTotal,
+  memberBillingTabCounts,
   memberOverviewAttention,
   notificationAttentionItems,
 } from "./badge-model";

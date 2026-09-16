@@ -5,8 +5,10 @@ import {
   EMPTY_ADMIN_ACTIONS,
   EMPTY_MEMBER_ACTIONS,
   formatNavBadgeCount,
+  adminBillingTabCounts,
   memberActionTotal,
   memberBillingActionTotal,
+  memberBillingTabCounts,
   memberOverviewAttention,
   notificationAttentionItems,
 } from "./badge-model";
@@ -60,6 +62,44 @@ assert.equal(
     copyInvite: 4,
   }),
   2,
+);
+assert.deepEqual(
+  memberBillingTabCounts({
+    ...EMPTY_MEMBER_ACTIONS,
+    pastDue: 1,
+    accountShortfall: 1,
+    updateCard: 1,
+  }),
+  {
+    overview: 1,
+    invoices: 0,
+    method: 1,
+    wallet: 1,
+    ledger: 0,
+  },
+);
+assert.deepEqual(
+  adminBillingTabCounts({
+    ...EMPTY_ADMIN_ACTIONS,
+    sweepFailed: 1,
+    gasLow: 1,
+    walletWithdraws: 2,
+  }),
+  { overview: 2, invoices: 0, withdrawals: 2 },
+);
+assert.deepEqual(
+  notificationAttentionItems({
+    pastDue: false,
+    accountShortfall: false,
+    copyInvite: 0,
+    updateCard: true,
+  }),
+  [
+    {
+      label: "Update the card on this login.",
+      href: "/account/billing?tab=method",
+    },
+  ],
 );
 assert.equal(adminActionTotal(EMPTY_ADMIN_ACTIONS), 0);
 assert.equal(

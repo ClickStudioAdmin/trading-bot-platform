@@ -8,6 +8,7 @@ import {
   parseCopyCatalogueTab,
 } from "@/lib/copy/model";
 import { getSessionMember } from "@/lib/auth/session";
+import { loadMemberNotificationChrome } from "@/lib/notifications/badges";
 import { listExchangeConnections } from "@/lib/exchanges/store";
 import { firstSearchValue } from "@/lib/paper/open";
 import { redirect } from "next/navigation";
@@ -43,6 +44,10 @@ export default async function AccountCopyCataloguePage({
   const connections = await listExchangeConnections(member.id);
   const openParentId = firstSearchValue(params.copy) ?? "";
   const next = copyCatalogueHref({ tab, privateOnly, query, sort });
+  const chrome = await loadMemberNotificationChrome(
+    member.id,
+    member.platformMember,
+  );
 
   return (
     <>
@@ -71,6 +76,7 @@ export default async function AccountCopyCataloguePage({
         next={next}
         connections={connections}
         openParentId={openParentId}
+        inviteCount={chrome.actions.copyInvite}
       />
     </>
   );

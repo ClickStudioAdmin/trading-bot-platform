@@ -34,6 +34,11 @@ import {
   listDepositAddresses,
   listUnsweptDepositCredits,
 } from "@/lib/membership/wallet-store";
+import { NavBadge } from "@/components/nav-badge";
+import {
+  adminBillingTabCounts,
+  loadAdminNotificationChrome,
+} from "@/lib/notifications/badges";
 import { firstSearchValue } from "@/lib/paper/open";
 import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
 
@@ -82,6 +87,9 @@ export default async function AdminBillingPage({
   const depositSweeps = overview?.depositSweeps ?? [];
   const addresses = overview?.addresses ?? [];
   const [payouts, files, stats] = withdrawals ?? [[], [], null];
+  const tabCounts = adminBillingTabCounts(
+    (await loadAdminNotificationChrome()).actions,
+  );
 
   return (
     <div>
@@ -95,20 +103,26 @@ export default async function AdminBillingPage({
       </p>
       <nav
         aria-label="Billing and Wallets"
-        className="mt-5 flex border-b border-line"
+        className="mt-5 flex flex-wrap border-b border-line"
       >
-        <TabLink href="/admin/billing" selected={tab === "overview"}>
+        <TabLink
+          href="/admin/billing"
+          selected={tab === "overview"}
+          count={tabCounts.overview}
+        >
           Overview
         </TabLink>
         <TabLink
           href="/admin/billing?tab=invoices"
           selected={tab === "invoices"}
+          count={tabCounts.invoices}
         >
           Invoices
         </TabLink>
         <TabLink
           href="/admin/billing?tab=withdrawals"
           selected={tab === "withdrawals"}
+          count={tabCounts.withdrawals}
         >
           Wallet withdrawal requests
         </TabLink>
@@ -436,22 +450,25 @@ async function loadAdminBillingOverview(env: ReturnType<typeof billingChainEnvir
 function TabLink({
   href,
   selected,
+  count = 0,
   children,
 }: {
   href: string;
   selected: boolean;
+  count?: number;
   children: string;
 }) {
   return (
     <Link
       href={href}
-      className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+      className={`-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm ${
         selected
           ? "border-accent text-ink"
           : "border-transparent text-ink-muted hover:text-ink"
       }`}
     >
       {children}
+      <NavBadge count={count} />
     </Link>
   );
 }

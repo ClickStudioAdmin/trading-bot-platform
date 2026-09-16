@@ -63,6 +63,34 @@ export function memberBillingActionTotal(counts: MemberActionCounts): number {
   return counts.pastDue + counts.accountShortfall + counts.updateCard;
 }
 
+export function memberBillingTabCounts(counts: MemberActionCounts): {
+  overview: number;
+  invoices: number;
+  method: number;
+  wallet: number;
+  ledger: number;
+} {
+  return {
+    overview: counts.pastDue,
+    invoices: 0,
+    method: counts.updateCard,
+    wallet: counts.accountShortfall,
+    ledger: 0,
+  };
+}
+
+export function adminBillingTabCounts(counts: AdminActionCounts): {
+  overview: number;
+  invoices: number;
+  withdrawals: number;
+} {
+  return {
+    overview: counts.sweepFailed + counts.gasLow,
+    invoices: 0,
+    withdrawals: counts.walletWithdraws,
+  };
+}
+
 export function adminActionTotal(counts: AdminActionCounts): number {
   return (
     counts.affiliatePayouts +
@@ -115,7 +143,7 @@ export function notificationAttentionItems(input: {
   if (input.updateCard && !input.pastDue) {
     items.push({
       label: "Update the card on this login.",
-      href: "/account/billing",
+      href: "/account/billing?tab=method",
     });
   }
   if (input.accountShortfall) {

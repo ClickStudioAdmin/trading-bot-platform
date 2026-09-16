@@ -35,6 +35,11 @@ export async function SiteHeader() {
         <HeaderChromeLinks
           signedIn={Boolean(user)}
           platformMember={user?.platformMember !== false}
+          badges={
+            memberChrome
+              ? { "/account/copy": memberChrome.actions.copyInvite }
+              : undefined
+          }
         />
       }
     >

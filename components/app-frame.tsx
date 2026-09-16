@@ -32,6 +32,8 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
           ? {
               "/account": chrome.overview,
               "/account/billing": chrome.billing,
+              "/account/exchanges":
+                chrome.actions.unboundLive + chrome.actions.sharedKey,
             }
           : undefined
       }

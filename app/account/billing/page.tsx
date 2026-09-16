@@ -53,6 +53,11 @@ import {
   stripePublishableKey,
   stripeSecretConfigured,
 } from "@/lib/membership/stripe";
+import { NavBadge } from "@/components/nav-badge";
+import {
+  loadMemberNotificationChrome,
+  memberBillingTabCounts,
+} from "@/lib/notifications/badges";
 import { firstSearchValue } from "@/lib/paper/open";
 import { formatLocalDate, parseDisplayTime } from "@/lib/time/display";
 import { redirect } from "next/navigation";
@@ -138,6 +143,11 @@ export default async function AccountBillingPage({
           hasCardOnFile: Boolean(cardOnFile),
         })
       : false;
+  const chrome = await loadMemberNotificationChrome(
+    member.id,
+    member.platformMember,
+  );
+  const tabCounts = memberBillingTabCounts(chrome.actions);
 
   return (
     <div>
@@ -154,14 +164,19 @@ export default async function AccountBillingPage({
       </p>
       <nav
         aria-label="Billing & Account Balance"
-        className="mt-5 flex border-b border-line"
+        className="mt-5 flex flex-wrap border-b border-line"
       >
-        <TabLink href="/account/billing" selected={tab === "overview"}>
+        <TabLink
+          href="/account/billing"
+          selected={tab === "overview"}
+          count={tabCounts.overview}
+        >
           Overview
         </TabLink>
         <TabLink
           href="/account/billing?tab=invoices"
           selected={tab === "invoices"}
+          count={tabCounts.invoices}
         >
           Invoices
         </TabLink>
@@ -169,6 +184,7 @@ export default async function AccountBillingPage({
           <TabLink
             href="/account/billing?tab=method"
             selected={tab === "method"}
+            count={tabCounts.method}
           >
             Manage Payment Method
           </TabLink>
@@ -177,6 +193,7 @@ export default async function AccountBillingPage({
           <TabLink
             href="/account/billing?tab=wallet"
             selected={tab === "wallet"}
+            count={tabCounts.wallet}
           >
             Manage Account Balance
           </TabLink>
@@ -185,6 +202,7 @@ export default async function AccountBillingPage({
           <TabLink
             href="/account/billing?tab=ledger"
             selected={tab === "ledger"}
+            count={tabCounts.ledger}
           >
             Account Ledger
           </TabLink>
@@ -589,22 +607,25 @@ function BillingTablePager({
 function TabLink({
   href,
   selected,
+  count = 0,
   children,
 }: {
   href: string;
   selected: boolean;
+  count?: number;
   children: string;
 }) {
   return (
     <Link
       href={href}
-      className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+      className={`-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm ${
         selected
           ? "border-accent text-ink"
           : "border-transparent text-ink-muted hover:text-ink"
       }`}
     >
       {children}
+      <NavBadge count={count} />
     </Link>
   );
 }

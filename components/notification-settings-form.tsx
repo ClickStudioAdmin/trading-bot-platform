@@ -15,6 +15,13 @@ import {
   type NotificationSettingGroup,
 } from "@/lib/notifications/settings";
 
+const CHANNEL_GRID =
+  "grid grid-cols-[minmax(0,1fr)_6rem_6rem_6rem] items-start gap-x-2";
+
+function ChannelEmpty() {
+  return <span className="text-ink-faint">—</span>;
+}
+
 export function MemberNotificationSettingsForm({
   groups,
   prefs,
@@ -97,47 +104,37 @@ export function AdminChannelSettingsForm({
               className="rounded-card border border-line bg-surface p-5"
             >
               <h3 className="text-sm font-semibold text-ink">{group.label}</h3>
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[32rem] text-left text-sm">
-                  <thead>
-                    <tr className="text-xs uppercase tracking-[0.12em] text-ink-faint">
-                      <th className="pb-2 font-medium">Notice</th>
-                      <th className="w-20 pb-2 text-center font-medium">
-                        Email
-                      </th>
-                      {list.showInApp ? (
-                        <th className="w-20 pb-2 text-center font-medium">
-                          In-app
-                        </th>
-                      ) : null}
-                      <th className="w-20 pb-2 text-center font-medium">
-                        Alert
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-line">
-                    {group.rows.map((row) => (
-                      <ChannelSettingRow
-                        key={row.id}
-                        row={row}
-                        showInApp={list.showInApp}
-                        emailOn={
-                          row.emailId
-                            ? !notificationIsDisabled(
-                                disabledEmails,
-                                row.emailId,
-                              )
-                            : false
-                        }
-                        badgeOn={
-                          row.badgeId
-                            ? !badgeIsDisabled(disabledBadges, row.badgeId)
-                            : false
-                        }
-                      />
-                    ))}
-                  </tbody>
-                </table>
+              <div className="mt-4 min-w-[32rem] text-sm">
+                <div
+                  className={`${CHANNEL_GRID} pb-2 text-xs uppercase tracking-[0.12em] text-ink-faint`}
+                >
+                  <div className="font-medium">Notice</div>
+                  <div className="text-center font-medium">Email</div>
+                  <div className="text-center font-medium">In-app</div>
+                  <div className="text-center font-medium">Alert</div>
+                </div>
+                <div className="divide-y divide-line">
+                  {group.rows.map((row) => (
+                    <ChannelSettingRow
+                      key={row.id}
+                      row={row}
+                      showInApp={list.showInApp}
+                      emailOn={
+                        row.emailId
+                          ? !notificationIsDisabled(
+                              disabledEmails,
+                              row.emailId,
+                            )
+                          : false
+                      }
+                      badgeOn={
+                        row.badgeId
+                          ? !badgeIsDisabled(disabledBadges, row.badgeId)
+                          : false
+                      }
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           ))}
@@ -166,15 +163,15 @@ function ChannelSettingRow({
   badgeOn: boolean;
 }) {
   return (
-    <tr>
-      <td className="py-3 pr-4">
+    <div className={`${CHANNEL_GRID} py-3`}>
+      <div className="pr-4">
         <p className="text-ink">{row.label}</p>
         <p className="mt-1 text-xs text-ink-faint">{row.hint}</p>
         {row.emailId && !emailDefaultOn(row.emailId) ? (
           <p className="mt-1 text-xs text-ink-faint">Email defaults off.</p>
         ) : null}
-      </td>
-      <td className="py-3 text-center">
+      </div>
+      <div className="flex justify-center">
         {row.emailId ? (
           <SettingsCheck
             name="email"
@@ -183,25 +180,23 @@ function ChannelSettingRow({
             label={`${row.label} email`}
           />
         ) : (
-          <span className="text-ink-faint">—</span>
+          <ChannelEmpty />
         )}
-      </td>
-      {showInApp ? (
-        <td className="py-3 text-center">
-          {row.showInApp ? (
-            <SettingsCheck
-              name="inapp-preview"
-              value={row.id}
-              defaultChecked
-              disabled
-              label={`${row.label} in-app`}
-            />
-          ) : (
-            <span className="text-ink-faint">—</span>
-          )}
-        </td>
-      ) : null}
-      <td className="py-3 text-center">
+      </div>
+      <div className="flex justify-center">
+        {showInApp && row.showInApp ? (
+          <SettingsCheck
+            name="inapp-preview"
+            value={row.id}
+            defaultChecked
+            disabled
+            label={`${row.label} in-app`}
+          />
+        ) : (
+          <ChannelEmpty />
+        )}
+      </div>
+      <div className="flex justify-center">
         {row.badgeId ? (
           <SettingsCheck
             name="badge"
@@ -210,10 +205,10 @@ function ChannelSettingRow({
             label={`${row.label} alert`}
           />
         ) : (
-          <span className="text-ink-faint">—</span>
+          <ChannelEmpty />
         )}
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 }
 

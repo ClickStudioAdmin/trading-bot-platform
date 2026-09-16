@@ -21,15 +21,18 @@ function navItemClass(active: boolean): string {
 export function HeaderChromeLinks({
   signedIn,
   platformMember = true,
+  badges = {},
 }: {
   signedIn: boolean;
   platformMember?: boolean;
+  badges?: Record<string, number>;
 }) {
   const pathname = usePathname();
   if (usesSignedInAppChrome(pathname, signedIn)) {
     return signedIn ? (
       <HeaderBrowseLinks
         links={platformMember ? HEADER_LINKS : AFFILIATE_ONLY_HEADER_LINKS}
+        badges={badges}
       />
     ) : null;
   }
@@ -65,8 +68,10 @@ export function HeaderPublicLinks() {
 
 export function HeaderBrowseLinks({
   links = HEADER_LINKS,
+  badges = {},
 }: {
   links?: readonly { href: string; label: string }[];
+  badges?: Record<string, number>;
 }) {
   const pathname = usePathname();
   return (
@@ -78,9 +83,10 @@ export function HeaderBrowseLinks({
           <Link
             key={link.href}
             href={link.href}
-            className={navItemClass(active)}
+            className={`${navItemClass(active)} inline-flex items-center gap-2`}
           >
             {link.label}
+            <NavBadge count={badges[link.href] ?? 0} />
           </Link>
         );
       })}
