@@ -599,15 +599,6 @@ export function overviewAttentionItems(input: {
   const unboundLive = input.accounts.filter(
     (account) => account.mode === "live" && !boundIds.has(account.id),
   );
-  const desksByKey = new Map<string, Set<string>>();
-  for (const bind of input.binds) {
-    const desks = desksByKey.get(bind.connectionId) ?? new Set<string>();
-    desks.add(bind.accountId);
-    desksByKey.set(bind.connectionId, desks);
-  }
-  const sharedKeys = [...desksByKey.values()].filter(
-    (desks) => desks.size > 1,
-  ).length;
   const items: OverviewAttention[] = [];
   if (unboundLive.length === 1) {
     const desk = unboundLive[0];
@@ -622,17 +613,6 @@ export function overviewAttentionItems(input: {
     items.push({
       label: `${unboundLive.length} live desks have no key bound.`,
       href: "/account/sub-accounts",
-    });
-  }
-  if (sharedKeys === 1) {
-    items.push({
-      label: "One exchange key is bound to more than one desk.",
-      href: "/account/exchanges",
-    });
-  } else if (sharedKeys > 1) {
-    items.push({
-      label: `${sharedKeys} exchange keys are bound to more than one desk.`,
-      href: "/account/exchanges",
     });
   }
   return items;

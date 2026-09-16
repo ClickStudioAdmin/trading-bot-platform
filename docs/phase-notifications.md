@@ -115,7 +115,7 @@ Dispatch keys (step 3): `invoice:{invoiceId}`, `invoice-paid:{invoiceId}`, `paym
 
 Computed. Never stored as todos.
 
-**Member:** `past_due`, `account_shortfall` (collect window open), `unbound_live`, `shared_key` (already on Overview Attention), `desk_critical`, `copy_invite`, `update_card` (Card collection + `past_due`).
+**Member:** `past_due`, `account_shortfall` (collect window open), `unbound_live`, `desk_critical`, `copy_invite`, `update_card` (Card collection + `past_due`). A key on more than one desk is warned at bind time only — not an alert.
 
 **Admin:** `affiliate_payouts`, `wallet_withdraws`, `sweep_failed`, `gas_low`, `past_due_members`, `desk_critical`.
 

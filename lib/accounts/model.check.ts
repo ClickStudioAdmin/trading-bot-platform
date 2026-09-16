@@ -558,12 +558,7 @@ assert.deepEqual(
       { connectionId: "k1", accountId: "b" },
     ],
   }),
-  [
-    {
-      label: "One exchange key is bound to more than one desk.",
-      href: "/account/exchanges",
-    },
-  ],
+  [],
 );
 assert.deepEqual(
   overviewAttentionItems({

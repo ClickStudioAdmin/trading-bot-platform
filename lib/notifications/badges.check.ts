@@ -120,7 +120,7 @@ assert.deepEqual(
     ],
     binds: [],
   }),
-  { unboundLive: 1, sharedKey: 0 },
+  { unboundLive: 1 },
 );
 assert.deepEqual(
   deskActionCountsFromAttention({
@@ -133,7 +133,7 @@ assert.deepEqual(
       { connectionId: "k1", accountId: "b" },
     ],
   }),
-  { unboundLive: 0, sharedKey: 1 },
+  { unboundLive: 0 },
 );
 
 assert.deepEqual(

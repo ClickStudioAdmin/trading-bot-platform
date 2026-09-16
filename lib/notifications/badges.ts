@@ -136,7 +136,6 @@ export const loadMemberNotificationChrome = cache(
           pastDue,
           accountShortfall: short,
           unboundLive: desk.unboundLive,
-          sharedKey: desk.sharedKey,
           deskCritical,
           copyInvite,
           updateCard: memberNeedsCardUpdate({

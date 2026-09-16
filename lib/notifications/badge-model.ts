@@ -5,7 +5,6 @@ export type MemberActionCounts = {
   pastDue: number;
   accountShortfall: number;
   unboundLive: number;
-  sharedKey: number;
   deskCritical: number;
   copyInvite: number;
   updateCard: number;
@@ -24,7 +23,6 @@ export const EMPTY_MEMBER_ACTIONS: MemberActionCounts = {
   pastDue: 0,
   accountShortfall: 0,
   unboundLive: 0,
-  sharedKey: 0,
   deskCritical: 0,
   copyInvite: 0,
   updateCard: 0,
@@ -52,7 +50,6 @@ export function memberActionTotal(counts: MemberActionCounts): number {
     counts.pastDue +
     counts.accountShortfall +
     counts.unboundLive +
-    counts.sharedKey +
     counts.deskCritical +
     counts.copyInvite +
     counts.updateCard
@@ -110,20 +107,12 @@ export function deskActionCountsFromAttention(input: {
     venue?: string;
   }[];
   binds: readonly { connectionId: string; accountId: string }[];
-}): Pick<MemberActionCounts, "unboundLive" | "sharedKey"> {
+}): Pick<MemberActionCounts, "unboundLive"> {
   const boundIds = new Set(input.binds.map((bind) => bind.accountId));
   const unboundLive = input.accounts.filter(
     (account) => account.mode === "live" && !boundIds.has(account.id),
   ).length;
-  const desksByKey = new Map<string, Set<string>>();
-  for (const bind of input.binds) {
-    const desks = desksByKey.get(bind.connectionId) ?? new Set<string>();
-    desks.add(bind.accountId);
-    desksByKey.set(bind.connectionId, desks);
-  }
-  const sharedKey = [...desksByKey.values()].filter((desks) => desks.size > 1)
-    .length;
-  return { unboundLive, sharedKey };
+  return { unboundLive };
 }
 
 export function notificationAttentionItems(input: {

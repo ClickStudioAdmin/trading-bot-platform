@@ -225,13 +225,6 @@ export const MEMBER_CHANNEL_LIST: ChannelList = {
           showInApp: false,
           badgeId: "unbound_live",
         },
-        {
-          id: "shared_key",
-          label: "Shared exchange key",
-          hint: "Overview Attention. One key bound to more than one desk.",
-          showInApp: false,
-          badgeId: "shared_key",
-        },
       ],
     },
     {
