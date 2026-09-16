@@ -5,17 +5,13 @@ import {
   type NotificationId,
 } from "@/lib/notifications/catalog";
 import type { NotificationPreferences } from "@/lib/notifications/store";
-import {
-  ADMIN_BADGE_SETTINGS,
-  AFFILIATE_BADGE_SETTINGS,
-  badgeIsDisabled,
-  MEMBER_BADGE_SETTINGS,
-} from "@/lib/notifications/badges-catalog";
+import { badgeIsDisabled } from "@/lib/notifications/badges-catalog";
 import {
   emailSwitchLockedOn,
-  notificationAudience,
   NOTIFICATION_HINTS,
   NOTIFICATION_LABELS,
+  type ChannelList,
+  type ChannelRow,
   type NotificationSettingGroup,
 } from "@/lib/notifications/settings";
 
@@ -74,131 +70,150 @@ export function MemberNotificationSettingsForm({
   );
 }
 
-export function AdminBadgeSettingsForm({
+export function AdminChannelSettingsForm({
+  lists,
+  disabledEmails,
   disabledBadges,
   action,
 }: {
+  lists: ChannelList[];
+  disabledEmails: string[];
   disabledBadges: string[];
   action: (formData: FormData) => void | Promise<void>;
 }) {
   return (
-    <form action={action} className="mt-4 space-y-6">
+    <form action={action} className="mt-6 space-y-8">
       <p className="text-sm text-ink-muted">
-        Off hides that numbered alert everywhere it appears. Live work still
-        exists; only the badge is gone.
+        Same trigger on one row. Off email or alert is a platform kill. In-app
+        stays on for members unless they mute it themselves. Admins do not get
+        an inbox.
       </p>
-      {(
-        [
-          ["Member alerts", MEMBER_BADGE_SETTINGS],
-          ["Affiliates", AFFILIATE_BADGE_SETTINGS],
-          ["Admin alerts", ADMIN_BADGE_SETTINGS],
-        ] as const
-      ).map(([label, rows]) => (
-        <section
-          key={label}
-          className="rounded-card border border-line bg-surface p-5"
-        >
-          <h2 className="text-sm font-semibold text-ink">{label}</h2>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[32rem] text-left text-sm">
-              <thead>
-                <tr className="text-xs uppercase tracking-[0.12em] text-ink-faint">
-                  <th className="pb-2 font-medium">Alert</th>
-                  <th className="w-28 pb-2 font-medium">Shown on</th>
-                  <th className="w-20 pb-2 text-center font-medium">On</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td className="py-3 pr-4">
-                      <p className="text-ink">{row.label}</p>
-                      <p className="mt-1 text-xs text-ink-faint">{row.hint}</p>
-                    </td>
-                    <td className="py-3 pr-4 text-xs text-ink-muted">
-                      {row.audience === "admin" ? "Admin" : "Member"}
-                    </td>
-                    <td className="py-3 text-center">
-                      <SettingsCheck
-                        name="badge"
-                        value={row.id}
-                        defaultChecked={!badgeIsDisabled(disabledBadges, row.id)}
-                        label={`${row.label} on`}
+      {lists.map((list) => (
+        <section key={list.id} className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight">{list.label}</h2>
+          {list.groups.map((group) => (
+            <div
+              key={group.id}
+              className="rounded-card border border-line bg-surface p-5"
+            >
+              <h3 className="text-sm font-semibold text-ink">{group.label}</h3>
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-[32rem] text-left text-sm">
+                  <thead>
+                    <tr className="text-xs uppercase tracking-[0.12em] text-ink-faint">
+                      <th className="pb-2 font-medium">Notice</th>
+                      <th className="w-20 pb-2 text-center font-medium">
+                        Email
+                      </th>
+                      {list.showInApp ? (
+                        <th className="w-20 pb-2 text-center font-medium">
+                          In-app
+                        </th>
+                      ) : null}
+                      <th className="w-20 pb-2 text-center font-medium">
+                        Alert
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {group.rows.map((row) => (
+                      <ChannelSettingRow
+                        key={row.id}
+                        row={row}
+                        showInApp={list.showInApp}
+                        emailOn={
+                          row.emailId
+                            ? !notificationIsDisabled(
+                                disabledEmails,
+                                row.emailId,
+                              )
+                            : false
+                        }
+                        badgeOn={
+                          row.badgeId
+                            ? !badgeIsDisabled(disabledBadges, row.badgeId)
+                            : false
+                        }
                       />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
         </section>
       ))}
       <PendingSubmitButton
         pendingLabel="Saving…"
-        successKey="save-admin-badges"
+        successKey="save-admin-channels"
         className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
       >
-        Save alerts
+        Save notifications & alerts
       </PendingSubmitButton>
     </form>
   );
 }
 
-export function AdminNotificationSettingsForm({
-  groups,
-  disabledEmails,
-  action,
+function ChannelSettingRow({
+  row,
+  showInApp,
+  emailOn,
+  badgeOn,
 }: {
-  groups: NotificationSettingGroup[];
-  disabledEmails: string[];
-  action: (formData: FormData) => void | Promise<void>;
+  row: ChannelRow;
+  showInApp: boolean;
+  emailOn: boolean;
+  badgeOn: boolean;
 }) {
   return (
-    <form action={action} className="mt-4 space-y-6">
-      {groups.map((group) => (
-        <section
-          key={group.id}
-          className="rounded-card border border-line bg-surface p-5"
-        >
-          <h2 className="text-sm font-semibold text-ink">{group.label}</h2>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[28rem] text-left text-sm">
-              <thead>
-                <tr className="text-xs uppercase tracking-[0.12em] text-ink-faint">
-                  <th className="pb-2 font-medium">Notice</th>
-                  <th className="w-28 pb-2 font-medium">Sent to</th>
-                  <th className="w-20 pb-2 text-center font-medium">Email</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {group.ids.map((id) => (
-                  <SettingRow
-                    key={id}
-                    id={id}
-                    emailOn={!notificationIsDisabled(disabledEmails, id)}
-                    inAppOn
-                    showInApp={false}
-                    sentTo={
-                      notificationAudience(id) === "operator"
-                        ? "Admins"
-                        : "Member"
-                    }
-                    emailDefault={emailDefaultOn(id)}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ))}
-      <PendingSubmitButton
-        pendingLabel="Saving…"
-        successKey="save-admin-notifications"
-        className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
-      >
-        Save notifications
-      </PendingSubmitButton>
-    </form>
+    <tr>
+      <td className="py-3 pr-4">
+        <p className="text-ink">{row.label}</p>
+        <p className="mt-1 text-xs text-ink-faint">{row.hint}</p>
+        {row.emailId && !emailDefaultOn(row.emailId) ? (
+          <p className="mt-1 text-xs text-ink-faint">Email defaults off.</p>
+        ) : null}
+      </td>
+      <td className="py-3 text-center">
+        {row.emailId ? (
+          <SettingsCheck
+            name="email"
+            value={row.emailId}
+            defaultChecked={emailOn}
+            label={`${row.label} email`}
+          />
+        ) : (
+          <span className="text-ink-faint">—</span>
+        )}
+      </td>
+      {showInApp ? (
+        <td className="py-3 text-center">
+          {row.showInApp ? (
+            <SettingsCheck
+              name="inapp-preview"
+              value={row.id}
+              defaultChecked
+              disabled
+              label={`${row.label} in-app`}
+            />
+          ) : (
+            <span className="text-ink-faint">—</span>
+          )}
+        </td>
+      ) : null}
+      <td className="py-3 text-center">
+        {row.badgeId ? (
+          <SettingsCheck
+            name="badge"
+            value={row.badgeId}
+            defaultChecked={badgeOn}
+            label={`${row.label} alert`}
+          />
+        ) : (
+          <span className="text-ink-faint">—</span>
+        )}
+      </td>
+    </tr>
   );
 }
 
@@ -207,15 +222,11 @@ function SettingRow({
   emailOn,
   inAppOn,
   showInApp,
-  sentTo,
-  emailDefault,
 }: {
   id: NotificationId;
   emailOn: boolean;
   inAppOn: boolean;
   showInApp: boolean;
-  sentTo?: string;
-  emailDefault?: boolean;
 }) {
   const locked = emailSwitchLockedOn(id);
   return (
@@ -223,24 +234,16 @@ function SettingRow({
       <td className="py-3 pr-4">
         <p className="text-ink">{NOTIFICATION_LABELS[id]}</p>
         <p className="mt-1 text-xs text-ink-faint">{NOTIFICATION_HINTS[id]}</p>
-        {emailDefault === false ? (
-          <p className="mt-1 text-xs text-ink-faint">Email defaults off.</p>
-        ) : null}
       </td>
-      {sentTo ? (
-        <td className="py-3 pr-4 text-xs text-ink-muted">{sentTo}</td>
-      ) : null}
       <td className="py-3 text-center">
         <SettingsCheck
           name="email"
           value={id}
           defaultChecked={emailOn}
-          disabled={locked && !sentTo}
+          disabled={locked}
           label={`${NOTIFICATION_LABELS[id]} email`}
         />
-        {locked && !sentTo ? (
-          <input type="hidden" name="email" value={id} />
-        ) : null}
+        {locked ? <input type="hidden" name="email" value={id} /> : null}
       </td>
       {showInApp ? (
         <td className="py-3 text-center">

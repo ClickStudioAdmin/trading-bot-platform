@@ -24,18 +24,14 @@ import {
   loadWalletMinPayoutUsd,
 } from "@/lib/membership/wallet-store";
 import { firstSearchValue } from "@/lib/paper/open";
-import {
-  AdminBadgeSettingsForm,
-  AdminNotificationSettingsForm,
-} from "@/components/notification-settings-form";
+import { AdminChannelSettingsForm } from "@/components/notification-settings-form";
 import {
   clearDemoBadgeCountsAction,
-  savePlatformBadgesAction,
-  savePlatformNotificationEmailsAction,
+  savePlatformChannelSettingsAction,
   seedAdminInboxAction,
 } from "@/lib/notifications/actions";
 import { demoBadgesAllowed } from "@/lib/notifications/badges-catalog";
-import { adminSettingGroups } from "@/lib/notifications/settings";
+import { channelLists } from "@/lib/notifications/settings";
 import { loadPlatformAlertSettings } from "@/lib/notifications/store";
 
 export const metadata: Metadata = {
@@ -670,11 +666,10 @@ async function NotificationsTab({
   const demoActive = allowDemo && Object.keys(settings.demoBadgeCounts).length > 0;
   return (
     <>
-      {saved === "1" ? (
-        <p className="mt-6 text-sm text-success">Notification settings saved.</p>
-      ) : null}
-      {saved === "badges" ? (
-        <p className="mt-6 text-sm text-success">Alert settings saved.</p>
+      {saved === "1" || saved === "badges" ? (
+        <p className="mt-6 text-sm text-success">
+          Notification and alert settings saved.
+        </p>
       ) : null}
       {saved === "seeded" ? (
         <p className="mt-6 text-sm text-success">
@@ -740,23 +735,12 @@ async function NotificationsTab({
         .
       </p>
 
-      <div className="mt-6 grid items-start gap-6 lg:grid-cols-2">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Notifications</h2>
-          <AdminNotificationSettingsForm
-            groups={adminSettingGroups()}
-            disabledEmails={settings.disabledEmails}
-            action={savePlatformNotificationEmailsAction}
-          />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Alerts</h2>
-          <AdminBadgeSettingsForm
-            disabledBadges={settings.disabledBadges}
-            action={savePlatformBadgesAction}
-          />
-        </div>
-      </div>
+      <AdminChannelSettingsForm
+        lists={channelLists()}
+        disabledEmails={settings.disabledEmails}
+        disabledBadges={settings.disabledBadges}
+        action={savePlatformChannelSettingsAction}
+      />
     </>
   );
 }

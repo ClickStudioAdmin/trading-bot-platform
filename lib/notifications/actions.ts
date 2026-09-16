@@ -22,7 +22,6 @@ import {
   markUserNotificationsUnread,
   saveNotificationPreferences,
   savePlatformAlertSettings,
-  savePlatformDisabledEmails,
 } from "./store";
 
 function safeNoticeHref(value: unknown): string {
@@ -93,35 +92,25 @@ export async function saveMemberNotificationPrefsAction(formData: FormData) {
   redirect("/account/settings?tab=notifications&saved=notifications");
 }
 
-export async function savePlatformNotificationEmailsAction(formData: FormData) {
+export async function savePlatformChannelSettingsAction(formData: FormData) {
   await requireAdmin();
-  const enabled = new Set(
-    formData
-      .getAll("email")
-      .map(String)
-      .filter(isNotificationId),
+  const enabledEmail = new Set(
+    formData.getAll("email").map(String).filter(isNotificationId),
   );
-  const disabledEmails = NOTIFICATION_IDS.filter((id) => !enabled.has(id));
-  const saved = await savePlatformDisabledEmails(disabledEmails);
+  const enabledBadge = new Set(
+    formData.getAll("badge").map(String).filter(isBadgeId),
+  );
+  const disabledEmails = NOTIFICATION_IDS.filter((id) => !enabledEmail.has(id));
+  const disabledBadges = BADGE_IDS.filter((id) => !enabledBadge.has(id));
+  const saved = await savePlatformAlertSettings({
+    disabledEmails,
+    disabledBadges,
+  });
   if (!saved) {
     redirect("/admin/settings?tab=notifications&error=notifications");
   }
   refreshAdminAlertPaths();
   redirect("/admin/settings?tab=notifications&saved=1");
-}
-
-export async function savePlatformBadgesAction(formData: FormData) {
-  await requireAdmin();
-  const enabled = new Set(
-    formData.getAll("badge").map(String).filter(isBadgeId),
-  );
-  const disabledBadges = BADGE_IDS.filter((id) => !enabled.has(id));
-  const saved = await savePlatformAlertSettings({ disabledBadges });
-  if (!saved) {
-    redirect("/admin/settings?tab=notifications&error=badges");
-  }
-  refreshAdminAlertPaths();
-  redirect("/admin/settings?tab=notifications&saved=badges");
 }
 
 export async function seedAdminInboxAction() {

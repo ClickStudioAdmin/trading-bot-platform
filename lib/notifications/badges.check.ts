@@ -23,8 +23,12 @@ import {
   SAMPLE_BADGE_COUNTS,
 } from "./badges-catalog";
 import {
+  ADMIN_CHANNEL_LIST,
   adminSettingGroups,
+  channelBadgeIds,
+  channelEmailIds,
   emailSwitchLockedOn,
+  MEMBER_CHANNEL_LIST,
   memberSettingGroups,
   notificationAudience,
   NOTIFICATION_LABELS,
@@ -182,6 +186,38 @@ assert.equal(
 for (const id of NOTIFICATION_IDS) {
   assert.equal(Boolean(NOTIFICATION_LABELS[id]), true);
 }
+
+const emails = channelEmailIds();
+assert.equal(new Set(emails).size, emails.length);
+assert.deepEqual([...emails].sort(), [...NOTIFICATION_IDS].sort());
+const badges = channelBadgeIds();
+assert.equal(new Set(badges).size, badges.length);
+assert.deepEqual([...badges].sort(), [...BADGE_IDS].sort());
+assert.equal(MEMBER_CHANNEL_LIST.showInApp, true);
+assert.equal(ADMIN_CHANNEL_LIST.showInApp, false);
+const memberRows = MEMBER_CHANNEL_LIST.groups.flatMap((group) => group.rows);
+const adminRows = ADMIN_CHANNEL_LIST.groups.flatMap((group) => group.rows);
+const pastDue = memberRows.find((row) => row.id === "subscription_past_due");
+assert.equal(pastDue?.emailId, "subscription_past_due");
+assert.equal(pastDue?.badgeId, "past_due");
+const copyInvite = memberRows.find((row) => row.id === "copy_invite_received");
+assert.equal(copyInvite?.badgeId, "copy_invite");
+const deskCritical = memberRows.find((row) => row.id === "desk_sync_failed");
+assert.equal(deskCritical?.badgeId, "desk_critical");
+assert.equal(
+  memberRows.some((row) => row.emailId?.startsWith("operator_")),
+  false,
+);
+assert.equal(
+  adminRows.every((row) => !row.emailId || row.emailId.startsWith("operator_")),
+  true,
+);
+const payout = adminRows.find((row) => row.id === "operator_payout_requested");
+assert.equal(payout?.badgeId, "affiliate_payouts");
+assert.equal(
+  adminRows.find((row) => row.id === "wallet_withdraws")?.emailId,
+  undefined,
+);
 
 assert.equal(demoBadgesAllowed({ VERCEL_ENV: "production" }), false);
 assert.equal(demoBadgesAllowed({ VERCEL_ENV: "preview" }), true);
