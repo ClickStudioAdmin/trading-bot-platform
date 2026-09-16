@@ -11,6 +11,8 @@ import type { InboxFilters } from "@/lib/notifications/inbox";
 
 const actionLink =
   "rounded-control border border-line px-2 py-0.5 text-xs font-medium text-accent hover:text-accent-strong disabled:opacity-40";
+const bulkAction =
+  "rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40";
 
 export type InboxTableRow = {
   id: number;
@@ -56,30 +58,32 @@ export function InboxBulkTable({
         <input type="hidden" name="status" value={filters.status} />
         <input type="hidden" name="scope" value={filters.scope} />
         <input type="hidden" name="event" value={filters.event} />
-        <div className="mb-3 flex flex-wrap items-center gap-3">
-          <PendingSubmitButton
-            formAction={markNotificationsReadAction}
-            pendingLabel="Marking…"
-            disabled={!hasSelection}
-            className={actionLink}
-          >
-            Mark read
-          </PendingSubmitButton>
-          <PendingSubmitButton
-            formAction={markNotificationsUnreadAction}
-            pendingLabel="Marking…"
-            disabled={!hasSelection}
-            className={actionLink}
-          >
-            Mark unread
-          </PendingSubmitButton>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            <PendingSubmitButton
+              formAction={markNotificationsReadAction}
+              pendingLabel="Marking…"
+              disabled={!hasSelection}
+              className={bulkAction}
+            >
+              Mark read
+            </PendingSubmitButton>
+            <PendingSubmitButton
+              formAction={markNotificationsUnreadAction}
+              pendingLabel="Marking…"
+              disabled={!hasSelection}
+              className={bulkAction}
+            >
+              Mark unread
+            </PendingSubmitButton>
+          </div>
           <PendingSubmitButton
             formAction={markNotificationsReadAction}
             name="all"
             value="1"
             pendingLabel="Marking…"
             disabled={unread < 1}
-            className={actionLink}
+            className={bulkAction}
           >
             Mark all read
           </PendingSubmitButton>
