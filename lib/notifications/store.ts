@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/admin";
+import { INBOX_PAGE_SIZE, inboxPageWindow } from "./inbox";
 
 export type NotificationPreferences = {
   disabledEmails: string[];
@@ -127,6 +128,25 @@ export type UserNotification = {
   createdAt: string;
 };
 
+function parseNotificationRow(
+  row: Record<string, unknown>,
+): UserNotification | null {
+  const id = Number(row.id);
+  const title = String(row.title ?? "").trim();
+  if (!Number.isFinite(id) || !title) {
+    return null;
+  }
+  return {
+    id,
+    template: String(row.template ?? ""),
+    title,
+    body: String(row.body ?? ""),
+    href: String(row.href ?? "/account/notifications"),
+    readAt: typeof row.read_at === "string" ? row.read_at : null,
+    createdAt: String(row.created_at ?? ""),
+  };
+}
+
 export async function listUserNotifications(
   userId: string,
   limit = 50,
@@ -145,23 +165,55 @@ export async function listUserNotifications(
     return [];
   }
   return data.flatMap((row) => {
-    const id = Number(row.id);
-    const title = String(row.title ?? "").trim();
-    if (!Number.isFinite(id) || !title) {
-      return [];
-    }
-    return [
-      {
-        id,
-        template: String(row.template ?? ""),
-        title,
-        body: String(row.body ?? ""),
-        href: String(row.href ?? "/account/notifications"),
-        readAt: typeof row.read_at === "string" ? row.read_at : null,
-        createdAt: String(row.created_at ?? ""),
-      },
-    ];
+    const parsed = parseNotificationRow(row as Record<string, unknown>);
+    return parsed ? [parsed] : [];
   });
+}
+
+export async function listUserNotificationPage(
+  userId: string,
+  page: number,
+  pageSize = INBOX_PAGE_SIZE,
+): Promise<{
+  rows: UserNotification[];
+  page: number;
+  pageCount: number;
+  total: number;
+  from: number;
+  to: number;
+}> {
+  const empty = inboxPageWindow(0, 1, pageSize);
+  const supabase = createServiceClient();
+  if (!supabase || !userId) {
+    return { ...empty, rows: [] };
+  }
+  const counted = await supabase
+    .from("user_notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if (counted.error) {
+    return { ...empty, rows: [] };
+  }
+  const window = inboxPageWindow(counted.count ?? 0, page, pageSize);
+  if (window.total === 0) {
+    return { ...window, rows: [] };
+  }
+  const { data, error } = await supabase
+    .from("user_notifications")
+    .select("id, template, title, body, href, read_at, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .range(window.start, window.end - 1);
+  if (error || !data) {
+    return { ...window, rows: [] };
+  }
+  return {
+    ...window,
+    rows: data.flatMap((row) => {
+      const parsed = parseNotificationRow(row as Record<string, unknown>);
+      return parsed ? [parsed] : [];
+    }),
+  };
 }
 
 export async function countUnreadUserNotifications(

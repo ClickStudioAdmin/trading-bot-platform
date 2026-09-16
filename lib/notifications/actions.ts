@@ -16,6 +16,7 @@ import {
   isBadgeId,
   SAMPLE_BADGE_COUNTS,
 } from "./badges-catalog";
+import { inboxPath, parseInboxPage } from "./inbox";
 import { seedUserInbox } from "./seed";
 import {
   markUserNotificationsRead,
@@ -29,7 +30,11 @@ function safeNoticeHref(value: unknown): string {
   if (href.startsWith("/") && !href.startsWith("//")) {
     return href;
   }
-  return "/account/notifications";
+  return inboxPath();
+}
+
+function inboxReturnPath(formData: FormData): string {
+  return inboxPath(parseInboxPage(formData.get("page")));
 }
 
 function parseIds(formData: FormData): number[] {
@@ -64,12 +69,14 @@ export async function markNotificationsReadAction(formData: FormData) {
   if (typeof next === "string" && next.trim()) {
     redirect(safeNoticeHref(next));
   }
+  redirect(inboxReturnPath(formData));
 }
 
 export async function markNotificationsUnreadAction(formData: FormData) {
   const member = await requireMember();
   await markUserNotificationsUnread(member.id, parseIds(formData));
   refreshNoticePaths();
+  redirect(inboxReturnPath(formData));
 }
 
 export async function saveMemberNotificationPrefsAction(formData: FormData) {

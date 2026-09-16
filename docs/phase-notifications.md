@@ -125,7 +125,7 @@ Platform kill switches: `platform_settings.disabled_emails` and `disabled_badges
 
 ## Surfaces (from step 4)
 
-- `/account/notifications` — Inbox (affiliate-only allowed)
+- `/account/notifications` — Inbox (affiliate-only allowed). 20 per page (`?page=`), same Previous / Next as Billing.
 - `/account/settings?tab=notifications`
 - `/admin/settings?tab=notifications` (Member list + Admin list; Email / In-app / Alert)
 - `/admin/email-templates` — locked `NoticeEmail` previews
