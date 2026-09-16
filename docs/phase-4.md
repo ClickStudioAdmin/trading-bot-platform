@@ -26,7 +26,7 @@ Stop after each step.
 
 ## Runtime
 
-The tick is host-agnostic: `runPaperEngineTick` in `lib/engine`. Phase 4 calls it from `POST /api/engine/tick` on Vercel in Sydney (cron secret). Admins can also run it from the header **Tick** button (`POST /api/engine/admin-tick`, session admin only — no cron secret in the browser). GitHub Actions schedules the POST. Fly.io can later call the same function; do not add Fly this phase.
+The tick is host-agnostic: `runPaperEngineTick` in `lib/engine`. Phase 4 calls it from `POST /api/engine/tick` on Vercel in Sydney (cron secret). Admins can also run it from the footer **Tick** button (`POST /api/engine/admin-tick`, session admin only — no cron secret in the browser). GitHub Actions schedules the POST. Fly.io can later call the same function; do not add Fly this phase.
 
 Vercel Cron is not the scheduler. Hobby cron is once per day and Production-only, so `develop` would not tick.
 

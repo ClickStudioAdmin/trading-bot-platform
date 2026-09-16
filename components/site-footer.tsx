@@ -2,9 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AdminTickButton } from "@/components/admin-tick-button";
 import { SiteLogo } from "@/components/site-logo";
+import { HeaderAdminLink } from "@/components/site-nav";
 import { formatDeskType, type DeskType } from "@/lib/accounts/model";
 import { usesSignedInAppChrome } from "@/lib/site-links";
+
+export type FooterAdminChrome = {
+  count: number;
+  autoTick: boolean;
+};
 
 const FOOTER_DESKS: { id: string; deskType: DeskType }[] = [
   { id: "cash-and-carry", deskType: "cash_and_carry" },
@@ -17,9 +24,11 @@ const FOOTER_DESKS: { id: string; deskType: DeskType }[] = [
 export function SiteFooter({
   appHref = null,
   signedIn = false,
+  admin = null,
 }: {
   appHref?: string | null;
   signedIn?: boolean;
+  admin?: FooterAdminChrome | null;
 }) {
   const compact = usesSignedInAppChrome(usePathname(), signedIn);
 
@@ -30,14 +39,17 @@ export function SiteFooter({
           <p className="text-xs text-ink-faint">
             Trading Bot Platform · Development
           </p>
-          <a
-            href="/"
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs text-accent hover:text-accent-strong"
-          >
-            Home (outside app)
-          </a>
+          <div className="flex shrink-0 items-center gap-2">
+            <FooterAdminTools admin={admin} />
+            <a
+              href="/"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-accent hover:text-accent-strong"
+            >
+              Home (outside app)
+            </a>
+          </div>
         </div>
       </footer>
     );
@@ -123,10 +135,25 @@ export function SiteFooter({
         </div>
       </div>
       <div className="border-t border-line">
-        <p className="mx-auto max-w-7xl px-6 py-4 text-xs text-ink-faint">
-          Trading Bot Platform · Development
-        </p>
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+          <p className="text-xs text-ink-faint">
+            Trading Bot Platform · Development
+          </p>
+          <FooterAdminTools admin={admin} />
+        </div>
       </div>
     </footer>
+  );
+}
+
+function FooterAdminTools({ admin }: { admin?: FooterAdminChrome | null }) {
+  if (!admin) {
+    return null;
+  }
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <HeaderAdminLink count={admin.count} />
+      <AdminTickButton autoTick={admin.autoTick} notePlacement="above" />
+    </div>
   );
 }

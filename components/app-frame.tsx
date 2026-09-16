@@ -1,19 +1,27 @@
 import { AccountSidenavGate } from "@/components/account-sidenav-gate";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { deskHomePath } from "@/lib/accounts/model";
 import { listTradingAccounts } from "@/lib/accounts/store";
+import { getAdminUser } from "@/lib/admin/access";
+import { loadAutoTickEnabled } from "@/lib/admin/settings";
 import { signedInHomePath } from "@/lib/auth/onboarding";
 import { getSessionMember } from "@/lib/auth/session";
-import { loadMemberNotificationChrome } from "@/lib/notifications/badges";
+import {
+  loadAdminNotificationChrome,
+  loadMemberNotificationChrome,
+} from "@/lib/notifications/badges";
 
 export async function AppFrame({ children }: { children: React.ReactNode }) {
   const member = await getSessionMember();
   const desks = member ? await listTradingAccounts(member.id) : [];
+  const verified = Boolean(member?.emailVerifiedAt);
   const chrome =
-    member?.emailVerifiedAt
+    verified && member
       ? await loadMemberNotificationChrome(member.id, member.platformMember)
       : null;
+  const admin = verified && member ? await getAdminUser() : null;
+  const autoTick = admin ? await loadAutoTickEnabled() : false;
+  const adminChrome = admin ? await loadAdminNotificationChrome() : null;
   const appHref = member ? signedInHomePath(member, desks) : null;
 
   return (
@@ -34,7 +42,15 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
         <SiteHeader />
         <div className="flex flex-1 flex-col">{children}</div>
-        <SiteFooter appHref={appHref} signedIn={Boolean(member)} />
+        <SiteFooter
+          appHref={appHref}
+          signedIn={Boolean(member)}
+          admin={
+            admin
+              ? { count: adminChrome?.header ?? 0, autoTick }
+              : null
+          }
+        />
       </div>
     </AccountSidenavGate>
   );

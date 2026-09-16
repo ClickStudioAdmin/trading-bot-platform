@@ -130,7 +130,7 @@ The tick is `runEngineCycle` in `lib/engine`: shared scan, then **hot desks firs
 
 `POST /api/engine/tick` on Sydney Vercel is a **manual fallback** (same leases, 50s budget). [`.github/workflows/paper-engine-tick.yml`](../.github/workflows/paper-engine-tick.yml) is **Run workflow** only. Do not use Vercel Cron.
 
-Admin header **Tick** runs the same cycle (`POST /api/engine/admin-tick`). Auto tick is **off** unless you turn it on in Admin Settings. It then POSTs that door every 5 seconds while an admin tab is visible.
+Admin footer **Tick** runs the same cycle (`POST /api/engine/admin-tick`). Auto tick is **off** unless you turn it on in Admin Settings. It then POSTs that door every 5 seconds while an admin tab is visible.
 
 | Variable | Where | Value |
 | --- | --- | --- |

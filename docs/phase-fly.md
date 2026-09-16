@@ -77,7 +77,7 @@ Start with **one machine per app**. Adding machines is then “raise count”; t
 - TradingView / Signal **inbound** HTTP (`/api/futures/webhook/…`) — event-driven place, not the 5-minute scan
 - User Save / Arm / Trigger (already server-side)
 
-Admin header **Tick** must not keep running the global 60s monolith. After cutover it nudges the worker (or claims desks the same way). Until cutover, keep the existing door as fallback.
+Admin footer **Tick** must not keep running the global 60s monolith. After cutover it nudges the worker (or claims desks the same way). Until cutover, keep the existing door as fallback.
 
 ### 5. Venue budget (per bound key)
 
@@ -112,7 +112,7 @@ If those pass, adding machines and desks is capacity, not a redesign.
 
 Accepted 29 Aug 2026. Implementation started 29 Aug 2026. Parked 29 Aug 2026 — Click left the engine as-is. Do not harden further until Click asks. Next locked item is Hyperliquid when Click starts it.
 
-Shipped in repo: `engine_desk_leases` + claim RPCs (`20260829080000_engine_desk_leases.sql`), `runEngineCycle` / per-desk tick, in-memory lease tests, Fly configs (`fly.development.toml`, `fly.production.toml`), worker (`lib/engine/worker.ts`), GitHub **Deploy Engine**. Vercel tick and admin Tick call the same leased cycle (`maxMs` 50s). The 5-minute GitHub POST is off (workflow_dispatch only). Header **Tick** is the Vercel fallback.
+Shipped in repo: `engine_desk_leases` + claim RPCs (`20260829080000_engine_desk_leases.sql`), `runEngineCycle` / per-desk tick, in-memory lease tests, Fly configs (`fly.development.toml`, `fly.production.toml`), worker (`lib/engine/worker.ts`), GitHub **Deploy Engine**. Vercel tick and admin Tick call the same leased cycle (`maxMs` 50s). The 5-minute GitHub POST is off (workflow_dispatch only). Footer **Tick** is the Vercel fallback.
 
 Each Fly loop claims **hot desks first** (open futures rows, armed DCA playbooks, active Perps recipes), then idle books, and ticks up to three claimed desks at once. One linear ticker snapshot is reused for reconcile. Paper desks skip the venue gate. Live market stop / take profit attach on the fill (`placeClip` and GTC reconcile). Indicator **cross** starts latch until the first order so a 5m bar is not missed. The worker loads desk binds without a browser session. Auto tick is off unless an admin turns it on.
 
@@ -166,7 +166,7 @@ Re-run **Deploy Engine**. You want both green:
 In Fly, open **tbp-engine-dev** logs. You should see the worker start, then a cycle about every 20 seconds. In the app, `/admin/logs` should show engine tick lines. A live DCA desk on Demo should keep placing or amending without you sitting on Auto tick.
 
 **8. Leave Auto tick off**  
-Fly is the clock. Use header **Tick** if you want a Vercel nudge. **Run workflow** on Paper Engine Tick is the manual fallback. Do not turn Auto tick on unless you are debugging.
+Fly is the clock. Use footer **Tick** if you want a Vercel nudge. **Run workflow** on Paper Engine Tick is the manual fallback. Do not turn Auto tick on unless you are debugging.
 
 **Do not do yet**  
 Production Fly app, production secrets on the dev app, or merging to `main` for this. Same split as always: `develop` → dev database + this Fly app; `main` → production later.

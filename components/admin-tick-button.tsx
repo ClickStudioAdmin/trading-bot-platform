@@ -55,7 +55,13 @@ function tickChanged(body: TickBody): boolean {
   );
 }
 
-export function AdminTickButton({ autoTick }: { autoTick: boolean }) {
+export function AdminTickButton({
+  autoTick,
+  notePlacement = "below",
+}: {
+  autoTick: boolean;
+  notePlacement?: "below" | "above";
+}) {
   const router = useRouter();
   const inFlight = useRef(false);
   const runTickRef = useRef<(auto: boolean) => Promise<void>>(async () => {});
@@ -211,7 +217,9 @@ export function AdminTickButton({ autoTick }: { autoTick: boolean }) {
       {note ? (
         <span
           role="status"
-          className="absolute top-full right-0 z-30 mt-2 whitespace-nowrap rounded-card border border-line bg-surface px-3 py-2 text-xs text-ink-muted"
+          className={`absolute right-0 z-30 whitespace-nowrap rounded-card border border-line bg-surface px-3 py-2 text-xs text-ink-muted ${
+            notePlacement === "above" ? "bottom-full mb-2" : "top-full mt-2"
+          }`}
         >
           {note}
         </span>

@@ -106,7 +106,7 @@ Computed. Never stored as todos.
 
 **Admin:** `affiliate_payouts`, `wallet_withdraws`, `sweep_failed`, `gas_low`, `past_due_members`, `desk_critical`. `desk_critical` counts live desks with a critical log in the last 30 minutes (same window as repeating-reject mail).
 
-Header Inbox = unread inbox only. Overview / Billing / Affiliates = action counts. Header admin / Admin Overview = admin action sum. The same count also sits on the destination tab: member Billing Overview (`past_due`), Manage Payment Method (`update_card`), Manage Account Balance (`account_shortfall`); admin Billing Overview (`sweep_failed` + `gas_low`) and Wallet withdrawal requests (`wallet_withdraws`). Copy invites sit on header Copy Trading and the All tab.
+Header Inbox = unread inbox only. Overview / Billing / Affiliates = action counts. Footer admin / Admin Overview = admin action sum. The same count also sits on the destination tab: member Billing Overview (`past_due`), Manage Payment Method (`update_card`), Manage Account Balance (`account_shortfall`); admin Billing Overview (`sweep_failed` + `gas_low`) and Wallet withdrawal requests (`wallet_withdraws`). Copy invites sit on header Copy Trading and the All tab.
 
 Platform kill switches: `platform_settings.disabled_emails` and `disabled_badges`. Off email or alert is a platform kill. Off does not clear the live work. Develop-only `demo_badge_counts` can overlay sample numbers so the chrome looks populated; production ignores that column. Admin Settings → Notifications & Alerts groups the same trigger on one row. Every section uses the same Email / In-app / Alert columns; admin In-app is a dash.
 
