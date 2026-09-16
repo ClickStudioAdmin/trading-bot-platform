@@ -174,6 +174,7 @@ export async function listUserNotificationPage(
   userId: string,
   page: number,
   pageSize = INBOX_PAGE_SIZE,
+  filters?: { status?: "unread" | "read" | ""; templates?: string[] | null },
 ): Promise<{
   rows: UserNotification[];
   page: number;
@@ -183,27 +184,38 @@ export async function listUserNotificationPage(
   to: number;
 }> {
   const empty = inboxPageWindow(0, 1, pageSize);
+  const templates = filters?.templates;
+  if (templates && templates.length === 0) {
+    return { ...empty, rows: [] };
+  }
   const supabase = createServiceClient();
   if (!supabase || !userId) {
     return { ...empty, rows: [] };
   }
-  const counted = await supabase
-    .from("user_notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
-  if (counted.error) {
+  const counted = applyInboxListFilters(
+    supabase
+      .from("user_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId),
+    filters,
+  );
+  const countedResult = await counted;
+  if (countedResult.error) {
     return { ...empty, rows: [] };
   }
-  const window = inboxPageWindow(counted.count ?? 0, page, pageSize);
+  const window = inboxPageWindow(countedResult.count ?? 0, page, pageSize);
   if (window.total === 0) {
     return { ...window, rows: [] };
   }
-  const { data, error } = await supabase
-    .from("user_notifications")
-    .select("id, template, title, body, href, read_at, created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .range(window.start, window.end - 1);
+  const { data, error } = await applyInboxListFilters(
+    supabase
+      .from("user_notifications")
+      .select("id, template, title, body, href, read_at, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .range(window.start, window.end - 1),
+    filters,
+  );
   if (error || !data) {
     return { ...window, rows: [] };
   }
@@ -214,6 +226,26 @@ export async function listUserNotificationPage(
       return parsed ? [parsed] : [];
     }),
   };
+}
+
+function applyInboxListFilters<T extends {
+  is: (column: string, value: null) => T;
+  not: (column: string, operator: string, value: null) => T;
+  in: (column: string, values: string[]) => T;
+}>(
+  query: T,
+  filters?: { status?: "unread" | "read" | ""; templates?: string[] | null },
+): T {
+  let next = query;
+  if (filters?.status === "unread") {
+    next = next.is("read_at", null);
+  } else if (filters?.status === "read") {
+    next = next.not("read_at", "is", null);
+  }
+  if (filters?.templates && filters.templates.length > 0) {
+    next = next.in("template", filters.templates);
+  }
+  return next;
 }
 
 export async function countUnreadUserNotifications(

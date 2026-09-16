@@ -1,9 +1,75 @@
+import { firstSearchValue } from "@/lib/paper/open";
+import { isNotificationId, type NotificationId } from "./catalog";
+import type { NotificationSettingGroup } from "./settings";
+
 export const INBOX_PATH = "/account/notifications";
 export const INBOX_PAGE_SIZE = 20;
+export const INBOX_STATUSES = ["unread", "read"] as const;
+
+export type InboxStatus = "" | (typeof INBOX_STATUSES)[number];
+
+export type InboxFilters = {
+  status: InboxStatus;
+  scope: string;
+  event: string;
+};
+
+export const EMPTY_INBOX_FILTERS: InboxFilters = {
+  status: "",
+  scope: "",
+  event: "",
+};
 
 export function parseInboxPage(value: unknown): number {
   const page = Math.trunc(Number(String(value ?? "").trim()));
   return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+export function parseInboxStatus(value: unknown): InboxStatus {
+  const status = String(value ?? "").trim();
+  return INBOX_STATUSES.includes(status as (typeof INBOX_STATUSES)[number])
+    ? (status as InboxStatus)
+    : "";
+}
+
+export function parseInboxFilters(
+  params: Record<string, string | string[] | undefined>,
+  groups: readonly NotificationSettingGroup[],
+): InboxFilters {
+  const allowedScopes = new Set(groups.map((group) => group.id));
+  const allowedEvents = new Set(groups.flatMap((group) => group.ids));
+  const scope = (firstSearchValue(params.scope) ?? "").trim();
+  const event = (firstSearchValue(params.event) ?? "").trim();
+  return {
+    status: parseInboxStatus(firstSearchValue(params.status)),
+    scope: allowedScopes.has(scope) ? scope : "",
+    event:
+      isNotificationId(event) && allowedEvents.has(event) ? event : "",
+  };
+}
+
+export function inboxHasFilters(filters: InboxFilters): boolean {
+  return Boolean(filters.status || filters.scope || filters.event);
+}
+
+export function inboxFilterTemplates(
+  filters: InboxFilters,
+  groups: readonly NotificationSettingGroup[],
+): NotificationId[] | null {
+  const group = groups.find((row) => row.id === filters.scope) ?? null;
+  if (filters.scope && !group) {
+    return [];
+  }
+  if (filters.event) {
+    if (!isNotificationId(filters.event)) {
+      return [];
+    }
+    if (group && !group.ids.includes(filters.event)) {
+      return [];
+    }
+    return [filters.event];
+  }
+  return group ? [...group.ids] : null;
 }
 
 export function inboxPageWindow(
@@ -47,7 +113,21 @@ export function inboxPageLabel(input: {
   return `Showing ${input.from}–${input.to} of ${input.total}`;
 }
 
-export function inboxPath(page = 1): string {
+export function inboxPath(page = 1, filters: InboxFilters = EMPTY_INBOX_FILTERS): string {
+  const params = new URLSearchParams();
+  if (filters.status) {
+    params.set("status", filters.status);
+  }
+  if (filters.scope) {
+    params.set("scope", filters.scope);
+  }
+  if (filters.event) {
+    params.set("event", filters.event);
+  }
   const safe = parseInboxPage(page);
-  return safe > 1 ? `${INBOX_PATH}?page=${safe}` : INBOX_PATH;
+  if (safe > 1) {
+    params.set("page", String(safe));
+  }
+  const query = params.toString();
+  return query ? `${INBOX_PATH}?${query}` : INBOX_PATH;
 }

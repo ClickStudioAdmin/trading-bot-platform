@@ -125,7 +125,7 @@ Platform kill switches: `platform_settings.disabled_emails` and `disabled_badges
 
 ## Surfaces (from step 4)
 
-- `/account/notifications` — Inbox (affiliate-only allowed). 20 per page (`?page=`), same Previous / Next as Billing.
+- `/account/notifications` — Inbox (affiliate-only allowed). Status / Scope / Event filters (same Apply / Clear bar as desk Activity). 20 per page (`?page=`), same Previous / Next as Billing. Message / Date / Actions table with checkbox bulk Mark read / Mark unread. Desk notices open Activity with `?desk=` so the layout does not bounce.
 - `/account/settings?tab=notifications`
 - `/admin/settings?tab=notifications` (Member list + Admin list; Email / In-app / Alert)
 - `/admin/email-templates` — locked `NoticeEmail` previews

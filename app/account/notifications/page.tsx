@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LocalTime } from "@/components/local-time";
+import { InboxBulkTable } from "@/components/inbox-bulk-table";
 import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { listTradingAccounts } from "@/lib/accounts/store";
 import { getSessionMember } from "@/lib/auth/session";
+import { markNotificationsReadAction } from "@/lib/notifications/actions";
+import { resolveInboxHref } from "@/lib/notifications/hrefs";
 import {
-  markNotificationsReadAction,
-  markNotificationsUnreadAction,
-} from "@/lib/notifications/actions";
-import {
+  inboxHasFilters,
+  inboxFilterTemplates,
   inboxPageLabel,
   inboxPath,
+  parseInboxFilters,
   parseInboxPage,
 } from "@/lib/notifications/inbox";
+import { NOTIFICATION_LABELS, memberSettingGroups } from "@/lib/notifications/settings";
 import { firstSearchValue } from "@/lib/paper/open";
 import {
   countUnreadUserNotifications,
@@ -35,14 +38,38 @@ export default async function AccountNotificationsPage({
     redirect("/sign-in");
   }
   const params = await searchParams;
+  const groups = memberSettingGroups(!member.platformMember);
+  const filters = parseInboxFilters(params, groups);
   const page = parseInboxPage(firstSearchValue(params.page));
-  const [list, unread] = await Promise.all([
-    listUserNotificationPage(member.id, page),
+  const templates = inboxFilterTemplates(filters, groups);
+  const events = groups.flatMap((group) =>
+    filters.scope && group.id !== filters.scope ? [] : group.ids,
+  );
+  const [list, unread, desks] = await Promise.all([
+    listUserNotificationPage(member.id, page, undefined, {
+      status: filters.status,
+      templates,
+    }),
     countUnreadUserNotifications(member.id),
+    listTradingAccounts(member.id),
   ]);
   if (page !== list.page) {
-    redirect(inboxPath(list.page));
+    redirect(inboxPath(list.page, filters));
   }
+  const rows = list.rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    body: row.body,
+    href: resolveInboxHref({
+      href: row.href,
+      title: row.title,
+      template: row.template,
+      desks,
+    }),
+    readAt: row.readAt,
+    createdAt: row.createdAt,
+  }));
+  const filteredEmpty = list.total === 0 && inboxHasFilters(filters);
 
   return (
     <div>
@@ -53,6 +80,9 @@ export default async function AccountNotificationsPage({
             <form action={markNotificationsReadAction}>
               <input type="hidden" name="all" value="1" />
               <input type="hidden" name="page" value={String(list.page)} />
+              <input type="hidden" name="status" value={filters.status} />
+              <input type="hidden" name="scope" value={filters.scope} />
+              <input type="hidden" name="event" value={filters.event} />
               <PendingSubmitButton
                 pendingLabel="Marking…"
                 className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
@@ -74,60 +104,77 @@ export default async function AccountNotificationsPage({
         </Link>
         .
       </p>
-      {list.total === 0 ? (
+      <form
+        method="get"
+        className="mt-6 rounded-card border border-line bg-surface p-4"
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="block text-xs text-ink-muted">
+            Status
+            <select
+              name="status"
+              defaultValue={filters.status}
+              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+            >
+              <option value="">All</option>
+              <option value="unread">Unread</option>
+              <option value="read">Read</option>
+            </select>
+          </label>
+          <label className="block text-xs text-ink-muted">
+            Scope
+            <select
+              name="scope"
+              defaultValue={filters.scope}
+              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+            >
+              <option value="">All</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-xs text-ink-muted">
+            Event
+            <select
+              name="event"
+              defaultValue={filters.event}
+              className="mt-1 w-full rounded-control border border-line bg-surface-raised px-3 py-2 text-sm text-ink focus:border-line-strong focus:outline-none"
+            >
+              <option value="">All</option>
+              {events.map((id) => (
+                <option key={id} value={id}>
+                  {NOTIFICATION_LABELS[id]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <PendingSubmitButton
+            pendingLabel="Applying…"
+            className="rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink"
+          >
+            Apply filters
+          </PendingSubmitButton>
+          <Link
+            href="/account/notifications"
+            className="rounded-control border border-line px-4 py-2 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+          >
+            Clear
+          </Link>
+        </div>
+      </form>
+      {list.total === 0 && !filteredEmpty ? (
         <p className="mt-6 rounded-card border border-line bg-surface px-5 py-6 text-sm text-ink-muted">
           No notices yet.
         </p>
       ) : (
         <div className="mt-6">
-          <ul className="divide-y divide-line rounded-card border border-line bg-surface">
-            {list.rows.map((row) => (
-              <li
-                key={row.id}
-                className={`flex flex-wrap items-start justify-between gap-3 px-5 py-4 ${
-                  row.readAt ? "" : "bg-warning/5"
-                }`}
-              >
-                <div className="min-w-0 flex-1">
-                  <form action={markNotificationsReadAction}>
-                    <input type="hidden" name="id" value={row.id} />
-                    <input type="hidden" name="next" value={row.href} />
-                    <button
-                      type="submit"
-                      className={`text-left text-sm hover:text-accent ${
-                        row.readAt ? "text-ink-muted" : "font-medium text-ink"
-                      }`}
-                    >
-                      {row.title}
-                    </button>
-                  </form>
-                  {row.body ? (
-                    <p className="mt-1 text-sm text-ink-muted">{row.body}</p>
-                  ) : null}
-                  <p className="mt-2 text-xs text-ink-faint">
-                    <LocalTime at={row.createdAt} />
-                  </p>
-                </div>
-                <form
-                  action={
-                    row.readAt
-                      ? markNotificationsUnreadAction
-                      : markNotificationsReadAction
-                  }
-                >
-                  <input type="hidden" name="id" value={row.id} />
-                  <input type="hidden" name="page" value={String(list.page)} />
-                  <PendingSubmitButton
-                    pendingLabel="Saving…"
-                    className="rounded-control px-2 py-1 text-xs text-ink-faint hover:bg-surface-raised hover:text-ink"
-                  >
-                    {row.readAt ? "Mark unread" : "Mark read"}
-                  </PendingSubmitButton>
-                </form>
-              </li>
-            ))}
-          </ul>
-          <InboxPager list={list} />
+          <InboxBulkTable rows={rows} page={list.page} filters={filters} />
+          <InboxPager list={list} filters={filters} />
         </div>
       )}
     </div>
@@ -136,6 +183,7 @@ export default async function AccountNotificationsPage({
 
 function InboxPager({
   list,
+  filters,
 }: {
   list: {
     page: number;
@@ -144,6 +192,7 @@ function InboxPager({
     from: number;
     to: number;
   };
+  filters: Parameters<typeof inboxPath>[1];
 }) {
   if (list.total === 0) {
     return null;
@@ -155,7 +204,7 @@ function InboxPager({
         <div className="flex gap-2">
           {list.page > 1 ? (
             <Link
-              href={inboxPath(list.page - 1)}
+              href={inboxPath(list.page - 1, filters)}
               className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
             >
               Previous
@@ -163,7 +212,7 @@ function InboxPager({
           ) : null}
           {list.page < list.pageCount ? (
             <Link
-              href={inboxPath(list.page + 1)}
+              href={inboxPath(list.page + 1, filters)}
               className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
             >
               Next

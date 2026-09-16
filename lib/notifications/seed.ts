@@ -1,5 +1,7 @@
+import { listTradingAccounts } from "@/lib/accounts/store";
 import { createServiceClient } from "@/lib/supabase/admin";
 import { inboxBody, inboxTitle, notificationCopy } from "./copy";
+import { resolveInboxHref } from "./hrefs";
 import { insertUserNotification } from "./store";
 
 type SeedRow = {
@@ -173,14 +175,21 @@ export async function seedUserInbox(userId: string): Promise<number> {
   if (!supabase || !userId) {
     return 0;
   }
+  const desks = await listTradingAccounts(userId);
   let inserted = 0;
   for (const row of sampleInboxNotices()) {
+    const title = inboxTitle(row.notice);
     const id = await insertUserNotification({
       userId,
       template: row.template,
-      title: inboxTitle(row.notice),
+      title,
       body: inboxBody(row.notice),
-      href: row.notice.actionUrl,
+      href: resolveInboxHref({
+        href: row.notice.actionUrl,
+        title,
+        template: row.template,
+        desks,
+      }),
     });
     if (id == null) {
       continue;

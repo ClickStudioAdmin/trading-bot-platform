@@ -16,7 +16,13 @@ import {
   isBadgeId,
   SAMPLE_BADGE_COUNTS,
 } from "./badges-catalog";
-import { inboxPath, parseInboxPage } from "./inbox";
+import { safeNoticeHref } from "./hrefs";
+import {
+  inboxPath,
+  parseInboxFilters,
+  parseInboxPage,
+} from "./inbox";
+import { memberSettingGroups } from "./settings";
 import { seedUserInbox } from "./seed";
 import {
   markUserNotificationsRead,
@@ -25,16 +31,18 @@ import {
   savePlatformAlertSettings,
 } from "./store";
 
-function safeNoticeHref(value: unknown): string {
-  const href = String(value ?? "").trim();
-  if (href.startsWith("/") && !href.startsWith("//")) {
-    return href;
-  }
-  return inboxPath();
-}
-
-function inboxReturnPath(formData: FormData): string {
-  return inboxPath(parseInboxPage(formData.get("page")));
+function inboxReturnPath(formData: FormData, affiliateOnly: boolean): string {
+  return inboxPath(
+    parseInboxPage(formData.get("page")),
+    parseInboxFilters(
+      {
+        status: String(formData.get("status") ?? ""),
+        scope: String(formData.get("scope") ?? ""),
+        event: String(formData.get("event") ?? ""),
+      },
+      memberSettingGroups(affiliateOnly),
+    ),
+  );
 }
 
 function parseIds(formData: FormData): number[] {
@@ -69,14 +77,14 @@ export async function markNotificationsReadAction(formData: FormData) {
   if (typeof next === "string" && next.trim()) {
     redirect(safeNoticeHref(next));
   }
-  redirect(inboxReturnPath(formData));
+  redirect(inboxReturnPath(formData, !member.platformMember));
 }
 
 export async function markNotificationsUnreadAction(formData: FormData) {
   const member = await requireMember();
   await markUserNotificationsUnread(member.id, parseIds(formData));
   refreshNoticePaths();
-  redirect(inboxReturnPath(formData));
+  redirect(inboxReturnPath(formData, !member.platformMember));
 }
 
 export async function saveMemberNotificationPrefsAction(formData: FormData) {

@@ -19,6 +19,7 @@ import {
   loadMemberNotificationChrome,
   memberOverviewAttention,
 } from "@/lib/notifications/badges";
+import { resolveInboxHref } from "@/lib/notifications/hrefs";
 import { listUserNotifications } from "@/lib/notifications/store";
 import { redirect } from "next/navigation";
 
@@ -123,7 +124,12 @@ export default async function AccountOverviewPage() {
             {notices.map((row) => (
               <li key={row.id} className="py-3 first:pt-0 last:pb-0">
                 <Link
-                  href={row.href}
+                  href={resolveInboxHref({
+                    href: row.href,
+                    title: row.title,
+                    template: row.template,
+                    desks: accounts,
+                  })}
                   className={`text-sm hover:text-accent ${
                     row.readAt ? "text-ink-muted" : "text-ink"
                   }`}
