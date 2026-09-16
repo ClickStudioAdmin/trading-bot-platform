@@ -27,6 +27,7 @@ export {
   pathAllowsAffiliateOnly,
   pathAllowsUnverified,
   RESET_PASSWORD_PATH,
+  SIGN_IN_2FA_PATH,
   SIGN_IN_PATH,
   SIGN_UP_PATH,
   VERIFY_EMAIL_PATH,

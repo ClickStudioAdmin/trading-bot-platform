@@ -159,7 +159,7 @@ Encrypts API keys at rest. Server only. Different values on Development and Prod
 
 Never `NEXT_PUBLIC_`. Never put the production key on Development. Local `.env.local` may hold a dev-only key; do not commit it.
 
-The same key encrypts the Futures webhook token (AAD `tbp.futures.webhook.v1`) so Settings can show the URL. The path token is the secret. Never `NEXT_PUBLIC_`.
+The same key encrypts the Futures webhook token (AAD `tbp.futures.webhook.v1`) so Settings can show the URL. The path token is the secret. It also encrypts Google Authenticator TOTP secrets on `members` (AAD `tbp.totp.v1`). Never `NEXT_PUBLIC_`.
 
 ## TradingView webhook (Phase 9)
 

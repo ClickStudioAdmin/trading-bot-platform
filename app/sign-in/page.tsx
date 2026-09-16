@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { signIn } from "@/lib/auth/actions";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { SIGN_IN_2FA_PATH } from "@/lib/auth/onboarding-path";
 import { redirectSignedInHome } from "@/lib/auth/onboarding";
+import { getSignInChallengeUserId } from "@/lib/auth/session";
 import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -16,6 +19,9 @@ export default async function SignInPage({
   searchParams: Promise<{ error?: string; verified?: string; reset?: string }>;
 }) {
   await redirectSignedInHome();
+  if (await getSignInChallengeUserId()) {
+    redirect(SIGN_IN_2FA_PATH);
+  }
 
   const { error, verified, reset } = await searchParams;
 

@@ -6,6 +6,7 @@ export const RESET_PASSWORD_PATH = "/reset-password";
 export const AFFILIATES_PATH = "/affiliates";
 export const SIGN_UP_PATH = "/sign-up";
 export const SIGN_IN_PATH = "/sign-in";
+export const SIGN_IN_2FA_PATH = "/sign-in/2fa";
 
 const UNVERIFIED_PREFIXES = [
   "/api/",

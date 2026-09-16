@@ -8,7 +8,7 @@ Never trust the browser for entitlements, verification, 2FA, or admin permission
 
 ## Status
 
-**V1 item 1 (identity) in repo** 16 Sep 2026: verify on signup + forgot password + unverified wall. Stop. Do not start 2FA (V1 item 2) or gates (V1 item 4) until Click says go.
+**V1 item 1 (identity) in repo** 16 Sep 2026: verify on signup + forgot password + unverified wall. **V1 item 2 (2FA) in repo** 17 Sep 2026: Google Authenticator enroll + sign-in. Stop. Do not start gates (V1 item 4) until Click says go.
 
 ## Purpose
 
@@ -91,7 +91,7 @@ Never trust the browser. `requireVerifiedEmail()` on every mutating server actio
 #### Out of this slice
 
 - Change-email flow (V2)
-- 2FA enroll + sign-in ([phase-2fa.md](phase-2fa.md), V1 item 2)
+- 2FA enroll + sign-in ([phase-2fa.md](phase-2fa.md), V1 item 2) — in repo 17 Sep 2026
 - `assertEntitlement` / Upgrade banners (V1 item 4)
 - Downgrade grace (V1 item 4)
 - Onboarding wizard refine (V1 item 5)

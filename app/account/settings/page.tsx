@@ -16,13 +16,21 @@ import { saveMemberNotificationPrefsAction } from "@/lib/notifications/actions";
 import { memberSettingGroups } from "@/lib/notifications/settings";
 import { loadNotificationPreferences } from "@/lib/notifications/store";
 import { firstSearchValue } from "@/lib/paper/open";
-import { getSessionMember } from "@/lib/auth/session";
+import { getSessionMember, readRecoveryCodesFlash } from "@/lib/auth/session";
+import { totpOtpauthUrl } from "@/lib/auth/totp";
+import { totpQrSvg } from "@/lib/auth/totp-qr";
+import {
+  decryptMemberTotpSecret,
+  loadMemberTotp,
+  memberTotpEnabled,
+} from "@/lib/auth/totp-store";
 import { MemberNotificationSettingsForm } from "@/components/notification-settings-form";
+import { TotpSettings } from "@/components/totp-settings";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Settings",
-  description: "Desk profile, password, and notifications.",
+  description: "Desk profile, password, Google Authenticator, and notifications.",
 };
 
 const fieldClass =
@@ -44,9 +52,14 @@ export default async function AccountSettingsPage({
   const tab =
     rawTab === "password" || saved === "password"
       ? "password"
-      : rawTab === "notifications" || saved === "notifications"
-        ? "notifications"
-        : "profile";
+      : rawTab === "security" ||
+          saved === "2fa" ||
+          saved === "2fa-off" ||
+          firstSearchValue(params.enroll) === "1"
+        ? "security"
+        : rawTab === "notifications" || saved === "notifications"
+          ? "notifications"
+          : "profile";
   const showPlatformSettings = member.platformMember;
   const trader =
     tab === "profile" && showPlatformSettings
@@ -88,6 +101,12 @@ export default async function AccountSettingsPage({
           Password
         </TabLink>
         <TabLink
+          href="/account/settings?tab=security"
+          selected={tab === "security"}
+        >
+          Security
+        </TabLink>
+        <TabLink
           href="/account/settings?tab=notifications"
           selected={tab === "notifications"}
         >
@@ -110,6 +129,16 @@ export default async function AccountSettingsPage({
       {saved === "password" ? (
         <p className="mt-6 text-sm text-success">Password changed.</p>
       ) : null}
+      {saved === "2fa" ? (
+        <p className="mt-6 text-sm text-success">
+          Google Authenticator is on.
+        </p>
+      ) : null}
+      {saved === "2fa-off" ? (
+        <p className="mt-6 text-sm text-success">
+          Google Authenticator is off.
+        </p>
+      ) : null}
       {saved === "notifications" ? (
         <p className="mt-6 text-sm text-success">Notification settings saved.</p>
       ) : null}
@@ -119,6 +148,8 @@ export default async function AccountSettingsPage({
           affiliateOnly={!showPlatformSettings}
           userId={member.id}
         />
+      ) : tab === "security" ? (
+        <SecuritySettingsTab email={member.email} userId={member.id} />
       ) : tab === "password" ? (
         <form
           action={changeOwnPassword}
@@ -303,6 +334,34 @@ export default async function AccountSettingsPage({
         </>
       )}
     </div>
+  );
+}
+
+async function SecuritySettingsTab({
+  email,
+  userId,
+}: {
+  email: string;
+  userId: string;
+}) {
+  const totp = await loadMemberTotp(userId);
+  const enabled = memberTotpEnabled(totp);
+  const recoveryCodes = await readRecoveryCodesFlash();
+  const pendingSecret =
+    !enabled && totp ? decryptMemberTotpSecret(totp) : null;
+  const pending =
+    pendingSecret != null
+      ? {
+          secret: pendingSecret,
+          qrSvg: await totpQrSvg(totpOtpauthUrl(email, pendingSecret)),
+        }
+      : null;
+  return (
+    <TotpSettings
+      enabled={enabled}
+      pending={pending}
+      recoveryCodes={recoveryCodes}
+    />
   );
 }
 

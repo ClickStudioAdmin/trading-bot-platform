@@ -5,6 +5,7 @@ import { listTradingAccounts } from "@/lib/accounts/store";
 import {
   FORGOT_PASSWORD_PATH,
   RESET_PASSWORD_PATH,
+  SIGN_IN_2FA_PATH,
   SIGN_IN_PATH,
   SIGN_UP_PATH,
   VERIFY_PATH,
@@ -13,8 +14,10 @@ import { signedInHomePath } from "@/lib/auth/onboarding";
 import {
   clearSession,
   createSession,
+  createSignInChallenge,
   getSessionMember,
 } from "@/lib/auth/session";
+import { loadMemberTotp, memberTotpEnabled } from "@/lib/auth/totp-store";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import {
   consumeMemberAuthLink,
@@ -272,6 +275,11 @@ export async function signIn(formData: FormData) {
 
   if (!stored || !verifyPassword(password, stored)) {
     redirect("/sign-in?error=Unknown%20email%20or%20password.");
+  }
+
+  if (memberTotpEnabled(await loadMemberTotp(userId))) {
+    await createSignInChallenge(userId);
+    redirect(SIGN_IN_2FA_PATH);
   }
 
   await createSession(userId);

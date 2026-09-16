@@ -10,7 +10,7 @@ Never trust the browser for payment status, desk health, or unread counts.
 
 ## Status
 
-Steps 1–8 in repo 16 Sep 2026. Add `RESEND_API_KEY` + `EMAIL_FROM` on Vercel and Fly (develop ≠ production). Click desk-tests mute, unread, badge clear, and no fill spam. Identity is the current V1 item. Do not start 2FA, gates, or admin roles until Click says go.
+Steps 1–8 in repo 16 Sep 2026. Add `RESEND_API_KEY` + `EMAIL_FROM` on Vercel and Fly (develop ≠ production). Click desk-tests mute, unread, badge clear, and no fill spam. 2FA is in repo. Do not start gates or admin roles until Click says go.
 
 ## Purpose
 

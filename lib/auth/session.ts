@@ -9,10 +9,18 @@ import {
   type TradingAccount,
 } from "@/lib/accounts/model";
 import {
+  CHALLENGE_COOKIE,
+  CHALLENGE_MINUTES,
+  parseChallengeToken,
+  parseRecoveryFlash,
   parseSessionToken,
+  RECOVERY_FLASH_COOKIE,
+  RECOVERY_FLASH_MINUTES,
   SESSION_COOKIE,
   SESSION_DAYS,
   sessionSecret,
+  signChallengeToken,
+  signRecoveryFlash,
   signSessionToken,
 } from "@/lib/auth/token";
 import { VERIFY_PATH } from "@/lib/auth/onboarding-path";
@@ -30,6 +38,7 @@ export type SessionMember = {
   status: MemberStatus;
   platformMember: boolean;
   emailVerifiedAt: string | null;
+  totpEnabled: boolean;
 };
 
 export type SessionContext = {
@@ -70,55 +79,76 @@ export async function getSessionMember(): Promise<SessionMember | null> {
   if (!supabase) {
     return null;
   }
-  let { data, error } = await supabase
-    .from("members")
-    .select(
-      "user_id, email, name, role, status, platform_member, email_verified_at",
-    )
-    .eq("user_id", parsed.userId)
-    .maybeSingle();
-  if (error) {
-    const retry = await supabase
-      .from("members")
-      .select("user_id, email, name, role, status, platform_member")
-      .eq("user_id", parsed.userId)
-      .maybeSingle();
-    data = retry.data
-      ? { ...retry.data, email_verified_at: "legacy" }
-      : null;
-    if (retry.error) {
-      const legacy = await supabase
-        .from("members")
-        .select("user_id, email, name, role, status")
-        .eq("user_id", parsed.userId)
-        .maybeSingle();
-      data = legacy.data
-        ? {
-            ...legacy.data,
-            platform_member: true,
-            email_verified_at: "legacy",
-          }
-        : null;
-      error = legacy.error;
-    } else {
-      error = retry.error;
-    }
-  }
-  if (error || !data || data.status === "disabled") {
+  const loaded = await loadSessionMemberRow(supabase, parsed.userId);
+  if (!loaded || loaded.status === "disabled") {
     return null;
   }
-  const verifiedRaw = data.email_verified_at;
+  const verifiedRaw = loaded.email_verified_at;
+  const totpRaw = loaded.totp_enabled_at;
   return {
-    id: String(data.user_id),
-    email: String(data.email),
-    name: String(data.name),
-    role: data.role === "admin" ? "admin" : "member",
-    status: data.status === "disabled" ? "disabled" : "active",
-    platformMember: data.platform_member !== false,
+    id: String(loaded.user_id),
+    email: String(loaded.email),
+    name: String(loaded.name),
+    role: loaded.role === "admin" ? "admin" : "member",
+    status: loaded.status === "disabled" ? "disabled" : "active",
+    platformMember: loaded.platform_member !== false,
     emailVerifiedAt:
       verifiedRaw == null || verifiedRaw === ""
         ? null
         : String(verifiedRaw),
+    totpEnabled: totpRaw != null && totpRaw !== "",
+  };
+}
+
+async function loadSessionMemberRow(
+  supabase: NonNullable<ReturnType<typeof createServiceClient>>,
+  userId: string,
+) {
+  const full = await supabase
+    .from("members")
+    .select(
+      "user_id, email, name, role, status, platform_member, email_verified_at, totp_enabled_at",
+    )
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!full.error) {
+    return full.data;
+  }
+  const withoutTotp = await supabase
+    .from("members")
+    .select(
+      "user_id, email, name, role, status, platform_member, email_verified_at",
+    )
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!withoutTotp.error && withoutTotp.data) {
+    return { ...withoutTotp.data, totp_enabled_at: null };
+  }
+  const withoutVerified = await supabase
+    .from("members")
+    .select("user_id, email, name, role, status, platform_member")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!withoutVerified.error && withoutVerified.data) {
+    return {
+      ...withoutVerified.data,
+      email_verified_at: "legacy",
+      totp_enabled_at: null,
+    };
+  }
+  const legacy = await supabase
+    .from("members")
+    .select("user_id, email, name, role, status")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (legacy.error || !legacy.data) {
+    return null;
+  }
+  return {
+    ...legacy.data,
+    platform_member: true,
+    email_verified_at: "legacy",
+    totp_enabled_at: null,
   };
 }
 
@@ -168,6 +198,7 @@ export async function createSession(userId: string): Promise<void> {
     path: "/",
     expires: new Date(expiresAtMs),
   });
+  store.delete(CHALLENGE_COOKIE);
   const accounts = await listTradingAccounts(userId);
   const account = pickDefaultAccount(accounts);
   if (account) {
@@ -191,4 +222,71 @@ export async function clearSession(): Promise<void> {
   const store = await cookies();
   store.delete(SESSION_COOKIE);
   store.delete(ACCOUNT_COOKIE);
+  store.delete(CHALLENGE_COOKIE);
+  store.delete(RECOVERY_FLASH_COOKIE);
+}
+
+function cookieOptions(expiresAtMs: number) {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    expires: new Date(expiresAtMs),
+  };
+}
+
+export async function createSignInChallenge(userId: string): Promise<void> {
+  if (!sessionSecret()) {
+    throw new Error("Session secret is not configured.");
+  }
+  const expiresAtMs = Date.now() + CHALLENGE_MINUTES * 60_000;
+  const store = await cookies();
+  store.delete(SESSION_COOKIE);
+  store.set(
+    CHALLENGE_COOKIE,
+    signChallengeToken(userId, expiresAtMs),
+    cookieOptions(expiresAtMs),
+  );
+}
+
+export async function getSignInChallengeUserId(): Promise<string | null> {
+  const store = await requestCookies();
+  const token = store?.get(CHALLENGE_COOKIE)?.value;
+  if (!token) {
+    return null;
+  }
+  return parseChallengeToken(token)?.userId ?? null;
+}
+
+export async function clearSignInChallenge(): Promise<void> {
+  const store = await cookies();
+  store.delete(CHALLENGE_COOKIE);
+}
+
+export async function setRecoveryCodesFlash(codes: string[]): Promise<void> {
+  if (!sessionSecret()) {
+    throw new Error("Session secret is not configured.");
+  }
+  const expiresAtMs = Date.now() + RECOVERY_FLASH_MINUTES * 60_000;
+  const store = await cookies();
+  store.set(
+    RECOVERY_FLASH_COOKIE,
+    signRecoveryFlash(codes, expiresAtMs),
+    cookieOptions(expiresAtMs),
+  );
+}
+
+export async function readRecoveryCodesFlash(): Promise<string[] | null> {
+  const store = await requestCookies();
+  const token = store?.get(RECOVERY_FLASH_COOKIE)?.value;
+  if (!token) {
+    return null;
+  }
+  return parseRecoveryFlash(token);
+}
+
+export async function clearRecoveryCodesFlash(): Promise<void> {
+  const store = await cookies();
+  store.delete(RECOVERY_FLASH_COOKIE);
 }

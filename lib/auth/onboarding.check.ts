@@ -6,6 +6,7 @@ import {
   pathAllowsAffiliateOnly,
   pathAllowsUnverified,
   RESET_PASSWORD_PATH,
+  SIGN_IN_2FA_PATH,
   SIGN_UP_PATH,
   VERIFY_EMAIL_PATH,
   VERIFY_PATH,
@@ -19,6 +20,8 @@ assert.equal(pathAllowsUnverified("/verify-email"), true);
 assert.equal(pathAllowsUnverified("/forgot-password"), true);
 assert.equal(pathAllowsUnverified("/reset-password"), true);
 assert.equal(pathAllowsUnverified("/sign-in"), true);
+assert.equal(pathAllowsUnverified(SIGN_IN_2FA_PATH), true);
+assert.equal(SIGN_IN_2FA_PATH, "/sign-in/2fa");
 assert.equal(pathAllowsUnverified("/sign-up"), true);
 assert.equal(pathAllowsUnverified("/pricing"), true);
 assert.equal(pathAllowsUnverified("/r/AB12CD"), true);

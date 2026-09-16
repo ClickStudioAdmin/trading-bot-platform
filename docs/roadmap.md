@@ -28,8 +28,8 @@ Stop after each item until Click says go.
 
 | # | Item | Notes |
 | --- | --- | --- |
-| 1 | **Identity** | **Current.** Email verify on signup + forgot password + unverified wall. Wizard removed; new users land on Overview after confirm. Spec: [phase-entitlements.md](phase-entitlements.md) (identity slice). Step 1 in repo 16 Sep 2026. |
-| 2 | **2FA** | Settings enroll + sign-in challenge only. TOTP, recovery codes shown once. **Not** a plan gate yet. Spec: [phase-2fa.md](phase-2fa.md). Do not start until Click says go. |
+| 1 | **Identity** | Email verify on signup + forgot password + unverified wall. Wizard removed; new users land on Overview after confirm. Spec: [phase-entitlements.md](phase-entitlements.md) (identity slice). In repo 16 Sep 2026. |
+| 2 | **2FA** | **Current.** Settings enroll + sign-in challenge only. Google Authenticator TOTP, recovery codes shown once. **Not** a plan gate yet. Spec: [phase-2fa.md](phase-2fa.md). In repo 17 Sep 2026. |
 | 3 | **UI refinement and cleanup** | Desk and account chrome. No phase doc until Click starts it and locks screens. |
 | 4 | **Entitlements and plan / 2FA gates** | `assertEntitlement`, visible/disabled + Upgrade, a plan may require verified email and/or 2FA, downgrade grace. Spec: [phase-entitlements.md](phase-entitlements.md) (gates). |
 | 5 | **Onboarding wizards and Starter Packs** | Reimagine first-run and new-desk. Starter Packs copy/apply idle, never arm. Spec: [phase-onboarding.md](phase-onboarding.md). |
