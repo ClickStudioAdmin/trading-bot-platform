@@ -177,6 +177,79 @@ export function notificationAttentionItems(input: {
   return items;
 }
 
+export function adminOverviewAttention(
+  counts: AdminActionCounts,
+): OverviewAttention[] {
+  const items: OverviewAttention[] = [];
+  if (counts.affiliatePayouts === 1) {
+    items.push({
+      label: "One affiliate payout is waiting to send.",
+      href: "/admin/affiliates",
+    });
+  } else if (counts.affiliatePayouts > 1) {
+    items.push({
+      label: `${counts.affiliatePayouts} affiliate payouts are waiting to send.`,
+      href: "/admin/affiliates",
+    });
+  }
+  if (counts.walletWithdraws === 1) {
+    items.push({
+      label: "One Account Balance withdraw is waiting.",
+      href: "/admin/billing?tab=withdrawals",
+    });
+  } else if (counts.walletWithdraws > 1) {
+    items.push({
+      label: `${counts.walletWithdraws} Account Balance withdraws are waiting.`,
+      href: "/admin/billing?tab=withdrawals",
+    });
+  }
+  if (counts.sweepFailed === 1) {
+    items.push({
+      label: "One credited deposit did not sweep.",
+      href: "/admin/billing",
+    });
+  } else if (counts.sweepFailed > 1) {
+    items.push({
+      label: `${counts.sweepFailed} credited deposits did not sweep.`,
+      href: "/admin/billing",
+    });
+  }
+  if (counts.gasLow === 1) {
+    items.push({
+      label: "The gas wallet is low on one chain.",
+      href: "/admin/billing",
+    });
+  } else if (counts.gasLow > 1) {
+    items.push({
+      label: `The gas wallet is low on ${counts.gasLow} chains.`,
+      href: "/admin/billing",
+    });
+  }
+  if (counts.pastDueMembers === 1) {
+    items.push({
+      label: "One member is past due.",
+      href: "/admin/members",
+    });
+  } else if (counts.pastDueMembers > 1) {
+    items.push({
+      label: `${counts.pastDueMembers} members are past due.`,
+      href: "/admin/members",
+    });
+  }
+  if (counts.deskCritical === 1) {
+    items.push({
+      label: "One live desk has a critical issue.",
+      href: "/admin/logs?level=error",
+    });
+  } else if (counts.deskCritical > 1) {
+    items.push({
+      label: `${counts.deskCritical} live desks have a critical issue.`,
+      href: "/admin/logs?level=error",
+    });
+  }
+  return items;
+}
+
 export function memberOverviewAttention(input: {
   accounts: readonly {
     id: string;

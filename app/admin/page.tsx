@@ -4,6 +4,10 @@ import { PageHeading } from "@/components/page-heading";
 import { loadAdminOverview } from "@/lib/admin/overview";
 import { LocalTime } from "@/components/local-time";
 import { formatDeskType } from "@/lib/accounts/model";
+import {
+  adminOverviewAttention,
+  loadAdminNotificationChrome,
+} from "@/lib/notifications/badges";
 
 export const metadata: Metadata = {
   title: "Admin overview",
@@ -12,6 +16,8 @@ export const metadata: Metadata = {
 
 export default async function AdminOverviewPage() {
   const overview = await loadAdminOverview();
+  const chrome = await loadAdminNotificationChrome();
+  const attention = adminOverviewAttention(chrome.actions);
   const openPositions =
     overview.positions.cashAndCarryOpen + overview.positions.perpsOpen;
 
@@ -31,6 +37,29 @@ export default async function AdminOverviewPage() {
           Auth is not configured on this environment, so counts are empty.
         </p>
       ) : null}
+
+      <section
+        className={`rounded-card border p-5 ${
+          attention.length > 0
+            ? "border-warning/40 bg-surface"
+            : "border-line bg-surface"
+        }`}
+      >
+        <h2 className="text-lg font-semibold tracking-tight">Attention</h2>
+        {attention.length === 0 ? (
+          <p className="mt-3 text-sm text-ink-muted">Nothing needs attention.</p>
+        ) : (
+          <ul className="mt-3 space-y-2 text-sm">
+            {attention.map((item) => (
+              <li key={item.label}>
+                <Link href={item.href} className="text-warning hover:text-ink">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section>
         <h2 className="text-xl font-semibold tracking-tight">Snapshot</h2>

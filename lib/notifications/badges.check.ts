@@ -6,6 +6,7 @@ import {
   EMPTY_MEMBER_ACTIONS,
   formatNavBadgeCount,
   adminBillingTabCounts,
+  adminOverviewAttention,
   memberActionTotal,
   memberBillingActionTotal,
   memberBillingTabCounts,
@@ -159,6 +160,45 @@ assert.deepEqual(
     {
       label: "2 copy invites are waiting.",
       href: "/account/copy",
+    },
+  ],
+);
+
+assert.deepEqual(adminOverviewAttention(EMPTY_ADMIN_ACTIONS), []);
+assert.deepEqual(
+  adminOverviewAttention({
+    ...EMPTY_ADMIN_ACTIONS,
+    affiliatePayouts: 1,
+    walletWithdraws: 2,
+    sweepFailed: 1,
+    gasLow: 2,
+    pastDueMembers: 1,
+    deskCritical: 3,
+  }),
+  [
+    {
+      label: "One affiliate payout is waiting to send.",
+      href: "/admin/affiliates",
+    },
+    {
+      label: "2 Account Balance withdraws are waiting.",
+      href: "/admin/billing?tab=withdrawals",
+    },
+    {
+      label: "One credited deposit did not sweep.",
+      href: "/admin/billing",
+    },
+    {
+      label: "The gas wallet is low on 2 chains.",
+      href: "/admin/billing",
+    },
+    {
+      label: "One member is past due.",
+      href: "/admin/members",
+    },
+    {
+      label: "3 live desks have a critical issue.",
+      href: "/admin/logs?level=error",
     },
   ],
 );

@@ -131,7 +131,7 @@ Platform kill switches: `platform_settings.disabled_emails` and `disabled_badges
 - `/admin/email-templates` — locked `NoticeEmail` previews
 - Header Inbox (unread only); amber action counts on Overview, Billing, Affiliates, and the destination tab / Copy Trading link
 - Admin Overview, Billing, Affiliates amber counts
-- Overview Attention + recent notifications widget
+- Overview Attention + recent notifications widget. Admin Overview Attention lists gated admin alerts with links to Affiliates, Billing, Members, and Logs.
 
 Desk Activity and blotters stay. They are not the inbox.
 

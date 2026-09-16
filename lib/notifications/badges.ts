@@ -38,6 +38,7 @@ export {
   EMPTY_MEMBER_ACTIONS,
   formatNavBadgeCount,
   adminBillingTabCounts,
+  adminOverviewAttention,
   memberActionTotal,
   memberBillingActionTotal,
   memberBillingTabCounts,
