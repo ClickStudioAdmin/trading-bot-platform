@@ -5,7 +5,6 @@ import { PageHeading } from "@/components/page-heading";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { listTradingAccounts } from "@/lib/accounts/store";
 import { getSessionMember } from "@/lib/auth/session";
-import { markNotificationsReadAction } from "@/lib/notifications/actions";
 import { resolveInboxHref } from "@/lib/notifications/hrefs";
 import {
   inboxHasFilters,
@@ -73,26 +72,7 @@ export default async function AccountNotificationsPage({
 
   return (
     <div>
-      <PageHeading
-        title="Inbox"
-        actions={
-          unread > 0 ? (
-            <form action={markNotificationsReadAction}>
-              <input type="hidden" name="all" value="1" />
-              <input type="hidden" name="page" value={String(list.page)} />
-              <input type="hidden" name="status" value={filters.status} />
-              <input type="hidden" name="scope" value={filters.scope} />
-              <input type="hidden" name="event" value={filters.event} />
-              <PendingSubmitButton
-                pendingLabel="Marking…"
-                className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
-              >
-                Mark all read
-              </PendingSubmitButton>
-            </form>
-          ) : null
-        }
-      />
+      <PageHeading title="Inbox" />
       <p className="-mt-4 text-sm text-ink-muted">
         Email copies land here. This badge is unread notices only. Work that
         still needs doing stays on Overview and Billing. Change what you get on{" "}
@@ -173,7 +153,12 @@ export default async function AccountNotificationsPage({
         </p>
       ) : (
         <div className="mt-6">
-          <InboxBulkTable rows={rows} page={list.page} filters={filters} />
+          <InboxBulkTable
+            rows={rows}
+            page={list.page}
+            filters={filters}
+            unread={unread}
+          />
           <InboxPager list={list} filters={filters} />
         </div>
       )}

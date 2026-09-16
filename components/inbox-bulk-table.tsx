@@ -25,10 +25,12 @@ export function InboxBulkTable({
   rows,
   page,
   filters,
+  unread,
 }: {
   rows: InboxTableRow[];
   page: number;
   filters: InboxFilters;
+  unread: number;
 }) {
   const ids = useMemo(() => rows.map((row) => row.id), [rows]);
   const [selected, setSelected] = useState<number[]>([]);
@@ -70,6 +72,16 @@ export function InboxBulkTable({
             className={actionLink}
           >
             Mark unread
+          </PendingSubmitButton>
+          <PendingSubmitButton
+            formAction={markNotificationsReadAction}
+            name="all"
+            value="1"
+            pendingLabel="Marking…"
+            disabled={unread < 1}
+            className={actionLink}
+          >
+            Mark all read
           </PendingSubmitButton>
         </div>
         <div className="overflow-x-auto rounded-card border border-line bg-surface">
