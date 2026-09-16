@@ -9,6 +9,9 @@ import {
 } from "@/lib/notifications/actions";
 import type { InboxFilters } from "@/lib/notifications/inbox";
 
+const actionLink =
+  "rounded-control border border-line px-2 py-0.5 text-xs font-medium text-accent hover:text-accent-strong disabled:opacity-40";
+
 export type InboxTableRow = {
   id: number;
   title: string;
@@ -51,12 +54,12 @@ export function InboxBulkTable({
         <input type="hidden" name="status" value={filters.status} />
         <input type="hidden" name="scope" value={filters.scope} />
         <input type="hidden" name="event" value={filters.event} />
-        <div className="mb-3 flex flex-wrap gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-3">
           <PendingSubmitButton
             formAction={markNotificationsReadAction}
             pendingLabel="Marking…"
             disabled={!hasSelection}
-            className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40"
+            className={actionLink}
           >
             Mark read
           </PendingSubmitButton>
@@ -64,16 +67,16 @@ export function InboxBulkTable({
             formAction={markNotificationsUnreadAction}
             pendingLabel="Marking…"
             disabled={!hasSelection}
-            className="rounded-control border border-line px-3 py-1.5 text-sm text-ink-muted hover:bg-surface-raised hover:text-ink disabled:opacity-40"
+            className={actionLink}
           >
             Mark unread
           </PendingSubmitButton>
         </div>
         <div className="overflow-x-auto rounded-card border border-line bg-surface">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-xs uppercase tracking-[0.12em] text-ink-muted">
+          <table className="w-full min-w-[42rem] text-left text-sm">
+            <thead className="border-b border-line text-xs uppercase tracking-[0.08em] text-ink-faint">
               <tr>
-                <th className="w-10 px-5 py-3">
+                <th className="w-10 px-4 py-3">
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -83,15 +86,15 @@ export function InboxBulkTable({
                     className="size-4 accent-accent"
                   />
                 </th>
-                <th className="px-5 py-3 font-medium">Message</th>
-                <th className="px-5 py-3 font-medium">Date</th>
-                <th className="px-5 py-3 font-medium">Actions</th>
+                <th className="px-4 py-3 font-medium">Message</th>
+                <th className="px-4 py-3 font-medium">Date</th>
+                <th className="px-4 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-5 py-6 text-sm text-ink-muted">
+                  <td colSpan={4} className="px-4 py-6 text-sm text-ink-muted">
                     No notices match these filters.
                   </td>
                 </tr>
@@ -99,9 +102,11 @@ export function InboxBulkTable({
                 rows.map((row) => (
                   <tr
                     key={row.id}
-                    className={row.readAt ? undefined : "bg-warning/5"}
+                    className={`border-b border-line last:border-b-0 ${
+                      row.readAt ? "" : "bg-warning/5"
+                    }`}
                   >
-                    <td className="px-5 py-4 align-top">
+                    <td className="px-4 py-3 align-top">
                       <input
                         type="checkbox"
                         name="id"
@@ -112,7 +117,7 @@ export function InboxBulkTable({
                         className="size-4 accent-accent"
                       />
                     </td>
-                    <td className="px-5 py-4 align-top">
+                    <td className="px-4 py-3 align-top">
                       <button
                         type="submit"
                         form={`inbox-open-${row.id}`}
@@ -128,17 +133,19 @@ export function InboxBulkTable({
                         <p className="mt-1 text-ink-muted">{row.body}</p>
                       ) : null}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-4 align-top text-ink-muted">
+                    <td className="whitespace-nowrap px-4 py-3 align-top text-ink-muted">
                       <LocalTime at={row.createdAt} />
                     </td>
-                    <td className="px-5 py-4 align-top">
-                      <button
-                        type="submit"
-                        form={`inbox-row-${row.id}`}
-                        className="rounded-control px-2 py-1 text-xs text-ink-faint hover:bg-surface-raised hover:text-ink"
-                      >
-                        {row.readAt ? "Mark unread" : "Mark read"}
-                      </button>
+                    <td className="px-4 py-3 align-top">
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="submit"
+                          form={`inbox-row-${row.id}`}
+                          className={actionLink}
+                        >
+                          {row.readAt ? "Mark unread" : "Mark read"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
