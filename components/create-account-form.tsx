@@ -284,7 +284,7 @@ export function CreateAccountForm({
                   <>
                     No connections saved yet.{" "}
                     <Link
-                      href="/account/exchanges"
+                      href="/account/sub-accounts?tab=exchanges"
                       className="text-accent hover:text-accent-strong"
                     >
                       Add a connection on Exchanges

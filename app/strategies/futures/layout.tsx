@@ -186,7 +186,7 @@ export default async function FuturesLayout({
                   connected: false,
                   href:
                     connections.length === 0
-                      ? "/account/exchanges"
+                      ? "/account/sub-accounts?tab=exchanges"
                       : settingsHref,
                 }
             : {

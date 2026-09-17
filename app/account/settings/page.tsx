@@ -77,8 +77,8 @@ export default async function AccountSettingsPage({
       <p className="-mt-4 text-sm text-ink-muted">
         {showPlatformSettings ? (
           <>
-            Your desk login. Sub-accounts and exchange keys stay on their own
-            pages. Membership plans are on{" "}
+            Your desk login. Desks and exchange keys live on Manage Desks.
+            Membership plans are on{" "}
             <Link href="/account/plans" className="text-accent hover:text-accent-strong">
               Plans
             </Link>

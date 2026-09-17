@@ -212,7 +212,10 @@ const attention = memberOverviewAttention({
   updateCard: false,
 });
 assert.equal(attention[0]?.href, "/account/billing");
-assert.equal(attention.some((item) => item.href === "/account/exchanges"), true);
+assert.equal(
+  attention.some((item) => item.href === "/account/sub-accounts?tab=exchanges"),
+  true,
+);
 
 assert.equal(emailSwitchLockedOn("password_changed"), true);
 assert.equal(emailSwitchLockedOn("invoice_issued"), false);

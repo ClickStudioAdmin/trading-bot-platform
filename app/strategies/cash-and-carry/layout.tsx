@@ -104,7 +104,7 @@ export default async function CashAndCarryLayout({
                   connected: false,
                   href:
                     connections.length === 0
-                      ? "/account/exchanges"
+                      ? "/account/sub-accounts?tab=exchanges"
                       : settingsHref,
                 }
             : {

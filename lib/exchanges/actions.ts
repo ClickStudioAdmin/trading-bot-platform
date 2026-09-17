@@ -30,13 +30,14 @@ import {
 import { writeEventLog } from "@/lib/logs/write";
 import { withQuery } from "@/lib/accounts/model";
 import { getSessionContext } from "@/lib/auth/session";
+import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 function safeReturnPath(raw: unknown): string {
   const path = String(raw ?? "").trim();
   if (!path.startsWith("/") || path.startsWith("//") || path.includes("://")) {
-    return "/account/exchanges";
+    return ACCOUNT_EXCHANGES_HREF;
   }
   return path;
 }
@@ -46,7 +47,7 @@ function finish(path: string, extra: Record<string, string>): never {
 }
 
 function fail(message: string): never {
-  finish("/account/exchanges", { error: message });
+  finish(ACCOUNT_EXCHANGES_HREF, { error: message });
 }
 
 function readConnectForm(formData: FormData) {
@@ -261,7 +262,7 @@ export async function renameExchangeConnection(formData: FormData) {
   revalidatePath("/account/sub-accounts");
   revalidatePath("/strategies/cash-and-carry/settings");
   revalidatePath("/strategies/futures/settings");
-  redirect("/account/exchanges?renamed=1");
+  redirect(withQuery(ACCOUNT_EXCHANGES_HREF, { renamed: "1" }));
 }
 
 export async function replaceExchangeConnection(formData: FormData) {
@@ -387,7 +388,7 @@ export async function replaceExchangeConnection(formData: FormData) {
   revalidatePath("/strategies/cash-and-carry/settings");
   revalidatePath("/strategies/futures");
   revalidatePath("/strategies/futures/settings");
-  redirect("/account/exchanges?replaced=1");
+  redirect(withQuery(ACCOUNT_EXCHANGES_HREF, { replaced: "1" }));
 }
 
 export async function removeExchangeConnection(formData: FormData) {
@@ -437,5 +438,5 @@ export async function removeExchangeConnection(formData: FormData) {
   revalidatePath("/strategies/cash-and-carry/settings");
   revalidatePath("/strategies/futures");
   revalidatePath("/strategies/futures/settings");
-  redirect("/account/exchanges?removed=1");
+  redirect(withQuery(ACCOUNT_EXCHANGES_HREF, { removed: "1" }));
 }

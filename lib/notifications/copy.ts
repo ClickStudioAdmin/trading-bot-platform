@@ -1,4 +1,5 @@
 import { DEFAULT_PLATFORM_NAME } from "@/lib/platform/brand";
+import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 
 export type NotificationNotice = {
   subject: string;
@@ -189,7 +190,7 @@ export const notificationCopy = {
       [
         `We could not verify ${input.connectionName} (${input.venue}). Live desks on this key will not place until you replace it.`,
       ],
-      { label: "Open Exchanges", url: "/account/exchanges" },
+      { label: "Open Exchanges", url: ACCOUNT_EXCHANGES_HREF },
     ),
   password_changed: (input?: { platformName?: string }) =>
     notice(

@@ -158,7 +158,7 @@ export default async function AccountOverviewPage() {
             </p>
           </div>
           <Link
-            href="/account/exchanges"
+            href="/account/sub-accounts?tab=exchanges"
             className="text-sm text-accent hover:text-accent-strong"
           >
             Exchanges

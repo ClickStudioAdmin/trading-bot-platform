@@ -36,7 +36,7 @@ export async function AppFrame({ children }: { children: React.ReactNode }) {
           ? {
               "/account": chrome.overview,
               "/account/billing": chrome.billing,
-              "/account/exchanges": chrome.actions.unboundLive,
+              "/account/sub-accounts": chrome.actions.unboundLive,
             }
           : undefined
       }

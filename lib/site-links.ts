@@ -82,12 +82,14 @@ export const ADMIN_NAV_LINKS = [
   { href: "/admin/theme", label: "Theme" },
 ] as const;
 
+export const ACCOUNT_DESKS_HREF = "/account/sub-accounts";
+export const ACCOUNT_EXCHANGES_HREF = "/account/sub-accounts?tab=exchanges";
+
 export const ACCOUNT_DESK_LINKS = [
   { href: "/account", label: "Overview", exact: true },
   { href: "/account/settings", label: "Profile & Settings", exact: true },
   { href: "/account/billing", label: "Billing & Account", exact: false },
-  { href: "/account/exchanges", label: "Exchanges", exact: true },
-  { href: "/account/sub-accounts", label: "Manage Desks", exact: true },
+  { href: ACCOUNT_DESKS_HREF, label: "Manage Desks", exact: true },
   { href: "/account/templates", label: "Bot Templates", exact: true },
 ] as const;
 

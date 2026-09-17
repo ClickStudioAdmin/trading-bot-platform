@@ -166,7 +166,7 @@ function ExchangeBindField({
         <p className="mt-2 text-sm text-ink-muted">
           Keys also live on{" "}
           <Link
-            href="/account/exchanges"
+            href="/account/sub-accounts?tab=exchanges"
             className="text-accent hover:text-accent-strong"
           >
             Exchanges

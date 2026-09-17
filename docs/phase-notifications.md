@@ -88,7 +88,7 @@ Member footer (step 8): “You can modify your email preferences on Account Sett
 | `copy_invite_revoked` | Copy invite withdrawn — {deskName} | The invite to copy {deskName} was withdrawn. | Open Copy Trading → `/account/copy` |
 | `desk_sync_failed` | Desk sync failed — {deskName} | {deskName} could not sync with {venue}. {detail} / The bot stays as it is until this is fixed. Check the desk Activity log. | Desk Activity |
 | `desk_order_failed` | Live order failed — {deskName} | {deskName} hit a repeating {venue} reject ({detail}). / Open the desk, fix the bind or size, or disarm the bot. | Desk |
-| `exchange_verify_failed` | Exchange key failed — {connectionName} | We could not verify {connectionName} ({venue}). Live desks on this key will not place until you replace it. | Open Exchanges → `/account/exchanges` |
+| `exchange_verify_failed` | Exchange key failed — {connectionName} | We could not verify {connectionName} ({venue}). Live desks on this key will not place until you replace it. | Open Exchanges → `/account/sub-accounts?tab=exchanges` |
 | `password_changed` | Your password was changed | The password for this {platformName} login was changed. If you did not do this, reset it and contact support. | Account settings → `/account/settings` |
 | `operator_payout_requested` | Payout to send — {bookLabel} {amount} | {memberLabel} requested {amount} USDT ({bookLabel}) to {addressShort} on {network}. | Admin Affiliates or Billing withdrawals |
 | `operator_sweep_failed` | Sweep failed — {chain} | A credited deposit on {chain} did not sweep ({detail}). The member credit stays. Retry on the next watch. | `/admin/billing` |

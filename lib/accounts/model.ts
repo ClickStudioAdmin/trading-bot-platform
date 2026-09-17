@@ -6,6 +6,7 @@ import {
   parseVenueId,
   venueAllowsDeskType,
 } from "@/lib/exchanges/venues";
+import { ACCOUNT_EXCHANGES_HREF } from "@/lib/site-links";
 
 export type TradingAccountMode = "paper" | "live";
 export type DeskType =
@@ -607,7 +608,7 @@ export function overviewAttentionItems(input: {
       label: venue
         ? `${desk.name} is a live ${venue} desk with no key bound.`
         : `${desk.name} is live with no key bound.`,
-      href: "/account/exchanges",
+      href: ACCOUNT_EXCHANGES_HREF,
     });
   } else if (unboundLive.length > 1) {
     items.push({

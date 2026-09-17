@@ -120,7 +120,7 @@ export default async function BookOverviewPage() {
               </p>
             </div>
             <Link
-              href="/account/exchanges"
+              href="/account/sub-accounts?tab=exchanges"
               className="text-sm text-accent hover:text-accent-strong"
             >
               Manage

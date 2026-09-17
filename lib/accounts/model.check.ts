@@ -513,7 +513,7 @@ assert.deepEqual(
   [
     {
       label: "Live A is a live Bybit desk with no key bound.",
-      href: "/account/exchanges",
+      href: "/account/sub-accounts?tab=exchanges",
     },
   ],
 );
@@ -528,7 +528,7 @@ assert.deepEqual(
   [
     {
       label: "Live B is a live Hyperliquid desk with no key bound.",
-      href: "/account/exchanges",
+      href: "/account/sub-accounts?tab=exchanges",
     },
   ],
 );
