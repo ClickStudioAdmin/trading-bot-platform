@@ -277,51 +277,54 @@ export function ThemeTableDraft() {
             Hide Filters
           </button>
         </TableFilterBar>
-      ) : (
-        <div className="mt-6">
-          <button
-            type="button"
-            onClick={() => setShowFilters(true)}
-            className={TABLE_FILTER_CLEAR_CLASS}
-          >
-            Show Filters
-          </button>
-        </div>
-      )}
+      ) : null}
 
       {notice ? <p className="mt-4 text-sm text-success">{notice}</p> : null}
 
-      {selectedCount > 0 ? (
+      {!showFilters || selectedCount > 0 ? (
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <p className="text-sm text-ink-muted">{selectedCount} selected</p>
-          <button
-            type="button"
-            className={bulkBtn}
-            onClick={() => flash(`Sample only — export ${selectedCount}.`)}
-          >
-            Export
-          </button>
-          <button
-            type="button"
-            className={bulkBtn}
-            onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
-          >
-            Disable
-          </button>
-          <button
-            type="button"
-            className={dangerBulkBtn}
-            onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
-          >
-            Delete
-          </button>
-          <button
-            type="button"
-            className={bulkBtn}
-            onClick={() => setSelected(new Set())}
-          >
-            Clear
-          </button>
+          {!showFilters ? (
+            <button
+              type="button"
+              onClick={() => setShowFilters(true)}
+              className={TABLE_FILTER_CLEAR_CLASS}
+            >
+              Show Filters
+            </button>
+          ) : null}
+          {selectedCount > 0 ? (
+            <>
+              <p className="text-sm text-ink-muted">{selectedCount} selected</p>
+              <button
+                type="button"
+                className={bulkBtn}
+                onClick={() => flash(`Sample only — export ${selectedCount}.`)}
+              >
+                Export
+              </button>
+              <button
+                type="button"
+                className={bulkBtn}
+                onClick={() => flash(`Sample only — disable ${selectedCount}.`)}
+              >
+                Disable
+              </button>
+              <button
+                type="button"
+                className={dangerBulkBtn}
+                onClick={() => flash(`Sample only — delete ${selectedCount}.`)}
+              >
+                Delete
+              </button>
+              <button
+                type="button"
+                className={bulkBtn}
+                onClick={() => setSelected(new Set())}
+              >
+                Clear
+              </button>
+            </>
+          ) : null}
         </div>
       ) : null}
 

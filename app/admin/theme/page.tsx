@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { ButtonBusyIcon } from "@/components/pending-submit-button";
 import { ThemeBotFormDraft } from "@/components/theme-bot-form-draft";
+import { ThemeFormDraft } from "@/components/theme-form-draft";
 import { ThemeSelectDraft } from "@/components/theme-select-draft";
 import { ThemeTableDraft } from "@/components/theme-table-draft";
 
@@ -54,7 +55,13 @@ export default async function ThemePage({
   const raw = params.tab;
   const requested = Array.isArray(raw) ? raw[0] : raw;
   const tab =
-    requested === "bot" ? "bot" : requested === "table" ? "table" : "theme";
+    requested === "bot"
+      ? "bot"
+      : requested === "table"
+        ? "table"
+        : requested === "forms"
+          ? "forms"
+          : "theme";
   return (
     <div className="space-y-12">
       <div className="overflow-hidden rounded-card border border-line bg-surface">
@@ -90,6 +97,9 @@ export default async function ThemePage({
           <TabLink href="/admin/theme?tab=table" selected={tab === "table"}>
             Table
           </TabLink>
+          <TabLink href="/admin/theme?tab=forms" selected={tab === "forms"}>
+            Forms
+          </TabLink>
         </nav>
         {tab === "bot" ? (
           <section>
@@ -114,6 +124,17 @@ export default async function ThemePage({
             </p>
             <div className="mt-5">
               <ThemeTableDraft />
+            </div>
+          </section>
+        ) : tab === "forms" ? (
+          <section>
+            <h2 className="text-xl font-semibold tracking-tight">Forms</h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              Standard platform form chrome. This sample matches the live Join
+              for Free registration page. Dummy only — nothing is created.
+            </p>
+            <div className="mt-5">
+              <ThemeFormDraft />
             </div>
           </section>
         ) : (
