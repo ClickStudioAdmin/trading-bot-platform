@@ -27,11 +27,11 @@ export default async function SignIn2faPage({
   const error = firstSearchValue((await searchParams).error);
 
   return (
-    <main className="mx-auto max-w-md px-6 py-16">
+    <main className="mx-auto max-w-xl px-6 py-16">
       <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
         Desk
       </p>
-      <h1 className="mt-3 text-3xl font-semibold tracking-tight">
+      <h1 className="mt-3 whitespace-nowrap text-3xl font-semibold tracking-tight">
         Two-factor authentication (2FA)
       </h1>
       <p className="mt-3 text-sm text-ink-muted">
