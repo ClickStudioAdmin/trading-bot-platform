@@ -25,7 +25,7 @@ export function AppCheck({
   "aria-label": ariaLabel,
 }: {
   name?: string;
-  value?: string;
+  value?: string | number;
   checked?: boolean;
   defaultChecked?: boolean;
   disabled?: boolean;
@@ -47,7 +47,7 @@ export function AppCheck({
         ref={ref}
         type="checkbox"
         name={name}
-        value={value}
+        value={value != null ? String(value) : undefined}
         checked={checked}
         defaultChecked={defaultChecked}
         disabled={disabled}
