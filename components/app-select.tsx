@@ -141,10 +141,14 @@ export function AppSelect({
   }
 
   const triggerClass =
-    `${variant === "action" ? ACTION_TRIGGER : FIELD_TRIGGER} ${className}`.trim();
+    variant === "action" ? ACTION_TRIGGER : FIELD_TRIGGER;
+  const rootClass =
+    variant === "action"
+      ? `inline-flex max-w-full ${className}`.trim()
+      : `block min-w-0 ${className}`.trim();
 
   return (
-    <>
+    <span className={rootClass}>
       {name ? (
         <input
           ref={hiddenRef}
@@ -209,7 +213,7 @@ export function AppSelect({
             document.body,
           )
         : null}
-    </>
+    </span>
   );
 }
 

@@ -18,7 +18,11 @@ const MONTHS = [
   "October",
   "November",
   "December",
-];
+] as const;
+const MONTH_OPTIONS = MONTHS.map((label, value) => ({
+  value: String(value),
+  label,
+}));
 
 function parseIso(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
@@ -180,37 +184,30 @@ export function DatePicker({
               ‹
             </button>
             <AppSelect
-              value={cursor.month}
+              value={String(cursor.month)}
               onChange={(event) =>
                 setCursor((current) => ({
                   ...current,
                   month: Number(event.target.value),
                 }))
               }
-              className="min-w-0 flex-1 rounded-control border border-line bg-canvas px-2 py-1 text-xs text-ink"
-            >
-              {MONTHS.map((month, index) => (
-                <option key={month} value={index}>
-                  {month}
-                </option>
-              ))}
-            </AppSelect>
+              className="min-w-[8.5rem] flex-1"
+              options={MONTH_OPTIONS}
+            />
             <AppSelect
-              value={cursor.year}
+              value={String(cursor.year)}
               onChange={(event) =>
                 setCursor((current) => ({
                   ...current,
                   year: Number(event.target.value),
                 }))
               }
-              className="w-20 rounded-control border border-line bg-canvas px-2 py-1 text-xs text-ink"
-            >
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </AppSelect>
+              className="w-24 shrink-0"
+              options={years.map((year) => ({
+                value: String(year),
+                label: String(year),
+              }))}
+            />
             <button
               type="button"
               onClick={() => shiftMonth(1)}
