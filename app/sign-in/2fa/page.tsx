@@ -29,18 +29,15 @@ export default async function SignIn2faPage({
   const error = firstSearchValue((await searchParams).error);
 
   return (
-    <main className="mx-auto max-w-xl px-6 py-16">
-      <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-        Desk
-      </p>
-      <h1 className="mt-3 whitespace-nowrap text-3xl font-semibold tracking-tight">
+    <main className="mx-auto w-full max-w-xl px-6 py-16">
+      <h1 className="whitespace-nowrap text-3xl font-semibold tracking-tight">
         Two-factor authentication (2FA)
       </h1>
-      <p className="mt-3 text-sm text-ink-muted">
+      <p className="mt-3 max-w-md text-sm text-ink-muted">
         Open Google Authenticator and enter the 6-digit code. A recovery code
         also works once.
       </p>
-      <section className="mt-8 rounded-card border border-line bg-surface p-5">
+      <section className="mt-8 max-w-md rounded-card border border-line bg-surface p-5">
         {error ? (
           <p className="mb-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
             {error}

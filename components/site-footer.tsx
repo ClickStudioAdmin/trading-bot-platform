@@ -121,7 +121,7 @@ export function SiteFooter({
               <>
                 <li>
                   <Link href="/sign-up" className="text-ink-muted hover:text-ink">
-                    Start free
+                    Join for Free
                   </Link>
                 </li>
                 <li>

@@ -9,7 +9,7 @@ import { BILLING_FIELD_CLASS } from "@/lib/membership/wallet-form";
 import { firstSearchValue } from "@/lib/paper/open";
 
 export const metadata: Metadata = {
-  title: "Start free",
+  title: "Join for Free",
   description: "Create a Free membership on Trading Bot Platform.",
 };
 
@@ -30,14 +30,9 @@ export default async function SignUpPage({
 
   return (
     <main className="mx-auto max-w-md px-6 py-16">
-      <p className="text-xs font-medium uppercase tracking-[0.16em] text-accent">
-        Membership
-      </p>
-      <h1 className="mt-3 text-3xl font-semibold tracking-tight">Start free</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Join for Free</h1>
       <p className="mt-3 text-sm text-ink-muted">
-        Create a Free account and confirm your email. You can open a desk
-        from Overview when you are ready. Upgrade later for Live, copy,
-        backtest, or more desks. Every login is also an affiliate.
+        Create a Free account and confirm your email to get started.
       </p>
       <section className="mt-8 rounded-card border border-line bg-surface p-5">
         {error ? (

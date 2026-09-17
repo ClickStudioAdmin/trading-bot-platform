@@ -204,7 +204,7 @@ function PlanCell({
                 href={joinHref ?? "/sign-up"}
                 className="block w-full rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent"
               >
-                Start free
+                Join for Free
               </Link>
             )}
             <p className="mt-2 text-xs text-ink-faint">
@@ -218,7 +218,7 @@ function PlanCell({
             href={joinHref}
             className="block w-full rounded-control bg-accent-strong px-4 py-2 text-sm font-medium text-ink hover:bg-accent"
           >
-            Start free
+            Join for Free
           </Link>
         ) : (
           <p className="text-xs text-ink-faint">Free</p>

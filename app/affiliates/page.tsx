@@ -88,7 +88,7 @@ export default async function AffiliatesPage({
     <main className="mx-auto max-w-7xl px-6 py-12">
       <div className="grid gap-10 lg:grid-cols-[1fr_24rem] lg:items-start">
         <div>
-          <PageHeading overline="Program" title="Affiliates" />
+          <PageHeading title="Affiliates" />
           <p className="-mt-4 max-w-2xl text-sm text-ink-muted">
             Promote the platform and earn a percent of referred membership
             subscriptions. You do not need a platform account to join. Platform
@@ -107,11 +107,11 @@ export default async function AffiliatesPage({
         </div>
         <section className="rounded-card border border-line bg-surface p-5">
           <h2 className="text-lg font-semibold tracking-tight">
-            Join as an affiliate
+            Register as an affiliate
           </h2>
           <p className="mt-2 text-sm text-ink-muted">
-            Separate from platform membership. Upgrade later to unlock
-            platform features and earn higher commissions.
+            Upgrade later to unlock platform features and earn higher
+            commissions.
           </p>
           {error ? (
             <p className="mt-4 rounded-card border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
@@ -170,11 +170,14 @@ export default async function AffiliatesPage({
             </PendingSubmitButton>
           </form>
           <p className="mt-4 text-sm text-ink-muted">
-            Want desks?{" "}
+            Want to use the trading platform too?{" "}
             <Link href="/sign-up" className="text-accent hover:text-accent-strong">
-              Start free
+              Join here for free
             </Link>
-            . Already have an account?{" "}
+            . All members are also affiliates.
+          </p>
+          <p className="mt-2 text-sm text-ink-muted">
+            Already have an account?{" "}
             <Link href="/sign-in" className="text-accent hover:text-accent-strong">
               Sign in
             </Link>

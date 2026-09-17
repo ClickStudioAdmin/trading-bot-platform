@@ -49,7 +49,7 @@ export function UserMenu({ name }: { name: string | null }) {
           href="/sign-up"
           className="rounded-control bg-accent-strong px-3 py-1.5 text-sm font-medium text-ink"
         >
-          Start free
+          Join for Free
         </Link>
       </div>
     );

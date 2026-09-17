@@ -20,7 +20,7 @@ export default async function StrategiesPage() {
       </p>
       <p className="mt-8 flex flex-wrap gap-4 text-sm">
         <Link href="/sign-up" className="text-accent hover:text-accent-strong">
-          Start free
+          Join for Free
         </Link>
         <Link href="/sign-in" className="text-ink-muted hover:text-ink">
           Sign in
